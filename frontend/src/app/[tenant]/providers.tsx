@@ -12,6 +12,10 @@ import {
   useSessionPollInterval,
 } from "~/components/auth/session-account-binding";
 import { SentrySessionContext } from "~/components/auth/sentry-session-context";
+import {
+  SessionTreeBoundary,
+  StaleSessionMarkCheck,
+} from "~/components/auth/session-tree-boundary";
 import { ModuleBookingAudienceProvider } from "~/contexts/ToastContext";
 import { TenantAuthWrapper } from "~/components/auth/tenant-auth-wrapper";
 import { PushSubscriptionSync } from "~/components/notifications/push-subscription-sync";
@@ -40,6 +44,8 @@ import { TenantProvider, type TenantRoutingMode } from "~/lib/tenant-context";
 import { tenantAwarePath } from "~/lib/tenant-path";
 import type { TenantInfo } from "~/lib/tenant-api";
 import { seesLockedModules } from "~/lib/module-register";
+import { sessionMarkName } from "~/lib/session-mark";
+import { clientEnv } from "~/env.client";
 
 /**
  * Mirrors SessionProvider's response into the getSession() dedupe cache that
@@ -217,12 +223,16 @@ function ShellSwrSeed({
  * value with non-React API clients. `shell` is the server preload (#2973);
  * missing fields retain their client fetch path.
  */
+// The school's login explains that the session ended (#8082).
+const tenantExpiredLogin = () => "/?error=SessionExpired";
+
 export function TenantProviders({
   children,
   tenantSlug,
   tenant,
   routingMode,
   session,
+  sessionMark,
   shell = null,
 }: Readonly<{
   children: React.ReactNode;
@@ -230,6 +240,8 @@ export function TenantProviders({
   tenant: TenantInfo;
   routingMode: TenantRoutingMode;
   session?: Session | null;
+  /** The session mark the page was rendered with (#8082). */
+  sessionMark: string;
   shell?: ShellBootstrap | null;
 }>) {
   const swrSeed = useMemo(() => {
@@ -244,6 +256,13 @@ export function TenantProviders({
   const seedGeneration = authGeneration(session);
   // A logout stops the poll at once (#5399).
   const pollSeconds = useSessionPollInterval(SESSION_PROVIDER_POLL_SECONDS);
+  const mark = useMemo(
+    () => ({
+      name: sessionMarkName("tenant", clientEnv.NEXT_PUBLIC_TENANT_DOMAIN),
+      rendered: sessionMark,
+    }),
+    [sessionMark],
+  );
 
   const providers = (
     <ShellSeedProvider value={shell}>
@@ -272,22 +291,30 @@ export function TenantProviders({
       refetchInterval={pollSeconds}
       refetchOnWindowFocus={false}
     >
+      <StaleSessionMarkCheck sessionMark={mark} />
       <SessionAccountBinding />
       <PersonalStorageGuard
         homeHref={() => tenantAwarePath("/", tenantSlug, routingMode)}
       />
       <SWRScopeBoundary expectedTenantId={tenant.tenantId} />
       <SessionCachePrimer />
-      <ModuleBookingAudienceBridge>
-        <SentrySessionContext portal="tenant" />
-        {swrSeed ? (
-          <ShellSwrSeed seed={swrSeed} generation={seedGeneration}>
-            {providers}
-          </ShellSwrSeed>
-        ) : (
-          providers
-        )}
-      </ModuleBookingAudienceBridge>
+      <SentrySessionContext portal="tenant" />
+      {/* Everything that shows or holds this session's data (#8082). */}
+      <SessionTreeBoundary
+        portal="tenant"
+        sessionMark={mark}
+        endedSessionUrl={tenantExpiredLogin}
+      >
+        <ModuleBookingAudienceBridge>
+          {swrSeed ? (
+            <ShellSwrSeed seed={swrSeed} generation={seedGeneration}>
+              {providers}
+            </ShellSwrSeed>
+          ) : (
+            providers
+          )}
+        </ModuleBookingAudienceBridge>
+      </SessionTreeBoundary>
     </SessionProvider>
   );
 }

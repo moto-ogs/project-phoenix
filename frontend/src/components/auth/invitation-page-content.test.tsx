@@ -24,7 +24,7 @@ describe("InvitationPageContent (#2517)", () => {
   });
 
   it("names a missing token without asking the API", () => {
-    render(<InvitationPageContent token={null} />);
+    render(<InvitationPageContent portal="tenant" token={null} />);
 
     expect(screen.getByText(/Der Link ist unvollständig/)).toBeInTheDocument();
     expect(validateInvitation).not.toHaveBeenCalled();
@@ -37,7 +37,7 @@ describe("InvitationPageContent (#2517)", () => {
         code: "identity.invitation_expired",
       }),
     );
-    render(<InvitationPageContent token="t-1" />);
+    render(<InvitationPageContent portal="tenant" token="t-1" />);
 
     expect(
       await screen.findByText(
@@ -58,7 +58,7 @@ describe("InvitationPageContent (#2517)", () => {
       roleName: "user",
       expiresAt: "2027-01-01T12:00:00Z",
     });
-    render(<InvitationPageContent token="t-1" />);
+    render(<InvitationPageContent portal="tenant" token="t-1" />);
 
     await screen.findByText(catalogText("general.server", "die Einladung"));
     fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));

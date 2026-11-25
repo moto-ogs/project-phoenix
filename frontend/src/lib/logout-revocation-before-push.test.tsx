@@ -50,7 +50,13 @@ vi.mock("~/env.client", () => ({
   clientEnv: { NEXT_PUBLIC_TENANT_DOMAIN: "localhost" },
 }));
 vi.mock("~/lib/push-api", () => ({ unsubscribePushSilently: mockUnsubscribe }));
-vi.mock("~/lib/tenant-session-cookie", () => ({ signOutTenant: vi.fn() }));
+vi.mock("~/lib/tenant-session-cookie", () => ({
+  signOutTenant: vi.fn(),
+  tenantSessionReplaced: () => false,
+  sessionReplaced: () => false,
+  leaveReplacedSession: vi.fn(),
+  SessionReplaced: class SessionReplaced extends Error {},
+}));
 
 beforeEach(() => {
   // A push cleanup that never settles (#5260).

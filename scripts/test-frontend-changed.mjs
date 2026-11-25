@@ -152,6 +152,7 @@ const guards = [
   "src/components/settings/settings-filter.test.ts",
   "src/components/school-setup/setup-tour-targets.test.ts",
   "src/components/auth/session-end-barrier.test.tsx",
+  "src/components/auth/session-tree-boundary.test.tsx",
   "src/lib/hooks/use-sse.test.ts",
   "src/lib/service-worker.test.ts",
   "src/styles/moto-token-drift.test.ts",

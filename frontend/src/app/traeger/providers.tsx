@@ -11,9 +11,19 @@ import { ModulePortalProvider } from "~/lib/module-portal-context";
 export function TraegerProviders({
   children,
   session,
-}: Readonly<{ children: React.ReactNode; session?: Session | null }>) {
+  sessionMark,
+}: Readonly<{
+  children: React.ReactNode;
+  session?: Session | null;
+  /** The session mark the page was rendered with (#8082). */
+  sessionMark: string;
+}>) {
   return (
-    <PortalProviders portal="traeger" session={session}>
+    <PortalProviders
+      portal="traeger"
+      session={session}
+      sessionMark={sessionMark}
+    >
       <TraegerAnalyticsSession />
       {/* A missing right sends the person to the Leitung of the
           Träger-Büro, not to a school (#6871). */}

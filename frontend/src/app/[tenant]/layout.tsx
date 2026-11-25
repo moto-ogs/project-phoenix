@@ -9,6 +9,7 @@ import { loadShellBootstrap } from "~/lib/shell-bootstrap.server";
 import type { ShellBootstrap } from "~/lib/shell-seed";
 import {
   readPortalSessionSnapshot,
+  readRenderedSessionMark,
   type PortalSessionSnapshot,
 } from "~/lib/portal-session-snapshot.server";
 import { projectTenantResolve, type TenantInfo } from "~/lib/tenant-api";
@@ -221,6 +222,7 @@ export default async function TenantLayout({
       tenant={tenant}
       routingMode={routingMode}
       session={session}
+      sessionMark={await readRenderedSessionMark("tenant")}
       shell={shell}
     >
       <TenantGuard>{children}</TenantGuard>

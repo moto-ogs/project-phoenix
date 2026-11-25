@@ -8,22 +8,41 @@ import { clientEnv } from "~/env.client";
 import { unsubscribePushSilently } from "~/lib/push-api";
 import { createLogger } from "~/lib/logger";
 import { runTenantSessionEnd } from "~/lib/tenant-session-end";
-import { signOutTenant } from "~/lib/tenant-session-cookie";
+import { discardSessionTree } from "~/lib/session-tree";
+import {
+  leaveReplacedSession,
+  signOutTenant,
+  tenantSessionReplaced,
+} from "~/lib/tenant-session-cookie";
+import {
+  END_SESSION_HEADER,
+  endSessionHeader,
+  shownSessionMark,
+} from "~/lib/session-mark";
 
 const logger = createLogger({ component: "TenantRelogin" });
 
-/** Same logout endpoints/order as the tenant shell, without its source-host redirect. */
-export function reloginAtTenant(subdomain: string): Promise<void> {
+/**
+ * Same logout endpoints/order as the tenant shell, without its source-host
+ * redirect. `mark` names the session it ends: by default the tree's, or the
+ * one the cookie holds after a step of this tab (a staff preview ended
+ * inside a school switch).
+ */
+export function reloginAtTenant(
+  subdomain: string,
+  mark: string = shownSessionMark(),
+): Promise<void> {
   const port = window.location.port ? `:${window.location.port}` : "";
   const callbackUrl = `${window.location.protocol}//${subdomain}.${clientEnv.NEXT_PUBLIC_TENANT_DOMAIN}${port}/`;
   return runTenantSessionEnd(
-    (signal) => endSessionAndNavigate(callbackUrl, signal),
+    (signal) => endSessionAndNavigate(callbackUrl, mark, signal),
     callbackUrl,
   );
 }
 
 async function endSessionAndNavigate(
   callbackUrl: string,
+  mark: string,
   signal: AbortSignal,
 ): Promise<void> {
   // Revoke the refresh family BEFORE Auth.js deletes the shared domain cookie.
@@ -34,6 +53,9 @@ async function endSessionAndNavigate(
   // session nor opens the login.
   try {
     await bffJson("public", sessionBff.logout("tenant"), {
+      // Another school's sign-in since is not this exit's: the route revokes
+      // nothing of it and answers 401 (#8082).
+      headers: { [END_SESSION_HEADER]: endSessionHeader("tenant", mark) },
       signal: AbortSignal.any([signal, AbortSignal.timeout(5000)]),
       errorMessage: "Tenant logout failed",
     });
@@ -44,6 +66,8 @@ async function endSessionAndNavigate(
     if (!isNothingToRevoke(error)) throw error;
   }
   signal.throwIfAborted();
+  // The family is gone: nothing of the session shows from now (#8082).
+  discardSessionTree();
   // Cleanup must not hold navigation on a revoked session: other protected
   // requests can already redirect it to the source school's login (#5260).
   void unsubscribePushSilently("tenant", { signal, timeoutMs: 5000 });
@@ -56,6 +80,12 @@ async function endSessionAndNavigate(
     });
   }
   signal.throwIfAborted();
+  // Before this device's data of the account goes: another school's sign-in
+  // meanwhile owns it now (#8082).
+  if (tenantSessionReplaced(mark)) {
+    leaveReplacedSession();
+    return;
+  }
   // Nothing personal of the source school's account stays on the device (#5000).
   clearPersonalStorage();
   clearSessionCache();
@@ -64,7 +94,7 @@ async function endSessionAndNavigate(
   } catch {
     // Storage is optional; the server-side revocation and cookie deletion are not.
   }
-  await signOutTenant({ callbackUrl }, signal);
+  await signOutTenant({ callbackUrl, revoked: true, mark }, signal);
 }
 
 /** A 401 answer of the logout: no live session family is left to revoke. */

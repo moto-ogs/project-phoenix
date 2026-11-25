@@ -1,4 +1,5 @@
 import "server-only";
+import { createHmac } from "node:crypto";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { decode } from "next-auth/jwt";
@@ -11,8 +12,17 @@ import {
   approveSessionCookieWrites,
   isSessionCookieName,
   isWrittenSessionCookieName,
+  tenantSessionCookieName,
 } from "~/lib/session-cookie-exit.server";
-import { portalOfScope } from "./portals";
+import {
+  END_SESSION_HEADER,
+  PRESENTED_MARK_HEADER,
+  SESSION_MARK_HEADER,
+  SESSION_REPLACED_HEADER,
+  sessionMarkName,
+} from "~/lib/session-mark";
+import { decodeJwtPayload } from "./jwt-payload";
+import { PORTALS, portalOfScope } from "./portals";
 import {
   familyBacksSession,
   sessionFamilyState,
@@ -241,8 +251,25 @@ export async function gateSessionCookieWrites(
   const fromJar = (await takeJarSessionCookies()).filter(
     (cookie) => !ownNames.has(parseSetCookie(cookie)?.name),
   );
-  const setCookies = [...fromJar, ...own];
+  const replaced = endsAnotherSession(request);
+  // Which session this answer describes, for the tab that asked: the one
+  // an error of it belongs to, also after another tab changed the cookie.
+  const described = presentedMarkHeader(request);
+  const setCookies = [...fromJar, ...own].filter(
+    (cookie) => !replaced || !isSessionDeletion(cookie),
+  );
   const allowed = await allowedSetCookies(request, setCookies, states);
+  const marks = await sessionMarkWrites(allowed);
+  allowed.push(...marks.map(({ cookie }) => cookie));
+  // A mark this request changed (sign-in, school switch, a second factor,
+  // logout): the asking tab's own step. A rotation within the family it
+  // presented changes none, also not one another tab's login brought.
+  const presentedMarks = new Map(requestCookies(request));
+  // A deletion is always this tab's own step, also of a session without a
+  // mark (empty to empty): its tree goes at the answer's headers.
+  const changed = marks.filter(
+    ({ name, value }) => !value || (presentedMarks.get(name) ?? "") !== value,
+  );
   // The lock at the server's exit lets only these session cookie writes go
   // (#5520); a write that bypasses this gate is dropped there.
   approveSessionCookieWrites(
@@ -253,16 +280,77 @@ export async function gateSessionCookieWrites(
       return write && isWrittenSessionCookieName(write.name) && !write.deletes;
     }),
   );
-  if (!fromJar.length && allowed.length === own.length) return response;
+  if (
+    !replaced &&
+    !described &&
+    !fromJar.length &&
+    !marks.length &&
+    allowed.length === own.length
+  )
+    return response;
 
   const headers = new Headers(response.headers);
   headers.delete("Set-Cookie");
   for (const cookie of allowed) headers.append("Set-Cookie", cookie);
+  // The marks this request changed, readable by the tab that asked: its own
+  // session step, never another tab's change (#8082, ~/lib/session-mark).
+  if (changed.length)
+    headers.set(
+      SESSION_MARK_HEADER,
+      changed.map(({ name, value }) => `${name}=${value}`).join(", "),
+    );
+  if (replaced) headers.set(SESSION_REPLACED_HEADER, "1");
+  if (described) headers.set(PRESENTED_MARK_HEADER, described);
   return new Response(response.body, {
     status: response.status,
     statusText: response.statusText,
     headers,
   });
+}
+
+/** A deletion of a session cookie or one of its chunks. */
+function isSessionDeletion(cookie: string): boolean {
+  const write = parseSetCookie(cookie);
+  return write !== null && write.deletes && isGatedSessionCookie(write.name);
+}
+
+/**
+ * Whether this request would end another session than the one its exit
+ * names (END_SESSION_HEADER, #8082): another tab signed in on the cookie
+ * since, before the request left. The request carries the cookies the
+ * browser deletes with its answer (and whose family a logout revokes), the
+ * session's mark among them; the exit named the mark the cookie held for
+ * its session. A request without the header names nothing.
+ */
+export function endsAnotherSession(request: Request): boolean {
+  const [portal, named] = (request.headers.get(END_SESSION_HEADER) ?? "")
+    .trim()
+    .split(/\s+/);
+  if (!portal || named === undefined) return false;
+  const presented = new Map(requestCookies(request));
+  const mark = sessionMarks().find(({ key }) => key === portal)?.name;
+  if (!mark) return false;
+  return (presented.get(mark) || "-") !== named;
+}
+
+/** The mark the request carried for `portal`'s session; "" without one. */
+export function presentedSessionMark(
+  request: Request,
+  portal: keyof typeof PORTALS,
+): string {
+  const mark = sessionMarks().find(({ key }) => key === portal)?.name;
+  return (mark && new Map(requestCookies(request)).get(mark)) || "";
+}
+
+/** The marks the request carried, as PRESENTED_MARK_HEADER names them. */
+function presentedMarkHeader(request: Request): string {
+  const presented = new Map(requestCookies(request));
+  return [...new Set(sessionMarks().map(({ name }) => name))]
+    .flatMap((name) => {
+      const value = presented.get(name);
+      return value ? [`${name}=${value}`] : [];
+    })
+    .join(", ");
 }
 
 async function allowedSetCookies(
@@ -306,4 +394,106 @@ async function allowedSetCookies(
     const write = writes[index];
     return !write || !refused.has(baseName(write.name));
   });
+}
+
+/**
+ * The mark of a session: its refresh-token family and, for a staff preview,
+ * the preview (it keeps the admin's family). Null without a family.
+ */
+function sessionMarkOf(session: Record<string, unknown> | null): string | null {
+  const token = typeof session?.token === "string" ? session.token : "";
+  const claims = decodeJwtPayload(token);
+  const family = claims?.family_id;
+  if (typeof family !== "string" || !family) return null;
+  const preview =
+    typeof claims?.preview_id === "string" ? claims.preview_id : "";
+  return createHmac("sha256", env.NEXTAUTH_SECRET)
+    .update(`session-mark:${family}:${preview}`)
+    .digest("base64url")
+    .slice(0, 22);
+}
+
+/** Each portal's session cookie with its mark (~/lib/session-mark). */
+function sessionMarks() {
+  return (Object.keys(PORTALS) as (keyof typeof PORTALS)[]).flatMap((key) => {
+    const name = sessionMarkName(key, env.TENANT_DOMAIN);
+    const domain = PORTALS[key].cookieNames?.domain;
+    const base =
+      key === "tenant"
+        ? tenantSessionCookieName(env.TENANT_DOMAIN)
+        : (PORTALS[key].cookieNames?.session ?? `${key}.session-token`);
+    // Auth.js' default name (the tenant on localhost) takes `__Secure-` on https.
+    const bases = PORTALS[key].cookieNames
+      ? [base]
+      : [base, `__Secure-${base}`];
+    return bases.map((variant) => ({ key, base: variant, name, domain }));
+  });
+}
+
+/**
+ * The session marks that go with the session cookies this response leaves
+ * with (#8082, ~/lib/session-mark): the mark of the session it writes, also
+ * when the request presented the same one (a late answer may write back an
+ * older session than the cookie holds now), or its deletion with the session.
+ */
+async function sessionMarkWrites(
+  setCookies: string[],
+): Promise<{ name: string; value: string; cookie: string }[]> {
+  const parsed = setCookies.map(parseSetCookie);
+  const marks: { name: string; value: string; cookie: string }[] = [];
+  for (const { base, name, domain } of sessionMarks()) {
+    const writes = parsed.filter(
+      (write): write is CookieWrite =>
+        write !== null && chunkIndex(write.name, base) !== null,
+    );
+    if (!writes.length) continue;
+    const latest = new Map<string, string>();
+    for (const write of writes) {
+      if (write.deletes) latest.delete(write.name);
+      else latest.set(write.name, write.value);
+    }
+    const written = latest.size ? joinChunks(latest, base) : null;
+    // A deletion ends the session only with its first chunk; deleting a
+    // leftover chunk beside a kept session is a cleanup.
+    if (
+      !written &&
+      !writes.some(
+        (write) => write.deletes && chunkIndex(write.name, base) === 0,
+      )
+    )
+      continue;
+    const mark = written
+      ? sessionMarkOf(await readSession(written, base))
+      : null;
+    // A session without a family (from before families) carries no mark.
+    if (written && !mark) continue;
+    const attributes = [
+      "Path=/",
+      "SameSite=Lax",
+      ...(domain ? [`Domain=${domain}`] : []),
+      ...(process.env.NODE_ENV === "production" ? ["Secure"] : []),
+    ];
+    // As long as the session cookie: a browser restart keeps both or none.
+    const lifetime =
+      setCookies
+        .filter((_, index) => {
+          const write = parsed[index];
+          return (
+            write && !write.deletes && chunkIndex(write.name, base) !== null
+          );
+        })
+        .at(-1)
+        ?.split(";")
+        .slice(1)
+        .map((attribute) => attribute.trim())
+        .filter((attribute) => /^(expires|max-age)=/i.test(attribute)) ?? [];
+    marks.push({
+      name,
+      value: mark ?? "",
+      cookie: mark
+        ? [`${name}=${mark}`, ...lifetime, ...attributes].join("; ")
+        : [`${name}=`, "Max-Age=0", ...attributes].join("; "),
+    });
+  }
+  return marks;
 }

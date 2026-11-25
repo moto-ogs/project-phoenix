@@ -53,6 +53,7 @@ function LoginForm() {
   const targetTenantSlug = useSearchParams().get("tenant") ?? undefined;
   const isCheckingAuth = useLoginSessionCheck({
     logger,
+    portal: "school",
     paused: enrollmentStep !== null,
     onAccess: openSchoolPortal,
   });

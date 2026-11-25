@@ -38,6 +38,7 @@ import {
 } from "./generation";
 import { hasSessionAccess } from "~/lib/session-access";
 import { sessionGeneration } from "./session-generation";
+import { sessionTreeState, subscribeSessionTree } from "~/lib/session-tree";
 
 type MaybeSession = Session | null | undefined;
 
@@ -103,7 +104,8 @@ export function _setSWRCleanupForTests(enabled: boolean): void {
 
 // Cross-tab invalidation must take effect before React commits new keys or
 // SessionProvider answers. The revision also permanently withdraws shell seeds.
-const initialRefresh = { pending: false, revision: 0 };
+// `signedOut`: the other tab cleared the owner (its session ended).
+const initialRefresh = { pending: false, signedOut: false, revision: 0 };
 let sessionRefresh = initialRefresh;
 const refreshListeners = new Set<() => void>();
 
@@ -126,8 +128,12 @@ export function isSWRSessionPending(): boolean {
   return sessionRefresh.pending;
 }
 
-export function suspendSWRSession(): void {
-  sessionRefresh = { pending: true, revision: sessionRefresh.revision + 1 };
+export function suspendSWRSession(signedOut = false): void {
+  sessionRefresh = {
+    pending: true,
+    signedOut,
+    revision: sessionRefresh.revision + 1,
+  };
   for (const listener of refreshListeners) listener();
 }
 
@@ -135,6 +141,17 @@ export function resumeSWRSession(): void {
   if (!sessionRefresh.pending) return;
   sessionRefresh = { ...sessionRefresh, pending: false };
   for (const listener of refreshListeners) listener();
+}
+
+/**
+ * The paused session is confirmed: clear the cache while still paused (old
+ * subscribers may not have committed their disabled keys yet), then let the
+ * reads go on. The null → scoped key transition loads the confirmed
+ * session, immutable readers included.
+ */
+export function confirmSWRSession(): void {
+  resetSWRScope({ revalidate: false });
+  resumeSWRSession();
 }
 
 const scopeResetListeners = new Set<() => void>();
@@ -168,6 +185,22 @@ export function resetSWRScope({ revalidate }: { revalidate: boolean }): void {
   clearListOverlays();
   unload({ revalidate });
 }
+
+/**
+ * Drops this tab's whole cache because the session cookie changed under it
+ * (#8082: another subdomain replaced the shared tenant cookie). Nothing
+ * loads again until a reader of the confirmed session mounts.
+ */
+export function dropSWRSession(): void {
+  resetSWRScope({ revalidate: false });
+}
+
+// A document that leaves its session (logout, school switch, another account,
+// pagehide) ends the tree's work with it: a read, prefetch or seed still
+// running writes nothing into the cache (#8082).
+subscribeSessionTree(() => {
+  if (sessionTreeState().leaving) dropSWRSession();
+});
 
 /**
  * Whether `error` is the server's refusal of an entity with one of `codes`.

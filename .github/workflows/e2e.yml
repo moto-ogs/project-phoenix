@@ -11,7 +11,8 @@ name: Frontend E2E
 # Jede Suite läuft mit einem Worker. Darum laufen die Suites parallel in
 # eigenen Jobs: die Flows in drei Shards, die Seed und Build einmal von den
 # Jobs `seed` und `build` übernehmen, die Netzwerksuiten ohne Datenbank gegen ihr
-# synthetisches Backend mit `next dev` (e2e/network/server.mjs). Das
+# synthetisches Backend mit `next dev` (e2e/network/server.mjs), die Suite der
+# Sitzungsgrenze (#8082) mit einem eigenen Production-Build. Das
 # Repository ist öffentlich, die GitHub-Runner kosten nichts; jeder Job
 # kostet seinen Aufbau an Zeit.
 #
@@ -63,7 +64,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        suite: [network evidence, tenant switch]
+        suite: [network evidence, tenant switch, session tree]
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -115,6 +116,15 @@ jobs:
         env:
           NODE_OPTIONS: "--require ./e2e/network/no-subdomain-dns.cjs"
         run: pnpm run test:tenant-switch
+
+      # The portals' session boundary (#8082) in a production build of its
+      # own (next build + next start), with Chrome's back-forward cache on.
+      - name: Run session boundary regression
+        if: matrix.suite == 'session tree'
+        working-directory: frontend
+        env:
+          NODE_OPTIONS: "--require ./e2e/network/no-subdomain-dns.cjs"
+        run: pnpm run test:session-tree
 
   # Seed und Frontend-Build einmal pro Lauf statt in jedem Shard, in zwei
   # Jobs nebeneinander: in einem Job bremsten sich Next-Build, Go-Build und

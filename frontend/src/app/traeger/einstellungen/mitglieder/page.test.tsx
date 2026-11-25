@@ -43,8 +43,11 @@ const api = vi.hoisted(() => ({
 }));
 
 vi.mock("~/lib/traeger-api", () => api);
+const leaveRemovedSession = vi.hoisted(() =>
+  vi.fn(async (_portal: string) => undefined),
+);
+vi.mock("~/lib/shell-auth-context", () => ({ leaveRemovedSession }));
 vi.mock("next-auth/react", () => ({
-  signOut: vi.fn(),
   useSession: () => ({
     data: {
       user: {
@@ -672,6 +675,38 @@ describe("TraegerAccountsPage", () => {
         catalogText("traeger.last_administrator", "das Entfernen"),
       ),
     ).toBeInTheDocument();
+  });
+
+  it("leaves the session at once when the person removed themselves", async () => {
+    api.fetchTraegerBuero.mockResolvedValue({
+      ...BUERO,
+      members: [
+        BUERO.members[0]!,
+        { ...BUERO.members[1]!, roles: ["leadership", "billing"] },
+      ],
+    });
+    api.removeTraegerMember.mockResolvedValue(undefined);
+    renderPage();
+
+    await openMenu("leitung@traeger.example");
+    fireEvent.click(
+      await screen.findByRole("menuitem", {
+        name: "Aus dem Träger-Büro entfernen",
+      }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Ja, entfernen" }),
+    );
+    fireEvent.click(
+      await within(dialog).findByRole("button", { name: "Entfernen" }),
+    );
+
+    // The server ended the sessions: nothing of this one shows, also while
+    // Auth.js deletes the cookie (#8082).
+    await waitFor(() =>
+      expect(leaveRemovedSession).toHaveBeenCalledWith("traeger"),
+    );
   });
 
   it("shows the history of changes and loads older entries", async () => {

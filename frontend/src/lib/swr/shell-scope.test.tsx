@@ -14,6 +14,8 @@ const { mockUseSession, mockAnnounce } = vi.hoisted(() => ({
 vi.mock("next-auth/react", () => ({
   SessionProvider: ({ children }: { children: ReactNode }) => children,
   useSession: mockUseSession,
+  // The server's answer after another tab cleared the owner: no session.
+  getSession: async () => null,
 }));
 vi.mock("~/lib/session-cache", () => ({
   confirmSessionSnapshot: vi.fn(),
@@ -46,6 +48,7 @@ vi.mock("~/lib/tenant-context", () => ({
 import useSWR from "swr";
 import { useImmutableSWR } from "~/lib/swr";
 import { resetSWRScope, resumeSWRSession } from "~/lib/swr/scope";
+import { _resetSessionTreeForTests } from "~/lib/session-tree";
 import { TenantProviders } from "~/app/[tenant]/providers";
 
 const session = mockSessionData({ user: { tenantId: "1" } });
@@ -80,6 +83,7 @@ function ShellReader() {
 function Page() {
   return (
     <TenantProviders
+      sessionMark=""
       tenantSlug="school-a"
       tenant={{ tenantId: "1" } as TenantInfo}
       routingMode="subdomain"
@@ -94,11 +98,19 @@ function Page() {
 afterEach(() => {
   resumeSWRSession();
   resetSWRScope({ revalidate: false });
+  // Every test is a new document: no tree of the one before leaves.
+  _resetSessionTreeForTests();
 });
 
-it.each([null, "1:2"])(
+it.each([
+  // Another tab cleared the owner and the server answers no session: for a
+  // page without a mark that may be a failed request, so the person loads.
+  [null, "moto kann gerade nicht prüfen"],
+  // Another tab's session: the person loads again.
+  ["1:2", "Seite neu laden"],
+])(
   "withdraws the real shell fallback immediately on owner change to %s",
-  async (owner) => {
+  async (owner, ended) => {
     mockUseSession.mockReturnValue({ data: session, status: "authenticated" });
     const view = render(<Page />);
     // Anker: alle drei echten Shell-Seeds sind sichtbar.
@@ -111,24 +123,21 @@ it.each([null, "1:2"])(
         }),
       );
     });
-    expect(screen.getByTestId("shell")).toHaveTextContent("0 seeds");
+    // This document's tree ended for good (#8082), so no reader can see a
+    // seed, also not once a lookup answers.
+    expect(screen.queryByTestId("shell")).not.toBeInTheDocument();
+    expect(screen.getByText(ended, { exact: false })).toBeVisible();
     expect(mockAnnounce).toHaveBeenCalled();
-    view.rerender(<Page />);
-    expect(screen.getByTestId("shell")).toHaveTextContent("0 seeds");
-
-    // Returning to the server generation must not revive its withdrawn seed.
-    mockUseSession.mockReturnValue({ data: null, status: "unauthenticated" });
-    view.rerender(<Page />);
     mockUseSession.mockReturnValue({
       data: { ...session },
       status: "authenticated",
     });
     view.rerender(<Page />);
-    expect(screen.getByTestId("shell")).toHaveTextContent("0 seeds");
+    expect(screen.queryByTestId("shell")).not.toBeInTheDocument();
   },
 );
 
-it("loads the server answer, not the seed, after a rights change under the same key", async () => {
+it("ends the tree with its seed on a rights change under the same key", async () => {
   // SWR 2.5.1 keeps a hook's cacheData in its revalidate closure ([key,
   // cache]). A seed the seeder wrote into the cache is never consumed, so a
   // revalidation after the reset answered with the seed (#5006 review).
@@ -146,6 +155,7 @@ it("loads the server answer, not the seed, after a rights change under the same 
   function RightsPage() {
     return (
       <TenantProviders
+        sessionMark=""
         tenantSlug="school-a"
         tenant={{ tenantId: "1" } as TenantInfo}
         routingMode="subdomain"
@@ -173,6 +183,9 @@ it("loads the server answer, not the seed, after a rights change under the same 
   });
   view.rerender(<RightsPage />);
 
-  expect(await screen.findByText("neu")).toBeInTheDocument();
-  expect(fetcher).toHaveBeenCalledTimes(1);
+  // Other rights end the document's tree (#8082): nothing of it, the seed
+  // neither, renders again; the next document reads from the server.
+  expect(screen.queryByTestId("context")).not.toBeInTheDocument();
+  expect(screen.getByText("Seite wird neu geladen...")).toBeInTheDocument();
+  expect(fetcher).not.toHaveBeenCalled();
 });

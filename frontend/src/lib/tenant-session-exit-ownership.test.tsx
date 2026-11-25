@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { _resetSessionTreeForTests } from "./session-tree";
 import { randomBytes } from "node:crypto";
 import { act, renderHook } from "@testing-library/react";
 import { reloginAtTenant } from "~/components/tenant/tenant-relogin";
@@ -42,8 +43,10 @@ describe("tenant exit ownership through real cookie deletion", () => {
         protocol: "http:",
         port: "13845",
         href: "http://school-a.mfa.localhost:13845/profile",
+        reload: vi.fn(),
       },
     });
+    _resetSessionTreeForTests();
     let started: () => void;
     csrfStarted = new Promise<void>((resolve) => {
       started = resolve;
@@ -137,6 +140,9 @@ describe("tenant exit ownership through real cookie deletion", () => {
     expect(window.location.href).toBe(
       "http://school-a.mfa.localhost:13845/profile",
     );
+    // The revoked exit dropped its tree: the document loads the new
+    // session instead of staying on "Seite wird neu geladen..." (#8082).
+    expect(window.location.reload).toHaveBeenCalledTimes(1);
   });
 
   function dirtyPage() {

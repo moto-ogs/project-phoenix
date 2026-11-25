@@ -9,7 +9,10 @@ import {
   traegerPageSeed,
 } from "~/lib/traeger/page-seed.server";
 import { TRAEGER_PUBLIC_PAGES } from "./public-pages";
-import { readPortalSessionSnapshot } from "~/lib/portal-session-snapshot.server";
+import {
+  readPortalSessionSnapshot,
+  readRenderedSessionMark,
+} from "~/lib/portal-session-snapshot.server";
 
 /**
  * Server layout for Träger routes ("moto träger", #4649). German-only like
@@ -41,7 +44,10 @@ export default async function TraegerLayout({
       : null;
 
   return (
-    <TraegerProviders session={snapshot?.session ?? null}>
+    <TraegerProviders
+      session={snapshot?.session ?? null}
+      sessionMark={await readRenderedSessionMark("traeger")}
+    >
       {shellReads ? (
         <SWRServerSeed seed={shellReads.seed} claims={shellReads.claims}>
           {guarded}

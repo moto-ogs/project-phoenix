@@ -1,0 +1,8 @@
+{
+  "checking": "Anmeldung wird geprüft...",
+  "leaving": "Seite wird neu geladen...",
+  "changed": "Deine Anmeldung hat sich in einem anderen Tab oder Fenster geändert. Lade die Seite neu, um weiterzuarbeiten.",
+  "unconfirmed": "moto kann gerade nicht prüfen, ob du noch angemeldet bist. Lade die Seite gleich noch einmal.",
+  "reload": "Seite neu laden",
+  "reloadHint": "Lädt die Seite mit deiner aktuellen Anmeldung neu."
+}
