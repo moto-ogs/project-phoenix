@@ -11,6 +11,11 @@ export interface PageHeaderBadge {
   readonly icon?: ReactNode;
   readonly count: number;
   readonly label?: string;
+  /**
+   * Wort hinter der Zahl in der schmalen Zeile (Telefon, #8070), etwa
+   * „Kinder“: Ohne steht dort nur die Zahl am Symbol.
+   */
+  readonly compactLabel?: string;
 }
 
 /** Suchfeld der Such- und Filterzeile. */

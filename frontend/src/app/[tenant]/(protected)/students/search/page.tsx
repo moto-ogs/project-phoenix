@@ -2553,7 +2553,9 @@ function SearchPageContent() {
         className: "md:col-span-2",
         render: (
           <div className="space-y-2">
-            <div className="flex flex-wrap gap-1.5">
+            {/* Telefon (#8070): 8 px zwischen den Tag-Knöpfen wie zwischen
+                allen Chips der App. */}
+            <div className="app:gap-2 flex flex-wrap gap-1.5">
               <Button
                 type="button"
                 size="compact"
@@ -3567,6 +3569,15 @@ function SearchPageContent() {
             ? {
                 count: filteredStudents.length,
                 icon: <MotoConceptIcon concept={childrenConcept} size={20} />,
+                // Telefon (#8070): Die Titelzeile trägt nur „da“ und
+                // „krank“; die Gesamtzahl steht hier beschriftet wie am
+                // Desktop („118 Kinder“), nicht als nackte Zahl.
+                ...(appView
+                  ? {
+                      compactLabel:
+                        filteredStudents.length === 1 ? "Kind" : "Kinder",
+                    }
+                  : {}),
               }
             : undefined
         }

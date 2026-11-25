@@ -20,6 +20,9 @@ import {
 } from "react";
 import { AlertTriangle, Clock, Route, StickyNote } from "lucide-react";
 
+import { PresenceHint } from "~/components/students/presence/presence-hint";
+import { resolvePresence } from "~/lib/presence-status";
+
 import { Avatar } from "~/components/ui/avatar";
 import { ButtonLink } from "~/components/ui/button";
 import {
@@ -66,6 +69,9 @@ const SHORT_DEPARTURE_LABELS: Record<DepartureMode, string> = {
   pickup: "Abholung",
   accompanied: "Mit Kind",
 };
+
+// Nur für die Hinweiszeile: Der Hinweis hängt nicht am Ortsmodus.
+const BINARY_VIEW = { mode: "binary" } as const;
 
 function shortDepartureLabel(student: Student): string | null {
   if (student.has_full_access === false) return null;
@@ -149,9 +155,21 @@ function RowLine({
       );
     }
   }
-  if (!lead) return subtitle ? <>{subtitle}</> : null;
+  // Die Zeile unter der Pille der Karte („Ungeplant anwesend“, „Krank“)
+  // steht hier vorn in der zweiten Zeile: in der Namenszeile kürzte sie den
+  // Namen („Ben Hartm…“). Nur heute, wie die Pille selbst.
+  const hint = isToday ? resolvePresence(student, BINARY_VIEW).hint : null;
+  const hintNode = hint ? (
+    <span className="flex shrink-0 [&>span]:mt-0 [&>span]:text-sm">
+      <PresenceHint status={hint.status} title={hint.title} />
+    </span>
+  ) : null;
+  if (!lead && !hintNode) return subtitle ? <>{subtitle}</> : null;
+  if (!lead) rest = subtitle;
   return (
     <span className="flex min-w-0 items-center gap-1">
+      {hintNode}
+      {hintNode && lead ? <span aria-hidden="true">·</span> : null}
       {lead}
       {rest ? <span className="truncate">· {rest}</span> : null}
     </span>
@@ -396,9 +414,9 @@ export function StudentListApp({
   );
   const listWithRail =
     railLetters.length > 0 ? (
-      // Die Leiste steht innen am rechten Kartenrand; die Zeilen lassen ihr
-      // Platz, damit kein Abzeichen unter ihr liegt.
-      <div ref={listRef} className="[&_[data-collection-row]]:pr-9">
+      // Die Leiste steht innen am rechten Kartenrand und erscheint nur beim
+      // Rollen; in Ruhe haben die Zeilen rechts denselben Rand wie links.
+      <div ref={listRef}>
         {list}
         <IndexRail letters={railLetters} onJump={scrollToLetter} />
       </div>
@@ -459,6 +477,21 @@ export function StudentListApp({
         isToday={isToday}
         classLabel={sheetStudent ? classLabel(sheetStudent) : null}
         cardFacts={sheetStudent ? cardFactsOf(sheetStudent) : undefined}
+        // Oben dieselbe Orts-Pille wie in der Zeile („Zuhause“, Raum) samt
+        // Hinweis; die Ankunft steht nur einmal, unter „Ankunft heute“.
+        statusBadge={
+          sheetStudent ? (
+            <div className="flex [&_.mt-1]:mt-0 [&>div]:flex-row [&>div]:items-center [&>div]:gap-2">
+              <SearchStudentStatusBadge
+                student={sheetStudent}
+                isToday={isToday}
+                userGroups={userGroups}
+                groupRooms={groupRooms}
+                supervisedRooms={supervisedRooms}
+              />
+            </div>
+          ) : undefined
+        }
       />
     </>
   );
