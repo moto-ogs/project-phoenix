@@ -107,10 +107,11 @@ export function TagesplanDayBar({
 }>) {
   const days = weekDays(day);
   const todayInStrip = days.includes(today);
-  // Mit Monat nur, wo die Leiste breit ist (iPad hoch); am Telefon und in
-  // der Listenspalte reicht der Tag, der Monat stünde gedrängt.
-  const { layout, isSplit } = useDeviceContext();
-  const withMonth = layout === "tablet" && !isSplit;
+  // Mit Monat wie das Datum am Desktop („25.11.“), damit der Tag auch
+  // über den Monatswechsel eindeutig bleibt. Nur in der schmalen
+  // Listenspalte (iPad quer) reicht der Tag.
+  const { isSplit } = useDeviceContext();
+  const withMonth = !isSplit;
   return (
     <div className="flex items-center gap-1" data-tagesplan-day-bar="">
       <Button
@@ -444,6 +445,20 @@ export function TagesplanApp(props: TagesplanAppProps) {
         mine={showMine && entry.instance.isAssigned}
         selected={splitId === entry.instance.id}
         onOpen={() => openEntry(entry.instance.id)}
+        action={
+          entry.state.startable && !isSplit ? (
+            <Button
+              type="button"
+              variant="success"
+              size="md"
+              disabled={startBusyId === entry.instance.id}
+              tooltip="Startet die Aufsicht für diesen Termin und öffnet sie."
+              onClick={() => onStart(entry.instance)}
+            >
+              {startBusyId === entry.instance.id ? "Startet..." : "Starten"}
+            </Button>
+          ) : undefined
+        }
       />
     );
   };
@@ -459,6 +474,19 @@ export function TagesplanApp(props: TagesplanAppProps) {
   // nächste Block steht wieder auf Weiß. Ihr Kopf klebt, solange Blöcke der
   // Gruppe im Bild sind: Er bleibt in seiner Gruppe (Sticky endet an ihrem
   // Rand) und steht so nie über einem fremden Block.
+  // Eine Gruppe „Gleichzeitig“, die schon begonnen hat, kann Blöcke
+  // enthalten, die erst nach jetzt beginnen (15:00–17:00 mit der
+  // Busaufsicht um 16:00). Dann steht die Jetzt-Linie in der Gruppe vor
+  // dem ersten dieser Blöcke statt unter der ganzen Gruppe.
+  const splitAt = (group: TagesplanGroup) =>
+    nowIndex === -1 || group.cells.length < 2
+      ? -1
+      : group.cells.findIndex((cell) => cell.instance.startTime > nowHHMM);
+  const lineInGroup =
+    nowIndex > 0 && groups[nowIndex - 1]
+      ? splitAt(groups[nowIndex - 1]!) > 0
+      : false;
+
   const list = (
     <Collection
       label="Blöcke des Tages"
@@ -468,7 +496,7 @@ export function TagesplanApp(props: TagesplanAppProps) {
     >
       {groups.map((group, index) => (
         <Fragment key={group.key}>
-          {index === nowIndex ? nowLine : null}
+          {index === nowIndex && !lineInGroup ? nowLine : null}
           {group.cells.length === 1 ? (
             <div className="border-gray-100 [&:not(:first-child)]:border-t">
               <CollectionList>{renderRow(group.cells[0]!)}</CollectionList>
@@ -489,13 +517,24 @@ export function TagesplanApp(props: TagesplanAppProps) {
                 }
                 meta={`${group.cells.length} Blöcke`}
               >
-                {group.cells.map((cell) => renderRow(cell))}
+                {group.cells.map((cell, cellIndex) =>
+                  index === nowIndex - 1 &&
+                  lineInGroup &&
+                  cellIndex === splitAt(group) ? (
+                    <Fragment key={`jetzt-${cell.instance.id}`}>
+                      <li className="list-none">{nowLine}</li>
+                      {renderRow(cell)}
+                    </Fragment>
+                  ) : (
+                    renderRow(cell)
+                  ),
+                )}
               </CollectionGroup>
             </div>
           )}
         </Fragment>
       ))}
-      {nowIndex === groups.length ? nowLine : null}
+      {nowIndex === groups.length && !lineInGroup ? nowLine : null}
     </Collection>
   );
 
@@ -782,11 +821,9 @@ function childrenPart(entry: Entry): string | null {
 function rowChildren(entry: Entry): string | null {
   if (entry.state.cancelled || entry.state.isDuty) return null;
   const { instance } = entry;
-  if (instance.status === "active") {
-    const current =
-      instance.currentStudentsCount ?? instance.presentStudentsCount;
-    return `${current} da`;
-  }
+  // Laufend die ganze Angabe wie am Desktop („12 da · 4 nicht mehr im
+  // Raum“): wer gegangen ist, sucht man gerade hier.
+  if (instance.status === "active") return blockChildrenLabel(instance);
   const count =
     instance.status === "completed"
       ? instance.presentStudentsCount
@@ -820,12 +857,15 @@ function BlockRow({
   mine,
   selected,
   onOpen,
+  action,
 }: Readonly<{
   entry: Entry;
   next: boolean;
   mine: boolean;
   selected: boolean;
   onOpen: () => void;
+  /** „Starten“ am eigenen Block wie am Desktop, ohne erst das Blatt. */
+  action?: ReactNode;
 }>) {
   const { instance, state } = entry;
   const quiet = state.over ? "text-gray-600" : "text-gray-900";
@@ -862,6 +902,7 @@ function BlockRow({
     <CollectionRow
       onClick={onOpen}
       selected={selected}
+      action={action}
       wrap
       // Beginnt mit dem sichtbaren Text des Ziels (Titel), damit
       // Sprachsteuerung den Block beim Namen findet.
@@ -907,6 +948,11 @@ function BlockRow({
           )}
         >
           {instance.title}
+          {instance.planningTrackName ? (
+            <span className="ml-1.5 inline-block text-xs font-normal text-gray-600">
+              {instance.planningTrackName}
+            </span>
+          ) : null}
         </span>
       }
       subtitle={
