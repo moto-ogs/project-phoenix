@@ -111,6 +111,9 @@ For the #8080 baseline, see the [per-journey results](../perf/revisit-8080/resul
 This run used the product code at `development@de207b1c8f` and harness
 `3d15b19eee`. Across trials the shared host had
 0–71% idle CPU (median 20%); cross-worktree load was not controlled.
+#8099, #8100, #8098 and #8102 landed during this run. The numbers predate
+those changes. For a paired cache-flag comparison on a later revision, run the
+same command on that revision before and after enabling the flags.
 
 Local outputs in `frontend/perf-results/navigation/`: `revisit.json` (per-run
 observations, profile, load, diagnostics and separate confirmation/denial),
