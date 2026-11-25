@@ -51,6 +51,11 @@ interface PlannedNowSectionProps {
   readonly hasActiveTimetableSession?: boolean;
   readonly isStartingInstance: string | null;
   readonly onStart: (instance: PlannedTimetableInstance) => void;
+  /**
+   * Ohne eigenen Außenabstand: In der App steht die Karte in der Spalte am
+   * Listenende, die den Abstand zwischen den Karten selbst setzt.
+   */
+  readonly flush?: boolean;
 }
 
 const SOON_THRESHOLD_MINUTES = 15;
@@ -106,6 +111,7 @@ export function PlannedNowSection({
   hasActiveTimetableSession = false,
   isStartingInstance,
   onStart,
+  flush = false,
 }: PlannedNowSectionProps) {
   const showTimetableCounts = useShowTimetableCounts();
   const now = useMinuteClock();
@@ -126,7 +132,10 @@ export function PlannedNowSection({
 
   if (sortedPlanned.length === 0) {
     return (
-      <div className="mb-4" data-setup-tour="supervision-next">
+      <div
+        className={flush ? undefined : "mb-4"}
+        data-setup-tour="supervision-next"
+      >
         <SectionCard
           title="Als Nächstes"
           action={
@@ -180,7 +189,10 @@ export function PlannedNowSection({
   return (
     // Der Tour-Anker sitzt an der Hülle: SectionCard reicht keine
     // data-Attribute durch, die Hülle hat dieselben Maße wie die Karte.
-    <div className="mb-5" data-setup-tour="supervision-next">
+    <div
+      className={flush ? undefined : "mb-5"}
+      data-setup-tour="supervision-next"
+    >
       <SectionCard padding="none">
         <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
           <button
@@ -188,7 +200,12 @@ export function PlannedNowSection({
             onClick={() =>
               setSectionExpanded((current) => !(current ?? hasActionableSlot))
             }
-            className="group focus-visible:ring-moto-blue/30 flex min-w-0 items-center gap-3 text-left focus-visible:ring-2 focus-visible:outline-none"
+            // Am Telefon steht der Pfeil rechts am Kartenrand wie bei „Kinder
+            // unterwegs“, nicht mitten in der Karte hinter dem Titel.
+            className="group focus-visible:ring-moto-blue/30 phone:w-full flex min-w-0 items-center gap-3 text-left focus-visible:ring-2 focus-visible:outline-none"
+            // Auf- und Zuklappen ist kein Ausklappmenü: Die Karte hebt sich
+            // dabei nicht über Aktionsleiste und Pill (globals.css).
+            data-section-collapse-toggle=""
             aria-expanded={isSectionExpanded}
           >
             <ConceptIconTile concept={carePlanConcept} size="sm" />
@@ -201,7 +218,7 @@ export function PlannedNowSection({
               </span>
             </span>
             <ChevronDown
-              className={`h-4 w-4 shrink-0 text-gray-500 transition-transform group-hover:text-gray-600 ${isSectionExpanded ? "rotate-180" : ""}`}
+              className={`phone:ml-auto h-4 w-4 shrink-0 text-gray-500 transition-transform group-hover:text-gray-600 ${isSectionExpanded ? "rotate-180" : ""}`}
               aria-hidden="true"
             />
           </button>
