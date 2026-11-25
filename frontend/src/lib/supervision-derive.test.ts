@@ -1,384 +1,145 @@
 import { describe, expect, it } from "vitest";
 import type {
-  OpenRoomPayload,
-  SupervisedGroupPayload,
-} from "./supervision-derive";
+  ContextSession,
+  NavigationContext,
+} from "~/lib/contract/active.generated";
 import {
   deriveSupervision,
+  isCompleteSupervisionSeed,
   isSharedOpenRoom,
-  sameSupervision,
 } from "./supervision-derive";
 
-// The navigation contract for released rooms (#3065). It replaces the previous
-// synthetic "schulhof" tab, which could only ever be one room, only appeared
-// when a session existed, and counted as the caller's own supervision.
-
-const supervision = (
-  id: number,
-  roomId: number,
+const session = (
+  id: string,
+  roomId: string,
   roomName: string,
-  activity?: string,
-): SupervisedGroupPayload => ({
-  id: String(id),
-  room_id: String(roomId),
-  group_id: String(id),
-  room: { id: String(roomId), name: roomName },
-  ...(activity ? { actual_group: { id: String(id), name: activity } } : {}),
+  activity: string,
+  own: boolean,
+): ContextSession => ({
+  id,
+  room_id: roomId,
+  room_name: roomName,
+  activity_name: activity,
+  is_own: own,
 });
 
-const openRoom = (id: number, name: string): OpenRoomPayload => ({
-  id: String(id),
-  name,
-});
-
-describe("deriveSupervision with released rooms", () => {
-  it("recognizes a shared room through its room or legacy session id", () => {
-    const rooms = [
-      {
-        id: "7",
-        name: "Turnhalle",
-        groupId: "",
-        isOpenRoom: true,
-        sessionIds: ["active-turnhalle"],
+describe("supervision navigation", () => {
+  it("uses stable room IDs, keeps empty releases and resolves previous session links", () => {
+    const result = deriveSupervision({
+      sessions: {
+        status: "ok",
+        overview_status: "ok",
+        own_status: "ok",
+        items: [
+          session("30", "5", "Garten", "Natur", false),
+          session("31", "5", "Garten", "Gartenrunde", true),
+          session("32", "6", "Turnhalle", "Sport", false),
+        ],
       },
+      released_rooms: {
+        status: "ok",
+        items: [
+          { id: "5", name: "Garten" },
+          { id: "6", name: "Turnhalle" },
+          { id: "7", name: "Atelier" },
+        ],
+      },
+    });
+
+    expect(result.supervisedRoomId).toBe("5");
+    expect(result.supervisedRooms).toMatchObject([
+      { id: "7", name: "Atelier", isOwnSupervision: false, isOpenRoom: true },
       {
-        id: "8",
-        name: "Kreativraum",
+        id: "5",
         groupId: "",
-        isOpenRoom: true,
+        sessionIds: ["30", "31"],
         isOwnSupervision: true,
-        sessionIds: ["active-kreativraum"],
       },
-      { id: "9", name: "Gruppenraum", groupId: "active-gruppe" },
-    ];
-
-    expect(isSharedOpenRoom(rooms, { roomId: "7", sessionId: null })).toBe(
-      true,
-    );
+      { id: "6", groupId: "", sessionIds: ["32"], isOwnSupervision: false },
+    ]);
     expect(
-      isSharedOpenRoom(rooms, {
+      isSharedOpenRoom(result.supervisedRooms, {
         roomId: null,
-        sessionId: "active-turnhalle",
+        sessionId: "32",
       }),
     ).toBe(true);
     expect(
-      isSharedOpenRoom(rooms, {
-        roomId: "7",
-        sessionId: "active-gruppe",
-      }),
-    ).toBe(false);
-    expect(
-      isSharedOpenRoom(rooms, {
+      isSharedOpenRoom(result.supervisedRooms, {
         roomId: null,
-        sessionId: "active-kreativraum",
+        sessionId: "31",
       }),
     ).toBe(false);
   });
 
-  it("lists several released rooms at once, by their real room id", () => {
-    const result = deriveSupervision(
-      null,
-      [openRoom(7, "Turnhalle"), openRoom(3, "Werkraum")],
-      false,
-    );
-
-    expect(result.supervisedRooms.map((room) => room.id)).toEqual(["7", "3"]);
-    expect(result.supervisedRooms.every((room) => room.isOpenRoom)).toBe(true);
-    expect(result.supervisedRooms.map((room) => room.groupId)).toEqual([
-      "",
-      "",
+  it("keeps parallel non-released sessions separate and puts own sessions first", () => {
+    const result = deriveSupervision({
+      sessions: {
+        status: "ok",
+        overview_status: "ok",
+        own_status: "ok",
+        items: [
+          session("11", "5", "Halle", "Anfang", false),
+          session("12", "5", "Halle", "Ziel", true),
+        ],
+      },
+    });
+    expect(result.supervisedRooms).toMatchObject([
+      { id: "5", groupId: "12", name: "Ziel · Halle", isOwnSupervision: true },
+      {
+        id: "5",
+        groupId: "11",
+        name: "Anfang · Halle",
+        isOwnSupervision: false,
+      },
+    ]);
+    expect(result.ownSupervisedRooms.map((room) => room.name)).toEqual([
+      "Halle",
     ]);
   });
 
-  it("shows a released room that has nothing running in it", () => {
-    // The previous derivation took its rooms from running supervisions, so an
-    // empty room could not appear at all.
-    const result = deriveSupervision([], [openRoom(7, "Turnhalle")], true);
-
-    expect(result.supervisedRooms).toHaveLength(1);
-    expect(result.supervisedRooms[0]?.name).toBe("Turnhalle");
-  });
-
-  it("does not turn visibility into the caller's own supervision", () => {
-    const result = deriveSupervision(null, [openRoom(7, "Turnhalle")], false);
-
-    expect(result.isSupervising).toBe(false);
-    expect(result.supervisedRoomId).toBeUndefined();
-    expect(result.supervisedRoomName).toBeUndefined();
-  });
-
-  it("keeps own supervisions first and shared rooms after them", () => {
-    const result = deriveSupervision(
-      [supervision(1, 5, "Gruppenraum")],
-      [openRoom(7, "Turnhalle")],
-      true,
-    );
-
-    expect(result.isSupervising).toBe(true);
-    expect(result.supervisedRooms.map((room) => room.name)).toEqual([
-      "Gruppenraum",
-      "Turnhalle",
+  it("does not grant supervision by release or guess own sessions when ownership was unavailable", () => {
+    const result = deriveSupervision({
+      sessions: {
+        status: "ok",
+        overview_status: "ok",
+        own_status: "unavailable",
+        items: [
+          { ...session("11", "5", "Turnhalle", "Sport", true), is_own: null },
+        ],
+      },
+      released_rooms: { status: "ok", items: [{ id: "5", name: "Turnhalle" }] },
+    });
+    expect(result.supervisedRooms).toMatchObject([
+      { id: "5", isOwnSupervision: false },
     ]);
-    expect(result.supervisedRooms[0]?.isOpenRoom).toBeUndefined();
-    expect(result.supervisedRooms[1]?.isOpenRoom).toBe(true);
+    expect(result.ownSupervision).toBe(false);
   });
 
-  it("puts own sessions before foreign ones of the overview (#5035)", () => {
-    const result = deriveSupervision(
-      [supervision(1, 5, "Atelier"), supervision(2, 6, "Werkraum")],
-      [openRoom(7, "Turnhalle")],
-      true,
-      [supervision(2, 6, "Werkraum")],
-    );
-
-    expect(result.supervisedRooms.map((room) => room.name)).toEqual([
-      "Werkraum",
-      "Atelier",
-      "Turnhalle",
-    ]);
-    expect(result.supervisedRooms[0]?.isOwnSupervision).toBe(true);
-    expect(result.supervisedRooms[1]?.isOwnSupervision).toBeUndefined();
-    expect(result.supervisedRoomId).toBe("6");
-    expect(result.supervisedRoomName).toBe("Werkraum");
-  });
-
-  it("lists a released room once even when the caller supervises there", () => {
-    // Otherwise the same place appears twice: once as an own supervision and
-    // once as a shared room.
-    const result = deriveSupervision(
-      [supervision(1, 7, "Turnhalle")],
-      [openRoom(7, "Turnhalle")],
-      true,
-    );
-
-    const turnhalle = result.supervisedRooms.filter((room) => room.id === "7");
-    expect(turnhalle).toHaveLength(1);
-    expect(turnhalle[0]?.isOpenRoom).toBe(true);
-    expect(turnhalle[0]?.sessionIds).toEqual(["1"]);
-  });
-
-  it("lists a released room once even with several sessions running there", () => {
-    // Parallel sessions used to produce one navigation entry each, suffixed
-    // with the activity name.
-    const result = deriveSupervision(
-      [
-        supervision(1, 7, "Turnhalle", "Fußball"),
-        supervision(2, 7, "Turnhalle", "Tanzen"),
-      ],
-      [openRoom(7, "Turnhalle")],
-      true,
-    );
-
+  it("seeds known refusals, but recovers a missing or technically failed section", () => {
+    const empty: NavigationContext = {
+      groups: {
+        status: "forbidden",
+        navigation: null,
+        own_group_ids: null,
+        own_room_names: null,
+      },
+      sessions: {
+        status: "ok",
+        overview_status: "forbidden",
+        own_status: "ok",
+        items: [],
+      },
+      released_rooms: { status: "forbidden", items: null },
+    };
+    expect(isCompleteSupervisionSeed(empty)).toBe(true);
     expect(
-      result.supervisedRooms.filter((room) => room.id === "7"),
-    ).toHaveLength(1);
-    expect(result.supervisedRooms[0]?.sessionIds).toEqual(["1", "2"]);
-  });
-
-  it("still distinguishes parallel sessions in a room that is NOT released", () => {
-    // The disambiguation stays where it is still needed.
-    const result = deriveSupervision(
-      [
-        supervision(1, 5, "Gruppenraum", "Fußball"),
-        supervision(2, 5, "Gruppenraum", "Tanzen"),
-      ],
-      [],
-      true,
-    );
-
-    expect(result.supervisedRooms.map((room) => room.name)).toEqual([
-      "Fußball · Gruppenraum",
-      "Tanzen · Gruppenraum",
-    ]);
-  });
-
-  it("treats a failed room load as unknown, not as 'no open rooms'", () => {
-    const failed = deriveSupervision(
-      [supervision(1, 5, "Gruppenraum")],
-      null,
-      true,
-    );
-    const empty = deriveSupervision(
-      [supervision(1, 5, "Gruppenraum")],
-      [],
-      true,
-    );
-
-    expect(failed.supervisedRooms).toHaveLength(1);
-    expect(empty.supervisedRooms).toHaveLength(1);
-    // Both render the same navigation here; the distinction that matters is
-    // that a null never fabricates an entry, and never removes the caller's
-    // own supervision either.
-    expect(failed.isSupervising).toBe(true);
-  });
-
-  it("orders released rooms by name", () => {
-    const result = deriveSupervision(
-      null,
-      [
-        openRoom(1, "Werkraum"),
-        openRoom(2, "Ästhetikraum"),
-        openRoom(3, "Turnhalle"),
-      ],
-      false,
-    );
-
-    expect(result.supervisedRooms.map((room) => room.name)).toEqual([
-      "Ästhetikraum",
-      "Turnhalle",
-      "Werkraum",
-    ]);
-  });
-
-  // „Aufsicht fortsetzen" auf der Startseite darf nur erscheinen, wenn die
-  // Person selbst gerade Aufsicht führt — nicht, weil es einen offenen Raum
-  // gibt, den sie betreten könnte (#2180).
-  it("unterscheidet die eigene Aufsicht von der bloßen Möglichkeit dazu", () => {
-    // Ein offener Raum steht bereit, die Person führt dort nichts: nichts
-    // fortzusetzen.
-    expect(
-      deriveSupervision([], [openRoom(7, "Turnhalle")], true).ownSupervision,
-    ).toBe(false);
-    // Eigener Raum aus /api/me/groups/supervised (keine Übersicht).
-    expect(
-      deriveSupervision([supervision(1, 5, "Zebra")], [], false).ownSupervision,
-    ).toBe(true);
-    // Dieselbe Zeile aus der schulweiten Übersicht kann fremd sein; erst die
-    // zusätzliche eigene Abfrage entscheidet.
-    expect(
-      deriveSupervision([supervision(1, 5, "Zebra")], [], true).ownSupervision,
+      isCompleteSupervisionSeed({ ...empty, released_rooms: undefined }),
     ).toBe(false);
     expect(
-      deriveSupervision([supervision(1, 5, "Zebra")], [], true, [
-        supervision(1, 5, "Zebra"),
-      ]).ownSupervision,
-    ).toBe(true);
-  });
-
-  it("counts an own supervision inside a released room as own supervision", () => {
-    // Der offene Raum ersetzt den Schulhof: wer sich dort angeschlossen hat,
-    // führt Aufsicht und muss sie fortsetzen können.
-    expect(
-      deriveSupervision(
-        [supervision(1, 7, "Turnhalle")],
-        [openRoom(7, "Turnhalle")],
-        false,
-      ).ownSupervision,
-    ).toBe(true);
-    expect(
-      deriveSupervision(
-        [supervision(1, 7, "Turnhalle")],
-        [openRoom(7, "Turnhalle")],
-        true,
-        [supervision(1, 7, "Turnhalle")],
-      ).ownSupervision,
-    ).toBe(true);
-  });
-
-  it("keeps current own rooms separate from the school-wide overview", () => {
-    const result = deriveSupervision(
-      [supervision(1, 5, "Eigener Raum"), supervision(2, 6, "Fremder Raum")],
-      [],
-      true,
-      [supervision(1, 5, "Eigener Raum")],
-    );
-
-    expect(result.supervisedRooms.map((room) => room.id)).toEqual(["5", "6"]);
-    expect(result.ownSupervisedRooms?.map((room) => room.id)).toEqual(["5"]);
-  });
-
-  it("marks a released room as own when the caller supervises there (#4349)", () => {
-    // The own session is listed only under the released room. Without the
-    // marker the caller's activity looked unassigned in the navigation.
-    const result = deriveSupervision(
-      [supervision(1, 7, "Kreativraum", "Basteln")],
-      [openRoom(7, "Kreativraum"), openRoom(8, "Turnhalle")],
-      false,
-    );
-
-    expect(
-      result.supervisedRooms.map((room) => [room.name, room.isOwnSupervision]),
-    ).toEqual([
-      ["Kreativraum", true],
-      ["Turnhalle", undefined],
-    ]);
-  });
-
-  it("marks a released room as own only from the caller's own sessions", () => {
-    // The school-wide overview also carries other people's sessions; a room
-    // someone else supervises is not the caller's own.
-    const result = deriveSupervision(
-      [supervision(1, 7, "Kreativraum"), supervision(2, 8, "Turnhalle")],
-      [openRoom(7, "Kreativraum"), openRoom(8, "Turnhalle")],
-      true,
-      [supervision(1, 7, "Kreativraum")],
-    );
-
-    expect(
-      result.supervisedRooms.map((room) => [room.name, room.isOwnSupervision]),
-    ).toEqual([
-      ["Kreativraum", true],
-      ["Turnhalle", undefined],
-    ]);
-  });
-
-  it("reports overviewEnabled only when the overview endpoint answered", () => {
-    expect(deriveSupervision([], [], true).overviewEnabled).toBe(true);
-    expect(deriveSupervision([], [], false).overviewEnabled).toBe(false);
-    expect(deriveSupervision(null, [], true).overviewEnabled).toBe(false);
-  });
-});
-
-describe("sameSupervision", () => {
-  it("treats an added released room as a change", () => {
-    const before = deriveSupervision([], [], true);
-    const after = deriveSupervision([], [openRoom(7, "Turnhalle")], true);
-
-    expect(sameSupervision(before, after)).toBe(false);
-  });
-
-  it("treats an unchanged room list as unchanged", () => {
-    const before = deriveSupervision([], [openRoom(7, "Turnhalle")], true);
-    const after = deriveSupervision([], [openRoom(7, "Turnhalle")], true);
-
-    expect(sameSupervision(before, after)).toBe(true);
-  });
-
-  it("detects joining a released room while the room list stays the same", () => {
-    const overview = [supervision(1, 7, "Kreativraum")];
-    const rooms = [openRoom(7, "Kreativraum")];
-    const before = deriveSupervision(overview, rooms, true, []);
-    const after = deriveSupervision(overview, rooms, true, [
-      supervision(1, 7, "Kreativraum"),
-    ]);
-
-    expect(sameSupervision(before, after)).toBe(false);
-  });
-
-  it("detects a changed own room while the overview stays the same", () => {
-    const overview = [supervision(1, 5, "Raum A"), supervision(2, 6, "Raum B")];
-    const before = deriveSupervision(overview, [], true, [
-      supervision(1, 5, "Raum A"),
-    ]);
-    const after = deriveSupervision(overview, [], true, [
-      supervision(2, 6, "Raum B"),
-    ]);
-
-    expect(sameSupervision(before, after)).toBe(false);
-  });
-
-  it("detects a renamed own room while the overview stays the same", () => {
-    const overview = [supervision(1, 5, "Werkraum")];
-    const before = deriveSupervision(overview, [], true, [
-      supervision(1, 5, "Werkraum"),
-    ]);
-    const after = deriveSupervision(overview, [], true, [
-      supervision(1, 5, "Kreativraum"),
-    ]);
-
-    expect(sameSupervision(before, after)).toBe(false);
-    expect(after.ownSupervisedRooms).toEqual([
-      expect.objectContaining({ name: "Kreativraum" }),
-    ]);
+      isCompleteSupervisionSeed({
+        ...empty,
+        released_rooms: { status: "unavailable", items: null },
+      }),
+    ).toBe(false);
   });
 });

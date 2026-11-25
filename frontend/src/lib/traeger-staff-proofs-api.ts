@@ -159,7 +159,7 @@ export function mapStaffProof(
   };
 }
 
-function mapSchoolKinds(
+export function mapSchoolKinds(
   data: traegerStaffProofsContract.TraegerSchoolProofKinds[],
 ): SchoolProofKinds[] {
   return data.map((school) => ({

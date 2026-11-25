@@ -1,0 +1,7 @@
+{
+  "scenario": "workforce.own_time_views.overview",
+  "max": 31,
+  "exact": false,
+  "description": "Production tenant GET for the clock, shifts, assignments and account figures with an open break and three or nine completed work blocks. Includes booking, transactions and savepoints.",
+  "route": "GET /api/time-tracking/overview"
+}

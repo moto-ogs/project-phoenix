@@ -390,7 +390,7 @@ func TestRespondPaginated_Success(t *testing.T) {
 	w := httptest.NewRecorder()
 	r := httptest.NewRequest("GET", "/test", nil)
 	data := []map[string]int{{"id": 1}, {"id": 2}}
-	params := common.PaginationParams{Page: 2, PageSize: 10, Total: 50}
+	params := common.PaginationParams{Page: 2, PageSize: 10, Total: 50, NextCursor: "next"}
 
 	common.RespondPaginated(w, r, http.StatusOK, data, params, "page 2 of 5")
 
@@ -406,6 +406,7 @@ func TestRespondPaginated_Success(t *testing.T) {
 	assert.Equal(t, 10, response.Pagination.PageSize)
 	assert.Equal(t, 5, response.Pagination.TotalPages)
 	assert.Equal(t, 50, response.Pagination.TotalRecords)
+	assert.Equal(t, "next", response.Pagination.NextCursor)
 }
 
 func TestRespondPaginated_EmptyResults(t *testing.T) {

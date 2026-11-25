@@ -116,6 +116,7 @@ func instanceRouteContracts() []common.RouteContract {
 		{Method: "GET", Pattern: "/instances/{id}/guardian-notice", Portals: p, Response: GuardianNoticeReachResponse{}},
 		{Method: "POST", Pattern: "/instances/{id}/deviations", Portals: p, Request: applyDeviationsRequest{}, Response: ApplyDeviationsResponse{}},
 		{Method: "GET", Pattern: "/instances/{id}/staff-pool", Portals: p, Response: StaffPoolResponse{}},
+		{Method: "GET", Pattern: "/instances/{id}/attendance", Portals: p, Response: instanceAttendanceResponse{}},
 		{Method: "GET", Pattern: "/instances/{id}/participants", Portals: p, Response: InstanceParticipantsResponse{}},
 		{Method: "POST", Pattern: "/instances/{id}/move-staff", Portals: p, Request: moveStaffRequest{}, Response: MoveStaffResponse{}},
 		{Method: "PATCH", Pattern: "/instances/{instance_id}/students/{student_id}", Portals: p, Request: PatchAttendanceRequest{}, Response: AttendanceResponse{}},

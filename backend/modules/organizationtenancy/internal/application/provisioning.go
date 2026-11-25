@@ -31,6 +31,7 @@ type ProvisioningDependencies struct {
 	DeviceSlots organizationtenancy.SchoolDeviceSlotCommand
 	Transaction ports.Transaction
 	Dashboard   organizationtenancy.OperatorDashboard
+	Accounts    organizationtenancy.AccountDirectory
 	Identity    ports.ProvisioningIdentity
 	Devices     ports.ProvisioningDevices
 	People      ports.ProvisioningPeople
@@ -58,6 +59,7 @@ type Provisioning struct {
 	deviceSlots        organizationtenancy.SchoolDeviceSlotCommand
 	tx                 ports.Transaction
 	dashboard          organizationtenancy.OperatorDashboard
+	accounts           organizationtenancy.AccountDirectory
 	identity           ports.ProvisioningIdentity
 	devices            ports.ProvisioningDevices
 	people             ports.ProvisioningPeople
@@ -74,7 +76,7 @@ var _ organizationtenancy.Provisioning = (*Provisioning)(nil)
 
 // NewProvisioning builds the provisioning application.
 func NewProvisioning(deps ProvisioningDependencies) (*Provisioning, error) {
-	if deps.PWAUsageWindowDays <= 0 || deps.Organizations == nil || deps.ErasureOrderRecords == nil || deps.DeviceSlots == nil || deps.Transaction == nil || deps.Dashboard == nil || deps.Identity == nil ||
+	if deps.PWAUsageWindowDays <= 0 || deps.Organizations == nil || deps.ErasureOrderRecords == nil || deps.DeviceSlots == nil || deps.Transaction == nil || deps.Dashboard == nil || deps.Accounts == nil || deps.Identity == nil ||
 		deps.Devices == nil || deps.People == nil || deps.Presence == nil || deps.Categories == nil ||
 		deps.Settings == nil || deps.Audit == nil || deps.Secrets == nil || deps.Now == nil {
 		return nil, errors.New("organization tenancy provisioning: all dependencies are required")
@@ -87,7 +89,7 @@ func NewProvisioning(deps ProvisioningDependencies) (*Provisioning, error) {
 		OrganizationQuery: deps.Organizations, TraegerErasureOrderQuery: deps.Organizations,
 		pwaUsageWindowDays: deps.PWAUsageWindowDays,
 		organizations:      deps.Organizations, erasureRecords: deps.ErasureOrderRecords, deviceSlots: deps.DeviceSlots, tx: deps.Transaction, dashboard: deps.Dashboard,
-		identity: deps.Identity, devices: deps.Devices, people: deps.People, presence: deps.Presence,
+		accounts: deps.Accounts, identity: deps.Identity, devices: deps.Devices, people: deps.People, presence: deps.Presence,
 		categories: deps.Categories, settings: deps.Settings, audit: deps.Audit, secrets: deps.Secrets,
 		now: deps.Now, logger: logger,
 	}, nil

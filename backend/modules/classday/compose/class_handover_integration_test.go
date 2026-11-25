@@ -45,6 +45,10 @@ type handoverDayFacts struct {
 	careDays map[int64]careplan.CareDayStatus
 }
 
+func (handoverRoster) AssignedClassRoster(context.Context, []string, calendar.Date, string) (classday.AssignedRoster, error) {
+	panic("unexpected assigned class roster read")
+}
+
 func (f *handoverDayFacts) StandingStatusDays(context.Context, []int64, calendar.Date) ([]compose.StatusDayEntry, error) {
 	return f.statuses, nil
 }

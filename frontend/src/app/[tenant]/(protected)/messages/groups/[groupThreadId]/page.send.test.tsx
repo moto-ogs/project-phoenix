@@ -138,7 +138,9 @@ describe("Gruppennachricht senden: Ablehnung je Code", () => {
   beforeEach(() => {
     mockFetchGroupThread.mockReset().mockResolvedValue(detail);
     // No message has an e-mail: the mail status side-load stays empty.
-    mockFetchGroupThreadMails.mockReset().mockResolvedValue({});
+    mockFetchGroupThreadMails
+      .mockReset()
+      .mockResolvedValue({ mails: {}, awaitingFeedback: false });
     mockPostGroupMessage.mockReset();
     tenantFlags.messagingEnabled = true;
   });

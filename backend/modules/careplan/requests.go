@@ -57,8 +57,11 @@ type CareScheduleChangeRequest = carerequests.Request
 
 type CareScheduleRequestFilter struct {
 	// IDs restricts the listing to exact rows. Nil means no ID filter.
-	IDs          []int64
-	StudentID    int64
+	IDs       []int64
+	StudentID int64
+	// StudentIDs restricts the listing to these children in one read. Nil
+	// means no filter; an empty set matches no row.
+	StudentIDs   []int64
 	RequestKinds []string
 	Statuses     []string
 	RecentSince  time.Time
@@ -77,8 +80,11 @@ type StudentDataChangeRequest = masterdatarequests.Request
 
 type StudentDataRequestFilter struct {
 	// IDs restricts the listing to exact rows. Nil means no ID filter.
-	IDs           []int64
-	StudentID     int64
+	IDs       []int64
+	StudentID int64
+	// StudentIDs restricts the listing to these children in one read. Nil
+	// means no filter; an empty set matches no row.
+	StudentIDs    []int64
 	Statuses      []string
 	ParentVisible bool
 	Limit         int

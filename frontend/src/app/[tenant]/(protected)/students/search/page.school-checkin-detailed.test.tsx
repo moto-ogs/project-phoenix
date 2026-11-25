@@ -41,6 +41,10 @@ vi.mock("~/lib/hooks/use-school-checkin-mode", async (importOriginal) => {
 // what it says if the global default ever moves.
 vi.mock("~/lib/supervision-context", () => ({
   useOptionalSupervision: () => ({
+    ownGroupIds: [],
+    ownGroupRoomNames: [],
+    ownSessionRoomNames: [],
+    ownSupervisedRooms: [],
     hasGroups: false,
     isSupervising: false,
     isLoadingGroups: false,
@@ -202,17 +206,6 @@ vi.mock("~/lib/active-api", () => ({
       Promise.resolve({ labels: [], results: {} }),
     ),
   },
-}));
-
-vi.mock("~/lib/hooks/use-user-context", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("~/lib/hooks/use-user-context")>()),
-  useUserContext: () => ({
-    userContext: {
-      educationalGroupIds: [],
-      educationalGroupRoomNames: [],
-      supervisedRoomNames: [],
-    },
-  }),
 }));
 
 vi.mock("~/lib/student-api", async (importOriginal) => ({

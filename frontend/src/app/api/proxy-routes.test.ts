@@ -1,17 +1,12 @@
 import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
-import typescript from "typescript";
-import type * as TS from "typescript";
+import ts from "typescript";
 import { describe, expect, it } from "vitest";
 import { bffPath, type Portal } from "~/lib/bff-fetch";
 import {
   portalRoutes,
   routeFileRoutes,
 } from "~/lib/contract/portals.generated";
-
-// The test runner reads an imported binding through a proxy on every access;
-// the scan touches `ts` millions of times, so bind it once.
-const ts = typescript;
 
 const src = path.resolve(__dirname, "../..");
 
@@ -80,37 +75,22 @@ const hostAllowlist = new Set([
   "/api/auth/tenants",
 ]);
 
-const resolvedDeclarations = new WeakMap<
-  TS.TypeChecker,
-  Map<TS.Node, TS.Declaration | undefined>
->();
-
 /** Follow values, not identifier names: constants, aliases and local helpers. */
 function urlShapes(
-  node: TS.Node,
-  checker: TS.TypeChecker,
-  active = new Set<TS.Node>(),
-  bindings: ReadonlyMap<TS.ParameterDeclaration, string[]> = new Map(),
+  node: ts.Node,
+  checker: ts.TypeChecker,
+  active = new Set<ts.Node>(),
+  bindings: ReadonlyMap<ts.ParameterDeclaration, string[]> = new Map(),
 ): string[] {
   if (active.has(node) || active.size >= 32) return [unknownSegment];
   active.add(node);
-  function declarationOf(expression: TS.Node) {
-    // Shapes of nested sums and calls resolve the same names again; the
-    // checker's answer per node does not change, so look it up once.
-    let declarations = resolvedDeclarations.get(checker);
-    if (!declarations) {
-      declarations = new Map();
-      resolvedDeclarations.set(checker, declarations);
-    }
-    if (declarations.has(expression)) return declarations.get(expression);
+  function declarationOf(expression: ts.Node) {
     let symbol = checker.getSymbolAtLocation(expression);
     if (symbol && symbol.flags & ts.SymbolFlags.Alias)
       symbol = checker.getAliasedSymbol(symbol);
-    const declaration = symbol?.valueDeclaration;
-    declarations.set(expression, declaration);
-    return declaration;
+    return symbol?.valueDeclaration;
   }
-  const visit = (part: TS.Node) => urlShapes(part, checker, active, bindings);
+  const visit = (part: ts.Node) => urlShapes(part, checker, active, bindings);
   const join = (left: string[], right: string[]) =>
     left
       .flatMap((prefix) => right.map((suffix) => prefix + suffix))
@@ -185,11 +165,11 @@ function urlShapes(
           const argument = node.arguments[index] ?? parameter.initializer;
           if (argument) callBindings.set(parameter, visit(argument));
         });
-        const result = (expression: TS.Expression) =>
+        const result = (expression: ts.Expression) =>
           urlShapes(expression, checker, active, callBindings);
         if (!ts.isBlock(declaration.body)) return result(declaration.body);
         const returns: string[] = [];
-        function collect(part: TS.Node) {
+        function collect(part: ts.Node) {
           if (ts.isReturnStatement(part) && part.expression)
             returns.push(...result(part.expression));
           else if (!ts.isFunctionLike(part)) ts.forEachChild(part, collect);
@@ -204,9 +184,9 @@ function urlShapes(
   }
 }
 
-function isArrayJoin(node: TS.Node): node is TS.CallExpression & {
-  expression: TS.PropertyAccessExpression & {
-    expression: TS.ArrayLiteralExpression;
+function isArrayJoin(node: ts.Node): node is ts.CallExpression & {
+  expression: ts.PropertyAccessExpression & {
+    expression: ts.ArrayLiteralExpression;
   };
 } {
   return (
@@ -217,9 +197,9 @@ function isArrayJoin(node: TS.Node): node is TS.CallExpression & {
   );
 }
 
-function violations(source: TS.SourceFile, checker: TS.TypeChecker): string[] {
+function violations(source: ts.SourceFile, checker: ts.TypeChecker): string[] {
   const findings: string[] = [];
-  const report = (node: TS.Node, message: string) => {
+  const report = (node: ts.Node, message: string) => {
     const { line } = source.getLineAndCharacterOfPosition(
       node.getStart(source),
     );
@@ -243,7 +223,7 @@ function violations(source: TS.SourceFile, checker: TS.TypeChecker): string[] {
         ?.some((match) => match.test(pathname)) ?? false
     );
   }
-  const visit = (node: TS.Node) => {
+  const visit = (node: ts.Node) => {
     if (ts.isIdentifier(node) && retired.has(node.text)) {
       report(node, `retired route helper: ${node.text}`);
     }
@@ -307,9 +287,7 @@ function scanProject(sources: ReadonlyMap<string, string>): string[] {
     const source = sources.get(file);
     return source === undefined
       ? undefined
-      : // The checker binds every program file and sets its parent links
-        // then; a separate parent pass while parsing would walk it twice.
-        ts.createSourceFile(file, source, ts.ScriptTarget.Latest, false);
+      : ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true);
   };
   // Keep the compiler program within the worker heap. Start with possible
   // path pieces and add call-only files referring to a possible API prefix.
@@ -317,26 +295,26 @@ function scanProject(sources: ReadonlyMap<string, string>): string[] {
   const pathPieces = /["'`]\/[^/\s]|\}\/|\.join\s*\(|\\[xu]/;
   const barrel = /\bexport\s+(?:\*|\{)/;
   const cache = ts.createModuleResolutionCache(src, (file) => file, options);
-  // Barrels are followed from many files; resolve each file's imports once.
+  // Shared barrels recur in many import chains. Resolve each file's imports
+  // once per source snapshot, without changing the roots or the checker.
   const resolvedImports = new Map<string, string[]>();
   const imports = (file: string, source: string) => {
-    let targets = resolvedImports.get(file);
-    if (!targets) {
-      targets = ts
-        .preProcessFile(source)
-        .importedFiles.flatMap(({ fileName }) => {
-          const target = ts.resolveModuleName(
-            fileName,
-            file,
-            options,
-            host,
-            cache,
-          ).resolvedModule?.resolvedFileName;
-          return target ? [target] : [];
-        });
-      resolvedImports.set(file, targets);
-    }
-    return targets;
+    const previous = resolvedImports.get(file);
+    if (previous) return previous;
+    const resolved = ts
+      .preProcessFile(source)
+      .importedFiles.flatMap(({ fileName }) => {
+        const target = ts.resolveModuleName(
+          fileName,
+          file,
+          options,
+          host,
+          cache,
+        ).resolvedModule?.resolvedFileName;
+        return target ? [target] : [];
+      });
+    resolvedImports.set(file, resolved);
+    return resolved;
   };
   const carriesPrefix = (file: string, seen: Set<string>): boolean => {
     if (seen.has(file)) return false;

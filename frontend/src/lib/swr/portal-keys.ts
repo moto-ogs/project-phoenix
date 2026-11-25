@@ -1,3 +1,7 @@
+import type {
+  AccountPageQuery,
+  AccountScope,
+} from "~/lib/operator/account-pages";
 import { encodeMultiValueParam } from "~/lib/multi-value-param";
 import { compareIds } from "~/lib/compare-ids";
 import {
@@ -53,11 +57,13 @@ export const operatorProvisioningKeys = {
   schoolRequiredDetails: () => "operator-school-required-details",
   schoolPersons: (id: string | undefined) =>
     `operator-school-persons-${encodeURIComponent(id ?? "")}`,
-  schoolAccounts: (id: string | undefined) =>
-    `operator-school-accounts-${encodeURIComponent(id ?? "")}`,
-  orgAccounts: (id: string | undefined) =>
-    `operator-org-accounts-${encodeURIComponent(id ?? "")}`,
-  allAccounts: () => "operator-all-accounts",
+  accountPage: (scope: AccountScope, query: AccountPageQuery) => {
+    const base =
+      scope.kind === "all"
+        ? "operator-all-accounts"
+        : `operator-${scope.kind === "school" ? "school" : "org"}-accounts-${encodeURIComponent(scope.id)}`;
+    return `${base}:${query.sort ?? ""}:${query.direction ?? ""}:${encodeURIComponent(query.search ?? "")}`;
+  },
   schools: () => "operator-schools",
   organizationSummaries: () => "operator-organization-summaries",
   organizationSchoolSummaries: (id: string | undefined) =>
@@ -286,6 +292,7 @@ export const schoolPortalKeys = {
   classDayClasses: () => "class-day-my-classes",
   classDayReport: (schoolClass: string, date: string) =>
     resourceKey("school-class-day-report-", { schoolClass, date }),
+  assignedClasses: (date: string) => `school-assigned-classes-${date}`,
   schoolDay: (date: string) => `school-day-${date}`,
   parentConferences: () => "school-parent-conferences",
   absenceList: (schoolClass: string, from = "", to = "") =>
@@ -453,7 +460,13 @@ export const schoolTraegerDocumentKeys = {
   list: () => "traeger-documents-school",
 } as const;
 export const timeTrackingKeys = {
-  current: () => "time-tracking-current",
+  overviewFamily: "time-tracking-overview-",
+  overview: (day: string) => `time-tracking-overview-${day}`,
+  periodFamily: "time-tracking-period-",
+  period: (view: "week" | "month", start: string) =>
+    `time-tracking-period-${view}-${start}`,
+  leaveOverviewFamily: "time-tracking-leave-overview-",
+  leaveOverview: (year: number) => `time-tracking-leave-overview-${year}`,
   // Eigene Schichten auf „Mein Dienstplan“ (#3821). Beide teilen das Präfix
   // `time-tracking-own-shifts-week-` aus PLAN_CACHE_KEY_PREFIXES und den
   // SSE-Präfixen: eine Planänderung frischt so auch die Suche nach der
@@ -469,30 +482,12 @@ export const timeTrackingKeys = {
     `time-tracking-holidays-${from}-${to}`,
   closingDays: (from: string, to: string) =>
     `time-tracking-closing-days-${from}-${to}`,
-  /** Eigene Einsätze von heute: Startseite und Zeiterfassung teilen sie. */
+  /** Eigene Einsätze von heute auf der Startseite. */
   ownAssignmentsToday: (today: string) =>
     `time-tracking-own-assignments-today-${today}`,
   /** Eigene Tagesprojektion im Zeitraum (#2443). */
   scheduleTargets: (from: string, to: string) =>
     `time-tracking-schedule-targets-${from}-${to}`,
-  /** Eigene Monatskarte. */
-  monthSummary: (year: number, month: number) =>
-    `time-tracking-month-summary-${year}-${month}`,
-  /** Eigener Arbeitszeitplan; Präfix „time-tracking-own-schedule-“ im SSE. */
-  ownSchedule: (staffId: string) => `time-tracking-own-schedule-${staffId}`,
-  /** Eigene Schichten eines Tages für die Stempeluhr. */
-  ownShiftsToday: (day: string) => `time-tracking-own-shifts-today-${day}`,
-  /** Eigene Arbeitsblöcke für das Wochendiagramm. */
-  history: (from: string, to: string) => `time-tracking-history-${from}-${to}`,
-  /**
-   * Eigene Arbeitsblöcke, Abwesenheiten und Schichten der Tabelle. Alle
-   * beginnen mit „time-tracking-table“, das ein Stempeln neu lädt.
-   */
-  table: (from: string, to: string) => `time-tracking-table-${from}-${to}`,
-  tableAbsences: (from: string, to: string) =>
-    `time-tracking-table-absences-${from}-${to}`,
-  tableShifts: (from: string, to: string) =>
-    `time-tracking-table-shifts-${from}-${to}`,
 } as const;
 
 /** Exact list identity shared with intent; preserve the SSE group segment. */
@@ -516,38 +511,20 @@ function searchKey(params: {
   return `${SEARCH_STUDENTS_KEY_PREFIX}${searchStudentsGroupScope(params.groupIds)}-${params.search}-${encodeMultiValueParam([...params.schoolClasses])}-${params.roomId}-${params.dayStatus}-${params.date}-${params.isToday ? "today" : "planning"}-${params.photoState}-${params.bus}-${params.photoConsent}-${params.companions}-${encodeMultiValueParam([...params.years])}-${params.pickupStatus}${params.enrollmentAnswer ? `-a${params.enrollmentAnswer}` : ""}`;
 }
 
-const catererOrdersFamily = "caterer-orders-";
+const catererOverviewFamily = "caterer-overview-";
+const catererDetailFamily = "caterer-orders-";
 
-/** Caterer sessions span schools; every order response still names its school. */
+/** The authenticated scope supplies the account part of each key. */
 export const catererKeys = {
-  family: catererOrdersFamily,
-  containsSchool(key: string, schoolId: string): boolean {
-    if (!key.startsWith(catererOrdersFamily)) return false;
-    try {
-      const params: unknown = JSON.parse(key.slice(catererOrdersFamily.length));
-      return (
-        params !== null &&
-        typeof params === "object" &&
-        "schoolIds" in params &&
-        Array.isArray(params.schoolIds) &&
-        params.schoolIds.includes(schoolId)
-      );
-    } catch {
-      // Not a factory-built order window.
-      return false;
-    }
-  },
-  schools: () => "caterer-schools",
-  // Die Glocke des Caterer-Portals (#7147): Zähler und erste Seite der
-  // Hinweise aller belieferten Schulen.
+  overviewFamily: catererOverviewFamily,
+  overview: (from: string, to: string) =>
+    resourceKey(catererOverviewFamily, { from, to }),
+  detailFamily: catererDetailFamily,
+  schoolDetails: (id: string) => `${catererDetailFamily}${id}:`,
+  orders: (id: string, grant: string, from: string, to: string) =>
+    resourceKey(`${catererDetailFamily}${id}:${grant}:`, { from, to }),
   notificationFeedFirstPage: () => "caterer-notification-feed-first-page",
   notificationFeedUnread: () => "caterer-notification-feed-unread",
-  orders: (schoolIds: readonly string[], from: string, to: string) =>
-    resourceKey(catererOrdersFamily, {
-      schoolIds: [...schoolIds].sort(),
-      from,
-      to,
-    }),
 } as const;
 
 /**

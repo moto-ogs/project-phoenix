@@ -351,6 +351,50 @@ school, omits the field; their `school_class` stays as before („Feriengast“
 for a guest). The kiosk shows „Gast aus <Schule>“ when the field is set and
 the class otherwise, so either side can deploy first.
 
+## Staff supervision context (#8084, #8085)
+
+`GET /api/active/supervision-context` is a staff-portal read. Omit `section`
+for the full projection, or repeat it for any union of `groups`, `sessions`
+and `released-rooms`. Unknown values return 400. Unrequested sections are
+absent and their section-specific reads do not run. Use the generated
+`active` contract for server and tenant BFF calls; no school, account or
+session ID comes from the caller.
+
+- `groups.navigation` is the Group Live navigation, including leadership and
+  substitution. `own_group_ids` and `own_room_names` are personal filters,
+  not all visible groups; a waiting holiday group can appear in the personal
+  filters without appearing in the navigation.
+- `sessions.items` contains one entry per open session, even when several
+  share a room. `overview_status: ok` means school-wide scope even if the
+  list is empty. `forbidden` or `unavailable` there leaves only known own
+  sessions. `own_status: unavailable` makes `is_own` null on overview rows;
+  do not treat these assignments as true or false. The section is `ok` when
+  the overview or the own list loaded; clients still check both statuses.
+  Released rooms never grant supervision. Overview requires `groups:read`
+  as well as the canonical operational overview rule; own sessions need neither.
+  Student Presence uses the same school-day assignment rule here and in the
+  existing own-session read. Only open sessions appear in this response.
+- `released_rooms.items` needs `rooms:read` and lists permanently released,
+  non-archived rooms. The Schulhof stays; WC and other system rooms are
+  excluded. The list is not paged and has no occupancy data.
+
+Each requested section reports `ok`, `forbidden` or `unavailable`. An empty
+list with `ok` is authoritative; independent successful sections survive
+recoverable SQL errors. A failed session family or transaction takes the
+ordinary HTTP error path. Calendar View composes owner reads using savepoints
+in one RLS school transaction, not a fixed snapshot across statements. The
+HTTP host checks the session family in its existing separate transaction.
+
+The tenant shell seeds the full projection under one in-memory SWR key for
+the staff school/account binding. If any section is missing or unavailable,
+the browser replaces the seed with a full read. Section refreshes replace only
+the requested sections, including `forbidden` or `unavailable` results. The
+shell, child navigation hints and own running supervision share this entry;
+it confers no read or write permissions. `GET /api/me/navigation` carries the
+current staff profile and school switches, not groups or running sessions.
+Other consumers of the general groups, rooms and sessions endpoints still use
+their own contracts. Do not retry a failed overview via an older endpoint.
+
 ## Tenant boundary
 
 Platform operator → organization (`platform.organizations`) → school
@@ -572,8 +616,12 @@ pass alone is not confirmation. Every portal shell revokes through its BFF logou
 Auth.js clears the cookie. When the route answers with an error (the
 backend's `identity.logout_not_revoked`, or a BFF 503), the browser still
 clears the cookie and the login page says the session ends at its expiry
-(#7209); only a logout without any answer (offline, timeout) keeps the
-session and shows the error with a retry. The tenant relogin action keeps
+(#7209). The password form receives that notice as ready-to-display copy:
+the generated German sentence for `identity.logout_not_revoked`, or the parents
+login's scoped translation. Opening a login must not load the full error
+presenter. Focusing the password form or starting an attempt warms it for a
+refusal without holding up the request. Only a logout without any answer
+(offline, timeout) keeps the session and shows the error with a retry. The tenant relogin action keeps
 the session on every failure and offers a retry: it moves to another
 school's host, where no notice could follow. All six routes
 come from one factory (`frontend/src/lib/logout-route.server.ts`); the
@@ -911,6 +959,10 @@ Backend paths in this section are relative to `backend/`:
   caterer portal (`workflows/catererportal`) opens each supplied school's
   tenant transaction itself (ADR 0077). The `caterer scope matrix` contract in
   `TestFullProductionRouterGolden` checks both directions.
+- `GET /caterer/schools?from=YYYY-MM-DD&to=YYYY-MM-DD` returns the compact
+  order overview (at most seven days). An optional `school_id` retries one
+  supplied school. A failed row is not a zero; a revoked supply is absent.
+  Only the school detail route returns classes, names or individual changes.
 - The caterer's second factor (ADR 0077 addendum, #4497) is voluntary and
   bound to the caterer's account, never to a school's `mfa_mode`. Once it is
   on, `/caterer/auth/login` answers `mfa_required` with a `caterer`-scope
@@ -1247,6 +1299,15 @@ coordinate producer and consumer changes.
 Class-day is mounted only at `/school/class-day`; `/api/class-day` and the
 tenant `/klassen` page were removed. Its frontend uses `app/school/*`, shared
 `components/class-day`, and `server/auth/school*.ts` (under `frontend/src/`).
+The teacher's home uses one `GET /school/class-day/assigned-classes?date=…`
+with `class_day:read`. Go resolves the class assignments in the school
+transaction, reads those rosters together and returns totals only, including
+the number of children with a reported status or a changed pickup. The report
+follows Berlin's day and the school's Friday-plan setting. The administration's
+audited `/school-day` with child lists still requires `class_day:all_classes`.
+The class sheet still checks the class and logs disclosure when opened;
+`/classes` remains the class/options read on the screens that need it.
+
 The PWA identity is moto schule (`schule` / `schule-staging` favicon variants).
 Lehrkraft invitations link to `SCHOOL_URL/invite`, not `FRONTEND_URL/invite`.
 

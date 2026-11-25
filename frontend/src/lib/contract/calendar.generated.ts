@@ -2,6 +2,7 @@
 import { z } from "zod";
 import {
   arr,
+  bool,
   calendarDate,
   fileAnswer,
   int64String,
@@ -25,11 +26,13 @@ import {
 
 /** Go: portal.AppointmentMails */
 export interface AppointmentMails {
+  awaiting_feedback?: boolean;
   kinds: Record<string, Record<string, number> | null> | null;
   not_arrived: Record<string, string[] | null> | null;
 }
 
 export const AppointmentMailsSchema: z.ZodType<AppointmentMails, unknown> = object<AppointmentMails>({
+  awaiting_feedback: optional(bool),
   kinds: nullable(rec(nullable(rec(safeInt)))),
   not_arrived: nullable(rec(nullable(arr(str)))),
 });

@@ -43,7 +43,7 @@ func NewWorkTimeMonthService(
 	settings monthSettingsResolver,
 	logger *slog.Logger,
 	opts ...WorkTimeMonthOption,
-) WorkTimeMonthService {
+) *workTimeMonthService {
 	service := &workTimeMonthService{
 		sessionRepo:   sessionRepo,
 		breakRepo:     breakRepo,
@@ -153,29 +153,12 @@ func validateMonth(year, month int) error {
 // contribute nothing to targetToDate and credits, so the current month's
 // balance is automatically pro-rated and future months are neutral.
 func (s *workTimeMonthService) computeAggregates(ctx context.Context, staffID int64, first calendar.Date, toKey monthKey, today calendar.Date) (map[monthKey]*monthAggregates, error) {
-	fromKey := monthOf(first)
 	last := toKey.lastDay()
-
-	aggregates := make(map[monthKey]*monthAggregates)
-	for k := fromKey; !toKey.before(k); k = k.next() {
-		aggregates[k] = &monthAggregates{}
-	}
-
 	resolver, err := s.buildTargetResolver(ctx, staffID, first, last)
 	if err != nil {
 		return nil, err
 	}
-	for d := first; !d.After(last); d = d.AddDays(1) {
-		target := resolver.TargetFor(d)
-		agg := aggregates[monthOf(d)]
-		agg.target += target
-		if resolver.HasSource(d) {
-			agg.hasTarget = true
-		}
-		if !d.After(today) {
-			agg.targetToDate += target
-		}
-	}
+	aggregates := monthTargets(first, last, today, resolver)
 
 	if err := s.addActualMinutes(ctx, staffID, first, last, today, aggregates); err != nil {
 		return nil, err
@@ -190,6 +173,23 @@ func (s *workTimeMonthService) computeAggregates(ctx context.Context, staffID in
 		return nil, err
 	}
 	return aggregates, nil
+}
+
+func monthTargets(first, last, today calendar.Date, resolver *dailyTargetResolver) map[monthKey]*monthAggregates {
+	aggregates := make(map[monthKey]*monthAggregates)
+	for k, end := monthOf(first), monthOf(last); !end.before(k); k = k.next() {
+		aggregates[k] = &monthAggregates{}
+	}
+	for d := first; !d.After(last); d = d.AddDays(1) {
+		target := resolver.TargetFor(d)
+		agg := aggregates[monthOf(d)]
+		agg.target += target
+		agg.hasTarget = agg.hasTarget || resolver.HasSource(d)
+		if !d.After(today) {
+			agg.targetToDate += target
+		}
+	}
+	return aggregates
 }
 
 // maxOpenWorkSessionDuration is the shared live limit. The presence lookup in
@@ -547,31 +547,30 @@ func (s *workTimeMonthService) GetDailyProjection(ctx context.Context, staffID i
 	if today.Before(through) {
 		through = today
 	}
-	targetFor := func(d calendar.Date) int {
-		if excludedByAccountStart(d, anchor) {
-			return 0
-		}
-		return resolver.TargetFor(d)
-	}
-
 	credits, actual, err := s.projectionDayValues(ctx, staffID, from, to, through, resolver)
 	if err != nil {
 		return nil, err
 	}
+	return projectWorkDays(from, to, today, anchor, resolver, credits, actual), nil
+}
 
+func projectWorkDays(from, to, today, anchor calendar.Date, resolver *dailyTargetResolver, credits, actual map[calendar.Date]int) []DailyProjection {
 	projection := make([]DailyProjection, 0, from.DaysUntil(to)+1)
 	for d := from; !d.After(to); d = d.AddDays(1) {
-		day := DailyProjection{Date: d, TargetMinutes: targetFor(d), TargetSource: resolver.SourceFor(d)}
-		if excludedByAccountStart(d, anchor) || d.After(today) {
+		day := DailyProjection{Date: d, TargetSource: resolver.SourceFor(d)}
+		if excludedByAccountStart(d, anchor) {
 			projection = append(projection, day)
 			continue
 		}
-		day.CreditMinutes = credits[d]
-		day.ActualMinutes = actual[d]
-		day.BalanceMinutes = day.ActualMinutes + day.CreditMinutes - day.TargetMinutes
+		day.TargetMinutes = resolver.TargetFor(d)
+		if !d.After(today) {
+			day.CreditMinutes = credits[d]
+			day.ActualMinutes = actual[d]
+			day.BalanceMinutes = day.ActualMinutes + day.CreditMinutes - day.TargetMinutes
+		}
 		projection = append(projection, day)
 	}
-	return projection, nil
+	return projection
 }
 
 // validateDailyRange bounds the day-level reads to a closed range of at most

@@ -1,0 +1,7 @@
+{
+  "scenario": "api.active.supervision_context.released_rooms",
+  "max": 10,
+  "exact": false,
+  "description": "Only room releases, more than 50 results from one list query. Includes session validation.",
+  "route": "GET /api/active/supervision-context"
+}

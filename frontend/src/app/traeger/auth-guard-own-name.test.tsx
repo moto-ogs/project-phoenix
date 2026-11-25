@@ -59,7 +59,7 @@ function HeaderName() {
 import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { traegerKeys } from "~/lib/swr/traeger-keys";
 import { TraegerAuthGuard } from "./auth-guard";
-import TraegerAccountPage from "./konto/page";
+import TraegerAccountPage from "./konto/page-content";
 
 function sessionOf(id: string, orgId: number, email: string) {
   return {

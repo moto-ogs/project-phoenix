@@ -216,55 +216,22 @@ func (p *Provisioning) ListSystemRoles(ctx context.Context) ([]organizationtenan
 	})
 }
 
-// ListSchoolAccounts lists the accounts of a non-deleted school.
-func (p *Provisioning) ListSchoolAccounts(ctx context.Context, schoolID int64) ([]organizationtenancy.SchoolAccount, error) {
-	return adminValue(ctx, p, func(adminCtx context.Context) ([]organizationtenancy.SchoolAccount, error) {
-		if _, err := p.findLiveSchool(adminCtx, schoolID); err != nil {
-			return nil, err
+// ListAccountPage validates the requested scope in the operator unit before
+// calling the read-only projection.
+func (p *Provisioning) ListAccountPage(ctx context.Context, scope organizationtenancy.AccountScope, query organizationtenancy.AccountPageQuery) (organizationtenancy.AccountPage, error) {
+	return adminValue(ctx, p, func(adminCtx context.Context) (organizationtenancy.AccountPage, error) {
+		if scope.SchoolID != 0 {
+			if _, err := p.findLiveSchool(adminCtx, scope.SchoolID); err != nil {
+				return organizationtenancy.AccountPage{}, err
+			}
 		}
-		accounts, err := p.identity.ListSchoolAccounts(adminCtx, schoolID)
-		if err != nil || accounts == nil {
-			return nil, err
+		if scope.OrganizationID != 0 {
+			if _, err := p.organizations.FindOrganization(adminCtx, scope.OrganizationID); err != nil {
+				return organizationtenancy.AccountPage{}, mapOrganizationError(err, scope.OrganizationID)
+			}
 		}
-		result := make([]organizationtenancy.SchoolAccount, 0, len(accounts))
-		for _, account := range accounts {
-			result = append(result, organizationtenancy.SchoolAccount(account))
-		}
-		return result, nil
+		return p.accounts.ListAccountPage(adminCtx, scope, query)
 	})
-}
-
-// ListOrganizationAccounts lists the accounts of an organisation's schools.
-func (p *Provisioning) ListOrganizationAccounts(ctx context.Context, organizationID int64) ([]organizationtenancy.OrganizationAccount, error) {
-	return adminValue(ctx, p, func(adminCtx context.Context) ([]organizationtenancy.OrganizationAccount, error) {
-		if _, err := p.organizations.FindOrganization(adminCtx, organizationID); err != nil {
-			return nil, mapOrganizationError(err, organizationID)
-		}
-		accounts, err := p.identity.ListOrganizationAccounts(adminCtx, organizationID)
-		return organizationAccounts(accounts), err
-	})
-}
-
-// ListAllAccounts lists the accounts of every school.
-func (p *Provisioning) ListAllAccounts(ctx context.Context) ([]organizationtenancy.OrganizationAccount, error) {
-	return adminValue(ctx, p, func(adminCtx context.Context) ([]organizationtenancy.OrganizationAccount, error) {
-		accounts, err := p.identity.ListAllAccounts(adminCtx)
-		return organizationAccounts(accounts), err
-	})
-}
-
-func organizationAccounts(accounts []domain.OrganizationAccount) []organizationtenancy.OrganizationAccount {
-	if accounts == nil {
-		return nil
-	}
-	result := make([]organizationtenancy.OrganizationAccount, 0, len(accounts))
-	for _, account := range accounts {
-		result = append(result, organizationtenancy.OrganizationAccount{
-			SchoolAccount: organizationtenancy.SchoolAccount(account.SchoolAccount),
-			SchoolID:      ident.ID(account.SchoolID), SchoolName: account.SchoolName,
-		})
-	}
-	return result
 }
 
 func invalidData(message string) error {

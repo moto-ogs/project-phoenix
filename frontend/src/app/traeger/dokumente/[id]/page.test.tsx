@@ -105,7 +105,7 @@ vi.mock("~/components/traeger/use-traeger-schools", async () => {
   };
 });
 
-const { default: TraegerDocumentPage } = await import("./page");
+const { default: TraegerDocumentPage } = await import("./page-content");
 
 function renderPage() {
   render(

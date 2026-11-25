@@ -213,7 +213,7 @@ func (e *sickCascadeEnv) updateInstanceOn(t *testing.T, instanceID, templateID i
 		if err != nil {
 			return err
 		}
-		rows, err := e.timetable.TimetableData.Data.ListScheduledInstanceRows(ctx, []timetable.ScheduledInstance{scheduled})
+		rows, err := e.timetable.TimetableData.Data.ListScheduledInstanceRows(ctx, []timetable.ScheduledInstance{scheduled}, timetable.PlannerGrid)
 		if err != nil {
 			return err
 		}

@@ -153,7 +153,7 @@ describe("navigation catalogs stay in sync with the header", () => {
           found.push(...collectStaticTitles(full));
           continue;
         }
-        if (entry !== "page.tsx") continue;
+        if (entry !== "page.tsx" && entry !== "page-content.tsx") continue;
         const title = SET_BREADCRUMB_TITLE.exec(
           readFileSync(full, "utf8"),
         )?.[1];
@@ -161,7 +161,7 @@ describe("navigation catalogs stay in sync with the header", () => {
 
         const route = full
           .slice(APP_DIR.length)
-          .replace(/\/page\.tsx$/, "")
+          .replace(/\/page(?:-content)?\.tsx$/, "")
           .replace(/\/\([^)]+\)/g, "")
           .replace(/^\/\[tenant\]/, "");
         // Dynamische Segmente haben keinen festen Pfad, den getPageTitle

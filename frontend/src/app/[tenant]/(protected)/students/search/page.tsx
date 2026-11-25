@@ -78,7 +78,7 @@ import {
   parseISODate,
   toISODate,
 } from "~/lib/date-helpers";
-import { useUserContext } from "~/lib/hooks/use-user-context";
+import { useOptionalSupervision } from "~/lib/supervision-context";
 import { schoolClassesLabel } from "~/lib/school-class-label";
 import { useHolidayGuestLabels } from "~/lib/hooks/use-holiday-guest-labels";
 import { StudentPresenceBadge } from "@/components/students/presence/student-presence-badge";
@@ -218,7 +218,6 @@ import { useSamePageLinkClick } from "./use-same-page-link-click";
 import { useChildScopeTabs } from "./use-child-scope-tabs";
 import { childrenConcept } from "~/lib/concepts/children";
 
-const EMPTY_STRING_ARRAY: string[] = [];
 const EMPTY_STUDENT_ARRAY: Student[] = [];
 const NO_GROUPS: Group[] = [];
 const NO_ROOMS: Room[] = [];
@@ -1534,14 +1533,11 @@ function SearchPageContent() {
       ? groupMode
       : "none";
 
-  // OGS group tracking via shared BFF endpoint with SWR caching
-  // This eliminates 2 separate API calls with 2 auth() calls each
-  const { userContext } = useUserContext();
-  const myGroups = userContext?.educationalGroupIds ?? EMPTY_STRING_ARRAY;
-  const myGroupRooms =
-    userContext?.educationalGroupRoomNames ?? EMPTY_STRING_ARRAY;
-  const mySupervisedRooms =
-    userContext?.supervisedRoomNames ?? EMPTY_STRING_ARRAY;
+  const {
+    ownGroupIds: myGroups,
+    ownGroupRoomNames: myGroupRooms,
+    ownSessionRoomNames: mySupervisedRooms,
+  } = useOptionalSupervision();
 
   // Page-level school check-in/out mode. When active, clicking a card toggles
   // the student's attendance instead of navigating to the detail page.

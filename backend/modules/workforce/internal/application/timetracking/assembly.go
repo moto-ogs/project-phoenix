@@ -126,14 +126,15 @@ type Dependencies struct {
 // Services are the composed time-tracking services. The Workforce
 // composition serves the public contracts from them.
 type Services struct {
-	Sessions WorkSessionService
-	Months   WorkTimeMonthService
-	Absences StaffAbsenceService
-	Ledger   StaffBalanceAdjustmentService
-	Closing  StaffMonthCloseService
-	Overview StaffOverviewService
-	Export   StaffTimeExportService
-	AuditLog TimeTrackingAuditLogService
+	Sessions    WorkSessionService
+	Months      *workTimeMonthService
+	Absences    StaffAbsenceService
+	ownAbsences *staffAbsenceService
+	Ledger      StaffBalanceAdjustmentService
+	Closing     StaffMonthCloseService
+	Overview    StaffOverviewService
+	Export      StaffTimeExportService
+	AuditLog    TimeTrackingAuditLogService
 }
 
 // Clock is every service but the absence lifecycle. The absence lifecycle
@@ -188,16 +189,17 @@ func (c *Clock) Sessions() WorkSessionService {
 // shift-plan-sync workflow to apply (#4825).
 func (c *Clock) WithAbsences() *Services {
 	deps, services := c.deps, c.services
-	services.Absences = NewStaffAbsenceService(deps.Absences, deps.Sessions, deps.VacationQuotas, deps.AbsenceAudits, deps.Settings, services.Months,
+	services.ownAbsences = newStaffAbsenceService(deps.Absences, deps.Sessions, deps.VacationQuotas, deps.AbsenceAudits, deps.Settings, services.Months,
 		append(deps.absenceOptions(deps.AbsenceTypes, deps.MonthSnapshots, loggerOrDefault(deps.Logger)), WithAbsenceUnitOfWork(runTimeTrackingUnit))...)
+	services.Absences = services.ownAbsences.transactional()
 	return &services
 }
 
 // sessionsAndMonths builds the work session service and the Monatskarte
 // (#1842), which reference each other: the weekly history summaries re-price
 // Sonderarbeitszeit weeks (#3259) through the month service.
-func (deps Dependencies) sessionsAndMonths(absenceTypes AbsenceTypeReader, snapshots MonthSnapshots, logger *slog.Logger) (WorkSessionService, WorkTimeMonthService) {
-	var months WorkTimeMonthService
+func (deps Dependencies) sessionsAndMonths(absenceTypes AbsenceTypeReader, snapshots MonthSnapshots, logger *slog.Logger) (WorkSessionService, *workTimeMonthService) {
+	var months *workTimeMonthService
 	sessions := NewWorkSessionService(deps.Sessions, deps.Breaks, deps.EditAudit, deps.Absences, deps.Supervisions, deps.SessionRecords,
 		deps.Staff, deps.Schedules, deps.TimeModels, deps.Settings, logger, deps.DB, deps.RenderPDF, deps.RenderWorkbook,
 		// Planned-shift lookups for the auto-checkout job (#1798).

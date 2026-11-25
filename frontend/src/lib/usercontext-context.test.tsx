@@ -1,3 +1,4 @@
+import { deriveSupervision } from "~/lib/supervision-derive";
 import type * as studentsContract from "~/lib/contract/students.generated";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, waitFor } from "@testing-library/react";
@@ -84,6 +85,7 @@ describe("UserContextProvider", () => {
     vi.mocked(usePathname).mockReturnValue("/dashboard");
 
     vi.mocked(useSupervision).mockReturnValue({
+      ...deriveSupervision(),
       hasGroups: true,
       isLoadingGroups: false,
       groups: mockBackendGroups,
@@ -260,6 +262,7 @@ describe("UserContextProvider", () => {
 
     it("should show loading when supervision groups are loading", () => {
       vi.mocked(useSupervision).mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: false,
         isLoadingGroups: true,
         groups: [],
@@ -313,6 +316,7 @@ describe("UserContextProvider", () => {
     it("should call supervision refresh when refetch is called", async () => {
       const mockRefresh = vi.fn().mockResolvedValue(undefined);
       vi.mocked(useSupervision).mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: true,
         isLoadingGroups: false,
         groups: mockBackendGroups,
@@ -347,6 +351,7 @@ describe("UserContextProvider", () => {
         .mockRejectedValue(new Error("Refresh failed"));
 
       vi.mocked(useSupervision).mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: true,
         isLoadingGroups: false,
         groups: mockBackendGroups,
@@ -397,6 +402,7 @@ describe("UserContextProvider", () => {
   describe("Edge Cases", () => {
     it("should handle empty supervision groups array", () => {
       vi.mocked(useSupervision).mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: false,
         isLoadingGroups: false,
         groups: [],
@@ -430,6 +436,7 @@ describe("UserContextProvider", () => {
       ];
 
       vi.mocked(useSupervision).mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: true,
         isLoadingGroups: false,
         groups: groupsWithoutRooms,
@@ -507,6 +514,7 @@ describe("UserContextProvider", () => {
 
       // Change the supervision groups
       vi.mocked(useSupervision).mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: true,
         isLoadingGroups: false,
         groups: [

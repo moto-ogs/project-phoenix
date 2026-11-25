@@ -71,7 +71,7 @@ function knownValues(values: Record<string, number> | null): ComparisonValues {
   return result;
 }
 
-function comparisonQuery(query: ComparisonQuery) {
+export function comparisonQuery(query: ComparisonQuery) {
   return {
     from: query.from,
     to: query.to,
@@ -79,7 +79,7 @@ function comparisonQuery(query: ComparisonQuery) {
   };
 }
 
-function comparisonFromBackend(
+export function comparisonFromBackend(
   body: traegerSchoolsContract.SchoolComparison,
 ): TraegerComparison {
   return {

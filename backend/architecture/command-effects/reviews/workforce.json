@@ -5276,7 +5276,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.MailOutcomes.MailOutcomes",
-      "reason": "Read-only delivery state: workforce reads what became of its payroll and absence mails through runtime.EmailOutcomes.EmailOutcomes in its tenant transaction (#7058). No persistent, lock or scope effect.",
+      "reason": "Copies the feedback flag from each existing transactional mail report for the requested entities. Delivery still reads only the requested mails in the caller’s tenant transaction. (#8094)",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.EmailOutcomes.EmailOutcomes",
       "target_owner": "delivery-platform"
@@ -5286,7 +5286,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.MailOutcomes.MailOutcomes",
-      "reason": "Read-only delivery state: workforce reads what became of its payroll and absence mails through tenant.TenantFromContext in its tenant transaction (#7058). No persistent, lock or scope effect.",
+      "reason": "Copies the feedback flag from each existing transactional mail report for the requested entities. The binding reads the tenant from the existing context; it does not open or change a scope. (#8094)",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
       "target_owner": "tenant-runtime"
@@ -5296,7 +5296,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.MailOutcomes.MailOutcomes",
-      "reason": "Read-only delivery state: workforce reads what became of its payroll and absence mails through tenant.TenantID.Int64 in its tenant transaction (#7058). No persistent, lock or scope effect.",
+      "reason": "Copies the feedback flag from each existing transactional mail report for the requested entities. Converting the scoped tenant ID to the delivery query argument neither writes nor changes scope. (#8094)",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantID.Int64",
       "target_owner": "tenant-runtime"
@@ -5612,6 +5612,46 @@
       "source_owner": "workforce",
       "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.observe",
       "target_owner": ""
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.ownTimeViews.ClockOverview",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.OwnTimeViews.ClockOverview",
+      "reason": "The root binds a read of the current school's Dienstplan booking in the caller's tenant transaction. It only gates the own shifts; it writes no settings and does not change tenant scope (#8078).",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveBool",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.ownTimeViews.ClockOverview",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.OwnTimeViews.ClockOverview",
+      "reason": "The root binds a read of the current school's Dienstplan booking in the caller's tenant transaction. It only gates the own shifts; it writes no settings and does not change tenant scope (#8078).",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsService.ResolveBool",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.ownTimeViews.Period",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.OwnTimeViews.Period",
+      "reason": "The root binds a read of the current school's Dienstplan booking in the caller's tenant transaction. It only gates the own shifts; it writes no settings and does not change tenant scope (#8078).",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveBool",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.ownTimeViews.Period",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.OwnTimeViews.Period",
+      "reason": "The root binds a read of the current school's Dienstplan booking in the caller's tenant transaction. It only gates the own shifts; it writes no settings and does not change tenant scope (#8078).",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsService.ResolveBool",
+      "target_owner": "settings-platform"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/workforce.WorkSessions.ExportSessions",
@@ -19193,13 +19233,24 @@
     },
     {
       "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timeTrackingEventPublisher.QueueStaffLeaveChanged",
+      "classification": "platform",
+      "effect": "notice",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.EventPublisher.QueueStaffLeaveChanged",
+      "reason": "Platform protocol participation (notice, #8081): Workforce announces an absence or quota change inside its tenant unit. Delivery's shared after-commit site (ADR 0310) sends only staff_leave_changed with empty data; rollback drops the signal. No persistence, locks, or change to the caller's transaction (ADR 0098).",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/application/realtimeevents.BoundTenantSignal.Announce",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timeTrackingEventPublisher.QueueStaffTimeTrackingChanged",
       "classification": "platform",
-      "effect": "durable",
+      "effect": "notice",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.EventPublisher.QueueStaffTimeTrackingChanged",
-      "reason": "Platform protocol participation (durable): workforce reaches modules/delivery/compose.QueueStaffTimeTrackingChanged (delivery-platform) through roots/owners.timeTrackingEventPublisher.QueueStaffTimeTrackingChanged. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "reason": "Platform protocol participation (notice, #8081): Workforce queues staff_time_tracking_changed inside its existing tenant unit. Delivery sends the same empty event through the shared after-commit site (ADR 0310); rollback drops it. No persistence, locks, or change to the caller's transaction (ADR 0098).",
       "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.QueueStaffTimeTrackingChanged",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/application/realtimeevents.BoundTenantSignal.Announce",
       "target_owner": "delivery-platform"
     },
     {

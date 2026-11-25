@@ -1,5 +1,6 @@
 "use client";
 
+import { timeTrackingKeys } from "~/lib/swr/portal-keys";
 import { ListRowLink } from "~/components/ui/list-row-link";
 import { FramedList } from "~/components/ui/framed-list";
 import { COUNTER_TONE } from "~/lib/counter-tones";
@@ -500,7 +501,8 @@ function StaffPageContent() {
       (key) =>
         key.includes("staff-time-accounts") ||
         key.includes("staff-month-summary-") ||
-        key.includes("time-tracking-month-summary-"),
+        key.includes(timeTrackingKeys.periodFamily) ||
+        key.includes(timeTrackingKeys.overviewFamily),
     );
   const handleCloseMonth = async (reason: string) => {
     await staffMonthCloseService.closeMonth({

@@ -24,14 +24,16 @@ const maxAbsenceMailIDs = 200
 // mail that told the applicant about a decision or a question. An absence
 // without such a mail is absent.
 type AbsenceDecisionMailsResponse struct {
-	Absences map[ident.ID]string `json:"absences"`
+	AwaitingFeedback bool                `json:"awaiting_feedback"`
+	Absences         map[ident.ID]string `json:"absences"`
 }
 
 // AbsenceRequestMailsResponse maps an absence ID to the mails of its latest
 // notice to the approvers, counted by outcome. An absence without a notice
 // mail is absent.
 type AbsenceRequestMailsResponse struct {
-	Absences map[ident.ID]map[string]int `json:"absences"`
+	AwaitingFeedback bool                        `json:"awaiting_feedback"`
+	Absences         map[ident.ID]map[string]int `json:"absences"`
 }
 
 // getAbsenceDecisionMails handles GET /api/staff/absences/mails?ids=1,2: the
@@ -44,13 +46,13 @@ func (rs *StaffAdminResource) getAbsenceDecisionMails(w http.ResponseWriter, r *
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
-	mails, err := rs.absenceMails.AbsenceDecisionMails(r.Context(), ids)
+	mails, active, err := rs.absenceMails.AbsenceDecisionMails(r.Context(), ids)
 	if err != nil {
 		rs.logger.Error("failed to read absence decision mails", "error", err.Error())
 		common.RenderError(w, r, common.ErrorInternalServer(err))
 		return
 	}
-	out := AbsenceDecisionMailsResponse{Absences: make(map[ident.ID]string, len(mails))}
+	out := AbsenceDecisionMailsResponse{AwaitingFeedback: active, Absences: make(map[ident.ID]string, len(mails))}
 	for id, outcome := range mails {
 		out.Absences[ident.ID(id)] = outcome
 	}
@@ -78,12 +80,12 @@ func (rs *Resource) getOwnAbsenceRequestMails(w http.ResponseWriter, r *http.Req
 			ids = append(ids, absence.ID.Int64())
 		}
 	}
-	mails, err := rs.absenceMails.AbsenceRequestMails(r.Context(), ids)
+	mails, active, err := rs.absenceMails.AbsenceRequestMails(r.Context(), ids)
 	if err != nil {
 		common.RenderError(w, r, common.ErrorInternalServer(err))
 		return
 	}
-	out := AbsenceRequestMailsResponse{Absences: make(map[ident.ID]map[string]int, len(mails))}
+	out := AbsenceRequestMailsResponse{AwaitingFeedback: active, Absences: make(map[ident.ID]map[string]int, len(mails))}
 	for id, counts := range mails {
 		out.Absences[ident.ID(id)] = counts
 	}

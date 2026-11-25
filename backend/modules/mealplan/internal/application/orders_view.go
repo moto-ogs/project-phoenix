@@ -20,7 +20,7 @@ func (s *Service) orderView(ctx context.Context, from, to domain.Date) (view dom
 			return domain.OperationStats{}, rulesErr
 		}
 		var stats domain.OperationStats
-		view, stats, err = s.provisionalOrders(txCtx, rules, from, to)
+		view, stats, err = s.provisionalOrders(txCtx, rules, from, to, true)
 		return stats, err
 	})
 	return view, err
@@ -183,7 +183,7 @@ func (s *Service) currentChildren(ctx context.Context, rules domain.OrderingRule
 // provisionalOrders lays out the weekdays of [from, to] without writing: the
 // due orders not stored yet and the changes since the last recording are
 // derived in memory, the changes without a number.
-func (s *Service) provisionalOrders(ctx context.Context, rules domain.OrderingRules, from, to domain.Date) (domain.OrderView, domain.OperationStats, error) {
+func (s *Service) provisionalOrders(ctx context.Context, rules domain.OrderingRules, from, to domain.Date, withNames bool) (domain.OrderView, domain.OperationStats, error) {
 	now := s.now()
 	today := domain.DateFromInstant(now)
 	seen := registrations{}
@@ -202,6 +202,9 @@ func (s *Service) provisionalOrders(ctx context.Context, rules domain.OrderingRu
 		window.state.Changes = append(window.state.Changes, change)
 	}
 	view := buildOrderView(rules, window, current, from, to, today)
+	if !withNames {
+		return view, stats, nil
+	}
 	names, nameStats, err := s.orderNames(ctx, view, current)
 	view.Names = names
 	for index := range view.Days {

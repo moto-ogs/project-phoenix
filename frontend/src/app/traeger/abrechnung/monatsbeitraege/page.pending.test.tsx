@@ -48,7 +48,7 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/abrechnung/monatsbeitraege",
 }));
 
-import TraegerMonatsbeitraegePage from "./page";
+import TraegerMonatsbeitraegePage from "./page-content";
 
 const TITLE = "Monatslauf starten";
 

@@ -262,7 +262,7 @@ export interface AbsenceTypeAllowanceSummary {
   readonly version: string;
 }
 
-export function mapAllowance(
+function mapAllowance(
   data: AllowanceSummaryResponse,
 ): AbsenceTypeAllowanceSummary {
   return {

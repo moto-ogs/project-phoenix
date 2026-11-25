@@ -1,3 +1,4 @@
+import type { z } from "zod";
 import { bffJson } from "~/lib/bff-fetch";
 /**
  * Client of the Elternabrechnung in the Träger portal (#4664): the
@@ -49,7 +50,7 @@ export interface ContributionRule {
 export type ContributionRuleInput = Omit<ContributionRule, "id" | "version">;
 
 /** A rule of a kind this build does not know is left out of the list. */
-function rulesFromBackend(
+export function rulesFromBackend(
   rules: readonly sharedContract.ContributionRule[],
 ): ContributionRule[] {
   return rules.flatMap((rule) => {
@@ -156,7 +157,14 @@ function costBearerFromBackend(bearer: sharedContract.CostBearer): CostBearer {
 
 /** The cost bearers of the Träger by name. */
 export async function fetchCostBearers(): Promise<CostBearer[]> {
-  const bearers = await bffJson("org", "GET /traeger/cost-bearers/");
+  return mapCostBearers(await bffJson("org", "GET /traeger/cost-bearers/"));
+}
+
+export function mapCostBearers(
+  bearers: z.output<
+    (typeof traegerCostBearersContract.routes)["GET /traeger/cost-bearers/"]["response"]
+  >["data"],
+): CostBearer[] {
   return bearers.map(costBearerFromBackend);
 }
 

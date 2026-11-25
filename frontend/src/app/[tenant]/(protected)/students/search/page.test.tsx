@@ -409,10 +409,7 @@ vi.mock("~/lib/api", () => ({
 }));
 
 vi.mock("~/lib/usercontext-api", () => ({
-  userContextService: {
-    getMyEducationalGroups: vi.fn(() => Promise.resolve([])),
-    getMySupervisedGroups: vi.fn(() => Promise.resolve([])),
-  },
+  userContextService: {},
 }));
 
 // Selects several options of a multi-select filter (#2218) and fires the one

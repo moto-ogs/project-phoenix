@@ -76,16 +76,19 @@ func TestAbsenceMailsShowWhatBecameOfThem(t *testing.T) {
 		t.Helper()
 		require.NoError(t, inMailSchool(ctx, db, testpkg.Tenant(t), fn))
 	}
-	read := func(tenantCtx func(func(context.Context) error)) (map[int64]map[string]int, map[int64]string) {
+	read := func(tenantCtx func(func(context.Context) error), wantRequest, wantDecision bool) (map[int64]map[string]int, map[int64]string) {
 		t.Helper()
 		var requests map[int64]map[string]int
 		var decisions map[int64]string
 		tenantCtx(func(txCtx context.Context) error {
 			var err error
-			if requests, err = status.AbsenceRequestMails(txCtx, []int64{absenceID}); err != nil {
+			var pendingRequest, pendingDecision bool
+			if requests, pendingRequest, err = status.AbsenceRequestMails(txCtx, []int64{absenceID}); err != nil {
 				return err
 			}
-			decisions, err = status.AbsenceDecisionMails(txCtx, []int64{absenceID})
+			decisions, pendingDecision, err = status.AbsenceDecisionMails(txCtx, []int64{absenceID})
+			require.Equal(t, wantRequest, pendingRequest)
+			require.Equal(t, wantDecision, pendingDecision)
 			return err
 		})
 		return requests, decisions
@@ -97,7 +100,7 @@ func TestAbsenceMailsShowWhatBecameOfThem(t *testing.T) {
 		return err
 	})
 	settleWorkforceMail(t, db, workforce.AbsenceMailRequestReceived, absenceID, "failed")
-	requests, decisions := read(inTenant)
+	requests, decisions := read(inTenant, false, false)
 	require.Equal(t, map[int64]map[string]int{absenceID: {"undeliverable": 1}}, requests)
 	require.Empty(t, decisions, "no decision yet")
 
@@ -110,7 +113,7 @@ func TestAbsenceMailsShowWhatBecameOfThem(t *testing.T) {
 		_, err := service.StaffAbsences.ResubmitAbsence(txCtx, requester.ID, requesterAccount.ID, absenceID, "Zweite Antwort")
 		return err
 	})
-	requests, decisions = read(inTenant)
+	requests, decisions = read(inTenant, true, true)
 	require.Equal(t, map[int64]map[string]int{absenceID: {"queued": 1}}, requests, "the bounced first round is history")
 	require.Equal(t, map[int64]string{absenceID: "queued"}, decisions, "the question mail")
 
@@ -120,14 +123,14 @@ func TestAbsenceMailsShowWhatBecameOfThem(t *testing.T) {
 		return err
 	})
 	settleWorkforceMail(t, db, workforce.AbsenceMailRequestApproved, absenceID, "delivered")
-	_, decisions = read(inTenant)
+	_, decisions = read(inTenant, true, false)
 	require.Equal(t, map[int64]string{absenceID: "delivered"}, decisions)
 
 	// Another school reads none of it.
 	foreign, _ := testpkg.CreateTestTenant(t, db)
 	requests, decisions = read(func(fn func(context.Context) error) {
 		require.NoError(t, inMailSchool(testpkg.WithTenantRuntime(t, testpkg.TenantContext(foreign), db), db, foreign, fn))
-	})
+	}, false, false)
 	require.Empty(t, requests)
 	require.Empty(t, decisions)
 }

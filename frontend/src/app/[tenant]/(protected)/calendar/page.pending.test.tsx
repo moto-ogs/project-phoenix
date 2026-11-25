@@ -32,6 +32,7 @@ const {
 // These cases create appointments; the edit form's detail read
 // (preload, reload after a refusal) is not reached.
 vi.mock("~/lib/swr", () => ({
+  useTenantMutate: () => vi.fn(),
   useSWRAuth: mockUseSWRAuth,
   useSWRPreload: () => () => Promise.resolve(undefined),
   revalidateOrThrow: () => Promise.reject(new Error("not reached")),

@@ -25,6 +25,14 @@ func (unconfiguredRequestSharer) LoadRequestShareVisibility(context.Context, int
 	return submitterOnlyVisibility{}, nil
 }
 
+func (unconfiguredRequestSharer) LoadRequestShareVisibilities(_ context.Context, studentIDs []int64) (map[int64]RequestShareVisibility, error) {
+	out := make(map[int64]RequestShareVisibility, len(studentIDs))
+	for _, studentID := range studentIDs {
+		out[studentID] = submitterOnlyVisibility{}
+	}
+	return out, nil
+}
+
 type submitterOnlyVisibility struct{}
 
 func (submitterOnlyVisibility) Allows(_ string, _, accountID, submittedBy int64) bool {

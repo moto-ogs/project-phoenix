@@ -365,6 +365,7 @@ func TestADelayedMailBecomesOverdue(t *testing.T) {
 		latest, err := store.LatestEmailOutcomes(txCtx, school, []string{"guardian_invitation"}, []string{address})
 		require.NoError(t, err)
 		assert.Equal(t, deliveryContract.EmailDelayed, latest[address].Outcome)
+		assert.True(t, latest[address].AwaitingFeedback)
 		require.NotNil(t, latest[address].OutcomeAt)
 		assert.WithinDuration(t, providerAt, *latest[address].OutcomeAt, time.Microsecond)
 		return nil
@@ -374,6 +375,7 @@ func TestADelayedMailBecomesOverdue(t *testing.T) {
 		latest, err := store.LatestEmailOutcomes(txCtx, school, []string{"guardian_invitation"}, []string{address})
 		require.NoError(t, err)
 		assert.Equal(t, deliveryContract.EmailOverdue, latest[address].Outcome)
+		assert.False(t, latest[address].AwaitingFeedback)
 		return nil
 	})
 }
@@ -696,4 +698,33 @@ func TestTraegerMailHoldsOfAnswerLikeTheSingleRead(t *testing.T) {
 		assert.NotContains(t, held, free)
 		return nil
 	}))
+}
+
+func TestAcceptedMailAwaitsFeedbackOnlyForATrackedProviderSend(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	store, ctx := testStore(t, db)
+	school := testpkg.Tenant(t)
+	id := relatedMail(t, db, store, ctx, school, "feedback-channel", "channel@example.test", 8094)
+	for _, test := range []struct {
+		name       string
+		providerID any
+		fallback   bool
+		want       bool
+	}{
+		{"smtp", nil, false, false}, {"provider", "feedback-provider", false, true}, {"fallback", "feedback-provider", true, false},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			_, err := db.NewRaw(`UPDATE platform.email_outbox SET status='sent', sent_at=NOW(), provider_message_id=?, fallback_requested_at=CASE WHEN ? THEN NOW() END WHERE id=?`, test.providerID, test.fallback, id).Exec(ctx)
+			require.NoError(t, err)
+			inSchool(t, ctx, db, school, func(tx context.Context) error {
+				rows, err := store.EmailOutcomes(tx, school, deliveryContract.EmailOutcomeQuery{RelatedType: "invitation", RelatedIDs: []int64{8094}})
+				require.NoError(t, err)
+				require.Len(t, rows, 1)
+				assert.Equal(t, deliveryContract.EmailAccepted, rows[0].Outcome)
+				assert.Equal(t, test.want, rows[0].AwaitingFeedback)
+				return nil
+			})
+		})
+	}
 }

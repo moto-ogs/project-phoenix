@@ -1,52 +1,21 @@
-"use client";
+import { catalogPhase } from "~/lib/traeger/holiday-seed-reads.server";
+import { Suspense } from "react";
+import { SWRServerSeed } from "~/lib/swr/server-seed";
+import { traegerPageSeed } from "~/lib/traeger/page-seed.server";
+import NewTraegerCatalogOfferingPage from "./page-content";
 
-// Neues Betreuungsangebot einer Anmeldephase des Trägers (#4704).
-
-import { useParams, useRouter } from "next/navigation";
-import { CatalogOfferingForm } from "~/components/traeger/catalog-offering-form";
-import { useTraegerCatalogPhase } from "~/components/traeger/use-traeger-catalog";
-import { TenantPage } from "~/components/ui/tenant-page";
-import { useToast } from "~/contexts/ToastContext";
-import { useInvalidateFamily } from "~/lib/swr";
-import { traegerKeys } from "~/lib/swr/traeger-keys";
-import { createTraegerOffering } from "~/lib/traeger-catalog-api";
-import { traegerPath } from "~/lib/traeger-url";
-
-export default function NewTraegerCatalogOfferingPage() {
-  const router = useRouter();
-  const params = useParams<{ id: string }>();
-  const id = params?.id ?? "";
-  const { data: phase, loadError } = useTraegerCatalogPhase(id);
-  const invalidate = useInvalidateFamily();
-  const { success } = useToast();
-  const phaseHref = traegerPath(`/traeger/anmeldephasen/${id}`);
-
+export default async function Page({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const { seed, claims } = traegerPageSeed([catalogPhase(id)]);
   return (
-    <TenantPage
-      title="Neues Betreuungsangebot"
-      info="Die Schulen bekommen das Angebot, wenn du die Anmeldephase freigibst und überträgst."
-      back
-      backHref={phaseHref}
-      backLabel={
-        phase ? `Zurück zu „${phase.draft.name}“` : "Zurück zur Anmeldephase"
-      }
-      error={loadError}
-      loading={!loadError && !phase}
-    >
-      {phase ? (
-        <CatalogOfferingForm
-          saveLabel="Angebot anlegen"
-          onSave={(draft) => createTraegerOffering(id, draft)}
-          onCancel={() => router.push(phaseHref)}
-          onSaved={() => {
-            void invalidate(traegerKeys.catalogFamily);
-            success(
-              "Das Angebot ist angelegt. Die Schulen bekommen es, wenn du überträgst.",
-            );
-            router.push(phaseHref);
-          }}
-        />
-      ) : null}
-    </TenantPage>
+    <Suspense fallback={null}>
+      <SWRServerSeed seed={seed} claims={claims} render>
+        <NewTraegerCatalogOfferingPage />
+      </SWRServerSeed>
+    </Suspense>
   );
 }

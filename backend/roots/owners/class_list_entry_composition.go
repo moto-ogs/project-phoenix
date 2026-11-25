@@ -24,8 +24,8 @@ func NewClassListEntryRosterReader(entries schoolmembership.ClassListEntries) en
 	return classListEntryRosterReader{entries: entries}
 }
 
-func (r classListEntryRosterReader) ListClassListEntries(ctx context.Context, schoolClass string) ([]enrollmentCompose.ClassListEntry, error) {
-	values, err := r.entries.ListClassListEntriesInDisplayOrder(ctx, schoolmembership.ClassListEntryFilter{SchoolClass: schoolClass})
+func (r classListEntryRosterReader) ListClassListEntries(ctx context.Context, classes []string) ([]enrollmentCompose.ClassListEntry, error) {
+	values, err := r.entries.ListClassListEntriesInDisplayOrder(ctx, schoolmembership.ClassListEntryFilter{SchoolClasses: classes})
 	if err != nil {
 		return nil, err
 	}

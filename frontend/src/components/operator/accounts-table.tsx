@@ -8,12 +8,16 @@ import type {
   SchoolAccount,
 } from "~/lib/operator/provisioning-helpers";
 import { DataTable } from "~/components/ui/data-table";
-import type { DataTableColumn } from "~/components/ui/data-table";
+import type {
+  DataTableColumn,
+  DataTableMoreAction,
+} from "~/components/ui/data-table";
 import {
   StatusBadge,
   type StatusBadgeTone,
 } from "~/components/ui/status-badge";
 import { StatusColorBadge } from "~/components/ui/status-color-badge";
+import type { AccountSort } from "~/lib/operator/account-pages";
 import { LOCATION_COLORS } from "~/lib/location-helper";
 
 type AccountRow = SchoolAccount | OrgAccount;
@@ -89,14 +93,10 @@ function getDisplayName(account: AccountRow): string {
     : "–";
 }
 
-function getNameSortValue(account: AccountRow): string {
-  return account.firstName || account.lastName
-    ? `${account.lastName} ${account.firstName}`.trim().toLowerCase()
-    : "";
-}
-
 interface AccountsTableProps {
-  accounts: SchoolAccount[] | OrgAccount[];
+  accounts: AccountRow[];
+  serverSort?: AccountSort & { onChange: (sort: AccountSort) => void };
+  moreAction?: DataTableMoreAction;
   showSchool?: boolean;
   isLoading?: boolean;
   selectedSchool?: School | null;
@@ -114,6 +114,8 @@ interface AccountsTableProps {
 
 export function AccountsTable({
   accounts,
+  serverSort,
+  moreAction,
   showSchool = false,
   isLoading = false,
   selectedSchool,
@@ -129,7 +131,7 @@ export function AccountsTable({
         key: "schoolName",
         header: "Schule",
         render: (row) => (row as OrgAccount).schoolName,
-        sortValue: (row) => (row as OrgAccount).schoolName.toLowerCase(),
+        serverSortable: true,
         className: "text-gray-600",
       });
     }
@@ -139,14 +141,14 @@ export function AccountsTable({
         key: "name",
         header: "Name",
         render: getDisplayName,
-        sortValue: getNameSortValue,
+        serverSortable: true,
         className: "font-medium text-gray-900",
       },
       {
         key: "email",
         header: "E-Mail",
         render: (row) => row.email,
-        sortValue: (row) => row.email.toLowerCase(),
+        serverSortable: true,
         className: "text-gray-600",
       },
       {
@@ -162,13 +164,13 @@ export function AccountsTable({
           ) : (
             <span className="text-gray-500">–</span>
           ),
-        sortValue: (row) => row.roleName.toLowerCase(),
+        serverSortable: true,
       },
       {
         key: "pedagogicRole",
         header: "Päd. Rolle",
         render: (row) => row.pedagogicRole || "–",
-        sortValue: (row) => row.pedagogicRole.toLowerCase(),
+        serverSortable: true,
         className: "text-gray-600",
       },
       {
@@ -182,7 +184,7 @@ export function AccountsTable({
         key: "status",
         header: "Status",
         render: (row) => <AccountStatusBadge status={row.status} />,
-        sortValue: (row) => row.status.toLowerCase(),
+        serverSortable: true,
       },
       {
         key: "actions",
@@ -262,15 +264,15 @@ export function AccountsTable({
   return (
     <DataTable
       columns={columns}
-      rows={accounts as AccountRow[]}
+      rows={accounts}
       getRowKey={(row) => {
         const orgAccount = showSchool ? (row as OrgAccount) : undefined;
         return row.accountId !== "0"
           ? `${orgAccount?.schoolId ?? ""}-${row.accountId}`
-          : `${orgAccount?.schoolId ?? ""}-invited-${row.email}`;
+          : `${orgAccount?.schoolId ?? ""}-invited-${row.invitationId ?? row.email}`;
       }}
-      defaultSortKey={showSchool ? "schoolName" : "name"}
-      pageSize={50}
+      serverSort={serverSort}
+      moreAction={moreAction}
       isLoading={isLoading}
     />
   );

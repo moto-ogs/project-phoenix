@@ -38,6 +38,10 @@ vi.mock("next-auth/react", () => ({
   useSession: () => ({ data: null }),
 }));
 
+vi.mock("~/lib/hooks/use-message-mails", () => ({
+  useThreadMails: () => ({ mails: {}, refresh: vi.fn() }),
+}));
+
 vi.mock("~/lib/swr", () => ({
   useSWRAuth: (...args: unknown[]) => mockUseSWR(...args),
   // An empty inbox cache: no seed.

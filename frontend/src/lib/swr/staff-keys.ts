@@ -37,9 +37,11 @@ export const staffKeys = {
  * Anträge; Konto und Schule ergänzen die Hooks. Die Leitung liest die Mails
  * zu ihren Entscheidungen, die Person die Meldung ihrer wartenden Anträge.
  */
+const decisionMailFamily = "staff-absence-mails-";
 export const absenceMailKeys = {
+  decisionsFamily: decisionMailFamily,
   decisions: (absenceIds: readonly string[]) =>
-    `staff-absence-mails-${absenceIds.join(",")}`,
+    `${decisionMailFamily}${absenceIds.join(",")}`,
   ownRequests: (waitingIds: readonly string[]) =>
     `own-absence-request-mails-${waitingIds.join(",")}`,
 } as const;
@@ -149,12 +151,8 @@ export const staffAbsenceKeys = {
     value: string,
   ) =>
     `staff-absences-rebooking-preview-${encodeURIComponent(staffId)}-${absenceIds.join(",")}-${encodeURIComponent(value)}`,
-  /** Eigene Abwesenheiten im Zeitraum; derselbe Eintrag wie die Seite
-   *  „Zeiterfassung“. */
+  /** Abwesenheiten für die Überschneidungsprüfung im Urlaubsformular. */
   ownList: (from: string, to: string) => `time-tracking-absences-${from}-${to}`,
-  ownVacationQuota: (year: number) => `time-tracking-absences-quota-${year}`,
-  ownQuestioned: () => "time-tracking-absences-questioned",
-  ownAllowances: () => "time-tracking-absences-allowances",
   /** Abwesenheiten für das Stundenkonto einer Person (Reiter „Übersicht“). */
   accountListFamily: (staffId: string) => `staff-absences-account-${staffId}-`,
   accountList: (staffId: string, from: string, to: string): string =>

@@ -35,8 +35,6 @@ type (
 	SchoolAccountRegistration    = domain.SchoolAccountRegistration
 	CreatedAccount               = domain.CreatedAccount
 	SchoolIdentityRequest        = domain.SchoolIdentityRequest
-	SchoolAccount                = domain.SchoolAccount
-	OrganizationAccount          = domain.OrganizationAccount
 	ProvisioningDevice           = domain.Device
 	NewProvisioningDevice        = domain.NewDevice
 	DeviceSession                = domain.DeviceSession
@@ -65,6 +63,7 @@ const (
 type ProvisioningDependencies struct {
 	PWAUsageWindowDays int
 	Organizations      organizationtenancy.Capability
+	Accounts           organizationtenancy.AccountDirectory
 	Observe            func(Observation) // of the owner's records command (#4720)
 	Identity           ProvisioningIdentity
 	Devices            ProvisioningDevices
@@ -89,7 +88,7 @@ func NewProvisioning(dependencies ProvisioningDependencies, dashboard organizati
 		PWAUsageWindowDays: dependencies.PWAUsageWindowDays, Organizations: dependencies.Organizations,
 		ErasureOrderRecords: application.New(postgresNative.New(postgresNative.NewDatabase(), dependencies.Now), postgresNative.Transaction{}, dependencies.Observe, calendar.CalendarDateClock(dependencies.Now)),
 		Transaction:         postgresNative.Transaction{}, Dashboard: dashboard, DeviceSlots: application.New(postgresNative.New(postgresNative.NewDatabase(), dependencies.Now), postgresNative.Transaction{}, dependencies.Observe, calendar.CalendarDateClock(dependencies.Now)),
-		Identity: dependencies.Identity, Devices: dependencies.Devices, People: dependencies.People,
+		Accounts: dependencies.Accounts, Identity: dependencies.Identity, Devices: dependencies.Devices, People: dependencies.People,
 		Presence: dependencies.Presence, Categories: dependencies.Categories, Settings: dependencies.Settings,
 		Audit: dependencies.Audit, Secrets: dependencies.Secrets, Logger: dependencies.Logger, Now: dependencies.Now,
 	})

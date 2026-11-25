@@ -13,7 +13,10 @@ import { formatDate } from "~/lib/date-helpers";
 export function AllowanceExpiryNote({
   summary,
 }: {
-  readonly summary: AbsenceTypeAllowanceSummary;
+  readonly summary: Pick<
+    AbsenceTypeAllowanceSummary,
+    "carriedIn" | "expiresOn" | "expiredDays" | "remainingDays"
+  >;
 }) {
   const lines: { text: string; expired: boolean }[] = [];
   const carried = summary.carriedIn;

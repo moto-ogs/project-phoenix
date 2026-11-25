@@ -52,7 +52,7 @@ import {
   useListOverlays,
 } from "~/lib/list-overlays";
 import { useSWRAuth, useTenantMutateMatching } from "~/lib/swr";
-import { staffAbsenceKeys } from "~/lib/swr/staff-keys";
+import { absenceMailKeys, staffAbsenceKeys } from "~/lib/swr/staff-keys";
 import { useTenantSlugSafe } from "~/lib/tenant-context";
 
 const logger = createLogger({ component: "StaffAbsenceRequestList" });
@@ -172,7 +172,10 @@ export function StaffAbsenceRequestList({
   );
   const { mails, loadError: mailLoadError } =
     useAbsenceDecisionMails(mailedIds);
-  const revalidateLists = useTenantMutateMatching([family]);
+  const revalidateLists = useTenantMutateMatching([
+    family,
+    absenceMailKeys.decisionsFamily,
+  ]);
   const loadError = useSwrLoadError(error, "die Liste der Anträge", () =>
     mutate(),
   );

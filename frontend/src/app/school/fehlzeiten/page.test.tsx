@@ -28,7 +28,7 @@ vi.mock("~/lib/file-download", () => ({
   openBlobForPrint: vi.fn(),
 }));
 
-import SchoolAbsenceListPage from "./page";
+import SchoolAbsenceListPage from "./page-content";
 
 const CLASSES_KEY = "class-day-my-classes";
 

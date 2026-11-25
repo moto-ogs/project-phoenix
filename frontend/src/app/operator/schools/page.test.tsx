@@ -155,7 +155,7 @@ vi.mock("../provisioning/create-account-modal", () => ({
     ) : null,
 }));
 
-import OperatorSchoolsPage from "./page";
+import OperatorSchoolsPage from "./page-content";
 import {
   mockOrg,
   mockSchool,

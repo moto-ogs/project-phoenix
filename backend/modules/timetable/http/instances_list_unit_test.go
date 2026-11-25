@@ -64,12 +64,12 @@ func TestSummarizeInstanceStudentsEarlyPickupRequiresExpectedCareDay(t *testing.
 		return map[int64]map[calendar.Date]careplan.CareDayStatus{studentID: {day: v}}
 	}
 
-	scheduled := summarizeInstanceStudents(inst, rows, verdicts(careplan.CareDayScheduled), cutoffs)
+	scheduled := summarizeInstanceStudents(inst, rows, verdicts(careplan.CareDayScheduled), cutoffs, timetable.PlannerFull)
 	if assert.Len(t, scheduled.students, 1) && assert.NotNil(t, scheduled.students[0].EarlyPickupTime) {
 		assert.Equal(t, "14:45", *scheduled.students[0].EarlyPickupTime)
 	}
 
-	cancelled := summarizeInstanceStudents(inst, rows, verdicts(careplan.CareDayCancelled), cutoffs)
+	cancelled := summarizeInstanceStudents(inst, rows, verdicts(careplan.CareDayCancelled), cutoffs, timetable.PlannerFull)
 	if assert.Len(t, cancelled.students, 1) {
 		assert.Nil(t, cancelled.students[0].EarlyPickupTime)
 	}

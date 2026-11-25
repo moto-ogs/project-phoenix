@@ -1,4 +1,8 @@
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
+import { parentFamilyFixture } from "~/test/parent-family-fixture";
 import { IsolatedSWRCache } from "~/lib/swr";
+const family = parentFamilyFixture();
+
 vi.unmock("swr");
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
@@ -18,11 +22,7 @@ import { ApiError } from "~/lib/api-error";
 import { NextIntlClientProvider } from "next-intl";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import deMessages from "~/i18n/messages/de.generated";
-import {
-  listGroupThreads,
-  listMessageThreads,
-  listMyChildren,
-} from "~/lib/parent-api";
+import { listGroupThreads, listMessageThreads } from "~/lib/parent-api";
 import { catalogText } from "~/test/error-catalog-text";
 import { ParentMessagesPage } from "./parent-messages-page";
 
@@ -32,8 +32,7 @@ vi.mock("~/lib/parent-url", () => ({
 
 vi.mock("~/lib/parent-api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/lib/parent-api")>()),
-  listMyChildren: vi.fn(),
-  getChildFeatures: vi.fn().mockResolvedValue({}),
+
   listMessageThreads: vi.fn(),
   listGroupThreads: vi.fn(),
 }));
@@ -48,7 +47,7 @@ vi.mock("~/components/parent/ogs-conversation", () => ({
   ),
 }));
 
-const mockedChildren = vi.mocked(listMyChildren);
+const mockedChildren = family.children;
 const mockedThreads = vi.mocked(listMessageThreads);
 const mockedGroupThreads = vi.mocked(listGroupThreads);
 
@@ -61,7 +60,7 @@ const felix = {
   status: "active",
   school_name: "Schule am Berg",
   school_slug: "berg",
-} as unknown as Awaited<ReturnType<typeof listMyChildren>>[number];
+} as unknown as parentMeContract.ChildResponse;
 
 const mia = { ...felix, student_id: "43", first_name: "Mia" };
 
@@ -77,6 +76,8 @@ function renderPage() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+
+  family.mockRead();
   mockedThreads.mockResolvedValue([]);
   mockedGroupThreads.mockResolvedValue([]);
 });

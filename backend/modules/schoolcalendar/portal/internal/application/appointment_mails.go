@@ -41,7 +41,7 @@ func (s *service) StaffAppointmentMails(ctx context.Context, appointmentID int64
 	if err != nil {
 		return nil, fmt.Errorf("calendar: read appointment mails: %w", err)
 	}
-	notArrived := countAppointmentMails(result.Kinds, newestMailPerAddress(mails))
+	notArrived := countAppointmentMails(result, newestMailPerAddress(mails))
 	if len(notArrived) == 0 {
 		return result, nil
 	}
@@ -59,13 +59,14 @@ func (s *service) StaffAppointmentMails(ctx context.Context, appointmentID int64
 
 // countAppointmentMails counts the mails into kinds by kind and outcome and
 // returns, per kind, the addresses whose mail did not arrive.
-func countAppointmentMails(kinds map[string]map[string]int, mails []ports.AppointmentMail) map[string]map[string]bool {
+func countAppointmentMails(result *AppointmentMails, mails []ports.AppointmentMail) map[string]map[string]bool {
 	notArrived := map[string]map[string]bool{}
 	for _, mail := range mails {
-		if kinds[mail.Kind] == nil {
-			kinds[mail.Kind] = map[string]int{}
+		result.AwaitingFeedback = result.AwaitingFeedback || mail.AwaitingFeedback
+		if result.Kinds[mail.Kind] == nil {
+			result.Kinds[mail.Kind] = map[string]int{}
 		}
-		kinds[mail.Kind][mail.Outcome]++
+		result.Kinds[mail.Kind][mail.Outcome]++
 		if !mailNotArrived[mail.Outcome] {
 			continue
 		}

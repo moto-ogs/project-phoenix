@@ -741,6 +741,7 @@ export const TranslatedTextSchema: z.ZodType<TranslatedText, unknown> = object<T
 
 /** Go: enrollment.RequestMailOutcome */
 export interface RequestMailOutcome {
+  awaiting_feedback?: boolean;
   kind: string;
   outcome: string;
   address_mark?: string;
@@ -750,6 +751,7 @@ export interface RequestMailOutcome {
 }
 
 export const RequestMailOutcomeSchema: z.ZodType<RequestMailOutcome, unknown> = object<RequestMailOutcome>({
+  awaiting_feedback: optional(bool),
   kind: str,
   outcome: str,
   address_mark: optional(str),
@@ -1565,6 +1567,7 @@ export interface preferenceRequest {
 /** Go: organizationtenancy.OrganizationAccount */
 export interface OrganizationAccount {
   account_id: string;
+  invitation_id?: string;
   email: string;
   active: boolean;
   first_name: string;
@@ -1582,6 +1585,7 @@ export interface OrganizationAccount {
 
 export const OrganizationAccountSchema: z.ZodType<OrganizationAccount, unknown> = object<OrganizationAccount>({
   account_id: int64String,
+  invitation_id: optional(int64String),
   email: str,
   active: bool,
   first_name: str,

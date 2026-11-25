@@ -708,7 +708,7 @@ export function OgsConversation({
               composer that always 403s on send.
 
               Gate on the first care load FIRST: features start at DEFAULT_FEATURES
-              (notes_enabled = false) until getChildFeatures resolves, so without
+              (notes_enabled = false) until the family snapshot resolves, so without
               this guard a messaging-enabled school would flash the read-only
               fallback on first paint before flipping to the composer.
 

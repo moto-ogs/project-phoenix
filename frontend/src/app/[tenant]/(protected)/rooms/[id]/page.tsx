@@ -189,7 +189,8 @@ function RoomDetailPageContent() {
   // Ein offener Raum (#3065) hat seine gemeinsame Aufsichtsansicht. Sie ist
   // seit #4372 nur noch über „Räume“ erreichbar, also über diese Seite.
   // Dieselbe Regel wie der Zugang zur Aufsichtsseite.
-  const { overviewEnabled } = useOptionalSupervision();
+  const { overviewEnabled, refresh: refreshSupervision } =
+    useOptionalSupervision();
   const canOpenSupervision = canReadSupervisionData(session) || overviewEnabled;
 
   const tabItems: TenantPageTab[] = [
@@ -343,7 +344,16 @@ function RoomDetailPageContent() {
         toastSuccess(`Der Raum „${savedName}“ ist gespeichert.`);
         // A failed reload is a load error above the room, never an error
         // of the form (#6652).
-        await roomAfterWrite.refresh();
+        const renamed = stored.name !== room.name;
+        const releaseChanged = stored.isOpenRoom !== room.isOpenRoom;
+        await Promise.all([
+          roomAfterWrite.refresh(),
+          renamed
+            ? refreshSupervision()
+            : releaseChanged
+              ? refreshSupervision(["released-rooms"])
+              : undefined,
+        ]);
         return stored;
       } catch (updateError) {
         logger.error("failed to update room", {
@@ -361,6 +371,7 @@ function RoomDetailPageContent() {
     },
     [
       refreshRoomLists,
+      refreshSupervision,
       roomAfterWrite,
       room,
       roomId,
@@ -379,10 +390,17 @@ function RoomDetailPageContent() {
           : `Der Raum „${room.name}“ ist gelöscht.`,
       );
       setShowDeleteModal(false);
-      await refreshRoomFamily();
+      await Promise.all([refreshRoomFamily(), refreshSupervision()]);
       router.push(referrer);
     },
-    [referrer, room, router, refreshRoomFamily, toastSuccess],
+    [
+      referrer,
+      room,
+      router,
+      refreshRoomFamily,
+      refreshSupervision,
+      toastSuccess,
+    ],
   );
 
   if (loading && !room) {

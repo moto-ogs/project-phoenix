@@ -133,7 +133,7 @@ func (r *studentRepository) ListByGroupIDsIncludingAlumni(context.Context, []int
 	return nil, errStudentWritesMoved
 }
 
-func (r *studentRepository) ListClassRoster(context.Context, string) ([]*users.Student, error) {
+func (r *studentRepository) ListClassRoster(context.Context, []string) ([]*users.Student, error) {
 	return nil, errStudentWritesMoved
 }
 

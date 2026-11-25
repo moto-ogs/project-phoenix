@@ -146,7 +146,7 @@ function ruleFromBackend(
   };
 }
 
-function ruleSetFromBackend(
+export function ruleSetFromBackend(
   body: traegerCareRulesContract.CareRuleSet,
 ): CareRuleSet {
   return {

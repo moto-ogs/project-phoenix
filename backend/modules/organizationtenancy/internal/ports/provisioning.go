@@ -13,7 +13,7 @@ import (
 
 // ProvisioningIdentity is the Identity & Access part of provisioning: roles,
 // school-admin invitations, account registration, the school identity
-// chain, account listings and session revocation. Owner errors pass through
+// chain and session revocation. Owner errors pass through
 // unchanged, except the identity chain's input errors, which wrap
 // domain.ErrInvalidSchoolIdentity.
 type ProvisioningIdentity interface {
@@ -24,9 +24,6 @@ type ProvisioningIdentity interface {
 	RegisterSchoolAccount(ctx context.Context, registration domain.SchoolAccountRegistration) (domain.CreatedAccount, error)
 	EnsureSchoolIdentity(ctx context.Context, request domain.SchoolIdentityRequest) error
 	AssignRole(ctx context.Context, tenantID, accountID, roleID int64) error
-	ListSchoolAccounts(ctx context.Context, tenantID int64) ([]domain.SchoolAccount, error)
-	ListOrganizationAccounts(ctx context.Context, organizationID int64) ([]domain.OrganizationAccount, error)
-	ListAllAccounts(ctx context.Context) ([]domain.OrganizationAccount, error)
 	// RevokeSchoolSessions deletes every refresh session of the school.
 	RevokeSchoolSessions(ctx context.Context, tenantID int64) (int, error)
 	// InvalidatePendingInvitations consumes every open invitation of the school.

@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { usePathname } from "next/navigation";
 import { CaretDownIcon } from "@phosphor-icons/react";
 import { Button, ButtonLink } from "~/components/ui/button";
@@ -85,6 +92,7 @@ export function ParentFirstSteps({
   const t = useCareTermTranslations("parentFirstSteps");
   const pathname = usePathname();
   const [state, setState] = useState<ParentFirstStepsState | null>(null);
+  const beaconDescriptionId = useId();
   const [view, setView] = useState<View>("beacon");
   const [expanded, setExpanded] = useState<ParentFirstStepKey | null>(null);
   const [confirmDismiss, setConfirmDismiss] = useState(false);
@@ -379,15 +387,12 @@ export function ParentFirstSteps({
           variant="success"
           size="md"
           onClick={() => setView("checklist")}
-          aria-label={t("open", { count: steps.length - finished })}
+          aria-describedby={beaconDescriptionId}
           tooltip={t("tooltips.open")}
           className="gap-2"
         >
           <span>{t("shortTitle")}</span>
-          <span
-            aria-hidden
-            className="flex h-6 min-w-6 items-center justify-center rounded-full bg-white px-1.5 text-xs font-semibold text-gray-900"
-          >
+          <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-white px-1.5 text-xs font-semibold text-gray-900">
             {steps.length - finished}
           </span>
           <CaretDownIcon
@@ -397,6 +402,9 @@ export function ParentFirstSteps({
             aria-hidden
           />
         </Button>
+        <span id={beaconDescriptionId} hidden>
+          {t("open", { count: steps.length - finished })}
+        </span>
       </div>
     );
   }

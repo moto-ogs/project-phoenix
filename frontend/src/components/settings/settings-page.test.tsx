@@ -864,7 +864,10 @@ describe("SettingsContent (via renderTab)", () => {
     );
 
     await stateChange.waitFor(() => {
-      expect(mockRefreshSupervision).toHaveBeenCalledWith({ force: true });
+      expect(mockRefreshSupervision).toHaveBeenCalledWith([
+        "groups",
+        "sessions",
+      ]);
     });
   });
 

@@ -2,15 +2,39 @@ import type { ReactElement } from "react";
 import type { Session } from "next-auth";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { parentAuthMock, readParentSessionSnapshotMock, notBooked } = vi.hoisted(
-  () => ({
-    notBooked: { current: false },
-    parentAuthMock: vi.fn(async () => null),
-    readParentSessionSnapshotMock: vi.fn<() => Promise<Session | null>>(
-      async () => null,
+const {
+  parentAuthMock,
+  readParentSessionSnapshotMock,
+  notBooked,
+  requestPath,
+  loadShellSeedMock,
+} = vi.hoisted(() => ({
+  requestPath: { current: null as string | null },
+  loadShellSeedMock: vi.fn(() => ({
+    day: "2026-09-09",
+    seed: null,
+    render: false,
+  })),
+  notBooked: { current: false },
+  parentAuthMock: vi.fn(async () => null),
+  readParentSessionSnapshotMock: vi.fn<() => Promise<Session | null>>(
+    async () => null,
+  ),
+}));
+
+vi.mock("next/headers", () => ({
+  headers: async () =>
+    new Headers(
+      requestPath.current === null
+        ? {}
+        : { "x-moto-original-path": requestPath.current },
     ),
-  }),
-);
+}));
+
+vi.mock("~/lib/parent-seed.server", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/parent-seed.server")>()),
+  parentSeedProps: loadShellSeedMock,
+}));
 
 vi.mock("~/server/auth/parent", async () =>
   (await import("~/test/portal-binding")).mockPortalModule("parent", {
@@ -29,6 +53,9 @@ vi.mock("~/lib/portal-session-snapshot.server", () => ({
 }));
 
 const { default: ParentLayout } = await import("./layout");
+const { ParentServerSeed } =
+  await import("~/components/parent/parent-server-seed");
+const { ParentAuthGuard } = await import("./auth-guard");
 
 type ProvidersElement = ReactElement<{
   session: unknown;
@@ -47,6 +74,8 @@ beforeEach(() => {
   readParentSessionSnapshotMock.mockReset();
   readParentSessionSnapshotMock.mockResolvedValue(null);
   notBooked.current = false;
+  requestPath.current = null;
+  loadShellSeedMock.mockClear();
 });
 
 describe("ParentLayout", () => {
@@ -80,5 +109,55 @@ describe("ParentLayout", () => {
     const providers = await renderedProviders();
 
     expect(providers.props.children.props.notBooked).toBe(true);
+  });
+
+  // #8077: the protected shell gets the children list and features from the
+  // server; a public page gets no personal seed, also with a parent cookie.
+  describe("shell seed", () => {
+    const parentSession: Session = {
+      expires: "2026-09-10T12:00:00.000Z",
+      user: { id: "41", scope: "parent" },
+    };
+
+    it("starts the seed for a protected page and wraps the guard in it", async () => {
+      readParentSessionSnapshotMock.mockResolvedValue(parentSession);
+      requestPath.current = "/children/7?tab=angaben";
+
+      const providers = await renderedProviders();
+
+      const seed = providers.props.children as unknown as ReactElement<{
+        children: ReactElement;
+      }>;
+      expect(seed.type).toBe(ParentServerSeed);
+      expect(seed.props.children.type).toBe(ParentAuthGuard);
+      expect(loadShellSeedMock).toHaveBeenCalledTimes(1);
+    });
+
+    it.each(["/login", "/parents/ferienanmeldung/abc", "/demo"])(
+      "seeds nothing on the public page %s with a parent cookie",
+      async (path) => {
+        readParentSessionSnapshotMock.mockResolvedValue(parentSession);
+        requestPath.current = path;
+
+        const providers = await renderedProviders();
+
+        expect(providers.props.children.type).toBe(ParentAuthGuard);
+        expect(loadShellSeedMock).not.toHaveBeenCalled();
+      },
+    );
+
+    it("seeds nothing without a snapshot or for a module not booked", async () => {
+      requestPath.current = "/";
+      expect((await renderedProviders()).props.children.type).toBe(
+        ParentAuthGuard,
+      );
+
+      readParentSessionSnapshotMock.mockResolvedValue(parentSession);
+      notBooked.current = true;
+      expect((await renderedProviders()).props.children.type).toBe(
+        ParentAuthGuard,
+      );
+      expect(loadShellSeedMock).not.toHaveBeenCalled();
+    });
   });
 });

@@ -12,6 +12,7 @@ GET /api/timetable/gaps -> basis
 GET /api/timetable/holidays -> basis
 GET /api/timetable/instances/ -> basis
 GET /api/timetable/instances/edited-in-window -> basis
+GET /api/timetable/instances/{id}/attendance -> basis
 GET /api/timetable/instances/{id}/guardian-notice -> basis
 GET /api/timetable/instances/{id}/participants -> basis
 GET /api/timetable/instances/{id}/staff-pool -> basis

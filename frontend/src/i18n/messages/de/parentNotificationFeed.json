@@ -1,7 +1,7 @@
 {
   "bell": "Hinweise",
-  "bellCount": "Hinweise ({count})",
-  "badge": "{count} neue Hinweise",
+  "bellCount": "Hinweise: {count}",
+  "bellCountCapped": "{max}+ Hinweise, insgesamt {count}",
   "bellTooltip": "Zeigt Hinweise der Schule zu deinen Kindern.",
   "description": "Hinweise der Schule zu deinen Kindern, zum Beispiel wenn eine Betreuung ausfällt.",
   "close": "Schließen",

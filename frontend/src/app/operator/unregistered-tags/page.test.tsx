@@ -38,7 +38,7 @@ vi.mock("~/components/ui/data-table", () => ({
   DataTable: () => <div data-testid="scans-table" />,
 }));
 
-import OperatorUnregisteredTagsPage from "./page";
+import OperatorUnregisteredTagsPage from "./page-content";
 
 function render(ui: React.ReactElement) {
   return renderPlain(ui, { wrapper: ToastProvider });

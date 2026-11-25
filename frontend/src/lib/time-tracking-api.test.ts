@@ -64,17 +64,6 @@ const backendBreak = {
   updated_at: "2025-06-15T12:30:00Z",
 };
 
-const backendHistory = {
-  ...backendSessionWithCheckout,
-  net_minutes: 480,
-  is_overtime: false,
-  is_break_compliant: true,
-  rest_period_warning: null,
-  breaks: [backendBreak],
-  edit_count: 0,
-  audit_count: 0,
-};
-
 const backendEdit = {
   id: "3",
   session_id: "1",
@@ -276,34 +265,6 @@ describe("TimeTrackingService", () => {
     });
   });
 
-  describe("getCurrentSession", () => {
-    it("returns mapped session when active", async () => {
-      global.fetch = mockFetchResponse({
-        status: "success",
-        data: backendSession,
-      });
-
-      const result = await timeTrackingService.getCurrentSession();
-
-      expect(global.fetch).toHaveBeenCalledWith(
-        "/api/time-tracking/current",
-        expect.objectContaining({ method: "GET" }),
-      );
-      expect(result).not.toBeNull();
-      expect(result!.id).toBe("1");
-    });
-
-    it("returns null when no active session", async () => {
-      global.fetch = mockFetchResponse({
-        status: "success",
-        data: null,
-      });
-
-      const result = await timeTrackingService.getCurrentSession();
-      expect(result).toBeNull();
-    });
-  });
-
   describe("getConfig", () => {
     it("returns the configured account start date", async () => {
       global.fetch = mockFetchResponse({
@@ -332,34 +293,6 @@ describe("TimeTrackingService", () => {
       const result = await timeTrackingService.getConfig();
 
       expect(result.accountStartDate).toBe("");
-    });
-  });
-
-  describe("getHistory", () => {
-    it("sends date range and returns mapped history", async () => {
-      global.fetch = mockFetchResponse({
-        status: "success",
-        data: {
-          sessions: [backendHistory],
-          weekly_summaries: [],
-        },
-      });
-
-      const result = await timeTrackingService.getHistory(
-        "2025-06-01",
-        "2025-06-30",
-      );
-
-      expect(global.fetch).toHaveBeenCalledWith(
-        "/api/time-tracking/history?from=2025-06-01&to=2025-06-30",
-        expect.objectContaining({ method: "GET" }),
-      );
-      expect(result.sessions).toHaveLength(1);
-      expect(result.sessions[0]!.netMinutes).toBe(480);
-      expect(result.sessions[0]!.isOvertime).toBe(false);
-      expect(result.sessions[0]!.isBreakCompliant).toBe(true);
-      expect(result.sessions[0]!.breaks).toHaveLength(1);
-      expect(result.sessions[0]!.breaks[0]!.durationMinutes).toBe(30);
     });
   });
 
@@ -550,25 +483,6 @@ describe("TimeTrackingService", () => {
     });
   });
 
-  describe("getSessionBreaks", () => {
-    it("returns mapped breaks for a session", async () => {
-      global.fetch = mockFetchResponse({
-        status: "success",
-        data: [backendBreak],
-      });
-
-      const result = await timeTrackingService.getSessionBreaks("1");
-
-      expect(global.fetch).toHaveBeenCalledWith(
-        "/api/time-tracking/breaks/1",
-        expect.objectContaining({ method: "GET" }),
-      );
-      expect(result).toHaveLength(1);
-      expect(result[0]!.startedAt).toBe("2025-06-15T12:00:00Z");
-      expect(result[0]!.endedAt).toBe("2025-06-15T12:30:00Z");
-    });
-  });
-
   describe("getSessionEdits", () => {
     it("returns mapped edits for a session", async () => {
       global.fetch = mockFetchResponse({
@@ -631,23 +545,6 @@ describe("TimeTrackingService", () => {
         "2025-06-30",
       );
       expect(result).toEqual([]);
-    });
-
-    it("fetches questioned absences without a date range", async () => {
-      global.fetch = mockFetchResponse({
-        status: "success",
-        data: [{ ...backendAbsence, status: "question" }],
-      });
-
-      const result = await timeTrackingService.getQuestionedAbsences();
-
-      expect(global.fetch).toHaveBeenCalledWith(
-        "/api/time-tracking/absences?status=question",
-        expect.objectContaining({ method: "GET" }),
-      );
-      expect(result).toHaveLength(1);
-      expect(result[0]!.status).toBe("question");
-      expect(result[0]!.id).toBe("7");
     });
   });
 
@@ -805,128 +702,15 @@ describe("TimeTrackingService", () => {
     });
   });
 
-  describe("getVacationQuota", () => {
-    const quota = {
-      staff_id: 10,
-      year: 2026,
-      entitled_days: 30,
-      carryover_days: 1,
-      taken_days: 10,
-      reserved_days: 2,
-      remaining_days: 19,
-    };
-
-    it("loads vacation quota for a specific year", async () => {
-      global.fetch = mockFetchResponse({
-        status: "success",
-        data: quota,
-      });
-
-      const result = await timeTrackingService.getVacationQuota(2026);
-
-      expect(global.fetch).toHaveBeenCalledWith(
-        "/api/time-tracking/vacation/quota?year=2026",
-        expect.objectContaining({ method: "GET" }),
-      );
-      expect(result.remaining_days).toBe(19);
-    });
-
-    it("loads vacation quota without year parameter", async () => {
-      global.fetch = mockFetchResponse({
-        status: "success",
-        data: quota,
-      });
-
-      await timeTrackingService.getVacationQuota();
-
-      expect(global.fetch).toHaveBeenCalledWith(
-        "/api/time-tracking/vacation/quota",
-        expect.objectContaining({ method: "GET" }),
-      );
-    });
-  });
-
-  describe("getOwnAbsenceAllowances", () => {
-    it("maps each own Kontingent with its name and string IDs", async () => {
-      global.fetch = mockFetchResponse({
-        status: "success",
-        data: [
-          {
-            name: "Regenerationstag",
-            staff_id: "10",
-            absence_type_id: "4",
-            year: 2026,
-            entitled_days: 3,
-            taken_days: 1,
-            reserved_days: 0.5,
-            remaining_days: 1.5,
-            expires_on: "2027-03-31",
-            expired_days: 0,
-            booking_days: 0,
-            kept_by_traeger: false,
-            carried_in: {
-              year: 2025,
-              remaining_days: 1,
-              expired_days: 0,
-              expires_on: "2026-03-31",
-            },
-          },
-        ],
-      });
-
-      const result = await timeTrackingService.getOwnAbsenceAllowances();
-
-      expect(global.fetch).toHaveBeenCalledWith(
-        "/api/time-tracking/absence-allowances",
-        expect.objectContaining({ method: "GET" }),
-      );
-      expect(result).toEqual([
-        {
-          name: "Regenerationstag",
-          summary: {
-            staffId: "10",
-            absenceTypeId: "4",
-            year: 2026,
-            entitledDays: 3,
-            takenDays: 1,
-            reservedDays: 0.5,
-            remainingDays: 1.5,
-            expiresOn: "2027-03-31",
-            expiredDays: 0,
-            bookingDays: 0,
-            carriedIn: {
-              year: 2025,
-              remainingDays: 1,
-              expiredDays: 0,
-              expiresOn: "2026-03-31",
-            },
-            keptByTraeger: false,
-          },
-        },
-      ]);
-    });
-
-    it("reads a missing list as no Kontingente", async () => {
-      global.fetch = mockFetchResponse({
-        status: "success",
-        data: null,
-      });
-
-      await expect(
-        timeTrackingService.getOwnAbsenceAllowances(),
-      ).resolves.toEqual([]);
-    });
-  });
-
   describe("authentication", () => {
     it("sends request without auth header when no session", async () => {
       mockGetSession.mockResolvedValue(null);
       global.fetch = mockFetchResponse({
         status: "success",
-        data: backendSession,
+        data: [],
       });
 
-      await timeTrackingService.getCurrentSession();
+      await timeTrackingService.getSessionEdits("123");
 
       const callArgs = (global.fetch as ReturnType<typeof vi.fn>).mock
         .calls[0] as [string, RequestInit];
@@ -941,10 +725,10 @@ describe("TimeTrackingService", () => {
       } as never);
       global.fetch = mockFetchResponse({
         status: "success",
-        data: backendSession,
+        data: [],
       });
 
-      await timeTrackingService.getCurrentSession();
+      await timeTrackingService.getSessionEdits("123");
 
       const callArgs = (global.fetch as ReturnType<typeof vi.fn>).mock
         .calls[0] as [string, RequestInit];
@@ -971,10 +755,10 @@ describe("TimeTrackingService", () => {
     it("omits Content-Type for GET requests", async () => {
       global.fetch = mockFetchResponse({
         status: "success",
-        data: backendSession,
+        data: [],
       });
 
-      await timeTrackingService.getCurrentSession();
+      await timeTrackingService.getSessionEdits("123");
 
       const callArgs = (global.fetch as ReturnType<typeof vi.fn>).mock
         .calls[0] as [string, RequestInit];

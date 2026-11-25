@@ -58,7 +58,7 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
-import TraegerVertraegePage from "./page";
+import TraegerVertraegePage from "./page-content";
 import {
   expectPageReloadedAfterRefusal,
   resetPageReloads,

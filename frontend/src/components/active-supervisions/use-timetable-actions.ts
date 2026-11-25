@@ -237,8 +237,8 @@ export function useTimetableActions(
   });
 
   // Starting, ending or reopening a block changes which supervisions run.
-  // The sidebar („Aktuelle Aufsichten“) keeps its own copy and otherwise only
-  // hears SSE, which may drop events. So the own action reloads both lists;
+  // The shared context cannot rely on lossy SSE after our own write, so the
+  // action reloads its sessions as well as the separately mounted page;
   // a failed reload leaves the next refresh to fix it and never reports the
   // write itself as failed. No extra SWR key bump afterwards: it fetched the
   // same aggregate a second time and kept the old view on screen meanwhile
@@ -248,11 +248,7 @@ export function useTimetableActions(
   // nur (#6652).
   const lifecycleAfterWrite = useRefreshAfterWrite(
     "die Anzeige der Aufsicht",
-    () =>
-      Promise.all([
-        mutateDashboard(),
-        refreshSupervision({ silent: true, force: true }),
-      ]),
+    () => Promise.all([mutateDashboard(), refreshSupervision(["sessions"])]),
   );
   const reloadAfterLifecycleChange = lifecycleAfterWrite.refresh;
 

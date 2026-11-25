@@ -1,0 +1,7 @@
+{
+  "scenario": "api.timetable.instances.list.slim",
+  "max": 4,
+  "exact": true,
+  "description": "Grid: instances, staff, participants and block metadata, without detail-only pickup cutoffs.",
+  "route": "GET /api/timetable/instances/"
+}

@@ -145,16 +145,18 @@ export function CalendarSubscribePanel({
   calDAVEnabled = false,
 }: CalendarSubscribePanelProps) {
   const t = useTranslations("parentCalendarSubscribe");
-  const staffT = useTranslations("staffCalendarSubscribe");
   const isStaff = audience === "staff";
+  const audienceT = useTranslations(
+    isStaff ? "staffCalendarSubscribe" : "parentCalendarSubscribe",
+  );
   const copy: CalendarSubscribeCopy = {
     title: t("title"),
-    description: isStaff ? staffT("description") : t("description"),
+    description: audienceT("description"),
     showLink: t("showLink"),
     loading: t("loading"),
-    createNew: isStaff ? staffT("createNew") : t("createNew"),
+    createNew: audienceT("createNew"),
     subscribe: t("subscribe"),
-    regenerate: isStaff ? staffT("regenerate") : t("regenerate"),
+    regenerate: audienceT("regenerate"),
     linkLabel: t("linkLabel"),
     copy: t("copy"),
     copiedButton: t("copiedButton"),
@@ -163,15 +165,15 @@ export function CalendarSubscribePanel({
     howToMac: t("howToMac"),
     howToApple: t("howToApple"),
     howToAndroid: t("howToAndroid"),
-    alreadyActive: isStaff ? staffT("alreadyActive") : t("alreadyActive"),
+    alreadyActive: audienceT("alreadyActive"),
     loadObject: t("loadObject"),
     rotateObject: t("rotateObject"),
-    regenerated: isStaff ? staffT("regenerated") : t("regenerated"),
+    regenerated: audienceT("regenerated"),
     copied: t("copied"),
     copyFailed: t("copyFailed"),
     showLinkHint: t("showLinkHint"),
     subscribeHint: t("subscribeHint"),
-    rotateHint: isStaff ? staffT("rotateHint") : t("rotateHint"),
+    rotateHint: audienceT("rotateHint"),
     copyLinkHint: t("copyLinkHint"),
   };
   const feedApi = {
@@ -341,10 +343,10 @@ export function CalendarSubscribePanel({
               />
               <div>
                 <h3 className="font-semibold text-gray-900">
-                  {staffT("caldavTitle")}
+                  {audienceT("caldavTitle")}
                 </h3>
                 <p className="mt-1 text-sm leading-6 text-gray-600">
-                  {staffT("caldavDescription")}
+                  {audienceT("caldavDescription")}
                 </p>
               </div>
             </div>
@@ -353,39 +355,39 @@ export function CalendarSubscribePanel({
               <div className="mt-4 space-y-3">
                 <CopyValueRow
                   id="staff-caldav-server-url"
-                  label={staffT("caldavAddress")}
+                  label={audienceT("caldavAddress")}
                   value={feed.caldav.server_url}
                   copyLabel={copy.copy}
-                  copyHint={staffT("copyAddressHint")}
+                  copyHint={audienceT("copyAddressHint")}
                   copiedLabel={copy.copiedButton}
-                  copiedMessage={staffT("addressCopied")}
+                  copiedMessage={audienceT("addressCopied")}
                   copyFailedMessage={copy.copyFailed}
                 />
                 <CopyValueRow
                   id="staff-caldav-username"
-                  label={staffT("caldavUsername")}
+                  label={audienceT("caldavUsername")}
                   value={feed.caldav.username}
                   copyLabel={copy.copy}
-                  copyHint={staffT("copyUsernameHint")}
+                  copyHint={audienceT("copyUsernameHint")}
                   copiedLabel={copy.copiedButton}
-                  copiedMessage={staffT("usernameCopied")}
+                  copiedMessage={audienceT("usernameCopied")}
                   copyFailedMessage={copy.copyFailed}
                 />
                 {feed.caldav.app_password ? (
                   <>
                     <CopyValueRow
                       id="staff-caldav-app-password"
-                      label={staffT("caldavPassword")}
+                      label={audienceT("caldavPassword")}
                       value={feed.caldav.app_password}
                       copyLabel={copy.copy}
-                      copyHint={staffT("copyPasswordHint")}
+                      copyHint={audienceT("copyPasswordHint")}
                       copiedLabel={copy.copiedButton}
-                      copiedMessage={staffT("passwordCopied")}
+                      copiedMessage={audienceT("passwordCopied")}
                       copyFailedMessage={copy.copyFailed}
                       secret
                     />
                     <p className="text-xs leading-5 text-gray-500">
-                      {staffT("passwordOnce")}
+                      {audienceT("passwordOnce")}
                     </p>
                   </>
                 ) : (
@@ -393,7 +395,7 @@ export function CalendarSubscribePanel({
                     as="p"
                     className="text-sm leading-6 text-gray-600"
                   >
-                    {staffT("passwordHidden")}
+                    {audienceT("passwordHidden")}
                   </InsetPanel>
                 )}
               </div>
@@ -402,7 +404,7 @@ export function CalendarSubscribePanel({
                 as="p"
                 className="mt-4 text-sm leading-6 text-gray-600"
               >
-                {staffT("caldavUnavailable")}
+                {audienceT("caldavUnavailable")}
               </InsetPanel>
             )}
           </div>

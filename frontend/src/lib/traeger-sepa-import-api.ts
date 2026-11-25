@@ -266,7 +266,14 @@ export function applySepaImport(request: ImportRequest): Promise<ImportResult> {
 
 /** The imports of the Träger, newest first. */
 export async function fetchSepaImportLog(): Promise<ImportLogEntry[]> {
-  const entries = await bffJson("org", "GET /traeger/sepa-mandates/imports");
+  return mapSepaImportLog(
+    await bffJson("org", "GET /traeger/sepa-mandates/imports"),
+  );
+}
+
+export function mapSepaImportLog(
+  entries: traegerSepaMandatesContract.SEPAMandateImportEntry[],
+): ImportLogEntry[] {
   return entries.map((entry) => ({
     file: entry.file,
     accountId: entry.account_id,

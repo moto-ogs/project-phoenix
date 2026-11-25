@@ -33,6 +33,16 @@ vi.mock("~/lib/auth-api", () => ({
   confirmPasswordReset: (...args: unknown[]) => confirmPasswordReset(...args),
 }));
 
+vi.mock("next-intl/server", async () => {
+  const { createTranslator } =
+    await vi.importActual<typeof import("next-intl")>("next-intl");
+  const { default: messages } = await import("~/i18n/messages/de.generated");
+  return {
+    getTranslations: async (namespace: keyof typeof messages) =>
+      createTranslator({ locale: "de", messages, namespace }),
+  };
+});
+
 import ParentResetPasswordPage from "./page";
 
 describe("ParentResetPasswordPage", () => {
@@ -41,8 +51,8 @@ describe("ParentResetPasswordPage", () => {
     mocks.token = "valid-token";
   });
 
-  it("renders the reset form wired with localized parent copy", () => {
-    render(<ParentResetPasswordPage />);
+  it("renders the reset form wired with localized parent copy", async () => {
+    render(await ParentResetPasswordPage());
 
     // The German default catalog (mocked globally) drives next-intl, so the
     // localized parent form chrome is what renders.
@@ -53,9 +63,9 @@ describe("ParentResetPasswordPage", () => {
     ).toBeEnabled();
   });
 
-  it("offers a new link when the URL has no token", () => {
+  it("offers a new link when the URL has no token", async () => {
     mocks.token = null;
-    render(<ParentResetPasswordPage />);
+    render(await ParentResetPasswordPage());
 
     expect(
       screen.getByRole("link", { name: "Neuen Link anfordern" }),
@@ -66,7 +76,7 @@ describe("ParentResetPasswordPage", () => {
     confirmPasswordReset.mockRejectedValue(
       new ApiError("diag", 503, { code: "general.unavailable" }),
     );
-    render(<ParentResetPasswordPage />);
+    render(await ParentResetPasswordPage());
 
     fireEvent.change(screen.getByLabelText("Neues Passwort"), {
       target: { value: "Sicher!123" },
@@ -87,8 +97,8 @@ describe("ParentResetPasswordPage", () => {
   });
 
   // Off its own host (as here), the portal's login is the prefixed page.
-  it("links back to the parents login", () => {
-    render(<ParentResetPasswordPage />);
+  it("links back to the parents login", async () => {
+    render(await ParentResetPasswordPage());
 
     const backLink = screen.getByRole("link", { name: /Anmeldung/i });
     expect(backLink).toHaveAttribute("href", "/parents/login");

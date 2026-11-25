@@ -116,10 +116,7 @@ vi.mock("~/lib/student-api", () => ({
 
 // The child's detail also reads the account's own groups; none here.
 vi.mock("~/lib/usercontext-api", () => ({
-  userContextService: {
-    getMyEducationalGroups: () => Promise.resolve([]),
-    getMySupervisedGroups: () => Promise.resolve([]),
-  },
+  userContextService: {},
 }));
 
 vi.mock("~/lib/feedback-api", () => ({

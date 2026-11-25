@@ -23,9 +23,24 @@ import {
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
 import { staffAbsenceService } from "~/lib/staff-api";
-import { useSWRAuth } from "~/lib/swr";
+import {
+  MAIL_RECONCILE_MS,
+  useMailStatusRead,
+} from "~/lib/hooks/use-mail-status-read";
 import { absenceMailKeys } from "~/lib/swr/staff-keys";
-import { timeTrackingService } from "~/lib/time-tracking-api";
+import { mapOwnLeaveMails, timeTrackingService } from "~/lib/time-tracking-api";
+
+import { useSWRAuth } from "~/lib/swr";
+import { ApiError } from "~/lib/api-error";
+import type { OwnLeaveMails } from "~/lib/contract/time-tracking.generated";
+
+const mailUnavailable = new ApiError(
+  "Initial absence mails unavailable",
+  undefined,
+  {
+    code: "general.unavailable",
+  },
+);
 
 const logger = createLogger({ component: "AbsenceMailStatus" });
 
@@ -49,16 +64,17 @@ function useLoggedLoadError(error: unknown, event: string) {
 export function useAbsenceDecisionMails(absenceIds: readonly string[]) {
   const key =
     absenceIds.length > 0 ? absenceMailKeys.decisions(absenceIds) : null;
-  const { data, error, mutate } = useSWRAuth(
+  const { data, error, mutate } = useMailStatusRead(
     key,
     () => staffAbsenceService.decisionMails(absenceIds),
-    { refreshInterval: MAIL_REFRESH_MS, shouldRetryOnError: false },
+    (latest) => (latest.awaitingFeedback ? MAIL_REFRESH_MS : MAIL_RECONCILE_MS),
+    false,
   );
   useLoggedLoadError(error, "absence_decision_mails_load_failed");
   const loadError = useSwrLoadError(error, "der Stand der E-Mails", () =>
     mutate(),
   );
-  return { mails: data ?? {}, loadError };
+  return { mails: data?.mails ?? {}, loadError };
 }
 
 /**
@@ -66,19 +82,40 @@ export function useAbsenceDecisionMails(absenceIds: readonly string[]) {
  * picks the waiting requests itself; `waitingIds` only reloads the status
  * when a request is added or decided.
  */
-export function useOwnAbsenceRequestMails(waitingIds: readonly string[]) {
+export function useOwnAbsenceRequestMails(
+  waitingIds: readonly string[],
+  initial?: OwnLeaveMails,
+) {
   const key =
     waitingIds.length > 0 ? absenceMailKeys.ownRequests(waitingIds) : null;
   const { data, error, mutate } = useSWRAuth(
     key,
     () => timeTrackingService.getAbsenceRequestMails(),
-    { refreshInterval: MAIL_REFRESH_MS, shouldRetryOnError: false },
+    {
+      revalidateOnMount: false,
+      revalidateIfStale: false,
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      shouldRetryOnError: false,
+      refreshInterval: (latest) =>
+        (latest?.awaitingFeedback ?? initial?.awaiting_feedback)
+          ? MAIL_REFRESH_MS
+          : MAIL_RECONCILE_MS,
+    },
   );
-  useLoggedLoadError(error, "own_absence_request_mails_load_failed");
-  const loadError = useSwrLoadError(error, "der Stand der E-Mails", () =>
-    mutate(),
-  );
-  return { mails: data ?? {}, loadError };
+  const problem =
+    error ??
+    (!data && initial && initial.state !== "ready"
+      ? mailUnavailable
+      : undefined);
+  useLoggedLoadError(problem, "own_absence_request_mails_load_failed");
+  const loadError = useSwrLoadError(problem, "der Stand der E-Mails", mutate);
+  return {
+    mails:
+      data?.mails ??
+      (initial?.state === "ready" ? mapOwnLeaveMails(initial).mails : {}),
+    loadError,
+  };
 }
 
 function MailLine({

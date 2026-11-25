@@ -3,7 +3,7 @@ import { beforeEach, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import type { ExportRecipient } from "~/lib/traeger-export-handovers-api";
-import TraegerExportRecipientPage from "./page";
+import TraegerExportRecipientPage from "./page-content";
 
 vi.unmock("swr");
 

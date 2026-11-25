@@ -50,21 +50,7 @@ func buildClassDayReportFor(schoolClass string, date calendar.Date, weekday, pha
 	for _, row := range rosterRows {
 		dayRow := classDayRow(row, weekday, facts)
 		report.Rows = append(report.Rows, dayRow)
-		report.Totals.Students++
-		switch {
-		case row.ListEntry, row.WithoutCarePlace && dayRow.Status == "":
-			// A class-list-only entry, and a child without an OGS place
-			// (#4803) whom no day status keeps away, neither stays nor
-			// leaves — "Keine Betreuung" is its own neutral roster bucket,
-			// never a "geht nach Hause" claim.
-			report.Totals.ListEntries++
-		case dayRow.Status != "":
-			report.Totals.Absent++
-		case dayRow.StaysToday:
-			report.Totals.Staying++
-		default:
-			report.Totals.Leaving++
-		}
+		countDayRow(&report.Totals, dayRow)
 	}
 	if !report.SchoolDay {
 		// Kein Schultag: there is no handoff, so "geht nach Hause" is not a
@@ -75,6 +61,31 @@ func buildClassDayReportFor(schoolClass string, date calendar.Date, weekday, pha
 		report.Totals.ListEntries = 0
 	}
 	return report
+}
+
+// countDayRow puts a child in the same bucket on the class sheet and both
+// overviews. No-care entries neither stay nor go home, unless a day status
+// takes precedence for a child with a student record.
+func countDayRow(totals *classday.DayTotals, row classday.DayRow) {
+	totals.Students++
+	switch {
+	case row.ListEntry, row.WithoutCarePlace && row.Status == "":
+		totals.ListEntries++
+	case row.Status != "":
+		totals.Absent++
+	case row.StaysToday:
+		totals.Staying++
+	default:
+		totals.Leaving++
+	}
+}
+
+func dayRowChanged(row classday.DayRow) bool {
+	return !row.ListEntry && (row.Status != "" || row.PickupChanged)
+}
+
+func (f classDayFacts) staysToday(id int64, hasOffering bool) bool {
+	return hasOffering && f.statuses[id] == "" && !f.notScheduled[id]
 }
 
 // applyEnrollmentKnown records whether an enrollment phase covers the day.
@@ -120,7 +131,7 @@ func classDayRow(row DayRosterRow, weekday string, facts classDayFacts) classday
 		// The materialized care plan is the current truth: a weekday the
 		// parents struck from the plan beats the approved offering — the
 		// same source the effective times above already come from.
-		StaysToday:    len(offerings) > 0 && status == "" && !facts.notScheduled[row.StudentID],
+		StaysToday:    facts.staysToday(row.StudentID, len(offerings) > 0),
 		Offerings:     offerings,
 		Arrival:       arrival,
 		Pickup:        pickup,

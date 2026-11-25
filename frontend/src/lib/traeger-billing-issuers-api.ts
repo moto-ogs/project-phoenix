@@ -88,6 +88,13 @@ function statusFromBackend(
 export async function fetchBillingIssuerStatuses(): Promise<
   BillingIssuerStatus[]
 > {
-  const body = await bffJson("org", "GET /traeger/required-details/issuers");
+  return mapBillingIssuerStatuses(
+    await bffJson("org", "GET /traeger/required-details/issuers"),
+  );
+}
+
+export function mapBillingIssuerStatuses(
+  body: contract.BillingIssuerOverview,
+): BillingIssuerStatus[] {
   return (body.issuers ?? []).map(statusFromBackend);
 }

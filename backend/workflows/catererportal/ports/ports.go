@@ -34,6 +34,9 @@ type MealOrders interface {
 	ConfirmOrder(ctx context.Context, orderID int64, since time.Time, accountID int64) error
 }
 
+// OrderSummary reads the supplied school's compact order window in its transaction.
+type OrderSummary func(ctx context.Context, since time.Time, from, to mealplan.Date) (mealplan.OrderSummary, error)
+
 // SchoolNames names non-deleted schools by ID in one read; unknown or deleted
 // schools are absent. Presence in the result is required for caterer access.
 type SchoolNames func(ctx context.Context, ids []int64) (map[int64]string, error)

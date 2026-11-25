@@ -557,7 +557,7 @@ func (s *Service) loadMasterData(ctx context.Context, accountID, guardianProfile
 // visiblePendingDataRequests returns the child's pending Track B requests the
 // caller may see under the family's sharing choices.
 func (s *Service) visiblePendingDataRequests(ctx context.Context, accountID, studentID int64) ([]*StudentDataChangeRequest, error) {
-	pending, err := s.ChangeRequestRepo.ListByStudent(ctx, studentID, []string{DataChangeStatusPending}, 0)
+	pending, err := s.ChangeRequestRepo.ListByStudents(ctx, []int64{studentID}, []string{DataChangeStatusPending}, 0)
 	if err != nil {
 		return nil, err
 	}

@@ -14,3 +14,64 @@ Paths below are relative to `frontend/` except `.github/` and `docs/`.
 
 - **Render budget** (Vitest, blocking): `expectIdleRenderBudget` from `src/test/render-budget.tsx` counts `<Profiler>` commits over 5 s of fake-timer idle and caps them at 20; `mobile-bottom-nav.test.tsx` and `sidebar.test.tsx` use it. A new effect loop in the shell trips this regardless of runner speed. Keep the cap; fix the loop. Reuse the helper for any new always-mounted component.
 - **Nightly counters** (`.github/workflows/perf-nightly.yml`, non-blocking): runs `pnpm run perf:trace` and `pnpm run perf:render` against a seeded backend on weeknights and via `workflow_dispatch`; the report lands in the job summary and as a 30-day artifact. Compare counters (requests per screen, duplicates, longest chain, renders per interaction) with `docs/perf/frontend-baseline-2026.md`; runner timings are not comparable across machines. Timing-based numbers (LCP, Lighthouse) are deliberately not gates.
+
+## School: assigned-class cards
+
+On an authenticated cold document, the teacher's assigned-class totals use
+one Go GET and no browser GET. The SWR seed contains totals only. A visible
+burst of school-day changes causes one browser and Go GET; a hidden tab waits
+until visible. The first class sheet is a separate audited browser read.
+The query budget, including the school's transaction, is independent of
+whether the caller has one, three or six classes
+(scenario `modules.classday.assigned_classes`).
+
+For the local browser measurement, run `school-class-counts.perf.ts` with
+`playwright.perf-dev.config.ts`, `PERF_PORT` for the seeded native stack
+and `PERF_SCHOOL_FIXTURE` for the executable fixture command. The command
+receives `1`, `3` or `6` to set the seeded teacher's class assignments, or
+`event` to emit a child change for that school. Use only the isolated local
+database. The recorder reports encoded browser response bodies; match its
+time windows to the backend's tenant request log for Go GETs and body bytes.
+The route test measures SQL statements for the old and new read paths over
+the same fixture. `PERF_BASELINE=1` compares against a checkout before #8092.
+
+## Parents: start cards
+
+Measure the children, feature flags and today's statuses together, separately
+from the profile, message counts and feeds. A cold, unseeded start reads
+`GET /parent/me/family-start` once at the browser and Go boundaries regardless
+of family size. Behind it, Go reads each school's children as one set: the
+statement count grows with the schools, not with the children of a school,
+pinned by the query budget `parent.me.family_start.http_positive_growth`.
+On a seeded document navigation, the protected layout and page
+share one Go read; hydration uses that family snapshot without a browser GET.
+Public pages receive no family seed. A child event narrows that request by `student_id`; a reconnect
+or an unqualified event reloads the family. Compare response-body bytes on the
+same seeded families, not the number of children returned by unrelated feeds.
+
+## Parents and public enrollment: message payload
+
+The request catalog is complete on the server, including the German fallback.
+On these two surfaces, pass formatted strings to client components when possible.
+For interactive translations, declare a `messageBoundary(...paths)` in the
+server page or a layout shared by exactly those routes. List the controls and
+dialogs rendered there too: nested next-intl providers replace their parent's
+messages. Select individual paths when only a few labels of a namespace are
+used. Dynamic API errors still go through the shared error display path.
+
+Measure a cold login's encoded document (includes inline RSC) separately from
+its JavaScript. A standalone Flight response is an alternative request, not
+additional bytes on the document load. Use the Pixel 7 profile from #4986:
+4× CPU, 150 ms latency, 1.6 Mbit/s down, median of three cold contexts, until
+the sign-in button is visible.
+
+## Betreuungsplan: grid and attendance
+
+The server seed and the browser both request `GET /api/timetable/instances?view=slim`
+with the grid window and filters. Slim keeps student IDs, counts, conflicts and
+the block version; it skips the child DTOs and pickup cutoffs. Omitting `view`
+still returns the full list. Opening a block reads only
+`GET /api/timetable/instances/{id}/attendance`. The SWR key includes the block
+ID and planned date inside the school/account scope. The separate
+`/participants` route applies name visibility; attendance contains no names.
+Measure seeded document navigation separately from the first and repeated click.

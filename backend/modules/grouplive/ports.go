@@ -63,9 +63,10 @@ type Access interface {
 
 // GroupRecord is one education group as the projection needs it.
 type GroupRecord struct {
-	ID     int64
-	Name   string
-	RoomID *int64
+	ID       int64
+	Name     string
+	RoomID   *int64
+	RoomName string
 }
 
 // GroupDirectory lists groups. The projection sorts the rows of
@@ -73,6 +74,9 @@ type GroupRecord struct {
 type GroupDirectory interface {
 	// SupervisedGroups are the caller's own groups, including substitutions.
 	SupervisedGroups(ctx context.Context) ([]GroupRecord, error)
+	// SupervisedGroupsWithRooms reads the same assignments and their room names
+	// together for strict navigation context reads.
+	SupervisedGroupsWithRooms(ctx context.Context) ([]GroupRecord, error)
 	// SupervisedGroupIDs marks the same groups by ID, for a caller who sees
 	// every group anyway and needs only to mark its own.
 	SupervisedGroupIDs(ctx context.Context) (map[int64]bool, error)
