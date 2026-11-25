@@ -15,8 +15,12 @@ import {
 import { Modal } from "./modal";
 import { SCROLL_AREA_PROPS, SHEET_SCOPE_PROPS } from "./overlay-stack";
 
-/** Höhe, in der das Blatt am Telefon aufgeht. */
-export type OverlaySheetSize = "half" | "full";
+/**
+ * Höhe, in der das Blatt am Telefon aufgeht. `fit`: so hoch wie sein Inhalt
+ * (höchstens voll), ohne Rastpunkte – für kurze Inhalte wie einen Hinweis,
+ * die in halber Höhe ein halb leeres Blatt ergäben.
+ */
+export type OverlaySheetSize = "half" | "full" | "fit";
 
 /** Die beiden Rastpunkte am Telefon: halbe und volle Höhe. */
 const SNAP_HALF = 0.55;
@@ -102,6 +106,7 @@ function AppSheet({
 }: OverlaySheetProps) {
   const { layout } = useDeviceContext();
   const phone = layout === "phone";
+  const fit = size === "fit";
   const startSnap = size === "full" ? SNAP_FULL : SNAP_HALF;
   const [snap, setSnap] = useState<number | string | null>(startSnap);
   // Jedes Öffnen beginnt in der gewählten Höhe.
@@ -109,14 +114,15 @@ function AppSheet({
     if (open) setSnap(startSnap);
   }, [open, startSnap]);
 
-  const snapProps = phone
-    ? {
-        snapPoints: SNAP_POINTS,
-        activeSnapPoint: snap,
-        setActiveSnapPoint: setSnap,
-        fadeFromIndex: 0,
-      }
-    : {};
+  const snapProps =
+    phone && !fit
+      ? {
+          snapPoints: SNAP_POINTS,
+          activeSnapPoint: snap,
+          setActiveSnapPoint: setSnap,
+          fadeFromIndex: 0,
+        }
+      : {};
 
   return (
     <Drawer
@@ -134,12 +140,16 @@ function AppSheet({
           // Am Telefon trägt das Blatt die volle Höhe; Vaul schiebt es auf
           // den Rastpunkt. Oben bleibt die Statusleiste frei.
           phone &&
+            !fit &&
             "h-[calc(100dvh-env(safe-area-inset-top)-0.5rem)] max-h-none",
+          phone &&
+            fit &&
+            "max-h-[calc(100dvh-env(safe-area-inset-top)-0.5rem)]",
         )}
         // In halber Höhe liegt der untere Teil des Blatts außerhalb des
         // Bildes; das Polster hebt Fußzeile und Listenende darüber.
         style={
-          phone && snap === SNAP_HALF
+          phone && !fit && snap === SNAP_HALF
             ? {
                 paddingBottom: `calc(100dvh - env(safe-area-inset-top) - 0.5rem - ${SNAP_HALF * 100}dvh)`,
               }
