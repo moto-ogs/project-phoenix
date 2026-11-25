@@ -1044,7 +1044,7 @@ function ClockInCard({
                 {metrics.month === null
                   ? null
                   : ` von ${formatDuration(metrics.month.soll)}`}
-                {" · Konto seit "}
+                {" · Stundenkonto seit "}
                 {metrics.accountStart.toLocaleDateString("de-DE", {
                   timeZone: "Europe/Berlin",
                   day: "numeric",
@@ -3423,7 +3423,7 @@ const fetchOwnSessionEdits = (_staffId: string, sessionId: string) =>
   timeTrackingService.getSessionEdits(sessionId);
 
 const TIME_TRACKING_APP_INFO =
-  "Hier erfasst du deine Arbeitszeit und deine Pausen. Tippe unten auf „Einstempeln“ und wähle, wo du arbeitest. Oben steht dein Stundenkonto, darunter deine Woche Tag für Tag. Tippe auf einen Tag, um ihn anzusehen oder zu korrigieren.";
+  "Hier erfasst du deine Arbeitszeit und deine Pausen. Tippe unten auf „Einstempeln“ und wähle, wo du arbeitest. Oben stehen deine Woche und dein Saldo (Stundenkonto), darunter deine Woche Tag für Tag. Tippe auf einen Tag, um ihn anzusehen oder zu korrigieren.";
 
 function TimeTrackingContent() {
   const { data: authSession, status: authStatus } = useSession({
@@ -4297,7 +4297,10 @@ function TimeTrackingContent() {
               },
               {
                 value: formatSignedDuration(ownMetrics.accountBalanceMinutes!),
-                label: "Stundenkonto",
+                // Wie im Kopf des Desktops; „Stundenkonto“ lief am SE
+                // über den Rand (#8070, Runde 7). Die Stempeluhr nennt es
+                // „Stundenkonto seit …“.
+                label: "Saldo",
               },
             ]}
           />

@@ -199,13 +199,11 @@ function InboxList({
             <CollectionRow
               key={thread.thread_id}
               {...shownTarget}
-              // Beginnt mit dem sichtbaren Text der Zeile (Sprachsteuerung),
-              // schmal folgt die Beziehung, die dort nicht sichtbar ist.
-              aria-label={`${thread.guardian_name} · ${
-                wide
-                  ? relation
-                  : `${thread.student_name}, ${relationshipLabel(thread.relationship_type)}`
-              }${unread ? `, ${thread.unread_count} ungelesen` : ""}`}
+              // Beginnt mit dem sichtbaren Text der Zeile (Sprachsteuerung):
+              // Person · Beziehung, dann das Kind.
+              aria-label={`${thread.guardian_name} · ${relation}${
+                unread ? `, ${thread.unread_count} ungelesen` : ""
+              }`}
               leading={
                 <Avatar
                   name={thread.guardian_name}
