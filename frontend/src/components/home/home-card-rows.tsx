@@ -1,10 +1,17 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useSyncExternalStore, type ReactNode } from "react";
 
 import { ButtonLink } from "~/components/ui/button";
 import Link from "~/components/ui/navigation-link";
 import { BELOW_SM, useMediaQuery } from "~/lib/hooks/use-media-query";
+
+const berlinClock = new Intl.DateTimeFormat("de-DE", {
+  timeZone: "Europe/Berlin",
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+});
 
 /**
  * Der Weiterlink im Kopf einer Karte der Startseite: ein weißer Knopf aus
@@ -53,28 +60,25 @@ export function dayPlanLinkTooltip(dayPlanHref: string): string {
 /**
  * Die aktuelle Berliner Uhrzeit als „HH:MM", halbminütlich nachgezogen.
  *
- * Bis zum ersten Rendern im Browser ist sie leer: die Uhr wird angezeigt,
- * und ein Wert vom Server könnte an der Minutengrenze vom Wert des Browsers
- * abweichen — genau der Unterschied, den React beim Hydrieren als Fehler
- * meldet. Wer die Uhrzeit rechnet, behandelt „" als „noch unbekannt".
+ * Im Server-HTML und bei der Hydrierung bleibt die Uhr leer, damit ein
+ * Minutenwechsel keinen Mismatch auslöst. Bei einem Client-Seitenwechsel
+ * steht die Uhrzeit dagegen sofort für Uhr und Karten zur Verfügung.
  */
 export function useBerlinClock(): string {
-  const [now, setNow] = useState("");
-  useEffect(() => {
-    setNow(berlinTime());
-    const id = setInterval(() => setNow(berlinTime()), 30_000);
-    return () => clearInterval(id);
-  }, []);
-  return now;
+  return useSyncExternalStore(subscribeToClock, berlinTime, emptyClock);
+}
+
+function subscribeToClock(onChange: () => void) {
+  const id = setInterval(onChange, 30_000);
+  return () => clearInterval(id);
 }
 
 function berlinTime(): string {
-  return new Intl.DateTimeFormat("de-DE", {
-    timeZone: "Europe/Berlin",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).format(new Date());
+  return berlinClock.format(Date.now());
+}
+
+function emptyClock(): string {
+  return "";
 }
 
 /**
