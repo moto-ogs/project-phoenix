@@ -10,7 +10,7 @@
 // Ein Tipp öffnet das Kind-Blatt (Telefon, iPad hoch), im iPad-Querformat
 // steht das Kind rechts neben der Liste (`?kind=<id>`).
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Avatar } from "~/components/ui/avatar";
 import { ButtonLink } from "~/components/ui/button";
@@ -20,10 +20,12 @@ import {
   CollectionList,
   CollectionRow,
 } from "~/components/ui/collection";
+import { IndexRail } from "~/components/ui/index-rail";
 import { SectionCard } from "~/components/ui/section-card";
 import { SplitView, useSplitSelection } from "~/components/ui/split-view";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { ChildSheet, ChildSummary } from "~/components/students/child-sheet";
+import { dailyDepartureLabelForStudent } from "~/components/students/search-student-card";
 import {
   CHILD_DAY_TONE_BADGE,
   childDayStatus,
@@ -116,6 +118,11 @@ export function StudentListApp({
       "",
     );
     const subtitle = [klass, student.group_name].filter(Boolean).join(" · ");
+    const departure =
+      student.has_full_access === false
+        ? null
+        : dailyDepartureLabelForStudent(student);
+    const homeway = departure && departure !== "–" ? departure : null;
     const badge = (
       <StatusBadge
         label={status.value}
@@ -143,15 +150,42 @@ export function StudentListApp({
           </span>
         }
         subtitle={subtitle || undefined}
-        meta={<span className="tablet:hidden">{badge}</span>}
+        // iPad: rechts der Heimweg statt einer leeren halben Zeile.
+        meta={
+          <>
+            <span className="tablet:hidden">{badge}</span>
+            {homeway ? <span className="phone:hidden">{homeway}</span> : null}
+          </>
+        }
         selected={selected === id}
         onClick={() => (isSplit ? select(id) : setSheetId(id))}
       />
     );
   };
 
+  // Buchstaben-Sprungleiste (Telefon, iPad hoch): bei langen Namenslisten.
+  const listRef = useRef<HTMLDivElement>(null);
+  const railLetters =
+    alphabetic && groups.length === 0 && !isSplit && shownGroups.length >= 5
+      ? shownGroups.map((group) => group.label)
+      : [];
+  const scrollToLetter = useCallback((index: number) => {
+    const group = listRef.current?.querySelectorAll<HTMLElement>(
+      "[data-collection-group]",
+    )[index];
+    if (!group) return;
+    const offset = Number.parseFloat(
+      getComputedStyle(document.documentElement).getPropertyValue(
+        "--app-sticky-offset",
+      ) || "0",
+    );
+    window.scrollTo({
+      top: group.getBoundingClientRect().top + window.scrollY - offset,
+    });
+  }, []);
+
   const list = (
-    <Collection label="Kinder">
+    <Collection label="Kinder" className="phone:-mt-1.5">
       {shownGroups.length > 0 ? (
         shownGroups.map((group) => (
           <CollectionGroup
@@ -167,6 +201,15 @@ export function StudentListApp({
       )}
     </Collection>
   );
+  const listWithRail =
+    railLetters.length > 0 ? (
+      <div ref={listRef}>
+        {list}
+        <IndexRail letters={railLetters} onJump={scrollToLetter} />
+      </div>
+    ) : (
+      list
+    );
 
   const selectedStudent = selected ? (byId.get(selected) ?? null) : null;
   const sheetStudent = sheetId ? (byId.get(sheetId) ?? null) : null;
@@ -174,7 +217,7 @@ export function StudentListApp({
   return (
     <>
       <SplitView
-        list={list}
+        list={listWithRail}
         detail={
           selectedStudent ? (
             <SectionCard>
@@ -187,7 +230,7 @@ export function StudentListApp({
                 headerAction={
                   <ButtonLink
                     href={studentHref(selectedStudent)}
-                    variant="primary"
+                    variant="outline"
                     size="md"
                     tooltip="Öffnet die ganze Akte mit allen Angaben."
                   >

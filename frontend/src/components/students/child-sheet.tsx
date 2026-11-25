@@ -86,7 +86,7 @@ export function ChildSheet({
             // auf die Liste mit ihrer Scroll-Position, nicht auf einen leeren
             // Blatt-Eintrag.
             replace
-            variant="primary"
+            variant="outline"
             size="md"
             className="w-full"
             tooltip="Öffnet die ganze Akte mit allen Angaben."
