@@ -105,15 +105,18 @@ export function AppTenantHead({
 }: AppHeadProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const scrolledAway = useScrolledAway(headRef);
-  const hasMenuEntries = (overflowMenu?.length ?? 0) > 0;
-  const hasToolbar = tabs != null || toolbar != null;
   const toolbarRef = useRef<HTMLDivElement>(null);
+  const veiled = useStuck(toolbarRef, scrolledAway);
+  const hasMenuEntries = (overflowMenu?.length ?? 0) > 0;
+  // „…“ nur, wenn das Blatt etwas zeigt: Aktionen, Menüeinträge oder Info.
+  const hasMenu = hasMenuEntries || info != null || actions != null;
+  const hasToolbar = tabs != null || toolbar != null;
   useStickyOffset(toolbarRef, scrolledAway);
   const stickyTop = scrolledAway
     ? `calc(${TOP_GAP} + ${COMPACT_HEIGHT_PX + 8}px)`
     : TOP_GAP;
 
-  const menuButton = (
+  const menuButton = hasMenu ? (
     <Button
       type="button"
       variant="ghost"
@@ -124,7 +127,7 @@ export function AppTenantHead({
     >
       <MoreHorizontal className="size-5" aria-hidden="true" />
     </Button>
-  );
+  ) : null;
 
   return (
     <>
@@ -132,7 +135,7 @@ export function AppTenantHead({
         ref={headRef}
         {...APP_HEAD_ATTR}
         className={cn(
-          "moto-content-surface rounded-2xl border px-2 py-1",
+          "moto-content-surface rounded-2xl border px-2 py-0.5",
           printHideHeader && "print:hidden",
         )}
       >
@@ -148,7 +151,9 @@ export function AppTenantHead({
             suppressHydrationWarning
             className={cn(
               "min-w-0 flex-1 truncate text-lg leading-7 font-semibold tracking-tight text-gray-900",
-              !backLink && "pl-2",
+              // Bündig: ohne Zurück-Pfeil 16 px vom Rand wie die Chips, nach
+              // dem Pfeil ohne zusätzlichen Einzug.
+              backLink && !leading ? "-ml-3" : !backLink && "pl-2",
             )}
           >
             {title}
@@ -158,19 +163,39 @@ export function AppTenantHead({
         </div>
         {statusLine != null && (
           <AppHeadStatsContext.Provider value={true}>
-            <div className="-mx-2 [scrollbar-width:none] overflow-x-auto px-2 pb-1 text-sm text-gray-600">
+            {/* Chips beginnen an der Titelkante (ohne Pfeil 16 px, nach
+                dem Pfeil 52 px vom Kartenrand). */}
+            <div
+              className={cn(
+                "-mx-2 [scrollbar-width:none] overflow-x-auto pr-2 pb-1.5 text-sm text-gray-600",
+                backLink && !leading ? "pl-13" : "pl-4",
+              )}
+            >
               {statusLine}
             </div>
           </AppHeadStatsContext.Provider>
         )}
       </header>
 
+      {/* Deckende Zone hinter Leiste und schmaler Kopfkarte bis zum oberen
+          Rand: Darüber scheint keine Liste durch. */}
+      <div
+        aria-hidden="true"
+        data-app-page-backdrop=""
+        className={cn(
+          `moto-app-backdrop pointer-events-none fixed inset-x-0 top-0 ${Z_LAYER.nav} ${FIXED_LAYER_SHIFT}`,
+          !veiled && "hidden",
+          printHideHeader && "print:hidden",
+        )}
+        style={{ height: "var(--app-sticky-offset, 0px)" }}
+      />
+
       {hasToolbar && (
         <div
           ref={toolbarRef}
           data-app-page-toolbar=""
           className={cn(
-            `sticky ${Z_LAYER.sticky} mt-2 space-y-1.5 px-1.5 py-1.5`,
+            `sticky ${Z_LAYER.nav} mt-1.5 space-y-1.5 px-1.5 py-1`,
             FLOATING_CARD,
             printHideHeader && "print:hidden",
           )}
@@ -274,6 +299,32 @@ function useStickyOffset(
       root.style.removeProperty("--app-sticky-offset");
     };
   }, [toolbarRef, scrolledAway]);
+}
+
+/**
+ * Ob die klebenden Teile über Inhalt liegen: Die Kopfkarte ist weg oder
+ * die Leiste klebt schon oben.
+ */
+function useStuck(
+  toolbarRef: RefObject<HTMLElement | null>,
+  scrolledAway: boolean,
+): boolean {
+  const [stuck, setStuck] = useState(false);
+  useEffect(() => {
+    const update = () => {
+      const toolbar = toolbarRef.current;
+      if (toolbar === null || window.scrollY <= 0) {
+        setStuck(false);
+        return;
+      }
+      const top = Number.parseFloat(getComputedStyle(toolbar).top);
+      setStuck(toolbar.getBoundingClientRect().top <= top + 0.5);
+    };
+    update();
+    window.addEventListener("scroll", update, { passive: true });
+    return () => window.removeEventListener("scroll", update);
+  }, [toolbarRef]);
+  return stuck || scrolledAway;
 }
 
 /** Ob die Kopfkarte ganz aus dem Bild gescrollt ist. */
