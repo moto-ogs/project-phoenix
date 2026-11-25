@@ -10,7 +10,7 @@
 // Ein Tipp öffnet das Kind-Blatt (Telefon, iPad hoch), im iPad-Querformat
 // steht das Kind rechts neben der Liste (`?kind=<id>`).
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Avatar } from "~/components/ui/avatar";
 import { ButtonLink } from "~/components/ui/button";
@@ -100,12 +100,29 @@ export function StudentListApp({
   }, [groups, alphabetic, students]);
 
   const { isSplit } = useDeviceContext();
+  // iPad quer: Die Detailspalte ist nie leer, das erste Kind steht vorgewählt.
+  const firstId = (shownGroups[0]?.items[0] ?? students[0])?.id.toString();
+  useEffect(() => {
+    if (isSplit && !selected && firstId) select(firstId);
+  }, [isSplit, selected, firstId, select]);
 
   const row = (student: Student) => {
     const id = student.id.toString();
     const status = childDayStatus(student, isToday);
-    const klass = classLabel(student) ?? student.school_class;
+    // „1b · Sternengruppe“: Das Wort „Klasse“ kostet am schmalen Telefon
+    // den Platz, an dem sonst der Gruppenname abgeschnitten würde.
+    const klass = (classLabel(student) ?? student.school_class)?.replace(
+      /^Klasse\s+/,
+      "",
+    );
     const subtitle = [klass, student.group_name].filter(Boolean).join(" · ");
+    const badge = (
+      <StatusBadge
+        label={status.value}
+        tone={CHILD_DAY_TONE_BADGE[status.tone]}
+        compact
+      />
+    );
     return (
       <CollectionRow
         key={id}
@@ -117,15 +134,16 @@ export function StudentListApp({
             decorative
           />
         }
-        title={studentName(student)}
-        subtitle={subtitle || undefined}
-        meta={
-          <StatusBadge
-            label={status.value}
-            tone={CHILD_DAY_TONE_BADGE[status.tone]}
-            compact
-          />
+        // iPad: Der Status steht direkt hinter dem Namen statt am rechten
+        // Rand der breiten Zeile (kurzer Blickweg).
+        title={
+          <span className="flex min-w-0 items-center gap-2">
+            <span className="truncate">{studentName(student)}</span>
+            <span className="phone:hidden shrink-0">{badge}</span>
+          </span>
         }
+        subtitle={subtitle || undefined}
+        meta={<span className="tablet:hidden">{badge}</span>}
         selected={selected === id}
         aria-label={`${studentName(student)}, ${status.value}`}
         onClick={() => (isSplit ? select(id) : setSheetId(id))}
@@ -167,17 +185,17 @@ export function StudentListApp({
                 isToday={isToday}
                 classLabel={classLabel(selectedStudent)}
                 header
+                headerAction={
+                  <ButtonLink
+                    href={studentHref(selectedStudent)}
+                    variant="primary"
+                    size="md"
+                    tooltip="Öffnet die ganze Akte mit allen Angaben."
+                  >
+                    Ganze Akte öffnen
+                  </ButtonLink>
+                }
               />
-              <div className="mt-5 flex">
-                <ButtonLink
-                  href={studentHref(selectedStudent)}
-                  variant="primary"
-                  size="md"
-                  tooltip="Öffnet die ganze Akte mit allen Angaben."
-                >
-                  Ganze Akte öffnen
-                </ButtonLink>
-              </div>
             </SectionCard>
           ) : null
         }

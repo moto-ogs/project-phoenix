@@ -10,17 +10,11 @@ import { useSession } from "next-auth/react";
 import type { ReactNode } from "react";
 
 import { Avatar } from "~/components/ui/avatar";
-import { ButtonLink } from "~/components/ui/button";
+import { Button, ButtonLink } from "~/components/ui/button";
 import { DataField, DataGrid } from "~/components/ui/data-field";
 import { OverlaySheet } from "~/components/ui/overlay-sheet";
 import { SectionLabel } from "~/components/ui/section-label";
 import { StatusBadge } from "~/components/ui/status-badge";
-import {
-  StudentCheckinSection,
-  StudentCheckoutSection,
-  StudentExcusedReportSection,
-  StudentSickReportSection,
-} from "~/components/students/student-checkout-section";
 import { dailyDepartureLabelForStudent } from "~/components/students/search-student-card";
 import {
   CHILD_DAY_TONE_BADGE,
@@ -39,6 +33,7 @@ import {
   type Student,
 } from "~/lib/student-helpers";
 import { useTenantRouter } from "~/lib/tenant-router";
+import { useAttendanceWebEnabled } from "~/lib/tenant-context";
 
 export interface ChildSheetProps {
   /** Das Kind aus der Liste; `null` schließt das Blatt. */
@@ -118,6 +113,7 @@ export function ChildSummary({
   classLabel,
   contextActions,
   header = false,
+  headerAction,
   replaceEntry = false,
 }: Readonly<{
   student: Student;
@@ -127,6 +123,8 @@ export function ChildSummary({
   contextActions?: ReactNode;
   /** Name und Foto oben (Detail neben der Liste; das Blatt hat einen Titel). */
   header?: boolean;
+  /** Rechts neben dem Namen, etwa „Ganze Akte öffnen“ (nur mit `header`). */
+  headerAction?: ReactNode;
   /** Im Blatt: Die Akte ersetzt dessen Verlaufseintrag (siehe `ChildSheet`). */
   replaceEntry?: boolean;
 }>) {
@@ -146,7 +144,7 @@ export function ChildSummary({
       : []),
   ];
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {header ? (
         <div className="flex items-center gap-3">
           <Avatar
@@ -155,15 +153,23 @@ export function ChildSummary({
             size="md"
             decorative
           />
-          <h2 className="min-w-0 flex-1 truncate text-lg font-semibold text-gray-900">
-            {studentName(student)}
-          </h2>
+          <div className="min-w-0 flex-1">
+            <h2 className="truncate text-lg font-semibold text-gray-900">
+              {studentName(student)}
+            </h2>
+            <StatusBadge
+              label={status.value}
+              tone={CHILD_DAY_TONE_BADGE[status.tone]}
+            />
+          </div>
+          {headerAction ? <div className="shrink-0">{headerAction}</div> : null}
         </div>
-      ) : null}
-      <StatusBadge
-        label={status.value}
-        tone={CHILD_DAY_TONE_BADGE[status.tone]}
-      />
+      ) : (
+        <StatusBadge
+          label={status.value}
+          tone={CHILD_DAY_TONE_BADGE[status.tone]}
+        />
+      )}
       {contextActions}
       {isToday ? (
         <ChildQuickActions
@@ -172,27 +178,17 @@ export function ChildSummary({
           replaceEntry={replaceEntry}
         />
       ) : null}
-      <DataGrid columns={1}>
-        {room ? (
-          <DataField label="Raum" inline>
-            {room}
-          </DataField>
-        ) : null}
-        <DataField label="Klasse" inline>
+      <DataGrid columns={2} appRows>
+        {room ? <DataField label="Raum">{room}</DataField> : null}
+        <DataField label="Klasse">
           {classLabel ?? (student.school_class || "–")}
         </DataField>
-        <DataField label="Gruppe" inline>
-          {student.group_name || "–"}
-        </DataField>
+        <DataField label="Gruppe">{student.group_name || "–"}</DataField>
         {fullAccess ? (
           <>
-            <DataField label="Ankunft" inline>
-              {arrivalText(student)}
-            </DataField>
-            <DataField label="Gehzeit" inline>
-              {pickupText(student)}
-            </DataField>
-            <DataField label="Heimweg" inline>
+            <DataField label="Ankunft heute">{arrivalText(student)}</DataField>
+            <DataField label="Gehen heute">{pickupText(student)}</DataField>
+            <DataField label="Heimweg">
               {dailyDepartureLabelForStudent(student)}
             </DataField>
           </>
@@ -212,20 +208,23 @@ export function ChildSummary({
   );
 }
 
+// „Gekommen 00:03 · geplant 07:30“: Was tatsächlich war, steht vorn, der
+// Plan als Zusatz; ohne Ankunft nur der Plan.
 function arrivalText(student: Student): string {
   if (student.actual_arrival_time) {
-    return student.arrival_time
-      ? `${student.actual_arrival_time} (geplant ${student.arrival_time})`
-      : student.actual_arrival_time;
+    return student.arrival_time &&
+      student.arrival_time !== student.actual_arrival_time
+      ? `Gekommen ${student.actual_arrival_time} · geplant ${student.arrival_time}`
+      : `Gekommen ${student.actual_arrival_time}`;
   }
-  return student.arrival_time ? `${student.arrival_time} geplant` : "–";
+  return student.arrival_time ? `Kommt ${student.arrival_time}` : "–";
 }
 
 function pickupText(student: Student): string {
   if (student.actual_pickup_time) {
-    return `gegangen ${student.actual_pickup_time}`;
+    return `Gegangen ${student.actual_pickup_time}`;
   }
-  return student.pickup_time ?? "–";
+  return student.pickup_time ? `Geht ${student.pickup_time}` : "–";
 }
 
 /**
@@ -247,8 +246,12 @@ function ChildQuickActions({
     status === "authenticated" && hasPermission(session, "users:checkin");
   const withoutCarePlace = student.without_care_place === true;
   const notCheckedIn = isNotCheckedInLocation(student.current_location);
-  const showCheckout = canCheckin && !withoutCarePlace && !notCheckedIn;
-  const showCheckin = canCheckin && !withoutCarePlace && notCheckedIn;
+  // Wie die Kacheln der Akte: An- und Abmelden nur mit Anwesenheit im Web.
+  const attendanceWebEnabled = useAttendanceWebEnabled();
+  const showCheckout =
+    attendanceWebEnabled && canCheckin && !withoutCarePlace && !notCheckedIn;
+  const showCheckin =
+    attendanceWebEnabled && canCheckin && !withoutCarePlace && notCheckedIn;
   const sickExcused = detail.hasSickExcusedWriteAccess;
   if (!showCheckout && !showCheckin && !sickExcused) return null;
   const open = (action: StudentQuickAction) => () =>
@@ -256,27 +259,57 @@ function ChildQuickActions({
       ? router.replace(studentQuickActionHref(href, action))
       : router.push(studentQuickActionHref(href, action));
   const isQuickExcused = (student.excused ?? false) && !student.class_trip;
+  // Eine Knopfzeile statt hoher Kacheln: Das Blatt bleibt kompakt, die
+  // Hauptaktion (An- oder Abmelden) ist dunkel.
   return (
-    <div className="flex gap-2" aria-label="Schnellaktionen">
+    <div className="flex flex-wrap gap-2" aria-label="Schnellaktionen">
       {showCheckout ? (
-        <StudentCheckoutSection onCheckoutClick={open("abmelden")} />
+        <Button
+          type="button"
+          variant="primary"
+          size="md"
+          className="flex-1"
+          onClick={open("abmelden")}
+          tooltip="Öffnet die Akte und fragt dort vor dem Abmelden nach."
+        >
+          Abmelden
+        </Button>
       ) : null}
       {showCheckin ? (
-        <StudentCheckinSection onCheckinClick={open("anmelden")} />
+        <Button
+          type="button"
+          variant="primary"
+          size="md"
+          className="flex-1"
+          onClick={open("anmelden")}
+          tooltip="Öffnet die Akte und fragt dort vor dem Anmelden nach."
+        >
+          Anmelden
+        </Button>
       ) : null}
       {sickExcused ? (
-        <StudentSickReportSection
-          isSick={student.sick ?? false}
-          onToggle={open("krank")}
-          isLoading={false}
-        />
+        <Button
+          type="button"
+          variant="outline"
+          size="md"
+          className="flex-1"
+          onClick={open("krank")}
+          tooltip="Öffnet die Akte und fragt dort vor dem Speichern nach."
+        >
+          {student.sick ? "Gesund melden" : "Krank melden"}
+        </Button>
       ) : null}
       {sickExcused ? (
-        <StudentExcusedReportSection
-          isExcused={isQuickExcused}
-          onToggle={open("entschuldigen")}
-          isLoading={false}
-        />
+        <Button
+          type="button"
+          variant="outline"
+          size="md"
+          className="flex-1"
+          onClick={open("entschuldigen")}
+          tooltip="Öffnet die Akte und fragt dort vor dem Speichern nach."
+        >
+          {isQuickExcused ? "Entschuldigung aufheben" : "Entschuldigen"}
+        </Button>
       ) : null}
     </div>
   );

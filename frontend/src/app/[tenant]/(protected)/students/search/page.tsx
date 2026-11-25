@@ -130,6 +130,7 @@ import {
 } from "~/components/students/student-table";
 import { StudentSelectionScope } from "~/components/students/student-selection-scope";
 import { StudentListApp } from "~/components/students/student-list-app";
+import { ActionBar } from "~/components/ui/action-bar";
 import { useDeviceContext } from "~/lib/device-context";
 import {
   CollectionViewSwitch,
@@ -3465,23 +3466,6 @@ function SearchPageContent() {
         statsLoading={!hasFetchedOnce || isDateTransition}
         actions={
           <>
-            {/* App (#8070): Der Modus steht als Symbol im Kopf statt als
-                Zeile über der Liste; die Liste bleibt im ersten Bild. */}
-            {appList && checkinModeAvailable ? (
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                // Abstand zum „…“: Die Trefferflächen (44 px) überlappen sonst.
-                className="mr-2"
-                aria-label="Kinder an- und abmelden"
-                tooltip="Zeigt bei jedem Kind einen Knopf zum An- und Abmelden."
-                onClick={schoolCheckin.toggleActive}
-                disabled={schoolCheckin.isBulkRunning}
-              >
-                <ListChecks className="size-5" aria-hidden="true" />
-              </Button>
-            ) : null}
             {appView ? null : (
               <CollectionViewSwitch
                 value={collectionView.view}
@@ -3495,17 +3479,6 @@ function SearchPageContent() {
               tourTarget="child-search-menu"
               items={[
                 ...childScope.menuItems,
-                ...(appList && checkinModeAvailable
-                  ? [
-                      {
-                        label: "Kinder an- und abmelden",
-                        description:
-                          "Zeigt bei jedem Kind einen Knopf zum An- und Abmelden.",
-                        icon: <ListChecks className="h-4 w-4" aria-hidden />,
-                        onClick: schoolCheckin.toggleActive,
-                      },
-                    ]
-                  : []),
                 {
                   // Abwesenheits-Übersicht (#2288): bewusst kein eigener
                   // Seitenleisten-Eintrag; der Einstieg liegt hier, wo das Team
@@ -3575,8 +3548,9 @@ function SearchPageContent() {
         }
         // Der Zähler ändert sich mit der Filterung und gehört deshalb in
         // die Filterzeile, nicht in die Titelzeile.
+        // App (#8070): Die Zahl steht schon im Kopf („118 Kinder“).
         badge={
-          rowsLoaded
+          rowsLoaded && !appView
             ? {
                 count: filteredStudents.length,
                 icon: <MotoConceptIcon concept={childrenConcept} size={20} />,
@@ -3903,18 +3877,38 @@ function SearchPageContent() {
                 }
                 if (appList) {
                   return (
-                    <StudentListApp
-                      students={sortedStudents}
-                      groups={groupedStudents}
-                      alphabetic={
-                        effectiveGroupMode === "none" && sortMode === "name"
-                      }
-                      isToday={isToday}
-                      studentHref={(student) =>
-                        `/students/${student.id}?from=${fromParam}`
-                      }
-                      classLabel={holidayGuestLabel}
-                    />
+                    <>
+                      <StudentListApp
+                        students={sortedStudents}
+                        groups={groupedStudents}
+                        alphabetic={
+                          effectiveGroupMode === "none" && sortMode === "name"
+                        }
+                        isToday={isToday}
+                        studentHref={(student) =>
+                          `/students/${student.id}?from=${fromParam}`
+                        }
+                        classLabel={holidayGuestLabel}
+                      />
+                      {/* App (#8070): An- und Abmelden als beschriftete
+                          Aktion in Daumennähe. */}
+                      {checkinModeAvailable ? (
+                        <ActionBar>
+                          <Button
+                            type="button"
+                            variant="primary"
+                            size="md"
+                            className="gap-2"
+                            onClick={schoolCheckin.toggleActive}
+                            disabled={schoolCheckin.isBulkRunning}
+                            tooltip="Zeigt bei jedem Kind einen Knopf zum An- und Abmelden."
+                          >
+                            <ListChecks className="size-5" aria-hidden="true" />
+                            Kinder an- und abmelden
+                          </Button>
+                        </ActionBar>
+                      ) : null}
+                    </>
                   );
                 }
                 if (showTable) {
