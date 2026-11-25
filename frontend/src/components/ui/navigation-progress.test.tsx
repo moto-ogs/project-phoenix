@@ -102,8 +102,16 @@ function navigateTo(url: string) {
   route.search = location.search;
 }
 
+function expectDelayedProgress(
+  bar = screen.getByTestId("navigation-progress"),
+) {
+  act(() => vi.advanceTimersByTime(150));
+  expect(bar).toBeVisible();
+}
+
 describe("NavigationProgress", () => {
   beforeEach(() => {
+    vi.useFakeTimers();
     navigateTo("/dienstplan");
     router.push.mockClear();
     router.replace.mockClear();
@@ -129,7 +137,8 @@ describe("NavigationProgress", () => {
     fireEvent.click(screen.getByRole("link", { name: "Planungszeiträume" }));
 
     const bar = screen.getByTestId("navigation-progress");
-    expect(bar).toBeVisible();
+    expect(bar).not.toBeVisible();
+    expectDelayedProgress(bar);
     expect(bar).toHaveClass("moto-nav-progress");
     expect(screen.getByRole("status")).toHaveTextContent("Seite wird geladen");
 
@@ -154,7 +163,7 @@ describe("NavigationProgress", () => {
     fireEvent.click(screen.getByRole("link", { name: "Planungszeiträume" }));
 
     const bar = screen.getByTestId("navigation-progress");
-    expect(bar).toBeVisible();
+    expectDelayedProgress(bar);
     expect(bar).toHaveClass("moto-nav-progress");
   });
 
@@ -208,7 +217,7 @@ describe("NavigationProgress", () => {
     );
     fireEvent.click(screen.getByRole("link", { name: "Zum Dienstplan" }));
 
-    expect(screen.getByTestId("navigation-progress")).toBeVisible();
+    expectDelayedProgress();
 
     navigateTo("/dienstplan");
     rendered.rerender(
@@ -241,7 +250,7 @@ describe("NavigationProgress", () => {
     fireEvent.click(screen.getByRole("link", { name: "Zum Dienstplan" }));
 
     expect(router.push).toHaveBeenCalledWith("/staff/dienstplan");
-    expect(screen.getByTestId("navigation-progress")).toBeVisible();
+    expectDelayedProgress();
 
     navigateTo("/dienstplan");
     rendered.rerender(
@@ -281,7 +290,7 @@ describe("NavigationProgress", () => {
       );
 
       expect(router[method]).toHaveBeenCalledWith("/calendar-periods");
-      expect(screen.getByTestId("navigation-progress")).toBeVisible();
+      expectDelayedProgress();
 
       navigateTo("/calendar-periods");
       rendered.rerender(
@@ -328,7 +337,7 @@ describe("NavigationProgress", () => {
         </NavigationProgressProvider>
       </AppRouterContext.Provider>,
     );
-    expect(screen.getByTestId("navigation-progress")).toBeVisible();
+    expectDelayedProgress();
 
     navigateTo("/calendar-periods");
     rendered.rerender(
@@ -375,7 +384,7 @@ describe("NavigationProgress", () => {
       </AppRouterContext.Provider>,
     );
 
-    expect(screen.getByTestId("navigation-progress")).toBeVisible();
+    expectDelayedProgress();
 
     navigateTo("/calendar-periods");
     rendered.rerender(
@@ -387,7 +396,7 @@ describe("NavigationProgress", () => {
       </AppRouterContext.Provider>,
     );
 
-    expect(screen.getByTestId("navigation-progress")).toBeVisible();
+    expectDelayedProgress();
 
     navigateTo("/first");
     rendered.rerender(
@@ -455,7 +464,7 @@ describe("NavigationProgress", () => {
       window.dispatchEvent(new PopStateEvent("popstate"));
     });
 
-    expect(screen.getByTestId("navigation-progress")).toBeVisible();
+    expectDelayedProgress();
 
     route.pathname = "/calendar-periods";
     rendered.rerender(
@@ -479,7 +488,7 @@ describe("NavigationProgress", () => {
     });
 
     // Anker: die Verlaufsnavigation hat den Balken gestartet.
-    expect(screen.getByTestId("navigation-progress")).toBeVisible();
+    expectDelayedProgress();
 
     route.pathname = "/calendar-periods";
     route.search = "?q=a+b";
@@ -503,7 +512,7 @@ describe("NavigationProgress", () => {
       window.dispatchEvent(new PopStateEvent("popstate"));
     });
 
-    expect(screen.getByTestId("navigation-progress")).toBeVisible();
+    expectDelayedProgress();
 
     navigateTo("/dienstplan");
     rendered.rerender(
@@ -550,7 +559,7 @@ describe("NavigationProgress", () => {
       </AppRouterContext.Provider>,
     );
 
-    expect(screen.getByTestId("navigation-progress")).toBeVisible();
+    expectDelayedProgress();
 
     route.pathname = "/staff";
     rendered.rerender(
@@ -577,7 +586,7 @@ describe("NavigationProgress", () => {
     navigateTo("/rooms");
     const rendered = renderShell(<ProgrammaticNavigation />);
     fireEvent.click(screen.getByRole("button", { name: "Erstes Ziel" }));
-    expect(screen.getByTestId("navigation-progress")).toBeVisible();
+    expectDelayedProgress();
 
     act(() => {
       window.history.replaceState({}, "", "/first");
@@ -612,7 +621,7 @@ describe("NavigationProgress", () => {
     navigateTo("/rooms");
     const rendered = renderShell(<ProgrammaticNavigation />);
     fireEvent.click(screen.getByRole("button", { name: "Zum Dienstplan" }));
-    expect(screen.getByTestId("navigation-progress")).toBeVisible();
+    expectDelayedProgress();
 
     navigateTo("/dienstplan");
     rendered.rerender(
@@ -654,7 +663,7 @@ describe("NavigationProgress", () => {
     fireEvent.click(
       screen.getByRole("button", { name: "Zu den Planungszeiträumen" }),
     );
-    expect(screen.getByTestId("navigation-progress")).toBeVisible();
+    expectDelayedProgress();
 
     navigateTo("/dienstplan");
     rendered.rerender(
@@ -682,12 +691,11 @@ describe("NavigationProgress", () => {
       );
     }
 
-    vi.useFakeTimers();
     renderShell(<ProgrammaticNavigation />);
     fireEvent.click(
       screen.getByRole("button", { name: "Zu den Planungszeiträumen" }),
     );
-    expect(screen.getByTestId("navigation-progress")).toBeVisible();
+    expectDelayedProgress();
 
     act(() => {
       vi.advanceTimersByTime(10_000);

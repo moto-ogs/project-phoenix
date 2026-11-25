@@ -48,6 +48,7 @@ import { FIXED_LAYER_SHIFT } from "./hooks/useFixedLayersFollowViewport";
  */
 
 const NAVIGATION_TIMEOUT_MS = 10_000;
+const SHOW_PROGRESS_AFTER_MS = 150;
 
 interface PendingNavigation {
   readonly id: number;
@@ -349,13 +350,25 @@ export function NavigationProgressBar() {
     const status = statusRef.current;
     const bar = barRef.current;
     if (!store || !status || !bar) return;
+    let reveal: ReturnType<typeof setTimeout> | undefined;
     const update = () => {
       const pending = store.isPending();
       status.textContent = pending ? "Seite wird geladen" : "";
-      bar.hidden = !pending;
+      if (pending) {
+        reveal = setTimeout(() => {
+          bar.hidden = false;
+        }, SHOW_PROGRESS_AFTER_MS);
+        return;
+      }
+      clearTimeout(reveal);
+      if (!bar.hidden) bar.hidden = true;
     };
     update();
-    return store.subscribe(update);
+    const unsubscribe = store.subscribe(update);
+    return () => {
+      unsubscribe();
+      clearTimeout(reveal);
+    };
   }, [store]);
 
   return (
