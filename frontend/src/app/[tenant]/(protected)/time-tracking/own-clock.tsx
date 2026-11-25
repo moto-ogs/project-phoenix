@@ -172,7 +172,7 @@ const MIN_BREAK_MINUTES = 15;
 const MAX_BREAK_MINUTES = 240;
 
 // Session status type (only present or home_office - no absent for active sessions)
-export type SessionStatus = ClockSession["status"];
+type SessionStatus = ClockSession["status"];
 
 // Work mode type for clock-in status (includes absent option)
 type WorkMode = SessionStatus | "absent";

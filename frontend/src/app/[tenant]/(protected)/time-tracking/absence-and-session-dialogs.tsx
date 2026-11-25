@@ -72,8 +72,8 @@ import {
 import { absenceRequestFor, selectValueFor } from "~/lib/absence-type-select";
 import { createLogger } from "~/lib/logger";
 import type { OwnAbsence, OwnBlock } from "~/lib/own-time-tracking-view";
-import type { SessionStatus } from "./own-clock";
 
+type SessionStatus = OwnBlock["status"];
 const logger = createLogger({ component: "OwnTimeDialogs" });
 const ABSENCE_RANGE_MISSING = "Wähle zuerst Von und Bis.";
 function formatDateGerman(date: Date): string {
