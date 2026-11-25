@@ -4,7 +4,7 @@ import { releaseFakeTimers } from "~/test/clock";
 
 import { ModalProvider } from "~/components/ui/modal-context";
 import type { UnregisteredTagScan } from "~/lib/operator/provisioning-helpers";
-import { ResolveScanModal } from "./page";
+import { ResolveScanModal } from "./page-content";
 
 const scan: UnregisteredTagScan = {
   id: "scan-1",

@@ -190,7 +190,7 @@ vi.mock("~/components/teachers/caregiver-capability-modal", () => ({
   CaregiverCapabilityModal: () => null,
 }));
 
-import OperatorSchoolDetailPage from "./page";
+import OperatorSchoolDetailPage from "./page-content";
 
 const mockOrg = {
   id: "1",

@@ -96,7 +96,7 @@ vi.mock("~/components/ui/skeleton", () => ({
   ),
 }));
 
-import OperatorPersonsPage from "./page";
+import OperatorPersonsPage from "./page-content";
 
 /** Löschen liegt im Kebab der Karte (#5604). */
 function openPersonDelete(index = 0) {

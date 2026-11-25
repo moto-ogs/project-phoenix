@@ -55,7 +55,7 @@ vi.mock("~/lib/parent-announcements-api", async (importOriginal) => ({
 import { ToastProvider } from "~/contexts/ToastContext";
 import { unavailableApiError } from "~/lib/api-error";
 import type { Announcement } from "~/lib/parent-announcements-api";
-import SchoolParentLettersPage from "./page";
+import SchoolParentLettersPage from "./page-content";
 
 const TITLE = "Neuer Elternbrief";
 const FOOTER = ["Abbrechen", "Wird gesendet…"];

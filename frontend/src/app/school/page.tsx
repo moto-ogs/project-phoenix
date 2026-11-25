@@ -1,30 +1,19 @@
-"use client";
-
-// Startseite des Schul-Portals ("moto schule", #2207): die Tagesübersicht
-// der Klassenansicht. Die Kinderlisten liegen unter /school/klasse?klasse=…
-// (#2294), eine Klasse pro Seite.
-
-import { ClassDayOverview } from "~/components/class-day/class-day-overview";
-import { TodayNoticesCard } from "~/components/school/today-notices-card";
+import { Suspense } from "react";
+import { SWRServerSeed } from "~/lib/swr/server-seed";
 import {
-  fetchClassDaySchool,
-  fetchClassDayClassesSchool,
-  fetchSchoolDaySchool,
-  reportAbsenceSchool,
-  withdrawAbsenceReportSchool,
-} from "~/lib/school-class-day-api";
+  schoolPageSeed,
+  schoolClasses,
+  schoolNotices,
+} from "~/lib/school/page-seed.server";
+import SchoolHomePage from "./page-content";
 
-export default function SchoolHomePage() {
+export default function Page() {
+  const { seed, claims } = schoolPageSeed([schoolClasses, schoolNotices]);
   return (
-    <ClassDayOverview
-      fetchClasses={fetchClassDayClassesSchool}
-      fetchClassDay={fetchClassDaySchool}
-      fetchSchoolDay={fetchSchoolDaySchool}
-      reportAbsence={reportAbsenceSchool}
-      withdrawAbsenceReport={withdrawAbsenceReportSchool}
-      // Hinweise der OGS-Leitung für heute (#2208): direkt unter dem Kopf;
-      // ohne Hinweis rendert die Karte nichts.
-      notices={<TodayNoticesCard />}
-    />
+    <Suspense fallback={null}>
+      <SWRServerSeed seed={seed} claims={claims} render>
+        <SchoolHomePage />
+      </SWRServerSeed>
+    </Suspense>
   );
 }

@@ -229,7 +229,7 @@ vi.mock("~/components/teachers/caregiver-capability-modal", () => ({
   CaregiverCapabilityModal: () => null,
 }));
 
-import OperatorOrganizationDetailPage from "./page";
+import OperatorOrganizationDetailPage from "./page-content";
 import {
   expectPageReloadedAfterRefusal,
   resetPageReloads,
