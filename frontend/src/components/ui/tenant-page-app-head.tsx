@@ -236,7 +236,7 @@ export function AppTenantHead({
             FLOATING_CARD,
             // Telefon: unten an der Kopfkarte, solange sie steht; klebt die
             // Leiste allein, ist sie wieder eine ganze Karte.
-            "phone:mt-0",
+            "phone:mt-0 phone:mb-0",
             "phone:rounded-t-none phone:border-t-0 phone:pt-0",
             printHideHeader && "print:hidden",
           )}
@@ -255,7 +255,7 @@ export function AppTenantHead({
         aria-hidden={!scrolledAway || undefined}
         inert={!scrolledAway}
         className={cn(
-          `tablet:inset-x-8 fixed inset-x-3 ${Z_LAYER.nav} ${FIXED_LAYER_SHIFT} flex items-center gap-1 px-1.5 transition-[opacity,transform] duration-200 motion-reduce:transition-none`,
+          `tablet:inset-x-8 fixed inset-x-4 ${Z_LAYER.nav} ${FIXED_LAYER_SHIFT} flex items-center gap-1 px-1.5 transition-[opacity,transform] duration-200 motion-reduce:transition-none`,
           FLOATING_CARD,
           // Mit Leiste bilden schmale Kopfkarte und Leiste eine Karte.
           hasToolbar && "phone:rounded-b-none phone:border-b-0",

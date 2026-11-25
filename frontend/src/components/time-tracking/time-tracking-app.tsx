@@ -69,6 +69,11 @@ export interface AppClockPanelProps {
   /** Pause des laufenden oder letzten Blocks, live. */
   readonly breakMinutes: number;
   readonly plannedShifts: readonly StaffShift[];
+  /**
+   * Der heutige Dienst wie auf dem Desktop (Schichtart, Zeit, Pause,
+   * entfallene Schichten); steht, solange noch nicht gestempelt ist.
+   */
+  readonly plannedInfo?: ReactNode;
   readonly laborHints: readonly LaborHint[];
   /** Pause mit Ende: Sekunden bis zum Ende. */
   readonly breakCountdownSecs: number | null;
@@ -126,6 +131,7 @@ export function AppClockPanel(props: AppClockPanelProps) {
     todayMinutes,
     breakMinutes,
     plannedShifts,
+    plannedInfo,
     laborHints,
     breakCountdownSecs,
     breakEndsAt,
@@ -188,54 +194,66 @@ export function AppClockPanel(props: AppClockPanelProps) {
     isSplit && typeof document !== "undefined"
       ? createPortal(bars, document.body)
       : bars;
-  // Noch nichts gestempelt: der Zustand steht in der Aktionsleiste
-  // („Dienst 08:00–16:30 · Einstempeln“), die Karte entfällt – auf jedem
-  // Gerät gleich. Die Zeile von heute in der Liste nennt den Plan ebenfalls;
-  // so passen mehr Tage ins erste Bild. Mit Hinweisen und beim Speichern
-  // bleibt die Karte.
-  const foldIntoBar =
-    state === "idle" &&
-    todayMinutes === 0 &&
-    laborHints.length === 0 &&
-    !saving;
   const spinner = pending ? <SpinnerIcon className="mr-1.5 h-4 w-4" /> : null;
+  // Noch nichts gestempelt: die Karte nennt den Dienst wie heute auf dem
+  // Desktop („Geplant: Schichtart 08:00–16:30 · Pause 30 min“), die Leiste
+  // trägt nur den Knopf – wie auf allen übrigen Seiten.
+  const idleBeforeWork = state === "idle" && todayMinutes === 0 && !saving;
+  const showToday = !idleBeforeWork;
 
   return (
     <>
-      {/* Kompakt (#8070): Zustand und heutige Zeit in einer Zeile, Dienst
-          und Pause in der zweiten. So bleibt am kleinen Telefon Platz für
-          die Tage darunter. */}
+      {/* Wiedererkennbar (#8070): dieselbe Karte „Stempeluhr“ mit Zustand
+          rechts wie heute, aber kompakt – Dienst bzw. laufende Zeit in einer
+          Zeile, damit am kleinen Telefon die Tage darunter Platz haben. */}
       <SectionCard
-        padding="none"
-        className={cn("px-4 py-3", foldIntoBar && "hidden")}
+        title="Stempeluhr"
+        // Neben dem Titel statt rechts: rechts bräche der Zustand am kleinen
+        // Telefon in eine eigene Zeile um.
+        titleBadge={
+          <span role="status">
+            <StatusBadge label={badge.label} tone={badge.tone} />
+          </span>
+        }
       >
-        <div data-setup-tour="time-clock" data-app-clock="">
-          <div className="flex items-center justify-between gap-3">
-            <span role="status" className="min-w-0">
-              <StatusBadge label={badge.label} tone={badge.tone} />
-            </span>
-            <p className="shrink-0 text-sm leading-6 text-gray-500 tabular-nums">
-              <span className="text-lg font-semibold text-gray-900">
-                {/* Gleich nach dem Einstempeln: nicht „0min“, die Zeit
-                    läuft schon (sie zählt alle 15 s weiter). */}
-                {state === "working" && todayMinutes < 1
-                  ? "<1min"
-                  : formatDuration(todayMinutes)}
-              </span>{" "}
-              heute
-            </p>
-          </div>
-          <p className="mt-1 truncate text-sm leading-5 tabular-nums">
-            <span
-              className={cn(
-                "font-semibold",
-                state === "break" ? "text-moto-orange-strong" : "text-gray-900",
-              )}
-            >
-              {headline}
-            </span>
-            {detail ? <span className="text-gray-500"> · {detail}</span> : null}
-          </p>
+        <div
+          data-setup-tour="time-clock"
+          data-app-clock=""
+          className="mt-2 text-sm leading-6"
+        >
+          {idleBeforeWork && plannedInfo ? (
+            plannedInfo
+          ) : (
+            <div className="flex items-baseline justify-between gap-3">
+              <p className="min-w-0 truncate tabular-nums">
+                <span
+                  className={cn(
+                    "font-semibold",
+                    state === "break"
+                      ? "text-moto-orange-strong"
+                      : "text-gray-900",
+                  )}
+                >
+                  {headline}
+                </span>
+                {detail ? (
+                  <span className="text-gray-500"> · {detail}</span>
+                ) : null}
+              </p>
+              {showToday ? (
+                <p className="shrink-0 text-gray-500 tabular-nums">
+                  <span className="font-semibold text-gray-900">
+                    {/* Gleich nach dem Einstempeln: nicht „0min“, die Zeit
+                        läuft schon (sie zählt alle 15 s weiter). */}
+                    {state === "working" && todayMinutes < 1
+                      ? "<1min"
+                      : formatDuration(todayMinutes)}
+                  </span>{" "}
+                  heute
+                </p>
+              ) : null}
+            </div>
+          )}
         </div>
         {laborHints.length > 0 ? (
           <ul className="mt-2 space-y-0.5">
@@ -254,10 +272,7 @@ export function AppClockPanel(props: AppClockPanelProps) {
       {portalBars(
         <>
           {state === "idle" ? (
-            <ActionBar
-              column="list"
-              status={foldIntoBar ? headline : undefined}
-            >
+            <ActionBar column="list">
               <Button
                 type="button"
                 variant="success"
@@ -265,8 +280,6 @@ export function AppClockPanel(props: AppClockPanelProps) {
                 disabled={disabled || pending}
                 onClick={() => setStatusSheetOpen(true)}
                 tooltip="Öffnet die Auswahl, wo du heute arbeitest."
-                // Ohne Karte zeigt die Einführung auf den Knopf.
-                data-setup-tour={foldIntoBar ? "time-clock" : undefined}
               >
                 {spinner}
                 Einstempeln
@@ -303,7 +316,7 @@ export function AppClockPanel(props: AppClockPanelProps) {
             </ActionBar>
           ) : null}
           {state === "break" ? (
-            <ActionBar column="list" status={headline}>
+            <ActionBar column="list">
               <Button
                 type="button"
                 variant="primary"
@@ -521,11 +534,15 @@ export function AppRangeBar({
 
 const WEEKDAY_SHORT = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
 
+/**
+ * Plus (Überstunden) und ausgeglichen in Grün, ein kleines Minus grau; erst
+ * ein deutliches Minus in Warnfarbe. Ein Plus in Orange las sich wie ein
+ * Fehler (#8070, Runde 5).
+ */
 function balanceClass(delta: number): string {
-  if (delta > 0) return "text-moto-amber-strong";
-  if (delta < -15) return "text-moto-red-strong";
-  if (delta < 0) return "text-gray-500";
-  return "text-moto-green-strong";
+  if (delta >= 0) return "text-moto-green-strong";
+  if (delta < -15) return "text-moto-orange-strong";
+  return "text-gray-500";
 }
 
 function isoWeek(d: Date): number {
@@ -662,7 +679,14 @@ export function AppDayList({
         // Wochenansicht: der Zeitraum steht schon im Kopf der Karte und die
         // Stunden der Woche in der Kopfkarte; die Gruppe nennt nur den Saldo.
         const single = weeks.length === 1 && header !== undefined;
-        const saldoLabel = partial ? "Wochensaldo bis gestern" : "Wochensaldo";
+        // Die laufende Woche ist ein Teil des Stundenkontos im Kopf: „davon“
+        // macht die Beziehung der beiden Zahlen lesbar (#8070, Runde 5).
+        const saldoLabel =
+          single && partial
+            ? "Davon diese Woche bis gestern"
+            : partial
+              ? "Wochensaldo bis gestern"
+              : "Wochensaldo";
         if (single) {
           return (
             <CollectionGroup

@@ -315,7 +315,21 @@ function AssignmentRow({
       >
         {block.startTime}–{block.endTime}
       </span>
-      {dense || inline ? (
+      {inline ? (
+        // App: Raum und Gruppe brechen als Ganzes in die nächste Zeile um,
+        // statt abgeschnitten („OGS-Rau…“) oder mitten im Namen getrennt zu
+        // werden („OGS-“ / „Raum 2“).
+        <p className="flex min-w-0 flex-1 flex-wrap gap-x-2 text-sm">
+          <span
+            className={`font-medium ${dimmed ? "text-gray-500" : "text-gray-900"}`}
+          >
+            {block.title}
+          </span>
+          {secondary && (
+            <span className="whitespace-nowrap text-gray-500">{secondary}</span>
+          )}
+        </p>
+      ) : dense ? (
         <p className="min-w-0 flex-1 truncate text-sm">
           <span
             className={`font-medium ${dimmed ? "text-gray-500" : "text-gray-900"}`}

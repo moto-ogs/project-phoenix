@@ -39,6 +39,7 @@ import { MessagesInboxApp } from "~/components/messaging/messages-inbox-app";
 import { ActionBar } from "~/components/ui/action-bar";
 import { SearchBar } from "~/components/ui/page-header/SearchBar";
 import { ToggleChip } from "~/components/ui/toggle-chip";
+import { EmptyState } from "~/components/ui/empty-state";
 import { MessageThreadContent } from "./[threadId]/page";
 
 // Info-Knopf am Seitentitel (#7578): wofür die Seite da ist.
@@ -224,8 +225,13 @@ function MessagesInboxContent() {
         inputProps={{ "aria-label": "Person oder Kind suchen" }}
         className="min-w-0 flex-1"
       />
-      <ToggleChip pressed={onlyUnread} onPressedChange={setOnlyUnread}>
-        Ungelesen
+      {/* Die Zahl wie heute im Kopf („5 ungelesen“), zugleich der Filter. */}
+      <ToggleChip
+        pressed={onlyUnread}
+        onPressedChange={setOnlyUnread}
+        className="shrink-0 whitespace-nowrap tabular-nums"
+      >
+        {unreadThreads > 0 ? `${unreadThreads} ungelesen` : "Ungelesen"}
       </ToggleChip>
     </div>
   );
@@ -252,7 +258,11 @@ function MessagesInboxContent() {
   // Fehler- und Leerzustand ersetzen den Inhalt des Gerüsts. Solange das
   // Verfassen-Fenster offen ist, muss der Inhalt gerendert werden, denn dort
   // hängt das Fenster.
-  const bodyReplaced = !showSkeleton && !hasThreads && !composeOpen;
+  // App: findet die Suche nichts, bleibt die Karte mit der Suche stehen,
+  // sonst verschwände das Suchfeld mit dem Ergebnis.
+  const appFilterEmpty = isApp && !hasThreads && filtersActive && !loadFailed;
+  const bodyReplaced =
+    !showSkeleton && !hasThreads && !composeOpen && !appFilterEmpty;
 
   return (
     <TenantPage
@@ -288,25 +298,34 @@ function MessagesInboxContent() {
             ]
           : []),
       ]}
-      searchSlot={isApp ? appToolbar : undefined}
-      search={{
-        value: searchTerm,
-        onChange: setSearchTerm,
-        placeholder: "Person oder Kind suchen…",
-      }}
-      filters={[
-        {
-          id: "unread",
-          type: "dropdown",
-          label: "Nachrichten filtern",
-          value: onlyUnread ? "unread" : "all",
-          onChange: (next) => setOnlyUnread(next === "unread"),
-          options: [
-            { value: "all", label: "Alle Nachrichten" },
-            { value: "unread", label: "Nur ungelesen" },
-          ],
-        },
-      ]}
+      // App: Suche und Filter stehen als Kopf der Liste in der Karte; die
+      // Kopfkarte trägt nur Titel und Reiter und bleibt am SE flach.
+      search={
+        isApp
+          ? undefined
+          : {
+              value: searchTerm,
+              onChange: setSearchTerm,
+              placeholder: "Person oder Kind suchen…",
+            }
+      }
+      filters={
+        isApp
+          ? undefined
+          : [
+              {
+                id: "unread",
+                type: "dropdown",
+                label: "Nachrichten filtern",
+                value: onlyUnread ? "unread" : "all",
+                onChange: (next) => setOnlyUnread(next === "unread"),
+                options: [
+                  { value: "all", label: "Alle Nachrichten" },
+                  { value: "unread", label: "Nur ungelesen" },
+                ],
+              },
+            ]
+      }
       error={bodyReplaced && loadFailed ? loadError : null}
       empty={
         bodyReplaced && !loadFailed
@@ -356,6 +375,14 @@ function MessagesInboxContent() {
           <MessagesInboxApp
             threads={filteredThreads}
             listAction={isSplit ? appComposeButton : null}
+            header={appToolbar}
+            empty={
+              <EmptyState
+                variant="compact"
+                title="Keine passenden Nachrichten"
+                description="Ändere die Suche oder den Filter."
+              />
+            }
             renderDetail={(threadId) => (
               <MessageThreadContent
                 key={threadId}

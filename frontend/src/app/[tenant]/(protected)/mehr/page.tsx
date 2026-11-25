@@ -17,6 +17,7 @@ import {
   StaffNewsList,
 } from "~/components/dashboard/header/staff-news-button";
 import { UnreadBadge } from "~/components/messaging/unread-badge";
+import { SchoolSearchSlot } from "~/components/search/school-search-slot";
 import { ListRowLink } from "~/components/ui/list-row-link";
 import { ModuleLockMark } from "~/components/ui/module-lock-mark";
 import { NotificationBadge } from "~/components/ui/notification-badge";
@@ -267,12 +268,16 @@ function MorePageContent() {
     <TenantPage
       title="Mehr"
       info="Hier stehen alle Bereiche, die nicht in der unteren Leiste sind, dazu dein Profil und Abmelden."
+      // Wiedererkennbar: „Überall suchen“ stand im heutigen Blatt „Mehr“
+      // ganz oben; am Telefon trägt sonst keine Kopfkarte die Suche.
+      searchSlot={<SchoolSearchSlot placement="moreSheet" />}
       overlays={
         <LogoutModal isOpen={logoutOpen} onClose={() => setLogoutOpen(false)} />
       }
     >
       {columns === 1 ? (
-        <div className="flex flex-col gap-6">
+        // 16 px zwischen den Karten wie auf jeder Seite der App.
+        <div className="flex flex-col gap-4">
           <Collection label="Mehr">
             {sections.map((section) => group(section))}
           </Collection>

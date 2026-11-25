@@ -222,15 +222,24 @@ const DAY_NAMES_LONG = [
 function PlannedShiftsInfo({
   plannedShifts,
   cancelledShifts,
+  className = "-mt-3 mb-5 space-y-1 text-sm text-gray-500",
+  app = false,
 }: {
   readonly plannedShifts?: readonly StaffShift[];
   readonly cancelledShifts?: readonly StaffShift[];
+  /** App (#8070): ohne den Versatz unter den Titel der Desktop-Karte. */
+  readonly className?: string;
+  /**
+   * App (#8070): Zeit und Pause bleiben zusammen; am schmalen Telefon bricht
+   * sonst „· Pause 30 min“ allein in die nächste Zeile.
+   */
+  readonly app?: boolean;
 }) {
   const active = plannedShifts ?? [];
   const cancelled = cancelledShifts ?? [];
   if (active.length === 0 && cancelled.length === 0) return null;
   return (
-    <div className="-mt-3 mb-5 space-y-1 text-sm text-gray-500">
+    <div className={className}>
       {active.map((shift) => (
         <div key={shift.id} className="flex flex-wrap items-center gap-1.5">
           <span className="text-gray-500">Geplant:</span>
@@ -243,16 +252,32 @@ function PlannedShiftsInfo({
               color={shift.shiftTypeColor ?? LOCATION_COLORS.HOME}
             />
           )}
-          <span className="tabular-nums">
-            {shift.startTime}–{shift.endTime}
-          </span>
-          {shift.originShiftId && (
-            <StatusBadge label="Vertretung" tone="blue" compact />
-          )}
-          {shift.breakMinutes > 0 && (
-            <span className="text-gray-500">
-              · Pause {shift.breakMinutes} min
-            </span>
+          {app ? (
+            <>
+              {shift.originShiftId && (
+                <StatusBadge label="Vertretung" tone="blue" compact />
+              )}
+              <span className="whitespace-nowrap tabular-nums">
+                {shift.startTime}–{shift.endTime}
+                {shift.breakMinutes > 0
+                  ? ` · Pause ${shift.breakMinutes} min`
+                  : ""}
+              </span>
+            </>
+          ) : (
+            <>
+              <span className="tabular-nums">
+                {shift.startTime}–{shift.endTime}
+              </span>
+              {shift.originShiftId && (
+                <StatusBadge label="Vertretung" tone="blue" compact />
+              )}
+              {shift.breakMinutes > 0 && (
+                <span className="text-gray-500">
+                  · Pause {shift.breakMinutes} min
+                </span>
+              )}
+            </>
           )}
         </div>
       ))}
@@ -962,6 +987,16 @@ function ClockInCard({
         todayMinutes={isCheckedIn ? displayMinutes : completedTodayMinutes}
         breakMinutes={isCheckedIn ? liveBreakMins : breakMins}
         plannedShifts={plannedShifts ?? []}
+        plannedInfo={
+          (plannedShifts?.length ?? 0) + (cancelledShifts?.length ?? 0) > 0 ? (
+            <PlannedShiftsInfo
+              plannedShifts={plannedShifts}
+              cancelledShifts={cancelledShifts}
+              className="space-y-1 text-sm text-gray-500"
+              app
+            />
+          ) : undefined
+        }
         laborHints={laborHints}
         breakCountdownSecs={
           plannedBreakDurationMins ? countdownRemainingSecs : null
@@ -2204,6 +2239,13 @@ function ModalActions({
           {cancelLabel}
         </Button>
       )}
+      {/* App (#8070): ohne Abbrechen ist Platz für den Grund, warum
+          Speichern noch nicht geht – sichtbar, nicht erst beim Antippen. */}
+      {hideCancel && confirmDisabled && confirmDisabledReason ? (
+        <p className="self-center text-sm leading-5 text-gray-600">
+          {confirmDisabledReason}
+        </p>
+      ) : null}
       <Button
         type="button"
         variant="primary"
@@ -2869,7 +2911,8 @@ function EditSessionModal({
                   ) : (
                     <CustomSelect
                       id="edit-break"
-                      label="Pause (Min)"
+                      // App: der Wert nennt die Einheit schon („38 min“).
+                      label={app ? "Pause" : "Pause (Min)"}
                       value={breakMins}
                       onChange={setBreakMins}
                       // Eine gestempelte Pause wie 38 min steht nicht in der
@@ -3302,8 +3345,8 @@ const NO_BREAKS: WorkSessionBreak[] = [];
 const TIME_TRACKING_INFO =
   "Hier erfasst du deine Arbeitszeit und deine Pausen. Wähle zuerst unter „Stempeluhr“ deinen Arbeitsort und dann „Einstempeln“. Oben siehst du deinen Stand, darunter deine erfassten Zeiten.";
 
-// Dieselbe Hilfe in der App (#8070): dort gibt es keine Stempeluhr-Karte,
-// gestempelt wird unten über die Leiste.
+// Dieselbe Hilfe in der App (#8070): die Stempeluhr zeigt dort nur den
+// Zustand, gestempelt wird unten über die Leiste.
 const TIME_TRACKING_APP_INFO =
   "Hier erfasst du deine Arbeitszeit und deine Pausen. Tippe unten auf „Einstempeln“ und wähle, wo du arbeitest. Oben steht dein Stundenkonto, darunter deine Woche Tag für Tag. Tippe auf einen Tag, um ihn anzusehen oder zu korrigieren.";
 
