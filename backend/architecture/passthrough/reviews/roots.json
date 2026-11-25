@@ -2337,21 +2337,6 @@
     },
     {
       "decision": "0090",
-      "id": "roots/owners/ProvisioningIdentity.ListAllAccounts",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "roots/owners/ProvisioningIdentity.ListOrganizationAccounts",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "roots/owners/ProvisioningIdentity.ListSchoolAccounts",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "roots/owners/ProvisioningIdentity.ListTraegerAccounts",
       "reason": "ADR 0084 (#4649): root translation of the Identity \u0026 Access Träger accounts into the provisioning vocabulary."
     },

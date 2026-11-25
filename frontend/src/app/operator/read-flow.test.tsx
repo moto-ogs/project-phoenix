@@ -25,9 +25,7 @@ const { state, api } = vi.hoisted(() => ({
   api: {
     listOrganizations: vi.fn(),
     listSchools: vi.fn(),
-    listSchoolAccounts: vi.fn(),
-    listAllAccounts: vi.fn(),
-    listOrganizationAccounts: vi.fn(),
+    listAccountPage: vi.fn(),
     listSchoolDevices: vi.fn(),
     listAllDevices: vi.fn(),
     listOrganizationDevices: vi.fn(),
@@ -174,7 +172,7 @@ beforeEach(() => {
   state.query = "schoolId=10";
   api.listOrganizations.mockResolvedValue([org]);
   api.listSchools.mockResolvedValue([{ ...school, organization: org }]);
-  api.listSchoolAccounts.mockResolvedValue([]);
+  api.listAccountPage.mockResolvedValue({ rows: [], total: 0 });
   api.listSchoolDevices.mockResolvedValue([]);
   api.listSchoolPersons.mockResolvedValue([]);
   api.listUnregisteredTagScans.mockResolvedValue([]);
@@ -190,7 +188,7 @@ beforeEach(() => {
 
 describe("operator reads with real SWR", () => {
   it.each([
-    ["accounts", AccountsPage, api.listSchoolAccounts],
+    ["accounts", AccountsPage, api.listAccountPage],
     ["devices", DevicesPage, api.listSchoolDevices],
     ["persons", PersonsPage, api.listSchoolPersons],
     ["RFID", TagsPage, api.listUnregisteredTagScans],
@@ -199,22 +197,27 @@ describe("operator reads with real SWR", () => {
     async (_name, Page, read) => {
       api.listSchools.mockReturnValue(new Promise(() => undefined));
       renderPage(<Page />);
-      await waitFor(() =>
-        expect(read).toHaveBeenCalledWith(
-          _name === "RFID"
-            ? {
-                organizationId: undefined,
-                schoolId: "10",
-                resolved: "unresolved",
-              }
-            : "10",
-        ),
-      );
+      await waitFor(() => {
+        if (_name === "accounts") {
+          expect(read).toHaveBeenCalledWith(
+            { kind: "school", id: "10" },
+            { sort: "name", direction: "asc", search: "" },
+          );
+        } else if (_name === "RFID") {
+          expect(read).toHaveBeenCalledWith({
+            organizationId: undefined,
+            schoolId: "10",
+            resolved: "unresolved",
+          });
+        } else {
+          expect(read).toHaveBeenCalledWith("10");
+        }
+      });
     },
   );
 
   describe.each([
-    ["accounts", AccountsPage, api.listSchoolAccounts, "die Liste der Konten"],
+    ["accounts", AccountsPage, api.listAccountPage, "die Liste der Konten"],
     ["devices", DevicesPage, api.listSchoolDevices, "die Liste der Geräte"],
   ] as const)("%s load failures", (_name, Page, read, object) => {
     it.each(["pending", "failed"])(
@@ -236,7 +239,14 @@ describe("operator reads with real SWR", () => {
         const retry = within(
           message.closest<HTMLElement>('[role="alert"]')!,
         ).getByRole("button", { name: "Wiederholen" });
-        expect(read).toHaveBeenCalledWith("10");
+        if (read === api.listAccountPage) {
+          expect(read).toHaveBeenCalledWith(
+            { kind: "school", id: "10" },
+            { sort: "name", direction: "asc", search: "" },
+          );
+        } else {
+          expect(read).toHaveBeenCalledWith("10");
+        }
         act(() => retry.click());
         await waitFor(() => expect(read).toHaveBeenCalledTimes(2));
       },
@@ -259,7 +269,7 @@ describe("operator reads with real SWR", () => {
     });
     expect(await screen.findByText("Schule A")).toBeInTheDocument();
     expect(api.getSchoolPWAUsage).toHaveBeenCalledWith("10");
-    expect(api.listSchoolAccounts).not.toHaveBeenCalled();
+    expect(api.listAccountPage).not.toHaveBeenCalled();
     // Anker: the matched school is fully resolved, not a permanent skeleton.
     expect(screen.getByText("Schule A")).toBeInTheDocument();
     expect(api.listOrganizationSchools).not.toHaveBeenCalled();
@@ -274,7 +284,10 @@ describe("operator reads with real SWR", () => {
     });
     expect(await screen.findByText("Schule A")).toBeInTheDocument();
     await waitFor(() =>
-      expect(api.listSchoolAccounts).toHaveBeenCalledWith("10"),
+      expect(api.listAccountPage).toHaveBeenCalledWith(
+        { kind: "school", id: "10" },
+        { sort: "name", direction: "asc", search: "" },
+      ),
     );
     expect(api.getSchoolPWAUsage).not.toHaveBeenCalled();
     expect(api.listOrganizationSchools).not.toHaveBeenCalled();
@@ -294,7 +307,7 @@ describe("operator reads with real SWR", () => {
     ).toBeInTheDocument();
     // Anker: the wrong-organization route has resolved to its explicit not-found view.
     expect(screen.getByText("Schule nicht gefunden.")).toBeInTheDocument();
-    expect(api.listSchoolAccounts).not.toHaveBeenCalled();
+    expect(api.listAccountPage).not.toHaveBeenCalled();
     expect(api.getSchoolPWAUsage).not.toHaveBeenCalled();
   });
 
@@ -420,7 +433,10 @@ describe("operator reads with real SWR", () => {
     const summary = vi.fn(async () => `Übersicht ${revision}`);
     function DetailReaders() {
       const account = useSWRAuth(
-        operatorProvisioningKeys.orgAccounts("1"),
+        operatorProvisioningKeys.accountPage(
+          { kind: "organization", id: "1" },
+          { sort: "schoolName", direction: "asc" },
+        ),
         detail,
       );
       const count = useSWRAuth(
@@ -433,7 +449,10 @@ describe("operator reads with real SWR", () => {
         </p>
       );
     }
-    api.listSchoolAccounts.mockResolvedValue([{ accountId: "1" }]);
+    api.listAccountPage.mockResolvedValue({
+      rows: [{ accountId: "1" }],
+      total: 1,
+    });
     renderPage(
       <>
         <AccountsPage />

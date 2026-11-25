@@ -3,6 +3,7 @@ package owners
 import (
 	"testing"
 
+	"github.com/moto-ogs/project-phoenix/modules/schoolmembership"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -15,8 +16,6 @@ func TestCaregiverChainsComeFromSchoolMembership(t *testing.T) {
 	membership, err := NewSchoolMembership(testpkg.NewDatabase(t, db))
 	require.NoError(t, err)
 
-	chains := caregiverChainsFromMembership(membership)
-
 	teacher := testpkg.CreateTestTeacher(t, db, "Kette", "Lehrkraft")
 	plainStaff := testpkg.CreateTestStaff(t, db, "Kette", "Ohne Profil")
 	stranger := testpkg.CreateTestPerson(t, db, "Kette", "Ohne Anstellung")
@@ -24,7 +23,7 @@ func TestCaregiverChainsComeFromSchoolMembership(t *testing.T) {
 	staffRow, err := membership.FindStaff(ctx, teacher.StaffID)
 	require.NoError(t, err)
 
-	result, err := chains.CaregiverChainByPersonIDs(ctx, []int64{staffRow.PersonID, plainStaff.PersonID, stranger.ID})
+	result, err := schoolmembership.StaffChainsByPerson(ctx, membership, []int64{staffRow.PersonID, plainStaff.PersonID, stranger.ID})
 	require.NoError(t, err)
 
 	chain, found := result[staffRow.PersonID]
@@ -41,7 +40,7 @@ func TestCaregiverChainsComeFromSchoolMembership(t *testing.T) {
 	assert.False(t, found, "a person without a staff record has no caregiver chain")
 
 	require.NoError(t, membership.DeleteStaff(ctx, plainStaff.ID))
-	result, err = chains.CaregiverChainByPersonIDs(ctx, []int64{plainStaff.PersonID})
+	result, err = schoolmembership.StaffChainsByPerson(ctx, membership, []int64{plainStaff.PersonID})
 	require.NoError(t, err)
 	assert.Empty(t, result, "an offboarded staff member is no caregiver")
 }

@@ -1567,6 +1567,7 @@ export interface preferenceRequest {
 /** Go: organizationtenancy.OrganizationAccount */
 export interface OrganizationAccount {
   account_id: string;
+  invitation_id?: string;
   email: string;
   active: boolean;
   first_name: string;
@@ -1584,6 +1585,7 @@ export interface OrganizationAccount {
 
 export const OrganizationAccountSchema: z.ZodType<OrganizationAccount, unknown> = object<OrganizationAccount>({
   account_id: int64String,
+  invitation_id: optional(int64String),
   email: str,
   active: bool,
   first_name: str,

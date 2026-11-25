@@ -2,9 +2,12 @@ package api
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
@@ -14,18 +17,13 @@ import (
 	"github.com/uptrace/bun"
 )
 
-// newProjectedOperatorAccountDirectory uses the serving owner projection.
-func newProjectedOperatorAccountDirectory(t *testing.T, db *bun.DB) owners.OperatorAccountDirectory {
+func readTestOperatorAccounts(t *testing.T, db *bun.DB, scope organizationtenancy.AccountScope, query organizationtenancy.AccountPageQuery) (page organizationtenancy.AccountPage, err error) {
 	t.Helper()
-	schools, err := owners.NewOrganizationTenancy(testpkg.NewDatabase(t, db))
-	require.NoError(t, err)
-	persons, err := owners.NewPeopleDirectory(testpkg.NewDatabase(t, db))
-	require.NoError(t, err)
-	membership, err := owners.NewSchoolMembership(testpkg.NewDatabase(t, db))
-	require.NoError(t, err)
-	identity, err := NewIdentityAccessForTests(testpkg.NewDatabase(t, db))
-	require.NoError(t, err)
-	return owners.NewOperatorAccountDirectory(identity, persons, membership, schools)
+	err = testpkg.WithinAdminContext(t, context.Background(), db, func(ctx context.Context) error {
+		page, err = owners.NewOperatorAccountDirectory().ListAccountPage(ctx, scope, query)
+		return err
+	})
+	return page, err
 }
 
 func TestOperatorAccountDirectory_ListAccountsByTenantID(t *testing.T) {
@@ -44,15 +42,13 @@ func TestOperatorAccountDirectory_ListAccountsByTenantID(t *testing.T) {
 		`UPDATE users.persons SET account_id = ? WHERE id = ?`, account.ID, person.ID)
 	require.NoError(t, err)
 
-	repo := newProjectedOperatorAccountDirectory(t, db)
-
 	t.Run("returns accounts for tenant", func(t *testing.T) {
 		// The composed repository resolves persons through the tenant runtime.
-		accounts, err := repo.ListAccountsByTenantID(testpkg.TenantContext(tenantID), tenantID)
+		accountsPage, err := readTestOperatorAccounts(t, db, organizationtenancy.AccountScope{SchoolID: tenantID}, organizationtenancy.AccountPageQuery{})
 		require.NoError(t, err)
 
 		var found bool
-		for _, a := range accounts {
+		for _, a := range accountsPage.Rows {
 			if a.Email == account.Email {
 				found = true
 				assert.Equal(t, ident.ID(account.ID), a.AccountID)
@@ -65,9 +61,9 @@ func TestOperatorAccountDirectory_ListAccountsByTenantID(t *testing.T) {
 	})
 
 	t.Run("returns empty for nonexistent tenant", func(t *testing.T) {
-		accounts, err := repo.ListAccountsByTenantID(testpkg.TenantContext(999999), 999999)
+		accountsPage, err := readTestOperatorAccounts(t, db, organizationtenancy.AccountScope{SchoolID: 999999}, organizationtenancy.AccountPageQuery{})
 		require.NoError(t, err)
-		assert.Empty(t, accounts)
+		assert.Empty(t, accountsPage.Rows)
 	})
 }
 
@@ -86,12 +82,11 @@ func TestOperatorAccountDirectory_ListAccountsByTenantID_IncludesPendingInvitati
 		`UPDATE auth.invitation_tokens SET tenant_id = ? WHERE id = ?`, tenantID, invitation.ID)
 	require.NoError(t, err)
 
-	repo := newProjectedOperatorAccountDirectory(t, db)
-	accounts, err := repo.ListAccountsByTenantID(ctx, tenantID)
+	accountsPage, err := readTestOperatorAccounts(t, db, organizationtenancy.AccountScope{SchoolID: tenantID}, organizationtenancy.AccountPageQuery{})
 	require.NoError(t, err)
 
 	var found bool
-	for _, a := range accounts {
+	for _, a := range accountsPage.Rows {
 		if a.Email == invitation.Email {
 			found = true
 			assert.Equal(t, "invited", a.Status)
@@ -106,7 +101,6 @@ func TestOperatorAccountDirectory_ListAccountsByOrganizationID(t *testing.T) {
 	t.Parallel()
 
 	db := testpkg.SetupTestDB(t)
-	ctx := testpkg.WithTestTenantRuntime(t, context.Background())
 
 	tenantID := testpkg.UniqueTestTenantID(t)
 	testpkg.EnsureTestTenant(t, db, tenantID)
@@ -115,17 +109,15 @@ func TestOperatorAccountDirectory_ListAccountsByOrganizationID(t *testing.T) {
 	account := testpkg.CreateTestAccount(t, db, "list-by-org")
 	testpkg.MapAccountToTenant(t, db, account.ID, tenantID)
 
-	repo := newProjectedOperatorAccountDirectory(t, db)
-
 	t.Run("returns accounts for organization", func(t *testing.T) {
-		accounts, err := repo.ListAccountsByOrganizationID(ctx, orgID)
+		accountsPage, err := readTestOperatorAccounts(t, db, organizationtenancy.AccountScope{OrganizationID: orgID}, organizationtenancy.AccountPageQuery{})
 		require.NoError(t, err)
 
 		var found bool
-		for _, a := range accounts {
+		for _, a := range accountsPage.Rows {
 			if a.Email == account.Email {
 				found = true
-				assert.Equal(t, tenantID, a.SchoolID)
+				assert.Equal(t, ident.ID(tenantID), a.SchoolID)
 				break
 			}
 		}
@@ -133,21 +125,17 @@ func TestOperatorAccountDirectory_ListAccountsByOrganizationID(t *testing.T) {
 	})
 
 	t.Run("returns empty for nonexistent org", func(t *testing.T) {
-		accounts, err := repo.ListAccountsByOrganizationID(ctx, 999999)
+		accountsPage, err := readTestOperatorAccounts(t, db, organizationtenancy.AccountScope{OrganizationID: 999999}, organizationtenancy.AccountPageQuery{})
 		require.NoError(t, err)
-		assert.Empty(t, accounts)
+		assert.Empty(t, accountsPage.Rows)
 	})
 }
 
 func TestOperatorAccountDirectory_ListAllAccounts(t *testing.T) {
 	t.Parallel()
 
-	// A "list all" sweep reads every school twice (IDs first, names second).
-	// On the package database a parallel sibling hard-deletes its school
-	// between those reads and the sweep fails with "school missing for
-	// account row"; a clone of its own has no concurrent deleters.
+	// The global first page must not depend on other tests' school fixtures.
 	db := testpkg.SetupIsolatedTestDB(t)
-	ctx := testpkg.WithTestTenantRuntime(t, context.Background())
 
 	tenantID := testpkg.UniqueTestTenantID(t)
 	testpkg.EnsureTestTenant(t, db, tenantID)
@@ -155,15 +143,14 @@ func TestOperatorAccountDirectory_ListAllAccounts(t *testing.T) {
 	account := testpkg.CreateTestAccount(t, db, "list-all")
 	testpkg.MapAccountToTenant(t, db, account.ID, tenantID)
 
-	repo := newProjectedOperatorAccountDirectory(t, db)
-	accounts, err := repo.ListAllAccounts(ctx)
+	accountsPage, err := readTestOperatorAccounts(t, db, organizationtenancy.AccountScope{}, organizationtenancy.AccountPageQuery{})
 	require.NoError(t, err)
 
 	var found bool
-	for _, a := range accounts {
+	for _, a := range accountsPage.Rows {
 		if a.Email == account.Email {
 			found = true
-			assert.Equal(t, tenantID, a.SchoolID)
+			assert.Equal(t, ident.ID(tenantID), a.SchoolID)
 			break
 		}
 	}
@@ -171,7 +158,7 @@ func TestOperatorAccountDirectory_ListAllAccounts(t *testing.T) {
 }
 
 // containsAccount reports whether the result list includes an entry for the given email.
-func containsAccount(accounts []owners.OrgAccountInfo, email string) bool {
+func containsAccount(accounts []organizationtenancy.OrganizationAccount, email string) bool {
 	for _, a := range accounts {
 		if a.Email == email {
 			return true
@@ -186,7 +173,6 @@ func containsAccount(accounts []owners.OrgAccountInfo, email string) bool {
 func TestOperatorAccountDirectory_ListAllAccounts_ExcludesDeletedSchool(t *testing.T) {
 	t.Parallel()
 
-	// Same sweep as above, same race with parallel school deletes.
 	db := testpkg.SetupIsolatedTestDB(t)
 	ctx := testpkg.WithTestTenantRuntime(t, context.Background())
 
@@ -200,12 +186,10 @@ func TestOperatorAccountDirectory_ListAllAccounts_ExcludesDeletedSchool(t *testi
 	testpkg.UnclaimTestAccount(t, db, account.ID)
 	testpkg.MapAccountToTenant(t, db, account.ID, tenantID)
 
-	repo := newProjectedOperatorAccountDirectory(t, db)
-
 	// Baseline: account is visible while school is active.
-	accounts, err := repo.ListAllAccounts(ctx)
+	accountsPage, err := readTestOperatorAccounts(t, db, organizationtenancy.AccountScope{}, organizationtenancy.AccountPageQuery{})
 	require.NoError(t, err)
-	require.True(t, containsAccount(accounts, account.Email),
+	require.True(t, containsAccount(accountsPage.Rows, account.Email),
 		"baseline: account should be visible while school is active")
 
 	// Soft-delete the school directly to keep the test isolated from
@@ -215,15 +199,15 @@ func TestOperatorAccountDirectory_ListAllAccounts_ExcludesDeletedSchool(t *testi
 	require.NoError(t, err)
 
 	// After soft-delete: account must disappear from global listing.
-	accounts, err = repo.ListAllAccounts(ctx)
+	accountsPage, err = readTestOperatorAccounts(t, db, organizationtenancy.AccountScope{}, organizationtenancy.AccountPageQuery{})
 	require.NoError(t, err)
-	require.False(t, containsAccount(accounts, account.Email),
+	require.False(t, containsAccount(accountsPage.Rows, account.Email),
 		"account whose school is soft-deleted must not appear in ListAllAccounts")
 
 	// Also hidden when filtered by the parent organization.
-	orgAccounts, err := repo.ListAccountsByOrganizationID(ctx, tenantID)
+	orgAccountsPage, err := readTestOperatorAccounts(t, db, organizationtenancy.AccountScope{OrganizationID: tenantID}, organizationtenancy.AccountPageQuery{})
 	require.NoError(t, err)
-	require.False(t, containsAccount(orgAccounts, account.Email),
+	require.False(t, containsAccount(orgAccountsPage.Rows, account.Email),
 		"account whose school is soft-deleted must not appear in ListAccountsByOrganizationID")
 
 	// Restore: account reappears in both listings.
@@ -231,13 +215,176 @@ func TestOperatorAccountDirectory_ListAllAccounts_ExcludesDeletedSchool(t *testi
 		`UPDATE platform.schools SET deleted_at = NULL WHERE id = ?`, tenantID)
 	require.NoError(t, err)
 
-	accounts, err = repo.ListAllAccounts(ctx)
+	accountsPage, err = readTestOperatorAccounts(t, db, organizationtenancy.AccountScope{}, organizationtenancy.AccountPageQuery{})
 	require.NoError(t, err)
-	assert.True(t, containsAccount(accounts, account.Email),
+	assert.True(t, containsAccount(accountsPage.Rows, account.Email),
 		"restore: account should be visible again in ListAllAccounts")
 
-	orgAccounts, err = repo.ListAccountsByOrganizationID(ctx, tenantID)
+	orgAccountsPage, err = readTestOperatorAccounts(t, db, organizationtenancy.AccountScope{OrganizationID: tenantID}, organizationtenancy.AccountPageQuery{})
 	require.NoError(t, err)
-	assert.True(t, containsAccount(orgAccounts, account.Email),
+	assert.True(t, containsAccount(orgAccountsPage.Rows, account.Email),
 		"restore: account should be visible again in ListAccountsByOrganizationID")
+}
+
+func TestOperatorAccountDirectory_PagesAccountAndInvitationRows(t *testing.T) {
+	t.Parallel()
+
+	db := testpkg.SetupTestDB(t)
+	ctx := context.Background()
+	school := testpkg.Tenant(t)
+	otherSchool := testpkg.UniqueTestTenantID(t)
+	testpkg.EnsureTestTenant(t, db, otherSchool)
+	role := testpkg.GetOrCreateTestRole(t, db, "admin")
+	prefix := fmt.Sprintf("account-page-%d", school)
+	_, err := db.ExecContext(ctx, `
+WITH accounts AS (
+	INSERT INTO auth.accounts (email, active)
+	SELECT ? || '-' || lpad(i::text, 3, '0') || '@example.test', true
+	FROM generate_series(1, 101) AS i ORDER BY i RETURNING id, email
+), memberships AS (
+	INSERT INTO auth.account_tenants (account_id, tenant_id, status)
+	SELECT id, ?, CASE WHEN email LIKE '%-101@%' THEN 'inactive' ELSE 'active' END FROM accounts
+	UNION ALL SELECT id, ?, 'active' FROM accounts WHERE email LIKE '%-001@%'
+	RETURNING account_id, tenant_id
+)
+INSERT INTO users.persons (account_id, tenant_id, first_name, last_name)
+SELECT account_id, tenant_id, 'Änne', 'Gleich' FROM memberships`, prefix, school, otherSchool)
+	require.NoError(t, err)
+	_, err = db.ExecContext(ctx, `
+INSERT INTO auth.invitation_tokens (email, token, role_id, expires_at, tenant_id, first_name, last_name)
+SELECT ? || suffix || '@example.test', encode(sha256(convert_to(uuid_generate_v4()::text, 'UTF8')), 'hex'), ?, now() + validity, ?, 'Änne', 'Gleich'
+FROM (VALUES ('-001', interval '1 day'), ('-101', interval '1 day'),
+	('-pending', interval '1 day'), ('-expired', interval '-1 day')) AS fixture(suffix, validity) ORDER BY suffix`, prefix, role.ID, school)
+	require.NoError(t, err)
+
+	scope := organizationtenancy.AccountScope{SchoolID: school}
+	query := organizationtenancy.AccountPageQuery{Sort: "name", Search: strings.ToUpper(prefix)}
+	var all []organizationtenancy.OrganizationAccount
+	for number, size := range []int{50, 50, 3} {
+		page, err := readTestOperatorAccounts(t, db, scope, query)
+		require.NoError(t, err)
+		require.Len(t, page.Rows, size)
+		assert.Equal(t, 103, page.Total)
+		assert.Equal(t, number+1, page.Number)
+		assert.Equal(t, number == 2, page.NextCursor == "")
+		query.Cursor = page.NextCursor
+		all = append(all, page.Rows...)
+	}
+	seen := make(map[[2]ident.ID]bool)
+	for _, row := range all {
+		key := [2]ident.ID{row.AccountID, row.InvitationID}
+		assert.False(t, seen[key], "the same row must not cross the cursor twice")
+		seen[key] = true
+		assert.Equal(t, "Änne", row.FirstName)
+		assert.Equal(t, "Gleich", row.LastName)
+	}
+	assert.Equal(t, "inactive", all[100].Status)
+	assert.Equal(t, "invited", all[101].Status)
+	assert.Equal(t, "admin", all[101].RoleName)
+	assert.False(t, all[101].HasAdminRole)
+	assert.Equal(t, prefix+"-101@example.test", all[101].Email)
+	assert.Equal(t, prefix+"-pending@example.test", all[102].Email)
+
+	roleQuery := organizationtenancy.AccountPageQuery{Sort: "roleName", Descending: true, Search: prefix}
+	roleFirst, err := readTestOperatorAccounts(t, db, scope, roleQuery)
+	require.NoError(t, err)
+	require.Len(t, roleFirst.Rows, 50)
+	assert.Equal(t, role.Name, roleFirst.Rows[0].RoleName)
+	assert.Equal(t, role.Name, roleFirst.Rows[1].RoleName)
+	roleQuery.Cursor = roleFirst.NextCursor
+	roleSecond, err := readTestOperatorAccounts(t, db, scope, roleQuery)
+	require.NoError(t, err)
+	require.Len(t, roleSecond.Rows, 50)
+	assert.Equal(t, all[48].AccountID, roleSecond.Rows[0].AccountID,
+		"the role-sorted cursor crosses equal blank role names without skipping the next account")
+
+	query = organizationtenancy.AccountPageQuery{Sort: "email", Descending: true, Search: prefix}
+	first, err := readTestOperatorAccounts(t, db, organizationtenancy.AccountScope{}, query)
+	require.NoError(t, err)
+	require.Len(t, first.Rows, 50)
+	assert.Equal(t, 104, first.Total, "the second school's assignment is also a row")
+	assert.Equal(t, prefix+"-pending@example.test", first.Rows[0].Email)
+	query.Cursor = first.NextCursor
+	_, err = readTestOperatorAccounts(t, db, scope, query)
+	require.ErrorAs(t, err, new(*organizationtenancy.InvalidProvisioningDataError))
+	query.Cursor = ""
+	orgPage, err := readTestOperatorAccounts(t, db, organizationtenancy.AccountScope{OrganizationID: otherSchool}, query)
+	require.NoError(t, err)
+	require.Len(t, orgPage.Rows, 1)
+	assert.Equal(t, all[0].AccountID, orgPage.Rows[0].AccountID)
+	assert.Equal(t, ident.ID(otherSchool), orgPage.Rows[0].SchoolID)
+}
+
+func TestOperatorAccountDirectorySortsRolesAndKeepsCaregiverFactsAtTheirSchool(t *testing.T) {
+	t.Parallel()
+
+	db := testpkg.SetupTestDB(t)
+	ctx := testpkg.Ctx(t)
+	school := testpkg.Tenant(t)
+	otherSchool := testpkg.UniqueTestTenantID(t)
+	testpkg.EnsureTestTenant(t, db, otherSchool)
+	teacher, account := testpkg.CreateTestTeacherWithAccount(t, db, "Ada", "Listing")
+	testpkg.MapAccountToTenant(t, db, account.ID, otherSchool)
+
+	plain := testpkg.CreateTestAccount(t, db, "plain-listing-account")
+	localRole := testpkg.CreateTestRole(t, db, "Alpha")
+	foreignRole := testpkg.CreateTestRoleForTenant(t, db, "Foreign", otherSchool)
+	userRole := testpkg.GetOrCreateTestRole(t, db, "user")
+	_, err := db.ExecContext(ctx,
+		`INSERT INTO auth.account_roles (account_id, role_id, tenant_id) VALUES (?, ?, ?), (?, ?, ?), (?, ?, ?)`,
+		plain.ID, localRole.ID, school, account.ID, userRole.ID, school, account.ID, foreignRole.ID, otherSchool)
+	require.NoError(t, err)
+	_, err = db.ExecContext(ctx, `UPDATE users.teachers SET role = 'Leitung' WHERE id = ?`, teacher.ID)
+	require.NoError(t, err)
+
+	scope := organizationtenancy.AccountScope{SchoolID: school}
+	byRole, err := readTestOperatorAccounts(t, db, scope, organizationtenancy.AccountPageQuery{Sort: "roleName"})
+	require.NoError(t, err)
+	require.Len(t, byRole.Rows, 2)
+	assert.Equal(t, ident.ID(plain.ID), byRole.Rows[0].AccountID)
+	assert.Equal(t, localRole.Name, byRole.Rows[0].RoleName)
+	assert.Equal(t, ident.ID(account.ID), byRole.Rows[1].AccountID)
+	assert.Equal(t, userRole.Name, byRole.Rows[1].RoleName)
+
+	query := organizationtenancy.AccountPageQuery{Sort: "pedagogicRole", Descending: true}
+	before, err := readTestOperatorAccounts(t, db, scope, query)
+	require.NoError(t, err)
+	require.Len(t, before.Rows, 2)
+	caregiver := before.Rows[0]
+	assert.Equal(t, ident.ID(account.ID), caregiver.AccountID)
+	assert.Equal(t, "Ada", caregiver.FirstName)
+	assert.Equal(t, "Listing", caregiver.LastName)
+	assert.Equal(t, "Leitung", caregiver.PedagogicRole)
+	assert.True(t, caregiver.HasUserRole)
+	assert.True(t, caregiver.HasCaregiverProfile)
+	assert.True(t, caregiver.IsActiveCaregiver)
+
+	other, err := readTestOperatorAccounts(t, db, organizationtenancy.AccountScope{SchoolID: otherSchool}, query)
+	require.NoError(t, err)
+	require.Len(t, other.Rows, 1)
+	assert.Equal(t, ident.ID(account.ID), other.Rows[0].AccountID)
+	assert.Equal(t, foreignRole.Name, other.Rows[0].RoleName)
+	assert.Empty(t, other.Rows[0].PedagogicRole)
+	assert.False(t, other.Rows[0].HasCaregiverProfile)
+	assert.False(t, other.Rows[0].IsActiveCaregiver)
+
+	_, err = db.ExecContext(ctx, `DELETE FROM auth.account_roles WHERE account_id = ? AND tenant_id = ? AND role_id = ?`, account.ID, school, userRole.ID)
+	require.NoError(t, err)
+	noUserRole, err := readTestOperatorAccounts(t, db, scope, query)
+	require.NoError(t, err)
+	require.Len(t, noUserRole.Rows, 2)
+	assert.True(t, noUserRole.Rows[0].HasCaregiverProfile)
+	assert.False(t, noUserRole.Rows[0].IsActiveCaregiver)
+
+	membership, err := owners.NewSchoolMembership(testpkg.NewDatabase(t, db))
+	require.NoError(t, err)
+	require.NoError(t, membership.DeleteTeacher(ctx, teacher.ID))
+	after, err := readTestOperatorAccounts(t, db, scope, query)
+	require.NoError(t, err)
+	require.Len(t, after.Rows, 2)
+	for _, row := range after.Rows {
+		assert.Empty(t, row.PedagogicRole)
+		assert.False(t, row.HasCaregiverProfile)
+		assert.False(t, row.IsActiveCaregiver)
+	}
 }

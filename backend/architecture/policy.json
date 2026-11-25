@@ -178,6 +178,10 @@
       "kind": "domain"
     },
     {
+      "id": "operator-account-directory",
+      "kind": "projection"
+    },
+    {
       "id": "operator-dashboard-view",
       "kind": "projection"
     },

@@ -102,23 +102,23 @@ func (m *mockProvisioningService) ListSystemRoles(ctx context.Context) ([]organi
 	}
 	return nil, nil
 }
-func (m *mockProvisioningService) ListSchoolAccounts(ctx context.Context, schoolID int64) ([]organizationtenancy.SchoolAccount, error) {
-	if m.listSchoolAccountsFn != nil {
-		return m.listSchoolAccountsFn(ctx, schoolID)
+func (m *mockProvisioningService) ListAccountPage(ctx context.Context, scope organizationtenancy.AccountScope, _ organizationtenancy.AccountPageQuery) (organizationtenancy.AccountPage, error) {
+	page := organizationtenancy.AccountPage{Rows: []organizationtenancy.OrganizationAccount{}, Number: 1}
+	if scope.SchoolID != 0 && m.listSchoolAccountsFn != nil {
+		rows, err := m.listSchoolAccountsFn(ctx, scope.SchoolID)
+		for _, row := range rows {
+			page.Rows = append(page.Rows, organizationtenancy.OrganizationAccount{SchoolAccount: row})
+		}
+		return page, err
 	}
-	return nil, nil
-}
-func (m *mockProvisioningService) ListOrganizationAccounts(ctx context.Context, orgID int64) ([]organizationtenancy.OrganizationAccount, error) {
-	if m.listOrgAccountsFn != nil {
-		return m.listOrgAccountsFn(ctx, orgID)
+	var err error
+	if scope.OrganizationID != 0 && m.listOrgAccountsFn != nil {
+		page.Rows, err = m.listOrgAccountsFn(ctx, scope.OrganizationID)
+	} else if m.listAllAccountsFn != nil {
+		page.Rows, err = m.listAllAccountsFn(ctx)
 	}
-	return nil, nil
-}
-func (m *mockProvisioningService) ListAllAccounts(ctx context.Context) ([]organizationtenancy.OrganizationAccount, error) {
-	if m.listAllAccountsFn != nil {
-		return m.listAllAccountsFn(ctx)
-	}
-	return nil, nil
+	page.Total = len(page.Rows)
+	return page, err
 }
 func (m *mockProvisioningService) ListAllDevices(ctx context.Context) ([]organizationtenancy.OperatorDevice, error) {
 	if m.listAllDevicesFn != nil {
