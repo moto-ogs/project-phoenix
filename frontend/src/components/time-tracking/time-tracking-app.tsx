@@ -662,7 +662,7 @@ export function AppDayList({
         // Wochenansicht: der Zeitraum steht schon im Kopf der Karte und die
         // Stunden der Woche in der Kopfkarte; die Gruppe nennt nur den Saldo.
         const single = weeks.length === 1 && header !== undefined;
-        const saldoLabel = partial ? "Saldo bis gestern" : "Wochensaldo";
+        const saldoLabel = partial ? "Wochensaldo bis gestern" : "Wochensaldo";
         if (single) {
           return (
             <CollectionGroup

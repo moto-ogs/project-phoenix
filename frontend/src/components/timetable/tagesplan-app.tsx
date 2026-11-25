@@ -455,9 +455,9 @@ export function TagesplanApp(props: TagesplanAppProps) {
 
   // Gleichzeitige Blöcke stehen auf jedem Gerät untereinander in einer
   // eingefärbten Gruppe mit Klammer links. Die Gruppe endet sichtbar: der
-  // nächste Block steht wieder auf Weiß. Ihr Kopf klebt nicht: eine Gruppe
-  // ist höchstens ein paar Zeilen hoch, und ein klebender Kopf stünde am
-  // Ende der Gruppe über dem nächsten Block (falsche Zuordnung).
+  // nächste Block steht wieder auf Weiß. Ihr Kopf klebt, solange Blöcke der
+  // Gruppe im Bild sind: Er bleibt in seiner Gruppe (Sticky endet an ihrem
+  // Rand) und steht so nie über einem fremden Block.
   const list = (
     <Collection label="Blöcke des Tages">
       {groups.map((group, index) => (
@@ -470,7 +470,7 @@ export function TagesplanApp(props: TagesplanAppProps) {
           ) : (
             <div
               data-tagesplan-parallel=""
-              className="relative border-gray-200 bg-gray-50 before:absolute before:top-10 before:bottom-3 before:left-1.5 before:w-1 before:rounded-full before:bg-gray-300 before:content-[''] [&_[data-collection-group]>div:first-child]:static [&_[data-collection-group]>div:first-child]:bg-gray-100 [&:not(:first-child)]:border-t [&:not(:last-child)]:border-b"
+              className="relative border-gray-200 bg-gray-50 before:absolute before:top-10 before:bottom-3 before:left-1.5 before:w-1 before:rounded-full before:bg-gray-300 before:content-[''] [&_[data-collection-group]>div:first-child]:bg-gray-100 [&:not(:first-child)]:border-t [&:not(:last-child)]:border-b"
             >
               <CollectionGroup
                 title={
