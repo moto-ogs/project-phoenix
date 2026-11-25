@@ -76,6 +76,10 @@ export const PERSONAL_STORAGE_PREFIXES: readonly string[] = [
   // Nach dem Räumen meldet die nächste Anmeldung einmal mehr; das Backend
   // schreibt dann nur last_seen_at derselben Zeile neu (#2189).
   "moto-pwa-usage-reported.",
+  // App-Navigation (#8070): Verlauf der besuchten Adressen samt Filtern und
+  // die zuletzt offene Seite je Reiter. Adressen nennen Kinder und Räume.
+  "moto:nav-stack:",
+  "moto:tab-memory:",
   // Wem die Einträge gerade gehören (bindPersonalStorage).
   OWNER_KEY,
 ];
