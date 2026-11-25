@@ -201,9 +201,15 @@ export function AppTenantHead({
           <AppHeadStatsContext.Provider value={true}>
             {/* Chips beginnen an der Titelkante (ohne Pfeil 16 px, nach
                 dem Pfeil 52 px vom Kartenrand). */}
+            {/* Scrollt die Zeile seitlich, erreicht man sie auch per Tastatur
+                (axe `scrollable-region-focusable`). */}
             <div
+              role="region"
+              aria-label="Kennzahlen"
+              // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- the horizontally scrolling chip row holds no control and must be reachable by keyboard (axe scrollable-region-focusable); it is a labelled region
+              tabIndex={0}
               className={cn(
-                "-mx-2 [scrollbar-width:none] overflow-x-auto pr-2 pb-1.5 text-sm text-gray-600",
+                "-mx-2 [scrollbar-width:none] overflow-x-auto pr-2 pb-1.5 text-sm text-gray-600 focus-visible:ring-2 focus-visible:ring-gray-600 focus-visible:outline-none",
                 backLink ? "pl-13" : "pl-4",
               )}
             >
