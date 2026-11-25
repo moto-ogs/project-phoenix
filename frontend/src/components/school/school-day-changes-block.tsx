@@ -2,7 +2,8 @@
 
 // „Heute anders“ in moto schule (#7670): was heute für die eigenen Klassen
 // und die ganze Schule anders ist, oben auf der Startseite. Unterrichtsschluss
-// und Schließtag kommen aus der Übersicht des Backends. Die Kinder stehen im
+// und Schließtag kommen aus der Übersicht des Backends, seit #8148 auch die
+// Vertretungen bei den eigenen Aufsichten. Die Kinder stehen im
 // Klassentag; der Block zählt sie nur pro Klasse aus dem Bericht, den die
 // Startseite ohnehin lädt, und springt zur ersten geänderten Zeile.
 
@@ -50,6 +51,8 @@ function schoolHref(entry: DayChange, today: string): string | null {
         : null;
     case "school_calendar":
       return schoolPath("/school/kalender");
+    case "school_supervisions":
+      return schoolPath("/school/aufsichten");
     default:
       return null;
   }

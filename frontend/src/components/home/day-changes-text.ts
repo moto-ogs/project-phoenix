@@ -416,6 +416,9 @@ const SOURCE_FAILURE_TEXTS: Readonly<Record<string, string>> = {
     "Änderungen am Unterrichtsschluss der Klassen konnten gerade nicht geladen werden.",
   appointments: "Deine Termine konnten gerade nicht geladen werden.",
   meal_plan: "Änderungen am Speiseplan konnten gerade nicht geladen werden.",
+  // Aufsichten in moto schule (#8148).
+  supervisions:
+    "Vertretungen bei deinen Aufsichten konnten gerade nicht geladen werden.",
 };
 
 export function sourceFailureText(source: string): string {

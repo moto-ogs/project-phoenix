@@ -17,6 +17,12 @@ func (s *operations) BlockStaffChanges(ctx context.Context, date calendar.Date) 
 	if err != nil {
 		return nil, err
 	}
+	return groupBlockStaffChanges(rows), nil
+}
+
+// groupBlockStaffChanges groups the staff rows of changed blocks by block,
+// in the order of the rows.
+func groupBlockStaffChanges(rows []timetable.InstanceStaff) []timetable.BlockStaffChange {
 	changes := make([]timetable.BlockStaffChange, 0)
 	index := map[int64]int{}
 	for _, row := range rows {
@@ -37,7 +43,7 @@ func (s *operations) BlockStaffChanges(ctx context.Context, date calendar.Date) 
 			SickReport: row.SickAbsenceID != nil,
 		})
 	}
-	return changes, nil
+	return changes
 }
 
 // staffChangesOn reads the staff rows of the day's changed blocks; with a
