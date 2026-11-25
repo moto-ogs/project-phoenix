@@ -849,12 +849,10 @@ function BlockRow({
   ) => {
     if (text) parts.push({ key, text, danger });
   };
-  if (state.over || (state.cancelled && chips.length === 0)) {
-    push("state", state.label, state.cancelled && !state.over);
-  }
-  if (state.cancelled && !state.over) {
-    push("reason", instance.cancelReason, true);
-  }
+  // Ein Ausfall trägt immer den roten Chip „Fällt aus“; das Wort steht
+  // nicht noch einmal daneben, wohl aber sein Grund.
+  if (state.over && !state.cancelled) push("state", state.label);
+  if (state.cancelled) push("reason", instance.cancelReason, true);
   if (state.isDuty && !state.over) push("duty", "Dienst");
   push("room", state.room);
   push("count", count);
