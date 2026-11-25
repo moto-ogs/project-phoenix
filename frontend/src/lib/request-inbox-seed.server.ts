@@ -22,7 +22,7 @@ import {
   loadFirstRequestPage,
   WITHDRAWAL_PAGE_SIZE,
   type RequestFeedSource,
-} from "~/components/students/requests/request-feed-resource";
+} from "~/lib/request-feed-resource";
 
 export async function loadRequestInboxSeed(slug: string) {
   const builtAt = Date.now();

@@ -70,7 +70,7 @@ import {
   type PagedSnapshot,
   type RequestFeedSnapshot,
   type RequestFeedSource,
-} from "./request-feed-resource";
+} from "~/lib/request-feed-resource";
 
 const logger = createLogger({ component: "AggregatedRequestList" });
 

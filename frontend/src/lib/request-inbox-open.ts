@@ -5,7 +5,7 @@ import {
   resolveChangeRequestAccess,
   type ParentRequestReviewAccess,
 } from "~/lib/change-request-access";
-import { requestFeedParts } from "~/components/students/requests/request-feed-resource";
+import { requestFeedParts } from "~/lib/request-feed-resource";
 import { courseWaitlistKeys } from "~/lib/swr/course-waitlist-keys";
 import { requestFeedKeys } from "~/lib/swr/portal-keys";
 import { shellResourceKeys } from "~/lib/swr/shell-keys";

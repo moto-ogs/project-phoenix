@@ -6,8 +6,8 @@ import {
   type FeedSource,
   type FeedState,
 } from "~/lib/request-feed";
-import type { AnyItem } from "./case-model";
-import type { AggregatedRequestFilters } from "./filters";
+import type { AnyItem } from "~/components/students/requests/case-model";
+import type { AggregatedRequestFilters } from "~/components/students/requests/filters";
 
 export const PAGE_SIZE = 25;
 export const WITHDRAWAL_PAGE_SIZE = 25;
