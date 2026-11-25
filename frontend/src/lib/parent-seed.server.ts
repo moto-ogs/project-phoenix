@@ -139,14 +139,14 @@ function loadCalendar(token: string, from: string, days: number) {
   });
 }
 
-function loadAnnouncements(token: string) {
-  return seedRead(
+const loadAnnouncements = cache((token: string) =>
+  seedRead(
     "parentAnnouncements",
     async (signal) =>
       (await readContract(routes["GET /parent/me/news"], { token, signal }))
         .data,
-  );
-}
+  ),
+);
 
 function loadHolidayEntries(token: string) {
   return seedRead("parentHolidayEntries", async (signal) => {
@@ -404,6 +404,14 @@ function shellEntries(token: string, day: string): ServerSeedEntry[] {
   return [
     { key: parentKeys.familyStart(day), value: loadFamily(token) },
     { key: parentKeys.profile(), value: loadProfile(token) },
+    {
+      key: parentKeys.newsAvailable(),
+      // The sidebar needs only existence. On pages displaying the feed,
+      // reuse the server read without putting its entries in the shell.
+      value: loadAnnouncements(token).then((feed) =>
+        feed === undefined ? undefined : feed.length > 0,
+      ),
+    },
     {
       key: parentKeys.messagesUnreadCount(),
       // Preserve the badge's aggregation. Start and messages can share these

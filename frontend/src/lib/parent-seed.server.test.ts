@@ -138,6 +138,17 @@ describe("parent page seeds", () => {
     },
   );
 
+  it("seeds only news availability for the shell, not the feed", async () => {
+    answers.set("/parent/me/news", ok([]));
+    const shell = await valuesOf(await parentSeedProps(false).seed);
+    expect(shell[parentKeys.newsAvailable()]).toBe(false);
+    expect(shell[parentKeys.announcements()]).toBeUndefined();
+
+    answers.set("/parent/me/news", { status: 503, body: { status: "error" } });
+    const refused = await valuesOf(await parentSeedProps(false).seed);
+    expect(refused[parentKeys.newsAvailable()]).toBeUndefined();
+  });
+
   it("seeds successful siblings and serializable partial errors, not a second read", async () => {
     answers.set(
       endpoint,

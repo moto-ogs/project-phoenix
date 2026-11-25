@@ -22,6 +22,7 @@ export const parentShellSeedKeys = [
   parentKeys.profile(),
   parentKeys.messagesUnreadCount(),
   parentKeys.newsUnreadCount(),
+  parentKeys.newsAvailable(),
   parentKeys.notificationFeed.unreadCount(),
 ] as const;
 
