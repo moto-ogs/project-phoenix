@@ -17,7 +17,16 @@ Paths below are relative to `frontend/` except `.github/` and `docs/`.
 
 ## Revisit baseline: all portals (#8080)
 
-On a configured native worktree, start only the backend and its database/Mailpit.
+The #8080 reference host for #8083 is **`rechenzentrum`** (Linux x86_64, 32 logical CPUs).
+Use that same machine and browser version for both sides of a performance comparison;
+a Mac run is a smoke test, not its counterpart. Use a private clone, its own native
+backend bound to loopback (`PORT=127.0.0.1:<port>` for the server), and separate
+loopback-only Postgres/Mailpit Compose ports. The benchmark binds Next to loopback.
+The reference browser is sandboxed Google Chrome for Testing 158.0.8127.88.
+If it is not installed globally, unpack the official Linux build under the
+private checkout and expose it only inside the benchmark's mount namespace:
+`bwrap --dev-bind / / --tmpfs /opt --dir /opt/google --ro-bind "$CHROME_DIR" /opt/google/chrome devbox run -- scripts/perf-revisit.sh`.
+
 Use the seeded `vollbetrieb` school and run
 `devbox run -- scripts/perf-revisit.sh --prepare-day`
 once on the measurement day ([seed instructions](../getting-started.md)). This runs the full-day simulation without a clock override and records only its aggregate counts, bound to the seed timestamp and Berlin date. The benchmark requires that receipt. The seeder

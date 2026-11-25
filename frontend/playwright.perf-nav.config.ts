@@ -32,8 +32,8 @@ export default defineConfig({
   },
   webServer: {
     command: existsSync(join(homedir(), "bin", "agent-heavy"))
-      ? '"$HOME/bin/agent-heavy" -- pnpm run build && pnpm run start'
-      : "pnpm run build && pnpm run start",
+      ? '"$HOME/bin/agent-heavy" -- pnpm run build && pnpm run start --hostname 127.0.0.1'
+      : "pnpm run build && pnpm run start --hostname 127.0.0.1",
     env: { ...env, PORT: perfPort() },
     url: `http://localhost:${perfPort()}/help`,
     reuseExistingServer: false,
