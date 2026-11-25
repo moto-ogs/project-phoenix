@@ -133,4 +133,29 @@ describe("groupParallelBlocks", () => {
 
     expect(groups[0]?.endTime).toBe("10:01");
   });
+
+  it("counts an open block only at its start in the app", () => {
+    const groups = groupParallelBlocks(
+      [
+        makeInstance({
+          id: "running",
+          startTime: "00:03",
+          endTime: "01:03",
+          status: "active",
+          isSpontaneous: true,
+        }),
+        makeInstance({ id: "early", startTime: "07:00", endTime: "07:30" }),
+        makeInstance({ id: "lunch", startTime: "12:00", endTime: "13:00" }),
+      ],
+      "13:15",
+      "point",
+    );
+
+    expect(groups.map((group) => group.key)).toEqual([
+      "running",
+      "early",
+      "lunch",
+    ]);
+    expect(groups[0]).toMatchObject({ laneCount: 1, endTime: "00:03" });
+  });
 });

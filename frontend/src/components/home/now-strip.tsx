@@ -292,8 +292,14 @@ export function NowText({
   wrap = false,
   lead,
   extra,
+  withoutDate = false,
 }: {
   readonly state: HomeNowState;
+  /**
+   * App (#8070): die Kopfkarte nennt das Datum schon. Ohne eigenen Einsatz
+   * steht dann die Zahl der Kinder als Überschrift statt des Datums.
+   */
+  readonly withoutDate?: boolean;
   readonly analytics: DashboardAnalytics | undefined;
   readonly today: string;
   /** App: steht vor der Überschrift (die Uhrzeit). */
@@ -445,13 +451,19 @@ export function NowText({
           wrap={wrap}
           lead={lead}
           extra={extra}
-          headline={formatStatusDate(today)}
+          headline={
+            withoutDate && analytics
+              ? childrenPresent(analytics.studentsPresent)
+              : formatStatusDate(today)
+          }
           detail={
             analytics
-              ? [
-                  childrenPresent(analytics.studentsPresent),
-                  staffOnDuty(analytics.supervisorsToday),
-                ]
+              ? withoutDate
+                ? [staffOnDuty(analytics.supervisorsToday)]
+                : [
+                    childrenPresent(analytics.studentsPresent),
+                    staffOnDuty(analytics.supervisorsToday),
+                  ]
               : []
           }
         />

@@ -538,6 +538,26 @@ export function TagesplanView() {
     [instances, isToday, nowHHMM],
   );
 
+  // App (#8070): ein spontaner Block ohne Ende zählt nur bei seinem Beginn,
+  // und die Jetzt-Linie steht nach Beginn zwischen den Blöcken: über ihr,
+  // was schon begonnen hat, unter ihr, was noch kommt.
+  const appGroups = useMemo(
+    () =>
+      isApp
+        ? groupParallelBlocks(
+            instances ?? [],
+            isToday ? nowHHMM : null,
+            "point",
+          )
+        : [],
+    [isApp, instances, isToday, nowHHMM],
+  );
+  const appNowIndex = useMemo(() => {
+    if (!isToday || appGroups.length === 0) return -1;
+    const index = appGroups.findIndex((group) => group.startTime > nowHHMM);
+    return index === -1 ? appGroups.length : index;
+  }, [isToday, appGroups, nowHHMM]);
+
   // "Jetzt"-Markierung: vor der ersten Gruppe, die noch nicht vorbei ist.
   const nowIndex = useMemo(() => {
     if (!isToday || groups.length === 0) return -1;
@@ -712,8 +732,8 @@ export function TagesplanView() {
           today={today}
           nowHHMM={nowHHMM}
           now={now}
-          groups={groups}
-          nowIndex={nowIndex}
+          groups={appGroups}
+          nowIndex={appNowIndex}
           showMine={showMine}
           startBusyId={startBusyId}
           onOpenSession={openSession}

@@ -5,11 +5,11 @@ import { useSession } from "next-auth/react";
 
 import {
   DayChangesList,
+  DayChangesPreview,
   DayDetail,
   GroupDetail,
   NoticeDetail,
 } from "~/components/home/home-app-details";
-import { childSummaryCounts } from "~/components/home/day-changes-text";
 import { shownEntries } from "~/components/home/day-changes-block";
 import { useNoticeAcknowledge } from "~/components/home/day-notice-row";
 import { useBerlinClock } from "~/components/home/home-card-rows";
@@ -20,7 +20,7 @@ import {
 } from "~/components/home/use-home-stamp";
 import { START_OWN_BLOCK_TOOLTIP } from "~/components/home/use-start-own-block";
 import { ActionBar } from "~/components/ui/action-bar";
-import { Button, ButtonLink } from "~/components/ui/button";
+import { Button } from "~/components/ui/button";
 import {
   Collection,
   CollectionGroup,
@@ -36,10 +36,10 @@ import { SplitView, useSplitSelection } from "~/components/ui/split-view";
 import { StatusBadge } from "~/components/ui/status-badge";
 import type { BirthdayOverview } from "~/lib/birthdays-api";
 import { blockChildrenLabel } from "~/lib/block-children";
+import { presentConcept } from "~/lib/concepts/present";
 import { supervisionConcept } from "~/lib/concepts/supervision";
 import { birthdaysConcept } from "~/lib/concepts/birthdays";
 import { carePlanConcept } from "~/lib/concepts/carePlan";
-import { dayChangesConcept } from "~/lib/concepts/dayChanges";
 import { groupsConcept } from "~/lib/concepts/groups";
 import { announcementsConcept } from "~/lib/concepts/announcements";
 import { requestsConcept } from "~/lib/concepts/requests";
@@ -94,37 +94,9 @@ function isChildChange(entry: DayChange): boolean {
   );
 }
 
-/** Alles Übrige aus „Heute anders“: Team, Räume, die Schule. */
-function isTeamOrSchool(entry: DayChange): boolean {
-  return !openNotice(entry) && !isChildChange(entry);
-}
-
 /** Alles aus „Heute anders“ außer offenen Hinweisen (die stehen einzeln). */
 function isDayChange(entry: DayChange): boolean {
   return !openNotice(entry);
-}
-
-/** „1 krank, 2 mit anderer Abholzeit“: dieselben Wörter wie am Desktop. */
-function childCounts(entries: readonly DayChange[]): string {
-  const count = (kind: string, status?: string) =>
-    entries.filter(
-      (entry) =>
-        entry.kind === kind &&
-        (status === undefined || entry.child?.status === status),
-    ).length;
-  const absent = count("child_absent");
-  const sick = count("child_absent", "sick");
-  return childSummaryCounts({
-    schoolClass: "",
-    items: [],
-    counts: {
-      sick,
-      excused: absent - sick,
-      pickupChanged: count("child_pickup_changed"),
-      goesAlone: count("child_goes_alone"),
-      pickupNote: count("child_pickup_note"),
-    },
-  });
 }
 
 /**
@@ -232,7 +204,6 @@ export function HomeApp({
   const shown = overview ? shownEntries(overview) : [];
   const openNotices = shown.filter(openNotice);
   const children = shown.filter(isChildChange);
-  const teamAndSchool = shown.filter(isTeamOrSchool);
   const todo: HomeEntry[] = [];
   for (const entry of openNotices) {
     todo.push({
@@ -267,42 +238,26 @@ export function HomeApp({
       href: tenantPath(request.href),
     });
   }
-  if (overview && has("section.day_changes")) {
-    // Ein Eintrag „Heute anders“ wie am Desktop: Kinder, Team und Schule in
-    // einer Liste. Er steht auch, wenn heute alles nach Plan läuft, damit
-    // man ihn immer an derselben Stelle findet.
-    const changes = children.length + teamAndSchool.length;
-    const list = (
-      <DayChangesList
-        overview={overview}
-        include={isDayChange}
-        label="Heute anders"
-      />
-    );
-    todo.push({
-      id: "heute-anders",
-      row: {
-        leading: <Icon concept={dayChangesConcept} />,
-        title: "Heute anders",
-        subtitle:
-          changes === 0
-            ? "Alles wie geplant"
-            : children.length > 0
-              ? [
-                  childCounts(children),
-                  teamAndSchool.length > 0
-                    ? `${teamAndSchool.length} weitere`
-                    : null,
-                ]
-                  .filter(Boolean)
-                  .join(" · ")
-              : `${teamAndSchool.length} in Team und Schule`,
-        meta: changes > 0 ? <CountBadge count={changes} /> : undefined,
-      },
-      detail: list,
-      sheet: { kind: "list", title: "Heute anders", body: list },
-    });
-  }
+  // „Heute anders“ steht wie am Desktop als eigene Karte mit den ersten
+  // Änderungen als ganze Sätze; alle stehen im Blatt.
+  const dayChangesEntry: HomeEntry | null =
+    overview && has("section.day_changes")
+      ? {
+          id: "heute-anders",
+          row: { title: "Heute anders" },
+          sheet: {
+            kind: "list",
+            title: "Heute anders",
+            body: (
+              <DayChangesList
+                overview={overview}
+                include={isDayChange}
+                label="Heute anders"
+              />
+            ),
+          },
+        }
+      : null;
 
   // ── Überblick ──
   // iPad hoch zeigt Gruppe und Tag daneben als ganze Liste; die
@@ -387,7 +342,7 @@ export function HomeApp({
   }
 
   const nowCard = <NowCard now={now} stamp={stamp} />;
-  const actionBar = <HomeActionBar now={now} stamp={stamp} />;
+  const actionBar = <HomeActionBar stamp={stamp} />;
   const extra =
     rest.length > 0 ? (
       <div className="space-y-4">
@@ -399,6 +354,8 @@ export function HomeApp({
   const todoLoading = has("section.day_changes") && !overview && !loadError;
   const listProps = {
     todo,
+    dayChanges:
+      overview && dayChangesEntry ? { overview, entry: dayChangesEntry } : null,
     overviewEntries,
     todoLoading,
     loadError,
@@ -484,6 +441,11 @@ export function HomeApp({
 
 interface ListProps {
   readonly todo: readonly HomeEntry[];
+  /** „Heute anders“ als eigene Karte unter „Zu erledigen“. */
+  readonly dayChanges: {
+    readonly overview: DayChangesOverview;
+    readonly entry: HomeEntry;
+  } | null;
   readonly overviewEntries: readonly HomeEntry[];
   readonly todoLoading: boolean;
   readonly loadError: ReturnType<typeof useSwrLoadError>;
@@ -499,6 +461,7 @@ interface ListProps {
  */
 function HomeLists({
   todo,
+  dayChanges,
   overviewEntries,
   todoLoading,
   loadError,
@@ -512,7 +475,11 @@ function HomeLists({
   };
 }) {
   const [sheetId, setSheetId] = useState<string | null>(null);
-  const all = [...todo, ...overviewEntries];
+  const all = [
+    ...todo,
+    ...(dayChanges ? [dayChanges.entry] : []),
+    ...overviewEntries,
+  ];
   const sheetEntry = all.find((entry) => entry.id === sheetId);
 
   const row = (entry: HomeEntry) => {
@@ -555,22 +522,13 @@ function HomeLists({
         </CollectionGroup>
       </Collection>
     );
-  } else if (showTodo) {
+  } else if (showTodo && todo.length > 0) {
+    // Ohne offene Aufgabe entfällt die Karte; „Heute anders“ darunter sagt
+    // dann, dass alles wie geplant läuft.
     todoBlock = (
       <Collection label="Zu erledigen">
-        <CollectionGroup
-          title="Zu erledigen"
-          count={todo.length > 0 ? todo.length : undefined}
-        >
-          {todo.length > 0 ? (
-            todo.map(row)
-          ) : (
-            <CollectionRow
-              leading={<Icon concept={dayChangesConcept} />}
-              title="Nichts offen"
-              subtitle="Heute läuft alles wie geplant."
-            />
-          )}
+        <CollectionGroup title="Zu erledigen" count={todo.length}>
+          {todo.map(row)}
         </CollectionGroup>
       </Collection>
     );
@@ -579,6 +537,13 @@ function HomeLists({
   return (
     <>
       {todoBlock}
+      {dayChanges && !loadError ? (
+        <DayChangesPreview
+          overview={dayChanges.overview}
+          include={isDayChange}
+          onShowAll={() => setSheetId(dayChanges.entry.id)}
+        />
+      ) : null}
       {overviewEntries.length > 0 ? (
         <Collection label="Überblick">
           <CollectionGroup title="Überblick">
@@ -708,7 +673,13 @@ function stampLabel(state: HomeStampState): string | null {
   }
 }
 
-/** Was gerade läuft: nur Information, die Aktionen stehen in der ActionBar. */
+/**
+ * Die Jetzt-Karte wie am Desktop (#2180): die Uhr groß links als Anker, daneben
+ * was gerade läuft oder als Nächstes kommt, darunter wie viele Kinder da
+ * sind. Wer die Startseite von heute kennt, erkennt sie wieder. Knöpfe nur
+ * für das, was die Pill nicht schon trägt: den eigenen Block starten und
+ * Ausstempeln (selten, deshalb hier statt in der Leiste).
+ */
 function NowCard({
   now,
   stamp,
@@ -716,136 +687,116 @@ function NowCard({
   readonly now: ReturnType<typeof useHomeNow>;
   readonly stamp: ReturnType<typeof useHomeStamp>;
 }) {
-  const stampText = stampLabel(stamp.state);
+  const start = now.actions.find((entry) => entry.kind === "start");
+  const stamped = stamp.state.kind === "in" || stamp.state.kind === "done";
+  const stampText = stamped ? stampLabel(stamp.state) : null;
+  const footer =
+    !now.loading &&
+    (now.presentCount !== undefined || start !== undefined || stamped);
   return (
     <SectionCard testId="home-now" padding="none">
-      {/* Eine knappe Karte: Uhrzeit vor der Überschrift, Zustand, Ort und
-          Zähler in einer Zeile darunter. So beginnt „Zu erledigen“ auch am
-          kleinen Telefon im ersten Bild. Ob jemand eingestempelt ist, sagt
-          am Telefon schon der Knopf in der Leiste. */}
-      <div className="px-4 py-3">
-        {now.loading ? (
-          <div className="space-y-2" aria-hidden="true">
-            <Skeleton className="h-4 w-3/5" />
-            <Skeleton className="h-3 w-4/5" />
+      <div className="p-4">
+        <div className="flex items-center gap-4">
+          <time
+            dateTime={`${now.today}T${now.now}`}
+            className="shrink-0 text-3xl font-semibold text-gray-900 tabular-nums"
+          >
+            {now.now}
+          </time>
+          <span aria-hidden="true" className="h-10 w-px shrink-0 bg-gray-200" />
+          {now.loading ? (
+            <div className="min-w-0 flex-1 space-y-2" aria-hidden="true">
+              <Skeleton className="h-4 w-3/5" />
+              <Skeleton className="h-3 w-4/5" />
+            </div>
+          ) : (
+            <NowText
+              state={now.state}
+              analytics={now.analytics.data}
+              today={now.today}
+              wrap
+              withoutDate
+            />
+          )}
+        </div>
+        {footer ? (
+          <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2">
+            {now.presentCount !== undefined ? (
+              <p className="flex items-center gap-1.5 text-sm whitespace-nowrap text-gray-600">
+                <MotoConceptIcon concept={presentConcept} size={18} />
+                <span>
+                  <span className="font-semibold text-gray-900 tabular-nums">
+                    {now.presentCount}
+                  </span>{" "}
+                  {now.presentCount === 1 ? "Kind da" : "Kinder da"}
+                </span>
+              </p>
+            ) : null}
+            {stampText ? (
+              <StatusBadge
+                tone={stamp.state.kind === "in" ? "green" : "gray"}
+                label={stampText}
+              />
+            ) : null}
+            {start?.kind === "start" ? (
+              <Button
+                type="button"
+                variant="primary"
+                size="md"
+                className="flex-1 whitespace-nowrap"
+                disabled={now.busyId !== null}
+                onClick={() => void now.start(start.block)}
+                tooltip={START_OWN_BLOCK_TOOLTIP}
+              >
+                {now.busyId === start.block.id ? "Startet..." : start.label}
+              </Button>
+            ) : stamp.state.kind === "in" ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="md"
+                className="ml-auto whitespace-nowrap"
+                disabled={stamp.disabled}
+                onClick={stamp.checkOut}
+                tooltip="Stempelt dich sofort aus und beendet deine Arbeitszeit."
+              >
+                Ausstempeln
+              </Button>
+            ) : null}
           </div>
-        ) : (
-          <NowText
-            state={now.state}
-            analytics={now.analytics.data}
-            today={now.today}
-            wrap
-            // Ohne Uhrzeit davor: Sie stand unbeschriftet vor „Als
-            // Nächstes“, und die Uhr zeigt das Gerät ohnehin oben an.
-            extra={
-              now.presentCount !== undefined || stampText ? (
-                <>
-                  {now.presentCount !== undefined ? (
-                    <StatusBadge
-                      tone="gray"
-                      label={
-                        now.presentCount === 1
-                          ? "1 Kind da"
-                          : `${now.presentCount} Kinder da`
-                      }
-                    />
-                  ) : null}
-                  {stampText ? (
-                    <span
-                      className={
-                        stamp.state.kind === "in" ? undefined : "phone:hidden"
-                      }
-                    >
-                      <StatusBadge
-                        tone={stamp.state.kind === "in" ? "green" : "gray"}
-                        label={stampText}
-                      />
-                    </span>
-                  ) : null}
-                </>
-              ) : undefined
-            }
-          />
-        )}
+        ) : null}
       </div>
     </SectionCard>
   );
 }
 
 /**
- * Die eine Aktion für jetzt in Daumennähe: die Aufsicht öffnen oder starten,
- * daneben Ein- oder Ausstempeln. Ohne Aufsicht ist Stempeln die Hauptaktion.
+ * Die Leiste über der Pill trägt nur, was man auf der Startseite am
+ * häufigsten tut und sonst nirgends in einem Tipp erreicht: Einstempeln,
+ * solange man heute noch nicht eingestempelt ist. Die Aufsicht hat ihren
+ * Reiter in der Pill; Ausstempeln steht in der Jetzt-Karte.
  */
 function HomeActionBar({
-  now,
   stamp,
 }: {
-  readonly now: ReturnType<typeof useHomeNow>;
   readonly stamp: ReturnType<typeof useHomeStamp>;
 }) {
-  // „Alle Kinder“ hat in der Pill ihren Reiter (Suche).
-  const action = now.actions.find(
-    (entry) => entry.kind === "start" || entry.label === "Zur Aufsicht",
-  );
-  const canStampIn = stamp.state.kind === "out" || stamp.state.kind === "done";
-  const canStampOut = stamp.state.kind === "in";
-
-  const primary =
-    action?.kind === "start" ? (
+  if (stamp.state.kind !== "out") return null;
+  /* VORSCHLAG zu Produktentscheid 4 (Epic #8070): Stempeln als neuer
+     Einstieg auf der Startseite; Logik in `useHomeStamp`. */
+  return (
+    <ActionBar>
       <Button
         type="button"
         variant="primary"
         size="md"
         className="whitespace-nowrap"
-        disabled={now.busyId !== null}
-        onClick={() => void now.start(action.block)}
-        tooltip={START_OWN_BLOCK_TOOLTIP}
+        disabled={stamp.disabled}
+        onClick={stamp.checkIn}
+        tooltip="Stempelt dich vor Ort ein. Homeoffice wählst du in der Zeiterfassung."
       >
-        {now.busyId === action.block.id ? "Startet..." : action.label}
+        Einstempeln
       </Button>
-    ) : action?.kind === "link" ? (
-      <ButtonLink
-        href={action.href}
-        variant="primary"
-        size="md"
-        className="whitespace-nowrap"
-        tooltip="Öffnet deine laufende Aufsicht."
-      >
-        Aufsicht öffnen
-      </ButtonLink>
-    ) : null;
-  /* VORSCHLAG zu Produktentscheid 4 (Epic #8070): Stempeln als neuer
-     Einstieg auf der Startseite; Logik in `useHomeStamp`. */
-  const stampButton = canStampIn ? (
-    <Button
-      type="button"
-      variant={primary ? "outline" : "primary"}
-      size="md"
-      className="whitespace-nowrap"
-      disabled={stamp.disabled}
-      onClick={stamp.checkIn}
-      tooltip="Stempelt dich vor Ort ein. Homeoffice wählst du in der Zeiterfassung."
-    >
-      Einstempeln
-    </Button>
-  ) : canStampOut ? (
-    <Button
-      type="button"
-      variant="outline"
-      size="md"
-      className="whitespace-nowrap"
-      disabled={stamp.disabled}
-      onClick={stamp.checkOut}
-      tooltip="Stempelt dich aus und beendet deine Arbeitszeit."
-    >
-      Ausstempeln
-    </Button>
-  ) : null;
-
-  if (!primary && !stampButton) return null;
-  return (
-    <ActionBar secondary={primary && stampButton ? stampButton : undefined}>
-      {primary ?? stampButton}
     </ActionBar>
   );
 }
@@ -958,9 +909,4 @@ function useOpenRequestRows(enabled: boolean): {
 
 function Icon({ concept }: { readonly concept: MotoConcept }) {
   return <MotoConceptIcon concept={concept} size={20} />;
-}
-
-/** Die Zahl einer Zeile, rechts: wie viele Einträge das Detail zeigt. */
-function CountBadge({ count }: { readonly count: number }) {
-  return <StatusBadge tone="gray" label={String(count)} size="xs" />;
 }

@@ -402,8 +402,9 @@ export function TagesplanApp(props: TagesplanAppProps) {
     const top = marker.getBoundingClientRect().top;
     // Nur scrollen, wenn die Linie unterhalb der ersten Bildschirmhälfte
     // steht; sonst bleibt der Kopf im Bild.
+    // Mittig, damit über der Linie sichtbar bleibt, was gerade läuft.
     if (top > window.innerHeight * 0.5) {
-      marker.scrollIntoView({ block: "start" });
+      marker.scrollIntoView({ block: "center" });
     }
   }, [isToday, day, groups.length, isSplit]);
 
@@ -459,7 +460,12 @@ export function TagesplanApp(props: TagesplanAppProps) {
   // Gruppe im Bild sind: Er bleibt in seiner Gruppe (Sticky endet an ihrem
   // Rand) und steht so nie über einem fremden Block.
   const list = (
-    <Collection label="Blöcke des Tages">
+    <Collection
+      label="Blöcke des Tages"
+      // Beginn und Ende stehen auf Höhe des Titels, auch wenn die Angaben
+      // darunter umbrechen.
+      className="[&_[data-collection-row]>span:first-child]:self-start"
+    >
       {groups.map((group, index) => (
         <Fragment key={group.key}>
           {index === nowIndex ? nowLine : null}
@@ -476,7 +482,7 @@ export function TagesplanApp(props: TagesplanAppProps) {
                 title={
                   <span className="tabular-nums">
                     Gleichzeitig ·{" "}
-                    {group.openEnd
+                    {group.openEnd && group.endTime <= group.startTime
                       ? `ab ${group.startTime}`
                       : `${group.startTime}–${group.endTime}`}
                   </span>
@@ -830,30 +836,42 @@ function BlockRow({
   // Am iPad hoch ist die Zeile breit genug für alle Namen.
   const { layout, isSplit } = useDeviceContext();
   const wide = layout === "tablet" && !isSplit;
-  // Unterzeile: Zustand (vorbei, Dienst), Raum, Gruppe, Personal.
-  const place = [
-    state.over || (state.cancelled && chips.length === 0) ? state.label : null,
-    state.isDuty && !state.over ? "Dienst" : null,
-    state.room,
-    instance.groupName,
-    state.cancelled ? null : wide ? staff : rowStaff(instance),
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  // Unterzeile: Zustand (vorbei, Dienst), Raum, Kinder, Gruppe, Personal.
+  // Sie bricht zwischen den Teilen um statt gekürzt zu werden: am Telefon
+  // stand sonst „OGS-Ra…“ und „Anna Müll…“. Ein Ausfall nennt seinen Grund
+  // rot wie am Desktop.
   const count = rowChildren(entry);
+  const parts: { key: string; text: string; danger?: boolean }[] = [];
+  const push = (
+    key: string,
+    text: string | null | undefined,
+    danger?: boolean,
+  ) => {
+    if (text) parts.push({ key, text, danger });
+  };
+  // Ein Ausfall trägt immer den roten Chip „Fällt aus“; das Wort steht
+  // nicht noch einmal daneben, wohl aber sein Grund.
+  if (state.over && !state.cancelled) push("state", state.label);
+  if (state.cancelled) push("reason", instance.cancelReason, true);
+  if (state.isDuty && !state.over) push("duty", "Dienst");
+  push("room", state.room);
+  push("count", count);
+  push("group", instance.groupName);
+  if (!state.cancelled) push("staff", wide ? staff : rowStaff(instance));
   return (
     <CollectionRow
       onClick={onOpen}
       selected={selected}
+      wrap
       // Beginnt mit dem sichtbaren Text des Ziels (Titel), damit
-      // Sprachsteuerung den Block beim Namen findet. Die gekürzten Angaben
-      // stehen hier vollständig.
+      // Sprachsteuerung den Block beim Namen findet.
       aria-label={[
         instance.title,
         blockTimeRange(instance),
         state.label,
         next ? "als Nächstes" : null,
         mine ? "mit dir" : null,
+        state.cancelled ? instance.cancelReason : null,
         state.room,
         instance.groupName,
         children,
@@ -892,25 +910,32 @@ function BlockRow({
         </span>
       }
       subtitle={
-        chips.length > 0 || place ? (
-          <span className="flex min-w-0 items-center gap-1.5">
+        chips.length > 0 || parts.length > 0 ? (
+          <span className="block">
             {chips.length > 0 ? (
-              <span className="flex shrink-0 items-center gap-1">{chips}</span>
-            ) : null}
-            {place ? (
-              <span
-                className={cn(
-                  "min-w-0 truncate",
-                  state.cancelled && !state.over && "text-moto-red-strong",
-                )}
-              >
-                {place}
+              <span className="mr-1.5 inline-flex items-center gap-1 align-middle">
+                {chips}
               </span>
             ) : null}
+            {parts.map((part, index) => (
+              <Fragment key={part.key}>
+                {index > 0 ? " " : null}
+                <span
+                  className={cn(
+                    "inline-block max-w-full",
+                    part.danger && "text-moto-red-strong",
+                  )}
+                >
+                  {part.text}
+                  {index < parts.length - 1 ? (
+                    <span className="text-gray-500"> ·</span>
+                  ) : null}
+                </span>
+              </Fragment>
+            ))}
           </span>
         ) : undefined
       }
-      meta={count ? <span className={quiet}>{count}</span> : undefined}
     />
   );
 }
