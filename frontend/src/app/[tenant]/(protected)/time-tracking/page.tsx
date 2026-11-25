@@ -216,7 +216,7 @@ function TimeTrackingContent() {
               onUpdateAbsence={updateAbsence}
               onDeleteAbsence={deleteAbsence}
               canManage={canManage}
-              ownStaffId={staffId ?? null}
+              ownStaffId={edit.staffId}
               laborDay={edit.laborDay}
             />
           )}
@@ -244,7 +244,6 @@ function TimeTrackingContent() {
         today={today}
         isCurrent={isCurrent}
         isSessionOpen={clock.currentSession?.checkOutTime === null}
-        staffId={staffId}
         setTargetHref={targetHref}
         onEdit={setEdit}
       />

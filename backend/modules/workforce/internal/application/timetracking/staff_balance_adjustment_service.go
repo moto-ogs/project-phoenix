@@ -124,7 +124,7 @@ type staffBalanceAdjustmentService struct {
 }
 
 func (s *staffBalanceAdjustmentService) broadcastTimeTrackingChanged(ctx context.Context) {
-	queueStaffTimeTrackingChanged(ctx, s.broadcaster, s.getLogger(), "")
+	queueStaffTimeTrackingChanged(ctx, s.broadcaster, s.getLogger())
 }
 
 func NewStaffBalanceAdjustmentService(

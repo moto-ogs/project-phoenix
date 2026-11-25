@@ -23,18 +23,19 @@ func TestTimeTrackingEventsBroadcastAfterCommit(t *testing.T) {
 	events := TimeTrackingEvents(broadcaster)
 	ctx, commit := testpkg.WithAfterCommitHooks(testpkg.TenantContext(42))
 
-	events.QueueStaffTimeTrackingChanged(ctx, nil, "absence")
+	events.QueueStaffTimeTrackingChanged(ctx, nil)
+	events.QueueStaffLeaveChanged(ctx, nil)
 	assert.Empty(t, broadcaster.Events(),
 		"the invalidation must not precede the surrounding transaction commit")
 
 	commit()
 
-	announced := broadcaster.EventsOfType(staffTimeTrackingChanged)
-	require.Len(t, announced, 1)
-	assert.Equal(t, "absence", *announced[0].Data.Reason)
+	require.Len(t, broadcaster.EventsOfType(staffTimeTrackingChanged), 1)
 	calls := broadcaster.CallsByMethod("tenant")
-	require.Len(t, calls, 1)
+	require.Len(t, calls, 2)
 	assert.Equal(t, int64(42), calls[0].TenantID)
+	assert.Equal(t, int64(42), calls[1].TenantID)
+	require.Len(t, broadcaster.EventsOfType("staff_leave_changed"), 1)
 }
 
 func TestTimeTrackingEventsIgnoreContextsWithoutTenant(t *testing.T) {
@@ -44,7 +45,7 @@ func TestTimeTrackingEventsIgnoreContextsWithoutTenant(t *testing.T) {
 	events := TimeTrackingEvents(broadcaster)
 	ctx, commit := testpkg.WithAfterCommitHooks(context.Background())
 
-	events.QueueStaffTimeTrackingChanged(ctx, nil, "")
+	events.QueueStaffTimeTrackingChanged(ctx, nil)
 	commit()
 
 	assert.Empty(t, broadcaster.Events())

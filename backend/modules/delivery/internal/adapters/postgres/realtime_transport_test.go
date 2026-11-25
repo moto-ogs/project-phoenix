@@ -28,7 +28,7 @@ func TestWorkerSignalReachesEveryAPIOnlyAfterCommit(t *testing.T) {
 	a, b := subscribeTransport(t, apiA, schoolID), subscribeTransport(t, apiB, schoolID)
 	foreign := subscribeTransport(t, apiA, testpkg.NewTenantScope(t, db).TenantID)
 	require.NoError(t, tenant.WithTenantTx(testpkg.WithTenantRuntime(t, context.Background(), db), db, schoolID, func(ctx context.Context, _ bun.Tx) error {
-		deliveryCompose.QueueStaffTimeTrackingChanged(ctx, worker, slog.Default(), "")
+		deliveryCompose.QueueStaffTimeTrackingChanged(ctx, worker, slog.Default())
 		// Publishing a marker through the SAME FIFO publisher is a receive barrier:
 		// an incorrectly immediate hook would arrive before it, before commit.
 		require.NoError(t, worker.BroadcastToTenant(schoolID, realtime.NewEvent(realtime.EventInstanceStarted, "", realtime.EventData{})))
@@ -61,7 +61,7 @@ func TestWorkerRollbackNeverPublishes(t *testing.T) {
 	client := subscribeTransport(t, api, schoolID)
 	rollback := errors.New("job rolled back")
 	err := tenant.WithTenantTx(testpkg.WithTenantRuntime(t, context.Background(), db), db, schoolID, func(ctx context.Context, _ bun.Tx) error {
-		deliveryCompose.QueueStaffTimeTrackingChanged(ctx, worker, slog.Default(), "")
+		deliveryCompose.QueueStaffTimeTrackingChanged(ctx, worker, slog.Default())
 		return rollback
 	})
 	require.ErrorIs(t, err, rollback)

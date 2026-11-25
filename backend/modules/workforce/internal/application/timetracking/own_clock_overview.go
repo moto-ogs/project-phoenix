@@ -83,8 +83,9 @@ func (facts ownTimeFacts) projectClock(staffID int64, open *WorkSession, current
 	key := monthOf(today)
 	result := workforce.OwnClockOverview{
 		Today: today, AsOf: now, StaffID: ident.ID(staffID), TodayAbsence: currentAbsence,
-		Chart:     facts.chart(chartDays),
-		LaborDays: facts.laborDays(min(week, today.AddDays(-1)), today), AccountStart: anchor,
+		TodayCountsInTotals: !excludedByAccountStart(today, anchor),
+		Chart:               facts.chart(chartDays),
+		LaborDays:           facts.laborDays(min(week, today.AddDays(-1)), today), AccountStart: anchor,
 		Week: ownWeekTotals(facts.daily(week, weekEnd, anchor)),
 		Month: workforce.OwnTimeTotals{
 			HasTarget: summary.HasTarget, HasOverride: facts.hasOverride(key.firstDay(), key.lastDay()),
@@ -103,10 +104,6 @@ func (facts ownTimeFacts) projectClock(staffID int64, open *WorkSession, current
 	}
 	closed := slices.DeleteFunc(slices.Clone(facts.sessions), func(row *WorkSession) bool { return row.CheckOutTime == nil })
 	result.CompletedToday = actualMinutesByDay(closed, facts.breaks, now, today, today, today)[today]
-	result.CompletedWeek = result.CompletedToday
-	for day := week; day.Before(today); day = day.AddDays(1) {
-		result.CompletedWeek += facts.actual[day]
-	}
 	for _, summary := range facts.weeklySummaries(week, weekEnd, anchor) {
 		result.IsOverWeeklyMax = result.IsOverWeeklyMax || summary.IsOverWeeklyMax
 	}

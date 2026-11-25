@@ -461,13 +461,14 @@ is not the missing-profile state.
 
 On a write, one short invalidation burst combines the local response and SSE
 echo. Its predicate refreshes mounted readers and expires affected cached
-periods without fetching them. `staff_time_tracking_changed` has no staff ID,
-date or attendance content. Its optional `absence` reason also invalidates
-leave and the open vacation form's year list; work blocks and shift changes do
-not. Timetable events update the clock's assignments, and a closing-day
-change also affects the period. A reconnect reconciles all three. No historic
-period polls. The chart and clock advance today's actual time from the
-snapshot and its open block, not from a second history reader.
+periods without fetching them. `staff_leave_changed` invalidates the same
+time views as `staff_time_tracking_changed`, plus leave and the open vacation
+form's year list. Both are contentless tenant signals (ADR 0310). Timetable
+events update the clock's assignments; a closing-day change also affects the
+period. A reconnect reconciles all three. No historic period polls. The chart
+and clock advance today's actual time from the snapshot and its open block,
+not a second history reader. Only advance the week and month totals when
+`today_counts_in_totals` is true.
 
 The Admin table and the home assignment card still have their original reads.
 The session editor receives the selected block and the rejecting

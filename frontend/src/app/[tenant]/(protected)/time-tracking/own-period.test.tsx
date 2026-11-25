@@ -5,7 +5,7 @@ import type {
   OwnTimePeriod,
 } from "~/lib/contract/time-tracking.generated";
 import { parseISODate, toISODate } from "~/lib/date-helpers";
-import type { StaffHistorySession } from "~/lib/staff-api";
+import type { StaffAbsenceRow, StaffHistorySession } from "~/lib/staff-api";
 import { endOfWeek } from "~/lib/staff-metrics-helpers";
 import { SWRConfig } from "~/lib/swr/testing";
 import { ToastProvider } from "~/contexts/ToastContext";
@@ -34,16 +34,26 @@ vi.mock("~/components/staff/staff-session-table", () => ({
   StaffSessionTable: ({
     from,
     sessions,
+    absences,
+    absencesUnresolved,
     onEditDay,
     editsUnresolved,
   }: {
     from: Date;
     sessions: StaffHistorySession[];
+    absences?: readonly StaffAbsenceRow[];
+    absencesUnresolved: boolean;
     editsUnresolved: boolean;
     onEditDay: (date: Date, row: StaffHistorySession) => void;
   }) => (
     <div>
       <p>Woche {toISODate(from)}</p>
+      {!absencesUnresolved &&
+        absences?.map((absence) => (
+          <p key={absence.id}>
+            {absence.staff_id}: {absence.absence_type}
+          </p>
+        ))}
       {sessions.map((row) => (
         <button
           key={row.id}
@@ -87,6 +97,7 @@ function block(id: string, day: string): OwnTimeBlock {
 function week(start: string, sessions: OwnTimeBlock[]): OwnTimePeriod {
   const end = toISODate(endOfWeek(parseISODate(start)));
   return {
+    staff_id: "42",
     view: "week",
     start,
     end,
@@ -115,7 +126,6 @@ function ui(start: string, onEdit = vi.fn<(edit: OwnPeriodEdit) => void>()) {
           today={THIRD}
           isCurrent={start === THIRD}
           isSessionOpen={false}
-          staffId="42"
           onEdit={onEdit}
         />
       </ToastProvider>
@@ -127,6 +137,28 @@ beforeEach(() => {
   getPeriod.mockReset();
   identity.account = "a";
   identity.school = "school-a";
+});
+
+it("shows absences from the period without waiting for the overview", async () => {
+  getPeriod.mockResolvedValue({
+    ...week(FIRST, []),
+    absences: [
+      {
+        id: "3",
+        date_start: FIRST,
+        date_end: FIRST,
+        absence_type: "vacation",
+        half_day: false,
+        start_half_day: false,
+        end_half_day: false,
+        status: "approved",
+        requested_at: "2026-10-01T09:00:00Z",
+        duration_days: 1,
+      },
+    ],
+  } satisfies OwnTimePeriod);
+  render(ui(FIRST));
+  expect(await screen.findByText("42: vacation")).toBeInTheDocument();
 });
 
 it("drops a late week when switching quickly and reloads the exact chosen block's read", async () => {
@@ -154,7 +186,16 @@ it("drops a late week when switching quickly and reloads the exact chosen block'
 
   fireEvent.click(chosen);
   const draft = edit.mock.calls[0]![0];
+  expect(draft.staffId).toBe("42");
   expect(draft.session).toMatchObject({ id: "3", version: "read-3" });
+  const refresh = deferred<OwnTimePeriod>();
+  getPeriod.mockReturnValueOnce(refresh.promise);
+  void act(() => {
+    void draft.reloadDay();
+  });
+  expect(chosen).toBeEnabled();
+  await act(async () => refresh.resolve(week(THIRD, [block("3", THIRD)])));
+
   const offline = new Error("Lesung fehlgeschlagen");
   getPeriod.mockRejectedValueOnce(offline);
   await act(async () => {

@@ -124,7 +124,7 @@ func (s *staffAbsenceService) RebookAbsences(ctx context.Context, req RebookAbse
 	}
 	result.Applied = true
 	result.Absences = s.withLabels(ctx, rebookedResponses(entries)...)
-	s.broadcastTimeTrackingChanged(ctx)
+	s.broadcastLeaveChanged(ctx)
 	return result, nil
 }
 

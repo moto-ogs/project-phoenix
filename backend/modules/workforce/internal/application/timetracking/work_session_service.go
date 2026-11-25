@@ -58,7 +58,7 @@ func (s *workSessionService) getLogger() *slog.Logger {
 }
 
 func (s *workSessionService) broadcastTimeTrackingChanged(ctx context.Context) {
-	queueStaffTimeTrackingChanged(ctx, s.broadcaster, s.getLogger(), "")
+	queueStaffTimeTrackingChanged(ctx, s.broadcaster, s.getLogger())
 }
 
 func (s *workSessionService) lockStaffBalanceWrites(ctx context.Context, staffID int64) error {

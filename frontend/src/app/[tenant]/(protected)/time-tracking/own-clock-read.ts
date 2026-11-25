@@ -42,7 +42,6 @@ export async function readOwnClock(today: string) {
       : null,
     chart: overview.chart ?? [],
     completedToday: overview.completed_today_minutes,
-    completedWeek: overview.completed_week_minutes,
     laborDays: (overview.labor_days ?? []).map(mapWorkDayLaborHint),
     shiftsUnavailable:
       overview.shifts.state !== "ready" &&
@@ -66,6 +65,7 @@ export async function readOwnClock(today: string) {
         ? null
         : parseISODate(overview.account_start),
     accountBalanceMinutes: overview.account_balance_minutes,
+    todayCountsInTotals: overview.today_counts_in_totals,
   };
 }
 
@@ -80,14 +80,16 @@ export function clockMetrics(
   data: Awaited<ReturnType<typeof readOwnClock>>,
   runningDelta: number,
 ) {
+  // The server excludes days before accounting starts from these totals.
+  const accountingDelta = data.todayCountsInTotals ? runningDelta : 0;
   return {
-    week: totals(data.week, runningDelta),
-    month: totals(data.month, runningDelta),
+    week: totals(data.week, accountingDelta),
+    month: totals(data.month, accountingDelta),
     accountStart: data.accountStart,
     accountBalanceMinutes:
       data.accountBalanceMinutes === null
         ? null
-        : data.accountBalanceMinutes + runningDelta,
+        : data.accountBalanceMinutes + accountingDelta,
     hasTargetOverride: data.week.has_override || data.month.has_override,
     hasTarget: data.month.has_target,
   };

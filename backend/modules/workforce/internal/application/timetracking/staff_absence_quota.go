@@ -169,7 +169,7 @@ func (s *staffAbsenceService) createDirectVacation(ctx context.Context, staffID,
 	if err != nil {
 		return nil, fmt.Errorf("failed to create vacation: %w", err)
 	}
-	s.broadcastTimeTrackingChanged(ctx)
+	s.broadcastLeaveChanged(ctx)
 	return s.withLabel(ctx, toAbsenceResponse(absence)), nil
 }
 
@@ -362,6 +362,6 @@ func (s *staffAbsenceService) upsertVacationQuota(ctx context.Context, change Va
 		err = workSessionWriteError("upsert vacation quota", err)
 		return err
 	}
-	s.broadcastTimeTrackingChanged(ctx)
+	s.broadcastLeaveChanged(ctx)
 	return nil
 }

@@ -9,8 +9,17 @@ import (
 )
 
 // QueueStaffTimeTrackingChanged emits the time-tracking invalidation after the commit (Workforce port).
-func QueueStaffTimeTrackingChanged(ctx context.Context, broadcaster realtime.Broadcaster, logger *slog.Logger, reason string) {
-	realtimeevents.QueueStaffTimeTrackingChanged(ctx, broadcaster, logger, reason)
+func QueueStaffTimeTrackingChanged(ctx context.Context, broadcaster realtime.Broadcaster, logger *slog.Logger) {
+	realtimeevents.BoundTenantSignal{
+		Broadcaster: broadcaster, Logger: logger, Signal: realtimeevents.StaffTimeTrackingChanged,
+	}.Announce(ctx)
+}
+
+// QueueStaffLeaveChanged announces that staff absence and time views changed.
+func QueueStaffLeaveChanged(ctx context.Context, broadcaster realtime.Broadcaster, logger *slog.Logger) {
+	realtimeevents.BoundTenantSignal{
+		Broadcaster: broadcaster, Logger: logger, Signal: realtimeevents.StaffLeaveChanged,
+	}.Announce(ctx)
 }
 
 // StartedInstance names the timetable instance a kiosk session started.

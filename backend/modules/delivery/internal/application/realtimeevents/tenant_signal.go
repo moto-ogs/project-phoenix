@@ -19,6 +19,8 @@ const (
 	// CalendarAppointmentsChanged: an appointment of the school was written
 	// (#7693).
 	CalendarAppointmentsChanged TenantSignal = iota + 1
+	StaffTimeTrackingChanged
+	StaffLeaveChanged
 )
 
 // event is the one event a signal is bound to; false for an unknown value.
@@ -26,6 +28,10 @@ func (signal TenantSignal) event() (realtime.EventType, bool) {
 	switch signal {
 	case CalendarAppointmentsChanged:
 		return realtime.EventCalendarAppointmentsChanged, true
+	case StaffTimeTrackingChanged:
+		return realtime.EventStaffTimeTrackingChanged, true
+	case StaffLeaveChanged:
+		return realtime.EventStaffLeaveChanged, true
 	default:
 		return "", false
 	}

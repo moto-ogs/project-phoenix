@@ -17,6 +17,7 @@ frontend-relative paths start at `frontend/src/`.
   it connects and decodes events before sending them to subscribers. Don't
   import the JSON-route runtime into the SSE hook.
 - Events are notification triggers, not payloads — clients refetch via bulk endpoints.
+- **Own time tracking (#8081)**: `staff_time_tracking_changed` reloads the overview and the selected period. The contentless `staff_leave_changed` also reloads the leave overview and the open vacation form's year list. Instance updates reload only the overview for today's assignments; the relay preserves the fixed `closing_days` source on `staffing_deviation_changed` so closing-day updates also reload the period on other API replicas. Reconnects reconcile all own time-tracking reads; inactive affected periods are expired, not fetched.
 - The staff supervision context (#8084) is a bulk read, not an SSE topic.
   It can read just the affected sections through its [generated contract](contracts.md#staff-supervision-context-8084).
   This route adds no event or refetch; #8085 switches the staff consumers.

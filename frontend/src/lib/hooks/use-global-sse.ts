@@ -1331,9 +1331,10 @@ export function useGlobalSSE(): SSEHookState {
           break;
         }
 
-        case "staff_time_tracking_changed": {
+        case "staff_time_tracking_changed":
+        case "staff_leave_changed": {
           void refreshOwnTime(
-            event.data.reason === "absence" ? "leave" : "time",
+            event.type === "staff_leave_changed" ? "leave" : "time",
           );
           hasPendingStaffTimeTrackingEvent.current = true;
           scheduleFlush();

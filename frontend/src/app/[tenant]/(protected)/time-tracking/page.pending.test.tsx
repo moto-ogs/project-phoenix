@@ -273,7 +273,7 @@ function mockData(absences: StaffAbsence[]) {
         absence: null,
         chart: [],
         completedToday: 0,
-        completedWeek: 0,
+        todayCountsInTotals: true,
         laborDays: [],
         plannedShifts: [],
         cancelledShifts: [],
@@ -286,6 +286,7 @@ function mockData(absences: StaffAbsence[]) {
     }
     if (key.startsWith("time-tracking-period-")) {
       return answer({
+        staffId: "10",
         from: new Date(2026, 8, 7),
         to: new Date(2026, 8, 13),
         sessions: [session],

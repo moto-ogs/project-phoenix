@@ -73,3 +73,13 @@ Variante 2.
 - Die Signale sind verlustbehaftet (ADR 0145). Leser laden bei Fokus, nach
   erneuter Verbindung und über ihre Abfrage nach; ein verlorenes Event verzögert
   nur die Anzeige.
+
+## Nachtrag: Eigene Zeiterfassung (#8081)
+
+Workforce meldet Zeitbuchungen, Arbeitszeitmodelle und Monatsabschlüsse weiter
+mit `staff_time_tracking_changed`. Änderungen an Abwesenheiten melden jetzt
+`staff_leave_changed`. Beide Namen laufen über den bestehenden, unveränderten
+Callback in Delivery; der frühere eigene Callback für Zeiterfassungsänderungen
+und sein Registereintrag entfallen. Beide Signale tragen weiterhin keine IDs,
+Tage oder Inhalte. Das zweite Signal lässt die Urlaubsansicht bei reinen
+Zeitbuchungen unverändert.

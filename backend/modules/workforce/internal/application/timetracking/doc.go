@@ -29,7 +29,8 @@ type DatabaseHandle interface {
 // composition root binds it to the realtime hub; the retained services never
 // reach the Delivery platform themselves.
 type EventPublisher interface {
-	QueueStaffTimeTrackingChanged(ctx context.Context, logger *slog.Logger, reason string)
+	QueueStaffTimeTrackingChanged(ctx context.Context, logger *slog.Logger)
+	QueueStaffLeaveChanged(ctx context.Context, logger *slog.Logger)
 }
 
 // DeletionAudit writes retention evidence in the deletion transaction.

@@ -41,6 +41,7 @@ import {
 } from "~/lib/time-tracking-helpers";
 
 export interface OwnPeriodEdit {
+  readonly staffId: string;
   readonly date: Date;
   readonly session: OwnBlock | null;
   readonly absence: OwnAbsence | null;
@@ -86,6 +87,7 @@ async function getPeriod(view: OwnTimePeriodView, start: string) {
     }),
   );
   return {
+    staffId: period.staff_id,
     from: parseISODate(start),
     to: parseISODate(end),
     sessions,
@@ -129,7 +131,6 @@ export function OwnPeriod({
   today,
   isCurrent,
   isSessionOpen,
-  staffId,
   setTargetHref,
   onEdit,
 }: {
@@ -138,7 +139,6 @@ export function OwnPeriod({
   readonly today: string;
   readonly isCurrent: boolean;
   readonly isSessionOpen: boolean;
-  readonly staffId?: string;
   readonly setTargetHref?: string;
   readonly onEdit: (edit: OwnPeriodEdit) => void;
 }) {
@@ -152,7 +152,7 @@ export function OwnPeriod({
       refreshInterval: isCurrent && isSessionOpen ? interval : 0,
     },
   );
-  const { data, error, mutate, isValidating } = read;
+  const { data, error, mutate } = read;
   const previous = useRef({ today, start, view });
   useEffect(() => {
     const last = previous.current;
@@ -174,12 +174,10 @@ export function OwnPeriod({
   );
   const absences = useMemo(
     () =>
-      staffId
-        ? data?.absences.map((absence) =>
-            adaptAbsenceForMetrics({ ...absence, staffId }),
-          )
-        : undefined,
-    [staffId, data],
+      data?.absences.map((absence) =>
+        adaptAbsenceForMetrics({ ...absence, staffId: data.staffId }),
+      ),
+    [data],
   );
   const reload = () => revalidateOrThrow(read);
 
@@ -211,13 +209,13 @@ export function OwnPeriod({
             </div>
           )}
           <StaffSessionTable
-            staffId={staffId ?? ""}
+            staffId={data.staffId}
             from={data.from}
             to={data.to}
             sessions={data.rows}
             reloadSessions={reload}
             absences={absences}
-            absencesUnresolved={!staffId || error !== undefined}
+            absencesUnresolved={error !== undefined}
             schedule={null}
             dailyProjection={data.dailyProjection}
             dailyProjectionPending
@@ -228,7 +226,7 @@ export function OwnPeriod({
             accountStartDateError={undefined}
             today={parseISODate(today)}
             isAdminView
-            editsUnresolved={!staffId || error !== undefined || isValidating}
+            editsUnresolved={error !== undefined}
             onEditDay={(date, row, absenceRow) => {
               const session =
                 data.sessions.find((block) => block.id === row?.id) ?? null;
@@ -239,6 +237,7 @@ export function OwnPeriod({
                 ? berlinTodayISO(new Date(session.checkInTime))
                 : toISODate(date);
               onEdit({
+                staffId: data.staffId,
                 date,
                 session,
                 absence,

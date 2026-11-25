@@ -778,7 +778,7 @@ function setupDefaultMocks(overrides?: {
                 ) ?? null,
               chart: [],
               completedToday: overrides?.completedToday ?? 0,
-              completedWeek: 0,
+              todayCountsInTotals: true,
               laborDays,
               plannedShifts: [],
               cancelledShifts: [],
@@ -820,6 +820,7 @@ function setupDefaultMocks(overrides?: {
         overrides?.historyLoading
           ? undefined
           : {
+              staffId: mockOwnStaff.id,
               from,
               to,
               sessions: history,
