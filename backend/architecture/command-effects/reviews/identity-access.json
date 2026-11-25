@@ -15819,14 +15819,23 @@
       "target_owner": "student-presence"
     },
     {
-      "adr": "0067",
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.callerLiveTopics.StaffSessionIDs",
-      "classification": "leaf",
-      "effect": "lock",
+      "classification": "query",
+      "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.CallerLiveTopics.StaffSessionIDs",
-      "reason": "Owner-provided conditional locking read: ForUpdate=true requires an ambient transaction and executes SELECT FOR UPDATE; otherwise read-only. Classify the complete method surface as lock, not query. Target modules/studentpresence.Owner.QueryGroupSupervisions; modules/studentpresence/internal/application/live_groups.go:122; modules/studentpresence/internal/adapters/postgres/live_groups.go:209. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Student Presence reads assignments on its school day with no write or row lock; SSE uses the returned session IDs to choose topics (#8084).",
       "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.QueryGroupSupervisions",
+      "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.StaffSupervisionAssignments.StaffSupervisionSessionIDs",
+      "target_owner": "student-presence"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.callerLiveTopics.StaffSessionIDs",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.CallerLiveTopics.StaffSessionIDs",
+      "reason": "Narrows the composed owner to its assignment read; this type assertion performs no SQL, mutation or locking (#8084).",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.StaffSupervisionAssignmentsOf",
       "target_owner": "student-presence"
     },
     {
@@ -21706,14 +21715,23 @@
       "target_owner": "student-presence"
     },
     {
-      "adr": "0067",
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.CallerLiveTopics.StaffSessionIDs",
-      "classification": "leaf",
-      "effect": "lock",
+      "classification": "query",
+      "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/ports.CallerLiveTopics.StaffSessionIDs",
-      "reason": "Owner-provided conditional locking read: ForUpdate=true requires an ambient transaction and executes SELECT FOR UPDATE; otherwise read-only. Classify the complete method surface as lock, not query. Target modules/studentpresence.Owner.QueryGroupSupervisions; modules/studentpresence/internal/application/live_groups.go:122; modules/studentpresence/internal/adapters/postgres/live_groups.go:209. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Student Presence reads assignments on its school day with no write or row lock; SSE uses the returned session IDs to choose topics (#8084).",
       "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.QueryGroupSupervisions",
+      "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.StaffSupervisionAssignments.StaffSupervisionSessionIDs",
+      "target_owner": "student-presence"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.CallerLiveTopics.StaffSessionIDs",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/ports.CallerLiveTopics.StaffSessionIDs",
+      "reason": "Narrows the composed owner to its assignment read; this type assertion performs no SQL, mutation or locking (#8084).",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.StaffSupervisionAssignmentsOf",
       "target_owner": "student-presence"
     },
     {

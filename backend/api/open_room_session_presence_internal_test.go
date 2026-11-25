@@ -28,13 +28,18 @@ func TestStaffSessionAssignmentsUseThePresenceOwnerClock(t *testing.T) {
 	db := testpkg.SetupTestDB(t)
 	staff := testpkg.CreateTestStaff(t, db, "Assignment", "Reader")
 	session := testpkg.CreateTestActiveGroupForTenant(t, db, testpkg.Tenant(t))
-	day := calendar.TodayDate().AddDays(2)
+	day := calendar.NewDate(2026, time.September, 15)
 	testpkg.CreateTestGroupSupervisorOn(t, db, staff.ID, session.ID, "supervisor", day)
-	clock := func() time.Time { return day.BerlinMidnight() }
+	now := day.AddDays(-1).BerlinMidnight()
+	clock := func() time.Time { return now }
 	presence := owners.NewLoggedStudentPresence(testpkg.NewDatabase(t, db), slog.Default(), clock)
 	adapter := owners.OpenRoomSessionPresence{Presence: presence}
 
 	ids, err := adapter.GetStaffActiveGroupIDs(testpkg.Ctx(t), staff.ID)
+	require.NoError(t, err)
+	require.Empty(t, ids)
+	now = day.BerlinMidnight()
+	ids, err = adapter.GetStaffActiveGroupIDs(testpkg.Ctx(t), staff.ID)
 	require.NoError(t, err)
 	require.Equal(t, []int64{session.ID}, ids)
 }

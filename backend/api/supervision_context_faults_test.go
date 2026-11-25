@@ -60,7 +60,7 @@ func TestSupervisionContextRecoversFromSQLFailures(t *testing.T) {
 		data := read(t, "")
 		require.Equal(t, supervisiondashboard.ContextUnavailable, data.Sessions.OverviewStatus)
 		assertOwnSupervisionContext(t, f, data.Sessions)
-		require.Equal(t, supervisiondashboard.ContextUnavailable, data.Groups.Status, "groups use the same overview setting")
+		require.Equal(t, supervisiondashboard.ContextUnavailable, data.Groups.Status, "the fault rig also fails its groups reader on the unreadable setting")
 		require.Equal(t, supervisiondashboard.ContextOK, data.ReleasedRooms.Status)
 		require.Len(t, data.ReleasedRooms.Items, 2)
 	})

@@ -11666,10 +11666,18 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.callerLiveTopics.StaffSessionIDs",
-      "binding_digest": "23ff4fa425efdaf89169eca7a5c9be6c",
+      "binding_digest": "89f8b04bf4a7b832faaeb65d866b3303",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.CallerLiveTopics.StaffSessionIDs",
       "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.QueryGroupSupervisions",
+      "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.StaffSupervisionAssignments.StaffSupervisionSessionIDs",
+      "target_owner": "student-presence"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.callerLiveTopics.StaffSessionIDs",
+      "binding_digest": "9dc5bf28e357dfd73bedfca62cb3c989",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.CallerLiveTopics.StaffSessionIDs",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.StaffSupervisionAssignmentsOf",
       "target_owner": "student-presence"
     },
     {
@@ -16042,10 +16050,18 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.CallerLiveTopics.StaffSessionIDs",
-      "binding_digest": "23ff4fa425efdaf89169eca7a5c9be6c",
+      "binding_digest": "89f8b04bf4a7b832faaeb65d866b3303",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/ports.CallerLiveTopics.StaffSessionIDs",
       "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.QueryGroupSupervisions",
+      "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.StaffSupervisionAssignments.StaffSupervisionSessionIDs",
+      "target_owner": "student-presence"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.CallerLiveTopics.StaffSessionIDs",
+      "binding_digest": "9dc5bf28e357dfd73bedfca62cb3c989",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/ports.CallerLiveTopics.StaffSessionIDs",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.StaffSupervisionAssignmentsOf",
       "target_owner": "student-presence"
     },
     {
