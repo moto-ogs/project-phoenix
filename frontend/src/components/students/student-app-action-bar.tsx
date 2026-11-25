@@ -2,21 +2,16 @@
 
 // Schnellaktionen der Kindakte in der App (#8070): Die Hauptaktion steht in
 // Daumennähe über der Pill (An- oder Abmelden), „Krank melden“ daneben, alles
-// Seltenere (Entschuldigen, Klassenfahrt) hinter „Mehr“ in einem Blatt. Die
+// Seltenere (Entschuldigen, Klassenfahrt) im einen „···“ der Kopfkarte. Die
 // Kopfkarte bleibt so eine Zeile Name plus Statuschips.
 //
 // Die Handler sind dieselben wie die der Kacheln am Desktop: Rückfragen,
 // Rechte und Fehlerwege gibt es nur einmal.
 
-import { MoreHorizontal } from "lucide-react";
-import { useState } from "react";
 import { createPortal } from "react-dom";
 
 import { ActionBar } from "~/components/ui/action-bar";
 import { Button } from "~/components/ui/button";
-import { ListRow } from "~/components/ui/list-row";
-import { OverlaySheet } from "~/components/ui/overlay-sheet";
-import { useAttendanceWebEnabled } from "~/lib/tenant-context";
 
 export interface StudentAppActionBarProps {
   readonly showCheckout: boolean;
@@ -36,20 +31,26 @@ export interface StudentAppActionBarProps {
   readonly plannedStatusLoading: boolean;
 }
 
-interface Entry {
+export interface StudentQuickAction {
   readonly key: string;
   readonly label: string;
   readonly run: () => void;
   readonly loading?: boolean;
-  /** Eine Zeile im Blatt „Weitere Aktionen“: was die Aktion bewirkt. */
+  /** Eine Zeile im Kopfmenü: was die Aktion bewirkt. */
   readonly hint: string;
 }
 
-export function StudentAppActionBar(props: StudentAppActionBarProps) {
-  const [moreOpen, setMoreOpen] = useState(false);
-  // Wie die Kacheln am Desktop: An- und Abmelden nur mit Anwesenheit im Web.
-  const attendanceWebEnabled = useAttendanceWebEnabled();
-  const entries: Entry[] = [];
+/**
+ * Die Tagesaktionen der Kindakte in fester Reihenfolge. Die ersten zwei
+ * stehen in der Leiste; alle weiteren führt die Seite im „···“ der
+ * Kopfkarte, damit es nur ein Menü gibt.
+ */
+export function studentAppQuickActions(
+  props: StudentAppActionBarProps,
+  /** Wie die Kacheln am Desktop: An- und Abmelden nur mit Anwesenheit im Web. */
+  attendanceWebEnabled: boolean,
+): readonly StudentQuickAction[] {
+  const entries: StudentQuickAction[] = [];
   if (props.showCheckout && attendanceWebEnabled)
     entries.push({
       key: "abmelden",
@@ -94,7 +95,13 @@ export function StudentAppActionBar(props: StudentAppActionBarProps) {
       run: props.onClassTrip,
       loading: props.plannedStatusLoading,
     });
-  const [primary, second, ...rest] = entries;
+  return entries;
+}
+
+export function StudentAppActionBar({
+  entries,
+}: Readonly<{ entries: readonly StudentQuickAction[] }>) {
+  const [primary, second] = entries;
   if (!primary) return null;
 
   // Die Seite reicht die Leiste in ihre Spalte; am iPad quer ist das die
@@ -105,33 +112,17 @@ export function StudentAppActionBar(props: StudentAppActionBarProps) {
     <ActionBar
       column="detail"
       secondary={
-        second || rest.length > 0 ? (
-          <div className="flex gap-2">
-            {second ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="md"
-                onClick={second.run}
-                isLoading={second.loading}
-                tooltip={second.hint}
-              >
-                {second.label}
-              </Button>
-            ) : null}
-            {rest.length > 0 ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                aria-label="Weitere Aktionen"
-                tooltip="Zeigt weitere Aktionen für dieses Kind, etwa Entschuldigen."
-                onClick={() => setMoreOpen(true)}
-              >
-                <MoreHorizontal className="size-5" aria-hidden="true" />
-              </Button>
-            ) : null}
-          </div>
+        second ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="md"
+            onClick={second.run}
+            isLoading={second.loading}
+            tooltip={second.hint}
+          >
+            {second.label}
+          </Button>
         ) : undefined
       }
     >
@@ -148,34 +139,7 @@ export function StudentAppActionBar(props: StudentAppActionBarProps) {
     </ActionBar>
   );
 
-  return (
-    <>
-      {typeof document === "undefined" ? bar : createPortal(bar, document.body)}
-      {rest.length > 0 ? (
-        <OverlaySheet
-          open={moreOpen}
-          onOpenChange={setMoreOpen}
-          title="Weitere Aktionen"
-        >
-          <div className="-mx-2 flex flex-col">
-            {rest.map((entry) => (
-              <ListRow
-                key={entry.key}
-                className="min-h-12 bg-transparent text-base"
-                onClick={() => {
-                  setMoreOpen(false);
-                  entry.run();
-                }}
-              >
-                <span className="flex flex-col">
-                  <span>{entry.label}</span>
-                  <span className="text-sm text-gray-500">{entry.hint}</span>
-                </span>
-              </ListRow>
-            ))}
-          </div>
-        </OverlaySheet>
-      ) : null}
-    </>
-  );
+  return typeof document === "undefined"
+    ? bar
+    : createPortal(bar, document.body);
 }

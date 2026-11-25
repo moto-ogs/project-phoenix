@@ -95,7 +95,10 @@ import { SectionCard } from "~/components/ui/section-card";
 import type { OverflowMenuEntry } from "~/components/ui/page-header/types";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { useDeviceContext } from "~/lib/device-context";
-import { StudentAppActionBar } from "~/components/students/student-app-action-bar";
+import {
+  StudentAppActionBar,
+  studentAppQuickActions,
+} from "~/components/students/student-app-action-bar";
 import { StudentSplitFrame } from "~/components/students/student-split-frame";
 import {
   RequestedQuickAction,
@@ -139,7 +142,11 @@ import {
 } from "~/lib/student-status-days-api";
 import { parseISODate, berlinTodayISO } from "~/lib/date-helpers";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
-import { useModuleBooked, useWeekendFollowsFriday } from "~/lib/tenant-context";
+import {
+  useAttendanceWebEnabled,
+  useModuleBooked,
+  useWeekendFollowsFriday,
+} from "~/lib/tenant-context";
 import { careWithdrawalNotice } from "~/lib/care-withdrawal-notice";
 import { fetchStudentCareWithdrawal } from "~/lib/care-exit-api";
 import {
@@ -484,6 +491,7 @@ export default function StudentDetailPage() {
 }
 
 function StudentDetailPageContent() {
+  const attendanceWebEnabled = useAttendanceWebEnabled();
   const tenantMutate = useTenantMutate();
   const params = useParams();
   const searchParams = useSearchParams();
@@ -1546,10 +1554,41 @@ function StudentDetailPageContent() {
     />
   ) : undefined;
 
+  const appQuickActions = studentAppQuickActions(
+    {
+      showCheckout,
+      showCheckin,
+      canSickExcused: hasSickExcusedWriteAccess,
+      canPlanAbsence: hasAbsenceWriteAccess,
+      isSick: student.sick ?? false,
+      isExcused: isQuickExcused,
+      isClassTrip: student.class_trip ?? false,
+      onCheckout: () => {
+        setCheckoutNote("");
+        setCheckoutIsEarly(isEarlyCheckout(todayPickup.time));
+        setShowConfirmCheckout(true);
+      },
+      onCheckin: () => setShowConfirmCheckin(true),
+      onSick: handleSickClick,
+      onExcused: handleExcusedClick,
+      onClassTrip: () => setPlannedStatusModal("class_trip"),
+      sickLoading,
+      excusedLoading,
+      plannedStatusLoading,
+    },
+    attendanceWebEnabled,
+  );
+
   // App (#8070): Das „…“ im Kopf trägt die seltenen Wege der Akte, nicht
   // nur Info und Hilfe. Die Tagesaktionen stehen in der Aktionsleiste.
   const fullRecord = hasFullAccess && !isHolidayGuest;
   const appMenuEntries: OverflowMenuEntry[] = [
+    // Was nicht in die Aktionsleiste passt (ab der dritten Tagesaktion).
+    ...appQuickActions.slice(2).map((action) => ({
+      label: action.label,
+      description: action.hint,
+      onClick: action.run,
+    })),
     ...(fullRecord && hasWriteAccess
       ? [
           {
@@ -1572,16 +1611,7 @@ function StudentDetailPageContent() {
           },
         ]
       : []),
-    ...(fullRecord && hasWriteAccess
-      ? [
-          {
-            label: "Änderungen",
-            description: "Wer hat welche Angabe wann geändert.",
-            onClick: () =>
-              tenantRouter.push(`/students/${studentId}/change-history`),
-          },
-        ]
-      : []),
+    // „Änderungsverlauf“ steht nur unter „Verlauf“: ein Ort, ein Name.
   ];
 
   const page = (
@@ -1683,29 +1713,7 @@ function StudentDetailPageContent() {
         <>
           {/* App (#8070): die Schnellaktionen in Daumennähe über der
               Pill statt als Kachelreihe im Kopf. */}
-          {appHead ? (
-            <StudentAppActionBar
-              showCheckout={showCheckout}
-              showCheckin={showCheckin}
-              canSickExcused={hasSickExcusedWriteAccess}
-              canPlanAbsence={hasAbsenceWriteAccess}
-              isSick={student.sick ?? false}
-              isExcused={isQuickExcused}
-              isClassTrip={student.class_trip ?? false}
-              onCheckout={() => {
-                setCheckoutNote("");
-                setCheckoutIsEarly(isEarlyCheckout(todayPickup.time));
-                setShowConfirmCheckout(true);
-              }}
-              onCheckin={() => setShowConfirmCheckin(true)}
-              onSick={handleSickClick}
-              onExcused={handleExcusedClick}
-              onClassTrip={() => setPlannedStatusModal("class_trip")}
-              sickLoading={sickLoading}
-              excusedLoading={excusedLoading}
-              plannedStatusLoading={plannedStatusLoading}
-            />
-          ) : null}
+          {appHead ? <StudentAppActionBar entries={appQuickActions} /> : null}
           {/* Aktion aus dem Kind-Blatt der Liste (#8070): öffnet hier
               denselben Dialog wie die Kachel. */}
           {requestedAction && isStudentQuickAction(requestedAction) ? (
