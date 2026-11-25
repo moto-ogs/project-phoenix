@@ -565,7 +565,7 @@ function edgeMask(edges: { start: boolean; end: boolean }) {
   if (!edges.start && !edges.end) return undefined;
   const mask = `linear-gradient(to right, ${
     edges.start ? "transparent 0, #000 2.5rem" : "#000 0"
-  }, ${edges.end ? "#000 calc(100% - 4rem), transparent calc(100% - 1.5rem)" : "#000 100%"})`;
+  }, ${edges.end ? "#000 calc(100% - 5rem), transparent calc(100% - 2.75rem)" : "#000 100%"})`;
   return { maskImage: mask, WebkitMaskImage: mask };
 }
 
