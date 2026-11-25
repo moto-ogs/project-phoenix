@@ -1314,6 +1314,32 @@ export const EnrollablePhaseResponseSchema: z.ZodType<EnrollablePhaseResponse, u
   audience: str,
 });
 
+/** Go: parent.FamilyStartCardResponse */
+export interface FamilyStartCardResponse {
+  access_version: string;
+  child: ChildResponse;
+  features: ChildFeaturesResponse | null;
+  today: TodayStatusResponse | null;
+}
+
+export const FamilyStartCardResponseSchema: z.ZodType<FamilyStartCardResponse, unknown> = object<FamilyStartCardResponse>({
+  access_version: str,
+  child: ChildResponseSchema,
+  features: nullable(ChildFeaturesResponseSchema),
+  today: nullable(TodayStatusResponseSchema),
+});
+
+/** Go: parent.FamilyStartResponse */
+export interface FamilyStartResponse {
+  day: string | null;
+  cards: FamilyStartCardResponse[] | null;
+}
+
+export const FamilyStartResponseSchema: z.ZodType<FamilyStartResponse, unknown> = object<FamilyStartResponse>({
+  day: nullable(calendarDate),
+  cards: nullable(arr(FamilyStartCardResponseSchema)),
+});
+
 /** Go: parent.HolidayRegistrationEntryWeekResponse */
 export interface HolidayRegistrationEntryWeekResponse {
   first_day: string | null;
@@ -3023,6 +3049,15 @@ export const routes = {
     pattern: "/parent/me/enrollable-schools",
     portals: ["parent"],
     response: success(z.array(EnrollablePhaseResponseSchema)),
+  },
+  "GET /parent/me/family-start": {
+    method: "GET",
+    pattern: "/parent/me/family-start",
+    portals: ["parent"],
+    query: {
+      "student_id": { kind: "id" },
+    },
+    response: success(FamilyStartResponseSchema),
   },
   "GET /parent/me/holiday-registration-entries": {
     method: "GET",

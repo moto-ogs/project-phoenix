@@ -51,8 +51,10 @@ vi.mock("~/lib/hooks/use-parent-meal-plan-enabled", () => ({
 }));
 
 vi.mock("~/lib/parent-api", () => ({
-  listMyChildren: async () => [],
-  getChildFeatures: async () => ({}),
+  getFamilyStart: async () => ({
+    day: new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Berlin" }),
+    cards: [],
+  }),
 }));
 
 vi.mock("~/lib/notification-feed-api", async (importOriginal) => {

@@ -24,10 +24,12 @@ vi.mock("~/lib/parent-api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/lib/parent-api")>()),
   getChildConversation: mockGetConversation,
   postChildMessage: mockPostMessage,
-  getChildToday: vi.fn(),
   // Side-load of the child's other conversations; none in these tests.
   listChildThreads: vi.fn(() => Promise.resolve([])),
-  listMyChildren: vi.fn(() => Promise.resolve([])),
+  getFamilyStart: vi.fn(async () => ({
+    day: new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Berlin" }),
+    cards: [],
+  })),
 }));
 
 // The send overlay (#5011) and the readers are bound to the session's scope.

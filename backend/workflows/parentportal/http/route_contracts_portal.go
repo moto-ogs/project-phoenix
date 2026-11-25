@@ -71,6 +71,7 @@ func accountRouteContracts() []common.RouteContract {
 	portals := []common.PortalScope{common.PortalParent}
 	page := []common.QueryParam{{Name: "limit", Kind: common.QueryInt}, {Name: "cursor", Kind: common.QueryString}}
 	return []common.RouteContract{
+		{Method: "GET", Pattern: "/me/family-start", Portals: portals, Query: []common.QueryParam{{Name: "student_id", Kind: common.QueryID}}, Response: FamilyStartResponse{}},
 		{Method: "GET", Pattern: "/me/children", Portals: portals, Response: []ChildResponse{}},
 		{Method: "GET", Pattern: "/me/profile", Portals: portals, Response: ParentProfileResponse{}},
 		{Method: "PUT", Pattern: "/me/profile", Portals: portals, Request: UpdateParentProfileRequest{}, Response: ParentProfileResponse{}},

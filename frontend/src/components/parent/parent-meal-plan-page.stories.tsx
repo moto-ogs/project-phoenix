@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { storyNow } from "~storybook/clock";
 import { installStorybookFetch, jsonResponse } from "~storybook/mocks/fetch";
+import { berlinTodayISO } from "~/lib/date-helpers";
 import { ParentMealPlanPage } from "./parent-meal-plan-page";
 import type { MealParticipation, MealPlanEntry } from "~/lib/parent-api";
 import type * as parentMeContract from "~/lib/contract/parent-me.generated";
@@ -179,14 +180,33 @@ function mockParentMealPlan({
     const requestUrl = new URL(url, "http://storybook.test");
     const { pathname } = requestUrl;
 
-    if (pathname === "/api/parent/me/children") {
+    if (pathname === "/api/parent/me/family-start") {
       if (shouldFail) {
         return jsonResponse(
           { error: "Interner Serverfehler" },
           { status: 500 },
         );
       }
-      return jsonResponse({ data: childrenData });
+      const studentId = requestUrl.searchParams.get("student_id");
+      return jsonResponse({
+        data: {
+          day: berlinTodayISO(storyNow()),
+          cards: childrenData
+            .filter((child) => !studentId || child.student_id === studentId)
+            .map((child) => ({
+              child,
+              access_version: "story",
+              features: {
+                ...baseFeatures,
+                meal_plan_enabled: enabledStudentIds.has(child.student_id),
+                meal_registration_enabled: registrationEnabledStudentIds.has(
+                  child.student_id,
+                ),
+              },
+              today: { state: "unknown", at_ogs: null },
+            })),
+        } satisfies parentMeContract.FamilyStartResponse,
+      });
     }
 
     const participationMatch = pathname.match(
@@ -200,24 +220,11 @@ function mockParentMealPlan({
     }
 
     const childMatch = pathname.match(
-      /^\/api\/parent\/me\/children\/([^/]+)\/(features|meal-plan)$/,
+      /^\/api\/parent\/me\/children\/([^/]+)\/meal-plan$/,
     );
     if (!childMatch) return undefined;
 
     const studentId = decodeURIComponent(childMatch[1] ?? "");
-    const resource = childMatch[2];
-
-    if (resource === "features") {
-      return jsonResponse({
-        data: {
-          ...baseFeatures,
-          meal_plan_enabled: enabledStudentIds.has(studentId),
-          meal_registration_enabled:
-            registrationEnabledStudentIds.has(studentId),
-        },
-      });
-    }
-
     return jsonResponse({ data: entriesByStudent[studentId] ?? [] });
   });
 }

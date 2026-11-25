@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan/parentrequests"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 var (
@@ -226,15 +227,19 @@ func (s *Service) permittedChild(adminCtx context.Context, accountID, studentID 
 	if requiredPermission != "" && !childHasPermission(child, requiredPermission) {
 		return nil, ErrGuardianPermissionDenied
 	}
+	return child.resolved(s.todayDate()), nil
+}
+
+func (child *ChildSummary) resolved(day calendar.Date) *Child {
 	return &Child{
 		TenantID:            child.TenantID,
 		GuardianProfileID:   child.GuardianProfileID,
 		GuardianPermissions: child.GuardianPermissions,
 		StudentName:         strings.TrimSpace(child.FirstName + " " + child.LastName),
 		SchoolName:          child.SchoolName,
-		CareEnded:           child.CareEnded(s.todayDate()),
+		CareEnded:           child.CareEnded(day),
 		WithoutCarePlace:    child.WithoutCarePlace,
-	}, nil
+	}
 }
 
 func childHasPermission(child *ChildSummary, permission string) bool {

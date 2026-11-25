@@ -1,3 +1,5 @@
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
+import { parentFamilyFixture } from "~/test/parent-family-fixture";
 import { act, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { setTestClock } from "~/test/clock";
@@ -9,18 +11,18 @@ import { ApiError } from "~/lib/api-error";
 import { resetSWRScope, resumeSWRSession } from "~/lib/swr/scope";
 import { ParentRealtimeBridge } from "~/components/parent/parent-realtime-bridge";
 import {
+  getFamilyStart,
   fetchParentProfile,
-  getChildFeatures,
-  getChildToday,
-  listMyChildren,
   listMessageThreads,
   listAnnouncements,
 } from "~/lib/parent-api";
 import { ParentStartPage } from "./parent-start-page";
 import type { SSEHookOptions } from "~/lib/sse-types";
 
+const family = parentFamilyFixture();
+
 vi.unmock("swr");
-const useSSE = vi.hoisted(() => vi.fn());
+const useSSE = vi.hoisted(() => vi.fn().mockReturnValue({ isConnected: true }));
 vi.mock("~/lib/hooks/use-sse", () => ({ useSSE }));
 const state = vi.hoisted(() => ({ account: "A" as string | null }));
 vi.mock("next-auth/react", () => ({
@@ -44,18 +46,7 @@ vi.mock("~/lib/shell-auth-context", () => ({
 }));
 vi.mock("~/lib/parent-api", async (original) => ({
   ...(await original<typeof import("~/lib/parent-api")>()),
-  listMyChildren: vi.fn(async () => [
-    {
-      student_id: "42",
-      tenant_id: "7",
-      first_name: `Kind ${state.account}`,
-      last_name: "Test",
-      school_name: "Schule",
-      school_class: "1a",
-    },
-  ]),
-  getChildFeatures: vi.fn(async () => ({})),
-  getChildToday: vi.fn(async () => ({ at_ogs: null, state: "unknown" })),
+
   fetchParentProfile: vi.fn(async () => ({ first_name: "Eltern" })),
   listAnnouncements: vi.fn(async () => []),
   listMessageThreads: vi.fn(async () => []),
@@ -67,12 +58,13 @@ vi.mock("~/lib/personal-calendar-api", () => ({
 }));
 
 beforeEach(() => {
+  family.mockRead();
   resumeSWRSession();
   resetSWRScope({ revalidate: false });
   state.account = "A";
   vi.clearAllMocks();
   vi.mocked(listAnnouncements).mockResolvedValue([]);
-  vi.mocked(getChildToday).mockResolvedValue({
+  family.today.mockResolvedValue({
     at_ogs: null,
     state: "unknown",
   });
@@ -82,7 +74,7 @@ beforeEach(() => {
     first_name: "Eltern",
     portal_locale: null,
   });
-  vi.mocked(listMyChildren).mockImplementation(async () => [
+  family.children.mockImplementation(async () => [
     {
       care_ended: false,
       student_id: "42",
@@ -95,8 +87,8 @@ beforeEach(() => {
       school_slug: "schule",
     },
   ]);
-  vi.mocked(getChildFeatures).mockResolvedValue(
-    {} as Awaited<ReturnType<typeof getChildFeatures>>,
+  family.features.mockResolvedValue(
+    {} as parentMeContract.ChildFeaturesResponse,
   );
 });
 afterEach(() => {
@@ -126,6 +118,58 @@ function mount(onCommit?: () => void) {
 }
 
 describe("parent start cache isolation", () => {
+  it("narrows child events, reconciles missing IDs and reconnects, and ignores a late card after revocation", async () => {
+    const rows = await family.children();
+    const child = rows[0]!;
+    family.children.mockResolvedValue([
+      child,
+      { ...child, student_id: "43", first_name: "Geschwister" },
+    ]);
+    const view = mount();
+    expect(await screen.findByText("Geschwister Test")).toBeInTheDocument();
+    const update = async (studentId?: string) => {
+      const options = useSSE.mock.calls.at(-1)?.[1] as SSEHookOptions;
+      await act(async () => {
+        options.onMessage?.({
+          type: "parent_child_updated",
+          active_group_id: "",
+          data: studentId ? { student_id: studentId } : {},
+          timestamp: new Date().toISOString(),
+        });
+      });
+    };
+    const oldCard = await family.read("42");
+    let resolveCard!: (answer: typeof oldCard) => void;
+    vi.mocked(getFamilyStart).mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveCard = resolve;
+      }),
+    );
+    await update("42");
+    family.children.mockResolvedValue([
+      { ...child, student_id: "43", first_name: "Geschwister" },
+    ]);
+    await update();
+    await waitFor(() =>
+      expect(screen.queryByText("Kind A Test")).not.toBeInTheDocument(),
+    );
+    await act(async () => {
+      resolveCard(oldCard);
+    });
+    expect(screen.queryByText("Kind A Test")).not.toBeInTheDocument();
+    expect(screen.getByText("Geschwister Test")).toBeInTheDocument();
+    useSSE.mockReturnValueOnce({ isConnected: false });
+    view.rerender(<Fixture />);
+    view.rerender(<Fixture />);
+    await waitFor(() =>
+      expect(vi.mocked(getFamilyStart).mock.calls).toEqual([
+        [undefined],
+        ["42"],
+        [undefined],
+        [undefined],
+      ]),
+    );
+  });
   it("withdraws the old child's data on account change", async () => {
     const view = mount();
     expect(await screen.findByText("Kind A Test")).toBeInTheDocument();
@@ -158,8 +202,8 @@ describe("parent start cache isolation", () => {
   it("withdraws every child view after the server refuses the relationship", async () => {
     mount();
     expect(await screen.findByText("Kind A Test")).toBeInTheDocument();
-    vi.mocked(getChildFeatures).mockImplementation(async () => {
-      vi.mocked(listMyChildren).mockResolvedValue([]);
+    family.features.mockImplementation(async () => {
+      family.children.mockResolvedValue([]);
       throw new ApiError("not linked", 403, { code: "care.child_not_linked" });
     });
     act(() => {
@@ -181,9 +225,7 @@ describe("parent start cache isolation", () => {
   it("shows a returning page synchronously without repeating shared GETs", async () => {
     const view = mount();
     expect(await screen.findByText("Kind A Test")).toBeInTheDocument();
-    expect(listMyChildren).toHaveBeenCalledTimes(1);
-    expect(getChildFeatures).toHaveBeenCalledTimes(1);
-    expect(getChildToday).toHaveBeenCalledTimes(1);
+    expect(getFamilyStart).toHaveBeenCalledTimes(1);
     view.rerender(<Fixture visible={false} />);
     view.rerender(<Fixture />);
     // Anker: bestätigte Kindkarte bereits beim ersten Render, kein Kaltstart.
@@ -191,14 +233,12 @@ describe("parent start cache isolation", () => {
     expect(
       screen.queryByTestId("parent-start-child-skeleton"),
     ).not.toBeInTheDocument();
-    expect(listMyChildren).toHaveBeenCalledTimes(1);
-    expect(getChildFeatures).toHaveBeenCalledTimes(1);
-    expect(getChildToday).toHaveBeenCalledTimes(1);
+    expect(getFamilyStart).toHaveBeenCalledTimes(1);
   });
   it("withdraws child data when another tab reports a relationship refusal", async () => {
     mount();
     expect(await screen.findByText("Kind A Test")).toBeInTheDocument();
-    vi.mocked(listMyChildren).mockResolvedValue([]);
+    family.children.mockResolvedValue([]);
     const channel = new BroadcastChannel("moto:parent-access-refused");
     channel.postMessage({
       source: "other-tab",
@@ -218,13 +258,13 @@ describe("parent start cache isolation", () => {
   it("starts child features and day status without waiting for the profile", async () => {
     vi.mocked(fetchParentProfile).mockReturnValue(new Promise(() => undefined));
     mount();
-    await waitFor(() => expect(getChildFeatures).toHaveBeenCalledWith("42"));
-    expect(getChildToday).toHaveBeenCalledWith("42");
+    await waitFor(() => expect(family.features).toHaveBeenCalledWith("42"));
+    expect(family.today).toHaveBeenCalledWith("42");
     expect(await screen.findByText("Kind A Test")).toBeInTheDocument();
   });
   it("never paints the no-children state while presenting a load failure", async () => {
     const commits: string[] = [];
-    vi.mocked(listMyChildren).mockRejectedValue(
+    family.children.mockRejectedValue(
       new ApiError("offline", 503, { code: "general.unavailable" }),
     );
     mount(() => commits.push(document.body.textContent ?? ""));
@@ -252,9 +292,9 @@ describe("parent start cache isolation", () => {
     expect(commits.some((text) => text.includes("Alles erledigt"))).toBe(false);
   });
   it.each([
-    ["parent-child-status-refresh", listMyChildren, "Kind A Test"],
-    ["parent-child-status-refresh", getChildFeatures, "Kind A Test"],
-    ["parent-child-status-refresh", getChildToday, "Kind A Test"],
+    ["parent-child-status-refresh", family.children, "Kind A Test"],
+    ["parent-child-status-refresh", family.features, "Kind A Test"],
+    ["parent-child-status-refresh", family.today, "Kind A Test"],
     ["parent-news-unread-refresh", listAnnouncements, "Alles erledigt"],
   ] as const)(
     "keeps the mounted start content after a failed %s",
@@ -281,9 +321,7 @@ describe("parent start cache isolation", () => {
       window.dispatchEvent(new CustomEvent("parent-messages-unread-refresh"));
     });
     await waitFor(() => expect(listMessageThreads).toHaveBeenCalledTimes(2));
-    expect(listMyChildren).toHaveBeenCalledTimes(1);
-    expect(getChildFeatures).toHaveBeenCalledTimes(1);
-    expect(getChildToday).toHaveBeenCalledTimes(1);
+    expect(getFamilyStart).toHaveBeenCalledTimes(1);
   });
   it("refreshes the shared message list only once for one incoming SSE message", async () => {
     mount();
@@ -299,9 +337,7 @@ describe("parent start cache isolation", () => {
       });
     });
     await waitFor(() => expect(listMessageThreads).toHaveBeenCalledTimes(2));
-    expect(listMyChildren).toHaveBeenCalledTimes(1);
-    expect(getChildFeatures).toHaveBeenCalledTimes(1);
-    expect(getChildToday).toHaveBeenCalledTimes(1);
+    expect(getFamilyStart).toHaveBeenCalledTimes(1);
   });
 
   it("removes a read conversation from the start tasks on a warm return", async () => {
@@ -328,21 +364,18 @@ describe("parent start cache isolation", () => {
     await waitFor(() =>
       expect(screen.queryByText("Neue Nachricht")).not.toBeInTheDocument(),
     );
-    expect(listMyChildren).toHaveBeenCalledTimes(1);
-    expect(getChildFeatures).toHaveBeenCalledTimes(1);
-    expect(getChildToday).toHaveBeenCalledTimes(1);
+    expect(getFamilyStart).toHaveBeenCalledTimes(1);
   });
 
   it("does not reuse yesterday's day status or date-dependent features on a warm mount", async () => {
     const view = mount();
     expect(await screen.findByText("Kind A Test")).toBeInTheDocument();
-    expect(getChildToday).toHaveBeenCalledTimes(1);
+    expect(family.today).toHaveBeenCalledTimes(1);
     view.rerender(<Fixture visible={false} />);
     setTestClock("2026-09-10T12:00:00+02:00");
     view.rerender(<Fixture />);
-    await waitFor(() => expect(getChildToday).toHaveBeenCalledTimes(2));
-    expect(getChildFeatures).toHaveBeenCalledTimes(2);
-    expect(listMyChildren).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(family.today).toHaveBeenCalledTimes(2));
+    expect(getFamilyStart).toHaveBeenCalledTimes(2);
   });
 
   it("revalidates a message list invalidated while its page was unmounted", async () => {
@@ -355,6 +388,6 @@ describe("parent start cache isolation", () => {
     });
     view.rerender(<Fixture />);
     await waitFor(() => expect(listMessageThreads).toHaveBeenCalledTimes(2));
-    expect(listMyChildren).toHaveBeenCalledTimes(1);
+    expect(family.children).toHaveBeenCalledTimes(1);
   });
 });

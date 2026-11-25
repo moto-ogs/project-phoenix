@@ -1,3 +1,5 @@
+import type * as parentMeContract from "~/lib/contract/parent-me.generated";
+import { parentFamilyFixture } from "~/test/parent-family-fixture";
 import {
   act,
   fireEvent,
@@ -11,9 +13,7 @@ import deMessages from "~/i18n/messages/de.generated";
 import { ApiError } from "~/lib/api-error";
 import {
   getChildConversation,
-  getChildFeatures,
   getGroupThread,
-  listMyChildren,
   postChildMessage,
 } from "~/lib/parent-api";
 import {
@@ -26,6 +26,8 @@ import { parentKeys } from "~/lib/swr/parent-keys";
 import { catalogText } from "~/test/error-catalog-text";
 import { ParentResourceTestProvider } from "~/test/parent-resource-provider";
 import { ParentGroupThreadView } from "./group-thread-view";
+
+const family = parentFamilyFixture();
 
 vi.unmock("swr");
 
@@ -44,15 +46,14 @@ vi.mock("~/lib/parent-api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/lib/parent-api")>()),
   getGroupThread: vi.fn(),
   getChildConversation: vi.fn(),
-  getChildFeatures: vi.fn(),
-  listMyChildren: vi.fn(),
+
   postChildMessage: vi.fn(),
 }));
 
 const mockedThread = vi.mocked(getGroupThread);
-const mockedFeatures = vi.mocked(getChildFeatures);
+const mockedFeatures = family.features;
 const mockedPost = vi.mocked(postChildMessage);
-const mockedChildren = vi.mocked(listMyChildren);
+const mockedChildren = family.children;
 
 const felix = { student_id: "42", first_name: "Felix", last_name: "Schneider" };
 const mia = { student_id: "43", first_name: "Mia", last_name: "Schneider" };
@@ -83,15 +84,16 @@ const sommerfest = {
 };
 
 function features(notesEnabled: boolean) {
-  return { notes_enabled: notesEnabled } as unknown as Awaited<
-    ReturnType<typeof getChildFeatures>
-  >;
+  return {
+    notes_enabled: notesEnabled,
+  } as unknown as parentMeContract.ChildFeaturesResponse;
 }
 
 function linked(child: typeof felix) {
-  return { ...child, tenant_id: "7" } as unknown as Awaited<
-    ReturnType<typeof listMyChildren>
-  >[number];
+  return {
+    ...child,
+    tenant_id: "7",
+  } as unknown as parentMeContract.ChildResponse;
 }
 
 function renderView() {
@@ -106,6 +108,8 @@ function renderView() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+
+  family.mockRead();
   mockedFeatures.mockResolvedValue(features(true));
   mockedChildren.mockResolvedValue([linked(felix), linked(mia)]);
 });

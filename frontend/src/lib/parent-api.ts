@@ -210,15 +210,16 @@ async function parentCall<T>(
   }
 }
 
-/**
- * Fetches every child linked to the calling parent's account, across
- * every active tenant mapping. The response is already sorted (school
- * to first name to last name) by the backend.
- */
-export async function listMyChildren(): Promise<
-  parentMeContract.ChildResponse[]
-> {
-  return parentCall(bffJson("parent", "GET /parent/me/children"));
+/** The confirmed family roster and card fields, optionally narrowed to one child. */
+export function getFamilyStart(
+  studentId?: string,
+): Promise<parentMeContract.FamilyStartResponse> {
+  return parentCall(
+    bffJson("parent", "GET /parent/me/family-start", {
+      query: studentId ? { student_id: studentId } : {},
+    }),
+    true,
+  );
 }
 
 /** Reads the four current consent and acknowledgement states for one child. */
@@ -487,64 +488,11 @@ export async function listExcusedRequests(
   );
 }
 
-/**
- * Fetches which write actions the child's school allows (resolved per
- * tenant). Used to hide/disable actions the backend would reject. Defaults
- * to both enabled if the request fails, so a transient error doesn't lock a
- * parent out of an enabled feature.
- */
-export async function getChildFeatures(
-  studentId: string,
-): Promise<parentMeContract.ChildFeaturesResponse> {
-  return parentCall(
-    bffJson("parent", "GET /parent/me/children/{studentId}/features", {
-      params: { studentId },
-    }),
-    true, // This endpoint requires only parent_portal.access.
-  );
-}
-
 /** Was angezeigt wird, solange oder falls der Endpunkt nichts liefert. */
 export const UNKNOWN_CHILD_TODAY: parentMeContract.TodayStatusResponse = {
   at_ogs: null,
   state: "unknown",
 };
-
-/**
- * Holt den Tagesstatus des Kindes.
- *
- * Faellt auf `unknown` zurueck, statt zu werfen: der Endpunkt kann fehlen
- * (404, waehrend das Backend nachzieht) oder der Zugriff auf das Kind ist
- * entzogen (403). Beides ist "wir wissen es nicht", kein Fehlerzustand, den ein
- * Elternteil sehen muesste. 401 laesst bffJson weiterhin zur
- * Anmeldung umleiten.
- *
- * Genau diese zwei Codes, nicht "ab 403": ein 500er oder ein ausgefallener
- * Proxy ist ein echter Fehler und darf nicht als gueltiger Unbekannt-Zustand
- * durchgehen. Alle Aufrufer fangen den Wurf ab und zeigen weiterhin
- * UNKNOWN_CHILD_TODAY — nur bleibt der Ausfall jetzt als Fehler sichtbar.
- */
-export async function getChildToday(
-  studentId: string,
-): Promise<parentMeContract.TodayStatusResponse> {
-  try {
-    return await parentCall(
-      bffJson("parent", "GET /parent/me/children/{studentId}/today", {
-        params: { studentId },
-      }),
-      true, // This endpoint requires only parent_portal.access.
-    );
-  } catch (err) {
-    if (err instanceof ApiError && (err.status === 403 || err.status === 404)) {
-      logger.warn("parent_child_today_unavailable", {
-        status: err.status,
-        student_id: studentId,
-      });
-      return UNKNOWN_CHILD_TODAY;
-    }
-    throw err;
-  }
-}
 
 /**
  * Fetches the Monday-Friday meal plan for the child's school for the week

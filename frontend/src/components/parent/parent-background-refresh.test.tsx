@@ -1,3 +1,4 @@
+import { parentFamilyFixture } from "~/test/parent-family-fixture";
 import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 import type { ReactNode } from "react";
 import {
@@ -25,12 +26,14 @@ import { SharedParentFeaturesProvider } from "./child-requests-context";
 import { ChildPage } from "./child/child-page";
 import { ParentMessagesPage } from "./messages/parent-messages-page";
 import { ParentRealtimeBridge } from "./parent-realtime-bridge";
+const family = parentFamilyFixture();
+
 vi.unmock("swr");
 vi.mock("~/lib/tenant-context", () => ({
   useTenantSlugSafe: () => null,
   useTenantSafe: () => null,
 }));
-const useSSE = vi.hoisted(() => vi.fn());
+const useSSE = vi.hoisted(() => vi.fn().mockReturnValue({ isConnected: true }));
 vi.mock("~/lib/hooks/use-sse", () => ({ useSSE }));
 const params = new URLSearchParams();
 vi.mock("next/navigation", () => ({
@@ -54,8 +57,10 @@ const unavailable = new ApiError("offline", 503, {
 beforeEach(async () => {
   await import("~/lib/error-presentation");
   vi.restoreAllMocks();
-  vi.spyOn(api, "listMyChildren").mockResolvedValue([child]);
-  vi.spyOn(api, "getChildFeatures").mockResolvedValue({
+
+  family.mockRead();
+  family.children.mockResolvedValue([child]);
+  family.features.mockResolvedValue({
     conference_book_allowed: false,
     care_ended: false,
     excused_note_enabled: false,
@@ -85,7 +90,7 @@ beforeEach(async () => {
     sick_note_enabled: true,
     notes_enabled: true,
   } as parentMeContract.ChildFeaturesResponse);
-  vi.spyOn(api, "getChildToday").mockResolvedValue(api.UNKNOWN_CHILD_TODAY);
+  family.today.mockResolvedValue(api.UNKNOWN_CHILD_TODAY);
   vi.spyOn(api, "getChildCareSchedule").mockResolvedValue({
     weekdays: [],
     today_absent: false,
@@ -133,18 +138,15 @@ beforeEach(async () => {
   });
 });
 async function failChildrenRefresh() {
-  vi.mocked(api.listMyChildren).mockRejectedValue(unavailable);
+  family.children.mockRejectedValue(unavailable);
   await act(async () => {
     window.dispatchEvent(new CustomEvent("parent-child-status-refresh"));
   });
-  await waitFor(() => expect(api.listMyChildren).toHaveBeenCalledTimes(2));
+  await waitFor(() => expect(family.children).toHaveBeenCalledTimes(2));
 }
 async function failResourceRefresh(source: "children" | "features" | "today") {
   if (source === "children") return failChildrenRefresh();
-  const request =
-    source === "features"
-      ? vi.mocked(api.getChildFeatures)
-      : vi.mocked(api.getChildToday);
+  const request = source === "features" ? family.features : family.today;
   request.mockRejectedValue(unavailable);
   await act(async () => {
     window.dispatchEvent(new CustomEvent("parent-child-status-refresh"));
@@ -192,7 +194,7 @@ describe("parent background refresh preserves mounted content", () => {
 });
 
 it("keeps an unsaved master-data field after a feature background failure", async () => {
-  vi.mocked(api.getChildFeatures).mockResolvedValue({
+  family.features.mockResolvedValue({
     master_data_edit_enabled: true,
   } as parentMeContract.ChildFeaturesResponse);
   vi.mocked(api.getChildMasterData).mockResolvedValue({
@@ -227,12 +229,12 @@ function SharedLoadErrorFixture() {
 
 describe("shared SWR load error semantics", () => {
   it("shows the error card when the initial request has no data", async () => {
-    vi.mocked(api.listMyChildren).mockRejectedValue(unavailable);
+    family.children.mockRejectedValue(unavailable);
     mount(<SharedLoadErrorFixture />);
     expect(await screen.findByRole("alert")).toBeInTheDocument();
   });
   it("treats a confirmed empty list as data during a failed revalidation", async () => {
-    vi.mocked(api.listMyChildren).mockResolvedValue([]);
+    family.children.mockResolvedValue([]);
     mount(<SharedLoadErrorFixture />);
     const content = await screen.findByText("loaded");
     await failChildrenRefresh();
