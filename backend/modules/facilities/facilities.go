@@ -125,6 +125,10 @@ func ErrorCode(err error) string {
 		return "room_still_planned"
 	case errors.Is(err, ErrRoomArchived):
 		return "room_archived"
+	case errors.Is(err, ErrInvalidRoomClosure):
+		return "invalid_room_closure"
+	case errors.Is(err, ErrRoomClosureNotFound):
+		return "room_closure_not_found"
 	default:
 		return "internal_error"
 	}

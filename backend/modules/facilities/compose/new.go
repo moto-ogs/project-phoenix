@@ -58,3 +58,14 @@ func (transaction) RunWrite(ctx context.Context, callback func(context.Context) 
 func (transaction) AcquireLock(ctx context.Context, key string) error {
 	return tenant.AcquireLock(ctx, key, false)
 }
+
+// NewClosures composes the room closures (#7653) over DB, Observe and the
+// root's clock, whose Berlin day is today.
+func NewClosures(dependencies Dependencies) (facilities.Closures, error) {
+	if dependencies.DB == nil || dependencies.Observe == nil {
+		return nil, errors.New("facilities compose: all closure dependencies are required")
+	}
+	store := postgres.New(postgres.DatabaseRuntime(dependencies.DB), calendar.InstantClock(dependencies.Now))
+	rooms := application.NewRooms(store, transaction{}, ports.Observer(dependencies.Observe))
+	return application.NewClosures(rooms, store, calendar.CalendarDateClock(dependencies.Now)), nil
+}

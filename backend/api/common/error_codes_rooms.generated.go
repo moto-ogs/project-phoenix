@@ -2,6 +2,7 @@
 package common
 
 const CodeRoomsArchived = "rooms.archived"
+const CodeRoomsClosureNotFound = "rooms.closure_not_found"
 const CodeRoomsColorAlreadyInUse = "rooms.color_already_in_use"
 const CodeRoomsNotFound = "rooms.not_found"
 const CodeRoomsNotReleased = "rooms.not_released"
@@ -11,6 +12,7 @@ const CodeRoomsStillPlanned = "rooms.still_planned"
 
 var errorCodeClassesRooms = []errorCodeClass{
 	{CodeRoomsArchived, "business_rejection"},
+	{CodeRoomsClosureNotFound, "business_rejection"},
 	{CodeRoomsColorAlreadyInUse, "business_rejection"},
 	{CodeRoomsNotFound, "business_rejection"},
 	{CodeRoomsNotReleased, "business_rejection"},

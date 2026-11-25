@@ -11,6 +11,7 @@ import (
 	"github.com/uptrace/bun"
 
 	"github.com/moto-ogs/project-phoenix/api"
+	facilitiesCompose "github.com/moto-ogs/project-phoenix/modules/facilities/compose"
 	httpadapter "github.com/moto-ogs/project-phoenix/modules/facilities/http"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
@@ -31,9 +32,12 @@ func composeRooms(t *testing.T) (*bun.DB, RoomsComposition, func(chi.Router, fun
 	prefetch, constraintViolation := api.RoomsHTTPBindingsForTest()
 	references, err := api.NewRoomReferencesForTest(testpkg.NewDatabase(t, db))
 	require.NoError(t, err)
+	closures, err := facilitiesCompose.NewClosures(facilitiesCompose.Dependencies{DB: db, Observe: func(facilitiesCompose.Observation) {}, Now: time.Now})
+	require.NoError(t, err)
 	return db, RoomsComposition{
 		Dependencies: httpadapter.Dependencies{
 			Facilities:          svcFacilities.Facilities,
+			Closures:            closures,
 			RoomHistorySettings: api.NewRoomHistorySettings(svcSettings.Settings, slog.Default(), prefetch),
 			UserContext:         svcCaller, Active: svcPresence.Active, Users: api.NewRoomSnapshotPeople(svcPeople.Users), Education: svcEducation.Education,
 			// The real clock: the default history window is today, and the

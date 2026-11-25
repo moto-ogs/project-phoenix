@@ -7,6 +7,12 @@
       "legacy": "rooms.archived"
     },
     {
+      "code": "rooms.closure_not_found",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "rooms.closure_not_found"
+    },
+    {
       "code": "rooms.color_already_in_use",
       "class": "business_rejection",
       "parameters": [],

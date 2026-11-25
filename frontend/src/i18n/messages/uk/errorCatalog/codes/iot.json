@@ -27,6 +27,7 @@
   "rfid_tag_not_student_or_staff": "Не вдалося зберегти: {object}. Перевірте введені дані.",
   "rfid_tag_unassigned": "Не вдалося зберегти: {object}. Перевірте введені дані.",
   "room_capacity_exceeded": "Не вдалося змінити: {object}. Перевірте поточний стан.",
+  "room_closed": "Не вдалося змінити: {object}. Перевірте поточний стан.",
   "room_not_found": "Не вдалося змінити: {object}. Перевірте поточний стан.",
   "schulhof_not_configured": "Не вдалося обробити: {object}. Спробуйте пізніше.",
   "staff_not_found": "Не вдалося зберегти: {object}. Перевірте введені дані.",

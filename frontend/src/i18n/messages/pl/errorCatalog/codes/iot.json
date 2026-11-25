@@ -27,6 +27,7 @@
   "rfid_tag_not_student_or_staff": "Nie udało się zapisać: {object}. Sprawdź wpisane dane.",
   "rfid_tag_unassigned": "Nie udało się zapisać: {object}. Sprawdź wpisane dane.",
   "room_capacity_exceeded": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
+  "room_closed": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
   "room_not_found": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
   "schulhof_not_configured": "Nie udało się przetworzyć: {object}. Spróbuj ponownie później.",
   "staff_not_found": "Nie udało się zapisać: {object}. Sprawdź wpisane dane.",

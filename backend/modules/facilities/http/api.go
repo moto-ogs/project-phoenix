@@ -97,12 +97,13 @@ type Runtime struct {
 }
 
 type Resource struct {
-	rooms   facilities.Capability
-	runtime Runtime
+	rooms    facilities.Capability
+	closures facilities.Closures
+	runtime  Runtime
 }
 
-func newRoomResource(rooms facilities.Capability, runtime Runtime) *Resource {
-	if rooms == nil || runtime.Protected == nil || runtime.Permission == nil ||
+func newRoomResource(rooms facilities.Capability, closures facilities.Closures, runtime Runtime) *Resource {
+	if rooms == nil || closures == nil || runtime.Protected == nil || runtime.Permission == nil ||
 		runtime.ParseID == nil || runtime.Pagination == nil || runtime.Success == nil ||
 		runtime.Paginated == nil || runtime.NoContent == nil || runtime.Failure == nil ||
 		runtime.Occupancy == nil || runtime.HistoryConfig == nil || runtime.HistoryAllowed == nil ||
@@ -111,7 +112,7 @@ func newRoomResource(rooms facilities.Capability, runtime Runtime) *Resource {
 		runtime.ReadUsers == "" || runtime.Create == "" || runtime.Update == "" || runtime.Delete == "" {
 		panic("rooms HTTP: all dependencies are required")
 	}
-	return &Resource{rooms: rooms, runtime: runtime}
+	return &Resource{rooms: rooms, closures: closures, runtime: runtime}
 }
 
 func (rs *Resource) Router() chi.Router {
@@ -119,6 +120,7 @@ func (rs *Resource) Router() chi.Router {
 	router.Use(render.SetContentType(render.ContentTypeJSON))
 	rs.runtime.Protected(router, func(protected chi.Router, withTx Middleware) {
 		protected.With(rs.runtime.Permission(rs.runtime.Read), withTx).Get("/", rs.listRooms)
+		protected.With(rs.runtime.Permission(rs.runtime.Read), withTx).Get("/closures", rs.listRoomClosures)
 		protected.With(rs.runtime.Permission(rs.runtime.Read), rs.runtime.Permission(rs.runtime.ReadUsers), withTx).Post("/export", rs.exportSnapshot)
 		protected.With(rs.runtime.Permission(rs.runtime.Read), withTx).Get("/{id}", rs.getRoom)
 		protected.With(rs.runtime.Permission(rs.runtime.Read), withTx).Get("/{id}/history", rs.GetRoomHistory)
@@ -126,6 +128,9 @@ func (rs *Resource) Router() chi.Router {
 		protected.With(rs.runtime.Permission(rs.runtime.Update), withTx).Put("/{id}", rs.updateRoom)
 		protected.With(rs.runtime.Permission(rs.runtime.Delete), withTx).Delete("/{id}", rs.deleteRoom)
 		protected.With(rs.runtime.Permission(rs.runtime.Delete), withTx).Get("/{id}/removal-impact", rs.roomRemovalImpact)
+		// Closing a room is part of keeping it (#7653): rooms:update.
+		protected.With(rs.runtime.Permission(rs.runtime.Update), withTx).Post("/{id}/closures", rs.closeRoom)
+		protected.With(rs.runtime.Permission(rs.runtime.Update), withTx).Delete("/{id}/closures/{closureId}", rs.reopenRoom)
 	})
 	return router
 }
@@ -391,9 +396,10 @@ func classifyFailure(err error) (FailureKind, string) {
 	kind, code := FailureInternal, facilities.ErrorCode(err)
 	switch {
 	case errors.Is(err, facilities.ErrInvalidRoom), errors.Is(err, facilities.ErrSystemRoomNameReserved),
-		errors.Is(err, facilities.ErrRoomColorReserved), errors.Is(err, facilities.ErrToiletRoomNotReleasable):
+		errors.Is(err, facilities.ErrRoomColorReserved), errors.Is(err, facilities.ErrToiletRoomNotReleasable),
+		errors.Is(err, facilities.ErrInvalidRoomClosure):
 		kind = FailureInvalid
-	case errors.Is(err, facilities.ErrRoomNotFound):
+	case errors.Is(err, facilities.ErrRoomNotFound), errors.Is(err, facilities.ErrRoomClosureNotFound):
 		kind = FailureNotFound
 	case errors.Is(err, facilities.ErrSystemRoomProtected):
 		kind = FailureForbidden
