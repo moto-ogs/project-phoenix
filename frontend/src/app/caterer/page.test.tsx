@@ -202,6 +202,60 @@ describe("CatererOverviewPage (#3873)", () => {
     expect(mocks.fetchCatererOrders).toHaveBeenCalledTimes(1);
   });
 
+  it.each(["success", "failure"] as const)(
+    "keeps the directory result when one school's manual retry finishes mid-refresh: %s",
+    async (result) => {
+      const signal: { refresh?: ReturnType<typeof useInvalidateMatching> } = {};
+      const failed = {
+        ...summary(),
+        failure: { code: "general.server", status: 500 },
+        days: [],
+      };
+      mocks.fetchCatererOverview.mockResolvedValueOnce(
+        overview(failed, summary(south)),
+      );
+      render(
+        <>
+          <Revalidation signal={signal} />
+          <CatererOverviewPage />
+        </>,
+      );
+      await ready();
+      openSchool();
+      const retry = await schoolCard().findByRole("button", {
+        name: "Wiederholen",
+      });
+      const pending = deferred<ReturnType<typeof initialOverview>>();
+      mocks.fetchCatererOverview
+        .mockReturnValueOnce(pending.promise)
+        .mockResolvedValueOnce(overview(summary()));
+      act(() => {
+        void signal.refresh?.((candidate) =>
+          candidate.startsWith(catererKeys.overviewFamily),
+        );
+      });
+      await waitFor(() =>
+        expect(mocks.fetchCatererOverview).toHaveBeenCalledTimes(2),
+      );
+      await act(async () => fireEvent.click(retry));
+      expect(mocks.fetchCatererOverview).toHaveBeenCalledTimes(3);
+      if (result === "success") {
+        await act(async () => pending.resolve(overview(summary())));
+        expect(
+          screen.queryByRole("heading", { name: south.name }),
+        ).not.toBeInTheDocument();
+      } else {
+        await act(async () => pending.reject(new ApiError("offline", 503)));
+        expect(screen.getByRole("heading", { name: south.name })).toBeVisible();
+      }
+      expect(
+        await schoolCard().findAllByRole("button", {
+          name: "Erhalten bestätigen",
+        }),
+      ).toHaveLength(5);
+    },
+  );
+
   it("loads the details once on first opening per school and window", async () => {
     render(<CatererOverviewPage />);
     await ready();

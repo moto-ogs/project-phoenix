@@ -142,6 +142,32 @@ function SchoolLoadError({
   return <LoadErrorAlert error={retryable} />;
 }
 
+type SchoolUpdate = (
+  row: CatererSchoolSummary,
+  freshDirectory: boolean,
+) => CatererSchoolSummary | null;
+interface RowChange {
+  id: string;
+  update: SchoolUpdate;
+}
+interface DirectoryRead {
+  details: Map<string, CatererSummaryDay[]>;
+  changes: RowChange[];
+}
+
+function applyRowChange(
+  directory: CatererSchools,
+  change: RowChange,
+  freshDirectory: boolean,
+) {
+  return {
+    ...directory,
+    schools: directory.schools.flatMap((row) =>
+      row.id === change.id ? (change.update(row, freshDirectory) ?? []) : row,
+    ),
+  };
+}
+
 interface OverviewRow {
   key: string;
   school: CatererSchoolSummary | null;
@@ -285,19 +311,23 @@ export function CatererOverviewPage() {
   const invalidate = useInvalidateMatching();
   const guard = useSWRRequestGuard();
   const retries = useRef(new Map<string, symbol>());
-  // A detail completing during a directory refresh must not mutate that SWR
-  // key: SWR would discard the pending directory, including revoked schools.
-  const reading = useRef(new Map<string, Map<string, CatererSummaryDay[]>>());
+  // Fold concurrent school reads/writes into the directory result. Mutating its
+  // SWR key mid-fetch would drop the whole directory, including revoked schools.
+  const reading = useRef(new Map<string, DirectoryRead>());
   const response = useSWRAuth<CatererSchools>(
     key,
     async (): Promise<CatererSchools> => {
       const complete = guard(key);
       const window = scoped(key!)!;
-      const overlapping = new Map<string, CatererSummaryDay[]>();
+      const overlapping: DirectoryRead = { details: new Map(), changes: [] };
       reading.current.set(window, overlapping);
       retries.current.clear();
       try {
-        const fresh = await fetchCatererOverview(from, to);
+        const directory = await fetchCatererOverview(from, to);
+        const fresh = overlapping.changes.reduce(
+          (data, change) => applyRowChange(data, change, true),
+          directory,
+        );
         complete(() => {
           // An overview refresh can discover a changed order while its detail
           // is open or cached. Refresh just that window of the changed school.
@@ -316,7 +346,7 @@ export function CatererOverviewPage() {
             if (
               !school.failure &&
               !sameSummaryDays(
-                overlapping.get(detailKey) ?? before?.days,
+                overlapping.details.get(detailKey) ?? before?.days,
                 school.days,
               )
             )
@@ -343,17 +373,19 @@ export function CatererOverviewPage() {
         }
         if (
           !isReadRefusal(cause) &&
-          overlapping.size &&
+          overlapping.changes.length &&
           reading.current.get(window) === overlapping
         ) {
-          reading.current.delete(window);
           complete(() => {
-            for (const school of response.readCurrent?.().data?.schools ?? []) {
-              const days = overlapping.get(
-                catererKeys.orders(school.id, school.grant, from, to),
-              );
-              if (days) reconcileDetail(school, days);
-            }
+            void response.mutate(
+              (data) =>
+                data &&
+                overlapping.changes.reduce(
+                  (previous, change) => applyRowChange(previous, change, false),
+                  data,
+                ),
+              { revalidate: false },
+            );
           });
         }
         throw cause;
@@ -414,21 +446,28 @@ export function CatererOverviewPage() {
     );
   });
 
-  function updateSchool(
-    id: string,
-    update: (row: CatererSchoolSummary) => CatererSchoolSummary | null,
+  function applyToWindow(
+    windowKey: string | null,
+    mutate: typeof response.mutate,
+    change: RowChange,
   ) {
+    if (!windowKey) return;
+    const pending = reading.current.get(scoped(windowKey)!);
+    if (pending) {
+      pending.changes.push(change);
+    } else {
+      void mutate((data) => data && applyRowChange(data, change, false), {
+        revalidate: false,
+      });
+    }
+  }
+
+  function updateSchool(id: string, update: SchoolUpdate) {
     const visible = current.current;
     if (visible.scope !== scoped("")) return;
-    const patch = (data: CatererSchools | undefined) =>
-      data && {
-        ...data,
-        schools: data.schools.flatMap((row) =>
-          row.id === id ? (update(row) ?? []) : row,
-        ),
-      };
-    void response.mutate(patch, { revalidate: false });
-    if (visible.key !== key) void visible.mutate(patch, { revalidate: false });
+    const change = { id, update };
+    applyToWindow(key, response.mutate, change);
+    if (visible.key !== key) applyToWindow(visible.key, visible.mutate, change);
     void invalidate(
       (candidate) =>
         candidate.startsWith(catererKeys.overviewFamily) &&
@@ -446,28 +485,27 @@ export function CatererOverviewPage() {
     // period, restore an ended supply or put names into the overview cache.
     const pending = reading.current.get(scoped(key!)!);
     if (pending) {
-      pending.set(catererKeys.orders(school.id, school.grant, from, to), days);
-      return;
+      pending.details.set(
+        catererKeys.orders(school.id, school.grant, from, to),
+        days,
+      );
     }
     const cached = response.readCurrent?.().data;
     const previous = cached?.schools.find((row) => row.id === school.id);
     if (
-      !cached ||
       !previous ||
       previous.failure ||
       previous.grant !== school.grant ||
       sameSummaryDays(previous.days, days)
     )
       return;
-    void response.mutate(
-      {
-        ...cached,
-        schools: cached.schools.map((row) =>
-          row === previous ? { ...row, days } : row,
-        ),
-      },
-      { revalidate: false },
-    );
+    applyToWindow(key, response.mutate, {
+      id: school.id,
+      update: (row, freshDirectory) =>
+        freshDirectory || row.failure || row.grant !== school.grant
+          ? row
+          : { ...row, days },
+    });
   }
 
   async function retrySchool(school: CatererSchoolSummary) {
@@ -487,16 +525,14 @@ export function CatererOverviewPage() {
       const result = await fetchCatererOverview(from, to, school.id);
       const row = result.schools[0];
       if (row?.id !== school.id || !isCurrent()) return;
-      await response.mutate(
-        (data) =>
-          data && {
-            ...data,
-            schools: data.schools.map((old) =>
-              old.id === school.id ? row : old,
-            ),
-          },
-        { revalidate: false },
-      );
+      applyToWindow(key, response.mutate, {
+        id: school.id,
+        // A concurrent directory's membership, new grant or refusal wins.
+        update: (previous, freshDirectory) =>
+          freshDirectory && (previous.failure || previous.grant !== row.grant)
+            ? previous
+            : row,
+      });
     } catch (cause) {
       if (!isCurrent()) return;
       if (cause instanceof ApiError && cause.code === "meals.not_supplied")
