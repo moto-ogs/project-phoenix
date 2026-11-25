@@ -17,6 +17,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type ReactNode,
 } from "react";
 import { useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -59,6 +60,8 @@ import { useApiErrorDisplay, useApiFormError } from "~/contexts/ToastContext";
 import { useTenant } from "~/lib/tenant-context";
 import { useTenantAwarePath } from "~/lib/tenant-path";
 import { useTenantRouter } from "~/lib/tenant-router";
+import { ListRowLink } from "~/components/ui/list-row-link";
+import { INBOX_SELECTION_PARAM } from "~/components/messaging/messages-inbox-app";
 import {
   type InboxThread,
   type Message,
@@ -126,6 +129,7 @@ export function MessageThreadContent({
   // App (#8070): einzeiliger Kopf, Kinderprofil als Symbol, Pill aus.
   const { isApp } = useDeviceContext();
   const router = useTenantRouter();
+  const tenantPath = useTenantAwarePath();
   const { data: session } = useSession();
   // The Änderungsanfragen queue is gated on users:update (backend + page guard),
   // scoped per child in the service. One who lacks users:update sees the plain
@@ -612,20 +616,13 @@ export function MessageThreadContent({
     );
   }
 
-  // App: nur die Beziehung als Chip; die Zahl der Nachrichten sieht man im
-  // Verlauf selbst. Der Name des Kindes bleibt sichtbar.
-  const appStatusLine = thread ? (
-    <TenantPageStats
-      items={[
-        ...(thread.audience === "leadership"
-          ? [{ label: LEADERSHIP_AUDIENCE_LABEL }]
-          : []),
-        {
-          label: `${relationshipLabel(thread.relationship_type)} von ${thread.student_name}`,
-        },
-      ]}
-    />
-  ) : null;
+  // App: Beziehung und Kind stehen als beschriftete Zeile zum Kinderprofil
+  // oben im Verlauf (`childRow`); der Kopf bleibt einzeilig. Nur eine
+  // Leitungs-Unterhaltung trägt das als Chip im Kopf.
+  const appStatusLine =
+    thread?.audience === "leadership" ? (
+      <TenantPageStats items={[{ label: LEADERSHIP_AUDIENCE_LABEL }]} />
+    ) : null;
 
   const markUnreadMenu = (
     <OverflowMenu
@@ -639,25 +636,21 @@ export function MessageThreadContent({
       ]}
     />
   );
-  // App und eingebetteter Verlauf: Kinderprofil als Symbol (Kopf der App
-  // behält höchstens zwei Symbole, das Menü wandert ins „…“-Blatt).
-  const compactActions = thread ? (
-    <>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        onClick={() =>
-          router.push(`/students/${thread.student_id}?from=/messages`)
-        }
-        tooltip="Öffnet die Akte des Kindes."
-        aria-label={`Kinderprofil von ${thread.student_name}`}
-      >
-        <MotoConceptIcon concept={childrenConcept} size={20} />
-      </Button>
-      {markUnreadMenu}
-    </>
-  ) : null;
+  // App und eingebetteter Verlauf: Der Weg zum Kind ist eine beschriftete
+  // Zeile über dem Verlauf statt eines Symbols im Kopf, das niemand als
+  // „Kinderprofil“ las (Jury #8070). Sie nennt zugleich, wessen Elternteil
+  // hier schreibt.
+  const childRow =
+    isApp && thread ? (
+      <ListRowLink
+        href={tenantPath(`/students/${thread.student_id}?from=/messages`)}
+        className="mb-2 border-b border-gray-100 px-1 py-2"
+        icon={<MotoConceptIcon concept={childrenConcept} size={20} />}
+        title={`${relationshipLabel(thread.relationship_type)} von ${thread.student_name}`}
+        subtitle="Zum Kinderprofil"
+        aria-label={`Kinderprofil von ${thread.student_name} öffnen`}
+      />
+    ) : null;
 
   const chat = (
     <div
@@ -670,13 +663,9 @@ export function MessageThreadContent({
         className="moto-scroll-surface flex min-h-0 flex-1 flex-col"
         bodyClassName="flex min-h-0 flex-1 flex-col"
         title={embedded ? (thread?.guardian_name ?? "Unterhaltung") : undefined}
-        description={
-          embedded && thread
-            ? `${relationshipLabel(thread.relationship_type)} von ${thread.student_name}`
-            : undefined
-        }
-        action={embedded ? compactActions : undefined}
+        action={embedded && thread ? markUnreadMenu : undefined}
       >
+        {childRow}
         {showSkeleton ? (
           <ThreadSkeleton />
         ) : (
@@ -685,65 +674,76 @@ export function MessageThreadContent({
             data-chat-scroll=""
             role="log"
             aria-label="Nachrichtenverlauf"
-            className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-1"
+            className={
+              isApp
+                ? "flex min-h-0 flex-1 flex-col overflow-y-auto pr-1"
+                : "min-h-0 flex-1 space-y-3 overflow-y-auto pr-1"
+            }
           >
-            {messagesLoading ? (
-              <ThreadMessagesSkeleton />
-            ) : messages.length > 0 ? (
-              messages.map((message) =>
-                message.kind === "request" ? (
-                  <RequestHistoryCard key={message.id} message={message} />
-                ) : message.kind === "event" ? (
-                  <ChatEventCard
-                    key={message.id}
-                    body={message.body}
-                    createdAt={message.created_at}
-                    action={eventAction(message)}
-                  />
-                ) : (
-                  <div key={message.id}>
-                    {message.group_thread_id && (
-                      <GroupThreadReference
-                        id={message.group_thread_id}
-                        title={message.group_thread_title}
-                      />
-                    )}
-                    <ChatBubble
+            {/* App: Wie in Chat-Apps stehen wenige Nachrichten unten am
+                Schreibfeld, nicht oben mit leerer Fläche darunter. `mt-auto`
+                statt `justify-end`: so bleibt der Anfang scrollbar. */}
+            <AnchorBottom enabled={isApp}>
+              {messagesLoading ? (
+                <ThreadMessagesSkeleton />
+              ) : messages.length > 0 ? (
+                messages.map((message) =>
+                  message.kind === "request" ? (
+                    <RequestHistoryCard key={message.id} message={message} />
+                  ) : message.kind === "event" ? (
+                    <ChatEventCard
+                      key={message.id}
                       body={message.body}
-                      own={message.sender_kind === "staff"}
-                      senderName={message.sender_name}
                       createdAt={message.created_at}
-                      pending={send.stateOf(message.id)}
-                      attachments={message.attachments}
-                      attachmentFiles={PARENT_MESSAGE_ATTACHMENTS}
-                      readReceiptLabel={
-                        message.sender_kind === "staff" &&
-                        message.read_by_guardian
-                          ? "Gelesen"
-                          : undefined
-                      }
-                      mailStatus={
-                        <MessageMailBadge
-                          outcome={threadMails.mails[message.id]}
-                        />
-                      }
-                      mailNote={messageMailNote(threadMails.mails[message.id])}
+                      action={eventAction(message)}
                     />
-                  </div>
-                ),
-              )
-            ) : loadError ? (
-              // The header seed (fallbackData) keeps `thread` truthy with an empty
-              // messages array, so a failed history fetch would otherwise render the
-              // "no messages" empty state for a thread that actually has history.
-              // Surface the load failure instead of a misleading empty conversation.
-              <LoadErrorAlert error={shownLoadError} />
-            ) : (
-              <EmptyState
-                title="Noch keine Nachrichten"
-                description="In dieser Unterhaltung wurde noch nichts geschrieben."
-              />
-            )}
+                  ) : (
+                    <div key={message.id}>
+                      {message.group_thread_id && (
+                        <GroupThreadReference
+                          id={message.group_thread_id}
+                          title={message.group_thread_title}
+                        />
+                      )}
+                      <ChatBubble
+                        body={message.body}
+                        own={message.sender_kind === "staff"}
+                        senderName={message.sender_name}
+                        createdAt={message.created_at}
+                        pending={send.stateOf(message.id)}
+                        attachments={message.attachments}
+                        attachmentFiles={PARENT_MESSAGE_ATTACHMENTS}
+                        readReceiptLabel={
+                          message.sender_kind === "staff" &&
+                          message.read_by_guardian
+                            ? "Gelesen"
+                            : undefined
+                        }
+                        mailStatus={
+                          <MessageMailBadge
+                            outcome={threadMails.mails[message.id]}
+                          />
+                        }
+                        mailNote={messageMailNote(
+                          threadMails.mails[message.id],
+                        )}
+                      />
+                    </div>
+                  ),
+                )
+              ) : loadError ? (
+                // The header seed (fallbackData) keeps `thread` truthy with an empty
+                // messages array, so a failed history fetch would otherwise render the
+                // "no messages" empty state for a thread that actually has history.
+                // Surface the load failure instead of a misleading empty conversation.
+                <LoadErrorAlert error={shownLoadError} />
+              ) : (
+                <EmptyState
+                  title="Noch keine Nachrichten"
+                  description="In dieser Unterhaltung wurde noch nichts geschrieben."
+                />
+              )}
+            </AnchorBottom>
           </div>
         )}
 
@@ -778,7 +778,12 @@ export function MessageThreadContent({
                 upload: PARENT_MESSAGE_ATTACHMENTS.upload,
               }}
               sendHint={`Schickt die Nachricht sofort an ${thread?.guardian_name ?? "die Eltern"}.`}
-              placeholder="Nachricht an die Eltern schreiben…"
+              // App: kurz, damit er auch auf schmalen Telefonen ganz steht.
+              placeholder={
+                isApp
+                  ? "Nachricht schreiben…"
+                  : "Nachricht an die Eltern schreiben…"
+              }
             />
           ) : (
             <Alert
@@ -817,7 +822,9 @@ export function MessageThreadContent({
       statsLoading={showSkeleton}
       actions={
         isApp ? (
-          compactActions
+          thread ? (
+            markUnreadMenu
+          ) : null
         ) : thread ? (
           <>
             <Button
@@ -904,7 +911,33 @@ function GroupThreadReference({
   );
 }
 
+/** Hüllt die Nachrichten in der App ein, damit `mt-auto` sie nach unten schiebt. */
+function AnchorBottom({
+  enabled,
+  children,
+}: Readonly<{ enabled: boolean; children: ReactNode }>) {
+  if (!enabled) return <>{children}</>;
+  return <div className="mt-auto space-y-3">{children}</div>;
+}
+
 export default function MessageThreadPage() {
   const params = useParams();
-  return <MessageThreadContent threadId={params.threadId as string} />;
+  const threadId = params.threadId as string;
+  const { isSplit } = useDeviceContext();
+  // iPad quer: Der Verlauf steht immer rechts neben der Liste (⅓ : ⅔), auch
+  // bei direktem Aufruf oder aus einer Mitteilung. Die Liste mit Auswahl
+  // ist dieselbe Ansicht; ersetzt wird nur der Verlaufseintrag, Zurück führt
+  // dorthin, woher man kam.
+  if (isSplit) return <OpenInSplit threadId={threadId} />;
+  return <MessageThreadContent threadId={threadId} />;
+}
+
+function OpenInSplit({ threadId }: Readonly<{ threadId: string }>) {
+  const router = useTenantRouter();
+  useEffect(() => {
+    router.replace(
+      `/messages?${INBOX_SELECTION_PARAM}=${encodeURIComponent(threadId)}`,
+    );
+  }, [router, threadId]);
+  return <TenantPage title="Nachrichten" loading />;
 }
