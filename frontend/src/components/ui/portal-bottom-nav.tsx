@@ -293,7 +293,7 @@ export function PortalBottomNav({
         >
           <ul
             ref={indicator?.listRef}
-            className={`relative flex items-center justify-around ${card ? "[&_a]:rounded-xl [&_button]:rounded-xl" : ""} ${listClassName}`}
+            className={`relative flex items-center justify-around ${card ? "[&_a]:min-w-11 [&_a]:rounded-xl [&_button]:min-w-11 [&_button]:rounded-xl" : ""} ${listClassName}`}
           >
             {indicator?.position ? (
               <li

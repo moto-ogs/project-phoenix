@@ -1051,8 +1051,9 @@ function MainMobileBottomNav({ className = "" }: MobileBottomNavProps) {
       ) : null}
 
       <PortalMoreBottomNav
-        listClassName="gap-1"
-        barClassName="px-2"
+        // Am Telefon enger, damit jedes Feld auch am iPhone SE 44 px breit bleibt.
+        listClassName={isApp ? "gap-0.5" : "gap-1"}
+        barClassName={isApp ? "px-1" : "px-2"}
         fade={false}
         // Dieselbe Karte wie die Aktionsleiste darüber (#8070).
         look={isApp ? "card" : "pill"}
