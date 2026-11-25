@@ -239,7 +239,7 @@ function useFilterPanelAnchor(
   return { anchorRef, anchor, toggle };
 }
 
-/** Zähler-Plakette der Zeile; auf dem Telefon ohne Label. */
+/** Zähler-Plakette der Zeile; schmal nur mit `compactLabel` beschriftet. */
 function RowBadge({
   badge,
   variant,
@@ -247,7 +247,11 @@ function RowBadge({
   if (variant === "mobile") {
     return (
       <div className="flex flex-shrink-0 items-center gap-2">
-        <BadgeDisplayCompact count={badge.count} icon={badge.icon} />
+        <BadgeDisplayCompact
+          count={badge.count}
+          icon={badge.icon}
+          label={badge.compactLabel}
+        />
       </div>
     );
   }
