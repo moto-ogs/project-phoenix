@@ -31,6 +31,7 @@ export type EnrollmentStatusChangeRequest = Pick<
 export interface EnrollmentStatusSeedData {
   readonly status: EnrollmentStatusDisplay;
   readonly changes?: readonly EnrollmentStatusChangeRequest[];
+  readonly changesLocale?: string;
 }
 
 const MAX_AGE_MS = 30_000;

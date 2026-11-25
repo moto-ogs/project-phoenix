@@ -136,6 +136,7 @@ function EnrollmentStatusViewContent({
   parentAppHref,
 }: Props & { readonly seed?: EnrollmentStatusSeedData }) {
   const t = useCareTermTranslations("enrollmentStatus");
+  const locale = useLocale();
   // Loading depends on these texts, not on the asynchronously loaded care term.
   const loadErrorObject = t("errorObject");
   const requestsLoadErrorObject = t("errorObjectChangeRequests");
@@ -147,6 +148,11 @@ function EnrollmentStatusViewContent({
   const [changeRequests, setChangeRequests] = useState<
     readonly StatusChangeRequest[]
   >(seed?.changes ?? []);
+  const seededLocale = seed?.changesLocale;
+  const staleChanges =
+    seededLocale !== undefined &&
+    seededLocale !== locale &&
+    changeRequests === seed?.changes;
   const [loading, setLoading] = useState(seed === undefined);
   const [requestsPending, setRequestsPending] = useState(
     seed !== undefined && seed.changes === undefined,
@@ -244,7 +250,10 @@ function EnrollmentStatusViewContent({
           setChangeRequests([]);
           return;
         }
-        applyStatus(result, requestChanges ?? []);
+        // A language change only refreshes the diff. Keep any status and
+        // contact edits made since the original server render.
+        if (seed) setChangeRequests(requestChanges ?? []);
+        else applyStatus(result, requestChanges ?? []);
       } catch (err) {
         if (request !== latestRequest.current) return;
         logger.error("status_load_failed", {
@@ -283,9 +292,9 @@ function EnrollmentStatusViewContent({
   }, []);
   // oxlint-disable-next-line swr/no-effect-load -- status-link token page, open without a session; the shared cache reads only with a session, by design
   useEffect(() => {
-    if (!seed?.changes) void load(seed);
+    if (!seed?.changes || staleChanges) void load(seed);
     return invalidateRequest;
-  }, [load, invalidateRequest, seed]);
+  }, [load, invalidateRequest, seed, staleChanges]);
 
   // The reload after a confirmed write (#6652) only reads and sets: the shown
   // status stays while it runs, and a failure rejects, so the hook reports it
@@ -508,8 +517,8 @@ function EnrollmentStatusViewContent({
   return (
     <>
       <EnrollmentStatusContent
-        changeRequests={changeRequests}
-        requestsPending={requestsPending}
+        changeRequests={staleChanges ? [] : changeRequests}
+        requestsPending={requestsPending || staleChanges}
         confirmingRenewal={confirmingRenewal}
         duplicateWarning={duplicateWarning}
         editFirstName={editFirstName}

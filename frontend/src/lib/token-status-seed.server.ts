@@ -70,12 +70,12 @@ export function readHolidayRegistrationStatusSeed(token: string) {
 
 export function readEnrollmentStatusSeed(token: string) {
   return seedStatus<EnrollmentStatusSeedData>(async () => {
-    const [status, changes] = await Promise.all([
+    const [status, localizedChanges] = await Promise.all([
       readEnrollmentStatus(token),
       // Formatting the optional diff must not discard a valid status.
       readEnrollmentChanges(token).catch(() => undefined),
     ]);
-    return status === undefined ? undefined : { status, changes };
+    return status === undefined ? undefined : { status, ...localizedChanges };
   });
 }
 
@@ -105,7 +105,7 @@ function readEnrollmentStatus(token: string) {
 
 async function readEnrollmentChanges(
   statusToken: string,
-): Promise<readonly EnrollmentStatusChangeRequest[] | undefined> {
+): Promise<Pick<EnrollmentStatusSeedData, "changes" | "changesLocale">> {
   const changes = await readStatusPart(
     "enrollment.changeRequests",
     async (signal) => {
@@ -118,7 +118,7 @@ async function readEnrollmentChanges(
       return data.map(changeRequestFromContract);
     },
   );
-  if (!changes?.length) return changes;
+  if (!changes?.length) return { changes };
 
   const [locale, t, labels] = await Promise.all([
     getLocale(),
@@ -139,7 +139,7 @@ async function readEnrollmentChanges(
   const copy = enrollmentStatusDiffCopy(t);
   // The diff renderer needs only formatted changes, not the submission
   // snapshots with every unchanged answer or IDs of the staff who reviewed it.
-  return changes.map((request) => ({
+  const projected = changes.map((request): EnrollmentStatusChangeRequest => ({
     id: request.id,
     origin: request.origin,
     status: request.status,
@@ -162,4 +162,5 @@ async function readEnrollmentChanges(
       formLabels,
     }),
   }));
+  return { changes: projected, changesLocale: locale };
 }

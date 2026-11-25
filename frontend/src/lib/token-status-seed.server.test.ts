@@ -87,6 +87,7 @@ describe("token status seeds", () => {
     const seed = await readEnrollmentStatusSeed("secret-link");
     expect(seed?.data).toMatchObject({
       status: { signature: { signer_name: "Mara Muster", integrity_ok: true } },
+      changesLocale: "de",
       changes: [{ groups: [{ rows: [{ before: "0123", after: "0456" }] }] }],
     });
     expect(JSON.stringify(seed)).not.toMatch(
