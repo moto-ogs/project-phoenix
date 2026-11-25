@@ -19,6 +19,7 @@ import {
 } from "~/components/dashboard/header/staff-news-button";
 import { UnreadBadge } from "~/components/messaging/unread-badge";
 import { SchoolSearchSlot } from "~/components/search/school-search-slot";
+import { SpinnerIcon } from "~/components/ui/icons";
 import { ListRowLink } from "~/components/ui/list-row-link";
 import { ModuleLockMark } from "~/components/ui/module-lock-mark";
 import { NotificationBadge } from "~/components/ui/notification-badge";
@@ -312,7 +313,10 @@ function MorePageContent() {
               title="Daten aktualisieren"
               meta={
                 refresh === "busy" ? (
-                  <span role="status">Lädt …</span>
+                  <span role="status" className="inline-flex items-center">
+                    <SpinnerIcon className="size-4" />
+                    <span className="sr-only">Wird aktualisiert</span>
+                  </span>
                 ) : refresh === "done" ? (
                   <span role="status">Aktualisiert</span>
                 ) : undefined
