@@ -118,7 +118,8 @@ async function readEnrollmentChanges(
       return data.map(changeRequestFromContract);
     },
   );
-  if (!changes?.length) return { changes };
+  if (changes === undefined) return {};
+  if (changes.length === 0) return { changes: [] };
 
   const [locale, t, labels] = await Promise.all([
     getLocale(),
