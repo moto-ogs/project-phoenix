@@ -116,6 +116,7 @@ function MorePageContent() {
   return (
     <TenantPage
       title="Mehr"
+      info="Hier findest du alles, was nicht unten in der Leiste steht: deine Aufgaben für den Tag, alle Bereiche von moto und dein Konto."
       overlays={
         <LogoutModal isOpen={logoutOpen} onClose={() => setLogoutOpen(false)} />
       }
