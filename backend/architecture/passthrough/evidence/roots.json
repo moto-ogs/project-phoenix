@@ -5105,7 +5105,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (r classListEntryRosterReader) ListClassListEntries(ctx context.Context, schoolClass string) ([]enrollmentCompose.ClassListEntry, error) {\n\tvalues, err := r.entries.ListClassListEntriesInDisplayOrder(ctx, schoolmembership.ClassListEntryFilter{SchoolClass: schoolClass})\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]enrollmentCompose.ClassListEntry, 0, len(values))\n\tfor _, value := range values {\n\t\tresult = append(result, enrollmentCompose.ClassListEntry{ID: value.ID, FirstName: value.FirstName, LastName: value.LastName, SchoolClass: value.SchoolClass})\n\t}\n\treturn result, nil\n}",
+      "evidence": "func (r classListEntryRosterReader) ListClassListEntries(ctx context.Context, classes []string) ([]enrollmentCompose.ClassListEntry, error) {\n\tvalues, err := r.entries.ListClassListEntriesInDisplayOrder(ctx, schoolmembership.ClassListEntryFilter{SchoolClasses: classes})\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]enrollmentCompose.ClassListEntry, 0, len(values))\n\tfor _, value := range values {\n\t\tresult = append(result, enrollmentCompose.ClassListEntry{ID: value.ID, FirstName: value.FirstName, LastName: value.LastName, SchoolClass: value.SchoolClass})\n\t}\n\treturn result, nil\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/classListEntryRosterReader.ListClassListEntries",
       "owner": "roots"

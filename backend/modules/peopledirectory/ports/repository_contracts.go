@@ -146,9 +146,9 @@ type StudentRepository interface {
 	// ListByGroupIDsIncludingAlumni is the care-participation candidate set:
 	// the rule that follows decides per child whether a graduate still counts.
 	ListByGroupIDsIncludingAlumni(ctx context.Context, groupIDs []int64) ([]*peopledirectory.StudentState, error)
-	// ListClassRoster is the class-roster report's candidate set — one class,
-	// or every child when the report spans all of them.
-	ListClassRoster(ctx context.Context, schoolClass string) ([]*peopledirectory.StudentState, error)
+	// ListClassRoster returns candidates in the selected classes, or the
+	// whole school for nil. A non-nil empty selection matches none.
+	ListClassRoster(ctx context.Context, classes []string) ([]*peopledirectory.StudentState, error)
 	// CountEnrolled counts the children of the school, graduates excluded.
 	CountEnrolled(ctx context.Context) (int, error)
 

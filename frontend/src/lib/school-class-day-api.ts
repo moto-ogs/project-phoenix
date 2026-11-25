@@ -28,6 +28,14 @@ export async function fetchClassDayClassesSchool(): Promise<ClassDayClasses> {
   return { ...data, classes: data.classes ?? [] };
 }
 
+export function fetchAssignedClassesSchool(
+  date: string,
+): Promise<schoolClassDayContract.AssignedClassesReport> {
+  return bffJson("school", "GET /school/class-day/assigned-classes", {
+    query: { date },
+  });
+}
+
 export async function fetchSchoolDaySchool(
   date: string,
 ): Promise<schoolClassDayContract.SchoolDayReport> {

@@ -10635,6 +10635,23 @@
     },
     {
       "method": "GET",
+      "pattern": "/school/class-day/assigned-classes",
+      "portals": [
+        "school"
+      ],
+      "query": [
+        {
+          "name": "date",
+          "kind": "date"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "AssignedClassesReport"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/school/class-day/classes",
       "portals": [
         "school"
@@ -32494,6 +32511,48 @@
       ]
     },
     {
+      "name": "AssignedClassesReport",
+      "go_type": "classday.AssignedClassesReport",
+      "fields": [
+        {
+          "name": "date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "weekday",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_day",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "enrollment_known",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "classes",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ClassSummary"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "AssignmentRequest",
       "go_type": "exporttransferhttp.AssignmentRequest",
       "request": true,
@@ -46270,6 +46329,31 @@
               "kind": "ref",
               "ref": "ClassListImportError"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ClassSummary",
+      "go_type": "classday.ClassSummary",
+      "fields": [
+        {
+          "name": "school_class",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "totals",
+          "schema": {
+            "kind": "ref",
+            "ref": "DayTotals"
+          }
+        },
+        {
+          "name": "changes",
+          "schema": {
+            "kind": "int"
           }
         }
       ]

@@ -48,6 +48,10 @@ type fakeClassDayStatusDays struct {
 	entries []StatusDayEntry
 }
 
+func (fakeDayRosters) AssignedClassRoster(context.Context, []string, calendar.Date, string) (classday.AssignedRoster, error) {
+	panic("unexpected assigned class roster read")
+}
+
 func (f fakeClassDayStatusDays) StandingStatusDays(context.Context, []int64, calendar.Date) ([]StatusDayEntry, error) {
 	return f.entries, nil
 }

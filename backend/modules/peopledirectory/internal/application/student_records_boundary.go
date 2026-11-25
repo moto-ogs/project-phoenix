@@ -88,15 +88,15 @@ func (r *StudentRecords) ListByGroupIDsIncludingAlumni(ctx context.Context, grou
 	})
 }
 
-// ListClassRoster is the class-roster report's candidate set: one class, or
-// every child when the report spans all of them. Graduates are included
+// ListClassRoster is the class-roster report's candidate set: selected classes,
+// or every child for a nil selection. Graduates are included
 // because the shared participation rule filters the set afterwards.
-func (r *StudentRecords) ListClassRoster(ctx context.Context, schoolClass string) ([]*peopleModule.StudentState, error) {
+func (r *StudentRecords) ListClassRoster(ctx context.Context, classes []string) ([]*peopleModule.StudentState, error) {
 	return r.listRecords(ctx, "list class roster", func() ([]domain.StudentRecord, error) {
-		if schoolClass == "" {
+		if classes == nil {
 			return r.directory.ListRecords(ctx, string(peopleModule.StudentScopeAll))
 		}
-		classes := peopleModule.SchoolClasses([]string{schoolClass})
+		classes := peopleModule.SchoolClasses(classes)
 		if len(classes) == 0 {
 			return []domain.StudentRecord{}, nil
 		}

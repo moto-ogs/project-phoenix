@@ -7,7 +7,7 @@
 import { ClassDayOverview } from "~/components/class-day/class-day-overview";
 import { TodayNoticesCard } from "~/components/school/today-notices-card";
 import {
-  fetchClassDaySchool,
+  fetchAssignedClassesSchool,
   fetchClassDayClassesSchool,
   fetchSchoolDaySchool,
   reportAbsenceSchool,
@@ -18,7 +18,7 @@ export default function SchoolHomePage() {
   return (
     <ClassDayOverview
       fetchClasses={fetchClassDayClassesSchool}
-      fetchClassDay={fetchClassDaySchool}
+      fetchAssignedClasses={fetchAssignedClassesSchool}
       fetchSchoolDay={fetchSchoolDaySchool}
       reportAbsence={reportAbsenceSchool}
       withdrawAbsenceReport={withdrawAbsenceReportSchool}

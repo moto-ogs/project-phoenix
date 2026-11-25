@@ -286,6 +286,7 @@ export const schoolPortalKeys = {
   classDayClasses: () => "class-day-my-classes",
   classDayReport: (schoolClass: string, date: string) =>
     resourceKey("school-class-day-report-", { schoolClass, date }),
+  assignedClasses: (date: string) => `school-assigned-classes-${date}`,
   schoolDay: (date: string) => `school-day-${date}`,
   parentConferences: () => "school-parent-conferences",
   absenceList: (schoolClass: string, from = "", to = "") =>
