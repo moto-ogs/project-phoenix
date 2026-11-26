@@ -72,13 +72,18 @@ import { parentKeys } from "~/lib/swr/parent-keys";
 const FORM_CHANGED = "enrollment.holiday_registration_form_changed";
 
 /**
- * The consent texts got a new version while the form was open: the backend
- * refuses the old one at `consent_version`, which no field of the form shows.
+ * The consent texts got a new version while the form was open (#8136): the
+ * backend refuses the old one at `consent_version`, which no field of the
+ * form shows. To the parent that is a changed form, so it takes the same
+ * path: read the offer again and agree to the texts it shows now.
  */
-function namesStaleConsentTexts(error: ApiError): boolean {
-  return (
-    error.errors?.some(({ field }) => field === "consent_version") ?? false
-  );
+function staleConsentAsFormChanged(error: unknown): unknown {
+  const stale =
+    error instanceof ApiError &&
+    error.errors?.some(({ field }) => field === "consent_version");
+  return stale
+    ? new ApiError(error.message, 409, { code: FORM_CHANGED })
+    : error;
 }
 /** The code of a proof whose upload no longer counts (#5238). */
 const UPLOAD_EXPIRED = "enrollment.upload_expired";
@@ -191,7 +196,8 @@ export function HolidayRegistrationForm({
       setStatusToken(receipt?.statusToken ?? "");
       setStep("done");
       window.scrollTo({ top: 0 });
-    } catch (err) {
+    } catch (caught) {
+      const err = staleConsentAsFormChanged(caught);
       logger.error("holiday_registration_submit_failed", {
         error: err instanceof Error ? err.message : String(err),
       });
@@ -201,10 +207,7 @@ export function HolidayRegistrationForm({
       // The form changed since it was read: the error path reads it again
       // and says when that fails (ADR 0311).
       let reload: (() => Promise<unknown>) | undefined;
-      const formChanged = err instanceof ApiError && err.code === FORM_CHANGED;
-      const staleConsentTexts =
-        err instanceof ApiError && namesStaleConsentTexts(err);
-      if (formChanged || staleConsentTexts) {
+      if (err instanceof ApiError && err.code === FORM_CHANGED) {
         // The consent texts may read differently now (#6691, #8136): the
         // parent agrees to the texts the reloaded form shows, not the old
         // ones.
@@ -214,20 +217,17 @@ export function HolidayRegistrationForm({
           privacyConsent: false,
           healthConsent: false,
         }));
-      }
-      if (formChanged) {
         reload = onFormChanged;
       } else if (
-        staleConsentTexts ||
-        (err instanceof ApiError &&
-          err.errors?.some(({ field }) =>
-            /^(children\.\d+\.)?criteria(?:\.|$)/.test(field),
-          ))
+        err instanceof ApiError &&
+        err.errors?.some(({ field }) =>
+          /^(children\.\d+\.)?criteria(?:\.|$)/.test(field),
+        )
       ) {
-        // The consent texts and the catalog can change without a new form
-        // version. Read the offer again, keeping the rest of the draft, so
-        // the next submit names what the form shows. A failed read keeps
-        // the form on screen; the error says what to check.
+        // The catalog can change without a new form version. Reload its
+        // questions so parents can answer them, keeping the entire draft.
+        // A failed read keeps the questions on screen; the field error says
+        // what to check.
         await onFormChanged?.().catch((reloadError: unknown) =>
           logger.warn("holiday_registration_offer_reload_failed", {
             error:

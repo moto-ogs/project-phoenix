@@ -1780,7 +1780,8 @@ describe("HolidayRegistrationForm questions of the Träger (#5198)", () => {
   it("loads the offer again and asks for both consents when the consent texts are stale", async () => {
     mockSubmit.mockRejectedValue(
       new ApiError("validation failed", 400, {
-        errors: [{ field: "consent_version", message: "not current" }],
+        code: "enrollment.holiday_registration_invalid",
+        errors: [{ field: "consent_version", reason: "not current" }],
       }),
     );
     const reload = vi.fn().mockResolvedValue(undefined);
@@ -1804,7 +1805,12 @@ describe("HolidayRegistrationForm questions of the Träger (#5198)", () => {
 
     await waitFor(() => expect(reload).toHaveBeenCalledTimes(1));
     expect(
-      await screen.findByLabelText(/Ich bin einverstanden, dass der Träger/),
+      await screen.findByText(
+        "Der Träger hat das Formular gerade geändert. Bitte prüfe deine Angaben und sende die Anmeldung noch einmal.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByLabelText(/Ich bin einverstanden, dass der Träger/),
     ).not.toBeChecked();
   });
   // ADR 0311 rule 6: a failed read of the changed form says so instead of
