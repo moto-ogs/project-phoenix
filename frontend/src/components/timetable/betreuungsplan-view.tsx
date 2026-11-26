@@ -2201,19 +2201,13 @@ function TimetablesContent() {
                 },
               ]
             : [
+                // Die Konflikte nennt der Hinweis direkt unter dem Kopf, mit
+                // dem Weg zu jedem einzelnen. Dieselbe Zahl hier noch einmal
+                // stand doppelt da (#8134).
                 {
                   value: instanceCount,
                   label: instanceCount === 1 ? "Termin" : "Termine",
                 },
-                ...(canManageSchedules && openConflicts.length > 0
-                  ? [
-                      {
-                        value: openConflicts.length,
-                        label:
-                          openConflicts.length === 1 ? "Konflikt" : "Konflikte",
-                      },
-                    ]
-                  : []),
               ]
         }
       />
@@ -2493,32 +2487,33 @@ function TimetablesContent() {
       stats={statusLine}
       statsLoading={statsLoading}
       actions={
-        <>
-          {/* Leseansicht (#2283): ohne schedules:manage gibt es kein "Neu";
-              das Badge erklärt den Unterschied zum Admin-Bildschirm. */}
-          {canManageSchedules ? (
+        // Leseansicht (#2283): ohne schedules:manage gibt es kein "Neu";
+        // das Badge erklärt den Unterschied zum Admin-Bildschirm.
+        canManageSchedules ? (
+          // Am Telefon teilen sich „Neu“ und das Menü eine Zeile (#8134):
+          // das Menü allein in einer eigenen Zeile kostete dort 52 px, bevor
+          // der Plan begann. Ab sm löst sich die Hülle auf, und beide stehen
+          // wie auf jeder anderen Seite neben dem Titel.
+          <div className="flex items-center gap-2 sm:contents">
             <TimetableAddMenu
               onAddInstance={openEventCreate}
               onAddSeries={openSeriesCreate}
               disabled={!periodsReady || firstCoveredDateISO === undefined}
             />
-          ) : (
-            <StatusBadge
-              label="Nur ansehen"
-              tone="gray"
-              title="Du kannst den Betreuungsplan ansehen. Ändern können ihn nur Admins."
-            />
-          )}
-          {/* Ein Menü statt dreier Einstiege: Zeilenhöhe, ausgeblendete
-              Konflikte und Drucken lagen vorher in zwei Menüs und einem
-              eigenen Knopf, je nach Ansicht und Recht mal so, mal so.
-              Neben dem Titel steht damit eine sichtbare Aktion ("Neu") und
-              rechts davon das Menü -- dieselbe Aufteilung wie auf jeder
-              anderen Seite. */}
-          {menuItems.length > 0 && (
-            <OverflowMenu ariaLabel="Weitere Aktionen" items={menuItems} />
-          )}
-        </>
+            {/* Ein Menü statt dreier Einstiege: Zeilenhöhe, ausgeblendete
+                Konflikte und Drucken lagen vorher in zwei Menüs und einem
+                eigenen Knopf, je nach Ansicht und Recht mal so, mal so. */}
+            {menuItems.length > 0 && (
+              <OverflowMenu ariaLabel="Weitere Aktionen" items={menuItems} />
+            )}
+          </div>
+        ) : (
+          <StatusBadge
+            label="Nur ansehen"
+            tone="gray"
+            title="Du kannst den Betreuungsplan ansehen. Ändern können ihn nur Admins."
+          />
+        )
       }
       searchSlot={
         <PlanningContextBar
@@ -2562,28 +2557,33 @@ function TimetablesContent() {
               onRoomChange={setRoomFilter}
             />
           )}
-          {periodsReady && calendarPeriods.length > 0 && (
-            <PeriodSwitcherDropdown
-              periods={calendarPeriods}
-              weekDays={periodContextDays}
-              view={view}
-              selectedPeriodId={focusedPeriodID}
-              isLoading={periodsLoading}
-              onCreate={openPeriodCreate}
-              onSelect={jumpToPeriod}
-              canManage={canManageSchedules}
-            />
-          )}
-          {demandOriginChip}
-          {shouldLoadGaps && !gapsError && (
-            <GapJumpList
-              gaps={gaps}
-              state={gapsData === undefined ? "loading" : "ready"}
-              onJump={(gap) =>
-                updateUrlParams({ d: gap.date, block: gap.instanceId })
-              }
-            />
-          )}
+          {/* Was über den Zeitraum sagt, bleibt beisammen und bricht als
+              Gruppe um: Schuljahr, woher der Bedarf kommt und wo Personal
+              fehlt. Vorher stand „5 Lücken“ allein in einer dritten Zeile. */}
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 empty:hidden">
+            {periodsReady && calendarPeriods.length > 0 && (
+              <PeriodSwitcherDropdown
+                periods={calendarPeriods}
+                weekDays={periodContextDays}
+                view={view}
+                selectedPeriodId={focusedPeriodID}
+                isLoading={periodsLoading}
+                onCreate={openPeriodCreate}
+                onSelect={jumpToPeriod}
+                canManage={canManageSchedules}
+              />
+            )}
+            {demandOriginChip}
+            {shouldLoadGaps && !gapsError && (
+              <GapJumpList
+                gaps={gaps}
+                state={gapsData === undefined ? "loading" : "ready"}
+                onJump={(gap) =>
+                  updateUrlParams({ d: gap.date, block: gap.instanceId })
+                }
+              />
+            )}
+          </div>
         </PlanningContextBar>
       }
       // Bauart 3, Regel 5: Laden, Fehler und Leerzustand kommen aus dem
