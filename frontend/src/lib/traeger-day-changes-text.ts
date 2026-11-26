@@ -13,6 +13,17 @@ function shortDay(iso: string): string {
   return `${Number(day)}.${Number(month)}.`;
 }
 
+/** Hängt „seit …“ und „bis …“ an, wo der Eintrag über heute hinausreicht. */
+function withSpan(
+  first: string,
+  span: { readonly since: string | null; readonly until: string | null },
+): string {
+  const parts = [first];
+  if (span.since) parts.push(`seit ${shortDay(span.since)}`);
+  if (span.until) parts.push(`bis ${shortDay(span.until)}`);
+  return parts.join(", ");
+}
+
 /** „Schließtag der Schule: Studientag“, „Schließtag des Trägers: …“. */
 export function closingDayLabel(closing: TraegerDayClosing): string {
   return closing.traeger ? "Schließtag des Trägers" : "Schließtag der Schule";
@@ -20,10 +31,7 @@ export function closingDayLabel(closing: TraegerDayClosing): string {
 
 /** „Studientag“, „Betriebsausflug, seit 9.7., bis 11.7.“. */
 export function closingDayText(closing: TraegerDayClosing): string {
-  const parts = [closing.name.trim()];
-  if (closing.since) parts.push(`seit ${shortDay(closing.since)}`);
-  if (closing.until) parts.push(`bis ${shortDay(closing.until)}`);
-  return parts.join(", ");
+  return withSpan(closing.name.trim(), closing);
 }
 
 /** „8:00“ aus „08:00“. */
@@ -33,12 +41,10 @@ function clockTime(value: string): string {
 
 /** „8:00 bis 12:30 Uhr“, „8:00 bis 12:30 Uhr, seit 9.7., bis 11.7.“. */
 export function openingChangeText(opening: TraegerDayOpening): string {
-  const parts = [
+  return withSpan(
     `${clockTime(opening.opensAt)} bis ${clockTime(opening.closesAt)} Uhr`,
-  ];
-  if (opening.since) parts.push(`seit ${shortDay(opening.since)}`);
-  if (opening.until) parts.push(`bis ${shortDay(opening.until)}`);
-  return parts.join(", ");
+    opening,
+  );
 }
 
 /** „1 Raum gesperrt“, „2 Räume gesperrt“. */

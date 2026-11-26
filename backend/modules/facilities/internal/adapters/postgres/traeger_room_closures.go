@@ -2,10 +2,8 @@ package postgres
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
-	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect/pgdialect"
 
 	"github.com/moto-ogs/project-phoenix/modules/facilities"
@@ -28,24 +26,9 @@ func (s traegerRooms) ClosedRoomsByTenant(ctx context.Context, schools []int64, 
 	if len(schools) == 0 {
 		return result, nil
 	}
-	transaction, ok := s.transaction(ctx)
-	if !ok {
-		return nil, errors.New("facilities: transaction is required")
-	}
-	if !s.admin(ctx) {
-		return nil, errors.New("facilities: the room closures of a Träger need the administrative transaction")
-	}
-	var db bun.IDB
-	switch tx := transaction.(type) {
-	case bun.Tx:
-		db = tx
-	case *bun.Tx:
-		if tx != nil {
-			db = *tx
-		}
-	}
-	if db == nil {
-		return nil, fmt.Errorf("facilities postgres: unsupported transaction %T", transaction)
+	db, err := s.adminDB(ctx)
+	if err != nil {
+		return nil, err
 	}
 	var rows []struct {
 		TenantID int64 `bun:"tenant_id"`

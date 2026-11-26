@@ -20,7 +20,7 @@ type MenuChanges struct {
 
 func NewMenuChanges(database Database, transaction func(context.Context) (any, bool), admin func(context.Context) bool) *MenuChanges {
 	if database == nil || transaction == nil || admin == nil {
-		panic("meal plan postgres: database runtime is required")
+		panic("meal plan postgres: the tenant database, the transaction and the administrative check are required")
 	}
 	return &MenuChanges{database: database, transaction: transaction, admin: admin}
 }
