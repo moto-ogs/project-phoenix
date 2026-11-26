@@ -2024,6 +2024,55 @@ describe("SettingsField care-facility term", () => {
       ).toHaveAttribute("aria-pressed", "true");
     });
 
+    it("follows a later stored article instead of an old pick", async () => {
+      const own = { ...term, value: "Hort", is_default: false };
+      const onSave = vi.fn().mockResolvedValue(undefined);
+      const field = (stored: string) => (
+        <ToastProvider>
+          <SettingsField
+            setting={own}
+            categoryItems={[own, article(stored)]}
+            onSave={onSave}
+            onReset={vi.fn()}
+          />
+        </ToastProvider>
+      );
+      const { getByRole, rerender } = render(field("die"));
+      const pressed = (name: string) =>
+        within(articles(getByRole))
+          .getByRole("button", { name })
+          .getAttribute("aria-pressed");
+
+      fireEvent.click(
+        within(articles(getByRole)).getByRole("button", { name: "der" }),
+      );
+      await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+      rerender(field("der"));
+      expect(pressed("der")).toBe("true");
+
+      // Another tab stores „die“ again: the old pick must not come back.
+      rerender(field("die"));
+      expect(pressed("die")).toBe("true");
+      fireEvent.click(
+        within(articles(getByRole)).getByRole("button", { name: "der" }),
+      );
+      await waitFor(() => expect(onSave).toHaveBeenCalledTimes(2));
+    });
+
+    it("shows no example for a preset typed as an own name", () => {
+      const { getByRole, queryByText } = renderWithProviders(
+        <SettingsField
+          setting={term}
+          categoryItems={[term, article("der")]}
+          onSave={vi.fn()}
+          onReset={vi.fn()}
+        />,
+      );
+
+      fireEvent.click(getByRole("button", { name: "Eigener Name" }));
+      expect(queryByText(/Beispiel:/)).not.toBeInTheDocument();
+    });
+
     it("opens the article with „Eigener Name“ and keeps it read-only without the right", () => {
       const { getByRole } = renderWithProviders(
         <SettingsField

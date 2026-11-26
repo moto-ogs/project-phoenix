@@ -11,6 +11,7 @@
  * other language keeps the bare `{careTerm}`.
  */
 const DEFAULT_CARE_FACILITY_TERM = "OGS";
+const PRESET_CARE_TERMS: ReadonlySet<string> = new Set(["OGS", "GTS"]);
 
 /** The term the backend sent, or „OGS“ for missing metadata. */
 export function normalizeCareFacilityTerm(value: unknown): string {
@@ -40,9 +41,14 @@ export function careFacilityName(
   term: unknown,
   article?: unknown,
 ): CareFacilityName {
+  const name = normalizeCareFacilityTerm(term);
   return {
-    term: normalizeCareFacilityTerm(term),
-    article: normalizeCareArticle(article),
+    term: name,
+    // As the backend (textnorm.CareArticle): the presets are feminine
+    // whatever article is stored.
+    article: PRESET_CARE_TERMS.has(name)
+      ? "die"
+      : normalizeCareArticle(article),
   };
 }
 
@@ -56,6 +62,11 @@ const DECLENSION = {
   careNom: { der: "der", die: "die", das: "das" },
   /** Object and after an, für, auf, durch, in (where to): „an die OGS“. */
   careAcc: { der: "den", die: "die", das: "das" },
+  /**
+   * The object on a button that named the care without an article before
+   * #8136: stays „an OGS“, reads „an den Hort“ / „an das Lernhaus“.
+   */
+  careAccShort: { der: "den", die: "", das: "das" },
   /** After mit, and as the receiver: „schreibe der OGS“. */
   careDat: { der: "dem", die: "der", das: "dem" },
   /** Whose: „die Antwort der OGS“, „die Antwort vom Hort“. */
@@ -140,8 +151,8 @@ export function careTermValues(
     careTerm: [...new Set(all.map((name) => name.term))].join("/"),
   };
   for (const key of Object.keys(DECLENSION) as DeclinedPlaceholder[]) {
-    values[key] = join(
-      (name) => `${DECLENSION[key][name.article]} ${name.term}`,
+    values[key] = join((name) =>
+      `${DECLENSION[key][name.article]} ${name.term}`.trim(),
     );
   }
   for (const key of Object.keys(PRONOUNS) as PronounPlaceholder[]) {

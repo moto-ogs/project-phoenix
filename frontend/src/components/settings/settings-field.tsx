@@ -2274,6 +2274,9 @@ function PresetTextField({
     readonly article: CareArticle;
     readonly over: CareArticle;
   } | null>(null);
+  // The stored value caught up with the pick: forget it, so a later change
+  // from elsewhere (another tab) is not painted over by the old pick.
+  if (picked && picked.article === storedArticle) setPicked(null);
   const shownArticle =
     picked?.over === storedArticle ? picked.article : storedArticle;
   const exampleId = useId();
@@ -2281,7 +2284,12 @@ function PresetTextField({
     !presets.some((preset) => preset.value === value) || ownFor === value;
   const name = value.trim();
   const exampleText =
-    own && example && name !== "" && !errorId
+    own &&
+    example &&
+    name !== "" &&
+    !errorId &&
+    // A preset typed as an own name keeps „die“, so no article applies.
+    !presets.some((preset) => preset.value === name)
       ? example(name, shownArticle)
       : null;
   return (

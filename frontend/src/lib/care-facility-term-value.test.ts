@@ -23,6 +23,7 @@ describe("care term declension", () => {
       careNom: "die OGS",
       careNomCap: "Die OGS",
       careAcc: "die OGS",
+      careAccShort: "OGS",
       careDat: "der OGS",
       careGen: "der OGS",
       careIn: "in der OGS",
@@ -48,6 +49,7 @@ describe("care term declension", () => {
       careNom: "der Hort",
       careNomCap: "Der Hort",
       careAcc: "den Hort",
+      careAccShort: "den Hort",
       careDat: "dem Hort",
       careGen: "vom Hort",
       careIn: "im Hort",
@@ -73,6 +75,7 @@ describe("care term declension", () => {
       careNom: "das Lernhaus",
       careNomCap: "Das Lernhaus",
       careAcc: "das Lernhaus",
+      careAccShort: "das Lernhaus",
       careDat: "dem Lernhaus",
       careGen: "vom Lernhaus",
       careIn: "im Lernhaus",
@@ -100,6 +103,12 @@ describe("care term declension", () => {
     expect(careTermValuesOf("  ", "der").careTerm).toBe("OGS");
     expect(careTermValuesOf("Ganztag").careAcc).toBe("die Ganztag");
     expect(careTermValues([]).careIn).toBe("in der OGS");
+  });
+
+  it("keeps „die“ for the presets whatever article is stored, as the backend", () => {
+    expect(careTermValuesOf("OGS", "der").careNomCap).toBe("Die OGS");
+    expect(careTermValuesOf(" GTS ", "das").careAcc).toBe("die GTS");
+    expect(careFacilityName(undefined, "der").article).toBe("die");
   });
 
   it("names every school of an account once, each with its own article", () => {
