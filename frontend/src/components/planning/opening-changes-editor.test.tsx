@@ -43,6 +43,7 @@ vi.mock("~/lib/opening-change-api", async (importOriginal) => ({
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
 import { SWRConfig } from "~/lib/swr/testing";
+import { OpeningChangeEditCard } from "./opening-change-edit-card";
 import { OpeningChangesEditor as Editor } from "./opening-changes-editor";
 
 function OpeningChangesEditor() {
@@ -128,6 +129,42 @@ describe("OpeningChangesEditor", () => {
     expect(
       await screen.findByRole("button", { name: /Tag anlegen/ }),
     ).toBeInTheDocument();
+  });
+
+  it("zeigt die gespeicherte Änderung, wenn die Liste danach nicht aktualisiert wird", async () => {
+    mockUpdate.mockResolvedValue(
+      makeChange({ reason: "Zeugnistag", version: "v2" }),
+    );
+
+    render(
+      <OpeningChangeEditCard
+        change={makeChange()}
+        reload={async () => makeChange({ reason: "Zeugnistag", version: "v2" })}
+        onStored={async () => {
+          throw new Error("unavailable");
+        }}
+        onClose={vi.fn()}
+        minDate="2026-08-10"
+        maxDate="2027-09-09"
+      />,
+    );
+    fireEvent.change(screen.getByLabelText("Anlass"), {
+      target: { value: "Zeugnistag" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Die Änderung ist gespeichert. Lade die Liste neu.",
+    );
+    expect(
+      screen.getByRole("button", { name: "Liste neu laden" }),
+    ).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Speichern" })).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+    expect(screen.queryByRole("button", { name: "Speichert…" })).toBeNull();
+    expect(mockToastSuccess).not.toHaveBeenCalled();
   });
 
   it("zeigt nach einer Änderung von anderer Seite den gespeicherten Tag (ADR 0311)", async () => {

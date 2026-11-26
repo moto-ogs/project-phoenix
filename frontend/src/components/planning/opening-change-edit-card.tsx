@@ -83,33 +83,65 @@ export function OpeningChangeEditCard({
       return;
     }
     setSaving(true);
-    const result = await edit.submit((version, sent) =>
-      openingChangeService.update(
-        change.id,
-        { ...sent, reason: sent.reason.trim() },
-        version,
-      ),
-    );
-    setSaving(false);
-    if (result.ok) {
-      toastSuccess(`„${result.saved.reason}“ ist gespeichert.`);
-      onClose();
-      return;
+    try {
+      const result = await edit.submit((version, sent) =>
+        openingChangeService.update(
+          change.id,
+          { ...sent, reason: sent.reason.trim() },
+          version,
+        ),
+      );
+      if (result.ok) {
+        toastSuccess(`„${result.saved.reason}“ ist gespeichert.`);
+        onClose();
+        return;
+      }
+      if (result.skipped) return;
+      if (result.persisted) {
+        logger.error("opening_change_list_refresh_failed", {
+          opening_change_id: change.id,
+          error:
+            result.error instanceof Error
+              ? result.error.message
+              : String(result.error),
+        });
+        void errors.show(result.error, {
+          object: "die Liste der geänderten Öffnungszeiten",
+          messageSuffix: "Die Änderung ist gespeichert. Lade die Liste neu.",
+          action: {
+            label: "Liste neu laden",
+            onClick: () => {
+              errors.clear();
+              edit.retryLoad();
+            },
+          },
+        });
+        return;
+      }
+      logger.error("opening_change_update_failed", {
+        opening_change_id: change.id,
+        error:
+          result.error instanceof Error
+            ? result.error.message
+            : String(result.error),
+      });
+      // Changed since editing began: the card stays open on the stored day
+      // and says so, without a retry (ADR 0311).
+      void errors.show(result.error, {
+        object: "das Speichern der geänderten Öffnungszeit",
+        reload: result.reload,
+      });
+    } catch (error) {
+      logger.error("opening_change_update_failed", {
+        opening_change_id: change.id,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      void errors.show(error, {
+        object: "das Speichern der geänderten Öffnungszeit",
+      });
+    } finally {
+      setSaving(false);
     }
-    if (result.skipped) return;
-    logger.error("opening_change_update_failed", {
-      opening_change_id: change.id,
-      error:
-        result.error instanceof Error
-          ? result.error.message
-          : String(result.error),
-    });
-    // Changed since editing began: the card stays open on the stored day
-    // and says so, without a retry (ADR 0311).
-    void errors.show(result.error, {
-      object: "das Speichern der geänderten Öffnungszeit",
-      reload: result.reload,
-    });
   };
 
   return (
