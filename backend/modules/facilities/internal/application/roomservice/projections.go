@@ -111,7 +111,7 @@ func labelsForActivityGroups(ids []int64, groups map[int64]facilitiesModule.Acti
 	categories := make([]string, 0, len(ids))
 	for _, id := range ids {
 		group, ok := groups[id]
-		if !ok {
+		if !ok || group.RoomStay {
 			continue
 		}
 		names = append(names, group.Name)

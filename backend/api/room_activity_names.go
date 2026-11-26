@@ -19,7 +19,7 @@ func (n roomActivityNames) ListActivityGroupNames(ctx context.Context, ids []int
 	}
 	names := make(map[int64]facilitiesNative.ActivityGroupName, len(groups))
 	for _, group := range groups {
-		name := facilitiesNative.ActivityGroupName{Name: group.Name}
+		name := facilitiesNative.ActivityGroupName{Name: group.Name, RoomStay: timetable.IsOpenRoomStay(group)}
 		if group.Category != nil {
 			name.Category = &group.Category.Name
 		}

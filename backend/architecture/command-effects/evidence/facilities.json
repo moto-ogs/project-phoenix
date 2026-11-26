@@ -42,7 +42,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.roomActivityNames.ListActivityGroupNames",
-      "binding_digest": "c84e154327f26fb2df14cf3a31ddb2c3",
+      "binding_digest": "019bab462be24519b8d49a6574d520f0",
       "port": "github.com/moto-ogs/project-phoenix/modules/facilities.ActivityGroupNames.ListActivityGroupNames",
       "source_owner": "facilities",
       "target": "github.com/moto-ogs/project-phoenix/modules/timetable.Capability.ListGroups",
@@ -50,7 +50,15 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.roomActivityNames.ListActivityGroupNames",
-      "binding_digest": "6edaef31971ab319b2194ec62a3fc92e",
+      "binding_digest": "d7ecf8f6fb80743c1ab358d6949a4449",
+      "port": "github.com/moto-ogs/project-phoenix/modules/facilities.ActivityGroupNames.ListActivityGroupNames",
+      "source_owner": "facilities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/timetable.IsOpenRoomStay",
+      "target_owner": "timetable-activities"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.roomActivityNames.ListActivityGroupNames",
+      "binding_digest": "6b3fb0cbb85fea1b099169ab91658787",
       "port": "github.com/moto-ogs/project-phoenix/modules/facilities.ActivityGroupNames.ListActivityGroupNames",
       "source_owner": "facilities",
       "target": "github.com/moto-ogs/project-phoenix/modules/timetable.Owner.ListGroups",
@@ -58,7 +66,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.roomActivityNames.ListActivityGroupNames",
-      "binding_digest": "b85dda81b7c92a46fada1b95948093cf",
+      "binding_digest": "13ac634941de7161eb70000562239c82",
       "port": "github.com/moto-ogs/project-phoenix/modules/facilities.ActivityGroupNames.ListActivityGroupNames",
       "source_owner": "facilities",
       "target": "github.com/moto-ogs/project-phoenix/modules/timetable.Query.ListGroups",
