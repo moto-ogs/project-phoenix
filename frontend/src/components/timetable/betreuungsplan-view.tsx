@@ -2559,8 +2559,9 @@ function TimetablesContent() {
           )}
           {/* Was über den Zeitraum sagt, bleibt beisammen und bricht als
               Gruppe um: Schuljahr, woher der Bedarf kommt und wo Personal
-              fehlt. Vorher stand „5 Lücken“ allein in einer dritten Zeile. */}
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 empty:hidden">
+              fehlt. Vorher stand „5 Lücken“ allein in einer dritten Zeile.
+              Am Telefon füllen die Teile die Zeilen der Filter mit auf. */}
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 empty:hidden max-sm:contents">
             {periodsReady && calendarPeriods.length > 0 && (
               <PeriodSwitcherDropdown
                 periods={calendarPeriods}

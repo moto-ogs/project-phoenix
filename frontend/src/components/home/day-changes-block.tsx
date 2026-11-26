@@ -567,9 +567,12 @@ function DayChangeLinkRow({
       {span ? (
         <>
           {/* Das Leerzeichen bleibt im Namen des Links, der Punkt nicht. Der
-              Zeitraum bricht als Ganzes um, nie mitten in der Uhrzeit. */}{" "}
-          <span className="inline-block text-xs text-gray-500">
-            <span aria-hidden="true">· </span>
+              Zeitraum bricht als Ganzes um, nie mitten in der Uhrzeit; am
+              Telefon steht er in seiner eigenen Zeile, ohne den Punkt. */}{" "}
+          <span className="inline-block text-xs text-gray-500 max-sm:block">
+            <span aria-hidden="true" className="max-sm:hidden">
+              ·{" "}
+            </span>
             {span}
           </span>
         </>
