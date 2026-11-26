@@ -151,7 +151,9 @@ func (s *PickupChangeTeamStore) ListUnreadPickupChangeNotices(ctx context.Contex
 			AND (NOT jsonb_exists("request".payload, 'pickup_person') OR (("person".requested_by_guardian = "request".submitted_by
 				AND "person".person_name = "request".payload->'pickup_person'->>'name'
 				AND COALESCE("person".guardian_profile_id::text, '') = COALESCE("request".payload->'pickup_person'->>'guardian_profile_id', ''))
-				OR ("person".id IS NULL AND EXISTS (
+				OR ("person".id IS NULL
+					AND NULLIF("request".payload->'pickup_person'->>'guardian_profile_id', '') IS NOT NULL
+					AND EXISTS (
 					SELECT 1 FROM schedule.student_pickup_notes AS "legacy_note"
 					WHERE "legacy_note".tenant_id = "request".tenant_id
 						AND "legacy_note".student_id = "request".student_id
