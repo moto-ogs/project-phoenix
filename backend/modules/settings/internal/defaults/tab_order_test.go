@@ -46,16 +46,36 @@ func TestEveryTabHasAFixedPlace(t *testing.T) {
 }
 
 // The school's own areas come first, the areas of the Träger follow as one
-// block (#8153).
-func TestTabOrderKeepsTheTraegerAreasTogether(t *testing.T) {
+// block (#8153). An area belongs to the Träger when none of its settings has
+// a school level: the school app heads exactly these with „Vom Träger“.
+func TestTabOrderPutsTheTraegerAreasLast(t *testing.T) {
 	t.Parallel()
 
+	schoolLevel := make(map[string]bool)
+	for _, def := range config.DefaultRegistry().AllDefinitions() {
+		if def.Levels == config.LevelSchool {
+			schoolLevel[def.Tab] = true
+		}
+	}
+
+	firstTraeger := ""
+	var school, traeger []string
+	for _, tab := range config.TabOrder {
+		if !schoolLevel[tab] {
+			if firstTraeger == "" {
+				firstTraeger = tab
+			}
+			traeger = append(traeger, tab)
+			continue
+		}
+		school = append(school, tab)
+		assert.Empty(t, firstTraeger,
+			"school area %q comes after the Träger area %q", tab, firstTraeger)
+	}
+	assert.Contains(t, school, "security", "„Sicherheit“ is an area of the school")
+	assert.Equal(t, "operations", config.TabOrder[0])
 	assert.Equal(t, []string{
-		"operations", "meals", "reminders", "devices", "enrollment",
-		"gdpr", "security",
-		"system", "modules", "startseite",
-		"zustaendigkeiten", "vertraege", "ferien", "monatsbeitrag",
-		"abrechnung", "datev", "einsatzplanung", "lohnexport",
-		"dashboard", "branding",
-	}, config.TabOrder)
+		"zustaendigkeiten", "vertraege", "ferien", "monatsbeitrag", "datev",
+		"einsatzplanung", "lohnexport", "dashboard", "branding",
+	}, traeger)
 }

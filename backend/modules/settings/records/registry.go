@@ -192,9 +192,10 @@ type SelectOption struct {
 
 // TabOrder is the fixed display order of the setting areas on every surface
 // that shows the schema (school settings, Träger portal, operator). Every
-// area a definition declares has a place here; TestEveryTabHasAFixedPlace
-// fails for one without (#8153). The school's own areas come first, the
-// areas of the Träger follow as one block.
+// area a definition declares has a place here (#8153). The school's own
+// areas come first; the areas of the Träger, whose settings all live at the
+// Träger level, follow as one block. TestEveryTabHasAFixedPlace and
+// TestTabOrderPutsTheTraegerAreasLast enforce both.
 var TabOrder = []string{
 	// Alltag der Schule
 	"operations",
@@ -208,13 +209,14 @@ var TabOrder = []string{
 	// Technik
 	"system",
 	"modules",
+	// Elternabrechnung der Schule; die Schul-App zeigt sie auf eigenen Seiten.
+	"abrechnung",
 	"startseite",
 	// Bereiche des Trägers
 	"zustaendigkeiten",
 	"vertraege",
 	"ferien",
 	"monatsbeitrag",
-	"abrechnung",
 	"datev",
 	"einsatzplanung",
 	"lohnexport",

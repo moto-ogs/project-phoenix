@@ -92,6 +92,9 @@ function useStaffSettingsNav() {
   const activeId = sections
     ? activeSettingsSectionId(sections, searchParams.get("tab"))
     : "";
+  // Die Bereiche des Trägers stehen als Block am Ende (`settingsSectionsFor`).
+  const tabs = sections?.tabs ?? [];
+  const traegerStart = tabs.findIndex((section) => section.traeger);
   return {
     loading: sections === null,
     back: {
@@ -101,18 +104,16 @@ function useStaffSettingsNav() {
       concept: backConcept,
       active: false,
     },
-    items: (sections?.tabs ?? []).map((section, index, tabs) => ({
+    items: tabs.map((section, index) => ({
       key: section.id,
       href: tenantPath(settingsSectionHref(section.id)),
       label: section.label,
       concept: section.icon,
       active: section.id === activeId,
-      traeger: section.traeger === true,
-      // Die erste Vorgabe des Trägers trägt im „Mehr“-Blatt die Überschrift.
-      ...(section.traeger && !tabs[index - 1]?.traeger
-        ? { heading: TRAEGER_SECTIONS_HEADING }
-        : {}),
+      // Der erste Bereich des Trägers trägt im „Mehr“-Blatt die Überschrift.
+      ...(index === traegerStart ? { heading: TRAEGER_SECTIONS_HEADING } : {}),
     })),
+    traegerStart: traegerStart === -1 ? tabs.length : traegerStart,
   };
 }
 
@@ -130,9 +131,9 @@ export function StaffSettingsSidebarNav({
   readonly labelsMounted: boolean;
   readonly labelsVisible: boolean;
 }) {
-  const { loading, back, items } = useStaffSettingsNav();
-  const ownItems = items.filter((item) => !item.traeger);
-  const traegerItems = items.filter((item) => item.traeger);
+  const { loading, back, items, traegerStart } = useStaffSettingsNav();
+  const ownItems = items.slice(0, traegerStart);
+  const traegerItems = items.slice(traegerStart);
   const renderRow = (row: PortalOverflowNavItem) => (
     <SidebarRowLink
       key={row.key}

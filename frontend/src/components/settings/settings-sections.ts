@@ -52,47 +52,51 @@ const NFC_ONLY_TABS = new Set(["devices"]);
  * eigenes Symbol, auf dem Telefon ist es sogar der einzige Hinweis. Das
  * Zahnrad gehört „Betrieb“ allein (#8132). Ein Bereich des Trägers trägt das
  * Symbol, unter dem ihn das Träger-Portal führt; nur „Dashboard“ weicht ab,
- * weil das Haus hier schon die Startseite meint.
- *
- * `traeger` stellt den Bereich unter „Vom Träger“ (#8153): die
- * Schule sieht dort Werte ihres Trägers, die sie meist nur lesen kann. Die
- * Reihenfolge innerhalb einer Gruppe kommt aus dem Schema (`TabOrder` im
- * Backend). Wer in der Registry einen Bereich anlegt, trägt ihn hier und in
- * `TAB_LABELS` ein, sonst schlägt `settings-nav-items.test.ts` fehl.
+ * weil das Haus hier schon die Startseite meint. Wer in der Registry einen
+ * Bereich anlegt, trägt ihn hier und in `TAB_LABELS` ein, sonst schlägt
+ * `settings-nav-items.test.ts` fehl.
  */
-const TAB_PLACES: Record<
-  string,
-  { readonly icon: MotoConcept; readonly traeger?: true }
-> = {
-  operations: { icon: settingsConcept },
-  meals: { icon: mealPlanConcept },
-  reminders: { icon: notificationsConcept },
-  gdpr: { icon: privacyConcept },
-  devices: { icon: devicesConcept },
-  enrollment: { icon: enrollmentsConcept },
-  system: { icon: calendarConcept },
-  security: { icon: permissionsConcept },
-  modules: { icon: listsConcept },
+const TAB_CONCEPTS: Record<string, MotoConcept> = {
+  operations: settingsConcept,
+  meals: mealPlanConcept,
+  reminders: notificationsConcept,
+  gdpr: privacyConcept,
+  devices: devicesConcept,
+  enrollment: enrollmentsConcept,
+  system: calendarConcept,
+  security: permissionsConcept,
+  modules: listsConcept,
+  branding: documentsConcept,
   // Wer Verträge schließt, abrechnet und Personal anstellt (#4811).
-  zustaendigkeiten: { icon: organizationsConcept, traeger: true },
-  vertraege: { icon: careContractsConcept, traeger: true },
-  monatsbeitrag: { icon: contributionsConcept, traeger: true },
-  einsatzplanung: { icon: staffPlanConcept, traeger: true },
-  lohnexport: { icon: payrollConcept, traeger: true },
+  zustaendigkeiten: organizationsConcept,
   // Der Bereich legt fest, ab wann eine Kennzahl auffällt: daher das Diagramm.
-  dashboard: { icon: reportsConcept, traeger: true },
-  branding: { icon: documentsConcept, traeger: true },
+  dashboard: reportsConcept,
+  einsatzplanung: staffPlanConcept,
+  lohnexport: payrollConcept,
+  monatsbeitrag: contributionsConcept,
+  vertraege: careContractsConcept,
 };
 
-/** Die Überschrift über den Bereichen des Trägers (#8153). */
-// Nicht „Vorgaben“: der Kopf jedes Bereichs zählt „abweichend von der
-// Vorgabe“ und meint damit den Standardwert von moto. „Vom Träger“ passt zur
-// Marke „Vom Träger festgelegt“ an den einzelnen Werten.
+/**
+ * Die Überschrift über den Bereichen des Trägers (#8153). Nicht „Vorgaben“:
+ * der Kopf jedes Bereichs zählt „abweichend von der Vorgabe“ und meint den
+ * Standardwert von moto. „Vom Träger“ passt zur Marke „Vom Träger festgelegt“
+ * an den einzelnen Werten.
+ */
 export const TRAEGER_SECTIONS_HEADING = "Vom Träger";
 
-/** Ob ein Bereich des Schemas einen festen Platz in der Seitenleiste hat. */
-export function settingsTabIsPlaced(key: string): boolean {
-  return key in TAB_PLACES;
+/**
+ * Ein Bereich des Trägers: keine seiner Einstellungen liegt auf der Ebene der
+ * Schule. Die Schule sieht dort Werte ihres Trägers (#8153). Das Backend
+ * stellt genau diese Bereiche in `TabOrder` ans Ende
+ * (`TestTabOrderPutsTheTraegerAreasLast`).
+ */
+function isTraegerTab(tab: SchemaTab): boolean {
+  const items = tab.categories.flatMap((category) => category.items);
+  return (
+    items.length > 0 &&
+    items.every((item) => item.levels === "traeger" || item.levels === "beide")
+  );
 }
 
 // A tab whose settings are all hidden (DependsOn, access) would open onto the
@@ -202,7 +206,7 @@ const PERSONALIZATION_TAB: SettingsSection = {
 
 /** Das Symbol eines Bereichs aus dem Schema. */
 export function settingsTabConcept(key: string): MotoConcept {
-  return TAB_PLACES[key]?.icon ?? settingsConcept;
+  return TAB_CONCEPTS[key] ?? settingsConcept;
 }
 
 /**
@@ -233,7 +237,7 @@ export function settingsSectionsFor(
         id: `settings-${tab.key}`,
         label: displayTabLabel(tab),
         icon: settingsTabConcept(tab.key),
-        ...(TAB_PLACES[tab.key]?.traeger ? { traeger: true } : {}),
+        ...(isTraegerTab(tab) ? { traeger: true } : {}),
       }));
   // Die eigenen Bereiche der Schule zuerst, die Bereiche des Trägers als
   // eigene Gruppe am Ende (#8153).

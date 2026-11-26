@@ -10,7 +10,6 @@ import {
   settingsSectionHref,
   settingsSectionsFor,
 } from "./settings-nav-items";
-import { settingsTabIsPlaced } from "./settings-sections";
 
 const tabs = [
   { id: "settings-operations", label: "Betrieb", icon: settingsConcept },
@@ -77,7 +76,10 @@ function backendTabKeys(): string[] {
   return [...keys].sort((a, b) => a.localeCompare(b));
 }
 
-function tabWithOneSetting(key: string): SchemaTab {
+function tabWithOneSetting(
+  key: string,
+  levels: "schule" | "beide" | "traeger" = "schule",
+): SchemaTab {
   return {
     key,
     label: key,
@@ -98,7 +100,7 @@ function tabWithOneSetting(key: string): SchemaTab {
             visible: true,
             sort_order: 1,
             access_policy: "shared",
-            levels: "schule",
+            levels,
             source: "default",
           },
         ],
@@ -110,8 +112,23 @@ function tabWithOneSetting(key: string): SchemaTab {
 // #8132: fünf Bereiche trugen dasselbe Zahnrad, einer hieß „lohnexport“.
 describe("settingsSectionsFor", () => {
   const keys = backendTabKeys();
+  // Die Bereiche, deren Einstellungen alle auf der Ebene des Trägers liegen
+  // (`TestTabOrderPutsTheTraegerAreasLast` im Backend).
+  const traegerKeys = new Set([
+    "zustaendigkeiten",
+    "vertraege",
+    "monatsbeitrag",
+    "einsatzplanung",
+    "lohnexport",
+    "dashboard",
+    "branding",
+  ]);
   const sections = settingsSectionsFor(
-    { tabs: keys.map(tabWithOneSetting) },
+    {
+      tabs: keys.map((key) =>
+        tabWithOneSetting(key, traegerKeys.has(key) ? "traeger" : "schule"),
+      ),
+    },
     { schemaFailed: false, nfcEnabled: true, canManageHomeBlocks: true },
   );
   // „Startseite für alle“ ist handgeschrieben (#2875), auch wenn ihre
@@ -157,15 +174,6 @@ describe("settingsSectionsFor", () => {
     ).toEqual(["Betrieb"]);
   });
 
-  // #8153: ein Bereich ohne festen Platz fiel ans Ende, und „Sicherheit“
-  // stand zwischen den Bereichen des Trägers.
-  it("places every area of the sidebar in a group", () => {
-    const unplaced = schemaSections
-      .map((section) => section.id.replace(/^settings-/, ""))
-      .filter((key) => !settingsTabIsPlaced(key));
-    expect(unplaced).toEqual([]);
-  });
-
   it("lists the areas of the Träger last, after Personalisierung", () => {
     const labels = sections.map((section) => section.label);
     const traeger = sections
@@ -198,6 +206,26 @@ describe("settingsSectionsFor", () => {
         .map((section) => section.id);
       expect(group).toEqual(schemaOrder.filter((id) => group.includes(id)));
     }
+  });
+
+  it("counts an area as the Träger's only without a school setting", () => {
+    const mixed = tabWithOneSetting("gdpr", "beide");
+    mixed.categories[0]!.items.push({
+      ...mixed.categories[0]!.items[0]!,
+      key: "gdpr.schule",
+      levels: "schule",
+    });
+    const grouped = settingsSectionsFor(
+      { tabs: [mixed, tabWithOneSetting("zustaendigkeiten", "beide")] },
+      { schemaFailed: false, nfcEnabled: true, canManageHomeBlocks: false },
+    );
+    expect(
+      grouped.map((section) => [section.label, section.traeger === true]),
+    ).toEqual([
+      ["Datenschutz", false],
+      ["Personalisierung", false],
+      ["Zuständigkeiten", true],
+    ]);
   });
 
   it("shows „Lohnexport“ with a capital letter", () => {

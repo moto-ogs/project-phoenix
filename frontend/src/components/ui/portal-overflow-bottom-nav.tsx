@@ -46,7 +46,8 @@ export interface PortalOverflowNavItem {
   /**
    * Eine Zwischenüberschrift über dem Eintrag im „Mehr"-Blatt, die eine
    * Gruppe von Zielen benennt, etwa die Bereiche des Trägers in den
-   * Einstellungen (#8153). In der Leiste selbst steht sie nicht.
+   * Einstellungen (#8153). In der Leiste selbst steht sie nicht; neben
+   * `separated` trägt der Eintrag nur dessen Linie.
    */
   readonly heading?: string;
   /**
