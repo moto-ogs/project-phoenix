@@ -1,0 +1,1990 @@
+[
+  {
+    "route": "/",
+    "portal": "öffentlich",
+    "family": "Öffentlich",
+    "representative": "–",
+    "reason": "Öffentlicher Einstieg, Hilfe, Einladung oder Anmeldung; keine bestehende Fachsitzung."
+  },
+  {
+    "route": "/[tenant]",
+    "portal": "OGS",
+    "family": "Öffentlich",
+    "representative": "–",
+    "reason": "Öffentlicher Einstieg, Hilfe, Einladung oder Anmeldung; keine bestehende Fachsitzung."
+  },
+  {
+    "route": "/[tenant]/(protected)/@parentAttention/(.)parent-attention/[studentId]",
+    "portal": "OGS",
+    "family": "Fachlisten und Verwaltung",
+    "representative": "anfragen-admin",
+    "reason": "Verglichen wird der erneute Einstieg aus der linken Schulnavigation: bestehende Schulhülle, neue Route und eigener Datenabruf. Anfragen vertritt nur diesen Einstieg, nicht das Gewicht eines Chats, Speiseplans oder Einstellungsformulars."
+  },
+  {
+    "route": "/[tenant]/(protected)/absences",
+    "portal": "OGS",
+    "family": "Tagesbetrieb",
+    "representative": "aufsicht-admin, gruppe-navigation, start-betreuer",
+    "reason": "Kontextabhängige Tagesdaten oder Startkarten, bei Aufsicht und Gruppen mit aktiver Auswahl."
+  },
+  {
+    "route": "/[tenant]/(protected)/active-supervisions",
+    "portal": "OGS",
+    "family": "Tagesbetrieb",
+    "representative": "aufsicht-admin, gruppe-navigation, start-betreuer",
+    "reason": "Kontextabhängige Tagesdaten oder Startkarten, bei Aufsicht und Gruppen mit aktiver Auswahl."
+  },
+  {
+    "route": "/[tenant]/(protected)/activities",
+    "portal": "OGS",
+    "family": "Verzeichnis und Detail",
+    "representative": "kindersuche-admin, kinderakte-admin, team-person, räume-raum",
+    "reason": "Datenliste mit Suche, Auswahl und separat geladener Detailansicht; keine Zeitbehauptung für einzelne ungemessene Unterseiten."
+  },
+  {
+    "route": "/[tenant]/(protected)/admin/change-requests",
+    "portal": "OGS",
+    "family": "Fachlisten und Verwaltung",
+    "representative": "anfragen-admin",
+    "reason": "Verglichen wird der erneute Einstieg aus der linken Schulnavigation: bestehende Schulhülle, neue Route und eigener Datenabruf. Anfragen vertritt nur diesen Einstieg, nicht das Gewicht eines Chats, Speiseplans oder Einstellungsformulars."
+  },
+  {
+    "route": "/[tenant]/(protected)/admin/enrollments",
+    "portal": "OGS",
+    "family": "Fachlisten und Verwaltung",
+    "representative": "anfragen-admin",
+    "reason": "Verglichen wird der erneute Einstieg aus der linken Schulnavigation: bestehende Schulhülle, neue Route und eigener Datenabruf. Anfragen vertritt nur diesen Einstieg, nicht das Gewicht eines Chats, Speiseplans oder Einstellungsformulars."
+  },
+  {
+    "route": "/[tenant]/(protected)/admin/enrollments/[id]",
+    "portal": "OGS",
+    "family": "Fachlisten und Verwaltung",
+    "representative": "anfragen-admin",
+    "reason": "Verglichen wird der erneute Einstieg aus der linken Schulnavigation: bestehende Schulhülle, neue Route und eigener Datenabruf. Anfragen vertritt nur diesen Einstieg, nicht das Gewicht eines Chats, Speiseplans oder Einstellungsformulars."
+  },
+  {
+    "route": "/[tenant]/(protected)/admin/enrollments/change-requests",
+    "portal": "OGS",
+    "family": "Fachlisten und Verwaltung",
+    "representative": "anfragen-admin",
+    "reason": "Verglichen wird der erneute Einstieg aus der linken Schulnavigation: bestehende Schulhülle, neue Route und eigener Datenabruf. Anfragen vertritt nur diesen Einstieg, nicht das Gewicht eines Chats, Speiseplans oder Einstellungsformulars."
+  },
+  {
+    "route": "/[tenant]/(protected)/admin/enrollments/change-requests/[id]",
+    "portal": "OGS",
+    "family": "Fachlisten und Verwaltung",
+    "representative": "anfragen-admin",
+    "reason": "Verglichen wird der erneute Einstieg aus der linken Schulnavigation: bestehende Schulhülle, neue Route und eigener Datenabruf. Anfragen vertritt nur diesen Einstieg, nicht das Gewicht eines Chats, Speiseplans oder Einstellungsformulars."
+  },
+  {
+    "route": "/[tenant]/(protected)/admin/enrollments/phases/[phaseId]",
+    "portal": "OGS",
+    "family": "Fachlisten und Verwaltung",
+    "representative": "anfragen-admin",
+    "reason": "Verglichen wird der erneute Einstieg aus der linken Schulnavigation: bestehende Schulhülle, neue Route und eigener Datenabruf. Anfragen vertritt nur diesen Einstieg, nicht das Gewicht eines Chats, Speiseplans oder Einstellungsformulars."
+  },
+  {
+    "route": "/[tenant]/(protected)/admin/guardian-approvals",
+    "portal": "OGS",
+    "family": "Fachlisten und Verwaltung",
+    "representative": "anfragen-admin",
+    "reason": "Verglichen wird der erneute Einstieg aus der linken Schulnavigation: bestehende Schulhülle, neue Route und eigener Datenabruf. Anfragen vertritt nur diesen Einstieg, nicht das Gewicht eines Chats, Speiseplans oder Einstellungsformulars."
+  },
+  {
+    "route": "/[tenant]/(protected)/anfragen",
+    "portal": "OGS",
+    "family": "Fachlisten und Verwaltung",
+    "representative": "anfragen-admin",
+    "reason": "Verglichen wird der erneute Einstieg aus der linken Schulnavigation: bestehende Schulhülle, neue Route und eigener Datenabruf. Anfragen vertritt nur diesen Einstieg, nicht das Gewicht eines Chats, Speiseplans oder Einstellungsformulars."
+  },
+  {
+    "route": "/[tenant]/(protected)/betreuungsplan",
+    "portal": "OGS",
+    "family": "Zeit und Planung",
+    "representative": "zeit-admin, plan-admin, plan-betreuer, dienstplan-admin",
+    "reason": "Zeitraumabhängige Auswertung, Wochenansicht oder Plan."
+  },
+  {
+    "route": "/[tenant]/(protected)/calendar",
+    "portal": "OGS",
+    "family": "Zeit und Planung",
+    "representative": "zeit-admin, plan-admin, plan-betreuer, dienstplan-admin",
+    "reason": "Zeitraumabhängige Auswertung, Wochenansicht oder Plan."
+  },
+  {
+    "route": "/[tenant]/(protected)/calendar-periods",
+    "portal": "OGS",
+    "family": "Zeit und Planung",
+    "representative": "zeit-admin, plan-admin, plan-betreuer, dienstplan-admin",
+    "reason": "Zeitraumabhängige Auswertung, Wochenansicht oder Plan."
+  },
+  {
+    "route": "/[tenant]/(protected)/care-offerings",
+    "portal": "OGS",
+    "family": "Verzeichnis und Detail",
+    "representative": "kindersuche-admin, kinderakte-admin, team-person, räume-raum",
+    "reason": "Datenliste mit Suche, Auswahl und separat geladener Detailansicht; keine Zeitbehauptung für einzelne ungemessene Unterseiten."
+  },
+  {
+    "route": "/[tenant]/(protected)/dashboard",
+    "portal": "OGS",
+    "family": "Tagesbetrieb",
+    "representative": "aufsicht-admin, gruppe-navigation, start-betreuer",
+    "reason": "Kontextabhängige Tagesdaten oder Startkarten, bei Aufsicht und Gruppen mit aktiver Auswahl."
+  },
+  {
+    "route": "/[tenant]/(protected)/database",
+    "portal": "OGS",
+    "family": "Verzeichnis und Detail",
+    "representative": "kindersuche-admin, kinderakte-admin, team-person, räume-raum",
+    "reason": "Datenliste mit Suche, Auswahl und separat geladener Detailansicht; keine Zeitbehauptung für einzelne ungemessene Unterseiten."
+  },
+  {
+    "route": "/[tenant]/(protected)/database/absence-types",
+    "portal": "OGS",
+    "family": "Verzeichnis und Detail",
+    "representative": "kindersuche-admin, kinderakte-admin, team-person, räume-raum",
+    "reason": "Datenliste mit Suche, Auswahl und separat geladener Detailansicht; keine Zeitbehauptung für einzelne ungemessene Unterseiten."
+  },
+  {
+    "route": "/[tenant]/(protected)/database/activities",
+    "portal": "OGS",
+    "family": "Verzeichnis und Detail",
+    "representative": "kindersuche-admin, kinderakte-admin, team-person, räume-raum",
+    "reason": "Datenliste mit Suche, Auswahl und separat geladener Detailansicht; keine Zeitbehauptung für einzelne ungemessene Unterseiten."
+  },
+  {
+    "route": "/[tenant]/(protected)/database/categories",
+    "portal": "OGS",
+    "family": "Verzeichnis und Detail",
+    "representative": "kindersuche-admin, kinderakte-admin, team-person, räume-raum",
+    "reason": "Datenliste mit Suche, Auswahl und separat geladener Detailansicht; keine Zeitbehauptung für einzelne ungemessene Unterseiten."
+  },
+  {
+    "route": "/[tenant]/(protected)/database/devices",
+    "portal": "OGS",
+    "family": "Verzeichnis und Detail",
+    "representative": "kindersuche-admin, kinderakte-admin, team-person, räume-raum",
+    "reason": "Datenliste mit Suche, Auswahl und separat geladener Detailansicht; keine Zeitbehauptung für einzelne ungemessene Unterseiten."
+  },
+  {
+    "route": "/[tenant]/(protected)/database/exports",
+    "portal": "OGS",
+    "family": "Verzeichnis und Detail",
+    "representative": "kindersuche-admin, kinderakte-admin, team-person, räume-raum",
+    "reason": "Datenliste mit Suche, Auswahl und separat geladener Detailansicht; keine Zeitbehauptung für einzelne ungemessene Unterseiten."
+  },
+  {
+    "route": "/[tenant]/(protected)/database/grade-transitions",
+    "portal": "OGS",
+    "family": "Verzeichnis und Detail",
+    "representative": "kindersuche-admin, kinderakte-admin, team-person, räume-raum",
+    "reason": "Datenliste mit Suche, Auswahl und separat geladener Detailansicht; keine Zeitbehauptung für einzelne ungemessene Unterseiten."
+  },
+  {
+    "route": "/[tenant]/(protected)/database/groups",
+    "portal": "OGS",
+    "family": "Verzeichnis und Detail",
+    "representative": "kindersuche-admin, kinderakte-admin, team-person, räume-raum",
+    "reason": "Datenliste mit Suche, Auswahl und separat geladener Detailansicht; keine Zeitbehauptung für einzelne ungemessene Unterseiten."
+  },
+  {
+    "route": "/[tenant]/(protected)/database/permissions",
+    "portal": "OGS",
+    "family": "Verzeichnis und Detail",
+    "representative": "kindersuche-admin, kinderakte-admin, team-person, räume-raum",
+    "reason": "Datenliste mit Suche, Auswahl und separat geladener Detailansicht; keine Zeitbehauptung für einzelne ungemessene Unterseiten."
+  },
+  {
+    "route": "/[tenant]/(protected)/database/personal",
+    "portal": "OGS",
+    "family": "Verzeichnis und Detail",
+    "representative": "kindersuche-admin, kinderakte-admin, team-person, räume-raum",
+    "reason": "Datenliste mit Suche, Auswahl und separat geladener Detailansicht; keine Zeitbehauptung für einzelne ungemessene Unterseiten."
+  },
+  {
+    "route": "/[tenant]/(protected)/database/personal/import",
+    "portal": "OGS",
+    "family": "Nicht wiederverwendbar",
+    "representative": "–",
+    "reason": "Einmaliger, schreibender oder tokengebundener Vorgang; kein erneuter Besuch gültigen Fachinhalts."
+  },
+  {
+    "route": "/[tenant]/(protected)/database/personal/opening-balances",
+    "portal": "OGS",
+    "family": "Verzeichnis und Detail",
+    "representative": "kindersuche-admin, kinderakte-admin, team-person, räume-raum",
+    "reason": "Datenliste mit Suche, Auswahl und separat geladener Detailansicht; keine Zeitbehauptung für einzelne ungemessene Unterseiten."
+  },
+  {
+    "route": "/[tenant]/(protected)/database/planning-tracks",
+    "portal": "OGS",
+    "family": "Verzeichnis und Detail",
+    "representative": "kindersuche-admin, kinderakte-admin, team-person, räume-raum",
+    "reason": "Datenliste mit Suche, Auswahl und separat geladener Detailansicht; keine Zeitbehauptung für einzelne ungemessene Unterseiten."
+  },
+  {
+    "route": "/[tenant]/(protected)/database/qualification-types",
+    "portal": "OGS",
+    "family": "Verzeichnis und Detail",
+    "representative": "kindersuche-admin, kinderakte-admin, team-person, räume-raum",
+    "reason": "Datenliste mit Suche, Auswahl und separat geladener Detailansicht; keine Zeitbehauptung für einzelne ungemessene Unterseiten."
+  },
+  {
+    "route": "/[tenant]/(protected)/database/qualifications",
+    "portal": "OGS",
+    "family": "Verzeichnis und Detail",
+    "representative": "kindersuche-admin, kinderakte-admin, team-person, räume-raum",
+    "reason": "Datenliste mit Suche, Auswahl und separat geladener Detailansicht; keine Zeitbehauptung für einzelne ungemessene Unterseiten."
+  },
+  {
+    "route": "/[tenant]/(protected)/database/roles",
+    "portal": "OGS",
+    "family": "Verzeichnis und Detail",
+    "representative": "kindersuche-admin, kinderakte-admin, team-person, räume-raum",
+    "reason": "Datenliste mit Suche, Auswahl und separat geladener Detailansicht; keine Zeitbehauptung für einzelne ungemessene Unterseiten."
+  },
+  {
+    "route": "/[tenant]/(protected)/database/rooms",
+    "portal": "OGS",
+    "family": "Verzeichnis und Detail",
+    "representative": "kindersuche-admin, kinderakte-admin, team-person, räume-raum",
+    "reason": "Datenliste mit Suche, Auswahl und separat geladener Detailansicht; keine Zeitbehauptung für einzelne ungemessene Unterseiten."
+  },
+  {
+    "route": "/[tenant]/(protected)/database/shift-types",
+    "portal": "OGS",
+    "family": "Verzeichnis und Detail",
+    "representative": "kindersuche-admin, kinderakte-admin, team-person, räume-raum",
+    "reason": "Datenliste mit Suche, Auswahl und separat geladener Detailansicht; keine Zeitbehauptung für einzelne ungemessene Unterseiten."
+  },
+  {
+    "route": "/[tenant]/(protected)/database/students",
+    "portal": "OGS",
+    "family": "Verzeichnis und Detail",
+    "representative": "kindersuche-admin, kinderakte-admin, team-person, räume-raum",
+    "reason": "Datenliste mit Suche, Auswahl und separat geladener Detailansicht; keine Zeitbehauptung für einzelne ungemessene Unterseiten."
+  },
+  {
+    "route": "/[tenant]/(protected)/database/students/class-list",
+    "portal": "OGS",
+    "family": "Verzeichnis und Detail",
+    "representative": "kindersuche-admin, kinderakte-admin, team-person, räume-raum",
+    "reason": "Datenliste mit Suche, Auswahl und separat geladener Detailansicht; keine Zeitbehauptung für einzelne ungemessene Unterseiten."
+  },
+  {
+    "route": "/[tenant]/(protected)/database/students/class-list/import",
+    "portal": "OGS",
+    "family": "Nicht wiederverwendbar",
+    "representative": "–",
+    "reason": "Einmaliger, schreibender oder tokengebundener Vorgang; kein erneuter Besuch gültigen Fachinhalts."
+  },
+  {
+    "route": "/[tenant]/(protected)/database/students/ended-care",
+    "portal": "OGS",
+    "family": "Verzeichnis und Detail",
+    "representative": "kindersuche-admin, kinderakte-admin, team-person, räume-raum",
+    "reason": "Datenliste mit Suche, Auswahl und separat geladener Detailansicht; keine Zeitbehauptung für einzelne ungemessene Unterseiten."
+  },
+  {
+    "route": "/[tenant]/(protected)/database/students/import",
+    "portal": "OGS",
+    "family": "Nicht wiederverwendbar",
+    "representative": "–",
+    "reason": "Einmaliger, schreibender oder tokengebundener Vorgang; kein erneuter Besuch gültigen Fachinhalts."
+  },
+  {
+    "route": "/[tenant]/(protected)/database/work-time-models",
+    "portal": "OGS",
+    "family": "Verzeichnis und Detail",
+    "representative": "kindersuche-admin, kinderakte-admin, team-person, räume-raum",
+    "reason": "Datenliste mit Suche, Auswahl und separat geladener Detailansicht; keine Zeitbehauptung für einzelne ungemessene Unterseiten."
+  },
+  {
+    "route": "/[tenant]/(protected)/dateien",
+    "portal": "OGS",
+    "family": "Fachlisten und Verwaltung",
+    "representative": "anfragen-admin",
+    "reason": "Verglichen wird der erneute Einstieg aus der linken Schulnavigation: bestehende Schulhülle, neue Route und eigener Datenabruf. Anfragen vertritt nur diesen Einstieg, nicht das Gewicht eines Chats, Speiseplans oder Einstellungsformulars."
+  },
+  {
+    "route": "/[tenant]/(protected)/day-log",
+    "portal": "OGS",
+    "family": "Zeit und Planung",
+    "representative": "zeit-admin, plan-admin, plan-betreuer, dienstplan-admin",
+    "reason": "Zeitraumabhängige Auswertung, Wochenansicht oder Plan."
+  },
+  {
+    "route": "/[tenant]/(protected)/dienstplan",
+    "portal": "OGS",
+    "family": "Zeit und Planung",
+    "representative": "zeit-admin, plan-admin, plan-betreuer, dienstplan-admin",
+    "reason": "Zeitraumabhängige Auswertung, Wochenansicht oder Plan."
+  },
+  {
+    "route": "/[tenant]/(protected)/dienstplan/springer",
+    "portal": "OGS",
+    "family": "Zeit und Planung",
+    "representative": "zeit-admin, plan-admin, plan-betreuer, dienstplan-admin",
+    "reason": "Zeitraumabhängige Auswertung, Wochenansicht oder Plan."
+  },
+  {
+    "route": "/[tenant]/(protected)/eltern/bankverbindungen",
+    "portal": "OGS",
+    "family": "Fachlisten und Verwaltung",
+    "representative": "anfragen-admin",
+    "reason": "Verglichen wird der erneute Einstieg aus der linken Schulnavigation: bestehende Schulhülle, neue Route und eigener Datenabruf. Anfragen vertritt nur diesen Einstieg, nicht das Gewicht eines Chats, Speiseplans oder Einstellungsformulars."
+  },
+  {
+    "route": "/[tenant]/(protected)/emergency",
+    "portal": "OGS",
+    "family": "Tagesbetrieb",
+    "representative": "aufsicht-admin, gruppe-navigation, start-betreuer",
+    "reason": "Kontextabhängige Tagesdaten oder Startkarten, bei Aufsicht und Gruppen mit aktiver Auswahl."
+  },
+  {
+    "route": "/[tenant]/(protected)/enrollment-form",
+    "portal": "OGS",
+    "family": "Fachlisten und Verwaltung",
+    "representative": "anfragen-admin",
+    "reason": "Verglichen wird der erneute Einstieg aus der linken Schulnavigation: bestehende Schulhülle, neue Route und eigener Datenabruf. Anfragen vertritt nur diesen Einstieg, nicht das Gewicht eines Chats, Speiseplans oder Einstellungsformulars."
+  },
+  {
+    "route": "/[tenant]/(protected)/enrollment-phases",
+    "portal": "OGS",
+    "family": "Fachlisten und Verwaltung",
+    "representative": "anfragen-admin",
+    "reason": "Verglichen wird der erneute Einstieg aus der linken Schulnavigation: bestehende Schulhülle, neue Route und eigener Datenabruf. Anfragen vertritt nur diesen Einstieg, nicht das Gewicht eines Chats, Speiseplans oder Einstellungsformulars."
+  },
+  {
+    "route": "/[tenant]/(protected)/enrollment-phases/[id]/review",
+    "portal": "OGS",
+    "family": "Fachlisten und Verwaltung",
+    "representative": "anfragen-admin",
+    "reason": "Verglichen wird der erneute Einstieg aus der linken Schulnavigation: bestehende Schulhülle, neue Route und eigener Datenabruf. Anfragen vertritt nur diesen Einstieg, nicht das Gewicht eines Chats, Speiseplans oder Einstellungsformulars."
+  },
+  {
+    "route": "/[tenant]/(protected)/enrollment-phases/[id]/rollover",
+    "portal": "OGS",
+    "family": "Fachlisten und Verwaltung",
+    "representative": "anfragen-admin",
+    "reason": "Verglichen wird der erneute Einstieg aus der linken Schulnavigation: bestehende Schulhülle, neue Route und eigener Datenabruf. Anfragen vertritt nur diesen Einstieg, nicht das Gewicht eines Chats, Speiseplans oder Einstellungsformulars."
+  },
+  {
+    "route": "/[tenant]/(protected)/ferienwochen",
+    "portal": "OGS",
+    "family": "Zeit und Planung",
+    "representative": "zeit-admin, plan-admin, plan-betreuer, dienstplan-admin",
+    "reason": "Zeitraumabhängige Auswertung, Wochenansicht oder Plan."
+  },
+  {
+    "route": "/[tenant]/(protected)/home",
+    "portal": "OGS",
+    "family": "Tagesbetrieb",
+    "representative": "aufsicht-admin, gruppe-navigation, start-betreuer",
+    "reason": "Kontextabhängige Tagesdaten oder Startkarten, bei Aufsicht und Gruppen mit aktiver Auswahl."
+  },
+  {
+    "route": "/[tenant]/(protected)/info-displays",
+    "portal": "OGS",
+    "family": "Fachlisten und Verwaltung",
+    "representative": "anfragen-admin",
+    "reason": "Verglichen wird der erneute Einstieg aus der linken Schulnavigation: bestehende Schulhülle, neue Route und eigener Datenabruf. Anfragen vertritt nur diesen Einstieg, nicht das Gewicht eines Chats, Speiseplans oder Einstellungsformulars."
+  },
+  {
+    "route": "/[tenant]/(protected)/lists",
+    "portal": "OGS",
+    "family": "Verzeichnis und Detail",
+    "representative": "kindersuche-admin, kinderakte-admin, team-person, räume-raum",
+    "reason": "Datenliste mit Suche, Auswahl und separat geladener Detailansicht; keine Zeitbehauptung für einzelne ungemessene Unterseiten."
+  },
+  {
+    "route": "/[tenant]/(protected)/meal-plan",
+    "portal": "OGS",
+    "family": "Fachlisten und Verwaltung",
+    "representative": "anfragen-admin",
+    "reason": "Verglichen wird der erneute Einstieg aus der linken Schulnavigation: bestehende Schulhülle, neue Route und eigener Datenabruf. Anfragen vertritt nur diesen Einstieg, nicht das Gewicht eines Chats, Speiseplans oder Einstellungsformulars."
+  },
+  {
+    "route": "/[tenant]/(protected)/meal-plan/freigabe",
+    "portal": "OGS",
+    "family": "Fachlisten und Verwaltung",
+    "representative": "anfragen-admin",
+    "reason": "Verglichen wird der erneute Einstieg aus der linken Schulnavigation: bestehende Schulhülle, neue Route und eigener Datenabruf. Anfragen vertritt nur diesen Einstieg, nicht das Gewicht eines Chats, Speiseplans oder Einstellungsformulars."
+  },
+  {
+    "route": "/[tenant]/(protected)/mein-dienstplan",
+    "portal": "OGS",
+    "family": "Zeit und Planung",
+    "representative": "zeit-admin, plan-admin, plan-betreuer, dienstplan-admin",
+    "reason": "Zeitraumabhängige Auswertung, Wochenansicht oder Plan."
+  },
+  {
+    "route": "/[tenant]/(protected)/messages",
+    "portal": "OGS",
+    "family": "Fachlisten und Verwaltung",
+    "representative": "anfragen-admin",
+    "reason": "Verglichen wird der erneute Einstieg aus der linken Schulnavigation: bestehende Schulhülle, neue Route und eigener Datenabruf. Anfragen vertritt nur diesen Einstieg, nicht das Gewicht eines Chats, Speiseplans oder Einstellungsformulars."
+  },
+  {
+    "route": "/[tenant]/(protected)/messages/[threadId]",
+    "portal": "OGS",
+    "family": "Fachlisten und Verwaltung",
+    "representative": "anfragen-admin",
+    "reason": "Verglichen wird der erneute Einstieg aus der linken Schulnavigation: bestehende Schulhülle, neue Route und eigener Datenabruf. Anfragen vertritt nur diesen Einstieg, nicht das Gewicht eines Chats, Speiseplans oder Einstellungsformulars."
+  },
+  {
+    "route": "/[tenant]/(protected)/messages/groups",
+    "portal": "OGS",
+    "family": "Fachlisten und Verwaltung",
+    "representative": "anfragen-admin",
+    "reason": "Verglichen wird der erneute Einstieg aus der linken Schulnavigation: bestehende Schulhülle, neue Route und eigener Datenabruf. Anfragen vertritt nur diesen Einstieg, nicht das Gewicht eines Chats, Speiseplans oder Einstellungsformulars."
+  },
+  {
+    "route": "/[tenant]/(protected)/messages/groups/[groupThreadId]",
+    "portal": "OGS",
+    "family": "Fachlisten und Verwaltung",
+    "representative": "anfragen-admin",
+    "reason": "Verglichen wird der erneute Einstieg aus der linken Schulnavigation: bestehende Schulhülle, neue Route und eigener Datenabruf. Anfragen vertritt nur diesen Einstieg, nicht das Gewicht eines Chats, Speiseplans oder Einstellungsformulars."
+  },
+  {
+    "route": "/[tenant]/(protected)/ogs-groups",
+    "portal": "OGS",
+    "family": "Tagesbetrieb",
+    "representative": "aufsicht-admin, gruppe-navigation, start-betreuer",
+    "reason": "Kontextabhängige Tagesdaten oder Startkarten, bei Aufsicht und Gruppen mit aktiver Auswahl."
+  },
+  {
+    "route": "/[tenant]/(protected)/ogs-groups/overview",
+    "portal": "OGS",
+    "family": "Tagesbetrieb",
+    "representative": "aufsicht-admin, gruppe-navigation, start-betreuer",
+    "reason": "Kontextabhängige Tagesdaten oder Startkarten, bei Aufsicht und Gruppen mit aktiver Auswahl."
+  },
+  {
+    "route": "/[tenant]/(protected)/parent-announcements",
+    "portal": "OGS",
+    "family": "Fachlisten und Verwaltung",
+    "representative": "anfragen-admin",
+    "reason": "Verglichen wird der erneute Einstieg aus der linken Schulnavigation: bestehende Schulhülle, neue Route und eigener Datenabruf. Anfragen vertritt nur diesen Einstieg, nicht das Gewicht eines Chats, Speiseplans oder Einstellungsformulars."
+  },
+  {
+    "route": "/[tenant]/(protected)/parent-announcements/[id]",
+    "portal": "OGS",
+    "family": "Fachlisten und Verwaltung",
+    "representative": "anfragen-admin",
+    "reason": "Verglichen wird der erneute Einstieg aus der linken Schulnavigation: bestehende Schulhülle, neue Route und eigener Datenabruf. Anfragen vertritt nur diesen Einstieg, nicht das Gewicht eines Chats, Speiseplans oder Einstellungsformulars."
+  },
+  {
+    "route": "/[tenant]/(protected)/parent-attention/[studentId]",
+    "portal": "OGS",
+    "family": "Fachlisten und Verwaltung",
+    "representative": "anfragen-admin",
+    "reason": "Verglichen wird der erneute Einstieg aus der linken Schulnavigation: bestehende Schulhülle, neue Route und eigener Datenabruf. Anfragen vertritt nur diesen Einstieg, nicht das Gewicht eines Chats, Speiseplans oder Einstellungsformulars."
+  },
+  {
+    "route": "/[tenant]/(protected)/payroll",
+    "portal": "OGS",
+    "family": "Zeit und Planung",
+    "representative": "zeit-admin, plan-admin, plan-betreuer, dienstplan-admin",
+    "reason": "Zeitraumabhängige Auswertung, Wochenansicht oder Plan."
+  },
+  {
+    "route": "/[tenant]/(protected)/profile",
+    "portal": "OGS",
+    "family": "Fachlisten und Verwaltung",
+    "representative": "anfragen-admin",
+    "reason": "Verglichen wird der erneute Einstieg aus der linken Schulnavigation: bestehende Schulhülle, neue Route und eigener Datenabruf. Anfragen vertritt nur diesen Einstieg, nicht das Gewicht eines Chats, Speiseplans oder Einstellungsformulars."
+  },
+  {
+    "route": "/[tenant]/(protected)/reminders",
+    "portal": "OGS",
+    "family": "Fachlisten und Verwaltung",
+    "representative": "anfragen-admin",
+    "reason": "Verglichen wird der erneute Einstieg aus der linken Schulnavigation: bestehende Schulhülle, neue Route und eigener Datenabruf. Anfragen vertritt nur diesen Einstieg, nicht das Gewicht eines Chats, Speiseplans oder Einstellungsformulars."
+  },
+  {
+    "route": "/[tenant]/(protected)/rooms",
+    "portal": "OGS",
+    "family": "Verzeichnis und Detail",
+    "representative": "kindersuche-admin, kinderakte-admin, team-person, räume-raum",
+    "reason": "Datenliste mit Suche, Auswahl und separat geladener Detailansicht; keine Zeitbehauptung für einzelne ungemessene Unterseiten."
+  },
+  {
+    "route": "/[tenant]/(protected)/rooms/[id]",
+    "portal": "OGS",
+    "family": "Verzeichnis und Detail",
+    "representative": "kindersuche-admin, kinderakte-admin, team-person, räume-raum",
+    "reason": "Datenliste mit Suche, Auswahl und separat geladener Detailansicht; keine Zeitbehauptung für einzelne ungemessene Unterseiten."
+  },
+  {
+    "route": "/[tenant]/(protected)/rooms/unterwegs",
+    "portal": "OGS",
+    "family": "Verzeichnis und Detail",
+    "representative": "kindersuche-admin, kinderakte-admin, team-person, räume-raum",
+    "reason": "Datenliste mit Suche, Auswahl und separat geladener Detailansicht; keine Zeitbehauptung für einzelne ungemessene Unterseiten."
+  },
+  {
+    "route": "/[tenant]/(protected)/settings",
+    "portal": "OGS",
+    "family": "Fachlisten und Verwaltung",
+    "representative": "anfragen-admin",
+    "reason": "Verglichen wird der erneute Einstieg aus der linken Schulnavigation: bestehende Schulhülle, neue Route und eigener Datenabruf. Anfragen vertritt nur diesen Einstieg, nicht das Gewicht eines Chats, Speiseplans oder Einstellungsformulars."
+  },
+  {
+    "route": "/[tenant]/(protected)/staff",
+    "portal": "OGS",
+    "family": "Verzeichnis und Detail",
+    "representative": "kindersuche-admin, kinderakte-admin, team-person, räume-raum",
+    "reason": "Datenliste mit Suche, Auswahl und separat geladener Detailansicht; keine Zeitbehauptung für einzelne ungemessene Unterseiten."
+  },
+  {
+    "route": "/[tenant]/(protected)/staff/[id]",
+    "portal": "OGS",
+    "family": "Verzeichnis und Detail",
+    "representative": "kindersuche-admin, kinderakte-admin, team-person, räume-raum",
+    "reason": "Datenliste mit Suche, Auswahl und separat geladener Detailansicht; keine Zeitbehauptung für einzelne ungemessene Unterseiten."
+  },
+  {
+    "route": "/[tenant]/(protected)/statistics",
+    "portal": "OGS",
+    "family": "Zeit und Planung",
+    "representative": "zeit-admin, plan-admin, plan-betreuer, dienstplan-admin",
+    "reason": "Zeitraumabhängige Auswertung, Wochenansicht oder Plan."
+  },
+  {
+    "route": "/[tenant]/(protected)/students/[id]",
+    "portal": "OGS",
+    "family": "Verzeichnis und Detail",
+    "representative": "kindersuche-admin, kinderakte-admin, team-person, räume-raum",
+    "reason": "Datenliste mit Suche, Auswahl und separat geladener Detailansicht; keine Zeitbehauptung für einzelne ungemessene Unterseiten."
+  },
+  {
+    "route": "/[tenant]/(protected)/students/[id]/change-history",
+    "portal": "OGS",
+    "family": "Verzeichnis und Detail",
+    "representative": "kindersuche-admin, kinderakte-admin, team-person, räume-raum",
+    "reason": "Datenliste mit Suche, Auswahl und separat geladener Detailansicht; keine Zeitbehauptung für einzelne ungemessene Unterseiten."
+  },
+  {
+    "route": "/[tenant]/(protected)/students/[id]/feedback-history",
+    "portal": "OGS",
+    "family": "Verzeichnis und Detail",
+    "representative": "kindersuche-admin, kinderakte-admin, team-person, räume-raum",
+    "reason": "Datenliste mit Suche, Auswahl und separat geladener Detailansicht; keine Zeitbehauptung für einzelne ungemessene Unterseiten."
+  },
+  {
+    "route": "/[tenant]/(protected)/students/[id]/room-history",
+    "portal": "OGS",
+    "family": "Verzeichnis und Detail",
+    "representative": "kindersuche-admin, kinderakte-admin, team-person, räume-raum",
+    "reason": "Datenliste mit Suche, Auswahl und separat geladener Detailansicht; keine Zeitbehauptung für einzelne ungemessene Unterseiten."
+  },
+  {
+    "route": "/[tenant]/(protected)/students/[id]/unfallanzeigen/[reportId]",
+    "portal": "OGS",
+    "family": "Verzeichnis und Detail",
+    "representative": "kindersuche-admin, kinderakte-admin, team-person, räume-raum",
+    "reason": "Datenliste mit Suche, Auswahl und separat geladener Detailansicht; keine Zeitbehauptung für einzelne ungemessene Unterseiten."
+  },
+  {
+    "route": "/[tenant]/(protected)/students/search",
+    "portal": "OGS",
+    "family": "Verzeichnis und Detail",
+    "representative": "kindersuche-admin, kinderakte-admin, team-person, räume-raum",
+    "reason": "Datenliste mit Suche, Auswahl und separat geladener Detailansicht; keine Zeitbehauptung für einzelne ungemessene Unterseiten."
+  },
+  {
+    "route": "/[tenant]/(protected)/substitutions",
+    "portal": "OGS",
+    "family": "Tagesbetrieb",
+    "representative": "aufsicht-admin, gruppe-navigation, start-betreuer",
+    "reason": "Kontextabhängige Tagesdaten oder Startkarten, bei Aufsicht und Gruppen mit aktiver Auswahl."
+  },
+  {
+    "route": "/[tenant]/(protected)/tagesinformationen",
+    "portal": "OGS",
+    "family": "Tagesbetrieb",
+    "representative": "aufsicht-admin, gruppe-navigation, start-betreuer",
+    "reason": "Kontextabhängige Tagesdaten oder Startkarten, bei Aufsicht und Gruppen mit aktiver Auswahl."
+  },
+  {
+    "route": "/[tenant]/(protected)/tagesplan",
+    "portal": "OGS",
+    "family": "Zeit und Planung",
+    "representative": "zeit-admin, plan-admin, plan-betreuer, dienstplan-admin",
+    "reason": "Zeitraumabhängige Auswertung, Wochenansicht oder Plan."
+  },
+  {
+    "route": "/[tenant]/(protected)/team-chat",
+    "portal": "OGS",
+    "family": "Fachlisten und Verwaltung",
+    "representative": "anfragen-admin",
+    "reason": "Verglichen wird der erneute Einstieg aus der linken Schulnavigation: bestehende Schulhülle, neue Route und eigener Datenabruf. Anfragen vertritt nur diesen Einstieg, nicht das Gewicht eines Chats, Speiseplans oder Einstellungsformulars."
+  },
+  {
+    "route": "/[tenant]/(protected)/team-chat/[threadID]",
+    "portal": "OGS",
+    "family": "Fachlisten und Verwaltung",
+    "representative": "anfragen-admin",
+    "reason": "Verglichen wird der erneute Einstieg aus der linken Schulnavigation: bestehende Schulhülle, neue Route und eigener Datenabruf. Anfragen vertritt nur diesen Einstieg, nicht das Gewicht eines Chats, Speiseplans oder Einstellungsformulars."
+  },
+  {
+    "route": "/[tenant]/(protected)/time-tracking",
+    "portal": "OGS",
+    "family": "Zeit und Planung",
+    "representative": "zeit-admin, plan-admin, plan-betreuer, dienstplan-admin",
+    "reason": "Zeitraumabhängige Auswertung, Wochenansicht oder Plan."
+  },
+  {
+    "route": "/[tenant]/(protected)/umfragen",
+    "portal": "OGS",
+    "family": "Fachlisten und Verwaltung",
+    "representative": "anfragen-admin",
+    "reason": "Verglichen wird der erneute Einstieg aus der linken Schulnavigation: bestehende Schulhülle, neue Route und eigener Datenabruf. Anfragen vertritt nur diesen Einstieg, nicht das Gewicht eines Chats, Speiseplans oder Einstellungsformulars."
+  },
+  {
+    "route": "/[tenant]/(protected)/umfragen/[id]",
+    "portal": "OGS",
+    "family": "Fachlisten und Verwaltung",
+    "representative": "anfragen-admin",
+    "reason": "Verglichen wird der erneute Einstieg aus der linken Schulnavigation: bestehende Schulhülle, neue Route und eigener Datenabruf. Anfragen vertritt nur diesen Einstieg, nicht das Gewicht eines Chats, Speiseplans oder Einstellungsformulars."
+  },
+  {
+    "route": "/[tenant]/(protected)/vertretung",
+    "portal": "OGS",
+    "family": "Tagesbetrieb",
+    "representative": "aufsicht-admin, gruppe-navigation, start-betreuer",
+    "reason": "Kontextabhängige Tagesdaten oder Startkarten, bei Aufsicht und Gruppen mit aktiver Auswahl."
+  },
+  {
+    "route": "/[tenant]/(protected)/wochenprotokolle",
+    "portal": "OGS",
+    "family": "Zeit und Planung",
+    "representative": "zeit-admin, plan-admin, plan-betreuer, dienstplan-admin",
+    "reason": "Zeitraumabhängige Auswertung, Wochenansicht oder Plan."
+  },
+  {
+    "route": "/[tenant]/(protected)/wochenprotokolle/[protocolId]",
+    "portal": "OGS",
+    "family": "Zeit und Planung",
+    "representative": "zeit-admin, plan-admin, plan-betreuer, dienstplan-admin",
+    "reason": "Zeitraumabhängige Auswertung, Wochenansicht oder Plan."
+  },
+  {
+    "route": "/[tenant]/(public)/anmeldung",
+    "portal": "OGS",
+    "family": "Nicht wiederverwendbar",
+    "representative": "–",
+    "reason": "Einmaliger, schreibender oder tokengebundener Vorgang; kein erneuter Besuch gültigen Fachinhalts."
+  },
+  {
+    "route": "/[tenant]/(public)/anmeldung/[phaseId]",
+    "portal": "OGS",
+    "family": "Nicht wiederverwendbar",
+    "representative": "–",
+    "reason": "Einmaliger, schreibender oder tokengebundener Vorgang; kein erneuter Besuch gültigen Fachinhalts."
+  },
+  {
+    "route": "/[tenant]/(public)/anmeldung/preview",
+    "portal": "OGS",
+    "family": "Nicht wiederverwendbar",
+    "representative": "–",
+    "reason": "Einmaliger, schreibender oder tokengebundener Vorgang; kein erneuter Besuch gültigen Fachinhalts."
+  },
+  {
+    "route": "/[tenant]/(public)/anmeldung/status/[token]",
+    "portal": "OGS",
+    "family": "Nicht wiederverwendbar",
+    "representative": "–",
+    "reason": "Einmaliger, schreibender oder tokengebundener Vorgang; kein erneuter Besuch gültigen Fachinhalts."
+  },
+  {
+    "route": "/[tenant]/(public)/anmeldung/status/[token]/adjust",
+    "portal": "OGS",
+    "family": "Nicht wiederverwendbar",
+    "representative": "–",
+    "reason": "Einmaliger, schreibender oder tokengebundener Vorgang; kein erneuter Besuch gültigen Fachinhalts."
+  },
+  {
+    "route": "/[tenant]/(public)/anmeldung/status/[token]/edit",
+    "portal": "OGS",
+    "family": "Nicht wiederverwendbar",
+    "representative": "–",
+    "reason": "Einmaliger, schreibender oder tokengebundener Vorgang; kein erneuter Besuch gültigen Fachinhalts."
+  },
+  {
+    "route": "/[tenant]/(public)/anmeldung/submitted",
+    "portal": "OGS",
+    "family": "Nicht wiederverwendbar",
+    "representative": "–",
+    "reason": "Einmaliger, schreibender oder tokengebundener Vorgang; kein erneuter Besuch gültigen Fachinhalts."
+  },
+  {
+    "route": "/[tenant]/(public)/demo",
+    "portal": "OGS",
+    "family": "Öffentlich",
+    "representative": "–",
+    "reason": "Öffentlicher Einstieg, Hilfe, Einladung oder Anmeldung; keine bestehende Fachsitzung."
+  },
+  {
+    "route": "/[tenant]/(public)/display",
+    "portal": "OGS",
+    "family": "Öffentlich",
+    "representative": "–",
+    "reason": "Öffentlicher Einstieg, Hilfe, Einladung oder Anmeldung; keine bestehende Fachsitzung."
+  },
+  {
+    "route": "/[tenant]/(public)/invite",
+    "portal": "OGS",
+    "family": "Nicht wiederverwendbar",
+    "representative": "–",
+    "reason": "Einmaliger, schreibender oder tokengebundener Vorgang; kein erneuter Besuch gültigen Fachinhalts."
+  },
+  {
+    "route": "/[tenant]/(public)/reset-password",
+    "portal": "OGS",
+    "family": "Nicht wiederverwendbar",
+    "representative": "–",
+    "reason": "Einmaliger, schreibender oder tokengebundener Vorgang; kein erneuter Besuch gültigen Fachinhalts."
+  },
+  {
+    "route": "/[tenant]/(public)/traeger-uebergabe",
+    "portal": "OGS",
+    "family": "Nicht wiederverwendbar",
+    "representative": "–",
+    "reason": "Einmaliger, schreibender oder tokengebundener Vorgang; kein erneuter Besuch gültigen Fachinhalts."
+  },
+  {
+    "route": "/[tenant]/[...not-found]",
+    "portal": "OGS",
+    "family": "Öffentlich",
+    "representative": "–",
+    "reason": "Öffentlicher Einstieg, Hilfe, Einladung oder Anmeldung; keine bestehende Fachsitzung."
+  },
+  {
+    "route": "/caterer",
+    "portal": "caterer",
+    "family": "Bestellungen und Konto",
+    "representative": "bestellungen-konto, konto-bestellungen, bestellungen-zeitraum",
+    "reason": "Zwei geschützte Seiten; Zeiträume und Schuldetails bleiben im selben History-Eintrag."
+  },
+  {
+    "route": "/caterer/einladung/[schoolId]/[token]",
+    "portal": "caterer",
+    "family": "Nicht wiederverwendbar",
+    "representative": "–",
+    "reason": "Einmaliger, schreibender oder tokengebundener Vorgang; kein erneuter Besuch gültigen Fachinhalts."
+  },
+  {
+    "route": "/caterer/konto",
+    "portal": "caterer",
+    "family": "Bestellungen und Konto",
+    "representative": "bestellungen-konto, konto-bestellungen, bestellungen-zeitraum",
+    "reason": "Zwei geschützte Seiten; Zeiträume und Schuldetails bleiben im selben History-Eintrag."
+  },
+  {
+    "route": "/caterer/login",
+    "portal": "caterer",
+    "family": "Öffentlich",
+    "representative": "–",
+    "reason": "Öffentlicher Einstieg, Hilfe, Einladung oder Anmeldung; keine bestehende Fachsitzung."
+  },
+  {
+    "route": "/caterer/reset-password",
+    "portal": "caterer",
+    "family": "Nicht wiederverwendbar",
+    "representative": "–",
+    "reason": "Einmaliger, schreibender oder tokengebundener Vorgang; kein erneuter Besuch gültigen Fachinhalts."
+  },
+  {
+    "route": "/demo",
+    "portal": "öffentlich",
+    "family": "Öffentlich",
+    "representative": "–",
+    "reason": "Öffentlicher Einstieg, Hilfe, Einladung oder Anmeldung; keine bestehende Fachsitzung."
+  },
+  {
+    "route": "/help/[[...topic]]",
+    "portal": "öffentlich",
+    "family": "Öffentlich",
+    "representative": "–",
+    "reason": "Öffentlicher Einstieg, Hilfe, Einladung oder Anmeldung; keine bestehende Fachsitzung."
+  },
+  {
+    "route": "/help/nfc/erste-schritte",
+    "portal": "öffentlich",
+    "family": "Öffentlich",
+    "representative": "–",
+    "reason": "Öffentlicher Einstieg, Hilfe, Einladung oder Anmeldung; keine bestehende Fachsitzung."
+  },
+  {
+    "route": "/invite",
+    "portal": "öffentlich",
+    "family": "Nicht wiederverwendbar",
+    "representative": "–",
+    "reason": "Einmaliger, schreibender oder tokengebundener Vorgang; kein erneuter Besuch gültigen Fachinhalts."
+  },
+  {
+    "route": "/lohnbuero/[link]",
+    "portal": "öffentlich",
+    "family": "Nicht wiederverwendbar",
+    "representative": "–",
+    "reason": "Einmaliger, schreibender oder tokengebundener Vorgang; kein erneuter Besuch gültigen Fachinhalts."
+  },
+  {
+    "route": "/onboarding",
+    "portal": "öffentlich",
+    "family": "Nicht wiederverwendbar",
+    "representative": "–",
+    "reason": "Einmaliger, schreibender oder tokengebundener Vorgang; kein erneuter Besuch gültigen Fachinhalts."
+  },
+  {
+    "route": "/operator",
+    "portal": "operator",
+    "family": "Weiterleitung",
+    "representative": "trägerliste-detail",
+    "reason": "Die Operator-Wurzel leitet auf das Trägerverzeichnis weiter; kein eigener Fachinhalt."
+  },
+  {
+    "route": "/operator/accounts",
+    "portal": "operator",
+    "family": "Plattformverzeichnis",
+    "representative": "trägerliste-detail, schulen-schuldetail, trägerliste-konten",
+    "reason": "Plattformweite Liste, Stammdaten und gefilterte Unterlisten in der Operator-Hülle."
+  },
+  {
+    "route": "/operator/announcements",
+    "portal": "operator",
+    "family": "Plattformverzeichnis",
+    "representative": "trägerliste-detail, schulen-schuldetail, trägerliste-konten",
+    "reason": "Plattformweite Liste, Stammdaten und gefilterte Unterlisten in der Operator-Hülle."
+  },
+  {
+    "route": "/operator/billing",
+    "portal": "operator",
+    "family": "Plattformverzeichnis",
+    "representative": "trägerliste-detail, schulen-schuldetail, trägerliste-konten",
+    "reason": "Plattformweite Liste, Stammdaten und gefilterte Unterlisten in der Operator-Hülle."
+  },
+  {
+    "route": "/operator/caterers",
+    "portal": "operator",
+    "family": "Plattformverzeichnis",
+    "representative": "trägerliste-detail, schulen-schuldetail, trägerliste-konten",
+    "reason": "Plattformweite Liste, Stammdaten und gefilterte Unterlisten in der Operator-Hülle."
+  },
+  {
+    "route": "/operator/devices",
+    "portal": "operator",
+    "family": "Plattformverzeichnis",
+    "representative": "trägerliste-detail, schulen-schuldetail, trägerliste-konten",
+    "reason": "Plattformweite Liste, Stammdaten und gefilterte Unterlisten in der Operator-Hülle."
+  },
+  {
+    "route": "/operator/email-confirm",
+    "portal": "operator",
+    "family": "Nicht wiederverwendbar",
+    "representative": "–",
+    "reason": "Einmaliger, schreibender oder tokengebundener Vorgang; kein erneuter Besuch gültigen Fachinhalts."
+  },
+  {
+    "route": "/operator/invite",
+    "portal": "operator",
+    "family": "Nicht wiederverwendbar",
+    "representative": "–",
+    "reason": "Einmaliger, schreibender oder tokengebundener Vorgang; kein erneuter Besuch gültigen Fachinhalts."
+  },
+  {
+    "route": "/operator/login",
+    "portal": "operator",
+    "family": "Öffentlich",
+    "representative": "–",
+    "reason": "Öffentlicher Einstieg, Hilfe, Einladung oder Anmeldung; keine bestehende Fachsitzung."
+  },
+  {
+    "route": "/operator/operators",
+    "portal": "operator",
+    "family": "Plattformverzeichnis",
+    "representative": "trägerliste-detail, schulen-schuldetail, trägerliste-konten",
+    "reason": "Plattformweite Liste, Stammdaten und gefilterte Unterlisten in der Operator-Hülle."
+  },
+  {
+    "route": "/operator/organizations",
+    "portal": "operator",
+    "family": "Plattformverzeichnis",
+    "representative": "trägerliste-detail, schulen-schuldetail, trägerliste-konten",
+    "reason": "Plattformweite Liste, Stammdaten und gefilterte Unterlisten in der Operator-Hülle."
+  },
+  {
+    "route": "/operator/organizations/[slug]",
+    "portal": "operator",
+    "family": "Plattformverzeichnis",
+    "representative": "trägerliste-detail, schulen-schuldetail, trägerliste-konten",
+    "reason": "Plattformweite Liste, Stammdaten und gefilterte Unterlisten in der Operator-Hülle."
+  },
+  {
+    "route": "/operator/organizations/[slug]/schools/[schoolSlug]",
+    "portal": "operator",
+    "family": "Plattformverzeichnis",
+    "representative": "trägerliste-detail, schulen-schuldetail, trägerliste-konten",
+    "reason": "Plattformweite Liste, Stammdaten und gefilterte Unterlisten in der Operator-Hülle."
+  },
+  {
+    "route": "/operator/persons",
+    "portal": "operator",
+    "family": "Plattformverzeichnis",
+    "representative": "trägerliste-detail, schulen-schuldetail, trägerliste-konten",
+    "reason": "Plattformweite Liste, Stammdaten und gefilterte Unterlisten in der Operator-Hülle."
+  },
+  {
+    "route": "/operator/provisioning",
+    "portal": "operator",
+    "family": "Plattformverzeichnis",
+    "representative": "trägerliste-detail, schulen-schuldetail, trägerliste-konten",
+    "reason": "Plattformweite Liste, Stammdaten und gefilterte Unterlisten in der Operator-Hülle."
+  },
+  {
+    "route": "/operator/schools",
+    "portal": "operator",
+    "family": "Plattformverzeichnis",
+    "representative": "trägerliste-detail, schulen-schuldetail, trägerliste-konten",
+    "reason": "Plattformweite Liste, Stammdaten und gefilterte Unterlisten in der Operator-Hülle."
+  },
+  {
+    "route": "/operator/schools/[id]/settings",
+    "portal": "operator",
+    "family": "Plattformverzeichnis",
+    "representative": "trägerliste-detail, schulen-schuldetail, trägerliste-konten",
+    "reason": "Plattformweite Liste, Stammdaten und gefilterte Unterlisten in der Operator-Hülle."
+  },
+  {
+    "route": "/operator/settings",
+    "portal": "operator",
+    "family": "Plattformverzeichnis",
+    "representative": "trägerliste-detail, schulen-schuldetail, trägerliste-konten",
+    "reason": "Plattformweite Liste, Stammdaten und gefilterte Unterlisten in der Operator-Hülle."
+  },
+  {
+    "route": "/operator/unregistered-tags",
+    "portal": "operator",
+    "family": "Plattformverzeichnis",
+    "representative": "trägerliste-detail, schulen-schuldetail, trägerliste-konten",
+    "reason": "Plattformweite Liste, Stammdaten und gefilterte Unterlisten in der Operator-Hülle."
+  },
+  {
+    "route": "/parents",
+    "portal": "parents",
+    "family": "Familie und Kind",
+    "representative": "start-kind, kind-start",
+    "reason": "Kontogebundene Kinderkarten und kindbezogene Detaildaten."
+  },
+  {
+    "route": "/parents/accept-guardian-invite/[token]",
+    "portal": "parents",
+    "family": "Nicht wiederverwendbar",
+    "representative": "–",
+    "reason": "Einmaliger, schreibender oder tokengebundener Vorgang; kein erneuter Besuch gültigen Fachinhalts."
+  },
+  {
+    "route": "/parents/anmeldung",
+    "portal": "parents",
+    "family": "Nicht wiederverwendbar",
+    "representative": "–",
+    "reason": "Einmaliger, schreibender oder tokengebundener Vorgang; kein erneuter Besuch gültigen Fachinhalts."
+  },
+  {
+    "route": "/parents/anmeldung/[tenantSlug]/[phaseId]",
+    "portal": "parents",
+    "family": "Nicht wiederverwendbar",
+    "representative": "–",
+    "reason": "Einmaliger, schreibender oder tokengebundener Vorgang; kein erneuter Besuch gültigen Fachinhalts."
+  },
+  {
+    "route": "/parents/anmeldung/status/[token]",
+    "portal": "parents",
+    "family": "Nicht wiederverwendbar",
+    "representative": "–",
+    "reason": "Einmaliger, schreibender oder tokengebundener Vorgang; kein erneuter Besuch gültigen Fachinhalts."
+  },
+  {
+    "route": "/parents/anmeldung/status/[token]/adjust",
+    "portal": "parents",
+    "family": "Nicht wiederverwendbar",
+    "representative": "–",
+    "reason": "Einmaliger, schreibender oder tokengebundener Vorgang; kein erneuter Besuch gültigen Fachinhalts."
+  },
+  {
+    "route": "/parents/anmeldung/status/[token]/edit",
+    "portal": "parents",
+    "family": "Nicht wiederverwendbar",
+    "representative": "–",
+    "reason": "Einmaliger, schreibender oder tokengebundener Vorgang; kein erneuter Besuch gültigen Fachinhalts."
+  },
+  {
+    "route": "/parents/calendar",
+    "portal": "parents",
+    "family": "Familienlisten und Konto",
+    "representative": "start-nachrichten",
+    "reason": "Weitere wiederkehrende Familienansichten; Zwischenstationen sind keine separat gemessenen Zielzeiten."
+  },
+  {
+    "route": "/parents/children",
+    "portal": "parents",
+    "family": "Familie und Kind",
+    "representative": "start-kind, kind-start",
+    "reason": "Kontogebundene Kinderkarten und kindbezogene Detaildaten."
+  },
+  {
+    "route": "/parents/children/[id]",
+    "portal": "parents",
+    "family": "Familie und Kind",
+    "representative": "start-kind, kind-start",
+    "reason": "Kontogebundene Kinderkarten und kindbezogene Detaildaten."
+  },
+  {
+    "route": "/parents/children/[id]/elternsprechtag",
+    "portal": "parents",
+    "family": "Familie und Kind",
+    "representative": "start-kind, kind-start",
+    "reason": "Kontogebundene Kinderkarten und kindbezogene Detaildaten."
+  },
+  {
+    "route": "/parents/demo",
+    "portal": "parents",
+    "family": "Öffentlich",
+    "representative": "–",
+    "reason": "Öffentlicher Einstieg, Hilfe, Einladung oder Anmeldung; keine bestehende Fachsitzung."
+  },
+  {
+    "route": "/parents/documents",
+    "portal": "parents",
+    "family": "Familienlisten und Konto",
+    "representative": "start-nachrichten",
+    "reason": "Weitere wiederkehrende Familienansichten; Zwischenstationen sind keine separat gemessenen Zielzeiten."
+  },
+  {
+    "route": "/parents/documents/vertraege/[organizationId]/[contractId]",
+    "portal": "parents",
+    "family": "Familienlisten und Konto",
+    "representative": "start-nachrichten",
+    "reason": "Weitere wiederkehrende Familienansichten; Zwischenstationen sind keine separat gemessenen Zielzeiten."
+  },
+  {
+    "route": "/parents/documents/vertrag/[organizationId]/[contractId]",
+    "portal": "parents",
+    "family": "Familienlisten und Konto",
+    "representative": "start-nachrichten",
+    "reason": "Weitere wiederkehrende Familienansichten; Zwischenstationen sind keine separat gemessenen Zielzeiten."
+  },
+  {
+    "route": "/parents/ferienanmeldung/[token]",
+    "portal": "parents",
+    "family": "Nicht wiederverwendbar",
+    "representative": "–",
+    "reason": "Einmaliger, schreibender oder tokengebundener Vorgang; kein erneuter Besuch gültigen Fachinhalts."
+  },
+  {
+    "route": "/parents/ferienanmeldung/status/[token]",
+    "portal": "parents",
+    "family": "Nicht wiederverwendbar",
+    "representative": "–",
+    "reason": "Einmaliger, schreibender oder tokengebundener Vorgang; kein erneuter Besuch gültigen Fachinhalts."
+  },
+  {
+    "route": "/parents/ferienanmeldungen",
+    "portal": "parents",
+    "family": "Familienlisten und Konto",
+    "representative": "start-nachrichten",
+    "reason": "Weitere wiederkehrende Familienansichten; Zwischenstationen sind keine separat gemessenen Zielzeiten."
+  },
+  {
+    "route": "/parents/ferienkonto/[token]",
+    "portal": "parents",
+    "family": "Nicht wiederverwendbar",
+    "representative": "–",
+    "reason": "Einmaliger, schreibender oder tokengebundener Vorgang; kein erneuter Besuch gültigen Fachinhalts."
+  },
+  {
+    "route": "/parents/invite",
+    "portal": "parents",
+    "family": "Nicht wiederverwendbar",
+    "representative": "–",
+    "reason": "Einmaliger, schreibender oder tokengebundener Vorgang; kein erneuter Besuch gültigen Fachinhalts."
+  },
+  {
+    "route": "/parents/login",
+    "portal": "parents",
+    "family": "Öffentlich",
+    "representative": "–",
+    "reason": "Öffentlicher Einstieg, Hilfe, Einladung oder Anmeldung; keine bestehende Fachsitzung."
+  },
+  {
+    "route": "/parents/meal-plan",
+    "portal": "parents",
+    "family": "Familienlisten und Konto",
+    "representative": "start-nachrichten",
+    "reason": "Weitere wiederkehrende Familienansichten; Zwischenstationen sind keine separat gemessenen Zielzeiten."
+  },
+  {
+    "route": "/parents/messages",
+    "portal": "parents",
+    "family": "Familienlisten und Konto",
+    "representative": "start-nachrichten",
+    "reason": "Weitere wiederkehrende Familienansichten; Zwischenstationen sind keine separat gemessenen Zielzeiten."
+  },
+  {
+    "route": "/parents/messages/[studentId]",
+    "portal": "parents",
+    "family": "Familienlisten und Konto",
+    "representative": "start-nachrichten",
+    "reason": "Weitere wiederkehrende Familienansichten; Zwischenstationen sind keine separat gemessenen Zielzeiten."
+  },
+  {
+    "route": "/parents/messages/group/[groupThreadId]",
+    "portal": "parents",
+    "family": "Familienlisten und Konto",
+    "representative": "start-nachrichten",
+    "reason": "Weitere wiederkehrende Familienansichten; Zwischenstationen sind keine separat gemessenen Zielzeiten."
+  },
+  {
+    "route": "/parents/news",
+    "portal": "parents",
+    "family": "Familienlisten und Konto",
+    "representative": "start-nachrichten",
+    "reason": "Weitere wiederkehrende Familienansichten; Zwischenstationen sind keine separat gemessenen Zielzeiten."
+  },
+  {
+    "route": "/parents/news/[id]/nachweis",
+    "portal": "parents",
+    "family": "Familienlisten und Konto",
+    "representative": "start-nachrichten",
+    "reason": "Weitere wiederkehrende Familienansichten; Zwischenstationen sind keine separat gemessenen Zielzeiten."
+  },
+  {
+    "route": "/parents/reset-password",
+    "portal": "parents",
+    "family": "Nicht wiederverwendbar",
+    "representative": "–",
+    "reason": "Einmaliger, schreibender oder tokengebundener Vorgang; kein erneuter Besuch gültigen Fachinhalts."
+  },
+  {
+    "route": "/parents/settings",
+    "portal": "parents",
+    "family": "Familienlisten und Konto",
+    "representative": "start-nachrichten",
+    "reason": "Weitere wiederkehrende Familienansichten; Zwischenstationen sind keine separat gemessenen Zielzeiten."
+  },
+  {
+    "route": "/parents/vertrag-unterschreiben/[link]",
+    "portal": "parents",
+    "family": "Nicht wiederverwendbar",
+    "representative": "–",
+    "reason": "Einmaliger, schreibender oder tokengebundener Vorgang; kein erneuter Besuch gültigen Fachinhalts."
+  },
+  {
+    "route": "/reset-password",
+    "portal": "öffentlich",
+    "family": "Nicht wiederverwendbar",
+    "representative": "–",
+    "reason": "Einmaliger, schreibender oder tokengebundener Vorgang; kein erneuter Besuch gültigen Fachinhalts."
+  },
+  {
+    "route": "/school",
+    "portal": "school",
+    "family": "Schultag, Listen und Klassenkontext",
+    "representative": "tagesübersicht-klasse, fehlzeiten-start",
+    "reason": "Schulhülle mit Tagesdaten, Klassen-/Kind-Auswahl oder eigener Fachliste."
+  },
+  {
+    "route": "/school/aufsichten",
+    "portal": "school",
+    "family": "Schultag, Listen und Klassenkontext",
+    "representative": "tagesübersicht-klasse, fehlzeiten-start",
+    "reason": "Schulhülle mit Tagesdaten, Klassen-/Kind-Auswahl oder eigener Fachliste."
+  },
+  {
+    "route": "/school/einstellungen",
+    "portal": "school",
+    "family": "Schultag, Listen und Klassenkontext",
+    "representative": "tagesübersicht-klasse, fehlzeiten-start",
+    "reason": "Schulhülle mit Tagesdaten, Klassen-/Kind-Auswahl oder eigener Fachliste."
+  },
+  {
+    "route": "/school/elternbriefe",
+    "portal": "school",
+    "family": "Schultag, Listen und Klassenkontext",
+    "representative": "tagesübersicht-klasse, fehlzeiten-start",
+    "reason": "Schulhülle mit Tagesdaten, Klassen-/Kind-Auswahl oder eigener Fachliste."
+  },
+  {
+    "route": "/school/elternbriefe/[id]",
+    "portal": "school",
+    "family": "Schultag, Listen und Klassenkontext",
+    "representative": "tagesübersicht-klasse, fehlzeiten-start",
+    "reason": "Schulhülle mit Tagesdaten, Klassen-/Kind-Auswahl oder eigener Fachliste."
+  },
+  {
+    "route": "/school/elternsprechtag",
+    "portal": "school",
+    "family": "Schultag, Listen und Klassenkontext",
+    "representative": "tagesübersicht-klasse, fehlzeiten-start",
+    "reason": "Schulhülle mit Tagesdaten, Klassen-/Kind-Auswahl oder eigener Fachliste."
+  },
+  {
+    "route": "/school/fehlzeiten",
+    "portal": "school",
+    "family": "Schultag, Listen und Klassenkontext",
+    "representative": "tagesübersicht-klasse, fehlzeiten-start",
+    "reason": "Schulhülle mit Tagesdaten, Klassen-/Kind-Auswahl oder eigener Fachliste."
+  },
+  {
+    "route": "/school/invite",
+    "portal": "school",
+    "family": "Nicht wiederverwendbar",
+    "representative": "–",
+    "reason": "Einmaliger, schreibender oder tokengebundener Vorgang; kein erneuter Besuch gültigen Fachinhalts."
+  },
+  {
+    "route": "/school/kalender",
+    "portal": "school",
+    "family": "Schultag, Listen und Klassenkontext",
+    "representative": "tagesübersicht-klasse, fehlzeiten-start",
+    "reason": "Schulhülle mit Tagesdaten, Klassen-/Kind-Auswahl oder eigener Fachliste."
+  },
+  {
+    "route": "/school/klasse",
+    "portal": "school",
+    "family": "Schultag, Listen und Klassenkontext",
+    "representative": "tagesübersicht-klasse, fehlzeiten-start",
+    "reason": "Schulhülle mit Tagesdaten, Klassen-/Kind-Auswahl oder eigener Fachliste."
+  },
+  {
+    "route": "/school/klasse/kind",
+    "portal": "school",
+    "family": "Schultag, Listen und Klassenkontext",
+    "representative": "tagesübersicht-klasse, fehlzeiten-start",
+    "reason": "Schulhülle mit Tagesdaten, Klassen-/Kind-Auswahl oder eigener Fachliste."
+  },
+  {
+    "route": "/school/login",
+    "portal": "school",
+    "family": "Öffentlich",
+    "representative": "–",
+    "reason": "Öffentlicher Einstieg, Hilfe, Einladung oder Anmeldung; keine bestehende Fachsitzung."
+  },
+  {
+    "route": "/school/nachrichten",
+    "portal": "school",
+    "family": "Schultag, Listen und Klassenkontext",
+    "representative": "tagesübersicht-klasse, fehlzeiten-start",
+    "reason": "Schulhülle mit Tagesdaten, Klassen-/Kind-Auswahl oder eigener Fachliste."
+  },
+  {
+    "route": "/school/nachrichten/[threadID]",
+    "portal": "school",
+    "family": "Schultag, Listen und Klassenkontext",
+    "representative": "tagesübersicht-klasse, fehlzeiten-start",
+    "reason": "Schulhülle mit Tagesdaten, Klassen-/Kind-Auswahl oder eigener Fachliste."
+  },
+  {
+    "route": "/school/reset-password",
+    "portal": "school",
+    "family": "Nicht wiederverwendbar",
+    "representative": "–",
+    "reason": "Einmaliger, schreibender oder tokengebundener Vorgang; kein erneuter Besuch gültigen Fachinhalts."
+  },
+  {
+    "route": "/school/tagesinformationen",
+    "portal": "school",
+    "family": "Schultag, Listen und Klassenkontext",
+    "representative": "tagesübersicht-klasse, fehlzeiten-start",
+    "reason": "Schulhülle mit Tagesdaten, Klassen-/Kind-Auswahl oder eigener Fachliste."
+  },
+  {
+    "route": "/start",
+    "portal": "öffentlich",
+    "family": "Öffentlich",
+    "representative": "–",
+    "reason": "Öffentlicher Einstieg, Hilfe, Einladung oder Anmeldung; keine bestehende Fachsitzung."
+  },
+  {
+    "route": "/traeger",
+    "portal": "traeger",
+    "family": "Standorte und Kennzahlen",
+    "representative": "übersicht-schule, belegung-übersicht",
+    "reason": "Trägerweite Ansicht, Zeilen je Schule und Auswahl einer einzelnen Schule."
+  },
+  {
+    "route": "/traeger/abrechnung",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/abrechnung/[id]",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/abrechnung/[id]/faelligkeiten",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/abrechnung/ermaessigungen",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/abrechnung/exporte",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/abrechnung/exporte/empfaenger",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/abrechnung/exporte/empfaenger/[id]",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/abrechnung/exporte/empfaenger/neu",
+    "portal": "traeger",
+    "family": "Nicht wiederverwendbar",
+    "representative": "–",
+    "reason": "Einmaliger, schreibender oder tokengebundener Vorgang; kein erneuter Besuch gültigen Fachinhalts."
+  },
+  {
+    "route": "/traeger/abrechnung/exporte/feldzuordnung",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/abrechnung/exporte/konten",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/abrechnung/familien",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/abrechnung/familien/[id]",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/abrechnung/familien/zahlung/[contractId]",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/abrechnung/jahresbescheide",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/abrechnung/jahresbescheide/[id]",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/abrechnung/jahresbescheide/[id]/bescheid/[contractId]",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/abrechnung/jahresbescheide/[id]/lastschrift",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/abrechnung/jahresbescheide/[id]/versand",
+    "portal": "traeger",
+    "family": "Nicht wiederverwendbar",
+    "representative": "–",
+    "reason": "Einmaliger, schreibender oder tokengebundener Vorgang; kein erneuter Besuch gültigen Fachinhalts."
+  },
+  {
+    "route": "/traeger/abrechnung/kinderzahl",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/abrechnung/kinderzahl/import",
+    "portal": "traeger",
+    "family": "Nicht wiederverwendbar",
+    "representative": "–",
+    "reason": "Einmaliger, schreibender oder tokengebundener Vorgang; kein erneuter Besuch gültigen Fachinhalts."
+  },
+  {
+    "route": "/traeger/abrechnung/kostentraeger",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/abrechnung/lastschrift",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/abrechnung/lastschrift/[contractId]",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/abrechnung/lastschrift/import",
+    "portal": "traeger",
+    "family": "Nicht wiederverwendbar",
+    "representative": "–",
+    "reason": "Einmaliger, schreibender oder tokengebundener Vorgang; kein erneuter Besuch gültigen Fachinhalts."
+  },
+  {
+    "route": "/traeger/abrechnung/mensa",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/abrechnung/monatsbeitraege",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/abrechnung/monatsbeitraege/[id]",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/abrechnung/monatsbeitraege/[id]/empfaenger/[contractId]",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/abrechnung/monatsbeitraege/[id]/faelligkeiten",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/abrechnung/monatsbeitraege/[id]/rechnung/[contractId]",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/abrechnung/monatsbeitraege/[id]/schreiben",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/abrechnung/nachweise",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/abrechnung/preise",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/ankunft-abholung",
+    "portal": "traeger",
+    "family": "Standorte und Kennzahlen",
+    "representative": "übersicht-schule, belegung-übersicht",
+    "reason": "Trägerweite Ansicht, Zeilen je Schule und Auswahl einer einzelnen Schule."
+  },
+  {
+    "route": "/traeger/anmeldephasen",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/anmeldephasen/[id]",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/anmeldephasen/[id]/angebote/[offeringId]",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/anmeldephasen/[id]/angebote/neu",
+    "portal": "traeger",
+    "family": "Nicht wiederverwendbar",
+    "representative": "–",
+    "reason": "Einmaliger, schreibender oder tokengebundener Vorgang; kein erneuter Besuch gültigen Fachinhalts."
+  },
+  {
+    "route": "/traeger/anmeldephasen/[id]/vorschau",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/anmeldephasen/neu",
+    "portal": "traeger",
+    "family": "Nicht wiederverwendbar",
+    "representative": "–",
+    "reason": "Einmaliger, schreibender oder tokengebundener Vorgang; kein erneuter Besuch gültigen Fachinhalts."
+  },
+  {
+    "route": "/traeger/auslastung",
+    "portal": "traeger",
+    "family": "Standorte und Kennzahlen",
+    "representative": "übersicht-schule, belegung-übersicht",
+    "reason": "Trägerweite Ansicht, Zeilen je Schule und Auswahl einer einzelnen Schule."
+  },
+  {
+    "route": "/traeger/belegung",
+    "portal": "traeger",
+    "family": "Standorte und Kennzahlen",
+    "representative": "übersicht-schule, belegung-übersicht",
+    "reason": "Trägerweite Ansicht, Zeilen je Schule und Auswahl einer einzelnen Schule."
+  },
+  {
+    "route": "/traeger/berichte",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/berichte/vorlagen/[id]",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/berichte/vorlagen/neu",
+    "portal": "traeger",
+    "family": "Nicht wiederverwendbar",
+    "representative": "–",
+    "reason": "Einmaliger, schreibender oder tokengebundener Vorgang; kein erneuter Besuch gültigen Fachinhalts."
+  },
+  {
+    "route": "/traeger/demo",
+    "portal": "traeger",
+    "family": "Öffentlich",
+    "representative": "–",
+    "reason": "Öffentlicher Einstieg, Hilfe, Einladung oder Anmeldung; keine bestehende Fachsitzung."
+  },
+  {
+    "route": "/traeger/dokumente",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/dokumente/[id]",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/einstellungen",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/einstellungen/abrechnung",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/einstellungen/briefkopf",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/einstellungen/briefkopf/vorlagen",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/einstellungen/briefkopf/vorlagen/[kind]",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/einstellungen/dokumentarten",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/einstellungen/mitglieder",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/einstellungen/module",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/einstellungen/schulrollen",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/einstellungen/zugriffsprotokoll",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/einstellungen/zustaendigkeiten",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/ferien",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/ferien/[id]",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/ferien/[id]/anmeldungen",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/ferien/[id]/anmeldungen/[registrationId]",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/ferien/[id]/formular",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/ferien/[id]/plaetze",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/ferien/[id]/vergabe",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/ferien/kriterien",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/ferien/neu",
+    "portal": "traeger",
+    "family": "Nicht wiederverwendbar",
+    "representative": "–",
+    "reason": "Einmaliger, schreibender oder tokengebundener Vorgang; kein erneuter Besuch gültigen Fachinhalts."
+  },
+  {
+    "route": "/traeger/invite",
+    "portal": "traeger",
+    "family": "Nicht wiederverwendbar",
+    "representative": "–",
+    "reason": "Einmaliger, schreibender oder tokengebundener Vorgang; kein erneuter Besuch gültigen Fachinhalts."
+  },
+  {
+    "route": "/traeger/konto",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/login",
+    "portal": "traeger",
+    "family": "Öffentlich",
+    "representative": "–",
+    "reason": "Öffentlicher Einstieg, Hilfe, Einladung oder Anmeldung; keine bestehende Fachsitzung."
+  },
+  {
+    "route": "/traeger/nachweise",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/personal",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/personal/[id]",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/personal/abwesenheitsarten",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/personal/einsatzplanung",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/personal/einstellen",
+    "portal": "traeger",
+    "family": "Nicht wiederverwendbar",
+    "representative": "–",
+    "reason": "Einmaliger, schreibender oder tokengebundener Vorgang; kein erneuter Besuch gültigen Fachinhalts."
+  },
+  {
+    "route": "/traeger/personal/import",
+    "portal": "traeger",
+    "family": "Nicht wiederverwendbar",
+    "representative": "–",
+    "reason": "Einmaliger, schreibender oder tokengebundener Vorgang; kein erneuter Besuch gültigen Fachinhalts."
+  },
+  {
+    "route": "/traeger/personal/lohnexport",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/personal/vertretungspool",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/reset-password",
+    "portal": "traeger",
+    "family": "Nicht wiederverwendbar",
+    "representative": "–",
+    "reason": "Einmaliger, schreibender oder tokengebundener Vorgang; kein erneuter Besuch gültigen Fachinhalts."
+  },
+  {
+    "route": "/traeger/schliesstage",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/schulen/[id]",
+    "portal": "traeger",
+    "family": "Standorte und Kennzahlen",
+    "representative": "übersicht-schule, belegung-übersicht",
+    "reason": "Trägerweite Ansicht, Zeilen je Schule und Auswahl einer einzelnen Schule."
+  },
+  {
+    "route": "/traeger/standortvergleich",
+    "portal": "traeger",
+    "family": "Standorte und Kennzahlen",
+    "representative": "übersicht-schule, belegung-übersicht",
+    "reason": "Trägerweite Ansicht, Zeilen je Schule und Auswahl einer einzelnen Schule."
+  },
+  {
+    "route": "/traeger/tagesmeldung",
+    "portal": "traeger",
+    "family": "Standorte und Kennzahlen",
+    "representative": "übersicht-schule, belegung-übersicht",
+    "reason": "Trägerweite Ansicht, Zeilen je Schule und Auswahl einer einzelnen Schule."
+  },
+  {
+    "route": "/traeger/uebersicht",
+    "portal": "traeger",
+    "family": "Standorte und Kennzahlen",
+    "representative": "übersicht-schule, belegung-übersicht",
+    "reason": "Trägerweite Ansicht, Zeilen je Schule und Auswahl einer einzelnen Schule."
+  },
+  {
+    "route": "/traeger/vertraege",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/vertraege/[id]",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/vertraege/anmeldungen",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/vertraege/bedingungen",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/vertraege/geschwister",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/vertraege/import",
+    "portal": "traeger",
+    "family": "Nicht wiederverwendbar",
+    "representative": "–",
+    "reason": "Einmaliger, schreibender oder tokengebundener Vorgang; kein erneuter Besuch gültigen Fachinhalts."
+  },
+  {
+    "route": "/traeger/vertraege/module-zuordnen",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/vertraege/nachpflege",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/vertraege/verknuepfen",
+    "portal": "traeger",
+    "family": "Trägerverwaltung",
+    "representative": "schulen-ferien, ferien-zeitraum",
+    "reason": "Der Ferienweg vertritt den geschützten Wiedereinstieg in derselben Trägerhülle und den Wechsel von einer Übersicht in ein einzelnes Objekt. Abrechnungsberechnung, Berichtsumfang und Personaldaten sind eigene, nicht gemessene Nutzlasten."
+  },
+  {
+    "route": "/traeger/zeitvergleich",
+    "portal": "traeger",
+    "family": "Standorte und Kennzahlen",
+    "representative": "übersicht-schule, belegung-übersicht",
+    "reason": "Trägerweite Ansicht, Zeilen je Schule und Auswahl einer einzelnen Schule."
+  }
+]
