@@ -1264,17 +1264,31 @@ describe("Termine aus dem eigenen Kalender (#7663)", () => {
 });
 
 describe("DayChangesBlock: Vorschau auf morgen (#7657)", () => {
-  beforeEach(() => {
+  let tomorrow = "";
+
+  /** Antwortet je Schlüssel mit der Übersicht dieses Tags. */
+  function servePerDay(overview: Partial<DayChangesOverview>) {
+    useSWRAuth.mockImplementation((key: string) => ({
+      data: overviewOf({
+        ...overview,
+        date: key.endsWith(`:${tomorrow}`) ? tomorrow : "2026-01-01",
+      }),
+      error: undefined,
+      isLoading: false,
+      mutate: vi.fn(),
+    }));
+  }
+
+  beforeEach(async () => {
     vi.clearAllMocks();
     phone.value = false;
-  });
-
-  it("liest morgen über den Umschalter mit eigenem Schlüssel und Sätzen für morgen", async () => {
     const { berlinTodayISO } = await import("~/lib/date-helpers");
     const { nextDayISO } = await import("~/components/home/day-switch");
-    const tomorrow = nextDayISO(berlinTodayISO());
-    serve({
-      date: tomorrow,
+    tomorrow = nextDayISO(berlinTodayISO());
+  });
+
+  it("liest morgen über den Umschalter mit eigenem Schlüssel und Sätzen für morgen", () => {
+    servePerDay({
       entries: [
         absent("Ben Kollege", "you"),
         change({
@@ -1284,8 +1298,10 @@ describe("DayChangesBlock: Vorschau auf morgen (#7657)", () => {
       ],
     });
     render(<DayChangesBlock />);
-    const today = screen.getByRole("button", { name: "Heute" });
-    expect(today).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Heute" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
 
     fireEvent.click(screen.getByRole("button", { name: "Morgen" }));
 
@@ -1315,15 +1331,25 @@ describe("DayChangesBlock: Vorschau auf morgen (#7657)", () => {
     expect(trackEvent).toHaveBeenCalledTimes(1);
   });
 
+  it("zeigt beim Wechsel die Übersicht von heute nicht mit Sätzen für morgen", () => {
+    // SWR hält die Daten des vorigen Schlüssels, bis die neuen da sind.
+    serve({ date: "2026-01-01", entries: [absent("Ben Kollege", "you")] });
+    render(<DayChangesBlock />);
+    expect(screen.getByText("Ben Kollege ist heute nicht da.")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Morgen" }));
+    expect(screen.queryByText(/Ben Kollege/)).toBeNull();
+    expect(screen.queryByText(/läuft alles wie geplant/)).toBeNull();
+  });
+
   it("sagt ohne Einträge, dass morgen alles wie geplant läuft", () => {
-    serve({});
+    servePerDay({});
     render(<DayChangesBlock />);
     fireEvent.click(screen.getByRole("button", { name: "Morgen" }));
     expect(screen.getByText("Morgen läuft alles wie geplant.")).toBeVisible();
   });
 
   it("gibt morgen bei einer ausgefallenen Quelle keine Entwarnung", () => {
-    serve({ failedSources: ["children"] });
+    servePerDay({ failedSources: ["children"] });
     render(<DayChangesBlock />);
     fireEvent.click(screen.getByRole("button", { name: "Morgen" }));
     expect(screen.queryByText(/läuft alles wie geplant/)).toBeNull();

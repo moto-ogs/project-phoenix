@@ -50,7 +50,13 @@ vi.mock("~/lib/swr", () => ({
   useSWRAuth: (key: string | null) => {
     if (key?.startsWith("school-day-changes-")) {
       requestedChangeKeys(key);
-      return { data: state.overview, error: undefined, mutate: reloadChanges };
+      // Die Übersicht trägt den Tag ihres Schlüssels.
+      const date = key.slice("school-day-changes-".length);
+      return {
+        data: state.overview && { ...state.overview, date },
+        error: undefined,
+        mutate: reloadChanges,
+      };
     }
     if (key?.startsWith("school-assigned-classes-")) {
       return { data: state.classes, error: undefined, mutate: reloadClasses };

@@ -23,7 +23,11 @@ import {
   useDayChangeHref,
 } from "~/components/home/day-change-link";
 import { DayNoticeRow } from "~/components/home/day-notice-row";
-import { DaySwitch, nextDayISO } from "~/components/home/day-switch";
+import {
+  DaySwitch,
+  isOverviewOfDay,
+  nextDayISO,
+} from "~/components/home/day-switch";
 import { HOME_TWO_COLUMNS } from "~/components/home/home-card-rows";
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
@@ -83,13 +87,19 @@ export function DayChangesBlock() {
   const [day, setDay] = useState<DayChangesDay>("today");
   const tomorrow = nextDayISO(useBerlinToday());
   const date = day === "tomorrow" ? tomorrow : undefined;
-  const { data, error, isLoading, mutate } = useSWRAuth<DayChangesOverview>(
+  const {
+    data: anyDay,
+    error,
+    isLoading,
+    mutate,
+  } = useSWRAuth<DayChangesOverview>(
     homeKeys.dayChanges(accountId, date),
     () => fetchDayChanges(date),
     // Abgleich beim Fokus des Fensters (#7659), zusätzlich zu den
     // SSE-Ereignissen und dem Abgleich nach erneuter Verbindung.
     { revalidateOnFocus: true },
   );
+  const data = isOverviewOfDay(anyDay, day, tomorrow) ? anyDay : undefined;
   const loadError = useSwrLoadError(error, "die Übersicht „Heute anders“", () =>
     mutate(),
   );
@@ -113,7 +123,7 @@ export function DayChangesBlock() {
         {(() => {
           if (loadError) return <LoadErrorAlert error={loadError} />;
           if (!data) {
-            return isLoading || error ? <DayChangesSkeleton /> : null;
+            return isLoading || error || anyDay ? <DayChangesSkeleton /> : null;
           }
           return (
             <DayChangesContent overview={data} day={day} onChanged={mutate} />

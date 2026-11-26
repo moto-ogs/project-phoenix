@@ -12,6 +12,22 @@ export function nextDayISO(iso: string): string {
 }
 
 /**
+ * Ob eine Übersicht zum gewählten Tag gehört. SWR zeigt beim Wechsel die
+ * Daten des anderen Tags weiter, bis die neuen da sind (`keepPreviousData`);
+ * die stünden dann mit den Sätzen des falschen Tags da.
+ */
+export function isOverviewOfDay(
+  overview: { readonly date: string } | undefined,
+  day: DayChangesDay,
+  tomorrow: string,
+): boolean {
+  if (!overview) return false;
+  return day === "tomorrow"
+    ? overview.date === tomorrow
+    : overview.date !== tomorrow;
+}
+
+/**
  * Umschalter „Heute / Morgen“ im Kopf von „Heute anders“ (#7657), im
  * Staff-Portal und in moto schule. Morgen ist der nächste Kalendertag, auch
  * am Wochenende oder an einem Schließtag.

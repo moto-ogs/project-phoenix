@@ -21,7 +21,11 @@ import {
   sourceFailureText,
   type DayChangesDay,
 } from "~/components/home/day-changes-text";
-import { DaySwitch, nextDayISO } from "~/components/home/day-switch";
+import {
+  DaySwitch,
+  isOverviewOfDay,
+  nextDayISO,
+} from "~/components/home/day-switch";
 import { Alert } from "~/components/ui/alert";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { ListRow } from "~/components/ui/list-row";
@@ -121,7 +125,8 @@ export function SchoolDayChangesBlock({
   // Die Vorschau auf morgen (#7657): Übersicht und Klassenbericht des
   // nächsten Kalendertags. Die Links führen in den Klassentag dieses Tags.
   const [day, setDay] = useState<DayChangesDay>("today");
-  const shown = day === "tomorrow" ? nextDayISO(today) : today;
+  const tomorrow = nextDayISO(today);
+  const shown = day === "tomorrow" ? tomorrow : today;
   // Wer alle Klassen sieht (Schulverwaltung), hat die Zahlen der ganzen
   // Schule direkt darunter; der Block zählt nur eigene Klassen.
   const ownClassesOnly = !hasPermission(session, "class_day:all_classes");
@@ -156,14 +161,21 @@ export function SchoolDayChangesBlock({
   );
   if (!isToday) return null;
 
-  const overview = changes.data;
-  const classLines = (classes.data?.classes ?? []).filter(
-    (klass) => classes.data?.school_day && klass.changes > 0,
+  // Bis die Übersicht des gewählten Tags da ist, lädt der Block.
+  const overview = isOverviewOfDay(changes.data, day, tomorrow)
+    ? changes.data
+    : undefined;
+  // Der Bericht des anderen Tags bleibt beim Wechsel kurz stehen.
+  const report =
+    classes.data && (classes.data.date ?? shown) === shown
+      ? classes.data
+      : undefined;
+  const classLines = (report?.classes ?? []).filter(
+    (klass) => report?.school_day && klass.changes > 0,
   );
-  const trips = classTripChanges(classes.data);
+  const trips = classTripChanges(report);
   const classesFailed = ownClassesOnly && Boolean(classes.error);
-  const loading =
-    !overview || (ownClassesOnly && !classes.data && !classes.error);
+  const loading = !overview || (ownClassesOnly && !report && !classes.error);
   const own = overview?.entries.filter((e) => e.section === "you") ?? [];
   const school = overview?.entries.filter((e) => e.section !== "you") ?? [];
   const failed = overview?.failedSources ?? [];
