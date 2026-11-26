@@ -7,6 +7,7 @@
 import type { CSSProperties } from "react";
 import { TIMETABLE_UNTYPED_EDGE_COLOR } from "~/components/timetable/timetable-colors";
 import { LOCATION_COLORS } from "~/lib/location-helper";
+import { cn } from "~/lib/utils";
 import type { PlannedTimetableInstance } from "~/lib/timetable-operations-types";
 
 type BlockColorFields = Pick<
@@ -91,4 +92,42 @@ export function blockStaffShort(
   const name = shortPersonName(first.displayName);
   const label = first.isSubstitute ? `${name} (Vertretung)` : name;
   return names.length > 1 ? `${label} +${names.length - 1}` : label;
+}
+
+/** Ein Teil der Angabenzeile einer Blockzeile. */
+export interface BlockRowPart {
+  readonly key: string;
+  readonly text: string;
+  /** Ein Ausfallgrund steht rot. */
+  readonly danger?: boolean;
+}
+
+/**
+ * Angabenzeile einer Blockzeile am Telefon: genau eine Zeile, gekürzt wird
+ * an den Teilgrenzen. Ein Teil, der nicht mehr ganz passt, entfällt mit
+ * seinem Trenner (statt „OGS-Raum 2 · 16 Kind…“); vorne steht das
+ * Wichtigste (Raum, Kinder). Alle Angaben stehen am Ziel der Zeile.
+ */
+export function BlockRowParts({
+  parts,
+}: Readonly<{ parts: readonly BlockRowPart[] }>) {
+  return (
+    <span className="flex h-5 flex-wrap overflow-hidden">
+      {parts.map((part, index) => (
+        <span
+          key={part.key}
+          className={cn(
+            "whitespace-nowrap",
+            index === 0 && "min-w-0 truncate",
+            part.danger && "text-moto-red-strong",
+          )}
+        >
+          {index > 0 ? (
+            <span className="text-gray-500">{"\u00a0·\u00a0"}</span>
+          ) : null}
+          {part.text}
+        </span>
+      ))}
+    </span>
+  );
 }
