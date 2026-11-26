@@ -127,6 +127,8 @@ export function calendarPeriodsTopic(): HelpTopic {
     notes: [
       "Ein Zeitraum, den noch nichts benutzt, trägt `Nicht verwendet`.",
       "An einem Tag mit geänderter Öffnungszeit enden die Sitzungen zur neuen Schließzeit. Danach können Eltern die Abholzeit für den Tag nicht mehr ändern.",
+      // #8170: Eltern sehen die geänderte Öffnungszeit in „Heute anders“.
+      "Eltern sehen die geänderte Öffnungszeit unter `Heute anders` bei ihrem Kind. Liegt eine Abholzeit nach der Schließzeit, steht das dabei. moto ändert die Abholzeit nicht.",
       // #6845: Schichtserien halten ihren Zeitraum fest.
       "Einen Zeitraum mit Schichtserien im Dienstplan kannst du nicht löschen, auch wenn die Serien beendet sind. Nimm stattdessen den Haken bei `Zeitraum im Plan verwenden` heraus.",
       "Ferienbetreuung an Schließtagen: Wähle beim Speichern der Serie `Auch an Schließtagen planen`. Trage bei `Letzter Tag` den letzten Ferientag ein. Dann endet die Serie mit den Ferien.",

@@ -25760,7 +25760,8 @@
         "child_pickup_person",
         "class_dismissal_changed",
         "class_trip",
-        "closing_day"
+        "closing_day",
+        "opening_changed"
       ]
     },
     {
@@ -45258,6 +45259,33 @@
         },
         {
           "name": "closing_traeger",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "opening_name",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "opens_at",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "closes_at",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "pickup_after_closing",
           "schema": {
             "kind": "bool"
           }

@@ -35,7 +35,7 @@ import {
   type SwitchOffRequest,
 } from "./shared.generated";
 
-export const CHILD_DAY_CHANGE_KIND_VALUES = ["activity_cancelled", "activity_lead_changed", "activity_reinstated", "activity_room_changed", "child_absent", "child_goes_alone", "child_pickup_changed", "child_pickup_person", "class_dismissal_changed", "class_trip", "closing_day"] as const;
+export const CHILD_DAY_CHANGE_KIND_VALUES = ["activity_cancelled", "activity_lead_changed", "activity_reinstated", "activity_room_changed", "child_absent", "child_goes_alone", "child_pickup_changed", "child_pickup_person", "class_dismissal_changed", "class_trip", "closing_day", "opening_changed"] as const;
 export type ChildDayChangeKind = (typeof CHILD_DAY_CHANGE_KIND_VALUES)[number];
 
 export const CHILD_DAY_SOURCE_VALUES = ["activities", "children", "classes", "closing_days"] as const;
@@ -546,6 +546,10 @@ export interface ChildDayChangeEntry {
   previous_room_name: string | null;
   closing_name: string | null;
   closing_traeger: boolean;
+  opening_name: string | null;
+  opens_at: string | null;
+  closes_at: string | null;
+  pickup_after_closing: boolean;
   class_name: string | null;
   class_time: string | null;
 }
@@ -567,6 +571,10 @@ export const ChildDayChangeEntrySchema: z.ZodType<ChildDayChangeEntry, unknown> 
   previous_room_name: nullable(str),
   closing_name: nullable(str),
   closing_traeger: bool,
+  opening_name: nullable(str),
+  opens_at: nullable(str),
+  closes_at: nullable(str),
+  pickup_after_closing: bool,
   class_name: nullable(str),
   class_time: nullable(str),
 });
