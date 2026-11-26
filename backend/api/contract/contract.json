@@ -52787,6 +52787,17 @@
               "ref": "SupervisionTeacherHint"
             }
           }
+        },
+        {
+          "name": "planned_activities",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "SupervisionPlannedActivity"
+            }
+          }
         }
       ]
     },
@@ -102331,6 +102342,17 @@
           }
         },
         {
+          "name": "planned_activities",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "StudentListPlannedActivity"
+            }
+          }
+        },
+        {
           "name": "departure_modes",
           "optional": true,
           "schema": {
@@ -108439,6 +108461,30 @@
       ]
     },
     {
+      "name": "StudentListPlannedActivity",
+      "go_type": "presenceprojectionhttp.StudentListPlannedActivity",
+      "fields": [
+        {
+          "name": "title",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "start_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end_time",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "StudentMoveResult",
       "go_type": "studentpresence.StudentMoveResult",
       "fields": [
@@ -110346,6 +110392,36 @@
         {
           "name": "note",
           "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SupervisionPlannedActivity",
+      "go_type": "supervisiondashboard.SupervisionPlannedActivity",
+      "fields": [
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "title",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "start_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end_time",
           "schema": {
             "kind": "string"
           }

@@ -927,6 +927,21 @@ export const SupervisionTeacherHintSchema: z.ZodType<SupervisionTeacherHint, unk
   school_class: optional(str),
 });
 
+/** Go: supervisiondashboard.SupervisionPlannedActivity */
+export interface SupervisionPlannedActivity {
+  student_id: string;
+  title: string;
+  start_time: string;
+  end_time: string;
+}
+
+export const SupervisionPlannedActivitySchema: z.ZodType<SupervisionPlannedActivity, unknown> = object<SupervisionPlannedActivity>({
+  student_id: int64String,
+  title: str,
+  start_time: str,
+  end_time: str,
+});
+
 /** Go: supervisiondashboard.DashboardProjection */
 export interface DashboardProjection {
   business_day: string;
@@ -946,6 +961,7 @@ export interface DashboardProjection {
   pickup_times: DashboardPickupTime[] | null;
   arrival_times: ArrivalTime[] | null;
   teacher_hints: SupervisionTeacherHint[] | null;
+  planned_activities: SupervisionPlannedActivity[] | null;
 }
 
 export const DashboardProjectionSchema: z.ZodType<DashboardProjection, unknown> = object<DashboardProjection>({
@@ -966,6 +982,7 @@ export const DashboardProjectionSchema: z.ZodType<DashboardProjection, unknown> 
   pickup_times: nullable(arr(DashboardPickupTimeSchema)),
   arrival_times: nullable(arr(ArrivalTimeSchema)),
   teacher_hints: nullable(arr(SupervisionTeacherHintSchema)),
+  planned_activities: nullable(arr(SupervisionPlannedActivitySchema)),
 });
 
 /** Go: presence.VisitResponse */

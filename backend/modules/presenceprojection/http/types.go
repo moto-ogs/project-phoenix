@@ -17,6 +17,14 @@ type TeacherHint struct {
 	SchoolClass string `json:"school_class,omitempty"`
 }
 
+// StudentListPlannedActivity is one offering a child is planned for on the listed day
+// (#8194), such as "Töpfer-AG", with its wall-clock times (HH:MM).
+type StudentListPlannedActivity struct {
+	Title     string `json:"title"`
+	StartTime string `json:"start_time"`
+	EndTime   string `json:"end_time"`
+}
+
 // StudentResponse represents a student response
 type StudentResponse struct {
 	ID                 ident.ID             `json:"id"`

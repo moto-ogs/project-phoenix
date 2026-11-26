@@ -81,7 +81,7 @@ export function ownGroupsTopic(
     ],
     // Einstellung „Angebote auf der Kinderkarte“ (#6487), standardmäßig aus.
     notes: [
-      "Die Karten können auch die Angebote des Tages zeigen, zum Beispiel „14:00–15:00 Töpfer-AG“. Deine Leitung schaltet das in den Einstellungen bei `Angebote auf der Kinderkarte` ein.",
+      "Die Karten können auch die Angebote des Tages zeigen, zum Beispiel „14:00–15:00 Töpfer-AG“. Deine Leitung schaltet das in den Einstellungen bei `Angebote auf der Kinderkarte` ein. Dann stehen die Angebote auch in `Alle Kinder` und `Aktuelle Aufsicht` auf der Karte.",
     ],
     troubleshooting: HELP_TOPICS.missingChildOrGroup,
     related: [

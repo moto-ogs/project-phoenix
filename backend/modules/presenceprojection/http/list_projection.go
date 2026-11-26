@@ -93,6 +93,9 @@ type SlimStudentResponse struct {
 	TeacherHints []TeacherHint `json:"teacher_hints,omitempty"`
 	// ClassHandover: today's handover of the child to the OGS (#4794).
 	ClassHandover *ClassHandover `json:"class_handover,omitempty"`
+	// PlannedActivities are the child's offerings on the listed day (#8194),
+	// between arrival and pickup on the card; full-access rows only.
+	PlannedActivities []StudentListPlannedActivity `json:"planned_activities,omitempty"`
 
 	// Planned + actual times (the arrival/pickup rows and their sort/group
 	// modes). Only populated for full-access rows and when the caller passes

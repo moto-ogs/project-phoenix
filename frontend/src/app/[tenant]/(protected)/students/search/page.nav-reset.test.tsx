@@ -183,6 +183,15 @@ vi.mock("~/components/students/student-card", () => ({
   StudentInfoRow: ({ children }: { children: React.ReactNode }) => (
     <div>{children}</div>
   ),
+  PlannedActivityRows: ({
+    activities,
+  }: {
+    activities?: readonly { title: string }[];
+  }) => (
+    <div data-testid="planned-activity-rows">
+      {(activities ?? []).map((activity) => activity.title).join(", ")}
+    </div>
+  ),
   PickupTimeRow: () => <div />,
   ArrivalTimeRow: () => <div />,
 }));
