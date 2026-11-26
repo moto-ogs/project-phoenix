@@ -54,6 +54,8 @@ const (
 	openingChangeColumns    = `id, start_date, end_date, opens_at::text AS opens_at, closes_at::text AS closes_at, reason, updated_at`
 	listOpeningChangesQuery = `SELECT ` + openingChangeColumns + ` FROM schedule.opening_changes
 		WHERE tenant_id = ? AND start_date <= ? AND end_date >= ? ORDER BY start_date, id`
+	closingTimeOnQuery = `SELECT min(closes_at)::text FROM schedule.opening_changes
+		WHERE tenant_id = ? AND start_date <= ? AND end_date >= ?`
 	insertOpeningChangeQuery = `INSERT INTO schedule.opening_changes (tenant_id, start_date, end_date, opens_at, closes_at, reason)
 		VALUES (?, ?, ?, ?::time, ?::time, ?) RETURNING ` + openingChangeColumns
 	lockOpeningChangeQuery = `SELECT ` + openingChangeColumns + ` FROM schedule.opening_changes
@@ -82,6 +84,27 @@ func (s *OpeningChangeStore) ListOpeningChanges(ctx context.Context, from, to ca
 		result = append(result, openingChangeToDomain(row))
 	}
 	return result, nil
+}
+
+// ClosingTimeOn answers the earliest closing time of the changes on day.
+// Overlapping changes are allowed; the earliest wins, so no session runs
+// past a closing the school entered.
+func (s *OpeningChangeStore) ClosingTimeOn(ctx context.Context, day calendar.Date) (string, bool, error) {
+	if day == "" {
+		return "", false, invalidOpeningChange(&domain.OpeningChangeProblem{Field: "date", Reason: "date is required"})
+	}
+	db, schoolID, err := s.database(ctx)
+	if err != nil {
+		return "", false, err
+	}
+	var closesAt sql.NullString
+	if err := db.NewRaw(closingTimeOnQuery, schoolID, day, day).Scan(ctx, &closesAt); err != nil {
+		return "", false, fmt.Errorf("school calendar postgres: closing time of the day: %w", err)
+	}
+	if !closesAt.Valid {
+		return "", false, nil
+	}
+	return wallClock(closesAt.String), true, nil
 }
 
 // CreateOpeningChange stores a new change.

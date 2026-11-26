@@ -101,6 +101,7 @@ type Dependencies struct {
 	// Platform: the meal plan, "Heute anders" of a child (#7671), live events and notifiers.
 	MealPlan              MealPlanProvider
 	DayChanges            care.ChildDayChanges
+	ClosingTimes          care.ClosingTimes
 	StudentUpdates        care.StudentUpdates
 	AbsenceNotifier       care.AbsenceNotifier
 	ParentMessageNotifier care.StaffParentMessageNotifier
@@ -140,9 +141,8 @@ func careConfig(deps Dependencies, bound owners, messagingFlows *messaging.Servi
 		ParentAccounts: deps.ParentAccounts, DocumentNotifier: deps.DocumentNotifier,
 		GuardianChanges: newGuardianChanges(deps.GuardianChanges), PickupSignatures: deps.Signatures,
 		Memberships: deps.Memberships, InvitationAccounts: deps.InvitationAccounts, GuardianHold: GuardianHold, GuardianInvites: deps.GuardianInvites, GuardianInvitations: deps.GuardianInvitations,
-		InvalidateInvites: deps.InvalidateInvites,
-		Locales:           deps.Locales, StudentUpdates: deps.StudentUpdates, GuardianPolicy: deps.GuardianPolicy, DeparturePolicy: deps.DeparturePolicy,
-		AbsenceNotifier: deps.AbsenceNotifier, Emitter: deps.Emitter, DayChanges: deps.DayChanges,
+		InvalidateInvites: deps.InvalidateInvites, Locales: deps.Locales, StudentUpdates: deps.StudentUpdates, GuardianPolicy: deps.GuardianPolicy, DeparturePolicy: deps.DeparturePolicy,
+		AbsenceNotifier: deps.AbsenceNotifier, Emitter: deps.Emitter, DayChanges: deps.DayChanges, ClosingTimes: deps.ClosingTimes,
 		SelfService:    messagingFlows,
 		RequestSharing: messagingFlows.ChildFlowSharing(),
 	}

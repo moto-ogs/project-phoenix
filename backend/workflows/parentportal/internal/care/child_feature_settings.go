@@ -106,7 +106,7 @@ func (s *Service) resolveChildFeatureSettings(ctx context.Context, tenantID int6
 	if out.pickupChange, out.pickupCutoff, err = resolvePickupChangeSettings(r, now); err != nil {
 		return out, err
 	}
-	// Today's pickup closes for guardians at the school's care day end (#5710).
+	// Hint only: operations.session_end_time (#5710); the day's changed closing time is #8170, the write path guards it.
 	if out.careDayEnd, err = r.resolveString(KeySessionEndTime); err != nil {
 		return out, fmt.Errorf("parent: resolve care day end: %w", err)
 	}
