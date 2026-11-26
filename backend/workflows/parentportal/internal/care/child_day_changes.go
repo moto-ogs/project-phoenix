@@ -50,6 +50,9 @@ type ChildDayChange struct {
 	// PickupTime is the changed pickup ("15:04"); nil on
 	// child_pickup_changed means the child does not come.
 	PickupTime *string
+	// PickupAfterClosing marks a changed pickup after today's changed
+	// closing time (#8170).
+	PickupAfterClosing bool
 	// ActivityTitle, RoomName and PreviousRoomName describe a block.
 	ActivityTitle    *string
 	RoomName         *string
@@ -57,6 +60,11 @@ type ChildDayChange struct {
 	// ClosingName is the school's or the Träger's name of a closing day.
 	ClosingName    *string
 	ClosingTraeger bool
+	// OpeningName, OpensAt and ClosesAt describe an opening change of the
+	// school ("13:00"), #8170.
+	OpeningName *string
+	OpensAt     *string
+	ClosesAt    *string
 	// ClassName and ClassTime describe a class trip (return time) or a
 	// changed Unterrichtsschluss.
 	ClassName *string
