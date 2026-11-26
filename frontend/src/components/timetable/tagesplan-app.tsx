@@ -26,6 +26,7 @@ import {
 
 import {
   BlockRowParts,
+  type BlockRowPart,
   blockStaffNames,
   blockStaffShort,
 } from "~/components/timetable/block-row-parts";
@@ -82,6 +83,12 @@ export function tagesplanAppTitle(day: string, today: string): string {
   if (day === shiftISO(today, 1)) return "Morgen";
   if (day === shiftISO(today, -1)) return "Gestern";
   return "Tagesplan";
+}
+
+/** Tag im schmalen Kopf: „Do, 26.11.“ (die Wochenleiste ist eingeklappt). */
+export function tagesplanCompactDate(day: string): string {
+  const [, month, date] = day.split("-");
+  return `${getGermanWeekdayShort(parseISODate(day))}, ${date}.${month}.`;
 }
 
 /** Montag bis Freitag der Woche von `day`; ein Wochenendtag kommt dazu. */
@@ -430,54 +437,74 @@ export function TagesplanApp(props: TagesplanAppProps) {
   // gemerkte Position wieder her.
   const nowRef = useRef<HTMLDivElement>(null);
   const scrolledForDay = useRef<string | null>(null);
-  // Ziel ist der laufende Block, sonst der nächste; erst wenn keiner mehr
-  // kommt, die Jetzt-Linie. Sonst öffnete die Seite abends am Listenende,
-  // während ein spontaner Block („seit 00:03“) ganz oben läuft.
-  // Steht ein eigener Block zum Start an, ist er das Ziel: Ihn startet
-  // die Leiste über der Pill, und er muss dabei im Bild stehen.
-  const scrollTargetId = useMemo(() => {
+  // Ziel sind der laufende und der eigene startbereite Block (den startet
+  // die Leiste über der Pill); gibt es keinen, der nächste; erst wenn keiner
+  // mehr kommt, die Jetzt-Linie. Sonst öffnete die Seite abends am
+  // Listenende, während ein spontaner Block („seit 00:03“) oben läuft.
+  const scrollTargetIds = useMemo(() => {
     const all = [...entries.values()];
-    return (
-      all
-        .filter(
-          (entry) =>
-            entry.state.startable && (!showMine || entry.instance.isAssigned),
-        )
-        .sort((a, b) =>
-          a.instance.startTime.localeCompare(b.instance.startTime),
-        )[0]?.instance.id ??
-      all.find((entry) => entry.state.running)?.instance.id ??
-      all.find(
-        (entry) => entry.instance.startTime === nextStart && !entry.state.over,
-      )?.instance.id ??
-      null
-    );
+    const startable = all
+      .filter(
+        (entry) =>
+          entry.state.startable && (!showMine || entry.instance.isAssigned),
+      )
+      .sort((a, b) =>
+        a.instance.startTime.localeCompare(b.instance.startTime),
+      )[0]?.instance.id;
+    const running = all.find((entry) => entry.state.running)?.instance.id;
+    const ids = [startable, running].filter((id): id is string => !!id);
+    if (ids.length > 0) return ids;
+    const next = all.find(
+      (entry) => entry.instance.startTime === nextStart && !entry.state.over,
+    )?.instance.id;
+    return next ? [next] : [];
   }, [entries, nextStart, showMine]);
+  const scrollTargetKey = scrollTargetIds.join(",");
   useEffect(() => {
     if (!isToday || scrolledForDay.current === day || isSplit) return;
     if (groups.length === 0) return;
     scrolledForDay.current = day;
-    const row = scrollTargetId
-      ? document
-          .querySelector(`[data-tagesplan-row="${scrollTargetId}"]`)
-          ?.closest<HTMLElement>("[data-collection-row]")
-      : null;
-    const marker = row ?? nowRef.current;
-    if (!marker) return;
-    const rect = marker.getBoundingClientRect();
-    // Nur scrollen, wenn das Ziel nicht ganz über Aktionsleiste und Pill
-    // im Bild steht (am SE lag der startbereite Block sonst unter der
-    // Leiste); sonst bleibt der Kopf im Bild.
-    if (rect.bottom <= window.innerHeight - BOTTOM_BARS_PX) return;
-    if (row) {
-      // Der Block steht oben unter der klebenden Kopfkarte.
-      row.style.scrollMarginTop = NOW_SCROLL_MARGIN.scrollMarginTop as string;
-      row.scrollIntoView({ block: "start" });
-    } else {
+    const rows = scrollTargetKey
+      .split(",")
+      .filter(Boolean)
+      .map((id) =>
+        document
+          .querySelector(`[data-tagesplan-row="${id}"]`)
+          ?.closest<HTMLElement>("[data-collection-row]"),
+      )
+      .filter((row): row is HTMLElement => row != null);
+    const limit = window.innerHeight - BOTTOM_BARS_PX;
+    // Das Ziel reicht bis zur Jetzt-Linie, wenn sie direkt darunter steht.
+    const bottomOf = (element: HTMLElement) => {
+      const line = nowRef.current;
+      const bottom = element.getBoundingClientRect().bottom;
+      if (!line) return bottom;
+      const lineRect = line.getBoundingClientRect();
+      return lineRect.top >= bottom && lineRect.top - bottom < 8
+        ? lineRect.bottom
+        : bottom;
+    };
+    if (rows.length === 0) {
+      const marker = nowRef.current;
+      if (!marker || marker.getBoundingClientRect().bottom <= limit) return;
       // Mittig, damit über der Linie sichtbar bleibt, was zuletzt lief.
       marker.scrollIntoView({ block: "center" });
+      return;
     }
-  }, [isToday, day, groups.length, isSplit, scrollTargetId]);
+    // Nur scrollen, wenn ein Ziel nicht ganz über Aktionsleiste und Pill
+    // steht; sonst bleibt der Kopf mit der Tagesleiste im Bild.
+    if (rows.every((row) => bottomOf(row) <= limit)) return;
+    // Der obere der Blöcke steht unter der klebenden Kopfkarte. Reicht die
+    // Höhe nicht für beide, gewinnt der startbereite (erstes Ziel).
+    const sorted = [...rows].sort(
+      (a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top,
+    );
+    const top = sorted[0]!;
+    const span = bottomOf(sorted.at(-1)!) - top.getBoundingClientRect().top;
+    const anchor = span > limit - STICKY_HEAD_PX ? rows[0]! : top;
+    anchor.style.scrollMarginTop = NOW_SCROLL_MARGIN.scrollMarginTop as string;
+    anchor.scrollIntoView({ block: "start" });
+  }, [isToday, day, groups.length, isSplit, scrollTargetKey]);
 
   // Am iPad quer steht die vorgewählte Zeile (meist der laufende Block)
   // im eigenen Scroll der Liste im Bild, einmal je Tag.
@@ -714,6 +741,8 @@ export function TagesplanApp(props: TagesplanAppProps) {
  */
 /** Höhe von schwebender Aktionsleiste und Pill samt Abständen, in px. */
 const BOTTOM_BARS_PX = 170;
+/** Schmale Kopfkarte samt Abstand, unter der ein Ziel beim Öffnen steht. */
+const STICKY_HEAD_PX = 80;
 
 const SPLIT_PANE_HEIGHT = "calc(100dvh - var(--tagesplan-split-top) - 6.5rem)";
 
@@ -997,13 +1026,14 @@ function BlockRow({
   // stand sonst „OGS-Ra…“ und „Anna Müll…“. Ein Ausfall nennt seinen Grund
   // rot wie am Desktop.
   const count = rowChildren(entry);
-  const parts: { key: string; text: string; danger?: boolean }[] = [];
+  const parts: BlockRowPart[] = [];
   const push = (
     key: string,
     text: string | null | undefined,
     danger?: boolean,
+    shrink?: BlockRowPart["shrink"],
   ) => {
-    if (text) parts.push({ key, text, danger });
+    if (text) parts.push({ key, text, danger, shrink });
   };
   // Ein Ausfall trägt immer den roten Chip „Fällt aus“; das Wort steht
   // nicht noch einmal daneben, wohl aber sein Grund.
@@ -1021,15 +1051,17 @@ function BlockRow({
 
   if (state.cancelled) push("reason", instance.cancelReason, true);
   if (state.isDuty) push("duty", "Dienst");
-  push("room", state.room);
-  push("count", count);
+  // Reicht die Zeile nicht (SE), kürzt zuerst der Raum, dann das Personal
+  // mit „…“; keine Angabe entfällt still.
+  push("room", state.room, false, wide ? undefined : "room");
+  push("count", count, false, wide ? undefined : "count");
   // Am Telefon Personal kurz („Julia K. +1“, Vertretung benannt): wer
   // betreut, sucht man im Plan. Gruppe und alle Namen stehen im Blatt.
   if (wide) {
     push("group", instance.groupName);
     if (!state.cancelled) push("staff", staff);
   } else if (!state.cancelled) {
-    push("staff", blockStaffShort(instance));
+    push("staff", blockStaffShort(instance), false, "staff");
   }
   return (
     <CollectionRow
