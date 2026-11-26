@@ -62,11 +62,6 @@ const DECLENSION = {
   careNom: { der: "der", die: "die", das: "das" },
   /** Object and after an, für, auf, durch, in (where to): „an die OGS“. */
   careAcc: { der: "den", die: "die", das: "das" },
-  /**
-   * The object on a button that named the care without an article before
-   * #8136: stays „an OGS“, reads „an den Hort“ / „an das Lernhaus“.
-   */
-  careAccShort: { der: "den", die: "", das: "das" },
   /** After mit, and as the receiver: „schreibe der OGS“. */
   careDat: { der: "dem", die: "der", das: "dem" },
   /** Whose: „die Antwort der OGS“, „die Antwort vom Hort“. */
@@ -114,6 +109,7 @@ type SentenceStartPlaceholder = `${(typeof SENTENCE_START)[number]}Cap`;
 
 export type CareTermPlaceholder =
   | "careTerm"
+  | "careAccShort"
   | DeclinedPlaceholder
   | PronounPlaceholder
   | SentenceStartPlaceholder;
@@ -128,6 +124,7 @@ function capitalize(text: string): string {
 /** Every placeholder a message may use for the school's care. */
 export const CARE_TERM_PLACEHOLDERS: readonly CareTermPlaceholder[] = [
   "careTerm",
+  "careAccShort",
   ...(Object.keys(DECLENSION) as DeclinedPlaceholder[]),
   ...(Object.keys(PRONOUNS) as PronounPlaceholder[]),
   ...SENTENCE_START.map((key): SentenceStartPlaceholder => `${key}Cap`),
@@ -142,13 +139,23 @@ export const CARE_TERM_PLACEHOLDERS: readonly CareTermPlaceholder[] = [
 export function careTermValues(
   names: CareFacilityName | readonly CareFacilityName[],
 ): CareTermValues {
-  const all = sharedArticle(
-    distinctNames(Array.isArray(names) ? names : [names]),
-  );
+  const distinct = distinctNames(Array.isArray(names) ? names : [names]);
+  const all = sharedArticle(distinct);
   const join = (form: (name: CareFacilityName) => string) =>
     all.map(form).join("/");
   const values: Partial<Record<CareTermPlaceholder, string>> = {
     careTerm: [...new Set(all.map((name) => name.term))].join("/"),
+    // The object on a button that named a preset without an article before
+    // #8136: stays „an OGS“; an own name gets its article, „an den Hort“.
+    careAccShort: [
+      ...new Set(
+        (distinct.length > 0 ? distinct : all).map((name) =>
+          PRESET_CARE_TERMS.has(name.term)
+            ? name.term
+            : `${DECLENSION.careAcc[name.article]} ${name.term}`,
+        ),
+      ),
+    ].join("/"),
   };
   for (const key of Object.keys(DECLENSION) as DeclinedPlaceholder[]) {
     values[key] = join((name) =>

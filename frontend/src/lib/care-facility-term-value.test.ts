@@ -111,6 +111,20 @@ describe("care term declension", () => {
     expect(careFacilityName(undefined, "der").article).toBe("die");
   });
 
+  it("keeps a preset bare on the request button and gives an own name its article", () => {
+    expect(careTermValuesOf("GTS").careAccShort).toBe("GTS");
+    expect(careTermValuesOf("Nachmittagsbetreuung", "die").careAccShort).toBe(
+      "die Nachmittagsbetreuung",
+    );
+    expect(
+      careTermValues([
+        careFacilityName("OGS"),
+        careFacilityName("GTS"),
+        careFacilityName("Hort", "der"),
+      ]).careAccShort,
+    ).toBe("OGS/GTS/den Hort");
+  });
+
   it("names every school of an account once, each with its own article", () => {
     const mixed = careTermValues([
       careFacilityName("OGS", "die"),
