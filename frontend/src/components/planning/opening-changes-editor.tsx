@@ -5,11 +5,13 @@
  * other times than usual (#7654), for example a shorter day before the
  * holidays. It sits beside the closing days on „Schuljahr und Kalender“ and
  * needs the same rights. The usual times are the settings „Öffnungszeiten“.
+ * A saved day is changed in place (#8173): the card switches to its fields.
  */
 
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 
+import { OpeningChangeEditCard } from "~/components/planning/opening-change-edit-card";
 import { OpeningChangeModal } from "~/components/planning/opening-change-modal";
 import { Button } from "~/components/ui/button";
 import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
@@ -61,6 +63,8 @@ export function OpeningChangesEditor() {
   const loading = data === undefined && !loadFailed;
   const [modalOpen, setModalOpen] = useState(false);
   const [deleting, setDeleting] = useState<OpeningChange | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const editing = changes.find((change) => change.id === editingId);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const deleteErrors = useApiFormError();
   const latestDeleteRef = useRef<() => void>(() => undefined);
@@ -151,6 +155,12 @@ export function OpeningChangesEditor() {
               ariaLabel={`Aktionen für ${change.reason}`}
               items={[
                 {
+                  label: "Bearbeiten",
+                  icon: <Pencil className="h-4 w-4" aria-hidden />,
+                  description: "Öffnet die Felder dieses Tags zum Ändern",
+                  onClick: () => setEditingId(change.id),
+                },
+                {
                   label: "Löschen",
                   icon: <Trash2 className="h-4 w-4" aria-hidden />,
                   destructive: true,
@@ -184,6 +194,34 @@ export function OpeningChangesEditor() {
         isLoading={loading}
       />
     );
+
+  const reloadEditing = useCallback(async () => {
+    const found = (await mutate())?.find((change) => change.id === editingId);
+    if (!found) throw new Error("opening change is gone");
+    return found;
+  }, [mutate, editingId]);
+  const storeEditing = useCallback(
+    (stored: OpeningChange) =>
+      mutate(
+        (current) =>
+          current?.map((change) => (change.id === stored.id ? stored : change)),
+        { revalidate: true },
+      ),
+    [mutate],
+  );
+
+  if (editing) {
+    return (
+      <OpeningChangeEditCard
+        change={editing}
+        reload={reloadEditing}
+        onStored={storeEditing}
+        onClose={() => setEditingId(null)}
+        minDate={from}
+        maxDate={to}
+      />
+    );
+  }
 
   return (
     <>

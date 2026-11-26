@@ -3,14 +3,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { OpeningChange } from "~/lib/opening-change-api";
 
-const { mockList, mockCreate, mockDelete, mockToastSuccess } = vi.hoisted(
-  () => ({
+const { mockList, mockCreate, mockUpdate, mockDelete, mockToastSuccess } =
+  vi.hoisted(() => ({
     mockList: vi.fn(),
     mockCreate: vi.fn(),
+    mockUpdate: vi.fn(),
     mockDelete: vi.fn(),
     mockToastSuccess: vi.fn(),
-  }),
-);
+  }));
 
 vi.unmock("swr");
 
@@ -35,10 +35,13 @@ vi.mock("~/lib/opening-change-api", async (importOriginal) => ({
   openingChangeService: {
     list: mockList,
     create: mockCreate,
+    update: mockUpdate,
     delete: mockDelete,
   },
 }));
 
+import { ApiError } from "~/lib/api-error";
+import { catalogText } from "~/test/error-catalog-text";
 import { SWRConfig } from "~/lib/swr/testing";
 import { OpeningChangesEditor as Editor } from "./opening-changes-editor";
 
@@ -78,14 +81,90 @@ describe("OpeningChangesEditor", () => {
     ).toBeInTheDocument();
     expect(screen.getAllByText("29.01.2027")[0]).toBeInTheDocument();
     expect(screen.getAllByText("07:30 bis 12:00 Uhr")[0]).toBeInTheDocument();
-    // Ein Tag öffnet kein Bearbeiten im Overlay (bauart/no-edit-overlay).
     fireEvent.click(
       screen.getByRole("button", { name: "Aktionen für Zeugnisausgabe" }),
     );
-    expect(
-      screen.queryByRole("menuitem", { name: "Bearbeiten" }),
-    ).not.toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Bearbeiten" })).toBeVisible();
     expect(screen.getByRole("menuitem", { name: "Löschen" })).toBeVisible();
+  });
+
+  it("ändert einen Tag an Ort und Stelle und sendet die gelesene Version (#8173)", async () => {
+    mockList.mockResolvedValue([makeChange()]);
+    mockUpdate.mockResolvedValue(
+      makeChange({ reason: "Zeugnistag", version: "v2" }),
+    );
+
+    render(<OpeningChangesEditor />);
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Aktionen für Zeugnisausgabe",
+      }),
+    );
+    fireEvent.click(screen.getByRole("menuitem", { name: "Bearbeiten" }));
+    // Kein Overlay (bauart/no-edit-overlay): die Felder stehen in der Karte.
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    const reason = screen.getByLabelText("Anlass");
+    expect(reason).toHaveValue("Zeugnisausgabe");
+    fireEvent.change(reason, { target: { value: " Zeugnistag " } });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    await waitFor(() =>
+      expect(mockUpdate).toHaveBeenCalledWith(
+        "7",
+        {
+          startDate: "2027-01-29",
+          endDate: "2027-01-29",
+          opensAt: "07:30",
+          closesAt: "12:00",
+          reason: "Zeugnistag",
+        },
+        "v1",
+      ),
+    );
+    expect(mockToastSuccess).toHaveBeenCalledWith(
+      "„Zeugnistag“ ist gespeichert.",
+    );
+    expect(
+      await screen.findByRole("button", { name: /Tag anlegen/ }),
+    ).toBeInTheDocument();
+  });
+
+  it("zeigt nach einer Änderung von anderer Seite den gespeicherten Tag (ADR 0311)", async () => {
+    mockList
+      .mockResolvedValueOnce([makeChange()])
+      .mockResolvedValue([
+        makeChange({ reason: "Elternabend", version: "v2" }),
+      ]);
+    mockUpdate.mockRejectedValue(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+
+    render(<OpeningChangesEditor />);
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Aktionen für Zeugnisausgabe",
+      }),
+    );
+    fireEvent.click(screen.getByRole("menuitem", { name: "Bearbeiten" }));
+    fireEvent.change(screen.getByLabelText("Anlass"), {
+      target: { value: "Zeugnistag" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    await waitFor(() =>
+      expect(screen.getByLabelText("Anlass")).toHaveValue("Elternabend"),
+    );
+    expect(mockUpdate).toHaveBeenCalledTimes(1);
+    expect(
+      await screen.findByText(
+        catalogText(
+          "general.changed_since_read",
+          "das Speichern der geänderten Öffnungszeit",
+        ),
+      ),
+    ).toBeInTheDocument();
   });
 
   it("liest das Fenster vom letzten Monat bis ein Jahr voraus", async () => {
