@@ -2254,16 +2254,22 @@ function AppStudentLateBadge({
 }: Readonly<{
   late: ReturnType<typeof getStudentTimeStatus>;
   pickup: boolean;
-  /** Nur Warnzeichen und Zeit, für den schmalen Kopf neben dem Namen. */
+  /** Kurz („16:00 überfällig“), für den schmalen Kopf neben dem Namen. */
   short?: boolean;
 }>) {
   return (
     <StatusBadge
       tone={late.state === "very-overdue" ? "red" : "orange"}
-      icon={<AlertTriangle className="size-3.5" aria-hidden="true" />}
+      // Im schmalen Kopf trägt das Wort die Warnung; ohne Warnzeichen
+      // bleibt der Name daneben am iPhone SE ganz stehen.
+      icon={
+        short ? undefined : (
+          <AlertTriangle className="size-3.5" aria-hidden="true" />
+        )
+      }
       label={
         short
-          ? (late.displayTime ?? "")
+          ? `${late.displayTime ?? ""} überfällig`
           : `${pickup ? "Abholung" : "Ankunft"} überfällig ${late.displayTime}`
       }
     />
@@ -2290,10 +2296,11 @@ function AppStudentCompactStatus({
     plannedArrival,
     plannedPickup,
   );
-  // Mit roter Zeit nur sie, kurz als Warnzeichen und Uhrzeit: Der Name
-  // braucht den Platz, der volle Satz steht im Kopf darüber.
+  // Mit roter Zeit nur sie, kurz mit dem Wort „überfällig“ (eine Uhrzeit
+  // allein sagte nicht, was mit ihr ist): Der Name braucht den Platz, der
+  // volle Satz steht im Kopf darüber.
   return (
-    <span className="flex max-w-40 min-w-0 items-center gap-1.5 overflow-hidden [&_*]:whitespace-nowrap">
+    <span className="flex max-w-44 min-w-0 items-center gap-1.5 overflow-hidden [&_*]:whitespace-nowrap">
       {late ? (
         <AppStudentLateBadge late={late} pickup={late === pickupLate} short />
       ) : (
@@ -2746,6 +2753,14 @@ function FullAccessView({
   useEffect(() => {
     if (activeTab === "notizen") setNotesTabSeen(true);
   }, [activeTab]);
+  // In der App stehen die dauerhaften Hinweise (Allergien, Absprachen) vor
+  // den Stammdaten: Wer die Akte am Telefon öffnet, sieht das, was für das
+  // Kind immer gilt, im ersten Bild (#8070). Der Desktop bleibt, wie er ist.
+  const device = useDeviceContext();
+  const notesFirst = device.resolved && device.isApp;
+  const permanentNotes = tabs.includes("notizen") ? (
+    <StudentPermanentNotesCard studentId={studentId} />
+  ) : null;
   return (
     <>
       <StudentTabPanel
@@ -2753,6 +2768,7 @@ function FullAccessView({
         activeTab={activeTab}
         className={TAB_CONTENT_CLASS}
       >
+        {notesFirst ? permanentNotes : null}
         {/* Bearbeitet wird am Objekt: der Reiter wechselt in den
             Bearbeiten-Zustand und zurück, kein Dialog über der Akte. */}
         {hasWriteAccess && showPersonalInfoEdit ? (
@@ -2778,9 +2794,7 @@ function FullAccessView({
           />
         )}
         {/* Die Hinweise sind Notizen: wie der Reiter nur mit users:read. */}
-        {tabs.includes("notizen") ? (
-          <StudentPermanentNotesCard studentId={studentId} />
-        ) : null}
+        {notesFirst ? null : permanentNotes}
         <StudentConsentsReadOnly consents={student.consents} />
         {canManageFamilyProtection ? (
           <SectionCard

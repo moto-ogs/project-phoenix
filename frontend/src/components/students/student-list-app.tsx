@@ -49,6 +49,7 @@ import { dayHomeChange } from "~/components/students/student-table";
 import { NotificationBadge } from "~/components/ui/notification-badge";
 import { COUNTER_TONE } from "~/lib/counter-tones";
 import { useStudentParentAttention } from "~/lib/hooks/use-parent-attention";
+import { cn } from "~/lib/utils";
 import { MOTO_COLOR_PALETTE } from "~/lib/kit-palette";
 import type { TrackingIndicatorsResponse } from "~/lib/active-helpers";
 import { useRowClock } from "~/components/students/student-card-clock";
@@ -107,13 +108,17 @@ function RowLine({
   klass: string | undefined;
   homeway: string | null;
 }>) {
-  // Jede Angabe bleibt ganz oder fällt als Ganzes weg, von hinten: zuerst
-  // der Heimweg („Kürzung trifft das Unwichtige“); alles steht im Kind-Blatt.
-  let parts: { text: string; cut?: boolean }[] = [
-    klass ? { text: klass } : null,
-    student.group_name ? { text: student.group_name } : null,
-    homeway ? { text: homeway, cut: true } : null,
-  ].filter((part): part is { text: string; cut?: boolean } => Boolean(part));
+  // Die Klasse bleibt ganz; Gruppe und Heimweg kürzen sich mit „…“, statt
+  // am kleinen Telefon still wegzufallen. Neben einem Hinweis vorn steht der
+  // Heimweg auf keinem Telefon (er steht im Kind-Blatt), damit iPhone SE und
+  // iPhone 15 dieselben Angaben zeigen.
+  let parts: { text: string; kind: "class" | "group" | "homeway" }[] = [
+    klass ? { text: klass, kind: "class" as const } : null,
+    student.group_name
+      ? { text: student.group_name, kind: "group" as const }
+      : null,
+    homeway ? { text: homeway, kind: "homeway" as const } : null,
+  ].filter((part) => part !== null);
   const now = useRowClock(undefined);
   const dayChange =
     isToday && student.has_full_access !== false
@@ -137,8 +142,7 @@ function RowLine({
           style={{ color: overdue.color }}
         >
           <AlertTriangle className="size-3.5 shrink-0" aria-hidden="true" />
-          {overdue.label} {overdue.time}
-          <span className="sr-only">, überfällig</span>
+          {overdue.label} {overdue.time}, überfällig
         </span>
       );
     } else if (dayChange) {
@@ -162,7 +166,8 @@ function RowLine({
         </span>
       );
       // Der geänderte Heimweg steht schon vorn.
-      if (dayChange.mode) parts = parts.filter((part) => !part.cut);
+      if (dayChange.mode)
+        parts = parts.filter((part) => part.kind !== "homeway");
     } else if (notComing) {
       // Wie „Kommt heute nicht (kein Plan für heute)“ auf der Karte: Die
       // Pille nennt den Zustand, die zweite Zeile den Grund.
@@ -190,10 +195,11 @@ function RowLine({
       <PresenceHint status={hint.status} title={hint.title} />
     </span>
   ) : null;
-  if (!lead && !hintNode && parts.length === 0) return null;
-  // Eine Zeile hoch: Was nicht mehr in die Zeile passt, bricht in eine
-  // verborgene Folgezeile um, statt mitten im Wort zu enden.
   const leading = Boolean(lead || hintNode);
+  if (leading) parts = parts.filter((part) => part.kind !== "homeway");
+  if (!leading && parts.length === 0) return null;
+  // Eine Zeile hoch: Was nicht mehr in die Zeile passt, bricht in eine
+  // verborgene Folgezeile um.
   return (
     <span className="flex h-[1lh] min-w-0 flex-wrap items-center gap-x-1 overflow-hidden">
       {hintNode}
@@ -201,15 +207,17 @@ function RowLine({
       {lead}
       {parts.map((part, index) => (
         <span
-          key={part.text}
-          // Allein in der Zeile darf der Heimweg mit „…“ enden; neben
-          // anderen Angaben fällt er als Ganzes weg, statt mitten im Wort
-          // abzubrechen („Geht all…“).
-          className={
-            part.cut && !leading && parts.length === 1
-              ? "max-w-max min-w-0 shrink grow basis-16 truncate"
-              : "shrink-0 whitespace-nowrap"
-          }
+          key={part.kind}
+          // Gruppe und Heimweg kürzen sich mit „…“ („· Regenbogengr…“). Die
+          // Gruppe bekommt den Platz zuerst: Erst wenn sie ganz steht, wächst
+          // der Heimweg in den Rest.
+          className={cn(
+            part.kind === "class"
+              ? "shrink-0 whitespace-nowrap"
+              : "max-w-max min-w-0 shrink truncate",
+            part.kind === "group" && "grow-[1000] basis-12",
+            part.kind === "homeway" && "grow basis-16",
+          )}
         >
           {leading || index > 0 ? "· " : ""}
           {part.text}
@@ -330,7 +338,7 @@ const SHORT_PHONE_DENSE = [
   "phone:[@media(max-height:700px)]:[&_[data-collection-row]]:py-[3px]",
   "phone:[@media(max-height:700px)]:[&_[data-row-target]+span]:mt-0",
   "phone:[@media(max-height:700px)]:[&_[data-row-target]+span]:leading-[1.0625rem]",
-  "phone:[@media(max-height:700px)]:[&_[data-collection-group]>div:first-child]:h-[1.125rem]",
+  "phone:[@media(max-height:700px)]:[&_[data-collection-group]>div:first-child]:h-6",
   "phone:[@media(max-height:700px)]:[&_[data-collection-group]>div:first-child]:min-h-0",
   "phone:[@media(max-height:700px)]:[&_[data-collection-group]>div:first-child]:py-0",
   "phone:[@media(max-height:700px)]:[&_[data-collection-group]_h3]:leading-[1.0625rem]",
