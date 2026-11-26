@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Plus, StickyNote } from "lucide-react";
+import { AlertTriangle, CalendarX, Plus, StickyNote } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 
 import { Alert } from "~/components/ui/alert";
@@ -316,6 +316,17 @@ function rowNotice(row: TimetableRosterRow): ReactNode {
   } else if (row.parallelPresentIn) {
     label = `Auch in „${row.parallelPresentIn.title}“`;
   }
+  // Eine fehlende Ankunftszeit ist eine Lücke im Plan, kein Zustand des
+  // Kindes: grau statt Warnfarbe, die bleibt für das, was jetzt Handeln
+  // verlangt. Den ganzen Satz zeigt weiter das Kind-Blatt.
+  if (label && planning?.kind === "missing_arrival_schedule") {
+    return (
+      <span className="flex min-w-0 items-center gap-0.5 text-gray-600">
+        <CalendarX className="size-3.5 shrink-0" aria-hidden="true" />
+        <span className="truncate">{label}</span>
+      </span>
+    );
+  }
   if (label) {
     return (
       <span className="text-moto-amber-strong flex min-w-0 items-center gap-0.5 font-medium">
@@ -357,6 +368,15 @@ function overduePickupColor(
     ? getAccessibleTextColor(status.textColor)
     : null;
 }
+
+/**
+ * Niedrige Telefone (iPhone SE, 667 px): Zeilen 52 statt 59 px, die zweite
+ * Zeile ohne Abstand zur ersten. So stehen acht Kinder ganz über der Pill
+ * (erste Zeile bei 158 px, Pill bei 581 px). Höhere Telefone behalten die
+ * Kit-Zeile; die Trefferfläche bleibt über 44 px.
+ */
+const SHORT_PHONE_ROWS =
+  "[@media(max-height:760px)]:[&_[data-collection-row]]:min-h-[52px] [@media(max-height:760px)]:[&_[data-collection-row]]:py-1.5 [@media(max-height:760px)]:[&_[data-collection-row]>.flex-1>span]:mt-0 [@media(max-height:760px)]:[&_[data-collection-row]>.flex-1>span]:leading-[18px]";
 
 /**
  * Eine Angabe der zweiten Zeile. Der Punkt davor steht links außerhalb und
@@ -691,9 +711,11 @@ export function TimetableRosterApp({
       // rechts, nächste Zeile), damit die Aktion nah am Namen steht und keine
       // Zelle neben einem Kind leer bleibt.
       className={
-        layout === "tablet" && !isSplit
-          ? "[&_ul]:grid [&_ul]:grid-cols-2 [&_ul]:divide-y-0 [&_ul>li]:border-b [&_ul>li]:border-gray-100 [&_ul>li:last-child]:border-b-0 [&_ul>li:nth-child(odd)]:border-r [&_ul>li:nth-last-child(2):nth-child(odd)]:border-b-0"
-          : undefined
+        layout === "phone"
+          ? SHORT_PHONE_ROWS
+          : layout === "tablet" && !isSplit
+            ? "[&_ul]:grid [&_ul]:grid-cols-2 [&_ul]:divide-y-0 [&_ul>li]:border-b [&_ul>li]:border-gray-100 [&_ul>li:last-child]:border-b-0 [&_ul>li:nth-child(odd)]:border-r [&_ul>li:nth-last-child(2):nth-child(odd)]:border-b-0"
+            : undefined
       }
     >
       {sections.map(({ key, rows }) =>
