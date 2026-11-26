@@ -189,6 +189,7 @@ function DayChangesAnnouncer({
                   entry.appointment.timeChanged,
                 ]
               : null,
+            entry.roomClosure?.reason ?? null,
           ]),
         )
         .join("|")

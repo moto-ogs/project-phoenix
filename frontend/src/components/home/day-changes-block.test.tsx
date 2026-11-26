@@ -781,6 +781,24 @@ describe("DayChangesBlock über den Tag (#7660)", () => {
     expect(live).toHaveTextContent("„Heute anders“ hat sich geändert.");
   });
 
+  it("sagt einen geänderten Grund einer Raumsperre an", () => {
+    const roomClosure = (reason: string) =>
+      change({
+        kind: "room_closed",
+        roomName: "Werkraum",
+        roomClosure: { reason },
+      });
+    serve({ entries: [roomClosure("Wasserschaden")] });
+    const { rerender } = render(<DayChangesBlock />);
+    const live = document.querySelector('[aria-live="polite"]');
+    expect(live).toHaveTextContent("");
+
+    serve({ entries: [roomClosure("Elektrischer Defekt")] });
+    rerender(<DayChangesBlock />);
+
+    expect(live).toHaveTextContent("„Heute anders“ hat sich geändert.");
+  });
+
   it("sagt eine geänderte Zahl eines Klassenausflugs an", () => {
     const trip = (children: number) =>
       change({

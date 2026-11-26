@@ -186,6 +186,29 @@ describe("SearchBar", () => {
       expect(mockOnChange).not.toHaveBeenCalled();
     });
 
+    it("keeps a newer draft when the owner echoes an earlier sent term", () => {
+      const { rerender } = render(
+        <SearchBar value="M" onChange={mockOnChange} debounceMs={300} />,
+      );
+      const input = screen.getByPlaceholderText("Name suchen...");
+      fireEvent.change(input, { target: { value: "Ma" } });
+      act(() => {
+        vi.advanceTimersByTime(300);
+      });
+      expect(mockOnChange).toHaveBeenLastCalledWith("Ma");
+
+      fireEvent.change(input, { target: { value: "Max" } });
+      rerender(
+        <SearchBar value="Ma" onChange={mockOnChange} debounceMs={300} />,
+      );
+
+      expect(input).toHaveValue("Max");
+      act(() => {
+        vi.advanceTimersByTime(300);
+      });
+      expect(mockOnChange).toHaveBeenLastCalledWith("Max");
+    });
+
     it("uses the current callback when it changes during a pending debounce", () => {
       const initialOnChange = vi.fn();
       const currentOnChange = vi.fn();

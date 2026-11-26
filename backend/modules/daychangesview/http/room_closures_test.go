@@ -84,6 +84,12 @@ func TestRoomClosuresInHeuteAnders(t *testing.T) {
 	// Tomorrow's closure is not today's change.
 	musik := testpkg.CreateTestRoom(t, db, "Musikraum Sperre")
 	closeTestRoom(t, db, tenantID, musik.ID, day.AddDays(1), day.AddDays(1), "Konzertprobe")
+	// Archived rooms only remain reachable through their history. A current
+	// closure must not turn that historical room into a school-day notice.
+	archived := testpkg.CreateTestRoom(t, db, "Archivierter Raum")
+	closeTestRoom(t, db, tenantID, archived.ID, day, day, "Alte Sperre")
+	_, err := db.ExecContext(testpkg.Ctx(t), `UPDATE facilities.rooms SET archived_at = now() WHERE tenant_id = ? AND id = ?`, tenantID, archived.ID)
+	require.NoError(t, err)
 
 	// A closure of another school on the same database never reaches this
 	// one (the subtests below assert its absence).
@@ -125,6 +131,7 @@ func TestRoomClosuresInHeuteAnders(t *testing.T) {
 		assert.Equal(t, day.AddDays(3).String(), *halle.Until)
 		assert.NotContains(t, body, "Konzertprobe", "tomorrow's closure waits for tomorrow")
 		assert.NotContains(t, body, "Fremde Sperre", "another school's closure stays there")
+		assert.NotContains(t, body, "Alte Sperre", "an archived room has no current notice")
 	})
 
 	t.Run("without rooms:read the staff portal shows none", func(t *testing.T) {
@@ -141,6 +148,7 @@ func TestRoomClosuresInHeuteAnders(t *testing.T) {
 			assert.Nil(t, line.Link, "moto schule has no room page")
 		}
 		assert.NotContains(t, body, "Fremde Sperre", "another school's closure stays there")
+		assert.NotContains(t, body, "Alte Sperre", "an archived room has no current notice")
 		_, body = readSchool(t, schoolRouter, account.ID, tenantID, "class_day:read", "calendar:school")
 		assert.Empty(t, roomClosureLines(t, body), "a Lehrkraft without rooms:read sees none")
 	})
