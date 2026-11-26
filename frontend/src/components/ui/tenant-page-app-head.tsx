@@ -673,16 +673,18 @@ export function AppTenantTabs({
 // Reihe seitlich scrollt (Grundwert wie `variant="chip"`: 14 px).
 const TAB_CHIP_PADDING = "px-[var(--app-tab-px,0.875rem)]";
 const TAB_BASE_PADDING_PX = 14;
-// So weit schaut der erste nicht ganz sichtbare Reiter am Rand hervor: sein
-// Rahmen und ein Stück Innenabstand, kein angeschnittener Buchstabe.
-const TAB_PEEK_PX = 10;
+// Mindestens so weit schaut der erste nicht ganz sichtbare Reiter am Rand
+// hervor: sein Rahmen und ein Stück Innenabstand, kein angeschnittener
+// Buchstabe.
+const TAB_PEEK_MIN_PX = 10;
 const TAB_MIN_PADDING_PX = 10;
-const TAB_MAX_PADDING_PX = 20;
+const TAB_MAX_PADDING_PX = 24;
 
 /**
  * Innenabstand der Reiter, wenn die Reihe breiter als die Karte ist: Alle
  * Reiter im ersten Bild stehen ganz da, vom nächsten schaut nur der Rand
- * hervor (`TAB_PEEK_PX`). `null`, solange alle Reiter passen.
+ * hervor. `null`, solange alle Reiter passen oder kein Wert in den Grenzen
+ * das schafft.
  */
 function useTabPeekPadding(
   ref: RefObject<HTMLElement | null>,
@@ -712,26 +714,32 @@ function useTabPeekPadding(
         setPadding(null);
         return;
       }
-      let left = start;
-      let index = 0;
-      while (
-        index < widths.length &&
-        left + widths[index]! <= node.clientWidth
-      ) {
-        left += widths[index]! + gap;
-        index += 1;
+      // Für jede Zahl ganz sichtbarer Reiter (k) die Innenabstände, bei denen
+      // vom nächsten Reiter mindestens `TAB_PEEK_MIN_PX`, aber nur Rahmen und
+      // Innenabstand hervorschauen (kein Buchstabe). Gewählt wird der Wert,
+      // der dem Grundwert am nächsten liegt und in den Grenzen bleibt.
+      const contents = widths.map((width) => width - 2 * TAB_BASE_PADDING_PX);
+      let best: number | null = null;
+      let used = start;
+      for (let k = 1; k < contents.length; k += 1) {
+        used += contents[k - 1]! + gap;
+        const room = node.clientWidth - used;
+        // Rand: 1 px Rahmen, danach beginnt der Text.
+        const low = Math.max(TAB_MIN_PADDING_PX, (room - 1) / (2 * k + 1));
+        const high = Math.min(
+          TAB_MAX_PADDING_PX,
+          (room - TAB_PEEK_MIN_PX) / (2 * k),
+        );
+        if (low > high) continue;
+        const candidate = Math.min(high, Math.max(low, TAB_BASE_PADDING_PX));
+        if (
+          best === null ||
+          Math.abs(candidate - TAB_BASE_PADDING_PX) <
+            Math.abs(best - TAB_BASE_PADDING_PX)
+        )
+          best = candidate;
       }
-      if (index === 0) {
-        setPadding(null);
-        return;
-      }
-      const peek = node.clientWidth - left;
-      const next = TAB_BASE_PADDING_PX + (peek - TAB_PEEK_PX) / (2 * index);
-      setPadding(
-        Math.round(
-          Math.min(TAB_MAX_PADDING_PX, Math.max(TAB_MIN_PADDING_PX, next)) * 10,
-        ) / 10,
-      );
+      setPadding(best === null ? null : Math.round(best * 10) / 10);
     };
     measure();
     // Auch die Reiter selbst: Nach dem Laden der Schrift werden sie breiter.
