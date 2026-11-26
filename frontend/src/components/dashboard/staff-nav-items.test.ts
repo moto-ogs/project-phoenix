@@ -80,6 +80,45 @@ describe("staff navigation items (#6580)", () => {
     );
   });
 
+  // #8134: der Plan steht im Tagesbetrieb für das ganze Team. Lesen darf
+  // ihn, wer den Plan und das Team sieht; planen bleibt bei schedules:manage
+  // und entscheidet die Seite (Leseansicht, #2283).
+  describe("Betreuungsplan (#8134)", () => {
+    const carePlan = STAFF_NAV_ITEMS_BY_HREF.get("/betreuungsplan")!;
+    const permitted = (permissions: string[], isAdmin = false) =>
+      staffNavItemPermitted(carePlan, {
+        ...STAFF,
+        isAdmin,
+        session: session(permissions),
+      });
+
+    it("opens for the team with schedules:read and users:read, without schedules:manage", () => {
+      expect(permitted(["schedules:read", "users:read"])).toBe(true);
+    });
+
+    // Bis #8134 hing der Eintrag allein an schedules:manage; eine
+    // Leitungsrolle der Schule (#3469) verliert ihn nicht.
+    it("stays open for whoever plans, with schedules:manage alone", () => {
+      expect(permitted(["schedules:manage"])).toBe(true);
+    });
+
+    it("stays away from the AG-Leitung, who holds schedules:read alone (ADR 0091)", () => {
+      expect(permitted(["schedules:read"])).toBe(false);
+      expect(permitted(["users:read"])).toBe(false);
+    });
+
+    it("opens for the admin role and follows only the school switch, not binary mode", () => {
+      expect(permitted([], true)).toBe(true);
+      expect(carePlan.setting).toBe("timetable");
+      expect(STAFF_NAV_BINARY_HIDDEN_HREFS.has(carePlan.href)).toBe(false);
+    });
+
+    it("carries the calendar, today the clock", () => {
+      const today = STAFF_NAV_ITEMS_BY_HREF.get("/tagesplan")!;
+      expect(carePlan.concept.icon).not.toBe(today.concept.icon);
+    });
+  });
+
   describe("staffNavItemPermitted", () => {
     const item = (fields: Partial<StaffNavItem>): StaffNavItem => ({
       href: "/x",

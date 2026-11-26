@@ -7,6 +7,10 @@ import {
   hasRole,
   isCaregiver,
 } from "~/lib/auth-utils";
+import {
+  CARE_PLAN_MANAGE_PERMISSION,
+  CARE_PLAN_READ_PERMISSIONS,
+} from "~/lib/care-plan-access";
 import { useChangeRequestAccess } from "~/lib/hooks/use-change-request-access";
 import { useHasOwnStaff } from "~/lib/hooks/use-user-context";
 import {
@@ -43,6 +47,7 @@ import { calendarConcept } from "~/lib/concepts/calendar";
 import { carePlanConcept } from "~/lib/concepts/carePlan";
 import { childrenConcept } from "~/lib/concepts/children";
 import { dashboardConcept } from "~/lib/concepts/dashboard";
+import { dayPlanConcept } from "~/lib/concepts/dayPlan";
 import { dayReportConcept } from "~/lib/concepts/dayReport";
 import { emergencyConcept } from "~/lib/concepts/emergency";
 import { filesConcept } from "~/lib/concepts/files";
@@ -92,6 +97,11 @@ export interface StaffNavItem {
   readonly requiresPermission?: string | readonly string[];
   /** Alle Rechte der Route (wie `RequiresAllPermissions`). */
   readonly requiresAllPermissions?: readonly string[];
+  /**
+   * Wer die Seite bearbeiten darf, sieht sie auch ohne die Leserechte oben:
+   * das Recht allein öffnet den Eintrag (Betreuungsplan, #8134).
+   */
+  readonly managePermission?: string;
   /** Nur für die Rolle Admin (Planungsseiten ohne Recht für andere). */
   readonly requiresAdmin?: boolean;
   /** Bei offener Betreuung öffnet auch dieses Recht die Seite (#4769). */
@@ -128,16 +138,33 @@ export const STAFF_NAV_ITEMS: readonly StaffNavItem[] = [
   {
     // Tages-Betreuungsplan (#2383): Einstieg der Betreuungskräfte in den
     // laufenden Tag. Für Admins versteckt, sie haben den vollen
-    // Betreuungsplan im Planungsbereich. schedules:read ist das Gate der
+    // Betreuungsplan direkt darunter. schedules:read ist das Gate der
     // Route (/timetable/operations/planned-now); ohne das Recht wäre der
     // Eintrag nur ein sicherer 403. Nur an Schulen mit Betreuungsplan; das
     // Flag kommt vom Tenant-Resolve und ist auch ohne config:read da.
     ...STAFF_FLAT_PAGES.tagesplan,
-    concept: carePlanConcept,
+    // Die Uhr für den laufenden Tag, neben dem Kalender des ganzen Plans
+    // direkt darunter (#8134).
+    concept: dayPlanConcept,
     requiresPermission: "schedules:read",
     hideForAdmin: true,
     setting: "timetable",
     binaryHidden: true,
+  },
+  {
+    // Der ganze Betreuungsplan (#8134): für das Team, nicht nur für die
+    // Planenden. Ohne schedules:manage zeigt die Seite die Leseansicht
+    // (#2283), wie der Reiter in „Mein Kalender“. Bis #8134 stand der Eintrag
+    // in der Planung und verlangte schedules:manage. Wer ihn sieht, sagt
+    // `care-plan-access.ts`: Plan und Team lesen, oder planen.
+    //
+    // Kein `binaryHidden`: der Plan hing auch vorher nur am Schulschalter,
+    // nicht am Anwesenheitsmodus.
+    ...STAFF_FLAT_PAGES.carePlan,
+    concept: carePlanConcept,
+    requiresAllPermissions: CARE_PLAN_READ_PERMISSIONS,
+    managePermission: CARE_PLAN_MANAGE_PERMISSION,
+    setting: "timetable",
   },
   {
     // Alle Kinder liest das Schülerverzeichnis: users:read oder, für die
@@ -319,6 +346,12 @@ export function staffNavItemPermitted(
   if (item.requiresOwnStaff && !viewer.hasOwnStaff) return false;
   if (viewer.isAdmin) return true;
   if (item.requiresAdmin) return false;
+  if (
+    item.managePermission !== undefined &&
+    hasPermission(viewer.session, item.managePermission)
+  ) {
+    return true;
+  }
   if (
     viewer.openCareGroupMode &&
     item.openCarePermission !== undefined &&

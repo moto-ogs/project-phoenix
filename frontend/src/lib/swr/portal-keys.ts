@@ -358,7 +358,7 @@ export const homeLayoutKeys = {
 /** Cards of the start page. Keys describe the response, not the card. */
 export const homeKeys = {
   /**
-   * Today's planned blocks without rosters. „Ablauf des Tages“, „Mein Tag“
+   * Today's planned blocks without rosters. „Betreuungsplan heute“, „Mein Tag“
    * and the now strip share it; a settings change refreshes it.
    */
   dayFlow: () => "home-day-flow",

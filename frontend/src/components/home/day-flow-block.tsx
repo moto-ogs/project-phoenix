@@ -1,10 +1,8 @@
 "use client";
 
-import { Fragment } from "react";
-
 import { ListRow } from "~/components/ui/list-row";
+import Link from "~/components/ui/navigation-link";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
-import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { SkeletonRows } from "~/components/ui/skeleton";
 import {
   HomeCard,
@@ -14,16 +12,19 @@ import {
 import { StatusBadge } from "~/components/ui/status-badge";
 import { blockTintStyle } from "~/components/timetable/block-row-parts";
 import { useOperationalOverviewScope } from "~/lib/tenant-context";
-import { blockChildrenLabel, blockTimeRange } from "~/lib/block-children";
 import { formatMinutesAhead, minutesBetween } from "~/lib/home-clock";
 import { timetableOperationsApi } from "~/lib/timetable-operations-api";
 import type { PlannedTimetableInstance } from "~/lib/timetable-operations-types";
 import { useSWRAuth } from "~/lib/swr";
 import { homeKeys } from "~/lib/swr/portal-keys";
-import { useDayPlanHref, useDayPlanLabel } from "~/lib/hooks/use-day-plan-href";
+import { useCarePlanTodayTarget } from "~/lib/hooks/use-day-plan-href";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import {
-  dayPlanLinkTooltip,
+  BlockRowBody,
+  blockRowState,
+  NowLine,
+} from "~/components/home/home-block-row";
+import {
   HomeCardLink,
   HomeMoreRow,
   upcomingFirst,
@@ -31,31 +32,46 @@ import {
   useHomeCardRows,
 } from "~/components/home/home-card-rows";
 import { carePlanConcept } from "~/lib/concepts/carePlan";
-import { roomsConcept } from "~/lib/concepts/rooms";
-
-/** So viele Blöcke passen in eine Karte dieser Höhe ganz hinein. */
-const MAX_BLOCKS = 3;
 
 /**
- * Baustein „Ablauf des Tages" (#2180): der Rahmen des Tages, nicht nur die
- * eigenen Einsätze. Der GANZE Tag mit seinen Zuständen — was gelaufen ist,
- * was gerade läuft, was noch kommt; gearbeitet wird weiterhin im Tagesplan,
- * dorthin führt der Weiterlink.
+ * So viele Blöcke passen in eine Spalte der Karte ganz hinein: drei
+ * Rasterzeilen wie „Mein Tag“ (Körper 286 px, Zeile 52 px, Jetzt-Linie 20 px).
+ */
+const COLUMN_ROWS = 5;
+
+/** Ab dieser Kartenbreite stehen die Blöcke in zwei Spalten (`@3xl`, 48rem). */
+const WIDE_ROWS = COLUMN_ROWS * 2;
+
+/** Bis zu so vielen Minuten vor dem Beginn zählt die Karte herunter. */
+const SOON_MINUTES = 60;
+
+/**
+ * Baustein „Betreuungsplan heute" (#8134, vorher „Ablauf des Tages", #2180):
+ * der Betreuungsplan der ganzen Schule für den laufenden Tag, unter seinem
+ * Namen und mit denselben Zeilen wie „Mein Tag". Die Karte beginnt bei dem,
+ * was läuft oder als Nächstes kommt; jede Zeile führt in ihren Termin, der
+ * Weiterlink auf den Tag im Plan.
+ *
+ * Über die volle Breite stehen mehr als fünf Blöcke in zwei Spalten, die man
+ * wie eine Zeitung liest: erst die linke nach unten, dann die rechte. So
+ * passt ein Betreuungstag mit zehn Blöcken ganz auf die Karte. Die Breite entscheidet
+ * die Karte selbst (Container-Abfrage), nicht der Bildschirm: halb so breit
+ * gelegt oder auf dem Handy bleibt es eine Spalte. Beide Mengen stehen im
+ * Dokument und CSS wählt, damit die Karte ohne Messen und ohne Sprung nach
+ * dem ersten Rendern auskommt.
+ *
+ * Die Karte ist so hoch wie ihr Inhalt (`data-home-card-fit`): nachmittags
+ * stehen noch drei Blöcke da, und drei Rasterzeilen wären dann halb leer.
  *
  * Bewusst `scope: "day"` statt des Standardfensters: das liefert nur, was in
  * den nächsten 15 Minuten beginnt, und lässt einen gerade laufenden Block
- * ganz weg. Für einen Baustein, der „Ablauf des Tages" heißt, ist das die
- * falsche Frage.
+ * ganz weg.
  *
  * Bewusst ohne Kinderlisten: die Startseite ist eine Übersicht, und die
- * Namen gehören in den Tagesplan (GDPR).
+ * Namen gehören in den Termin (GDPR).
  */
 export function DayFlowBlock() {
-  // Reine Adminkonten haben keinen Tagesplan in der Navigation; für sie
-  // führt der Weiterlink in den Betreuungsplan im Planungsbereich.
-  const dayPlanHref = useDayPlanHref();
-  const dayPlanLabel = useDayPlanLabel();
-  const dayPlanTooltip = dayPlanLinkTooltip(dayPlanHref);
+  const { opensPlan, dayHref, blockHref } = useCarePlanTodayTarget();
   const { data, error, isLoading, mutate } = useSWRAuth<
     PlannedTimetableInstance[]
   >(
@@ -67,8 +83,10 @@ export function DayFlowBlock() {
       }),
     { refreshInterval: 5 * 60 * 1000 },
   );
-  const loadError = useSwrLoadError(error, "die Karte „Ablauf des Tages“", () =>
-    mutate(),
+  const loadError = useSwrLoadError(
+    error,
+    "die Karte „Betreuungsplan heute“",
+    () => mutate(),
   );
 
   const now = useBerlinClock();
@@ -77,123 +95,223 @@ export function DayFlowBlock() {
   const showMine = useOperationalOverviewScope() === "all_staff";
   const blocks = data ?? [];
   // Ab dem Block, der gerade läuft: sonst stünde um 16 Uhr immer noch die
-  // Frühbetreuung in der Karte.
-  // Ein Block, der laut Server noch läuft, zählt als „jetzt", auch wenn seine
-  // geplante Endzeit vorbei ist — die Jetzt-Zone zählt ihn ebenfalls mit.
-  const { items: relevant, allPast } = upcomingFirst(
-    blocks,
-    (block) => (block.status === "active" ? "24:00" : block.endTime),
-    now,
-  );
-  const { shown, hidden } = useHomeCardRows(relevant, MAX_BLOCKS, {
-    preferLatest: allPast,
-  });
+  // Frühbetreuung oben in der Karte. Ist der Tag vorbei, bleiben die letzten
+  // Blöcke stehen: „heute war das" ist eine Antwort, eine leere Karte keine.
+  const { items: open, allPast } = upcomingFirst(blocks, openUntil, now);
+  // Eine Spalte und zwei Spalten kappen verschieden. Die schmale Auswahl ist
+  // immer Teil der breiten: dieselbe Liste, vom selben Ende her gekürzt.
+  const narrow = useHomeCardRows(open, COLUMN_ROWS, { preferLatest: allPast });
+  const wide = useHomeCardRows(open, WIDE_ROWS, { preferLatest: allPast });
+  const inNarrow = new Set(narrow.shown.map((block) => block.id));
+  // Zwei Spalten nur, wenn eine nicht reicht: zwei oder drei Blöcke
+  // nebeneinander läse man quer statt erst nach unten.
+  const columns =
+    open.length > COLUMN_ROWS
+      ? "@3xl:columns-2 @3xl:gap-x-6 @3xl:[column-rule:1px_solid_var(--color-gray-200)]"
+      : "";
+  const today = blocks[0]?.date;
+  // Was vor jetzt lag, steht nicht mehr als Zeile da. Die Karte nennt die
+  // Zahl, damit drei Zeilen am Nachmittag nicht wie der ganze Tag aussehen.
+  const earlier = allPast ? 0 : blocks.length - open.length;
+  const label = opensPlan ? "Plan öffnen" : "Heute öffnen";
 
   return (
     <HomeCard
-      title="Ablauf des Tages"
+      title="Betreuungsplan heute"
       leading={<HomeCardIcon concept={carePlanConcept} />}
       inlineActions
       actions={
         <HomeCardLink
-          href={dayPlanHref}
-          label={`Ablauf des Tages: ${dayPlanLabel}`}
-          tooltip={dayPlanTooltip}
+          href={dayHref(today)}
+          label={`Betreuungsplan heute: ${label}`}
+          tooltip={
+            opensPlan
+              ? "Öffnet den Betreuungsplan von heute."
+              : "Öffnet deinen Tagesplan für heute."
+          }
         >
-          {dayPlanLabel}
+          {label}
         </HomeCardLink>
       }
     >
       {(() => {
         // Bis der Katalogtext da ist, bleibt das Skelett stehen: ein
-        // Ladefehler ist nie „Gerade steht nichts an“.
+        // Ladefehler ist nie „Heute ist nichts geplant“.
         if (loadError) return <LoadErrorAlert error={loadError} />;
         if ((isLoading && data === undefined) || error) {
-          return <SkeletonRows />;
+          return <SkeletonRows rows={4} labelClassName="w-20" />;
         }
         if (blocks.length === 0) {
           return (
             <HomeCardEmpty
-              title="Gerade steht nichts an"
-              description="Hier erscheinen die Blöcke des Betreuungsplans, sobald der nächste beginnt."
+              title="Heute ist nichts geplant"
+              description="Sobald für heute Termine im Betreuungsplan stehen, siehst du sie hier."
             />
           );
         }
         return (
-          <>
-            <ul className="space-y-2">
-              {shown.map((block) => {
-                const mine = showMine && block.isAssigned;
-                // Beendete Blöcke sind ausgegraut: Schrift gray-500 statt
-                // Deckkraft und ohne Tönung, auf der gray-500 keine 4,5:1
-                // erreicht (#7110); „Beendet" steht rechts.
-                const done = block.status === "completed";
-                const tinted = mine && !done;
-                const strong = done ? "text-gray-500" : "text-gray-900";
-                return (
-                  <li key={block.id}>
-                    {/* Jede Zeile führt in den Tagesplan, wo der Block bedient
-                      wird — wie die Zeilen der Nachbarkarten. */}
-                    <ListRow
-                      href={dayPlanHref}
-                      style={blockTintStyle(block, tinted)}
-                      trailing={<BlockState block={block} now={now} />}
-                    >
-                      <span
-                        className={`w-24 flex-shrink-0 text-sm font-medium tabular-nums ${strong}`}
-                      >
-                        {blockTimeRange(block)}
-                      </span>
-                      {/* Eine Zeile je Block: zweizeilige Einträge lassen in
-                        eine Karte dieser Höhe nur zwei ganz hinein, und zwei
-                        Blöcke sind kein Tagesablauf. */}
-                      <p className="min-w-0 flex-1 truncate text-sm">
-                        <span className={`font-medium ${strong}`}>
-                          {block.title}
-                        </span>
-                        <span
-                          className={tinted ? "text-gray-600" : "text-gray-500"}
-                        >
-                          {[
-                            block.roomName ? (
-                              <Fragment key="room">
-                                <MotoConceptIcon
-                                  concept={roomsConcept}
-                                  tone={done ? "neutral" : undefined}
-                                  size={14}
-                                  className="mr-1 inline-block align-[-2px]"
-                                />
-                                {block.roomName}
-                              </Fragment>
-                            ) : null,
-                            block.isDuty === true
-                              ? "Dienst"
-                              : block.status === "cancelled"
-                                ? null
-                                : blockChildrenLabel(block),
-                          ]
-                            .filter(Boolean)
-                            .flatMap((part) => [" · ", part])}
-                        </span>
-                      </p>
-                      {/* Named by what the row shows (WCAG 2.5.3, #7112);
-                          the mark and the target follow hidden. */}
-                      <span className="sr-only">{`${mine ? ", Mein Block" : ""}, unter Heute öffnen`}</span>
-                    </ListRow>
-                  </li>
-                );
-              })}
+          <div className="@container" data-home-card-fit="">
+            {/* Die Jetzt-Linie steht über beiden Spalten: in der Liste stünde
+                sie nur über der linken und verschöbe deren Zeilen gegen die
+                rechte. Ohne Uhr (erstes Rendern) gibt es keine Linie. */}
+            {now !== "" && !allPast ? (
+              <div className="mb-1.5">
+                <NowLine
+                  now={now}
+                  before={
+                    earlier > 0 ? (
+                      <EarlierLink count={earlier} href={dayHref(today)} />
+                    ) : null
+                  }
+                />
+              </div>
+            ) : null}
+            {/* -mb-1 nimmt den Abstand unter der letzten Zeile zurück. Die
+                feine Linie zwischen den Spalten sagt: erst links nach unten
+                lesen, dann rechts. */}
+            <ul className={`-mb-1 ${columns}`}>
+              {wide.shown.map((block) => (
+                <PlanRow
+                  key={block.id}
+                  block={block}
+                  now={now}
+                  mine={showMine && block.isAssigned}
+                  href={blockHref(block)}
+                  opensPlan={opensPlan}
+                  wideOnly={!inNarrow.has(block.id)}
+                />
+              ))}
+              {/* Je Breite ein eigener Rest: eine Spalte kappt früher. */}
+              {narrow.hidden > 0 ? (
+                <li
+                  className="mb-1 break-inside-avoid @3xl:hidden"
+                  data-plan-more="narrow"
+                >
+                  <HomeMoreRow
+                    hidden={narrow.hidden}
+                    href={dayHref(today)}
+                    label="Blöcke"
+                    singular="Block"
+                  />
+                </li>
+              ) : null}
+              {wide.hidden > 0 ? (
+                <li
+                  className="mb-1 hidden break-inside-avoid @3xl:block"
+                  data-plan-more="wide"
+                >
+                  <HomeMoreRow
+                    hidden={wide.hidden}
+                    href={dayHref(today)}
+                    label="Blöcke"
+                    singular="Block"
+                  />
+                </li>
+              ) : null}
             </ul>
-            <HomeMoreRow
-              hidden={hidden}
-              href={dayPlanHref}
-              label="Blöcke"
-              singular="Block"
-            />
-          </>
+            {/* Der Tag ist vorbei: die Linie steht unter dem letzten Block. */}
+            {now !== "" && allPast ? (
+              <div className="mt-1.5">
+                <NowLine now={now} />
+              </div>
+            ) : null}
+          </div>
         );
       })()}
     </HomeCard>
+  );
+}
+
+/**
+ * Bis wann ein Block für die Karte offen ist. Ein Block, der laut Server
+ * noch läuft, zählt als „jetzt", auch wenn seine geplante Endzeit vorbei ist:
+ * die Jetzt-Zone zählt ihn ebenfalls mit. Ein vorzeitig beendeter Block ist
+ * vorbei, auch wenn seine geplante Zeit noch läuft.
+ */
+export function openUntil(
+  block: Pick<PlannedTimetableInstance, "status" | "endTime">,
+): string {
+  if (block.status === "active") return "24:00";
+  if (block.status === "completed") return "00:00";
+  return block.endTime;
+}
+
+/**
+ * Links vor der Jetzt-Linie: wie viele Blöcke heute schon vorbei sind, als
+ * Weg in den Tag. Ohne das läse sich die Karte nachmittags, als hätte der
+ * Tag nur drei Termine.
+ */
+function EarlierLink({
+  count,
+  href,
+}: {
+  readonly count: number;
+  readonly href: string;
+}) {
+  return (
+    // Dieselbe Schrift und dieselben Worte wie „Noch 3 Blöcke ansehen“
+    // (`HomeMoreRow`) unter der Liste: beide führen in den Tag im Plan.
+    <Link
+      href={href}
+      className="shrink-0 text-sm font-medium text-gray-600 transition-colors hover:text-gray-900"
+    >
+      {count === 1 ? "1 früheren Block" : `${count} frühere Blöcke`} ansehen
+    </Link>
+  );
+}
+
+/**
+ * Ein Block des Plans. Dieselbe Zeile wie in „Mein Tag", nur führt die ganze
+ * Zeile zu ihrem Termin, und rechts steht allein der Zustand.
+ */
+function PlanRow({
+  block,
+  now,
+  mine,
+  href,
+  opensPlan,
+  wideOnly,
+}: {
+  readonly block: PlannedTimetableInstance;
+  readonly now: string;
+  readonly mine: boolean;
+  readonly href: string;
+  /** Die Zeile öffnet den Termin im Betreuungsplan statt den Tagesplan. */
+  readonly opensPlan: boolean;
+  /** Nur in zwei Spalten ist für diese Zeile Platz. */
+  readonly wideOnly: boolean;
+}) {
+  const { over } = blockRowState(block, now);
+  // Beendete Blöcke sind ausgegraut und ohne Tönung, auf der gray-500 keine
+  // 4,5:1 erreicht (#7110).
+  const tinted = mine && !over;
+  // Rechts steht nur, was JETZT zählt: läuft, fällt aus, nicht gestartet
+  // oder beginnt gleich. Ein Block am Nachmittag braucht morgens keine Marke
+  // „in 7 Std“; seine Uhrzeit steht links, und zehn blaue Marken
+  // untereinander sagen nichts mehr. „Beendet“ nennt die Metazeile.
+  const farAhead =
+    block.status === "planned" &&
+    !block.isOverdue &&
+    now !== "" &&
+    minutesBetween(now, block.startTime) > SOON_MINUTES;
+  return (
+    <li
+      className={`mb-1 break-inside-avoid ${wideOnly ? "hidden @3xl:block" : ""}`}
+    >
+      <ListRow
+        density="compact"
+        href={href}
+        style={blockTintStyle(block, tinted)}
+        trailing={
+          over || farAhead ? undefined : <BlockState block={block} now={now} />
+        }
+      >
+        <BlockRowBody block={block} now={now} />
+        {/* Named by what the row shows (WCAG 2.5.3, #7112); the mark and
+            the target follow hidden. */}
+        <span className="sr-only">{`${mine ? ", Mein Block" : ""}, ${opensPlan ? "im Betreuungsplan öffnen" : "unter Heute öffnen"}`}</span>
+      </ListRow>
+    </li>
   );
 }
 

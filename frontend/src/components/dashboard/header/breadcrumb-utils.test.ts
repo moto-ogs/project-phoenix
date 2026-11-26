@@ -376,9 +376,9 @@ describe("breadcrumb-utils", () => {
 
     describe("planning pages", () => {
       it("should resolve a planning page without a section link", () => {
-        const result = getSectionBreadcrumb("/betreuungsplan");
+        const result = getSectionBreadcrumb("/dienstplan");
         expect(result?.sectionLabel).toBe("Planung");
-        expect(result?.pageLabel).toBe("Betreuungsplan");
+        expect(result?.pageLabel).toBe("Dienstplan");
         // Planung hat keine Hub-Seite: ohne href rendert die Sektion als
         // Text statt als Link ins Leere.
         expect(result?.sectionHref).toBeUndefined();
@@ -405,10 +405,13 @@ describe("breadcrumb-utils", () => {
         expect(getPageTitle("/payroll")).toBe("Abrechnung");
       });
 
+      it("files the Betreuungsplan under no section since it moved to the Tagesbetrieb (#8134)", () => {
+        // Eine Seite des Tagesbetriebs trägt wie „Heute“ nur ihren Titel.
+        expect(getSectionBreadcrumb("/betreuungsplan")).toBeNull();
+        expect(getPageTitle("/betreuungsplan")).toBe("Betreuungsplan");
+      });
+
       it("should map canonical planning paths to their current entry", () => {
-        expect(getSectionBreadcrumb("/betreuungsplan")?.pageLabel).toBe(
-          "Betreuungsplan",
-        );
         expect(getSectionBreadcrumb("/vertretung")?.pageLabel).toBe(
           "Vertretungsplan",
         );
@@ -421,9 +424,9 @@ describe("breadcrumb-utils", () => {
       });
 
       it("should keep sub-paths of a planning page on that page", () => {
-        expect(getSectionBreadcrumb("/betreuungsplan/2026-07-30")).toEqual({
+        expect(getSectionBreadcrumb("/dienstplan/springer")).toEqual({
           sectionLabel: "Planung",
-          pageLabel: "Betreuungsplan",
+          pageLabel: "Dienstplan",
         });
       });
     });

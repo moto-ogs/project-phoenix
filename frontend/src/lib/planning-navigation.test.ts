@@ -15,9 +15,8 @@ import {
 
 describe("planning navigation", () => {
   it.each([
-    ["/betreuungsplan", "/betreuungsplan"],
-    ["/betreuungsplan/42", "/betreuungsplan"],
     ["/dienstplan", "/dienstplan"],
+    ["/dienstplan/springer", "/dienstplan"],
     ["/vertretung", "/vertretung"],
     ["/lists", "/lists"],
     ["/calendar-periods", "/calendar-periods"],
@@ -64,13 +63,19 @@ describe("planning navigation", () => {
         PLANNING_SUB_PAGES.map((page) => [page.href, page.nonAdminPermission]),
       ),
     ).toEqual({
-      "/betreuungsplan": "schedules:manage",
       "/dienstplan": "time_tracking:manage",
       "/vertretung": "schedules:manage",
       "/lists": "schedules:manage",
       "/wochenprotokolle": "groups:manage",
       "/calendar-periods": "schedules:manage",
     });
+  });
+
+  it("no longer counts the Betreuungsplan as a planning page (#8134)", () => {
+    // Der Plan steht seit #8134 im Tagesbetrieb und öffnet mit Leserecht;
+    // Rechte und Platz prüfen staff-nav-items.test.ts und der Baumtest.
+    expect(getActivePlanningSubPageHref("/betreuungsplan")).toBeNull();
+    expect(isPlanningPageHref("/betreuungsplan")).toBe(false);
   });
 
   it("recognizes only canonical planning hrefs", () => {

@@ -16,14 +16,15 @@ export function leadCarePlanTopic(): HelpTopic {
     audience: "lead",
     icon: "Table",
     steps: [
-      "Klappe in der Seitenleiste `Planung` auf.",
-      "Öffne `Betreuungsplan`.",
+      // #8134: der Plan steht im Tagesbetrieb, nicht mehr unter `Planung`.
+      "Öffne in der Seitenleiste unter `Tagesbetrieb` den `Betreuungsplan`.",
       "Wähle oben die Ansicht `Tag`, `Woche`, `Monat` oder `Serien`.",
       "Blättere mit den Pfeilen zur gewünschten Woche.",
       "Lege die Termine der Woche an.",
       "Prüfe zum Schluss die gemeldeten Konflikte.",
     ],
-    result: "Dein Team sieht den Plan unter `Heute` und unter `Mein Kalender`.",
+    result:
+      "Dein Team sieht den Plan unter `Heute`, unter `Betreuungsplan` und unter `Mein Kalender`.",
     notes: [
       "Ein Regeltermin wiederholt sich. Die Ansicht `Serien` zeigt alle Regeltermine.",
       // #5102: Hand-Kinderlisten folgen keiner Abmeldung; #5137: Klassen-

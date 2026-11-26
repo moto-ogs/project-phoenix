@@ -992,10 +992,11 @@ export const appOverviewTopic = function appOverviewTopic(): HelpTopic {
           "Ganz oben steht die `Startseite`. Darunter bündeln Gruppen, was zusammengehört.",
         ordered: false,
         steps: [
-          "`Tagesbetrieb`: alles für den laufenden Betreuungstag. Diese Gruppe ist schon aufgeklappt.",
+          // #8134: der Betreuungsplan steht hier, direkt unter `Heute`.
+          "`Tagesbetrieb`: alles für den laufenden Betreuungstag. Hier steht auch der `Betreuungsplan`, wenn deine OGS ihn nutzt. Diese Gruppe ist schon aufgeklappt.",
           "`Eltern`: was du mit den Familien austauschst.",
           "`Team`: Dein Dienstplan, dein Kalender, deine Arbeitszeit, deine Kolleginnen und Kollegen und die gemeinsamen Dateien. Wer nicht plant, findet diese Gruppe beim ersten Besuch schon aufgeklappt.",
-          "`Planung`: die Pläne deiner OGS. Wer plant, findet diese Gruppe beim ersten Besuch schon aufgeklappt.",
+          "`Planung`: was die Leitung zum Planen braucht, etwa der Dienstplan. Wer plant, findet diese Gruppe beim ersten Besuch schon aufgeklappt.",
           "`Verwaltung`: Stammdaten, Auswertungen und die Lohnabrechnung.",
           "In jeder Gruppe steht oben, was im Alltag am häufigsten gebraucht wird.",
           "Du siehst nur Gruppen, in denen etwas für dich dabei ist.",
@@ -1068,6 +1069,25 @@ export const appOverviewTopic = function appOverviewTopic(): HelpTopic {
           // Krank und Urlaub des Teams stehen seit #7668 nur noch hier, nicht
           // mehr in „Personal heute“ (components/home/staff-today-block.tsx).
           "Die Leitung sieht in `Personal heute`, wie viele in Aufsicht und eingestempelt sind. Wer krank oder im Urlaub ist, steht in `Heute anders`.",
+        ],
+      },
+      {
+        // Baustein „Betreuungsplan heute" (#8134), components/home/day-flow-block.tsx.
+        // Die Karte gibt es nur mit Betreuungsplan; der Artikel kennt den
+        // Schulschalter nicht, deshalb sagt der Text die Bedingung selbst.
+        title: "Der Betreuungsplan von heute",
+        description:
+          "Nutzt deine OGS den Betreuungsplan? Dann zeigt die Karte `Betreuungsplan heute`, was heute noch ansteht. Wer die OGS leitet, findet sie oben auf der Startseite.",
+        ordered: false,
+        steps: [
+          "Die Karte beginnt bei dem, was gerade läuft oder als Nächstes kommt. Die grüne Linie `Jetzt` zeigt die Uhrzeit.",
+          "Jede Zeile zeigt Beginn und Ende, den Raum, die Kinder und das Team.",
+          "Rechts steht, was gerade zählt: `Läuft`, `Nicht gestartet` oder `Fällt aus`. Beginnt ein Block in der nächsten Stunde, steht dort die Zeit bis zum Beginn.",
+          "Tippe auf eine Zeile, um den Termin im `Betreuungsplan` zu öffnen.",
+          "Links neben `Jetzt` steht, wie viele Blöcke heute schon vorbei sind. Tippe darauf, um den ganzen Tag zu sehen.",
+          "Passen nicht alle Blöcke auf die Karte? Darunter steht, wie viele noch kommen.",
+          "Die Karte fehlt bei dir? Wähle `Anpassen`, dann `Bausteine` und dann `Betreuungsplan heute`. Steht sie dort nicht, nutzt deine OGS sie nicht.",
+          "Deine eigenen Einsätze zeigt die Karte `Mein Tag`.",
         ],
       },
       {
@@ -1396,8 +1416,8 @@ export const carePlanTopic = function carePlanTopic(
     audience: ["caregiver", "lead"],
     icon: "Table",
     steps: [
-      "Klappe in der Seitenleiste `Team` auf und öffne `Mein Kalender`.",
-      "Wähle den Tab `Betreuungsplan`.",
+      // #8134: eigener Eintrag im Tagesbetrieb, direkt unter `Heute`.
+      "Öffne in der Seitenleiste unter `Tagesbetrieb` den `Betreuungsplan`.",
       "Wähle oben `Tag` oder `Woche`.",
       "Nutze die Pfeile oder `Heute`, um zum passenden Tag zu wechseln.",
       presenceMode === "binary"
@@ -1411,7 +1431,9 @@ export const carePlanTopic = function carePlanTopic(
     differences: [
       // Live geprueft: die Kopfzeile des Reiters traegt das Kennzeichen.
       "Steht oben rechts `Nur ansehen`? Dann darfst du den Plan lesen, aber nicht ändern.",
-      SIMPLE_NAV_DIFFERENCE,
+      // Die einfache Seitenleiste (#6956) führt den Plan nicht; der Reiter
+      // in `Mein Kalender` steht dort.
+      "Du siehst in der Seitenleiste keine Überschriften wie `Tagesbetrieb`? Dann nutzt deine OGS die einfache Seitenleiste. Öffne dort `Mein Kalender` und wähle den Tab `Betreuungsplan`. Oder wähle ganz unten `Alle Seiten anzeigen`.",
     ],
     notes: [
       // #4766: Filter Gruppe und Person, auch in der Leseansicht.
@@ -1419,11 +1441,13 @@ export const carePlanTopic = function carePlanTopic(
       // #4768: Raumfilter.
       "Nur einen Raum sehen? Wähle oben bei `Alle Räume` einen Raum.",
       "Die Adresse der Seite behält deine Auswahl. So kannst du den gefilterten Plan teilen.",
+      // Leseansicht als Reiter der einen Kalenderfläche (#2283), bleibt.
+      "Derselbe Plan steht auch in `Mein Kalender`, im Tab `Betreuungsplan`.",
       // #5028: Sa/So nur in der Woche des heutigen Wochenendes.
       "Betreut deine OGS am Wochenende? Dann gilt dort der Freitagsplan. Am Wochenende zeigt die Wochenansicht dieser Woche auch Samstag und Sonntag.",
     ],
     troubleshootingDetails: [
-      "Der Tab `Betreuungsplan` fehlt? Frag deine Leitung, ob sie deinen Zugang prüft.",
+      "Der Eintrag `Betreuungsplan` fehlt? Frag deine Leitung, ob sie deinen Zugang prüft.",
       "Steht dort `Noch kein Planungszeitraum`? Dann hat deine Leitung den Zeitraum noch nicht angelegt.",
       "Steht dort `Für diese Auswahl ist nichts geplant`? Stelle die Filter wieder auf `Alle Gruppen`, `Alle Personen` und `Alle Räume`.",
     ],
@@ -2162,6 +2186,8 @@ export const dayPlanTopic = function dayPlanTopic(
     ],
     notes: [
       "Mit den Pfeilen oben rechts siehst du einen anderen Tag.",
+      // #8134: der ganze Plan steht direkt unter `Heute`.
+      "Steht unter `Heute` auch `Betreuungsplan`? Dort siehst du die ganze Woche der OGS.",
       "Betreut deine OGS am Wochenende? Dann zeigt die Seite `Heute` auch Samstag und Sonntag. Dort gilt der Freitagsplan.",
     ],
     troubleshootingDetails: [
@@ -4381,8 +4407,8 @@ export const leadCancelBlockTopic = function leadCancelBlockTopic(): HelpTopic {
     icon: "CalendarCheck",
     requirements: ["Du darfst den Betreuungsplan bearbeiten."],
     steps: [
-      "Klappe in der Seitenleiste `Planung` auf.",
-      "Öffne `Betreuungsplan` und wähle den Termin.",
+      "Öffne in der Seitenleiste unter `Tagesbetrieb` den `Betreuungsplan`.",
+      "Wähle den Termin.",
       "Wähle `Absagen`.",
       "Lass den Haken bei `Eltern per App und E-Mail informieren` gesetzt, wenn die Familien Bescheid bekommen sollen.",
       "Prüfe `Betreff` und `Text an die Eltern`. moto schlägt beides vor.",
@@ -4418,14 +4444,15 @@ export const leadCarePlanTopic = function leadCarePlanTopic(): HelpTopic {
     audience: "lead",
     icon: "Table",
     steps: [
-      "Klappe in der Seitenleiste `Planung` auf.",
-      "Öffne `Betreuungsplan`.",
+      // #8134: der Plan steht im Tagesbetrieb, nicht mehr unter `Planung`.
+      "Öffne in der Seitenleiste unter `Tagesbetrieb` den `Betreuungsplan`.",
       "Wähle oben die Ansicht `Tag`, `Woche`, `Monat` oder `Serien`.",
       "Blättere mit den Pfeilen zur gewünschten Woche.",
       "Lege die Termine der Woche an.",
       "Prüfe zum Schluss die gemeldeten Konflikte.",
     ],
-    result: "Dein Team sieht den Plan unter `Heute` und unter `Mein Kalender`.",
+    result:
+      "Dein Team sieht den Plan unter `Heute`, unter `Betreuungsplan` und unter `Mein Kalender`.",
     notes: [
       "Ein Regeltermin wiederholt sich. Die Ansicht `Serien` zeigt alle Regeltermine.",
       // #5102: Hand-Kinderlisten folgen keiner Abmeldung; #5137: Klassen-

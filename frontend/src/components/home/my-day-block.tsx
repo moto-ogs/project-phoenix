@@ -1,17 +1,14 @@
 "use client";
 
 import { ChevronRight } from "lucide-react";
-import { Fragment, type ReactNode } from "react";
 
 import { Button } from "~/components/ui/button";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { ListRow } from "~/components/ui/list-row";
 import Link from "~/components/ui/navigation-link";
-import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { SkeletonRows } from "~/components/ui/skeleton";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { BlockState } from "~/components/home/day-flow-block";
-import { blockStaffNames } from "~/components/timetable/block-row-parts";
 import {
   HomeCard,
   HomeCardEmpty,
@@ -26,10 +23,11 @@ import {
   useHomeCardRows,
 } from "~/components/home/home-card-rows";
 import {
-  blockChildrenLabel,
-  blockEndLine,
-  hasOpenEnd,
-} from "~/lib/block-children";
+  BlockRowBody,
+  blockRowState,
+  blockSpokenTime,
+  NowLine,
+} from "~/components/home/home-block-row";
 import { useDayPlanHref, useDayPlanLabel } from "~/lib/hooks/use-day-plan-href";
 import {
   START_OWN_BLOCK_TOOLTIP,
@@ -43,8 +41,6 @@ import { timetableOperationsApi } from "~/lib/timetable-operations-api";
 import { canStartPlannedInstance } from "~/lib/timetable-lifecycle";
 import type { PlannedTimetableInstance } from "~/lib/timetable-operations-types";
 import { carePlanConcept } from "~/lib/concepts/carePlan";
-import { roomsConcept } from "~/lib/concepts/rooms";
-import { staffConcept } from "~/lib/concepts/staff";
 
 /**
  * So viele Blöcke passen in eine Karte von drei Rasterzeilen ganz hinein
@@ -63,7 +59,7 @@ const MAX_ROWS = 5;
  * seine Kinderliste. Nichts davon muss man im Tagesplan suchen; der bleibt
  * der Weg zu den anderen Tagen und zu den Blöcken der anderen.
  *
- * Dieselbe Abfrage wie „Ablauf des Tages" (gleicher Schlüssel): stehen beide
+ * Dieselbe Abfrage wie „Betreuungsplan heute" (gleicher Schlüssel): stehen beide
  * Karten auf dem Brett, fragt die Seite den Server nur einmal.
  */
 export function MyDayBlock() {
@@ -189,20 +185,6 @@ export function MyDayBlock() {
   );
 }
 
-/** Die Jetzt-Linie: dieselbe wie im Tagesplan, nur schmaler. */
-function NowLine({ now }: { readonly now: string }) {
-  return (
-    <span
-      className="flex items-center gap-2 px-1 text-xs font-medium text-gray-500"
-      aria-label={`Jetzt, ${now} Uhr`}
-    >
-      <span className="bg-moto-green h-px flex-1" aria-hidden="true"></span>
-      Jetzt · {now} Uhr
-      <span className="bg-moto-green h-px flex-1" aria-hidden="true"></span>
-    </span>
-  );
-}
-
 /**
  * Ein Block des eigenen Tages. Zeit, Name, Raum, Kinderzahl und Kolleginnen
  * in einer Zeile mit Untertitel; rechts, was der Block gerade ist — oder
@@ -225,72 +207,15 @@ function BlockRow({
   readonly busy: boolean;
   readonly onStart: (block: PlannedTimetableInstance) => void;
 }) {
-  const running = block.status === "active";
-  const cancelled = block.status === "cancelled";
+  const { running, over } = blockRowState(block, now);
   const startable =
     block.status === "planned" && canStartPlannedInstance(block, new Date());
-  // Vorbei ist vorbei: ausgegraut über Schrift in gray-500 statt Deckkraft
-  // (WCAG 1.4.3, #7110), damit das Laufende und Kommende von selbst
-  // hervortritt — wie im Tagesplan; die Metazeile nennt den Zustand
-  // zusätzlich in Worten.
-  // Ein Dienst (#3822) wird nie gestartet und hat keine Kinder.
-  const isDuty = block.isDuty === true;
-  const ended =
-    block.status === "planned" && now !== "" && block.endTime <= now;
-  const missed = ended && !isDuty;
-  const over = block.status === "completed" || ended;
   // Ein laufender Block führt in seine Kinderliste; jeder andere in den
   // Tagesplan, wo er bedient wird.
   const href =
     running && block.activeGroupId
       ? tenantPath(`/active-supervisions?session=${block.activeGroupId}`)
       : dayPlanHref;
-  const room =
-    block.roomName ??
-    (isDuty && block.roomId === "0" ? null : `Raum ${block.roomId}`);
-  // Kinderzahl so knapp wie im Tagesplan: laufend „12 von 18 da“ und wer
-  // gegangen ist, danach nur noch, wer da war, davor, wer erwartet wird.
-  const children = cancelled
-    ? null
-    : isDuty
-      ? "Dienst"
-      : blockChildrenLabel(block);
-  const staff = blockStaffNames(block);
-  // Was vorbei ist, steht als Wort in der Zeile, nicht als Marke rechts:
-  // auf dem Handy nähme die Marke dem Namen den Platz, und „Beendet" muss
-  // niemandem ins Auge springen. Rechts steht nur, was JETZT zählt.
-  // Raum und Personal tragen ihre Konzeptsymbole wie im Tagesplan (#4350).
-  const meta: ReactNode[] = [
-    block.status === "completed" ? "Beendet" : null,
-    missed ? "Nicht gestartet" : null,
-    // Ein Dienst wird nie gestartet: „Beendet" und „Nicht gestartet"
-    // passen nicht, er ist schlicht vorbei.
-    ended && isDuty ? "Vorbei" : null,
-    room ? (
-      <Fragment key="room">
-        <MotoConceptIcon
-          concept={roomsConcept}
-          tone={over ? "neutral" : undefined}
-          size={14}
-          className="mr-1 inline-block align-[-2px]"
-        />
-        {room}
-      </Fragment>
-    ) : null,
-    block.groupName,
-    children,
-    staff ? (
-      <Fragment key="staff">
-        <MotoConceptIcon
-          concept={staffConcept}
-          tone={over ? "neutral" : undefined}
-          size={14}
-          className="mr-1 inline-block align-[-2px]"
-        />
-        {staff}
-      </Fragment>
-    ) : null,
-  ].filter(Boolean);
 
   return (
     <li>
@@ -330,38 +255,20 @@ function BlockRow({
       >
         <Link
           href={href}
-          aria-label={`${block.title} ${hasOpenEnd(block) ? `seit ${block.startTime}` : `${block.startTime} bis ${block.endTime}`}: ${running ? "Kinderliste öffnen" : "unter Heute öffnen"}`}
+          aria-label={`${block.title} ${blockSpokenTime(block)}: ${running ? "Kinderliste öffnen" : "unter Heute öffnen"}`}
           className="flex min-w-0 flex-1 items-center gap-3"
         >
-          <span className="w-14 shrink-0 sm:w-16">
-            <span
-              className={`block text-sm font-semibold tabular-nums ${over ? "text-gray-500" : "text-gray-900"}`}
-            >
-              {block.startTime}
-            </span>
-            <span className="block text-xs text-gray-500 tabular-nums">
-              {blockEndLine(block)}
-            </span>
-          </span>
-          <span className="min-w-0 flex-1">
-            <span
-              className={`block truncate text-sm ${over ? "text-gray-500" : "text-gray-900"} ${running ? "font-semibold" : "font-medium"}`}
-            >
-              {block.title}
-              {block.isSubstitute && (
+          <BlockRowBody
+            block={block}
+            now={now}
+            titleAddon={
+              block.isSubstitute ? (
                 <span className="ml-2 text-xs font-normal text-gray-500">
                   Vertretung
                 </span>
-              )}
-            </span>
-            <span className="block truncate text-xs text-gray-500">
-              {cancelled && block.cancelReason
-                ? `Fällt aus · ${block.cancelReason}`
-                : meta.flatMap((part, index) =>
-                    index === 0 ? [part] : [" · ", part],
-                  )}
-            </span>
-          </span>
+              ) : null
+            }
+          />
         </Link>
       </ListRow>
     </li>

@@ -31,10 +31,11 @@ export function appOverviewTopic(): HelpTopic {
           "Ganz oben steht die `Startseite`. Darunter bündeln Gruppen, was zusammengehört.",
         ordered: false,
         steps: [
-          "`Tagesbetrieb`: alles für den laufenden Betreuungstag. Diese Gruppe ist schon aufgeklappt.",
+          // #8134: der Betreuungsplan steht hier, direkt unter `Heute`.
+          "`Tagesbetrieb`: alles für den laufenden Betreuungstag. Hier steht auch der `Betreuungsplan`, wenn deine OGS ihn nutzt. Diese Gruppe ist schon aufgeklappt.",
           "`Eltern`: was du mit den Familien austauschst.",
           "`Team`: Dein Dienstplan, dein Kalender, deine Arbeitszeit, deine Kolleginnen und Kollegen und die gemeinsamen Dateien. Wer nicht plant, findet diese Gruppe beim ersten Besuch schon aufgeklappt.",
-          "`Planung`: die Pläne deiner OGS. Wer plant, findet diese Gruppe beim ersten Besuch schon aufgeklappt.",
+          "`Planung`: was die Leitung zum Planen braucht, etwa der Dienstplan. Wer plant, findet diese Gruppe beim ersten Besuch schon aufgeklappt.",
           "`Verwaltung`: Stammdaten, Auswertungen und die Lohnabrechnung.",
           "In jeder Gruppe steht oben, was im Alltag am häufigsten gebraucht wird.",
           "Du siehst nur Gruppen, in denen etwas für dich dabei ist.",
@@ -107,6 +108,25 @@ export function appOverviewTopic(): HelpTopic {
           // Krank und Urlaub des Teams stehen seit #7668 nur noch hier, nicht
           // mehr in „Personal heute“ (components/home/staff-today-block.tsx).
           "Die Leitung sieht in `Personal heute`, wie viele in Aufsicht und eingestempelt sind. Wer krank oder im Urlaub ist, steht in `Heute anders`.",
+        ],
+      },
+      {
+        // Baustein „Betreuungsplan heute" (#8134), components/home/day-flow-block.tsx.
+        // Die Karte gibt es nur mit Betreuungsplan; der Artikel kennt den
+        // Schulschalter nicht, deshalb sagt der Text die Bedingung selbst.
+        title: "Der Betreuungsplan von heute",
+        description:
+          "Nutzt deine OGS den Betreuungsplan? Dann zeigt die Karte `Betreuungsplan heute`, was heute noch ansteht. Wer die OGS leitet, findet sie oben auf der Startseite.",
+        ordered: false,
+        steps: [
+          "Die Karte beginnt bei dem, was gerade läuft oder als Nächstes kommt. Die grüne Linie `Jetzt` zeigt die Uhrzeit.",
+          "Jede Zeile zeigt Beginn und Ende, den Raum, die Kinder und das Team.",
+          "Rechts steht, was gerade zählt: `Läuft`, `Nicht gestartet` oder `Fällt aus`. Beginnt ein Block in der nächsten Stunde, steht dort die Zeit bis zum Beginn.",
+          "Tippe auf eine Zeile, um den Termin im `Betreuungsplan` zu öffnen.",
+          "Links neben `Jetzt` steht, wie viele Blöcke heute schon vorbei sind. Tippe darauf, um den ganzen Tag zu sehen.",
+          "Passen nicht alle Blöcke auf die Karte? Darunter steht, wie viele noch kommen.",
+          "Die Karte fehlt bei dir? Wähle `Anpassen`, dann `Bausteine` und dann `Betreuungsplan heute`. Steht sie dort nicht, nutzt deine OGS sie nicht.",
+          "Deine eigenen Einsätze zeigt die Karte `Mein Tag`.",
         ],
       },
       {

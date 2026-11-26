@@ -53,7 +53,7 @@ const logger = createLogger({ component: "HomeNowStrip" });
  * frei anordenbar.
  *
  * Die Abfragen teilen ihre Schlüssel mit den Karten darunter („Mein Tag",
- * „Ablauf des Tages", Kennzahlen): steht die Karte auf der Fläche, kostet
+ * „Betreuungsplan heute", Kennzahlen): steht die Karte auf der Fläche, kostet
  * die Zone keine zweite Abfrage.
  */
 export function NowStrip({
@@ -87,7 +87,7 @@ export function NowStrip({
     context.detailed &&
     access.has("schedules:read");
   // Der Tag laut Plan, für „Aufsicht starten": dieselbe Freigabe und
-  // derselbe Schlüssel wie „Mein Tag" und „Ablauf des Tages". Die
+  // derselbe Schlüssel wie „Mein Tag" und „Betreuungsplan heute". Die
   // Schulansicht daraus bleibt der Leitung vorbehalten; wer betreut, bekommt
   // aus diesen Daten nur den Knopf.
   const wantsDay = context.timetableEnabled && access.has("schedules:read");

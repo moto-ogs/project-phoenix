@@ -7,6 +7,7 @@ import {
   isHomeBlockAvailable,
   appendPlacement,
   computeBoardCells,
+  homeBlockHeight,
   homeProfileFor,
   movePlacementBy,
   placePlacement,
@@ -113,9 +114,44 @@ describe("resolveHomeLayout — Standardansicht", () => {
     expect(keysOf(placements)).not.toContain("section.active_groups");
   });
 
+  // Der Betreuungsplan stand in der dritten Kartenreihe der Leitung, halb
+  // breit und mit drei Blöcken, und war im Alltag zu versteckt (#8134).
+  it("stellt der Leitung den Betreuungsplan von heute direkt unter „Heute anders“", () => {
+    const { placements } = resolveHomeLayout(fullContext, [], {}, {});
+
+    expect(homeProfileFor(fullContext.access)).toBe("lead");
+    expect(placements.slice(0, 2)).toEqual([
+      { key: "section.day_changes", span: 4, col: 0, row: 0 },
+      { key: "section.day_flow", span: 4, col: 0, row: 2 },
+    ]);
+    // Drei Zeilen hoch wie „Mein Tag“: die Kennzahlen stehen darunter.
+    expect(homeBlockHeight("section.day_flow")).toBe(3);
+    expect(
+      placements.find((entry) => entry.key === "tile.students_present"),
+    ).toMatchObject({ col: 0, row: 5 });
+  });
+
+  it("gibt der Leitung, die selbst betreut, den Plan der Schule über die volle Breite", () => {
+    const { placements } = resolveHomeLayout(
+      { ...fullContext, access: leadCareAccess },
+      [],
+      {},
+      {},
+    );
+
+    expect(
+      placements.find((entry) => entry.key === "section.day_flow"),
+    ).toMatchObject({ span: 4, col: 0 });
+    // Der eigene Tag bleibt davor.
+    const keys = keysOf(placements);
+    expect(keys.indexOf("section.my_day")).toBeLessThan(
+      keys.indexOf("section.day_flow"),
+    );
+  });
+
   // Zwei Bausteine, die dieselben Zeilen zeigen, gehören nicht zusammen in
-  // einen Standard: „Mein Tag" ist der eigene Ausschnitt des Ablaufs.
-  it("stellt Mein Tag und Ablauf des Tages nicht zusammen auf, wer nur eines ist", () => {
+  // einen Standard: „Mein Tag" ist der eigene Ausschnitt des Plans.
+  it("stellt Mein Tag und Betreuungsplan heute nicht zusammen auf, wer nur eines ist", () => {
     for (const profile of ["care", "lead"] as const) {
       const keys = keysOf(DEFAULT_LAYOUTS[profile]);
       expect(
@@ -378,10 +414,17 @@ describe("resolveHomeLayout — eigene Anordnung", () => {
       col: 0,
       row: 2,
     });
+    // Danach der Betreuungsplan von heute (#8134), drei Zeilen hoch; die
+    // Kennzahlen folgen darunter.
     expect(placements[2]).toMatchObject({
-      key: "tile.students_present",
+      key: "section.day_flow",
       col: 0,
       row: 4,
+    });
+    expect(placements[3]).toMatchObject({
+      key: "tile.students_present",
+      col: 0,
+      row: 7,
     });
     expect(keysOf(placements)).toContain("section.open_requests");
   });
@@ -495,10 +538,10 @@ describe("resolveHomeLayout — Berechtigung", () => {
     );
   });
 
-  // In der Betreuungsansicht steht der Ablauf des Tages nicht: er zeigt
+  // In der Betreuungsansicht steht der Betreuungsplan von heute nicht: er zeigt
   // dieselben Blöcke wie „Mein Tag". Anbieten lässt er sich trotzdem, sobald
   // das Recht reicht.
-  it("bietet den Ablauf des Tages nur mit schedules:read an", () => {
+  it("bietet den Betreuungsplan von heute nur mit schedules:read an", () => {
     expect(resolveFor([]).addable.map((block) => block.key)).not.toContain(
       "section.day_flow",
     );
