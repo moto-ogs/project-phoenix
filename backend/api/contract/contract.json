@@ -128851,6 +128851,12 @@
           }
         },
         {
+          "name": "skipped_closed_rooms",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
           "name": "candidates_raced",
           "schema": {
             "kind": "int"

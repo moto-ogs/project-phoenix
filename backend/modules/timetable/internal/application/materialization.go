@@ -72,6 +72,7 @@ type materializationService struct {
 	careBounds     ports.CareBoundReader
 	sickReports    ports.SickReportReader          // nil marks no supervisor sick (#6292)
 	nonWorkingDays timetable.NonWorkingDayCalendar // nil skips no holidays or closing days (#3594)
+	roomClosures   ports.RoomClosures
 	exceptionRepo  timetable.ActivityExceptionQuery
 	timeframeRepo  timetable.TimeframeQuery
 	lock           timetable.RecurrenceWriteLock
@@ -84,7 +85,7 @@ type materializationService struct {
 func NewMaterialization(deps ports.MaterializationDependencies) (timetable.MaterializationCapability, error) {
 	if deps.GroupRepo == nil || deps.ScheduleRepo == nil || deps.EnrollmentRepo == nil || deps.SupervisorRepo == nil ||
 		deps.PeriodRepo == nil || noInstanceRows(deps.InstanceRepo) || deps.StaffRepo == nil || noParticipantRows(deps.StudentRepo) ||
-		deps.ExceptionRepo == nil || deps.TimeframeRepo == nil {
+		deps.ExceptionRepo == nil || deps.TimeframeRepo == nil || deps.RoomClosures == nil {
 		return nil, errors.New("timetable materialization: required repository is nil")
 	}
 	if deps.Transactions != nil && deps.RecurrenceLock == nil {
@@ -103,6 +104,7 @@ func NewMaterialization(deps ports.MaterializationDependencies) (timetable.Mater
 		careBounds:     deps.CareBounds,
 		sickReports:    deps.SickReports,
 		nonWorkingDays: deps.NonWorkingDays,
+		roomClosures:   deps.RoomClosures,
 		exceptionRepo:  deps.ExceptionRepo,
 		timeframeRepo:  deps.TimeframeRepo,
 		lock:           deps.RecurrenceLock,
@@ -200,6 +202,7 @@ type materializationWorld struct {
 	existingIdx   map[existingKey]struct{}
 	exceptionIdx  map[exceptionKey]*schedule.ActivityException
 	timeframeByID map[int64]*schedule.Timeframe
+	closedRooms   map[int64][]ports.RoomClosureRange
 	// sickDays names the absence behind every full absence day of a staff
 	// member in the window (#6292, #6847).
 	sickDays map[staffDay]absenceStamp
@@ -232,7 +235,7 @@ func (s *materializationService) materializeForTenantLocked(
 		s.finishLog(tenantID, source, result, elapsed())
 		return result, nil
 	}
-	world, err := s.loadMaterializationWorld(ctx, from, to, periods)
+	world, err := s.loadMaterializationWorld(ctx, from, to, periods, templates)
 	if err != nil {
 		return nil, err
 	}
@@ -344,6 +347,7 @@ func (s *materializationService) loadMaterializationWorld(
 	ctx context.Context,
 	from, to calendar.Date,
 	periods []*schedule.CalendarPeriod,
+	templates []*activityContract.Group,
 ) (*materializationWorld, error) {
 	world, err := s.loadOccurrenceRules(ctx, from, to, periods)
 	if err != nil {
@@ -354,12 +358,36 @@ func (s *materializationService) loadMaterializationWorld(
 		return nil, &ports.ScheduleError{Op: "materialize for tenant: load existing instances", Err: err}
 	}
 	world.existingIdx = buildExistingIndex(existing)
+	roomIDs := make([]int64, 0, len(templates))
+	for _, template := range templates {
+		if template.PlannedRoomID != nil && *template.PlannedRoomID > 0 {
+			roomIDs = append(roomIDs, *template.PlannedRoomID)
+		}
+	}
+	for _, exception := range world.exceptionIdx {
+		if exception.RoomID != nil && *exception.RoomID > 0 {
+			roomIDs = append(roomIDs, *exception.RoomID)
+		}
+	}
+	closures, err := s.roomClosures.RoomClosureRanges(ctx, roomIDs, from, to)
+	if err != nil {
+		return nil, &ports.ScheduleError{Op: "materialize for tenant: load room closures", Err: err}
+	}
+	world.closedRooms = roomClosureRangesByRoom(closures)
 	// Past days included: the run stamps every block it creates (I-1).
 	world.sickDays, err = sickDaysIn(ctx, s.sickReports, daysBetween(from, to)...)
 	if err != nil {
 		return nil, err
 	}
 	return world, nil
+}
+
+func roomClosureRangesByRoom(closures []ports.RoomClosureRange) map[int64][]ports.RoomClosureRange {
+	byRoom := make(map[int64][]ports.RoomClosureRange)
+	for _, closure := range closures {
+		byRoom[closure.RoomID] = append(byRoom[closure.RoomID], closure)
+	}
+	return byRoom
 }
 
 // loadOccurrenceRules loads what candidateSlot decides a date by: the
@@ -604,6 +632,10 @@ func (s *materializationService) materializeCandidate(
 	effective, period, skip := candidateSlot(tmpl, sch, date, world.periods, world.days, exc, world.timeframeByID, s.getLogger())
 	if skip != candidateKept {
 		countSkippedCandidate(result, skip)
+		return nil
+	}
+	if roomClosedOn(world.closedRooms[effective.RoomID], date) {
+		result.CandidatesSkippedClosedRoom++
 		return nil
 	}
 	key := existingKey{

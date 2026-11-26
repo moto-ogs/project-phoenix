@@ -54,9 +54,10 @@ type CloseRoom struct {
 // RoomClosureFilter selects the closures that overlap From through Until,
 // both included; RoomID narrows them to one room.
 type RoomClosureFilter struct {
-	RoomID *int64
-	From   calendar.Date
-	Until  calendar.Date
+	RoomID  *int64
+	RoomIDs []int64
+	From    calendar.Date
+	Until   calendar.Date
 }
 
 // Closures owns the room closures of the caller's school. ReopenRoom lifts a
@@ -67,6 +68,9 @@ type Closures interface {
 	ListRoomClosures(context.Context, RoomClosureFilter) ([]RoomClosure, error)
 	// RoomClosedOn reports whether a closure closes the room on the day.
 	RoomClosedOn(ctx context.Context, roomID int64, day calendar.Date) (bool, error)
+	// RoomClosureRanges locks the rooms and lists their closures overlapping
+	// the window. Timetable uses this one batched read while materializing.
+	RoomClosureRanges(ctx context.Context, roomIDs []int64, from, until calendar.Date) ([]RoomClosure, error)
 }
 
 // ClosedRoomsOn maps each room closed on the day to the closure that closes

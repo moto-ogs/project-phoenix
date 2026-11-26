@@ -91,6 +91,9 @@ func (s *Store) ListClosures(ctx context.Context, filter facilities.RoomClosureF
 	if filter.RoomID != nil {
 		query = query.Where(`"closure".room_id = ?`, *filter.RoomID)
 	}
+	if len(filter.RoomIDs) > 0 {
+		query = query.Where(`"closure".room_id IN (?)`, bun.In(filter.RoomIDs))
+	}
 	if err := query.Scan(ctx); err != nil {
 		return nil, stats, fmt.Errorf("facilities postgres: list room closures: %w", err)
 	}

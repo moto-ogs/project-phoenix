@@ -226,6 +226,7 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 		organizations    organizationtenancy.Capability
 		groups           schoolstructure.Owner
 		rooms            facilitiesModule.Catalog
+		roomClosures     facilitiesModule.Closures
 		membership       schoolMembershipModule.Owner
 		bookings         *enrollmentOwner.BookingProjection
 		settings         SettingsOwner
@@ -310,6 +311,7 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 		func() (err error) { organizations, err = BuildServeOrganizations(db, env.Now); return },
 		func() (err error) { groups, err = BuildServeSchoolStructure(db, env.Now); return },
 		func() (err error) { rooms, err = BuildServeRooms(db); return },
+		func() (err error) { roomClosures, err = BuildRoomClosures(db, env.Now); return },
 		func() (err error) { membership, err = ComposeSchoolMembership(db, env.Now); return },
 		func() error { bookings = NewEnrollmentBookings(env.Now); return nil },
 		func() (err error) {
@@ -455,12 +457,12 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 			return
 		},
 		func() (err error) {
-			materialization, err = BuildTimetableMaterialization(db, env, hub, timetableRows, people, calendar, workTime)
+			materialization, err = BuildTimetableMaterialization(db, env, hub, timetableRows, people, calendar, workTime, NewTimetableRoomClosures(roomClosures))
 			return
 		},
 		func() (err error) {
 			lifecycle, err = BuildTimetableLifecycle(db, env, hub, timetableRows, days, people, careRows, presence, supervisions,
-				WorkforceShiftRows(workTime), schedules, carePlan, active, materialization, announcements, settings.Service, NewTimetableSickReports(workTime), NewTimetableStaffNotices(notifications, membership, timetableOwner, workTime).WithGuardianContacts(persons))
+				WorkforceShiftRows(workTime), schedules, carePlan, active, materialization, announcements, settings.Service, NewTimetableSickReports(workTime), NewTimetableStaffNotices(notifications, membership, timetableOwner, workTime).WithGuardianContacts(persons), NewTimetableRoomClosures(roomClosures))
 			return
 		},
 		func() (err error) {

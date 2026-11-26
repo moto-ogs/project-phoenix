@@ -143,7 +143,10 @@ func NewTimetableTestModule(db transactionruntime.Database, unit tenant.UnitOfWo
 		return TimetableTestModule{}, nil, nil, err
 	}
 	rows := r.TimetableTemplateRows()
-	materialization, err := newTimetableTestMaterialization(db, owners.TimetableMaterializationDependencies(rows, members.Student, calendar, recurrenceLock, hub, logger))
+	roomClosures := owners.NewTimetableRoomClosures(NewRoomClosuresForTest(db, now))
+	materializationDeps := owners.TimetableMaterializationDependencies(rows, members.Student, calendar, recurrenceLock, hub, logger)
+	materializationDeps.RoomClosures = roomClosures
+	materialization, err := newTimetableTestMaterialization(db, materializationDeps)
 	if err != nil {
 		return TimetableTestModule{}, nil, nil, err
 	}
@@ -167,6 +170,7 @@ func NewTimetableTestModule(db transactionruntime.Database, unit tenant.UnitOfWo
 		IdempotencyRepo: r.InstanceIdempotency, ExceptionRepo: r.ActivityException, CalendarPeriodRepo: r.CalendarPeriod, Database: arrivalTimetable.NewTenantDatabase(db.Pool()),
 		StaffRepo: owners.NewTimetableStaff(members.Staff), ActiveGroupRepo: presence.ActiveGroup, SupervisorRepo: presence.GroupSupervisor,
 		Presence: owners.NewLoggedStudentPresence(db, logger), ActiveService: ender, CareDayLocks: carePlan,
+		RoomClosures:    roomClosures,
 		Materialization: materialization, SickReports: owners.NewTimetableSickReports(owners.MustNewWorkforce(db)), RecurrenceLock: recurrenceLock,
 		StartConflicts: conflicts, SubstituteConflicts: substituteConflicts, Logger: logger, Now: now,
 	}, lifecycleRows, careDay, nil, settings.Settings, hub)

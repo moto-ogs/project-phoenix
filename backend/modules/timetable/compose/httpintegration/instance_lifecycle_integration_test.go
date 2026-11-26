@@ -23,6 +23,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan/absencerecords"
+	"github.com/moto-ogs/project-phoenix/modules/facilities"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/modules/timetable/compose"
@@ -280,6 +281,42 @@ func TestInstance_CreateRejectsDateOutsideActiveCalendarPeriod(t *testing.T) {
 	})
 
 	require.ErrorIs(t, err, timetable.ErrInstanceOutsideActiveCalendarPeriod)
+}
+
+func TestInstance_ClosedRoomRejectsNewAndMovedAppointments(t *testing.T) {
+	t.Parallel()
+
+	s := buildLifecycle(t)
+	openDate := calendar.DateFromTime(s.clock()).AddDays(1)
+	closedDate := openDate.AddDays(1)
+	existing := seedInstanceOn(t, s, openDate, false, false)
+	closures := api.NewRoomClosuresForTest(testpkg.NewDatabase(t, s.db), s.clock)
+	_, err := closures.CloseRoom(s.ctx, facilities.CloseRoom{
+		RoomID: s.roomID, StartDate: closedDate, EndDate: closedDate, Reason: "Wasserschaden",
+	})
+	require.NoError(t, err)
+
+	created, err := s.svc.CreateInstance(s.ctx, timetable.CreateInstanceInput{
+		Date: closedDate, StartTime: existing.StartTime, EndTime: existing.EndTime,
+		Title: "Neuer Termin", RoomID: s.roomID,
+	})
+	assert.Nil(t, created)
+	assert.ErrorIs(t, err, timetable.ErrRoomClosed)
+
+	_, err = s.svc.UpdatePlanned(s.ctx, existing.ID, timetable.UpdateInstanceInput{
+		ExpectedVersion: plannerVersion(t, s.ctx, s.timetableData.Data, existing.ID),
+		Date:            closedDate, StartTime: existing.StartTime, EndTime: existing.EndTime,
+		Title: "Verschoben", RoomID: s.roomID,
+	}, nil)
+	assert.ErrorIs(t, err, timetable.ErrRoomClosed)
+
+	updated, err := s.svc.UpdatePlanned(s.ctx, existing.ID, timetable.UpdateInstanceInput{
+		ExpectedVersion: plannerVersion(t, s.ctx, s.timetableData.Data, existing.ID),
+		Date:            openDate, StartTime: existing.StartTime, EndTime: existing.EndTime,
+		Title: "Bestehender Termin", RoomID: s.roomID,
+	}, nil)
+	require.NoError(t, err)
+	assert.Equal(t, openDate, updated.Date)
 }
 
 func TestInstance_CreateSpontaneousSkipsActiveCalendarPeriodValidation(t *testing.T) {

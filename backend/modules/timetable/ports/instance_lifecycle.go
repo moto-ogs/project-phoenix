@@ -99,6 +99,7 @@ type InstanceLifecycleDependencies struct {
 	Presence           LifecyclePresence
 	ActiveService      SessionEnder
 	Rooms              LifecycleRooms
+	RoomClosures       RoomClosures
 	CareDays           CareDays
 	CareDayLocks       CareDayLocks
 	Protocol           DeviationProtocol

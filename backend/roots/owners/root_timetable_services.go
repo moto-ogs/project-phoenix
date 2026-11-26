@@ -51,11 +51,12 @@ type TimetableLifecycle struct {
 // Holidays and closing days carry no series occurrences unless the series
 // opts into closing days (#3594); the School Calendar answers. Workforce's
 // open sick reports mark newly planned supervisors absent (#6292).
-func BuildTimetableMaterialization(db transactionruntime.Database, env RootEnvironment, hub *realtime.Hub, owner TimetableOwner, people PeopleRows, calendar schoolcalendar.Days, absences SickReportAbsences) (timetable.MaterializationCapability, error) {
+func BuildTimetableMaterialization(db transactionruntime.Database, env RootEnvironment, hub *realtime.Hub, owner TimetableOwner, people PeopleRows, calendar schoolcalendar.Days, absences SickReportAbsences, roomClosures timetablePorts.RoomClosures) (timetable.MaterializationCapability, error) {
 	deps := TimetableMaterializationDependencies(owner.TemplateRows, people.Students, calendar,
 		owner.RecurrenceLock, hub, env.Logger.With("service", "materialization"))
 	deps.Transactions = arrivalTimetable.NewTenantTransactions(db.Pool())
 	deps.SickReports = NewTimetableSickReports(absences)
+	deps.RoomClosures = roomClosures
 	materialization, err := arrivalTimetable.NewMaterialization(deps)
 	if err != nil {
 		return nil, fmt.Errorf("compose timetable materialization: %w", err)
@@ -71,7 +72,7 @@ func BuildTimetableLifecycle(
 	people PeopleRows, careRows TimetableCareRows, presence PresenceOwner, supervisions studentpresence.SupervisionRecords,
 	shifts timetablePorts.ConflictShifts, schedules CarePlanSchedules, carePlan careplan.Capability, active studentpresence.Presence,
 	materialization timetable.MaterializationCapability, notices communication.CareCancellationPublisher, settings settingsCompose.BatchSettingsService,
-	sickReports timetablePorts.SickReportReader, staffNotices TimetableStaffNotices,
+	sickReports timetablePorts.SickReportReader, staffNotices TimetableStaffNotices, roomClosures timetablePorts.RoomClosures,
 ) (TimetableLifecycle, error) {
 	repos := owner.Repositories
 	rows := days.Rows
@@ -95,6 +96,7 @@ func BuildTimetableLifecycle(
 		CalendarPeriodRepo: owner.TemplateRows.CalendarPeriods, Database: arrivalTimetable.NewTenantDatabase(db.Pool()),
 		StaffRepo: NewTimetableStaff(people.Staff), ActiveGroupRepo: presence.SessionRecords, SupervisorRepo: supervisions,
 		Presence: presence.Presence, ActiveService: active, CareDayLocks: carePlan,
+		RoomClosures:    roomClosures,
 		Materialization: materialization, SickReports: sickReports, RecurrenceLock: owner.RecurrenceLock,
 		StartConflicts: conflicts, SubstituteConflicts: substituteConflicts, StaffNotices: staffNotices.Cancellations, RoomNotices: staffNotices.RoomChanges,
 		Logger: env.Logger.With("service", "instance-lifecycle"), Now: env.Now,

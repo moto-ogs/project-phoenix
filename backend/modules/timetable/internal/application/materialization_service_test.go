@@ -1222,6 +1222,7 @@ func newMaterializationForTest(
 		StudentRepo:    legacyParticipantRows(studentRepo),
 		ExceptionRepo:  exceptionRepo,
 		TimeframeRepo:  timeframeRepo,
+		RoomClosures:   openRoomClosures{},
 		Transactions:   transactions,
 		Staffing:       staffing,
 		Logger:         logger,
@@ -1230,4 +1231,14 @@ func newMaterializationForTest(
 		panic(err)
 	}
 	return svc
+}
+
+type openRoomClosures struct{}
+
+func (openRoomClosures) RoomClosedOn(context.Context, int64, calendar.Date) (bool, error) {
+	return false, nil
+}
+
+func (openRoomClosures) RoomClosureRanges(context.Context, []int64, calendar.Date, calendar.Date) ([]ports.RoomClosureRange, error) {
+	return nil, nil
 }

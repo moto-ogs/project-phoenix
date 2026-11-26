@@ -106,19 +106,53 @@ func (c *Closures) ListRoomClosures(ctx context.Context, filter facilities.RoomC
 // RoomClosedOn reports whether the school closed the room on the day: the
 // kiosk's session start refuses such a room (#7653).
 func (c *Closures) RoomClosedOn(ctx context.Context, roomID int64, day calendar.Date) (closed bool, err error) {
+	closures, err := c.RoomClosureRanges(ctx, []int64{roomID}, day, day)
+	return len(closures) > 0, err
+}
+
+// RoomClosureRanges locks the named rooms before reading their closures. A
+// timetable write that wins the lock is therefore an existing appointment
+// when a concurrent closure is committed; one that waits sees the closure and
+// is refused. The list stays set-based for materialization.
+func (c *Closures) RoomClosureRanges(ctx context.Context, roomIDs []int64, from, until calendar.Date) (result []facilities.RoomClosure, err error) {
 	if err := c.service.requireTenant(ctx, "room_closed_on"); err != nil {
-		return false, err
+		return nil, err
 	}
-	if roomID <= 0 || day.IsZero() {
-		return false, nil
+	if len(roomIDs) == 0 || from.IsZero() || until.IsZero() || until.Before(from) {
+		return []facilities.RoomClosure{}, nil
 	}
-	err = c.service.runWrite(ctx, "room_closed_on", func(txCtx context.Context, stats *domain.OperationStats) error {
-		closures, queryStats, err := c.store.ListClosures(txCtx, facilities.RoomClosureFilter{RoomID: &roomID, From: day, Until: day})
+	ids := uniquePositiveRoomIDs(roomIDs)
+	if len(ids) == 0 {
+		return []facilities.RoomClosure{}, nil
+	}
+	err = c.service.runWrite(ctx, "room_closure_ranges", func(txCtx context.Context, stats *domain.OperationStats) error {
+		_, queryStats, err := c.service.store.LockByIDs(txCtx, ids)
 		stats.Add(queryStats)
-		closed = len(closures) > 0
+		if err != nil {
+			return err
+		}
+		closures, queryStats, err := c.store.ListClosures(txCtx, facilities.RoomClosureFilter{RoomIDs: ids, From: from, Until: until})
+		stats.Add(queryStats)
+		result = closures
 		return err
 	})
-	return closed, err
+	return result, err
+}
+
+func uniquePositiveRoomIDs(ids []int64) []int64 {
+	seen := make(map[int64]struct{}, len(ids))
+	result := make([]int64, 0, len(ids))
+	for _, id := range ids {
+		if id <= 0 {
+			continue
+		}
+		if _, exists := seen[id]; exists {
+			continue
+		}
+		seen[id] = struct{}{}
+		result = append(result, id)
+	}
+	return result
 }
 
 func validateClosure(input facilities.CloseRoom, today calendar.Date) error {

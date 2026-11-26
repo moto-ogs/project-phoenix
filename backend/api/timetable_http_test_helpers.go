@@ -107,12 +107,14 @@ func NewTimetableHTTPTestModule(db transactionruntime.Database, options Timetabl
 	}
 	materialization := options.Materialization
 	if materialization == nil {
+		roomClosures := owners.NewTimetableRoomClosures(NewRoomClosuresForTest(db, clocks...))
 		materialization, err = timetableCompose.NewMaterialization(timetablePorts.MaterializationDependencies{
 			GroupRepo: r.Timetable, ScheduleRepo: r.ActivitySchedule,
 			EnrollmentRepo: r.StudentEnrollment, SupervisorRepo: r.ActivitySupervisor, Directories: r.Directories,
 			PeriodRepo: r.CalendarPeriod, InstanceRepo: r.ActivityInstance, StaffRepo: r.InstanceStaff,
 			StudentRepo: r.InstanceStudent, ExceptionRepo: r.ActivityException, NonWorkingDays: options.NonWorkingDays,
 			TimeframeRepo: r.Timeframe, CareBounds: members.Student, RecurrenceLock: lock, Transactions: timetableCompose.NewTenantTransactions(db.Pool()),
+			RoomClosures: roomClosures,
 		})
 		if err != nil {
 			return TimetableHTTPTestModule{}, err

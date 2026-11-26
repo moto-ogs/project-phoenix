@@ -23,7 +23,7 @@ type instanceReferences struct {
 // tenant and returns the block type of the linked template ("" without one).
 // date is the date the rows will LIVE on (the target of a move): it decides
 // whether a graduated child is still refused.
-func (s *InstanceLifecycleService) validateInstanceReferences(ctx context.Context, date calendar.Date, refs instanceReferences) (string, error) {
+func (s *InstanceLifecycleService) validateInstanceReferences(ctx context.Context, date calendar.Date, refs instanceReferences, allowClosedRoom bool) (string, error) {
 	groupType, err := s.validateActivityGroupReference(ctx, refs.activityGroupID)
 	if err != nil {
 		return "", err
@@ -34,7 +34,7 @@ func (s *InstanceLifecycleService) validateInstanceReferences(ctx context.Contex
 	if isDuty && len(domain.UniquePositiveIDs(refs.studentIDs)) > 0 {
 		return "", fmt.Errorf("%w: a duty has no children", timetable.ErrInvalidInstanceReference)
 	}
-	if err := s.validateRoomReference(ctx, refs.roomID, isDuty); err != nil {
+	if err := s.validateRoomReference(ctx, date, refs.roomID, isDuty, allowClosedRoom); err != nil {
 		return "", err
 	}
 	if err := s.validateStaffReferences(ctx, refs.staffIDs, refs.createdByStaffID); err != nil {
@@ -52,7 +52,7 @@ func invalidReference(field string, err error) error {
 	return fmt.Errorf("%w: invalid %s", timetable.ErrInvalidInstanceReference, field)
 }
 
-func (s *InstanceLifecycleService) validateRoomReference(ctx context.Context, roomID int64, roomOptional bool) error {
+func (s *InstanceLifecycleService) validateRoomReference(ctx context.Context, date calendar.Date, roomID int64, roomOptional, allowClosedRoom bool) error {
 	if roomID == 0 && roomOptional {
 		return nil
 	}
@@ -61,6 +61,16 @@ func (s *InstanceLifecycleService) validateRoomReference(ctx context.Context, ro
 	}
 	if _, ok, err := s.deps.Rooms.RoomName(ctx, roomID); err != nil || !ok {
 		return invalidReference("room_id", err)
+	}
+	if allowClosedRoom {
+		return nil
+	}
+	closed, err := s.deps.RoomClosures.RoomClosedOn(ctx, roomID, date)
+	if err != nil {
+		return fmt.Errorf("check room closure: %w", err)
+	}
+	if closed {
+		return fmt.Errorf("%w: room_id %d on %s", timetable.ErrRoomClosed, roomID, date)
 	}
 	return nil
 }
