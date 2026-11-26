@@ -22,8 +22,14 @@ import (
 // Version 5 adds that the Träger keeps the customer number of the Gemeinde
 // for later registrations and when it goes (#6692). Version 6 keeps the
 // texts of version 5 and gives the name sentence in the Du-Form (#7687, ADR
-// 0294).
-const HolidayConsentVersionCurrent = HolidayConsentVersionInformalDeclaration
+// 0294). Version 7 names the team that cares for the child instead of "die
+// OGS": a school may call its care "der Hort" or "das Lernhaus" (#8136).
+const HolidayConsentVersionCurrent = HolidayConsentVersionCareTeam
+
+// HolidayConsentVersionCareTeam is the first version whose privacy and
+// health texts name the hosting care by what it does, not as "die OGS"
+// (#8136). The versions before keep the wording the parents agreed to.
+const HolidayConsentVersionCareTeam = 7
 
 // HolidayConsentVersionInformalDeclaration is the first version whose name
 // sentence addresses the parent with Du (#7687). The versions before keep
@@ -102,6 +108,16 @@ const (
 		"Die OGS sieht das schon vor der Ferienwoche. So kann sie sich vorbereiten. " +
 		"Die Liste der Kinder sieht sie bis zum letzten Tag der Woche. " +
 		"Name, Telefon und Antworten kann sie danach höchstens 7 Tage lesen. Dann werden sie gelöscht."
+	// holidayCareTeamPrivacyConsentText is the privacy text from
+	// HolidayConsentVersionCareTeam on, with the same two numbers.
+	holidayCareTeamPrivacyConsentText = "Ich bin einverstanden, dass der Träger die Angaben für die Ferienbetreuung nutzt. " +
+		"Er löscht sie %d Tage nach den Ferien. Gesundheitsangaben löscht er schon %d Tage nach den Ferien. " +
+		"Das Team, das mein Kind in einer Ferienwoche betreut, " +
+		"sieht Name und Telefon der zweiten sorgeberechtigten Person. Es sieht auch die Antworten, " +
+		"die der Träger für das Team freigibt. Gesundheitsangaben sieht es nur, wenn ich zustimme. " +
+		"Das Team sieht das schon vor der Ferienwoche. So kann es sich vorbereiten. " +
+		"Die Liste der Kinder sieht es bis zum letzten Tag der Woche. " +
+		"Name, Telefon und Antworten kann es danach höchstens 7 Tage lesen. Dann werden sie gelöscht."
 	// holidayDebtorNumberConsentText follows the privacy text from
 	// HolidayConsentVersionDebtorNumber on: the number the family keeps at
 	// the Träger goes on 1 January of the fourth year after it was last
@@ -113,6 +129,11 @@ const (
 	holidayHealthConsentText = "Ich bin einverstanden: Der Träger und die OGS sehen die Gesundheitsangaben meiner Kinder. " +
 		"Es geht um die OGS, die ein Kind in einer Ferienwoche betreut. " +
 		"Sie sieht die Angaben ab der Bestätigung bis zum letzten Tag der Woche."
+	// holidayCareTeamHealthConsentText is the health text from
+	// HolidayConsentVersionCareTeam on.
+	holidayCareTeamHealthConsentText = "Ich bin einverstanden: Der Träger und das Betreuungsteam sehen die Gesundheitsangaben meiner Kinder. " +
+		"Es geht um das Team, das ein Kind in einer Ferienwoche betreut. " +
+		"Es sieht die Angaben ab der Bestätigung bis zum letzten Tag der Woche."
 	holidayBindingConfirmedText = "Ich weiß, dass die Anmeldung verbindlich ist."
 	holidayCustodyConfirmedText = "Ich darf die Anmeldung allein abgeben: " +
 		"Ich bin allein sorgeberechtigt oder die andere sorgeberechtigte Person ist einverstanden."
@@ -148,7 +169,12 @@ func HolidayConsentTextsOf(version, retentionDays int) (HolidayConsentTexts, boo
 	if version >= HolidayConsentVersionRetention && version <= HolidayConsentVersionCurrent {
 		texts := holidayConsentTexts[holidayConsentVersionDeclaration]
 		texts.Version, texts.RetentionDays = version, retentionDays
-		texts.PrivacyConsent = fmt.Sprintf(holidayRetentionPrivacyConsentText, retentionDays, HolidayHealthRetentionDays)
+		privacy := holidayRetentionPrivacyConsentText
+		if version >= HolidayConsentVersionCareTeam {
+			privacy = holidayCareTeamPrivacyConsentText
+			texts.HealthConsent = holidayCareTeamHealthConsentText
+		}
+		texts.PrivacyConsent = fmt.Sprintf(privacy, retentionDays, HolidayHealthRetentionDays)
 		if version >= HolidayConsentVersionDebtorNumber {
 			texts.PrivacyConsent += " " + holidayDebtorNumberConsentText
 		}

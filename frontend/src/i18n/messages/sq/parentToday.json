@@ -58,6 +58,7 @@
     "closingDayUntil": "{careTerm} është e mbyllur deri më {date}: {name}.",
     "openingChanged": "{careTerm} sot është e hapur nga {opens} deri në {closes}: {name}.",
     "openingChangedUntil": "Deri më {date}, {careTerm} është e hapur nga {opens} deri në {closes}: {name}.",
+    "mealCancelled": "Sot nuk ka drekë për {name}. Ajo nuk do të faturohet.",
     "pickupAfterClosing": "Kjo është pas mbylljes. Të lutem ndrysho marrjen.",
     "regularPickupAfterClosing": "Sipas planit javor, {name} merret në orën {time}.",
     "activityCancelled": "{title} në orën {time} sot anulohet.",

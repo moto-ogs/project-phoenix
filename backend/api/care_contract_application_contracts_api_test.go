@@ -74,6 +74,9 @@ func newApplicationContractsFixture(t *testing.T, name string) applicationContra
 	_, err = db.ExecContext(t.Context(), `UPDATE care_contract.contracts SET status = ?, concluded_at = ?, conclusion_method = ?
 		WHERE id = ?`, carecontract.StatusWithdrawn, time.Date(2099, 7, 2, 9, 30, 0, 0, time.UTC), carecontract.MethodWithApplication, withdrawn)
 	require.NoError(t, err)
+	_, err = db.ExecContext(t.Context(), `UPDATE care_contract.contract_versions SET status = ? WHERE contract_id IN (?, ?)`,
+		carecontract.VersionEffective, concluded, withdrawn)
+	require.NoError(t, err)
 	replaced := testpkg.CreateTestCareContract(t, db, organization, school, testpkg.UniqueTestTenantID(t), carecontract.StatusSent, august,
 		testpkg.CareContractService{Weekday: "fri", Module: "Ganztag", EndsAt: "16:00"})
 	_, err = db.ExecContext(t.Context(), `UPDATE care_contract.contract_versions SET status = ? WHERE contract_id = ?`, carecontract.VersionEffective, replaced)
@@ -194,6 +197,11 @@ func TestApplicationContractsShowTheSchoolItsSentAndConcludedContracts(t *testin
 	at, err := time.Parse(time.RFC3339, concluded.Concluded.At)
 	require.NoError(t, err)
 	assert.True(t, at.Equal(time.Date(2099, 7, 1, 9, 30, 0, 0, time.UTC)), concluded.Concluded.At)
+	require.NotNil(t, concluded.EffectiveFrom)
+	assert.Equal(t, "2099-08-03", *concluded.EffectiveFrom)
+	require.Len(t, concluded.Services, 1)
+	assert.Equal(t, "wed", concluded.Services[0].Weekday)
+	assert.Equal(t, "14:00", concluded.Services[0].EndsAt)
 
 	// The other school asks for the same children and sees only its own.
 	rec = f.get(t, f.staffOf(t, f.other, permissions.ConfigManage), f.path(f.sent, f.concluded, f.foreign))

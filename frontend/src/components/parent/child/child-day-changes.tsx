@@ -86,6 +86,10 @@ function childDayChangeText(
       if (!entry.pickup_after_closing || !entry.pickup_time) return opening;
       return `${opening} ${t("changes.regularPickupAfterClosing", { name: firstName, time: entry.pickup_time })} ${t("changes.pickupAfterClosing")}`;
     }
+    case "meal_cancelled":
+      // Nur bei einer Buchung des Kindes an dem Tag (#8160). Der Grund der
+      // Schule bleibt beim Team.
+      return t("changes.mealCancelled", { name: firstName });
     case "activity_cancelled":
       return t("changes.activityCancelled", { title, time });
     case "activity_reinstated":

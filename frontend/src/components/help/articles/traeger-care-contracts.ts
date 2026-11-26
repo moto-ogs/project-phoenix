@@ -277,10 +277,24 @@ export function traegerCareContractsTopic(): HelpTopic {
       {
         title: "Wenn sich die Betreuung ändert: neue Version",
         steps: [
-          "Nach einer Freigabe durch dich oder die Schule bekommt der aktive Vertrag nach wenigen Minuten eine neue Version. Sie gilt ab dem freigegebenen Tag.",
+          "Ändert sich die gebuchte Betreuung, bekommt der Vertrag nach wenigen Minuten eine neue Version.",
+          "Haben die Eltern die Änderung selbst beantragt, und du oder die Schule gibt sie frei? Dann gilt die neue Version ab dem freigegebenen Tag. Der Antrag der Eltern gilt als Unterschrift. Die Eltern bekommen die neue Fassung per Mail und in der Eltern-App.",
           "Wähle in der Liste das Kind. Oben steht, ab wann die neue Version gilt.",
-          "Im Reiter `Versionen` siehst du jede Version mit ihren Tagen. `Geändert` markiert die Wochentage, die anders sind als vorher.",
+          "Im Reiter `Versionen` siehst du jede Version mit ihren Tagen. `Geändert` markiert die Wochentage, die anders sind als vorher. Unter den Daten steht, wie die Eltern zugestimmt haben.",
           "Mit `PDF` lädst du eine Version als PDF.",
+        ],
+      },
+      {
+        title: "Wenn die Eltern eine Änderung neu unterschreiben müssen",
+        description:
+          "Hat die Schule oder der Träger die Betreuung geändert, ohne dass die Eltern das beantragt haben? Dann müssen die Eltern die neue Version unterschreiben. Bis dahin gilt die bisherige Version, auch für die Abrechnung.",
+        steps: [
+          "In der Liste steht beim Vertrag `Änderung wartet auf Unterschrift`. Wähle das Kind.",
+          "Oben steht, welche Version bis zur Unterschrift gilt. Wähle `Zur geänderten Fassung`.",
+          "Die Karte `Geänderte Fassung` zeigt `Wartet auf Eltern` und den Versandstand. Wird die Mail noch gesendet? Dann warte, bis der Versand fertig ist. Ist sie nicht angekommen oder ihr Ergebnis unbekannt? Gib den Eltern das PDF unter `Versionen`. In der Eltern-App sehen sie die Änderung und unterschreiben.",
+          "Bis zur Unterschrift bekommen die Eltern Erinnerungen per Mail. Die Karte zeigt jede Erinnerung.",
+          "Haben die Eltern auf Papier unterschrieben? Lade das PDF der neuen Version im Reiter `Versionen` mit `PDF`. Wähle danach in der Karte `Papiervertrag erfassen`.",
+          "Nach der Unterschrift steht die Version im Reiter `Versionen` mit `Gilt ab` oder `Gilt jetzt`.",
         ],
       },
       {
@@ -322,6 +336,11 @@ export function traegerCareContractsTopic(): HelpTopic {
       "Den Kündigungstermin rechnet moto aus den Bedingungen im Vertrag, nicht aus den heutigen Vertragsbedingungen. Die Widerrufsfrist beginnt frühestens mit dem Erhalt der Belehrung. Ohne Nachweis gilt die längere Frist.",
       "Endet die Widerrufsfrist an einem Samstag, Sonntag oder Feiertag, endet sie erst am nächsten Werktag. moto nimmt die Feiertage aus dem Bundesland der Schule. Feiertage, die nur in einer Stadt oder Gemeinde gelten, kennt moto nicht. Hat deine Gemeinde einen eigenen Feiertag, prüfe die Frist an diesem Tag selbst.",
       "Eine neue Version gilt nie rückwirkend. Kommt eine Freigabe zu spät, gilt die Version ab dem Tag, an dem moto sie anlegt.",
+      "Unterschreiben die Eltern eine geänderte Fassung erst nach ihrem Tag, gilt sie ab dem Tag der Unterschrift. Im Reiter `Versionen` steht dann auch der Tag aus dem Vertrag.",
+      "Als Unterschrift zählt nur ein Antrag vom Elternkonto der Vertragspartei, den die Freigabe genau so gebucht hat. Hat ein anderer Elternteil gefragt, oder hat die Freigabe etwas anderes gebucht? Dann wartet die Version auf die Unterschrift.",
+      "Ändert sich die Betreuung noch einmal, bevor die Eltern unterschrieben haben? Dann bekommen sie eine neue Fassung mit neuem Link. Die frühere steht unter `Versionen` als `Überholt`. Niemand kann sie mehr unterschreiben. Das gilt auch für einen versendeten Vertrag, den noch niemand unterschrieben hat.",
+      "Nimmt die Schule die Änderung zurück, wartet nichts mehr. Die Version steht dann als `Überholt` unter `Versionen`.",
+      "Ging der Vertrag nie per Mail an die Eltern, zum Beispiel bei einer Übergabe auf Papier? Dann bekommen die Eltern auch die geänderte Fassung nicht per Mail. Die Karte `Geänderte Fassung` sagt dir das. Gib den Eltern das PDF.",
       "Beginnt an einem Tag schon eine Version, und du oder die Schule gibt für denselben Tag eine weitere Änderung frei, ersetzt moto diese Version. Die neue Version enthält beide Änderungen. Die alte steht unter `Versionen` als `Ersetzt` und gilt an keinem Tag.",
       "Ist schon eine spätere Version geplant, gilt eine frühere Änderung nur bis dahin. Die geplante Version übernimmt sie nicht von selbst.",
     ],

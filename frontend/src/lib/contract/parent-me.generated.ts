@@ -35,10 +35,10 @@ import {
   type SwitchOffRequest,
 } from "./shared.generated";
 
-export const CHILD_DAY_CHANGE_KIND_VALUES = ["activity_cancelled", "activity_lead_changed", "activity_reinstated", "activity_room_changed", "child_absent", "child_goes_alone", "child_pickup_changed", "class_dismissal_changed", "class_trip", "closing_day", "opening_changed"] as const;
+export const CHILD_DAY_CHANGE_KIND_VALUES = ["activity_cancelled", "activity_lead_changed", "activity_reinstated", "activity_room_changed", "child_absent", "child_goes_alone", "child_pickup_changed", "class_dismissal_changed", "class_trip", "closing_day", "meal_cancelled", "opening_changed"] as const;
 export type ChildDayChangeKind = (typeof CHILD_DAY_CHANGE_KIND_VALUES)[number];
 
-export const CHILD_DAY_SOURCE_VALUES = ["activities", "children", "classes", "closing_days"] as const;
+export const CHILD_DAY_SOURCE_VALUES = ["activities", "children", "classes", "closing_days", "meal_plan"] as const;
 export type ChildDaySource = (typeof CHILD_DAY_SOURCE_VALUES)[number];
 
 export const CHILD_DAY_SOURCE_STATE_VALUES = ["failed", "loaded"] as const;
@@ -1128,6 +1128,7 @@ export interface BillingDocumentResponse {
   can_sign?: boolean;
   signed_at?: string;
   replaced: boolean;
+  change_awaits_signature: boolean;
   ends_on?: string;
   can_end_contract?: boolean;
   can_withdraw_contract?: boolean;
@@ -1151,6 +1152,7 @@ export const BillingDocumentResponseSchema: z.ZodType<BillingDocumentResponse, u
   can_sign: optional(bool),
   signed_at: optional(instant),
   replaced: bool,
+  change_awaits_signature: bool,
   ends_on: optional(calendarDate),
   can_end_contract: optional(bool),
   can_withdraw_contract: optional(bool),
@@ -2557,6 +2559,7 @@ export interface ContractSignRequest {
   typed_name?: string;
   withdrawal_notice_acknowledged?: boolean;
   early_start_requested?: boolean;
+  document_sha256?: string;
 }
 
 /** Go: parent.PostMessageRequest */

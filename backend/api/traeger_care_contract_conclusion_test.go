@@ -37,6 +37,16 @@ import (
 // ports the serving root binds, for the fixture's Träger.
 func careContractConclusionRun(t *testing.T, f careContractFixture) carecontract.ConclusionRun {
 	t.Helper()
+	conclusion, ctx := careContractConclusionOf(t, f)
+	run, err := conclusion.ConcludeAccepted(ctx, f.office.organization)
+	require.NoError(t, err)
+	return run
+}
+
+// careContractConclusionOf builds the Worker's conclusion over the ports
+// the serving root binds, with the context its runs take.
+func careContractConclusionOf(t *testing.T, f careContractFixture) (carecontract.Conclusion, context.Context) {
+	t.Helper()
 	database := testpkg.NewDatabase(t, f.db)
 	unit := testpkg.TenantRuntime(t, f.db)
 	organizations, err := owners.NewOrganizationTenancy(database)
@@ -51,10 +61,8 @@ func careContractConclusionRun(t *testing.T, f careContractFixture) carecontract
 	require.NoError(t, err)
 	schoolSettings, err := owners.NewSettingsTestModule(database, unit)
 	require.NoError(t, err)
-	conclusion := NewCareContractConclusion(organizations, settings, schoolSettings.Settings, delivery.Module, providerBlockOutcomes{delivery.EmailOutcomes}, audit.DataAccessLog, owners.CareContractTestHolidays{}, "http://parents.localhost:3000", careContractConclusionClock)
-	run, err := conclusion.ConcludeAccepted(tenant.WithUnitOfWork(context.Background(), unit), f.office.organization)
-	require.NoError(t, err)
-	return run
+	conclusion := NewCareContractConclusion(organizations, settings, schoolSettings.Settings, delivery.Module, providerBlockOutcomes{delivery.EmailOutcomes}, audit.DataAccessLog, owners.CareContractTestHolidays{}, "http://parents.localhost:3000", careContractConclusionClock, f.accounts)
+	return conclusion, tenant.WithUnitOfWork(context.Background(), unit)
 }
 
 // careContractConclusionClock is the clock of the conclusion runs: the

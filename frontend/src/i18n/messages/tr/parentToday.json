@@ -58,6 +58,7 @@
     "closingDayUntil": "{careTerm} {date} tarihine kadar kapalı: {name}.",
     "openingChanged": "{careTerm} bugün {opens} ile {closes} arasında açık: {name}.",
     "openingChangedUntil": "{careTerm} {date} tarihine kadar {opens} ile {closes} arasında açık: {name}.",
+    "mealCancelled": "Bugün {name} için öğle yemeği yok. Ücreti alınmayacak.",
     "pickupAfterClosing": "Bu, kapanış saatinden sonra. Lütfen alma saatini değiştir.",
     "regularPickupAfterClosing": "Haftalık plana göre {name} saat {time} alınıyor.",
     "activityCancelled": "Saat {time} {title} bugün yapılmıyor.",

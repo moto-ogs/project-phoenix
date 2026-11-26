@@ -45,12 +45,13 @@ type versionRow struct {
 	CreatedAt              time.Time      `bun:"created_at"`
 	Source                 string         `bun:"source"`
 	ValidUntil             *calendar.Date `bun:"valid_until,type:date"`
+	AgreedFrom             *calendar.Date `bun:"agreed_from,type:date"`
 }
 
 const versionColumns = `v.id, v.version_number, v.status, v.effective_from, v.ends_on, v.child_first_name,
 	v.child_last_name, v.child_birth_date, v.school_name, v.phase_name, v.price_cents, v.term_kind, v.term_months,
 	v.notice_months, v.notice_to, v.special_termination, v.special_termination_note, v.statute_required,
-	v.statute_title, v.statute_url, v.contract_partner, v.created_at`
+	v.statute_title, v.statute_url, v.contract_partner, v.created_at, v.agreed_from`
 
 // servicesSQL reads the services of version v as one JSON array, by weekday
 // and end time, in the same statement as the version.
@@ -89,7 +90,7 @@ func (r versionRow) version() (carecontract.Version, error) {
 		ID: ident.ID(r.ID), Number: r.VersionNumber, Status: r.Status, EffectiveFrom: r.EffectiveFrom, EndsOn: r.EndsOn,
 		ChildFirstName: r.ChildFirstName, ChildLastName: r.ChildLastName, ChildBirthDate: r.ChildBirthDate,
 		SchoolName: r.SchoolName, PhaseName: r.PhaseName, Services: services, PriceCents: r.PriceCents,
-		CreatedAt: r.CreatedAt, Source: r.Source, ValidUntil: r.ValidUntil,
+		CreatedAt: r.CreatedAt, Source: r.Source, ValidUntil: r.ValidUntil, AgreedFrom: r.AgreedFrom,
 		Terms: carecontract.TemplateInput{
 			TermKind: r.TermKind, TermMonths: r.TermMonths, NoticeMonths: r.NoticeMonths, NoticeTo: r.NoticeTo,
 			SpecialTermination: r.SpecialTermination, SpecialTerminationNote: r.SpecialTerminationNote,
@@ -162,15 +163,19 @@ func (s Store) Contract(ctx context.Context, organizationID, contractID int64, f
 }
 
 // readDocuments fills in the stored PDF of the record's version and the
-// newest stored PDF of the contract with its version (#4681).
+// newest stored PDF of the contract with its version (#4681). An overtaken
+// version was never concluded and cannot be the PDF sent again.
 func readDocuments(ctx context.Context, db bun.IDB, organizationID int64, record *ports.ContractRecord) error {
 	var documents []struct {
 		ID        int64   `bun:"id"`
 		VersionID int64   `bun:"contract_version_id"`
 		Issuer    *string `bun:"issuer"`
 	}
-	if err := db.NewRaw(`SELECT id, contract_version_id, issuer FROM care_contract.contract_documents
-		WHERE organization_id = ? AND contract_id = ? ORDER BY id DESC`, organizationID, record.Summary.ID).Scan(ctx, &documents); err != nil {
+	if err := db.NewRaw(`SELECT d.id, d.contract_version_id, d.issuer FROM care_contract.contract_documents AS d
+		JOIN care_contract.contract_versions AS v ON v.id = d.contract_version_id
+			AND v.organization_id = d.organization_id AND v.contract_id = d.contract_id
+		WHERE d.organization_id = ? AND d.contract_id = ? AND v.status <> ? ORDER BY d.id DESC`,
+		organizationID, record.Summary.ID, carecontract.VersionOvertaken).Scan(ctx, &documents); err != nil {
 		return fmt.Errorf("care contract postgres: read documents: %w", err)
 	}
 	for i, document := range documents {
@@ -333,25 +338,30 @@ func (Store) DeleteDraft(ctx context.Context, organizationID, contractID int64) 
 // to the address, so the list matches the PDF the parents open (#4681).
 const inboxSQL = `SELECT c.id, c.school_id, v.child_first_name, v.child_last_name, ` + moduleNamesSQL + ` AS module_names, v.school_name,
 	v.effective_from, v.status = '` + carecontract.VersionReplaced + `' AS replaced, m.first_sent AS sent_at, c.status, c.ends_on,
-	(c.status = '` + carecontract.StatusSent + `' AND ` + inboxChildScopeSQL + ` AND EXISTS (SELECT 1 FROM care_contract.contract_signing_links AS l
-		WHERE l.organization_id = c.organization_id AND l.contract_id = c.id)) AS can_sign,
+	(` + inboxAwaitsSQL + ` AND ` + inboxChildScopeSQL + ` AND EXISTS (SELECT 1 FROM care_contract.contract_signing_links AS l
+		WHERE l.organization_id = c.organization_id AND l.contract_id = c.id AND l.contract_document_id = v.document_id)) AS can_sign,
+	(c.status = '` + carecontract.StatusActive + `' AND v.status = '` + carecontract.VersionRequested + `') AS change_awaits_signature,
 	(c.status = '` + carecontract.StatusActive + `' AND ` + inboxChildScopeSQL + `) AS can_end,
 	(SELECT MAX(s.signed_at) FROM care_contract.contract_signatures AS s
 		WHERE s.organization_id = c.organization_id AND s.contract_id = c.id) AS signed_at,
 	c.concluded_at, c.conclusion_method, c.conclusion_date_unknown, c.import_origin IS NOT NULL AS taken_over,
-	LEAST(c.withdrawal_informed_at, (SELECT CASE WHEN s.method <> '` + carecontract.SignaturePaper + `' THEN s.withdrawal_notice_at END
-		FROM care_contract.contract_signatures AS s WHERE s.organization_id = c.organization_id AND s.contract_id = c.id
-		ORDER BY s.signed_at DESC, s.id DESC LIMIT 1)) AS informed_at
+	LEAST(c.withdrawal_informed_at, (SELECT a.acknowledged_at FROM (` + acknowledgedSQL + `) AS a)) AS informed_at
 	FROM care_contract.contracts AS c
 	JOIN (SELECT contract_id, MIN(sent_at) AS first_sent FROM care_contract.contract_mailings
 		WHERE organization_id = ? AND lower(recipient_email) = lower(?) GROUP BY contract_id) AS m ON m.contract_id = c.id
-	JOIN LATERAL (SELECT cv.* FROM care_contract.contract_mailings AS cm
+	JOIN LATERAL (SELECT cv.*, cd.id AS document_id FROM care_contract.contract_mailings AS cm
 		JOIN care_contract.contract_documents AS cd ON cd.organization_id = cm.organization_id AND cd.id = cm.contract_document_id
 		JOIN care_contract.contract_versions AS cv ON cv.organization_id = cd.organization_id AND cv.id = cd.contract_version_id
 		WHERE cm.organization_id = c.organization_id AND cm.contract_id = c.id AND lower(cm.recipient_email) = lower(?)
+			AND cv.status <> '` + carecontract.VersionOvertaken + `'
 		ORDER BY cm.sent_at DESC, cm.id DESC LIMIT 1) AS v ON true
 	WHERE c.organization_id = ? AND ` + inboxChildScopeSQL + `
 	ORDER BY m.first_sent DESC, c.id DESC`
+
+// inboxAwaitsSQL tells that the listed version v waits for the signature:
+// the version of a sent contract, or the changed version of an active one
+// (#4816).
+const inboxAwaitsSQL = `v.status = '` + carecontract.VersionRequested + `' AND c.status IN ('` + carecontract.StatusSent + `', '` + carecontract.StatusActive + `')`
 
 // InboxContracts lists the contracts sent to the address, newest first.
 func (Store) InboxContracts(ctx context.Context, organizationID int64, reader carecontract.InboxReader) ([]ports.InboxRow, error) {
@@ -373,6 +383,7 @@ func (Store) InboxContracts(ctx context.Context, organizationID int64, reader ca
 		EndsOn         *calendar.Date `bun:"ends_on,type:date"`
 		SignedAt       *time.Time     `bun:"signed_at"`
 		CanSign        bool           `bun:"can_sign"`
+		ChangeAwaits   bool           `bun:"change_awaits_signature"`
 		CanEnd         bool           `bun:"can_end"`
 		ConcludedAt    *time.Time     `bun:"concluded_at"`
 		Method         *string        `bun:"conclusion_method"`
@@ -400,6 +411,7 @@ func (Store) InboxContracts(ctx context.Context, organizationID int64, reader ca
 			ModulesText: carecontract.JoinNames(row.ModuleNames),
 			SchoolName:  row.SchoolName, SentAt: row.SentAt, EffectiveOn: row.EffectiveFrom, Replaced: row.Replaced,
 			Status: row.Status, EndsOn: row.EndsOn, SignedAt: row.SignedAt, CanSign: row.CanSign, CanEnd: row.CanEnd,
+			ChangeAwaitsSignature: row.ChangeAwaits,
 		}
 	}
 	return result, nil
@@ -417,7 +429,10 @@ func (Store) InboxDocument(ctx context.Context, organizationID, contractID int64
 		JOIN care_contract.contract_documents AS d ON d.organization_id = m.organization_id AND d.id = m.contract_document_id
 		JOIN care_contract.contracts AS c ON c.organization_id = m.organization_id AND c.id = m.contract_id
 		WHERE m.organization_id = ? AND m.contract_id = ? AND lower(m.recipient_email) = lower(?) AND `+inboxChildScopeSQL+`
-		ORDER BY m.sent_at DESC, m.id DESC LIMIT 1`, organizationID, contractID, reader.Email, pgdialect.Array(schools), pgdialect.Array(students)).Scan(ctx, &row)
+			AND NOT EXISTS (SELECT 1 FROM care_contract.contract_versions AS o
+				WHERE o.organization_id = d.organization_id AND o.id = d.contract_version_id AND o.status = ?)
+		ORDER BY m.sent_at DESC, m.id DESC LIMIT 1`, organizationID, contractID, reader.Email, pgdialect.Array(schools), pgdialect.Array(students),
+		carecontract.VersionOvertaken).Scan(ctx, &row)
 	return row.file(err, carecontract.ErrInboxDocumentNotFound)
 }
 

@@ -5235,7 +5235,7 @@ export const mealPlanTopic = function mealPlanTopic(): HelpTopic {
       },
     ],
     result:
-      "Der Plan erscheint sofort im Elternportal. Fällt das Essen aus, steht beim Tag `Essen fällt aus` mit dem Grund.",
+      "Der Plan erscheint sofort im Elternportal. Fällt das Essen aus, steht hier im `Speiseplan` beim Tag `Essen fällt aus` mit dem Grund.",
     notes: [
       "Pro Tag sind mehrere Gerichte möglich.",
       "Änderst du einen Tag, der schon Gerichte hatte, bekommen die Eltern einen Hinweis in moto. Das gilt nur für Kinder, die an dem Tag ein Essen gebucht haben. Mehrere Änderungen einer Woche in 10 Minuten werden ein Hinweis.",
@@ -5251,7 +5251,7 @@ export const mealPlanTopic = function mealPlanTopic(): HelpTopic {
       "Öffne `Tagesliste herunterladen` oder `Wochenliste herunterladen`. Wähle `PDF` oder `Excel`.",
       "Bis wann Eltern ändern können, legst du unter `Einstellungen` im Bereich `Mittagessen` fest.",
       "An Feiertagen und Schließtagen gibt es kein Essen. Die Wochenliste zeigt dort `kein Essen`.",
-      "Fällt das Essen aus, gelten die Buchungen des Tages nicht. Die Liste für die Küche ist leer, und der Tag wird im Monat nicht abgerechnet. Am Tag selbst sieht das Team den Ausfall mit dem Grund unter `Heute anders`.",
+      "Fällt das Essen aus, gelten die Buchungen des Tages nicht. Die Liste für die Küche ist leer, und der Tag wird im Monat nicht abgerechnet. Am Tag selbst sieht das Team den Ausfall mit dem Grund unter `Heute anders`. Eltern sehen ihn dort im Elternportal bei jedem Kind, das an dem Tag angemeldet ist, ohne den Grund.",
       "Findet das Essen doch statt, wähle im Menü des Tages `Essen findet statt`. Dann gelten die Buchungen wieder. Den Grund änderst du mit `Grund ändern`.",
       "Hast du den Monat schon freigegeben, ändert ein späterer Ausfall die Freigabe nicht. Gib den Monat dann neu frei.",
     ],
@@ -6303,7 +6303,9 @@ export const parentCareChangeTopic =
         "Eine Änderung am Wochenplan ist dauerhaft und gilt jede Woche.",
         "Geht es nur um einen Tag? Ändere stattdessen die Abholung für diesen Tag.",
         "Eine offene Anfrage lässt sich mit `Anfrage bearbeiten` noch ändern.",
-        "Gilt dein Betreuungsvertrag schon? Dann kann auch der Träger deiner OGS die Anfrage bestätigen. Nach der Bestätigung bekommt der Vertrag eine neue Version ab dem bestätigten Tag. Die alte Version gilt bis dahin weiter.",
+        "Gilt dein Betreuungsvertrag schon? Dann kann auch der Träger deiner OGS die Anfrage bestätigen. Nach der Bestätigung bekommt der Vertrag eine neue Fassung ab dem bestätigten Tag. Die alte Fassung gilt bis dahin weiter.",
+        "Deine Anfrage gilt als deine Zustimmung zur neuen Fassung. Du musst nichts unterschreiben. Die neue Fassung bekommst du per Mail und unter `Dokumente`.",
+        "Hat ein anderer Elternteil den Vertrag abgeschlossen? Oder wurde etwas anderes bestätigt, als du angefragt hast? Dann bittet moto um eine Unterschrift. Du findest das unter `Dokumente`.",
         "Betreut deine OGS am Wochenende? Dann gilt der Freitagsplan auch für Samstag und Sonntag.",
       ],
       differences: [
@@ -6478,6 +6480,8 @@ export const parentChildOverviewTopic =
         "`Kontakte`: Abholberechtigte, Kontakte und verbundene Konten.",
         "Unter `Heute` stehen die Knöpfe zum Abmelden, zur Abholzeit und für eine Nachricht.",
         "`Heute anders` nennt zum Beispiel: Ein Angebot fällt aus, ist in einem anderen Raum oder hat eine Vertretung. Dazu kommen eine geänderte Abholzeit, ein Schließtag, geänderte Öffnungszeiten, ein Ausflug oder eine Krankmeldung.",
+        // Essensausfall im Elternportal (#8160): nur bei einer Buchung des Kindes.
+        "Fällt das Mittagessen aus und dein Kind ist an dem Tag angemeldet, steht das auch unter `Heute anders`. Der Tag wird nicht berechnet.",
         // #8170, #8173: eine Abholzeit nach der geänderten Schließzeit bleibt stehen.
         "Schließt die OGS heute früher und liegt deine Abholzeit danach, steht dort `Das ist nach der Schließung.` Das gilt auch für die Abholzeit aus dem Wochenplan. moto ändert die Abholzeit nicht. Wähle `Abholung ändern` und trage eine frühere Zeit ein.",
         "Namen von Betreuungskräften stehen bei `Heute anders` nie. Du siehst nur, was dein Kind betrifft.",
@@ -6689,6 +6693,18 @@ export const parentDocumentsTopic = function parentDocumentsTopic(): HelpTopic {
           "Soll die Betreuung schon vor dem Ende der Widerrufsfrist beginnen? Setze auch diesen Haken.",
           "Unterschreibe mit dem Finger oder tippe deinen Namen. Wähle `Unterschrift bestätigen`.",
           "Wähle `Vertrag verbindlich unterschreiben`.",
+        ],
+      },
+      {
+        title: "Eine geänderte Fassung unterschreiben",
+        description:
+          "Hat die OGS oder der Träger die Betreuung geändert? Dann steht beim Vertrag `Änderung wartet auf deine Unterschrift`. Bis du unterschreibst, gilt dein Vertrag wie bisher.",
+        steps: [
+          "Wähle beim Vertrag `Änderung ansehen und unterschreiben`. Das geht auch über den Link in der Mail, ohne Konto.",
+          "Lies die Karte `Das ändert sich`. Durchgestrichen ist die Betreuung bisher. Daneben steht die neue. `Geändert`, `Neu` und `Entfällt` zeigen die Tage, die anders sind.",
+          "Lies die neue Fassung als PDF und die Widerrufsbelehrung. Setze den Haken bei `Ich habe die Widerrufsbelehrung gelesen.`",
+          "Unterschreibe mit dem Finger oder tippe deinen Namen. Wähle `Unterschrift bestätigen`.",
+          "Wähle `Neue Fassung verbindlich unterschreiben`.",
         ],
       },
       {
@@ -7208,7 +7224,7 @@ export const parentHolidayConsentsTopic =
         "moto fragt nach. Wähle noch einmal `Widerrufen`.",
       ],
       result:
-        "Die Einwilligung gilt ab jetzt nicht mehr. Die OGS, die dein Kind in den Ferien betreut, sieht das sofort. Der Träger sieht es auch.",
+        "Die Einwilligung gilt ab jetzt nicht mehr. Das Team, das dein Kind in den Ferien betreut, sieht das sofort. Der Träger sieht es auch.",
       notes: [
         "Die Einwilligungen sind freiwillig. Die Anmeldung gilt auch ohne sie.",
         "Ohne Elternkonto widerrufst du beim Träger, zum Beispiel per Mail. Er trägt den Widerruf in moto ein.",
@@ -7274,7 +7290,7 @@ export const parentHolidayRegistrationTopic =
       result:
         "Du bekommst eine E-Mail: Die Anmeldung ist eingegangen. Das ist noch keine Zusage. Der Träger schreibt dir, ob dein Kind einen Platz bekommt. In der E-Mail steht auch `Deine Erklärung` mit dem genauen Text. Hebe die E-Mail auf. Mit `Stand ansehen` in der E-Mail siehst du jederzeit, wie weit deine Anmeldung ist. In der Eltern-App siehst du den Stand unter `Ferienanmeldungen`.",
       notes: [
-        "Achtet der Träger auf den Ferienwunsch aus der OGS-Anmeldung, steht das über den Kindern. Mit Elternkonto siehst du beim Kind, was in der OGS-Anmeldung steht.",
+        "Achtet der Träger auf den Ferienwunsch aus der Anmeldung für das Schuljahr, steht das über den Kindern. Mit Elternkonto siehst du beim Kind, was in dieser Anmeldung steht.",
         "Ein Elternkonto brauchst du nicht. Mit Konto siehst du in der Eltern-App den Stand der Anmeldung, die Bestätigung und die Rechnung.",
         "Hast du bei `Möchtest du ein Elternkonto anlegen?` `Ja` gewählt? Dann bekommst du eine zweite E-Mail. Öffne den Link darin. Lege zweimal dein Passwort fest und wähle `Konto anlegen`. Danach wählst du `Anmelden`.",
         "Hast du schon ein Elternkonto? Dann steht nach dem Link `Du hast schon ein Elternkonto`. Wähle `Anmelden`. Dein Passwort bleibt gleich.",
@@ -7285,9 +7301,9 @@ export const parentHolidayRegistrationTopic =
         "Vergibt der Träger die Plätze nach festen Regeln? Dann steht im Formular `Fragen für die Platzvergabe`. Beantworte jede Frage mit Ja oder Nein. Das Büro kann nach einem Nachweis fragen. Nach dem Absenden steht bei jeder Woche `Platz offen`. Das Büro vergibt die Plätze. Du bekommst eine E-Mail.",
         "Nach dem Absenden siehst du bei jeder Woche `Platz` oder `Warteliste`. Ist eine Woche voll, steht dein Kind dort auf der Warteliste. Wird ein Platz frei, bekommt dein Kind ihn automatisch. Du bekommst dann eine E-Mail. Bei einer verbindlichen Anmeldung ist auch dieser Platz verbindlich.",
         "Liest du die Anmeldung in einer anderen Sprache? Dann steht unter jeder Erklärung eine Übersetzung. Es gilt der deutsche Text.",
-        "Gesundheitsangaben sehen der Träger und die OGS, die dein Kind in der Ferienwoche betreut. Nur wenn du zustimmst.",
-        "Die OGS, die dein Kind in einer Ferienwoche betreut, sieht Name und Telefon der zweiten sorgeberechtigten Person. Sie sieht auch die Antworten, die der Träger für sie freigibt. Zum Beispiel, ob dein Kind allein nach Hause gehen darf.",
-        "Die OGS sieht diese Angaben schon vor der Ferienwoche. So kann sie sich vorbereiten. Die Liste der Kinder sieht sie bis zum letzten Tag der Woche. Name, Telefon und Antworten kann sie danach höchstens 7 Tage lesen. Dann werden sie gelöscht. Gesundheitsangaben sieht sie nur bis zum letzten Tag der Woche.",
+        "Gesundheitsangaben sehen der Träger und das Team, das dein Kind in der Ferienwoche betreut. Nur wenn du zustimmst.",
+        "Das Team, das dein Kind in einer Ferienwoche betreut, sieht Name und Telefon der zweiten sorgeberechtigten Person. Es sieht auch die Antworten, die der Träger für das Team freigibt. Zum Beispiel, ob dein Kind allein nach Hause gehen darf.",
+        "Das Team sieht diese Angaben schon vor der Ferienwoche. So kann es sich vorbereiten. Die Liste der Kinder sieht es bis zum letzten Tag der Woche. Name, Telefon und Antworten kann es danach höchstens 7 Tage lesen. Dann werden sie gelöscht. Gesundheitsangaben sieht es nur bis zum letzten Tag der Woche.",
         "Ein Kind von einer anderen Schule kommt als Feriengast.",
         "Manche Ferien haben eine Grenze, zum Beispiel höchstens 5 Tage pro Kind. Dann steht sie über den Wochen. Eine ganze Woche zählt mit allen Tagen von Montag bis Freitag. Meldest du dein Kind ein zweites Mal an, zählen die Tage beider Anmeldungen zusammen.",
         "Ein Feiertag oder Schließtag ist bei den Tagen durchgestrichen. An diesem Tag ist keine Betreuung, du kannst ihn nicht wählen.",
@@ -12420,10 +12436,24 @@ export const traegerCareContractsTopic =
         {
           title: "Wenn sich die Betreuung ändert: neue Version",
           steps: [
-            "Nach einer Freigabe durch dich oder die Schule bekommt der aktive Vertrag nach wenigen Minuten eine neue Version. Sie gilt ab dem freigegebenen Tag.",
+            "Ändert sich die gebuchte Betreuung, bekommt der Vertrag nach wenigen Minuten eine neue Version.",
+            "Haben die Eltern die Änderung selbst beantragt, und du oder die Schule gibt sie frei? Dann gilt die neue Version ab dem freigegebenen Tag. Der Antrag der Eltern gilt als Unterschrift. Die Eltern bekommen die neue Fassung per Mail und in der Eltern-App.",
             "Wähle in der Liste das Kind. Oben steht, ab wann die neue Version gilt.",
-            "Im Reiter `Versionen` siehst du jede Version mit ihren Tagen. `Geändert` markiert die Wochentage, die anders sind als vorher.",
+            "Im Reiter `Versionen` siehst du jede Version mit ihren Tagen. `Geändert` markiert die Wochentage, die anders sind als vorher. Unter den Daten steht, wie die Eltern zugestimmt haben.",
             "Mit `PDF` lädst du eine Version als PDF.",
+          ],
+        },
+        {
+          title: "Wenn die Eltern eine Änderung neu unterschreiben müssen",
+          description:
+            "Hat die Schule oder der Träger die Betreuung geändert, ohne dass die Eltern das beantragt haben? Dann müssen die Eltern die neue Version unterschreiben. Bis dahin gilt die bisherige Version, auch für die Abrechnung.",
+          steps: [
+            "In der Liste steht beim Vertrag `Änderung wartet auf Unterschrift`. Wähle das Kind.",
+            "Oben steht, welche Version bis zur Unterschrift gilt. Wähle `Zur geänderten Fassung`.",
+            "Die Karte `Geänderte Fassung` zeigt `Wartet auf Eltern` und den Versandstand. Wird die Mail noch gesendet? Dann warte, bis der Versand fertig ist. Ist sie nicht angekommen oder ihr Ergebnis unbekannt? Gib den Eltern das PDF unter `Versionen`. In der Eltern-App sehen sie die Änderung und unterschreiben.",
+            "Bis zur Unterschrift bekommen die Eltern Erinnerungen per Mail. Die Karte zeigt jede Erinnerung.",
+            "Haben die Eltern auf Papier unterschrieben? Lade das PDF der neuen Version im Reiter `Versionen` mit `PDF`. Wähle danach in der Karte `Papiervertrag erfassen`.",
+            "Nach der Unterschrift steht die Version im Reiter `Versionen` mit `Gilt ab` oder `Gilt jetzt`.",
           ],
         },
         {
@@ -12465,6 +12495,11 @@ export const traegerCareContractsTopic =
         "Den Kündigungstermin rechnet moto aus den Bedingungen im Vertrag, nicht aus den heutigen Vertragsbedingungen. Die Widerrufsfrist beginnt frühestens mit dem Erhalt der Belehrung. Ohne Nachweis gilt die längere Frist.",
         "Endet die Widerrufsfrist an einem Samstag, Sonntag oder Feiertag, endet sie erst am nächsten Werktag. moto nimmt die Feiertage aus dem Bundesland der Schule. Feiertage, die nur in einer Stadt oder Gemeinde gelten, kennt moto nicht. Hat deine Gemeinde einen eigenen Feiertag, prüfe die Frist an diesem Tag selbst.",
         "Eine neue Version gilt nie rückwirkend. Kommt eine Freigabe zu spät, gilt die Version ab dem Tag, an dem moto sie anlegt.",
+        "Unterschreiben die Eltern eine geänderte Fassung erst nach ihrem Tag, gilt sie ab dem Tag der Unterschrift. Im Reiter `Versionen` steht dann auch der Tag aus dem Vertrag.",
+        "Als Unterschrift zählt nur ein Antrag vom Elternkonto der Vertragspartei, den die Freigabe genau so gebucht hat. Hat ein anderer Elternteil gefragt, oder hat die Freigabe etwas anderes gebucht? Dann wartet die Version auf die Unterschrift.",
+        "Ändert sich die Betreuung noch einmal, bevor die Eltern unterschrieben haben? Dann bekommen sie eine neue Fassung mit neuem Link. Die frühere steht unter `Versionen` als `Überholt`. Niemand kann sie mehr unterschreiben. Das gilt auch für einen versendeten Vertrag, den noch niemand unterschrieben hat.",
+        "Nimmt die Schule die Änderung zurück, wartet nichts mehr. Die Version steht dann als `Überholt` unter `Versionen`.",
+        "Ging der Vertrag nie per Mail an die Eltern, zum Beispiel bei einer Übergabe auf Papier? Dann bekommen die Eltern auch die geänderte Fassung nicht per Mail. Die Karte `Geänderte Fassung` sagt dir das. Gib den Eltern das PDF.",
         "Beginnt an einem Tag schon eine Version, und du oder die Schule gibt für denselben Tag eine weitere Änderung frei, ersetzt moto diese Version. Die neue Version enthält beide Änderungen. Die alte steht unter `Versionen` als `Ersetzt` und gilt an keinem Tag.",
         "Ist schon eine spätere Version geplant, gilt eine frühere Änderung nur bis dahin. Die geplante Version übernimmt sie nicht von selbst.",
       ],

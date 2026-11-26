@@ -44,6 +44,7 @@ import { CareContractChildLinkModal } from "~/components/traeger/care-contract-c
 import {
   CONTRACT_DELIVERY_SECTION_ID,
   CONTRACT_DETAIL_TABS,
+  CONTRACT_CHANGE_SECTION_ID,
   CONTRACT_VERSIONS_SECTION_ID,
   ContractDetailTabsProvider,
   ContractSectionJump,
@@ -60,6 +61,11 @@ import {
   plannedVersionText,
 } from "~/components/traeger/care-contract-versions";
 import { CareContractSignatureCard } from "~/components/traeger/care-contract-signature-card";
+import {
+  CareContractWaitingChangeCard,
+  waitingChange,
+  waitingChangeText,
+} from "~/components/traeger/care-contract-waiting-change-card";
 import {
   useFreshTraegerResource,
   useTraegerResource,
@@ -477,6 +483,8 @@ function TraegerVertragView() {
     contract.endsOn < comingVersion.effectiveFrom
       ? undefined
       : comingVersion;
+  // A changed version that waits for the parents' signature (#4816).
+  const waiting = contract ? waitingChange(contract) : undefined;
   // An active or ended contract shows its versions, so the office sees where
   // an approved change will appear; a draft has only its first version.
   const showVersions =
@@ -798,6 +806,22 @@ function TraegerVertragView() {
         <ContractDetailTabsProvider openTab={openTab}>
           <LoadErrorAlert error={afterSend.error} />
           <StatusNotice contract={contract} />
+          {/* The tab „Unterschrift und Versand“ opens with the card of the
+              changed version itself; the notice would only repeat it. */}
+          {waiting && activeTab !== "versand" ? (
+            <Alert
+              type="warning"
+              message={waitingChangeText(waiting, contract.version.number)}
+              action={
+                <ContractSectionJump
+                  targetId={CONTRACT_CHANGE_SECTION_ID}
+                  tooltip="Springt zur geänderten Fassung mit ihren Erinnerungen."
+                >
+                  Zur geänderten Fassung
+                </ContractSectionJump>
+              }
+            />
+          ) : null}
           {planned ? (
             <Alert
               type="info"
@@ -964,6 +988,13 @@ function TraegerVertragView() {
           ) : null}
           {activeTab === "versand" ? (
             <>
+              {waiting ? (
+                <CareContractWaitingChangeCard
+                  contract={contract}
+                  waiting={waiting}
+                  onChanged={afterCardWrite}
+                />
+              ) : null}
               <CareContractSignatureCard
                 contract={contract}
                 onChanged={afterCardWrite}
@@ -1142,6 +1173,7 @@ function TraegerVertragView() {
                 <CareContractVersions
                   contractId={contract.id}
                   versions={contract.versions}
+                  signatures={contract.versionSignatures}
                   end={{
                     withdrawn: contract.status === "widerrufen",
                     endsOn:

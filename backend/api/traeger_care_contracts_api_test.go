@@ -122,6 +122,22 @@ type careContractFixture struct {
 	phase    int64
 	offering int64
 	child    int64
+	// accounts are the addresses of the parents accounts the conclusion
+	// run reads to tell who asked for a change (#4816).
+	accounts careContractTestAccounts
+}
+
+// careContractTestAccounts names the addresses of parents accounts.
+type careContractTestAccounts map[int64]string
+
+func (a careContractTestAccounts) ListAccountEmails(_ context.Context, accountIDs []int64) (map[int64]string, error) {
+	emails := map[int64]string{}
+	for _, id := range accountIDs {
+		if email, ok := a[id]; ok {
+			emails[id] = email
+		}
+	}
+	return emails, nil
 }
 
 // newCareContractFixture gives the Träger a letterhead: a contract is sent
@@ -169,7 +185,7 @@ func newCareContractFixtureWithoutLetterhead(t *testing.T, name string) careCont
 	_, err = f.db.ExecContext(ctx, `INSERT INTO enrollment.care_offering_bookings (tenant_id, request_child_id, care_offering_id,
 			manual_selected_days, valid_from) VALUES (?, ?, ?, '["thu"]'::jsonb, DATE '2027-08-01')`, school, child, ag.ID)
 	require.NoError(t, err)
-	return careContractFixture{reviewFixture: f, school: school, phase: phaseID, offering: offering.ID, child: child}
+	return careContractFixture{reviewFixture: f, school: school, phase: phaseID, offering: offering.ID, child: child, accounts: careContractTestAccounts{}}
 }
 
 func (f careContractFixture) key() map[string]any {

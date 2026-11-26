@@ -5,6 +5,7 @@ import {
   changedWeekdays,
   plannedVersion,
   plannedVersionText,
+  signatureText,
   versionPhase,
 } from "./care-contract-versions";
 
@@ -190,5 +191,62 @@ describe("weekend care", () => {
     expect(
       serviceDays(after.services, [...changed]).map((day) => day.weekday),
     ).toEqual(["mon", "tue", "wed", "thu", "fri", "sat"]);
+  });
+});
+
+// #4816: a changed version waits for the parents' signature, and one nobody
+// signed stays in the history.
+describe("versions that wait for a signature", () => {
+  it("names a changed version that waits, and the first version of a draft", () => {
+    expect(
+      versionPhase(version({ number: 2, status: "beantragt" }), "2026-09-09"),
+    ).toBe("awaiting");
+    expect(
+      versionPhase(version({ number: 1, status: "beantragt" }), "2026-09-09"),
+    ).toBe("pending");
+  });
+
+  it("names a version nobody signed", () => {
+    expect(
+      versionPhase(version({ number: 2, status: "ueberholt" }), "2026-09-09"),
+    ).toBe("overtaken");
+  });
+
+  it("plans no change from a version that only waits", () => {
+    expect(
+      plannedVersion(
+        [
+          version({}),
+          version({
+            number: 2,
+            status: "beantragt",
+            source: "buchungsaenderung",
+            effectiveFrom: "2027-01-01",
+          }),
+        ],
+        "2026-09-09",
+      ),
+    ).toBeUndefined();
+  });
+
+  it("says how the parents agreed", () => {
+    expect(
+      signatureText({
+        versionNumber: 2,
+        method: "request",
+        signerName: "Eva Muster",
+        signedAt: "2026-09-01T10:00:00Z",
+      }),
+    ).toBe(
+      "Von den Eltern selbst beantragt am 01.09.2026. Der Antrag gilt als Unterschrift.",
+    );
+    expect(
+      signatureText({
+        versionNumber: 1,
+        method: "drawn",
+        signerName: "Eva Muster",
+        signedAt: "2026-09-01T10:00:00Z",
+      }),
+    ).toBe("Online unterschrieben am 01.09.2026 von Eva Muster.");
   });
 });
