@@ -6,8 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar"
-	schoolCalendarCompose "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/compose"
+	"github.com/moto-ogs/project-phoenix/api"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	parentService "github.com/moto-ogs/project-phoenix/workflows/parentportal"
 )
@@ -22,20 +21,15 @@ func TestPickupChangesCloseAtTheChangedClosingTime(t *testing.T) {
 	ctx := testpkg.WithPackageTenantRuntime(context.Background())
 	settings := cutoffStub(true, "")
 	settings.stringValues[parentService.KeySessionEndTime] = "16:00"
-	changes := schoolCalendarCompose.NewOpeningChanges()
+	// The production root binds the School Calendar the same way.
+	d.base.ClosingTimes = api.OpeningChangeClosingTimes()
 	service := func(hour, minute int) *parentService.Portal {
-		cfg := d.base
-		cfg.ClosingTimes = changes.ClosingTimeOn
-		d.base = cfg
 		return d.service(t, settings, berlinClock(hour, minute))
 	}
 
 	chain := testpkg.CreateTestParentGuardianChain(t, d.db)
 	require.NoError(t, testpkg.WithinTenantContext(t, ctx, d.db, chain.TenantID, func(txCtx context.Context) error {
-		_, err := changes.CreateOpeningChange(txCtx, schoolcalendar.OpeningChangeInput{
-			StartDate: cutoffToday, EndDate: cutoffToday, OpensAt: "07:30", ClosesAt: "12:00", Reason: "Zeugnisausgabe",
-		})
-		return err
+		return api.CreateOpeningChangeFixture(txCtx, cutoffToday, "12:00")
 	}))
 
 	_, err := service(11, 59).SubmitPickupChangeRequest(ctx, chain.AccountID, chain.StudentID, cutoffToday, cutoffPickupTime(), "", "Arzttermin", nil)

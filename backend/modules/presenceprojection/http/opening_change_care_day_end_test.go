@@ -10,9 +10,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/moto-ogs/project-phoenix/api"
 	"github.com/moto-ogs/project-phoenix/api/testutil"
-	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar"
-	schoolCalendarCompose "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/compose"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
@@ -48,12 +47,8 @@ func TestListStudents_ChangedClosingTimeEndsTheCareDay(t *testing.T) {
 	child := expectedChild(t, "Opening-8157")
 	require.Equal(t, "Schule", location(t, "Opening-8157", child), "the regular session end lies ahead")
 
-	changes := schoolCalendarCompose.NewOpeningChanges()
 	require.NoError(t, testpkg.WithinTenantContext(t, testpkg.Ctx(t), tc.db, testpkg.Tenant(t), func(txCtx context.Context) error {
-		_, err := changes.CreateOpeningChange(txCtx, schoolcalendar.OpeningChangeInput{
-			StartDate: today, EndDate: today, OpensAt: "07:30", ClosesAt: "11:30", Reason: "Zeugnisausgabe",
-		})
-		return err
+		return api.CreateOpeningChangeFixture(txCtx, today, "11:30")
 	}))
 	assert.Equal(t, "Abwesend", location(t, "Opening-8157", child), "the school closed at 11:30 today")
 	count, err := testpkg.TenantQuery1(t, testpkg.Ctx(t), tc.db, tc.resource.CountAtSchoolToday, []int64{child})

@@ -188,7 +188,6 @@ type buildState struct {
 	arrivals   map[int64]Arrival
 	pickups    map[int64]Pickup
 	timetable  map[int64]bool
-	careDayEnd *careDayEnd
 }
 
 func (s *service) LiveGroup(ctx context.Context, requestedGroupID int64) (*Projection, error) {
@@ -487,9 +486,9 @@ func (s *service) loadPlanning(ctx context.Context, state *buildState) error {
 		return fmt.Errorf("load pending excused requests: %w", err)
 	}
 	state.arrivals, state.pickups, state.timetable = arrivals, pickups, timetable
-	state.careDayEnd = s.lazyCareDayEnd(ctx)
-	s.applyPlanning(state, pending)
-	if err := state.careDayEnd.failure(); err != nil {
+	careDayEnd := s.lazyCareDayEnd(ctx)
+	s.applyPlanning(state, pending, careDayEnd)
+	if err := careDayEnd.failure(); err != nil {
 		return err
 	}
 	if err := s.applyTeacherHints(ctx, state, ids); err != nil {
@@ -529,8 +528,8 @@ const (
 // expected child is still in class. It needs the decision applyPlanning just
 // resolved, so it runs right after it. A child still "Im Unterricht" after the
 // care day's end reads "Abwesend" again (#5656).
-func (s *service) applyAtSchool(state *buildState, student *Student, decision DayDecision, attendance Attendance) {
-	if student.Location == inClassLocation && !s.deps.Planning.InClassUntilCareDayEnd(state.careDayEnd.get(), s.deps.Calendar.Now()) {
+func (s *service) applyAtSchool(state *buildState, careDayEnd *careDayEnd, student *Student, decision DayDecision, attendance Attendance) {
+	if student.Location == inClassLocation && !s.deps.Planning.InClassUntilCareDayEnd(careDayEnd.get(), s.deps.Calendar.Now()) {
 		student.Location = absentLocation
 		student.LocationSince = nil
 		return
@@ -546,7 +545,7 @@ func (s *service) applyAtSchool(state *buildState, student *Student, decision Da
 	if pickup, ok := state.pickups[student.ID.Int64()]; ok {
 		inputs.PickupTime = pickup.PickupTime
 	}
-	inputs.CareDayEnd = atSchoolCareDayEnd(state.careDayEnd, decision, inputs.CheckedIn, inputs.PickupTime)
+	inputs.CareDayEnd = atSchoolCareDayEnd(careDayEnd, decision, inputs.CheckedIn, inputs.PickupTime)
 	if s.deps.Planning.AtSchoolBeforeCheckIn(inputs) {
 		student.Location = atSchoolLocation
 		student.LocationSince = nil
@@ -577,7 +576,7 @@ func (s *service) loadPendingExcused(ctx context.Context, state *buildState) (ma
 	return s.deps.ExcusedRequests.PendingByStudentForDate(ctx, excusedrequests.Date(state.today))
 }
 
-func (s *service) applyPlanning(state *buildState, pending map[int64]*pendingExcusedRequest) {
+func (s *service) applyPlanning(state *buildState, pending map[int64]*pendingExcusedRequest, careDayEnd *careDayEnd) {
 	for i := range state.projected {
 		student := &state.projected[i]
 		// The parent's pending note runs FIRST and outside the full-access
@@ -618,7 +617,7 @@ func (s *service) applyPlanning(state *buildState, pending map[int64]*pendingExc
 		}
 		student.DayPlanningReason = decision.Reason
 		student.DayPlanningLabel = planningLabel(decision)
-		s.applyAtSchool(state, student, decision, attendance)
+		s.applyAtSchool(state, careDayEnd, student, decision, attendance)
 		applyTimes(student, inputs.Arrival, attendance, s.deps.Calendar)
 	}
 }
