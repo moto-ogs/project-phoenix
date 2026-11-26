@@ -1636,8 +1636,15 @@ function SearchPageContent() {
   );
 
   // Whether these filters' list fits is known from its answer read without a
-  // term; kept data of other filters says nothing about it.
-  if (!isSearching && studentsData && serverSearchTerm === "") {
+  // term. While that read is loading or has failed, the rows may be kept from
+  // other filters and say nothing about it.
+  if (
+    !awaitsSearchFilters &&
+    !isSearching &&
+    !studentsError &&
+    studentsData &&
+    serverSearchTerm === ""
+  ) {
     const answerIsPartial = (studentsData.truncatedTotal ?? null) !== null;
     if (answerIsPartial !== listIsPartial) {
       setPartialListKey(answerIsPartial ? wholeListKey : null);
