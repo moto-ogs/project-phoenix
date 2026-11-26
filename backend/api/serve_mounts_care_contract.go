@@ -122,7 +122,7 @@ func careContractPorts(organizations HolidayOrganizations, settings TraegerBrand
 		Access:   careContractAccessLog{log: accessLog}, Runtime: owners.CareContractRuntime{},
 		Modes: careContractModes{settings: schoolSettings}, Mail: owners.CareContractPost{Delivery: delivery, Outcomes: outcomes},
 		Letterheads: letterheads, Issuers: issuers, Families: owners.NewCareContractFamilyNumbers(),
-		Requests: careContractParentRequests{changes: carePlanCompose.NewContractOfferingChanges()},
+		Requests: careContractParentRequests{changes: carePlanCompose.NewContractOfferings()},
 	}
 }
 

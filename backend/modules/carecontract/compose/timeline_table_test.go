@@ -94,7 +94,7 @@ func newTableFixture(t *testing.T, fixedMonths int, versions []tableVersion) *ta
 		compose.ContractPorts{Holidays: holidaysDouble{}, Letterheads: letterheadDouble{}, Post: &postDouble{}, Runtime: runtimeDouble{}, Access: school,
 			Ledger: ledgerDouble{}, Links: testSigningLinks()},
 		compose.IntakePorts{Schools: school, Applications: school, Bookings: school, Access: school, Runtime: runtimeDouble{}, Modes: modesDouble{}, Mail: noMailBlocks{}, Letterheads: letterheadDouble{}, Families: familyNumbersDouble{},
-			Requests: askedByParents{bookings: school, account: contractPartyAt(t, ctx, db, organization, f.contract, "")}}, time.Now)
+			Requests: askedByParents{bookings: school, account: contractPartyAt(t, ctx, organization, f.contract, "")}}, time.Now)
 	return f
 }
 

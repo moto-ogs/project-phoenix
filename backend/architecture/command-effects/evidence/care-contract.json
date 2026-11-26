@@ -305,6 +305,14 @@
       "target_owner": "care-plan"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/api.careContractBookings.Offerings",
+      "binding_digest": "be60db7bbb20fc8fe0df8b3ae0132bd8",
+      "port": "github.com/moto-ogs/project-phoenix/modules/carecontract.SchoolBookings.Offerings",
+      "source_owner": "care-contract",
+      "target": "github.com/moto-ogs/project-phoenix/modules/careplan.ContractReads.ContractOfferings",
+      "target_owner": "care-plan"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/api.careContractCareTimes.Overruns",
       "binding_digest": "3878c58badf3eae1c2b6e0946be7edb0",
       "port": "github.com/moto-ogs/project-phoenix/modules/carecontract.SchoolCareTimes.Overruns",
@@ -447,6 +455,22 @@
       "source_owner": "care-contract",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.SchoolResponsibilities.ResponsibleParties",
       "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.careContractParentRequests.ApprovedParentRequests",
+      "binding_digest": "468a98452d7a61bbf41b6e940418f13f",
+      "port": "github.com/moto-ogs/project-phoenix/modules/carecontract.SchoolParentRequests.ApprovedParentRequests",
+      "source_owner": "care-contract",
+      "target": "github.com/moto-ogs/project-phoenix/modules/careplan.ContractOfferingChanges.ApprovedOfferingChanges",
+      "target_owner": "care-plan"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.careContractParentRequests.ApprovedParentRequests",
+      "binding_digest": "c3d005b50a2f82dd43402ef3110ed345",
+      "port": "github.com/moto-ogs/project-phoenix/modules/carecontract.SchoolParentRequests.ApprovedParentRequests",
+      "source_owner": "care-contract",
+      "target": "github.com/moto-ogs/project-phoenix/modules/careplan.ContractReads.ApprovedOfferingChanges",
+      "target_owner": "care-plan"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.CareContractSignatures.ContractSignatureProofs",

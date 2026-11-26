@@ -27,3 +27,11 @@ type ApprovedOfferingChange struct {
 type ContractOfferingChanges interface {
 	ApprovedOfferingChanges(ctx context.Context, requestChildIDs []int64) ([]ApprovedOfferingChange, error)
 }
+
+// ContractReads are the reads of a school the Betreuungsvertrag of the
+// Träger takes from Care Plan: the offerings that count as care, and the
+// parents' approved requests to change them.
+type ContractReads interface {
+	ContractOfferings
+	ContractOfferingChanges
+}

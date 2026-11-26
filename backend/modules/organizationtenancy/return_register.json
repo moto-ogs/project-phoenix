@@ -16628,6 +16628,12 @@
           "type": "character varying",
           "udt": "varchar",
           "nullable": false
+        },
+        {
+          "name": "agreed_from",
+          "type": "date",
+          "udt": "date",
+          "nullable": true
         }
       ],
       "relationships": [
@@ -17278,6 +17284,12 @@
           "type": "timestamp with time zone",
           "udt": "timestamptz",
           "nullable": false
+        },
+        {
+          "name": "change_request_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": true
         }
       ],
       "relationships": [
@@ -17479,6 +17491,12 @@
           "type": "timestamp with time zone",
           "udt": "timestamptz",
           "nullable": false
+        },
+        {
+          "name": "contract_version_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
         }
       ],
       "relationships": [
@@ -17486,6 +17504,16 @@
           "column": "contract_id",
           "targetTable": "care_contract.contracts",
           "targetColumn": "id"
+        },
+        {
+          "column": "contract_version_id",
+          "targetTable": "care_contract.contract_versions",
+          "targetColumn": "id"
+        },
+        {
+          "column": "organization_id",
+          "targetTable": "care_contract.contract_versions",
+          "targetColumn": "organization_id"
         },
         {
           "column": "organization_id",

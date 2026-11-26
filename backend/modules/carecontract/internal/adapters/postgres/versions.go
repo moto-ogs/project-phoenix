@@ -77,26 +77,9 @@ func (Store) AmendableContracts(ctx context.Context, organizationID int64) ([]po
 	if err != nil {
 		return nil, err
 	}
-	var heads []struct {
-		ContractID     int64         `bun:"contract_id"`
-		SchoolID       int64         `bun:"school_id"`
-		RequestChildID int64         `bun:"request_child_id"`
-		UpdatedAt      time.Time     `bun:"updated_at"`
-		FirstFrom      calendar.Date `bun:"first_from,type:date"`
-		NextNumber     int           `bun:"next_number"`
-	}
-	if err := db.NewRaw(`SELECT c.id AS contract_id, c.school_id, c.request_child_id, c.updated_at,
-			(SELECT f.effective_from FROM care_contract.contract_versions AS f
-				WHERE f.organization_id = c.organization_id AND f.contract_id = c.id
-					AND f.version_number = 1) AS first_from,
-			(SELECT MAX(m.version_number) + 1 FROM care_contract.contract_versions AS m
-				WHERE m.organization_id = c.organization_id AND m.contract_id = c.id) AS next_number
-		FROM care_contract.contracts AS c
-		JOIN care_contract.contract_versions AS v ON v.organization_id = c.organization_id AND v.contract_id = c.id
-			AND v.status = ?
-		WHERE c.organization_id = ? AND c.status = ? AND c.request_child_id IS NOT NULL
-		ORDER BY c.school_id, c.id`, carecontract.VersionEffective, organizationID, carecontract.StatusActive).Scan(ctx, &heads); err != nil {
-		return nil, fmt.Errorf("care contract postgres: read active contracts: %w", err)
+	heads, err := amendableHeads(ctx, db, organizationID)
+	if err != nil {
+		return nil, err
 	}
 	if len(heads) == 0 {
 		return []ports.AmendableContract{}, nil
@@ -105,11 +88,11 @@ func (Store) AmendableContracts(ctx context.Context, organizationID int64) ([]po
 	for i, head := range heads {
 		contractIDs[i] = head.ContractID
 	}
-	timelines, err := versionTimelines(ctx, db, organizationID, contractIDs, effectiveStatusSQL)
+	timelines, err := versionTimelines(ctx, db, organizationID, contractIDs, effectiveStatuses)
 	if err != nil {
 		return nil, err
 	}
-	waiting, err := versionTimelines(ctx, db, organizationID, contractIDs, requestedStatusSQL)
+	waiting, err := versionTimelines(ctx, db, organizationID, contractIDs, requestedStatuses)
 	if err != nil {
 		return nil, err
 	}
@@ -136,9 +119,13 @@ func (Store) AmendableContracts(ctx context.Context, organizationID int64) ([]po
 	return result, nil
 }
 
-// requestedStatusSQL selects the version that waits for a signature; the
-// index uq_contract_versions_requested keeps it to one per contract.
-const requestedStatusSQL = `('` + carecontract.VersionRequested + `')`
+// requestedStatuses selects the version that waits for a signature (the
+// index uq_contract_versions_requested keeps it to one per contract),
+// effectiveStatuses the versions of the timeline.
+var (
+	requestedStatuses = []string{carecontract.VersionRequested}
+	effectiveStatuses = []string{carecontract.VersionEffective, carecontract.VersionSuperseded}
+)
 
 // partyAccounts reads the parents accounts of the contracts' parties in one
 // statement (#4816).
@@ -189,7 +176,7 @@ func (Store) SentContracts(ctx context.Context, organizationID int64) ([]ports.S
 	for i, head := range heads {
 		contractIDs[i] = head.ContractID
 	}
-	waiting, err := versionTimelines(ctx, db, organizationID, contractIDs, requestedStatusSQL)
+	waiting, err := versionTimelines(ctx, db, organizationID, contractIDs, requestedStatuses)
 	if err != nil {
 		return nil, err
 	}
@@ -206,13 +193,13 @@ func (Store) SentContracts(ctx context.Context, organizationID int64) ([]ports.S
 }
 
 // versionTimelines reads the versions of the contracts in one of the
-// statuses of statusSQL by effective date, in one statement.
-func versionTimelines(ctx context.Context, db bun.IDB, organizationID int64, ids []int64, statusSQL string) (map[int64][]carecontract.Version, error) {
+// given statuses by effective date, in one statement.
+func versionTimelines(ctx context.Context, db bun.IDB, organizationID int64, ids []int64, statuses []string) (map[int64][]carecontract.Version, error) {
 	var rows []periodRow
 	if err := db.NewRaw(`SELECT v.contract_id, `+versionColumns+`, v.source, `+servicesSQL+` AS services, `+validUntilSQL+` AS valid_until
 		FROM care_contract.contract_versions AS v
-		WHERE v.organization_id = ? AND v.contract_id = ANY(?) AND v.status IN `+statusSQL+`
-		ORDER BY v.contract_id, v.effective_from`, organizationID, pgdialect.Array(ids)).Scan(ctx, &rows); err != nil {
+		WHERE v.organization_id = ? AND v.contract_id = ANY(?) AND v.status = ANY(?)
+		ORDER BY v.contract_id, v.effective_from`, organizationID, pgdialect.Array(ids), pgdialect.Array(statuses)).Scan(ctx, &rows); err != nil {
 		return nil, fmt.Errorf("care contract postgres: read versions: %w", err)
 	}
 	timelines := make(map[int64][]carecontract.Version, len(ids))
@@ -308,7 +295,7 @@ func (Store) WaitingVersion(ctx context.Context, organizationID int64, record *p
 	if err != nil {
 		return false, err
 	}
-	waiting, err := versionTimelines(ctx, db, organizationID, []int64{record.Summary.ID.Int64()}, requestedStatusSQL)
+	waiting, err := versionTimelines(ctx, db, organizationID, []int64{record.Summary.ID.Int64()}, requestedStatuses)
 	if err != nil {
 		return false, err
 	}
@@ -415,5 +402,34 @@ func (Store) VersionDocument(ctx context.Context, organizationID, versionID int6
 // effectiveTimelines reads the effective versions of the contracts by
 // effective date, in one statement.
 func effectiveTimelines(ctx context.Context, db bun.IDB, organizationID int64, ids []int64) (map[int64][]carecontract.Version, error) {
-	return versionTimelines(ctx, db, organizationID, ids, effectiveStatusSQL)
+	return versionTimelines(ctx, db, organizationID, ids, effectiveStatuses)
+}
+
+// amendableHead is an active contract with an application child, before its
+// versions are read.
+type amendableHead struct {
+	ContractID     int64         `bun:"contract_id"`
+	SchoolID       int64         `bun:"school_id"`
+	RequestChildID int64         `bun:"request_child_id"`
+	UpdatedAt      time.Time     `bun:"updated_at"`
+	FirstFrom      calendar.Date `bun:"first_from,type:date"`
+	NextNumber     int           `bun:"next_number"`
+}
+
+func amendableHeads(ctx context.Context, db bun.IDB, organizationID int64) ([]amendableHead, error) {
+	var heads []amendableHead
+	if err := db.NewRaw(`SELECT c.id AS contract_id, c.school_id, c.request_child_id, c.updated_at,
+			(SELECT f.effective_from FROM care_contract.contract_versions AS f
+				WHERE f.organization_id = c.organization_id AND f.contract_id = c.id
+					AND f.version_number = 1) AS first_from,
+			(SELECT MAX(m.version_number) + 1 FROM care_contract.contract_versions AS m
+				WHERE m.organization_id = c.organization_id AND m.contract_id = c.id) AS next_number
+		FROM care_contract.contracts AS c
+		JOIN care_contract.contract_versions AS v ON v.organization_id = c.organization_id AND v.contract_id = c.id
+			AND v.status = ?
+		WHERE c.organization_id = ? AND c.status = ? AND c.request_child_id IS NOT NULL
+		ORDER BY c.school_id, c.id`, carecontract.VersionEffective, organizationID, carecontract.StatusActive).Scan(ctx, &heads); err != nil {
+		return nil, fmt.Errorf("care contract postgres: read active contracts: %w", err)
+	}
+	return heads, nil
 }

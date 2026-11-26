@@ -42,7 +42,7 @@ func newRaceFixture(t *testing.T) raceFixture {
 		compose.ContractPorts{Holidays: holidaysDouble{}, Letterheads: letterheadDouble{}, Post: &postDouble{}, Runtime: runtimeDouble{}, Access: school,
 			Ledger: ledgerDouble{}, Links: testSigningLinks()},
 		compose.IntakePorts{Schools: school, Applications: school, Bookings: school, Access: school, Runtime: runtimeDouble{}, Modes: modesDouble{}, Mail: noMailBlocks{}, Letterheads: letterheadDouble{}, Families: familyNumbersDouble{},
-			Requests: askedByParents{bookings: school, account: contractParty(t, ctx, db, organization, contract)}}, time.Now)
+			Requests: askedByParents{bookings: school, account: contractParty(t, ctx, organization, contract)}}, time.Now)
 	return raceFixture{db: db, ctx: ctx, organization: organization, contract: contract, conclusion: conclusion}
 }
 

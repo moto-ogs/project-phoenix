@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	"github.com/uptrace/bun"
 
 	"github.com/moto-ogs/project-phoenix/modules/carecontract"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -55,17 +54,13 @@ func (a askedByParents) ApprovedParentRequests(ctx context.Context, requestChild
 	return requests, nil
 }
 
-// contractParty gives the contract a party with a parents account and
-// answers that account: only a request of a party counts as a signature.
-func contractParty(t *testing.T, ctx context.Context, db *bun.DB, organization, contract int64) int64 {
+// contractPartyAt gives the contract a party with a parents account and
+// answers that account: only a request of a party counts as a signature. An
+// empty mail address is a family without mail, whose changed version is
+// frozen but not sent.
+func contractPartyAt(t *testing.T, ctx context.Context, organization, contract int64, email string) int64 {
 	t.Helper()
-	return contractPartyAt(t, ctx, db, organization, contract, fmt.Sprintf("erika-%d@test.local", contract))
-}
-
-// contractPartyAt is contractParty with the party's mail address; an empty
-// one is a family without mail, whose changed version is frozen but not sent.
-func contractPartyAt(t *testing.T, ctx context.Context, db *bun.DB, organization, contract int64, email string) int64 {
-	t.Helper()
+	db := testpkg.SetupTestDB(t)
 	account := testpkg.CreateTestAccountWithPassword(t, db, fmt.Sprintf("partei-%d@test.local", testpkg.UniqueTestTenantID(t)), testpkg.NewTestPassword())
 	_, err := db.ExecContext(ctx, `INSERT INTO care_contract.contract_parties (organization_id, contract_id, first_name, last_name, email, account_id)
 		VALUES (?, ?, 'Erika', 'Muster', ?, ?)`, organization, contract, email, account.ID)

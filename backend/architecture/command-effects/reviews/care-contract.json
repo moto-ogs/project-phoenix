@@ -399,6 +399,16 @@
       "target_owner": "care-plan"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/api.careContractBookings.Offerings",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/carecontract.SchoolBookings.Offerings",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/careplan.ContractReads.ContractOfferings: the same read of the school's offerings in its tenant transaction (#4678, ADR 0153), reached through the combined reads of the contract (#4816).",
+      "source_owner": "care-contract",
+      "target": "github.com/moto-ogs/project-phoenix/modules/careplan.ContractReads.ContractOfferings",
+      "target_owner": "care-plan"
+    },
+    {
       "adr": "0067",
       "binding": "github.com/moto-ogs/project-phoenix/api.careContractCareTimes.Overruns",
       "classification": "leaf",
@@ -580,6 +590,26 @@
       "source_owner": "care-contract",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.SchoolResponsibilities.ResponsibleParties",
       "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.careContractParentRequests.ApprovedParentRequests",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/carecontract.SchoolParentRequests.ApprovedParentRequests",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/careplan ApprovedOfferingChanges: reads the approved offering change requests of the application children in the school's tenant transaction (#4816, ADR 0322).",
+      "source_owner": "care-contract",
+      "target": "github.com/moto-ogs/project-phoenix/modules/careplan.ContractOfferingChanges.ApprovedOfferingChanges",
+      "target_owner": "care-plan"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.careContractParentRequests.ApprovedParentRequests",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/carecontract.SchoolParentRequests.ApprovedParentRequests",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/careplan ApprovedOfferingChanges: reads the approved offering change requests of the application children in the school's tenant transaction (#4816, ADR 0322).",
+      "source_owner": "care-contract",
+      "target": "github.com/moto-ogs/project-phoenix/modules/careplan.ContractReads.ApprovedOfferingChanges",
+      "target_owner": "care-plan"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.CareContractSignatures.ContractSignatureProofs",

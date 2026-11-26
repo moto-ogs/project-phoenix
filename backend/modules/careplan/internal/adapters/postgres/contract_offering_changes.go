@@ -13,16 +13,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
-// ContractOfferingChangeStore reads the approved offering changes for the
-// Betreuungsvertrag (#4816) in the caller's tenant transaction.
-type ContractOfferingChangeStore struct{}
-
-var _ careplan.ContractOfferingChanges = ContractOfferingChangeStore{}
-
-// NewContractOfferingChangeStore builds the store.
-func NewContractOfferingChangeStore() ContractOfferingChangeStore {
-	return ContractOfferingChangeStore{}
-}
+var _ careplan.ContractOfferingChanges = ContractOfferingStore{}
 
 type approvedOfferingChangeRow struct {
 	ID             int64           `bun:"id"`
@@ -33,10 +24,11 @@ type approvedOfferingChangeRow struct {
 	Payload        json.RawMessage `bun:"payload"`
 }
 
-// ApprovedOfferingChanges lists the applied requests of the children in one
-// statement. A request whose stored selection cannot be read is an error:
+// ApprovedOfferingChanges lists the applied requests of the children for
+// the Betreuungsvertrag (#4816) in one statement, in the caller's tenant
+// transaction. A request whose stored selection cannot be read is an error:
 // it must never pass as a request for nothing.
-func (ContractOfferingChangeStore) ApprovedOfferingChanges(ctx context.Context, requestChildIDs []int64) ([]careplan.ApprovedOfferingChange, error) {
+func (ContractOfferingStore) ApprovedOfferingChanges(ctx context.Context, requestChildIDs []int64) ([]careplan.ApprovedOfferingChange, error) {
 	tx, tenantID, err := tenant.CurrentTenantTransaction[bun.Tx](ctx)
 	if err != nil {
 		return nil, fmt.Errorf("care plan postgres: approved offering changes need the school transaction: %w", err)

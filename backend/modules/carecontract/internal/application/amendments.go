@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"slices"
 
 	"github.com/moto-ogs/project-phoenix/modules/carecontract"
@@ -135,7 +136,7 @@ func (c *Conclusions) amendContract(ctx context.Context, organizationID int64, r
 		return nil
 	}
 	amended := carecontract.AmendedContract{ContractID: contract.ID, VersionNumber: plan.version.Number, EffectiveFrom: plan.version.EffectiveFrom}
-	done, reason, err := c.amend(ctx, organizationID, contract, *plan, consent)
+	done, reason, err := c.nextVersion(ctx, organizationID, contract, *plan, consent)
 	switch {
 	case reason != "":
 		run.Skipped = append(run.Skipped, carecontract.AmendmentSkip{ContractID: contract.ID, Reason: reason})
@@ -147,57 +148,83 @@ func (c *Conclusions) amendContract(ctx context.Context, organizationID int64, r
 	return err
 }
 
-// amend stores the new version in the contract's own Träger transaction,
-// under the row lock of the contract, with its PDF and the mail that brings
-// it to the parents. With the parents' own request it joins the timeline
-// and the request is recorded as its signature; without one it waits as
-// beantragt, with a one-time link to sign it (#4816). A contract that
-// changed since the read (another run, a termination) is left for the next
-// run; one whose PDF cannot be made yet is held back with the reason.
-func (c *Conclusions) amend(ctx context.Context, organizationID int64, contract AmendableContract, plan amendmentPlan,
+// nextVersion stores the new version of an active contract. With the
+// parents' own request it joins the timeline and the request is recorded as
+// its signature; without one it waits as beantragt, with a one-time link to
+// sign it (#4816). A contract that changed since the read (another run, a
+// termination) is left for the next run; one whose PDF or mail cannot be
+// made yet is held back with the reason.
+func (c *Conclusions) nextVersion(ctx context.Context, organizationID int64, contract AmendableContract, plan amendmentPlan,
 	consent *signedRequest) (bool, string, error) {
-	version, step, purpose := plan.version, timelineStep(contract, plan), carecontract.MailPurposeAmended
+	change := versionChange{version: plan.version, step: timelineStep(contract, plan), purpose: carecontract.MailPurposeAmended,
+		details: map[string]any{"replaced_version_id": replacedID(plan), "change_request_id": consent.requestID()}}
 	if consent == nil {
-		version.Status, step, purpose = carecontract.VersionRequested, waitingStep(contract), carecontract.MailPurposeAmendment
+		change.version.Status, change.step, change.purpose = carecontract.VersionRequested, waitingStep(contract), carecontract.MailPurposeAmendment
 	}
 	amended := false
-	err := c.intake.runtime.WithinTraeger(ctx, organizationID, func(txCtx context.Context) error {
+	reason, err := c.amend(ctx, organizationID, contract.ID, func(txCtx context.Context) error {
 		record, unchanged, err := c.lockedTimeline(txCtx, organizationID, contract)
 		if err != nil || !unchanged {
 			return err
 		}
-		versionID, err := c.intake.store.InsertVersion(txCtx, organizationID, contract.ID, step, version)
-		if errors.Is(err, ports.ErrVersionMoved) {
-			return nil
-		}
-		if err != nil {
+		if record, amended, err = c.storeVersion(txCtx, organizationID, record, change); err != nil || !amended {
 			return err
 		}
-		version.ID = ident.ID(versionID)
-		if err := trail(txCtx, c.intake.store, organizationID, 0, contract.ID, contract.Key.SchoolID, ActionCreate, map[string]any{
-			"version_id": versionID, "version_number": version.Number, "source": version.Source,
-			"effective_from": version.EffectiveFrom.String(), "status": version.Status,
-			"replaced_version_id": replacedID(plan), "overtaken_version_id": overtakenID(step),
-			"change_request_id": consent.requestID(),
-		}); err != nil {
-			return err
-		}
-		if record, err = c.withStoredVersion(txCtx, organizationID, record, versionID); err != nil {
-			return err
-		}
-		if err := c.contracts.deliverChange(txCtx, organizationID, record, purpose); err != nil {
-			return changeHoldBack(err)
-		}
-		amended = true
 		return c.recordRequest(txCtx, organizationID, record, consent)
 	})
+	return amended && reason == "", reason, err
+}
+
+// amend runs one write of a contract's versions in the contract's own
+// Träger transaction; the write takes the row lock of the contract. A
+// write held back (errHoldBack) rolls back and answers its reason, so the
+// next run finds the same change.
+func (c *Conclusions) amend(ctx context.Context, organizationID, contractID int64, write func(context.Context) error) (string, error) {
+	err := c.intake.runtime.WithinTraeger(ctx, organizationID, write)
 	if reason := holdBackReason(err); reason != "" {
-		return false, reason, nil
+		return reason, nil
 	}
 	if err != nil {
-		return false, "", fmt.Errorf("care contract: amend contract %d: %w", contract.ID, err)
+		return "", fmt.Errorf("care contract: amend contract %d: %w", contractID, err)
 	}
-	return amended, "", nil
+	return "", nil
+}
+
+// versionChange is a new version of a contract with what it does to the
+// versions before it, the mail that brings it to the parents and what the
+// trail names besides.
+type versionChange struct {
+	version carecontract.Version
+	step    VersionStep
+	purpose string
+	details map[string]any
+}
+
+// storeVersion stores the changed version of the contract locked as record,
+// records it in the trail, freezes its PDF and brings it to the parents. It
+// answers the record pointed at the stored version; false when another
+// write moved the version it steps on.
+func (c *Conclusions) storeVersion(ctx context.Context, organizationID int64, record ContractRecord, change versionChange) (ContractRecord, bool, error) {
+	contractID, version := record.Summary.ID.Int64(), change.version
+	versionID, err := c.intake.store.InsertVersion(ctx, organizationID, contractID, change.step, version)
+	if errors.Is(err, ports.ErrVersionMoved) {
+		return record, false, nil
+	}
+	if err != nil {
+		return record, false, err
+	}
+	details := map[string]any{
+		"version_id": versionID, "version_number": version.Number, "source": version.Source,
+		"effective_from": version.EffectiveFrom.String(), "status": version.Status, "overtaken_version_id": overtakenID(change.step),
+	}
+	maps.Copy(details, change.details)
+	if err := trailContract(ctx, c.intake.store, organizationID, 0, record, ActionCreate, details); err != nil {
+		return record, false, err
+	}
+	if record, err = c.withStoredVersion(ctx, organizationID, record, versionID); err != nil {
+		return record, false, err
+	}
+	return record, true, changeHoldBack(c.contracts.deliverChange(ctx, organizationID, record, change.purpose))
 }
 
 // withStoredVersion points record at the version just stored, as the store
@@ -238,26 +265,24 @@ func (c *Conclusions) dropWaiting(ctx context.Context, organizationID int64, con
 		return nil
 	}
 	waiting := *contract.Waiting
-	err := c.intake.runtime.WithinTraeger(ctx, organizationID, func(txCtx context.Context) error {
-		_, unchanged, err := c.lockedTimeline(txCtx, organizationID, contract)
+	_, err := c.amend(ctx, organizationID, contract.ID, func(txCtx context.Context) error {
+		record, unchanged, err := c.lockedTimeline(txCtx, organizationID, contract)
 		if err != nil || !unchanged {
 			return err
 		}
-		if err := c.intake.store.OvertakeVersion(txCtx, organizationID, contract.ID, waiting.ID.Int64()); err != nil {
-			if errors.Is(err, ports.ErrVersionMoved) {
-				return nil
-			}
+		err = c.intake.store.OvertakeVersion(txCtx, organizationID, contract.ID, waiting.ID.Int64())
+		if errors.Is(err, ports.ErrVersionMoved) {
+			return nil
+		}
+		if err != nil {
 			return err
 		}
-		return trail(txCtx, c.intake.store, organizationID, 0, contract.ID, contract.Key.SchoolID, ActionDiscard, map[string]any{
+		return trailContract(txCtx, c.intake.store, organizationID, 0, record, ActionDiscard, map[string]any{
 			"version_id": waiting.ID.Int64(), "version_number": waiting.Number, "status": carecontract.VersionOvertaken,
 			"reason": "change_taken_back",
 		})
 	})
-	if err != nil {
-		return fmt.Errorf("care contract: drop the waiting version of contract %d: %w", contract.ID, err)
-	}
-	return nil
+	return err
 }
 
 // waitingStep is what a new waiting version does to the one that waits

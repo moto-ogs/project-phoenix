@@ -2,14 +2,11 @@ package application
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"slices"
 
 	"github.com/moto-ogs/project-phoenix/modules/carecontract"
 	"github.com/moto-ogs/project-phoenix/modules/carecontract/internal/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Who agreed to a changed version (#4816, ADR 0088 section 3, ADR 0322).
@@ -193,44 +190,23 @@ func (c *Conclusions) followSent(ctx context.Context, organizationID int64, read
 		return nil
 	}
 	followed := false
-	err := c.intake.runtime.WithinTraeger(ctx, organizationID, func(txCtx context.Context) error {
+	reason, err := c.amend(ctx, organizationID, sent.ID, func(txCtx context.Context) error {
 		record, err := c.intake.store.Contract(txCtx, organizationID, sent.ID, true)
 		if err != nil || record.Summary.Status != carecontract.StatusSent || record.Version.ID != sent.Version.ID ||
 			!record.UpdatedAt.Equal(sent.UpdatedAt) {
 			return err
 		}
-		step := VersionStep{Overtake: sent.Version.ID.Int64(), Status: carecontract.VersionRequested}
-		versionID, err := c.intake.store.InsertVersion(txCtx, organizationID, sent.ID, step, version)
-		if errors.Is(err, ports.ErrVersionMoved) {
-			return nil
-		}
-		if err != nil {
-			return err
-		}
-		version.ID = ident.ID(versionID)
-		if err := trail(txCtx, c.intake.store, organizationID, 0, sent.ID, sent.Key.SchoolID, ActionCreate, map[string]any{
-			"version_id": versionID, "version_number": version.Number, "source": version.Source,
-			"effective_from": version.EffectiveFrom.String(), "status": version.Status, "overtaken_version_id": step.Overtake,
-		}); err != nil {
-			return err
-		}
-		if record, err = c.withStoredVersion(txCtx, organizationID, record, versionID); err != nil {
-			return err
-		}
-		followed = true
-		return changeHoldBack(c.contracts.deliverChange(txCtx, organizationID, record, carecontract.MailPurposeAmendment))
+		_, followed, err = c.storeVersion(txCtx, organizationID, record, versionChange{version: version, purpose: carecontract.MailPurposeAmendment,
+			step: VersionStep{Overtake: sent.Version.ID.Int64(), Status: carecontract.VersionRequested}})
+		return err
 	})
-	if reason := holdBackReason(err); reason != "" {
+	switch {
+	case reason != "":
 		run.Skipped = append(run.Skipped, carecontract.AmendmentSkip{ContractID: sent.ID, Reason: reason})
-		return nil
-	}
-	if err != nil {
-		return fmt.Errorf("care contract: follow the bookings of sent contract %d: %w", sent.ID, err)
-	}
-	if followed {
+	case err == nil && followed:
 		run.Awaiting = append(run.Awaiting, carecontract.AmendedContract{ContractID: sent.ID, VersionNumber: version.Number, EffectiveFrom: version.EffectiveFrom})
 	}
-	return nil
+	return err
 }
 
 // sentVersionNow is the version a sent contract would have with the care
