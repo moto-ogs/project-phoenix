@@ -20,6 +20,7 @@ const activities: Activity[] = [
     name: "Schulhof Freispiel",
     max_participant: 0,
     is_open_ags: false,
+    is_system: true,
     supervisor_id: "",
     ag_category_id: "",
     created_at: new Date("2026-01-01"),
