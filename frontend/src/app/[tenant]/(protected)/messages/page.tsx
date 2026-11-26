@@ -223,9 +223,9 @@ function MessagesInboxContent() {
       <SearchBar
         value={searchTerm}
         onChange={setSearchTerm}
-        // Kurz, damit er neben „Ungelesen“ auch auf 320–375 px ganz steht;
-        // gesucht wird im Namen der Person und des Kindes.
-        placeholder="Name suchen…"
+        // Kurz, damit er neben „Nur ungelesene“ auch auf 375 px ganz
+        // steht, und sagt, dass auch das Kind gefunden wird (Runde 13).
+        placeholder="Name oder Kind"
         inputProps={{ "aria-label": "Person oder Kind suchen" }}
         className="min-w-0 flex-1"
       />
@@ -241,9 +241,10 @@ function MessagesInboxContent() {
         ) : (
           <FunnelSimpleIcon size={16} className="mr-1.5" aria-hidden />
         )}
-        {/* Beschriftet als Filter (Runde 11); die Zahl steht über der
-            Liste. */}
-        Nur ungelesene
+        {/* Beschriftet als Filter (Runde 11); die Zahl steht am Ende der
+            Liste. Ohne „Nur“ (Runde 13), damit „Name oder Kind“ am SE ganz
+            im Suchfeld steht. */}
+        Ungelesene
       </ToggleChip>
     </div>
   );
@@ -312,9 +313,9 @@ function MessagesInboxContent() {
             ]
           : []),
       ]}
-      // App: Suche und Filter in der Leiste der Kopfkarte wie in der
-      // Kindersuche; sie klebt beim Scrollen (Runde 9).
-      searchSlot={isApp ? appToolbar : undefined}
+      // App (Runde 13): Suche und Filter stehen oben in der Liste und
+      // rollen mit ihr weg; die Kopfkarte trägt nur Titel und Reiter und
+      // bleibt am SE unter 20 % der Höhe.
       search={
         isApp
           ? undefined
@@ -397,6 +398,7 @@ function MessagesInboxContent() {
                   } · ${unreadThreads} ungelesen`
             }
             listAction={isSplit ? appComposeButton : null}
+            header={appToolbar}
             empty={
               <EmptyState
                 variant="compact"

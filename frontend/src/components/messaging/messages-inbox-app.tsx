@@ -151,8 +151,8 @@ function InboxSplit({
 
 /**
  * Kurz wie in Chat-Apps: heute die Uhrzeit, gestern „Gestern“, sonst Tag und
- * Monat. Die Uhrzeit steht ab 390 px Breite auch bei älteren Nachrichten
- * dabei („Gestern, 21:28“); am SE bliebe sonst kaum Platz für die Vorschau.
+ * Monat. Auf jedem Telefon gleich (Runde 13): die Uhrzeit älterer
+ * Nachrichten steht im Verlauf und im Vorlesetext der Zeile.
  */
 function chatTimeParts(
   iso: string,
@@ -171,9 +171,10 @@ function ChatTime({ iso }: Readonly<{ iso: string }>) {
   if (parts === null) return null;
   return (
     <>
+      {/* iPad hoch: mit Uhrzeit wie bisher. */}
       {parts.date}
       {parts.time ? (
-        <span className="hidden min-[390px]:inline">, {parts.time}</span>
+        <span className="tablet:inline hidden">, {parts.time}</span>
       ) : null}
     </>
   );
@@ -214,12 +215,7 @@ function InboxList({
   return (
     <Collection label="Unterhaltungen">
       {header ? (
-        <div className="border-b border-gray-100 px-4 py-3">{header}</div>
-      ) : null}
-      {summary ? (
-        <p className="border-b border-gray-100 px-4 py-2 text-xs leading-4 text-gray-500 tabular-nums">
-          {summary}
-        </p>
+        <div className="border-b border-gray-100 px-4 py-2">{header}</div>
       ) : null}
       {threads.length === 0 && empty ? empty : null}
       <CollectionList>
@@ -270,17 +266,33 @@ function InboxList({
               // 56–64 px und am SE stehen acht Unterhaltungen im Bild.
               title={
                 <span className="flex min-w-0 items-baseline gap-2">
-                  <span className="min-w-0 flex-1 truncate">
-                    <span className={unread ? "font-semibold" : undefined}>
+                  {/* Name ganz, die Rolle ganz oder gar nicht (Runde 13):
+                      passt sie nicht mehr in die Zeile, bricht sie in eine
+                      zweite, unsichtbare Zeile um, statt „Eltern…“ zu
+                      zeigen. Im Vorlesetext steht sie immer. */}
+                  <span
+                    className={cn(
+                      "min-w-0 flex-1",
+                      wide
+                        ? "truncate"
+                        : "flex h-lh flex-wrap items-baseline overflow-hidden",
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        !wide && "max-w-full truncate",
+                        unread && "font-semibold",
+                      )}
+                    >
                       {thread.guardian_name}
                     </span>
-                    <span className="font-normal text-gray-500">
+                    <span className="font-normal whitespace-pre text-gray-500">
                       {" · "}
                       {wide
                         ? relation
                         : relationshipLabel(thread.relationship_type)}
                     </span>
-                    {thread.audience === "leadership" ? (
+                    {wide && thread.audience === "leadership" ? (
                       <span className="ml-1.5 inline-flex align-[1px]">
                         <StatusBadge
                           tone="blue"
@@ -290,6 +302,17 @@ function InboxList({
                       </span>
                     ) : null}
                   </span>
+                  {/* Schmal: das Abzeichen bleibt stehen, auch wenn die
+                      Rolle ausgeblendet ist. */}
+                  {!wide && thread.audience === "leadership" ? (
+                    <span className="inline-flex shrink-0 self-center">
+                      <StatusBadge
+                        tone="blue"
+                        label={LEADERSHIP_AUDIENCE_LABEL}
+                        compact
+                      />
+                    </span>
+                  ) : null}
                   {/* Wie in Chat-Apps: Zeit oben rechts, die Zahl der
                       ungelesenen darunter; die Vorschau nutzt die Breite. */}
                   {/* Leerzeichen für den zugänglichen Text („Elternteil
@@ -316,7 +339,8 @@ function InboxList({
                   ) : (
                     <span className="flex min-w-0 flex-1 items-baseline">
                       {/* Ein Kopf = Kind. */}
-                      <span className="flex max-w-[50%] min-w-0 shrink-0 items-baseline font-medium text-gray-700">
+                      {/* Das Kind steht ganz; gekürzt wird die Vorschau. */}
+                      <span className="flex max-w-full min-w-0 shrink-0 items-baseline font-medium text-gray-700">
                         <MotoConceptIcon
                           concept={childrenConcept}
                           size={14}
@@ -344,6 +368,13 @@ function InboxList({
           );
         })}
       </CollectionList>
+      {/* Am Ende der Liste (Runde 13): oben kostete die Zeile am SE eine
+          Unterhaltung im ersten Bild. */}
+      {summary ? (
+        <p className="border-t border-gray-100 px-4 py-2 text-xs leading-4 text-gray-500 tabular-nums">
+          {summary}
+        </p>
+      ) : null}
     </Collection>
   );
 }
