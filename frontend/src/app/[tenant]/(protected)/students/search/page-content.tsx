@@ -18,7 +18,6 @@ import {
   keepOfferedYears,
   keepValidGroupIds,
   maxPlanningIso,
-  readFilterParam,
   searchSelection,
   searchYearSelection,
   studentSearchUrl,
@@ -216,8 +215,6 @@ import {
   asFilterValues,
   buildSearchFilterStorageKey,
   filtersFromSearchParams,
-  parsePickupTimeParam,
-  persistedFiltersToSearchParams,
   readSearchPageFilters,
   readStoredFilters,
   removeStoredFilters,
@@ -290,18 +287,15 @@ function SearchPageContent() {
   );
   const storageOwner = personalStorageOwner(session?.user);
   const hasUrlFilterParams = searchParamsHavePersistedFilters(searchParams);
-  // Initial state comes from the URL only. localStorage is unavailable on the
-  // server, so reading it during render made the first client render differ
-  // from the server HTML (hydration mismatch, Sentry FRONTEND-17). The mount
-  // effect below restores stored filters when the URL carries none.
-  const initial = studentSearchUrl(searchParams, berlinTodayISO());
+  // Initial state comes from the URL only, so refreshes, history and copied
+  // links restore the same view. localStorage is unavailable on the server, so
+  // reading it during render made the first client render differ from the
+  // server HTML (hydration mismatch, Sentry FRONTEND-17). The mount effect
+  // below restores stored filters when the URL carries none.
+  const initialToday = berlinTodayISO();
+  const initial = studentSearchUrl(searchParams, initialToday);
+  const initialFilters = readSearchPageFilters(searchParams, initialToday);
 
-  // Read initial filters from URL params so refreshes, revisits via browser
-  // history, and copied links restore the same operational view. When no URL
-  // filters are present, fall back to the last browser-local PWA view.
-  const initialFilters = readSearchPageFilters(searchParams, berlinTodayISO());
-
-  // Search and filter state
   // The search field keeps an immediate local draft and reports the term
   // after its debounce. The term then narrows the loaded list in the browser,
   // as a transition: a key typed while the list renders is shown first.
@@ -435,15 +429,10 @@ function SearchPageContent() {
     }
 
     const storedFilters = readStoredFilters(storageKey);
-    if (!storedFilters || Object.keys(storedFilters).length === 0) return;
+    if (!storedFilters) return;
 
-    applyFilters(
-      readSearchPageFilters(
-        persistedFiltersToSearchParams(storedFilters),
-        berlinTodayISO(),
-      ),
-    );
-    updateUrlParams(storedFilters);
+    applyFilters(storedFilters);
+    updateUrlParams(searchPageFilterParams(storedFilters));
   }, [
     applyFilters,
     hasUrlFilterParams,
@@ -459,7 +448,7 @@ function SearchPageContent() {
       if (window.location.pathname !== searchPathname) return;
       const params = new URLSearchParams(window.location.search);
       setPickupTimeFilter(
-        parsePickupTimeParam(readFilterParam(params, "pickup_time")),
+        readSearchPageFilters(params, berlinTodayISO()).pickupTimes,
       );
       writeStoredFilters(
         storageKey,
@@ -1051,7 +1040,7 @@ function SearchPageContent() {
     applyFilters(NO_FILTERS);
     setExplicitDate(null);
     updateUrlParams({
-      ...Object.fromEntries(FILTER_QUERY_PARAMS.map((key) => [key, ""])),
+      ...searchPageFilterParams(NO_FILTERS),
       [DATE_QUERY_PARAM]: "",
       [SEARCH_QUERY_PARAM]: "",
     });

@@ -40,7 +40,7 @@ export function asFilterValues(value: string | string[]): string[] {
     : parseMultiValueParam(value);
 }
 
-export function parsePickupTimeParam(value: string | null): string[] {
+function parsePickupTimeParam(value: string | null): string[] {
   return parseMultiValueParam(value).filter((time) => time !== "all");
 }
 
@@ -53,9 +53,7 @@ export function searchParamsHavePersistedFilters(
   );
 }
 
-export function persistedFiltersToSearchParams(
-  filters: PersistedSearchFilters,
-) {
+function persistedFiltersToSearchParams(filters: PersistedSearchFilters) {
   const params = new URLSearchParams();
   for (const key of FILTER_QUERY_PARAMS) {
     const value = filters[key];
@@ -75,7 +73,6 @@ export function filtersFromSearchParams(
   return filters;
 }
 
-/** Every filter of the page as the URL and the stored view name it. */
 export interface SearchPageFilters {
   groupIds: string[];
   schoolClasses: string[];
@@ -97,8 +94,8 @@ export interface SearchPageFilters {
 
 /**
  * The one reading of the filter parameters: first render, stored view and
- * reset all take their values from here. An unknown value is the filter's
- * neutral one.
+ * reset all take their values from here. A value outside a fixed choice is
+ * that filter's neutral one.
  */
 export function readSearchPageFilters(
   params: SearchParamReader,
@@ -145,7 +142,7 @@ function unlessNeutral(value: string, neutral: string): string {
   return value === neutral ? "" : value;
 }
 
-/** The parameters of these filters; a neutral filter is the empty string. */
+/** A neutral filter is the empty string. */
 export function searchPageFilterParams(
   filters: SearchPageFilters,
 ): Record<FilterQueryParam, string> {
@@ -196,7 +193,10 @@ function safelyRemoveStoredFilters(storageKey: string) {
   }
 }
 
-export function readStoredFilters(storageKey: string | null) {
+/** The stored view, or null when none is stored. */
+export function readStoredFilters(
+  storageKey: string | null,
+): SearchPageFilters | null {
   if (!storageKey || typeof window === "undefined") return null;
 
   try {
@@ -207,9 +207,13 @@ export function readStoredFilters(storageKey: string | null) {
       safelyRemoveStoredFilters(storageKey);
       return null;
     }
-    return compactStoredFilters(
-      normalizeStoredFilters(parsed as PersistedSearchFilters),
+    const filters = readSearchPageFilters(
+      persistedFiltersToSearchParams(parsed as PersistedSearchFilters),
+      berlinTodayISO(),
     );
+    return Object.values(searchPageFilterParams(filters)).some(Boolean)
+      ? filters
+      : null;
   } catch {
     // Bewusst still: ein kaputter oder gesperrter Speicher startet die Suche
     // ohne gemerkte Filter, die Adresse trägt sie weiter.

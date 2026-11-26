@@ -25,26 +25,6 @@ export type GroupMode =
   | "pickup-status"
   | "companions";
 
-export const STATUS_FILTER_OPTIONS: Array<{
-  value: StatusFilter;
-  label: string;
-}> = [
-  { value: "all", label: "Alle" },
-  { value: "anwesend", label: "Anwesend" },
-  { value: "schule", label: "Schule" },
-  { value: "unterricht", label: "Im Unterricht" },
-  { value: "abwesend", label: "Zuhause" },
-  { value: "krank", label: "Krank" },
-  { value: "klassenfahrt", label: "Klassenfahrt" },
-  { value: "entschuldigt", label: "Entschuldigt" },
-  {
-    value: "entschuldigt-klassenfahrt",
-    label: "Entschuldigt oder Klassenfahrt",
-  },
-  { value: "unterwegs", label: "Unterwegs" },
-  { value: "schulhof", label: "Schulhof" },
-];
-
 export const DAY_STATUS_FILTER_OPTIONS: Array<{
   value: DayStatusFilter;
   label: string;
@@ -148,6 +128,15 @@ export function isPlannedAbsenceStatusFilter(filter: StatusFilter): boolean {
     (option) => option.value === filter,
   );
 }
+
+export const STATUS_FILTER_OPTIONS: Array<{
+  value: StatusFilter;
+  label: string;
+}> = [
+  { value: "all", label: "Alle" },
+  ...LIVE_STATUS_FILTER_OPTIONS,
+  ...PLANNED_ABSENCE_STATUS_FILTER_OPTIONS,
+];
 
 export const STATUS_FILTER_LABELS = Object.fromEntries(
   STATUS_FILTER_OPTIONS.map((option) => [option.value, option.label]),
