@@ -40,12 +40,14 @@ const logger = createLogger({ component: "RoomClosuresSection" });
 
 interface RoomClosuresSectionProps {
   readonly roomId: string;
+  readonly canUpdate: boolean;
   readonly canReadPlan: boolean;
   readonly planHref: (day: string) => string;
 }
 
 export function RoomClosuresSection({
   roomId,
+  canUpdate,
   canReadPlan,
   planHref,
 }: RoomClosuresSectionProps) {
@@ -99,15 +101,17 @@ export function RoomClosuresSection({
       title="Sperren"
       description="Ein gesperrter Raum ist für neue Termine und am Kiosk nicht wählbar."
       action={
-        <Button
-          type="button"
-          variant="outline"
-          size="md"
-          onClick={() => setCreating(true)}
-          tooltip="Öffnet den Dialog, um den Raum für einen Zeitraum zu sperren."
-        >
-          Raum sperren
-        </Button>
+        canUpdate ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="md"
+            onClick={() => setCreating(true)}
+            tooltip="Öffnet den Dialog, um den Raum für einen Zeitraum zu sperren."
+          >
+            Raum sperren
+          </Button>
+        ) : undefined
       }
     >
       {loadError ? (
@@ -139,54 +143,60 @@ export function RoomClosuresSection({
                   <StatusBadge label="Heute gesperrt" tone="orange" />
                 ) : null}
               </div>
-              <ResponsiveRowActions>
-                <OverflowMenu
-                  ariaLabel={`Aktionen zur Sperre ${closure.reason}`}
-                  items={[
-                    {
-                      label: "Sperre aufheben",
-                      description:
-                        "Gibt den Raum wieder frei, moto fragt vorher nach.",
-                      onClick: () => setLifting(closure),
-                    },
-                  ]}
-                />
-              </ResponsiveRowActions>
+              {canUpdate ? (
+                <ResponsiveRowActions>
+                  <OverflowMenu
+                    ariaLabel={`Aktionen zur Sperre ${closure.reason}`}
+                    items={[
+                      {
+                        label: "Sperre aufheben",
+                        description:
+                          "Gibt den Raum wieder frei, moto fragt vorher nach.",
+                        onClick: () => setLifting(closure),
+                      },
+                    ]}
+                  />
+                </ResponsiveRowActions>
+              ) : null}
             </ResponsiveActionRow>
           ))}
         </ResponsiveActionList>
       )}
 
-      <RoomClosureModal
-        isOpen={creating}
-        onClose={() => setCreating(false)}
-        onSaved={() => {
-          refresh();
-          toastSuccess("Der Raum ist gesperrt.");
-        }}
-        roomId={roomId}
-        today={today}
-        canReadPlan={canReadPlan}
-        planHref={planHref}
-      />
-      <ConfirmationModal
-        isOpen={lifting !== null}
-        onClose={() => setLifting(null)}
-        onConfirm={() => {
-          if (lifting) void lift(lifting);
-        }}
-        title="Sperre aufheben?"
-        confirmText="Aufheben"
-        confirmTooltip="Gibt den Raum sofort wieder für neue Termine und den Kiosk frei."
-        isConfirmLoading={liftPending}
-        loadingText="Wird aufgehoben …"
-      >
-        {lifting ? (
-          <p className="text-sm text-gray-700">
-            Der Raum ist dann {roomClosurePeriod(lifting)} wieder wählbar.
-          </p>
-        ) : null}
-      </ConfirmationModal>
+      {canUpdate ? (
+        <>
+          <RoomClosureModal
+            isOpen={creating}
+            onClose={() => setCreating(false)}
+            onSaved={() => {
+              refresh();
+              toastSuccess("Der Raum ist gesperrt.");
+            }}
+            roomId={roomId}
+            today={today}
+            canReadPlan={canReadPlan}
+            planHref={planHref}
+          />
+          <ConfirmationModal
+            isOpen={lifting !== null}
+            onClose={() => setLifting(null)}
+            onConfirm={() => {
+              if (lifting) void lift(lifting);
+            }}
+            title="Sperre aufheben?"
+            confirmText="Aufheben"
+            confirmTooltip="Gibt den Raum sofort wieder für neue Termine und den Kiosk frei."
+            isConfirmLoading={liftPending}
+            loadingText="Wird aufgehoben …"
+          >
+            {lifting ? (
+              <p className="text-sm text-gray-700">
+                Der Raum ist dann {roomClosurePeriod(lifting)} wieder wählbar.
+              </p>
+            ) : null}
+          </ConfirmationModal>
+        </>
+      ) : null}
     </SectionCard>
   );
 }

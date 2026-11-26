@@ -31,11 +31,12 @@ vi.mock("~/lib/room-closures-api", async (importOriginal) => ({
 // Der Dialog „Raum sperren“ ist hier nicht Gegenstand.
 vi.mock("./room-closure-modal", () => ({ RoomClosureModal: () => null }));
 
-function renderSection() {
+function renderSection(canUpdate = true) {
   render(
     <ToastProvider>
       <RoomClosuresSection
         roomId="10"
+        canUpdate={canUpdate}
         canReadPlan
         planHref={(day) => `/rooms/10?tab=plan&d=${day}`}
       />
@@ -83,6 +84,29 @@ describe("RoomClosuresSection (#7653)", () => {
     expect(screen.getByText("Wasserschaden")).toBeInTheDocument();
     expect(screen.getByText("Reinigung")).toBeInTheDocument();
     expect(screen.getAllByText("Heute gesperrt")).toHaveLength(1);
+  });
+
+  it("shows closures without write actions to room readers", () => {
+    swrState.data = [
+      {
+        id: "1",
+        roomId: "10",
+        startDate: testClockDay(0),
+        endDate: testClockDay(1),
+        reason: "Wasserschaden",
+      },
+    ];
+    renderSection(false);
+
+    expect(screen.getByText("Wasserschaden")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Raum sperren" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", {
+        name: "Aktionen zur Sperre Wasserschaden",
+      }),
+    ).not.toBeInTheDocument();
   });
 
   it("lifts a closure after the question and refreshes the closures", async () => {
