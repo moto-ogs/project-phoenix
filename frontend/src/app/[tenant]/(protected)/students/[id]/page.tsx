@@ -1649,6 +1649,21 @@ function StudentDetailPageContent() {
     </span>
   );
 
+  // App (#8070): Orts-Abzeichen ohne „seit …“ für Kopf und schmalen Kopf.
+  const appLocation = (
+    <StudentHeaderLocation
+      student={student}
+      myGroups={myGroups}
+      myGroupRooms={myGroupRooms}
+      mySupervisedRooms={mySupervisedRooms}
+      todayArrivalPlannedTime={todayArrival.time}
+      isArrivalException={todayArrival.isException}
+      todayArrivalNote={todayArrival.note}
+      isArrivalAbsent={todayArrival.isAbsent}
+      showLocationSince={false}
+    />
+  );
+
   const page = (
     /* Der Entitätskopf IST die Kopfkarte der Seite: Foto, Name, Statuszeile
           mit Klasse, Gruppe und den Zeiten des heutigen Tages, der aktuelle
@@ -1673,22 +1688,20 @@ function StudentDetailPageContent() {
           />
         ) : undefined
       }
+      appCompactStats={
+        appHead ? (
+          <AppStudentCompactStatus
+            location={appLocation}
+            student={student}
+            plannedArrival={todayArrival.time}
+            plannedPickup={todayPickup.time}
+          />
+        ) : undefined
+      }
       stats={
         appHead ? (
           <AppStudentHeadStatus
-            location={
-              <StudentHeaderLocation
-                student={student}
-                myGroups={myGroups}
-                myGroupRooms={myGroupRooms}
-                mySupervisedRooms={mySupervisedRooms}
-                todayArrivalPlannedTime={todayArrival.time}
-                isArrivalException={todayArrival.isException}
-                todayArrivalNote={todayArrival.note}
-                isArrivalAbsent={todayArrival.isAbsent}
-                showLocationSince={false}
-              />
-            }
+            location={appLocation}
             student={student}
             plannedArrival={todayArrival.time}
             plannedPickup={todayPickup.time}
@@ -2186,33 +2199,18 @@ function StudentQuickActions({
 }
 
 /**
- * Kopf der Kindakte in der App (#8070): Aufenthaltsort und die Zeiten des
- * Tages als eine Chip-Zeile, die bei Platzmangel seitlich scrollt. Die
- * Schnellaktionen stehen in der Aktionsleiste über der Pill.
+ * Rote Zeit der Kindakte in der App (#8070): eine überschrittene Ankunft oder
+ * Abholung, dieselbe Rechnung wie „Heutige Abholung … (Überfällig …)“ am
+ * Desktop; ein krankes oder entschuldigtes Kind ist nie überfällig.
  */
-function AppStudentHeadStatus({
-  location,
-  student,
-  plannedArrival,
-  plannedPickup,
-  details,
-}: Readonly<{
-  location: ReactNode;
-  student: Student;
-  plannedArrival?: string;
-  plannedPickup?: string;
-  /** Die ganze Statuszeile des Desktops, im Blatt „Heute“. */
-  details: ReactNode;
-}>) {
+function useAppStudentDay(
+  student: Student,
+  plannedArrival?: string,
+  plannedPickup?: string,
+) {
   const now = useMinuteClock();
-  const [detailsOpen, setDetailsOpen] = useState(false);
   const arrived = Boolean(student.actual_arrival_time);
   const pickedUp = Boolean(student.actual_pickup_time);
-  const arrival = student.actual_arrival_time ?? plannedArrival;
-  const pickup = student.actual_pickup_time ?? plannedPickup;
-  // Wie heute rot im Kopf (#8070): eine überschrittene Ankunft oder
-  // Abholung. Dieselbe Rechnung wie „Heutige Abholung … (Überfällig …)“ am
-  // Desktop; ein krankes oder entschuldigtes Kind ist nie überfällig.
   const day = {
     plannedArrival,
     actualArrival: student.actual_arrival_time,
@@ -2246,34 +2244,152 @@ function AppStudentHeadStatus({
   const arrivalLate = arrived ? null : overdue("arrival", plannedArrival);
   const pickupLate = pickedUp ? null : overdue("pickup", plannedPickup);
   const late = pickupLate ?? arrivalLate;
+  return { now, day, arrived, pickedUp, late, pickupLate };
+}
+
+function AppStudentLateBadge({
+  late,
+  pickup,
+  short = false,
+}: Readonly<{
+  late: ReturnType<typeof getStudentTimeStatus>;
+  pickup: boolean;
+  /** Nur Warnzeichen und Zeit, für den schmalen Kopf neben dem Namen. */
+  short?: boolean;
+}>) {
+  return (
+    <StatusBadge
+      tone={late.state === "very-overdue" ? "red" : "orange"}
+      icon={<AlertTriangle className="size-3.5" aria-hidden="true" />}
+      label={
+        short
+          ? (late.displayTime ?? "")
+          : `${pickup ? "Abholung" : "Ankunft"} überfällig ${late.displayTime}`
+      }
+    />
+  );
+}
+
+/**
+ * Schmaler Kopf beim Rollen (#8070): Ort und, falls nötig, die rote Zeit
+ * bleiben neben dem Namen stehen.
+ */
+function AppStudentCompactStatus({
+  location,
+  student,
+  plannedArrival,
+  plannedPickup,
+}: Readonly<{
+  location: ReactNode;
+  student: Student;
+  plannedArrival?: string;
+  plannedPickup?: string;
+}>) {
+  const { late, pickupLate } = useAppStudentDay(
+    student,
+    plannedArrival,
+    plannedPickup,
+  );
+  // Mit roter Zeit nur sie, kurz als Warnzeichen und Uhrzeit: Der Name
+  // braucht den Platz, der volle Satz steht im Kopf darüber.
+  return (
+    <span className="flex max-w-40 min-w-0 items-center gap-1.5 overflow-hidden [&_*]:whitespace-nowrap">
+      {late ? (
+        <AppStudentLateBadge late={late} pickup={late === pickupLate} short />
+      ) : (
+        location
+      )}
+    </span>
+  );
+}
+
+/**
+ * Kopf der Kindakte in der App (#8070): Aufenthaltsort und die Zeiten des
+ * Tages als eine Chip-Zeile, die bei Platzmangel seitlich scrollt. Die
+ * Schnellaktionen stehen in der Aktionsleiste über der Pill.
+ */
+function AppStudentHeadStatus({
+  location,
+  student,
+  plannedArrival,
+  plannedPickup,
+  details,
+}: Readonly<{
+  location: ReactNode;
+  student: Student;
+  plannedArrival?: string;
+  plannedPickup?: string;
+  /** Die ganze Statuszeile des Desktops, im Blatt „Heute“. */
+  details: ReactNode;
+}>) {
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const { now, day, arrived, pickedUp, late, pickupLate } = useAppStudentDay(
+    student,
+    plannedArrival,
+    plannedPickup,
+  );
 
   // Erste Zeile: Ort, dann eine rote Zeit oder die geplanten Zeiten des
   // Tages. Eine rote Zeit verdrängt die übrigen Zeit-Chips, damit die Zeile
   // auch am iPhone SE eine Zeile bleibt.
   const items: { label: string }[] = [];
-  if (!late && !arrived && arrival) items.push({ label: `Kommt ${arrival}` });
-  if (!late && pickup)
-    items.push({ label: `${pickedUp ? "Gegangen" : "Geht"} ${pickup}` });
-  // Zweite Zeile (#8070): wann das Kind kam und wer es angemeldet hat, wie
-  // „Heutige Ankunft“ und „Angemeldet: am Gerät“ am Desktop, dazu Klasse und
-  // Gruppe. Was nicht ganz passt, rutscht in eine verborgene Folgezeile statt
-  // mitten im Wort abgeschnitten zu werden; alles steht im Blatt „Heute“.
+  if (!late && !arrived && plannedArrival)
+    items.push({ label: `Kommt ${plannedArrival}` });
+  // Ist das Kind gegangen, nennt die zweite Zeile Zeit und Plan.
+  if (!late && !pickedUp && plannedPickup)
+    items.push({ label: `Geht ${plannedPickup}` });
+  // Zweite Zeile (#8070): wann das Kind kam, wie weit das vom Plan abwich
+  // und wer es angemeldet hat, wie „Heutige Ankunft: 21:27 (geplant: 11:45,
+  // +582 min)“ und „Angemeldet: am Gerät“ am Desktop; danach Klasse und
+  // Gruppe. Was nicht mehr ganz passt, rutscht in eine verborgene Folgezeile
+  // statt mitten im Wort abgeschnitten zu werden; alles steht im Blatt „Heute“.
   const actor = (value: AttendanceActor | null | undefined) => {
     const label = attendanceActorLabel(value ?? null);
-    if (!label) return "";
-    return value?.kind === "staff" ? ` von ${label}` : ` ${label}`;
+    if (!label) return null;
+    return value?.kind === "staff" ? `von ${label}` : label;
   };
+  const planned = (kind: "arrival" | "pickup", plannedTime?: string) => {
+    const actualTime =
+      kind === "arrival"
+        ? student.actual_arrival_time
+        : student.actual_pickup_time;
+    if (!plannedTime || !actualTime) return null;
+    const status = getStudentTimeStatus({
+      plannedTime,
+      actualTime,
+      now,
+      kind,
+      day,
+    });
+    const diff = status.detailAnnotation;
+    return `(geplant ${plannedTime.slice(0, 5)}${diff ? `, ${diff}` : ""})`;
+  };
+  // Kurz „Da seit“/„Gegangen“ wie die Chips, damit Zeit und Plan auch am
+  // iPhone SE in eine Zeile passen; wer gebucht hat, folgt als eigene Angabe.
+  const doneFact = pickedUp
+    ? {
+        time: `Gegangen ${student.actual_pickup_time}`,
+        plan: planned("pickup", plannedPickup),
+        by: actor(student.actual_pickup_by),
+        verb: "abgemeldet",
+      }
+    : arrived
+      ? {
+          time: `Da seit ${student.actual_arrival_time}`,
+          plan: planned("arrival", plannedArrival),
+          by: actor(student.actual_arrival_by),
+          verb: "angemeldet",
+        }
+      : null;
   const facts = [
-    pickedUp
-      ? `Abgemeldet ${student.actual_pickup_time}${actor(student.actual_pickup_by)}`
-      : arrived
-        ? `Angemeldet ${student.actual_arrival_time}${actor(student.actual_arrival_by)}`
-        : null,
+    doneFact ? [doneFact.time, doneFact.plan].filter(Boolean).join(" ") : null,
+    doneFact?.by ? `${doneFact.verb} ${doneFact.by}` : null,
     student.school_class ? schoolClassLabel(student.school_class) : null,
     student.group_name,
   ].filter((fact): fact is string => Boolean(fact));
-  // Die Chips beginnen an derselben Kante wie der Zurück-Pfeil und der
-  // Inhalt der Karten darunter (`-ml-9`), nicht eingerückt unter dem Namen.
+  // Die Zeilen beginnen an derselben Kante wie der Inhalt der Karten darunter
+  // (16 px Einzug der Statuszeile im Kopf). Die Chips brechen um statt
+  // seitlich zu scrollen: nichts liegt verborgen links oder rechts.
   // Ein Tipp auf die Zeilen öffnet „Heute“ mit allem, was der Desktop unter
   // dem Namen zeigt; der Pfeil am Ende sagt, dass es dort mehr gibt.
   return (
@@ -2283,20 +2399,14 @@ function AppStudentHeadStatus({
         onClick={() => setDetailsOpen(true)}
         aria-haspopup="dialog"
         // Mindestens 44 px hoch: die Zeilen sind die Trefferfläche für „Heute“.
-        className="-ml-9 flex min-h-11 w-[calc(100%+2.25rem)] min-w-0 cursor-pointer items-center gap-1.5 py-1 text-left"
+        className="flex min-h-11 max-w-full min-w-full cursor-pointer items-center gap-1.5 text-left"
       >
         <span className="flex min-w-0 flex-1 flex-col gap-1">
-          <span className="flex min-w-0 items-center gap-1.5 [&_*]:whitespace-nowrap">
+          <span className="flex min-w-0 flex-wrap items-center gap-1.5 [&_*]:whitespace-nowrap">
             <span className="shrink-0">{location}</span>
             {late ? (
               <span className="shrink-0">
-                <StatusBadge
-                  tone={late.state === "very-overdue" ? "red" : "orange"}
-                  icon={
-                    <AlertTriangle className="size-3.5" aria-hidden="true" />
-                  }
-                  label={`${late === pickupLate ? "Abholung" : "Ankunft"} überfällig ${late.displayTime}`}
-                />
+                <AppStudentLateBadge late={late} pickup={late === pickupLate} />
               </span>
             ) : null}
             {items.length > 0 ? (
@@ -2311,7 +2421,16 @@ function AppStudentHeadStatus({
               className="flex h-5 flex-wrap gap-x-1 overflow-hidden text-sm leading-5 text-gray-600"
             >
               {facts.map((fact, index) => (
-                <span key={fact} className="whitespace-nowrap">
+                <span
+                  key={fact}
+                  // Die erste Angabe ist die wichtigste: passt sie allein
+                  // nicht, endet sie mit „…“ statt zu verschwinden.
+                  className={
+                    index === 0
+                      ? "max-w-full min-w-0 truncate"
+                      : "whitespace-nowrap"
+                  }
+                >
                   {index > 0 ? "· " : ""}
                   {fact}
                 </span>
@@ -2331,7 +2450,11 @@ function AppStudentHeadStatus({
         title="Heute"
         closeLabel="Heute schließen"
       >
-        <div className="text-sm text-gray-700">{details}</div>
+        {/* Das Orts-Abzeichen steht am Desktop rechtsbündig über „seit …“;
+            im Blatt beginnt es links wie alle Zeilen darunter. */}
+        <div className="text-sm text-gray-700 [&_.items-end]:items-start">
+          {details}
+        </div>
       </OverlaySheet>
     </>
   );

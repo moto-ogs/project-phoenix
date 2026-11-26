@@ -1,9 +1,9 @@
 "use client";
 
 // Schnellaktionen der Kindakte in der App (#8070): Die Leiste über der Pill
-// trägt, was zum Zustand des Kindes passt. Ist es da, ist das Abmelden die
-// eine Aktion; „Krank melden“ wäre neben einem anwesenden Kind falsch. Ist es
-// nicht da, stehen Anmelden und „Krank melden“ nebeneinander. Alles Seltenere
+// trägt, was zum Zustand des Kindes passt: Abmelden oder Anmelden als
+// Hauptaktion, daneben „Krank melden“ wie die Kachel am Desktop (auch ein
+// anwesendes Kind wird im Laufe des Tages krank). Alles Seltenere
 // (Entschuldigen, Klassenfahrt) steht im einen „···“ der Kopfkarte.
 //
 // Die Handler sind dieselben wie die der Kacheln am Desktop: Rückfragen,
@@ -100,13 +100,13 @@ export function studentAppQuickActions(
 }
 
 /**
- * Wie viele der Tagesaktionen in der Leiste stehen: eine, wenn das Kind da
- * ist (Abmelden), sonst zwei. Der Rest gehört ins „···“ der Kopfkarte.
+ * Wie viele der Tagesaktionen in der Leiste stehen: die Hauptaktion und
+ * höchstens eine Nebenaktion. Der Rest gehört ins „···“ der Kopfkarte.
  */
 export function studentAppBarCount(
   entries: readonly StudentQuickAction[],
 ): number {
-  return entries[0]?.key === "abmelden" ? 1 : Math.min(2, entries.length);
+  return Math.min(2, entries.length);
 }
 
 export function StudentAppActionBar({
