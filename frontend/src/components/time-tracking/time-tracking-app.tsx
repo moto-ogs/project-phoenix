@@ -365,9 +365,11 @@ export function AppClockPanel(props: AppClockPanelProps) {
           <p className="-mt-1 text-center text-sm text-gray-500">
             Unterwegs: zum Beispiel Ausflug, Fortbildung oder zu Hause.
           </p>
+          {/* Neutral (Runde 11): Rot las sich im Einstempeln-Blatt wie
+              Löschen; eine Abwesenheit zu melden ist nichts Gefährliches. */}
           <Button
             type="button"
-            variant="outline_danger"
+            variant="ghost"
             size="md"
             disabled={disabled || pending}
             onClick={() => {
@@ -645,11 +647,11 @@ export function AppDayList({
         // Wochenansicht: der Zeitraum steht schon im Kopf der Karte und die
         // Stunden der Woche in der Kopfkarte; die Gruppe nennt nur den Saldo.
         const single = weeks.length === 1 && header !== undefined;
-        // Die laufende Woche ist ein Teil des Stundenkontos im Kopf: „davon“
-        // macht die Beziehung der beiden Zahlen lesbar (#8070, Runde 5).
+        // Die laufende Woche bis gestern; der Kopf nennt den Saldo „gesamt“,
+        // so widersprechen sich die zwei Zahlen nicht (Runde 11).
         const saldoLabel =
           single && partial
-            ? "Davon diese Woche bis gestern"
+            ? "Diese Woche bis gestern"
             : partial
               ? "Wochensaldo bis gestern"
               : "Wochensaldo";
@@ -1026,7 +1028,7 @@ export function AppDayFactsPanel({ facts }: { readonly facts: AppDayFacts }) {
       <DataField label="Ist">
         {p && p.actualMinutes > 0 ? formatDuration(p.actualMinutes) : "–"}
       </DataField>
-      <DataField label="Gutschrift">
+      <DataField label="Gutgeschrieben">
         {credit > 0 ? formatDuration(credit) : "–"}
       </DataField>
       <DataField label="Saldo">
@@ -1038,7 +1040,7 @@ export function AppDayFactsPanel({ facts }: { readonly facts: AppDayFacts }) {
           "–"
         )}
       </DataField>
-      <DataField label="Quelle">{facts.source ?? "–"}</DataField>
+      <DataField label="Erfasst über">{facts.source ?? "–"}</DataField>
     </dl>
   );
 }

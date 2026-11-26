@@ -2859,7 +2859,16 @@ function EditSessionModal({
           {/* ── Session section ──────────────────────────────────────────── */}
           {hasSession && effectiveTab === "session" && (
             <div className="space-y-4">
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {/* App (Runde 11): Start und Ende, Pause und Ort je
+                  nebeneinander, damit der Pflicht-Grund am kleinen Telefon
+                  ohne Scrollen in Sicht kommt. */}
+              <div
+                className={
+                  app
+                    ? "grid grid-cols-2 gap-3"
+                    : "grid grid-cols-1 gap-4 sm:grid-cols-2"
+                }
+              >
                 <Input
                   id="edit-start"
                   name="check_in_time"
@@ -2892,7 +2901,13 @@ function EditSessionModal({
                 />
               </div>
 
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div
+                className={
+                  app && !hasIndividualBreaks
+                    ? "grid grid-cols-2 gap-3"
+                    : "grid grid-cols-1 gap-4 sm:grid-cols-2"
+                }
+              >
                 {/* Break section */}
                 <div>
                   {hasIndividualBreaks ? (
@@ -3542,6 +3557,8 @@ function TimeTrackingContent() {
     facts?: AppDayFacts;
   } | null>(null);
   const [absenceModalOpen, setAbsenceModalOpen] = useState(false);
+  // App: Der Export steht im „…“-Blatt der Kopfkarte (Runde 11).
+  const [exportOpen, setExportOpen] = useState(false);
   const handleCloseEditModal = useCallback(() => setEditModal(null), []);
   const handleCloseAbsenceModal = useCallback(
     () => setAbsenceModalOpen(false),
@@ -4267,6 +4284,36 @@ function TimeTrackingContent() {
     );
   }
 
+  // App (#8070): Woche/Monat und Dienstplan stehen oben in der Karte der
+  // Tage, nicht in der Kopfkarte: Der Kopf bleibt am SE unter 20 % der
+  // Höhe (Runde 11), und die Wahl steht bei dem, was sie umschaltet.
+  const appViewToolbar = (
+    <div
+      className="flex items-center gap-2 px-3 pt-2 pb-1"
+      data-app-tt-toolbar=""
+    >
+      <SegmentedControl
+        ariaLabel="Zeitraum-Ansicht"
+        items={APP_VIEW_MODE_ITEMS}
+        value={viewMode}
+        onChange={setViewMode}
+        className="flex-1"
+        fullWidth
+      />
+      {ownStaffId && dienstplanBooked ? (
+        <ButtonLink
+          href={tenantPath("/mein-dienstplan")}
+          variant="outline"
+          size="md"
+          tooltip="Öffnet deine geplanten Schichten der Woche."
+        >
+          <CalendarRange className="mr-1.5 h-4 w-4 shrink-0" aria-hidden />
+          <span className="whitespace-nowrap">Dienstplan</span>
+        </ButtonLink>
+      ) : null}
+    </div>
+  );
+
   return (
     <TenantPage
       title="Zeiterfassung"
@@ -4290,11 +4337,20 @@ function TimeTrackingContent() {
                 label: "Woche",
               },
               {
-                value: formatSignedDuration(ownMetrics.accountBalanceMinutes!),
-                // Wie im Kopf des Desktops; „Stundenkonto“ lief am SE
-                // über den Rand (#8070, Runde 7). Die Stempeluhr nennt es
-                // „Stundenkonto seit …“.
-                label: "Saldo",
+                // „gesamt“: Es ist der Stand über alle Wochen, nicht der
+                // Saldo der Woche in der Liste (Runde 11). Am SE (< 380 px)
+                // liefe es neben der Woche über den Rand, dort nur „Saldo“.
+                value: (
+                  <>
+                    {formatSignedDuration(ownMetrics.accountBalanceMinutes!)}
+                    <span className="font-normal text-gray-700">
+                      {" "}
+                      Saldo
+                      <span className="max-[379px]:hidden"> gesamt</span>
+                    </span>
+                  </>
+                ),
+                label: "",
               },
             ]}
           />
@@ -4346,41 +4402,7 @@ function TimeTrackingContent() {
       // Bauart 3, Regel 1: eine Zeitnavigation im Bedienband der Kopfkarte,
       // dieselbe wie in Dienstplan, Vertretung und Betreuungsplan.
       searchSlot={
-        app ? (
-          // App (#8070, Runde 9): Woche/Monat, Dienstplan und Export sichtbar
-          // in der Leiste der Kopfkarte statt im „…“ bzw. hinter dem Zeitraum.
-          <div className="flex items-center gap-2" data-app-tt-toolbar="">
-            <SegmentedControl
-              ariaLabel="Zeitraum-Ansicht"
-              items={APP_VIEW_MODE_ITEMS}
-              value={viewMode}
-              onChange={setViewMode}
-              className="flex-1"
-              fullWidth
-            />
-            {ownStaffId && dienstplanBooked ? (
-              <ButtonLink
-                href={tenantPath("/mein-dienstplan")}
-                variant="outline"
-                size="md"
-                tooltip="Öffnet deine geplanten Schichten der Woche."
-              >
-                <CalendarRange
-                  className="mr-1.5 h-4 w-4 shrink-0"
-                  aria-hidden
-                />
-                <span className="whitespace-nowrap">Dienstplan</span>
-              </ButtonLink>
-            ) : null}
-            {ownStaffId ? (
-              <StaffExportButton
-                asButton
-                staffId={ownStaffId}
-                yearStart={startOfYear(parseISODate(todayISO))}
-              />
-            ) : null}
-          </div>
-        ) : (
+        app ? undefined : (
           <PlanningContextBar
             withoutContextRow
             dateLabel={rangeLabel}
@@ -4403,8 +4425,28 @@ function TimeTrackingContent() {
       // Dialoge und Slide-overs gehören in den overlays-Slot des Gerüsts,
       // nicht in die Inhalte: sonst hängt TenantPage sie im Lade-, Leer- und
       // Fehlerzustand aus.
+      overflowMenu={
+        app && ownStaffId
+          ? [
+              {
+                label: "Zeitnachweis exportieren",
+                description:
+                  "Öffnet die Auswahl von Zeitraum und Format für den Zeitnachweis.",
+                onClick: () => setExportOpen(true),
+              },
+            ]
+          : undefined
+      }
       overlays={
         <>
+          {app && ownStaffId ? (
+            <StaffExportButton
+              staffId={ownStaffId}
+              yearStart={startOfYear(parseISODate(todayISO))}
+              open={exportOpen}
+              onOpenChange={setExportOpen}
+            />
+          ) : null}
           {/* Edit modal */}
           <EditSessionModal
             isOpen={editModal !== null}
@@ -4634,23 +4676,26 @@ function TimeTrackingContent() {
               weekAnchor={weekAnchor}
               monthAnchor={monthAnchor}
               rangeBar={
-                <AppRangeBar
-                  label={rangeLabel.replace(/\.(\d{4})$/, ".")}
-                  onPrevious={goToPreviousRange}
-                  onNext={goToNextRange}
-                  previousLabel={
-                    viewMode === "month"
-                      ? "Vorheriger Monat"
-                      : "Vorherige Woche"
-                  }
-                  nextLabel={
-                    viewMode === "month" ? "Nächster Monat" : "Nächste Woche"
-                  }
-                  onToday={isOnCurrentRange ? undefined : goToCurrentRange}
-                  todayLabel={
-                    viewMode === "month" ? "Dieser Monat" : "Diese Woche"
-                  }
-                />
+                <>
+                  {appViewToolbar}
+                  <AppRangeBar
+                    label={rangeLabel.replace(/\.(\d{4})$/, ".")}
+                    onPrevious={goToPreviousRange}
+                    onNext={goToNextRange}
+                    previousLabel={
+                      viewMode === "month"
+                        ? "Vorheriger Monat"
+                        : "Vorherige Woche"
+                    }
+                    nextLabel={
+                      viewMode === "month" ? "Nächster Monat" : "Nächste Woche"
+                    }
+                    onToday={isOnCurrentRange ? undefined : goToCurrentRange}
+                    todayLabel={
+                      viewMode === "month" ? "Dieser Monat" : "Diese Woche"
+                    }
+                  />
+                </>
               }
               setTargetHref={
                 canSetTarget && ownStaffId

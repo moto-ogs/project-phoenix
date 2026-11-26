@@ -11,6 +11,8 @@ import { SectionCard } from "~/components/ui/section-card";
 import { SplitView, useSplitSelection } from "~/components/ui/split-view";
 import { UnreadBadge } from "~/components/messaging/unread-badge";
 import { Avatar } from "~/components/ui/avatar";
+import { StatusBadge } from "~/components/ui/status-badge";
+import { LEADERSHIP_AUDIENCE_LABEL } from "~/lib/messaging-status";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { childrenConcept } from "~/lib/concepts/children";
 import { useDeviceContext } from "~/lib/device-context";
@@ -53,6 +55,8 @@ export function MessagesInboxApp(
     header?: ReactNode;
     /** Steht in der Karte, wenn Suche oder Filter nichts finden. */
     empty?: ReactNode;
+    /** Kennzahlen des Desktop-Kopfs als erste Zeile der Liste. */
+    summary?: string;
   }>,
 ) {
   // `useSearchParams` in der Auswahl braucht eine Suspense-Grenze.
@@ -63,6 +67,7 @@ export function MessagesInboxApp(
           threads={props.threads}
           header={props.header}
           empty={props.empty}
+          summary={props.summary}
         />
       }
     >
@@ -88,12 +93,14 @@ function InboxSplit({
   listAction,
   header,
   empty,
+  summary,
 }: Readonly<{
   threads: readonly InboxThread[];
   renderDetail: (threadId: string) => ReactNode;
   listAction?: ReactNode;
   header?: ReactNode;
   empty?: ReactNode;
+  summary?: string;
 }>) {
   // `selected` gibt es nur im Split; die Vorwahl wirkt auch nur dort, denn
   // ohne Split zeigt `SplitView` allein die Liste.
@@ -120,6 +127,7 @@ function InboxSplit({
             active={active}
             header={header}
             empty={empty}
+            summary={summary}
           />
           {listAction ? (
             // Klebt unten in der eigenen Scroll-Spalte der Liste: über der
@@ -143,14 +151,39 @@ function InboxSplit({
 
 /**
  * Kurz wie in Chat-Apps: heute die Uhrzeit, gestern „Gestern“, sonst Tag und
- * Monat.
+ * Monat. Die Uhrzeit steht ab 390 px Breite auch bei älteren Nachrichten
+ * dabei („Gestern, 21:28“); am SE bliebe sonst kaum Platz für die Vorschau.
  */
-function shortChatTime(iso: string): string {
+function chatTimeParts(
+  iso: string,
+): { date: string; time: string | null } | null {
   const day = relativeDaysLabel(iso);
-  if (day === null) return "";
-  if (day === "heute") return formatBerlinTime(iso);
-  if (day === "gestern") return "Gestern";
-  return formatChatTime(iso).split(",")[0] ?? "";
+  if (day === null) return null;
+  const time = formatBerlinTime(iso);
+  if (day === "heute") return { date: time, time: null };
+  const date =
+    day === "gestern" ? "Gestern" : (formatChatTime(iso).split(",")[0] ?? "");
+  return { date, time };
+}
+
+function ChatTime({ iso }: Readonly<{ iso: string }>) {
+  const parts = chatTimeParts(iso);
+  if (parts === null) return null;
+  return (
+    <>
+      {parts.date}
+      {parts.time ? (
+        <span className="hidden min-[390px]:inline">, {parts.time}</span>
+      ) : null}
+    </>
+  );
+}
+
+/** Die Zeit als Text für den zugänglichen Namen der Zeile, voll. */
+function chatTimeText(iso: string | null | undefined): string {
+  const parts = iso ? chatTimeParts(iso) : null;
+  if (parts === null) return "";
+  return parts.time ? `${parts.date}, ${parts.time}` : parts.date;
 }
 
 type RowProps = (
@@ -164,10 +197,12 @@ function InboxList({
   active = null,
   header,
   empty,
+  summary,
 }: Readonly<{
   threads: readonly InboxThread[];
   header?: ReactNode;
   empty?: ReactNode;
+  summary?: string;
   rowProps?: RowProps;
   /** Im Split: die Unterhaltung, die rechts steht (auch vorgewählt). */
   active?: string | null;
@@ -180,6 +215,11 @@ function InboxList({
     <Collection label="Unterhaltungen">
       {header ? (
         <div className="border-b border-gray-100 px-4 py-3">{header}</div>
+      ) : null}
+      {summary ? (
+        <p className="border-b border-gray-100 px-4 py-2 text-xs leading-4 text-gray-500 tabular-nums">
+          {summary}
+        </p>
       ) : null}
       {threads.length === 0 && empty ? empty : null}
       <CollectionList>
@@ -199,11 +239,22 @@ function InboxList({
             <CollectionRow
               key={thread.thread_id}
               {...shownTarget}
-              // Beginnt mit dem sichtbaren Text der Zeile (Sprachsteuerung):
-              // Person · Beziehung, dann das Kind.
-              aria-label={`${thread.guardian_name} · ${relation}${
-                unread ? `, ${thread.unread_count} ungelesen` : ""
-              }`}
+              // Beginnt mit dem sichtbaren Text der Zeile (Sprachsteuerung,
+              // axe label-content-name-mismatch): Person · Rolle, Abzeichen,
+              // Zeit; dann das Kind und die Zahl der ungelesenen.
+              aria-label={[
+                `${thread.guardian_name} · ${
+                  wide ? relation : relationshipLabel(thread.relationship_type)
+                }`,
+                thread.audience === "leadership"
+                  ? ` ${LEADERSHIP_AUDIENCE_LABEL}`
+                  : "",
+                thread.last_message_at
+                  ? ` ${chatTimeText(thread.last_message_at)}`
+                  : "",
+                wide ? "" : `, ${relation}`,
+                unread ? `, ${thread.unread_count} ungelesen` : "",
+              ].join("")}
               leading={
                 <Avatar
                   name={thread.guardian_name}
@@ -213,32 +264,59 @@ function InboxList({
                 />
               }
               // Breit (iPad hoch): Person samt Beziehung zum Kind, darunter
-              // die letzte Nachricht. Schmal (Telefon, Runde 9): die Person,
-              // darunter das Kind mit der Beziehung und die letzte Nachricht
-              // in einer eigenen Zeile – vorher brach sie nach ~15 Zeichen ab.
+              // die letzte Nachricht. Schmal (Telefon, Runde 11): zwei Zeilen
+              // wie in Chat-Apps – oben die Person mit ihrer Rolle, darunter
+              // das Kind und die letzte Nachricht. So bleibt die Zeile bei
+              // 56–64 px und am SE stehen acht Unterhaltungen im Bild.
               title={
-                <>
-                  <span className={unread ? "font-semibold" : undefined}>
-                    {thread.guardian_name}
-                  </span>
-                  {wide ? (
+                <span className="flex min-w-0 items-baseline gap-2">
+                  <span className="min-w-0 flex-1 truncate">
+                    <span className={unread ? "font-semibold" : undefined}>
+                      {thread.guardian_name}
+                    </span>
                     <span className="font-normal text-gray-500">
                       {" · "}
-                      {relation}
+                      {wide
+                        ? relation
+                        : relationshipLabel(thread.relationship_type)}
+                    </span>
+                    {thread.audience === "leadership" ? (
+                      <span className="ml-1.5 inline-flex align-[1px]">
+                        <StatusBadge
+                          tone="blue"
+                          label={LEADERSHIP_AUDIENCE_LABEL}
+                          compact
+                        />
+                      </span>
+                    ) : null}
+                  </span>
+                  {/* Wie in Chat-Apps: Zeit oben rechts, die Zahl der
+                      ungelesenen darunter; die Vorschau nutzt die Breite. */}
+                  {/* Leerzeichen für den zugänglichen Text („Elternteil
+                      24.11.“ statt „Elternteil24.11.“); im Flex unsichtbar. */}
+                  {thread.last_message_at ? " " : null}
+                  {thread.last_message_at ? (
+                    <span className="shrink-0 text-xs font-normal text-gray-500 tabular-nums">
+                      <ChatTime iso={thread.last_message_at} />
                     </span>
                   ) : null}
-                </>
+                </span>
               }
               subtitle={
-                wide ? (
-                  <span className={unread ? "text-gray-900" : undefined}>
-                    {last}
-                  </span>
-                ) : (
-                  <>
-                    <span className="flex min-w-0 items-baseline gap-1">
+                <span className="flex min-w-0 items-center gap-2">
+                  {wide ? (
+                    <span
+                      className={cn(
+                        "min-w-0 flex-1 truncate",
+                        unread && "text-gray-900",
+                      )}
+                    >
+                      {last}
+                    </span>
+                  ) : (
+                    <span className="flex min-w-0 flex-1 items-baseline">
                       {/* Ein Kopf = Kind. */}
-                      <span className="flex min-w-0 items-baseline truncate font-medium text-gray-700">
+                      <span className="flex max-w-[50%] min-w-0 shrink-0 items-baseline font-medium text-gray-700">
                         <MotoConceptIcon
                           concept={childrenConcept}
                           size={14}
@@ -246,35 +324,20 @@ function InboxList({
                         />
                         <span className="truncate">{thread.student_name}</span>
                       </span>
-                      <span className="shrink-0">
-                        · {relationshipLabel(thread.relationship_type)}
+                      <span aria-hidden="true" className="shrink-0 px-1">
+                        ·
+                      </span>
+                      <span
+                        className={cn(
+                          "min-w-0 flex-1 truncate",
+                          unread && "text-gray-900",
+                        )}
+                      >
+                        {last}
                       </span>
                     </span>
-                    <span
-                      className={cn(
-                        "block truncate",
-                        unread && "text-gray-900",
-                      )}
-                    >
-                      {last}
-                    </span>
-                  </>
-                )
-              }
-              meta={
-                <span className="flex flex-col items-end gap-1">
-                  {thread.last_message_at ? (
-                    <span className="text-xs leading-5 text-gray-500">
-                      {shortChatTime(thread.last_message_at)}
-                    </span>
-                  ) : null}
-                  {unread ? (
-                    <UnreadBadge count={thread.unread_count} />
-                  ) : (
-                    // Gleiche Höhe mit und ohne Zahl, damit die Zeit in
-                    // jeder Zeile auf derselben Linie steht.
-                    <span aria-hidden="true" className="h-5" />
                   )}
+                  {unread ? <UnreadBadge count={thread.unread_count} /> : null}
                 </span>
               }
             />

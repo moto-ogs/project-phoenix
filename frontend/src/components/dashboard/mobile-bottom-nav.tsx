@@ -1115,11 +1115,11 @@ function MainMobileBottomNav({ className = "" }: MobileBottomNavProps) {
                 size="sm"
                 max={NOTIFICATIONS_BADGE_MAX}
                 ariaLabel={`${moreBadgeCount} neu für dich`}
-                // Am Telefon über dem Symbol, ganz innerhalb der Leiste. Rechts
-                // am Symbol rückte „9+“ an das „M“ von „Mehr“ (Runde 9); so
-                // bleiben 10 px Luft zur Beschriftung. iPad und Desktop
+                // Telefon (Runde 11): oben rechts am Symbol und über seine
+                // Oberkante gehoben, so verdeckt „9+“ weder das Symbol (Runde
+                // 10) noch das „M“ von „Mehr“ (Runde 9). iPad und Desktop
                 // behalten die heutige Lage.
-                className="app:-top-3 app:right-auto app:-left-1.5 absolute -top-1 -right-2"
+                className="app:-top-4 app:-right-3 absolute -top-1 -right-2"
               />
             ) : null,
           paddingClassName: ITEM_PADDING,

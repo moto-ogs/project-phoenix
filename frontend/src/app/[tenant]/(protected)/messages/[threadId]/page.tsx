@@ -11,6 +11,7 @@ import { messageKeys } from "~/lib/swr/portal-keys";
 import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 
 import {
+  Fragment,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -35,6 +36,7 @@ import {
   errorAlertActions,
 } from "~/components/ui/form-error-alert";
 import { SectionCard } from "~/components/ui/section-card";
+import { StatusBadge } from "~/components/ui/status-badge";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import NavigationLink from "~/components/ui/navigation-link";
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
@@ -89,7 +91,12 @@ import {
   isAdmin,
 } from "~/lib/auth-utils";
 import { createLogger } from "~/lib/logger";
-import { formatChatDateTime } from "~/lib/date-helpers";
+import {
+  berlinDayFromISO,
+  formatChatDateTime,
+  formatChatTime,
+  relativeDaysLabel,
+} from "~/lib/date-helpers";
 import { ThreadSkeleton, ThreadMessagesSkeleton } from "./page-skeleton";
 import { childrenConcept } from "~/lib/concepts/children";
 
@@ -705,54 +712,71 @@ export function MessageThreadContent({
             {/* App: Wie in Chat-Apps stehen wenige Nachrichten unten am
                 Schreibfeld, nicht oben mit leerer Fläche darunter. `mt-auto`
                 statt `justify-end`: so bleibt der Anfang scrollbar. */}
+            {/* App: Die Zahl der Nachrichten des Desktop-Kopfs steht am
+                Anfang des Verlaufs (Runde 11), die Kopfkarte bleibt flach. */}
+            {isApp && !messagesLoading && sentCount > 0 ? (
+              <p className="pt-1 pb-3 text-center text-xs text-gray-500 tabular-nums">
+                {sentCount === 1
+                  ? "1 Nachricht in dieser Unterhaltung"
+                  : `${sentCount} Nachrichten in dieser Unterhaltung`}
+              </p>
+            ) : null}
             <AnchorBottom enabled={isApp}>
               {messagesLoading ? (
                 <ThreadMessagesSkeleton />
               ) : messages.length > 0 ? (
-                messages.map((message) =>
-                  message.kind === "request" ? (
-                    <RequestHistoryCard key={message.id} message={message} />
-                  ) : message.kind === "event" ? (
-                    <ChatEventCard
-                      key={message.id}
-                      body={message.body}
-                      createdAt={message.created_at}
-                      action={eventAction(message)}
-                    />
-                  ) : (
-                    <div key={message.id}>
-                      {message.group_thread_id && (
-                        <GroupThreadReference
-                          id={message.group_thread_id}
-                          title={message.group_thread_title}
-                        />
-                      )}
-                      <ChatBubble
-                        body={message.body}
-                        own={message.sender_kind === "staff"}
-                        senderName={message.sender_name}
-                        createdAt={message.created_at}
-                        pending={send.stateOf(message.id)}
-                        attachments={message.attachments}
-                        attachmentFiles={PARENT_MESSAGE_ATTACHMENTS}
-                        readReceiptLabel={
-                          message.sender_kind === "staff" &&
-                          message.read_by_guardian
-                            ? "Gelesen"
-                            : undefined
-                        }
-                        mailStatus={
-                          <MessageMailBadge
-                            outcome={threadMails.mails[message.id]}
-                          />
-                        }
-                        mailNote={messageMailNote(
-                          threadMails.mails[message.id],
-                        )}
+                messages.map((message, index) => (
+                  <Fragment key={message.id}>
+                    {isApp ? (
+                      <DaySeparator
+                        iso={message.created_at}
+                        previousIso={messages[index - 1]?.created_at}
                       />
-                    </div>
-                  ),
-                )
+                    ) : null}
+                    {message.kind === "request" ? (
+                      <RequestHistoryCard key={message.id} message={message} />
+                    ) : message.kind === "event" ? (
+                      <ChatEventCard
+                        key={message.id}
+                        body={message.body}
+                        createdAt={message.created_at}
+                        action={eventAction(message)}
+                      />
+                    ) : (
+                      <div key={message.id}>
+                        {message.group_thread_id && (
+                          <GroupThreadReference
+                            id={message.group_thread_id}
+                            title={message.group_thread_title}
+                          />
+                        )}
+                        <ChatBubble
+                          body={message.body}
+                          own={message.sender_kind === "staff"}
+                          senderName={message.sender_name}
+                          createdAt={message.created_at}
+                          pending={send.stateOf(message.id)}
+                          attachments={message.attachments}
+                          attachmentFiles={PARENT_MESSAGE_ATTACHMENTS}
+                          readReceiptLabel={
+                            message.sender_kind === "staff" &&
+                            message.read_by_guardian
+                              ? "Gelesen"
+                              : undefined
+                          }
+                          mailStatus={
+                            <MessageMailBadge
+                              outcome={threadMails.mails[message.id]}
+                            />
+                          }
+                          mailNote={messageMailNote(
+                            threadMails.mails[message.id],
+                          )}
+                        />
+                      </div>
+                    )}
+                  </Fragment>
+                ))
               ) : loadError ? (
                 // The header seed (fallbackData) keeps `thread` truthy with an empty
                 // messages array, so a failed history fetch would otherwise render the
@@ -800,10 +824,11 @@ export function MessageThreadContent({
                 upload: PARENT_MESSAGE_ATTACHMENTS.upload,
               }}
               sendHint={`Schickt die Nachricht sofort an ${thread?.guardian_name ?? "die Eltern"}.`}
-              // App: kurz, damit er auch auf schmalen Telefonen ganz steht.
+              // App: kurz, damit er auch auf schmalen Telefonen ganz steht,
+              // und wie am Desktop mit Empfänger.
               placeholder={
                 isApp
-                  ? "Nachricht schreiben…"
+                  ? "Nachricht an die Eltern…"
                   : "Nachricht an die Eltern schreiben…"
               }
             />
@@ -842,12 +867,22 @@ export function MessageThreadContent({
       {...MESSAGES_BACK}
       stats={isApp ? appStatusLine : statusLine}
       statsLoading={showSkeleton}
+      // App: „Als ungelesen markieren“ steht als eigene Zeile im „…“-Blatt
+      // (Runde 11), nicht hinter einem zweiten Menü darin.
+      overflowMenu={
+        isApp && thread
+          ? [
+              {
+                label: MARK_UNREAD_LABEL,
+                description:
+                  "Für das ganze Team, bis jemand die Unterhaltung öffnet",
+                onClick: () => void handleMarkUnread(),
+              },
+            ]
+          : undefined
+      }
       actions={
-        isApp ? (
-          thread ? (
-            markUnreadMenu
-          ) : null
-        ) : thread ? (
+        isApp ? null : thread ? (
           <>
             <Button
               type="button"
@@ -929,6 +964,30 @@ function GroupThreadReference({
       >
         {title ?? "Gruppennachricht"}
       </NavigationLink>
+    </p>
+  );
+}
+
+/**
+ * App: Datum über der ersten Nachricht eines Tages, wie in Chat-Apps
+ * („Heute“, „Gestern“, sonst „24.11.“).
+ */
+function DaySeparator({
+  iso,
+  previousIso,
+}: Readonly<{ iso: string; previousIso?: string }>) {
+  const day = berlinDayFromISO(iso)?.getTime();
+  if (day === undefined) return null;
+  if (previousIso && berlinDayFromISO(previousIso)?.getTime() === day) {
+    return null;
+  }
+  const relative = relativeDaysLabel(iso);
+  let label = formatChatTime(iso).split(",")[0] ?? "";
+  if (relative === "heute") label = "Heute";
+  if (relative === "gestern") label = "Gestern";
+  return (
+    <p className="flex justify-center">
+      <StatusBadge tone="gray" label={label} compact />
     </p>
   );
 }
