@@ -154,9 +154,13 @@ export function ChildSheet({
               footerQuickActions && "app:flex-col!",
             )}
           >
+            {/* Mit den Aktionen der Aufsicht steht die Akte als Nebenweg
+                vorn: In der Reihe der App landet die Hauptaktion rechts,
+                wie in den anderen Blättern. */}
+            {footerQuickActions ? null : akteLink}
             {footerActions}
             {footerQuickActions}
-            {akteLink}
+            {footerQuickActions ? akteLink : null}
           </div>
         ) : (
           (akteLink ?? undefined)
