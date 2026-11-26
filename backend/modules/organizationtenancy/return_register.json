@@ -2,7 +2,7 @@
   "registerVersion": 1,
   "formatVersion": 1,
   "catalogVersion": 1,
-  "catalogSHA256": "75d55452fe5d4975927d009c31ccf479d0b0e337a6bdea87d7c4bd73496b6e5b",
+  "catalogSHA256": "cb4edbe7cbe3c17eb80fc40cf54bbb52f8b2bcea0fd37f364b4b5c2a669e2c1b",
   "about": "Dieses Register beschreibt das Rückgabepaket von moto: welche Tabellen und Felder es enthält, welche Typen sie haben, ob sie leer sein dürfen und wie die Tabellen verbunden sind. Es enthält keine Kundendaten. Jedes Paket enthält dieselbe Beschreibung für seine Tabellen als model.json. formatVersion und catalogSHA256 stehen auch in der manifest.json des Pakets.",
   "standards": [
     {
@@ -32329,6 +32329,105 @@
           "column": "tenant_id",
           "targetTable": "platform.schools",
           "targetColumn": "id"
+        },
+        {
+          "column": "tenant_id",
+          "targetTable": "users.staff_school_memberships",
+          "targetColumn": "tenant_id"
+        },
+        {
+          "column": "tenant_id",
+          "targetTable": "users.student_profiles",
+          "targetColumn": "tenant_id"
+        }
+      ],
+      "packages": [
+        "school"
+      ]
+    },
+    {
+      "name": "schedule.student_pickup_persons",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "tenant_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "student_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "exception_date",
+          "type": "date",
+          "udt": "date",
+          "nullable": false
+        },
+        {
+          "name": "person_name",
+          "type": "character varying",
+          "udt": "varchar",
+          "nullable": false
+        },
+        {
+          "name": "guardian_profile_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": true
+        },
+        {
+          "name": "created_by",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": true
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": false
+        }
+      ],
+      "relationships": [
+        {
+          "column": "created_by",
+          "targetTable": "users.staff_school_memberships",
+          "targetColumn": "id"
+        },
+        {
+          "column": "guardian_profile_id",
+          "targetTable": "users.guardian_profiles",
+          "targetColumn": "id"
+        },
+        {
+          "column": "student_id",
+          "targetTable": "users.student_profiles",
+          "targetColumn": "id"
+        },
+        {
+          "column": "tenant_id",
+          "targetTable": "platform.schools",
+          "targetColumn": "id"
+        },
+        {
+          "column": "tenant_id",
+          "targetTable": "users.guardian_profiles",
+          "targetColumn": "tenant_id"
         },
         {
           "column": "tenant_id",

@@ -10,6 +10,7 @@ DELETE /api/students/{id}/partial-absences/{partialAbsenceId} -> basis
 DELETE /api/students/{id}/photo -> basis
 DELETE /api/students/{id}/pickup-exceptions/{exceptionId} -> basis
 DELETE /api/students/{id}/pickup-notes/{noteId} -> basis
+DELETE /api/students/{id}/pickup-persons/{date} -> basis
 DELETE /api/students/{id}/purge -> basis
 DELETE /api/students/{id}/rfid -> nfc_anwesenheit
 DELETE /api/students/{id}/room-history-stop -> basis
@@ -121,6 +122,7 @@ PUT /api/students/{id}/partial-absences/{partialAbsenceId} -> basis
 PUT /api/students/{id}/pickup-exceptions/{exceptionId} -> basis
 PUT /api/students/{id}/pickup-notes -> basis
 PUT /api/students/{id}/pickup-notes/{noteId} -> basis
+PUT /api/students/{id}/pickup-persons/{date} -> basis
 PUT /api/students/{id}/pickup-schedules -> basis
 PUT /api/students/{id}/privacy-consent -> basis
 PUT /api/students/{id}/room-history-stop -> basis

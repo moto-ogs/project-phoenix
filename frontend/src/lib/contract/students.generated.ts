@@ -1509,6 +1509,17 @@ export const DayNoteSchema: z.ZodType<DayNote, unknown> = object<DayNote>({
   content: str,
 });
 
+/** Go: grouplive.PickupPerson */
+export interface PickupPerson {
+  name: string;
+  one_time: boolean;
+}
+
+export const PickupPersonSchema: z.ZodType<PickupPerson, unknown> = object<PickupPerson>({
+  name: str,
+  one_time: bool,
+});
+
 /** Go: grouplive.PickupTime */
 export interface PickupTime {
   student_id: string;
@@ -1519,6 +1530,7 @@ export interface PickupTime {
   notes?: string;
   day_notes?: DayNote[];
   day_departure_mode?: string;
+  day_pickup_person?: PickupPerson;
 }
 
 export const PickupTimeSchema: z.ZodType<PickupTime, unknown> = object<PickupTime>({
@@ -1530,6 +1542,7 @@ export const PickupTimeSchema: z.ZodType<PickupTime, unknown> = object<PickupTim
   notes: optional(str),
   day_notes: optional(arr(DayNoteSchema)),
   day_departure_mode: optional(str),
+  day_pickup_person: optional(PickupPersonSchema),
 });
 
 /** Go: grouplive.TrackingIndicators */
@@ -2569,6 +2582,27 @@ export const DepartureExceptionResponseSchema: z.ZodType<DepartureExceptionRespo
   updated_at: str,
 });
 
+/** Go: careplanhttp.PickupPersonResponse */
+export interface PickupPersonResponse {
+  id: string;
+  student_id: string;
+  exception_date: string;
+  name: string;
+  guardian_profile_id?: string;
+  one_time: boolean;
+  updated_at: string;
+}
+
+export const PickupPersonResponseSchema: z.ZodType<PickupPersonResponse, unknown> = object<PickupPersonResponse>({
+  id: int64String,
+  student_id: int64String,
+  exception_date: str,
+  name: str,
+  guardian_profile_id: optional(int64String),
+  one_time: bool,
+  updated_at: str,
+});
+
 /** Go: careplanhttp.PickupDataResponse */
 export interface PickupDataResponse {
   schedules: PickupScheduleResponse[] | null;
@@ -2576,6 +2610,7 @@ export interface PickupDataResponse {
   exceptions: PickupExceptionResponse[] | null;
   notes: PickupNoteResponse[] | null;
   departure_exceptions: DepartureExceptionResponse[] | null;
+  pickup_persons: PickupPersonResponse[] | null;
   weekly_plan_version?: string;
 }
 
@@ -2585,6 +2620,7 @@ export const PickupDataResponseSchema: z.ZodType<PickupDataResponse, unknown> = 
   exceptions: nullable(arr(PickupExceptionResponseSchema)),
   notes: nullable(arr(PickupNoteResponseSchema)),
   departure_exceptions: nullable(arr(DepartureExceptionResponseSchema)),
+  pickup_persons: nullable(arr(PickupPersonResponseSchema)),
   weekly_plan_version: optional(str),
 });
 
@@ -3670,6 +3706,12 @@ export interface PickupNoteUpdateRequest {
   expected_version?: string;
 }
 
+/** Go: careplanhttp.PickupPersonRequest */
+export interface PickupPersonRequest {
+  guardian_profile_id?: string | null;
+  name?: string | null;
+}
+
 /** Go: careplanhttp.BulkPickupScheduleRequest */
 export interface BulkPickupScheduleRequest {
   schedules?: PickupScheduleRequest[] | null;
@@ -3759,6 +3801,12 @@ export const routes = {
   "DELETE /api/students/{id}/pickup-notes/{noteId}": {
     method: "DELETE",
     pattern: "/api/students/{id}/pickup-notes/{noteId}",
+    portals: ["tenant"],
+    response: noData,
+  },
+  "DELETE /api/students/{id}/pickup-persons/{date}": {
+    method: "DELETE",
+    pattern: "/api/students/{id}/pickup-persons/{date}",
     portals: ["tenant"],
     response: noData,
   },
@@ -4619,6 +4667,13 @@ export const routes = {
     portals: ["tenant"],
     request: requestBody<PickupNoteUpdateRequest>(),
     response: success(PickupNoteResponseSchema),
+  },
+  "PUT /api/students/{id}/pickup-persons/{date}": {
+    method: "PUT",
+    pattern: "/api/students/{id}/pickup-persons/{date}",
+    portals: ["tenant"],
+    request: requestBody<PickupPersonRequest>(),
+    response: success(PickupPersonResponseSchema),
   },
   "PUT /api/students/{id}/pickup-schedules": {
     method: "PUT",

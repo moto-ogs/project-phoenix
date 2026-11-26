@@ -30,7 +30,7 @@ export type GuardianPhoneType = (typeof GUARDIAN_PHONE_TYPE_VALUES)[number];
 export const GUARDIAN_RELATIONSHIP_TYPE_VALUES = ["guardian", "other", "parent", "relative"] as const;
 export type GuardianRelationshipType = (typeof GUARDIAN_RELATIONSHIP_TYPE_VALUES)[number];
 
-export const KIND_VALUES = ["activity_cancelled", "activity_lead_changed", "activity_reinstated", "activity_room_changed", "appointment_cancelled", "appointment_changed", "block_change_count", "block_staff_absent", "block_substitution", "child_absent", "child_goes_alone", "child_pickup_changed", "child_pickup_note", "child_summary", "class_dismissal_changed", "class_trip", "closing_day", "group_substitution", "group_substitution_count", "meal_plan_changed", "shift_cancelled", "shift_changed", "shift_replacement", "staff_absent", "staff_absent_count", "staff_notice"] as const;
+export const KIND_VALUES = ["activity_cancelled", "activity_lead_changed", "activity_reinstated", "activity_room_changed", "appointment_cancelled", "appointment_changed", "block_change_count", "block_staff_absent", "block_substitution", "child_absent", "child_goes_alone", "child_pickup_changed", "child_pickup_note", "child_pickup_person", "child_summary", "class_dismissal_changed", "class_trip", "closing_day", "group_substitution", "group_substitution_count", "meal_plan_changed", "shift_cancelled", "shift_changed", "shift_replacement", "staff_absent", "staff_absent_count", "staff_notice"] as const;
 export type Kind = (typeof KIND_VALUES)[number];
 
 export const LINK_TARGET_VALUES = ["calendar", "calendar_periods", "day_plan", "group_handovers", "meal_plan", "own_absences", "own_shift_plan", "school_calendar", "school_class", "shift_plan", "staff_absences", "staff_list", "staff_member", "staff_notices", "student", "substitution_plan"] as const;
@@ -821,6 +821,17 @@ export const DayClosingSchema: z.ZodType<DayClosing, unknown> = object<DayClosin
   traeger: bool,
 });
 
+/** Go: daychangesview.ChildPickupPerson */
+export interface ChildPickupPerson {
+  name: string;
+  one_time: boolean;
+}
+
+export const ChildPickupPersonSchema: z.ZodType<ChildPickupPerson, unknown> = object<ChildPickupPerson>({
+  name: str,
+  one_time: bool,
+});
+
 /** Go: daychangesview.Child */
 export interface Child {
   student_id: string;
@@ -829,6 +840,7 @@ export interface Child {
   status: OpenEnum<ChildStatus> | null;
   pickup_time: string | null;
   note: string | null;
+  pickup_person: ChildPickupPerson | null;
 }
 
 export const ChildSchema: z.ZodType<Child, unknown> = object<Child>({
@@ -838,6 +850,7 @@ export const ChildSchema: z.ZodType<Child, unknown> = object<Child>({
   status: nullable(str),
   pickup_time: nullable(str),
   note: nullable(str),
+  pickup_person: nullable(ChildPickupPersonSchema),
 });
 
 /** Go: daychangesview.ChildCounts */
@@ -847,6 +860,7 @@ export interface ChildCounts {
   pickup_changed: number;
   goes_alone: number;
   pickup_note: number;
+  pickup_person: number;
 }
 
 export const ChildCountsSchema: z.ZodType<ChildCounts, unknown> = object<ChildCounts>({
@@ -855,6 +869,7 @@ export const ChildCountsSchema: z.ZodType<ChildCounts, unknown> = object<ChildCo
   pickup_changed: safeInt,
   goes_alone: safeInt,
   pickup_note: safeInt,
+  pickup_person: safeInt,
 });
 
 /** Go: daychangesview.ChildItem */
