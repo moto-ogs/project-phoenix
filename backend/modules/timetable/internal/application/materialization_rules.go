@@ -11,6 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	activityContract "github.com/moto-ogs/project-phoenix/modules/timetable/activitycontract"
 	schedule "github.com/moto-ogs/project-phoenix/modules/timetable/internal/domain/schedulerecords"
+	"github.com/moto-ogs/project-phoenix/modules/timetable/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
@@ -163,6 +164,15 @@ func countSkippedCandidate(result *timetable.MaterializationResult, skip candida
 	case candidateCancelled:
 		result.CandidatesSkippedException++
 	}
+}
+
+func roomClosedOn(closures []ports.RoomClosureRange, date calendar.Date) bool {
+	for _, closure := range closures {
+		if !date.Before(closure.StartDate) && !date.After(closure.EndDate) {
+			return true
+		}
+	}
+	return false
 }
 
 // weekPatternApplies asks the School Calendar's A/B-week engine whether a

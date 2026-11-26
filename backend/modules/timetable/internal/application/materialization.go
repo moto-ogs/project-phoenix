@@ -72,6 +72,7 @@ type materializationService struct {
 	careBounds     ports.CareBoundReader
 	sickReports    ports.SickReportReader          // nil marks no supervisor sick (#6292)
 	nonWorkingDays timetable.NonWorkingDayCalendar // nil skips no holidays or closing days (#3594)
+	roomClosures   ports.RoomClosures
 	exceptionRepo  timetable.ActivityExceptionQuery
 	timeframeRepo  timetable.TimeframeQuery
 	lock           timetable.RecurrenceWriteLock
@@ -84,7 +85,7 @@ type materializationService struct {
 func NewMaterialization(deps ports.MaterializationDependencies) (timetable.MaterializationCapability, error) {
 	if deps.GroupRepo == nil || deps.ScheduleRepo == nil || deps.EnrollmentRepo == nil || deps.SupervisorRepo == nil ||
 		deps.PeriodRepo == nil || noInstanceRows(deps.InstanceRepo) || deps.StaffRepo == nil || noParticipantRows(deps.StudentRepo) ||
-		deps.ExceptionRepo == nil || deps.TimeframeRepo == nil {
+		deps.ExceptionRepo == nil || deps.TimeframeRepo == nil || deps.RoomClosures == nil {
 		return nil, errors.New("timetable materialization: required repository is nil")
 	}
 	if deps.Transactions != nil && deps.RecurrenceLock == nil {
@@ -103,6 +104,7 @@ func NewMaterialization(deps ports.MaterializationDependencies) (timetable.Mater
 		careBounds:     deps.CareBounds,
 		sickReports:    deps.SickReports,
 		nonWorkingDays: deps.NonWorkingDays,
+		roomClosures:   deps.RoomClosures,
 		exceptionRepo:  deps.ExceptionRepo,
 		timeframeRepo:  deps.TimeframeRepo,
 		lock:           deps.RecurrenceLock,
@@ -189,25 +191,6 @@ func (s *materializationService) materializeForTenantInTransaction(
 	return result, err
 }
 
-// materializationWorld is everything a run loads once up front. The window is
-// bounded (≤ 56 days), a tenant has O(dozens) of templates, O(hundreds) of
-// enrollments — a single fetch per collection avoids the N+1 trap in the
-// candidate loop.
-type materializationWorld struct {
-	from, to      calendar.Date
-	periods       []*schedule.CalendarPeriod
-	days          timetable.NonWorkingDays
-	existingIdx   map[existingKey]struct{}
-	exceptionIdx  map[exceptionKey]*schedule.ActivityException
-	timeframeByID map[int64]*schedule.Timeframe
-	// sickDays names the absence behind every full absence day of a staff
-	// member in the window (#6292, #6847).
-	sickDays map[staffDay]absenceStamp
-	// weekendFollowsFriday materializes Saturday and Sunday from Friday's
-	// schedules (#3921).
-	weekendFollowsFriday bool
-}
-
 func (s *materializationService) materializeForTenantLocked(
 	ctx context.Context,
 	tenantID int64,
@@ -232,7 +215,7 @@ func (s *materializationService) materializeForTenantLocked(
 		s.finishLog(tenantID, source, result, elapsed())
 		return result, nil
 	}
-	world, err := s.loadMaterializationWorld(ctx, from, to, periods)
+	world, err := s.loadMaterializationWorld(ctx, from, to, periods, templates)
 	if err != nil {
 		return nil, err
 	}
@@ -240,8 +223,12 @@ func (s *materializationService) materializeForTenantLocked(
 	if err != nil {
 		return result, err
 	}
-	people, err := s.loadTemplatesPeople(ctx, scheduledTemplateIDs(templates, schedules), "materialize template")
+	templateIDs := scheduledTemplateIDs(templates, schedules)
+	people, err := s.loadTemplatesPeople(ctx, templateIDs, scheduledTargetTemplateIDs(templates, schedules), "materialize template")
 	if err != nil {
+		return result, err
+	}
+	if err := loadMaterializationSickDays(ctx, s.sickReports, from, to, people, world); err != nil {
 		return result, err
 	}
 	if err := s.lockMaterializationStaff(ctx, templates, schedules, people, world); err != nil {
@@ -274,6 +261,16 @@ func scheduledTemplateIDs(templates []*activityContract.Group, schedules map[int
 	ids := make([]int64, 0, len(templates))
 	for _, tmpl := range templates {
 		if len(schedules[tmpl.ID]) > 0 {
+			ids = append(ids, tmpl.ID)
+		}
+	}
+	return ids
+}
+
+func scheduledTargetTemplateIDs(templates []*activityContract.Group, schedules map[int64][]*activityContract.Schedule) []int64 {
+	ids := make([]int64, 0, len(templates))
+	for _, tmpl := range templates {
+		if len(schedules[tmpl.ID]) > 0 && tmpl.HasDynamicTargets {
 			ids = append(ids, tmpl.ID)
 		}
 	}
@@ -335,31 +332,6 @@ func (s *materializationService) loadMaterializationPreconditions(
 		return nil, nil, true, nil
 	}
 	return periods, templates, false, nil
-}
-
-// loadMaterializationWorld pre-fetches the window's existing instances (an
-// (activity_group_id, date, start_time) set for O(1) lookup) on top of the
-// per-date rule inputs of loadOccurrenceRules.
-func (s *materializationService) loadMaterializationWorld(
-	ctx context.Context,
-	from, to calendar.Date,
-	periods []*schedule.CalendarPeriod,
-) (*materializationWorld, error) {
-	world, err := s.loadOccurrenceRules(ctx, from, to, periods)
-	if err != nil {
-		return nil, err
-	}
-	existing, err := instancesBetween(ctx, s.instanceRepo.Reads, calendar.Date(from), calendar.Date(to))
-	if err != nil {
-		return nil, &ports.ScheduleError{Op: "materialize for tenant: load existing instances", Err: err}
-	}
-	world.existingIdx = buildExistingIndex(existing)
-	// Past days included: the run stamps every block it creates (I-1).
-	world.sickDays, err = sickDaysIn(ctx, s.sickReports, daysBetween(from, to)...)
-	if err != nil {
-		return nil, err
-	}
-	return world, nil
 }
 
 // loadOccurrenceRules loads what candidateSlot decides a date by: the
@@ -613,6 +585,10 @@ func (s *materializationService) materializeCandidate(
 	}
 	if _, exists := world.existingIdx[key]; exists {
 		result.CandidatesSkippedExisting++
+		return nil
+	}
+	if roomClosedOn(world.closedRooms[effective.RoomID], date) {
+		result.CandidatesSkippedClosedRoom++
 		return nil
 	}
 

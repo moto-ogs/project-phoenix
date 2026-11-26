@@ -30,6 +30,6 @@ func newDeviceOpenRoomMover(command openroommove.Command) devicescanCompose.Open
 			}
 			return devicescanCompose.OpenRoomMoveReport{RoomSessionID: result.RoomSessionID, Moved: result.Moved, Skipped: skipped}, nil
 		},
-		devicescanCompose.OpenRoomRefusals{RoomNotFound: openroommove.ErrRoomNotFound, RoomNotReleased: openroommove.ErrRoomNotReleased},
+		devicescanCompose.OpenRoomRefusals{RoomNotFound: openroommove.ErrRoomNotFound, RoomNotReleased: openroommove.ErrRoomNotReleased, RoomClosed: openroommove.ErrRoomClosed},
 	)
 }

@@ -42,6 +42,7 @@ type groupRow struct {
 	ManualRosterConfirmed bool           `bun:"manual_roster_confirmed,scanonly"`
 	CalendarPeriodID      *int64         `bun:"calendar_period_id"`
 	TargetGroupType       string         `bun:"target_group_type"`
+	HasDynamicTargets     bool           `bun:"has_dynamic_targets,scanonly"`
 	TargetGradeLevel      *int16         `bun:"target_grade_level"`
 	TargetSchoolClass     *string        `bun:"target_school_class"`
 	SourceCareOfferingIDs []int64        `bun:"source_care_offering_ids,type:jsonb,nullzero"`
@@ -519,6 +520,7 @@ func jsonText[T any](values []T) (any, error) {
 func groupListQuery(db bun.IDB, rows *[]groupRow, tenantID int64, filter timetable.GroupFilter) *bun.SelectQuery {
 	query := db.NewSelect().Model(rows).ModelTableExpr(`activities.groups AS "group"`).
 		ColumnExpr(`"group".*`).
+		ColumnExpr(`EXISTS (SELECT 1 FROM activities.group_targets AS "target" WHERE "target".tenant_id = "group".tenant_id AND "target".activity_group_id = "group".id) AS has_dynamic_targets`).
 		ColumnExpr(`"category".created_at AS category_created_at, "category".updated_at AS category_updated_at`).
 		ColumnExpr(`"category".name AS category_name, "category".description AS category_description`).
 		ColumnExpr(`"category".color AS category_color, "category".is_system AS category_is_system`).
@@ -681,7 +683,7 @@ func groupToDomain(row groupRow, withCategory bool) timetable.Group {
 		CategoryID: row.CategoryID, PlanningTrackID: row.PlanningTrackID, PlannedRoomID: row.PlannedRoomID,
 		CreatedBy: row.CreatedBy, Type: row.Type, EducationGroupID: row.EducationGroupID, ListKind: row.ListKind,
 		IsTemplate: row.IsTemplate, IsSystem: row.IsSystem, ArchivedAt: row.ArchivedAt, SeriesRootID: row.SeriesRootID,
-		CalendarPeriodID: row.CalendarPeriodID, TargetGroupType: row.TargetGroupType,
+		CalendarPeriodID: row.CalendarPeriodID, TargetGroupType: row.TargetGroupType, HasDynamicTargets: row.HasDynamicTargets,
 		TargetGradeLevel: row.TargetGradeLevel, TargetSchoolClass: row.TargetSchoolClass,
 		SourceCareOfferingIDs: row.SourceCareOfferingIDs, SourceGradeLevels: row.SourceGradeLevels,
 		SourceSchoolClasses: row.SourceSchoolClasses, Notes: row.Notes, IncludeClosingDays: row.IncludeClosingDays,

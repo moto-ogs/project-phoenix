@@ -80,6 +80,10 @@
   ],
   "data_objects": [
     {
+      "name": "facilities.room_closures",
+      "write_owner": "facilities"
+    },
+    {
       "name": "facilities.rooms",
       "write_owner": "facilities"
     }

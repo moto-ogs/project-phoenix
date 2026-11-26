@@ -170,9 +170,10 @@ func (s *InstanceLifecycleService) editableInstance(ctx context.Context, instanc
 			return nil, &ports.ScheduleError{Op: "update instance: validate calendar period", Err: err}
 		}
 	}
+	allowClosedRoom := instance.RoomID == req.RoomID && calendar.Date(instance.Date) == req.Date
 	templateType, err := s.validateInstanceReferences(ctx, req.Date, instanceReferences{
 		roomID: req.RoomID, activityGroupID: req.ActivityGroupID, staffIDs: req.StaffIDs, studentIDs: req.StudentIDs,
-	})
+	}, allowClosedRoom)
 	if err != nil {
 		return nil, &ports.ScheduleError{Op: "update instance: validate references", Err: err}
 	}

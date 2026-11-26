@@ -188,7 +188,7 @@ func legacyGroup(group timetable.Group) *activityContract.Group {
 		PlannedRoomID: group.PlannedRoomID, CreatedBy: group.CreatedBy, Type: group.Type,
 		EducationGroupID: group.EducationGroupID, ListKind: group.ListKind, IsTemplate: group.IsTemplate,
 		IsSystem: group.IsSystem, ArchivedAt: group.ArchivedAt, SeriesRootID: group.SeriesRootID,
-		CalendarPeriodID: group.CalendarPeriodID, TargetGroupType: group.TargetGroupType,
+		CalendarPeriodID: group.CalendarPeriodID, TargetGroupType: group.TargetGroupType, HasDynamicTargets: group.HasDynamicTargets,
 		TargetGradeLevel: group.TargetGradeLevel, TargetSchoolClass: group.TargetSchoolClass,
 		SourceCareOfferingIDs: group.SourceCareOfferingIDs, SourceGradeLevels: group.SourceGradeLevels,
 		SourceSchoolClasses: group.SourceSchoolClasses, Notes: group.Notes, IncludeClosingDays: group.IncludeClosingDays,

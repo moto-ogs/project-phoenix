@@ -82,6 +82,9 @@ func namedPlannedSupervisors(ctx context.Context, supervisors timetable.PlannedS
 	if err != nil {
 		return nil, legacyPlannedSupervisorError(operation, err)
 	}
+	if len(values) == 0 {
+		return []*activityContract.SupervisorPlanned{}, nil
+	}
 	return namePlannedSupervisors(ctx, directories, legacyPlannedSupervisors(values))
 }
 

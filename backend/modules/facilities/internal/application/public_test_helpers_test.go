@@ -78,6 +78,10 @@ func (s seamStore) LockByIDs(ctx context.Context, ids []int64) ([]facilities.Roo
 	return r, domain.OperationStats{}, err
 }
 
+func (seamStore) ListClosuresWithRoomLocks(context.Context, facilities.RoomClosureFilter) ([]facilities.RoomClosure, domain.OperationStats, error) {
+	return nil, domain.OperationStats{}, nil
+}
+
 type seamTransaction struct{}
 
 func (seamTransaction) RunWrite(ctx context.Context, fn func(context.Context) error) error {

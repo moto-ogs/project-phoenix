@@ -8,6 +8,7 @@ import (
 	"time"
 
 	facilitiesModule "github.com/moto-ogs/project-phoenix/modules/facilities"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 type OccupancyProjection func(context.Context, []facilitiesModule.Room) ([]RoomWithOccupancy, error)
@@ -19,6 +20,9 @@ type ServiceConfig struct {
 	Rooms     facilitiesModule.Catalog
 	Occupancy OccupancyProjection
 	History   RoomHistoryProjection
+	// Today is the school day of the root's clock: the kiosk offers no room
+	// closed on it (#7653).
+	Today func() calendar.Date
 }
 
 type service struct {
@@ -27,7 +31,7 @@ type service struct {
 }
 
 func NewServiceWithConfig(config ServiceConfig) Service {
-	if config.Rooms == nil || config.Occupancy == nil || config.History == nil {
+	if config.Rooms == nil || config.Occupancy == nil || config.History == nil || config.Today == nil {
 		panic("facilities compatibility service: all dependencies are required")
 	}
 	return &service{OccupancyProjection: config.Occupancy, config: config}
@@ -90,7 +94,9 @@ func (s *service) FindToiletRoom(ctx context.Context, exclude int64) (*facilitie
 }
 
 func (s *service) GetAvailableRoomsWithOccupancy(ctx context.Context, capacity int) ([]RoomWithOccupancy, error) {
-	rooms, err := s.config.Rooms.ListRooms(ctx, facilitiesModule.RoomFilter{MinimumCapacity: &capacity})
+	// A room closed today is not available at the kiosk (#7653).
+	today := s.config.Today()
+	rooms, err := s.config.Rooms.ListRooms(ctx, facilitiesModule.RoomFilter{MinimumCapacity: &capacity, OpenOn: &today})
 	if err != nil {
 		return nil, wrap("get available rooms with occupancy", err)
 	}

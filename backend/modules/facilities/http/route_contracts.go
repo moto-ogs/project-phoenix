@@ -10,10 +10,16 @@ func RouteContracts() []apiCommon.RouteContract {
 	list := []apiCommon.QueryParam{
 		{Name: "building", Kind: apiCommon.QueryString},
 		{Name: "category", Kind: apiCommon.QueryString},
+		{Name: "open_on", Kind: apiCommon.QueryDate},
 		{Name: "is_open_room", Kind: apiCommon.QueryBool},
 		{Name: "include_system", Kind: apiCommon.QueryBool},
 		{Name: "page", Kind: apiCommon.QueryInt},
 		{Name: "page_size", Kind: apiCommon.QueryInt},
+	}
+	closures := []apiCommon.QueryParam{
+		{Name: "from", Kind: apiCommon.QueryDate},
+		{Name: "to", Kind: apiCommon.QueryDate},
+		{Name: "room_id", Kind: apiCommon.QueryID},
 	}
 	window := []apiCommon.QueryParam{{Name: "start", Kind: apiCommon.QueryString}, {Name: "end", Kind: apiCommon.QueryString}}
 	return []apiCommon.RouteContract{
@@ -25,5 +31,8 @@ func RouteContracts() []apiCommon.RouteContract {
 		{Method: "GET", Pattern: "/{id}/history", Portals: portals, Query: window, Response: []RoomSessionEntry{}},
 		{Method: "GET", Pattern: "/{id}/removal-impact", Portals: portals, Response: RoomRemovalImpactResponse{}},
 		{Method: "POST", Pattern: "/export", Portals: portals, Request: roomSnapshotExportRequest{}, File: true},
+		{Method: "GET", Pattern: "/closures", Portals: portals, Query: closures, Response: []RoomClosureResponse{}},
+		{Method: "POST", Pattern: "/{id}/closures", Portals: portals, Request: RoomClosureRequest{}, Response: RoomClosureResponse{}},
+		{Method: "DELETE", Pattern: "/{id}/closures/{closureId}", Portals: portals, NoData: true},
 	}
 }

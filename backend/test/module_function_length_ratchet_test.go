@@ -84,14 +84,14 @@ var moduleFuncLenAllowlist = map[string]int{
 	"api/reminders_test_helpers.go:NewRemindersTestModule":        64,
 	// ADR 0234: the school search mount takes the note search and the
 	// activity read; gofmt splits its root step (+2).
-	"api/root_serve.go:composeServeRoot":                                 510,
-	"api/root_test_root.go:composeTestRootWith":                          282,
+	"api/root_serve.go:composeServeRoot":                                 508,
+	"api/root_test_root.go:composeTestRootWith":                          280,
 	"api/serve_mounts_students.go:mountStudentRoutes":                    117,
 	"api/serve_mounts_students.go:requestReviewDependencies":             100,
 	"api/student_owner_http_test_helpers.go:NewStudentHTTPTestResources": 164,
 	"api/student_owner_http_test_helpers.go:newStudentHTTPTestReviews":   103,
 	"api/student_test_helpers.go:newStudentTestModule":                   315,
-	"api/timetable_http_test_helpers.go:NewTimetableHTTPTestModule":      81,
+	"api/timetable_http_test_helpers.go:NewTimetableHTTPTestModule":      75,
 	"api/timetable_http_test_helpers.go:newTimetableHTTPTestReads":       78,
 	"api/timetable_test_helpers.go:NewTimetableTestModule":               167,
 	"api/workforce_test_helpers.go:NewWorkforceTestModule":               102,
@@ -591,7 +591,7 @@ var moduleFuncLenAllowlist = map[string]int{
 	"roots/owners/root_identity.go:BuildIdentityAccess":                                      106,
 	// ADR 0078: the worker composes the Meal Plan whose orders it settles.
 	// ADR 0263: the worker hands its clock to the Timetable owner (+3).
-	"roots/owners/root_worker.go:ComposeWorker": 349,
+	"roots/owners/root_worker.go:ComposeWorker": 345,
 	// ADR 0110: the worker passes the retention of the public holiday
 	// registrations.
 	"roots/owners/worker.go:NewWorker": 87,

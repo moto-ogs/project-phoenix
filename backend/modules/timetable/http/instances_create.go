@@ -274,6 +274,9 @@ func respondCreatedWithoutEnrichment(w http.ResponseWriter, r *http.Request, ins
 }
 
 var createInstanceErrorRules = []common.ErrorRule{
+	{Target: timetable.ErrRoomClosed, Render: func(err error) render.Renderer {
+		return common.ErrorConflictOnField(err, common.CodeTimetableRoomClosed, "room_id")
+	}},
 	{
 		Match: func(err error) bool {
 			return errors.Is(err, timetable.ErrInvalidInstanceReference)

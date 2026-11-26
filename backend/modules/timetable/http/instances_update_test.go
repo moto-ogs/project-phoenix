@@ -152,6 +152,12 @@ func TestUpdateInstance_ServiceErrors(t *testing.T) {
 	badReference := doTemplateJSON(t, router, http.MethodPut, "/instances/50", body)
 	assert.Equal(t, http.StatusBadRequest, badReference.Code)
 
+	s.mock.updateErr = fmt.Errorf("wrapped: %w", timetable.ErrRoomClosed)
+	closedRoom := doTemplateJSON(t, router, http.MethodPut, "/instances/50", body)
+	assert.Equal(t, http.StatusConflict, closedRoom.Code)
+	assert.Contains(t, closedRoom.Body.String(), "timetable.room_closed")
+	assert.Contains(t, closedRoom.Body.String(), `"field":"room_id"`)
+
 	// The owner classifies the unique violation on the template slot as
 	// ErrDuplicateTemplateInstance and keeps the storage error in the chain.
 	s.mock.updateErr = fmt.Errorf("update instance: %w: %w", timetable.ErrDuplicateTemplateInstance,
