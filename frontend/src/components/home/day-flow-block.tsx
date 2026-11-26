@@ -62,6 +62,7 @@ const SOON_MINUTES = 60;
  *
  * Die Karte ist so hoch wie ihr Inhalt (`data-home-card-fit`): nachmittags
  * stehen noch drei Blöcke da, und drei Rasterzeilen wären dann halb leer.
+ * Ist der Tag vorbei, steht ein Satz da statt der letzten Blöcke.
  *
  * Bewusst `scope: "day"` statt des Standardfensters: das liefert nur, was in
  * den nächsten 15 Minuten beginnt, und lässt einen gerade laufenden Block
@@ -95,13 +96,12 @@ export function DayFlowBlock() {
   const showMine = useOperationalOverviewScope() === "all_staff";
   const blocks = data ?? [];
   // Ab dem Block, der gerade läuft: sonst stünde um 16 Uhr immer noch die
-  // Frühbetreuung oben in der Karte. Ist der Tag vorbei, bleiben die letzten
-  // Blöcke stehen: „heute war das" ist eine Antwort, eine leere Karte keine.
+  // Frühbetreuung oben in der Karte.
   const { items: open, allPast } = upcomingFirst(blocks, openUntil, now);
   // Eine Spalte und zwei Spalten kappen verschieden. Die schmale Auswahl ist
   // immer Teil der breiten: dieselbe Liste, vom selben Ende her gekürzt.
-  const narrow = useHomeCardRows(open, COLUMN_ROWS, { preferLatest: allPast });
-  const wide = useHomeCardRows(open, WIDE_ROWS, { preferLatest: allPast });
+  const narrow = useHomeCardRows(open, COLUMN_ROWS);
+  const wide = useHomeCardRows(open, WIDE_ROWS);
   const inNarrow = new Set(narrow.shown.map((block) => block.id));
   // Zwei Spalten nur, wenn eine nicht reicht: zwei oder drei Blöcke
   // nebeneinander läse man quer statt erst nach unten.
@@ -112,7 +112,7 @@ export function DayFlowBlock() {
   const today = blocks[0]?.date;
   // Was vor jetzt lag, steht nicht mehr als Zeile da. Die Karte nennt die
   // Zahl, damit drei Zeilen am Nachmittag nicht wie der ganze Tag aussehen.
-  const earlier = allPast ? 0 : blocks.length - open.length;
+  const earlier = blocks.length - open.length;
   const label = opensPlan ? "Plan öffnen" : "Heute öffnen";
 
   return (
@@ -134,90 +134,102 @@ export function DayFlowBlock() {
         </HomeCardLink>
       }
     >
-      {(() => {
-        // Bis der Katalogtext da ist, bleibt das Skelett stehen: ein
-        // Ladefehler ist nie „Heute ist nichts geplant“.
-        if (loadError) return <LoadErrorAlert error={loadError} />;
-        if ((isLoading && data === undefined) || error) {
-          return <SkeletonRows rows={4} labelClassName="w-20" />;
-        }
-        if (blocks.length === 0) {
+      {/* So hoch wie der Inhalt: nachmittags stehen noch drei Blöcke da,
+          abends ein Satz, und drei Rasterzeilen wären dann fast leer. */}
+      <div className="@container" data-home-card-fit="">
+        {(() => {
+          // Bis der Katalogtext da ist, bleibt das Skelett stehen: ein
+          // Ladefehler ist nie „Heute ist nichts geplant“.
+          if (loadError) return <LoadErrorAlert error={loadError} />;
+          if ((isLoading && data === undefined) || error) {
+            return <SkeletonRows rows={4} labelClassName="w-20" />;
+          }
+          if (blocks.length === 0) {
+            return (
+              <HomeCardEmpty
+                title="Heute ist nichts geplant"
+                description="Sobald für heute Termine im Betreuungsplan stehen, siehst du sie hier."
+              />
+            );
+          }
+          // Der Tag ist vorbei: ein Satz statt zehn grauer Zeilen, die sich
+          // wie offene Arbeit lesen. Der Weg in den Tag steht im Kopf.
+          if (allPast) {
+            return (
+              <HomeCardEmpty
+                title="Für heute ist nichts mehr geplant"
+                description={
+                  blocks.length === 1
+                    ? "Der eine Block von heute ist vorbei."
+                    : `Alle ${blocks.length} Blöcke von heute sind vorbei.`
+                }
+              />
+            );
+          }
           return (
-            <HomeCardEmpty
-              title="Heute ist nichts geplant"
-              description="Sobald für heute Termine im Betreuungsplan stehen, siehst du sie hier."
-            />
+            <>
+              {/* Die Jetzt-Linie steht über beiden Spalten: in der Liste
+                  stünde sie nur über der linken und verschöbe deren Zeilen
+                  gegen die rechte. Ohne Uhr (erstes Rendern) gibt es keine. */}
+              {now !== "" ? (
+                <div className="mb-1.5">
+                  <NowLine
+                    now={now}
+                    before={
+                      earlier > 0 ? (
+                        <EarlierLink count={earlier} href={dayHref(today)} />
+                      ) : null
+                    }
+                  />
+                </div>
+              ) : null}
+              {/* -mb-1 nimmt den Abstand unter der letzten Zeile zurück. Die
+                  feine Linie zwischen den Spalten sagt: erst links nach unten
+                  lesen, dann rechts. */}
+              <ul className={`-mb-1 ${columns}`}>
+                {wide.shown.map((block) => (
+                  <PlanRow
+                    key={block.id}
+                    block={block}
+                    now={now}
+                    mine={showMine && block.isAssigned}
+                    href={blockHref(block)}
+                    opensPlan={opensPlan}
+                    wideOnly={!inNarrow.has(block.id)}
+                  />
+                ))}
+                {/* Je Breite ein eigener Rest: eine Spalte kappt früher. */}
+                {narrow.hidden > 0 ? (
+                  <li
+                    className="mb-1 break-inside-avoid @3xl:hidden"
+                    data-plan-more="narrow"
+                  >
+                    <HomeMoreRow
+                      hidden={narrow.hidden}
+                      href={dayHref(today)}
+                      label="Blöcke"
+                      singular="Block"
+                    />
+                  </li>
+                ) : null}
+                {wide.hidden > 0 ? (
+                  <li
+                    className="mb-1 hidden break-inside-avoid @3xl:block"
+                    data-plan-more="wide"
+                  >
+                    <HomeMoreRow
+                      hidden={wide.hidden}
+                      href={dayHref(today)}
+                      label="Blöcke"
+                      singular="Block"
+                    />
+                  </li>
+                ) : null}
+              </ul>
+            </>
           );
-        }
-        return (
-          <div className="@container" data-home-card-fit="">
-            {/* Die Jetzt-Linie steht über beiden Spalten: in der Liste stünde
-                sie nur über der linken und verschöbe deren Zeilen gegen die
-                rechte. Ohne Uhr (erstes Rendern) gibt es keine Linie. */}
-            {now !== "" && !allPast ? (
-              <div className="mb-1.5">
-                <NowLine
-                  now={now}
-                  before={
-                    earlier > 0 ? (
-                      <EarlierLink count={earlier} href={dayHref(today)} />
-                    ) : null
-                  }
-                />
-              </div>
-            ) : null}
-            {/* -mb-1 nimmt den Abstand unter der letzten Zeile zurück. Die
-                feine Linie zwischen den Spalten sagt: erst links nach unten
-                lesen, dann rechts. */}
-            <ul className={`-mb-1 ${columns}`}>
-              {wide.shown.map((block) => (
-                <PlanRow
-                  key={block.id}
-                  block={block}
-                  now={now}
-                  mine={showMine && block.isAssigned}
-                  href={blockHref(block)}
-                  opensPlan={opensPlan}
-                  wideOnly={!inNarrow.has(block.id)}
-                />
-              ))}
-              {/* Je Breite ein eigener Rest: eine Spalte kappt früher. */}
-              {narrow.hidden > 0 ? (
-                <li
-                  className="mb-1 break-inside-avoid @3xl:hidden"
-                  data-plan-more="narrow"
-                >
-                  <HomeMoreRow
-                    hidden={narrow.hidden}
-                    href={dayHref(today)}
-                    label="Blöcke"
-                    singular="Block"
-                  />
-                </li>
-              ) : null}
-              {wide.hidden > 0 ? (
-                <li
-                  className="mb-1 hidden break-inside-avoid @3xl:block"
-                  data-plan-more="wide"
-                >
-                  <HomeMoreRow
-                    hidden={wide.hidden}
-                    href={dayHref(today)}
-                    label="Blöcke"
-                    singular="Block"
-                  />
-                </li>
-              ) : null}
-            </ul>
-            {/* Der Tag ist vorbei: die Linie steht unter dem letzten Block. */}
-            {now !== "" && allPast ? (
-              <div className="mt-1.5">
-                <NowLine now={now} />
-              </div>
-            ) : null}
-          </div>
-        );
-      })()}
+        })()}
+      </div>
     </HomeCard>
   );
 }

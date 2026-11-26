@@ -120,13 +120,13 @@ describe("resolveHomeLayout — Standardansicht", () => {
 
   // Der Betreuungsplan stand in der dritten Kartenreihe der Leitung, halb
   // breit und mit drei Blöcken, und war im Alltag zu versteckt (#8134).
-  it("stellt der Leitung den Betreuungsplan von heute direkt unter „Heute anders“", () => {
+  it("stellt der Leitung den Betreuungsplan von heute ganz nach oben, darunter „Heute anders“", () => {
     const { placements } = resolveHomeLayout(fullContext, [], {}, {});
 
     expect(homeProfileFor(fullContext.access)).toBe("lead");
     expect(placements.slice(0, 2)).toEqual([
-      { key: "section.day_changes", span: 4, col: 0, row: 0 },
-      { key: "section.day_flow", span: 4, col: 0, row: 2 },
+      { key: "section.day_flow", span: 4, col: 0, row: 0 },
+      { key: "section.day_changes", span: 4, col: 0, row: 3 },
     ]);
     // Drei Zeilen hoch wie „Mein Tag“: die Kennzahlen stehen darunter.
     expect(homeBlockHeight("section.day_flow")).toBe(3);
@@ -191,7 +191,7 @@ describe("resolveHomeLayout — Standardansicht", () => {
 
     expect(homeProfileFor(leadCareAccess)).toBe("lead_care");
     const keys = keysOf(placements);
-    // „Heute anders“ steht in jedem Profil ganz oben (#7659), darunter der
+    // Wer selbst betreut, liest zuerst „Heute anders“ (#7659), darunter der
     // eigene Tag.
     expect(keys[0]).toBe("section.day_changes");
     expect(keys[1]).toBe("section.my_day");
@@ -411,19 +411,19 @@ describe("resolveHomeLayout — eigene Anordnung", () => {
     );
 
     expect(placements[0]?.key).toBe("section.staff_today");
-    // Der neue Baustein „Heute anders“ (#7659) erreicht so auch Konten mit
-    // eigener Anordnung: er hängt als Erster der Standardansicht hinten an.
+    // Der Betreuungsplan von heute (#8134) erreicht so auch Konten mit
+    // eigener Anordnung: er hängt als Erster der Standardansicht hinten an,
+    // drei Zeilen hoch.
     expect(placements[1]).toMatchObject({
-      key: "section.day_changes",
+      key: "section.day_flow",
       col: 0,
       row: 2,
     });
-    // Danach der Betreuungsplan von heute (#8134), drei Zeilen hoch; die
-    // Kennzahlen folgen darunter.
+    // Danach „Heute anders“ (#7659); die Kennzahlen folgen darunter.
     expect(placements[2]).toMatchObject({
-      key: "section.day_flow",
+      key: "section.day_changes",
       col: 0,
-      row: 4,
+      row: 5,
     });
     expect(placements[3]).toMatchObject({
       key: "tile.students_present",

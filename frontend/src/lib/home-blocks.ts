@@ -626,11 +626,11 @@ export const DEFAULT_LAYOUTS: Record<
     { key: "section.birthdays", span: 4, col: 0, row: 7 },
   ],
   lead: [
-    // „Heute anders“ ganz oben und über die volle Breite (#7659).
-    { key: "section.day_changes", span: 4, col: 0, row: 0 },
-    // Der Plan von heute direkt darunter, über die volle Breite (#8134):
-    // erst was anders ist, dann was geplant ist.
-    { key: "section.day_flow", span: 4, col: 0, row: 2 },
+    // Der Plan von heute ganz oben und über die volle Breite (#8134): was
+    // läuft und was als Nächstes kommt, braucht die Leitung zuerst.
+    { key: "section.day_flow", span: 4, col: 0, row: 0 },
+    // „Heute anders“ direkt darunter (#7659): was vom Plan abweicht.
+    { key: "section.day_changes", span: 4, col: 0, row: 3 },
     // Eine Reihe mit vier Zahlen (#3260): wer da ist, wer noch im Unterricht
     // sitzt, wer zu Hause ist, wer krank ist. „Entschuldigt" steht im
     // Hinzufügen-Menü; eine fünfte Kachel bräche das Raster.

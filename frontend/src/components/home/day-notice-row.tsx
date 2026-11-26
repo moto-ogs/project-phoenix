@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import { Button } from "~/components/ui/button";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { ListRow } from "~/components/ui/list-row";
+import Link from "~/components/ui/navigation-link";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { useApiErrorDisplay } from "~/contexts/ToastContext";
 import { trackEvent } from "~/lib/analytics";
@@ -97,27 +98,23 @@ export function DayNoticeRow({
     latestConfirmRef.current = () => void confirm();
   });
 
-  const body = (
-    <span className="min-w-0 flex-1">
-      <span className="flex flex-wrap items-center gap-2">
-        <span className="text-sm font-medium text-gray-900">
-          {notice.title}
-        </span>
-        {notice.important ? (
-          <StatusBadge label="Wichtig" tone="warning" size="xs" />
-        ) : null}
-        {notice.requiresAcknowledgement && notice.acknowledged ? (
-          <StatusBadge label="Zur Kenntnis genommen" tone="green" size="xs" />
-        ) : null}
-      </span>
-      {notice.body ? (
-        // Der ganze Text: „gelesen“ heißt den ganzen Hinweis, nicht einen Teil.
-        <span className="block text-xs whitespace-pre-line text-gray-600">
-          {notice.body}
-        </span>
+  const href = tenantPath("/tagesinformationen");
+  const badges = (
+    <>
+      {notice.important ? (
+        <StatusBadge label="Wichtig" tone="warning" size="xs" />
       ) : null}
-    </span>
+      {notice.requiresAcknowledgement && notice.acknowledged ? (
+        <StatusBadge label="Zur Kenntnis genommen" tone="green" size="xs" />
+      ) : null}
+    </>
   );
+  const text = notice.body ? (
+    // Der ganze Text: „gelesen“ heißt den ganzen Hinweis, nicht einen Teil.
+    <span className="block text-xs whitespace-pre-line text-gray-600">
+      {notice.body}
+    </span>
+  ) : null;
 
   return (
     <li
@@ -132,24 +129,50 @@ export function DayNoticeRow({
         }
       }}
     >
-      <ListRow href={tenantPath("/tagesinformationen")} density="compact">
-        {body}
-      </ListRow>
       {open ? (
-        <div className="mt-1 pl-3">
-          <Button
-            type="button"
-            variant="outline"
-            size="compact"
-            disabled={pending}
-            aria-label={`${notice.title}: zur Kenntnis nehmen`}
-            tooltip="Bestätigt sofort, dass du den Hinweis gelesen hast."
-            onClick={() => void confirm()}
-          >
-            {pending ? "Wird gespeichert …" : "Zur Kenntnis nehmen"}
-          </Button>
-        </div>
-      ) : null}
+        // Solange die Kenntnisnahme fehlt, gehört der Knopf in den Hinweis:
+        // die Zeile ist dann Anzeige, und der Titel führt zur Seite (Kit:
+        // eigener Knopf neben einem Link).
+        <ListRow density="compact">
+          <span className="min-w-0 flex-1">
+            <span className="flex flex-wrap items-center gap-2">
+              <Link
+                href={href}
+                className="text-sm font-medium text-gray-900 hover:underline"
+              >
+                {notice.title}
+              </Link>
+              {badges}
+            </span>
+            {text}
+            <span className="mt-2 block">
+              <Button
+                type="button"
+                variant="outline"
+                size="compact"
+                disabled={pending}
+                aria-label={`${notice.title}: zur Kenntnis nehmen`}
+                tooltip="Bestätigt sofort, dass du den Hinweis gelesen hast."
+                onClick={() => void confirm()}
+              >
+                {pending ? "Wird gespeichert …" : "Zur Kenntnis nehmen"}
+              </Button>
+            </span>
+          </span>
+        </ListRow>
+      ) : (
+        <ListRow href={href} density="compact">
+          <span className="min-w-0 flex-1">
+            <span className="flex flex-wrap items-center gap-2">
+              <span className="text-sm font-medium text-gray-900">
+                {notice.title}
+              </span>
+              {badges}
+            </span>
+            {text}
+          </span>
+        </ListRow>
+      )}
       <LoadErrorAlert error={afterAcknowledge.error} className="mt-1" />
     </li>
   );

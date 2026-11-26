@@ -343,27 +343,23 @@ describe("Betreuungsplan heute (#2180, #8134)", () => {
 
   // Ist der Tag vorbei, bleibt der Tag stehen: „heute war das" ist eine
   // Antwort, eine leere Karte ist keine.
-  it("zeigt nach Tagesende die letzten Blöcke über der Jetzt-Linie", () => {
+  // Zehn graue Zeilen mit „Nicht gestartet“ lasen sich abends wie offene
+  // Arbeit (#8134). Ein Satz sagt, dass der Tag vorbei ist und wo er steht.
+  it("zeigt nach Tagesende einen Satz statt der vergangenen Blöcke", () => {
     swr.data = hourly(4, 3);
 
     render(<DayFlowBlock />);
 
-    const rows = screen.getAllByRole("listitem");
-    expect(rows.map((row) => row.textContent)).toEqual([
-      expect.stringContaining("Block 1"),
-      expect.stringContaining("Block 2"),
-      expect.stringContaining("Block 3"),
-      expect.stringContaining("Block 4"),
-    ]);
-    // Was vorbei ist, sagt die Metazeile; rechts steht nur, was jetzt zählt.
-    expect(rows[0]).toHaveTextContent("Nicht gestartet");
-    const line = screen.getByLabelText("Jetzt, 07:00 Uhr");
     expect(
-      rows[3]!.compareDocumentPosition(line) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
+      screen.getByText("Für heute ist nichts mehr geplant"),
+    ).toBeInTheDocument();
     expect(
-      screen.queryByRole("link", { name: /früher/ }),
-    ).not.toBeInTheDocument();
+      screen.getByText("Alle 4 Blöcke von heute sind vorbei."),
+    ).toBeInTheDocument();
+    expect(screen.queryAllByRole("listitem")).toHaveLength(0);
+    expect(
+      screen.getByRole("link", { name: "Betreuungsplan heute: Plan öffnen" }),
+    ).toBeInTheDocument();
   });
 
   // Die Karte ist so hoch wie ihr Inhalt: nachmittags stünden drei

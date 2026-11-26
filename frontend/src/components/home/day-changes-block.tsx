@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useRef, useState } from "react";
+import { useId, useState, type ReactNode } from "react";
 import { ChevronRight } from "lucide-react";
 import { useSession } from "next-auth/react";
 
@@ -43,7 +43,12 @@ import { homeKeys } from "~/lib/swr/portal-keys";
 import { useTenantAwarePath } from "~/lib/tenant-path";
 import { cn } from "~/lib/utils";
 
-/** So viele Einträge von „Schule“ zeigt das Telefon, bevor es zählt. */
+/**
+ * So viele offene Einträge von „Schule“ stehen da, bevor die Karte zählt:
+ * fünf wie in jeder langen Liste des Kits, am Telefon drei, damit „Mein Tag“
+ * sichtbar bleibt.
+ */
+const SCHOOL_ROWS = 5;
 const PHONE_SCHOOL_ROWS = 3;
 
 /**
@@ -59,8 +64,10 @@ const PHONE_SCHOOL_ROWS = 3;
  * am Ende („3 erledigt“). Ein Bildschirmleser hört nur, was sich bei einem
  * Neuladen geändert hat, nie die ganze Liste.
  *
- * Die Karte wächst mit ihrem Inhalt (`data-home-card-fit`): eine Übersicht,
- * die bei vielen Einträgen die Hälfte abschneidet, wäre keine.
+ * Die Karte wächst mit ihrem Inhalt (`data-home-card-fit`). „Betrifft dich“
+ * steht immer ganz da. „Schule“ zeigt die ersten Einträge und nennt, wie
+ * viele noch folgen (#8134): zwanzig Zeilen am Stück liest niemand, und sie
+ * schoben den Rest der Startseite aus dem Bild.
  */
 export function DayChangesBlock() {
   const { data: session } = useSession();
@@ -268,7 +275,7 @@ function DayChangesContent({
             entries={school}
             now={now}
             onChanged={onChanged}
-            capOnPhone
+            folds
           />
         ) : null}
       </div>
@@ -281,25 +288,25 @@ function DayChangesSection({
   entries,
   now,
   onChanged,
-  capOnPhone = false,
+  folds = false,
 }: {
   readonly title: string;
   readonly entries: readonly DayChange[];
   /** Die Uhr des Browsers in Minuten-Schritten; 0 vor dem ersten Rendern. */
   readonly now: number;
   readonly onChanged: () => Promise<unknown>;
-  /** Auf dem Telefon nur die ersten Einträge, damit „Mein Tag“ sichtbar bleibt. */
-  readonly capOnPhone?: boolean;
+  /** Zeigt nur die ersten Einträge und klappt den Rest auf Wunsch auf. */
+  readonly folds?: boolean;
 }) {
   const isPhone = useMediaQuery(BELOW_SM);
   const [expanded, setExpanded] = useState(false);
   const headingId = useId();
-  const listRef = useRef<HTMLUListElement>(null);
+  const listId = useId();
   const open = entries.filter((entry) => !isDone(entry, now));
   const done = entries.filter((entry) => isDone(entry, now));
-  const capped =
-    capOnPhone && isPhone && !expanded && open.length > PHONE_SCHOOL_ROWS;
-  const visible = capped ? open.slice(0, PHONE_SCHOOL_ROWS) : open;
+  const limit = isPhone ? PHONE_SCHOOL_ROWS : SCHOOL_ROWS;
+  const hidden = folds ? Math.max(0, open.length - limit) : 0;
+  const visible = hidden > 0 && !expanded ? open.slice(0, limit) : open;
 
   return (
     <section aria-labelledby={headingId} className="min-w-0">
@@ -307,7 +314,7 @@ function DayChangesSection({
         {title}
       </SectionLabel>
       {visible.length > 0 ? (
-        <ul ref={listRef} className="space-y-2">
+        <ul id={listId} className="space-y-2">
           {withKeys(visible).map(([key, entry]) =>
             entry.notice ? (
               <DayNoticeRow
@@ -322,31 +329,71 @@ function DayChangesSection({
           )}
         </ul>
       ) : null}
-      {capped ? (
-        <Button
-          type="button"
-          variant="link"
-          className="mt-2"
-          aria-expanded={false}
-          tooltip="Zeigt alle Änderungen der Schule von heute."
-          onClick={() => {
-            setExpanded(true);
-            trackEvent("day_changes_show_all");
-            // Der Knopf verschwindet; der Fokus geht auf den ersten neuen
-            // Eintrag statt an den Seitenanfang.
-            requestAnimationFrame(() => {
-              const rows = listRef.current?.querySelectorAll<HTMLElement>(
-                ":scope > li > a, :scope > li > div",
-              );
-              rows?.[PHONE_SCHOOL_ROWS]?.focus();
-            });
-          }}
-        >
-          Alle anzeigen ({open.length})
-        </Button>
-      ) : null}
-      {done.length > 0 ? <DoneChanges entries={done} /> : null}
+      <div className="mt-2 empty:hidden">
+        {hidden > 0 ? (
+          // Der Knopf bleibt nach dem Aufklappen stehen und trägt den Fokus:
+          // wer alles gesehen hat, klappt an derselben Stelle wieder zu.
+          <FoldButton
+            expanded={expanded}
+            controls={listId}
+            tooltip={
+              expanded
+                ? "Zeigt wieder nur die ersten Änderungen der Schule."
+                : "Zeigt alle Änderungen der Schule von heute."
+            }
+            onToggle={() => {
+              if (!expanded) trackEvent("day_changes_show_all");
+              setExpanded(!expanded);
+            }}
+          >
+            {expanded ? "Weniger anzeigen" : `${hidden} weitere anzeigen`}
+          </FoldButton>
+        ) : null}
+        {done.length > 0 ? <DoneChanges entries={done} /> : null}
+      </div>
     </section>
+  );
+}
+
+/**
+ * Die Klappe am Ende eines Abschnitts: „15 weitere anzeigen“ und „3 erledigt“
+ * sehen gleich aus, weil beide dasselbe tun.
+ */
+function FoldButton({
+  expanded,
+  controls,
+  tooltip,
+  onToggle,
+  children,
+}: {
+  readonly expanded: boolean;
+  readonly controls: string;
+  readonly tooltip: string;
+  readonly onToggle: () => void;
+  readonly children: ReactNode;
+}) {
+  return (
+    <div>
+      <Button
+        type="button"
+        variant="ghost"
+        size="compact"
+        className="-ml-2"
+        aria-expanded={expanded}
+        aria-controls={controls}
+        tooltip={tooltip}
+        onClick={onToggle}
+      >
+        <ChevronRight
+          aria-hidden
+          className={cn(
+            "h-3.5 w-3.5 shrink-0 text-gray-500 transition-transform",
+            expanded && "rotate-90",
+          )}
+        />
+        {children}
+      </Button>
+    </div>
   );
 }
 
@@ -355,33 +402,22 @@ function DoneChanges({ entries }: { readonly entries: readonly DayChange[] }) {
   const [open, setOpen] = useState(false);
   const listId = useId();
   return (
-    <div className="mt-2">
-      <Button
-        type="button"
-        variant="ghost"
-        size="compact"
-        className="-ml-2"
-        aria-expanded={open}
-        aria-controls={listId}
+    <>
+      <FoldButton
+        expanded={open}
+        controls={listId}
         tooltip={
           open
             ? "Blendet die Änderungen aus, die heute schon vorbei sind."
             : "Zeigt die Änderungen, die heute schon vorbei sind."
         }
-        onClick={() => {
+        onToggle={() => {
           if (!open) trackEvent("day_changes_done_expanded");
           setOpen(!open);
         }}
       >
-        <ChevronRight
-          aria-hidden
-          className={cn(
-            "h-3.5 w-3.5 shrink-0 text-gray-500 transition-transform",
-            open && "rotate-90",
-          )}
-        />
         {entries.length} erledigt
-      </Button>
+      </FoldButton>
       <ul id={listId} hidden={!open} className="mt-1 space-y-2">
         {open
           ? withKeys(entries).map(([key, entry]) => (
@@ -389,7 +425,7 @@ function DoneChanges({ entries }: { readonly entries: readonly DayChange[] }) {
             ))
           : null}
       </ul>
-    </div>
+    </>
   );
 }
 
@@ -534,25 +570,23 @@ function DayChangeLinkRow({
       : entry.link?.target === "day_plan"
         ? dayPlanHref
         : tenantPath(path);
-  // Eine lange Änderung, die vor heute begann, steht kompakt in einer Zeile
-  // („… · seit 3.11.“), damit sie nicht jeden Tag die neuen verdrängt.
-  const compact = entry.since !== null;
-  const textClass = muted || compact ? "text-gray-600" : "text-gray-900";
-  const body = compact ? (
+  // Zeitraum und Ort stehen bei jeder Zeile an derselben Stelle: hinter dem
+  // Satz, kleiner und grau. Eine lange Änderung, die vor heute begann
+  // („… · seit 3.11.“), ist ganz grau, damit sie die neuen nicht verdrängt.
+  const textClass =
+    muted || entry.since !== null ? "text-gray-600" : "text-gray-900";
+  const body = (
     <span className="min-w-0 flex-1 text-sm">
       <span className={textClass}>{text}</span>
       {span ? (
-        <span className="text-xs text-gray-500">
-          {/* Die Leerzeichen bleiben im Namen des Links, der Punkt nicht. */}{" "}
-          <span aria-hidden="true">·</span> <span>{span}</span>
-        </span>
-      ) : null}
-    </span>
-  ) : (
-    <span className="min-w-0 flex-1">
-      <span className={cn("block text-sm", textClass)}>{text}</span>
-      {span ? (
-        <span className="block text-xs text-gray-500">{span}</span>
+        <>
+          {/* Das Leerzeichen bleibt im Namen des Links, der Punkt nicht. Der
+              Zeitraum bricht als Ganzes um, nie mitten in der Uhrzeit. */}{" "}
+          <span className="inline-block text-xs text-gray-500">
+            <span aria-hidden="true">· </span>
+            {span}
+          </span>
+        </>
       ) : null}
     </span>
   );
