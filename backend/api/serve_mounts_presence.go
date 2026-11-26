@@ -72,7 +72,7 @@ func mountPresenceRoutes(
 	timeTracking *workforceCompose.TimeTracking, rooms FacilitiesRooms, feedback feedbackModule.Capability,
 	organizations organizationtenancy.Query, invitations identityaccess.SchoolInvitations, now func() time.Time,
 ) error {
-	openRoomMove, err := newOpenRoomMove(facilities, timetableOwner, active, logger)
+	openRoomMove, err := newOpenRoomMove(facilities, rooms.Closures, timetableOwner, active, calendar.CalendarDateClock(now), logger)
 	if err != nil {
 		return err
 	}
@@ -176,7 +176,7 @@ func newIoTResource(
 		SchoolName:              devicescanCompose.NewSchoolName(schoolName(organizations), DeviceScanPrincipal),
 		ErrorReports:            NewIoTErrorReporter(errorReports, deviceErrorReportQuota(limits)),
 		SessionEnd:              bindIoTHostSessionEnd(BindIoTSessionEnd(sessionEnd)),
-		SessionLifecycle:        scanBindings.NewSessionLifecycle(active, presence, scanBindings.NewSupervisionQuery(presence), NewDeviceScanPeople(users), iot, NewKioskSessionMirror(timetableRepos, activities, KioskMirrorPublisher(hub, logger), logger), logger, DeviceScanPrincipal, now),
+		SessionLifecycle:        scanBindings.NewSessionLifecycle(active, presence, scanBindings.NewSupervisionQuery(presence), NewDeviceScanPeople(users), iot, NewKioskSessionMirror(timetableRepos, activities, KioskMirrorPublisher(hub, logger), logger), rooms.Closures, logger, DeviceScanPrincipal, now),
 		Logger:                  logger.With("handler", "iot"),
 		DeviceAuthenticator:     gateDeviceAuthentication(deviceAuth.Device()),
 		DeviceOnlyAuthenticator: gateDeviceAuthentication(deviceAuth.DeviceOnly()),

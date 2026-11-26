@@ -34,6 +34,10 @@ vi.mock("~/lib/supervision-context", () => ({
   useOptionalSupervision: vi.fn(),
 }));
 
+vi.mock("~/lib/hooks/use-berlin-today", () => ({
+  useBerlinToday: () => "2026-12-01",
+}));
+
 const { mockPush, mockSearchParamsToString } = vi.hoisted(() => ({
   mockPush: vi.fn(),
   mockSearchParamsToString: vi.fn(() => ""),
@@ -240,7 +244,7 @@ function mockTransitData({
       return { data: mockActivities, error: null, isLoading: false } as never;
     }
 
-    if (key === "rooms-list-{}") {
+    if (key === 'rooms-list-{"openOn":"2026-12-01"}') {
       return {
         data: rooms,
         error: null,

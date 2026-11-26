@@ -18,6 +18,7 @@ import (
 	facilitiesCompose "github.com/moto-ogs/project-phoenix/modules/facilities/compose"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/moto-ogs/project-phoenix/workflows/openroommove"
@@ -96,6 +97,7 @@ func (p *recordingPresence) CheckInStudentsToOpenRoomSessionAuthorized(ctx conte
 
 type moveStack struct {
 	rooms     facilities.Capability
+	closures  facilities.Closures
 	timetable timetable.Capability
 	presence  *recordingPresence
 	command   openroommove.Command
@@ -120,13 +122,19 @@ func newMoveStack(t *testing.T) *moveStack {
 		Observe: func(facilitiesCompose.Observation) {},
 	})
 	require.NoError(t, err)
-	s := &moveStack{rooms: rooms, timetable: owners.NewTestTimetable(t, testpkg.MustDatabase(db)), presence: newRecordingPresence()}
+	closures, err := facilitiesCompose.NewClosures(facilitiesCompose.Dependencies{
+		DB: db, Observe: func(facilitiesCompose.Observation) {},
+	})
+	require.NoError(t, err)
+	s := &moveStack{rooms: rooms, closures: closures, timetable: owners.NewTestTimetable(t, testpkg.MustDatabase(db)), presence: newRecordingPresence()}
 	s.command, err = compose.New(compose.Dependencies{
 		Rooms:        rooms,
+		RoomClosures: closures,
 		Activities:   s.timetable,
 		RoomSessions: movebinding.NewRoomSessions(s.presence),
 		Moves:        movebinding.NewMoves(s.presence, s.presence),
 		Observe:      func(compose.Observation) {},
+		Today:        calendar.TodayDate,
 	})
 	require.NoError(t, err)
 	return s
@@ -251,6 +259,24 @@ func TestMoveToOpenRoomRejectsAnUnreleasedRoomWithoutWriting(t *testing.T) {
 
 	require.ErrorIs(t, err, openroommove.ErrRoomNotReleased)
 	assert.Empty(t, s.systemActivities(t, ctx, timetable.OpenRoomActivityName))
+	assert.Empty(t, s.presence.ensured)
+	assert.Empty(t, s.presence.moves)
+}
+
+func TestMoveToOpenRoomRejectsAClosedRoomWithoutWriting(t *testing.T) {
+	t.Parallel()
+	s := newMoveStack(t)
+	ctx := testpkg.Ctx(t)
+	room := testpkg.CreateTestOpenRoom(t, testpkg.SetupTestDB(t), "Turnhalle Gesperrt")
+	today := calendar.TodayDate()
+	_, err := s.closures.CloseRoom(ctx, facilities.CloseRoom{
+		RoomID: room.ID, StartDate: today, EndDate: today, Reason: "Wasserschaden",
+	})
+	require.NoError(t, err)
+
+	_, err = s.command.MoveToOpenRoom(ctx, staffMove(room.ID, 1))
+
+	require.ErrorIs(t, err, openroommove.ErrRoomClosed)
 	assert.Empty(t, s.presence.ensured)
 	assert.Empty(t, s.presence.moves)
 }

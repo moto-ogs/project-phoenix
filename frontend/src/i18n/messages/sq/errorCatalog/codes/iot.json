@@ -27,6 +27,7 @@
   "rfid_tag_not_student_or_staff": "Nuk u ruajt: {object}. Kontrolloni të dhënat.",
   "rfid_tag_unassigned": "Nuk u ruajt: {object}. Kontrolloni të dhënat.",
   "room_capacity_exceeded": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
+  "room_closed": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
   "room_not_found": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
   "schulhof_not_configured": "Nuk u përpunua: {object}. Provoni përsëri më vonë.",
   "staff_not_found": "Nuk u ruajt: {object}. Kontrolloni të dhënat.",

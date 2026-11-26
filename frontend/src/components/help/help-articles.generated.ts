@@ -8559,6 +8559,27 @@ export const roomsCatalogTopic = function roomsCatalogTopic(
         ],
       },
       {
+        title: "Einen Raum sperren",
+        description:
+          "Zum Beispiel bei einem Wasserschaden. In der Zeit kannst du den Raum für neue Termine nicht wählen. Termine, die schon im Raum liegen, bleiben dort.",
+        steps: [
+          "Öffne `Räume` und wähle den Raum aus der Liste.",
+          "Öffne den Reiter `Stammdaten`.",
+          "Wähle bei `Sperren` den Knopf `Raum sperren`.",
+          "Trage den `Grund` ein und wähle `Von` und `Bis`.",
+          "Prüfe die Liste `Termine in dieser Zeit`. Verlege diese Termine im Raumplan selbst.",
+          "Wähle `Sperren`.",
+        ],
+      },
+      {
+        title: "Eine Sperre aufheben",
+        steps: [
+          "Öffne beim Raum den Reiter `Stammdaten`.",
+          "Öffne bei `Sperren` das Menü neben der Sperre.",
+          "Wähle `Sperre aufheben` und bestätige mit `Aufheben`.",
+        ],
+      },
+      {
         title: "Einen Raum löschen",
         description:
           "moto zeigt vorher, wo der Raum noch genutzt wird. Hat der Raum schon Termine oder Anwesenheiten, archiviert moto ihn. Der Verlauf behält dann den Raum.",
@@ -8579,6 +8600,7 @@ export const roomsCatalogTopic = function roomsCatalogTopic(
         ? [
             "`Maximale Belegung` begrenzt, wie viele Kinder gleichzeitig im Raum sind.",
             "Mit `Offener Raum` dürfen Kinder den Raum jederzeit als Ziel wählen. Eine Aufsicht ersetzt das nicht.",
+            "Ein heute gesperrter Raum fehlt am Tablet. Eine Aktivität kann dort nicht starten.",
           ]
         : [
             "`Maximale Belegung` und `Offener Raum` wirken bei dir nicht. Deine OGS hält nur fest, ob ein Kind da ist.",

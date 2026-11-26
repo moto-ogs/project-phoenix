@@ -9,6 +9,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/facilities"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/workflows/openroommove"
 	"github.com/moto-ogs/project-phoenix/workflows/openroommove/ports"
 )
@@ -24,6 +25,25 @@ type fakeRooms struct {
 	lockRoom *facilities.Room
 	lockErr  error
 	order    *[]string
+}
+
+type fakeRoomClosures struct {
+	closed   bool
+	err      error
+	day      calendar.Date
+	insideTx bool
+	order    *[]string
+}
+
+type transactionContextKey struct{}
+
+func (f *fakeRoomClosures) RoomClosedOn(ctx context.Context, _ int64, day calendar.Date) (bool, error) {
+	f.day = day
+	f.insideTx, _ = ctx.Value(transactionContextKey{}).(bool)
+	if f.order != nil {
+		*f.order = append(*f.order, "RoomClosedOn")
+	}
+	return f.closed, f.err
 }
 
 func (f *fakeRooms) note(step string) {
@@ -131,6 +151,7 @@ func (f *fakeMoves) CheckInIntoRoomSession(_ context.Context, sessionID int64, s
 
 type harness struct {
 	rooms      *fakeRooms
+	closures   *fakeRoomClosures
 	activities *fakeActivities
 	sessions   *fakeRoomSessions
 	moves      *fakeMoves
@@ -144,15 +165,18 @@ type harness struct {
 func newHarness(room facilities.Room) *harness {
 	h := &harness{
 		rooms:      &fakeRooms{room: room},
+		closures:   &fakeRoomClosures{},
 		activities: &fakeActivities{},
 		sessions:   &fakeRoomSessions{},
 		moves:      &fakeMoves{},
 	}
 	h.rooms.order = &h.order
+	h.closures.order = &h.order
 	h.sessions.order = &h.order
 	h.moves.order = &h.order
 	h.command = NewCommand(Dependencies{
 		Rooms:        h.rooms,
+		RoomClosures: h.closures,
 		Activities:   h.activities,
 		RoomSessions: h.sessions,
 		Moves:        h.moves,
@@ -160,12 +184,13 @@ func newHarness(room facilities.Room) *harness {
 			TenantID: func(context.Context) int64 { return 42 },
 			WithinTenant: func(ctx context.Context, fn func(context.Context) error) error {
 				h.txCalls++
-				return fn(ctx)
+				return fn(context.WithValue(ctx, transactionContextKey{}, true))
 			},
 			AcquireLock: func(_ context.Context, key string) error {
 				h.lockKeys = append(h.lockKeys, key)
 				return nil
 			},
+			Today: func() calendar.Date { return calendar.NewDate(2026, time.November, 26) },
 		},
 		Observe: func(o ports.Observation) { h.observed = append(h.observed, o) },
 	})
@@ -227,6 +252,24 @@ func TestMoveToOpenRoomRequiresTheRelease(t *testing.T) {
 	}
 	if len(h.order) != 1 || h.order[0] != "FindRoom" {
 		t.Fatalf("order = %v, want only the unlocked room read", h.order)
+	}
+}
+
+func TestMoveToOpenRoomRefusesAClosedRoomInsideTheTenantUnit(t *testing.T) {
+	t.Parallel()
+	h := newHarness(releasedRoom(7, "Turnhalle"))
+	h.closures.closed = true
+
+	_, err := h.command.MoveToOpenRoom(context.Background(), move(7, 1))
+
+	if !errors.Is(err, openroommove.ErrRoomClosed) {
+		t.Fatalf("error = %v, want ErrRoomClosed", err)
+	}
+	if !h.closures.insideTx || h.closures.day != calendar.NewDate(2026, time.November, 26) {
+		t.Fatalf("closure check insideTx=%t day=%s", h.closures.insideTx, h.closures.day)
+	}
+	if h.sessions.calls != 0 || h.moves.calls != 0 {
+		t.Fatalf("a closed room created %d sessions and moved %d times", h.sessions.calls, h.moves.calls)
 	}
 }
 
@@ -397,7 +440,7 @@ func TestMoveToOpenRoomReturnsThePresenceFailureUnchanged(t *testing.T) {
 	if len(h.observed) != 1 || !errors.Is(h.observed[0].Err, presenceErr) {
 		t.Fatalf("observations = %+v, want the failure observed", h.observed)
 	}
-	if got, want := h.order, []string{"FindRoom", "EnsureOpenRoomSession", "MoveIntoRoomSession"}; !equalStrings(got, want) {
+	if got, want := h.order, []string{"FindRoom", "PrepareOpenRoomMove", "RoomClosedOn", "EnsureOpenRoomSession", "MoveIntoRoomSession"}; !equalStrings(got, want) {
 		t.Fatalf("order = %v, want %v (the room is locked only after a successful move)", got, want)
 	}
 }
@@ -412,7 +455,7 @@ func TestMoveToOpenRoomLocksTheRoomAfterStudentsAndSessions(t *testing.T) {
 		t.Fatalf("MoveToOpenRoom: %v", err)
 	}
 
-	want := []string{"FindRoom", "EnsureOpenRoomSession", "MoveIntoRoomSession", "FindRoomForUpdate"}
+	want := []string{"FindRoom", "PrepareOpenRoomMove", "RoomClosedOn", "EnsureOpenRoomSession", "MoveIntoRoomSession", "FindRoomForUpdate"}
 	if !equalStrings(h.order, want) {
 		t.Fatalf("order = %v, want %v so the room row is locked after the presence write", h.order, want)
 	}
@@ -448,7 +491,12 @@ func equalStrings(got, want []string) bool {
 	return true
 }
 
-func (f *fakeMoves) PrepareOpenRoomMove(context.Context, []int64, int64) error { return nil }
+func (f *fakeMoves) PrepareOpenRoomMove(context.Context, []int64, int64) error {
+	if f.order != nil {
+		*f.order = append(*f.order, "PrepareOpenRoomMove")
+	}
+	return nil
+}
 
 func checkIn(roomID, staffID int64, studentIDs ...int64) openroommove.CheckIn {
 	return openroommove.CheckIn{RoomID: roomID, StudentIDs: studentIDs, CheckedInBy: staffID, Actor: openroommove.Actor{StaffID: staffID}}
@@ -482,6 +530,21 @@ func TestCheckInToOpenRoomRequiresTheReleaseBeforeCheckingAnyoneIn(t *testing.T)
 	}
 }
 
+func TestCheckInToOpenRoomRefusesAClosedRoomBeforeCheckingAnyoneIn(t *testing.T) {
+	t.Parallel()
+	h := newHarness(releasedRoom(7, "Turnhalle"))
+	h.closures.closed = true
+
+	_, err := h.command.CheckInToOpenRoom(context.Background(), checkIn(7, 9, 1))
+
+	if !errors.Is(err, openroommove.ErrRoomClosed) {
+		t.Fatalf("error = %v, want ErrRoomClosed", err)
+	}
+	if h.moves.calls != 0 {
+		t.Fatalf("a closed room checked in %d times", h.moves.calls)
+	}
+}
+
 func TestCheckInToOpenRoomPlacesChildrenInTheSameUnitAsTheMove(t *testing.T) {
 	t.Parallel()
 	// The check-in keeps every step and lock of the move; only the Student
@@ -495,7 +558,7 @@ func TestCheckInToOpenRoomPlacesChildrenInTheSameUnitAsTheMove(t *testing.T) {
 		t.Fatalf("CheckInToOpenRoom: %v", err)
 	}
 
-	want := []string{"FindRoom", "EnsureOpenRoomSession", "CheckInIntoRoomSession", "FindRoomForUpdate"}
+	want := []string{"FindRoom", "PrepareOpenRoomMove", "RoomClosedOn", "EnsureOpenRoomSession", "CheckInIntoRoomSession", "FindRoomForUpdate"}
 	if !equalStrings(h.order, want) {
 		t.Fatalf("order = %v, want %v", h.order, want)
 	}

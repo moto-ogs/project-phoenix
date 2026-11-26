@@ -25,6 +25,8 @@ var (
 	// ErrRoomNotReleased reports a room the administration has not released,
 	// or no longer releases. Seeing a room never authorizes a move into it.
 	ErrRoomNotReleased = errors.New("room is not released as an open room")
+	// ErrRoomClosed reports a released room closed for the current school day.
+	ErrRoomClosed = errors.New("room is closed today")
 )
 
 // Actor is the authenticated caller whose rights the move checks. The inbound

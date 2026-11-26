@@ -100,7 +100,7 @@ func CatalogGroup(row *activityContract.Group) timetable.Group {
 		CategoryID: row.CategoryID, PlanningTrackID: row.PlanningTrackID, PlannedRoomID: row.PlannedRoomID, CreatedBy: row.CreatedBy,
 		Type: row.Type, EducationGroupID: row.EducationGroupID, ListKind: row.ListKind, IsTemplate: row.IsTemplate, IsSystem: row.IsSystem,
 		ArchivedAt: row.ArchivedAt, SeriesRootID: row.SeriesRootID, CalendarPeriodID: row.CalendarPeriodID,
-		TargetGroupType: row.TargetGroupType, TargetGradeLevel: row.TargetGradeLevel, TargetSchoolClass: row.TargetSchoolClass,
+		TargetGroupType: row.TargetGroupType, HasDynamicTargets: row.HasDynamicTargets, TargetGradeLevel: row.TargetGradeLevel, TargetSchoolClass: row.TargetSchoolClass,
 		SourceCareOfferingIDs: row.SourceCareOfferingIDs, SourceGradeLevels: row.SourceGradeLevels, SourceSchoolClasses: row.SourceSchoolClasses,
 		Notes: row.Notes, IncludeClosingDays: row.IncludeClosingDays, SeriesLastDay: activityDateString(row.SeriesLastDay), Category: catalogCategoryPointer(row.Category),
 	}

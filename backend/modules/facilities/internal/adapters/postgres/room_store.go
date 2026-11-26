@@ -378,6 +378,9 @@ func applyRoomListFilter(query *bun.SelectQuery, filter facilities.RoomFilter) (
 	if filter.IsOpenRoom != nil {
 		query = query.Where(`"room".is_open_room = ?`, *filter.IsOpenRoom)
 	}
+	if filter.OpenOn != nil {
+		query = query.Where(`NOT EXISTS (SELECT 1 FROM facilities.room_closures AS "closure" WHERE "closure".tenant_id = "room".tenant_id AND "closure".room_id = "room".id AND "closure".start_date <= ? AND "closure".end_date >= ?)`, *filter.OpenOn, *filter.OpenOn)
+	}
 	if filter.Search != nil {
 		if *filter.Search == "" {
 			return query, true

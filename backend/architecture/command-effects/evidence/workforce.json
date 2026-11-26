@@ -7322,7 +7322,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.staffShiftPlanning.ApplyCancellation",
-      "binding_digest": "acf566606041c844f10f2600d3ac975a",
+      "binding_digest": "b2cf6097cc1e1c2cb534dfef674525dd",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffShiftPlanning.ApplyCancellation",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.LockStaffAssignments",
@@ -16522,7 +16522,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.staffShiftService.ApplyCancellation",
-      "binding_digest": "acf566606041c844f10f2600d3ac975a",
+      "binding_digest": "b2cf6097cc1e1c2cb534dfef674525dd",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.StaffShiftService.ApplyCancellation",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.LockStaffAssignments",
