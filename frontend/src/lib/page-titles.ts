@@ -234,6 +234,7 @@ export const GERMAN_PAGE_TITLES: Readonly<
     "/ferien/kriterien": "Kriterien der Platzvergabe",
     "/ferien/neu": "Neuer Ferienzeitraum",
     "/invite": "Einladung annehmen",
+    "/kinder": "Kinder",
     "/konto": "Konto",
     "/login": "Anmelden",
     "/nachweise": "Personalnachweise",
