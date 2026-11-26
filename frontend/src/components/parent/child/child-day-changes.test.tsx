@@ -102,6 +102,17 @@ describe("ChildDayChangesList in der Tageskarte", () => {
     ]);
   });
 
+  it("sagt, dass das Mittagessen heute ausfällt (#8160)", () => {
+    renderCard(day([entry({ kind: "meal_cancelled" })]));
+    expect(
+      within(screen.getByTestId("child-day-changes"))
+        .getAllByRole("listitem")
+        .map((item) => item.textContent),
+    ).toEqual([
+      "Heute gibt es kein Mittagessen für Felix. Es wird nicht berechnet.",
+    ]);
+  });
+
   it("nennt jede Änderung in einfacher Sprache und markiert die eigenen", () => {
     const until = testClockDay(2);
     renderCard(

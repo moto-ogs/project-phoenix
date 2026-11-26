@@ -25898,6 +25898,7 @@
         "class_dismissal_changed",
         "class_trip",
         "closing_day",
+        "meal_cancelled",
         "opening_changed"
       ]
     },
@@ -25907,7 +25908,8 @@
         "activities",
         "children",
         "classes",
-        "closing_days"
+        "closing_days",
+        "meal_plan"
       ]
     },
     {

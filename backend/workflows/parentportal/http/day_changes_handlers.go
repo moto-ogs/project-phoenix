@@ -58,11 +58,11 @@ var ChildDayChangeKinds = []string{
 	"child_absent", "child_pickup_changed", "child_goes_alone", "class_trip",
 	"closing_day", "opening_changed",
 	"activity_cancelled", "activity_reinstated", "activity_room_changed", "activity_lead_changed",
-	"class_dismissal_changed",
+	"class_dismissal_changed", "meal_cancelled",
 }
 
 // ChildDaySources are the sources of the child's day, in answer order.
-var ChildDaySources = []string{"children", "closing_days", "activities", "classes"}
+var ChildDaySources = []string{"children", "closing_days", "activities", "classes", "meal_plan"}
 
 // childDayChangesEnums types the wire's closed strings for the frontend.
 func childDayChangesEnums() []common.EnumContract {

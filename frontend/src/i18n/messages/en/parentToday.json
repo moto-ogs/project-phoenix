@@ -58,6 +58,7 @@
     "closingDayUntil": "The {careTerm} is closed until {date}: {name}.",
     "openingChanged": "The {careTerm} is open from {opens} to {closes} today: {name}.",
     "openingChangedUntil": "Until {date}, the {careTerm} is open from {opens} to {closes}: {name}.",
+    "mealCancelled": "There is no lunch for {name} today. It will not be charged.",
     "pickupAfterClosing": "That is after closing time. Please change the pickup.",
     "activityCancelled": "{title} at {time} is cancelled today.",
     "activityReinstated": "{title} at {time} takes place after all today.",

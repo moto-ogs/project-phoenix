@@ -22,14 +22,16 @@ import (
 // DayChangesMealPlanTestRig serves Meal Plan's staff routes under
 // /api/meal-plan (#7666), the write paths whose change mark and days without
 // lunch (#7656) the overview reads, with the Meal Plan's clock on the morning of today. Enable switches
-// the meal plan on for the school in ctx. Signals drains the
+// the meal plan on for the school in ctx, EnableRegistration its meal
+// registration (#8160), whose bookings the parents portal reads. Signals drains the
 // meal_plan_changed events a staff connection of each registered school
 // received, and whether any carried content.
 type DayChangesMealPlanTestRig struct {
-	Router  chi.Router
-	Enable  func(ctx context.Context) error
-	Listen  func(tenantID int64)
-	Signals func() (count int, content bool)
+	Router             chi.Router
+	Enable             func(ctx context.Context) error
+	EnableRegistration func(ctx context.Context) error
+	Listen             func(tenantID int64)
+	Signals            func() (count int, content bool)
 }
 
 // NewDayChangesMealPlanTestRig builds the rig over the production Meal Plan
@@ -54,6 +56,9 @@ func NewDayChangesMealPlanTestRig(db transactionruntime.Database, unit tenant.Un
 		Router: router,
 		Enable: func(ctx context.Context) error {
 			return settings.Settings.SetValue(ctx, settingsModule.KeyMealPlanEnabled, true, nil, nil)
+		},
+		EnableRegistration: func(ctx context.Context) error {
+			return settings.Settings.SetValue(ctx, settingsModule.KeyMealRegistrationEnabled, true, nil, nil)
 		},
 		Listen: func(tenantID int64) { hub.Register(connection, tenantID, nil) },
 		Signals: func() (int, bool) {
