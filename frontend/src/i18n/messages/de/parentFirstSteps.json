@@ -27,11 +27,11 @@
     },
     "messagesNews": {
       "title": "Nachrichten und Elternbriefe finden",
-      "description": "Lies Nachrichten und finde Elternbriefe der {careTerm}."
+      "description": "Lies Nachrichten und finde Elternbriefe {careGen}."
     },
     "messages": {
       "title": "Nachrichten finden",
-      "description": "Hier liest und schreibst du Nachrichten an die {careTerm}."
+      "description": "Hier liest und schreibst du Nachrichten an {careAcc}."
     },
     "installApp": {
       "title": "moto als App auf dem Handy hinzufügen",
@@ -80,10 +80,10 @@
     "messagesNews": {
       "messagesNavigation": "Öffne die Nachrichten.",
       "messagesTitle": "Nachrichten",
-      "messages": "Hier liest du Nachrichten der {careTerm} und kannst antworten.",
+      "messages": "Hier liest du Nachrichten {careGen} und kannst antworten.",
       "newsNavigation": "Öffne die Elternbriefe.",
       "newsTitle": "Elternbriefe",
-      "news": "Hier findest du Elternbriefe und wichtige Informationen der {careTerm}."
+      "news": "Hier findest du Elternbriefe und wichtige Informationen {careGen}."
     },
     "installApp": {
       "guideTitle": "moto zum Handy hinzufügen",

@@ -1886,6 +1886,231 @@ describe("SettingsField care-facility term", () => {
     expect(onSave).toHaveBeenCalledTimes(2);
   });
 
+  // #8136: a school with its own name chooses the article next to it.
+  describe("article of an own name", () => {
+    const article = (value: string, writable = true) =>
+      makeSetting({
+        key: "enrollment.care_facility_article",
+        label: "Artikel zum eigenen Namen der Betreuung",
+        type: "select",
+        default: "die",
+        value,
+        is_default: value === "die",
+        writable,
+        options: {
+          static: [
+            { label: "der", value: "der" },
+            { label: "die", value: "die" },
+            { label: "das", value: "das" },
+          ],
+        },
+      });
+    const articles = (
+      getByRole: (role: string, options: object) => HTMLElement,
+    ) => getByRole("group", { name: "Artikel zum eigenen Namen" });
+
+    it("offers no article for OGS and GTS", () => {
+      const { getByRole, queryByRole, queryByText } = renderWithProviders(
+        <SettingsField
+          setting={term}
+          categoryItems={[term, article("der")]}
+          onSave={vi.fn()}
+          onReset={vi.fn()}
+        />,
+      );
+
+      expect(getByRole("button", { name: "OGS" })).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      );
+      expect(
+        queryByRole("group", { name: "Artikel zum eigenen Namen" }),
+      ).not.toBeInTheDocument();
+      expect(queryByText(/Beispiel:/)).not.toBeInTheDocument();
+    });
+
+    it("shows the stored article and a live example for an own name", () => {
+      const own = { ...term, value: "Hort", is_default: false };
+      const { getByRole, getByText } = renderWithProviders(
+        <SettingsField
+          setting={own}
+          categoryItems={[own, article("der")]}
+          onSave={vi.fn()}
+          onReset={vi.fn()}
+        />,
+      );
+
+      const group = articles(getByRole);
+      expect(
+        within(group).getByRole("button", { name: "der" }),
+      ).toHaveAttribute("aria-pressed", "true");
+      const example = getByText(
+        "„Der Hort prüft deine Angaben. Bitte wende dich an den Hort.“",
+      );
+      expect(example.closest("p")).toHaveAttribute("aria-live", "polite");
+      expect(group).toHaveAttribute(
+        "aria-describedby",
+        example.closest("p")!.id,
+      );
+
+      fireEvent.change(ownField(getByRole), {
+        target: { value: "Ganztag" },
+      });
+      expect(
+        getByText(
+          "„Der Ganztag prüft deine Angaben. Bitte wende dich an den Ganztag.“",
+        ),
+      ).toBeInTheDocument();
+    });
+
+    it("saves a picked article at once and shows it in the example", async () => {
+      const own = { ...term, value: "Lernhaus", is_default: false };
+      const onSave = vi.fn().mockResolvedValue(undefined);
+      const { getByRole, getByText } = renderWithProviders(
+        <SettingsField
+          setting={own}
+          categoryItems={[own, article("die")]}
+          onSave={onSave}
+          onReset={vi.fn()}
+        />,
+      );
+
+      expect(
+        getByText(
+          "„Die Lernhaus prüft deine Angaben. Bitte wende dich an die Lernhaus.“",
+        ),
+      ).toBeInTheDocument();
+      fireEvent.click(
+        within(articles(getByRole)).getByRole("button", { name: "das" }),
+      );
+
+      expect(
+        getByText(
+          "„Das Lernhaus prüft deine Angaben. Bitte wende dich an das Lernhaus.“",
+        ),
+      ).toBeInTheDocument();
+      await waitFor(() =>
+        expect(onSave).toHaveBeenCalledWith(
+          "enrollment.care_facility_article",
+          "das",
+        ),
+      );
+      expect(onSave).toHaveBeenCalledTimes(1);
+    });
+
+    it("puts the stored article back when the save fails", async () => {
+      const own = { ...term, value: "Hort", is_default: false };
+      const onSave = vi.fn().mockRejectedValue(new Error("offline"));
+      const { getByRole, findByText } = renderWithProviders(
+        <SettingsField
+          setting={own}
+          categoryItems={[own, article("die")]}
+          onSave={onSave}
+          onReset={vi.fn()}
+        />,
+      );
+
+      fireEvent.click(
+        within(articles(getByRole)).getByRole("button", { name: "der" }),
+      );
+
+      expect(
+        await findByText(
+          "„Die Hort prüft deine Angaben. Bitte wende dich an die Hort.“",
+        ),
+      ).toBeInTheDocument();
+      expect(
+        within(articles(getByRole)).getByRole("button", { name: "die" }),
+      ).toHaveAttribute("aria-pressed", "true");
+    });
+
+    it("follows a later stored article instead of an old pick", async () => {
+      const own = { ...term, value: "Hort", is_default: false };
+      const onSave = vi.fn().mockResolvedValue(undefined);
+      const field = (stored: string) => (
+        <ToastProvider>
+          <SettingsField
+            setting={own}
+            categoryItems={[own, article(stored)]}
+            onSave={onSave}
+            onReset={vi.fn()}
+          />
+        </ToastProvider>
+      );
+      const { getByRole, rerender } = render(field("die"));
+      const pressed = (name: string) =>
+        within(articles(getByRole))
+          .getByRole("button", { name })
+          .getAttribute("aria-pressed");
+
+      fireEvent.click(
+        within(articles(getByRole)).getByRole("button", { name: "der" }),
+      );
+      await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+      rerender(field("der"));
+      expect(pressed("der")).toBe("true");
+
+      // Another tab stores „die“ again: the old pick must not come back.
+      rerender(field("die"));
+      expect(pressed("die")).toBe("true");
+      fireEvent.click(
+        within(articles(getByRole)).getByRole("button", { name: "der" }),
+      );
+      await waitFor(() => expect(onSave).toHaveBeenCalledTimes(2));
+    });
+
+    it("shows no example for a preset typed as an own name", () => {
+      const { getByRole, queryByText } = renderWithProviders(
+        <SettingsField
+          setting={term}
+          categoryItems={[term, article("der")]}
+          onSave={vi.fn()}
+          onReset={vi.fn()}
+        />,
+      );
+
+      fireEvent.click(getByRole("button", { name: "Eigener Name" }));
+      expect(queryByText(/Beispiel:/)).not.toBeInTheDocument();
+    });
+
+    it("opens the article with „Eigener Name“ and keeps it read-only without the right", () => {
+      const { getByRole } = renderWithProviders(
+        <SettingsField
+          setting={term}
+          categoryItems={[term, article("die", false)]}
+          onSave={vi.fn()}
+          onReset={vi.fn()}
+        />,
+      );
+
+      fireEvent.click(getByRole("button", { name: "Eigener Name" }));
+      for (const name of ["der", "die", "das"]) {
+        expect(
+          within(articles(getByRole)).getByRole("button", { name }),
+        ).toBeDisabled();
+      }
+    });
+
+    it("hides the example while the name is refused", async () => {
+      const own = { ...term, value: "Hort", is_default: false };
+      const { getByRole, findByText, queryByText } = renderWithProviders(
+        <SettingsField
+          setting={own}
+          categoryItems={[own, article("der")]}
+          onSave={vi.fn()}
+          onReset={vi.fn()}
+        />,
+      );
+
+      const field = ownField(getByRole);
+      fireEvent.change(field, { target: { value: "<b>" } });
+      fireEvent.blur(field);
+
+      await findByText(/Erlaubt sind Buchstaben, Ziffern/);
+      expect(queryByText(/Beispiel:/)).not.toBeInTheDocument();
+    });
+  });
+
   it("saves the latest unmounted draft after pending and queued saves", async () => {
     let finishFirst: () => void = () => undefined;
     let finishSecond: () => void = () => undefined;

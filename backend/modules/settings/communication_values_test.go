@@ -169,3 +169,50 @@ func TestParentMessagingValuesResolveCareFacilityTerm(t *testing.T) {
 		assert.Equal(t, "GTS", term)
 	}
 }
+
+// The article of the school's own care name (#8136): the stored choice for an
+// own name, "die" for the presets, and both read errors reach the caller.
+func TestResolveCareFacilityArticle(t *testing.T) {
+	t.Parallel()
+	ctx := context.WithValue(context.Background(), communicationContextKey{}, "care article")
+	probe := func(term, article string, failing string) communicationValueProbe {
+		return communicationValueProbe{text: func(actual context.Context, key string) (string, error) {
+			assert.Same(t, ctx, actual)
+			if key == failing {
+				return "", errors.New("unavailable")
+			}
+			switch key {
+			case configModel.KeyEnrollmentCareFacilityTerm:
+				return term, nil
+			case configModel.KeyEnrollmentCareFacilityArticle:
+				return article, nil
+			}
+			t.Fatalf("unexpected key %s", key)
+			return "", nil
+		}}
+	}
+	for _, tc := range []struct{ term, stored, want string }{
+		{"Hort", "der", "der"},
+		{"Lernhaus", "das", "das"},
+		{"Betreuung", "die", "die"},
+		{"OGS", "der", "die"},
+		{"GTS", "das", "die"},
+	} {
+		article, err := NewParentMessagingValues(probe(tc.term, tc.stored, "")).CareFacilityArticle(ctx)
+		require.NoError(t, err)
+		assert.Equal(t, tc.want, article, tc.term)
+		article, err = NewEnrollmentIntakeValues(enrollmentArticleSource{probe(tc.term, tc.stored, "")}).CareFacilityArticle(ctx)
+		require.NoError(t, err)
+		assert.Equal(t, tc.want, article, tc.term)
+	}
+	for _, failing := range []string{configModel.KeyEnrollmentCareFacilityTerm, configModel.KeyEnrollmentCareFacilityArticle} {
+		_, err := ResolveCareFacilityArticle(ctx, probe("Hort", "der", failing))
+		require.Error(t, err, failing)
+	}
+}
+
+type enrollmentArticleSource struct{ communicationValueProbe }
+
+func (enrollmentArticleSource) HasTenantOverride(context.Context, string) (bool, error) {
+	return false, nil
+}

@@ -1865,6 +1865,14 @@
       "target_owner": "organization-tenancy"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/settings.ParentMessagingValues.CareFacilityArticle",
+      "binding_digest": "4d1d43c2a06c30749e54a308e7a5686f",
+      "port": "github.com/moto-ogs/project-phoenix/modules/communication/internal/parentmessages.Settings.CareFacilityArticle",
+      "source_owner": "communication",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings.ParentMessagingValues.CareFacilityArticle",
+      "target_owner": "settings-platform"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/settings.ParentMessagingValues.CareFacilityTerm",
       "binding_digest": "3ceedb7965e073071e3f6464743dbfbd",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/internal/parentmessages.Settings.CareFacilityTerm",

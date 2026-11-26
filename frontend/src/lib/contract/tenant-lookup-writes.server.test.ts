@@ -53,6 +53,7 @@ const writesByField = {
   child_search_only_navigation: [schoolSettings],
   simple_staff_navigation: [schoolSettings],
   care_facility_term: [schoolSettings],
+  care_facility_article: [schoolSettings],
 } satisfies Record<keyof Required<TenantResolveResponse>, readonly string[]>;
 
 it("binds every lookup field to an invalidating write", () => {

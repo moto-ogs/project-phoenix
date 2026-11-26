@@ -394,6 +394,18 @@ func payloadStringSlice(payload map[string]any, key string) []string {
 // header (#6042); the parent message mail shares the rule (#6082).
 func careFacilityBadge(term string) string { return textnorm.Badge(term) }
 
+// careFacilityOwn is the header's stand-in for a missing school name with
+// the school's article: "Deine OGS", "Dein Hort" (#8136). Empty without a
+// term, so the header keeps its own default.
+func careFacilityOwn(payload map[string]any) string {
+	term := payloadString(payload, enrollment.EnrollmentPayloadCareFacilityTerm)
+	if strings.TrimSpace(term) == "" {
+		return ""
+	}
+	article := payloadString(payload, enrollment.EnrollmentPayloadCareFacilityArticle)
+	return textnorm.SentenceStart(textnorm.NewCareFacilityName(term, article).Your())
+}
+
 // schoolSender is the sender name of a mail: the school's name, or "" for
 // the platform's default sender.
 func schoolSender(schoolName string) string {
@@ -431,6 +443,7 @@ func renderSubmitted(_ string, payload map[string]any) (*enrollment.RenderedMail
 			"MotoLogoURL":       payloadString(payload, enrollment.EnrollmentPayloadMotoLogoURL),
 			"CareFacilityTerm":  payloadString(payload, enrollment.EnrollmentPayloadCareFacilityTerm),
 			"CareFacilityBadge": careFacilityBadge(payloadString(payload, enrollment.EnrollmentPayloadCareFacilityTerm)),
+			"CareFacilityOwn":   careFacilityOwn(payload),
 			"ChildNames":        payloadStringSlice(payload, enrollment.EnrollmentPayloadChildNames),
 		},
 	}, nil
@@ -471,6 +484,7 @@ func renderAdminNotification(_ string, payload map[string]any) (*enrollment.Rend
 			"MotoLogoURL":       payloadString(payload, enrollment.EnrollmentPayloadMotoLogoURL),
 			"CareFacilityTerm":  payloadString(payload, enrollment.EnrollmentPayloadCareFacilityTerm),
 			"CareFacilityBadge": careFacilityBadge(payloadString(payload, enrollment.EnrollmentPayloadCareFacilityTerm)),
+			"CareFacilityOwn":   careFacilityOwn(payload),
 			"ChildNames":        payloadStringSlice(payload, enrollment.EnrollmentPayloadChildNames),
 		},
 	}, nil
@@ -526,6 +540,7 @@ func rolloverRenderer(spec rolloverRendererSpec) payloadRenderer {
 				"MotoLogoURL":       payloadString(payload, enrollment.EnrollmentPayloadMotoLogoURL),
 				"CareFacilityTerm":  payloadString(payload, enrollment.EnrollmentPayloadCareFacilityTerm),
 				"CareFacilityBadge": careFacilityBadge(payloadString(payload, enrollment.EnrollmentPayloadCareFacilityTerm)),
+				"CareFacilityOwn":   careFacilityOwn(payload),
 				"ChildNames":        payloadStringSlice(payload, enrollment.EnrollmentPayloadChildNames),
 				"RolloverDeadline":  payloadString(payload, enrollment.EnrollmentPayloadRolloverDeadline),
 				// A payload enqueued before #6456 has no flag and keeps the
@@ -566,6 +581,7 @@ func renderDecisionMail(kind string, payload map[string]any, subject, templateNa
 			"MotoLogoURL":       payloadString(payload, enrollment.EnrollmentPayloadMotoLogoURL),
 			"CareFacilityTerm":  payloadString(payload, enrollment.EnrollmentPayloadCareFacilityTerm),
 			"CareFacilityBadge": careFacilityBadge(payloadString(payload, enrollment.EnrollmentPayloadCareFacilityTerm)),
+			"CareFacilityOwn":   careFacilityOwn(payload),
 			"ChildNames":        payloadStringSlice(payload, enrollment.EnrollmentPayloadChildNames),
 			"StatusReason":      payloadString(payload, enrollment.EnrollmentPayloadStatusReason),
 		},
@@ -629,6 +645,7 @@ func changeRequestRenderer(subject, templateName string) payloadRenderer {
 				"MotoLogoURL":       payloadString(payload, enrollment.EnrollmentPayloadMotoLogoURL),
 				"CareFacilityTerm":  payloadString(payload, enrollment.EnrollmentPayloadCareFacilityTerm),
 				"CareFacilityBadge": careFacilityBadge(payloadString(payload, enrollment.EnrollmentPayloadCareFacilityTerm)),
+				"CareFacilityOwn":   careFacilityOwn(payload),
 			},
 		}, nil
 	}

@@ -4,7 +4,10 @@ import {
   apiErrorCatalogValues,
   errorClassCode,
 } from "~/lib/api-error";
-import { normalizeCareFacilityTerm } from "~/lib/care-facility-term-value";
+import {
+  careTermValuesOf,
+  type CareTermValues,
+} from "~/lib/care-facility-term-value";
 import { ERROR_CATALOG } from "~/lib/error-catalog.generated";
 import type { ErrorContact } from "~/lib/error-contact";
 import {
@@ -45,9 +48,8 @@ function isKnownErrorCode(code: string): code is ErrorCode {
  * Values the frontend fills in itself, next to the parameters a code
  * declares: the object of the action and the school's care term (#6258).
  */
-interface FrontendValues {
+interface FrontendValues extends CareTermValues {
   readonly object: string;
-  readonly careTerm: string;
 }
 
 function interpolate(
@@ -95,19 +97,21 @@ function withDerivedCapacityDetails(
  * `contact` names whom the reader turns to: a class text such as a missing
  * right sends a Träger-Büro to its own Leitung, not to a school (#6871).
  * `careTerm` is what the reader's school calls its care (GTS, OGS, …) for
- * the `{careTerm}` placeholder; without a school the texts say „OGS“.
+ * the `{careTerm}` placeholder and its declined forms (`{careAcc}`, …,
+ * #8136); a bare term reads with „die“, and without a school the texts say
+ * „OGS“.
  */
 export function presentError(
   error: unknown,
   object: string,
   locale: AppLocale = "de",
   contact: ErrorContact = "school",
-  careTerm?: string,
+  careTerm?: string | CareTermValues,
 ): ErrorPresentation {
   const catalog = catalogs[locale];
   const own: FrontendValues = {
+    ...(typeof careTerm === "object" ? careTerm : careTermValuesOf(careTerm)),
     object,
-    careTerm: normalizeCareFacilityTerm(careTerm),
   };
   if (!(error instanceof ApiError)) {
     return {

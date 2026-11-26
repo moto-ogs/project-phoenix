@@ -19,7 +19,7 @@ import { TOAST_FADE_MS } from "~/components/ui/motion";
 import { Toast } from "~/components/ui/toast";
 import { clientEnv } from "~/env.client";
 import { normalizeLocale, type AppLocale } from "~/i18n/locales";
-import { useErrorCareFacilityTerm } from "~/lib/care-facility-term-context";
+import { useErrorCareTermValues } from "~/lib/care-facility-term-context";
 import { useLatest } from "~/lib/hooks/use-latest";
 import { useErrorContact } from "~/lib/error-contact";
 import { onSessionTreeDiscard, onSessionTreeHidden } from "~/lib/session-tree";
@@ -692,7 +692,7 @@ function useApiErrorCore(
   // The school of the screen that failed names the care in the text (#6258).
   // Read when the error shows: a term that arrives with a response must not
   // give `show` a new identity, or callers that depend on it load again.
-  const careTermRef = useLatest(useErrorCareFacilityTerm());
+  const careTermRef = useLatest(useErrorCareTermValues());
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   // A catalog import can finish after the caller has cleared the error, shown
   // another one, or unmounted. Only the latest request may update its state.

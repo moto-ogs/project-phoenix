@@ -83,6 +83,7 @@ const features = {
   parent_news_enabled: true,
   reason_required: false,
   care_facility_term: "OGS",
+  care_facility_article: "die",
 };
 
 const ok = (data: unknown) => ({

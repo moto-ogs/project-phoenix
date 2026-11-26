@@ -25,8 +25,12 @@ const allowedClasses = new Set([
 // classes whose fallback names that contact (#6871).
 const portalClasses = { traeger: ["permission"] };
 // Placeholders `presentError` fills in itself: the object of the failed
-// action and the school's care term (`enrollment.care_facility_term`).
-const FRONTEND_PARAMETERS = ["object", "careTerm"];
+// action and the school's care term (`enrollment.care_facility_term`) with
+// its declined German forms (`{careAcc}`, `{careNomCap}`, …, #8136). The
+// exact names are `CARE_TERM_PLACEHOLDERS`; `care-term-placeholders.test.ts`
+// fails on a name the frontend does not fill.
+const FRONTEND_PARAMETERS = ["object"];
+const CARE_TERM_PARAMETER = /^care[A-Z][A-Za-z]*$/;
 const failures = [];
 const runtimeCatalog = {};
 let germanLogoutNotice;
@@ -48,14 +52,17 @@ for (const { code: locale } of locales) {
       failures.push(`${locale}: ${entry.code}: missing text`);
       continue;
     }
-    // `object` and `careTerm` come from the frontend (#6258): registry
+    // `object` and the care term come from the frontend (#6258): registry
     // parameters are snake_case, so a backend value cannot take their place.
     const allowedParameters = new Set([
       ...FRONTEND_PARAMETERS,
       ...entry.parameters,
     ]);
     for (const match of text.matchAll(/\{([^{}]+)\}/g)) {
-      if (!allowedParameters.has(match[1])) {
+      if (
+        !allowedParameters.has(match[1]) &&
+        !CARE_TERM_PARAMETER.test(match[1])
+      ) {
         failures.push(
           `${locale}: ${entry.code}: unsupported parameter ${match[1]}`,
         );
@@ -97,12 +104,16 @@ for (const { code: locale } of locales) {
     const texts = catalog?.portalClasses?.[portal] ?? {};
     for (const className of classNames) {
       if (typeof texts[className] !== "string" || !texts[className].trim()) {
-        failures.push(`${locale}: ${portal}.${className}: missing portal class`);
+        failures.push(
+          `${locale}: ${portal}.${className}: missing portal class`,
+        );
       }
     }
     for (const className of Object.keys(texts)) {
       if (!classNames.includes(className)) {
-        failures.push(`${locale}: ${portal}.${className}: unknown portal class`);
+        failures.push(
+          `${locale}: ${portal}.${className}: unknown portal class`,
+        );
       }
     }
   }

@@ -28,6 +28,9 @@ type ParentMessagingValues interface {
 	// CareFacilityTerm is the school's term for its care („OGS“, „GTS“),
 	// named in the guardian's new-message mail (#6082).
 	CareFacilityTerm(ctx context.Context) (string, error)
+	// CareFacilityArticle is the article the German texts decline that
+	// term with: "der", "die" or "das" (#8136).
+	CareFacilityArticle(ctx context.Context) (string, error)
 }
 
 type parentMessagingValues struct{ source ParentMessagingValueSource }
@@ -54,6 +57,10 @@ func (v parentMessagingValues) ParentMessageLeadershipEnabled(ctx context.Contex
 
 func (v parentMessagingValues) CareFacilityTerm(ctx context.Context) (string, error) {
 	return v.source.ResolveString(ctx, configModel.KeyEnrollmentCareFacilityTerm)
+}
+
+func (v parentMessagingValues) CareFacilityArticle(ctx context.Context) (string, error) {
+	return ResolveCareFacilityArticle(ctx, v.source)
 }
 
 // ParentAnnouncementValueSource is the resolver slice used by ParentAnnouncementValues.

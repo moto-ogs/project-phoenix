@@ -35,6 +35,10 @@ const (
 	// (enrollment.care_facility_term, #6042) for the mail header. A payload
 	// enqueued before it existed has none; the header then says "OGS".
 	EnrollmentPayloadCareFacilityTerm = "care_facility_term"
+	// EnrollmentPayloadCareFacilityArticle is the article of that term
+	// (#8136). A payload queued before the article existed has none and
+	// renders with "die".
+	EnrollmentPayloadCareFacilityArticle = "care_facility_article"
 )
 
 // StatusURL builds the parent-facing status link sent in the submitted,
@@ -132,6 +136,9 @@ type MailBrand struct {
 	LogoURL          string
 	MotoLogoURL      string
 	CareFacilityTerm string
+	// CareFacilityArticle is the article of that term: "der", "die" or
+	// "das" (#8136).
+	CareFacilityArticle string
 }
 
 // Notifications is Enrollment's side of the parent and admin mails: the

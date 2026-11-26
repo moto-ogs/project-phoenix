@@ -45758,6 +45758,12 @@
           "schema": {
             "kind": "string"
           }
+        },
+        {
+          "name": "care_facility_article",
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -55401,6 +55407,12 @@
         },
         {
           "name": "care_facility_term",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "care_facility_article",
           "schema": {
             "kind": "string"
           }
@@ -106779,6 +106791,12 @@
           }
         },
         {
+          "name": "care_facility_article",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
           "name": "renewal_terms",
           "optional": true,
           "schema": {
@@ -111362,6 +111380,12 @@
         },
         {
           "name": "care_facility_term",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "care_facility_article",
           "schema": {
             "kind": "string"
           }

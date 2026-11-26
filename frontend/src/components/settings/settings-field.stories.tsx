@@ -66,6 +66,46 @@ export const TextSetting: Story = {
 };
 
 /** A boolean toggle field. */
+const careNameSetting = makeSetting({
+  key: "enrollment.care_facility_term",
+  label: "Name der Betreuung in Texten für Eltern",
+  description:
+    "So heißt deine Betreuung in den festen Texten der Online-Anmeldung, der Eltern-App und in den E-Mails dazu.",
+  default: "OGS",
+  value: "Hort",
+  is_default: false,
+  options: {
+    static: [
+      { label: "OGS", value: "OGS" },
+      { label: "GTS", value: "GTS" },
+    ],
+  },
+});
+
+const careArticleSetting = makeSetting({
+  key: "enrollment.care_facility_article",
+  label: "Artikel zum eigenen Namen der Betreuung",
+  type: "select",
+  default: "die",
+  value: "der",
+  is_default: false,
+  options: {
+    static: [
+      { label: "der", value: "der" },
+      { label: "die", value: "die" },
+      { label: "das", value: "das" },
+    ],
+  },
+});
+
+/** An own care name with its article and the live example (#8136). */
+export const CareNameWithArticle: Story = {
+  args: {
+    setting: careNameSetting,
+    categoryItems: [careNameSetting, careArticleSetting],
+  },
+};
+
 export const BooleanSetting: Story = {
   args: {
     setting: makeSetting({
