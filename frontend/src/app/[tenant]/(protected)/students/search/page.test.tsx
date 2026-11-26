@@ -2277,6 +2277,7 @@ describe("StudentSearchPage", () => {
         // rollover where the date is unchanged but semantics flip (#1939).
         requestDate: expect.any(String),
         requestIsToday: expect.any(Boolean),
+        // The list is read without the name search; the browser applies it.
         // Null whenever the page walk loaded the whole selection, which is the
         // case here: a response without pagination counts as one page (#2218).
         truncatedTotal: null,

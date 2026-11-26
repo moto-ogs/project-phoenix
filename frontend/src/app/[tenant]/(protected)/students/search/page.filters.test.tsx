@@ -926,6 +926,16 @@ describe("StudentSearchPage — registration answer counts (#7645)", () => {
     expect(screen.queryByTestId("student-card-8")).not.toBeInTheDocument();
   });
 
+  it("counts an answer among the children a name search leaves", async () => {
+    currentSearch = new URLSearchParams({ search: "Mia" });
+
+    render(<StudentSearchPage />, { wrapper: FreshSwrCache });
+
+    expect(
+      await screen.findByRole("button", { name: /: Ja \(1\)$/ }),
+    ).toBeInTheDocument();
+  });
+
   it("shows as many children as the chosen answer counted, without a new list request", async () => {
     mockFetchAnswerFilters.mockResolvedValue([
       {
@@ -2056,7 +2066,7 @@ describe("StudentSearchPage — Unterwegs-Karte (#5026)", () => {
 
   it("keeps a name search on the way to and from the assignment page", async () => {
     currentSearch = new URLSearchParams({
-      search: "Mila",
+      search: "Max",
       view: "status",
     });
 
@@ -2069,11 +2079,11 @@ describe("StudentSearchPage — Unterwegs-Karte (#5026)", () => {
       "https://example.test",
     );
     expect(referrer.pathname).toBe("/students/search");
-    expect(referrer.searchParams.get("search")).toBe("Mila");
+    expect(referrer.searchParams.get("search")).toBe("Max");
     expect(referrer.searchParams.get("view")).toBe("status");
     expect(mockPageHeader).toHaveBeenLastCalledWith(
       expect.objectContaining({
-        search: expect.objectContaining({ value: "Mila" }),
+        search: expect.objectContaining({ value: "Max" }),
       }),
     );
   });
