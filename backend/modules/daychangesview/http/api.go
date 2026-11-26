@@ -32,7 +32,7 @@ func RouteContracts() []common.RouteContract {
 		Response: daychangesview.Overview{},
 		Enums: []common.EnumContract{
 			{Type: daychangesview.Section(""), Values: []string{string(daychangesview.SectionYou), string(daychangesview.SectionSchool)}},
-			{Type: daychangesview.Source(""), Values: []string{string(daychangesview.SourceStaff), string(daychangesview.SourceChildren), string(daychangesview.SourceNotices), string(daychangesview.SourceClosingDays), string(daychangesview.SourceActivities), string(daychangesview.SourceClasses), string(daychangesview.SourceAppointments), string(daychangesview.SourceMealPlan)}},
+			{Type: daychangesview.Source(""), Values: []string{string(daychangesview.SourceStaff), string(daychangesview.SourceChildren), string(daychangesview.SourceNotices), string(daychangesview.SourceClosingDays), string(daychangesview.SourceActivities), string(daychangesview.SourceClasses), string(daychangesview.SourceAppointments), string(daychangesview.SourceMealPlan), string(daychangesview.SourceSupervisions)}},
 			{Type: daychangesview.SourceState(""), Values: []string{string(daychangesview.SourceLoaded), string(daychangesview.SourceFailed)}},
 			{Type: daychangesview.Kind(""), Values: []string{
 				string(daychangesview.KindStaffAbsent), string(daychangesview.KindStaffAbsentCount),
@@ -64,6 +64,7 @@ func RouteContracts() []common.RouteContract {
 				string(daychangesview.LinkStaffNotices), string(daychangesview.LinkCalendarPeriods), string(daychangesview.LinkDayPlan),
 				string(daychangesview.LinkSubstitutionPlan), string(daychangesview.LinkCalendar), string(daychangesview.LinkMealPlan),
 				string(daychangesview.LinkSchoolClass), string(daychangesview.LinkSchoolCalendar),
+				string(daychangesview.LinkSchoolSupervisions),
 			}},
 			{Type: daychangesview.NoticePriority(""), Values: []string{
 				string(daychangesview.NoticeInfo), string(daychangesview.NoticeImportant),

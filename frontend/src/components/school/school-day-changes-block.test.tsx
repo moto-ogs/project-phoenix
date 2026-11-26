@@ -139,6 +139,45 @@ describe("SchoolDayChangesBlock", () => {
     expect(screen.queryByText("Heute läuft alles wie geplant.")).toBeNull();
   });
 
+  it("zeigt Vertretungen bei den eigenen Aufsichten ohne Namen und führt zu den Aufsichten", () => {
+    const self = { staffId: "5", name: "", isSelf: true };
+    state.overview = {
+      date: "2026-09-09",
+      failedSources: [],
+      entries: [
+        change({
+          kind: "block_substitution",
+          section: "you",
+          activity: { id: "1", title: "Pausenaufsicht Hof" },
+          people: [{ ...self, role: "substitute" }],
+          link: { target: "school_supervisions", staffId: null },
+        }),
+        change({
+          kind: "block_substitution",
+          section: "you",
+          activity: { id: "2", title: "Mittagsaufsicht" },
+          people: [
+            { staffId: "0", name: "", isSelf: false, role: "substitute" },
+            { ...self, role: "replaced" },
+          ],
+          link: { target: "school_supervisions", staffId: null },
+        }),
+      ],
+    };
+    renderBlock();
+    const own = screen.getByRole("region", { name: "Betrifft dich" });
+    expect(
+      within(own).getByRole("link", {
+        name: "Du übernimmst heute „Pausenaufsicht Hof“.",
+      }),
+    ).toHaveAttribute("href", "/school/aufsichten");
+    expect(
+      within(own).getByRole("link", {
+        name: "Jemand aus dem Team übernimmt heute „Mittagsaufsicht“ für dich.",
+      }),
+    ).toHaveAttribute("href", "/school/aufsichten");
+  });
+
   it("sagt ohne Änderung, dass alles wie geplant läuft", () => {
     state.permissions = ["class_day:read", "calendar:school"];
     state.overview = { date: "2026-09-09", failedSources: [], entries: [] };
