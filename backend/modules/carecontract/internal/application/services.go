@@ -27,47 +27,72 @@ type booked struct {
 // day. Offerings that are no care (an AG, the lunch) are not in read and
 // drop out. A weekday may carry several modules (early and afternoon care).
 func bookedCare(read schoolRead, application carecontract.Application, today calendar.Date) booked {
+	chosen := concurrentBookings(currentBookings(application.Bookings, read.offerings, today), today)
+	return careFromBookings(read, application.Bookings, chosen, today)
+}
+
+// careFromBookings takes the services of the chosen bookings and follows
+// each weekday through all contiguous bookings, as promisesBooked does.
+func careFromBookings(read schoolRead, bookings, chosen []carecontract.Booking, today calendar.Date) booked {
 	result := booked{services: []carecontract.Service{}}
-	open := false
-	for _, booking := range concurrentBookings(currentBookings(application.Bookings, read.offerings, today), today) {
+	for _, booking := range chosen {
 		offering, ok := read.offerings[booking.CareOfferingID]
 		if !ok {
 			continue
 		}
-		days := effectiveBookingDays(booking, offering)
-		added := false
-		for _, day := range weekdayOrder {
-			if !slices.Contains(days, day) {
-				continue
-			}
-			result.services = append(result.services, carecontract.Service{
-				Weekday: day, CareOfferingID: ident.ID(offering.ID), ModuleName: offering.Name, EndsAt: offering.EndTimes[day],
-				LastDay: lastDay(booking.ValidUntil),
-			})
-			added = true
-		}
-		if !added {
+		services := bookingServices(read, bookings, booking, today)
+		if len(services) == 0 {
 			continue
 		}
+		result.services = append(result.services, services...)
 		result.offerings = append(result.offerings, offering.ID)
 		result.addPrice(offering.PriceCents)
 		result.phaseName = firstText(result.phaseName, offering.PhaseName)
 		result.starts = append(result.starts, booking.ValidFrom)
-		switch {
-		case booking.ValidUntil == nil:
-			open = true
-		case result.until == nil || booking.ValidUntil.After(*result.until):
-			result.until = booking.ValidUntil
-		}
 	}
-	if open {
-		result.until = nil
-	}
+	result.until = servicesUntil(result.services)
 	if result.unpriced {
 		result.price = nil
 	}
 	sortServices(result.services)
 	return result
+}
+
+// bookingServices follows each booked weekday through its continuations.
+func bookingServices(read schoolRead, bookings []carecontract.Booking, booking carecontract.Booking, today calendar.Date) []carecontract.Service {
+	offering := read.offerings[booking.CareOfferingID]
+	days := effectiveBookingDays(booking, offering)
+	from := today
+	if booking.ValidFrom != nil && booking.ValidFrom.After(from) {
+		from = *booking.ValidFrom
+	}
+	services := []carecontract.Service{}
+	for _, day := range weekdayOrder {
+		if !slices.Contains(days, day) {
+			continue
+		}
+		service := carecontract.Service{
+			Weekday: day, CareOfferingID: ident.ID(offering.ID), ModuleName: offering.Name, EndsAt: offering.EndTimes[day],
+		}
+		service.LastDay, _ = moduleBookedUntil(read, bookings, service, from)
+		services = append(services, service)
+	}
+	return services
+}
+
+// servicesUntil is the exclusive end of all services; nil if any is open ended.
+func servicesUntil(services []carecontract.Service) *calendar.Date {
+	var until *calendar.Date
+	for _, service := range services {
+		end := dayAfter(service.LastDay)
+		if end == nil {
+			return nil
+		}
+		if until == nil || end.After(*until) {
+			until = end
+		}
+	}
+	return until
 }
 
 // effectiveBookingDays resolves the fixed schedule even when the booking

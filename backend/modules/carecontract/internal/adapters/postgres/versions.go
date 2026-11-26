@@ -22,6 +22,14 @@ import (
 
 const effectiveStatusSQL = `('` + carecontract.VersionEffective + `', '` + carecontract.VersionSuperseded + `')`
 
+// firstConcludedFromSQL anchors a fixed term to the first concluded version,
+// including one replaced on its own first day. Overtaken unsigned versions
+// never started the term; a later amendment may precede its original start.
+const firstConcludedFromSQL = `(SELECT f.effective_from FROM care_contract.contract_versions AS f
+	WHERE f.organization_id = c.organization_id AND f.contract_id = c.id
+		AND f.status IN ('` + carecontract.VersionEffective + `', '` + carecontract.VersionSuperseded + `', '` + carecontract.VersionReplaced + `')
+	ORDER BY f.version_number LIMIT 1)`
+
 // validUntilSQL is the last day version v holds; NULL when it holds open
 // ended or is no effective version.
 const validUntilSQL = `CASE WHEN v.status IN ` + effectiveStatusSQL + ` THEN LEAST(
@@ -68,10 +76,10 @@ func versionsOf(rows []versionRow) ([]carecontract.Version, error) {
 // AmendableContracts reads every active contract with an application child:
 // one from an application, and an imported one bound to the enrollment of
 // its child (ADR 0309). An imported contract that is not bound follows no
-// bookings (#4723). Each comes with its effective
-// versions by effective date, the start of version 1, which a fixed term
-// counts from even when a later change goes before it, its next version
-// number, and the stamp of the last write of its row (UpdatedAt).
+// bookings (#4723). Each comes with its effective versions by effective date,
+// the start of the first concluded version, which a fixed term counts from
+// even when a later change goes before it, its next version number, and the
+// stamp of the last write of its row (UpdatedAt).
 func (Store) AmendableContracts(ctx context.Context, organizationID int64) ([]ports.AmendableContract, error) {
 	db, err := traegerDB(ctx, organizationID)
 	if err != nil {
@@ -443,9 +451,7 @@ type amendableHead struct {
 func amendableHeads(ctx context.Context, db bun.IDB, organizationID int64) ([]amendableHead, error) {
 	var heads []amendableHead
 	if err := db.NewRaw(`SELECT c.id AS contract_id, c.school_id, c.request_child_id, c.updated_at,
-			(SELECT f.effective_from FROM care_contract.contract_versions AS f
-				WHERE f.organization_id = c.organization_id AND f.contract_id = c.id
-					AND f.version_number = 1) AS first_from,
+			`+firstConcludedFromSQL+` AS first_from,
 			(SELECT MAX(m.version_number) + 1 FROM care_contract.contract_versions AS m
 				WHERE m.organization_id = c.organization_id AND m.contract_id = c.id) AS next_number
 		FROM care_contract.contracts AS c

@@ -322,7 +322,8 @@ func servicesAt(read schoolRead, application carecontract.Application, day calen
 			running.Bookings = append(running.Bookings, clipped)
 		}
 	}
-	return bookedCare(read, running, day)
+	chosen := concurrentBookings(currentBookings(running.Bookings, read.offerings, day), day)
+	return careFromBookings(read, application.Bookings, chosen, day)
 }
 
 // promised is what the version promises on a day: nothing after its end,

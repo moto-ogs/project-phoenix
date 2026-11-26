@@ -318,7 +318,7 @@ func sentVersionNow(read schoolRead, application carecontract.Application, sent 
 	services := boundServices(booked.services, ends)
 	// The sent version stays when it promises exactly the care booked now,
 	// for exactly as long: a version that promises more is never concluded.
-	if sameCare(services, sent.Version.Services) && sameEnd(ends, sent.Version.EndsOn) &&
+	if sent.Version.EffectiveFrom == from && sameCare(services, sent.Version.Services) && sameEnd(ends, sent.Version.EndsOn) &&
 		promisesBooked(read, application.Bookings, sent.Version, from) {
 		return carecontract.Version{}, false
 	}
