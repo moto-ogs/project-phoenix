@@ -153,3 +153,41 @@ func TestDayPickupPerson_RefusedAfterTheCutoff(t *testing.T) {
 	require.ErrorIs(t, submit(pickupPermissionToday), parentService.ErrPickupChangeCutoffPassed)
 	require.NoError(t, submit(pickupPermissionDay), "a later day has no cutoff")
 }
+
+func TestDayPickupPerson_RefusesNonCareWeekend(t *testing.T) {
+	t.Parallel()
+
+	f := buildPickupPermissionService(t)
+	chain := testpkg.CreateTestParentGuardianChain(t, f.db)
+	date := pickupPermissionToday.AddDays(4)
+	_, err := f.svc.SubmitPickupChange(testpkg.WithPackageTenantRuntime(context.Background()), chain.AccountID, chain.StudentID, parentService.PickupChangeSubmission{
+		Date: date, PickupPersonName: "Tante Frieda", Reason: "Tante holt ab",
+		Signature: signedOneTimePerson(t, f, chain, date, "Tante Frieda"),
+	})
+
+	require.ErrorIs(t, err, parentService.ErrCareExceptionNotCareDay)
+}
+
+func TestDayPickupPerson_RefusesIncompatibleDayDeparture(t *testing.T) {
+	t.Parallel()
+
+	for _, mode := range []string{careplan.DepartureModeAlone, careplan.DepartureModeBus} {
+		t.Run(mode, func(t *testing.T) {
+			f := buildPickupPermissionService(t)
+			chain := testpkg.CreateTestParentGuardianChain(t, f.db)
+			staff := testpkg.CreateTestStaff(t, f.db, "Day", "Departure")
+			ctx := tenant.WithTenantID(testpkg.WithPackageTenantRuntime(context.Background()), chain.TenantID)
+			_, err := f.care.SaveDepartureException(ctx, careplan.DepartureException{
+				StudentID: chain.StudentID, ExceptionDate: careplan.Date(pickupPermissionDay), DepartureMode: mode, CreatedBy: &staff.ID,
+			})
+			require.NoError(t, err)
+
+			_, err = f.svc.SubmitPickupChange(ctx, chain.AccountID, chain.StudentID, parentService.PickupChangeSubmission{
+				Date: pickupPermissionDay, PickupPersonName: "Tante Frieda", Reason: "Tante holt ab",
+				Signature: signedOneTimePerson(t, f, chain, pickupPermissionDay, "Tante Frieda"),
+			})
+
+			require.ErrorIs(t, err, parentService.ErrCareExceptionConflict)
+		})
+	}
+}

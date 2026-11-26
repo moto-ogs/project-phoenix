@@ -29,7 +29,7 @@ func (s *PickupApprovals) ApplyPickupApproval(ctx context.Context, input carereq
 	if err != nil {
 		return carerequests.PickupApplied{}, err
 	}
-	if change.DepartureMode != "" {
+	if change.DepartureMode != "" || change.PickupPerson != nil {
 		careDay, careDayErr := calendar.IsCareWeekday(ctx, change.Date)
 		if careDayErr != nil {
 			return carerequests.PickupApplied{}, fmt.Errorf("schedule: resolve weekend plan for pickup request decision: %w", careDayErr)
@@ -65,6 +65,15 @@ func (s *PickupApprovals) lockApprovalDay(ctx context.Context, input carerequest
 	if change.PickupTime != nil {
 		if err := s.verifyImpact(ctx, input, date, *change.PickupTime); err != nil {
 			return err
+		}
+	}
+	if change.PickupPerson != nil && change.DepartureMode == "" {
+		departure, err := s.Exceptions.FindDepartureForDate(ctx, input.StudentID, date)
+		if err != nil {
+			return fmt.Errorf("schedule: load departure exception for pickup person request: %w", err)
+		}
+		if departure != nil && !carerequests.PickupPersonAllowed(departure.DepartureMode) {
+			return carerequests.ErrPickupChangeConflict
 		}
 	}
 	return s.ensureNotCompleted(ctx, input.StudentID, date)

@@ -133,7 +133,8 @@ func TestPickupChangeTeamMarksTheTeamAndClearsOnOpen(t *testing.T) {
 	assert.Len(t, unreadPickups(t, db, ctx, team, colleague.ID), 1, "the colleague's marker stays until they open the child")
 
 	// A correction that takes the time back marks it unread again, as taken
-	// back; a read of the revision the colleague loaded before leaves it.
+	// back while preserving its context; a read of the revision the colleague
+	// loaded before leaves it.
 	loaded := revisions(unreadPickups(t, db, ctx, team, colleague.ID))
 	_, err = db.NewRaw(`DELETE FROM schedule.student_pickup_exceptions WHERE student_id = ? AND exception_date = ?`, child.ID, string(date)).Exec(ctx)
 	require.NoError(t, err)
@@ -151,7 +152,7 @@ func TestPickupChangeTeamMarksTheTeamAndClearsOnOpen(t *testing.T) {
 		}
 	}
 	assert.True(t, withdrawn.Withdrawn)
-	assert.Empty(t, withdrawn.PickupTime)
+	assert.Equal(t, "15:00", withdrawn.PickupTime)
 	stale, err := inPickupSchool(t, db, ctx, func(txCtx context.Context) ([]careplan.PickupChangeTeamNotice, error) {
 		return team.MarkPickupChangeNoticesRead(txCtx, colleague.ID, child.ID, loaded)
 	})

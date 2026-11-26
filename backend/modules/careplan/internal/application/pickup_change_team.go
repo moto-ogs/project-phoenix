@@ -28,6 +28,8 @@ const (
 	pickupPersonBody           = "Ein Kind wird %s von einer anderen Person abgeholt."
 	pickupPersonWithdrawnTitle = "Abholperson zurückgenommen"
 	pickupPersonWithdrawnBody  = "Für ein Kind gilt %s wieder die normale Abholung."
+	pickupBothWithdrawnTitle   = "Abholzeit und Abholperson zurückgenommen"
+	pickupBothWithdrawnBody    = "Für ein Kind gelten %s wieder die normale Abholzeit und Abholung."
 )
 
 // MaxPickupChangeTeamNotices bounds the reader's unread list. It is a pointer
@@ -166,9 +168,7 @@ func (s *PickupChangeTeamService) unread(ctx context.Context, stats *domain.Oper
 			RequestID: row.RequestID, StudentID: row.StudentID, StudentFirstName: row.StudentFirstName,
 			Date: terms.Date, Withdrawn: row.Status != carerequests.StatusApproved, InformedAt: row.InformedAt,
 		}
-		if !notice.Withdrawn {
-			notice.PickupTime, notice.PickupPerson = terms.PickupTime, terms.PickupPersonName
-		}
+		notice.PickupTime, notice.PickupPerson = terms.PickupTime, terms.PickupPersonName
 		out = append(out, notice)
 	}
 	return out, nil
@@ -203,7 +203,10 @@ func withoutAccount(accountIDs []int64, excluded int64) []int64 {
 func pickupChangeCopy(notice careplan.PickupChangeNotice) (string, string) {
 	day := "am " + germanWeekdayShort[notice.Date.Weekday()] + " " + notice.Date.Format("02.01.2006")
 	personOnly := notice.PickupTime == "" && notice.PickupPerson != ""
+	both := notice.PickupTime != "" && notice.PickupPerson != ""
 	switch {
+	case notice.Withdrawn && both:
+		return pickupBothWithdrawnTitle, fmt.Sprintf(pickupBothWithdrawnBody, day)
 	case notice.Withdrawn && personOnly:
 		return pickupPersonWithdrawnTitle, fmt.Sprintf(pickupPersonWithdrawnBody, day)
 	case notice.Withdrawn:

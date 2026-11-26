@@ -279,6 +279,18 @@ func TestNativePickupApprovalRefusesDayDepartureOnNonCareWeekend(t *testing.T) {
 	require.Nil(t, f.writtenDeparture)
 }
 
+func TestNativePickupApprovalRefusesPickupPersonOnNonCareWeekend(t *testing.T) {
+	t.Parallel()
+	f := newPickupApprovalFixture(t)
+	f.input.Payload = json.RawMessage(`{"date":"2026-09-26","pickup_person":{"name":"Tante Frieda"},"reason":"Ausflug"}`)
+
+	_, err := approvalService(t, f).ApplyPickupApproval(context.Background(), f.input)
+
+	require.ErrorIs(t, err, careplan.ErrDepartureExceptionNotCareDay)
+	require.Empty(t, f.calls)
+	require.Nil(t, f.existingPerson)
+}
+
 // Both legs: the time first (with its impact and excusal), then the mode.
 func TestNativePickupApprovalWritesTimeAndDayDeparture(t *testing.T) {
 	t.Parallel()
@@ -304,4 +316,20 @@ func TestNativePickupApprovalRefusesOverAnOGSDayDeparture(t *testing.T) {
 	_, err := approvalService(t, f).ApplyPickupApproval(context.Background(), f.input)
 	require.ErrorIs(t, err, carerequests.ErrPickupChangeConflict)
 	require.Nil(t, f.writtenDeparture)
+}
+
+func TestNativePickupApprovalRefusesPickupPersonIncompatibleWithDayDeparture(t *testing.T) {
+	t.Parallel()
+	for _, mode := range []string{careplan.DepartureModeAlone, careplan.DepartureModeBus} {
+		t.Run(mode, func(t *testing.T) {
+			f := newPickupApprovalFixture(t)
+			f.existingDeparture = &careplan.DepartureException{ID: 5, DepartureMode: mode}
+			f.input.Payload = json.RawMessage(`{"date":"2026-09-21","pickup_person":{"name":"Tante Frieda"},"reason":"Ausflug"}`)
+
+			_, err := approvalService(t, f).ApplyPickupApproval(context.Background(), f.input)
+
+			require.ErrorIs(t, err, carerequests.ErrPickupChangeConflict)
+			require.Nil(t, f.existingPerson)
+		})
+	}
 }
