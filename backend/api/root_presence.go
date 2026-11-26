@@ -39,3 +39,16 @@ func buildFacilitiesRooms(db transactionruntime.Database, env owners.RootEnviron
 		OpenGroups: facilitiesCompose.NewOpenGroupCatalog(FacilitiesGroupSupervisions(presence), FacilitiesRoomSessions(presence), FacilitiesGroupVisits(presence)),
 	}, nil
 }
+
+func assignFacilitiesRooms(into *FacilitiesRooms, rooms FacilitiesRooms, err error) error {
+	if err != nil {
+		return err
+	}
+	*into = rooms
+	return nil
+}
+
+func buildFacilitiesRoomsInto(into *FacilitiesRooms, db transactionruntime.Database, env owners.RootEnvironment, presence studentpresence.Owner, rooms facilitiesModule.Catalog, timetableOwner timetable.Capability, membership schoolmembership.Capability, persons peopledirectory.Capability) error {
+	built, err := buildFacilitiesRooms(db, env, presence, rooms, timetableOwner, membership, persons)
+	return assignFacilitiesRooms(into, built, err)
+}

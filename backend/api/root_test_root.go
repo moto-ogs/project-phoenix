@@ -196,9 +196,7 @@ func composeTestRootWith(db transactionruntime.Database, logger *slog.Logger, cf
 			presence = owners.BuildPresenceOwner(db, env.Logger, env.Now, devices, persons, rooms, membership, carePlan, timetableOwner, timetableRepos, people, structure)
 			substitutions = owners.NewGroupSubstitutionRepository(structure.Groups, membership, workTime, env.Today)
 			supervisions = owners.NewGroupSupervisionRecords(presence.SessionRecords, groups)
-			var err error
-			facilitiesRooms, err = buildFacilitiesRooms(db, env, presence.Presence, rooms, timetableOwner, membership, persons)
-			return err
+			return buildFacilitiesRoomsInto(&facilitiesRooms, db, env, presence.Presence, rooms, timetableOwner, membership, persons)
 		},
 		func() (err error) {
 			timetableRows, err = owners.BuildTimetableOwner(db, env.Logger, env.Now, timetableOwner, timetableRepos, calendar, bookings, structure.Groups, hub, persons, people.Students)
