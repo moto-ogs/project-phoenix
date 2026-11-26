@@ -48,11 +48,12 @@ func markPickupsAfterClosing(entries []Entry) {
 }
 
 // dropRegularPickupsBesideDayChanges keeps the weekly pickup conflict only
-// on a day without a pickup change or absence of the child (#8173): those
-// replace the weekly pickup.
+// on a day without a pickup change, absence or going-home-alone entry of the
+// child (#8173): those replace the weekly pickup.
 func dropRegularPickupsBesideDayChanges(entries []Entry) {
 	for _, entry := range entries {
-		if entry.Kind != KindChildPickupChanged && entry.Kind != KindChildAbsent {
+		if entry.Kind != KindChildPickupChanged && entry.Kind != KindChildAbsent &&
+			entry.Kind != KindChildGoesAlone {
 			continue
 		}
 		for i := range entries {
