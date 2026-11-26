@@ -232,22 +232,22 @@ export function HomeApp({
       id: `hinweis-${entry.notice.id}`,
       // Ohne eigenes Symbol: die Zeile steht bündig mit den übrigen
       // Einträgen von „Heute anders“, deren Kopf das Symbol trägt.
-      // Wie am Desktop unter „Betrifft dich“; rechts steht, dass eine
-      // Bestätigung offen ist. Die Zeile öffnet den Text mit dem Knopf
-      // „Zur Kenntnis nehmen“: bestätigt wird erst nach dem Lesen.
+      // Wie am Desktop unter „Betrifft dich“, dahinter, dass die Bestätigung
+      // offen ist. Die Zeile öffnet den Text mit dem Knopf „Zur Kenntnis
+      // nehmen“: bestätigt wird erst nach dem Lesen. In der Zeile steht kein
+      // Knopf-ähnlicher Chip, die Zeile hat genau eine Trefferfläche.
       row: {
         title: entry.notice.title,
-        subtitle: entry.notice.important ? (
+        subtitle: (
           <span className="inline-flex flex-wrap items-center gap-x-1.5">
-            <StatusBadge label="Wichtig" tone="warning" size="xs" />
-            Betrifft dich
+            {entry.notice.important ? (
+              <StatusBadge label="Wichtig" tone="warning" size="xs" />
+            ) : null}
+            Betrifft dich · noch nicht bestätigt
           </span>
-        ) : (
-          "Betrifft dich"
         ),
         // Der Titel bricht um statt „Neuer Notfallplan …“ am SE.
         wrap: true,
-        meta: <StatusBadge label="Zur Kenntnis nehmen" tone="blue" size="xs" />,
       },
       detail: <NoticeDetail notice={entry.notice} onChanged={retry} />,
       sheet: { kind: "notice", notice: entry.notice },
@@ -448,9 +448,10 @@ export function HomeApp({
     loadError,
     showTodo: has("section.day_changes") || has("section.open_requests"),
     onChanged: retry,
-    // Am Telefon zwei Änderungen statt drei, auf jedem Telefon gleich (die
-    // Kürzung hängt nicht an der Bildhöhe): „Mein Tag“ rückt ins erste
-    // Bild; alle stehen hinter „Alle anzeigen · N weitere“.
+    // Am Telefon zwei Zeilen statt vier (Hinweise zählen mit), auf jedem
+    // Telefon gleich (die Kürzung hängt nicht an der Bildhöhe): „Mein Tag“
+    // steht am SE mit drei Blöcken im ersten Bild; alle Änderungen stehen
+    // hinter „Alle anzeigen · N weitere“.
     previewLimit: layout === "phone" ? 2 : undefined,
   };
 
@@ -663,7 +664,13 @@ function HomeLists({
         <DayChangesPreview
           overview={dayChanges.overview}
           include={isDayChange}
-          limit={previewLimit}
+          // Die Grenze gilt für die ganze Vorschau: Hinweise zur Kenntnisnahme
+          // stehen immer (sie sind nicht im Blatt), Änderungen füllen auf.
+          limit={
+            previewLimit == null
+              ? undefined
+              : Math.max(0, previewLimit - notices.length)
+          }
           lead={notices.length > 0 ? notices.map(row) : undefined}
           leadCount={notices.length}
           onShowAll={() => setSheetId(dayChanges.entry.id)}
@@ -814,6 +821,13 @@ export function HomeHeadStatus({
   );
   const runningOverride =
     running && now.state.kind !== "own_running" ? running : null;
+  // Läuft ein eigener Block, steht er als erste Zeile von „Mein Tag“ direkt
+  // unter dem Kopf („seit 01:20 Basteln Läuft“). Der Kopf wiederholte ihn
+  // nur und bleibt dann zweizeilig: Gruß, Datum mit Kindern und Stempel.
+  // „Nicht gestartet“ und „Als Nächstes“ nennt er weiter.
+  const ownActive =
+    runningOverride != null ||
+    (now.state.kind === "own_running" && now.state.block.status === "active");
   const firstLine = [
     date,
     now.presentCount === undefined
@@ -830,7 +844,7 @@ export function HomeHeadStatus({
         <div className="py-1" aria-hidden="true">
           <Skeleton className="h-4 w-4/5" />
         </div>
-      ) : runningOverride ? (
+      ) : ownActive ? null : runningOverride ? (
         <NowRunningText
           head
           block={runningOverride}

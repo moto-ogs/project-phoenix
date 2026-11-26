@@ -15,6 +15,7 @@ import {
 } from "~/components/timetable/block-row-parts";
 import { BlockState, blockStateLabel } from "~/components/home/day-flow-block";
 import {
+  LinkRowMeta,
   upcomingFirst,
   useBerlinClock,
   useHomeCardRows,
@@ -197,9 +198,11 @@ export function MyDayCard() {
         <CollectionRow
           title={dayPlanLabel}
           meta={
-            hidden > 0
-              ? `${hidden} ${hidden === 1 ? "weiterer Einsatz" : "weitere Einsätze"}`
-              : undefined
+            <LinkRowMeta>
+              {hidden > 0
+                ? `${hidden} ${hidden === 1 ? "weiterer Einsatz" : "weitere Einsätze"}`
+                : null}
+            </LinkRowMeta>
           }
           href={dayPlanHref}
         />
@@ -534,9 +537,11 @@ export function MyGroupCard() {
           title="Zur Gruppe"
           subtitle={label ?? undefined}
           meta={
-            hidden > 0
-              ? `${hidden} ${hidden === 1 ? "weiteres Kind" : "weitere Kinder"}`
-              : undefined
+            <LinkRowMeta>
+              {hidden > 0
+                ? `${hidden} ${hidden === 1 ? "weiteres Kind" : "weitere Kinder"}`
+                : null}
+            </LinkRowMeta>
           }
           href={href}
         />
@@ -747,7 +752,11 @@ export function OpenRequestsCard({
             />
           ))
         )}
-        <CollectionRow title="Alle ansehen" href={tenantPath("/anfragen")} />
+        <CollectionRow
+          title="Alle ansehen"
+          meta={<LinkRowMeta />}
+          href={tenantPath("/anfragen")}
+        />
       </CollectionGroup>
     </Collection>
   );
