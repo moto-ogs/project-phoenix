@@ -17,6 +17,9 @@ export const tenantListKeys = {
   /** Gerichte einer Speiseplan-Woche ab ihrem Montag (Mitarbeitende). */
   mealPlanWeek: (monday: string) =>
     `meal-plan-week-${encodeURIComponent(monday)}`,
+  /** Tage ohne Mittagessen einer Speiseplan-Woche ab ihrem Montag (#7656). */
+  mealCancellations: (monday: string) =>
+    `meal-cancellations-${encodeURIComponent(monday)}`,
   /**
    * Fragen der Anmeldung, nach deren Antworten die Kinderliste filtert
    * (#6954), mit den Kindern des Planungstags (#7645); ohne Tag heute.

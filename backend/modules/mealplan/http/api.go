@@ -55,6 +55,9 @@ type Runtime struct {
 	// sees the committed answer: the root binds it to the content-free
 	// meal_plan_changed signal (#7666). Nil sends none.
 	MenuChanged Middleware
+	// Cancellations is the school's entry of the days without lunch
+	// (#7656). Nil leaves its routes out, as in tests of the menu alone.
+	Cancellations mealplanModule.MealCancellations
 }
 
 type Resource struct {
@@ -96,6 +99,7 @@ func (rs *Resource) Router() chi.Router {
 		protected.With(rs.runtime.Permission(AccessRegister), withTx).Put("/participation/{studentId}/days/{date}", rs.setChildDay)
 		protected.With(rs.runtime.Permission(AccessRegister), withTx).Delete("/participation/{studentId}/days/{date}", rs.clearChildDay)
 		protected.With(rs.runtime.Permission(AccessRegister), withTx).Put("/participation/{studentId}/schedule", rs.replaceChildSchedule)
+		rs.cancellationRoutes(protected, withTx)
 	})
 	return router
 }
@@ -117,18 +121,22 @@ type DailyParticipantResponse struct {
 }
 
 type DailyListResponse struct {
-	Date         string                     `json:"date" contract:"date"`
-	CutoffTime   string                     `json:"cutoff_time"`
-	Deadline     time.Time                  `json:"deadline"`
-	Closed       bool                       `json:"closed"`
-	Participants []DailyParticipantResponse `json:"participants"`
-	Others       []DailyParticipantResponse `json:"others,omitempty"`
+	Date       string    `json:"date" contract:"date"`
+	CutoffTime string    `json:"cutoff_time"`
+	Deadline   time.Time `json:"deadline"`
+	Closed     bool      `json:"closed"`
+	// MealCancelled: closed because the school cancelled lunch (#7656).
+	MealCancelled bool                       `json:"meal_cancelled,omitempty"`
+	Participants  []DailyParticipantResponse `json:"participants"`
+	Others        []DailyParticipantResponse `json:"others,omitempty"`
 }
 type WeeklyDayResponse struct {
-	Date         string                     `json:"date" contract:"date"`
-	Deadline     time.Time                  `json:"deadline"`
-	Closed       bool                       `json:"closed"`
-	Participants []DailyParticipantResponse `json:"participants"`
+	Date     string    `json:"date" contract:"date"`
+	Deadline time.Time `json:"deadline"`
+	Closed   bool      `json:"closed"`
+	// MealCancelled: closed because the school cancelled lunch (#7656).
+	MealCancelled bool                       `json:"meal_cancelled,omitempty"`
+	Participants  []DailyParticipantResponse `json:"participants"`
 }
 type WeeklyListResponse struct {
 	WeekStart string              `json:"week_start" contract:"date"`
@@ -328,7 +336,7 @@ func (rs *Resource) getParticipants(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	response := DailyListResponse{Date: string(list.Date), CutoffTime: list.CutoffTime, Deadline: list.Deadline, Closed: list.Closed, Participants: participantResponses(list.Participants)}
+	response := DailyListResponse{Date: string(list.Date), CutoffTime: list.CutoffTime, Deadline: list.Deadline, Closed: list.Closed, MealCancelled: list.MealCancelled, Participants: participantResponses(list.Participants)}
 	// The children who do not eat are there to register them, so only a
 	// caller who may change a registration sees them.
 	if r.URL.Query().Get("include") == "all" && rs.runtime.Allowed(r.Context(), AccessRegister) {
@@ -344,7 +352,7 @@ func (rs *Resource) getWeeklyParticipants(w http.ResponseWriter, r *http.Request
 	}
 	days := make([]WeeklyDayResponse, 0, len(week.Days))
 	for _, day := range week.Days {
-		days = append(days, WeeklyDayResponse{Date: string(day.Date), Deadline: day.Deadline, Closed: day.Closed, Participants: participantResponses(day.Participants)})
+		days = append(days, WeeklyDayResponse{Date: string(day.Date), Deadline: day.Deadline, Closed: day.Closed, MealCancelled: day.MealCancelled, Participants: participantResponses(day.Participants)})
 	}
 	rs.runtime.Success(w, r, http.StatusOK, WeeklyListResponse{WeekStart: string(week.WeekStart), Days: days}, "Weekly meal participation list retrieved successfully")
 }

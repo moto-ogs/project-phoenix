@@ -813,6 +813,14 @@
     },
     {
       "method": "DELETE",
+      "pattern": "/api/meal-plan/days/{date}/cancellation",
+      "portals": [
+        "tenant"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
       "pattern": "/api/meal-plan/participation/{studentId}/days/{date}",
       "portals": [
         "tenant"
@@ -4088,6 +4096,30 @@
         "elem": {
           "kind": "ref",
           "ref": "MealPlanWeekEntryResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/meal-plan/cancellations",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "from",
+          "kind": "date"
+        },
+        {
+          "name": "to",
+          "kind": "date"
+        }
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "MealCancellationResponse"
         }
       }
     },
@@ -22510,6 +22542,21 @@
     },
     {
       "method": "PUT",
+      "pattern": "/api/meal-plan/days/{date}/cancellation",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "MealCancellationRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "MealCancellationResponse"
+      }
+    },
+    {
+      "method": "PUT",
       "pattern": "/api/meal-plan/participation/{studentId}/days/{date}",
       "portals": [
         "tenant"
@@ -25960,6 +26007,7 @@
         "closing_day",
         "group_substitution",
         "group_substitution_count",
+        "meal_cancelled",
         "meal_plan_changed",
         "shift_cancelled",
         "shift_changed",
@@ -52098,6 +52146,13 @@
           }
         },
         {
+          "name": "meal_cancelled",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
           "name": "participants",
           "schema": {
             "kind": "array",
@@ -53379,6 +53434,18 @@
         {
           "name": "note",
           "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "DayMealCancellation",
+      "go_type": "daychangesview.DayMealCancellation",
+      "fields": [
+        {
+          "name": "reason",
           "schema": {
             "kind": "string"
           }
@@ -56880,6 +56947,14 @@
             "kind": "ref",
             "nullable": true,
             "ref": "DayAppointment"
+          }
+        },
+        {
+          "name": "meal_cancellation",
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "DayMealCancellation"
           }
         }
       ]
@@ -73240,6 +73315,38 @@
       ]
     },
     {
+      "name": "MealCancellationRequest",
+      "go_type": "mealplan.MealCancellationRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "MealCancellationResponse",
+      "go_type": "mealplan.MealCancellationResponse",
+      "fields": [
+        {
+          "name": "date",
+          "schema": {
+            "kind": "date"
+          }
+        },
+        {
+          "name": "reason",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "MealParticipationDayResponse",
       "go_type": "parent.MealParticipationDayResponse",
       "fields": [
@@ -79038,6 +79145,13 @@
         },
         {
           "name": "closed",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "meal_cancelled",
+          "optional": true,
           "schema": {
             "kind": "bool"
           }
@@ -119203,6 +119317,13 @@
         },
         {
           "name": "closed",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "meal_cancelled",
+          "optional": true,
           "schema": {
             "kind": "bool"
           }

@@ -16,6 +16,7 @@ export function mealPlanSeedKeys(today: string) {
     to,
     date,
     plan: tenantListKeys.mealPlanWeek(from),
+    cancellations: tenantListKeys.mealCancellations(from),
     orders: tenantContactKeys.mealOrders(from, to),
     participants: tenantContactKeys.mealParticipantsDay(date, false),
     caterer: tenantContactKeys.mealCaterer(),

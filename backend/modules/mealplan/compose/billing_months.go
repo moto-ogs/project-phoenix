@@ -24,6 +24,5 @@ func NewTraegerMealMonths() mealplan.TraegerMealMonths {
 }
 
 func billingMonthStore() *postgres.BillingMonthStore {
-	return postgres.NewBillingMonthStore(postgres.NewDatabase(tenant.TransactionFromContext, tenant.TenantFromContext),
-		postgres.NewTraegerDatabase(tenant.TransactionFromContext, tenant.TraegerTransactionFromContext))
+	return postgres.NewBillingMonthStore(postgres.NewDatabase(tenant.TransactionFromContext, tenant.TenantFromContext), postgres.NewTraegerDatabase(tenant.TransactionFromContext, tenant.TraegerTransactionFromContext))
 }

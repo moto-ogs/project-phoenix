@@ -15,8 +15,8 @@ func init() {
 		Version:     openingChangesVersion,
 		Description: "Geänderte Öffnungszeiten einer Schule an einzelnen Tagen (#7654)",
 		DependsOn: []string{
-			closingDaysVersion,      // the closing days these days sit beside
-			roomHistoryStopsVersion, // the erasure fingerprint this one follows
+			closingDaysVersion,       // the closing days these days sit beside
+			mealCancellationsVersion, // its erasure fingerprint follows the days without lunch
 		},
 	})
 	Migrations.MustRegister(openingChangesUp, openingChangesDown)
@@ -69,8 +69,9 @@ GRANT USAGE ON SEQUENCE schedule.opening_changes_id_seq TO phoenix_tenant;
 `
 
 // openingChangesFingerprint is the incoming-FK fingerprint of the school
-// erasure plan with the opening changes; the repeatable preflight checks it.
-const openingChangesFingerprint = "84716a2b063dcc0caf139931a9e35aa489cb1686558be56e241cbdbf52daab5d"
+// erasure plan with the opening changes and days without lunch; the repeatable
+// preflight checks it.
+const openingChangesFingerprint = "3515c196a607918b21a1f3172f1c189d0aff66d3837746e4e3480d2e6cf8e12f"
 
 // openingChangesErasureLines are the lines the repeatable school erasure
 // carries for the opening changes, per function. The down takes them out of
@@ -125,7 +126,7 @@ func openingChangesErasureWithout(ctx context.Context, tx bun.Tx) ([]string, err
 			continue
 		}
 		definition = strings.Replace(definition, line, "", 1)
-		definition = strings.Replace(definition, "'"+openingChangesFingerprint+"'", "'"+roomHistoryStopsFingerprint+"'", 1)
+		definition = strings.Replace(definition, "'"+openingChangesFingerprint+"'", "'"+mealCancellationsFingerprint+"'", 1)
 		restored = append(restored, definition)
 	}
 	return restored, nil

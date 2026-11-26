@@ -1,12 +1,14 @@
 package api
 
-// The Essen source of "Heute anders" (ADR 0299, #7666). The owner is Meal
-// Plan: it marks a day whose published menu changed, the change the families
-// hear about (#7145). Every staff account of the school sees that today's
-// menu changed, also without meals:read: the entry names no dish. The link
-// leads to the meal plan page only for an account that may read it (the rule
-// of GET /api/meal-plan/), so nobody lands on a page without content. A day
-// without the mark gives no entry.
+// The Essen source of "Heute anders" (ADR 0299, #7666, #7656). The owner is
+// Meal Plan: it marks a day whose published menu changed, the change the
+// families hear about (#7145), and it holds the days the school cancelled
+// lunch on with the school's reason. Every staff account of the school sees
+// both, also without meals:read: the entry names no dish and no person. A
+// cancelled lunch replaces a changed menu of the same day. The link leads to
+// the meal plan page only for an account that may read it (the rule of
+// GET /api/meal-plan/), so nobody lands on a page without content. A day
+// without either gives no entry.
 
 import (
 	"context"
@@ -18,23 +20,29 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
-// dayChangesMenuChanges is Meal Plan's read of a day's change mark.
+// dayChangesMenuChanges is Meal Plan's read of a day's change mark and
+// cancellation, in one statement.
 type dayChangesMenuChanges interface {
-	MenuChangedOn(ctx context.Context, date mealplan.Date) (bool, error)
+	MenuDayOn(ctx context.Context, date mealplan.Date) (mealplan.MenuDay, error)
 }
 
-// dayChangesMealPlan is the Essen source over Meal Plan's change mark.
+// dayChangesMealPlan is the Essen source over Meal Plan's read of the day.
 type dayChangesMealPlan struct{ reads dayChangesMenuChanges }
 
 func (s dayChangesMealPlan) MealPlanChanges(ctx context.Context, day calendar.Date) ([]daychangesview.SourceEntry, error) {
-	changed, err := s.reads.MenuChangedOn(ctx, mealplan.Date(day.String()))
+	menu, err := s.reads.MenuDayOn(ctx, mealplan.Date(day.String()))
 	if err != nil {
-		return nil, fmt.Errorf("read meal plan change: %w", err)
+		return nil, fmt.Errorf("read meal plan day: %w", err)
 	}
-	if !changed {
+	var entry daychangesview.SourceEntry
+	switch {
+	case menu.Cancelled:
+		entry = daychangesview.SourceEntry{Kind: daychangesview.KindMealCancelled, MealCancellation: &daychangesview.DayMealCancellation{Reason: menu.Reason}}
+	case menu.Changed:
+		entry = daychangesview.SourceEntry{Kind: daychangesview.KindMealPlanChanged}
+	default:
 		return nil, nil
 	}
-	entry := daychangesview.SourceEntry{Kind: daychangesview.KindMealPlanChanged}
 	if mealPlanAllowed(ctx, mealplanAPI.AccessRead) {
 		entry.Link = &daychangesview.Link{Target: daychangesview.LinkMealPlan}
 	}

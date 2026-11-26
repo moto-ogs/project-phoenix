@@ -25,6 +25,7 @@ func TestSurveyErasureAfterMealsRepairsLateSurveyMigration(t *testing.T) {
 	// history stops at the head; pickup persons go first.
 	require.NoError(t, studentPickupPersonsDown(t.Context(), db))
 	require.NoError(t, openingChangesDown(t.Context(), db))
+	require.NoError(t, mealCancellationsDown(t.Context(), db))
 	require.NoError(t, roomHistoryStopsDown(t.Context(), db))
 	require.NoError(t, deviceLifecycleEventsDown(t.Context(), db))
 	require.NoError(t, parentLetterCopiesDown(t.Context(), db))

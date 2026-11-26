@@ -198,12 +198,15 @@ func OrderPeriod(rhythm Rhythm, day Date) (Date, Date) {
 // every change applied) or unordered (over without an order, as before the
 // school started ordering).
 type OrderDay struct {
-	Date      Date
-	Closed    bool
-	Unordered bool
-	Deadline  time.Time
-	Order     *Order
-	Children  map[int64]string
+	Date   Date
+	Closed bool
+	// MealCancelled marks a closed day on which only lunch is cancelled
+	// (#7656).
+	MealCancelled bool
+	Unordered     bool
+	Deadline      time.Time
+	Order         *Order
+	Children      map[int64]string
 	// FrozenChildren holds the fixed lines for counts, without late changes.
 	FrozenChildren map[int64]string
 	Changes        []OrderChange

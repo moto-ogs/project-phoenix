@@ -128,6 +128,7 @@ var unmappedDateColumns = map[string]string{
 	// Meal-plan persistence uses an adapter-local row with calendar.Date. The
 	// scanner intentionally only inspects models/, so it cannot discover it.
 	"schedule.meal_plan_entries.date":                      "meal-plan Postgres adapter-local row uses calendar.Date — no models/ struct",
+	"schedule.meal_cancellations.date":                     "meal-cancellation Postgres adapter-local row uses calendar.Date — no models/ struct",
 	"schedule.meal_participation_schedules.effective_from": "meal-participation Postgres adapter-local row uses calendar.Date — no models/ struct",
 	"schedule.meal_participation_overrides.date":           "meal-participation Postgres adapter-local row uses calendar.Date — no models/ struct",
 	"schedule.meal_sickness_status_history.date":           "meal-participation sickness history is queried through adapter-local calendar.Date rows — no models/ struct",

@@ -30,15 +30,17 @@ type OrderClassCountResponse struct {
 
 // OrderDayResponse is one weekday of the orders.
 type OrderDayResponse struct {
-	Date        string                    `json:"date" contract:"date"`
-	Closed      bool                      `json:"closed"`
-	Deadline    time.Time                 `json:"deadline"`
-	Status      string                    `json:"status"`
-	OrderID     ident.ID                  `json:"order_id,omitempty"`
-	ConfirmedAt *time.Time                `json:"confirmed_at,omitempty"`
-	Total       int                       `json:"total"`
-	Classes     []OrderClassCountResponse `json:"classes"`
-	Changes     []OrderChangeResponse     `json:"changes"`
+	Date   string `json:"date" contract:"date"`
+	Closed bool   `json:"closed"`
+	// MealCancelled: closed because the school cancelled lunch (#7656).
+	MealCancelled bool                      `json:"meal_cancelled,omitempty"`
+	Deadline      time.Time                 `json:"deadline"`
+	Status        string                    `json:"status"`
+	OrderID       ident.ID                  `json:"order_id,omitempty"`
+	ConfirmedAt   *time.Time                `json:"confirmed_at,omitempty"`
+	Total         int                       `json:"total"`
+	Classes       []OrderClassCountResponse `json:"classes"`
+	Changes       []OrderChangeResponse     `json:"changes"`
 }
 
 // OrdersResponse is the school's orders of a window (#3873).
@@ -54,7 +56,7 @@ func OrderDays(week mealplanModule.OrderWeek) []OrderDayResponse {
 	days := make([]OrderDayResponse, 0, len(week.Days))
 	for _, day := range week.Days {
 		response := OrderDayResponse{
-			Date: string(day.Date), Closed: day.Closed, Deadline: day.Deadline, Status: string(day.Status),
+			Date: string(day.Date), Closed: day.Closed, MealCancelled: day.MealCancelled, Deadline: day.Deadline, Status: string(day.Status),
 			ConfirmedAt: day.ConfirmedAt, Total: day.Total,
 			Classes: make([]OrderClassCountResponse, 0, len(day.Classes)), Changes: make([]OrderChangeResponse, 0, len(day.Changes)),
 		}
