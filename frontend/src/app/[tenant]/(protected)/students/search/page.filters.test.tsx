@@ -463,16 +463,9 @@ describe("StudentSearchPage — room_id deep-link (#1323)", () => {
       expect(mockGetStudents).toHaveBeenCalled();
     });
 
-    // Find the call with our roomId — there may be multiple if the page
-    // re-renders. The contract is: the first call after mount must carry
-    // the URL-derived room_id, otherwise the page would render the
-    // unfiltered list before correcting itself.
-    const calls = mockGetStudents.mock.calls.map(
-      (c) => c[0] as Record<string, unknown>,
-    );
-    const filteredCall = calls.find((c) => c.roomId === "42");
-    expect(filteredCall).toBeDefined();
-    expect(filteredCall?.roomId).toBe("42");
+    // The first call after mount must carry the URL's room, otherwise the
+    // page would render the unfiltered list before correcting itself.
+    expect(mockGetStudents.mock.calls[0]?.[0]).toMatchObject({ roomId: "42" });
   });
 
   it("applies an offered registration answer from the URL on the page (#6954, #7645)", async () => {
@@ -924,6 +917,16 @@ describe("StudentSearchPage — registration answer counts (#7645)", () => {
     ).toBeInTheDocument();
     expect(screen.getByTestId("student-card-7")).toBeInTheDocument();
     expect(screen.queryByTestId("student-card-8")).not.toBeInTheDocument();
+  });
+
+  it("counts an answer among the children a name search leaves", async () => {
+    currentSearch = new URLSearchParams({ search: "Mia" });
+
+    render(<StudentSearchPage />, { wrapper: FreshSwrCache });
+
+    expect(
+      await screen.findByRole("button", { name: /: Ja \(1\)$/ }),
+    ).toBeInTheDocument();
   });
 
   it("shows as many children as the chosen answer counted, without a new list request", async () => {
@@ -2056,7 +2059,7 @@ describe("StudentSearchPage — Unterwegs-Karte (#5026)", () => {
 
   it("keeps a name search on the way to and from the assignment page", async () => {
     currentSearch = new URLSearchParams({
-      search: "Mila",
+      search: "Max",
       view: "status",
     });
 
@@ -2069,11 +2072,11 @@ describe("StudentSearchPage — Unterwegs-Karte (#5026)", () => {
       "https://example.test",
     );
     expect(referrer.pathname).toBe("/students/search");
-    expect(referrer.searchParams.get("search")).toBe("Mila");
+    expect(referrer.searchParams.get("search")).toBe("Max");
     expect(referrer.searchParams.get("view")).toBe("status");
     expect(mockPageHeader).toHaveBeenLastCalledWith(
       expect.objectContaining({
-        search: expect.objectContaining({ value: "Mila" }),
+        search: expect.objectContaining({ value: "Max" }),
       }),
     );
   });
