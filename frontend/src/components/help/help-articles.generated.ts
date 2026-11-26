@@ -1077,17 +1077,19 @@ export const appOverviewTopic = function appOverviewTopic(): HelpTopic {
         // Schulschalter nicht, deshalb sagt der Text die Bedingung selbst.
         title: "Der Betreuungsplan von heute",
         description:
-          "Nutzt deine OGS den Betreuungsplan? Dann zeigt die Karte `Betreuungsplan heute`, was heute noch ansteht. Wer die OGS leitet, findet sie oben auf der Startseite.",
+          "Nutzt deine OGS den Betreuungsplan? Dann zeigt die Karte `Betreuungsplan heute`, was in der ganzen OGS heute noch ansteht. Wer die OGS leitet, hat sie schon auf der Startseite.",
         ordered: false,
         steps: [
           "Die Karte beginnt bei dem, was gerade läuft oder als Nächstes kommt. Die grüne Linie `Jetzt` zeigt die Uhrzeit.",
           "Jede Zeile zeigt Beginn und Ende, den Raum, die Kinder und das Team.",
           "Rechts steht, was gerade zählt: `Läuft`, `Nicht gestartet` oder `Fällt aus`. Beginnt ein Block in der nächsten Stunde, steht dort die Zeit bis zum Beginn.",
-          "Tippe auf eine Zeile, um den Termin im `Betreuungsplan` zu öffnen.",
+          "Tippe auf eine Zeile. Sie öffnet den Termin im `Betreuungsplan`. Hast du den Plan nicht in der Seitenleiste, öffnet sich `Heute`.",
           "Links neben `Jetzt` steht, wie viele Blöcke heute schon vorbei sind. Tippe darauf, um den ganzen Tag zu sehen.",
           "Passen nicht alle Blöcke auf die Karte? Darunter steht, wie viele noch kommen.",
-          "Die Karte fehlt bei dir? Wähle `Anpassen`, dann `Bausteine` und dann `Betreuungsplan heute`. Steht sie dort nicht, nutzt deine OGS sie nicht.",
-          "Deine eigenen Einsätze zeigt die Karte `Mein Tag`.",
+          "Die Karte fehlt bei dir? Wähle `Anpassen`, dann `Bausteine` und dann `Betreuungsplan heute`.",
+          // Karte nur mit Betreuungsplan, Leserecht und schulweiter Sicht
+          // (#2380); sonst zeigt „Mein Tag“ die eigenen Einsätze.
+          "Steht sie dort nicht? Dann nutzt deine OGS den Betreuungsplan nicht, oder du siehst nur deine eigenen Einsätze. Die zeigt die Karte `Mein Tag`.",
         ],
       },
       {

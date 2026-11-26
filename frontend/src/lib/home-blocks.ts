@@ -110,6 +110,14 @@ export interface HomeBlockAccess {
    * ohne Gruppe wäre eine Karte, die nur sagt, dass sie leer ist.
    */
   readonly hasOwnGroups: boolean;
+  /**
+   * Sieht die Person die Blöcke der ganzen Schule oder nur die eigenen
+   * (#2380)? Die Leitung immer, alle anderen nur an Schulen mit schulweiter
+   * Übersicht. Der Server entscheidet dasselbe beim Abruf
+   * (/timetable/operations/planned-now); hier steht es, damit eine Karte, die
+   * den Plan der Schule verspricht, nicht mit den eigenen Einsätzen dasteht.
+   */
+  readonly seesAllBlocks: boolean;
 }
 
 /** Der Betriebsmodus der Schule, ohne Session- oder Kontext-Typen. */
@@ -459,7 +467,11 @@ export const HOME_BLOCKS: readonly HomeBlockDefinition[] = [
     // die volle Breite zwei Spalten und damit ein ganzer Betreuungstag. Mit
     // weniger Blöcken ist die Karte nur so hoch wie ihr Inhalt.
     height: 3,
-    permitted: (access) => access.has(PERMISSION.schedulesRead),
+    // Der Plan der Schule: wer nur die eigenen Einsätze sieht (#2380), hat
+    // dafür „Mein Tag“. Dieselben Zeilen unter dem Namen des Schulplans
+    // wären falsch beschriftet.
+    permitted: (access) =>
+      access.has(PERMISSION.schedulesRead) && access.seesAllBlocks,
     // Ohne Betreuungsplan gibt es keinen Ablauf, und im Anwesenheitsmodus
     // "binary" plant die Schule keine Blöcke.
     available: (ctx) => ctx.timetableEnabled && ctx.detailed,

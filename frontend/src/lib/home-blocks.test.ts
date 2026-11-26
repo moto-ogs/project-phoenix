@@ -31,6 +31,7 @@ const leadAccess: HomeBlockAccess = {
   canOpenRequestsPage: true,
   caresForGroups: false,
   hasOwnGroups: false,
+  seesAllBlocks: true,
 };
 
 /**
@@ -43,6 +44,7 @@ const careAccess: HomeBlockAccess = {
   canOpenRequestsPage: true,
   caresForGroups: true,
   hasOwnGroups: true,
+  seesAllBlocks: true,
 };
 
 /**
@@ -55,6 +57,7 @@ const customLeadAccess: HomeBlockAccess = {
   canOpenRequestsPage: true,
   caresForGroups: false,
   hasOwnGroups: false,
+  seesAllBlocks: true,
 };
 
 /** Führt die Einrichtung UND betreut selbst: bekommt die Vereinigung. */
@@ -64,6 +67,7 @@ const leadCareAccess: HomeBlockAccess = {
   canOpenRequestsPage: true,
   caresForGroups: true,
   hasOwnGroups: true,
+  seesAllBlocks: true,
 };
 
 const fullContext: HomeBlockContext = {
@@ -506,6 +510,7 @@ describe("resolveHomeLayout — Berechtigung", () => {
     canOpenRequestsPage,
     caresForGroups: true,
     hasOwnGroups: true,
+    seesAllBlocks: true,
   });
 
   const resolveFor = (
@@ -548,6 +553,46 @@ describe("resolveHomeLayout — Berechtigung", () => {
     expect(
       resolveFor(["schedules:read"]).addable.map((block) => block.key),
     ).toContain("section.day_flow");
+  });
+
+  // Der Plan der Schule: wer nur die eigenen Einsätze sieht (#2380), hat
+  // dafür „Mein Tag“. Dieselben Zeilen unter dem Namen des Schulplans wären
+  // falsch beschriftet (#8134).
+  it("bietet den Betreuungsplan von heute nicht an, wer nur die eigenen Blöcke sieht", () => {
+    const ownOnly = resolveHomeLayout(
+      {
+        ...fullContext,
+        access: { ...accessWith(["schedules:read"]), seesAllBlocks: false },
+      },
+      [],
+      {},
+      {},
+    );
+    expect(ownOnly.addable.map((block) => block.key)).not.toContain(
+      "section.day_flow",
+    );
+    // Der eigene Tag bleibt.
+    expect(keysOf(ownOnly.placements)).toContain("section.my_day");
+  });
+
+  // Eine Leitungsrolle der Schule ohne Adminzuschnitt sieht an einer Schule
+  // mit enger Sicht nur ihre eigenen Blöcke: ihre Ansicht rückt ohne die
+  // Karte lückenlos zusammen.
+  it("lässt die Karte aus der Leitungsansicht, wo die Leitung nur eigene Blöcke sieht", () => {
+    const { placements } = resolveHomeLayout(
+      {
+        ...fullContext,
+        access: { ...customLeadAccess, seesAllBlocks: false },
+      },
+      [],
+      {},
+      {},
+    );
+    expect(keysOf(placements)).not.toContain("section.day_flow");
+    expect(placements[1]).toMatchObject({
+      key: "tile.students_present",
+      row: 2,
+    });
   });
 
   // In der Betreuungsansicht stehen die offenen Anfragen nicht von Haus aus:

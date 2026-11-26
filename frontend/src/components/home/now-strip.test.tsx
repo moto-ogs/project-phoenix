@@ -97,6 +97,7 @@ const care: HomeBlockAccess = {
   canOpenRequestsPage: false,
   caresForGroups: true,
   hasOwnGroups: true,
+  seesAllBlocks: true,
 };
 const lead: HomeBlockAccess = {
   isAdminScope: true,
@@ -104,6 +105,7 @@ const lead: HomeBlockAccess = {
   canOpenRequestsPage: true,
   caresForGroups: false,
   hasOwnGroups: false,
+  seesAllBlocks: true,
 };
 
 function context(access: HomeBlockAccess): HomeBlockContext {
