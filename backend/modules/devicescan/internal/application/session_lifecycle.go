@@ -78,18 +78,7 @@ func (s *sessionLifecycle) StartSession(ctx context.Context, command devicescan.
 		return devicescan.SessionStartResponse{}, err
 	}
 	if err != nil {
-		var conflict *ports.SessionStartConflict
-		if errors.As(err, &conflict) {
-			info, lookupErr := s.store.Conflict(ctx, command.ActivityID, device.ID)
-			if lookupErr == nil && info.HasConflict {
-				return devicescan.SessionStartResponse{Status: "conflict", Message: info.ConflictMessage, ConflictInfo: &info}, nil
-			}
-		}
-		var failure *devicescan.Failure
-		if errors.As(err, &failure) {
-			return devicescan.SessionStartResponse{}, failure
-		}
-		return devicescan.SessionStartResponse{}, classifyPresenceFailure(err)
+		return s.startFailure(ctx, command.ActivityID, device.ID, err)
 	}
 	// The start resolved the session's room, the chosen or the planned one.
 	// A room closed today takes no session (#7653); the caller rolls the
@@ -105,6 +94,21 @@ func (s *sessionLifecycle) StartSession(ctx context.Context, command devicescan.
 		response.Supervisors = s.supervisorInfos(ctx, supervisors)
 	}
 	return response, nil
+}
+
+func (s *sessionLifecycle) startFailure(ctx context.Context, activityID, deviceID int64, err error) (devicescan.SessionStartResponse, error) {
+	var conflict *ports.SessionStartConflict
+	if errors.As(err, &conflict) {
+		info, lookupErr := s.store.Conflict(ctx, activityID, deviceID)
+		if lookupErr == nil && info.HasConflict {
+			return devicescan.SessionStartResponse{Status: "conflict", Message: info.ConflictMessage, ConflictInfo: &info}, nil
+		}
+	}
+	var failure *devicescan.Failure
+	if errors.As(err, &failure) {
+		return devicescan.SessionStartResponse{}, failure
+	}
+	return devicescan.SessionStartResponse{}, classifyPresenceFailure(err)
 }
 
 func (s *sessionLifecycle) refuseClosedRoom(ctx context.Context, roomID int64) error {

@@ -201,6 +201,23 @@ func workerTracer(tracer *observability.Tracer) schedulerPorts.WorkerTracer {
 	}
 }
 
+// composeWorkerPresence builds Student Presence and the room closures its
+// activity starts consume before the worker enters its scheduled jobs.
+func composeWorkerPresence(
+	db transactionruntime.Database, env RootEnvironment, devices devicefleet.Capability, persons *peopleCompose.Directory,
+	rooms facilitiesModule.Catalog, membership schoolMembershipModule.Owner, carePlan carePlanModule.Owner,
+	timetableOwner timetable.Owner, timetableRepos TimetableRepositories, people PeopleRows, structure StructureRows,
+	groups schoolstructure.Query, workTime workforceCompose.WorkTime,
+) (PresenceOwner, GroupSubstitutions, studentpresence.SupervisionRecords, facilitiesModule.Closures, error) {
+	presence := BuildPresenceOwner(db, env.Logger, env.Now, devices, persons, rooms, membership, carePlan, timetableOwner, timetableRepos, people, structure)
+	closures, err := BuildRoomClosures(db, env.Now)
+	if err != nil {
+		return PresenceOwner{}, nil, nil, nil, StepError("compose room closures", err)
+	}
+	return presence, NewGroupSubstitutionRepository(structure.Groups, membership, workTime, env.Today),
+		NewGroupSupervisionRecords(presence.SessionRecords, groups), closures, nil
+}
+
 // ComposeWorker builds the owners the Worker's jobs need as local values,
 // in the build order of the owner graph, without the HTTP router, and starts
 // the Worker over them through newWorker, the function the server root
@@ -361,11 +378,9 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 			return StepError("compose device fleet", err)
 		},
 		func() (err error) {
-			presence = BuildPresenceOwner(db, env.Logger, env.Now, devices, persons, rooms, membership, carePlan, timetableOwner, timetableRepos, people, structure)
-			substitutions = NewGroupSubstitutionRepository(structure.Groups, membership, workTime, env.Today)
-			supervisions = NewGroupSupervisionRecords(presence.SessionRecords, groups)
-			roomClosures, err = BuildRoomClosures(db, env.Now)
-			return StepError("compose room closures", err)
+			presence, substitutions, supervisions, roomClosures, err = composeWorkerPresence(
+				db, env, devices, persons, rooms, membership, carePlan, timetableOwner, timetableRepos, people, structure, groups, workTime)
+			return
 		},
 		func() (err error) {
 			timetableRows, err = BuildTimetableOwner(db, env.Logger, env.Now, timetableOwner, timetableRepos, calendar, bookings, structure.Groups, hub, persons, people.Students)
