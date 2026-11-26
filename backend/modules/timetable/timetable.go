@@ -379,3 +379,11 @@ func ErrorCode(err error) string {
 func IsSystemActivityName(name string) bool {
 	return name == SchulhofActivityName || name == WCActivityName || name == OpenRoomActivityName
 }
+
+// IsOpenRoomStay reports the shared system activity whose room sessions hold
+// the independent stays of released rooms (#3066). Children do not take part
+// in it, so views must not present it as a running activity (#8130). A staff
+// activity that only carries the name is not it.
+func IsOpenRoomStay(group Group) bool {
+	return group.IsSystem && group.Name == OpenRoomActivityName
+}
