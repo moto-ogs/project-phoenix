@@ -8,7 +8,6 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/mealplan"
 	"github.com/moto-ogs/project-phoenix/modules/mealplan/internal/domain"
-	"github.com/moto-ogs/project-phoenix/modules/mealplan/internal/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
@@ -91,18 +90,19 @@ func NewSchoolCalendar(find mealplan.CalendarFinder) schoolCalendar {
 
 // newMealCalendar is the school calendar that also closes the days the
 // school cancelled lunch on (#7656), so bookings, kitchen lists, orders and
-// the month treat them like closed days, and marks them as cancelled.
-func newMealCalendar(find mealplan.CalendarFinder, cancellations ports.CancellationStore) schoolCalendar {
-	return schoolCalendar{find: find, cancellations: cancellations}
+// the month treat them like closed days, and marks them as cancelled. Both
+// reads come from the root, like the rest of the calendar.
+func newMealCalendar(find mealplan.CalendarFinder, cancelled mealplan.CancelledDaysFinder) schoolCalendar {
+	return schoolCalendar{find: find, cancelled: cancelled}
 }
 
 type schoolCalendar struct {
-	find          mealplan.CalendarFinder
-	cancellations ports.CancellationStore
+	find      mealplan.CalendarFinder
+	cancelled mealplan.CancelledDaysFinder
 }
 
 // Days reads the school calendar (two statements: the federal state, the
-// closing days with the holiday periods) and the meal cancellations (one).
+// closing days with the holiday periods) and the days without lunch (one).
 func (c schoolCalendar) Days(ctx context.Context, from, to domain.Date) (domain.CalendarDays, domain.OperationStats, error) {
 	started := time.Now()
 	closed, periods, err := c.find(ctx, from.String(), to.String())
@@ -110,11 +110,11 @@ func (c schoolCalendar) Days(ctx context.Context, from, to domain.Date) (domain.
 	if err != nil {
 		return domain.CalendarDays{}, stats, err
 	}
-	var cancelled []domain.MealCancellation
-	if c.cancellations != nil {
-		var cancelStats domain.OperationStats
-		cancelled, cancelStats, err = c.cancellations.FindCancellations(ctx, from, to)
-		stats = addStats(stats, cancelStats)
+	var cancelled map[string]bool
+	if c.cancelled != nil {
+		cancelled, err = c.cancelled(ctx, from.String(), to.String())
+		stats.Queries++
+		stats.StatementDuration = time.Since(started)
 		if err != nil {
 			return domain.CalendarDays{}, stats, err
 		}
@@ -130,11 +130,15 @@ func (c schoolCalendar) Days(ctx context.Context, from, to domain.Date) (domain.
 	}
 	days := domain.NewCalendarDays(closed, holidays, from, to)
 	days.Cancelled = make(map[domain.Date]bool, len(cancelled))
-	for _, cancellation := range cancelled {
-		if !days.Closed[cancellation.Date] {
-			days.Cancelled[cancellation.Date] = true
+	for value := range cancelled {
+		date, err := calendar.ParseDate(value)
+		if err != nil {
+			return domain.CalendarDays{}, stats, err
 		}
-		days.Closed[cancellation.Date] = true
+		if !days.Closed[date] {
+			days.Cancelled[date] = true
+		}
+		days.Closed[date] = true
 	}
 	return days, stats, nil
 }

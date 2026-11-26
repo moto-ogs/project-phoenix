@@ -13,13 +13,13 @@ import (
 )
 
 // NewWithCancellations composes the Meal Plan like New, over a school
-// calendar that closes the days in the cancellation store, and adds the
-// school's entry of those days (#7656).
-func NewWithCancellations(store ports.Store, cancellationStore ports.CancellationStore, directory ports.Directory, find mealplan.CalendarFinder, settings ports.Settings, tx ports.Transaction, observe ports.Observer, now func() time.Time, notices mealplan.MenuChangeNotices) mealplan.Services {
+// calendar that also closes the days cancelled finds, and adds the school's
+// entry of those days into the cancellation store (#7656).
+func NewWithCancellations(store ports.Store, cancellationStore ports.CancellationStore, directory ports.Directory, find mealplan.CalendarFinder, cancelled mealplan.CancelledDaysFinder, settings ports.Settings, tx ports.Transaction, observe ports.Observer, now func() time.Time, notices mealplan.MenuChangeNotices) mealplan.Services {
 	if cancellationStore == nil || find == nil {
 		panic("meal plan application: the cancellations need their store and the school calendar")
 	}
-	services := New(store, directory, newMealCalendar(find, cancellationStore), settings, tx, observe, now, notices)
+	services := New(store, directory, newMealCalendar(find, cancelled), settings, tx, observe, now, notices)
 	services.Cancellations = &cancellations{service: services.Capability.(*Service), store: cancellationStore}
 	return services
 }

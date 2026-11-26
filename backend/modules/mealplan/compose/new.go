@@ -36,20 +36,30 @@ type Dependencies struct {
 	StudentNames    mealplan.StudentNameFinder
 	LockStudent     mealplan.StudentLock
 	Calendar        mealplan.CalendarFinder
-	Notices         mealplan.MenuChangeNotices // changed menu to the families (#7145); nil in the worker, which never changes it
+	// CancelledDays closes the days without lunch (#7656) as part of the
+	// school calendar; the root binds NewCancelledDays. Nil cancels no day.
+	CancelledDays mealplan.CancelledDaysFinder
+	Notices       mealplan.MenuChangeNotices // changed menu to the families (#7145); nil in the worker, which never changes it
 }
 
 func New(dependencies Dependencies) (mealplan.Services, error) {
 	if dependencies.DB == nil || dependencies.Settings == nil || dependencies.Observe == nil || dependencies.Now == nil || dependencies.Participants == nil || dependencies.ParticipantDays == nil || dependencies.StudentNames == nil || dependencies.LockStudent == nil || dependencies.Calendar == nil {
 		return mealplan.Services{}, errors.New("meal plan compose: all dependencies are required")
 	}
-	return application.NewWithCancellations(postgres.New(postgres.NewDatabase(tenant.TransactionFromContext, tenant.TenantFromContext)), postgres.NewCancellations(postgres.NewDatabase(tenant.TransactionFromContext, tenant.TenantFromContext)), application.NewParticipantDirectory(dependencies.Participants, dependencies.StudentNames, dependencies.ParticipantDays, dependencies.LockStudent), dependencies.Calendar, dependencies.Settings, transaction{}, dependencies.Observe, dependencies.Now, dependencies.Notices), nil
+	return application.NewWithCancellations(postgres.New(postgres.NewDatabase(tenant.TransactionFromContext, tenant.TenantFromContext)), postgres.NewCancellations(postgres.NewDatabase(tenant.TransactionFromContext, tenant.TenantFromContext)), application.NewParticipantDirectory(dependencies.Participants, dependencies.StudentNames, dependencies.ParticipantDays, dependencies.LockStudent), dependencies.Calendar, dependencies.CancelledDays, dependencies.Settings, transaction{}, dependencies.Observe, dependencies.Now, dependencies.Notices), nil
 }
 
 type Settings = application.Settings // the application-owned bound resolvers
 
 func NewBoundSettings(mealPlanEnabled, mealRegistrationEnabled func(context.Context) (bool, error), orderingSettings func(context.Context) (OrderingSettings, error)) (*Settings, error) {
 	return application.NewBoundSettings(mealPlanEnabled, mealRegistrationEnabled, orderingSettings)
+}
+
+// NewCancelledDays reads the days without lunch (#7656) in the caller's
+// tenant transaction, in one statement, for the school calendar the root
+// binds into Dependencies.CancelledDays.
+func NewCancelledDays() mealplan.CancelledDaysFinder {
+	return postgres.NewCancelledDays(postgres.NewDatabase(tenant.TransactionFromContext, tenant.TenantFromContext))
 }
 
 // NewMenuChanges reads the change mark (#7666) and the cancellation (#7656) of a day in the caller's tenant transaction.
