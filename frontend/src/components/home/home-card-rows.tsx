@@ -90,6 +90,15 @@ export function upcomingFirst<T>(
   return { items: items.slice(firstRelevant), allPast: false };
 }
 
+/**
+ * Zwei Spalten für eine lange Liste in einer breiten Karte (`@3xl`, 48rem):
+ * man liest sie wie eine Zeitung, erst links nach unten, dann rechts; die
+ * feine Linie dazwischen sagt das. Die Karte braucht `@container`, die
+ * Zeilen `break-inside-avoid`.
+ */
+export const HOME_TWO_COLUMNS =
+  "@3xl:columns-2 @3xl:gap-x-6 @3xl:[column-rule:1px_solid_var(--color-gray-200)]";
+
 /** So viele Zeilen zeigt eine Karte auf dem Handy, bevor sie den Rest zählt. */
 const PHONE_MAX_ROWS = 6;
 

@@ -429,7 +429,7 @@ describe("Betreuungsplan heute (#2180, #8134)", () => {
   });
 
   // Ein Ausfall hinter „Noch 8 Blöcke ansehen“ bliebe sonst unsichtbar.
-  it("nennt am Rest der Liste, wie viele der nicht gezeigten Blöcke ausfallen", () => {
+  it("nennt am Rest der Liste den Block, der dahinter ausfällt", () => {
     const day = hourly(13, 8);
     swr.data = day.map((entry, index) =>
       index === 12 ? { ...entry, status: "cancelled" as const } : entry,
@@ -439,10 +439,10 @@ describe("Betreuungsplan heute (#2180, #8134)", () => {
 
     expect(
       container.querySelector('[data-plan-more="narrow"]'),
-    ).toHaveTextContent(/Noch 9 Blöcke ansehen.*1 fällt aus/);
+    ).toHaveTextContent(/Noch 9 Blöcke ansehen.*„Block 13“ fällt aus/);
     expect(
       container.querySelector('[data-plan-more="wide"]'),
-    ).toHaveTextContent(/Noch 4 Blöcke ansehen.*1 fällt aus/);
+    ).toHaveTextContent(/Noch 4 Blöcke ansehen.*„Block 13“ fällt aus/);
   });
 
   // Die Karte ist so hoch wie ihr Inhalt: nachmittags stünden drei

@@ -22,6 +22,7 @@ import {
   useDayChangeHref,
 } from "~/components/home/day-change-link";
 import { DayNoticeRow } from "~/components/home/day-notice-row";
+import { HOME_TWO_COLUMNS } from "~/components/home/home-card-rows";
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
@@ -49,6 +50,8 @@ import { cn } from "~/lib/utils";
  * sichtbar bleibt.
  */
 const SCHOOL_ROWS = 5;
+/** Bis zu so vielen Zeilen bleibt ein Abschnitt einspaltig. */
+const SINGLE_COLUMN_ROWS = 3;
 const PHONE_SCHOOL_ROWS = 3;
 
 /**
@@ -252,33 +255,28 @@ function DayChangesContent({
     return <HomeCardEmpty title="Heute läuft alles wie geplant." />;
   }
   return (
-    <div className="space-y-4">
+    // Erst was die Person betrifft, darunter die Schule, beide über die
+    // ganze Breite: nebeneinander stand links eine Zeile und daneben eine
+    // lange Liste, und die halbe Karte blieb leer (#8134).
+    <div className="@container space-y-4">
       {failures.length > 0 ? <div className="space-y-2">{failures}</div> : null}
-      <div
-        className={
-          mine.length > 0 && school.length > 0
-            ? "grid gap-4 lg:grid-cols-2"
-            : "grid gap-4"
-        }
-      >
-        {mine.length > 0 ? (
-          <DayChangesSection
-            title="Betrifft dich"
-            entries={mine}
-            now={now}
-            onChanged={onChanged}
-          />
-        ) : null}
-        {school.length > 0 ? (
-          <DayChangesSection
-            title="Schule"
-            entries={school}
-            now={now}
-            onChanged={onChanged}
-            folds
-          />
-        ) : null}
-      </div>
+      {mine.length > 0 ? (
+        <DayChangesSection
+          title="Betrifft dich"
+          entries={mine}
+          now={now}
+          onChanged={onChanged}
+        />
+      ) : null}
+      {school.length > 0 ? (
+        <DayChangesSection
+          title="Schule"
+          entries={school}
+          now={now}
+          onChanged={onChanged}
+          folds
+        />
+      ) : null}
     </div>
   );
 }
@@ -314,7 +312,7 @@ function DayChangesSection({
         {title}
       </SectionLabel>
       {visible.length > 0 ? (
-        <ul id={listId} className="space-y-2">
+        <ul id={listId} className={listClass(visible.length)}>
           {withKeys(visible).map(([key, entry]) =>
             entry.notice ? (
               <DayNoticeRow
@@ -352,6 +350,19 @@ function DayChangesSection({
         {done.length > 0 ? <DoneChanges entries={done} /> : null}
       </div>
     </section>
+  );
+}
+
+/**
+ * Die Zeilen eines Abschnitts. Ab vier Zeilen stehen sie in einer breiten
+ * Karte in zwei Spalten: zwanzig Zeilen untereinander in der halben Breite
+ * ließen die andere Hälfte der Karte leer (#8134). `mb-2` statt `space-y`,
+ * damit die erste Zeile der rechten Spalte auf Höhe der linken beginnt.
+ */
+function listClass(rows: number): string {
+  return cn(
+    "-mb-2 [&>li]:mb-2 [&>li]:break-inside-avoid",
+    rows > SINGLE_COLUMN_ROWS && HOME_TWO_COLUMNS,
   );
 }
 
@@ -418,7 +429,11 @@ function DoneChanges({ entries }: { readonly entries: readonly DayChange[] }) {
       >
         {entries.length} erledigt
       </FoldButton>
-      <ul id={listId} hidden={!open} className="mt-1 space-y-2">
+      <ul
+        id={listId}
+        hidden={!open}
+        className={cn("mt-1", listClass(entries.length))}
+      >
         {open
           ? withKeys(entries).map(([key, entry]) => (
               <DayChangeRow key={key} entry={entry} muted />

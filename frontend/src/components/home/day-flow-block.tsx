@@ -1,6 +1,6 @@
 "use client";
 
-import { Check } from "lucide-react";
+import { Check, TriangleAlert } from "lucide-react";
 
 import { EmptyState } from "~/components/ui/empty-state";
 import { ListRow } from "~/components/ui/list-row";
@@ -27,6 +27,7 @@ import {
   openUntil,
 } from "~/components/home/home-block-row";
 import {
+  HOME_TWO_COLUMNS,
   HomeCardLink,
   HomeMoreRow,
   upcomingFirst,
@@ -93,10 +94,7 @@ export function DayFlowBlock() {
   const inNarrow = new Set(narrow.shown.map((block) => block.id));
   // Zwei Spalten nur, wenn eine nicht reicht: zwei oder drei Blöcke
   // nebeneinander läse man quer statt erst nach unten.
-  const columns =
-    open.length > COLUMN_ROWS
-      ? "@3xl:columns-2 @3xl:gap-x-6 @3xl:[column-rule:1px_solid_var(--color-gray-200)]"
-      : "";
+  const columns = open.length > COLUMN_ROWS ? HOME_TWO_COLUMNS : "";
   const today = blocks[0]?.date;
   // Was vor jetzt lag, steht nicht mehr als Zeile da. Die Karte nennt die
   // Zahl, damit drei Zeilen am Nachmittag nicht wie der ganze Tag aussehen.
@@ -145,7 +143,15 @@ export function DayFlowBlock() {
               <EmptyState
                 variant="compact"
                 tone="neutral"
-                icon={<Check aria-hidden />}
+                // Der Haken nur, wenn alles nach Plan lief: neben „1 Block
+                // ist ausgefallen“ läse er sich als „alles gut“.
+                icon={
+                  dayWentToPlan(blocks, now) ? (
+                    <Check aria-hidden />
+                  ) : (
+                    <TriangleAlert aria-hidden />
+                  )
+                }
                 title="Für heute ist nichts mehr geplant"
                 description={dayOverText(blocks, now)}
               />
@@ -261,11 +267,25 @@ function cancelledNote(
   shown: readonly PlannedTimetableInstance[],
 ): string | undefined {
   const visible = new Set(shown.map((block) => block.id));
-  const count = all.filter(
+  const cancelled = all.filter(
     (block) => block.status === "cancelled" && !visible.has(block.id),
-  ).length;
-  if (count === 0) return undefined;
-  return count === 1 ? "1 fällt aus" : `${count} fallen aus`;
+  );
+  if (cancelled.length === 0) return undefined;
+  // Ein Ausfall beim Namen: genau auf diesen Block muss die Leitung handeln.
+  return cancelled.length === 1
+    ? `„${cancelled[0]!.title}“ fällt aus`
+    : `${cancelled.length} fallen aus`;
+}
+
+/** Kein Block ist ausgefallen oder ungestartet geblieben. */
+function dayWentToPlan(
+  blocks: readonly PlannedTimetableInstance[],
+  now: string,
+): boolean {
+  return blocks.every(
+    (block) =>
+      block.status !== "cancelled" && !blockRowState(block, now).missed,
+  );
 }
 
 /**
