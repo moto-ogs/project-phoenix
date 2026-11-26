@@ -78,6 +78,12 @@ function withTraegerAreas(ownCount = 5): SettingsSections {
         icon: settingsConcept,
         traeger: true,
       },
+      {
+        id: "settings-lohnexport",
+        label: "Lohnexport",
+        icon: settingsConcept,
+        traeger: true,
+      },
     ],
   };
 }
@@ -197,17 +203,18 @@ describe("staff settings navigation", () => {
     ).toBeTruthy();
   });
 
-  it("keeps the Träger heading behind Mehr when its first area stays in the bar", async () => {
-    sections.value = withTraegerAreas(2);
+  it("keeps the Träger heading behind Mehr when multiple areas stay in the bar", async () => {
+    sections.value = withTraegerAreas(1);
     render(<MobileBottomNav />);
 
     expect(
       screen.getByRole("link", { name: "Zuständigkeiten" }),
     ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Briefkopf" })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Mehr" }));
 
-    const sheetLink = await screen.findByRole("link", { name: "Briefkopf" });
+    const sheetLink = await screen.findByRole("link", { name: "Verträge" });
     const heading = screen.getByText("Vom Träger");
     expect(
       heading.compareDocumentPosition(sheetLink) &

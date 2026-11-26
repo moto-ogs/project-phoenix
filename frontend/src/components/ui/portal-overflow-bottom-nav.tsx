@@ -123,12 +123,15 @@ export function PortalOverflowBottomNav({
   const moreItems = crowded
     ? items.filter((item) => !barItems.includes(item))
     : [];
-  // Eine Gruppenüberschrift kann am letzten Eintrag der Leiste hängen. Das
-  // Blatt beginnt dann mit dem nächsten Eintrag derselben Gruppe und muss die
+  // Eine Gruppenüberschrift kann an einem sichtbaren Eintrag der Leiste
+  // hängen. Das Blatt beginnt dann später in derselben Gruppe und muss die
   // Überschrift selbst wiederholen.
   const firstMoreItemHeading = moreItems[0]?.heading
     ? undefined
-    : barItems.at(-1)?.heading;
+    : barItems.reduceRight<string | undefined>(
+        (heading, item) => heading ?? item.heading,
+        undefined,
+      );
 
   const linkProps = (item: PortalOverflowNavItem) => ({
     href: item.href,
