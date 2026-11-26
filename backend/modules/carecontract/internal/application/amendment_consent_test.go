@@ -95,6 +95,25 @@ func TestParentConsentNeedsAPartyAndExactlyTheBookedCare(t *testing.T) {
 	}
 }
 
+// A request signs once. The parents asked for the care, later agreed to
+// something else, and the school books the first care again: their old
+// request no longer says what they want, the new version waits.
+func TestARequestThatAlreadySignedAVersionSignsNoSecondOne(t *testing.T) {
+	t.Parallel()
+	account := consentParty
+	request := consentRequest(consentParty, "2027-10-01", carecontract.RequestedOffering{CareOfferingID: consentGanztag, Days: []string{"mon", "tue"}})
+	application := carecontract.Application{ParentRequests: []carecontract.ParentRequest{request}, Bookings: []carecontract.Booking{
+		{CareOfferingID: consentGanztag, Days: []string{"mon", "tue", "wed"}, ValidFrom: consentDay("2027-08-01"), ValidUntil: consentDay("2027-10-01")},
+		{CareOfferingID: consentGanztag, Days: []string{"mon", "tue"}, ValidFrom: consentDay("2027-10-01")},
+	}}
+	contract := consentContract(ports.PartyAccount{AccountID: &account, Name: "Erika Muster"})
+	require.NotNil(t, parentConsent(consentRead(), application, contract, change2("2027-10-01", "2027-10-01")))
+
+	contract.SignedRequests = []int64{request.ID}
+
+	assert.Nil(t, parentConsent(consentRead(), application, contract, change2("2027-10-01", "2027-10-01")))
+}
+
 func change2(day string, origins ...calendar.Date) change {
 	return change{day: calendar.Date(day), origins: origins}
 }

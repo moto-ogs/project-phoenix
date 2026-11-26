@@ -100,6 +100,10 @@ func (Store) AmendableContracts(ctx context.Context, organizationID int64) ([]po
 	if err != nil {
 		return nil, err
 	}
+	signed, err := signedRequests(ctx, db, organizationID, contractIDs)
+	if err != nil {
+		return nil, err
+	}
 	result := make([]ports.AmendableContract, 0, len(heads))
 	for _, head := range heads {
 		timeline := timelines[head.ContractID]
@@ -109,7 +113,7 @@ func (Store) AmendableContracts(ctx context.Context, organizationID int64) ([]po
 		contract := ports.AmendableContract{
 			ID: head.ContractID, Key: ports.ContractKey{SchoolID: head.SchoolID, RequestChildID: head.RequestChildID},
 			UpdatedAt: head.UpdatedAt, FirstFrom: head.FirstFrom, NextNumber: head.NextNumber, Latest: timeline[len(timeline)-1], Versions: timeline,
-			Parties: accounts[head.ContractID],
+			Parties: accounts[head.ContractID], SignedRequests: signed[head.ContractID],
 		}
 		if requested := waiting[head.ContractID]; len(requested) > 0 {
 			contract.Waiting = &requested[0]
@@ -146,6 +150,25 @@ func partyAccounts(ctx context.Context, db bun.IDB, organizationID int64, ids []
 		accounts[row.ContractID] = append(accounts[row.ContractID], ports.PartyAccount{AccountID: row.AccountID, Email: row.Email, Name: row.Name})
 	}
 	return accounts, nil
+}
+
+// signedRequests reads, per contract, the parents' requests that already
+// count as the signature of one of its versions (#4816).
+func signedRequests(ctx context.Context, db bun.IDB, organizationID int64, ids []int64) (map[int64][]int64, error) {
+	var rows []struct {
+		ContractID int64 `bun:"contract_id"`
+		RequestID  int64 `bun:"change_request_id"`
+	}
+	if err := db.NewRaw(`SELECT contract_id, change_request_id FROM care_contract.contract_signatures
+		WHERE organization_id = ? AND contract_id = ANY(?) AND change_request_id IS NOT NULL ORDER BY contract_id, id`,
+		organizationID, pgdialect.Array(ids)).Scan(ctx, &rows); err != nil {
+		return nil, fmt.Errorf("care contract postgres: read signed requests: %w", err)
+	}
+	signed := make(map[int64][]int64, len(ids))
+	for _, row := range rows {
+		signed[row.ContractID] = append(signed[row.ContractID], row.RequestID)
+	}
+	return signed, nil
 }
 
 // SentContracts reads every sent contract with an application child and

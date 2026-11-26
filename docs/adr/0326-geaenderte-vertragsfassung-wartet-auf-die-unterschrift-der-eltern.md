@@ -54,6 +54,11 @@ entscheidet, wie moto beides erkennt und umsetzt.
      geltenden Version ändert. Eine überfällige Änderung gilt ab heute und
      steht mit älteren Tagen zusammen; die trägt die geltende Version schon.
 
+   - Die Anfrage hat noch keine Version dieses Vertrags unterschrieben. Eine
+     Anfrage unterschreibt einmal: Bucht die Schule dieselbe Betreuung später
+     noch einmal, nachdem die Eltern etwas anderem zugestimmt haben, wartet
+     die neue Version.
+
    Trifft alles zu, wird die Version sofort `wirksam`. `contract_signatures`
    bekommt einen Eintrag mit dem Verfahren `request`, dem Konto, dem
    Zeitpunkt des Antrags, der Nummer der Anfrage und den Prüfsummen der
@@ -139,3 +144,20 @@ entscheidet, wie moto beides erkennt und umsetzt.
   erklären ihn beim Träger.
 - Zählt der Antrag der Eltern als Unterschrift, sehen sie dabei keine
   Widerrufsbelehrung. Auch das gehört in die Rechtsprüfung.
+- Der Abgleich läuft alle fünf Minuten. Unterschreiben Eltern in diesem
+  Fenster eine Fassung, deren Buchungen sich gerade geändert haben, schließt
+  der Vertrag auf dieser Fassung. Der nächste Lauf legt die Änderung dann als
+  Version an, die auf die Unterschrift wartet oder vom Antrag getragen ist.
+  Der Vertrag bleibt also nicht auf der alten Fassung stehen; die Abrechnung
+  folgt ihr aber, bis die neue gilt. Dasselbe gilt für einen versendeten
+  Vertrag, dessen Kind gar keine Betreuung mehr bucht: Das ist ein Ende der
+  Betreuung, keine neue Fassung, und läuft über Kündigung oder Rücknahme.
+- Das Postfach der Eltern-App bietet die Unterschrift dem Konto an, an dessen
+  Adresse der Vertrag ging und das für das Kind handeln darf, wie beim ersten
+  Vertrag (ADR 0155). Leitet das Träger-Büro den Versand an einen anderen
+  Elternteil um, kann dieser unterschreiben. Das ist die Entscheidung des
+  Büros.
+- Die Down-Migration ist ein Werkzeug für die Entwicklung. Nach dem ersten
+  Einsatz in Produktion löscht sie Nachweise (Unterschriften per Antrag,
+  `agreed_from`) von Versionen, die weiter gelten. Ein Rollback in Produktion
+  geht nur vorwärts.

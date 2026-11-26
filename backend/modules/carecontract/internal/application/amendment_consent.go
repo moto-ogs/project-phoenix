@@ -61,7 +61,7 @@ func parentConsent(read schoolRead, application carecontract.Application, contra
 		if !origin.After(carried) || !careChangesOn(read, application.Bookings, origin) {
 			continue
 		}
-		found := requestOn(read, application, contract.Parties, origin)
+		found := requestOn(read, application, contract, origin)
 		if found == nil {
 			return nil
 		}
@@ -81,10 +81,14 @@ func careChangesOn(read schoolRead, bookings []carecontract.Booking, day calenda
 }
 
 // requestOn is the request of a party that took effect on day and whose
-// modules and weekdays the bookings of that day carry.
-func requestOn(read schoolRead, application carecontract.Application, parties []ports.PartyAccount, day calendar.Date) *signedRequest {
+// modules and weekdays the bookings of that day carry. A request that
+// already signed a version of the contract signs no second one: when the
+// school later books that care again, after the parents agreed to something
+// else, the old request no longer says what they want.
+func requestOn(read schoolRead, application carecontract.Application, contract AmendableContract, day calendar.Date) *signedRequest {
+	parties := contract.Parties
 	for _, request := range application.ParentRequests {
-		if request.EffectiveFrom != day {
+		if request.EffectiveFrom != day || slices.Contains(contract.SignedRequests, request.ID) {
 			continue
 		}
 		index := slices.IndexFunc(parties, func(party ports.PartyAccount) bool { return party.Sent(request.AccountID, request.AccountEmail) })

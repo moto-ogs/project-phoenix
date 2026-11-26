@@ -63,15 +63,15 @@ func TestSeedCareContractSchoolChangeTakesOneDayOffAContractChild(t *testing.T) 
 			var body map[string]any
 			srv := newSeedHTTPTestServer(func(w seedHTTPResponseWriter, r *seedHTTPRequest) {
 				w.Header().Set("Content-Type", "application/json")
-				switch {
-				case r.URL.Path == "/traeger/contracts/":
+				switch r.URL.Path {
+				case "/traeger/contracts/":
 					_, _ = fmt.Fprintf(w, `{"data":{"contracts":[{"request_child_id":"38","student_id":"6","change_awaits_signature":%t}]}}`, waits)
-				case r.URL.Path == "/api/enrollment/admin/students/6/requests":
+				case "/api/enrollment/admin/students/6/requests":
 					_, _ = fmt.Fprint(w, `{"data":[{"id":"31"}]}`)
-				case r.URL.Path == "/api/enrollment/admin/requests/31":
+				case "/api/enrollment/admin/requests/31":
 					_, _ = fmt.Fprint(w, `{"data":{"children":[{"id":"38","offerings_version":"v1","offerings":[
 						{"offering_id":"1","selected_days":["mon","wed","fri"]},{"offering_id":"3"}]}]}}`)
-				case r.URL.Path == "/api/enrollment/admin/requests/31/children/38/offerings":
+				case "/api/enrollment/admin/requests/31/children/38/offerings":
 					put = append(put, r.Method)
 					require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
 					_, _ = fmt.Fprint(w, `{"data":{}}`)

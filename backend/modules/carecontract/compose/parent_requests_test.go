@@ -3,6 +3,7 @@ package compose_test
 import (
 	"context"
 	"fmt"
+	"hash/fnv"
 	"slices"
 	"testing"
 	"time"
@@ -41,13 +42,18 @@ func (a askedByParents) ApprovedParentRequests(ctx context.Context, requestChild
 				}
 			}
 		}
-		for i, day := range days {
-			request := carecontract.ParentRequest{ID: int64(i + 1), AccountID: a.account, SubmittedAt: requestSubmittedAt, EffectiveFrom: day}
+		for _, day := range days {
+			request := carecontract.ParentRequest{AccountID: a.account, SubmittedAt: requestSubmittedAt, EffectiveFrom: day}
 			for _, booking := range booked {
 				if (booking.ValidFrom == nil || !booking.ValidFrom.After(day)) && (booking.ValidUntil == nil || booking.ValidUntil.After(day)) {
 					request.Offerings = append(request.Offerings, carecontract.RequestedOffering{CareOfferingID: booking.CareOfferingID, Days: booking.Days})
 				}
 			}
+			// A request signs once: other care on the same day is another
+			// request of the parents, with a number of its own.
+			number := fnv.New32a()
+			_, _ = fmt.Fprint(number, day, request.Offerings)
+			request.ID = int64(number.Sum32())
 			requests[child] = append(requests[child], request)
 		}
 	}

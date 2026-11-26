@@ -47,9 +47,12 @@ export function PaperSignatureModal({
   onSaved: RefreshAfterWrite;
 }>) {
   const party = contract.parties[0];
-  // The version that waits for the signature; the scan belongs to it.
-  const waiting = contract.versions.find(
-    (version) => version.status === "beantragt",
+  // The version that waits for the signature; the scan belongs to it. The
+  // dialog keeps the version it opened with: when the contract reloads while
+  // it is open and a newer version waits by then, the scan must not sign
+  // that one. The server then refuses the overtaken version.
+  const [waiting] = useState(() =>
+    contract.versions.find((version) => version.status === "beantragt"),
   );
   const [signerName, setSignerName] = useState(
     party ? `${party.firstName} ${party.lastName}`.trim() : "",

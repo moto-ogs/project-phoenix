@@ -47,6 +47,10 @@ type AmendableContract struct {
 	// Parties are the contract's parties: only a request one of them sent
 	// counts as the signature of a version.
 	Parties []PartyAccount
+	// SignedRequests are the parents' requests that already count as the
+	// signature of a version of this contract. A request signs once: when
+	// the school books its care again later, the parents sign anew.
+	SignedRequests []int64
 }
 
 // PartyAccount is a party of a contract as a request is matched to it: by
