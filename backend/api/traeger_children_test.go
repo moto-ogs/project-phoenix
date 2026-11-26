@@ -14,6 +14,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/traegerview"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/collation"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
@@ -65,9 +66,8 @@ func TestTraegerChildrenListTheChildrenOfEverySchoolByName(t *testing.T) {
 	testpkg.CreateTestStudentForTenant(t, db, foreign, "Fritz", "Fremd", "4a")
 	// A child that left is no child of the Stichtagszahl rule any more.
 	left := testpkg.CreateTestStudentForTenant(t, db, linde, "Lars", "Fort", "4a")
-	_, err := db.ExecContext(context.Background(), `UPDATE users.student_school_memberships
-		SET enrolled_until = CURRENT_DATE - 1 WHERE tenant_id = ? AND student_profile_id = ?`, linde, left.ID)
-	require.NoError(t, err)
+	lastDay := calendar.NewDate(2026, 7, 31)
+	testpkg.SetStudentLifecycle(t, db, left.ID, "active", nil, &lastDay)
 	token, _ := traegerChildrenSignIn(t, db, router, organization, identityaccess.TraegerRoleAdministration)
 
 	all := traegerChildren(t, router, token, "")
@@ -92,7 +92,7 @@ func TestTraegerChildrenListTheChildrenOfEverySchoolByName(t *testing.T) {
 	assert.Equal(t, 1, one.Total, "the children of the chosen school")
 	assert.Len(t, one.Schools, 2, "every school keeps its tab")
 
-	for search, want := range map[string]string{"omer": "Aksoy, Ömer", "zander mi": "Zander, Mia", "ANNA BE": "Berg, Anna"} {
+	for search, want := range map[string]string{"omer": "Aksoy, Ömer", "zander mi": "Zander, Mia", "zander, mi": "Zander, Mia", "ANNA BE": "Berg, Anna"} {
 		found := traegerChildren(t, router, token, "?search="+url.QueryEscape(search))
 		assert.Equal(t, []string{want}, childNames(found.Children), "search %q", search)
 		assert.Equal(t, 1, found.Matched)

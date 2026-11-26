@@ -14,11 +14,11 @@ import {
   traegerExportScope,
   useTraegerListExportItems,
 } from "~/components/traeger/traeger-list-export-menu";
-import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
+import { isRefusal } from "~/components/traeger/use-traeger-confirmed-resource";
+import { useFreshTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { useTraegerSchools } from "~/components/traeger/use-traeger-schools";
 import { Button } from "~/components/ui/button";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
-import { EmptyState } from "~/components/ui/empty-state";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { ListSkeleton } from "~/components/ui/page-skeletons";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
@@ -26,6 +26,7 @@ import { useApiErrorDisplay } from "~/contexts/ToastContext";
 import { childrenConcept } from "~/lib/concepts/children";
 import { createLogger } from "~/lib/logger";
 import { schoolClassLabel, schoolClassName } from "~/lib/school-class-label";
+import { useSWRRequestGuard } from "~/lib/swr/hooks";
 import { traegerKeys } from "~/lib/swr/traeger-keys";
 import {
   downloadTraegerChildren,
@@ -44,16 +45,6 @@ const ALL_SCHOOLS = "alle";
 /** Die Schule in der Adresse, damit ein Lesezeichen ihren Reiter öffnet. */
 const SCHOOL_PARAM = "schule";
 const LIST_OBJECT = "die Liste der Kinder";
-
-// Jede geladene Seite steht im Zugriffsprotokoll der gezeigten Schulen: ein
-// Lesen je Öffnen und Filter, keines beim Zurückkehren in den Tab, bei neuer
-// Verbindung oder aus dem Dedupe-Fenster.
-const ONCE_PER_OPENING = {
-  revalidateOnMount: true,
-  revalidateOnFocus: false,
-  revalidateOnReconnect: false,
-  dedupingInterval: 0,
-};
 
 function Plain({ value }: Readonly<{ value: string }>) {
   return <span className="text-sm text-gray-700">{value || "–"}</span>;
@@ -163,12 +154,16 @@ function ChildrenContent() {
     () => ({ schoolId, search: debouncedSearch }),
     [schoolId, debouncedSearch],
   );
-  const first = useTraegerResource(
-    traegerKeys.children(filter),
+  // Every page read stands in the access log of the schools it shows. So a
+  // reiter or a search shows nothing until its own read answered, also when
+  // the person comes back to one the tab has read before (ADR 0311).
+  const listKey = traegerKeys.children(filter);
+  const first = useFreshTraegerResource(
+    listKey,
     () => fetchTraegerChildren(filter),
     LIST_OBJECT,
-    ONCE_PER_OPENING,
   );
+  const beginPageRead = useSWRRequestGuard();
 
   // Later pages belong to the first page they continue; another reiter,
   // another search or a reload starts a new list and drops them.
@@ -188,6 +183,7 @@ function ChildrenContent() {
 
   const loadMore = async () => {
     if (!page) return;
+    const complete = beginPageRead(listKey);
     setLoadingMore(true);
     try {
       const next = await fetchTraegerChildren(filter, children.length);
@@ -197,19 +193,35 @@ function ChildrenContent() {
         hasMore: next.hasMore,
       });
     } catch (err) {
-      logger.error("traeger_children_load_more_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      await showActionError(err, { object: "die nächsten Kinder" });
+      // The next children have the access boundary of the first: a refusal
+      // takes the names already shown away, for this list only.
+      if (isRefusal(err)) {
+        complete(() => {
+          first.readCallbacks.onError(err);
+          void first.mutate(undefined, { revalidate: false });
+          setLater(null);
+        });
+      } else {
+        logger.error("traeger_children_load_more_failed", {
+          error: err instanceof Error ? err.message : String(err),
+        });
+        await showActionError(err, { object: "die nächsten Kinder" });
+      }
     } finally {
       setLoadingMore(false);
     }
   };
 
   // The reiters come from the schools the page was opened with, so they
-  // stand while a list loads; the list's own answer keeps them current.
-  const schools: readonly Pick<TraegerSchoolChildCount, "id" | "name">[] =
-    page?.schools ?? knownSchools ?? [];
+  // stand while a list loads. Each answer brings the schools with the number
+  // of their children; the last one stays at the reiters while the next
+  // list loads, so the numbers do not flicker on every change.
+  const [counted, setCounted] = useState<
+    readonly TraegerSchoolChildCount[] | null
+  >(null);
+  if (page && page.schools !== counted) setCounted(page.schools);
+  const schools: readonly (Pick<TraegerSchoolChildCount, "id" | "name"> &
+    Partial<TraegerSchoolChildCount>)[] = counted ?? knownSchools ?? [];
   const school = schools.find((entry) => entry.id === schoolId);
   const changeTab = (next: string) => {
     setTab(next);
@@ -234,21 +246,42 @@ function ChildrenContent() {
   const columns = useMemo(() => childColumns(showSchool), [showSchool]);
   const searching = debouncedSearch !== "";
   const loading = !page && !first.error;
-  const emptyText = searching
-    ? {
-        title: "Kein Kind gefunden",
-        description: emptySearchText(search, []).description,
-      }
-    : school
-      ? {
-          title: "Keine Kinder an dieser Schule",
-          description: `${school.name} führt heute kein Kind mit Betreuungsplatz.`,
-        }
-      : {
-          title: "Noch keine Kinder",
-          description:
-            "Sobald eine deiner Schulen Kinder mit Betreuungsplatz führt, stehen sie hier.",
-        };
+  const noMatch = emptySearchText(search, []);
+  // A search without a hit offers the way back. A list nobody can fill
+  // from here is one sentence, not a stage.
+  const empty =
+    !page || children.length > 0
+      ? undefined
+      : searching
+        ? {
+            title: "Kein Kind gefunden",
+            description: noMatch.description,
+            icon: (
+              <MotoConceptIcon
+                concept={childrenConcept}
+                className="h-12 w-12"
+              />
+            ),
+            action: (
+              <Button
+                type="button"
+                variant="outline"
+                size="md"
+                tooltip="Leert die Suche und zeigt wieder alle Kinder."
+                onClick={() => setSearch("")}
+              >
+                {noMatch.actionLabel}
+              </Button>
+            ),
+          }
+        : school
+          ? {
+              title: `${school.name} führt heute kein Kind mit Betreuungsplatz`,
+            }
+          : {
+              title:
+                "Deine Schulen führen heute noch kein Kind mit Betreuungsplatz",
+            };
 
   return (
     <TenantPage
@@ -280,12 +313,15 @@ function ChildrenContent() {
                 ...schools.map((entry) => ({
                   value: entry.id,
                   label: entry.name,
+                  // The children the school counts today, as in its own view.
+                  badge: entry.children,
                 })),
               ],
             }
           : undefined
       }
       error={first.error}
+      empty={empty}
       // A list loads in the shape of its rows.
       loading={loading ? <ListSkeleton rows={8} avatar={false} /> : false}
     >
@@ -309,30 +345,6 @@ function ChildrenContent() {
                     "Zeigt die nächsten 50 Kinder unten in der Liste an.",
                 }
               : undefined
-          }
-          emptyState={
-            <EmptyState
-              icon={
-                <MotoConceptIcon
-                  concept={childrenConcept}
-                  className="h-12 w-12"
-                />
-              }
-              {...emptyText}
-              action={
-                searching ? (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="md"
-                    tooltip="Leert die Suche und zeigt wieder alle Kinder."
-                    onClick={() => setSearch("")}
-                  >
-                    {emptySearchText(search, []).actionLabel}
-                  </Button>
-                ) : undefined
-              }
-            />
           }
         />
       ) : null}

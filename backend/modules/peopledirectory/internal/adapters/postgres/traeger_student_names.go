@@ -25,8 +25,10 @@ type studentNames struct {
 const studentNameSearch = `'%' || ` + collation.UnaccentLikePatternSQL + ` || '%' ESCAPE '\'`
 
 // studentNamesSQL takes the school set, the student profiles, the search
-// text three times, the limit (NULL for none) and the offset. The name
-// columns carry the German collation, so the order needs none of its own.
+// text four times, the limit (NULL for none) and the offset. A name matches
+// as "first last", as "last first" and as the list shows it, "last, first".
+// The name columns carry the German collation, so the order needs none of
+// its own.
 // The statement holds what a person typed, so the query log redacts its
 // literals.
 const studentNamesSQL = collation.RedactLiteralsInLog + `SELECT profile.tenant_id, profile.id, person.first_name, person.last_name, count(*) OVER () AS matched
@@ -36,7 +38,8 @@ JOIN users.persons AS person
 WHERE profile.tenant_id = ANY(?) AND profile.id = ANY(?)
   AND (? = ''
     OR public.f_unaccent(person.first_name || ' ' || person.last_name) ILIKE ` + studentNameSearch + `
-    OR public.f_unaccent(person.last_name || ' ' || person.first_name) ILIKE ` + studentNameSearch + `)
+    OR public.f_unaccent(person.last_name || ' ' || person.first_name) ILIKE ` + studentNameSearch + `
+    OR public.f_unaccent(person.last_name || ', ' || person.first_name) ILIKE ` + studentNameSearch + `)
 ORDER BY person.last_name, person.first_name, profile.id
 LIMIT ? OFFSET ?`
 
@@ -65,7 +68,7 @@ func (s studentNames) StudentNamesByTenant(ctx context.Context, schools []int64,
 		LastName  string `bun:"last_name"`
 		Matched   int    `bun:"matched"`
 	}
-	if err := db.NewRaw(studentNamesSQL, pgdialect.Array(schools), pgdialect.Array(query.StudentProfileIDs), query.Search, query.Search, query.Search, limit, query.Offset).
+	if err := db.NewRaw(studentNamesSQL, pgdialect.Array(schools), pgdialect.Array(query.StudentProfileIDs), query.Search, query.Search, query.Search, query.Search, limit, query.Offset).
 		Scan(ctx, &rows); err != nil {
 		return nil, 0, fmt.Errorf("people directory postgres: student names: %w", err)
 	}

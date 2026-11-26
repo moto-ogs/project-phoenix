@@ -45,9 +45,9 @@ Structure. Ein Träger hat 2 bis über 100 Schulen mit je 50 bis 400 Kindern.
 3. **Welche Kinder.** Die Liste zeigt die Kinder der Stichtagszahl-Regel von
    heute (#2791), dieselben wie „Kinder gesamt“ der Schulansicht und die
    Belegung. Die Zahl am Reiter einer Schule ist damit dieselbe Zahl wie in
-   der Schulansicht. Ein Feriengast steht bei der ausrichtenden OGS mit der
-   Klasse, die School Membership ihm gibt. Die Definitionen stehen an
-   `traegerview.TraegerChildren`.
+   der Schulansicht. Führt die ausrichtende OGS einen Feriengast nach dieser
+   Regel, steht er bei ihr, mit der Klasse, die School Membership ihm gibt.
+   Die Definitionen stehen an `traegerview.TraegerChildren`.
 4. **Lesen über die Owner in der Admin-Einheit der Projektion.**
    `GET /traeger/schools/children` liest je Seite:
    - die Schulen des Trägers und ihre Zeilen (bestehend),
@@ -68,8 +68,9 @@ Structure. Ein Träger hat 2 bis über 100 Schulen mit je 50 bis 400 Kindern.
    der Schulen und Kinder.
 5. **Seiten und Suche.** Eine Seite hat 50 Kinder, geordnet nach Nachname,
    Vorname und ID in der deutschen Sortierung der Namensspalten. Die Suche
-   trifft einen Teil von „Vorname Nachname“ oder „Nachname Vorname“, ohne
-   Groß- und Kleinschreibung und Akzente. Der Suchtext steht nicht im
+   trifft einen Teil von „Vorname Nachname“, „Nachname Vorname“ oder
+   „Nachname, Vorname“, wie die Liste den Namen zeigt, ohne Groß- und
+   Kleinschreibung und Akzente. Der Suchtext steht nicht im
    Query-Log (ADR 0234). `school_id` grenzt auf eine Schule ein; eine Schule
    eines anderen Trägers und eine unbekannte ID antworten gleich mit 404
    `traeger.school_not_found`.
@@ -78,7 +79,11 @@ Structure. Ein Träger hat 2 bis über 100 Schulen mit je 50 bis 400 Kindern.
    jeder Schule, von der eine Zeile gezeigt wurde, mit Konto, Kanal
    „Träger-Portal“ und der Zahl der Zeilen (`traeger_children`,
    `traeger_children_export`). Die Zahlen je Schule an den Reitern sind
-   zusammengefasst und stehen nicht im Protokoll.
+   zusammengefasst und stehen nicht im Protokoll. Die Seite zeigt deshalb
+   nach jedem Wechsel von Reiter oder Suche erst die Antwort ihres eigenen
+   Abrufs, nie Namen aus dem Speicher des Browsers (ADR 0311, Regel für
+   protokollierte Lesezugriffe). Verweigert das Nachladen den Zugriff,
+   verschwinden auch die schon gezeigten Namen.
 7. **Modul.** Die Liste gehört wie die Schulliste zu moto Basis.
 8. **Wurzel und Register.** `api/traeger_children_ports.go` übersetzt die
    Namensabfrage und ihre Antwort zwischen Projektion und People Directory;

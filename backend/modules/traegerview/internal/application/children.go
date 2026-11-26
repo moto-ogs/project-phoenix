@@ -71,7 +71,7 @@ func (o *Overview) ChildrenExport(ctx context.Context, viewer traegerview.Viewer
 			return err
 		}
 		if filter.SchoolID > 0 {
-			result.SchoolName = listed.names[filter.SchoolID]
+			result.SchoolName = listed.schoolNames[filter.SchoolID]
 		}
 		names, _, err := o.children.Names.StudentNamesByTenant(adminCtx, listed.scope, traegerview.StudentNameQuery{Students: listed.students, Search: filter.Search})
 		if err != nil {
@@ -117,9 +117,9 @@ func (o *Overview) today() window {
 // listedChildren are the children the schools of the Träger count today and
 // the part of them a filter lists.
 type listedChildren struct {
-	schools []traegerview.TraegerSchool
-	names   map[int64]string
-	roster  map[int64]map[int64]int64
+	schools     []traegerview.TraegerSchool
+	schoolNames map[int64]string
+	roster      map[int64]map[int64]int64
 	// scope are the schools of the filter, students their counted children
 	// and memberships the membership of each of those.
 	scope       []int64
@@ -142,9 +142,9 @@ func (o *Overview) listedChildren(adminCtx context.Context, ids []int64, filter 
 	if err != nil {
 		return listedChildren{}, err
 	}
-	listed := listedChildren{schools: schools, names: make(map[int64]string, len(schools)), roster: roster, scope: ids, memberships: map[int64]int64{}}
+	listed := listedChildren{schools: schools, schoolNames: make(map[int64]string, len(schools)), roster: roster, scope: ids, memberships: map[int64]int64{}}
 	for _, school := range schools {
-		listed.names[school.ID.Int64()] = school.Name
+		listed.schoolNames[school.ID.Int64()] = school.Name
 	}
 	if filter.SchoolID > 0 {
 		listed.scope = []int64{filter.SchoolID}
@@ -202,7 +202,7 @@ func (o *Overview) placedChildren(adminCtx context.Context, listed listedChildre
 	for _, name := range names {
 		membership := listed.memberships[name.StudentProfileID]
 		children = append(children, traegerview.TraegerChild{
-			StudentID: ident.ID(name.StudentProfileID), SchoolID: ident.ID(name.SchoolID), SchoolName: listed.names[name.SchoolID],
+			StudentID: ident.ID(name.StudentProfileID), SchoolID: ident.ID(name.SchoolID), SchoolName: listed.schoolNames[name.SchoolID],
 			FirstName: name.FirstName, LastName: name.LastName, SchoolClass: classes[membership], GroupName: groupNames[groups[membership]],
 		})
 	}

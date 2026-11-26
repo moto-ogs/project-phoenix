@@ -89,6 +89,10 @@ const pageOf = (
   ...rest,
 });
 
+/** The reiter of a school; its name ends with the number of its children. */
+const schoolTab = (school: typeof BACH) =>
+  screen.getByRole("tab", { name: new RegExp(`^${school.name}`) });
+
 function renderPage() {
   render(
     <TraegerResourceTestProvider>
@@ -130,8 +134,9 @@ describe("TraegerChildrenPage", () => {
       "aria-selected",
       "true",
     );
-    expect(screen.getByRole("tab", { name: BACH.name })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: LINDE.name })).toBeInTheDocument();
+    // Each school's reiter carries the number of children it counts.
+    expect(schoolTab(BACH)).toHaveTextContent(/2$/);
+    expect(schoolTab(LINDE)).toHaveTextContent(/1$/);
     expect(api.fetchTraegerChildren).toHaveBeenCalledWith({
       schoolId: "",
       search: "",
@@ -142,7 +147,7 @@ describe("TraegerChildrenPage", () => {
     renderPage();
     await screen.findAllByText("Zander, Mia");
 
-    fireEvent.click(screen.getByRole("tab", { name: LINDE.name }));
+    fireEvent.click(schoolTab(LINDE));
 
     await waitFor(() =>
       expect(api.fetchTraegerChildren).toHaveBeenCalledWith({
@@ -173,10 +178,7 @@ describe("TraegerChildrenPage", () => {
     expect((await screen.findAllByText("Berg, Anna")).length).toBeGreaterThan(
       0,
     );
-    expect(screen.getByRole("tab", { name: LINDE.name })).toHaveAttribute(
-      "aria-selected",
-      "true",
-    );
+    expect(schoolTab(LINDE)).toHaveAttribute("aria-selected", "true");
     expect(api.fetchTraegerChildren).toHaveBeenCalledWith({
       schoolId: LINDE.id,
       search: "",
@@ -252,6 +254,53 @@ describe("TraegerChildrenPage", () => {
     expect(
       screen.queryByRole("button", { name: /Weitere Kinder laden/ }),
     ).not.toBeInTheDocument();
+  });
+
+  it("shows no names of an earlier visit before the reiter's own read answers", async () => {
+    renderPage();
+    await screen.findAllByText("Zander, Mia");
+    fireEvent.click(schoolTab(LINDE));
+    await screen.findAllByText("Berg, Anna");
+    // Every read is written to the schools' access logs: coming back to
+    // „Alle“ waits for its own answer instead of showing the cached names.
+    api.fetchTraegerChildren.mockImplementation(
+      () => new Promise(() => undefined),
+    );
+
+    fireEvent.click(screen.getByRole("tab", { name: "Alle" }));
+
+    // Anchor: the reiter is open and its list is loading.
+    await waitFor(() =>
+      expect(screen.getByRole("tab", { name: "Alle" })).toHaveAttribute(
+        "aria-selected",
+        "true",
+      ),
+    );
+    expect(screen.queryByText("Zander, Mia")).not.toBeInTheDocument();
+    expect(screen.queryByText("Berg, Anna")).not.toBeInTheDocument();
+  });
+
+  it("takes the shown names away when loading the next children is refused", async () => {
+    api.fetchTraegerChildren.mockResolvedValueOnce(
+      pageOf([AKSOY, BERG], { total: 3, matched: 3, hasMore: true }),
+    );
+    renderPage();
+    await screen.findAllByText("Berg, Anna");
+    api.fetchTraegerChildren
+      .mockRejectedValueOnce(new ApiError("refused", 403))
+      .mockImplementation(() => new Promise(() => undefined));
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Weitere Kinder laden (2 von 3)" }),
+    );
+
+    // Anchor: the refusal is shown, so the list is gone, not only hidden.
+    expect(
+      await screen.findByText(
+        catalogText("general.permission", "die Liste der Kinder"),
+      ),
+    ).toBeVisible();
+    expect(screen.queryByText("Berg, Anna")).not.toBeInTheDocument();
   });
 
   it("names the missing right instead of a list", async () => {

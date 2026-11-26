@@ -21,8 +21,8 @@ import (
 //     under its host school with the class School Membership gives it.
 //   - The list is ordered by last name, first name and ID, in the German
 //     order of the name columns.
-//   - The search matches a part of "first last" or "last first", without
-//     case and accents.
+//   - The search matches a part of "first last", "last first" or "last,
+//     first" as the list shows a name, without case and accents.
 //   - A row names the child and where it is cared for, nothing else: no date
 //     of birth, no address, no health or support information, no contract.
 

@@ -26,7 +26,7 @@ export function traegerChildrenTopic(): HelpTopic {
     notes: [
       "Die Liste ist nach Nachnamen sortiert.",
       "Die Suche findet Vornamen und Nachnamen, auch ohne Umlaute: „Oemer“ musst du nicht tippen, „omer“ findet „Ömer“.",
-      "Die Zahl oben nennt die Kinder des offenen Reiters. Sie ist dieselbe Zahl wie `Kinder gesamt` in der Ansicht der Schule.",
+      "Am Reiter jeder Schule steht die Zahl ihrer Kinder. Sie ist dieselbe Zahl wie `Kinder gesamt` in der Ansicht der Schule.",
       "moto hält fest, wer die Liste öffnet oder herunterlädt. Das steht im Zugriffsprotokoll der Schule.",
     ],
     differences: [

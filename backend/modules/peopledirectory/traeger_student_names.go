@@ -11,8 +11,8 @@ type SchoolStudentName struct {
 }
 
 // SchoolStudentNameQuery selects names among the given student profiles: those a
-// part of whose "first last" or "last first" matches Search without case and
-// accents (empty for all), ordered by last name, first name and profile ID,
+// part of whose "first last", "last first" or "last, first" matches Search
+// without case and accents (empty for all), ordered by last name, first name and profile ID,
 // Limit of them (0 for all) after Offset.
 type SchoolStudentNameQuery struct {
 	StudentProfileIDs []int64
