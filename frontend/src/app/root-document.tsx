@@ -140,7 +140,7 @@ export async function RootDocument({
       <body
         className={`${inter.className} ${inter.variable} ${motoFont.variable}`}
       >
-        <Providers>
+        <Providers moreContrast={contrast === "more"}>
           <RouteTitle {...titleProps}>
             <BackgroundWrapper>
               <Suspense>{children}</Suspense>

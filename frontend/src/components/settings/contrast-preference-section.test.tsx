@@ -7,6 +7,7 @@ import {
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ContrastAccountSync } from "./contrast-account-sync";
+import { ContrastPreferenceHydration } from "./contrast-preference-hydration";
 import { ContrastPreferenceSection } from "./contrast-preference-section";
 
 const mocks = vi.hoisted(() => ({
@@ -71,6 +72,18 @@ describe("ContrastPreferenceSection", () => {
     expect(mocks.showError.mock.calls[0]?.[0]).toBe(failure);
     expect(document.documentElement.dataset.contrast).toBeUndefined();
     expect(toggle).toHaveAttribute("aria-checked", "false");
+  });
+
+  it("uses the server's cookie snapshot during hydration", () => {
+    document.documentElement.dataset.contrast = "more";
+
+    render(
+      <ContrastPreferenceHydration moreContrast>
+        <ContrastPreferenceSection portal="tenant" />
+      </ContrastPreferenceHydration>,
+    );
+
+    expect(screen.getByRole("switch")).toHaveAttribute("aria-checked", "true");
   });
 });
 

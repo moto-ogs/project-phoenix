@@ -15,6 +15,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	identityaccessCompose "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose"
 	meAPI "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/me"
+	identityOperatorHTTP "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/operator"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	settingsModule "github.com/moto-ogs/project-phoenix/modules/settings"
@@ -52,7 +53,7 @@ func mountServeRootHost(db transactionruntime.Database, env owners.RootEnvironme
 	if err != nil {
 		return router, auth, err
 	}
-	mountDisplayPreferences(router, identityaccessCompose.NewAccountDisplayPreferences(db.Pool(), db.UnitOfWork()))
+	mountDisplayPreferences(router, identityaccessCompose.NewAccountDisplayPreferences(db.Pool(), db.UnitOfWork()), identity)
 	return router, auth, nil
 }
 
@@ -182,10 +183,11 @@ func mountAnalyticsConsent(router chi.Router, consent identityaccess.AccountAnal
 // mountDisplayPreferences serves each person's display preferences
 // ("Mehr Kontrast") in every portal, operators included. Like the consent
 // above, the Authenticator verifies the access token, the preview middleware
-// blocks writes, and the resource refuses preview sessions itself.
-func mountDisplayPreferences(router chi.Router, preferences identityaccess.AccountDisplayPreferences) {
+// blocks writes, and the resource refuses preview sessions itself. Platform
+// sessions additionally verify their active operator and refresh family.
+func mountDisplayPreferences(router chi.Router, preferences identityaccess.AccountDisplayPreferences, operators identityaccess.OperatorSessionLiveness) {
 	router.Mount("/display-preferences", meAPI.NewDisplayPreferencesResource(preferences).Router(func(r chi.Router) {
-		r.Use(sessiontoken.Authenticator, ReadOnlyPreviewMiddleware)
+		r.Use(sessiontoken.Authenticator, ReadOnlyPreviewMiddleware, identityOperatorHTTP.RequiresLivePlatformOperator(operators))
 	}))
 }
 

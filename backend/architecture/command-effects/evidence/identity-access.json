@@ -4041,6 +4041,14 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.VerifyOperatorSession",
+      "binding_digest": "320226bfa8a6488747b6798147203eb9",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.OperatorSessionLiveness.VerifyOperatorSession",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
+      "target_owner": "tenant-runtime"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.AcceptGuardianInvitation",
       "binding_digest": "223a9e381e77a997bb16177f6181e8b4",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.AcceptGuardianInvitation",

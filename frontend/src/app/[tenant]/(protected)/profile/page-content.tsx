@@ -382,8 +382,11 @@ function ProfileContent() {
           Sichtbarkeits- und Benachrichtigungsentscheidungen des eigenen Kontos. */}
       <BirthdayVisibilitySection />
       <PushNotificationSection />
-      {/* Darstellung des Kontos in allen Portalen: dunklere Feldränder. */}
-      <ContrastPreferenceSection portal="tenant" />
+      {/* Darstellung des Kontos in allen Portalen: dunklere Feldränder.
+          Eine Vorschau zeigt die fremde Person und ändert deshalb kein Konto. */}
+      {session?.user?.isPreview !== true ? (
+        <ContrastPreferenceSection portal="tenant" />
+      ) : null}
       <PasskeySettingsSection />
       <TrustedDevicesSection />
       {/* Eigene Einwilligung zur Nutzungsanalyse (#4901), mit Hinweis auf

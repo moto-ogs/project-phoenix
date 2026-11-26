@@ -1,6 +1,6 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useCallback, useSyncExternalStore } from "react";
 import { Contrast } from "lucide-react";
 import { SectionCard } from "~/components/ui/section-card";
 import { SwitchRow } from "~/components/ui/switch";
@@ -13,6 +13,7 @@ import {
   subscribeToContrast,
 } from "~/lib/contrast-preference";
 import type { PortalKey } from "~/lib/portal-paths";
+import { useContrastPreferenceServerSnapshot } from "./contrast-preference-hydration";
 
 /** Die Texte des Abschnitts; das Elternportal reicht übersetzte herein. */
 export type ContrastPreferenceCopy = Readonly<{
@@ -41,10 +42,12 @@ export function ContrastPreferenceSection({
   portal,
   copy = CONTRAST_PREFERENCE_COPY,
 }: Readonly<{ portal: PortalKey; copy?: ContrastPreferenceCopy }>) {
+  const serverSnapshot = useContrastPreferenceServerSnapshot();
+  const getServerSnapshot = useCallback(() => serverSnapshot, [serverSnapshot]);
   const checked = useSyncExternalStore(
     subscribeToContrast,
     isMoreContrastActive,
-    () => false,
+    getServerSnapshot,
   );
   const { show: showSaveError } = useApiErrorDisplay();
 
