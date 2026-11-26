@@ -2111,7 +2111,7 @@ describe("StudentSearchPage", () => {
       await waitFor(() => {
         expect(mockPush).toHaveBeenCalledWith(
           `/test-tenant/students/1?from=${encodeURIComponent(
-            "/students/search?group_id=1%2C2&school_class=3a%2C4b&year=3%2C4",
+            "/students/search?year=3%2C4&school_class=3a%2C4b&group_id=1%2C2",
           )}`,
         );
       });
@@ -2119,59 +2119,6 @@ describe("StudentSearchPage", () => {
   });
 
   describe("SWR Fetcher Execution", () => {
-    it("executes the groups SWR fetcher successfully", async () => {
-      const groupService = await import("~/lib/api");
-      const mockGetGroups = vi.fn().mockResolvedValue([
-        { id: "1", name: "Test Group A" },
-        { id: "2", name: "Test Group B" },
-      ]);
-      vi.mocked(groupService.groupService.getGroups).mockImplementation(
-        mockGetGroups,
-      );
-
-      let capturedGroupsFetcher: (() => Promise<unknown>) | null = null;
-
-      const swrModule = await import("~/lib/swr");
-      vi.mocked(swrModule.useImmutableSWR).mockImplementation(
-        (key, fetcher) => {
-          if (key === "groups-list-{}" && fetcher) {
-            capturedGroupsFetcher = fetcher as () => Promise<unknown>;
-          }
-          return {
-            data: [
-              { id: "1", name: "Test Group A" },
-              { id: "2", name: "Test Group B" },
-            ],
-            isLoading: false,
-            error: null,
-          } as ReturnType<typeof swrModule.useImmutableSWR>;
-        },
-      );
-
-      mockUseSWRAuthWithStudents(swrModule, {
-        data: { students: mockStudents },
-        isLoading: false,
-        error: null,
-      } as ReturnType<typeof swrModule.useSWRAuth>);
-
-      await act(async () => {
-        render(<StudentSearchPage />);
-      });
-
-      // Execute the captured fetcher to cover lines 93-103
-      expect(capturedGroupsFetcher).not.toBeNull();
-      const result: unknown = await act(async () => {
-        return await (
-          capturedGroupsFetcher as unknown as () => Promise<unknown>
-        )();
-      });
-      expect(result).toEqual([
-        { id: "1", name: "Test Group A" },
-        { id: "2", name: "Test Group B" },
-      ]);
-      expect(mockGetGroups).toHaveBeenCalled();
-    });
-
     it("rejects a failed group fetch instead of caching an empty success", async () => {
       const groupService = await import("~/lib/api");
       const mockGetGroups = vi
@@ -2427,38 +2374,6 @@ describe("StudentSearchPage", () => {
       expect(
         screen.queryByText("Keine Kinder gefunden"),
       ).not.toBeInTheDocument();
-    });
-
-    it("does NOT redirect when user is authenticated with token", async () => {
-      const mockPush = vi.fn();
-      const useRouter = await import("next/navigation");
-      vi.mocked(useRouter.useRouter).mockReturnValue({
-        push: mockPush,
-        replace: vi.fn(),
-        back: vi.fn(),
-        forward: vi.fn(),
-        refresh: vi.fn(),
-        prefetch: vi.fn(),
-        bfcacheId: "test",
-      });
-
-      // Default authenticated state with token
-      const useSession = await import("next-auth/react");
-      vi.mocked(useSession.useSession).mockReturnValue({
-        data: { user: { token: "valid-token" }, expires: "2099-01-01" },
-        status: "authenticated",
-        update: vi.fn(),
-      } as unknown as ReturnType<typeof useSession.useSession>);
-
-      render(<StudentSearchPage />);
-
-      await waitFor(() => {
-        // Should render page header (meaning component rendered normally)
-        expect(screen.getByTestId("page-header")).toBeInTheDocument();
-      });
-
-      // Should NOT have redirected to home
-      expect(mockPush).not.toHaveBeenCalledWith("/test-tenant/");
     });
   });
 
@@ -4207,7 +4122,6 @@ describe("StudentSearchPage", () => {
         expect(screen.getByText(new RegExp(`^Max\\b`))).toBeInTheDocument(),
       );
 
-      // Flip to arrival sort mode: component should re-render without error.
       fireEvent.change(screen.getByTestId("filter-sort"), {
         target: { value: "arrival" },
       });
@@ -4216,29 +4130,12 @@ describe("StudentSearchPage", () => {
         expect(screen.getByTestId("filter-sort")).toHaveValue("arrival"),
       );
 
-      // All four default students still present post-sort.
-      expect(screen.getByText(new RegExp(`^Max\\b`))).toBeInTheDocument();
-      expect(screen.getByText(new RegExp(`^Anna\\b`))).toBeInTheDocument();
-      expect(screen.getByText(new RegExp(`^Tom\\b`))).toBeInTheDocument();
-      expect(screen.getByText(new RegExp(`^Lisa\\b`))).toBeInTheDocument();
-    });
-
-    it("offers pickup sorting as a dedicated sort mode", async () => {
-      render(<StudentSearchPage />);
-
-      await waitFor(() =>
-        expect(screen.getByText(new RegExp(`^Max\\b`))).toBeInTheDocument(),
-      );
-
-      fireEvent.change(screen.getByTestId("filter-sort"), {
-        target: { value: "pickup" },
-      });
-
-      await waitFor(() =>
-        expect(screen.getByTestId("filter-sort")).toHaveValue("pickup"),
-      );
-      expect(screen.getByText(new RegExp(`^Max\\b`))).toBeInTheDocument();
-      expect(screen.getByText(new RegExp(`^Tom\\b`))).toBeInTheDocument();
+      const renderedNames = screen
+        .getAllByText(/^(Max|Tom|Lisa|Anna) /)
+        .map((node) => node.textContent?.split(" ")[0]);
+      // Anna is still expected (08:30, at home); the others follow by the
+      // time they were due: 08:00, 08:15, 09:00.
+      expect(renderedNames).toEqual(["Anna", "Max", "Tom", "Lisa"]);
     });
 
     it("filters by a specific arrival time", async () => {

@@ -463,16 +463,9 @@ describe("StudentSearchPage — room_id deep-link (#1323)", () => {
       expect(mockGetStudents).toHaveBeenCalled();
     });
 
-    // Find the call with our roomId — there may be multiple if the page
-    // re-renders. The contract is: the first call after mount must carry
-    // the URL-derived room_id, otherwise the page would render the
-    // unfiltered list before correcting itself.
-    const calls = mockGetStudents.mock.calls.map(
-      (c) => c[0] as Record<string, unknown>,
-    );
-    const filteredCall = calls.find((c) => c.roomId === "42");
-    expect(filteredCall).toBeDefined();
-    expect(filteredCall?.roomId).toBe("42");
+    // The first call after mount must carry the URL's room, otherwise the
+    // page would render the unfiltered list before correcting itself.
+    expect(mockGetStudents.mock.calls[0]?.[0]).toMatchObject({ roomId: "42" });
   });
 
   it("applies an offered registration answer from the URL on the page (#6954, #7645)", async () => {
