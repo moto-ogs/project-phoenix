@@ -977,7 +977,7 @@ describe("DatabaseForm", () => {
     const select = screen.getByRole("combobox");
     expect(select).toBeDisabled();
     expect(select).toHaveTextContent("Administrator");
-    expect(screen.getByText("Fest vorgegeben")).toBeInTheDocument();
+    expect(select).toHaveAccessibleDescription("Fest vorgegeben");
 
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
     await waitFor(() => {

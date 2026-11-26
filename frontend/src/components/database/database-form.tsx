@@ -627,11 +627,9 @@ export function DatabaseForm<T = Record<string, unknown>>({
           }}
           required={field.required}
           invalid={hasError}
+          hint={field.helperText}
           disabled={field.disabled || loadingOptions[field.name]}
         />
-        {field.helperText && (
-          <p className="mt-1 text-xs text-gray-500">{field.helperText}</p>
-        )}
       </div>
     );
   };
