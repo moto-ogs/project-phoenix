@@ -77,5 +77,6 @@
   "signedTitleChange": "Dziękujemy. Nowa wersja jest podpisana.",
   "requestTitle": "Ta wersja obowiązuje. Nie musisz nic podpisywać.",
   "signedByRequest": "Sam poprosiłeś o tę zmianę. Twój wniosek z {date} liczy się jako Twoja zgoda.",
-  "afterFrom": "Nowe od {date}"
+  "afterFrom": "Nowe od {date}",
+  "withdrawalUntilChange": "Możesz odstąpić od zmiany do {date}. Napisz do organizatora. Umowa obowiązuje wtedy jak wcześniej."
 }

@@ -543,7 +543,7 @@ function SignedConfirmation({
           </DataField>
           {signature?.withdrawalEndsOn ? (
             <DataField label={t("withdrawalTitle")} fullWidth>
-              {t("withdrawalUntil", {
+              {t(change ? "withdrawalUntilChange" : "withdrawalUntil", {
                 date: formatDate(signature.withdrawalEndsOn, false, locale),
               })}
               {signature.earlyStartRequested ? (

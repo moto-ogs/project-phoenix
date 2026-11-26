@@ -345,7 +345,7 @@ func (Store) InsertReminder(ctx context.Context, organizationID int64, candidate
 
 // InboxContractAddressed tells whether the contract was sent to the
 // reader's address and its child is one the reader may act for.
-func (Store) InboxContractAddressed(ctx context.Context, organizationID, contractID int64, reader carecontract.InboxReader) (bool, error) {
+func (Store) InboxContractAddressed(ctx context.Context, organizationID, contractID, versionID int64, reader carecontract.InboxReader) (bool, error) {
 	db, err := traegerDB(ctx, organizationID)
 	if err != nil {
 		return false, err
@@ -354,8 +354,10 @@ func (Store) InboxContractAddressed(ctx context.Context, organizationID, contrac
 	var found bool
 	if err := db.NewRaw(`SELECT EXISTS (SELECT 1 FROM care_contract.contract_mailings AS m
 		JOIN care_contract.contracts AS c ON c.organization_id = m.organization_id AND c.id = m.contract_id
-		WHERE m.organization_id = ? AND m.contract_id = ? AND lower(m.recipient_email) = lower(?) AND `+inboxChildScopeSQL+`)`,
-		organizationID, contractID, reader.Email, pgdialect.Array(schools), pgdialect.Array(students)).Scan(ctx, &found); err != nil {
+		JOIN care_contract.contract_documents AS d ON d.organization_id = m.organization_id AND d.id = m.contract_document_id
+		WHERE m.organization_id = ? AND m.contract_id = ? AND lower(m.recipient_email) = lower(?) AND (? = 0 OR d.contract_version_id = ?)
+			AND `+inboxChildScopeSQL+`)`,
+		organizationID, contractID, reader.Email, versionID, versionID, pgdialect.Array(schools), pgdialect.Array(students)).Scan(ctx, &found); err != nil {
 		return false, fmt.Errorf("care contract postgres: check inbox contract: %w", err)
 	}
 	return found, nil

@@ -100,15 +100,37 @@ func change2(day string, origins ...calendar.Date) change {
 }
 
 // A waiting version that promises care longer than booked now is replaced,
-// never signed.
-func TestWaitingVersionWithAnotherEndIsNotCarried(t *testing.T) {
+// never signed: the end of the contract and of each module count. A booking
+// the school's correction split into two rows is the same promise.
+func TestWaitingVersionIsCarriedOnlyWhileItsPromiseIsBooked(t *testing.T) {
 	t.Parallel()
-	services := []carecontract.Service{{Weekday: "mon", CareOfferingID: ident.ID(consentGanztag), EndsAt: "16:00"}}
 	june, january := calendar.NewDate(2028, 6, 30), calendar.NewDate(2028, 1, 31)
+	services := []carecontract.Service{
+		{Weekday: "mon", CareOfferingID: ident.ID(consentGanztag), EndsAt: "16:00"},
+		{Weekday: "thu", CareOfferingID: ident.ID(consentLateCare), EndsAt: "17:00", LastDay: &january},
+	}
 	waiting := carecontract.Version{EffectiveFrom: "2027-10-01", EndsOn: &june, Services: services}
-	planned := waiting
 	today := calendar.NewDate(2027, 9, 1)
-	assert.True(t, waitingCarries(&waiting, planned, today))
-	planned.EndsOn = &january
-	assert.False(t, waitingCarries(&waiting, planned, today), "the contract ends earlier than the waiting version says")
+	booking := func(offering int64, day, from, until string) carecontract.Booking {
+		return carecontract.Booking{CareOfferingID: offering, Days: []string{day}, ValidFrom: consentDay(from), ValidUntil: consentDay(until)}
+	}
+	ganztag := booking(consentGanztag, "mon", "2027-08-01", "2028-07-01")
+	for name, c := range map[string]struct {
+		bookings   []carecontract.Booking
+		plannedEnd *calendar.Date
+		carried    bool
+	}{
+		"booked as promised": {bookings: []carecontract.Booking{ganztag, booking(consentLateCare, "thu", "2027-10-01", "2028-02-01")}, plannedEnd: &june, carried: true},
+		"a booking split in two rows is the same promise": {bookings: []carecontract.Booking{ganztag,
+			booking(consentLateCare, "thu", "2027-10-01", "2027-11-08"), booking(consentLateCare, "thu", "2027-11-08", "2028-02-01")}, plannedEnd: &june, carried: true},
+		"one module ends earlier than promised":   {bookings: []carecontract.Booking{ganztag, booking(consentLateCare, "thu", "2027-10-01", "2027-12-01")}, plannedEnd: &june},
+		"the contract ends earlier than promised": {bookings: []carecontract.Booking{ganztag, booking(consentLateCare, "thu", "2027-10-01", "2028-02-01")}, plannedEnd: &january},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			planned := waiting
+			planned.EndsOn = c.plannedEnd
+			assert.Equal(t, c.carried, waitingCarries(consentRead(), c.bookings, &waiting, planned, today))
+		})
+	}
 }

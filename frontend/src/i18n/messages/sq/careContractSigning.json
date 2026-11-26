@@ -77,5 +77,6 @@
   "signedTitleChange": "Faleminderit. Versioni i ri është nënshkruar.",
   "requestTitle": "Ky version vlen. Nuk duhet të nënshkruash asgjë.",
   "signedByRequest": "Këtë ndryshim e kërkove vetë. Kërkesa jote e datës {date} vlen si pëlqimi yt.",
-  "afterFrom": "E re nga {date}"
+  "afterFrom": "E re nga {date}",
+  "withdrawalUntilChange": "Mund ta tërheqësh ndryshimin deri më {date}. Shkruaji ofruesit. Kontrata vlen atëherë si më parë."
 }

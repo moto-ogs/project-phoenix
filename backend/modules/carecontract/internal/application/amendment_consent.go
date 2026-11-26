@@ -155,19 +155,77 @@ func sameDays(a, b []string) bool {
 }
 
 // waitingCarries tells whether the version that waits for a signature is
-// the planned one: the same care from the same day. A waiting version whose
-// day has passed holds from the day of its signature, so the plan from
-// today is still its change. The contract's end counts: a waiting version
-// that promises care longer than booked now is never signed. As on the
-// timeline (sameCare), the day a single module is booked until does not
-// count: a module booked longer since is the next change, from the day
-// after the version's promise ends.
-func waitingCarries(waiting *carecontract.Version, planned carecontract.Version, today calendar.Date) bool {
+// the planned one: the same care from the same day, with the same end of
+// the contract and of every module. A waiting version whose day has passed
+// holds from the day of its signature, so the plan from today is still its
+// change. A waiting version that promises care longer than booked now is
+// never signed.
+func waitingCarries(read schoolRead, bookings []carecontract.Booking, waiting *carecontract.Version, planned carecontract.Version, today calendar.Date) bool {
 	if waiting == nil || !sameCare(waiting.Services, planned.Services) || !sameEnd(waiting.EndsOn, planned.EndsOn) {
 		return false
 	}
-	return waiting.EffectiveFrom == planned.EffectiveFrom ||
-		(waiting.EffectiveFrom.Before(today) && planned.EffectiveFrom == today)
+	day := waiting.EffectiveFrom
+	if day.Before(today) {
+		day = today
+	}
+	if planned.EffectiveFrom != day {
+		return false
+	}
+	return promisesBooked(read, bookings, *waiting, day)
+}
+
+// promisesBooked tells whether every module of the version is booked from
+// day exactly as long as the version promises it: to the module's last day,
+// else to the version's end, else open ended.
+func promisesBooked(read schoolRead, bookings []carecontract.Booking, version carecontract.Version, day calendar.Date) bool {
+	for _, service := range version.Services {
+		booked, ok := moduleBookedUntil(read, bookings, service, day)
+		if !ok || !sameEnd(earlier(booked, version.EndsOn), earlier(service.LastDay, version.EndsOn)) {
+			return false
+		}
+	}
+	return true
+}
+
+// moduleBookedUntil is the last day the child books the module on the weekday
+// without a gap from day on; nil while it is booked open ended, false when
+// it is not booked on day. A booking that starts on the day another one
+// ends continues it: the school's correction splits a booking without
+// changing the care.
+func moduleBookedUntil(read schoolRead, bookings []carecontract.Booking, service carecontract.Service, day calendar.Date) (*calendar.Date, bool) {
+	offering, care := read.offerings[service.CareOfferingID.Int64()]
+	if !care {
+		return nil, false
+	}
+	cursor := day
+	for advanced := true; advanced; {
+		advanced = false
+		for _, booking := range bookings {
+			clipped, ok := bookingWithinPhase(booking, offering, calendar.Date("0001-01-01"))
+			if booking.CareOfferingID != offering.ID || !ok || !runsOn(clipped, cursor) ||
+				!slices.Contains(effectiveBookingDays(clipped, offering), service.Weekday) {
+				continue
+			}
+			if clipped.ValidUntil == nil {
+				return nil, true
+			}
+			cursor, advanced = *clipped.ValidUntil, true
+			break
+		}
+	}
+	if cursor == day {
+		return nil, false
+	}
+	last := cursor.AddDays(-1)
+	return &last, true
+}
+
+// earlier is the earlier of two last days; nil is open ended.
+func earlier(a, b *calendar.Date) *calendar.Date {
+	if a == nil || (b != nil && b.Before(*a)) {
+		return b
+	}
+	return a
 }
 
 func sameEnd(a, b *calendar.Date) bool {
@@ -254,7 +312,10 @@ func sentVersionNow(read schoolRead, application carecontract.Application, sent 
 	from := booked.effectiveFrom(application, today)
 	ends := endsOn(sent.Version.Terms, from, booked.until)
 	services := boundServices(booked.services, ends)
-	if sameCare(services, sent.Version.Services) {
+	// The sent version stays when it promises exactly the care booked now,
+	// for exactly as long: a version that promises more is never concluded.
+	if sameCare(services, sent.Version.Services) && sameEnd(ends, sent.Version.EndsOn) &&
+		promisesBooked(read, application.Bookings, sent.Version, from) {
 		return carecontract.Version{}, false
 	}
 	version := sent.Version
@@ -263,4 +324,53 @@ func sentVersionNow(read schoolRead, application carecontract.Application, sent 
 	version.PhaseName, version.PriceCents = firstText(booked.phaseName, sent.Version.PhaseName), booked.price
 	version.ValidUntil, version.AgreedFrom = nil, nil
 	return version, true
+}
+
+// readParentRequests fills in the parents' own approved requests of the
+// applications read, in the caller's tenant transaction (#4816). Only the
+// run that follows the bookings needs them; a composition without the port
+// knows none.
+func (in *Intake) readParentRequests(ctx context.Context, read *schoolRead) error {
+	if in.requests == nil || len(read.applications) == 0 {
+		return nil
+	}
+	ids := make([]int64, len(read.applications))
+	for i, application := range read.applications {
+		ids[i] = application.RequestChildID
+	}
+	requests, err := in.requests.ApprovedParentRequests(ctx, ids)
+	if err != nil {
+		return err
+	}
+	missing := []int64{}
+	for i := range read.applications {
+		read.applications[i].ParentRequests = requests[read.applications[i].RequestChildID]
+		for _, request := range read.applications[i].ParentRequests {
+			for _, requested := range request.Offerings {
+				if _, known := read.offerings[requested.CareOfferingID]; !known && !slices.Contains(missing, requested.CareOfferingID) {
+					missing = append(missing, requested.CareOfferingID)
+				}
+			}
+		}
+	}
+	return in.readRequestedOfferings(ctx, read, missing)
+}
+
+// readRequestedOfferings adds the care modules a request names that the
+// child no longer books, in one read: a request for a module another
+// approval took away again must not pass as carried out. A requested
+// offering that is no care (the lunch, an AG) is not in the answer and stays
+// out of the comparison.
+func (in *Intake) readRequestedOfferings(ctx context.Context, read *schoolRead, ids []int64) error {
+	if len(ids) == 0 {
+		return nil
+	}
+	offerings, err := in.offerings(ctx, ids)
+	if err != nil {
+		return err
+	}
+	for _, offering := range offerings {
+		read.offerings[offering.ID] = offering
+	}
+	return nil
 }

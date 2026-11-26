@@ -479,11 +479,29 @@ func TestCareContractInboxOffersTheWaitingChangeToSign(t *testing.T) {
 	require.NotNil(t, view.Previous)
 	assert.Len(t, view.Version.Services, 4)
 
+	// The office records a scan only for the version it names: a changed
+	// version may have overtaken the one that was printed.
+	rec := paperUpload(t, f, f.office.token, contract, "aenderung.pdf", []byte("%PDF-1.4 unterschrieben"))
+	assert.Equal(t, http.StatusConflict, rec.Code, "a scan without its version signs no changed version: %s", rec.Body.String())
+
 	stranger := reader
 	stranger.Email = "fremd@example.org"
 	require.NoError(t, tenant.WithinTraeger(ctx, f.office.organization, func(txCtx context.Context) error {
 		_, err := signing.InboxSigningView(txCtx, f.office.organization, contract, stranger)
 		assert.ErrorIs(t, err, carecontract.ErrInboxDocumentNotFound, "an account the contract did not go to sees nothing")
+		return nil
+	}))
+	// The first version went to another address than the changed one: that
+	// account reads its contract, but neither sees nor signs the change.
+	earlier := reader
+	earlier.Email = "frueher@example.org"
+	_, err = f.db.ExecContext(context.Background(), `UPDATE care_contract.contract_mailings AS m SET recipient_email = 'frueher@example.org'
+		FROM care_contract.contract_documents AS d JOIN care_contract.contract_versions AS v ON v.id = d.contract_version_id
+		WHERE d.id = m.contract_document_id AND m.contract_id = ? AND v.version_number = 1`, contract)
+	require.NoError(t, err)
+	require.NoError(t, tenant.WithinTraeger(ctx, f.office.organization, func(txCtx context.Context) error {
+		_, err := signing.InboxSigningView(txCtx, f.office.organization, contract, earlier)
+		assert.ErrorIs(t, err, carecontract.ErrInboxDocumentNotFound, "the change went to another address")
 		return nil
 	}))
 	require.NoError(t, tenant.WithinTraeger(ctx, f.office.organization, func(txCtx context.Context) error {

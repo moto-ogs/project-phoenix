@@ -77,5 +77,6 @@
   "signedTitleChange": "Thank you. The new version is signed.",
   "requestTitle": "This version is valid. You do not need to sign anything.",
   "signedByRequest": "You asked for this change yourself. Your request of {date} counts as your consent.",
-  "afterFrom": "New from {date}"
+  "afterFrom": "New from {date}",
+  "withdrawalUntilChange": "You can withdraw the change until {date}. Write to your provider. Your contract then applies as before."
 }

@@ -77,5 +77,6 @@
   "signedTitleChange": "Vielen Dank. Die neue Fassung ist unterschrieben.",
   "requestTitle": "Diese Fassung gilt. Du musst nichts unterschreiben.",
   "signedByRequest": "Du hast diese Änderung selbst beantragt. Dein Antrag vom {date} gilt als deine Zustimmung.",
-  "afterFrom": "Neu ab {date}"
+  "afterFrom": "Neu ab {date}",
+  "withdrawalUntilChange": "Du kannst die Änderung bis zum {date} widerrufen. Schreibe dazu deinem Träger. Dein Vertrag gilt dann wieder wie vorher."
 }

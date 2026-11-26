@@ -39,7 +39,7 @@ func (s signingErrorStore) CurrentDocument(context.Context, int64, int64, int64)
 }
 func (s signingErrorStore) InsertEvents(context.Context, int64, []Event) error { return s.failure }
 
-func (signingErrorStore) InboxContractAddressed(context.Context, int64, int64, carecontract.InboxReader) (bool, error) {
+func (signingErrorStore) InboxContractAddressed(context.Context, int64, int64, int64, carecontract.InboxReader) (bool, error) {
 	return true, nil
 }
 

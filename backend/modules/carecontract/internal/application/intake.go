@@ -620,28 +620,6 @@ func (in *Intake) acceptedApplications(ctx context.Context, requestChildIDs []in
 	return applications, nil
 }
 
-// readParentRequests fills in the parents' own approved requests of the
-// applications read, in the caller's tenant transaction (#4816). Only the
-// run that follows the bookings needs them; a composition without the port
-// knows none.
-func (in *Intake) readParentRequests(ctx context.Context, read *schoolRead) error {
-	if in.requests == nil || len(read.applications) == 0 {
-		return nil
-	}
-	ids := make([]int64, len(read.applications))
-	for i, application := range read.applications {
-		ids[i] = application.RequestChildID
-	}
-	requests, err := in.requests.ApprovedParentRequests(ctx, ids)
-	if err != nil {
-		return err
-	}
-	for i := range read.applications {
-		read.applications[i].ParentRequests = requests[read.applications[i].RequestChildID]
-	}
-	return nil
-}
-
 // offerings reads the offerings with the names of their phases in the
 // caller's tenant transaction.
 func (in *Intake) offerings(ctx context.Context, ids []int64) ([]carecontract.Offering, error) {

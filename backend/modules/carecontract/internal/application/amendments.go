@@ -126,13 +126,14 @@ func (c *Conclusions) amendContract(ctx context.Context, organizationID int64, r
 	plan, reason, next := nextChange(read, application, contract, today)
 	if reason != "" {
 		run.Skipped = append(run.Skipped, carecontract.AmendmentSkip{ContractID: contract.ID, Reason: reason})
-		return nil
 	}
 	if plan == nil {
+		// Nothing to change, or the care ends (an end of the contract, not a
+		// version): a version that still waits promises care nobody books.
 		return c.dropWaiting(ctx, organizationID, contract)
 	}
 	consent := parentConsent(read, application, contract, next)
-	if consent == nil && waitingCarries(contract.Waiting, plan.version, today) {
+	if consent == nil && waitingCarries(read, application.Bookings, contract.Waiting, plan.version, today) {
 		return nil
 	}
 	amended := carecontract.AmendedContract{ContractID: contract.ID, VersionNumber: plan.version.Number, EffectiveFrom: plan.version.EffectiveFrom}

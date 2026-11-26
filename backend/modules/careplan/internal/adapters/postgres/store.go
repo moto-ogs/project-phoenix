@@ -121,6 +121,7 @@ type offeringChangeRow struct {
 	TenantID                    int64           `bun:"tenant_id,notnull"`
 	CreatedAt                   time.Time       `bun:"created_at,nullzero,notnull"`
 	UpdatedAt                   time.Time       `bun:"updated_at,nullzero,notnull"`
+	SubmittedAt                 time.Time       `bun:"submitted_at,nullzero,notnull"` // last sent by the parents (#4816)
 	StudentID                   int64           `bun:"student_id,notnull"`
 	RequestChildID              int64           `bun:"request_child_id,notnull"`
 	SubmittedBy                 int64           `bun:"submitted_by,notnull"`
@@ -544,7 +545,7 @@ func (s *Store) UpdatePendingOfferingChange(ctx context.Context, input careplan.
 		return query.
 			Set("payload = ?", input.Payload).
 			Set("effective_from = ?", calendarDate(input.EffectiveFrom)).
-			Set("parent_note = ?", input.ParentNote)
+			Set("parent_note = ?", input.ParentNote).Set("submitted_at = DEFAULT") // sent anew by the parents (#4816)
 	})
 }
 

@@ -9,7 +9,8 @@ import (
 // child's booked offerings that the school or the Träger-Büro approved, as
 // the Betreuungsvertrag reads it (#4816, ADR 0325): the parents' own request
 // proves their agreement to the contract version it made. SubmittedBy is the
-// parents account that sent it at SubmittedAt, EffectiveFrom the day the
+// parents account that sent it, SubmittedAt when it last did (the creation
+// or its last edit), EffectiveFrom the day the
 // approval applied it from, and Selections what the parents asked for from
 // that day.
 type ApprovedOfferingChange struct {

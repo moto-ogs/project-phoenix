@@ -84,7 +84,10 @@ func (s *Signatures) RecordPaperSignature(ctx context.Context, reviewer carecont
 	}
 	// The office names the version of the scan: a changed version may have
 	// overtaken it since the page was read.
-	if !waits || record.DocumentID == nil || (input.VersionNumber != 0 && input.VersionNumber != record.Version.Number) {
+	// A changed version always needs it; a first contract has one version
+	// and takes a scan without it, as before.
+	named := input.VersionNumber != 0 || record.Version.Number <= 1
+	if !waits || record.DocumentID == nil || !named || (input.VersionNumber != 0 && input.VersionNumber != record.Version.Number) {
 		return carecontract.ErrContractNotSignable
 	}
 	document, err := s.store.CurrentDocument(ctx, reviewer.OrganizationID, contractID, record.Version.ID.Int64())

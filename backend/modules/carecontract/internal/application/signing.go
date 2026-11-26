@@ -282,7 +282,7 @@ func (s *Signatures) inboxContract(ctx context.Context, organizationID, contract
 		return ContractRecord{}, StoredDocument{}, carecontract.ErrInboxDocumentNotFound
 	}
 	reader.Email = email
-	addressed, err := s.store.InboxContractAddressed(ctx, organizationID, contractID, reader)
+	addressed, err := s.store.InboxContractAddressed(ctx, organizationID, contractID, 0, reader)
 	if err != nil {
 		return ContractRecord{}, StoredDocument{}, err
 	}
@@ -298,8 +298,21 @@ func (s *Signatures) inboxContract(ctx context.Context, organizationID, contract
 	}
 	// An active contract shows its changed version while it waits for the
 	// signature (#4816), else the version in force.
-	if _, err := waitingRecord(ctx, s.store, organizationID, &record); err != nil {
+	waits, err := waitingRecord(ctx, s.store, organizationID, &record)
+	if err != nil {
 		return ContractRecord{}, StoredDocument{}, err
+	}
+	// A version that waits is shown and signed only by an account it was
+	// sent to: an earlier address of the contract does not sign a change
+	// that went to another one.
+	if waits {
+		addressed, err = s.store.InboxContractAddressed(ctx, organizationID, contractID, record.Version.ID.Int64(), reader)
+		if err != nil {
+			return ContractRecord{}, StoredDocument{}, err
+		}
+		if !addressed {
+			return ContractRecord{}, StoredDocument{}, carecontract.ErrInboxDocumentNotFound
+		}
 	}
 	document, err := s.store.CurrentDocument(ctx, organizationID, contractID, record.Version.ID.Int64())
 	if errors.Is(err, carecontract.ErrContractNotSignable) {

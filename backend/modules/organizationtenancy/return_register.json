@@ -24336,6 +24336,12 @@
           "type": "timestamp with time zone",
           "udt": "timestamptz",
           "nullable": true
+        },
+        {
+          "name": "submitted_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": false
         }
       ],
       "relationships": [

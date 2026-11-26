@@ -77,5 +77,6 @@
   "signedTitleChange": "Teşekkürler. Yeni sürüm imzalandı.",
   "requestTitle": "Bu sürüm geçerli. Bir şey imzalaman gerekmiyor.",
   "signedByRequest": "Bu değişikliği kendin istedin. {date} tarihli talebin onayın sayılır.",
-  "afterFrom": "{date} tarihinden itibaren yeni"
+  "afterFrom": "{date} tarihinden itibaren yeni",
+  "withdrawalUntilChange": "Değişiklikten {date} tarihine kadar cayabilirsin. Bunun için kuruma yaz. Sözleşmen o zaman eskisi gibi geçerli olur."
 }

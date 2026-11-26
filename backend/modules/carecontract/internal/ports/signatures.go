@@ -118,5 +118,8 @@ type SignatureStore interface {
 	// VersionSignatures lists how the parents agreed to each signed version
 	// of the contract, oldest version first (#4816).
 	VersionSignatures(ctx context.Context, organizationID, contractID int64) ([]carecontract.VersionSignature, error)
-	InboxContractAddressed(ctx context.Context, organizationID, contractID int64, reader carecontract.InboxReader) (bool, error)
+	// InboxContractAddressed tells whether the contract went to the
+	// reader's address for a child the reader may act for; a nonzero
+	// versionID asks for the PDF of that version (#4816).
+	InboxContractAddressed(ctx context.Context, organizationID, contractID, versionID int64, reader carecontract.InboxReader) (bool, error)
 }

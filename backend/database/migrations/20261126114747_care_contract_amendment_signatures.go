@@ -53,6 +53,10 @@ func init() {
 //     drawn or typed signature exists. change_request_id names Care Plan's
 //     request in the contract's school; it is no foreign key, the request
 //     lives in the school's tenant.
+//   - enrollment.offering_change_requests.submitted_at is when the parents
+//     last sent their request, its creation or their last edit: the instant
+//     the request counts as their signature. created_at stays the first
+//     submission, updated_at also moves with the school's decision.
 //   - A reminder belongs to the version that waits, so a changed version is
 //     reminded anew, up to the same limit. Every reminder so far reminded of
 //     the first version: only a sent contract was reminded.
@@ -145,6 +149,13 @@ ALTER TABLE care_contract.contract_signatures ADD CONSTRAINT chk_contract_signat
 	OR (method = 'request' AND channel = 'parent_account' AND audit_signature_id IS NULL AND paper_pdf IS NULL
 		AND contract_document_id IS NOT NULL AND change_request_id IS NOT NULL));
 
+ALTER TABLE enrollment.offering_change_requests ADD COLUMN IF NOT EXISTS submitted_at TIMESTAMPTZ;
+UPDATE enrollment.offering_change_requests SET submitted_at = created_at WHERE submitted_at IS NULL;
+ALTER TABLE enrollment.offering_change_requests ALTER COLUMN submitted_at SET DEFAULT NOW();
+ALTER TABLE enrollment.offering_change_requests ALTER COLUMN submitted_at SET NOT NULL;
+COMMENT ON COLUMN enrollment.offering_change_requests.submitted_at IS
+	'When the parents last sent the request: its creation or their last edit (#4816). The instant their request counts as the signature of the contract version it made.';
+
 ALTER TABLE care_contract.contract_reminders ADD COLUMN IF NOT EXISTS contract_version_id BIGINT;
 UPDATE care_contract.contract_reminders AS r SET contract_version_id = (
 	SELECT v.id FROM care_contract.contract_versions AS v
@@ -178,6 +189,7 @@ ALTER TABLE care_contract.contract_reminders DROP CONSTRAINT IF EXISTS fk_contra
 ALTER TABLE care_contract.contract_reminders DROP COLUMN IF EXISTS contract_version_id;
 ALTER TABLE care_contract.contract_reminders ADD CONSTRAINT uq_contract_reminders_number UNIQUE (contract_id, reminder_number);
 
+ALTER TABLE enrollment.offering_change_requests DROP COLUMN IF EXISTS submitted_at;
 DELETE FROM care_contract.contract_signatures WHERE method = 'request';
 ALTER TABLE care_contract.contract_signatures DROP CONSTRAINT chk_contract_signatures_proof;
 ALTER TABLE care_contract.contract_signatures DROP CONSTRAINT chk_contract_signatures_method;
