@@ -453,7 +453,11 @@ export function useSchoolCheckinMode(
       checkoutNote?: string,
       checkoutReason?: SchoolCheckoutReason,
     ) => {
-      if (!enabled || pendingIds.has(studentId)) return;
+      if (!enabled) {
+        showMessage("Lade die Kinderliste neu. Versuche es dann noch einmal.");
+        return;
+      }
+      if (pendingIds.has(studentId)) return;
 
       setPendingIds((prev) => {
         const next = new Set(prev);

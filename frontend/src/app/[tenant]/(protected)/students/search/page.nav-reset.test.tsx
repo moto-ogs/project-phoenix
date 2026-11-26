@@ -508,7 +508,9 @@ describe("StudentSearchPage: click on the navigation entry of this page (#3374)"
     mockParentAnnouncementsAvailable.mockReturnValue(true);
     renderOnSearchPage("");
     const [input] = screen.getAllByPlaceholderText("Name suchen…");
+    const pageReads = mockUseSWRAuth.mock.calls.length;
     fireEvent.change(input!, { target: { value: "Ma" } });
+    expect(mockUseSWRAuth).toHaveBeenCalledTimes(pageReads);
     const [menu] = screen.getAllByRole("button", { name: "Weitere Aktionen" });
     fireEvent.click(menu!);
     const letter = screen.getByRole("menuitem", {
@@ -520,6 +522,46 @@ describe("StudentSearchPage: click on the navigation entry of this page (#3374)"
     await waitFor(() => expect(letter).toBeEnabled());
     fireEvent.click(letter);
     expect(mockPush).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not trust a page walk with unchanged counts for names or recipients", async () => {
+    mockParentAnnouncementsAvailable.mockReturnValue(true);
+    const mila = { ...mockStudent, id: "8", first_name: "Mila" };
+    const joined = { ...mockStudent, id: "9", first_name: "Lia" };
+    // Mila moves back to page one after Max leaves. Lia joins page two.
+    // Both reads still report two children, and both returned IDs differ.
+    mockGetStudents.mockImplementation(({ search, page }: StudentFilters) =>
+      Promise.resolve({
+        students: search ? [mila] : page ? [joined] : [mockStudent],
+        pagination: {
+          current_page: page ?? 1,
+          page_size: 1,
+          total_pages: search ? 1 : 2,
+          total_records: search ? 1 : 2,
+        },
+      }),
+    );
+    renderWithRealStudentReads("");
+    expect(await screen.findByTestId("student-card-9")).toBeVisible();
+    const [menu] = screen.getAllByRole("button", { name: "Weitere Aktionen" });
+    fireEvent.click(menu!);
+    // Anker: the menu is open, but cannot copy a multi-page roster.
+    expect(
+      screen.getByRole("menuitem", { name: /Abwesenheiten/ }),
+    ).toBeVisible();
+    expect
+      .soft(screen.queryByRole("menuitem", { name: /Elternbrief schreiben/ }))
+      .toBeNull();
+
+    const [input] = screen.getAllByPlaceholderText("Name suchen…");
+    fireEvent.change(input!, { target: { value: "Mila" } });
+    expect(await screen.findByTestId("student-card-8")).toBeVisible();
+    expect(mockGetStudents).toHaveBeenLastCalledWith(
+      expect.objectContaining({ search: "Mila" }),
+    );
+    expect(
+      screen.getByRole("menuitem", { name: /Elternbrief schreiben/ }),
+    ).toBeEnabled();
   });
 
   it("excludes nonmatching children while a server search is loading", async () => {
@@ -1277,6 +1319,8 @@ describe("StudentSearchPage: click on the navigation entry of this page (#3374)"
     await act(async () => {
       await reload.get(rosterKey)!();
     });
+    expect(screen.getByTestId("student-card-8")).toBeVisible();
+    expect(screen.getByTestId("select-all-count")).toHaveTextContent("1");
 
     holdFirstPage = true;
     fireEvent.click(

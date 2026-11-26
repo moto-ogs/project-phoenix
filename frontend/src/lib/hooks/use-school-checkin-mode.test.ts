@@ -2,12 +2,17 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "~/lib/api-error";
 
-const { mockSchoolCheckinStudent, mockGlobalMutate, mockToastError } =
-  vi.hoisted(() => ({
-    mockSchoolCheckinStudent: vi.fn(),
-    mockGlobalMutate: vi.fn(),
-    mockToastError: vi.fn(),
-  }));
+const {
+  mockSchoolCheckinStudent,
+  mockGlobalMutate,
+  mockToastError,
+  mockShowMessage,
+} = vi.hoisted(() => ({
+  mockSchoolCheckinStudent: vi.fn(),
+  mockGlobalMutate: vi.fn(),
+  mockToastError: vi.fn(),
+  mockShowMessage: vi.fn(),
+}));
 
 vi.mock("~/lib/student-api", () => ({
   schoolCheckinStudent: mockSchoolCheckinStudent,
@@ -37,7 +42,10 @@ vi.mock("~/contexts/ToastContext", () => ({
     warning: vi.fn(),
     remove: vi.fn(),
   }),
-  useApiErrorDisplay: () => ({ show: showApiError }),
+  useApiErrorDisplay: () => ({
+    show: showApiError,
+    showMessage: mockShowMessage,
+  }),
 }));
 
 import {
@@ -309,6 +317,31 @@ describe("useSchoolCheckinMode", () => {
       ),
     );
     expect(result.current.pendingIds.has("5")).toBe(false);
+  });
+
+  it("explains a retry blocked by read-only attendance without writing again", async () => {
+    mockSchoolCheckinStudent.mockRejectedValueOnce(
+      new ApiError("Unavailable", 503),
+    );
+    const { result, rerender } = renderHook(
+      ({ enabled }) => useSchoolCheckinMode({ enabled }),
+      {
+        initialProps: { enabled: true },
+      },
+    );
+    await act(async () => {
+      await result.current.toggle("5", "abwesend");
+    });
+    await waitFor(() => expect(mockToastError).toHaveBeenCalled());
+    const retry = mockToastError.mock.calls[0]?.[1]?.retry;
+    expect(retry).toEqual(expect.any(Function));
+
+    rerender({ enabled: false });
+    act(() => retry());
+    expect(mockSchoolCheckinStudent).toHaveBeenCalledTimes(1);
+    expect(mockShowMessage).toHaveBeenCalledWith(
+      "Lade die Kinderliste neu. Versuche es dann noch einmal.",
+    );
   });
 
   it("names the permission problem instead of asking for a retry on 403", async () => {

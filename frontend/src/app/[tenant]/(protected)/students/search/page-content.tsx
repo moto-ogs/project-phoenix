@@ -87,6 +87,8 @@ import {
   type FilterOption,
   type ActiveFilter,
   type FilterSection,
+  type OverflowMenuEntry,
+  type OverflowMenuItem,
 } from "~/components/ui/page-header/types";
 import { DetailIcons } from "~/components/ui/detail-modal-components";
 import {
@@ -999,6 +1001,65 @@ function isTransientRosterError(error: unknown): boolean {
 }
 
 type SearchResult = Awaited<ReturnType<typeof fetchStudentSearch>>;
+
+function isCompleteSearchResult(result: SearchResult | undefined): boolean {
+  return (
+    result !== undefined &&
+    !result.spansPages &&
+    !result.pagesInconsistent &&
+    (result.truncatedTotal ?? null) === null
+  );
+}
+
+function createSearchDraftStatus() {
+  let pending = false;
+  const listeners = new Set<() => void>();
+  return {
+    getSnapshot: () => pending,
+    setPending(next: boolean) {
+      if (pending === next) return;
+      pending = next;
+      for (const listener of listeners) listener();
+    },
+    subscribe(listener: () => void) {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+  };
+}
+
+function SearchActionsMenu({
+  draftStatus,
+  items,
+  parentLetter,
+  viewItems,
+}: Readonly<{
+  draftStatus: ReturnType<typeof createSearchDraftStatus>;
+  items: readonly OverflowMenuEntry[];
+  parentLetter?: OverflowMenuItem;
+  viewItems: readonly OverflowMenuEntry[];
+}>) {
+  // Keep immediate draft updates out of the page's results render.
+  const pending = useSyncExternalStore(
+    draftStatus.subscribe,
+    draftStatus.getSnapshot,
+    () => false,
+  );
+  return (
+    <OverflowMenu
+      tourTarget="child-search-menu"
+      ariaLabel="Weitere Aktionen"
+      items={[
+        ...items,
+        ...(parentLetter ? [{ ...parentLetter, disabled: pending }] : []),
+        ...viewItems,
+      ]}
+    />
+  );
+}
+
 type RosterResult = SearchResult & {
   opening: symbol;
   expandedRoster?: SearchResult;
@@ -1066,7 +1127,7 @@ function SearchPageContent() {
   // after its debounce. The term then narrows the loaded list in the browser,
   // as a transition: a key typed while the list renders is shown first.
   const [searchTerm, setSearchTerm] = useState(initial.search);
-  const [searchDraftPending, setSearchDraftPending] = useState(false);
+  const [searchDraftStatus] = useState(createSearchDraftStatus);
   const [linkedSearch, setLinkedSearch] = useState(initial.search !== "");
   const [searchResetKey, setSearchResetKey] = useState(0);
   const [selectedGroupIds, setSelectedGroupIds] = useState(initial.groupIds);
@@ -1791,9 +1852,7 @@ function SearchPageContent() {
   // A saved term (or an edit before the roster is ready) is independent of
   // the roster read. Use the browser only once the current list fits in full.
   const hasCompleteList =
-    rosterData !== undefined &&
-    (rosterData.truncatedTotal ?? null) === null &&
-    !rosterData.pagesInconsistent &&
+    isCompleteSearchResult(rosterData) &&
     (!roster.error || rosterRefreshFailed) &&
     !rosterRefused &&
     !rosterReadDeferred;
@@ -1872,11 +1931,11 @@ function SearchPageContent() {
     error: resultError,
   } = needsServerSearch ? namedSearch : roster;
   const searchData = needsServerSearch ? namedSearch.data : rosterData;
+  const showingRetainedRoster = !needsServerSearch && usingRetainedRoster;
   // Clearing a saved search changes which reader is running, not where the
   // visible rows came from. Keep the probe's error until the full read wins.
   const displayedResultError =
-    resultError ??
-    (!needsServerSearch && usingRetainedRoster ? rosterProbe.error : undefined);
+    resultError ?? (showingRetainedRoster ? rosterProbe.error : undefined);
   // Cached rows of this exact key are still useful for lookup, not writes.
   const keepResultsAfterError =
     !rosterRefused &&
@@ -1899,7 +1958,7 @@ function SearchPageContent() {
     !displayedResultError &&
     !studentsData?.pagesInconsistent &&
     !rosterRefused &&
-    !(usingRetainedRoster && rosterReadDeferred);
+    !(showingRetainedRoster && rosterReadDeferred);
   const schoolCheckin = useSchoolCheckinMode({
     enabled: checkinModeAvailable,
     target: checkinTarget.target,
@@ -3367,7 +3426,7 @@ function SearchPageContent() {
   const parentAnnouncementsAvailable = useParentAnnouncementsAvailable();
   const tenantSlug = useTenantSlugSafe();
   const writeParentLetter = () => {
-    if (searchDraftPending) return;
+    if (searchDraftStatus.getSnapshot()) return;
     const token = tenantSlug
       ? stashAnnouncementStudents(
           tenantSlug,
@@ -3682,8 +3741,8 @@ function SearchPageContent() {
             {/* `tourTarget` gibt der Einstiegs-Tour ein eindeutiges Ziel: über
                 dieses Menü erreicht man die Aufsicht, wenn die Schule Kinder
                 nur hier finden lässt (#1321). */}
-            <OverflowMenu
-              tourTarget="child-search-menu"
+            <SearchActionsMenu
+              draftStatus={searchDraftStatus}
               items={[
                 ...childScope.menuItems,
                 {
@@ -3710,30 +3769,29 @@ function SearchPageContent() {
                       },
                     ]
                   : []),
-                // Nur mit vollständig geladenen, sichtbaren Kindern: ein
-                // Brief an eine abgeschnittene Liste würde Empfänger
-                // auslassen.
-                ...(parentAnnouncementsAvailable &&
+              ]}
+              // Nur ein Ergebnis aus einer Abfrage kann alle Empfänger
+              // sicher enthalten. Über mehrere Seiten können Kinder fehlen.
+              parentLetter={
+                parentAnnouncementsAvailable &&
                 rowsLoaded &&
                 !isSearchResultValidating &&
                 !displayedResultError &&
                 (needsServerSearch ||
                   (!usingRetainedRoster && !rosterReadDeferred)) &&
-                truncatedTotal === null &&
-                !paginationInconsistent &&
+                isCompleteSearchResult(studentsData) &&
                 filteredStudents.length > 0
-                  ? [
-                      {
-                        label: "Elternbrief schreiben",
-                        description:
-                          "Öffnet einen neuen Brief an die Eltern der gezeigten Kinder.",
-                        icon: <FileText className="h-4 w-4" aria-hidden />,
-                        onClick: writeParentLetter,
-                        disabled: searchDraftPending,
-                        badge: filteredStudents.length,
-                      },
-                    ]
-                  : []),
+                  ? {
+                      label: "Elternbrief schreiben",
+                      description:
+                        "Öffnet einen neuen Brief an die Eltern der gezeigten Kinder.",
+                      icon: <FileText className="h-4 w-4" aria-hidden />,
+                      onClick: writeParentLetter,
+                      badge: filteredStudents.length,
+                    }
+                  : undefined
+              }
+              viewItems={[
                 // Die Spaltenwahl der Liste (#3834) steht hier und nicht
                 // als eigener Knopf neben dem Umschalter.
                 ...(showTable && !isPhone
@@ -3751,7 +3809,6 @@ function SearchPageContent() {
                     )
                   : []),
               ]}
-              ariaLabel="Weitere Aktionen"
             />
           </>
         }
@@ -3789,7 +3846,7 @@ function SearchPageContent() {
           value: searchTerm,
           onChange: updateSearchTerm,
           onDraftPendingChange: parentAnnouncementsAvailable
-            ? setSearchDraftPending
+            ? searchDraftStatus.setPending
             : undefined,
           placeholder: "Name suchen…",
           debounceMs: 300,

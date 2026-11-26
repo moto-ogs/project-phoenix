@@ -75,11 +75,9 @@ export async function fetchStudentSearch(
   // The first request stays untouched (no page parameter), so the common
   // single-page case is byte-identical with before.
   //
-  // Separate requests only add up to the whole selection because the list
-  // query carries a total order (repositories/users/student.go orders by id
-  // unless a caller asks for something else). Without one, PostgreSQL may
-  // answer two windows out of two different row orders, and children then
-  // appear twice or not at all (#2218 review).
+  // The list query orders by ID, but separate requests do not share a
+  // snapshot. Even with matching counts and distinct IDs, a child can move
+  // into an already read page and be missed. Only use the walk for display.
   const totalPages = result.pagination?.total_pages ?? 1;
   const exceedsPageCap = totalPages > MAX_STUDENT_SEARCH_PAGES;
   let pagesDeferred = false;
@@ -134,6 +132,7 @@ export async function fetchStudentSearch(
     requestDate: requestDate,
     requestIsToday: requestIsToday,
     truncatedTotal,
+    ...(totalPages > 1 ? { spansPages: true } : {}),
     ...(pagesDeferred ? { pagesDeferred } : {}),
     ...(pagesInconsistent ? { pagesInconsistent } : {}),
   };
