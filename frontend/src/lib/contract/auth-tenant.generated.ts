@@ -54,6 +54,7 @@ export interface TenantResolveResponse {
   child_search_only_navigation: boolean;
   simple_staff_navigation: boolean;
   care_facility_term: string;
+  care_facility_article: string;
   traeger_name?: string;
 }
 
@@ -97,6 +98,7 @@ export const TenantResolveResponseSchema: z.ZodType<TenantResolveResponse, unkno
   child_search_only_navigation: bool,
   simple_staff_navigation: bool,
   care_facility_term: str,
+  care_facility_article: str,
   traeger_name: optional(str),
 });
 

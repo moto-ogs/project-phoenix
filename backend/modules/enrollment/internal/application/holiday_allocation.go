@@ -31,10 +31,12 @@ type HolidayAllocationStore interface {
 	// LockHolidayCriteriaCatalog keeps ranking and decision snapshots on the
 	// same catalog until the transaction ends, including an empty catalog.
 	LockHolidayCriteriaCatalog(ctx context.Context, organizationID int64) error
+	ReadHolidayWeekPlacementCounts(ctx context.Context, organizationID, periodID int64) ([]enrollment.HolidayWeekPlaces, error)
 	ReadHolidayCriteria(ctx context.Context, organizationID int64) ([]enrollment.HolidayCriterion, error)
+	ReadHolidayCriteriaCatalog(ctx context.Context, organizationID int64) (enrollment.HolidayCriteriaCatalog, error)
 	// WriteHolidayCriteria makes criteria the criteria of the Träger in
 	// their order; one left out is archived.
-	WriteHolidayCriteria(ctx context.Context, organizationID int64, criteria []enrollment.HolidayCriterionInput, actorAccountID int64) error
+	WriteHolidayCriteria(ctx context.Context, organizationID int64, ranking string, criteria []enrollment.HolidayCriterionInput, actorAccountID int64) error
 	// ReadHolidayCriterionAnswers reads the answers of the registrations of
 	// a period, or of the one registrationID names.
 	ReadHolidayCriterionAnswers(ctx context.Context, organizationID, periodID, registrationID int64) ([]enrollment.HolidayCriterionAnswer, error)
@@ -69,29 +71,25 @@ func NewHolidayAllocation(review *HolidayRegistrationReview) *HolidayAllocation 
 	return &HolidayAllocation{review: review}
 }
 
-// HolidayCriteria lists the criteria of the Träger by priority with the
-// periods that allocate by them.
+// HolidayCriteria lists the Träger’s criteria and ranking with the periods
+// that allocate by them.
 func (a *HolidayAllocation) HolidayCriteria(ctx context.Context, reviewer enrollment.HolidayReviewer) (enrollment.HolidayCriteriaCatalog, error) {
 	if err := holidayReviewKey(reviewer, 1, 1); err != nil {
 		return enrollment.HolidayCriteriaCatalog{}, err
 	}
-	criteria, err := a.review.store.ReadHolidayCriteria(ctx, reviewer.OrganizationID)
-	if err != nil {
-		return enrollment.HolidayCriteriaCatalog{}, fmt.Errorf("enrollment: read holiday criteria: %w", err)
-	}
-	periods, err := a.review.periods.ListHolidayPeriods(ctx, reviewer.OrganizationID)
-	if err != nil {
-		return enrollment.HolidayCriteriaCatalog{}, fmt.Errorf("enrollment: list holiday periods: %w", err)
-	}
-	return holidayCriteriaCatalog(criteria, periods), nil
+	return a.readHolidayCriteria(ctx, reviewer.OrganizationID)
 }
 
-// SaveHolidayCriteria checks and writes the criteria of the Träger in their
-// order and returns them as stored. It takes the catalog lock first and
-// writes only over the version the Büro read (ADR 0311).
-func (a *HolidayAllocation) SaveHolidayCriteria(ctx context.Context, reviewer enrollment.HolidayReviewer, expectedVersion string, input []enrollment.HolidayCriterionInput) (enrollment.HolidayCriteriaCatalog, error) {
+// SaveHolidayCriteria replaces the catalog only over the version the Büro
+// read (ADR 0311). The catalog lock covers both criteria and ranking.
+func (a *HolidayAllocation) SaveHolidayCriteria(ctx context.Context, reviewer enrollment.HolidayReviewer, expectedVersion, ranking string, input []enrollment.HolidayCriterionInput) (enrollment.HolidayCriteriaCatalog, error) {
 	if err := holidayReviewKey(reviewer, 1, 1); err != nil {
 		return enrollment.HolidayCriteriaCatalog{}, err
+	}
+	switch ranking {
+	case "", enrollment.HolidayCriteriaRankingPriority, enrollment.HolidayCriteriaRankingEqual, enrollment.HolidayCriteriaRankingPoints:
+	default:
+		return enrollment.HolidayCriteriaCatalog{}, validation.Errors{"ranking": errors.New("must be priority, equal or points")}
 	}
 	input, err := normalizeHolidayCriteria(input)
 	if err != nil {
@@ -100,56 +98,55 @@ func (a *HolidayAllocation) SaveHolidayCriteria(ctx context.Context, reviewer en
 	if err := a.review.store.LockHolidayCriteriaCatalog(ctx, reviewer.OrganizationID); err != nil {
 		return enrollment.HolidayCriteriaCatalog{}, err
 	}
-	stored, err := a.review.store.ReadHolidayCriteria(ctx, reviewer.OrganizationID)
+	stored, err := a.review.store.ReadHolidayCriteriaCatalog(ctx, reviewer.OrganizationID)
 	if err != nil {
-		return enrollment.HolidayCriteriaCatalog{}, fmt.Errorf("enrollment: read holiday criteria: %w", err)
+		return enrollment.HolidayCriteriaCatalog{}, err
 	}
 	if err := readstate.Check(expectedVersion, holidayCriteriaVersion(stored)); err != nil {
 		return enrollment.HolidayCriteriaCatalog{}, err
 	}
-	if err := a.review.store.WriteHolidayCriteria(ctx, reviewer.OrganizationID, input, reviewer.AccountID); err != nil {
+	if err := a.review.store.WriteHolidayCriteria(ctx, reviewer.OrganizationID, ranking, input, reviewer.AccountID); err != nil {
 		return enrollment.HolidayCriteriaCatalog{}, err
 	}
-	criteria, err := a.review.store.ReadHolidayCriteria(ctx, reviewer.OrganizationID)
+	return a.readHolidayCriteria(ctx, reviewer.OrganizationID)
+}
+
+func (a *HolidayAllocation) readHolidayCriteria(ctx context.Context, organizationID int64) (enrollment.HolidayCriteriaCatalog, error) {
+	catalog, err := a.review.store.ReadHolidayCriteriaCatalog(ctx, organizationID)
 	if err != nil {
-		return enrollment.HolidayCriteriaCatalog{}, fmt.Errorf("enrollment: read holiday criteria: %w", err)
+		return enrollment.HolidayCriteriaCatalog{}, err
 	}
-	periods, err := a.review.periods.ListHolidayPeriods(ctx, reviewer.OrganizationID)
+	periods, err := a.review.periods.ListHolidayPeriods(ctx, organizationID)
 	if err != nil {
 		return enrollment.HolidayCriteriaCatalog{}, fmt.Errorf("enrollment: list holiday periods: %w", err)
 	}
-	return holidayCriteriaCatalog(criteria, periods), nil
-}
-
-// holidayCriteriaCatalog names the criteria with the periods by criteria.
-func holidayCriteriaCatalog(criteria []enrollment.HolidayCriterion, periods []enrollment.HolidayPeriod) enrollment.HolidayCriteriaCatalog {
-	catalog := enrollment.HolidayCriteriaCatalog{
-		Criteria: criteria, Periods: []enrollment.HolidayCriterionPeriod{}, Version: holidayCriteriaVersion(criteria),
-	}
+	catalog.Version = holidayCriteriaVersion(catalog)
+	catalog.Periods = []enrollment.HolidayCriterionPeriod{}
 	for _, period := range periods {
 		if period.AllocationMode == enrollment.HolidayAllocationCriteria {
 			catalog.Periods = append(catalog.Periods, enrollment.HolidayCriterionPeriod{ID: period.ID, Name: period.Name})
 		}
 	}
-	return catalog
+	return catalog, nil
 }
 
-// holidayCriteriaVersion is the token of the criteria as the Büro edits
-// them, in their order (ADR 0311). Whether a criterion is answered is left
-// out: a parent's answer changes no text, and the scope of an answered
-// criterion is checked on every save anyway.
-func holidayCriteriaVersion(criteria []enrollment.HolidayCriterion) string {
+// holidayCriteriaVersion fingerprints only what the Büro edits (ADR 0311).
+// Answers and periods are not part of the editor's state.
+func holidayCriteriaVersion(catalog enrollment.HolidayCriteriaCatalog) string {
 	type edited struct {
 		ID                    int64
 		Name, Question, Scope string
 		Active                bool
-		Position              int
+		Position, Points      int
 	}
-	state := make([]edited, len(criteria))
-	for i, criterion := range criteria {
-		state[i] = edited{criterion.ID.Int64(), criterion.Name, criterion.Question, criterion.Scope, criterion.Active, criterion.Position}
+	state := make([]edited, len(catalog.Criteria))
+	for i, criterion := range catalog.Criteria {
+		state[i] = edited{criterion.ID.Int64(), criterion.Name, criterion.Question, criterion.Scope, criterion.Active, criterion.Position, criterion.Points}
 	}
-	return readstate.Fingerprint(state)
+	return readstate.Fingerprint(struct {
+		Ranking  string
+		Criteria []edited
+	}{catalog.Ranking, state})
 }
 
 // normalizeHolidayCriteria trims the texts and checks the list: at most
@@ -186,6 +183,9 @@ func validateHolidayCriterion(errs validation.Errors, index int, criterion enrol
 	}
 	if criterion.Scope != enrollment.HolidayCriterionFamily && criterion.Scope != enrollment.HolidayCriterionChild {
 		errs[field("scope")] = errors.New("must be family or child")
+	}
+	if criterion.Points < 0 || criterion.Points > enrollment.HolidayCriterionPointsMax {
+		errs[field("points")] = fmt.Errorf("must be between 1 and %d", enrollment.HolidayCriterionPointsMax)
 	}
 	if criterion.ID < 0 || (criterion.ID > 0 && seen[criterion.ID.Int64()]) {
 		errs[field("id")] = errors.New("names a criterion twice")
@@ -230,15 +230,17 @@ func (a *HolidayAllocation) criteriaPeriod(ctx context.Context, reviewer enrollm
 	return period, nil
 }
 
-// board reads the allocation list: five statements for any number of
-// weeks and bookings.
+// board reads the allocation list. A read takes no catalog lock: it would
+// wait behind a decision that holds the period, which the read's audit
+// entry needs (a decision reads it under its own lock). Five statements
+// for any number of weeks and bookings.
 func (a *HolidayAllocation) board(ctx context.Context, organizationID int64, period enrollment.HolidayPeriod) (enrollment.HolidayAllocationBoard, error) {
 	store := a.review.store
-	criteria, err := store.ReadHolidayCriteria(ctx, organizationID)
+	catalog, err := store.ReadHolidayCriteriaCatalog(ctx, organizationID)
 	if err != nil {
-		return enrollment.HolidayAllocationBoard{}, fmt.Errorf("enrollment: read holiday criteria: %w", err)
+		return enrollment.HolidayAllocationBoard{}, err
 	}
-	places, err := store.ReadHolidayWeekPlaces(ctx, organizationID, period.ID.Int64())
+	places, err := store.ReadHolidayWeekPlacementCounts(ctx, organizationID, period.ID.Int64())
 	if err != nil {
 		return enrollment.HolidayAllocationBoard{}, fmt.Errorf("enrollment: read holiday week places: %w", err)
 	}
@@ -254,10 +256,11 @@ func (a *HolidayAllocation) board(ctx context.Context, organizationID int64, per
 	if err != nil {
 		return enrollment.HolidayAllocationBoard{}, fmt.Errorf("enrollment: read holiday allocation decisions: %w", err)
 	}
-	active := activeHolidayCriteria(criteria)
+	active := activeHolidayCriteria(catalog.Criteria)
 	values := holidayAllocationValues(period, active, answers)
+	weights, maxScore := holidayCriteriaWeights(active, catalog.Ranking)
 	board := enrollment.HolidayAllocationBoard{
-		AllocationMode: period.AllocationMode, Criteria: []enrollment.HolidayCriterionRef{},
+		AllocationMode: period.AllocationMode, Ranking: catalog.Ranking, MaxScore: maxScore, Criteria: []enrollment.HolidayCriterionRef{},
 		Weeks: make([]enrollment.HolidayAllocationWeek, len(places)), Decisions: decisions,
 	}
 	if period.HolidayWishRule {
@@ -266,17 +269,17 @@ func (a *HolidayAllocation) board(ctx context.Context, organizationID int64, per
 		})
 	}
 	for _, criterion := range active {
-		board.Criteria = append(board.Criteria, enrollment.HolidayCriterionRef{ID: criterion.ID, Name: criterion.Name, Scope: criterion.Scope, Position: len(board.Criteria) + 1})
+		board.Criteria = append(board.Criteria, enrollment.HolidayCriterionRef{ID: criterion.ID, Name: criterion.Name, Scope: criterion.Scope, Position: len(board.Criteria) + 1, Points: criterion.Points})
 	}
 	for i, week := range places {
-		board.Weeks[i] = holidayAllocationWeek(week, pending, values)
+		board.Weeks[i] = holidayAllocationWeek(week, pending, values, weights)
 	}
 	return board, nil
 }
 
 // holidayAllocationWeek is a week of the list with its pending bookings in
 // the order of the proposal and the proposal of each.
-func holidayAllocationWeek(week enrollment.HolidayWeekPlaces, pending []enrollment.HolidayPendingBooking, values func(enrollment.HolidayPendingBooking) []enrollment.HolidayCriterionValue) enrollment.HolidayAllocationWeek {
+func holidayAllocationWeek(week enrollment.HolidayWeekPlaces, pending []enrollment.HolidayPendingBooking, values func(enrollment.HolidayPendingBooking) []enrollment.HolidayCriterionValue, weights map[ident.ID]int) enrollment.HolidayAllocationWeek {
 	careDays := holidayAllocationCareDays(week.StartsOn, week.EndsOn)
 	taken := map[calendar.Date]int{}
 	if week.BookingUnit == enrollment.HolidayBookingUnitDay {
@@ -299,10 +302,11 @@ func holidayAllocationWeek(week enrollment.HolidayWeekPlaces, pending []enrollme
 			continue
 		}
 		days = append(days, booking.Days)
+		criteria := values(booking)
 		allocation.Pending = append(allocation.Pending, enrollment.HolidayAllocationCandidate{
 			BookingID: ident.ID(booking.BookingID), Rank: booking.Rank, RegistrationID: ident.ID(booking.RegistrationID), SubmittedAt: booking.SubmittedAt,
 			ChildID: ident.ID(booking.ChildID), ChildFirstName: booking.ChildFirstName, ChildLastName: booking.ChildLastName,
-			TimeModelName: booking.TimeModelName, Days: booking.Days, Criteria: values(booking),
+			TimeModelName: booking.TimeModelName, Days: booking.Days, Criteria: criteria, Score: holidayCriteriaScore(criteria, weights),
 		})
 	}
 	for i, placed := range holidayProposal(week.Capacity, taken, careDays, days) {
@@ -364,13 +368,13 @@ func holidayPlacementOf(placed bool) string {
 	return enrollment.HolidayPlacementWaitlisted
 }
 
-// activeHolidayCriteria are the active criteria in their priority.
+// activeHolidayCriteria are the active criteria in catalog order.
 func activeHolidayCriteria(criteria []enrollment.HolidayCriterion) []enrollment.HolidayCriterion {
 	return slices.DeleteFunc(slices.Clone(criteria), func(criterion enrollment.HolidayCriterion) bool { return !criterion.Active })
 }
 
 // holidayCriterionLookup names the values of the active criteria for the
-// booking of a child of a registration, in their priority.
+// booking of a child of a registration, in catalog order.
 type holidayCriterionLookup func(registrationID, childID int64) []enrollment.HolidayCriterionValue
 
 // holidayCriterionValues looks the answers up: a family criterion by the
@@ -457,4 +461,30 @@ func holidayCriteriaMet(names []string, values []enrollment.HolidayCriterionValu
 		}
 	}
 	return met
+}
+
+// holidayCriteriaWeights counts each active catalog criterion once except in
+// points mode. The separate holiday wish rule has no weight.
+func holidayCriteriaWeights(active []enrollment.HolidayCriterion, ranking string) (map[ident.ID]int, int) {
+	weights := make(map[ident.ID]int, len(active))
+	maxScore := 0
+	for _, criterion := range active {
+		weight := 1
+		if ranking == enrollment.HolidayCriteriaRankingPoints {
+			weight = criterion.Points
+		}
+		weights[criterion.ID] = weight
+		maxScore += weight
+	}
+	return weights, maxScore
+}
+
+func holidayCriteriaScore(values []enrollment.HolidayCriterionValue, weights map[ident.ID]int) int {
+	score := 0
+	for _, value := range values {
+		if value.Value == enrollment.HolidayCriterionYes {
+			score += weights[value.CriterionID]
+		}
+	}
+	return score
 }

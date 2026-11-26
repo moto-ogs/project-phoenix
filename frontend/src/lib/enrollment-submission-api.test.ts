@@ -233,6 +233,7 @@ describe("enrollment-submission-api", () => {
           edit_mode: "direct_edit",
           signature_required: false,
           care_facility_term: "OGS",
+          care_facility_article: "die",
           children: [
             {
               id: "7",
@@ -290,6 +291,7 @@ describe("enrollment-submission-api", () => {
           care_required: false,
           grade_level_max: 13,
           care_facility_term: "OGS",
+          care_facility_article: "die",
           edit_mode: "direct_edit",
           draft: {
             request_id: "99",

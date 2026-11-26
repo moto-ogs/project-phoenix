@@ -541,6 +541,8 @@ const (
 	KeyEnrollmentStatusTokenTTLDays                     = "enrollment.status_token_ttl_days"
 	KeyEnrollmentGradeLevelMax                          = "enrollment.grade_level_max"
 	KeyEnrollmentCareFacilityTerm                       = "enrollment.care_facility_term"
+	// The article of a school's own care name (der, die, das; #8136).
+	KeyEnrollmentCareFacilityArticle = "enrollment.care_facility_article"
 	// Per-tenant info texts (Markdown) shown behind each consent
 	// checkbox on the public enrollment form. A block is shown only when
 	// its matching enable setting is true and its text is non-empty.

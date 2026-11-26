@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	config "github.com/moto-ogs/project-phoenix/modules/settings/records"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -38,6 +39,8 @@ func TestAllSettingsRegistered(t *testing.T) {
 		"operations.federal_state",
 		// Term for the care in fixed parent texts (#6042).
 		"enrollment.care_facility_term",
+		// Article of a school's own care name (#8136).
+		"enrollment.care_facility_article",
 		// Saturday and Sunday on Friday's plan, demo schools only (#3921).
 		"operations.weekend_follows_friday",
 		"gdpr.data_cleanup_enabled",
@@ -2587,6 +2590,39 @@ func TestCareFacilityTermSetting(t *testing.T) {
 	}
 	for _, bad := range []string{"", " ", " GTS", "GTS ", "<b>GTS</b>", "{term}", "GTS\nNord", "<script>", "a\"b", "#GTS", "Schule & Hort", "https://x.de"} {
 		assert.False(t, pattern.MatchString(bad), bad)
+	}
+}
+
+// A school with its own care name chooses the article (#8136). Without a
+// choice every school keeps "die", and every preset name is feminine, so the
+// texts of existing schools do not change.
+func TestCareFacilityArticleSetting(t *testing.T) {
+	t.Parallel()
+
+	def := config.GetDefinition(config.KeyEnrollmentCareFacilityArticle)
+	require.NotNil(t, def, "enrollment.care_facility_article should be registered")
+	assert.Equal(t, config.FieldSelect, def.Type)
+	assert.Equal(t, "die", def.Default)
+	assert.Equal(t, config.AccessShared, def.AccessPolicy)
+	assert.Equal(t, "config:update", def.WritePermission)
+	require.NotNil(t, def.Options)
+	values := make([]any, 0, len(def.Options.Static))
+	for _, option := range def.Options.Static {
+		values = append(values, option.Value)
+	}
+	assert.Equal(t, []any{"der", "die", "das"}, values)
+
+	term := config.GetDefinition(config.KeyEnrollmentCareFacilityTerm)
+	require.NotNil(t, term)
+	assert.Equal(t, term.Tab, def.Tab)
+	assert.Equal(t, term.Category, def.Category)
+	assert.Equal(t, term.SortOrder+1, def.SortOrder, "sits directly under the name it belongs to")
+	for _, preset := range term.Options.Static {
+		name, ok := preset.Value.(string)
+		require.True(t, ok)
+		for _, stored := range []string{"der", "die", "das"} {
+			assert.Equal(t, "die", textnorm.CareArticle(name, stored), "preset %s is feminine", name)
+		}
 	}
 }
 

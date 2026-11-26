@@ -886,7 +886,7 @@ export const activitiesCatalogTopic =
       ],
       differences: [
         "Auf dem Handy steht statt `+ Aktivität` ein rundes Plus unten rechts.",
-        "`Schulhof Freispiel` und `WC` legt moto selbst an. Deine Namen sind fest, und `Löschen` fehlt.",
+        "`Schulhof Freispiel`, `WC` und `Offener Raum` legt moto selbst an. Ihre Namen sind fest, und `Löschen` fehlt.",
       ],
       troubleshootingDetails: [
         "Fehlt `Datenverwaltung` in der Seitenleiste? Dann fehlen dir die Leitungsrechte. Frage deine Leitung.",
@@ -8896,7 +8896,7 @@ export const settingsGuideTopic = function settingsGuideTopic(): HelpTopic {
         ordered: false,
         steps: [
           "`Online-Anmeldung`: Eltern melden ihr Kind über ein Formular im Internet an. Einschalten lässt sie sich erst mit einer Datenschutzinformation unter `Rechtstexte`.",
-          "`Name der Betreuung in Texten für Eltern`: So heißt deine Betreuung in den festen Texten der Anmeldung, der Eltern-App und in den E-Mails dazu. Auch Fehlermeldungen für Eltern und für dein Team nennen ihn. Wähle `OGS`, `GTS` oder `Eigener Name`. Deine eigenen Texte im Formular ändern sich nicht.",
+          "`Name der Betreuung in Texten für Eltern`: So heißt deine Betreuung in den festen Texten der Anmeldung, der Eltern-App und in den E-Mails dazu. Auch Fehlermeldungen für Eltern und für dein Team nennen ihn. Wähle `OGS`, `GTS` oder `Eigener Name`. Bei `Eigener Name` wählst du auch den Artikel, der zu deinem Namen passt, zum Beispiel „der Hort“. Deine eigenen Texte im Formular ändern sich nicht.",
           "`Empfänger für neue Anmeldungen`: Diese Adressen bekommen bei jeder neuen Anmeldung eine E-Mail.",
           "`Rechtstexte`: Was Eltern im Formular lesen und bestätigen, zum Beispiel die Datenschutzinformation.",
         ],
@@ -13900,8 +13900,20 @@ export const traegerHolidayAllocationTopic =
             "Öffne oben rechts das Drei-Punkte-Menü. Wähle `Kriterien der Platzvergabe`.",
             "Wähle eine Vorlage oder `Eigenes Kriterium`.",
             "Gib den Namen und die `Frage an die Eltern` ein. Wähle bei `Gilt für`, ob die Frage für die Familie oder für jedes Kind gilt.",
-            "Bringe die Kriterien mit den Pfeilen in die richtige Reihenfolge. Das oberste Kriterium zählt am meisten.",
             "Wähle `Kriterien speichern`.",
+          ],
+        },
+        {
+          title: "Festlegen, wie die Kriterien zählen",
+          description:
+            "Das gilt für alle Ferien, die ihre Plätze nach Kriterien vergeben.",
+          steps: [
+            "Öffne `Kriterien der Platzvergabe`.",
+            "Wähle bei `Wie zählen die Kriterien?` eine Karte.",
+            "`Nach Rangfolge`: Bringe die Kriterien mit den Pfeilen in die richtige Reihenfolge. Das oberste Kriterium zählt am meisten.",
+            "`Alle gleich`: Jedes Kriterium zählt gleich viel. Wer mehr Kriterien erfüllt, steht weiter oben.",
+            "`Nach Punkten`: Gib bei jedem Kriterium die `Punkte` ein. Wer mehr Punkte hat, steht weiter oben.",
+            "Wähle `Kriterien speichern`. moto sortiert offene Anmeldungen und Wartelisten sofort neu.",
           ],
         },
         {
@@ -13945,7 +13957,9 @@ export const traegerHolidayAllocationTopic =
         "Die Eltern bekommen eine E-Mail mit dem Platz oder der Warteliste. Danach rücken Kinder von der Warteliste automatisch nach, wenn ein Platz frei wird. Die Warteliste ist nach deinen Kriterien sortiert, dann nach Eingang.",
       notes: [
         "moto schlägt nur vor. Jede Entscheidung trifft dein Büro. Unter `Verlauf der Entscheidungen` steht jede Entscheidung mit Vorschlag und Begründung.",
-        "Bei gleichen Kriterien zählt, wer sich zuerst angemeldet hat.",
+        "Bei Gleichstand zählt, wer sich zuerst angemeldet hat. Das gilt bei jeder Zählweise.",
+        "Bei `Alle gleich` und `Nach Punkten` steht im Reiter `Vergabe` bei jedem Kind der Stand, zum Beispiel `2 von 3 Kriterien erfüllt` oder `5 von 6 Punkten`.",
+        "Im `Verlauf der Entscheidungen` bleibt stehen, wie die Kriterien bei der Entscheidung gezählt haben.",
         "Sobald Antworten vorliegen, bleibt `Gilt für` beim Kriterium fest.",
         "Solange eine Woche offene Entscheidungen hat, rückt dort niemand nach. Nach der letzten Entscheidung können ältere Wartelisteneinträge nachrücken. Gerade auf die Warteliste gesetzte Kinder bleiben zunächst dort.",
         "Eine Prüfung des Büros zählt vor der Angabe der Eltern. Sie ändert den Vorschlag für offene Plätze.",
@@ -13956,6 +13970,7 @@ export const traegerHolidayAllocationTopic =
       differences: [
         "Bei einem Kriterium steht `ungeklärt`? Die Eltern haben dazu nichts gesagt, zum Beispiel weil das Kriterium später dazukam. Es zählt erst, wenn dein Büro es geprüft hat.",
         "Der Reiter `Vergabe` fehlt? Der Ferienzeitraum vergibt die Plätze nach Eingang.",
+        "Bei den Kriterien steht keine Priorität? Dann zählen sie gleich viel oder nach Punkten. Die Pfeile ändern dann nur die Reihenfolge der Fragen für die Eltern.",
         "Die Karten bei `Wie werden die Plätze vergeben?` lassen sich nicht wählen? Es gibt schon Anmeldungen.",
       ],
       troubleshootingDetails: [

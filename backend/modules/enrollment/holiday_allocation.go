@@ -13,7 +13,7 @@ import (
 // Allocation of holiday places by criteria (#4700, decision of 09.11.,
 // model A). A period gives its places by arrival (#4699) or by criteria.
 // By criteria no booking gets a place when the parents send the form: it is
-// pending. The Träger names its criteria with their priority; the system
+// pending. The Träger sets its criteria and how they count; the system
 // sorts the pending bookings of each week by them and proposes the first
 // ones for the free places, the Träger-Büro decides, one by one or by
 // taking the proposal, and gives a reason for every decision that deviates
@@ -37,6 +37,13 @@ const (
 	HolidayAllocationCriteria = "criteria"
 )
 
+// Ranking modes of the Träger's criteria catalog.
+const (
+	HolidayCriteriaRankingPriority = "priority"
+	HolidayCriteriaRankingEqual    = "equal"
+	HolidayCriteriaRankingPoints   = "points"
+)
+
 // Scopes of a criterion: one answer per registration or one per child.
 const (
 	HolidayCriterionFamily = "family"
@@ -58,8 +65,8 @@ const (
 
 // HolidayWishCriterionID names the holiday care wish of the online
 // registration (#4703) among the criteria of a period that takes it into
-// account: it comes before the criteria of the Träger, as one criterion of
-// the allocation, and is no row of the Träger's list.
+// account: it comes before the criteria of the Träger and does not count
+// toward the score.
 const (
 	HolidayWishCriterionID   int64 = 0
 	HolidayWishCriterionName       = "Ferienwunsch aus der OGS-Anmeldung"
@@ -68,6 +75,7 @@ const (
 // Limits of the criteria and the decisions.
 const (
 	HolidayCriteriaMax             = 10
+	HolidayCriterionPointsMax      = 100
 	HolidayCriterionNameMaxLength  = 60
 	HolidayCriterionQuestionMaxLen = 300
 	HolidayAllocationReasonMaxLen  = 500
@@ -124,8 +132,9 @@ func (r *HolidayAllocationReasonRefusal) Error() string {
 
 func (r *HolidayAllocationReasonRefusal) Unwrap() error { return ErrHolidayAllocationReasonRequired }
 
-// HolidayCriterion is a criterion of the Träger. Position is its priority,
-// 1 first; Answered reports answers to it, which removing keeps.
+// HolidayCriterion is a criterion of the Träger. Position orders the catalog
+// and decides priority when ranking by priority. Answered reports whether
+// answers exist; archiving keeps them.
 type HolidayCriterion struct {
 	ID       ident.ID `json:"id"`
 	Name     string   `json:"name"`
@@ -133,13 +142,15 @@ type HolidayCriterion struct {
 	Scope    string   `json:"scope"`
 	Active   bool     `json:"active"`
 	Position int      `json:"position"`
+	Points   int      `json:"points"`
 	Answered bool     `json:"answered"`
 }
 
-// HolidayCriteriaCatalog are the criteria of the Träger by priority and the
-// periods that allocate by them: a change of the criteria changes the order
-// of their pending bookings and waiting lists at once.
+// HolidayCriteriaCatalog holds the Träger’s ranking mode, its ordered criteria
+// and the periods that use them. Catalog edits affect pending bookings and
+// waiting lists across those periods.
 type HolidayCriteriaCatalog struct {
+	Ranking  string                   `json:"ranking"`
 	Criteria []HolidayCriterion       `json:"criteria"`
 	Periods  []HolidayCriterionPeriod `json:"periods"`
 	// Version is the token of the criteria as the Büro edits them; a save
@@ -154,13 +165,14 @@ type HolidayCriterionPeriod struct {
 }
 
 // HolidayCriterionInput is a criterion as the Träger-Büro writes it; a zero
-// ID adds one. The order of the list is the priority.
+// ID adds one. Zero points keep the existing value, or default to one.
 type HolidayCriterionInput struct {
 	ID       ident.ID
 	Name     string
 	Question string
 	Scope    string
 	Active   bool
+	Points   int
 }
 
 // HolidayCriterionQuestion is an active criterion as the form asks it.
@@ -176,6 +188,7 @@ type HolidayCriterionRef struct {
 	Name     string   `json:"name"`
 	Scope    string   `json:"scope"`
 	Position int      `json:"position"`
+	Points   int      `json:"points"`
 }
 
 // HolidayCriterionValue is the value that counts of one criterion for one
@@ -192,6 +205,7 @@ type HolidayCriterionValue struct {
 type HolidayAllocationCandidate struct {
 	BookingID      ident.ID                `json:"booking_id"`
 	Rank           int                     `json:"rank"`
+	Score          int                     `json:"score"`
 	RegistrationID ident.ID                `json:"registration_id"`
 	SubmittedAt    time.Time               `json:"submitted_at"`
 	ChildID        ident.ID                `json:"child_id"`
@@ -219,7 +233,8 @@ type HolidayAllocationWeek struct {
 }
 
 // HolidayAllocationDecision is one decision of the Büro as recorded:
-// CriteriaMet names the criteria the booking met at that moment.
+// CriteriaMet names the criteria the booking met at that moment. Decisions
+// predating scores have nil Score and MaxScore.
 type HolidayAllocationDecision struct {
 	ID                 ident.ID      `json:"id"`
 	WeekID             ident.ID      `json:"week_id"`
@@ -232,6 +247,9 @@ type HolidayAllocationDecision struct {
 	Placement          string        `json:"placement"`
 	Proposal           string        `json:"proposal"`
 	Rank               int           `json:"rank"`
+	Ranking            string        `json:"ranking"`
+	Score              *int          `json:"score"`
+	MaxScore           *int          `json:"max_score"`
 	CriteriaMet        []string      `json:"criteria_met"`
 	Reason             string        `json:"reason"`
 	DecidedAt          time.Time     `json:"decided_at"`
@@ -239,7 +257,7 @@ type HolidayAllocationDecision struct {
 }
 
 // HolidayAllocationBoard is the allocation list of a period: its active
-// criteria by priority, the pending bookings of each week in the order of
+// criteria in catalog order, the pending bookings of each week in the order of
 // the proposal and the decisions, newest first.
 type HolidayAllocationBoard struct {
 	// PlacedRegistrations names registrations that gained a place in this
@@ -247,6 +265,8 @@ type HolidayAllocationBoard struct {
 	// sibling groups in the same transaction.
 	PlacedRegistrations []int64                     `json:"-"`
 	AllocationMode      string                      `json:"allocation_mode"`
+	Ranking             string                      `json:"ranking"`
+	MaxScore            int                         `json:"max_score"`
 	Criteria            []HolidayCriterionRef       `json:"criteria"`
 	Weeks               []HolidayAllocationWeek     `json:"weeks"`
 	Decisions           []HolidayAllocationDecision `json:"decisions"`
@@ -288,14 +308,14 @@ type HolidayCriterionCheck struct {
 // places of a period by them. Every operation runs in the Träger
 // transaction of the reviewer's Träger.
 type HolidayAllocation interface {
-	// HolidayCriteria lists the criteria of the Träger by priority, archived
-	// ones left out, with the periods that allocate by them.
+	// HolidayCriteria lists the Träger’s criteria and ranking, with the periods
+	// that allocate by them. Archived criteria are left out.
 	HolidayCriteria(ctx context.Context, reviewer HolidayReviewer) (HolidayCriteriaCatalog, error)
 	// SaveHolidayCriteria makes criteria the criteria of the Träger in their
-	// order; one left out is archived. Invalid texts or scopes are a
-	// validation error on criteria.N.field. expectedVersion is the Version
+	// order; one left out is archived. An empty ranking keeps the stored mode.
+	// Invalid criteria are validation errors on criteria.N.field. expectedVersion is the Version
 	// the Büro read; another one is readstate.ErrChanged.
-	SaveHolidayCriteria(ctx context.Context, reviewer HolidayReviewer, expectedVersion string, criteria []HolidayCriterionInput) (HolidayCriteriaCatalog, error)
+	SaveHolidayCriteria(ctx context.Context, reviewer HolidayReviewer, expectedVersion, ranking string, criteria []HolidayCriterionInput) (HolidayCriteriaCatalog, error)
 	// HolidayAllocationBoard reads the allocation list of a period and
 	// records the read; a period by arrival is ErrHolidayAllocationOff.
 	HolidayAllocationBoard(ctx context.Context, reviewer HolidayReviewer, periodID int64) (HolidayAllocationBoard, error)

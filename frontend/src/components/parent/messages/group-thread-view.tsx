@@ -99,8 +99,8 @@ export function ParentGroupThreadView({
   );
   // Eine Gruppennachricht kommt von einer Schule: ihre Texte nennen die
   // Betreuung so, wie diese Schule sie nennt (#6082).
-  const { termOfSchool } = useParentCareTerms();
-  const threadTerm = termOfSchool(thread?.school_name);
+  const { valuesOfSchool } = useParentCareTerms();
+  const threadTerm = valuesOfSchool(thread?.school_name);
   const t = useCareTermTranslations("parentGroupThreads", threadTerm);
   const tm = useCareTermTranslations("parentMessages", threadTerm);
   const locale = useLocale();

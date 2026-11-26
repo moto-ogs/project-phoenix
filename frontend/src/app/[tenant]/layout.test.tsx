@@ -120,6 +120,7 @@ const tenantDefaults = {
   child_search_only_navigation: false,
   simple_staff_navigation: false,
   care_facility_term: "",
+  care_facility_article: "die",
 };
 
 function tenantResponse(name = "School A") {

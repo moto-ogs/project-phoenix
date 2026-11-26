@@ -128,6 +128,7 @@ describe("tenant-api", () => {
       );
       expect(result).toEqual({
         careFacilityTerm: "OGS",
+        careFacilityArticle: "die",
         tenantId: "1",
         slug: "demo-school",
         name: "Demo School",
@@ -409,6 +410,39 @@ describe("tenant-api", () => {
 
       expect((await resolveTenant("barnstorf"))?.careFacilityTerm).toBe("GTS");
       expect((await resolveTenant("barnstorf"))?.careFacilityTerm).toBe("OGS");
+    });
+
+    // #8136: the article of a school's own name; missing metadata is „die“.
+    it("carries the care facility article", async () => {
+      const respond = (extra: Record<string, unknown>) =>
+        new Response(
+          JSON.stringify({
+            status: "success",
+            data: {
+              tenant_id: "2",
+              slug: "barnstorf",
+              name: "Barnstorf",
+              subdomain: "barnstorf",
+              organization_id: "20",
+              organization_name: "Org B",
+              settings: {},
+              ...extra,
+            },
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      vi.mocked(global.fetch)
+        .mockResolvedValueOnce(
+          respond({ care_facility_term: "Hort", care_facility_article: "der" }),
+        )
+        .mockResolvedValueOnce(respond({ care_facility_term: "Hort" }));
+
+      expect((await resolveTenant("barnstorf"))?.careFacilityArticle).toBe(
+        "der",
+      );
+      expect((await resolveTenant("barnstorf"))?.careFacilityArticle).toBe(
+        "die",
+      );
     });
 
     it("derives nfcEnabled from the booked NFC module", async () => {

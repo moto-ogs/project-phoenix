@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan/carerequests"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
 
 // childFeatureSettings holds the tenant settings behind ChildFeatureFlags,
@@ -31,6 +32,7 @@ type childFeatureSettings struct {
 	guardianManagement bool
 	reasonPolicy       string
 	careTerm           string
+	careArticle        string
 }
 
 // childFeatureSettingKeys lists the settings ChildFeatures batch-resolves.
@@ -54,6 +56,7 @@ func childFeatureSettingKeys() []string {
 		KeyParentGuardianManagementEnabled,
 		KeyParentRequestReasonPolicy,
 		KeyEnrollmentCareFacilityTerm,
+		KeyEnrollmentCareFacilityArticle,
 	}
 }
 
@@ -201,5 +204,10 @@ func (r childSettingResolver) resolvePortalSettings(out *childFeatureSettings) e
 	if out.careTerm, err = r.resolveString(KeyEnrollmentCareFacilityTerm); err != nil {
 		return fmt.Errorf("parent: resolve care facility term: %w", err)
 	}
+	stored, err := r.resolveString(KeyEnrollmentCareFacilityArticle)
+	if err != nil {
+		return fmt.Errorf("parent: resolve care facility article: %w", err)
+	}
+	out.careArticle = textnorm.CareArticle(out.careTerm, stored)
 	return nil
 }

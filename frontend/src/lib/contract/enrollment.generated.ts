@@ -1413,6 +1413,7 @@ export interface StatusResponse {
   signature_required: boolean;
   signature?: RequestSignatureResponse;
   care_facility_term: string;
+  care_facility_article: string;
   renewal_terms?: StatusRenewalTermsResponse;
 }
 
@@ -1432,6 +1433,7 @@ export const StatusResponseSchema: z.ZodType<StatusResponse, unknown> = object<S
   signature_required: bool,
   signature: optional(RequestSignatureResponseSchema),
   care_facility_term: str,
+  care_facility_article: str,
   renewal_terms: optional(StatusRenewalTermsResponseSchema),
 });
 
@@ -1539,6 +1541,7 @@ export interface EditBootstrapResponse {
   care_offerings_enabled: boolean;
   grade_level_max: number;
   care_facility_term: string;
+  care_facility_article: string;
   legal_texts: PublicLegalTextsResponse;
   draft: EditDraftResponse;
   edit_mode: string;
@@ -1556,6 +1559,7 @@ export const EditBootstrapResponseSchema: z.ZodType<EditBootstrapResponse, unkno
   care_offerings_enabled: bool,
   grade_level_max: safeInt,
   care_facility_term: str,
+  care_facility_article: str,
   legal_texts: PublicLegalTextsResponseSchema,
   draft: EditDraftResponseSchema,
   edit_mode: str,

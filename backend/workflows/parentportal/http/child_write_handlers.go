@@ -306,6 +306,9 @@ type ChildFeaturesResponse struct {
 	// CareFacilityTerm is the school's term for its care („OGS“, „GTS“,
 	// #6082): the portal names this child's care with it.
 	CareFacilityTerm string `json:"care_facility_term"`
+	// CareFacilityArticle is the article the German texts decline that
+	// term with: "der", "die" or "das" (#8136).
+	CareFacilityArticle string `json:"care_facility_article"`
 }
 
 // getChildFeatures returns the resolved parent-portal feature flags for the
@@ -359,6 +362,7 @@ func toChildFeaturesResponse(flags parentService.ChildFeatureFlags) ChildFeature
 		NewsEnabled:                   flags.NewsEnabled,
 		ReasonRequired:                flags.ReasonRequired,
 		CareFacilityTerm:              flags.CareFacilityTerm,
+		CareFacilityArticle:           flags.CareFacilityArticle,
 	}
 }
 

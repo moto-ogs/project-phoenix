@@ -77,8 +77,9 @@ func TestChildFeaturesNameTheSchoolsCareTerm(t *testing.T) {
 		CareExceptions:      owners.NewParentCareExceptions(repos.CarePlan()),
 		Settings: batchSettingsStub{parentSettingsStub{
 			stringValues: map[string]string{
-				parentService.KeyGuardianParentInviteMode:   parentService.ParentInviteModeDisabled,
-				parentService.KeyEnrollmentCareFacilityTerm: "GTS",
+				parentService.KeyGuardianParentInviteMode:      parentService.ParentInviteModeDisabled,
+				parentService.KeyEnrollmentCareFacilityTerm:    "GTS",
+				parentService.KeyEnrollmentCareFacilityArticle: "der",
 			},
 		}},
 		MealPlan: availableMealPlan(false),
@@ -92,10 +93,12 @@ func TestChildFeaturesNameTheSchoolsCareTerm(t *testing.T) {
 	flags, err := svc.ChildFeatures(ctx, chain.AccountID, chain.StudentID)
 	require.NoError(t, err)
 	assert.Equal(t, "GTS", flags.CareFacilityTerm)
+	assert.Equal(t, "die", flags.CareFacilityArticle, "a preset is feminine whatever article is stored (#8136)")
 
 	endCareFor(t, db, chain.StudentID)
 	flags, err = svc.ChildFeatures(ctx, chain.AccountID, chain.StudentID)
 	require.NoError(t, err)
 	require.True(t, flags.CareEnded)
 	assert.Equal(t, "GTS", flags.CareFacilityTerm)
+	assert.Equal(t, "die", flags.CareFacilityArticle)
 }

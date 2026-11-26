@@ -73,6 +73,7 @@ func featuresForChild(child *Child, settings childFeatureSettings, hasOpenChange
 			MealRegistrationEnabled: false,
 			NewsEnabled:             settings.news,
 			CareFacilityTerm:        settings.careTerm,
+			CareFacilityArticle:     settings.careArticle,
 		}
 	}
 
@@ -142,6 +143,7 @@ func (f childFeatureSettings) activeChildFlags(child *Child, hasOpenChangeReques
 		NewsEnabled:                   f.news,
 		ReasonRequired:                parentrequests.ReasonRequired(f.reasonPolicy, parentrequests.ReasonSideGuardian),
 		CareFacilityTerm:              f.careTerm,
+		CareFacilityArticle:           f.careArticle,
 	}
 }
 

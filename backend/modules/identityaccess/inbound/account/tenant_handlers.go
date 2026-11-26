@@ -15,6 +15,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/modules/settings"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
 
 // Bounds of enrollment.grade_level_max, the same range the settings registry
@@ -151,6 +152,7 @@ func newTenantResolveResponse(school *TenantSchool, resolved tenantShellSettings
 		ChildSearchOnlyNavigation:         resolved.childSearchOnlyNavigation,
 		SimpleStaffNavigation:             resolved.simpleStaffNavigation,
 		CareFacilityTerm:                  resolved.careFacilityTerm,
+		CareFacilityArticle:               textnorm.CareArticle(resolved.careFacilityTerm, resolved.careFacilityArticle),
 	}
 }
 
@@ -194,6 +196,7 @@ func TenantShellSettingKeys() []string {
 		settings.KeyChildSearchOnlyNavigation,
 		settings.KeySimpleStaffNavigation,
 		settings.KeyEnrollmentCareFacilityTerm,
+		settings.KeyEnrollmentCareFacilityArticle,
 		// Not read from this snapshot — prefetched so the hard-fail
 		// resolveTenantGradeLevelMax call hits the request cache instead of
 		// opening a second tenant transaction (issue #2065).
@@ -238,6 +241,7 @@ func resolveTenantShellValues(readBool func(string) (bool, error), readString fu
 		{settings.KeyAttendanceEditScope, &resolved.attendanceEditScope},
 		{settings.KeyParentRequestReasonPolicy, &resolved.reasonPolicy},
 		{settings.KeyEnrollmentCareFacilityTerm, &resolved.careFacilityTerm},
+		{settings.KeyEnrollmentCareFacilityArticle, &resolved.careFacilityArticle},
 	}
 	for _, field := range stringFields {
 		value, err := readString(field.key)

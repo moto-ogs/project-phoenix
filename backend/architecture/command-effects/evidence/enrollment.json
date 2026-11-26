@@ -5641,6 +5641,14 @@
       "target_owner": "settings-platform"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.enrollmentIntakeSettings.CareFacilityArticle",
+      "binding_digest": "48a7db3984cc292642a75ca691981729",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.IntakeSettings.CareFacilityArticle",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings.EnrollmentIntakeValues.CareFacilityArticle",
+      "target_owner": "settings-platform"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.enrollmentIntakeSettings.CareFacilityTerm",
       "binding_digest": "8ad07acd06a8aca55c5d8f279256302f",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.IntakeSettings.CareFacilityTerm",
@@ -5799,6 +5807,14 @@
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/timetable.RecurrenceWriteLock.LockRecurrenceWrites",
       "target_owner": "timetable-activities"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.enrollmentNotificationSettings.CareFacilityArticle",
+      "binding_digest": "fb30c365d4146c3e8a96b611405a81d7",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.NotificationSettings.CareFacilityArticle",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings.ResolveCareFacilityArticle",
+      "target_owner": "settings-platform"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.enrollmentNotificationSettings.CareFacilityTerm",

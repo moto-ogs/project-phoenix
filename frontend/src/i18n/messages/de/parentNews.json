@@ -1,7 +1,7 @@
 {
-  "kicker": "Post von der {careTerm}",
+  "kicker": "Post {careVon}",
   "title": "Elternbriefe",
-  "description": "Mitteilungen, Umfragen und wichtige Informationen deiner {careTerm}.",
+  "description": "Mitteilungen, Umfragen und wichtige Informationen {careYourGen}.",
   "empty": "Derzeit gibt es keine neuen Elternbriefe.",
   "open": "Offen",
   "openLabel": "Offen, {count}",

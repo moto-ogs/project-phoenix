@@ -529,6 +529,10 @@ func (notificationModeSettings) CareFacilityTerm(context.Context) (string, error
 	return "", nil
 }
 
+func (notificationModeSettings) CareFacilityArticle(context.Context) (string, error) {
+	return "", nil
+}
+
 // testNotifications composes Enrollment's parent mails for a flow under
 // test: the owner pins the mode, the suite's settings choose it, and a
 // recording outbox takes the mails.

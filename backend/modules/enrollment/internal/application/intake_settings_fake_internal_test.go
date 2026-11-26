@@ -15,6 +15,7 @@ type intakeSettingsFake struct {
 	careOfferingsEnabled bool
 	gradeLevelMax        int
 	careFacilityTerm     string
+	careFacilityArticle  string
 	duplicateHandling    string
 	legal                LegalSettings
 	legalErr             error
@@ -58,6 +59,10 @@ func (f intakeSettingsFake) GradeLevelMax(context.Context) (int, error) {
 
 func (f intakeSettingsFake) CareFacilityTerm(context.Context) (string, error) {
 	return f.careFacilityTerm, f.errFor[settingCareFacilityTerm]
+}
+
+func (f intakeSettingsFake) CareFacilityArticle(context.Context) (string, error) {
+	return f.careFacilityArticle, f.errFor[settingCareFacilityArticle]
 }
 
 func (f intakeSettingsFake) LegalSettings(context.Context) (LegalSettings, error) {

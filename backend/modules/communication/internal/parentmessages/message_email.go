@@ -27,6 +27,9 @@ const (
 	messagePayloadLogoURL     = "logo_url"
 	messagePayloadMotoLogoURL = "moto_logo_url"
 	messagePayloadCareTerm    = "care_facility_term"
+	// messagePayloadCareArticle is the article of that term (#8136). A mail
+	// queued before the article existed has none and reads "die".
+	messagePayloadCareArticle = "care_facility_article"
 	// defaultCareFacilityTerm names the care in a mail queued before the
 	// payload carried the school's term (#6082).
 	defaultCareFacilityTerm = "OGS"
@@ -107,6 +110,10 @@ func (s *Service) notifyGuardianEmail(ctx context.Context, thread *ParentMessage
 	if err != nil {
 		return fmt.Errorf("messaging: resolve care facility term: %w", err)
 	}
+	careArticle, err := s.Settings.CareFacilityArticle(ctx)
+	if err != nil {
+		return fmt.Errorf("messaging: resolve care facility article: %w", err)
+	}
 	schoolName, logoURL := s.resolveSchoolBrand(ctx, thread.TenantID)
 	locale := s.deliveryPolicy.DefaultLocale()
 	if profile.PortalLocale != nil {
@@ -128,6 +135,7 @@ func (s *Service) notifyGuardianEmail(ctx context.Context, thread *ParentMessage
 			messagePayloadLogoURL:     deliveryPorts.JSONString(logoURL),
 			messagePayloadMotoLogoURL: deliveryPorts.JSONString(s.deliveryPolicy.MotoLogoURL(s.ParentsURL)),
 			messagePayloadCareTerm:    deliveryPorts.JSONString(careTerm),
+			messagePayloadCareArticle: deliveryPorts.JSONString(careArticle),
 		},
 	}.Public()
 	if err := s.Outbox.EnqueueMail(ctx, request); err != nil {
@@ -175,8 +183,9 @@ func NewParentMessageRenderer(cfg ParentMessageRendererConfig, policy deliveryPo
 		if careTerm == "" {
 			careTerm = defaultCareFacilityTerm
 		}
+		care := textnorm.NewCareFacilityName(careTerm, row.Payload.String(messagePayloadCareArticle))
 		salutation := row.Payload.String(messagePayloadSalutation)
-		copy := messageEmailCopy(locale, salutation, first, last, schoolName, "", careTerm, policy)
+		copy := messageEmailCopy(locale, salutation, first, last, schoolName, "", care, policy)
 		return &deliveryPorts.MailMessage{
 			From:     cfg.DefaultFrom,
 			To:       deliveryPorts.NewMailAddress(strings.TrimSpace(first+" "+last), recipient),
@@ -212,25 +221,25 @@ func NewParentMessageRenderer(cfg ParentMessageRendererConfig, policy deliveryPo
 // the chosen form of address ("Liebe Karin,", "Lieber Jonas,"); without a
 // choice and in every other language it stays neutral with first and last
 // name.
-func messageEmailCopy(locale, salutation, firstName, lastName, schoolName, childName, careTerm string, policy deliveryPorts.LocaleNormalizer) parentMessageEmailCopy {
+func messageEmailCopy(locale, salutation, firstName, lastName, schoolName, childName string, care textnorm.CareFacilityName, policy deliveryPorts.LocaleNormalizer) parentMessageEmailCopy {
 	name := strings.TrimSpace(firstName + " " + lastName)
 	school := strings.TrimSpace(schoolName)
 	child := strings.TrimSpace(childName)
 	switch policy.NormalizeLocale(locale) {
 	case "en":
-		return englishMessageEmailCopy(name, school, child, careTerm)
+		return englishMessageEmailCopy(name, school, child, care.Term())
 	case "ru":
-		return russianMessageEmailCopy(name, school, child, careTerm)
+		return russianMessageEmailCopy(name, school, child, care.Term())
 	case "sq":
-		return albanianMessageEmailCopy(name, school, child, careTerm)
+		return albanianMessageEmailCopy(name, school, child, care.Term())
 	case "pl":
-		return polishMessageEmailCopy(name, school, child, careTerm)
+		return polishMessageEmailCopy(name, school, child, care.Term())
 	case "tr":
-		return turkishMessageEmailCopy(name, school, child, careTerm)
+		return turkishMessageEmailCopy(name, school, child, care.Term())
 	case "uk":
-		return ukrainianMessageEmailCopy(name, school, child, careTerm)
+		return ukrainianMessageEmailCopy(name, school, child, care.Term())
 	default:
-		return germanMessageEmailCopy(textnorm.GermanGreeting(salutation, firstName, lastName)+",", school, child, careTerm)
+		return germanMessageEmailCopy(textnorm.GermanGreeting(salutation, firstName, lastName)+",", school, child, care)
 	}
 }
 
@@ -374,15 +383,18 @@ func ukrainianMessageEmailCopy(name, school, child, term string) parentMessageEm
 	}
 }
 
-func germanMessageEmailCopy(greeting, school, child, term string) parentMessageEmailCopy {
+// germanMessageEmailCopy declines the school's care name with its article
+// (#8136): "von der OGS" / "vom Hort", "Die OGS" / "Der Hort", "Deine OGS" /
+// "Dein Hort".
+func germanMessageEmailCopy(greeting, school, child string, care textnorm.CareFacilityName) parentMessageEmailCopy {
 	return parentMessageEmailCopy{
-		Subject: "Neue Nachricht von der " + term, Kicker: "Neue Nachricht",
+		Subject: "Neue Nachricht " + care.From(), Kicker: "Neue Nachricht",
 		Greeting: greeting,
-		Intro:    localizedMessageIntro("Die "+term, school, "hat dir eine Nachricht geschrieben", "zu", child),
+		Intro:    localizedMessageIntro(textnorm.SentenceStart(care.Nominative()), school, "hat dir eine Nachricht geschrieben", "zu", child),
 		Reply:    "Antworten", FallbackHint: "Falls der Button nicht funktioniert, kopiere bitte diesen Link:",
 		PreferenceHint: "Du erhältst diese E-Mail, weil du in moto als sorgeberechtigte Person hinterlegt bist. In der App kannst du unter „Benachrichtigungen“ einstellen, worüber wir dich informieren.",
 		FooterText:     localizedEmailFooter("Diese E-Mail wurde im Auftrag von", school, "Diese E-Mail wurde automatisch versendet."),
 		PoweredByLabel: "Unterstützt von", SchoolLogoAlt: "Logo der Schule",
-		DefaultBrandKicker: "Elternportal", DefaultSchoolName: "Deine " + term,
+		DefaultBrandKicker: "Elternportal", DefaultSchoolName: textnorm.SentenceStart(care.Your()),
 	}
 }
