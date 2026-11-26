@@ -57,26 +57,52 @@ function CareOfDay({ care }: Readonly<{ care: readonly SigningService[] }>) {
   );
 }
 
-function ChangedDay({ day }: Readonly<{ day: DayChange<SigningService> }>) {
+/**
+ * The care of one weekday before and after. From `sm` on both stand in
+ * their columns, also for a day that stays the same, so the right column
+ * reads as the whole new week. On a phone an unchanged day is one line; a
+ * changed day carries „Bisher“ and „Neu“ in front of its two lines.
+ */
+function DayCare({ day }: Readonly<{ day: DayChange<SigningService> }>) {
   const t = useTranslations("careContractSigning");
+  const same = day.kind === "same";
   return (
     <span className="grid min-w-0 flex-1 grid-cols-1 gap-x-3 gap-y-1 text-sm sm:grid-cols-[1fr_auto_1fr] sm:items-baseline">
-      <span className="text-gray-500">
-        <span className="mr-1.5 text-xs font-semibold sm:sr-only">
-          {t("before")}:
-        </span>
-        <span className="inline-flex line-through decoration-gray-400">
+      {/* An unchanged day repeats its care in the left column for the eye
+          only; read aloud it is said once and carries no „Bisher“. */}
+      <span
+        className={same ? "text-gray-500 max-sm:hidden" : "text-gray-500"}
+        aria-hidden={same || undefined}
+      >
+        {same ? null : (
+          <span className="mr-1.5 text-xs font-semibold sm:sr-only">
+            {t("before")}:
+          </span>
+        )}
+        <span
+          className={
+            same
+              ? "inline-flex"
+              : "inline-flex line-through decoration-gray-400"
+          }
+        >
           <CareOfDay care={day.before} />
         </span>
       </span>
-      <ArrowRight
-        className="hidden h-4 w-4 self-center text-gray-500 sm:block"
-        aria-hidden="true"
-      />
-      <span className="font-semibold text-gray-900">
-        <span className="mr-1.5 text-xs font-semibold text-gray-500 sm:sr-only">
-          {t("after")}:
-        </span>
+      {same ? (
+        <span className="hidden w-4 sm:block" />
+      ) : (
+        <ArrowRight
+          className="hidden h-4 w-4 self-center text-gray-500 sm:block"
+          aria-hidden="true"
+        />
+      )}
+      <span className={same ? "text-gray-700" : "font-semibold text-gray-900"}>
+        {same ? null : (
+          <span className="mr-1.5 text-xs font-semibold text-gray-500 sm:sr-only">
+            {t("after")}:
+          </span>
+        )}
         <span className="inline-flex">
           <CareOfDay care={day.after} />
         </span>
@@ -153,22 +179,16 @@ export function ContractChangeOverview({
                 </span>
               )}
             </span>
-            {day.kind === "same" ? (
-              <span className="min-w-0 flex-1 text-sm text-gray-600">
-                <CareOfDay care={day.after} />
-              </span>
-            ) : (
-              <>
-                <ChangedDay day={day} />
-                <span className="hidden w-24 shrink-0 justify-end sm:flex">
-                  <StatusBadge
-                    label={t(KIND_LABELS[day.kind])}
-                    tone={KIND_TONES[day.kind]}
-                    size="xs"
-                  />
-                </span>
-              </>
-            )}
+            <DayCare day={day} />
+            <span className="hidden w-24 shrink-0 justify-end sm:flex">
+              {day.kind === "same" ? null : (
+                <StatusBadge
+                  label={t(KIND_LABELS[day.kind])}
+                  tone={KIND_TONES[day.kind]}
+                  size="xs"
+                />
+              )}
+            </span>
           </li>
         ))}
       </ul>

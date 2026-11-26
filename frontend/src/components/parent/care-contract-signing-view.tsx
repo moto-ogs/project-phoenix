@@ -148,7 +148,9 @@ export function ContractSigningView({
   return (
     <div ref={stepRef} className="space-y-5">
       <ContractFacts view={view} />
-      <ParentFamilyChildrenCard source={source} />
+      {/* A changed version shows what changes right under its facts; the
+          number of children has nothing to do with it and follows below. */}
+      {view.previous ? null : <ParentFamilyChildrenCard source={source} />}
       {view.previous ? (
         <ContractChangeOverview
           previous={view.previous}
@@ -171,6 +173,7 @@ export function ContractSigningView({
             void invalidateFamily(parentInboxKeys.documents());
         }}
       />
+      {view.previous ? <ParentFamilyChildrenCard source={source} /> : null}
     </div>
   );
 }

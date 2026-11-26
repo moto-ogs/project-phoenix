@@ -806,7 +806,9 @@ function TraegerVertragView() {
         <ContractDetailTabsProvider openTab={openTab}>
           <LoadErrorAlert error={afterSend.error} />
           <StatusNotice contract={contract} />
-          {waiting ? (
+          {/* The tab „Unterschrift und Versand“ opens with the card of the
+              changed version itself; the notice would only repeat it. */}
+          {waiting && activeTab !== "versand" ? (
             <Alert
               type="warning"
               message={waitingChangeText(waiting, contract.version.number)}
