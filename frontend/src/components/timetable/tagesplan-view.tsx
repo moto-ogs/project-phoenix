@@ -55,7 +55,11 @@ import {
   groupParallelBlocks,
 } from "~/components/timetable/tagesplan-groups";
 import { useApiErrorDisplay } from "~/contexts/ToastContext";
-import { blockChildrenLabel, blockEndLine } from "~/lib/block-children";
+import {
+  blockChildrenLabel,
+  blockEndLine,
+  hasOpenEnd,
+} from "~/lib/block-children";
 import {
   formatDate,
   formatStatusDate,
@@ -498,6 +502,7 @@ export function TagesplanView() {
   const now = useMinuteClock();
   // App (Telefon, iPad): eigene Tagesliste, Desktop unverändert (#8070).
   const { isApp, isSplit } = useDeviceContext();
+  const collapsedDayBar = useCollapsedDayBar(isApp && !isSplit);
 
   const today = useBerlinToday();
   const dayParam = searchParams.get("d");
@@ -541,17 +546,33 @@ export function TagesplanView() {
   // App (#8070): ein spontaner Block ohne Ende zählt nur bei seinem Beginn,
   // und die Jetzt-Linie steht nach Beginn zwischen den Blöcken: über ihr,
   // was schon begonnen hat, unter ihr, was noch kommt.
-  const appGroups = useMemo(
-    () =>
-      isApp
-        ? groupParallelBlocks(
-            instances ?? [],
-            isToday ? nowHHMM : null,
-            "point",
-          )
-        : [],
-    [isApp, instances, isToday, nowHHMM],
-  );
+  // Ein spontan gestarteter Block ohne Ende („seit 01:20“) läuft bis jetzt:
+  // Er steht direkt über der Jetzt-Linie statt vor dem ersten Block des
+  // Tages, damit die Zeitfolge und die Jetzt-Linie zusammenpassen.
+  const appGroups = useMemo(() => {
+    if (!isApp) return [];
+    const grouped = groupParallelBlocks(
+      instances ?? [],
+      isToday ? nowHHMM : null,
+      "point",
+    );
+    if (!isToday) return grouped;
+    const runsUntilNow = (group: (typeof grouped)[number]) =>
+      group.cells.length === 1 &&
+      group.cells[0]!.instance.status === "active" &&
+      hasOpenEnd(group.cells[0]!.instance);
+    const moved = grouped.filter(runsUntilNow);
+    if (moved.length === 0) return grouped;
+    const rest = grouped.filter((group) => !runsUntilNow(group));
+    // Vor der ersten Gruppe, in der noch etwas beginnt: Steht die
+    // Jetzt-Linie mitten in einer Gruppe „Gleichzeitig“, steht der Block
+    // über dieser Gruppe.
+    const at = rest.findIndex((group) =>
+      group.cells.some((cell) => cell.instance.startTime > nowHHMM),
+    );
+    const index = at === -1 ? rest.length : at;
+    return [...rest.slice(0, index), ...moved, ...rest.slice(index)];
+  }, [isApp, instances, isToday, nowHHMM]);
   const appNowIndex = useMemo(() => {
     if (!isToday || appGroups.length === 0) return -1;
     const index = appGroups.findIndex((group) => group.startTime > nowHHMM);
@@ -702,6 +723,10 @@ export function TagesplanView() {
       />
     );
     const barInList = isSplit && groups.length > 0;
+    // Telefon, weit gescrollt: Die Wochenleiste klappt ein, der schmale
+    // Kopf trägt nur Titel und Kennzahlen (an einem anderen Tag als heute
+    // das Datum). Oben auf der Seite steht sie wieder.
+    const dayBarCollapsed = collapsedDayBar && !isSplit;
     return (
       <TenantPage
         title={tagesplanAppTitle(day, today)}
@@ -712,7 +737,12 @@ export function TagesplanView() {
         // Die Kennzahlen stehen am Telefon in der Titelzeile: der Kopf
         // bleibt am SE unter 20 % der Höhe.
         appStatsInline
-        searchSlot={barInList ? undefined : dayBar}
+        appCompactStats={
+          dayBarCollapsed && !isToday ? (
+            <span className="tabular-nums">{formatDate(day)}</span>
+          ) : undefined
+        }
+        searchSlot={barInList || dayBarCollapsed ? undefined : dayBar}
         searchSlotHeight="natural"
         loading={showSkeleton}
         error={pageError}
@@ -828,4 +858,48 @@ export function TagesplanView() {
       </SectionCard>
     </TenantPage>
   );
+}
+
+/** Ab hier (px gescrollt) klappt die Wochenleiste am Telefon ein … */
+const DAY_BAR_COLLAPSE_AT = 160;
+/** … und erst ganz oben wieder auf (Abstand gegen Flattern). */
+const DAY_BAR_EXPAND_AT = 24;
+
+/**
+ * Ob die Wochenleiste am Telefon eingeklappt ist. Beim Einklappen fällt
+ * die klebende Leiste aus dem Fluss; die Seite rückt um ihre Höhe zurück,
+ * damit der Inhalt im Bild nicht springt.
+ */
+function useCollapsedDayBar(enabled: boolean): boolean {
+  const [collapsed, setCollapsed] = useState(false);
+  const shift = useRef(0);
+  useEffect(() => {
+    if (!enabled) {
+      setCollapsed(false);
+      return undefined;
+    }
+    const onScroll = () => {
+      const y = window.scrollY;
+      setCollapsed((current) => {
+        if (!current && y > DAY_BAR_COLLAPSE_AT) {
+          const bar = document.querySelector<HTMLElement>(
+            "[data-app-page-toolbar]",
+          );
+          shift.current = bar?.offsetHeight ?? 0;
+          return true;
+        }
+        if (current && y < DAY_BAR_EXPAND_AT) return false;
+        return current;
+      });
+    };
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [enabled]);
+  useLayoutEffect(() => {
+    if (!collapsed || shift.current === 0) return;
+    window.scrollBy(0, -shift.current);
+    shift.current = 0;
+  }, [collapsed]);
+  return collapsed;
 }

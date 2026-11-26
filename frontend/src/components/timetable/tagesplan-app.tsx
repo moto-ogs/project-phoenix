@@ -25,6 +25,7 @@ import {
 } from "react";
 
 import {
+  BlockRowParts,
   blockStaffNames,
   blockStaffShort,
 } from "~/components/timetable/block-row-parts";
@@ -306,6 +307,8 @@ interface Entry {
   parallel: readonly PlannedTimetableInstance[];
   /** Die späteren Blöcke des Tages im selben Raum, nach Beginn. */
   sameRoom: readonly PlannedTimetableInstance[];
+  /** Der nächste eigene Block nach diesem, der noch kommt oder läuft. */
+  nextOwn: PlannedTimetableInstance | null;
 }
 
 export function TagesplanApp(props: TagesplanAppProps) {
@@ -332,6 +335,13 @@ export function TagesplanApp(props: TagesplanAppProps) {
     );
     const roomOf = (instance: PlannedTimetableInstance) =>
       instance.roomId && instance.roomId !== "0" ? instance.roomId : null;
+    // „Danach“ heißt heute: was noch kommt oder läuft. Abends standen sonst
+    // längst vergangene Blöcke da.
+    const stillToCome = (other: PlannedTimetableInstance) =>
+      !isToday ||
+      other.status === "active" ||
+      hasOpenEnd(other) ||
+      other.endTime > nowHHMM;
     for (const group of groups) {
       for (const cell of group.cells) {
         map.set(cell.instance.id, {
@@ -347,15 +357,23 @@ export function TagesplanApp(props: TagesplanAppProps) {
                     other.id !== cell.instance.id &&
                     other.startTime > cell.instance.startTime &&
                     roomOf(other) === roomOf(cell.instance) &&
-                    // „Danach“ heißt heute: was noch kommt oder läuft.
-                    // Abends standen sonst längst vergangene Blöcke da.
-                    (!isToday ||
-                      other.status === "active" ||
-                      hasOpenEnd(other) ||
-                      other.endTime > nowHHMM),
+                    stillToCome(other),
                 )
                 .sort((a, b) => a.startTime.localeCompare(b.startTime))
             : [],
+          nextOwn:
+            all
+              .filter(
+                (other) =>
+                  other.id !== cell.instance.id &&
+                  other.isAssigned &&
+                  other.isDuty !== true &&
+                  other.status !== "cancelled" &&
+                  other.startTime > cell.instance.startTime &&
+                  stillToCome(other),
+              )
+              .sort((a, b) => a.startTime.localeCompare(b.startTime))[0] ??
+            null,
           state: blockState(cell.instance, cell.effectiveEndTime, {
             isToday,
             dayIsPast: day < today,
@@ -415,16 +433,26 @@ export function TagesplanApp(props: TagesplanAppProps) {
   // Ziel ist der laufende Block, sonst der nächste; erst wenn keiner mehr
   // kommt, die Jetzt-Linie. Sonst öffnete die Seite abends am Listenende,
   // während ein spontaner Block („seit 00:03“) ganz oben läuft.
+  // Steht ein eigener Block zum Start an, ist er das Ziel: Ihn startet
+  // die Leiste über der Pill, und er muss dabei im Bild stehen.
   const scrollTargetId = useMemo(() => {
     const all = [...entries.values()];
     return (
+      all
+        .filter(
+          (entry) =>
+            entry.state.startable && (!showMine || entry.instance.isAssigned),
+        )
+        .sort((a, b) =>
+          a.instance.startTime.localeCompare(b.instance.startTime),
+        )[0]?.instance.id ??
       all.find((entry) => entry.state.running)?.instance.id ??
       all.find(
         (entry) => entry.instance.startTime === nextStart && !entry.state.over,
       )?.instance.id ??
       null
     );
-  }, [entries, nextStart]);
+  }, [entries, nextStart, showMine]);
   useEffect(() => {
     if (!isToday || scrolledForDay.current === day || isSplit) return;
     if (groups.length === 0) return;
@@ -436,10 +464,11 @@ export function TagesplanApp(props: TagesplanAppProps) {
       : null;
     const marker = row ?? nowRef.current;
     if (!marker) return;
-    const top = marker.getBoundingClientRect().top;
-    // Nur scrollen, wenn das Ziel unterhalb der ersten Bildschirmhälfte
-    // steht; sonst bleibt der Kopf im Bild.
-    if (top <= window.innerHeight * 0.5) return;
+    const rect = marker.getBoundingClientRect();
+    // Nur scrollen, wenn das Ziel nicht ganz über Aktionsleiste und Pill
+    // im Bild steht (am SE lag der startbereite Block sonst unter der
+    // Leiste); sonst bleibt der Kopf im Bild.
+    if (rect.bottom <= window.innerHeight - BOTTOM_BARS_PX) return;
     if (row) {
       // Der Block steht oben unter der klebenden Kopfkarte.
       row.style.scrollMarginTop = NOW_SCROLL_MARGIN.scrollMarginTop as string;
@@ -683,6 +712,9 @@ export function TagesplanApp(props: TagesplanAppProps) {
  * samt Abstand). So passt die Seite ins Bild, nichts scrollt unter die Pill
  * und die Aktion unten in der Detailspalte bleibt frei.
  */
+/** Höhe von schwebender Aktionsleiste und Pill samt Abständen, in px. */
+const BOTTOM_BARS_PX = 170;
+
 const SPLIT_PANE_HEIGHT = "calc(100dvh - var(--tagesplan-split-top) - 6.5rem)";
 
 /** Abstand der Spalten vom Seitenanfang, als CSS-Variable am Split. */
@@ -881,6 +913,13 @@ function blockChips(state: BlockState, next: boolean, mine: boolean) {
   return chips;
 }
 
+/** Vorbei ohne gelaufen zu sein (ein gelaufener Block heißt „Beendet“). */
+function pastLabel(state: BlockState): boolean {
+  return (
+    state.over && !state.cancelled && state.label?.startsWith("Vorbei") === true
+  );
+}
+
 /** Startbar: schon über den Beginn „Nicht gestartet“, sonst „Startbereit“. */
 function startChipLabel(state: BlockState): string {
   return state.startOverdue ? "Nicht gestartet" : "Startbereit";
@@ -968,11 +1007,16 @@ function BlockRow({
   };
   // Ein Ausfall trägt immer den roten Chip „Fällt aus“; das Wort steht
   // nicht noch einmal daneben, wohl aber sein Grund.
-  // Vorbei: die Zeile ist grau und steht über der Jetzt-Linie; ein Wort
-  // steht nur, wenn der Block lief („Beendet“). „Vorbei, nicht gestartet“
-  // steht im Blatt. So bleibt die Angabenzeile einzeilig.
+  // Vorbei: die Zeile ist grau, steht über der Jetzt-Linie und beginnt mit
+  // „Beendet“ (lief) bzw. „Vorbei“. „Vorbei, nicht gestartet“ steht im
+  // Blatt. Die Angabenzeile bleibt einzeilig.
   if (state.over && !state.cancelled && instance.status === "completed") {
     push("state", state.label);
+  } else if (pastLabel(state)) {
+    // Vorbei wie auf der Startseite („Mittagessen Vorbei“), als erstes
+    // Wort der Angabenzeile: ein Abzeichen brach die Zeile am SE um.
+    // „nicht gestartet“ steht im Blatt.
+    push("state", "Vorbei");
   }
 
   if (state.cancelled) push("reason", instance.cancelReason, true);
@@ -1080,7 +1124,9 @@ function BlockRow({
         </span>
       }
       subtitle={
-        parts.length > 0 ? (
+        parts.length > 0 && !wide ? (
+          <BlockRowParts parts={parts} />
+        ) : parts.length > 0 ? (
           <span className="block">
             {parts.map((part, index) => (
               <Fragment key={part.key}>
@@ -1230,7 +1276,9 @@ function BlockDetail({
           // Ein Folgeblock steht einzeilig wie die Felder darüber; der Raum
           // steht direkt darüber. Mehrere stehen als Liste darunter.
           <DataField
-            label={sameRoom.length === 1 ? "Danach" : `Danach in ${state.room}`}
+            // „im Raum“: gemeint ist der nächste Block in diesem Raum, nicht
+            // dein nächster Block (der steht darunter, wenn es deiner ist).
+            label="Danach im Raum"
             fullWidth={sameRoom.length > 1}
           >
             <ul>
@@ -1244,6 +1292,17 @@ function BlockDetail({
                 </li>
               ))}
             </ul>
+          </DataField>
+        ) : null}
+        {mine && entry.nextOwn ? (
+          <DataField label="Dein nächster Block">
+            <span className="tabular-nums">
+              {blockTimeRange(entry.nextOwn)}
+              <span className="font-normal text-gray-600">
+                {" · "}
+                {entry.nextOwn.title}
+              </span>
+            </span>
           </DataField>
         ) : null}
       </DataGrid>
