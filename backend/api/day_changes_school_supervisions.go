@@ -21,7 +21,6 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/daychangesview"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
-	"github.com/moto-ogs/project-phoenix/modules/schoolmembership"
 	"github.com/moto-ogs/project-phoenix/modules/securityruntime"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -67,7 +66,7 @@ type schoolDayCaller struct {
 // statement (#8155).
 type schoolDayCallerRead struct {
 	person schoolDayChangesCaller
-	staff  schoolmembership.StaffClassReads
+	staff  schoolDayChangesStaff
 }
 
 func (r schoolDayCallerRead) resolve(ctx context.Context) (schoolDayCaller, error) {

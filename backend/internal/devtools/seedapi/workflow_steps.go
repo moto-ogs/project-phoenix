@@ -270,6 +270,7 @@ func fullDemoWorkflow(seeder *Seeder) Workflow {
 		seedStaffOnboardingStep{},
 		seedLocalCarePlanAccountStep{seeder: seeder},
 		seedSchoolTeacherStep{seeder: seeder},
+		seedSchoolTeacherDayChangesStep{seeder: seeder},
 	)
 	steps = appendPayrollRuleSteps(steps, seeder)
 	steps = append(steps,

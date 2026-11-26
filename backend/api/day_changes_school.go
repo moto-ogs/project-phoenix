@@ -26,7 +26,6 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar"
-	"github.com/moto-ogs/project-phoenix/modules/schoolmembership"
 	"github.com/moto-ogs/project-phoenix/modules/securityruntime"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -38,13 +37,19 @@ type schoolDayChangesCaller interface {
 	Person(ctx context.Context) (identityaccess.CallerPerson, error)
 }
 
+// schoolDayChangesStaff is School Membership's read of a person's staff
+// record and the classes assigned to it, in one statement (#8155).
+type schoolDayChangesStaff interface {
+	FindStaffClassesByPerson(ctx context.Context, personID int64) (staffID int64, classes []string, found bool, err error)
+}
+
 // SchoolDayChangesSources are the owner reads of the school portal's
 // overview; all required except Logger. Staff is School Membership's read of
 // the caller's staff record and classes in one statement (#8155): it saves
 // the statement the appointments of the Lehrkraft need.
 type SchoolDayChangesSources struct {
 	Caller        schoolDayChangesCaller
-	Staff         schoolmembership.StaffClassReads
+	Staff         schoolDayChangesStaff
 	ClassArrivals timetable.ClassArrivalQuery
 	ClosingDays   dayChangesClosingDayReads
 	Appointments  dayChangesAppointmentReads
