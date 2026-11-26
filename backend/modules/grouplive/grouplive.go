@@ -10,7 +10,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"strconv"
 	"strings"
 	"time"
@@ -26,7 +25,6 @@ var ErrForbiddenGroup = errors.New("caller cannot view the requested group")
 // Query is the single public capability of the projection.
 type Query interface {
 	LiveGroup(ctx context.Context, requestedGroupID int64) (*Projection, error)
-	ListGroups(ctx context.Context) ([]NavigationGroup, error)
 	NavigationContext(ctx context.Context) (NavigationContext, error)
 	AtSchoolCounter
 }
@@ -44,7 +42,6 @@ type AtSchoolCounter interface {
 // TeacherHints is optional: without it no hint of the Lehrkraft is attached.
 // Handovers is optional: without it no child carries a handover absence.
 // Collate is optional: without it the groups keep the directory order.
-// Logger defaults to slog.Default; every other field is required.
 type Dependencies struct {
 	Access          Access
 	Groups          GroupDirectory
@@ -63,7 +60,6 @@ type Dependencies struct {
 	// Collate orders two group names in German dictionary order (DIN 5007-1),
 	// the order the group selection and the response rely on.
 	Collate func(a, b string) int
-	Logger  *slog.Logger
 }
 
 type service struct{ deps Dependencies }
@@ -71,9 +67,6 @@ type service struct{ deps Dependencies }
 // New builds the projection. Missing wiring surfaces as an error on the
 // first call, never as a partial projection.
 func New(deps Dependencies) Query {
-	if deps.Logger == nil {
-		deps.Logger = slog.Default()
-	}
 	return &service{deps: deps}
 }
 
@@ -210,7 +203,7 @@ func (s *service) LiveGroup(ctx context.Context, requestedGroupID int64) (*Proje
 	if err != nil {
 		return nil, fmt.Errorf("resolve caller access: %w", err)
 	}
-	groups, selected, err := s.resolveGroups(ctx, caller, requestedGroupID, false)
+	groups, selected, err := s.resolveGroups(ctx, caller, requestedGroupID)
 	if err != nil {
 		return nil, err
 	}

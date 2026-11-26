@@ -301,6 +301,54 @@ test("another account in another tab: A to B never shows A again", async ({
   await context.close();
 });
 
+test("returning from public help after another tab signs out never restores the portal", async ({
+  browser,
+}) => {
+  const context = await newContext(browser);
+  const app = await context.newPage();
+  await login(app, "a");
+  await app.goto(`${schoolA}/students/search`);
+  await expectShowsAccount(app, "a");
+  await app.getByRole("link", { name: "Hilfe zu dieser Seite" }).click();
+  await expect(app).toHaveURL(/\/help\/kindersuche\?/);
+  await expectNothingOf(app, "a");
+
+  const other = await context.newPage();
+  await openHome(other, "a");
+  await logout(other);
+  await expectNothingOf(app, "a");
+  await app.goBack();
+  await expectDroppedTree(app);
+  await expectNothingOf(app, "a");
+  await context.close();
+});
+
+test("a same-session return retains the child-search filter", async ({
+  browser,
+}) => {
+  const context = await newContext(browser);
+  const app = await context.newPage();
+  await login(app, "b");
+  await app.goto(`${schoolA}/students/search`);
+  const input = app.getByPlaceholder("Name suchen…").filter({ visible: true });
+  await input.fill("Mira");
+  await expect(app).toHaveURL(/\/students\/search\?.*search=Mira/);
+  await app.evaluate(
+    () => (document.documentElement.dataset.filterTrip = "same"),
+  );
+
+  await app
+    .locator('a[href="/home"]')
+    .filter({ visible: true })
+    .first()
+    .click();
+  await expect(app).toHaveURL(`${schoolA}/home`);
+  await app.goBack();
+  await expect(input).toHaveValue("Mira");
+  await expect(app.locator("html")).toHaveAttribute("data-filter-trip", "same");
+  await context.close();
+});
+
 test("another account replaces a live session: A to B without a logout never shows A again", async ({
   browser,
 }) => {
@@ -693,6 +741,80 @@ test("staff preview: start and end leave nothing of the other view", async ({
   ).toHaveCount(0);
   await expectShowsAccount(tab2, "b");
   expect((await rendered(tab2)).draft).toBe(false);
+  await context.close();
+});
+
+test("a warm parent return keeps its cards while changed data revalidates", async ({
+  browser,
+}) => {
+  const context = await newContext(browser);
+  const tab = await context.newPage();
+  await tab.goto(`${parents}/login`);
+  await tab.locator('input[type="email"]').fill(accounts.a.email);
+  await tab
+    .locator('input[type="password"]')
+    .fill(randomBytes(24).toString("hex"));
+  await tab.getByRole("button", { name: "Anmelden", exact: true }).click();
+  await tab.waitForURL((url) => url.pathname === "/");
+  const childName = (name: string) =>
+    tab
+      .locator("main")
+      .getByText(name, { exact: false })
+      .filter({ visible: true })
+      .first();
+  const profile = tab
+    .locator('main a[href="/children/11"]')
+    .filter({ visible: true })
+    .first();
+  await expect(childName("Mira")).toBeVisible();
+  await tab.evaluate(
+    () => (document.documentElement.dataset.warmReturn = "same"),
+  );
+  await profile.click();
+  await tab.waitForURL((url) => url.pathname === "/children/11");
+
+  let signalRequest!: () => void;
+  const requested = new Promise<void>((resolve) => (signalRequest = resolve));
+  let signalRelease!: () => void;
+  const released = new Promise<void>((resolve) => (signalRelease = resolve));
+  await tab.route("**/api/parent/me/family-start*", async (route) => {
+    const request = route.request();
+    const loopback = new URL(request.url());
+    const host = loopback.host;
+    loopback.hostname = "127.0.0.1";
+    const upstream = await route.fetch({
+      url: loopback.href,
+      headers: { ...(await request.allHeaders()), host },
+    });
+    const body = (await upstream.json()) as {
+      data: {
+        cards: Array<{ child: { student_id: string; first_name: string } }>;
+      };
+    };
+    const child = body.data.cards.find(
+      (entry) => entry.child.student_id === "11",
+    );
+    if (child) child.child.first_name = "Mila";
+    signalRequest();
+    await released;
+    await route.fulfill({ response: upstream, json: body });
+  });
+  try {
+    await tab.goBack();
+    await expect(tab.locator("html")).toHaveAttribute(
+      "data-warm-return",
+      "same",
+    );
+    await expect(childName("Mira")).toBeVisible();
+    await tab.evaluate(() =>
+      window.dispatchEvent(new Event("parent-child-status-refresh")),
+    );
+    await requested;
+    await expect(childName("Mira")).toBeVisible();
+  } finally {
+    signalRelease();
+  }
+  await expect(childName("Mila")).toBeVisible();
   await context.close();
 });
 

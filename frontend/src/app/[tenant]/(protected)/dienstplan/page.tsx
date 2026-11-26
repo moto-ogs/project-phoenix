@@ -18,6 +18,8 @@ import { closingDayKeys } from "~/lib/swr/staff-keys";
 import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 import PageContent from "./page-content";
 
+export const unstable_dynamicStaleTime = 60;
+
 export default async function DienstplanPage({
   params,
   searchParams,
@@ -28,14 +30,13 @@ export default async function DienstplanPage({
   const { tenant } = await params;
   const query = await searchParams;
   const d = Array.isArray(query.d) ? query.d[0] : query.d;
-  const today = berlinTodayISO();
-  const day = d && isValidISODate(d) ? d : today;
   return (
     <TenantRouteSeed
       slug={tenant}
       module="dienstplan"
       load={({ token, session }) => {
         if (!hasPermission(session, "time_tracking:manage")) return [];
+        const day = d && isValidISODate(d) ? d : berlinTodayISO();
         const days = calendarWeekDays(day);
         const from = days[0] ?? "";
         const to = days[4] ?? "";

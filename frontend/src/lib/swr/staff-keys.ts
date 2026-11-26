@@ -283,6 +283,12 @@ export const staffRecordKeys = {
  */
 export const closingDayKeys = {
   list: () => "planning-closing-days",
+  /**
+   * Geänderte Öffnungszeiten der Schule im Fenster der Seite (#7654). Sie
+   * stehen auf derselben Seite wie die Schließtage.
+   */
+  openingChanges: (fromISO: string, toISO: string) =>
+    `planning-opening-changes-${fromISO}-${toISO}`,
   /** Das Fenster des Zeiterfassungs-Endpunkts ohne `schedules:read`. */
   window: (fromISO: string, toISO: string) =>
     `planning-closing-days-${fromISO}-${toISO}`,

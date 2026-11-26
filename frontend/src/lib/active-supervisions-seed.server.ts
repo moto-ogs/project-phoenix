@@ -8,9 +8,9 @@ import { readTenantPageContext } from "~/lib/tenant-page-seed.server";
 import { mapPlannedInstance } from "~/lib/timetable-operations-types";
 
 export async function loadActiveSupervisionsSeed(slug: string) {
-  const builtAt = Date.now();
   const context = await readTenantPageContext(slug);
   if (!context || context.tenant.presenceMode === "binary") return null;
+  const builtAt = Date.now();
   const { snapshot, session, tenant, token } = context;
   if (
     !canReadSupervisionData(session) &&

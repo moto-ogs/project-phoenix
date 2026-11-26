@@ -2419,6 +2419,16 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/schoolmembership/internal/adapters/postgres.Store.FindStaffClassesByPerson",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership/internal/ports.Store.FindStaffClassesByPerson",
+      "reason": "Read-only: one tenant-scoped SELECT of the person's live staff record with its class assignments (#8155); the tenant comes from the request's context like FindStaffByPerson. No persistent, lock or scope effect.",
+      "source_owner": "school-membership",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
+      "target_owner": "tenant-runtime"
+    },
+    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/schoolmembership/internal/adapters/postgres.Store.FindTeacher",
       "classification": "query",
       "effect": "query",

@@ -26,10 +26,9 @@ details: [frontend test clock](../docs/agents/frontend-testing.md).
 
 ## Server and API boundaries
 
-Server requests use `getServerApiUrl()` / `API_URL`, not the browser URL.
-Keep auth and server env imports out of client bundles; required values fail fast.
-Before changing clients, handlers, imports, URL resolution, or data mapping,
-read [frontend API and server boundaries](../docs/agents/frontend-api.md).
+Use `getServerApiUrl()` / `API_URL` for server calls. Required values fail fast;
+auth and server env imports stay server-side. For clients, handlers, imports,
+URLs and mappings, read [frontend API boundaries](../docs/agents/frontend-api.md).
 
 ## Multi-Tenancy & Routing
 
@@ -79,13 +78,11 @@ Only three files may use raw `console.*`: `src/lib/logger.ts`, `src/lib/client-l
 
 ## Loading data (MANDATORY)
 
-Read through the shared cache: `useSWRAuth` with a key factory of `~/lib/swr`
-(Träger portal: `useTraegerResource`), never `useEffect` + `useState`. A load
-in an effect is gone at the next page switch; oxlint `swr/no-effect-load`
-fails it. After a write, refresh its family with `useInvalidateFamily`; no
-lint checks this. Refused read: branch on the predicates of
-`~/lib/access-refusal`, not on status numbers.
-Contract and exceptions: `src/lib/swr/README.md`.
+New page or first-display reads: [server seeds, Cache Components and inventories](../docs/agents/frontend-api.md#first-display-in-a-protected-page).
+Use `useSWRAuth` with `~/lib/swr` key factories (Träger: `useTraegerResource`).
+Effect-based loads fail `swr/no-effect-load` and lose data on navigation.
+After writes, call `useInvalidateFamily` (not linted). On refusal, use
+`~/lib/access-refusal` predicates, not status numbers. [SWR rules](src/lib/swr/README.md).
 
 ## Real-time updates
 

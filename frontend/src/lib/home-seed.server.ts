@@ -57,13 +57,13 @@ import { readTenantPageContext } from "~/lib/tenant-page-seed.server";
 import { mapPlannedInstance } from "~/lib/timetable-operations-types";
 
 export async function loadHomeSeed(slug: string) {
-  const builtAt = Date.now();
   const context = await readTenantPageContext(slug);
   if (
     !context ||
     isSchoolPortalHandoffPath(getSmartRedirectPath(context.session))
   )
     return null;
+  const builtAt = Date.now();
   const { session, snapshot, tenant, token } = context;
   const today = berlinTodayISO();
   const timetableEnabled = tenant.timetableEnabled !== false;
@@ -297,7 +297,6 @@ export async function loadHomeSeed(slug: string) {
 
 /** The optional planning notices never delay the board and its layout. */
 export async function loadHomePlanningSeed(slug: string) {
-  const builtAt = Date.now();
   const context = await readTenantPageContext(slug);
   if (
     !context ||
@@ -306,6 +305,7 @@ export async function loadHomePlanningSeed(slug: string) {
     isSchoolPortalHandoffPath(getSmartRedirectPath(context.session))
   )
     return null;
+  const builtAt = Date.now();
   const { snapshot, token } = context;
   const today = berlinTodayISO();
   const periods = seedRead("homePlanningPeriods", async (signal) =>

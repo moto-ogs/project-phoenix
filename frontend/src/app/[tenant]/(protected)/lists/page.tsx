@@ -21,10 +21,10 @@ export default async function SlotListsPage({
     Array.isArray(query.datum) ? query.datum[0] : query.datum,
   );
   const key = tenantDailyKeys.slotListOptions(date);
-  const builtAt = Date.now();
   const seed = readTenantPageContext(tenant)
     .then((context) => {
       if (!context || context.tenant.timetableEnabled === false) return null;
+      const builtAt = Date.now();
       const { snapshot, token, session } = context;
       if (
         !hasPermission(session, "schedules:read") ||

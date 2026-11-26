@@ -139,6 +139,7 @@ function assignedReport(
       school_class: schoolClass,
       changes: 0,
       totals: report.totals,
+      trips: [],
     })),
   };
 }

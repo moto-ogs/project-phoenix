@@ -85,7 +85,7 @@ func TestSchoolDayChanges(t *testing.T) {
 		assert.Equal(t, []string{"school Pädagogischer Tag ->school_calendar"}, closingLines(t, body))
 		assert.Equal(t, "loaded", sourceStatus(overview, "closing_days"))
 		assert.Equal(t, "loaded", sourceStatus(overview, "classes"))
-		assert.Len(t, overview.Sources, 3, "moto schule reads only its own sources")
+		assert.Len(t, overview.Sources, 4, "moto schule reads only its own sources")
 		assert.Contains(t, body, `"target":"school_class"`)
 		for _, leak := range []string{"Lehrerkonferenz", "Wandertag", "2c", "12:15", "10:00", "09:05", "Fremd"} {
 			assert.NotContains(t, body, leak, "no reason, other class, other day or other school")
@@ -130,8 +130,8 @@ func TestSchoolDayChanges(t *testing.T) {
 }
 
 // TestSchoolDayChangesQueryBudget measures the route for a Lehrkraft with
-// one and with four classes that end at another time today and a cover on
-// one of her Aufsichten.
+// one and with four classes that end at another time today, a cover on one
+// of her Aufsichten and a cancelled date of one of her appointments.
 func TestSchoolDayChangesQueryBudget(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupIsolatedTestDB(t)
@@ -146,6 +146,14 @@ func TestSchoolDayChangesQueryBudget(t *testing.T) {
 	block := testpkg.CreateTestActivityInstance(t, db, day, room.ID, testpkg.ActivityInstanceOpts{Title: "Budgetaufsicht", StartHHMM: "09:30", EndHHMM: "09:50"})
 	testpkg.CreateTestInstanceStaff(t, db, block.ID, absent.ID, testpkg.InstanceStaffOpts{IsPrimary: true, IsAbsent: true})
 	testpkg.CreateTestInstanceStaff(t, db, block.ID, teacher.ID, testpkg.InstanceStaffOpts{IsSubstitute: true})
+	// A cancelled date of one of her appointments (#8155): the statement the
+	// caller's staff record with its classes saves (one School Membership read).
+	writes, err := api.NewDayChangesTestCalendar(testpkg.NewDatabase(t, db))
+	require.NoError(t, err)
+	ctx := testpkg.Ctx(t)
+	meeting, err := writes.Create(ctx, api.DayChangesTestAppointment{Organizer: teacher.ID, Title: "Budgettermin", Location: "Büro", Day: day.AddDays(-7), StartHour: 8, EndHour: 9, Weekly: true})
+	require.NoError(t, err)
+	require.NoError(t, writes.Except(ctx, meeting, day, api.DayChangesTestException{Cancel: true}))
 	router := newSchoolRouter(t, db, day)
 	counter := testpkg.CaptureQueries(t, db)
 	var statements testpkg.QueryMeasurement
@@ -161,6 +169,7 @@ func TestSchoolDayChangesQueryBudget(t *testing.T) {
 		_, body := readSchool(t, router, account.ID, tenantID, "class_day:read", "calendar:school", "supervision:own")
 		require.Len(t, classLines(t, body), n)
 		require.Len(t, activityLines(t, body), 1, "the cover on her Aufsicht")
+		require.Len(t, appointmentLines(t, body), 1, "the cancelled date of her appointment")
 		measured := counter.Measurement(counter.Queries())
 		if round > 0 {
 			require.Len(t, measured.Statements, len(statements.Statements), "statements must not grow with the classes")

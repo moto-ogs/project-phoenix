@@ -1,5 +1,7 @@
 {
   "occurrence_unavailable": "Tego terminu już nie ma. Mógł zostać odwołany. Proszę odświeżyć kalendarz.",
   "federal_state_missing": "Dla szkoły nie ustawiono jeszcze kraju związkowego. Dlatego brakuje dni świątecznych. Kierownictwo może go ustawić w ustawieniach.",
-  "no_staff_profile": "Nie masz dostępu do: {object}. Skontaktuj się ze szkołą."
+  "no_staff_profile": "Nie masz dostępu do: {object}. Skontaktuj się ze szkołą.",
+  "opening_change_invalid": "Nie udało się zapisać: {object}. Sprawdź wpisane dane.",
+  "opening_change_not_found": "Nie udało się zmienić: {object}. Sprawdź aktualny stan."
 }

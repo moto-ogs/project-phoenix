@@ -92,6 +92,7 @@ export function ContextHelpLink({
   return (
     <ButtonLink
       href={href}
+      nativeAnchor
       variant="ghost"
       size="icon"
       aria-label="Hilfe zu dieser Seite"

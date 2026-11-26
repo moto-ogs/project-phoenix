@@ -43,6 +43,10 @@ func TestSeedOperationsDemoStepCreatesOperationalPlanningData(t *testing.T) {
 		"/api/settings/values/operations.meal_registration_enabled",
 		"/api/timetable/closing-days",
 	}
+	for _, weekday := range []string{"monday", "tuesday", "wednesday", "thursday", "friday"} {
+		want = append(want, "/api/settings/values/opening_hours."+weekday+"_open", "/api/settings/values/opening_hours."+weekday+"_close")
+	}
+	want = append(want, "/api/opening-changes/")
 	for _, day := range demoMealDates(todaySeedDate()) {
 		want = append(want, "/api/meal-plan/days/"+day)
 	}

@@ -22,6 +22,22 @@ func (b CareDayBinding) ResolveForDate(ctx context.Context, studentIDs []int64, 
 	return out, nil
 }
 
+func (b CareDayBinding) ResolvePlannedForDate(ctx context.Context, studentIDs []int64, date calendar.Date) (map[int64]ports.PlannedCareDay, error) {
+	planned, err := b.Resolver.ResolvePlannedForRange(ctx, studentIDs, date, date)
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[int64]ports.PlannedCareDay, len(planned))
+	for studentID, days := range planned {
+		day, ok := days[date]
+		if !ok {
+			continue
+		}
+		out[studentID] = ports.PlannedCareDay{Status: ports.CareDay(day.Status), Arrival: day.Arrival, ArrivalReason: day.ArrivalReason}
+	}
+	return out, nil
+}
+
 type EffectiveTimeBinding struct {
 	Pickups  PickupTimeReader
 	Arrivals ArrivalTimeReader

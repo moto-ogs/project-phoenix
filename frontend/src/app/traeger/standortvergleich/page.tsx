@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import { berlinTodayISO } from "~/lib/date-helpers";
 import { utilizationPresets } from "~/components/traeger/utilization-model";
 import { comparison } from "~/lib/traeger/metrics-seed-reads.server";
@@ -9,7 +10,8 @@ import {
 } from "~/lib/traeger/page-seed.server";
 import TraegerComparisonPage from "./page-content";
 
-export default function Page() {
+export default async function Page() {
+  await connection();
   const today = berlinTodayISO();
   const window = utilizationPresets(today)[0]?.window ?? {
     from: today,

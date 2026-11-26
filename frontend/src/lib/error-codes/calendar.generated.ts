@@ -3,16 +3,22 @@ export const codes = [
   "calendar.federal_state_missing",
   "calendar.no_staff_profile",
   "calendar.occurrence_unavailable",
+  "calendar.opening_change_invalid",
+  "calendar.opening_change_not_found",
 ] as const;
 
 export const classes = {
   "calendar.federal_state_missing": "business_rejection",
   "calendar.no_staff_profile": "permission",
   "calendar.occurrence_unavailable": "business_rejection",
+  "calendar.opening_change_invalid": "input",
+  "calendar.opening_change_not_found": "business_rejection",
 } as const;
 
 export const parameters = {
   "calendar.federal_state_missing": [],
   "calendar.no_staff_profile": [],
   "calendar.occurrence_unavailable": [],
+  "calendar.opening_change_invalid": [],
+  "calendar.opening_change_not_found": [],
 } as const;

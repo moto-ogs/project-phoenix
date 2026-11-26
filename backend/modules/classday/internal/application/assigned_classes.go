@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/moto-ogs/project-phoenix/modules/classday"
 	"github.com/moto-ogs/project-phoenix/modules/schoolstructure"
@@ -47,7 +48,7 @@ func assignedClassScope(date calendar.Date, weekday string, classes []string) (*
 			continue
 		}
 		index[key] = len(out.Classes)
-		out.Classes = append(out.Classes, classday.ClassSummary{SchoolClass: class})
+		out.Classes = append(out.Classes, classday.ClassSummary{SchoolClass: class, Trips: []classday.ClassTripSummary{}})
 		allowed = append(allowed, key)
 	}
 	return out, index, allowed
@@ -109,4 +110,48 @@ func countAssignedStudent(summary *classday.ClassSummary, student classday.Assig
 	if dayRowChanged(row) {
 		summary.Changes++
 	}
+	if returnAt, onTrip := facts.tripOf(id); onTrip {
+		addClassTrip(summary, returnAt)
+	}
+}
+
+// tripOf reports whether the child is on a trip today: a Klassenfahrt
+// (status day, no return time) or a day outing without a stronger status.
+func (f classDayFacts) tripOf(id int64) (string, bool) {
+	switch status := f.statuses[id]; {
+	case status == statusDayClassTrip:
+		return "", true
+	case status == "" && f.tripReturn[id] != "":
+		return f.tripReturn[id], true
+	default:
+		return "", false
+	}
+}
+
+// addClassTrip counts the child under its return time, in time order with
+// the whole-day trip first.
+func addClassTrip(summary *classday.ClassSummary, returnAt string) {
+	for i := range summary.Trips {
+		if tripReturn(summary.Trips[i]) == returnAt {
+			summary.Trips[i].Children++
+			return
+		}
+	}
+	trip := classday.ClassTripSummary{Children: 1}
+	if returnAt != "" {
+		at := returnAt
+		trip.ReturnTime = &at
+	}
+	at := len(summary.Trips)
+	for at > 0 && tripReturn(summary.Trips[at-1]) > returnAt {
+		at--
+	}
+	summary.Trips = slices.Insert(summary.Trips, at, trip)
+}
+
+func tripReturn(trip classday.ClassTripSummary) string {
+	if trip.ReturnTime == nil {
+		return ""
+	}
+	return *trip.ReturnTime
 }

@@ -3,6 +3,7 @@
 Pfade relativ zu `frontend/src/app/[tenant]/(protected)/`. Alle Einträge
 verwenden den Tenant-Snapshot der aufgelösten Schule; Go prüft die Rechte
 jedes Abrufs. Ein fehlender Seed lässt den bestehenden Leser nachladen.
+Weitere Team-Seiten stehen im [Team-Inventar](server-seed-team.md).
 
 | Seite (`page.tsx`) | Erste serverseitige Antworten | Nicht vorgezogen |
 | --- | --- | --- |
@@ -40,10 +41,3 @@ jedes Abrufs. Ein fehlender Seed lässt den bestehenden Leser nachladen.
 | `database/students/ended-care` | Erste Seite der beendeten Betreuungen ohne Suchtext | Andere Suchbegriffe und Folgeseiten |
 | `database/students/import` | Statisches Importformular | Vorlagendownload und Dateivorschau erst auf Aktion |
 | `database/work-time-models` | Arbeitszeitmodelle mit Nutzung | Schreiben erst auf Aktion |
-
-`/students/[id]`: Der GET der Kindakte kann einen Gesundheitszugriff
-protokollieren. Weder ein Seiten-Seed noch Link-Intent startet ihn. Die
-unabhängigen Ankunfts-, Abhol- und Statusdaten sowie die offene Abmeldung
-nutzen ihre jeweiligen Go-Rechte für dieses Kind und denselben Zeitraum und
-Schlüssel wie der Browser. Editoren und auf Wunsch geöffnete Dokumente sind
-keine Seeds.

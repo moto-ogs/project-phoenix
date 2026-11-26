@@ -16,7 +16,6 @@ export default async function FeedbackHistoryPage({
 }) {
   const { tenant, id } = await params;
   const key = tenantStudentKeys.feedback(id);
-  const builtAt = Date.now();
   const seed = readTenantPageContext(tenant)
     .then((context) => {
       if (
@@ -25,6 +24,7 @@ export default async function FeedbackHistoryPage({
         !hasPermission(context.session, "feedback:read")
       )
         return null;
+      const builtAt = Date.now();
       const { snapshot, token } = context;
       return seedOf(
         snapshot,

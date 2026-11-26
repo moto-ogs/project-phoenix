@@ -14,7 +14,6 @@ export default async function ChangeHistoryPage({
 }) {
   const { tenant, id } = await params;
   const key = studentKeys.changeHistory(id);
-  const builtAt = Date.now();
   const seed = readTenantPageContext(tenant)
     .then((context) => {
       if (
@@ -23,6 +22,7 @@ export default async function ChangeHistoryPage({
         !hasPermission(context.session, "users:read")
       )
         return null;
+      const builtAt = Date.now();
       const { snapshot, token } = context;
       // Go independently checks full access to this child and filters document categories.
       return seedOf(

@@ -51,7 +51,7 @@ export interface StudentDetailResponse {
   supervisors: studentsContract.SupervisorContact[];
 }
 
-/** Canonical complete detail projection, shared with navigation intent. */
+/** Complete detail projection for the browser's child record read. */
 export async function fetchStudentDetail(
   studentId: string,
 ): Promise<StudentDetailResponse> {

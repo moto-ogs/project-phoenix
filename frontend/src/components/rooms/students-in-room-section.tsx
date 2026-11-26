@@ -14,6 +14,9 @@
 
 "use client";
 
+import { ParentAttentionList } from "~/components/students/parent-attention-badge";
+import { useHasDeepScrollPosition } from "~/components/ui/navigation-scroll-position";
+import { useInitialPaintViewport } from "~/lib/hooks/use-after-initial-paint";
 import { Alert } from "~/components/ui/alert";
 import { EmptyState } from "~/components/ui/empty-state";
 import { me as meKeys } from "~/lib/swr/me";
@@ -31,8 +34,9 @@ import { ExternalLink, UserPlus } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useTenantRouter } from "~/lib/tenant-router";
+import { useTenantAwarePath } from "~/lib/tenant-path";
 import { useSWRAuth, useTenantMutateMatching } from "~/lib/swr";
-import { Button } from "~/components/ui/button";
+import { Button, ButtonLink } from "~/components/ui/button";
 import { FormRow } from "~/components/ui/form-row";
 import { SelectionBar } from "~/components/ui/selection-bar";
 import { ChoiceTile } from "~/components/ui/choice-tile";
@@ -67,6 +71,7 @@ import { createLogger } from "~/lib/logger";
 import { useAttendanceWebEnabled, usePresenceMode } from "~/lib/tenant-context";
 import { canCheckInToRooms } from "~/lib/student-access";
 import { RoomCheckinDialog } from "~/components/rooms/room-checkin-dialog";
+import { MountOnFirstOpen } from "~/components/ui/mount-on-first-open";
 import {
   useSwrLoadError,
   useSwrResourceLoadError,
@@ -85,6 +90,8 @@ const EMPTY_STUDENTS: RoomStudent[] = [];
 const NO_ACTIVE_GROUPS: ActiveGroup[] = [];
 const NO_SUPERVISIONS: Supervisor[] = [];
 const NO_ROOMS: Room[] = [];
+const NO_SELECTION: ReadonlySet<string> = new Set();
+const IDLE_MOVE = { type: "idle" } as const;
 
 interface StudentsInRoomSectionProps {
   readonly roomId: string;
@@ -118,15 +125,14 @@ export function StudentsInRoomSection({
     "die Anzeige der Kinder im Raum",
     refreshRoomConsumers,
   );
-  const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(
-    () => new Set(),
-  );
+  const [selectedStudentIds, setSelectedStudentIds] =
+    useState<ReadonlySet<string>>(NO_SELECTION);
   // The chosen target's option value: a session ID or `room:<id>` for a
   // released room.
   const [targetValue, setTargetValue] = useState("");
   const [bulkMoveState, setBulkMoveState] = useState<
     { type: "idle" } | { type: "loading" }
-  >({ type: "idle" });
+  >(IDLE_MOVE);
   // „In Raum setzen“ ist ein kleines Formular: Fehler stehen in seiner Leiste,
   // der Zielraum wird markiert (#2517).
   const moveToolbarRef = useRef<HTMLDivElement>(null);
@@ -135,7 +141,7 @@ export function StudentsInRoomSection({
   // „Wiederholen“ setzt die aktuell gewählten Kinder in den aktuellen Zielraum.
   const retryMoveRef = useRef<() => void>(() => undefined);
   const resetBulkMove = () => {
-    setBulkMoveState({ type: "idle" });
+    setBulkMoveState(IDLE_MOVE);
     clearMoveErrors();
   };
   const sectionSearchParams = useSearchParams();
@@ -283,18 +289,18 @@ export function StudentsInRoomSection({
     canCheckInToRooms(session);
   const roomCheckinTarget = useMemo((): TargetRoomOption | null => {
     const here = buildTargetRoomOptions(
-      activeGroups,
-      rooms,
+      sourceGroups,
+      rooms.filter((room) => room.id === roomId),
       "",
       // An arriving child needs a running supervision, also for admins.
       "supervised",
       supervisedTargetGroupIds,
-    ).filter((option) => option.roomId === roomId);
+    );
     return (
       here.find((option) => option.kind === "openRoom") ??
       (here.length === 1 ? (here[0] ?? null) : null)
     );
-  }, [activeGroups, rooms, roomId, supervisedTargetGroupIds]);
+  }, [sourceGroups, rooms, roomId, supervisedTargetGroupIds]);
   // Pulling present children out of their rooms needs the move rights over
   // them: an administrator, or the supervisor of this room's session.
   const canPullIntoRoom =
@@ -381,9 +387,9 @@ export function StudentsInRoomSection({
   const hiddenCount = Math.max(0, totalCount - students.length);
 
   useEffect(() => {
-    setSelectedStudentIds(new Set());
+    setSelectedStudentIds(NO_SELECTION);
     setTargetValue("");
-    setBulkMoveState({ type: "idle" });
+    setBulkMoveState(IDLE_MOVE);
     clearMoveErrors();
   }, [roomId, clearMoveErrors]);
 
@@ -418,7 +424,7 @@ export function StudentsInRoomSection({
   };
 
   const clearSelection = () => {
-    setSelectedStudentIds(new Set());
+    setSelectedStudentIds(NO_SELECTION);
     resetBulkMove();
   };
 
@@ -493,7 +499,7 @@ export function StudentsInRoomSection({
           ...targetLog,
           skipped_reasons: result.skipped.map((item) => item.reason),
         });
-        setBulkMoveState({ type: "idle" });
+        setBulkMoveState(IDLE_MOVE);
         // Teilerfolg, kein API-Fehler: die übrigen Kinder sind bewegt.
         moveErrors.invalid(
           `${skipped} von ${studentIds.length} Kindern konnten nicht bewegt werden.`,
@@ -502,9 +508,9 @@ export function StudentsInRoomSection({
         return;
       }
 
-      setSelectedStudentIds(new Set());
+      setSelectedStudentIds(NO_SELECTION);
       setTargetValue("");
-      setBulkMoveState({ type: "idle" });
+      setBulkMoveState(IDLE_MOVE);
       const successCount = summarizeStudentMoveResult(result).successCount;
       toastSuccess(
         successCount === 1
@@ -527,7 +533,7 @@ export function StudentsInRoomSection({
         setTargetValue("");
         await refreshMoveRooms();
       }
-      setBulkMoveState({ type: "idle" });
+      setBulkMoveState(IDLE_MOVE);
       // Katalogtext; ein voller Raum oder eine volle Aktivität nennt sich
       // selbst über Code und Details (#3633).
       void moveErrors.show(err, {
@@ -548,14 +554,16 @@ export function StudentsInRoomSection({
     // aria-label keep the named landmark the tests and a11y tooling expect.
     <section aria-label="Kinder im Raum">
       {showRoomCheckin && roomCheckinTarget ? (
-        <RoomCheckinDialog
-          isOpen={roomCheckinOpen}
-          onClose={() => setRoomCheckinOpen(false)}
-          roomName={roomName}
-          target={roomCheckinTarget}
-          canPullPresent={canPullIntoRoom}
-          onDone={moveAfterWrite.refresh}
-        />
+        <MountOnFirstOpen open={roomCheckinOpen}>
+          <RoomCheckinDialog
+            isOpen={roomCheckinOpen}
+            onClose={() => setRoomCheckinOpen(false)}
+            roomName={roomName}
+            target={roomCheckinTarget}
+            canPullPresent={canPullIntoRoom}
+            onDone={moveAfterWrite.refresh}
+          />
+        </MountOnFirstOpen>
       ) : null}
       <SectionCard
         overflow="visible"
@@ -649,7 +657,6 @@ export function StudentsInRoomSection({
             selectableStudentIds={selectableStudentIds}
             selectedStudentIds={selectedStudentIds}
             onToggleStudentSelection={toggleStudentSelection}
-            router={router}
           />
         </div>
       </SectionCard>
@@ -799,7 +806,6 @@ interface StudentsInRoomBodyProps {
   readonly selectableStudentIds: ReadonlySet<string>;
   readonly selectedStudentIds: ReadonlySet<string>;
   readonly onToggleStudentSelection: (studentId: string) => void;
-  readonly router: ReturnType<typeof useTenantRouter>;
 }
 
 function StudentsInRoomBody({
@@ -811,9 +817,17 @@ function StudentsInRoomBody({
   selectableStudentIds,
   selectedStudentIds,
   onToggleStudentSelection,
-  router,
 }: StudentsInRoomBodyProps) {
+  const tenantPath = useTenantAwarePath();
   const { enabled: photosEnabled } = useStudentPhotosEnabled();
+  const viewport = useInitialPaintViewport(true);
+  const deepScroll = useHasDeepScrollPosition();
+  // The section starts below the room heading and facts. A complete first
+  // viewport needs at most this many single-column rows, including the gap.
+  const initialRowCount =
+    viewport && !deepScroll
+      ? Math.max(1, Math.ceil((viewport.height - 128) / 48))
+      : students.length;
   if (loadError) {
     return <LoadErrorAlert error={loadError} />;
   }
@@ -851,24 +865,26 @@ function StudentsInRoomBody({
     // Single column inside the slide-over: the panel is ~512px, so a
     // multi-column grid would either truncate names or shrink the rows
     // below useful tap-target size on touch.
-    <div className="flex flex-col gap-2">
-      {students.map((student) => (
-        <SelectableStudentRow
-          key={student.id}
-          student={student}
-          selectable={
-            selectable && selectableStudentIds.has(String(student.id))
-          }
-          isSelected={selectedStudentIds.has(String(student.id))}
-          onToggleSelection={() => onToggleStudentSelection(String(student.id))}
-          onOpen={() =>
-            router.push(
+    <ParentAttentionList>
+      <div className="flex flex-col gap-2">
+        {students.slice(0, initialRowCount).map((student) => (
+          <SelectableStudentRow
+            key={student.id}
+            student={student}
+            selectable={
+              selectable && selectableStudentIds.has(String(student.id))
+            }
+            isSelected={selectedStudentIds.has(String(student.id))}
+            onToggleSelection={() =>
+              onToggleStudentSelection(String(student.id))
+            }
+            href={tenantPath(
               `/students/${student.id}?from=${encodeURIComponent(fromReferrer)}`,
-            )
-          }
-        />
-      ))}
-    </div>
+            )}
+          />
+        ))}
+      </div>
+    </ParentAttentionList>
   );
 }
 
@@ -877,13 +893,13 @@ function SelectableStudentRow({
   selectable,
   isSelected,
   onToggleSelection,
-  onOpen,
+  href,
 }: {
   readonly student: RoomStudent;
   readonly selectable: boolean;
   readonly isSelected: boolean;
   readonly onToggleSelection: () => void;
-  readonly onOpen: () => void;
+  readonly href: string;
 }) {
   const fullName =
     `${student.first_name ?? ""} ${student.second_name ?? ""}`.trim() || "Kind";
@@ -920,18 +936,17 @@ function SelectableStudentRow({
           {studentCard}
         </div>
       )}
-      <Button
-        type="button"
+      <ButtonLink
+        href={href}
         variant="outline"
         size="compact"
-        onClick={onOpen}
         aria-label={`${fullName} Profil öffnen`}
         tooltip="Öffnet die Akte des Kindes."
         className="shrink-0"
       >
         Profil
         <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
-      </Button>
+      </ButtonLink>
     </ChoiceTile>
   );
 }

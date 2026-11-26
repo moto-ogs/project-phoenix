@@ -4,11 +4,15 @@ package common
 const CodeCalendarFederalStateMissing = "calendar.federal_state_missing"
 const CodeCalendarNoStaffProfile = "calendar.no_staff_profile"
 const CodeCalendarOccurrenceUnavailable = "calendar.occurrence_unavailable"
+const CodeCalendarOpeningChangeInvalid = "calendar.opening_change_invalid"
+const CodeCalendarOpeningChangeNotFound = "calendar.opening_change_not_found"
 
 var errorCodeClassesCalendar = []errorCodeClass{
 	{CodeCalendarFederalStateMissing, "business_rejection"},
 	{CodeCalendarNoStaffProfile, "permission"},
 	{CodeCalendarOccurrenceUnavailable, "business_rejection"},
+	{CodeCalendarOpeningChangeInvalid, "input"},
+	{CodeCalendarOpeningChangeNotFound, "business_rejection"},
 }
 
 func init() {

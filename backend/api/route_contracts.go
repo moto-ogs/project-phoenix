@@ -211,6 +211,7 @@ func tenantContractMounts() []contractMount {
 		{"/api/shift-types", shiftTypeRouteContracts()},
 		{"/api/staff-shifts", staffShiftRouteContracts()},
 		{"/api/timetable", timetableHTTP.RouteContracts()},
+		{"/api/opening-changes", calendarAPI.OpeningChangeRouteContracts()},
 		{"/api/week-protocols", timetableHTTP.WeekProtocolRouteContracts()},
 		{"/api/surveys", announcementAPI.SurveyRouteContracts()},
 		{"/api/messages", parentMessagingAPI.RouteContracts()},

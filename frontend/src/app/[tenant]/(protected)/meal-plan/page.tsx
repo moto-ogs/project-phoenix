@@ -16,9 +16,9 @@ import { MealPlanSeed } from "./page-seed";
 import { mealPlanSeedKeys } from "./seed-keys";
 
 async function loadMealPlanSeed(slug: string) {
-  const builtAt = Date.now();
   const context = await readTenantPageContext(slug, "mittagessen");
   if (!context) return null;
+  const builtAt = Date.now();
   const { token, session, snapshot, tenant } = context;
   const { from, to, date, plan, orders, participants, caterer } =
     mealPlanSeedKeys(berlinTodayISO());

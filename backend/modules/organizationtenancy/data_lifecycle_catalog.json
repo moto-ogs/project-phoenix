@@ -369,6 +369,7 @@
     {"name": "schedule.meal_plan_entries", "scope": "tenant", "export": "include"},
     {"name": "schedule.meal_registration_changes", "scope": "tenant", "export": "include", "personKeys": {"student_id": "users.student_profiles.id", "account_id": "auth.accounts.id"}},
     {"name": "schedule.meal_sickness_status_history", "scope": "tenant", "export": "include", "personKeys": {"student_id": "users.student_profiles.id"}},
+    {"name": "schedule.opening_changes", "scope": "tenant", "export": "include"},
     {"name": "schedule.pickup_extension_tasks", "scope": "tenant", "export": "include", "personKeys": {"student_id": "users.student_profiles.id"}},
     {"name": "schedule.planning_tracks", "scope": "tenant", "export": "include"},
     {"name": "schedule.recurrence_rules", "scope": "tenant", "export": "include"},

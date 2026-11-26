@@ -941,7 +941,9 @@ function useApiErrorCore(
     [careTermRef, contact, deliver, logShown, markFields],
   );
 
-  const clearFieldErrors = useCallback(() => setFieldErrors({}), []);
+  const clearFieldErrors = useCallback(() => {
+    setFieldErrors((current) => (Object.keys(current).length ? {} : current));
+  }, []);
 
   return {
     show,

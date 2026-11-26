@@ -1,8 +1,12 @@
 import { readFileSync } from "node:fs";
 import type { Page } from "@playwright/test";
 import { berlinTodayISO } from "../../src/lib/date-helpers";
+import { PORTAL_ROUTES } from "../../src/lib/portal-paths";
 
-import { loginToLocalMfaPortal } from "../../e2e/local-tenant-login";
+import {
+  loginToCachedLocalPortal,
+  loginToLocalMfaPortal,
+} from "../../e2e/local-tenant-login";
 import { readSeedAccess, readSeedProfile } from "../seed-state";
 import { dismissNotificationHint, login, perfPort } from "./access";
 import { perfServerEnv } from "./env.mjs";
@@ -144,11 +148,8 @@ export async function openRevisitSession(
 ) {
   const env = perfServerEnv();
   const tenant = role === "admin" || role === "betreuer";
-  const access = tenant
-    ? readSeedAccess({ role, profile: "vollbetrieb" })
-    : undefined;
-  const hostname = access
-    ? access.slug + ".localhost:" + perfPort()
+  const hostname = tenant
+    ? fixture.schoolSlug + ".localhost:" + perfPort()
     : env["NEXT_PUBLIC_" + role.toUpperCase() + "_HOSTNAME"];
   const origin = new URL("http://" + hostname);
   if (
@@ -157,7 +158,10 @@ export async function openRevisitSession(
     origin.host !== hostname
   )
     throw new Error("Revisit braucht lokale Portal-Hosts mit PERF_PORT.");
-  if (access) {
+  if (tenant) {
+    const access = readSeedAccess({ role, profile: "vollbetrieb" });
+    if (!access)
+      throw new Error("Zugang für " + role + " fehlt im lokalen Seed.");
     await login(page, access);
     await dismissNotificationHint(page, origin.origin);
   } else {
@@ -176,7 +180,19 @@ export async function openRevisitSession(
               : fixture.first;
     if (!credentials)
       throw new Error("Zugang für " + role + " fehlt im lokalen Seed.");
-    await loginToLocalMfaPortal(page, origin.origin, credentials);
+    if (role === "parents") {
+      // The parent isolation, logout and rights probes use fresh contexts
+      // and must not share a family they will revoke.
+      await loginToLocalMfaPortal(page, origin.origin, credentials);
+    } else {
+      await loginToCachedLocalPortal(
+        page,
+        origin.origin,
+        credentials,
+        "../tmp/revisit-role-sessions",
+        PORTAL_ROUTES[role].basePath,
+      );
+    }
   }
   if (role === "parents") {
     // A returning parent has finished the first-steps panel. Dismiss it through

@@ -3,9 +3,10 @@
 // „Heute anders“ in moto schule (#7670): was heute für die eigenen Klassen
 // und die ganze Schule anders ist, oben auf der Startseite. Unterrichtsschluss
 // und Schließtag kommen aus der Übersicht des Backends, seit #8148 auch die
-// Vertretungen bei den eigenen Aufsichten. Die Kinder stehen im
-// Klassentag; der Block zählt sie nur pro Klasse aus dem Bericht, den die
-// Startseite ohnehin lädt, und springt zur ersten geänderten Zeile.
+// Vertretungen bei den eigenen Aufsichten, seit #8155 die eigenen Termine.
+// Die Kinder stehen im Klassentag; der Block zählt sie nur pro Klasse aus
+// dem Bericht, den die Startseite ohnehin lädt, und springt zur ersten
+// geänderten Zeile. Aus demselben Bericht kommen die Ausflüge der Klassen.
 
 import { useSession } from "next-auth/react";
 import { useCallback, useId } from "react";
@@ -56,6 +57,37 @@ function schoolHref(entry: DayChange, today: string): string | null {
     default:
       return null;
   }
+}
+
+/**
+ * Die Ausflüge der eigenen Klassen (#8155) aus dem Bericht, den die
+ * Startseite ohnehin lädt: ein Eintrag je Klasse und Rückkehrzeit, ohne Kind
+ * und ohne Grund. Den Satz baut derselbe Text wie im Staff-Portal.
+ */
+function classTripChanges(
+  report: schoolClassDayContract.AssignedClassesReport | undefined,
+): DayChange[] {
+  if (!report?.school_day) return [];
+  return (report.classes ?? []).flatMap((klass) =>
+    (klass.trips ?? []).map((trip): DayChange => ({
+      kind: "class_trip",
+      section: "you",
+      halfDay: false,
+      since: null,
+      until: null,
+      startsAt: null,
+      endsAt: null,
+      people: [],
+      groupName: null,
+      link: { target: "school_class", staffId: null },
+      count: null,
+      schoolClass: {
+        name: klass.school_class,
+        time: trip.return_time,
+        children: trip.children,
+      },
+    })),
+  );
 }
 
 function childChangesText(klass: string, count: number): string {
@@ -121,6 +153,7 @@ export function SchoolDayChangesBlock({
   const classLines = (classes.data?.classes ?? []).filter(
     (klass) => classes.data?.school_day && klass.changes > 0,
   );
+  const trips = classTripChanges(classes.data);
   const classesFailed = ownClassesOnly && Boolean(classes.error);
   const loading =
     !overview || (ownClassesOnly && !classes.data && !classes.error);
@@ -129,6 +162,7 @@ export function SchoolDayChangesBlock({
   const failed = overview?.failedSources ?? [];
   const noVisibleChanges =
     own.length === 0 &&
+    trips.length === 0 &&
     school.length === 0 &&
     classLines.length === 0 &&
     failed.length === 0 &&
@@ -173,8 +207,11 @@ export function SchoolDayChangesBlock({
             Heute läuft alles wie geplant.
           </p>
         ) : null}
-        {own.length > 0 || classLines.length > 0 ? (
+        {own.length > 0 || trips.length > 0 || classLines.length > 0 ? (
           <DayChangeList title="Betrifft dich">
+            {trips.map((entry, i) => (
+              <EntryRow key={`trip-${i}`} entry={entry} today={today} />
+            ))}
             {own.map((entry, i) => (
               <EntryRow key={`you-${i}`} entry={entry} today={today} />
             ))}

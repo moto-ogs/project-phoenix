@@ -415,13 +415,6 @@
     },
     {
       "build": "production",
-      "evidence": "func (p activeStaffAccess) HasCurrentStaff(ctx context.Context) (bool, error) {\n\treturn p.source.HasCurrentStaff(ctx)\n}",
-      "form": "forward-debt",
-      "id": "api/activeStaffAccess.HasCurrentStaff",
-      "owner": "roots"
-    },
-    {
-      "build": "production",
       "evidence": "func (a activityCatalogAdapter) CreateActivity(ctx context.Context, input facilities.SystemActivity) (facilities.SystemActivity, error) {\n\tcreated, err := a.service.CreateCatalogGroup(ctx, timetable.GroupInput{Name: input.Name, MaxParticipants: input.MaxParticipants, IsOpen: input.IsOpen, CategoryID: input.CategoryID, PlannedRoomID: input.PlannedRoomID, IsSystem: input.IsSystem, CreatedBy: input.CreatedBy})\n\treturn systemActivity(\u0026created), err\n}",
       "form": "unclassified-evidence",
       "id": "api/activityCatalogAdapter.CreateActivity",

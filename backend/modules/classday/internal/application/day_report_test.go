@@ -56,13 +56,26 @@ func (f fakeClassDayStatusDays) StandingStatusDays(context.Context, []int64, cal
 	return f.entries, nil
 }
 
-// fakeCareDays serves fixed care-day verdicts.
+// fakeCareDays serves fixed care-day verdicts; planned adds the arrival of
+// the day behind a verdict.
 type fakeCareDays struct {
 	statuses map[int64]ports.CareDay
+	planned  map[int64]ports.PlannedCareDay
 }
 
 func (f fakeCareDays) ResolveForDate(context.Context, []int64, calendar.Date) (map[int64]ports.CareDay, error) {
 	return f.statuses, nil
+}
+
+func (f fakeCareDays) ResolvePlannedForDate(context.Context, []int64, calendar.Date) (map[int64]ports.PlannedCareDay, error) {
+	out := make(map[int64]ports.PlannedCareDay, len(f.statuses)+len(f.planned))
+	for id, status := range f.statuses {
+		out[id] = ports.PlannedCareDay{Status: status}
+	}
+	for id, day := range f.planned {
+		out[id] = day
+	}
+	return out, nil
 }
 
 // fakeDayTimes serves fixed effective times for the bulk read the class day

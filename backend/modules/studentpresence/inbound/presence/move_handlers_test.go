@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http/httptest"
 	"testing"
 
@@ -12,6 +13,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/api/testutil"
+	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
@@ -289,7 +291,14 @@ func TestMoveStudentsToActiveGroup(t *testing.T) {
 
 	t.Run("all_staff visibility does not bypass move resource checks", func(t *testing.T) {
 		rs := resourceForTest(Resource{
-			SettingsService: scopeSettings(tenantsettings.OverviewScopeAllStaff),
+			SettingsService: &settingsDouble{
+				ResolveStringFn: func(_ context.Context, key string) (string, error) {
+					if key != tenantsettings.KeyOperationalOverviewScope {
+						return "", fmt.Errorf("unexpected settings key: %s", key)
+					}
+					return tenantsettings.OverviewScopeAllStaff, nil
+				},
+			},
 			PersonService: moveAuthPersonService{
 				person: &PersonIdentity{ID: 10},
 				staff:  &StaffIdentity{ID: 20},
@@ -368,4 +377,39 @@ func TestMoveStudentsToActiveGroup(t *testing.T) {
 		require.Equal(t, testutil.StatusInternalServerError, w.Code)
 		assert.True(t, calledMove)
 	})
+}
+
+func newRequestWithClaims(method, path string, claims testutil.Claims) *testutil.Request {
+	req := httptest.NewRequest(method, path, nil)
+	return req.WithContext(claimsCtxWithParent(req.Context(), claims))
+}
+
+func claimsCtxWithParent(parent context.Context, claims testutil.Claims) context.Context {
+	ctx := testutil.WithAuthenticatedContext(parent, claims, nil)
+	principal, err := permissions.NewPrincipal(permissions.PrincipalInput{
+		AccountID: int64(claims.ID), TenantID: claims.TenantID, OrganizationID: claims.OrgID, Scope: claims.Scope,
+		Roles: claims.Roles, Permissions: claims.Permissions, Admin: claims.IsAdmin,
+	})
+	if err != nil {
+		panic(err)
+	}
+	return permissions.WithPrincipal(ctx, principal)
+}
+
+func adminClaims() testutil.Claims {
+	return testutil.Claims{
+		ID:       42,
+		IsAdmin:  true,
+		Roles:    []string{"admin"},
+		TenantID: 10,
+	}
+}
+
+func staffClaims() testutil.Claims {
+	return testutil.Claims{
+		ID:       99,
+		IsAdmin:  false,
+		Roles:    []string{"user"},
+		TenantID: 10,
+	}
 }
