@@ -154,19 +154,36 @@ function InboxSplit({
  * Monat. Die Uhrzeit steht ab 390 px Breite auch bei älteren Nachrichten
  * dabei („Gestern, 21:28“); am SE bliebe sonst kaum Platz für die Vorschau.
  */
-function ChatTime({ iso }: Readonly<{ iso: string }>) {
+function chatTimeParts(
+  iso: string,
+): { date: string; time: string | null } | null {
   const day = relativeDaysLabel(iso);
   if (day === null) return null;
   const time = formatBerlinTime(iso);
-  if (day === "heute") return <>{time}</>;
+  if (day === "heute") return { date: time, time: null };
   const date =
     day === "gestern" ? "Gestern" : (formatChatTime(iso).split(",")[0] ?? "");
+  return { date, time };
+}
+
+function ChatTime({ iso }: Readonly<{ iso: string }>) {
+  const parts = chatTimeParts(iso);
+  if (parts === null) return null;
   return (
     <>
-      {date}
-      <span className="hidden min-[390px]:inline">, {time}</span>
+      {parts.date}
+      {parts.time ? (
+        <span className="hidden min-[390px]:inline">, {parts.time}</span>
+      ) : null}
     </>
   );
+}
+
+/** Die Zeit als Text für den zugänglichen Namen der Zeile, voll. */
+function chatTimeText(iso: string | null | undefined): string {
+  const parts = iso ? chatTimeParts(iso) : null;
+  if (parts === null) return "";
+  return parts.time ? `${parts.date}, ${parts.time}` : parts.date;
 }
 
 type RowProps = (
@@ -222,11 +239,22 @@ function InboxList({
             <CollectionRow
               key={thread.thread_id}
               {...shownTarget}
-              // Beginnt mit dem sichtbaren Text der Zeile (Sprachsteuerung):
-              // Person · Beziehung, dann das Kind.
-              aria-label={`${thread.guardian_name} · ${relation}${
-                unread ? `, ${thread.unread_count} ungelesen` : ""
-              }`}
+              // Beginnt mit dem sichtbaren Text der Zeile (Sprachsteuerung,
+              // axe label-content-name-mismatch): Person · Rolle, Abzeichen,
+              // Zeit; dann das Kind und die Zahl der ungelesenen.
+              aria-label={[
+                `${thread.guardian_name} · ${
+                  wide ? relation : relationshipLabel(thread.relationship_type)
+                }`,
+                thread.audience === "leadership"
+                  ? ` ${LEADERSHIP_AUDIENCE_LABEL}`
+                  : "",
+                thread.last_message_at
+                  ? ` ${chatTimeText(thread.last_message_at)}`
+                  : "",
+                wide ? "" : `, ${relation}`,
+                unread ? `, ${thread.unread_count} ungelesen` : "",
+              ].join("")}
               leading={
                 <Avatar
                   name={thread.guardian_name}
@@ -264,6 +292,9 @@ function InboxList({
                   </span>
                   {/* Wie in Chat-Apps: Zeit oben rechts, die Zahl der
                       ungelesenen darunter; die Vorschau nutzt die Breite. */}
+                  {/* Leerzeichen für den zugänglichen Text („Elternteil
+                      24.11.“ statt „Elternteil24.11.“); im Flex unsichtbar. */}
+                  {thread.last_message_at ? " " : null}
                   {thread.last_message_at ? (
                     <span className="shrink-0 text-xs font-normal text-gray-500 tabular-nums">
                       <ChatTime iso={thread.last_message_at} />
