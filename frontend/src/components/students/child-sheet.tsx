@@ -141,8 +141,9 @@ export function ChildSheet({
       title={student ? studentName(student) : "Kind"}
       closeLabel="Kind-Blatt schließen"
       // Alle Aktionen im Fuß, in Daumennähe, wie im Kind-Blatt der
-      // Aufsicht: die Aktionen der Liste bzw. die Schnellaktionen der Akte
-      // zuerst, die Akte als Nebenweg darunter.
+      // Aufsicht: die Akte als Nebenweg zuerst, die Hauptaktion zuletzt,
+      // in der Reihe also rechts, gestapelt unten. Anzeige, Tab-Reihenfolge
+      // und Vorleser folgen derselben DOM-Reihenfolge.
       footer={
         footerActions || footerQuickActions ? (
           <div
@@ -150,17 +151,13 @@ export function ChildSheet({
               "flex w-full flex-col gap-2",
               // Die App legt Fußknöpfe in eine Reihe; drei Schnellaktionen
               // und die Akte passen nicht nebeneinander, sie stehen darum
-              // untereinander (Hauptaktion oben, Akte als Nebenweg unten).
+              // untereinander (Akte oben, Hauptaktion unten).
               footerQuickActions && "app:flex-col!",
             )}
           >
-            {/* Mit den Aktionen der Aufsicht steht die Akte als Nebenweg
-                vorn: In der Reihe der App landet die Hauptaktion rechts,
-                wie in den anderen Blättern. */}
-            {footerQuickActions ? null : akteLink}
+            {akteLink}
             {footerActions}
             {footerQuickActions}
-            {footerQuickActions ? akteLink : null}
           </div>
         ) : (
           (akteLink ?? undefined)

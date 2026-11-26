@@ -124,19 +124,10 @@ export const Z_INDEX = {
 /**
  * Eine Fußleiste in der App (#8070): eine Reihe, Hauptaktion rechts, auf
  * jedem Gerät gleich. Stapelt der Aufrufer seine Knöpfe am Telefon
- * (`flex-col`), stellt die Regel sie wieder nebeneinander.
- *
- * Hauptaktion unten rechts in jedem Blatt: Ein gefüllter Knopf (primary,
- * danger, success, warning) oder die Gruppe, die ihn trägt, rückt ans Ende
- * der Fußleiste, gleich in welcher Reihenfolge die Seite übergibt (Jury R12:
- * im Kind-Blatt der Aufsicht stand er links). In einer Reihe steht er damit
- * rechts, in gestapelten Knöpfen unten. Nur die Anzeige-Reihenfolge, nur in
- * der App; Tab-Reihenfolge und Vorleser folgen weiter dem DOM.
+ * (`flex-col`), stellt die Regel sie wieder nebeneinander. Die Hauptaktion
+ * steht im DOM zuletzt, damit Anzeige, Tab-Reihenfolge und Vorleser
+ * übereinstimmen; die Leiste sortiert nicht um.
  */
 // Wörtlich ausgeschrieben: Tailwind findet nur vollständige Klassennamen.
-export const APP_FOOTER_ROW = [
-  "app:[&>div]:flex-row app:[&>div]:flex-nowrap app:[&>div>*]:flex-1",
-  "app:[&>:is(.bg-gray-900,.bg-moto-red,.bg-moto-green-fill,.bg-moto-orange)]:order-last",
-  "app:[&>div>:is(.bg-gray-900,.bg-moto-red,.bg-moto-green-fill,.bg-moto-orange)]:order-last",
-  "app:[&>div>:has(>:is(.bg-gray-900,.bg-moto-red,.bg-moto-green-fill,.bg-moto-orange))]:order-last",
-].join(" ");
+export const APP_FOOTER_ROW =
+  "app:[&>div]:flex-row app:[&>div]:flex-nowrap app:[&>div>*]:flex-1";
