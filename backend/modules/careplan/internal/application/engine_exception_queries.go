@@ -33,10 +33,6 @@ type StatusQueries interface {
 	ListPickupSchedules(ctx context.Context, f careplan.StudentScheduleFilter) ([]careplan.PickupSchedule, domain.OperationStats, error)
 	ListStudentStatusDays(ctx context.Context, filter careplan.StudentStatusDayFilter) ([]careplan.StudentStatusDay, domain.RequestStoreStats, error)
 	SaveDepartureException(ctx context.Context, v careplan.DepartureException) (careplan.DepartureException, domain.OperationStats, error)
-	// The pickup person of one day (#7655).
-	ListDayPickups(ctx context.Context, from, to calendar.Date, studentIDs []int64) ([]careplan.DayPickup, domain.OperationStats, error)
-	SavePickupPerson(ctx context.Context, v careplan.PickupPerson) (careplan.PickupPerson, domain.OperationStats, error)
-	DeletePickupPerson(ctx context.Context, studentID int64, date calendar.Date) (bool, domain.OperationStats, error)
 }
 
 // ExceptionStore is the Care Plan store behind the exception queries: the
@@ -44,6 +40,15 @@ type StatusQueries interface {
 type ExceptionStore interface {
 	ports.Store
 	StatusQueries
+	PickupPersonQueries
+}
+
+// PickupPersonQueries are the store calls of the pickup person of one day
+// (#7655), with the Abholart of the day in one read.
+type PickupPersonQueries interface {
+	ListDayPickups(ctx context.Context, from, to calendar.Date, studentIDs []int64) ([]careplan.DayPickup, domain.OperationStats, error)
+	SavePickupPerson(ctx context.Context, v careplan.PickupPerson) (careplan.PickupPerson, domain.OperationStats, error)
+	DeletePickupPerson(ctx context.Context, studentID int64, date calendar.Date) (bool, domain.OperationStats, error)
 }
 
 // Owner reads keep transaction acquisition in the application layer. The raw

@@ -74,11 +74,14 @@ func (rs *Resource) listDayPickups(ctx context.Context, studentID int64, from, t
 	if err != nil {
 		return nil, nil, err
 	}
+	today := rs.today()
 	for _, row := range rows {
 		if row.Departure != nil {
 			departures = append(departures, mapDepartureExceptionToResponse(*row.Departure))
 		}
-		if row.Person != nil {
+		// A past day never shows its pickup person, also before the nightly
+		// retention deleted it: the name is kept for its day only (#7655).
+		if row.Person != nil && string(row.Date) >= today.String() {
 			persons = append(persons, mapPickupPersonToResponse(*row.Person))
 		}
 	}

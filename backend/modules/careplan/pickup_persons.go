@@ -64,7 +64,8 @@ type DayPickup struct {
 type PickupPersons interface {
 	// ListDayPickups reads the Abholart and the pickup person of every child
 	// and day from from to to (a zero to has no end), limited to studentIDs
-	// when given, in one statement, ordered by day and child.
+	// when given, in one statement, ordered by day and child. A reader of
+	// days other than its today hides the persons of past days.
 	ListDayPickups(ctx context.Context, from, to calendar.Date, studentIDs []int64) ([]DayPickup, error)
 	// SetPickupPerson replaces the pickup person of the child's day under
 	// the care-day lock. The caller has checked that a named contact may

@@ -17,33 +17,25 @@ var _ careplan.PickupPersons = (*Service)(nil)
 
 // ListDayPickups reads the Abholart and pickup person of the days from from
 // to to. A nil studentIDs reads the whole school, an empty one reads
-// nothing. A past day never shows a pickup person, also before the nightly
-// retention removed it: the name is kept for its day only (#7655).
+// nothing. Readers of the day itself (group view, "Heute anders") pass
+// their today; a reader of other days hides the persons of past days, which
+// the nightly retention deletes (#7655).
 func (s *Service) ListDayPickups(ctx context.Context, from, to calendar.Date, studentIDs []int64) ([]careplan.DayPickup, error) {
 	if from.IsZero() || !to.IsZero() && to.Before(from) {
 		return nil, scheduleInvalid()
 	}
 	if studentIDs != nil {
-		studentIDs = uniquePositive(studentIDs)
+		// An empty list reads nothing and opens no transaction.
+		if studentIDs = uniquePositive(studentIDs); len(studentIDs) == 0 {
+			return []careplan.DayPickup{}, nil
+		}
 	}
 	started := time.Now()
 	rows, stats, err := scopedRecordRead(ctx, func(txCtx context.Context) ([]careplan.DayPickup, domain.OperationStats, error) {
-		return s.statusQueries.ListDayPickups(txCtx, from, to, studentIDs)
+		return s.pickupPersons.ListDayPickups(txCtx, from, to, studentIDs)
 	})
 	s.observeRequest("list_day_pickups", time.Since(started), stats, err)
-	if err != nil {
-		return nil, err
-	}
-	today, kept := s.today(), rows[:0]
-	for _, row := range rows {
-		if string(row.Date) < today.String() {
-			row.Person = nil
-		}
-		if row.Departure != nil || row.Person != nil {
-			kept = append(kept, row)
-		}
-	}
-	return kept, nil
+	return rows, err
 }
 
 // SetPickupPerson validates the value, takes the care-day lock every writer
@@ -61,11 +53,11 @@ func (s *Service) SetPickupPerson(ctx context.Context, person careplan.PickupPer
 	person.CreatedBy = optionalStaff(staffID)
 	var saved careplan.PickupPerson
 	err = s.run(ctx, "save_pickup_person", func(txCtx context.Context, stats *domain.OperationStats) error {
-		if err := s.DayLocks.LockStudentAndExceptionDay(txCtx, person.StudentID, date.String()); err != nil {
+		if err := s.LockStudentAndExceptionDay(txCtx, person.StudentID, date.String()); err != nil {
 			return err
 		}
 		var err error
-		saved, *stats, err = s.statusQueries.SavePickupPerson(txCtx, person)
+		saved, *stats, err = s.pickupPersons.SavePickupPerson(txCtx, person)
 		return err
 	})
 	return saved, err
@@ -79,11 +71,11 @@ func (s *Service) DeletePickupPerson(ctx context.Context, studentID int64, date 
 	}
 	deleted := false
 	err := s.run(ctx, "delete_pickup_person", func(txCtx context.Context, stats *domain.OperationStats) error {
-		if err := s.DayLocks.LockStudentAndExceptionDay(txCtx, studentID, date.String()); err != nil {
+		if err := s.LockStudentAndExceptionDay(txCtx, studentID, date.String()); err != nil {
 			return err
 		}
 		var err error
-		deleted, *stats, err = s.statusQueries.DeletePickupPerson(txCtx, studentID, date)
+		deleted, *stats, err = s.pickupPersons.DeletePickupPerson(txCtx, studentID, date)
 		return err
 	})
 	return deleted, err

@@ -9,6 +9,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/domain"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/uptrace/bun"
+	"github.com/uptrace/bun/dialect/pgdialect"
 )
 
 // The pickup person of one day (#7655), schedule.student_pickup_persons.
@@ -58,17 +59,27 @@ func (s *Store) ListDayPickups(ctx context.Context, from, to calendar.Date, stud
 	if studentIDs != nil && len(studentIDs) == 0 {
 		return []careplan.DayPickup{}, domain.OperationStats{}, nil
 	}
-	filter, args := `tenant_id = ? AND exception_date >= ?`, []any{tid, from}
+	// A NULL end or child list reads without that limit.
+	var until, students any
 	if !to.IsZero() {
-		filter, args = filter+` AND exception_date <= ?`, append(args, to)
+		until = to
 	}
 	if studentIDs != nil {
-		filter, args = filter+` AND student_id IN (?)`, append(args, bun.List(studentIDs))
+		students = pgdialect.Array(studentIDs)
 	}
 	rows := []dayPickupRow{}
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()
 	err = db.NewRaw(`
+		WITH d AS (
+			SELECT * FROM schedule.student_departure_exceptions
+			WHERE tenant_id = ?0 AND exception_date >= ?1 AND (?2::date IS NULL OR exception_date <= ?2::date)
+				AND (?3::bigint[] IS NULL OR student_id = ANY(?3::bigint[]))
+		), p AS (
+			SELECT * FROM schedule.student_pickup_persons
+			WHERE tenant_id = ?0 AND exception_date >= ?1 AND (?2::date IS NULL OR exception_date <= ?2::date)
+				AND (?3::bigint[] IS NULL OR student_id = ANY(?3::bigint[]))
+		)
 		SELECT COALESCE(d.student_id, p.student_id) AS student_id,
 			COALESCE(d.exception_date, p.exception_date)::text AS exception_date,
 			d.id AS departure_id, d.created_at AS departure_created_at, d.updated_at AS departure_updated_at,
@@ -76,10 +87,8 @@ func (s *Store) ListDayPickups(ctx context.Context, from, to calendar.Date, stud
 			d.entered_by_traeger AS departure_entered_by_traeger,
 			p.id AS person_id, p.created_at AS person_created_at, p.updated_at AS person_updated_at,
 			p.person_name, p.guardian_profile_id AS person_guardian_profile_id, p.created_by AS person_created_by
-		FROM (SELECT * FROM schedule.student_departure_exceptions WHERE `+filter+`) AS d
-		FULL JOIN (SELECT * FROM schedule.student_pickup_persons WHERE `+filter+`) AS p
-			ON p.student_id = d.student_id AND p.exception_date = d.exception_date
-		ORDER BY 2, 1`, append(args, args...)...).Scan(ctx, &rows)
+		FROM d FULL JOIN p ON p.student_id = d.student_id AND p.exception_date = d.exception_date
+		ORDER BY 2, 1`, tid, from, until, students).Scan(ctx, &rows)
 	stats.StatementDuration = time.Since(started)
 	if err != nil {
 		return nil, stats, fmt.Errorf("care plan postgres: list day pickups: %w", err)

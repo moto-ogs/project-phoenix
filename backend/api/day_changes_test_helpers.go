@@ -39,7 +39,7 @@ func NewDayChangesTestResource(db transactionruntime.Database, unit tenant.UnitO
 	if err != nil {
 		return nil, err
 	}
-	carePlan, dayPickups, err := dayChangesTestCarePlan(db, today)
+	carePlan, dayPickups, err := dayChangesTestCarePlan(db)
 	if err != nil {
 		return nil, err
 	}
@@ -83,20 +83,15 @@ func NewDayChangesTestResource(db transactionruntime.Database, unit tenant.UnitO
 }
 
 // dayChangesTestCarePlan binds Care Plan's reads of the overview. The Kinder
-// reads take the day as a filter; Care Plan's clock stamps writes only. A
-// shared clock adds no closure to its effect bindings. The pickup person of
-// a day shows only on its day and later (#7655): that read decides on the
-// overview's day.
-func dayChangesTestCarePlan(db transactionruntime.Database, today calendar.Date) (careplan.Capability, careplan.PickupPersons, error) {
+// reads and the pickup person of a day (#7655) take the day as a filter;
+// Care Plan's clock stamps writes only. A shared clock adds no closure to its
+// effect bindings.
+func dayChangesTestCarePlan(db transactionruntime.Database) (careplan.Capability, careplan.PickupPersons, error) {
 	carePlan, err := NewClockedCarePlanForTests(db, time.Now)
 	if err != nil {
 		return nil, nil, err
 	}
-	dayCarePlan, err := NewClockedCarePlanForTests(db, func() time.Time { return today.BerlinMidnight().Add(12 * time.Hour) })
-	if err != nil {
-		return nil, nil, err
-	}
-	dayPickups, err := owners.CarePlanPickupPersons(dayCarePlan)
+	dayPickups, err := owners.CarePlanPickupPersons(carePlan)
 	return carePlan, dayPickups, err
 }
 
