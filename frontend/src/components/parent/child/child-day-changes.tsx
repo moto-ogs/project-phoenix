@@ -84,12 +84,16 @@ function childDayChangeText(
         opens: entry.opens_at ?? "",
         closes: entry.closes_at ?? "",
       };
-      return entry.until
+      const opening = entry.until
         ? t("changes.openingChangedUntil", {
             ...hours,
             date: formatDate(entry.until),
           })
         : t("changes.openingChanged", hours);
+      // Die Abholzeit aus dem Wochenplan nach der Schließzeit bleibt, wie sie
+      // ist; der Satz sagt, dass sie danach liegt (#8173).
+      if (!entry.pickup_after_closing || !entry.pickup_time) return opening;
+      return `${opening} ${t("changes.regularPickupAfterClosing", { name: firstName, time: entry.pickup_time })} ${t("changes.pickupAfterClosing")}`;
     }
     case "meal_cancelled":
       // Nur bei einer Buchung des Kindes an dem Tag (#8160). Der Grund der

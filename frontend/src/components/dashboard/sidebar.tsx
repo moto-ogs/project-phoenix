@@ -231,6 +231,8 @@ const OPERATOR_NAV_SECTIONS: readonly OperatorNavSection[] = [
 const TENANT_SCOPED_HREFS = new Set<string>([
   "/anfragen",
   STAFF_FLAT_PAGES.payroll.href,
+  // Stand bis #8134 im Planungskatalog und lief darüber durch tenantPath.
+  STAFF_FLAT_PAGES.carePlan.href,
   ...PARENT_SUB_PAGES.map((page) => page.href),
   ...COMMUNICATION_SUB_PAGES.map((page) => page.href),
   ...PLANNING_SUB_PAGES.map((page) => page.href),

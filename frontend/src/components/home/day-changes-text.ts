@@ -2,7 +2,7 @@
  * Die Texte von „Heute anders“ (#7659). Das Backend liefert nur Art,
  * Personen, Gruppe und Tage; hier entstehen die Sätze in einfacher Sprache.
  * Eine neue Quelle ergänzt ihre Arten in `DAY_CHANGE_TEXTS`, ihren Namen in
- * `SOURCE_FAILURE_TEXTS` und ihre Link-Ziele in `dayChangeHref`.
+ * `SOURCE_FAILURE_TEXTS` und ihre Link-Ziele in `dayChangeLinkHref`.
  */
 import type {
   DayChange,
@@ -440,12 +440,10 @@ export function sourceFailureText(source: string): string {
   );
 }
 
-/** Der Weg zur Detailseite eines Eintrags, ohne Schulpräfix. */
-export function dayChangeHref(change: DayChange): string | null {
-  return dayChangeLinkHref(change.link);
-}
-
-/** Der Weg zu einem Link-Ziel, auch für die Zeilen einer Zusammenfassung. */
+/**
+ * Der Weg zur Detailseite eines Link-Ziels, ohne Schulpräfix, auch für die
+ * Zeilen einer Zusammenfassung. Die Karte liest ihn über `useDayChangeHref`.
+ */
 export function dayChangeLinkHref(link: DayChangeLink | null): string | null {
   if (!link) return null;
   switch (link.target) {
@@ -478,7 +476,7 @@ export function dayChangeLinkHref(link: DayChangeLink | null): string | null {
         : "/vertretung";
     case "day_plan":
       // Die Zeile ersetzt den Weg durch den Tagesplan der Person
-      // (useDayPlanHref); das hier ist der Weg der Betreuung.
+      // (useDayChangeHref); das hier ist der Weg der Betreuung.
       return "/tagesplan";
     case "calendar":
       return "/calendar";

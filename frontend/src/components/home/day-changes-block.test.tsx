@@ -295,7 +295,7 @@ describe("DayChangesBlock", () => {
       screen.queryByText("Finn ist heute nicht da."),
     ).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Alle anzeigen (4)" }));
+    fireEvent.click(screen.getByRole("button", { name: "1 weitere anzeigen" }));
 
     expect(screen.getByText("Finn ist heute nicht da.")).toBeInTheDocument();
     expect(trackEvent).toHaveBeenCalledWith("day_changes_show_all");
@@ -311,9 +311,13 @@ describe("DayChangesBlock", () => {
     const { rerender } = render(<DayChangesBlock />);
 
     const mine = within(screen.getByRole("region", { name: "Betrifft dich" }));
-    expect(
-      mine.getByRole("link", { name: /Elternabend.*Wichtig/ }),
-    ).toHaveAttribute("href", "/schule/tagesinformationen");
+    // Solange die Kenntnisnahme fehlt, führt der Titel zur Seite und der
+    // Knopf steht im Hinweis (#8134).
+    expect(mine.getByRole("link", { name: "Elternabend" })).toHaveAttribute(
+      "href",
+      "/schule/tagesinformationen",
+    );
+    expect(mine.getByText("Wichtig")).toBeInTheDocument();
     expect(mine.getByText("Bitte Stühle stellen.")).toBeInTheDocument();
 
     fireEvent.click(
@@ -552,8 +556,8 @@ describe("DayChangesBlock über den Tag (#7660)", () => {
       }),
     ).toBeInTheDocument();
     expect(rowTexts(school)).toEqual([
-      "Neu ist heute nicht da.bis 21.9.",
-      "Mittag ist heute nicht da.11:30 bis 14:00 Uhr",
+      "Neu ist heute nicht da. · bis 21.9.",
+      "Mittag ist heute nicht da. · 11:30 bis 14:00 Uhr",
       "Lang ist heute nicht da. · seit 3.9.",
     ]);
     const toggle = within(school).getByRole("button", { name: "1 erledigt" });
@@ -566,7 +570,7 @@ describe("DayChangesBlock über den Tag (#7660)", () => {
 
     expect(toggle).toHaveAttribute("aria-expanded", "true");
     expect(rowTexts(school).at(-1)).toBe(
-      "Morgens ist heute nicht da.08:00 bis 09:00 Uhr",
+      "Morgens ist heute nicht da. · 08:00 bis 09:00 Uhr",
     );
     expect(trackEvent).toHaveBeenCalledWith("day_changes_done_expanded");
 
@@ -621,7 +625,7 @@ describe("DayChangesBlock über den Tag (#7660)", () => {
       within(school).getByRole("button", { name: "1 erledigt" }),
     ).toBeInTheDocument();
     const showAll = within(school).getByRole("button", {
-      name: "Alle anzeigen (4)",
+      name: "1 weitere anzeigen",
     });
     expect(showAll).toHaveAttribute("aria-expanded", "false");
 
@@ -629,18 +633,54 @@ describe("DayChangesBlock über den Tag (#7660)", () => {
 
     expect(rowTexts(school)).toHaveLength(4);
     expect(trackEvent).toHaveBeenCalledWith("day_changes_show_all");
+    // Der Knopf bleibt stehen und klappt an derselben Stelle wieder zu.
+    const showLess = within(school).getByRole("button", {
+      name: "Weniger anzeigen",
+    });
+    expect(showLess).toHaveAttribute("aria-expanded", "true");
+
+    fireEvent.click(showLess);
+
+    expect(rowTexts(school)).toHaveLength(3);
   });
 
-  it("zeigt am Desktop alles ohne „Alle anzeigen“", () => {
+  it("zeigt am Desktop bis zu fünf Einträge von „Schule“ ohne Klappe", () => {
     serve({ entries: [...dayEntries(), absent("Viert"), absent("Fünft")] });
     render(<DayChangesBlock />);
 
+    const school = screen.getByRole("region", { name: "Schule" });
+    expect(rowTexts(school)).toHaveLength(5);
     expect(
-      rowTexts(screen.getByRole("region", { name: "Schule" })),
-    ).toHaveLength(5);
+      within(school).getByRole("button", { name: "1 erledigt" }),
+    ).toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: /Alle anzeigen/ }),
+      screen.queryByRole("button", { name: /weitere anzeigen/ }),
     ).not.toBeInTheDocument();
+  });
+
+  it("klappt „Schule“ am Desktop nach fünf Einträgen ein, „Betrifft dich“ nie (#8134)", () => {
+    serve({
+      entries: [
+        ...["Ich1", "Ich2", "Ich3", "Ich4", "Ich5", "Ich6", "Ich7"].map(
+          (name) => absent(name, "you"),
+        ),
+        ...dayEntries(),
+        ...["Viert", "Fünft", "Sechst", "Siebt"].map((name) => absent(name)),
+      ],
+    });
+    render(<DayChangesBlock />);
+
+    expect(
+      rowTexts(screen.getByRole("region", { name: "Betrifft dich" })),
+    ).toHaveLength(7);
+    const school = screen.getByRole("region", { name: "Schule" });
+    expect(rowTexts(school)).toHaveLength(5);
+
+    fireEvent.click(
+      within(school).getByRole("button", { name: "2 weitere anzeigen" }),
+    );
+
+    expect(rowTexts(school)).toHaveLength(7);
   });
 
   it("sagt nur an, was ein Neuladen geändert hat", () => {
@@ -1092,7 +1132,7 @@ describe("Abwesenheit und Vertretung bei Terminen (#7675)", () => {
 
     fireEvent.click(within(mine).getByRole("button", { name: "1 erledigt" }));
     expect(rowTexts(mine).at(-1)).toBe(
-      "Bei „Lernzeit“ bist du heute nicht da.10:00 bis 11:00 Uhr",
+      "Bei „Lernzeit“ bist du heute nicht da. · 10:00 bis 11:00 Uhr",
     );
     expect(trackEvent).toHaveBeenCalledWith("day_changes_done_expanded");
 
@@ -1195,10 +1235,10 @@ describe("Termine aus dem eigenen Kalender (#7663)", () => {
 
     const mine = screen.getByRole("region", { name: "Betrifft dich" });
     expect(rowTexts(mine)).toEqual([
-      "„Teamsitzung“ fällt heute aus.15:00 bis 16:00 Uhr",
-      "„AG-Treffen“ ist heute an einem anderen Ort. Neuer Ort: Raum 12.15:00 bis 16:00 Uhr",
-      "„Planung“ ist heute zu einer anderen Zeit und an einem anderen Ort.15:00 bis 16:00 Uhr",
-      "Ein Termin ist heute zu einer anderen Zeit.15:00 bis 16:00 Uhr",
+      "„Teamsitzung“ fällt heute aus. · 15:00 bis 16:00 Uhr",
+      "„AG-Treffen“ ist heute an einem anderen Ort. Neuer Ort: Raum 12. · 15:00 bis 16:00 Uhr",
+      "„Planung“ ist heute zu einer anderen Zeit und an einem anderen Ort. · 15:00 bis 16:00 Uhr",
+      "Ein Termin ist heute zu einer anderen Zeit. · 15:00 bis 16:00 Uhr",
     ]);
     const link = screen.getByRole("link", {
       name: /„Teamsitzung“ fällt heute aus\./,

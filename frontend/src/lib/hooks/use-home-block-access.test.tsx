@@ -1,9 +1,10 @@
 import { renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { mockUseSession, mockSupervision } = vi.hoisted(() => ({
+const { mockUseSession, mockSupervision, overviewScope } = vi.hoisted(() => ({
   mockUseSession: vi.fn(),
   mockSupervision: vi.fn(),
+  overviewScope: { current: "own" },
 }));
 
 vi.mock("next-auth/react", () => ({ useSession: mockUseSession }));
@@ -18,6 +19,9 @@ vi.mock("~/lib/change-request-access", () => ({
 vi.mock("~/lib/supervision-context", () => ({
   useOptionalSupervision: mockSupervision,
 }));
+vi.mock("~/lib/tenant-context", () => ({
+  useOperationalOverviewScope: () => overviewScope.current,
+}));
 
 import { useHomeBlockAccess } from "./use-home-block-access";
 
@@ -31,6 +35,22 @@ describe("useHomeBlockAccess", () => {
       status: "authenticated",
       update: vi.fn(),
     });
+    overviewScope.current = "own";
+  });
+
+  // #2380, #8134: ohne Adminzuschnitt sieht die Person die Blöcke der ganzen
+  // Schule nur an einer Schule mit schulweiter Übersicht.
+  it("sees all blocks of the school only under the school-wide overview", () => {
+    mockSupervision.mockReturnValue({ hasGroups: false, groups: [] });
+
+    expect(renderHook(() => useHomeBlockAccess()).result.current).toMatchObject(
+      { seesAllBlocks: false },
+    );
+
+    overviewScope.current = "all_staff";
+    expect(renderHook(() => useHomeBlockAccess()).result.current).toMatchObject(
+      { seesAllBlocks: true },
+    );
   });
 
   it("does not treat a visible tenant group as an own assignment", () => {

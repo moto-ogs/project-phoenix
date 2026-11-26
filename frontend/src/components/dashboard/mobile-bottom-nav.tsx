@@ -104,7 +104,7 @@ import { accountsConcept } from "~/lib/concepts/accounts";
 import { mealPlanConcept } from "~/lib/concepts/mealPlan";
 import { activitiesConcept } from "~/lib/concepts/activities";
 import { announcementsConcept } from "~/lib/concepts/announcements";
-import { carePlanConcept } from "~/lib/concepts/carePlan";
+import { dayPlanConcept } from "~/lib/concepts/dayPlan";
 import { dashboardConcept } from "~/lib/concepts/dashboard";
 import { databaseConcept } from "~/lib/concepts/database";
 import { devicesConcept } from "~/lib/concepts/devices";
@@ -261,7 +261,7 @@ const STAFF_MAIN_ITEMS: NavItem[] = [
     href: STAFF_FLAT_PAGES.tagesplan.href,
     label: STAFF_FLAT_PAGES.tagesplan.label,
     iconKey: "betreuungsplan",
-    concept: carePlanConcept,
+    concept: dayPlanConcept,
     alwaysShow: true,
   },
   {

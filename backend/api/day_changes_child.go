@@ -12,6 +12,7 @@ package api
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
@@ -43,12 +44,16 @@ type ChildDayChangesSources struct {
 	ClosingDays dayChangesClosingDayReads
 	// OpeningChanges is School Calendar's read of the opening changes (#8170).
 	OpeningChanges dayChangesOpeningChangeReads
-	Blocks         dayChangesChildBlocks
-	ClassArrivals  dayChangesClassArrivals
+	// WeeklyPickups is Care Plan's weekly pickups, read on a day with an
+	// opening change only (#8173).
+	WeeklyPickups dayChangesWeeklyPickups
+	Blocks        dayChangesChildBlocks
+	ClassArrivals dayChangesClassArrivals
 	// Meals is Meal Plan's read of a cancelled lunch the child is booked
 	// for (#8160).
-	Meals dayChangesChildMeals
-	Today func() calendar.Date
+	Meals  dayChangesChildMeals
+	Today  func() calendar.Date
+	Logger *slog.Logger
 }
 
 // dayChangesChildMeals is Meal Plan's read of a cancelled lunch of one
@@ -60,13 +65,13 @@ type dayChangesChildMeals interface {
 // NewChildDayChanges binds the child's sources to the projection and the
 // projection to the parents portal's port.
 func NewChildDayChanges(sources ChildDayChangesSources) (parentService.ChildDayChanges, error) {
-	if sources.CarePlan == nil || sources.DayPickups == nil || sources.Students == nil || sources.ClosingDays == nil || sources.OpeningChanges == nil || sources.Blocks == nil || sources.ClassArrivals == nil || sources.Meals == nil {
+	if sources.CarePlan == nil || sources.DayPickups == nil || sources.Students == nil || sources.ClosingDays == nil || sources.OpeningChanges == nil || sources.WeeklyPickups == nil || sources.Blocks == nil || sources.ClassArrivals == nil || sources.Meals == nil || sources.Logger == nil {
 		return nil, fmt.Errorf("%w: child day sources", daychangesview.ErrDependencies)
 	}
 	query, err := daychangesview.NewChild(daychangesview.ChildDependencies{
-		Today: sources.Today, Isolation: dayChangesSavepoints{},
+		Today: sources.Today, Isolation: dayChangesSavepoints{}, Logger: sources.Logger,
 		Children:   childDayChildren{sources: sources},
-		Closing:    childDayClosingDays{reads: sources.ClosingDays, openings: sources.OpeningChanges},
+		Closing:    childDayClosingDays{reads: sources.ClosingDays, openings: sources.OpeningChanges, pickups: sources.WeeklyPickups, logger: sources.Logger},
 		Activities: childDayActivities(sources.Blocks),
 		Classes:    childDayClasses{sources: sources},
 		Meals:      childDayMeals(sources.Meals),
@@ -245,9 +250,11 @@ func enteredBy(accountID int64, authors ...*int64) bool {
 type childDayClosingDays struct {
 	reads    dayChangesClosingDayReads
 	openings dayChangesOpeningChangeReads
+	pickups  dayChangesWeeklyPickups
+	logger   *slog.Logger
 }
 
-func (s childDayClosingDays) ChildDayChanges(ctx context.Context, day calendar.Date, _ daychangesview.ChildFilter) ([]daychangesview.SourceEntry, error) {
+func (s childDayClosingDays) ChildDayChanges(ctx context.Context, day calendar.Date, child daychangesview.ChildFilter) ([]daychangesview.SourceEntry, error) {
 	days, err := s.reads.ListClosingDays(ctx, schoolcalendar.ClosingDayFilter{OverlappingFrom: day.String(), OverlappingTo: day.String()})
 	if err != nil {
 		return nil, fmt.Errorf("list closing days: %w", err)
@@ -265,7 +272,18 @@ func (s childDayClosingDays) ChildDayChanges(ctx context.Context, day calendar.D
 			Closing: &daychangesview.DayClosing{Name: closing.Reason, Traeger: closing.Traeger},
 		})
 	}
-	return append(entries, openingChangeEntries(openings, day, nil, true)...), nil
+	opened := openingChangeEntries(openings, day, nil, true)
+	// A closing day already tells the parent that care does not take place.
+	// A weekly pickup conflict beside it is neither actionable nor worth a
+	// separate Care Plan read.
+	if len(days) == 0 {
+		if err := markRegularPickupAfterClosing(ctx, s.pickups, child.StudentID.Int64(), day, opened); err != nil {
+			// The weekly pickup only adds a conflict hint. Calendar entries remain
+			// available when its separate Care Plan read is temporarily unavailable.
+			s.logger.WarnContext(ctx, "weekly pickup lookup unavailable; omitted opening-time conflict hint", "error", err)
+		}
+	}
+	return append(entries, opened...), nil
 }
 
 // childDaySourceFunc lets a function serve as a source of the child's day.
@@ -395,6 +413,10 @@ func toParentDayChange(entry daychangesview.Entry) parentService.ChildDayChange 
 	}
 	if entry.Opening != nil {
 		out.OpeningName, out.OpensAt, out.ClosesAt = &entry.Opening.Name, &entry.Opening.OpensAt, &entry.Opening.ClosesAt
+		// The child's weekly pickup after the changed closing time (#8173).
+		if regular := entry.Opening.RegularPickupAfterClosing; regular != nil {
+			out.PickupTime, out.PickupAfterClosing = regular, true
+		}
 	}
 	if entry.Class != nil {
 		out.ClassName, out.ClassTime = &entry.Class.Name, entry.Class.Time
@@ -402,19 +424,26 @@ func toParentDayChange(entry daychangesview.Entry) parentService.ChildDayChange 
 	return out
 }
 
+// childDayCarePlan is Care Plan as the child's day reads it: the day's
+// rows and the weekly pickups (#8173).
+type childDayCarePlan interface {
+	dayChangesCarePlan
+	dayChangesWeeklyPickups
+}
+
 // mustBuildChildDayChanges binds the child's day over the owners the serve
 // root builds anyway: Care Plan, People Directory, School Calendar, the class
 // arrivals and the operational day of Timetable. A failure is a wiring error
 // of the root, so the serve root stops at it.
-func mustBuildChildDayChanges(carePlan dayChangesCarePlan, dayPickups dayChangesDayPickups, students dayChangesStudents, closing dayChangesClosingDayReads, classArrivals timetable.ClassArrivalQuery, lifecycle owners.TimetableLifecycle, meals dayChangesChildMeals, today func() calendar.Date) parentService.ChildDayChanges {
-	port, err := buildChildDayChanges(carePlan, dayPickups, students, closing, classArrivals, lifecycle, meals, today)
+func mustBuildChildDayChanges(carePlan childDayCarePlan, dayPickups dayChangesDayPickups, students dayChangesStudents, closing dayChangesClosingDayReads, classArrivals timetable.ClassArrivalQuery, lifecycle owners.TimetableLifecycle, meals dayChangesChildMeals, today func() calendar.Date, logger *slog.Logger) parentService.ChildDayChanges {
+	port, err := buildChildDayChanges(carePlan, dayPickups, students, closing, classArrivals, lifecycle, meals, today, logger)
 	if err != nil {
 		panic(fmt.Sprintf("compose the child's day changes: %v", err))
 	}
 	return port
 }
 
-func buildChildDayChanges(carePlan dayChangesCarePlan, dayPickups dayChangesDayPickups, students dayChangesStudents, closing dayChangesClosingDayReads, classArrivals timetable.ClassArrivalQuery, lifecycle owners.TimetableLifecycle, meals dayChangesChildMeals, today func() calendar.Date) (parentService.ChildDayChanges, error) {
+func buildChildDayChanges(carePlan childDayCarePlan, dayPickups dayChangesDayPickups, students dayChangesStudents, closing dayChangesClosingDayReads, classArrivals timetable.ClassArrivalQuery, lifecycle owners.TimetableLifecycle, meals dayChangesChildMeals, today func() calendar.Date, logger *slog.Logger) (parentService.ChildDayChanges, error) {
 	classDay, err := timetable.ClassArrivalDayOf(classArrivals)
 	if err != nil {
 		return nil, err
@@ -425,7 +454,7 @@ func buildChildDayChanges(carePlan dayChangesCarePlan, dayPickups dayChangesDayP
 	}
 	return NewChildDayChanges(ChildDayChangesSources{
 		CarePlan: carePlan, DayPickups: dayPickups, Students: students, ClosingDays: closing,
-		OpeningChanges: schoolCalendarCompose.NewOpeningChanges(),
-		Blocks:         blocks, ClassArrivals: classDay, Meals: meals, Today: today,
+		OpeningChanges: schoolCalendarCompose.NewOpeningChanges(), WeeklyPickups: carePlan,
+		Blocks: blocks, ClassArrivals: classDay, Meals: meals, Today: today, Logger: logger,
 	})
 }

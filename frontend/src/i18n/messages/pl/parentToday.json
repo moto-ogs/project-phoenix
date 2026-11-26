@@ -62,6 +62,7 @@
     "openingChangedUntil": "Do {date} {careTerm} jest otwarta od {opens} do {closes}: {name}.",
     "mealCancelled": "Dziś nie ma obiadu dla {name}. Nie zostanie on naliczony.",
     "pickupAfterClosing": "To jest po zamknięciu. Zmień odbiór.",
+    "regularPickupAfterClosing": "Według planu tygodniowego odbiór {name} jest o {time}.",
     "activityCancelled": "{title} o {time} jest dziś odwołane.",
     "activityReinstated": "{title} o {time} jednak się dziś odbywa.",
     "activityRoomChanged": "{title} o {time} jest dziś w sali {room}.",

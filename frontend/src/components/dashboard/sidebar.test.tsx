@@ -3406,7 +3406,6 @@ describe("Sidebar", () => {
 
       for (const label of [
         "Planung",
-        "Betreuungsplan",
         "Dienstplan",
         "Anmeldungen",
         "Elternzugänge",
@@ -3419,9 +3418,37 @@ describe("Sidebar", () => {
       expect(screen.getByText("Mein Kalender")).toBeInTheDocument();
     });
 
+    // #8134: der Plan steht im Tagesbetrieb direkt unter „Heute“, für das
+    // ganze Team. Planen darf weiter nur, wer schedules:manage hält; das
+    // prüft die Seite selbst (Leseansicht, #2283).
+    it("zeigt einer Betreuungsrolle den Betreuungsplan im Tagesbetrieb unter „Heute“", () => {
+      mockHasPermission.mockImplementation(
+        (_session: unknown, permission: string) =>
+          CAREGIVER_PERMISSIONS.has(permission),
+      );
+
+      render(<Sidebar />);
+
+      const today = screen.getByText("Heute").closest("a");
+      const plan = screen.getByText("Betreuungsplan").closest("a");
+      expect(plan).toHaveAttribute("href", "/test-tenant/betreuungsplan");
+      expect(
+        today!.compareDocumentPosition(plan!) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      // Vor den Gruppen, also noch im immer offenen Tagesbetrieb.
+      expect(
+        plan!.compareDocumentPosition(screen.getByText("Alle Kinder")) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      expect(screen.queryByText("Planung")).not.toBeInTheDocument();
+    });
+
     // ADR 0091: die AG-Leitung hält nur schedules:read. Einträge, deren
     // Route ein anderes Recht verlangt, wären für sie Sackgassen.
     const EXTERN_GATED_LABELS = [
+      // Der schulweite Plan nennt das Team und braucht users:read (#8134).
+      "Betreuungsplan",
       "Alle Kinder",
       "Mitarbeitende",
       "Zeiterfassung",
@@ -3785,10 +3812,32 @@ describe("Sidebar", () => {
       expect(screen.queryByText("Betreuungsplan")).not.toBeInTheDocument();
     });
 
-    // Leseansicht (#2283): Nicht-Admins erreichen den Betreuungsplan als Tab
-    // in "Mein Kalender" — die Sidebar zeigt ihnen KEINEN eigenen Eintrag,
-    // auch nicht mit schedules:read.
-    it("shows no Betreuungsplan entry for non-admins with schedules:read", () => {
+    // Leseansicht (#2283, #8134): wer den Plan lesen darf und das Team sieht
+    // (schedules:read und users:read), hat ihn als Eintrag im Tagesbetrieb,
+    // ohne die Gruppe „Planung“. Der Reiter in „Mein Kalender“ bleibt.
+    it("shows the Betreuungsplan entry to non-admins who may read the plan and the team", () => {
+      mockIsAdmin.mockReturnValue(false);
+      mockUseSession.mockReturnValue(createMockSession(false));
+      mockHasPermission.mockImplementation(
+        (_session, permission) =>
+          permission === "schedules:read" ||
+          permission === "users:read" ||
+          permission === "calendar:own",
+      );
+
+      render(<Sidebar />);
+
+      expect(screen.queryByText("Planung")).not.toBeInTheDocument();
+      expect(screen.getByText("Betreuungsplan").closest("a")).toHaveAttribute(
+        "href",
+        "/test-tenant/betreuungsplan",
+      );
+      expect(screen.getByText("Mein Kalender")).toBeInTheDocument();
+    });
+
+    // schedules:read allein (AG-Leitung, ADR 0091) reicht nicht: der Plan
+    // der ganzen Schule nennt das Team.
+    it("shows no Betreuungsplan entry with schedules:read alone", () => {
       mockIsAdmin.mockReturnValue(false);
       mockUseSession.mockReturnValue(createMockSession(false));
       mockHasPermission.mockImplementation(
@@ -3798,9 +3847,8 @@ describe("Sidebar", () => {
 
       render(<Sidebar />);
 
-      expect(screen.queryByText("Planung")).not.toBeInTheDocument();
-      expect(screen.queryByText("Betreuungsplan")).not.toBeInTheDocument();
       expect(screen.getByText("Mein Kalender")).toBeInTheDocument();
+      expect(screen.queryByText("Betreuungsplan")).not.toBeInTheDocument();
     });
 
     it("hides Betreuungsplan for non-admins without schedules:read", () => {

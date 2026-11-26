@@ -47,6 +47,8 @@ export function dayPlanTopic(presenceMode: HelpPresenceMode): HelpTopic {
     ],
     notes: [
       "Mit den Pfeilen oben rechts siehst du einen anderen Tag.",
+      // #8134: der ganze Plan steht direkt unter `Heute`.
+      "Steht unter `Heute` auch `Betreuungsplan`? Dort siehst du die ganze Woche der OGS.",
       "Betreut deine OGS am Wochenende? Dann zeigt die Seite `Heute` auch Samstag und Sonntag. Dort gilt der Freitagsplan.",
     ],
     troubleshootingDetails: [
