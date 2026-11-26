@@ -300,18 +300,25 @@ function feedbackFor(
  * in einem anderen Block, Hinweis der Lehrkraft), kurz vorn in der zweiten
  * Zeile. Den ganzen Satz zeigt das Kind-Blatt.
  */
-function rowNotice(row: TimetableRosterRow): ReactNode {
-  const planning = (row.warnings ?? []).find(
+function rowPlanningWarning(row: TimetableRosterRow) {
+  return (row.warnings ?? []).find(
     (warning) =>
       (warning.kind !== "arrival_after_slot_start" ||
         !warning.expectedArrival) &&
       warning.kind !== "class_arrival_exception",
   );
+}
+
+function rowNotice(row: TimetableRosterRow): ReactNode {
+  const planning = rowPlanningWarning(row);
   let label: string | null = null;
   if (planning) {
+    // Am Computer „Für diesen Tag ist keine erwartete Ankunft hinterlegt.“
+    // „Keine Ankunftszeit“ las sich wie „nicht erfasst“; gemeint ist der Plan.
+    // Kurz genug, dass Hinweis und Gehzeit am SE in eine Zeile passen.
     label =
       planning.kind === "missing_arrival_schedule"
-        ? "Keine Ankunftszeit"
+        ? "Keine Ankunft geplant"
         : planning.message;
   } else if (row.parallelPresentIn) {
     label = `Auch in „${row.parallelPresentIn.title}“`;
@@ -370,13 +377,13 @@ function overduePickupColor(
 }
 
 /**
- * Niedrige Telefone (iPhone SE, 667 px): Zeilen 52 statt 59 px, die zweite
- * Zeile ohne Abstand zur ersten. So stehen acht Kinder ganz über der Pill
- * (erste Zeile bei 158 px, Pill bei 581 px). Höhere Telefone behalten die
- * Kit-Zeile; die Trefferfläche bleibt über 44 px.
+ * Niedrige Telefone (iPhone SE, 667 px): Zeilen 45 statt 59 px (44 plus Trennlinie), die zweite
+ * Zeile ohne Abstand zur ersten. So stehen acht Kinder ganz über der
+ * Aktionsleiste (erste Zeile bei 158 px, Leiste bei 522 px: 8 × 45 = 360).
+ * Höhere Telefone behalten die Kit-Zeile; die Trefferfläche bleibt über 44 px.
  */
 const SHORT_PHONE_ROWS =
-  "[@media(max-height:760px)]:[&_[data-collection-row]]:min-h-[52px] [@media(max-height:760px)]:[&_[data-collection-row]]:py-1.5 [@media(max-height:760px)]:[&_[data-collection-row]>.flex-1>span]:mt-0 [@media(max-height:760px)]:[&_[data-collection-row]>.flex-1>span]:leading-[18px]";
+  "[@media(max-height:760px)]:[&_[data-collection-row]]:min-h-[44px] [@media(max-height:760px)]:[&_[data-collection-row]]:py-[3px] [@media(max-height:760px)]:[&_[data-collection-row]>.flex-1>span]:mt-0 [@media(max-height:760px)]:[&_[data-collection-row]>.flex-1>span]:leading-[18px]";
 
 /**
  * Eine Angabe der zweiten Zeile. Der Punkt davor steht links außerhalb und
@@ -629,7 +636,14 @@ export function TimetableRosterApp({
         text("heute nicht eingeplant");
       }
       if (!row.currentlyPresent && row.status === "present") pickupPart();
-      if (notice) parts.push({ key: "notice", node: notice });
+      // Wann ein gegangenes Kind kommen sollte, braucht die Aufsicht nicht
+      // mehr; die Zeile bleibt zweizeilig wie die anderen. Das Kind-Blatt
+      // nennt den Hinweis weiter.
+      if (
+        notice &&
+        rowPlanningWarning(row)?.kind !== "missing_arrival_schedule"
+      )
+        parts.push({ key: "notice", node: notice });
     }
     if (!sharedGroup && row.groupName && row.groupName !== row.schoolClass)
       text(row.groupName);
