@@ -63449,6 +63449,18 @@
           }
         },
         {
+          "name": "ranking",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "max_score",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
           "name": "criteria",
           "schema": {
             "kind": "array",
@@ -63495,6 +63507,12 @@
         },
         {
           "name": "rank",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "score",
           "schema": {
             "kind": "int"
           }
@@ -63635,6 +63653,26 @@
           "name": "rank",
           "schema": {
             "kind": "int"
+          }
+        },
+        {
+          "name": "ranking",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "score",
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "max_score",
+          "schema": {
+            "kind": "int",
+            "nullable": true
           }
         },
         {
@@ -64927,6 +64965,12 @@
       "go_type": "enrollment.HolidayCriteriaCatalog",
       "fields": [
         {
+          "name": "ranking",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
           "name": "criteria",
           "schema": {
             "kind": "array",
@@ -64980,6 +65024,13 @@
       "go_type": "enrollmenthttp.HolidayCriteriaRequest",
       "request": true,
       "fields": [
+        {
+          "name": "ranking",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
         {
           "name": "criteria",
           "optional": true,
@@ -65037,6 +65088,12 @@
         },
         {
           "name": "position",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "points",
           "schema": {
             "kind": "int"
           }
@@ -65171,6 +65228,12 @@
         },
         {
           "name": "position",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "points",
           "schema": {
             "kind": "int"
           }
@@ -128107,6 +128170,13 @@
           "optional": true,
           "schema": {
             "kind": "bool"
+          }
+        },
+        {
+          "name": "points",
+          "optional": true,
+          "schema": {
+            "kind": "int"
           }
         }
       ]

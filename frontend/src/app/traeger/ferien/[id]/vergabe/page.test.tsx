@@ -137,6 +137,52 @@ describe("holiday allocation page (#4700)", () => {
     expect(screen.getByText("Vorschlag: Warteliste")).toBeInTheDocument();
   });
 
+  // #8135: where a total decides, the list states it at every child.
+  it("explains the order and each child's total when every criterion counts the same", async () => {
+    fetchBoard.mockResolvedValue(allocationBoard({ ranking: "equal" }));
+    renderPage();
+
+    expect(
+      await screen.findByText(
+        "Jedes Kriterium zählt gleich viel. Wer mehr Kriterien erfüllt, steht weiter oben. Bei Gleichstand zählt der Eingang. Du entscheidest.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getAllByText("1 von 2 Kriterien erfüllt")).toHaveLength(2);
+    expect(screen.getByText("0 von 2 Kriterien erfüllt")).toBeInTheDocument();
+    // No rank number in front of a criterion: none outranks another.
+    expect(screen.getAllByText("Beide Eltern berufstätig")).not.toHaveLength(0);
+    expect(
+      screen.getByText("Geschwisterkind ist schon angemeldet: ungeklärt"),
+    ).toBeInTheDocument();
+  });
+
+  it("shows the points of the criteria and of each child by points", async () => {
+    const board = allocationBoard({ ranking: "points", maxScore: 5 });
+    fetchBoard.mockResolvedValue({
+      ...board,
+      weeks: [
+        allocationWeek({
+          pending: board.weeks[0]!.pending.map((entry) => ({
+            ...entry,
+            score: entry.score * 3,
+          })),
+        }),
+      ],
+    });
+    renderPage();
+
+    expect(
+      await screen.findByText(
+        "Jedes Kriterium bringt Punkte. Wer mehr Punkte hat, steht weiter oben. Bei Gleichstand zählt der Eingang. Du entscheidest.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getAllByText("3 von 5 Punkten")).toHaveLength(2);
+    expect(screen.getByText("0 von 5 Punkten")).toBeInTheDocument();
+    expect(
+      screen.getAllByText("Beide Eltern berufstätig · 3 Punkte"),
+    ).not.toHaveLength(0);
+  });
+
   it("asks for a reason before a decision that differs from the proposal", async () => {
     fetchBoard.mockResolvedValue(allocationBoard());
     decide.mockResolvedValue(
