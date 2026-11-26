@@ -143,6 +143,9 @@ export function AppTenantHead({
       variant="ghost"
       size="icon"
       aria-label="Mehr zu dieser Seite"
+      // Über einer dicht darunter gerückten Statuszeile: Die 44-px-
+      // Trefferfläche bleibt ganz.
+      className={`relative ${Z_LAYER.raised}`}
       tooltip="Zeigt Infos, Hilfe und weitere Aktionen dieser Seite."
       onClick={() => setMenuOpen(true)}
     >
