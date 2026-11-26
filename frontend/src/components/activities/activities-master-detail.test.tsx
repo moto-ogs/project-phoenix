@@ -97,6 +97,7 @@ const systemActivity: Activity = {
   id: "2",
   name: "Schulhof Freispiel",
   supervisor_name: undefined,
+  is_system: true,
 };
 
 describe("ActivitiesMasterDetail", () => {

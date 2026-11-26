@@ -31,6 +31,8 @@ export type Activity = Pick<
   supervisors?: ActivitySupervisor[];
   ag_category_id: ActivityResponse["category_id"];
   category_name?: string;
+  /** moto provisions it (Schulhof Freispiel, WC, Offener Raum). */
+  is_system?: ActivityResponse["is_system"];
   // Parsed instants.
   created_at: Date;
   updated_at: Date;
@@ -199,25 +201,15 @@ function mapScheduleToTime(
   };
 }
 
-// System activity names that cannot be deleted or renamed. Must stay in sync
-// with `IsSystemActivityName` in backend/modules/timetable/timetable.go.
-const SYSTEM_ACTIVITY_NAMES = [
-  "Schulhof Freispiel",
-  "WC",
-  "Offener Raum",
-] as const;
-
 /**
- * Returns true if the activity is a system activity (Schulhof Freispiel, WC,
- * Offener Raum).
+ * Returns true if moto provisions the activity (Schulhof Freispiel, WC,
+ * Offener Raum): its name and category stay fixed and it cannot be deleted.
+ * The backend flag decides; a team's own activity may share such a name.
  */
 export function isSystemActivity(
   activity: Activity | null | undefined,
 ): boolean {
-  if (!activity) return false;
-  return SYSTEM_ACTIVITY_NAMES.includes(
-    activity.name as (typeof SYSTEM_ACTIVITY_NAMES)[number],
-  );
+  return activity?.is_system === true;
 }
 
 // Mapping functions for backend to frontend types
@@ -243,6 +235,7 @@ export function mapActivityResponse(
       ? String(backendActivity.planned_room_id)
       : undefined,
     category_name: backendActivity.category?.name,
+    is_system: backendActivity.is_system,
     version: backendActivity.version,
   };
 }

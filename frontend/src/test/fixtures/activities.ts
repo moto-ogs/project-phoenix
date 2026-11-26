@@ -26,6 +26,7 @@ export function buildBackendActivity(
     name: "Basketball AG",
     max_participants: 20,
     is_open: true,
+    is_system: false,
     category_id: "1",
     created_by: null,
     supervisor_id: "10",
