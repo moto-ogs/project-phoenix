@@ -1033,9 +1033,6 @@ function SearchPageContent() {
   // after its debounce. The term then narrows the loaded list in the browser,
   // as a transition: a key typed while the list renders is shown first.
   const [searchTerm, setSearchTerm] = useState(initial.search);
-  // Only a list too long to load in full sends the term to the server.
-  // Key of the list (read without a name) that the page cap cut short.
-  const [partialListKey, setPartialListKey] = useState<string | null>(null);
   const [searchResetKey, setSearchResetKey] = useState(0);
   const [selectedGroupIds, setSelectedGroupIds] = useState(initial.groupIds);
   const [selectedSchoolClasses, setSelectedSchoolClasses] = useState(
@@ -1127,6 +1124,12 @@ function SearchPageContent() {
     },
     [updateUrlParams],
   );
+
+  const clearSearchTerm = useCallback(() => {
+    setSearchTerm("");
+    setSearchResetKey((key) => key + 1);
+    updateUrlParams({ [SEARCH_QUERY_PARAM]: "" });
+  }, [updateUrlParams]);
 
   const applyPersistedFilters = useCallback(
     (filters: PersistedSearchFilters) => {
@@ -1579,10 +1582,47 @@ function SearchPageContent() {
     enrollmentAnswer: serverEnrollmentAnswer,
   } satisfies StudentSearchFilterInput & { photoState: string };
   const wholeListKey = studentKeys.search(wholeListParams);
-  const listIsPartial = partialListKey === wholeListKey;
-  const serverSearchTerm = listIsPartial ? searchTerm : "";
-  const studentSearchParams = { ...wholeListParams, search: serverSearchTerm };
-  const studentsCacheKey = studentKeys.search(studentSearchParams);
+  const wholeList = useSWRAuth(
+    awaitsSearchFilters ? null : wholeListKey,
+    () =>
+      fetchStudentSearch(
+        buildStudentSearchFilters(wholeListParams),
+        selectedDate,
+        isToday,
+      ),
+    // Previous filters can stay visible in the normal list as before, but
+    // cannot establish completeness for a search with the new filters.
+    { keepPreviousData: searchTerm === "" },
+  );
+  // A saved term (or an edit before the roster is ready) is independent of
+  // the roster read. Use the browser only once the current list fits in full.
+  const hasCompleteList =
+    wholeList.data !== undefined &&
+    (wholeList.data.truncatedTotal ?? null) === null &&
+    !wholeList.error;
+  const needsServerSearch = searchTerm !== "" && !hasCompleteList;
+  const namedSearchParams = { ...wholeListParams, search: searchTerm };
+  const studentsCacheKey = needsServerSearch
+    ? studentKeys.search(namedSearchParams)
+    : wholeListKey;
+  const namedSearch = useSWRAuth(
+    !awaitsSearchFilters && needsServerSearch ? studentsCacheKey : null,
+    () =>
+      fetchStudentSearch(
+        buildStudentSearchFilters(namedSearchParams),
+        selectedDate,
+        isToday,
+      ),
+    // Until this term's answer arrives, no earlier rows can be selected.
+    { keepPreviousData: false },
+  );
+  const {
+    data: studentsData,
+    isLoading: isSearching,
+    isValidating: isSearchResultValidating,
+    error: studentsError,
+    mutate: mutateStudents,
+  } = needsServerSearch ? namedSearch : wholeList;
 
   // Any change to the result query — the server-side cache key or one of the
   // client-only filters — replaces the visual context a selection was made
@@ -1598,58 +1638,11 @@ function SearchPageContent() {
   // counts visible cards only) cannot be the retry surface then; the
   // failure dialog therefore carries its own retry that executes its named
   // snapshot regardless of what the current filters show (review #2372).
-  const selectionScopeSignature = `${studentsCacheKey}|${searchTerm}|${effectiveEnrollmentAnswer}|${effectiveAttendanceFilter}|${encodeMultiValueParam(pickupTimeFilter)}|${arrivalTimeFilter}|${effectiveTrackingFilter}`;
+  const selectionScopeSignature = `${wholeListKey}|${searchTerm}|${effectiveEnrollmentAnswer}|${effectiveAttendanceFilter}|${encodeMultiValueParam(pickupTimeFilter)}|${arrivalTimeFilter}|${effectiveTrackingFilter}`;
   const clearCheckinSelection = schoolCheckin.clearSelection;
   useEffect(() => {
     clearCheckinSelection();
   }, [selectionScopeSignature, clearCheckinSelection]);
-
-  // Fetch students with SWR (automatic deduplication, cancellation, and revalidation)
-  const {
-    data: studentsData,
-    isLoading: isSearching,
-    isValidating: isSearchResultValidating,
-    error: studentsError,
-    mutate: mutateStudents,
-  } = useSWRAuth<{
-    students: Student[];
-    requestDate: string;
-    requestIsToday: boolean;
-    /**
-     * Number of matching children the backend counted when the page walk could
-     * not load them all, otherwise null. Never silently dropped: the list, the
-     * count badge and the export scope all read the loaded rows, so a partial
-     * result has to say so on screen (#2218 review).
-     */
-    truncatedTotal: number | null;
-  }>(
-    awaitsSearchFilters ? null : studentsCacheKey,
-    async () => {
-      const filters = buildStudentSearchFilters(studentSearchParams);
-
-      return fetchStudentSearch(filters, selectedDate, isToday);
-    },
-    {
-      // Keep previous data while fetching (prevents loading flash)
-      keepPreviousData: true,
-    },
-  );
-
-  // Whether these filters' list fits is known from its answer read without a
-  // term. While that read is loading or has failed, the rows may be kept from
-  // other filters and say nothing about it.
-  if (
-    !awaitsSearchFilters &&
-    !isSearching &&
-    !studentsError &&
-    studentsData &&
-    serverSearchTerm === ""
-  ) {
-    const answerIsPartial = (studentsData.truncatedTotal ?? null) !== null;
-    if (answerIsPartial !== listIsPartial) {
-      setPartialListKey(answerIsPartial ? wholeListKey : null);
-    }
-  }
 
   // Keep room state and room_id/room_name query params in sync without a
   // Next.js navigation, which would discard SWR data and flash the loading
@@ -1850,17 +1843,17 @@ function SearchPageContent() {
   // A reload the person asked for. The counter also restarts the stall timer
   // below, so a retry gets the full waiting time again.
   const [reloadCount, setReloadCount] = useState(0);
-  const reloadRequestKeyRef = useRef<string | null>(null);
+  const reloadRequestKeysRef = useRef<readonly string[]>([]);
   const requestReload = useCallback(() => {
-    reloadRequestKeyRef.current = studentsCacheKey;
+    reloadRequestKeysRef.current = [wholeListKey, studentsCacheKey];
     setReloadCount((count) => count + 1);
-  }, [studentsCacheKey]);
+  }, [wholeListKey, studentsCacheKey]);
   useEffect(() => {
     if (reloadCount === 0) return;
-    // A reset that changed the request key is already being fetched by SWR;
-    // only the unchanged key needs a forced revalidation. mutate() bypasses
-    // deduplication, so it also replaces a request that never answered.
-    if (reloadRequestKeyRef.current === studentsCacheKey) {
+    // A reset to a key not already being read starts a new fetch in SWR.
+    // A reset from server search to the same roster still needs a reload.
+    // mutate() bypasses deduplication to replace a request that never answered.
+    if (reloadRequestKeysRef.current.includes(studentsCacheKey)) {
       void mutateStudents();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once per requested reload; the key is read at that moment
@@ -1898,15 +1891,14 @@ function SearchPageContent() {
         : studentsData.students,
     [studentsData, isDateTransition],
   );
-  // The children of the list's server filters and the registration answer:
-  // what every count, card and bulk action below works on, as when the server
-  // applied the answer.
-  const nameMatchedStudents = useMemo(() => {
-    const browserTerm = serverSearchTerm ? "" : searchTerm;
-    return browserTerm
-      ? loadedStudents.filter(studentNameSearch(browserTerm))
-      : loadedStudents;
-  }, [loadedStudents, searchTerm, serverSearchTerm]);
+  const browserTerm = needsServerSearch ? "" : searchTerm;
+  const nameMatchedStudents = useMemo(
+    () =>
+      browserTerm
+        ? loadedStudents.filter(studentNameSearch(browserTerm))
+        : loadedStudents,
+    [loadedStudents, browserTerm],
+  );
   const students = useMemo(
     () =>
       activeEnrollmentAnswerChildren
@@ -2670,7 +2662,7 @@ function SearchPageContent() {
       filters.push({
         id: "search",
         label: `"${searchTerm}"`,
-        onRemove: () => updateSearchTerm(""),
+        onRemove: clearSearchTerm,
       });
     }
 
@@ -2859,7 +2851,7 @@ function SearchPageContent() {
   }, [
     filterConfigs,
     searchTerm,
-    updateSearchTerm,
+    clearSearchTerm,
     selectedYears,
     selectedSchoolClasses,
     selectedGroupIds,
@@ -3219,7 +3211,18 @@ function SearchPageContent() {
   // Kacheln oder Tabelle (#3834). Die Tabelle trägt dieselben Angaben wie
   // die Karte, eine Spalte je Angabe, und markiert Kinder per Kästchen für
   // die Sammelaktionen. Auf dem Telefon wird sie zur dichten Zeilenliste.
-  const holidayGuestLabel = useHolidayGuestLabels(students);
+  // Match the seed's guest scope before browser name filtering. Only the
+  // visible rows below render labels; typing does not change the lookup key.
+  const guestBadgeStudents = useMemo(
+    () =>
+      activeEnrollmentAnswerChildren
+        ? loadedStudents.filter((student) =>
+            activeEnrollmentAnswerChildren.has(student.id),
+          )
+        : loadedStudents,
+    [loadedStudents, activeEnrollmentAnswerChildren],
+  );
+  const holidayGuestLabel = useHolidayGuestLabels(guestBadgeStudents);
   const tableColumns = useMemo(
     () =>
       compactColumns<Student>([

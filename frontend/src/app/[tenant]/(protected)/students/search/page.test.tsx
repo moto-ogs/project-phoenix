@@ -106,12 +106,13 @@ vi.mock("~/components/ui/tenant-page-search-row", () => ({
     }>;
     activeFilters: Array<{ id: string; label: string }>;
     onClearAllFilters: () => void;
-    search: { value: string; onChange: (v: string) => void };
+    search: { value: string; onChange: (v: string) => void; resetKey: number };
     overflowMenu?: Array<{ label: string; onClick: () => void }>;
   }) => (
     <div data-testid="page-header">
       <input
         data-testid="search-input"
+        data-reset-key={search.resetKey}
         value={search.value}
         onChange={(e) => search.onChange(e.target.value)}
       />
@@ -494,6 +495,7 @@ function captureStudentsFetcher(swrModule: typeof import("~/lib/swr")) {
 describe("StudentSearchPage", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
+    mockSearchParams.delete("search");
     mockSearchParams.delete("status");
     mockSearchParams.delete("year");
     mockSearchParams.delete("group_id");
@@ -573,29 +575,57 @@ describe("StudentSearchPage", () => {
       second_name: "Gast",
       school_class: "Feriengast",
     };
+    const otherGuest = { ...guest, id: "10", first_name: "Mila" };
     mockUseSWRAuthWithStudents(swrModule, {
-      data: { students: [...mockStudents, guest] },
+      data: { students: [...mockStudents, guest, otherGuest] },
       isLoading: false,
       error: null,
     } as ReturnType<typeof swrModule.useSWRAuth>);
     const students = vi.mocked(swrModule.useSWRAuth).getMockImplementation();
-    vi.mocked(swrModule.useSWRAuth).mockImplementation((key, ...rest) =>
-      typeof key === "string" && key.startsWith("holiday-guest-badges:")
-        ? ({
-            data: [{ studentId: "9", schoolName: "OGS Am Park" }],
-            isLoading: false,
-            error: null,
-          } as ReturnType<typeof swrModule.useSWRAuth>)
-        : students!(key, ...rest),
-    );
+    const badgeKeys = new Set<string>();
+    vi.mocked(swrModule.useSWRAuth).mockImplementation((key, ...rest) => {
+      if (!key?.startsWith("holiday-guest-badges:"))
+        return students!(key, ...rest);
+      badgeKeys.add(key);
+      return {
+        data: [
+          { studentId: "9", schoolName: "OGS Am Park" },
+          { studentId: "10", schoolName: "OGS Am See" },
+        ],
+        isLoading: false,
+        error: null,
+      } as ReturnType<typeof swrModule.useSWRAuth>;
+    });
 
     render(<StudentSearchPage />);
 
     expect(await screen.findByText("Gast aus OGS Am Park")).toBeInTheDocument();
     expect(screen.getByText("2b")).toBeInTheDocument();
+
+    fireEvent.change(screen.getByTestId("search-input"), {
+      target: { value: "Ben" },
+    });
+
+    // Anker: Ben is still visible; the other guest has been filtered out.
+    expect(screen.getByText("Gast aus OGS Am Park")).toBeInTheDocument();
+    expect(screen.queryByText("Gast aus OGS Am See")).not.toBeInTheDocument();
+    expect([...badgeKeys]).toEqual(["holiday-guest-badges:9,10"]);
   });
 
   describe("URL Parameter Handling", () => {
+    it("removing the search filter explicitly resets the input draft", () => {
+      mockSearchParams.set("search", "Max");
+      render(<StudentSearchPage />);
+      const input = screen.getByTestId("search-input");
+      expect(input).toHaveValue("Max");
+      expect(input).toHaveAttribute("data-reset-key", "0");
+
+      fireEvent.click(screen.getByTestId("active-filter-search"));
+
+      expect(input).toHaveValue("");
+      expect(input).toHaveAttribute("data-reset-key", "1");
+    });
+
     it("defaults to 'all' when no status param is present", async () => {
       render(<StudentSearchPage />);
 

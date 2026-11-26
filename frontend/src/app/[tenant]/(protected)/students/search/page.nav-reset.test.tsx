@@ -16,6 +16,7 @@ import {
   waitFor,
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { SelectAllControl } from "~/components/students/school-checkin-select-all";
 
 const {
   mockGetStudents,
@@ -115,7 +116,9 @@ vi.mock("~/components/students/school-checkin-fab", () => ({
 }));
 
 vi.mock("~/components/students/school-checkin-mode-mobile", () => ({
-  SchoolCheckinModeMobile: () => <span />,
+  SchoolCheckinModeMobile: ({ selectAll }: { selectAll: SelectAllControl }) => (
+    <span data-testid="select-all-count">{selectAll.count}</span>
+  ),
 }));
 
 vi.mock("~/lib/hooks/use-school-checkin-mode", () => ({
@@ -167,8 +170,7 @@ vi.mock("~/lib/api", () => ({
 
 vi.mock("~/lib/swr", () => ({
   useImmutableSWR: (...args: unknown[]) => mockUseImmutableSWR(...args),
-  useSWRAuth: (key: string | null, fetcher?: () => Promise<unknown>) =>
-    mockUseSWRAuth(key, fetcher),
+  useSWRAuth: (...args: unknown[]) => mockUseSWRAuth(...args),
   mutate: vi.fn(),
   useTenantMutate: () => vi.fn(),
 }));
@@ -329,7 +331,7 @@ describe("StudentSearchPage: click on the navigation entry of this page (#3374)"
     expect(new Set(studentKeys)).toEqual(new Set([unfilteredKey]));
   });
 
-  it("asks the server for the term when the list is too long to load in full", async () => {
+  it("excludes nonmatching children while a server search is loading", async () => {
     studentsResponse = {
       data: {
         students: [mockStudent],
@@ -338,15 +340,64 @@ describe("StudentSearchPage: click on the navigation entry of this page (#3374)"
       isLoading: false,
       error: undefined,
     };
-    renderOnSearchPage("");
+    const rosterReader = mockUseSWRAuth.getMockImplementation()!;
+    let matches: (typeof mockStudent)[] | undefined;
+    mockUseSWRAuth.mockImplementation((key, fetcher, options) =>
+      typeof key === "string" && key.includes("-Mila-")
+        ? {
+            data: matches
+              ? { students: matches }
+              : options?.keepPreviousData
+                ? studentsResponse.data
+                : undefined,
+            isLoading: !matches,
+            error: undefined,
+          }
+        : rosterReader(key, fetcher, options),
+    );
+    const { rerender } = renderOnSearchPage("");
     const [searchInput] = screen.getAllByPlaceholderText("Name suchen…");
+    expect(screen.getByTestId("student-card-7")).toBeTruthy();
+    expect(screen.getByTestId("select-all-count")).toHaveTextContent("1");
 
     fireEvent.change(searchInput!, { target: { value: "Mila" } });
 
-    await waitFor(() => {
-      expect(studentKeys.at(-1)).toContain("-Mila-");
-    });
+    await screen.findByTestId("student-card-grid-skeleton");
+    expect(screen.getByTestId("select-all-count")).toHaveTextContent("0");
+
+    matches = [{ ...mockStudent, id: "8", first_name: "Mila" }];
+    rerender(<StudentSearchPage />);
+    // Anker: the named response is on screen.
+    expect(screen.getByTestId("student-card-8")).toBeTruthy();
+    expect(screen.queryByTestId("student-card-7")).toBeNull();
+    expect(screen.getByTestId("select-all-count")).toHaveTextContent("1");
   });
+
+  it.each([undefined, new Error("Roster page failed")])(
+    "shows a saved name search independently of the roster (%s)",
+    (error) => {
+      studentsResponse = { data: undefined, isLoading: !error, error };
+      const rosterReader = mockUseSWRAuth.getMockImplementation()!;
+      mockUseSWRAuth.mockImplementation((key, fetcher, options) =>
+        typeof key === "string" && key.includes("-Mila-")
+          ? {
+              data: {
+                students: [{ ...mockStudent, id: "8", first_name: "Mila" }],
+              },
+              isLoading: false,
+              error: undefined,
+            }
+          : rosterReader(key, fetcher, options),
+      );
+
+      renderOnSearchPage("?search=Mila");
+
+      expect(screen.getByTestId("student-card-8")).toBeTruthy();
+      expect(
+        studentKeys.some((key) => key.startsWith("search-students-gall--")),
+      ).toBe(true);
+    },
+  );
 
   it("removes a restored name search from the URL", async () => {
     const { navLink } = renderOnSearchPage("?search=Mila");

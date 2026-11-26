@@ -173,8 +173,6 @@ export function initialStudentSearch(
   const { explicitDate, ...filters } = studentSearchUrl(params, today);
   return {
     ...filters,
-    // The list is read without the term; the browser applies it.
-    search: "",
     years: searchYearSelection(filters.years),
     date: explicitDate ?? today,
     isToday: explicitDate === null,

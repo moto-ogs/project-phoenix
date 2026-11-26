@@ -21,8 +21,10 @@ const UNDECOMPOSABLE_LETTERS: Readonly<Record<string, string>> = {
  */
 export function foldForSearch(value: string | null | undefined): string {
   if (!value) return "";
+  // Go's strings.ToLower maps uppercase sigma to σ even at word ends.
   return value
-    .toLocaleLowerCase("de")
+    .replaceAll("Σ", "σ")
+    .toLowerCase()
     .normalize("NFD")
     .replace(/\p{Mn}/gu, "")
     .replace(

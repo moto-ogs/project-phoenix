@@ -94,4 +94,14 @@ describe("studentNameSearch", () => {
   ])("matches %j: %s", (term, expected) => {
     expect(studentNameSearch(term)(child)).toBe(expected);
   });
+
+  it.each([
+    ["ΟΣ", "ΟΣΚΑΡ", true],
+    ["οσ", "ΟΣ", true],
+    ["ος", "ΟΣ", false],
+  ])("matches %j in %j like the server: %s", (term, firstName, expected) => {
+    expect(studentNameSearch(term)({ ...child, first_name: firstName })).toBe(
+      expected,
+    );
+  });
 });

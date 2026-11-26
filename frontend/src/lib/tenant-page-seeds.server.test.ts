@@ -259,6 +259,33 @@ describe("first tenant page reads", () => {
     ).resolves.toEqual([{ studentId: "11", schoolName: "Heimatschule" }]);
   });
 
+  it("seeds a saved name search without reading the roster first", async () => {
+    const params = new URLSearchParams({ search: "Mila" });
+    source.response.mockImplementation((url) => {
+      if (url.pathname === "/api/groups/" || url.pathname === "/api/rooms/")
+        return pageSuccess([]);
+      if (url.pathname !== "/api/students/") return success([]);
+      return url.searchParams.get("search") === "Mila"
+        ? pageSuccess([buildBackendStudent({ id: "11", first_name: "Mila" })])
+        : new Response(null, { status: 503 });
+    });
+
+    const seed = await loadStudentSearchSeed("school-a", params);
+    const key = studentKeys.search({
+      ...initialStudentSearch(params, testClockDay(0), false),
+      search: "Mila",
+    });
+
+    await expect(
+      seed?.entries.find((entry) => entry.key === key)?.value,
+    ).resolves.toMatchObject({ students: [{ id: "11", first_name: "Mila" }] });
+    expect(
+      entries(source.send.mock.calls)
+        .filter(({ pathname }) => pathname === "/api/students/")
+        .map(({ searchParams }) => searchParams.get("search")),
+    ).toEqual(["Mila"]);
+  });
+
   it("uses the unfiltered key when a link selects every offered grade, class and group", async () => {
     source.response.mockImplementation((url) => {
       if (url.pathname === "/api/students/school-classes")
