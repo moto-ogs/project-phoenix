@@ -14,7 +14,7 @@ export function traegerPayrollExportTopic(): HelpTopic {
     title: "Lohnexport und Zeitexport",
     question: "Wie bekomme ich die Lohndatei für DATEV?",
     summary:
-      "Du lädst die Lohndatei für alle Schulen herunter. Stellt eine Gemeinde oder ein Schulträger an, wählst du eine Datei oder eine je Arbeitgeber.",
+      "Du lädst die Lohndatei für alle Schulen herunter. Stellt eine Gemeinde oder ein Schulträger an, wählst du eine Datei oder eine pro Arbeitgeber.",
     group: "personal",
     audience: "traeger",
     icon: "Download",
@@ -27,8 +27,8 @@ export function traegerPayrollExportTopic(): HelpTopic {
         title: "Einmal: Lohnarten eintragen",
         steps: [
           "Wähle in der Navigation `Lohnexport` und den Reiter `Einrichtung`.",
-          "Trage bei `DATEV-Mandant des Trägers` die `Beraternummer` und `Mandantennummer` deines Lohnbüros ein. Lohn und Gehalt braucht sie nur bei einer Datei je Arbeitgeber.",
-          "Trage in der Tabelle je Art des Vertrags die Nummer der Lohnart aus deinem DATEV ein. Sie gilt für alle Arbeitgeber.",
+          "Trage bei `DATEV-Mandant des Trägers` die `Beraternummer` und `Mandantennummer` deines Lohnbüros ein. Lohn und Gehalt braucht sie nur bei einer Datei pro Arbeitgeber.",
+          "Trage in der Tabelle pro Art des Vertrags die Nummer der Lohnart aus deinem DATEV ein. Sie gilt für alle Arbeitgeber.",
           "Wähle bei `Krank`, `Urlaub` und `Fortbildung`, ob DATEV Stunden oder Tage erwartet.",
           "Wähle unten `Speichern`.",
         ],
@@ -45,15 +45,15 @@ export function traegerPayrollExportTopic(): HelpTopic {
         ],
       },
       {
-        title: "Fall 2: Eine Datei je Arbeitgeber",
+        title: "Fall 2: Eine Datei pro Arbeitgeber",
         description:
           "Für Träger, bei denen jede Gemeinde und jeder Schulträger ein eigener DATEV-Mandant ist.",
         steps: [
-          "Wähle im Reiter `Einrichtung` bei `Wie viele Lohndateien?` die Form `Eine Datei je Arbeitgeber`.",
-          "Trage unter `Andere Arbeitgeber` je Gemeinde und Schulträger die `Beraternummer` und die `Mandantennummer` ein. Die Nummern bekommst du vom Lohnbüro des Arbeitgebers.",
+          "Wähle im Reiter `Einrichtung` bei `Wie viele Lohndateien?` die Form `Eine Datei pro Arbeitgeber`.",
+          "Trage unter `Andere Arbeitgeber` pro Gemeinde und Schulträger die `Beraternummer` und die `Mandantennummer` ein. Die Nummern bekommst du vom Lohnbüro des Arbeitgebers.",
           "Wähle unten `Speichern`.",
           "Hat eine Person bei einer Gemeinde eine andere Personalnummer als beim Träger: Öffne ihre Personalakte, wähle bei `Personalnummer` den Knopf `Bearbeiten` und trage die Nummer bei der Gemeinde ein.",
-          "Wähle den Reiter `Lohndatei`. Unter `Dateien je Arbeitgeber` steht jede Datei mit ihren Schulen. Wähle bei jeder Datei `Herunterladen`.",
+          "Wähle den Reiter `Lohndatei`. Unter `Dateien pro Arbeitgeber` steht jede Datei mit ihren Schulen. Wähle bei jeder Datei `Herunterladen`.",
         ],
       },
       {

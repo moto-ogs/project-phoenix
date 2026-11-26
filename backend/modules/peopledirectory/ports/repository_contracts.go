@@ -146,9 +146,9 @@ type StudentRepository interface {
 	// ListByGroupIDsIncludingAlumni is the care-participation candidate set:
 	// the rule that follows decides per child whether a graduate still counts.
 	ListByGroupIDsIncludingAlumni(ctx context.Context, groupIDs []int64) ([]*peopledirectory.StudentState, error)
-	// ListClassRoster is the class-roster report's candidate set — one class,
-	// or every child when the report spans all of them.
-	ListClassRoster(ctx context.Context, schoolClass string) ([]*peopledirectory.StudentState, error)
+	// ListClassRoster returns candidates in the selected classes, or the
+	// whole school for nil. A non-nil empty selection matches none.
+	ListClassRoster(ctx context.Context, classes []string) ([]*peopledirectory.StudentState, error)
 	// CountEnrolled counts the children of the school, graduates excluded.
 	CountEnrolled(ctx context.Context) (int, error)
 
@@ -272,6 +272,12 @@ type StaffRepository interface {
 	FindSchoolPortalStaffIDs(ctx context.Context) (map[int64]bool, error)
 	// FindReachableSchoolCalendarStaffIDs keeps accounts with calendar:school.
 	FindReachableSchoolCalendarStaffIDs(ctx context.Context, ids []int64) (map[int64]bool, error)
+
+	// FindTimeTrackingManagerStaffIDs keeps the given staff whose active
+	// account holds time_tracking:manage in the current tenant, resolved like
+	// auth (role grants, wildcard-aware): the leadership that terminal-only
+	// stamping exempts (#8024).
+	FindTimeTrackingManagerStaffIDs(ctx context.Context, ids []int64) (map[int64]bool, error)
 
 	// FindWithPerson retrieves a staff member with their associated person data
 	FindWithPerson(ctx context.Context, id int64) (*peopledirectory.Staff, error)

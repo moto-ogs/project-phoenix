@@ -16,6 +16,7 @@ func RouteContracts() []common.RouteContract {
 	to := common.QueryParam{Name: "to", Kind: common.QueryDate}
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/classes", Portals: portals, Response: ClassesResponse{}},
+		{Method: "GET", Pattern: "/assigned-classes", Portals: portals, Query: []common.QueryParam{date}, Response: classday.AssignedClassesReport{}},
 		{Method: "GET", Pattern: "/", Portals: portals, Query: []common.QueryParam{class, date}, Response: classday.DayReport{}},
 		{Method: "GET", Pattern: "/school-day", Portals: portals, Query: []common.QueryParam{date}, Response: classday.SchoolDayReport{}},
 		{Method: "GET", Pattern: "/absence-list", Portals: portals, Query: []common.QueryParam{class, from, to}, Response: classday.AbsenceListReport{}},

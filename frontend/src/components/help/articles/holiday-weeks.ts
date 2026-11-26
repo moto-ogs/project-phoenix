@@ -21,7 +21,7 @@ export function holidayWeeksTopic(): HelpTopic {
     icon: "SunHorizon",
     image: "/help/screens/ferienwochen-freigegebene-antworten.webp",
     imageAlt:
-      "Die Liste der Kinder mit der zweiten sorgeberechtigten Person, den freigegebenen Antworten und der Spalte Gesundheit.",
+      "Zahlen pro Zeitmodell, Heimatschule und Tag. Darunter steht die Kinderliste mit den freigegebenen Antworten.",
     requirements: [
       "Der Träger hat deine OGS für eine Ferienwoche eingetragen.",
       "Der Träger hat Anmeldungen für diese Woche bestätigt.",
@@ -30,8 +30,8 @@ export function holidayWeeksTopic(): HelpTopic {
       "Klappe in der Seitenleiste `Eltern` auf.",
       "Öffne `Ferienwochen`.",
       "Richtet deine OGS mehrere Wochen aus, wähle oben die Woche.",
-      "Lies unter `Je Zeitmodell` und `Je Heimatschule` die Zahlen.",
-      "Gibt es in der Woche Mittagessen, steht unter `Mittagessen je Tag`, wie viele Essen für jeden Tag gebucht sind. Tage ohne Betreuung stehen nicht in der Liste, zum Beispiel ein Schließtag.",
+      "Lies unter `Pro Zeitmodell` und `Pro Heimatschule` die Zahlen.",
+      "Gibt es in der Woche Mittagessen, steht unter `Mittagessen pro Tag`, wie viele Essen für jeden Tag gebucht sind. Tage ohne Betreuung stehen nicht in der Liste, zum Beispiel ein Schließtag.",
       "Kommen Kinder deiner OGS? Dann steht unter `Kinder deiner OGS`, ob sie eingeplant sind.",
       "Unter `Kinder` steht jedes Kind mit Geburtsdatum, Heimatschule und Zeitmodell.",
       "Bei einem Kind deiner OGS öffnest du mit `Akte öffnen` seine Kinderakte.",

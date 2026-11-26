@@ -51,7 +51,6 @@ const {
   mockPush,
   mockUseSession,
   mockUseOptionalSupervision,
-  mockUseUserContext,
   mockPageHeader,
   mockTrackEvent,
   flags,
@@ -62,7 +61,6 @@ const {
   mockPush: vi.fn(),
   mockUseSession: vi.fn(),
   mockUseOptionalSupervision: vi.fn(),
-  mockUseUserContext: vi.fn(),
   mockPageHeader: vi.fn(),
   mockTrackEvent: vi.fn(),
   mockFetchAnswerFilters: vi.fn(),
@@ -83,6 +81,7 @@ vi.mock("next-auth/react", () => ({
 }));
 
 vi.mock("next/navigation", () => ({
+  usePathname: () => "/students/search",
   useRouter: () => ({ push: mockPush, replace: vi.fn() }),
   useSearchParams: () => currentSearch,
 }));
@@ -213,11 +212,6 @@ vi.mock("~/lib/active-api", () => ({
   },
 }));
 
-vi.mock("~/lib/hooks/use-user-context", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("~/lib/hooks/use-user-context")>()),
-  useUserContext: () => mockUseUserContext(),
-}));
-
 vi.mock("~/lib/student-api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/lib/student-api")>()),
   fetchStudents: (...args: unknown[]) => mockGetStudents(...args),
@@ -331,7 +325,7 @@ vi.mock("~/components/students/student-search-transit-card", () => ({
   ),
 }));
 
-import StudentSearchPage from "./page";
+import StudentSearchPage from "./page-content";
 
 vi.unmock("swr");
 
@@ -366,6 +360,10 @@ beforeEach(() => {
     status: "authenticated",
   }));
   mockUseOptionalSupervision.mockImplementation(() => ({
+    ownGroupIds: [],
+    ownGroupRoomNames: [],
+    ownSessionRoomNames: [],
+    ownSupervisedRooms: [],
     hasGroups: false,
     isSupervising: false,
     isLoadingGroups: false,
@@ -374,13 +372,6 @@ beforeEach(() => {
     supervisedRooms: [],
     groups: [],
     refresh: () => undefined,
-  }));
-  mockUseUserContext.mockImplementation(() => ({
-    userContext: {
-      educationalGroupIds: [],
-      educationalGroupRoomNames: [],
-      supervisedRoomNames: [],
-    },
   }));
   mockPageHeader.mockImplementation(() => <div data-testid="header" />);
 });
@@ -1001,6 +992,9 @@ describe("StudentSearchPage — Kinder nur über Alle Kinder (#1321)", () => {
       status: "authenticated",
     }));
     mockUseOptionalSupervision.mockImplementation(() => ({
+      ownGroupIds: ["5"],
+      ownGroupRoomNames: [],
+      ownSessionRoomNames: ["Werkraum"],
       hasGroups: true,
       isSupervising: true,
       isLoadingGroups: false,
@@ -1010,21 +1004,6 @@ describe("StudentSearchPage — Kinder nur über Alle Kinder (#1321)", () => {
       ownSupervisedRooms: [{ id: "42", name: "Werkraum", groupId: "900" }],
       groups: [{ id: "5", name: "Bären", is_personal: true }],
       refresh: () => undefined,
-    }));
-    mockUseUserContext.mockImplementation(() => ({
-      userContext: {
-        educationalGroupIds: ["5"],
-        educationalGroupRoomNames: [],
-        supervisedRoomNames: ["Veralteter Raum"],
-        supervisedGroups: [
-          {
-            id: "900",
-            name: "Werken",
-            roomId: "91",
-            room: { id: "91", name: "Veralteter Raum" },
-          },
-        ],
-      },
     }));
   });
 

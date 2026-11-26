@@ -44,7 +44,7 @@ vi.mock("~/env.client", () => ({
   },
 }));
 
-import TraegerArrivalPickupPage from "./page";
+import TraegerArrivalPickupPage from "./page-content";
 import { testClockDay } from "~/test/clock";
 
 /** The last four weeks up to yesterday, relative to the test clock. */
@@ -141,7 +141,7 @@ describe("TraegerArrivalPickupPage", () => {
     renderPage();
 
     const arrivals = await screen.findByRole("table", {
-      name: "Ankunft je Wochentag und halbe Stunde",
+      name: "Ankunft pro Wochentag und halbe Stunde",
     });
     expect(mockFetch).toHaveBeenCalledWith({
       from: FROM,
@@ -184,7 +184,7 @@ describe("TraegerArrivalPickupPage", () => {
     mockFetch.mockResolvedValue(TIMES);
     renderPage();
     expect(
-      await screen.findByRole("heading", { name: /Je Schule/ }),
+      await screen.findByRole("heading", { name: /Pro Schule/ }),
     ).toBeInTheDocument();
     const linden = screen.getByText("OGS Lindenweg").closest("tr")!;
     expect(
@@ -198,7 +198,7 @@ describe("TraegerArrivalPickupPage", () => {
     ).toBeInTheDocument();
     expect(screen.getAllByText("aus 2 Tagen").length).toBeGreaterThan(0);
     expect(
-      screen.queryByRole("heading", { name: /Je Schule/ }),
+      screen.queryByRole("heading", { name: /Pro Schule/ }),
     ).not.toBeInTheDocument();
   });
 
@@ -220,7 +220,7 @@ describe("TraegerArrivalPickupPage", () => {
       ),
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole("table", { name: /Ankunft je Wochentag/ }),
+      screen.queryByRole("table", { name: /Ankunft pro Wochentag/ }),
     ).not.toBeInTheDocument();
   });
 
@@ -243,7 +243,7 @@ describe("TraegerArrivalPickupPage", () => {
     });
     renderPage();
     await screen.findByRole("table", {
-      name: "Ankunft je Wochentag und halbe Stunde",
+      name: "Ankunft pro Wochentag und halbe Stunde",
     });
 
     fireEvent.click(

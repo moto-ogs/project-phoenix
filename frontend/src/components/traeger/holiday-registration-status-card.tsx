@@ -877,7 +877,7 @@ function useHolidayRegistrationStatus({
       label: childHasNumber
         ? "Nummern der Kinder bearbeiten"
         : "Nummern der Kinder eintragen",
-      description: "Öffnet je Kind ein Feld für seine Debitorennummer.",
+      description: "Öffnet pro Kind ein Feld für seine Debitorennummer.",
       disabled: busy,
       onClick: () => {
         onReveal();
@@ -1126,7 +1126,7 @@ function useHolidayRegistrationStatus({
         {showsDebtorNumber && perChild && showsRegistrationNumber ? (
           <p>
             Die Nummer der Anmeldung gilt für eine gemeinsame Rechnung.
-            Rechnungen je Kind nennen die Nummer des Kindes.
+            Rechnungen pro Kind nennen die Nummer des Kindes.
           </p>
         ) : null}
         {choosesPayer ? (

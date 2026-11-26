@@ -224,3 +224,48 @@ describe("session-end barrier in the fetch observer (#5399)", () => {
     expect(fetchMock.mock.calls[0]?.[1]?.signal).toBeUndefined();
   });
 });
+
+describe("an answer of another session wakes the tree (#8082)", () => {
+  it("wakes the boundary when an answer carried another mark than the tree shows", async () => {
+    const { onOwnSessionMark, setShownSessionMark, trackOwnSessionMark } =
+      await import("./session-mark");
+    // (noteSessionAnswer runs for every own-origin answer.)
+    const stop = trackOwnSessionMark("authjs.session-mark");
+    const woken = vi.fn();
+    const stopListening = onOwnSessionMark(woken);
+    setShownSessionMark("family-a");
+    try {
+      fetchMock.mockResolvedValueOnce(
+        Response.json(
+          {},
+          {
+            headers: {
+              "X-Moto-Presented-Session-Mark": "authjs.session-mark=family-a",
+            },
+          },
+        ),
+      );
+      await fetch("/api/students");
+      // Every answer wakes the boundary; the tree's own session is no
+      // evidence of another.
+      expect(woken).toHaveBeenLastCalledWith(undefined);
+
+      fetchMock.mockResolvedValueOnce(
+        Response.json(
+          {},
+          {
+            headers: {
+              "X-Moto-Presented-Session-Mark": "authjs.session-mark=family-b",
+            },
+          },
+        ),
+      );
+      await fetch("/api/auth/session");
+      expect(woken).toHaveBeenLastCalledWith("family-b");
+    } finally {
+      stopListening();
+      stop();
+      setShownSessionMark("");
+    }
+  });
+});

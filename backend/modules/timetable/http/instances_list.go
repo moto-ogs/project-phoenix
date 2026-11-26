@@ -8,12 +8,7 @@
 // counts, and expected/present student counts. Powers the admin weekly
 // planner UI (database/timetables). Permission: SchedulesRead.
 //
-// The window is capped at 56 days (8 weeks) to bound the response size and
-// prevent accidental DoS via wide range queries. Individual instance lookups
-// follow an N+1 pattern for staff/student rows; this is acceptable at the
-// expected scale (~30 instances per week per tenant). If the planner ever
-// extends to a multi-week overview, replace per-instance loads with batched
-// repo helpers similar to instanceStaffRepo.CountNonAbsentByInstanceIDs.
+// The window is capped at 56 days (8 weeks) to bound work and response size. Staff and students are loaded in batches.
 package timetablehttp
 
 import (
@@ -187,20 +182,17 @@ func (rs *Resource) listInstances(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	slim, err := parseInstanceListView(r.URL.Query().Get("view"))
+	projection, err := parseInstanceListView(r.URL.Query().Get("view"))
 	if err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
 
-	enriched, err := rs.listWindow(r.Context(), from, to, filter)
+	enriched, err := rs.listWindow(r.Context(), from, to, filter, projection)
 	if err != nil {
 		common.RenderError(w, r, common.ErrorInternalServerWrap(
 			"list instances failed", err))
 		return
-	}
-	if slim {
-		slimInstances(enriched)
 	}
 
 	resp := weeklyInstancesResponse{
@@ -218,7 +210,7 @@ func (rs *Resource) listInstances(w http.ResponseWriter, r *http.Request) {
 }
 
 // listWindow projects the blocks of the window that pass the filter.
-func (rs *Resource) listWindow(ctx context.Context, from, to calendar.Date, filter timetable.BlockFilter) ([]enrichedInstance, error) {
+func (rs *Resource) listWindow(ctx context.Context, from, to calendar.Date, filter timetable.BlockFilter, projection timetable.PlannerProjection) ([]enrichedInstance, error) {
 	instances, err := rs.TimetableData.ListScheduledInstances(ctx, from, to)
 	if err != nil {
 		return nil, fmt.Errorf("load instances: %w", err)
@@ -238,7 +230,7 @@ func (rs *Resource) listWindow(ctx context.Context, from, to calendar.Date, filt
 		return nil, fmt.Errorf("resolve block groups: %w", err)
 	}
 
-	enriched, conflictInputs, matches, err := rs.enrichInstances(ctx, instances, ratio, careDays, selection)
+	enriched, conflictInputs, matches, err := rs.enrichInstances(ctx, instances, ratio, careDays, selection, projection)
 	if err != nil {
 		return nil, fmt.Errorf("enrich instances: %w", err)
 	}
@@ -402,7 +394,7 @@ func (rs *Resource) enrichWrittenInstance(ctx context.Context, instanceID int64)
 	if err != nil {
 		return enrichedInstance{}, fmt.Errorf("resolve care days for instance %d: %w", inst.ID, err)
 	}
-	rows, err := rs.TimetableData.ListScheduledInstanceRows(ctx, []timetable.ScheduledInstance{inst})
+	rows, err := rs.TimetableData.ListScheduledInstanceRows(ctx, []timetable.ScheduledInstance{inst}, timetable.PlannerFull)
 	if err != nil {
 		return enrichedInstance{}, fmt.Errorf("load instance rows: %w", err)
 	}
@@ -410,7 +402,7 @@ func (rs *Resource) enrichWrittenInstance(ctx context.Context, instanceID int64)
 	if err != nil {
 		return enrichedInstance{}, fmt.Errorf("load block display metadata: %w", err)
 	}
-	enriched, _, _, err := rs.enrichInstance(ctx, inst, rows, metadata[inst.ID.Int64()], make(map[int64]timetable.EmptyOfferingRosterExplainer), rs.childrenPerStaffRatio(ctx), careDays)
+	enriched, _, _, err := rs.enrichInstance(ctx, inst, rows, metadata[inst.ID.Int64()], make(map[int64]timetable.EmptyOfferingRosterExplainer), rs.childrenPerStaffRatio(ctx), careDays, timetable.PlannerFull)
 	if err != nil {
 		return enrichedInstance{}, err
 	}
@@ -428,8 +420,9 @@ func (rs *Resource) enrichInstances(
 	childrenPerStaffRatio int,
 	careDays map[int64]map[calendar.Date]careplan.CareDayStatus,
 	selection *blockSelection,
+	projection timetable.PlannerProjection,
 ) ([]enrichedInstance, []timetable.WindowConflictBlock, []bool, error) {
-	rows, err := rs.TimetableData.ListScheduledInstanceRows(ctx, instances)
+	rows, err := rs.TimetableData.ListScheduledInstanceRows(ctx, instances, projection)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("load instance rows: %w", err)
 	}
@@ -449,7 +442,7 @@ func (rs *Resource) enrichInstances(
 		matches = make([]bool, 0, len(instances))
 	}
 	for _, inst := range instances {
-		item, staffRows, studentRows, err := rs.enrichInstance(ctx, inst, rows, metadata[inst.ID.Int64()], offeringSourceCache, childrenPerStaffRatio, careDays)
+		item, staffRows, studentRows, err := rs.enrichInstance(ctx, inst, rows, metadata[inst.ID.Int64()], offeringSourceCache, childrenPerStaffRatio, careDays, projection)
 		if err != nil {
 			return nil, nil, nil, err
 		}
@@ -507,12 +500,13 @@ func (rs *Resource) enrichInstance(
 	offeringSourceCache map[int64]timetable.EmptyOfferingRosterExplainer,
 	childrenPerStaffRatio int,
 	careDays map[int64]map[calendar.Date]careplan.CareDayStatus,
+	projection timetable.PlannerProjection,
 ) (enrichedInstance, []timetable.InstanceStaff, []timetable.ScheduledParticipant, error) {
 	staffRows := rows.Staff[inst.ID.Int64()]
 	staff, absentCount := summarizeInstanceStaff(staffRows)
 
 	studentRows := rows.Participants[inst.ID.Int64()]
-	attendance := summarizeInstanceStudents(inst, studentRows, careDays, rows.Cutoffs[inst.Date])
+	attendance := summarizeInstanceStudents(inst, studentRows, careDays, rows.Cutoffs[inst.Date], projection)
 
 	availability, err := rs.completionAvailability(ctx, inst)
 	if err != nil {
@@ -544,7 +538,7 @@ func (rs *Resource) enrichInstance(
 		GroupName:              metadata.GroupName,
 		Staff:                  staff,
 		Version:                timetable.ScheduledInstanceVersion(inst, staffRows, studentRows),
-		StudentIDs:             ident.IDs(attendance.studentIDs),
+		StudentIDs:             attendance.studentIDs,
 		Students:               attendance.students,
 		StaffCount:             len(staffRows),
 		AbsentStaffCount:       absentCount,
@@ -612,7 +606,7 @@ func (rs *Resource) dayConflictWarningsFor(
 		)
 		return empty
 	}
-	rows, err := rs.TimetableData.ListScheduledInstanceRows(ctx, dayInstances)
+	rows, err := rs.TimetableData.ListScheduledInstanceRows(ctx, dayInstances, timetable.PlannerGrid)
 	if err != nil {
 		rs.getLogger().Warn("day conflict detection: load instance rows failed",
 			slog.Int64("instance_id", inst.ID.Int64()),

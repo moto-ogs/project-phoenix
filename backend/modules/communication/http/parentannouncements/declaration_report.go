@@ -118,7 +118,7 @@ func declarationReport(s *announcementService.ParentDeclarationStatus) ReportDoc
 		Sections: []ReportSection{
 			{Title: "Überblick", Cards: []ReportCard{declarationSettingsCard(s), declarationSummaryCard(s)}},
 			{Title: "Fassungen", Cards: declarationVersionCards(s)},
-			{Title: "Stand je Kind", Cards: declarationChildCards(s.Children)},
+			{Title: "Stand pro Kind", Cards: declarationChildCards(s.Children)},
 			{Title: "Verlauf", Cards: declarationHistoryCards(s.Submissions)},
 		},
 	}

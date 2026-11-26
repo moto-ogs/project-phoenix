@@ -44,6 +44,7 @@ const logger = createLogger({ component: "BulkCancelAppointmentsModal" });
 const PLAN_CACHE_PREFIXES = [
   "timetable-week-",
   "timetable-month-",
+  "timetable-detail-",
   "timetable-day-",
   "timetable-gaps-",
   // Planungszeiträume des Betreuungsplans: die Verwendung zählt Termine.

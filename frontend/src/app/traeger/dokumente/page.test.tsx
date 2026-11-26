@@ -68,7 +68,7 @@ vi.mock("~/components/traeger/use-traeger-schools", async () => {
   };
 });
 
-const { default: TraegerDocumentsPage } = await import("./page");
+const { default: TraegerDocumentsPage } = await import("./page-content");
 
 // The release column names the schools; without them releases to different
 // schools read alike (#4692 review). The list shows the failed load with a

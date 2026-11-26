@@ -174,7 +174,7 @@ func TestReconciliationAlarmsOnAWebhookStateItCannotRead(t *testing.T) {
 func TestReconciliationAlarmsOnMailsWithoutAnyEvent(t *testing.T) {
 	t.Parallel()
 	store := &reconcileStore{mails: []domain.ProviderMail{
-		{ID: 1, ProviderMessageID: "old", SentAt: reconcileNow.Add(-emailEventSilence - time.Minute)},
+		{ID: 1, ProviderMessageID: "old", SentAt: reconcileNow.Add(-deliveryContract.EmailFeedbackWindow - time.Minute)},
 		{ID: 2, ProviderMessageID: "new", SentAt: reconcileNow.Add(-time.Hour)},
 	}}
 
@@ -325,9 +325,9 @@ func TestReconciliationWritesTheAlarmLineWhenTheRateLimitEndsTheRun(t *testing.T
 // A mail stays open for up to 28 days. Its silence is one finding, not one per hour.
 func TestReconciliationReportsASilentMailOnlyOnce(t *testing.T) {
 	t.Parallel()
-	sent := reconcileNow.Add(-emailEventSilence - 2*time.Hour)
-	beforeTheLimit := sent.Add(emailEventSilence - time.Hour)
-	afterTheLimit := sent.Add(emailEventSilence + time.Hour)
+	sent := reconcileNow.Add(-deliveryContract.EmailFeedbackWindow - 2*time.Hour)
+	beforeTheLimit := sent.Add(deliveryContract.EmailFeedbackWindow - time.Hour)
+	afterTheLimit := sent.Add(deliveryContract.EmailFeedbackWindow + time.Hour)
 	for name, test := range map[string]struct {
 		checked *time.Time
 		alarm   bool
@@ -355,7 +355,7 @@ func TestReconciliationReportsASilentMailOnlyOnce(t *testing.T) {
 func TestReconciliationDoesNotCountASilentMailItCouldNotMark(t *testing.T) {
 	t.Parallel()
 	store := &reconcileStore{markErr: errors.New("database is down"), mails: []domain.ProviderMail{
-		{ID: 1, ProviderMessageID: "m1", SentAt: reconcileNow.Add(-emailEventSilence - time.Hour)},
+		{ID: 1, ProviderMessageID: "m1", SentAt: reconcileNow.Add(-deliveryContract.EmailFeedbackWindow - time.Hour)},
 	}}
 
 	err := reconciler(store, &stubProviderAPI{enabled: true}).ReconcileEmailDelivery(context.Background())
@@ -367,7 +367,7 @@ func TestReconciliationDoesNotCountASilentMailItCouldNotMark(t *testing.T) {
 // A mail the provider does not know says nothing about the event stream.
 func TestReconciliationNotesAnUnknownMailWithoutTheSilenceAlarm(t *testing.T) {
 	t.Parallel()
-	store := &reconcileStore{mails: []domain.ProviderMail{{ID: 1, ProviderMessageID: "gone", SentAt: reconcileNow.Add(-emailEventSilence - time.Hour)}}}
+	store := &reconcileStore{mails: []domain.ProviderMail{{ID: 1, ProviderMessageID: "gone", SentAt: reconcileNow.Add(-deliveryContract.EmailFeedbackWindow - time.Hour)}}}
 	api := &stubProviderAPI{enabled: true, eventErrs: map[string]error{"gone": domain.ErrProviderNotFound}}
 	reconciliation, logs := alarmingReconciler(store, api)
 

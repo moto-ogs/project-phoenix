@@ -34,6 +34,9 @@ func checkNoStaffProfileOwnRoutes(t *testing.T, api *goldenRuntime) {
 
 		for path, code := range map[string]string{
 			"/api/time-tracking/current":                              "workforce.no_staff_profile",
+			"/api/time-tracking/period?view=week&start=2026-01-05":    "workforce.no_staff_profile",
+			"/api/time-tracking/overview":                             "workforce.no_staff_profile",
+			"/api/time-tracking/leave-overview":                       "workforce.no_staff_profile",
 			"/api/time-tracking/shifts?from=2026-01-05&to=2026-01-11": "workforce.no_staff_profile",
 			"/api/calendar/my?from=2026-01-05&to=2026-01-11":          "calendar.no_staff_profile",
 		} {

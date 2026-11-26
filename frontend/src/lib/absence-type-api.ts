@@ -49,7 +49,7 @@ export interface AbsenceType {
   readonly version: string;
 }
 
-function mapAbsenceType(data: AbsenceTypeResponse): AbsenceType {
+export function mapAbsenceType(data: AbsenceTypeResponse): AbsenceType {
   return {
     id: data.id,
     name: data.name,

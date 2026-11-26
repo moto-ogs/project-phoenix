@@ -33,5 +33,7 @@ type GuardianFamilyProtectionReads interface {
 }
 type ParentRequestShares interface {
 	AppendParentRequestShare(context.Context, *ParentRequestShareRecord) error
-	ParentRequestSharesForStudent(context.Context, int64) ([]*ParentRequestShareRecord, error)
+	// ParentRequestSharesForStudents returns the effective share of every
+	// request of the children, in one read.
+	ParentRequestSharesForStudents(context.Context, []int64) ([]*ParentRequestShareRecord, error)
 }

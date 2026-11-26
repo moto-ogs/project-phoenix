@@ -77,7 +77,10 @@ const (
 	DeletionTypeStaffCleanupRetention           = "staff_cleanup_retention"
 	DeletionTypeStudentDocumentCleanupRetention = "student_document_cleanup_retention"
 	DeletionTypeCareWithdrawalRetention         = "care_withdrawal_retention"
-	DeletionTypeSubmissionRateLimitRetention    = "submission_rate_limit_retention"
+	// DeletionTypePickupPersonRetention logs the nightly deletion of the
+	// pickup persons of past days (#7655).
+	DeletionTypePickupPersonRetention        = "pickup_person_retention"
+	DeletionTypeSubmissionRateLimitRetention = "submission_rate_limit_retention"
 	// Withdrawn and lapsed enrollments no child was created from, with
 	// their invitations to enroll late (#3960).
 	DeletionTypeSettledEnrollmentRetention = "settled_enrollment_retention"
@@ -182,6 +185,7 @@ func IsDataKindRetention(deletionType string) bool {
 		DeletionTypeStaffCleanupRetention,
 		DeletionTypeStudentDocumentCleanupRetention,
 		DeletionTypeCareWithdrawalRetention,
+		DeletionTypePickupPersonRetention,
 		DeletionTypeSubmissionRateLimitRetention,
 		DeletionTypeSettledEnrollmentRetention,
 		DeletionTypeEnrollmentUploadRetention,

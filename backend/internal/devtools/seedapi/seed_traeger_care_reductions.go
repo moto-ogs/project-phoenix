@@ -71,7 +71,7 @@ var seedCareRules = []map[string]any{
 	{"kind": "sibling", "name": "Geschwister ab dem 2. Kind (Platzhalter)", "sibling_from_child": 2, "discount_basis_points": 5000,
 		"counts_family_children": true},
 	{"kind": "single_parent", "name": "Alleinerziehende (Platzhalter)", "discount_cents": 1000},
-	{"kind": "cap", "name": "Höchstbetrag je Familie (Platzhalter)", "cap_cents": 25000},
+	{"kind": "cap", "name": "Höchstbetrag pro Familie (Platzhalter)", "cap_cents": 25000},
 }
 
 // seedCareReductions keeps the placeholder rules of the Träger from month on,

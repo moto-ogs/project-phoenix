@@ -26,7 +26,7 @@ type StaffTargetOverrideInput = {
   | { weekdayMinutes: readonly number[]; dailyMinutes?: never }
 );
 
-function mapStaffTargetOverride(
+export function mapStaffTargetOverride(
   row: staffContract.StaffTargetOverride,
 ): StaffTargetOverride {
   return {

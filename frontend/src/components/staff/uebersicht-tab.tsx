@@ -25,13 +25,11 @@ import {
   staffHistoryService,
   staffMonthSummaryService,
 } from "~/lib/staff-api";
-import type { StaffAbsenceRow, StaffHistorySession } from "~/lib/staff-api";
 import { MOTO_COLOR_PALETTE } from "~/lib/kit-palette";
 import {
   endOfWeek,
   getDeltaStatus,
   isHalfAbsenceBoundary,
-  resolveAccountStartDate,
   startOfWeek,
   toDateKey,
   toIsoDayOfWeek,
@@ -41,7 +39,17 @@ import {
   endOfBerlinDayISO,
   parseISODate,
 } from "~/lib/date-helpers";
+import { staffAccountWindow } from "~/lib/staff-detail-windows";
+import {
+  overviewAbsence,
+  overviewSession,
+  staffBalanceEntry,
+  type StaffBalanceEntry,
+  type OverviewAbsence,
+  type OverviewSession,
+} from "~/lib/staff-tab-projections";
 import { useAccountBalance } from "~/lib/hooks/use-account-balance";
+import { useAfterInitialPaint } from "~/lib/hooks/use-after-initial-paint";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { useSWRAuth, useTenantMutateMatching } from "~/lib/swr";
 import { timeTrackingKeys } from "~/lib/swr/portal-keys";
@@ -49,7 +57,6 @@ import { staffAbsenceKeys, staffTimeKeys } from "~/lib/swr/staff-keys";
 import { timeTrackingService } from "~/lib/time-tracking-api";
 import {
   balanceSessionEnd,
-  type BalanceAdjustment,
   type DayProjection,
 } from "~/lib/time-tracking-helpers";
 
@@ -93,6 +100,7 @@ const DistributionChart = dynamic(
 //
 // Period-bound KPIs (this week, this month) live on the Zeiterfassung tab.
 export function UebersichtTab({ staffId }: { readonly staffId: string }) {
+  const showCharts = useAfterInitialPaint();
   // The Berlin day, not the browser's, and re-rendered on the rollover: the
   // overview's target range and account balance both derive from "today", and
   // the server-computed Stundenkonto uses the Berlin month. A non-Berlin
@@ -101,45 +109,60 @@ export function UebersichtTab({ staffId }: { readonly staffId: string }) {
   const todayISO = useBerlinToday();
   const today = useMemo(() => parseISODate(todayISO), [todayISO]);
 
-  const { data: timeTrackingConfig } = useSWRAuth(
+  const { data: timeTrackingConfig, isLoading: configLoading } = useSWRAuth(
     timeTrackingKeys.config(),
     () => timeTrackingService.getConfig(),
   );
 
-  const accountAnchor = useMemo(() => {
-    return resolveAccountStartDate(today, timeTrackingConfig?.accountStartDate);
-  }, [timeTrackingConfig?.accountStartDate, today]);
-
-  const accountStartKey = toDateKey(accountAnchor);
-  const accountHistoryStartKey = useMemo(() => {
-    const previousDay = new Date(accountAnchor);
-    previousDay.setDate(previousDay.getDate() - 1);
-    return toDateKey(previousDay);
-  }, [accountAnchor]);
-  const yearEndKey = toDateKey(today);
-  const adjustmentHistoryEndKey = "9999-12-31";
+  const {
+    anchor: accountAnchor,
+    from: accountStartKey,
+    historyFrom: accountHistoryStartKey,
+    to: yearEndKey,
+    adjustmentTo: adjustmentHistoryEndKey,
+  } = useMemo(
+    () => staffAccountWindow(today, timeTrackingConfig?.accountStartDate),
+    [timeTrackingConfig?.accountStartDate, today],
+  );
   const {
     data: accountSessions,
     isLoading: sessionsLoading,
     error: sessionsError,
     mutate: mutateSessions,
-  } = useSWRAuth<StaffHistorySession[]>(
-    staffTimeKeys.historyAccount(staffId, accountHistoryStartKey, yearEndKey),
-    () =>
-      staffHistoryService.getHistory(
-        staffId,
-        accountHistoryStartKey,
-        yearEndKey,
-      ),
+  } = useSWRAuth<OverviewSession[]>(
+    configLoading
+      ? null
+      : staffTimeKeys.historyAccount(
+          staffId,
+          accountHistoryStartKey,
+          yearEndKey,
+        ),
+    async () =>
+      (
+        await staffHistoryService.getHistory(
+          staffId,
+          accountHistoryStartKey,
+          yearEndKey,
+        )
+      ).map(overviewSession),
   );
   const {
     data: accountAbsences,
     isLoading: absencesLoading,
     error: absencesError,
     mutate: mutateAbsences,
-  } = useSWRAuth<StaffAbsenceRow[]>(
-    staffAbsenceKeys.accountList(staffId, accountStartKey, yearEndKey),
-    () => staffAbsenceService.getAbsences(staffId, accountStartKey, yearEndKey),
+  } = useSWRAuth<OverviewAbsence[]>(
+    configLoading
+      ? null
+      : staffAbsenceKeys.accountList(staffId, accountStartKey, yearEndKey),
+    async () =>
+      (
+        await staffAbsenceService.getAbsences(
+          staffId,
+          accountStartKey,
+          yearEndKey,
+        )
+      ).map(overviewAbsence),
   );
   // Stundenkonto-Buchungen (#1420) — Teil der Saldo-Wahrheit: sie fliessen in
   // den kumulativen Saldo-Verlauf ein, sonst widerspricht die Kurve der
@@ -149,18 +172,22 @@ export function UebersichtTab({ staffId }: { readonly staffId: string }) {
     isLoading: adjustmentsLoading,
     error: adjustmentsError,
     mutate: mutateAdjustments,
-  } = useSWRAuth<BalanceAdjustment[]>(
-    staffTimeKeys.balanceAdjustments(
-      staffId,
-      accountStartKey,
-      adjustmentHistoryEndKey,
-    ),
-    () =>
-      staffBalanceAdjustmentService.list(
-        staffId,
-        accountStartKey,
-        adjustmentHistoryEndKey,
-      ),
+  } = useSWRAuth<StaffBalanceEntry[]>(
+    configLoading
+      ? null
+      : staffTimeKeys.balanceAdjustments(
+          staffId,
+          accountStartKey,
+          adjustmentHistoryEndKey,
+        ),
+    async () =>
+      (
+        await staffBalanceAdjustmentService.list(
+          staffId,
+          accountStartKey,
+          adjustmentHistoryEndKey,
+        )
+      ).map(staffBalanceEntry),
   );
   const refreshStundenkonto = useTenantMutateMatching([
     `staff-month-summary-${staffId}-`,
@@ -183,7 +210,13 @@ export function UebersichtTab({ staffId }: { readonly staffId: string }) {
     error: targetsError,
     mutate: mutateTargets,
   } = useSWRAuth<ProjectionByDay>(
-    staffTimeKeys.scheduleTargetsAccount(staffId, accountStartKey, yearEndKey),
+    configLoading
+      ? null
+      : staffTimeKeys.scheduleTargetsAccount(
+          staffId,
+          accountStartKey,
+          yearEndKey,
+        ),
     () =>
       staffMonthSummaryService.getDailyProjectionRange(
         staffId,
@@ -261,23 +294,27 @@ export function UebersichtTab({ staffId }: { readonly staffId: string }) {
 
   const weeklyTrendData = useMemo(
     () =>
-      buildWeeklyBalanceSeriesRange(
-        accountProjection ?? EMPTY_PROJECTION,
-        accountAdjustments ?? [],
-        saldoFrom,
-        saldoTo,
-      ),
-    [accountProjection, accountAdjustments, saldoFrom, saldoTo],
+      showCharts
+        ? buildWeeklyBalanceSeriesRange(
+            accountProjection ?? EMPTY_PROJECTION,
+            accountAdjustments ?? [],
+            saldoFrom,
+            saldoTo,
+          )
+        : [],
+    [accountProjection, accountAdjustments, saldoFrom, saldoTo, showCharts],
   );
 
   const dailyTrendData = useMemo(
     () =>
-      buildDailyIstSollSeriesRange(
-        accountProjection ?? EMPTY_PROJECTION,
-        dailyFrom,
-        dailyTo,
-      ),
-    [accountProjection, dailyFrom, dailyTo],
+      showCharts
+        ? buildDailyIstSollSeriesRange(
+            accountProjection ?? EMPTY_PROJECTION,
+            dailyFrom,
+            dailyTo,
+          )
+        : [],
+    [accountProjection, dailyFrom, dailyTo, showCharts],
   );
 
   const hasTimeTrendData =
@@ -289,6 +326,7 @@ export function UebersichtTab({ staffId }: { readonly staffId: string }) {
   // targets land would draw a 0-Soll baseline and a Saldo line that jumps once
   // the real map arrives.
   if (
+    configLoading ||
     sessionsLoading ||
     absencesLoading ||
     targetsLoading ||
@@ -375,7 +413,9 @@ export function UebersichtTab({ staffId }: { readonly staffId: string }) {
             />
           }
         >
-          {!hasTimeTrendData || dailyTrendData.length < 2 ? (
+          {hasTimeTrendData && !showCharts ? (
+            <div className="h-64" aria-hidden />
+          ) : !hasTimeTrendData || dailyTrendData.length < 2 ? (
             <EmptyState
               variant="dashed"
               className="flex-1 justify-center"
@@ -406,7 +446,9 @@ export function UebersichtTab({ staffId }: { readonly staffId: string }) {
             />
           }
         >
-          {!hasBalanceTrendData || weeklyTrendData.length < 2 ? (
+          {hasBalanceTrendData && !showCharts ? (
+            <div className="h-64" aria-hidden />
+          ) : !hasBalanceTrendData || weeklyTrendData.length < 2 ? (
             <EmptyState
               variant="dashed"
               className="flex-1 justify-center"
@@ -440,11 +482,15 @@ export function UebersichtTab({ staffId }: { readonly staffId: string }) {
           <EmptyState variant="dashed" title="Noch keine Tage erfasst." />
         ) : (
           <div className="grid grid-cols-1 items-center gap-6 md:grid-cols-2">
-            <DistributionChart
-              config={distributionConfig}
-              data={distributionData}
-              total={distributionTotal}
-            />
+            {showCharts ? (
+              <DistributionChart
+                config={distributionConfig}
+                data={distributionData}
+                total={distributionTotal}
+              />
+            ) : (
+              <div className="h-64" aria-hidden />
+            )}
             <div className="flex flex-col gap-2">
               {distributionData.map((point) => {
                 const percentage = Math.round(
@@ -521,7 +567,7 @@ interface AbsenceDayCounts {
 }
 
 function countAbsenceDays(
-  absences: readonly StaffAbsenceRow[],
+  absences: readonly OverviewAbsence[],
   from: Date,
   to: Date,
 ): AbsenceDayCounts {
@@ -574,7 +620,7 @@ function countAbsenceDays(
 // Exported for the unit test: the counters answer "how many days was this
 // person at work", which is decided here and nowhere else.
 export function countSessionDaysInRange(
-  sessions: readonly StaffHistorySession[],
+  sessions: readonly OverviewSession[],
   from: Date,
   to: Date,
 ): { present: number; homeOffice: number } {
@@ -718,7 +764,7 @@ interface TrendPoint {
 // original check-in date by design; the presence counters must use the same
 // allocation or a night block counts on the wrong day.
 export function splitSessionNetMinutesByBerlinDate(
-  session: StaffHistorySession,
+  session: OverviewSession,
 ): Map<string, number> {
   const start = new Date(session.check_in_time);
   const checkOut = session.check_out_time
@@ -827,7 +873,7 @@ function distributeNetMinutes(
 // range. Weeks beyond `to` are skipped; the final week is clipped at `to`.
 export function buildWeeklyBalanceSeriesRange(
   projection: ProjectionByDay,
-  adjustments: readonly BalanceAdjustment[],
+  adjustments: readonly StaffBalanceEntry[],
   from: Date,
   to: Date,
 ): TrendPoint[] {

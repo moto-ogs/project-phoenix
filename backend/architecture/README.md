@@ -4186,7 +4186,8 @@ ADR 0053 point 8 puts it:
   `services`' `staffByID`, `personsByID` and `uniqueIDs`. #4007 deletes the
   `services` copies.
 
-Delivery's composition exposes `QueueStaffTimeTrackingChanged`, and the Audit
+Delivery's composition binds `staff_time_tracking_changed` through
+`NewTenantSignal` (ADR 0310, #8081), and the Audit
 vocabulary exposes `TimeTrackingAuditLogEntry`, because the root may not import
 an owner's application or domain role. The root's adapters declare the narrow
 ports they call instead of naming whole repositories, which the

@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
+	parentService "github.com/moto-ogs/project-phoenix/workflows/parentportal"
 )
 
 // TodayStatusResponse ist die vollstaendige Elternsicht auf den Betreuungstag.
@@ -41,12 +42,16 @@ func (rs *Resource) getChildTodayStatus(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	common.Respond(w, r, http.StatusOK, TodayStatusResponse{
+	common.Respond(w, r, http.StatusOK, toTodayStatusResponse(status), "Today status retrieved")
+}
+
+func toTodayStatusResponse(status *parentService.TodayStatus) TodayStatusResponse {
+	return TodayStatusResponse{
 		AtOgs:        status.AtOgs,
 		State:        string(status.State),
 		Since:        status.Since,
 		Until:        status.Until,
 		ExpectedFrom: status.ExpectedFrom,
 		PickupTime:   status.PickupTime,
-	}, "Today status retrieved")
+	}
 }

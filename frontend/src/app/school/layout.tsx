@@ -1,6 +1,14 @@
+import { headers } from "next/headers";
+import { SWRServerSeed } from "~/lib/swr/server-seed";
+import { isPortalPublicPath } from "~/lib/portal-public-pages";
 import { SchoolProviders } from "./providers";
 import { SchoolAuthGuard } from "./auth-guard";
-import { readPortalSessionSnapshot } from "~/lib/portal-session-snapshot.server";
+import { schoolPageSeed, schoolNotices } from "~/lib/school/page-seed.server";
+import { SCHOOL_PUBLIC_PAGES } from "./public-pages";
+import {
+  readPortalSessionSnapshot,
+  readRenderedSessionMark,
+} from "~/lib/portal-session-snapshot.server";
 
 /**
  * Server layout for school routes ("moto schule", #2207).
@@ -20,12 +28,36 @@ export default async function SchoolLayout({
 }: {
   readonly children: React.ReactNode;
 }) {
-  const snapshot = await readPortalSessionSnapshot("school");
+  const [snapshot, request] = await Promise.all([
+    readPortalSessionSnapshot("school"),
+    headers(),
+  ]);
+  const path = request.get("x-moto-original-path")?.split("?")[0];
+  const guarded = (
+    <SchoolAuthGuard notBooked={snapshot?.notBooked ?? false}>
+      {children}
+    </SchoolAuthGuard>
+  );
+  const shellReads =
+    snapshot &&
+    !snapshot.notBooked &&
+    path &&
+    !isPortalPublicPath("school", SCHOOL_PUBLIC_PAGES, path)
+      ? schoolPageSeed([schoolNotices])
+      : null;
+
   return (
-    <SchoolProviders session={snapshot?.session ?? null}>
-      <SchoolAuthGuard notBooked={snapshot?.notBooked ?? false}>
-        {children}
-      </SchoolAuthGuard>
+    <SchoolProviders
+      session={snapshot?.session ?? null}
+      sessionMark={await readRenderedSessionMark("school")}
+    >
+      {shellReads ? (
+        <SWRServerSeed seed={shellReads.seed} claims={shellReads.claims}>
+          {guarded}
+        </SWRServerSeed>
+      ) : (
+        guarded
+      )}
     </SchoolProviders>
   );
 }

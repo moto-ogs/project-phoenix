@@ -379,7 +379,7 @@ export function LetterStatusPanel({
             status.recipients.length > 0 ? (
               <JumpButton
                 targetId={recipientsId}
-                tooltip="Springt zur Liste der Empfänger mit dem Grund je Adresse."
+                tooltip="Springt zur Liste der Empfänger mit dem Grund pro Adresse."
               >
                 Zu den Empfängern
               </JumpButton>

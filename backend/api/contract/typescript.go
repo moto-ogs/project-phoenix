@@ -412,14 +412,19 @@ func (w *tsWriter) file(routes []Route, shared *tsWriter) string {
 	return out.String()
 }
 
-// namedIn lists the shared names a file's text uses, as import specifiers.
+// tsLiteralsAndComments are the string literals and comments of generated
+// TypeScript: a shared name inside them ("Geht mit anderem Kind") is no use.
+var tsLiteralsAndComments = regexp.MustCompile(`"(?:[^"\\]|\\.)*"|/\*[\s\S]*?\*/|//[^\n]*`)
+
+// namedIn lists the shared names a file's code uses, as import specifiers.
 func (w *tsWriter) namedIn(text string) []string {
 	if w == nil {
 		return nil
 	}
+	code := tsLiteralsAndComments.ReplaceAllString(text, `""`)
 	var imports []string
 	add := func(name, specifier string) {
-		if regexp.MustCompile(`\b` + name + `\b`).MatchString(text) {
+		if regexp.MustCompile(`\b` + name + `\b`).MatchString(code) {
 			imports = append(imports, specifier)
 		}
 	}

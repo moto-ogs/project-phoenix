@@ -55,6 +55,7 @@ vi.mock("next-auth/react", () => ({
 const mockPush = vi.fn();
 const mockRedirect = vi.fn();
 vi.mock("next/navigation", () => ({
+  usePathname: () => "/active-supervisions",
   useRouter: () => ({ push: mockPush, replace: vi.fn() }),
   useSearchParams: () => ({
     get: (key: string) => {
@@ -305,7 +306,7 @@ vi.mock("~/lib/swr", () => ({
 import { useSWRAuth } from "~/lib/swr";
 import { TenantPageSearchRow } from "~/components/ui/tenant-page-search-row";
 import { useNFCEnabled, usePresenceMode } from "~/lib/tenant-context";
-import MeinRaumPage from "./page";
+import MeinRaumPage from "./page-content";
 import { useSupervisionDashboard } from "~/components/active-supervisions/use-supervision-dashboard";
 import type { PlannedTimetableInstance } from "~/lib/timetable-operations-types";
 import { TEST_CLOCK_INSTANT, TEST_CLOCK_TODAY } from "~/test/clock";

@@ -32,6 +32,32 @@ func TestCatererReadsAndConfirmsOrdersOfItsSupply(t *testing.T) {
 	week, err := module.CatererOrders(ctx, since, "2026-09-07", "2026-09-07")
 	require.NoError(t, err)
 	require.Len(t, week.Days, 1)
+	assertSummary := func(reader testPlan, day mealplan.OrderDay, names, byClass bool) {
+		t.Helper()
+		summary, err := reader.Summaries.CatererOrderSummary(ctx, since, day.Date, day.Date)
+		require.NoError(t, err)
+		require.Len(t, summary.Days, 1)
+		assert.Equal(t, names, summary.Names)
+		assert.Equal(t, byClass, summary.ByClass)
+		row := summary.Days[0]
+		assert.Equal(t, string(day.Date), row.Date.String())
+		assert.Equal(t, day.Status, row.Status)
+		assert.Equal(t, day.OrderID, row.OrderID)
+		assert.Equal(t, day.Total, row.Total)
+		assert.Equal(t, day.Closed, row.Closed)
+		assert.Equal(t, day.Deadline, row.Deadline)
+		var added, removed int
+		for _, change := range day.Changes {
+			if change.Delta > 0 {
+				added += change.Delta
+			} else {
+				removed -= change.Delta
+			}
+		}
+		assert.Equal(t, added, row.Added)
+		assert.Equal(t, removed, row.Removed)
+	}
+	assertSummary(module, week.Days[0], false, true)
 	provisional := week.Days[0]
 	assert.Equal(t, mealplan.OrderOrdered, provisional.Status, "due at 09:00, shown before the worker stores it")
 	assert.Zero(t, provisional.OrderID, "an order not stored yet has no ID")
@@ -51,9 +77,11 @@ func TestCatererReadsAndConfirmsOrdersOfItsSupply(t *testing.T) {
 	assert.Empty(t, day.Children, "numbers only by default")
 
 	settings.CatererNames = true
-	named, err := buildModuleWithRules(t, db, settings, time.Date(2026, 9, 7, 10, 0, 0, 0, testBerlin)).CatererOrders(ctx, since, "2026-09-07", "2026-09-07")
+	namedReader := buildModuleWithRules(t, db, settings, time.Date(2026, 9, 7, 10, 0, 0, 0, testBerlin))
+	named, err := namedReader.CatererOrders(ctx, since, "2026-09-07", "2026-09-07")
 	require.NoError(t, err)
 	require.Len(t, named.Days[0].Children, 1)
+	assertSummary(namedReader, named.Days[0], true, true)
 	assert.Equal(t, mealplan.OrderChild{FirstName: "Lea", LastName: "Koch", SchoolClass: "4b"}, named.Days[0].Children[0], "names without the child's ID")
 
 	require.ErrorIs(t, module.ConfirmOrder(ctx, day.OrderID+1_000_000, since, caterer.ID), mealplan.ErrOrderNotFound)
@@ -62,6 +90,7 @@ func TestCatererReadsAndConfirmsOrdersOfItsSupply(t *testing.T) {
 	week, err = module.CatererOrders(ctx, since, "2026-09-07", "2026-09-07")
 	require.NoError(t, err)
 	assert.Equal(t, mealplan.OrderConfirmed, week.Days[0].Status)
+	assertSummary(module, week.Days[0], false, true)
 }
 
 // ADR 0077: with orders by total the caterer reads no class.

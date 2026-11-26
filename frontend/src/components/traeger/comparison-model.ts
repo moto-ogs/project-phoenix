@@ -52,13 +52,13 @@ export const COMPARISON_METRIC_INFO: readonly ComparisonMetricInfo[] = [
   {
     key: "free_places",
     label: "Freie Plätze",
-    hint: "Plätze ohne Buchung, im Schnitt je Tag",
+    hint: "Plätze ohne Buchung, im Schnitt pro Tag",
     format: "number",
   },
   {
     key: "booked",
     label: "Kinder gebucht",
-    hint: "Gebuchte Kinder, im Schnitt je Tag",
+    hint: "Gebuchte Kinder, im Schnitt pro Tag",
     format: "number",
   },
   {
@@ -70,7 +70,7 @@ export const COMPARISON_METRIC_INFO: readonly ComparisonMetricInfo[] = [
   {
     key: "present",
     label: "Kinder anwesend",
-    hint: "Kinder mit Check-in, im Schnitt je Tag mit Check-ins",
+    hint: "Kinder mit Check-in, im Schnitt pro Tag mit Check-ins",
     format: "number",
   },
   {
@@ -215,7 +215,7 @@ export function comparisonRows(
   if (schools.length < 2) return rows;
   return [
     ...rows,
-    { kind: "average", label: "Schnitt je Schule", values: average },
+    { kind: "average", label: "Schnitt pro Schule", values: average },
     { kind: "together", label: "Alle zusammen", values: together },
   ];
 }

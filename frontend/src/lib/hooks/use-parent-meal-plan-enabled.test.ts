@@ -1,21 +1,19 @@
+import { parentFamilyFixture } from "~/test/parent-family-fixture";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ParentResourceTestProvider } from "~/test/parent-resource-provider";
 import { useInvalidateMatching } from "~/lib/swr";
 import { parentKeys } from "~/lib/swr/parent-keys";
-import {
-  listMyChildren,
-  getChildFeatures,
-  listAnnouncements,
-} from "~/lib/parent-api";
+import { listAnnouncements } from "~/lib/parent-api";
 import { useParentMealPlanEnabled } from "./use-parent-meal-plan-enabled";
 import type * as parentMeContract from "~/lib/contract/parent-me.generated";
+
+const family = parentFamilyFixture();
 
 vi.unmock("swr");
 vi.mock("~/lib/tenant-context", () => ({ useTenantSlugSafe: () => null }));
 vi.mock("~/lib/parent-api", () => ({
-  listMyChildren: vi.fn(),
-  getChildFeatures: vi.fn(),
+  getFamilyStart: vi.fn(),
   listAnnouncements: vi.fn(),
 }));
 const children = [
@@ -25,10 +23,12 @@ const children = [
 ] as parentMeContract.ChildResponse[];
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.mocked(listMyChildren).mockResolvedValue(children);
-  vi.mocked(getChildFeatures).mockResolvedValue({
+
+  family.mockRead();
+  family.children.mockResolvedValue(children);
+  family.features.mockResolvedValue({
     meal_plan_enabled: false,
-  } as Awaited<ReturnType<typeof getChildFeatures>>);
+  } as parentMeContract.ChildFeaturesResponse);
   vi.mocked(listAnnouncements).mockResolvedValue([]);
 });
 function mount(enabled = true) {
@@ -44,47 +44,47 @@ describe("useParentMealPlanEnabled with real SWR", () => {
   it("does not fetch in another portal or disabled mode", () => {
     const { result } = mount(false);
     expect(result.current.enabled).toBe(false);
-    expect(listMyChildren).not.toHaveBeenCalled();
-    expect(getChildFeatures).not.toHaveBeenCalled();
+    expect(family.children).not.toHaveBeenCalled();
+    expect(family.features).not.toHaveBeenCalled();
   });
   it("checks every relationship, including siblings at the same school", async () => {
-    vi.mocked(getChildFeatures).mockImplementation(
+    family.features.mockImplementation(
       async (id) =>
-        ({ meal_plan_enabled: id === "11" }) as Awaited<
-          ReturnType<typeof getChildFeatures>
-        >,
+        ({
+          meal_plan_enabled: id === "11",
+        }) as parentMeContract.ChildFeaturesResponse,
     );
     const { result } = mount();
     await waitFor(() => expect(result.current.enabled).toBe(true));
-    expect(getChildFeatures).toHaveBeenCalledTimes(3);
-    expect(getChildFeatures).toHaveBeenCalledWith("10");
-    expect(getChildFeatures).toHaveBeenCalledWith("11");
-    expect(getChildFeatures).toHaveBeenCalledWith("20");
-    expect(listMyChildren).toHaveBeenCalledTimes(1);
+    expect(family.features).toHaveBeenCalledTimes(3);
+    expect(family.features).toHaveBeenCalledWith("10");
+    expect(family.features).toHaveBeenCalledWith("11");
+    expect(family.features).toHaveBeenCalledWith("20");
+    expect(family.children).toHaveBeenCalledTimes(1);
   });
   it("stays hidden until availability is confirmed", async () => {
     const { result } = mount();
-    await waitFor(() => expect(getChildFeatures).toHaveBeenCalledTimes(3));
+    await waitFor(() => expect(family.features).toHaveBeenCalledTimes(3));
     expect(result.current.enabled).toBe(false);
   });
   it("does not cache a failed lookup as false and recovers on revalidation", async () => {
-    vi.mocked(getChildFeatures).mockRejectedValue(new Error("offline"));
+    family.features.mockRejectedValue(new Error("offline"));
     const { result } = mount();
-    await waitFor(() => expect(getChildFeatures).toHaveBeenCalledTimes(3));
+    await waitFor(() => expect(family.features).toHaveBeenCalledTimes(3));
     expect(result.current.enabled).toBe(false);
-    vi.mocked(getChildFeatures).mockResolvedValue({
+    family.features.mockResolvedValue({
       meal_plan_enabled: true,
-    } as Awaited<ReturnType<typeof getChildFeatures>>);
+    } as parentMeContract.ChildFeaturesResponse);
     await act(async () => {
       await result.current.refresh(parentKeys.isResource);
     });
     await waitFor(() => expect(result.current.enabled).toBe(true));
   });
   it("has no discoverable feature without children or feed", async () => {
-    vi.mocked(listMyChildren).mockResolvedValue([]);
+    family.children.mockResolvedValue([]);
     const { result } = mount();
-    await waitFor(() => expect(listMyChildren).toHaveBeenCalledOnce());
+    await waitFor(() => expect(family.children).toHaveBeenCalledOnce());
     expect(result.current.enabled).toBe(false);
-    expect(getChildFeatures).not.toHaveBeenCalled();
+    expect(family.features).not.toHaveBeenCalled();
   });
 });

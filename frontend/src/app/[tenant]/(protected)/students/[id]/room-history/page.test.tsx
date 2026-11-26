@@ -35,10 +35,7 @@ function render(ui: ReactElement) {
 
 // The child's detail also reads the account's own groups; none here.
 vi.mock("~/lib/usercontext-api", () => ({
-  userContextService: {
-    getMyEducationalGroups: () => Promise.resolve([]),
-    getMySupervisedGroups: () => Promise.resolve([]),
-  },
+  userContextService: {},
 }));
 
 const mockPush = vi.fn();
@@ -300,7 +297,6 @@ const sickStatusDay = {
 describe("StudentRoomHistoryPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    window.scrollTo = vi.fn();
   });
 
   // ─── Loading ────────────────────────────────────────────────────────────────
@@ -347,15 +343,6 @@ describe("StudentRoomHistoryPage", () => {
       expect(screen.getByText("Test Student")).toBeInTheDocument();
     });
     expect(screen.queryByText("·")).not.toBeInTheDocument();
-  });
-
-  it("scrolls to top on mount", async () => {
-    setupFetch(mockAttendanceHistoryResponse());
-    render(<StudentRoomHistoryPage />);
-
-    await waitFor(() => {
-      expect(window.scrollTo).toHaveBeenCalledWith(0, 0);
-    });
   });
 
   // ─── Error states ───────────────────────────────────────────────────────────

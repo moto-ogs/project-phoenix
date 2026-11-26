@@ -44,6 +44,12 @@ vi.mock("next-auth/react", () => ({
   signOut: mocks.signOut,
   useSession: mocks.useSession,
 }));
+// The login page ends a stale cookie through Auth.js' signout protocol,
+// bound to the session mark (#8082).
+vi.mock("~/lib/tenant-session-cookie", async (original) => ({
+  ...(await original<typeof import("~/lib/tenant-session-cookie")>()),
+  signOutSession: (...args: unknown[]) => mocks.signOut(...args),
+}));
 
 // The page signs in through the parents BFF (#7051); the transport has its
 // own tests.
@@ -195,6 +201,18 @@ describe("ParentLoginPage i18n", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("shows the translated logout notice until the next failed login", async () => {
+    sessionStorage.setItem("logoutNotRevoked", "1");
+    render(<ParentLoginPage />);
+    const notice = enMessages.errorCatalog.codes.identity.logout_not_revoked;
+    expect(screen.getByText(notice)).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      enMessages.parentLogin.errors.missingCredentials,
+    );
+    expect(screen.queryByText(notice)).not.toBeInTheDocument();
+  });
+
   it("keeps the auth shell and language switcher stable while the session loads", () => {
     mocks.useSession.mockReturnValue({
       status: "loading",
@@ -229,7 +247,7 @@ describe("ParentLoginPage i18n", () => {
 
     expect(mocks.redirect).not.toHaveBeenCalled();
     await vi.waitFor(() => {
-      expect(mocks.signOut).toHaveBeenCalledWith({ redirect: false });
+      expect(mocks.signOut).toHaveBeenCalledWith("parent", "");
     });
   });
 

@@ -55,7 +55,7 @@ vi.mock("next-auth/react", () => ({
   }),
 }));
 
-import TraegerBriefkopfPage from "./page";
+import TraegerBriefkopfPage from "./page-content";
 
 function setting(key: string, label: string, value: string): ResolvedSetting {
   return {

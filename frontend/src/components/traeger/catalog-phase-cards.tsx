@@ -156,7 +156,7 @@ function priceSummary(offering: TraegerOffering): string {
     low === high
       ? formatEuro(low)
       : `${formatEuro(low)} bis ${formatEuro(high)}`;
-  return `${range} ${scale ? "nach Tagen je Woche" : "je Wochentag"}`;
+  return `${range} ${scale ? "nach Tagen pro Woche" : "pro Wochentag"}`;
 }
 
 /**

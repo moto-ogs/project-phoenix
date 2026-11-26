@@ -9,7 +9,7 @@ import {
 import { useSession } from "next-auth/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import StaffDetailContent from "./page";
+import StaffDetailContent from "./page-content";
 import { SWRConfig } from "~/lib/swr/testing";
 import { useSWRAuth, useTenantMutateMatching } from "~/lib/swr";
 import { staffKeys } from "~/lib/swr/staff-keys";

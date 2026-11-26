@@ -13265,14 +13265,6 @@
       "target_owner": "people-directory"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/api.activeStaffAccess.HasCurrentStaff",
-      "binding_digest": "d0788398f6b9f115e9434e95da2b0b8d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.StaffAccess.HasCurrentStaff",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.AttendanceRouteStaff.HasCurrentStaff",
-      "target_owner": "people-directory"
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.SessionRepository.CheckRoomConflict",
       "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.sessionRepository.CheckRoomConflict",

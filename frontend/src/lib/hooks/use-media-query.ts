@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useSyncExternalStore } from "react";
+import { useCallback, useSyncExternalStore } from "react";
 
 /**
  * Verfolgt eine CSS-Media-Query im Client.
@@ -28,6 +28,59 @@ export function useMediaQuery(query: string): boolean {
 const noSubscription = () => () => undefined;
 const unknownOnServer = () => null;
 
+interface MediaQueryStore {
+  getSnapshot(): boolean;
+  subscribe(onChange: () => void): () => void;
+}
+
+// Menus and their panels often read the same breakpoint. They can share
+// one live list and browser subscription for as long as someone reads it.
+const storesByMatchMedia = new WeakMap<
+  Window["matchMedia"],
+  Map<string, MediaQueryStore>
+>();
+
+function mediaQueryStore(query: string): MediaQueryStore | null {
+  const matchMedia = window.matchMedia;
+  if (typeof matchMedia !== "function") return null;
+  let stores = storesByMatchMedia.get(matchMedia);
+  if (!stores) {
+    stores = new Map();
+    storesByMatchMedia.set(matchMedia, stores);
+  }
+  const existing = stores.get(query);
+  if (existing) return existing;
+
+  const owner = stores;
+  const list = matchMedia.call(window, query);
+  const listeners = new Set<() => void>();
+  let matches = list.matches;
+  const notify = () => {
+    const next = list.matches;
+    if (matches === next) return;
+    matches = next;
+    for (const listener of listeners) listener();
+  };
+  const store: MediaQueryStore = {
+    getSnapshot: () => matches,
+    subscribe(onChange) {
+      if (listeners.size === 0) {
+        list.addEventListener("change", notify);
+        matches = list.matches;
+      }
+      listeners.add(onChange);
+      return () => {
+        listeners.delete(onChange);
+        if (listeners.size !== 0) return;
+        list.removeEventListener("change", notify);
+        if (owner.get(query) === store) owner.delete(query);
+      };
+    },
+  };
+  stores.set(query, store);
+  return store;
+}
+
 /**
  * Wie `useMediaQuery`, aber ohne Vorgabe vor der Hydration: `null` heißt
  * „noch unbekannt“. So kann ein Aufrufer bis dahin beide Darstellungen per
@@ -37,26 +90,15 @@ const unknownOnServer = () => null;
  * bleibt der Wert `null`.
  */
 export function useResolvedMediaQuery(query: string): boolean | null {
-  // Eine Liste je Abfrage, für Lesen und Abonnieren: Sie entsteht erst im
-  // Client, beim ersten Lesen.
-  const listRef = useRef<{ query: string; list: MediaQueryList } | null>(null);
-  const getList = useCallback(() => {
-    if (typeof window.matchMedia !== "function") return null;
-    if (listRef.current?.query !== query) {
-      listRef.current = { query, list: window.matchMedia(query) };
-    }
-    return listRef.current.list;
-  }, [query]);
   const subscribe = useCallback(
-    (onChange: () => void) => {
-      const list = getList();
-      if (list === null) return noSubscription();
-      list.addEventListener("change", onChange);
-      return () => list.removeEventListener("change", onChange);
-    },
-    [getList],
+    (onChange: () => void) =>
+      mediaQueryStore(query)?.subscribe(onChange) ?? noSubscription(),
+    [query],
   );
-  const getSnapshot = useCallback(() => getList()?.matches ?? null, [getList]);
+  const getSnapshot = useCallback(
+    () => mediaQueryStore(query)?.getSnapshot() ?? null,
+    [query],
+  );
   return useSyncExternalStore(subscribe, getSnapshot, unknownOnServer);
 }
 

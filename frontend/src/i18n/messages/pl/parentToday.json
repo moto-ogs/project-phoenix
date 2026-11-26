@@ -39,5 +39,29 @@
     "pickupTooltip": "Otwiera formularz prośby o inną godzinę odbioru.",
     "pickupWithModeTooltip": "Otwiera formularz prośby o zmianę odbioru.",
     "messageTooltip": "Otwiera wiadomości z {careTerm} o Twoim dziecku."
+  },
+  "changes": {
+    "title": "Dziś inaczej",
+    "allAsPlanned": "Dziś wszystko idzie zgodnie z planem.",
+    "partial": "Nie udało się wczytać wszystkich zmian. Sprawdź ponownie później.",
+    "loadObject": "dzisiejszych zmian",
+    "enteredByYou": "Wpisane przez ciebie",
+    "sick": "Dziś zgłoszono chorobę: {name}.",
+    "excused": "Dziś usprawiedliwiona nieobecność: {name}.",
+    "pickupAt": "Odbiór {name} dziś o {time}.",
+    "notComing": "{name} dziś nie przychodzi.",
+    "goesAlone": "{name} wraca dziś do domu samodzielnie.",
+    "classTrip": "Klasa {class} jest dziś na wycieczce.",
+    "classTripBack": "Klasa {class} jest dziś na wycieczce. Powrót o {time}.",
+    "classDismissal": "Lekcje klasy {class} kończą się dziś o {time}.",
+    "closingDay": "{careTerm} jest dziś zamknięta: {name}.",
+    "closingDayUntil": "{careTerm} jest zamknięta do {date}: {name}.",
+    "openingChanged": "{careTerm} jest dziś otwarta od {opens} do {closes}: {name}.",
+    "openingChangedUntil": "Do {date} {careTerm} jest otwarta od {opens} do {closes}: {name}.",
+    "pickupAfterClosing": "To jest po zamknięciu. Zmień odbiór.",
+    "activityCancelled": "{title} o {time} jest dziś odwołane.",
+    "activityReinstated": "{title} o {time} jednak się dziś odbywa.",
+    "activityRoomChanged": "{title} o {time} jest dziś w sali {room}.",
+    "activityLeadChanged": "{title} o {time} prowadzi dziś zastępstwo."
   }
 }

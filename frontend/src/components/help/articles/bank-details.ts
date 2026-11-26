@@ -11,7 +11,7 @@ export function bankDetailsTopic(): HelpTopic {
     id: HELP_TOPICS.leadBankDetails,
     title: "Bankverbindungen einsehen",
     question: "Wo finde ich die Bankverbindungen der Familien?",
-    summary: "Du siehst je Kind die hinterlegte IBAN und kannst sie ausgeben.",
+    summary: "Du siehst pro Kind die hinterlegte IBAN und kannst sie ausgeben.",
     group: "elternarbeit",
     audience: "lead",
     icon: "Landmark",

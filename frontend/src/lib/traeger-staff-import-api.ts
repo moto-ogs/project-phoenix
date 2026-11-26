@@ -208,7 +208,14 @@ export function applyStaffImport(
 
 /** The imports of the Träger, newest first. */
 export async function fetchStaffImportLog(): Promise<StaffImportLogEntry[]> {
-  const entries = await bffJson("org", "GET /traeger/staff-record-imports/");
+  return mapStaffImportLog(
+    await bffJson("org", "GET /traeger/staff-record-imports/"),
+  );
+}
+
+export function mapStaffImportLog(
+  entries: traegerStaffRecordImportsContract.StaffImportEntry[],
+): StaffImportLogEntry[] {
   return entries.map((entry) => ({
     file: entry.file,
     accountId: entry.account_id,

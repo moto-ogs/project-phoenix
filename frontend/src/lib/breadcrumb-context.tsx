@@ -35,6 +35,9 @@ interface BreadcrumbContextValue {
 }
 
 const BreadcrumbContext = createContext<BreadcrumbContextValue | null>(null);
+const BreadcrumbSetterContext = createContext<
+  BreadcrumbContextValue["setBreadcrumb"] | null
+>(null);
 
 export function BreadcrumbProvider({
   children,
@@ -46,9 +49,11 @@ export function BreadcrumbProvider({
   const value = useMemo(() => ({ breadcrumb, setBreadcrumb }), [breadcrumb]);
 
   return (
-    <BreadcrumbContext.Provider value={value}>
-      {children}
-    </BreadcrumbContext.Provider>
+    <BreadcrumbSetterContext.Provider value={setBreadcrumb}>
+      <BreadcrumbContext.Provider value={value}>
+        {children}
+      </BreadcrumbContext.Provider>
+    </BreadcrumbSetterContext.Provider>
   );
 }
 
@@ -94,7 +99,12 @@ export function useStudentHistoryBreadcrumb(opts: {
  * Pages call this to communicate breadcrumb info to the persistent Header.
  */
 export function useSetBreadcrumb(data: BreadcrumbData): void {
-  const { setBreadcrumb } = useBreadcrumb();
+  // Updating the persistent header must not render the page that just
+  // published its breadcrumb, or another writer held by Activity.
+  const setBreadcrumb = useContext(BreadcrumbSetterContext);
+  if (!setBreadcrumb) {
+    throw new Error("useBreadcrumb must be used within a BreadcrumbProvider");
+  }
 
   const stableKey = JSON.stringify(data);
 

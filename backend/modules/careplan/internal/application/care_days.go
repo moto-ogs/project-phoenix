@@ -84,6 +84,9 @@ func plannedCareDay(facts careplan.CareDayFacts, participating bool) careplan.Pl
 	}
 	if facts.Arrival != nil {
 		day.Arrival = wallClockOf(facts.Arrival.ArrivalTime)
+		if facts.Arrival.IsException {
+			day.ArrivalReason = facts.Arrival.Notes
+		}
 	}
 	if facts.Pickup != nil {
 		day.Pickup = wallClockOf(facts.Pickup.PickupTime)

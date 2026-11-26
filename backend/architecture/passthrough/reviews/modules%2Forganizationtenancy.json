@@ -102,11 +102,6 @@
     },
     {
       "decision": "0090",
-      "id": "modules/organizationtenancy/inbound/operator/ProvisioningResource.ListAllAccounts",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "modules/organizationtenancy/inbound/operator/ProvisioningResource.ListAllDevices",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
@@ -348,11 +343,6 @@
     {
       "decision": "0090",
       "id": "modules/organizationtenancy/internal/adapters/postgres/DemoStateStore.Return",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "modules/organizationtenancy/internal/application/Provisioning.ListAllAccounts",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {

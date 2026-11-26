@@ -36,6 +36,12 @@ type dayChangesCarePlan interface {
 	ListArrivalExceptions(context.Context, careplan.StudentScheduleFilter) ([]careplan.ArrivalException, error)
 }
 
+// dayChangesDayPickups is the Care Plan read of the day's Abholart and
+// pickup person in one statement (#7655).
+type dayChangesDayPickups interface {
+	ListDayPickups(ctx context.Context, from, to calendar.Date, studentIDs []int64) ([]careplan.DayPickup, error)
+}
+
 // dayChangesStudents is the People Directory read of the children: names,
 // class and group in one statement (#7681). Class trips retain the placement
 // of a deleted person, but normal child changes do not display that person.
@@ -125,9 +131,9 @@ func (s dayChangesChildren) changes(ctx context.Context, day calendar.Date) ([]c
 	if err != nil {
 		return nil, nil, fmt.Errorf("list pickup exceptions: %w", err)
 	}
-	departures, err := s.sources.CarePlan.ListDepartureExceptions(ctx, careplan.StudentScheduleFilter{Date: date})
+	pickups, err := s.sources.DayPickups.ListDayPickups(ctx, day, day, nil)
 	if err != nil {
-		return nil, nil, fmt.Errorf("list day departures: %w", err)
+		return nil, nil, fmt.Errorf("list day pickups: %w", err)
 	}
 	notes, err := s.sources.CarePlan.ListPickupNotes(ctx, careplan.StudentScheduleFilter{Date: date})
 	if err != nil {
@@ -140,11 +146,7 @@ func (s dayChangesChildren) changes(ctx context.Context, day calendar.Date) ([]c
 	absent := map[int64]bool{}
 	changes := absentChildren(statusDays, absent)
 	changes = append(changes, pickupChanges(exceptions, absent)...)
-	for _, departure := range departures {
-		if departure.DepartureMode == careplan.DepartureModeAlone {
-			changes = append(changes, childChange{kind: daychangesview.KindChildGoesAlone, child: daychangesview.Child{StudentID: ident.ID(departure.StudentID)}})
-		}
-	}
+	changes = append(changes, dayPickupChanges(pickups)...)
 	for _, note := range notes {
 		// A date filter returns dated notes and recurring weekday notes that
 		// apply on this day. The latter have no NoteDate.
@@ -205,6 +207,22 @@ func pickupChanges(exceptions []careplan.PickupException, absent map[int64]bool)
 			child.PickupTime = &at
 		}
 		changes = append(changes, childChange{kind: daychangesview.KindChildPickupChanged, child: child})
+	}
+	return changes
+}
+
+// dayPickupChanges turns the day's Abholart into "goes alone" and the day's
+// pickup person into its own entry (#7655), in that order per child.
+func dayPickupChanges(pickups []careplan.DayPickup) []childChange {
+	changes := make([]childChange, 0, len(pickups))
+	for _, pickup := range pickups {
+		if pickup.Departure != nil && pickup.Departure.DepartureMode == careplan.DepartureModeAlone {
+			changes = append(changes, childChange{kind: daychangesview.KindChildGoesAlone, child: daychangesview.Child{StudentID: ident.ID(pickup.StudentID)}})
+		}
+		if pickup.Person != nil {
+			person := daychangesview.ChildPickupPerson{Name: pickup.Person.Name, OneTime: pickup.Person.OneTime()}
+			changes = append(changes, childChange{kind: daychangesview.KindChildPickupPerson, child: daychangesview.Child{StudentID: ident.ID(pickup.StudentID), PickupPerson: &person}})
+		}
 	}
 	return changes
 }
@@ -306,6 +324,8 @@ func countChild(counts *daychangesview.ChildCounts, change childChange) {
 		counts.GoesAlone++
 	case daychangesview.KindChildPickupNote:
 		counts.PickupNote++
+	case daychangesview.KindChildPickupPerson:
+		counts.PickupPerson++
 	}
 }
 

@@ -13,7 +13,7 @@ export interface ChildQuota {
 }
 
 /** Wandelt die Backend-Antwort; ohne Kinderkontingent null. */
-function mapChildQuota(
+export function mapChildQuota(
   response: studentsContract.childQuotaResponse | null,
 ): ChildQuota | null {
   if (

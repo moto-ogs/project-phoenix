@@ -51,6 +51,7 @@ vi.mock("next-auth/react", () => ({
 }));
 
 vi.mock("next/navigation", () => ({
+  usePathname: () => "/students/search",
   useRouter: () => ({ push: mockPush, replace: vi.fn() }),
   useSearchParams: () => currentSearch,
 }));
@@ -61,6 +62,10 @@ vi.mock("~/lib/tenant-router", () => ({
 
 vi.mock("~/lib/supervision-context", () => ({
   useOptionalSupervision: () => ({
+    ownGroupIds: [],
+    ownGroupRoomNames: [],
+    ownSessionRoomNames: [],
+    ownSupervisedRooms: [],
     hasGroups: false,
     isSupervising: false,
     isLoadingGroups: false,
@@ -145,17 +150,6 @@ vi.mock("~/lib/active-api", () => ({
   },
 }));
 
-vi.mock("~/lib/hooks/use-user-context", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("~/lib/hooks/use-user-context")>()),
-  useUserContext: () => ({
-    userContext: {
-      educationalGroupIds: [],
-      educationalGroupRoomNames: [],
-      supervisedRoomNames: [],
-    },
-  }),
-}));
-
 vi.mock("~/lib/student-api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/lib/student-api")>()),
   fetchStudents: (...args: unknown[]) => mockGetStudents(...args),
@@ -195,7 +189,7 @@ vi.mock("~/components/students/student-card", () => ({
 
 import { ApiError } from "~/lib/api-error";
 import { releaseFakeTimers } from "~/test/clock";
-import StudentSearchPage from "./page";
+import StudentSearchPage from "./page-content";
 
 const STORAGE_KEY = "student-search:last-filters:tenant-2:3";
 const STALL_MESSAGE =

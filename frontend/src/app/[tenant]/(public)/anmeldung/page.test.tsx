@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
+import { TEST_CLOCK_INSTANT } from "~/test/clock";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
 
@@ -51,7 +52,7 @@ vi.mock("~/components/enrollment/public-enrollment-shell", () => ({
   ),
 }));
 
-import EnrollPhasePickerPage from "./page";
+import EnrollPhasePickerPage from "./enrollment-start-page";
 
 describe("EnrollPhasePickerPage", () => {
   beforeEach(() => {
@@ -75,6 +76,19 @@ describe("EnrollPhasePickerPage", () => {
     expect(
       await screen.findByRole("link", { name: /Schuljahr 2026\/27/ }),
     ).toHaveAttribute("href", "/demo/anmeldung/phase%2F1");
+  });
+
+  it("does not fetch again for a fresh public catalog", () => {
+    render(
+      <EnrollPhasePickerPage
+        initial={{
+          phases: [],
+          builtAt: new Date(TEST_CLOCK_INSTANT).getTime(),
+        }}
+      />,
+    );
+
+    expect(mocks.fetchPublicPhases).not.toHaveBeenCalled();
   });
 
   it("uses a document navigation so the form receives its Turnstile CSP", async () => {

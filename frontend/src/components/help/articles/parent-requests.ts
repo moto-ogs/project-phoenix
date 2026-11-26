@@ -58,7 +58,7 @@ export function parentRequestsTopic(groupMode: HelpGroupMode): HelpTopic {
       "Plant ein Regeltermin alle Kinder einer Klasse, eines Jahrgangs oder einer Gruppe, steht dort `Mit Angebot verbinden`. Nur so fehlt das Kind dauerhaft.",
       // #4767: Warteliste je AG; Nachrücken ist die normale Freigabe.
       "Fragen Eltern einen Platz in einer vollen AG an? Dann zeigt die Anfrage zum Beispiel `Warteliste Platz 2`. Die älteste Anfrage ist zuerst dran.",
-      "Oben steht die Karte `Wartelisten`. Sie zeigt je AG die belegten Plätze und die wartenden Kinder in Reihenfolge. `Zur Anfrage` öffnet die Anfrage des Kindes.",
+      "Oben steht die Karte `Wartelisten`. Sie zeigt pro AG die belegten Plätze und die wartenden Kinder in Reihenfolge. `Zur Anfrage` öffnet die Anfrage des Kindes.",
       "Ist in einer AG ein Platz frei, steht dort `Platz frei` und beim ersten Kind `Als Nächstes dran`. Wähle bei seiner Anfrage `Freigeben`, dann rückt es nach.",
       "Anmeldungsänderungen öffnest du über `Prüfen`. Dafür brauchst du ein zusätzliches Recht.",
       // Ohne feste Gruppen gibt es keine Gruppenleitung, an der die

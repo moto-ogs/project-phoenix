@@ -39,5 +39,29 @@
     "pickupTooltip": "Hap formularin për të kërkuar një orë tjetër marrjeje.",
     "pickupWithModeTooltip": "Hap formularin për të kërkuar ndryshim të marrjes.",
     "messageTooltip": "Hap mesazhet me {careTerm} për fëmijën tuaj."
+  },
+  "changes": {
+    "title": "Sot ndryshe",
+    "allAsPlanned": "Sot gjithçka shkon sipas planit.",
+    "partial": "Jo të gjitha ndryshimet mund të ngarkoheshin. Shiko përsëri më vonë.",
+    "loadObject": "ndryshimet e sotme",
+    "enteredByYou": "Shënuar nga ti",
+    "sick": "Për {name} sot është njoftuar sëmundje.",
+    "excused": "{name} sot mungon me arsye.",
+    "pickupAt": "{name} sot merret në orën {time}.",
+    "notComing": "{name} sot nuk vjen.",
+    "goesAlone": "{name} sot shkon vetëm në shtëpi.",
+    "classTrip": "Klasa {class} sot është në ekskursion.",
+    "classTripBack": "Klasa {class} sot është në ekskursion. Kthehet në orën {time}.",
+    "classDismissal": "Mësimi i klasës {class} sot mbaron në orën {time}.",
+    "closingDay": "{careTerm} sot është e mbyllur: {name}.",
+    "closingDayUntil": "{careTerm} është e mbyllur deri më {date}: {name}.",
+    "openingChanged": "{careTerm} sot është e hapur nga {opens} deri në {closes}: {name}.",
+    "openingChangedUntil": "Deri më {date}, {careTerm} është e hapur nga {opens} deri në {closes}: {name}.",
+    "pickupAfterClosing": "Kjo është pas mbylljes. Të lutem ndrysho marrjen.",
+    "activityCancelled": "{title} në orën {time} sot anulohet.",
+    "activityReinstated": "{title} në orën {time} sot zhvillohet gjithsesi.",
+    "activityRoomChanged": "{title} në orën {time} sot është në {room}.",
+    "activityLeadChanged": "{title} në orën {time} sot e drejton një zëvendësues."
   }
 }

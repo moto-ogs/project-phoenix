@@ -84,6 +84,7 @@ import {
 import { classDayChildPath, classDayDateParam, isWeekendISO } from "./routes";
 import { schoolDayListParam, schoolDayListPath } from "./school-day";
 import { Section, type StudentRowMorning } from "./student-row";
+import { useJumpToDayChange } from "./use-jump-to-day-change";
 import { type ClassHomeworkApi, useClassHomework } from "./use-class-homework";
 
 const logger = createLogger({ component: "ClassDayClass" });
@@ -351,6 +352,8 @@ export function ClassDayClass({
     [refetchReport],
   );
   useClassDayRefresh(refreshReport);
+  // Vom Block „Heute anders“ der Startseite: zur ersten geänderten Zeile.
+  useJumpToDayChange(report !== undefined);
 
   // Ladefehler mit Katalogtext und Wiederholen (#2517); eine entzogene
   // Klasse meldet sich über ihren Code (fehlende Berechtigung).
@@ -1220,7 +1223,8 @@ export function ClassDayClass({
                     Hausaufgaben
                   </h3>
                   <p className="text-sm text-gray-600">
-                    Die OGS sieht sie in der Lernzeit und meldet je Kind zurück.
+                    Die OGS sieht sie in der Lernzeit und meldet pro Kind
+                    zurück.
                   </p>
                 </div>
                 {canWriteHomework ? (

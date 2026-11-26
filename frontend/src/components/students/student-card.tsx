@@ -4,7 +4,6 @@
 import type * as studentsContract from "~/lib/contract/students.generated";
 import { ParentAttentionBadge } from "~/components/students/parent-attention-badge";
 import { useParentAttentionEnabled } from "~/lib/hooks/use-parent-attention";
-import { useDataPrefetchIntent } from "~/components/ui/data-prefetch-intent";
 import type { ReactNode } from "react";
 import { tileCardSurface } from "~/components/ui/tile-card";
 import {
@@ -97,6 +96,7 @@ interface StudentCardProps {
   readonly locationBadge: ReactNode;
   /** Optional extra content between name and click hint */
   readonly extraContent?: ReactNode;
+  readonly className?: string;
   /** Optional tracking indicators (right-aligned, below location badge) */
   readonly trackingIndicators?: ReactNode;
   /**
@@ -189,6 +189,7 @@ export function StudentCard({
   onClick,
   locationBadge,
   extraContent,
+  className,
   trackingIndicators,
   checkinMode = false,
   checkinState = "unknown",
@@ -252,20 +253,13 @@ export function StudentCard({
       }
     : undefined;
   const hasTapStrip = checkinMode && !selectMode;
-  const dataIntent = useDataPrefetchIntent(
-    checkinMode || selectMode ? null : `/students/${studentId}`,
-  );
   const parentAttentionEnabled = useParentAttentionEnabled();
 
   const card = (
     <button
       key={studentId}
       type="button"
-      {...dataIntent}
-      onClick={() => {
-        dataIntent.onClick();
-        activeHandler();
-      }}
+      onClick={activeHandler}
       disabled={isCheckinPending}
       aria-busy={isCheckinPending}
       aria-pressed={selectMode ? isCheckinSelected : undefined}
@@ -275,7 +269,7 @@ export function StudentCard({
       data-checkin-selected={isSelectedCard || undefined}
       data-day-home-change={dayChangeKind}
       style={selectedRingStyle}
-      className={`${tileCardSurface({ padding: "none" })} flex cursor-pointer flex-col disabled:cursor-wait disabled:opacity-70 ${parentAttentionEnabled ? "h-full" : ""}`}
+      className={`${tileCardSurface({ padding: "none" })} flex cursor-pointer flex-col [contain-intrinsic-block-size:auto_12rem] [content-visibility:auto] disabled:cursor-wait disabled:opacity-70 print:[content-visibility:visible] ${parentAttentionEnabled ? "h-full" : ""} ${className ?? ""}`}
     >
       <div
         className={`relative ${hasTapStrip || dayChangeLabel ? "p-3 pb-0 sm:p-5 sm:pb-0" : "p-3 sm:p-5"}`}

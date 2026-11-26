@@ -154,14 +154,15 @@ type SeedScheduledActivityState struct {
 }
 
 type SeedStateCredentials struct {
-	Operator    *SeedOperatorCredentials  `json:"operator,omitempty"`
+	Operator    *SeedPortalCredentials    `json:"operator,omitempty"`
+	Caterer     *SeedPortalCredentials    `json:"caterer,omitempty"`
 	SchoolAdmin BootstrapAdminCredentials `json:"school_admin"`
 	DevicePIN   string                    `json:"device_pin"`
 	Accounts    SeedStateAccounts         `json:"accounts"`
 	Parents     []ParentCredentials       `json:"parents,omitempty"`
 }
 
-type SeedOperatorCredentials struct {
+type SeedPortalCredentials struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
 }

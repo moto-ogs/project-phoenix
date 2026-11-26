@@ -1,10 +1,9 @@
 // Router-level tests for the Feriengruppe before its week (ADR 0120,
-// Nachtrag 2026-11-11): the daily group lists (navigation and live view of
-// the group page) keep back a group that waits for its hosted week and has
-// no child in care today, and show it as soon as a child is in care or the
-// week has begun. A regular group that is also the Feriengruppe always
-// shows. GET /api/holiday-guests/groups names every Feriengruppe with its
-// week and guests for the group management, behind groups:read.
+// Nachtrag 2026-11-11): the group live view keeps back a group that waits for
+// its hosted week and has no child in care today. It shows the group as soon
+// as a child is in care or the week has begun. A regular group that is also
+// the Feriengruppe always shows. GET /api/holiday-guests/groups names every
+// Feriengruppe with its week and guests, behind groups:read.
 package api
 
 import (
@@ -35,7 +34,7 @@ type holidayGuestGroupBody struct {
 	Guests   int    `json:"guests"`
 }
 
-// groupLiveRouter serves the group page's navigation and live view of the
+// groupLiveRouter serves the group page's live view of the
 // fixture's school over the fixture's clock, at noon of its day.
 func (f holidayGuestFixture) groupLiveRouter(t *testing.T) http.Handler {
 	t.Helper()
@@ -57,36 +56,24 @@ func (f holidayGuestFixture) groupLiveRouter(t *testing.T) http.Handler {
 	return testpkg.SessionVerifier(router)
 }
 
-// dailyGroups lists the groups of the navigation and of the live view's
-// group tabs, which must agree.
+// dailyGroups lists the groups of the live view's group tabs.
 func dailyGroups(t *testing.T, router http.Handler, token string) []int64 {
 	t.Helper()
-	read := func(path string) []int64 {
-		req := httptest.NewRequest(http.MethodGet, path, nil)
-		req.Header.Set("Authorization", "Bearer "+token)
-		rec := httptest.NewRecorder()
-		router.ServeHTTP(rec, req)
-		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-		type group struct {
+	req := httptest.NewRequest(http.MethodGet, "/api/students/ogs-group-live", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	data := decodeSchoolPortalData[struct {
+		Groups []struct {
 			ID ident.ID `json:"id"`
-		}
-		var groups []group
-		if path == "/api/students/ogs-group-navigation" {
-			groups = decodeSchoolPortalData[[]group](t, rec.Body.Bytes())
-		} else {
-			groups = decodeSchoolPortalData[struct {
-				Groups []group `json:"groups"`
-			}](t, rec.Body.Bytes()).Groups
-		}
-		ids := make([]int64, 0, len(groups))
-		for _, g := range groups {
-			ids = append(ids, g.ID.Int64())
-		}
-		return ids
+		} `json:"groups"`
+	}](t, rec.Body.Bytes())
+	ids := make([]int64, 0, len(data.Groups))
+	for _, group := range data.Groups {
+		ids = append(ids, group.ID.Int64())
 	}
-	navigation := read("/api/students/ogs-group-navigation")
-	assert.ElementsMatch(t, navigation, read("/api/students/ogs-group-live"), "navigation and group tabs list the same groups")
-	return navigation
+	return ids
 }
 
 func (f holidayGuestFixture) guestGroups(t *testing.T, token string) []holidayGuestGroupBody {

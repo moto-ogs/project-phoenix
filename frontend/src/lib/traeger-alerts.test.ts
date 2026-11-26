@@ -82,7 +82,7 @@ describe("thresholdsSentence", () => {
         openEnrollments: 1,
       }),
     ).toBe(
-      "Deine Grenzen: mehr als 20 Kinder je Betreuungskraft · ab 10 % kranke Kinder · ab 1 offenen Anmeldung",
+      "Deine Grenzen: mehr als 20 Kinder pro Betreuungskraft · ab 10 % kranke Kinder · ab 1 offenen Anmeldung",
     );
     expect(
       thresholdsSentence({

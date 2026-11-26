@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 
@@ -363,18 +364,21 @@ func (s *workTimeMonthService) getDailyActualMinutes(
 	if err != nil {
 		return nil, fmt.Errorf("failed to load work sessions for daily balance calculation: %w", err)
 	}
-	actualByDate := make(map[calendar.Date]int)
-	now := s.now()
 	breaksBySessionID, err := s.breaksBySessionID(ctx, sessions)
 	if err != nil {
 		return nil, err
 	}
+	return actualMinutesByDay(sessions, breaksBySessionID, s.now(), s.today(), from, to), nil
+}
+
+func actualMinutesByDay(sessions []*WorkSession, breaks map[int64][]*WorkSessionBreak, now time.Time, today, from, to calendar.Date) map[calendar.Date]int {
+	actualByDate := make(map[calendar.Date]int)
 	for _, session := range sessions {
-		for day, minutes := range creditedNetMinutesByDate(session, breaksBySessionID[session.ID], balanceSessionEnd(session, now, s.today()), from, to) {
+		for day, minutes := range creditedNetMinutesByDate(session, breaks[session.ID], balanceSessionEnd(session, now, today), from, to) {
 			actualByDate[day] += minutes
 		}
 	}
-	return actualByDate, nil
+	return actualByDate
 }
 
 func (s *workTimeMonthService) addDailyAbsenceCredits(
@@ -409,12 +413,16 @@ func (s *workTimeMonthService) getDailyAbsenceCredits(
 	if err != nil {
 		return nil, fmt.Errorf("failed to load absences for daily credits: %w", err)
 	}
+	return absenceCreditsByDay(absences, from, through, resolver), nil
+}
+
+func absenceCreditsByDay(absences []*StaffAbsence, from, through calendar.Date, resolver *dailyTargetResolver) map[calendar.Date]int {
 	credits := make(map[calendar.Date]int)
 	walkCreditedAbsenceDays(absences, from, through, resolver.TargetFor,
 		func(d calendar.Date, _ *StaffAbsence, credit int, _ float64) {
 			credits[d] += credit
 		})
-	return credits, nil
+	return credits
 }
 
 func (s *workTimeMonthService) addDailyAdjustments(

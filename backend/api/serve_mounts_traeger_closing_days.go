@@ -26,16 +26,20 @@ import (
 // "Einstellungen verwalten". A saved closing day tells the parents of the
 // holiday bookings it affects (#6434); /traeger/holiday-closures previews
 // them and lists the closed days nobody told yet, behind the planning right.
+// It returns the Träger's closing days it mounted.
 func mountTraegerClosingDayRoutes(root chi.Router, schools traegercalendar.Schools, organizations HolidayOrganizations,
 	mail owners.HolidayClosureMail, holidayCalendar enrollmentOwner.HolidaySchoolCalendar, holidays owners.HolidayClosureHolidays, staffing schoolCalendarHTTP.StaffingChangeQueue, now func() time.Time,
-) {
+) traegercalendar.ClosingDays {
 	closures := newHolidayClosures(organizations, mail, holidayCalendar, holidays, now)
 	requireManage := common.RequiresPermission(identityaccess.TraegerRightSettingsManage)
-	resource := schoolCalendarHTTP.NewTraegerClosingDayResource(
-		schoolCalendarCompose.NewTraegerClosingDays(schools, owners.NewTraegerClosingDayHolidayNotices(closures)), traegerListRenderer(NewSimpleListRenderer()),
+	closingDays := schoolCalendarCompose.NewTraegerClosingDays(schools, owners.NewTraegerClosingDayHolidayNotices(closures))
+	resource := schoolCalendarHTTP.NewTraegerClosingDayResource(closingDays, traegerListRenderer(NewSimpleListRenderer()),
 		common.RequiresPermission(identityaccess.TraegerRightOverviewRead), requireManage, staffing)
 	root.Mount("/traeger/closing-days", resource.TraegerRouter(ProtectedTraegerRoutes))
 	root.Mount("/traeger/holiday-closures", enrollmentAPI.NewHolidayClosureResource(closures, requireManage).TraegerRouter(ProtectedTraegerRoutes))
+	// The same closing days read the closings of the schools for "Heute
+	// anders" (#7672).
+	return closingDays
 }
 
 // newTraegerClosingDayStaffingQueue binds the Träger closing-day routes to

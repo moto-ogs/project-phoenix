@@ -29,6 +29,7 @@ type ClassDayPickupReader interface {
 // CareDayResolver is the retained schedule service's care-day derivation.
 type CareDayResolver interface {
 	ResolveForDate(ctx context.Context, studentIDs []int64, date calendar.Date) (map[int64]careplan.CareDayStatus, error)
+	ResolvePlannedForRange(ctx context.Context, studentIDs []int64, from, to calendar.Date) (map[int64]map[calendar.Date]careplan.PlannedCareDay, error)
 }
 
 // PickupTimeReader is the retained pickup schedule service's bulk read.

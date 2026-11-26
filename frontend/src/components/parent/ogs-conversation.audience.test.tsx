@@ -26,8 +26,11 @@ vi.mock("~/lib/parent-api", async (importOriginal) => ({
   getChildConversation: mockGetConversation,
   postChildMessage: mockPostMessage,
   listChildThreads: mockListChildThreads,
-  getChildToday: vi.fn(),
-  listMyChildren: vi.fn(() => Promise.resolve([])),
+  getFamilyStart: vi.fn(async () => ({
+    day_remaining_seconds: 86400,
+    day: new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Berlin" }),
+    cards: [],
+  })),
 }));
 
 vi.mock("~/lib/parent-url", () => ({

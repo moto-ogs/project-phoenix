@@ -80,13 +80,16 @@ function heatmapOf(heatmap: {
 export async function fetchTraegerArrivalPickupTimes(
   period: ArrivalPickupPeriod,
 ): Promise<TraegerArrivalPickupTimes> {
-  const times = await bffJson(
-    "org",
-    "GET /traeger/schools/arrival-pickup-times",
-    {
+  return mapTraegerArrivalPickupTimes(
+    await bffJson("org", "GET /traeger/schools/arrival-pickup-times", {
       query: { from: period.from, to: period.to },
-    },
+    }),
   );
+}
+
+export function mapTraegerArrivalPickupTimes(
+  times: traegerSchoolsContract.ArrivalPickupTimes,
+): TraegerArrivalPickupTimes {
   return {
     from: requiredDay(times.from, "arrival_pickup_times.from"),
     to: requiredDay(times.to, "arrival_pickup_times.to"),

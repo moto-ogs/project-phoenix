@@ -66,7 +66,7 @@ vi.mock("next-auth/react", () => ({
   }),
 }));
 
-import TraegerVorlagePage from "./page";
+import TraegerVorlagePage from "./page-content";
 
 const STANDARD = {
   subject: "Rechnung {{rechnungsnummer}}: {{zeitraum}}",

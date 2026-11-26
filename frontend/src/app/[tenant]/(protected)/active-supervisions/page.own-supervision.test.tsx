@@ -13,6 +13,28 @@ import {
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { ContextSession } from "~/lib/contract/active.generated";
+
+const supervision = vi.hoisted(() => ({
+  ownSessions: [] as ContextSession[],
+  ownSessionsError: undefined as Error | undefined,
+  refresh: vi.fn(async () => undefined),
+}));
+vi.mock("~/lib/supervision-context", () => ({
+  useOptionalSupervision: () => ({
+    ...supervision,
+    overviewEnabled: false,
+    isLoadingSupervision: false,
+  }),
+}));
+const ownSession = (id: string): ContextSession => ({
+  id,
+  room_id: "10",
+  room_name: "Musikraum",
+  activity_name: "Musik",
+  is_own: true,
+});
+
 const state = vi.hoisted(() => ({
   mobile: false,
   permissions: [] as string[],
@@ -33,6 +55,7 @@ vi.mock("~/lib/hooks/use-media-query", async (importOriginal) => ({
 
 const mockPush = vi.fn();
 vi.mock("next/navigation", () => ({
+  usePathname: () => "/active-supervisions",
   useRouter: () => ({ push: mockPush, replace: vi.fn() }),
   useSearchParams: () => ({
     get: (key: string) => (key === "session" ? state.sessionParam : null),
@@ -120,7 +143,7 @@ import {
 import { timetableOperationsApi } from "~/lib/timetable-operations-api";
 import { ToastProvider } from "~/contexts/ToastContext";
 import { TEST_CLOCK_INSTANT } from "~/test/clock";
-import MeinRaumPage from "./page";
+import MeinRaumPage from "./page-content";
 
 function render(ui: Parameters<typeof rtlRender>[0]) {
   return rtlRender(ui, { wrapper: ToastProvider });
@@ -209,6 +232,8 @@ describe("MeinRaumPage without groups:read (#4573)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     swrKeys.length = 0;
+    supervision.ownSessions = [];
+    supervision.ownSessionsError = undefined;
     state.mobile = false;
     state.permissions = ["schedules:read"];
     state.sessionParam = "500";
@@ -223,7 +248,6 @@ describe("MeinRaumPage without groups:read (#4573)", () => {
     });
     vi.mocked(useSWRAuth).mockImplementation(((key: string | null) => {
       swrKeys.push(key);
-      if (key === "active-supervisions-own-sessions") return swr([]);
       if (key === "active-supervisions-own-day") {
         return swr([runningBlock, otherRunningBlock]);
       }
@@ -262,6 +286,7 @@ describe("MeinRaumPage without groups:read (#4573)", () => {
     expect(
       swrKeys.some((key) => key?.startsWith("active-supervision-dashboard")),
     ).toBe(false);
+    expect(swrKeys).not.toContain("active-supervisions-own-sessions");
     expect(global.fetch).not.toHaveBeenCalled();
     expect(screen.queryByText("Fremder Block")).not.toBeInTheDocument();
   });
@@ -270,11 +295,8 @@ describe("MeinRaumPage without groups:read (#4573)", () => {
     const rosterError = new ApiError("roster unavailable", 503);
     const mutateDay = vi.fn().mockResolvedValue(undefined);
     const mutateUpcoming = vi.fn().mockResolvedValue(undefined);
-    const mutateOwnSessions = vi.fn().mockResolvedValue(undefined);
     const mutateRoster = vi.fn().mockResolvedValue(undefined);
     vi.mocked(useSWRAuth).mockImplementation(((key: string | null) => {
-      if (key === "active-supervisions-own-sessions")
-        return { ...swr([]), mutate: mutateOwnSessions };
       if (key === "active-supervisions-own-day") {
         return { ...swr([runningBlock]), mutate: mutateDay };
       }
@@ -295,11 +317,10 @@ describe("MeinRaumPage without groups:read (#4573)", () => {
       expect(mutateDay).toHaveBeenCalledOnce();
       expect(mutateUpcoming).toHaveBeenCalledOnce();
       expect(mutateRoster).toHaveBeenCalledOnce();
-      expect(mutateOwnSessions).toHaveBeenCalledOnce();
+      expect(supervision.refresh).toHaveBeenCalledWith(["sessions"]);
     });
 
     vi.mocked(useSWRAuth).mockImplementation(((key: string | null) => {
-      if (key === "active-supervisions-own-sessions") return swr([]);
       if (key === "active-supervisions-own-day") return swr([runningBlock]);
       if (key === "active-supervisions-own-planned-now") return swr([]);
       return swr(key === "timetable-roster-99" ? roster : undefined);
@@ -333,12 +354,10 @@ describe("MeinRaumPage without groups:read (#4573)", () => {
 
   it("opens an additional supervision from the sidebar without a planned assignment", async () => {
     state.sessionParam = "501";
+    supervision.ownSessions = [ownSession("501")];
     vi.mocked(useSWRAuth).mockImplementation(((key: string | null) => {
       if (key === "active-supervisions-own-day") return swr([]);
       if (key === "active-supervisions-own-planned-now") return swr([]);
-      if (key === "active-supervisions-own-sessions") {
-        return swr([{ id: "501", name: "AG Musik" }]);
-      }
       if (key === "timetable-roster-active-group-501") {
         return swr({
           ...roster,
@@ -360,15 +379,11 @@ describe("MeinRaumPage without groups:read (#4573)", () => {
   it("includes additional supervisions once and switches between them on mobile", async () => {
     state.mobile = true;
     state.sessionParam = "501";
+    supervision.ownSessions = [ownSession("500"), ownSession("501")];
     vi.mocked(useSWRAuth).mockImplementation(((key: string | null) => {
       if (key === "active-supervisions-own-day")
         return swr([runningBlock, otherRunningBlock]);
       if (key === "active-supervisions-own-planned-now") return swr([]);
-      if (key === "active-supervisions-own-sessions")
-        return swr([
-          { id: "500", name: "Aufsicht" },
-          { id: "501", name: "Aufsicht" },
-        ]);
       if (key === "timetable-roster-98")
         return swr({
           ...roster,
@@ -398,7 +413,6 @@ describe("MeinRaumPage without groups:read (#4573)", () => {
       if (key === "active-supervisions-own-day")
         return swr([otherRunningBlock]);
       if (key === "active-supervisions-own-planned-now") return swr([]);
-      if (key === "active-supervisions-own-sessions") return swr([]);
       return swr(undefined);
     }) as never);
 
@@ -413,16 +427,10 @@ describe("MeinRaumPage without groups:read (#4573)", () => {
   });
 
   it("reports a failed own-supervision request and retries it", async () => {
-    const retry = vi.fn().mockResolvedValue(undefined);
+    supervision.ownSessionsError = new ApiError("unavailable", 503);
     vi.mocked(useSWRAuth).mockImplementation(((key: string | null) => {
       if (key === "active-supervisions-own-day") return swr([runningBlock]);
       if (key === "active-supervisions-own-planned-now") return swr([]);
-      if (key === "active-supervisions-own-sessions")
-        return {
-          ...swr(undefined),
-          error: new ApiError("unavailable", 503),
-          mutate: retry,
-        };
       return swr(key === "timetable-roster-99" ? roster : undefined);
     }) as never);
 
@@ -432,13 +440,14 @@ describe("MeinRaumPage without groups:read (#4573)", () => {
     // The load error renders after the roster.
     expect(await screen.findByRole("alert")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
-    await waitFor(() => expect(retry).toHaveBeenCalledOnce());
+    await waitFor(() =>
+      expect(supervision.refresh).toHaveBeenCalledWith(["sessions"]),
+    );
   });
 
   it("names the missing supervision when no own block runs", async () => {
     vi.mocked(useSWRAuth).mockImplementation(((key: string | null) => {
       swrKeys.push(key);
-      if (key === "active-supervisions-own-sessions") return swr([]);
       if (key === "active-supervisions-own-day") {
         return swr([otherRunningBlock]);
       }
@@ -474,7 +483,6 @@ describe("MeinRaumPage without groups:read (#4573)", () => {
       key: string | null,
       fetcher: () => Promise<unknown>,
     ) => {
-      if (key === "active-supervisions-own-sessions") return swr([]);
       if (key === "active-supervisions-own-day") return swr([]);
       if (key === "active-supervisions-own-planned-now") return swr([]);
       // The past blocks list reads through the shared cache once opened.

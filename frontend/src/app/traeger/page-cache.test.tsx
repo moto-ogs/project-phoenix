@@ -15,10 +15,10 @@ import { traegerKeys } from "~/lib/swr/traeger-keys";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
 import { resumeSWRSession } from "~/lib/swr/scope";
-import PeriodsPage from "./ferien/page";
-import PeriodPage from "./ferien/[id]/page";
-import NewPeriodPage from "./ferien/neu/page";
-import FormPage from "./ferien/[id]/formular/page";
+import PeriodsPage from "./ferien/page-content";
+import PeriodPage from "./ferien/[id]/page-content";
+import NewPeriodPage from "./ferien/neu/page-content";
+import FormPage from "./ferien/[id]/formular/page-content";
 
 vi.unmock("swr");
 const { api, identity, announce, discardUploads } = vi.hoisted(() => ({

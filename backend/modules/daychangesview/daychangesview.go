@@ -36,7 +36,7 @@ const (
 	// SourceNotices is Hinweise der Leitung: the notices that apply today.
 	SourceNotices Source = "notices"
 	// SourceClosingDays is Schule: the closing days of the school and of its
-	// current Träger (#7664).
+	// current Träger (#7664) and the opening changes of the school (#8170).
 	SourceClosingDays Source = "closing_days"
 	// SourceActivities is Stundenplan: cancelled, reinstated, moved and
 	// covered activity blocks (#7662).
@@ -101,6 +101,9 @@ const (
 	KindChildGoesAlone Kind = "child_goes_alone"
 	// KindChildPickupNote: a pickup note for today ("Oma holt ab").
 	KindChildPickupNote Kind = "child_pickup_note"
+	// KindChildPickupPerson: someone else collects a child today (#7655);
+	// Child.PickupPerson names the person.
+	KindChildPickupPerson Kind = "child_pickup_person"
 	// KindChildSummary: the children of one group or class outside the
 	// caller's groups, with the numbers and the rows to unfold.
 	KindChildSummary Kind = "child_summary"
@@ -109,6 +112,10 @@ const (
 	// KindClosingDay: the school is closed today, by its own closing day or
 	// one of its Träger (#7664).
 	KindClosingDay Kind = "closing_day"
+	// KindOpeningChanged: the school opens or closes at another time today,
+	// by an opening change of the school (#8170). Opening carries the name
+	// and the times; from the Schule source like the closing days.
+	KindOpeningChanged Kind = "opening_changed"
 	// KindActivityCancelled: an activity block does not take place today.
 	KindActivityCancelled Kind = "activity_cancelled"
 	// KindActivityReinstated: its cancellation was taken back.
@@ -217,7 +224,8 @@ type Link struct {
 
 // Child is the child an entry concerns, with what is different today:
 // Status for child_absent, PickupTime ("15:04"; nil: the child does not
-// come) for child_pickup_changed, Note for child_pickup_note.
+// come) for child_pickup_changed, Note for child_pickup_note, PickupPerson
+// for child_pickup_person.
 type Child struct {
 	StudentID  ident.ID     `json:"student_id"`
 	FirstName  string       `json:"first_name"`
@@ -225,6 +233,20 @@ type Child struct {
 	Status     *ChildStatus `json:"status"`
 	PickupTime *string      `json:"pickup_time"`
 	Note       *string      `json:"note"`
+	// AfterClosing marks a pickup time after today's changed closing time
+	// (#8170): the pickup stays as entered, the child's day of the parents
+	// shows the conflict. Not on the staff wire yet: its sources read no
+	// opening change (follow-up of #8170).
+	AfterClosing bool `json:"-"`
+	// PickupPerson is who collects the child today (#7655).
+	PickupPerson *ChildPickupPerson `json:"pickup_person"`
+}
+
+// ChildPickupPerson is who collects a child on the day. OneTime marks a
+// person without a standing pickup permission: the staff check the ID card.
+type ChildPickupPerson struct {
+	Name    string `json:"name"`
+	OneTime bool   `json:"one_time"`
 }
 
 // ChildItem is one row of a child summary.
@@ -241,6 +263,7 @@ type ChildCounts struct {
 	PickupChanged int `json:"pickup_changed"`
 	GoesAlone     int `json:"goes_alone"`
 	PickupNote    int `json:"pickup_note"`
+	PickupPerson  int `json:"pickup_person"`
 }
 
 // ChildSummary sums up the children of one group (Entry.Group) or, for
@@ -345,6 +368,8 @@ type SourceEntry struct {
 	Notice *DayNotice
 	// Closing is set on KindClosingDay only.
 	Closing *DayClosing
+	// Opening is set on KindOpeningChanged only (#8170).
+	Opening *DayOpening
 	// Activity is set on the activity kinds (#7662) and on the block kinds of
 	// the Personal source (#7675). Room is where the block
 	// takes place, PreviousRoom where its series plans it when it moved.
@@ -355,6 +380,9 @@ type SourceEntry struct {
 	Class *DayClass
 	// Appointment is set on the appointment kinds only (#7663).
 	Appointment *DayAppointment
+	// EnteredByYou marks a change the reading guardian entered itself, in
+	// the child's day of the parents portal (#7671).
+	EnteredByYou bool
 }
 
 // Entry is one change to regular operation of the day.
@@ -377,6 +405,9 @@ type Entry struct {
 	Count    *int        `json:"count"`
 	Notice   *DayNotice  `json:"notice"`
 	Closing  *DayClosing `json:"closing"`
+	// Opening: see SourceEntry. Only the child's day of the parents reads
+	// opening changes so far (#8170); the staff wire does not carry it.
+	Opening *DayOpening `json:"-"`
 	// Child is set on the child kinds, ChildSummary on child_summary.
 	Child        *Child        `json:"child"`
 	ChildSummary *ChildSummary `json:"child_summary"`
@@ -388,6 +419,8 @@ type Entry struct {
 	Class *DayClass `json:"class"`
 	// Appointment is set on the appointment kinds only (#7663).
 	Appointment *DayAppointment `json:"appointment"`
+	// EnteredByYou: see SourceEntry. Never set in the staff overview.
+	EnteredByYou bool `json:"-"`
 }
 
 // SourceStatus reports one source.
@@ -582,6 +615,7 @@ func (v *view) Today(ctx context.Context) (Overview, error) {
 		}
 	}
 	overview.Entries = foldCoveredBlocks(overview.Entries)
+	markPickupsAfterClosing(overview.Entries)
 	sortEntries(overview.Entries)
 	return overview, nil
 }
@@ -654,9 +688,9 @@ func toEntry(entry SourceEntry) Entry {
 		Kind: entry.Kind, Section: section, AllDay: entry.StartsAt == nil, HalfDay: entry.HalfDay,
 		Since: entry.Since, Until: entry.Until, StartsAt: entry.StartsAt, EndsAt: entry.EndsAt,
 		People: people, Group: entry.Group, Link: entry.Link, Count: entry.Count, Notice: entry.Notice,
-		Closing: entry.Closing, Child: entry.Child, ChildSummary: entry.ChildSummary,
+		Closing: entry.Closing, Opening: entry.Opening, Child: entry.Child, ChildSummary: entry.ChildSummary,
 		Activity: entry.Activity, Room: entry.Room, PreviousRoom: entry.PreviousRoom,
-		Class: entry.Class, Appointment: entry.Appointment,
+		Class: entry.Class, Appointment: entry.Appointment, EnteredByYou: entry.EnteredByYou,
 	}
 }
 
@@ -690,8 +724,9 @@ func sortEntries(entries []Entry) {
 
 func rank(entry Entry) int {
 	switch {
-	// The school is closed: that stands above every other change (#7664).
-	case entry.Kind == KindClosingDay:
+	// The school is closed or opens at other times: that stands above every
+	// other change (#7664, #8170).
+	case entry.Kind == KindClosingDay, entry.Kind == KindOpeningChanged:
 		return -2
 	case entry.Notice != nil && entry.Notice.RequiresAcknowledgement && !entry.Notice.Acknowledged:
 		return -1

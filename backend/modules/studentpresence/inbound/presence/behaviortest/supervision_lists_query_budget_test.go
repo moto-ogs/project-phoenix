@@ -16,7 +16,7 @@ import (
 )
 
 // TestSupervisionListsQueryBudget covers the basic supervision DTO routes,
-// not /supervisors/all or /groups/{id}/supervisors and their different reads.
+// not /groups/{id}/supervisors and its different reads.
 func TestSupervisionListsQueryBudget(t *testing.T) {
 	t.Parallel()
 	type sample struct {

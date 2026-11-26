@@ -558,7 +558,7 @@ function RebookingEditor({
         />
       ) : null}
       <p className="text-sm text-gray-700">
-        Wähle je Woche ein Zeitmodell. Gibt es eine Woche an mehreren Schulen,
+        Wähle pro Woche ein Zeitmodell. Gibt es eine Woche an mehreren Schulen,
         wähle auch die Schule. Mindestens eine Woche bleibt gebucht.
       </p>
       <ul className="space-y-3">
@@ -695,7 +695,7 @@ function RebookingEditor({
                     Mit Mittagessen
                     <span className="text-gray-600">
                       {" "}
-                      ({formatEuro(bookedWeek.lunchPriceCents)} je Essen)
+                      ({formatEuro(bookedWeek.lunchPriceCents)} pro Essen)
                     </span>
                   </span>
                 </label>

@@ -348,7 +348,7 @@ export function CarePriceListModal({
             error={formErrors.fieldError("valid_from")}
           />
           <p className="text-sm text-gray-600 sm:pb-2.5">
-            Monatspreise je Modul. Ein leeres Feld beim 1. Kind setzt ab diesem
+            Monatspreise pro Modul. Ein leeres Feld beim 1. Kind setzt ab diesem
             Monat keinen Preis. Dann gilt der Preis davor.
           </p>
         </div>

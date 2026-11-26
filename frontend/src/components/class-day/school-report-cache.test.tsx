@@ -18,6 +18,10 @@ import { ApiError } from "~/lib/api-error";
 import type { ClassDayReport } from "~/lib/class-day-api";
 import { ClassDayOverview } from "./class-day-overview";
 import { ClassDayClass } from "./class-day-class";
+import {
+  CLASS_DAY_REFRESH_DEBOUNCE_MS,
+  CLASS_DAY_REFRESH_EVENT,
+} from "./use-class-day-refresh";
 
 vi.unmock("swr");
 const identity = vi.hoisted(() => ({
@@ -65,9 +69,14 @@ const report: ClassDayReport = {
     },
   ],
 };
-function signIn(id = "A", tenantId = "1") {
+function signIn(id = "A", tenantId = "1", admin = false) {
   identity.session = {
-    user: { id, tenantId, scope: "school" },
+    user: {
+      id,
+      tenantId,
+      scope: "school",
+      permissions: admin ? ["class_day:all_classes"] : [],
+    },
     expires: "2099-01-01",
   } as Session;
 }
@@ -83,9 +92,17 @@ function setup() {
     weekend_follows_friday: false,
   });
   const fetchClassDay = vi.fn().mockResolvedValue(report);
+  const fetchAssignedClasses = vi
+    .fn()
+    .mockResolvedValue(assignedReport(["4a", "4b"]));
   function Wrapper({ children }: Readonly<{ children: React.ReactNode }>) {
     return (
-      <SWRConfig value={{ provider: () => cache, shouldRetryOnError: false }}>
+      <SWRConfig
+        value={{
+          provider: () => cache,
+          shouldRetryOnError: false,
+        }}
+      >
         <ToastProvider>
           <SWRScopeBoundary />
           <Revalidation />
@@ -99,12 +116,34 @@ function setup() {
     cache,
     fetchClasses,
     fetchClassDay,
+    fetchAssignedClasses,
+    refreshAssigned: () =>
+      invalidate(
+        (key) => key === schoolPortalKeys.assignedClasses(report.date),
+      ),
     refresh: () =>
       invalidate((key) => key.startsWith("school-class-day-report-")),
     refreshSchoolDay: () =>
       invalidate((key) => key === schoolPortalKeys.schoolDay("2026-09-09")),
   };
 }
+function assignedReport(
+  classes: string[],
+): schoolClassDayContract.AssignedClassesReport {
+  return {
+    date: report.date,
+    school_day: true,
+    weekday: "wed",
+    enrollment_known: true,
+    classes: classes.map((schoolClass) => ({
+      school_class: schoolClass,
+      changes: 0,
+      totals: report.totals,
+      trips: [],
+    })),
+  };
+}
+
 beforeEach(() => {
   signIn();
   identity.search = "tag=2026-09-09";
@@ -121,6 +160,7 @@ describe("school report cache", () => {
   ] as const)(
     "handles %s post-write reload returning %s (retry: %s)",
     async (reader, status, retry) => {
+      if (reader === "school") signIn("A", "1", true);
       const options = setup();
       const write = vi.fn().mockResolvedValue(undefined);
       const totals = {
@@ -242,70 +282,144 @@ describe("school report cache", () => {
     },
   );
 
-  it("opens the report loaded by the overview immediately, with the same load key", async () => {
+  it.each([1, 3, 6])(
+    "loads one aggregate for %s assigned classes and fetches the sheet only when opened",
+    async (count) => {
+      const options = setup();
+      options.fetchAssignedClasses.mockResolvedValue(
+        assignedReport(
+          Array.from({ length: count }, (_, i) => String(i + 4) + "a"),
+        ),
+      );
+      const view = render(<ClassDayOverview {...options} />, options);
+      // Anker: Die erwarteten Klassenkacheln stehen mit geladenen Zahlen.
+      expect(await screen.findAllByText(/1 Kinder · 1 bleiben/)).toHaveLength(
+        count,
+      );
+      expect(options.fetchAssignedClasses).toHaveBeenCalledExactlyOnceWith(
+        report.date,
+      );
+      expect(options.fetchClasses).not.toHaveBeenCalled();
+      expect(options.fetchClassDay).not.toHaveBeenCalled();
+      expect(screen.queryByText("Klassentag, Klara")).not.toBeInTheDocument();
+
+      view.rerender(<ClassDayClass schoolClass="4a" {...options} />);
+      expect(await screen.findByText("Klassentag, Klara")).toBeVisible();
+      expect(options.fetchClassDay).toHaveBeenCalledExactlyOnceWith(
+        "4a",
+        report.date,
+      );
+    },
+  );
+
+  it("debounces live changes into one aggregate read and defers hidden refreshes", async () => {
     const options = setup();
-    const view = render(<ClassDayOverview {...options} />, options);
-    await screen.findAllByText(/1 Kinder · 1 bleiben/);
-    expect(options.fetchClassDay).toHaveBeenCalledTimes(2);
-    options.fetchClasses.mockImplementation(() => new Promise(() => undefined));
-    options.fetchClassDay.mockImplementation(
-      () => new Promise(() => undefined),
-    );
-    view.rerender(<ClassDayClass schoolClass="4a" {...options} />);
-    expect(screen.getByText("Klassentag, Klara")).toBeVisible();
-    expect(screen.queryByText("Wird geladen…")).not.toBeInTheDocument();
-    expect(options.fetchClasses).toHaveBeenCalledTimes(1);
-    expect(options.fetchClassDay).toHaveBeenCalledTimes(2);
+    const hidden = vi.spyOn(document, "hidden", "get").mockReturnValue(false);
+    render(<ClassDayOverview {...options} />, options);
+    expect(
+      await screen.findByRole("link", { name: /4a 1 Kinder/ }),
+    ).toBeVisible();
+    vi.useFakeTimers();
+    const burst = () => {
+      for (let i = 0; i < 3; i++)
+        fireEvent(window, new Event(CLASS_DAY_REFRESH_EVENT));
+    };
+    const debounce = () =>
+      act(async () => {
+        await vi.advanceTimersByTimeAsync(CLASS_DAY_REFRESH_DEBOUNCE_MS);
+      });
+
+    burst();
+    await debounce();
+    expect(options.fetchAssignedClasses).toHaveBeenCalledTimes(2);
+    hidden.mockReturnValue(true);
+    burst();
+    await debounce();
+    expect(options.fetchAssignedClasses).toHaveBeenCalledTimes(2);
+
+    hidden.mockReturnValue(false);
+    fireEvent(document, new Event("visibilitychange"));
+    await debounce();
+    expect(options.fetchAssignedClasses).toHaveBeenCalledTimes(3);
+    hidden.mockRestore();
   });
 
-  it.each([
-    ["overview", 403],
-    ["class", 403],
-    ["overview", 503],
-    ["class", 503],
-  ] as const)(
-    "handles a %s refresh returning %s without exposing refused reports",
-    async (reader, status) => {
+  it("drops an old aggregate response when authorization changes mid-read", async () => {
+    const options = setup();
+    const view = render(<ClassDayOverview {...options} />, options);
+    expect(
+      await screen.findByRole("link", { name: /4a 1 Kinder/ }),
+    ).toBeVisible();
+
+    let finish!: (value: schoolClassDayContract.AssignedClassesReport) => void;
+    options.fetchAssignedClasses.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    );
+    let pending!: Promise<unknown>;
+    act(() => {
+      pending = options.refreshAssigned();
+    });
+    await waitFor(() =>
+      expect(options.fetchAssignedClasses).toHaveBeenCalledTimes(2),
+    );
+    options.fetchAssignedClasses.mockResolvedValue(assignedReport(["5c"]));
+    signIn("A", "2");
+    view.rerender(<ClassDayOverview {...options} />);
+    expect(
+      await screen.findByRole("link", { name: /5c 1 Kinder/ }),
+    ).toBeVisible();
+
+    await act(async () => {
+      finish(assignedReport(["4a", "4b"]));
+      await pending;
+    });
+    // Anker: Die Antwort der aktuellen Schulsitzung bleibt sichtbar.
+    expect(screen.getByRole("link", { name: /5c 1 Kinder/ })).toBeVisible();
+    expect(
+      screen.queryByRole("link", { name: /4a 1 Kinder/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it.each([403, 503])(
+    "handles a refused or transient class read (%s) even while re-opening",
+    async (status) => {
       const options = setup();
       const view = render(
-        reader === "overview" ? (
-          <ClassDayOverview {...options} />
-        ) : (
-          <ClassDayClass schoolClass="4a" {...options} />
-        ),
+        <ClassDayClass schoolClass="4a" {...options} />,
         options,
       );
-      // Anker: Der erfolgreiche Erstabruf zeigt den später entzogenen Report.
-      if (reader === "overview")
-        expect(await screen.findAllByText(/1 Kinder · 1 bleiben/)).toHaveLength(
-          2,
-        );
-      else expect(await screen.findByText("Klassentag, Klara")).toBeVisible();
+      expect(await screen.findByText("Klassentag, Klara")).toBeVisible();
 
       const failure = new ApiError("Report refresh failed", status);
-      options.fetchClassDay.mockImplementation((klass: string) =>
-        klass === "4a" ? Promise.reject(failure) : Promise.resolve(report),
+      let refuse!: (failure: ApiError) => void;
+      options.fetchClassDay.mockImplementationOnce(
+        () =>
+          new Promise((_resolve, reject) => {
+            refuse = reject;
+          }),
       );
-      await act(async () => {
-        await options.refresh();
+      let pending!: Promise<unknown>;
+      act(() => {
+        pending = options.refresh();
       });
-      if (status === 403)
-        expect(await screen.findByRole("alert")).toBeVisible();
-      const cachedReport = [...options.cache.entries()].find(([key]) =>
-        key.endsWith(`:${schoolPortalKeys.classDayReport("4a", "2026-09-09")}`),
+      await waitFor(() =>
+        expect(options.fetchClassDay).toHaveBeenCalledTimes(2),
+      );
+      expect(screen.getByText("Klassentag, Klara")).toBeVisible();
+      await act(async () => {
+        refuse(failure);
+        await pending;
+      });
+      const cached = [...options.cache.entries()].find(([key]) =>
+        key.endsWith(":" + schoolPortalKeys.classDayReport("4a", report.date)),
       )?.[1];
-      expect(cachedReport).toBeDefined();
-      expect(cachedReport.data).toBe(status === 403 ? undefined : report);
-      expect(cachedReport.error).toBe(failure);
-      if (reader === "overview")
-        expect(screen.getAllByText(/1 Kinder · 1 bleiben/)).toHaveLength(
-          status === 403 ? 1 : 2,
-        );
-      if (reader === "class" && status === 403)
-        expect(screen.queryByText("Klassentag, Klara")).not.toBeInTheDocument();
+      expect(cached).toBeDefined();
+      expect(cached.data).toBe(status === 403 ? undefined : report);
+      expect(cached.error).toBe(failure);
 
-      // Reopening must not reveal a refused cached report, even while the
-      // next request is pending. Transient failures retain the warm report.
       options.fetchClassDay.mockImplementation(
         () => new Promise(() => undefined),
       );
@@ -313,189 +427,48 @@ describe("school report cache", () => {
         <ClassDayClass key="reopened" schoolClass="4a" {...options} />,
       );
       if (status === 403) {
-        // Anker: Der neue Leser zeigt weiter den echten Zugriffsfehler.
+        // Anker: Der neue Leser zeigt den echten Zugriffsfehler.
         expect(await screen.findByRole("alert")).toBeVisible();
         expect(screen.queryByText("Klassentag, Klara")).not.toBeInTheDocument();
       } else {
-        // Anker: Der neue Leser behält den geladenen Report ohne Fehlerkarte.
+        // Anker: Ein temporärer Fehler lässt den bestätigten Report sichtbar.
         expect(screen.getByText("Klassentag, Klara")).toBeVisible();
         expect(screen.queryByRole("alert")).not.toBeInTheDocument();
       }
     },
   );
 
-  it("keeps both loaded summaries and their links after background report failures", async () => {
-    const options = setup();
-    render(<ClassDayOverview {...options} />, options);
-    expect(await screen.findAllByText(/1 Kinder · 1 bleiben/)).toHaveLength(2);
-    const links = screen
-      .getAllByText(/1 Kinder · 1 bleiben/)
-      .map((node) => node.closest("a"));
-    await act(async () => {
-      await import("~/lib/error-presentation");
-    });
-    options.fetchClassDay.mockImplementation(async () => {
-      throw new ApiError("unavailable", 503);
-    });
-    await act(async () => {
-      await options.refresh();
-    });
-    // Anker: beide vorher geladenen Zahlen bleiben an denselben Links sichtbar.
-    expect(screen.getAllByText(/1 Kinder · 1 bleiben/)).toHaveLength(2);
-    expect(
-      screen
-        .getAllByText(/1 Kinder · 1 bleiben/)
-        .map((node) => node.closest("a")),
-    ).toEqual(links);
-    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
-  });
+  it.each([403, 503])(
+    "gates cached aggregate data after a refresh error (%s)",
+    async (status) => {
+      const options = setup();
+      render(<ClassDayOverview {...options} />, options);
+      expect(
+        await screen.findByRole("link", { name: /4a 1 Kinder/ }),
+      ).toBeVisible();
 
-  it("shows one shared error outside the tiles and retries every missing report", async () => {
-    const options = setup();
-    options.fetchClassDay.mockImplementation(async () => {
-      throw new ApiError("unavailable", 503);
-    });
-    await act(async () => {
-      await import("~/lib/error-presentation");
-    });
-    render(<ClassDayOverview {...options} />, options);
-    const failedLinks = await waitFor(() => {
-      const links = screen
-        .getAllByText("Konnte nicht geladen werden")
-        .map((node) => node.closest("a")!);
-      expect(links).toHaveLength(2);
-      return links;
-    });
-    const errors = await screen.findAllByRole("alert");
-    expect(errors).toHaveLength(1);
-    for (const link of failedLinks)
-      expect(link).not.toContainElement(errors[0]!);
-    options.fetchClassDay.mockResolvedValue(report);
-    fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
-    // Anker: ein Retry stellt beide Klassen wieder her, ohne neue Kacheln.
-    expect(await screen.findAllByText(/1 Kinder · 1 bleiben/)).toHaveLength(2);
-    expect(
-      screen
-        .getAllByText(/1 Kinder · 1 bleiben/)
-        .map((node) => node.closest("a")),
-    ).toEqual(failedLinks);
-    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
-    expect(options.fetchClassDay).toHaveBeenCalledTimes(4);
-  });
-
-  it("separates denied and unavailable classes and retries only the unavailable report", async () => {
-    const options = setup();
-    options.fetchClasses.mockResolvedValue({
-      classes: ["4a", "4b", "4c"],
-      weekend_follows_friday: false,
-    });
-    let recovered = false;
-    options.fetchClassDay.mockImplementation(async (klass: string) => {
-      if (klass === "4a") throw new ApiError("denied", 403);
-      if (klass === "4b" && !recovered) throw new ApiError("down", 503);
-      return report;
-    });
-    render(<ClassDayOverview {...options} />, options);
-    const healthy = await screen.findByRole("link", {
-      name: /Klasse 4c.*1 Kinder/,
-    });
-    const denied = (
-      await screen.findByText(
-        /Für die Übersicht für Klasse 4a fehlt dir die Berechtigung/,
-      )
-    ).closest<HTMLElement>('[role="alert"]')!;
-    const unavailable = (
-      await screen.findByText(
-        /Die Übersicht für Klasse 4b ist gerade nicht erreichbar/,
-      )
-    ).closest<HTMLElement>('[role="alert"]')!;
-    expect(screen.getAllByRole("alert")).toHaveLength(2);
-    expect(
-      within(denied).queryByRole("button", { name: "Wiederholen" }),
-    ).not.toBeInTheDocument();
-    const retry = within(unavailable).getByRole("button", {
-      name: "Wiederholen",
-    });
-    expect(denied).not.toHaveTextContent("4c");
-    expect(unavailable).not.toHaveTextContent("4c");
-    recovered = true;
-    fireEvent.click(retry);
-    expect(
-      await screen.findByRole("link", { name: /Klasse 4b.*1 Kinder/ }),
-    ).toBeVisible();
-    expect(screen.getByRole("link", { name: /Klasse 4c.*1 Kinder/ })).toBe(
-      healthy,
-    );
-    expect(screen.getAllByRole("alert")).toHaveLength(1);
-    expect(options.fetchClassDay.mock.calls.map(([klass]) => klass)).toEqual([
-      "4a",
-      "4b",
-      "4c",
-      "4b",
-    ]);
-  });
-
-  it("does not show a class heading or grid after the initial class-list load fails", async () => {
-    const options = setup();
-    options.fetchClasses.mockRejectedValue(new ApiError("down", 503));
-    render(<ClassDayOverview {...options} />, options);
-    const failure = await screen.findByRole("alert");
-    expect(failure).toHaveTextContent(
-      "Die Liste deiner Klassen ist gerade nicht erreichbar",
-    );
-    expect(
-      within(failure).getByRole("button", { name: "Wiederholen" }),
-    ).toBeVisible();
-    expect(
-      screen.queryByRole("heading", { name: "Deine Klassen" }),
-    ).not.toBeInTheDocument();
-    expect(
-      failure.parentElement?.querySelector(".grid"),
-    ).not.toBeInTheDocument();
-    expect(options.fetchClassDay).not.toHaveBeenCalled();
-    options.fetchClasses.mockResolvedValue({
-      classes: ["4a", "4b"],
-      weekend_follows_friday: false,
-    });
-    fireEvent.click(
-      within(failure).getByRole("button", { name: "Wiederholen" }),
-    );
-    expect(
-      await screen.findByRole("heading", { name: "Deine Klassen" }),
-    ).toBeVisible();
-    expect(await screen.findAllByText(/1 Kinder · 1 bleiben/)).toHaveLength(2);
-    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
-  });
-
-  it("groups denied reports without a retry and recovers on later revalidation", async () => {
-    const options = setup();
-    options.fetchClassDay.mockImplementation(async () => {
-      throw new ApiError("denied", 403);
-    });
-    render(<ClassDayOverview {...options} />, options);
-    expect(
-      await screen.findAllByText("Konnte nicht geladen werden"),
-    ).toHaveLength(2);
-    expect(await screen.findAllByRole("alert")).toHaveLength(1);
-    // Anker: die betroffenen Klassen stehen da, aber keine verweigerten Zahlen.
-    expect(screen.getByRole("link", { name: /Klasse 4a/ })).toBeVisible();
-    expect(screen.getByRole("link", { name: /Klasse 4b/ })).toBeVisible();
-    expect(
-      screen.queryByRole("button", { name: "Wiederholen" }),
-    ).not.toBeInTheDocument();
-    expect(screen.queryByText(/1 Kinder · 1 bleiben/)).not.toBeInTheDocument();
-    options.fetchClassDay.mockResolvedValue(report);
-    await act(async () => {
-      await options.refresh();
-    });
-    // Anker: neue erlaubte Antworten heben den Entzug auf, nicht alte Daten.
-    expect(screen.getAllByText(/1 Kinder · 1 bleiben/)).toHaveLength(2);
-    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
-  });
+      options.fetchAssignedClasses.mockRejectedValue(
+        new ApiError("Overview refresh failed", status),
+      );
+      await act(async () => {
+        await options.refreshAssigned();
+      });
+      if (status === 403) {
+        // Anker: Die Fehlerkarte zeigt den abgelehnten Zugriff.
+        expect(await screen.findByRole("alert")).toBeVisible();
+        expect(
+          screen.queryByRole("link", { name: /4a 1 Kinder/ }),
+        ).not.toBeInTheDocument();
+      } else {
+        expect(screen.getByRole("link", { name: /4a 1 Kinder/ })).toBeVisible();
+      }
+    },
+  );
 
   it.each([403, 503])(
     "handles school-day revalidation returning %s without retaining refused children",
     async (status) => {
+      signIn("A", "1", true);
       const options = setup();
       identity.search = "tag=2026-09-09&liste=kinder";
       options.fetchClasses.mockResolvedValue({
@@ -606,17 +579,6 @@ describe("school report cache", () => {
       } else expect(screen.getByText("Klassentag, Klara")).toBeVisible();
     },
   );
-
-  it("starts all class reports in parallel without waiting for another report", async () => {
-    const options = setup();
-    options.fetchClassDay.mockImplementation(
-      () => new Promise(() => undefined),
-    );
-    render(<ClassDayOverview {...options} />, options);
-    await waitFor(() => expect(options.fetchClassDay).toHaveBeenCalledTimes(2));
-    expect(options.fetchClassDay).toHaveBeenCalledWith("4a", "2026-09-09");
-    expect(options.fetchClassDay).toHaveBeenCalledWith("4b", "2026-09-09");
-  });
 
   it.each([
     "account",

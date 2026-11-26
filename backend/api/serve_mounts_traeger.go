@@ -86,8 +86,8 @@ type TraegerAudit struct {
 // #4649) at /traeger: the public sign-in and the Träger route group, which
 // accepts only Träger sessions. Token refresh and logout go through the
 // shared scope-preserving /auth/refresh and /auth/logout.
-func mountTraegerPortalRoutes(root chi.Router, limiters authRateLimiters, identity TraegerPortalIdentity, organizations organizationtenancy.TraegerMembershipQuery, persons TraegerPersons, staff TraegerStaff, audit TraegerAudit, settings TraegerPortalSettings, schoolSettings owners.ResponsibilitySchoolSettings, healthData enrollment.HolidayHealthCipher, holidayCalendar enrollment.HolidaySchoolCalendar, holidayMail enrollment.TraegerMailOutbox, holidayMails enrollment.HolidayMailStates, holidayTraeger enrollment.HolidayTraegerDirectory, statistics studentpresence.StatisticsReports, traegerModules TraegerBookedModules, today func() calendar.Date, now func() time.Time, calendarSchools traegercalendar.Schools) error {
-	portal, err := NewTraegerPortalHTTP(identity, organizations, persons, staff, audit, settings, schoolSettings, healthData, holidayCalendar, holidayMail, holidayMails, holidayTraeger, statistics, traegerModules, today, now, calendarSchools)
+func mountTraegerPortalRoutes(root chi.Router, limiters authRateLimiters, identity TraegerPortalIdentity, organizations organizationtenancy.TraegerMembershipQuery, persons TraegerPersons, staff TraegerStaff, audit TraegerAudit, settings TraegerPortalSettings, schoolSettings owners.ResponsibilitySchoolSettings, healthData enrollment.HolidayHealthCipher, holidayCalendar enrollment.HolidaySchoolCalendar, holidayMail enrollment.TraegerMailOutbox, holidayMails enrollment.HolidayMailStates, holidayTraeger enrollment.HolidayTraegerDirectory, statistics studentpresence.StatisticsReports, traegerModules TraegerBookedModules, today func() calendar.Date, now func() time.Time, calendarSchools traegercalendar.Schools, dayChanges traegerview.DayChangePorts) error {
+	portal, err := NewTraegerPortalHTTP(identity, organizations, persons, staff, audit, settings, schoolSettings, healthData, holidayCalendar, holidayMail, holidayMails, holidayTraeger, statistics, traegerModules, today, now, calendarSchools, dayChanges)
 	if err != nil {
 		return err
 	}
@@ -112,8 +112,9 @@ func mountTraegerPortalRoutes(root chi.Router, limiters authRateLimiters, identi
 // registration files and exports (ADR 0265). calendarSchools
 // names the federal state of each school for the daily attendance report of
 // Mecklenburg-Vorpommern (#4717). traegerModules names the modules the
-// frame of the portal shows as booked (#6052).
-func NewTraegerPortalHTTP(identity TraegerPortalIdentity, organizations organizationtenancy.TraegerMembershipQuery, persons TraegerPersons, staff TraegerStaff, audit TraegerAudit, settings TraegerPortalSettings, schoolSettings owners.ResponsibilitySchoolSettings, healthData enrollment.HolidayHealthCipher, holidayCalendar enrollment.HolidaySchoolCalendar, holidayMail enrollment.TraegerMailOutbox, holidayMails enrollment.HolidayMailStates, holidayTraeger enrollment.HolidayTraegerDirectory, statistics studentpresence.StatisticsReports, traegerModules TraegerBookedModules, today func() calendar.Date, now func() time.Time, calendarSchools traegercalendar.Schools) (*traegerportal.Resource, error) {
+// frame of the portal shows as booked (#6052). dayChanges are the reads of
+// "Heute anders" (#7672).
+func NewTraegerPortalHTTP(identity TraegerPortalIdentity, organizations organizationtenancy.TraegerMembershipQuery, persons TraegerPersons, staff TraegerStaff, audit TraegerAudit, settings TraegerPortalSettings, schoolSettings owners.ResponsibilitySchoolSettings, healthData enrollment.HolidayHealthCipher, holidayCalendar enrollment.HolidaySchoolCalendar, holidayMail enrollment.TraegerMailOutbox, holidayMails enrollment.HolidayMailStates, holidayTraeger enrollment.HolidayTraegerDirectory, statistics studentpresence.StatisticsReports, traegerModules TraegerBookedModules, today func() calendar.Date, now func() time.Time, calendarSchools traegercalendar.Schools, dayChanges traegerview.DayChangePorts) (*traegerportal.Resource, error) {
 	if identity == nil || organizations == nil || persons == nil || staff == nil || audit.Trail == nil || audit.Log == nil || settings == nil || schoolSettings == nil || holidayCalendar == nil || holidayMail == nil || holidayMails == nil || holidayTraeger == nil || statistics == nil || calendarSchools == nil {
 		return nil, errors.New("traeger portal: identity, organizations, persons, staff, the access trail, the access log, the settings, the host schools' calendar, the holiday mail, its states, the Träger names, the statistics and the schools' federal states are required")
 	}
@@ -128,7 +129,7 @@ func NewTraegerPortalHTTP(identity TraegerPortalIdentity, organizations organiza
 		Enrollments: enrollmentCompose.NewOpenEnrollments(), Alerts: traegerAlertSettings{settings: settings},
 		Occupancy: traegerOccupancyPorts(), Known: traegerKnownChildrenPorts(), Utilization: traegerUtilizationPorts(statistics, now),
 		Times: traegerArrivalPickupCounts{times: presence}, Daily: traegerDailyAttendancePorts(presence, sick, calendarSchools),
-		Reports: traegerReportPorts(reportTemplateReads),
+		Reports: traegerReportPorts(reportTemplateReads), DayChanges: dayChanges,
 	})
 	if err != nil {
 		return nil, err

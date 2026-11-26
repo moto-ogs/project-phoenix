@@ -43,6 +43,10 @@ export const ERROR_CATALOG = {
         "Dafür brauchst du in dieser Schule ein eigenes Personalprofil. Bitte frage die Leitung.",
       "calendar.occurrence_unavailable":
         "Diesen Termin gibt es nicht mehr, er wurde vielleicht abgesagt. Bitte lade den Kalender neu.",
+      "calendar.opening_change_invalid":
+        "Bitte prüfe die markierten Angaben zur geänderten Öffnungszeit.",
+      "calendar.opening_change_not_found":
+        "Diese geänderte Öffnungszeit gibt es nicht mehr. Bitte lade die Seite neu.",
       "care_contract.application_not_found":
         "Diese Anmeldung gibt es nicht mehr oder sie ist nicht angenommen. Bitte lade die Seite neu.",
       "care_contract.change_contract_not_active":
@@ -213,6 +217,8 @@ export const ERROR_CATALOG = {
         "Eine neue Abholerlaubnis braucht deine Unterschrift. Die {careTerm} bestätigt sie dann.",
       "care.pickup_permission_unchanged":
         "Diese Person darf an diesen Tagen schon abholen.",
+      "care.pickup_person_not_authorized":
+        "Diese Person darf das Kind an diesem Tag nicht abholen. Wähle eine andere Person oder trage einen Namen ein.",
       "care.pickup_person_not_linked":
         "Diese Person ist kein Kontakt deines Kindes. Bitte trage sie zuerst bei den Kontakten ein.",
       "care.pickup_proof_not_found":
@@ -577,7 +583,7 @@ export const ERROR_CATALOG = {
       "enrollment.holiday_week_booked":
         "Für diese Woche gibt es schon Anmeldungen. Darum lassen sich die Woche und ihre gebuchten Zeitmodelle nicht entfernen. Ein gebuchtes Zeitmodell kannst du archivieren. Dann kann es niemand mehr neu buchen.",
       "enrollment.holiday_week_day_limit":
-        "Ein Kind ist schon für diese Woche angemeldet. Mit den neuen Tagen hätte es mehr Tage als erlaubt. Lass die Tage so oder erhöhe „Höchstens Tage je Kind“.",
+        "Ein Kind ist schon für diese Woche angemeldet. Mit den neuen Tagen hätte es mehr Tage als erlaubt. Lass die Tage so. Oder trage unter „Höchstzahl an Tagen pro Kind“ eine höhere Zahl ein.",
       "enrollment.holiday_week_no_care_day":
         "Am {date} gibt es keine Betreuung ({name}). Diese Woche kann man nicht buchen. Wähle eine andere Woche.",
       "enrollment.holiday_week_not_found":
@@ -2112,6 +2118,10 @@ export const ERROR_CATALOG = {
         "Das Ende liegt vor dem Anfang. Bitte prüfe den Zeitraum.",
       "workforce.target_override_too_long":
         "Der Zeitraum ist zu lang. Erlaubt sind höchstens {max_days} Tage.",
+      "workforce.terminal_only_stamping":
+        "Du stempelst nur am NFC-Tablet. Halte dort dein Armband an das Tablet.",
+      "workforce.terminal_only_time_edit":
+        "Deine Zeiten ändert nur die Leitung. Bitte frage die Leitung.",
       "workforce.traeger_absence_allowance_below_booked":
         "Der Anspruch ist zu klein. An den Schulen sind schon mehr Tage eingetragen oder beantragt.",
       "workforce.traeger_absence_type_in_use":
@@ -2399,6 +2409,8 @@ export const ERROR_CATALOG = {
         "A new pickup permission needs your signature. The {careTerm} then confirms it.",
       "care.pickup_permission_unchanged":
         "This person may already pick up on these days.",
+      "care.pickup_person_not_authorized":
+        "This person may not pick up the child on this day. Choose another person or enter a name.",
       "care.pickup_person_not_linked":
         "This person is not a contact of your child. Please add them to your contacts first.",
       "care.pickup_proof_not_found":
@@ -2629,7 +2641,7 @@ export const ERROR_CATALOG = {
       "enrollment.holiday_week_booked":
         "This week already has registrations. That is why the week and its booked time models cannot be removed. You can archive a booked time model instead. Then nobody can book it any more.",
       "enrollment.holiday_week_day_limit":
-        "A child is already registered for this week. With the new days, the child would have more days than allowed. Keep the days as they are or raise “Höchstens Tage je Kind”.",
+        "A child is already registered for this week. With the new days, the child would have more days than allowed. Keep the days as they are or enter a higher number in “Höchstzahl an Tagen pro Kind”.",
       "enrollment.holiday_week_no_care_day":
         "There is no care on {date} ({name}). This week cannot be booked.",
       "enrollment.holiday_week_not_found":
@@ -3192,6 +3204,8 @@ export const ERROR_CATALOG = {
         "Для нового разрешения нужна ваша подпись. Затем {careTerm} его подтвердит.",
       "care.pickup_permission_unchanged":
         "Этот человек уже может забирать ребёнка в эти дни.",
+      "care.pickup_person_not_authorized":
+        "Этот человек не может забрать ребёнка в этот день. Выберите другого человека или введите имя.",
       "care.pickup_person_not_linked":
         "Этот человек не является контактом вашего ребёнка. Пожалуйста, сначала добавьте его в контакты.",
       "care.pickup_proof_not_found":
@@ -3846,6 +3860,8 @@ export const ERROR_CATALOG = {
         "Një leje e re për marrjen e fëmijës kërkon nënshkrimin tuaj. Pastaj {careTerm} e konfirmon.",
       "care.pickup_permission_unchanged":
         "Ky person e merr tashmë fëmijën në këto ditë.",
+      "care.pickup_person_not_authorized":
+        "Ky person nuk mund ta marrë fëmijën në këtë ditë. Zgjidh një person tjetër ose shkruaj një emër.",
       "care.pickup_person_not_linked":
         "Ky person nuk është kontakt i fëmijës suaj. Ju lutemi shtojeni fillimisht te kontaktet.",
       "care.pickup_proof_not_found":
@@ -4515,6 +4531,8 @@ export const ERROR_CATALOG = {
         "Nowa zgoda na odbiór wymaga Państwa podpisu. {careTerm} ją potem potwierdzi.",
       "care.pickup_permission_unchanged":
         "Ta osoba już może odbierać dziecko w te dni.",
+      "care.pickup_person_not_authorized":
+        "Ta osoba nie może odebrać dziecka w tym dniu. Wybierz inną osobę lub wpisz imię i nazwisko.",
       "care.pickup_person_not_linked":
         "Ta osoba nie jest kontaktem Państwa dziecka. Proszę najpierw dodać ją do kontaktów.",
       "care.pickup_proof_not_found":
@@ -5169,6 +5187,8 @@ export const ERROR_CATALOG = {
         "Yeni bir alma izni imzanızı gerektirir. Ardından {careTerm} onaylar.",
       "care.pickup_permission_unchanged":
         "Bu kişi bu günlerde zaten çocuğu alabilir.",
+      "care.pickup_person_not_authorized":
+        "Bu kişi bu gün çocuğu alamaz. Başka bir kişi seçin veya bir isim girin.",
       "care.pickup_person_not_linked":
         "Bu kişi çocuğunuzun kişileri arasında değil. Lütfen önce kişilerinize ekleyin.",
       "care.pickup_proof_not_found":
@@ -5829,6 +5849,8 @@ export const ERROR_CATALOG = {
         "Для нового дозволу потрібен ваш підпис. Потім {careTerm} його підтвердить.",
       "care.pickup_permission_unchanged":
         "Ця особа вже може забирати дитину в ці дні.",
+      "care.pickup_person_not_authorized":
+        "Ця особа не може забрати дитину в цей день. Виберіть іншу особу або введіть ім'я.",
       "care.pickup_person_not_linked":
         "Ця особа не є контактом вашої дитини. Будь ласка, спершу додайте її до контактів.",
       "care.pickup_proof_not_found":

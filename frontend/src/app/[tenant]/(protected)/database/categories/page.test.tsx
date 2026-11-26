@@ -1,7 +1,7 @@
 import { render } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import CategoriesPage from "./page";
+import CategoriesPage from "./page-content";
 interface CapturedConfig {
   isReadOnly: (item: { isSystem?: boolean; archivedAt?: string }) => boolean;
   update: (

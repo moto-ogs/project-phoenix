@@ -249,6 +249,7 @@ export const READER_OPTION_KEYS = [
   "focusThrottleInterval",
   "isPaused",
   "keepPreviousData",
+  "onDiscarded",
   "onError",
   "onSuccess",
   "refreshInterval",
@@ -261,8 +262,12 @@ export const READER_OPTION_KEYS = [
 
 export type ReaderOptions<T, E = Error> = Pick<
   SWRConfiguration<T, E>,
-  Exclude<(typeof READER_OPTION_KEYS)[number], "onSuccess" | "onError">
+  Exclude<
+    (typeof READER_OPTION_KEYS)[number],
+    "onDiscarded" | "onSuccess" | "onError"
+  >
 > & {
+  onDiscarded?: () => void;
   onSuccess?: (data: T) => void;
   onError?: (error: E) => void;
 };
@@ -309,13 +314,14 @@ function copyAllowed(
 function readerConfig<T, E>(
   options: ReaderOptions<T, E> | undefined,
 ): SWRConfiguration<T, E> {
-  const { onSuccess, onError, ...rest } = copyAllowed(
+  const { onDiscarded, onSuccess, onError, ...rest } = copyAllowed(
     options,
     allowedReaderKeys,
     "reader",
   ) as ReaderOptions<T, E>;
   return {
     ...rest,
+    ...(onDiscarded ? { onDiscarded: () => onDiscarded() } : {}),
     ...(onSuccess ? { onSuccess: (data: T) => onSuccess(data) } : {}),
     ...(onError ? { onError: (error: E) => onError(error) } : {}),
   };
@@ -422,6 +428,11 @@ type ScopedSWRResponse<T, E> = SWRResponse<T, E> & {
   /** Current protected values, including between renders. Never raw cache. */
   readCurrent?(): { data: T | undefined; error: E | undefined };
 };
+
+// Unlike a normal SWR mount, mutate() deliberately skips deduplication.
+// A discarded seed or stale generation needs one recovery per cache/key,
+// not one per mounted projection of that key.
+const recoveringReads = new WeakMap<Cache, Set<string>>();
 
 function useScopedSWR<T, E>(
   key: string | null,
@@ -538,8 +549,13 @@ function useScopedSWR<T, E>(
   useEffect(() => {
     if (reload === null || reloaded.current === reload) return;
     reloaded.current = reload;
-    void revalidate();
-  }, [reload, revalidate]);
+    const active = recoveringReads.get(cache) ?? new Set<string>();
+    if (active.has(reload)) return;
+    recoveringReads.set(cache, active);
+    active.add(reload);
+    const release = () => active.delete(reload);
+    void revalidate().then(release, release);
+  }, [cache, reload, revalidate]);
 
   const mutationGeneration = fullKey === null ? 0 : dataGenerationOf(fullKey);
   const mutate = useMemo(
@@ -1359,6 +1375,44 @@ export function useSWRPreload() {
   );
 }
 
+interface InvalidationBurst {
+  readonly matches: ((key: string) => boolean)[];
+  readonly done: Promise<unknown[]>;
+}
+
+const invalidationBursts = new WeakMap<Cache, Map<string, InvalidationBurst>>();
+
+function coalesceInvalidation(
+  cache: Cache,
+  channel: string,
+  matches: (key: string) => boolean,
+  run: (match: (key: string) => boolean) => Promise<unknown[]>,
+): Promise<unknown[]> {
+  const bursts =
+    invalidationBursts.get(cache) ?? new Map<string, InvalidationBurst>();
+  invalidationBursts.set(cache, bursts);
+  const pending = bursts.get(channel);
+  if (pending) {
+    pending.matches.push(matches);
+    return pending.done;
+  }
+  const batch = [matches];
+  const done = new Promise<unknown[]>((resolve, reject) => {
+    setTimeout(() => {
+      bursts.delete(channel);
+      if (isSWRSessionPending() || !SWRGlobalState.has(cache)) {
+        resolve([]);
+        return;
+      }
+      const finish = async () =>
+        run((key) => batch.some((match) => match(key)));
+      void finish().then(resolve, reject);
+    }, 350);
+  });
+  bursts.set(channel, { matches: batch, done });
+  return done;
+}
+
 /**
  * Invalidate every entry of the session's scope whose resource key `matches`,
  * wherever SWR keeps it (invalidateSWRKeys). `matches` gets the key without
@@ -1372,14 +1426,36 @@ export function useInvalidateMatching() {
   const { prefix } = useSWRScope();
   const { cache } = useSWRConfig();
   return useCallback(
-    (matches: (key: string) => boolean, options?: { clear?: boolean }) => {
+    (
+      matches: (key: string) => boolean,
+      options?: {
+        clear?: boolean;
+        expireInactive?: boolean;
+        /** Union local and SSE invalidations for this channel in one short burst. */
+        coalesce?: string;
+      },
+    ) => {
       if (prefix === null || isSWRSessionPending()) return Promise.resolve([]);
       const scope = scopedSWRKey(prefix, "");
-      return invalidateSWRKeys(
-        cache,
-        (key) => key.startsWith(scope) && matches(key.slice(scope.length)),
-        options?.clear ? "clear" : "revalidate",
-      );
+      const mode = options?.clear
+        ? "clear"
+        : options?.expireInactive
+          ? "expire-inactive"
+          : "revalidate";
+      const run = (match: (key: string) => boolean) =>
+        invalidateSWRKeys(
+          cache,
+          (key) => key.startsWith(scope) && match(key.slice(scope.length)),
+          mode,
+        );
+      return options?.coalesce
+        ? coalesceInvalidation(
+            cache,
+            `${scope}${options.coalesce}:${mode}`,
+            matches,
+            run,
+          )
+        : run(matches);
     },
     [prefix, cache],
   );

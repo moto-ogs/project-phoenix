@@ -32,7 +32,8 @@ export const parentKeys = {
   ) =>
     `parent-meal-participation-${encodeURIComponent(schoolId)}-${encodeURIComponent(studentId)}-${from}-${to}-${asOf}`,
 
-  shellChildren: () => "parent-shell-children",
+  familyStart: (day: string) => `parent-family-start-${day}`,
+  isFamilyStart: (key: string) => key.startsWith("parent-family-start-"),
   // Badges of the parents shell (useUnreadCount).
   messagesUnreadCount: () => "parent-messages-unread-count",
   newsUnreadCount: () => "parent-news-unread-count",
@@ -41,10 +42,6 @@ export const parentKeys = {
     firstPage: () => "parent-notification-feed-first-page",
     unreadCount: () => "parent-notification-feed-unread",
   },
-  isChildResource: (key: string) =>
-    key === "parent-shell-children" ||
-    key.startsWith("parent-features-") ||
-    key.startsWith("parent-today-"),
   /**
    * What a staff decision or a parent write on a child changes besides the
    * shared child resources: its care state and offerings, its courses and
@@ -73,17 +70,12 @@ export const parentKeys = {
     key === "parent-messages" ||
     key === "parent-group-threads" ||
     key.startsWith(CHILD_THREADS_FAMILY),
-  isNewsResource: (key: string) => key === "parent-announcements",
+  isNewsResource: (key: string) =>
+    key === "parent-announcements" || key === "parent-news-available",
   isResource: (key: string) =>
     key.startsWith("parent-") && !key.startsWith("parent-profile"),
   relationshipSet: (children: readonly parentMeContract.ChildResponse[]) =>
     relationships(children),
-  features: (
-    children: readonly parentMeContract.ChildResponse[],
-    day: string,
-  ) => `parent-features-${relationships(children)}-${day}`,
-  today: (children: readonly parentMeContract.ChildResponse[], day: string) =>
-    `parent-today-${relationships(children)}-${day}`,
   /** Appointments from `day` over `days` days; the start page reads 90. */
   calendar: (day: string, days = 90) => `parent-calendar-${day}-${days}`,
   calendarFamily: "parent-calendar-",
@@ -107,6 +99,9 @@ export const parentKeys = {
     `parent-child-${encodeURIComponent(studentId)}-status-pickup-change-requests-${day}`,
   pickupChangeRequestsFamily: (studentId: string) =>
     `parent-child-${encodeURIComponent(studentId)}-status-pickup-change-requests-`,
+  /** „Heute anders“ of the child on the Berlin `day` (#7671). */
+  dayChanges: (studentId: string, day: string) =>
+    `parent-child-${encodeURIComponent(studentId)}-status-day-changes-${day}`,
   careSchedule: (studentId: string, day: string) =>
     `parent-child-${encodeURIComponent(studentId)}-status-care-schedule-${day}`,
   careOfferings: (studentId: string) =>
@@ -147,6 +142,7 @@ export const parentKeys = {
   messages: () => "parent-messages",
   groupThreads: () => "parent-group-threads",
   announcements: () => "parent-announcements",
+  newsAvailable: () => "parent-news-available",
   /** The holiday periods the start page announces (#6671). */
   holidayOffers: () => "parent-holiday-offers",
   /** The holiday registrations linked to the account (#6673). */

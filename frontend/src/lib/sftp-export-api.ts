@@ -3,7 +3,10 @@
 // übertragene Datei ist dieselbe, die der Download liefert.
 
 import { bffJson } from "./bff-fetch";
-import type { TransferExportRequest } from "./contract/staff.generated";
+import type {
+  ExportTransferStatus,
+  TransferExportRequest,
+} from "./contract/staff.generated";
 
 type ExportFormat = "csv" | "xlsx" | "datev_lodas" | "datev_lug";
 
@@ -87,6 +90,10 @@ export async function fetchSFTPStatus(): Promise<SFTPStatus> {
     "tenant",
     "GET /api/staff/time-tracking/export/sftp-status",
   );
+  return mapSFTPStatus(status);
+}
+
+export function mapSFTPStatus(status: ExportTransferStatus): SFTPStatus {
   return {
     enabled: status.enabled,
     ready: status.ready,

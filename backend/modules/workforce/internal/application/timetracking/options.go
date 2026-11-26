@@ -33,6 +33,12 @@ func WithWorkSessionHolidays(reader HolidayDatesReader) WorkSessionOption {
 	return func(s *workSessionService) { s.holidayReader = reader }
 }
 
+// WithWorkSessionTimeTrackingManagers supplies the lookup that exempts the
+// leadership from terminal-only stamping (#8024).
+func WithWorkSessionTimeTrackingManagers(managers TimeTrackingManagerStaff) WorkSessionOption {
+	return func(s *workSessionService) { s.timeTrackingManagers = managers }
+}
+
 // WithWorkSessionExternalCaregivers supplies the external-caregiver lookup
 // the auto-stamp skips (#4573).
 func WithWorkSessionExternalCaregivers(externals ExternalCaregiverStaff) WorkSessionOption {

@@ -106,7 +106,7 @@ vi.mock("~/lib/parent-messages-api", async (importOriginal) => ({
   markAllMessagesRead: mockMarkAllMessagesRead,
 }));
 
-import MessagesPage from "./page";
+import MessagesPage from "./page-content";
 
 function openMenu() {
   fireEvent.click(screen.getByRole("button", { name: "Weitere Aktionen" }));

@@ -60,7 +60,7 @@ vi.mock("~/lib/traeger-billing-families-api", async (importOriginal) => ({
 }));
 
 import { useDebtorNumberSettings } from "~/components/traeger/use-debtor-number-format";
-import TraegerSettingsPage from "./page";
+import TraegerSettingsPage from "./page-content";
 
 /** A page elsewhere that shows the debtor number format (#6675). */
 function DebtorScope() {

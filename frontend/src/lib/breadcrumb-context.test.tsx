@@ -84,6 +84,28 @@ describe("useSetBreadcrumb", () => {
     expect(breadcrumbResult?.breadcrumb).toEqual(data);
   });
 
+  it("publishes to the header without rendering the publishing page again", () => {
+    const renderPage = vi.fn();
+    function Page() {
+      renderPage();
+      useSetBreadcrumb({ roomName: "Raum 1" });
+      return null;
+    }
+    function Header() {
+      return <div>{useBreadcrumb().breadcrumb.roomName}</div>;
+    }
+
+    render(
+      <BreadcrumbProvider>
+        <Page />
+        <Header />
+      </BreadcrumbProvider>,
+    );
+
+    expect(screen.getByText("Raum 1")).toBeInTheDocument();
+    expect(renderPage).toHaveBeenCalledOnce();
+  });
+
   it("clears breadcrumb data on unmount", () => {
     const data = { studentName: "Lisa Schmidt" };
     let breadcrumbResult: ReturnType<typeof useBreadcrumb> | undefined;

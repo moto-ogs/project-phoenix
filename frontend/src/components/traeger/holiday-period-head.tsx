@@ -93,6 +93,6 @@ export function holidayPeriodStats(period: HolidayPeriod): { label: string }[] {
     },
     ...(period.maxDaysPerChild == null
       ? []
-      : [{ label: `höchstens ${period.maxDaysPerChild} Tage je Kind` }]),
+      : [{ label: `höchstens ${period.maxDaysPerChild} Tage pro Kind` }]),
   ];
 }

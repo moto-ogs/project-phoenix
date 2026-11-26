@@ -105,17 +105,6 @@ type CallerGroup struct {
 	ViaSubstitution bool
 }
 
-// CallerNavigation is the identity projection the shared frontend context
-// reads in one request. StaffID is zero for a caller who is no staff
-// member. A section that failed to load is named in UnavailableSections.
-type CallerNavigation struct {
-	Groups               []CallerGroup
-	SupervisedSessionIDs []int64
-	StaffID              int64
-	Incomplete           bool
-	UnavailableSections  []string
-}
-
 // SSESubscription is the resolved topic set of a live-update client: the
 // staff member (0 for effective admins without a staff record), the room
 // session topics, the educational-group topics and their deduplicated union.
@@ -200,7 +189,6 @@ type CallerReach interface {
 	MyActivityGroupIDs(context.Context) ([]int64, error)
 	MyActiveSessionIDs(context.Context) ([]int64, error)
 	MySupervisedSessionIDs(context.Context) ([]int64, error)
-	Navigation(context.Context) (CallerNavigation, error)
 	SSESubscription(context.Context) (SSESubscription, error)
 }
 

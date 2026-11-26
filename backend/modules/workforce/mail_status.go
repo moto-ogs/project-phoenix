@@ -22,10 +22,11 @@ const (
 // MailOutcome is what became of one Workforce mail, in Delivery's words
 // ("queued", "accepted", "delivered", "undeliverable", ...).
 type MailOutcome struct {
-	MailID      int64
-	RelatedType string
-	RelatedID   int64
-	Outcome     string
+	AwaitingFeedback bool
+	MailID           int64
+	RelatedType      string
+	RelatedID        int64
+	Outcome          string
 }
 
 // MailOutcomes reads the outcomes of Workforce's mails in the caller's tenant
@@ -43,11 +44,11 @@ type AbsenceMailStatus interface {
 	// AbsenceRequestMails counts the mails of each absence's latest notice to
 	// the approvers by outcome. A resubmission after a question starts a new
 	// notice; an absence without a notice mail has no key.
-	AbsenceRequestMails(ctx context.Context, absenceIDs []int64) (map[int64]map[string]int, error)
+	AbsenceRequestMails(ctx context.Context, absenceIDs []int64) (map[int64]map[string]int, bool, error)
 	// AbsenceDecisionMails reports the outcome of each absence's newest mail
 	// to the applicant about an approval, a decline or a question; an absence
 	// without such a mail has no key.
-	AbsenceDecisionMails(ctx context.Context, absenceIDs []int64) (map[int64]string, error)
+	AbsenceDecisionMails(ctx context.Context, absenceIDs []int64) (map[int64]string, bool, error)
 }
 
 // NewAbsenceMailStatus reads the absence request mails over the outcomes,
@@ -65,15 +66,16 @@ type absenceMailStatus struct{ outcomes MailOutcomes }
 // AbsenceRequestMails counts the latest notice round per absence. A question
 // closes a round: the received mails after the newest question mail are the
 // notice of the resubmitted request, the older ones belong to the first one.
-func (s absenceMailStatus) AbsenceRequestMails(ctx context.Context, absenceIDs []int64) (map[int64]map[string]int, error) {
+func (s absenceMailStatus) AbsenceRequestMails(ctx context.Context, absenceIDs []int64) (map[int64]map[string]int, bool, error) {
 	counts := map[int64]map[string]int{}
 	if len(absenceIDs) == 0 {
-		return counts, nil
+		return counts, false, nil
 	}
 	mails, err := s.outcomes.MailOutcomes(ctx, absenceIDs, AbsenceMailRequestQuestion, AbsenceMailRequestReceived)
 	if err != nil {
-		return nil, fmt.Errorf("absence mail status: read the notice mails: %w", err)
+		return nil, false, fmt.Errorf("absence mail status: read the notice mails: %w", err)
 	}
+	active := false
 	lastQuestion := map[int64]int64{}
 	for _, mail := range mails {
 		if mail.RelatedType == AbsenceMailRequestQuestion && mail.MailID > lastQuestion[mail.RelatedID] {
@@ -88,28 +90,34 @@ func (s absenceMailStatus) AbsenceRequestMails(ctx context.Context, absenceIDs [
 			counts[mail.RelatedID] = map[string]int{}
 		}
 		counts[mail.RelatedID][mail.Outcome]++
+		active = active || mail.AwaitingFeedback
 	}
-	return counts, nil
+	return counts, active, nil
 }
 
 // AbsenceDecisionMails reports the newest decision or question mail per
 // absence; a later mail replaces an earlier one, as a decision follows a
 // question.
-func (s absenceMailStatus) AbsenceDecisionMails(ctx context.Context, absenceIDs []int64) (map[int64]string, error) {
+func (s absenceMailStatus) AbsenceDecisionMails(ctx context.Context, absenceIDs []int64) (map[int64]string, bool, error) {
 	outcomes := map[int64]string{}
 	if len(absenceIDs) == 0 {
-		return outcomes, nil
+		return outcomes, false, nil
 	}
 	mails, err := s.outcomes.MailOutcomes(ctx, absenceIDs, AbsenceMailRequestApproved, AbsenceMailRequestDeclined, AbsenceMailRequestQuestion)
 	if err != nil {
-		return nil, fmt.Errorf("absence mail status: read the decision mails: %w", err)
+		return nil, false, fmt.Errorf("absence mail status: read the decision mails: %w", err)
 	}
-	newest := map[int64]int64{}
+	newest := map[int64]MailOutcome{}
 	for _, mail := range mails {
-		if mail.MailID > newest[mail.RelatedID] {
-			newest[mail.RelatedID] = mail.MailID
+		if mail.MailID > newest[mail.RelatedID].MailID {
+			newest[mail.RelatedID] = mail
 			outcomes[mail.RelatedID] = mail.Outcome
 		}
 	}
-	return outcomes, nil
+	for _, mail := range newest {
+		if mail.AwaitingFeedback {
+			return outcomes, true, nil
+		}
+	}
+	return outcomes, false, nil
 }

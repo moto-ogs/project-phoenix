@@ -118,7 +118,7 @@ describe("SchoolLoginPage error path", () => {
     submit();
 
     expect(
-      await screen.findByText(/keinen Zugang zum Schul-Portal/),
+      await screen.findByText(/keinen Zugang zu moto schule/),
     ).toBeInTheDocument();
   });
 

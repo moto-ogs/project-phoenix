@@ -1,7 +1,7 @@
 import type { HelpTopic } from "../help-types";
 import { HELP_TOPICS } from "~/lib/help-topics";
 
-/** `/traeger/uebersicht` (#4674), in der Navigation „Dashboard": die Zahlen von jetzt für alle Schulen und ihre Auffälligkeiten (#4675). */
+/** `/traeger/uebersicht` (#4674), in der Navigation „Dashboard": die Zahlen von jetzt für alle Schulen, „Heute anders“ (#7672) und ihre Auffälligkeiten (#4675). */
 export function traegerDashboardTopic(): HelpTopic {
   return {
     id: HELP_TOPICS.traegerDashboard,
@@ -15,9 +15,10 @@ export function traegerDashboardTopic(): HelpTopic {
     steps: [
       "Nach der Anmeldung öffnet moto das Dashboard. Sonst wähle in der Navigation `Dashboard`.",
       "Lies oben die Summe für alle Schulen.",
+      "Prüfe unter `Heute anders`, welche Schule heute geschlossen ist oder Termine abgesagt hat.",
       "Prüfe unter `Auffälligkeiten`, an welcher Schule etwas deine Grenzen erreicht.",
       "Wähle dort `Zur Schule`, um die Schule anzusehen.",
-      "Lies unter `Zahlen je Schule` die Zahlen jeder Schule.",
+      "Lies unter `Zahlen pro Schule` die Zahlen jeder Schule.",
       "Wähle eine Schule, um ihre Zahlen und Stammdaten zu sehen.",
       "Öffne das Drei-Punkte-Menü rechts neben der Suche, bei nur einer Schule rechts neben dem Titel. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`. Hast du bei `Auffälligkeiten` eine Schule gewählt, enthält die Datei nur diese Schule.",
     ],
@@ -26,6 +27,8 @@ export function traegerDashboardTopic(): HelpTopic {
     notes: [
       "Ohne die Pflichtangaben erstellt moto nicht alle Verträge, Rechnungen und Bescheide. Der Hinweis verschwindet, sobald alles eingetragen ist.",
       "Die Zahlen aktualisieren sich jede Minute von selbst.",
+      "`Heute anders` zeigt pro Schule die Schließtage von heute, von der Schule oder von dir. Dazu kommt die Zahl der abgesagten Termine im Stundenplan. Es steht dort kein Name und kein Grund.",
+      "Fehlt Personal, steht das unter `Auffälligkeiten` bei `Zu wenig Personal`, nicht unter `Heute anders`.",
       "Du siehst nur Zahlen, keine Namen.",
       "Ein Kind, das da ist, zählt nicht als krank. Das gilt auch mit Krankmeldung.",
       "Mit einem Klick auf eine Spaltenüberschrift sortierst du die Schulen, zum Beispiel nach `Heute krank`.",
@@ -43,6 +46,7 @@ export function traegerDashboardTopic(): HelpTopic {
       "Ohne das Recht `In OGS wechseln` fehlt die Aktion `Schul-App öffnen`. Die Zahlen siehst du trotzdem.",
       "Ohne das Recht, Einstellungen zu ändern, steht dort `Grenzen ansehen` statt `Grenzen bearbeiten`.",
       "Steht unter `Auffälligkeiten` „Gerade ist an keiner Schule etwas auffällig.“? Dann erreicht keine Schule deine Grenzen.",
+      "Steht unter `Heute anders` „Heute läuft an allen Schulen alles wie geplant.“? Dann hat heute keine Schule einen Schließtag oder einen abgesagten Termin.",
     ],
     related: [
       HELP_TOPICS.traegerSchoolView,

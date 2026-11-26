@@ -3,6 +3,8 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TeacherShellProvider, useShellAuth } from "./shell-auth-context";
 import { reloginAtTenant } from "~/components/tenant/tenant-relogin";
+import { _resetSessionTreeForTests, sessionTreeState } from "./session-tree";
+import { setShownSessionMark } from "./session-mark";
 
 const preview = vi.hoisted(() => ({ active: false, update: vi.fn() }));
 
@@ -82,8 +84,10 @@ beforeEach(() => {
       protocol: "http:",
       port: "",
       href: "http://school-a.localhost/home",
+      reload: vi.fn(),
     },
   });
+  _resetSessionTreeForTests();
   Object.defineProperty(navigator, "serviceWorker", {
     configurable: true,
     value: { getRegistration },
@@ -290,13 +294,15 @@ describe.each([
     expect(request.headers).toEqual({
       "Content-Type": "application/x-www-form-urlencoded",
       "X-Auth-Return-Redirect": "1",
+      // The exit of session cookies deletes no other session (#8082).
+      "X-Moto-End-Session": "tenant -",
     });
     expect(request.body.get("csrfToken")).toBe(csrfToken);
     expect(request.body.get("callbackUrl")).toBe(destination);
     expect(window.location.href).toBe(destination);
   });
 
-  it("allows retry after a failed cookie deletion without late cleanup effects", async () => {
+  it("leaves after a revocation also when the cookie deletion failed, without late cleanup effects", async () => {
     const lookup = deferred<unknown>();
     getSubscription.mockReturnValueOnce(lookup.promise);
     fetchMock.mockImplementation(async (url) => {
@@ -305,23 +311,102 @@ describe.each([
         throw new TypeError("cookie deletion failed");
       return ok();
     });
-    await expect(start()).rejects.toThrow("cookie deletion failed");
-    expect(window.location.href).toBe("http://school-a.localhost/home");
-    getSubscription.mockResolvedValue(null);
+    await start();
+    // The family is revoked: the cookie left behind opens nothing (#8082).
+    expect(window.location.href).toBe(destination);
+    expect(sessionTreeState().leaving).toBe(true);
+    lookup.resolve(device());
+    await vi.advanceTimersByTimeAsync(0);
+    expect(cookieDeletes()).toHaveLength(1);
+    expect(unsubscribe).not.toHaveBeenCalled();
+  });
+
+  it("ends nothing when another school's sign-in took the shared cookie", async () => {
+    // The tree shows family-a; school B's tab signed in meanwhile. The
+    // logout route and the exit of session cookies keep B's session.
+    setShownSessionMark("family-a");
     fetchMock.mockImplementation(async (url) =>
       url === "/api/auth/csrf"
         ? csrfResponse()
         : url === "/api/auth/signout"
-          ? Response.json({})
-          : ok(),
+          ? Response.json(
+              { url: destination },
+              { headers: { "X-Moto-Session-Replaced": "1" } },
+            )
+          : url === "/api/auth/logout"
+            ? Response.json(
+                { status: 401, code: "general.unauthorized", detail: "x" },
+                {
+                  status: 401,
+                  headers: { "Content-Type": "application/problem+json" },
+                },
+              )
+            : ok(),
     );
-    await start();
-    lookup.resolve(device());
-    await vi.advanceTimersByTimeAsync(0);
-    expect(cookieDeletes()).toHaveLength(2);
-    expect(unsubscribe).not.toHaveBeenCalled();
-    expect(window.location.href).toBe(destination);
+    try {
+      await start();
+      // The revocation named family-a.
+      const [, revocation] = revocations()[0]!;
+      expect(new Headers(revocation.headers).get("X-Moto-End-Session")).toBe(
+        "tenant family-a",
+      );
+      expect(window.location.reload).toHaveBeenCalledTimes(1);
+      expect(window.location.href).toBe("http://school-a.localhost/home");
+    } finally {
+      setShownSessionMark("");
+    }
   });
+
+  it("loads the new session when another tab signs in during a revoked exit", async () => {
+    const csrf = deferred<Response>();
+    fetchMock.mockImplementation(async (url) =>
+      url === "/api/auth/csrf" ? csrf.promise : ok(),
+    );
+    const exit = start();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(sessionTreeState().leaving).toBe(true);
+    window.dispatchEvent(
+      new StorageEvent("storage", {
+        key: "moto:personal-storage-owner",
+        newValue: "2:8",
+        storageArea: localStorage,
+      }),
+    );
+    // No stuck "Seite wird neu geladen...", no deletion of the new cookie.
+    expect(window.location.reload).toHaveBeenCalledTimes(1);
+    csrf.resolve(csrfResponse());
+    await exit;
+    expect(cookieDeletes()).toHaveLength(0);
+  });
+});
+
+it("keeps the menu logout's page and retry when neither revocation nor cookie deletion worked", async () => {
+  fetchMock.mockImplementation(async (url) => {
+    if (url === "/api/auth/csrf") return csrfResponse();
+    if (url === "/api/auth/signout")
+      throw new TypeError("cookie deletion failed");
+    if (url === "/api/auth/logout")
+      return Response.json(
+        { status: 500, code: "general.server", detail: "x" },
+        {
+          status: 500,
+          headers: { "Content-Type": "application/problem+json" },
+        },
+      );
+    return ok();
+  });
+  await expect(startMenuLogout()).rejects.toThrow("cookie deletion failed");
+  expect(window.location.href).toBe("http://school-a.localhost/home");
+  expect(sessionTreeState().leaving).toBe(false);
+  fetchMock.mockImplementation(async (url) =>
+    url === "/api/auth/csrf"
+      ? csrfResponse()
+      : url === "/api/auth/signout"
+        ? Response.json({ url: "http://school-a.localhost/" })
+        : ok(),
+  );
+  await startMenuLogout();
+  expect(window.location.href).toBe("/");
 });
 
 it.each([true, false])(

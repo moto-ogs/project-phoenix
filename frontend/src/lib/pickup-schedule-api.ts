@@ -210,6 +210,36 @@ export async function deleteStudentDepartureException(
   );
 }
 
+/**
+ * Setzt, wer das Kind an einem Tag abholt (#7655): eine abholberechtigte
+ * Person oder eine einmalige Person mit Namen. Erneutes Speichern ersetzt sie.
+ */
+export async function setStudentPickupPerson(
+  studentId: string,
+  date: string,
+  person: { guardianProfileId: string } | { name: string },
+): Promise<void> {
+  await bffJson("tenant", "PUT /api/students/{id}/pickup-persons/{date}", {
+    params: { id: studentId, date },
+    body:
+      "guardianProfileId" in person
+        ? { guardian_profile_id: person.guardianProfileId }
+        : { name: person.name },
+    errorMessage: "Failed to set pickup person",
+  });
+}
+
+/** Entfernt die Abholperson des Tages (#7655). */
+export async function deleteStudentPickupPerson(
+  studentId: string,
+  date: string,
+): Promise<void> {
+  await bffJson("tenant", "DELETE /api/students/{id}/pickup-persons/{date}", {
+    params: { id: studentId, date },
+    errorMessage: "Failed to delete pickup person",
+  });
+}
+
 // =============================================================================
 // PICKUP NOTES API
 // =============================================================================

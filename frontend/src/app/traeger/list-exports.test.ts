@@ -146,7 +146,11 @@ const pages = collectPages(TRAEGER_DIR).map((file) => {
     .relative(TRAEGER_DIR, path.dirname(file))
     .split(path.sep)
     .join("/");
-  return { route: `/${route}`, source: readFileSync(file, "utf8") };
+  const source = readFileSync(file, "utf8");
+  const content = source.includes('from "./page-content"')
+    ? readFileSync(path.join(path.dirname(file), "page-content.tsx"), "utf8")
+    : source;
+  return { route: `/${route}`, source: content };
 });
 
 /** The shared menu, its page-menu entries or its formats: PDF, Excel and CSV. */

@@ -7,6 +7,7 @@
 import { useCallback, useSyncExternalStore } from "react";
 
 import { useNotificationFeedPortal } from "~/lib/notification-feed-portal";
+import { onSessionTreeDiscard } from "~/lib/session-tree";
 import { useTenantSafe } from "~/lib/tenant-context";
 
 /** Abzeichen an Glocke und „Mehr“: zwei Ziffern sind das Höchste, „9+“. */
@@ -25,6 +26,9 @@ function subscribe(listener: () => void) {
   listeners.add(listener);
   return () => listeners.delete(listener);
 }
+
+// The sheet shows a person's notifications: it closes with their tree (#8082).
+onSessionTreeDiscard(() => setSheetOpen(false));
 
 const readOpen = () => sheetOpen;
 const readServer = () => false;

@@ -118,7 +118,7 @@ function mapDocument(
   };
 }
 
-function mapSharedDocument(
+export function mapSharedDocument(
   document: traegerDocumentsContract.SharedDocument,
 ): SharedTraegerDocument {
   return {
@@ -134,7 +134,12 @@ function mapSharedDocument(
 
 /** Die Dokumente des Trägers, das neueste zuerst. */
 export async function fetchTraegerDocuments(): Promise<TraegerDocument[]> {
-  const documents = await bffJson("org", "GET /traeger/documents/");
+  return mapTraegerDocuments(await bffJson("org", "GET /traeger/documents/"));
+}
+
+export function mapTraegerDocuments(
+  documents: traegerDocumentsContract.TraegerDocument[],
+): TraegerDocument[] {
   return documents.map(mapDocument);
 }
 
@@ -142,7 +147,14 @@ export async function fetchTraegerDocuments(): Promise<TraegerDocument[]> {
 export async function fetchTraegerDocumentAudiences(): Promise<
   TraegerDocumentSchool[]
 > {
-  const schools = await bffJson("org", "GET /traeger/documents/audiences");
+  return mapTraegerDocumentAudiences(
+    await bffJson("org", "GET /traeger/documents/audiences"),
+  );
+}
+
+export function mapTraegerDocumentAudiences(
+  schools: traegerDocumentsContract.TraegerDocumentSchool[],
+): TraegerDocumentSchool[] {
   return schools.map((school) => ({
     id: school.id,
     name: school.name,

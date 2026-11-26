@@ -2643,3 +2643,30 @@ func assertLegalTextVisibility(t *testing.T, key string, def *config.Definition)
 	assert.Equal(t, "eq", def.DependsOn.Condition)
 	assert.Equal(t, true, def.DependsOn.Value)
 }
+
+// The regular opening hours are optional clock times the school team may
+// change (#7654): one opening and one closing time per school day, empty by
+// default, so a school that enters none has no opening hours.
+func TestOpeningHoursSettings(t *testing.T) {
+	t.Parallel()
+
+	assert.Equal(t, "opening_hours.monday_open", config.OpeningHoursKey("monday", config.OpeningHoursOpen))
+	sortOrder := 0
+	for _, weekday := range config.OpeningHoursWeekdays {
+		for _, edge := range []string{config.OpeningHoursOpen, config.OpeningHoursClose} {
+			sortOrder++
+			def := config.GetDefinition(config.OpeningHoursKey(weekday, edge))
+			require.NotNilf(t, def, "%s %s should be registered", weekday, edge)
+			assert.Equal(t, config.FieldTime, def.Type)
+			assert.Equal(t, "", def.Default)
+			assert.Equal(t, "config:read", def.ReadPermission)
+			assert.Equal(t, "config:update", def.WritePermission)
+			assert.Equal(t, config.AccessShared, def.AccessPolicy)
+			assert.Equal(t, "operations", def.Tab)
+			assert.Equal(t, "oeffnungszeiten", def.Category)
+			assert.Equal(t, sortOrder, def.SortOrder)
+		}
+	}
+	assert.Equal(t, "Schließt am Freitag", config.GetDefinition(config.OpeningHoursKey("friday", config.OpeningHoursClose)).Label)
+	assert.Nil(t, config.GetDefinition(config.OpeningHoursKey("saturday", config.OpeningHoursOpen)))
+}

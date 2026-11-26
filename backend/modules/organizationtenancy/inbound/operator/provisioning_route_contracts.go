@@ -13,7 +13,7 @@ func ProvisioningRouteContracts(caregiverState any) []common.RouteContract {
 		return common.RouteContract{Method: method, Pattern: pattern, Portals: operator, Request: request, Response: response, NoData: response == nil}
 	}
 	return []common.RouteContract{
-		route("GET", "/accounts", nil, []organizationtenancy.OrganizationAccount{}),
+		operatorAccountPageContract("/accounts", []organizationtenancy.OrganizationAccount{}),
 		route("GET", "/roles", nil, []organizationtenancy.SystemRole{}),
 		route("GET", "/stats", nil, organizationtenancy.ProvisioningStats{}),
 		route("GET", "/devices/", nil, []organizationtenancy.OperatorDevice{}),
@@ -26,7 +26,7 @@ func ProvisioningRouteContracts(caregiverState any) []common.RouteContract {
 		route("POST", "/organizations/", createOrganizationRequest{}, organizationtenancy.Organization{}),
 		route("POST", "/organizations/test-traeger", createTestTraegerRequest{}, organizationtenancy.TestTraeger{}),
 		route("POST", "/organizations/{id}/restore", nil, nil),
-		route("GET", "/organizations/{id}/accounts", nil, []organizationtenancy.OrganizationAccount{}),
+		operatorAccountPageContract("/organizations/{id}/accounts", []organizationtenancy.OrganizationAccount{}),
 		route("GET", "/organizations/{id}/devices", nil, []organizationtenancy.OperatorDevice{}),
 		route("GET", "/organizations/{id}/schools", nil, []organizationtenancy.SchoolSummary{}),
 		route("GET", "/organizations/{id}/persons", nil, []organizationtenancy.OperatorPerson{}),
@@ -48,7 +48,7 @@ func ProvisioningRouteContracts(caregiverState any) []common.RouteContract {
 		route("POST", "/schools/{id}/restore", nil, nil),
 		route("POST", "/schools/{id}/invite-admin", inviteSchoolAdminRequest{}, operatorInvitationResponse{}),
 		route("POST", "/schools/{id}/create-account", createSchoolAccountRequest{}, organizationtenancy.CreatedAccount{}),
-		route("GET", "/schools/{id}/accounts", nil, []organizationtenancy.SchoolAccount{}),
+		operatorAccountPageContract("/schools/{id}/accounts", []organizationtenancy.SchoolAccount{}),
 		route("GET", "/schools/{id}/devices", nil, []organizationtenancy.OperatorDevice{}),
 		route("DELETE", "/devices/{id}", nil, nil),
 		route("DELETE", "/persons/{id}", nil, nil),
@@ -63,6 +63,18 @@ func ProvisioningRouteContracts(caregiverState any) []common.RouteContract {
 		route("GET", "/schools/{id}/accounts/{accountId}/caregiver-capability/", nil, caregiverState),
 		route("POST", "/schools/{id}/accounts/{accountId}/caregiver-capability/", updateCaregiverCapabilityRequest{}, caregiverState),
 		route("DELETE", "/schools/{id}/accounts/{accountId}/caregiver-capability/", nil, caregiverState),
+	}
+}
+
+func operatorAccountPageContract(pattern string, response any) common.RouteContract {
+	return common.RouteContract{
+		Method: "GET", Pattern: pattern, Portals: []common.PortalScope{common.PortalOperator}, Response: response, Paginated: true,
+		Query: []common.QueryParam{
+			{Name: "sort", Kind: common.QueryString},
+			{Name: "direction", Kind: common.QueryString},
+			{Name: "search", Kind: common.QueryString},
+			{Name: "cursor", Kind: common.QueryString},
+		},
 	}
 }
 

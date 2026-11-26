@@ -109,3 +109,45 @@ func TestSchoolClientHearsThatAClassDayChanged(t *testing.T) {
 		t.Fatalf("tenant broadcast after unregister: %v", err)
 	}
 }
+
+// TestSchoolClientHearsTheChangesOfHeuteAnders pins the relay of #8148: a
+// changed arrival schedule and a staffing change at the school reach the
+// school client as class_day_changed with the source only, so "Heute
+// anders" of moto schule reloads; another tenant event does not.
+func TestSchoolClientHearsTheChangesOfHeuteAnders(t *testing.T) {
+	t.Parallel()
+
+	hub := NewHub(nil)
+	teacher := schoolClient(11)
+	hub.RegisterSchool(teacher, 100)
+	elsewhere := schoolClient(12)
+	hub.RegisterSchool(elsewhere, 200)
+
+	source := "closing_days"
+	studentID := "7"
+	for _, eventType := range []EventType{EventArrivalScheduleChanged, EventStaffingDeviationChanged} {
+		if err := hub.BroadcastToTenant(100, NewEvent(eventType, "", EventData{Source: &source, StudentID: &studentID})); err != nil {
+			t.Fatalf("tenant broadcast %s: %v", eventType, err)
+		}
+		select {
+		case event := <-teacher.Channel:
+			if event.Type != EventClassDayChanged {
+				t.Fatalf("%s: expected %s, got %s", eventType, EventClassDayChanged, event.Type)
+			}
+			if event.Data.StudentID != nil {
+				t.Fatalf("%s: the school signal must carry no content", eventType)
+			}
+		default:
+			t.Fatalf("%s at the client's school must reach it as class_day_changed", eventType)
+		}
+	}
+	if received(t, elsewhere) {
+		t.Fatal("another school's change must not reach a school client")
+	}
+	if err := hub.BroadcastToTenant(100, NewEvent(EventMealPlanChanged, "", EventData{Source: &source})); err != nil {
+		t.Fatalf("tenant broadcast: %v", err)
+	}
+	if received(t, teacher) {
+		t.Fatal("a staff-only tenant event must not reach a school client")
+	}
+}

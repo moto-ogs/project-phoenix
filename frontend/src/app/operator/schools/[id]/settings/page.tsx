@@ -14,6 +14,8 @@ import {
 import { operatorProvisioningService } from "~/lib/operator/provisioning-api";
 import { resolveOperatorBackHref } from "~/lib/operator/back-href";
 import { SettingsCategory } from "~/components/settings/settings-category";
+import { displayTabLabel } from "~/components/settings/settings-filter";
+import { settingsTabConcept } from "~/components/settings/settings-sections";
 import {
   FormErrorAlert,
   LoadErrorAlert,
@@ -31,38 +33,8 @@ import { useBookingAuthorityImpact } from "./use-booking-authority-impact";
 import { EmptyState } from "~/components/ui/empty-state";
 import { TenantPage } from "~/components/ui/tenant-page";
 import { SectionCard } from "~/components/ui/section-card";
-import type { MotoConcept } from "~/lib/moto-concepts";
-import { settingsConcept } from "~/lib/concepts/settings";
-import { devicesConcept } from "~/lib/concepts/devices";
-import { notificationsConcept } from "~/lib/concepts/notifications";
-import { permissionsConcept } from "~/lib/concepts/permissions";
 
 const logger = createLogger({ component: "OperatorSchoolSettingsPage" });
-
-// Tab labels (match the tenant settings UI mapping)
-const TAB_LABELS: Record<string, string> = {
-  operations: "Betrieb",
-  reminders: "Erinnerungen",
-  gdpr: "Datenschutz",
-  security: "Sicherheit",
-  devices: "Geräte",
-  system: "System",
-  general: "Allgemein",
-  startseite: "Startseite für alle",
-  modules: "Module",
-};
-
-// Konzept je Einstellungs-Tab, fuer die Kachel im Sektions-Header. Faellt auf
-// das neutrale "settings"-Konzept zurueck, wenn kein spezifischeres passt.
-const TAB_CONCEPTS: Record<string, MotoConcept> = {
-  operations: settingsConcept,
-  reminders: notificationsConcept,
-  gdpr: permissionsConcept,
-  security: permissionsConcept,
-  devices: devicesConcept,
-  system: settingsConcept,
-  general: settingsConcept,
-};
 
 interface PageProps {
   readonly params: Promise<{ id: string }>;
@@ -286,8 +258,8 @@ function OperatorSchoolSettingsPageContent({ params }: PageProps) {
         <SectionCard
           key={tab.key}
           bare
-          title={TAB_LABELS[tab.key] ?? tab.label}
-          concept={TAB_CONCEPTS[tab.key] ?? settingsConcept}
+          title={displayTabLabel(tab)}
+          concept={settingsTabConcept(tab.key)}
         >
           <div className="space-y-6">
             {tab.categories.map((category) => (

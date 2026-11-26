@@ -1,13 +1,36 @@
-"use client";
+import { TenantRouteSeed } from "../tenant-route-seed";
+import { readContract, seedRead } from "~/lib/server-seed.server";
+import { routes } from "~/lib/contract/staff-messages.generated";
+import { messageKeys } from "~/lib/swr/portal-keys";
+import PageContent from "./page-content";
 
-import { TeamChatInbox } from "~/components/messaging/team-chat-inbox";
-import { useTenantTeamChatPortal } from "~/lib/hooks/use-tenant-team-chat-portal";
-
-/**
- * Posteingang des Team-Chats im OGS-Portal. Logik und Liste kommen aus der
- * geteilten `TeamChatInbox` (#2208).
- */
-export default function TeamChatPage() {
-  const portal = useTenantTeamChatPortal();
-  return <TeamChatInbox portal={portal} />;
+export default async function TeamChatPage({
+  params,
+}: {
+  params: Promise<{ tenant: string }>;
+}) {
+  const { tenant } = await params;
+  return (
+    <TenantRouteSeed
+      slug={tenant}
+      load={({ token, tenant: school }) => {
+        if (!school.staffMessagingEnabled) return [];
+        return [
+          {
+            key: messageKeys.teamChatInbox(false),
+            render: true,
+            value: seedRead("GET /api/staff-messages/", async (signal) => {
+              const { data } = await readContract(
+                routes["GET /api/staff-messages/"],
+                { token, signal },
+              );
+              return data;
+            }),
+          },
+        ];
+      }}
+    >
+      <PageContent />
+    </TenantRouteSeed>
+  );
 }

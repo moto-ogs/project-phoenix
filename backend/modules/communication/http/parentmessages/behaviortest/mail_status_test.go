@@ -78,6 +78,7 @@ func TestOGSMessagesShowWhatBecameOfTheirMail(t *testing.T) {
 	var mails messaging.ThreadMailsResponse
 	read("GET", "/threads/"+thread.ThreadID.String()+"/mails", "", &mails)
 	require.Len(t, mails.Messages, 1)
+	require.True(t, mails.AwaitingFeedback)
 	require.Equal(t, "queued", mails.Messages[messageID], "the mail is queued with the message")
 
 	_, err = db.NewRaw(`UPDATE platform.email_outbox SET status = 'sent', sent_at = now(), delivery_state = 'failed', delivery_state_at = now()
@@ -85,6 +86,7 @@ func TestOGSMessagesShowWhatBecameOfTheirMail(t *testing.T) {
 	require.NoError(t, err)
 	read("GET", "/threads/"+thread.ThreadID.String()+"/mails", "", &mails)
 	require.Len(t, mails.Messages, 1)
+	require.False(t, mails.AwaitingFeedback)
 	require.Equal(t, "undeliverable", mails.Messages[messageID])
 
 	var group messaging.GroupThreadDetailResponse
@@ -93,6 +95,7 @@ func TestOGSMessagesShowWhatBecameOfTheirMail(t *testing.T) {
 	var groupMails messaging.GroupThreadMailsResponse
 	read("GET", "/group-threads/"+group.Thread.ID.String()+"/mails", "", &groupMails)
 	require.Len(t, groupMails.Messages, 1)
+	require.True(t, groupMails.AwaitingFeedback)
 	require.Equal(t, map[string]int{"queued": 1}, groupMails.Messages[group.Messages[0].ID], "one mail per family of the class")
 
 	// The list shows the group thread with its families, the reach names

@@ -220,18 +220,28 @@ func netMinutesWithBreaks(ws *WorkSession, breaks []*WorkSessionBreak, now time.
 // the walk instead would carry that whole cache into the first included day
 // and understate it there (#2402).
 func netMinutesByDate(session *WorkSession, breaks []*WorkSessionBreak, end time.Time, from, to calendar.Date) map[calendar.Date]int {
-	minutesByDate := make(map[calendar.Date]int)
+	net := make(map[calendar.Date]int)
+	walkStampedMinutesByDay(session, breaks, end, from, to, func(day calendar.Date, netMinutes, _ int) {
+		if netMinutes > 0 {
+			net[day] = netMinutes
+		}
+	})
+	return net
+}
+
+func walkStampedMinutesByDay(session *WorkSession, breaks []*WorkSessionBreak, end time.Time, from, to calendar.Date, visit func(calendar.Date, int, int)) {
 	cachedBreakMinutes := session.BreakMinutes
 	pendingBreakMinutes := 0
 	if !end.After(session.CheckInTime) {
-		return minutesByDate
+		return
 	}
 	for day := calendar.DateFromTime(session.CheckInTime); !day.After(calendar.DateFromTime(end)); day = day.AddDays(1) {
 		start, dayEnd := sessionDaySpan(session.CheckInTime, end, day)
 		// Cumulative rounding conserves minutes across midnight, including
 		// sessions and pauses whose timestamps contain seconds.
 		gross := int(dayEnd.Sub(session.CheckInTime).Minutes()) - int(start.Sub(session.CheckInTime).Minutes())
-		pendingBreakMinutes += breakMinutesWithin(breaks, end, start, dayEnd)
+		breakMinutes := breakMinutesWithin(breaks, end, start, dayEnd)
+		pendingBreakMinutes += breakMinutes
 		deduct := min(gross, pendingBreakMinutes)
 		minutes := gross - deduct
 		pendingBreakMinutes -= deduct
@@ -241,15 +251,13 @@ func netMinutesByDate(session *WorkSession, breaks []*WorkSessionBreak, end time
 			deduct := min(minutes, cachedBreakMinutes)
 			minutes -= deduct
 			cachedBreakMinutes -= deduct
+			breakMinutes = deduct
 		}
 		if day.Before(from) || day.After(to) {
 			continue
 		}
-		if minutes > 0 {
-			minutesByDate[day] = minutes
-		}
+		visit(day, minutes, breakMinutes)
 	}
-	return minutesByDate
 }
 
 // sessionDaySpan is the part of a session [checkIn, end) that falls on day.

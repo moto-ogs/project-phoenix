@@ -1,12 +1,17 @@
 import "server-only";
 import type { Session } from "next-auth";
+import { portalOfScope } from "./portals";
 import {
   familyStateOf,
   gateSessionCookieWrites,
+  presentedSessionMark,
   type FamilyStates,
 } from "./session-cookie-writes";
 import type { ServerSession } from "./session-types";
-import type { SessionFamilyState } from "./token-validation";
+import {
+  familyBacksSession,
+  type SessionFamilyState,
+} from "./token-validation";
 
 /**
  * Every user field the browser may see (#5005). The type demands one entry
@@ -118,10 +123,22 @@ export function withBrowserSession<A extends [Request, ...unknown[]]>(
           })
         : null;
     const session = sessionOfFamily(body, shown);
+    // Which session this answer describes (#8082): its exit names it.
+    const mark = presentedSessionMark(
+      request,
+      portalOfScope(body.user.scope).key,
+    );
 
     const headers = new Headers(response.headers);
     headers.delete("Content-Length");
-    return new Response(JSON.stringify(toBrowserSession(session)), {
+    const browser = {
+      ...toBrowserSession(session),
+      ...(mark ? { sessionMark: mark } : {}),
+      ...(shown !== null && familyBacksSession(shown)
+        ? { sessionConfirmed: true as const }
+        : {}),
+    };
+    return new Response(JSON.stringify(browser), {
       status: response.status,
       statusText: response.statusText,
       headers,

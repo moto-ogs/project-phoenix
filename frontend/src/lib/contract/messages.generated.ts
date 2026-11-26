@@ -251,10 +251,12 @@ export const GroupThreadDetailResponseSchema: z.ZodType<GroupThreadDetailRespons
 
 /** Go: messaging.GroupThreadMailsResponse */
 export interface GroupThreadMailsResponse {
+  awaiting_feedback: boolean;
   messages: Record<string, Record<string, number> | null> | null;
 }
 
 export const GroupThreadMailsResponseSchema: z.ZodType<GroupThreadMailsResponse, unknown> = object<GroupThreadMailsResponse>({
+  awaiting_feedback: bool,
   messages: nullable(rec(nullable(rec(safeInt)))),
 });
 
@@ -362,10 +364,12 @@ export const ParentChatThreadDetailResponseSchema: z.ZodType<ParentChatThreadDet
 
 /** Go: messaging.ThreadMailsResponse */
 export interface ThreadMailsResponse {
+  awaiting_feedback: boolean;
   messages: Record<string, string> | null;
 }
 
 export const ThreadMailsResponseSchema: z.ZodType<ThreadMailsResponse, unknown> = object<ThreadMailsResponse>({
+  awaiting_feedback: bool,
   messages: nullable(rec(str)),
 });
 

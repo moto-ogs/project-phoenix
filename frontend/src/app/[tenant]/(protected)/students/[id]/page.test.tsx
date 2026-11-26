@@ -11,7 +11,7 @@ import {
   within,
 } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import StudentDetailPage from "./page";
+import StudentDetailPage from "./page-content";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
 import { SWRConfig } from "~/lib/swr/testing";
@@ -996,6 +996,7 @@ describe("StudentDetailPage", () => {
       setTestClock("2026-09-12T12:00:00+02:00");
       vi.mocked(useWeekendFollowsFriday).mockReturnValue(true);
 
+      mockSearchParams.set("tab", "betreuungszeiten");
       render(
         <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0 }}>
           <StudentDetailPage />
@@ -1177,12 +1178,14 @@ describe("StudentDetailPage", () => {
     });
 
     it("renders student history section", () => {
+      mockSearchParams.set("tab", "historie");
       render(<StudentDetailPage />);
 
       expect(screen.getByTestId("student-history")).toBeInTheDocument();
     });
 
     it("renders guardian manager", () => {
+      mockSearchParams.set("tab", "erziehungsberechtigte");
       render(<StudentDetailPage />);
 
       expect(screen.getByTestId("guardian-manager")).toBeInTheDocument();
@@ -1250,6 +1253,7 @@ describe("StudentDetailPage", () => {
 
     it("renders guardian manager in read-only mode in limited view", () => {
       // All staff can view guardian info (read-only), only supervisors can edit
+      mockSearchParams.set("tab", "erziehungsberechtigte");
       render(<StudentDetailPage />);
 
       expect(screen.getByTestId("guardian-manager")).toBeInTheDocument();
@@ -1751,6 +1755,7 @@ describe("StudentDetailPage", () => {
 
   describe("Embedded Manager Updates", () => {
     it("refreshes data when guardian manager triggers update", async () => {
+      mockSearchParams.set("tab", "erziehungsberechtigte");
       render(<StudentDetailPage />);
 
       const updateButton = screen.getByTestId("update-guardians");
@@ -1762,6 +1767,7 @@ describe("StudentDetailPage", () => {
     });
 
     it("revalidates field history when the care schedule triggers an update", async () => {
+      mockSearchParams.set("tab", "betreuungszeiten");
       render(<StudentDetailPage />);
 
       fireEvent.click(screen.getByTestId("update-care-schedule"));
@@ -2886,6 +2892,7 @@ describe("StudentDetailPage", () => {
         },
         status: "authenticated",
       } as ReturnType<typeof useSession>);
+      mockSearchParams.set("tab", "betreuungszeiten");
       render(<StudentDetailPage />);
 
       // Anker: die geladene volle Ansicht. Nur sie rendert die
@@ -3092,6 +3099,7 @@ describe("StudentDetailPage", () => {
         status: "authenticated",
       } as ReturnType<typeof useSession>);
 
+      mockSearchParams.set("tab", "betreuungszeiten");
       render(<StudentDetailPage />);
 
       // Anker: die geladene volle Ansicht (Betreuungszeiten).
@@ -3101,6 +3109,7 @@ describe("StudentDetailPage", () => {
 
     it("hides the Betreuungsplan tab without schedules:read", () => {
       // Default mock session is config:manage only -> no schedules:read.
+      mockSearchParams.set("tab", "betreuungszeiten");
       render(<StudentDetailPage />);
 
       // Anker: die geladene volle Ansicht (Betreuungszeiten).
@@ -3209,10 +3218,8 @@ describe("StudentDetailPage", () => {
     });
 
     it("marks only the active panel active and the rest inactive (hidden via CSS)", () => {
-      // forceMount keeps every panel mounted; Radix sets data-state, and the
-      // `data-[state=inactive]:hidden` class hides the inactive ones in the
-      // browser. jsdom applies no CSS, so we assert the data-state wiring that
-      // drives the hiding instead of computed visibility.
+      // jsdom does not compute Tailwind visibility. Assert the attribute and
+      // class that hide inactive panels in the browser.
       render(<StudentDetailPage />);
 
       const panels = screen.getAllByRole("tabpanel", { hidden: true });
@@ -3228,6 +3235,26 @@ describe("StudentDetailPage", () => {
       for (const panel of inactive) {
         expect(panel.className).toContain("data-[state=inactive]:hidden");
       }
+    });
+
+    it("opens a tab's readers on demand and retains them on tab switches", () => {
+      const view = render(<StudentDetailPage />);
+      expect(screen.queryByTestId("care-schedule-manager")).toBeNull();
+
+      // Model Next publishing the query after the native history change.
+      const open = (name: string) => {
+        selectTab(name);
+        const tab = new URLSearchParams(window.location.search).get("tab");
+        if (tab) mockSearchParams.set("tab", tab);
+        else mockSearchParams.delete("tab");
+        view.rerender(<StudentDetailPage />);
+      };
+      open("Betreuungszeiten");
+      const schedule = screen.getByTestId("care-schedule-manager");
+      open("Stammdaten");
+      open("Betreuungszeiten");
+
+      expect(screen.getByTestId("care-schedule-manager")).toBe(schedule);
     });
 
     it("activates the tab from the ?tab= query param (deep link)", () => {

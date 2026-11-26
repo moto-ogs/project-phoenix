@@ -11,7 +11,7 @@ import type {
   ExportRecipient,
   ExportRecipientsPage,
 } from "~/lib/traeger-export-handovers-api";
-import TraegerExportRecipientsPage from "./page";
+import TraegerExportRecipientsPage from "./page-content";
 
 vi.unmock("swr");
 

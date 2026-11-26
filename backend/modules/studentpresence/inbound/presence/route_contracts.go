@@ -20,7 +20,6 @@ func RouteContracts() []common.RouteContract {
 		{Method: "POST", Pattern: "/visits/transit/assign", Portals: portals, Request: assignTransitStudentsRequest{}, Response: studentpresence.TransitAssignResult{}},
 		{Method: "POST", Pattern: "/visits/move-to-group", Portals: portals, Request: moveStudentsToActiveGroupRequest{}, Response: studentpresence.StudentMoveResult{}},
 		{Method: "POST", Pattern: "/visits/check-in-to-group", Portals: portals, Request: checkInStudentsToSessionRequest{}, Response: studentpresence.StudentMoveResult{}},
-		{Method: "GET", Pattern: "/supervisors/all", Portals: portals, Response: []ActiveGroupResponse{}},
 		{Method: "GET", Pattern: "/supervisors/staff/{staffId}/active", Portals: portals, Response: []SupervisorResponse{}},
 		// The ended supervision is read back; a failed read answers null.
 		{Method: "POST", Pattern: "/supervisors/{id}/end", Portals: portals, Response: &SupervisorResponse{}},

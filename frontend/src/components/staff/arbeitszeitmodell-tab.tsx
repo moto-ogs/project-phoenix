@@ -16,6 +16,10 @@ import { StatCard } from "~/components/ui/stat-card";
 import { Alert } from "~/components/ui/alert";
 import { EmptyState } from "~/components/ui/empty-state";
 import { MISSING_TARGET_OWNER } from "~/components/staff/missing-target-notice";
+import {
+  fourWeekStaffPreview,
+  STAFF_PREVIEW_WEEKS,
+} from "~/lib/staff-detail-windows";
 import { useStaffHasTarget } from "~/lib/hooks/use-staff-has-target";
 import { Button } from "~/components/ui/button";
 import { ChoiceTile } from "~/components/ui/choice-tile";
@@ -50,11 +54,7 @@ import type {
   UpdateScheduleRequest,
   WorkTimeModel,
 } from "~/lib/staff-api";
-import {
-  resolveWeekIndex,
-  startOfWeek,
-  toDateKey,
-} from "~/lib/staff-metrics-helpers";
+import { resolveWeekIndex, toDateKey } from "~/lib/staff-metrics-helpers";
 import {
   revalidateOrThrow,
   useInvalidateMatching,
@@ -113,8 +113,6 @@ type ScheduleEdit = ReadDraft<
   string,
   StaffSchedule
 >;
-
-const PREVIEW_WEEKS = 4;
 
 // Arbeitszeitmodell tab. Shows the staff member's contractual Soll-Stunden,
 // which can either come from a tenant-level template (mode=template) or
@@ -389,11 +387,11 @@ function FourWeekPreview({
   readonly schedule: StaffSchedule;
   readonly today: Date;
 }) {
-  const firstMonday = startOfWeek(today);
-  const lastDay = new Date(firstMonday);
-  lastDay.setDate(lastDay.getDate() + PREVIEW_WEEKS * 7 - 1);
-  const fromKey = toDateKey(firstMonday);
-  const toKey = toDateKey(lastDay);
+  const {
+    firstMonday,
+    from: fromKey,
+    to: toKey,
+  } = useMemo(() => fourWeekStaffPreview(today), [today]);
   const {
     data: projection,
     error: projectionError,
@@ -431,8 +429,8 @@ function FourWeekPreview({
       days: Array<{ date: Date; target: number | null; isOverride: boolean }>;
       isCurrent: boolean;
     }> = [];
-    for (let w = 0; w < PREVIEW_WEEKS; w++) {
-      const wMonday = startOfWeek(today);
+    for (let w = 0; w < STAFF_PREVIEW_WEEKS; w++) {
+      const wMonday = new Date(firstMonday);
       wMonday.setDate(wMonday.getDate() + w * 7);
       const days = WORK_DAYS.map((d) => {
         const date = new Date(wMonday);
@@ -458,7 +456,7 @@ function FourWeekPreview({
       });
     }
     return result;
-  }, [schedule, projection, today]);
+  }, [schedule, projection, firstMonday]);
   // Pending: "…"; unavailable: "–" with the reason in the alert above.
   const pending = projectionError ? "–" : "…";
 

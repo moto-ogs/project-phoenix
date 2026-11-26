@@ -192,12 +192,17 @@ func enabledTestSettings(settingErr error) testMealPlanSettings {
 	return testMealPlanSettings{mealPlanEnabled: true, mealRegistrationEnabled: true, cutoff: "09:00", err: settingErr}
 }
 
-func buildModule(t *testing.T, db *bun.DB, enabled bool, settingErr error) mealplan.Capability {
+type testPlan struct {
+	mealplan.Capability
+	Summaries mealplan.CatererSummaries
+}
+
+func buildModule(t *testing.T, db *bun.DB, enabled bool, settingErr error) testPlan {
 	t.Helper()
 	return buildModuleAt(t, db, enabled, settingErr, time.Date(2026, 9, 7, 8, 0, 0, 0, testBerlin))
 }
 
-func buildModuleAt(t *testing.T, db *bun.DB, enabled bool, settingErr error, now time.Time) mealplan.Capability {
+func buildModuleAt(t *testing.T, db *bun.DB, enabled bool, settingErr error, now time.Time) testPlan {
 	t.Helper()
 	module, err := New(Dependencies{
 		DB:              db,
@@ -211,7 +216,7 @@ func buildModuleAt(t *testing.T, db *bun.DB, enabled bool, settingErr error, now
 		Calendar:        openCalendar,
 	})
 	require.NoError(t, err)
-	return module
+	return testPlan{module.Capability, module.Summaries}
 }
 
 func mustDate(t *testing.T, value string) mealplan.Date {
@@ -336,9 +341,9 @@ func TestModuleReportsPersistenceQueryAndRowCounts(t *testing.T) {
 	require.NoError(t, err)
 
 	date := mustDate(t, "2026-09-28")
-	version := DayVersionNow(t, module, testpkg.Ctx(t), date)
+	version := DayVersionNow(t, module.Capability, testpkg.Ctx(t), date)
 	observations = nil
-	_, err = module.ReplaceDay(testpkg.Ctx(t), mealplan.ReplaceDay{Date: date, Dishes: []mealplan.Dish{{Dish: "Eintopf"}}, ExpectedVersion: version})
+	_, err = module.Capability.ReplaceDay(testpkg.Ctx(t), mealplan.ReplaceDay{Date: date, Dishes: []mealplan.Dish{{Dish: "Eintopf"}}, ExpectedVersion: version})
 	require.NoError(t, err)
 	require.Len(t, observations, 1)
 	// The day's lock and its earlier menu (the read state it checks, ADR
@@ -393,7 +398,7 @@ func TestParticipationRejectsSameDayChangeAfterKitchenCutoff(t *testing.T) {
 	student := testpkg.CreateTestStudent(t, db, "Noah", "Beispiel", "3b")
 	account := testpkg.CreateTestAccount(t, db, "meal-cutoff")
 
-	err = module.SetParticipationForDay(testpkg.Ctx(t), mealplan.SetParticipationDay{
+	err = module.Capability.SetParticipationForDay(testpkg.Ctx(t), mealplan.SetParticipationDay{
 		StudentID: student.ID, GuardianAccountID: account.ID, Date: "2026-09-07", Participating: true,
 	})
 	require.ErrorIs(t, err, mealplan.ErrParticipationCutoff)
@@ -419,10 +424,10 @@ func TestRegistrationUsesSeparateToggleAndTenantCutoff(t *testing.T) {
 		Calendar:        openCalendar,
 	})
 	require.NoError(t, err)
-	available, err := disabledModule.RegistrationAvailable(testpkg.Ctx(t))
+	available, err := disabledModule.Capability.RegistrationAvailable(testpkg.Ctx(t))
 	require.NoError(t, err)
 	assert.False(t, available)
-	err = disabledModule.SetParticipationForDay(testpkg.Ctx(t), mealplan.SetParticipationDay{
+	err = disabledModule.Capability.SetParticipationForDay(testpkg.Ctx(t), mealplan.SetParticipationDay{
 		StudentID: student.ID, GuardianAccountID: account.ID, Date: "2026-09-07", Participating: true,
 	})
 	require.ErrorIs(t, err, mealplan.ErrRegistrationDisabled)
@@ -441,7 +446,7 @@ func TestRegistrationUsesSeparateToggleAndTenantCutoff(t *testing.T) {
 		Calendar:        openCalendar,
 	})
 	require.NoError(t, err)
-	require.NoError(t, enabledModule.SetParticipationForDay(testpkg.Ctx(t), mealplan.SetParticipationDay{
+	require.NoError(t, enabledModule.Capability.SetParticipationForDay(testpkg.Ctx(t), mealplan.SetParticipationDay{
 		StudentID: student.ID, GuardianAccountID: account.ID, Date: "2026-09-07", Participating: true,
 	}))
 }
@@ -606,7 +611,7 @@ func TestParticipationUsesLatestSicknessSnapshotWhenTimestampsMatch(t *testing.T
 	assert.Contains(t, dailyParticipantIDs(list), student.ID)
 }
 
-func buildModuleWithRules(t *testing.T, db *bun.DB, ordering OrderingSettings, now time.Time) mealplan.Capability {
+func buildModuleWithRules(t *testing.T, db *bun.DB, ordering OrderingSettings, now time.Time) testPlan {
 	t.Helper()
 	module, err := New(Dependencies{
 		DB:              db,
@@ -620,7 +625,7 @@ func buildModuleWithRules(t *testing.T, db *bun.DB, ordering OrderingSettings, n
 		Calendar:        openCalendar,
 	})
 	require.NoError(t, err)
-	return module
+	return testPlan{module.Capability, module.Summaries}
 }
 
 // splitSettings: register until Thursday noon of the previous week, cancel
@@ -795,7 +800,7 @@ func TestSickCancelledModeCancelsAbsencesReportedAfterTheDeadline(t *testing.T) 
 	assert.True(t, plan.Days[0].Participating, "with the default the meal stays ordered")
 }
 
-func buildModuleWithCalendar(t *testing.T, db *bun.DB, calendar mealplan.CalendarFinder, now time.Time) mealplan.Capability {
+func buildModuleWithCalendar(t *testing.T, db *bun.DB, calendar mealplan.CalendarFinder, now time.Time) testPlan {
 	t.Helper()
 	module, err := New(Dependencies{
 		DB:              db,
@@ -809,7 +814,7 @@ func buildModuleWithCalendar(t *testing.T, db *bun.DB, calendar mealplan.Calenda
 		Calendar:        calendar,
 	})
 	require.NoError(t, err)
-	return module
+	return testPlan{module.Capability, module.Summaries}
 }
 
 func createStatusDay(t *testing.T, db *bun.DB, tenantID, studentID int64, date, status string, reportedAt time.Time) {
@@ -1155,6 +1160,12 @@ func TestLateSchoolChangesBecomeNumberedOrderChanges(t *testing.T) {
 	assert.Equal(t, 2, monday.Changes[1].Sequence)
 	deltas := map[int64]int{monday.Changes[0].Child.StudentID: monday.Changes[0].Delta, monday.Changes[1].Child.StudentID: monday.Changes[1].Delta}
 	assert.Equal(t, map[int64]int{first.ID: -1, second.ID: 1}, deltas)
+	summary, err := late.Summaries.CatererOrderSummary(ctx, time.Date(2026, 9, 7, 0, 0, 0, 0, testBerlin), monday.Date, monday.Date)
+	require.NoError(t, err)
+	require.Len(t, summary.Days, 1)
+	assert.Equal(t, monday.Total, summary.Days[0].Total)
+	assert.Equal(t, 1, summary.Days[0].Added)
+	assert.Equal(t, 1, summary.Days[0].Removed)
 
 	var changedBy []int64
 	require.NoError(t, db.NewRaw(`SELECT changed_by_account_id FROM schedule.meal_order_changes WHERE tenant_id = ? ORDER BY sequence`, first.TenantID).Scan(context.Background(), &changedBy))
@@ -1328,6 +1339,12 @@ func TestClosedDaysAreOrderedEmpty(t *testing.T) {
 	assert.True(t, monday.Closed)
 	assert.Equal(t, mealplan.OrderOrdered, monday.Status)
 	assert.Zero(t, monday.Total)
+	summary, err := module.Summaries.CatererOrderSummary(testpkg.Ctx(t), time.Date(2026, 9, 7, 0, 0, 0, 0, testBerlin), monday.Date, monday.Date)
+	require.NoError(t, err)
+	require.Len(t, summary.Days, 1)
+	assert.True(t, summary.Days[0].Closed)
+	assert.Equal(t, monday.Total, summary.Days[0].Total)
+	assert.Equal(t, monday.Status, summary.Days[0].Status)
 }
 
 func TestSchoolParticipationSelectsTheScheduleAtTheRequestedDate(t *testing.T) {

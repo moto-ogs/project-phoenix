@@ -204,11 +204,11 @@ func (rs *Resource) enrichWithDayPlanning(ctx context.Context, responses []Stude
 
 	applyDayPlanning(responses, arrivals, pickups, attendances, timetableIDs, isToday)
 	if isToday {
-		careDayEnd, err := rs.SettingsService.ResolveString(ctx, settingSessionEndTime)
-		if err != nil {
-			return dayPlanningTimes{}, err
+		careDayEnd := rs.lazyCareDayEnd(ctx)
+		applyAtSchoolLocation(responses, pickups, attendances, careDayEnd.get, rs.Now())
+		if careDayEnd.err != nil {
+			return dayPlanningTimes{}, careDayEnd.err
 		}
-		applyAtSchoolLocation(responses, pickups, attendances, careDayEnd, rs.Now())
 	}
 	return dayPlanningTimes{arrivals: arrivals, pickups: pickups}, nil
 }
@@ -222,12 +222,12 @@ func applyAtSchoolLocation(
 	responses []StudentResponse,
 	pickups map[int64]*careplan.EffectivePickupTime,
 	attendances map[int64]*studentpresence.DailyAttendanceStatus,
-	careDayEnd string,
+	careDayEnd func() string,
 	now time.Time,
 ) {
 	for i := range responses {
 		response := &responses[i]
-		if response.Location == studentpresence.InClassLocationLabel && !careplan.InClassUntilCareDayEnd(careDayEnd, now) {
+		if response.Location == studentpresence.InClassLocationLabel && !careplan.InClassUntilCareDayEnd(careDayEnd(), now) {
 			response.Location = studentpresence.AbsentLocationLabel
 			response.LocationSince = nil
 			continue
@@ -239,16 +239,21 @@ func applyAtSchoolLocation(
 		if pickup := pickups[response.ID.Int64()]; pickup != nil {
 			pickupTime = pickup.PickupTime
 		}
-		if !careplan.IsAtSchoolBeforeCheckIn(careplan.AtSchoolInputs{
+		inputs := careplan.AtSchoolInputs{
 			Decision: careplan.DayPlanningDecision{
 				ComesToday: response.DayPlanningStatus == DayPlanningStatusComesToday,
 				Reason:     response.DayPlanningReason,
 			},
 			CheckedInToday: attendances[response.ID.Int64()].HasRecordToday(),
 			PickupTime:     pickupTime,
-			CareDayEnd:     careDayEnd,
 			Now:            now,
-		}) {
+		}
+		// Only an expected child without check-in and pickup time ends its
+		// day with the school's care day end (#8157).
+		if inputs.Decision.ComesToday && !inputs.CheckedInToday && pickupTime == nil {
+			inputs.CareDayEnd = careDayEnd()
+		}
+		if !careplan.IsAtSchoolBeforeCheckIn(inputs) {
 			continue
 		}
 		response.Location = studentpresence.AtSchoolLocationLabel

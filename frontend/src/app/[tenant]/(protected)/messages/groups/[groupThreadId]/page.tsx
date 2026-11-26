@@ -1,440 +1,57 @@
-"use client";
-
-import type * as sharedContract from "~/lib/contract/shared.generated";
-import {
-  attachmentIdArgs,
-  PARENT_MESSAGE_ATTACHMENTS,
-} from "~/lib/message-attachments";
-import { useMessageSendAttempt } from "~/lib/swr/optimistic";
-
-import { isParentMessagingDisabled } from "~/lib/parent-messages-api";
-
+import { TenantRouteSeed } from "../../../tenant-route-seed";
+import { readContract, seedRead } from "~/lib/server-seed.server";
+import { routes } from "~/lib/contract/messages.generated";
+import { hasPermission } from "~/lib/auth-utils";
 import { messageKeys } from "~/lib/swr/portal-keys";
+import { mapGroupThreadMails, withLists } from "~/lib/parent-group-threads-api";
+import PageContent from "./page-content";
 
-import { useRef, useCallback, useMemo, useState } from "react";
-import { useParams } from "next/navigation";
-import { useSWRAuth, useSWRSeedFrom } from "~/lib/swr";
-import { GROUP_THREAD_SEND_REFUSALS } from "~/lib/message-send-refusals";
-import { useOptimisticAction } from "~/lib/swr/optimistic";
-import { Alert } from "~/components/ui/alert";
-import { ConfirmationModal } from "~/components/ui/modal";
-import { EmptyState } from "~/components/ui/empty-state";
-import {
-  FormErrorAlert,
-  LoadErrorAlert,
-} from "~/components/ui/form-error-alert";
-import { formErrorMessage } from "~/components/ui/form-error";
-import { SectionCard } from "~/components/ui/section-card";
-import { StatusBadge } from "~/components/ui/status-badge";
-import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
-import { ChatBubble } from "~/components/messaging/chat-bubble";
-import { MessageComposer } from "~/components/messaging/message-composer";
-import { useApiErrorDisplay, useApiFormError } from "~/contexts/ToastContext";
-import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
-import { useSwitchedOffWhileOpen } from "~/lib/hooks/use-switched-off-while-open";
-import { useMessagesActivity } from "~/lib/hooks/use-messages-activity";
-import { useGroupThreadMails } from "~/lib/hooks/use-message-mails";
-import {
-  GroupMessageMailBadges,
-  groupMessageMailNote,
-} from "~/components/messaging/message-mail-status";
-import { createLogger } from "~/lib/logger";
-import {
-  type GroupThreadDetail,
-  closeGroupThread,
-  familyReadLabel,
-  groupRecipientsLabel,
-  fetchGroupThread,
-  postGroupMessage,
-} from "~/lib/parent-group-threads-api";
-import { useTenant } from "~/lib/tenant-context";
-
-// Info-Knopf am Seitentitel (#7578): wofür die Seite da ist.
-const GROUP_THREAD_INFO =
-  "Hier liest du die Nachricht an alle Eltern dieser Gruppe. Solange sie offen ist und Eltern-Nachrichten eingeschaltet sind, kannst du etwas dazuschreiben. Unter „Gelesen“ siehst du je Kind, ob ein Elternteil die neueste Nachricht gelesen hat.";
-
-const logger = createLogger({ component: "GroupMessagePage" });
-
-const GROUPS_BACK = {
-  back: true,
-  backHref: "/messages/groups",
-  backLabel: "Zurück zu Gruppennachrichten",
-} as const;
-
-/**
- * One Gruppennachricht (#4784): the messages the OGS wrote, a field for one
- * more while it is open, and which families have read it. Parents answer in
- * the conversation of their child; their answers do not appear here.
- */
-function GroupMessageContent() {
-  const params = useParams();
-  const threadId = params.groupThreadId as string;
-  const { tenant } = useTenant();
-  const flagSaysEnabled = tenant?.messagingEnabled === true;
-  const { switchedOff, markSwitchedOff } = useSwitchedOffWhileOpen(
-    flagSaysEnabled,
-    threadId,
-  );
-  const messagingEnabled = flagSaysEnabled && !switchedOff;
-
-  const {
-    data: confirmed,
-    error: readerError,
-    isLoading,
-    mutate,
-  } = useSWRAuth<GroupThreadDetail>(
-    messageKeys.groupMessage(threadId),
-    () => fetchGroupThread(threadId),
-    { keepPreviousData: false, revalidateOnFocus: false },
-  );
-  // Eine weitere Nachricht steht sofort im Verlauf (#5011), markiert, bis
-  // die Antwort sie bestätigt oder ihr Fehlschlag sie als nicht gesendet
-  // zeigt.
-  const sendAction = useOptimisticAction(
-    messageKeys.groupMessage(threadId),
-    confirmed,
-  );
-  const data = sendAction.data;
-  // Lehnt der Server beim Senden die Gruppennachricht ab, ist sie verworfen
-  // (#5011). Die Ablehnung steht dann dort, wo sie fehlt, bis ein neuer
-  // Abruf wieder Daten liefert.
-  const [refusal, setRefusal] = useState<{
-    readonly id: string;
-    readonly error: unknown;
-  }>();
-  const error =
-    readerError ??
-    (data || refusal?.id !== threadId ? undefined : refusal.error);
-  const loadError = useSwrLoadError(error, "die Gruppennachricht", mutate);
-
-  // Group-thread broadcasts deliberately omit the thread id from staff events,
-  // so refetch any open group detail. This view does not advance a read cursor.
-  // The e-mails of each message, one per family (#7058).
-  const groupMails = useGroupThreadMails(threadId);
-  const refreshMails = groupMails.refresh;
-  const refreshThread = useCallback(() => {
-    void mutate();
-    void refreshMails();
-  }, [mutate, refreshMails]);
-  useMessagesActivity({
-    onMatch: refreshThread,
-    debounceMs: 500,
-    marksRead: false,
-    refetchOnFocus: true,
-  });
-
-  const [draft, setDraft] = useState("");
-  const draftRevision = useRef(0);
-  const sending = sendAction.pending;
-  const sendError = useApiFormError();
-  const [confirmClose, setConfirmClose] = useState(false);
-  const [closing, setClosing] = useState(false);
-  const { show: showActionError } = useApiErrorDisplay();
-
-  const attempt = useMessageSendAttempt(messageKeys.groupMessage(threadId));
-  // Die Dateien des letzten Versuchs: „Wiederholen“ sendet sie erneut.
-  const sentFiles = useRef<readonly Readonly<sharedContract.UploadResponse>[]>(
-    [],
-  );
-  // Ob der letzte Versuch ankam: sonst behält das Eingabefeld die Dateien.
-  const sendArrived = useRef(true);
-  const send = async (
-    picked?: readonly Readonly<sharedContract.UploadResponse>[],
-  ) => {
-    const attachments = picked ?? sentFiles.current;
-    const body = draft.trim();
-    if ((!body && attachments.length === 0) || sending || !messagingEnabled)
-      return;
-    sentFiles.current = attachments;
-    sendArrived.current = true;
-    const clientMessageId = attempt.begin(
-      [body, ...attachments.map((attachment) => attachment.id)].join("\u0000"),
-    );
-    sendError.clear();
-    // Ein neuer Versuch ersetzt die als nicht gesendet markierte Blase.
-    sendAction.dismiss();
-    setDraft("");
-    const sentDraftRevision = draftRevision.current;
-    let failed = false;
-    const outcome = await sendAction.run({
-      onConfirmed: () => {
-        attempt.complete(clientMessageId);
-        // Only the restored draft belongs to this failed send. User edits,
-        // including retyping identical text, are a separate intent.
-        if (failed && draftRevision.current === sentDraftRevision) {
-          setDraft((current) => (current === body ? "" : current));
-        }
-        sendError.clear();
-      },
-      confirmed: (current) =>
-        current.messages.some(
-          (message) => message.client_message_id === clientMessageId,
-        ),
-      optimistic: (current, { id }) => ({
-        ...current,
-        messages: [
-          ...current.messages,
-          {
-            id,
-            sender_name: "",
-            body,
-            created_at: "",
-            attachments: [...attachments],
-          },
-        ],
-      }),
-      request: () =>
-        postGroupMessage(
-          threadId,
-          body,
-          clientMessageId,
-          ...attachmentIdArgs(attachments),
-        ),
-      commit: (next) => void mutate(next, { revalidate: false }),
-      keepFailed: true,
-      refusal: {
-        codes: GROUP_THREAD_SEND_REFUSALS,
-        matches: (key) =>
-          key === messageKeys.groupMessage(threadId) ||
-          key === messageKeys.groupMessages(),
-      },
-    });
-    sendArrived.current = outcome.status !== "failed";
-    if (outcome.status !== "failed") void refreshMails();
-    if (outcome.status === "done") {
-      attempt.complete(clientMessageId);
-      sentFiles.current = [];
-    }
-    if (
-      outcome.status !== "failed" ||
-      (!outcome.refused && !attempt.isActive(clientMessageId))
-    )
-      return;
-    failed = true;
-    const mayRestoreDraft =
-      attempt.isActive(clientMessageId) &&
-      draftRevision.current === sentDraftRevision;
-    const err = outcome.error;
-    // Der Text kommt zurück ins Feld, außer dort steht schon ein neuer.
-    setDraft((current) => (mayRestoreDraft && current === "" ? body : current));
-    logger.error("group_message_send_failed", {
-      error: err instanceof Error ? err.message : String(err),
-    });
-    if (outcome.refused) {
-      setRefusal({ id: threadId, error: err });
-      return;
-    }
-    if (isParentMessagingDisabled(err)) {
-      markSwitchedOff();
-      return;
-    }
-    void sendError.show(err, { object: "die Nachricht" });
-  };
-
-  const close = async () => {
-    if (closing || !messagingEnabled) return;
-    setClosing(true);
-    try {
-      const next = await closeGroupThread(threadId);
-      await mutate(next, { revalidate: false });
-      setConfirmClose(false);
-    } catch (err) {
-      logger.error("group_message_close_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      setConfirmClose(false);
-      if (isParentMessagingDisabled(err)) {
-        markSwitchedOff();
-        return;
-      }
-      void showActionError(err, {
-        object: "die Gruppennachricht",
-        retry: () => setConfirmClose(true),
-      });
-    } finally {
-      setClosing(false);
-    }
-  };
-
-  const showSkeleton =
-    (isLoading && !data) ||
-    (Boolean(error) && !data && formErrorMessage(loadError) === null);
-
-  const seedFrom = useSWRSeedFrom();
-  const preview = useMemo(
-    () =>
-      showSkeleton
-        ? seedFrom(
-            messageKeys.groupMessages(),
-            messageKeys.groupMessage(threadId),
-            (source: unknown) => messageKeys.groupPreview(source, threadId),
-          )
-        : undefined,
-    [seedFrom, showSkeleton, threadId],
-  );
-
-  if (!showSkeleton && !data) {
-    return (
-      <TenantPage
-        info={GROUP_THREAD_INFO}
-        title="Gruppennachricht"
-        {...GROUPS_BACK}
-        error={error ? loadError : "Gruppennachricht nicht gefunden."}
-      />
-    );
-  }
-
-  const thread = data?.thread;
-  const closed = Boolean(thread?.closed_at);
-  const children = data?.children ?? [];
-  const stats =
-    data && thread ? (
-      <TenantPageStats
-        items={[
-          { label: thread.target_label },
-          { label: familyReadLabel(data.read_count, data.family_count) },
-          ...(closed ? [{ label: "Geschlossen" }] : []),
-        ]}
-      />
-    ) : null;
-
+export default async function MessagesPage({
+  params,
+}: {
+  params: Promise<{ tenant: string; groupThreadId: string }>;
+}) {
+  const { tenant, groupThreadId } = await params;
   return (
-    <TenantPage
-      info={GROUP_THREAD_INFO}
-      title={thread?.title ?? preview?.name ?? "Gruppennachricht"}
-      {...GROUPS_BACK}
-      stats={stats}
-      statsLoading={showSkeleton}
-      loading={showSkeleton}
-      overflowMenu={
-        thread && !closed && messagingEnabled
-          ? [
-              {
-                label: "Schließen",
-                description:
-                  "Eltern können dann nicht mehr antworten, moto fragt vorher nach",
-                onClick: () => setConfirmClose(true),
+    <TenantRouteSeed
+      slug={tenant}
+      module="eltern_app"
+      load={({ token, session }) => {
+        if (!hasPermission(session, "users:read")) return [];
+        return [
+          {
+            key: messageKeys.groupMessage(groupThreadId),
+            render: true,
+            value: seedRead(
+              "GET /api/messages/group-threads/{groupThreadId}",
+              async (signal) => {
+                const { data } = await readContract(
+                  routes["GET /api/messages/group-threads/{groupThreadId}"],
+                  { token, signal, params: { groupThreadId } },
+                );
+                return withLists(data);
               },
-            ]
-          : []
-      }
-      overlays={
-        <ConfirmationModal
-          isOpen={confirmClose}
-          onClose={() => setConfirmClose(false)}
-          onConfirm={() => void close()}
-          title="Gruppennachricht schließen?"
-          confirmText="Schließen"
-          confirmVariant="warning"
-          isConfirmLoading={closing}
-          loadingText="Wird geschlossen…"
-        >
-          <p className="text-sm text-gray-700">
-            Danach können Eltern nicht mehr antworten. Du selbst kannst auch
-            nichts mehr dazuschreiben.
-          </p>
-        </ConfirmationModal>
-      }
+            ),
+          },
+          {
+            key: messageKeys.groupMessageMails(groupThreadId),
+            value: seedRead(
+              "GET /api/messages/group-threads/{groupThreadId}/mails",
+              async (signal) => {
+                const { data } = await readContract(
+                  routes[
+                    "GET /api/messages/group-threads/{groupThreadId}/mails"
+                  ],
+                  { token, signal, params: { groupThreadId } },
+                );
+                return mapGroupThreadMails(data);
+              },
+            ),
+          },
+        ];
+      }}
     >
-      <SectionCard title="Nachrichten">
-        <div className="space-y-3" role="log" aria-label="Nachrichtenverlauf">
-          {(data?.messages ?? []).map((message) => (
-            <ChatBubble
-              key={message.id}
-              body={message.body}
-              own
-              senderName={message.sender_name}
-              createdAt={message.created_at}
-              pending={sendAction.stateOf(message.id)}
-              attachments={message.attachments}
-              attachmentFiles={PARENT_MESSAGE_ATTACHMENTS}
-              mailStatus={
-                <GroupMessageMailBadges counts={groupMails.mails[message.id]} />
-              }
-              mailNote={groupMessageMailNote(groupMails.mails[message.id])}
-            />
-          ))}
-        </div>
-        <LoadErrorAlert error={groupMails.loadError} className="mt-3" />
-        <p className="mt-4 text-sm text-gray-500" data-testid="group-readers">
-          {data?.readers ? `${groupRecipientsLabel(data.readers)} ` : null}
-          Eltern antworten nur der OGS. Ihre Antworten findest du in der
-          Unterhaltung mit der Familie.
-        </p>
-        <FormErrorAlert message={sendError.error} className="mt-3" />
-        <div className="mt-4">
-          {closed ? (
-            <Alert
-              type="info"
-              message="Diese Gruppennachricht ist geschlossen. Eltern können nicht mehr antworten."
-            />
-          ) : messagingEnabled ? (
-            <MessageComposer
-              value={draft}
-              onChange={(value) => {
-                draftRevision.current += 1;
-                setDraft(value);
-              }}
-              onSend={async (files) => {
-                await send(files);
-                return sendArrived.current;
-              }}
-              sending={sending}
-              sendHint="Schickt die Nachricht sofort an alle Eltern dieser Gruppennachricht."
-              placeholder="Weitere Nachricht an alle Eltern…"
-              attachments={{
-                upload: PARENT_MESSAGE_ATTACHMENTS.upload,
-                notice: "Alle Eltern dieser Gruppennachricht sehen die Datei.",
-              }}
-            />
-          ) : (
-            <Alert
-              type="info"
-              message="Die Eltern-Nachrichten sind für diese Schule ausgeschaltet. Du kannst den Verlauf weiterhin lesen."
-            />
-          )}
-        </div>
-      </SectionCard>
-
-      <SectionCard
-        title="Gelesen"
-        description="Je Kind: Hat ein Elternteil die neueste Nachricht gelesen?"
-      >
-        {children.length === 0 ? (
-          <EmptyState title="Noch keine Familien" />
-        ) : (
-          <ul
-            className="divide-y divide-gray-100"
-            data-testid="group-read-list"
-          >
-            {children.map((child) => (
-              <li
-                key={child.student_id}
-                className="flex items-center justify-between gap-3 py-2"
-              >
-                <span className="min-w-0 truncate text-sm text-gray-900">
-                  {child.first_name} {child.last_name}
-                  {child.school_class && (
-                    <span className="text-gray-500">
-                      {" "}
-                      · {child.school_class}
-                    </span>
-                  )}
-                </span>
-                <StatusBadge
-                  tone={child.read ? "green" : "gray"}
-                  label={child.read ? "Gelesen" : "Noch nicht gelesen"}
-                  compact
-                />
-              </li>
-            ))}
-          </ul>
-        )}
-      </SectionCard>
-    </TenantPage>
+      <PageContent />
+    </TenantRouteSeed>
   );
-}
-
-export default function GroupMessagePage() {
-  return <GroupMessageContent />;
 }

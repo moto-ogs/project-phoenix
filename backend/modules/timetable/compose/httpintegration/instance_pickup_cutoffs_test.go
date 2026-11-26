@@ -65,7 +65,7 @@ func TestInstancePickupCutoffsKeepSelectedPairs(t *testing.T) {
 	counter := testpkg.CaptureQueries(t, db)
 	rows, err := module.TimetableData.Data.ListScheduledInstanceRows(ctx, []timetable.ScheduledInstance{
 		{ID: ident.ID(first.ID), Date: day}, {ID: ident.ID(last.ID), Date: day.AddDays(2)},
-	})
+	}, timetable.PlannerFull)
 	require.NoError(t, err)
 	assert.Len(t, counter.Selects("schedule.student_pickup_exceptions"), 1, "one pickup read for the complete window")
 	assert.Equal(t, map[calendar.Date]map[int64]time.Time{
@@ -74,10 +74,10 @@ func TestInstancePickupCutoffsKeepSelectedPairs(t *testing.T) {
 
 	empty := testpkg.CreateTestActivityInstance(t, db, day.AddDays(4), room.ID, testpkg.ActivityInstanceOpts{})
 	counter.Reset()
-	rows, err = module.TimetableData.Data.ListScheduledInstanceRows(ctx, []timetable.ScheduledInstance{{ID: ident.ID(empty.ID), Date: day.AddDays(4)}})
+	rows, err = module.TimetableData.Data.ListScheduledInstanceRows(ctx, []timetable.ScheduledInstance{{ID: ident.ID(empty.ID), Date: day.AddDays(4)}}, timetable.PlannerFull)
 	require.NoError(t, err)
 	assert.Empty(t, rows.Cutoffs)
-	rows, err = module.TimetableData.Data.ListScheduledInstanceRows(ctx, nil)
+	rows, err = module.TimetableData.Data.ListScheduledInstanceRows(ctx, nil, timetable.PlannerFull)
 	require.NoError(t, err)
 	assert.Empty(t, rows.Cutoffs)
 	assert.Empty(t, counter.Selects("schedule.student_pickup_exceptions"), "no pickup read without participants")

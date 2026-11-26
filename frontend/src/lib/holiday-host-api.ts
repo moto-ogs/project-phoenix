@@ -1,3 +1,4 @@
+import type * as wire from "~/lib/contract/holiday-guests.generated";
 /**
  * Client der Teilnehmerliste für die ausrichtende OGS (#4665). Spricht mit
  * den Next.js-Routen unter /api/holiday-weeks, die mit dem Mitarbeiter-JWT an
@@ -205,7 +206,7 @@ export function formatHolidayHostAnswer(
   return answer.value;
 }
 
-function mapWeek(week: weeks.HostedHolidayWeek): HostedHolidayWeek {
+export function mapWeek(week: weeks.HostedHolidayWeek): HostedHolidayWeek {
   return {
     id: week.id,
     periodName: week.period_name,
@@ -397,15 +398,38 @@ export interface HolidayGuestBadge {
  * Die Hinweise aller Feriengäste, die die Schule heute betreut (#5630).
  * Vor und nach ihrer Woche stehen Gäste in keiner Liste und haben keinen.
  */
-export async function fetchHolidayGuestBadges(): Promise<HolidayGuestBadge[]> {
+export function holidayGuestIds(
+  students: readonly {
+    readonly id: string;
+    readonly school_class?: string | null;
+  }[],
+): string[] {
+  return students
+    .filter((student) => student.school_class === HOLIDAY_GUEST_SCHOOL_CLASS)
+    .map((student) => student.id);
+}
+
+export function mapHolidayGuestBadges(
+  badges: readonly wire.HolidayGuestBadge[],
+  studentIds: readonly string[],
+): HolidayGuestBadge[] {
+  const visible = new Set(studentIds);
+  return badges
+    .filter((badge) => visible.has(badge.student_id))
+    .map((badge) => ({
+      studentId: badge.student_id,
+      schoolName: badge.school_name,
+    }));
+}
+
+export async function fetchHolidayGuestBadges(
+  studentIds: readonly string[],
+): Promise<HolidayGuestBadge[]> {
   const badges = await bffJson("tenant", "GET /api/holiday-guests/", {
     errorMessage:
       "Die Hinweise zu den Feriengästen konnten nicht geladen werden",
   });
-  return badges.map((badge) => ({
-    studentId: badge.student_id,
-    schoolName: badge.school_name,
-  }));
+  return mapHolidayGuestBadges(badges, studentIds);
 }
 
 /** Was die Wahl der Feriengruppe bewirkt hat. */
@@ -439,13 +463,19 @@ export async function fetchHolidayGuestGroups(): Promise<HolidayGuestGroup[]> {
   const groups = await bffJson("tenant", "GET /api/holiday-guests/groups", {
     errorMessage: "Die Feriengruppen konnten nicht geladen werden",
   });
-  return groups.map((group) => ({
+  return groups.map(mapHolidayGuestGroup);
+}
+
+export function mapHolidayGuestGroup(
+  group: wire.HolidayGuestGroup,
+): HolidayGuestGroup {
+  return {
     groupId: group.group_id,
     weekId: group.week_id,
     startsOn: day(group.starts_on),
     endsOn: day(group.ends_on),
     guests: group.guests,
-  }));
+  };
 }
 
 /** „04.–08.01.2027“, über Monate „29.06.–03.07.2027“, über Jahre ganz. */
@@ -645,11 +675,17 @@ export async function fetchHolidayOwnChildAssignments(
         "Die eigenen Kinder der Ferienwoche konnten nicht geladen werden",
     },
   );
-  return entries.map((entry) => ({
+  return entries.map(mapHolidayOwnChildAssignment);
+}
+
+export function mapHolidayOwnChildAssignment(
+  entry: weeks.HolidayOwnChildAssignment,
+): HolidayOwnChildAssignment {
+  return {
     childId: entry.child_id,
     assignment: assignmentState(entry.assignment),
     studentId: entry.student_id,
-  }));
+  };
 }
 
 // ─── Eigene Kinder in Ferienwochen anderer OGS (#6679) ──────────────────────

@@ -4,7 +4,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { useSession } from "next-auth/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import TeachersPage from "./page";
+import TeachersPage from "./page-content";
 
 vi.mock("next-auth/react", () => ({
   useSession: vi.fn(() => ({

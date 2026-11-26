@@ -65,7 +65,7 @@ export function draftColumns(
     return SCALE_STEPS.map((days) => ({
       key: String(days),
       short: daysLabel(days),
-      long: `${daysLabel(days)} je Woche`,
+      long: `${daysLabel(days)} pro Woche`,
     }));
   }
   return weekdays.map((weekday) => ({
@@ -76,8 +76,8 @@ export function draftColumns(
 }
 
 const FORM_ITEMS = [
-  { value: "weekday" as const, label: "Je Wochentag" },
-  { value: "days_per_week" as const, label: "Nach Tagen je Woche" },
+  { value: "weekday" as const, label: "Pro Wochentag" },
+  { value: "days_per_week" as const, label: "Nach Tagen pro Woche" },
 ];
 
 export function CarePriceModuleEditor({
@@ -138,7 +138,7 @@ export function CarePriceModuleEditor({
   const tableColumns: DataTableColumn<Column>[] = [
     {
       key: "day",
-      header: draft.form === "days_per_week" ? "Tage je Woche" : "Wochentag",
+      header: draft.form === "days_per_week" ? "Tage pro Woche" : "Wochentag",
       render: (column) => column.short,
       className: "w-20",
     },

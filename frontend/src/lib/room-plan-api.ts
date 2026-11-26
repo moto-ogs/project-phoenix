@@ -4,6 +4,7 @@
 // -Helfer mitzieht.
 
 import { bffJson } from "~/lib/bff-fetch";
+import type { weeklyInstancesResponse } from "~/lib/contract/timetable.generated";
 import type { RoomPlanBlock } from "~/lib/room-plan";
 
 /** Die Blöcke des Raums von `from` bis `to` (beide inklusive). */
@@ -16,6 +17,12 @@ export async function fetchRoomPlanBlocks(
     query: { from, to, room_id: roomId },
     errorMessage: "Der Raumplan konnte nicht geladen werden.",
   });
+  return mapRoomPlanBlocks(week);
+}
+
+export function mapRoomPlanBlocks(
+  week: weeklyInstancesResponse,
+): RoomPlanBlock[] {
   return (week.instances ?? []).map((raw) => ({
     id: raw.id,
     date: raw.date,

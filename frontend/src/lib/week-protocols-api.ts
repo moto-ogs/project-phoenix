@@ -118,7 +118,7 @@ function mapDay(day: weekProtocolDayResponse): WeekProtocolDay {
   };
 }
 
-function mapWeekProtocol(data: weekProtocolResponse): WeekProtocol {
+export function mapWeekProtocol(data: weekProtocolResponse): WeekProtocol {
   return {
     id: data.id,
     scope: knownEnum(SCOPES, data.scope) ?? "group",

@@ -134,7 +134,7 @@ export function TraegerBelegRetentionSection({
 
       <SectionCard
         title="Weisungen des Trägers"
-        description="Je Belegart die dokumentierte Weisung. Erst mit einer Weisung löscht moto nach Fristende."
+        description="Pro Belegart die dokumentierte Weisung. Erst mit einer Weisung löscht moto nach Fristende."
         action={
           <Button
             type="button"
@@ -176,7 +176,7 @@ export function TraegerBelegRetentionSection({
       />
 
       <SectionCard
-        title="Stand je Belegart"
+        title="Stand pro Belegart"
         description="Wie viele Belege eine Frist haben, noch laufen, offen oder ausgesetzt sind."
       >
         <DataTable

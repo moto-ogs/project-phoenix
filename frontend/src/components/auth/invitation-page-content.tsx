@@ -1,5 +1,6 @@
 "use client";
 
+import type { PortalKey } from "~/lib/portal-paths";
 import {
   useCallback,
   useEffect,
@@ -38,10 +39,13 @@ const MISSING_TOKEN_TEXT =
 export function InvitationPageContent({
   token,
   redirectToPath,
+  portal,
 }: {
   token: string | null;
   /** Post-accept redirect override — see InvitationAcceptForm (#2207). */
   redirectToPath?: string;
+  /** The portal of the page (InvitationAcceptForm ends its session). */
+  portal: PortalKey;
 }) {
   const [invitation, setInvitation] = useState<InvitationValidation | null>(
     null,
@@ -181,6 +185,7 @@ export function InvitationPageContent({
             token={token}
             invitation={invitation}
             redirectToPath={redirectToPath}
+            portal={portal}
           />
         ))}
     </AuthShell>

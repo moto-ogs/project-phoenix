@@ -1,16 +1,12 @@
 import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
-import typescript from "typescript";
+import ts from "typescript";
 import { describe, expect, it } from "vitest";
 import { bffPath, type Portal } from "~/lib/bff-fetch";
 import {
   portalRoutes,
   routeFileRoutes,
 } from "~/lib/contract/portals.generated";
-
-// Copy the namespace once: property lookups on the module object dominate a
-// walk over every node of the production source.
-const ts = { ...typescript };
 
 const src = path.resolve(__dirname, "../..");
 
@@ -81,21 +77,20 @@ const hostAllowlist = new Set([
 
 /** Follow values, not identifier names: constants, aliases and local helpers. */
 function urlShapes(
-  node: typescript.Node,
-  checker: typescript.TypeChecker,
-  active = new Set<typescript.Node>(),
-  bindings: ReadonlyMap<typescript.ParameterDeclaration, string[]> = new Map(),
+  node: ts.Node,
+  checker: ts.TypeChecker,
+  active = new Set<ts.Node>(),
+  bindings: ReadonlyMap<ts.ParameterDeclaration, string[]> = new Map(),
 ): string[] {
   if (active.has(node) || active.size >= 32) return [unknownSegment];
   active.add(node);
-  function declarationOf(expression: typescript.Node) {
+  function declarationOf(expression: ts.Node) {
     let symbol = checker.getSymbolAtLocation(expression);
     if (symbol && symbol.flags & ts.SymbolFlags.Alias)
       symbol = checker.getAliasedSymbol(symbol);
     return symbol?.valueDeclaration;
   }
-  const visit = (part: typescript.Node) =>
-    urlShapes(part, checker, active, bindings);
+  const visit = (part: ts.Node) => urlShapes(part, checker, active, bindings);
   const join = (left: string[], right: string[]) =>
     left
       .flatMap((prefix) => right.map((suffix) => prefix + suffix))
@@ -170,11 +165,11 @@ function urlShapes(
           const argument = node.arguments[index] ?? parameter.initializer;
           if (argument) callBindings.set(parameter, visit(argument));
         });
-        const result = (expression: typescript.Expression) =>
+        const result = (expression: ts.Expression) =>
           urlShapes(expression, checker, active, callBindings);
         if (!ts.isBlock(declaration.body)) return result(declaration.body);
         const returns: string[] = [];
-        function collect(part: typescript.Node) {
+        function collect(part: ts.Node) {
           if (ts.isReturnStatement(part) && part.expression)
             returns.push(...result(part.expression));
           else if (!ts.isFunctionLike(part)) ts.forEachChild(part, collect);
@@ -189,11 +184,9 @@ function urlShapes(
   }
 }
 
-function isArrayJoin(
-  node: typescript.Node,
-): node is typescript.CallExpression & {
-  expression: typescript.PropertyAccessExpression & {
-    expression: typescript.ArrayLiteralExpression;
+function isArrayJoin(node: ts.Node): node is ts.CallExpression & {
+  expression: ts.PropertyAccessExpression & {
+    expression: ts.ArrayLiteralExpression;
   };
 } {
   return (
@@ -204,19 +197,15 @@ function isArrayJoin(
   );
 }
 
-function violations(
-  source: typescript.SourceFile,
-  checker: typescript.TypeChecker,
-): string[] {
+function violations(source: ts.SourceFile, checker: ts.TypeChecker): string[] {
   const findings: string[] = [];
-  const report = (node: typescript.Node, message: string) => {
+  const report = (node: ts.Node, message: string) => {
     const { line } = source.getLineAndCharacterOfPosition(
       node.getStart(source),
     );
     findings.push(`${line + 1}: ${message}`);
   };
   function isRegistered(value: string) {
-    if (!value.includes("/api/")) return false;
     const relative = value.replace(
       /^(?:https?:\/\/[^/]+|__route_parameter__)(?=\/api\/)/,
       "",
@@ -234,7 +223,7 @@ function violations(
         ?.some((match) => match.test(pathname)) ?? false
     );
   }
-  const visit = (node: typescript.Node) => {
+  const visit = (node: ts.Node) => {
     if (ts.isIdentifier(node) && retired.has(node.text)) {
       report(node, `retired route helper: ${node.text}`);
     }
@@ -306,25 +295,26 @@ function scanProject(sources: ReadonlyMap<string, string>): string[] {
   const pathPieces = /["'`]\/[^/\s]|\}\/|\.join\s*\(|\\[xu]/;
   const barrel = /\bexport\s+(?:\*|\{)/;
   const cache = ts.createModuleResolutionCache(src, (file) => file, options);
-  const resolved = new Map<string, string[]>();
+  // Shared barrels recur in many import chains. Resolve each file's imports
+  // once per source snapshot, without changing the roots or the checker.
+  const resolvedImports = new Map<string, string[]>();
   const imports = (file: string, source: string) => {
-    let targets = resolved.get(file);
-    if (!targets) {
-      targets = ts
-        .preProcessFile(source)
-        .importedFiles.flatMap(({ fileName }) => {
-          const target = ts.resolveModuleName(
-            fileName,
-            file,
-            options,
-            host,
-            cache,
-          ).resolvedModule?.resolvedFileName;
-          return target ? [target] : [];
-        });
-      resolved.set(file, targets);
-    }
-    return targets;
+    const previous = resolvedImports.get(file);
+    if (previous) return previous;
+    const resolved = ts
+      .preProcessFile(source)
+      .importedFiles.flatMap(({ fileName }) => {
+        const target = ts.resolveModuleName(
+          fileName,
+          file,
+          options,
+          host,
+          cache,
+        ).resolvedModule?.resolvedFileName;
+        return target ? [target] : [];
+      });
+    resolvedImports.set(file, resolved);
+    return resolved;
   };
   const carriesPrefix = (file: string, seen: Set<string>): boolean => {
     if (seen.has(file)) return false;

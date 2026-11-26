@@ -12,14 +12,12 @@ const {
   mockStartCodeStep,
   mockVerifyCodeStep,
   mockUseSession,
-  mockSignOut,
 } = vi.hoisted(() => ({
   mockFetchSchool: vi.fn(),
   mockStartSession: vi.fn(),
   mockStartCodeStep: vi.fn(),
   mockVerifyCodeStep: vi.fn(),
   mockUseSession: vi.fn(),
-  mockSignOut: vi.fn(),
 }));
 
 vi.mock("~/lib/traeger-url", () => ({
@@ -28,7 +26,6 @@ vi.mock("~/lib/traeger-url", () => ({
 
 vi.mock("next-auth/react", () => ({
   useSession: mockUseSession,
-  signOut: mockSignOut,
 }));
 vi.mock("next/navigation", () => ({
   useParams: () => ({ id: "2" }),
@@ -50,7 +47,7 @@ vi.mock("~/env.client", () => ({
   },
 }));
 
-import TraegerSchoolPage from "./page";
+import TraegerSchoolPage from "./page-content";
 
 const SCHOOL = {
   id: "2",
@@ -96,7 +93,6 @@ describe("TraegerSchoolPage", () => {
     mockStartSession.mockReset();
     mockStartCodeStep.mockReset();
     mockVerifyCodeStep.mockReset();
-    mockSignOut.mockReset();
     mockUseSession.mockReturnValue(sessionWith(["traeger_overview:read"]));
   });
 
@@ -249,7 +245,7 @@ describe("TraegerSchoolPage", () => {
     await vi.waitFor(() =>
       expect(assign).toHaveBeenCalledWith(expect.stringContaining("handoff")),
     );
-    expect(mockSignOut).not.toHaveBeenCalled();
+    expect(assign).not.toHaveBeenCalledWith("/traeger/login");
     assign.mockRestore();
     openSpy.mockRestore();
   });
@@ -257,14 +253,20 @@ describe("TraegerSchoolPage", () => {
   // The code was right, but the renewed session could not be kept: the old
   // one is retired, so the portal signs out and asks for a new sign-in.
   it("signs in again when the renewed session could not be kept", async () => {
-    mockSignOut.mockResolvedValue(undefined);
     const assign = vi
       .spyOn(window.location, "assign")
       .mockImplementation(() => undefined);
     const openSpy = vi.spyOn(globalThis, "open").mockReturnValue(null);
+    // The revocation, then Auth.js' signout protocol (#8082).
     const revoke = vi
       .spyOn(globalThis, "fetch")
-      .mockResolvedValue(new Response(null, { status: 204 }));
+      .mockImplementation(async (input) =>
+        String(input).endsWith("/auth/csrf")
+          ? Response.json({ csrfToken: "csrf" })
+          : String(input).endsWith("/auth/signout")
+            ? Response.json({ url: "/traeger/login" })
+            : new Response(null, { status: 204 }),
+      );
     localStorage.setItem("supervision-last-session", "Gruppe Sonne");
 
     await refuseThenEnterCode(false);
@@ -279,7 +281,10 @@ describe("TraegerSchoolPage", () => {
       "/api/traeger/auth/logout",
       expect.objectContaining({ method: "POST" }),
     );
-    expect(mockSignOut).toHaveBeenCalledWith({ redirect: false });
+    expect(revoke).toHaveBeenCalledWith(
+      "/api/traeger/auth/signout",
+      expect.objectContaining({ method: "POST" }),
+    );
     expect(localStorage.getItem("supervision-last-session")).toBeNull();
     expect(sessionStorage.getItem("moto.traeger.sign-in-with-code")).toBe("1");
     sessionStorage.clear();

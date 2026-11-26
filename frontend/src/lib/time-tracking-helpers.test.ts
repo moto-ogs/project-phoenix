@@ -6,7 +6,6 @@ import {
   mapDailyProjectionResponse,
   mapWorkSessionResponse,
   mapWorkSessionBreakResponse,
-  mapWorkSessionHistoryResponse,
   mapWorkSessionEditResponse,
   mapStaffAbsenceResponse,
   formatDuration,
@@ -16,7 +15,6 @@ import {
   calculateNetMinutes,
   indexWorkSessionMinutesByBerlinDate,
   mapClosingDaysResponse,
-  mapHistoryResponse,
   mapHolidaysResponse,
 } from "./time-tracking-helpers";
 
@@ -178,142 +176,6 @@ describe("mapWorkSessionBreakResponse", () => {
     const result = mapWorkSessionBreakResponse(backend);
 
     expect(result.endedAt).toBeNull();
-  });
-});
-
-describe("mapWorkSessionHistoryResponse", () => {
-  it("maps base session and adds history fields", () => {
-    const backend: shared.HistorySessionResponse = {
-      version: "v1",
-      pack_up_minutes: 0,
-      rounding_minutes: 0,
-      ...createMockBackendSession(),
-      net_minutes: 450,
-      is_overtime: false,
-      is_break_compliant: true,
-      breaks: null,
-      edit_count: 0,
-      audit_count: 1,
-    };
-    const result = mapWorkSessionHistoryResponse(backend);
-
-    expect(result.id).toBe("42");
-    expect(result.netMinutes).toBe(450);
-    expect(result.isOvertime).toBe(false);
-    expect(result.isBreakCompliant).toBe(true);
-    expect(result.editCount).toBe(0);
-    expect(result.auditCount).toBe(1);
-  });
-
-  it("maps nested breaks array", () => {
-    const backend: shared.HistorySessionResponse = {
-      version: "v1",
-      pack_up_minutes: 0,
-      rounding_minutes: 0,
-      ...createMockBackendSession(),
-      net_minutes: 450,
-      is_overtime: false,
-      is_break_compliant: true,
-      breaks: [
-        {
-          tenant_id: "1",
-          id: "1",
-          session_id: "42",
-          started_at: "2026-01-15T12:00:00Z",
-          ended_at: "2026-01-15T12:15:00Z",
-          duration_minutes: 15,
-          planned_end_time: undefined,
-          created_at: "2026-01-15T12:00:00Z",
-          updated_at: "2026-01-15T12:15:00Z",
-        },
-        {
-          tenant_id: "1",
-          id: "2",
-          session_id: "42",
-          started_at: "2026-01-15T14:00:00Z",
-          ended_at: "2026-01-15T14:15:00Z",
-          duration_minutes: 15,
-          planned_end_time: undefined,
-          created_at: "2026-01-15T14:00:00Z",
-          updated_at: "2026-01-15T14:15:00Z",
-        },
-      ],
-      edit_count: 0,
-      audit_count: 0,
-    };
-    const result = mapWorkSessionHistoryResponse(backend);
-
-    expect(result.breaks).toHaveLength(2);
-    expect(result.breaks[0]?.id).toBe("1");
-    expect(result.breaks[0]?.sessionId).toBe("42");
-    expect(result.breaks[1]?.id).toBe("2");
-  });
-
-  it("handles null breaks array", () => {
-    const backend: shared.HistorySessionResponse = {
-      version: "v1",
-      pack_up_minutes: 0,
-      rounding_minutes: 0,
-      ...createMockBackendSession(),
-      net_minutes: 450,
-      is_overtime: false,
-      is_break_compliant: true,
-      breaks: null,
-      edit_count: 0,
-      audit_count: 0,
-    };
-    const result = mapWorkSessionHistoryResponse(backend);
-
-    expect(result.breaks).toEqual([]);
-  });
-
-  it("defaults edit_count to 0 when undefined", () => {
-    const backend: shared.HistorySessionResponse = {
-      version: "v1",
-      pack_up_minutes: 0,
-      rounding_minutes: 0,
-      ...createMockBackendSession(),
-      net_minutes: 450,
-      is_overtime: false,
-      is_break_compliant: true,
-      breaks: null,
-      edit_count: undefined as unknown as number,
-      audit_count: undefined as unknown as number,
-    };
-    const result = mapWorkSessionHistoryResponse(backend);
-
-    expect(result.editCount).toBe(0);
-    expect(result.auditCount).toBe(0);
-  });
-});
-
-describe("mapHistoryResponse", () => {
-  it("maps weekly summaries", () => {
-    const result = mapHistoryResponse({
-      labor_days: null,
-      sessions: [],
-      weekly_summaries: [
-        {
-          week_number: 23,
-          year: 2026,
-          total_net_minutes: 1200,
-          target_minutes: 1500,
-          delta_minutes: -300,
-          session_count: 3,
-          is_over_weekly_max: false,
-        },
-      ],
-    });
-
-    expect(result.weeklySummaries[0]).toEqual({
-      weekNumber: 23,
-      year: 2026,
-      totalNetMinutes: 1200,
-      targetMinutes: 1500,
-      deltaMinutes: -300,
-      sessionCount: 3,
-      isOverWeeklyMax: false,
-    });
   });
 });
 

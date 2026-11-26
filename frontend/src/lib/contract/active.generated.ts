@@ -14,7 +14,11 @@ import {
   safeInt,
   str,
   success,
+  type OpenEnum,
 } from "./runtime";
+
+export const CONTEXT_STATUS_VALUES = ["forbidden", "ok", "unavailable"] as const;
+export type ContextStatus = (typeof CONTEXT_STATUS_VALUES)[number];
 
 /** Go: presence.RecentActivityItem */
 export interface RecentActivityItem {
@@ -244,6 +248,109 @@ export const SchulhofStatusResponseSchema: z.ZodType<SchulhofStatusResponse, unk
   supervisor_count: safeInt,
   student_count: safeInt,
   supervisors: nullable(arr(SupervisorInfoResponseSchema)),
+});
+
+/** Go: supervisiondashboard.ContextNavigationGroup */
+export interface ContextNavigationGroup {
+  id: string;
+  name: string;
+  room_id?: string;
+  room_name?: string;
+  via_substitution: boolean;
+  is_personal: boolean;
+  leaders?: string[];
+}
+
+export const ContextNavigationGroupSchema: z.ZodType<ContextNavigationGroup, unknown> = object<ContextNavigationGroup>({
+  id: int64String,
+  name: str,
+  room_id: optional(int64String),
+  room_name: optional(str),
+  via_substitution: bool,
+  is_personal: bool,
+  leaders: optional(arr(str)),
+});
+
+/** Go: supervisiondashboard.ContextGroups */
+export interface ContextGroups {
+  status: OpenEnum<ContextStatus>;
+  navigation: ContextNavigationGroup[] | null;
+  own_group_ids: string[] | null;
+  own_room_names: string[] | null;
+}
+
+export const ContextGroupsSchema: z.ZodType<ContextGroups, unknown> = object<ContextGroups>({
+  status: str,
+  navigation: nullable(arr(ContextNavigationGroupSchema)),
+  own_group_ids: nullable(arr(int64String)),
+  own_room_names: nullable(arr(str)),
+});
+
+/** Go: supervisiondashboard.ContextSession */
+export interface ContextSession {
+  id: string;
+  room_id: string;
+  room_name: string;
+  activity_name: string;
+  is_own: boolean | null;
+}
+
+export const ContextSessionSchema: z.ZodType<ContextSession, unknown> = object<ContextSession>({
+  id: int64String,
+  room_id: int64String,
+  room_name: str,
+  activity_name: str,
+  is_own: nullable(bool),
+});
+
+/** Go: supervisiondashboard.ContextSessions */
+export interface ContextSessions {
+  status: OpenEnum<ContextStatus>;
+  overview_status: OpenEnum<ContextStatus>;
+  own_status: OpenEnum<ContextStatus>;
+  items: ContextSession[] | null;
+}
+
+export const ContextSessionsSchema: z.ZodType<ContextSessions, unknown> = object<ContextSessions>({
+  status: str,
+  overview_status: str,
+  own_status: str,
+  items: nullable(arr(ContextSessionSchema)),
+});
+
+/** Go: supervisiondashboard.ContextRoom */
+export interface ContextRoom {
+  id: string;
+  name: string;
+}
+
+export const ContextRoomSchema: z.ZodType<ContextRoom, unknown> = object<ContextRoom>({
+  id: int64String,
+  name: str,
+});
+
+/** Go: supervisiondashboard.ContextRooms */
+export interface ContextRooms {
+  status: OpenEnum<ContextStatus>;
+  items: ContextRoom[] | null;
+}
+
+export const ContextRoomsSchema: z.ZodType<ContextRooms, unknown> = object<ContextRooms>({
+  status: str,
+  items: nullable(arr(ContextRoomSchema)),
+});
+
+/** Go: supervisiondashboard.NavigationContext */
+export interface NavigationContext {
+  groups?: ContextGroups;
+  sessions?: ContextSessions;
+  released_rooms?: ContextRooms;
+}
+
+export const NavigationContextSchema: z.ZodType<NavigationContext, unknown> = object<NavigationContext>({
+  groups: optional(ContextGroupsSchema),
+  sessions: optional(ContextSessionsSchema),
+  released_rooms: optional(ContextRoomsSchema),
 });
 
 /** Go: supervisiondashboard.SpontaneousStartAvailability */
@@ -1044,6 +1151,15 @@ export const routes = {
     portals: ["tenant"],
     response: success(SchulhofStatusResponseSchema),
   },
+  "GET /api/active/supervision-context": {
+    method: "GET",
+    pattern: "/api/active/supervision-context",
+    portals: ["tenant"],
+    query: {
+      "section": { kind: "string", repeated: true, values: ["groups", "released-rooms", "sessions"] },
+    },
+    response: success(NavigationContextSchema),
+  },
   "GET /api/active/supervision-dashboard": {
     method: "GET",
     pattern: "/api/active/supervision-dashboard",
@@ -1052,12 +1168,6 @@ export const routes = {
       "group_id": { kind: "id" },
     },
     response: success(DashboardProjectionSchema),
-  },
-  "GET /api/active/supervisors/all": {
-    method: "GET",
-    pattern: "/api/active/supervisors/all",
-    portals: ["tenant"],
-    response: success(z.array(ActiveGroupResponseSchema)),
   },
   "GET /api/active/supervisors/staff/{staffId}/active": {
     method: "GET",

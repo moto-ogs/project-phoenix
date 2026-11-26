@@ -1,3 +1,4 @@
+import { parentFamilyFixture } from "~/test/parent-family-fixture";
 import {
   fireEvent,
   render as baseRender,
@@ -8,6 +9,8 @@ import {
 import { ApiError } from "~/lib/api-error";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ParentResourceTestProvider } from "~/test/parent-resource-provider";
+
+const family = parentFamilyFixture();
 
 vi.unmock("swr");
 
@@ -110,6 +113,7 @@ function submission(action: "agreed" | "declined" | "revoked") {
 }
 
 beforeEach(() => {
+  family.mockRead();
   vi.spyOn(parentApi, "listAnnouncementAttachments").mockResolvedValue([]);
 });
 
@@ -543,15 +547,15 @@ describe("Einverständnis in the detail view", () => {
   it("names the letter's own school, not the account's terms (#6258)", async () => {
     // Two children at two schools: the account reads „GTS/OGS“, the letter
     // of „OGS Am Berg“ names that school's term.
-    vi.spyOn(parentApi, "listMyChildren").mockResolvedValue([
+    family.children.mockResolvedValue([
       { student_id: "5", school_name: "OGS Am Berg" },
       { student_id: "6", school_name: "Sonnenschule" },
-    ] as Awaited<ReturnType<typeof parentApi.listMyChildren>>);
-    const features = vi.spyOn(parentApi, "getChildFeatures").mockImplementation(
+    ] as parentMeContract.ChildResponse[]);
+    const features = family.features.mockImplementation(
       async (studentId) =>
         ({
           care_facility_term: studentId === "5" ? "GTS" : "OGS",
-        }) as Awaited<ReturnType<typeof parentApi.getChildFeatures>>,
+        }) as parentMeContract.ChildFeaturesResponse,
     );
     vi.spyOn(parentApi, "submitDeclaration").mockRejectedValue(
       new ApiError("closed", 409, { code: "care.declaration_closed" }),

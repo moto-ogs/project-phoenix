@@ -33,6 +33,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/requestreview"
 	requestreviewcompose "github.com/moto-ogs/project-phoenix/modules/requestreview/compose"
 	reviewStudentsHTTP "github.com/moto-ogs/project-phoenix/modules/requestreview/http"
+	schoolCalendarCompose "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/compose"
 	schoolMembershipModule "github.com/moto-ogs/project-phoenix/modules/schoolmembership"
 	"github.com/moto-ogs/project-phoenix/modules/schoolstructure"
 	schoolStructureCompose "github.com/moto-ogs/project-phoenix/modules/schoolstructure/compose"
@@ -239,7 +240,7 @@ func mountStudentRoutes(
 			PeopleDirectory:              persons,
 			Persons:                      peopleCompose.NewStudentRoutePersons(services.Users),
 			PickupAdjustmentService:      requests.CareOfferings, PickupChangeNotices: requests.PickupChangeTeam,
-			PickupScheduleService: schedules.Pickups, PickupSignatureProofs: staffPickupSignatures{ledger: owners.SignatureLedger()}, Reports: newDeclarationReports(),
+			PickupScheduleService: schedules.Pickups, PickupPersons: schedules.PickupPersons, PickupSignatureProofs: staffPickupSignatures{ledger: owners.SignatureLedger()}, Reports: newDeclarationReports(),
 			Schools: studentSchoolDirectory{schools: organizations}, SettingsService: settings,
 			StudentAccidentReports: requests.AccidentReports, StudentAuditService: persons,
 			StudentConsents:        services.StudentConsents,
@@ -256,7 +257,7 @@ func mountStudentRoutes(
 			ArrivalScheduleService: schedules.Arrivals,
 			CareDayService:         schedules.CareDay,
 			CareLifecycleService:   schedules.Lifecycle, ClassHandovers: studentListHandovers{reads: classHandoverReads{handovers: presence, staff: NewTimetablePeople(services.Users)}},
-			ClassListEntries:        classListEntryStudentsReader{entries: membership},
+			ClassListEntries: classListEntryStudentsReader{entries: membership}, ClosingTimes: schoolCalendarCompose.NewOpeningChanges().ClosingTimeOn,
 			CompanionService:        companions,
 			ExcusedRequestService:   requests.Excused,
 			InstanceService:         lifecycle.Instances,

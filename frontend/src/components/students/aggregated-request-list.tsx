@@ -17,6 +17,7 @@
 
 import {
   useCallback,
+  useId,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -75,8 +76,8 @@ import {
 } from "~/components/students/requests/use-request-feed";
 import { useWithdrawalDialogs } from "~/components/students/requests/withdrawal-cards";
 
-export type { AggregatedRequestFilters } from "~/components/students/requests/filters";
-import type { AggregatedRequestFilters } from "~/components/students/requests/filters";
+export type { AggregatedRequestFilters } from "~/lib/request-feed-filters";
+import type { AggregatedRequestFilters } from "~/lib/request-feed-filters";
 
 const logger = createLogger({ component: "AggregatedRequestList" });
 
@@ -165,6 +166,7 @@ export function AggregatedRequestList({
   const [bulkSaving, setBulkSaving] = useState(false);
   const wide = useViewportAtLeast(SPLIT_VIEW_FROM);
   const returnFocus = useReturnFocus();
+  const requestListId = useId();
   // Set while THIS list announces a change, so its own listener doesn't
   // refetch: it already removed the decided row optimistically. The window
   // event dispatches synchronously.
@@ -321,10 +323,10 @@ export function AggregatedRequestList({
 
   const selectCase = useCallback(
     (childCase: OpenCase) => {
-      returnFocus.remember(caseRowID(childCase.key));
+      returnFocus.remember(caseRowID(requestListId, childCase.key));
       setSelectedCaseKey(childCase.key);
     },
-    [returnFocus],
+    [requestListId, returnFocus],
   );
 
   // Ein Sprung aus der Warteliste wählt das Kind und holt die Liste in den
@@ -501,7 +503,9 @@ export function AggregatedRequestList({
     loading || withdrawalsLoading
       ? null
       : items.length + visibleWithdrawals.length;
-  useEffect(() => {
+  // The parent shows the count in its header. A warm remount already has it;
+  // report it before paint so that header does not flash a loading bar.
+  useLayoutEffect(() => {
     onCountChange?.(visibleCount, hasMore);
   }, [onCountChange, visibleCount, hasMore]);
 
@@ -557,6 +561,7 @@ export function AggregatedRequestList({
             {showList && (
               <RequestCaseList
                 buckets={buckets}
+                prefix={requestListId}
                 selectedKey={selectedCase?.key ?? null}
                 onSelect={selectCase}
               />

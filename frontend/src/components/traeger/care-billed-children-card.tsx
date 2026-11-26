@@ -112,7 +112,7 @@ function unpricedNoticeText(children: readonly CareBilledChild[]): string {
   return [
     one
       ? "Für einen Vertrag dieses Kindes fehlt ein Preis."
-      : "Für je einen Vertrag dieser Kinder fehlt ein Preis.",
+      : "Für jedes dieser Kinder fehlt bei einem Vertrag der Preis.",
     one
       ? "Sein bisheriger Jahresbescheid gilt weiter, auch für Tage eines anderen Vertrags."
       : "Ihre bisherigen Jahresbescheide gelten weiter, auch für Tage anderer Verträge.",

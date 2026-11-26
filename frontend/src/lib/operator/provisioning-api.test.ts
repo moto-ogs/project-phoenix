@@ -363,38 +363,60 @@ describe("OperatorProvisioningService", () => {
     });
   });
 
-  describe("listSchoolAccounts", () => {
-    it("calls correct endpoint with school id", async () => {
-      mockBffJson.mockResolvedValue([mockBackendSchoolAccount]);
+  const query = {
+    sort: "email",
+    direction: "desc",
+    cursor: "previous",
+  } as const;
+  const pagination = { total_records: 51, next_cursor: "next" };
 
-      await operatorProvisioningService.listSchoolAccounts("10");
+  describe("school account page", () => {
+    it("calls correct endpoint with school id", async () => {
+      mockBffJson.mockResolvedValue({
+        data: [mockBackendSchoolAccount],
+        pagination,
+      });
+
+      await operatorProvisioningService.listAccountPage(
+        { kind: "school", id: "10" },
+        query,
+      );
 
       expect(mockBffJson).toHaveBeenCalledWith(
         "platform",
         "GET /operator/schools/{id}/accounts",
-        { params: { id: "10" } },
+        { params: { id: "10" }, query },
       );
     });
 
     it("hands the raw school id to bffJson, which encodes it", async () => {
-      mockBffJson.mockResolvedValue([]);
+      mockBffJson.mockResolvedValue({ data: [], pagination });
 
-      await operatorProvisioningService.listSchoolAccounts("10/evil");
+      await operatorProvisioningService.listAccountPage(
+        { kind: "school", id: "10/evil" },
+        query,
+      );
 
       expect(mockBffJson).toHaveBeenCalledWith(
         "platform",
         "GET /operator/schools/{id}/accounts",
-        { params: { id: "10/evil" } },
+        { params: { id: "10/evil" }, query },
       );
     });
 
     it("maps response data correctly", async () => {
-      mockBffJson.mockResolvedValue([mockBackendSchoolAccount]);
+      mockBffJson.mockResolvedValue({
+        data: [mockBackendSchoolAccount],
+        pagination,
+      });
 
-      const result = await operatorProvisioningService.listSchoolAccounts("10");
+      const result = await operatorProvisioningService.listAccountPage(
+        { kind: "school", id: "10" },
+        query,
+      );
 
-      expect(result).toHaveLength(1);
-      expect(result[0]).toEqual({
+      expect(result.rows).toHaveLength(1);
+      expect(result.rows[0]).toEqual({
         accountId: "1",
         email: "teacher@school.de",
         active: true,
@@ -411,27 +433,38 @@ describe("OperatorProvisioningService", () => {
     });
   });
 
-  describe("listOrganizationAccounts", () => {
+  describe("organization account page", () => {
     it("calls correct endpoint with org id", async () => {
-      mockBffJson.mockResolvedValue([mockBackendOrgAccount]);
+      mockBffJson.mockResolvedValue({
+        data: [mockBackendOrgAccount],
+        pagination,
+      });
 
-      await operatorProvisioningService.listOrganizationAccounts("5");
+      await operatorProvisioningService.listAccountPage(
+        { kind: "organization", id: "5" },
+        query,
+      );
 
       expect(mockBffJson).toHaveBeenCalledWith(
         "platform",
         "GET /operator/organizations/{id}/accounts",
-        { params: { id: "5" } },
+        { params: { id: "5" }, query },
       );
     });
 
     it("maps response data correctly", async () => {
-      mockBffJson.mockResolvedValue([mockBackendOrgAccount]);
+      mockBffJson.mockResolvedValue({
+        data: [mockBackendOrgAccount],
+        pagination,
+      });
 
-      const result =
-        await operatorProvisioningService.listOrganizationAccounts("5");
+      const result = await operatorProvisioningService.listAccountPage(
+        { kind: "organization", id: "5" },
+        query,
+      );
 
-      expect(result).toHaveLength(1);
-      expect(result[0]).toEqual({
+      expect(result.rows).toHaveLength(1);
+      expect(result.rows[0]).toEqual({
         accountId: "1",
         email: "teacher@school.de",
         active: true,
@@ -450,26 +483,39 @@ describe("OperatorProvisioningService", () => {
     });
   });
 
-  describe("listAllAccounts", () => {
+  describe("platform account page", () => {
     it("calls correct endpoint", async () => {
-      mockBffJson.mockResolvedValue([mockBackendOrgAccount]);
+      mockBffJson.mockResolvedValue({
+        data: [mockBackendOrgAccount],
+        pagination,
+      });
 
-      await operatorProvisioningService.listAllAccounts();
+      await operatorProvisioningService.listAccountPage({ kind: "all" }, query);
 
       expect(mockBffJson).toHaveBeenCalledWith(
         "platform",
         "GET /operator/accounts",
+        { query },
       );
     });
 
     it("maps response data correctly", async () => {
-      mockBffJson.mockResolvedValue([mockBackendOrgAccount]);
+      mockBffJson.mockResolvedValue({
+        data: [mockBackendOrgAccount],
+        pagination,
+      });
 
-      const result = await operatorProvisioningService.listAllAccounts();
+      const result = await operatorProvisioningService.listAccountPage(
+        { kind: "all" },
+        query,
+      );
 
-      expect(result).toHaveLength(1);
-      expect(result[0]!.schoolId).toBe("10");
-      expect(result[0]!.schoolName).toBe("GGS Europaschule");
+      expect(result.rows).toHaveLength(1);
+      expect(result.rows[0]).toMatchObject({
+        schoolId: "10",
+        schoolName: "GGS Europaschule",
+      });
+      expect(result).toMatchObject({ total: 51, cursor: "next" });
     });
   });
 

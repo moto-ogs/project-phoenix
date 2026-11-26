@@ -1,3 +1,8 @@
+const refreshContext = vi.hoisted(() => vi.fn(async () => undefined));
+vi.mock("~/lib/supervision-context", () => ({
+  useOptionalSupervision: () => ({ refresh: refreshContext }),
+}));
+
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 
@@ -53,7 +58,8 @@ vi.mock("~/lib/swr", async (importOriginal) => ({
       (key: unknown) => typeof key === "string" && key.includes(`:${family}`),
     ),
 }));
-vi.mock("swr", () => ({
+vi.mock("swr", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   default: vi.fn(() => ({
     data: undefined,
     error: undefined,
@@ -105,6 +111,7 @@ function fireSSE(event: SSEEvent) {
 }
 
 beforeEach(() => {
+  refreshContext.mockClear();
   vi.useFakeTimers({ shouldAdvanceTime: true });
   vi.clearAllMocks();
   // Pin the per-burst flush jitter (#2057) to 0 so the existing
@@ -492,11 +499,6 @@ describe("useGlobalSSE — SWR invalidation debounce", () => {
 describe("useGlobalSSE — supervisor changes of a running session", () => {
   function staleRefreshes(reason: string | undefined) {
     renderHook(() => useGlobalSSE());
-    const details: unknown[] = [];
-    const listener = (event: Event) => {
-      details.push((event as CustomEvent<unknown>).detail);
-    };
-    window.addEventListener("phoenix:supervision-stale", listener);
     fireSSE(
       makeEvent(
         "active_supervision_changed",
@@ -507,8 +509,7 @@ describe("useGlobalSSE — supervisor changes of a running session", () => {
     act(() => {
       vi.advanceTimersByTime(500);
     });
-    window.removeEventListener("phoenix:supervision-stale", listener);
-    return details;
+    return refreshContext.mock.calls;
   }
 
   it.each([
@@ -516,7 +517,7 @@ describe("useGlobalSSE — supervisor changes of a running session", () => {
     "supervision_released",
     "additional_supervisor_assigned",
   ])("reloads the sidebar supervisions on %s (#4763)", (reason) => {
-    expect(staleRefreshes(reason)).toEqual([{ groupsOnly: false }]);
+    expect(staleRefreshes(reason)).toEqual([[["sessions"]]]);
   });
 
   it("leaves the sidebar alone for a supervision change without such a reason", () => {

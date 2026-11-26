@@ -31,7 +31,8 @@ function openSchoolPortal() {
 }
 
 const SHELL_COPY = {
-  title: "Willkommen im Schulportal",
+  // Geschütztes Leerzeichen: der Name bricht auf dem Handy nicht um.
+  title: "Willkommen bei moto\u00a0schule",
   subtitle: "Melde dich mit deinem Konto für moto schule an.",
 } as const;
 
@@ -53,6 +54,7 @@ function LoginForm() {
   const targetTenantSlug = useSearchParams().get("tenant") ?? undefined;
   const isCheckingAuth = useLoginSessionCheck({
     logger,
+    portal: "school",
     paused: enrollmentStep !== null,
     onAccess: openSchoolPortal,
   });
@@ -152,7 +154,7 @@ function LoginForm() {
             ) : refusal === "no_portal_role" ? (
               <Alert
                 type="info"
-                message="Dieses Konto hat keinen Zugang zum Schul-Portal. Bitte wende dich an deine OGS-Verwaltung."
+                message="Dieses Konto hat keinen Zugang zu moto schule. Bitte wende dich an deine OGS-Verwaltung."
               />
             ) : undefined
           }

@@ -51,6 +51,11 @@ func (s *workSessionService) UpdateSession(ctx context.Context, staffID int64, s
 	if session.StaffID != staffID {
 		return nil, workforce.ErrSessionUpdateNotOwned
 	}
+	// Refused before the version check: who may not change times needs no
+	// fresh form to learn it.
+	if err := s.ensureSelfTimeEditAllowed(ctx, session, updates); err != nil {
+		return nil, err
+	}
 	if err := s.checkSessionVersion(ctx, session, updates.ExpectedVersion); err != nil {
 		return nil, err
 	}

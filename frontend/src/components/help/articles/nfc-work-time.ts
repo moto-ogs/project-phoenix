@@ -44,9 +44,10 @@ export function nfcWorkTimeTopic(nfcEnabled: boolean | null): HelpTopic {
       "Kinderarmbänder und nicht zugewiesene Armbänder funktionieren für die persönliche Arbeitszeit nicht.",
       "Eine laufende Pause wird als `In Pause` angezeigt.",
       "Deine Schule kann das Einstempeln erst kurz vor deiner Schicht erlauben. Dann zeigt das Tablet, ab wann es geht.",
+      "Deine Schule kann das Stempeln in der moto-App ausschalten. Dann stempelst du nur hier am Tablet. Die Leitung stempelt weiter in der App.",
     ],
     notes: [
-      "Am Tablet gibt es keine Wahl des Arbeitsorts. Wer dort einstempelt, ist in der OGS. Arbeitest du unterwegs, stemple in der moto-App unter `Zeiterfassung` ein.",
+      "Am Tablet gibt es keine Wahl des Arbeitsorts. Wer dort einstempelt, ist in der OGS. Arbeitest du unterwegs, stemple in der moto-App unter `Zeiterfassung` ein. Geht das an deiner Schule nicht, trägt die Leitung die Zeit nach.",
     ],
     troubleshooting: HELP_TOPICS.nfcProblem,
     related: [HELP_TOPICS.trackWorkTime, HELP_TOPICS.tagAssignment],

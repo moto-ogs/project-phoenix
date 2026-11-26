@@ -312,7 +312,7 @@ shots:
       # Die Phasenkarte ist ein InsetPanel ohne eigene Rolle: vom Titel zur
       # Karte, dann ihr Link.
       - klicken: 'h3:has-text("Anmeldung Schuljahr") >> xpath=ancestor::div[contains(@class, "rounded-xl")][1] >> role=link[name="Anmeldungen ansehen"]'
-      - warten_auf: 'text=Freie Plätze je Angebot'
+      - warten_auf: 'text=Freie Plätze pro Angebot'
   # Website: Platzentscheidung. Luka Berisha ist im Seed noch offen; der Shot
   # zeigt nur die Auswahl und speichert nichts.
   - id: anmeldung-entscheiden
@@ -324,7 +324,7 @@ shots:
       # Die Phasenkarte ist ein InsetPanel ohne eigene Rolle: vom Titel zur
       # Karte, dann ihr Link.
       - klicken: 'h3:has-text("Anmeldung Schuljahr") >> xpath=ancestor::div[contains(@class, "rounded-xl")][1] >> role=link[name="Anmeldungen ansehen"]'
-      - warten_auf: 'text=Freie Plätze je Angebot'
+      - warten_auf: 'text=Freie Plätze pro Angebot'
       - klicken: 'tr:has-text("Luka Berisha") >> role=link[name="Anmeldung ansehen"]'
       - warten_auf: 'text=Entscheidung speichern'
       # Die Karte des Kindes oben: Name, Angebote und die Entscheidung mit

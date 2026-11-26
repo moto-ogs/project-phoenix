@@ -95,6 +95,10 @@ func checkCatererDeliveryExportQueryBudget(t *testing.T, api *goldenRuntime) {
 	assert.Len(t, moreChildren.Statements, len(one.Statements), "growing the same school from 1 to 8 children adds no statement")
 	querybudgets.AssertQueryBudget(t, "workflows.catererportal.delivery_export.one_school_week", moreChildren)
 
+	overviewPath := fmt.Sprintf("/caterer/schools?from=%s&to=%s", monday, monday.AddDays(4))
+	overviewStatus, summary := export(overviewPath)
+	require.Equal(t, http.StatusOK, overviewStatus)
+	querybudgets.AssertQueryBudget(t, "workflows.catererportal.order_overview.one_school_week", summary)
 	status, oneDay := export(fmt.Sprintf("/caterer/orders/export?from=%s&to=%s&format=csv", monday, monday))
 	require.Equal(t, http.StatusOK, status)
 	querybudgets.AssertQueryBudget(t, "workflows.catererportal.delivery_export.one_school_day", oneDay)

@@ -1,0 +1,4 @@
+DELETE /api/opening-changes/{id}
+GET /api/opening-changes/
+POST /api/opening-changes/
+PUT /api/opening-changes/{id}

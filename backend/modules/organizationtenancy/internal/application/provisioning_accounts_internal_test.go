@@ -436,158 +436,51 @@ func TestProvisioningListSystemRoles(t *testing.T) {
 	require.ErrorIs(t, err, errBoom)
 }
 
-func schoolAccount(id int64, email string) domain.SchoolAccount {
-	return domain.SchoolAccount{
-		AccountID: ident.ID(id), Email: email, Active: true, FirstName: "Jane", LastName: "Doe",
-		RoleName: "admin", PedagogicRole: "Leitung", Status: "active",
-		HasAdminRole: true, HasCaregiverProfile: true, IsActiveCaregiver: true,
-	}
-}
-
-func TestProvisioningListSchoolAccounts(t *testing.T) {
+func TestProvisioningListAccountPage(t *testing.T) {
 	t.Parallel()
-
-	t.Run("maps the school's accounts", func(t *testing.T) {
-		t.Parallel()
-		h := newHarness(t)
-		seedDeviceSchools(h)
-		h.identity.schoolAccts = []domain.SchoolAccount{schoolAccount(1, "a@example.test"), schoolAccount(2, "b@example.test")}
-
-		accounts, err := h.svc.ListSchoolAccounts(context.Background(), 10)
-
-		require.NoError(t, err)
-		require.Len(t, accounts, 2)
-		assert.Equal(t, organizationtenancy.SchoolAccount(h.identity.schoolAccts[0]), accounts[0])
-		assert.Equal(t, "b@example.test", accounts[1].Email)
-	})
-
-	t.Run("no accounts stays nil", func(t *testing.T) {
-		t.Parallel()
-		h := newHarness(t)
-		seedDeviceSchools(h)
-
-		accounts, err := h.svc.ListSchoolAccounts(context.Background(), 10)
-
-		require.NoError(t, err)
-		assert.Nil(t, accounts)
-	})
-
-	for name, tc := range map[string]struct {
-		seed  func(*provisioningHarness)
-		check func(*testing.T, error)
-	}{
-		"missing school": {
-			seed: func(h *provisioningHarness) { delete(h.engine.schools, 10) },
-			check: func(t *testing.T, err error) {
-				var notFound *organizationtenancy.SchoolNotFoundError
-				require.ErrorAs(t, err, &notFound)
-			},
-		},
-		"deleted school": {
-			seed: func(h *provisioningHarness) { h.engine.schools[10].DeletedAt = deletedNow() },
-			check: func(t *testing.T, err error) {
-				var deleted *organizationtenancy.SchoolAlreadyDeletedError
-				require.ErrorAs(t, err, &deleted)
-			},
-		},
-		"listing failure": {
-			seed:  func(h *provisioningHarness) { h.identity.fail["ListSchoolAccounts"] = errBoom },
-			check: func(t *testing.T, err error) { require.ErrorIs(t, err, errBoom) },
-		},
+	query := organizationtenancy.AccountPageQuery{Sort: "email", Descending: true, Search: "Ada", Cursor: "next"}
+	for name, scope := range map[string]organizationtenancy.AccountScope{
+		"school":       {SchoolID: 10},
+		"organization": {OrganizationID: 1},
+		"all":          {},
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			h := newHarness(t)
 			seedDeviceSchools(h)
-			tc.seed(h)
+			want := organizationtenancy.AccountPage{
+				Rows: []organizationtenancy.OrganizationAccount{{SchoolAccount: organizationtenancy.SchoolAccount{
+					AccountID: 1, Email: "ada@example.test", HasAdminRole: true,
+				}, SchoolID: 10, SchoolName: "Burbach"}},
+				Total: 51, Number: 1, NextCursor: "next",
+			}
+			h.identity.accountPage = want
+			page, err := h.svc.ListAccountPage(context.Background(), scope, query)
+			require.NoError(t, err)
+			assert.Equal(t, want, page)
+			assert.Equal(t, []organizationtenancy.AccountScope{scope}, h.identity.accountScopes)
+			assert.Equal(t, query, h.identity.accountQuery)
 
-			accounts, err := h.svc.ListSchoolAccounts(context.Background(), 10)
-
-			assert.Nil(t, accounts)
-			tc.check(t, err)
+			h.identity.fail["ListAccountPage"] = errBoom
+			page, err = h.svc.ListAccountPage(context.Background(), scope, query)
+			require.ErrorIs(t, err, errBoom)
+			assert.Empty(t, page)
 		})
 	}
 }
 
-func TestProvisioningListOrganizationAndAllAccounts(t *testing.T) {
+func TestProvisioningListAccountPageValidatesScope(t *testing.T) {
 	t.Parallel()
-
-	rows := []domain.OrganizationAccount{
-		{SchoolAccount: schoolAccount(1, "a@example.test"), SchoolID: 10, SchoolName: "Burbach"},
-		{SchoolAccount: schoolAccount(2, "b@example.test"), SchoolID: 20, SchoolName: "Walbach"},
-	}
-	want := []organizationtenancy.OrganizationAccount{
-		{SchoolAccount: organizationtenancy.SchoolAccount(rows[0].SchoolAccount), SchoolID: 10, SchoolName: "Burbach"},
-		{SchoolAccount: organizationtenancy.SchoolAccount(rows[1].SchoolAccount), SchoolID: 20, SchoolName: "Walbach"},
-	}
-
-	t.Run("organisation accounts", func(t *testing.T) {
-		t.Parallel()
-		h := newHarness(t)
-		seedDeviceSchools(h)
-		h.identity.orgAccts = rows
-
-		accounts, err := h.svc.ListOrganizationAccounts(context.Background(), 1)
-
-		require.NoError(t, err)
-		assert.Equal(t, want, accounts)
-		assert.Equal(t, []int64{1}, h.identity.orgAcctsFor)
-	})
-
-	t.Run("missing organisation", func(t *testing.T) {
-		t.Parallel()
-		h := newHarness(t)
-
-		accounts, err := h.svc.ListOrganizationAccounts(context.Background(), 99)
-
-		assert.Nil(t, accounts)
-		var notFound *organizationtenancy.OrganizationNotFoundError
-		require.ErrorAs(t, err, &notFound)
-		assert.Equal(t, int64(99), notFound.OrganizationID)
-		assert.Empty(t, h.identity.orgAcctsFor)
-	})
-
-	t.Run("organisation listing failure", func(t *testing.T) {
-		t.Parallel()
-		h := newHarness(t)
-		seedDeviceSchools(h)
-		h.identity.fail["ListOrganizationAccounts"] = errBoom
-
-		accounts, err := h.svc.ListOrganizationAccounts(context.Background(), 1)
-
-		assert.Nil(t, accounts)
-		require.ErrorIs(t, err, errBoom)
-	})
-
-	t.Run("all accounts", func(t *testing.T) {
-		t.Parallel()
-		h := newHarness(t)
-		h.identity.orgAccts = rows
-
-		accounts, err := h.svc.ListAllAccounts(context.Background())
-
-		require.NoError(t, err)
-		assert.Equal(t, want, accounts)
-	})
-
-	t.Run("no accounts stays nil", func(t *testing.T) {
-		t.Parallel()
-		h := newHarness(t)
-
-		accounts, err := h.svc.ListAllAccounts(context.Background())
-
-		require.NoError(t, err)
-		assert.Nil(t, accounts)
-	})
-
-	t.Run("all accounts failure", func(t *testing.T) {
-		t.Parallel()
-		h := newHarness(t)
-		h.identity.fail["ListAllAccounts"] = errBoom
-
-		accounts, err := h.svc.ListAllAccounts(context.Background())
-
-		assert.Nil(t, accounts)
-		require.ErrorIs(t, err, errBoom)
-	})
+	h := newHarness(t)
+	seedDeviceSchools(h)
+	ctx := context.Background()
+	query := organizationtenancy.AccountPageQuery{}
+	_, err := h.svc.ListAccountPage(ctx, organizationtenancy.AccountScope{SchoolID: 99}, query)
+	require.ErrorAs(t, err, new(*organizationtenancy.SchoolNotFoundError))
+	h.engine.schools[10].DeletedAt = deletedNow()
+	_, err = h.svc.ListAccountPage(ctx, organizationtenancy.AccountScope{SchoolID: 10}, query)
+	require.ErrorAs(t, err, new(*organizationtenancy.SchoolAlreadyDeletedError))
+	_, err = h.svc.ListAccountPage(ctx, organizationtenancy.AccountScope{OrganizationID: 99}, query)
+	require.ErrorAs(t, err, new(*organizationtenancy.OrganizationNotFoundError))
+	assert.Empty(t, h.identity.accountScopes)
 }

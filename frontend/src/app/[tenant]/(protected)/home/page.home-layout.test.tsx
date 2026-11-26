@@ -8,7 +8,7 @@ import {
 import type { ReactElement } from "react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import HomePage from "./page";
+import HomePage from "./page-content";
 import { preloadHomeBoardEditor } from "~/components/home/home-board";
 import { ToastProvider } from "~/contexts/ToastContext";
 
@@ -73,12 +73,6 @@ vi.mock("~/lib/breadcrumb-context", () => ({
   useBreadcrumb: vi.fn(() => ({ breadcrumb: {}, setBreadcrumb: vi.fn() })),
   BreadcrumbProvider: ({ children }: { children: React.ReactNode }) => (
     <>{children}</>
-  ),
-}));
-
-vi.mock("~/lib/usercontext-context", () => ({
-  UserContextProvider: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="user-context-provider">{children}</div>
   ),
 }));
 
@@ -156,6 +150,7 @@ vi.mock("~/lib/dashboard-helpers", () => ({
 
 vi.mock("~/lib/swr/hooks", () => ({
   useSWRAuth: vi.fn(),
+  useOpeningRead: () => ({ data: undefined, error: undefined }),
   useScopedSWRKey: () => null,
 }));
 vi.mock("~/lib/birthdays-api", () => ({
@@ -229,7 +224,9 @@ describe("Startseite — Abfragen nicht platzierter Bausteine", () => {
     render(<HomePage />);
 
     await waitFor(() =>
-      expect(screen.getByTestId("user-context-provider")).toBeInTheDocument(),
+      expect(
+        screen.getByRole("button", { name: "Anpassen" }),
+      ).toBeInTheDocument(),
     );
     expect(requestedKeys()).toContain("dashboard-analytics");
   });
@@ -255,7 +252,9 @@ describe("Startseite — Abfragen nicht platzierter Bausteine", () => {
     render(<HomePage />);
 
     await waitFor(() =>
-      expect(screen.getByTestId("user-context-provider")).toBeInTheDocument(),
+      expect(
+        screen.getByRole("button", { name: "Anpassen" }),
+      ).toBeInTheDocument(),
     );
     expect(requestedKeys()).not.toContain("dashboard-analytics");
   });
@@ -279,7 +278,9 @@ describe("Startseite — Abfragen nicht platzierter Bausteine", () => {
     render(<HomePage />);
 
     await waitFor(() =>
-      expect(screen.getByTestId("user-context-provider")).toBeInTheDocument(),
+      expect(
+        screen.getByRole("button", { name: "Anpassen" }),
+      ).toBeInTheDocument(),
     );
     expect(requestedKeys()).toContain("dashboard-analytics");
   });
@@ -296,7 +297,9 @@ describe("Startseite — Abfragen nicht platzierter Bausteine", () => {
     render(<HomePage />);
 
     await waitFor(() =>
-      expect(screen.getByTestId("user-context-provider")).toBeInTheDocument(),
+      expect(
+        screen.getByRole("button", { name: "Anpassen" }),
+      ).toBeInTheDocument(),
     );
     expect(requestedKeys()).not.toContain("dashboard-analytics");
   });
@@ -306,7 +309,9 @@ describe("Startseite — Abfragen nicht platzierter Bausteine", () => {
     render(<HomePage />);
 
     await waitFor(() =>
-      expect(screen.getByTestId("user-context-provider")).toBeInTheDocument(),
+      expect(
+        screen.getByRole("button", { name: "Anpassen" }),
+      ).toBeInTheDocument(),
     );
     expect(requestedKeys()).toContain("birthday-overview");
 
@@ -324,7 +329,9 @@ describe("Startseite — Abfragen nicht platzierter Bausteine", () => {
     render(<HomePage />);
 
     await waitFor(() =>
-      expect(screen.getByTestId("user-context-provider")).toBeInTheDocument(),
+      expect(
+        screen.getByRole("button", { name: "Anpassen" }),
+      ).toBeInTheDocument(),
     );
     const call = vi
       .mocked(useSWRAuth)
@@ -425,7 +432,9 @@ describe("Startseite — Abfragen nicht platzierter Bausteine", () => {
     render(<HomePage />);
 
     await waitFor(() =>
-      expect(screen.getByTestId("user-context-provider")).toBeInTheDocument(),
+      expect(
+        screen.getByRole("button", { name: "Anpassen" }),
+      ).toBeInTheDocument(),
     );
     expect(screen.queryByText("Kinder anwesend")).not.toBeInTheDocument();
     // Die übrigen Kennzahlen leben weiter aus derselben Abfrage.

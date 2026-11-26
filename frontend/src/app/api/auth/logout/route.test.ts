@@ -69,6 +69,36 @@ describe("POST /api/auth/logout", () => {
     });
   });
 
+  it("revokes nothing of a session another tab signed in with (#8082)", async () => {
+    // The exit names family-a; the request carries school B's new session.
+    const request = new NextRequest("http://localhost:3000/api/auth/logout", {
+      method: "POST",
+      headers: {
+        cookie: "authjs.session-mark=family-b",
+        "X-Moto-End-Session": "tenant family-a",
+      },
+    });
+    const response = await POST(request);
+
+    expect(response.status).toBe(401);
+    expect(global.fetch).not.toHaveBeenCalled();
+
+    // Control: the named session is revoked.
+    vi.mocked(global.fetch).mockResolvedValueOnce(
+      new Response(null, { status: 204 }),
+    );
+    const own = await POST(
+      new NextRequest("http://localhost:3000/api/auth/logout", {
+        method: "POST",
+        headers: {
+          cookie: "authjs.session-mark=family-a",
+          "X-Moto-End-Session": "tenant family-a",
+        },
+      }),
+    );
+    expect(own.status).toBe(204);
+  });
+
   it("returns 401 when session has no refresh token", async () => {
     mockAuth.mockResolvedValueOnce({
       user: { id: "1", token: "access-token-only", name: "Test" },

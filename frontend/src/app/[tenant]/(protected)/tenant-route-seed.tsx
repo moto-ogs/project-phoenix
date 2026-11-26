@@ -1,0 +1,50 @@
+import type { ReactNode } from "react";
+import type { ModuleScope } from "~/lib/module-register";
+import { seedOf } from "~/lib/server-seed.server";
+import { SWRServerSeed, type ServerSeedEntry } from "~/lib/swr/server-seed";
+import { readTenantPageContext } from "~/lib/tenant-page-seed.server";
+
+type TenantContext = NonNullable<
+  Awaited<ReturnType<typeof readTenantPageContext>>
+>;
+
+type TenantSeedLoader = (
+  context: TenantContext,
+) => readonly ServerSeedEntry[] | Promise<readonly ServerSeedEntry[]>;
+
+export async function loadTenantRouteSeed(
+  slug: string,
+  load: TenantSeedLoader,
+  module?: ModuleScope,
+) {
+  const context = await readTenantPageContext(slug, module);
+  if (!context) return null;
+  const builtAt = Date.now();
+  const entries = await load(context);
+  return entries.length > 0 ? seedOf(context.snapshot, entries, builtAt) : null;
+}
+
+export async function TenantRouteSeed({
+  slug,
+  module,
+  claims,
+  load,
+  children,
+}: {
+  slug: string;
+  module?: ModuleScope;
+  claims?: readonly string[];
+  load: TenantSeedLoader;
+  children: ReactNode;
+}) {
+  const seed = loadTenantRouteSeed(slug, load, module).catch(() => null);
+  const input = claims ? seed : await seed;
+
+  // Loaders that resolve dependent keys pass their known initial keys as
+  // claims. Navigation can then commit the page while the seed is streaming.
+  return (
+    <SWRServerSeed seed={input} claims={claims} render>
+      {children}
+    </SWRServerSeed>
+  );
+}

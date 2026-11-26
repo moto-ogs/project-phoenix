@@ -14,6 +14,7 @@ import { mutate } from "~/lib/swr";
 import { SWRConfig, type Cache } from "~/lib/swr/testing";
 import { catalogText } from "~/test/error-catalog-text";
 
+import { useAbsenceDecisionMails } from "./absence-mail-status";
 import { StaffAbsenceRequestList } from "./staff-absence-request-list";
 
 // Die Anträge liegen im SWR-Cache (#4988): echtes SWR, ein eigener Cache je
@@ -100,7 +101,7 @@ function decidedRow(): StaffAbsenceRequestRow {
 describe("StaffAbsenceRequestList", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    decisionMails.mockResolvedValue({});
+    decisionMails.mockResolvedValue({ mails: {}, awaitingFeedback: false });
   });
 
   it("zeigt offene Anträge mit Namen und Entscheidungs-Schaltflächen", async () => {
@@ -168,7 +169,10 @@ describe("StaffAbsenceRequestList", () => {
   // #7058: ob die Mail zur Entscheidung bei der Person ankam.
   it("zeigt eine nicht zugestellte Mail zur Entscheidung schon in der zugeklappten Zeile", async () => {
     listRequests.mockResolvedValue([decidedRow()]);
-    decisionMails.mockResolvedValue({ "18": "undeliverable" });
+    decisionMails.mockResolvedValue({
+      mails: { "18": "undeliverable" },
+      awaitingFeedback: false,
+    });
 
     render(
       <StaffAbsenceRequestList
@@ -193,7 +197,10 @@ describe("StaffAbsenceRequestList", () => {
       openRow(),
       { ...openRow(), id: "19", status: "question", decision_note: "Wer?" },
     ]);
-    decisionMails.mockResolvedValue({ "19": "delivered" });
+    decisionMails.mockResolvedValue({
+      mails: { "19": "delivered" },
+      awaitingFeedback: false,
+    });
 
     render(
       <StaffAbsenceRequestList
@@ -236,15 +243,23 @@ describe("StaffAbsenceRequestList", () => {
     listRequests.mockResolvedValueOnce([openRow()]).mockResolvedValueOnce([]);
     approve.mockResolvedValue(undefined);
 
+    function OtherOpenMailList() {
+      useAbsenceDecisionMails(["18"]);
+      return null;
+    }
     renderComponent(
-      <StaffAbsenceRequestList
-        view="open"
-        filters={{ search: "", types: [] }}
-      />,
+      <>
+        <OtherOpenMailList />
+        <StaffAbsenceRequestList
+          view="open"
+          filters={{ search: "", types: [] }}
+        />
+      </>,
       { wrapper: DefaultCache },
     );
 
     await screen.findByText("Mira Muster");
+    expect(decisionMails).toHaveBeenCalledTimes(1);
     await userEvent.click(screen.getByRole("button", { name: "Genehmigen" }));
 
     await waitFor(() => expect(approve).toHaveBeenCalledWith("17"));
@@ -252,6 +267,7 @@ describe("StaffAbsenceRequestList", () => {
       await screen.findByText("Keine offenen Anträge."),
     ).toBeInTheDocument();
     await waitFor(() => expect(listRequests).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(decisionMails).toHaveBeenCalledTimes(2));
     await clearDefaultCache();
   });
 

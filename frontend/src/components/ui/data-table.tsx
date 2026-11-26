@@ -58,6 +58,8 @@ export interface DataTableColumn<T> {
   // null is a missing value and sorts after all present values, independent
   // of direction.
   sortValue?: (row: T) => string | number | null;
+  /** This column is sorted by the server, without a local value comparator. */
+  serverSortable?: boolean;
   // Role this column plays in the stacked phone layout (below md, unless
   // the table sets `mobileScroll`).
   // A "field" whose render returns null for a row has no line in that row.
@@ -235,6 +237,11 @@ interface DataTableProps<T> {
   rowClassName?: (row: T) => string;
   defaultSortKey?: string;
   defaultSortDirection?: SortDirection;
+  serverSort?: {
+    key: string;
+    direction: SortDirection;
+    onChange: (sort: { key: string; direction: SortDirection }) => void;
+  };
   // When set, only the first N sorted rows render; a footer button reveals
   // another N per click. Use on tables whose row count is unbounded
   // (persons, accounts) — leave undefined on bounded views (orgs, devices).
@@ -1389,6 +1396,7 @@ export function DataTable<T>({
   rowClassName,
   defaultSortKey,
   defaultSortDirection = "asc",
+  serverSort,
   pageSize,
   loadMoreTooltip,
   pageNoun,
@@ -1444,7 +1452,7 @@ export function DataTable<T>({
   // it scrolls away (comparison tables carry no selection).
   const pinStartKey = stackedOnMobile ? undefined : shownColumns[0]?.key;
 
-  const [sort, setSort] = useState<{
+  const [localSort, setLocalSort] = useState<{
     key: string;
     direction: SortDirection;
   } | null>(
@@ -1453,16 +1461,21 @@ export function DataTable<T>({
       : null,
   );
 
-  const toggleSort = useCallback((key: string) => {
-    setSort((prev) =>
-      prev?.key === key
-        ? { key, direction: prev.direction === "asc" ? "desc" : "asc" }
-        : { key, direction: "asc" },
-    );
-  }, []);
+  const sort = serverSort ?? localSort;
+  const toggleSort = (key: string) => {
+    const nextSort = (current: typeof sort) => ({
+      key,
+      direction:
+        current?.key === key && current.direction === "asc"
+          ? ("desc" as const)
+          : ("asc" as const),
+    });
+    if (serverSort) serverSort.onChange(nextSort(serverSort));
+    else setLocalSort(nextSort);
+  };
 
   const sortedRows = useMemo(() => {
-    if (!sort) return rows;
+    if (serverSort || !sort) return rows;
     const col = columns.find((c) => c.key === sort.key);
     if (!col?.sortValue) return rows;
     const getValue = col.sortValue;
@@ -1480,7 +1493,7 @@ export function DataTable<T>({
       }
       return String(av).localeCompare(String(bv)) * dir;
     });
-  }, [rows, sort, columns]);
+  }, [rows, sort, columns, serverSort]);
 
   const [visibleCount, setVisibleCount] = useState(
     pageSize ?? Number.POSITIVE_INFINITY,
@@ -1503,26 +1516,36 @@ export function DataTable<T>({
   // Columns that run past the card edge get a cue: a fade at the edge, or
   // the pinned column's shadow. Without it a cut column reads as missing.
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [overflowEnd, setOverflowEnd] = useState(false);
-  const [overflowStart, setOverflowStart] = useState(false);
   useEffect(() => {
     const scroller = scrollRef.current;
     if (!scroller) return;
     const update = () => {
-      setOverflowEnd(
-        scroller.scrollWidth - scroller.clientWidth - scroller.scrollLeft > 1,
-      );
-      setOverflowStart(scroller.scrollLeft > 1);
+      const { scrollWidth, clientWidth, scrollLeft } = scroller;
+      // Only the scroll cues depend on these measurements. Re-rendering all
+      // rows would compete with the first paint and with each horizontal swipe.
+      if (scrollWidth - clientWidth - scrollLeft > 1) {
+        scroller.dataset.overflowEnd = "true";
+      } else {
+        delete scroller.dataset.overflowEnd;
+      }
+      if (scrollLeft > 1) {
+        scroller.dataset.overflowStart = "true";
+      } else {
+        delete scroller.dataset.overflowStart;
+      }
     };
-    update();
     scroller.addEventListener("scroll", update, { passive: true });
     let observer: ResizeObserver | undefined;
     if (typeof ResizeObserver !== "undefined") {
+      // The first observer notification runs after layout. Measuring here
+      // synchronously would force the whole table's layout on every reveal.
       observer = new ResizeObserver(update);
       observer.observe(scroller);
       if (scroller.firstElementChild) {
         observer.observe(scroller.firstElementChild);
       }
+    } else {
+      update();
     }
     return () => {
       scroller.removeEventListener("scroll", update);
@@ -1624,9 +1647,7 @@ export function DataTable<T>({
               containing block here they escape it and widen the page. */}
             <div
               ref={scrollRef}
-              data-overflow-end={overflowEnd ? "true" : undefined}
-              data-overflow-start={overflowStart ? "true" : undefined}
-              className="group/tablescroll relative overflow-x-auto"
+              className="group/tablescroll peer/table relative overflow-x-auto"
             >
               <table className={tableClass}>
                 <thead>
@@ -1656,7 +1677,9 @@ export function DataTable<T>({
                     ) : null}
                     {shownColumns.map((col) => {
                       const align = alignClass[col.align ?? "left"];
-                      const sortable = Boolean(col.sortValue);
+                      const sortable = serverSort
+                        ? col.serverSortable
+                        : Boolean(col.sortValue);
                       const active = sort?.key === col.key;
                       const pinned = pinnedHeadCellClass(
                         pinEdgeOf(col.key, pinStartKey),
@@ -1940,11 +1963,10 @@ export function DataTable<T>({
                 </tbody>
               </table>
             </div>
-            {overflowEnd &&
-            !shownColumns.some((col) => col.key === PINNED_COLUMN_KEY) ? (
+            {!shownColumns.some((col) => col.key === PINNED_COLUMN_KEY) ? (
               <div
                 aria-hidden
-                className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-white to-transparent"
+                className="pointer-events-none absolute inset-y-0 right-0 hidden w-10 bg-gradient-to-l from-white to-transparent peer-data-[overflow-end=true]/table:block"
               />
             ) : null}
           </div>

@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * Ungelesene Anmeldungen (#3778): der Zähler und sein Neu-zählen-Auslöser.
  * Eigenes kleines Modul, weil Seitenleiste und mobiles Menü auf jeder Seite

@@ -1,0 +1,8 @@
+{
+  "checking": "Oturum kontrol ediliyor...",
+  "leaving": "Sayfa yeniden yükleniyor...",
+  "changed": "Oturumun başka bir sekmede veya pencerede değişti. Devam etmek için sayfayı yeniden yükle.",
+  "unconfirmed": "moto şu anda oturumunun hâlâ açık olup olmadığını kontrol edemiyor. Birazdan sayfayı yeniden yükle.",
+  "reload": "Sayfayı yeniden yükle",
+  "reloadHint": "Sayfayı mevcut oturumunla yeniden yükler."
+}

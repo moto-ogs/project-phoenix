@@ -54,7 +54,6 @@ export function useTenantRouter() {
       back: () => router.back(),
       forward: () => router.forward(),
       refresh: () => router.refresh(),
-      prefetch: (path: string) => router.prefetch(`${prefix}${path}`),
     };
   }, [tenantSlug, router, routingMode]);
 }

@@ -24,11 +24,12 @@ const perFileDependencies = [
 // suite (1547 files, 11/2026): with 640 MB old space, a 16 MB young
 // generation and a new thread once one ends a file above 200 MB heap, two
 // workers peak at 1.7 GB process-tree RSS instead of 3.6 GB.
-const reusedPool = reusedThreads({
+const reusedThreadLimits = {
   maxOldGenerationSizeMb: 640,
   maxYoungGenerationSizeMb: 16,
   recycleHeapMb: 200,
-});
+};
+const reusedPool = reusedThreads(reusedThreadLimits);
 
 // The main process collects lazily up to a multi-gigabyte heap of which
 // 0.2–0.3 GB is live; above 200 MB it collects every half second.
@@ -168,7 +169,13 @@ export default defineConfig({
           exclude: baseTestExcludes,
           environment: "node",
           isolate: false,
-          pool: reusedPool,
+          // The BFF route guard builds a TypeScript program for the entire
+          // production source tree. Keep ordinary recycling, but let that
+          // scan finish when it starts in a worker that already ran tests.
+          pool: reusedThreads({
+            ...reusedThreadLimits,
+            maxOldGenerationSizeMb: 896,
+          }),
           setupFiles: [
             "./src/test/setup-worker-reuse.ts",
             "./src/test/setup-common.ts",

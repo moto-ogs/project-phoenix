@@ -61,7 +61,7 @@ import {
   upcomingAfter,
   type SupervisionStartState,
   type SupervisionViewIntent,
-} from "./view-model";
+} from "~/lib/school/supervision-view-model";
 
 const logger = createLogger({ component: "SchoolSupervisionsView" });
 

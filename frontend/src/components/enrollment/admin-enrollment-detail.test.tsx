@@ -209,7 +209,11 @@ describe("AdminEnrollmentDetail mail updates", () => {
     mocks.getAdminRequestMails
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([
-        { kind: "enrollment_waitlisted", outcome: "queued" },
+        {
+          kind: "enrollment_waitlisted",
+          outcome: "queued",
+          awaiting_feedback: true,
+        },
       ])
       .mockResolvedValue([
         { kind: "enrollment_waitlisted", outcome: "delivered" },

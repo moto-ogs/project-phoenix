@@ -19,6 +19,7 @@ import (
 type Dependencies struct {
 	Caterers      ports.Caterers
 	Orders        ports.MealOrders
+	Summary       ports.OrderSummary
 	SchoolNames   ports.SchoolNames
 	CurrentSchool ports.CurrentSchool
 	Lock          ports.Lock
@@ -42,7 +43,7 @@ var _ catererportal.Portal = (*Portal)(nil)
 
 // New builds the portal; every dependency is required.
 func New(deps Dependencies) (*Portal, error) {
-	if deps.Caterers == nil || deps.Orders == nil || deps.SchoolNames == nil || deps.CurrentSchool == nil || deps.Lock == nil || deps.WithinSchool == nil {
+	if deps.Caterers == nil || deps.Orders == nil || deps.Summary == nil || deps.SchoolNames == nil || deps.CurrentSchool == nil || deps.Lock == nil || deps.WithinSchool == nil {
 		return nil, errors.New("caterer portal: all dependencies are required")
 	}
 	return &Portal{identityFlows: deps.Caterers, deps: deps}, nil
@@ -136,24 +137,76 @@ func (p *Portal) AcceptInvitation(ctx context.Context, schoolID int64, token str
 	return refused
 }
 
-// Schools names the caterer and the schools it supplies now.
-func (p *Portal) Schools(ctx context.Context, accountID int64) (catererportal.CatererSchools, error) {
+// OrderOverview resolves live schools once and reads each under its own RLS
+// transaction. Sequential reads bound DB concurrency to one per request.
+func (p *Portal) OrderOverview(ctx context.Context, accountID, onlySchool int64, from, to mealplan.Date) (catererportal.CatererSchools, error) {
+	if err := deliveryWindow(from, to); err != nil {
+		return catererportal.CatererSchools{}, err
+	}
 	caterer, ids, err := p.deps.Caterers.CatererSchools(ctx, accountID)
 	if err != nil {
 		return catererportal.CatererSchools{}, err
 	}
-	names, err := p.deps.SchoolNames(ctx, ids)
+	if onlySchool != 0 {
+		if !slices.Contains(ids, onlySchool) {
+			return catererportal.CatererSchools{}, catererportal.ErrSchoolNotSupplied
+		}
+		ids = []int64{onlySchool}
+	}
+	schools, err := p.summariesOf(ctx, caterer.ID, ids, from, to)
 	if err != nil {
 		return catererportal.CatererSchools{}, err
 	}
-	result := catererportal.CatererSchools{CatererName: caterer.Name, Schools: make([]catererportal.School, 0, len(ids))}
+	if onlySchool != 0 {
+		if len(schools) == 0 {
+			return catererportal.CatererSchools{}, catererportal.ErrSchoolNotSupplied
+		}
+		if schools[0].Failure != nil {
+			return catererportal.CatererSchools{}, schools[0].Failure
+		}
+	}
+	return catererportal.CatererSchools{CatererName: caterer.Name, Schools: schools}, nil
+}
+
+func (p *Portal) summariesOf(ctx context.Context, catererID int64, ids []int64, from, to mealplan.Date) ([]catererportal.SchoolSummary, error) {
+	names, err := p.deps.SchoolNames(ctx, ids)
+	if err != nil {
+		return nil, err
+	}
+	rows := make([]catererportal.SchoolSummary, 0, len(ids))
 	for _, id := range ids {
-		if _, live := names[id]; !live {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+		name, live := names[id]
+		if !live {
 			continue
 		}
-		result.Schools = append(result.Schools, catererportal.School{ID: id, Name: names[id]})
+		school := catererportal.School{ID: id, Name: name}
+		row, err := p.schoolSummary(ctx, catererID, school, from, to)
+		if errors.Is(err, catererportal.ErrSchoolNotSupplied) {
+			continue
+		}
+		if err != nil {
+			row = catererportal.SchoolSummary{School: school, Failure: err}
+		}
+		rows = append(rows, row)
 	}
-	return result, nil
+	return rows, ctx.Err()
+}
+
+func (p *Portal) schoolSummary(ctx context.Context, catererID int64, school catererportal.School, from, to mealplan.Date) (catererportal.SchoolSummary, error) {
+	row := catererportal.SchoolSummary{School: school}
+	err := p.deps.WithinSchool(ctx, school.ID, func(txCtx context.Context) error {
+		supply, err := p.supplyOf(txCtx, catererID)
+		if err != nil {
+			return err
+		}
+		row.StartedAt, row.DeliveryAddress = supply.StartedAt, supply.DeliveryAddress
+		row.Summary, err = p.deps.Summary(txCtx, supply.StartedAt, from, to)
+		return err
+	})
+	return row, err
 }
 
 // SchoolOrders reads one school's orders in that school's transaction, only
@@ -318,7 +371,10 @@ func (p *Portal) catererDeliveryLines(ctx context.Context, catererID, schoolID i
 func deliveryWindow(from, to mealplan.Date) error {
 	start, startErr := calendar.ParseDate(string(from))
 	end, endErr := calendar.ParseDate(string(to))
-	if startErr == nil && endErr == nil && start.DaysUntil(end) >= catererportal.MaxDeliveryDays {
+	if startErr != nil || endErr != nil || end.Before(start) {
+		return mealplan.ErrInvalidParticipation
+	}
+	if start.DaysUntil(end) >= catererportal.MaxDeliveryDays {
 		return catererportal.ErrDeliveryRangeTooLong
 	}
 	return nil

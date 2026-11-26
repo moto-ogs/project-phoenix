@@ -6367,7 +6367,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.ClassListEntries.ListClassListEntries",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Capability.ListClassListEntriesInDisplayOrder; modules/schoolmembership.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Capability.ListClassListEntriesInDisplayOrder; modules/schoolmembership.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim. The binding forwards a tenant-scoped set of classes: nil is the whole school, and a non-nil empty set matches no class.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.ListClassListEntriesInDisplayOrder",
       "target_owner": "school-membership"
@@ -6377,7 +6377,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.ClassListEntries.ListClassListEntries",
-      "reason": "Read or pure value helper on the supplied interface: modules/schoolmembership.ClassListEntries.ListClassListEntriesInDisplayOrder. No mutation or locking read at this terminal; type-level binding coverage, not proof that Enrollment calls every exposed method.",
+      "reason": "Read or pure value helper on the supplied interface: modules/schoolmembership.ClassListEntries.ListClassListEntriesInDisplayOrder. No mutation or locking read at this terminal; type-level binding coverage, not proof that Enrollment calls every exposed method. The binding forwards a tenant-scoped set of classes: nil is the whole school, and a non-nil empty set matches no class.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.ClassListEntries.ListClassListEntriesInDisplayOrder",
       "target_owner": "school-membership"
@@ -6387,7 +6387,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.ClassListEntries.ListClassListEntries",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Owner.ListClassListEntriesInDisplayOrder; modules/schoolmembership.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Owner.ListClassListEntriesInDisplayOrder; modules/schoolmembership.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. The binding forwards a tenant-scoped set of classes: nil is the whole school, and a non-nil empty set matches no class.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.ListClassListEntriesInDisplayOrder",
       "target_owner": "school-membership"
@@ -6875,7 +6875,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.EnrollmentDeletionDelivery.RelatedEmailOutcomes",
-      "reason": "Read-only delivery state: enrollment reads what became of a mail or address through runtime.EmailOutcomes.EmailOutcomes in its tenant transaction (#5934). No persistent, lock or scope effect.",
+      "reason": "Copies the feedback flag when projecting the existing reports for parent mails. Delivery still reads only the requested mails in the caller’s tenant transaction. (#8094)",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.EmailOutcomes.EmailOutcomes",
       "target_owner": "delivery-platform"
@@ -6885,7 +6885,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.EnrollmentDeletionDelivery.RelatedEmailOutcomes",
-      "reason": "Read-only delivery state: enrollment reads what became of a mail or address through tenant.TenantFromContext in its tenant transaction (#5934). No persistent, lock or scope effect.",
+      "reason": "Copies the feedback flag when projecting the existing reports for parent mails. The binding reads the tenant from the existing context; it does not open or change a scope. (#8094)",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
       "target_owner": "tenant-runtime"
@@ -6895,7 +6895,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.EnrollmentDeletionDelivery.RelatedEmailOutcomes",
-      "reason": "Read-only delivery state: enrollment reads what became of a mail or address through tenant.TenantID.Int64 in its tenant transaction (#5934). No persistent, lock or scope effect.",
+      "reason": "Copies the feedback flag when projecting the existing reports for parent mails. Converting the scoped tenant ID to the delivery query argument neither writes nor changes scope. (#8094)",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantID.Int64",
       "target_owner": "tenant-runtime"
@@ -8534,7 +8534,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.RosterStudents.ListClassRoster",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.ClassMemberFrom; modules/peopledirectory/student_state.go:121. Pure value method stating the class membership of a child without an OGS place (ADR 0282); the binding now also maps the class time a child keeps from before its care. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.ClassMemberFrom; modules/peopledirectory/student_state.go:121. Pure value method stating the class membership of a child without an OGS place (ADR 0282); the binding now also maps the class time a child keeps from before its care. May-bind method surface, not a production-call/liveness claim. The binding reads roster candidates as a tenant-scoped set: nil selects the whole school, and a non-nil empty set matches no class; the per-record projection is unchanged.",
       "source_owner": "enrollment",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.ClassMemberFrom",
       "target_owner": "people-directory"
@@ -8544,7 +8544,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.RosterStudents.ListClassRoster",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.ClassTimeBeforeCare. Pure value method stating the class time a child with an OGS place keeps from before its care (ADR 0282). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.ClassTimeBeforeCare. Pure value method stating the class time a child with an OGS place keeps from before its care (ADR 0282). May-bind method surface, not a production-call/liveness claim. The binding reads roster candidates as a tenant-scoped set: nil selects the whole school, and a non-nil empty set matches no class; the per-record projection is unchanged.",
       "source_owner": "enrollment",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.ClassTimeBeforeCare",
       "target_owner": "people-directory"
@@ -8554,7 +8554,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.RosterStudents.ListClassRoster",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.LeftSchool. Pure value method stating the class membership of a child without an OGS place (ADR 0282); the binding now also maps the class time a child keeps from before its care. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.LeftSchool. Pure value method stating the class membership of a child without an OGS place (ADR 0282); the binding now also maps the class time a child keeps from before its care. May-bind method surface, not a production-call/liveness claim. The binding reads roster candidates as a tenant-scoped set: nil selects the whole school, and a non-nil empty set matches no class; the per-record projection is unchanged.",
       "source_owner": "enrollment",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.LeftSchool",
       "target_owner": "people-directory"
@@ -8564,7 +8564,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.RosterStudents.ListClassRoster",
-      "reason": "Read or pure value helper on the supplied interface: modules/peopledirectory/ports.StudentRepository.ListClassRoster. Also maps the mark of a child without an OGS place, the graduate status and the class time a child keeps from before its care (ADR 0282). No mutation or locking read at this terminal; type-level binding coverage, not proof that Enrollment calls every exposed method.",
+      "reason": "Read or pure value helper on the supplied interface: modules/peopledirectory/ports.StudentRepository.ListClassRoster. Also maps the mark of a child without an OGS place, the graduate status and the class time a child keeps from before its care (ADR 0282). No mutation or locking read at this terminal; type-level binding coverage, not proof that Enrollment calls every exposed method. The binding reads roster candidates as a tenant-scoped set: nil selects the whole school, and a non-nil empty set matches no class; the per-record projection is unchanged.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.ListClassRoster",
       "target_owner": "people-directory"

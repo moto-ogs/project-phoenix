@@ -64,7 +64,7 @@ const NAME_PLACEHOLDER: Record<CareRuleKind, string> = {
   income_level: "z. B. Stufe 2: bis 40.000 € im Jahr",
   sibling: "z. B. Geschwister Ispringen",
   single_parent: "z. B. Ermäßigung für Alleinerziehende",
-  cap: "z. B. Höchstbetrag je Familie",
+  cap: "z. B. Höchstbetrag pro Familie",
 };
 
 type SiblingScope = "rank" | "family";
@@ -401,12 +401,12 @@ export function CareRuleModal({
 
   const valueLabel =
     kind === "cap"
-      ? "Höchstbetrag je Familie und Monat in €"
+      ? "Höchstbetrag pro Familie und Monat in €"
       : draft.effect === "share"
         ? "Anteil in %"
         : draft.effect === "price"
-          ? "Preis je Monat in €"
-          : "Betrag je Monat in €";
+          ? "Preis pro Monat in €"
+          : "Betrag pro Monat in €";
 
   // Bewusst ein Modal, keine Bearbeitung am Objekt (BAUARTEN-SPEC Bauart 2
   // Regel 3): eine Betreuungsregel ist ein kleiner Listeneintrag ohne eigene
@@ -623,8 +623,8 @@ export function CareRuleModal({
         {kind === "sibling" && draft.effect === "tariff" ? (
           <p className="text-sm text-gray-600">
             {draft.siblingScope === "family"
-              ? "Jedes Kind der Familie zahlt den Preis aus der Spalte „Jedes weitere Kind“ der Preisliste, auch das erste, je Modul und Tag. Wo dort nichts steht, zahlt es den Preis des 1. Kindes."
-              : "Jedes weitere Kind zahlt den Preis aus der Spalte „Jedes weitere Kind“ der Preisliste, je Modul und Tag. Wo dort nichts steht, zahlt es den Preis des 1. Kindes."}
+              ? "Jedes Kind der Familie zahlt den Preis aus der Spalte „Jedes weitere Kind“ der Preisliste, auch das erste, pro Modul und Tag. Wo dort nichts steht, zahlt es den Preis des 1. Kindes."
+              : "Jedes weitere Kind zahlt den Preis aus der Spalte „Jedes weitere Kind“ der Preisliste, pro Modul und Tag. Wo dort nichts steht, zahlt es den Preis des 1. Kindes."}
           </p>
         ) : (
           <Input

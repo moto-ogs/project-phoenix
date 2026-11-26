@@ -11,9 +11,15 @@ import { Button } from "~/components/ui/button";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { usePickupExtensions } from "~/lib/hooks/use-pickup-extensions";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
-import type { PickupExtension } from "~/lib/pickup-extension-api";
+import {
+  fetchPickupExtensions,
+  type PickupExtension,
+  type PickupExtensionReminder,
+} from "~/lib/pickup-extension-api";
+import { useOpeningRead } from "~/lib/swr";
+import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 
-function todoMessage(tasks: readonly PickupExtension[]): string {
+function todoMessage(tasks: readonly PickupExtensionReminder[]): string {
   const [first] = tasks;
   if (!first) return "";
   if (tasks.length === 1) {
@@ -39,17 +45,37 @@ export function PickupExtensionTodos({
   // Die Liste im Fenster bleibt fest, solange es offen ist: das Neuladen
   // nach jeder Entscheidung darf die Reihenfolge nicht verschieben.
   const [open, setOpen] = useState<readonly PickupExtension[]>([]);
+  const [opening, setOpening] = useState(false);
+  const choices = useOpeningRead(
+    enabled && opening ? tenantDailyKeys.pickupExtensions() : null,
+    () => fetchPickupExtensions(),
+    { showCached: false },
+  );
   const loadError = useSwrLoadError(
     error,
     "die Liste der späteren Abholzeiten",
     refresh,
   );
 
-  if (!enabled || (tasks.length === 0 && open.length === 0 && !error))
+  const openingError = useSwrLoadError(
+    choices.error,
+    "die Liste der späteren Abholzeiten",
+    () => choices.mutate(),
+  );
+  if (opening && choices.data !== undefined) {
+    setOpen(choices.data);
+    setOpening(false);
+  }
+
+  if (
+    !enabled ||
+    (tasks.length === 0 && open.length === 0 && !error && !openingError)
+  )
     return null;
 
   return (
     <>
+      <LoadErrorAlert error={openingError} />
       {error ? (
         <LoadErrorAlert error={loadError} />
       ) : tasks.length > 0 ? (
@@ -63,7 +89,10 @@ export function PickupExtensionTodos({
               type="button"
               variant="surface"
               size="md"
-              onClick={() => setOpen(tasks)}
+              isLoading={opening && !choices.error}
+              onClick={() =>
+                opening ? void choices.mutate() : setOpening(true)
+              }
               tooltip="Öffnet ein Fenster, um einen Termin für die längere Zeit zu wählen."
             >
               {tasks.length === 1 ? "Termin wählen" : "Termine wählen"}

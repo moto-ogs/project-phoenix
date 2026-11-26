@@ -23,7 +23,7 @@ export function parentCareChangeTopic(): HelpTopic {
           "Tippe unten auf `Mein Kind`.",
           "Wähle den Reiter `Betreuung`.",
           "Tippe bei `Dein OGS Wochenplan` auf `Änderungen anfragen`.",
-          "Schalte je Tag `Betreuung an diesem Tag` ein oder aus.",
+          "Schalte pro Tag `Betreuung an diesem Tag` ein oder aus.",
           "Wählst du bei einem Tag `Geht allein`? Dann unterschreibe die Erlaubnis im Feld und tippe auf `Unterschrift bestätigen`.",
           "Tippe auf `Anfrage an OGS senden`.",
         ],

@@ -1314,8 +1314,8 @@ export function StudentHistorySection({
               : !attendanceLogEnabled
                 ? "Für deine Schule deaktiviert"
                 : stop.stopped
-                  ? "Anwesenheit je Betreuungsangebot, ohne Räume"
-                  : "Anwesenheit je Betreuungsangebot und besuchte Räume"
+                  ? "Anwesenheit pro Betreuungsangebot, ohne Räume"
+                  : "Anwesenheit pro Betreuungsangebot und besuchte Räume"
           }
           disabled={attendanceDisabled}
           onClick={

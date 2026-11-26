@@ -30,7 +30,10 @@ type ResourceConfig struct {
 	CareLifecycleService   careplan.CareLifecycle
 	ClassHandovers         ClassHandoverReader
 	ClassListEntries       ClassListEntryReader
-	CompanionService       careplan.StudentCompanions
+	// ClosingTimes moves today's care day end to the closing time of a
+	// changed opening day (#8157); nil keeps operations.session_end_time.
+	ClosingTimes     ClosingTimes
+	CompanionService careplan.StudentCompanions
 	// EnrollmentAnswers serves the registration answer filter (#6954).
 	EnrollmentAnswers       EnrollmentAnswerFilters
 	ExcusedRequestService   excusedrequests.Service

@@ -21,7 +21,7 @@ export const SECTION_META: Record<
   { readonly label: string; readonly hint: string }
 > = {
   children: {
-    label: "Kinder je Standort und Betreuungsform",
+    label: "Kinder pro Standort und Betreuungsform",
     hint: "Wie viele Kinder jede Schule am Stichtag hat, aufgeteilt nach Betreuungsform.",
   },
   staff: {

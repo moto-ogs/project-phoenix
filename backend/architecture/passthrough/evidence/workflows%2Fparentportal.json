@@ -338,16 +338,9 @@
     },
     {
       "build": "production",
-      "evidence": "func (a arrivalSchedules) GetStudentArrivalExceptionForDate(ctx context.Context, id int64, date calendar.Date) (*care.ArrivalException, error) {\n\treturn a.callbacks.GetStudentArrivalExceptionForDate(ctx, id, date)\n}",
+      "evidence": "func (a arrivalSchedules) GetStudentArrivalExceptionsForDate(ctx context.Context, ids []int64, date calendar.Date) (map[int64]*care.ArrivalException, error) {\n\treturn a.callbacks.GetStudentArrivalExceptionsForDate(ctx, ids, date)\n}",
       "form": "unchanged-forward-evidence",
-      "id": "workflows/parentportal/arrivalSchedules.GetStudentArrivalExceptionForDate",
-      "owner": "workflows/parentportal"
-    },
-    {
-      "build": "production",
-      "evidence": "func (a arrivalSchedules) GetStudentArrivalScheduleForWeekday(ctx context.Context, id int64, weekday int) (*care.ArrivalSchedule, error) {\n\treturn a.callbacks.GetStudentArrivalScheduleForWeekday(ctx, id, weekday)\n}",
-      "form": "unchanged-forward-evidence",
-      "id": "workflows/parentportal/arrivalSchedules.GetStudentArrivalScheduleForWeekday",
+      "id": "workflows/parentportal/arrivalSchedules.GetStudentArrivalExceptionsForDate",
       "owner": "workflows/parentportal"
     },
     {
@@ -355,6 +348,13 @@
       "evidence": "func (a arrivalSchedules) GetStudentArrivalSchedules(ctx context.Context, id int64) ([]*care.ArrivalSchedule, error) {\n\treturn a.callbacks.GetStudentArrivalSchedules(ctx, id)\n}",
       "form": "unchanged-forward-evidence",
       "id": "workflows/parentportal/arrivalSchedules.GetStudentArrivalSchedules",
+      "owner": "workflows/parentportal"
+    },
+    {
+      "build": "production",
+      "evidence": "func (a arrivalSchedules) GetWeeklySchedulesByStudentIDsAndWeekday(ctx context.Context, ids []int64, weekday int) ([]*care.ArrivalSchedule, error) {\n\treturn a.callbacks.GetWeeklySchedulesByStudentIDsAndWeekday(ctx, ids, weekday)\n}",
+      "form": "unchanged-forward-evidence",
+      "id": "workflows/parentportal/arrivalSchedules.GetWeeklySchedulesByStudentIDsAndWeekday",
       "owner": "workflows/parentportal"
     },
     {
@@ -478,16 +478,23 @@
     },
     {
       "build": "production",
-      "evidence": "func (r dataRequestReads) ListByStudent(ctx context.Context, id int64, statuses []string, limit int) ([]*care.StudentDataChangeRequest, error) {\n\treturn nativeDataRequestRows(r.callbacks.List(ctx, id, statuses, limit, false))\n}",
+      "evidence": "func (r dataRequestReads) ListByStudents(ctx context.Context, ids []int64, statuses []string, limit int) ([]*care.StudentDataChangeRequest, error) {\n\treturn nativeDataRequestRows(r.callbacks.List(ctx, ids, statuses, limit, false))\n}",
       "form": "unclassified-evidence",
-      "id": "workflows/parentportal/dataRequestReads.ListByStudent",
+      "id": "workflows/parentportal/dataRequestReads.ListByStudents",
       "owner": "workflows/parentportal"
     },
     {
       "build": "production",
-      "evidence": "func (r dataRequestReads) ListParentVisibleByStudent(ctx context.Context, id int64, limit int) ([]*care.StudentDataChangeRequest, error) {\n\treturn nativeDataRequestRows(r.callbacks.List(ctx, id, nil, limit, true))\n}",
+      "evidence": "func (r dataRequestReads) ListParentVisibleByStudent(ctx context.Context, id int64, limit int) ([]*care.StudentDataChangeRequest, error) {\n\treturn nativeDataRequestRows(r.callbacks.List(ctx, []int64{id}, nil, limit, true))\n}",
       "form": "unclassified-evidence",
       "id": "workflows/parentportal/dataRequestReads.ListParentVisibleByStudent",
+      "owner": "workflows/parentportal"
+    },
+    {
+      "build": "production",
+      "evidence": "func (r dataRequestReads) ListPendingWeeklyCareRequests(ctx context.Context, ids []int64) ([]care.OpenWeeklyRequest, error) {\n\treturn r.callbacks.PendingWeekly(ctx, ids)\n}",
+      "form": "unchanged-forward-evidence",
+      "id": "workflows/parentportal/dataRequestReads.ListPendingWeeklyCareRequests",
       "owner": "workflows/parentportal"
     },
     {
@@ -926,6 +933,13 @@
     },
     {
       "build": "production",
+      "evidence": "func (c childFlowSharing) LoadRequestShareVisibilities(ctx context.Context, studentIDs []int64) (map[int64]care.RequestShareVisibility, error) {\n\tvisibilities, err := c.Service.LoadRequestShareVisibilities(ctx, studentIDs)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tout := make(map[int64]care.RequestShareVisibility, len(visibilities))\n\tfor studentID, visibility := range visibilities {\n\t\tout[studentID] = visibility\n\t}\n\treturn out, nil\n}",
+      "form": "unclassified-evidence",
+      "id": "workflows/parentportal/internal/messaging/childFlowSharing.LoadRequestShareVisibilities",
+      "owner": "workflows/parentportal"
+    },
+    {
+      "build": "production",
       "evidence": "func (c childFlowSharing) LoadRequestShareVisibility(ctx context.Context, studentID int64) (care.RequestShareVisibility, error) {\n\tvisibility, err := c.Service.LoadRequestShareVisibility(ctx, studentID)\n\tif err != nil || visibility == nil {\n\t\treturn nil, err\n\t}\n\treturn visibility, nil\n}",
       "form": "unclassified-evidence",
       "id": "workflows/parentportal/internal/messaging/childFlowSharing.LoadRequestShareVisibility",
@@ -1052,6 +1066,13 @@
     },
     {
       "build": "production",
+      "evidence": "func (a pickupSchedules) GetBulkEffectivePickupTimesForDate(ctx context.Context, ids []int64, date calendar.Date) (map[int64]*care.EffectivePickupTime, error) {\n\treturn a.callbacks.GetBulkEffectivePickupTimesForDate(ctx, ids, date)\n}",
+      "form": "unchanged-forward-evidence",
+      "id": "workflows/parentportal/pickupSchedules.GetBulkEffectivePickupTimesForDate",
+      "owner": "workflows/parentportal"
+    },
+    {
+      "build": "production",
       "evidence": "func (a pickupSchedules) GetEffectivePickupTimeForDate(ctx context.Context, id int64, date calendar.Date) (*care.EffectivePickupTime, error) {\n\treturn a.callbacks.GetEffectivePickupTimeForDate(ctx, id, date)\n}",
       "form": "unchanged-forward-evidence",
       "id": "workflows/parentportal/pickupSchedules.GetEffectivePickupTimeForDate",
@@ -1108,9 +1129,9 @@
     },
     {
       "build": "production",
-      "evidence": "func (p requestShareRecordsBinding) CurrentForStudent(pA context.Context, pB int64) ([]*messaging.ParentRequestShareEvent, error) {\n\treturn p.callbacks.CurrentForStudent(pA, pB)\n}",
+      "evidence": "func (p requestShareRecordsBinding) CurrentForStudents(pA context.Context, pB []int64) ([]*messaging.ParentRequestShareEvent, error) {\n\treturn p.callbacks.CurrentForStudents(pA, pB)\n}",
       "form": "unchanged-forward-evidence",
-      "id": "workflows/parentportal/requestShareRecordsBinding.CurrentForStudent",
+      "id": "workflows/parentportal/requestShareRecordsBinding.CurrentForStudents",
       "owner": "workflows/parentportal"
     },
     {

@@ -117,7 +117,7 @@ vi.mock("~/components/ui/skeleton", () => ({
   ),
 }));
 
-import OperatorOrganizationsPage from "./page";
+import OperatorOrganizationsPage from "./page-content";
 import {
   mockOrg,
   setupSWR,

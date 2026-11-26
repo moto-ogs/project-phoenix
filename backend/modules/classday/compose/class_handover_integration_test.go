@@ -45,12 +45,24 @@ type handoverDayFacts struct {
 	careDays map[int64]careplan.CareDayStatus
 }
 
+func (handoverRoster) AssignedClassRoster(context.Context, []string, calendar.Date, string) (classday.AssignedRoster, error) {
+	panic("unexpected assigned class roster read")
+}
+
 func (f *handoverDayFacts) StandingStatusDays(context.Context, []int64, calendar.Date) ([]compose.StatusDayEntry, error) {
 	return f.statuses, nil
 }
 
 func (f *handoverDayFacts) ResolveForDate(context.Context, []int64, calendar.Date) (map[int64]careplan.CareDayStatus, error) {
 	return f.careDays, nil
+}
+
+func (f *handoverDayFacts) ResolvePlannedForRange(_ context.Context, _ []int64, from, _ calendar.Date) (map[int64]map[calendar.Date]careplan.PlannedCareDay, error) {
+	out := make(map[int64]map[calendar.Date]careplan.PlannedCareDay, len(f.careDays))
+	for id, status := range f.careDays {
+		out[id] = map[calendar.Date]careplan.PlannedCareDay{from: {Status: status}}
+	}
+	return out, nil
 }
 
 func (*handoverDayFacts) GetBulkEffectivePickupTimesForDate(context.Context, []int64, calendar.Date) (map[int64]*careplan.EffectivePickupTime, error) {

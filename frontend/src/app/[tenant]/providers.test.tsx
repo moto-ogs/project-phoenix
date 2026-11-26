@@ -49,7 +49,12 @@ describe("TenantProviders", () => {
     const tenant = { subdomain: "school-a" } as TenantInfo;
 
     render(
-      <TenantProviders tenantSlug="school-a" tenant={tenant} routingMode="path">
+      <TenantProviders
+        sessionMark=""
+        tenantSlug="school-a"
+        tenant={tenant}
+        routingMode="path"
+      >
         <div>Tenant content</div>
       </TenantProviders>,
     );

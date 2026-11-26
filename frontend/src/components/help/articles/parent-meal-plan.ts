@@ -39,7 +39,7 @@ export function parentMealPlanTopic(): HelpTopic {
         ],
       },
     ],
-    result: "Du siehst je Tag das Gericht und ob dein Kind mitisst.",
+    result: "Du siehst pro Tag das Gericht und ob dein Kind mitisst.",
     notes: [
       "Steht am Gericht zum Beispiel `Allergene: A, G`, enthält es diese Allergene. Unter dem Plan steht, was die Buchstaben bedeuten.",
       "Die Angaben kommen von der Schule oder vom Caterer. Ein Gericht ohne Buchstaben ist nicht sicher frei von Allergenen. Frage im Zweifel die OGS.",

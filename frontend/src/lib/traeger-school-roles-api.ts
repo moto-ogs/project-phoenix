@@ -1,3 +1,4 @@
+import type { z } from "zod";
 import { bffJson } from "~/lib/bff-fetch";
 /**
  * Rollen des Trägers für das Personal aller seiner Schulen (#4810, ADR 0317).
@@ -119,7 +120,16 @@ function roleBody(input: TraegerSchoolRoleInput) {
 }
 
 export async function fetchTraegerSchoolRoles(): Promise<TraegerSchoolRoleList> {
-  const data = await bffJson("org", "GET /traeger/school-roles/");
+  return mapTraegerSchoolRoles(
+    await bffJson("org", "GET /traeger/school-roles/"),
+  );
+}
+
+export function mapTraegerSchoolRoles(
+  data: z.output<
+    (typeof contract.routes)["GET /traeger/school-roles/"]["response"]
+  >["data"],
+): TraegerSchoolRoleList {
   return {
     roles: (data.roles ?? []).map(mapRole),
     schoolCount: (data.schools ?? []).length,
@@ -127,7 +137,16 @@ export async function fetchTraegerSchoolRoles(): Promise<TraegerSchoolRoleList> 
 }
 
 export async function fetchTraegerSchoolRoleCatalog(): Promise<TraegerSchoolRoleCatalog> {
-  const data = await bffJson("org", "GET /traeger/school-roles/catalog");
+  return mapTraegerSchoolRoleCatalog(
+    await bffJson("org", "GET /traeger/school-roles/catalog"),
+  );
+}
+
+export function mapTraegerSchoolRoleCatalog(
+  data: z.output<
+    (typeof contract.routes)["GET /traeger/school-roles/catalog"]["response"]
+  >["data"],
+): TraegerSchoolRoleCatalog {
   const templates: Record<TraegerSchoolRoleBase, readonly string[]> = {
     user: [],
     admin: [],

@@ -82,6 +82,7 @@ const filledPickup: studentsContract.PickupDataResponse = {
   ],
   exceptions: [],
   notes: [],
+  pickup_persons: [],
   departure_exceptions: [],
 };
 
@@ -89,6 +90,7 @@ const emptyPickup: studentsContract.PickupDataResponse = {
   schedules: [],
   exceptions: [],
   notes: [],
+  pickup_persons: [],
   departure_exceptions: [],
 };
 

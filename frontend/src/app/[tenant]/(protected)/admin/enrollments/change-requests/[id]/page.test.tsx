@@ -1,7 +1,7 @@
 import { act, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import Page from "./page";
+import Page from "./page-content";
 import { canReviewEnrollmentChangeRequests } from "~/lib/change-request-access";
 import { useRequirePermission } from "~/lib/hooks/use-require-permission";
 

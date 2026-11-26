@@ -3,12 +3,11 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { useSession } from "next-auth/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { roomKeys } from "~/lib/swr/rooms-keys";
-import RoomDetailPage from "./page";
+import RoomDetailPage from "./page-content";
 
 const {
   searchParams,
   pushMock,
-  replaceMock,
   useRoomDetailMock,
   presenceModeState,
   serviceUpdateMock,
@@ -17,6 +16,7 @@ const {
   toastErrorMock,
   exportPlanMock,
   showErrorMock,
+  refreshSupervisionMock,
   supervisionState,
   suspendSearchParamsState,
   weekendOpenState,
@@ -24,7 +24,6 @@ const {
 } = vi.hoisted(() => ({
   searchParams: new URLSearchParams(),
   pushMock: vi.fn(),
-  replaceMock: vi.fn(),
   useRoomDetailMock: vi.fn(),
   presenceModeState: { mode: "detailed" as string },
   serviceUpdateMock: vi.fn(() => Promise.resolve({})),
@@ -33,18 +32,21 @@ const {
   toastErrorMock: vi.fn(),
   exportPlanMock: vi.fn(() => Promise.resolve()),
   showErrorMock: vi.fn(() => Promise.resolve()),
+  refreshSupervisionMock: vi.fn(() => Promise.resolve()),
   supervisionState: { overviewEnabled: false },
   suspendSearchParamsState: { value: false },
   weekendOpenState: { value: false },
   tenantMutateMock: vi.fn(() => Promise.resolve()),
 }));
 
+vi.unmock("swr");
+
 vi.mock("next-auth/react", () => ({ useSession: vi.fn() }));
 
 vi.mock("next/navigation", () => ({
   useParams: () => ({ id: "7" }),
   usePathname: () => "/rooms/7",
-  useRouter: () => ({ replace: replaceMock }),
+  useRouter: () => ({ replace: vi.fn() }),
   useSearchParams: () => {
     if (suspendSearchParamsState.value) throw new Promise(() => {});
     return searchParams;
@@ -58,6 +60,7 @@ vi.mock("~/lib/tenant-router", () => ({
 vi.mock("~/lib/supervision-context", () => ({
   useOptionalSupervision: () => ({
     overviewEnabled: supervisionState.overviewEnabled,
+    refresh: refreshSupervisionMock,
   }),
 }));
 
@@ -138,9 +141,11 @@ vi.mock("~/components/rooms/room-detail-content", () => ({
 vi.mock("~/components/rooms/room-stammdaten-tab", () => ({
   RoomStammdatenTab: ({
     onSave,
+    room,
     showOccupancy,
   }: {
-    onSave: (data: { name: string }) => Promise<void>;
+    onSave: (data: { name?: string; isOpenRoom?: boolean }) => Promise<void>;
+    room: { isOpenRoom?: boolean };
     showOccupancy: boolean;
   }) => (
     <div
@@ -149,6 +154,12 @@ vi.mock("~/components/rooms/room-stammdaten-tab", () => ({
     >
       <button type="button" onClick={() => void onSave({ name: "Neu" })}>
         Speichern
+      </button>
+      <button
+        type="button"
+        onClick={() => void onSave({ isOpenRoom: !room.isOpenRoom })}
+      >
+        Freigabe ändern
       </button>
     </div>
   ),
@@ -263,6 +274,7 @@ function mockSession(permissions: string[], roles: string[] = []) {
 describe("RoomDetailPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    window.history.replaceState(null, "", "/rooms/7");
     searchParams.delete("from");
     searchParams.delete("tab");
     searchParams.delete("d");
@@ -409,9 +421,9 @@ describe("RoomDetailPage", () => {
     render(<RoomDetailPage />);
 
     fireEvent.click(screen.getByRole("tab", { name: "Stammdaten" }));
-    expect(replaceMock).toHaveBeenCalledWith("/rooms/7?tab=stammdaten", {
-      scroll: false,
-    });
+    expect(window.location.pathname + window.location.search).toBe(
+      "/rooms/7?tab=stammdaten",
+    );
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
 
     await waitFor(() => {
@@ -450,7 +462,35 @@ describe("RoomDetailPage", () => {
     const cached = update({ room: { ...room, version: "v1" }, history: [] });
     expect(cached.room).toMatchObject({ name: "Neu", version: "v2" });
     expect(cached.room.isOccupied).toBe(true);
+    expect(refreshSupervisionMock).toHaveBeenCalledWith();
   });
+
+  it.each([true, false])(
+    "refreshes only released rooms after setting the release to %s",
+    async (isOpenRoom) => {
+      mockSession(["rooms:update"]);
+      useRoomDetailMock.mockReturnValue({
+        room: { ...room, isOpenRoom: !isOpenRoom },
+        history: [],
+        loading: false,
+        error: null,
+        historyDisabled: false,
+      });
+      serviceUpdateMock.mockResolvedValueOnce({ ...room, isOpenRoom });
+      render(<RoomDetailPage />);
+
+      fireEvent.click(screen.getByRole("tab", { name: "Stammdaten" }));
+      fireEvent.click(screen.getByRole("button", { name: "Freigabe ändern" }));
+
+      await waitFor(() =>
+        expect(refreshSupervisionMock).toHaveBeenCalledWith(["released-rooms"]),
+      );
+      expect(serviceUpdateMock).toHaveBeenCalledWith(
+        "7",
+        expect.objectContaining({ isOpenRoom }),
+      );
+    },
+  );
 
   it("keeps the referrer when switching room tabs", () => {
     mockSession(["rooms:update"]);
@@ -459,9 +499,8 @@ describe("RoomDetailPage", () => {
 
     fireEvent.click(screen.getByRole("tab", { name: "Stammdaten" }));
 
-    expect(replaceMock).toHaveBeenCalledWith(
+    expect(window.location.pathname + window.location.search).toBe(
       "/rooms/7?from=%2Fdatabase%2Frooms%3FgroupBy%3Dfloor&tab=stammdaten",
-      { scroll: false },
     );
   });
 
@@ -493,6 +532,7 @@ describe("RoomDetailPage", () => {
     await waitFor(() => {
       expect(pushMock).toHaveBeenCalledWith("/database/rooms?groupBy=floor");
     });
+    expect(refreshSupervisionMock).toHaveBeenCalledWith();
   });
 
   it("marks an archived room and offers neither editing nor removal", () => {
@@ -640,9 +680,9 @@ describe("RoomDetailPage", () => {
     render(<RoomDetailPage />);
 
     fireEvent.click(screen.getByRole("tab", { name: "Plan" }));
-    expect(replaceMock).toHaveBeenCalledWith("/rooms/7?tab=plan", {
-      scroll: false,
-    });
+    expect(window.location.pathname + window.location.search).toBe(
+      "/rooms/7?tab=plan",
+    );
   });
 
   it("hides the Plan tab without schedules:read", () => {
@@ -689,9 +729,9 @@ describe("RoomDetailPage", () => {
     render(<RoomDetailPage />);
 
     fireEvent.click(screen.getByRole("button", { name: "Tag" }));
-    expect(replaceMock).toHaveBeenCalledWith("/rooms/7?tab=plan&view=tag", {
-      scroll: false,
-    });
+    expect(window.location.pathname + window.location.search).toBe(
+      "/rooms/7?tab=plan&view=tag",
+    );
   });
 
   it("drops the plan parameters when leaving the Plan tab", () => {
@@ -702,9 +742,9 @@ describe("RoomDetailPage", () => {
     render(<RoomDetailPage />);
 
     fireEvent.click(screen.getByRole("tab", { name: "Stammdaten" }));
-    expect(replaceMock).toHaveBeenCalledWith("/rooms/7?tab=stammdaten", {
-      scroll: false,
-    });
+    expect(window.location.pathname + window.location.search).toBe(
+      "/rooms/7?tab=stammdaten",
+    );
   });
 
   it("downloads the room's plan of the shown week as PDF", async () => {

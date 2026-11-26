@@ -4,6 +4,7 @@ import { useLayoutEffect, useMemo, useRef } from "react";
 import type { Session } from "next-auth";
 import { SessionProvider, useSession } from "next-auth/react";
 import { ProfileProvider } from "~/lib/profile-context";
+import { supervisionContextKeys } from "~/lib/swr/supervision-keys";
 import { SupervisionProvider } from "~/lib/supervision-context";
 import { PersonalStorageGuard } from "~/components/auth/personal-storage-guard";
 import {
@@ -11,6 +12,10 @@ import {
   useSessionPollInterval,
 } from "~/components/auth/session-account-binding";
 import { SentrySessionContext } from "~/components/auth/sentry-session-context";
+import {
+  SessionTreeBoundary,
+  StaleSessionMarkCheck,
+} from "~/components/auth/session-tree-boundary";
 import { ModuleBookingAudienceProvider } from "~/contexts/ToastContext";
 import { TenantAuthWrapper } from "~/components/auth/tenant-auth-wrapper";
 import { PushSubscriptionSync } from "~/components/notifications/push-subscription-sync";
@@ -39,6 +44,8 @@ import { TenantProvider, type TenantRoutingMode } from "~/lib/tenant-context";
 import { tenantAwarePath } from "~/lib/tenant-path";
 import type { TenantInfo } from "~/lib/tenant-api";
 import { seesLockedModules } from "~/lib/module-register";
+import { sessionMarkName } from "~/lib/session-mark";
+import { clientEnv } from "~/env.client";
 
 /**
  * Mirrors SessionProvider's response into the getSession() dedupe cache that
@@ -88,7 +95,7 @@ const COUNT_KEYS: Record<keyof ShellCounts, (accountId: string) => string> = {
  * bell polls the reminders, the sidebar badge reloads today's staff notices
  * on focus and after an acknowledgement, and the home block only shows them.
  * The badge counts reload on their refresh events and on focus. The user
- * context is immutable SWR; settings changes, SSE events and the
+ * context is immutable SWR; settings changes and the
  * guardian-approval retry invalidate it.
  */
 export function shellOwnedEntries(shell: ShellBootstrap, tenantSlug: string) {
@@ -99,8 +106,16 @@ export function shellOwnedEntries(shell: ShellBootstrap, tenantSlug: string) {
   if (shell.userContext) {
     entries[scopedSWRKey(scope, USER_CONTEXT_SWR_KEY)] = shell.userContext;
   }
+  if (shell.supervision) {
+    entries[scopedSWRKey(scope, supervisionContextKeys.snapshot())] =
+      shell.supervision;
+  }
   if (shell.reminders) {
     entries[scopedSWRKey(scope, REMINDERS_SWR_KEY)] = shell.reminders;
+  }
+  if (shell.announcements) {
+    entries[scopedSWRKey(scope, announcementKeys.unread())] =
+      shell.announcements;
   }
   if (shell.staffNoticesToday) {
     entries[scopedSWRKey(scope, staffNoticesTodayKey(shell.accountId))] =
@@ -115,28 +130,14 @@ export function shellOwnedEntries(shell: ShellBootstrap, tenantSlug: string) {
   return entries;
 }
 
-/**
- * SWR entries the server preloaded, under the tenant-scoped keys useSWRAuth
- * produces. `fallback` lets the first (server and hydration) render show the
- * data; `cacheData` makes SWR consume it as the mount revalidation instead of
- * fetching, after which it is an ordinary cache entry.
- *
- * The shell-owned entries stay out of `cacheData`: ShellCacheSeeder writes
- * them into the cache, so no reader ever consumes them there, and SWR keeps
- * a hook's `cacheData` in its revalidation for the hook's lifetime. After
- * the cache reset of a rights change under the same key (#5006), that
- * revalidation answered with the seed instead of the server.
- */
+const NO_ENTRIES: Record<string, unknown> = {};
+const NO_SEED = { fallback: NO_ENTRIES, cacheData: NO_ENTRIES };
+
+/** Fallback for server render/hydration; ShellCacheSeeder owns the cache write. */
 export function shellSwrConfig(shell: ShellBootstrap, tenantSlug: string) {
-  const consumed: Record<string, unknown> = {};
-  const scope = tenantSWRScope(tenantSlug, shell.accountId);
-  if (shell.announcements) {
-    consumed[scopedSWRKey(scope, announcementKeys.unread())] =
-      shell.announcements;
-  }
   return {
-    fallback: { ...shellOwnedEntries(shell, tenantSlug), ...consumed },
-    cacheData: consumed,
+    fallback: shellOwnedEntries(shell, tenantSlug),
+    cacheData: NO_ENTRIES,
   };
 }
 
@@ -158,9 +159,6 @@ export function ShellCacheSeeder({
   return null;
 }
 
-const NO_SEED = { fallback: {}, cacheData: {} };
-const NO_ENTRIES: Record<string, unknown> = {};
-
 /**
  * The server preload, only while the session is the one it was built for
  * (#5006). After a change of rights or preview, even under the same keys, no
@@ -173,10 +171,7 @@ function ShellSwrSeed({
   generation,
   children,
 }: Readonly<{
-  seed: {
-    config: ReturnType<typeof shellSwrConfig>;
-    owned: Record<string, unknown>;
-  };
+  seed: ReturnType<typeof shellSwrConfig>;
   generation: string | null;
   children: React.ReactNode;
 }>) {
@@ -192,8 +187,8 @@ function ShellSwrSeed({
     if (invalidated || current !== generation) left.current = true;
   }, [invalidated, current, generation]);
   return (
-    <SWRSeedBoundary seed={active ? seed.config : NO_SEED}>
-      <ShellCacheSeeder entries={active ? seed.owned : NO_ENTRIES} />
+    <SWRSeedBoundary seed={active ? seed : NO_SEED}>
+      <ShellCacheSeeder entries={active ? seed.fallback : NO_ENTRIES} />
       {children}
     </SWRSeedBoundary>
   );
@@ -212,12 +207,16 @@ function ShellSwrSeed({
  * value with non-React API clients. `shell` is the server preload (#2973);
  * missing fields retain their client fetch path.
  */
+// The school's login explains that the session ended (#8082).
+const tenantExpiredLogin = () => "/?error=SessionExpired";
+
 export function TenantProviders({
   children,
   tenantSlug,
   tenant,
   routingMode,
   session,
+  sessionMark,
   shell = null,
 }: Readonly<{
   children: React.ReactNode;
@@ -225,6 +224,8 @@ export function TenantProviders({
   tenant: TenantInfo;
   routingMode: TenantRoutingMode;
   session?: Session | null;
+  /** The session mark the page was rendered with (#8082). */
+  sessionMark: string;
   shell?: ShellBootstrap | null;
 }>) {
   const swrSeed = useMemo(() => {
@@ -233,12 +234,19 @@ export function TenantProviders({
     // The seed belongs to the generation it was built in (#5006): after a
     // drop of one of its keys no reader shows it, also not as fallback.
     stampSWRSeeds(config.fallback);
-    return { config, owned: shellOwnedEntries(shell, tenantSlug) };
+    return config;
   }, [shell, tenantSlug]);
   // The seed belongs to the session the server rendered with.
   const seedGeneration = authGeneration(session);
   // A logout stops the poll at once (#5399).
   const pollSeconds = useSessionPollInterval(SESSION_PROVIDER_POLL_SECONDS);
+  const mark = useMemo(
+    () => ({
+      name: sessionMarkName("tenant", clientEnv.NEXT_PUBLIC_TENANT_DOMAIN),
+      rendered: sessionMark,
+    }),
+    [sessionMark],
+  );
 
   const providers = (
     <ShellSeedProvider value={shell}>
@@ -250,13 +258,13 @@ export function TenantProviders({
         {/* Inside the tenant context: it reads the push key under the same
             cache scope as the guided setup and the settings card. */}
         <PushSubscriptionSync portal="tenant" />
-        <TenantAuthWrapper>
-          <ProfileProvider initialProfile={shell?.profile ?? null}>
-            <SupervisionProvider initial={shell?.supervision ?? null}>
+        <SupervisionProvider>
+          <TenantAuthWrapper>
+            <ProfileProvider initialProfile={shell?.profile ?? null}>
               {children}
-            </SupervisionProvider>
-          </ProfileProvider>
-        </TenantAuthWrapper>
+            </ProfileProvider>
+          </TenantAuthWrapper>
+        </SupervisionProvider>
       </TenantProvider>
     </ShellSeedProvider>
   );
@@ -267,22 +275,30 @@ export function TenantProviders({
       refetchInterval={pollSeconds}
       refetchOnWindowFocus={false}
     >
+      <StaleSessionMarkCheck sessionMark={mark} />
       <SessionAccountBinding />
       <PersonalStorageGuard
         homeHref={() => tenantAwarePath("/", tenantSlug, routingMode)}
       />
       <SWRScopeBoundary expectedTenantId={tenant.tenantId} />
       <SessionCachePrimer />
-      <ModuleBookingAudienceBridge>
-        <SentrySessionContext portal="tenant" />
-        {swrSeed ? (
-          <ShellSwrSeed seed={swrSeed} generation={seedGeneration}>
-            {providers}
-          </ShellSwrSeed>
-        ) : (
-          providers
-        )}
-      </ModuleBookingAudienceBridge>
+      <SentrySessionContext portal="tenant" />
+      {/* Everything that shows or holds this session's data (#8082). */}
+      <SessionTreeBoundary
+        portal="tenant"
+        sessionMark={mark}
+        endedSessionUrl={tenantExpiredLogin}
+      >
+        <ModuleBookingAudienceBridge>
+          {swrSeed ? (
+            <ShellSwrSeed seed={swrSeed} generation={seedGeneration}>
+              {providers}
+            </ShellSwrSeed>
+          ) : (
+            providers
+          )}
+        </ModuleBookingAudienceBridge>
+      </SessionTreeBoundary>
     </SessionProvider>
   );
 }
