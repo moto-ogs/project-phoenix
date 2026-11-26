@@ -40,6 +40,7 @@ import { ParentDocumentsPage } from "./parent-documents-page";
 
 const letter: ParentDocument = {
   replaced: false,
+  change_awaits_signature: false,
   id: "31",
   organization_id: "4",
   traeger_name: "Ganztag im Quartier e.V.",
@@ -350,6 +351,45 @@ describe("ParentDocumentsPage", () => {
     expect(
       screen.queryByRole("link", { name: deMessages.parentDocuments.signNow }),
     ).not.toBeInTheDocument();
+  });
+
+  it("asks for the signature of a changed version and says the contract holds until then (#4816)", async () => {
+    mocks.listMyDocuments.mockResolvedValue({
+      documents: [
+        {
+          ...letter,
+          kind: "care_contract",
+          contract_status: "aktiv",
+          signed_at: "2026-08-01T09:00:00Z",
+          can_sign: true,
+          change_awaits_signature: true,
+          service_from: "2026-10-01",
+        },
+      ],
+      shared: [],
+      failedSource: null,
+      error: null,
+    });
+    render(<ParentDocumentsPage />);
+
+    expect(
+      await screen.findByText("Änderung wartet auf deine Unterschrift"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Die Betreuung ändert sich ab dem 01.10.2026. Bitte unterschreibe die neue Fassung. Bis dahin gilt dein Vertrag wie bisher.",
+      ),
+    ).toBeInTheDocument();
+    // The contract began long ago: the date is the day of the change.
+    expect(screen.getByText("Änderung ab")).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", {
+        name: deMessages.parentDocuments.signChange,
+      }),
+    ).toHaveAttribute(
+      "href",
+      expect.stringContaining("/documents/vertrag/4/31"),
+    );
   });
 
   it("marks a replaced contract version and names from when the new version applies (#4681)", async () => {

@@ -12,7 +12,9 @@ import (
 // composes. The server root supplies it, where the Betreuungsvertrag's
 // ports are bound for its portal routes too. parentsURL is the base of the
 // parents portal the signing links of those ports point to (#4679);
-// holidays dates the withdrawal period at each school (#6350).
+// holidays dates the withdrawal period at each school (#6350); accounts
+// names the address of the parents account that asked for a change, which
+// tells whether a party of the contract asked (#4816).
 type CareContractConclusionBuilder func(organizations organizationtenancy.Capability, settings SettingsOwner,
 	delivery deliveryRuntime.Capability, outcomes deliveryRuntime.EmailOutcomes, accessLog DataAccessAppender,
-	holidays carecontract.SchoolHolidays, parentsURL string) schedulerPorts.CareContractConclusion
+	holidays carecontract.SchoolHolidays, parentsURL string, accounts CareContractAccountEmails) schedulerPorts.CareContractConclusion

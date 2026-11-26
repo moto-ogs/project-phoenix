@@ -34391,6 +34391,12 @@
           }
         },
         {
+          "name": "change_awaits_signature",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
           "name": "ends_on",
           "optional": true,
           "schema": {
@@ -48603,6 +48609,12 @@
           }
         },
         {
+          "name": "change_awaits_signature",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
           "name": "version",
           "schema": {
             "kind": "ref",
@@ -48653,6 +48665,17 @@
             "elem": {
               "kind": "ref",
               "ref": "Reminder"
+            }
+          }
+        },
+        {
+          "name": "version_signatures",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "VersionSignature"
             }
           }
         },
@@ -49702,6 +49725,13 @@
           "schema": {
             "kind": "bool"
           }
+        },
+        {
+          "name": "document_sha256",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -49960,6 +49990,12 @@
           "schema": {
             "kind": "id",
             "nullable": true
+          }
+        },
+        {
+          "name": "change_awaits_signature",
+          "schema": {
+            "kind": "bool"
           }
         }
       ]
@@ -90090,6 +90126,12 @@
       "go_type": "carecontract.Reminder",
       "fields": [
         {
+          "name": "version_number",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
           "name": "number",
           "schema": {
             "kind": "int"
@@ -101792,6 +101834,13 @@
           "schema": {
             "kind": "bool"
           }
+        },
+        {
+          "name": "document_sha256",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -102056,6 +102105,26 @@
             "kind": "ref",
             "nullable": true,
             "ref": "SigningSignature"
+          }
+        },
+        {
+          "name": "previous",
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "SigningContract"
+          }
+        },
+        {
+          "name": "awaits_signature",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "amendment",
+          "schema": {
+            "kind": "bool"
           }
         }
       ]
@@ -118927,6 +118996,49 @@
           "schema": {
             "kind": "date",
             "nullable": true
+          }
+        },
+        {
+          "name": "agreed_from",
+          "optional": true,
+          "schema": {
+            "kind": "date"
+          }
+        }
+      ]
+    },
+    {
+      "name": "VersionSignature",
+      "go_type": "carecontract.VersionSignature",
+      "fields": [
+        {
+          "name": "version_number",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "method",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "channel",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "signer_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "signed_at",
+          "schema": {
+            "kind": "instant"
           }
         }
       ]

@@ -23,8 +23,7 @@ import (
 // child of their newest version.
 const enrollmentContractsSQL = `SELECT c.id AS contract_id, c.school_id, c.status, c.student_id, c.request_child_id, c.ends_on,
 		n.child_first_name, n.child_last_name,
-		(SELECT f.effective_from FROM care_contract.contract_versions AS f
-			WHERE f.organization_id = c.organization_id AND f.contract_id = c.id AND f.version_number = 1) AS first_from,
+		` + firstConcludedFromSQL + ` AS first_from,
 		(SELECT MAX(m.version_number) + 1 FROM care_contract.contract_versions AS m
 			WHERE m.organization_id = c.organization_id AND m.contract_id = c.id) AS next_number
 	FROM care_contract.contracts AS c

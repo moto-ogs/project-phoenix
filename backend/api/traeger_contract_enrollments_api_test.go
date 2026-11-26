@@ -481,7 +481,9 @@ func TestContractEnrollmentEnrollsBindsAndKeepsCareContractAndBillingInStep(t *t
 	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), "care_contract.child_link_bound")
 
-	// The normal way: an approved change of the bookings makes version 2.
+	// The normal way: a change of the bookings makes version 2. The school
+	// booked it, the parents asked for nothing, so it waits for their
+	// signature (#4816).
 	late := &testpkg.CareOffering{PhaseID: f.phase, Name: "Spätbetreuung", DaysOfWeekMode: "fixed", AvailableDays: []string{"thu"},
 		AutoAddGradeLevels: []int{}, IsActive: true, CountsAsCare: true, PickupTimes: map[string]string{"thu": "17:00"}}
 	late.TenantID = f.school
@@ -491,9 +493,9 @@ func TestContractEnrollmentEnrollsBindsAndKeepsCareContractAndBillingInStep(t *t
 	require.NoError(t, err)
 	amended, err = conclusion.AmendFromBookings(ctx, f.office.organization)
 	require.NoError(t, err)
-	require.Len(t, amended.Amended, 1, "a bound imported contract follows its bookings like any other")
-	assert.Equal(t, f.mia, amended.Amended[0].ContractID)
-	assert.Equal(t, 2, amended.Amended[0].VersionNumber)
+	require.Len(t, amended.Awaiting, 1, "a bound imported contract follows its bookings like any other")
+	assert.Equal(t, f.mia, amended.Awaiting[0].ContractID)
+	assert.Equal(t, 2, amended.Awaiting[0].VersionNumber)
 	assert.Equal(t, 1, f.count(t, `SELECT COUNT(*) FROM care_contract.contract_versions WHERE contract_id = ? AND version_number = 2
 		AND source = ? AND effective_from = DATE '2027-10-01'`, f.mia, carecontract.SourceBookingChange))
 }

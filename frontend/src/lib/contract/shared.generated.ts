@@ -2888,6 +2888,9 @@ export interface SigningView {
   document_sha256: string;
   withdrawal_notice: string[] | null;
   signature: SigningSignature | null;
+  previous: SigningContract | null;
+  awaits_signature: boolean;
+  amendment: boolean;
 }
 
 export const SigningViewSchema: z.ZodType<SigningView, unknown> = object<SigningView>({
@@ -2900,6 +2903,9 @@ export const SigningViewSchema: z.ZodType<SigningView, unknown> = object<Signing
   document_sha256: str,
   withdrawal_notice: nullable(arr(str)),
   signature: nullable(SigningSignatureSchema),
+  previous: nullable(SigningContractSchema),
+  awaits_signature: bool,
+  amendment: bool,
 });
 
 /** Go: schoolsetuphttp.dismissalRequest */

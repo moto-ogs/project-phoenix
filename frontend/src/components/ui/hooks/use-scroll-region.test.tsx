@@ -33,6 +33,26 @@ describe("useScrollRegion", () => {
     expect(result.current).toBe(true);
   });
 
+  it.each([
+    [400, 800],
+    [800, 400],
+  ])(
+    "keeps a region with scroll dimensions %i × %i keyboard reachable",
+    (scrollWidth, scrollHeight) => {
+      const ref = { current: document.createElement("div") };
+      Object.defineProperties(ref.current, {
+        scrollWidth: { value: scrollWidth },
+        scrollHeight: { value: scrollHeight },
+        clientWidth: { value: 400 },
+        clientHeight: { value: 400 },
+      });
+
+      const { result } = renderHook(() => useScrollRegion(ref));
+
+      expect(result.current).toBe(true);
+    },
+  );
+
   it.each(["disabled", "hidden"])(
     "keeps the same-sized scroll area reachable when its only control becomes %s",
     async (attribute) => {
