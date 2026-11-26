@@ -356,7 +356,7 @@ beforeEach(() => {
     },
   ]);
   mockUseSession.mockImplementation(() => ({
-    data: { user: { token: "t" } },
+    data: { user: { id: "7", token: "t" } },
     status: "authenticated",
   }));
   mockUseOptionalSupervision.mockImplementation(() => ({
@@ -520,7 +520,7 @@ describe("StudentSearchPage — room_id deep-link (#1323)", () => {
 
   it("drops a registration answer the account may not read (#6954)", async () => {
     mockUseSession.mockImplementation(() => ({
-      data: { user: { token: "t", permissions: ["students:read"] } },
+      data: { user: { id: "7", token: "t", permissions: ["students:read"] } },
       status: "authenticated",
     }));
     currentSearch = new URLSearchParams({
@@ -998,7 +998,7 @@ describe("StudentSearchPage — Kinder nur über Alle Kinder (#1321)", () => {
   // Own groups and own supervision, as the former file mocked them.
   beforeEach(() => {
     mockUseSession.mockImplementation(() => ({
-      data: { user: { token: "t", roles: ["user"] } },
+      data: { user: { id: "7", token: "t", roles: ["user"] } },
       status: "authenticated",
     }));
     mockUseOptionalSupervision.mockImplementation(() => ({

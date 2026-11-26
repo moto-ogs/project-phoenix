@@ -1,6 +1,11 @@
 "use client";
 
-import { isReadRefusal, markRefused } from "~/lib/access-refusal";
+import {
+  isReadRefusal,
+  markRefused,
+  refusalFor,
+  subscribeRefusals,
+} from "~/lib/access-refusal";
 import { ParentAttentionList } from "~/components/students/parent-attention-badge";
 import { useHasDeepScrollPosition } from "~/components/ui/navigation-scroll-position";
 import { StatusBadge } from "~/components/ui/status-badge";
@@ -32,7 +37,7 @@ import {
   type SearchParamReader,
 } from "~/lib/student-search-url";
 import { studentKeys } from "~/lib/swr/portal-keys";
-import { useSWRCacheKey } from "~/lib/swr/hooks";
+import { useSWRCacheKey, useSWRRequestGuard } from "~/lib/swr/hooks";
 import { rooms as roomKeys } from "~/lib/swr/rooms";
 import { groups as groupKeys } from "~/lib/swr/groups";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
@@ -46,6 +51,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
 } from "react";
 import { CalendarRange, Download, FileText, Search } from "lucide-react";
 // SSE is handled globally by TenantAuthWrapper - real-time updates work automatically
@@ -1581,20 +1587,49 @@ function SearchPageContent() {
     enrollmentAnswer: serverEnrollmentAnswer,
   } satisfies StudentSearchFilterInput & { photoState: string };
   const wholeListKey = studentKeys.search(wholeListParams);
-  const scopedRosterKey = useSWRCacheKey()(wholeListKey);
+  const scopeKey = useSWRCacheKey();
+  const scopedRosterKey = scopeKey(wholeListKey);
+  const heldRosterRefusal = useSyncExternalStore(
+    subscribeRefusals,
+    () => (scopedRosterKey === null ? undefined : refusalFor(scopedRosterKey)),
+    () => undefined,
+  );
+  const beginSearchRead = useSWRRequestGuard();
+  async function readSearchList(
+    key: string,
+    params: StudentSearchFilterInput,
+    deferOverflowPages = false,
+  ) {
+    const complete = beginSearchRead(key);
+    const scopedReadKey = scopeKey(key);
+    try {
+      return await fetchStudentSearch(
+        buildStudentSearchFilters(params),
+        params.date,
+        params.isToday,
+        { deferOverflowPages },
+      );
+    } catch (error) {
+      if (isReadRefusal(error)) {
+        // SWR may skip onError or use the next view's callback after a key
+        // change. Withdraw the original request and its roster together.
+        complete(() => {
+          if (scopedReadKey !== null) markRefused(scopedReadKey, error);
+          if (scopedRosterKey !== null && scopedRosterKey !== scopedReadKey)
+            markRefused(scopedRosterKey, error);
+        });
+      }
+      throw error;
+    }
+  }
   const wholeList = useSWRAuth(
     awaitsSearchFilters ? null : wholeListKey,
-    () =>
-      fetchStudentSearch(
-        buildStudentSearchFilters(wholeListParams),
-        selectedDate,
-        isToday,
-        { deferOverflowPages: searchTerm !== "" },
-      ),
+    () => readSearchList(wholeListKey, wholeListParams, searchTerm !== ""),
     // An earlier group's children cannot be selected while this one loads.
     { keepPreviousData: false },
   );
-  const rosterRefused = isReadRefusal(wholeList.error);
+  const rosterRefused =
+    heldRosterRefusal !== undefined || isReadRefusal(wholeList.error);
   // A saved term (or an edit before the roster is ready) is independent of
   // the roster read. Use the browser only once the current list fits in full.
   const hasCompleteList =
@@ -1610,22 +1645,9 @@ function SearchPageContent() {
     : wholeListKey;
   const namedSearch = useSWRAuth(
     !awaitsSearchFilters && needsServerSearch ? studentsCacheKey : null,
-    () =>
-      fetchStudentSearch(
-        buildStudentSearchFilters(namedSearchParams),
-        selectedDate,
-        isToday,
-      ),
+    () => readSearchList(studentsCacheKey, namedSearchParams),
     // Until this term's answer arrives, no earlier rows can be selected.
-    {
-      keepPreviousData: false,
-      onError(error) {
-        // Clearing a refused name search must not uncover a cached roster.
-        if (scopedRosterKey && isReadRefusal(error)) {
-          markRefused(scopedRosterKey, error);
-        }
-      },
-    },
+    { keepPreviousData: false },
   );
   const {
     data: searchData,
@@ -1638,7 +1660,9 @@ function SearchPageContent() {
     searchTerm === "" && searchData?.pagesDeferred === true;
   const searchRefused = isReadRefusal(studentsError);
   const studentsData =
-    searchRefused || isFinishingRoster ? undefined : searchData;
+    rosterRefused || searchRefused || isFinishingRoster
+      ? undefined
+      : searchData;
   const isSearching = isLoading || isFinishingRoster;
 
   // Any change to the result query — the server-side cache key or one of the

@@ -18,6 +18,8 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { SelectAllControl } from "~/components/students/school-checkin-select-all";
 
+vi.unmock("swr");
+
 const {
   mockGetStudents,
   mockUseSWRAuth,
@@ -190,9 +192,18 @@ vi.mock("~/components/students/student-card", () => ({
 }));
 
 import { ApiError } from "~/lib/api-error";
+import { liftAllRefusals, refusalFor } from "~/lib/access-refusal";
+import type { StudentFilters } from "~/lib/student-api";
 import { initialStudentSearch } from "~/lib/student-search-url";
+import { IsolatedSWRCache } from "~/lib/swr/config-boundaries";
+import {
+  useSWRAuth as useRealSWRAuth,
+  type ReaderOptions,
+} from "~/lib/swr/hooks";
 import { studentKeys as studentKey } from "~/lib/swr/portal-keys";
+import { scopedSWRKey, tenantSWRScope } from "~/lib/swr/scope";
 import { releaseFakeTimers, testClockDay } from "~/test/clock";
+import { deferred } from "~/test/helpers/form-modal-pending";
 import StudentSearchPage from "./page-content";
 
 const STORAGE_KEY = "student-search:last-filters:tenant-2:3";
@@ -230,15 +241,34 @@ function storedFilters() {
   return localStorage.getItem(STORAGE_KEY);
 }
 
-function renderOnSearchPage(search: string) {
+function renderOnSearchPage(search: string, wrapper?: typeof IsolatedSWRCache) {
   window.history.replaceState(null, "", `/students/search${search}`);
   currentSearch = new URLSearchParams(search);
   const navLink = document.createElement("a");
   navLink.href = "/students/search";
   navLink.textContent = "Alle Kinder (Navigation)";
   document.body.appendChild(navLink);
-  const view = render(<StudentSearchPage />);
+  const view = render(<StudentSearchPage />, { wrapper });
   return { ...view, navLink };
+}
+
+function renderWithRealStudentReads(search: string) {
+  const reload = new Map<string, () => Promise<unknown>>();
+  function useStudentReads(
+    key: string | null,
+    fetcher: () => Promise<unknown>,
+    options?: ReaderOptions<unknown, Error>,
+  ) {
+    const studentKey = key?.startsWith("search-students-") ? key : null;
+    const read = useRealSWRAuth(studentKey, fetcher, {
+      ...options,
+      shouldRetryOnError: false,
+    });
+    if (studentKey) reload.set(studentKey, read.mutate);
+    return read;
+  }
+  mockUseSWRAuth.mockImplementation(useStudentReads);
+  return { ...renderOnSearchPage(search, IsolatedSWRCache), reload };
 }
 
 beforeEach(() => {
@@ -272,6 +302,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  liftAllRefusals();
   document.body.innerHTML = "";
   localStorage.clear();
   window.history.replaceState(null, "", "/");
@@ -439,6 +470,97 @@ describe("StudentSearchPage: click on the navigation entry of this page (#3374)"
       // Anker: the same selection control now has no children to act on.
       expect(screen.getByTestId("select-all-count")).toHaveTextContent("0");
       expect(screen.queryByTestId("student-card-8")).toBeNull();
+    },
+  );
+
+  it("does not restore cached name matches after a refused roster retry fails", async () => {
+    const roster = deferred<{
+      students: (typeof mockStudent)[];
+    }>();
+    const mila = { ...mockStudent, id: "8", first_name: "Mila" };
+    mockGetStudents.mockImplementation(({ search }: StudentFilters) =>
+      search ? Promise.resolve({ students: [mila] }) : roster.promise,
+    );
+    const { reload } = renderWithRealStudentReads("?search=Mila");
+    expect(await screen.findByTestId("student-card-8")).toBeVisible();
+
+    await act(async () => roster.reject(new ApiError("Access refused", 403)));
+    expect(screen.getByTestId("select-all-count")).toHaveTextContent("0");
+
+    mockGetStudents.mockRejectedValueOnce(new ApiError("Unavailable", 503));
+    await act(async () => {
+      await reload.get(rosterKey)!();
+    });
+    // Anker: the transient failure has its retry action instead of results.
+    const retry = await screen.findByRole("button", { name: "Wiederholen" });
+    expect(retry).toBeVisible();
+    expect(screen.queryByTestId("student-card-8")).toBeNull();
+    expect(screen.queryByTestId("select-all-count")).toBeNull();
+
+    mockGetStudents.mockResolvedValueOnce({ students: [mila] });
+    fireEvent.click(retry);
+    expect(await screen.findByTestId("student-card-8")).toBeVisible();
+    expect(screen.getByTestId("select-all-count")).toHaveTextContent("1");
+  });
+
+  it.each([false, true])(
+    "binds a late named refusal to its original keys (clear group: %s)",
+    async (clearGroup) => {
+      const groupId = "7";
+      const groupRosterKey = studentKey.search(
+        initialStudentSearch(
+          new URLSearchParams({ group_id: groupId }),
+          testClockDay(0),
+          true,
+        ),
+      );
+      const groupNamedKey = studentKey.search(
+        initialStudentSearch(
+          new URLSearchParams({ group_id: groupId, search: "Mila" }),
+          testClockDay(0),
+          true,
+        ),
+      );
+      const scope = tenantSWRScope("t", "3");
+      const refusal = new ApiError("Access refused", 403);
+      const groupRoster = deferred<{
+        students: (typeof mockStudent)[];
+      }>();
+      const namedRefresh = deferred<{
+        students: (typeof mockStudent)[];
+      }>();
+      const mila = { ...mockStudent, id: "8", first_name: "Mila" };
+      mockGetStudents.mockImplementation(
+        ({ search, groupId }: StudentFilters) => {
+          if (search === "Mila") return Promise.resolve({ students: [mila] });
+          if (search === "Max" || !groupId?.length)
+            return Promise.resolve({ students: [mockStudent] });
+          return groupRoster.promise;
+        },
+      );
+      const { navLink, reload } = renderWithRealStudentReads(
+        "?group_id=7&search=Mila",
+      );
+      expect(await screen.findByTestId("student-card-8")).toBeVisible();
+
+      mockGetStudents.mockReturnValueOnce(namedRefresh.promise);
+      act(() => {
+        void reload.get(groupNamedKey)!();
+      });
+      if (clearGroup) {
+        fireEvent.click(navLink);
+      } else {
+        const [search] = screen.getAllByPlaceholderText("Name suchen…");
+        fireEvent.change(search!, { target: { value: "Max" } });
+      }
+      expect(await screen.findByTestId("student-card-7")).toBeVisible();
+
+      await act(async () => namedRefresh.reject(refusal));
+      expect(refusalFor(scopedSWRKey(scope, groupNamedKey))).toBe(refusal);
+      expect(refusalFor(scopedSWRKey(scope, groupRosterKey))).toBe(refusal);
+      expect(screen.getByTestId("select-all-count")).toHaveTextContent(
+        clearGroup ? "1" : "0",
+      );
     },
   );
 
