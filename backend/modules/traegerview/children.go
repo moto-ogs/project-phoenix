@@ -89,6 +89,8 @@ type TraegerChildren struct {
 // ChildrenExport is the file of the list: every child of the filter, and the
 // name of the filter's school, empty for all schools.
 type ChildrenExport struct {
+	// RosterDate is the Berlin day whose roster the file lists.
+	RosterDate calendar.Date
 	SchoolName string
 	Search     string
 	Children   []TraegerChild

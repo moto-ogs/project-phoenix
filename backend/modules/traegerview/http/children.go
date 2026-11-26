@@ -96,22 +96,25 @@ func renderChildrenError(w http.ResponseWriter, r *http.Request, err error) {
 }
 
 // childrenTable is the export: one row per child in the order of the list.
-// The head names the school and the search of the filter.
+// The head names the roster's day, the school and the search of the filter;
+// a spreadsheet carries the day in a column, as the other Träger lists do.
 func childrenTable(export traegerview.ChildrenExport) common.ListTable {
+	day := export.RosterDate.Format("02.01.2006")
 	rows := make([][]string, 0, len(export.Children))
 	for _, child := range export.Children {
-		rows = append(rows, []string{child.LastName, child.FirstName, child.SchoolName, child.SchoolClass, child.GroupName})
+		rows = append(rows, []string{day, child.LastName, child.FirstName, child.SchoolName, child.SchoolClass, child.GroupName})
 	}
 	filters := []string{common.ListSchoolLabel(export.SchoolName)}
 	if export.Search != "" {
 		filters = append(filters, "Suche: "+export.Search)
 	}
 	return common.ListTable{
-		Title: "Kinder", Filters: filters,
+		Title: "Kinder", Subtitle: "Stand " + day, Filters: filters,
 		Columns: []common.ListColumn{
+			{ID: "day", Label: "Datum", SpreadsheetOnly: true},
 			{ID: "last_name", Label: "Nachname"}, {ID: "first_name", Label: "Vorname"}, {ID: "school", Label: "Schule"},
 			{ID: "school_class", Label: "Klasse"}, {ID: "group", Label: "Gruppe"},
 		},
-		Rows: rows, Footer: common.ListPersonalDataFooter, Filename: "kinder",
+		Rows: rows, Footer: common.ListPersonalDataFooter, Filename: "kinder-" + export.RosterDate.String(),
 	}
 }

@@ -841,38 +841,51 @@ describe("TraegerChildrenPage", () => {
     ).toHaveTextContent(/5\s*Kinder/);
   });
 
-  it("updates roster counts from an empty continuation without restarting an unfiltered list", async () => {
-    api.fetchTraegerChildren
-      .mockResolvedValueOnce(
-        pageOf([AKSOY, BERG], { total: 3, matched: 3, nextCursor: "second" }),
-      )
-      .mockResolvedValueOnce(
-        pageOf([], {
-          total: 2,
-          schools: [
-            { ...BACH, children: 1 },
-            { ...LINDE, children: 1 },
-          ],
+  it.each([
+    {
+      change: "the continuation is empty",
+      continuation: pageOf([], { total: 2 }),
+    },
+    {
+      change: "shown children left the roster",
+      continuation: pageOf([ZANDER], { total: 2, matched: 2 }),
+    },
+    {
+      change: "a rename moved an unseen child before the cursor",
+      continuation: pageOf([ZANDER], { total: 4, matched: 4 }),
+    },
+  ])(
+    "starts an unfiltered list over when $change",
+    async ({ continuation }) => {
+      api.fetchTraegerChildren
+        .mockResolvedValueOnce(
+          pageOf([AKSOY, BERG], { total: 3, matched: 3, nextCursor: "second" }),
+        )
+        .mockResolvedValueOnce(continuation)
+        .mockResolvedValueOnce(pageOf([BERG, ZANDER]));
+      renderPage();
+      await screen.findAllByText("Berg, Anna");
+      fireEvent.click(
+        await screen.findByRole("button", {
+          name: "Weitere Kinder laden (2 von 3)",
         }),
       );
-    renderPage();
-    await screen.findAllByText("Berg, Anna");
-    fireEvent.click(
-      await screen.findByRole("button", {
-        name: "Weitere Kinder laden (2 von 3)",
-      }),
-    );
 
-    await waitFor(() => expect(schoolTab(BACH)).toHaveTextContent(/1$/));
-    expect(
-      screen.getByText("Kinder", { selector: "span" }).parentElement,
-    ).toHaveTextContent(/2\s*Kinder/);
-    expect(api.fetchTraegerChildren).toHaveBeenCalledTimes(2);
-    expect(screen.getAllByText("Berg, Anna")[0]).toBeVisible();
-    expect(
-      screen.queryByRole("button", { name: /Weitere Kinder laden/ }),
-    ).not.toBeInTheDocument();
-  });
+      await waitFor(() =>
+        expect(api.fetchTraegerChildren).toHaveBeenCalledTimes(3),
+      );
+      expect(api.fetchTraegerChildren).toHaveBeenLastCalledWith({
+        schoolId: "",
+        search: "",
+      });
+      await waitFor(() =>
+        expect(
+          screen.getByText("Kinder", { selector: "span" }).parentElement,
+        ).toHaveTextContent(/2\s*Kinder/),
+      );
+      expect(screen.getAllByText("Zander, Mia")[0]).toBeVisible();
+    },
+  );
 
   it.each([
     { change: "a child leaves the roster", total: 1 },

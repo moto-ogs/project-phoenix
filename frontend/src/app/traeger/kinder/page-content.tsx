@@ -331,20 +331,27 @@ function ChildrenContent({
         clearList();
         return;
       }
-      if (filter.search && next.children.length === 0) {
-        // An empty continuation has no match count, even if the roster size stayed the same.
-        clearList();
-        return;
-      }
       // A renamed child can reappear after the cursor. Its newer position
       // and details replace the older row.
       const nextIDs = new Set(next.children.map(childRowKey));
+      const merged = [
+        ...children.filter((child) => !nextIDs.has(child.studentId)),
+        ...next.children,
+      ];
+      if (
+        next.children.length === 0 ||
+        merged.length > next.matched ||
+        (!next.nextCursor && merged.length < next.matched)
+      ) {
+        // The rows no longer add up to the count of this answer: a child
+        // left, or a rename moved one across the cursor. The cursor cannot
+        // repair that, so the list starts over with a fresh first page.
+        clearList();
+        return;
+      }
       setLater({
         after: page,
-        children: [
-          ...children.filter((child) => !nextIDs.has(child.studentId)),
-          ...next.children,
-        ],
+        children: merged,
         nextCursor: next.nextCursor,
         counts: {
           total: next.total,

@@ -150,8 +150,9 @@ func TestTraegerChildrenNeedTheirRightAndAreLogged(t *testing.T) {
 
 	export := traegerOccupancyRequest(t, router, "/traeger/schools/children/export?search=sommer&roster_date="+page.RosterDate.String(), admin, nil)
 	require.Equal(t, http.StatusOK, export.Code, export.Body.String())
-	assert.Contains(t, export.Header().Get("Content-Disposition"), "kinder")
+	assert.Contains(t, export.Header().Get("Content-Disposition"), "kinder-2026-11-26", "the file is named after the roster's day")
 	body := export.Body.String()
+	assert.Contains(t, body, "26.11.2026", "a spreadsheet carries the roster's day in a column")
 	assert.Contains(t, body, "Sommer")
 	assert.Contains(t, body, "OGS Gezeigt")
 	assert.NotContains(t, body, "Winter", "the export follows the search")

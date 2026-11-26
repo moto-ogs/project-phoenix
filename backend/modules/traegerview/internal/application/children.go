@@ -85,7 +85,7 @@ func (o *Overview) ChildrenExport(ctx context.Context, viewer traegerview.Viewer
 	if rosterDate != day {
 		return traegerview.ChildrenExport{}, readstate.ErrChanged
 	}
-	result := traegerview.ChildrenExport{Search: filter.Search, Children: []traegerview.TraegerChild{}}
+	result := traegerview.ChildrenExport{RosterDate: day, Search: filter.Search, Children: []traegerview.TraegerChild{}}
 	err = o.read(ctx, viewer.OrganizationID, func(adminCtx context.Context, ids []int64) error {
 		listed, err := o.listedChildren(adminCtx, ids, filter, day)
 		if err != nil {
