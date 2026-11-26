@@ -65,6 +65,7 @@ export function RoomClosuresSection({
   const refresh = () => {
     void invalidate(roomKeys.closuresFamily);
     void invalidate(roomKeys.detailKey(roomId));
+    void invalidate(roomKeys.family);
   };
   const [creating, setCreating] = useState(false);
   const [lifting, setLifting] = useState<RoomClosure | null>(null);

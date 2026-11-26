@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ToastProvider } from "~/contexts/ToastContext";
 import type { RoomClosure } from "~/lib/room-closures-api";
+import { roomKeys } from "~/lib/swr/rooms-keys";
 import { testClockDay } from "~/test/clock";
 import { RoomClosuresSection } from "./room-closures-section";
 
@@ -34,8 +35,15 @@ vi.mock("~/lib/room-closures-api", async (importOriginal) => ({
   reopenRoom: reopenMock,
 }));
 
-// Der Dialog „Raum sperren“ ist hier nicht Gegenstand.
-vi.mock("./room-closure-modal", () => ({ RoomClosureModal: () => null }));
+// Der Dialog selbst ist hier nicht Gegenstand; sein Speichern muss aber die
+// gemeinsamen Raumlisten aktualisieren.
+vi.mock("./room-closure-modal", () => ({
+  RoomClosureModal: ({ onSaved }: { onSaved: () => void }) => (
+    <button type="button" onClick={onSaved}>
+      Test-Sperre speichern
+    </button>
+  ),
+}));
 
 function renderSection(canUpdate = true) {
   render(
@@ -102,6 +110,19 @@ describe("RoomClosuresSection (#7653)", () => {
     expect(screen.getAllByText("Heute gesperrt")).toHaveLength(1);
   });
 
+  it("refreshes all room lists after saving a closure", () => {
+    swrState.data = [];
+    renderSection();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Test-Sperre speichern" }),
+    );
+
+    expect(invalidateMock).toHaveBeenCalledWith("room-closures-");
+    expect(invalidateMock).toHaveBeenCalledWith("room-detail-10");
+    expect(invalidateMock).toHaveBeenCalledWith(roomKeys.family);
+  });
+
   it("shows closures without write actions to room readers", () => {
     swrState.data = [
       {
@@ -148,5 +169,7 @@ describe("RoomClosuresSection (#7653)", () => {
 
     await waitFor(() => expect(reopenMock).toHaveBeenCalledWith("10", "7"));
     expect(invalidateMock).toHaveBeenCalledWith("room-closures-");
+    expect(invalidateMock).toHaveBeenCalledWith("room-detail-10");
+    expect(invalidateMock).toHaveBeenCalledWith(roomKeys.family);
   });
 });
