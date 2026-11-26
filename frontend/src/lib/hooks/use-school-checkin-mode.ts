@@ -7,7 +7,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { useInvalidateMatching } from "~/lib/swr/hooks";
+import { mutate as globalMutate } from "~/lib/swr/mutate";
 import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
 import {
   isNotCheckedInLocation,
@@ -186,6 +186,28 @@ function checkinModeSessionReducer(
   }
 }
 
+/**
+ * Bundled SWR invalidation after a batch toggle (#2359): one revalidation
+ * sweep for the whole batch instead of one per student (cf. #848 — bulk
+ * events already arrive as a burst; the page must not multiply that).
+ * student-detail matches on the bare prefix because any of the batch's
+ * children may have an open detail cache entry.
+ */
+async function invalidatePresenceCachesBulk(
+  placedInRoom: boolean,
+): Promise<void> {
+  await globalMutate(
+    (key) =>
+      typeof key === "string" &&
+      (key.includes(groupKeys.liveFamily) ||
+        key.includes(SEARCH_STUDENTS_KEY_PREFIX) ||
+        key.includes("tracking-supervisions-") ||
+        key.includes("tracking-indicators-") ||
+        key.includes(STUDENT_KEY_FAMILIES.detail) ||
+        (placedInRoom && isRoomPresenceKey(key))),
+  );
+}
+
 /** Room lists and room pages count the children a check-in placed (#6953). */
 function isRoomPresenceKey(key: string): boolean {
   return (
@@ -197,17 +219,7 @@ function isRoomPresenceKey(key: string): boolean {
   );
 }
 
-function reportPresenceRefreshError(error: unknown): void {
-  // Readers display their own load errors. A failed invalidation must not
-  // turn a saved check-in into a failed write with a retry that writes again.
-  logger.warn("school_checkin_refresh_failed", {
-    error: error instanceof Error ? error.message : String(error),
-  });
-}
-
 interface UseSchoolCheckinModeOptions {
-  /** A stale list can be read but must not start or retry a write. */
-  readonly enabled?: boolean;
   /**
    * Where a check-in puts the children (#6953); null or missing keeps
    * „Anwesend (ohne Raum)“. Only check-ins use it: a checkout ends the stay
@@ -316,27 +328,6 @@ interface UseSchoolCheckinModeResult {
 export function useSchoolCheckinMode(
   options: UseSchoolCheckinModeOptions = {},
 ): UseSchoolCheckinModeResult {
-  const enabled = options.enabled ?? true;
-  const invalidateMatching = useInvalidateMatching();
-  const refreshPresence = useCallback(
-    async (placedInRoom: boolean, studentId?: string) =>
-      // One sweep per action or batch. Supersede earlier reads so their
-      // refusals cannot clear the search family after this refresh.
-      invalidateMatching(
-        (key) =>
-          typeof key === "string" &&
-          (key.includes(groupKeys.liveFamily) ||
-            key.includes(SEARCH_STUDENTS_KEY_PREFIX) ||
-            key.includes("tracking-supervisions-") ||
-            key.includes("tracking-indicators-") ||
-            (studentId === undefined
-              ? key.includes(STUDENT_KEY_FAMILIES.detail)
-              : key.endsWith(studentKeys.detail(studentId))) ||
-            (placedInRoom && isRoomPresenceKey(key))),
-        { expireInactive: true },
-      ),
-    [invalidateMatching],
-  );
   const targetRef = useRef(options.target ?? null);
   const onTargetRefusedRef = useRef(options.onTargetRefused);
   useLayoutEffect(() => {
@@ -453,10 +444,6 @@ export function useSchoolCheckinMode(
       checkoutNote?: string,
       checkoutReason?: SchoolCheckoutReason,
     ) => {
-      if (!enabled) {
-        showMessage("Lade die Kinderliste neu. Versuche es dann noch einmal.");
-        return;
-      }
       if (pendingIds.has(studentId)) return;
 
       setPendingIds((prev) => {
@@ -494,8 +481,15 @@ export function useSchoolCheckinMode(
           );
         }
 
-        await refreshPresence(target !== null, studentId).catch(
-          reportPresenceRefreshError,
+        await globalMutate(
+          (key) =>
+            typeof key === "string" &&
+            (key.includes(groupKeys.liveFamily) ||
+              key.includes(SEARCH_STUDENTS_KEY_PREFIX) ||
+              key.includes("tracking-supervisions-") ||
+              key.includes("tracking-indicators-") ||
+              key.endsWith(studentKeys.detail(studentId)) ||
+              (target !== null && isRoomPresenceKey(key))),
         );
 
         // Bump the per-session counter so the ModeBar can surface "X
@@ -529,7 +523,7 @@ export function useSchoolCheckinMode(
         });
       }
     },
-    [enabled, pendingIds, refreshPresence, showError, showMessage],
+    [pendingIds, showError, showMessage],
   );
   useLayoutEffect(() => {
     latestToggleRef.current = toggle;
@@ -541,7 +535,7 @@ export function useSchoolCheckinMode(
       onlyIds?: readonly string[],
       checkoutReason?: SchoolCheckoutReason,
     ): Promise<SchoolCheckinBatchOutcome | null> => {
-      if (!enabled || isBulkRunningRef.current) return null;
+      if (isBulkRunningRef.current) return null;
       const target = action === "in" ? targetRef.current : null;
 
       // An explicit id list is a dialog's displayed snapshot and runs
@@ -578,9 +572,7 @@ export function useSchoolCheckinMode(
             : schoolCheckinStudentsBatch(ids, action));
         }
 
-        await refreshPresence(target !== null).catch(
-          reportPresenceRefreshError,
-        );
+        await invalidatePresenceCachesBulk(target !== null);
         dispatchSession({ type: "addSuccesses", count: outcome.succeeded });
 
         // Clean run → summary toast right here (counts only, no names). A
@@ -661,7 +653,7 @@ export function useSchoolCheckinMode(
         }
       }
     },
-    [enabled, selectedIds, refreshPresence, toast, showError],
+    [selectedIds, toast, showError],
   );
 
   return {

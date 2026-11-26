@@ -1,12 +1,5 @@
 "use client";
 
-import {
-  isReadRefusal,
-  liftRefusal,
-  markRefused,
-  refusalFor,
-  subscribeRefusals,
-} from "~/lib/access-refusal";
 import { ParentAttentionList } from "~/components/students/parent-attention-badge";
 import { useHasDeepScrollPosition } from "~/components/ui/navigation-scroll-position";
 import { StatusBadge } from "~/components/ui/status-badge";
@@ -38,28 +31,19 @@ import {
   type SearchParamReader,
 } from "~/lib/student-search-url";
 import { studentKeys } from "~/lib/swr/portal-keys";
-import {
-  useInvalidateFamily,
-  useInvalidateMatching,
-  useSWRCacheKey,
-  useSWRRequestGuard,
-} from "~/lib/swr/hooks";
 import { rooms as roomKeys } from "~/lib/swr/rooms";
 import { groups as groupKeys } from "~/lib/swr/groups";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
-import { useSwrPollingRecovery } from "~/lib/hooks/use-swr-polling-recovery";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import {
   Suspense,
   startTransition,
   useCallback,
   useEffect,
-  useEffectEvent,
   useLayoutEffect,
   useMemo,
   useRef,
   useState,
-  useSyncExternalStore,
 } from "react";
 import { CalendarRange, Download, FileText, Search } from "lucide-react";
 // SSE is handled globally by TenantAuthWrapper - real-time updates work automatically
@@ -77,7 +61,7 @@ import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { ForbiddenPage } from "~/components/ui/forbidden-page";
 import { errorAlertActions } from "~/components/ui/form-error-alert";
 import { useApiLoadError } from "~/contexts/ToastContext";
-import { ApiError, errorClassCode } from "~/lib/api-error";
+import { ApiError } from "~/lib/api-error";
 import { SectionCard } from "~/components/ui/section-card";
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import {
@@ -87,8 +71,6 @@ import {
   type FilterOption,
   type ActiveFilter,
   type FilterSection,
-  type OverflowMenuEntry,
-  type OverflowMenuItem,
 } from "~/components/ui/page-header/types";
 import { DetailIcons } from "~/components/ui/detail-modal-components";
 import {
@@ -201,7 +183,7 @@ import {
   useAttendanceWebEnabled,
   useTenantSlugSafe,
 } from "~/lib/tenant-context";
-import { useSWRAuth, useImmutableSWR, useLiveRefreshInterval } from "~/lib/swr";
+import { useSWRAuth, useImmutableSWR } from "~/lib/swr";
 import { tenantListKeys } from "~/lib/swr/tenant-list-keys";
 import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
 import {
@@ -994,82 +976,6 @@ function orderedRooms(
   });
 }
 
-function isTransientRosterError(error: unknown): boolean {
-  if (!(error instanceof ApiError)) return false;
-  const code = errorClassCode(error.status ?? 0);
-  return code === "general.unavailable" || code === "general.server";
-}
-
-type SearchResult = Awaited<ReturnType<typeof fetchStudentSearch>>;
-
-function isCompleteSearchResult(result: SearchResult | undefined): boolean {
-  return (
-    result !== undefined &&
-    !result.spansPages &&
-    !result.pagesInconsistent &&
-    (result.truncatedTotal ?? null) === null
-  );
-}
-
-function createSearchDraftStatus() {
-  let pending = false;
-  const listeners = new Set<() => void>();
-  return {
-    getSnapshot: () => pending,
-    setPending(next: boolean) {
-      if (pending === next) return;
-      pending = next;
-      for (const listener of listeners) listener();
-    },
-    subscribe(listener: () => void) {
-      listeners.add(listener);
-      return () => {
-        listeners.delete(listener);
-      };
-    },
-  };
-}
-
-function SearchActionsMenu({
-  draftStatus,
-  items,
-  parentLetter,
-  viewItems,
-}: Readonly<{
-  draftStatus: ReturnType<typeof createSearchDraftStatus>;
-  items: readonly OverflowMenuEntry[];
-  parentLetter?: OverflowMenuItem;
-  viewItems: readonly OverflowMenuEntry[];
-}>) {
-  // Keep immediate draft updates out of the page's results render.
-  const pending = useSyncExternalStore(
-    draftStatus.subscribe,
-    draftStatus.getSnapshot,
-    () => false,
-  );
-  return (
-    <OverflowMenu
-      tourTarget="child-search-menu"
-      ariaLabel="Weitere Aktionen"
-      items={[
-        ...items,
-        ...(parentLetter ? [{ ...parentLetter, disabled: pending }] : []),
-        ...viewItems,
-      ]}
-    />
-  );
-}
-
-type RosterResult = SearchResult & {
-  opening: symbol;
-  expandedRoster?: SearchResult;
-};
-
-function retainedProbeRoster(probe: RosterResult | undefined, opening: symbol) {
-  if (probe?.opening !== opening) return undefined;
-  return probe.pagesDeferred ? probe.expandedRoster : probe;
-}
-
 function SearchPageContent() {
   const router = useTenantRouter();
   // Use required: true to auto-redirect unauthenticated users (same pattern as /active-supervisions)
@@ -1127,8 +1033,9 @@ function SearchPageContent() {
   // after its debounce. The term then narrows the loaded list in the browser,
   // as a transition: a key typed while the list renders is shown first.
   const [searchTerm, setSearchTerm] = useState(initial.search);
-  const [searchDraftStatus] = useState(createSearchDraftStatus);
-  const [linkedSearch, setLinkedSearch] = useState(initial.search !== "");
+  // Only a list too long to load in full sends the term to the server.
+  // Key of the list (read without a name) that the page cap cut short.
+  const [partialListKey, setPartialListKey] = useState<string | null>(null);
   const [searchResetKey, setSearchResetKey] = useState(0);
   const [selectedGroupIds, setSelectedGroupIds] = useState(initial.groupIds);
   const [selectedSchoolClasses, setSelectedSchoolClasses] = useState(
@@ -1215,21 +1122,11 @@ function SearchPageContent() {
 
   const updateSearchTerm = useCallback(
     (value: string) => {
-      startTransition(() => {
-        setSearchTerm(value);
-        if (value === "") setLinkedSearch(false);
-      });
+      startTransition(() => setSearchTerm(value));
       updateUrlParams({ [SEARCH_QUERY_PARAM]: value });
     },
     [updateUrlParams],
   );
-
-  const clearSearchTerm = useCallback(() => {
-    setSearchTerm("");
-    setLinkedSearch(false);
-    setSearchResetKey((key) => key + 1);
-    updateUrlParams({ [SEARCH_QUERY_PARAM]: "" });
-  }, [updateUrlParams]);
 
   const applyPersistedFilters = useCallback(
     (filters: PersistedSearchFilters) => {
@@ -1472,14 +1369,31 @@ function SearchPageContent() {
   // the school has web attendance switched off.
   const attendanceWebEnabled = useAttendanceWebEnabled();
   // Ohne users:checkin (etwa als Gast, ADR 0091) scheiterte jeder Tipp.
-  const checkinPermitted =
+  const checkinModeAvailable =
     isToday && attendanceWebEnabled && canCheckInChildren(session);
   // „Anmelden in“ (#6953): binary schools and sessions without the move
   // right see no target; a check-in then stays „Anwesend (ohne Raum)“.
   const checkinTarget = useCheckinTarget(
-    checkinPermitted && canCheckInToRooms(session),
+    checkinModeAvailable && canCheckInToRooms(session),
   );
   const refreshCheckinTargets = checkinTarget.refresh;
+  const schoolCheckin = useSchoolCheckinMode({
+    target: checkinTarget.target,
+    onTargetRefused: () => void refreshCheckinTargets(),
+  });
+  // A checkout well before today's pickup time asks for an optional reason
+  // (#3324); every other checkout keeps its current behaviour.
+  const earlyCheckout = useEarlyCheckoutDialog((studentId, note, reason) => {
+    void schoolCheckin.toggle(studentId, "anwesend", note, reason);
+  });
+  const requestEarlyCheckout = earlyCheckout.request;
+  // Checkout of a student who is currently in a room asks first and names the
+  // room; every roomless state stays a single tap (#2220).
+  const [pendingRoomCheckout, setPendingRoomCheckout] = useState<{
+    studentId: string;
+    studentName: string;
+    room: string;
+  } | null>(null);
   const {
     enabled: studentPhotosEnabled,
     isLoading: studentPhotosSettingLoading,
@@ -1565,6 +1479,8 @@ function SearchPageContent() {
   // Companion links are fetched only for the Laufgemeinschaft grouping — they
   // cost an extra backend query, and no other view reads them. Part of the
   // cache key so switching into that grouping triggers exactly one refetch.
+  // Sits BEFORE pickup_status on purpose: that filter must stay the key's last
+  // segment (asserted by the #1492 cache-key test).
   const wantsCompanions = groupMode === "companions";
   // The key carries selectedDate AND the today/non-today mode: when an
   // explicitly selected future date becomes today at midnight, selectedDate
@@ -1643,8 +1559,9 @@ function SearchPageContent() {
 
   // The group filter leads the key as a fixed `g{id}`/`gall` scope segment
   // (#2097) so the SSE flush can read it back and skip a refetch when a
-  // check-in event names a group this view does not show. See
-  // lib/swr/search-students-key.
+  // check-in event names a group this view does not show. It has to sit BEFORE
+  // the free-text term: the term may contain dashes ("Anna-Lena"), so no
+  // segment after it can be located positionally. See lib/swr/search-students-key.
   const wholeListParams = {
     groupIds: queryGroupIds,
     search: "",
@@ -1662,324 +1579,10 @@ function SearchPageContent() {
     enrollmentAnswer: serverEnrollmentAnswer,
   } satisfies StudentSearchFilterInput & { photoState: string };
   const wholeListKey = studentKeys.search(wholeListParams);
-  const rosterProbeKey = studentKeys.searchRosterProbe(wholeListParams);
-  const useRosterProbe = linkedSearch && searchTerm !== "";
-  const activeRosterKey = useRosterProbe ? rosterProbeKey : wholeListKey;
-  const liveRefreshInterval = useLiveRefreshInterval();
-  const scopeKey = useSWRCacheKey();
-  const scopedRosterKey = scopeKey(wholeListKey);
-  const scopedProbeKey = scopeKey(rosterProbeKey);
-  // A return to the same SWR key is a new activation. Clearing the name is
-  // not: the full roster may still use the probe from this opening.
-  const probeOpening = useMemo(
-    () => Symbol(scopedProbeKey ?? undefined),
-    [scopedProbeKey],
-  );
-  const heldRosterRefusal = useSyncExternalStore(
-    subscribeRefusals,
-    () => (scopedRosterKey === null ? undefined : refusalFor(scopedRosterKey)),
-    () => undefined,
-  );
-  const refreshInterval =
-    awaitsSearchFilters || heldRosterRefusal !== undefined
-      ? 0
-      : liveRefreshInterval;
-  const beginSearchRead = useSWRRequestGuard();
-  const invalidateSearchFamily = useInvalidateFamily();
-  const invalidateSearchKey = useInvalidateMatching();
-  const searchFamily = studentKeys.searchFamily(wholeListParams);
-  const nameSearchActive = useRef(searchTerm !== "");
-  useLayoutEffect(() => {
-    nameSearchActive.current = searchTerm !== "";
-  }, [searchTerm]);
-  async function readSearchList(
-    key: string,
-    params: StudentSearchFilterInput,
-    shouldDeferOverflowPages?: () => boolean,
-  ) {
-    const complete = beginSearchRead(key);
-    const scopedReadKey = scopeKey(key);
-    try {
-      return await fetchStudentSearch(
-        buildStudentSearchFilters(params),
-        params.date,
-        params.isToday,
-        { shouldDeferOverflowPages, beforeNextPage: complete.assertCurrent },
-      );
-    } catch (error) {
-      if (isReadRefusal(error)) {
-        // Use the family captured by this request, even after a filter change.
-        // Drop cached matches and reject any earlier answers from that family.
-        complete(() => {
-          if (scopedReadKey !== null) markRefused(scopedReadKey, error);
-          if (scopedRosterKey !== null && scopedRosterKey !== scopedReadKey)
-            markRefused(scopedRosterKey, error);
-          if (scopedProbeKey !== null && scopedProbeKey !== scopedReadKey)
-            markRefused(scopedProbeKey, error);
-          void invalidateSearchFamily(searchFamily, { clear: true });
-        });
-      }
-      throw error;
-    }
-  }
-  const rosterReaders = useRef<{
-    opening: symbol;
-    readFull: () => SearchResult | undefined;
-    readProbe: () => RosterResult | undefined;
-  }>(null);
-  const rosterProbe = useSWRAuth<RosterResult>(
-    awaitsSearchFilters ? null : rosterProbeKey,
-    async () => {
-      const result = await readSearchList(
-        rosterProbeKey,
-        wholeListParams,
-        () => true,
-      );
-      const readers = rosterReaders.current;
-      const expandedRoster =
-        result.pagesDeferred && readers?.opening === probeOpening
-          ? retainedProbeRoster(readers.readProbe(), probeOpening)
-          : undefined;
-      return { ...result, opening: probeOpening, expandedRoster };
-    },
-    {
-      keepPreviousData: false,
-      recoverDiscardedRefusals: false,
-      isPaused: () => !useRosterProbe,
-      revalidateIfStale: false,
-      refreshInterval: useRosterProbe ? refreshInterval : 0,
-      onSuccess() {
-        if (scopedRosterKey !== null) liftRefusal(scopedRosterKey);
-      },
-    },
-  );
-  // An unconfirmed cached probe needs a real refresh, not another use of
-  // a deduped response from another opening.
-  const probeConfirmed = rosterProbe.data?.opening === probeOpening;
-  const refreshCachedProbe =
-    useRosterProbe &&
-    !probeConfirmed &&
-    heldRosterRefusal === undefined &&
-    rosterProbe.data !== undefined &&
-    !rosterProbe.isValidating &&
-    (!rosterProbe.error || isTransientRosterError(rosterProbe.error));
-  const mutateRosterProbe = rosterProbe.mutate;
-  const attemptedProbeRefresh = useRef<symbol | null>(null);
-  useEffect(() => {
-    if (refreshCachedProbe && attemptedProbeRefresh.current !== probeOpening) {
-      attemptedProbeRefresh.current = probeOpening;
-      void mutateRosterProbe();
-    }
-  }, [probeOpening, refreshCachedProbe, mutateRosterProbe]);
-  const wholeList = useSWRAuth<SearchResult | undefined>(
-    awaitsSearchFilters || useRosterProbe ? null : wholeListKey,
-    async () => {
-      const complete = beginSearchRead(wholeListKey);
-      const result = await readSearchList(
-        wholeListKey,
-        wholeListParams,
-        () => nameSearchActive.current,
-      );
-      if (!result.pagesDeferred) return result;
-      const readers = rosterReaders.current;
-      // A stopped walk is not an answer for the seed's full-roster key.
-      // Record it under the originating filters, even if they have changed.
-      // Retain prior rows only if they are still readable for that key.
-      const expandedRoster =
-        readers?.opening === probeOpening
-          ? (retainedProbeRoster(readers.readProbe(), probeOpening) ??
-            readers.readFull())
-          : undefined;
-      complete(() => {
-        void rosterProbe.mutate(
-          { ...result, opening: probeOpening, expandedRoster },
-          { revalidate: false },
-        );
-      });
-      return undefined;
-    },
-    {
-      keepPreviousData: false,
-      recoverDiscardedRefusals: false,
-      refreshInterval: useRosterProbe ? 0 : refreshInterval,
-      onSuccess(result) {
-        if (scopedProbeKey !== null) liftRefusal(scopedProbeKey);
-        const readers = rosterReaders.current;
-        if (
-          result !== undefined &&
-          readers?.opening === probeOpening &&
-          (rosterProbe.isValidating || readers.readProbe() !== undefined)
-        ) {
-          // The replacement roster now owns detail previews for these filters.
-          // Clear the request generation too: a paused probe can still finish.
-          void invalidateSearchKey((key) => key === rosterProbeKey, {
-            clear: true,
-          });
-        }
-      },
-    },
-  );
-  const readFullRoster = wholeList.readCurrent;
-  const readRosterProbe = rosterProbe.readCurrent;
-  useLayoutEffect(() => {
-    rosterReaders.current = {
-      opening: probeOpening,
-      readFull: () => readFullRoster?.().data,
-      readProbe: () => readRosterProbe?.().data,
-    };
-    return () => {
-      rosterReaders.current = null;
-    };
-  }, [probeOpening, readFullRoster, readRosterProbe]);
-  const roster = useRosterProbe ? rosterProbe : wholeList;
-  // Keep this opening's probe ahead of older full-list cache or seed data
-  // until a completed full read retires it.
-  const retainedRoster = retainedProbeRoster(rosterProbe.data, probeOpening);
-  const usingRetainedRoster = !useRosterProbe && retainedRoster !== undefined;
-  // A deferred result from this opening needs a new full read, even if an
-  // older one is cached. A seed alone does not satisfy a stopped walk either.
-  const rosterReadDeferred =
-    rosterProbe.data?.pagesDeferred === true &&
-    (probeConfirmed || wholeList.readCurrent?.().data === undefined);
-  const rosterData = useRosterProbe
-    ? probeConfirmed
-      ? rosterProbe.data
-      : undefined
-    : (retainedRoster ?? (rosterReadDeferred ? undefined : wholeList.data));
-  const rosterRefused =
-    heldRosterRefusal !== undefined || isReadRefusal(roster.error);
-  const rosterRefreshFailed = isTransientRosterError(roster.error);
-  // A saved term (or an edit before the roster is ready) is independent of
-  // the roster read. Use the browser only once the current list fits in full.
-  const hasCompleteList =
-    isCompleteSearchResult(rosterData) &&
-    (!roster.error || rosterRefreshFailed) &&
-    !rosterRefused &&
-    !rosterReadDeferred;
-  // A refusal for the roster also denies its named projection.
-  const needsServerSearch =
-    searchTerm !== "" && !rosterRefused && !hasCompleteList;
-  const namedSearchParams = { ...wholeListParams, search: searchTerm };
-  const studentsCacheKey = needsServerSearch
-    ? studentKeys.search(namedSearchParams)
-    : activeRosterKey;
-  const namedSearch = useSWRAuth(
-    !awaitsSearchFilters && needsServerSearch ? studentsCacheKey : null,
-    () => readSearchList(studentsCacheKey, namedSearchParams),
-    // Until this term's answer arrives, no earlier rows can be selected.
-    {
-      keepPreviousData: false,
-      refreshInterval: needsServerSearch ? refreshInterval : 0,
-    },
-  );
-  useLayoutEffect(() => {
-    if (!hasCompleteList) return;
-    // The roster now answers every term for these filters. A complete probe
-    // also supersedes the full-list cache, which may predate this opening.
-    void invalidateSearchKey(
-      (key) =>
-        key.startsWith(searchFamily) &&
-        (useRosterProbe || key !== wholeListKey) &&
-        key !== rosterProbeKey,
-      { clear: "existing" },
-    );
-  }, [
-    hasCompleteList,
-    invalidateSearchKey,
-    searchFamily,
-    wholeListKey,
-    rosterProbeKey,
-    useRosterProbe,
-  ]);
-  useSwrPollingRecovery(
-    refreshInterval > 0 &&
-      !rosterRefused &&
-      rosterRefreshFailed &&
-      !roster.isValidating
-      ? roster.error
-      : undefined,
-    roster.mutate,
-    refreshInterval,
-  );
-  useSwrPollingRecovery(
-    refreshInterval > 0 &&
-      needsServerSearch &&
-      isTransientRosterError(namedSearch.error) &&
-      !namedSearch.isValidating
-      ? namedSearch.error
-      : undefined,
-    namedSearch.mutate,
-    refreshInterval,
-  );
-  const refreshRestoredSearch = useEffectEvent(() => {
-    if (!useRosterProbe || !probeConfirmed || awaitsSearchFilters) return;
-    void invalidateSearchKey(
-      (key) =>
-        key === rosterProbeKey ||
-        (needsServerSearch && key === studentsCacheKey),
-    );
-  });
-  const hasShownSearch = useRef(false);
-  useEffect(() => {
-    // Activity reconnects effects but preserves the confirmed opening token.
-    if (hasShownSearch.current) refreshRestoredSearch();
-    hasShownSearch.current = true;
-  }, []);
-  const {
-    isLoading,
-    isValidating: isSearchResultValidating,
-    error: resultError,
-  } = needsServerSearch ? namedSearch : roster;
-  const searchData = needsServerSearch ? namedSearch.data : rosterData;
-  const showingRetainedRoster = !needsServerSearch && usingRetainedRoster;
-  // Clearing a saved search changes which reader is running, not where the
-  // visible rows came from. Keep the probe's error until the full read wins.
-  const displayedResultError =
-    resultError ?? (showingRetainedRoster ? rosterProbe.error : undefined);
-  // Cached rows of this exact key are still useful for lookup, not writes.
-  const keepResultsAfterError =
-    !rosterRefused &&
-    searchData !== undefined &&
-    isTransientRosterError(displayedResultError);
-  const studentsError = keepResultsAfterError
-    ? undefined
-    : displayedResultError;
-  const rosterNeedsExpansion = searchTerm === "" && rosterReadDeferred;
-  const isFinishingRoster = rosterNeedsExpansion && searchData === undefined;
-  const searchRefused = isReadRefusal(studentsError);
-  const studentsData =
-    rosterRefused || searchRefused || isFinishingRoster
-      ? undefined
-      : searchData;
-  const isSearching = isLoading || isFinishingRoster;
-
-  const checkinModeAvailable =
-    checkinPermitted &&
-    !displayedResultError &&
-    !studentsData?.pagesInconsistent &&
-    !rosterRefused &&
-    !(showingRetainedRoster && rosterReadDeferred);
-  const schoolCheckin = useSchoolCheckinMode({
-    enabled: checkinModeAvailable,
-    target: checkinTarget.target,
-    onTargetRefused: () => void refreshCheckinTargets(),
-  });
-  // A checkout well before today's pickup time asks for an optional reason
-  // (#3324); every other checkout keeps its current behaviour.
-  const earlyCheckout = useEarlyCheckoutDialog((studentId, note, reason) => {
-    void schoolCheckin.toggle(studentId, "anwesend", note, reason);
-  }, checkinModeAvailable);
-  const requestEarlyCheckout = earlyCheckout.request;
-  // Checkout of a student who is currently in a room asks first and names the
-  // room; every roomless state stays a single tap (#2220).
-  const [pendingRoomCheckout, setPendingRoomCheckout] = useState<{
-    studentId: string;
-    studentName: string;
-    room: string;
-  } | null>(null);
-  useEffect(() => {
-    if (!checkinModeAvailable) setPendingRoomCheckout(null);
-  }, [checkinModeAvailable]);
+  const listIsPartial = partialListKey === wholeListKey;
+  const serverSearchTerm = listIsPartial ? searchTerm : "";
+  const studentSearchParams = { ...wholeListParams, search: serverSearchTerm };
+  const studentsCacheKey = studentKeys.search(studentSearchParams);
 
   // Any change to the result query — the server-side cache key or one of the
   // client-only filters — replaces the visual context a selection was made
@@ -1995,11 +1598,58 @@ function SearchPageContent() {
   // counts visible cards only) cannot be the retry surface then; the
   // failure dialog therefore carries its own retry that executes its named
   // snapshot regardless of what the current filters show (review #2372).
-  const selectionScopeSignature = `${wholeListKey}|${searchTerm}|${effectiveEnrollmentAnswer}|${effectiveAttendanceFilter}|${encodeMultiValueParam(pickupTimeFilter)}|${arrivalTimeFilter}|${effectiveTrackingFilter}`;
+  const selectionScopeSignature = `${studentsCacheKey}|${searchTerm}|${effectiveEnrollmentAnswer}|${effectiveAttendanceFilter}|${encodeMultiValueParam(pickupTimeFilter)}|${arrivalTimeFilter}|${effectiveTrackingFilter}`;
   const clearCheckinSelection = schoolCheckin.clearSelection;
   useEffect(() => {
     clearCheckinSelection();
   }, [selectionScopeSignature, clearCheckinSelection]);
+
+  // Fetch students with SWR (automatic deduplication, cancellation, and revalidation)
+  const {
+    data: studentsData,
+    isLoading: isSearching,
+    isValidating: isSearchResultValidating,
+    error: studentsError,
+    mutate: mutateStudents,
+  } = useSWRAuth<{
+    students: Student[];
+    requestDate: string;
+    requestIsToday: boolean;
+    /**
+     * Number of matching children the backend counted when the page walk could
+     * not load them all, otherwise null. Never silently dropped: the list, the
+     * count badge and the export scope all read the loaded rows, so a partial
+     * result has to say so on screen (#2218 review).
+     */
+    truncatedTotal: number | null;
+  }>(
+    awaitsSearchFilters ? null : studentsCacheKey,
+    async () => {
+      const filters = buildStudentSearchFilters(studentSearchParams);
+
+      return fetchStudentSearch(filters, selectedDate, isToday);
+    },
+    {
+      // Keep previous data while fetching (prevents loading flash)
+      keepPreviousData: true,
+    },
+  );
+
+  // Whether these filters' list fits is known from its answer read without a
+  // term. While that read is loading or has failed, the rows may be kept from
+  // other filters and say nothing about it.
+  if (
+    !awaitsSearchFilters &&
+    !isSearching &&
+    !studentsError &&
+    studentsData &&
+    serverSearchTerm === ""
+  ) {
+    const answerIsPartial = (studentsData.truncatedTotal ?? null) !== null;
+    if (answerIsPartial !== listIsPartial) {
+      setPartialListKey(answerIsPartial ? wholeListKey : null);
+    }
+  }
 
   // Keep room state and room_id/room_name query params in sync without a
   // Next.js navigation, which would discard SWR data and flash the loading
@@ -2171,7 +1821,6 @@ function SearchPageContent() {
 
   const clearAllFilters = useCallback(() => {
     setSearchTerm("");
-    setLinkedSearch(false);
     setSearchResetKey((key) => key + 1);
     setSelectedGroupIds([]);
     setSelectedSchoolClasses([]);
@@ -2201,30 +1850,21 @@ function SearchPageContent() {
   // A reload the person asked for. The counter also restarts the stall timer
   // below, so a retry gets the full waiting time again.
   const [reloadCount, setReloadCount] = useState(0);
-  const reloadRequestKeysRef = useRef<readonly string[]>([]);
-  const handledReloadRef = useRef(0);
+  const reloadRequestKeyRef = useRef<string | null>(null);
   const requestReload = useCallback(() => {
-    reloadRequestKeysRef.current = [activeRosterKey, studentsCacheKey];
+    reloadRequestKeyRef.current = studentsCacheKey;
     setReloadCount((count) => count + 1);
-  }, [activeRosterKey, studentsCacheKey]);
-  // An incomplete probe can leave a cached full list that suppresses SWR's
-  // read on handoff. A complete probe already retired that cache entry.
-  const resumeRoster =
-    rosterNeedsExpansion && !isSearchResultValidating && !resultError;
+  }, [studentsCacheKey]);
   useEffect(() => {
-    const requested = handledReloadRef.current !== reloadCount;
-    handledReloadRef.current = reloadCount;
-    // A reset to a key not already being read starts a new fetch in SWR.
-    // A reset from server search to the same roster still needs a reload.
-    if (
-      resumeRoster ||
-      (requested && reloadRequestKeysRef.current.includes(studentsCacheKey))
-    ) {
-      // Supersede the old request as well as bypassing deduplication: its
-      // late refusal must not invalidate the retried search's entire family.
-      void invalidateSearchKey((key) => key === studentsCacheKey);
+    if (reloadCount === 0) return;
+    // A reset that changed the request key is already being fetched by SWR;
+    // only the unchanged key needs a forced revalidation. mutate() bypasses
+    // deduplication, so it also replaces a request that never answered.
+    if (reloadRequestKeyRef.current === studentsCacheKey) {
+      void mutateStudents();
     }
-  }, [reloadCount, resumeRoster, studentsCacheKey, invalidateSearchKey]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once per requested reload; the key is read at that moment
+  }, [reloadCount]);
 
   // Clicking "Alle Kinder" in the navigation while already here means "start
   // over": drop search, filters and date and load the list fresh (#3374). The
@@ -2237,8 +1877,16 @@ function SearchPageContent() {
     }, [clearAllFilters, requestReload]),
   );
 
-  // A planning response must not count as live after midnight even when
-  // the selected date itself is unchanged (#1939).
+  // keepPreviousData holds the previous request's rows until the new request
+  // resolves. Gate every date-sensitive derivation on the response's own
+  // requestDate AND today/planning mode so prior statuses, counts, and filter
+  // options are never presented under the newly selected date/mode (#1939).
+  // Non-date filter changes keep both tags equal, so only date OR mode switches
+  // gate. The mode tag is what catches the midnight rollover: selectedDate is
+  // unchanged when a future date becomes today, but requestIsToday flips, so a
+  // held planning response is still recognized as stale. An untagged response
+  // (requestDate absent, e.g. under test mocks) is treated as current, so this
+  // never gates a real fetch — only an in-flight date/mode transition.
   const isDateTransition =
     studentsData?.requestDate !== undefined &&
     (studentsData.requestDate !== selectedDate ||
@@ -2250,14 +1898,15 @@ function SearchPageContent() {
         : studentsData.students,
     [studentsData, isDateTransition],
   );
-  const browserTerm = needsServerSearch ? "" : searchTerm;
-  const nameMatchedStudents = useMemo(
-    () =>
-      browserTerm
-        ? loadedStudents.filter(studentNameSearch(browserTerm))
-        : loadedStudents,
-    [loadedStudents, browserTerm],
-  );
+  // The children of the list's server filters and the registration answer:
+  // what every count, card and bulk action below works on, as when the server
+  // applied the answer.
+  const nameMatchedStudents = useMemo(() => {
+    const browserTerm = serverSearchTerm ? "" : searchTerm;
+    return browserTerm
+      ? loadedStudents.filter(studentNameSearch(browserTerm))
+      : loadedStudents;
+  }, [loadedStudents, searchTerm, serverSearchTerm]);
   const students = useMemo(
     () =>
       activeEnrollmentAnswerChildren
@@ -2305,8 +1954,6 @@ function SearchPageContent() {
     studentsData === undefined || isDateTransition
       ? null
       : (studentsData.truncatedTotal ?? null);
-  const paginationInconsistent =
-    !isDateTransition && studentsData?.pagesInconsistent === true;
   const photoConsentDataAvailable =
     photoConsentFeatureAvailable &&
     (students.length === 0 ||
@@ -2372,19 +2019,17 @@ function SearchPageContent() {
   const clearLoadError = load.clear;
   const reloadStudentsRef = useRef<() => void>(() => undefined);
   useEffect(() => {
-    if (displayedResultError) {
-      void showLoadError(displayedResultError, {
+    if (studentsError) {
+      void showLoadError(studentsError, {
         object: "die Liste der Kinder",
         retry: () => reloadStudentsRef.current(),
       });
     } else {
       clearLoadError();
     }
-  }, [displayedResultError, showLoadError, clearLoadError]);
+  }, [studentsError, showLoadError, clearLoadError]);
   const isPermissionError =
-    searchRefused &&
-    studentsError instanceof ApiError &&
-    studentsError.status === 403;
+    studentsError instanceof ApiError && studentsError.status === 403;
   const hasLoadError = studentsError !== undefined && studentsError !== null;
 
   // Fix P1: Detect when auth prevents fetching (user can't fetch but no error from SWR)
@@ -2400,8 +2045,14 @@ function SearchPageContent() {
   // hasFetchedOnce ist auch nach einem Fehler wahr (#2517).
   const rowsLoaded = studentsData !== undefined && !isDateTransition;
 
-  // Show the skeleton until the current list is ready. A read error takes
-  // precedence so recovery guidance stays visible.
+  // Show the skeleton while the session is still resolving, while the first
+  // fetch is in progress (not yet hasFetchedOnce), or while a date switch is in
+  // flight: keepPreviousData still holds the previous day's rows, so show the
+  // skeleton instead of presenting them under the newly selected date (#1939).
+  // A fetch error wins, though: when the new date's request fails,
+  // keepPreviousData keeps the stale response so isDateTransition stays true.
+  // Without this guard the page would show the skeleton indefinitely instead
+  // of the error and its recovery guidance (#1939).
   const showGridSkeleton =
     isInitializing ||
     isAuthError ||
@@ -3019,7 +2670,7 @@ function SearchPageContent() {
       filters.push({
         id: "search",
         label: `"${searchTerm}"`,
-        onRemove: clearSearchTerm,
+        onRemove: () => updateSearchTerm(""),
       });
     }
 
@@ -3208,7 +2859,7 @@ function SearchPageContent() {
   }, [
     filterConfigs,
     searchTerm,
-    clearSearchTerm,
+    updateSearchTerm,
     selectedYears,
     selectedSchoolClasses,
     selectedGroupIds,
@@ -3426,7 +3077,6 @@ function SearchPageContent() {
   const parentAnnouncementsAvailable = useParentAnnouncementsAvailable();
   const tenantSlug = useTenantSlugSafe();
   const writeParentLetter = () => {
-    if (searchDraftStatus.getSnapshot()) return;
     const token = tenantSlug
       ? stashAnnouncementStudents(
           tenantSlug,
@@ -3491,7 +3141,6 @@ function SearchPageContent() {
     schoolCheckin,
     selectedStudentsForBulk,
     handleBulkRunProcessed,
-    checkinModeAvailable,
   );
   const { handleBulkAction, runningBulkAction } = bulkCheckin;
 
@@ -3570,18 +3219,7 @@ function SearchPageContent() {
   // Kacheln oder Tabelle (#3834). Die Tabelle trägt dieselben Angaben wie
   // die Karte, eine Spalte je Angabe, und markiert Kinder per Kästchen für
   // die Sammelaktionen. Auf dem Telefon wird sie zur dichten Zeilenliste.
-  // Match the seed's guest scope before browser name filtering. Only the
-  // visible rows below render labels; typing does not change the lookup key.
-  const guestBadgeStudents = useMemo(
-    () =>
-      activeEnrollmentAnswerChildren
-        ? loadedStudents.filter((student) =>
-            activeEnrollmentAnswerChildren.has(student.id),
-          )
-        : loadedStudents,
-    [loadedStudents, activeEnrollmentAnswerChildren],
-  );
-  const holidayGuestLabel = useHolidayGuestLabels(guestBadgeStudents);
+  const holidayGuestLabel = useHolidayGuestLabels(students);
   const tableColumns = useMemo(
     () =>
       compactColumns<Student>([
@@ -3641,7 +3279,6 @@ function SearchPageContent() {
   );
   const checkinClick = useCallback(
     (student: Student) => {
-      if (!checkinModeAvailable) return;
       const studentIdStr = student.id.toString();
       if (schoolCheckin.selectionActive) {
         schoolCheckin.toggleSelected(studentIdStr);
@@ -3670,7 +3307,7 @@ function SearchPageContent() {
       }
       void schoolCheckin.toggle(studentIdStr, checkinState);
     },
-    [checkinModeAvailable, schoolCheckin, requestEarlyCheckout],
+    [schoolCheckin, requestEarlyCheckout],
   );
   const checkinClickRef = useLatest(checkinClick);
   const handleCheckinClick = useCallback(
@@ -3741,8 +3378,8 @@ function SearchPageContent() {
             {/* `tourTarget` gibt der Einstiegs-Tour ein eindeutiges Ziel: über
                 dieses Menü erreicht man die Aufsicht, wenn die Schule Kinder
                 nur hier finden lässt (#1321). */}
-            <SearchActionsMenu
-              draftStatus={searchDraftStatus}
+            <OverflowMenu
+              tourTarget="child-search-menu"
               items={[
                 ...childScope.menuItems,
                 {
@@ -3769,29 +3406,26 @@ function SearchPageContent() {
                       },
                     ]
                   : []),
-              ]}
-              // Nur ein Ergebnis aus einer Abfrage kann alle Empfänger
-              // sicher enthalten. Über mehrere Seiten können Kinder fehlen.
-              parentLetter={
-                parentAnnouncementsAvailable &&
+                // Nur mit vollständig geladenen, sichtbaren Kindern: ein
+                // Brief an eine abgeschnittene Liste würde Empfänger
+                // auslassen.
+                ...(parentAnnouncementsAvailable &&
                 rowsLoaded &&
                 !isSearchResultValidating &&
-                !displayedResultError &&
-                (needsServerSearch ||
-                  (!usingRetainedRoster && !rosterReadDeferred)) &&
-                isCompleteSearchResult(studentsData) &&
+                !hasLoadError &&
+                truncatedTotal === null &&
                 filteredStudents.length > 0
-                  ? {
-                      label: "Elternbrief schreiben",
-                      description:
-                        "Öffnet einen neuen Brief an die Eltern der gezeigten Kinder.",
-                      icon: <FileText className="h-4 w-4" aria-hidden />,
-                      onClick: writeParentLetter,
-                      badge: filteredStudents.length,
-                    }
-                  : undefined
-              }
-              viewItems={[
+                  ? [
+                      {
+                        label: "Elternbrief schreiben",
+                        description:
+                          "Öffnet einen neuen Brief an die Eltern der gezeigten Kinder.",
+                        icon: <FileText className="h-4 w-4" aria-hidden />,
+                        onClick: writeParentLetter,
+                        badge: filteredStudents.length,
+                      },
+                    ]
+                  : []),
                 // Die Spaltenwahl der Liste (#3834) steht hier und nicht
                 // als eigener Knopf neben dem Umschalter.
                 ...(showTable && !isPhone
@@ -3809,6 +3443,7 @@ function SearchPageContent() {
                     )
                   : []),
               ]}
+              ariaLabel="Weitere Aktionen"
             />
           </>
         }
@@ -3845,9 +3480,6 @@ function SearchPageContent() {
         search={{
           value: searchTerm,
           onChange: updateSearchTerm,
-          onDraftPendingChange: parentAnnouncementsAvailable
-            ? searchDraftStatus.setPending
-            : undefined,
           placeholder: "Name suchen…",
           debounceMs: 300,
           resetKey: searchResetKey,
@@ -3882,8 +3514,6 @@ function SearchPageContent() {
         })()}
         empty={
           !hasLoadError &&
-          !keepResultsAfterError &&
-          !paginationInconsistent &&
           hasFetchedOnce &&
           !isInitializing &&
           !isAuthError &&
@@ -3920,7 +3550,7 @@ function SearchPageContent() {
           first and names the room (#2220). Roomless states never reach
           this dialog — they stay a single tap. */}
             <Modal
-              isOpen={checkinModeAvailable && pendingRoomCheckout !== null}
+              isOpen={pendingRoomCheckout !== null}
               onClose={() => setPendingRoomCheckout(null)}
               title="Aus der Betreuung abmelden?"
               mobileSheet
@@ -3940,7 +3570,7 @@ function SearchPageContent() {
                     variant="surface"
                     size="md"
                     onClick={() => {
-                      if (!checkinModeAvailable || !pendingRoomCheckout) return;
+                      if (!pendingRoomCheckout) return;
                       void schoolCheckin.toggle(
                         pendingRoomCheckout.studentId,
                         "anwesend",
@@ -3958,7 +3588,7 @@ function SearchPageContent() {
                     variant="danger"
                     size="md"
                     onClick={() => {
-                      if (!checkinModeAvailable || !pendingRoomCheckout) return;
+                      if (!pendingRoomCheckout) return;
                       void schoolCheckin.toggle(
                         pendingRoomCheckout.studentId,
                         "anwesend",
@@ -4002,10 +3632,6 @@ function SearchPageContent() {
           <ForbiddenPage embedded message={load.error.message} />
         ) : null}
         <div hidden={isPermissionError}>
-          <LoadErrorAlert
-            error={keepResultsAfterError ? load.error : null}
-            className="mb-3"
-          />
           <LoadErrorAlert error={filterOptionsLoad.error} className="mb-3" />
           {/* Planning-date context banner (#1939). The day chooser itself lives in
           the filter panel, in the "Anwesenheit" section right above the
@@ -4036,23 +3662,13 @@ function SearchPageContent() {
           export all describe the rows it loaded. Without this the school would
           read a truncated list as the complete one, so the shortfall is named
           here instead of only in the log. */}
-          {paginationInconsistent ? (
+          {truncatedTotal !== null && (
             <div className="mb-3">
               <Alert
                 type="warning"
-                message="Die Kinderliste hat sich beim Laden geändert. Lade sie erneut oder suche nach einem Namen."
-                action={reloadAction}
+                message={`Es werden nur die ersten ${students.length} von ${truncatedTotal} Kindern geladen. Anzahl, Gruppierung und Export beziehen sich allein auf diese Kinder; bitte die Filter enger setzen.`}
               />
             </div>
-          ) : (
-            truncatedTotal !== null && (
-              <div className="mb-3">
-                <Alert
-                  type="warning"
-                  message={`Es werden nur die ersten ${students.length} von ${truncatedTotal} Kindern geladen. Anzahl, Gruppierung und Export beziehen sich allein auf diese Kinder; bitte die Filter enger setzen.`}
-                />
-              </div>
-            )
           )}
 
           {/* Unterwegs-Kinder einem Raum zuweisen (#5026): wie auf „Räume“
@@ -4164,7 +3780,7 @@ function SearchPageContent() {
                     <StudentSelectionScope
                       visibleStudents={filteredStudents}
                       scopeKey={selectionScopeSignature}
-                      checkinAllowed={checkinModeAvailable}
+                      checkinAllowed={isToday}
                       exportContext={{
                         ...(isToday ? {} : { date: selectedDate }),
                         sort: sortMode,

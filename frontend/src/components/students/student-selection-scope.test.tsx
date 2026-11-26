@@ -17,17 +17,9 @@ const mocks = vi.hoisted(() => ({
   batch: vi.fn(),
 }));
 
-vi.mock("next-auth/react", () => ({
-  useSession: () => ({
-    data: { user: { id: "3", tenantId: "2" } },
-    status: "authenticated",
-  }),
-}));
-
 vi.mock("~/lib/tenant-context", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/lib/tenant-context")>()),
   useAttendanceWebEnabled: () => mocks.attendanceWebEnabled,
-  useTenantSlugSafe: () => "school",
 }));
 
 vi.mock("~/lib/student-api", async (importOriginal) => ({

@@ -148,24 +148,22 @@ export async function loadStudentSearchSeed(
       buildStudentSearchFilters(input),
       input.date,
       input.isToday,
-      {
-        fetchPage: async (filters) => {
-          const read = await contractGet(
-            studentsContract.routes["GET /api/students/"],
-            {
-              token,
-              signal,
-              query: { ...studentQuery(filters), view: "slim" },
-            },
-          );
-          if (!read.ok) throw read.error.cause;
-          return {
-            students: read.value.data.map((row) =>
-              mapStudentListRow(row, "slim"),
-            ),
-            pagination: read.value.pagination,
-          };
-        },
+      async (filters) => {
+        const read = await contractGet(
+          studentsContract.routes["GET /api/students/"],
+          {
+            token,
+            signal,
+            query: { ...studentQuery(filters), view: "slim" },
+          },
+        );
+        if (!read.ok) throw read.error.cause;
+        return {
+          students: read.value.data.map((row) =>
+            mapStudentListRow(row, "slim"),
+          ),
+          pagination: read.value.pagination,
+        };
       },
     ),
   );

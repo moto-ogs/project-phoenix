@@ -57,11 +57,6 @@ vi.mock("~/lib/swr", async (importOriginal) => ({
     mockMutate(
       (key: unknown) => typeof key === "string" && key.includes(`:${family}`),
     ),
-  useInvalidateMatching: () => (matches: (key: string) => boolean) =>
-    mockMutate(
-      (key: unknown) =>
-        typeof key === "string" && matches(key.slice(key.indexOf(":") + 1)),
-    ),
 }));
 vi.mock("swr", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),

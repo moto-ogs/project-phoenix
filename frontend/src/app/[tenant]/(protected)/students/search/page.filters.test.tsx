@@ -258,7 +258,6 @@ vi.mock("~/lib/swr", async (importOriginal) => {
   const { tenantListKeys } = await import("~/lib/swr/tenant-list-keys");
   const answersKey = tenantListKeys.enrollmentAnswerFilters();
   return {
-    useLiveRefreshInterval: actual.useLiveRefreshInterval,
     useImmutableSWR: (...args: unknown[]) => mockUseImmutableSWR(...args),
     useSWRAuth: (
       key: string | null,
@@ -267,9 +266,7 @@ vi.mock("~/lib/swr", async (importOriginal) => {
     ) => {
       const answers = key?.startsWith(answersKey) === true;
       const real = actual.useSWRAuth(answers ? key : null, fetcher, options);
-      return answers || key === null
-        ? real
-        : mockUseSWRAuth(key, fetcher, options);
+      return answers || key === null ? real : mockUseSWRAuth(key, fetcher);
     },
     mutate: vi.fn(),
     useTenantMutate: () => vi.fn(),
@@ -368,7 +365,7 @@ beforeEach(() => {
     },
   ]);
   mockUseSession.mockImplementation(() => ({
-    data: { user: { id: "7", token: "t" } },
+    data: { user: { token: "t" } },
     status: "authenticated",
   }));
   mockUseOptionalSupervision.mockImplementation(() => ({
@@ -532,7 +529,7 @@ describe("StudentSearchPage — room_id deep-link (#1323)", () => {
 
   it("drops a registration answer the account may not read (#6954)", async () => {
     mockUseSession.mockImplementation(() => ({
-      data: { user: { id: "7", token: "t", permissions: ["students:read"] } },
+      data: { user: { token: "t", permissions: ["students:read"] } },
       status: "authenticated",
     }));
     currentSearch = new URLSearchParams({
@@ -844,23 +841,12 @@ describe("StudentSearchPage — registration answer counts (#7645)", () => {
 
   // The filter options as plain buttons, so a test reads their labels and
   // picks one without the real header's panel.
-  function AnswerButtonsHeader({
-    filters,
-    search,
-  }: {
-    filters?: FilterConfig[];
-    search?: { value: string; onChange: (value: string) => void };
-  }) {
+  function AnswerButtonsHeader({ filters }: { filters?: FilterConfig[] }) {
     const answers = (filters ?? []).find(
       (filter) => filter.id === "enrollmentAnswer",
     );
     return (
       <div data-testid="header">
-        <input
-          aria-label="Name suchen"
-          value={search?.value ?? ""}
-          onChange={(event) => search?.onChange(event.target.value)}
-        />
         {answers?.options.map((option) => (
           <button
             key={option.value}
@@ -941,15 +927,9 @@ describe("StudentSearchPage — registration answer counts (#7645)", () => {
   });
 
   it("counts an answer among the children a name search leaves", async () => {
-    currentSearch = new URLSearchParams();
+    currentSearch = new URLSearchParams({ search: "Mia" });
 
     render(<StudentSearchPage />, { wrapper: FreshSwrCache });
-    expect(
-      await screen.findByRole("button", { name: /: Ja \(2\)$/ }),
-    ).toBeInTheDocument();
-    fireEvent.change(screen.getByRole("textbox", { name: "Name suchen" }), {
-      target: { value: "Mia" },
-    });
 
     expect(
       await screen.findByRole("button", { name: /: Ja \(1\)$/ }),
@@ -970,7 +950,6 @@ describe("StudentSearchPage — registration answer counts (#7645)", () => {
     const listKeys = () =>
       new Set(
         mockUseSWRAuth.mock.calls
-          .filter(([, , options]) => !options?.isPaused?.())
           .map((call) => call[0] as string | null)
           .filter((key) => key?.startsWith("search-students-")),
       );
@@ -984,7 +963,7 @@ describe("StudentSearchPage — registration answer counts (#7645)", () => {
 
     expect(await screen.findByTestId("student-card-8")).toBeInTheDocument();
     expect(screen.queryByTestId("student-card-7")).not.toBeInTheDocument();
-    // The list keeps its one active cache key: the answer needs no new request.
+    // The list keeps its one cache key: the answer needs no new request.
     expect(listKeys().size).toBe(1);
   });
 
@@ -1028,7 +1007,7 @@ describe("StudentSearchPage — Kinder nur über Alle Kinder (#1321)", () => {
   // Own groups and own supervision, as the former file mocked them.
   beforeEach(() => {
     mockUseSession.mockImplementation(() => ({
-      data: { user: { id: "7", token: "t", roles: ["user"] } },
+      data: { user: { token: "t", roles: ["user"] } },
       status: "authenticated",
     }));
     mockUseOptionalSupervision.mockImplementation(() => ({
@@ -2062,13 +2041,7 @@ describe("StudentSearchPage — Unterwegs-Karte (#5026)", () => {
     mockUseSWRAuth.mockImplementation((key: string | null) =>
       key === 'rooms-list-{"page":1,"pageSize":1000}'
         ? { data: [], isLoading: false, error: null }
-        : {
-            data: { students: [mockStudent] },
-            isLoading: false,
-            isValidating: false,
-            error: null,
-            mutate: vi.fn(async () => undefined),
-          },
+        : { data: { students: [mockStudent] }, isLoading: false, error: null },
     );
   });
 

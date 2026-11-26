@@ -221,12 +221,11 @@ export function isEntityRefusal(
  *   request or preload from before (data stays until the answer).
  * - `expire-inactive`: same for mounted readers, clear the unmounted entries.
  * - `clear`: data, error and loading state go; nothing is fetched.
- * - `clear-existing`: clear only keys with data, an error or a pending read/write.
  * - `discard`: like `clear`, but an error stays, so a view shows the
  *   refusal instead of the data.
  */
 export type SWRInvalidation =
-  "revalidate" | "expire-inactive" | "clear" | "clear-existing" | "discard";
+  "revalidate" | "expire-inactive" | "clear" | "discard";
 
 /**
  * The one way to invalidate part of the cache (#5006; the whole cache goes
@@ -264,26 +263,11 @@ export function invalidateSWRKeys(
       for (const key of Object.keys(family)) keys.add(key);
     }
   }
-  const matched = [...keys].filter((key) => {
-    if (!matches(plainSWRKey(key))) return false;
-    if (mode !== "clear-existing") return true;
-    const entry = cache.get(key);
-    return (
-      entry?.data !== undefined ||
-      entry?.error !== undefined ||
-      state?.[1][key]?.[1] === 0 ||
-      state?.[2][key] !== undefined ||
-      state?.[3][key] !== undefined
-    );
-  });
+  const matched = [...keys].filter((key) => matches(plainSWRKey(key)));
   // The lock first: it holds also for keys the cleanup cannot see.
   if (mode === "revalidate" || mode === "expire-inactive")
     bumpRequestGeneration(matched);
-  else if (mode === "clear-existing") {
-    if (matched.length === 0) return Promise.resolve([]);
-    const currentKeys = new Set(matched.map(plainSWRKey));
-    bumpDataGeneration((key) => currentKeys.has(key));
-  } else bumpDataGeneration(matches);
+  else bumpDataGeneration(matches);
   // `discard` keeps the refusal on screen: that failure counts in the new
   // generation, everything else of the keys does not.
   if (mode === "discard" && refusal !== undefined) {
@@ -328,9 +312,7 @@ export function invalidateSWRKeys(
       _c: undefined,
       isValidating: false,
       isLoading: false,
-      ...(mode === "clear" ||
-      mode === "clear-existing" ||
-      mode === "expire-inactive"
+      ...(mode === "clear" || mode === "expire-inactive"
         ? { error: undefined }
         : {}),
       ...(mode === "discard" && key === refusedKey ? { error: refusal } : {}),

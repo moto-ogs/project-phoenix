@@ -120,50 +120,10 @@ type OnError = NonNullable<SWRConfiguration["onError"]>;
 type Compare = NonNullable<SWRConfiguration["compare"]>;
 type OnErrorRetry = NonNullable<SWRConfiguration["onErrorRetry"]>;
 
-const pendingLockedReads = new WeakMap<
-  Cache,
-  Map<string, { replaced: boolean }>
->();
-
 const generationLockMiddleware: Middleware =
   (useSWRNext) => (key, fetcher, config) => {
-    let read = fetcher;
-    if (typeof key === "string" && fetcher) {
-      const locked = lockFetcher(key, fetcher);
-      read = (...args) => {
-        // A delayed revalidation may use this fetcher for its previous key.
-        // Reject it without counting it as a replacement for this key.
-        if (typeof args[0] === "string" && args[0] !== key)
-          return locked(...args);
-        const { cache } = config as { cache?: Cache };
-        let reads = cache && pendingLockedReads.get(cache);
-        if (cache && !reads) {
-          reads = new Map();
-          pendingLockedReads.set(cache, reads);
-        }
-        const previous = reads?.get(key);
-        if (previous) previous.replaced = true;
-        const flight = { replaced: false };
-        reads?.set(key, flight);
-
-        const pending = locked(...args)
-          .catch((error: unknown) => {
-            // SWR checks request identity on fulfillment, but not rejection.
-            // Preserve the replacement's state even when its FETCH entry is
-            // already gone. A discarded seed without a replacement still rejects.
-            if (isDiscardedAnswer(error)) {
-              const active = cache && SWRGlobalState.get(cache)?.[2][key];
-              if (flight.replaced || (active && active[0] !== pending))
-                return undefined as Awaited<ReturnType<typeof locked>>;
-            }
-            throw error;
-          })
-          .finally(() => {
-            if (reads?.get(key) === flight) reads.delete(key);
-          });
-        return pending;
-      };
-    }
+    const locked =
+      typeof key === "string" && fetcher ? lockFetcher(key, fetcher) : fetcher;
     const onSuccess: OnSuccess = (data, successKey, current) => {
       // Every successful read lifts a refusal, even without a resource guard.
       // Cache writes never come through this callback.
@@ -214,7 +174,7 @@ const generationLockMiddleware: Middleware =
       }
       return config.compare?.(a, b) ?? false;
     };
-    return useSWRNext(key, read, {
+    return useSWRNext(key, locked, {
       ...config,
       compare,
       isPaused: () => {
@@ -273,8 +233,6 @@ function runResult<V>(
  *   `revalidateOnReconnect`;
  * - retries, which the lock drops after a generation moved:
  *   `errorRetryCount`, `shouldRetryOnError`;
- * - `recoverDiscardedRefusals`: opt out of the wrapper's recovery for a
- *   discarded answer while an access refusal is in force;
  * - read-side values the lock judges: `fallbackData` (shown only under the
  *   fallback rules), `keepPreviousData` (only while no generation moved);
  * - `isPaused`, which can only add pauses to the session pause;
@@ -294,28 +252,24 @@ export const READER_OPTION_KEYS = [
   "onDiscarded",
   "onError",
   "onSuccess",
-  "recoverDiscardedRefusals",
   "refreshInterval",
   "revalidateIfStale",
   "revalidateOnFocus",
   "revalidateOnMount",
   "revalidateOnReconnect",
   "shouldRetryOnError",
-] as const satisfies readonly (
-  keyof SWRConfiguration | "recoverDiscardedRefusals"
-)[];
+] as const satisfies readonly (keyof SWRConfiguration)[];
 
 export type ReaderOptions<T, E = Error> = Pick<
   SWRConfiguration<T, E>,
   Exclude<
     (typeof READER_OPTION_KEYS)[number],
-    "onDiscarded" | "onSuccess" | "onError" | "recoverDiscardedRefusals"
+    "onDiscarded" | "onSuccess" | "onError"
   >
 > & {
   onDiscarded?: () => void;
   onSuccess?: (data: T) => void;
   onError?: (error: E) => void;
-  recoverDiscardedRefusals?: boolean;
 };
 
 /**
@@ -360,13 +314,11 @@ function copyAllowed(
 function readerConfig<T, E>(
   options: ReaderOptions<T, E> | undefined,
 ): SWRConfiguration<T, E> {
-  const {
-    onDiscarded,
-    onSuccess,
-    onError,
-    recoverDiscardedRefusals: _recover,
-    ...rest
-  } = copyAllowed(options, allowedReaderKeys, "reader") as ReaderOptions<T, E>;
+  const { onDiscarded, onSuccess, onError, ...rest } = copyAllowed(
+    options,
+    allowedReaderKeys,
+    "reader",
+  ) as ReaderOptions<T, E>;
   return {
     ...rest,
     ...(onDiscarded ? { onDiscarded: () => onDiscarded() } : {}),
@@ -585,7 +537,7 @@ function useScopedSWR<T, E>(
   // Load again once per generation: after a discarded answer, or when the
   // shown data belongs to an older generation and no error explains it.
   const reload =
-    fullKey === null || (refused && options?.recoverDiscardedRefusals === false)
+    fullKey === null
       ? null
       : discarded
         ? `request:${fullKey}:${requestGenerationOf(fullKey)}`
@@ -1396,15 +1348,12 @@ export function useSWRRequestGuard() {
         !isSWRSessionPending() &&
         latestPrefix.current === prefix &&
         isStillCurrent(fullKey, started);
-      const assertCurrent = () => {
-        if (!isCurrent()) throw new DiscardedAnswer();
-      };
       return Object.assign(
         (complete: () => void): void => {
-          assertCurrent();
+          if (!isCurrent()) throw new DiscardedAnswer();
           complete();
         },
-        { isCurrent, assertCurrent },
+        { isCurrent },
       );
     },
     [prefix, origin],
@@ -1486,9 +1435,6 @@ interface InvalidationBurst {
 
 const invalidationBursts = new WeakMap<Cache, Map<string, InvalidationBurst>>();
 
-/** Record which invalidations had happened when a live signal arrived. */
-export const getSWRInvalidationCheckpoint = currentSWRGeneration;
-
 function coalesceInvalidation(
   cache: Cache,
   channel: string,
@@ -1536,34 +1482,23 @@ export function useInvalidateMatching() {
     (
       matches: (key: string) => boolean,
       options?: {
-        /** `existing` retires only populated or pending keys, not future matches. */
-        clear?: boolean | "existing";
+        clear?: boolean;
         expireInactive?: boolean;
         /** Union local and SSE invalidations for this channel in one short burst. */
         coalesce?: string;
-        /** On revalidation, skip keys already invalidated since this signal. */
-        observedAt?: number;
       },
     ) => {
       if (prefix === null || isSWRSessionPending()) return Promise.resolve([]);
       const scope = scopedSWRKey(prefix, "");
-      const mode =
-        options?.clear === "existing"
-          ? "clear-existing"
-          : options?.clear
-            ? "clear"
-            : options?.expireInactive
-              ? "expire-inactive"
-              : "revalidate";
-      const observedAt = options?.clear ? undefined : options?.observedAt;
+      const mode = options?.clear
+        ? "clear"
+        : options?.expireInactive
+          ? "expire-inactive"
+          : "revalidate";
       const run = (match: (key: string) => boolean) =>
         invalidateSWRKeys(
           cache,
-          (key) =>
-            key.startsWith(scope) &&
-            match(key.slice(scope.length)) &&
-            (observedAt === undefined ||
-              requestGenerationOf(key) <= observedAt),
+          (key) => key.startsWith(scope) && match(key.slice(scope.length)),
           mode,
         );
       return options?.coalesce

@@ -57,90 +57,54 @@ export async function fetchStudentSearch(
   filters: StudentFilters,
   requestDate: string,
   requestIsToday: boolean,
-  {
-    fetchPage = fetchStudents,
-    shouldDeferOverflowPages,
-    beforeNextPage,
-  }: {
-    fetchPage?: typeof fetchStudents;
-    shouldDeferOverflowPages?: () => boolean;
-    beforeNextPage?: () => void;
-  } = {},
+  fetchPage: typeof fetchStudents = fetchStudents,
 ) {
   const result = await fetchPage(filters);
   const students = [...result.students];
-  const totalRecords = result.pagination?.total_records;
 
   // Walk the remaining pages when the selection is larger than one page.
   // The first request stays untouched (no page parameter), so the common
   // single-page case is byte-identical with before.
   //
-  // The list query orders by ID, but separate requests do not share a
-  // snapshot. Even with matching counts and distinct IDs, a child can move
-  // into an already read page and be missed. Only use the walk for display.
+  // Separate requests only add up to the whole selection because the list
+  // query carries a total order (repositories/users/student.go orders by id
+  // unless a caller asks for something else). Without one, PostgreSQL may
+  // answer two windows out of two different row orders, and children then
+  // appear twice or not at all (#2218 review).
   const totalPages = result.pagination?.total_pages ?? 1;
-  const exceedsPageCap = totalPages > MAX_STUDENT_SEARCH_PAGES;
-  let pagesDeferred = false;
-  let pagesInconsistent = false;
   const lastPage = Math.min(totalPages, MAX_STUDENT_SEARCH_PAGES);
   for (let page = 2; page <= lastPage; page++) {
-    if (exceedsPageCap && shouldDeferOverflowPages?.()) {
-      pagesDeferred = true;
-      break;
-    }
-    beforeNextPage?.();
     const nextPage = await fetchPage({ ...filters, page });
-    if (
-      nextPage.pagination?.total_records !== totalRecords ||
-      nextPage.pagination?.total_pages !== totalPages
-    ) {
-      pagesInconsistent = true;
-      break;
-    }
     students.push(...nextPage.students);
   }
-  // The backend orders by id, but a deletion or insertion can move rows
-  // between pages. An incomplete or duplicated walk cannot answer names.
-  if (!exceedsPageCap && totalRecords !== undefined) {
-    pagesInconsistent ||= students.length !== totalRecords;
-  }
-  const uniqueStudents =
-    totalPages > 1
-      ? [...new Map(students.map((student) => [student.id, student])).values()]
-      : students;
-  pagesInconsistent ||= uniqueStudents.length !== students.length;
   // Past the bound the list is incomplete, and everything downstream — the
   // count badge, the grouping headers, the export scope — reads exactly the
   // rows loaded here. Reporting that as a finished result would present a
   // truncated list as the complete one, so the number the backend counted
   // travels along and the page says on screen that it is showing a part
   // (#2218 review). The log line stays for the server-side view.
-  const truncatedTotal = exceedsPageCap
-    ? (result.pagination?.total_records ?? students.length)
-    : null;
-  if (exceedsPageCap && !pagesDeferred && !pagesInconsistent) {
+  let truncatedTotal: number | null = null;
+  if (totalPages > lastPage) {
+    truncatedTotal = result.pagination?.total_records ?? students.length;
     logger.warn("student_search_pages_truncated", {
       total_pages: totalPages,
       fetched_pages: lastPage,
     });
   }
 
-  // Tag the response with its date and today/planning mode. On a rollover,
-  // the date can stay the same while the mode flips to live (#1939).
+  // Tag the response with the date AND today/planning mode it was fetched
+  // for so date-sensitive rendering can tell a fresh result apart from
+  // keepPreviousData holding the previous request's rows. The mode matters
+  // on top of the date: when a selected future date rolls over to today at
+  // midnight, requestDate is unchanged but the semantics flip from planning
+  // to live — the stale planning rows must not be shown under live presence
+  // badges and check-in controls (#1939).
   return {
-    students: uniqueStudents,
+    students,
     requestDate: requestDate,
     requestIsToday: requestIsToday,
     truncatedTotal,
-    ...(totalPages > 1 ? { spansPages: true } : {}),
-    ...(pagesDeferred ? { pagesDeferred } : {}),
-    ...(pagesInconsistent ? { pagesInconsistent } : {}),
   };
-}
-
-function foldStudentName(value: string): string {
-  // Go lowercases uppercase sigma to σ even at the end of a word.
-  return foldForSearch(value.replaceAll("Σ", "σ"));
 }
 
 /**
@@ -154,10 +118,10 @@ function foldStudentName(value: string): string {
 export function studentNameSearch(
   search: string,
 ): (student: Pick<Student, "id" | "first_name" | "second_name">) => boolean {
-  const term = foldStudentName(search);
+  const term = foldForSearch(search);
   if (!term) return () => true;
   return (student) =>
-    foldStudentName(
+    foldForSearch(
       `${student.first_name ?? ""} ${student.second_name ?? ""}`,
     ).includes(term) || student.id.includes(term);
 }

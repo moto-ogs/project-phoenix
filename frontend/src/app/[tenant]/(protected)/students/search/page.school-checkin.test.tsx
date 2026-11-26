@@ -286,7 +286,6 @@ vi.mock("~/lib/api", () => ({
 }));
 
 vi.mock("~/lib/swr", () => ({
-  useLiveRefreshInterval: () => 60_000,
   useImmutableSWR: vi.fn(),
   useSWRAuth: vi.fn(),
   mutate: vi.fn(),

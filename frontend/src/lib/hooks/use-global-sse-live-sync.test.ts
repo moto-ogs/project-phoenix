@@ -26,11 +26,8 @@ const { session, sse, invalidatedFamilies, invalidateMatching, useSSESpy } =
       handlers: [] as ((event: SSEEvent) => void)[],
     },
     invalidatedFamilies: [] as string[],
-    invalidateMatching: vi.fn(
-      (
-        _matches: (key: string) => boolean,
-        _options?: { expireInactive?: boolean },
-      ) => Promise.resolve([]),
+    invalidateMatching: vi.fn((_matches: (key: string) => boolean) =>
+      Promise.resolve([]),
     ),
     useSSESpy: { lastReconnectKey: undefined as string | number | undefined },
   }));
@@ -160,45 +157,6 @@ beforeEach(() => {
   session.current = { id: "account-7", tenantId: "1", roles: ["user"] };
   setVisibility("visible");
   resumeSWRSession();
-});
-
-it("supersedes roster and name reads affected by a checkout", () => {
-  renderConnected();
-  fire(event("student_checkout", { student_id: "7", group_ids: ["3"] }));
-  act(() => vi.advanceTimersByTime(MAX_FLUSH_WAIT_MS));
-  expect(invalidateMatching).toHaveBeenCalledTimes(1);
-  const [match, options] = invalidateMatching.mock.calls[0]!;
-  expect(options).toEqual({
-    expireInactive: true,
-    observedAt: expect.any(Number),
-  });
-  expect(match("search-students-g3-filter:roster-probe")).toBe(true);
-  expect(match("search-students-g3-filter:Max")).toBe(true);
-  expect(match("search-students-gall-filter:Max")).toBe(true);
-  expect(match("search-students-g4-filter:Max")).toBe(false);
-});
-
-it("expires inactive search results when companion links change", () => {
-  renderConnected();
-  fire(event("student_companions_changed", {}));
-  act(() => vi.advanceTimersByTime(MAX_FLUSH_WAIT_MS));
-  expect(invalidateMatching).toHaveBeenCalledTimes(1);
-  const [match, options] = invalidateMatching.mock.calls[0]!;
-  expect(options).toEqual({ expireInactive: true });
-  expect(match("search-students-g3-filter:Max")).toBe(true);
-  expect(match("search-students-g4-filter:Max")).toBe(true);
-  expect(match("room-students-1")).toBe(false);
-});
-
-it("refreshes all search scopes at the group access flush, even in an attendance burst", () => {
-  renderConnected();
-  fire(event("student_checkout", { student_id: "7", group_ids: ["3"] }));
-  fire(event("group_access_changed"));
-  act(() => vi.advanceTimersByTime(MAX_FLUSH_WAIT_MS));
-  expect(invalidateMatching).toHaveBeenCalledTimes(1);
-  const [match, options] = invalidateMatching.mock.calls[0]!;
-  expect(options).toEqual({ expireInactive: true });
-  expect(match("search-students-g4-filter:Max")).toBe(true);
 });
 
 describe("useGlobalSSE: own supervision family (#5017)", () => {
@@ -473,13 +431,10 @@ describe("useGlobalSSE: own time-tracking reads (#8081)", () => {
   };
 
   function refreshedReads() {
-    const ownMatchers = invalidateMatching.mock.calls
-      .map(([matches]) => matches)
-      .filter((matches) => Object.values(keys).some((key) => matches(key)));
-    expect(ownMatchers).toHaveLength(1);
-    const [matches] = ownMatchers;
+    expect(invalidateMatching).toHaveBeenCalledTimes(1);
+    const [matches] = invalidateMatching.mock.calls[0]!;
     return Object.entries(keys)
-      .filter(([, key]) => matches!(key))
+      .filter(([, key]) => matches(key))
       .map(([name]) => name);
   }
 

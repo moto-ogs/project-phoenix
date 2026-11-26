@@ -131,7 +131,6 @@ const REVIEWED_EXPORTS: Record<string, string[]> = {
   hooks: [
     "MUTATION_OPTION_KEYS",
     "READER_OPTION_KEYS",
-    "getSWRInvalidationCheckpoint",
     "revalidateOrThrow",
     "useDiscardRefusedEntity",
     "useImmutableSWR",
@@ -472,7 +471,6 @@ describe("option allowlists of ~/lib/swr", () => {
       "onDiscarded",
       "onError",
       "onSuccess",
-      "recoverDiscardedRefusals",
       "refreshInterval",
       "revalidateIfStale",
       "revalidateOnFocus",

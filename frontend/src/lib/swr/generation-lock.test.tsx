@@ -42,8 +42,6 @@ import { setTestClock } from "~/test/clock";
 import {
   _resetSWRFallbacksForTests,
   bumpScopeGeneration,
-  currentSWRDataGeneration,
-  dataGenerationOf,
   isCurrentSWRValue,
   isFallbackVisible,
   preloadSWR,
@@ -51,11 +49,8 @@ import {
 } from "./generation";
 import { swrConfig } from "./config";
 import {
-  getSWRInvalidationCheckpoint,
   useDiscardRefusedEntity,
-  useInvalidateMatching,
   useSWRAuth,
-  useSWRPreload,
   useTenantMutate,
   useTenantMutateMatching,
   type ReaderOptions,
@@ -216,69 +211,6 @@ async function flush() {
   });
 }
 
-it("retires an existing preload without recording an empty or repeated clear", async () => {
-  const key = "search-students-gall-name";
-  const view = renderHook(() => ({
-    invalidate: useInvalidateMatching(),
-    preload: useSWRPreload(),
-  }));
-  const retire = () =>
-    view.result.current.invalidate((candidate) => candidate === key, {
-      clear: "existing",
-    });
-  const initial = currentSWRDataGeneration();
-  await act(async () => {
-    await retire();
-  });
-  expect(currentSWRDataGeneration()).toBe(initial);
-
-  const response = deferred<string>();
-  const pending = view.result.current.preload(key, () => response.promise);
-  await act(async () => {
-    await retire();
-  });
-  expect(currentSWRDataGeneration()).toBe(initial + 1);
-  await act(async () => {
-    await retire();
-  });
-  expect(currentSWRDataGeneration()).toBe(initial + 1);
-  response.resolve("old name");
-  await expect(pending).resolves.toBeUndefined();
-});
-
-it("starts the local refresh immediately and skips only signals it already covers", async () => {
-  const key = "search-students-gall-roster";
-  const fetcher = vi.fn(async () => "roster");
-  const view = renderHook(() => ({
-    roster: useSWRAuth(key, fetcher),
-    invalidate: useInvalidateMatching(),
-  }));
-  await waitFor(() => expect(view.result.current.roster.data).toBe("roster"));
-  const matches = (candidate: string) => candidate === key;
-  const echo = getSWRInvalidationCheckpoint();
-  await act(async () => {
-    const local = view.result.current.invalidate(matches, {
-      expireInactive: true,
-    });
-    expect(fetcher).toHaveBeenCalledTimes(2);
-    await local;
-    await view.result.current.invalidate(matches, {
-      expireInactive: true,
-      observedAt: echo,
-    });
-  });
-  expect(fetcher).toHaveBeenCalledTimes(2);
-
-  const laterSignal = getSWRInvalidationCheckpoint();
-  await act(async () => {
-    await view.result.current.invalidate(matches, {
-      expireInactive: true,
-      observedAt: laterSignal,
-    });
-  });
-  expect(fetcher).toHaveBeenCalledTimes(3);
-});
-
 function cachedData(name: string): unknown {
   return renderHook(() => useSWRConfig()).result.current.cache.get(FULL(name))
     ?.data;
@@ -296,36 +228,6 @@ afterEach(() => {
   _setSWRCleanupForTests(true);
   resumeSWRSession();
   _resetPersonalStorageLeave();
-});
-
-it("keeps the old key's cache when its scheduled read sees a new fetcher", async () => {
-  const oldKey = "student-7-scheduled-read";
-  const newKey = "student-7-next-read";
-  const fullOldKey = FULL(oldKey);
-  const { cache } = renderHook(() => useSWRConfig()).result.current;
-  stampSWRValue(fullOldKey, "bisher", dataGenerationOf(fullOldKey));
-  cache.set(fullOldKey, { data: "bisher" });
-  const frames: FrameRequestCallback[] = [];
-  const frame = vi
-    .spyOn(window, "requestAnimationFrame")
-    .mockImplementation((callback) => frames.push(callback));
-  onTestFinished(() => frame.mockRestore());
-  const oldRead = vi.fn(async () => "alt");
-  const answer = deferred<string>();
-  const newRead = vi.fn(() => answer.promise);
-  const view = render(<Reader name={oldKey} fetcher={oldRead} />);
-  expect(screen.getByTestId(oldKey)).toHaveTextContent("bisher");
-  expect(frames).toHaveLength(1);
-  view.rerender(<Reader name={newKey} fetcher={newRead} />);
-  expect(newRead).toHaveBeenCalledTimes(1);
-
-  frames[0]!(0);
-  await flush();
-  expect(cache.get(fullOldKey)?.data).toBe("bisher");
-  expect(oldRead).not.toHaveBeenCalled();
-  expect(newRead).toHaveBeenCalledTimes(1);
-  await act(async () => answer.resolve("neu"));
-  expect(screen.getByTestId(newKey)).toHaveTextContent("neu");
 });
 
 describe.each([

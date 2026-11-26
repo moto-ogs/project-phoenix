@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { TEST_CLOCK_TODAY } from "~/test/clock";
-import { studentKeys } from "~/lib/swr/portal-keys";
 import {
   buildStudentSearchFilters,
   studentNameSearch,
@@ -21,40 +20,6 @@ const base: StudentSearchFilterInput = {
   pickupStatus: "all",
   companions: false,
 };
-
-it("keeps name terms and hyphenated classes distinct in the cache", () => {
-  const params = { ...base, photoState: "photos-disabled" };
-  expect(
-    studentKeys.search({ ...params, search: "-2", schoolClasses: ["3a"] }),
-  ).not.toBe(studentKeys.search({ ...params, schoolClasses: ["2-3a"] }));
-});
-
-it("groups only search keys with the same non-name filters", () => {
-  const params = {
-    ...base,
-    groupIds: ["9", "7"],
-    schoolClasses: ["3a", "2a"],
-    photoState: "photos-disabled",
-  };
-  const family = studentKeys.searchFamily(params);
-  expect(
-    studentKeys
-      .search({
-        ...params,
-        groupIds: ["7", "9"],
-        schoolClasses: ["2a", "3a"],
-        search: "Anna: Lena",
-      })
-      .startsWith(family),
-  ).toBe(true);
-  expect(studentKeys.search(params).startsWith(family)).toBe(true);
-  expect(
-    studentKeys.search({ ...params, groupIds: ["7"] }).startsWith(family),
-  ).toBe(false);
-  expect(studentKeys.search({ ...params, bus: "yes" }).startsWith(family)).toBe(
-    false,
-  );
-});
 
 describe("shared student search HTTP projection", () => {
   it("keeps the unfiltered today request slim and omits inactive filters", () => {
@@ -128,15 +93,5 @@ describe("studentNameSearch", () => {
     ["gross ", false],
   ])("matches %j: %s", (term, expected) => {
     expect(studentNameSearch(term)(child)).toBe(expected);
-  });
-
-  it.each([
-    ["ΟΣ", "ΟΣΚΑΡ", true],
-    ["οσ", "ΟΣ", true],
-    ["ος", "ΟΣ", false],
-  ])("matches %j in %j like the server: %s", (term, firstName, expected) => {
-    expect(studentNameSearch(term)({ ...child, first_name: firstName })).toBe(
-      expected,
-    );
   });
 });

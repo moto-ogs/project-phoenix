@@ -36,12 +36,10 @@ import {
 import {
   authGeneration,
   useInvalidateFamily,
-  useInvalidateMatching,
   useLiveEventScope,
   usePublishLiveChannel,
 } from "~/lib/swr";
 import { mutate } from "~/lib/swr/mutate";
-import { getSWRInvalidationCheckpoint } from "~/lib/swr/hooks";
 import { useOwnTimeRefresh } from "./use-own-time-refresh";
 import {
   SWR_FAMILIES,
@@ -323,7 +321,6 @@ function currentStudentDetailId(): string | null {
 export function useGlobalSSE(): SSEHookState {
   const { data: session, status: sessionStatus } = useSession();
   const invalidateFamily = useInvalidateFamily();
-  const invalidateMatching = useInvalidateMatching();
   const refreshOwnTime = useOwnTimeRefresh();
   const { refresh: refreshSupervision } = useOptionalSupervision();
   const supervisionRefresh = useLatest(refreshSupervision);
@@ -430,12 +427,10 @@ export function useGlobalSSE(): SSEHookState {
   // the burst's start time for the MAX_FLUSH_WAIT_MS cap.
   const burstStartedAt = useRef(0);
   const burstJitter = useRef(0);
-  const burstCheckpoint = useRef<number | undefined>(undefined);
 
   // SWR cache keys are tenant-prefixed by useSWRAuth (e.g. "tenant-slug:ogs-students-2").
   // All matchers must use includes() instead of startsWith() to match regardless of prefix.
   const resetPending = useCallback(() => {
-    burstCheckpoint.current = undefined;
     pendingGroupIds.current.clear();
     pendingStudentIds.current.clear();
     pendingOpenStudentIds.current.clear();
@@ -603,13 +598,11 @@ export function useGlobalSSE(): SSEHookState {
       const unfilteredSearchOnly =
         hasPendingUnscopedActiveEvent.current &&
         !hasPendingDashboardEvent.current;
-      const structuralSearchChange =
+      const broadSearch =
+        hasPendingBroadOgsEvent.current ||
         hasPendingArrivalScheduleEvent.current ||
         hasPendingPickupScheduleEvent.current ||
         hasPendingStudentUpdateEvent.current ||
-        // The companion grouping gets its links in the list response.
-        // A deletion may send only student_companions_changed.
-        hasPendingCompanionEvent.current ||
         // A group handover or leader change rewrites GetMyGroups and with it
         // the has_full_access of every row (modules/identityaccess/legacy/usercontext/
         // student_access.go), which decides whether a card shows absence,
@@ -621,30 +614,17 @@ export function useGlobalSSE(): SSEHookState {
         // crutch is gone, so the trigger has to be explicit. Rare event, so
         // the extra refetch costs nothing in practice.
         hasPendingGroupAccessEvent.current;
-      const broadSearch =
-        hasPendingBroadOgsEvent.current || structuralSearchChange;
       const scopedEduGroupIds = new Set(pendingEduGroupIds.current);
       if (broadSearch || unfilteredSearchOnly || scopedEduGroupIds.size > 0) {
-        void invalidateMatching(
+        mutate(
           (key) =>
-            key.startsWith(SEARCH_STUDENTS_KEY_PREFIX) &&
+            typeof key === "string" &&
+            key.includes(SEARCH_STUDENTS_KEY_PREFIX) &&
             (broadSearch ||
-              key.startsWith(SEARCH_STUDENTS_ALL_GROUPS_KEY) ||
+              key.includes(SEARCH_STUDENTS_ALL_GROUPS_KEY) ||
               [...scopedEduGroupIds].some((gid) =>
                 searchStudentsKeyTargetsGroup(key, gid),
               )),
-          {
-            expireInactive: true,
-            // A local save can already have started a newer read since an
-            // attendance signal arrived. Access and other structural changes
-            // still refresh at this flush, as does a reconnect.
-            ...(structuralSearchChange ||
-            hasPendingActivityEvent.current ||
-            hasPendingUnscopedActiveEvent.current ||
-            burstCheckpoint.current === undefined
-              ? {}
-              : { observedAt: burstCheckpoint.current }),
-          },
         ).catch((err) => {
           // Fire-and-forget: the screen keeps its data until the next event or load.
           logger.debug("swr_revalidation_failed", {
@@ -761,6 +741,25 @@ export function useGlobalSSE(): SSEHookState {
       // rename, photo upload or sick flag in the school would cost users
       // their work for changes that never touched the links.
       notifyStudentCompanionsChanged();
+
+      // The Kindersuche is the one companion view that does NOT fetch the links
+      // separately: its grouping rides along inside the student list response
+      // (companion_student_ids, only with include_companions=true), so the
+      // announcement above never reaches it. Deleting a linked child announces
+      // ONLY student_companions_changed — no student_updated, no checkin — so
+      // without this the open "Nach Laufgemeinschaft" view keeps listing the
+      // deleted child, and every grouping the delete changed, until something
+      // unrelated revalidates the list.
+      mutate(
+        (key) =>
+          typeof key === "string" && key.includes(SEARCH_STUDENTS_KEY_PREFIX),
+      ).catch((err) => {
+        // Fire-and-forget: the screen keeps its data until the next event or load.
+        logger.debug("swr_revalidation_failed", {
+          error: err instanceof Error ? err.message : String(err),
+          scope: "student_companions",
+        });
+      });
     }
 
     // Arrival schedule changes affect derived "Kommt heute nicht" badges and
@@ -1085,16 +1084,9 @@ export function useGlobalSSE(): SSEHookState {
     }
 
     resetPending();
-  }, [
-    accepts,
-    invalidateFamily,
-    invalidateMatching,
-    resetPending,
-    supervisionRefresh,
-  ]);
+  }, [accepts, invalidateFamily, resetPending, supervisionRefresh]);
 
   const scheduleFlush = useCallback(() => {
-    burstCheckpoint.current = getSWRInvalidationCheckpoint();
     const now = Date.now();
     if (debounceTimer.current) {
       clearTimeout(debounceTimer.current);

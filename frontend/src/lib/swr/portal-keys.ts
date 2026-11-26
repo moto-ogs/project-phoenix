@@ -2,6 +2,7 @@ import type {
   AccountPageQuery,
   AccountScope,
 } from "~/lib/operator/account-pages";
+import { encodeMultiValueParam } from "~/lib/multi-value-param";
 import { compareIds } from "~/lib/compare-ids";
 import {
   SEARCH_STUDENTS_KEY_PREFIX,
@@ -171,9 +172,6 @@ export const STUDENT_KEY_FAMILIES = {
 
 export const studentKeys = {
   search: searchKey,
-  searchFamily: searchListFamily,
-  searchRosterProbe: (params: Omit<SearchKeyParams, "search">) =>
-    `${searchListFamily(params)}roster-probe`,
   schoolClasses: () => "search-student-school-classes",
   statisticsReport: (params: object) =>
     resourceKey("student-statistics-report-", params),
@@ -219,11 +217,7 @@ export const studentKeys = {
     key.startsWith(STUDENT_KEY_FAMILIES.statusDayOverview) ||
     key.startsWith("student-statistics-report-"),
   preview(data: unknown, id: string): ListPreview | undefined {
-    const retained =
-      data && typeof data === "object" && "expandedRoster" in data
-        ? data.expandedRoster
-        : undefined;
-    const row = previewRow(data, id) ?? previewRow(retained, id);
+    const row = previewRow(data, id);
     if (!row) return undefined;
     const name =
       previewText(row.name) ??
@@ -503,7 +497,8 @@ export const timeTrackingKeys = {
     `time-tracking-schedule-targets-${from}-${to}`,
 } as const;
 
-interface SearchKeyParams {
+/** Exact list identity shared with intent; preserve the SSE group segment. */
+function searchKey(params: {
   groupIds: readonly string[];
   search: string;
   schoolClasses: readonly string[];
@@ -517,36 +512,10 @@ interface SearchKeyParams {
   companions: boolean;
   years: readonly string[];
   pickupStatus: string;
-  /** The registration answer filter (#6954). */
+  /** The registration answer filter (#6954); only an active one adds a segment. */
   enrollmentAnswer?: string;
-}
-
-/** One roster and all its name searches, with the same SSE group segment. */
-function searchListFamily(params: Omit<SearchKeyParams, "search">): string {
-  const filters = [
-    [...params.schoolClasses].sort(),
-    params.roomId,
-    params.dayStatus,
-    params.date,
-    params.isToday,
-    params.photoState,
-    params.bus,
-    params.photoConsent,
-    params.companions,
-    [...params.years].sort(),
-    params.pickupStatus,
-    params.enrollmentAnswer ?? "",
-  ];
-  const groupScope = searchStudentsGroupScope(
-    [...params.groupIds].sort(compareIds),
-  );
-  // The colon separates the encoded filters from the encoded name.
-  return `${SEARCH_STUDENTS_KEY_PREFIX}${groupScope}-${encodeURIComponent(JSON.stringify(filters))}:`;
-}
-
-/** Exact list identity shared with intent. */
-function searchKey(params: SearchKeyParams): string {
-  return `${searchListFamily(params)}${encodeURIComponent(JSON.stringify(params.search))}`;
+}): string {
+  return `${SEARCH_STUDENTS_KEY_PREFIX}${searchStudentsGroupScope(params.groupIds)}-${params.search}-${encodeMultiValueParam([...params.schoolClasses])}-${params.roomId}-${params.dayStatus}-${params.date}-${params.isToday ? "today" : "planning"}-${params.photoState}-${params.bus}-${params.photoConsent}-${params.companions}-${encodeMultiValueParam([...params.years])}-${params.pickupStatus}${params.enrollmentAnswer ? `-a${params.enrollmentAnswer}` : ""}`;
 }
 
 const catererOverviewFamily = "caterer-overview-";

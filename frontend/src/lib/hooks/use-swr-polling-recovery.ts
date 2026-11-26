@@ -19,7 +19,6 @@ export function useSwrPollingRecovery(
         error.status !== undefined &&
         error.status >= 400 &&
         error.status < 500 &&
-        error.status !== 408 &&
         error.status !== 429)
     )
       return;

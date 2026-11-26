@@ -25,9 +25,7 @@ vi.mock("~/lib/active-service", () => ({
     checkInStudentsToOpenRoom: mocks.toRoom,
   },
 }));
-vi.mock("~/lib/swr/hooks", () => ({
-  useInvalidateMatching: () => mocks.mutate,
-}));
+vi.mock("swr", () => ({ mutate: mocks.mutate }));
 vi.mock("~/contexts/ToastContext", () => ({
   useToast: () => ({ success: mocks.success, error: vi.fn() }),
   useApiErrorDisplay: () => ({
