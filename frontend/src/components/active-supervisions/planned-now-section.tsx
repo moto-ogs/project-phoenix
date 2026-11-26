@@ -56,9 +56,58 @@ interface PlannedNowSectionProps {
    * Listenende, die den Abstand zwischen den Karten selbst setzt.
    */
   readonly flush?: boolean;
+  /**
+   * Telefon: Die Kennzahl nennt, was sie zählt („Kinder erwartet“), die
+   * Kopfzeile auch die Zeit des nächsten Blocks.
+   */
+  readonly app?: boolean;
 }
 
 const SOON_THRESHOLD_MINUTES = 15;
+
+/** Was „Als Nächstes“ zeigt: abgelaufene Starts fallen weg, Überfälliges zuerst. */
+function visiblePlanned(
+  plannedNow: readonly PlannedTimetableInstance[],
+  now: Date,
+): PlannedTimetableInstance[] {
+  return [...plannedNow]
+    .filter((instance) => !isPlannedStartExpired(instance.startExpiresAt, now))
+    .sort((a, b) => {
+      if (a.isOverdue !== b.isOverdue) return a.isOverdue ? -1 : 1;
+      return a.minutesUntilStart - b.minutesUntilStart;
+    });
+}
+
+/**
+ * Telefon: Überfällige Blöcke aus „Als Nächstes“ als Chip in der Kopfkarte.
+ * Heute steht der Abschnitt direkt unter dem Kopf; am Telefon steht er hinter
+ * der Kinderliste, der Hinweis bliebe sonst unten verborgen. Der Chip gleicht
+ * dem im Abschnitt, dort stehen die Blöcke mit „Starten“. Kein Knopf: Die
+ * Chipzeile ist zu niedrig für eine 44-px-Trefferfläche, und eine eigene
+ * Zeile schöbe die Kinder aus dem ersten Bild. Ohne Symbol passt er am
+ * iPhone 15 noch in die Zeile; am SE rückt er in eine zweite.
+ */
+export function PlannedOverdueChip({
+  plannedNow,
+}: Readonly<{ plannedNow: readonly PlannedTimetableInstance[] }>) {
+  const now = useMinuteClock();
+  const overdueCount = visiblePlanned(plannedNow, now).filter(
+    (instance) => instance.isOverdue,
+  ).length;
+  if (overdueCount === 0) return null;
+  return (
+    <span
+      data-planned-overdue-chip=""
+      className="bg-moto-amber/20 text-moto-amber-strong inline-flex h-6 shrink-0 items-center gap-1 rounded-full px-2.5 text-xs font-medium"
+    >
+      {overdueCount} überfällig
+      <span className="sr-only">
+        {overdueCount === 1 ? " (ein Block" : ` (${overdueCount} Blöcke`}, siehe
+        „Als Nächstes“)
+      </span>
+    </span>
+  );
+}
 
 // Both numbers come from the backend, which counts only rows that are still
 // expected AND scheduled today. Deriving them from the roster length would
@@ -112,21 +161,14 @@ export function PlannedNowSection({
   isStartingInstance,
   onStart,
   flush = false,
+  app = false,
 }: PlannedNowSectionProps) {
   const showTimetableCounts = useShowTimetableCounts();
   const now = useMinuteClock();
   const [expandedIds, setExpandedIds] = useState<Set<string>>(() => new Set());
   const [sectionExpanded, setSectionExpanded] = useState<boolean | null>(null);
   const sortedPlanned = useMemo(
-    () =>
-      [...plannedNow]
-        .filter(
-          (instance) => !isPlannedStartExpired(instance.startExpiresAt, now),
-        )
-        .sort((a, b) => {
-          if (a.isOverdue !== b.isOverdue) return a.isOverdue ? -1 : 1;
-          return a.minutesUntilStart - b.minutesUntilStart;
-        }),
+    () => visiblePlanned(plannedNow, now),
     [now, plannedNow],
   );
 
@@ -213,9 +255,24 @@ export function PlannedNowSection({
               <span className="block text-base font-semibold text-gray-900">
                 Als Nächstes
               </span>
-              <span className="mt-0.5 block truncate text-sm text-gray-600">
-                {sortedPlanned[0]?.title}
-              </span>
+              {app && sortedPlanned[0] ? (
+                // Titel und Zeit des nächsten Blocks; passt beides nicht in
+                // eine Zeile, rückt die Zeit ganz in die nächste. Die Uhr
+                // trennt beide, ein Punkt hinge am Zeilenanfang.
+                <span className="mt-0.5 flex min-w-0 flex-wrap items-center gap-x-2 text-sm text-gray-600">
+                  <span className="max-w-full truncate">
+                    {sortedPlanned[0].title}
+                  </span>
+                  <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap">
+                    <MotoConceptIcon concept={careTimesConcept} size={14} />
+                    {blockTimeRange(sortedPlanned[0])} Uhr
+                  </span>
+                </span>
+              ) : (
+                <span className="mt-0.5 block truncate text-sm text-gray-600">
+                  {sortedPlanned[0]?.title}
+                </span>
+              )}
             </span>
             <ChevronDown
               className={`phone:ml-auto h-4 w-4 shrink-0 text-gray-500 transition-transform group-hover:text-gray-600 ${isSectionExpanded ? "rotate-180" : ""}`}
@@ -231,7 +288,11 @@ export function PlannedNowSection({
             {showTimetableCounts && (
               <SummaryPill
                 concept={childrenConcept}
-                label={`${expectedCount} Kinder`}
+                label={
+                  app
+                    ? `${expectedCount} Kinder erwartet`
+                    : `${expectedCount} Kinder`
+                }
               />
             )}
             {overdueCount > 0 ? (
