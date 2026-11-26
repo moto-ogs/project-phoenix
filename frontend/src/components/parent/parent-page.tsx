@@ -4,6 +4,7 @@ import type React from "react";
 import { useTranslations } from "next-intl";
 import { MobilePageHelpTarget } from "~/components/ui/mobile-page-help-target";
 import { BackLink } from "~/components/ui/back-link";
+import { PARENT_HEAD_ROW } from "~/components/ui/control-geometry";
 import {
   PageBody,
   type PageBodyEmpty,
@@ -136,13 +137,13 @@ export function ParentPageHeader({
     <header>
       <SectionCard
         overflow="visible"
-        className={prominent ? "compact:p-5 max-sm:p-5" : ""}
+        className={prominent ? PARENT_HEAD_ROW.prominentSurface : ""}
       >
         <div className="space-y-3">
           {backHref && backLabel && (
             <BackLink href={backHref} label={backLabel} />
           )}
-          <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className={PARENT_HEAD_ROW.row}>
             <SectionCard
               bare
               kicker={kicker}
@@ -151,7 +152,7 @@ export function ParentPageHeader({
               leading={media}
               headingLevel={1}
               titleSize={prominent ? "display" : "page"}
-              className="min-w-0 flex-1 basis-0"
+              className={PARENT_HEAD_ROW.title}
             />
             {actions ? (
               <div className="contents sm:flex sm:shrink-0 sm:items-center sm:gap-2">
@@ -175,12 +176,21 @@ export function ParentPageHeader({
  * head (`Suspense`, auth guard, shell). `rows` is the number of cards below the
  * head.
  */
-export function ParentPageSkeleton({ rows = 2 }: Readonly<{ rows?: number }>) {
+export function ParentPageSkeleton({
+  rows = 2,
+  prominent = false,
+}: Readonly<{
+  rows?: number;
+  /** Für die Startseite, deren Kopf die Begrüßung (`prominent`) trägt. */
+  prominent?: boolean;
+}>) {
   const t = useTranslations("parentNav");
   return (
     <SkeletonRegion label={t("sectionLoading")}>
       <div className="w-full space-y-5">
-        <TenantPageHeaderSkeleton matches="parent-page" />
+        <TenantPageHeaderSkeleton
+          matches={prominent ? "parent-start" : "parent-page"}
+        />
         {Array.from({ length: rows }, (_, index) => (
           <ParentSectionSkeleton key={index} announce={false} />
         ))}
