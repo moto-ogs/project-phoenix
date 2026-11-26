@@ -147,64 +147,66 @@ function SearchBarContent({
   };
 
   return (
-    <div className={`relative ${className}`}>
-      <svg
-        className={`absolute top-1/2 left-3 -translate-y-1/2 transform ${iconSizeClasses[size]} text-gray-400`}
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-        />
-      </svg>
-
-      <input
-        {...inputProps}
-        // A search only filters the page and holds no draft: a tab of an
-        // earlier release may reload over it (lib/deployment-reload.ts).
-        data-search-field=""
-        type="text"
-        placeholder={placeholder}
-        value={shownValue}
-        aria-invalid={draftError ? true : inputProps?.["aria-invalid"]}
-        aria-describedby={
-          draftError
-            ? [describedBy, hintId].filter(Boolean).join(" ")
-            : describedBy
-        }
-        onChange={(e) => handleChange(e.target.value)}
-        className={`w-full rounded-2xl border border-gray-500/80 bg-white text-gray-900 placeholder-gray-500 transition duration-200 focus:border-gray-900 focus:ring-0 focus:outline-none ${sizeClasses[size]} ${shownValue ? "pr-10" : ""} `}
-      />
-
-      {shownValue && (
-        <button
-          type="button"
-          aria-label="Suche löschen"
-          onClick={() => {
-            commitNow("");
-            onClear?.();
-          }}
-          className="absolute top-1/2 right-2 -translate-y-1/2 transform rounded-full p-1 transition-colors hover:bg-gray-100 md:right-3"
+    <div className={className}>
+      <div className="relative">
+        <svg
+          className={`absolute top-1/2 left-3 -translate-y-1/2 transform ${iconSizeClasses[size]} text-gray-400`}
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
         >
-          <svg
-            className={`${iconSizeClasses[size]} text-gray-400`}
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+          />
+        </svg>
+
+        <input
+          {...inputProps}
+          // A search only filters the page and holds no draft: a tab of an
+          // earlier release may reload over it (lib/deployment-reload.ts).
+          data-search-field=""
+          type="text"
+          placeholder={placeholder}
+          value={shownValue}
+          aria-invalid={draftError ? true : inputProps?.["aria-invalid"]}
+          aria-describedby={
+            draftError
+              ? [describedBy, hintId].filter(Boolean).join(" ")
+              : describedBy
+          }
+          onChange={(e) => handleChange(e.target.value)}
+          className={`w-full rounded-2xl border border-gray-500/80 bg-white text-gray-900 placeholder-gray-500 transition duration-200 focus:border-gray-900 focus:ring-0 focus:outline-none ${sizeClasses[size]} ${shownValue ? "pr-10" : ""} `}
+        />
+
+        {shownValue && (
+          <button
+            type="button"
+            aria-label="Suche löschen"
+            onClick={() => {
+              commitNow("");
+              onClear?.();
+            }}
+            className="absolute top-1/2 right-2 -translate-y-1/2 transform rounded-full p-1 transition-colors hover:bg-gray-100 md:right-3"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
-        </button>
-      )}
+            <svg
+              className={`${iconSizeClasses[size]} text-gray-400`}
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        )}
+      </div>
       <FieldErrorHint id={hintId} message={draftError} live />
     </div>
   );

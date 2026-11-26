@@ -752,17 +752,15 @@ interface OpeningSource<T> {
 async function readThrough<T>(
   current: OpeningSource<T>,
   flight: number,
+  isCurrent: () => boolean,
 ): Promise<OpeningFlight<T>> {
-  const generation = dataGenerationOf(current.fullKey);
   for (let tries = 0; ; tries += 1) {
     try {
       const data = await current.mutate(
         lockFetcher(current.fullKey, current.fetcher)(),
         { revalidate: false },
       );
-      // Undefined: a scope or data bump dropped the run; the bump
-      // started a new opening.
-      if (dataGenerationOf(current.fullKey) !== generation) {
+      if (!isCurrent()) {
         return { ok: true, flight, data: undefined };
       }
       if (data !== undefined) {
@@ -771,9 +769,8 @@ async function readThrough<T>(
       }
       return { ok: true, flight, data };
     } catch (error) {
-      // A data bump ended this opening, not just its request. Only the new
-      // opening may read through it, including after an external refusal.
-      if (dataGenerationOf(current.fullKey) !== generation) {
+      // A superseded opening cannot retry or change the shared refusal.
+      if (!isCurrent()) {
         return { ok: true, flight, data: undefined };
       }
       if (isDiscardedAnswer(error) && tries < 2) continue;
@@ -824,26 +821,6 @@ export function useOpeningRead<T>(
     fullKey === null
       ? null
       : JSON.stringify([fullKey, generation, dataGenerationOf(fullKey)]);
-  // SWR starts automatic reads on a key change even with mount
-  // revalidation off. Until this opening started its own read, none runs;
-  // reset before SWR's own layout effects of the new key can read.
-  const ready = useRef(false);
-  useLayoutEffect(() => {
-    ready.current = false;
-  }, [opening]);
-  const read = useScopedSWR<T, unknown>(
-    key,
-    fetcher,
-    {
-      ...OPENING_READER,
-      isPaused: () => !ready.current,
-      ...(options.onSuccess ? { onSuccess: options.onSuccess } : {}),
-      ...(options.onError ? { onError: options.onError } : {}),
-    },
-    swrConfig,
-    false,
-  );
-
   const [held, setHeld] = useState<{
     serial: number;
     flight: number;
@@ -857,6 +834,45 @@ export function useOpeningRead<T>(
     setTrack({ opening, serial });
     setHeld(undefined);
   }
+  // The identity belongs to a visible commit, including Activity reveals
+  // that reconnect effects without changing the key or the render state.
+  const committed = useRef<{ serial: number } | null>(null);
+  useLayoutEffect(() => {
+    committed.current = { serial };
+    return () => {
+      committed.current = null;
+    };
+  }, [serial]);
+  // SWR starts automatic reads on a key change even with mount
+  // revalidation off. Until this opening started its own read, none runs;
+  // reset before SWR's own layout effects of the new key can read.
+  const ready = useRef(false);
+  useLayoutEffect(() => {
+    ready.current = false;
+  }, [opening]);
+  const read = useScopedSWR<T, unknown>(
+    key,
+    async () => {
+      // An external invalidation can also read through SWR's own fetcher.
+      const started = committed.current;
+      if (started === null) throw new DiscardedAnswer();
+      const data = await fetcher().catch((error: unknown) => {
+        if (committed.current !== started) throw new DiscardedAnswer();
+        throw error;
+      });
+      if (committed.current !== started) throw new DiscardedAnswer();
+      return data;
+    },
+    {
+      ...OPENING_READER,
+      isPaused: () => !ready.current,
+      ...(options.onSuccess ? { onSuccess: options.onSuccess } : {}),
+      ...(options.onError ? { onError: options.onError } : {}),
+    },
+    swrConfig,
+    false,
+  );
+
   const [attempt, setAttempt] = useState({ serial, count: 0 });
   const count = attempt.serial === serial ? attempt.count : 0;
   const [failed, setFailed] = useState<{
@@ -892,16 +908,34 @@ export function useOpeningRead<T>(
     };
   });
 
-  const readOnce = useCallback(async (): Promise<OpeningFlight<T>> => {
+  const readOnce = useCallback(async (): Promise<
+    OpeningFlight<T> & { readonly isCurrent: () => boolean }
+  > => {
     const current = latest.current;
+    const started = committed.current;
     const flight = ++flights.current;
     const { fullKey: readKey } = current;
-    if (readKey === null) {
-      return { ok: false, flight, error: new DiscardedAnswer() };
+    if (readKey === null || started === null) {
+      return {
+        ok: false,
+        flight,
+        error: new DiscardedAnswer(),
+        isCurrent: () => false,
+      };
     }
+    const dataGeneration = dataGenerationOf(readKey);
+    const isCurrent = () =>
+      committed.current === started &&
+      flights.current === flight &&
+      dataGenerationOf(readKey) === dataGeneration;
     setPending(flight);
     try {
-      return await readThrough({ ...current, fullKey: readKey }, flight);
+      const result = await readThrough(
+        { ...current, fullKey: readKey },
+        flight,
+        isCurrent,
+      );
+      return { ...result, isCurrent };
     } finally {
       setPending((newest) => (newest === flight ? null : newest));
     }
@@ -914,7 +948,7 @@ export function useOpeningRead<T>(
     let current = true;
     ready.current = true;
     void readOnce().then((result) => {
-      if (!current) return;
+      if (!current || !result.isCurrent()) return;
       if (!result.ok) {
         setFailed({ serial, flight: result.flight, error: result.error });
       } else if (result.data !== undefined) {
@@ -946,6 +980,7 @@ export function useOpeningRead<T>(
   const reload = useCallback(async () => {
     const forSerial = latest.current.serial;
     const result = await readOnce();
+    if (!result.isCurrent()) throw new DiscardedAnswer();
     if (!result.ok) throw result.error;
     if (result.data === undefined) throw new DiscardedAnswer();
     const data = result.data;
@@ -957,6 +992,7 @@ export function useOpeningRead<T>(
       const current = latest.current;
       if (args.length === 0) {
         return readOnce().then((result) => {
+          if (!result.isCurrent()) return undefined;
           if (!result.ok) {
             setFailed({
               serial: current.serial,
@@ -972,12 +1008,19 @@ export function useOpeningRead<T>(
           return result.data;
         });
       }
+      const started = committed.current;
       const flight = ++flights.current;
       const written = (
         current.mutate as (...values: unknown[]) => Promise<T | undefined>
       )(...args);
       if (args[0] === undefined) return written;
       return written.then((data) => {
+        if (
+          started === null ||
+          committed.current !== started ||
+          flights.current !== flight
+        )
+          return undefined;
         if (data !== undefined) {
           setHeld({ serial: current.serial, flight, data });
         }

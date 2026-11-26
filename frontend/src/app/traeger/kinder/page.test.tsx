@@ -434,6 +434,34 @@ describe("TraegerChildrenPage", () => {
     ).toBeVisible();
   });
 
+  it("keeps the fresh list when a pre-hide read is refused after React restores the page", async () => {
+    const old = deferred<TraegerChildrenPage>();
+    api.fetchTraegerChildren
+      .mockReturnValueOnce(old.promise)
+      .mockResolvedValueOnce(pageOf([BERG]));
+    const view = (mode: "visible" | "hidden") => (
+      <TraegerResourceTestProvider>
+        <Activity mode={mode}>
+          <ChildrenPage />
+        </Activity>
+      </TraegerResourceTestProvider>
+    );
+    const { rerender } = render(view("visible"));
+    await waitFor(() =>
+      expect(api.fetchTraegerChildren).toHaveBeenCalledTimes(1),
+    );
+    rerender(view("hidden"));
+    rerender(view("visible"));
+    await screen.findAllByText("Berg, Anna");
+
+    await act(async () => {
+      old.reject(new ApiError("refused", 403));
+      await old.promise.catch(() => undefined);
+    });
+
+    expect(screen.getByText("Berg, Anna")).toBeVisible();
+  });
+
   it("withdraws a school's shown names when its download is refused", async () => {
     navigation.query = "schule=4";
     api.downloadTraegerChildren.mockRejectedValue(
@@ -745,6 +773,30 @@ describe("TraegerChildrenPage", () => {
     ).toBeVisible();
     expect(screen.queryByText("Aksoy, Ömer")).not.toBeInTheDocument();
     expect(screen.getByText("Erler, Ömer")).toBeVisible();
+  });
+
+  it("loads the new day's first page when the first click after midnight precedes the date poll", async () => {
+    setTestClock("2026-11-26T22:59:30Z");
+    api.fetchTraegerChildren
+      .mockResolvedValueOnce(
+        pageOf([AKSOY], { matched: 2, nextCursor: "yesterday" }),
+      )
+      .mockResolvedValueOnce(pageOf([BERG], { rosterDate: "2026-11-27" }));
+    renderPage();
+    const more = await screen.findByRole("button", {
+      name: /Weitere Kinder laden/,
+    });
+
+    setTestClock("2026-11-26T23:00:00Z");
+    fireEvent.click(more);
+
+    await screen.findAllByText("Berg, Anna");
+    expect(screen.queryByText("Aksoy, Ömer")).not.toBeInTheDocument();
+    expect(api.fetchTraegerChildren).toHaveBeenCalledTimes(2);
+    expect(api.fetchTraegerChildren).toHaveBeenLastCalledWith({
+      schoolId: "",
+      search: "",
+    });
   });
 
   it("opens a fresh roster after Berlin midnight and discards yesterday's continuation", async () => {

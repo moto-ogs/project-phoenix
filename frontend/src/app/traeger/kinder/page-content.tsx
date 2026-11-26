@@ -38,8 +38,7 @@ import { useApiErrorDisplay } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import { isPositiveInt64Id } from "~/lib/compare-ids";
 import { childrenConcept } from "~/lib/concepts/children";
-import { berlinTodayISO } from "~/lib/date-helpers";
-import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
+import { useBerlinTodayWithRefresh } from "~/lib/hooks/use-berlin-today";
 import { createLogger } from "~/lib/logger";
 import { schoolClassLabel, schoolClassName } from "~/lib/school-class-label";
 import { IsolatedSWRCache, useInvalidateMatching } from "~/lib/swr";
@@ -191,7 +190,7 @@ function ChildrenContent({
   const schoolId = tab === ALL_SCHOOLS ? "" : tab;
   const invalidSchool = tab !== ALL_SCHOOLS && !isPositiveInt64Id(tab);
   const term = search.trim();
-  const day = useBerlinToday();
+  const [day, refreshDay] = useBerlinTodayWithRefresh();
   const [draftPending, setDraftPending] = useState(false);
   const { show: showActionError } = useApiErrorDisplay();
 
@@ -262,15 +261,11 @@ function ChildrenContent({
   );
 
   const loadMore = useCallback(async () => {
-    if (
-      !page ||
-      !children ||
-      !nextCursor ||
-      loadingMore ||
-      draftPending ||
-      berlinTodayISO() !== day
-    )
+    if (!page || !children || !nextCursor || loadingMore || draftPending)
       return;
+    // A new date changes the list key and opens its first page, not the
+    // continuation of the previous day's roster.
+    if (refreshDay() !== day) return;
     let complete: ReturnType<typeof beginPageRead> | undefined;
     setLoadingPage(page);
     try {
@@ -279,7 +274,7 @@ function ChildrenContent({
       if (
         !complete.isCurrent() ||
         shownPage.current !== page ||
-        berlinTodayISO() !== day
+        refreshDay() !== day
       )
         return;
       // A renamed child can reappear after the cursor. Its newer position
@@ -299,7 +294,7 @@ function ChildrenContent({
       if (
         !complete?.isCurrent() ||
         shownPage.current !== page ||
-        berlinTodayISO() !== day
+        refreshDay() !== day
       )
         return;
       if (isRefusal(err)) {
@@ -320,6 +315,7 @@ function ChildrenContent({
     loadingMore,
     draftPending,
     day,
+    refreshDay,
     beginPageRead,
     listKey,
     filter,

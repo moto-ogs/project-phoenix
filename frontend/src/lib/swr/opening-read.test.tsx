@@ -162,6 +162,69 @@ describe("useOpeningRead (showCached: false)", () => {
     },
   );
 
+  it.each(["reload", "mutate"] as const)(
+    "discards a late %s instead of replacing another opening's answer",
+    async (action) => {
+      const old = deferred<string>();
+      const fetcher = vi
+        .fn()
+        .mockResolvedValueOnce("First opening")
+        .mockReturnValueOnce(old.promise)
+        .mockResolvedValueOnce("Second opening");
+      const { result, rerender } = renderHook(
+        ({ resourceKey }) => useAudited(resourceKey, fetcher),
+        { initialProps: { resourceKey: "late-reload-first" } },
+      );
+      await waitFor(() => expect(result.current.data).toBe("First opening"));
+
+      let pending!: Promise<unknown>;
+      act(() => {
+        pending = result.current[action]().catch((error: unknown) => error);
+      });
+      rerender({ resourceKey: "late-reload-second" });
+      await waitFor(() => expect(result.current.data).toBe("Second opening"));
+
+      await act(async () => {
+        old.resolve("Outdated first opening");
+        const value = await pending;
+        if (action === "reload")
+          expect(value).toMatchObject({ name: "DiscardedAnswer" });
+        else expect(value).toBeUndefined();
+      });
+      expect(result.current.data).toBe("Second opening");
+      expect(result.current.isLoading).toBe(false);
+    },
+  );
+
+  it("ignores a late refusal after reopening the same filter", async () => {
+    const old = deferred<string>();
+    const fetcher = vi
+      .fn()
+      .mockReturnValueOnce(old.promise)
+      .mockResolvedValueOnce("Other filter")
+      .mockResolvedValueOnce("Reopened filter");
+    const onError = vi.fn();
+    const { result, rerender } = renderHook(
+      ({ resourceKey }) =>
+        useOpeningRead(resourceKey, fetcher, { showCached: false, onError }),
+      { initialProps: { resourceKey: "late-refusal-first" } },
+    );
+    await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(1));
+    rerender({ resourceKey: "late-refusal-second" });
+    await waitFor(() => expect(result.current.data).toBe("Other filter"));
+    rerender({ resourceKey: "late-refusal-first" });
+    await waitFor(() => expect(result.current.data).toBe("Reopened filter"));
+
+    await act(async () => {
+      old.reject(new ApiError("refused", 403));
+      await old.promise.catch(() => undefined);
+    });
+
+    expect(onError).not.toHaveBeenCalled();
+    expect(result.current.error).toBeUndefined();
+    expect(result.current.data).toBe("Reopened filter");
+  });
+
   it("withdraws confirmed data when its generation is cleared", async () => {
     const next = deferred<string>();
     const fetcher = vi
