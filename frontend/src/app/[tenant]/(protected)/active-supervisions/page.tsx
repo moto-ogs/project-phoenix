@@ -479,6 +479,18 @@ function MeinRaumPageContent() {
       "Keine Aufsicht aktiv"
     );
   const appSupervisionSummary = appSupervisionSummaryFor(false);
+  const appCompactCount = supervisionName ? (
+    <TenantPageStats
+      items={[
+        {
+          label:
+            supervisionOccupancy.limit != null && supervisionOccupancy.limit > 0
+              ? `${supervisionCount} / ${supervisionOccupancy.limit} da`
+              : `${supervisionCount} da`,
+        },
+      ]}
+    />
+  ) : undefined;
   const supervisionSummary = appMode ? (
     appSupervisionSummary
   ) : supervisionName ? (
@@ -605,8 +617,33 @@ function MeinRaumPageContent() {
       </Button>
     );
     // Während eine Liste läuft, steht der Start im „…“-Menü der Kopfkarte
-    // und, damit man ihn ohne Menü findet, als leiser Knopf am Listenende.
-    if (appHasRunningRoster) return button;
+    // und, damit man ihn ohne Menü findet, als eigene Karte am Listenende:
+    // ein loser Knopf zwischen den Karten brach das Kartenmuster.
+    if (appHasRunningRoster) {
+      return (
+        <SectionCard
+          title="Spontane Aktivität"
+          icon={Sparkles}
+          titleSize="sm"
+          titleClassName="text-gray-700"
+          inlineActions
+          action={
+            <Button
+              type="button"
+              variant="outline"
+              size="compact"
+              disabled={disabled}
+              disabledReason={spontaneousStartBlockedReason}
+              aria-label="Spontane Aktivität starten"
+              tooltip="Öffnet ein Fenster: Aktivität wählen, Raum belegen, Kinder danach hinzufügen."
+              onClick={open}
+            >
+              Starten
+            </Button>
+          }
+        />
+      );
+    }
     if (appStartablePlanned) return button;
     return <ActionBar>{button}</ActionBar>;
   };
@@ -778,13 +815,21 @@ function MeinRaumPageContent() {
   // In der App stehen die Abzeichen vorn in der Chipzeile der Kopfkarte
   // (heute: eigene Zeile unter den Angaben). Im „…“-Blatt stünden sie wie
   // Knöpfe; dort bleibt nur, was man tippt.
+  // „Aktiv“ neben „Eigene Aufsicht“ sagte am Telefon zweimal dasselbe: Die
+  // eigene Aufsicht läuft. Der Zustand steht dort nur, wenn er abweicht
+  // („Beendet“).
+  const appRunStateBadge =
+    ownSupervisionBadge &&
+    currentTimetableRoster?.instance.status !== "completed"
+      ? null
+      : runStateBadge;
   const appHeadBadges =
-    runStateBadge ||
+    appRunStateBadge ||
     openRoomBadge ||
     ownSupervisionBadge ||
     foreignSupervisionBadge ? (
       <>
-        {runStateBadge}
+        {appRunStateBadge}
         {openRoomBadge}
         {ownSupervisionBadge}
         {foreignSupervisionBadge}
@@ -1283,6 +1328,9 @@ function MeinRaumPageContent() {
       title={supervisionName ?? "Aktuelle Aufsicht"}
       info={ACTIVE_SUPERVISIONS_INFO}
       stats={appMode ? appStats : supervisionSummary}
+      // Beim Rollen bleibt im schmalen Kopf die Zahl der Kinder stehen, wie
+      // auf den anderen Seiten der Kurzstatus.
+      appCompactStats={appMode ? appCompactCount : undefined}
       back={isSharedRoomView}
       backHref={
         currentOpenRoom ? `/rooms/${currentOpenRoom.roomId}` : undefined
