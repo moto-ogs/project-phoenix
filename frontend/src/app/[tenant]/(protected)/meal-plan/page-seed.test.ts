@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ServerSeed } from "~/lib/swr/server-seed";
 import { tenantListKeys } from "~/lib/swr/tenant-list-keys";
+import { TEST_CLOCK_TODAY } from "~/test/clock";
 
 const state = vi.hoisted(() => ({
   context: undefined as unknown,
@@ -25,7 +26,7 @@ import MealPlanPage from "./page";
 import { mealPlanSeedClaims } from "./page-seed";
 import { mealPlanSeedKeys } from "./seed-keys";
 
-const today = "2026-09-09";
+const today = TEST_CLOCK_TODAY;
 const keys = mealPlanSeedKeys(today);
 
 beforeEach(() => {
@@ -57,7 +58,7 @@ beforeEach(() => {
     if (route.pattern === "/api/meal-plan/days") return { data: [] };
     if (route.pattern === "/api/meal-plan/cancellations")
       return {
-        data: [{ date: "2026-09-09", reason: "Der Caterer liefert nicht." }],
+        data: [{ date: today, reason: "Der Caterer liefert nicht." }],
       };
     throw new Error(`unexpected route ${route.pattern}`);
   });
@@ -73,7 +74,7 @@ describe("meal plan first-display seed", () => {
       keys.caterer,
     ]);
     expect(keys.cancellations).toBe(
-      tenantListKeys.mealCancellations("2026-09-07"),
+      tenantListKeys.mealCancellations(keys.from),
     );
   });
 
@@ -91,13 +92,13 @@ describe("meal plan first-display seed", () => {
       render: true,
     });
     expect(await cancellation?.value).toEqual([
-      { date: "2026-09-09", reason: "Der Caterer liefert nicht." },
+      { date: today, reason: "Der Caterer liefert nicht." },
     ]);
     expect(state.readContract).toHaveBeenCalledWith(
       expect.objectContaining({ pattern: "/api/meal-plan/cancellations" }),
       expect.objectContaining({
         token: "seed-token",
-        query: { from: "2026-09-07", to: "2026-09-11" },
+        query: { from: keys.from, to: keys.to },
       }),
     );
   });
