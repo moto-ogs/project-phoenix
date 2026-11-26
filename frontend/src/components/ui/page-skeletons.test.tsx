@@ -52,28 +52,33 @@ describe("TenantPageHeaderSkeleton", () => {
     expect(container.querySelector(".h-8.w-8")).toBeInTheDocument();
   });
 
-  // Unter `lg` steht die Hilfe als 44-px-Knopf im Kopf von `TenantPage`. Ohne
-  // denselben Platz im Ladekopf wächst der Kopf beim Laden um diesen Knopf
-  // (#6568). Das Elternportal behält seinen bisherigen Ladekopf (#6613).
-  it("offers the page help its place in the head, as TenantPage does", () => {
-    const { registerTarget } = helpRegistration;
-    const { rerender } = render(
-      <MobilePageHelpTargetContext.Provider value={helpRegistration}>
-        <TenantPageHeaderSkeleton matches="parent-page" />
-      </MobilePageHelpTargetContext.Provider>,
-    );
-    expect(screen.getByRole("banner")).toBeInTheDocument();
-    expect(registerTarget).not.toHaveBeenCalled();
+  // Unter `lg` steht die Hilfe als Knopf im Kopf von `TenantPage` und von
+  // `ParentPageHeader`. Ohne denselben Platz im Ladekopf wächst der Kopf beim
+  // Laden um diesen Knopf (#6568, im Elternportal #6613).
+  it.each(["tenant-page", "parent-page"] as const)(
+    "offers the page help its place in the head (%s)",
+    (matches) => {
+      const { registerTarget } = helpRegistration;
+      registerTarget.mockClear();
+      render(
+        <MobilePageHelpTargetContext.Provider value={helpRegistration}>
+          <TenantPageHeaderSkeleton matches={matches} stats={false} />
+        </MobilePageHelpTargetContext.Provider>,
+      );
+      expect(registerTarget).toHaveBeenCalledOnce();
+      expect(screen.getByRole("banner")).toContainElement(
+        registerTarget.mock.calls[0]?.[0] as HTMLElement,
+      );
+    },
+  );
 
-    rerender(
-      <MobilePageHelpTargetContext.Provider value={helpRegistration}>
-        <TenantPageHeaderSkeleton stats={false} info />
-      </MobilePageHelpTargetContext.Provider>,
+  // Der Elternkopf hat keine Statuszeile; sein Ladekopf zeigt nur den Titel.
+  it("never shows a status line for the parents portal head", () => {
+    const { container } = render(
+      <TenantPageHeaderSkeleton matches="parent-page" stats />,
     );
-    expect(registerTarget).toHaveBeenCalledOnce();
-    expect(screen.getByRole("banner")).toContainElement(
-      registerTarget.mock.calls[0]?.[0] as HTMLElement,
-    );
+
+    expect(container.querySelectorAll(".animate-pulse")).toHaveLength(1);
   });
 });
 
