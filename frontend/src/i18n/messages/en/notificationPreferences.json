@@ -49,6 +49,10 @@
       "label": "Closing days",
       "description": "When the {careTerm} adds, changes or removes a closing day. The notice in moto always comes; a phone notification only for closing days within the next 14 days."
     },
+    "parent_opening_change_changed": {
+      "label": "Changed opening hours",
+      "description": "When the {careTerm} opens at other times or closes earlier on a day. The notice in moto always comes; a phone notification only for days within the next 14 days."
+    },
     "parent_billing_document": {
       "label": "New document from the provider",
       "description": "When the provider sends or shares a document with you, for example a contract."

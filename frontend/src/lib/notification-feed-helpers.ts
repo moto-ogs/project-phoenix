@@ -78,6 +78,8 @@ export const NOTIFICATION_FEED_ANALYTICS_TYPES = [
   "meal_plan_changed",
   "school_closing_day_changed",
   "parent_school_closing_day_changed",
+  "opening_change_changed",
+  "parent_opening_change_changed",
   "staffing_changed",
   "group_staffing_changed",
   "team_member_absent",

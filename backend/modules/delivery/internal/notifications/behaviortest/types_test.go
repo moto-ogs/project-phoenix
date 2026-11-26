@@ -31,7 +31,7 @@ func TestNotificationTypeCatalogue(t *testing.T) {
 
 	t.Run("staff catalogue is grouped and ordered", func(t *testing.T) {
 		defs := notifications.TypesForPortal(notifications.PortalStaff)
-		require.Len(t, defs, 25)
+		require.Len(t, defs, 26)
 
 		keys := make([]string, len(defs))
 		for i, def := range defs {
@@ -60,6 +60,7 @@ func TestNotificationTypeCatalogue(t *testing.T) {
 			notifications.TypeInstanceRoomChanged,
 			notifications.TypeSchoolClosingDayChanged,
 			notifications.TypeInstanceRoomChangedLater,
+			notifications.TypeOpeningChangeChanged,
 			notifications.TypeStaffingChanged,
 			notifications.TypeGroupStaffingChanged,
 			notifications.TypeTeamMemberAbsent,
@@ -68,7 +69,7 @@ func TestNotificationTypeCatalogue(t *testing.T) {
 
 	t.Run("parent catalogue is separate", func(t *testing.T) {
 		defs := notifications.TypesForPortal(notifications.PortalParent)
-		require.Len(t, defs, 12)
+		require.Len(t, defs, 13)
 
 		keys := make([]string, len(defs))
 		for i, def := range defs {
@@ -86,6 +87,7 @@ func TestNotificationTypeCatalogue(t *testing.T) {
 			notifications.TypeParentCareCancelled,
 			notifications.TypeParentRoomChanged,
 			notifications.TypeParentSchoolClosingDayChanged,
+			notifications.TypeParentOpeningChangeChanged,
 			notifications.TypeParentRoomChangedLater,
 		}, keys, "order is fixed by group then SortOrder, not by registration order")
 
@@ -127,6 +129,9 @@ func TestNotificationTypeCatalogue(t *testing.T) {
 			notifications.TypeParentClassTimetableChanged:   "notifications.class_timetable_changed_enabled",
 			notifications.TypeSchoolClosingDayChanged:       "notifications.school_closing_day_enabled",
 			notifications.TypeParentSchoolClosingDayChanged: "notifications.school_closing_day_enabled",
+			notifications.TypeOpeningChangeChanged:          "notifications.opening_change_enabled",
+			notifications.TypeParentOpeningChangeChanged:    "notifications.opening_change_enabled",
+			notifications.TypeTraegerOpeningChangeChanged:   "notifications.opening_change_enabled",
 		}
 		for key, expected := range gated {
 			def, ok := notifications.GetType(key)

@@ -39,6 +39,8 @@ export function parentNotificationsTopic(): HelpTopic {
       "Ändert sich das Essen an einem Tag, an dem dein Kind ein Essen gebucht hat, steht das auch unter `Hinweise`. Der Hinweis öffnet den Speiseplan dieser Woche. Aufs Handy kommt er nur, wenn du `Speiseplan geändert` einschaltest.",
       "Findet ein Termin deines Kindes in einem anderen Raum statt, steht das auch unter `Hinweise`. Für heute und morgen bekommst du dazu eine Benachrichtigung, solange du `Raumänderung heute oder morgen` nicht ausschaltest.",
       "Trägt die OGS einen Schließtag ein, ändert oder löscht ihn, steht das ebenfalls unter `Hinweise`. Das Thema `Schließtage` ist von Anfang an eingeschaltet. Eine Mitteilung aufs Handy kommt nur, wenn der Tag in den nächsten 14 Tagen liegt.",
+      // #8178: Hinweis zur geänderten Öffnungszeit.
+      "Öffnet die OGS an einem Tag zu anderen Zeiten oder schließt früher, steht das auch unter `Hinweise`. Das Thema `Geänderte Öffnungszeit` ist von Anfang an eingeschaltet. Eine Mitteilung aufs Handy kommt nur, wenn der Tag in den nächsten 14 Tagen liegt.",
       "Für spätere Tage schalte `Raumänderung an späteren Tagen` selbst ein. Sie gilt bis 14 Tage im Voraus.",
       "Ändert sich der Unterrichtsschluss in der Klasse deines Kindes, steht in moto `Stundenplan geändert`. Eine Mitteilung aufs Handy kommt dazu, wenn du `Stundenplan der Klasse` einschaltest und die Änderung in den nächsten 14 Tagen gilt.",
       "Ein Hinweis gilt erst als gelesen, wenn du ihn wählst oder `Alle als gelesen markieren` wählst.",

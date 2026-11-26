@@ -122,6 +122,14 @@ func NewOpeningChanges() schoolcalendar.OpeningChanges {
 	return postgres.NewOpeningChangeStore(postgres.NewCompositionDatabase())
 }
 
+// NewNoticedOpeningChanges composes the opening changes of a school (#7654) whose writes tell the school, its families and its Träger (#8178); nil today is the Berlin day.
+func NewNoticedOpeningChanges(notices schoolcalendar.OpeningChangeNotices, today func() string) schoolcalendar.OpeningChanges {
+	if today == nil {
+		today = application.BerlinDay(time.Now)
+	}
+	return application.NewNoticedOpeningChanges(postgres.NewOpeningChangeStore(postgres.NewCompositionDatabase()), notices, today)
+}
+
 // NewHolidayClosureEvents composes the notices of ADR 0196 over the caller's school or Träger transaction; today is the root's day clock.
 func NewHolidayClosureEvents(today func() calendar.Date) *postgres.HolidayClosureEventStore {
 	return postgres.NewHolidayClosureEventStore(postgres.NewCompositionDatabase(), today)

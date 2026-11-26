@@ -189,4 +189,16 @@ var notifications_init_benachrichtigungen_1Definitions = []config.Definition{
 		Category:        "benachrichtigungen",
 		SortOrder:       11,
 	},
+	{
+		Key:             config.KeyNotificationsOpeningChangeEnabled,
+		Label:           "Benachrichtigung bei geänderter Öffnungszeit",
+		Description:     "Wird eine geänderte Öffnungszeit eingetragen, geändert oder gelöscht, steht das bei den Benachrichtigungen aller Mitarbeitenden, Eltern und im Träger-Büro. Liegt der Tag in den nächsten 14 Tagen, bekommen Mitarbeitende und Eltern auch eine Mitteilung aufs Handy. Jede Person kann sie selbst ausschalten.",
+		Type:            config.FieldBoolean,
+		Default:         true,
+		ReadPermission:  "config:read",
+		WritePermission: "config:update",
+		Tab:             "operations",
+		Category:        "benachrichtigungen",
+		SortOrder:       12,
+	},
 }

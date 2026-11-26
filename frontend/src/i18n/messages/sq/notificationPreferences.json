@@ -49,6 +49,10 @@
       "label": "Ditët e mbylljes",
       "description": "Kur {careTerm}-ja shton, ndryshon ose fshin një ditë mbylljeje. Njoftimi në moto vjen gjithmonë, njoftimi në telefon vetëm për ditët e mbylljes në 14 ditët e ardhshme."
     },
+    "parent_opening_change_changed": {
+      "label": "Orari i ndryshuar",
+      "description": "Kur {careTerm}-ja në një ditë hapet në orë të tjera ose mbyllet më herët. Njoftimi në moto vjen gjithmonë, njoftimi në telefon vetëm për ditët në 14 ditët e ardhshme."
+    },
     "parent_billing_document": {
       "label": "Dokument i ri nga ofruesi",
       "description": "Kur ofruesi ju dërgon ose ju ndan një dokument, për shembull një kontratë."
