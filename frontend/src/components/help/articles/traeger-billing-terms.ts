@@ -7,7 +7,7 @@ export function traegerBillingTermsTopic(): HelpTopic {
     title: "Zahlung und Empfänger der Rechnungen",
     question: "Wie lege ich fest, wie und bis wann Familien zahlen?",
     summary:
-      "Je Leistung legst du den Zahlungsweg und das Zahlungsziel fest. Das Mittagessen steht auf der Rechnung der Betreuung oder auf einer eigenen Rechnung. Für eine einzelne Familie legst du einen anderen Empfänger, einen eigenen Zahlungsweg oder einen eigenen Zahltag fest.",
+      "Pro Leistung legst du den Zahlungsweg und das Zahlungsziel fest. Das Mittagessen steht auf der Rechnung der Betreuung oder auf einer eigenen Rechnung. Für eine einzelne Familie legst du einen anderen Empfänger, einen eigenen Zahlungsweg oder einen eigenen Zahltag fest.",
     group: "anmeldeverwaltung",
     audience: "traeger",
     icon: "Users",
@@ -15,12 +15,12 @@ export function traegerBillingTermsTopic(): HelpTopic {
     steps: [],
     instructionGroups: [
       {
-        title: "Zahlung je Leistung festlegen",
+        title: "Zahlung pro Leistung festlegen",
         description:
           "Ohne deine Wahl zahlen alle Familien per Überweisung, innerhalb von 14 Tagen.",
         steps: [
           "Wähle unten in der Navigation `Einstellungen` und dann `Abrechnungsvorgaben`.",
-          "In der Karte `Zahlung und Rechnungen` steht je Leistung eine Zeile: `Monatsbeitrag Betreuung`, `Mittagessen` und `Ferienbetreuung`.",
+          "In der Karte `Zahlung und Rechnungen` steht pro Leistung eine Zeile: `Monatsbeitrag Betreuung`, `Mittagessen` und `Ferienbetreuung`.",
           "Wähle die Zeile der Leistung. Oder wähle das Menü mit den drei Punkten und dann `Bearbeiten`.",
           "Wähle den `Zahlungsweg`: `Überweisung` oder `Lastschrift`.",
           "Trage das `Zahlungsziel in Tagen` ein. Das sind die Tage nach dem Rechnungsdatum.",
@@ -35,7 +35,7 @@ export function traegerBillingTermsTopic(): HelpTopic {
         steps: [
           "Öffne den Lauf unter `Abrechnungsläufe`, im Reiter `Monatsbeiträge` oder `Ferien`.",
           "Wähle im Monatslauf in der Karte `Monatslauf`, im Ferienlauf in der Karte `Abrechnungslauf` den Knopf `Fälligkeiten bearbeiten`. Es öffnet sich eine eigene Seite.",
-          "Wähle je Zahlungsweg ein Datum. Ohne Datum gilt das Zahlungsziel der Leistung.",
+          "Wähle pro Zahlungsweg ein Datum. Ohne Datum gilt das Zahlungsziel der Leistung.",
           "Wähle `Speichern`. Du kommst zurück zum Lauf. Bei `Fällig` steht jetzt das Datum.",
         ],
       },

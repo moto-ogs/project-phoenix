@@ -85,7 +85,7 @@ func (s *staffAbsenceService) requestAbsence(ctx context.Context, staffID int64,
 	if err := s.notifyAbsenceRequested(ctx, absence); err != nil {
 		return nil, fmt.Errorf("enqueue absence mail: %w", err)
 	}
-	s.broadcastTimeTrackingChanged(ctx)
+	s.broadcastLeaveChanged(ctx)
 	return s.withLabel(ctx, toAbsenceResponse(absence)), nil
 }
 
@@ -135,7 +135,7 @@ func (s *staffAbsenceService) CreateAbsenceFor(ctx context.Context, subjectStaff
 	if err := s.cascadeAbsence(ctx, resp.StaffAbsence, createdByStaffID, actorAccountID); err != nil {
 		return nil, err
 	}
-	s.broadcastTimeTrackingChanged(ctx)
+	s.broadcastLeaveChanged(ctx)
 	return resp, nil
 }
 

@@ -100,7 +100,7 @@ import {
   updateAnnouncement,
   type Announcement,
 } from "~/lib/parent-announcements-api";
-import ParentAnnouncementsPage from "./page";
+import ParentAnnouncementsPage from "./page-content";
 
 vi.unmock("swr");
 

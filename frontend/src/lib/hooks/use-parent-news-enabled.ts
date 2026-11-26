@@ -22,13 +22,13 @@ export function useParentNewsEnabled(
     parentEnabled ? (children ?? linked.data) : undefined,
   );
   // Enrollment-only parents can receive news without a linked child.
-  const feed = useSWRAuth(
-    parentEnabled ? parentKeys.announcements() : null,
-    listAnnouncements,
+  const feedAvailable = useSWRAuth(
+    parentEnabled ? parentKeys.newsAvailable() : null,
+    async () => (await listAnnouncements()).length > 0,
     PARENT_RESOURCE_OPTIONS,
   );
   return (
-    (feed.data?.length ?? 0) > 0 ||
+    feedAvailable.data === true ||
     Object.values(features.data ?? {}).some(
       (f) => f.parent_news_enabled === true,
     )

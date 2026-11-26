@@ -2,11 +2,12 @@
 
 import React, { createContext, useContext, useMemo } from "react";
 import {
+  PORTAL_ROUTES,
   portalLoginPath,
   type HostedPortalKey,
   type PortalKey,
 } from "./portal-paths";
-import { signOut, useSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { useProfile } from "~/lib/profile-context";
 import { operatorAbsoluteUrl, operatorPath } from "~/lib/operator-url";
 import { parentPath } from "~/lib/parent-url";
@@ -18,6 +19,7 @@ import { traegerPath } from "~/lib/traeger-url";
 import { clearSessionCache, DELIBERATE_LOGOUT_KEY } from "~/lib/session-cache";
 import { markLogoutNotRevoked } from "~/lib/login-session-notice";
 import { clearPersonalStorage } from "~/lib/personal-storage";
+import { discardSessionTree, sessionTreeState } from "~/lib/session-tree";
 import { createLogger } from "~/lib/logger";
 import { useApiErrorDisplay } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
@@ -29,7 +31,19 @@ import { getSmartRedirectPath } from "~/lib/redirect-utils";
 import { recordStaffPreviewEnd } from "~/lib/staff-preview-api";
 import { runTenantSessionEnd } from "~/lib/tenant-session-end";
 import { sessionEndBarrier } from "~/lib/session-end-state";
-import { signOutTenant } from "~/lib/tenant-session-cookie";
+import {
+  signOutPortal,
+  signOutTenant,
+  leaveReplacedSession,
+  SessionReplaced,
+  sessionReplaced,
+  tenantSessionReplaced,
+} from "~/lib/tenant-session-cookie";
+import {
+  END_SESSION_HEADER,
+  endSessionHeader,
+  shownSessionMark,
+} from "~/lib/session-mark";
 
 const logger = createLogger({ component: "ShellAuthContext" });
 
@@ -70,6 +84,16 @@ function reportingLogout(
 }
 
 /**
+ * The logout has committed: names, preselections and counters of this
+ * account do not stay on the device (#5000). The protected tree goes once
+ * the cookie is deleted, right before the document leaves (#8082).
+ */
+function leaveEndedSession(): void {
+  clearPersonalStorage();
+  clearSessionCache();
+}
+
+/**
  * One portal logout outside the tenant shell (whose runTenantSessionEnd
  * owns the barrier). From its start no answer of the ending session may set
  * its cookie (#5399); a failure lets the held requests go on.
@@ -92,10 +116,83 @@ function behindSessionBarrier(
  * Clears the portal's cookie and opens its login on the portal's own host.
  * Auth.js resolves a callbackUrl against NEXTAUTH_URL, the tenant origin, so
  * a redirecting signOut would land on the tenant's host root instead.
+ *
+ * `revoked`: the server ended the session's family, so the session opens
+ * nothing. Its tree goes at once, before `cleanup` and the cookie deletion
+ * that may stall, and a deletion that fails still leaves for the login: the
+ * cookie left behind is dead (#8082). Without a revocation (#7209) the
+ * deletion decides; its failure keeps the page and its retry.
  */
-async function signOutToLogin(portal: HostedPortalKey): Promise<void> {
-  await signOut({ redirect: false });
-  window.location.assign(portalLoginPath(portal));
+async function signOutToLogin(
+  portal: HostedPortalKey,
+  revoked: boolean,
+  {
+    login = portalLoginPath(portal),
+    cleanup,
+    mark = shownSessionMark(),
+  }: { login?: string; cleanup?: () => Promise<void>; mark?: string } = {},
+): Promise<void> {
+  if (revoked) discardSessionTree();
+  try {
+    if (cleanup) await cleanup();
+    // Before this device's data of the account goes: a sign-in of another
+    // tab meanwhile owns it now.
+    if (sessionReplaced(portal, mark)) throw new SessionReplaced();
+    // A revoked session's data goes now; without a revocation only once
+    // its cookie is gone: a failed deletion keeps the session, and other
+    // tabs keep theirs (the shared owner of personal storage).
+    if (revoked) leaveEndedSession();
+    await signOutPortal(PORTAL_ROUTES[portal].basePath, login, {
+      portal,
+      mark,
+    });
+    // Without a revocation the data went only now: not if another tab's
+    // sign-in took the cookie since its deletion (#8082).
+    if (!revoked) {
+      if (sessionReplaced(portal, "")) throw new SessionReplaced();
+      leaveEndedSession();
+    }
+  } catch (error) {
+    // The cookie went (its own deletion dropped the tree) or another session
+    // took it: the document loads what the cookie holds now.
+    if (
+      error instanceof SessionReplaced ||
+      (!revoked && sessionTreeState().leaving)
+    ) {
+      leaveReplacedSession();
+      return;
+    }
+    if (!revoked) throw error;
+    logger.warn("revoked_session_cookie_kept", {
+      portal,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+  discardSessionTree();
+  window.location.assign(login);
+}
+
+/**
+ * One hosted portal's logout (#5194): revokes the family, then
+ * signOutToLogin. A cookie another tab's sign-in took (#8082) ends nothing:
+ * the document loads that session.
+ */
+async function endHostedSession(
+  portal: HostedPortalKey,
+  options: { login?: string; cleanup?: () => Promise<void> } = {},
+): Promise<void> {
+  const mark = shownSessionMark();
+  const revoked = await revokeSessionFamily(portal, mark);
+  await signOutToLogin(portal, revoked, { ...options, mark });
+}
+
+/**
+ * Leaves a session the server already ended (a person who removed
+ * themselves from the Träger office): nothing of it shows from this moment,
+ * also while Auth.js deletes the cookie or does not answer.
+ */
+export function leaveRemovedSession(portal: HostedPortalKey): Promise<void> {
+  return signOutToLogin(portal, true);
 }
 
 /**
@@ -108,16 +205,22 @@ async function signOutToLogin(portal: HostedPortalKey): Promise<void> {
  * are signed out, so this device must not stay signed in (#7209). The login
  * page then says that the session ends at its expiry. Without an answer
  * (offline, timeout) the call throws and the session stays, with a retry.
+ * Resolves whether the family is gone (revoked, or nothing left to revoke).
  */
 async function revokeSessionFamily(
   portal: PortalKey,
+  /** The mark of the session to revoke (END_SESSION_HEADER, #8082). */
+  mark: string,
   signal?: AbortSignal,
-): Promise<void> {
+): Promise<boolean> {
   markLogoutNotRevoked(false);
   // A session step of the BFF: through `public`, so a 401 neither renews the
   // session nor opens the login.
   try {
     await bffJson("public", sessionBff.logout(portal), {
+      // Another tab's sign-in since is not this logout's: the route revokes
+      // nothing of it and answers 401 (nothing of this session left).
+      headers: { [END_SESSION_HEADER]: endSessionHeader(portal, mark) },
       signal: signal
         ? AbortSignal.any([signal, AbortSignal.timeout(5000)])
         : AbortSignal.timeout(5000),
@@ -127,15 +230,16 @@ async function revokeSessionFamily(
     signal?.throwIfAborted();
     // Without an answer the session stays, with a retry.
     if (!(error instanceof ApiError) || error.noResponse) throw error;
-    if (error.status === 401) return;
+    if (error.status === 401) return true;
     logger.warn("logout_not_revoked", {
       status: error.status,
       code: error.code,
     });
     markLogoutNotRevoked(true);
-    return;
+    return false;
   }
   signal?.throwIfAborted();
+  return true;
 }
 
 interface ShellUser {
@@ -257,6 +361,7 @@ export function TeacherShellProvider({
       runTenantSessionEnd((signal) =>
         reportingLogout(
           async () => {
+            const mark = shownSessionMark();
             // Mark as deliberate logout so the login page suppresses the
             // "session expired" banner that NextAuth's required-session
             // redirect would otherwise trigger (race with useSession).
@@ -285,17 +390,32 @@ export function TeacherShellProvider({
             // The revocation never waits for push (#5194): the backend drops the
             // family's push subscriptions with it, and the device-side cleanup
             // below stays best-effort with one five-second budget (#5260).
-            await revokeSessionFamily("tenant", signal);
+            const revoked = await revokeSessionFamily("tenant", mark, signal);
+            // A revoked family opens nothing: its tree goes now (#8082).
+            if (revoked) discardSessionTree();
             void unsubscribePushSilently("tenant", {
               signal,
               timeoutMs: 5000,
             });
             signal.throwIfAborted();
-            // Namen, Vorauswahl und Zähler dieses Kontos bleiben nicht auf dem
-            // Gerät (#5000).
-            clearPersonalStorage();
-            clearSessionCache();
-            await signOutTenant({ callbackUrl: "/" }, signal);
+            // Before this device's data of the account goes (#8082).
+            if (tenantSessionReplaced(mark)) {
+              leaveReplacedSession();
+              return;
+            }
+            // Without a revocation the data goes once the cookie is gone
+            // (signOutTenant's onDeleted): a failed deletion keeps the
+            // session, and other tabs keep theirs.
+            if (revoked) leaveEndedSession();
+            await signOutTenant(
+              {
+                callbackUrl: "/",
+                revoked,
+                mark,
+                onDeleted: revoked ? undefined : leaveEndedSession,
+              },
+              signal,
+            );
           },
           showLogoutError,
           signal,
@@ -375,13 +495,8 @@ export function OperatorShellProvider({
         behindSessionBarrier(async () => {
           // The operator family is checked on every operator request; revoking
           // it ends this session's tokens at once (#5194).
-          await revokeSessionFamily("operator");
-          // Namen, Vorauswahl und Zähler dieses Kontos bleiben nicht auf dem
-          // Gerät (#5000).
-          clearPersonalStorage();
-          clearSessionCache();
-          await signOut({
-            callbackUrl: operatorAbsoluteUrl("/operator/login"),
+          await endHostedSession("operator", {
+            login: operatorAbsoluteUrl("/operator/login"),
           });
         }),
         showLogoutError,
@@ -454,16 +569,12 @@ export function SchoolShellProvider({
           // School sessions revoke through the shared scope-preserving
           // /auth/logout (tenant-style), proxied with the school session's
           // refresh token (#5194).
-          await revokeSessionFamily("school");
           // Dieses Gerät abmelden, bevor die Session weg ist (#2208): sonst
           // bliebe das Browser-Abo bestehen und der nächste Login auf diesem
           // Gerät fände ein Abo ohne Zuordnung vor.
-          await unsubscribePushSilently("school");
-          // Namen, Vorauswahl und Zähler dieses Kontos bleiben nicht auf dem
-          // Gerät (#5000).
-          clearPersonalStorage();
-          clearSessionCache();
-          await signOutToLogin("school");
+          await endHostedSession("school", {
+            cleanup: () => unsubscribePushSilently("school"),
+          });
         }),
         showLogoutError,
       ),
@@ -523,12 +634,7 @@ export function CatererShellProvider({
           } catch {
             // sessionStorage unavailable: the login page shows its notice.
           }
-          await revokeSessionFamily("caterer");
-          // Namen, Vorauswahl und Zähler dieses Kontos bleiben nicht auf dem
-          // Gerät (#5000).
-          clearPersonalStorage();
-          clearSessionCache();
-          await signOutToLogin("caterer");
+          await endHostedSession("caterer");
         }),
         showLogoutError,
       ),
@@ -563,12 +669,7 @@ export const endTraegerSession: () => Promise<void> = behindSessionBarrier(
       // "session expired" note, which is harmless.
     }
     // Revoke the backend refresh session first (#5194).
-    await revokeSessionFamily("traeger");
-    // Namen, Vorauswahl und Zähler dieses Kontos bleiben nicht auf dem
-    // Gerät (#5000).
-    clearPersonalStorage();
-    clearSessionCache();
-    await signOutToLogin("traeger");
+    await endHostedSession("traeger");
   },
 );
 
@@ -657,7 +758,7 @@ export function TraegerShellProvider({
 // parent-scope NextAuth session. Used by app/parents/auth-guard.tsx
 // to feed the AppShell user/profile/logout machinery on the parent
 // portal. Cross-tenant ChildSummary data isn't carried here — the
-// dashboard fetches it directly via /api/parent/me/children.
+// dashboard reads it from the shared family-start snapshot.
 export function ParentShellProvider({
   children,
   accountName,
@@ -729,13 +830,9 @@ export function ParentShellProvider({
           // Revoke the parent family first (#5194): the revocation never waits
           // for push. The backend drops the family's push subscriptions with
           // it; the device-side cleanup below stays best-effort (#5260).
-          await revokeSessionFamily("parent");
-          await unsubscribePushSilently("parent");
-          // Namen, Vorauswahl und Zähler dieses Kontos bleiben nicht auf dem
-          // Gerät (#5000).
-          clearPersonalStorage();
-          clearSessionCache();
-          await signOutToLogin("parent");
+          await endHostedSession("parent", {
+            cleanup: () => unsubscribePushSilently("parent"),
+          });
         }),
         showLogoutError,
       ),

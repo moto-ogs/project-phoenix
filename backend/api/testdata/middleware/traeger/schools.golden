@@ -11,6 +11,7 @@ api.requestIDs.# > api/common.ProblemResponseMiddleware > api/common.TenantRunti
 	GET /traeger/schools/comparison/export
 	GET /traeger/schools/daily-attendance
 	GET /traeger/schools/daily-attendance/export
+	GET /traeger/schools/day-changes
 	GET /traeger/schools/export
 	GET /traeger/schools/occupancy
 	GET /traeger/schools/occupancy/export

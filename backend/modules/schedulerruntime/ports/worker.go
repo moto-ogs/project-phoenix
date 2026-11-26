@@ -16,15 +16,18 @@ import (
 type WorkerDependencies struct {
 	Logger *slog.Logger
 	// Now supplies the worker clock; required.
-	Now                       func() time.Time
-	Getenv                    func(string) string
-	SchoolRepo                TenantDirectory
-	TenantRuntime             TenantRuntime
-	TenantRuntimeObserver     func(entryPoint, outcome string)
-	UnitOfWorkObserver        func(entryPoint, kind, result string, duration time.Duration, retries int)
-	Tracer                    WorkerTracer
-	Settings                  SettingsResolver
-	Active                    SessionMaintenance
+	Now                   func() time.Time
+	Getenv                func(string) string
+	SchoolRepo            TenantDirectory
+	TenantRuntime         TenantRuntime
+	TenantRuntimeObserver func(entryPoint, outcome string)
+	UnitOfWorkObserver    func(entryPoint, kind, result string, duration time.Duration, retries int)
+	Tracer                WorkerTracer
+	Settings              SettingsResolver
+	Active                SessionMaintenance
+	// ClosingTimes moves the session end to the closing time of a changed
+	// opening day (#8157); nil keeps operations.session_end_time every day.
+	ClosingTimes              ClosingTimes
 	ActiveCleanup             PresenceCleanup
 	AuthCleanup               AuthCleanup
 	InvitationCleanup         InvitationCleaner

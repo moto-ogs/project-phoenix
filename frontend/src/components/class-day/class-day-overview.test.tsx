@@ -12,14 +12,14 @@ import { deferred } from "~/test/helpers/form-modal-pending";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
 import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
-import type { ClassDayReport } from "~/lib/class-day-api";
 import { setTestClock } from "~/test/clock";
 import { ClassDayOverview } from "./class-day-overview";
 
-// Die Übersicht lädt am Wochenende keine Klasse, außer die Schule betreut
-// Samstag und Sonntag nach dem Freitagsplan (#3921).
-
-const navigation = vi.hoisted(() => ({ search: "", replace: vi.fn() }));
+const navigation = vi.hoisted(() => ({
+  search: "",
+  replace: vi.fn(),
+  admin: false,
+}));
 
 vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(navigation.search),
@@ -29,7 +29,12 @@ vi.mock("next/navigation", () => ({
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
     data: {
-      user: { id: "teacher", scope: "school", tenantId: "1" },
+      user: {
+        id: "teacher",
+        scope: "school",
+        tenantId: "1",
+        permissions: navigation.admin ? ["class_day:all_classes"] : [],
+      },
       expires: "2099-01-01",
     },
     status: "authenticated",
@@ -56,31 +61,29 @@ function render(ui: ReactElement) {
   });
 }
 
-function report(date: string): ClassDayReport {
+function assignedClasses(
+  date: string,
+  schoolDay = true,
+): schoolClassDayContract.AssignedClassesReport {
   return {
-    school_class: "4a",
     date,
-    weekday: "fri",
-    school_day: true,
+    weekday: schoolDay ? "fri" : "",
+    school_day: schoolDay,
     enrollment_known: true,
-    can_write_day_hints: false,
-    can_record_morning_attendance: false,
-    can_write_homework: false,
-    can_read_shared_notes: false,
-    can_hand_over: false,
-    can_report_absences: false,
-    totals: { students: 1, staying: 1, leaving: 0, absent: 0, list_entries: 0 },
-    rows: [],
-  };
-}
-
-function classList(weekendFollowsFriday: boolean) {
-  return {
-    classes: ["4a"],
-    can_report_class_trip: false,
-    can_view_school_day: false,
-    can_write_arrival_exception: false,
-    weekend_follows_friday: weekendFollowsFriday,
+    classes: [
+      {
+        school_class: "4a",
+        trips: [],
+        totals: {
+          students: 1,
+          staying: schoolDay ? 1 : 0,
+          leaving: 0,
+          absent: 0,
+          list_entries: 0,
+        },
+        changes: 0,
+      },
+    ],
   };
 }
 
@@ -88,30 +91,34 @@ describe("ClassDayOverview on the weekend", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     navigation.search = "";
+    navigation.admin = false;
     setTestClock(new Date("2026-09-05T12:00:00+02:00")); // Samstag
   });
 
-  it("loads no class without the weekend plan", async () => {
-    const fetchClassDay = vi.fn((_: string, date: string) =>
-      Promise.resolve(report(date)),
+  it("shows no handover without the weekend plan", async () => {
+    const fetchAssignedClasses = vi.fn(async (date: string) =>
+      assignedClasses(date, false),
     );
+    const fetchClasses = vi.fn();
     render(
       <ClassDayOverview
-        fetchClasses={() => Promise.resolve(classList(false))}
-        fetchClassDay={fetchClassDay}
+        fetchClasses={fetchClasses}
+        fetchAssignedClasses={fetchAssignedClasses}
       />,
     );
 
-    expect(await screen.findByText(/Kein Schultag|Wochenende/)).toBeVisible();
-    expect(fetchClassDay).not.toHaveBeenCalled();
+    // Anker: die Antwort ohne Schultag ist geladen.
+    expect(await screen.findByText("Kein Schultag")).toBeVisible();
+    expect(screen.queryByRole("link", { name: /4a/ })).not.toBeInTheDocument();
+    expect(fetchClasses).not.toHaveBeenCalled();
+    expect(fetchAssignedClasses).toHaveBeenCalledExactlyOnceWith("2026-09-05");
   });
 
-  // Ohne Namen grüßt der Klassentag ohne Anrede, nie mit „User“ (#7305).
   it("greets without a name when the session carries none", async () => {
     render(
       <ClassDayOverview
-        fetchClasses={() => Promise.resolve(classList(false))}
-        fetchClassDay={vi.fn()}
+        fetchClasses={vi.fn()}
+        fetchAssignedClasses={async (date) => assignedClasses(date, false)}
       />,
     );
 
@@ -120,22 +127,52 @@ describe("ClassDayOverview on the weekend", () => {
     );
   });
 
-  it("loads the classes when the weekend follows Friday's plan", async () => {
-    const fetchClassDay = vi.fn((_: string, date: string) =>
-      Promise.resolve(report(date)),
+  it("shows the assigned class when the weekend follows Friday's plan", async () => {
+    const fetchAssignedClasses = vi.fn(async (date: string) =>
+      assignedClasses(date),
     );
-    const fetchClasses = vi.fn(() => Promise.resolve(classList(true)));
     render(
       <ClassDayOverview
-        fetchClasses={fetchClasses}
-        fetchClassDay={fetchClassDay}
+        fetchClasses={vi.fn()}
+        fetchAssignedClasses={fetchAssignedClasses}
       />,
     );
 
-    await waitFor(() =>
-      expect(fetchClassDay).toHaveBeenCalledWith("4a", "2026-09-05"),
+    expect(
+      await screen.findByRole("link", { name: /4a 1 Kinder/ }),
+    ).toBeVisible();
+    expect(fetchAssignedClasses).toHaveBeenCalledExactlyOnceWith("2026-09-05");
+  });
+});
+
+describe("ClassDayOverview day selection", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    navigation.search = "tag=2026-09-08";
+    navigation.admin = false;
+  });
+
+  it("passes the day from the address to notices and class cards", async () => {
+    const fetchAssignedClasses = vi.fn(async (date: string) =>
+      assignedClasses(date),
     );
-    expect(fetchClasses).toHaveBeenCalledTimes(1);
+    const notices = vi.fn((date: string) => (
+      <output data-testid="class-day-notices-date">{date}</output>
+    ));
+
+    render(
+      <ClassDayOverview
+        fetchClasses={vi.fn()}
+        fetchAssignedClasses={fetchAssignedClasses}
+        notices={notices}
+      />,
+    );
+
+    expect(
+      await screen.findByTestId("class-day-notices-date"),
+    ).toHaveTextContent("2026-09-08");
+    expect(notices).toHaveBeenLastCalledWith("2026-09-08");
+    expect(fetchAssignedClasses).toHaveBeenCalledExactlyOnceWith("2026-09-08");
   });
 });
 
@@ -223,6 +260,7 @@ describe("ClassDayOverview for the Schulverwaltung", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     navigation.search = "";
+    navigation.admin = true;
     setTestClock(new Date("2026-09-09T12:00:00+02:00")); // Mittwoch
   });
 
@@ -236,23 +274,21 @@ describe("ClassDayOverview for the Schulverwaltung", () => {
     });
 
   it("loads the school once instead of one report per class", async () => {
-    const fetchClassDay = vi.fn((_: string, date: string) =>
-      Promise.resolve(report(date)),
-    );
+    const fetchAssignedClasses = vi.fn();
     const fetchSchoolDay = vi.fn((date: string) =>
       Promise.resolve(schoolDay(date)),
     );
     render(
       <ClassDayOverview
         fetchClasses={classes}
-        fetchClassDay={fetchClassDay}
+        fetchAssignedClasses={fetchAssignedClasses}
         fetchSchoolDay={fetchSchoolDay}
       />,
     );
 
     expect(await screen.findByText("Ganze Schule")).toBeVisible();
     expect(fetchSchoolDay).toHaveBeenCalledWith("2026-09-09");
-    expect(fetchClassDay).not.toHaveBeenCalled();
+    expect(fetchAssignedClasses).not.toHaveBeenCalled();
     expect(
       screen.getByRole("link", { name: /^Krank 1 ?, Liste öffnen$/ }),
     ).toHaveAttribute("href", "/school?tag=2026-09-09&liste=krank");
@@ -269,7 +305,7 @@ describe("ClassDayOverview for the Schulverwaltung", () => {
     render(
       <ClassDayOverview
         fetchClasses={classes}
-        fetchClassDay={(_, date) => Promise.resolve(report(date))}
+        fetchAssignedClasses={vi.fn()}
         fetchSchoolDay={(date) => Promise.resolve(schoolDay(date))}
       />,
     );
@@ -307,7 +343,7 @@ describe("ClassDayOverview for the Schulverwaltung", () => {
     render(
       <ClassDayOverview
         fetchClasses={classes}
-        fetchClassDay={(_, date) => Promise.resolve(report(date))}
+        fetchAssignedClasses={vi.fn()}
         fetchSchoolDay={() => Promise.resolve(data)}
       />,
     );
@@ -322,7 +358,7 @@ describe("ClassDayOverview for the Schulverwaltung", () => {
     render(
       <ClassDayOverview
         fetchClasses={classes}
-        fetchClassDay={(_, date) => Promise.resolve(report(date))}
+        fetchAssignedClasses={vi.fn()}
         fetchSchoolDay={(date) => Promise.resolve(schoolDay(date))}
       />,
     );
@@ -334,36 +370,6 @@ describe("ClassDayOverview for the Schulverwaltung", () => {
       { scroll: false },
     );
   });
-
-  it("keeps the per-class reports for a Lehrkraft", async () => {
-    const fetchSchoolDay = vi.fn((date: string) =>
-      Promise.resolve(schoolDay(date)),
-    );
-    const fetchClassDay = vi.fn((_: string, date: string) =>
-      Promise.resolve(report(date)),
-    );
-    render(
-      <ClassDayOverview
-        fetchClasses={() =>
-          Promise.resolve({
-            classes: ["4a"],
-            can_report_class_trip: false,
-            weekend_follows_friday: false,
-            can_view_school_day: false,
-            can_write_arrival_exception: false,
-          })
-        }
-        fetchClassDay={fetchClassDay}
-        fetchSchoolDay={fetchSchoolDay}
-      />,
-    );
-
-    await waitFor(() =>
-      expect(fetchClassDay).toHaveBeenCalledWith("4a", "2026-09-09"),
-    );
-    expect(screen.getByText("Deine Klassen")).toBeVisible();
-    expect(fetchSchoolDay).not.toHaveBeenCalled();
-  });
 });
 
 // Fehlen ohne Meldung (#4791): die Schulverwaltung trägt für ein Kind, das
@@ -373,6 +379,7 @@ describe("ClassDayOverview: Meldung nachtragen", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     navigation.search = "";
+    navigation.admin = true;
     setTestClock(new Date("2026-09-09T12:00:00+02:00")); // Mittwoch
   });
 
@@ -437,7 +444,7 @@ describe("ClassDayOverview: Meldung nachtragen", () => {
     render(
       <ClassDayOverview
         fetchClasses={classes}
-        fetchClassDay={(_, date) => Promise.resolve(report(date))}
+        fetchAssignedClasses={vi.fn()}
         fetchSchoolDay={fetchSchoolDay}
         reportAbsence={reportAbsence}
         withdrawAbsenceReport={vi.fn(() => Promise.resolve())}
@@ -487,7 +494,7 @@ describe("ClassDayOverview: Meldung nachtragen", () => {
     render(
       <ClassDayOverview
         fetchClasses={classes}
-        fetchClassDay={(_, date) => Promise.resolve(report(date))}
+        fetchAssignedClasses={vi.fn()}
         fetchSchoolDay={fetchSchoolDay}
         reportAbsence={reportAbsence}
         withdrawAbsenceReport={vi.fn(() => Promise.resolve())}
@@ -521,7 +528,7 @@ describe("ClassDayOverview: Meldung nachtragen", () => {
     render(
       <ClassDayOverview
         fetchClasses={classes}
-        fetchClassDay={(_, date) => Promise.resolve(report(date))}
+        fetchAssignedClasses={vi.fn()}
         fetchSchoolDay={fetchSchoolDay}
         reportAbsence={() => Promise.reject(refused)}
         withdrawAbsenceReport={vi.fn()}
@@ -556,7 +563,7 @@ describe("ClassDayOverview: Meldung nachtragen", () => {
     render(
       <ClassDayOverview
         fetchClasses={classes}
-        fetchClassDay={(_, date) => Promise.resolve(report(date))}
+        fetchAssignedClasses={vi.fn()}
         fetchSchoolDay={(date) => Promise.resolve(unreportedDay(date, "sick"))}
         reportAbsence={vi.fn(() => Promise.resolve())}
         withdrawAbsenceReport={vi.fn(() =>
@@ -586,7 +593,7 @@ describe("ClassDayOverview: Meldung nachtragen", () => {
     render(
       <ClassDayOverview
         fetchClasses={classes}
-        fetchClassDay={(_, date) => Promise.resolve(report(date))}
+        fetchAssignedClasses={vi.fn()}
         fetchSchoolDay={(date) => Promise.resolve(unreportedDay(date, "sick"))}
         reportAbsence={vi.fn(() => Promise.resolve())}
         withdrawAbsenceReport={withdrawAbsenceReport}
@@ -619,7 +626,7 @@ describe("ClassDayOverview: Meldung nachtragen", () => {
     render(
       <ClassDayOverview
         fetchClasses={classes}
-        fetchClassDay={(_, date) => Promise.resolve(report(date))}
+        fetchAssignedClasses={vi.fn()}
         fetchSchoolDay={(date) =>
           Promise.resolve(unreportedDay(date, null, false))
         }

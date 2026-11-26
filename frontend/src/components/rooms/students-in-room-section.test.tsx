@@ -1,3 +1,4 @@
+import { deriveSupervision } from "~/lib/supervision-derive";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ApiError } from "~/lib/api-error";
@@ -9,6 +10,7 @@ import { useOptionalSupervision } from "~/lib/supervision-context";
 
 /** Default supervision context: no school-wide overview (#2380). */
 const EMPTY_SUPERVISION = {
+  ...deriveSupervision(),
   hasGroups: false,
   isLoadingGroups: false,
   groups: [],
@@ -65,6 +67,7 @@ vi.mock("~/lib/tenant-router", () => ({
 }));
 
 vi.mock("next/navigation", () => ({
+  usePathname: () => "/rooms/1",
   useSearchParams: () => mockUseSearchParams(),
 }));
 
@@ -111,7 +114,8 @@ vi.mock("~/contexts/ToastContext", async (importOriginal) => ({
 // own <section aria-label> wrapper (#1323 review, quiet section headers
 // across the slide-over), so no card mock is needed.
 
-vi.mock("~/components/ui/button", () => ({
+vi.mock("~/components/ui/button", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/components/ui/button")>()),
   Button: ({
     onClick,
     children,
@@ -1367,15 +1371,14 @@ describe("StudentsInRoomSection", () => {
 
       render(<StudentsInRoomSection roomId="42" roomName="OGS-Raum 1" />);
 
-      fireEvent.click(
-        screen.getByRole("button", { name: /Anna Müller Profil öffnen/ }),
-      );
-
       // ? inside from= must be URL-encoded; & inside likewise. Without
       // encoding the outer query parser splits at the inner '?' and
       // sees only the first param.
-      expect(mockPush).toHaveBeenCalledWith(
-        `/students/7?from=${encodeURIComponent(
+      expect(
+        screen.getByRole("link", { name: /Anna Müller Profil öffnen/ }),
+      ).toHaveAttribute(
+        "href",
+        `/test-tenant/students/7?from=${encodeURIComponent(
           "/rooms/42?from=%2Frooms%3Fbuilding%3DMain&tab=uebersicht",
         )}`,
       );
@@ -1390,12 +1393,11 @@ describe("StudentsInRoomSection", () => {
 
       render(<StudentsInRoomSection roomId="42" roomName="OGS-Raum 1" />);
 
-      fireEvent.click(
-        screen.getByRole("button", { name: /Anna Müller Profil öffnen/ }),
-      );
-
-      expect(mockPush).toHaveBeenCalledWith(
-        `/students/7?from=${encodeURIComponent("/rooms/42")}`,
+      expect(
+        screen.getByRole("link", { name: /Anna Müller Profil öffnen/ }),
+      ).toHaveAttribute(
+        "href",
+        `/test-tenant/students/7?from=${encodeURIComponent("/rooms/42")}`,
       );
     });
 

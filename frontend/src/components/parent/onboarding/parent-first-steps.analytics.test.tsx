@@ -131,7 +131,10 @@ describe("ParentFirstSteps analytics", () => {
     );
 
     fireEvent.click(
-      screen.getByRole("button", { name: /Erste Schritte öffnen/ }),
+      screen.getByRole("button", {
+        name: /^Erste Schritte \d+$/,
+        description: /Erste Schritte öffnen/,
+      }),
     );
     fireEvent.click(
       screen.getByRole("button", { name: "Erste Schritte ausblenden" }),
@@ -162,7 +165,10 @@ describe("ParentFirstSteps analytics", () => {
       screen.getByRole("button", { name: "Erste Schritte einklappen" }),
     );
     fireEvent.click(
-      screen.getByRole("button", { name: /Erste Schritte öffnen/ }),
+      screen.getByRole("button", {
+        name: /^Erste Schritte \d+$/,
+        description: /Erste Schritte öffnen/,
+      }),
     );
     fireEvent.click(
       screen.getByRole("button", { name: "Erste Schritte ausblenden" }),

@@ -554,6 +554,21 @@ func (r StaffMembershipRepository) FindReachableSchoolCalendarStaffIDs(ctx conte
 	return result, nil
 }
 
+// FindTimeTrackingManagerStaffIDs keeps the staff members whose account may
+// manage the working time of others (#8024).
+func (r StaffMembershipRepository) FindTimeTrackingManagerStaffIDs(ctx context.Context, ids []int64) (map[int64]bool, error) {
+	const op = "find time-tracking manager staff"
+	directory, err := r.staffDirectory()
+	if err != nil {
+		return nil, staffDirectoryError(op, err)
+	}
+	result, err := directory.ReachableStaffIDs(ctx, ids, permissions.TimeTrackingManage)
+	if err != nil {
+		return nil, staffDirectoryError(op, err)
+	}
+	return result, nil
+}
+
 // FindSchoolPortalStaffIDs keeps the staff members whose account holds a
 // school-portal role: the Lehrkräfte the calendar target all_teachers
 // reaches (#4798).

@@ -1378,7 +1378,7 @@ describe("StudentHistorySection", () => {
     render(<StudentHistorySection {...defaultProps} />);
     expect(screen.getByText("Anwesenheitsprotokoll")).toBeInTheDocument();
     expect(
-      screen.getByText("Anwesenheit je Betreuungsangebot und besuchte Räume"),
+      screen.getByText("Anwesenheit pro Betreuungsangebot und besuchte Räume"),
     ).toBeInTheDocument();
     expect(
       screen.getByText("Anwesenheitsprotokoll").closest("button"),
@@ -1521,7 +1521,7 @@ describe("StudentHistorySection", () => {
         ),
       ).toBeInTheDocument();
       expect(
-        screen.getByText("Anwesenheit je Betreuungsangebot, ohne Räume"),
+        screen.getByText("Anwesenheit pro Betreuungsangebot, ohne Räume"),
       ).toBeInTheDocument();
       expect(
         screen.getByText("Neue Stimmung wird nicht gespeichert"),

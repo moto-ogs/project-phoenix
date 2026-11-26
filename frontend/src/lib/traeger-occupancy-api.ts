@@ -1,3 +1,4 @@
+import type * as seedOccupancyContract from "./contract/traeger-schools.generated";
 import { bffFile, bffJson } from "~/lib/bff-fetch";
 /**
  * Client of the occupancy of the Träger portal (#4676): how many children
@@ -48,7 +49,14 @@ export interface TraegerOccupancy {
 
 /** The occupancy of every school of the Träger, today. */
 export async function fetchTraegerOccupancy(): Promise<TraegerOccupancy> {
-  const occupancy = await bffJson("org", "GET /traeger/schools/occupancy");
+  return mapTraegerOccupancy(
+    await bffJson("org", "GET /traeger/schools/occupancy"),
+  );
+}
+
+export function mapTraegerOccupancy(
+  occupancy: seedOccupancyContract.Occupancy,
+): TraegerOccupancy {
   return {
     day: requiredDay(occupancy.day, "occupancy.day"),
     asOf: occupancy.as_of,

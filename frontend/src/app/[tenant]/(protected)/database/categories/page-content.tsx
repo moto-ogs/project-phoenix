@@ -1,0 +1,229 @@
+"use client";
+
+// Terminkategorien der Schule (#2131) als eigene Route der Datenverwaltung
+// (#3114).
+// Vorher lagen Liste und Formular in einem Slide-over, das der Termin-Assistent
+// über sich selbst öffnete; die Fläche ist jetzt eine Sammlung wie Räume und
+// Gruppen, und das Termin-Formular verlinkt nur noch hierher.
+
+import { isAccessRefusal } from "~/lib/access-refusal";
+import { Suspense, useCallback, useLayoutEffect, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
+
+import {
+  CatalogPage,
+  CATALOG_SELECTION_PARAM,
+  type CatalogConfig,
+} from "~/components/database/catalog/catalog-page";
+import { CatalogColorField } from "~/components/database/catalog-color-field";
+import type { SectionConfig } from "~/lib/database/types";
+import type { ActivityCategory } from "~/lib/activity-helpers";
+import { categoryService } from "~/lib/category-api";
+import { formatCount } from "~/lib/format-utils";
+import { LOCATION_COLORS } from "~/lib/location-helper";
+import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
+import { STALE_DATA_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
+import { ApiError } from "~/lib/api-error";
+import { useDiscardRefusedEntity } from "~/lib/swr/hooks";
+import { revalidateOrThrow, useSWRAuth } from "~/lib/swr";
+import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
+import { activitiesConcept } from "~/lib/concepts/activities";
+import { TenantPageStats } from "~/components/ui/tenant-page";
+
+/** Info-Knopf am Titel: wofür die Seite da ist und was man zuerst tut. */
+const CATEGORIES_INFO =
+  "Hier pflegst du die Liste der Terminkategorien. Bei Aktivitäten und Terminen wählst du dann eine davon aus. Unter jeder Kategorie steht, wie oft sie schon verwendet wird.";
+
+const CACHE_KEY = tenantAdminKeys.categories();
+const DEFAULT_COLOR: string = LOCATION_COLORS.GROUP_ROOM;
+/** Spiegelt maxCategoryNameLength / maxCategoryDescriptionLength in Go. */
+const NAME_MAX_LENGTH = 60;
+const DESCRIPTION_MAX_LENGTH = 255;
+
+function usageLabel(category: ActivityCategory): string {
+  const count = category.usageCount ?? 0;
+  if (count === 0) return "Noch nicht verwendet";
+  if (count === 1) return "In 1 Termin oder 1 Aktivität verwendet";
+  return `In ${count} Terminen und Aktivitäten verwendet`;
+}
+
+function sections(): SectionConfig[] {
+  return [
+    {
+      title: "Terminkategorie",
+      fields: [
+        {
+          name: "name",
+          label: "Name",
+          type: "text",
+          required: true,
+          placeholder: "z. B. Essen",
+          maxLength: NAME_MAX_LENGTH,
+        },
+        {
+          name: "color",
+          label: "Farbe",
+          type: "custom",
+          component: CatalogColorField,
+          componentProps: {
+            defaultHex: DEFAULT_COLOR,
+            hint: "Die Farbe kennzeichnet die Kategorie im Betreuungsplan.",
+          },
+        },
+        {
+          name: "description",
+          label: "Beschreibung",
+          type: "textarea",
+          placeholder: "Optional",
+          maxLength: DESCRIPTION_MAX_LENGTH,
+        },
+      ],
+    },
+  ];
+}
+
+function payloadOf(values: Record<string, unknown>) {
+  return {
+    name: String(values.name ?? "").trim(),
+    description: String(values.description ?? "").trim(),
+    color: typeof values.color === "string" ? values.color : "",
+  };
+}
+
+const config: CatalogConfig<ActivityCategory> = {
+  concept: activitiesConcept,
+  // „Terminkategorien", nicht „Kategorien": im Portal heißen vier
+  // verschiedene Dinge sichtbar „Kategorie" (Raum, Termin, Lohnart,
+  // Personal-Dokument), und es gibt eine Terminkategorie „Gruppenraum"
+  // neben der gleichnamigen Raumkategorie. Als Name in der Seitenleiste
+  // sagt die Gattung allein nicht, was eingeordnet wird (#3114).
+  title: "Terminkategorien",
+  singular: "Terminkategorie",
+  purpose:
+    "Terminkategorien ordnen Termine und Aktivitäten ein, zum Beispiel Essen, Lernzeit oder Freispiel.",
+  searchPlaceholder: "Terminkategorie suchen…",
+  emptyDescription:
+    "Lege eine Terminkategorie an, damit Termine und Aktivitäten sich einordnen lassen.",
+  stats: (items) => {
+    const archived = items.filter((item) => item.archivedAt).length;
+    const active = items.length - archived;
+    return archived > 0 ? (
+      <TenantPageStats
+        items={[
+          { value: formatCount(active), label: "in der Auswahl" },
+          { value: formatCount(archived), label: "archiviert" },
+        ]}
+      />
+    ) : (
+      `${formatCount(active)} ${active === 1 ? "Terminkategorie" : "Terminkategorien"}`
+    );
+  },
+  toRow: (item) => ({
+    name: item.name,
+    subtitle: usageLabel(item),
+    color: item.color ?? null,
+    retired: Boolean(item.archivedAt),
+  }),
+  isReadOnly: (item) => Boolean(item.archivedAt || item.isSystem),
+  readOnlyHint:
+    "Diese Kategorie kannst du nicht ändern. Archivierte Kategorien kannst du wieder anbieten.",
+  sections,
+  toFormValues: (item) => ({
+    name: item.name,
+    description: item.description ?? "",
+    color: item.color ?? null,
+  }),
+  createDefaults: { name: "", description: "", color: DEFAULT_COLOR },
+  create: (values) => categoryService.createCategory(payloadOf(values)),
+  // Der Stand, aus dem das Formular stammt (ADR 0311).
+  update: (item, values) =>
+    categoryService.updateCategory(item.id, {
+      ...payloadOf(values),
+      expected_version: item.version,
+    }),
+  retire: {
+    menuLabel: "Archivieren",
+    confirmTitle: "Terminkategorie archivieren?",
+    confirmLabel: "Archivieren",
+    loadingLabel: "Wird archiviert …",
+    describe: (item) =>
+      `Die Terminkategorie „${item.name}“ wird für neue Termine und Aktivitäten nicht mehr angeboten. Bestehende Einträge behalten sie und bleiben gültig.`,
+    run: (item) => categoryService.archiveCategory(item.id),
+    toast: (item) => `Die Terminkategorie „${item.name}“ ist archiviert.`,
+  },
+  restore: {
+    menuLabel: "Wieder anbieten",
+    run: (item) => categoryService.restoreCategory(item.id),
+    toast: (item) =>
+      `Die Terminkategorie „${item.name}“ wird wieder angeboten.`,
+  },
+};
+
+function CategoriesPageContent() {
+  const searchParams = useSearchParams();
+
+  const discardRefused = useDiscardRefusedEntity();
+  const list = useSWRAuth<ActivityCategory[]>(CACHE_KEY, () =>
+    categoryService.getManagedCategories(),
+  );
+  const { data: cachedData, isLoading, error: swrError, mutate } = list;
+  const accessRefused =
+    swrError instanceof ApiError && isAccessRefusal(swrError);
+  const data = accessRefused ? undefined : cachedData;
+  useLayoutEffect(() => {
+    if (!accessRefused) return;
+    discardRefused(swrError, {
+      codes: [swrError.code ?? "general.permission"],
+      matches: (key) => key === CACHE_KEY,
+      refusedKey: CACHE_KEY,
+    });
+  }, [accessRefused, swrError, discardRefused]);
+  // Ladefehler mit Katalogtext und Wiederholen statt eines eigenen Satzes
+  // (#2517).
+  const loadError = useSwrLoadError(
+    swrError,
+    "die Liste der Terminkategorien",
+    () => mutate(),
+    data === undefined ? undefined : STALE_DATA_SUFFIX,
+  );
+
+  // Lehnt ab, wenn das Lesen scheitert (ADR 0311), mit der Liste als
+  // Antwort.
+  const onChanged = useCallback(() => revalidateOrThrow(list), [list]);
+
+  const items = useMemo(
+    () =>
+      data
+        ? [...data].sort((a, b) => a.name.localeCompare(b.name, "de"))
+        : undefined,
+    [data],
+  );
+
+  return (
+    <CatalogPage
+      info={CATEGORIES_INFO}
+      config={config}
+      items={items}
+      // Bis der Katalogtext des Ladefehlers da ist, bleibt das Skelett
+      // stehen: sonst blitzt der Leerzustand auf.
+      isLoading={
+        (isLoading && data === undefined) ||
+        (swrError !== undefined && loadError === null)
+      }
+      error={loadError}
+      onChanged={onChanged}
+      // Die Route liegt hinter activities:manage_categories (database/layout);
+      // wer sie öffnen darf, darf hier auch schreiben.
+      canManage
+      selectedId={searchParams.get(CATALOG_SELECTION_PARAM)}
+    />
+  );
+}
+
+export default function CategoriesPage() {
+  return (
+    <Suspense fallback={null}>
+      <CategoriesPageContent />
+    </Suspense>
+  );
+}

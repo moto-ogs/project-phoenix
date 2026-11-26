@@ -4,5 +4,5 @@
 import { InvitationPageRoute } from "~/components/auth/invitation-page-route";
 
 export default function SchoolInvitePage() {
-  return <InvitationPageRoute redirectToPath="/login" />;
+  return <InvitationPageRoute redirectToPath="/login" portal="school" />;
 }

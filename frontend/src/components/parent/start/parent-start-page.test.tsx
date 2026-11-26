@@ -1,4 +1,7 @@
+import { parentFamilyFixture } from "~/test/parent-family-fixture";
 import { IsolatedSWRCache } from "~/lib/swr";
+const family = parentFamilyFixture(() => "2026-05-14");
+
 vi.unmock("swr");
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
@@ -20,13 +23,10 @@ import deMessages from "~/i18n/messages/de.generated";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
 import {
-  getChildFeatures,
-  getChildToday,
   fetchParentProfile,
   listAnnouncements,
   listMessageThreads,
   listHolidayRegistrationEntries,
-  listMyChildren,
 } from "~/lib/parent-api";
 import { holidayRegistrationEntriesFromBackend } from "~/lib/parent-holiday-registration-entries";
 import { PARENT_HOLIDAY_REGISTRATION_ENTRIES } from "~/test/fixtures/holiday-registrations";
@@ -46,11 +46,10 @@ vi.mock("~/lib/hooks/use-berlin-today", () => ({
 }));
 
 vi.mock("~/lib/parent-api", () => ({
-  listMyChildren: vi.fn(),
+  getFamilyStart: vi.fn(),
   listAnnouncements: vi.fn(),
   listMessageThreads: vi.fn(),
-  getChildFeatures: vi.fn(),
-  getChildToday: vi.fn(),
+
   fetchParentProfile: vi.fn(),
   // The holiday card has its own tests (#6671); here no period is announced.
   listHolidayOffers: vi.fn(async () => []),
@@ -60,6 +59,10 @@ vi.mock("~/lib/parent-api", () => ({
 
 vi.mock("~/lib/personal-calendar-api", () => ({
   getParentCalendar: vi.fn(),
+}));
+
+vi.mock("~/components/parent/child/child-day-changes", () => ({
+  ChildDayChanges: () => <div data-testid="child-day-changes" />,
 }));
 
 vi.mock("~/lib/shell-auth-context", () => ({
@@ -78,11 +81,11 @@ vi.mock("~/components/parent/news/news-components", async (importOriginal) => {
   };
 });
 
-const mockedChildren = vi.mocked(listMyChildren);
+const mockedChildren = family.children;
 const mockedAnnouncements = vi.mocked(listAnnouncements);
 const mockedThreads = vi.mocked(listMessageThreads);
-const mockedFeatures = vi.mocked(getChildFeatures);
-const mockedToday = vi.mocked(getChildToday);
+const mockedFeatures = family.features;
+const mockedToday = family.today;
 const mockedProfile = vi.mocked(fetchParentProfile);
 const mockedCalendar = vi.mocked(getParentCalendar);
 const mockedHolidayEntries = vi.mocked(listHolidayRegistrationEntries);
@@ -96,7 +99,7 @@ const felix = {
   status: "active",
   school_name: "Schule am Berg",
   school_slug: "berg",
-} as unknown as Awaited<ReturnType<typeof listMyChildren>>[number];
+} as unknown as parentMeContract.ChildResponse;
 
 const mia = {
   ...felix,
@@ -154,6 +157,8 @@ function renderPage() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+
+  family.mockRead();
   vi.useFakeTimers({ shouldAdvanceTime: true });
   // 09:00 Berlin (Sommerzeit) — "Guten Morgen".
   vi.setSystemTime(new Date("2026-08-17T07:00:00Z"));
@@ -166,7 +171,7 @@ beforeEach(() => {
     sick_note_enabled: false,
     pickup_change_enabled: false,
     notes_enabled: false,
-  } as unknown as Awaited<ReturnType<typeof getChildFeatures>>);
+  } as unknown as parentMeContract.ChildFeaturesResponse);
   mockedToday.mockResolvedValue({ at_ogs: null, state: "unknown" });
   mockedProfile.mockResolvedValue({
     first_name: "Karin",
@@ -559,6 +564,14 @@ describe("ParentStartPage", () => {
     expect(screen.getAllByText("Donnerstag, 14. Mai 2026")).toHaveLength(2);
   });
 
+  it("zeigt Heute anders nicht fuer ein Kind ohne OGS-Platz", async () => {
+    mockedChildren.mockResolvedValue([{ ...felix, without_care_place: true }]);
+    renderPage();
+
+    await screen.findByTestId("child-day-card");
+    expect(screen.queryByTestId("child-day-changes")).not.toBeInTheDocument();
+  });
+
   it("zeigt die heutige Abholzeit nur fuer ein Kind in der OGS", async () => {
     mockedToday.mockResolvedValue({
       at_ogs: true,
@@ -595,7 +608,7 @@ describe("ParentStartPage", () => {
       sick_note_enabled: true,
       pickup_change_enabled: true,
       notes_enabled: true,
-    } as unknown as Awaited<ReturnType<typeof getChildFeatures>>);
+    } as unknown as parentMeContract.ChildFeaturesResponse);
 
     renderPage();
 

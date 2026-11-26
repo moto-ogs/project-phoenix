@@ -242,17 +242,17 @@
     },
     {
       "decision": "0090",
-      "id": "workflows/parentportal/arrivalSchedules.GetStudentArrivalExceptionForDate",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "workflows/parentportal/arrivalSchedules.GetStudentArrivalScheduleForWeekday",
+      "id": "workflows/parentportal/arrivalSchedules.GetStudentArrivalExceptionsForDate",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
       "decision": "0090",
       "id": "workflows/parentportal/arrivalSchedules.GetStudentArrivalSchedules",
+      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
+    },
+    {
+      "decision": "0090",
+      "id": "workflows/parentportal/arrivalSchedules.GetWeeklySchedulesByStudentIDsAndWeekday",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
@@ -342,12 +342,17 @@
     },
     {
       "decision": "0090",
-      "id": "workflows/parentportal/dataRequestReads.ListByStudent",
+      "id": "workflows/parentportal/dataRequestReads.ListByStudents",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
       "decision": "0090",
       "id": "workflows/parentportal/dataRequestReads.ListParentVisibleByStudent",
+      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
+    },
+    {
+      "decision": "0090",
+      "id": "workflows/parentportal/dataRequestReads.ListPendingWeeklyCareRequests",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
@@ -662,6 +667,11 @@
     },
     {
       "decision": "0090",
+      "id": "workflows/parentportal/internal/messaging/childFlowSharing.LoadRequestShareVisibilities",
+      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
+    },
+    {
+      "decision": "0090",
       "id": "workflows/parentportal/internal/messaging/childFlowSharing.LoadRequestShareVisibility",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
@@ -752,6 +762,11 @@
     },
     {
       "decision": "0090",
+      "id": "workflows/parentportal/pickupSchedules.GetBulkEffectivePickupTimesForDate",
+      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
+    },
+    {
+      "decision": "0090",
       "id": "workflows/parentportal/pickupSchedules.GetEffectivePickupTimeForDate",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
@@ -792,7 +807,7 @@
     },
     {
       "decision": "0090",
-      "id": "workflows/parentportal/requestShareRecordsBinding.CurrentForStudent",
+      "id": "workflows/parentportal/requestShareRecordsBinding.CurrentForStudents",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {

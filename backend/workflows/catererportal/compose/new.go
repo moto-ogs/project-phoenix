@@ -11,19 +11,13 @@ import (
 	"github.com/moto-ogs/project-phoenix/workflows/catererportal/ports"
 )
 
-// Dependencies are the owner capabilities the portal coordinates.
-type Dependencies struct {
-	Caterers    ports.Caterers
-	Orders      ports.MealOrders
-	SchoolNames ports.SchoolNames
-}
-
 // New binds the portal; each school runs in its own tenant transaction.
-func New(deps Dependencies) (catererportal.Portal, error) {
+func New(caterers ports.Caterers, orders ports.MealOrders, summary ports.OrderSummary, schoolNames ports.SchoolNames) (catererportal.Portal, error) {
 	return application.New(application.Dependencies{
-		Caterers:      deps.Caterers,
-		Orders:        deps.Orders,
-		SchoolNames:   deps.SchoolNames,
+		Caterers:      caterers,
+		Orders:        orders,
+		Summary:       summary,
+		SchoolNames:   schoolNames,
 		CurrentSchool: tenant.FromContext,
 		Lock:          func(ctx context.Context, key string) error { return tenant.AcquireLock(ctx, key, false) },
 		WithinSchool: func(ctx context.Context, schoolID int64, fn func(context.Context) error) error {

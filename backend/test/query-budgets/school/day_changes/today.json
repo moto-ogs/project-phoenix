@@ -1,0 +1,7 @@
+{
+  "scenario": "school.day_changes.today",
+  "max": 10,
+  "exact": false,
+  "description": "GET /school/day-changes/today (#7670) for a Lehrkraft with calendar:school and classes that end at another time today: the school's and its Träger's closing days; the class-wide arrival exceptions of the day together with the changed blocks of the caller's own Aufsichten (#8148, one statement of Timetable that the sources classes and supervisions share); the caller's person (Identity & Access caller chain) and her staff record with its class assignments (one School Membership statement, #8155); and today's appointments of the caller as the calendar of moto schule shows them (#8155, one Appointments statement), each in one batched read, inside the savepoint the sources share (SAVEPOINT and RELEASE count), plus the transaction frame. The children of the classes are not read: they stay in the class-day view. TestSchoolDayChangesQueryBudget compares one with four classes, with a cover on one of the caller's Aufsichten and a cancelled date of her appointment.",
+  "route": "GET /school/day-changes/today"
+}

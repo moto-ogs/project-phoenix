@@ -38,6 +38,12 @@ vi.mock("~/lib/traeger-required-details-api", () => ({
   fetchTraegerRequiredDetails: () => mockFetchRequiredDetails(),
 }));
 
+// „Heute anders“ (#7672) has its own card test; here it answers empty.
+vi.mock("~/lib/traeger-day-changes-api", () => ({
+  fetchTraegerSchoolsDayChanges: () =>
+    Promise.resolve({ day: "", schools: [], asOf: "" }),
+}));
+
 vi.mock("~/lib/traeger-url", () => ({
   traegerPath: (path: string) => path,
 }));
@@ -59,7 +65,7 @@ vi.mock("~/env.client", () => ({
   },
 }));
 
-import TraegerDashboardPage from "./page";
+import TraegerDashboardPage from "./page-content";
 
 const AS_OF = TEST_CLOCK_INSTANT.toISOString();
 
@@ -268,7 +274,7 @@ describe("TraegerDashboardPage", () => {
       ],
       [
         "Betreuungsschlüssel",
-        "Anwesende Kinder je anwesender Betreuungskraft.",
+        "Anwesende Kinder pro anwesender Betreuungskraft.",
       ],
     ] as const) {
       // Die Kachel trägt ihr Label als Absatz, die Tabelle als Spaltenkopf.

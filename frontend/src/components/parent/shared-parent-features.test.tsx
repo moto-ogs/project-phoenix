@@ -1,3 +1,4 @@
+import { parentFamilyFixture } from "~/test/parent-family-fixture";
 import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -21,6 +22,8 @@ import {
   SharedParentFeaturesProvider,
   useSharedParentFeatures,
 } from "./child-requests-context";
+const family = parentFamilyFixture();
+
 vi.unmock("swr");
 vi.mock("~/lib/tenant-context", () => ({
   useTenantSlugSafe: () => null,
@@ -45,7 +48,10 @@ function wrapper({ children: content }: Readonly<{ children: ReactNode }>) {
 }
 beforeEach(() => {
   vi.restoreAllMocks();
-  vi.spyOn(api, "getChildFeatures").mockResolvedValue(features);
+
+  family.mockRead();
+  family.children.mockResolvedValue(children);
+  family.features.mockResolvedValue(features);
   vi.spyOn(api, "getChildMasterData").mockResolvedValue(
     {} as parentMeContract.MasterDataResponse,
   );
@@ -58,7 +64,7 @@ beforeEach(() => {
   vi.spyOn(api, "listCareExceptions").mockResolvedValue([]);
   vi.spyOn(api, "listPickupChangeRequests").mockResolvedValue([]);
   // useParentToday loads beside the features; tests that assert it override this.
-  vi.spyOn(api, "getChildToday").mockResolvedValue(api.UNKNOWN_CHILD_TODAY);
+  family.today.mockResolvedValue(api.UNKNOWN_CHILD_TODAY);
 });
 function mount() {
   return renderHook(
@@ -78,16 +84,16 @@ describe("shared parent relationship features", () => {
       expect(result.current.master.features).toEqual(features),
     );
     expect(result.current.care.features).toEqual(features);
-    expect(api.getChildFeatures).toHaveBeenCalledTimes(1);
+    expect(family.features).toHaveBeenCalledTimes(1);
   });
   it("retries shared flags from care and clears the master-data error after recovery", async () => {
-    vi.mocked(api.getChildFeatures).mockRejectedValue(
+    family.features.mockRejectedValue(
       new ApiError("offline", 503, { code: "general.unavailable" }),
     );
     const { result } = mount();
     await waitFor(() => expect(result.current.master.error).not.toBeNull());
     expect(result.current.care.features.sick_note_enabled).toBe(false);
-    vi.mocked(api.getChildFeatures).mockResolvedValue(features);
+    family.features.mockResolvedValue(features);
     await act(async () => {
       result.current.care.refresh();
     });
@@ -103,7 +109,7 @@ describe("shared parent relationship features", () => {
       expect(result.current.master.features).toEqual(features),
     );
     expect(result.current.care.features.sick_note_enabled).toBe(true);
-    vi.mocked(api.getChildFeatures).mockRejectedValue(
+    family.features.mockRejectedValue(
       new ApiError("offline", 503, { code: "general.unavailable" }),
     );
     await act(async () => {
@@ -119,7 +125,7 @@ describe("shared parent relationship features", () => {
     expect(result.current.care.features.sick_note_enabled).toBe(true);
   });
   it("keeps another child's confirmed features when one relationship lookup fails", async () => {
-    vi.mocked(api.getChildFeatures).mockImplementation(async (id) => {
+    family.features.mockImplementation(async (id) => {
       if (id === "42")
         throw new ApiError("offline", 503, { code: "general.unavailable" });
       return features;
@@ -128,6 +134,7 @@ describe("shared parent relationship features", () => {
       ...children,
       { student_id: "43", tenant_id: "7" } as parentMeContract.ChildResponse,
     ];
+    family.children.mockResolvedValue(linked);
     const { result } = renderHook(
       () => ({
         features: useParentFeatures(linked),
@@ -142,15 +149,13 @@ describe("shared parent relationship features", () => {
     expect(result.current.features.error).toMatchObject({
       code: "general.unavailable",
     });
-    vi.mocked(api.getChildFeatures).mockReturnValue(
-      new Promise(() => undefined),
-    );
+    family.features.mockReturnValue(new Promise(() => undefined));
     act(() => {
       result.current.discard(
         new ApiError("gone", 403, { code: "care.child_not_linked" }),
         {
           codes: ["care.child_not_linked"],
-          matches: (key) => key.startsWith("parent-features-"),
+          matches: (key) => key.startsWith("parent-family-start-"),
         },
       );
     });
@@ -163,6 +168,9 @@ describe("shared parent daily status", () => {
     ...children,
     { student_id: "43", tenant_id: "7" } as parentMeContract.ChildResponse,
   ];
+  beforeEach(() => {
+    family.children.mockResolvedValue(linked);
+  });
   const present: parentMeContract.TodayStatusResponse = {
     at_ogs: true,
     state: "present",
@@ -174,14 +182,16 @@ describe("shared parent daily status", () => {
   const failure = new ApiError("offline", 503, { code: "general.unavailable" });
 
   it("keeps successful sibling statuses and exposes cold-load failures", async () => {
-    vi.spyOn(api, "getChildToday").mockImplementation(async (id) => {
+    family.today.mockImplementation(async (id) => {
       if (id === "42") throw failure;
       return present;
     });
     const { result } = renderHook(() => useParentToday(linked), {
       wrapper: ParentResourceTestProvider,
     });
-    await waitFor(() => expect(result.current.error).toBe(failure));
+    await waitFor(() =>
+      expect(result.current.error).toMatchObject({ code: failure.code }),
+    );
     expect(result.current.data).toEqual({
       "42": api.UNKNOWN_CHILD_TODAY,
       "43": present,
@@ -189,7 +199,7 @@ describe("shared parent daily status", () => {
   });
 
   it("keeps confirmed attendance for failed children while updating successful siblings", async () => {
-    const request = vi.spyOn(api, "getChildToday").mockResolvedValue(present);
+    const request = family.today.mockResolvedValue(present);
     const { result } = renderHook(() => useParentToday(linked), {
       wrapper: ParentResourceTestProvider,
     });
@@ -201,7 +211,7 @@ describe("shared parent daily status", () => {
     await act(async () => {
       await result.current.mutate();
     });
-    expect(result.current.error).toBe(failure);
+    expect(result.current.error).toMatchObject({ code: failure.code });
     expect(result.current.data).toEqual({
       "42": present,
       "43": left,
@@ -214,8 +224,8 @@ describe("shared parent daily status", () => {
     expect(result.current.data).toEqual({ "42": left, "43": left });
   });
 
-  it("handles a sibling access refusal even when another status request also fails", async () => {
-    const request = vi.spyOn(api, "getChildToday").mockResolvedValue(present);
+  it("withdraws all projections when the family read refuses access", async () => {
+    family.today.mockResolvedValue(present);
     const { result } = renderHook(
       () => ({
         today: useParentToday(linked),
@@ -229,13 +239,12 @@ describe("shared parent daily status", () => {
     await waitFor(() =>
       expect(result.current.today.data?.["43"]).toEqual(present),
     );
-    vi.mocked(api.getChildFeatures).mockReturnValue(
-      new Promise(() => undefined),
-    );
-    request.mockImplementation(async (id) => {
-      if (id === "42") throw failure;
-      throw new ApiError("gone", 403, { code: "care.child_not_linked" });
-    });
+    // The full response fails at the relationship gate, not once per child.
+    vi.mocked(api.getFamilyStart)
+      .mockRejectedValueOnce(
+        new ApiError("gone", 403, { code: "care.child_not_linked" }),
+      )
+      .mockReturnValue(new Promise(() => undefined));
     await act(async () => {
       await result.current.today.mutate();
     });
@@ -244,7 +253,7 @@ describe("shared parent daily status", () => {
   });
 
   it("withdraws partial statuses when relationship access is refused", async () => {
-    vi.spyOn(api, "getChildToday").mockImplementation(async (id) => {
+    family.today.mockImplementation(async (id) => {
       if (id === "42") throw failure;
       return present;
     });
@@ -258,13 +267,13 @@ describe("shared parent daily status", () => {
     await waitFor(() =>
       expect(result.current.today.data?.["43"]).toEqual(present),
     );
-    vi.mocked(api.getChildToday).mockReturnValue(new Promise(() => undefined));
+    family.today.mockReturnValue(new Promise(() => undefined));
     act(() => {
       result.current.discard(
         new ApiError("gone", 403, { code: "care.child_not_linked" }),
         {
           codes: ["care.child_not_linked"],
-          matches: (key) => key.startsWith("parent-today-"),
+          matches: (key) => key.startsWith("parent-family-start-"),
         },
       );
     });
@@ -298,22 +307,16 @@ describe("shared parent rate-limit recovery", () => {
       restore();
       window.fetch = previousFetch;
     };
-    await fetch("/api/parent/me/children");
-    vi.mocked(api.getChildFeatures).mockImplementation(async () => {
-      const reply = await fetch("/api/parent/me/children/42/features");
-      if (!reply.ok)
-        throw await apiErrorFromResponse(reply, "Features unavailable");
-      return features;
-    });
     const present: parentMeContract.TodayStatusResponse = {
       at_ogs: true,
       state: "present",
     };
-    vi.spyOn(api, "getChildToday").mockImplementation(async () => {
-      const reply = await fetch("/api/parent/me/children/42/today");
+    family.today.mockResolvedValue(present);
+    vi.mocked(api.getFamilyStart).mockImplementation(async () => {
+      const reply = await fetch("/api/parent/me/family-start");
       if (!reply.ok)
-        throw await apiErrorFromResponse(reply, "Status unavailable");
-      return present;
+        throw await apiErrorFromResponse(reply, "Family unavailable");
+      return family.read();
     });
     const { result } = renderHook(
       () => ({
@@ -342,13 +345,13 @@ describe("alternating partial parent refreshes", () => {
     ...children,
     { student_id: "43", tenant_id: "7" } as parentMeContract.ChildResponse,
   ];
+  beforeEach(() => {
+    family.children.mockResolvedValue(linked);
+  });
   it.each(["features", "today"] as const)(
     "keeps the latest successful %s value per child",
     async (kind) => {
-      const request =
-        kind === "features"
-          ? vi.mocked(api.getChildFeatures)
-          : vi.spyOn(api, "getChildToday");
+      const request = kind === "features" ? family.features : family.today;
       const initial =
         kind === "features" ? features : { at_ogs: true, state: "present" };
       const fresh =
@@ -389,7 +392,7 @@ describe("alternating partial parent refreshes", () => {
       await act(async () => {
         await result.current[kind].mutate();
       });
-      expect(result.current[kind].error).toBe(failure);
+      expect(result.current[kind].error).toMatchObject({ code: failure.code });
       expect(result.current[kind].data).toEqual({ "42": fresh, "43": fresh });
     },
   );

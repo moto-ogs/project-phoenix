@@ -124,7 +124,7 @@ function siteErrors(draft: HireDraft): Record<string, string> {
     return { sites: "Bitte mindestens eine Schule wählen." };
   }
   if (draft.sites.some((site) => parseHoursFields(site.hours) === null)) {
-    return { sites: "Bitte je Tag 0 bis 12 Stunden eingeben." };
+    return { sites: "Bitte pro Tag 0 bis 12 Stunden eingeben." };
   }
   if (draft.sites.some((site) => hoursFieldsEmpty(site.hours))) {
     return { sites: "Bitte für jede gewählte Schule Stunden eintragen." };

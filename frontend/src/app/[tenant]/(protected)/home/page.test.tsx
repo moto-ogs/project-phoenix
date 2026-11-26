@@ -15,7 +15,7 @@ import {
   vi,
 } from "vitest";
 
-import HomePage from "./page";
+import HomePage from "./page-content";
 import { preloadHomeBoardEditor } from "~/components/home/home-board";
 import { ToastProvider } from "~/contexts/ToastContext";
 
@@ -86,12 +86,6 @@ vi.mock("~/lib/breadcrumb-context", () => ({
   useBreadcrumb: vi.fn(() => ({ breadcrumb: {}, setBreadcrumb: vi.fn() })),
   BreadcrumbProvider: ({ children }: { children: React.ReactNode }) => (
     <>{children}</>
-  ),
-}));
-
-vi.mock("~/lib/usercontext-context", () => ({
-  UserContextProvider: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="user-context-provider">{children}</div>
   ),
 }));
 
@@ -223,6 +217,7 @@ vi.mock("~/lib/dashboard-helpers", () => ({
 
 vi.mock("~/lib/swr/hooks", () => ({
   useSWRAuth: vi.fn(),
+  useOpeningRead: () => ({ data: undefined, error: undefined }),
   useScopedSWRKey: () => null,
 }));
 

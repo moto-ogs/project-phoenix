@@ -16199,16 +16199,6 @@
       "target_owner": "identity-access"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/roots/owners.CallerRows.HasCurrentStaff",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.AttendanceRouteStaffSource.HasCurrentStaff",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/identityaccess.CallerContext.HasCurrentStaff; modules/identityaccess.CallerContext (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
-      "source_owner": "people-directory",
-      "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.CallerContext.HasCurrentStaff",
-      "target_owner": "identity-access"
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentChangeRecorder.RecordChangesForActor",
       "classification": "query",
       "effect": "query",
@@ -16788,16 +16778,6 @@
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/careplan/compose.CompanionRecords.CompanionDaysCoveredExcluding",
       "target_owner": "care-plan"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.AttendanceRouteStaffSource.HasCurrentStaff",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.currentStaffPresence.HasCurrentStaff",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/identityaccess.CallerContext.HasCurrentStaff; modules/identityaccess.CallerContext (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
-      "source_owner": "people-directory",
-      "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.CallerContext.HasCurrentStaff",
-      "target_owner": "identity-access"
     },
     {
       "adr": "0098",
@@ -19047,6 +19027,26 @@
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StaffRepository.FindSchoolPortalStaffIDs",
       "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/staffdirectoryview.New; modules/staffdirectoryview/staffdirectoryview.go:81. May-bind method surface, not a production-call/liveness claim.",
+      "source_owner": "people-directory",
+      "target": "github.com/moto-ogs/project-phoenix/modules/staffdirectoryview.New",
+      "target_owner": "staff-directory-view"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.StaffMembershipRepository.FindTimeTrackingManagerStaffIDs",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StaffRepository.FindTimeTrackingManagerStaffIDs",
+      "reason": "Read-only target added for terminal-only stamping (#8024): people-directory reaches modules/staffdirectoryview.Directory.ReachableStaffIDs (staff-directory-view) through roots/owners.StaffMembershipRepository.FindTimeTrackingManagerStaffIDs. Reads the school's setting or the staff accounts' effective permissions; no persistent, lock or scope effect.",
+      "source_owner": "people-directory",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/staffdirectoryview.Directory.ReachableStaffIDs",
+      "target_owner": "staff-directory-view"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.StaffMembershipRepository.FindTimeTrackingManagerStaffIDs",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StaffRepository.FindTimeTrackingManagerStaffIDs",
+      "reason": "Read-only target added for terminal-only stamping (#8024): people-directory reaches modules/staffdirectoryview.New (staff-directory-view) through roots/owners.StaffMembershipRepository.FindTimeTrackingManagerStaffIDs. Reads the school's setting or the staff accounts' effective permissions; no persistent, lock or scope effect.",
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/staffdirectoryview.New",
       "target_owner": "staff-directory-view"

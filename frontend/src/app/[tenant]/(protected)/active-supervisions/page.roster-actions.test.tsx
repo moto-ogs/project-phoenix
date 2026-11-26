@@ -50,6 +50,7 @@ vi.mock("next-auth/react", () => ({
 const mockPush = vi.fn();
 const mockRedirect = vi.fn();
 vi.mock("next/navigation", () => ({
+  usePathname: () => "/active-supervisions",
   useRouter: () => ({ push: mockPush, replace: vi.fn() }),
   useSearchParams: () => ({
     get: (key: string) =>
@@ -376,7 +377,7 @@ import {
   useShowTimetableCounts,
 } from "~/lib/tenant-context";
 import { timetableOperationsApi } from "~/lib/timetable-operations-api";
-import MeinRaumPage from "./page";
+import MeinRaumPage from "./page-content";
 
 import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";

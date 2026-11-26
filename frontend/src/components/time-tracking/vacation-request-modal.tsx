@@ -23,7 +23,11 @@ import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { dispatchAbsencesRefresh } from "~/lib/absence-helpers";
 import { createLogger } from "~/lib/logger";
 import { timeTrackingService } from "~/lib/time-tracking-api";
-import type { StaffAbsence } from "~/lib/time-tracking-helpers";
+import type { OwnAbsence } from "~/lib/own-time-tracking-view";
+import type { FormErrorInput } from "~/components/ui/form-error";
+import { LoadErrorAlert } from "~/components/ui/form-error-alert";
+import { SkeletonRegion } from "~/components/ui/page-skeletons";
+import { Skeleton } from "~/components/ui/skeleton";
 import { StatusDot } from "~/components/ui/status-dot";
 import { SectionLabel } from "~/components/ui/section-label";
 
@@ -124,7 +128,7 @@ function vacationStatusLabel(status: string): string {
   }
 }
 
-function isBlockingVacation(absence: StaffAbsence): boolean {
+function isBlockingVacation(absence: OwnAbsence): boolean {
   return (
     absence.absenceType === "vacation" &&
     BLOCKING_VACATION_STATUSES.has(absence.status)
@@ -175,12 +179,14 @@ export function VacationRequestModal({
   onSubmitted,
   remainingDays,
   existingVacations,
+  overlapError,
 }: {
   readonly isOpen: boolean;
   readonly onClose: () => void;
   readonly onSubmitted: () => void;
   readonly remainingDays: number;
-  readonly existingVacations: readonly StaffAbsence[];
+  readonly existingVacations?: readonly OwnAbsence[];
+  readonly overlapError?: FormErrorInput | null;
 }) {
   const today = useMemo(() => parseISODate(berlinTodayISO()), []);
   const vacationPresets = useMemo(() => buildVacationPresets(today), [today]);
@@ -197,7 +203,7 @@ export function VacationRequestModal({
   const toast = useToast();
 
   const blockingVacations = useMemo(
-    () => existingVacations.filter(isBlockingVacation),
+    () => (existingVacations ?? []).filter(isBlockingVacation),
     [existingVacations],
   );
 
@@ -267,6 +273,7 @@ export function VacationRequestModal({
     : null;
 
   const handleSubmit = async () => {
+    if (!existingVacations) return;
     if (!range?.from || !range.to) {
       formErrors.invalid("Bitte wähle einen Zeitraum.");
       return;
@@ -350,110 +357,118 @@ export function VacationRequestModal({
         <SlideOverBody
           error={overlapMessage ?? balanceMessage ?? formErrors.error}
         >
-          <div className="space-y-5">
-            <div>
-              <SectionLabel as="p" className="mb-2">
-                Zeitraum
-              </SectionLabel>
-              <div className="moto-content-surface overflow-hidden rounded-xl border">
-                <RangeCalendarInline
-                  value={range}
-                  onChange={(nextRange) => {
-                    setRange(nextRange);
-                    formErrors.clear();
-                  }}
-                  fromMin={today}
-                  presets={vacationPresets}
-                  modifiers={calendarModifiers}
-                  modifiersClassNames={{
-                    requestedVacation:
-                      "[&>button]:!bg-moto-orange/10 [&>button]:!text-moto-orange-strong [&>button]:!ring-moto-orange/30 [&>button]:!ring-1",
-                    questionVacation:
-                      "[&>button]:!bg-moto-purple/15 [&>button]:!text-moto-purple [&>button]:!ring-1 [&>button]:!ring-moto-purple/40",
-                    approvedVacation:
-                      "[&>button]:!bg-moto-green/15 [&>button]:!text-moto-green-strong [&>button]:!ring-1 [&>button]:!ring-moto-green/40",
-                  }}
-                />
-              </div>
-              {blockingVacations.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-3 text-xs text-gray-500">
-                  <span className="inline-flex items-center gap-1">
-                    <StatusDot
-                      className="bg-moto-orange/50"
-                      size="md"
-                      decorative
-                    />
-                    Beantragt
-                  </span>
-                  <span className="inline-flex items-center gap-1">
-                    <StatusDot
-                      className="bg-moto-purple/50"
-                      size="md"
-                      decorative
-                    />
-                    {"Rückfrage"}
-                  </span>
-                  <span className="inline-flex items-center gap-1">
-                    <StatusDot
-                      className="bg-moto-green/50"
-                      size="md"
-                      decorative
-                    />
-                    Genehmigt oder eingetragen
-                  </span>
+          <LoadErrorAlert error={overlapError} />
+          {!existingVacations && !overlapError && (
+            <SkeletonRegion label="Abwesenheiten werden geladen…">
+              <Skeleton className="h-56 w-full" />
+            </SkeletonRegion>
+          )}
+          {existingVacations && (
+            <div className="space-y-5">
+              <div>
+                <SectionLabel as="p" className="mb-2">
+                  Zeitraum
+                </SectionLabel>
+                <div className="moto-content-surface overflow-hidden rounded-xl border">
+                  <RangeCalendarInline
+                    value={range}
+                    onChange={(nextRange) => {
+                      setRange(nextRange);
+                      formErrors.clear();
+                    }}
+                    fromMin={today}
+                    presets={vacationPresets}
+                    modifiers={calendarModifiers}
+                    modifiersClassNames={{
+                      requestedVacation:
+                        "[&>button]:!bg-moto-orange/10 [&>button]:!text-moto-orange-strong [&>button]:!ring-moto-orange/30 [&>button]:!ring-1",
+                      questionVacation:
+                        "[&>button]:!bg-moto-purple/15 [&>button]:!text-moto-purple [&>button]:!ring-1 [&>button]:!ring-moto-purple/40",
+                      approvedVacation:
+                        "[&>button]:!bg-moto-green/15 [&>button]:!text-moto-green-strong [&>button]:!ring-1 [&>button]:!ring-moto-green/40",
+                    }}
+                  />
                 </div>
-              )}
-            </div>
+                {blockingVacations.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-3 text-xs text-gray-500">
+                    <span className="inline-flex items-center gap-1">
+                      <StatusDot
+                        className="bg-moto-orange/50"
+                        size="md"
+                        decorative
+                      />
+                      Beantragt
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      <StatusDot
+                        className="bg-moto-purple/50"
+                        size="md"
+                        decorative
+                      />
+                      {"Rückfrage"}
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      <StatusDot
+                        className="bg-moto-green/50"
+                        size="md"
+                        decorative
+                      />
+                      Genehmigt oder eingetragen
+                    </span>
+                  </div>
+                )}
+              </div>
 
-            {range?.from &&
-              range?.to &&
-              (isSingleDay ? (
-                <SwitchRow
-                  label="Halber Tag"
-                  description="Aktivieren, wenn nur ein halber Arbeitstag beansprucht wird."
-                  checked={startHalf || endHalf}
-                  onCheckedChange={(v) => {
-                    setStartHalf(v);
-                    setEndHalf(v);
-                  }}
+              {range?.from &&
+                range?.to &&
+                (isSingleDay ? (
+                  <SwitchRow
+                    label="Halber Tag"
+                    description="Aktivieren, wenn nur ein halber Arbeitstag beansprucht wird."
+                    checked={startHalf || endHalf}
+                    onCheckedChange={(v) => {
+                      setStartHalf(v);
+                      setEndHalf(v);
+                    }}
+                  />
+                ) : (
+                  <fieldset className="space-y-2">
+                    <SectionLabel as="legend">
+                      Halbe Tage an den Rändern
+                    </SectionLabel>
+                    <SwitchRow
+                      label="Erster Tag halbtags"
+                      description="Nur Vor- oder Nachmittag am Startdatum."
+                      checked={startHalf}
+                      onCheckedChange={setStartHalf}
+                    />
+                    <SwitchRow
+                      label="Letzter Tag halbtags"
+                      description="Nur Vor- oder Nachmittag am Enddatum."
+                      checked={endHalf}
+                      onCheckedChange={setEndHalf}
+                    />
+                  </fieldset>
+                ))}
+
+              <div>
+                <Textarea
+                  id="vacation-note"
+                  label="Notiz (optional)"
+                  name="note"
+                  error={formErrors.fieldError("note")}
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  rows={3}
+                  maxLength={500}
+                  placeholder="Zum Beispiel: Vertretung mit Kollegin XY abgestimmt"
                 />
-              ) : (
-                <fieldset className="space-y-2">
-                  <SectionLabel as="legend">
-                    Halbe Tage an den Rändern
-                  </SectionLabel>
-                  <SwitchRow
-                    label="Erster Tag halbtags"
-                    description="Nur Vor- oder Nachmittag am Startdatum."
-                    checked={startHalf}
-                    onCheckedChange={setStartHalf}
-                  />
-                  <SwitchRow
-                    label="Letzter Tag halbtags"
-                    description="Nur Vor- oder Nachmittag am Enddatum."
-                    checked={endHalf}
-                    onCheckedChange={setEndHalf}
-                  />
-                </fieldset>
-              ))}
-
-            <div>
-              <Textarea
-                id="vacation-note"
-                label="Notiz (optional)"
-                name="note"
-                error={formErrors.fieldError("note")}
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                rows={3}
-                maxLength={500}
-                placeholder="Zum Beispiel: Vertretung mit Kollegin XY abgestimmt"
-              />
-              <p className="mt-1 text-right text-xs text-gray-500">
-                {note.length}/500
-              </p>
+                <p className="mt-1 text-right text-xs text-gray-500">
+                  {note.length}/500
+                </p>
+              </div>
             </div>
-          </div>
+          )}
         </SlideOverBody>
         <SlideOverFooter>
           <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -496,6 +511,7 @@ export function VacationRequestModal({
                 size="md"
                 onClick={handleSubmit}
                 disabled={
+                  !existingVacations ||
                   save.pending ||
                   !range?.from ||
                   !range.to ||

@@ -1,0 +1,8 @@
+{
+  "checking": "Checking your sign-in...",
+  "leaving": "Reloading the page...",
+  "changed": "Your sign-in changed in another tab or window. Reload the page to continue.",
+  "unconfirmed": "moto can't check right now whether you're still signed in. Reload the page in a moment.",
+  "reload": "Reload page",
+  "reloadHint": "Reloads the page with your current sign-in."
+}

@@ -4,7 +4,7 @@ import { SWRConfig } from "~/lib/swr/testing";
 import { useSWRAuth } from "~/lib/swr";
 import { studentKeys } from "~/lib/swr/portal-keys";
 import { ToastProvider } from "~/contexts/ToastContext";
-import StudentDetailPage from "./page";
+import StudentDetailPage from "./page-content";
 
 vi.unmock("swr");
 const state = vi.hoisted(() => ({
@@ -39,10 +39,7 @@ vi.mock("~/lib/student-api", async (importOriginal) => ({
   fetchStudent: state.detail,
 }));
 vi.mock("~/lib/usercontext-api", () => ({
-  userContextService: {
-    getMyEducationalGroups: async () => [],
-    getMySupervisedGroups: async () => [],
-  },
+  userContextService: {},
 }));
 vi.mock("~/lib/pickup-schedule-api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/lib/pickup-schedule-api")>()),

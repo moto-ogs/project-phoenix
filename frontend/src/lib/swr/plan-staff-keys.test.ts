@@ -37,8 +37,8 @@ describe("factory keys of the staff, time tracking and plan readers", () => {
     );
     expect(staffKeys.stammdaten("7")).toBe("staff-stammdaten-7");
     expect(staffNoticeKeys.today("9")).toBe("staff-notices-today:9");
-    expect(timeTrackingKeys.monthSummary(2026, 9)).toBe(
-      "time-tracking-month-summary-2026-9",
+    expect(timeTrackingKeys.period("month", "2026-09-01")).toBe(
+      "time-tracking-period-month-2026-09-01",
     );
     expect(timeTrackingKeys.ownAssignmentsToday("2026-09-09")).toBe(
       "time-tracking-own-assignments-today-2026-09-09",
@@ -49,15 +49,9 @@ describe("factory keys of the staff, time tracking and plan readers", () => {
     expect(
       tenantDailyKeys.planInstances("week", "a", "b", NO_PLAN_FILTER),
     ).toBe("timetable-week-a-b");
-    expect(
-      tenantDailyKeys.planInstanceDetail(
-        "week",
-        "a",
-        "b",
-        { groupId: "3", staffId: null, roomId: "4" },
-        "a",
-      ),
-    ).toBe("timetable-week-a-b-g3-p-r4-detail-a");
+    expect(tenantDailyKeys.planInstanceDetail("42", "2026-11-25")).toBe(
+      "timetable-detail-42-2026-11-25",
+    );
     expect(tenantDailyKeys.dienstplanOverview("a", "b")).toBe(
       "dienstplan-overview-a-b",
     );

@@ -111,6 +111,16 @@ func (s *workSessionCommands) CheckInOn(ctx context.Context, staffID int64, pinn
 	return
 }
 
+// TerminalOnlyStamping reports whether the staff member stamps only at the
+// NFC terminal (#8024).
+func (s *workSessionCommands) TerminalOnlyStamping(ctx context.Context, staffID int64) (value0 bool, err error) {
+	err = s.commands.runInWorkSessionTx(ctx, func(txCtx context.Context) error {
+		value0, err = s.commands.TerminalOnlyStamping(txCtx, staffID)
+		return err
+	})
+	return
+}
+
 // EnsureCheckedIn ensures a staff member is checked in, creating a session if needed.
 // `source` is forwarded to CheckIn so the channel is recorded faithfully.
 func (s *workSessionCommands) EnsureCheckedIn(ctx context.Context, staffID int64, source string) (value0 *WorkSession, err error) {

@@ -48,8 +48,8 @@ func TestClassArrivalExceptionRechecksMembershipAndRollsBack(t *testing.T) {
 	})
 	require.ErrorIs(t, err, careplan.ErrBulkStudentNotFound)
 	for _, id := range []int64{first.ID, second.ID} {
-		row, readErr := service.GetStudentArrivalExceptionForDate(ctx, id, date)
+		rows, readErr := service.GetStudentArrivalExceptionsForDate(ctx, []int64{id}, date)
 		require.NoError(t, readErr)
-		require.Nil(t, row, "a changed membership rolls back every child's arrival")
+		require.Nil(t, rows[id], "a changed membership rolls back every child's arrival")
 	}
 }

@@ -27,7 +27,7 @@ function render(ui: ReactElement) {
     { wrapper: ToastProvider },
   );
 }
-import StaffImportPage from "./page";
+import StaffImportPage from "./page-content";
 
 // Mock next-auth/react. The default session may change existing records
 // (#2906); the mode switcher only renders for that permission pair.

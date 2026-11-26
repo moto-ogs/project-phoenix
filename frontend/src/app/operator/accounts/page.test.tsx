@@ -73,9 +73,16 @@ vi.mock("~/lib/operator/provisioning-api", async () => {
     operatorProvisioningService: {
       listOrganizations: mockListOrganizations,
       listSchools: mockListSchools,
-      listSchoolAccounts: mockListSchoolAccounts,
-      listOrganizationAccounts: mockListOrganizationAccounts,
-      listAllAccounts: mockListAllAccounts,
+      listAccountPage: (
+        scope: { kind: string; id?: string },
+        query: unknown,
+      ) => {
+        if (scope.kind === "school")
+          return mockListSchoolAccounts(scope.id, query);
+        if (scope.kind === "organization")
+          return mockListOrganizationAccounts(scope.id, query);
+        return mockListAllAccounts(query);
+      },
     },
   };
 });
@@ -106,7 +113,7 @@ vi.mock("~/components/teachers/caregiver-capability-modal", () => ({
     ) : null,
 }));
 
-import OperatorAccountsPage from "./page";
+import OperatorAccountsPage from "./page-content";
 import {
   mockOrg,
   mockSchool,
@@ -538,49 +545,21 @@ describe("OperatorAccountsPage", () => {
     expect(screen.getByText("teacher@school.de")).toBeVisible();
   });
 
-  // --- Sorting ---
-
-  it("sorts accounts by clicking column header", () => {
-    const account1 = { ...mockOrgAccount, email: "a@school.de" };
-    const account2 = {
-      ...mockOrgAccount,
-      accountId: "101",
-      email: "z@school.de",
-    };
-    withDefaultSWR({ allAccounts: [account2, account1] });
-
+  it("reads a new first page for ascending and descending column sorts", () => {
+    withDefaultSWR({ allAccounts: [mockOrgAccount] });
     render(<OperatorAccountsPage />);
-
     fireEvent.click(screen.getByText("E-Mail"));
-
-    const rows = screen.getAllByText(/@school.de/);
-    expect(rows[0]!.textContent).toBe("a@school.de");
-    expect(rows[1]!.textContent).toBe("z@school.de");
-
+    expect(mockUseSWR.mock.calls.map(([key]) => key)).toContain(
+      "operator-all-accounts:email:asc:",
+    );
     fireEvent.click(screen.getByText("E-Mail"));
-
-    const rowsReversed = screen.getAllByText(/@school.de/);
-    expect(rowsReversed[0]!.textContent).toBe("z@school.de");
-    expect(rowsReversed[1]!.textContent).toBe("a@school.de");
-  });
-
-  it("sorts accounts by status", () => {
-    const activeAccount = { ...mockOrgAccount, status: "active" };
-    const pendingAccount = {
-      ...mockOrgAccount,
-      accountId: "101",
-      email: "pending@school.de",
-      status: "pending",
-    };
-    withDefaultSWR({ allAccounts: [pendingAccount, activeAccount] });
-
-    render(<OperatorAccountsPage />);
-
+    expect(mockUseSWR.mock.calls.map(([key]) => key)).toContain(
+      "operator-all-accounts:email:desc:",
+    );
     fireEvent.click(screen.getByText("Status"));
-
-    const rows = screen.getAllByText(/teacher@school.de|pending@school.de/);
-    expect(rows[0]!.textContent).toBe("teacher@school.de");
-    expect(rows[1]!.textContent).toBe("pending@school.de");
+    expect(mockUseSWR.mock.calls.map(([key]) => key)).toContain(
+      "operator-all-accounts:status:asc:",
+    );
   });
 
   // --- Loading + plural ---

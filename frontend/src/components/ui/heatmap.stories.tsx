@@ -40,7 +40,7 @@ function Example({ tone }: Readonly<{ tone: "green" | "blue" }>) {
   return (
     <div className="max-w-4xl">
       <Heatmap
-        caption="Ankunft je Wochentag und halbe Stunde"
+        caption="Ankunft pro Wochentag und halbe Stunde"
         columns={columns}
         rows={rows}
         tone={tone}

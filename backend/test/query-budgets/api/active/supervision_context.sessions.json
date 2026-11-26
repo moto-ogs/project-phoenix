@@ -1,0 +1,7 @@
+{
+  "scenario": "api.active.supervision_context.sessions",
+  "max": 18,
+  "exact": false,
+  "description": "Only open sessions (school-wide scope) and own assignment. No education-group or room release query. Includes session validation.",
+  "route": "GET /api/active/supervision-context"
+}

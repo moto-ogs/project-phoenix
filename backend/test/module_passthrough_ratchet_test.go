@@ -260,7 +260,7 @@ var modulePassthroughOwnerBudgets = map[string]int{
 	// Raised by ADR 0112: the Träger logo read of the Träger-Portal.
 	// Raised by ADR 0172: the document contact read without an account (+1).
 	// ADR 0198: the transaction-bound account-retention read (+1).
-	"modules/organizationtenancy": 14,
+	"modules/organizationtenancy": 13,
 	// Added by ADR 0115: the rule checks and the link check of the new owner
 	// Elternabrechnung. Raised by ADR 0119: the billing run list (+1).
 	// Raised by ADR 0158: the monthly run list (+1).

@@ -226,7 +226,7 @@ export async function fetchCareWithdrawals(
   );
 }
 
-function mapCareWithdrawalPage(
+export function mapCareWithdrawalPage(
   wire: studentsContract.careWithdrawalPageResponse,
 ): CareWithdrawalPage {
   return {
@@ -365,6 +365,14 @@ export async function fetchEndedCare(params: {
     },
     errorMessage,
   });
+  return mapEndedCarePage(data);
+}
+
+export const ENDED_CARE_PAGE_SIZE = 50;
+
+export function mapEndedCarePage(
+  data: studentsContract.endedCarePageResponse,
+): EndedCarePage {
   return {
     items: (data.items ?? []).map((wire) => ({
       studentId: wire.student_id,

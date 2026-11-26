@@ -94,6 +94,12 @@ export async function fetchSlotListOptions(
     body: { date },
     errorMessage: "slot list options failed",
   });
+  return mapSlotListOptions(options);
+}
+
+export function mapSlotListOptions(
+  options: timetableContract.OptionsResult,
+): SlotListOptionsResult {
   return {
     ...options,
     slots: options.slots ?? [],

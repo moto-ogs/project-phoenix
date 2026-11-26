@@ -1,275 +1,44 @@
-"use client";
+import { headers } from "next/headers";
+import { connection } from "next/server";
+import { messageBoundary } from "~/i18n/scoped-messages";
+import { routes } from "~/lib/contract/enrollment.generated";
+import { publicPhaseFromContract } from "~/lib/enrollment-submission-api";
+import { readContract, seedRead } from "~/lib/server-seed.server";
+import { tenantSlugFromHost } from "~/lib/tenant-host";
+import EnrollPhasePickerPage from "./enrollment-start-page";
 
-import { Alert } from "~/components/ui/alert";
-import { StatusBadge } from "~/components/ui/status-badge";
-import { ApiError } from "~/lib/api-error";
-import { useEffect, useState } from "react";
-import { Check, Clock, RefreshCw, UserPlus } from "lucide-react";
-import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
-import { buttonClassName } from "~/components/ui/button";
-import { useLocale } from "next-intl";
-import { useTenant } from "~/lib/tenant-context";
-import { formatDate } from "~/lib/date-helpers";
-import { useTenantAwarePath } from "~/lib/tenant-path";
-import type { TenantInfo } from "~/lib/tenant-api";
-import {
-  PublicEnrollmentBrand,
-  PublicEnrollmentLocaleSwitcher,
-  PublicEnrollmentPageShell,
-  PublicEnrollmentSteps,
-  PublicInfoCard,
-} from "~/components/enrollment/public-enrollment-shell";
-import {
-  fetchPublicPhases,
-  type PublicPhase,
-} from "~/lib/enrollment-submission-api";
-import { localizeNamed } from "~/lib/enrollment-translations";
-import { createLogger } from "~/lib/logger";
-import { useApiLoadError } from "~/contexts/ToastContext";
-import { LoadErrorAlert } from "~/components/ui/form-error-alert";
-import { calendarConcept } from "~/lib/concepts/calendar";
-import { permissionsConcept } from "~/lib/concepts/permissions";
-import { Loading } from "~/components/ui/loading";
-import { SectionCard } from "~/components/ui/section-card";
-import { TileCard } from "~/components/ui/tile-card";
-import { useCareTermTranslations } from "~/lib/care-facility-term";
+const PageMessages = messageBoundary("enrollmentPublic", "language");
 
-const logger = createLogger({ component: "EnrollPhasePicker" });
-
-/**
- * Phase picker for the new public landing page for parents. Lists every
- * currently-open phase as a card. Clicking a phase navigates to
- * /{tenant}/anmeldung/{phaseId} which renders the per-phase form. Was
- * previously a school-year dropdown above the form; PR B's phase
- * model splits the picker out so each phase carries its own form.
- */
-export default function EnrollPhasePickerPage() {
-  const t = useCareTermTranslations("enrollmentPublic");
-  const loadErrorObject = t("errorObjectPhases");
-  const locale = useLocale();
-  const { tenantSlug, tenant } = useTenant();
-  const tenantPath = useTenantAwarePath();
-  const [phases, setPhases] = useState<PublicPhase[] | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [enrollmentDisabled, setEnrollmentDisabled] = useState(false);
-  // A failed load replaces the list (#2515): "no open phase" would be a
-  // wrong answer while the phases simply did not arrive.
-  const {
-    error: loadError,
-    show: showLoadError,
-    clear: clearLoadError,
-  } = useApiLoadError();
-  const [loadAttempt, setLoadAttempt] = useState(0);
-
-  // oxlint-disable-next-line swr/no-effect-load -- public enrollment for families without a session; the shared cache reads only with a session, by design
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      setLoading(true);
-      clearLoadError();
-      setEnrollmentDisabled(false);
-      try {
-        const list = await fetchPublicPhases(tenantSlug);
-        if (cancelled) return;
-        setPhases(list);
-      } catch (err) {
-        if (cancelled) return;
-        const code = err instanceof ApiError ? err.code : undefined;
-        logger.error("phase_picker_load_failed", {
-          error: err instanceof Error ? err.message : String(err),
-          code,
-        });
-        // Switched off for this school is a state, not a failure: the page
-        // says so in its own notice instead of an error.
-        if (code === "enrollment.disabled") {
-          setEnrollmentDisabled(true);
-        } else {
-          void showLoadError(err, {
-            object: loadErrorObject,
-            retry: () => setLoadAttempt((n) => n + 1),
-          });
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-    void load();
-    return () => {
-      cancelled = true;
-    };
-  }, [tenantSlug, loadErrorObject, loadAttempt, clearLoadError, showLoadError]);
-
-  if (loading) {
-    return (
-      <PublicEnrollmentPageShell withInlineSwitcher>
-        <PhasePickerHeader tenant={tenant} />
-        <SectionCard
-          padding="none"
-          className="flex min-h-[24rem] items-center justify-center"
-        >
-          <Loading message={t("loading")} />
-        </SectionCard>
-      </PublicEnrollmentPageShell>
-    );
-  }
-
+export default async function Page({
+  params,
+}: {
+  params: Promise<{ tenant: string }>;
+}) {
+  await connection();
+  const [{ tenant }, requestHeaders] = await Promise.all([params, headers()]);
+  const host =
+    requestHeaders.get("x-moto-original-host") ??
+    requestHeaders.get("x-forwarded-host") ??
+    requestHeaders.get("host");
+  const builtAt = Date.now();
+  // Public catalog data only. Neither a staff cookie nor a parent's form
+  // profile belongs in this payload. Unavailable data follows the old loader.
+  const phases =
+    tenantSlugFromHost(host) === tenant
+      ? await seedRead("enrollment.publicPhases", async (signal) => {
+          const { data } = await readContract(
+            routes["GET /api/enrollment/phases/public/{tenantSlug}"],
+            { params: { tenantSlug: tenant }, signal },
+          );
+          return data.map(publicPhaseFromContract);
+        })
+      : undefined;
   return (
-    <PublicEnrollmentPageShell withInlineSwitcher>
-      <PhasePickerHeader tenant={tenant} />
-
-      <SectionCard padding="none">
-        <div className="grid lg:grid-cols-[minmax(0,1fr)_24rem]">
-          <div className="p-5 sm:p-8 lg:p-10">
-            <div className="max-w-3xl">
-              <h1 className="text-3xl font-bold tracking-tight text-wrap text-gray-900 sm:text-4xl">
-                {t("phaseTitle")}
-              </h1>
-              <p className="mt-4 max-w-2xl text-base leading-7 text-gray-600">
-                {t("phaseDescription")}
-              </p>
-            </div>
-
-            <div className="mt-8">
-              {loadError ? (
-                <LoadErrorAlert error={loadError} />
-              ) : !phases || phases.length === 0 ? (
-                <Alert
-                  type="warning"
-                  announce="off"
-                  message={enrollmentDisabled ? t("disabled") : t("noPhase")}
-                />
-              ) : (
-                <ul className="space-y-3">
-                  {phases.map((phase) => (
-                    <li key={phase.id}>
-                      {/* A document navigation applies the form's Turnstile CSP;
-                          a Next Link would keep the picker's stricter policy. */}
-                      <TileCard
-                        href={tenantPath(
-                          `/anmeldung/${encodeURIComponent(phase.id)}`,
-                        )}
-                        nativeAnchor
-                        className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
-                      >
-                        <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <StatusBadge
-                              tone="gray"
-                              label={t(`kind.${phase.kind}`)}
-                            />
-                            {phase.enrollment_close_at && (
-                              <StatusBadge
-                                tone="green"
-                                icon={Clock}
-                                wrap
-                                label={t("openUntil", {
-                                  date: formatDateTime(
-                                    phase.enrollment_close_at,
-                                    locale,
-                                  ),
-                                })}
-                              />
-                            )}
-                            {phase.audience === "new_students" && (
-                              <StatusBadge
-                                tone="blue"
-                                icon={UserPlus}
-                                wrap
-                                label={t("audienceNewStudents")}
-                              />
-                            )}
-                            {phase.audience === "existing_students" && (
-                              <StatusBadge
-                                tone="blue"
-                                icon={RefreshCw}
-                                wrap
-                                label={t("audienceExistingStudents")}
-                              />
-                            )}
-                          </div>
-                          <h2 className="mt-3 text-lg font-semibold break-words text-gray-900 sm:text-xl">
-                            {localizeNamed(phase, locale).name}
-                          </h2>
-                          <p className="mt-1 text-sm text-gray-600">
-                            {t("serviceRange", {
-                              from: formatDate(
-                                phase.service_start_date,
-                                false,
-                                locale,
-                              ),
-                              to: formatDate(
-                                phase.service_end_date,
-                                false,
-                                locale,
-                              ),
-                            })}
-                          </p>
-                        </div>
-                        <span
-                          className={buttonClassName({
-                            variant: "primary",
-                            size: "md",
-                            className: "w-full shrink-0 sm:w-auto",
-                          })}
-                        >
-                          {t("start")}
-                        </span>
-                      </TileCard>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </div>
-
-          <aside className="moto-dotted-background moto-dotted-background--split border-t border-gray-100 p-5 sm:p-8 lg:border-t-0 lg:border-l">
-            <div className="space-y-4 lg:sticky lg:top-8">
-              <PublicInfoCard
-                icon={<MotoConceptIcon concept={calendarConcept} size={22} />}
-                title={t("chooseOfferTitle")}
-              >
-                {t("chooseOfferText")}
-              </PublicInfoCard>
-              <PublicInfoCard
-                icon={<Check className="h-5 w-5" />}
-                title={t("submitTitle")}
-              >
-                {t("submitText")}
-              </PublicInfoCard>
-              <PublicInfoCard
-                icon={
-                  <MotoConceptIcon concept={permissionsConcept} size={22} />
-                }
-                title={t("statusTitle")}
-              >
-                {t("statusText")}
-              </PublicInfoCard>
-            </div>
-          </aside>
-        </div>
-      </SectionCard>
-    </PublicEnrollmentPageShell>
+    <PageMessages>
+      <EnrollPhasePickerPage
+        key={tenant}
+        initial={phases === undefined ? undefined : { phases, builtAt }}
+      />
+    </PageMessages>
   );
-}
-
-function PhasePickerHeader({ tenant }: { readonly tenant: TenantInfo | null }) {
-  return (
-    <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
-      <PublicEnrollmentBrand tenant={tenant} />
-      <div className="flex items-center gap-3">
-        <PublicEnrollmentSteps current="phase" />
-        <PublicEnrollmentLocaleSwitcher />
-      </div>
-    </div>
-  );
-}
-
-function formatDateTime(value: string, locale: string): string {
-  return new Date(value).toLocaleString(locale, {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 }

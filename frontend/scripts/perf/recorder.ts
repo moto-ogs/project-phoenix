@@ -10,6 +10,7 @@ export interface RequestRecord {
   startMs: number;
   endMs: number | null;
   durationMs: number | null;
+  ttfbMs?: number | null;
   /** Response-Body-Bytes über die Leitung (Playwright `request.sizes()`). */
   bytes: number | null;
   /** SSE, Sentry-Tunnel, PostHog, Log-Shipping: aufgezeichnet, aber nie fürs Settle gezählt. */
@@ -93,6 +94,7 @@ export class RequestRecorder {
     if (!record.noise) this.lastActivity = record.endMs;
     try {
       const timing = request.timing();
+      record.ttfbMs = timing.responseStart >= 0 ? timing.responseStart : null;
       record.durationMs =
         timing.responseEnd >= 0
           ? timing.responseEnd

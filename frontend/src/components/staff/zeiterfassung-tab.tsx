@@ -12,7 +12,8 @@ import {
 import { DataTableSkeleton as TableSkeleton } from "~/components/ui/data-table";
 import { SectionCard } from "~/components/ui/section-card";
 import { staffShiftService } from "~/lib/shift-api";
-import type { StaffShift } from "~/lib/shift-helpers";
+import type { PlanShift } from "~/lib/own-time-tracking-view";
+import { staffTableShift } from "~/lib/staff-tab-projections";
 import {
   staffAbsenceService,
   staffHistoryService,
@@ -89,7 +90,8 @@ export function isStaleAfterMonthReopen(
   return (
     typeof key === "string" &&
     (key.includes(`staff-month-summary-${staffId}-`) ||
-      key.includes("time-tracking-month-summary-") ||
+      key.includes(timeTrackingKeys.periodFamily) ||
+      key.includes(timeTrackingKeys.overviewFamily) ||
       key.includes("staff-time-accounts") ||
       key.includes("staff-dashboard-summary-") ||
       key.includes("staff-month-close"))
@@ -249,14 +251,16 @@ export function ZeiterfassungTab({
     isLoading: shiftsLoading,
     error: shiftsError,
     mutate: mutateShifts,
-  } = useSWRAuth<StaffShift[]>(
+  } = useSWRAuth<PlanShift[]>(
     staffTimeKeys.shiftsVisible(staffId, visibleFromKey, visibleToKey),
-    () =>
-      staffShiftService.getShiftsForStaff(
-        staffId,
-        visibleFromKey,
-        visibleToKey,
-      ),
+    async () =>
+      (
+        await staffShiftService.getShiftsForStaff(
+          staffId,
+          visibleFromKey,
+          visibleToKey,
+        )
+      ).map(staffTableShift),
   );
 
   // Servergerechnete Tagesprojektion für den sichtbaren Zeitraum (#1842,

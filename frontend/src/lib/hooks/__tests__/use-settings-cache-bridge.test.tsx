@@ -87,6 +87,10 @@ describe("useSettingsCacheBridge", () => {
     const matches = predicates[0]!;
     expect(matches("test-tenant:account-7:student-detail-42")).toBe(true);
     expect(matches("test-tenant:account-7:timetable-roster-23")).toBe(true);
+    expect(matches("test-tenant:account-7:timetable-month-2026-09")).toBe(true);
+    expect(
+      matches("test-tenant:account-7:timetable-detail-42-2026-09-07"),
+    ).toBe(true);
     expect(matches("test-tenant:account-7:timetable-day-2026-09-12")).toBe(
       true,
     );

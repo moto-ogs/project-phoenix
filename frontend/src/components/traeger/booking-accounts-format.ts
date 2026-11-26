@@ -22,9 +22,9 @@ export const REVENUE_SERVICES: readonly {
   {
     scope: "care",
     label: "Monatsbeiträge",
-    hint: "Beiträge der Betreuung je Monat",
+    hint: "Beiträge der Betreuung pro Monat",
   },
-  { scope: "meals", label: "Mensa", hint: "Essen je Monat" },
+  { scope: "meals", label: "Mensa", hint: "Essen pro Monat" },
   {
     scope: "holiday",
     label: "Ferienbetreuung",

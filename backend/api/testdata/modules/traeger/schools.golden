@@ -7,6 +7,7 @@ GET /traeger/schools/comparison -> traeger_uebersicht
 GET /traeger/schools/comparison/export -> traeger_uebersicht
 GET /traeger/schools/daily-attendance -> traeger_uebersicht
 GET /traeger/schools/daily-attendance/export -> traeger_uebersicht
+GET /traeger/schools/day-changes -> traeger_uebersicht
 GET /traeger/schools/export -> basis
 GET /traeger/schools/occupancy -> traeger_uebersicht
 GET /traeger/schools/occupancy/export -> traeger_uebersicht

@@ -11,10 +11,10 @@ export function traegerDailyAttendanceTopic(): HelpTopic {
     title: "Tagesmeldung Mecklenburg-Vorpommern",
     question: "Wie melde ich die tägliche An- und Abwesenheit an das Land?",
     summary:
-      "Für Schulen in Mecklenburg-Vorpommern zeigt moto je Tag, wer da war und wer gefehlt hat. Die Datei für das Land lädst du mit einem Klick herunter.",
+      "Für Schulen in Mecklenburg-Vorpommern zeigt moto pro Tag, wer da war und wer gefehlt hat. Die Datei für das Land lädst du mit einem Klick herunter.",
     image: "/help/screens/tagesmeldung-mecklenburg-vorpommern.webp",
     imageAlt:
-      "Oben die Zahlen Kinder am Tag, Verweildauer, Längster Tag und Abwesend gemeldet. Darunter die Tabelle Je Tag mit einer Zeile je Tag.",
+      "Oben die Zahlen Kinder am Tag, Verweildauer, Längster Tag und Abwesend gemeldet. Darunter die Tabelle Pro Tag mit einer Zeile pro Tag.",
     group: "auswertung",
     audience: "traeger",
     icon: "SealCheck",
@@ -26,12 +26,12 @@ export function traegerDailyAttendanceTopic(): HelpTopic {
       "Wähle in der Navigation `Tagesmeldung`.",
       "Wähle oben den Zeitraum. Am Anfang ist es die letzte Woche bis gestern. Ein Zeitraum hat höchstens 31 Tage.",
       "Lies oben die Zahlen: `Kinder am Tag`, `Verweildauer`, `Längster Tag` und `Abwesend gemeldet`.",
-      "Lies unter `Je Tag`, wie viele Kinder an jedem Tag da waren und wie viele krank, entschuldigt oder auf Klassenfahrt waren.",
+      "Lies unter `Pro Tag`, wie viele Kinder an jedem Tag da waren und wie viele krank, entschuldigt oder auf Klassenfahrt waren.",
       "Wähle oben neben dem Zeitraum eine Schule, um nur sie zu sehen.",
       "Öffne oben rechts das Drei-Punkte-Menü. Wähle unter `Herunterladen` `CSV`. Diese Datei reichst du beim Land ein. `PDF` und `Excel` sind für deine eigene Ablage.",
     ],
     result:
-      "Du hast die Datei mit einer Zeile je Kind und Tag. Sie enthält keine Namen.",
+      "Du hast die Datei mit einer Zeile pro Kind und Tag. Sie enthält keine Namen.",
     notes: [
       "Die Pflicht steht in § 32 Absatz 1a KiföG M-V und gilt ab 2027.",
       "Das Land legt das genaue Format noch fest. Bis dahin enthält die Datei: Einrichtung, Ort, Datum, laufende Nummer, Status, Ankunft, Abholung und die Minuten dazwischen.",

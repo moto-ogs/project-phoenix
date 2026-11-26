@@ -163,8 +163,8 @@ export function SurveyEditorFields({
           <>
             <p className="text-sm text-gray-600">
               Alle Mitarbeitenden der OGS können antworten. Du findest die
-              Umfrage in moto unter „Umfragen“. Lehrkräfte, die nur das
-              Schulportal nutzen, bekommen sie nicht.
+              Umfrage in moto unter „Umfragen“. Lehrkräfte, die nur moto schule
+              nutzen, bekommen sie nicht.
             </p>
             <Alert
               type="info"

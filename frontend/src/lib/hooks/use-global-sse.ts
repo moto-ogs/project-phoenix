@@ -22,6 +22,10 @@
 
 "use client";
 
+import { useOptionalSupervision } from "~/lib/supervision-context";
+import type { SupervisionSection } from "~/lib/swr/supervision";
+import { OPERATIONAL_OVERVIEW_SETTING } from "~/lib/settings-keys";
+import { useLatest } from "~/lib/hooks/use-latest";
 import {
   useCallback,
   useEffect,
@@ -30,11 +34,13 @@ import {
   useState,
 } from "react";
 import {
+  authGeneration,
   useInvalidateFamily,
   useLiveEventScope,
   usePublishLiveChannel,
 } from "~/lib/swr";
 import { mutate } from "~/lib/swr/mutate";
+import { useOwnTimeRefresh } from "./use-own-time-refresh";
 import {
   SWR_FAMILIES,
   dashboardKeys,
@@ -120,14 +126,7 @@ const STAFF_TIME_TRACKING_CACHE_KEY_PARTS = [
   "staff-balance-adjustments-",
   "staff-schedule-",
   "staff-shifts-visible-",
-  "time-tracking-current",
-  "time-tracking-history-",
-  "time-tracking-absences-",
-  "time-tracking-table-",
-  "time-tracking-month-summary-",
   "time-tracking-schedule-targets-",
-  "time-tracking-own-schedule-",
-  "time-tracking-own-shifts-today-",
   "time-tracking-own-shifts-week-",
 ] as const;
 
@@ -183,6 +182,8 @@ const PICKUP_TIME_CACHE_KEY_PARTS = [
   // templates, phases and staff lists don't change with a Gehzeit.
   "timetable-day-",
   "timetable-week-",
+  "timetable-month-",
+  "timetable-detail-",
   "timetable-roster-",
 ] as const;
 
@@ -221,6 +222,8 @@ const STUDENT_UPDATE_CACHE_KEY_PARTS = [
   // event, for the same reason.
   "timetable-day-",
   "timetable-week-",
+  "timetable-month-",
+  "timetable-detail-",
   "timetable-roster-",
 ] as const;
 
@@ -318,6 +321,11 @@ function currentStudentDetailId(): string | null {
 export function useGlobalSSE(): SSEHookState {
   const { data: session, status: sessionStatus } = useSession();
   const invalidateFamily = useInvalidateFamily();
+  const refreshOwnTime = useOwnTimeRefresh();
+  const { refresh: refreshSupervision } = useOptionalSupervision();
+  const supervisionRefresh = useLatest(refreshSupervision);
+  const authorization = authGeneration(session);
+  const currentAuthorization = useLatest(authorization);
   const tenantID = session?.user?.tenantId;
   const tenant = useTenantSafe()?.tenant;
   const [groupAccessRevision, setGroupAccessRevision] = useState(0);
@@ -352,11 +360,11 @@ export function useGlobalSSE(): SSEHookState {
   const boundScopeRef = useRef(boundScope);
   // The scope of the pending burst; a flush for another scope is dropped.
   const burstScopeRef = useRef<string | null>(null);
-  // A reconcile spares the sidebar's own periodic resync, but must still
-  // deliver notifications from real events queued before the reconnect.
+  // A synthetic reconcile must not invent section-specific signals.
   const reconcilingRef = useRef<{
     groupAccess: boolean;
     activity: boolean;
+    full: boolean;
   } | null>(null);
 
   // Debounce state: collect affected group IDs, flush once after DEBOUNCE_MS
@@ -402,6 +410,7 @@ export function useGlobalSSE(): SSEHookState {
   // invalidates a different key set (the group list itself, the Vertretungen
   // page, the user-context BFF) and, unlike a check-in, it is rare.
   const hasPendingGroupAccessEvent = useRef(false);
+  const hasPendingOverviewSetting = useRef(false);
   // Reconnecting recalculates the server-side group topics fixed at SSE
   // connection time. Keep this separate from cache invalidation so a
   // date-bound access change can refresh subscriptions without another broad
@@ -440,6 +449,7 @@ export function useGlobalSSE(): SSEHookState {
     hasPendingCompanionEvent.current = false;
     hasPendingTimetableEvent.current = false;
     hasPendingGroupAccessEvent.current = false;
+    hasPendingOverviewSetting.current = false;
     hasPendingGroupSubscriptionRefresh.current = false;
     hasPendingStaffNoticesEvent.current = false;
     hasPendingCalendarAppointmentsEvent.current = false;
@@ -879,11 +889,8 @@ export function useGlobalSSE(): SSEHookState {
       });
     }
 
-    // Group access changed (#2084). Besides the OGS live view above, four
-    // caches carry that fact and none of them revalidates on focus: the admin
-    // Vertretungen page (its list, group choices and teacher availability) and
-    // the user-context BFF. Both group lists are fetched as immutable — without
-    // an explicit invalidation they never refetch for the whole session.
+    // Group access also affects the Vertretungen page and request access.
+    // The staff profile and school switches do not depend on assignments.
     if (hasPendingGroupAccessEvent.current) {
       mutate(
         (key) =>
@@ -892,7 +899,6 @@ export function useGlobalSSE(): SSEHookState {
             key.includes("group-handovers") ||
             key.includes("substitution-groups") ||
             key.includes("substitution-teachers") ||
-            key.includes("user-context") ||
             key.includes("change-request-access")),
       ).catch((err) => {
         // Fire-and-forget: the screen keeps its data until the next event or load.
@@ -901,35 +907,31 @@ export function useGlobalSSE(): SSEHookState {
           scope: "group_access",
         });
       });
-
-      // The sidebar's "Meine Gruppen" list lives in SupervisionContext, which
-      // keeps it in local state behind its own fetch — there is no SWR key to
-      // invalidate. That list is
-      // exactly what a colleague looks at after a handover, so announce
-      // staleness and let the provider refetch (same decoupling as reminders
-      // and the care-schedule editor above).
-      if (
-        typeof window !== "undefined" &&
-        (reconcilingRef.current?.groupAccess ?? true)
-      ) {
-        window.dispatchEvent(new CustomEvent("phoenix:supervision-stale"));
-      }
     }
 
     if (hasPendingGroupSubscriptionRefresh.current) {
       setGroupAccessRevision((revision) => revision + 1);
     }
 
+    const reconcile = reconcilingRef.current;
+    const sections: SupervisionSection[] = [];
     if (
-      hasPendingActivityEvent.current &&
-      (reconcilingRef.current?.activity ?? true) &&
-      typeof window !== "undefined"
-    ) {
-      window.dispatchEvent(
-        new CustomEvent("phoenix:supervision-stale", {
-          detail: { groupsOnly: false },
-        }),
+      (reconcile?.groupAccess ?? hasPendingGroupAccessEvent.current) ||
+      hasPendingOverviewSetting.current
+    )
+      sections.push("groups");
+    if (
+      (reconcile?.activity ?? hasPendingActivityEvent.current) ||
+      hasPendingOverviewSetting.current
+    )
+      sections.push("sessions");
+    if (reconcile?.full) {
+      void supervisionRefresh.current(
+        undefined,
+        sections.length ? undefined : "reconcile",
       );
+    } else if (sections.length) {
+      void supervisionRefresh.current(sections);
     }
 
     if (hasPendingTimetableEvent.current) {
@@ -1082,7 +1084,7 @@ export function useGlobalSSE(): SSEHookState {
     }
 
     resetPending();
-  }, [accepts, invalidateFamily, resetPending]);
+  }, [accepts, invalidateFamily, resetPending, supervisionRefresh]);
 
   const scheduleFlush = useCallback(() => {
     const now = Date.now();
@@ -1336,7 +1338,11 @@ export function useGlobalSSE(): SSEHookState {
           break;
         }
 
-        case "staff_time_tracking_changed": {
+        case "staff_time_tracking_changed":
+        case "staff_leave_changed": {
+          void refreshOwnTime(
+            event.type === "staff_leave_changed" ? "leave" : "time",
+          );
           hasPendingStaffTimeTrackingEvent.current = true;
           scheduleFlush();
           break;
@@ -1370,6 +1376,11 @@ export function useGlobalSSE(): SSEHookState {
         }
 
         case "tenant_settings_changed": {
+          if (event.data.source === OPERATIONAL_OVERVIEW_SETTING) {
+            hasPendingOverviewSetting.current = true;
+            hasPendingGroupSubscriptionRefresh.current = true;
+            scheduleFlush();
+          }
           // Cross-origin tenant settings sync. The backend fires this when a
           // setting whose value travels through /auth/tenant/resolve flips
           // (currently operations.student_photos_enabled).
@@ -1401,6 +1412,9 @@ export function useGlobalSSE(): SSEHookState {
         // change is_absent/is_substitute/understaffed_ack without any
         // lifecycle transition — same caches go stale, same invalidation.
         case "staffing_deviation_changed": {
+          void refreshOwnTime(
+            event.data.source === "closing_days" ? "time" : "assignments",
+          );
           hasPendingTimetableEvent.current = true;
           scheduleFlush();
           break;
@@ -1511,37 +1525,66 @@ export function useGlobalSSE(): SSEHookState {
         }
       }
     },
-    [scheduleFlush, collectEduGroupScope, collectActiveSupervisionChange],
+    [
+      scheduleFlush,
+      collectEduGroupScope,
+      collectActiveSupervisionChange,
+      refreshOwnTime,
+    ],
   );
 
   // Whether this binding's stream was open before, and whether it may have
   // missed events since (reconcile below).
   const hasConnectedRef = useRef(false);
   const missedEventsPossibleRef = useRef(false);
+  const pendingOwnTimeReconcile = useRef(false);
+  const topicReplacement = useRef(false);
+  const transportDropped = useRef(false);
+  const reconcilesSupervision = useRef(false);
+  const boundAuthorization = useRef(authorization);
 
   // A new school or account drops what the previous binding collected.
   useLayoutEffect(() => {
-    if (boundScopeRef.current === boundScope) return;
+    if (
+      boundScopeRef.current === boundScope &&
+      boundAuthorization.current === authorization
+    )
+      return;
     boundScopeRef.current = boundScope;
+    boundAuthorization.current = authorization;
+    reconcilesSupervision.current = false;
+    if (startupReconcileTimer.current) {
+      clearTimeout(startupReconcileTimer.current);
+      startupReconcileTimer.current = null;
+    }
+    if (reconcileTimer.current) {
+      clearTimeout(reconcileTimer.current);
+      reconcileTimer.current = null;
+    }
+    reconcileWhenVisible.current = false;
+    lastReconcileAt.current = null;
     if (debounceTimer.current) {
       clearTimeout(debounceTimer.current);
       debounceTimer.current = null;
     }
     resetPending();
-  }, [boundScope, resetPending]);
+  }, [authorization, boundScope, resetPending]);
 
   // The binding is part of the handler: a stream for another school or
   // account is a new stream (useSSE reconnects on a new handler), and an
   // event still delivered by the old one finds its binding outdated.
   const onMessage = useCallback(
     (event: SSEEvent) => {
-      if (!accepts(boundScope)) {
+      if (
+        !accepts(boundScope) ||
+        currentAuthorization.current !== authorization
+      ) {
         logger.debug("sse_event_ignored", { event_type: event.type });
         return;
       }
       handleSSEEvent(event);
     },
-    [accepts, boundScope, handleSSEEvent],
+    [accepts, authorization, boundScope, currentAuthorization, handleSSEEvent],
   );
 
   // Use the underlying SSE hook with global event handler.
@@ -1569,8 +1612,9 @@ export function useGlobalSSE(): SSEHookState {
   // fresh once the stream is back (#5017): every cache an event refreshes,
   // as if each kind of event had arrived, plus the unread and request
   // counters. Not the companion bus, whose listeners discard form drafts,
-  // not the group subscription, which would reopen the stream again, and not
-  // the sidebar lists, which SupervisionContext resyncs itself. The backend
+  // not the group subscription, which would reopen the stream again. Only
+  // transport recovery, not startup or a topic replacement, needs a full
+  // supervision context read. The backend
   // closes the stream when its token expires, so this runs about once per
   // token lifetime (AUTH_JWT_EXPIRY) and after every real outage.
   // Hidden tabs wait until they are visible; a flapping stream reconciles at
@@ -1610,7 +1654,9 @@ export function useGlobalSSE(): SSEHookState {
         accepts(burstScopeRef.current) && hasPendingGroupAccessEvent.current,
       activity:
         accepts(burstScopeRef.current) && hasPendingActivityEvent.current,
+      full: reconcilesSupervision.current,
     };
+    reconcilesSupervision.current = false;
     hasPendingBroadOgsEvent.current = true;
     hasPendingActivityEvent.current = true;
     hasPendingActiveSupervisionEvent.current = true;
@@ -1636,6 +1682,10 @@ export function useGlobalSSE(): SSEHookState {
     }
     burstScopeRef.current = boundScopeRef.current;
     reconcilingRef.current = pendingSidebarEvents;
+    if (pendingOwnTimeReconcile.current) {
+      pendingOwnTimeReconcile.current = false;
+      void refreshOwnTime("leave");
+    }
     try {
       flushInvalidations();
     } finally {
@@ -1645,7 +1695,7 @@ export function useGlobalSSE(): SSEHookState {
     window.dispatchEvent(new CustomEvent("team-messages-unread-refresh"));
     window.dispatchEvent(new CustomEvent(NOTIFICATION_FEED_REFRESH_EVENT));
     announceChangeRequestsChanged();
-  }, [accepts, flushInvalidations]);
+  }, [accepts, flushInvalidations, refreshOwnTime]);
   useLayoutEffect(() => {
     reconcileRef.current = reconcile;
   }, [reconcile]);
@@ -1675,6 +1725,7 @@ export function useGlobalSSE(): SSEHookState {
 
   const connectedTenantRef = useRef<string | undefined>(tenantID);
   const connectedScopeRef = useRef(boundScope);
+  const connectedAuthorization = useRef(authorization);
   const connectedReconnectKeyRef = useRef(reconnectKey);
   useEffect(() => {
     if (connectedTenantRef.current !== tenantID) {
@@ -1685,8 +1736,15 @@ export function useGlobalSSE(): SSEHookState {
     // A new account binds a new stream whose readers load afresh: its first
     // connection reconciles nothing. The status of this render still
     // describes the replaced stream.
-    if (connectedScopeRef.current !== boundScope) {
+    if (
+      connectedScopeRef.current !== boundScope ||
+      connectedAuthorization.current !== authorization
+    ) {
+      pendingOwnTimeReconcile.current = false;
       connectedScopeRef.current = boundScope;
+      connectedAuthorization.current = authorization;
+      topicReplacement.current = false;
+      transportDropped.current = false;
       connectedReconnectKeyRef.current = reconnectKey;
       hasConnectedRef.current = false;
       missedEventsPossibleRef.current = false;
@@ -1698,7 +1756,10 @@ export function useGlobalSSE(): SSEHookState {
     }
     if (connectedReconnectKeyRef.current !== reconnectKey) {
       connectedReconnectKeyRef.current = reconnectKey;
-      if (hasConnectedRef.current) missedEventsPossibleRef.current = true;
+      if (hasConnectedRef.current) {
+        missedEventsPossibleRef.current = true;
+        topicReplacement.current = true;
+      }
       return;
     }
     if (!isAuthenticated) {
@@ -1708,6 +1769,8 @@ export function useGlobalSSE(): SSEHookState {
     }
     if (sseState.status === "connected") {
       if (hasConnectedRef.current && missedEventsPossibleRef.current) {
+        pendingOwnTimeReconcile.current = true;
+        reconcilesSupervision.current ||= transportDropped.current;
         reconcileRef.current();
       } else if (!hasConnectedRef.current && !startupReconcileTimer.current) {
         // Math.random is fine here: load-spreading jitter, no security context.
@@ -1722,10 +1785,23 @@ export function useGlobalSSE(): SSEHookState {
       }
       hasConnectedRef.current = true;
       missedEventsPossibleRef.current = false;
+      topicReplacement.current = false;
+      transportDropped.current = false;
       return;
     }
-    if (hasConnectedRef.current) missedEventsPossibleRef.current = true;
-  }, [boundScope, isAuthenticated, reconnectKey, sseState.status, tenantID]);
+    if (hasConnectedRef.current) {
+      missedEventsPossibleRef.current = true;
+      transportDropped.current ||=
+        !topicReplacement.current || sseState.status !== "idle";
+    }
+  }, [
+    authorization,
+    boundScope,
+    isAuthenticated,
+    reconnectKey,
+    sseState.status,
+    tenantID,
+  ]);
 
   return sseState;
 }

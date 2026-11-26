@@ -96,7 +96,7 @@ function toReaders(readers: messagesContract.ReadersResponse): ThreadReaders {
   };
 }
 
-function toInboxThread(
+export function toInboxThread(
   thread: messagesContract.ParentChatInboxThreadResponse,
 ): InboxThread {
   return {
@@ -223,9 +223,7 @@ export async function fetchThread(threadId: string): Promise<ThreadDetail> {
  * What became of the e-mail of each OGS message in a conversation (#7058),
  * keyed by message id. A message without a mail has no key.
  */
-export async function fetchThreadMails(
-  threadId: string,
-): Promise<Readonly<Record<string, MailOutcome>>> {
+export async function fetchThreadMails(threadId: string) {
   const result = await bffJson(
     "tenant",
     "GET /api/messages/threads/{threadId}/mails",
@@ -240,7 +238,7 @@ export async function fetchThreadMails(
     const known = knownMailOutcome(outcome);
     if (known) mails[messageId] = known;
   }
-  return mails;
+  return { mails: mails, awaitingFeedback: result.awaiting_feedback };
 }
 
 /**
@@ -343,7 +341,14 @@ function toCountScope(value: unknown): MessageCountScope {
 export async function fetchMessageCountSetting(): Promise<MessageCountSetting> {
   // Own error path (#2517): the settings card shows the catalog text, so the
   // ApiError keeps code and request ID instead of a fixed sentence.
-  const result = await bffJson("tenant", "GET /api/messages/count-scope");
+  return mapMessageCountSetting(
+    await bffJson("tenant", "GET /api/messages/count-scope"),
+  );
+}
+
+export function mapMessageCountSetting(
+  result: messagesContract.CountScopeResponse,
+): MessageCountSetting {
   return {
     scope: toCountScope(result.scope),
     hasOwnGroups: result.has_own_groups,

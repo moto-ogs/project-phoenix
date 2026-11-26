@@ -214,7 +214,7 @@ function mailCounts(
   return known;
 }
 
-function mapPayrollDispatch(
+export function mapPayrollDispatch(
   data: staffContract.PayrollDispatchView,
 ): PayrollDispatchView {
   return {
@@ -267,10 +267,14 @@ export interface PayrollTargetCoverage {
  * config:manage und das Modul Zeiterfassung.
  */
 export async function fetchPayrollTargetCoverage(): Promise<PayrollTargetCoverage> {
-  const coverage = await bffJson(
-    "tenant",
-    "GET /api/staff/time-tracking/target-coverage",
+  return mapPayrollTargetCoverage(
+    await bffJson("tenant", "GET /api/staff/time-tracking/target-coverage"),
   );
+}
+
+export function mapPayrollTargetCoverage(
+  coverage: staffContract.TargetCoverage,
+): PayrollTargetCoverage {
   return {
     year: coverage.year,
     month: coverage.month,

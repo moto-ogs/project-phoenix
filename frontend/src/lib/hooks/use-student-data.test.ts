@@ -13,13 +13,11 @@ vi.mock("~/lib/usercontext-api");
 import { useSession } from "next-auth/react";
 import { useSWRAuth } from "~/lib/swr";
 import { fetchStudent } from "~/lib/student-api";
-import { userContextService } from "~/lib/usercontext-api";
 
 // Type the mocked functions
 const mockUseSession = vi.mocked(useSession);
 const mockUseSWRAuth = vi.mocked(useSWRAuth);
 const mockFetchStudent = vi.mocked(fetchStudent);
-const mockUserContextService = vi.mocked(userContextService);
 
 describe("useStudentData", () => {
   const mockStudent: Student = {
@@ -50,15 +48,6 @@ describe("useStudentData", () => {
       phone: "+49123456789",
       role: "teacher",
     },
-  ];
-
-  const mockGroups = [
-    { id: "100", name: "Group A", room: { id: "10", name: "Room A" } },
-    { id: "101", name: "Group B", room: { id: "11", name: "Room B" } },
-  ];
-
-  const mockSupervisedGroups = [
-    { id: "200", name: "Supervised Group", room: { id: "12", name: "Room C" } },
   ];
 
   beforeEach(() => {
@@ -245,125 +234,18 @@ describe("useStudentData", () => {
       );
     });
 
-    it("should fetch data in parallel when SWR fetcher is called", async () => {
-      const mockMutate = vi.fn();
-
-      mockUseSession.mockReturnValue({
-        data: { user: { id: "1" }, expires: "2099-12-31" },
-        status: "authenticated",
-        update: vi.fn(),
-      });
-
-      // Mock the service responses
-      mockFetchStudent.mockResolvedValue({
+    it("loads the child without an independent supervision read", async () => {
+      mockFetchStudent.mockResolvedValueOnce({
         id: "1",
-        first_name: "John",
-        second_name: "Doe",
-        name: "John Doe",
-        school_class: "5a",
-        group_id: "100",
-        group_name: "Group A",
-        current_location: "Room 101",
+        first_name: "Mia",
         has_full_access: true,
-        has_write_access: true,
-        group_supervisors: mockSupervisors,
-      });
-
-      mockUserContextService.getMyEducationalGroups.mockResolvedValue(
-        mockGroups,
-      );
-      mockUserContextService.getMySupervisedGroups.mockResolvedValue(
-        mockSupervisedGroups,
-      );
-
-      // Capture the fetcher function
-      let fetcherFn: (() => Promise<unknown>) | undefined;
-
-      mockUseSWRAuth.mockImplementation((key, fetcher) => {
-        if (key !== null && fetcher) {
-          fetcherFn = fetcher as () => Promise<unknown>;
-        }
-        return {
-          data: undefined,
-          error: undefined,
-          isLoading: true,
-          isValidating: false,
-          mutate: mockMutate,
-        };
-      });
-
+      } as Student);
       renderHook(() => useStudentData("1"));
-
-      // Execute the fetcher
-      expect(fetcherFn).toBeDefined();
-      if (fetcherFn) {
-        await fetcherFn();
-      }
-
-      // Verify all services were called
+      const fetcher = vi.mocked(useSWRAuth).mock.calls.at(-1)?.[1];
+      await expect(fetcher?.()).resolves.toMatchObject({
+        student: { id: "1" },
+      });
       expect(mockFetchStudent).toHaveBeenCalledWith("1");
-      expect(mockUserContextService.getMyEducationalGroups).toHaveBeenCalled();
-      expect(mockUserContextService.getMySupervisedGroups).toHaveBeenCalled();
-    });
-
-    it("should handle service errors gracefully", async () => {
-      mockUseSession.mockReturnValue({
-        data: { user: { id: "1" }, expires: "2099-12-31" },
-        status: "authenticated",
-        update: vi.fn(),
-      });
-
-      mockFetchStudent.mockResolvedValue({
-        id: "1",
-        first_name: "John",
-        second_name: "Doe",
-        name: "John Doe",
-        school_class: "5a",
-        group_id: "100",
-        group_name: "Group A",
-        current_location: "Room 101",
-        has_full_access: true,
-        has_write_access: true,
-        group_supervisors: mockSupervisors,
-      });
-
-      // Simulate errors for user context calls (should not crash)
-      mockUserContextService.getMyEducationalGroups.mockRejectedValue(
-        new Error("Network error"),
-      );
-      mockUserContextService.getMySupervisedGroups.mockRejectedValue(
-        new Error("Network error"),
-      );
-
-      let fetcherFn: (() => Promise<unknown>) | undefined;
-
-      mockUseSWRAuth.mockImplementation((key, fetcher) => {
-        if (key !== null && fetcher) {
-          fetcherFn = fetcher as () => Promise<unknown>;
-        }
-        return {
-          data: undefined,
-          error: undefined,
-          isLoading: true,
-          isValidating: false,
-          mutate: vi.fn(),
-        };
-      });
-
-      renderHook(() => useStudentData("1"));
-
-      // Execute the fetcher
-      if (fetcherFn) {
-        const result = await fetcherFn();
-        const typedResult = result as {
-          myGroups: string[];
-          mySupervisedRooms: string[];
-        };
-
-        // Should return empty arrays when services fail
-        expect(typedResult.myGroups).toEqual([]);
-        expect(typedResult.mySupervisedRooms).toEqual([]);
-      }
     });
   });
 
@@ -508,8 +390,6 @@ describe("useStudentData", () => {
         has_absence_write_access: true,
         has_sick_excused_write_access: false,
       });
-      mockUserContextService.getMyEducationalGroups.mockResolvedValue([]);
-      mockUserContextService.getMySupervisedGroups.mockResolvedValue([]);
 
       let fetcher: (() => Promise<unknown>) | undefined;
       mockUseSWRAuth.mockImplementation((_key, fn) => {

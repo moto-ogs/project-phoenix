@@ -41,6 +41,10 @@ vi.mock("~/lib/hooks/use-school-checkin-mode", async (importOriginal) => {
 // what it says if the global default ever moves.
 vi.mock("~/lib/supervision-context", () => ({
   useOptionalSupervision: () => ({
+    ownGroupIds: [],
+    ownGroupRoomNames: [],
+    ownSessionRoomNames: [],
+    ownSupervisedRooms: [],
     hasGroups: false,
     isSupervising: false,
     isLoadingGroups: false,
@@ -136,6 +140,7 @@ vi.mock("next-auth/react", () => ({
   })),
 }));
 vi.mock("next/navigation", () => ({
+  usePathname: () => "/students/search",
   useRouter: () => ({ push: mockPush, replace: vi.fn() }),
   useSearchParams: () => mockSearchParams,
 }));
@@ -204,17 +209,6 @@ vi.mock("~/lib/active-api", () => ({
   },
 }));
 
-vi.mock("~/lib/hooks/use-user-context", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("~/lib/hooks/use-user-context")>()),
-  useUserContext: () => ({
-    userContext: {
-      educationalGroupIds: [],
-      educationalGroupRoomNames: [],
-      supervisedRoomNames: [],
-    },
-  }),
-}));
-
 vi.mock("~/lib/student-api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/lib/student-api")>()),
   fetchStudents: vi.fn(() => Promise.resolve({ students: [] })),
@@ -236,7 +230,7 @@ vi.mock("~/lib/swr", () => ({
 
 import { useImmutableSWR, useSWRAuth } from "~/lib/swr";
 import { useAttendanceWebEnabled } from "~/lib/tenant-context";
-import StudentSearchPage from "./page";
+import StudentSearchPage from "./page-content";
 
 // One student per relevant location shape: in a room (needs confirmation),
 // present without a room, and gone home.

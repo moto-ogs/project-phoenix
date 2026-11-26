@@ -2,8 +2,8 @@ GET /api/active/analytics/dashboard -> basis
 GET /api/active/groups/ -> basis
 GET /api/active/groups/{id}/supervisors -> basis
 GET /api/active/schulhof/status -> basis
+GET /api/active/supervision-context -> basis
 GET /api/active/supervision-dashboard -> basis
-GET /api/active/supervisors/all -> basis
 GET /api/active/supervisors/staff/{staffId}/active -> basis
 GET /api/active/visits/ -> basis
 POST /api/active/groups/{id}/claim -> basis

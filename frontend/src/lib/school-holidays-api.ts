@@ -3,6 +3,7 @@
 // bearbeitbar. Proxy: /api/timetable/holidays.
 
 import { bffJson } from "~/lib/bff-fetch";
+import type { HolidaysResponse } from "~/lib/contract/timetable.generated";
 import { parseISODate, toISODate } from "~/lib/date-helpers";
 import type { CalendarEvent } from "~/lib/personal-calendar-api";
 
@@ -21,7 +22,7 @@ export interface SchoolHolidays {
   readonly holidays: readonly SchoolHoliday[];
 }
 
-function holidayWindows(
+export function holidayWindows(
   fromISO: string,
   toISO: string,
 ): Array<{ from: string; to: string }> {
@@ -57,6 +58,10 @@ async function getSchoolHolidayWindow(
     query: { from: fromISO, to: toISO },
     errorMessage: "Die Feiertage konnten nicht geladen werden.",
   });
+  return mapSchoolHolidays(data);
+}
+
+export function mapSchoolHolidays(data: HolidaysResponse): SchoolHolidays {
   return {
     federalState: data.federal_state,
     federalStateName: data.federal_state_name,
@@ -74,6 +79,12 @@ export async function getSchoolHolidays(
       getSchoolHolidayWindow(from, to),
     ),
   );
+  return mergeSchoolHolidayWindows(windows);
+}
+
+export function mergeSchoolHolidayWindows(
+  windows: readonly SchoolHolidays[],
+): SchoolHolidays {
   const [first] = windows;
   if (!first) {
     return { federalState: "", federalStateName: "", holidays: [] };

@@ -112,6 +112,19 @@ func TenantUserTestClaims(accountID int, tenantID int64, permissions ...string) 
 	}
 }
 
+// SchoolTestClaims returns the claims of a Lehrkraft in moto schule (school
+// scope) on the given tenant that holds exactly the listed permissions.
+func SchoolTestClaims(accountID int, tenantID int64, permissions ...string) sessiontoken.AppClaims {
+	return sessiontoken.AppClaims{
+		ID:          accountID,
+		Sub:         "lehrkraft@example.com",
+		Roles:       []string{"lehrkraft"},
+		TenantID:    tenantID,
+		Scope:       tenant.ScopeSchool,
+		Permissions: permissions,
+	}
+}
+
 // ParentTestClaims returns the claims of a guardian account in the
 // cross-tenant parent scope, as the parent portal mints them.
 func ParentTestClaims(accountID int) sessiontoken.AppClaims {

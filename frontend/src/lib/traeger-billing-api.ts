@@ -444,13 +444,25 @@ function detailFromBackend(
 
 /** The runs of the Träger, newest first. */
 export async function fetchBillingRuns(): Promise<BillingRun[]> {
-  const runs = await bffJson("org", "GET /traeger/billing-runs/");
+  return mapBillingRuns(await bffJson("org", "GET /traeger/billing-runs/"));
+}
+
+export function mapBillingRuns(
+  runs: traegerBillingRunsContract.BillingRun[],
+): BillingRun[] {
   return runs.map(runFromBackend);
 }
 
 /** The published holiday periods a run can bill, latest first. */
 export async function fetchBillingPeriods(): Promise<BillingPeriod[]> {
-  const periods = await bffJson("org", "GET /traeger/billing-runs/periods");
+  return mapBillingPeriods(
+    await bffJson("org", "GET /traeger/billing-runs/periods"),
+  );
+}
+
+export function mapBillingPeriods(
+  periods: traegerBillingRunsContract.HolidayBillingPeriod[],
+): BillingPeriod[] {
   return periods.map((period) => ({
     id: period.id,
     name: period.name,
@@ -883,11 +895,18 @@ function rangeOf(
   );
 }
 
+export function organizationNumberRange(
+  ranges: readonly traegerNumberRangesContract.NumberRange[],
+  service: NumberRangeService,
+): NumberRange {
+  return mapNumberRange(service, rangeOf(ranges, service, ""));
+}
+
 async function fetchNumberRange(
   service: NumberRangeService,
 ): Promise<NumberRange> {
   const ranges = await bffJson("org", "GET /traeger/number-ranges/");
-  return mapNumberRange(service, rangeOf(ranges, service, ""));
+  return organizationNumberRange(ranges, service);
 }
 
 /**
@@ -897,7 +916,14 @@ async function fetchNumberRange(
 export async function fetchIssuerNumberRanges(): Promise<
   ReadonlyMap<string, Readonly<Record<NumberRangeService, NumberRange>>>
 > {
-  const ranges = await bffJson("org", "GET /traeger/number-ranges/");
+  return mapIssuerNumberRanges(
+    await bffJson("org", "GET /traeger/number-ranges/"),
+  );
+}
+
+export function mapIssuerNumberRanges(
+  ranges: traegerNumberRangesContract.NumberRange[],
+): ReadonlyMap<string, Readonly<Record<NumberRangeService, NumberRange>>> {
   const byIssuer = new Map<
     string,
     Readonly<Record<NumberRangeService, NumberRange>>

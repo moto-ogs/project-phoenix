@@ -24,6 +24,10 @@ vi.mock("~/components/planning/closing-days-editor", () => ({
   ClosingDaysEditor: () => <div data-testid="closing-days-editor" />,
 }));
 
+vi.mock("~/components/planning/opening-changes-editor", () => ({
+  OpeningChangesEditor: () => <div data-testid="opening-changes-editor" />,
+}));
+
 vi.mock("~/components/planning/school-holidays-list", () => ({
   SchoolHolidaysList: () => <div data-testid="school-holidays-list" />,
 }));
@@ -49,7 +53,7 @@ vi.mock("~/components/ui/loading", () => ({
   Loading: () => <div data-testid="loading" />,
 }));
 
-import CalendarPeriodsPage from "./page";
+import CalendarPeriodsPage from "./page-content";
 
 describe("CalendarPeriodsPage", () => {
   beforeEach(() => {

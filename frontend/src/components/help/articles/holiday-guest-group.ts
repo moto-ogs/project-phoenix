@@ -32,7 +32,7 @@ export function holidayGuestGroupTopic(): HelpTopic {
     result:
       "Ab dem ersten Tag der Woche stehen die Feriengäste in der Gruppe, im Check-in und unter `Alle Kinder`. Bei jedem steht seine Schule, zum Beispiel `Gast aus Grundschule am See`. Dein Team sieht Betreuung, Notfall, Abholung und die Angaben, die der Träger freigibt.",
     notes: [
-      "Feriengäste sind Kinder anderer Schulen deines Trägers und Kinder ohne Schule beim Träger. Kinder deiner OGS bleiben in ihrer Gruppe.",
+      "Feriengäste sind Kinder, die sonst nicht in deine OGS gehen. Kinder deiner OGS bleiben in ihrer Gruppe.",
       "Kinder deiner OGS plant moto von selbst ein, auch ohne Feriengruppe. Der Stand steht unter `Kinder deiner OGS`.",
       "Öffnest du die leere Feriengruppe über einen Link, steht dort, wie viele Kinder dazukommen und ab wann.",
       "Vor der Woche siehst du die Feriengäste nur hier unter `Ferienwochen`.",

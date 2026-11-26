@@ -67,7 +67,7 @@ async function login(page: Page, context: BrowserContext) {
       httpOnly: true,
     },
   ]);
-  expect((await browserSession(context, target)).tenantId).toBe(1);
+  expect((await browserSession(context, target)).tenantId).toBe("1");
 }
 
 for (const entry of ["menu", "relogin"] as const) {
@@ -288,7 +288,7 @@ test("failed family revocation keeps the shared session and shows a recoverable 
     page.getByRole("alert").filter({ hasText: "die Abmeldung" }),
   ).toBeVisible();
   expect(page.url()).toBe(`${source}/home`);
-  expect((await browserSession(context, target)).tenantId).toBe(1);
+  expect((await browserSession(context, target)).tenantId).toBe("1");
   await page.unroute("**/api/auth/logout");
   await page.getByRole("button", { name: "Wiederholen" }).click();
   await page.waitForURL(`${target}/`);

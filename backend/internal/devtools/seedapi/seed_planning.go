@@ -244,6 +244,14 @@ func seedTodayHomeChanges(rt *Runtime, studentIDs []int64) error {
 	}); err != nil {
 		return fmt.Errorf("seed today departure change: %w", err)
 	}
+	// The staff flow names a one-time collector for the same visible day
+	// (#7655), so the editor, Kinderkarte and "Heute anders" have an existing
+	// pickup person to show or replace on every demo machine.
+	if _, err := rt.Client.Put(fmt.Sprintf("/api/students/%d/pickup-persons/%s", studentIDs[4], day.String()), map[string]any{
+		"name": "Oma Frieda",
+	}); err != nil {
+		return fmt.Errorf("seed today pickup person: %w", err)
+	}
 	// „Heute anders“ (#7665) shows every child kind of the day: index 3 goes
 	// home alone today, index 5 carries a pickup note for today.
 	if _, err := rt.Client.Put(fmt.Sprintf("/api/students/%d/departure-exceptions/%s", studentIDs[3], day.String()), map[string]any{

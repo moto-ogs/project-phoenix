@@ -87,7 +87,7 @@ func instanceStudentCareDay(
 // counts derived from it. They are built together so the rows and the header
 // counts can never disagree about the same child (#1747 review).
 type instanceAttendanceSummary struct {
-	studentIDs []int64
+	studentIDs []ident.ID
 	students   []instanceStudentSummary
 	expected   int
 	present    int
@@ -104,41 +104,56 @@ func summarizeInstanceStudents(
 	studentRows []timetable.ScheduledParticipant,
 	careDays map[int64]map[calendar.Date]careplan.CareDayStatus,
 	pickupCutoffs map[int64]time.Time,
+	projection timetable.PlannerProjection,
 ) instanceAttendanceSummary {
-	out := instanceAttendanceSummary{
-		studentIDs: make([]int64, 0, len(studentRows)),
-		students:   make([]instanceStudentSummary, 0, len(studentRows)),
+	out := instanceAttendanceSummary{studentIDs: make([]ident.ID, 0, len(studentRows))}
+	if projection == timetable.PlannerFull {
+		out.students = make([]instanceStudentSummary, 0, len(studentRows))
 	}
 	for _, row := range studentRows {
-		out.studentIDs = append(out.studentIDs, row.StudentID)
-		var checkedInAt *string
-		if row.CheckedInAt != nil {
-			formatted := row.CheckedInAt.UTC().Format("2006-01-02T15:04:05Z07:00")
-			checkedInAt = &formatted
+		out.studentIDs = append(out.studentIDs, ident.ID(row.StudentID))
+		verdict := instanceStudentCareDay(inst, row, careDays)
+		out.count(row, verdict)
+		if projection == timetable.PlannerFull {
+			out.students = append(out.students, instanceStudentDetail(inst, row, verdict, pickupCutoffs))
 		}
-		careDayStatus := instanceStudentCareDay(inst, row, careDays)
-		// The marker means "stays expected, leaves early" — a row a full-day
-		// status or manual absence flipped must not carry a pickup time. The
-		// care-day verdict must agree: a timed auto-excusal exception can
-		// coexist with a timeless "Kommt heute nicht" exception, which cancels
-		// the whole day while the pre-cutoff row stays expected — that child is
-		// not picked up early, they are not coming at all.
-		var earlyPickup *string
-		if row.Status == timetable.SlotAttendanceExpected && careDayStatus.Expected() {
-			earlyPickup = earlyPickupWithin(inst, pickupCutoffs, row.StudentID)
-		}
-		out.students = append(out.students, instanceStudentSummary{
-			StudentID:       ident.ID(row.StudentID),
-			Status:          row.Status,
-			Substatus:       row.Substatus,
-			Note:            row.Note,
-			CheckedInAt:     checkedInAt,
-			CareDayStatus:   careDayStatus,
-			EarlyPickupTime: earlyPickup,
-		})
-		out.count(row, careDayStatus)
 	}
 	return out
+}
+
+func instanceAttendanceDetails(inst timetable.ScheduledInstance, participants []timetable.ScheduledParticipant, careDays map[int64]map[calendar.Date]careplan.CareDayStatus, cutoffs map[int64]time.Time) []instanceStudentSummary {
+	students := make([]instanceStudentSummary, 0, len(participants))
+	for _, row := range participants {
+		students = append(students, instanceStudentDetail(inst, row, instanceStudentCareDay(inst, row, careDays), cutoffs))
+	}
+	return students
+}
+
+func instanceStudentDetail(inst timetable.ScheduledInstance, row timetable.ScheduledParticipant, careDayStatus careplan.CareDayStatus, pickupCutoffs map[int64]time.Time) instanceStudentSummary {
+	var checkedInAt *string
+	if row.CheckedInAt != nil {
+		formatted := row.CheckedInAt.UTC().Format("2006-01-02T15:04:05Z07:00")
+		checkedInAt = &formatted
+	}
+	// The marker means "stays expected, leaves early" — a row a full-day
+	// status or manual absence flipped must not carry a pickup time. The
+	// care-day verdict must agree: a timed auto-excusal exception can
+	// coexist with a timeless "Kommt heute nicht" exception, which cancels
+	// the whole day while the pre-cutoff row stays expected — that child is
+	// not picked up early, they are not coming at all.
+	var earlyPickup *string
+	if row.Status == timetable.SlotAttendanceExpected && careDayStatus.Expected() {
+		earlyPickup = earlyPickupWithin(inst, pickupCutoffs, row.StudentID)
+	}
+	return instanceStudentSummary{
+		StudentID:       ident.ID(row.StudentID),
+		Status:          row.Status,
+		Substatus:       row.Substatus,
+		Note:            row.Note,
+		CheckedInAt:     checkedInAt,
+		CareDayStatus:   careDayStatus,
+		EarlyPickupTime: earlyPickup,
+	}
 }
 
 // count adds one attendance row to the header counts, under the same

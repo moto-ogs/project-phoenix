@@ -206,13 +206,13 @@ func ObservePeopleDirectory(observation peopleCompose.Observation) {
 // BuildServeMealPlan composes the Meal Plan over its settings and the
 // participants of the day. notices tells the families about a changed menu
 // (#7145); nil tells nobody.
-func BuildServeMealPlan(db transactionruntime.Database, settings *mealplanCompose.Settings, students StudentRootReads, names peopledirectory.Capability, calendarRecords schoolcalendar.Days, notices mealplanModule.MenuChangeNotices) (mealplanModule.Capability, error) {
+func BuildServeMealPlan(db transactionruntime.Database, settings *mealplanCompose.Settings, students StudentRootReads, names peopledirectory.Capability, calendarRecords schoolcalendar.Days, notices mealplanModule.MenuChangeNotices) (mealplanModule.Services, error) {
 	if calendarRecords == nil {
-		return nil, errors.New("meal plan: the school calendar is required")
+		return mealplanModule.Services{}, errors.New("meal plan: the school calendar is required")
 	}
 	lockStudent, err := mealPlanStudentLock(names)
 	if err != nil {
-		return nil, err
+		return mealplanModule.Services{}, err
 	}
 	return mealplanCompose.New(mealplanCompose.Dependencies{
 		DB:       db.Pool(),

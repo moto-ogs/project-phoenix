@@ -279,7 +279,6 @@ function BlockedLink({
   legacyBehavior: _legacyBehavior,
   onNavigate: _onNavigate,
   transitionTypes: _transitionTypes,
-  resources: _resources,
   ...props
 }: Readonly<
   Omit<ButtonLinkProps, "variant" | "size" | "disabled" | "disabledReason"> & {

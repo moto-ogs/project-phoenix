@@ -73,7 +73,7 @@ func TestTrackingIndicatorsIssuesOneSettingValuesQuery(t *testing.T) {
 		},
 	}
 	// This route does not read visits; an unexpected presence call must fail.
-	rs := NewResource(active, nil, nil, settings, scopeTestTenantRoutes(testpkg.TenantSessionGatesWithCaches(scopeTestSettingsCache)), slog.Default(), struct{ PresenceQueries }{}, requestRuntimeForTest(func(context.Context, int64, int64) context.Context { panic("tracking must not bind staff") }), authorizationForTest(), tenantsettings.NewDisplaySettings(settings))
+	rs := NewResource(active, nil, nil, settings, scopeTestTenantRoutes(testpkg.TenantSessionGatesWithCaches(scopeTestSettingsCache)), slog.Default(), struct{ PresenceQueries }{}, requestRuntimeForTest(func(context.Context, int64, int64) context.Context { panic("tracking must not bind staff") }), tenantsettings.NewDisplaySettings(settings))
 	router := rs.Router()
 
 	counter := testpkg.CaptureQueries(t, db)

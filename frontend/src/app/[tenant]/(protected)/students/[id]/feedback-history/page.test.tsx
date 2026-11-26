@@ -15,7 +15,7 @@ import { useInvalidateFamily } from "~/lib/swr";
 import { studentKeys } from "~/lib/swr/portal-keys";
 import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
 import { SWRConfig } from "~/lib/swr/testing";
-import StudentFeedbackHistoryPage from "./page";
+import StudentFeedbackHistoryPage from "./page-content";
 import { ApiError } from "~/lib/api-error";
 import { fetchStudent } from "~/lib/student-api";
 import { fetchStudentFeedback } from "~/lib/feedback-api";
@@ -116,10 +116,7 @@ vi.mock("~/lib/student-api", () => ({
 
 // The child's detail also reads the account's own groups; none here.
 vi.mock("~/lib/usercontext-api", () => ({
-  userContextService: {
-    getMyEducationalGroups: () => Promise.resolve([]),
-    getMySupervisedGroups: () => Promise.resolve([]),
-  },
+  userContextService: {},
 }));
 
 vi.mock("~/lib/feedback-api", () => ({

@@ -71,3 +71,7 @@ export function perfServerEnv() {
 export function metricsBearerToken() {
   return requiredEnv(readEnvFiles(), "METRICS_BEARER_TOKEN");
 }
+
+export function perfBackendUrl() {
+  return requiredEnv(readEnvFiles(), "API_URL");
+}

@@ -38,18 +38,15 @@ vi.mock("~/lib/tenant-context", () => ({
 }));
 
 const SEEDED: UserContextResponse = {
-  educationalGroups: [],
-  supervisedGroups: [],
-  currentStaff: null,
-  educationalGroupIds: ["1"],
-  educationalGroupRoomNames: [],
-  supervisedRoomNames: [],
-  incomplete: false,
-  unavailableSections: [],
-  schoolSwitches: null,
+  currentStaff: { id: "1", personId: "9" },
+  schoolSwitches: {
+    parentNewsEnabled: true,
+    parentInviteMode: "direct",
+    timetableDayStartTime: "08:00",
+    timetableDayEndTime: "16:00",
+  },
 };
 
-const AT = "2026-09-01T08:00:00Z";
 const fetchMock = vi.fn<typeof fetch>();
 
 function contextRequests(): number {
@@ -61,8 +58,8 @@ function contextRequests(): number {
 function Navigation() {
   const { userContext } = useUserContext();
   return (
-    <span data-testid="groups">
-      {userContext?.educationalGroupIds.join(",") ?? "-"}
+    <span data-testid="staff">
+      {userContext?.currentStaff?.id ?? "kein Profil"}
     </span>
   );
 }
@@ -92,23 +89,12 @@ beforeEach(() => {
     Response.json({
       data: {
         current_staff: null,
-        educational_groups: ["1", "2"].map((id) => ({
-          id,
-          created_at: AT,
-          updated_at: AT,
-          tenant_id: "3",
-          name: `Gruppe ${id}`,
-          via_substitution: false,
-        })),
-        incomplete: false,
         school_switches: {
           parent_news_enabled: false,
           parent_invite_mode: "direct",
           timetable_day_start_time: "08:00",
           timetable_day_end_time: "16:00",
         },
-        supervised_groups: [],
-        unavailable_sections: [],
       } satisfies NavigationResponse,
     }),
   );
@@ -123,14 +109,14 @@ describe("useUserContext with the shell seed", () => {
   it("shows the seed without asking the server", async () => {
     render(<Shell />);
 
-    expect(screen.getByTestId("groups")).toHaveTextContent("1");
+    expect(screen.getByTestId("staff")).toHaveTextContent("1");
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(contextRequests()).toBe(0);
   });
 
   it("asks the server on the first invalidation after the seed", async () => {
     render(<Shell />);
-    expect(screen.getByTestId("groups")).toHaveTextContent("1");
+    expect(screen.getByTestId("staff")).toHaveTextContent("1");
 
     // Wie useTenantMutate(USER_CONTEXT_SWR_KEY) nach einer Einstellung.
     await act(async () => {
@@ -138,7 +124,7 @@ describe("useUserContext with the shell seed", () => {
     });
 
     await waitFor(() =>
-      expect(screen.getByTestId("groups")).toHaveTextContent("1,2"),
+      expect(screen.getByTestId("staff")).toHaveTextContent("kein Profil"),
     );
     expect(contextRequests()).toBe(1);
   });

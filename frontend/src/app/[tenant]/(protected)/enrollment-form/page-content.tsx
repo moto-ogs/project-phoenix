@@ -1,0 +1,57 @@
+"use client";
+
+import { useCallback, useState } from "react";
+import { EnrollmentFormEditor } from "~/components/enrollment/enrollment-form-editor";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
+import { DesktopOnlyNotice } from "~/components/ui/desktop-only-notice";
+import { useRequirePermission } from "~/lib/hooks/use-require-permission";
+
+const ENROLLMENT_FORM_INFO =
+  "Hier siehst du, welche Fragen Eltern bei der Anmeldung beantworten. Meist reicht das Basisformular. Eine eigene Vorlage legst du nur an, wenn dir etwas fehlt.";
+
+export default function EnrollmentFormPage() {
+  const { isReady } = useRequirePermission("config:manage");
+  // Statuszeile des Seitenkopfs: die Vorlagen, die der Editor ohnehin lädt.
+  const [templateCount, setTemplateCount] = useState<number | null>(null);
+  // Nach einem Ladefehler gibt es keine Zahl; die Statuszeile bleibt dann
+  // leer statt dauerhaft als Skelett zu laden.
+  const [loadFailed, setLoadFailed] = useState(false);
+  const handleTemplateCountChange = useCallback(
+    (count: number | null, failed: boolean) => {
+      setTemplateCount(count);
+      setLoadFailed(failed);
+    },
+    [],
+  );
+  const statusLine =
+    templateCount === null ? null : (
+      <TenantPageStats
+        items={[
+          { value: 1, label: "Basisformular" },
+          {
+            value: templateCount,
+            label: templateCount === 1 ? "Vorlage" : "Vorlagen",
+          },
+        ]}
+      />
+    );
+
+  return (
+    <TenantPage
+      title="Anmeldeformulare"
+      info={ENROLLMENT_FORM_INFO}
+      stats={statusLine}
+      statsLoading={statusLine === null && !loadFailed}
+      loading={!isReady}
+    >
+      <DesktopOnlyNotice />
+      {/* Flex-Spalte, damit die letzte Fläche bis zur Unterkante wächst
+          (`.moto-tenant-body`). */}
+      <div className="hidden lg:flex lg:flex-col">
+        <EnrollmentFormEditor
+          onTemplateCountChange={handleTemplateCountChange}
+        />
+      </div>
+    </TenantPage>
+  );
+}

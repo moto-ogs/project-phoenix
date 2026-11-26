@@ -3,7 +3,7 @@ import type { TenantPageSearchRowProps } from "~/components/ui/tenant-page-searc
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import RoomsPage from "./page";
+import RoomsPage from "./page-content";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
 
@@ -18,6 +18,11 @@ function errorText(error: unknown): string | null {
 const mockRefreshRoomConsumers = vi.hoisted(() =>
   vi.fn(() => Promise.resolve()),
 );
+const mockRefreshSupervision = vi.hoisted(() => vi.fn(() => Promise.resolve()));
+
+vi.mock("~/lib/supervision-context", () => ({
+  useOptionalSupervision: () => ({ refresh: mockRefreshSupervision }),
+}));
 
 vi.mock("next-auth/react", () => ({
   useSession: vi.fn(() => ({
@@ -421,29 +426,39 @@ describe("RoomsPage", () => {
     });
   });
 
-  it("calls create service when submitting the create modal", async () => {
-    mockCreate.mockResolvedValueOnce({ id: "3", name: "Neuer Raum" });
+  it.each([true, false])(
+    "creates the room and refreshes released rooms only if released (%s)",
+    async (isOpenRoom) => {
+      mockCreate.mockResolvedValueOnce({
+        id: "3",
+        name: "Neuer Raum",
+        isOpenRoom,
+      });
 
-    render(<RoomsPage />);
+      render(<RoomsPage />);
 
-    fireEvent.click(screen.getAllByLabelText("Raum erstellen")[0]!);
+      fireEvent.click(screen.getAllByLabelText("Raum erstellen")[0]!);
 
-    await waitFor(() => {
-      expect(screen.getByTestId("room-create-modal")).toBeInTheDocument();
-    });
+      await waitFor(() => {
+        expect(screen.getByTestId("room-create-modal")).toBeInTheDocument();
+      });
 
-    fireEvent.click(screen.getByTestId("submit-create"));
+      fireEvent.click(screen.getByTestId("submit-create"));
 
-    await waitFor(() => {
-      expect(mockCreate).toHaveBeenCalled();
-    });
-    await waitFor(() => {
-      expect(mockRefreshRoomConsumers).toHaveBeenCalledTimes(1);
-      expect(vi.mocked(useTenantMutateMatching)).toHaveBeenCalledWith([
-        roomKeys.family,
-      ]);
-    });
-  });
+      await waitFor(() => {
+        expect(mockCreate).toHaveBeenCalled();
+      });
+      await waitFor(() => {
+        expect(mockRefreshRoomConsumers).toHaveBeenCalledTimes(1);
+        expect(vi.mocked(useTenantMutateMatching)).toHaveBeenCalledWith([
+          roomKeys.family,
+        ]);
+      });
+      expect(mockRefreshSupervision.mock.calls).toEqual(
+        isOpenRoom ? [[["released-rooms"]]] : [],
+      );
+    },
+  );
 
   it("shows a refused create with the catalog text in the dialog (Issue #1356)", async () => {
     mockCreate.mockRejectedValueOnce(

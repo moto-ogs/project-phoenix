@@ -112,7 +112,7 @@ func (s *staffAbsenceService) RequestVacation(ctx context.Context, staffID int64
 	if err := s.notifyAbsenceRequested(ctx, absence); err != nil {
 		return nil, fmt.Errorf("enqueue absence mail: %w", err)
 	}
-	s.broadcastTimeTrackingChanged(ctx)
+	s.broadcastLeaveChanged(ctx)
 	return s.withLabel(ctx, toAbsenceResponse(absence)), nil
 }
 
@@ -169,7 +169,7 @@ func (s *staffAbsenceService) ApproveAbsence(ctx context.Context, absenceID int6
 	if err := s.notifyAbsenceDecision(ctx, absence); err != nil {
 		return nil, fmt.Errorf("enqueue absence mail: %w", err)
 	}
-	s.broadcastTimeTrackingChanged(ctx)
+	s.broadcastLeaveChanged(ctx)
 	return s.withLabel(ctx, toAbsenceResponse(absence)), nil
 }
 
@@ -246,7 +246,7 @@ func (s *staffAbsenceService) DenyAbsence(ctx context.Context, absenceID int64, 
 	if err := s.notifyAbsenceDecision(ctx, absence); err != nil {
 		return nil, fmt.Errorf("enqueue absence mail: %w", err)
 	}
-	s.broadcastTimeTrackingChanged(ctx)
+	s.broadcastLeaveChanged(ctx)
 	return s.withLabel(ctx, toAbsenceResponse(absence)), nil
 }
 
@@ -294,7 +294,7 @@ func (s *staffAbsenceService) QuestionAbsence(ctx context.Context, absenceID int
 	if err := s.notifyAbsenceDecision(ctx, absence); err != nil {
 		return nil, fmt.Errorf("enqueue absence mail: %w", err)
 	}
-	s.broadcastTimeTrackingChanged(ctx)
+	s.broadcastLeaveChanged(ctx)
 	return s.withLabel(ctx, toAbsenceResponse(absence)), nil
 }
 
@@ -341,7 +341,7 @@ func (s *staffAbsenceService) ResubmitAbsence(ctx context.Context, staffID int64
 	if err := s.notifyAbsenceRequested(ctx, absence); err != nil {
 		return nil, fmt.Errorf("enqueue absence mail: %w", err)
 	}
-	s.broadcastTimeTrackingChanged(ctx)
+	s.broadcastLeaveChanged(ctx)
 	return s.withLabel(ctx, toAbsenceResponse(absence)), nil
 }
 
@@ -391,7 +391,7 @@ func (s *staffAbsenceService) CancelAbsence(ctx context.Context, staffID int64, 
 			return fmt.Errorf("absence not canceled — plan cascade reversal failed: %w", err)
 		}
 	}
-	s.broadcastTimeTrackingChanged(ctx)
+	s.broadcastLeaveChanged(ctx)
 	return nil
 }
 

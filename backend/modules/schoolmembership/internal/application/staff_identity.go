@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/moto-ogs/project-phoenix/modules/schoolmembership"
 	"github.com/moto-ogs/project-phoenix/modules/schoolmembership/internal/domain"
@@ -78,4 +79,40 @@ func (s *Service) resolveStaffIdentity(ctx context.Context, personID int64) (sch
 		return schoolmembership.StaffIdentity{}, err
 	}
 	return schoolmembership.StaffIdentity{Link: schoolmembership.StaffLinkTeacher, PersonID: personID, StaffID: staff.ID, TeacherID: teacher.ID}, nil
+}
+
+// FindStaffClassesByPerson returns the live staff ID of a person and the
+// school classes assigned to it, read together (#8155). The classes are
+// trimmed, without empty ones and duplicates, in class order.
+func (s *Service) FindStaffClassesByPerson(ctx context.Context, personID int64) (staffID int64, classes []string, found bool, err error) {
+	if personID <= 0 {
+		return 0, nil, false, invalid("person ID is required")
+	}
+	var raw []string
+	err = s.runRead(ctx, "find_staff_classes_by_person", func(txCtx context.Context, stats *domain.OperationStats) error {
+		var queryStats domain.OperationStats
+		staffID, raw, found, queryStats, err = s.store.FindStaffClassesByPerson(txCtx, personID)
+		stats.Add(queryStats)
+		return err
+	})
+	if err != nil || !found {
+		return 0, nil, false, err
+	}
+	return staffID, distinctClasses(raw), true, nil
+}
+
+// distinctClasses trims the classes and drops empty ones and repeats.
+func distinctClasses(raw []string) []string {
+	classes := make([]string, 0, len(raw))
+	seen := make(map[string]bool, len(raw))
+	for _, class := range raw {
+		trimmed := strings.TrimSpace(class)
+		key := strings.ToLower(trimmed)
+		if trimmed == "" || seen[key] {
+			continue
+		}
+		seen[key] = true
+		classes = append(classes, trimmed)
+	}
+	return classes
 }

@@ -64,7 +64,7 @@ const (
 	reportTotalLabel           = "Gesamt"
 	reportSumLabel             = "Summe "
 	reportAllSchoolsGroup      = "Alle Standorte"
-	reportCareFormGroup        = "Kinder je Betreuungsform"
+	reportCareFormGroup        = "Kinder pro Betreuungsform"
 	reportWithoutCareFormLabel = "Ohne Betreuungsform"
 )
 
@@ -76,7 +76,7 @@ var reportSectionColumns = map[string][]lists.Column{
 	},
 	traegerview.ReportSectionStaff: {
 		{ID: reportColumnStaff, Label: "Personal"},
-		{ID: reportColumnPerStaff, Label: "Kinder je Person"},
+		{ID: reportColumnPerStaff, Label: "Kinder pro Person"},
 	},
 	traegerview.ReportSectionAbsences: {
 		{ID: reportColumnPresent, Label: "Anwesenheitstage"},
@@ -455,7 +455,7 @@ func sectionFields(section string, figures traegerview.KeyDateFigures) []lists.F
 	case traegerview.ReportSectionChildren:
 		return []lists.Field{{Label: "Kinder", Value: strconv.Itoa(figures.Children) + " · davon ohne Betreuungsform " + strconv.Itoa(figures.WithoutCareForm)}}
 	case traegerview.ReportSectionStaff:
-		return []lists.Field{{Label: "Personal", Value: strconv.Itoa(figures.Staff) + " · " + decimalOrDash(figures.ChildrenPerStaff, "") + " Kinder je Person"}}
+		return []lists.Field{{Label: "Personal", Value: strconv.Itoa(figures.Staff) + " · " + decimalOrDash(figures.ChildrenPerStaff, "") + " Kinder pro Person"}}
 	case traegerview.ReportSectionAbsences:
 		return []lists.Field{{Label: "Fehlzeiten", Value: strconv.Itoa(figures.PresentDays) + " Tage anwesend · " + strconv.Itoa(figures.SickDays) + " krank · " +
 			strconv.Itoa(figures.ExcusedDays) + " entschuldigt · Fehlquote " + decimalOrDash(figures.AbsenceRate, " %")}}

@@ -1,4 +1,5 @@
-import { signOut } from "next-auth/react";
+import { shownSessionMark } from "~/lib/session-mark";
+import { signOutSession } from "~/lib/tenant-session-cookie";
 import { createLogger } from "~/lib/logger";
 import { isTenantSessionEnding } from "~/lib/tenant-session-end";
 
@@ -84,6 +85,9 @@ export async function handleAuthFailure(): Promise<boolean> {
     return false;
   }
 
+  // The session whose refresh may fail: a school switch of this tab while
+  // the refresh runs is not the one to end (#8082).
+  const mark = shownSessionMark();
   try {
     // The JWT callback in NextAuth handles automatic token refresh
     // If we're here with a 401, it likely means:
@@ -119,7 +123,8 @@ export async function handleAuthFailure(): Promise<boolean> {
 
     // If refresh failed, sign out
     logger.warn("token refresh failed, signing out");
-    await signOut({ redirect: false });
+    // The tree's session only: another tab's sign-in stays (#8082).
+    await signOutSession("tenant", mark);
 
     // Redirect to home page (login)
     if (!isTenantSessionEnding()) globalThis.window.location.href = "/";
@@ -128,7 +133,16 @@ export async function handleAuthFailure(): Promise<boolean> {
   } catch (error) {
     logger.error("auth failure handling error", { error: String(error) });
     if (globalThis.window !== undefined && !isTenantSessionEnding()) {
-      await signOut({ redirect: false });
+      try {
+        await signOutSession("tenant", mark);
+        // The cookie went: the login, as after a failed refresh (#8082).
+        if (!isTenantSessionEnding()) globalThis.window.location.href = "/";
+      } catch (signOutError) {
+        // The session stays; the caller's error path keeps its retry.
+        logger.error("auth failure signout failed", {
+          error: String(signOutError),
+        });
+      }
     }
     return false;
   }

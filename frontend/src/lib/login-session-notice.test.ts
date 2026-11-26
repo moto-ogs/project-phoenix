@@ -5,7 +5,13 @@ const { signOut, useSession } = vi.hoisted(() => ({
   signOut: vi.fn(),
   useSession: vi.fn(),
 }));
-vi.mock("next-auth/react", () => ({ signOut, useSession }));
+vi.mock("next-auth/react", () => ({ useSession }));
+// Auth.js' signout protocol bound to the session mark (#8082).
+vi.mock("~/lib/tenant-session-cookie", () => ({
+  signOutSession: signOut,
+}));
+const { reloadDocument } = vi.hoisted(() => ({ reloadDocument: vi.fn() }));
+vi.mock("~/lib/session-tree", () => ({ reloadDocument }));
 
 import { renderHook } from "@testing-library/react";
 import {
@@ -22,6 +28,7 @@ describe("signOutStaleSession", () => {
   beforeEach(() => {
     signOut.mockReset();
     logger.warn.mockReset();
+    reloadDocument.mockClear();
   });
 
   it("leaves a page without a stale session to its other checks at once", () => {
@@ -32,7 +39,13 @@ describe("signOutStaleSession", () => {
       ["authenticated", healthy],
     ] as const) {
       expect(
-        signOutStaleSession({ status, session, started, logger }),
+        signOutStaleSession({
+          status,
+          session,
+          started,
+          logger,
+          portal: "tenant",
+        }),
       ).toBeNull();
     }
     expect(signOut).not.toHaveBeenCalled();
@@ -42,7 +55,13 @@ describe("signOutStaleSession", () => {
   it("signs a stale session out once, without leaving the page", async () => {
     signOut.mockResolvedValue(undefined);
     const started = { current: false };
-    const input = { status: "authenticated", session: stale, started, logger };
+    const input = {
+      status: "authenticated",
+      session: stale,
+      started,
+      logger,
+      portal: "tenant" as const,
+    };
 
     const cleanup = signOutStaleSession({ ...input, status: "authenticated" });
     expect(
@@ -51,7 +70,11 @@ describe("signOutStaleSession", () => {
     await cleanup;
 
     expect(signOut).toHaveBeenCalledTimes(1);
-    expect(signOut).toHaveBeenCalledWith({ redirect: false });
+    // The session the errored answer described: the exit keeps any other
+    // (#8082).
+    expect(signOut).toHaveBeenCalledWith("tenant", "");
+    // A new document reads the cookie as it is now.
+    expect(reloadDocument).toHaveBeenCalledTimes(1);
     expect(started.current).toBe(true);
     expect(logger.warn).not.toHaveBeenCalled();
   });
@@ -67,6 +90,7 @@ describe("signOutStaleSession", () => {
       session: stale,
       started,
       logger,
+      portal: "tenant",
       onFailure,
     });
 
@@ -80,8 +104,33 @@ describe("signOutStaleSession", () => {
       session: stale,
       started,
       logger,
+      portal: "tenant",
     });
     expect(signOut).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("signOutStaleSession and another tab's sign-in (#8082)", () => {
+  const logger = { warn: vi.fn() };
+
+  it("keeps a session another tab signed in with meanwhile and loads it", async () => {
+    // signOutSession resolves when the exit kept another session.
+    signOut.mockReset().mockResolvedValue(undefined);
+    reloadDocument.mockClear();
+    const onFailure = vi.fn();
+
+    await signOutStaleSession({
+      status: "authenticated",
+      session: stale,
+      started: { current: false },
+      logger,
+      portal: "tenant",
+      onFailure,
+    });
+
+    // No failure: the cookie is the new session's, the next document reads it.
+    expect(onFailure).not.toHaveBeenCalled();
+    expect(reloadDocument).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -92,7 +141,11 @@ describe("useLoginSessionCheck", () => {
     useSession.mockReturnValue({ data: null, status: "unauthenticated" });
     const onAccess = vi.fn();
     const { result, rerender } = renderHook(() =>
-      useLoginSessionCheck({ logger: { warn: vi.fn() }, onAccess }),
+      useLoginSessionCheck({
+        logger: { warn: vi.fn() },
+        portal: "tenant",
+        onAccess,
+      }),
     );
     expect(result.current).toBe(false);
 

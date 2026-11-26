@@ -297,11 +297,6 @@
     },
     {
       "decision": "0090",
-      "id": "api/activeStaffAccess.HasCurrentStaff",
-      "reason": "Finite named forwarding debt under ADR 0090, not a new floor; removal/deepening pending."
-    },
-    {
-      "decision": "0090",
       "id": "api/activityCatalogAdapter.CreateActivity",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
@@ -2334,21 +2329,6 @@
       "decision": "0084",
       "id": "roots/owners/ProvisioningIdentity.InviteTraegerAccount",
       "reason": "ADR 0084 (#5144, #5749): root translation of the Identity \u0026 Access operator invitation and its refusals onto the Organisation \u0026 Tenancy provisioning contract."
-    },
-    {
-      "decision": "0090",
-      "id": "roots/owners/ProvisioningIdentity.ListAllAccounts",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "roots/owners/ProvisioningIdentity.ListOrganizationAccounts",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "roots/owners/ProvisioningIdentity.ListSchoolAccounts",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
       "decision": "0090",

@@ -1,6 +1,8 @@
 import { ApiError } from "./api-error";
 import { bffJson } from "./bff-fetch";
 import { createLogger } from "./logger";
+import type { routes } from "./contract/settings.generated";
+import type { output } from "zod";
 import {
   sanitizeHomeBlockPlacements,
   sanitizeHomeBlockPolicies,
@@ -57,6 +59,14 @@ export async function fetchHomeLayout(): Promise<HomeLayoutState> {
     });
     throw error;
   }
+  return mapHomeLayout(layout);
+}
+
+type HomeLayoutAnswer = output<
+  (typeof routes)["GET /api/settings/home-layout"]["response"]
+>["data"];
+
+export function mapHomeLayout(layout: HomeLayoutAnswer): HomeLayoutState {
   return {
     blocks: sanitizeHomeBlockPlacements(layout.blocks),
     overrides: sanitizeHomeLayoutOverrides(layout.overrides),

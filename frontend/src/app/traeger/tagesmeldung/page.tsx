@@ -412,8 +412,8 @@ export default function TraegerDailyAttendancePage() {
         <>
           Träger in Mecklenburg-Vorpommern melden dem Land ab 2027 die tägliche
           An- und Abwesenheit der Kinder (§ 32 Absatz 1a KiföG M-V). Hier siehst
-          du je Tag, wer da war und wer gefehlt hat. Die Datei enthält eine
-          Zeile je Kind und Tag, ohne Namen. Heute zählt erst morgen mit.
+          du pro Tag, wer da war und wer gefehlt hat. Die Datei enthält eine
+          Zeile pro Kind und Tag, ohne Namen. Heute zählt erst morgen mit.
         </>
       }
       overflowMenu={exportItems}
@@ -476,7 +476,7 @@ export default function TraegerDailyAttendancePage() {
       <Alert
         type="info"
         title="Das Land legt das Format noch fest"
-        message="Bis dahin enthält die Datei je Kind und Tag: Einrichtung, Ort, Datum, laufende Nummer, Status, Ankunft, Abholung und Minuten. Sie enthält keine Namen."
+        message="Bis dahin enthält die Datei pro Kind und Tag: Einrichtung, Ort, Datum, laufende Nummer, Status, Ankunft, Abholung und Minuten. Sie enthält keine Namen."
       />
       {/* A state, no X (#7704): it ends with the next valid range. */}
       {clamped ? (
@@ -489,7 +489,7 @@ export default function TraegerDailyAttendancePage() {
       {report && hasChildren ? (
         <DataTable
           heading={{
-            title: selected ? `Je Tag: ${selected.name}` : "Je Tag",
+            title: selected ? `Pro Tag: ${selected.name}` : "Pro Tag",
             count: days.length,
             level: 2,
           }}
@@ -518,11 +518,11 @@ export default function TraegerDailyAttendancePage() {
           />
         </SectionCard>
       ) : (
-        <SectionCard loading title="Je Tag" />
+        <SectionCard loading title="Pro Tag" />
       )}
       {schools.length > 1 && !selected ? (
         <DataTable
-          heading={{ title: "Je Schule", count: schools.length, level: 2 }}
+          heading={{ title: "Pro Schule", count: schools.length, level: 2 }}
           columns={SCHOOL_COLUMNS}
           rows={[...schools]}
           getRowKey={(school) => school.id}

@@ -51,7 +51,7 @@ type enrollmentGuardianPhoneRows interface {
 }
 
 type enrollmentRosterStudentRows interface {
-	ListClassRoster(ctx context.Context, schoolClass string) ([]*peopleValues.StudentState, error)
+	ListClassRoster(ctx context.Context, classes []string) ([]*peopleValues.StudentState, error)
 }
 
 type enrollmentRosterPersonRows interface {

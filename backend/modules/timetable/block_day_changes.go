@@ -65,3 +65,20 @@ func BlockDayChangesOf(day OperationCapability) (BlockDayChangeQuery, error) {
 	}
 	return changes, nil
 }
+
+// ChildBlockDayChangeQuery reads the changed blocks of a day one child is
+// planned on, for the parents' "Heute anders" (#7671). The caller has checked
+// the guardian's relationship permission; staff travel as ids only.
+type ChildBlockDayChangeQuery interface {
+	ChildBlockDayChanges(ctx context.Context, studentID int64, date calendar.Date) ([]BlockDayChange, error)
+}
+
+// ChildBlockDayChangesOf is the child read of the operational day the owner
+// composed.
+func ChildBlockDayChangesOf(day OperationCapability) (ChildBlockDayChangeQuery, error) {
+	changes, ok := day.(ChildBlockDayChangeQuery)
+	if !ok {
+		return nil, ErrNoBlockDayChanges
+	}
+	return changes, nil
+}

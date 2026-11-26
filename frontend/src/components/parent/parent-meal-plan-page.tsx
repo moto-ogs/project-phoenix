@@ -36,7 +36,7 @@ import { StatusBadge } from "~/components/ui/status-badge";
 import { ParentPage, ParentPageHeader } from "~/components/parent/parent-page";
 import { ParentSubsection } from "~/components/parent/shell/parent-section";
 import { useDraftOn } from "~/lib/swr/read-draft";
-import { isValidISODate, parseISODate, toISODate } from "~/lib/date-helpers";
+import { parseISODate, toISODate } from "~/lib/date-helpers";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import {
   getChildMealPlan,
@@ -67,6 +67,15 @@ import {
 } from "~/lib/hooks/use-parent-resources";
 import { useSWRAuth } from "~/lib/swr";
 import { parentInboxKeys } from "~/lib/swr/parent-inbox-keys";
+import {
+  LAST_MEAL_PLAN_WEEK,
+  linkedWeekOffset,
+  mondayISOFromOffset,
+  weekOffsetFromParam,
+  type WeekOffset,
+} from "~/lib/parent-meal-plan-window";
+
+export { weekOffsetFromParam } from "~/lib/parent-meal-plan-window";
 
 const logger = createLogger({ component: "ParentMealPlanPage" });
 
@@ -88,44 +97,7 @@ interface ChildOption {
 
 // Parents reach the current week and the three following weeks. The meal plan
 // and the registration use this same range, so a notice always opens its plan.
-type WeekOffset = 0 | 1 | 2 | 3;
-const LAST_MEAL_PLAN_WEEK: WeekOffset = 3;
 const LAST_PARTICIPATION_WEEK: WeekOffset = LAST_MEAL_PLAN_WEEK;
-
-function mondayISOFromOffset(todayISO: string, weekOffset: number): string {
-  const base = parseISODate(todayISO);
-  base.setDate(base.getDate() + weekOffset * 7);
-  const offset = (base.getDay() + 6) % 7; // Mon=0 .. Sun=6
-  base.setDate(base.getDate() - offset);
-  return toISODate(base);
-}
-
-/**
- * Die Woche, die ein Link aus den Hinweisen öffnet (`?week=<Montag>`, #7145):
- * ihr Abstand zur aktuellen Woche, oder null für einen ungültigen Wert, eine
- * vergangene Woche oder eine Woche hinter der letzten erreichbaren.
- */
-function linkedWeekOffset(
-  todayISO: string,
-  week: string | undefined,
-): WeekOffset | null {
-  if (!week || !isValidISODate(week)) return null;
-  const monday = mondayISOFromOffset(week, 0);
-  for (let offset = 0; offset <= LAST_MEAL_PLAN_WEEK; offset++) {
-    if (mondayISOFromOffset(todayISO, offset) === monday) {
-      return offset as WeekOffset;
-    }
-  }
-  return null;
-}
-
-/** Wie `linkedWeekOffset`; ohne erreichbare Woche öffnet die aktuelle. */
-export function weekOffsetFromParam(
-  todayISO: string,
-  week: string | undefined,
-): WeekOffset {
-  return linkedWeekOffset(todayISO, week) ?? 0;
-}
 
 function workWeekDates(mondayISO: string): string[] {
   const monday = parseISODate(mondayISO);
@@ -1369,10 +1341,7 @@ export function ParentMealPlanPage({
     useSwrResourceLoadError(
       [children, features],
       tSchools("errorObjectSchools"),
-      () => {
-        void children.mutate();
-        void features.mutate();
-      },
+      () => children.mutate(),
     );
   const loadingSchools = !schoolsFailure && !resolved && !knownSchools;
   const [participationEditing, setParticipationEditing] = useState(false);

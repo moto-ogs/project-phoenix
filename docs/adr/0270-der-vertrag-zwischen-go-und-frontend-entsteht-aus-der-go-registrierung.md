@@ -534,3 +534,36 @@ Fehler wiederholbar. Ein 204 ersetzt keine zugesagten Daten.
    Demo-Route-Dateien lesen Status, Sitzung und Neustart über erzeugte
    Decoder. Die separate Website fordert den Link direkt an
    ([ADR 0316](0316-demo-link-anfrage-bleibt-ein-website-vertrag.md)).
+
+
+## Ergänzung: Aufsichtsfelder verlassen die Staff-Navigation (#8085)
+
+`GET /api/me/navigation` behält Personalprofil und Schulschalter. Seine vier
+Aufsichtsfelder (`educational_groups`, `supervised_groups`, `incomplete`,
+`unavailable_sections`) entfallen im selben Schnitt wie ihre Leser. Der
+Staff-Shell-Seed und der Browser lesen stattdessen
+[`GET /api/active/supervision-context`](../agents/contracts.md#staff-supervision-context-8084-8085).
+Die Auswertung des Lasttests liest keine dieser Eigenschaften; der Kiosk
+liest die Route nicht. Allgemeine Gruppen- und Aufsichtsabfragen für andere
+Leser bleiben unverändert.
+
+Die Vertragsprüfung erlaubt ausschließlich diese vier Feldentfernungen aus
+dem alten Go-Vertrag dieser Route. Der Schnitt setzt gemeinsam ausgelieferte
+Go- und Next-Versionen und danach neu geladene Staff-Tabs voraus. Ein alter
+Next-Decoder kann die kürzere Antwort nicht lesen. Die gewöhnliche
+Deprecation-Regel gilt für alle anderen Vertragsänderungen.
+
+## Ergänzung: Zwei ungenutzte Aufsichtsrouten entfallen
+
+Nach #8084 und #8085 liest die Staff-Oberfläche den Aufsichtskontext über
+`GET /api/active/supervision-context`. Die Suche in den Clients, Skripten,
+der Betriebs- und Monitoring-Konfiguration sowie in PyrePortal ergab keine
+Aufrufer mehr für `GET /api/students/ogs-group-navigation` oder
+`GET /api/active/supervisors/all`. Der k6-Kapazitätstest ruft weiterhin
+`GET /api/me/groups/supervised` auf; dieser Vertrag bleibt.
+
+Wie beim Schnitt für #8085 erlaubt die Vertragsprüfung nur die ausdrücklich
+benannten Entfernungen, hier die zwei bisherigen tenant-exklusiven
+GET-Routen mit ihren bisherigen Antworttypen. Die Deprecation-Regel gilt
+unverändert für andere Verträge. Ein älterer Client von vor der Umstellung
+muss neu geladen werden. Der Proxy leitet die beiden Pfade nicht mehr weiter.

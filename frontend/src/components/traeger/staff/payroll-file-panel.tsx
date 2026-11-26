@@ -277,7 +277,7 @@ function FileList({
   return (
     <div>
       <SectionLabel as="h3" className="mb-2">
-        Dateien je Arbeitgeber
+        Dateien pro Arbeitgeber
       </SectionLabel>
       <ResponsiveActionList>
         {files.map((file) => {
@@ -401,7 +401,7 @@ function readinessLabel(report: PayrollReport): string {
 /** Die Unterzeile der Karte: Monat und wie die Datei entsteht. */
 function fileDescription(report: PayrollReport | null, monthLabel: string) {
   if (report?.form === "arbeitgeber") {
-    return `${monthLabel} · Eine Datei je Arbeitgeber, jede mit eigener Berater- und Mandantennummer.`;
+    return `${monthLabel} · Eine Datei pro Arbeitgeber, jede mit eigener Berater- und Mandantennummer.`;
   }
   if (report && report.employers.length > 0) {
     return `${monthLabel} · Eine Datei für alle Schulen. Stunden anderer Arbeitgeber tragen ihre Kostenstelle.`;

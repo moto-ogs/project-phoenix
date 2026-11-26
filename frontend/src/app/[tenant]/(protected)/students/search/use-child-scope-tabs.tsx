@@ -5,7 +5,6 @@ import type { OverflowMenuItem } from "~/components/ui/page-header/types";
 import type { TenantPageProps } from "~/components/ui/tenant-page";
 import { trackEvent } from "~/lib/analytics";
 import { hasEffectiveAdminScope, isCaregiver } from "~/lib/auth-utils";
-import { useUserContext } from "~/lib/hooks/use-user-context";
 import { useOptionalSupervision } from "~/lib/supervision-context";
 import { useTenantAwarePath } from "~/lib/tenant-path";
 import {
@@ -64,22 +63,21 @@ export function useChildScopeTabs({
   const enabled = useChildSearchOnlyNavigation();
   const openCareGroupMode = useOpenCareGroupMode();
   const isBinaryMode = usePresenceMode() === "binary";
-  const { userContext } = useUserContext();
-  const { overviewEnabled, ownSupervisedRooms } = useOptionalSupervision();
+  const {
+    overviewEnabled,
+    ownSupervisedRooms,
+    ownGroupIds: personalGroupIds,
+  } = useOptionalSupervision();
   const { data: session } = useSession();
   const tenantPath = useTenantAwarePath();
 
   // Gruppen gibt es bei offener Betreuung nicht; Räume nur im detaillierten
   // Modus, und der Raumfilter kennt nur den heutigen Tag.
   const ownGroupIds =
-    enabled && !openCareGroupMode
-      ? (userContext?.educationalGroupIds ?? EMPTY_IDS)
-      : EMPTY_IDS;
+    enabled && !openCareGroupMode ? personalGroupIds : EMPTY_IDS;
   const rooms = useMemo<readonly ScopeRoom[]>(
     () =>
-      enabled && !isBinaryMode && isToday
-        ? (ownSupervisedRooms ?? EMPTY_ROOMS)
-        : EMPTY_ROOMS,
+      enabled && !isBinaryMode && isToday ? ownSupervisedRooms : EMPTY_ROOMS,
     [enabled, isBinaryMode, isToday, ownSupervisedRooms],
   );
 
@@ -144,7 +142,7 @@ export function useChildScopeTabs({
   if (enabled && showGroupEntry && !openCareGroupMode) {
     menuItems.push({
       label: "Zur Gruppenseite",
-      description: "Öffnet die Gruppenseite mit den Kindern je Gruppe.",
+      description: "Öffnet die Gruppenseite mit den Kindern pro Gruppe.",
       icon: <MotoConceptIcon concept={groupsConcept} size={16} />,
       href: tenantPath("/ogs-groups"),
       onClick: noop,

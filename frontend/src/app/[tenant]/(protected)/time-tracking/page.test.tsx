@@ -19,11 +19,9 @@ import { releaseFakeTimers, setTestClock } from "~/test/clock";
 const mockTimeTrackingService = vi.hoisted(() => ({
   checkIn: vi.fn(),
   checkOut: vi.fn(),
-  getCurrentSession: vi.fn(),
-  getHistory: vi.fn(),
+
   startBreak: vi.fn(),
   endBreak: vi.fn(),
-  getSessionBreaks: vi.fn(),
   getSessionEdits: vi.fn(),
   updateSession: vi.fn(),
   getAbsences: vi.fn(),
@@ -32,10 +30,13 @@ const mockTimeTrackingService = vi.hoisted(() => ({
   deleteAbsence: vi.fn(),
   requestVacation: vi.fn(),
   cancelAbsence: vi.fn(),
-  getVacationQuota: vi.fn(),
-  getQuestionedAbsences: vi.fn(),
-  getOwnAbsenceAllowances: vi.fn(),
+
   exportSessions: vi.fn(),
+}));
+
+const mockRefresh = vi.hoisted(() => vi.fn());
+vi.mock("~/lib/hooks/use-own-time-refresh", () => ({
+  useOwnTimeRefresh: () => mockRefresh,
 }));
 
 const mockTenantMutate = vi.hoisted(() => vi.fn());
@@ -68,10 +69,9 @@ const { routedSWRAuth } = vi.hoisted(() => ({
   routedSWRAuth: (real: typeof import("~/lib/swr").useSWRAuth) =>
     new Proxy(vi.fn(), {
       apply(fake, thisArg, args: Parameters<typeof real>) {
-        const [key, fetcher, options] = args;
-        const breaks = key?.startsWith("time-tracking-session-breaks-");
-        const response = real(breaks ? key : null, fetcher, options);
-        return breaks ? response : Reflect.apply(fake, thisArg, args);
+        const [, fetcher, options] = args;
+        real(null, fetcher, options);
+        return Reflect.apply(fake, thisArg, args);
       },
     }),
 }));
@@ -82,8 +82,8 @@ vi.mock("~/lib/swr", async (importOriginal) => {
     useLiveRefreshInterval: (fallbackMs = 60_000) => fallbackMs,
     useSWRAuth: routedSWRAuth(actual.useSWRAuth),
     useTenantMutate: vi.fn(() => mockTenantMutate),
-    useTenantMutateMatching: vi.fn(() => vi.fn()),
-    useInvalidateMatching: () => vi.fn(),
+    useSWRCacheKey: () => (key: string) => `scope:${key}`,
+    useInvalidateMatching: () => vi.fn(async () => []),
     revalidateOrThrow: mockRevalidateOrThrow,
   };
 });
@@ -122,11 +122,16 @@ vi.mock("~/lib/time-tracking-api", async (importOriginal) => ({
 
 // Das gebuchte Dienstplan-Modul steuert den Kopf-Link „Mein Dienstplan"
 // (#3821); timetable.enabled gehört nur zum Betreuungsplan.
-const moduleState = vi.hoisted(() => ({ dienstplanBooked: true }));
+const moduleState = vi.hoisted(() => ({
+  dienstplanBooked: true,
+  timeTrackingBooked: true,
+}));
 vi.mock("~/lib/tenant-context", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/lib/tenant-context")>()),
   useModuleBooked: (module: string) =>
-    module === "dienstplan" ? moduleState.dienstplanBooked : true,
+    module === "dienstplan"
+      ? moduleState.dienstplanBooked
+      : moduleState.timeTrackingBooked,
 }));
 
 vi.mock("~/components/staff/staff-export-button", async () => {
@@ -498,13 +503,19 @@ vi.mock("lucide-react", () => ({
 
 // ─── Imports after mocks ────────────────────────────────────────────────────
 
-import TimeTrackingPage from "./page";
+import TimeTrackingPage from "./page-content";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useSWRAuth, useTenantMutateMatching } from "~/lib/swr";
+import { useSWRAuth } from "~/lib/swr";
 import { SWRConfig } from "~/lib/swr/testing";
 import { ToastProvider, useToast } from "~/contexts/ToastContext";
 import { ApiError, apiErrorFromResponse } from "~/lib/api-error";
+import { berlinTodayISO, parseISODate, toISODate } from "~/lib/date-helpers";
+import {
+  adaptHistorySessionForMetrics,
+  endOfMonth,
+  endOfWeek,
+} from "~/lib/staff-metrics-helpers";
 import { catalogText } from "~/test/error-catalog-text";
 
 vi.unmock("swr");
@@ -533,6 +544,7 @@ import {
   OPEN_MONTH_REFRESH_MS,
   type MonthSummary,
   type WorkSession,
+  type WorkSessionBreak,
   type WorkDayLaborHint,
   type WorkSessionHistory,
   type StaffAbsence,
@@ -655,23 +667,18 @@ const mockVacationAbsence: StaffAbsence = {
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
+let currentBreaksForTest: WorkSessionBreak[] = [];
+let clockOverviewErrorForTest: unknown;
+const emptyTotals = {
+  has_target: true,
+  has_override: false,
+  actual_minutes: 0,
+  target_minutes: 0,
+  credit_minutes: 0,
+  balance_minutes: 0,
+};
 const mockMutate = vi.fn();
 const mockOwnStaff = { id: "10", inSchool: true };
-const mockOwnSchedule = {
-  mode: "custom",
-  model: null,
-  rotationLength: 1,
-  rotationAnchorDate: todayISO,
-  validFrom: todayISO,
-  entries: [
-    { weekIndex: 0, dayOfWeek: 0, targetMinutes: 480 },
-    { weekIndex: 0, dayOfWeek: 1, targetMinutes: 480 },
-    { weekIndex: 0, dayOfWeek: 2, targetMinutes: 480 },
-    { weekIndex: 0, dayOfWeek: 3, targetMinutes: 480 },
-    { weekIndex: 0, dayOfWeek: 4, targetMinutes: 480 },
-  ],
-  weeklyTotals: [2400],
-};
 
 // Issue #1368: the page no longer pre-selects a work mode — staff must pick
 // Vor Ort, Homeoffice, or Abwesend before "Einstempeln" becomes enabled.
@@ -718,6 +725,8 @@ function setupDefaultMocks(overrides?: {
   scheduleTargets?: ReadonlyMap<string, number>;
   monthSummary?: MonthSummary;
   laborDays?: WorkDayLaborHint[];
+  completedToday?: number;
+  terminalOnlyStamping?: boolean;
 }) {
   vi.mocked(useSession).mockReturnValue({
     data: {
@@ -732,195 +741,127 @@ function setupDefaultMocks(overrides?: {
   } as never);
 
   const currentSession = overrides?.currentSession ?? null;
-  const currentSessionError = overrides?.currentSessionError;
   const history = overrides?.history ?? [];
   const absences = overrides?.absences ?? [];
-  const absencesError = overrides?.absencesError;
-  const historyLoading = overrides?.historyLoading ?? false;
-  const configLoading = overrides?.configLoading ?? false;
-  const scheduleTargets =
-    overrides?.scheduleTargets ?? new Map<string, number>();
-  const monthSummary = overrides?.monthSummary;
   const laborDays = overrides?.laborDays ?? [];
+  const targets = overrides?.scheduleTargets ?? new Map<string, number>();
+  const monthSummary = overrides?.monthSummary;
 
   vi.mocked(useSWRAuth).mockImplementation((key: string | null) => {
-    if (key === null) {
-      return {
-        data: undefined,
-        isLoading: false,
+    const answer = (data: unknown, error?: unknown, isLoading = false) =>
+      ({
+        data,
+        error,
+        isLoading,
+        isValidating: isLoading,
         mutate: mockMutate,
-        isValidating: false,
-        error: undefined,
-      } as never;
+      }) as never;
+    if (key === null) return answer(undefined);
+    if (key.startsWith("time-tracking-overview-")) {
+      const error =
+        clockOverviewErrorForTest ??
+        overrides?.currentSessionError ??
+        overrides?.absencesError ??
+        overrides?.metricsError;
+      return answer(
+        overrides?.metricsError
+          ? undefined
+          : {
+              asOf: new Date().toISOString(),
+              staffId: mockOwnStaff.id,
+              session: currentSession,
+              breaks: currentBreaksForTest,
+              absence:
+                absences.find(
+                  (row) =>
+                    row.dateStart <= berlinTodayISO() &&
+                    row.dateEnd >= berlinTodayISO(),
+                ) ?? null,
+              chart: [],
+              completedToday: overrides?.completedToday ?? 0,
+              todayCountsInTotals: true,
+              terminalOnlyStamping: overrides?.terminalOnlyStamping ?? false,
+              laborDays,
+              plannedShifts: [],
+              cancelledShifts: [],
+              assignments: [],
+              shiftsUnavailable: false,
+              assignmentsUnavailable: false,
+              week: emptyTotals,
+              month: emptyTotals,
+              accountStart: `${berlinTodayISO().slice(0, 4)}-01-01`,
+              accountBalanceMinutes: 0,
+            },
+        error,
+      );
     }
-    if (key === "time-tracking-current") {
-      return {
-        data: currentSession,
-        isLoading: false,
-        mutate: mockMutate,
-        isValidating: false,
-        error: currentSessionError,
-      } as never;
-    } else if (key?.startsWith("time-tracking-history")) {
-      return {
-        data: { sessions: history, weeklySummaries: [], laborDays },
-        isLoading: historyLoading,
-        mutate: mockMutate,
-        isValidating: false,
-        error: undefined,
-      } as never;
-      // Date-valid Soll per day (#1842) — a Map, keyed by ISO day. The
-      // catch-all below hands back an array, which is not what any
-      // schedule-targets consumer reads.
-    } else if (key?.startsWith("time-tracking-schedule-targets")) {
-      return {
-        data: overrides?.metricsError ? undefined : scheduleTargets,
-        isLoading: false,
-        mutate: mockMutate,
-        isValidating: false,
-        error: overrides?.metricsError,
-      } as never;
-      // Monatskarte / period-KPI aggregate (#1842).
-    } else if (key?.startsWith("time-tracking-month-summary")) {
-      return {
-        data: monthSummary,
-        isLoading: false,
-        mutate: mockMutate,
-        isValidating: false,
-        error: undefined,
-      } as never;
-    } else if (key?.startsWith("time-tracking-table-absences")) {
-      return {
-        data: overrides?.tableAbsencesError ? undefined : absences,
-        isLoading: false,
-        mutate: mockMutate,
-        isValidating: false,
-        error: overrides?.tableAbsencesError,
-      } as never;
-      // The leave and allowance cards read their own keys (the same
-      // fixtures getVacationQuota / getQuestionedAbsences /
-      // getOwnAbsenceAllowances answer below).
-    } else if (
-      key === "time-tracking-absences-questioned" ||
-      key === "time-tracking-absences-allowances"
-    ) {
-      return {
-        data: [],
-        isLoading: false,
-        mutate: mockMutate,
-        isValidating: false,
-        error: undefined,
-      } as never;
-    } else if (key?.startsWith("time-tracking-absences-quota-")) {
-      return {
-        data: {
-          staff_id: 10,
-          year: new Date().getFullYear(),
-          entitled_days: 30,
-          carryover_days: 0,
-          taken_days: 0,
-          reserved_days: 0,
-          remaining_days: 30,
-        },
-        isLoading: false,
-        mutate: mockMutate,
-        isValidating: false,
-        error: undefined,
-      } as never;
-    } else if (key?.startsWith("time-tracking-absences-")) {
-      return {
-        data: absencesError ? undefined : absences,
-        isLoading: false,
-        mutate: mockMutate,
-        isValidating: false,
-        error: absencesError,
-      } as never;
-    } else if (key?.startsWith("time-tracking-table-")) {
-      return {
-        data: { sessions: history, weeklySummaries: [], laborDays },
-        isLoading: historyLoading,
-        mutate: mockMutate,
-        isValidating: false,
-        error: undefined,
-      } as never;
-    } else if (key?.startsWith("me-staff")) {
-      return {
-        data: mockOwnStaff,
-        isLoading: false,
-        mutate: mockMutate,
-        isValidating: false,
-        error: undefined,
-      } as never;
-    } else if (key?.startsWith("time-tracking-own-schedule")) {
-      return {
-        data: mockOwnSchedule,
-        isLoading: false,
-        mutate: mockMutate,
-        isValidating: false,
-        error: undefined,
-      } as never;
-    } else if (key === "time-tracking-config") {
-      return {
-        data: configLoading ? undefined : { accountStartDate: "" },
-        isLoading: configLoading,
-        mutate: mockMutate,
-        isValidating: false,
-        error: undefined,
-      } as never;
-    } else if (key?.startsWith("time-tracking-own-history")) {
-      return {
-        data: {
-          sessions: history,
-          weeklySummaries: [],
-        },
-        isLoading: false,
-        mutate: mockMutate,
-        isValidating: false,
-        error: undefined,
-      } as never;
-    } else if (key?.startsWith("time-tracking-own-absences")) {
-      return {
-        data: [],
-        isLoading: false,
-        mutate: mockMutate,
-        isValidating: false,
-        error: undefined,
-      } as never;
-    } else if (key === "staff-absence-types") {
-      return {
-        data: [],
-        isLoading: false,
-        mutate: mockMutate,
-        isValidating: false,
-        error: undefined,
-      } as never;
-    } else {
-      return {
-        data: absences,
-        isLoading: false,
-        mutate: mockMutate,
-        isValidating: false,
-        error: undefined,
-      } as never;
+    if (key.startsWith("time-tracking-period-")) {
+      const from = parseISODate(key.slice(-10));
+      const to = key.includes("-month-") ? endOfMonth(from) : endOfWeek(from);
+      const dailyProjection = new Map();
+      for (
+        let day = new Date(from);
+        day <= to;
+        day = new Date(day.getFullYear(), day.getMonth(), day.getDate() + 1)
+      ) {
+        const date = toISODate(day);
+        const target = targets.get(date) ?? 0;
+        dailyProjection.set(date, {
+          targetMinutes: target,
+          creditMinutes: 0,
+          actualMinutes: history
+            .filter((row) => row.date === date)
+            .reduce((total, row) => total + row.netMinutes, 0),
+          balanceMinutes: -target,
+          hasTarget: true,
+        });
+      }
+      return answer(
+        overrides?.historyLoading
+          ? undefined
+          : {
+              staffId: mockOwnStaff.id,
+              from: toISODate(from),
+              to: toISODate(to),
+              sessions: history,
+              rows: history.map(adaptHistorySessionForMetrics),
+              absences: overrides?.tableAbsencesError ? [] : absences,
+              laborDays,
+              weeklySummaries: [],
+              dailyProjection,
+              accountStart: "",
+              holidays: new Map(),
+              closingDays: new Map(),
+              shifts: [],
+              shiftsUnavailable: false,
+              monthSummary,
+              plannedShiftState: "ready",
+            },
+        overrides?.tableAbsencesError,
+        overrides?.historyLoading,
+      );
     }
+    if (key.startsWith("time-tracking-leave-overview-")) {
+      return answer({
+        year: Number(key.slice(-4)),
+        quota: { entitled_days: 30, carryover_days: 0, remaining_days: 30 },
+        counts: { question: 0, reserved: 0, approved: 0, declined: 0 },
+        recent: [],
+        questions: [],
+        allowances: [],
+        mails: { state: "ready", awaiting_feedback: false, absences: {} },
+      });
+    }
+    return answer(key.startsWith("time-tracking-absences-") ? absences : []);
   });
 
-  // Default: getSessionBreaks returns empty
-  vi.mocked(timeTrackingService.getSessionBreaks).mockResolvedValue([]);
-  vi.mocked(timeTrackingService.getVacationQuota).mockResolvedValue({
-    staff_id: "10",
-    year: today.getFullYear(),
-    entitled_days: 30,
-    carryover_days: 0,
-    taken_days: 0,
-    taken_before_days: 0,
-    reserved_days: 0,
-    remaining_days: 30,
-    version: "quota-1",
-  });
+  currentBreaksForTest = [];
+  clockOverviewErrorForTest = undefined;
+  mockRefresh.mockReset();
+  mockRefresh.mockResolvedValue(undefined);
+
   vi.mocked(timeTrackingService.getAbsences).mockResolvedValue(absences);
-  vi.mocked(timeTrackingService.getQuestionedAbsences).mockResolvedValue([]);
-  vi.mocked(timeTrackingService.getOwnAbsenceAllowances).mockResolvedValue([]);
+
   vi.mocked(timeTrackingService.requestVacation).mockResolvedValue(
     mockVacationAbsence,
   );
@@ -999,7 +940,7 @@ describe("TimeTrackingPage", () => {
 
       expect(
         await screen.findByText(
-          catalogText("general.permission", "die laufende Arbeitszeit"),
+          catalogText("general.permission", "deine Stempeluhr"),
         ),
       ).toBeInTheDocument();
       expect(screen.queryByText(/Kein eigenes Personalprofil/)).toBeNull();
@@ -1007,6 +948,17 @@ describe("TimeTrackingPage", () => {
   });
 
   describe("authentication and loading", () => {
+    it("does not start any of the three reads when Zeiterfassung is not booked", () => {
+      setupDefaultMocks();
+      moduleState.timeTrackingBooked = false;
+      try {
+        render(<TimeTrackingPage />);
+        expect(useSWRAuth).not.toHaveBeenCalled();
+      } finally {
+        moduleState.timeTrackingBooked = true;
+      }
+    });
+
     it("shows loading when auth status is loading", () => {
       vi.mocked(useSession).mockReturnValue({
         data: null,
@@ -1066,7 +1018,7 @@ describe("TimeTrackingPage", () => {
 
       expect(
         await screen.findByText(
-          catalogText("general.unavailable", "die Übersicht der Arbeitszeit"),
+          catalogText("general.unavailable", "deine Stempeluhr"),
         ),
       ).toBeInTheDocument();
       fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
@@ -1076,6 +1028,64 @@ describe("TimeTrackingPage", () => {
       expect(screen.queryByText("Saldo")).not.toBeInTheDocument();
       expect(screen.queryByText("0min")).not.toBeInTheDocument();
       expect(screen.queryByText(/^von \d/)).not.toBeInTheDocument();
+    });
+  });
+
+  // ── Terminal-only stamping (#8024) ──────────────────────────────────────
+
+  describe("terminal-only stamping", () => {
+    it("names the terminal instead of offering a check-in", () => {
+      setupDefaultMocks({ terminalOnlyStamping: true });
+      render(<TimeTrackingPage />);
+
+      expect(
+        screen.getByText("Du stempelst am NFC-Tablet"),
+      ).toBeInTheDocument();
+      expect(screen.getByText("Stempeluhr")).toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Einstempeln" }),
+      ).not.toBeInTheDocument();
+      expect(screen.queryByText("Bitte Status wählen")).not.toBeInTheDocument();
+    });
+
+    it("still opens the absence dialog", async () => {
+      setupDefaultMocks({ terminalOnlyStamping: true });
+      render(<TimeTrackingPage />);
+
+      fireEvent.click(
+        screen.getByRole("button", { name: "Abwesenheit melden" }),
+      );
+      expect(await screen.findByTestId("modal")).toBeInTheDocument();
+    });
+
+    it("shows the running block without pause and check-out buttons", () => {
+      setupDefaultMocks({
+        terminalOnlyStamping: true,
+        currentSession: mockActiveSession,
+      });
+      render(<TimeTrackingPage />);
+
+      expect(
+        screen.getByText("Pause und Ausstempeln machst du am NFC-Tablet."),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Ausstempeln" }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Pause starten" }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("keeps the stamp buttons while the school leaves the app open", () => {
+      setupDefaultMocks({ currentSession: mockActiveSession });
+      render(<TimeTrackingPage />);
+
+      expect(
+        screen.getByRole("button", { name: "Ausstempeln" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByText("Pause und Ausstempeln machst du am NFC-Tablet."),
+      ).not.toBeInTheDocument();
     });
   });
 
@@ -1282,13 +1292,13 @@ describe("TimeTrackingPage", () => {
           ?.at(-1)?.[2];
 
       expect(
-        refreshOptionsFor((key) => key.startsWith("time-tracking-history-")),
+        refreshOptionsFor((key) => key.startsWith("time-tracking-overview-")),
       ).toMatchObject({
         refreshInterval: OPEN_MONTH_REFRESH_MS,
       });
       expect(
         refreshOptionsFor((key) =>
-          /^time-tracking-table-\d{4}-\d{2}-\d{2}-\d{4}-\d{2}-\d{2}$/.test(key),
+          key.startsWith("time-tracking-period-week-"),
         ),
       ).toMatchObject({
         refreshInterval: OPEN_MONTH_REFRESH_MS,
@@ -1513,7 +1523,7 @@ describe("TimeTrackingPage", () => {
     it("shows Pause beenden button when on break", async () => {
       setupDefaultMocks({ currentSession: mockActiveSession });
       // Mock breaks to include an active break
-      vi.mocked(timeTrackingService.getSessionBreaks).mockResolvedValue([
+      currentBreaksForTest = [
         {
           id: "50",
           sessionId: "100",
@@ -1522,7 +1532,7 @@ describe("TimeTrackingPage", () => {
           durationMinutes: 0,
           plannedEndTime: null,
         },
-      ]);
+      ];
       render(<TimeTrackingPage />);
       // Need to wait for breaks to load
       await waitFor(() => {
@@ -1534,7 +1544,7 @@ describe("TimeTrackingPage", () => {
       const breakStart = new Date(Date.now() - 60 * 60 * 1000);
       const plannedEnd = new Date(Date.now() + 30 * 60 * 1000);
       setupDefaultMocks({ currentSession: mockActiveSession });
-      vi.mocked(timeTrackingService.getSessionBreaks).mockResolvedValue([
+      currentBreaksForTest = [
         {
           id: "50",
           sessionId: "100",
@@ -1543,7 +1553,7 @@ describe("TimeTrackingPage", () => {
           durationMinutes: 0,
           plannedEndTime: plannedEnd.toISOString(),
         },
-      ]);
+      ];
       render(<TimeTrackingPage />);
 
       await waitFor(() => {
@@ -1555,7 +1565,7 @@ describe("TimeTrackingPage", () => {
       const breakStart = new Date(Date.now() - 90 * 60 * 1000);
       const plannedEnd = new Date(Date.now() - 1000);
       setupDefaultMocks({ currentSession: mockActiveSession });
-      vi.mocked(timeTrackingService.getSessionBreaks).mockResolvedValue([
+      currentBreaksForTest = [
         {
           id: "50",
           sessionId: "100",
@@ -1564,7 +1574,7 @@ describe("TimeTrackingPage", () => {
           durationMinutes: 0,
           plannedEndTime: plannedEnd.toISOString(),
         },
-      ]);
+      ];
       vi.mocked(timeTrackingService.endBreak).mockResolvedValue({
         ...mockActiveSession,
         breakMinutes: 90,
@@ -1576,7 +1586,7 @@ describe("TimeTrackingPage", () => {
         expect(timeTrackingService.endBreak).toHaveBeenCalled();
       });
       await waitFor(() => {
-        expect(mockMutate).toHaveBeenCalledTimes(2);
+        expect(mockRefresh).toHaveBeenCalledWith("time");
       });
     });
 
@@ -1592,40 +1602,46 @@ describe("TimeTrackingPage", () => {
       const logError = vi.spyOn(console, "error").mockImplementation(() => {});
       try {
         setupDefaultMocks({ currentSession: mockActiveSession });
-        vi.mocked(timeTrackingService.getSessionBreaks)
-          .mockResolvedValueOnce([
-            {
-              id: "50",
-              sessionId: "100",
-              startedAt: new Date(Date.now() - 90 * 60 * 1000).toISOString(),
-              endedAt: null,
-              durationMinutes: 0,
-              plannedEndTime: new Date(Date.now() - 1000).toISOString(),
-            },
-          ])
-          .mockResolvedValue([]);
+        currentBreaksForTest = [
+          {
+            id: "50",
+            sessionId: "100",
+            startedAt: new Date(Date.now() - 90 * 60 * 1000).toISOString(),
+            endedAt: null,
+            durationMinutes: 0,
+            plannedEndTime: new Date(Date.now() - 1000).toISOString(),
+          },
+        ];
+        mockRefresh.mockImplementation(async () => {
+          currentBreaksForTest = [];
+        });
         vi.mocked(timeTrackingService.endBreak).mockResolvedValue({
           ...mockActiveSession,
           breakMinutes: 90,
         });
-        mockMutate.mockRejectedValue(new Error("session refresh failed"));
+        mockRefresh.mockImplementation(async () => {
+          clockOverviewErrorForTest = new ApiError("offline", 503, {
+            code: "general.unavailable",
+          });
+        });
 
-        render(<TimeTrackingPage />);
+        const view = render(<TimeTrackingPage />);
 
         await waitFor(() => {
           expect(timeTrackingService.endBreak).toHaveBeenCalledTimes(1);
-          expect(timeTrackingService.getSessionBreaks).toHaveBeenCalledTimes(2);
+          expect(mockRefresh).toHaveBeenCalledWith("time");
         });
-        // A failed reload is no API answer: the crash text names the screen.
+        view.rerender(<TimeTrackingPage />);
+        // A confirmed write and a failed overview reload are different outcomes.
         expect(
           await screen.findByText(
-            "Die Zeiterfassung konnte nicht bearbeitet werden. Bitte versuche es später erneut.",
+            catalogText("general.unavailable", "deine Stempeluhr"),
           ),
         ).toBeInTheDocument();
-        expect(logError).toHaveBeenCalledWith("end_break_failed", {
-          error: "session refresh failed",
-          status: undefined,
-        });
+        expect(logError).not.toHaveBeenCalledWith(
+          "end_break_failed",
+          expect.anything(),
+        );
       } finally {
         mockMutate.mockReset();
         logError.mockRestore();
@@ -1653,22 +1669,23 @@ describe("TimeTrackingPage", () => {
           durationMinutes: 0,
           plannedEndTime: new Date(Date.now() - 1000).toISOString(),
         };
-        vi.mocked(timeTrackingService.getSessionBreaks)
-          .mockResolvedValueOnce([activeBreak])
-          .mockResolvedValue([]);
+        currentBreaksForTest = [activeBreak];
+        mockRefresh.mockImplementation(async () => {
+          currentBreaksForTest = [];
+        });
         vi.mocked(timeTrackingService.endBreak).mockRejectedValue(
           new ApiError("no active break found", 404, {
             code: "workforce.no_active_break",
           }),
         );
 
-        render(<TimeTrackingPage />);
+        const view = render(<TimeTrackingPage />);
 
         await waitFor(() => {
           expect(timeTrackingService.endBreak).toHaveBeenCalledTimes(1);
-          expect(timeTrackingService.getSessionBreaks).toHaveBeenCalledTimes(2);
-          expect(mockMutate).toHaveBeenCalledTimes(2);
+          expect(mockRefresh).toHaveBeenCalledWith("time");
         });
+        view.rerender(<TimeTrackingPage />);
         // Anker: die Stempelleiste steht ohne laufende Pause da.
         expect(
           await screen.findByLabelText("Pause starten"),
@@ -1703,20 +1720,21 @@ describe("TimeTrackingPage", () => {
       const logError = vi.spyOn(console, "error").mockImplementation(() => {});
       try {
         setupDefaultMocks({ currentSession: mockActiveSession });
-        vi.mocked(timeTrackingService.getSessionBreaks)
-          .mockResolvedValueOnce([
-            {
-              id: "50",
-              sessionId: "100",
-              startedAt: new Date(Date.now() - 90 * 60 * 1000).toISOString(),
-              endedAt: null,
-              durationMinutes: 0,
-              plannedEndTime: new Date(Date.now() - 1000).toISOString(),
-            },
-          ])
-          .mockRejectedValue(
-            new ApiError("refresh failed", 500, { code: "general.server" }),
-          );
+        currentBreaksForTest = [
+          {
+            id: "50",
+            sessionId: "100",
+            startedAt: new Date(Date.now() - 90 * 60 * 1000).toISOString(),
+            endedAt: null,
+            durationMinutes: 0,
+            plannedEndTime: new Date(Date.now() - 1000).toISOString(),
+          },
+        ];
+        mockRefresh.mockImplementation(async () => {
+          clockOverviewErrorForTest = new ApiError("refresh failed", 500, {
+            code: "general.server",
+          });
+        });
         vi.mocked(timeTrackingService.endBreak).mockRejectedValue(
           new ApiError("server unavailable", 500, {
             code: "general.server",
@@ -1724,13 +1742,13 @@ describe("TimeTrackingPage", () => {
           }),
         );
 
-        render(<TimeTrackingPage />);
+        const view = render(<TimeTrackingPage />);
 
         await waitFor(() => {
           expect(timeTrackingService.endBreak).toHaveBeenCalledTimes(1);
-          expect(timeTrackingService.getSessionBreaks).toHaveBeenCalledTimes(2);
-          expect(mockMutate).toHaveBeenCalledTimes(2);
+          expect(mockRefresh).toHaveBeenCalledWith("time");
         });
+        view.rerender(<TimeTrackingPage />);
         // One toast for the failed action, with its request ID; the failed
         // break reload shows in place instead of as a second toast.
         expect(
@@ -1738,7 +1756,7 @@ describe("TimeTrackingPage", () => {
         ).toBeInTheDocument();
         expect(
           await screen.findByText(
-            catalogText("general.server", "die Liste der Pausen"),
+            catalogText("general.server", "deine Stempeluhr"),
           ),
         ).toBeInTheDocument();
         expect(toast.error).not.toHaveBeenCalled();
@@ -2128,36 +2146,22 @@ describe("TimeTrackingPage", () => {
       }
     });
 
-    // The table's history key is shared with usePeriodMetrics so SWR dedupes
-    // the two fetches into one request. Both must keep the same head start —
-    // not because the range decides which blocks are visible (/history bounds
-    // `from` against check_out_time), but because two keys mean two requests.
-    it("shares one history key with the period metrics", () => {
+    it("loads a single canonical week key, separate from the clock and vacation keys", () => {
       setupDefaultMocks();
       render(<TimeTrackingPage />);
-
-      const monday = new Date(today);
-      monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
-      const sunday = new Date(monday);
-      sunday.setDate(sunday.getDate() + 6);
-      const iso = (d: Date) =>
-        `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-      const headStart = new Date(monday);
-      headStart.setDate(headStart.getDate() - 1);
-
-      const tableKeys = vi
+      const keys = vi
         .mocked(useSWRAuth)
         .mock.calls.map(([key]) => key)
-        .filter(
-          (key): key is string =>
-            typeof key === "string" &&
-            key.startsWith("time-tracking-table-") &&
-            !key.startsWith("time-tracking-table-absences") &&
-            !key.startsWith("time-tracking-table-shifts"),
-        );
-
-      expect(new Set(tableKeys)).toEqual(
-        new Set([`time-tracking-table-${iso(headStart)}-${iso(sunday)}`]),
+        .filter((key) => key?.startsWith("time-tracking-"));
+      expect(new Set(keys).size).toBe(3);
+      expect(keys).toEqual(
+        expect.arrayContaining([
+          expect.stringMatching(
+            /^time-tracking-period-week-\d{4}-\d{2}-\d{2}$/,
+          ),
+          expect.stringMatching(/^time-tracking-overview-/),
+          expect.stringMatching(/^time-tracking-leave-overview-/),
+        ]),
       );
     });
   });
@@ -2373,7 +2377,7 @@ describe("TimeTrackingPage", () => {
         render(<TimeTrackingPage />);
 
         expect(useSWRAuth).toHaveBeenCalledWith(
-          "time-tracking-history-2026-05-13-2026-05-31",
+          "time-tracking-overview-2026-05-27",
           expect.any(Function),
           expect.any(Object),
         );
@@ -2765,7 +2769,7 @@ describe("TimeTrackingPage", () => {
       setupDefaultMocks({ currentSession: mockActiveSession });
 
       // First render without breaks
-      vi.mocked(timeTrackingService.getSessionBreaks).mockResolvedValue([
+      currentBreaksForTest = [
         {
           id: "50",
           sessionId: "100",
@@ -2774,7 +2778,7 @@ describe("TimeTrackingPage", () => {
           durationMinutes: 0,
           plannedEndTime: null,
         },
-      ]);
+      ];
       vi.mocked(timeTrackingService.endBreak).mockRejectedValue(
         new Error("no active break found"),
       );
@@ -2784,8 +2788,7 @@ describe("TimeTrackingPage", () => {
       const endBreakBtn = await screen.findByLabelText("Pause beenden");
       fireEvent.click(endBreakBtn);
 
-      // Verify test setup was correct - breaks were loaded
-      expect(timeTrackingService.getSessionBreaks).toHaveBeenCalled();
+      expect(timeTrackingService.endBreak).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -2800,7 +2803,7 @@ describe("TimeTrackingPage", () => {
       setupDefaultMocks();
       const base = vi.mocked(useSWRAuth).getMockImplementation()!;
       vi.mocked(useSWRAuth).mockImplementation((key: string | null) => {
-        if (key?.startsWith("time-tracking-table-shifts")) {
+        if (key?.startsWith("time-tracking-period-")) {
           return {
             data: undefined,
             isLoading: false,
@@ -2818,7 +2821,7 @@ describe("TimeTrackingPage", () => {
       render(<TimeTrackingPage />);
       expect(
         await screen.findByText(
-          catalogText("general.unavailable", "die Liste deiner Schichten"),
+          catalogText("general.unavailable", "die Liste deiner Arbeitszeiten"),
         ),
       ).toBeInTheDocument();
       expect(
@@ -2832,7 +2835,7 @@ describe("TimeTrackingPage", () => {
       const base = vi.mocked(useSWRAuth).getMockImplementation()!;
       const retry = vi.fn();
       vi.mocked(useSWRAuth).mockImplementation((key: string | null) => {
-        if (key && /^time-tracking-table-\d/.test(key)) {
+        if (key && key.startsWith("time-tracking-period-")) {
           return {
             data: undefined,
             isLoading: false,
@@ -2869,7 +2872,7 @@ describe("TimeTrackingPage", () => {
       setupDefaultMocks();
       const base = vi.mocked(useSWRAuth).getMockImplementation()!;
       vi.mocked(useSWRAuth).mockImplementation((key: string | null) => {
-        if (key === "time-tracking-current") {
+        if (key?.startsWith("time-tracking-overview-")) {
           return {
             data: undefined,
             isLoading: false,
@@ -2884,7 +2887,7 @@ describe("TimeTrackingPage", () => {
       render(<TimeTrackingPage />);
       expect(
         await screen.findByText(
-          catalogText("general.unavailable", "die laufende Arbeitszeit"),
+          catalogText("general.unavailable", "deine Stempeluhr"),
         ),
       ).toBeInTheDocument();
     });
@@ -2901,11 +2904,37 @@ describe("TimeTrackingPage", () => {
 
       expect(
         await screen.findByText(
-          catalogText("general.unavailable", "die laufende Arbeitszeit"),
+          catalogText("general.unavailable", "deine Stempeluhr"),
         ),
       ).toBeInTheDocument();
       expect(screen.getByLabelText("Pause starten")).toBeDisabled();
       expect(screen.getByLabelText("Ausstempeln")).toBeDisabled();
+    });
+
+    it("can stamp only after the failed overview has been successfully retried", async () => {
+      setupDefaultMocks();
+      clockOverviewErrorForTest = new ApiError("offline", 503, {
+        code: "general.unavailable",
+      });
+      mockMutate.mockImplementationOnce(() => {
+        clockOverviewErrorForTest = undefined;
+      });
+      vi.mocked(timeTrackingService.checkIn).mockResolvedValue(
+        mockActiveSession,
+      );
+      const page = render(<TimeTrackingPage />);
+
+      expect(screen.getByLabelText("Einstempeln")).toBeDisabled();
+      expect(timeTrackingService.checkIn).not.toHaveBeenCalled();
+      fireEvent.click(
+        await screen.findByRole("button", { name: "Wiederholen" }),
+      );
+      page.rerender(<TimeTrackingPage />);
+      fireEvent.click(screen.getByRole("button", { name: "In der OGS" }));
+      fireEvent.click(screen.getByLabelText("Einstempeln"));
+      await waitFor(() =>
+        expect(timeTrackingService.checkIn).toHaveBeenCalledWith("present"),
+      );
     });
 
     it("disables check-in while absences are unavailable", async () => {
@@ -2919,7 +2948,7 @@ describe("TimeTrackingPage", () => {
 
       expect(
         await screen.findByText(
-          catalogText("general.unavailable", "die Liste deiner Abwesenheiten"),
+          catalogText("general.unavailable", "deine Stempeluhr"),
         ),
       ).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "In der OGS" })).toBeDisabled();
@@ -2934,7 +2963,7 @@ describe("TimeTrackingPage", () => {
       setupDefaultMocks();
       const base = vi.mocked(useSWRAuth).getMockImplementation()!;
       vi.mocked(useSWRAuth).mockImplementation((key: string | null) => {
-        if (key?.startsWith("time-tracking-table-shifts")) {
+        if (key?.startsWith("time-tracking-period-")) {
           return {
             data: undefined,
             isLoading: true,
@@ -3391,7 +3420,7 @@ describe("TimeTrackingPage", () => {
           checkOutTime: null,
         },
       });
-      vi.mocked(timeTrackingService.getSessionBreaks).mockResolvedValue([
+      currentBreaksForTest = [
         {
           id: "51",
           sessionId: "100",
@@ -3401,7 +3430,7 @@ describe("TimeTrackingPage", () => {
           durationMinutes: 30,
           plannedEndTime: null,
         },
-      ]);
+      ];
       render(<TimeTrackingPage />);
 
       // Work 08:00–10:15, break 10:15–10:45, work from 10:45.
@@ -4015,7 +4044,7 @@ describe("TimeTrackingPage", () => {
       breakEnd.setMinutes(breakEnd.getMinutes() - 30);
 
       setupDefaultMocks({ currentSession: mockActiveSession });
-      vi.mocked(timeTrackingService.getSessionBreaks).mockResolvedValue([
+      currentBreaksForTest = [
         {
           id: "b1",
           sessionId: "100",
@@ -4024,7 +4053,7 @@ describe("TimeTrackingPage", () => {
           durationMinutes: 30,
           plannedEndTime: null,
         },
-      ]);
+      ];
 
       render(<TimeTrackingPage />);
 
@@ -4042,7 +4071,7 @@ describe("TimeTrackingPage", () => {
       breakEnd.setMinutes(breakEnd.getMinutes() - 30);
 
       setupDefaultMocks({ currentSession: mockActiveSession });
-      vi.mocked(timeTrackingService.getSessionBreaks).mockResolvedValue([
+      currentBreaksForTest = [
         {
           id: "b1",
           sessionId: "100",
@@ -4051,7 +4080,7 @@ describe("TimeTrackingPage", () => {
           durationMinutes: 30,
           plannedEndTime: null,
         },
-      ]);
+      ];
 
       render(<TimeTrackingPage />);
 
@@ -4064,7 +4093,7 @@ describe("TimeTrackingPage", () => {
 
     it("shows active break as ongoing with no end time", async () => {
       setupDefaultMocks({ currentSession: mockActiveSession });
-      vi.mocked(timeTrackingService.getSessionBreaks).mockResolvedValue([
+      currentBreaksForTest = [
         {
           id: "b1",
           sessionId: "100",
@@ -4073,7 +4102,7 @@ describe("TimeTrackingPage", () => {
           durationMinutes: 0,
           plannedEndTime: null,
         },
-      ]);
+      ];
 
       render(<TimeTrackingPage />);
 
@@ -5047,7 +5076,7 @@ describe("TimeTrackingPage", () => {
       vi.mocked(useToast).mockReturnValue(mockToast);
 
       setupDefaultMocks({ currentSession: mockActiveSession });
-      vi.mocked(timeTrackingService.getSessionBreaks).mockResolvedValue([
+      currentBreaksForTest = [
         {
           id: "50",
           sessionId: "100",
@@ -5056,7 +5085,7 @@ describe("TimeTrackingPage", () => {
           durationMinutes: 0,
           plannedEndTime: null,
         },
-      ]);
+      ];
       vi.mocked(timeTrackingService.endBreak).mockResolvedValue({
         ...mockActiveSession,
         breakMinutes: 15,
@@ -5132,6 +5161,7 @@ describe("TimeTrackingPage", () => {
             checkOutTime: null,
           },
           history: [closedOvernight],
+          completedToday: 120,
         });
         render(<TimeTrackingPage />);
 
@@ -5472,23 +5502,26 @@ describe("TimeTrackingPage", () => {
       };
       vi.mocked(useToast).mockReturnValue(mockToast);
       setupDefaultMocks({ currentSession: mockActiveSession });
-      vi.mocked(timeTrackingService.getSessionBreaks)
-        .mockResolvedValueOnce([
-          {
-            id: "50",
-            sessionId: "100",
-            startedAt: new Date().toISOString(),
-            endedAt: null,
-            durationMinutes: 0,
-            plannedEndTime: null,
-          },
-        ])
-        .mockResolvedValue([]);
+      currentBreaksForTest = [
+        {
+          id: "50",
+          sessionId: "100",
+          startedAt: new Date().toISOString(),
+          endedAt: null,
+          durationMinutes: 0,
+          plannedEndTime: null,
+        },
+      ];
+      mockRefresh.mockImplementation(async () => {
+        currentBreaksForTest = [];
+      });
       vi.mocked(timeTrackingService.endBreak).mockRejectedValue(
-        Object.assign(new Error("no active break found"), { status: 404 }),
+        new ApiError("no active break found", 404, {
+          code: "workforce.no_active_break",
+        }),
       );
 
-      render(<TimeTrackingPage />);
+      const view = render(<TimeTrackingPage />);
 
       await waitFor(() => {
         expect(screen.getByLabelText("Pause beenden")).toBeInTheDocument();
@@ -5498,9 +5531,10 @@ describe("TimeTrackingPage", () => {
         fireEvent.click(screen.getByLabelText("Pause beenden"));
       });
 
+      await waitFor(() => expect(mockRefresh).toHaveBeenCalledWith("time"));
+      view.rerender(<TimeTrackingPage />);
       await waitFor(() => {
-        expect(timeTrackingService.getSessionBreaks).toHaveBeenCalledTimes(2);
-        expect(mockMutate).toHaveBeenCalledTimes(2);
+        expect(mockRefresh).toHaveBeenCalledWith("time");
         expect(
           screen.queryByLabelText("Pause beenden"),
         ).not.toBeInTheDocument();
@@ -5628,34 +5662,6 @@ describe("TimeTrackingPage", () => {
         screen.queryByText("Arbeitszeit manuell bearbeitet"),
       ).not.toBeInTheDocument();
     });
-  });
-});
-
-// Check-in, checkout, session edits and absence changes all run through
-// refreshTableData. Since #2443 the day rows read their Ist, Gutschrift and
-// Saldo from the server's daily projection, so that key has to be invalidated
-// with the session list and the Monatskarte — otherwise the numbers the fix
-// added are the only ones on the screen still showing the pre-mutation state.
-describe("daily-projection invalidation (#2443)", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it("invalidates the daily projection alongside the table and Monatskarte", () => {
-    setupDefaultMocks();
-    render(<TimeTrackingPage />);
-
-    const invalidated = vi
-      .mocked(useTenantMutateMatching)
-      .mock.calls.flatMap(([substrings]) => substrings);
-
-    expect(invalidated).toEqual(
-      expect.arrayContaining([
-        "time-tracking-table",
-        "time-tracking-month-summary",
-        "time-tracking-schedule-targets-",
-      ]),
-    );
   });
 });
 

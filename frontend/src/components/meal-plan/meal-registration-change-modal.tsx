@@ -17,7 +17,10 @@ import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { formatDate, parseISODate, toISODate } from "~/lib/date-helpers";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { useLocalizedDatePicker } from "~/lib/hooks/use-localized-date-picker";
-import { useReadDraftLoadError } from "~/lib/hooks/use-swr-load-error";
+import {
+  useReadDraftLoadError,
+  type useSwrLoadError,
+} from "~/lib/hooks/use-swr-load-error";
 import { useReadDraft } from "~/lib/swr/read-draft";
 import { tenantContactKeys } from "~/lib/swr/tenant-contact-keys";
 import { createLogger } from "~/lib/logger";
@@ -55,6 +58,8 @@ export function MealRegistrationChangeModal({
   date,
   participants,
   others,
+  rosterLoading,
+  rosterError,
   initialStudentId,
 }: Readonly<{
   isOpen: boolean;
@@ -64,6 +69,8 @@ export function MealRegistrationChangeModal({
   date: string;
   participants: readonly DailyMealParticipant[];
   others: readonly DailyMealParticipant[];
+  rosterLoading: boolean;
+  rosterError: ReturnType<typeof useSwrLoadError>;
   initialStudentId?: string;
 }>) {
   const t = useCareTermTranslations("mealParticipantList");
@@ -176,6 +183,8 @@ export function MealRegistrationChangeModal({
     return toISODate(date);
   }, [today]);
   const ready =
+    !rosterLoading &&
+    !rosterError &&
     studentId !== "" &&
     (scope === "day"
       ? choice !== null
@@ -254,13 +263,19 @@ export function MealRegistrationChangeModal({
     >
       <div className="space-y-5">
         <p className="text-sm text-gray-600">{t("changeHint")}</p>
-        <CustomSelect
-          label={t("child")}
-          value={studentId}
-          options={options}
-          onChange={chooseChild}
-          placeholder={t("childPlaceholder")}
-        />
+        {rosterError ? (
+          <LoadErrorAlert error={rosterError} />
+        ) : rosterLoading ? (
+          <Skeleton shape="control" className="h-11" />
+        ) : (
+          <CustomSelect
+            label={t("child")}
+            value={studentId}
+            options={options}
+            onChange={chooseChild}
+            placeholder={t("childPlaceholder")}
+          />
+        )}
         <SegmentedControl<ChangeScope>
           items={[
             {

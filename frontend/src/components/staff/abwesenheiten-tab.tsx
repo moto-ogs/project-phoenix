@@ -328,7 +328,7 @@ export function AbwesenheitenTab({
   const tenantMutate = useTenantMutate();
   const yearStart = `${year}-01-01`;
   const yearEnd = `${year}-12-31`;
-  const afterLoad = useCallback(() => {
+  const refreshBadges = useCallback(() => {
     void refreshPendingBadges();
     // Sidebar pending counter (#1419) listens for this event.
     dispatchAbsencesRefresh();
@@ -341,7 +341,7 @@ export function AbwesenheitenTab({
   const absencesResource = useSWRAuth(
     staffAbsenceKeys.list(staffId, yearStart, yearEnd),
     () => staffAbsenceService.getAbsences(staffId, yearStart, yearEnd),
-    { keepPreviousData: false, onSuccess: afterLoad },
+    { keepPreviousData: false },
   );
   // Die Arten braucht nur, wer Abwesenheiten eintragen kann (#1843).
   const typesResource = useSWRAuth(
@@ -490,8 +490,8 @@ export function AbwesenheitenTab({
             { revalidate: false },
           ),
     ]);
-    afterLoad();
-  }, [afterLoad, staff, staffId, tenantMutate, year, yearEnd, yearStart]);
+    refreshBadges();
+  }, [refreshBadges, staff, staffId, tenantMutate, year, yearEnd, yearStart]);
   // A write's reload runs after the write; its failure stands above the tab
   // as a load error, never as an error of the write or its closed dialog
   // (#6652).
@@ -586,7 +586,7 @@ export function AbwesenheitenTab({
       <SectionCard
         title="Kontingente"
         headingLevel={3}
-        description="Wie viele Tage diese Person je Art hat und noch übrig sind."
+        description="Wie viele Tage diese Person pro Art hat und noch übrig sind."
         actions={
           canManageSickReports && staff ? (
             <div className="flex flex-wrap items-center gap-2">

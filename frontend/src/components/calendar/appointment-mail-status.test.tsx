@@ -52,7 +52,11 @@ describe("AppointmentMailStatus", () => {
     vi.useFakeTimers();
     vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
     mockGetStaffAppointmentMails
-      .mockResolvedValueOnce(BOUNCED)
+      .mockResolvedValueOnce({
+        ...BOUNCED,
+        awaitingFeedback: true,
+        kinds: { ...BOUNCED.kinds, appointment_reminder: { accepted: 1 } },
+      })
       .mockRejectedValue(new Error("offline"));
     const view = renderStatus();
     await act(async () => {

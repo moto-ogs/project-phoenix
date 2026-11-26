@@ -498,10 +498,6 @@ func jsonIDPointer(id *ident.ID) *int64 {
 	return &value
 }
 
-func (rs *ProvisioningResource) ListSchoolAccounts(w http.ResponseWriter, r *http.Request) {
-	common.IDFetch("id", "invalid school ID", rs.service.ListSchoolAccounts, ProvisioningErrorRenderer, "School accounts retrieved successfully")(w, r)
-}
-
 func (rs *ProvisioningResource) GetSchoolAccountCaregiverCapability(w http.ResponseWriter, r *http.Request) {
 	if rs.CaregiverCapabilityService == nil {
 		common.RenderError(w, r, common.OperatorInternal(nil, "Caregiver capability service is not configured"))
@@ -585,19 +581,6 @@ func (rs *ProvisioningResource) DisableSchoolAccountCaregiverCapability(w http.R
 	}
 
 	common.Respond(w, r, http.StatusOK, state, "Caregiver capability disabled successfully")
-}
-
-func (rs *ProvisioningResource) ListOrganizationAccounts(w http.ResponseWriter, r *http.Request) {
-	common.IDFetch("id", "invalid organization ID", rs.service.ListOrganizationAccounts, ProvisioningErrorRenderer, "Organization accounts retrieved successfully")(w, r)
-}
-
-func (rs *ProvisioningResource) ListAllAccounts(w http.ResponseWriter, r *http.Request) {
-	accounts, err := rs.service.ListAllAccounts(r.Context())
-	if err != nil {
-		common.RenderError(w, r, ProvisioningErrorRenderer(err))
-		return
-	}
-	common.Respond(w, r, http.StatusOK, accounts, "All accounts retrieved successfully")
 }
 
 func operatorInvitationCreatedByValue(createdBy *int64) int64 {

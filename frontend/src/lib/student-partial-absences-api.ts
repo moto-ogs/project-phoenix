@@ -20,7 +20,9 @@ export interface StudentPartialAbsence {
   version: string;
 }
 
-function mapPartialAbsence(row: PartialAbsenceResponse): StudentPartialAbsence {
+export function mapPartialAbsence(
+  row: PartialAbsenceResponse,
+): StudentPartialAbsence {
   return {
     id: row.id,
     studentId: row.student_id,

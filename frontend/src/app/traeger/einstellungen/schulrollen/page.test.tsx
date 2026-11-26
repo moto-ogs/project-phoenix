@@ -34,7 +34,7 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
-import TraegerSchoolRolesPage from "./page";
+import TraegerSchoolRolesPage from "./page-content";
 
 const CATALOG: TraegerSchoolRoleCatalog = {
   permissions: [

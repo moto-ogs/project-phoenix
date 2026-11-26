@@ -56,7 +56,7 @@ function mockAuthenticatedResponse(): typeof global.fetch {
 
 vi.mock("next/navigation", () => ({
   redirect: mockRedirect,
-  useRouter: () => ({ push: mockPush }),
+  useRouter: () => ({ push: vi.fn() }),
 }));
 
 vi.mock("next/image", () => ({
@@ -68,6 +68,12 @@ vi.mock("next-auth/react", () => ({
   signIn: mockSignIn,
   signOut: mockSignOut,
   useSession: mockUseSession,
+}));
+// The login page ends a stale cookie through Auth.js' signout protocol,
+// bound to the session mark (#8082).
+vi.mock("~/lib/tenant-session-cookie", async (original) => ({
+  ...(await original<typeof import("~/lib/tenant-session-cookie")>()),
+  signOutSession: (...args: unknown[]) => mockSignOut(...args),
 }));
 
 // Mock operator-url to avoid NEXT_PUBLIC_OPERATOR_HOSTNAME requirement
@@ -108,6 +114,9 @@ describe("OperatorLoginPage", () => {
       update: mockUpdate,
     });
     mockUpdate.mockResolvedValue(undefined);
+    // The login opens a new document (#8082).
+    mockPush.mockReset();
+    vi.spyOn(window.location, "assign").mockImplementation(mockPush);
     global.fetch = mockAuthenticatedResponse();
   });
 
@@ -248,7 +257,7 @@ describe("OperatorLoginPage", () => {
     render(<OperatorLoginPage />);
 
     await waitFor(() => {
-      expect(mockSignOut).toHaveBeenCalledWith({ redirect: false });
+      expect(mockSignOut).toHaveBeenCalledWith("operator", "");
     });
     expect(mockRedirect).not.toHaveBeenCalled();
   });

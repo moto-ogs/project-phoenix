@@ -1,24 +1,3 @@
-export interface EducationalGroup {
-  id: string;
-  name: string;
-  roomId?: string;
-  room?: {
-    id: string;
-    name: string;
-  };
-  viaSubstitution?: boolean;
-}
-
-/** A room session the caller supervises; its room names it. */
-export interface SupervisedGroup {
-  id: string;
-  roomId?: string;
-  room?: {
-    id: string;
-    name: string;
-  };
-}
-
 interface Staff {
   id: string;
   personId: string;
@@ -43,14 +22,6 @@ export interface SchoolSwitches {
 }
 
 export interface UserContextResponse {
-  educationalGroups: EducationalGroup[];
-  supervisedGroups: SupervisedGroup[];
   currentStaff: Staff | null;
-  educationalGroupIds: string[];
-  educationalGroupRoomNames: string[];
-  supervisedRoomNames: string[];
-  incomplete: boolean;
-  unavailableSections: string[];
-  /** null when the backend sent none (an older release) */
-  schoolSwitches: SchoolSwitches | null;
+  schoolSwitches: SchoolSwitches;
 }

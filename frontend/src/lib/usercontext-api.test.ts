@@ -2,8 +2,6 @@
  * Tests for usercontext-api.ts
  *
  * Tests the userContextService functions:
- * - getMyEducationalGroups
- * - getMySupervisedGroups
  * - hasEducationalGroups
  * - getCurrentUser
  * - getCurrentStaff
@@ -49,88 +47,6 @@ describe("userContextService", () => {
       value: undefined,
       writable: true,
       configurable: true,
-    });
-  });
-
-  describe("getMyEducationalGroups", () => {
-    it("returns mapped educational groups on success", async () => {
-      const backendData = [
-        {
-          id: "1",
-          name: "Group 1",
-          room_id: "10",
-          room: { id: "10", name: "Raum 101" },
-        },
-      ];
-
-      fetchWithAuthMock.mockImplementationOnce(() =>
-        plainResponse({
-          ok: true,
-          json: () => Promise.resolve({ status: "success", data: backendData }),
-        } as Response),
-      );
-
-      const result = await userContextService.getMyEducationalGroups();
-
-      expect(result).toHaveLength(1);
-      expect(result[0]?.id).toBe("1");
-      expect(result[0]?.name).toBe("Group 1");
-      expect(result[0]?.room?.name).toBe("Raum 101");
-    });
-
-    it("throws error on fetch failure", async () => {
-      fetchWithAuthMock.mockImplementationOnce(() =>
-        plainResponse({
-          ok: false,
-          status: 500,
-          text: () => Promise.resolve("Server error"),
-        } as Response),
-      );
-
-      await expect(
-        userContextService.getMyEducationalGroups(),
-      ).rejects.toThrow();
-    });
-
-    // The BFF reads the session cookie; the browser holds no token (#5005).
-    it("sends no Authorization header", async () => {
-      fetchWithAuthMock.mockImplementationOnce(() =>
-        plainResponse({
-          ok: true,
-          json: () => Promise.resolve({ status: "success", data: [] }),
-        } as Response),
-      );
-
-      await userContextService.getMyEducationalGroups();
-
-      expect(fetchWithAuthMock).toHaveBeenCalledWith("/api/me/groups", {
-        method: "GET",
-      });
-    });
-  });
-
-  describe("getMySupervisedGroups", () => {
-    it("returns mapped supervised groups on success", async () => {
-      const backendData = [
-        {
-          id: "2",
-          room_id: "20",
-          room: { id: "20", name: "Raum 202" },
-        },
-      ];
-
-      fetchWithAuthMock.mockImplementationOnce(() =>
-        plainResponse({
-          ok: true,
-          json: () => Promise.resolve({ status: "success", data: backendData }),
-        } as Response),
-      );
-
-      const result = await userContextService.getMySupervisedGroups();
-
-      expect(result).toHaveLength(1);
-      expect(result[0]?.id).toBe("2");
-      expect(result[0]?.room?.name).toBe("Raum 202");
     });
   });
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { timeTrackingKeys } from "~/lib/swr/portal-keys";
 import { differenceInCalendarDays } from "date-fns/differenceInCalendarDays";
 import { CalendarPlus, SquarePen, Thermometer } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -44,7 +45,7 @@ import type {
   StaffSchedule,
 } from "~/lib/staff-api";
 import { staffSessionEditsService } from "~/lib/staff-api";
-import type { StaffShift } from "~/lib/shift-helpers";
+import type { PlanShift } from "~/lib/own-time-tracking-view";
 import {
   indexCreditingAbsenceByDay,
   isEffectiveAbsenceStatus,
@@ -79,9 +80,8 @@ const dayLabels = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
 // server-computed Ist, Gutschrift and Saldo — exactly the numbers this save
 // just moved. The Übersicht charts' account-range key
 // ("staff-schedule-targets-<id>-account-…") matches too: the charts sum that
-// projection's Ist and Saldo (#6847). The id-less "time-tracking-schedule-targets-" / month-summary keys
-// belong to the self-service portal and matter when the manager is editing
-// their OWN days. useSWRAuth prefixes keys with the tenant slug
+// projection's Ist and Saldo (#6847). In self-service the same amounts come
+// from the period and clock overview. useSWRAuth prefixes keys with the tenant slug
 // ("phoenix:staff-history-…"), so a plain startsWith match would never fire —
 // we use includes instead.
 export function isStaleAfterSessionSave(
@@ -94,7 +94,8 @@ export function isStaleAfterSessionSave(
       key.includes("staff-absences-") ||
       key.includes("staff-month-summary-") ||
       key.includes(`staff-schedule-targets-${staffId}-`) ||
-      key.includes("time-tracking-month-summary-") ||
+      key.includes(timeTrackingKeys.periodFamily) ||
+      key.includes(timeTrackingKeys.overviewFamily) ||
       key.includes("time-tracking-schedule-targets-"))
   );
 }
@@ -103,7 +104,7 @@ export function isStaleAfterSessionSave(
 const NO_EDITS: WorkSessionEdit[] = [];
 
 const multiBlockBoundsHint =
-  "Tagesgrenzen über alle Blöcke — die Zeit zwischen zwei Blöcken zählt nicht als Arbeitszeit. Die gearbeiteten Zeiten stehen je Block darunter.";
+  "Tagesgrenzen über alle Blöcke — die Zeit zwischen zwei Blöcken zählt nicht als Arbeitszeit. Die gearbeiteten Zeiten stehen pro Block darunter.";
 
 // Checkout des letzten Segments: der gespeicherte Wert, wenn er die gezeigten
 // Minuten deckt, sonst das gekappte Ende. Ein offener Block behält null und
@@ -264,6 +265,7 @@ export function StaffSessionTable({
   today,
   isAdminView,
   plannedShifts,
+  editsUnresolved,
   onEditDay,
   onBackfillAbsence,
   fetchEdits,
@@ -335,7 +337,8 @@ export function StaffSessionTable({
   // Ist times so plan, actual and — via the audit expand — the deviation reason
   // read together. Omitted on the staff self-view. Does NOT feed the Soll/Saldo
   // math (that stays the Arbeitszeitmodell, #1842).
-  readonly plannedShifts?: readonly StaffShift[];
+  readonly plannedShifts?: readonly PlanShift[];
+  readonly editsUnresolved?: boolean;
   // Reads `sessions` again and rejects when that read fails: after a refused
   // correction in the bundled dialog the table shows the stored block, or
   // the load error (ADR 0311, rule 6).
@@ -413,8 +416,9 @@ export function StaffSessionTable({
   // Planned Dienstplan shifts per day for the "Plan" column (#1844). Absent
   // unless the caller passes plannedShifts (admin detail view).
   const showPlan = plannedShifts != null;
+  const canEdit = isAdminView && !editsUnresolved;
   const shiftsByDate = useMemo(() => {
-    const map = new Map<string, StaffShift[]>();
+    const map = new Map<string, PlanShift[]>();
     for (const shift of plannedShifts ?? []) {
       const list = map.get(shift.date);
       if (list) list.push(shift);
@@ -522,8 +526,9 @@ export function StaffSessionTable({
     (day: Date) => {
       const resolved = dailyProjection?.get(toDateKey(day));
       const unresolved =
-        resolved === undefined &&
-        (projectionFailed || dailyProjectionPending === true);
+        resolved?.hasTarget === false ||
+        (resolved === undefined &&
+          (projectionFailed || dailyProjectionPending === true));
       const planned = schedule ? resolveTargetForDate(schedule, day) : 0;
       return {
         unresolved,
@@ -737,7 +742,7 @@ export function StaffSessionTable({
       canExpand:
         session != null && daySessions.some((s) => (s.audit_count ?? 0) > 0),
       canEdit:
-        isAdminView &&
+        canEdit &&
         !isFuture &&
         (session != null || (!absencesUnresolved && !absenceBlocksBackfill)),
     };
@@ -862,7 +867,9 @@ export function StaffSessionTable({
       className: "tabular-nums whitespace-nowrap",
       render: (row) => (
         <span className="text-gray-500">
-          {row.targetUnresolved ? (
+          {row.projected?.hasTarget === false ? (
+            "Unbekannt"
+          ) : row.targetUnresolved ? (
             <span
               title={
                 projectionFailed
@@ -894,7 +901,13 @@ export function StaffSessionTable({
       className: "tabular-nums whitespace-nowrap",
       render: (row) => (
         <span className="font-medium text-gray-700">
-          {row.session ? formatDuration(row.ist) : "–"}
+          {row.session
+            ? formatDuration(
+                row.projected?.hasTarget === undefined
+                  ? row.ist
+                  : row.projected.actualMinutes,
+              )
+            : "–"}
         </span>
       ),
     },
@@ -1140,7 +1153,7 @@ export function StaffSessionTable({
                 </div>
               ),
             },
-            ...(isAdminView && row.canEdit
+            ...(canEdit && row.canEdit
               ? [
                   {
                     columnKey: "actions",
@@ -1196,9 +1209,7 @@ export function StaffSessionTable({
               staffId={staffId}
               sessionId={block.id}
               fetchEdits={fetchEdits}
-              onEdit={
-                isAdminView ? () => editBlock(block, row.absence) : undefined
-              }
+              onEdit={canEdit ? () => editBlock(block, row.absence) : undefined}
             />
           </div>
         ),
@@ -1350,7 +1361,7 @@ type RowStatus =
 function PlannedShiftCell({
   shifts,
 }: {
-  readonly shifts: readonly StaffShift[] | undefined;
+  readonly shifts: readonly PlanShift[] | undefined;
 }) {
   if (!shifts || shifts.length === 0) {
     return <span className="text-gray-500">–</span>;

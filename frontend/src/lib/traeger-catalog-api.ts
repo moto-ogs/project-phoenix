@@ -408,7 +408,7 @@ function phaseFromBackend(
   };
 }
 
-function phaseDetailFromBackend(
+export function phaseDetailFromBackend(
   phase: traegerCatalogContract.PhaseDetail,
 ): TraegerPhaseDetail {
   return {
@@ -493,7 +493,12 @@ function offeringDraftToBackend(
 // --- Requests ----------------------------------------------------------------
 
 export async function fetchTraegerPhases(): Promise<TraegerPhase[]> {
-  const phases = await bffJson("org", "GET /traeger/catalog/phases");
+  return mapTraegerPhases(await bffJson("org", "GET /traeger/catalog/phases"));
+}
+
+export function mapTraegerPhases(
+  phases: traegerCatalogContract.TraegerPhase[],
+): TraegerPhase[] {
   return phases.map(phaseFromBackend);
 }
 

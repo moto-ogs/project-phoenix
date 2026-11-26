@@ -6,8 +6,6 @@ import type { HelpSearchIndexEntry } from "~/lib/help-search-index";
 // die Artikeltexte bleiben so aus dem Client-JavaScript jeder Seite. Welche
 // Artikel eine Rolle bei ihren Einstellungen sieht, filtert die Suche mit
 // `isHelpTopicAvailable`, das ohne Artikeltexte auskommt.
-export const dynamic = "force-static";
-
 export function GET() {
   // Titel und Frage hängen nicht von der Einstellungsvariante ab; „unknown“
   // blendet keinen Artikel aus.

@@ -74,7 +74,7 @@ afterEach(() => {
 describe("ParentProviders", () => {
   it("starts authenticated from the server snapshot without a session request", async () => {
     render(
-      <ParentProviders session={snapshot}>
+      <ParentProviders sessionMark="" session={snapshot}>
         <SessionProbe />
       </ParentProviders>,
     );
@@ -87,7 +87,7 @@ describe("ParentProviders", () => {
 
   it("fetches the session in the browser when the server has no snapshot", async () => {
     render(
-      <ParentProviders session={null}>
+      <ParentProviders sessionMark="" session={null}>
         <SessionProbe />
       </ParentProviders>,
     );

@@ -16,7 +16,7 @@ import type {
   PersonRole,
   Section,
   Source,
-} from "~/lib/contract/day-changes.generated";
+} from "~/lib/contract/shared.generated";
 
 export interface DayChangePerson {
   readonly staffId: string;
@@ -35,6 +35,14 @@ export interface DayChangeChild {
   readonly pickupTime: string | null;
   /** Bei `child_pickup_note`: der Hinweis zum Abholen. */
   readonly note: string | null;
+  /**
+   * Bei `child_pickup_person` (#7655): wer das Kind heute abholt.
+   * `oneTime` heißt: keine dauerhaft berechtigte Person, Ausweis prüfen.
+   */
+  readonly pickupPerson?: {
+    readonly name: string;
+    readonly oneTime: boolean;
+  } | null;
 }
 
 export interface DayChangeLink {
@@ -56,6 +64,7 @@ export interface DayChangeChildSummary {
     readonly pickupChanged: number;
     readonly goesAlone: number;
     readonly pickupNote: number;
+    readonly pickupPerson?: number;
   };
   readonly items: readonly {
     readonly kind: Kind | (string & {});
@@ -166,6 +175,12 @@ function mapChild(child: Child): DayChangeChild {
     status: child.status,
     pickupTime: child.pickup_time,
     note: child.note,
+    pickupPerson: child.pickup_person
+      ? {
+          name: child.pickup_person.name,
+          oneTime: child.pickup_person.one_time,
+        }
+      : null,
   };
 }
 
@@ -180,6 +195,7 @@ function mapChildSummary(
       pickupChanged: summary.counts.pickup_changed,
       goesAlone: summary.counts.goes_alone,
       pickupNote: summary.counts.pickup_note,
+      pickupPerson: summary.counts.pickup_person,
     },
     items: (summary.items ?? []).map((item) => ({
       kind: item.kind,
@@ -257,7 +273,7 @@ function mapEntry(entry: Entry, day: string): DayChange {
   };
 }
 
-function mapDayChanges(overview: Overview): DayChangesOverview {
+export function mapDayChanges(overview: Overview): DayChangesOverview {
   return {
     date: overview.date ?? "",
     failedSources: (overview.sources ?? [])
@@ -272,4 +288,14 @@ function mapDayChanges(overview: Overview): DayChangesOverview {
 /** Liest die Übersicht der Sitzung über den Proxy des Staff-Portals. */
 export async function fetchDayChanges(): Promise<DayChangesOverview> {
   return mapDayChanges(await bffJson("tenant", "GET /api/day-changes/today"));
+}
+
+/**
+ * Liest die Übersicht von moto schule (#7670): Unterrichtsschluss der
+ * eigenen Klassen und Schließtage. Die Kinder stehen im Klassentag.
+ */
+export async function fetchSchoolDayChanges(): Promise<DayChangesOverview> {
+  return mapDayChanges(
+    await bffJson("school", "GET /school/day-changes/today"),
+  );
 }

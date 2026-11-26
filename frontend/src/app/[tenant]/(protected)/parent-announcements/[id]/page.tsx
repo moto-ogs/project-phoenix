@@ -1,370 +1,234 @@
-"use client";
-
-import { groups as groupsKeys } from "~/lib/swr/groups";
-import { Suspense, useMemo, useState } from "react";
-import { useParams, useSearchParams } from "next/navigation";
-import { MotoDuotoneIcon } from "~/components/ui/moto-duotone-icon";
-import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
-import { StatusBadge } from "~/components/ui/status-badge";
-import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
+import { TenantRouteSeed } from "../../tenant-route-seed";
+import { readContract, seedRead } from "~/lib/server-seed.server";
+import { routes } from "~/lib/contract/parent-announcements.generated";
+import * as groups from "~/lib/contract/groups.generated";
+import * as activities from "~/lib/contract/activities.generated";
+import { hasPermission } from "~/lib/auth-utils";
+import { hasLetterPlaceholders } from "~/lib/parent-letter-placeholders";
 import {
-  AnnouncementDetail,
-  logPollResultsError,
-} from "~/components/announcements/announcement-detail";
-import { AnnouncementReminderDialog } from "~/components/announcements/announcement-reminder-dialog";
-import {
-  buildAnnouncementMenuItems,
-  DeleteAnnouncementDialog,
-  PublishAnnouncementDialog,
-  UnpublishAnnouncementDialog,
-} from "~/components/announcements/announcement-lifecycle-dialogs";
-import {
-  announcementCollectionPath,
-  AnnouncementStatusBadge,
-  describeReminder,
-  kindOf,
-  KIND_PARAM,
-  classLetterReadOnlyNote,
-} from "~/components/announcements/announcement-meta";
-import type { AnnouncementKind } from "~/components/announcements/announcement-meta";
-import { useToast } from "~/contexts/ToastContext";
-import { ApiError } from "~/lib/api-error";
-import type { Group } from "~/lib/api";
-import { fetchActivities } from "~/lib/activity-api";
-import type { Activity } from "~/lib/activity-helpers";
-import { useSetBreadcrumb } from "~/lib/breadcrumb-context";
-import { formatBerlinDate, formatDate } from "~/lib/date-helpers";
-import { LoadErrorAlert } from "~/components/ui/form-error-alert";
-import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
-import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
-import {
-  fetchAnnouncement,
-  fetchPollResults,
-  fetchPollChildren,
+  isDeclaration,
+  isLetter,
   isPoll,
+  mapAnnouncementRecipients,
+  mapDeclarationStatus,
+  mapLetterStatus,
+  mapPollChildren,
+  mapPollResults,
+  showAnnouncementReadStats,
+  toAnnouncement,
 } from "~/lib/parent-announcements-api";
-import type { Announcement } from "~/lib/parent-announcements-api";
-import {
-  revalidateOrThrow,
-  useSWRAuth,
-  useSWRSeedFrom,
-  useTenantMutate,
-} from "~/lib/swr";
-import { useTenantRouter } from "~/lib/tenant-router";
-import { resolveDetailReferrer } from "~/lib/tenant-path";
-import { AnnouncementDetailLoadingPage } from "./page-skeleton";
-import { announcementsConcept } from "~/lib/concepts/announcements";
-import { confirmationsConcept } from "~/lib/concepts/confirmations";
-import { pollsConcept } from "~/lib/concepts/polls";
-
 import { parentAnnouncementKeys } from "~/lib/swr/portal-keys";
+import { tenantContactKeys } from "~/lib/swr/tenant-contact-keys";
+import PageContent from "./page-content";
 
-// Info-Knopf am Seitentitel (#7578): wofür die Seite da ist.
-const ANNOUNCEMENT_DETAIL_INFO =
-  "Hier siehst du, was die Eltern bekommen. Unter dem Titel steht, ob es schon veröffentlicht ist. Unter „Zielgruppen und Zustellung“ steht, an wen es geht.";
-
-/** SWR-Schlüssel der Liste, die nach jeder Lebenszyklus-Aktion neu lädt. */
-const LIST_KEY = parentAnnouncementKeys.list();
-
-const BACK_LABEL: Record<AnnouncementKind, string> = {
-  announcement: "Zurück zu den Mitteilungen",
-  letter: "Zurück zu den Elternbriefen",
-  poll: "Zurück zu den Umfragen",
-  declaration: "Zurück zu den Einverständnissen",
-};
-
-type LifecycleAction = "publish" | "unpublish" | "delete" | "reminder" | null;
-
-function editPath(
-  referrer: string,
-  kind: AnnouncementKind,
-  announcementId: string,
-): string {
-  const referrerParams = new URL(referrer, "https://moto.invalid").searchParams;
-  const query = new URLSearchParams({ art: KIND_PARAM[kind] });
-  const search = referrerParams.get("search");
-  const status = referrerParams.get("status");
-
-  if (search) query.set("search", search);
-  if (status === "draft" || status === "published" || status === "expired") {
-    query.set("status", status);
-  }
-  query.set("bearbeiten", announcementId);
-
-  return `/parent-announcements?${query}`;
-}
-
-export default function AnnouncementDetailPage() {
+export default async function ParentAnnouncementsPage({
+  params,
+}: {
+  params: Promise<{ tenant: string; id: string }>;
+}) {
+  const { tenant, id } = await params;
+  const routeParams = { announcementId: id };
   return (
-    <Suspense
-      fallback={
-        <AnnouncementDetailLoadingPage info={ANNOUNCEMENT_DETAIL_INFO} />
-      }
+    <TenantRouteSeed
+      slug={tenant}
+      module="eltern_app"
+      load={({ token, session }) => {
+        if (!hasPermission(session, "admin:*")) return [];
+        const announcement = seedRead(
+          "GET /api/parent-announcements/{announcementId}",
+          async (signal) => {
+            const { data } = await readContract(
+              routes["GET /api/parent-announcements/{announcementId}"],
+              {
+                token,
+                signal,
+                params: routeParams,
+              },
+            );
+            return toAnnouncement(data);
+          },
+        );
+        return [
+          {
+            key: parentAnnouncementKeys.detail(id),
+            render: true,
+            value: announcement,
+          },
+          {
+            key: parentAnnouncementKeys.detailGroupNames(),
+            value: seedRead("GET /api/groups/", async (signal) => {
+              const { data } = await readContract(
+                groups.routes["GET /api/groups/"],
+                { token, signal },
+              );
+              return data.map(({ id, name }) => ({ id, name }));
+            }),
+          },
+          {
+            key: parentAnnouncementKeys.detailActivityNames(),
+            value: seedRead("GET /api/activities/", async (signal) => {
+              const { data } = await readContract(
+                activities.routes["GET /api/activities/"],
+                { token, signal },
+              );
+              return data.map(({ id, name }) => ({ id, name }));
+            }),
+          },
+          {
+            key: parentAnnouncementKeys.pollEvaluation(id),
+            value: announcement.then((item) =>
+              item && isPoll(item)
+                ? seedRead(
+                    "parentAnnouncementPollEvaluation",
+                    async (signal) => {
+                      const [results, children] = await Promise.all([
+                        readContract(
+                          routes[
+                            "GET /api/parent-announcements/{announcementId}/poll-results"
+                          ],
+                          {
+                            token,
+                            signal,
+                            params: routeParams,
+                          },
+                        ),
+                        readContract(
+                          routes[
+                            "GET /api/parent-announcements/{announcementId}/poll-children"
+                          ],
+                          {
+                            token,
+                            signal,
+                            params: routeParams,
+                          },
+                        ),
+                      ]);
+                      return {
+                        results: mapPollResults(results.data),
+                        children: mapPollChildren(children.data),
+                      };
+                    },
+                  )
+                : undefined,
+            ),
+          },
+          {
+            key: tenantContactKeys.announcementStats(id),
+            value: announcement.then((item) =>
+              item && showAnnouncementReadStats(item)
+                ? seedRead(
+                    "GET /api/parent-announcements/{announcementId}/stats",
+                    async (signal) =>
+                      (
+                        await readContract(
+                          routes[
+                            "GET /api/parent-announcements/{announcementId}/stats"
+                          ],
+                          {
+                            token,
+                            signal,
+                            params: routeParams,
+                          },
+                        )
+                      ).data,
+                  )
+                : undefined,
+            ),
+          },
+          {
+            key: tenantContactKeys.announcementRecipients(id),
+            value: announcement.then((item) =>
+              item && showAnnouncementReadStats(item)
+                ? seedRead(
+                    "GET /api/parent-announcements/{announcementId}/recipients",
+                    async (signal) => {
+                      const { data } = await readContract(
+                        routes[
+                          "GET /api/parent-announcements/{announcementId}/recipients"
+                        ],
+                        {
+                          token,
+                          signal,
+                          params: routeParams,
+                        },
+                      );
+                      return mapAnnouncementRecipients(data);
+                    },
+                  )
+                : undefined,
+            ),
+          },
+          {
+            key: parentAnnouncementKeys.letterPlaceholders(),
+            value: announcement.then((item) =>
+              item && isLetter(item) && hasLetterPlaceholders(item.body)
+                ? seedRead(
+                    "GET /api/parent-announcements/letter-placeholders",
+                    async (signal) =>
+                      (
+                        await readContract(
+                          routes[
+                            "GET /api/parent-announcements/letter-placeholders"
+                          ],
+                          { token, signal },
+                        )
+                      ).data,
+                  )
+                : undefined,
+            ),
+          },
+          {
+            key: tenantContactKeys.letterStatus(id),
+            value: announcement.then((item) =>
+              item && isLetter(item) && item.status !== "draft"
+                ? seedRead(
+                    "GET /api/parent-announcements/{announcementId}/letter-status",
+                    async (signal) => {
+                      const { data } = await readContract(
+                        routes[
+                          "GET /api/parent-announcements/{announcementId}/letter-status"
+                        ],
+                        {
+                          token,
+                          signal,
+                          params: routeParams,
+                        },
+                      );
+                      return mapLetterStatus(data);
+                    },
+                  )
+                : undefined,
+            ),
+          },
+          {
+            key: tenantContactKeys.declarationStatus(id),
+            value: announcement.then((item) =>
+              item &&
+              isDeclaration(item) &&
+              (item.status !== "draft" || item.declaration_locked_attachments)
+                ? seedRead(
+                    "GET /api/parent-announcements/{announcementId}/declaration-status",
+                    async (signal) => {
+                      const { data } = await readContract(
+                        routes[
+                          "GET /api/parent-announcements/{announcementId}/declaration-status"
+                        ],
+                        {
+                          token,
+                          signal,
+                          params: routeParams,
+                        },
+                      );
+                      return mapDeclarationStatus(data);
+                    },
+                  )
+                : undefined,
+            ),
+          },
+        ];
+      }}
     >
-      <AnnouncementDetailPageContent />
-    </Suspense>
-  );
-}
-
-/**
- * Die Objektseite einer Elternmitteilung (BAUARTEN-SPEC Bauart 2, #3115):
- * vorher ein Slide-over über der Liste, jetzt eine Adresse, die sich teilen,
- * neu laden und per Zurück verlassen lässt. Der Assistent zum Anlegen und
- * Bearbeiten bleibt auf der Liste; „Bearbeiten" führt mit `?bearbeiten=`
- * dorthin.
- */
-function AnnouncementDetailPageContent() {
-  const params = useParams();
-  const searchParams = useSearchParams();
-  const router = useTenantRouter();
-  const tenantMutate = useTenantMutate();
-  const announcementId = params.id as string;
-
-  const detailRead = useSWRAuth<Announcement | undefined>(
-    parentAnnouncementKeys.detail(announcementId),
-    () => fetchAnnouncement(announcementId),
-    { revalidateOnFocus: false, keepPreviousData: false },
-  );
-  const {
-    data: announcement,
-    isLoading,
-    error: loadError,
-    mutate,
-  } = detailRead;
-  // After a refusal the dialogs show the stored announcement; a failed read
-  // rejects (ADR 0311).
-  const reloadDetail = () => revalidateOrThrow(detailRead);
-
-  const seedFrom = useSWRSeedFrom();
-  const preview = useMemo(
-    () =>
-      !announcement && isLoading && !loadError
-        ? seedFrom(
-            parentAnnouncementKeys.list(),
-            parentAnnouncementKeys.detail(announcementId),
-            (data: unknown) =>
-              parentAnnouncementKeys.preview(data, announcementId),
-          )
-        : undefined,
-    [seedFrom, announcement, isLoading, loadError, announcementId],
-  );
-  // Start with list-known type/status. Only the confirmed detail renders results.
-  const loadEvaluation = announcement
-    ? isPoll(announcement)
-    : preview?.poll &&
-      (preview.status === "published" || preview.status === "expired");
-  useSWRAuth(
-    loadEvaluation
-      ? parentAnnouncementKeys.pollEvaluation(announcementId)
-      : null,
-    async () => {
-      const [results, children] = await Promise.all([
-        fetchPollResults(announcementId),
-        fetchPollChildren(announcementId),
-      ]);
-      return { results, children };
-    },
-    {
-      revalidateOnFocus: false,
-      keepPreviousData: false,
-      onError: logPollResultsError,
-    },
-  );
-
-  // Der Rückweg: die Sammlung samt Reiter, aus der die Seite geöffnet wurde.
-  // Ohne `from` (Link von außen) führt er auf den Reiter, zu dem die
-  // Mitteilung gehört.
-  const kind = announcement ? kindOf(announcement) : "announcement";
-  const referrer = resolveDetailReferrer(
-    searchParams.get("from"),
-    announcementCollectionPath(kind),
-    ["/parent-announcements"],
-  );
-  const backLabel = BACK_LABEL[kind];
-
-  useSetBreadcrumb({
-    announcementTitle: announcement?.title,
-    referrerPage: referrer,
-  });
-
-  // Die Nachschlagelisten für Zielgruppennamen starten parallel zum Detail.
-  // Auch bei 404/Fehler dürfen diese unabhängigen, wiederverwendbaren Listen
-  // laden: Ein Detail-Gate würde auf dem normalen Weg einen Wasserfall erzeugen.
-  const { data: groups } = useSWRAuth<Group[]>(
-    groupsKeys.key(),
-    groupsKeys.fetcher,
-    { revalidateOnFocus: false },
-  );
-  const { data: activities } = useSWRAuth<Activity[]>(
-    parentAnnouncementKeys.targetActivities(),
-    () => fetchActivities(),
-    { revalidateOnFocus: false },
-  );
-
-  const [action, setAction] = useState<LifecycleAction>(null);
-  const { success: toastSuccess } = useToast();
-  // Ein 404 ist kein Ladefehler, sondern eine Mitteilung, die es nicht mehr
-  // gibt.
-  const notFound = loadError instanceof ApiError && loadError.status === 404;
-  const shownLoadError = useSwrLoadError(
-    notFound ? undefined : loadError,
-    "die Mitteilung",
-    () => void mutate(),
-  );
-
-  const refresh = async () => {
-    await Promise.all([mutate(), tenantMutate(LIST_KEY)]);
-  };
-  // Nach dem Speichern der Erinnerung lädt die Mitteilung nach; ein Fehler
-  // dabei steht über der Mitteilung, auch wenn der Dialog zu ist (#6652).
-  const reminderAfterWrite = useRefreshAfterWrite(
-    "die Anzeige der Mitteilung",
-    refresh,
-  );
-
-  // Bis der Katalogtext des Ladefehlers da ist, bleibt das Skelett stehen.
-  const awaitingErrorText = !!loadError && !notFound && !shownLoadError;
-  if ((isLoading && !announcement) || awaitingErrorText) {
-    return (
-      <AnnouncementDetailLoadingPage
-        info={ANNOUNCEMENT_DETAIL_INFO}
-        referrer={referrer}
-        backLabel={backLabel}
-        title={preview?.name}
-      />
-    );
-  }
-
-  if (loadError || !announcement) {
-    return (
-      <TenantPage
-        info={ANNOUNCEMENT_DETAIL_INFO}
-        title="Mitteilung"
-        back
-        backHref={referrer}
-        backLabel={backLabel}
-        error={
-          loadError && !notFound
-            ? shownLoadError
-            : "Diese Mitteilung gibt es nicht mehr."
-        }
-      />
-    );
-  }
-
-  const menuItems = buildAnnouncementMenuItems(announcement, {
-    onPublish: () => setAction("publish"),
-    onEdit: () => router.push(editPath(referrer, kind, announcement.id)),
-    onUnpublish: () => setAction("unpublish"),
-    onDelete: () => setAction("delete"),
-    onReminder: () => setAction("reminder"),
-  });
-
-  // Höchstens drei Angaben zeigt die Statuszeile; bei einem Klassenbrief
-  // mit Frist entfällt dort die Erinnerung. Außer bei Umfragen nennt sie der
-  // Abschnitt „Zielgruppen und Zustellung“ weiter unten.
-  const statusItems = [
-    classLetterReadOnlyNote(announcement) ?? null,
-    announcement.published_at
-      ? `Veröffentlicht ${formatDate(announcement.published_at)}`
-      : "Noch nicht veröffentlicht",
-    announcement.response_deadline
-      ? `${kind === "declaration" ? "Frist bis" : "Antwort bis"} ${formatBerlinDate(announcement.response_deadline)}`
-      : announcement.expires_at
-        ? `Läuft ab ${formatBerlinDate(announcement.expires_at)}`
-        : null,
-    describeReminder(announcement),
-  ]
-    .filter((part): part is string => Boolean(part))
-    .map((label) => ({ label }));
-  const statusLine = <TenantPageStats items={statusItems} />;
-
-  const concept =
-    kind === "poll"
-      ? pollsConcept
-      : kind === "declaration"
-        ? confirmationsConcept
-        : announcementsConcept;
-
-  return (
-    <TenantPage
-      info={ANNOUNCEMENT_DETAIL_INFO}
-      title={announcement.title}
-      stats={statusLine}
-      back
-      backHref={referrer}
-      backLabel={backLabel}
-      leading={
-        <MotoDuotoneIcon icon={concept.icon} tone={concept.tone} size={40} />
-      }
-      actions={
-        <>
-          <AnnouncementStatusBadge status={announcement.status} />
-          {announcement.system_kind === "care_cancellation" ? (
-            <StatusBadge
-              label="Ausfall"
-              tone="red"
-              title="Automatisch beim Absagen eines Termins erstellt"
-            />
-          ) : announcement.priority === "important" ? (
-            <StatusBadge label="Wichtig" tone="gray" />
-          ) : null}
-          {menuItems.length > 0 ? (
-            <OverflowMenu ariaLabel="Weitere Aktionen" items={menuItems} />
-          ) : null}
-        </>
-      }
-      overlays={
-        <>
-          {action === "publish" && (
-            <PublishAnnouncementDialog
-              announcement={announcement}
-              reload={reloadDetail}
-              onClose={() => setAction(null)}
-              onDone={refresh}
-            />
-          )}
-          {action === "unpublish" && (
-            <UnpublishAnnouncementDialog
-              announcement={announcement}
-              onClose={() => setAction(null)}
-              onDone={refresh}
-            />
-          )}
-          {action === "reminder" && (
-            <AnnouncementReminderDialog
-              announcement={announcement}
-              reload={reloadDetail}
-              onClose={() => setAction(null)}
-              onSaved={reminderAfterWrite.refresh}
-            />
-          )}
-          {action === "delete" && (
-            <DeleteAnnouncementDialog
-              announcement={announcement}
-              onClose={() => setAction(null)}
-              onDone={async () => {
-                await tenantMutate(LIST_KEY);
-                router.push(referrer);
-              }}
-            />
-          )}
-        </>
-      }
-    >
-      <LoadErrorAlert error={reminderAfterWrite.error} />
-      <AnnouncementDetail
-        announcement={announcement}
-        groups={groups ?? []}
-        activities={activities ?? []}
-        onReminded={(count) =>
-          toastSuccess(
-            count === 0
-              ? "Alle erreichten Kinder haben schon geantwortet. Es wurde niemand erinnert."
-              : `${count} ${count === 1 ? "Elternteil wurde" : "Eltern wurden"} an die offene Umfrage erinnert.`,
-          )
-        }
-      />
-    </TenantPage>
+      <PageContent />
+    </TenantRouteSeed>
   );
 }

@@ -30,5 +30,5 @@ Each glyph gets its own *action*: the calendar tears off a sheet, the coin flips
 
 `nav-scene-coverage.test.ts` reads the sidebar sources and fails naming the file and the glyph that lacks a scene. It also fails for a scene with no moving part, a rule not scoped to its scene, or an undefined keyframe. `scripts/test-frontend-changed.mjs` runs it on every frontend change.
 
-- The scan covers `lib/staff-navigation.ts` and files under `components/` named `*sidebar*` or `*-nav-items.ts(x)`. Keep sidebar entries in a file with such a name, or extend the scan in the same PR.
+- The scan covers `lib/staff-navigation.ts`, `components/settings/settings-sections.ts` and files under `components/` named `*sidebar*` or `*-nav-items.ts(x)`. Keep sidebar entries in a file with such a name, or extend the scan in the same PR.
 - A red guard is fixed by adding the scene. The scan scope and assertions stay as strong as they are (`.claude/rules/no-test-modifications.md`).

@@ -25,6 +25,7 @@ import {
   ParentSubsection,
 } from "~/components/parent/shell/parent-section";
 import { ChildDayCard } from "~/components/parent/child/child-day-card";
+import { ChildDayChanges } from "~/components/parent/child/child-day-changes";
 import { ChildConsentsSection } from "~/components/parent/child/child-consents-section";
 import { CoursesSection } from "~/components/parent/child/courses-section";
 import {
@@ -319,6 +320,14 @@ function ChildSections({
         }}
         today={today ?? UNKNOWN_CHILD_TODAY}
         loading={today === null || care.loading}
+        dayChanges={
+          withoutCarePlace ? undefined : (
+            <ChildDayChanges
+              studentId={child.student_id}
+              firstName={child.first_name}
+            />
+          )
+        }
         hideIdentity
         features={
           care.loading

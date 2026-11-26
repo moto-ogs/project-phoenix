@@ -42,7 +42,12 @@ export function useSchoolSetup(
     {
       keepPreviousData: false,
       revalidateOnFocus: true,
-      refreshInterval: live ? LIVE_REFRESH_MS : 0,
+      refreshInterval: live
+        ? (latest) =>
+            latest && !latest.completed && !latest.dismissed
+              ? LIVE_REFRESH_MS
+              : 0
+        : 0,
     },
   );
 

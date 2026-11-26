@@ -47,7 +47,7 @@ func TestDeclarationReportsRenderTheMotoPDF(t *testing.T) {
 	doc := testReportDocument{
 		Title: "Nachweisbericht", Subtitle: "Einverständnis \x01Zoo", GeneratedAt: time.Date(2026, 9, 28, 8, 0, 0, 0, time.UTC),
 		Filters: []string{"Eine sorgeberechtigte Person genügt"}, Footer: "Vertraulich",
-		Sections: []testReportSection{{Title: "Stand je Kind", Cards: []testReportCard{{
+		Sections: []testReportSection{{Title: "Stand pro Kind", Cards: []testReportCard{{
 			Title:  "Lina Richter",
 			Fields: []testReportField{{Label: "Stand", Value: "Zugestimmt"}},
 			Blocks: []testReportBlock{{Title: "Klaus Richter", Fields: []testReportField{{Label: "Antwort", Value: "Zugestimmt\nam 27.09.2026"}}}},

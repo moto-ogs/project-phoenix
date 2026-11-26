@@ -47,6 +47,8 @@ export const traegerKeys = {
   schools: () => "traeger-schools",
   school: (id: string) => `traeger-school-${encodeURIComponent(id)}`,
   schoolsAlerts: () => "traeger-schools-alerts",
+  // „Heute anders“ pro Schule (#7672): Schließtage und abgesagte Termine.
+  schoolsDayChanges: () => "traeger-schools-day-changes",
   // Pflichtangaben für Verträge und Abrechnung auf der Startseite (#7177).
   requiredDetails: () => "traeger-required-details",
   // Was jede Stelle, die eine Schule selbst abrechnet, noch braucht

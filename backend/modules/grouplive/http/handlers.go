@@ -1,7 +1,6 @@
 package grouplivehttp
 
 import (
-	"context"
 	"errors"
 	"net/http"
 	"strconv"
@@ -67,16 +66,4 @@ func NewResource(query grouplive.Query) *Resource { return &Resource{OGSGroupLiv
 // view-only child access of the role guest (ADR 0091).
 func (rs *Resource) Register(r chi.Router, withTx common.Middleware) {
 	r.With(common.RequiresAnyPermission(permissions.UsersRead, permissions.StudentsRead), withTx).Get("/ogs-group-live", rs.getOGSGroupLive)
-	r.With(withTx).Get("/ogs-group-navigation", common.Fetch(func(ctx context.Context) ([]grouplive.NavigationGroup, error) {
-		if rs.OGSGroupLiveService == nil {
-			return nil, errors.New("OGS group live service is not configured")
-		}
-		groups, err := rs.OGSGroupLiveService.ListGroups(ctx)
-		if groups == nil {
-			// No group answers an empty list, never null: the contract
-			// names none (#7563).
-			groups = []grouplive.NavigationGroup{}
-		}
-		return groups, err
-	}, common.ErrorInternalServer, "OGS group navigation retrieved successfully"))
 }

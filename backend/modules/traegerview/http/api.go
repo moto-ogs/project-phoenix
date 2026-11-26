@@ -55,6 +55,8 @@ func (rs *Resource) TraegerRouter(protectedTraegerRoutes func(chi.Router, func(c
 		r.With(common.RequiresPermission(identityaccess.TraegerRightOverviewRead)).Get("/export", rs.listSchoolsExport)
 		r.With(common.RequiresPermission(identityaccess.TraegerRightOverviewRead)).Get("/alerts", rs.schoolsAlerts)
 		r.With(common.RequiresPermission(identityaccess.TraegerRightOverviewRead)).Get("/alerts/export", rs.schoolsAlertsExport)
+		// "Heute anders" (#7672): closing days and cancelled blocks per school.
+		r.With(common.RequiresPermission(identityaccess.TraegerRightOverviewRead)).Get("/day-changes", rs.schoolsDayChanges)
 		r.With(common.RequiresPermission(identityaccess.TraegerRightOverviewRead)).Get("/occupancy", rs.occupancy)
 		r.With(common.RequiresPermission(identityaccess.TraegerRightOverviewRead)).Get("/occupancy/export", rs.occupancyExport)
 		// The utilization over time is a report (#4713, ADR 0241): the
@@ -202,5 +204,26 @@ func (rs *Resource) schoolsAlerts(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, common.ErrorInternalServer(err))
 	default:
 		common.Respond(w, r, http.StatusOK, alerts, "School alerts retrieved successfully")
+	}
+}
+
+// schoolsDayChanges answers GET /traeger/schools/day-changes: "Heute anders"
+// of every school of the Träger of the session that has a change today
+// (#7672). It names no person and no reason, so the read is not written to
+// the access log (ADR 0084 section 7).
+func (rs *Resource) schoolsDayChanges(w http.ResponseWriter, r *http.Request) {
+	principal, err := common.CurrentPrincipal(r.Context())
+	if err != nil || principal.OrganizationID() <= 0 {
+		common.RenderError(w, r, common.ErrorUnauthorized(common.ErrUnauthorized))
+		return
+	}
+	changes, err := rs.reports.SchoolsDayChanges(r.Context(), principal.OrganizationID())
+	switch {
+	case errors.Is(err, traegerview.ErrTraegerUnavailable):
+		common.RenderError(w, r, common.ErrorUnauthorized(common.ErrUnauthorized))
+	case err != nil:
+		common.RenderError(w, r, common.ErrorInternalServer(err))
+	default:
+		common.Respond(w, r, http.StatusOK, changes, "School day changes retrieved successfully")
 	}
 }

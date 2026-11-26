@@ -12,21 +12,14 @@ const { mockUseTenantRoutingModeSafe } = vi.hoisted(() => ({
   mockUseTenantRoutingModeSafe: vi.fn((): "path" | "subdomain" => "path"),
 }));
 
-const {
-  mockPush,
-  mockReplace,
-  mockBack,
-  mockForward,
-  mockRefresh,
-  mockPrefetch,
-} = vi.hoisted(() => ({
-  mockPush: vi.fn(),
-  mockReplace: vi.fn(),
-  mockBack: vi.fn(),
-  mockForward: vi.fn(),
-  mockRefresh: vi.fn(),
-  mockPrefetch: vi.fn(),
-}));
+const { mockPush, mockReplace, mockBack, mockForward, mockRefresh } =
+  vi.hoisted(() => ({
+    mockPush: vi.fn(),
+    mockReplace: vi.fn(),
+    mockBack: vi.fn(),
+    mockForward: vi.fn(),
+    mockRefresh: vi.fn(),
+  }));
 
 vi.mock("~/lib/tenant-context", () => ({
   useTenantSlugSafe: mockUseTenantSlugSafe,
@@ -41,7 +34,6 @@ vi.mock("next/navigation", () => ({
     back: mockBack,
     forward: mockForward,
     refresh: mockRefresh,
-    prefetch: mockPrefetch,
   })),
 }));
 
@@ -84,12 +76,6 @@ describe("useTenantRouter", () => {
       expect(mockReplace).toHaveBeenCalledWith("/school-a/settings");
     });
 
-    it("prefixes prefetch with tenant slug", () => {
-      const { result } = renderHook(() => useTenantRouter());
-      result.current.prefetch("/rooms");
-      expect(mockPrefetch).toHaveBeenCalledWith("/school-a/rooms");
-    });
-
     it("delegates back without prefix", () => {
       const { result } = renderHook(() => useTenantRouter());
       result.current.back();
@@ -125,12 +111,6 @@ describe("useTenantRouter", () => {
       const { result } = renderHook(() => useTenantRouter());
       result.current.replace("/settings");
       expect(mockReplace).toHaveBeenCalledWith("/settings");
-    });
-
-    it("prefetch uses bare path without slug prefix", () => {
-      const { result } = renderHook(() => useTenantRouter());
-      result.current.prefetch("/rooms");
-      expect(mockPrefetch).toHaveBeenCalledWith("/rooms");
     });
   });
 });

@@ -9,7 +9,7 @@ import { beforeEach, expect, it, vi } from "vitest";
 import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import { ApiError } from "~/lib/api-error";
 import type { ExportRun } from "~/lib/traeger-finance-exports-api";
-import TraegerFinanceExportsPage from "./page";
+import TraegerFinanceExportsPage from "./page-content";
 
 vi.unmock("swr");
 
@@ -226,7 +226,7 @@ it("keeps the card inset around the run table and the protocol table", async () 
     await screen.findAllByRole("button", { name: "Ältere anzeigen" }),
   ).toHaveLength(2);
 
-  for (const title of ["Dateien je Lauf", "Exportprotokoll"]) {
+  for (const title of ["Dateien pro Lauf", "Exportprotokoll"]) {
     const card = screen
       .getByRole("heading", { name: title })
       .closest("section")!;

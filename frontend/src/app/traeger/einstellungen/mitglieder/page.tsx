@@ -8,7 +8,7 @@ import { bffFile } from "~/lib/bff-fetch";
 // Nur mit dem Recht „Konten verwalten“ (Rolle Leitung, #5471).
 
 import { useEffect, useState } from "react";
-import { signOut, useSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { Pencil, Trash2, Undo2, UserPen, UserPlus, Users } from "lucide-react";
 import {
   ChangeTraegerMemberNameModal,
@@ -31,6 +31,7 @@ import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { formatDate, formatTime } from "~/lib/date-helpers";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { createLogger } from "~/lib/logger";
+import { leaveRemovedSession } from "~/lib/shell-auth-context";
 import { useInvalidateFamily, useInvalidateMatching } from "~/lib/swr";
 import { traegerKeys } from "~/lib/swr/traeger-keys";
 import {
@@ -46,7 +47,6 @@ import {
   listExportQuery,
 } from "~/lib/traeger-list-export";
 import { TRAEGER_ROLE_LABELS, type TraegerRole } from "~/lib/traeger-roles";
-import { traegerPath } from "~/lib/traeger-url";
 
 const logger = createLogger({ component: "TraegerAccountsPage" });
 
@@ -138,8 +138,7 @@ export default function TraegerAccountsPage() {
         await removeTraegerMember(pending.member.accountId);
         if (pending.member.email === ownEmail) {
           // Wer sich selbst entfernt, hat keinen Zugang mehr.
-          await signOut({ redirect: false });
-          window.location.assign(traegerPath("/traeger/login"));
+          await leaveRemovedSession("traeger");
           return;
         }
         success("Die Person ist aus dem Träger-Büro entfernt.");

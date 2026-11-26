@@ -9,6 +9,7 @@ import (
 	nativeUploads "github.com/moto-ogs/project-phoenix/modules/delivery/objects"
 	peoplePorts "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports"
 	settingsCompose "github.com/moto-ogs/project-phoenix/modules/settings/compose"
+	configModels "github.com/moto-ogs/project-phoenix/modules/settings/records"
 	staffShiftsHTTP "github.com/moto-ogs/project-phoenix/modules/workforce/http/staffshifts"
 
 	exportTransferModule "github.com/moto-ogs/project-phoenix/modules/exporttransfer"
@@ -85,6 +86,13 @@ func newTimeTrackingResource(
 	allowances workforceModule.OwnAbsenceAllowances, calendar schoolcalendar.Calendar, settings settingsCompose.SettingsService,
 ) *timeTrackingHTTP.Resource {
 	capabilities := owners.NewWorkforceAdminCapabilities(users, documents, timeTracking)
+	planningCalendar := PlanningCalendarCapability(calendar)
+	ownViews := timeTracking.OwnViews(workforceModule.OwnTimeViewPlanning{
+		Calendar: planningCalendar, Shifts: shifts, Assignments: assignments, Allowances: allowances,
+		ShiftsBooked: func(ctx context.Context) (bool, error) {
+			return settings.ResolveBool(ctx, configModels.KeyModuleDienstplan)
+		},
+	})
 	return timeTrackingHTTP.NewResource(timeTrackingHTTP.Dependencies{
 		WorkSessions:       capabilities.WorkSessions,
 		StaffAbsences:      capabilities.StaffAbsences,
@@ -94,7 +102,8 @@ func newTimeTrackingResource(
 		StaffShifts:        shifts,
 		ShiftResponses:     timeTrackingShiftResponses,
 		Assignments:        assignments,
-		Calendar:           PlanningCalendarCapability(calendar),
+		Calendar:           planningCalendar,
+		OwnViews:           ownViews,
 		Allowances:         allowances,
 		AllowanceResponses: timeTrackingAllowanceResponses,
 		AccountStartDate:   timeTrackingAccountStartDate(settings),

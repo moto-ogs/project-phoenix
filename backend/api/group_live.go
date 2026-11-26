@@ -13,7 +13,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"slices"
 	"strings"
 	"time"
@@ -30,6 +29,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/grouplive"
 	groupliveCompose "github.com/moto-ogs/project-phoenix/modules/grouplive/compose"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	schoolCalendarCompose "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/compose"
 	educationService "github.com/moto-ogs/project-phoenix/modules/schoolstructure/contract"
 	"github.com/moto-ogs/project-phoenix/modules/securityruntime"
 	settingsplatform "github.com/moto-ogs/project-phoenix/modules/settings"
@@ -88,7 +88,12 @@ type groupLiveSubstitutions interface {
 // groupLiveCareParticipation are the Care Plan reads of the day plans.
 type (
 	groupLivePickups interface {
-		GetBulkEffectivePickupDaysForDate(ctx context.Context, studentIDs []int64, date calendar.Date) (map[int64]*careplan.EffectivePickupTime, error)
+		GetBulkEffectivePickupTimesForDate(ctx context.Context, studentIDs []int64, date calendar.Date) (map[int64]*careplan.EffectivePickupTime, error)
+	}
+	// groupLiveDayPickups reads the day's Abholart and pickup person in one
+	// statement (#3946, #7655).
+	groupLiveDayPickups interface {
+		ListDayPickups(ctx context.Context, from, to calendar.Date, studentIDs []int64) ([]careplan.DayPickup, error)
 	}
 	groupLiveArrivals interface {
 		GetBulkEffectiveArrivalTimesForDate(ctx context.Context, studentIDs []int64, date calendar.Date) (map[int64]*careplan.EffectiveArrivalTime, error)
@@ -119,6 +124,7 @@ type groupLiveSources struct {
 	Active            groupLiveSessions
 	Settings          grouplive.Resolver
 	Pickups           groupLivePickups
+	DayPickups        groupLiveDayPickups
 	Arrivals          groupLiveArrivals
 	PlannedStudentIDs func(context.Context, []int64, calendar.Date) ([]int64, error)
 	Timetable         groupLiveTimetable
@@ -129,7 +135,6 @@ type groupLiveSources struct {
 	Handovers         grouplive.HandoverReader
 	StatusDays        groupLiveStatusDays
 	HolidayGroups     groupLiveHolidayGroups
-	Logger            *slog.Logger
 	Now               func() time.Time
 }
 
@@ -143,7 +148,7 @@ var errGroupLiveSources = errors.New("OGS group live adapters are not fully conf
 func newGroupLive(sources groupLiveSources, hints peopledirectory.SchoolDayHintQuery) (grouplive.Query, error) {
 	if sources.Presence == nil || sources.People == nil || sources.Education == nil ||
 		sources.Substitutions == nil || sources.UserContext == nil || sources.Active == nil ||
-		sources.Settings == nil || sources.Pickups == nil || sources.Arrivals == nil ||
+		sources.Settings == nil || sources.Pickups == nil || sources.DayPickups == nil || sources.Arrivals == nil ||
 		sources.PlannedStudentIDs == nil || sources.Timetable == nil || sources.BlockTypes == nil || sources.CareDays == nil || sources.CareParticipation == nil ||
 		sources.StatusDays == nil || sources.HolidayGroups == nil {
 		return nil, errGroupLiveSources
@@ -157,17 +162,16 @@ func newGroupLive(sources groupLiveSources, hints peopledirectory.SchoolDayHintQ
 		Roster:   groupLiveRoster{GroupRoster: sources.People, careParticipation: sources.CareParticipation},
 		Presence: groupLivePresence{presence: sources.Presence, active: sources.Active, statusDays: sources.StatusDays},
 		Planning: groupLivePlanning{
-			arrivals: sources.Arrivals, pickups: sources.Pickups, planned: sources.PlannedStudentIDs,
+			arrivals: sources.Arrivals, pickups: sources.Pickups, dayPickups: sources.DayPickups, planned: sources.PlannedStudentIDs,
 			careDays: sources.CareDays, timetable: sources.Timetable, blockTypes: sources.BlockTypes,
 		},
 		Transfers:       groupLiveTransfers{substitutions: sources.Substitutions},
-		Settings:        groupLiveSettings{settings: sources.Settings},
+		Settings:        groupLiveSettings{settings: sources.Settings, closingTimes: schoolCalendarCompose.NewOpeningChanges().ClosingTimeOn, now: sources.Now},
 		Calendar:        groupLiveCalendar{now: sources.Now},
 		ExcusedRequests: sources.ExcusedRequests,
 		TeacherHints:    groupLiveTeacherHints(hints),
 		Handovers:       sources.Handovers,
 		HolidayGroups:   groupLiveHolidayGroupWeeks{groups: sources.HolidayGroups},
-		Logger:          sources.Logger,
 	}), nil
 }
 
@@ -242,6 +246,24 @@ func (d groupLiveDirectory) SupervisedGroups(ctx context.Context) ([]grouplive.G
 	return d.userContext.MyGroupRecords(ctx)
 }
 
+func (d groupLiveDirectory) SupervisedGroupsWithRooms(ctx context.Context) ([]grouplive.GroupRecord, error) {
+	ids, err := d.userContext.MyGroupIDs(ctx)
+	if err != nil || len(ids) == 0 {
+		return nil, err
+	}
+	groups, err := d.education.GetGroupsWithRoomsByIDs(ctx, ids)
+	if err != nil {
+		return nil, err
+	}
+	records := make([]grouplive.GroupRecord, 0, len(groups))
+	for _, id := range ids {
+		if group := groups[id]; group != nil {
+			records = append(records, navigationGroupRecord(group))
+		}
+	}
+	return records, nil
+}
+
 // SupervisedGroupIDs marks the caller's groups from the IDs the identity
 // chain holds, without reading their rows again.
 func (d groupLiveDirectory) SupervisedGroupIDs(ctx context.Context) (map[int64]bool, error) {
@@ -286,10 +308,18 @@ func (d groupLiveDirectory) TenantGroups(ctx context.Context) ([]grouplive.Group
 	records := make([]grouplive.GroupRecord, 0, len(groups))
 	for _, group := range groups {
 		if group != nil {
-			records = append(records, grouplive.GroupRecord{ID: group.ID, Name: group.Name, RoomID: group.RoomID})
+			records = append(records, navigationGroupRecord(group))
 		}
 	}
 	return records, nil
+}
+
+func navigationGroupRecord(group *educationService.Group) grouplive.GroupRecord {
+	result := grouplive.GroupRecord{ID: group.ID, Name: group.Name, RoomID: group.RoomID}
+	if group.Room != nil {
+		result.RoomName = group.Room.Name
+	}
+	return result
 }
 
 func (d groupLiveDirectory) SubstitutedGroupIDs(ctx context.Context) (map[int64]bool, error) {
@@ -469,11 +499,13 @@ func (p groupLivePresence) TrackingIndicators(ctx context.Context, studentIDs []
 }
 
 type groupLivePlanning struct {
-	arrivals  groupLiveArrivals
-	pickups   groupLivePickups
-	planned   func(context.Context, []int64, calendar.Date) ([]int64, error)
-	careDays  groupLiveCareDays
-	timetable groupLiveTimetable
+	arrivals groupLiveArrivals
+	pickups  groupLivePickups
+	// dayPickups adds the day's Abholart and pickup person (#7655).
+	dayPickups groupLiveDayPickups
+	planned    func(context.Context, []int64, calendar.Date) ([]int64, error)
+	careDays   groupLiveCareDays
+	timetable  groupLiveTimetable
 	// blockTypes tells offerings from care and duty blocks (#6487).
 	blockTypes groupLiveBlockTypes
 }
@@ -509,7 +541,7 @@ func (p groupLivePlanning) Pickups(ctx context.Context, studentIDs []int64, date
 	if err != nil {
 		return nil, err
 	}
-	pickups, err := p.pickups.GetBulkEffectivePickupDaysForDate(ctx, studentIDs, day)
+	pickups, err := p.pickups.GetBulkEffectivePickupTimesForDate(ctx, studentIDs, day)
 	if err != nil {
 		return nil, err
 	}
@@ -518,6 +550,28 @@ func (p groupLivePlanning) Pickups(ctx context.Context, studentIDs []int64, date
 		if pickup != nil {
 			result[studentID] = groupLivePickup(pickup)
 		}
+	}
+	if len(result) == 0 {
+		return result, nil
+	}
+	// A child without an effective Gehzeit is not expected that day and gets
+	// no day values either, as GetBulkEffectivePickupDaysForDate decides.
+	days, err := p.dayPickups.ListDayPickups(ctx, day, day, studentIDs)
+	if err != nil {
+		return nil, err
+	}
+	for _, value := range days {
+		pickup, ok := result[value.StudentID]
+		if !ok {
+			continue
+		}
+		if value.Departure != nil {
+			pickup.DayDepartureMode = value.Departure.DepartureMode
+		}
+		if value.Person != nil {
+			pickup.DayPickupPerson = &grouplive.PickupPerson{Name: value.Person.Name, OneTime: value.Person.OneTime()}
+		}
+		result[value.StudentID] = pickup
 	}
 	return result, nil
 }
@@ -529,7 +583,7 @@ func groupLivePickup(pickup *careplan.EffectivePickupTime) grouplive.Pickup {
 	}
 	return grouplive.Pickup{
 		Date: grouplive.Date(pickup.Date.String()), WeekdayName: pickup.WeekdayName, PickupTime: pickup.PickupTime,
-		IsException: pickup.IsException, Notes: pickup.Notes, DayNotes: notes, DayDepartureMode: pickup.DayDepartureMode,
+		IsException: pickup.IsException, Notes: pickup.Notes, DayNotes: notes,
 	}
 }
 
@@ -635,7 +689,13 @@ func (t groupLiveTransfers) GroupHandovers(ctx context.Context, groupID int64, d
 	return result, nil
 }
 
-type groupLiveSettings struct{ settings grouplive.Resolver }
+// groupLiveSettings binds the projection's settings. closingTimes is the
+// School Calendar's closing time of a changed opening day (#8157).
+type groupLiveSettings struct {
+	settings     grouplive.Resolver
+	closingTimes func(context.Context, calendar.Date) (string, bool, error)
+	now          func() time.Time
+}
 
 func (s groupLiveSettings) Prepare(ctx context.Context) (context.Context, error) {
 	return s.settings.Prefetch(ctx, []string{
@@ -652,7 +712,16 @@ func (s groupLiveSettings) Prepare(ctx context.Context) (context.Context, error)
 	})
 }
 
+// CareDayEnd is the session end of today: the closing time of a changed
+// opening day (#8157), otherwise operations.session_end_time.
 func (s groupLiveSettings) CareDayEnd(ctx context.Context) (string, error) {
+	closesAt, ok, err := s.closingTimes(ctx, calendar.DateFromTime(s.now()))
+	if err != nil {
+		return "", fmt.Errorf("read the closing time of today: %w", err)
+	}
+	if ok {
+		return closesAt, nil
+	}
 	return s.settings.ResolveString(ctx, settingsplatform.KeySessionEndTime)
 }
 

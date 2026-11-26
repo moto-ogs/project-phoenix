@@ -197,7 +197,7 @@ function recipientFromBackend(
   };
 }
 
-function recipientsPageFromBackend(
+export function recipientsPageFromBackend(
   page: traegerExportRecipientContract.TraegerRecipientsPage,
 ): ExportRecipientsPage {
   return {
@@ -238,9 +238,16 @@ export async function fetchExportRecipients(): Promise<ExportRecipientsPage> {
 export async function fetchExportRecipient(
   id: string,
 ): Promise<ExportRecipientPage> {
-  const page = await bffJson("org", "GET /traeger/export-recipient/{id}", {
-    params: { id },
-  });
+  return mapExportRecipient(
+    await bffJson("org", "GET /traeger/export-recipient/{id}", {
+      params: { id },
+    }),
+  );
+}
+
+export function mapExportRecipient(
+  page: traegerExportRecipientContract.TraegerRecipientPage,
+): ExportRecipientPage {
   return {
     recipient: recipientFromBackend(page.recipient),
     handovers: (page.handovers ?? []).map(handoverFromBackend),

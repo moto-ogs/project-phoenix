@@ -210,15 +210,16 @@ async function parentCall<T>(
   }
 }
 
-/**
- * Fetches every child linked to the calling parent's account, across
- * every active tenant mapping. The response is already sorted (school
- * to first name to last name) by the backend.
- */
-export async function listMyChildren(): Promise<
-  parentMeContract.ChildResponse[]
-> {
-  return parentCall(bffJson("parent", "GET /parent/me/children"));
+/** The confirmed family roster and card fields, optionally narrowed to one child. */
+export function getFamilyStart(
+  studentId?: string,
+): Promise<parentMeContract.FamilyStartResponse> {
+  return parentCall(
+    bffJson("parent", "GET /parent/me/family-start", {
+      query: studentId ? { student_id: studentId } : {},
+    }),
+    true,
+  );
 }
 
 /** Reads the four current consent and acknowledgement states for one child. */
@@ -487,64 +488,7 @@ export async function listExcusedRequests(
   );
 }
 
-/**
- * Fetches which write actions the child's school allows (resolved per
- * tenant). Used to hide/disable actions the backend would reject. Defaults
- * to both enabled if the request fails, so a transient error doesn't lock a
- * parent out of an enabled feature.
- */
-export async function getChildFeatures(
-  studentId: string,
-): Promise<parentMeContract.ChildFeaturesResponse> {
-  return parentCall(
-    bffJson("parent", "GET /parent/me/children/{studentId}/features", {
-      params: { studentId },
-    }),
-    true, // This endpoint requires only parent_portal.access.
-  );
-}
-
-/** Was angezeigt wird, solange oder falls der Endpunkt nichts liefert. */
-export const UNKNOWN_CHILD_TODAY: parentMeContract.TodayStatusResponse = {
-  at_ogs: null,
-  state: "unknown",
-};
-
-/**
- * Holt den Tagesstatus des Kindes.
- *
- * Faellt auf `unknown` zurueck, statt zu werfen: der Endpunkt kann fehlen
- * (404, waehrend das Backend nachzieht) oder der Zugriff auf das Kind ist
- * entzogen (403). Beides ist "wir wissen es nicht", kein Fehlerzustand, den ein
- * Elternteil sehen muesste. 401 laesst bffJson weiterhin zur
- * Anmeldung umleiten.
- *
- * Genau diese zwei Codes, nicht "ab 403": ein 500er oder ein ausgefallener
- * Proxy ist ein echter Fehler und darf nicht als gueltiger Unbekannt-Zustand
- * durchgehen. Alle Aufrufer fangen den Wurf ab und zeigen weiterhin
- * UNKNOWN_CHILD_TODAY — nur bleibt der Ausfall jetzt als Fehler sichtbar.
- */
-export async function getChildToday(
-  studentId: string,
-): Promise<parentMeContract.TodayStatusResponse> {
-  try {
-    return await parentCall(
-      bffJson("parent", "GET /parent/me/children/{studentId}/today", {
-        params: { studentId },
-      }),
-      true, // This endpoint requires only parent_portal.access.
-    );
-  } catch (err) {
-    if (err instanceof ApiError && (err.status === 403 || err.status === 404)) {
-      logger.warn("parent_child_today_unavailable", {
-        status: err.status,
-        student_id: studentId,
-      });
-      return UNKNOWN_CHILD_TODAY;
-    }
-    throw err;
-  }
-}
+export { UNKNOWN_CHILD_TODAY } from "~/lib/parent-family-cards";
 
 /**
  * Fetches the Monday-Friday meal plan for the child's school for the week
@@ -561,10 +505,16 @@ export async function getChildMealPlan(
       query: { week_start: weekStart },
     }),
   );
-  return (entries ?? []).map((entry) => ({
+  return (entries ?? []).map(parentMealPlanEntry);
+}
+
+export function parentMealPlanEntry(
+  entry: parentMeContract.MealPlanEntryResponse,
+): MealPlanEntry {
+  return {
     ...entry,
     allergens: normalizeMealAllergens(entry.allergens),
-  }));
+  };
 }
 
 export type MealParticipation = Omit<
@@ -792,8 +742,14 @@ export async function listHolidayOffers(): Promise<HolidayOffer[]> {
   const offers = await parentCall(
     bffJson("parent", "GET /parent/me/holiday-registrations"),
   );
+  return (offers ?? []).map(parentHolidayOffer);
+}
+
+export function parentHolidayOffer(
+  offer: parentMeContract.HolidayRegistrationOfferResponse,
+): HolidayOffer {
   // Go always sets the registration window of an offer.
-  return (offers ?? []).map((offer) => ({
+  return {
     ...offer,
     registration_opens_on: requiredDay(
       offer.registration_opens_on,
@@ -803,7 +759,7 @@ export async function listHolidayOffers(): Promise<HolidayOffer[]> {
       offer.registration_closes_on,
       "holiday_offer.registration_closes_on",
     ),
-  }));
+  };
 }
 
 /**
@@ -1236,7 +1192,7 @@ function parentMessageOf(
   return fields ? { ...raw, ...fields } : null;
 }
 
-function threadSummaryOf(
+export function threadSummaryOf(
   raw: parentMeContract.ThreadSummaryResponse,
 ): ThreadSummary {
   const senderKind = knownSenderKind(raw.last_sender_kind);
@@ -1265,7 +1221,7 @@ function threadViewOf(raw: parentMeContract.ThreadViewResponse): ThreadView {
   };
 }
 
-function groupThreadSummaryOf(
+export function groupThreadSummaryOf(
   raw: parentMeContract.GroupThreadSummaryResponse,
 ): GroupThreadSummary {
   return {
@@ -1787,6 +1743,17 @@ export async function updateOfferingChangeRequest(
 }
 
 /** Returns the school's courses with this child's state. */
+/** „Heute anders“ eines Kindes (#7671): was heute für das Kind anders ist. */
+export async function getChildDayChanges(
+  studentId: string,
+): Promise<parentMeContract.ChildDayChangesResponse> {
+  return parentCall(
+    bffJson("parent", "GET /parent/me/children/{studentId}/day-changes", {
+      params: { studentId },
+    }),
+  );
+}
+
 export async function getChildCourses(
   studentId: string,
 ): Promise<parentMeContract.CoursesResponse> {

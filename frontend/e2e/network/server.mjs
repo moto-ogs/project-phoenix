@@ -1,16 +1,31 @@
 import { createServer } from "node:http";
 import { connect } from "node:net";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { join } from "node:path";
 import { createAppWorkspace } from "./app-workspace.mjs";
-import { catalogReads, profile } from "./catalog-fixtures.mjs";
+import {
+  catalogReads,
+  fixtureAccounts,
+  loginAnswer,
+  familyStart,
+  parentChildren,
+  profile,
+  sessionClaims,
+  staffPreviewCandidates,
+} from "./catalog-fixtures.mjs";
 import { networkPorts } from "./ports.mjs";
 import { realClock } from "../real-clock.mjs";
 
-const sharedTenantCookie = process.env.TENANT_SWITCH_EVIDENCE === "1";
-const ports = networkPorts(sharedTenantCookie ? "tenantSwitch" : "network");
+// The session boundary suite (#8082) runs the shared-cookie fixtures against
+// a production build: `next build`, then `next start`.
+const production = process.env.SESSION_TREE_EVIDENCE === "1";
+const sharedTenantCookie =
+  production || process.env.TENANT_SWITCH_EVIDENCE === "1";
+const ports = networkPorts(
+  production ? "sessionTree" : sharedTenantCookie ? "tenantSwitch" : "network",
+);
 const frontendPort = ports.frontend;
 const apiPort = ports.api;
 let switchRequests = 0;
@@ -26,28 +41,23 @@ const schools = ["school-a", "school-b"].map((subdomain, index) => ({
 
 // Only synthetic fixtures. This is not a backend/authentication test.
 const envelope = (data) => ({ status: "success", data });
-const claims = (scope = "") => ({
-  id: 1,
-  sub: "1",
-  scope,
-  tenant_id: scope === "parent" ? undefined : 1,
-  org_id: 1,
-  first_name: "Test",
-  last_name: "Fixture",
-  email: "fixture@example.invalid",
-  roles: [
-    scope === "school" ? "lehrkraft" : scope === "parent" ? "guardian" : "user",
-  ],
-  permissions: [],
-  exp:
-    Math.floor(
+const accountOfEmail = (email) =>
+  email === fixtureAccounts[2].email ? "2" : "1";
+const claims = (scope = "", account = "1", tenant = "1") =>
+  sessionClaims({
+    scope,
+    account,
+    tenant,
+    now: Math.floor(
       realClock("der Next-Server prüft exp gegen seine Wanduhr") / 1000,
-    ) + 3600,
-});
+    ),
+  });
 // Shared-cookie mode models the server-side session family (#5194): login
 // opens a family, logout revokes it, and session routes refuse a token whose
 // family is gone although it has not expired.
 let familySequence = 0;
+// Relationships the school ended (#8082): their child reads are refused.
+const revokedChildren = new Set();
 const liveFamilies = new Set();
 const fixtureToken = (payload) =>
   `fixture.${Buffer.from(JSON.stringify(payload)).toString("base64url")}.fixture`;
@@ -78,10 +88,22 @@ const familyRoutes = (path) =>
 // One protected read per other portal, through its BFF (the operator's
 // through the catalog proxy, #2352).
 const portalReads = new Set(["/operator/organizations"]);
-const refuse = (res, body) => {
-  res.writeHead(401, { "Content-Type": "application/problem+json" });
-  res.end(JSON.stringify(body));
+// The backend's refusal envelope (ADR 0006, RFC 9457): the BFF reads the
+// code only from a complete one.
+const problem = (res, status, code, detail = code) => {
+  res.writeHead(status, { "Content-Type": "application/problem+json" });
+  res.end(
+    JSON.stringify({
+      type: "about:blank",
+      title: status === 401 ? "Unauthorized" : "Forbidden",
+      status,
+      detail,
+      instance: "/fixture",
+      code,
+    }),
+  );
 };
+const refuse = (res, { code, detail }) => problem(res, 401, code, detail);
 const api = createServer(async (req, res) => {
   const url = new URL(req.url, `http://localhost:${apiPort}`);
   const path = url.pathname;
@@ -208,14 +230,90 @@ const api = createServer(async (req, res) => {
       family_id: presented.family_id,
     });
     data = envelope({ access_token: token, refresh_token: token });
+  } else if (sharedTenantCookie && path === "/parent/me/children") {
+    data = envelope(
+      parentChildren.filter(
+        ({ student_id }) => !revokedChildren.has(student_id),
+      ),
+    );
+  } else if (sharedTenantCookie && path === "/parent/me/family-start") {
+    const only = url.searchParams.get("student_id");
+    data = envelope(
+      familyStart(
+        parentChildren.filter(
+          ({ student_id }) =>
+            !revokedChildren.has(student_id) && (!only || only === student_id),
+        ),
+        new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Berlin" }).format(
+          realClock("der Elternstart liest den Berliner Tag"),
+        ),
+      ),
+    );
+  } else if (
+    sharedTenantCookie &&
+    revokedChildren.has(path.match(/^\/parent\/me\/children\/(\d+)\//)?.[1])
+  ) {
+    // Like the backend after the school ended the relationship.
+    problem(res, 403, "care.child_not_linked");
+    return;
+  } else if (sharedTenantCookie && path === "/__fixture/revoke-child") {
+    revokedChildren.add(url.searchParams.get("id"));
+    data = { revoked: [...revokedChildren] };
+  } else if (sharedTenantCookie && path === "/auth/staff-preview/candidates") {
+    data = envelope(staffPreviewCandidates);
+  } else if (
+    sharedTenantCookie &&
+    req.method === "POST" &&
+    path === "/auth/staff-preview"
+  ) {
+    // A read-only token of the target, acting for the admin and in the
+    // admin's family, as the backend mints it.
+    const admin = bearerClaims(req);
+    const target = staffPreviewCandidates[0];
+    const token = fixtureToken({
+      ...claims("", target.account_id, admin?.tenant_id ?? "1"),
+      read_only: true,
+      acting_admin_id: admin?.id,
+      preview_id: "preview-1",
+      family_id: admin?.family_id,
+    });
+    data = {
+      access_token: token,
+      expires_in: 900,
+      target_account_id: target.account_id,
+      target_name: `${target.first_name} ${target.last_name}`,
+    };
+  } else if (
+    sharedTenantCookie &&
+    req.method === "POST" &&
+    path === "/auth/staff-preview/end"
+  ) {
+    res.writeHead(204);
+    res.end();
+    return;
   } else if (sharedTenantCookie && path === "/__fixture/switch-state") {
     data = { switchRequests, logoutRequests, liveFamilies: liveFamilies.size };
   } else if (sharedTenantCookie && path === "/auth/switch-tenant") {
     switchRequests++;
-    res.writeHead(401, { "Content-Type": "application/problem+json" });
-    res.end(
-      JSON.stringify({ status: 401, code: "identity.mfa_session_required" }),
+    const presented = bearerClaims(req);
+    let body = "";
+    for await (const chunk of req) body += chunk;
+    const school = schools.find(
+      ({ subdomain }) => subdomain === JSON.parse(body || "{}").tenant_slug,
     );
+    if (presented?.id === "2" && school) {
+      // Like the backend: the switch mints a family for the target school.
+      const family = `family-${++familySequence}`;
+      liveFamilies.add(family);
+      const token = fixtureToken({
+        ...claims("", "2", school.tenant_id),
+        family_id: family,
+      });
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ access_token: token, refresh_token: token }));
+      return;
+    }
+    problem(res, 401, "identity.mfa_session_required");
     return;
   } else if (sharedTenantCookie && path === "/auth/logout") {
     // Like the backend: 204 only after the family is revoked.
@@ -231,7 +329,11 @@ const api = createServer(async (req, res) => {
       return;
     }
     const token = fixtureToken({
-      ...claims(presented.scope ?? ""),
+      ...claims(
+        presented.scope ?? "",
+        presented.id ?? "1",
+        presented.tenant_id ?? "1",
+      ),
       family_id: presented.family_id,
     });
     data = { access_token: token, refresh_token: token };
@@ -253,17 +355,29 @@ const api = createServer(async (req, res) => {
           : path.startsWith("/caterer")
             ? "caterer"
             : "";
+    // A parent's sign-in starts with every relationship: a repeated run of
+    // the withdrawal case against one server finds both children again.
+    if (scope === "parent") revokedChildren.clear();
+    let body = "";
+    for await (const chunk of req) body += chunk;
+    let email;
+    try {
+      ({ email } = JSON.parse(body || "{}"));
+    } catch {
+      email = undefined;
+    }
     const family = sharedTenantCookie
       ? `family-${++familySequence}`
       : undefined;
     if (family) liveFamilies.add(family);
-    const token = fixtureToken({ ...claims(scope), family_id: family });
-    const pair = { access_token: token, refresh_token: token };
+    const token = fixtureToken({
+      ...claims(scope, accountOfEmail(email)),
+      family_id: family,
+    });
+    const pair = loginAnswer(token);
     data = ["parent", "platform", "caterer"].includes(scope)
       ? envelope(pair)
-      : scope === "school"
-        ? { status: "authenticated", ...pair }
-        : pair;
+      : pair;
   } else if (path === "/auth/session/validate") {
     let body = "";
     for await (const chunk of req) body += chunk;
@@ -288,24 +402,53 @@ const api = createServer(async (req, res) => {
       });
       return;
     }
+    // The token's own account and school, as the backend reads them.
+    const presented = tokenClaims(access);
     data = {
-      ...claims(portal === "tenant" ? "" : portal),
+      ...claims(
+        portal === "tenant" ? "" : portal,
+        presented?.id ?? "1",
+        presented?.tenant_id ?? "1",
+      ),
+      ...(presented?.read_only && {
+        read_only: true,
+        acting_admin_id: presented.acting_admin_id,
+        preview_id: presented.preview_id,
+      }),
       family_id: family,
     };
-  } else if (path === "/api/me/profile") data = envelope(profile);
-  else if (path === "/api/me/navigation")
+  } else if (path === "/api/me/profile") {
+    const account = bearerClaims(req)?.id ?? "1";
     data = envelope({
-      educational_groups: [],
-      supervised_groups: [],
+      ...profile,
+      id: String(account),
+      ...fixtureAccounts[account],
+    });
+  } else if (path === "/api/me/navigation")
+    data = envelope({
       current_staff: null,
-      incomplete: false,
-      unavailable_sections: [],
       school_switches: {
         parent_news_enabled: false,
         parent_invite_mode: "direct",
         timetable_day_start_time: "08:00",
         timetable_day_end_time: "16:00",
       },
+    });
+  else if (path === "/api/active/supervision-context")
+    data = envelope({
+      groups: {
+        status: "ok",
+        navigation: [],
+        own_group_ids: [],
+        own_room_names: [],
+      },
+      sessions: {
+        status: "ok",
+        overview_status: "forbidden",
+        own_status: "ok",
+        items: [],
+      },
+      released_rooms: { status: "ok", items: [] },
     });
   // The school picker of the main domain (#7563).
   else if (path === "/auth/tenants")
@@ -371,12 +514,12 @@ await new Promise((resolve) => {
 // Do not inherit user-specific service configuration or credentials. Explicit
 // empty values also take precedence over Next's automatic .env.local loading.
 const frontendDirectory = fileURLToPath(new URL("../../", import.meta.url));
-const workspace = createAppWorkspace(frontendDirectory);
+const workspace = createAppWorkspace(frontendDirectory, { production });
 const env = {
   PATH: process.env.PATH,
   HOME: process.env.HOME,
   TMPDIR: process.env.TMPDIR,
-  NODE_ENV: "development",
+  NODE_ENV: production ? "production" : "development",
   NEXT_TELEMETRY_DISABLED: "1",
   API_URL: `http://127.0.0.1:${apiPort}`,
   NEXTAUTH_URL: `http://localhost:${frontendPort}`,
@@ -401,14 +544,29 @@ const env = {
   NEXT_PUBLIC_LOG_LEVEL: "error",
   NODE_OPTIONS: `--require ${JSON.stringify(fileURLToPath(new URL("./local-only.cjs", import.meta.url)))}`,
 };
+const nextBin = join(frontendDirectory, "node_modules/next/dist/bin/next");
+if (production) {
+  // The build reads the same synthetic environment as the server.
+  const build = spawnSync(process.execPath, [nextBin, "build"], {
+    cwd: workspace.directory,
+    // The heap of `pnpm run build`: the build's type check needs it.
+    env: {
+      ...env,
+      NODE_OPTIONS: `${env.NODE_OPTIONS} --max-old-space-size=6144`,
+    },
+    stdio: ["ignore", "ignore", "pipe"],
+  });
+  if (build.status !== 0) {
+    api.close();
+    workspace.cleanup();
+    fail(
+      `production build failed (${build.status ?? build.signal}): ${String(build.stderr).slice(-2000)}`,
+    );
+  }
+}
 const next = spawn(
   process.execPath,
-  [
-    join(frontendDirectory, "node_modules/next/dist/bin/next"),
-    "dev",
-    "--port",
-    String(frontendPort),
-  ],
+  [nextBin, production ? "start" : "dev", "--port", String(frontendPort)],
   { cwd: workspace.directory, env, stdio: "ignore" },
 );
 // Only this run's own children: the Next child and the fixture listener.

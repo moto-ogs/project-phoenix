@@ -25,7 +25,7 @@ import {
   staffService,
 } from "~/lib/staff-api";
 import { catalogText } from "~/test/error-catalog-text";
-import StaffDetailContent from "./page";
+import StaffDetailContent from "./page-content";
 
 const pending = vi.hoisted(() => ({
   fetcher: undefined as (() => Promise<unknown>) | undefined,

@@ -276,6 +276,9 @@ type wsMockSettingsResolver struct {
 	// credit answers PackUpMinutes and WorkTimeRounding (#6851, #6852).
 	credit    workforce.WorkSessionCreditRule
 	creditErr error
+	// terminalOnly answers TerminalOnlyStamping (#8024).
+	terminalOnly    bool
+	terminalOnlyErr error
 }
 
 // The time-tracking questions the work-session service asks.
@@ -306,6 +309,10 @@ func (m *wsMockSettingsResolver) resolveInt(ctx context.Context, key string) (in
 
 func (m *wsMockSettingsResolver) EnforcePlannedStart(ctx context.Context) (bool, error) {
 	return m.resolveBool(ctx, enforcePlannedStartQuestion)
+}
+
+func (m *wsMockSettingsResolver) TerminalOnlyStamping(context.Context) (bool, error) {
+	return m.terminalOnly, m.terminalOnlyErr
 }
 
 func (m *wsMockSettingsResolver) PlannedStartToleranceMinutes(ctx context.Context) (int, error) {

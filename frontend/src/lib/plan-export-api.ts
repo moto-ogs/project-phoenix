@@ -58,19 +58,19 @@ export const PLAN_EXPORT_TEMPLATES: Record<
       id: "persons",
       label: "Nach Personen",
       description:
-        "Eine Zeile je Mitarbeitenden, wie im Dienstplan auf dem Bildschirm.",
+        "Eine Zeile pro Mitarbeitenden, wie im Dienstplan auf dem Bildschirm.",
     },
     {
       id: "areas",
       label: "Nach Einsatzbereich",
       description:
-        "Eine Zeile je Dienstart oder Angebot, die Namen stehen in den Feldern.",
+        "Eine Zeile pro Dienstart oder Angebot, die Namen stehen in den Feldern.",
     },
     {
       id: "hours",
       label: "Stundenübersicht",
       description:
-        "Eine Zeile je Mitarbeitenden mit den Stunden je Dienstart und dem Soll.",
+        "Eine Zeile pro Mitarbeitenden mit den Stunden pro Dienstart und dem Soll.",
     },
   ],
   betreuungsplan: [
@@ -78,7 +78,7 @@ export const PLAN_EXPORT_TEMPLATES: Record<
       id: "offerings",
       label: "Nach Angebot",
       description:
-        "Eine Zeile je Betreuungsblock mit Raum, Personal und Kinderzahl.",
+        "Eine Zeile pro Betreuungsblock mit Raum, Personal und Kinderzahl.",
     },
   ],
 };

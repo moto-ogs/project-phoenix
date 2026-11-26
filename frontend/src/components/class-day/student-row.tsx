@@ -21,7 +21,8 @@ import { knownEnum } from "~/lib/contract/known-enum";
 import { LOCATION_COLORS } from "~/lib/location-helper";
 import { dayHintAuthorSuffix } from "~/lib/class-day-api";
 import type { MorningAttendanceStatus } from "~/lib/class-day-api";
-import { reportedTodayLabel } from "./day-changes";
+import { isDayChange, reportedTodayLabel } from "./day-changes";
+import { DAY_CHANGE_ROW_ATTRIBUTE } from "./use-jump-to-day-change";
 import {
   missingWithoutReport,
   morningStatus,
@@ -113,7 +114,14 @@ export function StudentRow({
     // min-w-0: die Zeile ist ein Grid-Item, und Grid-Items haben
     // min-width:auto — ohne das schiebt ein langer Name die ganze Liste
     // auf schmalen Bildschirmen über den Rand.
-    <li className="moto-content-surface flex min-w-0 flex-wrap items-start justify-between gap-x-3 gap-y-2 rounded-xl border px-3 py-2.5">
+    // Eine Zeile, die heute anders ist, ist das Ziel von „Heute anders“
+    // auf der Startseite (#7670): der Sprung fokussiert die erste.
+    <li
+      {...(isDayChange(row)
+        ? { [DAY_CHANGE_ROW_ATTRIBUTE]: "", tabIndex: -1 }
+        : {})}
+      className="moto-content-surface flex min-w-0 flex-wrap items-start justify-between gap-x-3 gap-y-2 rounded-xl border px-3 py-2.5"
+    >
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium text-gray-900">
           {row.last_name}, {row.first_name}
@@ -147,6 +155,7 @@ export function StudentRow({
         {notesHref ? (
           <NavigationLink
             href={notesHref}
+            prefetch={false}
             className="text-xs font-medium text-gray-700 underline underline-offset-2 hover:text-gray-900 focus-visible:ring-2 focus-visible:ring-gray-600 focus-visible:outline-none"
           >
             Beobachtungen der OGS

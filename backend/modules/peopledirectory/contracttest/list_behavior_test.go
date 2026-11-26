@@ -33,14 +33,14 @@ func TestStudentClassRosterHydratesOrdersAndReturnsNilWhenEmpty(t *testing.T) {
 	require.NoError(t, testpkg.TenantCommand1(t, ctx, db, repo.Create, hydrated))
 	second := testpkg.CreateTestStudent(t, db, "Student list", "Second", class)
 
-	rows, err := testpkg.TenantQuery1(t, ctx, db, repo.ListClassRoster, class)
+	rows, err := testpkg.TenantQuery1(t, ctx, db, repo.ListClassRoster, []string{class})
 	require.NoError(t, err)
 	require.Len(t, rows, 2)
 	assert.Equal(t, hydrated.ID, rows[0].ID, "rows arrive in a total order")
 	assert.Equal(t, second.ID, rows[1].ID)
 	assert.True(t, rows[0].BusDays.HasAny(), "the departure plan comes back hydrated")
 
-	empty, err := testpkg.TenantQuery1(t, ctx, db, repo.ListClassRoster, "Missing student class")
+	empty, err := testpkg.TenantQuery1(t, ctx, db, repo.ListClassRoster, []string{"Missing student class"})
 	require.NoError(t, err)
 	assert.Nil(t, empty)
 	assert.Empty(t, empty)

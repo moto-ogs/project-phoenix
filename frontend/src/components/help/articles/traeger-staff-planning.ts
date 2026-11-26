@@ -63,7 +63,7 @@ export function traegerStaffPlanningTopic(): HelpTopic {
         steps: [
           "Wähle die Woche mit den Pfeilen.",
           "Wähle oben rechts das Menü mit den drei Punkten. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`.",
-          "Die Datei hat eine Zeile je Person und eine Spalte je Tag.",
+          "Die Datei hat eine Zeile pro Person und eine Spalte pro Tag.",
         ],
       },
       {

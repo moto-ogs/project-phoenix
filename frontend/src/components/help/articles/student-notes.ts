@@ -109,7 +109,7 @@ export function studentNotesTopic(): HelpTopic {
       "Die `Bemerkung` an der Anwesenheit eines Angebots ist nur ein kurzer Satz zur Anwesenheit. Beobachtungen wie Verhalten oder einen Vorfall schreibst du als Notiz, mit dem Angebot als `Bezug`.",
     ],
     differences: [
-      "Du siehst weniger Notizen als eine Kollegin? Dann hat sie das Kind, du nicht. Die Reichweite entscheidet das je Notiz.",
+      "Du siehst weniger Notizen als eine Kollegin? Dann hat sie das Kind, du nicht. Die Reichweite entscheidet das pro Notiz.",
       "Ein Hinweis trägt `Übernommen aus den Betreuernotizen`? Der stammt aus dem früheren Textfeld und hat deshalb keinen Verfasser.",
       "Auf dem Handy gibt es keine Kopfzeile. Dort trägt `Mehr` unten den roten Zähler, und im Menü steht die Liste `Neu für dich`.",
     ],

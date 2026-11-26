@@ -20,7 +20,7 @@ export function traegerExportHandoverTopic(): HelpTopic {
     instructionGroups: [
       {
         title: "Empfänger eintragen",
-        description: "Das machst du einmal je Empfänger.",
+        description: "Das machst du einmal pro Empfänger.",
         steps: [
           "Wähle `Abrechnung`, dann den Reiter `Exporte`.",
           "Wähle oben rechts das Menü mit den drei Punkten und dann `Empfänger der Exporte`. Wähle dort `Empfänger hinzufügen`.",

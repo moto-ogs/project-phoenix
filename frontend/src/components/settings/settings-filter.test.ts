@@ -107,6 +107,12 @@ describe("displayCategoryLabel", () => {
       for (const match of source.matchAll(/Category:\s*"([^"]+)"/g)) {
         backendCategoryKeys.add(match[1]!);
       }
+      // Die Lohnwerte des Trägers nennen ihre Kategorie als Argument (#8132).
+      for (const match of source.matchAll(
+        /traegerPayrollDefinition\([^,()]+(?:\([^()]*\))?,\s*"([^"]+)"/g,
+      )) {
+        backendCategoryKeys.add(match[1]!);
+      }
     }
 
     expect(Object.keys(categoryLabels).sort()).toEqual(
@@ -184,10 +190,10 @@ describe("categorySummary / changedCount", () => {
     const items = ["A", "B", "C", "D", "E"].map((label) =>
       setting({ key: label, label }),
     );
-    expect(categorySummary(items.slice(0, 2))).toBe("A, B");
-    expect(categorySummary(items.slice(0, 3))).toBe("A, B, C");
-    expect(categorySummary(items.slice(0, 4))).toBe("A, B, C und 1 weitere");
-    expect(categorySummary(items)).toBe("A, B, C und 2 weitere");
+    expect(categorySummary(items.slice(0, 2))).toBe("A · B");
+    expect(categorySummary(items.slice(0, 3))).toBe("A · B · C");
+    expect(categorySummary(items.slice(0, 4))).toBe("A · B · C · 1 weitere");
+    expect(categorySummary(items)).toBe("A · B · C · 2 weitere");
   });
 
   it("counts settings that differ from their default", () => {

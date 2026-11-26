@@ -31,7 +31,7 @@ export function traegerSepaDebitFileTopic(): HelpTopic {
       {
         title: "Raten aus dem Jahresbescheid",
         description:
-          "Für Raten aus dem Jahresbescheid gibt es eine Datei je Monat.",
+          "Für Raten aus dem Jahresbescheid gibt es eine Datei pro Monat.",
         steps: [
           "Wähle `Abrechnung`, dann den Reiter `Jahresbescheide`, und öffne den freigegebenen Lauf.",
           "Wähle oben rechts das Menü mit den drei Punkten und dann `Lastschrift der Raten`.",

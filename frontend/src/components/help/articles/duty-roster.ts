@@ -28,8 +28,8 @@ export function dutyRosterTopic(): HelpTopic {
       "Löschst du eine Dienstart, die geplante Dienste tragen, behalten diese Dienste sie. Sie verschwindet nur aus der Auswahl für neue Dienste.",
       // ADR 0116: die ausgerichtete Ferienwoche im Dienstplan.
       "Richtet deine OGS eine Ferienwoche für den Träger aus, steht im Kopf jedes Tages `Ferienbetreuung`. Darunter stehen die Zahl der Kinder und die Betreuungszeit. Plane dafür Schichten. In der Ansicht `Halbjahr` zeigt eine Sonne die Woche.",
-      "Unter dem Plan steht `Stunden der Woche`. Dort siehst du je Person die Stunden je Dienstart und das Soll.",
-      "Unter `Person` siehst du die Woche einer Person in Viertelstunden. Darunter stehen die Stunden je Tag und Dienstart.",
+      "Unter dem Plan steht `Stunden der Woche`. Dort siehst du pro Person die Stunden pro Dienstart und das Soll.",
+      "Unter `Person` siehst du die Woche einer Person in Viertelstunden. Darunter stehen die Stunden pro Tag und Dienstart.",
       "Ziehe dort über die Viertelstunden, um eine Schicht anzulegen.",
       "Wähle im Drei-Punkte-Menü `Drucken oder exportieren`. Wähle Vorlage, Fassung und Zeitraum. `Drucken` öffnet die Druckansicht. Für eine Datei wähle das Format und `Herunterladen`.",
       "Die Vorlage `Stundenübersicht` druckt diese Stunden als Liste.",

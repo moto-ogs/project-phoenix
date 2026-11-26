@@ -121,6 +121,10 @@ const (
 	// clients re-fetch their permission-scoped time-tracking views.
 	EventStaffTimeTrackingChanged EventType = "staff_time_tracking_changed"
 
+	// EventStaffLeaveChanged invalidates staff absence and working-time views.
+	// The school signal carries no staff identity or absence content.
+	EventStaffLeaveChanged EventType = "staff_leave_changed"
+
 	// Active supervision refresh event — a tenant-wide signal emitted by
 	// timetable operations, schedule instance lifecycle changes, and the overdue
 	// scheduler. Attendance hot paths fold the same invalidation into

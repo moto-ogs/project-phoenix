@@ -123,6 +123,18 @@ export function isPoll(announcement: Announcement): boolean {
   return announcement.response_type !== "none";
 }
 
+/** Published polls, letters and declarations show their own status panels. */
+export function showAnnouncementReadStats(announcement: Announcement): boolean {
+  return (
+    announcement.status === "draft" ||
+    !(
+      isPoll(announcement) ||
+      isLetter(announcement) ||
+      isDeclaration(announcement)
+    )
+  );
+}
+
 /** The tally of a poll: per option, how many reached children picked it. */
 export type PollResults = Omit<
   parentAnnouncementsContract.pollResultsResponse,
@@ -373,7 +385,7 @@ export function withApiBase<T>(
   return base === undefined ? call(id) : call(id, base);
 }
 
-function toAnnouncement(
+export function toAnnouncement(
   announcement: sharedContract.announcementResponse,
 ): Announcement {
   // The backend writes the enum values listed above.
@@ -610,6 +622,12 @@ export async function fetchPollResults(id: string): Promise<PollResults> {
       errorMessage: "Umfrageergebnis konnte nicht geladen werden",
     },
   );
+  return mapPollResults(results);
+}
+
+export function mapPollResults(
+  results: parentAnnouncementsContract.pollResultsResponse,
+): PollResults {
   return { ...results, options: results.options ?? [] };
 }
 
@@ -622,6 +640,12 @@ export async function fetchPollChildren(id: string): Promise<PollChild[]> {
       errorMessage: "Antwortliste konnte nicht geladen werden",
     },
   );
+  return mapPollChildren(children);
+}
+
+export function mapPollChildren(
+  children: parentAnnouncementsContract.pollChildResponse[],
+): PollChild[] {
   return children.map((child) => ({
     ...child,
     answer_labels: child.answer_labels ?? [],
@@ -677,6 +701,12 @@ export async function fetchLetterStatus(
         { params, errorMessage },
       ),
   );
+  return mapLetterStatus(status);
+}
+
+export function mapLetterStatus(
+  status: sharedContract.letterStatusResponse,
+): LetterStatus {
   return {
     ...status,
     // The backend writes the enum values listed above.
@@ -710,6 +740,12 @@ export async function fetchDeclarationStatus(
         { params, errorMessage },
       ),
   );
+  return mapDeclarationStatus(status);
+}
+
+export function mapDeclarationStatus(
+  status: sharedContract.declarationStatusResponse,
+): DeclarationStatus {
   const summary = Object.fromEntries(
     DECLARATION_SUMMARY_KEYS.map((key) => [key, status.summary?.[key] ?? 0]),
   ) as Record<(typeof DECLARATION_SUMMARY_KEYS)[number], number>;
@@ -862,6 +898,12 @@ export async function fetchAnnouncementRecipients(
         { params, errorMessage },
       ),
   );
+  return mapAnnouncementRecipients(recipients);
+}
+
+export function mapAnnouncementRecipients(
+  recipients: sharedContract.recipientResponse[],
+): AnnouncementRecipient[] {
   // The backend writes the statuses listed above.
   return recipients as AnnouncementRecipient[];
 }

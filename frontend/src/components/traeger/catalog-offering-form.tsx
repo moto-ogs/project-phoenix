@@ -461,8 +461,8 @@ export function CatalogOfferingForm({
               <div>
                 <FieldLabel>
                   {fields.countsAsCare
-                    ? "Gehzeit je Betreuungstag"
-                    : "Gehzeit je Wochentag (freiwillig)"}
+                    ? "Gehzeit pro Betreuungstag"
+                    : "Gehzeit pro Wochentag (freiwillig)"}
                 </FieldLabel>
                 <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-5">
                   {fields.availableDays.map((day) => (

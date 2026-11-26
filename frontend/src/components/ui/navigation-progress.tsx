@@ -9,16 +9,22 @@ import {
   Suspense,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
-  useSyncExternalStore,
   type ReactNode,
 } from "react";
 import {
   NavigationProgressContext,
+  PortalScrollContext,
   type NavigationProgressStore,
 } from "./navigation-progress-store";
-import { currentUrl, navigationTarget, normalizedUrl } from "./navigation-url";
+import {
+  currentUrl,
+  navigationTarget,
+  normalizedUrl,
+  portalManagesScroll,
+} from "./navigation-url";
 import { FIXED_LAYER_SHIFT } from "./hooks/useFixedLayersFollowViewport";
 
 /**
@@ -33,16 +39,16 @@ import { FIXED_LAYER_SHIFT } from "./hooks/useFixedLayersFollowViewport";
  * Woher der Zustand kommt: `NavigationLink` meldet jeden tatsächlich
  * gestarteten clientseitigen Link-Wechsel vor dem Router-Dispatch. Der
  * Anbieter fängt außerdem `push` und `replace` des App-Routers ab, weil einige
- * Seiten per Schaltfläche wechseln. Für vorgeladene Ziele (`NavigationLink`
- * lädt bei Hover, Fokus oder Touch-Beginn vor) ist der Wechsel oft sofort fertig und
- * der Balken bleibt unsichtbar.
+ * Seiten per Schaltfläche wechseln. Für Ziele mit vorgeladener Hülle und
+ * gültigen Sitzungsdaten ist der Wechsel oft fertig, bevor der Balken erscheint.
  *
- * Warum ein eigener Store statt `useState`: der Anbieter umschließt die
- * gesamte Hülle. Ein State-Wechsel dort würde Kopfzeile, Seitenleiste und
- * Inhalt bei jedem Klick neu rendern. So rendert nur der Balken selbst neu.
+ * Der Store hält den Stand unabhängig vom Router. Der Balken aktualisiert
+ * seine beiden DOM-Knoten, ohne eine synchrone React-Aktualisierung vor
+ * dem parallelen Seitenwechsel einzuplanen.
  */
 
 const NAVIGATION_TIMEOUT_MS = 10_000;
+const SHOW_PROGRESS_AFTER_MS = 150;
 
 interface PendingNavigation {
   readonly id: number;
@@ -200,18 +206,6 @@ function createStore(): NavigationProgressStore {
   };
 }
 
-const NOT_PENDING = () => false;
-const NO_SUBSCRIPTION = () => () => undefined;
-
-function useNavigationProgressPending() {
-  const store = useContext(NavigationProgressContext);
-  return useSyncExternalStore(
-    store?.subscribe ?? NO_SUBSCRIPTION,
-    store?.isPending ?? NOT_PENDING,
-    NOT_PENDING,
-  );
-}
-
 /**
  * Umschließt die Hülle eines Portals. Außerhalb davon melden weder
  * `NavigationLink`s noch programmgesteuerte Wechsel etwas und der Balken
@@ -219,15 +213,19 @@ function useNavigationProgressPending() {
  */
 export function NavigationProgressProvider({
   children,
+  manageScroll = false,
 }: {
   readonly children: ReactNode;
+  readonly manageScroll?: boolean;
 }) {
   const store = useMemo(createStore, []);
   return (
     <NavigationProgressContext.Provider value={store}>
-      <NavigationProgressRouter store={store}>
-        {children}
-      </NavigationProgressRouter>
+      <PortalScrollContext.Provider value={manageScroll}>
+        <NavigationProgressRouter store={store}>
+          {children}
+        </NavigationProgressRouter>
+      </PortalScrollContext.Provider>
     </NavigationProgressContext.Provider>
   );
 }
@@ -240,6 +238,7 @@ function NavigationProgressRouter({
   readonly store: NavigationProgressStore;
 }) {
   const router: AppRouterInstance | null = useContext(AppRouterContext);
+  const manageScroll = useContext(PortalScrollContext);
   // Alle Nachkommen erhalten einen gleichartigen Router. So deckt die
   // Fortschrittsanzeige bestehende router.push/replace-Aufrufe ab, ohne jede
   // Schaltfläche auf einen eigenen Navigationshelfer umzustellen. Back und
@@ -247,16 +246,27 @@ function NavigationProgressRouter({
   const progressRouter = useMemo(() => {
     if (router === null) return null;
 
+    const scrollOptions = (
+      args: Parameters<AppRouterInstance["push"]>,
+    ): Parameters<AppRouterInstance["push"]> =>
+      manageScroll &&
+      portalManagesScroll(args[0]) &&
+      args[1]?.scroll === undefined
+        ? [args[0], { ...args[1], scroll: false }]
+        : args;
+
     return {
       ...router,
       push: (...args: Parameters<AppRouterInstance["push"]>) => {
-        navigateTo(store, args[0], () => router.push(...args));
+        navigateTo(store, args[0], () => router.push(...scrollOptions(args)));
       },
       replace: (...args: Parameters<AppRouterInstance["replace"]>) => {
-        navigateTo(store, args[0], () => router.replace(...args));
+        navigateTo(store, args[0], () =>
+          router.replace(...scrollOptions(args)),
+        );
       },
     } satisfies AppRouterInstance;
-  }, [router, store]);
+  }, [manageScroll, router, store]);
 
   const content = (
     <>
@@ -333,23 +343,50 @@ function NavigationProgressCompletion({
  * ruhig, statt kurz aufzublitzen.
  */
 export function NavigationProgressBar() {
-  const pending = useNavigationProgressPending();
+  const store = useContext(NavigationProgressContext);
+  const statusRef = useRef<HTMLSpanElement>(null);
+  const barRef = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const status = statusRef.current;
+    const bar = barRef.current;
+    if (!store || !status || !bar) return;
+    let reveal: ReturnType<typeof setTimeout> | undefined;
+    const update = () => {
+      const pending = store.isPending();
+      status.textContent = pending ? "Seite wird geladen" : "";
+      if (pending) {
+        reveal = setTimeout(() => {
+          bar.hidden = false;
+        }, SHOW_PROGRESS_AFTER_MS);
+        return;
+      }
+      clearTimeout(reveal);
+      if (!bar.hidden) bar.hidden = true;
+    };
+    update();
+    const unsubscribe = store.subscribe(update);
+    return () => {
+      unsubscribe();
+      clearTimeout(reveal);
+    };
+  }, [store]);
 
   return (
     <>
-      {/* Dauerhaft im Baum, damit Screenreader die Änderung überhaupt
-          vorlesen; ein erst beim Wechsel eingehängter Bereich wird nicht
-          angesagt. */}
-      <span role="status" aria-live="polite" className="sr-only">
-        {pending ? "Seite wird geladen" : ""}
-      </span>
-      {pending ? (
-        <div
-          data-testid="navigation-progress"
-          className={`moto-nav-progress ${FIXED_LAYER_SHIFT}`}
-          aria-hidden="true"
-        />
-      ) : null}
+      {/* Dauerhaft im Baum, damit Screenreader die Änderung vorlesen. */}
+      <span
+        ref={statusRef}
+        role="status"
+        aria-live="polite"
+        className="sr-only"
+      />
+      <div
+        ref={barRef}
+        data-testid="navigation-progress"
+        className={`moto-nav-progress ${FIXED_LAYER_SHIFT}`}
+        aria-hidden="true"
+        hidden
+      />
     </>
   );
 }

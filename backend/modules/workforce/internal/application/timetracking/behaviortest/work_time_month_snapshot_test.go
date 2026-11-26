@@ -47,7 +47,8 @@ type snapshotFixture struct {
 // surface; the snapshot tests exercise no setting-driven behaviour.
 type snapshotSessionSettings struct{}
 
-func (snapshotSessionSettings) EnforcePlannedStart(context.Context) (bool, error) { return false, nil }
+func (snapshotSessionSettings) EnforcePlannedStart(context.Context) (bool, error)  { return false, nil }
+func (snapshotSessionSettings) TerminalOnlyStamping(context.Context) (bool, error) { return false, nil }
 func (snapshotSessionSettings) PlannedStartToleranceMinutes(context.Context) (int, error) {
 	return 0, nil
 }

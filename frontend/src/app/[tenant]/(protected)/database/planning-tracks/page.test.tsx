@@ -2,7 +2,7 @@ import "@testing-library/jest-dom/vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import PlanningTracksPage from "./page";
+import PlanningTracksPage from "./page-content";
 import { ApiError } from "~/lib/api-error";
 import { useTimetableEnabled } from "~/lib/tenant-context";
 import { catalogText } from "~/test/error-catalog-text";

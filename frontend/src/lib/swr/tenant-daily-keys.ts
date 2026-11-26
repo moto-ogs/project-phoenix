@@ -145,15 +145,9 @@ export const tenantDailyKeys = {
    */
   planInstances: (view: string, from: string, to: string, filter: PlanFilter) =>
     `timetable-${view}-${from}-${to}${planFilterKey(filter)}`,
-  /** Die volle Fassung eines Tages für das Detailpanel. */
-  planInstanceDetail: (
-    view: string,
-    from: string,
-    to: string,
-    filter: PlanFilter,
-    date: string,
-  ): string =>
-    `${tenantDailyKeys.planInstances(view, from, to, filter)}-detail-${date}`,
+  /** Attendance belongs to a block and its planned care day, not to the grid filter. */
+  planInstanceDetail: (id: string, date: string) =>
+    `timetable-detail-${id}-${date}`,
   /** Lücken der Planung im Fenster (höchstens 14 Tage). */
   planGaps: (from: string, to: string) => `timetable-gaps-${from}-${to}`,
   /** Namen der Planpersonen ohne users:read (#3817). */
@@ -202,6 +196,8 @@ export const tenantDailyKeys = {
    */
   rosterDeviations: (periodId: string, freshReadID?: string | null) =>
     `roster-deviations-${periodId}${freshReadID ? `-connect-${freshReadID}` : ""}`,
+  rosterDeviationCount: (periodId: string) =>
+    `${tenantDailyKeys.rosterDeviations(periodId)}-count`,
   /** Vertretungsansicht: Termine, Lücken und Personal einer Woche. */
   vertretungWeekFamily: "vertretung-week-",
   vertretungWeek: (from: string, to: string): string =>
@@ -223,6 +219,7 @@ export const tenantDailyKeys = {
   shiftTypes: () => "dienstplan-shift-types",
   /** Offene Entscheidungen über verlängerte Abholzeiten. */
   pickupExtensions: () => "pickup-extensions",
+  pickupExtensionReminders: () => "pickup-extensions-reminders",
   /** Aktivitäten, Kategorien und eigenes Personalprofil der Seite „Aktivitäten“. */
   activitiesOverview: () => "activities-page",
   /** Alle Ansichten und Zeiträume des Team-Kalenders (#7693). */

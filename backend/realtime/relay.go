@@ -374,6 +374,8 @@ func invalidationFromEvent(kind EventType, data EventData) invalidationData {
 	// lives separately from arbitrary source text in the HTTP projection.
 	if kind == EventStaffMessage && data.SenderAccountID != nil && *data.SenderAccountID > 0 {
 		signal.Source = new(data.SenderAccountID.String())
+	} else {
+		signal.Source = closingDaySource(kind, data.Source)
 	}
 	return signal
 }
@@ -386,8 +388,17 @@ func (data invalidationData) eventData(kind EventType) EventData {
 	}
 	if kind == EventStaffMessage {
 		event.SenderAccountID = parseEventID(data.Source)
+	} else {
+		event.Source = closingDaySource(kind, data.Source)
 	}
 	return event
+}
+
+func closingDaySource(kind EventType, source *string) *string {
+	if kind == EventStaffingDeviationChanged && source != nil && *source == "closing_days" {
+		return source
+	}
+	return nil
 }
 
 func numericID(id *string) *string {
@@ -475,7 +486,7 @@ func invalidationReason(reason *string) *string {
 
 func relayEventType(kind EventType) bool {
 	switch kind {
-	case EventStudentCheckIn, EventStudentCheckOut, EventStudentUpdated, EventStudentCompanionsChanged, EventBulkStudentCheckOut, EventBulkStudentCheckIn, EventActivityStart, EventActivityEnd, EventActivityUpdate, EventInstanceStarted, EventInstanceCompleted, EventInstanceCancelled, EventInstanceOverdue, EventStaffingDeviationChanged, EventDashboardCountsChanged, EventGroupAccessChanged, EventStaffTimeTrackingChanged, EventActiveSupervisionChanged, EventArrivalScheduleChanged, EventPickupScheduleChanged, EventChangeRequestsChanged, EventStaffNoticesChanged, EventMealPlanChanged, EventCalendarAppointmentsChanged, EventTenantSettingsChanged, EventParentMessage, EventParentMessageRead, EventParentMessageUnreadChanged, EventStaffMessage, EventParentChildUpdated, EventClassDayChanged, EventNotificationFeedChanged:
+	case EventStudentCheckIn, EventStudentCheckOut, EventStudentUpdated, EventStudentCompanionsChanged, EventBulkStudentCheckOut, EventBulkStudentCheckIn, EventActivityStart, EventActivityEnd, EventActivityUpdate, EventInstanceStarted, EventInstanceCompleted, EventInstanceCancelled, EventInstanceOverdue, EventStaffingDeviationChanged, EventDashboardCountsChanged, EventGroupAccessChanged, EventStaffTimeTrackingChanged, EventStaffLeaveChanged, EventActiveSupervisionChanged, EventArrivalScheduleChanged, EventPickupScheduleChanged, EventChangeRequestsChanged, EventStaffNoticesChanged, EventMealPlanChanged, EventCalendarAppointmentsChanged, EventTenantSettingsChanged, EventParentMessage, EventParentMessageRead, EventParentMessageUnreadChanged, EventStaffMessage, EventParentChildUpdated, EventClassDayChanged, EventNotificationFeedChanged:
 		return true
 	default:
 		return false

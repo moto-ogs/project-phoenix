@@ -42,7 +42,7 @@ vi.mock("~/lib/tenant-router", () => ({
 vi.mock("~/components/messaging/new-group-message-modal", () => ({
   NewGroupMessageModal: () => <div>Formular Gruppennachricht</div>,
 }));
-import GroupMessagesPage from "./page";
+import GroupMessagesPage from "./page-content";
 
 /**
  * Findet die Statuszeile aus genau diesen Angaben. Die Angaben stehen ohne

@@ -1,0 +1,1096 @@
+"use client";
+
+import { useOperatorAccountPages } from "~/lib/operator/use-account-pages";
+
+import { useAccessControlledData } from "~/lib/hooks/use-access-controlled-data";
+import { operatorProvisioningKeys } from "~/lib/swr/portal-keys";
+import { useActionOn } from "~/lib/swr/read-draft";
+
+import {
+  Suspense,
+  use,
+  useCallback,
+  useLayoutEffect,
+  useMemo,
+  useState,
+} from "react";
+// eslint-disable-next-line no-restricted-imports -- operator pages are not tenant-scoped
+import {
+  revalidateOrThrow,
+  useSWRAuth,
+  useInvalidateMatching,
+} from "~/lib/swr";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { operatorProvisioningService } from "~/lib/operator/provisioning-api";
+import type {
+  OperatorDevice,
+  OperatorPerson,
+  OrgAccount,
+  OrganizationSummary,
+  SchoolAccount,
+  SchoolSummary,
+} from "~/lib/operator/provisioning-helpers";
+import {
+  summaryToOrganization,
+  summaryToSchool,
+} from "~/lib/operator/provisioning-helpers";
+import {
+  EntityStats,
+  EntityStatusLine,
+} from "~/components/operator/entity-head";
+import { TenantPage } from "~/components/ui/tenant-page";
+import { AccountsTable } from "~/components/operator/accounts-table";
+import { DevicesTable } from "~/components/operator/devices-table";
+import { DeleteDeviceModal } from "~/components/operator/delete-device-modal";
+import { useDeviceBlocking } from "~/components/operator/use-device-blocking";
+import { TransferDeviceModal } from "~/components/operator/transfer-device-modal";
+import { DeletePersonModal } from "~/components/operator/delete-person-modal";
+import { PersonsTable } from "~/components/operator/persons-table";
+import { DataTableStatusBadge } from "~/components/ui/data-table";
+import { Button, ButtonLink } from "~/components/ui/button";
+import { EmptyState } from "~/components/ui/empty-state";
+import { SectionCard } from "~/components/ui/section-card";
+import { CaregiverCapabilityModal } from "~/components/teachers/caregiver-capability-modal";
+import { MFAAdminOverrideModal } from "~/components/auth/mfa-admin-override-modal";
+import { useSetBreadcrumb } from "~/lib/breadcrumb-context";
+import { LoadErrorAlert } from "~/components/ui/form-error-alert";
+import { useApiErrorDisplay } from "~/contexts/ToastContext";
+import {
+  readStateWaitReason,
+  useReadDraftLoadError,
+  useSwrLoadError,
+} from "~/lib/hooks/use-swr-load-error";
+import {
+  STALE_DATA_SUFFIX,
+  useRefreshAfterWrite,
+} from "~/lib/hooks/use-refresh-after-write";
+import { formatCount } from "~/lib/format-utils";
+import { createLogger } from "~/lib/logger";
+import { PlusIcon } from "~/app/operator/provisioning/provisioning-shared";
+import { EditSchoolModal } from "~/app/operator/provisioning/edit-school-modal";
+import { ChildQuotaModal } from "~/app/operator/provisioning/child-quota-modal";
+import { DeviceSlotsModal } from "~/app/operator/provisioning/device-slots-modal";
+import { DeviceSlotsCard } from "~/components/operator/device-slots-card";
+import { childQuotaLimit } from "~/lib/operator/child-quota";
+import { InviteAdminModal } from "~/app/operator/provisioning/invite-admin-modal";
+import { CreateAccountModal } from "~/app/operator/provisioning/create-account-modal";
+import { CreateDeviceModal } from "~/app/operator/provisioning/create-device-modal";
+import { SetApiKeyModal } from "~/app/operator/provisioning/set-api-key-modal";
+import { useSoftDeletable } from "~/app/operator/provisioning/soft-delete-shared";
+import { SchoolSoftDeleteModal } from "~/app/operator/provisioning/operator-entity-modals";
+import { StatusColorBadge } from "~/components/ui/status-color-badge";
+import { LOCATION_COLORS } from "~/lib/location-helper";
+
+const logger = createLogger({ component: "OperatorSchoolDetailPage" });
+
+const TAB_ITEMS = [
+  { id: "uebersicht", label: "Übersicht" },
+  { id: "konten", label: "Konten" },
+  { id: "geraete", label: "Geräte" },
+  { id: "personen", label: "Personen" },
+] as const;
+
+type TabId = (typeof TAB_ITEMS)[number]["id"];
+
+interface PageProps {
+  readonly params: Promise<{ slug: string; schoolSlug: string }>;
+}
+
+function isTabId(value: string | null | undefined): value is TabId {
+  return TAB_ITEMS.some((t) => t.id === value);
+}
+
+export default function OperatorSchoolDetailPage({ params }: PageProps) {
+  return (
+    <Suspense fallback={null}>
+      <OperatorSchoolDetailPageContent params={params} />
+    </Suspense>
+  );
+}
+
+function OperatorSchoolDetailPageContent({ params }: PageProps) {
+  const { slug, schoolSlug } = use(params);
+  const { status } = useSession();
+  const invalidate = useInvalidateMatching();
+  const isAuthenticated = status === "authenticated";
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get("tab");
+  const activeTab: TabId = isTabId(tabParam) ? tabParam : "uebersicht";
+  const [caregiverAccount, setCaregiverAccount] = useState<
+    SchoolAccount | OrgAccount | null
+  >(null);
+  const [caregiverSchoolContext, setCaregiverSchoolContext] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+  const [mfaAccount, setMfaAccount] = useState<
+    SchoolAccount | OrgAccount | null
+  >(null);
+  const [mfaSchoolContext, setMfaSchoolContext] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+  const [editSchoolOpen, setEditSchoolOpen] = useState(false);
+  const [childQuotaOpen, setChildQuotaOpen] = useState(false);
+  const [deviceSlotsOpen, setDeviceSlotsOpen] = useState(false);
+  const { show: showToggleError } = useApiErrorDisplay();
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [createAccountOpen, setCreateAccountOpen] = useState(false);
+  const [createDeviceOpen, setCreateDeviceOpen] = useState(false);
+  const [setKeyDevice, setSetKeyDevice] = useState<OperatorDevice | null>(null);
+  const [transferDevice, setTransferDevice] = useState<OperatorDevice | null>(
+    null,
+  );
+  const [deleteDevice, setDeleteDevice] = useState<OperatorDevice | null>(null);
+  const [deletePersonTarget, setDeletePersonTarget] =
+    useState<OperatorPerson | null>(null);
+
+  const currentTabSearch =
+    activeTab === "uebersicht" ? "" : `?tab=${activeTab}`;
+
+  const setActiveTab = useCallback(
+    (next: TabId) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (next === "uebersicht") {
+        params.delete("tab");
+      } else {
+        params.set("tab", next);
+      }
+      const qs = params.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    },
+    [pathname, router, searchParams],
+  );
+
+  const {
+    data: cachedOrganizations,
+    error: organizationsError,
+    mutate: mutateOrganizations,
+  } = useSWRAuth(
+    isAuthenticated ? operatorProvisioningKeys.organizationSummaries() : null,
+    () => operatorProvisioningService.listOrganizationSummaries(),
+    {
+      keepPreviousData: false,
+      revalidateOnFocus: false,
+      dedupingInterval: 5000,
+    },
+  );
+  const { data: organizations, accessRefused: organizationsAccessRefused } =
+    useAccessControlledData(
+      isAuthenticated ? operatorProvisioningKeys.organizationSummaries() : null,
+      cachedOrganizations,
+      organizationsError,
+    );
+
+  const organization: OrganizationSummary | undefined = useMemo(
+    () => organizations?.find((item) => item.slug === slug),
+    [organizations, slug],
+  );
+
+  const activeOrganizations = useMemo(
+    () =>
+      (organizations ?? [])
+        .filter((item) => item.deletedAt == null)
+        .map(summaryToOrganization),
+    [organizations],
+  );
+
+  const schoolsRead = useSWRAuth(
+    isAuthenticated ? operatorProvisioningKeys.schoolSummaries() : null,
+    () => operatorProvisioningService.listSchoolSummaries(),
+    {
+      keepPreviousData: false,
+      revalidateOnFocus: false,
+      dedupingInterval: 5000,
+    },
+  );
+  const {
+    data: cachedSchools,
+    error: schoolsError,
+    isLoading: schoolsLoading,
+    mutate: mutateSchools,
+  } = schoolsRead;
+  // A write starts from the school as stored now. revalidateOrThrow, not
+  // mutate: `mutate()` resolves with the old list when the read fails, and
+  // `mutate(undefined, …)` empties the cache and resolves to undefined (#7780).
+  const readCurrentSchool = useCallback(
+    async (id: string): Promise<SchoolSummary> => {
+      const fresh = await revalidateOrThrow(schoolsRead);
+      const current = fresh.find((item) => item.id === id);
+      if (!current) throw new Error("school not found after refresh");
+      return current;
+    },
+    [schoolsRead],
+  );
+  const { data: schools, accessRefused: schoolsAccessRefused } =
+    useAccessControlledData(
+      isAuthenticated ? operatorProvisioningKeys.schoolSummaries() : null,
+      cachedSchools,
+      schoolsError,
+    );
+
+  const school: SchoolSummary | undefined = useMemo(
+    () =>
+      schools?.find(
+        (item) =>
+          item.slug === schoolSlug && item.organizationId === organization?.id,
+      ),
+    [schoolSlug, schools, organization?.id],
+  );
+
+  useSetBreadcrumb({ pageTitle: school?.name ?? "Schule" });
+
+  // What the school still lacks (#7174); the edit dialog completes it. A
+  // failed read leaves the dialog without the hint, never with a wrong one.
+  const {
+    data: requiredDetails,
+    error: requiredDetailsError,
+    mutate: mutateRequiredDetails,
+  } = useSWRAuth(
+    isAuthenticated ? operatorProvisioningKeys.schoolRequiredDetails() : null,
+    () => operatorProvisioningService.listSchoolRequiredDetails(),
+    { revalidateOnFocus: false, dedupingInterval: 5000 },
+  );
+  const schoolRequiredDetails = useMemo(
+    () => requiredDetails?.find((item) => item.schoolId === school?.id),
+    [requiredDetails, school?.id],
+  );
+
+  const refreshSchoolDetail = useCallback(async () => {
+    await Promise.all([
+      mutateOrganizations(),
+      mutateSchools(),
+      invalidate(
+        (key) =>
+          operatorProvisioningKeys.summaryChanges(key) &&
+          key !== operatorProvisioningKeys.organizationSummaries() &&
+          key !== operatorProvisioningKeys.schoolSummaries(),
+      ),
+    ]);
+  }, [mutateOrganizations, mutateSchools, invalidate]);
+
+  const accountsActive =
+    activeTab === "konten" && isAuthenticated && school != null;
+  const {
+    rows: schoolAccounts,
+    error: accountsError,
+    isLoading: accountsLoading,
+    accessRefused: schoolAccountsAccessRefused,
+    refresh: mutateSchoolAccounts,
+    serverSort: accountsSort,
+    moreAction: moreAccounts,
+  } = useOperatorAccountPages(
+    { kind: "school", id: school?.id ?? "" },
+    accountsActive,
+  );
+
+  const devicesActive =
+    activeTab === "geraete" && isAuthenticated && school != null;
+  const {
+    data: cachedSchoolDevices,
+    error: devicesError,
+    isLoading: devicesLoading,
+    mutate: mutateSchoolDevices,
+  } = useSWRAuth(
+    devicesActive ? operatorProvisioningKeys.schoolDevices(school?.id) : null,
+    () => operatorProvisioningService.listSchoolDevices(school?.id ?? ""),
+    {
+      keepPreviousData: false,
+      revalidateOnFocus: false,
+      dedupingInterval: 5000,
+    },
+  );
+  const { data: schoolDevices, accessRefused: schoolDevicesAccessRefused } =
+    useAccessControlledData(
+      devicesActive ? operatorProvisioningKeys.schoolDevices(school?.id) : null,
+      cachedSchoolDevices,
+      devicesError,
+    );
+
+  const personsActive =
+    activeTab === "personen" && isAuthenticated && school != null;
+  const {
+    data: cachedSchoolPersons,
+    error: personsError,
+    isLoading: personsLoading,
+    mutate: mutateSchoolPersons,
+  } = useSWRAuth(
+    personsActive ? operatorProvisioningKeys.schoolPersons(school?.id) : null,
+    () => operatorProvisioningService.listSchoolPersons(school?.id ?? ""),
+    {
+      keepPreviousData: false,
+      revalidateOnFocus: false,
+      dedupingInterval: 5000,
+    },
+  );
+  const { data: schoolPersons, accessRefused: schoolPersonsAccessRefused } =
+    useAccessControlledData(
+      personsActive ? operatorProvisioningKeys.schoolPersons(school?.id) : null,
+      cachedSchoolPersons,
+      personsError,
+    );
+
+  // PWA standalone usage (#2189): one of the figures on the overview tab.
+  const {
+    data: cachedPwaUsage,
+    error: pwaUsageError,
+    mutate: mutatePwaUsage,
+  } = useSWRAuth(
+    activeTab === "uebersicht" && isAuthenticated && school != null
+      ? operatorProvisioningKeys.schoolPwaUsage(school.id)
+      : null,
+    () => operatorProvisioningService.getSchoolPWAUsage(school?.id ?? ""),
+    {
+      keepPreviousData: false,
+      revalidateOnFocus: false,
+      dedupingInterval: 5000,
+    },
+  );
+  const { data: pwaUsage } = useAccessControlledData(
+    activeTab === "uebersicht" && isAuthenticated && school != null
+      ? operatorProvisioningKeys.schoolPwaUsage(school.id)
+      : null,
+    cachedPwaUsage,
+    pwaUsageError,
+  );
+
+  // One alert for the page head: the provider and school lists it is built
+  // from, and the app usage it shows.
+  const headLoadError = useSwrLoadError(
+    organizationsError ?? schoolsError,
+    "die Übersicht der Schule",
+    () => void refreshSchoolDetail(),
+  );
+  const requiredDetailsLoadError = useSwrLoadError(
+    requiredDetailsError,
+    "die fehlenden Pflichtangaben",
+    () => void mutateRequiredDetails(),
+  );
+  const pwaUsageLoadError = useSwrLoadError(
+    pwaUsageError,
+    "die Auswertung der App-Nutzung",
+    () => void mutatePwaUsage(),
+  );
+  const accountsLoadError = useSwrLoadError(
+    accountsError,
+    "die Liste der Konten",
+    () => void mutateSchoolAccounts(),
+    schoolAccounts?.length ? STALE_DATA_SUFFIX : undefined,
+  );
+  const devicesLoadError = useSwrLoadError(
+    devicesError,
+    "die Liste der Geräte",
+    () => void mutateSchoolDevices(),
+    schoolDevices?.length ? STALE_DATA_SUFFIX : undefined,
+  );
+  const personsLoadError = useSwrLoadError(
+    personsError,
+    "die Liste der Personen",
+    () => void mutateSchoolPersons(),
+    schoolPersons?.length ? STALE_DATA_SUFFIX : undefined,
+  );
+
+  // A write's reload runs after the write; its failure is a load error above
+  // the data it reloads, also after the dialog closed (#6652).
+  const statusAfterWrite = useRefreshAfterWrite(
+    "die Anzeige der Schule",
+    refreshSchoolDetail,
+  );
+  const editAfterWrite = useRefreshAfterWrite(
+    "die Anzeige der Schule",
+    async () => {
+      const [refreshedOrganizations] = await Promise.all([
+        mutateOrganizations(),
+        mutateSchools(),
+        mutateRequiredDetails(),
+      ]);
+      const refreshedSchools =
+        await operatorProvisioningService.listSchoolSummaries();
+      const updatedSchool = refreshedSchools.find(
+        (item) => item.id === school?.id,
+      );
+      if (!updatedSchool) {
+        return;
+      }
+      const targetOrganization =
+        refreshedOrganizations?.find(
+          (item) => item.id === updatedSchool.organizationId,
+        ) ??
+        organizations?.find((item) => item.id === updatedSchool.organizationId);
+      if (!targetOrganization) {
+        return;
+      }
+      const nextPath = `/operator/organizations/${encodeURIComponent(targetOrganization.slug)}/schools/${encodeURIComponent(updatedSchool.slug)}${currentTabSearch}`;
+      const currentPath = `/operator/organizations/${encodeURIComponent(slug)}/schools/${encodeURIComponent(schoolSlug)}${currentTabSearch}`;
+      if (nextPath !== currentPath) {
+        router.replace(nextPath);
+      }
+    },
+  );
+  const accountsAfterWrite = useRefreshAfterWrite(
+    "die Anzeige der Konten",
+    () => mutateSchoolAccounts(),
+  );
+  const devicesAfterWrite = useRefreshAfterWrite("die Anzeige der Geräte", () =>
+    Promise.all([mutateSchoolDevices(), refreshSchoolDetail()]),
+  );
+  const setDeviceBlocked = useDeviceBlocking(devicesAfterWrite.refresh);
+  const personsAfterWrite = useRefreshAfterWrite(
+    "die Anzeige der Personen",
+    () => Promise.all([mutateSchoolPersons(), refreshSchoolDetail()]),
+  );
+
+  const selectedSchoolForTable = useMemo(
+    () => (school ? summaryToSchool(school) : null),
+    [school],
+  );
+
+  const transferSchools = useMemo(
+    () =>
+      (schools ?? [])
+        .filter(
+          (item) =>
+            item.organizationId === organization?.id &&
+            item.active &&
+            item.deletedAt == null,
+        )
+        .map(summaryToSchool),
+    [schools, organization?.id],
+  );
+
+  const openCaregiverModal = useCallback(
+    (
+      account: SchoolAccount | OrgAccount,
+      schoolContext: { id: string; name: string } | null,
+    ) => {
+      setCaregiverAccount(account);
+      setCaregiverSchoolContext(schoolContext);
+    },
+    [],
+  );
+
+  const openMFAModal = useCallback(
+    (
+      account: SchoolAccount | OrgAccount,
+      schoolContext: { id: string; name: string } | null,
+    ) => {
+      setMfaAccount(account);
+      setMfaSchoolContext(schoolContext);
+    },
+    [],
+  );
+
+  // From a refusal until the stored school is read, the badge sends
+  // nothing: it still carries the refused version (ADR 0311, rule 4). Any
+  // read of another version lifts that, also after a failed read.
+  const toggle = useActionOn(
+    {
+      opening: school?.id ?? null,
+      data: school,
+      reload: () => readCurrentSchool(school?.id ?? ""),
+    },
+    { token: (read) => read.version },
+  );
+  const toggleLoadError = useReadDraftLoadError(
+    toggle,
+    "die Anzeige der Schule",
+  );
+  const toggleWait = readStateWaitReason(toggle.status);
+  const { submit: submitToggle } = toggle;
+  const handleToggleSchoolActive = useCallback(async () => {
+    if (!school) return;
+    // The route replaces every field: the toggle sends the school as shown
+    // with its version (ADR 0311), so a change since is refused, never
+    // undone, and the refusal shows the stored school.
+    const result = await submitToggle(() =>
+      operatorProvisioningService.updateSchool(school.id, {
+        organization_id: school.organizationId,
+        name: school.name,
+        slug: school.slug,
+        subdomain: school.subdomain,
+        address: school.address,
+        city: school.city,
+        zip: school.zip,
+        phone: school.phone,
+        email: school.email,
+        active: !school.active,
+        hidden: school.hidden,
+        expected_version: school.version,
+      }),
+    );
+    if (!result.ok) {
+      if (result.skipped) return;
+      logger.warn("school_toggle_active_failed", {
+        error:
+          result.error instanceof Error
+            ? result.error.message
+            : String(result.error),
+      });
+      // No retry: a repeat after an unknown outcome could switch the school
+      // back.
+      void showToggleError(result.error, {
+        object: "die Änderung des Status",
+        reload: result.reload,
+      });
+      return;
+    }
+    await statusAfterWrite.refresh();
+  }, [school, submitToggle, showToggleError, statusAfterWrite]);
+
+  const schoolDelete = useSoftDeletable<SchoolSummary>({
+    softDeleteFn: operatorProvisioningService.softDeleteSchool,
+    restoreFn: operatorProvisioningService.restoreSchool,
+    mutateList: refreshSchoolDetail,
+    errorObjects: {
+      softDelete: "das Löschen der Schule",
+      restore: "die Wiederherstellung der Schule",
+    },
+    logEventPrefix: "school",
+    reloadObject: "die Anzeige der Schule",
+    onAfterSoftDelete: async () => {
+      router.push(
+        `/operator/organizations/${encodeURIComponent(slug)}?tab=schulen`,
+      );
+    },
+  });
+
+  const handleTabValueChange = useCallback(
+    (value: string) => {
+      if (isTabId(value)) setActiveTab(value);
+    },
+    [setActiveTab],
+  );
+
+  const headerStats = useMemo(() => {
+    if (!school) return [];
+    // Honest wording: this counts standalone-mode usage in the window, never
+    // "installed" — the browser offers no reliable install signal.
+    const pwaTooltip =
+      "App vom Startbildschirm aus benutzt (Standalone-Modus), letzte 30 Tage. Zählt keine Nutzung im Browser-Tab.";
+    const pwaValue = (usage?: {
+      standaloneUsers: number;
+      eligibleUsers: number;
+    }) =>
+      usage
+        ? `${formatCount(usage.standaloneUsers)} von ${formatCount(usage.eligibleUsers)}`
+        : "–";
+    // Kinderkontingent next to the Kontingentzahl (#3568), so the moto team
+    // sees at a glance when a school needs another bundle.
+    const quotaLimit = childQuotaLimit({
+      bundles: school.childQuotaBundles,
+      bundleSize: school.childQuotaBundleSize,
+    });
+    const overQuota =
+      quotaLimit !== null && school.childQuotaCount > quotaLimit;
+    return [
+      { label: "Konten", value: formatCount(school.kontenCount) },
+      { label: "Geräte", value: formatCount(school.geraeteCount) },
+      {
+        // Geräteplätze (#2312): belegt von gekauft, orange wenn voll.
+        label: "Geräteplätze",
+        value:
+          school.deviceSlots === null
+            ? "Keine Grenze"
+            : `${formatCount(school.geraeteCount)} von ${formatCount(school.deviceSlots)}`,
+        tone:
+          school.deviceSlots !== null &&
+          school.geraeteCount >= school.deviceSlots
+            ? ("orange" as const)
+            : ("neutral" as const),
+      },
+      { label: "Personen", value: formatCount(school.personenCount) },
+      {
+        label: "Kinderkontingent",
+        value: quotaLimit === null ? "Keine Grenze" : formatCount(quotaLimit),
+      },
+      {
+        label: "Kontingentzahl",
+        value: formatCount(school.childQuotaCount),
+        tone: overQuota ? ("orange" as const) : ("neutral" as const),
+      },
+      {
+        label: "App-Nutzung Mitarbeitende",
+        value: pwaValue(pwaUsage?.staff),
+        title: pwaTooltip,
+      },
+      {
+        label: "App-Nutzung Eltern",
+        value: pwaValue(pwaUsage?.parent),
+        title: pwaTooltip,
+      },
+    ];
+  }, [school, pwaUsage]);
+
+  const schoolHeaderActions = useMemo(
+    () => (
+      <>
+        <button
+          type="button"
+          onClick={() => void handleToggleSchoolActive()}
+          disabled={!toggle.canSubmit}
+          className="cursor-pointer disabled:cursor-not-allowed"
+          title={toggleWait ?? (school?.active ? "Deaktivieren" : "Aktivieren")}
+          aria-label={school?.active ? "Deaktivieren" : "Aktivieren"}
+        >
+          <DataTableStatusBadge active={school?.active ?? false} />
+        </button>
+        <Button
+          type="button"
+          variant="outline"
+          size="compact"
+          onClick={() => setEditSchoolOpen(true)}
+        >
+          Bearbeiten
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="compact"
+          onClick={() => setChildQuotaOpen(true)}
+        >
+          Kinderkontingent
+        </Button>
+        <ButtonLink
+          variant="outline"
+          size="compact"
+          href={
+            school
+              ? `/operator/schools/${school.id}/settings?back=${encodeURIComponent(
+                  `/operator/organizations/${slug}/schools/${schoolSlug}${currentTabSearch}`,
+                )}`
+              : "#"
+          }
+        >
+          Einstellungen
+        </ButtonLink>
+        <Button
+          type="button"
+          variant="outline_danger"
+          size="compact"
+          onClick={() => {
+            if (school) {
+              schoolDelete.setDeleteTarget(school);
+            }
+          }}
+        >
+          Löschen
+        </Button>
+      </>
+    ),
+    [
+      currentTabSearch,
+      handleToggleSchoolActive,
+      school,
+      schoolDelete,
+      toggle.canSubmit,
+      toggleWait,
+      schoolSlug,
+      slug,
+    ],
+  );
+
+  const tabActions = useMemo(() => {
+    if (activeTab === "konten") {
+      return (
+        <>
+          <Button
+            type="button"
+            variant="primary"
+            size="compact"
+            onClick={() => setCreateAccountOpen(true)}
+          >
+            <PlusIcon />
+            Konto erstellen
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="compact"
+            onClick={() => setInviteOpen(true)}
+          >
+            Admin einladen
+          </Button>
+        </>
+      );
+    }
+
+    if (activeTab === "geraete") {
+      return (
+        <Button
+          type="button"
+          variant="primary"
+          size="compact"
+          onClick={() => setCreateDeviceOpen(true)}
+        >
+          <PlusIcon />
+          Neues Gerät
+        </Button>
+      );
+    }
+
+    return null;
+  }, [activeTab]);
+
+  const organizationBack = {
+    href: `/operator/organizations/${encodeURIComponent(slug)}?tab=schulen`,
+    label: "Zurück zum Träger",
+  };
+
+  const {
+    setDeleteTarget: setSchoolDeleteTarget,
+    setRestoreTarget: setSchoolRestoreTarget,
+  } = schoolDelete;
+  const headRefused = organizationsAccessRefused || schoolsAccessRefused;
+  useLayoutEffect(() => {
+    if (headRefused) {
+      setEditSchoolOpen(false);
+      setChildQuotaOpen(false);
+      setDeviceSlotsOpen(false);
+      setSchoolDeleteTarget(null);
+      setSchoolRestoreTarget(null);
+    }
+    if (headRefused || schoolAccountsAccessRefused) {
+      setInviteOpen(false);
+      setCreateAccountOpen(false);
+      setCaregiverAccount(null);
+      setCaregiverSchoolContext(null);
+      setMfaAccount(null);
+      setMfaSchoolContext(null);
+    }
+    if (headRefused || schoolDevicesAccessRefused) {
+      setCreateDeviceOpen(false);
+      setSetKeyDevice(null);
+      setTransferDevice(null);
+      setDeleteDevice(null);
+    }
+    if (headRefused || schoolPersonsAccessRefused) setDeletePersonTarget(null);
+  }, [
+    headRefused,
+    schoolAccountsAccessRefused,
+    schoolDevicesAccessRefused,
+    schoolPersonsAccessRefused,
+    setSchoolDeleteTarget,
+    setSchoolRestoreTarget,
+  ]);
+
+  if (!school && headLoadError) {
+    return (
+      <TenantPage
+        title="Schule"
+        back
+        backHref={organizationBack.href}
+        backLabel={organizationBack.label}
+        error={headLoadError}
+      />
+    );
+  }
+
+  if (
+    !school &&
+    (!organizations ||
+      schoolsLoading ||
+      ((organizationsError || schoolsError) && !headLoadError))
+  ) {
+    return (
+      <TenantPage
+        title="Schule"
+        back
+        backHref={organizationBack.href}
+        backLabel={organizationBack.label}
+        loading
+        loadingLabel="Schule wird geladen"
+      />
+    );
+  }
+
+  if (!organization) {
+    logger.warn("organization_not_found_by_slug", { slug });
+    return (
+      <TenantPage
+        title="Schule"
+        back
+        backHref="/operator/organizations"
+        backLabel="Zurück zu den Trägern"
+        empty={{ title: "Träger nicht gefunden." }}
+      />
+    );
+  }
+
+  if (!school) {
+    logger.warn("school_not_found_by_slug", { slug, schoolSlug });
+    return (
+      <TenantPage
+        title="Schule"
+        back
+        backHref={organizationBack.href}
+        backLabel={organizationBack.label}
+        empty={{ title: "Schule nicht gefunden." }}
+      />
+    );
+  }
+
+  return (
+    <TenantPage
+      title={school.name}
+      back
+      backHref={organizationBack.href}
+      backLabel={organizationBack.label}
+      stats={
+        <EntityStatusLine
+          subdomain={school.subdomain}
+          active={school.active}
+          subtitle={
+            <span className="flex flex-wrap items-center gap-2">
+              <span>
+                Träger:{" "}
+                <span className="font-medium text-gray-800">
+                  {organization.name}
+                </span>
+              </span>
+              {school.hidden && (
+                <StatusColorBadge
+                  label="Verborgen"
+                  color={LOCATION_COLORS.WARNING}
+                  compact
+                />
+              )}
+            </span>
+          }
+        />
+      }
+      actions={
+        <>
+          {schoolHeaderActions}
+          {tabActions}
+        </>
+      }
+      tabs={{
+        value: activeTab,
+        onChange: handleTabValueChange,
+        inUrl: true,
+        items: TAB_ITEMS.map((tab) => ({
+          value: tab.id,
+          label: tab.label,
+        })),
+        label: "Bereiche der Schule",
+      }}
+      overlays={
+        <>
+          {mfaAccount && mfaSchoolContext ? (
+            <MFAAdminOverrideModal
+              isOpen={true}
+              onClose={() => {
+                setMfaAccount(null);
+                setMfaSchoolContext(null);
+              }}
+              target={{ kind: "operator", schoolId: mfaSchoolContext.id }}
+              accountId={mfaAccount.accountId}
+              accountLabel={`${mfaAccount.firstName} ${mfaAccount.lastName}`.trim()}
+            />
+          ) : null}
+
+          {caregiverAccount && caregiverSchoolContext ? (
+            <CaregiverCapabilityModal
+              isOpen={true}
+              onClose={() => {
+                setCaregiverAccount(null);
+                setCaregiverSchoolContext(null);
+              }}
+              scope="operator"
+              accountId={caregiverAccount.accountId}
+              accountLabel={`${caregiverAccount.firstName} ${caregiverAccount.lastName}`.trim()}
+              schoolId={caregiverSchoolContext.id}
+              schoolName={caregiverSchoolContext.name}
+              onUpdated={accountsAfterWrite.refresh}
+            />
+          ) : null}
+
+          {schoolDelete.deleteTarget && (
+            <SchoolSoftDeleteModal
+              target={schoolDelete.deleteTarget}
+              errorMessage={schoolDelete.softDeleteError}
+              isProcessing={schoolDelete.isProcessing}
+              onCancel={() => schoolDelete.setDeleteTarget(null)}
+              onConfirm={() => void schoolDelete.handleSoftDelete()}
+            />
+          )}
+
+          <ChildQuotaModal
+            isOpen={childQuotaOpen}
+            onClose={() => setChildQuotaOpen(false)}
+            school={school}
+            loadCurrentSchool={() => readCurrentSchool(school.id)}
+            onUpdated={refreshSchoolDetail}
+          />
+
+          <DeviceSlotsModal
+            isOpen={deviceSlotsOpen}
+            onClose={() => setDeviceSlotsOpen(false)}
+            school={school}
+            onUpdated={refreshSchoolDetail}
+          />
+
+          <EditSchoolModal
+            isOpen={editSchoolOpen}
+            onClose={() => setEditSchoolOpen(false)}
+            school={summaryToSchool(school)}
+            reload={async () =>
+              summaryToSchool(await readCurrentSchool(school.id))
+            }
+            requiredDetails={schoolRequiredDetails}
+            organizations={activeOrganizations}
+            onUpdated={editAfterWrite.refresh}
+          />
+
+          <CreateAccountModal
+            isOpen={createAccountOpen}
+            onClose={() => setCreateAccountOpen(false)}
+            schoolId={school.id}
+            schoolName={school.name}
+            onCreated={() => {
+              void Promise.all([mutateSchoolAccounts(), refreshSchoolDetail()]);
+            }}
+          />
+
+          <InviteAdminModal
+            isOpen={inviteOpen}
+            onClose={() => setInviteOpen(false)}
+            schoolId={school.id}
+            schoolName={school.name}
+          />
+
+          <CreateDeviceModal
+            isOpen={createDeviceOpen}
+            onClose={() => setCreateDeviceOpen(false)}
+            schools={[summaryToSchool(school)]}
+            onCreated={() => {
+              void Promise.all([mutateSchoolDevices(), refreshSchoolDetail()]);
+            }}
+          />
+
+          <SetApiKeyModal
+            isOpen={setKeyDevice !== null}
+            onClose={() => setSetKeyDevice(null)}
+            device={setKeyDevice}
+            onKeySet={() => {
+              void mutateSchoolDevices();
+            }}
+          />
+
+          <TransferDeviceModal
+            device={transferDevice}
+            schools={transferSchools}
+            onClose={() => setTransferDevice(null)}
+            onTransferred={devicesAfterWrite.refresh}
+          />
+
+          <DeleteDeviceModal
+            device={deleteDevice}
+            onClose={() => setDeleteDevice(null)}
+            onDeleted={devicesAfterWrite.refresh}
+          />
+
+          <DeletePersonModal
+            person={deletePersonTarget}
+            onClose={() => setDeletePersonTarget(null)}
+            onDeleted={personsAfterWrite.refresh}
+          />
+        </>
+      }
+    >
+      <LoadErrorAlert error={headLoadError} />
+      <LoadErrorAlert error={requiredDetailsLoadError} />
+      <LoadErrorAlert error={schoolDelete.reloadError} />
+      <LoadErrorAlert error={statusAfterWrite.error} />
+      <LoadErrorAlert error={toggleLoadError} />
+      <LoadErrorAlert error={editAfterWrite.error} />
+
+      {activeTab === "uebersicht" ? (
+        <>
+          <LoadErrorAlert error={pwaUsageLoadError} />
+          <EntityStats stats={headerStats} createdAt={school.createdAt} />
+        </>
+      ) : null}
+
+      {activeTab === "konten" ? (
+        <>
+          <LoadErrorAlert error={accountsLoadError} className="mb-4" />
+          <LoadErrorAlert error={accountsAfterWrite.error} className="mb-4" />
+          {(schoolAccounts === undefined && !accountsLoading) ||
+          (accountsError && !schoolAccounts?.length) ? null : !accountsError &&
+            !accountsLoading &&
+            schoolAccounts?.length === 0 ? (
+            <SectionCard>
+              <EmptyState title="Keine Konten für diese Schule." />
+            </SectionCard>
+          ) : (
+            <AccountsTable
+              accounts={schoolAccounts ?? []}
+              serverSort={accountsSort}
+              moreAction={moreAccounts}
+              isLoading={accountsLoading}
+              selectedSchool={selectedSchoolForTable}
+              onManageCaregiver={openCaregiverModal}
+              onManageMFA={openMFAModal}
+            />
+          )}
+        </>
+      ) : null}
+
+      {activeTab === "geraete" ? (
+        <>
+          <LoadErrorAlert error={devicesLoadError} className="mb-4" />
+          <LoadErrorAlert error={devicesAfterWrite.error} className="mb-4" />
+          <DeviceSlotsCard
+            deviceSlots={school.deviceSlots}
+            occupied={school.geraeteCount}
+            onEdit={() => setDeviceSlotsOpen(true)}
+          />
+          {(schoolDevices === undefined && !devicesLoading) ||
+          (devicesError && !schoolDevices?.length) ? null : !devicesError &&
+            !devicesLoading &&
+            schoolDevices?.length === 0 ? (
+            <SectionCard>
+              <EmptyState title="Keine Geräte für diese Schule." />
+            </SectionCard>
+          ) : (
+            <DevicesTable
+              devices={schoolDevices ?? []}
+              isLoading={devicesLoading}
+              onSetKey={setSetKeyDevice}
+              onTransfer={setTransferDevice}
+              onSetBlocked={(device, blocked) =>
+                void setDeviceBlocked(device, blocked)
+              }
+              onDelete={setDeleteDevice}
+            />
+          )}
+        </>
+      ) : null}
+
+      {activeTab === "personen" ? (
+        <>
+          <LoadErrorAlert error={personsLoadError} className="mb-4" />
+          <LoadErrorAlert error={personsAfterWrite.error} className="mb-4" />
+          {(schoolPersons === undefined && !personsLoading) ||
+          (personsError && !schoolPersons?.length) ? null : !personsError &&
+            !personsLoading &&
+            schoolPersons?.length === 0 ? (
+            <SectionCard>
+              <EmptyState title="Keine Personen für diese Schule." />
+            </SectionCard>
+          ) : (
+            <PersonsTable
+              persons={schoolPersons ?? []}
+              isLoading={personsLoading}
+              onDelete={setDeletePersonTarget}
+            />
+          )}
+        </>
+      ) : null}
+    </TenantPage>
+  );
+}

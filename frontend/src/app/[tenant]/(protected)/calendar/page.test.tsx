@@ -21,6 +21,7 @@ vi.mock("~/components/ui/date-picker", async () =>
 );
 
 const {
+  mockRefreshMailStatus,
   mockUseSWRAuth,
   mockCreateStaffAppointment,
   mockUpdateStaffAppointment,
@@ -35,6 +36,7 @@ const {
   mockGetStaffAppointmentMails,
 } = vi.hoisted(() => ({
   mockGetStaffAppointmentMails: vi.fn(),
+  mockRefreshMailStatus: vi.fn(),
   mockUseSWRAuth: vi.fn(),
   mockCreateStaffAppointment: vi.fn(),
   mockUpdateStaffAppointment: vi.fn(),
@@ -96,6 +98,7 @@ vi.mock("~/lib/swr", async () => {
         ? detail
         : mockUseSWRAuth(key, fetcher, ...options);
     },
+    useTenantMutate: () => mockRefreshMailStatus,
     useSWRPreload:
       () => async (key: string, fetcher: () => Promise<unknown>) => {
         const value = await fetcher();
@@ -165,7 +168,7 @@ import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
 
-import StaffCalendarPage from "./page";
+import StaffCalendarPage from "./page-content";
 
 function render(ui: ReactElement) {
   return rtlRender(ui, { wrapper: ToastProvider });
@@ -761,6 +764,11 @@ describe("StaffCalendarPage", () => {
         "5",
         expect.objectContaining({ start_date: "2026-01-05", send_email: true }),
         "v-5",
+      ),
+    );
+    await waitFor(() =>
+      expect(mockRefreshMailStatus).toHaveBeenCalledWith(
+        "calendar-appointment-mails-5",
       ),
     );
     // Never sends the occurrence date as the new series anchor.

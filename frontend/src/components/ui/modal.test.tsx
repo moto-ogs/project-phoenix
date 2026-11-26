@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { BELOW_SM } from "~/lib/hooks/use-media-query";
 import { render, screen, fireEvent, act } from "@testing-library/react";
-import type { ReactNode } from "react";
+import { Activity, type ReactNode } from "react";
 import { Modal, ConfirmationModal } from "./modal";
 import { ModalProvider } from "./modal-context";
 
@@ -40,6 +40,38 @@ describe("Modal", () => {
     expect(childClose).toHaveBeenCalledOnce();
     expect(parentClose).not.toHaveBeenCalled();
     expect(screen.getByDisplayValue("draft")).toBeInTheDocument();
+  });
+
+  it("cancels a dismissal while hidden and can dismiss the restored draft", async () => {
+    const close = vi.fn();
+    const content = (mode: "visible" | "hidden") => (
+      <TestWrapper>
+        <Activity mode={mode}>
+          <Modal isOpen onClose={close} title="Edit">
+            <input aria-label="Draft" />
+          </Modal>
+        </Activity>
+        <p>Other page</p>
+      </TestWrapper>
+    );
+    const view = render(content("visible"));
+    fireEvent.change(screen.getByRole("textbox", { name: "Draft" }), {
+      target: { value: "Unsent" },
+    });
+    fireEvent.keyDown(document, { key: "Escape" });
+    view.rerender(content("hidden"));
+    expect(screen.getByText("Other page")).toBeVisible();
+    expect(screen.getByRole("dialog", { hidden: true })).not.toBeVisible();
+    await act(async () => vi.advanceTimersByTime(300));
+    expect(close).not.toHaveBeenCalled();
+
+    view.rerender(content("visible"));
+    expect(screen.getByRole("textbox", { name: "Draft" })).toHaveValue(
+      "Unsent",
+    );
+    fireEvent.keyDown(document, { key: "Escape" });
+    await act(async () => vi.advanceTimersByTime(300));
+    expect(close).toHaveBeenCalledOnce();
   });
 
   // #5579: Kopf mit Symbol und Untertitel, ohne eigenen Kopf im Inhalt.

@@ -1,3 +1,4 @@
+import { deriveSupervision } from "~/lib/supervision-derive";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { releaseFakeTimers } from "~/test/clock";
 import { render, screen, fireEvent, act } from "@testing-library/react";
@@ -329,6 +330,7 @@ describe("MobileBottomNav", () => {
     mockUseSearchParams.mockReturnValue(createMockSearchParams());
     mockUseSession.mockReturnValue(createMockSession(false));
     mockUseSupervision.mockReturnValue({
+      ...deriveSupervision(),
       hasGroups: true,
       isSupervising: false,
       isLoadingGroups: false,
@@ -865,6 +867,7 @@ describe("MobileBottomNav", () => {
         ),
       );
       mockUseSupervision.mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: true,
         isSupervising: true,
         isLoadingGroups: false,
@@ -1249,6 +1252,7 @@ describe("MobileBottomNav", () => {
     beforeEach(() => {
       mockIsAdmin.mockReturnValue(false);
       mockUseSupervision.mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: true,
         isSupervising: true,
         isLoadingGroups: false,
@@ -1536,6 +1540,7 @@ describe("MobileBottomNav", () => {
       mockIsAdmin.mockReturnValue(true);
       mockUseSession.mockReturnValue(createMockSession(true));
       mockUseSupervision.mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: true,
         isSupervising: true,
         isLoadingGroups: false,
@@ -1877,6 +1882,7 @@ describe("MobileBottomNav", () => {
   describe("supervision-based visibility", () => {
     it("shows supervision-related links when user has groups", () => {
       mockUseSupervision.mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: true,
         isSupervising: false,
         isLoadingGroups: false,
@@ -1897,6 +1903,7 @@ describe("MobileBottomNav", () => {
 
     it("shows supervision-related links when user is actively supervising", () => {
       mockUseSupervision.mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: false,
         isSupervising: true,
         isLoadingGroups: false,
@@ -1919,6 +1926,7 @@ describe("MobileBottomNav", () => {
       mockIsAdmin.mockReturnValue(true);
       mockUseSession.mockReturnValue(createMockSession(true));
       mockUseSupervision.mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: true,
         isSupervising: true,
         isLoadingGroups: false,
@@ -1941,6 +1949,7 @@ describe("MobileBottomNav", () => {
       mockIsAdmin.mockReturnValue(true);
       mockUseSession.mockReturnValue(createMockSession(true));
       mockUseSupervision.mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: true,
         isSupervising: true,
         isLoadingGroups: false,
@@ -1965,6 +1974,7 @@ describe("MobileBottomNav", () => {
       mockIsAdmin.mockReturnValue(true);
       mockUseSession.mockReturnValue(createMockSession(true));
       mockUseSupervision.mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: false,
         isSupervising: false,
         isLoadingGroups: true,
@@ -1990,6 +2000,7 @@ describe("MobileBottomNav", () => {
       mockIsAdmin.mockReturnValue(true);
       mockUseSession.mockReturnValue(createMockSession(true));
       mockUseSupervision.mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: false,
         isSupervising: true,
         isLoadingGroups: false,
@@ -2014,6 +2025,7 @@ describe("MobileBottomNav", () => {
       mockIsAdmin.mockReturnValue(true);
       mockUseSession.mockReturnValue(createMockSession(true));
       mockUseSupervision.mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: false,
         isSupervising: false,
         isLoadingGroups: false,

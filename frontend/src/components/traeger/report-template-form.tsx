@@ -344,7 +344,7 @@ export function ReportTemplateForm({
           legend="Sozialräume (freiwillig)"
           hint={
             mapped === 0
-              ? "Trage bei jeder Schule ihren Sozialraum ein. Dann zählt der Bericht auch je Sozialraum. Leer heißt: ohne Sozialraum."
+              ? "Trage bei jeder Schule ihren Sozialraum ein. Dann zählt der Bericht auch pro Sozialraum. Leer heißt: ohne Sozialraum."
               : `${mapped} von ${schools.length} Schulen haben einen Sozialraum. Schulen ohne Eintrag zählen unter „Ohne Sozialraum“.`
           }
         >

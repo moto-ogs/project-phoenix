@@ -4,22 +4,19 @@ Use the existing authenticated hooks. Each resource family owns its key,
 parameters and fetcher; pages do not give the same response a new name.
 
 ```tsx
-import { useSWRAuth, useSWRPreload, useInvalidateFamily } from "~/lib/swr";
+import { useSWRAuth, useInvalidateFamily } from "~/lib/swr";
 import { rooms } from "~/lib/swr/rooms";
 
 const params = { page: 1, pageSize: 500 };
 const response = useSWRAuth(rooms.key(params), () => rooms.fetcher(params));
-const preload = useSWRPreload();
 const invalidateFamily = useInvalidateFamily();
 
-// On intent, with the same parameters as the destination:
-// The destination owns load errors; intent must not show an error toast.
-void preload(rooms.key(params), () => rooms.fetcher(params)).catch(
-  () => undefined,
-);
 // After a write, refresh every parameter set, including preload-only keys:
 void invalidateFamily(rooms.family);
 ```
+
+For a page's first display, [seed the existing reader key on the server](../../../../docs/agents/frontend-api.md#first-display-in-a-protected-page).
+Links prefetch the route shell, not the reader's data.
 
 1. Factory keys are **unscoped**. The hooks add the authenticated portal,
    school and account through `scope.ts`. Never give an unscoped key to the
@@ -66,7 +63,10 @@ void invalidateFamily(rooms.family);
    `useTenantMutateMatching([factory.family])` remains available for combined
    invalidations, `useInvalidateMatching()` for a predicate over the unscoped
    key (`() => true` refreshes the whole session). Session boundaries also
-   clear all list overlays.
+   clear all list overlays. For a read shared by local writes and SSE,
+   pass the same `coalesce` channel to union invalidations in one burst.
+   With `expireInactive`, mounted readers refresh and unmounted matching
+   entries are evicted without a request.
 5. Keys describe the **response**, not its screen. Different parameters or
    projections stay separate: system rooms, paginated room lists, the staff
    directory and its teacher projection must not overwrite one another.
@@ -88,7 +88,8 @@ void invalidateFamily(rooms.family);
    `SWRSeedBoundary` only `fallback` and `cacheData`. The hooks copy the
    allowed keys and throw on any other outside production; `use`,
    `provider`, `fallback`, `fetcher`, `compare` and `onErrorRetry` never
-   reach SWR. `onSuccess` and `onError` get the value or failure alone.
+   reach SWR. `onSuccess` and `onError` get the value or failure alone;
+   `onDiscarded` takes no arguments.
 
 Migrated direct readers explicitly retain SWR’s former `keepPreviousData: false`
 default unless they already opted in. Do not carry a previous child, thread or
@@ -242,59 +243,42 @@ shared with the panel, so mounting it does not repeat the request.
 
 ## Parents portal
 
-`useParentChildren`, `useParentFeatures` and `useParentToday` share the parent
-resources between the shell, start page and child page. Features and today's
-status use the sorted `(tenant_id, student_id)` relationship set in their
-factory key, together with the Berlin calendar day for date-dependent flags
-and status. Each relationship is fetched, including siblings at the same
-school; a school's flags never stand in for another child's permissions.
-A non-refusal background failure preserves that child's latest confirmed
-features and status; successful siblings use their fresh answers. Alternating
-partial failures retain successful per-child updates in the current batch error,
-not only the last wholly successful batch. At request start, `readCurrent()` on
-the authenticated reader supplies generation-checked data/error snapshots.
-This capability exposes no cache and immediately returns empty values after a
-scope/data drop or session suspension, including before a React rerender.
-It is optional in the structural response type for compatibility with standard
-SWR-shaped consumers; real authenticated readers always implement it. Without a confirmed value, failed feature lookups stay off and failed
-status lookups use `UNKNOWN_CHILD_TODAY`. Errors remain available for logging
-and cold-load error presentation. Partial results are read only through the
-wrapper's current-error gate (G19). No separate fallback cache is retained:
-access refusal, logout, account or relationship changes discard confirmed and
-partial values together. The private batch failure is not an `ApiError`, so
-refusals cannot restamp its partial results into a newer generation.
-The authenticated wrapper adds `parent:-:<account>`: the parents JWT has no
-school, and account-wide lists can span schools. They must not use a tenant,
-school or operator session. News, message lists and the start-page calendar
-also have one factory key per response.
+The shell, start cards, navigation and child pages read projections of one
+account-scoped `parentKeys.familyStart(berlinDay)` snapshot. Cold entry needs
+one `GET /parent/me/family-start`. On a protected document navigation, the
+layout and page share the server read; the browser claims its result on mount.
+If a promised seed supplies no value, readers of the same scoped key share one
+recovery request, just as they do on a normal cold mount.
+The profile and unrelated feeds are independent. Warm mounts do not fetch
+again. The server authorizes each child separately.
 
-Batch readers expose `hasConfirmedData` for a complete, successful response;
-partial error values are not a confirmed initial response. Pages keep loaded
-content and dialogs mounted after background failures and log those failures.
-Use `useSwrResourceLoadError` from `~/lib/hooks/use-swr-load-error` for this
-shared presentation rule: it accepts SWR resources, blocks only on errors without
-confirmed data, and logs background failures. Empty lists are confirmed data.
-Pass batch readers with their `hasConfirmedData` flag so partial failure payloads
-do not hide an initial load error. Access/scope discards remain the resource
-boundary’s responsibility; the presenter never retains discarded data.
-The load-error path remains for resources that have never loaded successfully.
+A child event narrows that read with `student_id`; an empty answer removes
+only that card. A reconnect or event without an ID replaces the whole roster.
+Child detail resources keep their own keys. The device's Berlin day triggers a
+fresh read. Until it arrives, the roster may stay visible but yesterday's flags
+and statuses do not. The server day governs which fields can be reused. An
+event first seen on a new server day reconciles the whole roster. The server
+supplies the time remaining until Berlin midnight, so an open tab also
+refreshes with a fast or slow clock.
 
-Warm mounts use confirmed data immediately. Revalidating readers refresh an
-unmounted resource after an SSE invalidation; only the session-wide children
-list and profile skip mount revalidation. Requests deduplicate for 60 seconds. Focus recovery is throttled to
-60 seconds; SSE events revalidate the shared resources. Profile, children and
-the start-page feeds start independently, then features and day status start
-in parallel as soon as children are known. The child header still reads the
-complete authorized children list, not a new detail preview or permission seed.
+A failed list is not an empty family. A null card field represents a failed
+read: show the error and reuse confirmed values only for the same relationship
+version, care state and day. Other children keep their fresh values. Without a
+confirmed value, features stay off and status is unknown. The shell retries
+partial reads at most twice, for the affected child alone if there is only
+one. A targeted read respects Retry-After and the active read-rate limit. A
+failed event for an unlisted child can be retried, but cannot add a card or
+surface a sibling error. The SWR scope and generation guard covers every projection; no persistent
+cache holds family data.
 
 The parent API reports `care.child_not_linked` (401/403/404) to the
 authenticated bridge. `care.guardian_permission_denied` triggers eviction only
-for the features and today readers, which check `parent_portal.access` alone.
+for portal-access-only readers, which check `parent_portal.access` alone.
 Action-specific refusals, including document inbox reads and writes, do not
 prove loss of child access. Reads keep their load errors; write actions roll
 back and recheck their still-readable resource (as in #5425).
 It discards the parent resource family through `useDiscardRefusedEntity`,
-revalidates the children list, and broadcasts only account and refusal code
+revalidates the family snapshot, and broadcasts only account and refusal code
 to the other tabs. The API captures the originating account before the request;
 a late refusal cannot evict another account. Business refusals do not evict.
 A changed relationship set also drops derived resources, so removing and later
@@ -337,20 +321,21 @@ optimistic action. The guard exposes no cache or writer and does not change
 SWR's view-bound `onSuccess` semantics. Keep each refused resource's existing
 factory-key predicate; do not clear other readable schools.
 
-## Navigation intent
+## Navigation and seed handoff
 
-Navigation data preloads must use `useSWRPreload` with the destination's exact
-factory key and fetcher. Code prefetch and data prefetch are independent:
-data waits for about 300 ms of pointer intent or keyboard focus (blur cancels).
-Touch starts no load: only a completed single-finger tap, with at most 8 px of
-movement, starts data intent; swipes and cancelled gestures do not.
-Do not preload audited reads, inaccessible resources, or speculative detail
-fields. A failed speculative request must not become the destination's load
-error. Scope changes discard pending answers, including work queued before
-the change. Respect Save-Data, `prefers-reduced-data` and slow connections; bound concurrency.
+Navigation links prefetch only the neutral route shell. Protected page data
+travels with the authorized server seed on navigation, not a second browser
+BFF prefetch. Keep audited openings and any GET with a side effect out of
+that payload. When a page claims a key, the generation-locked handoff uses
+the same key as the browser reader and suppresses a duplicate browser load.
+A missing, failed or expired seed leaves the original retry path in charge.
+If the prefetched Flight payload supplies a promise that cannot settle, an
+open claim follows the real navigation's seed instead. Leaving the boundary
+or changing its session discards the claim through the same generation lock.
 
-`preload(key, fetcher, { intent: true })` is the speculative variant of the
-same locked writer. It skips an already current cached response and removes
+`SWRServerSeed` uses `preload(key, claimSeedValue, { intent: true })` internally
+to offer the server's promise, not to start a BFF request from a link.
+This locked writer skips an already current cached response and removes
 only its own failed preload promise atomically before rejecting, so a later
 page cannot take a promise between failure and cleanup. It runs its ordinary
 loader instead.
@@ -366,8 +351,3 @@ timers were suspended. Timer cleanup requires the original promise identity,
 and an expired pending request cannot trigger a handoff fallback. Expiry only
 evicts intent registry entries, never response data. General preloads retain
 their existing contract.
-The protected tenant shell shares thin fetchers, not page hooks, so data
-intent does not wait for another code chunk. It starts data only after intent. Its queue runs at most three resources concurrently
-and holds at most twelve waiting resources. New intent replaces older queued
-work and unresolved resource selection; queued work waits at most 5 s. Account/school/generation changes
-invalidate the captured writer even while code is loading or work is queued.

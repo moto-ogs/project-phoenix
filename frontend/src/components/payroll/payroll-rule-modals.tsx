@@ -355,7 +355,7 @@ export function CreateSurchargeRuleModal({
           />
         </div>
         <Input
-          label={rateType === "prozent" ? "Prozent" : "Euro je Stunde"}
+          label={rateType === "prozent" ? "Prozent" : "Euro pro Stunde"}
           name="rate_hundredths"
           value={rate}
           onChange={(event) => setRate(event.target.value)}

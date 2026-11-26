@@ -237,7 +237,7 @@ describe("TenantPageSearchRow", () => {
     );
   });
 
-  it("treats an empty multi-select selection as inactive", () => {
+  it("treats an empty or full multi-select selection as inactive", () => {
     const multiSelectFilters: TenantPageSearchRowProps["filters"] = [
       {
         id: "schoolClass",
@@ -266,7 +266,31 @@ describe("TenantPageSearchRow", () => {
     rerender(
       <TenantPageSearchRow
         {...baseProps}
+        filters={[{ ...multiSelectFilters[0]!, value: ["3a"] }]}
+      />,
+    );
+    expect(screen.getByTestId("mobile-filter-button")).toHaveAttribute(
+      "data-has-active-filters",
+      "true",
+    );
+
+    // Every option chosen is "alle" too, as in DesktopFilters (#6734).
+    rerender(
+      <TenantPageSearchRow
+        {...baseProps}
         filters={[{ ...multiSelectFilters[0]!, value: ["3a", "4b"] }]}
+      />,
+    );
+    expect(screen.getByTestId("mobile-filter-button")).toHaveAttribute(
+      "data-has-active-filters",
+      "false",
+    );
+
+    // A chosen value outside the options still narrows the list.
+    rerender(
+      <TenantPageSearchRow
+        {...baseProps}
+        filters={[{ ...multiSelectFilters[0]!, value: ["3a", "4b", "5c"] }]}
       />,
     );
     expect(screen.getByTestId("mobile-filter-button")).toHaveAttribute(

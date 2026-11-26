@@ -264,10 +264,14 @@ function requestBody(
 export async function fetchDocumentTemplates(): Promise<
   DocumentTemplateSummary[]
 > {
-  const data = await bffJson(
-    "org",
-    "GET /traeger/master-data/document-templates",
+  return mapDocumentTemplates(
+    await bffJson("org", "GET /traeger/master-data/document-templates"),
   );
+}
+
+export function mapDocumentTemplates(
+  data: traegerMasterDataContract.TraegerDocumentTemplateSummary[],
+): DocumentTemplateSummary[] {
   // A kind this build does not know has no page; it is left out.
   return data.flatMap((summary) => {
     const { kind } = summary;
@@ -288,11 +292,18 @@ export async function fetchDocumentTemplates(): Promise<
 export async function fetchDocumentTemplate(
   kind: DocumentTemplateKind,
 ): Promise<DocumentTemplateDetail> {
-  const data = await bffJson(
-    "org",
-    "GET /traeger/master-data/document-templates/{kind}",
-    { params: { kind } },
+  return mapDocumentTemplate(
+    await bffJson("org", "GET /traeger/master-data/document-templates/{kind}", {
+      params: { kind },
+    }),
+    kind,
   );
+}
+
+export function mapDocumentTemplate(
+  data: traegerMasterDataContract.TraegerDocumentTemplateDetail,
+  kind: DocumentTemplateKind,
+): DocumentTemplateDetail {
   return {
     version: data.version,
     current: mapVersion(data.current, kind),

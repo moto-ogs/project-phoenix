@@ -1,6 +1,8 @@
 "use client";
 
 import { ArrowRightLeft, Repeat, TriangleAlert } from "lucide-react";
+import { useInitialPaintViewport } from "~/lib/hooks/use-after-initial-paint";
+import { useHasDeepScrollPosition } from "~/components/ui/navigation-scroll-position";
 import {
   useEffect,
   useId,
@@ -23,7 +25,7 @@ import {
   OverflowMenu,
   type OverflowMenuEntry,
 } from "~/components/ui/page-header/OverflowMenu";
-import { PlanAddAffordance } from "~/components/ui/planning/plan-add-affordance";
+import { PlanAddButton } from "~/components/ui/planning/plan-add-affordance";
 import { PlanBlock } from "~/components/ui/planning/plan-block";
 import {
   PlanLegend,
@@ -684,21 +686,11 @@ export function DienstplanResourceGrid({
             assignment={assignment}
           />
         ))}
-        {/* Anlege-Geste in einer GEFÜLLTEN Zelle: dieselbe Fläche wie in einer
-            leeren Zelle und im Stundenraster des Betreuungsplans (#2031), nur
-            schmaler, weil darüber schon Inhalt steht. Ein- und Ausblendung
-            steckt in PlanAddAffordance; `group` hier am Button, damit auch
-            Tastaturfokus die Fläche zeigt (die Zelle selbst ist nicht
-            fokussierbar). */}
-        <button
-          type="button"
+        <PlanAddButton
           disabled={closingDaysLoading}
           onClick={() => openCell(member, date, null)}
-          aria-label={createShiftAriaLabel(member, column)}
-          className="group flex w-full rounded-md focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:outline-none disabled:cursor-wait disabled:opacity-40"
-        >
-          <PlanAddAffordance size="inline" />
-        </button>
+          label={createShiftAriaLabel(member, column)}
+        />
       </div>
     );
   };
@@ -752,6 +744,20 @@ export function DienstplanResourceGrid({
   // Baum, Screenreader läsen den Plan zweimal vor und die Tabulator-Reihenfolge
   // liefe durch eine unsichtbare Kopie.
   const isCompact = useMediaQuery(BELOW_LG);
+  const hasDeepScrollPosition = useHasDeepScrollPosition();
+  const viewport = useInitialPaintViewport(true);
+  // A desktop roster starts below the portal header, page heading, week
+  // controls and column headings. They occupy about 160px; a row with cell
+  // padding takes at least 72px. Only stage a return to the top: a deep
+  // history position needs the complete table height on the first paint.
+  const initialRows =
+    !viewport || hasDeepScrollPosition
+      ? staff.length
+      : isCompact
+        ? Math.ceil(viewport.height / 64)
+        : Math.max(1, Math.ceil((viewport.height - 160) / 72));
+  const showFooter = initialRows >= staff.length;
+  const visibleStaff = showFooter ? staff : staff.slice(0, initialRows);
   const mobileCare =
     mobileColumn && stripMarkers.has(mobileColumn.key)
       ? holidayCare?.get(mobileColumn.key)
@@ -798,7 +804,7 @@ export function DienstplanResourceGrid({
             )}
 
             <ul className="divide-y divide-gray-100">
-              {staff.map((member) => (
+              {visibleStaff.map((member) => (
                 <li key={member.id} className="px-3 py-2.5">
                   {renderRowHeader(member)}
                   <div className="mt-1.5">
@@ -806,15 +812,11 @@ export function DienstplanResourceGrid({
                       // Leerer Tag: dieselbe Anlege-Fläche, die das Raster in
                       // einer leeren Zelle rendert — ohne sie ließe sich mobil
                       // keine Schicht anlegen.
-                      <button
-                        type="button"
+                      <PlanAddButton
                         disabled={closingDaysLoading}
                         onClick={() => openCell(member, mobileColumn.key, null)}
-                        aria-label={createShiftAriaLabel(member, mobileColumn)}
-                        className="group flex w-full rounded-md focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:outline-none disabled:cursor-wait disabled:opacity-40"
-                      >
-                        <PlanAddAffordance size="inline" />
-                      </button>
+                        label={createShiftAriaLabel(member, mobileColumn)}
+                      />
                     )}
                   </div>
                 </li>
@@ -844,7 +846,9 @@ export function DienstplanResourceGrid({
           </p>
           <ResourceGrid
             columns={columns}
-            rows={staff}
+            rows={visibleStaff}
+            // Late cell layout would change the height above restored scroll.
+            deferOffscreenPaint={false}
             getRowKey={(member) => member.id}
             renderRowHeader={renderRowHeader}
             renderCell={renderCell}
@@ -858,24 +862,28 @@ export function DienstplanResourceGrid({
                 : (member, column) => openCell(member, column.key, null)
             }
             footer={
-              <CapacityStrip
-                rowLabel={
-                  <span title="Übergangslösung: Pausen sind in dieser Zahl nicht herausgerechnet.">
-                    Kapazität 12–16
-                  </span>
-                }
-                cells={weekDays.map((date) => ({
-                  key: date,
-                  content: capacityByDay.get(date) ?? 0,
-                }))}
-              />
+              showFooter ? (
+                <CapacityStrip
+                  rowLabel={
+                    <span title="Übergangslösung: Pausen sind in dieser Zahl nicht herausgerechnet.">
+                      Kapazität 12–16
+                    </span>
+                  }
+                  cells={weekDays.map((date) => ({
+                    key: date,
+                    content: capacityByDay.get(date) ?? 0,
+                  }))}
+                />
+              ) : null
             }
             ariaLabel="Dienstplan-Wochenansicht"
             legend={
-              <PlanLegend
-                entries={legendEntries}
-                aria-label="Legende Dienstarten und Zustände"
-              />
+              showFooter ? (
+                <PlanLegend
+                  entries={legendEntries}
+                  aria-label="Legende Dienstarten und Zustände"
+                />
+              ) : null
             }
           />
         </div>

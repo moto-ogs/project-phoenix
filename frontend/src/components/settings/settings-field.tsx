@@ -612,7 +612,7 @@ export function SettingsField({
   const legalTermsEnabled = legalTermsEnabledFromItems(setting, categoryItems);
   const legalDocumentManagementDisabledReason =
     audience === "operator"
-      ? "PDF-Dateien können nur im Schulportal hochgeladen oder entfernt werden."
+      ? "PDF-Dateien können nur in der Schul-App hochgeladen oder entfernt werden."
       : undefined;
   const legalDocumentDeleteDisabledReason =
     audience !== "operator" &&

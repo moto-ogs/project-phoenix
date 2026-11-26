@@ -162,6 +162,9 @@ type settingsResolver interface {
 	// PlannedStartToleranceMinutes is how many minutes before the planned
 	// shift start a check-in opens.
 	PlannedStartToleranceMinutes(ctx context.Context) (int, error)
+	// TerminalOnlyStamping reports whether staff without the right to manage
+	// working time stamp only with their chip at the NFC terminal (#8024).
+	TerminalOnlyStamping(ctx context.Context) (bool, error)
 	// RequireDeviationReason reports whether a self-edit that moves recorded
 	// times must carry a reason.
 	RequireDeviationReason(ctx context.Context) (bool, error)
@@ -195,6 +198,11 @@ type WorkSessionService interface {
 	// planned shift window of the day; an empty reason then yields
 	// *DeviationReasonRequiredError, a non-empty one is written to
 	// audit.work_session_edits. Same contract on CheckOut.
+	//
+	// CheckIn with the app channel and the three stamps below that carry no
+	// day are the app's stamps: they answer ErrTerminalOnlyStamping for a
+	// staff member TerminalOnlyStamping reports (#8024). The kiosk stamps
+	// with the NFC channel and the *On variants.
 	CheckIn(ctx context.Context, staffID int64, status, source, reason string) (*WorkSession, error)
 	CheckOut(ctx context.Context, staffID int64, reason string) (*WorkSession, error)
 	StartBreak(ctx context.Context, staffID int64, plannedDurationMinutes *int) (*WorkSessionBreak, error)
@@ -260,12 +268,17 @@ type WorkSessionService interface {
 	// shift end are skipped. Each close is marked AutoCheckedOut and audited
 	// with the SystemEditorID actor. No-op when no shift repo is injected.
 	AutoCheckoutDueSessions(ctx context.Context, grace time.Duration) (int, error)
+	// TerminalOnlyStamping reports whether the staff member stamps only with
+	// the own chip at the NFC terminal (#8024): the school's setting is on
+	// and the account holds no right to manage working time.
+	TerminalOnlyStamping(ctx context.Context, staffID int64) (bool, error)
 	// EnsureCheckedIn opens today's session if the staff member has no active
 	// row. The caller passes `source` (`app`/`nfc`) to record which channel
 	// triggered the auto-stamp; this avoids hard-coding the channel inside
 	// the service so future callers (web action triggers, schedulers) cannot
 	// be silently mislabelled as NFC. Returns nil if the staff member is
-	// already checked out today (no re-open).
+	// already checked out today (no re-open), and
+	// for a terminal-only staff member, who gets no block without a chip scan.
 	EnsureCheckedIn(ctx context.Context, staffID int64, source string) (*WorkSession, error)
 	// ExportSessions renders the single-staff export. CSV serializes locally
 	// (data format); XLSX uses the workbook writer, and PDF delegates to the

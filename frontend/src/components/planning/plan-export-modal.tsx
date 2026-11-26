@@ -285,7 +285,7 @@ function describeRange(
       : "Samstag und Sonntag nur, wenn dort etwas geplant ist.";
   return weekCount === 1
     ? `Gedruckt wird die Woche vom ${span}, Montag bis Freitag. ${weekend}`
-    : `Gedruckt werden ${weekCount} Wochen (${span}), je Woche ein Blatt. ${weekend}`;
+    : `Gedruckt werden ${weekCount} Wochen (${span}), pro Woche ein Blatt. ${weekend}`;
 }
 
 function RadioOption({
