@@ -453,7 +453,6 @@ function HomeContent() {
             : greeting
       }
       prominent
-      statsLoading={isLoading}
       stats={editing ? undefined : headerStats}
       info={
         editing

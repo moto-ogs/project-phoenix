@@ -4,6 +4,8 @@ import { ParentPageSeed } from "~/app/parents/parent-page-seed";
 import { ParentConversationMessages } from "~/i18n/shared-page-messages";
 import { ParentMessagesPage } from "~/components/parent/messages/parent-messages-page";
 
+export const unstable_dynamicStaleTime = 60;
+
 export default function ParentsMessagesPage() {
   return (
     <ParentConversationMessages>

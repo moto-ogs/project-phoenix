@@ -39,17 +39,27 @@ export function useAnnouncements() {
       // an idle tab only reconciles every five minutes (#5017).
       refreshInterval: LIVE_RECONCILE_INTERVAL_MS,
       revalidateOnFocus: false, // Don't revalidate on window focus to avoid showing dismissed items again
-      revalidateOnMount: true, // Always fetch fresh data on component mount
+      // The scoped shell already seeded the opening document. With no
+      // seed SWR still loads on mount; explicit refresh always reads anew.
+      revalidateIfStale: false,
       dedupingInterval: 5000, // Prevent rapid refetches
     },
   );
 
   // Revalidate on route change (since component stays mounted in layout)
   useEffect(() => {
-    if (previousPathname.current !== pathname) {
-      previousPathname.current = pathname;
-      void mutate();
-    }
+    if (previousPathname.current === pathname) return;
+    previousPathname.current = pathname;
+    // Route changes reuse this layout. Fetch after the next paint, so an
+    // unread notice cannot make the incoming page do another render first.
+    let task: ReturnType<typeof setTimeout> | undefined;
+    const frame = requestAnimationFrame(() => {
+      task = setTimeout(() => void mutate(), 0);
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+      clearTimeout(task);
+    };
   }, [pathname, mutate]);
 
   const dismiss = async (id: string) => {

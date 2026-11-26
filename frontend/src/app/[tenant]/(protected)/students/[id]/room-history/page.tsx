@@ -32,7 +32,6 @@ import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
 import { useStudentData } from "~/lib/hooks/use-student-data";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { useStudentHistoryBreadcrumb } from "~/lib/breadcrumb-context";
-import { useScrollToTop } from "~/lib/hooks/use-scroll-to-top";
 
 import {
   type AttendanceHistoryDay,
@@ -555,9 +554,6 @@ function StudentRoomHistoryPageContent() {
   const [exportOpen, setExportOpen] = useState(false);
 
   useStudentHistoryBreadcrumb({ studentName: student?.name, referrer });
-
-  // Start at the top instead of inheriting the previous page's scroll position
-  useScrollToTop(studentId);
 
   const displayName = student
     ? (student.name ?? `${student.first_name} ${student.second_name}`)

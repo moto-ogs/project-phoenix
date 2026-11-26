@@ -5,6 +5,7 @@ import { defineConfig, devices } from "@playwright/test";
 
 import { loadAccess, perfPort, tenantBaseUrl } from "./scripts/perf/access";
 import { perfServerEnv } from "./scripts/perf/env.mjs";
+import { revisitServerHosts } from "./scripts/perf/revisit-mode";
 import { SECURE_CHROME_SETUP, secureChromeUse } from "./scripts/secure-chrome";
 
 // Seitenwechsel-Messung (pnpm run perf:nav, #2828). Gleicher Aufbau wie
@@ -14,6 +15,10 @@ import { SECURE_CHROME_SETUP, secureChromeUse } from "./scripts/secure-chrome";
 // zwischen zwei Seiten.
 const env = perfServerEnv();
 const access = loadAccess();
+const build = existsSync(join(homedir(), "bin", "agent-heavy"))
+  ? '"$HOME/bin/agent-heavy" -- pnpm run build'
+  : "pnpm run build";
+const port = perfPort();
 
 export default defineConfig({
   globalSetup: SECURE_CHROME_SETUP,
@@ -30,13 +35,12 @@ export default defineConfig({
     baseURL: tenantBaseUrl(access),
     headless: true,
   },
-  webServer: {
-    command: existsSync(join(homedir(), "bin", "agent-heavy"))
-      ? '"$HOME/bin/agent-heavy" -- pnpm run build && pnpm run start --hostname 127.0.0.1'
-      : "pnpm run build && pnpm run start --hostname 127.0.0.1",
-    env: { ...env, PORT: perfPort() },
-    url: `http://localhost:${perfPort()}/help`,
+  webServer: ["127.0.0.1", ...revisitServerHosts()].map((host, index) => ({
+    command:
+      (index === 0 ? build + " && " : "") + `pnpm run start --hostname ${host}`,
+    env: { ...env, PORT: port },
+    url: `http://${host}:${port}/help`,
     reuseExistingServer: false,
     timeout: 600_000,
-  },
+  })),
 });

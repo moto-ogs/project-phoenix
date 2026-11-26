@@ -10,6 +10,8 @@
 import { BetreuungsplanView } from "~/components/timetable/betreuungsplan-view";
 import { loadBetreuungsplanSeed } from "~/lib/betreuungsplan-seed.server";
 
+export const unstable_dynamicStaleTime = 60;
+
 export default async function BetreuungsplanPage({
   params,
   searchParams,

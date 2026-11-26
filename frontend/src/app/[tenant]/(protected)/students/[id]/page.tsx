@@ -9,20 +9,22 @@ import { mapArrivalData } from "~/lib/student-arrival-api";
 import { mapPartialAbsence } from "~/lib/student-partial-absences-api";
 import { mapStatusDays } from "~/lib/student-status-days-api";
 import { studentKeys } from "~/lib/swr/portal-keys";
-import { SWRServerSeed, type ServerSeedEntry } from "~/lib/swr/server-seed";
+import type { ServerSeedEntry } from "~/lib/swr/server-seed";
 import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
 import { readTenantPageContext } from "~/lib/tenant-page-seed.server";
 import StudentDetailContent from "./page-content";
-import { getStatusDayRange, type StatusDayRange } from "./status-day-range";
+import { StudentRecordSeed } from "./page-seed";
+import { getStatusDayRange } from "./status-day-range";
 
-async function loadStudentRecordSeed(
-  slug: string,
-  id: string,
-  window: StatusDayRange,
-) {
-  const builtAt = Date.now();
+// The cached payload does not carry the audited record. Its existing
+// session-scoped reader and all permission checks remain in charge.
+export const unstable_dynamicStaleTime = 60;
+
+async function loadStudentRecordSeed(slug: string, id: string) {
   const context = await readTenantPageContext(slug);
   if (!context || !isPositiveInt64Id(id)) return null;
+  const window = getStatusDayRange();
+  const builtAt = Date.now();
   const { snapshot, session, token } = context;
   const entries: ServerSeedEntry[] = [];
   const canRead = hasPermission(session, "users:read");
@@ -112,24 +114,19 @@ async function loadStudentRecordSeed(
   return seedOf(snapshot, entries, builtAt);
 }
 
-export default async function StudentDetailPage({
+export default function StudentDetailPage({
   params,
 }: {
   params: Promise<{ tenant: string; id: string }>;
 }) {
-  const { tenant, id } = await params;
-  const window = getStatusDayRange();
-  const seed = loadStudentRecordSeed(tenant, id, window).catch(() => null);
-  const claims = [
-    studentKeys.pickupData(id),
-    studentKeys.arrivalData(id),
-    studentKeys.partialAbsences(id, window.from, window.to),
-    studentKeys.statusDays(id, window.from, window.to),
-    tenantStudentKeys.careWithdrawal(id),
-  ];
+  // The URL parameters are needed by the authorized seed, not by the
+  // reusable page shell. The mounted view reads the active URL itself.
+  const seed = params
+    .then(({ tenant, id }) => loadStudentRecordSeed(tenant, id))
+    .catch(() => null);
   return (
-    <SWRServerSeed seed={seed} claims={claims}>
+    <StudentRecordSeed seed={seed}>
       <StudentDetailContent />
-    </SWRServerSeed>
+    </StudentRecordSeed>
   );
 }

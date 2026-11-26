@@ -49,6 +49,7 @@ import {
   type OverviewSession,
 } from "~/lib/staff-tab-projections";
 import { useAccountBalance } from "~/lib/hooks/use-account-balance";
+import { useAfterInitialPaint } from "~/lib/hooks/use-after-initial-paint";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { useSWRAuth, useTenantMutateMatching } from "~/lib/swr";
 import { timeTrackingKeys } from "~/lib/swr/portal-keys";
@@ -99,6 +100,7 @@ const DistributionChart = dynamic(
 //
 // Period-bound KPIs (this week, this month) live on the Zeiterfassung tab.
 export function UebersichtTab({ staffId }: { readonly staffId: string }) {
+  const showCharts = useAfterInitialPaint();
   // The Berlin day, not the browser's, and re-rendered on the rollover: the
   // overview's target range and account balance both derive from "today", and
   // the server-computed Stundenkonto uses the Berlin month. A non-Berlin
@@ -292,23 +294,27 @@ export function UebersichtTab({ staffId }: { readonly staffId: string }) {
 
   const weeklyTrendData = useMemo(
     () =>
-      buildWeeklyBalanceSeriesRange(
-        accountProjection ?? EMPTY_PROJECTION,
-        accountAdjustments ?? [],
-        saldoFrom,
-        saldoTo,
-      ),
-    [accountProjection, accountAdjustments, saldoFrom, saldoTo],
+      showCharts
+        ? buildWeeklyBalanceSeriesRange(
+            accountProjection ?? EMPTY_PROJECTION,
+            accountAdjustments ?? [],
+            saldoFrom,
+            saldoTo,
+          )
+        : [],
+    [accountProjection, accountAdjustments, saldoFrom, saldoTo, showCharts],
   );
 
   const dailyTrendData = useMemo(
     () =>
-      buildDailyIstSollSeriesRange(
-        accountProjection ?? EMPTY_PROJECTION,
-        dailyFrom,
-        dailyTo,
-      ),
-    [accountProjection, dailyFrom, dailyTo],
+      showCharts
+        ? buildDailyIstSollSeriesRange(
+            accountProjection ?? EMPTY_PROJECTION,
+            dailyFrom,
+            dailyTo,
+          )
+        : [],
+    [accountProjection, dailyFrom, dailyTo, showCharts],
   );
 
   const hasTimeTrendData =
@@ -407,7 +413,9 @@ export function UebersichtTab({ staffId }: { readonly staffId: string }) {
             />
           }
         >
-          {!hasTimeTrendData || dailyTrendData.length < 2 ? (
+          {hasTimeTrendData && !showCharts ? (
+            <div className="h-64" aria-hidden />
+          ) : !hasTimeTrendData || dailyTrendData.length < 2 ? (
             <EmptyState
               variant="dashed"
               className="flex-1 justify-center"
@@ -438,7 +446,9 @@ export function UebersichtTab({ staffId }: { readonly staffId: string }) {
             />
           }
         >
-          {!hasBalanceTrendData || weeklyTrendData.length < 2 ? (
+          {hasBalanceTrendData && !showCharts ? (
+            <div className="h-64" aria-hidden />
+          ) : !hasBalanceTrendData || weeklyTrendData.length < 2 ? (
             <EmptyState
               variant="dashed"
               className="flex-1 justify-center"
@@ -472,11 +482,15 @@ export function UebersichtTab({ staffId }: { readonly staffId: string }) {
           <EmptyState variant="dashed" title="Noch keine Tage erfasst." />
         ) : (
           <div className="grid grid-cols-1 items-center gap-6 md:grid-cols-2">
-            <DistributionChart
-              config={distributionConfig}
-              data={distributionData}
-              total={distributionTotal}
-            />
+            {showCharts ? (
+              <DistributionChart
+                config={distributionConfig}
+                data={distributionData}
+                total={distributionTotal}
+              />
+            ) : (
+              <div className="h-64" aria-hidden />
+            )}
             <div className="flex flex-col gap-2">
               {distributionData.map((point) => {
                 const percentage = Math.round(

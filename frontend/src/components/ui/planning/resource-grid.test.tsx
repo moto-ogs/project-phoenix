@@ -155,11 +155,11 @@ describe("ResourceGrid", () => {
     const filledWrapper = screen.getByText("A. Krause früh").parentElement;
     const emptyWrapper = screen.getByRole("button", {
       name: "Anlegen, A. Krause, Di 14.07.",
-    }).parentElement;
+    });
 
     expect(filledWrapper).toHaveClass("min-h-16");
     expect(emptyWrapper).toHaveClass("min-h-16");
-    // Every cell wrapper in the body carries the floor, including the ones
+    // Every cell's first child carries the floor, including the ones
     // without any empty-cell affordance.
     for (const cell of container.querySelectorAll("tbody td")) {
       expect(cell.firstElementChild).toHaveClass("min-h-16");

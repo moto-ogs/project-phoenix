@@ -530,7 +530,7 @@ test("measure revisit: reject a failed Caterer order row", async ({ page }) => {
 
 // Revisit shares the production server, throttle, network recorder and visible loading probe.
 test("measure revisit", async ({ browser }, testInfo) => {
-  // This serial, three-round study is local only; individual actions have short deadlines.
+  // The local study can outlast a normal test; individual actions still have short deadlines.
   test.setTimeout(4 * 60 * 60_000);
   await measureRevisits(browser, (ms) =>
     testInfo.setTimeout(testInfo.timeout + ms),

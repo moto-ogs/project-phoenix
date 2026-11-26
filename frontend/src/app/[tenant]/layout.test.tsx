@@ -29,6 +29,10 @@ const { headersMock } = vi.hoisted(() => ({
 vi.mock("next/headers", () => ({
   headers: headersMock,
 }));
+vi.mock("next/server", async (original) => ({
+  ...(await original<typeof import("next/server")>()),
+  connection: async () => undefined,
+}));
 
 vi.mock("next/cache", () => ({
   revalidatePath: vi.fn(),

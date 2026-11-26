@@ -148,7 +148,11 @@ export function requestCost(
 ): RequestCost {
   return {
     requests: records.length,
-    rsc: records.filter((record) => record.path.includes("_rsc=")).length,
+    rsc: records.filter(
+      (record) =>
+        record.path.includes("_rsc=") ||
+        record.path.split("?", 1)[0]?.endsWith(".rsc"),
+    ).length,
     scripts: records.filter((record) => record.resourceType === "script")
       .length,
     api: records.filter((record) => record.path.startsWith("/api/")).length,

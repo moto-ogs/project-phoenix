@@ -161,13 +161,17 @@ export default function AnfragenPage() {
   // Render neu läuft.
   const handleParentCount = useCallback(
     (count: number | null, hasMore: boolean) =>
-      setListCount({ count, hasMore }),
+      setListCount((current) =>
+        current.count === count && current.hasMore === hasMore
+          ? current
+          : { count, hasMore },
+      ),
     [],
   );
   // Die Abwesenheitsanträge kommen ungeteilt, dort gibt es nie ein "+".
   const handleStaffCount = useCallback(
-    (count: number | null) => setListCount({ count, hasMore: false }),
-    [],
+    (count: number | null) => handleParentCount(count, false),
+    [handleParentCount],
   );
 
   const [selectedTab, setSelectedTab] = useState<AnfragenTabId>("eltern");

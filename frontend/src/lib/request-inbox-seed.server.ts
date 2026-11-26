@@ -25,9 +25,9 @@ import {
 } from "~/lib/request-feed-resource";
 
 export async function loadRequestInboxSeed(slug: string) {
-  const builtAt = Date.now();
   const context = await readTenantPageContext(slug);
   if (!context) return null;
+  const builtAt = Date.now();
   const { session, snapshot, token } = context;
   const entries: ServerSeedEntry[] = [];
   // A prefetched first page may precede any change in this browser. Its

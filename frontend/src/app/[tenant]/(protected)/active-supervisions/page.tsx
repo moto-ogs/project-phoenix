@@ -2,6 +2,8 @@ import { loadActiveSupervisionsSeed } from "~/lib/active-supervisions-seed.serve
 import ActiveSupervisionsContent from "./page-content";
 import { ActiveSupervisionsSeed } from "./page-seed";
 
+export const unstable_dynamicStaleTime = 60;
+
 export default async function ActiveSupervisionsPage({
   params,
 }: {

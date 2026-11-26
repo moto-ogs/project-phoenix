@@ -1,6 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { shellSwrConfig } from "~/app/[tenant]/providers";
+import { ShellCacheSeeder, shellSwrConfig } from "~/app/[tenant]/providers";
 import type { ShellBootstrap } from "~/lib/shell-seed";
 import { SWRConfig } from "~/lib/swr/testing";
 import { resetSWRScope } from "~/lib/swr/scope";
@@ -38,8 +38,12 @@ const shell: ShellBootstrap = {
   announcements: seed,
 };
 function Wrapper({ children }: { children: React.ReactNode }) {
+  const config = shellSwrConfig(shell, "school-a");
   return (
-    <SWRConfig value={shellSwrConfig(shell, "school-a")}>{children}</SWRConfig>
+    <SWRConfig value={config}>
+      <ShellCacheSeeder entries={config.fallback} />
+      {children}
+    </SWRConfig>
   );
 }
 

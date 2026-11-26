@@ -163,6 +163,7 @@ vi.mock("next-auth/react", () => ({
   })),
 }));
 vi.mock("next/navigation", () => ({
+  usePathname: () => "/students/search",
   useRouter: () => ({ push: mockPush, replace: vi.fn() }),
   useSearchParams: () => mockSearchParams,
 }));

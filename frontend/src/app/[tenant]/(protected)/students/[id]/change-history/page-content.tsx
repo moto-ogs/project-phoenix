@@ -18,7 +18,6 @@ import { studentKeys } from "~/lib/swr/portal-keys";
 import { useStudentData } from "~/lib/hooks/use-student-data";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { useStudentHistoryBreadcrumb } from "~/lib/breadcrumb-context";
-import { useScrollToTop } from "~/lib/hooks/use-scroll-to-top";
 import { formatDate, formatTime } from "~/lib/date-helpers";
 import { ChangeHistorySkeleton } from "./page-skeleton";
 import { changeHistoryConcept } from "~/lib/concepts/changeHistory";
@@ -167,7 +166,6 @@ function StudentChangeHistoryPageContent() {
     (historyLoad.failure !== undefined && historyLoad.error === null);
 
   useStudentHistoryBreadcrumb({ studentName: student?.name, referrer });
-  useScrollToTop(studentId);
 
   const displayName = student
     ? (student.name ?? `${student.first_name} ${student.second_name}`)

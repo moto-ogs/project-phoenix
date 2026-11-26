@@ -4,6 +4,8 @@ import { ChildPage } from "~/components/parent/child/child-page";
 import { ParentPageSkeleton } from "~/components/parent/parent-page";
 import { ParentPageSeed } from "~/app/parents/parent-page-seed";
 
+export const unstable_dynamicStaleTime = 60;
+
 /**
  * Derselbe Kinderbereich, mit dem Kind aus der Adresse vorausgewaehlt. Die
  * Kinderliste und der Tagesstatus kommen vom Server (#8077); fuer ein Kind,
