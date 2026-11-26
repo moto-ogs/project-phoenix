@@ -32612,6 +32612,12 @@
           "type": "timestamp with time zone",
           "udt": "timestamptz",
           "nullable": false
+        },
+        {
+          "name": "requested_by_guardian",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": true
         }
       ],
       "relationships": [
@@ -32623,6 +32629,11 @@
         {
           "column": "guardian_profile_id",
           "targetTable": "users.guardian_profiles",
+          "targetColumn": "id"
+        },
+        {
+          "column": "requested_by_guardian",
+          "targetTable": "auth.accounts",
           "targetColumn": "id"
         },
         {
