@@ -2111,7 +2111,7 @@ describe("StudentSearchPage", () => {
       await waitFor(() => {
         expect(mockPush).toHaveBeenCalledWith(
           `/test-tenant/students/1?from=${encodeURIComponent(
-            "/students/search?group_id=1%2C2&school_class=3a%2C4b&year=3%2C4",
+            "/students/search?year=3%2C4&school_class=3a%2C4b&group_id=1%2C2",
           )}`,
         );
       });

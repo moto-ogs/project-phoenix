@@ -10,25 +10,18 @@ import {
   type StudentSearchFilterInput,
 } from "~/lib/student-search-resource";
 import {
-  BOOLEAN_FILTER_VALUES,
   DATE_QUERY_PARAM,
   FILTER_QUERY_PARAMS,
-  PICKUP_STATUS_FILTER_VALUES,
   SEARCH_QUERY_PARAM,
-  STUDENT_SEARCH_YEAR_OPTIONS,
   enrollmentAnswerChildrenOf,
   enrollmentAnswerValue,
   keepOfferedYears,
   keepValidGroupIds,
   maxPlanningIso,
-  parseGroupIdsParam,
-  parseYearParam,
   readFilterParam,
   searchSelection,
   searchYearSelection,
   studentSearchUrl,
-  validQueryValue,
-  type SearchParamReader,
 } from "~/lib/student-search-url";
 import { studentKeys } from "~/lib/swr/portal-keys";
 import { rooms as roomKeys } from "~/lib/swr/rooms";
@@ -96,14 +89,12 @@ import { useHolidayGuestLabels } from "~/lib/hooks/use-holiday-guest-labels";
 import {
   LOCATION_STATUSES,
   parseLocation,
-  isAtSchoolLocation,
-  isInClassLocation,
   isNotCheckedInLocation,
   isPresentLocation,
   isSchoolyardLocation,
   isTransitLocation,
 } from "~/lib/location-helper";
-import { countedDayStatus, dayStatusLabel } from "~/lib/presence-status";
+import { countedDayStatus } from "~/lib/presence-status";
 import { useMinuteClock } from "~/lib/pickup-helpers";
 import { useLatest } from "~/lib/hooks/use-latest";
 import { useInitialPaintViewport } from "~/lib/hooks/use-after-initial-paint";
@@ -151,10 +142,7 @@ import {
   announcementPrefillPath,
   stashAnnouncementStudents,
 } from "~/lib/announcement-prefill";
-import {
-  mayWritePersonalStorage,
-  personalStorageOwner,
-} from "~/lib/personal-storage";
+import { personalStorageOwner } from "~/lib/personal-storage";
 import { KIND_PARAM } from "~/components/announcements/announcement-meta";
 import { SchoolCheckinSelectionBar } from "~/components/students/school-checkin-selection-bar";
 import { SchoolCheckinTargetPicker } from "~/components/students/school-checkin-target-picker";
@@ -189,7 +177,6 @@ import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
 import {
   encodeMultiValueParam,
   normalizeMultiValues,
-  parseMultiValueParam,
 } from "~/lib/multi-value-param";
 import { activeService } from "~/lib/active-api";
 import type { TrackingIndicatorsResponse } from "~/lib/active-helpers";
@@ -200,12 +187,52 @@ import {
 } from "~/lib/student-time-status";
 import {
   matchesTrackingFilter,
-  parseTrackingFilter,
   resolveTrackingFilterAfterLabelChange,
   trackingFilterChipLabel,
   type TrackingFilter,
 } from "./tracking-filter";
 import { StudentSearchPageSkeleton } from "./page-skeleton";
+import {
+  BUS_FILTER_OPTIONS,
+  DAY_STATUS_FILTER_OPTIONS,
+  DAY_STATUS_FILTER_OPTIONS_OTHER_DAY,
+  GROUP_OPTIONS,
+  LIVE_STATUS_FILTER_OPTIONS,
+  PHOTO_CONSENT_FILTER_OPTIONS,
+  PICKUP_STATUS_FILTER_OPTIONS,
+  PLANNED_ABSENCE_STATUS_FILTER_OPTIONS,
+  SCHOOL_YEAR_MULTI_OPTIONS,
+  SORT_OPTIONS,
+  STATUS_FILTER_LABELS,
+  isPlannedAbsenceStatusFilter,
+  type BooleanFilter,
+  type DayStatusFilter,
+  type GroupMode,
+  type PickupStatusFilter,
+  type SortMode,
+  type StatusFilter,
+} from "./search-filter-options";
+import {
+  asFilterValues,
+  buildSearchFilterStorageKey,
+  filtersFromSearchParams,
+  parsePickupTimeParam,
+  persistedFiltersToSearchParams,
+  readSearchPageFilters,
+  readStoredFilters,
+  removeStoredFilters,
+  searchPageFilterParams,
+  searchParamsHavePersistedFilters,
+  writeStoredFilters,
+  type SearchPageFilters,
+} from "./search-filter-storage";
+import {
+  compareByName,
+  compareByPickupTime,
+  groupStudents,
+  orderedRooms,
+  statusLabelForStudent,
+} from "./student-list-grouping";
 import { useSamePageLinkClick } from "./use-same-page-link-click";
 import { useChildScopeTabs } from "./use-child-scope-tabs";
 import { childrenConcept } from "~/lib/concepts/children";
@@ -214,86 +241,7 @@ const EMPTY_STUDENT_ARRAY: Student[] = [];
 const NO_GROUPS: Group[] = [];
 const NO_ROOMS: Room[] = [];
 const NO_VALUES: string[] = [];
-
-type StatusFilter =
-  | "all"
-  | "anwesend"
-  | "schule"
-  | "unterricht"
-  | "abwesend"
-  | "unterwegs"
-  | "schulhof"
-  | "krank"
-  | "klassenfahrt"
-  | "entschuldigt"
-  | "entschuldigt-klassenfahrt";
-type BooleanFilter = "all" | "yes" | "no";
-type PickupStatusFilter = "all" | "self" | "pickedUp" | "none";
-type DayStatusFilter = "all" | "comes_today" | "not_coming_today";
-type SortMode = "name" | "arrival" | "pickup";
-type GroupMode =
-  | "none"
-  | "status"
-  | "room"
-  | "arrival"
-  | "pickup"
-  | "pickup-status"
-  | "companions";
-
-const STATUS_FILTER_OPTIONS: Array<{ value: StatusFilter; label: string }> = [
-  { value: "all", label: "Alle" },
-  { value: "anwesend", label: "Anwesend" },
-  { value: "schule", label: "Schule" },
-  { value: "unterricht", label: "Im Unterricht" },
-  { value: "abwesend", label: "Zuhause" },
-  { value: "krank", label: "Krank" },
-  { value: "klassenfahrt", label: "Klassenfahrt" },
-  { value: "entschuldigt", label: "Entschuldigt" },
-  {
-    value: "entschuldigt-klassenfahrt",
-    label: "Entschuldigt oder Klassenfahrt",
-  },
-  { value: "unterwegs", label: "Unterwegs" },
-  { value: "schulhof", label: "Schulhof" },
-];
-
-const DAY_STATUS_FILTER_OPTIONS: Array<{
-  value: DayStatusFilter;
-  label: string;
-}> = [
-  { value: "all", label: "Alle Kinder" },
-  { value: "comes_today", label: "Kommt heute" },
-  { value: "not_coming_today", label: "Kommt heute nicht" },
-];
-
-// Same wire values evaluated for a non-today planning date (#1939) — the UI
-// must not say "heute" when the selection refers to another day, so the label
-// drops it ("Kommt" / "Kommt nicht") while staying the same Kommt/-nicht filter.
-const DAY_STATUS_FILTER_OPTIONS_OTHER_DAY: Array<{
-  value: DayStatusFilter;
-  label: string;
-}> = [
-  { value: "all", label: "Alle Kinder" },
-  { value: "comes_today", label: "Kommt" },
-  { value: "not_coming_today", label: "Kommt nicht" },
-];
-
-const SORT_OPTIONS: Array<{ value: SortMode; label: string }> = [
-  { value: "name", label: "Name A-Z" },
-  { value: "arrival", label: "Nächste Ankunft" },
-  { value: "pickup", label: "Nächste Abholung" },
-];
-
-const GROUP_OPTIONS: Array<{ value: GroupMode; label: string }> = [
-  // Nicht „Liste“: so heißt seit #3834 der Umschalter Kacheln/Liste.
-  { value: "none", label: "Nicht gruppiert" },
-  { value: "status", label: "Nach Status" },
-  { value: "room", label: "Nach Raum" },
-  { value: "arrival", label: "Nach Ankunftszeit" },
-  { value: "pickup", label: "Nach Gehzeit" },
-  { value: "pickup-status", label: "Nach Abholregelung" },
-  { value: "companions", label: "Nach Laufgemeinschaft" },
-];
+const NO_FILTERS = readSearchPageFilters(new URLSearchParams(), "");
 
 const NO_ENROLLMENT_ANSWER_QUESTIONS: readonly EnrollmentAnswerFilter[] = [];
 
@@ -315,666 +263,11 @@ function enrollmentAnswerAccessOf(
   return options.error ? "granted" : "pending";
 }
 
-type FilterQueryParam = (typeof FILTER_QUERY_PARAMS)[number];
-type PersistedSearchFilters = Partial<Record<FilterQueryParam, string>>;
-const STUDENT_SEARCH_FILTER_STORAGE_PREFIX = "student-search:last-filters";
-// This view shows every match at once — it has no pagination control, and the
-// grouping modes, the counts and the export selection all read the rendered
-// list. The backend caps a page of the child list at 1000 rows
-// (studentListMaxPageSize), so a selection larger than one page has to be
-// walked here; otherwise every child past the first page is unreachable
-// (#2218 review). The bound stops a bad total from looping forever: 20 pages
-// are 20.000 Kinder, far beyond any OGS, and hitting it is logged rather than
-// silently truncating.
-
 // The card skeleton has no end of its own: a request that never answers (weak
 // school Wi-Fi) or a session without a token keeps it up for good, with nothing
 // on screen saying why or what to do. After this long the page says so and
 // offers a reload instead (#3374).
 const LOADING_STALL_MS = 10_000;
-
-// The "Stufe" filter is a multi-select (#2218): an empty selection already
-// means "alle Stufen", so the neutral pseudo-option would be a second way to
-// say the same thing — and a checkable one at that.
-const SCHOOL_YEAR_MULTI_OPTIONS = STUDENT_SEARCH_YEAR_OPTIONS.map((option) => ({
-  value: option.value,
-  label: `Stufe ${option.label}`,
-}));
-
-const STATUS_GROUP_ORDER = new Map([
-  ["Anwesend", 0],
-  ["Unterwegs", 1],
-  ["Schulhof", 2],
-  ["Krank", 3],
-  ["Entschuldigt", 4],
-  ["Schule", 5],
-  ["Im Unterricht", 6],
-  ["Zuhause", 7],
-]);
-
-const BUS_FILTER_OPTIONS: Array<{ value: BooleanFilter; label: string }> = [
-  { value: "all", label: "Alle Kinder" },
-  { value: "yes", label: "Buskind" },
-  { value: "no", label: "Kein Buskind" },
-];
-
-const PHOTO_CONSENT_FILTER_OPTIONS: Array<{
-  value: BooleanFilter;
-  label: string;
-}> = [
-  { value: "all", label: "Alle Kinder" },
-  { value: "yes", label: "Fotoerlaubnis liegt vor" },
-  { value: "no", label: "Keine Fotoerlaubnis" },
-];
-
-const PICKUP_STATUS_FILTER_OPTIONS: Array<{
-  value: PickupStatusFilter;
-  label: string;
-}> = [
-  { value: "all", label: "Alle Kinder" },
-  { value: "self", label: "Geht alleine nach Hause" },
-  { value: "pickedUp", label: "Wird abgeholt" },
-  { value: "none", label: "Keine Abholregelung" },
-];
-
-// Status options split by what they read: the location-derived buckets only
-// answer for today, the absence buckets come from the status days of whichever
-// date is selected (#1939).
-const LIVE_STATUS_FILTER_OPTIONS = [
-  { value: "anwesend", label: "Anwesend" },
-  { value: "schule", label: "Schule" },
-  { value: "unterricht", label: "Im Unterricht" },
-  { value: "abwesend", label: "Zuhause" },
-  { value: "unterwegs", label: "Unterwegs" },
-  { value: "schulhof", label: "Schulhof" },
-] as const;
-
-const PLANNED_ABSENCE_STATUS_FILTER_OPTIONS = [
-  { value: "krank", label: "Krank" },
-  { value: "klassenfahrt", label: "Klassenfahrt" },
-  { value: "entschuldigt", label: "Entschuldigt" },
-  {
-    value: "entschuldigt-klassenfahrt",
-    label: "Entschuldigt oder Klassenfahrt",
-  },
-] as const;
-
-function isPlannedAbsenceStatusFilter(filter: StatusFilter): boolean {
-  return PLANNED_ABSENCE_STATUS_FILTER_OPTIONS.some(
-    (option) => option.value === filter,
-  );
-}
-
-const STATUS_FILTER_LABELS: Record<
-  Exclude<StatusFilter, "all" | "anwesend">,
-  string
-> = {
-  schule: "Schule",
-  unterricht: "Im Unterricht",
-  abwesend: "Zuhause",
-  unterwegs: "Unterwegs",
-  schulhof: "Schulhof",
-  krank: "Krank",
-  klassenfahrt: "Klassenfahrt",
-  entschuldigt: "Entschuldigt",
-  "entschuldigt-klassenfahrt": "Entschuldigt oder Klassenfahrt",
-};
-
-// The shared filter kit hands a multi-select its values as an array and a
-// single-select as a string; normalize before it reaches the state setters. An
-// array arrives as the raw selected labels — never re-encoded, or a class named
-// "A,B" would be split apart on its way into the state (#2218 review).
-function asFilterValues(value: string | string[]): string[] {
-  return Array.isArray(value)
-    ? normalizeMultiValues(value)
-    : parseMultiValueParam(value);
-}
-
-function parsePickupTimeParam(value: string | null): string[] {
-  return parseMultiValueParam(value).filter((time) => time !== "all");
-}
-
-function searchParamsHavePersistedFilters(searchParams: SearchParamReader) {
-  return (
-    searchParams.has(SEARCH_QUERY_PARAM) ||
-    FILTER_QUERY_PARAMS.some((key) => searchParams.has(key))
-  );
-}
-
-function persistedFiltersToSearchParams(filters: PersistedSearchFilters) {
-  const params = new URLSearchParams();
-  for (const key of FILTER_QUERY_PARAMS) {
-    const value = filters[key];
-    if (value) params.set(key, value);
-  }
-  return params;
-}
-
-function filtersFromSearchParams(
-  searchParams: SearchParamReader,
-): PersistedSearchFilters {
-  const filters: PersistedSearchFilters = {};
-  for (const key of FILTER_QUERY_PARAMS) {
-    const value = readFilterParam(searchParams, key);
-    if (value) filters[key] = value;
-  }
-  return filters;
-}
-
-function normalizeStoredFilters(
-  filters: PersistedSearchFilters,
-): PersistedSearchFilters {
-  const params = persistedFiltersToSearchParams(filters);
-  const trackingParam = params.get("tracking");
-  const trackingFilter =
-    trackingParam && parseTrackingFilter(trackingParam).kind !== "invalid"
-      ? trackingParam
-      : "";
-
-  return {
-    year: encodeMultiValueParam(parseYearParam(params.get("year"))),
-    school_class: encodeMultiValueParam(
-      parseMultiValueParam(params.get("school_class")),
-    ),
-    group_id: encodeMultiValueParam(parseGroupIdsParam(params.get("group_id"))),
-    room_id: params.get("room_id") ?? "",
-    room_name: params.get("room_id") ? (params.get("room_name") ?? "") : "",
-    bus:
-      validQueryValue(params.get("bus"), BOOLEAN_FILTER_VALUES, "all") === "all"
-        ? ""
-        : (params.get("bus") ?? ""),
-    photo_consent:
-      validQueryValue(
-        params.get("photo_consent"),
-        BOOLEAN_FILTER_VALUES,
-        "all",
-      ) === "all"
-        ? ""
-        : (params.get("photo_consent") ?? ""),
-    pickup_status:
-      validQueryValue(
-        params.get("pickup_status"),
-        PICKUP_STATUS_FILTER_VALUES,
-        "all",
-      ) === "all"
-        ? ""
-        : (params.get("pickup_status") ?? ""),
-    pickup_time: encodeMultiValueParam(
-      parsePickupTimeParam(params.get("pickup_time")),
-    ),
-    arrival_time: params.get("arrival_time") ?? "",
-    enrollment_answer: params.get("enrollment_answer") ?? "",
-    day_status:
-      validQueryValue(
-        params.get("day_status"),
-        DAY_STATUS_FILTER_OPTIONS.map((option) => option.value),
-        "all",
-      ) === "all"
-        ? ""
-        : (params.get("day_status") ?? ""),
-    status:
-      validQueryValue(
-        params.get("status"),
-        STATUS_FILTER_OPTIONS.map((option) => option.value),
-        "all",
-      ) === "all"
-        ? ""
-        : (params.get("status") ?? ""),
-    tracking: trackingFilter,
-    sort:
-      validQueryValue(
-        params.get("sort"),
-        SORT_OPTIONS.map((option) => option.value),
-        "name",
-      ) === "name"
-        ? ""
-        : (params.get("sort") ?? ""),
-    view:
-      validQueryValue(
-        params.get("view"),
-        GROUP_OPTIONS.map((option) => option.value),
-        "none",
-      ) === "none"
-        ? ""
-        : (params.get("view") ?? ""),
-  };
-}
-
-function compactStoredFilters(filters: PersistedSearchFilters) {
-  return Object.fromEntries(
-    Object.entries(filters).filter(
-      (entry): entry is [FilterQueryParam, string] => Boolean(entry[1]),
-    ),
-  ) as PersistedSearchFilters;
-}
-
-function safelyRemoveStoredFilters(storageKey: string) {
-  try {
-    window.localStorage.removeItem(storageKey);
-  } catch {
-    // Storage can be fully blocked by browser/privacy settings.
-  }
-}
-
-function readStoredFilters(storageKey: string | null) {
-  if (!storageKey || typeof window === "undefined") return null;
-
-  try {
-    const raw = window.localStorage.getItem(storageKey);
-    if (!raw) return null;
-    const parsed: unknown = JSON.parse(raw);
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-      safelyRemoveStoredFilters(storageKey);
-      return null;
-    }
-    return compactStoredFilters(
-      normalizeStoredFilters(parsed as PersistedSearchFilters),
-    );
-  } catch {
-    // Bewusst still: ein kaputter oder gesperrter Speicher startet die Suche
-    // ohne gemerkte Filter, die Adresse trägt sie weiter.
-    safelyRemoveStoredFilters(storageKey);
-    return null;
-  }
-}
-
-function writeStoredFilters(
-  storageKey: string | null,
-  owner: string | null,
-  filters: PersistedSearchFilters,
-) {
-  if (!storageKey || typeof window === "undefined") return;
-  // The filters belong to this account. After a logout or an account switch,
-  // also in another tab, they must not come back (#5000).
-  if (!mayWritePersonalStorage(owner)) return;
-
-  const compacted = compactStoredFilters(normalizeStoredFilters(filters));
-  try {
-    if (Object.keys(compacted).length === 0) {
-      safelyRemoveStoredFilters(storageKey);
-      return;
-    }
-    window.localStorage.setItem(storageKey, JSON.stringify(compacted));
-  } catch {
-    // localStorage can fail in private mode or when quota is exceeded. URL
-    // persistence still works, so ignore storage failures.
-  }
-}
-
-function removeStoredFilters(storageKey: string | null) {
-  if (!storageKey || typeof window === "undefined") return;
-  safelyRemoveStoredFilters(storageKey);
-}
-
-function buildSearchFilterStorageKey(
-  user:
-    | {
-        id?: string | null;
-        email?: string | null;
-        tenantId?: string | null;
-      }
-    | undefined,
-) {
-  if (typeof window === "undefined") return null;
-
-  const tenantKey =
-    user?.tenantId !== undefined && user.tenantId !== null
-      ? `tenant-${user.tenantId}`
-      : `host-${window.location.host}`;
-  const accountKey = user?.id ?? user?.email ?? "anonymous";
-  return `${STUDENT_SEARCH_FILTER_STORAGE_PREFIX}:${tenantKey}:${accountKey}`;
-}
-
-function compareByName(a: Student, b: Student) {
-  const lastCmp = (a.second_name ?? "").localeCompare(
-    b.second_name ?? "",
-    "de",
-  );
-  if (lastCmp !== 0) return lastCmp;
-  return (a.first_name ?? "").localeCompare(b.first_name ?? "", "de");
-}
-
-// Ohne offenen Check-in zählt ein Kind als zuhause, wie in der Betriebszahl
-// „Zuhause“ der Startseite (#4588): ein Kind ohne bekannten Ort oder mit
-// „Kommt heute nicht“ ist nicht in der OGS. Statuszeile, Statusfilter und
-// „Gruppieren nach Status“ lesen diese eine Definition.
-const HOME_STATUSES: ReadonlySet<string> = new Set([
-  LOCATION_STATUSES.HOME,
-  LOCATION_STATUSES.UNKNOWN,
-  LOCATION_STATUSES.NOT_ARRIVAL,
-]);
-
-// Ort vor Status (#6371): Ein eingechecktes Kind steht unter seinem Ort, auch
-// mit Krankmeldung, Entschuldigung oder Klassenfahrt. Der Status bleibt als
-// Hinweis am Ortsbadge.
-function statusLabelForStudent(student: Student): string {
-  const dayStatus = countedDayStatus(student);
-  if (dayStatus) return dayStatusLabel(dayStatus);
-  if (isSchoolyardLocation(student.current_location)) return "Schulhof";
-  if (isTransitLocation(student.current_location)) return "Unterwegs";
-  if (isAtSchoolLocation(student.current_location)) return "Schule";
-  if (isInClassLocation(student.current_location)) return "Im Unterricht";
-  if (HOME_STATUSES.has(parseLocation(student.current_location).status)) {
-    return "Zuhause";
-  }
-  return "Anwesend";
-}
-
-function roomLabelForStudent(student: Student): string {
-  if (student.has_full_access === false) return "Nicht einsehbar";
-
-  const location = student.current_location?.trim();
-  if (isNotCheckedInLocation(location)) return "Kein Raum";
-  if (isTransitLocation(location)) return "Unterwegs";
-  if (isSchoolyardLocation(location)) return "Schulhof";
-  const separatorIndex = location.indexOf("-");
-  if (separatorIndex >= 0) {
-    const room = location.slice(separatorIndex + 1).trim();
-    return room || "Kein Raum";
-  }
-  if (Object.values(LOCATION_STATUSES).some((status) => status === location)) {
-    return "Kein Raum";
-  }
-  return location;
-}
-
-function pickupLabelForStudent(student: Student): string {
-  if (student.has_full_access === false) return "Nicht einsehbar";
-  return student.pickup_time ? `${student.pickup_time} Uhr` : "Keine Gehzeit";
-}
-
-function dailyDepartureGroupLabelForStudent(student: Student): string {
-  const label = dailyDepartureLabelForStudent(student);
-  return label === "–" ? "Keine Abholregelung" : label;
-}
-
-function arrivalLabelForStudent(student: Student): string {
-  if (student.has_full_access === false) return "Nicht einsehbar";
-  return student.arrival_time
-    ? `${student.arrival_time} Uhr`
-    : "Keine Ankunftszeit";
-}
-
-const NO_COMPANION_GROUP_LABEL = "Ohne Laufgemeinschaft";
-/**
- * A child whose links the caller may not see. The backend only resolves the
- * Laufgemeinschaft of full-access children (`collectFullAccessStudentIDs`), so
- * for a restricted child an empty list means "not readable", NOT "walks alone" —
- * since #2329 that only affects guest/guardian callers, whose view stays
- * redacted. Filing them under "Ohne Laufgemeinschaft" would state as fact the
- * one thing this page cannot know.
- */
-const UNKNOWN_COMPANION_GROUP_LABEL = "Nicht einsehbar";
-
-/**
- * Resolves the Laufgemeinschaft of every student on the page.
- *
- * The backend stores links as pairs, not groups: a Laufgemeinschaft is the set
- * of children reachable through those links on the shown day. So this walks the
- * links (union-find) and labels each resulting set with its members' names —
- * there is no group name to display, by design.
- *
- * A companion the filter or the pagination kept off the page still takes part
- * in the walk, it just cannot be NAMED (the list never received them — shipping
- * the names here would leak the children the caller filtered away). Two things
- * depend on that: a child whose only companion is hidden must not be presented
- * as walking alone, and a hidden child can be the bridge of an A-B-C group
- * whose visible members A and C would otherwise fall apart. Hidden members are
- * therefore counted into the label instead of being dropped.
- *
- * Each student is mapped to the component's identity (the union-find root) AND
- * its label. Bucketing has to happen on the identity: the label is built from
- * names, and two unrelated Laufgemeinschaften whose visible children happen to
- * be namesakes would otherwise be merged into one displayed group.
- */
-interface CompanionGroup {
-  /** Stable identity of the connected component — the bucket key. */
-  readonly key: string;
-  /** Display text; never used to decide what belongs together. */
-  readonly label: string;
-}
-
-function companionGroupLabels(
-  students: Student[],
-): Map<string, CompanionGroup> {
-  const parent = new Map<string, string>();
-  const find = (id: string): string => {
-    let root = id;
-    while (parent.get(root) !== root) root = parent.get(root) ?? root;
-    return root;
-  };
-  const union = (a: string, b: string) => {
-    const rootA = find(a);
-    const rootB = find(b);
-    if (rootA !== rootB) parent.set(rootA, rootB);
-  };
-  const addNode = (id: string) => {
-    if (!parent.has(id)) parent.set(id, id);
-  };
-
-  const onPage = new Set(students.map((student) => String(student.id)));
-  for (const student of students) addNode(String(student.id));
-
-  for (const student of students) {
-    for (const companionId of student.companion_student_ids ?? []) {
-      const companion = String(companionId);
-      addNode(companion);
-      union(String(student.id), companion);
-    }
-  }
-
-  const members = new Map<string, Student[]>();
-  const hiddenCounts = new Map<string, number>();
-  for (const student of students) {
-    const root = find(String(student.id));
-    const bucket = members.get(root);
-    if (bucket) bucket.push(student);
-    else members.set(root, [student]);
-  }
-  for (const id of parent.keys()) {
-    if (onPage.has(id)) continue;
-    const root = find(id);
-    hiddenCounts.set(root, (hiddenCounts.get(root) ?? 0) + 1);
-  }
-
-  const labels = new Map<string, CompanionGroup>();
-  for (const [root, group] of members) {
-    const hidden = hiddenCounts.get(root) ?? 0;
-    // A set of one with nothing hidden behind it is a child that walks with
-    // nobody on this day. With a hidden member it is a real Laufgemeinschaft
-    // we can only show in part. The children who walk alone all share one
-    // bucket, so that label IS their key; every real group keeps its own root.
-    // A lone restricted child is the third case: nothing links to them on this
-    // page and their own links were never sent, so "walks alone" is a guess.
-    // Being pulled into a real group is still trustworthy — that link came
-    // from a full-access child and is readable data.
-    const lonely = group.length + hidden < 2;
-    const redacted = lonely && group[0]?.has_full_access === false;
-    const resolved: CompanionGroup = redacted
-      ? {
-          key: UNKNOWN_COMPANION_GROUP_LABEL,
-          label: UNKNOWN_COMPANION_GROUP_LABEL,
-        }
-      : lonely
-        ? { key: NO_COMPANION_GROUP_LABEL, label: NO_COMPANION_GROUP_LABEL }
-        : {
-            key: root,
-            label: withHiddenMembers(
-              group
-                .map((student) => student.name)
-                .sort((a, b) => a.localeCompare(b, "de"))
-                .join(", "),
-              hidden,
-            ),
-          };
-    for (const student of group) labels.set(String(student.id), resolved);
-  }
-  return labels;
-}
-
-/**
- * Appends the count of group members that are not on the page, so a partly
- * filtered Laufgemeinschaft reads as incomplete instead of as the whole group.
- * Only the count travels — the names belong to children the caller filtered out.
- */
-function withHiddenMembers(names: string, hidden: number): string {
-  if (hidden < 1) return names;
-  const suffix =
-    hidden === 1 ? "1 weiteres Kind" : `${String(hidden)} weitere Kinder`;
-  return `${names} (+ ${suffix} nicht angezeigt)`;
-}
-
-function groupStudents(students: Student[], groupMode: GroupMode) {
-  if (groupMode === "none") return [];
-
-  // Companion grouping is the one mode whose label depends on the OTHER
-  // students on the page, so it is resolved once up front instead of per row.
-  const companionLabels =
-    groupMode === "companions" ? companionGroupLabels(students) : null;
-
-  // Every mode but the companion one is grouped BY its label; companions are
-  // grouped by component identity and only rendered with the label.
-  const groups = new Map<string, { label: string; items: Student[] }>();
-  for (const student of students) {
-    const companionGroup = companionLabels?.get(String(student.id));
-    const label = companionLabels
-      ? (companionGroup?.label ?? NO_COMPANION_GROUP_LABEL)
-      : groupMode === "status"
-        ? statusLabelForStudent(student)
-        : groupMode === "room"
-          ? roomLabelForStudent(student)
-          : groupMode === "arrival"
-            ? arrivalLabelForStudent(student)
-            : groupMode === "pickup"
-              ? pickupLabelForStudent(student)
-              : dailyDepartureGroupLabelForStudent(student);
-    const key = companionLabels
-      ? (companionGroup?.key ?? NO_COMPANION_GROUP_LABEL)
-      : label;
-    const bucket = groups.get(key);
-    if (bucket) {
-      bucket.items.push(student);
-    } else {
-      groups.set(key, { label, items: [student] });
-    }
-  }
-
-  // The key travels with the group: two unrelated Laufgemeinschaften can render
-  // the SAME label (namesake children, identical hidden-member count), and a
-  // duplicate React key would let one section's rows reconcile into the other.
-  return Array.from(groups.entries())
-    .map(([key, { label, items }]) => ({
-      key,
-      label,
-      items,
-    }))
-    .sort((a, b) => {
-      if (groupMode === "status") {
-        return (
-          (STATUS_GROUP_ORDER.get(a.label) ?? 99) -
-          (STATUS_GROUP_ORDER.get(b.label) ?? 99)
-        );
-      }
-      if (groupMode === "pickup" || groupMode === "arrival") {
-        const rank = (label: string) =>
-          label === "Keine Gehzeit" || label === "Keine Ankunftszeit"
-            ? "99"
-            : label === "Nicht einsehbar"
-              ? "zz"
-              : label;
-        return rank(a.label).localeCompare(rank(b.label), "de");
-      }
-      if (groupMode === "companions") {
-        // Real Laufgemeinschaften first, then the children who walk with
-        // nobody, and last the ones this account may not read.
-        const rank = (label: string) =>
-          label === NO_COMPANION_GROUP_LABEL
-            ? 1
-            : label === UNKNOWN_COMPANION_GROUP_LABEL
-              ? 2
-              : 0;
-        const rankCmp = rank(a.label) - rank(b.label);
-        if (rankCmp !== 0) return rankCmp;
-      }
-      if (groupMode === "pickup-status") {
-        const rank = (label: string) =>
-          label === "Geht alleine nach Hause"
-            ? 0
-            : label === "Wird abgeholt"
-              ? 1
-              : label === "Nicht einsehbar"
-                ? 99
-                : label === "Keine Abholregelung"
-                  ? 98
-                  : 2;
-        const rankCmp = rank(a.label) - rank(b.label);
-        if (rankCmp !== 0) return rankCmp;
-      }
-      return a.label.localeCompare(b.label, "de");
-    });
-}
-
-function compareByPickupTime(
-  a: Student,
-  b: Student,
-  now: Date,
-  isToday: boolean,
-) {
-  const statusA = getStudentTimeStatus({
-    plannedTime: a.pickup_time,
-    actualTime: a.actual_pickup_time,
-    now,
-    kind: "pickup",
-    day: getStudentDayTimes(a, { ignoreCurrentAttendance: !isToday }),
-    sick: a.sick,
-    classTrip: a.class_trip,
-    excused: a.excused,
-    currentLocation: isToday ? a.current_location : null,
-  });
-  const statusB = getStudentTimeStatus({
-    plannedTime: b.pickup_time,
-    actualTime: b.actual_pickup_time,
-    now,
-    kind: "pickup",
-    day: getStudentDayTimes(b, { ignoreCurrentAttendance: !isToday }),
-    sick: b.sick,
-    classTrip: b.class_trip,
-    excused: b.excused,
-    currentLocation: isToday ? b.current_location : null,
-  });
-  const rankA = getTimeStatusSortRank(statusA);
-  const rankB = getTimeStatusSortRank(statusB);
-  if (rankA !== rankB) return rankA - rankB;
-
-  const timeA = a.pickup_time;
-  const timeB = b.pickup_time;
-  if (timeA && !timeB) return -1;
-  if (!timeA && timeB) return 1;
-  if (timeA && timeB) {
-    const timeCmp = timeA.localeCompare(timeB);
-    if (timeCmp !== 0) return timeCmp;
-  }
-  return compareByName(a, b);
-}
-
-function orderedRooms(
-  rooms: Room[],
-  groupRoomNames: string[],
-  supervisedRoomNames: string[],
-) {
-  const priorityNames = new Set(
-    [...groupRoomNames, ...supervisedRoomNames].map((name) =>
-      name.trim().toLowerCase(),
-    ),
-  );
-
-  return [...rooms].sort((a, b) => {
-    const aPriority = priorityNames.has(a.name.trim().toLowerCase());
-    const bPriority = priorityNames.has(b.name.trim().toLowerCase());
-    if (aPriority !== bPriority) return aPriority ? -1 : 1;
-    return a.name.localeCompare(b.name, "de");
-  });
-}
 
 function SearchPageContent() {
   const router = useTenantRouter();
@@ -1001,32 +294,12 @@ function SearchPageContent() {
   // server, so reading it during render made the first client render differ
   // from the server HTML (hydration mismatch, Sentry FRONTEND-17). The mount
   // effect below restores stored filters when the URL carries none.
-  const initialFilterParams = searchParams;
   const initial = studentSearchUrl(searchParams, berlinTodayISO());
 
   // Read initial filters from URL params so refreshes, revisits via browser
   // history, and copied links restore the same operational view. When no URL
   // filters are present, fall back to the last browser-local PWA view.
-  const initialAttendanceFilter = validQueryValue(
-    initialFilterParams.get("status"),
-    STATUS_FILTER_OPTIONS.map((option) => option.value),
-    "all",
-  );
-  const initialTrackingParam = initialFilterParams.get("tracking") ?? "all";
-  const initialTrackingFilter =
-    parseTrackingFilter(initialTrackingParam).kind === "invalid"
-      ? "all"
-      : (initialTrackingParam as TrackingFilter);
-  const initialSortMode = validQueryValue(
-    initialFilterParams.get("sort"),
-    SORT_OPTIONS.map((option) => option.value),
-    "name",
-  );
-  const initialGroupMode = validQueryValue(
-    initialFilterParams.get("view"),
-    GROUP_OPTIONS.map((option) => option.value),
-    "none",
-  );
+  const initialFilters = readSearchPageFilters(searchParams, berlinTodayISO());
 
   // Search and filter state
   // The search field keeps an immediate local draft and reports the term
@@ -1037,42 +310,44 @@ function SearchPageContent() {
   // Key of the list (read without a name) that the page cap cut short.
   const [partialListKey, setPartialListKey] = useState<string | null>(null);
   const [searchResetKey, setSearchResetKey] = useState(0);
-  const [selectedGroupIds, setSelectedGroupIds] = useState(initial.groupIds);
+  const [selectedGroupIds, setSelectedGroupIds] = useState(
+    initialFilters.groupIds,
+  );
   const [selectedSchoolClasses, setSelectedSchoolClasses] = useState(
-    initial.schoolClasses,
+    initialFilters.schoolClasses,
   );
-  const [selectedYears, setSelectedYears] = useState(initial.years);
+  const [selectedYears, setSelectedYears] = useState(initialFilters.years);
   const [attendanceFilter, setAttendanceFilter] = useState<StatusFilter>(
-    initialAttendanceFilter,
+    initialFilters.attendance,
   );
-  const [busFilter, setBusFilter] = useState<BooleanFilter>(initial.bus);
+  const [busFilter, setBusFilter] = useState<BooleanFilter>(initialFilters.bus);
   const [photoConsentFilter, setPhotoConsentFilter] = useState<BooleanFilter>(
-    initial.photoConsent,
+    initialFilters.photoConsent,
   );
   const [pickupStatusFilter, setPickupStatusFilter] =
-    useState<PickupStatusFilter>(initial.pickupStatus);
+    useState<PickupStatusFilter>(initialFilters.pickupStatus);
   const [dayStatusFilter, setDayStatusFilter] = useState<DayStatusFilter>(
-    initial.dayStatus,
+    initialFilters.dayStatus,
   );
-  const [pickupTimeFilter, setPickupTimeFilter] = useState<string[]>(() =>
-    parsePickupTimeParam(readFilterParam(initialFilterParams, "pickup_time")),
+  const [pickupTimeFilter, setPickupTimeFilter] = useState(
+    initialFilters.pickupTimes,
   );
   const [arrivalTimeFilter, setArrivalTimeFilter] = useState(
-    initialFilterParams.get("arrival_time") ?? "all",
+    initialFilters.arrivalTime,
   );
   // An answer to a question of the registration form, "<key>=<value>"
   // (#6954). Empty = off.
   const [enrollmentAnswerFilter, setEnrollmentAnswerFilter] = useState(
-    initial.enrollmentAnswer,
+    initialFilters.enrollmentAnswer,
   );
   const [trackingFilter, setTrackingFilter] = useState<TrackingFilter>(
-    initialTrackingFilter,
+    initialFilters.tracking,
   );
-  const [sortMode, setSortMode] = useState<SortMode>(initialSortMode);
-  const [groupMode, setGroupMode] = useState<GroupMode>(initialGroupMode);
-  const [selectedRoomId, setSelectedRoomId] = useState(initial.roomId);
+  const [sortMode, setSortMode] = useState<SortMode>(initialFilters.sort);
+  const [groupMode, setGroupMode] = useState<GroupMode>(initialFilters.view);
+  const [selectedRoomId, setSelectedRoomId] = useState(initialFilters.roomId);
   const [selectedRoomName, setSelectedRoomName] = useState(
-    initialFilterParams.get("room_name") ?? "",
+    initialFilters.roomName,
   );
   const [isExportOpen, setIsExportOpen] = useState(false);
 
@@ -1128,78 +403,24 @@ function SearchPageContent() {
     [updateUrlParams],
   );
 
-  const applyPersistedFilters = useCallback(
-    (filters: PersistedSearchFilters) => {
-      const params = persistedFiltersToSearchParams(
-        compactStoredFilters(normalizeStoredFilters(filters)),
-      );
-
-      setSelectedGroupIds(parseGroupIdsParam(params.get("group_id")));
-      setSelectedSchoolClasses(
-        parseMultiValueParam(params.get("school_class")),
-      );
-      setSelectedYears(parseYearParam(params.get("year")));
-      setAttendanceFilter(
-        validQueryValue(
-          params.get("status"),
-          STATUS_FILTER_OPTIONS.map((option) => option.value),
-          "all",
-        ),
-      );
-      setPickupTimeFilter(parsePickupTimeParam(params.get("pickup_time")));
-      setArrivalTimeFilter(params.get("arrival_time") ?? "all");
-      setEnrollmentAnswerFilter(params.get("enrollment_answer") ?? "");
-      setBusFilter(
-        validQueryValue(params.get("bus"), BOOLEAN_FILTER_VALUES, "all"),
-      );
-      setPhotoConsentFilter(
-        validQueryValue(
-          params.get("photo_consent"),
-          BOOLEAN_FILTER_VALUES,
-          "all",
-        ),
-      );
-      setPickupStatusFilter(
-        validQueryValue(
-          params.get("pickup_status"),
-          PICKUP_STATUS_FILTER_VALUES,
-          "all",
-        ),
-      );
-      setDayStatusFilter(
-        validQueryValue(
-          params.get("day_status"),
-          DAY_STATUS_FILTER_OPTIONS.map((option) => option.value),
-          "all",
-        ),
-      );
-
-      const trackingParam = params.get("tracking") ?? "all";
-      setTrackingFilter(
-        parseTrackingFilter(trackingParam).kind === "invalid"
-          ? "all"
-          : (trackingParam as TrackingFilter),
-      );
-
-      setSortMode(
-        validQueryValue(
-          params.get("sort"),
-          SORT_OPTIONS.map((option) => option.value),
-          "name",
-        ),
-      );
-      setGroupMode(
-        validQueryValue(
-          params.get("view"),
-          GROUP_OPTIONS.map((option) => option.value),
-          "none",
-        ),
-      );
-      setSelectedRoomId(params.get("room_id") ?? "");
-      setSelectedRoomName(params.get("room_name") ?? "");
-    },
-    [],
-  );
+  const applyFilters = useCallback((filters: SearchPageFilters) => {
+    setSelectedGroupIds(filters.groupIds);
+    setSelectedSchoolClasses(filters.schoolClasses);
+    setSelectedYears(filters.years);
+    setAttendanceFilter(filters.attendance);
+    setBusFilter(filters.bus);
+    setPhotoConsentFilter(filters.photoConsent);
+    setPickupStatusFilter(filters.pickupStatus);
+    setPickupTimeFilter(filters.pickupTimes);
+    setArrivalTimeFilter(filters.arrivalTime);
+    setEnrollmentAnswerFilter(filters.enrollmentAnswer);
+    setDayStatusFilter(filters.dayStatus);
+    setTrackingFilter(filters.tracking);
+    setSortMode(filters.sort);
+    setGroupMode(filters.view);
+    setSelectedRoomId(filters.roomId);
+    setSelectedRoomName(filters.roomName);
+  }, []);
 
   useEffect(() => {
     if (!storageKey) return;
@@ -1216,10 +437,15 @@ function SearchPageContent() {
     const storedFilters = readStoredFilters(storageKey);
     if (!storedFilters || Object.keys(storedFilters).length === 0) return;
 
-    applyPersistedFilters(storedFilters);
+    applyFilters(
+      readSearchPageFilters(
+        persistedFiltersToSearchParams(storedFilters),
+        berlinTodayISO(),
+      ),
+    );
     updateUrlParams(storedFilters);
   }, [
-    applyPersistedFilters,
+    applyFilters,
     hasUrlFilterParams,
     searchParams,
     storageKey,
@@ -1822,22 +1048,7 @@ function SearchPageContent() {
   const clearAllFilters = useCallback(() => {
     setSearchTerm("");
     setSearchResetKey((key) => key + 1);
-    setSelectedGroupIds([]);
-    setSelectedSchoolClasses([]);
-    setSelectedYears([]);
-    setAttendanceFilter("all");
-    setBusFilter("all");
-    setPhotoConsentFilter("all");
-    setPickupStatusFilter("all");
-    setPickupTimeFilter([]);
-    setArrivalTimeFilter("all");
-    setEnrollmentAnswerFilter("");
-    setDayStatusFilter("all");
-    setTrackingFilter("all");
-    setSortMode("name");
-    setGroupMode("none");
-    setSelectedRoomId("");
-    setSelectedRoomName("");
+    applyFilters(NO_FILTERS);
     setExplicitDate(null);
     updateUrlParams({
       ...Object.fromEntries(FILTER_QUERY_PARAMS.map((key) => [key, ""])),
@@ -1845,7 +1056,7 @@ function SearchPageContent() {
       [SEARCH_QUERY_PARAM]: "",
     });
     removeStoredFilters(storageKey);
-  }, [storageKey, updateUrlParams]);
+  }, [applyFilters, storageKey, updateUrlParams]);
 
   // A reload the person asked for. The counter also restarts the stall timer
   // below, so a retry gets the full waiting time again.
@@ -2729,22 +1940,9 @@ function SearchPageContent() {
     }
 
     if (effectiveAttendanceFilter !== "all") {
-      const statusLabels: Record<Exclude<StatusFilter, "all">, string> = {
-        anwesend: "Anwesend",
-        schule: "Schule",
-        unterricht: "Im Unterricht",
-        abwesend: "Zuhause",
-        unterwegs: "Unterwegs",
-        schulhof: "Schulhof",
-        krank: "Krank",
-        klassenfahrt: "Klassenfahrt",
-        entschuldigt: "Entschuldigt",
-        "entschuldigt-klassenfahrt": "Entschuldigt oder Klassenfahrt",
-      };
       filters.push({
         id: "attendance",
-        label:
-          statusLabels[effectiveAttendanceFilter] ?? effectiveAttendanceFilter,
+        label: STATUS_FILTER_LABELS[effectiveAttendanceFilter],
         onRemove: () => updateAttendanceFilter("all"),
       });
     }
@@ -3152,54 +2350,48 @@ function SearchPageContent() {
   const fromParam = useMemo(() => {
     const qs = new URLSearchParams();
     if (searchTerm) qs.set(SEARCH_QUERY_PARAM, searchTerm);
-    if (effectiveRoomId) {
-      qs.set("room_id", effectiveRoomId);
-      if (selectedRoomName) qs.set("room_name", selectedRoomName);
+    if (!isToday) qs.set(DATE_QUERY_PARAM, selectedDate);
+    const params = searchPageFilterParams({
+      groupIds: selectedGroupIds,
+      schoolClasses: selectedSchoolClasses,
+      years: selectedYears,
+      roomId: effectiveRoomId,
+      roomName: selectedRoomName,
+      bus: busFilter,
+      photoConsent: effectivePhotoConsentFilter,
+      pickupStatus: pickupStatusFilter,
+      pickupTimes: pickupTimeFilter,
+      arrivalTime: arrivalTimeFilter,
+      enrollmentAnswer: effectiveEnrollmentAnswer,
+      dayStatus: dayStatusFilter,
+      attendance: effectiveAttendanceFilter,
+      tracking: effectiveTrackingFilter,
+      sort: sortMode,
+      view: effectiveGroupMode,
+    });
+    for (const [key, value] of Object.entries(params)) {
+      if (value) qs.set(key, value);
     }
-    if (selectedGroupIds.length > 0)
-      qs.set("group_id", encodeMultiValueParam(selectedGroupIds));
-    if (selectedSchoolClasses.length > 0)
-      qs.set("school_class", encodeMultiValueParam(selectedSchoolClasses));
-    if (selectedYears.length > 0)
-      qs.set("year", encodeMultiValueParam(selectedYears));
-    if (effectiveAttendanceFilter !== "all")
-      qs.set("status", effectiveAttendanceFilter);
-    if (busFilter !== "all") qs.set("bus", busFilter);
-    if (effectivePhotoConsentFilter !== "all")
-      qs.set("photo_consent", effectivePhotoConsentFilter);
-    if (pickupStatusFilter !== "all")
-      qs.set("pickup_status", pickupStatusFilter);
-    if (effectiveEnrollmentAnswer)
-      qs.set("enrollment_answer", effectiveEnrollmentAnswer);
-    if (dayStatusFilter !== "all") qs.set("day_status", dayStatusFilter);
-    if (!isToday) qs.set("date", selectedDate);
-    if (pickupTimeFilter.length > 0)
-      qs.set("pickup_time", encodeMultiValueParam(pickupTimeFilter));
-    if (arrivalTimeFilter !== "all") qs.set("arrival_time", arrivalTimeFilter);
-    if (effectiveTrackingFilter !== "all")
-      qs.set("tracking", effectiveTrackingFilter);
-    if (sortMode !== "name") qs.set("sort", sortMode);
-    if (effectiveGroupMode !== "none") qs.set("view", effectiveGroupMode);
     return qs.size === 0
       ? "/students/search"
       : encodeURIComponent(`/students/search?${qs.toString()}`);
   }, [
     searchTerm,
-    effectiveRoomId,
-    selectedRoomName,
+    isToday,
+    selectedDate,
     selectedGroupIds,
     selectedSchoolClasses,
     selectedYears,
-    effectiveAttendanceFilter,
+    effectiveRoomId,
+    selectedRoomName,
     busFilter,
     effectivePhotoConsentFilter,
     pickupStatusFilter,
-    effectiveEnrollmentAnswer,
-    dayStatusFilter,
-    isToday,
-    selectedDate,
     pickupTimeFilter,
     arrivalTimeFilter,
+    effectiveEnrollmentAnswer,
+    dayStatusFilter,
+    effectiveAttendanceFilter,
     effectiveTrackingFilter,
     sortMode,
     effectiveGroupMode,
