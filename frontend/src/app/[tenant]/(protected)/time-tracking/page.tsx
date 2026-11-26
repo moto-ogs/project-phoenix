@@ -2258,6 +2258,9 @@ function ModalActions({
   readonly confirmDisabledReason?: string;
   readonly cancelDisabled?: boolean;
 }) {
+  const reasonShown = Boolean(
+    hideCancel && confirmDisabled && confirmDisabledReason,
+  );
   return (
     <div className="flex w-full flex-col-reverse gap-3 sm:flex-row">
       {hideCancel ? null : (
@@ -2275,8 +2278,14 @@ function ModalActions({
       )}
       {/* App (#8070): ohne Abbrechen ist Platz für den Grund, warum
           Speichern noch nicht geht – sichtbar, nicht erst beim Antippen. */}
-      {hideCancel && confirmDisabled && confirmDisabledReason ? (
-        <p className="self-center text-sm leading-5 text-gray-600">
+      {reasonShown ? (
+        // Runde 19: Der Satz bekommt zwei Drittel der Breite, „Speichern“
+        // das letzte Drittel; so bricht er am Telefon nicht um. Inline,
+        // weil der Fuß des Blatts jedem Kind `flex-1` gibt.
+        <p
+          className="min-w-0 self-center text-sm leading-5 text-gray-600"
+          style={{ flex: "2 1 0%" }}
+        >
           {confirmDisabledReason}
         </p>
       ) : null}
@@ -4349,12 +4358,12 @@ function TimeTrackingContent() {
             {metricsLoad.error ? (
               <LoadErrorAlert error={metricsLoad.error} />
             ) : metricsPending ? null : (
+              // Runde 19: Am Telefon eine Saldo-Zahl im Kopf. Die Stunden
+              // der Woche („16h 13min von 40h“) stehen über den Tagen der
+              // Woche und im Stundenkonto, so konkurrieren keine drei
+              // Zahlen im ersten Bild.
               <TenantPageStats
                 items={[
-                  {
-                    value: `${formatDuration(ownMetrics.week!.ist)} / ${formatDuration(ownMetrics.week!.soll)}`,
-                    label: "Woche",
-                  },
                   {
                     value: formatSignedDuration(
                       ownMetrics.accountBalanceMinutes!,
@@ -4762,6 +4771,8 @@ function TimeTrackingContent() {
           account={
             metricsPending || metricsLoad.error ? undefined : (
               <AppAccountCard
+                weekIst={ownMetrics.week?.ist ?? null}
+                weekSoll={ownMetrics.week?.soll ?? null}
                 monthIst={ownMetrics.month?.ist ?? null}
                 monthSoll={ownMetrics.month?.soll ?? null}
                 accountBalanceMinutes={ownMetrics.accountBalanceMinutes}
