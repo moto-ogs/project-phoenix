@@ -24,6 +24,7 @@ import { ListSkeleton } from "~/components/ui/page-skeletons";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { useApiErrorDisplay } from "~/contexts/ToastContext";
 import { childrenConcept } from "~/lib/concepts/children";
+import { useLatest } from "~/lib/hooks/use-latest";
 import { createLogger } from "~/lib/logger";
 import { schoolClassLabel, schoolClassName } from "~/lib/school-class-label";
 import { useSWRRequestGuard } from "~/lib/swr/hooks";
@@ -164,6 +165,7 @@ function ChildrenContent() {
     LIST_OBJECT,
   );
   const beginPageRead = useSWRRequestGuard();
+  const openListKey = useLatest(listKey);
 
   // Later pages belong to the first page they continue; another reiter,
   // another search or a reload starts a new list and drops them.
@@ -194,10 +196,14 @@ function ChildrenContent() {
       });
     } catch (err) {
       // The next children have the access boundary of the first: a refusal
-      // takes the names already shown away, for this list only.
+      // takes the names already shown away. It is recorded for the list
+      // that asked. Only while that list is still open does it also clear
+      // what the page holds: `first.mutate` writes to the open list, which
+      // is another one after a change of reiter or search.
       if (isRefusal(err)) {
         complete(() => {
           first.readCallbacks.onError(err);
+          if (openListKey.current !== listKey) return;
           void first.mutate(undefined, { revalidate: false });
           setLater(null);
         });

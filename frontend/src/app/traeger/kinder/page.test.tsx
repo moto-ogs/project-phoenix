@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "~/lib/api-error";
@@ -7,6 +13,7 @@ import type {
   TraegerChildrenPage,
 } from "~/lib/traeger-children-api";
 import { catalogText } from "~/test/error-catalog-text";
+import { deferred } from "~/test/helpers/form-modal-pending";
 import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 
 const { api, navigation } = vi.hoisted(() => ({
@@ -301,6 +308,52 @@ describe("TraegerChildrenPage", () => {
       ),
     ).toBeVisible();
     expect(screen.queryByText("Berg, Anna")).not.toBeInTheDocument();
+  });
+
+  it("keeps the open reiter when another reiter's next children are refused late", async () => {
+    const lateRefusal = deferred<TraegerChildrenPage>();
+    const school = deferred<TraegerChildrenPage>();
+    api.fetchTraegerChildren.mockImplementation(
+      ({ schoolId }: { schoolId: string }, offset?: number) => {
+        if (offset) return lateRefusal.promise;
+        if (schoolId === LINDE.id) return school.promise;
+        return Promise.resolve(
+          pageOf([AKSOY, ZANDER], { total: 3, matched: 3, hasMore: true }),
+        );
+      },
+    );
+    renderPage();
+    await screen.findAllByText("Zander, Mia");
+    fireEvent.click(
+      screen.getByRole("button", { name: "Weitere Kinder laden (2 von 3)" }),
+    );
+    fireEvent.click(schoolTab(LINDE));
+    await waitFor(() =>
+      expect(api.fetchTraegerChildren).toHaveBeenCalledWith({
+        schoolId: LINDE.id,
+        search: "",
+      }),
+    );
+
+    // The refusal of „Alle“ arrives while the school's own list is on its
+    // way: it must not take that read away.
+    await act(async () => {
+      lateRefusal.reject(new ApiError("refused", 403));
+      await lateRefusal.promise.catch(() => undefined);
+    });
+    await act(async () => {
+      school.resolve(pageOf([BERG]));
+      await school.promise;
+    });
+
+    expect((await screen.findAllByText("Berg, Anna")).length).toBeGreaterThan(
+      0,
+    );
+    expect(
+      screen.queryByText(
+        catalogText("general.permission", "die Liste der Kinder"),
+      ),
+    ).not.toBeInTheDocument();
   });
 
   it("names the missing right instead of a list", async () => {
