@@ -8,6 +8,10 @@ import (
 type ActivityGroupName struct {
 	Name     string
 	Category *string
+	// RoomStay marks the session activity of a released room's independent
+	// stays. It is no activity children take part in, so the occupancy
+	// label leaves it out (#8130).
+	RoomStay bool
 }
 
 type ActivityGroupNames interface {

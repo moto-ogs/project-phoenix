@@ -80,6 +80,37 @@ func TestOccupancyProjectionBuildsStableBatchProjection(t *testing.T) {
 	assert.False(t, result[1].IsOccupied)
 }
 
+// A released room's own session holds independent room stays; it is no
+// activity, so it neither names nor categorises the occupancy (#8130). A
+// block running in the same room still does.
+func TestOccupancyProjectionLeavesRoomStaySessionsUnnamed(t *testing.T) {
+	t.Parallel()
+	rooms := []facilitiesModule.Room{{ID: 1, Name: "Kreativraum"}, {ID: 2, Name: "Sporthalle"}}
+	facts := []facilitiesModule.RoomOccupancyFact{
+		{RoomID: 1, ActivityGroupIDs: []int64{90}, StudentCount: 4},
+		{RoomID: 2, ActivityGroupIDs: []int64{90, 10}, StudentCount: 6},
+	}
+	roomStay := activityGroup("Offener Raum", "Offene Räume")
+	roomStay.RoomStay = true
+	activities := activityProjectionStub{groups: map[int64]facilitiesModule.ActivityGroupName{
+		90: roomStay,
+		10: activityGroup("Lernzeit", "Lernen"),
+	}}
+
+	project := NewOccupancyProjection(occupancyGroupsStub{facts: facts}, activities, membershipQueryStub{}, personQueryStub{})
+	result, err := project(context.Background(), rooms)
+
+	require.NoError(t, err)
+	require.Len(t, result, 2)
+	assert.True(t, result[0].IsOccupied)
+	assert.Equal(t, 4, result[0].StudentCount)
+	assert.Nil(t, result[0].GroupName)
+	assert.Nil(t, result[0].CategoryName)
+	assert.True(t, result[1].IsOccupied)
+	assert.Equal(t, "Lernzeit", pointerValue(result[1].GroupName))
+	assert.Equal(t, "Lernen", pointerValue(result[1].CategoryName))
+}
+
 func TestOccupancyProjectionPropagatesDependencyErrors(t *testing.T) {
 	t.Parallel()
 	want := errors.New("dependency failed")
