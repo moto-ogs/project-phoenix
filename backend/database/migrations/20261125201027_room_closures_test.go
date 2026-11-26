@@ -39,8 +39,10 @@ func TestRoomClosuresGoWithTheSchoolAndRollBack(t *testing.T) {
 	require.Equal(t, "db_done", result.Status, "preflight, deletion and residual checks pass: %v", result.ErrorCode)
 	assert.EqualValues(t, 1, result.RowCounts["facilities.room_closures"], "the one closure of the school")
 
-	// The opening changes (#7654) follow the room closures at the head, so
-	// roll them back first just as the migration runner does.
+	// Pickup persons (#7655) and opening changes (#7654) follow the room
+	// closures at the head, so roll them back first just as the migration
+	// runner does.
+	require.NoError(t, studentPickupPersonsDown(ctx, db))
 	require.NoError(t, openingChangesDown(ctx, db))
 	require.NoError(t, roomClosuresDown(ctx, db))
 	var exists bool

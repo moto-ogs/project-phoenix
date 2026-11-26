@@ -275,8 +275,8 @@ export function OpeningChangeModal({
         </div>
         <p className="text-xs text-gray-500">
           Für einen einzelnen Tag trägst du dasselbe Datum in beide Felder ein.
-          Bisher zeigt moto diese Zeiten nur hier. Sitzungen und Abholzeiten
-          richten sich noch nicht danach.
+          An diesen Tagen enden die Sitzungen zur neuen Schließzeit. Danach
+          können Eltern die Abholzeit für den Tag nicht mehr ändern.
         </p>
       </div>
     </FormModal>

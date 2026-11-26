@@ -35,6 +35,14 @@ export interface DayChangeChild {
   readonly pickupTime: string | null;
   /** Bei `child_pickup_note`: der Hinweis zum Abholen. */
   readonly note: string | null;
+  /**
+   * Bei `child_pickup_person` (#7655): wer das Kind heute abholt.
+   * `oneTime` heißt: keine dauerhaft berechtigte Person, Ausweis prüfen.
+   */
+  readonly pickupPerson?: {
+    readonly name: string;
+    readonly oneTime: boolean;
+  } | null;
 }
 
 export interface DayChangeLink {
@@ -56,6 +64,7 @@ export interface DayChangeChildSummary {
     readonly pickupChanged: number;
     readonly goesAlone: number;
     readonly pickupNote: number;
+    readonly pickupPerson?: number;
   };
   readonly items: readonly {
     readonly kind: Kind | (string & {});
@@ -166,6 +175,12 @@ function mapChild(child: Child): DayChangeChild {
     status: child.status,
     pickupTime: child.pickup_time,
     note: child.note,
+    pickupPerson: child.pickup_person
+      ? {
+          name: child.pickup_person.name,
+          oneTime: child.pickup_person.one_time,
+        }
+      : null,
   };
 }
 
@@ -180,6 +195,7 @@ function mapChildSummary(
       pickupChanged: summary.counts.pickup_changed,
       goesAlone: summary.counts.goes_alone,
       pickupNote: summary.counts.pickup_note,
+      pickupPerson: summary.counts.pickup_person,
     },
     items: (summary.items ?? []).map((item) => ({
       kind: item.kind,

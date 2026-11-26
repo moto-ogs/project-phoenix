@@ -71,6 +71,10 @@ type OpeningChangeInput struct {
 type OpeningChanges interface {
 	// ListOpeningChanges lists the changes touching [from, to], by start.
 	ListOpeningChanges(ctx context.Context, from, to calendar.Date) ([]OpeningChange, error)
+	// ClosingTimeOn answers the closing time "HH:MM" a change sets for day,
+	// the earliest when several overlap; ok is false on a day without one.
+	// It replaces operations.session_end_time on that day (#8157).
+	ClosingTimeOn(ctx context.Context, day calendar.Date) (closesAt string, ok bool, err error)
 	CreateOpeningChange(ctx context.Context, input OpeningChangeInput) (OpeningChange, error)
 	UpdateOpeningChange(ctx context.Context, id int64, input OpeningChangeInput) (OpeningChange, error)
 	DeleteOpeningChange(ctx context.Context, id int64) error

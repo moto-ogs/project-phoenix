@@ -68,6 +68,7 @@
   "pickup_change_disabled": "{object} ist hier zurzeit nicht verfügbar. Bitte frage deine Ansprechperson.",
   "pickup_permission_request_required": "Eine neue Abholerlaubnis braucht deine Unterschrift. Die {careTerm} bestätigt sie dann.",
   "pickup_permission_unchanged": "Diese Person darf an diesen Tagen schon abholen.",
+  "pickup_person_not_authorized": "Diese Person darf das Kind an diesem Tag nicht abholen. Wähle eine andere Person oder trage einen Namen ein.",
   "pickup_person_not_linked": "Diese Person ist kein Kontakt deines Kindes. Bitte trage sie zuerst bei den Kontakten ein.",
   "pickup_proof_not_found": "Zu dieser Anfrage gibt es keinen Nachweis mit deiner Unterschrift.",
   "pickup_signature_invalid": "Die Unterschrift ist nicht lesbar. Bitte unterschreibe noch einmal.",

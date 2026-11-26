@@ -1349,7 +1349,7 @@ export const calendarPeriodsTopic = function calendarPeriodsTopic(): HelpTopic {
       "Im Betreuungsplan plant moto an Schließtagen und gesetzlichen Feiertagen keine Termine. Abgesagte Termine verschwinden aus dem Plan. Eltern bekommen keine Nachricht.",
     notes: [
       "Ein Zeitraum, den noch nichts benutzt, trägt `Nicht verwendet`.",
-      "Geänderte Öffnungszeiten zeigt moto bisher nur auf dieser Seite. Sitzungen und Abholzeiten richten sich noch nicht danach.",
+      "An einem Tag mit geänderter Öffnungszeit enden die Sitzungen zur neuen Schließzeit. Danach können Eltern die Abholzeit für den Tag nicht mehr ändern.",
       // #6845: Schichtserien halten ihren Zeitraum fest.
       "Einen Zeitraum mit Schichtserien im Dienstplan kannst du nicht löschen, auch wenn die Serien beendet sind. Nimm stattdessen den Haken bei `Zeitraum im Plan verwenden` heraus.",
       "Ferienbetreuung an Schließtagen: Wähle beim Speichern der Serie `Auch an Schließtagen planen`. Trage bei `Letzter Tag` den letzten Ferientag ein. Dann endet die Serie mit den Ferien.",
@@ -1551,6 +1551,16 @@ export const careTimesTopic = function careTimesTopic(): HelpTopic {
           "Wähle `Speichern`.",
         ],
       },
+      {
+        // #7655: care-pickup-person-section.tsx, Anzeige in pickup-person-row.tsx.
+        title: "Eintragen, wer an einem Tag abholt",
+        steps: [
+          "Öffne beim Kind den Bereich `Betreuungszeiten`.",
+          "Wähle beim gewünschten Tag `Ausnahme`.",
+          "Wähle unter `Wer holt ab?` eine abholberechtigte Person. Oder wähle `Andere Person` und trage den Namen ein.",
+          "Wähle `Speichern`.",
+        ],
+      },
     ],
     result:
       // #3946: student-card.tsx (dayHomeChange) zeigt unten einen orangen Streifen.
@@ -1561,6 +1571,8 @@ export const careTimesTopic = function careTimesTopic(): HelpTopic {
       // student-time-status.ts) warnt nicht mehr als überfällig.
       "Endet der Unterricht erst zur Abholzeit? Dann steht auf der Kinderkarte `Nur bei Unterrichtsausfall`. Das Kind gilt nicht als verspätet. Kommt es doch, checke es wie gewohnt ein.",
       "Den Wochenplan kannst du schon beim Anlegen des Kindes mitgeben.",
+      // #7655: nur der Name wird gespeichert und nach dem Tag gelöscht.
+      "Wer an diesem Tag abholt, steht auf der Kinderkarte in der Gruppe unter `Holt heute ab` und in `Heute anders`. Bei einer anderen Person steht `Ausweis prüfen` dabei. moto speichert nur den Namen und löscht ihn nach dem Tag.",
       // #3372: Die Auswahl erscheint nur mit gepflegten Schulstunden
       // (school-period-select.tsx) und kopiert die Uhrzeit ins Zeitfeld.
       "Schneller geht es mit `Nach Schulstunde` unter dem Feld `Ankunft`: Wähle zum Beispiel `5. Stunde`. moto trägt die passende Uhrzeit ein.",

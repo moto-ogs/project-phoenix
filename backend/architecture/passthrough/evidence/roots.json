@@ -926,7 +926,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (s groupLiveSettings) CareDayEnd(ctx context.Context) (string, error) {\n\treturn s.settings.ResolveString(ctx, settingsplatform.KeySessionEndTime)\n}",
+      "evidence": "func (s groupLiveSettings) CareDayEnd(ctx context.Context) (string, error) {\n\tclosesAt, ok, err := s.closingTimes(ctx, calendar.DateFromTime(s.now()))\n\tif err != nil {\n\t\treturn \"\", fmt.Errorf(\"read the closing time of today: %w\", err)\n\t}\n\tif ok {\n\t\treturn closesAt, nil\n\t}\n\treturn s.settings.ResolveString(ctx, settingsplatform.KeySessionEndTime)\n}",
       "form": "unclassified-evidence",
       "id": "api/groupLiveSettings.CareDayEnd",
       "owner": "roots"

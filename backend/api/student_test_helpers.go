@@ -418,7 +418,7 @@ func newStudentTestModule(db transactionruntime.Database, unit tenant.UnitOfWork
 		ExcusedRequests:   excusedRequestService,
 		StatusDays:        studentStatusDayService,
 		HolidayGroups:     enrollmentCompose.NewHolidayGuestBadgeList(timezone.CalendarDateClock(now)),
-		Now:               now,
+		Now:               now, DayPickups: mustCarePlanPickupPersons(students.CarePlan),
 	}, nil)
 	if err != nil {
 		return StudentTestModule{}, ActiveTestModule{}, StudentTestPeople{}, nil, nil, nil, fmt.Errorf("compose OGS group live projection: %w", err)

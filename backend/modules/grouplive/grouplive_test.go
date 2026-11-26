@@ -634,7 +634,9 @@ func TestGetShowsSchoolBeforeTheFirstCheckIn(t *testing.T) {
 	assert.Equal(t, AtSchoolInputs{
 		Decision:   DayDecision{ComesToday: true, Reason: DayReasonArrivalSchedule},
 		PickupTime: &pickupAt,
-		CareDayEnd: "17:00",
+		// The pickup time ends this child's day, so the care day end is not
+		// read for it (#8157).
+		CareDayEnd: "",
 		Now:        fakeNow,
 	}, seen[0])
 	assert.True(t, seen[1].CheckedIn)
@@ -644,14 +646,60 @@ func TestGetShowsSchoolBeforeTheFirstCheckIn(t *testing.T) {
 func TestGetFailsWhenTheCareDayEndCannotBeResolved(t *testing.T) {
 	t.Parallel()
 
+	// The care day end is read once a child depends on it (#8157): here a
+	// child still "Im Unterricht".
 	f := &fakes{
 		caller:           fullCaller,
 		supervisedGroups: func(context.Context) ([]GroupRecord, error) { return twoGroups(), nil },
-		careDayEnd:       func(context.Context) (string, error) { return "", errors.New("settings down") },
+		members: func(context.Context, int64) ([]RosterStudent, error) {
+			return []RosterStudent{{ID: 7}}, nil
+		},
+		snapshot: func(context.Context, []int64, Date) (PresenceSnapshot, error) {
+			return presenceFake{
+				locations:   map[int64]Location{7: {Name: inClassLocation}},
+				attendances: map[int64]Attendance{7: {CheckInTime: &fakeNow, CheckOutTime: &fakeNow, InClass: true}},
+			}, nil
+		},
+		careDayEnd: func(context.Context) (string, error) { return "", errors.New("settings down") },
 	}
 
 	_, err := newService(f).LiveGroup(context.Background(), 1)
 	require.ErrorContains(t, err, "resolve care day end")
+	_, _, err = newService(f).CountAtSchoolToday(context.Background(), []int64{7})
+	require.ErrorContains(t, err, "resolve care day end")
+}
+
+// A roster whose children do not depend on the care day end never reads it:
+// on a day with changed opening hours the read costs a statement (#8157).
+func TestCareDayEndIsReadOnlyWhenAChildDependsOnIt(t *testing.T) {
+	t.Parallel()
+
+	reads := 0
+	f := &fakes{
+		caller:           fullCaller,
+		supervisedGroups: func(context.Context) ([]GroupRecord, error) { return twoGroups(), nil },
+		members: func(context.Context, int64) ([]RosterStudent, error) {
+			return []RosterStudent{{ID: 7}, {ID: 8}}, nil
+		},
+		snapshot: func(context.Context, []int64, Date) (PresenceSnapshot, error) {
+			return presenceFake{locations: map[int64]Location{7: {Name: absentLocation}, 8: {Name: absentLocation}}}, nil
+		},
+		decide:     func(DayInputs) DayDecision { return DayDecision{} },
+		careDayEnd: func(context.Context) (string, error) { reads++; return "12:00", nil },
+	}
+	_, err := newService(f).LiveGroup(context.Background(), 1)
+	require.NoError(t, err)
+	_, _, err = newService(f).CountAtSchoolToday(context.Background(), []int64{7, 8})
+	require.NoError(t, err)
+	assert.Zero(t, reads, "no child is expected today or in class")
+
+	f.decide = func(DayInputs) DayDecision { return DayDecision{ComesToday: true, Reason: DayReasonPickupSchedule} }
+	var ends []string
+	f.atSchool = func(inputs AtSchoolInputs) bool { ends = append(ends, inputs.CareDayEnd); return false }
+	_, err = newService(f).LiveGroup(context.Background(), 1)
+	require.NoError(t, err)
+	assert.Equal(t, 1, reads, "two expected children share one read")
+	assert.Equal(t, []string{"12:00", "12:00"}, ends, "the rule decides with the care day end of today")
 }
 
 func TestGetPassesPresenceAndPlansIntoTheDayDecision(t *testing.T) {

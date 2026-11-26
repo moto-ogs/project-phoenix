@@ -213,9 +213,10 @@ func (s *Service) guardCareExceptionDay(ctx context.Context, tenantID int64, cha
 
 // guardTodayPickupOpen refuses a guardian change to today's pickup once the
 // child has left for the day, or once the school's care day has ended
-// (operations.session_end_time, #5710): a child still in class then goes home
-// straight from school, so a new pickup time would describe nothing. The
-// end of the care day is the same rule that ends "Im Unterricht"
+// (the changed opening-day closing time or operations.session_end_time, #5710):
+// a child still in class then goes home straight from school, so a new pickup
+// time would describe nothing. The end of the care day is the same rule that
+// ends "Im Unterricht"
 // (carerequests.CareDayEnded). It is read in the caller's tenant transaction
 // after the day's locks, like the cutoff. Later days stay open.
 func (s *Service) guardTodayPickupOpen(ctx context.Context, tenantID, studentID int64, date, today calendar.Date) error {
@@ -229,14 +230,33 @@ func (s *Service) guardTodayPickupOpen(ctx context.Context, tenantID, studentID 
 	if alreadyLeft {
 		return ErrCareExceptionAlreadyLeft
 	}
-	careDayEnd, err := s.Settings.ResolveStringForTenantInTx(ctx, tenantID, KeySessionEndTime)
+	careDayEnd, err := s.careDayEndToday(ctx, tenantID, today)
 	if err != nil {
-		return fmt.Errorf("parent: resolve care day end: %w", err)
+		return err
 	}
 	if carerequests.CareDayEnded(careDayEnd, s.now()) {
 		return ErrPickupChangeCareDayEnded
 	}
 	return nil
+}
+
+// careDayEndToday is the school's care day end of today: the closing time of
+// a changed opening day (#8157), otherwise operations.session_end_time.
+func (s *Service) careDayEndToday(ctx context.Context, tenantID int64, today calendar.Date) (string, error) {
+	if s.ClosingTimes != nil {
+		closesAt, ok, err := s.ClosingTimes(ctx, today)
+		if err != nil {
+			return "", fmt.Errorf("parent: read the closing time of today: %w", err)
+		}
+		if ok {
+			return closesAt, nil
+		}
+	}
+	careDayEnd, err := s.Settings.ResolveStringForTenantInTx(ctx, tenantID, KeySessionEndTime)
+	if err != nil {
+		return "", fmt.Errorf("parent: resolve care day end: %w", err)
+	}
+	return careDayEnd, nil
 }
 
 func (s *Service) childAlreadyLeftToday(ctx context.Context, studentID int64, date, today calendar.Date) (bool, error) {

@@ -12,6 +12,7 @@ import (
 
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 
+	schoolCalendarCompose "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/compose"
 	timetableCompose "github.com/moto-ogs/project-phoenix/modules/timetable/compose"
 
 	"github.com/go-chi/chi/v5"
@@ -149,7 +150,7 @@ func NewStudentHTTPTestResources(store transactionruntime.Database, unit tenant.
 			StudentConsents:          NewStudentHTTPTestConsents(store),
 			StudentPhotos:            peopleServices.PeopleDirectory,
 			UserContextService:       caller,
-			WeeklyPlans:              svc.WeeklyPlans,
+			WeeklyPlans:              svc.WeeklyPlans, PickupPersons: mustClockedPickupPersons(store, clock),
 		},
 		projectionStudentsHTTP.ResourceConfig{
 			PrivacyConsents:        presence,
@@ -157,9 +158,9 @@ func NewStudentHTTPTestResources(store transactionruntime.Database, unit tenant.
 			ActiveService:          livePresence.Active,
 			ArrivalScheduleService: live.ArrivalSchedule,
 			CareDayService:         live.CareDay,
-			CareLifecycleService:   lifecycle,
-			CompanionService:       NewStudentHTTPTestCompanions(students, repoFactory.Student, peopleServices.PeopleDirectory, peopleServices.StudentAudit),
-			EnrollmentAnswers:      newStudentEnrollmentAnswerFilters(newStudentAnswers()), ExcusedRequestService: svc.ExcusedRequests,
+			CareLifecycleService:   lifecycle, ClosingTimes: schoolCalendarCompose.NewOpeningChanges().ClosingTimeOn,
+			CompanionService:  NewStudentHTTPTestCompanions(students, repoFactory.Student, peopleServices.PeopleDirectory, peopleServices.StudentAudit),
+			EnrollmentAnswers: newStudentEnrollmentAnswerFilters(newStudentAnswers()), ExcusedRequestService: svc.ExcusedRequests,
 			InstanceService:       liveTimetable.Instance,
 			ListExportService:     lists.NewRenderer(),
 			Logger:                slog.Default(),
@@ -356,4 +357,24 @@ func studentHTTPTestRoomNames(rows owners.TimetableRoomRows) func(context.Contex
 		}
 		return names, nil
 	}
+}
+
+// mustClockedPickupPersons binds the pickup person of a day (#7655) from a
+// Care Plan owner on the given clock.
+func mustClockedPickupPersons(store transactionruntime.Database, clock func() time.Time) careplan.PickupPersons {
+	owner, err := NewClockedCarePlanForTests(store, clock)
+	if err != nil {
+		panic(err)
+	}
+	return mustCarePlanPickupPersons(owner)
+}
+
+// mustCarePlanPickupPersons binds the pickup person of a day (#7655) from the
+// test's Care Plan owner like the root does.
+func mustCarePlanPickupPersons(owner careplan.Capability) careplan.PickupPersons {
+	persons, err := owners.CarePlanPickupPersons(owner)
+	if err != nil {
+		panic(err)
+	}
+	return persons
 }

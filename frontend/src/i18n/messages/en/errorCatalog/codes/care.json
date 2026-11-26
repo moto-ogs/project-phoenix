@@ -68,6 +68,7 @@
   "pickup_change_disabled": "{object} is not available here at the moment. Please ask your contact person.",
   "pickup_permission_request_required": "A new pickup permission needs your signature. The {careTerm} then confirms it.",
   "pickup_permission_unchanged": "This person may already pick up on these days.",
+  "pickup_person_not_authorized": "This person may not pick up the child on this day. Choose another person or enter a name.",
   "pickup_person_not_linked": "This person is not a contact of your child. Please add them to your contacts first.",
   "pickup_proof_not_found": "There is no proof with your signature for this request.",
   "pickup_signature_invalid": "The signature cannot be read. Please sign again.",
