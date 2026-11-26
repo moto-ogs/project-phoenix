@@ -196,18 +196,6 @@ function MessagesInboxContent() {
       />
     );
 
-  const inboxCount =
-    threads === undefined ? null : (
-      <TenantPageStats
-        items={[
-          {
-            value: threadList.length,
-            label: threadList.length === 1 ? "Unterhaltung" : "Unterhaltungen",
-          },
-        ]}
-      />
-    );
-
   // App: „Neue Nachricht“ beschriftet in Daumennähe statt als Symbol oben.
   // Auf dem Telefon und dem iPad hoch schwebt sie als ActionBar über der
   // Pill. Im Split (iPad quer) klebt sie unten in der Listenspalte, über
@@ -241,7 +229,6 @@ function MessagesInboxContent() {
         inputProps={{ "aria-label": "Person oder Kind suchen" }}
         className="min-w-0 flex-1"
       />
-      {/* Die Zahl wie heute im Kopf („5 ungelesen“), zugleich der Filter. */}
       <ToggleChip
         pressed={onlyUnread}
         onPressedChange={setOnlyUnread}
@@ -254,7 +241,9 @@ function MessagesInboxContent() {
         ) : (
           <FunnelSimpleIcon size={16} className="mr-1.5" aria-hidden />
         )}
-        {unreadThreads > 0 ? `${unreadThreads} ungelesen` : "Ungelesen"}
+        {/* Beschriftet als Filter (Runde 11); die Zahl steht über der
+            Liste. */}
+        Nur ungelesene
       </ToggleChip>
     </div>
   );
@@ -292,9 +281,10 @@ function MessagesInboxContent() {
       info={MESSAGES_INFO}
       title="Nachrichten"
       tabs={messagesTabs("conversations")}
-      // App: „ungelesen“ steht als Filter über der Liste; die Zahl der
-      // Unterhaltungen bleibt wie auf dem Desktop im Kopf (#8070, Runde 7).
-      stats={isApp ? inboxCount : inboxSummary}
+      // App: Die Kennzahlen des Desktops stehen als erste Zeile der Liste
+      // (Runde 11): eine Zeile weniger in der Kopfkarte, und der Filter
+      // „Nur ungelesene“ ist nicht zugleich Kennzahl.
+      stats={isApp ? undefined : inboxSummary}
       statsLoading={showSkeleton}
       actions={composeButton}
       overflowMenu={[
@@ -399,6 +389,13 @@ function MessagesInboxContent() {
         {isApp ? (
           <MessagesInboxApp
             threads={filteredThreads}
+            summary={
+              threads === undefined
+                ? undefined
+                : `${threadList.length} ${
+                    threadList.length === 1 ? "Unterhaltung" : "Unterhaltungen"
+                  } · ${unreadThreads} ungelesen`
+            }
             listAction={isSplit ? appComposeButton : null}
             empty={
               <EmptyState
