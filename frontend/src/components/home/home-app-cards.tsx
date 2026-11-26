@@ -245,15 +245,16 @@ function MyDayRow({
   const room =
     block.roomName ??
     (isDuty && block.roomId === "0" ? null : `Raum ${block.roomId}`);
-  // Eine Angabenzeile: Raum, Gruppe, Kinder, Personal kurz („Anna Müller
-  // +1“). Der Zustand steht als Abzeichen rechts, alle Namen samt
-  // Vertretung im Tagesplan, wohin die Zeile führt.
+  // Eine Angabenzeile, am Telefon nie mehr als eine Zeile: Raum, Kinder,
+  // Gruppe, Personal kurz („Anna Müller +1“). Gekürzt wird hinten, also
+  // zuerst das Personal (das bist meist du) und die Gruppe; alle Namen
+  // samt Vertretung stehen im Tagesplan, wohin die Zeile führt.
   const parts = cancelled
     ? [block.cancelReason ? `Fällt aus · ${block.cancelReason}` : "Fällt aus"]
     : [
         room,
-        block.groupName,
         isDuty ? "Dienst" : blockChildrenLabel(block),
+        block.groupName,
         blockStaffShort(block),
       ].filter((part): part is string => Boolean(part));
   const overLabel =
@@ -330,8 +331,13 @@ function MyDayRow({
         }
         subtitle={
           parts.length > 0 ? (
-            <span className={cn(cancelled && "text-moto-red-strong")}>
-              <NoOrphanParts parts={parts} />
+            <span
+              className={cn(
+                "block truncate",
+                cancelled && "text-moto-red-strong",
+              )}
+            >
+              {parts.join(" · ")}
             </span>
           ) : undefined
         }
