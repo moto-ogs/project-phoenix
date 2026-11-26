@@ -44,6 +44,11 @@
 .ns-play[data-nav-scene="CalendarDotsIcon"] .ns-rings{animation:ns-hop14 320ms var(--ns-o) both}
 .ns-play[data-nav-scene="CalendarDotsIcon"] .ns-dot{animation:ns-pop 300ms var(--ns-o) calc(var(--ns-i,0)*55ms) both}
 
+/* ClockAfternoonIcon: der Zeiger läuft einmal durch den Tag bis zum Nachmittag */
+[data-nav-scene="ClockAfternoonIcon"] .ns-min,[data-nav-scene="ClockAfternoonIcon"] .ns-hour{transform-origin:128px 128px}
+.ns-play[data-nav-scene="ClockAfternoonIcon"] .ns-min{animation:ns-spin 620ms cubic-bezier(.4,0,.2,1) both}
+.ns-play[data-nav-scene="ClockAfternoonIcon"] .ns-hour{animation:ns-hour 620ms cubic-bezier(.4,0,.2,1) both}
+
 /* UserIcon: schaut sich um, zuckt mit den Schultern */
 [data-nav-scene="UserIcon"] .ns-head{transform-origin:128px 170px} .ns-play[data-nav-scene="UserIcon"] .ns-head{animation:ns-look 620ms var(--ns-o) both}
 @keyframes ns-look{0%,100%{transform:none}22%{transform:translateX(-16px) rotate(-12deg)}58%{transform:translateX(16px) rotate(12deg)}}

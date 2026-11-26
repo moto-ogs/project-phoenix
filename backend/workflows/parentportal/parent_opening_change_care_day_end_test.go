@@ -12,7 +12,8 @@ import (
 )
 
 // On a day with changed opening hours the school closes earlier, and with it
-// the parents' changes to today's pickup (#8157). Other days and other
+// the parents' changes to today's pickup (#8157) and the hint the portal
+// shows ahead of them (#8173). Other days and other
 // schools keep operations.session_end_time.
 func TestPickupChangesCloseAtTheChangedClosingTime(t *testing.T) {
 	t.Parallel()
@@ -32,7 +33,15 @@ func TestPickupChangesCloseAtTheChangedClosingTime(t *testing.T) {
 		return api.CreateOpeningChangeFixture(txCtx, cutoffToday, "12:00")
 	}))
 
-	_, err := service(11, 59).SubmitPickupChangeRequest(ctx, chain.AccountID, chain.StudentID, cutoffToday, cutoffPickupTime(), "", "Arzttermin", nil)
+	// The hint in the parent portal follows the same closing time (#8173).
+	features, err := service(11, 59).ChildFeatures(ctx, chain.AccountID, chain.StudentID)
+	require.NoError(t, err)
+	require.False(t, features.PickupChangeCareDayEnded, "before the changed closing time the hint stays off")
+	features, err = service(12, 0).ChildFeatures(ctx, chain.AccountID, chain.StudentID)
+	require.NoError(t, err)
+	require.True(t, features.PickupChangeCareDayEnded, "the changed closing time switches the hint on")
+
+	_, err = service(11, 59).SubmitPickupChangeRequest(ctx, chain.AccountID, chain.StudentID, cutoffToday, cutoffPickupTime(), "", "Arzttermin", nil)
 	require.NoError(t, err, "before the changed closing time today stays open")
 
 	_, err = service(12, 0).SubmitPickupChangeRequest(ctx, chain.AccountID, chain.StudentID, cutoffToday, cutoffPickupTime(), "", "Arzttermin", nil)
@@ -44,7 +53,10 @@ func TestPickupChangesCloseAtTheChangedClosingTime(t *testing.T) {
 		testpkg.OwnTenant(t)
 		other := testpkg.CreateTestParentGuardianChain(t, d.db)
 		require.NotEqual(t, chain.TenantID, other.TenantID)
-		_, err := service(12, 0).SubmitPickupChangeRequest(ctx, other.AccountID, other.StudentID, cutoffToday, cutoffPickupTime(), "", "Arzttermin", nil)
+		features, err := service(12, 0).ChildFeatures(ctx, other.AccountID, other.StudentID)
+		require.NoError(t, err)
+		require.False(t, features.PickupChangeCareDayEnded, "another school's hint keeps operations.session_end_time")
+		_, err = service(12, 0).SubmitPickupChangeRequest(ctx, other.AccountID, other.StudentID, cutoffToday, cutoffPickupTime(), "", "Arzttermin", nil)
 		require.NoError(t, err, "the change of one school never closes another")
 		_, err = service(16, 0).SubmitPickupChangeRequest(ctx, other.AccountID, other.StudentID, cutoffToday, cutoffPickupTime(), "", "Arzttermin", nil)
 		require.ErrorIs(t, err, parentService.ErrPickupChangeCareDayEnded, "there operations.session_end_time still holds")

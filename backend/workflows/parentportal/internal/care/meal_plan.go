@@ -55,28 +55,24 @@ func (s *Service) MealPlanWeek(ctx context.Context, accountID, studentID int64, 
 	return out, nil
 }
 
-// mealAvailabilityForTenant reads both meal switches of the school, the meal
-// plan and the meal registration, in one tenant transaction. A switched-off
+// mealAvailability reads both meal switches of the school, the meal plan and
+// the meal registration, in the caller's tenant transaction. A switched-off
 // meal plan answers the registration as unavailable.
-func (s *Service) mealAvailabilityForTenant(ctx context.Context, tenantID int64) (plan, registration bool, err error) {
+func (s *Service) mealAvailability(txCtx context.Context) (plan, registration bool, err error) {
 	if s.MealPlan == nil {
 		return false, false, fmt.Errorf("parent: resolve meal-plan setting: %w", errors.New("parent: meal plan capability is required"))
 	}
-	err = s.Runtime.WithinTenant(ctx, tenantID, func(txCtx context.Context) error {
-		var resolveErr error
-		if plan, resolveErr = s.MealPlan.Available(txCtx); resolveErr != nil {
-			return fmt.Errorf("parent: resolve meal-plan setting: %w", resolveErr)
-		}
-		registration, resolveErr = s.MealPlan.RegistrationAvailable(txCtx)
-		if errors.Is(resolveErr, ErrMealPlanDisabled) {
-			registration, resolveErr = false, nil
-		}
-		if resolveErr != nil {
-			return fmt.Errorf("parent: resolve meal-registration setting: %w", resolveErr)
-		}
-		return nil
-	})
-	return plan, registration, err
+	if plan, err = s.MealPlan.Available(txCtx); err != nil {
+		return false, false, fmt.Errorf("parent: resolve meal-plan setting: %w", err)
+	}
+	registration, err = s.MealPlan.RegistrationAvailable(txCtx)
+	if errors.Is(err, ErrMealPlanDisabled) {
+		return plan, false, nil
+	}
+	if err != nil {
+		return false, false, fmt.Errorf("parent: resolve meal-registration setting: %w", err)
+	}
+	return plan, registration, nil
 }
 
 func (s *Service) MealParticipation(ctx context.Context, accountID, studentID int64, from, to calendar.Date) (MealParticipationPlan, error) {

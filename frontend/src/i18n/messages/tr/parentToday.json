@@ -60,6 +60,7 @@
     "openingChangedUntil": "{careTerm} {date} tarihine kadar {opens} ile {closes} arasında açık: {name}.",
     "mealCancelled": "Bugün {name} için öğle yemeği yok. Ücreti alınmayacak.",
     "pickupAfterClosing": "Bu, kapanış saatinden sonra. Lütfen alma saatini değiştir.",
+    "regularPickupAfterClosing": "Haftalık plana göre {name} saat {time} alınıyor.",
     "activityCancelled": "Saat {time} {title} bugün yapılmıyor.",
     "activityReinstated": "Saat {time} {title} bugün yine de yapılıyor.",
     "activityRoomChanged": "Saat {time} {title} bugün {room} odasında.",

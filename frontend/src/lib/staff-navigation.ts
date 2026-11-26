@@ -22,7 +22,6 @@ import {
 import { accountsConcept } from "~/lib/concepts/accounts";
 import { announcementsConcept } from "~/lib/concepts/announcements";
 import { calendarPeriodsConcept } from "~/lib/concepts/calendarPeriods";
-import { carePlanConcept } from "~/lib/concepts/carePlan";
 import { listsConcept } from "~/lib/concepts/lists";
 import { mealPlanConcept } from "~/lib/concepts/mealPlan";
 import { messagesConcept } from "~/lib/concepts/messages";
@@ -43,15 +42,17 @@ import { weekProtocolsConcept } from "~/lib/concepts/weekProtocols";
  * Fünf Gruppen, benannt nach dem, was die Person gerade tut, nicht nach der
  * Technik dahinter:
  *
- * - **Tagesbetrieb** — mehrmals am Tag: die eigenen Gruppen, die laufende
- *   Aufsicht, alle Kinder, Räume, Aktivitäten, Vertretungen und die offenen
- *   Anfragen. Für alle Rollen beim ersten Besuch geöffnet.
+ * - **Tagesbetrieb** — mehrmals am Tag: der heutige Tag und der ganze
+ *   Betreuungsplan (#8134), die eigenen Gruppen, die laufende Aufsicht, alle
+ *   Kinder, Räume, Aktivitäten, Vertretungen und die offenen Anfragen. Für
+ *   alle Rollen beim ersten Besuch geöffnet.
  * - **Eltern** — alles, was die Einrichtung mit den Familien austauscht,
  *   plus die Anmeldungen und die Teilnehmer der Ferienwochen.
  * - **Team** — der eigene Dienstplan, der eigene Kalender, die eigene
  *   Arbeitszeit, die Kollegen, die interne Kommunikation und die
  *   gemeinsamen Dateien.
- * - **Planung** — die Pläne der Einrichtung; sichtbar nur, wenn die Person
+ * - **Planung** — die Werkzeuge, mit denen die Leitung plant (Dienstplan,
+ *   Vertretungsplan, Tageslisten, Schuljahr); sichtbar nur, wenn die Person
  *   mindestens eine Planungsseite öffnen darf.
  * - **Verwaltung** — Stammdaten, Auswertungen, Lohnabrechnung,
  *   Info-Displays.
@@ -125,6 +126,11 @@ export const STAFF_NAV_GROUPS: readonly StaffNavGroup[] = [
       // Der Tagesplan führt in den laufenden Betreuungstag und steht deshalb
       // ganz oben im Tagesbetrieb (#2180).
       page(STAFF_FLAT_PAGES.tagesplan.href),
+      // Der ganze Betreuungsplan direkt unter dem heutigen Tag (#8134): in
+      // der Planung fand ihn im Alltag niemand, und wer nicht plant, hatte
+      // ihn nur als Reiter in „Mein Kalender“. Die Leitung hat „Heute“ nicht
+      // (`hideForAdmin`); für sie führt der Eintrag den Tagesbetrieb an.
+      page(STAFF_FLAT_PAGES.carePlan.href),
       section("groups"),
       // Alle Kinder gehört zu den meistgenutzten Einträgen und steht deshalb
       // direkt unter Meine Gruppen, vor den aufklappbaren Aufsichten (#4348).
@@ -273,7 +279,6 @@ export const STAFF_NAV_CONCEPTS: Readonly<Record<string, MotoConcept>> = {
   "/team-chat": messagesConcept,
   "/tagesinformationen": announcementsConcept,
   "/umfragen": pollsConcept,
-  "/betreuungsplan": carePlanConcept,
   "/dienstplan": staffPlanConcept,
   "/vertretung": substitutionConcept,
   "/lists": listsConcept,

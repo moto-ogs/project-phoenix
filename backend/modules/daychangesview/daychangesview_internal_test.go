@@ -137,6 +137,19 @@ func TestTodayOrdersEachSection(t *testing.T) {
 	assert.True(t, overview.Entries[1].AllDay)
 }
 
+func TestMarkPickupsAfterClosingDropsRegularPickupWhenChildGoesAlone(t *testing.T) {
+	t.Parallel()
+	regularPickup := "16:00"
+	entries := []Entry{
+		{Kind: KindOpeningChanged, Opening: &DayOpening{ClosesAt: "14:00", RegularPickupAfterClosing: &regularPickup}},
+		{Kind: KindChildGoesAlone},
+	}
+
+	markPickupsAfterClosing(entries)
+
+	assert.Nil(t, entries[0].Opening.RegularPickupAfterClosing)
+}
+
 // TestNewRequiresEveryPort keeps missing wiring a configuration error.
 func TestNewRequiresEveryPort(t *testing.T) {
 	t.Parallel()

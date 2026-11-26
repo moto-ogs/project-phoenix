@@ -64,8 +64,11 @@ vi.mock("~/components/home/home-card-rows", () => ({
   useBerlinClock: () => "10:20",
 }));
 vi.mock("~/lib/hooks/use-day-plan-href", () => ({
-  useDayPlanHref: () => "/test-tenant/tagesplan",
-  useDayPlanLabel: () => "Heute öffnen",
+  useDayPlanLink: () => ({
+    href: "/test-tenant/tagesplan",
+    label: "Heute öffnen",
+    tooltip: "Öffnet deinen Tagesplan für heute.",
+  }),
 }));
 vi.mock("~/lib/tenant-path", () => ({
   useTenantAwarePath: () => (path: string) => `/test-tenant${path}`,
@@ -97,6 +100,7 @@ const care: HomeBlockAccess = {
   canOpenRequestsPage: false,
   caresForGroups: true,
   hasOwnGroups: true,
+  seesAllBlocks: true,
 };
 const lead: HomeBlockAccess = {
   isAdminScope: true,
@@ -104,6 +108,7 @@ const lead: HomeBlockAccess = {
   canOpenRequestsPage: true,
   caresForGroups: false,
   hasOwnGroups: false,
+  seesAllBlocks: true,
 };
 
 function context(access: HomeBlockAccess): HomeBlockContext {

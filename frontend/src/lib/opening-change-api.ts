@@ -1,5 +1,6 @@
 // Changed opening hours of a school on single days (#7654): the tenant
 // routes under /api/opening-changes (SchedulesRead/Create/Update/Delete),
+// with the version check of ADR 0311 on an update (#8173),
 // maintained beside the closing days.
 import { bffJson } from "./bff-fetch";
 import type * as contract from "./contract/opening-changes.generated";
@@ -78,6 +79,20 @@ class OpeningChangeService {
       body: requestBody(input),
     });
     logger.info("opening_change_created", { opening_change_id: raw.id });
+    return mapOpeningChange(raw);
+  }
+
+  /** Changes a saved day; `expectedVersion` is the version it was read at (ADR 0311). */
+  async update(
+    id: string,
+    input: OpeningChangeInput,
+    expectedVersion: string,
+  ): Promise<OpeningChange> {
+    const raw = await bffJson("tenant", "PUT /api/opening-changes/{id}", {
+      params: { id },
+      body: { ...requestBody(input), expected_version: expectedVersion },
+    });
+    logger.info("opening_change_updated", { opening_change_id: raw.id });
     return mapOpeningChange(raw);
   }
 
