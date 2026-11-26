@@ -1134,6 +1134,7 @@ export interface BillingDocumentResponse {
   can_sign?: boolean;
   signed_at?: string;
   replaced: boolean;
+  change_awaits_signature: boolean;
   ends_on?: string;
   can_end_contract?: boolean;
   can_withdraw_contract?: boolean;
@@ -1157,6 +1158,7 @@ export const BillingDocumentResponseSchema: z.ZodType<BillingDocumentResponse, u
   can_sign: optional(bool),
   signed_at: optional(instant),
   replaced: bool,
+  change_awaits_signature: bool,
   ends_on: optional(calendarDate),
   can_end_contract: optional(bool),
   can_withdraw_contract: optional(bool),
@@ -2564,6 +2566,7 @@ export interface ContractSignRequest {
   typed_name?: string;
   withdrawal_notice_acknowledged?: boolean;
   early_start_requested?: boolean;
+  document_sha256?: string;
 }
 
 /** Go: parent.PostMessageRequest */

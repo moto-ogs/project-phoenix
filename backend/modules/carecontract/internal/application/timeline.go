@@ -44,36 +44,37 @@ type change struct {
 	origins []calendar.Date
 }
 
-// nextAmendment is the first change of the contract that its timeline does
-// not carry yet; nil without a reason when it carries them all.
-func nextAmendment(read schoolRead, application carecontract.Application, contract AmendableContract,
-	today calendar.Date) (*amendmentPlan, string) {
-	plan, reason, _ := firstAmendment(read, application, contract, today)
-	return plan, reason
-}
-
-// firstAmendment answers nextAmendment with the day the change holds from;
-// empty when the timeline carries every change.
-func firstAmendment(read schoolRead, application carecontract.Application, contract AmendableContract,
-	today calendar.Date) (*amendmentPlan, string, calendar.Date) {
+// nextChange is the first change of the contract that its timeline does not
+// carry yet, with the day it holds from and the days it happened on; a nil
+// plan without a reason when the timeline carries them all.
+func nextChange(read schoolRead, application carecontract.Application, contract AmendableContract,
+	today calendar.Date) (*amendmentPlan, string, change) {
 	for _, next := range changeDays(read, application, contract, today) {
 		plan, reason := planChange(read, application, contract, next)
 		if plan != nil || reason != "" {
-			return plan, reason, next.day
+			return plan, reason, next
 		}
 	}
-	return nil, "", ""
+	return nil, "", change{}
+}
+
+// firstAmendment answers nextChange with the day the change holds from;
+// empty when the timeline carries every change.
+func firstAmendment(read schoolRead, application carecontract.Application, contract AmendableContract,
+	today calendar.Date) (*amendmentPlan, string, calendar.Date) {
+	plan, reason, next := nextChange(read, application, contract, today)
+	return plan, reason, next.day
 }
 
 // planChange is the version a change makes, or nil when the timeline
 // carries it already.
 func planChange(read schoolRead, application carecontract.Application, contract AmendableContract, next change) (*amendmentPlan, string) {
 	current, inForce := versionAt(contract.Versions, next.day)
+	booked := servicesAt(read, application, next.day)
 	base := []carecontract.Service{}
 	if inForce {
-		base = promised(current, next.day)
+		base = carriedServices(current, next.day, booked.services)
 	}
-	booked := servicesAt(read, application, next.day)
 	services := withChange(base, booked.services, changedOfferings(read, application, contract.Versions, next, base, booked.services))
 	if len(services) == 0 && len(booked.services) > 0 {
 		// Nothing the version promised is booked any more, but care goes on:
@@ -321,7 +322,8 @@ func servicesAt(read schoolRead, application carecontract.Application, day calen
 			running.Bookings = append(running.Bookings, clipped)
 		}
 	}
-	return bookedCare(read, running, day)
+	chosen := concurrentBookings(currentBookings(running.Bookings, read.offerings, day), day)
+	return careFromBookings(read, application.Bookings, chosen, day)
 }
 
 // promised is what the version promises on a day: nothing after its end,
@@ -331,6 +333,23 @@ func promised(version carecontract.Version, day calendar.Date) []carecontract.Se
 		return []carecontract.Service{}
 	}
 	return activeServices(version.Services, day)
+}
+
+// carriedServices makes the old contract's implicit module ends explicit
+// before a new version can extend the overall contract end, and caps them
+// at the current booking ends. A longer booking never extends an old promise.
+func carriedServices(version carecontract.Version, day calendar.Date, booked []carecontract.Service) []carecontract.Service {
+	services := promised(version, day)
+	for i := range services {
+		services[i].LastDay = earlier(services[i].LastDay, version.EndsOn)
+		for _, booking := range booked {
+			if booking.CareOfferingID == services[i].CareOfferingID && booking.Weekday == services[i].Weekday {
+				services[i].LastDay = earlier(services[i].LastDay, booking.LastDay)
+				break
+			}
+		}
+	}
+	return services
 }
 
 // activeServices are the services of a version that still run on a day:

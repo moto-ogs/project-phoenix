@@ -156,12 +156,12 @@ func (Store) InsertSignature(ctx context.Context, organizationID int64, s ports.
 	err = db.NewRaw(`INSERT INTO care_contract.contract_signatures (organization_id, contract_id,
 			contract_version_id, contract_document_id, method, channel, audit_signature_id, signer_name, signer_account_id,
 			signing_link_id, version_sha256, document_sha256, withdrawal_notice_at, early_start_requested, paper_filename,
-			paper_pdf, paper_pdf_sha256, signed_on, signed_at, recorded_by_account_id)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			paper_pdf, paper_pdf_sha256, signed_on, signed_at, recorded_by_account_id, change_request_id)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT (contract_version_id) DO NOTHING RETURNING id`,
 		organizationID, s.ContractID, s.VersionID, s.DocumentID, s.Method, s.Channel, s.AuditSignatureID, s.SignerName,
 		s.SignerAccountID, s.SigningLinkID, s.VersionSHA256, s.DocumentSHA256, s.WithdrawalNoticeAt, s.EarlyStartRequested,
-		paperName, s.PaperPDF, paperSHA256, s.SignedOn, s.SignedAt, s.RecordedByAccountID).Scan(ctx, &id)
+		paperName, s.PaperPDF, paperSHA256, s.SignedOn, s.SignedAt, s.RecordedByAccountID, s.ChangeRequestID).Scan(ctx, &id)
 	if errors.Is(err, sql.ErrNoRows) {
 		return carecontract.ErrContractNotSignable
 	}
@@ -171,7 +171,10 @@ func (Store) InsertSignature(ctx context.Context, organizationID int64, s ports.
 	return nil
 }
 
-// Signature reads the signature of a version; nil when it has none.
+// Signature reads the signature of a version; nil when it has none. Without
+// a version it reads the signature of the newest signed version: the
+// parents' request that signs a changed version (#4816) was sent before the
+// version existed, so the instant of a signature does not order them.
 func (Store) Signature(ctx context.Context, organizationID, contractID, versionID int64) (*ports.StoredSignature, error) {
 	db, err := traegerDB(ctx, organizationID)
 	if err != nil {
@@ -197,8 +200,9 @@ func (Store) Signature(ctx context.Context, organizationID, contractID, versionI
 			version_sha256, document_sha256, withdrawal_notice_at, early_start_requested, paper_filename,
 			COALESCE(paper_pdf_sha256 = encode(sha256(paper_pdf), 'hex'), false) AS paper_intact,
 			signed_on, signed_at
-		FROM care_contract.contract_signatures WHERE organization_id = ? AND contract_id = ? AND (? = 0 OR contract_version_id = ?)
-		ORDER BY signed_at DESC, id DESC LIMIT 1`,
+		FROM care_contract.contract_signatures AS s WHERE organization_id = ? AND contract_id = ? AND (? = 0 OR contract_version_id = ?)
+		ORDER BY (SELECT v.version_number FROM care_contract.contract_versions AS v
+			WHERE v.organization_id = s.organization_id AND v.id = s.contract_version_id) DESC, id DESC LIMIT 1`,
 		organizationID, contractID, versionID, versionID).Scan(ctx, &rows); err != nil {
 		return nil, fmt.Errorf("care contract postgres: read signature: %w", err)
 	}
@@ -238,24 +242,57 @@ func (Store) Reminders(ctx context.Context, organizationID, contractID int64) ([
 		return nil, err
 	}
 	var rows []struct {
-		Number    int       `bun:"reminder_number"`
-		Recipient string    `bun:"recipient_email"`
-		SentAt    time.Time `bun:"sent_at"`
+		VersionNumber int       `bun:"version_number"`
+		Number        int       `bun:"reminder_number"`
+		Recipient     string    `bun:"recipient_email"`
+		SentAt        time.Time `bun:"sent_at"`
 	}
-	if err := db.NewRaw(`SELECT reminder_number, recipient_email, sent_at FROM care_contract.contract_reminders
-		WHERE organization_id = ? AND contract_id = ? ORDER BY reminder_number`, organizationID, contractID).Scan(ctx, &rows); err != nil {
+	if err := db.NewRaw(`SELECT v.version_number, r.reminder_number, r.recipient_email, r.sent_at
+		FROM care_contract.contract_reminders AS r
+		JOIN care_contract.contract_versions AS v ON v.organization_id = r.organization_id AND v.id = r.contract_version_id
+		WHERE r.organization_id = ? AND r.contract_id = ? ORDER BY v.version_number, r.reminder_number`,
+		organizationID, contractID).Scan(ctx, &rows); err != nil {
 		return nil, fmt.Errorf("care contract postgres: read reminders: %w", err)
 	}
 	reminders := make([]carecontract.Reminder, len(rows))
 	for i, row := range rows {
-		reminders[i] = carecontract.Reminder{Number: row.Number, Recipient: row.Recipient, SentAt: row.SentAt}
+		reminders[i] = carecontract.Reminder{VersionNumber: row.VersionNumber, Number: row.Number, Recipient: row.Recipient, SentAt: row.SentAt}
 	}
 	return reminders, nil
 }
 
-// DueReminders lists the sent contracts without signature whose last mail
-// or reminder was sent before lastContactBefore and that have fewer than
-// maxReminders reminders, with the address of their last mail. A nonzero
+// VersionSignatures reads how the parents agreed to each signed version.
+func (Store) VersionSignatures(ctx context.Context, organizationID, contractID int64) ([]carecontract.VersionSignature, error) {
+	db, err := traegerDB(ctx, organizationID)
+	if err != nil {
+		return nil, err
+	}
+	var rows []struct {
+		VersionNumber int       `bun:"version_number"`
+		Method        string    `bun:"method"`
+		Channel       string    `bun:"channel"`
+		SignerName    string    `bun:"signer_name"`
+		SignedAt      time.Time `bun:"signed_at"`
+	}
+	if err := db.NewRaw(`SELECT v.version_number, s.method, s.channel, s.signer_name, s.signed_at
+		FROM care_contract.contract_signatures AS s
+		JOIN care_contract.contract_versions AS v ON v.organization_id = s.organization_id AND v.id = s.contract_version_id
+		WHERE s.organization_id = ? AND s.contract_id = ? ORDER BY v.version_number`, organizationID, contractID).Scan(ctx, &rows); err != nil {
+		return nil, fmt.Errorf("care contract postgres: read version signatures: %w", err)
+	}
+	signatures := make([]carecontract.VersionSignature, len(rows))
+	for i, row := range rows {
+		signatures[i] = carecontract.VersionSignature{VersionNumber: row.VersionNumber, Method: row.Method, Channel: row.Channel,
+			SignerName: row.SignerName, SignedAt: row.SignedAt}
+	}
+	return signatures, nil
+}
+
+// DueReminders lists the contracts with a version that waits for the
+// signature, of a sent contract or the changed version of an active one
+// (#4816), whose last mail or reminder was sent before lastContactBefore and
+// that have fewer than maxReminders reminders of that version, with the
+// address of the last mail of that version. A nonzero
 // contractID restricts the query to that contract for revalidation under its lock.
 func (Store) DueReminders(ctx context.Context, organizationID, contractID int64, lastContactBefore time.Time, maxReminders int) ([]ports.ReminderCandidate, error) {
 	db, err := traegerDB(ctx, organizationID)
@@ -264,38 +301,43 @@ func (Store) DueReminders(ctx context.Context, organizationID, contractID int64,
 	}
 	var rows []struct {
 		ContractID int64  `bun:"contract_id"`
+		VersionID  int64  `bun:"version_id"`
 		Number     int    `bun:"number"`
 		Recipient  string `bun:"recipient"`
 	}
-	if err := db.NewRaw(`SELECT c.id AS contract_id, r.sent + 1 AS number, m.recipient_email AS recipient
+	if err := db.NewRaw(`SELECT c.id AS contract_id, v.id AS version_id, r.sent + 1 AS number, m.recipient_email AS recipient
 		FROM care_contract.contracts AS c
-		JOIN LATERAL (SELECT recipient_email, sent_at FROM care_contract.contract_mailings AS cm
-			WHERE cm.organization_id = c.organization_id AND cm.contract_id = c.id
+		JOIN care_contract.contract_versions AS v ON v.organization_id = c.organization_id AND v.contract_id = c.id
+			AND v.status = ?
+		JOIN LATERAL (SELECT cm.recipient_email, cm.sent_at FROM care_contract.contract_mailings AS cm
+			JOIN care_contract.contract_documents AS cd ON cd.organization_id = cm.organization_id AND cd.id = cm.contract_document_id
+			WHERE cm.organization_id = c.organization_id AND cm.contract_id = c.id AND cd.contract_version_id = v.id
 			ORDER BY cm.sent_at DESC, cm.id DESC LIMIT 1) AS m ON true
 		JOIN LATERAL (SELECT COUNT(*)::int AS sent, MAX(cr.sent_at) AS last FROM care_contract.contract_reminders AS cr
-			WHERE cr.organization_id = c.organization_id AND cr.contract_id = c.id) AS r ON true
-		WHERE c.organization_id = ? AND (? = 0 OR c.id = ?) AND c.status = ? AND r.sent < ?
+			WHERE cr.organization_id = c.organization_id AND cr.contract_version_id = v.id) AS r ON true
+		WHERE c.organization_id = ? AND (? = 0 OR c.id = ?) AND c.status IN (?, ?) AND r.sent < ?
 			AND GREATEST(m.sent_at, COALESCE(r.last, m.sent_at)) <= ?
-		ORDER BY c.id`, organizationID, contractID, contractID, carecontract.StatusSent, maxReminders, lastContactBefore).Scan(ctx, &rows); err != nil {
+		ORDER BY c.id`, carecontract.VersionRequested, organizationID, contractID, contractID, carecontract.StatusSent,
+		carecontract.StatusActive, maxReminders, lastContactBefore).Scan(ctx, &rows); err != nil {
 		return nil, fmt.Errorf("care contract postgres: read due reminders: %w", err)
 	}
 	candidates := make([]ports.ReminderCandidate, len(rows))
 	for i, row := range rows {
-		candidates[i] = ports.ReminderCandidate{ContractID: row.ContractID, Number: row.Number, Recipient: row.Recipient}
+		candidates[i] = ports.ReminderCandidate{ContractID: row.ContractID, VersionID: row.VersionID, Number: row.Number, Recipient: row.Recipient}
 	}
 	return candidates, nil
 }
 
 // InsertReminder stamps sent_at with the owner clock's instant at, like
 // InsertMailing.
-func (Store) InsertReminder(ctx context.Context, organizationID, contractID int64, number int, outboxID int64, recipient string, at time.Time) error {
+func (Store) InsertReminder(ctx context.Context, organizationID int64, candidate ports.ReminderCandidate, outboxID int64, at time.Time) error {
 	db, err := traegerDB(ctx, organizationID)
 	if err != nil {
 		return err
 	}
 	if _, err := db.ExecContext(ctx, `INSERT INTO care_contract.contract_reminders (organization_id, contract_id,
-			reminder_number, outbox_id, recipient_email, sent_at) VALUES (?, ?, ?, ?, ?, ?)`,
-		organizationID, contractID, number, outboxID, recipient, at); err != nil {
+			contract_version_id, reminder_number, outbox_id, recipient_email, sent_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		organizationID, candidate.ContractID, candidate.VersionID, candidate.Number, outboxID, candidate.Recipient, at); err != nil {
 		return fmt.Errorf("care contract postgres: insert reminder: %w", err)
 	}
 	return nil
@@ -303,7 +345,7 @@ func (Store) InsertReminder(ctx context.Context, organizationID, contractID int6
 
 // InboxContractAddressed tells whether the contract was sent to the
 // reader's address and its child is one the reader may act for.
-func (Store) InboxContractAddressed(ctx context.Context, organizationID, contractID int64, reader carecontract.InboxReader) (bool, error) {
+func (Store) InboxContractAddressed(ctx context.Context, organizationID, contractID, versionID int64, reader carecontract.InboxReader) (bool, error) {
 	db, err := traegerDB(ctx, organizationID)
 	if err != nil {
 		return false, err
@@ -312,8 +354,10 @@ func (Store) InboxContractAddressed(ctx context.Context, organizationID, contrac
 	var found bool
 	if err := db.NewRaw(`SELECT EXISTS (SELECT 1 FROM care_contract.contract_mailings AS m
 		JOIN care_contract.contracts AS c ON c.organization_id = m.organization_id AND c.id = m.contract_id
-		WHERE m.organization_id = ? AND m.contract_id = ? AND lower(m.recipient_email) = lower(?) AND `+inboxChildScopeSQL+`)`,
-		organizationID, contractID, reader.Email, pgdialect.Array(schools), pgdialect.Array(students)).Scan(ctx, &found); err != nil {
+		JOIN care_contract.contract_documents AS d ON d.organization_id = m.organization_id AND d.id = m.contract_document_id
+		WHERE m.organization_id = ? AND m.contract_id = ? AND lower(m.recipient_email) = lower(?) AND (? = 0 OR d.contract_version_id = ?)
+			AND `+inboxChildScopeSQL+`)`,
+		organizationID, contractID, reader.Email, versionID, versionID, pgdialect.Array(schools), pgdialect.Array(students)).Scan(ctx, &found); err != nil {
 		return false, fmt.Errorf("care contract postgres: check inbox contract: %w", err)
 	}
 	return found, nil

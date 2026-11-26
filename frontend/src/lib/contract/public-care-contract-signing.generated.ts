@@ -43,6 +43,7 @@ export interface SignRequest {
   typed_name?: string;
   withdrawal_notice_acknowledged?: boolean;
   early_start_requested?: boolean;
+  document_sha256?: string;
 }
 
 /** Go: carecontracthttp.SigningFamilyChildrenRequest */

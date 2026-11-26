@@ -37,6 +37,9 @@ type BillingDocumentResponse struct {
 	SignedAt       *time.Time `json:"signed_at,omitempty"`
 	// Replaced marks a contract version replaced by a later change (#4681).
 	Replaced bool `json:"replaced"`
+	// ChangeAwaitsSignature marks a changed version of an active contract
+	// that waits for the parents' signature (#4816).
+	ChangeAwaitsSignature bool `json:"change_awaits_signature"`
 	// EndsOn is the last day of a terminated contract (#4682).
 	EndsOn *timezone.Date `json:"ends_on,omitempty"`
 	// CanEndContract tells that the account may withdraw or terminate the
@@ -78,7 +81,8 @@ func (rs *Resource) respondInbox(w http.ResponseWriter, r *http.Request, inbox p
 			ServiceFrom: document.ServiceFrom, ServiceUntil: document.ServiceUntil, IssuedOn: document.IssuedOn,
 			TotalCents: int(document.TotalCents), ChildNames: document.ChildNames, SentAt: document.SentAt,
 			ContractStatus: document.ContractStatus, SignedAt: document.SignedAt, CanSign: document.CanSign, Replaced: document.Replaced,
-			SEPAMandate: document.SEPAMandate, EndsOn: document.EndsOn, CanEndContract: document.CanEndContract, CanWithdrawContract: document.CanWithdrawContract,
+			ChangeAwaitsSignature: document.ChangeAwaitsSignature,
+			SEPAMandate:           document.SEPAMandate, EndsOn: document.EndsOn, CanEndContract: document.CanEndContract, CanWithdrawContract: document.CanWithdrawContract,
 		}
 	}
 	common.Respond(w, r, http.StatusOK, out, "Documents retrieved")

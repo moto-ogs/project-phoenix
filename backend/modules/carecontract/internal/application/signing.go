@@ -118,6 +118,12 @@ func (s *Signatures) openLinkContract(ctx context.Context, organizationID int64,
 	if err != nil {
 		return linkTarget{}, err
 	}
+	// The link signs the version that waits: a sent contract's, or the
+	// changed version of an active one (#4816).
+	waits, err := waitingRecord(ctx, s.store, organizationID, &record)
+	if err != nil {
+		return linkTarget{}, err
+	}
 	document, err := s.store.CurrentDocument(ctx, organizationID, link.ContractID, record.Version.ID.Int64())
 	if errors.Is(err, carecontract.ErrContractNotSignable) {
 		return linkTarget{}, carecontract.ErrSigningLinkInvalid
@@ -125,7 +131,7 @@ func (s *Signatures) openLinkContract(ctx context.Context, organizationID int64,
 	if err != nil {
 		return linkTarget{}, err
 	}
-	if document.ID != link.DocumentID || record.Summary.Status != carecontract.StatusSent {
+	if document.ID != link.DocumentID || !waits {
 		return linkTarget{}, carecontract.ErrSigningLinkInvalid
 	}
 	return linkTarget{link: link, record: record, document: document}, nil
@@ -234,7 +240,8 @@ func (s *Signatures) InboxSigningView(ctx context.Context, organizationID, contr
 			Method: stored.Method, SignerName: stored.SignerName, SignedAt: stored.SignedAt,
 			EarlyStartRequested: stored.EarlyStartRequested,
 		}
-		if stored.Method != carecontract.SignaturePaper {
+		// Only a drawn or typed signature starts a withdrawal period.
+		if stored.Method == carecontract.SignatureDrawn || stored.Method == carecontract.SignatureTyped {
 			ends, err := s.periods().withdrawalEnd(ctx, record.Summary.SchoolID.Int64(), stored.SignedAt)
 			if err != nil {
 				return carecontract.SigningView{}, err
@@ -242,6 +249,7 @@ func (s *Signatures) InboxSigningView(ctx context.Context, organizationID, contr
 			view.Signature.WithdrawalEndsOn = &ends
 		}
 	}
+	view.AwaitsSignature = stored == nil && awaitsSignature(record)
 	return view, trailContract(ctx, s.store, organizationID, reader.AccountID, record, ports.ActionRead, map[string]any{"via": carecontract.ChannelParentAccount})
 }
 
@@ -274,7 +282,7 @@ func (s *Signatures) inboxContract(ctx context.Context, organizationID, contract
 		return ContractRecord{}, StoredDocument{}, carecontract.ErrInboxDocumentNotFound
 	}
 	reader.Email = email
-	addressed, err := s.store.InboxContractAddressed(ctx, organizationID, contractID, reader)
+	addressed, err := s.store.InboxContractAddressed(ctx, organizationID, contractID, 0, reader)
 	if err != nil {
 		return ContractRecord{}, StoredDocument{}, err
 	}
@@ -287,6 +295,24 @@ func (s *Signatures) inboxContract(ctx context.Context, organizationID, contract
 	}
 	if err != nil {
 		return ContractRecord{}, StoredDocument{}, err
+	}
+	// An active contract shows its changed version while it waits for the
+	// signature (#4816), else the version in force.
+	waits, err := waitingRecord(ctx, s.store, organizationID, &record)
+	if err != nil {
+		return ContractRecord{}, StoredDocument{}, err
+	}
+	// A version that waits is shown and signed only by an account it was
+	// sent to: an earlier address of the contract does not sign a change
+	// that went to another one.
+	if waits {
+		addressed, err = s.store.InboxContractAddressed(ctx, organizationID, contractID, record.Version.ID.Int64(), reader)
+		if err != nil {
+			return ContractRecord{}, StoredDocument{}, err
+		}
+		if !addressed {
+			return ContractRecord{}, StoredDocument{}, carecontract.ErrInboxDocumentNotFound
+		}
 	}
 	document, err := s.store.CurrentDocument(ctx, organizationID, contractID, record.Version.ID.Int64())
 	if errors.Is(err, carecontract.ErrContractNotSignable) {
@@ -321,6 +347,22 @@ func unchangedSinceSent(sent *SentState, document StoredDocument, versionChecksu
 	return nil
 }
 
+// reviewedDocument refuses a signature for another PDF than the one the
+// signer read (#4816): while the page was open, a changed version may have
+// overtaken the one it showed. A changed version always needs the checksum
+// of the PDF the page showed; a first contract has one PDF and takes a
+// signature without it, as before.
+func reviewedDocument(record ContractRecord, document StoredDocument, input carecontract.SignatureInput) error {
+	reviewed := strings.TrimSpace(input.DocumentSHA256)
+	if reviewed == "" && record.Version.Number <= 1 {
+		return nil
+	}
+	if reviewed != document.SHA256 {
+		return fmt.Errorf("%w: the signer read another version", carecontract.ErrContractNotSignable)
+	}
+	return nil
+}
+
 // signer is who signs, how the signer was identified, and what was sent to
 // the signer.
 type signer struct {
@@ -335,11 +377,14 @@ type signer struct {
 // the withdrawal notice, all in the caller's Träger transaction.
 func (s *Signatures) sign(ctx context.Context, organizationID int64, record ContractRecord, document StoredDocument,
 	input carecontract.SignatureInput, who signer, now time.Time) (carecontract.SigningView, error) {
-	if record.Summary.Status != carecontract.StatusSent || ident.ID(document.VersionID) != record.Version.ID {
+	if !awaitsSignature(record) || ident.ID(document.VersionID) != record.Version.ID {
 		return carecontract.SigningView{}, carecontract.ErrContractNotSignable
 	}
 	checksum, err := s.unchangedChecksum(record, document, who.sent)
 	if err != nil {
+		return carecontract.SigningView{}, err
+	}
+	if err := reviewedDocument(record, document, input); err != nil {
 		return carecontract.SigningView{}, err
 	}
 	if !input.NoticeAcknowledged {
@@ -353,33 +398,23 @@ func (s *Signatures) sign(ctx context.Context, organizationID int64, record Cont
 	if signerName == "" {
 		return carecontract.SigningView{}, carecontract.ErrSignatureInvalid
 	}
-	auditID, err := s.ports.Ledger.RecordContractSignature(ctx, carecontract.ContractSignatureEntry{
-		OrganizationID: organizationID, VersionID: record.Version.ID.Int64(), SignerAccountID: who.accountID,
-		SignerName: signerName, DocumentSHA256: document.SHA256, SignedAt: now, Input: input,
-	})
-	if err != nil {
-		return carecontract.SigningView{}, err
-	}
-	documentID := document.ID
-	if err := s.store.InsertSignature(ctx, organizationID, NewSignature{
-		ContractID: record.Summary.ID.Int64(), VersionID: record.Version.ID.Int64(), DocumentID: &documentID, Method: input.Method,
-		Channel: who.channel, AuditSignatureID: &auditID, SignerName: signerName, SignerAccountID: who.accountID,
-		SigningLinkID: who.linkID, VersionSHA256: checksum, DocumentSHA256: document.SHA256, WithdrawalNoticeAt: &now,
-		EarlyStartRequested: input.EarlyStart, SignedOn: calendar.DateFromTime(now), SignedAt: now,
-	}); err != nil {
+	if err := s.recordSignature(ctx, organizationID, record, document, input, who, signed{name: signerName, checksum: checksum, at: now}); err != nil {
 		return carecontract.SigningView{}, err
 	}
 	accountID := int64(0)
 	if who.accountID != nil {
 		accountID = *who.accountID
 	}
-	status, err := concludeSigned(ctx, s.store, organizationID, accountID, record, input.Method, now)
+	status, from, err := s.takeEffect(ctx, organizationID, accountID, record, input.Method, now)
 	if err != nil {
 		return carecontract.SigningView{}, err
 	}
+	// A version signed after the day its PDF names holds from today: the
+	// confirmation shows that day.
+	record.Version.EffectiveFrom = from
 	if err := trailContract(ctx, s.store, organizationID, accountID, record, ports.ActionSign, map[string]any{
 		"via": who.channel, "method": input.Method, "document_sha256": document.SHA256, "version_sha256": checksum,
-		"early_start": input.EarlyStart, "status": status,
+		"early_start": input.EarlyStart, "status": status, "version_number": record.Version.Number,
 	}); err != nil {
 		return carecontract.SigningView{}, err
 	}
@@ -391,6 +426,47 @@ func (s *Signatures) sign(ctx context.Context, organizationID int64, record Cont
 	}
 	view.Status = status
 	return view, s.confirm(ctx, organizationID, record, document, view, party)
+}
+
+// signed is a drawn or typed signature as it is recorded: the signer's
+// name, the checksum of the version and the instant.
+type signed struct {
+	name     string
+	checksum string
+	at       time.Time
+}
+
+// recordSignature stores the drawn or typed signature in the ledger of the
+// Audit Platform and with the contract's version.
+func (s *Signatures) recordSignature(ctx context.Context, organizationID int64, record ContractRecord, document StoredDocument,
+	input carecontract.SignatureInput, who signer, entry signed) error {
+	auditID, err := s.ports.Ledger.RecordContractSignature(ctx, carecontract.ContractSignatureEntry{
+		OrganizationID: organizationID, VersionID: record.Version.ID.Int64(), SignerAccountID: who.accountID,
+		SignerName: entry.name, DocumentSHA256: document.SHA256, SignedAt: entry.at, Input: input,
+	})
+	if err != nil {
+		return err
+	}
+	documentID := document.ID
+	return s.store.InsertSignature(ctx, organizationID, NewSignature{
+		ContractID: record.Summary.ID.Int64(), VersionID: record.Version.ID.Int64(), DocumentID: &documentID, Method: input.Method,
+		Channel: who.channel, AuditSignatureID: &auditID, SignerName: entry.name, SignerAccountID: who.accountID,
+		SigningLinkID: who.linkID, VersionSHA256: entry.checksum, DocumentSHA256: document.SHA256, WithdrawalNoticeAt: &entry.at,
+		EarlyStartRequested: input.EarlyStart, SignedOn: calendar.DateFromTime(entry.at), SignedAt: entry.at,
+	})
+}
+
+// takeEffect lets the signed version take effect: the signature of a sent
+// contract concludes it, the signature of a changed version of an active
+// contract moves that version into the timeline (#4816). Either way the
+// contract is aktiv afterwards; the day is the one the version holds from.
+func (s *Signatures) takeEffect(ctx context.Context, organizationID, accountID int64, record ContractRecord, method string, now time.Time) (string, calendar.Date, error) {
+	if record.Summary.Status == carecontract.StatusSent {
+		status, err := concludeSigned(ctx, s.store, organizationID, accountID, record, method, now)
+		return status, record.Version.EffectiveFrom, err
+	}
+	from, err := activateSigned(ctx, s.store, organizationID, record, calendar.DateFromTime(now))
+	return carecontract.StatusActive, from, err
 }
 
 // signedView is the page after the signature, with the last day of the
@@ -406,7 +482,8 @@ func (s *Signatures) signedView(ctx context.Context, organizationID int64, recor
 		return carecontract.SigningView{}, err
 	}
 	signature.WithdrawalEndsOn = &ends
-	view.Signature = &signature
+	// Signed: nothing waits and nothing is left to compare.
+	view.Signature, view.AwaitsSignature, view.Previous = &signature, false, nil
 	return view, nil
 }
 
@@ -463,11 +540,69 @@ func (s *Signatures) view(ctx context.Context, organizationID int64, record Cont
 	traeger := traegerName(letterhead, record.Version.Terms)
 	partner := firstText(record.Version.Terms.ContractPartner, traeger)
 	party, _ := recipient(record.Parties)
+	previous, amendment, err := s.previousVersion(ctx, organizationID, record)
+	if err != nil {
+		return carecontract.SigningView{}, err
+	}
 	return carecontract.SigningView{
 		ContractID: record.Summary.ID, OrganizationID: ident.ID(organizationID), Status: record.Summary.Status,
 		TraegerName: traeger, PartyName: fullName(party.FirstName, party.LastName), Version: signingContract(record.Version),
 		DocumentSHA256: document.SHA256, WithdrawalNotice: withdrawalNoticeParagraphs(withdrawalAddressee(partner, letterhead, reach)),
+		Previous: previous, AwaitsSignature: awaitsSignature(record), Amendment: amendment,
 	}, nil
+}
+
+// previousVersion is the version the parents have before the changed one
+// that waits for their signature (#4816), so the page shows what changes:
+// of an active contract the version in force on the day the change holds
+// from, of a contract not signed yet the version sent before. Nil for a
+// first version and for a version that does not wait. The second answer
+// is the signature scope from the stored history, including after signing.
+func (s *Signatures) previousVersion(ctx context.Context, organizationID int64, record ContractRecord) (*carecontract.SigningContract, bool, error) {
+	if record.Version.Number <= 1 {
+		return nil, false, nil
+	}
+	versions, err := s.store.Versions(ctx, organizationID, record.Summary.ID.Int64())
+	if err != nil {
+		return nil, false, err
+	}
+	amendment := amendsConcludedVersion(record.Version, versions)
+	if !awaitsSignature(record) {
+		return nil, amendment, nil
+	}
+	day := record.Version.EffectiveFrom
+	if today := calendar.DateFromTime(s.clock.now()); day.Before(today) {
+		day = today
+	}
+	var previous *carecontract.Version
+	for i, version := range versions {
+		inForce := version.Status == carecontract.VersionEffective || version.Status == carecontract.VersionSuperseded
+		switch {
+		case record.Summary.Status == carecontract.StatusSent:
+			if version.Status == carecontract.VersionOvertaken && version.Number < record.Version.Number {
+				previous = &versions[i]
+			}
+		case inForce && !version.EffectiveFrom.After(day) && (previous == nil || version.EffectiveFrom.After(previous.EffectiveFrom)):
+			previous = &versions[i]
+		}
+	}
+	if previous == nil {
+		return nil, amendment, nil
+	}
+	contract := signingContract(*previous)
+	return &contract, amendment, nil
+}
+
+// An unsigned version overtaken before the first conclusion is no contract
+// to amend. Replaced concluded versions still establish the original scope.
+func amendsConcludedVersion(current carecontract.Version, versions []carecontract.Version) bool {
+	for _, version := range versions {
+		if version.Number < current.Number && (version.Status == carecontract.VersionEffective ||
+			version.Status == carecontract.VersionSuperseded || version.Status == carecontract.VersionReplaced) {
+			return true
+		}
+	}
+	return false
 }
 
 func berlinStamp(at time.Time) string {

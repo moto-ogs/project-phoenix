@@ -58,7 +58,7 @@ func TestCareContractConclusionIsGuardedByTheDatabase(t *testing.T) {
 		conclusion_method = 'mit_anmeldung' WHERE id = ?`, contract), "the request role concludes a contract")
 
 	assert.ErrorContains(t, asTraeger(`UPDATE care_contract.contract_versions SET status = 'abgeloest' WHERE id = ?`, version),
-		"cannot move from beantragt to abgeloest", "a requested version is not superseded")
+		"needs a later effective version", "a requested version joins the timeline only before a later version (#4816)")
 	require.NoError(t, asTraeger(`UPDATE care_contract.contract_versions SET status = 'wirksam' WHERE id = ?`, version),
 		"the request role makes a requested version effective")
 	assert.ErrorContains(t, asTraeger(`UPDATE care_contract.contract_versions SET status = 'beantragt' WHERE id = ?`, version),

@@ -3,7 +3,8 @@
 // Die Versionen eines Betreuungsvertrags (#4681). Gibt die Schule eine
 // Änderung der Betreuung frei, die Eltern beantragt haben, bekommt der
 // Vertrag eine neue Version mit Wirkdatum. Ältere Versionen bleiben lesbar,
-// jede mit ihrem PDF. Die Liste folgt dem Muster „mehrere Einträge mit
+// jede mit ihrem PDF. Eine Änderung, die die Eltern nicht selbst beantragt
+// haben, wartet als eigene Version auf ihre Unterschrift (#4816). Die Liste folgt dem Muster „mehrere Einträge mit
 // Aktionen“ des UI-Kits: eine Karte, weiße Zeilen, eine bündige Spalte mit
 // gleichrangigen Knöpfen.
 
@@ -26,13 +27,14 @@ import {
   type StatusBadgeTone,
 } from "~/components/ui/status-badge";
 import { useApiErrorDisplay } from "~/contexts/ToastContext";
-import { formatDate } from "~/lib/date-helpers";
+import { formatBerlinDate, formatDate } from "~/lib/date-helpers";
 import { downloadBlob } from "~/lib/file-download";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { createLogger } from "~/lib/logger";
 import {
   type ContractService,
   type ContractVersion,
+  type ContractVersionSignature,
   downloadCareContractVersion,
   type Weekday,
 } from "~/lib/traeger-care-contracts-api";
@@ -59,6 +61,8 @@ export type VersionPhase =
   | "planned"
   | "past"
   | "pending"
+  | "awaiting"
+  | "overtaken"
   | "rejected"
   | "replaced"
   | "ended"
@@ -76,6 +80,8 @@ const PHASE_TONES: Record<VersionPhase, StatusBadgeTone> = {
   planned: "blue",
   past: "outline",
   pending: "gray",
+  awaiting: "warning",
+  overtaken: "outline",
   rejected: "red",
   replaced: "outline",
   ended: "outline",
@@ -88,7 +94,14 @@ export function versionPhase(
   today: string,
   end?: ContractEnd,
 ): VersionPhase {
-  if (version.status === "beantragt") return "pending";
+  // A changed version waits for the parents' signature (#4816); the first
+  // version of a draft or sent contract is simply not in force yet.
+  if (version.status === "beantragt") {
+    return version.number > 1 ? "awaiting" : "pending";
+  }
+  // Nobody signed it: a newer version overtook it, or its change was taken
+  // back. It holds on no day.
+  if (version.status === "ueberholt") return "overtaken";
   if (version.status === "abgelehnt") return "rejected";
   // Replaced by a change on its own first day: it holds on no day.
   if (version.status === "ersetzt") return "replaced";
@@ -120,6 +133,10 @@ function phaseLabel(version: ContractVersion, phase: VersionPhase): string {
       return "Abgelöst";
     case "pending":
       return "Noch nicht wirksam";
+    case "awaiting":
+      return "Wartet auf Unterschrift";
+    case "overtaken":
+      return "Überholt";
     case "rejected":
       return "Abgelehnt";
     case "replaced":
@@ -135,6 +152,12 @@ function phaseLabel(version: ContractVersion, phase: VersionPhase): string {
 function formatValidity(version: ContractVersion): string {
   if (version.status === "ersetzt") {
     return `ab ${formatDate(version.effectiveFrom)} vorgesehen, gilt an keinem Tag`;
+  }
+  if (version.status === "ueberholt") {
+    return `ab ${formatDate(version.effectiveFrom)} vorgesehen, nie unterschrieben`;
+  }
+  if (version.status === "beantragt" && version.number > 1) {
+    return `ab ${formatDate(version.effectiveFrom)}, sobald die Eltern unterschrieben haben`;
   }
   const until = version.validUntil ?? version.endsOn;
   return until
@@ -203,13 +226,40 @@ export function plannedVersionText(version: ContractVersion): string {
   return `Ab ${formatDate(version.effectiveFrom)} gilt Version ${version.number}. ${reason} Was sich ändert, steht unter „Versionen“.`;
 }
 
+/** How the parents agreed to a version, in one line under its dates. */
+export function signatureText(signature: ContractVersionSignature): string {
+  const day = formatBerlinDate(signature.signedAt);
+  switch (signature.method) {
+    case "request":
+      return `Von den Eltern selbst beantragt am ${day}. Der Antrag gilt als Unterschrift.`;
+    case "paper":
+      return `Auf Papier unterschrieben, erfasst am ${day}.`;
+    default:
+      return `Online unterschrieben am ${day} von ${signature.signerName}.`;
+  }
+}
+
+const NO_SIGNATURES: readonly ContractVersionSignature[] = [];
+
+/** Versions that never held on a day are no base to compare with. */
+function heldOnADay(version: ContractVersion): boolean {
+  return (
+    version.status !== "ersetzt" &&
+    version.status !== "ueberholt" &&
+    version.status !== "beantragt"
+  );
+}
+
 export function CareContractVersions({
   contractId,
   versions,
+  signatures = NO_SIGNATURES,
   end,
 }: Readonly<{
   contractId: string;
   versions: readonly ContractVersion[];
+  /** How the parents agreed to each signed version (#4816). */
+  signatures?: readonly ContractVersionSignature[];
   end?: ContractEnd;
 }>) {
   const today = useBerlinToday();
@@ -249,7 +299,7 @@ export function CareContractVersions({
           <StatusBadge label={`${versions.length} Versionen`} tone="gray" />
         ) : null
       }
-      description="Gibst du oder die Schule eine Änderung der Betreuung frei oder ordnest du die Module neu zu, entsteht eine neue Version. Frühere Versionen bleiben hier lesbar."
+      description="Ändert sich die Betreuung oder ordnest du die Module neu zu, entsteht eine neue Version. Haben die Eltern die Änderung selbst beantragt, gilt sie sofort. Sonst wartet sie auf ihre Unterschrift. Frühere Versionen bleiben hier lesbar."
     >
       <ResponsiveActionList>
         {ordered.map((version, index) => {
@@ -258,9 +308,10 @@ export function CareContractVersions({
           // version held on no day.
           const changed = changedWeekdays(
             version,
-            ordered
-              .slice(index + 1)
-              .find((earlier) => earlier.status !== "ersetzt"),
+            ordered.slice(index + 1).find(heldOnADay),
+          );
+          const signature = signatures.find(
+            (entry) => entry.versionNumber === version.number,
           );
           return (
             <ResponsiveActionRow
@@ -285,6 +336,18 @@ export function CareContractVersions({
                     ? ` · ${changed.size === 1 ? "1 Tag" : `${changed.size} Tage`} geändert`
                     : null}
                 </p>
+                {signature ? (
+                  <p className="mt-1 text-sm text-gray-600">
+                    {signatureText(signature)}
+                  </p>
+                ) : null}
+                {version.agreedFrom ? (
+                  <p className="mt-1 text-sm text-gray-600">
+                    Im Vertrag steht {formatDate(version.agreedFrom)}. Die
+                    Eltern haben später unterschrieben. Deshalb gilt die Version
+                    ab {formatDate(version.effectiveFrom)}.
+                  </p>
+                ) : null}
                 {/* Every version lists its days, also the only one: the
                     card is the contract's history, read on its own. */}
                 <div className="mt-3">

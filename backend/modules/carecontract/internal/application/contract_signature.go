@@ -23,7 +23,10 @@ type signingLink struct {
 // concluded at the acceptance (Weg b, #4680) or an active one sent again
 // needs none.
 func (c *Contracts) signingLinkFor(ctx context.Context, organizationID int64, record ContractRecord, documentID int64) (signingLink, error) {
-	if record.Concluded != nil || record.Summary.Status == carecontract.StatusActive {
+	// An active contract gets one for its changed version that waits for
+	// the signature (#4816), never for a version in force.
+	if record.Version.Status != carecontract.VersionRequested ||
+		(record.Concluded != nil && record.Summary.Status != carecontract.StatusActive) {
 		return signingLink{}, nil
 	}
 	sent, err := sentState(ctx, c.store, c.links.Fingerprint, organizationID, record)
@@ -132,6 +135,12 @@ func (c *Contracts) signatureOf(ctx context.Context, organizationID int64, recor
 	}
 	if stored.Method == carecontract.SignaturePaper {
 		signature.Intact = signature.Intact && stored.PaperIntact
+		return signature, nil
+	}
+	// The parents' own request (#4816) has no drawn signature and starts no
+	// withdrawal period: the checksums of the version and its PDF are the
+	// proof.
+	if stored.Method == carecontract.SignatureRequest {
 		return signature, nil
 	}
 	ends, err := c.periods.withdrawalEnd(ctx, record.Summary.SchoolID.Int64(), stored.SignedAt)

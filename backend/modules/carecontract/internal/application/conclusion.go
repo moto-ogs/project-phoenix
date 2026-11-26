@@ -247,7 +247,7 @@ func (c *Conclusions) concludeRecord(ctx context.Context, organizationID, contra
 		return carecontract.ErrContractNotConcludable
 	}
 	record.Concluded = &conclusion
-	if err := c.contracts.deliver(ctx, carecontract.Reviewer{OrganizationID: organizationID}, record, ""); err != nil {
+	if err := c.contracts.deliver(ctx, carecontract.Reviewer{OrganizationID: organizationID}, record, "", carecontract.MailPurposeContract); err != nil {
 		return sendHoldBack(err)
 	}
 	if record, err = c.intake.store.Contract(ctx, organizationID, contractID, true); err != nil {

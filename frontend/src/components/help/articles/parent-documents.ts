@@ -41,6 +41,18 @@ export function parentDocumentsTopic(): HelpTopic {
         ],
       },
       {
+        title: "Eine geänderte Fassung unterschreiben",
+        description:
+          "Hat die OGS oder der Träger die Betreuung geändert? Dann steht beim Vertrag `Änderung wartet auf deine Unterschrift`. Bis du unterschreibst, gilt dein Vertrag wie bisher.",
+        steps: [
+          "Wähle beim Vertrag `Änderung ansehen und unterschreiben`. Das geht auch über den Link in der Mail, ohne Konto.",
+          "Lies die Karte `Das ändert sich`. Durchgestrichen ist die Betreuung bisher. Daneben steht die neue. `Geändert`, `Neu` und `Entfällt` zeigen die Tage, die anders sind.",
+          "Lies die neue Fassung als PDF und die Widerrufsbelehrung. Setze den Haken bei `Ich habe die Widerrufsbelehrung gelesen.`",
+          "Unterschreibe mit dem Finger oder tippe deinen Namen. Wähle `Unterschrift bestätigen`.",
+          "Wähle `Neue Fassung verbindlich unterschreiben`.",
+        ],
+      },
+      {
         title: "Kinder in der Familie angeben",
         description:
           "Für die Geschwisterermäßigung zählt der Träger alle Kinder deiner Familie. Auch Kinder ohne Betreuungsvertrag zählen mit.",

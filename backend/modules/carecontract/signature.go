@@ -23,6 +23,11 @@ const (
 	SignatureDrawn = "drawn"
 	SignatureTyped = "typed"
 	SignaturePaper = "paper"
+	// SignatureRequest is no drawn signature: the parents asked for the
+	// change of their child's care themselves, and the school approved it.
+	// Their request, sent with their account, counts as the signature of the
+	// version it made (#4816, ADR 0088 section 3).
+	SignatureRequest = "request"
 )
 
 const (
@@ -66,13 +71,20 @@ type SignatureInput struct {
 	TypedName          string `json:"typed_name"`
 	NoticeAcknowledged bool   `json:"withdrawal_notice_acknowledged"`
 	EarlyStart         bool   `json:"early_start_requested"`
+	// DocumentSHA256 is the checksum of the PDF the signing page showed
+	// (SigningView.DocumentSHA256). A changed version is signed only with it
+	// (#4816): a newer version may have overtaken the one the signer read.
+	DocumentSHA256 string `json:"document_sha256"`
 }
 
 type PaperInput struct {
-	SignerName string
-	SignedOn   calendar.Date
-	Filename   string
-	PDF        []byte
+	// VersionNumber is the version the office recorded the scan for; 0
+	// names none and takes the version that waits.
+	VersionNumber int
+	SignerName    string
+	SignedOn      calendar.Date
+	Filename      string
+	PDF           []byte
 }
 
 // ContractSignature is the signature of the contract's current version.
@@ -99,9 +111,12 @@ type ContractSignature struct {
 }
 
 type Reminder struct {
-	Number    int       `json:"number"`
-	Recipient string    `json:"recipient"`
-	SentAt    time.Time `json:"sent_at"`
+	// VersionNumber is the version the reminder asked a signature for
+	// (#4816): a changed version is reminded anew.
+	VersionNumber int       `json:"version_number"`
+	Number        int       `json:"number"`
+	Recipient     string    `json:"recipient"`
+	SentAt        time.Time `json:"sent_at"`
 }
 
 // SigningView is what the parents read before they sign: the contract with
@@ -118,6 +133,17 @@ type SigningView struct {
 	DocumentSHA256   string            `json:"document_sha256"`
 	WithdrawalNotice []string          `json:"withdrawal_notice"`
 	Signature        *SigningSignature `json:"signature"`
+	// Previous is the version the parents have so far, set when Version is a
+	// changed version (#4816): of an active contract the version it follows,
+	// of a contract not yet signed the version sent before. The page shows
+	// what changes before the parents sign. Nil for a first contract.
+	Previous *SigningContract `json:"previous"`
+	// AwaitsSignature tells that Version waits for the signature; false once
+	// signed or when nothing is to sign.
+	AwaitsSignature bool `json:"awaits_signature"`
+	// Amendment is true when this version amends an earlier concluded one.
+	// It follows the stored version history, also after signing and reopening.
+	Amendment bool `json:"amendment"`
 }
 
 // SigningContract is the version the parents sign, as the page shows it.
@@ -274,4 +300,9 @@ const (
 	MailPurposeContract = ""
 	MailPurposeReminder = "reminder"
 	MailPurposeSigned   = "signed"
+	// MailPurposeAmendment asks for the signature of a changed version;
+	// MailPurposeAmended brings the changed version the parents asked for
+	// themselves and sign nothing for (#4816).
+	MailPurposeAmendment = "amendment"
+	MailPurposeAmended   = "amended"
 )
