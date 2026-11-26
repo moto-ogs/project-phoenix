@@ -1199,6 +1199,78 @@ describe("TraegerVertragPage", () => {
     ).toBeInTheDocument();
   });
 
+  it("shows a changed version that waits for the parents' signature (#4816)", async () => {
+    setTestClock("2026-09-09T12:00:00+02:00");
+    const first = DRAFT.version.services;
+    api.fetchCareContract.mockResolvedValue({
+      ...DRAFT,
+      status: "aktiv",
+      changeAwaitsSignature: true,
+      sentAt: "2026-07-20T08:00:00Z",
+      concluded: { method: "einfach_elektronisch", at: "2026-07-20T08:00:00Z" },
+      documentFrozen: true,
+      version: { ...DRAFT.version, effectiveFrom: "2026-08-01" },
+      mailings: [
+        {
+          recipient: "erika@example.org",
+          sentAt: "2026-09-01T08:05:00Z",
+          state: "sent",
+        },
+      ],
+      reminders: [
+        { versionNumber: 1, number: 1, sentAt: "2026-07-27T08:00:00Z" },
+        { versionNumber: 2, number: 1, sentAt: "2026-09-08T08:00:00Z" },
+      ],
+      versions: [
+        {
+          number: 1,
+          status: "wirksam",
+          source: "abschluss",
+          effectiveFrom: "2026-08-01",
+          endsOn: null,
+          validUntil: null,
+          services: first,
+          createdAt: "2026-07-20T08:00:00Z",
+        },
+        {
+          number: 2,
+          status: "beantragt",
+          source: "buchungsaenderung",
+          effectiveFrom: "2026-10-01",
+          endsOn: null,
+          validUntil: null,
+          services: first.slice(0, 2),
+          createdAt: "2026-09-01T08:00:00Z",
+        },
+      ],
+    } satisfies CareContractDetail);
+    renderPage();
+
+    expect(
+      await screen.findByText(
+        "Eine geänderte Fassung wartet auf die Unterschrift der Eltern. Bis dahin gilt Version 1. Version 2 gilt ab 01.10.2026, frühestens ab der Unterschrift.",
+      ),
+    ).toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Zur geänderten Fassung" }),
+    );
+    const heading = await screen.findByRole("heading", {
+      name: "Geänderte Fassung",
+    });
+    await waitFor(() => expect(heading).toHaveFocus());
+    const card = heading.closest("section");
+    if (!card) throw new Error("the card of the changed version is missing");
+    expect(within(card).getByText("Wartet auf Eltern")).toBeInTheDocument();
+    expect(
+      within(card).getByText(/per Mail und in der Eltern-App\s+bekommen/),
+    ).toBeInTheDocument();
+    // Only the reminders of the version that waits.
+    expect(within(card).getAllByText(/Erinnerung$/)).toHaveLength(1);
+    expect(
+      within(card).getByRole("button", { name: "Papiervertrag erfassen" }),
+    ).toBeInTheDocument();
+  });
+
   it("shows the versions of an active contract and from when a change applies", async () => {
     // Die Änderung ab 01.03.2027 muss noch bevorstehen.
     setTestClock("2026-09-09T12:00:00+02:00");
