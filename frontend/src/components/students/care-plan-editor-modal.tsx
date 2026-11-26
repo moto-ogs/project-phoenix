@@ -190,8 +190,8 @@ export function CarePlanEditorModal({
     pickupPersonInitialState(null),
   );
   // Dieselbe Liste wie bei den Erziehungsberechtigten des Kindes. Der Dialog
-  // braucht ihren Zustand auch beim Speichern, damit ein Ladefehler nicht wie
-  // eine absichtlich leere Liste behandelt wird.
+  // braucht ihren Zustand auch bei einer Kontaktwahl, damit ein Ladefehler
+  // nicht wie eine absichtlich leere Liste behandelt wird.
   const pickupPersonGuardians = useSWRAuth(
     isOpen && studentId ? tenantContactKeys.studentGuardians(studentId) : null,
     () => (studentId ? fetchStudentGuardians(studentId) : Promise.resolve([])),
@@ -306,7 +306,12 @@ export function CarePlanEditorModal({
       errors.invalid("Bitte gib den Namen der Person ein, die abholt.");
       return;
     }
-    if (pickupPersonIsChanged && studentId && pickupPersonGuardians.error) {
+    if (
+      pickupPersonIsChanged &&
+      pickupPersonSubmit?.kind === "contact" &&
+      studentId &&
+      pickupPersonGuardians.error
+    ) {
       errors.invalid(
         "Die Liste der Abholpersonen konnte nicht geladen werden. Bitte versuche es noch einmal.",
       );
@@ -314,6 +319,7 @@ export function CarePlanEditorModal({
     }
     if (
       pickupPersonIsChanged &&
+      pickupPersonSubmit?.kind === "contact" &&
       studentId &&
       pickupPersonGuardians.data === undefined
     ) {

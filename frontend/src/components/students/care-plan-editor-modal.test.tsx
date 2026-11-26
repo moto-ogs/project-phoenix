@@ -410,7 +410,7 @@ describe("CarePlanEditorModal", () => {
     expect(onSubmitException).not.toHaveBeenCalled();
   });
 
-  it("does not save a pickup person while the guardians cannot be loaded", async () => {
+  it("saves a one-time pickup person while the guardians cannot be loaded", async () => {
     pickupPersonGuardians.error = new Error("request failed");
     const { onSubmitException } = renderEditor({ studentId: "42" });
 
@@ -418,6 +418,63 @@ describe("CarePlanEditorModal", () => {
     fireEvent.change(screen.getByLabelText("Vor- und Nachname"), {
       target: { value: "Tom Nachbar" },
     });
+    save();
+
+    await waitFor(() => {
+      expect(onSubmitException).toHaveBeenCalledWith(
+        expect.objectContaining({
+          pickupPerson: { kind: "name", name: "Tom Nachbar" },
+        }),
+      );
+    });
+  });
+
+  it("removes a pickup person while the guardians cannot be loaded", async () => {
+    pickupPersonGuardians.error = new Error("request failed");
+    const { onSubmitException } = renderEditor({
+      studentId: "42",
+      pickupDay: {
+        ...basePickupDay,
+        pickupPerson: {
+          exceptionDate: "2026-05-25",
+          name: "Oma Frieda",
+          oneTime: true,
+        },
+      },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Wie immer" }));
+    save();
+
+    await waitFor(() => {
+      expect(onSubmitException).toHaveBeenCalledWith(
+        expect.objectContaining({ pickupPerson: { kind: "regular" } }),
+      );
+    });
+  });
+
+  it("does not save a contact pickup person while the guardians cannot be loaded", async () => {
+    pickupPersonGuardians.data = [
+      {
+        id: "7",
+        firstName: "Berta",
+        lastName: "Beispiel",
+        phoneNumbers: [],
+        preferredContactMethod: "",
+        languagePreference: "",
+        hasAccount: false,
+        relationshipId: "8",
+        relationshipType: "pickup_only",
+        isPrimary: false,
+        isEmergencyContact: false,
+        canPickup: true,
+        emergencyPriority: 1,
+      },
+    ];
+    pickupPersonGuardians.error = new Error("request failed");
+    const { onSubmitException } = renderEditor({ studentId: "42" });
+
+    fireEvent.click(screen.getByRole("button", { name: "Berta Beispiel" }));
     save();
 
     expect(

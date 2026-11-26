@@ -359,6 +359,12 @@ func (rs *Resource) updateStudentPickupSchedules(w http.ResponseWriter, r *http.
 	}
 
 	response := buildPickupDataResponse(data)
+	response.DepartureExceptions, response.PickupPersons, err =
+		rs.listDayPickups(r.Context(), student.ID, "", "", false)
+	if err != nil {
+		renderError(w, r, common.ErrorInternalServer(err))
+		return
+	}
 	response.WeeklyPlanVersion = version
 
 	common.Respond(w, r, http.StatusOK, response, "Pickup schedules updated successfully")
@@ -794,5 +800,12 @@ func (rs *Resource) resetStudentPickupToOffering(w http.ResponseWriter, r *http.
 		renderError(w, r, common.ErrorInternalServer(err))
 		return
 	}
-	common.Respond(w, r, http.StatusOK, buildPickupDataResponse(data), "Pickup schedule reset to offering")
+	response := buildPickupDataResponse(data)
+	response.DepartureExceptions, response.PickupPersons, err =
+		rs.listDayPickups(r.Context(), student.ID, "", "", false)
+	if err != nil {
+		renderError(w, r, common.ErrorInternalServer(err))
+		return
+	}
+	common.Respond(w, r, http.StatusOK, response, "Pickup schedule reset to offering")
 }

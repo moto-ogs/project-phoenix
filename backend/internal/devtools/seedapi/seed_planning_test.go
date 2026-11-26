@@ -17,6 +17,7 @@ func TestSeedPlanningDemoStepCreatesRealPlanningFlows(t *testing.T) {
 	var paths []string
 	var templates []map[string]any
 	deviations := map[string]map[string]any{}
+	var pickupPerson map[string]any
 	srv := newSeedHTTPTestServer(func(w seedHTTPResponseWriter, r *seedHTTPRequest) {
 		paths = append(paths, r.URL.Path)
 		w.Header().Set("Content-Type", "application/json")
@@ -29,6 +30,9 @@ func TestSeedPlanningDemoStepCreatesRealPlanningFlows(t *testing.T) {
 			var deviation map[string]any
 			require.NoError(t, json.NewDecoder(r.Body).Decode(&deviation))
 			deviations[r.URL.Path] = deviation
+		}
+		if strings.HasPrefix(r.URL.Path, "/api/students/32/pickup-persons/") {
+			require.NoError(t, json.NewDecoder(r.Body).Decode(&pickupPerson))
 		}
 		if r.URL.Path == "/api/timetable/instances" {
 			assert.Equal(t, todaySeedDate().AddDays(1).String(), r.URL.Query().Get("from"), "deviations planned ahead leave today alone")
@@ -71,6 +75,9 @@ func TestSeedPlanningDemoStepCreatesRealPlanningFlows(t *testing.T) {
 		}
 		if strings.HasPrefix(path, "/api/students/32/departure-exceptions/") {
 			paths[i] = "/api/students/32/departure-exceptions/{weekday}"
+		}
+		if strings.HasPrefix(path, "/api/students/32/pickup-persons/") {
+			paths[i] = "/api/students/32/pickup-persons/{weekday}"
 		}
 		if strings.HasPrefix(path, "/api/students/31/departure-exceptions/") {
 			paths[i] = "/api/students/31/departure-exceptions/{weekday}"
@@ -121,6 +128,7 @@ func TestSeedPlanningDemoStepCreatesRealPlanningFlows(t *testing.T) {
 		// mark two Kinderkarten.
 		"/api/students/33/pickup-exceptions",
 		"/api/students/32/departure-exceptions/{weekday}",
+		"/api/students/32/pickup-persons/{weekday}",
 		// „Heute anders“ (#7665): goes home alone and a pickup note today.
 		"/api/students/31/departure-exceptions/{weekday}",
 		"/api/students/33/pickup-notes",
@@ -146,6 +154,7 @@ func TestSeedPlanningDemoStepCreatesRealPlanningFlows(t *testing.T) {
 		"/api/students/37/pickup-schedules",
 		"/api/students/37/pickup-schedules",
 	}, paths)
+	assert.Equal(t, map[string]any{"name": "Oma Frieda"}, pickupPerson)
 	require.Len(t, templates, 9)
 	monday := seedDate{Time: mostRecentWeekday(todaySeedDate().UTCMidnight(), time.Monday)}.String()
 	assert.Equal(t, "care", templates[0]["type"])
