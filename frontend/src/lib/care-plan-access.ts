@@ -13,16 +13,13 @@ import { hasPermission, isAdmin } from "~/lib/auth-utils";
  * Seitenleiste, Mehr-Menü, Suche und die Karte „Betreuungsplan heute“ lesen
  * dieselbe Regel von hier.
  */
-export const CARE_PLAN_READ_PERMISSIONS = [
-  "schedules:read",
-  "users:read",
-] as const;
+const CARE_PLAN_READ_PERMISSIONS = ["schedules:read", "users:read"] as const;
 
 /**
  * Wer plant, hat den Eintrag immer: bis #8134 hing er allein an diesem Recht,
  * und eine Leitungsrolle der Schule (#3469) soll ihn nicht verlieren.
  */
-export const CARE_PLAN_MANAGE_PERMISSION = "schedules:manage";
+const CARE_PLAN_MANAGE_PERMISSION = "schedules:manage";
 
 /** Ob die Person den Betreuungsplan als Seite öffnet (Plan oder Leseansicht). */
 export function canOpenCarePlan(session: Session | null): boolean {

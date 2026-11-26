@@ -89,8 +89,10 @@ export function DayFlowBlock() {
   const { items: open, allPast } = upcomingFirst(blocks, openUntil, now);
   // Eine Spalte und zwei Spalten kappen verschieden. Die schmale Auswahl ist
   // immer Teil der breiten: dieselbe Liste, vom selben Ende her gekürzt.
-  const narrow = useHomeCardRows(open, COLUMN_ROWS);
-  const wide = useHomeCardRows(open, WIDE_ROWS);
+  // Was ausfällt, steht immer als Zeile da, auch hinter der Kappung: genau
+  // auf diesen Block muss die Leitung handeln.
+  const narrow = keepCancelled(open, useHomeCardRows(open, COLUMN_ROWS).shown);
+  const wide = keepCancelled(open, useHomeCardRows(open, WIDE_ROWS).shown);
   const inNarrow = new Set(narrow.shown.map((block) => block.id));
   // Zwei Spalten nur, wenn eine nicht reicht: zwei oder drei Blöcke
   // nebeneinander läse man quer statt erst nach unten.
@@ -153,7 +155,7 @@ export function DayFlowBlock() {
                   )
                 }
                 title="Für heute ist nichts mehr geplant"
-                description={dayOverText(blocks, now)}
+                description={dayOverText(blocks, now, label)}
               />
             );
           }
@@ -200,7 +202,6 @@ export function DayFlowBlock() {
                       href={dayHref(today)}
                       label="Blöcke"
                       singular="Block"
-                      note={cancelledNote(open, narrow.shown)}
                     />
                   </li>
                 ) : null}
@@ -214,7 +215,6 @@ export function DayFlowBlock() {
                       href={dayHref(today)}
                       label="Blöcke"
                       singular="Block"
-                      note={cancelledNote(open, wide.shown)}
                     />
                   </li>
                 ) : null}
@@ -235,46 +235,55 @@ export function DayFlowBlock() {
 function dayOverText(
   blocks: readonly PlannedTimetableInstance[],
   now: string,
+  /** Der Knopf im Kopf der Karte, der die Blöcke des Tages zeigt. */
+  openLabel: string,
 ): string {
   const cancelled = blocks.filter((block) => block.status === "cancelled");
   const missed = blocks.filter((block) => blockRowState(block, now).missed);
+  // „Standen im Plan“, nicht „sind vorbei“: neben einem Ausfall wäre das
+  // zweite nicht wahr.
   const done =
     blocks.length === 1
-      ? "Der eine Block von heute ist vorbei."
-      : `Alle ${blocks.length} Blöcke von heute sind vorbei.`;
+      ? "Heute stand 1 Block im Plan."
+      : `Heute standen ${blocks.length} Blöcke im Plan.`;
   // Ein oder zwei Ausfälle beim Namen: wer abends nach der Abholung gefragt
   // wird, muss dafür nicht in den Plan wechseln.
   const cancelledText =
     cancelled.length === 0
       ? null
       : cancelled.length <= 2
-        ? `Ausgefallen: ${cancelled.map((block) => `„${block.title}“`).join(" und ")}.`
+        ? `Ausgefallen: ${cancelled
+            .map((block) =>
+              block.cancelReason
+                ? `„${block.title}“ (${block.cancelReason})`
+                : `„${block.title}“`,
+            )
+            .join(" und ")}.`
         : `${cancelled.length} Blöcke sind ausgefallen.`;
   const missedText =
     missed.length === 0
       ? null
       : missed.length === 1
-        ? "1 Block wurde nicht gestartet."
-        : `${missed.length} Blöcke wurden nicht gestartet.`;
+        ? `1 Block wurde in moto nicht gestartet. „${openLabel}“ zeigt ihn.`
+        : `${missed.length} Blöcke wurden in moto nicht gestartet. „${openLabel}“ zeigt sie.`;
   return [done, cancelledText, missedText]
     .filter((part) => part !== null)
     .join(" ");
 }
 
-/** „1 fällt aus“, wenn unter den nicht gezeigten Blöcken ein Ausfall ist. */
-function cancelledNote(
+/**
+ * Die gezeigten Zeilen und dazu jeder Block, der ausfällt, in der
+ * Reihenfolge des Tages. `hidden` zählt, was danach noch fehlt.
+ */
+function keepCancelled(
   all: readonly PlannedTimetableInstance[],
   shown: readonly PlannedTimetableInstance[],
-): string | undefined {
+): { shown: readonly PlannedTimetableInstance[]; hidden: number } {
   const visible = new Set(shown.map((block) => block.id));
-  const cancelled = all.filter(
-    (block) => block.status === "cancelled" && !visible.has(block.id),
+  const kept = all.filter(
+    (block) => visible.has(block.id) || block.status === "cancelled",
   );
-  if (cancelled.length === 0) return undefined;
-  // Ein Ausfall beim Namen: genau auf diesen Block muss die Leitung handeln.
-  return cancelled.length === 1
-    ? `„${cancelled[0]!.title}“ fällt aus`
-    : `${cancelled.length} fallen aus`;
+  return { shown: kept, hidden: all.length - kept.length };
 }
 
 /** Kein Block ist ausgefallen oder ungestartet geblieben. */

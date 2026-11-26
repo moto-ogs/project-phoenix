@@ -394,7 +394,7 @@ describe("Betreuungsplan heute (#2180, #8134)", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Alle 4 Blöcke von heute sind vorbei. 4 Blöcke wurden nicht gestartet.",
+        "Heute standen 4 Blöcke im Plan. 4 Blöcke wurden in moto nicht gestartet. „Plan öffnen“ zeigt sie.",
       ),
     ).toBeInTheDocument();
     expect(screen.queryAllByRole("listitem")).toHaveLength(0);
@@ -423,13 +423,13 @@ describe("Betreuungsplan heute (#2180, #8134)", () => {
 
     expect(
       screen.getByText(
-        "Alle 2 Blöcke von heute sind vorbei. Ausgefallen: „Lernzeit Jahrgang 1“.",
+        "Heute standen 2 Blöcke im Plan. Ausgefallen: „Lernzeit Jahrgang 1“.",
       ),
     ).toBeInTheDocument();
   });
 
   // Ein Ausfall hinter „Noch 8 Blöcke ansehen“ bliebe sonst unsichtbar.
-  it("nennt am Rest der Liste den Block, der dahinter ausfällt", () => {
+  it("zeigt einen Block, der ausfällt, auch hinter der Kappung als Zeile", () => {
     const day = hourly(13, 8);
     swr.data = day.map((entry, index) =>
       index === 12 ? { ...entry, status: "cancelled" as const } : entry,
@@ -437,12 +437,15 @@ describe("Betreuungsplan heute (#2180, #8134)", () => {
 
     const { container } = render(<DayFlowBlock />);
 
+    // In einer Spalte wie in zwei: die Zeile steht da und zählt nicht mit.
+    expect(screen.getByText("Block 13")).toBeInTheDocument();
+    expect(wideOnly("Block 13")).toBe(false);
     expect(
       container.querySelector('[data-plan-more="narrow"]'),
-    ).toHaveTextContent(/Noch 9 Blöcke ansehen.*„Block 13“ fällt aus/);
+    ).toHaveTextContent("Noch 8 Blöcke ansehen");
     expect(
       container.querySelector('[data-plan-more="wide"]'),
-    ).toHaveTextContent(/Noch 4 Blöcke ansehen.*„Block 13“ fällt aus/);
+    ).toHaveTextContent("Noch 3 Blöcke ansehen");
   });
 
   // Die Karte ist so hoch wie ihr Inhalt: nachmittags stünden drei

@@ -227,7 +227,7 @@ export function ConflictWarningsBanner({
           <span className="font-semibold text-gray-900">
             {openCount} {openCount === 1 ? "Konflikt" : "Konflikte"}
           </span>{" "}
-          {periodLabel} · doppelt eingeplante Kinder oder Personal.
+          {periodLabel}: Kinder oder Personal sind doppelt eingeplant.
           {hiddenConflicts.length > 0 && (
             <span className="text-gray-500">
               {" "}
