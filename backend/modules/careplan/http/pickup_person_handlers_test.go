@@ -7,9 +7,11 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/moto-ogs/project-phoenix/api"
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/modules/settings"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
@@ -129,6 +131,32 @@ func TestStudentPickupPersonRoutes(t *testing.T) {
 		require.Len(t, persons, 1)
 		assert.Equal(t, studentsTestToday.String(), persons[0].ExceptionDate)
 	})
+}
+
+// A weekend that follows Friday's plan uses Friday's pickup permissions too.
+func TestStudentPickupPersonRoutes_WeekendFollowingFridayUsesFridayContactPermission(t *testing.T) {
+	t.Parallel()
+
+	tc := setupStudentsRoute(t, fixedCalendarClock)
+	student := testpkg.CreateTestStudent(t, tc.db, "Wochenende", "Kind", "AP2")
+	_, account := testpkg.CreateTestTeacherWithAccount(t, tc.db, "Wochenende", "Teacher")
+	guardian := testpkg.CreateTestGuardianProfileNamed(t, tc.db, "Freitag", "Berechtigt", "freitag-berechtigt")
+	testpkg.CreateTestStudentGuardianLink(t, tc.db, student.ID, guardian.ID, "pickup_only")
+	_, err := tc.db.ExecContext(testpkg.Ctx(t), `UPDATE users.student_guardian_pickup_permissions SET pickup_weekdays = '{5}'
+		WHERE tenant_id = ? AND relationship_id IN (SELECT id FROM users.student_guardian_relationships WHERE tenant_id = ? AND guardian_profile_id = ?)`,
+		testpkg.Tenant(t), testpkg.Tenant(t), guardian.ID)
+	require.NoError(t, err)
+	require.NoError(t, tc.settings().SetValue(testpkg.Ctx(t), settings.KeyWeekendFollowsFriday, true, nil, nil))
+
+	for _, date := range []calendar.Date{studentsTestToday.AddDays(5), studentsTestToday.AddDays(6)} {
+		req := testutil.NewAuthenticatedRequest(t, http.MethodPut, fmt.Sprintf("/%d/pickup-persons/%s", student.ID, date), map[string]any{
+			"guardian_profile_id": fmt.Sprint(guardian.ID),
+		})
+		req = api.WithWeekendPlan(req, tc.settingsService)
+		rr := authExec(t, tc, req, testutil.AdminTestClaims(int(account.ID)), []string{"admin:*"})
+		require.Equal(t, http.StatusOK, rr.Code, "%s: %s", date, rr.Body.String())
+		assert.Contains(t, rr.Body.String(), `"name":"Freitag Berechtigt"`)
+	}
 }
 
 // listedPickupPersons reads the pickup persons of the child's pickup data

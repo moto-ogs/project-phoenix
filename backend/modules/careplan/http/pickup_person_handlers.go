@@ -132,7 +132,10 @@ func (rs *Resource) pickupPersonOf(ctx context.Context, studentID int64, date ca
 	if err != nil {
 		return careplan.PickupPerson{}, err
 	}
-	weekday := int(date.Weekday())
+	weekday, err := calendar.PlanWeekday(ctx, date)
+	if err != nil {
+		return careplan.PickupPerson{}, err
+	}
 	for _, contact := range contacts {
 		link := contact.Link
 		if link.GuardianProfileID != profileID || !link.CanPickup ||
