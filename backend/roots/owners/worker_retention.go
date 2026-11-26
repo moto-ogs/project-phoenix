@@ -508,7 +508,8 @@ func protocolRetentionSteps(auditLedgers retentionAuditLedgers, settingAudit set
 
 // cleanupJobRetentionSteps are the fixed-window deletions of the technical
 // remains (#4046): the finished cleanup jobs, care-withdrawal completions and
-// enrollment rate-limit buckets of their owners.
+// enrollment rate-limit buckets of their owners, and the pickup persons of
+// past days (#7655).
 func cleanupJobRetentionSteps(
 	fileCleanups fileStorageModule.CleanupRetention, staffCleanups workforceModule.CleanupRetention,
 	carePlanCleanups carePlanModule.CleanupRetention, submissionLimits enrollmentModule.SubmissionRateLimitRetention,
@@ -524,6 +525,7 @@ func cleanupJobRetentionSteps(
 		steps = append(steps,
 			ownerRetentionStep(auditModels.DeletionTypeStudentDocumentCleanupRetention, carePlanCleanups.DeleteFinishedStudentDocumentCleanups),
 			ownerRetentionStep(auditModels.DeletionTypeCareWithdrawalRetention, carePlanCleanups.DeleteFinishedWithdrawalCompletions),
+			ownerRetentionStep(auditModels.DeletionTypePickupPersonRetention, carePlanCleanups.DeletePastPickupPersons),
 		)
 	}
 	if submissionLimits != nil {

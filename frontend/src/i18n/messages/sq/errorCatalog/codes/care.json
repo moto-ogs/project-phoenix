@@ -68,6 +68,7 @@
   "pickup_change_disabled": "Për momentin nuk është i disponueshëm këtu: {object}. Pyetni personin tuaj të kontaktit.",
   "pickup_permission_request_required": "Një leje e re për marrjen e fëmijës kërkon nënshkrimin tuaj. Pastaj {careTerm} e konfirmon.",
   "pickup_permission_unchanged": "Ky person e merr tashmë fëmijën në këto ditë.",
+  "pickup_person_not_authorized": "Ky person nuk mund ta marrë fëmijën në këtë ditë. Zgjidh një person tjetër ose shkruaj një emër.",
   "pickup_person_not_linked": "Ky person nuk është kontakt i fëmijës suaj. Ju lutemi shtojeni fillimisht te kontaktet.",
   "pickup_proof_not_found": "Për këtë kërkesë nuk ka dëshmi me nënshkrimin tuaj.",
   "pickup_signature_invalid": "Nënshkrimi nuk lexohet. Ju lutemi nënshkruani përsëri.",

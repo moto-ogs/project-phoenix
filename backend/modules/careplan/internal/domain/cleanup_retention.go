@@ -10,4 +10,7 @@ const (
 	// WithdrawalCompletionRetentionWindow: a resolved or obsolete
 	// care-withdrawal completion goes 365 days after it was finished.
 	WithdrawalCompletionRetentionWindow = 365 * 24 * time.Hour
+	// PickupPersonRetentionWindow: the pickup person of a day is kept for
+	// that day only and goes the night after it (#7655).
+	PickupPersonRetentionWindow time.Duration = 0
 )

@@ -71,6 +71,7 @@ const CodeCarePickupChangeCutoffPassed = "care.pickup_change_cutoff_passed"
 const CodeCarePickupChangeDisabled = "care.pickup_change_disabled"
 const CodeCarePickupPermissionRequestRequired = "care.pickup_permission_request_required"
 const CodeCarePickupPermissionUnchanged = "care.pickup_permission_unchanged"
+const CodeCarePickupPersonNotAuthorized = "care.pickup_person_not_authorized"
 const CodeCarePickupPersonNotLinked = "care.pickup_person_not_linked"
 const CodeCarePickupProofNotFound = "care.pickup_proof_not_found"
 const CodeCarePickupSignatureInvalid = "care.pickup_signature_invalid"
@@ -158,6 +159,7 @@ var errorCodeClassesCare = []errorCodeClass{
 	{CodeCarePickupChangeDisabled, "permission"},
 	{CodeCarePickupPermissionRequestRequired, "business_rejection"},
 	{CodeCarePickupPermissionUnchanged, "business_rejection"},
+	{CodeCarePickupPersonNotAuthorized, "input"},
 	{CodeCarePickupPersonNotLinked, "input"},
 	{CodeCarePickupProofNotFound, "business_rejection"},
 	{CodeCarePickupSignatureInvalid, "input"},

@@ -162,6 +162,27 @@ describe("mapOgsGroupLiveResponse", () => {
     });
   });
 
+  it("carries the pickup person of the day (#7655)", () => {
+    const view = mapOgsGroupLiveResponse(
+      wireResponse({
+        pickup_times: [
+          {
+            student_id: "3",
+            date: "2026-09-09",
+            weekday_name: "Mittwoch",
+            pickup_time: "15:00",
+            is_exception: false,
+            day_pickup_person: { name: "Tom Nachbar", one_time: true },
+          },
+        ],
+      }),
+    );
+    expect(view.pickupTimes.get("3")?.dayPickupPerson).toEqual({
+      name: "Tom Nachbar",
+      oneTime: true,
+    });
+  });
+
   it("defaults pickup_times to an empty Map when absent", () => {
     const view = mapOgsGroupLiveResponse(
       wireResponse({ pickup_times: undefined as never }),

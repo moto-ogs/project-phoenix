@@ -188,6 +188,15 @@ type Pickup struct {
 
 	// DayDepartureMode is the Abholart set for this day only (#3946).
 	DayDepartureMode string
+	// DayPickupPerson is who collects the child on this day (#7655).
+	DayPickupPerson *PickupPerson
+}
+
+// PickupPerson is who collects a child on one day. OneTime marks a person
+// without a standing pickup permission: the staff check the ID card.
+type PickupPerson struct {
+	Name    string `json:"name"`
+	OneTime bool   `json:"one_time"`
 }
 
 // Day-planning reason codes are part of the students API wire contract

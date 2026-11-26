@@ -68,6 +68,7 @@
   "pickup_change_disabled": "{object} şu anda burada kullanılamıyor. Lütfen ilgili kişinize danışın.",
   "pickup_permission_request_required": "Yeni bir alma izni imzanızı gerektirir. Ardından {careTerm} onaylar.",
   "pickup_permission_unchanged": "Bu kişi bu günlerde zaten çocuğu alabilir.",
+  "pickup_person_not_authorized": "Bu kişi bu gün çocuğu alamaz. Başka bir kişi seçin veya bir isim girin.",
   "pickup_person_not_linked": "Bu kişi çocuğunuzun kişileri arasında değil. Lütfen önce kişilerinize ekleyin.",
   "pickup_proof_not_found": "Bu talep için imzanızı içeren bir belge yok.",
   "pickup_signature_invalid": "İmza okunamıyor. Lütfen tekrar imzalayın.",

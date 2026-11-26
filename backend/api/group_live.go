@@ -88,7 +88,12 @@ type groupLiveSubstitutions interface {
 // groupLiveCareParticipation are the Care Plan reads of the day plans.
 type (
 	groupLivePickups interface {
-		GetBulkEffectivePickupDaysForDate(ctx context.Context, studentIDs []int64, date calendar.Date) (map[int64]*careplan.EffectivePickupTime, error)
+		GetBulkEffectivePickupTimesForDate(ctx context.Context, studentIDs []int64, date calendar.Date) (map[int64]*careplan.EffectivePickupTime, error)
+	}
+	// groupLiveDayPickups reads the day's Abholart and pickup person in one
+	// statement (#3946, #7655).
+	groupLiveDayPickups interface {
+		ListDayPickups(ctx context.Context, from, to calendar.Date, studentIDs []int64) ([]careplan.DayPickup, error)
 	}
 	groupLiveArrivals interface {
 		GetBulkEffectiveArrivalTimesForDate(ctx context.Context, studentIDs []int64, date calendar.Date) (map[int64]*careplan.EffectiveArrivalTime, error)
@@ -119,6 +124,7 @@ type groupLiveSources struct {
 	Active            groupLiveSessions
 	Settings          grouplive.Resolver
 	Pickups           groupLivePickups
+	DayPickups        groupLiveDayPickups
 	Arrivals          groupLiveArrivals
 	PlannedStudentIDs func(context.Context, []int64, calendar.Date) ([]int64, error)
 	Timetable         groupLiveTimetable
@@ -142,7 +148,7 @@ var errGroupLiveSources = errors.New("OGS group live adapters are not fully conf
 func newGroupLive(sources groupLiveSources, hints peopledirectory.SchoolDayHintQuery) (grouplive.Query, error) {
 	if sources.Presence == nil || sources.People == nil || sources.Education == nil ||
 		sources.Substitutions == nil || sources.UserContext == nil || sources.Active == nil ||
-		sources.Settings == nil || sources.Pickups == nil || sources.Arrivals == nil ||
+		sources.Settings == nil || sources.Pickups == nil || sources.DayPickups == nil || sources.Arrivals == nil ||
 		sources.PlannedStudentIDs == nil || sources.Timetable == nil || sources.BlockTypes == nil || sources.CareDays == nil || sources.CareParticipation == nil ||
 		sources.StatusDays == nil || sources.HolidayGroups == nil {
 		return nil, errGroupLiveSources
@@ -156,7 +162,7 @@ func newGroupLive(sources groupLiveSources, hints peopledirectory.SchoolDayHintQ
 		Roster:   groupLiveRoster{GroupRoster: sources.People, careParticipation: sources.CareParticipation},
 		Presence: groupLivePresence{presence: sources.Presence, active: sources.Active, statusDays: sources.StatusDays},
 		Planning: groupLivePlanning{
-			arrivals: sources.Arrivals, pickups: sources.Pickups, planned: sources.PlannedStudentIDs,
+			arrivals: sources.Arrivals, pickups: sources.Pickups, dayPickups: sources.DayPickups, planned: sources.PlannedStudentIDs,
 			careDays: sources.CareDays, timetable: sources.Timetable, blockTypes: sources.BlockTypes,
 		},
 		Transfers:       groupLiveTransfers{substitutions: sources.Substitutions},
@@ -493,11 +499,13 @@ func (p groupLivePresence) TrackingIndicators(ctx context.Context, studentIDs []
 }
 
 type groupLivePlanning struct {
-	arrivals  groupLiveArrivals
-	pickups   groupLivePickups
-	planned   func(context.Context, []int64, calendar.Date) ([]int64, error)
-	careDays  groupLiveCareDays
-	timetable groupLiveTimetable
+	arrivals groupLiveArrivals
+	pickups  groupLivePickups
+	// dayPickups adds the day's Abholart and pickup person (#7655).
+	dayPickups groupLiveDayPickups
+	planned    func(context.Context, []int64, calendar.Date) ([]int64, error)
+	careDays   groupLiveCareDays
+	timetable  groupLiveTimetable
 	// blockTypes tells offerings from care and duty blocks (#6487).
 	blockTypes groupLiveBlockTypes
 }
@@ -533,7 +541,7 @@ func (p groupLivePlanning) Pickups(ctx context.Context, studentIDs []int64, date
 	if err != nil {
 		return nil, err
 	}
-	pickups, err := p.pickups.GetBulkEffectivePickupDaysForDate(ctx, studentIDs, day)
+	pickups, err := p.pickups.GetBulkEffectivePickupTimesForDate(ctx, studentIDs, day)
 	if err != nil {
 		return nil, err
 	}
@@ -542,6 +550,28 @@ func (p groupLivePlanning) Pickups(ctx context.Context, studentIDs []int64, date
 		if pickup != nil {
 			result[studentID] = groupLivePickup(pickup)
 		}
+	}
+	if len(result) == 0 {
+		return result, nil
+	}
+	// A child without an effective Gehzeit is not expected that day and gets
+	// no day values either, as GetBulkEffectivePickupDaysForDate decides.
+	days, err := p.dayPickups.ListDayPickups(ctx, day, day, studentIDs)
+	if err != nil {
+		return nil, err
+	}
+	for _, value := range days {
+		pickup, ok := result[value.StudentID]
+		if !ok {
+			continue
+		}
+		if value.Departure != nil {
+			pickup.DayDepartureMode = value.Departure.DepartureMode
+		}
+		if value.Person != nil {
+			pickup.DayPickupPerson = &grouplive.PickupPerson{Name: value.Person.Name, OneTime: value.Person.OneTime()}
+		}
+		result[value.StudentID] = pickup
 	}
 	return result, nil
 }
@@ -553,7 +583,7 @@ func groupLivePickup(pickup *careplan.EffectivePickupTime) grouplive.Pickup {
 	}
 	return grouplive.Pickup{
 		Date: grouplive.Date(pickup.Date.String()), WeekdayName: pickup.WeekdayName, PickupTime: pickup.PickupTime,
-		IsException: pickup.IsException, Notes: pickup.Notes, DayNotes: notes, DayDepartureMode: pickup.DayDepartureMode,
+		IsException: pickup.IsException, Notes: pickup.Notes, DayNotes: notes,
 	}
 }
 

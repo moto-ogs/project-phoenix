@@ -47,8 +47,10 @@ type ResourceConfig struct {
 	PickupAdjustmentService      careplan.PickupAdjustments
 	// PickupChangeNotices serves the reader's unread markers of changed
 	// pickup times (#6855).
-	PickupChangeNotices    careplan.PickupChangeTeamNotices
-	PickupScheduleService  careplan.PickupScheduleService
+	PickupChangeNotices   careplan.PickupChangeTeamNotices
+	PickupScheduleService careplan.PickupScheduleService
+	// PickupPersons holds who collects a child on one day (#7655).
+	PickupPersons          careplan.PickupPersons
 	PickupSignatureProofs  PickupSignatureProofs
 	Reports                ReportRenderer
 	Schools                SchoolIdentity
@@ -127,6 +129,8 @@ func (rs *Resource) Register(r chi.Router, withTx common.Middleware) {
 	r.With(common.RequiresPermission(permissions.UsersUpdate), withTx).Delete("/{id}/pickup-exceptions/{exceptionId}", rs.deleteStudentPickupException)
 	r.With(common.RequiresPermission(permissions.UsersUpdate), withTx).Put("/{id}/departure-exceptions/{date}", rs.putStudentDepartureException)
 	r.With(common.RequiresPermission(permissions.UsersUpdate), withTx).Delete("/{id}/departure-exceptions/{date}", rs.deleteStudentDepartureException)
+	r.With(common.RequiresPermission(permissions.UsersUpdate), withTx).Put("/{id}/pickup-persons/{date}", rs.putStudentPickupPerson)
+	r.With(common.RequiresPermission(permissions.UsersUpdate), withTx).Delete("/{id}/pickup-persons/{date}", rs.deleteStudentPickupPerson)
 	r.With(common.RequiresPermission(permissions.UsersUpdate), withTx).Post("/{id}/partial-absences", rs.createStudentPartialAbsence)
 	r.With(common.RequiresPermission(permissions.UsersUpdate), withTx).Put("/{id}/partial-absences/{partialAbsenceId}", rs.updateStudentPartialAbsence)
 	r.With(common.RequiresPermission(permissions.UsersUpdate), withTx).Delete("/{id}/partial-absences/{partialAbsenceId}", rs.deleteStudentPartialAbsence)

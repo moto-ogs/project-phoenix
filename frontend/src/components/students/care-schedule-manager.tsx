@@ -75,7 +75,9 @@ import {
   createStudentPickupNote,
   deleteStudentPickupException,
   deleteStudentDepartureException,
+  deleteStudentPickupPerson,
   setStudentDepartureException,
+  setStudentPickupPerson,
   deleteStudentPickupNote,
   fetchStudentPickupData,
   applyStudentPickupAdjustment,
@@ -96,6 +98,7 @@ import {
   formatPickupTime,
   formatWeekRange,
   getDayData as getPickupDayData,
+  withPickupPerson,
   mergeSchedulesWithTemplate as mergePickupSchedulesWithTemplate,
   pickupScheduleSourceLabel,
 } from "~/lib/pickup-schedule-helpers";
@@ -576,18 +579,22 @@ export function CareScheduleManager({
           weekendFollowsFriday,
           todayISO,
         );
-        const pickup = getPickupDayData(
-          date,
-          pickupData.schedules,
-          pickupData.exceptions,
-          isSick,
-          pickupData.notes,
-          isExcused,
-          statusForDate,
-          pickupData.effectiveSchedules,
-          weekendFollowsFriday,
-          pickupData.departureExceptions,
-          todayISO,
+        const pickup = withPickupPerson(
+          getPickupDayData(
+            date,
+            pickupData.schedules,
+            pickupData.exceptions,
+            isSick,
+            pickupData.notes,
+            isExcused,
+            statusForDate,
+            pickupData.effectiveSchedules,
+            weekendFollowsFriday,
+            pickupData.departureExceptions,
+            todayISO,
+          ),
+          pickupData.pickupPersons,
+          dateKey,
         );
         return {
           date,
@@ -611,6 +618,7 @@ export function CareScheduleManager({
       pickupData.notes,
       pickupData.effectiveSchedules,
       pickupData.departureExceptions,
+      pickupData.pickupPersons,
       isSick,
       isExcused,
       weekendFollowsFriday,
@@ -862,18 +870,22 @@ export function CareScheduleManager({
   const currentEditingPickupDay = useMemo(() => {
     if (!editingDayDate) return null;
     const dateKey = formatDateISO(editingDayDate);
-    return getPickupDayData(
-      editingDayDate,
-      pickupData.schedules,
-      pickupData.exceptions,
-      isSick,
-      pickupData.notes,
-      isExcused,
-      statusByDate.get(dateKey) ?? null,
-      pickupData.effectiveSchedules,
-      weekendFollowsFriday,
-      pickupData.departureExceptions,
-      todayISO,
+    return withPickupPerson(
+      getPickupDayData(
+        editingDayDate,
+        pickupData.schedules,
+        pickupData.exceptions,
+        isSick,
+        pickupData.notes,
+        isExcused,
+        statusByDate.get(dateKey) ?? null,
+        pickupData.effectiveSchedules,
+        weekendFollowsFriday,
+        pickupData.departureExceptions,
+        todayISO,
+      ),
+      pickupData.pickupPersons,
+      dateKey,
     );
   }, [
     editingDayDate,
@@ -893,7 +905,13 @@ export function CareScheduleManager({
    */
   const handleSubmitException = useCallback(
     async (payload: CareExceptionSubmit) => {
-      const { date: dayISO, arrival, pickup, departure } = payload;
+      const {
+        date: dayISO,
+        arrival,
+        pickup,
+        departure,
+        pickupPerson,
+      } = payload;
       let persistedChange = false;
 
       try {
@@ -966,6 +984,22 @@ export function CareScheduleManager({
               departureMode: departure.mode,
               reason: departure.reason ?? undefined,
             });
+          }
+          persistedChange = true;
+        }
+
+        // Wer an diesem Tag abholt (#7655), neben Abholzeit und Abholart.
+        if (pickupPerson) {
+          if (pickupPerson.kind === "regular") {
+            await deleteStudentPickupPerson(studentId, dayISO);
+          } else {
+            await setStudentPickupPerson(
+              studentId,
+              dayISO,
+              pickupPerson.kind === "contact"
+                ? { guardianProfileId: pickupPerson.guardianProfileId }
+                : { name: pickupPerson.name },
+            );
           }
           persistedChange = true;
         }
@@ -1292,6 +1326,7 @@ export function CareScheduleManager({
         pickupDay={currentEditingPickupDay}
         onSubmitException={handleSubmitException}
         weeklyDepartureModes={weeklyDepartureModes}
+        studentId={studentId}
         onCreateArrivalNote={handleCreateArrivalNote}
         onUpdateArrivalNote={handleUpdateArrivalNote}
         onDeleteArrivalNote={handleDeleteArrivalNote}

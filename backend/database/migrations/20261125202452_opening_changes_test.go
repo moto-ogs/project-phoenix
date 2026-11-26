@@ -30,6 +30,8 @@ func TestOpeningChangesGoWithTheSchoolAndRollBack(t *testing.T) {
 	require.Equal(t, "db_done", result.Status, "preflight, deletion and residual checks pass: %v", result.ErrorCode)
 	assert.EqualValues(t, 1, result.RowCounts["schedule.opening_changes"], "the one day of the school")
 
+	// The pickup persons follow the opening changes at the head and roll back first.
+	require.NoError(t, studentPickupPersonsDown(ctx, db))
 	require.NoError(t, openingChangesDown(ctx, db))
 	assert.False(t, exists())
 	for _, entry := range readErasurePlan(t, db) {
@@ -40,6 +42,7 @@ func TestOpeningChangesGoWithTheSchoolAndRollBack(t *testing.T) {
 	require.Equal(t, "db_done", eraseSchoolAsCLI(t, db, other, beginErasure(t, db, other)).Status, "the erasure works after the rollback")
 
 	require.NoError(t, openingChangesUp(ctx, db), "the migration applies again")
+	require.NoError(t, studentPickupPersonsUp(ctx, db), "the later pickup-person migration applies again")
 	require.NoError(t, applyRepeatableDefinitions(ctx, db))
 	assert.True(t, exists())
 	again := testpkg.UniqueTestTenantID(t)

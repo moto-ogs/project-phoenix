@@ -54,6 +54,7 @@ const mockPickupDataWire: studentsContract.PickupDataResponse = {
   schedules: [mockBackendSchedule],
   exceptions: [mockBackendException],
   notes: [],
+  pickup_persons: [],
   departure_exceptions: [],
 };
 
@@ -758,7 +759,12 @@ describe("pickup-schedule-api", () => {
         }),
       );
 
-      const result = await updateStudentPickupNote("123", "10", noteData, "note-read");
+      const result = await updateStudentPickupNote(
+        "123",
+        "10",
+        noteData,
+        "note-read",
+      );
 
       expect(global.fetch).toHaveBeenCalledWith(
         "/api/students/123/pickup-notes/10",
