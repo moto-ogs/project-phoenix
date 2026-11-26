@@ -101,3 +101,103 @@ func seedOneDayLess(rt *Runtime, parentAuth AuthRef, studentID int64) (bool, err
 	}
 	return true, nil
 }
+
+// seedCareContractSchoolChange lets the school take one weekday off a module
+// of a child whose contract is active, without a request of the parents
+// (#4816). The Worker then gives the contract a version that waits for the
+// parents' signature: the Träger-Büro finds „Änderung wartet auf
+// Unterschrift“ in its list, and the parents the change to sign under
+// „Dokumente“. It answers whether it changed a booking; a seed with a
+// contract whose change waits already, or without a fitting contract,
+// changes nothing.
+func seedCareContractSchoolChange(rt *Runtime, auth AuthRef) (bool, error) {
+	raw, err := rt.Client.GetWithAuth(auth, "/traeger/contracts/?status=aktiv")
+	if err != nil {
+		return false, fmt.Errorf("list the active care contracts: %w", err)
+	}
+	var list struct {
+		Data struct {
+			Contracts []struct {
+				RequestChildID        *ident.ID `json:"request_child_id"`
+				ChangeAwaitsSignature bool      `json:"change_awaits_signature"`
+			} `json:"contracts"`
+		} `json:"data"`
+	}
+	if err := parseJSON(raw, &list); err != nil {
+		return false, err
+	}
+	children := []int64{}
+	for _, contract := range list.Data.Contracts {
+		if contract.ChangeAwaitsSignature {
+			return false, nil
+		}
+		if contract.RequestChildID != nil {
+			children = append(children, int64(*contract.RequestChildID))
+		}
+	}
+	for _, request := range rt.Enrollment.Requests {
+		for _, childID := range request.ChildIDs {
+			if !slices.Contains(children, childID) {
+				continue
+			}
+			changed, err := seedSchoolTakesOneDay(rt, request.RequestID, childID)
+			if err != nil || changed {
+				return changed, err
+			}
+		}
+	}
+	return false, nil
+}
+
+// seedSchoolTakesOneDay books the child's offerings again from in two weeks
+// without the last weekday of the first offering with at least two chosen
+// days, as the school's correction editor does. It answers false for a
+// child without such an offering.
+func seedSchoolTakesOneDay(rt *Runtime, requestID, childID int64) (bool, error) {
+	raw, err := rt.Client.GetWithAuth(rt.TenantAuth, fmt.Sprintf("/api/enrollment/admin/requests/%d", requestID))
+	if err != nil {
+		return false, fmt.Errorf("read enrollment request %d: %w", requestID, err)
+	}
+	var detail struct {
+		Data struct {
+			Children []struct {
+				ID        ident.ID `json:"id"`
+				Offerings []struct {
+					OfferingID   string   `json:"offering_id"`
+					SelectedDays []string `json:"selected_days"`
+				} `json:"offerings"`
+			} `json:"children"`
+		} `json:"data"`
+	}
+	if err := parseJSON(raw, &detail); err != nil {
+		return false, err
+	}
+	for _, child := range detail.Data.Children {
+		if int64(child.ID) != childID {
+			continue
+		}
+		offerings, changed := []map[string]any{}, false
+		for _, offering := range child.Offerings {
+			days := slices.Clone(offering.SelectedDays)
+			if !changed && len(days) > 1 {
+				days, changed = days[:len(days)-1], true
+			}
+			booked := map[string]any{"offering_id": offering.OfferingID}
+			if len(days) > 0 {
+				booked["selected_days"] = days
+			}
+			offerings = append(offerings, booked)
+		}
+		if !changed {
+			return false, nil
+		}
+		if _, err := putReadChildOfferings(rt, rt.TenantAuth, requestID, childID, map[string]any{
+			"offerings": offerings, "reason": "Die Gruppe ist an diesem Tag voll",
+			"effective_from": todaySeedDate().AddDays(14).String(),
+		}); err != nil {
+			return false, fmt.Errorf("take one day off the care of child %d: %w", childID, err)
+		}
+		return true, nil
+	}
+	return false, nil
+}
