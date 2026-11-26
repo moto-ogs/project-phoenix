@@ -44,16 +44,9 @@ type change struct {
 	origins []calendar.Date
 }
 
-// nextAmendment is the first change of the contract that its timeline does
-// not carry yet; nil without a reason when it carries them all.
-func nextAmendment(read schoolRead, application carecontract.Application, contract AmendableContract,
-	today calendar.Date) (*amendmentPlan, string) {
-	plan, reason, _ := nextChange(read, application, contract, today)
-	return plan, reason
-}
-
-// nextChange answers nextAmendment with the change the plan comes from: the
-// day it holds from and the days it happened on.
+// nextChange is the first change of the contract that its timeline does not
+// carry yet, with the day it holds from and the days it happened on; a nil
+// plan without a reason when the timeline carries them all.
 func nextChange(read schoolRead, application carecontract.Application, contract AmendableContract,
 	today calendar.Date) (*amendmentPlan, string, change) {
 	for _, next := range changeDays(read, application, contract, today) {
@@ -65,7 +58,7 @@ func nextChange(read schoolRead, application carecontract.Application, contract 
 	return nil, "", change{}
 }
 
-// firstAmendment answers nextAmendment with the day the change holds from;
+// firstAmendment answers nextChange with the day the change holds from;
 // empty when the timeline carries every change.
 func firstAmendment(read schoolRead, application carecontract.Application, contract AmendableContract,
 	today calendar.Date) (*amendmentPlan, string, calendar.Date) {
