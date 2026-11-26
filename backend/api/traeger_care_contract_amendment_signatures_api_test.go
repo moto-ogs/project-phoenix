@@ -400,6 +400,16 @@ func TestCareContractSentButUnsignedFollowsAnApprovedChange(t *testing.T) {
 	assert.Empty(t, amendCareContracts(t, f).Awaiting)
 }
 
+type amendmentReminderMails struct {
+	owners.CareContractTestMails
+	last carecontract.ContractMail
+}
+
+func (m *amendmentReminderMails) EnqueueContractMail(ctx context.Context, mail carecontract.ContractMail) (int64, error) {
+	m.last = mail
+	return m.CareContractTestMails.EnqueueContractMail(ctx, mail)
+}
+
 // TestCareContractWaitingChangeIsRemindedAnew pins that a changed version
 // is reminded like a first contract (#4679), with its own count.
 func TestCareContractWaitingChangeIsRemindedAnew(t *testing.T) {
@@ -409,7 +419,7 @@ func TestCareContractWaitingChangeIsRemindedAnew(t *testing.T) {
 	bookLateCare(t, f)
 	require.Len(t, amendCareContracts(t, f).Awaiting, 1)
 	ctx := testpkg.WithPackageTenantRuntime(context.Background())
-	mails := &owners.CareContractTestMails{}
+	mails := &amendmentReminderMails{}
 	remind := func() {
 		t.Helper()
 		for _, statement := range []string{
@@ -429,6 +439,11 @@ func TestCareContractWaitingChangeIsRemindedAnew(t *testing.T) {
 		remind()
 	}
 	assert.Len(t, mails.Purposes(), 3, "at most three reminders of the changed version")
+	payload, err := json.Marshal(mails.last)
+	require.NoError(t, err)
+	var sent map[string]any
+	require.NoError(t, json.Unmarshal(payload, &sent))
+	assert.Equal(t, true, sent["amendment"], "the reminder asks for another signature, even if the first contract was on paper")
 	detail := careContractDetail(t, f, contract)
 	require.Len(t, detail.Reminders, 3)
 	assert.Equal(t, 2, detail.Reminders[0].VersionNumber, "the reminders belong to the version that waits")
@@ -557,4 +572,33 @@ func TestCareContractRequestOfThePartyOvertakesAWaitingChange(t *testing.T) {
 	assert.Equal(t, []string{"1:abgeloest", "2:ueberholt", "3:wirksam"}, versionStatuses(careContractDetail(t, f, contract)))
 	rec := publicSigning(t, f.traeger, http.MethodGet, waitingLink, nil)
 	assert.Equal(t, http.StatusGone, rec.Code, "the overtaken version is never signed")
+}
+
+func TestCareContractResendIgnoresAnOvertakenAmendmentWithoutAnOriginalPDF(t *testing.T) {
+	t.Parallel()
+	f := newCareContractFixture(t, "Träger Vertrag Überholtes PDF")
+	require.Equal(t, http.StatusOK, putTemplate(t, f.traeger, f.office.token, f.school, f.offering, careContractTemplate).Code)
+	rec := traegerJSON(t, f.traeger, f.office.token, http.MethodPost, "/traeger/contracts", map[string]any{"contracts": []any{f.key()}})
+	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+	created := decodeSchoolPortalData[careContractCreateBody](t, rec.Body.Bytes())
+	require.Len(t, created.Created, 1)
+	contract := int64(created.Created[0].ID)
+	ctx := t.Context()
+	// Like an imported contract, the concluded first version has no frozen PDF.
+	_, err := f.db.ExecContext(ctx, `UPDATE care_contract.contract_versions SET status = 'wirksam' WHERE contract_id = ?`, contract)
+	require.NoError(t, err)
+	_, err = f.db.ExecContext(ctx, `UPDATE care_contract.contracts SET status = 'aktiv', sent_at = NOW(), concluded_at = NOW(), conclusion_method = 'papier' WHERE id = ?`, contract)
+	require.NoError(t, err)
+	late := bookLateCare(t, f)
+	require.Len(t, amendCareContracts(t, f).Awaiting, 1)
+	_, err = f.db.ExecContext(ctx, `DELETE FROM enrollment.care_offering_bookings WHERE tenant_id = ? AND request_child_id = ? AND care_offering_id = ?`,
+		f.school, f.child, late)
+	require.NoError(t, err)
+	assert.Empty(t, amendCareContracts(t, f).Awaiting)
+	assert.Equal(t, []string{"1:wirksam", "2:ueberholt"}, versionStatuses(careContractDetail(t, f, contract)))
+	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, "/traeger/contracts/send", map[string]any{"contract_ids": []string{fmt.Sprint(contract)}})
+	require.Equal(t, http.StatusAccepted, rec.Code, rec.Body.String())
+	assert.Contains(t, rec.Body.String(), `"reason":"not_sendable"`)
+	assert.Zero(t, countRows(t, f, `SELECT COUNT(*) FROM platform.email_outbox WHERE kind = 'care_contract' AND organization_id = ? AND related_entity_id = ?`, f.office.organization, contract),
+		"the withdrawn unsigned PDF must not be sent as the concluded contract")
 }

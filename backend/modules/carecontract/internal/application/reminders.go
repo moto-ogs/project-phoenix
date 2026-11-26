@@ -133,6 +133,7 @@ func (r *Reminders) remind(ctx context.Context, organizationID int64, letterhead
 		Modules:   carecontract.JoinNames(ModuleNames(record.Version.Services)), Filename: document.File.Filename,
 		IdempotencyKey: reminderKey(candidate, record.Version.Number),
 		Purpose:        carecontract.MailPurposeReminder, SigningURL: link.url, LinkExpiresOn: link.expiresOn,
+		Amendment: record.Summary.Status == carecontract.StatusActive,
 	})
 	if err != nil {
 		return fmt.Errorf("enqueue reminder: %w", err)

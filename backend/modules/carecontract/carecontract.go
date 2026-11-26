@@ -667,6 +667,8 @@ type ContractMail struct {
 	Concluded bool `json:"concluded,omitempty"`
 	// EffectiveFrom is the German date a changed version holds from (#4816).
 	EffectiveFrom string `json:"effective_from,omitempty"`
+	// Amendment asks for another signature on a change to a concluded contract.
+	Amendment bool `json:"amendment,omitempty"`
 }
 
 // RenderedContractMail is the mail the worker sends.
@@ -698,6 +700,7 @@ type ContractMailContent struct {
 	Concluded        bool
 	// EffectiveFrom is the day a changed version holds from (#4816).
 	EffectiveFrom string
+	Amendment     bool
 }
 
 type ContractMailRenderer func(ctx context.Context, payload []byte) (RenderedContractMail, error)

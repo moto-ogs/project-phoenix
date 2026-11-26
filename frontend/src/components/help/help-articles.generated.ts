@@ -12441,7 +12441,7 @@ export const traegerCareContractsTopic =
           steps: [
             "In der Liste steht beim Vertrag `Änderung wartet auf Unterschrift`. Wähle das Kind.",
             "Oben steht, welche Version bis zur Unterschrift gilt. Wähle `Zur geänderten Fassung`.",
-            "Die Karte `Geänderte Fassung` zeigt `Wartet auf Eltern`. Die Eltern haben die neue Fassung per Mail und in der Eltern-App bekommen. Dort sehen sie, was sich ändert, und unterschreiben.",
+            "Die Karte `Geänderte Fassung` zeigt `Wartet auf Eltern` und den Versandstand. Wird die Mail noch gesendet? Dann warte, bis der Versand fertig ist. Ist sie nicht angekommen oder ihr Ergebnis unbekannt? Gib den Eltern das PDF unter `Versionen`. In der Eltern-App sehen sie die Änderung und unterschreiben.",
             "Bis zur Unterschrift bekommen die Eltern Erinnerungen per Mail. Die Karte zeigt jede Erinnerung.",
             "Haben die Eltern auf Papier unterschrieben? Lade das PDF der neuen Version im Reiter `Versionen` mit `PDF`. Wähle danach in der Karte `Papiervertrag erfassen`.",
             "Nach der Unterschrift steht die Version im Reiter `Versionen` mit `Gilt ab` oder `Gilt jetzt`.",

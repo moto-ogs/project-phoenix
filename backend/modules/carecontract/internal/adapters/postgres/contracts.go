@@ -163,15 +163,19 @@ func (s Store) Contract(ctx context.Context, organizationID, contractID int64, f
 }
 
 // readDocuments fills in the stored PDF of the record's version and the
-// newest stored PDF of the contract with its version (#4681).
+// newest stored PDF of the contract with its version (#4681). An overtaken
+// version was never concluded and cannot be the PDF sent again.
 func readDocuments(ctx context.Context, db bun.IDB, organizationID int64, record *ports.ContractRecord) error {
 	var documents []struct {
 		ID        int64   `bun:"id"`
 		VersionID int64   `bun:"contract_version_id"`
 		Issuer    *string `bun:"issuer"`
 	}
-	if err := db.NewRaw(`SELECT id, contract_version_id, issuer FROM care_contract.contract_documents
-		WHERE organization_id = ? AND contract_id = ? ORDER BY id DESC`, organizationID, record.Summary.ID).Scan(ctx, &documents); err != nil {
+	if err := db.NewRaw(`SELECT d.id, d.contract_version_id, d.issuer FROM care_contract.contract_documents AS d
+		JOIN care_contract.contract_versions AS v ON v.id = d.contract_version_id
+			AND v.organization_id = d.organization_id AND v.contract_id = d.contract_id
+		WHERE d.organization_id = ? AND d.contract_id = ? AND v.status <> ? ORDER BY d.id DESC`,
+		organizationID, record.Summary.ID, carecontract.VersionOvertaken).Scan(ctx, &documents); err != nil {
 		return fmt.Errorf("care contract postgres: read documents: %w", err)
 	}
 	for i, document := range documents {

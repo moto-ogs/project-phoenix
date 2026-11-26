@@ -12,6 +12,7 @@ import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import { ApiError } from "~/lib/api-error";
 import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
 import { catalogText } from "~/test/error-catalog-text";
+import { CareContractWaitingChangeCard } from "~/components/traeger/care-contract-waiting-change-card";
 import { PaperSignatureModal } from "~/components/traeger/care-contract-paper-modal";
 import type { CareContractDetail } from "~/lib/traeger-care-contracts-api";
 
@@ -1262,7 +1263,7 @@ describe("TraegerVertragPage", () => {
     if (!card) throw new Error("the card of the changed version is missing");
     expect(within(card).getByText("Wartet auf Eltern")).toBeInTheDocument();
     expect(
-      within(card).getByText(/per Mail und in der Eltern-App\s+bekommen/),
+      within(card).getByText(/Die neue Fassung wurde per Mail gesendet/),
     ).toBeInTheDocument();
     // Only the reminders of the version that waits.
     expect(within(card).getAllByText(/Erinnerung$/)).toHaveLength(1);
@@ -1901,5 +1902,55 @@ describe("TraegerVertragPage", () => {
         screen.queryByRole("button", { name: "Mit Kinderakte verknüpfen" }),
       ).not.toBeInTheDocument();
     });
+  });
+});
+
+describe("waiting amendment delivery", () => {
+  it.each([
+    ["queued", "Die Mail mit der neuen Fassung wird noch gesendet."],
+    ["failed", "Die Mail mit der neuen Fassung ist nicht angekommen."],
+    [
+      "unknown",
+      "Ob die Mail mit der neuen Fassung angekommen ist, ist unbekannt.",
+    ],
+  ] as const)("shows %s without claiming receipt", (state, message) => {
+    const waiting = {
+      number: 2,
+      status: "beantragt",
+      source: "buchungsaenderung",
+      effectiveFrom: testClockDay(10),
+      endsOn: null,
+      validUntil: null,
+      services: DRAFT.version.services,
+      createdAt: "2026-09-01T08:00:00Z",
+    } as const;
+    render(
+      <CareContractWaitingChangeCard
+        contract={{
+          ...DRAFT,
+          status: "aktiv",
+          changeAwaitsSignature: true,
+          mailings: [
+            {
+              recipient: "erika@example.org",
+              sentAt: "2026-09-01T08:05:00Z",
+              state,
+            },
+          ],
+        }}
+        waiting={waiting}
+        onChanged={vi.fn()}
+      />,
+    );
+    expect(
+      screen.getByRole("heading", { name: "Geänderte Fassung" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(new RegExp(message))).toBeInTheDocument();
+    if (state !== "queued") {
+      expect(screen.getByText(/Lade das PDF unter/)).toBeInTheDocument();
+    }
+    expect(
+      screen.queryByText(/per Mail und in der Eltern-App\s+bekommen/),
+    ).not.toBeInTheDocument();
   });
 });

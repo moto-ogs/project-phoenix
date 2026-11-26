@@ -74,8 +74,19 @@ export function CareContractWaitingChangeCard({
   const reminders = contract.reminders.filter(
     (reminder) => reminder.versionNumber === waiting.number,
   );
-  // The newest mail went out for this version when it is not older than it.
-  const mailed = (contract.mailings[0]?.sentAt ?? "") >= waiting.createdAt;
+  // sentAt is the enqueue time. Only the delivery state confirms a send.
+  const latestMail = contract.mailings[0];
+  const mailState =
+    latestMail && latestMail.sentAt >= waiting.createdAt
+      ? latestMail.state
+      : undefined;
+  const mailed = mailState === "sent";
+  const missingMail =
+    mailState === "failed"
+      ? "Die Mail mit der neuen Fassung ist nicht angekommen."
+      : mailState === "unknown"
+        ? "Ob die Mail mit der neuen Fassung angekommen ist, ist unbekannt."
+        : "Die Eltern haben für diese Fassung keine Mail bekommen.";
 
   return (
     <>
@@ -102,14 +113,18 @@ export function CareContractWaitingChangeCard({
         <div className="space-y-3">
           {mailed ? (
             <p className="text-sm text-gray-600">
-              Die Eltern haben die neue Fassung per Mail und in der Eltern-App
-              bekommen. Dort sehen sie, was sich ändert, und unterschreiben. Bis
-              zur Unterschrift bekommen sie Erinnerungen per Mail.
+              Die neue Fassung wurde per Mail gesendet. In der Eltern-App sehen
+              die Eltern, was sich ändert, und unterschreiben. Bis zur
+              Unterschrift bekommen sie Erinnerungen per Mail.
+            </p>
+          ) : mailState === "queued" ? (
+            <p className="text-sm text-gray-600">
+              Die Mail mit der neuen Fassung wird noch gesendet.
             </p>
           ) : (
             <Alert
               type="warning"
-              message="Die Eltern haben für diese Fassung keine Mail bekommen. Lade das PDF unter „Versionen“ herunter und gib es den Eltern. Hast du es unterschrieben zurück? Dann wähle „Papiervertrag erfassen“."
+              message={`${missingMail} Lade das PDF unter „Versionen“ herunter und gib es den Eltern. Hast du es unterschrieben zurück? Dann wähle „Papiervertrag erfassen“.`}
               action={
                 <ContractSectionJump
                   targetId={CONTRACT_VERSIONS_SECTION_ID}
