@@ -127,9 +127,12 @@ export function DayChangesPreview({
   limit = 3,
   onShowAll,
   lead,
+  leadCount = 0,
 }: {
   /** Zeilen vor den Änderungen: Hinweise zur Kenntnisnahme, wie am Desktop. */
   readonly lead?: ReactNode;
+  /** Wie viele Einträge `lead` sind; sie zählen im Kopf mit. */
+  readonly leadCount?: number;
   readonly overview: DayChangesOverview;
   readonly include: (entry: DayChange) => boolean;
   /** So viele Änderungen stehen auf der Startseite. */
@@ -146,7 +149,18 @@ export function DayChangesPreview({
     ...open.filter((entry) => entry.section !== "you"),
   ];
   const shown = ordered.slice(0, limit);
-  const rest = entries.length - shown.length;
+  // Der Zähler im Kopf nennt, was offen ist: die Zeilen im Bild plus
+  // „N weitere“ ergeben genau ihn. Was heute schon vorbei ist, zählt wie
+  // am Desktop („3 erledigt“) für sich und steht ebenfalls im Blatt.
+  const rest = open.length - shown.length;
+  const done = entries.length - open.length;
+  const openCount = leadCount + open.length;
+  const restLabel = [
+    rest > 0 ? `${rest} weitere` : null,
+    done > 0 ? `${done} erledigt` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
   return (
     <>
       {overview.failedSources.map((source) => (
@@ -165,7 +179,7 @@ export function DayChangesPreview({
               Heute anders
             </span>
           }
-          count={open.length > 0 ? open.length : undefined}
+          count={openCount > 0 ? openCount : undefined}
         >
           {lead}
           {shown.length > 0 ? (
@@ -173,10 +187,10 @@ export function DayChangesPreview({
           ) : lead ? null : (
             <CollectionRow title="Heute läuft alles wie geplant." />
           )}
-          {rest > 0 ? (
+          {restLabel ? (
             <CollectionRow
               title="Alle anzeigen"
-              meta={rest === 1 ? "1 weitere" : `${rest} weitere`}
+              meta={restLabel}
               onClick={onShowAll}
             />
           ) : null}

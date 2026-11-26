@@ -164,6 +164,8 @@ export function useHomeNow(access: HomeBlockAccess, context: HomeBlockContext) {
     presentCount,
     analytics,
     ownSupervision: ownSupervision === true,
+    /** Der eigene Block, der jetzt starten darf (auch neben einer laufenden Aufsicht). */
+    startable,
     /** Der Tag laut Plan (`homeKeys.dayFlow()`), wie „Mein Tag“. */
     dayBlocks: wantsDay && !day.error ? day.data : undefined,
   };
