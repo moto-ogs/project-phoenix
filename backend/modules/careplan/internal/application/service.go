@@ -53,6 +53,8 @@ type Service struct {
 	DayLocks
 	store         ports.Store
 	statusQueries StatusQueries
+	// pickupPersons serves the pickup person of one day (#7655).
+	pickupPersons PickupPersonQueries
 	observe       ports.Observer
 	requests      RequestStore
 	statusDays    StatusDayStore
@@ -88,6 +90,7 @@ func New(store ports.Store, observe ports.Observer) *Service {
 func NewExceptionQueryService(store ExceptionStore, observe func(ports.Observation)) *Service {
 	service := New(store, observe)
 	service.statusQueries = store
+	service.pickupPersons = store
 	return service
 }
 

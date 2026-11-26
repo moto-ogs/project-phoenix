@@ -15,6 +15,8 @@ type PickupTime struct {
 
 	// DayDepartureMode is the Abholart set for this day only (#3946).
 	DayDepartureMode string `json:"day_departure_mode,omitempty"`
+	// DayPickupPerson is who collects the child on this day (#7655).
+	DayPickupPerson *PickupPerson `json:"day_pickup_person,omitempty"`
 }
 
 func pickupTimes(students []Student, pickups map[int64]Pickup) []PickupTime {
@@ -30,7 +32,7 @@ func pickupTimes(students []Student, pickups map[int64]Pickup) []PickupTime {
 		item := PickupTime{
 			StudentID: students[i].ID, Date: string(effective.Date), WeekdayName: effective.WeekdayName,
 			IsException: effective.IsException, Notes: effective.Notes,
-			DayDepartureMode: effective.DayDepartureMode,
+			DayDepartureMode: effective.DayDepartureMode, DayPickupPerson: effective.DayPickupPerson,
 		}
 		if effective.PickupTime != nil {
 			formatted := effective.PickupTime.Format("15:04")

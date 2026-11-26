@@ -20,6 +20,7 @@ import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { isReadStateRefusal } from "~/lib/api-error";
+import { fetchStudentGuardians } from "~/lib/guardian-api";
 import {
   type ArrivalDayData,
   formatShortDate,
@@ -39,6 +40,15 @@ import { parentsConcept } from "~/lib/concepts/parents";
 import { pickupConcept } from "~/lib/concepts/pickup";
 import { IconTile } from "~/components/ui/icon-tile";
 import { InsetPanel } from "~/components/ui/inset-panel";
+import { useSWRAuth } from "~/lib/swr";
+import { tenantContactKeys } from "~/lib/swr/tenant-contact-keys";
+import {
+  CarePickupPersonSection,
+  pickupPersonChanged,
+  pickupPersonInitialState,
+  toPickupPersonSubmit,
+  type PickupPersonSubmit,
+} from "~/components/students/care-pickup-person-section";
 
 /**
  * The care plan is edited through exactly two doors, and each one owns one kind
@@ -74,6 +84,8 @@ export interface CareExceptionSubmit {
   readonly arrival: CareLegSubmit | null;
   readonly pickup: CareLegSubmit | null;
   readonly departure?: DepartureLegSubmit | null;
+  /** Wer an diesem Tag abholt (#7655); null = unverändert. */
+  readonly pickupPerson?: PickupPersonSubmit | null;
 }
 
 const DEPARTURE_OPTION_ORDER: readonly DepartureMode[] = [
@@ -105,6 +117,8 @@ interface CarePlanEditorModalProps {
   readonly onSubmitException: (payload: CareExceptionSubmit) => Promise<void>;
   /** Abholarten des Wochenplans; nennen „Regulär“ der Abholart (#3945). */
   readonly weeklyDepartureModes?: AllowedDepartureModes;
+  /** Das Kind; ohne fehlt die Wahl, wer an dem Tag abholt (#7655). */
+  readonly studentId?: string;
   /** Setzt die reguläre Gehzeit des Wochentags auf die Angebots-Gehzeit
    * zurück (#2290); nur angeboten, wenn der Tag von Hand gepflegt ist. */
   readonly onResetPickupToOffering?: (
@@ -151,6 +165,7 @@ export function CarePlanEditorModal({
   pickupDay,
   onSubmitException,
   weeklyDepartureModes,
+  studentId,
   onResetPickupToOffering,
   onCreateArrivalNote = noopNoteAction,
   onUpdateArrivalNote = noopNoteAction,
@@ -171,6 +186,16 @@ export function CarePlanEditorModal({
   const [pickupReason, setPickupReason] = useState("");
   const [departureMode, setDepartureMode] = useState<string>("regular");
   const [departureReason, setDepartureReason] = useState("");
+  const [pickupPersonDraft, setPickupPersonDraft] = useState(
+    pickupPersonInitialState(null),
+  );
+  // Dieselbe Liste wie bei den Erziehungsberechtigten des Kindes. Der Dialog
+  // braucht ihren Zustand auch bei einer Kontaktwahl, damit ein Ladefehler
+  // nicht wie eine absichtlich leere Liste behandelt wird.
+  const pickupPersonGuardians = useSWRAuth(
+    isOpen && studentId ? tenantContactKeys.studentGuardians(studentId) : null,
+    () => (studentId ? fetchStudentGuardians(studentId) : Promise.resolve([])),
+  );
   // Welche wartende Aktion das Panel sperrt; nur für die Ladetexte.
   const [runningAction, setRunningAction] = useState<
     "save" | "resetPickup" | "deleteNote" | null
@@ -227,6 +252,7 @@ export function CarePlanEditorModal({
     const departureInit = departureInitialState(pickupDay);
     setDepartureMode(departureInit.mode);
     setDepartureReason(departureInit.reason);
+    setPickupPersonDraft(pickupPersonInitialState(pickupDay));
   }, [isOpen, isException, arrivalDay, pickupDay, clearErrors]);
 
   if (!isOpen || !arrivalDay || !pickupDay) return null;
@@ -249,6 +275,11 @@ export function CarePlanEditorModal({
     { mode: departureMode, time: "", reason: departureReason },
     departureInit,
   );
+  const pickupPersonIsChanged = pickupPersonChanged(
+    pickupPersonDraft,
+    pickupPersonInitialState(pickupDay),
+  );
+  const pickupPersonSubmit = toPickupPersonSubmit(pickupPersonDraft);
 
   const parentAuthored =
     arrivalDay.exception?.source === "guardian" ||
@@ -271,7 +302,38 @@ export function CarePlanEditorModal({
       errors.invalid("Bitte gib eine gültige Abholzeit ein.");
       return;
     }
-    if (!arrivalChanged && !pickupChanged && !departureChanged) {
+    if (pickupPersonIsChanged && !pickupPersonSubmit) {
+      errors.invalid("Bitte gib den Namen der Person ein, die abholt.");
+      return;
+    }
+    if (
+      pickupPersonIsChanged &&
+      pickupPersonSubmit?.kind === "contact" &&
+      studentId &&
+      pickupPersonGuardians.error
+    ) {
+      errors.invalid(
+        "Die Liste der Abholpersonen konnte nicht geladen werden. Bitte versuche es noch einmal.",
+      );
+      return;
+    }
+    if (
+      pickupPersonIsChanged &&
+      pickupPersonSubmit?.kind === "contact" &&
+      studentId &&
+      pickupPersonGuardians.data === undefined
+    ) {
+      errors.invalid(
+        "Die Abholpersonen werden noch geladen. Bitte warte kurz.",
+      );
+      return;
+    }
+    if (
+      !arrivalChanged &&
+      !pickupChanged &&
+      !departureChanged &&
+      !pickupPersonIsChanged
+    ) {
       errors.invalid("Bitte ändere zuerst eine Zeit oder die Abholart.");
       return;
     }
@@ -366,6 +428,9 @@ export function CarePlanEditorModal({
             : null,
           ...(departureChanged
             ? { departure: toDepartureSubmit(departureMode, departureReason) }
+            : {}),
+          ...(pickupPersonIsChanged
+            ? { pickupPerson: pickupPersonSubmit }
             : {}),
         });
       } catch (err) {
@@ -517,6 +582,14 @@ export function CarePlanEditorModal({
                 showTime={false}
                 showReason={departureMode !== "regular"}
               />
+              {studentId ? (
+                <CarePickupPersonSection
+                  pickupDay={pickupDay}
+                  draft={pickupPersonDraft}
+                  onDraftChange={setPickupPersonDraft}
+                  guardians={pickupPersonGuardians.data ?? []}
+                />
+              ) : null}
               {pickupPulledForward(pickupMode, pickupTime, pickupDay) ? (
                 <Alert
                   type="warning"

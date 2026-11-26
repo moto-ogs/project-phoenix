@@ -334,7 +334,7 @@ AS $function$
 					WHERE school_id = ANY (hidden_schools);
 					-- How far the retention deleted its attendance (#4686).
 					DELETE FROM active.attendance_retention_marks
-					WHERE school_id = ANY (hidden_schools); DELETE FROM active.room_history_stops WHERE tenant_id = ANY (hidden_schools);
+					WHERE school_id = ANY (hidden_schools); DELETE FROM active.room_history_stops WHERE tenant_id = ANY (hidden_schools); DELETE FROM schedule.student_pickup_persons WHERE tenant_id = ANY (hidden_schools);
 					-- The original of a Jahresbescheid travels on Delivery's
 					-- outbox with the PDF and the address, and a push announces
 					-- it in the parents inbox (#6347). A send holds the notice

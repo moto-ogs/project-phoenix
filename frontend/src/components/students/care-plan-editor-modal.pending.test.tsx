@@ -21,6 +21,9 @@ vi.mock("~/contexts/ToastContext", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/contexts/ToastContext")>()),
   useToast: () => ({ success: toastSuccess, error: vi.fn() }),
 }));
+vi.mock("~/lib/swr", () => ({
+  useSWRAuth: () => ({ data: [] }),
+}));
 
 import { CarePlanEditorModal } from "./care-plan-editor-modal";
 

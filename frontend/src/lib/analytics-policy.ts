@@ -44,6 +44,7 @@ const DAY_CHANGE_KINDS = [
   "child_goes_alone",
   "child_pickup_changed",
   "child_pickup_note",
+  "child_pickup_person",
   "activity_cancelled",
   "activity_lead_changed",
   "activity_reinstated",

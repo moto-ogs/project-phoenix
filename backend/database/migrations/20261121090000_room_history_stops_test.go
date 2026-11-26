@@ -71,7 +71,9 @@ func TestRoomHistoryStopsGoWithTheSchoolAndRollBack(t *testing.T) {
 	require.Equal(t, "db_done", result.Status, "preflight, deletion and residual checks pass: %v", result.ErrorCode)
 	assert.EqualValues(t, 1, result.RowCounts["active.room_history_stops"], "the one stop of the school")
 
-	// The opening changes (#7654) follow the room history stops at the head; they go first.
+	// The opening changes (#7654) and pickup persons (#7655) follow the room
+	// history stops at the head; pickup persons go first.
+	require.NoError(t, studentPickupPersonsDown(ctx, db))
 	require.NoError(t, openingChangesDown(ctx, db))
 	require.NoError(t, roomHistoryStopsDown(ctx, db))
 	var exists bool

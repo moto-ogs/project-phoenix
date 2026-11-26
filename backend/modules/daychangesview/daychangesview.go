@@ -101,6 +101,9 @@ const (
 	KindChildGoesAlone Kind = "child_goes_alone"
 	// KindChildPickupNote: a pickup note for today ("Oma holt ab").
 	KindChildPickupNote Kind = "child_pickup_note"
+	// KindChildPickupPerson: someone else collects a child today (#7655);
+	// Child.PickupPerson names the person.
+	KindChildPickupPerson Kind = "child_pickup_person"
 	// KindChildSummary: the children of one group or class outside the
 	// caller's groups, with the numbers and the rows to unfold.
 	KindChildSummary Kind = "child_summary"
@@ -221,7 +224,8 @@ type Link struct {
 
 // Child is the child an entry concerns, with what is different today:
 // Status for child_absent, PickupTime ("15:04"; nil: the child does not
-// come) for child_pickup_changed, Note for child_pickup_note.
+// come) for child_pickup_changed, Note for child_pickup_note, PickupPerson
+// for child_pickup_person.
 type Child struct {
 	StudentID  ident.ID     `json:"student_id"`
 	FirstName  string       `json:"first_name"`
@@ -234,6 +238,15 @@ type Child struct {
 	// shows the conflict. Not on the staff wire yet: its sources read no
 	// opening change (follow-up of #8170).
 	AfterClosing bool `json:"-"`
+	// PickupPerson is who collects the child today (#7655).
+	PickupPerson *ChildPickupPerson `json:"pickup_person"`
+}
+
+// ChildPickupPerson is who collects a child on the day. OneTime marks a
+// person without a standing pickup permission: the staff check the ID card.
+type ChildPickupPerson struct {
+	Name    string `json:"name"`
+	OneTime bool   `json:"one_time"`
 }
 
 // ChildItem is one row of a child summary.
@@ -250,6 +263,7 @@ type ChildCounts struct {
 	PickupChanged int `json:"pickup_changed"`
 	GoesAlone     int `json:"goes_alone"`
 	PickupNote    int `json:"pickup_note"`
+	PickupPerson  int `json:"pickup_person"`
 }
 
 // ChildSummary sums up the children of one group (Entry.Group) or, for
