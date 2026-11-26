@@ -31,7 +31,7 @@ import { homeConcept } from "~/lib/concepts/home";
 import { atSchoolConcept } from "~/lib/concepts/atSchool";
 import { inClassConcept } from "~/lib/concepts/inClass";
 import { classTripConcept } from "~/lib/concepts/classTrip";
-import { freeRoomsConcept } from "~/lib/concepts/freeRooms";
+import { openRoomsConcept } from "~/lib/concepts/openRooms";
 import { utilizationConcept } from "~/lib/concepts/utilization";
 import { emergencyConcept } from "~/lib/concepts/emergency";
 import { notArrivalConcept } from "~/lib/concepts/notArrival";
@@ -126,7 +126,7 @@ const registry = {
   atSchool: atSchoolConcept,
   inClass: inClassConcept,
   classTrip: classTripConcept,
-  freeRooms: freeRoomsConcept,
+  openRooms: openRoomsConcept,
   utilization: utilizationConcept,
   emergency: emergencyConcept,
   notArrival: notArrivalConcept,
