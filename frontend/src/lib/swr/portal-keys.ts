@@ -171,6 +171,7 @@ export const STUDENT_KEY_FAMILIES = {
 
 export const studentKeys = {
   search: searchKey,
+  searchFamily: searchListFamily,
   schoolClasses: () => "search-student-school-classes",
   statisticsReport: (params: object) =>
     resourceKey("student-statistics-report-", params),
@@ -496,8 +497,7 @@ export const timeTrackingKeys = {
     `time-tracking-schedule-targets-${from}-${to}`,
 } as const;
 
-/** Exact list identity shared with intent; preserve the SSE group segment. */
-function searchKey(params: {
+interface SearchKeyParams {
   groupIds: readonly string[];
   search: string;
   schoolClasses: readonly string[];
@@ -513,10 +513,12 @@ function searchKey(params: {
   pickupStatus: string;
   /** The registration answer filter (#6954). */
   enrollmentAnswer?: string;
-}): string {
+}
+
+/** One roster and all its name searches, with the same SSE group segment. */
+function searchListFamily(params: Omit<SearchKeyParams, "search">): string {
   const filters = [
-    params.search,
-    params.schoolClasses,
+    [...params.schoolClasses].sort(),
     params.roomId,
     params.dayStatus,
     params.date,
@@ -525,13 +527,20 @@ function searchKey(params: {
     params.bus,
     params.photoConsent,
     params.companions,
-    params.years,
+    [...params.years].sort(),
     params.pickupStatus,
     params.enrollmentAnswer ?? "",
   ];
-  // Free text, class names and answers may all contain separators. Encode the
-  // tuple without changing the leading group segment used for invalidation.
-  return `${SEARCH_STUDENTS_KEY_PREFIX}${searchStudentsGroupScope(params.groupIds)}-${encodeURIComponent(JSON.stringify(filters))}`;
+  const groupScope = searchStudentsGroupScope(
+    [...params.groupIds].sort(compareIds),
+  );
+  // The colon separates the encoded filters from the encoded name.
+  return `${SEARCH_STUDENTS_KEY_PREFIX}${groupScope}-${encodeURIComponent(JSON.stringify(filters))}:`;
+}
+
+/** Exact list identity shared with intent. */
+function searchKey(params: SearchKeyParams): string {
+  return `${searchListFamily(params)}${encodeURIComponent(JSON.stringify(params.search))}`;
 }
 
 const catererOverviewFamily = "caterer-overview-";

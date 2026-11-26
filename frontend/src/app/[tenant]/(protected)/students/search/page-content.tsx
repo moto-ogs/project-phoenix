@@ -37,7 +37,11 @@ import {
   type SearchParamReader,
 } from "~/lib/student-search-url";
 import { studentKeys } from "~/lib/swr/portal-keys";
-import { useSWRCacheKey, useSWRRequestGuard } from "~/lib/swr/hooks";
+import {
+  useInvalidateFamily,
+  useSWRCacheKey,
+  useSWRRequestGuard,
+} from "~/lib/swr/hooks";
 import { rooms as roomKeys } from "~/lib/swr/rooms";
 import { groups as groupKeys } from "~/lib/swr/groups";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
@@ -1595,6 +1599,8 @@ function SearchPageContent() {
     () => undefined,
   );
   const beginSearchRead = useSWRRequestGuard();
+  const invalidateSearchFamily = useInvalidateFamily();
+  const searchFamily = studentKeys.searchFamily(wholeListParams);
   async function readSearchList(
     key: string,
     params: StudentSearchFilterInput,
@@ -1611,12 +1617,13 @@ function SearchPageContent() {
       );
     } catch (error) {
       if (isReadRefusal(error)) {
-        // SWR may skip onError or use the next view's callback after a key
-        // change. Withdraw the original request and its roster together.
+        // Use the family captured by this request, even after a filter change.
+        // Drop cached matches and reject any earlier answers from that family.
         complete(() => {
           if (scopedReadKey !== null) markRefused(scopedReadKey, error);
           if (scopedRosterKey !== null && scopedRosterKey !== scopedReadKey)
             markRefused(scopedRosterKey, error);
+          void invalidateSearchFamily(searchFamily, { clear: true });
         });
       }
       throw error;
@@ -1625,8 +1632,9 @@ function SearchPageContent() {
   const wholeList = useSWRAuth(
     awaitsSearchFilters ? null : wholeListKey,
     () => readSearchList(wholeListKey, wholeListParams, searchTerm !== ""),
-    // An earlier group's children cannot be selected while this one loads.
-    { keepPreviousData: false },
+    // Keep previous filters out of selection and do not retry a refusal
+    // just because it discarded this reader's pending requests.
+    { keepPreviousData: false, recoverDiscardedRefusals: false },
   );
   const rosterRefused =
     heldRosterRefusal !== undefined || isReadRefusal(wholeList.error);

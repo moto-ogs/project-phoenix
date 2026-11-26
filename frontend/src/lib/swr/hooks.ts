@@ -233,6 +233,8 @@ function runResult<V>(
  *   `revalidateOnReconnect`;
  * - retries, which the lock drops after a generation moved:
  *   `errorRetryCount`, `shouldRetryOnError`;
+ * - `recoverDiscardedRefusals`: opt out of the wrapper's recovery for a
+ *   discarded answer while an access refusal is in force;
  * - read-side values the lock judges: `fallbackData` (shown only under the
  *   fallback rules), `keepPreviousData` (only while no generation moved);
  * - `isPaused`, which can only add pauses to the session pause;
@@ -252,24 +254,28 @@ export const READER_OPTION_KEYS = [
   "onDiscarded",
   "onError",
   "onSuccess",
+  "recoverDiscardedRefusals",
   "refreshInterval",
   "revalidateIfStale",
   "revalidateOnFocus",
   "revalidateOnMount",
   "revalidateOnReconnect",
   "shouldRetryOnError",
-] as const satisfies readonly (keyof SWRConfiguration)[];
+] as const satisfies readonly (
+  keyof SWRConfiguration | "recoverDiscardedRefusals"
+)[];
 
 export type ReaderOptions<T, E = Error> = Pick<
   SWRConfiguration<T, E>,
   Exclude<
     (typeof READER_OPTION_KEYS)[number],
-    "onDiscarded" | "onSuccess" | "onError"
+    "onDiscarded" | "onSuccess" | "onError" | "recoverDiscardedRefusals"
   >
 > & {
   onDiscarded?: () => void;
   onSuccess?: (data: T) => void;
   onError?: (error: E) => void;
+  recoverDiscardedRefusals?: boolean;
 };
 
 /**
@@ -314,11 +320,13 @@ function copyAllowed(
 function readerConfig<T, E>(
   options: ReaderOptions<T, E> | undefined,
 ): SWRConfiguration<T, E> {
-  const { onDiscarded, onSuccess, onError, ...rest } = copyAllowed(
-    options,
-    allowedReaderKeys,
-    "reader",
-  ) as ReaderOptions<T, E>;
+  const {
+    onDiscarded,
+    onSuccess,
+    onError,
+    recoverDiscardedRefusals: _recover,
+    ...rest
+  } = copyAllowed(options, allowedReaderKeys, "reader") as ReaderOptions<T, E>;
   return {
     ...rest,
     ...(onDiscarded ? { onDiscarded: () => onDiscarded() } : {}),
@@ -537,7 +545,7 @@ function useScopedSWR<T, E>(
   // Load again once per generation: after a discarded answer, or when the
   // shown data belongs to an older generation and no error explains it.
   const reload =
-    fullKey === null
+    fullKey === null || (refused && options?.recoverDiscardedRefusals === false)
       ? null
       : discarded
         ? `request:${fullKey}:${requestGenerationOf(fullKey)}`

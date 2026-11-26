@@ -202,6 +202,7 @@ import {
 } from "~/lib/swr/hooks";
 import { studentKeys as studentKey } from "~/lib/swr/portal-keys";
 import { scopedSWRKey, tenantSWRScope } from "~/lib/swr/scope";
+import { useSWRSeedFrom } from "~/lib/swr/seed";
 import { releaseFakeTimers, testClockDay } from "~/test/clock";
 import { deferred } from "~/test/helpers/form-modal-pending";
 import StudentSearchPage from "./page-content";
@@ -212,13 +213,17 @@ const STALL_MESSAGE =
 const rosterKey = studentKey.search(
   initialStudentSearch(new URLSearchParams(), testClockDay(0), true),
 );
-const namedKey = studentKey.search(
-  initialStudentSearch(
-    new URLSearchParams({ search: "Mila" }),
-    testClockDay(0),
-    true,
-  ),
-);
+const scopedRosterKey = scopedSWRKey(tenantSWRScope("t", "3"), rosterKey);
+function nameKey(search: string) {
+  return studentKey.search(
+    initialStudentSearch(
+      new URLSearchParams({ search }),
+      testClockDay(0),
+      true,
+    ),
+  );
+}
+const namedKey = nameKey("Mila");
 
 const mockStudent = {
   id: "7",
@@ -254,6 +259,23 @@ function renderOnSearchPage(search: string, wrapper?: typeof IsolatedSWRCache) {
 
 function renderWithRealStudentReads(search: string) {
   const reload = new Map<string, () => Promise<unknown>>();
+  let preview: (id: string) => ReturnType<typeof studentKey.preview>;
+  function PreviewProbe() {
+    const seedFrom = useSWRSeedFrom();
+    preview = (id) =>
+      seedFrom(studentKey.previewSources, studentKey.detail(id), (data) =>
+        studentKey.preview(data, id),
+      );
+    return null;
+  }
+  function CacheWithPreview({ children }: { children: React.ReactNode }) {
+    return (
+      <IsolatedSWRCache>
+        {children}
+        <PreviewProbe />
+      </IsolatedSWRCache>
+    );
+  }
   function useStudentReads(
     key: string | null,
     fetcher: () => Promise<unknown>,
@@ -268,7 +290,11 @@ function renderWithRealStudentReads(search: string) {
     return read;
   }
   mockUseSWRAuth.mockImplementation(useStudentReads);
-  return { ...renderOnSearchPage(search, IsolatedSWRCache), reload };
+  return {
+    ...renderOnSearchPage(search, CacheWithPreview),
+    reload,
+    preview: (id: string) => preview(id),
+  };
 }
 
 beforeEach(() => {
@@ -502,6 +528,69 @@ describe("StudentSearchPage: click on the navigation entry of this page (#3374)"
     expect(await screen.findByTestId("student-card-8")).toBeVisible();
     expect(screen.getByTestId("select-all-count")).toHaveTextContent("1");
   });
+
+  it("rejects a roster answer from before the named search refused access", async () => {
+    const roster = deferred<{ students: (typeof mockStudent)[] }>();
+    const named = deferred<{ students: (typeof mockStudent)[] }>();
+    const mila = { ...mockStudent, id: "8", first_name: "Mila" };
+    mockGetStudents.mockImplementation(({ search }: StudentFilters) =>
+      search ? named.promise : roster.promise,
+    );
+    const { reload } = renderWithRealStudentReads("?search=Mila");
+    await waitFor(() => expect(mockGetStudents).toHaveBeenCalledTimes(2));
+
+    const refusal = new ApiError("Access refused", 403);
+    await act(async () => named.reject(refusal));
+    await act(async () => roster.resolve({ students: [mila] }));
+
+    // Anker: the late success did not lift the refusal or trigger another read.
+    expect(refusalFor(scopedRosterKey)).toBe(refusal);
+    expect(mockGetStudents).toHaveBeenCalledTimes(2);
+    expect(screen.queryByTestId("student-card-8")).toBeNull();
+
+    mockGetStudents.mockResolvedValueOnce({ students: [mila] });
+    await act(async () => {
+      await reload.get(rosterKey)!();
+    });
+    expect(await screen.findByTestId("student-card-8")).toBeVisible();
+    expect(screen.getByTestId("select-all-count")).toHaveTextContent("1");
+  });
+
+  it.each(["roster", "name"] as const)(
+    "withdraws active and inactive name matches from record previews after a %s refusal",
+    async (source) => {
+      const roster = deferred<{ students: (typeof mockStudent)[] }>();
+      const mila = { ...mockStudent, id: "8", first_name: "Mila" };
+      mockGetStudents.mockImplementation(({ search }: StudentFilters) => {
+        if (!search) return roster.promise;
+        return Promise.resolve({
+          students: [search === "Mila" ? mila : mockStudent],
+        });
+      });
+      const { reload, preview } = renderWithRealStudentReads("?search=Mila");
+      expect(await screen.findByTestId("student-card-8")).toBeVisible();
+      expect(preview("8")?.name).toBe("Mila Mustermann");
+
+      const [search] = screen.getAllByPlaceholderText("Name suchen…");
+      fireEvent.change(search!, { target: { value: "Max" } });
+      expect(await screen.findByTestId("student-card-7")).toBeVisible();
+      expect(preview("7")?.name).toBe("Max Mustermann");
+      expect(preview("8")?.name).toBe("Mila Mustermann");
+
+      const refusal = new ApiError("Access refused", 403);
+      if (source === "roster") {
+        await act(async () => roster.reject(refusal));
+      } else {
+        mockGetStudents.mockRejectedValueOnce(refusal);
+        await act(async () => {
+          await reload.get(nameKey("Max"))!();
+        });
+      }
+      expect(refusalFor(scopedRosterKey)).toBe(refusal);
+      expect(preview("7")).toBeUndefined();
+      expect(preview("8")).toBeUndefined();
+    },
+  );
 
   it.each([false, true])(
     "binds a late named refusal to its original keys (clear group: %s)",

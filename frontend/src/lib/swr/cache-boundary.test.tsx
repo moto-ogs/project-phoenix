@@ -471,6 +471,7 @@ describe("option allowlists of ~/lib/swr", () => {
       "onDiscarded",
       "onError",
       "onSuccess",
+      "recoverDiscardedRefusals",
       "refreshInterval",
       "revalidateIfStale",
       "revalidateOnFocus",
