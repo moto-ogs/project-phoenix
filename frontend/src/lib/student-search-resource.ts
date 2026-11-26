@@ -59,8 +59,11 @@ export async function fetchStudentSearch(
   requestIsToday: boolean,
   {
     fetchPage = fetchStudents,
-    deferOverflowPages = false,
-  }: { fetchPage?: typeof fetchStudents; deferOverflowPages?: boolean } = {},
+    shouldDeferOverflowPages,
+  }: {
+    fetchPage?: typeof fetchStudents;
+    shouldDeferOverflowPages?: () => boolean;
+  } = {},
 ) {
   const result = await fetchPage(filters);
   const students = [...result.students];
@@ -76,11 +79,13 @@ export async function fetchStudentSearch(
   // appear twice or not at all (#2218 review).
   const totalPages = result.pagination?.total_pages ?? 1;
   const exceedsPageCap = totalPages > MAX_STUDENT_SEARCH_PAGES;
-  const pagesDeferred = deferOverflowPages && exceedsPageCap;
-  const lastPage = pagesDeferred
-    ? 1
-    : Math.min(totalPages, MAX_STUDENT_SEARCH_PAGES);
+  let pagesDeferred = false;
+  const lastPage = Math.min(totalPages, MAX_STUDENT_SEARCH_PAGES);
   for (let page = 2; page <= lastPage; page++) {
+    if (exceedsPageCap && shouldDeferOverflowPages?.()) {
+      pagesDeferred = true;
+      break;
+    }
     const nextPage = await fetchPage({ ...filters, page });
     students.push(...nextPage.students);
   }

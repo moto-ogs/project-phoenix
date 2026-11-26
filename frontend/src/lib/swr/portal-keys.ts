@@ -172,6 +172,8 @@ export const STUDENT_KEY_FAMILIES = {
 export const studentKeys = {
   search: searchKey,
   searchFamily: searchListFamily,
+  searchRosterProbe: (params: Omit<SearchKeyParams, "search">) =>
+    `${searchListFamily(params)}roster-probe`,
   schoolClasses: () => "search-student-school-classes",
   statisticsReport: (params: object) =>
     resourceKey("student-statistics-report-", params),
@@ -217,7 +219,11 @@ export const studentKeys = {
     key.startsWith(STUDENT_KEY_FAMILIES.statusDayOverview) ||
     key.startsWith("student-statistics-report-"),
   preview(data: unknown, id: string): ListPreview | undefined {
-    const row = previewRow(data, id);
+    const retained =
+      data && typeof data === "object" && "expandedRoster" in data
+        ? data.expandedRoster
+        : undefined;
+    const row = previewRow(data, id) ?? previewRow(retained, id);
     if (!row) return undefined;
     const name =
       previewText(row.name) ??

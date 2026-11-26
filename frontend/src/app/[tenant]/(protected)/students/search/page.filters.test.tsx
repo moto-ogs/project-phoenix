@@ -266,7 +266,9 @@ vi.mock("~/lib/swr", async (importOriginal) => {
     ) => {
       const answers = key?.startsWith(answersKey) === true;
       const real = actual.useSWRAuth(answers ? key : null, fetcher, options);
-      return answers || key === null ? real : mockUseSWRAuth(key, fetcher);
+      return answers || key === null
+        ? real
+        : mockUseSWRAuth(key, fetcher, options);
     },
     mutate: vi.fn(),
     useTenantMutate: () => vi.fn(),
@@ -958,6 +960,7 @@ describe("StudentSearchPage — registration answer counts (#7645)", () => {
     const listKeys = () =>
       new Set(
         mockUseSWRAuth.mock.calls
+          .filter(([, , options]) => !options?.isPaused?.())
           .map((call) => call[0] as string | null)
           .filter((key) => key?.startsWith("search-students-")),
       );
@@ -971,7 +974,7 @@ describe("StudentSearchPage — registration answer counts (#7645)", () => {
 
     expect(await screen.findByTestId("student-card-8")).toBeInTheDocument();
     expect(screen.queryByTestId("student-card-7")).not.toBeInTheDocument();
-    // The list keeps its one cache key: the answer needs no new request.
+    // The list keeps its one active cache key: the answer needs no new request.
     expect(listKeys().size).toBe(1);
   });
 
