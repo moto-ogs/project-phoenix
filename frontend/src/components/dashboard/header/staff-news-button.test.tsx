@@ -119,6 +119,24 @@ describe("StaffNewsButton", () => {
       "Morgen: neue Abholzeit 15:00 Uhr, Oma Berta holt ab",
     );
   });
+
+  it("names a withdrawn pickup person without changing the regular pickup time", () => {
+    mockPickups.mockReturnValue({
+      notices: [
+        pickup({
+          pickupTime: "",
+          pickupPerson: "Tante Frieda",
+          withdrawn: true,
+        }),
+      ],
+    });
+    render(<StaffNewsButton />);
+    fireEvent.click(screen.getByRole("button", { name: /Neu für dich/ }));
+
+    expect(screen.getByRole("link", { name: /Noa/ })).toHaveTextContent(
+      "Morgen: Abholperson zurückgenommen",
+    );
+  });
 });
 
 describe("staffNewsItems", () => {

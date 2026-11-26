@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -140,13 +141,24 @@ func pickupTerms(payload map[string]any) (PickupChange, bool) {
 }
 
 func storedPickupPerson(raw any) (PickupPerson, bool) {
-	fields, _ := raw.(map[string]any)
-	id, _ := fields["guardian_profile_id"].(float64)
-	name, _ := fields["name"].(string)
-	if id < 0 || strings.TrimSpace(name) == "" {
+	fields, ok := raw.(map[string]any)
+	if !ok {
 		return PickupPerson{}, false
 	}
-	return PickupPerson{GuardianProfileID: int64(id), Name: name}, true
+	var id int64
+	if rawID, present := fields["guardian_profile_id"]; present {
+		value, ok := rawID.(float64)
+		if !ok || value <= 0 || math.Trunc(value) != value || value > math.MaxInt64 {
+			return PickupPerson{}, false
+		}
+		id = int64(value)
+	}
+	name, _ := fields["name"].(string)
+	person := PickupPerson{GuardianProfileID: id, Name: name}
+	if !person.valid("") {
+		return PickupPerson{}, false
+	}
+	return person, true
 }
 
 // PickupPersonAllowed reports whether a one-day collector fits the requested

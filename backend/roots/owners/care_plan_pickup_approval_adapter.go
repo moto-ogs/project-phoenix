@@ -29,6 +29,10 @@ func (s *CareScheduleRequestService) pickupApprovals() (carerequests.PickupAppro
 
 type pickupApprovalAdapter struct{ s *CareScheduleRequestService }
 
+func (a pickupApprovalAdapter) WeeklyDepartureModes(ctx context.Context, id int64) (map[string][]string, error) {
+	return requestSubmissionAdapter(a).WeeklyDepartureModes(ctx, id)
+}
+
 func (a pickupApprovalAdapter) EnrolledUntil(ctx context.Context, id int64) (*timezone.Date, error) {
 	student, err := a.s.People.FindStudentRecord(ctx, id)
 	if err != nil {

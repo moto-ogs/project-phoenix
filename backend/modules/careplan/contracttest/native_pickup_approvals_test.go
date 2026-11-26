@@ -36,6 +36,7 @@ type pickupApprovalFixture struct {
 	writtenDeparture  *careplan.DepartureException
 	// The day's pickup person (#8162).
 	existingPerson *careplan.PickupPerson
+	weeklyModes    map[string][]string
 }
 
 func (f *pickupApprovalFixture) step(name string) error {
@@ -53,6 +54,19 @@ func (f *pickupApprovalFixture) CurrentStaffID(context.Context) (int64, bool, er
 }
 func (f *pickupApprovalFixture) ValidatePickupPerson(context.Context, int64, int64) error {
 	return f.step("pickup-person")
+}
+func (*pickupApprovalFixture) PickupTime(context.Context, int64, calendar.Date) (*time.Time, error) {
+	return nil, nil
+}
+func (f *pickupApprovalFixture) DayDepartureMode(ctx context.Context, studentID int64, date calendar.Date) (string, bool, error) {
+	departure, err := f.FindDepartureForDate(ctx, studentID, date)
+	if err != nil || departure == nil {
+		return "", false, err
+	}
+	return departure.DepartureMode, true, nil
+}
+func (f *pickupApprovalFixture) WeeklyDepartureModes(context.Context, int64) (map[string][]string, error) {
+	return f.weeklyModes, nil
 }
 func (f *pickupApprovalFixture) LockStudentAndExceptionDay(context.Context, int64, string) error {
 	return f.step("student-day-lock")
@@ -124,6 +138,7 @@ func newPickupApprovalFixture(t *testing.T) *pickupApprovalFixture {
 	exception := testpkg.CreateTestPickupException(t, db, student.ID, calendar.Date("2026-09-21"), staff.ID, "14:30", "Termin")
 	token := securityruntime.Fingerprint(carerequests.PickupImpactContent(nil))
 	return &pickupApprovalFixture{staffID: staff.ID, exceptionID: exception.ID, guardianID: guardian.ID,
+		weeklyModes: map[string][]string{"mon": {careplan.DepartureModePickup}},
 		input: carerequests.PickupApproval{
 			TenantID: testpkg.Tenant(t), StudentID: student.ID, Payload: json.RawMessage(`{"date":"2026-09-21","pickup_time":"14:30","reason":"Termin"}`),
 			ExpectedImpactToken: &token, RequireImpactToken: true,
@@ -173,12 +188,14 @@ func TestNativePickupApprovalRejectsMalformedStoredPayloadBeforeEffects(t *testi
 		"{", "null", "[]",
 		`{"date":"2026-09-21","pickup_time":1430,"reason":"Termin"}`,
 		`{"date":"2026-09-21","pickup_time":"14:30","reason":null}`,
+		`{"date":"2026-09-21","pickup_person":{"name":"Tante Frieda","guardian_profile_id":"12"},"reason":"Termin"}`,
+		`{"date":"2026-09-21","pickup_person":{"name":"Tante Frieda","guardian_profile_id":0},"reason":"Termin"}`,
+		`{"date":"2026-09-21","pickup_person":{"name":"Tante Frieda","guardian_profile_id":1.5},"reason":"Termin"}`,
 	} {
 		t.Run(raw, func(t *testing.T) {
 			t.Parallel()
-			f := newPickupApprovalFixture(t)
-			f.input.Payload = json.RawMessage(raw)
-			_, err := approvalService(t, f).ApplyPickupApproval(testpkg.Ctx(t), f.input)
+			f := &pickupApprovalFixture{input: carerequests.PickupApproval{Payload: json.RawMessage(raw)}}
+			_, err := approvalService(t, f).ApplyPickupApproval(t.Context(), f.input)
 			require.ErrorIs(t, err, carerequests.ErrInvalidPayload)
 			require.Empty(t, f.calls)
 			require.Nil(t, f.written)
@@ -327,6 +344,27 @@ func TestNativePickupApprovalRefusesPickupPersonIncompatibleWithDayDeparture(t *
 			f.input.Payload = json.RawMessage(`{"date":"2026-09-21","pickup_person":{"name":"Tante Frieda"},"reason":"Ausflug"}`)
 
 			_, err := approvalService(t, f).ApplyPickupApproval(context.Background(), f.input)
+
+			require.ErrorIs(t, err, carerequests.ErrPickupChangeConflict)
+			require.Nil(t, f.existingPerson)
+		})
+	}
+}
+
+func TestNativePickupApprovalRefusesPickupPersonIncompatibleWithWeeklyDeparture(t *testing.T) {
+	t.Parallel()
+	for _, mode := range []string{careplan.DepartureModeAlone, careplan.DepartureModeBus} {
+		t.Run(mode, func(t *testing.T) {
+			f := &pickupApprovalFixture{
+				staffID:     1,
+				weeklyModes: map[string][]string{"mon": {mode}},
+				input: carerequests.PickupApproval{
+					StudentID: 1,
+					Payload:   json.RawMessage(`{"date":"2026-09-21","pickup_person":{"name":"Tante Frieda"},"reason":"Ausflug"}`),
+				},
+			}
+
+			_, err := approvalService(t, f).ApplyPickupApproval(t.Context(), f.input)
 
 			require.ErrorIs(t, err, carerequests.ErrPickupChangeConflict)
 			require.Nil(t, f.existingPerson)

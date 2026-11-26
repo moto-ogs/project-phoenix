@@ -68,15 +68,48 @@ func (s *PickupApprovals) lockApprovalDay(ctx context.Context, input carerequest
 		}
 	}
 	if change.PickupPerson != nil && change.DepartureMode == "" {
-		departure, err := s.Exceptions.FindDepartureForDate(ctx, input.StudentID, date)
-		if err != nil {
-			return fmt.Errorf("schedule: load departure exception for pickup person request: %w", err)
-		}
-		if departure != nil && !carerequests.PickupPersonAllowed(departure.DepartureMode) {
-			return carerequests.ErrPickupChangeConflict
+		if err := s.ensurePickupPersonDepartureAllowed(ctx, input.StudentID, date); err != nil {
+			return err
 		}
 	}
 	return s.ensureNotCompleted(ctx, input.StudentID, date)
+}
+
+// ensurePickupPersonDepartureAllowed resolves the day mode before the weekly
+// plan. The request check uses the same order; the approval repeats it because
+// the weekly plan can change while a request waits for review.
+func (s *PickupApprovals) ensurePickupPersonDepartureAllowed(ctx context.Context, studentID int64, date calendar.Date) error {
+	departure, err := s.Exceptions.FindDepartureForDate(ctx, studentID, date)
+	if err != nil {
+		return fmt.Errorf("schedule: load departure exception for pickup person request: %w", err)
+	}
+	if departure != nil {
+		if !carerequests.PickupPersonAllowed(departure.DepartureMode) {
+			return carerequests.ErrPickupChangeConflict
+		}
+		return nil
+	}
+	weekday, err := calendar.PlanWeekday(ctx, date)
+	if err != nil {
+		return fmt.Errorf("schedule: resolve plan weekday for pickup person request: %w", err)
+	}
+	if weekday < 1 || weekday > 5 {
+		return carerequests.ErrPickupChangeConflict
+	}
+	weekly, err := s.People.WeeklyDepartureModes(ctx, studentID)
+	if err != nil {
+		return fmt.Errorf("schedule: resolve weekly departure modes for pickup person request: %w", err)
+	}
+	modes := weekly[planWeekdayKeys[weekday]]
+	if len(modes) == 0 {
+		modes = []string{careplan.DepartureModeAlone}
+	}
+	for _, mode := range modes {
+		if !carerequests.PickupPersonAllowed(mode) {
+			return carerequests.ErrPickupChangeConflict
+		}
+	}
+	return nil
 }
 
 // applyLegs writes the requested Gehzeit and Abholart (#3945) of the day in

@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -102,7 +103,31 @@ func pickupRequestPayload(ctx context.Context, pickup ports.RequestSubmissionPic
 			payload["previous_departure_modes"] = previous
 		}
 	}
+	if input.PickupPerson != nil && input.DepartureMode == "" {
+		if err := ensurePickupPersonDepartureAllowed(ctx, pickup, input.StudentID, input.Date); err != nil {
+			return nil, err
+		}
+	}
 	return json.Marshal(payload)
+}
+
+// ensurePickupPersonDepartureAllowed refuses a collector when the effective
+// day mode still sends the child home alone or by bus. The approval repeats
+// this check because the weekly plan can change while the request waits.
+func ensurePickupPersonDepartureAllowed(ctx context.Context, pickup ports.RequestSubmissionPickup, studentID int64, date calendar.Date) error {
+	if pickup == nil {
+		return errors.New("schedule: pickup plan is not configured")
+	}
+	modes, err := previousDepartureModes(ctx, pickup, studentID, date)
+	if err != nil {
+		return fmt.Errorf("schedule: resolve current departure modes for pickup person: %w", err)
+	}
+	for _, mode := range modes {
+		if !carerequests.PickupPersonAllowed(mode) {
+			return carerequests.ErrPickupChangeConflict
+		}
+	}
+	return nil
 }
 
 // addPickupPersonAndSignature stores the day's collector and the signed
