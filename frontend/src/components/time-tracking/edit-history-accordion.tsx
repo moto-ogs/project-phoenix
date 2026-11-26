@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { SquarePen } from "lucide-react";
 
 import { Button } from "~/components/ui/button";
@@ -7,7 +8,12 @@ import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { EmptyState } from "~/components/ui/empty-state";
 import type { WorkSessionEdit } from "~/lib/time-tracking-helpers";
 import { formatTime } from "~/lib/time-tracking-helpers";
-import { berlinClockFromISO, formatBerlinDate } from "~/lib/date-helpers";
+import {
+  berlinClockFromISO,
+  formatBerlinDate,
+  formatDate,
+  isValidISODate,
+} from "~/lib/date-helpers";
 import { SpinnerIcon } from "~/components/ui/icons";
 import { InsetPanel } from "~/components/ui/inset-panel";
 
@@ -33,6 +39,9 @@ export const FIELD_LABELS: Record<string, string> = {
   break_duration: "Pausendauer",
   status: "Ort",
   notes: "Notiz",
+  // Beim Anlegen eines Eintrags speichert das Backend auch seinen Tag; ohne
+  // Beschriftung stand dort der Feldname „date“.
+  date: "Datum",
   // Deviation from the planned shift (#1844): old = geplante, new = tatsächliche
   // Zeit (both "HH:MM"), the reason lands in the Grund column. So the row reads
   // "Abweichung | 08:00 → 07:30 | Grund: …" — plan, actual and reason together.
@@ -52,6 +61,10 @@ export function formatEditValue(
   }
   if (fieldName === "status") {
     return value === "home_office" ? "Unterwegs" : "In der OGS";
+  }
+  // Ein Kalendertag als „23.11.2026“, nie als „2026-11-23“.
+  if (fieldName === "date" && isValidISODate(value.slice(0, 10))) {
+    return formatDate(value.slice(0, 10));
   }
   return value;
 }
@@ -128,14 +141,35 @@ const EDIT_COLUMNS: DataTableColumn<EditRow>[] = [
   },
 ];
 
+/** Ein Speichervorgang: im Blatt der App als Listeneintrag, sonst als Kasten. */
+function EditCardFrame({
+  plain,
+  children,
+}: {
+  readonly plain: boolean;
+  readonly children: ReactNode;
+}) {
+  return plain ? (
+    <div>{children}</div>
+  ) : (
+    <InsetPanel tone="white">{children}</InsetPanel>
+  );
+}
+
 export function EditHistoryAccordion({
   edits,
   isLoading,
   onEdit,
+  plain = false,
 }: {
   readonly edits: WorkSessionEdit[];
   readonly isLoading: boolean;
   readonly onEdit?: () => void;
+  /**
+   * App (#8070): im Blatt eine schlichte Liste mit Trennlinien statt
+   * umrandeter Kästen; eine Karte im Blatt las sich wie ein zweites Blatt.
+   */
+  readonly plain?: boolean;
 }) {
   if (isLoading) {
     return (
@@ -185,9 +219,15 @@ export function EditHistoryAccordion({
   return (
     <div>
       {/* Mobile: Compact card layout */}
-      <div className="space-y-2 md:hidden">
+      <div
+        className={
+          plain
+            ? "divide-y divide-gray-100 md:hidden [&>*]:py-2 [&>*:first-child]:pt-0"
+            : "space-y-2 md:hidden"
+        }
+      >
         {rows.map(({ timestamp, dateStr, fieldEdits, notes, editorLabel }) => (
-          <InsetPanel key={timestamp} tone="white">
+          <EditCardFrame key={timestamp} plain={plain}>
             <div className="mb-1.5 flex items-center justify-between text-xs text-gray-500">
               <span>{dateStr}</span>
               <span className="font-medium">{editorLabel}</span>
@@ -213,7 +253,7 @@ export function EditHistoryAccordion({
                 &ldquo;{notes}&rdquo;
               </p>
             )}
-          </InsetPanel>
+          </EditCardFrame>
         ))}
       </div>
 

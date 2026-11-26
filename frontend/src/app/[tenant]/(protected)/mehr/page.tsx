@@ -52,8 +52,9 @@ import { useStaffNoticesPending } from "~/lib/hooks/use-staff-notices-pending";
  */
 
 /** Die Abläufe, die Mitarbeitende täglich brauchen: oben, vor den Gruppen. */
+// Runde 13: „Nachrichten“ bleibt in der Gruppe „Eltern“ wie in der
+// Seitenleiste; oben gezogen ließ es die Gruppe leer, und „Eltern“ fehlte.
 const STAFF_FLOW_HREFS: readonly string[] = [
-  "/messages",
   "/mein-dienstplan",
   "/calendar",
   "/time-tracking",
@@ -239,55 +240,71 @@ function MorePageContent() {
     return item ? [item] : [];
   });
   const flowHrefs = new Set(flows.map((item) => item.href));
-  const groups = model.visibleDrawerGroups
+  const allGroups = model.visibleDrawerGroups
     .map((group) => ({
       ...group,
       items: group.items.filter((item) => !flowHrefs.has(item.href)),
     }))
     .filter((group) => group.items.length > 0);
+  // Zeilen ohne Gruppe (Hilfe) stehen unter „Konto“ (Runde 13): ein
+  // Abschnitt „Weiteres“ mit einer einzigen Zeile gliederte zu fein.
+  const hasAccount = Boolean(model.profileUrl);
+  const groups = hasAccount
+    ? allGroups.filter((group) => group.group != null)
+    : allGroups;
+  const looseItems = hasAccount
+    ? allGroups
+        .filter((group) => group.group == null)
+        .flatMap((group) => group.items)
+    : [];
 
   const isTeacher = model.mode === "teacher";
   const news = isTeacher ? model.staffNews : [];
 
   const sections: MoreSection[] = [];
-  // Oben, was auf die Person wartet: Benachrichtigungen mit ihrem Zähler
-  // (derselbe rote Zähler steht am Reiter „Mehr“) und die neuen Hinweise
-  // zu Kindern.
-  if (isTeacher) {
+  // Oben, was auf die Person wartet: die neuen Hinweise zu Kindern, einzeln
+  // wie im Knopf „Neu für dich“ des Desktops. Die Benachrichtigungen sind
+  // eine Sammlung (Glocke des Desktops) und stehen darum als erste Zeile
+  // von „Mein Tag“, nicht zwischen den einzelnen Hinweisen (Runde 13).
+  if (news.length > 0) {
     sections.push({
       key: "neu",
       title: STAFF_NEWS_TITLE,
-      size: 1 + news.length * 1.3,
-      rows: (
-        <>
-          <li>
-            <ListRowLink
-              onClick={openNotificationsSheet}
-              className="min-h-14"
-              icon={<Bell className={ROW_ICON} aria-hidden="true" />}
-              title="Benachrichtigungen"
-              badge={
-                <NotificationBadge
-                  count={model.feedUnreadCount}
-                  tone="red"
-                  size="md"
-                  max={NOTIFICATIONS_BADGE_MAX}
-                  ariaLabel={`${model.feedUnreadCount} neue Hinweise`}
-                />
-              }
-            />
-          </li>
-          {news.length > 0 ? <StaffNewsList items={news} rows /> : null}
-        </>
-      ),
+      size: news.length * 1.3,
+      rows: <StaffNewsList items={news} rows />,
     });
   }
-  if (flows.length > 0) {
+  const notificationsRow = isTeacher ? (
+    <li>
+      <ListRowLink
+        onClick={openNotificationsSheet}
+        className="min-h-14"
+        icon={<Bell className={ROW_ICON} aria-hidden="true" />}
+        title="Benachrichtigungen"
+        badge={
+          // Derselbe rote Zähler steht am Reiter „Mehr“.
+          <NotificationBadge
+            count={model.feedUnreadCount}
+            tone="red"
+            size="md"
+            max={NOTIFICATIONS_BADGE_MAX}
+            ariaLabel={`${model.feedUnreadCount} neue Hinweise`}
+          />
+        }
+      />
+    </li>
+  ) : null;
+  if (flows.length > 0 || notificationsRow) {
     sections.push({
       key: "tag",
       title: "Mein Tag",
-      size: flows.length,
-      rows: <MenuRows items={flows} model={model} counters={counters} />,
+      size: flows.length + (notificationsRow ? 1 : 0),
+      rows: (
+        <>
+          {notificationsRow}
+          <MenuRows items={flows} model={model} counters={counters} />
+        </>
+      ),
     });
   }
   for (const group of groups) {
@@ -298,34 +315,33 @@ function MorePageContent() {
       rows: <MenuRows items={group.items} model={model} counters={counters} />,
     });
   }
+  // Abmelden ist kein Ziel, sondern beendet die Sitzung: letzte Zeile, in
+  // Warnfarbe. Runde 13: in der Karte „Konto“ statt als eigene Karte.
+  const logoutRow = (
+    <li>
+      <ListRowLink
+        onClick={() => setLogoutOpen(true)}
+        className="min-h-14"
+        chevron={false}
+        icon={
+          <MobileNavIcon
+            item={{ iconKey: "profile", concept: logoutConcept }}
+            active={false}
+            className="text-moto-red-strong h-5 w-5 shrink-0"
+          />
+        }
+        title={<span className="text-moto-red-strong">Abmelden</span>}
+      />
+    </li>
+  );
+
   if (model.profileUrl) {
     sections.push({
       key: "konto",
       title: "Konto",
-      size: 2,
+      size: 3 + looseItems.length,
       rows: (
         <>
-          <li>
-            <ListRowLink
-              onClick={handleRefresh}
-              className="min-h-14"
-              chevron={false}
-              icon={<RotateCw className={ROW_ICON} aria-hidden="true" />}
-              title="Daten aktualisieren"
-              // Eine Aktion, kein Ziel (Runde 11): der Satz sagt, was sie tut.
-              subtitle="Lädt alle Angaben neu"
-              meta={
-                refresh === "busy" ? (
-                  <span role="status" className="inline-flex items-center">
-                    <SpinnerIcon className="size-4" />
-                    <span className="sr-only">Wird aktualisiert</span>
-                  </span>
-                ) : refresh === "done" ? (
-                  <span role="status">Aktualisiert</span>
-                ) : undefined
-              }
-            />
-          </li>
           <li>
             <ListRowLink
               href={model.tenantPath(model.profileUrl)}
@@ -347,32 +363,38 @@ function MorePageContent() {
               }
             />
           </li>
+          <MenuRows items={looseItems} model={model} counters={counters} />
+          <li>
+            <ListRowLink
+              onClick={handleRefresh}
+              className="min-h-14"
+              chevron={false}
+              icon={<RotateCw className={ROW_ICON} aria-hidden="true" />}
+              title="Daten aktualisieren"
+              // Eine Aktion, kein Ziel (Runde 11): der Satz sagt, was sie tut.
+              subtitle="Lädt alle Angaben neu"
+              meta={
+                refresh === "busy" ? (
+                  <span role="status" className="inline-flex items-center">
+                    <SpinnerIcon className="size-4" />
+                    <span className="sr-only">Wird aktualisiert</span>
+                  </span>
+                ) : refresh === "done" ? (
+                  <span role="status">Aktualisiert</span>
+                ) : undefined
+              }
+            />
+          </li>
+          {logoutRow}
         </>
       ),
     });
   }
 
-  // Abmelden ist kein Ziel, sondern beendet die Sitzung: eigene Karte mit
-  // Abstand am Ende, in Warnfarbe.
-  const logout = (
+  // Ohne Profil (kein Konto-Abschnitt) steht Abmelden allein am Ende.
+  const logout = model.profileUrl ? null : (
     <Collection label="Abmelden">
-      <ul>
-        <li>
-          <ListRowLink
-            onClick={() => setLogoutOpen(true)}
-            className="min-h-14"
-            chevron={false}
-            icon={
-              <MobileNavIcon
-                item={{ iconKey: "profile", concept: logoutConcept }}
-                active={false}
-                className="text-moto-red-strong h-5 w-5 shrink-0"
-              />
-            }
-            title={<span className="text-moto-red-strong">Abmelden</span>}
-          />
-        </li>
-      </ul>
+      <ul>{logoutRow}</ul>
     </Collection>
   );
 

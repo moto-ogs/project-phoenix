@@ -712,16 +712,17 @@ export function MessageThreadContent({
             {/* App: Wie in Chat-Apps stehen wenige Nachrichten unten am
                 Schreibfeld, nicht oben mit leerer Fläche darunter. `mt-auto`
                 statt `justify-end`: so bleibt der Anfang scrollbar. */}
-            {/* App: Die Zahl der Nachrichten des Desktop-Kopfs steht am
-                Anfang des Verlaufs (Runde 11), die Kopfkarte bleibt flach. */}
-            {isApp && !messagesLoading && sentCount > 0 ? (
-              <p className="pt-1 pb-3 text-center text-xs text-gray-500 tabular-nums">
-                {sentCount === 1
-                  ? "1 Nachricht in dieser Unterhaltung"
-                  : `${sentCount} Nachrichten in dieser Unterhaltung`}
-              </p>
-            ) : null}
             <AnchorBottom enabled={isApp}>
+              {/* App: Die Zahl der Nachrichten des Desktop-Kopfs steht
+                  direkt über der ersten Nachricht (Runde 13): oben in der
+                  Karte stand sie allein über einer leeren Fläche. */}
+              {isApp && !messagesLoading && sentCount > 0 ? (
+                <p className="pt-1 pb-1 text-center text-xs text-gray-500 tabular-nums">
+                  {sentCount === 1
+                    ? "1 Nachricht in dieser Unterhaltung"
+                    : `${sentCount} Nachrichten in dieser Unterhaltung`}
+                </p>
+              ) : null}
               {messagesLoading ? (
                 <ThreadMessagesSkeleton />
               ) : messages.length > 0 ? (
