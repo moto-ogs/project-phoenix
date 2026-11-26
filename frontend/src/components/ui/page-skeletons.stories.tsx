@@ -30,5 +30,5 @@ export const Full: Story = {
   },
 };
 
-/** Kopf des Elternportals (#6613). */
+/** Ladekopf des Elternportals: wie `ParentPageHeader`, ohne Statuszeile (#6613). */
 export const ParentPage: Story = { args: { matches: "parent-page" } };

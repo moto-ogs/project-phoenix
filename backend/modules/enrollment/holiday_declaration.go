@@ -20,8 +20,15 @@ import (
 // information goes (#6691). It is at least HolidayConsentVersionHostHealth,
 // so the hosting OGS sees the health information of a registration under it.
 // Version 5 adds that the Träger keeps the customer number of the Gemeinde
-// for later registrations and when it goes (#6692).
-const HolidayConsentVersionCurrent = HolidayConsentVersionDebtorNumber
+// for later registrations and when it goes (#6692). Version 6 keeps the
+// texts of version 5 and gives the name sentence in the Du-Form (#7687, ADR
+// 0294).
+const HolidayConsentVersionCurrent = HolidayConsentVersionInformalDeclaration
+
+// HolidayConsentVersionInformalDeclaration is the first version whose name
+// sentence addresses the parent with Du (#7687). The versions before keep
+// the sentence the parents agreed to.
+const HolidayConsentVersionInformalDeclaration = 6
 
 // HolidayConsentVersionDebtorNumber is the first version whose privacy text
 // says that the Träger keeps the debtor number of the family (#6692).
@@ -109,8 +116,9 @@ const (
 	holidayBindingConfirmedText = "Ich weiß, dass die Anmeldung verbindlich ist."
 	holidayCustodyConfirmedText = "Ich darf die Anmeldung allein abgeben: " +
 		"Ich bin allein sorgeberechtigt oder die andere sorgeberechtigte Person ist einverstanden."
-	// sie-anrede-erlaubt (ADR 0294): versionierter Erklärungssatz, Eltern haben ihm zugestimmt; Du-Fassung nur mit neuer Version.
-	holidayDeclarationNameText = "Mit Ihrem Namen geben Sie die Erklärungen oben ab."
+	// sie-anrede-erlaubt (ADR 0294): versionierter Erklärungssatz der Versionen 3 bis 5, Eltern haben ihm zugestimmt.
+	holidayFormalDeclarationNameText = "Mit Ihrem Namen geben Sie die Erklärungen oben ab."
+	holidayDeclarationNameText       = "Mit deinem Namen gibst du die Erklärungen oben ab."
 )
 
 // holidayConsentTexts are the known versions with a fixed wording. Version 1
@@ -123,7 +131,7 @@ var holidayConsentTexts = map[int]HolidayConsentTexts{
 	holidayConsentVersionDeclaration: {
 		Version: holidayConsentVersionDeclaration, RetentionDays: HolidayLegacyRetentionDays, PrivacyConsent: holidayPrivacyConsentText,
 		HealthConsent: holidayHealthConsentText, BindingConfirmed: holidayBindingConfirmedText,
-		CustodyConfirmed: holidayCustodyConfirmedText, DeclarationName: holidayDeclarationNameText,
+		CustodyConfirmed: holidayCustodyConfirmedText, DeclarationName: holidayFormalDeclarationNameText,
 	},
 }
 
@@ -137,12 +145,15 @@ const holidayConsentVersionDeclaration = 3
 // before HolidayConsentVersionRetention have one wording and ignore
 // retentionDays.
 func HolidayConsentTextsOf(version, retentionDays int) (HolidayConsentTexts, bool) {
-	if version == HolidayConsentVersionRetention || version == HolidayConsentVersionDebtorNumber {
+	if version >= HolidayConsentVersionRetention && version <= HolidayConsentVersionCurrent {
 		texts := holidayConsentTexts[holidayConsentVersionDeclaration]
 		texts.Version, texts.RetentionDays = version, retentionDays
 		texts.PrivacyConsent = fmt.Sprintf(holidayRetentionPrivacyConsentText, retentionDays, HolidayHealthRetentionDays)
-		if version == HolidayConsentVersionDebtorNumber {
+		if version >= HolidayConsentVersionDebtorNumber {
 			texts.PrivacyConsent += " " + holidayDebtorNumberConsentText
+		}
+		if version >= HolidayConsentVersionInformalDeclaration {
+			texts.DeclarationName = holidayDeclarationNameText
 		}
 		return texts, true
 	}

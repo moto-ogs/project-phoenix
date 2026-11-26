@@ -30,7 +30,7 @@ export default function ParentsStartPage() {
   // streaming. The server already started the independent reads in parallel.
   return (
     <PageMessages>
-      <Suspense fallback={<ParentPageSkeleton />}>
+      <Suspense fallback={<ParentPageSkeleton prominent />}>
         <ParentPageSeed page={{ kind: "start" }}>
           <ParentStartPage />
         </ParentPageSeed>

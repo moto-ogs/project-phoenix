@@ -31,6 +31,22 @@ export const HEAD_TITLE_SIZE = {
 } as const;
 
 /**
+ * Die Titelzeile des Elternkopfs (`ParentPageHeader`): Titelblock und Platz
+ * für die Seitenhilfe nebeneinander, oben bündig. Sein Ladekopf
+ * (`TenantPageHeaderSkeleton matches="parent-page"`) baut dieselbe Zeile
+ * daraus (#6613).
+ */
+export const PARENT_HEAD_ROW = {
+  row: "flex flex-wrap items-start justify-between gap-3",
+  title: "min-w-0 flex-1 basis-0",
+  /**
+   * Die Begrüßung der Startseite (`prominent`) behält ihr 20-px-Polster auch
+   * in `compact` und auf dem Telefon; über das Kartenpolster gelegt.
+   */
+  prominentSurface: "compact:p-5 max-sm:p-5",
+} as const;
+
+/**
  * Eine Bedienhöhe im Seitenkopf: 40 px (`CONTROL_HEIGHT_CLASS.compact`), auf
  * dem Telefon 44 px, die Untergrenze für eine Touch-Fläche. Ohne diese
  * Klammer standen 32, 36 und 40 px nebeneinander, je nachdem welches
