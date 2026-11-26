@@ -12,7 +12,7 @@ vi.mock("~/lib/logger", () => ({
 import { OpeningChangeModal } from "./opening-change-modal";
 
 describe("OpeningChangeModal", () => {
-  it("beschränkt neue Tage auf den Bereich der Liste", () => {
+  it("beschränkt neue Tage auf den Bereich der Liste und ein Schuljahr", () => {
     render(
       <OpeningChangeModal
         isOpen
@@ -29,6 +29,11 @@ describe("OpeningChangeModal", () => {
     expect(start).toHaveAttribute("max", "2027-09-09");
     expect(end).toHaveAttribute("min", "2026-08-10");
     expect(end).toHaveAttribute("max", "2027-09-09");
+
+    fireEvent.change(end, { target: { value: "2027-09-09" } });
+    fireEvent.change(start, { target: { value: "2026-08-10" } });
+    expect(end).toHaveAttribute("max", "2027-08-10");
+    expect(end).toHaveValue("2027-08-10");
 
     fireEvent.change(start, { target: { value: "2026-11-20" } });
     expect(end).toHaveAttribute("min", "2026-11-20");

@@ -17,6 +17,7 @@ import { Input } from "~/components/ui/input";
 import { TimeField } from "~/components/ui/time-field";
 import { useFormModalPending } from "~/components/ui/use-form-modal-pending";
 import { useApiFormError } from "~/contexts/ToastContext";
+import { parseISODate, toISODate } from "~/lib/date-helpers";
 import { createLogger } from "~/lib/logger";
 import { openingChangeService } from "~/lib/opening-change-api";
 
@@ -37,6 +38,26 @@ const EMPTY_FORM: OpeningChangeForm = {
   closesAt: "",
   reason: "",
 };
+
+// The backend accepts 366 calendar days including start and end.
+const MAX_OPENING_CHANGE_DAY_OFFSET = 365;
+
+function maximumEndDate(startDate: string, listMaxDate: string): string {
+  const day = parseISODate(startDate);
+  day.setDate(day.getDate() + MAX_OPENING_CHANGE_DAY_OFFSET);
+  const rangeEnd = toISODate(day);
+  return rangeEnd < listMaxDate ? rangeEnd : listMaxDate;
+}
+
+function endDateAfterStart(
+  currentEndDate: string,
+  startDate: string,
+  listMaxDate: string,
+): string {
+  if (!currentEndDate || currentEndDate < startDate) return startDate;
+  const maxDate = maximumEndDate(startDate, listMaxDate);
+  return currentEndDate > maxDate ? maxDate : currentEndDate;
+}
 
 /** Prüfung vor dem Senden. Schlüssel sind die Feldnamen des Backends. */
 function fieldErrors(form: OpeningChangeForm): Record<string, string> {
@@ -128,6 +149,9 @@ export function OpeningChangeModal({
 
   const opensError = formErrors.fieldError("opens_at");
   const closesError = formErrors.fieldError("closes_at");
+  const endMaxDate = form.startDate
+    ? maximumEndDate(form.startDate, maxDate)
+    : maxDate;
 
   return (
     <FormModal
@@ -188,10 +212,7 @@ export function OpeningChangeModal({
               setForm((current) => ({
                 ...current,
                 startDate: value,
-                endDate:
-                  !current.endDate || current.endDate < value
-                    ? value
-                    : current.endDate,
+                endDate: endDateAfterStart(current.endDate, value, maxDate),
               }))
             }
             error={formErrors.fieldError("start_date")}
@@ -205,7 +226,7 @@ export function OpeningChangeModal({
             controlSize="large"
             value={form.endDate}
             min={form.startDate || minDate}
-            max={maxDate}
+            max={endMaxDate}
             defaultMonth={form.startDate || minDate}
             onChange={(value) => setField("endDate", value)}
             error={formErrors.fieldError("end_date")}
