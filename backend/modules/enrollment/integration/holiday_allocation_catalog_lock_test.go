@@ -50,11 +50,13 @@ func TestHolidayAllocationHoldsTheCatalogUntilCommit(t *testing.T) {
 	})
 	probe(true)
 	withinTraeger(t, db, w.organization, func(ctx context.Context) {
+		// A read of the list holds no catalog lock: it would wait behind a
+		// decision that holds the period the read's audit entry needs, while
+		// that decision waits for the catalog (#8135).
 		_, err := allocation.HolidayAllocationBoard(ctx, reviewer, w.period)
 		require.NoError(t, err)
-		probe(false)
+		probe(true)
 	})
-	probe(true)
 	withinTraeger(t, db, w.organization, func(ctx context.Context) {
 		catalog, err := allocation.HolidayCriteria(ctx, reviewer)
 		require.NoError(t, err)
