@@ -415,6 +415,9 @@ export function HomeApp({
   const actionBar = (
     <HomeActionBar
       stamp={stamp}
+      // Am Telefon gibt es keine Jetzt-Karte mehr: Ausstempeln steht in
+      // der Leiste, wo am Morgen Einstempeln stand.
+      withCheckOut={layout === "phone"}
       supervisionHref={supervisionHref}
       start={
         startInBar
@@ -541,7 +544,7 @@ export function HomeApp({
   return (
     <>
       <div className="space-y-4" data-home-app="">
-        {nowCard}
+        {/* Das Jetzt steht in der Kopfkarte (`HomeHeadStatus`). */}
         {notices}
         <HomeLists {...listProps} withoutRequests />
         {placedCards}
@@ -781,6 +784,71 @@ function HomeSplit({
 
 // ─── Jetzt ─────────────────────────────────────────────────────────────────
 
+/**
+ * Telefon (#8070): Datum und Jetzt stehen in der Kopfkarte unter dem Gruß
+ * statt in einer zweiten Karte darunter. Oben das Datum, die Kinder da und
+ * der Stempelzustand, darunter was gerade läuft oder als Nächstes kommt.
+ * So beginnt am SE die erste Liste bei rund 20 % der Höhe. Dieselben
+ * Abfragen wie die Seite (SWR teilt sie).
+ */
+export function HomeHeadStatus({
+  access,
+  context,
+  date,
+}: {
+  readonly access: HomeBlockAccess;
+  readonly context: HomeBlockContext;
+  readonly date: string;
+}) {
+  const now = useHomeNow(access, context);
+  const hasOwnStaff = useHasOwnStaff();
+  const stamp = useHomeStamp(
+    hasOwnStaff &&
+      access.has("time_tracking:own") &&
+      isScopeBooked(PAGE_MODULES["/time-tracking"], context.bookedModules),
+  );
+  const stamped = stamp.state.kind === "in" || stamp.state.kind === "done";
+  const stampText = stamped ? stampLabel(stamp.state) : null;
+  const running = (now.dayBlocks ?? []).find(
+    (block) => block.isAssigned && block.status === "active",
+  );
+  const runningOverride =
+    running && now.state.kind !== "own_running" ? running : null;
+  const firstLine = [
+    date,
+    now.presentCount === undefined
+      ? null
+      : now.presentCount === 1
+        ? "1 Kind da"
+        : `${now.presentCount} Kinder da`,
+    stampText,
+  ].filter(Boolean);
+  return (
+    <div data-home-head-status="" className="min-w-0 pr-2">
+      <p className="leading-6">{firstLine.join(" · ")}</p>
+      {now.loading ? (
+        <div className="py-1" aria-hidden="true">
+          <Skeleton className="h-4 w-4/5" />
+        </div>
+      ) : runningOverride ? (
+        <NowRunningText
+          head
+          block={runningOverride}
+          next={now.state.kind === "own_next" ? now.state.block : null}
+        />
+      ) : (
+        <NowText
+          head
+          state={now.state}
+          analytics={now.analytics.data}
+          today={now.today}
+          withoutDate
+        />
+      )}
+    </div>
+  );
+}
+
 function stampLabel(state: HomeStampState): string | null {
   switch (state.kind) {
     case "in":
@@ -964,14 +1032,18 @@ function NowCard({
  * häufigsten braucht. Steht der eigene Block zum Start an: „Aufsicht
  * starten“. Sonst, solange der eigene Block läuft: „Zur Aufsicht“.
  * Daneben Einstempeln, falls man es heute noch nicht ist; sonst nur
- * Einstempeln. Ausstempeln steht in der Jetzt-Karte.
+ * Einstempeln. Ausstempeln steht in der Jetzt-Karte, am Telefon in der
+ * Leiste.
  */
 function HomeActionBar({
   stamp,
+  withCheckOut = false,
   supervisionHref,
   start,
 }: {
   readonly stamp: ReturnType<typeof useHomeStamp>;
+  /** Telefon: Ausstempeln steht in der Leiste statt in der Jetzt-Karte. */
+  readonly withCheckOut?: boolean;
   readonly supervisionHref: string | null;
   readonly start: {
     readonly busy: boolean;
@@ -980,7 +1052,8 @@ function HomeActionBar({
   } | null;
 }) {
   const checkIn = stamp.state.kind === "out";
-  if (!checkIn && !supervisionHref && !start) return null;
+  const checkOut = withCheckOut && stamp.state.kind === "in";
+  if (!checkIn && !checkOut && !supervisionHref && !start) return null;
   /* VORSCHLAG zu Produktentscheid 4 (Epic #8070): Stempeln als neuer
      Einstieg auf der Startseite; Logik in `useHomeStamp`. */
   const checkInButton = checkIn ? (
@@ -995,6 +1068,19 @@ function HomeActionBar({
       tooltip="Stempelt dich vor Ort ein. Homeoffice wählst du in der Zeiterfassung."
     >
       Einstempeln
+    </Button>
+  ) : checkOut ? (
+    // Stempel-Knöpfe sind überall grün (Kit-Ausnahme der Zeiterfassung).
+    <Button
+      type="button"
+      variant="success"
+      size="md"
+      className="whitespace-nowrap"
+      disabled={stamp.disabled}
+      onClick={stamp.checkOut}
+      tooltip="Stempelt dich sofort aus und beendet deine Arbeitszeit."
+    >
+      Ausstempeln
     </Button>
   ) : null;
   if (start) {

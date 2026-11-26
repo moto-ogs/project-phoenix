@@ -296,8 +296,14 @@ export function NowText({
   extra,
   aside,
   withoutDate = false,
+  head = false,
 }: {
   readonly state: HomeNowState;
+  /**
+   * App (#8070): eine Zeile in der Kopfkarte statt einer eigenen Karte;
+   * bricht nur zwischen den Teilen um.
+   */
+  readonly head?: boolean;
   /**
    * App (#8070): die Kopfkarte nennt das Datum schon. Ohne eigenen Einsatz
    * steht dann die Zahl der Kinder als Überschrift statt des Datums.
@@ -322,6 +328,7 @@ export function NowText({
       const { block, next } = state;
       return (
         <Lines
+          head={head}
           wrap={wrap}
           lead={lead}
           extra={extra}
@@ -364,7 +371,7 @@ export function NowText({
               ? `danach ${next.startTime} ${next.title}`
               : // App: Ohne Folgeblock entfällt der Satz, die Karte bleibt
                 // zweizeilig. Der Desktop sagt ihn weiter.
-                wrap
+                wrap || head
                 ? null
                 : "danach ist für heute nichts mehr geplant",
           ]}
@@ -375,6 +382,7 @@ export function NowText({
       const { block, minutesAhead } = state;
       return (
         <Lines
+          head={head}
           wrap={wrap}
           lead={lead}
           extra={extra}
@@ -410,6 +418,7 @@ export function NowText({
     case "own_done":
       return (
         <Lines
+          head={head}
           wrap={wrap}
           lead={lead}
           extra={extra}
@@ -439,6 +448,7 @@ export function NowText({
               : "Heute ist keine Betreuung geplant";
       return (
         <Lines
+          head={head}
           wrap={wrap}
           lead={lead}
           extra={extra}
@@ -465,6 +475,7 @@ export function NowText({
     case "plain":
       return (
         <Lines
+          head={head}
           wrap={wrap}
           lead={lead}
           extra={extra}
@@ -501,8 +512,11 @@ export function NowRunningText({
   lead,
   extra,
   aside,
+  head = false,
 }: {
   readonly block: PlannedTimetableInstance;
+  /** Eine Zeile in der Kopfkarte (siehe `NowText`). */
+  readonly head?: boolean;
   /** Der nächste eigene Einsatz, falls einer kommt. */
   readonly next: { readonly startTime: string; readonly title: string } | null;
   readonly lead?: ReactNode;
@@ -512,6 +526,7 @@ export function NowRunningText({
   return (
     <Lines
       wrap
+      head={head}
       lead={lead}
       extra={extra}
       aside={aside}
@@ -525,8 +540,13 @@ export function NowRunningText({
         </>
       }
       detail={[
+        // In der Kopfkarte steht keine Uhr davor: „seit 16:30“ sagt, wann
+        // der Block begann.
+        head ? `seit ${block.startTime}` : null,
         block.roomName,
         blockEndLine(block),
+        // Ohne Folgeblock kein Satz: „Mein Tag“ darunter zeigt den Tag, und
+        // die Kopfkarte bleibt am SE bei zwei Zeilen unter dem Gruß.
         next ? `danach ${next.startTime} ${next.title}` : null,
       ]}
     />
@@ -548,11 +568,13 @@ function Lines({
   badges,
   detail,
   wrap = false,
+  head = false,
   lead,
   extra,
   aside,
 }: {
   readonly wrap?: boolean;
+  readonly head?: boolean;
   readonly lead?: ReactNode;
   readonly extra?: ReactNode;
   readonly aside?: ReactNode;
@@ -562,6 +584,35 @@ function Lines({
   readonly detail: readonly ReactNode[];
 }) {
   const parts = detail.filter(Boolean);
+  if (head) {
+    // Kopfkarte (App): eine Zeile, die nur zwischen den Teilen umbricht.
+    // Titel und Zustand vorn, dann Beginn, Raum, Ende, was danach kommt;
+    // die Kinder da und der Stempelzustand stehen in der Zeile darüber.
+    // Der Trenner steht vor jedem Teil und fällt am Zeilenanfang in den
+    // abgeschnittenen Rand, damit keine Zeile auf „·“ endet.
+    return (
+      <div className="overflow-hidden">
+        <p className="-ml-3 flex flex-wrap items-center leading-6">
+          <span className="relative min-w-0 pl-3 font-semibold text-gray-900">
+            {headline}
+          </span>
+          {badges ? (
+            <span className="ml-1.5 inline-flex items-center gap-1">
+              {badges}
+            </span>
+          ) : null}
+          {parts.map((part, index) => (
+            <span
+              key={index}
+              className="relative min-w-0 pl-3 before:absolute before:left-1 before:content-['·']"
+            >
+              {part}
+            </span>
+          ))}
+        </p>
+      </div>
+    );
+  }
   if (wrap) {
     // App (#8070): zwei feste Zeilen. Oben Uhrzeit, Titel und Zustand, rechts
     // die Kinder da; darunter Raum, Ende und was danach kommt. Bricht die

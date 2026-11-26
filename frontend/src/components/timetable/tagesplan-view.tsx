@@ -35,6 +35,7 @@ import {
   TagesplanDayBar,
   tagesplanAppStats,
   tagesplanAppTitle,
+  tagesplanCompactDate,
 } from "~/components/timetable/tagesplan-app";
 import { useDeviceContext } from "~/lib/device-context";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
@@ -713,6 +714,9 @@ export function TagesplanView() {
     // die Detailspalte nie verdeckt; ohne Blöcke bleibt sie im Kopf.
     const showMine = overviewScope === "all_staff";
     const appStats = tagesplanAppStats(instances ?? [], showMine, scopeHint);
+    const compactRunning = appStats.filter(
+      (item) => item.label === "läuft" || item.label === "laufen",
+    );
     const dayBar = (
       <TagesplanDayBar
         day={day}
@@ -737,9 +741,19 @@ export function TagesplanView() {
         // Die Kennzahlen stehen am Telefon in der Titelzeile: der Kopf
         // bleibt am SE unter 20 % der Höhe.
         appStatsInline
+        // Eingeklappt nennt der schmale Kopf den Tag („Heute“ allein sagt
+        // nicht, welcher) und was gerade läuft; die übrigen Zahlen stehen
+        // oben auf der Seite.
         appCompactStats={
-          dayBarCollapsed && !isToday ? (
-            <span className="tabular-nums">{formatDate(day)}</span>
+          dayBarCollapsed ? (
+            <span className="flex items-center gap-2">
+              <span className="whitespace-nowrap tabular-nums">
+                {tagesplanCompactDate(day)}
+              </span>
+              {compactRunning.length > 0 ? (
+                <TenantPageStats items={compactRunning} />
+              ) : null}
+            </span>
           ) : undefined
         }
         searchSlot={barInList || dayBarCollapsed ? undefined : dayBar}
@@ -872,7 +886,8 @@ const DAY_BAR_EXPAND_AT = 24;
  */
 function useCollapsedDayBar(enabled: boolean): boolean {
   const [collapsed, setCollapsed] = useState(false);
-  const shift = useRef(0);
+  // Höhe der Leiste und Scrollstand beim Einklappen.
+  const shift = useRef<{ height: number; y: number } | null>(null);
   useEffect(() => {
     if (!enabled) {
       setCollapsed(false);
@@ -885,7 +900,7 @@ function useCollapsedDayBar(enabled: boolean): boolean {
           const bar = document.querySelector<HTMLElement>(
             "[data-app-page-toolbar]",
           );
-          shift.current = bar?.offsetHeight ?? 0;
+          shift.current = { height: bar?.offsetHeight ?? 0, y };
           return true;
         }
         if (current && y < DAY_BAR_EXPAND_AT) return false;
@@ -897,9 +912,16 @@ function useCollapsedDayBar(enabled: boolean): boolean {
     return () => window.removeEventListener("scroll", onScroll);
   }, [enabled]);
   useLayoutEffect(() => {
-    if (!collapsed || shift.current === 0) return;
-    window.scrollBy(0, -shift.current);
-    shift.current = 0;
+    const pending = shift.current;
+    shift.current = null;
+    if (!collapsed || !pending || pending.height === 0) return;
+    // Hat der Browser schon ausgeglichen (Scroll-Verankerung) oder stand
+    // die Seite am Ende und rückte dort nach, wäre ein zweites Zurückrücken
+    // doppelt: am SE stand „Läuft jetzt“ dann unter der Pill. Deshalb auf
+    // den Zielwert setzen statt relativ zu rücken.
+    const target = Math.max(0, pending.y - pending.height);
+    if (window.scrollY !== pending.y) return;
+    window.scrollTo({ top: target });
   }, [collapsed]);
   return collapsed;
 }
