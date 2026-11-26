@@ -163,6 +163,7 @@ describe("mapPickupDataResponse", () => {
       schedules: [],
       exceptions: [],
       notes: [],
+      pickup_persons: [],
       departure_exceptions: [
         {
           id: "1",
@@ -197,6 +198,7 @@ describe("mapPickupDataResponse", () => {
       schedules: [sampleBackendSchedule],
       exceptions: [sampleBackendException],
       notes: [],
+      pickup_persons: [],
       departure_exceptions: [],
     };
 
@@ -224,6 +226,7 @@ describe("mapPickupDataResponse", () => {
       ],
       exceptions: [],
       notes: [],
+      pickup_persons: [],
       departure_exceptions: [],
     };
 
@@ -244,6 +247,7 @@ describe("mapPickupDataResponse", () => {
       ],
       exceptions: [],
       notes: [],
+      pickup_persons: [],
       departure_exceptions: [],
     };
 
@@ -263,6 +267,7 @@ describe("mapPickupDataResponse", () => {
       schedules: [],
       exceptions: [],
       notes: [],
+      pickup_persons: [],
       departure_exceptions: [],
     };
 

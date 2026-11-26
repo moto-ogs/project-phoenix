@@ -43,6 +43,8 @@ export interface OgsPickupInfo {
   isException: boolean;
   /** The Abholart set for today only (#3946); absent for the weekly plan. */
   dayDepartureMode?: DepartureMode;
+  /** Who collects the child today (#7655); absent without a day value. */
+  dayPickupPerson?: { name: string; oneTime: boolean };
   notes?: string;
   dayNotes: Array<{ id: string; content: string }>;
 }
@@ -137,6 +139,12 @@ export function mapOgsGroupLiveResponse(
       isException: pt.is_exception,
       // An Abholart this build does not know reads as the weekly plan's.
       dayDepartureMode: knownEnum(DEPARTURE_MODES, pt.day_departure_mode),
+      dayPickupPerson: pt.day_pickup_person
+        ? {
+            name: pt.day_pickup_person.name,
+            oneTime: pt.day_pickup_person.one_time,
+          }
+        : undefined,
       notes: pt.notes,
       dayNotes: (pt.day_notes ?? []).map((note) => ({
         id: note.id,

@@ -213,6 +213,8 @@ export const ERROR_CATALOG = {
         "Eine neue Abholerlaubnis braucht deine Unterschrift. Die {careTerm} bestätigt sie dann.",
       "care.pickup_permission_unchanged":
         "Diese Person darf an diesen Tagen schon abholen.",
+      "care.pickup_person_not_authorized":
+        "Diese Person darf das Kind an diesem Tag nicht abholen. Wähle eine andere Person oder trage einen Namen ein.",
       "care.pickup_person_not_linked":
         "Diese Person ist kein Kontakt deines Kindes. Bitte trage sie zuerst bei den Kontakten ein.",
       "care.pickup_proof_not_found":
@@ -2403,6 +2405,8 @@ export const ERROR_CATALOG = {
         "A new pickup permission needs your signature. The {careTerm} then confirms it.",
       "care.pickup_permission_unchanged":
         "This person may already pick up on these days.",
+      "care.pickup_person_not_authorized":
+        "This person may not pick up the child on this day. Choose another person or enter a name.",
       "care.pickup_person_not_linked":
         "This person is not a contact of your child. Please add them to your contacts first.",
       "care.pickup_proof_not_found":
@@ -3196,6 +3200,8 @@ export const ERROR_CATALOG = {
         "Для нового разрешения нужна ваша подпись. Затем {careTerm} его подтвердит.",
       "care.pickup_permission_unchanged":
         "Этот человек уже может забирать ребёнка в эти дни.",
+      "care.pickup_person_not_authorized":
+        "Этот человек не может забрать ребёнка в этот день. Выберите другого человека или введите имя.",
       "care.pickup_person_not_linked":
         "Этот человек не является контактом вашего ребёнка. Пожалуйста, сначала добавьте его в контакты.",
       "care.pickup_proof_not_found":
@@ -3850,6 +3856,8 @@ export const ERROR_CATALOG = {
         "Një leje e re për marrjen e fëmijës kërkon nënshkrimin tuaj. Pastaj {careTerm} e konfirmon.",
       "care.pickup_permission_unchanged":
         "Ky person e merr tashmë fëmijën në këto ditë.",
+      "care.pickup_person_not_authorized":
+        "Ky person nuk mund ta marrë fëmijën në këtë ditë. Zgjidh një person tjetër ose shkruaj një emër.",
       "care.pickup_person_not_linked":
         "Ky person nuk është kontakt i fëmijës suaj. Ju lutemi shtojeni fillimisht te kontaktet.",
       "care.pickup_proof_not_found":
@@ -4519,6 +4527,8 @@ export const ERROR_CATALOG = {
         "Nowa zgoda na odbiór wymaga Państwa podpisu. {careTerm} ją potem potwierdzi.",
       "care.pickup_permission_unchanged":
         "Ta osoba już może odbierać dziecko w te dni.",
+      "care.pickup_person_not_authorized":
+        "Ta osoba nie może odebrać dziecka w tym dniu. Wybierz inną osobę lub wpisz imię i nazwisko.",
       "care.pickup_person_not_linked":
         "Ta osoba nie jest kontaktem Państwa dziecka. Proszę najpierw dodać ją do kontaktów.",
       "care.pickup_proof_not_found":
@@ -5173,6 +5183,8 @@ export const ERROR_CATALOG = {
         "Yeni bir alma izni imzanızı gerektirir. Ardından {careTerm} onaylar.",
       "care.pickup_permission_unchanged":
         "Bu kişi bu günlerde zaten çocuğu alabilir.",
+      "care.pickup_person_not_authorized":
+        "Bu kişi bu gün çocuğu alamaz. Başka bir kişi seçin veya bir isim girin.",
       "care.pickup_person_not_linked":
         "Bu kişi çocuğunuzun kişileri arasında değil. Lütfen önce kişilerinize ekleyin.",
       "care.pickup_proof_not_found":
@@ -5833,6 +5845,8 @@ export const ERROR_CATALOG = {
         "Для нового дозволу потрібен ваш підпис. Потім {careTerm} його підтвердить.",
       "care.pickup_permission_unchanged":
         "Ця особа вже може забирати дитину в ці дні.",
+      "care.pickup_person_not_authorized":
+        "Ця особа не може забрати дитину в цей день. Виберіть іншу особу або введіть ім'я.",
       "care.pickup_person_not_linked":
         "Ця особа не є контактом вашої дитини. Будь ласка, спершу додайте її до контактів.",
       "care.pickup_proof_not_found":
