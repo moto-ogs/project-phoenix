@@ -1395,7 +1395,7 @@ export function PickupTimeModal({
   // Ein Wortlaut zu einem älteren Namen gilt nicht: die Unterschrift muss
   // den Namen tragen, der gesendet wird.
   const dayStatement =
-    statementPersonName === otherPersonName
+    !otherPerson || statementPersonName === otherPersonName
       ? daySignatureStatement.statement
       : null;
   const alreadyHome = date === today && childToday?.state === "left";

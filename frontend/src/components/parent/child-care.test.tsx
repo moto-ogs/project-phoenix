@@ -3228,6 +3228,55 @@ describe("PickupTimeModal, Abholperson an einem Tag", () => {
     contacts.mockRestore();
   });
 
+  it("keeps the signature statement when changing another person back to a contact", async () => {
+    const contacts = vi
+      .spyOn(parentApi, "listChildGuardians")
+      .mockResolvedValue([
+        {
+          guardian_profile_id: "12",
+          student_guardian_id: "120",
+          first_name: "Rita",
+          last_name: "Klein",
+          relationship_type: "relative",
+          is_primary: false,
+          can_pickup: false,
+          can_manage_pickup: true,
+          is_emergency_contact: false,
+          phones: [],
+          is_self: false,
+        } as unknown as parentMeContract.childGuardianResponse,
+      ]);
+    const { dateInput } = renderModal({ studentId: "1" });
+
+    fireEvent.change(dateInput, { target: { value: "2026-09-15" } });
+    fireEvent.click(
+      await screen.findByRole("combobox", { name: "Wer holt ab?" }),
+    );
+    fireEvent.click(screen.getByRole("option", { name: "Rita Klein" }));
+    await screen.findByText(
+      "Ich erlaube, dass Rita Klein das Kind Felix Schneider am Dienstag, 15.09.2026 von der OGS abholt.",
+    );
+
+    fireEvent.click(screen.getByRole("combobox", { name: "Wer holt ab?" }));
+    fireEvent.click(screen.getByRole("option", { name: "Andere Person" }));
+    fireEvent.change(screen.getByLabelText(/Name der Person/), {
+      target: { value: "Tante Frieda" },
+    });
+    await screen.findByText(
+      "Ich erlaube, dass Tante Frieda das Kind Felix Schneider am Dienstag, 15.09.2026 von der OGS abholt.",
+    );
+
+    fireEvent.click(screen.getByRole("combobox", { name: "Wer holt ab?" }));
+    fireEvent.click(screen.getByRole("option", { name: "Rita Klein" }));
+
+    expect(
+      screen.getByText(
+        "Ich erlaube, dass Rita Klein das Kind Felix Schneider am Dienstag, 15.09.2026 von der OGS abholt.",
+      ),
+    ).toBeInTheDocument();
+    contacts.mockRestore();
+  });
+
   it("shows a retryable error when the signature statement cannot load", async () => {
     vi.mocked(parentApi.getPickupSignatureStatement).mockRejectedValue(
       new ApiError("backend unavailable", 503),
