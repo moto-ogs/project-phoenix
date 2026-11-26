@@ -32,9 +32,10 @@ import type {
  * names the retention of the Träger in days instead of three months (#6691).
  * Version 5 says that the Träger keeps the customer number of the Gemeinde
  * (Debitorennummer) for later registrations and when it goes (#6692).
- * Version 6 gives the name sentence in the Du-Form (#7687).
+ * Version 6 gives the name sentence in the Du-Form (#7687). Version 7
+ * names the team that cares for the child instead of „die OGS“ (#8136).
  */
-export const HOLIDAY_CONSENT_VERSION = 6;
+export const HOLIDAY_CONSENT_VERSION = 7;
 
 /** Bounds the typed name like the name of the parent. */
 export const DECLARATION_NAME_MAX_LENGTH = 100;

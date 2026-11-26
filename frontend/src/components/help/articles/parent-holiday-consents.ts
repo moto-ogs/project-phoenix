@@ -28,7 +28,7 @@ export function parentHolidayConsentsTopic(): HelpTopic {
       "moto fragt nach. Wähle noch einmal `Widerrufen`.",
     ],
     result:
-      "Die Einwilligung gilt ab jetzt nicht mehr. Die OGS, die dein Kind in den Ferien betreut, sieht das sofort. Der Träger sieht es auch.",
+      "Die Einwilligung gilt ab jetzt nicht mehr. Das Team, das dein Kind in den Ferien betreut, sieht das sofort. Der Träger sieht es auch.",
     notes: [
       "Die Einwilligungen sind freiwillig. Die Anmeldung gilt auch ohne sie.",
       "Ohne Elternkonto widerrufst du beim Träger, zum Beispiel per Mail. Er trägt den Widerruf in moto ein.",
