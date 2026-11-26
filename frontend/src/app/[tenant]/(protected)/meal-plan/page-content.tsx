@@ -1186,7 +1186,10 @@ function canCancelMeal(
   date: string,
   orderDays: MealOrderDay[] | null,
 ): boolean {
-  return !orderDays?.some(
-    (day) => day.date === date && day.closed && !day.mealCancelled,
+  return (
+    orderDays !== null &&
+    !orderDays.some(
+      (day) => day.date === date && day.closed && !day.mealCancelled,
+    )
   );
 }
