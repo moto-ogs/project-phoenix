@@ -26,6 +26,7 @@ const {
   mockUseImmutableSWR,
   mockPush,
   mockMutateStudents,
+  mockRefreshSearch,
   mockUpdateSession,
   sessionState,
 } = vi.hoisted(() => ({
@@ -34,6 +35,7 @@ const {
   mockUseImmutableSWR: vi.fn(),
   mockPush: vi.fn(),
   mockMutateStudents: vi.fn(),
+  mockRefreshSearch: vi.fn(),
   mockUpdateSession: vi.fn(),
   // The browser session carries no token (#5005); a session without one
   // carries an error.
@@ -44,6 +46,7 @@ const {
 }));
 
 let currentSearch = new URLSearchParams();
+let realStudentReads = false;
 
 vi.mock("next-auth/react", () => ({
   useSession: vi.fn(() => ({
@@ -177,6 +180,17 @@ vi.mock("~/lib/swr", () => ({
   useTenantMutate: () => vi.fn(),
 }));
 
+vi.mock("~/lib/swr/hooks", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/lib/swr/hooks")>();
+  return {
+    ...actual,
+    useInvalidateMatching() {
+      const invalidate = actual.useInvalidateMatching();
+      return realStudentReads ? invalidate : mockRefreshSearch;
+    },
+  };
+});
+
 vi.mock("~/components/students/student-card", () => ({
   StudentCard: ({ studentId }: { studentId: string }) => (
     <div data-testid={`student-card-${studentId}`}>card-{studentId}</div>
@@ -258,6 +272,7 @@ function renderOnSearchPage(search: string, wrapper?: typeof IsolatedSWRCache) {
 }
 
 function renderWithRealStudentReads(search: string) {
+  realStudentReads = true;
   const reload = new Map<string, () => Promise<unknown>>();
   let preview: (id: string) => ReturnType<typeof studentKey.preview>;
   function PreviewProbe() {
@@ -299,6 +314,7 @@ function renderWithRealStudentReads(search: string) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  realStudentReads = false;
   localStorage.clear();
   // The stored filters belong to the signed-in account (#5000).
   localStorage.setItem("moto:personal-storage-owner", "2:3");
@@ -352,7 +368,7 @@ describe("StudentSearchPage: click on the navigation entry of this page (#3374)"
     // The request key is what SWR fetches by: a changed key is the fresh,
     // unfiltered request, so no forced revalidation of the old one on top.
     expect(studentKeys.at(-1)).not.toBe(filteredKey);
-    expect(mockMutateStudents).not.toHaveBeenCalled();
+    expect(mockRefreshSearch).not.toHaveBeenCalled();
   });
 
   it("clears a name search", async () => {
@@ -527,6 +543,99 @@ describe("StudentSearchPage: click on the navigation entry of this page (#3374)"
     fireEvent.click(retry);
     expect(await screen.findByTestId("student-card-8")).toBeVisible();
     expect(screen.getByTestId("select-all-count")).toHaveTextContent("1");
+  });
+
+  it("ignores a named refusal from the request replaced by retry", async () => {
+    const oldMila = deferred<{ students: (typeof mockStudent)[] }>();
+    const roster = deferred<{ students: (typeof mockStudent)[] }>();
+    const mila = { ...mockStudent, id: "8", first_name: "Mila" };
+    let milaReads = 0;
+    mockGetStudents.mockImplementation(({ search }: StudentFilters) => {
+      if (!search) return roster.promise;
+      if (search === "Max") return Promise.resolve({ students: [mockStudent] });
+      return ++milaReads === 1
+        ? oldMila.promise
+        : Promise.resolve({ students: [mila] });
+    });
+    vi.useFakeTimers();
+    try {
+      renderWithRealStudentReads("?search=Mila");
+      act(() => vi.advanceTimersByTime(10_000));
+      fireEvent.click(screen.getByRole("button", { name: "Erneut laden" }));
+    } finally {
+      releaseFakeTimers();
+    }
+    expect(await screen.findByTestId("student-card-8")).toBeVisible();
+
+    const [search] = screen.getAllByPlaceholderText("Name suchen…");
+    fireEvent.change(search!, { target: { value: "Max" } });
+    expect(await screen.findByTestId("student-card-7")).toBeVisible();
+
+    await act(async () => oldMila.reject(new ApiError("Old refusal", 403)));
+    expect(screen.getByTestId("student-card-7")).toBeVisible();
+    expect(screen.getByTestId("select-all-count")).toHaveTextContent("1");
+  });
+
+  it("uses saved name results until a current roster is confirmed", async () => {
+    const freshRoster = deferred<{ students: (typeof mockStudent)[] }>();
+    const mila = { ...mockStudent, id: "8", first_name: "Mila" };
+    const { rerender, reload } = renderWithRealStudentReads("");
+    expect(await screen.findByTestId("student-card-7")).toBeVisible();
+
+    mockGetStudents.mockImplementation(({ search }: StudentFilters) =>
+      search ? Promise.resolve({ students: [mila] }) : freshRoster.promise,
+    );
+    currentSearch = new URLSearchParams({ search: "Mila" });
+    window.history.replaceState(null, "", "/students/search?search=Mila");
+    rerender(<StudentSearchPage key="saved-search" />);
+    expect(await screen.findByTestId("student-card-8")).toBeVisible();
+
+    await act(async () => {
+      const pending = reload.get(rosterKey)!();
+      freshRoster.resolve({ students: [mila, mockStudent] });
+      await pending;
+    });
+    const recordedCalls = mockGetStudents.mock.calls.length;
+    const [search] = screen.getAllByPlaceholderText("Name suchen…");
+    fireEvent.change(search!, { target: { value: "Max" } });
+    expect(await screen.findByTestId("student-card-7")).toBeVisible();
+    expect(mockGetStudents).toHaveBeenCalledTimes(recordedCalls);
+  });
+
+  it("keeps loaded roster pages visible when clearing a name after a deferred refresh", async () => {
+    const expansion = deferred<{ students: (typeof mockStudent)[] }>();
+    const mila = { ...mockStudent, id: "8", first_name: "Mila" };
+    const pagination = { total_pages: 25, total_records: 25000 };
+    let holdFirstPage = false;
+    mockGetStudents.mockImplementation(({ search, page }: StudentFilters) => {
+      if (search) return Promise.resolve({ students: [mila] });
+      if (!page && holdFirstPage) return expansion.promise;
+      return Promise.resolve({
+        students: page === 2 ? [mockStudent] : [],
+        pagination,
+      });
+    });
+    const { reload } = renderWithRealStudentReads("");
+    expect(await screen.findByTestId("student-card-7")).toBeVisible();
+    const [search] = screen.getAllByPlaceholderText("Name suchen…");
+    fireEvent.change(search!, { target: { value: "Mila" } });
+    expect(await screen.findByTestId("student-card-8")).toBeVisible();
+    await act(async () => {
+      await reload.get(rosterKey)!();
+    });
+
+    holdFirstPage = true;
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "Suche löschen" })[0]!,
+    );
+
+    expect(screen.getByTestId("student-card-7")).toBeVisible();
+    expect(screen.getByTestId("select-all-count")).toHaveTextContent("1");
+
+    await act(async () => expansion.resolve({ students: [mila] }));
+    // Anker: the retained rows were replaced by the new roster.
+    expect(await screen.findByTestId("student-card-8")).toBeVisible();
+    expect(screen.queryByTestId("student-card-7")).toBeNull();
   });
 
   it("rejects a roster answer from before the named search refused access", async () => {
@@ -745,7 +854,7 @@ describe("StudentSearchPage: click on the navigation entry of this page (#3374)"
     fireEvent.click(navLink);
 
     await waitFor(() => {
-      expect(mockMutateStudents).toHaveBeenCalledTimes(1);
+      expect(mockRefreshSearch).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -761,7 +870,7 @@ describe("StudentSearchPage: click on the navigation entry of this page (#3374)"
 
     expect(storedFilters()).toContain("yes");
     expect(studentKeys.at(-1)).toBe(filteredKey);
-    expect(mockMutateStudents).not.toHaveBeenCalled();
+    expect(mockRefreshSearch).not.toHaveBeenCalled();
   });
 });
 
@@ -790,7 +899,7 @@ describe("StudentSearchPage: student list that does not finish loading (#3374)",
 
     fireEvent.click(screen.getByRole("button", { name: "Erneut laden" }));
 
-    expect(mockMutateStudents).toHaveBeenCalledTimes(1);
+    expect(mockRefreshSearch).toHaveBeenCalledTimes(1);
     // A session with a token needs no second look; only the list is asked for.
     expect(mockUpdateSession).not.toHaveBeenCalled();
     // The retry gets the full waiting time again before the hint returns.
@@ -866,7 +975,7 @@ describe("StudentSearchPage: student list that does not finish loading (#3374)",
     ).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Erneut laden" }));
 
-    expect(mockMutateStudents).toHaveBeenCalledTimes(1);
+    expect(mockRefreshSearch).toHaveBeenCalledTimes(1);
   });
 
   it("retries a server error from the error state", async () => {
@@ -880,6 +989,6 @@ describe("StudentSearchPage: student list that does not finish loading (#3374)",
 
     fireEvent.click(await screen.findByRole("button", { name: "Wiederholen" }));
 
-    expect(mockMutateStudents).toHaveBeenCalledTimes(1);
+    expect(mockRefreshSearch).toHaveBeenCalledTimes(1);
   });
 });

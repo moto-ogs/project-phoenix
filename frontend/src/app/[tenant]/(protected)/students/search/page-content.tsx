@@ -39,6 +39,7 @@ import {
 import { studentKeys } from "~/lib/swr/portal-keys";
 import {
   useInvalidateFamily,
+  useInvalidateMatching,
   useSWRCacheKey,
   useSWRRequestGuard,
 } from "~/lib/swr/hooks";
@@ -1045,6 +1046,9 @@ function SearchPageContent() {
   // after its debounce. The term then narrows the loaded list in the browser,
   // as a transition: a key typed while the list renders is shown first.
   const [searchTerm, setSearchTerm] = useState(initial.search);
+  const [preferLinkedSearch, setPreferLinkedSearch] = useState(
+    initial.search !== "",
+  );
   const [searchResetKey, setSearchResetKey] = useState(0);
   const [selectedGroupIds, setSelectedGroupIds] = useState(initial.groupIds);
   const [selectedSchoolClasses, setSelectedSchoolClasses] = useState(
@@ -1131,7 +1135,10 @@ function SearchPageContent() {
 
   const updateSearchTerm = useCallback(
     (value: string) => {
-      startTransition(() => setSearchTerm(value));
+      startTransition(() => {
+        setSearchTerm(value);
+        setPreferLinkedSearch(false);
+      });
       updateUrlParams({ [SEARCH_QUERY_PARAM]: value });
     },
     [updateUrlParams],
@@ -1139,6 +1146,7 @@ function SearchPageContent() {
 
   const clearSearchTerm = useCallback(() => {
     setSearchTerm("");
+    setPreferLinkedSearch(false);
     setSearchResetKey((key) => key + 1);
     updateUrlParams({ [SEARCH_QUERY_PARAM]: "" });
   }, [updateUrlParams]);
@@ -1600,6 +1608,7 @@ function SearchPageContent() {
   );
   const beginSearchRead = useSWRRequestGuard();
   const invalidateSearchFamily = useInvalidateFamily();
+  const invalidateSearchKey = useInvalidateMatching();
   const searchFamily = studentKeys.searchFamily(wholeListParams);
   async function readSearchList(
     key: string,
@@ -1629,13 +1638,50 @@ function SearchPageContent() {
       throw error;
     }
   }
-  const wholeList = useSWRAuth(
+  type SearchResult = Awaited<ReturnType<typeof fetchStudentSearch>>;
+  type RosterResult = SearchResult & { expandedRoster?: SearchResult };
+  const rosterReader = useRef<{
+    key: string | null;
+    read: () => RosterResult | undefined;
+  }>(null);
+  const wholeList = useSWRAuth<RosterResult>(
     awaitsSearchFilters ? null : wholeListKey,
-    () => readSearchList(wholeListKey, wholeListParams, searchTerm !== ""),
-    // Keep previous filters out of selection and do not retry a refusal
-    // just because it discarded this reader's pending requests.
-    { keepPreviousData: false, recoverDiscardedRefusals: false },
+    async () => {
+      const result = await readSearchList(
+        wholeListKey,
+        wholeListParams,
+        searchTerm !== "",
+      );
+      const reader = rosterReader.current;
+      if (!result.pagesDeferred || reader?.key !== scopedRosterKey)
+        return result;
+      // Keep the last expanded result alongside, not mixed into, a page-one
+      // refresh. Only the same key's still-readable cache may supply it.
+      const previous = reader.read();
+      const expandedRoster = previous?.pagesDeferred
+        ? previous.expandedRoster
+        : previous;
+      return expandedRoster ? { ...result, expandedRoster } : result;
+    },
+    {
+      // Keep previous filters out of selection and do not retry a refusal
+      // just because it discarded this reader's pending requests.
+      keepPreviousData: false,
+      recoverDiscardedRefusals: false,
+      onSuccess(result) {
+        // A cached roster may predate the saved link's server results.
+        if (preferLinkedSearch && result.truncatedTotal === null)
+          setPreferLinkedSearch(false);
+      },
+    },
   );
+  const readRoster = wholeList.readCurrent;
+  useLayoutEffect(() => {
+    rosterReader.current = {
+      key: scopedRosterKey,
+      read: () => readRoster?.().data,
+    };
+  }, [scopedRosterKey, readRoster]);
   const rosterRefused =
     heldRosterRefusal !== undefined || isReadRefusal(wholeList.error);
   // A saved term (or an edit before the roster is ready) is independent of
@@ -1646,7 +1692,9 @@ function SearchPageContent() {
     !wholeList.error;
   // A refusal for the roster also denies its named projection.
   const needsServerSearch =
-    searchTerm !== "" && !rosterRefused && !hasCompleteList;
+    searchTerm !== "" &&
+    !rosterRefused &&
+    (preferLinkedSearch || !hasCompleteList);
   const namedSearchParams = { ...wholeListParams, search: searchTerm };
   const studentsCacheKey = needsServerSearch
     ? studentKeys.search(namedSearchParams)
@@ -1658,14 +1706,20 @@ function SearchPageContent() {
     { keepPreviousData: false },
   );
   const {
-    data: searchData,
+    data: freshSearchData,
     isLoading,
     isValidating: isSearchResultValidating,
     error: studentsError,
     mutate: mutateStudents,
   } = needsServerSearch ? namedSearch : wholeList;
+  const rosterNeedsExpansion =
+    searchTerm === "" && wholeList.data?.pagesDeferred === true;
+  const expandedRoster = rosterNeedsExpansion
+    ? wholeList.data?.expandedRoster
+    : undefined;
+  const searchData = expandedRoster ?? freshSearchData;
   const isFinishingRoster =
-    searchTerm === "" && searchData?.pagesDeferred === true;
+    rosterNeedsExpansion && expandedRoster === undefined;
   const searchRefused = isReadRefusal(studentsError);
   const studentsData =
     rosterRefused || searchRefused || isFinishingRoster
@@ -1863,6 +1917,7 @@ function SearchPageContent() {
 
   const clearAllFilters = useCallback(() => {
     setSearchTerm("");
+    setPreferLinkedSearch(false);
     setSearchResetKey((key) => key + 1);
     setSelectedGroupIds([]);
     setSelectedSchoolClasses([]);
@@ -1899,20 +1954,26 @@ function SearchPageContent() {
     setReloadCount((count) => count + 1);
   }, [wholeListKey, studentsCacheKey]);
   const resumeRoster =
-    isFinishingRoster && !isSearchResultValidating && !studentsError;
+    rosterNeedsExpansion && !isSearchResultValidating && !studentsError;
   useEffect(() => {
     const requested = handledReloadRef.current !== reloadCount;
     handledReloadRef.current = reloadCount;
     // A reset to a key not already being read starts a new fetch in SWR.
     // A reset from server search to the same roster still needs a reload.
-    // mutate() bypasses deduplication to replace a request that never answered.
-    if (
-      resumeRoster ||
-      (requested && reloadRequestKeysRef.current.includes(studentsCacheKey))
-    ) {
+    if (requested && reloadRequestKeysRef.current.includes(studentsCacheKey)) {
+      // Supersede the old request as well as bypassing deduplication: its
+      // late refusal must not invalidate the retried search's entire family.
+      void invalidateSearchKey((key) => key === studentsCacheKey);
+    } else if (resumeRoster) {
       void mutateStudents();
     }
-  }, [reloadCount, resumeRoster, studentsCacheKey, mutateStudents]);
+  }, [
+    reloadCount,
+    resumeRoster,
+    studentsCacheKey,
+    mutateStudents,
+    invalidateSearchKey,
+  ]);
 
   // Clicking "Alle Kinder" in the navigation while already here means "start
   // over": drop search, filters and date and load the list fresh (#3374). The
@@ -1992,7 +2053,7 @@ function SearchPageContent() {
   const truncatedTotal =
     studentsData === undefined || isDateTransition
       ? null
-      : (studentsData.truncatedTotal ?? null);
+      : (freshSearchData?.truncatedTotal ?? null);
   const photoConsentDataAvailable =
     photoConsentFeatureAvailable &&
     (students.length === 0 ||

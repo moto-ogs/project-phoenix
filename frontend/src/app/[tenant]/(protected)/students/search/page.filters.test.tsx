@@ -832,12 +832,23 @@ describe("StudentSearchPage — registration answer counts (#7645)", () => {
 
   // The filter options as plain buttons, so a test reads their labels and
   // picks one without the real header's panel.
-  function AnswerButtonsHeader({ filters }: { filters?: FilterConfig[] }) {
+  function AnswerButtonsHeader({
+    filters,
+    search,
+  }: {
+    filters?: FilterConfig[];
+    search?: { value: string; onChange: (value: string) => void };
+  }) {
     const answers = (filters ?? []).find(
       (filter) => filter.id === "enrollmentAnswer",
     );
     return (
       <div data-testid="header">
+        <input
+          aria-label="Name suchen"
+          value={search?.value ?? ""}
+          onChange={(event) => search?.onChange(event.target.value)}
+        />
         {answers?.options.map((option) => (
           <button
             key={option.value}
@@ -918,9 +929,15 @@ describe("StudentSearchPage — registration answer counts (#7645)", () => {
   });
 
   it("counts an answer among the children a name search leaves", async () => {
-    currentSearch = new URLSearchParams({ search: "Mia" });
+    currentSearch = new URLSearchParams();
 
     render(<StudentSearchPage />, { wrapper: FreshSwrCache });
+    expect(
+      await screen.findByRole("button", { name: /: Ja \(2\)$/ }),
+    ).toBeInTheDocument();
+    fireEvent.change(screen.getByRole("textbox", { name: "Name suchen" }), {
+      target: { value: "Mia" },
+    });
 
     expect(
       await screen.findByRole("button", { name: /: Ja \(1\)$/ }),
