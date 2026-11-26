@@ -9,6 +9,7 @@ import {
 import { Activity } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { NavigationScrollPositions } from "~/components/ui/navigation-scroll-position";
 import type {
   StaffScheduleAssignment,
   StaffScheduleStaff,
@@ -22,6 +23,11 @@ import { DienstplanResourceGrid } from "./dienstplan-resource-grid";
 const mocks = vi.hoisted(() => ({
   push: vi.fn(),
   useMediaQuery: vi.fn(() => false),
+}));
+
+vi.mock("next/navigation", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("next/navigation")>()),
+  usePathname: () => "/dienstplan",
 }));
 
 // useTenantMutate scopes its keys to the signed-in account (#5006).
@@ -182,6 +188,37 @@ function shiftMap(
 
 describe("DienstplanResourceGrid warm reveal", () => {
   afterEach(() => vi.useRealTimers());
+
+  it("includes lower rows on the first commit when returning to a deep scroll position", () => {
+    vi.useFakeTimers({
+      toFake: ["requestAnimationFrame", "cancelAnimationFrame"],
+    });
+    const staff = Array.from({ length: 30 }, (_, index) => ({
+      ...member,
+      id: String(index),
+      lastName: `Person ${index + 1}`,
+    }));
+
+    render(
+      <NavigationScrollPositions
+        value={new Map([["/dienstplan", window.innerHeight * 3]])}
+      >
+        <DienstplanResourceGrid
+          staff={staff}
+          shiftsByStaff={new Map()}
+          assignmentsByStaff={new Map()}
+          summaryByStaff={new Map()}
+          weekDays={WEEK_DAYS}
+          todayIso={TODAY}
+          typesById={new Map()}
+          shiftTypes={[]}
+          onCellClick={vi.fn()}
+        />
+      </NavigationScrollPositions>,
+    );
+
+    expect(screen.getByText("Person 30, Ada")).toBeVisible();
+  });
 
   it("shows the opening rows immediately and restores the full roster after paint", () => {
     vi.useFakeTimers({

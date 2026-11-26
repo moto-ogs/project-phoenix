@@ -2,6 +2,7 @@
 
 import { ArrowRightLeft, Repeat, TriangleAlert } from "lucide-react";
 import { useInitialPaintViewport } from "~/lib/hooks/use-after-initial-paint";
+import { useHasDeepScrollPosition } from "~/components/ui/navigation-scroll-position";
 import {
   useEffect,
   useId,
@@ -743,16 +744,18 @@ export function DienstplanResourceGrid({
   // Baum, Screenreader läsen den Plan zweimal vor und die Tabulator-Reihenfolge
   // liefe durch eine unsichtbare Kopie.
   const isCompact = useMediaQuery(BELOW_LG);
+  const hasDeepScrollPosition = useHasDeepScrollPosition();
   const viewport = useInitialPaintViewport(true);
   // A desktop roster starts below the portal header, page heading, week
-  // controls and column headings. Even in compact density these occupy
-  // more than 160px, and each row needs at least 72px. On a client mount or
-  // Activity reveal, build the visible rows before the lower roster.
-  const initialRows = !viewport
-    ? staff.length
-    : isCompact
-      ? Math.ceil(viewport.height / 64)
-      : Math.max(1, Math.ceil((viewport.height - 160) / 72));
+  // controls and column headings. They occupy about 160px; a row with cell
+  // padding takes at least 72px. Only stage a return to the top: a deep
+  // history position needs the complete table height on the first paint.
+  const initialRows =
+    !viewport || hasDeepScrollPosition
+      ? staff.length
+      : isCompact
+        ? Math.ceil(viewport.height / 64)
+        : Math.max(1, Math.ceil((viewport.height - 160) / 72));
   const showFooter = initialRows >= staff.length;
   const visibleStaff = showFooter ? staff : staff.slice(0, initialRows);
   const mobileCare =
@@ -844,6 +847,8 @@ export function DienstplanResourceGrid({
           <ResourceGrid
             columns={columns}
             rows={visibleStaff}
+            // Late cell layout would change the height above restored scroll.
+            deferOffscreenPaint={false}
             getRowKey={(member) => member.id}
             renderRowHeader={renderRowHeader}
             renderCell={renderCell}

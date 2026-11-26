@@ -87,6 +87,8 @@ interface ResourceGridProps<TRow> {
    */
   readonly scrollHintId?: string;
   readonly className?: string;
+  /** Skip offscreen cell layout unless stable document height is needed for scroll restoration. */
+  readonly deferOffscreenPaint?: boolean;
 }
 
 // Declared per-column floor on the header cells. Under `table-layout: fixed`
@@ -170,6 +172,7 @@ export function ResourceGrid<TRow>({
   ariaLabel,
   scrollHintId,
   className,
+  deferOffscreenPaint = true,
 }: ResourceGridProps<TRow>) {
   const columnMinWidth = COLUMN_MIN_WIDTH_CLASS[columnMode];
   const cellClass = `flex ${RESOURCE_GRID_METRICS.cellMinHeightClass[columnMode]} w-full`;
@@ -291,7 +294,7 @@ export function ResourceGrid<TRow>({
                           />
                         ) : (
                           <div
-                            className={`${cellClass} flex-col ${cell == null ? "" : populatedCellClass}`}
+                            className={`${cellClass} flex-col ${cell != null && deferOffscreenPaint ? populatedCellClass : ""}`}
                           >
                             {cell}
                           </div>

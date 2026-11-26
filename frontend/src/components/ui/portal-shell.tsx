@@ -1,12 +1,15 @@
 "use client";
 
-import { Suspense, type ReactNode } from "react";
+import { Suspense, useState, type ReactNode } from "react";
 import { Z_LAYER } from "./overlay-styles";
 import {
   NavigationProgressBar,
   NavigationProgressProvider,
 } from "~/components/ui/navigation-progress";
-import { NavigationScrollPosition } from "~/components/ui/navigation-scroll-position";
+import {
+  NavigationScrollPosition,
+  NavigationScrollPositions,
+} from "~/components/ui/navigation-scroll-position";
 import { ButtonLink } from "~/components/ui/button";
 import {
   FIXED_LAYER_SHIFT,
@@ -65,10 +68,11 @@ export function PortalShell({
   children,
 }: PortalShellProps) {
   useFixedLayersFollowViewport();
+  const [scrollPositions] = useState(() => new Map<string, number>());
   return (
     <NavigationProgressProvider manageScroll>
       <Suspense fallback={null}>
-        <NavigationScrollPosition />
+        <NavigationScrollPosition scrollPositions={scrollPositions} />
       </Suspense>
       {/*
        * Eine Flex-Spalte von der Wurzel bis zur Inhaltshülle: so reicht die
@@ -123,7 +127,9 @@ export function PortalShell({
             className="compact:p-5 compact:max-lg:pb-[calc(7rem+env(safe-area-inset-bottom))] flex min-w-0 flex-1 flex-col p-8 focus:outline-none max-md:p-4 max-md:pb-[calc(7rem+env(safe-area-inset-bottom))]"
           >
             <div className={`relative ${Z_LAYER.raised} ${contentClassName}`}>
-              {children}
+              <NavigationScrollPositions value={scrollPositions}>
+                {children}
+              </NavigationScrollPositions>
             </div>
           </main>
         </div>
