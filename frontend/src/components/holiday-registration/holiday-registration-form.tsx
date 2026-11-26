@@ -147,16 +147,21 @@ export function HolidayRegistrationForm({
   const [draft, setDraft] = useState<RegistrationDraft>(() =>
     registrationFromFamily(family),
   );
+  const [step, setStep] = useState<HolidayRegistrationStep>("form");
+  const [captchaToken, setCaptchaToken] = useState("");
   // A reloaded offer with another form or other consent texts voids the
   // ticks, also ones set while the old texts were still on screen (#8136).
+  // The summary has no boxes to tick: the parent goes back to the form.
   const consentBasis = consentBasisOf(offer);
   const [agreedBasis, setAgreedBasis] = useState(consentBasis);
   if (agreedBasis !== consentBasis) {
     setAgreedBasis(consentBasis);
     setDraft(withoutConsents);
+    if (step === "summary") {
+      setStep("form");
+      setCaptchaToken("");
+    }
   }
-  const [step, setStep] = useState<HolidayRegistrationStep>("form");
-  const [captchaToken, setCaptchaToken] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [placements, setPlacements] = useState<
     readonly HolidayReceiptPlacement[]

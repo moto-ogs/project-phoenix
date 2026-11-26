@@ -1832,6 +1832,10 @@ describe("HolidayRegistrationForm questions of the Träger (#5198)", () => {
     const privacy = () =>
       screen.getByLabelText(/Ich bin einverstanden, dass der Träger/);
     expect(privacy()).toBeChecked();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Weiter zur Zusammenfassung" }),
+    );
+    expect(screen.getByText("Bitte prüfe deine Angaben")).toBeInTheDocument();
 
     rerender(
       form({
@@ -1842,6 +1846,7 @@ describe("HolidayRegistrationForm questions of the Träger (#5198)", () => {
         },
       }),
     );
+    // Back on the form, where the boxes are.
     expect(privacy()).not.toBeChecked();
   });
   // ADR 0311 rule 6: a failed read of the changed form says so instead of
