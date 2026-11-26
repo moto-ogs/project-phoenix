@@ -30,6 +30,14 @@ export interface PickupChange {
   readonly isNew?: boolean;
 }
 
+interface PickupPersonChange {
+  readonly requestId: string;
+  readonly informedAt: string;
+  readonly date: string;
+  readonly person: string;
+  readonly withdrawn: boolean;
+}
+
 /**
  * Die Tage ab heute mit einer geänderten Abholzeit (#6855). Eine von den
  * Eltern angefragte Zeit wird mit der Freigabe zur Ausnahme der OGS; die
@@ -38,9 +46,9 @@ export interface PickupChange {
  * einmal: gezeigt wird immer der aktuelle Stand. Zurückgenommene Ausnahmen
  * sind gelöscht und fehlen, vergangene Tage fallen heraus.
  *
- * `fresh` sind die Änderungen, die die Person noch nicht gesehen hatte: ein
- * Tag mit Ausnahme trägt „Neu“, eine zurückgenommene Änderung ohne Ausnahme
- * steht als „wieder normale Abholzeit“ mit „Neu“ dabei.
+ * `fresh` sind die ungelesenen Zeitänderungen: ein Tag mit Ausnahme trägt
+ * „Neu“, eine zurückgenommene Zeitänderung ohne Ausnahme steht als „wieder
+ * normale Abholzeit“ mit „Neu“ dabei.
  */
 export function upcomingPickupChanges(
   exceptions: readonly PickupException[],
@@ -48,7 +56,9 @@ export function upcomingPickupChanges(
   fresh: readonly PickupChangeNotice[] = [],
 ): PickupChange[] {
   const freshDays = new Set(
-    fresh.filter((notice) => !notice.withdrawn).map((notice) => notice.date),
+    fresh
+      .filter((notice) => !notice.withdrawn && notice.pickupTime !== "")
+      .map((notice) => notice.date),
   );
   const changes: PickupChange[] = exceptions
     .filter(
@@ -64,6 +74,7 @@ export function upcomingPickupChanges(
   for (const notice of fresh) {
     if (
       notice.withdrawn &&
+      notice.pickupPerson === "" &&
       notice.date >= today &&
       !changedDays.has(notice.date)
     ) {
@@ -72,6 +83,21 @@ export function upcomingPickupChanges(
     }
   }
   return changes.sort((a, b) => a.date.localeCompare(b.date));
+}
+
+function upcomingPickupPersonChanges(
+  fresh: readonly PickupChangeNotice[],
+  today: string,
+): PickupPersonChange[] {
+  return fresh
+    .filter((notice) => notice.pickupPerson !== "" && notice.date >= today)
+    .map((notice) => ({
+      requestId: notice.requestId,
+      informedAt: notice.informedAt,
+      date: notice.date,
+      person: notice.pickupPerson,
+      withdrawn: notice.withdrawn,
+    }));
 }
 
 function changeLine(change: PickupChange, today: string): string {
@@ -100,12 +126,30 @@ function ChangeLine({
   );
 }
 
+function PickupPersonChangeLine({
+  change,
+  today,
+}: Readonly<{ change: PickupPersonChange; today: string }>) {
+  return (
+    <span className="inline-flex flex-wrap items-center gap-2">
+      {change.withdrawn
+        ? `${pickupDayLabel(change.date, today)}: Abholperson zurückgenommen`
+        : `${pickupDayLabel(change.date, today)}: ${change.person} holt ab`}
+      <StatusBadge
+        compact
+        tone="red"
+        label="Neu"
+        accessibleLabel="Neu: Diese Änderung hast du noch nicht gesehen."
+      />
+    </span>
+  );
+}
+
 /**
- * Banner in der Kinderakte (#7707): Die Abholzeit hat sich an einzelnen Tagen
+ * Banner in der Kinderakte (#7707): Die Abholung hat sich an einzelnen Tagen
  * geändert, und die Person hat es noch nicht gesehen. Es listet nur diese
  * Änderungen und lässt sich per X schließen. Der dauerhafte Stand steht in
- * den Betreuungszeiten, wo jeder geänderte Tag hervorgehoben ist; wer das
- * Banner schließt, verliert also nichts.
+ * den Betreuungszeiten; wer das Banner schließt, verliert also nichts.
  */
 export function PickupChangeAlert({
   exceptions,
@@ -121,15 +165,24 @@ export function PickupChangeAlert({
   const changes = upcomingPickupChanges(exceptions ?? [], today, fresh).filter(
     (change) => change.isNew,
   );
-  if (changes.length === 0) return null;
+  const personChanges = upcomingPickupPersonChanges(fresh, today);
+  const count = changes.length + personChanges.length;
+  if (count === 0) return null;
   const message =
-    changes.length === 1 ? (
+    count === 1 && changes.length === 1 ? (
       <ChangeLine change={changes[0]!} today={today} />
+    ) : count === 1 ? (
+      <PickupPersonChangeLine change={personChanges[0]!} today={today} />
     ) : (
       <ul className="list-none space-y-0.5">
         {changes.map((change) => (
-          <li key={change.date}>
+          <li key={`time-${change.date}`}>
             <ChangeLine change={change} today={today} />
+          </li>
+        ))}
+        {personChanges.map((change) => (
+          <li key={`person-${change.requestId}@${change.informedAt}`}>
+            <PickupPersonChangeLine change={change} today={today} />
           </li>
         ))}
       </ul>
@@ -137,11 +190,11 @@ export function PickupChangeAlert({
   return (
     <Alert
       type="info"
-      title="Abholzeit an einzelnen Tagen geändert"
+      title="Abholung an einzelnen Tagen geändert"
       message={message}
       announce="off"
       onDismiss={onDismiss}
-      dismissLabel="Hinweis zur geänderten Abholzeit schließen"
+      dismissLabel="Hinweis zur geänderten Abholung schließen"
       data-testid="pickup-change-alert"
     />
   );

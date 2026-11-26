@@ -18,7 +18,7 @@ export interface PickupChangeNotice {
   pickupTime: string;
   /** Who the family named to collect the child (#8162); empty for none. */
   pickupPerson: string;
-  /** A corrected decision took the time back; the regular time applies. */
+  /** A corrected decision took the approved pickup change back. */
   withdrawn: boolean;
   informedAt: string;
 }
