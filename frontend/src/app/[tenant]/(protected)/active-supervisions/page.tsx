@@ -55,7 +55,10 @@ import {
   SchulhofSuperviseButton,
 } from "~/components/active-supervisions/states";
 import { PastBlocksSection } from "~/components/active-supervisions/past-blocks-section";
-import { PlannedNowSection } from "~/components/active-supervisions/planned-now-section";
+import {
+  PlannedNowSection,
+  PlannedOverdueChip,
+} from "~/components/active-supervisions/planned-now-section";
 import { SpontaneousActivityStart } from "~/components/active-supervisions/spontaneous-activity-start";
 import { TransitStudentsSection } from "~/components/rooms/transit-students-section";
 import {
@@ -143,6 +146,24 @@ const ACTIVE_SUPERVISIONS_INFO =
   "Hier führst du die Kinderliste deiner laufenden Aufsicht. Starte zuerst deinen Termin unter „Als Nächstes“ oder übernimm einen Raum. Halte die Liste aktuell, wenn Kinder kommen oder gehen.";
 const ACTIVE_SUPERVISIONS_BINARY_MODE_INFO =
   "Hier wäre die Kinderliste deiner Aufsicht. Deine Schule nutzt sie zurzeit nicht.";
+
+/**
+ * Telefon, Titelzeile: Zustand und Zeit des Blocks als ein Abzeichen.
+ * „seit 00:03“ allein las sich wie eine Dauer; mit „Uhr“ ist es die Uhrzeit,
+ * zu der der Block begann. „Beendet“ steht schon in der Chipzeile.
+ */
+function appRunStateLabel(
+  instance: Parameters<typeof blockTimeRange>[0] & {
+    readonly status: Parameters<typeof rosterRunState>[0];
+  },
+): string {
+  const range = blockTimeRange(instance);
+  if (instance.status === "completed") return `${range} Uhr`;
+  const state = rosterRunState(instance.status).label;
+  return range.startsWith("seit")
+    ? `${state} ${range} Uhr`
+    : `${state} · ${range} Uhr`;
+}
 
 function hasSameGroupNames(
   previous: readonly string[] | undefined,
@@ -835,11 +856,20 @@ function MeinRaumPageContent() {
         {foreignSupervisionBadge}
       </>
     ) : null;
+  // Überfällige Blöcke stehen heute direkt unter dem Kopf („Als Nächstes“).
+  // Am Telefon steht der Abschnitt hinter der Liste; der Hinweis steht als
+  // Chip am Ende der Chipzeile, nur wenn es ihn gibt.
+  const appOverdueChip = appHasRunningRoster ? (
+    <PlannedOverdueChip plannedNow={plannedNow} />
+  ) : null;
   const appStats =
     appHeadBadges && supervisionName ? (
-      <span className="flex items-center gap-1.5 whitespace-nowrap">
+      // Umbrechen statt seitlich schieben: Der Chip „überfällig“ am Ende
+      // darf nicht hinter dem Kartenrand verschwinden.
+      <span className="flex flex-wrap items-center gap-1.5 whitespace-nowrap">
         {appHeadBadges}
         {appSupervisionSummaryFor(ownSupervisionBadge !== null)}
+        {appOverdueChip}
       </span>
     ) : (
       supervisionSummary
@@ -1207,7 +1237,8 @@ function MeinRaumPageContent() {
                   </div>
                 ) : null}
                 {/* „Als Nächstes“ wie heute, nur hinter der Liste: oben
-                    stünde es zwischen Kopf und Kindern. */}
+                    stünde es zwischen Kopf und Kindern. Überfälliges nennt
+                    die Kopfkarte. */}
                 <PlannedNowSection
                   plannedNow={plannedNow}
                   hasActiveTimetableSession
@@ -1216,6 +1247,7 @@ function MeinRaumPageContent() {
                     void actions.handleStartPlannedInstance(instance)
                   }
                   flush
+                  app
                 />
                 <PastBlocksSection onReopen={reopenPastBlock} app />
               </>
@@ -1345,13 +1377,16 @@ function MeinRaumPageContent() {
               // Telefon schon voll; in der Titelzeile ist Platz. Die Kopfkarte
               // zeigt in der Titelzeile nur `data-icon-only`-Elemente, im
               // „…“-Blatt keine: die Zeit steht nur hier.
-              <span
-                data-icon-only=""
-                className="shrink-0 text-sm text-gray-600 tabular-nums"
-              >
-                {/* „seit 00:03“ las sich wie eine Dauer; mit „Uhr“ ist es
-                    die Uhrzeit, zu der der Block begann. */}
-                {blockTimeRange(currentTimetableRoster.instance)} Uhr
+              // Als Abzeichen „Aktiv seit 01:20 Uhr“: Der Zustand gehört
+              // zur Zeit, frei neben der Lupe las sie sich wie ein Fremdkörper.
+              <span data-icon-only="" className="shrink-0 tabular-nums">
+                <StatusBadge
+                  label={appRunStateLabel(currentTimetableRoster.instance)}
+                  tone={
+                    rosterRunState(currentTimetableRoster.instance.status).tone
+                  }
+                  compact
+                />
               </span>
             ) : null}
             {appHasRunningRoster ? (
