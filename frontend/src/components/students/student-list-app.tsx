@@ -18,7 +18,13 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { AlertTriangle, Clock, Route, StickyNote } from "lucide-react";
+import {
+  AlertTriangle,
+  CalendarX,
+  Clock,
+  Route,
+  StickyNote,
+} from "lucide-react";
 
 import { PresenceHint } from "~/components/students/presence/presence-hint";
 import { resolvePresence } from "~/lib/presence-status";
@@ -48,6 +54,7 @@ import type { TrackingIndicatorsResponse } from "~/lib/active-helpers";
 import { useRowClock } from "~/components/students/student-card-clock";
 import { useDeviceContext } from "~/lib/device-context";
 import { getAccessibleTextColor } from "~/lib/kit-palette";
+import { getDayPlanningNotComingLabel } from "~/lib/day-planning-helper";
 import type { DepartureMode } from "~/lib/departure-plan";
 import type { Student } from "~/lib/student-helpers";
 import {
@@ -100,8 +107,8 @@ function RowLine({
   klass: string | undefined;
   homeway: string | null;
 }>) {
-  // Klasse und Gruppe bleiben ganz oder fallen als ganze Angabe weg; nur der
-  // Heimweg darf mit „…“ enden („Kürzung trifft das Unwichtige“).
+  // Jede Angabe bleibt ganz oder fällt als Ganzes weg, von hinten: zuerst
+  // der Heimweg („Kürzung trifft das Unwichtige“); alles steht im Kind-Blatt.
   let parts: { text: string; cut?: boolean }[] = [
     klass ? { text: klass } : null,
     student.group_name ? { text: student.group_name } : null,
@@ -113,6 +120,12 @@ function RowLine({
       ? dayHomeChange(searchStudentDay(student, isToday))
       : undefined;
   let lead: ReactNode = null;
+  // „für heute“ sagt schon die Pille („Kommt heute nicht“); ohne die Doppelung
+  // bleiben Klasse und Gruppe auch am iPhone SE daneben stehen.
+  const notComing = isToday
+    ? (getDayPlanningNotComingLabel(student)?.replace(/ für heute$/, "") ??
+      null)
+    : null;
   // Neben einer Warnung folgen Klasse, Gruppe und Heimweg wie sonst; was
   // nicht mehr passt, steht ganz im Kind-Blatt.
   if (student.has_full_access !== false) {
@@ -125,6 +138,7 @@ function RowLine({
         >
           <AlertTriangle className="size-3.5 shrink-0" aria-hidden="true" />
           {overdue.label} {overdue.time}
+          <span className="sr-only">, überfällig</span>
         </span>
       );
     } else if (dayChange) {
@@ -149,6 +163,15 @@ function RowLine({
       );
       // Der geänderte Heimweg steht schon vorn.
       if (dayChange.mode) parts = parts.filter((part) => !part.cut);
+    } else if (notComing) {
+      // Wie „Kommt heute nicht (kein Plan für heute)“ auf der Karte: Die
+      // Pille nennt den Zustand, die zweite Zeile den Grund.
+      lead = (
+        <span className="flex shrink-0 items-center gap-1 font-medium text-gray-700">
+          <CalendarX className="size-3.5 shrink-0" aria-hidden="true" />
+          {notComing.charAt(0).toUpperCase() + notComing.slice(1)}
+        </span>
+      );
     } else if (student.teacher_hints?.length) {
       lead = (
         <span className="flex shrink-0 items-center gap-1 font-medium text-gray-700">
@@ -169,8 +192,7 @@ function RowLine({
   ) : null;
   if (!lead && !hintNode && parts.length === 0) return null;
   // Eine Zeile hoch: Was nicht mehr in die Zeile passt, bricht in eine
-  // verborgene Folgezeile um, statt mitten im Wort zu enden. Der Heimweg
-  // bleibt stehen, solange 4 rem frei sind, und endet dann mit „…“.
+  // verborgene Folgezeile um, statt mitten im Wort zu enden.
   const leading = Boolean(lead || hintNode);
   return (
     <span className="flex h-[1lh] min-w-0 flex-wrap items-center gap-x-1 overflow-hidden">
@@ -180,8 +202,11 @@ function RowLine({
       {parts.map((part, index) => (
         <span
           key={part.text}
+          // Allein in der Zeile darf der Heimweg mit „…“ enden; neben
+          // anderen Angaben fällt er als Ganzes weg, statt mitten im Wort
+          // abzubrechen („Geht all…“).
           className={
-            part.cut
+            part.cut && !leading && parts.length === 1
               ? "max-w-max min-w-0 shrink grow basis-16 truncate"
               : "shrink-0 whitespace-nowrap"
           }
@@ -223,14 +248,17 @@ function overdueTime(student: Student, now: Date) {
     currentLocation: student.current_location,
   };
   const candidates = [
+    // „Kommt 12:30“ wie im Kind-Blatt („Kommt 12:30, überfällig“); Rot und
+    // Warnzeichen sagen, dass die Zeit überschritten ist. Kürzer als
+    // „Ankunftszeit 12:30“: Klasse und Gruppe bleiben auch am iPhone SE stehen.
     {
-      label: "Ankunftszeit",
+      label: "Kommt",
       kind: "arrival",
       plannedTime: student.arrival_time,
       actualTime: student.actual_arrival_time,
     },
     {
-      label: "Gehzeit",
+      label: "Geht",
       kind: "pickup",
       plannedTime: student.pickup_time ?? undefined,
       actualTime: student.actual_pickup_time,
