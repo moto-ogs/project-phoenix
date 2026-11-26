@@ -607,6 +607,36 @@ describe("TraegerChildrenPage", () => {
     expect(screen.queryByText("Zander, Mia")).not.toBeInTheDocument();
   });
 
+  it("keeps an expired list withdrawn when the export's refresh fails", async () => {
+    setTestClock("2026-11-26T22:59:30Z");
+    const refresh = deferred<TraegerChildrenPage>();
+    api.fetchTraegerChildren
+      .mockResolvedValueOnce(pageOf([ZANDER]))
+      .mockReturnValueOnce(refresh.promise)
+      .mockResolvedValueOnce(pageOf([BERG], { rosterDate: "2026-11-27" }));
+    api.downloadTraegerChildren.mockRejectedValue(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    renderPage();
+    await screen.findAllByText("Zander, Mia");
+    fireEvent.click(downloadOption());
+    await waitFor(() =>
+      expect(api.fetchTraegerChildren).toHaveBeenCalledTimes(2),
+    );
+
+    // Anker: the refresh is still pending while the rejected names are gone.
+    expect(screen.queryByText("Zander, Mia")).not.toBeInTheDocument();
+    await act(async () => refresh.reject(new ApiError("unavailable", 500)));
+    await screen.findByText((text) =>
+      text.includes(catalogText("general.server", "die Liste der Kinder")),
+    );
+    expect(screen.queryByText("Zander, Mia")).not.toBeInTheDocument();
+    expect(downloadOption()).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
+    await screen.findAllByText("Berg, Anna");
+    expect(screen.queryByText("Zander, Mia")).not.toBeInTheDocument();
+  });
+
   it("keeps another school's results if the previous school's export is refused late", async () => {
     navigation.query = "schule=4";
     const download = deferred<unknown>();
@@ -805,6 +835,45 @@ describe("TraegerChildrenPage", () => {
     ).toHaveTextContent(/5\s*Kinder/);
   });
 
+  it("updates roster counts from an empty continuation without showing zero search hits", async () => {
+    api.fetchTraegerChildren
+      .mockResolvedValueOnce(pageOf([AKSOY, BERG, ZANDER]))
+      .mockResolvedValueOnce(
+        pageOf([BERG], { total: 3, matched: 2, nextCursor: "second" }),
+      )
+      .mockResolvedValueOnce(
+        pageOf([], {
+          total: 2,
+          schools: [
+            { ...BACH, children: 1 },
+            { ...LINDE, children: 1 },
+          ],
+        }),
+      );
+    renderPage();
+    await screen.findAllByText("Berg, Anna");
+    fireEvent.change(screen.getAllByPlaceholderText("Kind suchen")[0]!, {
+      target: { value: "er" },
+    });
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Weitere Kinder laden (1 von 2)",
+      }),
+    );
+
+    await waitFor(() => expect(schoolTab(BACH)).toHaveTextContent(/1$/));
+    expect(
+      screen.getByText("Kinder", { selector: "span" }).parentElement,
+    ).toHaveTextContent(/2\s*Kinder/);
+    expect(screen.getByText("gefunden").parentElement).toHaveTextContent(
+      /2\s*gefunden/,
+    );
+    expect(screen.getAllByText("Berg, Anna")[0]).toBeVisible();
+    expect(
+      screen.queryByRole("button", { name: /Weitere Kinder laden/ }),
+    ).not.toBeInTheDocument();
+  });
+
   it("drops names and starts over when the continuation has fewer schools, even without rows", async () => {
     const fresh = deferred<TraegerChildrenPage>();
     const remainingSchools = [{ ...BACH, children: 1 }];
@@ -936,6 +1005,23 @@ describe("TraegerChildrenPage", () => {
     await act(async () => fresh.resolve(pageOf([BERG])));
     expect(screen.getByText("Berg, Anna")).toBeVisible();
     expect(screen.queryByText("Aksoy, Ömer")).not.toBeInTheDocument();
+  });
+
+  it("shows and exports the server's roster even when the device is a day ahead", async () => {
+    setTestClock("2026-11-27T00:30:00+01:00");
+    const rosterDate = "2026-11-26";
+    api.fetchTraegerChildren.mockResolvedValue(
+      pageOf([ZANDER], { rosterDate }),
+    );
+    renderPage();
+    await screen.findAllByText("Zander, Mia");
+    fireEvent.click(downloadOption());
+
+    expect(api.downloadTraegerChildren).toHaveBeenCalledExactlyOnceWith(
+      "csv",
+      { schoolId: "", search: "" },
+      rosterDate,
+    );
   });
 
   it("shows no names of an earlier visit before the reiter's own read answers", async () => {

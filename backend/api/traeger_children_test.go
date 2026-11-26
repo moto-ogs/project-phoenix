@@ -54,7 +54,9 @@ func childNames(children []traegerview.TraegerChild) []string {
 // school or by a part of the name.
 func TestTraegerChildrenListTheChildrenOfEverySchoolByName(t *testing.T) {
 	t.Parallel()
-	db, router, _, _ := newTraegerPortal(t)
+	day := calendar.NewDate(2026, 8, 1)
+	now := day.BerlinMidnight().Add(12 * time.Hour)
+	db, router, _, _ := newTraegerPortalAt(t, func() calendar.Date { return day }, func() time.Time { return now })
 	organization := traegerOrganization(t, db, "Träger Kinderliste", true)
 	bach := testpkg.CreateTestSchoolInOrganization(t, db, organization, "OGS Am Bach")
 	linde := testpkg.CreateTestSchoolInOrganization(t, db, organization, "OGS Zur Linde")

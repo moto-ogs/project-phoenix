@@ -213,11 +213,13 @@ function ChildrenContent({
   const first = useFreshTraegerResource(
     listKey,
     async () => {
+      const requestedOn = berlinTodayISO();
       const result = await fetchTraegerChildren(filter);
-      // The browser's midnight check can run after a queued response. A
-      // newer server date is valid when the browser clock lags behind.
-      if (!result.rosterDate || result.rosterDate < berlinTodayISO()) {
-        refreshDay();
+      // A browser day change retires this opening. The roster date itself
+      // comes from the server; a device clock may be ahead or behind.
+      const crossedMidnight = berlinTodayISO() !== requestedOn;
+      if (crossedMidnight || !result.rosterDate) {
+        if (crossedMidnight) refreshDay();
         throw new ApiError("Children roster is no longer current", 503, {
           code: "general.unavailable",
         });
@@ -226,7 +228,14 @@ function ChildrenContent({
     },
     LIST_OBJECT,
   );
-  const { data: page, readCallbacks } = first;
+  const { data: firstPage, readCallbacks } = first;
+  const [expired, setExpired] = useState<{
+    page: TraegerChildrenPage;
+    refreshing: boolean;
+  } | null>(null);
+  const expiredPage = expired?.page === firstPage ? expired : null;
+  if (expired && !expiredPage) setExpired(null);
+  const page = expiredPage ? null : firstPage;
   const invalidate = useInvalidateMatching();
   const beginPageRead = useSWRRequestGuard();
 
@@ -241,13 +250,13 @@ function ChildrenContent({
   const [loadingPage, setLoadingPage] = useState<TraegerChildrenPage | null>(
     null,
   );
-  const shownPage = useRef<TraegerChildrenPage | null>(null);
+  const activePage = useRef({ firstPage, shown: page });
   useLayoutEffect(() => {
-    shownPage.current = page;
+    activePage.current = { firstPage, shown: page };
     return () => {
-      shownPage.current = null;
+      activePage.current = { firstPage: null, shown: null };
     };
-  }, [page]);
+  }, [firstPage, page]);
   const continued = later && later.after === page ? later : null;
   const counts = continued?.counts ?? page;
   if (counts && (counted?.day !== day || counted.schools !== counts.schools)) {
@@ -277,7 +286,8 @@ function ChildrenContent({
 
   const withdrawRefusedList = useCallback(
     (error: unknown) => {
-      if (!page || shownPage.current !== page || !isRefusal(error)) return;
+      if (!page || activePage.current.shown !== page || !isRefusal(error))
+        return;
       readCallbacks.onError(error);
       clearList();
     },
@@ -297,7 +307,7 @@ function ChildrenContent({
       const next = await fetchTraegerChildren(filter, nextCursor);
       if (
         !complete.isCurrent() ||
-        shownPage.current !== page ||
+        activePage.current.shown !== page ||
         refreshDay() !== day
       )
         return;
@@ -324,15 +334,20 @@ function ChildrenContent({
           ...next.children,
         ],
         nextCursor: next.nextCursor,
-        counts: next.children.length
-          ? { total: next.total, matched: next.matched, schools: next.schools }
-          : (counts ?? page),
+        counts: {
+          total: next.total,
+          // An empty continuation does not carry a search count.
+          matched: next.children.length
+            ? next.matched
+            : (counts ?? page).matched,
+          schools: next.schools,
+        },
       });
     } catch (err) {
       // A superseded request must not change the new list or report an error.
       if (
         !complete?.isCurrent() ||
-        shownPage.current !== page ||
+        activePage.current.shown !== page ||
         refreshDay() !== day
       )
         return;
@@ -405,7 +420,20 @@ function ChildrenContent({
     unavailable: draftPending || !page?.rosterDate,
     onError: withdrawRefusedList,
     reloadOnChanged: async () => {
-      if (page && shownPage.current === page) await first.reloadOrThrow();
+      if (!page || activePage.current.firstPage !== page) return;
+      // Retire the refused snapshot even if the read that replaces it fails.
+      activePage.current.shown = null;
+      const attempt = { page, refreshing: true };
+      setExpired(attempt);
+      setLater(null);
+      setCounted(null);
+      try {
+        await first.reloadOrThrow();
+      } finally {
+        setExpired((value) =>
+          value === attempt ? { page, refreshing: false } : value,
+        );
+      }
     },
   });
 
@@ -414,7 +442,8 @@ function ChildrenContent({
   const showSchool = schoolId === "" && schools.length > 1;
   const columns = useMemo(() => childColumns(showSchool), [showSchool]);
   const searching = term !== "";
-  const loading = !invalidSchool && !page && !first.error;
+  const loading =
+    !invalidSchool && !first.error && (!firstPage || expiredPage?.refreshing);
   const schoolError = invalidSchool
     ? { message: "Der Link enthält keine gültige Schule." }
     : schoolId &&

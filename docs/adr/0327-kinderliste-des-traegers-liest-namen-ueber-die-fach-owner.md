@@ -131,6 +131,11 @@ Structure. Ein Träger hat 2 bis über 100 Schulen mit je 50 bis 400 Kindern.
   ADR 0084.
 - Je Seite entsteht höchstens ein Protokolleintrag je gezeigter Schule, also
   höchstens 50 Tenant-Transaktionen bei einer Seite mit 50 Schulen.
+- Maßgeblich ist der von der API gelieferte Stichtag. Eine offen gelassene
+  Liste kann nach Mitternacht noch den Vortag zeigen, bis die gemeinsame
+  Datumsprüfung den Wechsel bemerkt (sie prüft einmal pro Minute). Lehnt der
+  Server vorher eine Folgeseite oder einen Download wegen des Stichtags ab,
+  blendet die Seite die alte Liste aus und lädt neu.
 - #4815 kann Vertrags- und Abrechnungsspalten ergänzen, jede von ihrem Owner
   und mit dessen Recht, und den Klick auf ein Kind, sobald es die Kinderakte
   des Trägers gibt. Bis dahin sind die Zeilen nicht anklickbar.
