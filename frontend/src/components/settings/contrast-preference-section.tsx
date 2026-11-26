@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useRef, useSyncExternalStore } from "react";
 import { Contrast } from "lucide-react";
 import { SectionCard } from "~/components/ui/section-card";
 import { SwitchRow } from "~/components/ui/switch";
@@ -13,7 +13,9 @@ import {
   applyContrastPreference,
   beginAccountContrastMutation,
   currentContrastPreference,
+  hasPendingAccountContrastMutation,
   isMoreContrastActive,
+  subscribeToAccountContrastMutation,
   subscribeToContrast,
 } from "~/lib/contrast-preference";
 import type { PortalKey } from "~/lib/portal-paths";
@@ -54,9 +56,19 @@ export function ContrastPreferenceSection({
     getServerSnapshot,
   );
   const { show: showSaveError } = useApiErrorDisplay();
+  const isSavingAccountContrast = useSyncExternalStore(
+    subscribeToAccountContrastMutation,
+    hasPendingAccountContrastMutation,
+    () => false,
+  );
   const savedPreference = useRef(currentContrastPreference());
   const queuedSave = useRef(Promise.resolve());
   const latestChoice = useRef(0);
+
+  useEffect(() => {
+    if (!isSavingAccountContrast)
+      savedPreference.current = currentContrastPreference();
+  }, [checked, isSavingAccountContrast]);
 
   function showChoiceError(err: unknown, next: boolean) {
     void showSaveError(err, {

@@ -894,7 +894,8 @@
  * Der Schalter im Profil setzt `html[data-contrast]` über ein Cookie
  * (`~/lib/contrast-preference`). Ohne Wahl folgt die Seite der
  * Systemeinstellung „Kontrast erhöhen“. Die dunklen Werte erreichen 3:1 auf
- * Weiß (WCAG 1.4.11), die hellen Grundwerte nicht.
+ * Weiß (WCAG 1.4.11). Auch der Grundwert bleibt für Bedienelemente und ihren
+ * Fokus ausreichend deutlich.
  */
 @theme inline {
   --color-field-edge: var(--moto-field-edge);
@@ -904,11 +905,11 @@
 }
 
 :root {
-  --moto-field-edge: var(--color-gray-200);
-  --moto-control-edge: var(--color-gray-300);
-  --moto-switch-edge: transparent;
-  --moto-field-focus: var(--color-gray-400);
-  --moto-edge-more: color-mix(in oklab, var(--color-gray-500) 80%, transparent);
+  --moto-field-edge: var(--color-gray-500);
+  --moto-control-edge: var(--color-gray-500);
+  --moto-switch-edge: var(--color-gray-500);
+  --moto-field-focus: var(--color-gray-900);
+  --moto-edge-more: var(--color-gray-700);
 }
 
 html[data-contrast="more"] {

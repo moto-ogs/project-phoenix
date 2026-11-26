@@ -73,9 +73,16 @@ export function ContrastAccountSync({
           applyContrastPreference(wanted);
         }
       })
-      // Ohne Antwort bleibt die Darstellung des Geräts; die nächste Seite
-      // fragt wieder.
-      .catch(() => undefined);
+      // Ohne Antwort bleibt die Darstellung des Geräts; die nächste Änderung
+      // der Sitzung oder des Portals fragt erneut.
+      .catch(() => {
+        if (
+          !cancelled &&
+          lastSynced.current?.accountId === accountId &&
+          lastSynced.current.portal === portal
+        )
+          lastSynced.current = undefined;
+      });
     return () => {
       cancelled = true;
     };
