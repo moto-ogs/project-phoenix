@@ -54,8 +54,8 @@ function sectionList(count: number): SettingsSections {
   };
 }
 
-function withTraegerAreas(): SettingsSections {
-  const own = sectionList(5);
+function withTraegerAreas(ownCount = 5): SettingsSections {
+  const own = sectionList(ownCount);
   return {
     ...own,
     tabs: [
@@ -69,6 +69,12 @@ function withTraegerAreas(): SettingsSections {
       {
         id: "settings-branding",
         label: "Briefkopf",
+        icon: settingsConcept,
+        traeger: true,
+      },
+      {
+        id: "settings-vertraege",
+        label: "Verträge",
         icon: settingsConcept,
         traeger: true,
       },
@@ -180,6 +186,24 @@ describe("staff settings navigation", () => {
   it("heads the areas of the Träger behind Mehr on the phone", async () => {
     sections.value = withTraegerAreas();
     render(<MobileBottomNav />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Mehr" }));
+
+    const sheetLink = await screen.findByRole("link", { name: "Briefkopf" });
+    const heading = screen.getByText("Vom Träger");
+    expect(
+      heading.compareDocumentPosition(sheetLink) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it("keeps the Träger heading behind Mehr when its first area stays in the bar", async () => {
+    sections.value = withTraegerAreas(2);
+    render(<MobileBottomNav />);
+
+    expect(
+      screen.getByRole("link", { name: "Zuständigkeiten" }),
+    ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Mehr" }));
 

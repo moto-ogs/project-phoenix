@@ -123,6 +123,12 @@ export function PortalOverflowBottomNav({
   const moreItems = crowded
     ? items.filter((item) => !barItems.includes(item))
     : [];
+  // Eine Gruppenüberschrift kann am letzten Eintrag der Leiste hängen. Das
+  // Blatt beginnt dann mit dem nächsten Eintrag derselben Gruppe und muss die
+  // Überschrift selbst wiederholen.
+  const firstMoreItemHeading = moreItems[0]?.heading
+    ? undefined
+    : barItems.at(-1)?.heading;
 
   const linkProps = (item: PortalOverflowNavItem) => ({
     href: item.href,
@@ -198,29 +204,31 @@ export function PortalOverflowBottomNav({
         // die Liste: die Liste scrollt in ihr, sonst lägen die unteren Ziele
         // außer Reichweite.
         <ul className="min-h-0 space-y-2 overflow-y-auto px-4 pt-6 pb-[calc(2rem+env(safe-area-inset-bottom))]">
-          {moreItems.map((item) => (
-            <li
-              key={item.key}
-              className={
-                item.separated
-                  ? "mt-5 border-t border-gray-200 pt-5"
-                  : item.heading
-                    ? "pt-4"
-                    : undefined
-              }
-            >
-              {item.heading ? (
-                <SectionLabel className="mb-2 px-4">
-                  {item.heading}
-                </SectionLabel>
-              ) : null}
-              <PortalNavSheetLink
-                {...linkProps(item)}
-                badge={item.mark}
-                onClick={() => setMoreOpen(false)}
-              />
-            </li>
-          ))}
+          {moreItems.map((item, index) => {
+            const heading =
+              item.heading ?? (index === 0 ? firstMoreItemHeading : undefined);
+            return (
+              <li
+                key={item.key}
+                className={
+                  item.separated
+                    ? "mt-5 border-t border-gray-200 pt-5"
+                    : heading
+                      ? "pt-4"
+                      : undefined
+                }
+              >
+                {heading ? (
+                  <SectionLabel className="mb-2 px-4">{heading}</SectionLabel>
+                ) : null}
+                <PortalNavSheetLink
+                  {...linkProps(item)}
+                  badge={item.mark}
+                  onClick={() => setMoreOpen(false)}
+                />
+              </li>
+            );
+          })}
         </ul>
       }
     >
