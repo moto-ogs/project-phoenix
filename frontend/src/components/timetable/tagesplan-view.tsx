@@ -709,6 +709,9 @@ export function TagesplanView() {
         stats={
           appStats.length > 0 ? <TenantPageStats items={appStats} /> : undefined
         }
+        // Die Kennzahlen stehen am Telefon in der Titelzeile: der Kopf
+        // bleibt am SE unter 20 % der Höhe.
+        appStatsInline
         searchSlot={barInList ? undefined : dayBar}
         searchSlotHeight="natural"
         loading={showSkeleton}

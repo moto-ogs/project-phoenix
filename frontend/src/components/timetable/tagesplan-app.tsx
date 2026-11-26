@@ -29,6 +29,7 @@ import {
   blockStaffShort,
 } from "~/components/timetable/block-row-parts";
 import type { TagesplanGroup } from "~/components/timetable/tagesplan-groups";
+import { ActionBar } from "~/components/ui/action-bar";
 import { Button } from "~/components/ui/button";
 import {
   Collection,
@@ -42,6 +43,7 @@ import { Z_LAYER } from "~/components/ui/overlay-styles";
 import { PlanningDayChip } from "~/components/ui/planning/planning-context-bar";
 import { SectionCard } from "~/components/ui/section-card";
 import { SplitView, useSplitSelection } from "~/components/ui/split-view";
+import { StatusBadge } from "~/components/ui/status-badge";
 import { StatusColorBadge } from "~/components/ui/status-color-badge";
 import {
   blockChildrenLabel,
@@ -111,14 +113,14 @@ export function TagesplanDayBar({
 }>) {
   const days = weekDays(day);
   const todayInStrip = days.includes(today);
-  // Mit Monat wie das Datum am Desktop („25.11.“), damit der Tag auch
-  // über den Monatswechsel eindeutig bleibt. Nur in der schmalen
-  // Listenspalte (iPad quer) reicht der Tag.
-  // Am schmalen Telefon (SE) stießen „23.11. 24.11.“ aneinander: dort
-  // steht nur der Tag.
+  // Mit Monat wie das Datum am Desktop („25.11.“), sobald man eine andere
+  // Woche ansieht: dann bleibt der Tag auch über den Monatswechsel
+  // eindeutig. In der laufenden Woche (heute markiert) reicht der Tag; mit
+  // Monat füllte „26.11.“ die Markierung bis zum Rand. In der schmalen
+  // Listenspalte (iPad quer) und am SE steht nur der Tag.
   const { isSplit } = useDeviceContext();
   const narrow = useMediaQuery("(max-width: 389px)");
-  const withMonth = !isSplit && !narrow;
+  const withMonth = !isSplit && !narrow && !todayInStrip;
   return (
     <div className="flex items-center gap-1" data-tagesplan-day-bar="">
       <Button
@@ -217,6 +219,8 @@ interface BlockState {
   running: boolean;
   openable: boolean;
   startable: boolean;
+  /** Startbar und der Beginn ist schon vorbei („Nicht gestartet“). */
+  startOverdue: boolean;
   cancelled: boolean;
   over: boolean;
   isDuty: boolean;
@@ -262,6 +266,7 @@ function blockState(
     running,
     openable,
     startable,
+    startOverdue: startable && ctx.isToday && instance.startTime <= ctx.nowHHMM,
     cancelled,
     over,
     isDuty,
@@ -481,20 +486,6 @@ export function TagesplanApp(props: TagesplanAppProps) {
         mine={showMine && entry.instance.isAssigned}
         selected={splitId === entry.instance.id}
         onOpen={() => openEntry(entry.instance.id)}
-        action={
-          entry.state.startable && !isSplit ? (
-            <Button
-              type="button"
-              variant="success"
-              size="md"
-              disabled={startBusyId === entry.instance.id}
-              tooltip="Startet die Aufsicht für diesen Termin und öffnet sie."
-              onClick={() => onStart(entry.instance)}
-            >
-              {startBusyId === entry.instance.id ? "Startet..." : "Starten"}
-            </Button>
-          ) : undefined
-        }
       />
     );
   };
@@ -620,9 +611,42 @@ export function TagesplanApp(props: TagesplanAppProps) {
     );
   }
 
+  // Am Telefon steht „Starten“ nicht als Knopf in der Zeile (die Zeile
+  // brach dadurch auf vier Zeilen um): Die Zeile trägt „Nicht gestartet“
+  // bzw. „Startbereit“, ihr Blatt den Knopf. Der eigene startbereite Block
+  // ist die häufigste Aktion der Seite und steht in der Leiste über der
+  // Pill. Blöcke anderer startet man wie am Desktop, über ihr Blatt.
+  const ownStart = [...entries.values()]
+    .filter(
+      (entry) =>
+        entry.state.startable && (!showMine || entry.instance.isAssigned),
+    )
+    .sort((a, b) =>
+      a.instance.startTime.localeCompare(b.instance.startTime),
+    )[0];
+
   return (
     <>
       {list}
+      {ownStart && sheetEntry == null ? (
+        <ActionBar>
+          <Button
+            type="button"
+            variant="primary"
+            size="md"
+            className="min-w-0 flex-1"
+            disabled={startBusyId === ownStart.instance.id}
+            tooltip="Startet die Aufsicht für diesen Termin und öffnet sie."
+            onClick={() => onStart(ownStart.instance)}
+          >
+            <span className="truncate">
+              {startBusyId === ownStart.instance.id
+                ? "Startet..."
+                : `${ownStart.instance.title} starten`}
+            </span>
+          </Button>
+        </ActionBar>
+      ) : null}
       <OverlaySheet
         open={sheetEntry != null}
         onOpenChange={(open) => {
@@ -821,6 +845,19 @@ function blockChips(state: BlockState, next: boolean, mine: boolean) {
         compact
       />,
     );
+  } else if (state.startable) {
+    chips.push(
+      <StatusColorBadge
+        key="state"
+        label={startChipLabel(state)}
+        color={
+          state.startOverdue
+            ? LOCATION_COLORS.WARNING
+            : LOCATION_COLORS.GROUP_ROOM
+        }
+        compact
+      />,
+    );
   } else if (next) {
     chips.push(
       <StatusColorBadge
@@ -844,6 +881,11 @@ function blockChips(state: BlockState, next: boolean, mine: boolean) {
   return chips;
 }
 
+/** Startbar: schon über den Beginn „Nicht gestartet“, sonst „Startbereit“. */
+function startChipLabel(state: BlockState): string {
+  return state.startOverdue ? "Nicht gestartet" : "Startbereit";
+}
+
 /** Die Wörter der Abzeichen von `blockChips`, in derselben Reihenfolge. */
 function chipLabels(state: BlockState, next: boolean, mine: boolean) {
   return [
@@ -851,9 +893,11 @@ function chipLabels(state: BlockState, next: boolean, mine: boolean) {
       ? "Läuft jetzt"
       : state.cancelled
         ? "Fällt aus"
-        : next
-          ? "Als Nächstes"
-          : null,
+        : state.startable
+          ? startChipLabel(state)
+          : next
+            ? "Als Nächstes"
+            : null,
     mine ? "Mit dir" : null,
   ];
 }
@@ -893,15 +937,12 @@ function BlockRow({
   mine,
   selected,
   onOpen,
-  action,
 }: Readonly<{
   entry: Entry;
   next: boolean;
   mine: boolean;
   selected: boolean;
   onOpen: () => void;
-  /** „Starten“ am eigenen Block wie am Desktop, ohne erst das Blatt. */
-  action?: ReactNode;
 }>) {
   const { instance, state } = entry;
   const quiet = state.over ? "text-gray-600" : "text-gray-900";
@@ -950,7 +991,6 @@ function BlockRow({
     <CollectionRow
       onClick={onOpen}
       selected={selected}
-      action={action}
       wrap
       // Beginnt mit dem sichtbaren Text des Ziels (Titel), damit
       // Sprachsteuerung den Block beim Namen findet.
@@ -1006,11 +1046,17 @@ function BlockRow({
           )}
         >
           {instance.title}
+          {/* Der Bereich als graues Abzeichen: als lose graue Schrift las er
+              sich wie abgeschnittener Text hinter dem Titel. */}
           {instance.planningTrackName ? (
             <>
               {" "}
-              <span className="inline-block text-xs font-normal text-gray-600">
-                {instance.planningTrackName}
+              <span className="inline-flex align-[1px] font-normal">
+                <StatusBadge
+                  tone="gray"
+                  size="xs"
+                  label={instance.planningTrackName}
+                />
               </span>
             </>
           ) : null}
