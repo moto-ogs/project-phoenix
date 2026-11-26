@@ -20,11 +20,14 @@ func TestSchoolEmailRequiredStopsOnSchoolsWithoutAddress(t *testing.T) {
 	db := testpkg.SetupIsolatedTestDB(t)
 	ctx := context.Background()
 	require.NoError(t, schoolEmailRequiredDown(ctx, db))
+	tenantID, _ := testpkg.CreateTestTenant(t, db)
+	var organizationID int64
+	require.NoError(t, db.NewRaw(`SELECT organization_id FROM platform.schools WHERE id = ?`, tenantID).Scan(ctx, &organizationID))
 
 	insertSchool := func(slug string, email any, deleted bool) (int64, error) {
 		var id int64
 		err := db.NewRaw(`INSERT INTO platform.schools (organization_id, name, slug, subdomain, email, deleted_at)
-			VALUES (1, ?, ?, ?, ?, CASE WHEN ? THEN NOW() END) RETURNING id`, slug, slug, slug, email, deleted).Scan(ctx, &id)
+			VALUES (?, ?, ?, ?, ?, CASE WHEN ? THEN NOW() END) RETURNING id`, organizationID, slug, slug, slug, email, deleted).Scan(ctx, &id)
 		return id, err
 	}
 	deletedWithout, err := insertSchool("ohne-adresse-geloescht", nil, true)
@@ -34,7 +37,7 @@ func TestSchoolEmailRequiredStopsOnSchoolsWithoutAddress(t *testing.T) {
 
 	err = schoolEmailRequiredUp(ctx, db)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), fmt.Sprintf("2 school(s) have no contact address (IDs {%d,%d})", deletedWithout, blank))
+	assert.Contains(t, err.Error(), fmt.Sprintf("2 school(s) have no contact address (IDs {%d,%d}, soft-deleted ones included)", deletedWithout, blank))
 	assert.Equal(t, 2, countSchoolsWithoutEmail(ctx, t, db), "the migration fills in nothing")
 
 	_, err = db.NewRaw(`UPDATE platform.schools SET email = 'kontakt@' || subdomain || '.example.test' WHERE id IN (?, ?)`,

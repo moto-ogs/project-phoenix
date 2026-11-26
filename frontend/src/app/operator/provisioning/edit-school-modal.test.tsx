@@ -248,7 +248,7 @@ describe("EditSchoolModal", () => {
   );
 
   it.each(["button", "form"])(
-    "saves a school without an email once it has one, via %s",
+    "a school without an email saves once one is entered, via %s",
     async (submitVia) => {
       mockUpdateSchool.mockResolvedValue(mockSchool);
 

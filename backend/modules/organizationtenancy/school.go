@@ -201,10 +201,6 @@ func ValidateSchool(organizationID int64, name, slug, subdomain, email string) e
 	if err := ValidateSubdomain(subdomain); err != nil {
 		return err
 	}
-	// The database rejects a school without a contact address (#7434).
-	if strings.TrimSpace(email) == "" {
-		return invalidSchool("email is required")
-	}
 	if len(email) > MaxEmailLength {
 		return invalidSchool("email must not exceed 255 characters")
 	}

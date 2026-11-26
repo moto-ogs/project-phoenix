@@ -26,9 +26,11 @@ func init() {
 // schools included.
 //
 // The migration fills in nothing: a school without an address stops the
-// migration with the IDs to fix in the operator dashboard ("Angaben
-// fehlen"). A blank address counts as missing, which the check constraint
-// keeps true for every later write.
+// migration with its ID. Live schools get theirs in the operator dashboard
+// ("Angaben fehlen"); that list does not show soft-deleted ones. A blank
+// address counts as missing, which the check constraint keeps true for
+// every later write: the operator forms check it too, other writers meet
+// the constraint.
 const schoolEmailRequiredUpSQL = `
 DO $$
 DECLARE
@@ -38,7 +40,7 @@ BEGIN
 	FROM platform.schools
 	WHERE email IS NULL OR btrim(email) = '';
 	IF missing IS NOT NULL THEN
-		RAISE EXCEPTION 'platform.schools.email: % school(s) have no contact address (IDs %); add one in the operator dashboard first (#7434)',
+		RAISE EXCEPTION 'platform.schools.email: % school(s) have no contact address (IDs %, soft-deleted ones included); set an address for each before this migration runs (#7434)',
 			cardinality(missing), missing;
 	END IF;
 END
