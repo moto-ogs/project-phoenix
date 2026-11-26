@@ -7,6 +7,7 @@ import { useSWRAuth } from "~/lib/swr";
 import {
   CheckIcon,
   FunnelSimpleIcon,
+  MagnifyingGlassIcon,
   NotePencilIcon,
 } from "@phosphor-icons/react";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
@@ -77,6 +78,9 @@ function MessagesInboxContent() {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [onlyUnread, setOnlyUnread] = useState(false);
+  // App (Runde 15): Suche und Filter öffnet die Lupe im Kopf; offen stehen
+  // sie in der klebenden Leiste unter den Reitern und rollen nicht weg.
+  const [appSearchOpen, setAppSearchOpen] = useState(false);
   const [composeOpen, setComposeOpen] = useState(false);
 
   // SWR caches the inbox per filter across navigation, so returning from a
@@ -274,6 +278,38 @@ function MessagesInboxContent() {
   // App: findet die Suche nichts, bleibt die Karte mit der Suche stehen,
   // sonst verschwände das Suchfeld mit dem Ergebnis.
   const appFilterEmpty = isApp && !hasThreads && filtersActive && !loadFailed;
+  const appSearchShown = isApp && (appSearchOpen || filtersActive);
+  const appSearchButton = isApp ? (
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon"
+      aria-label={appSearchShown ? "Suche schließen" : "Nachrichten suchen"}
+      aria-expanded={appSearchShown}
+      // Abstand zum „…“: beide behalten ihre 44-px-Trefferfläche.
+      className="mr-3"
+      tooltip={
+        appSearchShown
+          ? "Schließt Suche und Filter und zeigt wieder alle Unterhaltungen."
+          : "Öffnet Suche und Filter über der Liste."
+      }
+      onClick={() => {
+        if (appSearchShown) {
+          setAppSearchOpen(false);
+          setSearchTerm("");
+          setOnlyUnread(false);
+        } else {
+          setAppSearchOpen(true);
+        }
+      }}
+    >
+      {appSearchShown ? (
+        <CheckIcon size={20} aria-hidden="true" />
+      ) : (
+        <MagnifyingGlassIcon size={20} aria-hidden="true" />
+      )}
+    </Button>
+  ) : null;
   const bodyReplaced =
     !showSkeleton && !hasThreads && !composeOpen && !appFilterEmpty;
 
@@ -282,12 +318,11 @@ function MessagesInboxContent() {
       info={MESSAGES_INFO}
       title="Nachrichten"
       tabs={messagesTabs("conversations")}
-      // App: Die Kennzahlen des Desktops stehen als erste Zeile der Liste
-      // (Runde 11): eine Zeile weniger in der Kopfkarte, und der Filter
-      // „Nur ungelesene“ ist nicht zugleich Kennzahl.
-      stats={isApp ? undefined : inboxSummary}
+      // App (Runde 15): Die Kennzahlen stehen wie auf den anderen Seiten als
+      // Chips im Kopf; „ungelesen“ filtert die Liste.
+      stats={inboxSummary}
       statsLoading={showSkeleton}
-      actions={composeButton}
+      actions={isApp ? appSearchButton : composeButton}
       overflowMenu={[
         // Only offered while something is unread: an entry that can do
         // nothing is not in the menu. Own counter or inbox rows, because a
@@ -313,9 +348,10 @@ function MessagesInboxContent() {
             ]
           : []),
       ]}
-      // App (Runde 13): Suche und Filter stehen oben in der Liste und
-      // rollen mit ihr weg; die Kopfkarte trägt nur Titel und Reiter und
-      // bleibt am SE unter 20 % der Höhe.
+      // App (Runde 15): Suche und Filter stehen nach Tipp auf die Lupe in
+      // der klebenden Leiste unter den Reitern; geschlossen bleibt die
+      // Kopfkarte am SE unter 20 % der Höhe.
+      searchSlot={appSearchShown ? appToolbar : undefined}
       search={
         isApp
           ? undefined
@@ -390,15 +426,7 @@ function MessagesInboxContent() {
         {isApp ? (
           <MessagesInboxApp
             threads={filteredThreads}
-            summary={
-              threads === undefined
-                ? undefined
-                : `${threadList.length} ${
-                    threadList.length === 1 ? "Unterhaltung" : "Unterhaltungen"
-                  } · ${unreadThreads} ungelesen`
-            }
             listAction={isSplit ? appComposeButton : null}
-            header={appToolbar}
             empty={
               <EmptyState
                 variant="compact"
