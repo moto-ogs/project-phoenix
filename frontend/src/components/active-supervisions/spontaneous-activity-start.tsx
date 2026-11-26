@@ -137,9 +137,8 @@ export function SpontaneousActivityStart({
   // den Grund. Er bleibt von belegten Räumen getrennt, damit eine veraltete
   // Auswahl die passende Sperrmeldung erhält.
   const today = useBerlinToday();
-  const { closedRooms, isLoading: isLoadingClosures } = useClosedRoomsOnState(
-    isOpen ? today : null,
-  );
+  const closures = useClosedRoomsOnState(isOpen ? today : null);
+  const { closedRooms, isLoading: isLoadingClosures } = closures;
   const occupiedRoomIdSet = useMemo(
     () => new Set(occupiedRoomIds),
     [occupiedRoomIds],
@@ -165,7 +164,7 @@ export function SpontaneousActivityStart({
   const staffList = useSWRAuth(isOpen ? staffResource.key() : null, () =>
     staffResource.fetcher(),
   );
-  const resources = [activityList, roomList, staffList];
+  const resources = [activityList, roomList, staffList, closures];
   const isLoadingRefs =
     isOpen &&
     (isLoadingClosures ||

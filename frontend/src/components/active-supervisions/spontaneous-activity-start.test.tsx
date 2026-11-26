@@ -11,6 +11,7 @@ import type React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { pagedJson, plainResponse } from "~/test/mocks/plain-session-fetch";
+import { ApiError } from "~/lib/api-error";
 vi.mock(
   "~/lib/session-cache",
   () => import("~/test/mocks/plain-session-fetch"),
@@ -55,6 +56,8 @@ const mocks = vi.hoisted(() => ({
       }
     >(),
     isLoading: false,
+    error: undefined as unknown,
+    mutate: vi.fn(),
   },
 }));
 
@@ -75,6 +78,10 @@ vi.mock("~/lib/hooks/use-closed-rooms", () => ({
   useClosedRoomsOnState: () => ({
     closedRooms: mocks.closedRooms.value,
     isLoading: mocks.closedRooms.isLoading,
+    data:
+      mocks.closedRooms.isLoading || mocks.closedRooms.error ? undefined : [],
+    error: mocks.closedRooms.error,
+    mutate: mocks.closedRooms.mutate,
   }),
 }));
 
@@ -155,6 +162,8 @@ describe("SpontaneousActivityStart", () => {
     vi.clearAllMocks();
     mocks.closedRooms.value = new Map();
     mocks.closedRooms.isLoading = false;
+    mocks.closedRooms.error = undefined;
+    mocks.closedRooms.mutate.mockReset();
     mocks.getActivities.mockResolvedValue([
       { id: "7", name: "Freispiel" },
       { id: "9", name: "Basteln" },
@@ -418,6 +427,20 @@ describe("SpontaneousActivityStart", () => {
     expect(
       screen.getByRole("button", { name: "Aktivität starten" }),
     ).toHaveAttribute("aria-disabled", "true");
+  });
+
+  it("shows a failed closure lookup and reloads it on retry", async () => {
+    mocks.closedRooms.error = new ApiError("closures down", 503, {
+      code: "general.unavailable",
+    });
+    render(<SpontaneousActivityStart onStart={vi.fn()} />);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /Spontane Aktivität starten/ }),
+    );
+
+    fireEvent.click(await screen.findByRole("button", { name: "Wiederholen" }));
+    expect(mocks.closedRooms.mutate).toHaveBeenCalledOnce();
   });
 
   it("disables an occupied room so it cannot be selected for a new activity", async () => {

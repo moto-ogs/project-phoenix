@@ -16,6 +16,9 @@ const NO_CLOSED_ROOMS: ReadonlyMap<string, RoomClosure> = new Map();
 export function useClosedRoomsOnState(day: string | null | undefined): {
   readonly closedRooms: ReadonlyMap<string, RoomClosure>;
   readonly isLoading: boolean;
+  readonly data: readonly RoomClosure[] | undefined;
+  readonly error: unknown;
+  readonly mutate: () => void;
 } {
   const validDay = day && /^\d{4}-\d{2}-\d{2}$/.test(day) ? day : null;
   const { data, error } = useSWRAuth(
@@ -32,6 +35,9 @@ export function useClosedRoomsOnState(day: string | null | undefined): {
   return {
     closedRooms,
     isLoading: validDay !== null && data === undefined && error === undefined,
+    data,
+    error,
+    mutate: () => void mutate(),
   };
 }
 
