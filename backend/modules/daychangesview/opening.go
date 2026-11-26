@@ -9,6 +9,11 @@ type DayOpening struct {
 	Name     string `json:"name"`
 	OpensAt  string `json:"opens_at"`
 	ClosesAt string `json:"closes_at"`
+	// RegularPickupAfterClosing is the child's weekly pickup time ("15:04")
+	// when it lies after ClosesAt (#8173), set by the child's day only. The
+	// projection drops it when the child's day has its own pickup or absence.
+	// Not on the staff wire: the staff portal is #8172.
+	RegularPickupAfterClosing *string `json:"-"`
 }
 
 // markPickupsAfterClosing marks the changed pickups of the day after the
@@ -26,6 +31,7 @@ func markPickupsAfterClosing(entries []Entry) {
 	if closesAt == "" {
 		return
 	}
+	dropRegularPickupsBesideDayChanges(entries)
 	mark := func(kind Kind, child *Child) {
 		if kind == KindChildPickupChanged && child != nil && child.PickupTime != nil && *child.PickupTime > closesAt {
 			child.AfterClosing = true
@@ -38,5 +44,23 @@ func markPickupsAfterClosing(entries []Entry) {
 				mark(summary.Items[j].Kind, &summary.Items[j].Child)
 			}
 		}
+	}
+}
+
+// dropRegularPickupsBesideDayChanges keeps the weekly pickup conflict only
+// on a day without a pickup change, absence or going-home-alone entry of the
+// child (#8173): those replace the weekly pickup.
+func dropRegularPickupsBesideDayChanges(entries []Entry) {
+	for _, entry := range entries {
+		if entry.Kind != KindChildPickupChanged && entry.Kind != KindChildAbsent &&
+			entry.Kind != KindChildGoesAlone {
+			continue
+		}
+		for i := range entries {
+			if entries[i].Opening != nil {
+				entries[i].Opening.RegularPickupAfterClosing = nil
+			}
+		}
+		return
 	}
 }

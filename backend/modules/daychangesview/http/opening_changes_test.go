@@ -27,7 +27,8 @@ func insertOpeningChange(t *testing.T, db *testpkg.DB, tenantID int64, start, en
 // child's day of the parents portal (#8170): the own child sees the
 // school's change and a changed pickup after it as conflict, a child of
 // another school only its own school's change, and a child without
-// parent_portal.access nothing.
+// parent_portal.access nothing. A weekly pickup after the closing time is a
+// conflict too, unless the day has its own pickup (#8173).
 func TestChildDayOpeningChanges(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
@@ -43,6 +44,19 @@ func TestChildDayOpeningChanges(t *testing.T) {
 	mia := testpkg.CreateTestStudent(t, db, "Mia", "Schneider", "2b")
 	testpkg.CreateTestStudentGuardianLink(t, db, mia.ID, chain.GuardianProfileID, "primary_guardian")
 	testpkg.CreateTestPickupException(t, db, mia.ID, day, staff.ID, "12:30", "Zahnarzt")
+	// Weekly pickups (#8173): the day's own pickup replaces them.
+	wednesday := int(day.Weekday())
+	testpkg.CreateTestPickupSchedule(t, db, chain.StudentID, wednesday, staff.ID, "16:00")
+	testpkg.CreateTestPickupSchedule(t, db, mia.ID, wednesday, staff.ID, "15:00")
+	// A sibling with only its weekly pickup after the closing time, and one
+	// whose weekly pickup lies before it or on another weekday.
+	ben := testpkg.CreateTestStudent(t, db, "Ben", "Schneider", "2a")
+	testpkg.CreateTestStudentGuardianLink(t, db, ben.ID, chain.GuardianProfileID, "primary_guardian")
+	testpkg.CreateTestPickupSchedule(t, db, ben.ID, wednesday, staff.ID, "15:30")
+	ida := testpkg.CreateTestStudent(t, db, "Ida", "Schneider", "4a")
+	testpkg.CreateTestStudentGuardianLink(t, db, ida.ID, chain.GuardianProfileID, "primary_guardian")
+	testpkg.CreateTestPickupSchedule(t, db, ida.ID, wednesday, staff.ID, "12:45")
+	testpkg.CreateTestPickupSchedule(t, db, ida.ID, wednesday+1, staff.ID, "16:00")
 
 	lena := testpkg.CreateTestStudent(t, db, "Lena", "Schneider", "3c")
 	lenaLink := testpkg.CreateTestStudentGuardianLink(t, db, lena.ID, chain.GuardianProfileID, "pickup_only")
@@ -82,7 +96,11 @@ func TestChildDayOpeningChanges(t *testing.T) {
 		for _, entry := range envelope.Data.Entries {
 			switch entry.Kind {
 			case "opening_changed":
-				out = append(out, fmt.Sprintf("opening %s %s-%s", *entry.OpeningName, *entry.OpensAt, *entry.ClosesAt))
+				opening := fmt.Sprintf("opening %s %s-%s", *entry.OpeningName, *entry.OpensAt, *entry.ClosesAt)
+				if entry.PickupAfterClosing {
+					opening += " regular=" + *entry.PickupTime
+				}
+				out = append(out, opening)
 			case "child_pickup_changed":
 				out = append(out, fmt.Sprintf("pickup %s after=%t", *entry.PickupTime, entry.PickupAfterClosing))
 			}
@@ -104,6 +122,18 @@ func TestChildDayOpeningChanges(t *testing.T) {
 		code, _, body := readChildDay(t, router, token, mia.ID)
 		require.Equal(t, http.StatusOK, code, body)
 		assert.Equal(t, []string{"opening Zeugnistage 08:00-13:00", "pickup 12:30 after=false"}, entries(body))
+	})
+
+	t.Run("a weekly pickup after the closing time is a conflict", func(t *testing.T) {
+		code, _, body := readChildDay(t, router, token, ben.ID)
+		require.Equal(t, http.StatusOK, code, body)
+		assert.Equal(t, []string{"opening Zeugnistage 08:00-13:00 regular=15:30"}, entries(body))
+	})
+
+	t.Run("a weekly pickup before the closing time is no conflict", func(t *testing.T) {
+		code, _, body := readChildDay(t, router, token, ida.ID)
+		require.Equal(t, http.StatusOK, code, body)
+		assert.Equal(t, []string{"opening Zeugnistage 08:00-13:00"}, entries(body))
 	})
 
 	t.Run("a child of another school shows only its own school's change", func(t *testing.T) {

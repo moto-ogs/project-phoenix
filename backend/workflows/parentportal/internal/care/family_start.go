@@ -67,17 +67,26 @@ func (s *Service) FamilyStart(ctx context.Context, accountID int64, studentID *i
 // readFamilySchool fills the features and the day of one school's children.
 // A failed field is missing for this school only.
 func (s *Service) readFamilySchool(ctx context.Context, accountID int64, school familySchool, now time.Time, features map[int64]ChildFeatureFlags, today map[int64]*TodayStatus) {
-	if settings, err := s.resolveChildFeatureSettings(ctx, school.tenantID, now); err != nil {
+	if schoolFeatures, err := s.familySchoolFeatures(ctx, accountID, school, now); err != nil {
 		s.Logger.Warn("parent_family_features_unavailable",
 			"school_id", school.tenantID,
 			"error", err.Error(),
 		)
 	} else {
-		maps.Copy(features, s.featuresForSchool(ctx, accountID, school.tenantID, school.children, settings))
+		maps.Copy(features, schoolFeatures)
 	}
 	// A failed day still yields the days that needed no read.
 	statuses, _ := s.todayForSchool(ctx, school.tenantID, school.children, now)
 	maps.Copy(today, statuses)
+}
+
+// familySchoolFeatures resolves the features of one school's children.
+func (s *Service) familySchoolFeatures(ctx context.Context, accountID int64, school familySchool, now time.Time) (map[int64]ChildFeatureFlags, error) {
+	settings, err := s.resolveChildFeatureSettings(ctx, school.tenantID, now)
+	if err != nil {
+		return nil, err
+	}
+	return s.featuresForSchool(ctx, accountID, school.tenantID, school.children, settings)
 }
 
 // familySchools groups the children the account may see by school, in the
