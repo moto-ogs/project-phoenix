@@ -18,7 +18,7 @@ import {
   HomeBoard,
   preloadHomeBoardEditor,
 } from "~/components/home/home-board";
-import { HomeApp } from "~/components/home/home-app";
+import { HomeApp, HomeHeadStatus } from "~/components/home/home-app";
 import { NowStrip } from "~/components/home/now-strip";
 import { PickupExtensionTodos } from "~/components/home/pickup-extension-todos";
 import { BookingLeftoverTodos } from "~/components/home/booking-leftover-todos";
@@ -550,7 +550,30 @@ function HomeContent() {
       }
       prominent
       statsLoading={isLoading}
-      stats={editing ? undefined : headerStats}
+      // Beim Rollen nennt der schmale Kopf neben dem Gruß den Tag.
+      appCompactStats={
+        appHead && !editing ? (
+          <span className="whitespace-nowrap tabular-nums">
+            {headerStats.replace(
+              /^(\S{2})\S*, (\d{2}\.\d{2}\.)\d{4}$/,
+              "$1, $2",
+            )}
+          </span>
+        ) : undefined
+      }
+      stats={
+        editing ? undefined : appHead ? (
+          // Telefon: Datum und Jetzt in der Kopfkarte statt einer zweiten
+          // Karte unter dem Gruß (#8070).
+          <HomeHeadStatus
+            access={access}
+            context={blockContext}
+            date={headerStats}
+          />
+        ) : (
+          headerStats
+        )
+      }
       overflowMenu={
         appHead && !editing
           ? [
