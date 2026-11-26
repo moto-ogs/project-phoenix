@@ -109,8 +109,8 @@ function RowLine({
       ? dayHomeChange(searchStudentDay(student, isToday))
       : undefined;
   let lead: ReactNode = null;
-  // Neben einer Warnung nur, was zu ihr gehört, damit nichts abgeschnitten
-  // wird: zur Ankunft die Klasse, zur Gehzeit der Heimweg.
+  // Neben einer Warnung folgen Klasse, Gruppe und Heimweg wie sonst; was
+  // nicht mehr passt, endet mit „…“ und steht ganz im Kind-Blatt.
   let rest = subtitle;
   if (student.has_full_access !== false) {
     const overdue = isToday ? overdueTime(student, now) : null;
@@ -124,7 +124,6 @@ function RowLine({
           {overdue.label} {overdue.time}
         </span>
       );
-      rest = (overdue.kind === "pickup" ? homeway : klass) ?? "";
     } else if (dayChange) {
       // Wie der orange Streifen der Karte (#3946): heute anders als sonst.
       const time = dayChange.time ? (student.pickup_time ?? null) : null;
@@ -145,7 +144,9 @@ function RowLine({
           {[mode, time ? `geht ${time}` : null].filter(Boolean).join(", ")}
         </span>
       );
-      rest = klass ?? "";
+      // Der geänderte Heimweg steht schon vorn.
+      if (dayChange.mode)
+        rest = [klass, student.group_name].filter(Boolean).join(" · ");
     } else if (student.teacher_hints?.length) {
       lead = (
         <span className="flex shrink-0 items-center gap-1 font-medium text-gray-700">
@@ -274,6 +275,19 @@ function alphabeticGroups(students: readonly Student[]): StudentListAppGroup[] {
   }));
 }
 
+// Kleine Telefone (iPhone SE, Höhe unter 700 px): Zeilen 47 statt 59 px und
+// Buchstabenköpfe 28 statt 36 px, damit bis über der Aktionsleiste sieben
+// Kinder ganz zu sehen sind. Alle Angaben bleiben, nur Innenabstand und
+// Zeilenhöhe der zweiten Zeile schrumpfen; die Zeile bleibt 44 px Ziel.
+const SHORT_PHONE_DENSE = [
+  "phone:[@media(max-height:700px)]:[&_[data-collection-row]]:min-h-11",
+  "phone:[@media(max-height:700px)]:[&_[data-collection-row]]:py-1",
+  "phone:[@media(max-height:700px)]:[&_[data-row-target]+span]:mt-0",
+  "phone:[@media(max-height:700px)]:[&_[data-row-target]+span]:leading-[1.125rem]",
+  "phone:[@media(max-height:700px)]:[&_[data-collection-group]>div:first-child]:min-h-7",
+  "phone:[@media(max-height:700px)]:[&_[data-collection-group]>div:first-child]:py-1",
+].join(" ");
+
 export function StudentListApp({
   students,
   groups,
@@ -396,7 +410,7 @@ export function StudentListApp({
   }, []);
 
   const list = (
-    <Collection label="Kinder" className="phone:-mt-1.5">
+    <Collection label="Kinder" className={`phone:-mt-1.5 ${SHORT_PHONE_DENSE}`}>
       {shownGroups.length > 0 ? (
         shownGroups.map((group) => (
           <CollectionGroup
