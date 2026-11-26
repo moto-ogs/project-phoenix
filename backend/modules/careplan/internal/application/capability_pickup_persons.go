@@ -48,6 +48,15 @@ func (s *Service) SetPickupPerson(ctx context.Context, person careplan.PickupPer
 	if err != nil {
 		return careplan.PickupPerson{}, err
 	}
+	person, err = validatedPickupPerson(person, guardian)
+	if err != nil {
+		return careplan.PickupPerson{}, err
+	}
+	person.CreatedBy = optionalStaff(staffID)
+	return s.savePickupPerson(ctx, person, date, guardian)
+}
+
+func validatedPickupPerson(person careplan.PickupPerson, guardian *careplan.PickupPersonGuardianAuthorization) (careplan.PickupPerson, error) {
 	person.Name = strings.Join(strings.Fields(person.Name), " ")
 	if person.Name == "" || utf8.RuneCountInString(person.Name) > careplan.PickupPersonNameMaxLength ||
 		person.GuardianProfileID != nil && *person.GuardianProfileID <= 0 {
@@ -57,27 +66,38 @@ func (s *Service) SetPickupPerson(ctx context.Context, person careplan.PickupPer
 		(guardian == nil || guardian.RelationshipID <= 0 || guardian.Weekday < 1 || guardian.Weekday > 5) {
 		return careplan.PickupPerson{}, careplan.ErrPickupPersonInvalid
 	}
-	person.CreatedBy = optionalStaff(staffID)
+	return person, nil
+}
+
+func (s *Service) savePickupPerson(ctx context.Context, person careplan.PickupPerson, date calendar.Date, guardian *careplan.PickupPersonGuardianAuthorization) (careplan.PickupPerson, error) {
 	var saved careplan.PickupPerson
-	err = s.run(ctx, "save_pickup_person", func(txCtx context.Context, stats *domain.OperationStats) error {
+	err := s.run(ctx, "save_pickup_person", func(txCtx context.Context, stats *domain.OperationStats) error {
 		if err := s.LockStudentAndExceptionDay(txCtx, person.StudentID, date.String()); err != nil {
 			return err
 		}
-		if guardian != nil {
-			allowed, permissionStats, err := s.pickupPersons.LockGuardianPickupPermission(txCtx, guardian.RelationshipID, guardian.Weekday)
-			stats.Add(permissionStats)
-			if err != nil {
-				return err
-			}
-			if !allowed {
-				return careplan.ErrPickupPersonGuardianNotAuthorized
-			}
+		if err := s.authorizePickupPersonGuardian(txCtx, stats, guardian); err != nil {
+			return err
 		}
 		var err error
 		saved, *stats, err = s.pickupPersons.SavePickupPerson(txCtx, person)
 		return err
 	})
 	return saved, err
+}
+
+func (s *Service) authorizePickupPersonGuardian(ctx context.Context, stats *domain.OperationStats, guardian *careplan.PickupPersonGuardianAuthorization) error {
+	if guardian == nil {
+		return nil
+	}
+	allowed, permissionStats, err := s.pickupPersons.LockGuardianPickupPermission(ctx, guardian.RelationshipID, guardian.Weekday)
+	stats.Add(permissionStats)
+	if err != nil {
+		return err
+	}
+	if !allowed {
+		return careplan.ErrPickupPersonGuardianNotAuthorized
+	}
+	return nil
 }
 
 // DeletePickupPerson removes the day's pickup person under the care-day
