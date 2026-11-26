@@ -53,6 +53,7 @@ import {
   startTransition,
   useCallback,
   useEffect,
+  useEffectEvent,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -197,7 +198,7 @@ import {
   useAttendanceWebEnabled,
   useTenantSlugSafe,
 } from "~/lib/tenant-context";
-import { useSWRAuth, useImmutableSWR } from "~/lib/swr";
+import { useSWRAuth, useImmutableSWR, useLiveRefreshInterval } from "~/lib/swr";
 import { tenantListKeys } from "~/lib/swr/tenant-list-keys";
 import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
 import {
@@ -1618,6 +1619,8 @@ function SearchPageContent() {
   const rosterProbeKey = studentKeys.searchRosterProbe(wholeListParams);
   const useRosterProbe = linkedSearch && searchTerm !== "";
   const activeRosterKey = useRosterProbe ? rosterProbeKey : wholeListKey;
+  const liveRefreshInterval = useLiveRefreshInterval();
+  const refreshInterval = awaitsSearchFilters ? 0 : liveRefreshInterval;
   const scopeKey = useSWRCacheKey();
   const scopedRosterKey = scopeKey(wholeListKey);
   const scopedProbeKey = scopeKey(rosterProbeKey);
@@ -1695,6 +1698,7 @@ function SearchPageContent() {
       recoverDiscardedRefusals: false,
       isPaused: () => !useRosterProbe,
       revalidateIfStale: false,
+      refreshInterval: useRosterProbe ? refreshInterval : 0,
       onSuccess() {
         if (scopedRosterKey !== null) liftRefusal(scopedRosterKey);
       },
@@ -1734,8 +1738,8 @@ function SearchPageContent() {
       // Retain prior rows only if they are still readable for that key.
       const expandedRoster =
         readers?.opening === probeOpening
-          ? (readers.readFull() ??
-            retainedProbeRoster(readers.readProbe(), probeOpening))
+          ? (retainedProbeRoster(readers.readProbe(), probeOpening) ??
+            readers.readFull())
           : undefined;
       complete(() => {
         void rosterProbe.mutate(
@@ -1748,16 +1752,20 @@ function SearchPageContent() {
     {
       keepPreviousData: false,
       recoverDiscardedRefusals: false,
+      refreshInterval: useRosterProbe ? 0 : refreshInterval,
       onSuccess(result) {
         if (scopedProbeKey !== null) liftRefusal(scopedProbeKey);
         const readers = rosterReaders.current;
         if (
           result !== undefined &&
           readers?.opening === probeOpening &&
-          readers.readProbe() !== undefined
+          (rosterProbe.isValidating || readers.readProbe() !== undefined)
         ) {
           // The replacement roster now owns detail previews for these filters.
-          void mutateRosterProbe(undefined, { revalidate: false });
+          // Clear the request generation too: a paused probe can still finish.
+          void invalidateSearchKey((key) => key === rosterProbeKey, {
+            clear: true,
+          });
         }
       },
     },
@@ -1775,16 +1783,15 @@ function SearchPageContent() {
     };
   }, [probeOpening, readFullRoster, readRosterProbe]);
   const roster = useRosterProbe ? rosterProbe : wholeList;
+  // Keep this opening's probe ahead of older full-list cache or seed data
+  // until a completed full read retires it.
   const retainedRoster = retainedProbeRoster(rosterProbe.data, probeOpening);
-  const usingRetainedRoster =
-    !useRosterProbe &&
-    wholeList.data === undefined &&
-    retainedRoster !== undefined;
+  const usingRetainedRoster = !useRosterProbe && retainedRoster !== undefined;
   const rosterData = useRosterProbe
     ? probeConfirmed
       ? rosterProbe.data
       : undefined
-    : (wholeList.data ?? retainedRoster);
+    : (retainedRoster ?? wholeList.data);
   const rosterRefused =
     heldRosterRefusal !== undefined || isReadRefusal(roster.error);
   const rosterRefreshFailed = isTransientRosterError(roster.error);
@@ -1812,8 +1819,25 @@ function SearchPageContent() {
     !awaitsSearchFilters && needsServerSearch ? studentsCacheKey : null,
     () => readSearchList(studentsCacheKey, namedSearchParams),
     // Until this term's answer arrives, no earlier rows can be selected.
-    { keepPreviousData: false },
+    {
+      keepPreviousData: false,
+      refreshInterval: needsServerSearch ? refreshInterval : 0,
+    },
   );
+  const refreshRestoredSearch = useEffectEvent(() => {
+    if (!useRosterProbe || !probeConfirmed || awaitsSearchFilters) return;
+    void invalidateSearchKey(
+      (key) =>
+        key === rosterProbeKey ||
+        (needsServerSearch && key === studentsCacheKey),
+    );
+  });
+  const hasShownSearch = useRef(false);
+  useEffect(() => {
+    // Activity reconnects effects but preserves the confirmed opening token.
+    if (hasShownSearch.current) refreshRestoredSearch();
+    hasShownSearch.current = true;
+  }, []);
   const {
     isLoading,
     isValidating: isSearchResultValidating,
@@ -2064,8 +2088,12 @@ function SearchPageContent() {
     reloadRequestKeysRef.current = [activeRosterKey, studentsCacheKey];
     setReloadCount((count) => count + 1);
   }, [activeRosterKey, studentsCacheKey]);
+  // A cached full list may have suppressed SWR's read on handoff.
   const resumeRoster =
-    rosterNeedsExpansion && !isSearchResultValidating && !resultError;
+    !needsServerSearch &&
+    (rosterNeedsExpansion || usingRetainedRoster) &&
+    !isSearchResultValidating &&
+    !resultError;
   useEffect(() => {
     const requested = handledReloadRef.current !== reloadCount;
     handledReloadRef.current = reloadCount;

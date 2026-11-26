@@ -15,6 +15,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
+import { Activity } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { SelectAllControl } from "~/components/students/school-checkin-select-all";
 
@@ -175,6 +176,7 @@ vi.mock("~/lib/api", () => ({
 
 vi.mock("~/lib/swr", () => ({
   useImmutableSWR: (...args: unknown[]) => mockUseImmutableSWR(...args),
+  useLiveRefreshInterval,
   useSWRAuth: (...args: unknown[]) => mockUseSWRAuth(...args),
   mutate: vi.fn(),
   useTenantMutate: () => vi.fn(),
@@ -223,6 +225,10 @@ import {
   useSWRAuth as useRealSWRAuth,
   type ReaderOptions,
 } from "~/lib/swr/hooks";
+import {
+  LIVE_FALLBACK_INTERVAL_MS,
+  useLiveRefreshInterval,
+} from "~/lib/swr/live-sync";
 import { studentKeys as studentKey } from "~/lib/swr/portal-keys";
 import {
   authGeneration,
@@ -687,6 +693,49 @@ describe("StudentSearchPage: click on the navigation entry of this page (#3374)"
     },
   );
 
+  it.each(["", "?search=Max"])(
+    "refreshes the active roster without a live stream (%s)",
+    async (url) => {
+      vi.useFakeTimers();
+      try {
+        const { reload } = renderWithRealStudentReads(url);
+        await act(async () => {
+          await reload.get(url ? rosterProbeKey : rosterKey)!();
+        });
+        expect(screen.getByTestId("student-card-7")).toBeVisible();
+        mockGetStudents.mockResolvedValue({ students: [] });
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(LIVE_FALLBACK_INTERVAL_MS);
+        });
+        expect(screen.getByText("Keine Kinder gefunden")).toBeVisible();
+      } finally {
+        releaseFakeTimers();
+      }
+    },
+  );
+
+  it("refreshes a confirmed saved search when React shows it again", async () => {
+    function view(mode: "hidden" | "visible") {
+      return (
+        <Activity mode={mode}>
+          <StudentSearchPage />
+        </Activity>
+      );
+    }
+    const { rerender, reload } = renderWithRealStudentReads("?search=Max");
+    rerender(view("visible"));
+    await act(async () => {
+      await reload.get(rosterProbeKey)!();
+    });
+    expect(screen.getByTestId("student-card-7")).toBeVisible();
+
+    rerender(view("hidden"));
+    mockGetStudents.mockResolvedValue({ students: [] });
+    rerender(view("visible"));
+
+    expect(await screen.findByText("Keine Kinder gefunden")).toBeVisible();
+  });
+
   it("retries a cached probe failure once on each saved-search opening", async () => {
     const { reload, rerender } = renderWithRealStudentReads("?search=Max");
     await act(async () => {
@@ -827,6 +876,57 @@ describe("StudentSearchPage: click on the navigation entry of this page (#3374)"
     );
   });
 
+  it("keeps newer probe rows while refreshing a cached full roster on clear", async () => {
+    const mila = { ...mockStudent, id: "8", first_name: "Mila" };
+    const { rerender, reload } = renderWithRealStudentReads("");
+    expect(await screen.findByTestId("student-card-7")).toBeVisible();
+    mockGetStudents.mockResolvedValue({ students: [mila] });
+    currentSearch = new URLSearchParams({ search: "Mila" });
+    window.history.replaceState(null, "", "/students/search?search=Mila");
+    rerender(<StudentSearchPage key="saved-search" />);
+    await act(async () => {
+      await reload.get(rosterProbeKey)!();
+    });
+    expect(screen.getByTestId("student-card-8")).toBeVisible();
+
+    const full = deferred<{ students: (typeof mockStudent)[] }>();
+    const refreshFull = vi.fn(() => full.promise);
+    mockGetStudents.mockImplementation(refreshFull);
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "Suche löschen" })[0]!,
+    );
+
+    // Anker: the confirmed result remains available without reviving Max.
+    expect(screen.getByTestId("student-card-8")).toBeVisible();
+    expect(screen.queryByTestId("student-card-7")).toBeNull();
+    await waitFor(() => expect(refreshFull).toHaveBeenCalledTimes(1));
+    await act(async () => full.resolve({ students: [] }));
+    expect(await screen.findByText("Keine Kinder gefunden")).toBeVisible();
+  });
+
+  it("does not use a late probe for previews after the full roster took over", async () => {
+    const probe = deferred<{ students: (typeof mockStudent)[] }>();
+    const mila = { ...mockStudent, id: "8", first_name: "Mila" };
+    const lia = { ...mockStudent, id: "9", first_name: "Lia" };
+    const readProbe = vi.fn(() => probe.promise);
+    mockGetStudents.mockImplementation(({ search }: StudentFilters) =>
+      search ? Promise.resolve({ students: [mila] }) : readProbe(),
+    );
+    const { preview } = renderWithRealStudentReads("?search=Mila");
+    expect(await screen.findByTestId("student-card-8")).toBeVisible();
+    expect(readProbe).toHaveBeenCalledTimes(1);
+    mockGetStudents.mockResolvedValue({ students: [lia] });
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "Suche löschen" })[0]!,
+    );
+    expect(await screen.findByTestId("student-card-9")).toBeVisible();
+    await act(async () => probe.resolve({ students: [mockStudent] }));
+
+    // Anker: the live full roster can seed a preview, the old probe cannot.
+    expect(preview("9")?.name).toBe("Lia Mustermann");
+    expect(preview("7")).toBeUndefined();
+  });
+
   it("does not mistake visible server start data for a finished roster refresh", async () => {
     const mila = { ...mockStudent, id: "8", first_name: "Mila" };
     const cached = { students: [mockStudent], truncatedTotal: null };
@@ -885,7 +985,11 @@ describe("StudentSearchPage: click on the navigation entry of this page (#3374)"
         pagination,
       });
     });
-    const { reload, preview } = renderWithRealStudentReads("");
+    const { reload, preview } = renderWithRealStudentReads("", {
+      fallback: {
+        [scopedRosterKey]: { students: [mila], truncatedTotal: 25000 },
+      },
+    });
     expect(await screen.findByTestId("student-card-7")).toBeVisible();
     const [search] = screen.getAllByPlaceholderText("Name suchen…");
     fireEvent.change(search!, { target: { value: "Mila" } });

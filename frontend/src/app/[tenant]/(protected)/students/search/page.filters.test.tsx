@@ -258,6 +258,7 @@ vi.mock("~/lib/swr", async (importOriginal) => {
   const { tenantListKeys } = await import("~/lib/swr/tenant-list-keys");
   const answersKey = tenantListKeys.enrollmentAnswerFilters();
   return {
+    useLiveRefreshInterval: actual.useLiveRefreshInterval,
     useImmutableSWR: (...args: unknown[]) => mockUseImmutableSWR(...args),
     useSWRAuth: (
       key: string | null,

@@ -310,6 +310,7 @@ vi.mock("~/lib/hooks/use-sse", () => ({
 
 // Mock SWR hooks - configured per test in beforeEach
 vi.mock("~/lib/swr", () => ({
+  useLiveRefreshInterval: () => 60_000,
   useImmutableSWR: vi.fn(),
   useSWRAuth: vi.fn(),
   mutate: vi.fn(),
