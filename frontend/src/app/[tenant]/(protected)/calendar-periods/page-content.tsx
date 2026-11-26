@@ -6,6 +6,7 @@ import {
   useCalendarPeriods,
 } from "~/components/planning/calendar-periods-editor";
 import { ClosingDaysEditor } from "~/components/planning/closing-days-editor";
+import { OpeningChangesEditor } from "~/components/planning/opening-changes-editor";
 import { SchoolHolidaysList } from "~/components/planning/school-holidays-list";
 import { SchoolVacationsList } from "~/components/planning/school-vacations-list";
 import { SchoolVacationHints } from "~/components/timetable/school-vacation-hints";
@@ -25,7 +26,7 @@ import { useRequirePermission } from "~/lib/hooks/use-require-permission";
  */
 // Info-Knopf am Titel (#7579): wofür die Seite da ist und was man zuerst tut.
 const CALENDAR_PERIODS_INFO =
-  "Hier legst du das Schuljahr, Halbjahre und Ferien als Zeiträume an. Hat die OGS geschlossen, trägst du unter „Schließtage“ einen Schließtag ein. Gesetzliche Feiertage musst du nicht eintragen.";
+  "Hier legst du das Schuljahr, Halbjahre und Ferien als Zeiträume an. Hat die OGS geschlossen, trägst du unter „Schließtage“ einen Schließtag ein. Öffnet sie an einem Tag zu anderen Zeiten, trägst du ihn unter „Geänderte Öffnungszeiten“ ein. Gesetzliche Feiertage musst du nicht eintragen.";
 
 export default function CalendarPeriodsPage() {
   // Dasselbe Recht wie der Eintrag in der Planungsgruppe (#3469): Zeiträume
@@ -75,6 +76,8 @@ function CalendarPeriodsPageContent() {
       <CalendarPeriodsEditor state={state} />
       {/* Abgesagte Termine ändern die Spalte „Verwendung“ (#3594). */}
       <ClosingDaysEditor onAppointmentsCancelled={() => void state.reload()} />
+      {/* Tage mit anderen Öffnungszeiten stehen neben den Schließtagen (#7654). */}
+      <OpeningChangesEditor />
       {/* Feiertage berechnet moto aus dem Bundesland der Schule (#4775). */}
       <SchoolHolidaysList
         periods={state.periods}

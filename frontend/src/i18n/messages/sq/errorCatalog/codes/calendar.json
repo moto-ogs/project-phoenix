@@ -1,5 +1,7 @@
 {
   "occurrence_unavailable": "Kjo datë nuk ekziston më. Mund të jetë anuluar. Ju lutemi rifreskoni kalendarin.",
   "federal_state_missing": "Për shkollën nuk është vendosur ende landi federal. Prandaj mungojnë ditët e festave. Drejtuesit mund ta vendosin te cilësimet.",
-  "no_staff_profile": "Nuk keni qasje te: {object}. Kontaktoni shkollën."
+  "no_staff_profile": "Nuk keni qasje te: {object}. Kontaktoni shkollën.",
+  "opening_change_invalid": "Nuk u ruajt: {object}. Kontrolloni të dhënat.",
+  "opening_change_not_found": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale."
 }

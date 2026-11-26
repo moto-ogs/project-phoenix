@@ -31,6 +31,8 @@ func TestDeviceLifecycleEventsGoWithTheSchoolAndRollBack(t *testing.T) {
 
 	// The room history stops (#3844) follow the device history at the head; they go first.
 
+	// The opening changes (#7654) follow the room history stops at the head; they go first.
+	require.NoError(t, openingChangesDown(ctx, db))
 	require.NoError(t, roomHistoryStopsDown(ctx, db))
 
 	require.NoError(t, deviceLifecycleEventsDown(ctx, db))

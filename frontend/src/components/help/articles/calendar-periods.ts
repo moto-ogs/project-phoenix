@@ -8,8 +8,9 @@ import { HELP_TOPICS } from "~/lib/help-topics";
 export function calendarPeriodsTopic(): HelpTopic {
   return {
     id: HELP_TOPICS.leadCalendarPeriods,
-    title: "Schuljahr, Ferien und Schließtage eintragen",
-    question: "Wo trage ich Schuljahr, Ferien und Schließtage ein?",
+    title: "Schuljahr, Ferien, Schließtage und Öffnungszeiten eintragen",
+    question:
+      "Wo trage ich Schuljahr, Ferien, Schließtage und Öffnungszeiten ein?",
     summary: "moto plant nur an Tagen, an denen deine OGS geöffnet hat.",
     group: "planung",
     audience: "lead",
@@ -47,6 +48,21 @@ export function calendarPeriodsTopic(): HelpTopic {
           "Stehen an diesen Tagen schon Termine, fragt moto nach. Sage sie ab wie im nächsten Abschnitt.",
           // „Heute anders“ (#7664) zeigt den Schließtag mit seinem Grund.
           "Am Schließtag steht auf der `Startseite` unter `Heute anders`, dass die OGS geschlossen ist. Dort steht auch der `Grund`.",
+        ],
+      },
+      // #7654: übliche Öffnungszeiten in den Einstellungen, geänderte
+      // Tage neben den Schließtagen.
+      {
+        title: "Öffnungszeiten eintragen",
+        description:
+          "Die üblichen Öffnungszeiten stehen in den Einstellungen. Öffnet oder schließt die OGS an einem Tag zu anderen Zeiten, trägst du den Tag in `Schuljahr und Kalender` ein.",
+        steps: [
+          "Öffne die `Einstellungen` und dort `Betrieb`.",
+          "Trage unter `Öffnungszeiten` für jeden Schultag ein, wann die OGS öffnet und schließt.",
+          "Für einen Tag mit anderen Zeiten öffne `Schuljahr und Kalender`.",
+          "Gehe zum Abschnitt `Geänderte Öffnungszeiten` und wähle `Tag anlegen`.",
+          "Trage `Anlass`, `Von`, `Bis`, `Öffnet um` und `Schließt um` ein, zum Beispiel `Zeugnisausgabe` bis 12:00 Uhr.",
+          "Wähle `Speichern`.",
         ],
       },
       {
@@ -110,6 +126,7 @@ export function calendarPeriodsTopic(): HelpTopic {
       "Im Betreuungsplan plant moto an Schließtagen und gesetzlichen Feiertagen keine Termine. Abgesagte Termine verschwinden aus dem Plan. Eltern bekommen keine Nachricht.",
     notes: [
       "Ein Zeitraum, den noch nichts benutzt, trägt `Nicht verwendet`.",
+      "Geänderte Öffnungszeiten zeigt moto bisher nur auf dieser Seite. Sitzungen und Abholzeiten richten sich noch nicht danach.",
       // #6845: Schichtserien halten ihren Zeitraum fest.
       "Einen Zeitraum mit Schichtserien im Dienstplan kannst du nicht löschen, auch wenn die Serien beendet sind. Nimm stattdessen den Haken bei `Zeitraum im Plan verwenden` heraus.",
       "Ferienbetreuung an Schließtagen: Wähle beim Speichern der Serie `Auch an Schließtagen planen`. Trage bei `Letzter Tag` den letzten Ferientag ein. Dann endet die Serie mit den Ferien.",

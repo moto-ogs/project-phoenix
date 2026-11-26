@@ -40,6 +40,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/planexport"
 	schedulerPorts "github.com/moto-ogs/project-phoenix/modules/schedulerruntime/ports"
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar"
+	schoolCalendarCompose "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/compose"
 	calendarAPI "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/http"
 	calendarCompose "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/portal/compose"
 	schoolMembershipModule "github.com/moto-ogs/project-phoenix/modules/schoolmembership"
@@ -187,11 +188,18 @@ func mountSchoolPortalRoutes(
 	school.ParentLetters, school.DayChanges = parentLetters, dayChanges
 	tenant.Mount("/staff-messages", staffMessaging.Router(ProtectedTenantRoutesWith(staffAttachments.Register)))
 	tenant.Mount("/staff-notices", staffNotices.Router(ProtectedTenantRoutes))
+	mountOpeningChangeRoutes(tenant)
 	tenant.Mount("/timetable", timetableResource.Router(ProtectedTenantRoutesWith(classdayHTTP.NewSlotListResource(classDay.SlotLists).Register)))
 	mountNotificationRoutes(root, tenant, notificationRoutes, notifications.TraegerFeed, notifications.CatererFeed)
 	root.Mount("/school-staff-messages", schoolMessageAttachmentRouter(staffAttachments))
 	root.Mount("/school", school.RouterWithAuthRateLimiter(limiters.authMiddleware(), SchoolSessionChain, ProtectedSchoolRoutes))
 	return nil
+}
+
+// mountOpeningChangeRoutes serves the changed opening hours on single days
+// (#7654), maintained beside the closing days with their rights.
+func mountOpeningChangeRoutes(tenant chi.Router) {
+	tenant.Mount("/opening-changes", calendarAPI.NewOpeningChangeResource(schoolCalendarCompose.NewOpeningChanges()).Router(ProtectedTenantRoutes))
 }
 
 // schoolClassSurfaces builds the class-bound surfaces of a Lehrkraft in
