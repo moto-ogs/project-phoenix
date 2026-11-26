@@ -43,8 +43,9 @@ func TestParentLetterCopiesGoWithTheSchoolAndRollBack(t *testing.T) {
 
 	// The device history (#2321) follows the letter copies at the head; it goes first.
 	// The room history stops (#3844) follow the device history at the head; they go first.
-	// The pickup persons (#7655) follow the room history stops at the head; they go first.
+	// The opening changes (#7654) follow the room history stops at the head; they go first.
 	require.NoError(t, studentPickupPersonsDown(ctx, db))
+	require.NoError(t, openingChangesDown(ctx, db))
 	require.NoError(t, roomHistoryStopsDown(ctx, db))
 	require.NoError(t, deviceLifecycleEventsDown(ctx, db))
 	require.NoError(t, parentLetterCopiesDown(ctx, db))
@@ -62,7 +63,8 @@ func TestParentLetterCopiesGoWithTheSchoolAndRollBack(t *testing.T) {
 	require.NoError(t, deviceLifecycleEventsUp(ctx, db))
 	// It also names the room history stops (#3844).
 	require.NoError(t, roomHistoryStopsUp(ctx, db))
-	// And the pickup persons (#7655).
+	// And the opening changes (#7654), followed by the pickup persons (#7655).
+	require.NoError(t, openingChangesUp(ctx, db))
 	require.NoError(t, studentPickupPersonsUp(ctx, db))
 	require.NoError(t, applyRepeatableDefinitions(ctx, db))
 	assert.True(t, exists())

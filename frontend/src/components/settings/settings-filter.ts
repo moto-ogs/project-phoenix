@@ -118,6 +118,7 @@ export const categoryLabels: Record<string, string> = {
   monitoring: "Geräte überwachen",
   "nach-hause": "„Nach Hause“ am Tablet",
   nutzungsanalyse: "Nutzungsanalyse",
+  oeffnungszeiten: "Öffnungszeiten",
   organisation: "Organisation",
   personaldokumente: "Personaldokumente",
   pin: "Zugang zum Tablet",

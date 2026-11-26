@@ -16,6 +16,7 @@ func init() {
 		Description: "Abholperson für einen einzelnen Tag (#7655)",
 		DependsOn: []string{
 			studentDepartureExceptionsVersion,            // the sibling day value of the Heimweg
+			openingChangesVersion,                        // the earlier school-erasure extension at the head
 			"1.15.895",                                   // the deletion log kinds this one extends
 			holidayRegistrationConsentWithdrawalsVersion, // the last migration before this one
 		},
@@ -147,7 +148,7 @@ func studentPickupPersonsUp(ctx context.Context, db *bun.DB) error {
 // studentPickupPersonsFingerprint is the incoming-FK fingerprint of the
 // school erasure plan with the pickup persons; the repeatable preflight
 // checks it.
-const studentPickupPersonsFingerprint = "3968ba9e7719974ac0b637f089c5b482e8ef39757251faa4db47b5b7cc959b22"
+const studentPickupPersonsFingerprint = "958d12b0a65d72530ca6aef2703d47cfefd699f0ae0b3ede51d4976f68776d5a"
 
 // studentPickupPersonsErasureLines are the lines the repeatable school and
 // demo erasures carry for the pickup persons, per function. The down takes
@@ -179,7 +180,7 @@ func studentPickupPersonsDown(ctx context.Context, db *bun.DB) error {
 				continue
 			}
 			definition = strings.Replace(definition, line, "", 1)
-			definition = strings.Replace(definition, "'"+studentPickupPersonsFingerprint+"'", "'"+roomHistoryStopsFingerprint+"'", 1)
+			definition = strings.Replace(definition, "'"+studentPickupPersonsFingerprint+"'", "'"+openingChangesFingerprint+"'", 1)
 			restored = append(restored, definition)
 		}
 		if err := installDerivedSchoolErasureFunctions(ctx, tx, restored); err != nil {

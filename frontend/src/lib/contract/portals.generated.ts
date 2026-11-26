@@ -58,6 +58,7 @@ import { routes as mealCaterer } from "./meal-caterer.generated";
 import { routes as mealPlan } from "./meal-plan.generated";
 import { routes as messages } from "./messages.generated";
 import { routes as notifications } from "./notifications.generated";
+import { routes as openingChanges } from "./opening-changes.generated";
 import { routes as operatorAccounts } from "./operator-accounts.generated";
 import { routes as operatorAnnouncements } from "./operator-announcements.generated";
 import { routes as operatorAuth } from "./operator-auth.generated";
@@ -1344,6 +1345,10 @@ export const portalRoutes = {
     notifications["POST /api/notifications/test"],
     notifications["PUT /api/notifications/email-subscriptions/{type}"],
     notifications["PUT /api/notifications/preferences/{type}"],
+    openingChanges["DELETE /api/opening-changes/{id}"],
+    openingChanges["GET /api/opening-changes/"],
+    openingChanges["POST /api/opening-changes/"],
+    openingChanges["PUT /api/opening-changes/{id}"],
     parentAnnouncements["DELETE /api/parent-announcements/{announcementId}"],
     parentAnnouncements["GET /api/parent-announcements/"],
     parentAnnouncements["GET /api/parent-announcements/letter-placeholders"],

@@ -449,6 +449,7 @@ var tableRetentions = map[string]tableRetention{
 	"schedule.meal_plan_entries":                            notPersonal("meal plan"),
 	"schedule.meal_sickness_status_history":                 parent("users.student_profiles"),
 	"schedule.pickup_extension_tasks":                       parent("users.student_profiles"),
+	"schedule.opening_changes":                              notPersonal("opening hours calendar; reason names the day, not a person (#7654)"),
 	"schedule.planning_tracks":                              notPersonal("planning track catalog"),
 	"schedule.recurrence_rules":                             notPersonal("recurrence configuration"),
 	"schedule.shift_types":                                  notPersonal("shift type catalog"),
