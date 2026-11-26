@@ -1227,7 +1227,12 @@ function BlockDetail({
           </DataField>
         ) : null}
         {sameRoom.length > 0 && state.room ? (
-          <DataField label={`Danach in ${state.room}`} fullWidth>
+          // Ein Folgeblock steht einzeilig wie die Felder darüber; der Raum
+          // steht direkt darüber. Mehrere stehen als Liste darunter.
+          <DataField
+            label={sameRoom.length === 1 ? "Danach" : `Danach in ${state.room}`}
+            fullWidth={sameRoom.length > 1}
+          >
             <ul>
               {sameRoom.map((other) => (
                 <li key={other.id} className="tabular-nums">
