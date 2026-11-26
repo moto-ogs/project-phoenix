@@ -140,6 +140,9 @@ func (s *RequestCorrections) revertPickupPerson(ctx context.Context, request *ca
 	if terms == nil {
 		return nil
 	}
+	if err := s.Plans.LockStudentAndExceptionDay(ctx, request.StudentID, terms.Date.String()); err != nil {
+		return err
+	}
 	row, err := dayPickupPerson(ctx, s.Records, request.StudentID, terms.Date)
 	if err != nil {
 		return err
@@ -149,6 +152,11 @@ func (s *RequestCorrections) revertPickupPerson(ctx context.Context, request *ca
 	}
 	if pickupPersonVersion(*row) != applied.PickupPersonVersion {
 		return fmt.Errorf("%w: die Abholperson am %s wurde nach der Entscheidung geändert", careplan.ErrParentRequestCorrectionUnsupported, terms.Date.Format("02.01.2006"))
+	}
+	if applied.PreviousPickupPerson != nil {
+		previous := careplan.PickupPerson{StudentID: request.StudentID, ExceptionDate: careplan.Date(terms.Date), Name: applied.PreviousPickupPerson.Name, GuardianProfileID: applied.PreviousPickupPerson.GuardianProfileID, CreatedBy: applied.PreviousPickupPerson.CreatedBy, RequestedByGuardian: applied.PreviousPickupPerson.RequestedByGuardian}
+		_, err = s.Records.SaveApprovedPickupPerson(ctx, previous)
+		return err
 	}
 	_, err = s.Records.DeleteApprovedPickupPerson(ctx, request.StudentID, terms.Date, row.ID)
 	return err
@@ -242,6 +250,7 @@ func latestPickupRows(events []ports.RequestCorrectionEvent) (carerequests.Picku
 			DepartureExceptionID: departureID, DepartureExceptionVersion: correctionRowVersion(event.Payload["departure_exception_version"]),
 			PickupNoteID: noteID, PickupNoteVersion: correctionRowVersion(event.Payload["pickup_note_version"]),
 			PickupPersonID: personID, PickupPersonVersion: correctionRowVersion(event.Payload["pickup_person_version"]),
+			PreviousPickupPerson: correctionPickupPerson(event.Payload["pickup_person_previous"]),
 		}
 		found = pickupOK || departureOK || noteOK || personOK
 	}
@@ -251,6 +260,28 @@ func latestPickupRows(events []ports.RequestCorrectionEvent) (carerequests.Picku
 func correctionRowVersion(value any) string {
 	version, _ := value.(string)
 	return version
+}
+
+func correctionPickupPerson(value any) *carerequests.PickupPersonState {
+	fields, ok := value.(map[string]any)
+	if !ok {
+		return nil
+	}
+	name, ok := fields["name"].(string)
+	if !ok || name == "" {
+		return nil
+	}
+	person := &carerequests.PickupPersonState{Name: name}
+	if id, ok := correctionExceptionID(fields["guardian_profile_id"]); ok {
+		person.GuardianProfileID = &id
+	}
+	if id, ok := correctionExceptionID(fields["created_by"]); ok {
+		person.CreatedBy = &id
+	}
+	if id, ok := correctionExceptionID(fields["requested_by_guardian"]); ok {
+		person.RequestedByGuardian = &id
+	}
+	return person
 }
 
 func correctionExceptionID(value any) (int64, bool) {

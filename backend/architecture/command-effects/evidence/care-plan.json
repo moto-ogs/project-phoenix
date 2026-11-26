@@ -16113,6 +16113,38 @@
       "target_owner": "parent-portal"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.requestDecisionAdapter.LockStudentAndExceptionDay",
+      "binding_digest": "411fbc4bc14d2cb61b73eb125d0524c6",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.RequestCorrectionPlans.LockStudentAndExceptionDay",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudent",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.requestDecisionAdapter.LockStudentAndExceptionDay",
+      "binding_digest": "f8f2126cf06a4d126f169c137236e86d",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.RequestCorrectionPlans.LockStudentAndExceptionDay",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudent",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.requestDecisionAdapter.LockStudentAndExceptionDay",
+      "binding_digest": "15b77d675e50b3c06b011967d2599373",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.RequestCorrectionPlans.LockStudentAndExceptionDay",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.CareStudentLock",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.requestDecisionAdapter.LockStudentAndExceptionDay",
+      "binding_digest": "13214f6a220c63b2017e0cf4567400f2",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.RequestCorrectionPlans.LockStudentAndExceptionDay",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTransaction",
+      "target_owner": "tenant-runtime"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.RequestCorrectionRecordsAdapter.DeleteDepartureException",
       "binding_digest": "116f64c508cc92711ef3d1138f480102",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.RequestCorrectionRecords.DeleteDepartureException",

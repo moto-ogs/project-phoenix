@@ -21465,6 +21465,46 @@
       "target_owner": "parent-portal"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.requestDecisionAdapter.LockStudentAndExceptionDay",
+      "classification": "",
+      "effect": "unknown",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.RequestCorrectionPlans.LockStudentAndExceptionDay",
+      "reason": "",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.LockStudent",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.requestDecisionAdapter.LockStudentAndExceptionDay",
+      "classification": "",
+      "effect": "unknown",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.RequestCorrectionPlans.LockStudentAndExceptionDay",
+      "reason": "",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.LockStudent",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.requestDecisionAdapter.LockStudentAndExceptionDay",
+      "classification": "",
+      "effect": "unknown",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.RequestCorrectionPlans.LockStudentAndExceptionDay",
+      "reason": "",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.CareStudentLock",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.requestDecisionAdapter.LockStudentAndExceptionDay",
+      "classification": "",
+      "effect": "unknown",
+      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports.RequestCorrectionPlans.LockStudentAndExceptionDay",
+      "reason": "",
+      "source_owner": "care-plan",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTransaction",
+      "target_owner": "tenant-runtime"
+    },
+    {
       "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.RequestCorrectionRecordsAdapter.DeleteDepartureException",
       "classification": "platform",

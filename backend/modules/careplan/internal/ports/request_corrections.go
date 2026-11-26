@@ -23,6 +23,7 @@ type RequestCorrectionRecords interface {
 	// pickup person an approval wrote (#8162).
 	ListDayPickups(ctx context.Context, from, to calendar.Date, studentIDs []int64) ([]careplan.DayPickup, error)
 	DeleteApprovedPickupPerson(ctx context.Context, studentID int64, date calendar.Date, id int64) (bool, error)
+	SaveApprovedPickupPerson(context.Context, careplan.PickupPerson) (careplan.PickupPerson, error)
 }
 
 type RequestCorrectionEvent struct {
@@ -42,6 +43,7 @@ type RequestCorrectionPeople interface {
 }
 
 type RequestCorrectionPlans interface {
+	LockStudentAndExceptionDay(context.Context, int64, string) error
 	ApplyPickup(context.Context, *carerequests.Request, *string, bool) (carerequests.PickupApplied, error)
 	ApplyPickupPermission(context.Context, *carerequests.Request) error
 	RevertPickupPermission(context.Context, *carerequests.Request) error

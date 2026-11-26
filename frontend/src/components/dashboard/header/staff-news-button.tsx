@@ -61,7 +61,10 @@ function noteSubtitle(notice: StudentNoteTeamNotice): string {
  */
 function pickupSubtitle(notice: PickupChangeNotice, today: string): string {
   const day = pickupDayLabel(notice.date, today);
-  if (notice.withdrawn && notice.pickupPerson && !notice.pickupTime) {
+  if (notice.withdrawn && notice.pickupPerson && notice.pickupTime) {
+    return `${day}: Abholzeit und Abholperson zurückgenommen`;
+  }
+  if (notice.withdrawn && notice.pickupPerson) {
     return `${day}: Abholperson zurückgenommen`;
   }
   if (notice.withdrawn) return `${day}: wieder normale Abholzeit`;

@@ -133,7 +133,7 @@ func (s *PickupApprovals) applyLegs(ctx context.Context, input carerequests.Pick
 		}
 	}
 	if change.PickupPerson != nil {
-		if applied.PickupPersonID, applied.PickupPersonVersion, err = s.applyPickupPerson(ctx, input, change, staffID); err != nil {
+		if applied.PickupPersonID, applied.PickupPersonVersion, applied.PreviousPickupPerson, err = s.applyPickupPerson(ctx, input, change, staffID); err != nil {
 			return applied, err
 		}
 	}
@@ -180,7 +180,7 @@ func (s *PickupApprovals) applyDepartureMode(ctx context.Context, input carerequ
 // rechecked under its lock; a one-time person has only the name. A pickup
 // person the OGS set for the day wins, as for the Abholart; one an earlier
 // approved request named is replaced.
-func (s *PickupApprovals) applyPickupPerson(ctx context.Context, input carerequests.PickupApproval, change carerequests.PickupChange, staffID int64) (int64, string, error) {
+func (s *PickupApprovals) applyPickupPerson(ctx context.Context, input carerequests.PickupApproval, change carerequests.PickupChange, staffID int64) (int64, string, *carerequests.PickupPersonState, error) {
 	person := careplan.PickupPerson{
 		TenantID: input.TenantID, StudentID: input.StudentID, ExceptionDate: careplan.Date(change.Date),
 		Name: change.PickupPerson.Name, CreatedBy: optionalStaff(staffID),
@@ -191,30 +191,38 @@ func (s *PickupApprovals) applyPickupPerson(ctx context.Context, input carereque
 	}
 	if !change.PickupPerson.OneTime() {
 		if err := s.People.ValidatePickupPerson(ctx, input.StudentID, change.PickupPerson.GuardianProfileID); err != nil {
-			return 0, "", err
+			return 0, "", nil, err
 		}
 		contact := change.PickupPerson.GuardianProfileID
 		person.GuardianProfileID = &contact
 	}
 	existing, err := dayPickupPerson(ctx, s.Persons, input.StudentID, change.Date)
 	if err != nil {
-		return 0, "", fmt.Errorf("schedule: load pickup person for request: %w", err)
+		return 0, "", nil, fmt.Errorf("schedule: load pickup person for request: %w", err)
 	}
 	if existing != nil && existing.RequestedByGuardian == nil {
-		return 0, "", carerequests.ErrPickupChangeConflict
+		return 0, "", nil, carerequests.ErrPickupChangeConflict
 	}
+	previous := pickupPersonState(existing)
 	saved, err := s.Persons.SaveApprovedPickupPerson(ctx, person)
 	if err != nil {
-		return 0, "", fmt.Errorf("schedule: save approved pickup person: %w", err)
+		return 0, "", nil, fmt.Errorf("schedule: save approved pickup person: %w", err)
 	}
 	stored, err := dayPickupPerson(ctx, s.Persons, input.StudentID, change.Date)
 	if err == nil && stored == nil {
 		err = careplan.ErrStudentScheduleNotFound
 	}
 	if err != nil {
-		return 0, "", fmt.Errorf("schedule: read back approved pickup person: %w", err)
+		return 0, "", nil, fmt.Errorf("schedule: read back approved pickup person: %w", err)
 	}
-	return saved.ID, pickupPersonVersion(*stored), nil
+	return saved.ID, pickupPersonVersion(*stored), previous, nil
+}
+
+func pickupPersonState(person *careplan.PickupPerson) *carerequests.PickupPersonState {
+	if person == nil {
+		return nil
+	}
+	return &carerequests.PickupPersonState{Name: person.Name, GuardianProfileID: person.GuardianProfileID, CreatedBy: person.CreatedBy, RequestedByGuardian: person.RequestedByGuardian}
 }
 
 // saveApprovedDeparture writes the requested Abholart of the day. A value the

@@ -26,6 +26,10 @@ type correctionBoundary struct {
 	payload map[string]any
 }
 
+func (*correctionBoundary) LockStudentAndExceptionDay(context.Context, int64, string) error {
+	return nil
+}
+
 func (b *correctionBoundary) ReleaseBeforeDelete(context.Context, *careplan.PickupException) error {
 	return nil
 }

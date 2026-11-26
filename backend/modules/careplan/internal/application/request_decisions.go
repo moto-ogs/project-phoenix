@@ -140,7 +140,24 @@ func appliedLedgerPayload(payload map[string]any, applied carerequests.PickupApp
 	if applied.PickupPersonID > 0 {
 		payload["pickup_person_id"] = applied.PickupPersonID
 		payload["pickup_person_version"] = applied.PickupPersonVersion
+		if applied.PreviousPickupPerson != nil {
+			payload["pickup_person_previous"] = pickupPersonLedgerValue(*applied.PreviousPickupPerson)
+		}
 	}
+}
+
+func pickupPersonLedgerValue(person carerequests.PickupPersonState) map[string]any {
+	value := map[string]any{"name": person.Name}
+	if person.GuardianProfileID != nil {
+		value["guardian_profile_id"] = *person.GuardianProfileID
+	}
+	if person.CreatedBy != nil {
+		value["created_by"] = *person.CreatedBy
+	}
+	if person.RequestedByGuardian != nil {
+		value["requested_by_guardian"] = *person.RequestedByGuardian
+	}
+	return value
 }
 
 func (s *RequestDecisions) apply(ctx context.Context, request *carerequests.Request, input carerequests.DecideInput) (bool, carerequests.PickupApplied, error) {

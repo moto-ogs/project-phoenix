@@ -137,6 +137,18 @@ describe("StaffNewsButton", () => {
       "Morgen: Abholperson zurückgenommen",
     );
   });
+
+  it("names both withdrawn pickup changes", () => {
+    mockPickups.mockReturnValue({
+      notices: [pickup({ pickupPerson: "Tante Frieda", withdrawn: true })],
+    });
+    render(<StaffNewsButton />);
+    fireEvent.click(screen.getByRole("button", { name: /Neu für dich/ }));
+
+    expect(screen.getByRole("link", { name: /Noa/ })).toHaveTextContent(
+      "Morgen: Abholzeit und Abholperson zurückgenommen",
+    );
+  });
 });
 
 describe("staffNewsItems", () => {

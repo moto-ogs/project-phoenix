@@ -57,6 +57,18 @@ type PickupApplied struct {
 	// #8162, in place of the dated note; PickupPersonVersion fingerprints it.
 	PickupPersonID      int64
 	PickupPersonVersion string
+	// PreviousPickupPerson is restored when a later guardian approval is
+	// corrected. It is nil when the approval created the day's first person.
+	PreviousPickupPerson *PickupPersonState
+}
+
+// PickupPersonState is the prior guardian-approved person a later approval
+// replaces, retained only so correcting that decision can restore it.
+type PickupPersonState struct {
+	Name                string
+	GuardianProfileID   *int64
+	CreatedBy           *int64
+	RequestedByGuardian *int64
 }
 
 // PickupApprovals applies the pickup leg of an already authorized request

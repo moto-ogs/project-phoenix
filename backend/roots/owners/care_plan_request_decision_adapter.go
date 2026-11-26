@@ -14,6 +14,10 @@ import (
 
 type requestDecisionAdapter struct{ requestEditAdapter }
 
+func (a requestDecisionAdapter) LockStudentAndExceptionDay(ctx context.Context, studentID int64, date string) error {
+	return a.s.DayLocker.LockStudentAndExceptionDay(ctx, studentID, date)
+}
+
 func (a requestDecisionAdapter) LockStudent(ctx context.Context, id int64) (compose.ReviewStudent, error) {
 	student, err := a.s.People.FindStudentRecordForMutation(ctx, id)
 	if errors.Is(err, peopleValues.ErrStudentNotFound) {
