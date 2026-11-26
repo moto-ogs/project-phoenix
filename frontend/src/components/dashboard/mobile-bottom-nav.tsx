@@ -1112,14 +1112,21 @@ function MainMobileBottomNav({ className = "" }: MobileBottomNavProps) {
               <NotificationBadge
                 count={moreBadgeCount}
                 tone="red"
+                // Neues und Ungelesenes zählt am Telefon blau, Rot bleibt
+                // Dringendem (Farbregel in `NotificationBadge`, Runde 17).
+                appTone="blue"
                 size="sm"
                 max={NOTIFICATIONS_BADGE_MAX}
                 ariaLabel={`${moreBadgeCount} neu für dich`}
                 // Telefon (Runde 11): oben rechts am Symbol und über seine
                 // Oberkante gehoben, so verdeckt „9+“ weder das Symbol (Runde
                 // 10) noch das „M“ von „Mehr“ (Runde 9). iPad und Desktop
-                // behalten die heutige Lage.
-                className="app:-top-4 app:-right-3 absolute -top-1 -right-2"
+                // behalten die heutige Lage. Auf der Seite „Mehr“ selbst
+                // stehen dieselben Zahlen je Zeile („Neu für dich“,
+                // „Benachrichtigungen“): Dort entfällt die Summe am Reiter.
+                className={`app:-top-4 app:-right-3 absolute -top-1 -right-2 ${
+                  pathname.endsWith(MORE_PAGE_HREF) ? "app:hidden" : ""
+                }`}
               />
             ) : null,
           paddingClassName: ITEM_PADDING,
