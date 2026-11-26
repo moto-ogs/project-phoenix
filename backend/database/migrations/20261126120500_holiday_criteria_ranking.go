@@ -7,7 +7,7 @@ import (
 	"github.com/uptrace/bun"
 )
 
-const holidayCriteriaRankingVersion = "20261126114014"
+const holidayCriteriaRankingVersion = "20261126120500"
 
 func init() {
 	MigrationRegistry.Register(&Migration{
