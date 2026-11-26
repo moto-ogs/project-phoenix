@@ -34,6 +34,16 @@ function signedIn(isPreview = false) {
   });
 }
 
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  return { promise, resolve, reject };
+}
+
 beforeEach(() => {
   delete document.documentElement.dataset.contrast;
   document.cookie = "moto_contrast=; path=/; max-age=0";
@@ -71,6 +81,34 @@ describe("ContrastPreferenceSection", () => {
     await waitFor(() => expect(mocks.showError).toHaveBeenCalled());
     expect(mocks.showError.mock.calls[0]?.[0]).toBe(failure);
     expect(document.documentElement.dataset.contrast).toBeUndefined();
+    expect(toggle).toHaveAttribute("aria-checked", "false");
+  });
+
+  it("serializes rapid choices and ignores a stale save failure", async () => {
+    const first = deferred<boolean | null>();
+    const second = deferred<boolean | null>();
+    mocks.storeAccountContrast
+      .mockReturnValueOnce(first.promise)
+      .mockReturnValueOnce(second.promise);
+    render(<ContrastPreferenceSection portal="parent" />);
+
+    const toggle = screen.getByRole("switch");
+    fireEvent.click(toggle);
+    fireEvent.click(toggle);
+
+    await waitFor(() =>
+      expect(mocks.storeAccountContrast).toHaveBeenCalledOnce(),
+    );
+    first.reject(new Error("first save failed"));
+    await waitFor(() =>
+      expect(mocks.storeAccountContrast).toHaveBeenCalledTimes(2),
+    );
+    second.resolve(false);
+
+    await waitFor(() =>
+      expect(document.documentElement.dataset.contrast).toBe("normal"),
+    );
+    expect(mocks.showError).not.toHaveBeenCalled();
     expect(toggle).toHaveAttribute("aria-checked", "false");
   });
 
@@ -118,5 +156,29 @@ describe("ContrastAccountSync", () => {
     await act(async () => {});
     expect(mocks.readAccountContrast).not.toHaveBeenCalled();
     expect(document.documentElement.dataset.contrast).toBe("normal");
+  });
+
+  it("does not replace a later local choice with a pending account read", async () => {
+    signedIn();
+    const pendingRead = deferred<boolean | null>();
+    mocks.readAccountContrast.mockReturnValue(pendingRead.promise);
+    mocks.storeAccountContrast.mockResolvedValue(true);
+    render(
+      <>
+        <ContrastAccountSync portal="tenant" />
+        <ContrastPreferenceSection portal="tenant" />
+      </>,
+    );
+
+    await waitFor(() =>
+      expect(mocks.readAccountContrast).toHaveBeenCalledWith("tenant"),
+    );
+    fireEvent.click(screen.getByRole("switch"));
+    await waitFor(() =>
+      expect(mocks.storeAccountContrast).toHaveBeenCalledWith("tenant", true),
+    );
+    await act(async () => pendingRead.resolve(false));
+
+    expect(document.documentElement.dataset.contrast).toBe("more");
   });
 });

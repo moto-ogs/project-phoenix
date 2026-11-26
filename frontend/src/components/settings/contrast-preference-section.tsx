@@ -1,13 +1,17 @@
 "use client";
 
-import { useCallback, useSyncExternalStore } from "react";
+import { useCallback, useRef, useSyncExternalStore } from "react";
 import { Contrast } from "lucide-react";
 import { SectionCard } from "~/components/ui/section-card";
 import { SwitchRow } from "~/components/ui/switch";
 import { useApiErrorDisplay } from "~/contexts/ToastContext";
-import { storeAccountContrast } from "~/lib/contrast-account";
+import {
+  contrastOfAccount,
+  storeAccountContrast,
+} from "~/lib/contrast-account";
 import {
   applyContrastPreference,
+  beginAccountContrastMutation,
   currentContrastPreference,
   isMoreContrastActive,
   subscribeToContrast,
@@ -50,21 +54,41 @@ export function ContrastPreferenceSection({
     getServerSnapshot,
   );
   const { show: showSaveError } = useApiErrorDisplay();
+  const savedPreference = useRef(currentContrastPreference());
+  const queuedSave = useRef(Promise.resolve());
+  const latestChoice = useRef(0);
 
-  async function choose(next: boolean) {
-    const previous = currentContrastPreference();
+  function showChoiceError(err: unknown, next: boolean) {
+    void showSaveError(err, {
+      object: copy.errorObject,
+      retry: () => choose(next),
+    });
+  }
+
+  function choose(next: boolean) {
+    const choice = latestChoice.current + 1;
+    latestChoice.current = choice;
+    const endMutation = beginAccountContrastMutation();
     applyContrastPreference(next ? "more" : "normal");
-    try {
-      await storeAccountContrast(portal, next);
-    } catch (err) {
-      // Nicht gespeichert: der Schalter springt zurück, sonst nähme der
-      // nächste Abgleich die Wahl stillschweigend wieder weg.
-      applyContrastPreference(previous);
-      void showSaveError(err, {
-        object: copy.errorObject,
-        retry: () => void choose(next),
-      });
-    }
+
+    queuedSave.current = queuedSave.current.then(async () => {
+      const previous = savedPreference.current;
+      try {
+        const stored = contrastOfAccount(
+          await storeAccountContrast(portal, next),
+        );
+        savedPreference.current = stored;
+        if (choice === latestChoice.current) applyContrastPreference(stored);
+      } catch (err) {
+        if (choice !== latestChoice.current) return;
+        // Nicht gespeichert: der Schalter springt zum zuletzt bestätigten
+        // Stand zurück, nicht zu einer überholten lokalen Wahl.
+        applyContrastPreference(previous);
+        showChoiceError(err, next);
+      } finally {
+        endMutation();
+      }
+    });
   }
 
   return (
@@ -77,7 +101,7 @@ export function ContrastPreferenceSection({
       <SwitchRow
         label={copy.label}
         checked={checked}
-        onCheckedChange={(next) => void choose(next)}
+        onCheckedChange={choose}
       />
     </SectionCard>
   );

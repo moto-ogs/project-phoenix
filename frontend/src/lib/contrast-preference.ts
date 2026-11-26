@@ -11,6 +11,34 @@ export const CONTRAST_COOKIE_NAME = "moto_contrast";
 
 export type ContrastPreference = "more" | "normal";
 
+let pendingAccountMutations = 0;
+let accountMutationGeneration = 0;
+
+/**
+ * Marks a local account update so a response from an older account read cannot
+ * replace the choice just made in this browser.
+ */
+export function beginAccountContrastMutation(): () => void {
+  pendingAccountMutations += 1;
+  accountMutationGeneration += 1;
+  let ended = false;
+  return () => {
+    if (ended) return;
+    ended = true;
+    pendingAccountMutations -= 1;
+  };
+}
+
+/** Whether an account update is queued or being saved in this browser. */
+export function hasPendingAccountContrastMutation(): boolean {
+  return pendingAccountMutations > 0;
+}
+
+/** Changes whenever a local account update starts. */
+export function accountContrastMutationGeneration(): number {
+  return accountMutationGeneration;
+}
+
 export function parseContrastPreference(
   raw: string | null | undefined,
 ): ContrastPreference | undefined {

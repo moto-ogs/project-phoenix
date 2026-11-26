@@ -4,8 +4,10 @@ import { useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { contrastOfAccount, readAccountContrast } from "~/lib/contrast-account";
 import {
+  accountContrastMutationGeneration,
   applyContrastPreference,
   currentContrastPreference,
+  hasPendingAccountContrastMutation,
 } from "~/lib/contrast-preference";
 import type { PortalKey } from "~/lib/portal-paths";
 
@@ -23,11 +25,17 @@ export function ContrastAccountSync({
   const isPreview = session?.user?.isPreview === true;
 
   useEffect(() => {
-    if (!accountId || isPreview) return;
+    if (!accountId || isPreview || hasPendingAccountContrastMutation()) return;
     let cancelled = false;
+    const generation = accountContrastMutationGeneration();
     readAccountContrast(portal)
       .then((moreContrast) => {
-        if (cancelled) return;
+        if (
+          cancelled ||
+          generation !== accountContrastMutationGeneration() ||
+          hasPendingAccountContrastMutation()
+        )
+          return;
         const wanted = contrastOfAccount(moreContrast);
         if (wanted !== currentContrastPreference()) {
           applyContrastPreference(wanted);
