@@ -356,3 +356,47 @@ func TestPickupChangeTeamShowsWithdrawnPickupPersonAlongsideTimeException(t *tes
 	assert.True(t, unread[0].Withdrawn)
 	assert.Equal(t, "Tante Frieda", unread[0].PickupPerson)
 }
+
+func TestPickupChangeTeamShowsWithdrawnPickupPersonWhenCorrectionRestoresEarlierPerson(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	ctx := testpkg.Ctx(t)
+	child := testpkg.CreateTestStudent(t, db, "Mia", "Abholung", "2a")
+	parent := testpkg.CreateTestAccount(t, db, "pickup-person-restore-parent")
+	reader := testpkg.CreateTestAccount(t, db, "pickup-person-restore-reader")
+	date := pickupTeamToday.AddDays(1)
+	var request int64
+	require.NoError(t, db.NewRaw(`INSERT INTO schedule.care_schedule_change_requests
+		(tenant_id, student_id, submitted_by, request_kind, payload, status)
+		VALUES (?, ?, ?, 'pickup_change', ?::jsonb, 'approved') RETURNING id`,
+		tenant.FromContext(ctx), child.ID, parent.ID, fmt.Sprintf(`{"date":%q,"pickup_person":{"name":"Tante Leyla"}}`, date.String()),
+	).Scan(ctx, &request))
+	_, err := db.NewRaw(`INSERT INTO schedule.student_pickup_persons
+		(tenant_id, student_id, exception_date, person_name, requested_by_guardian)
+		VALUES (?, ?, ?, 'Tante Leyla', ?)`, tenant.FromContext(ctx), child.ID, string(date), parent.ID,
+	).Exec(ctx)
+	require.NoError(t, err)
+
+	team := pickupTeam(&fixedPickupReach{responsible: []int64{reader.ID}})
+	approvePickup(t, db, ctx, team, careplan.PickupChangeNotice{
+		StudentID: child.ID, Date: date, PickupPerson: "Tante Leyla", RequestID: request,
+	})
+	require.Len(t, unreadPickups(t, db, ctx, team, reader.ID), 1)
+
+	// A corrected later approval restores the former guardian-approved person
+	// instead of deleting the row. It still changes who collects the child.
+	_, err = db.NewRaw(`UPDATE schedule.student_pickup_persons SET person_name = 'Oma Berta'
+		WHERE tenant_id = ? AND student_id = ? AND exception_date = ?`, tenant.FromContext(ctx), child.ID, string(date)).Exec(ctx)
+	require.NoError(t, err)
+	_, err = db.NewRaw(`UPDATE schedule.care_schedule_change_requests SET status = 'rejected'
+		WHERE tenant_id = ? AND id = ?`, tenant.FromContext(ctx), request).Exec(ctx)
+	require.NoError(t, err)
+	approvePickup(t, db, ctx, team, careplan.PickupChangeNotice{
+		StudentID: child.ID, Date: date, PickupPerson: "Tante Leyla", Withdrawn: true, RequestID: request,
+	})
+
+	unread := unreadPickups(t, db, ctx, team, reader.ID)
+	require.Len(t, unread, 1, "the restored earlier person must not hide the correction")
+	assert.True(t, unread[0].Withdrawn)
+	assert.Equal(t, "Tante Leyla", unread[0].PickupPerson)
+}
