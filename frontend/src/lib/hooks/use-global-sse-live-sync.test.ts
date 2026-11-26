@@ -159,6 +159,18 @@ beforeEach(() => {
   resumeSWRSession();
 });
 
+it("supersedes roster and name reads affected by a checkout", () => {
+  renderConnected();
+  fire(event("student_checkout", { student_id: "7", group_ids: ["3"] }));
+  act(() => vi.advanceTimersByTime(MAX_FLUSH_WAIT_MS));
+  expect(invalidateMatching).toHaveBeenCalledTimes(1);
+  const [match] = invalidateMatching.mock.calls[0]!;
+  expect(match("search-students-g3-filter:roster-probe")).toBe(true);
+  expect(match("search-students-g3-filter:Max")).toBe(true);
+  expect(match("search-students-gall-filter:Max")).toBe(true);
+  expect(match("search-students-g4-filter:Max")).toBe(false);
+});
+
 describe("useGlobalSSE: own supervision family (#5017)", () => {
   it.each([
     ["instance_started", {}],
@@ -431,10 +443,13 @@ describe("useGlobalSSE: own time-tracking reads (#8081)", () => {
   };
 
   function refreshedReads() {
-    expect(invalidateMatching).toHaveBeenCalledTimes(1);
-    const [matches] = invalidateMatching.mock.calls[0]!;
+    const ownMatchers = invalidateMatching.mock.calls
+      .map(([matches]) => matches)
+      .filter((matches) => Object.values(keys).some((key) => matches(key)));
+    expect(ownMatchers).toHaveLength(1);
+    const [matches] = ownMatchers;
     return Object.entries(keys)
-      .filter(([, key]) => matches(key))
+      .filter(([, key]) => matches!(key))
       .map(([name]) => name);
   }
 

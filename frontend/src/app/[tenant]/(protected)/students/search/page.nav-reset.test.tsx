@@ -711,6 +711,113 @@ describe("StudentSearchPage: click on the navigation entry of this page (#3374)"
     expect(mockGetStudents).toHaveBeenCalledTimes(reads);
   });
 
+  it("refreshes a saved search when its previous filter becomes active again", async () => {
+    const { reload } = renderWithRealStudentReads("?search=Max");
+    await act(async () => {
+      await reload.get(rosterProbeKey)!();
+    });
+    const otherFilter = deferred<{ students: (typeof mockStudent)[] }>();
+    const returning = vi.fn(async () => ({ students: [] }));
+    mockGetStudents.mockImplementation(({ search, bus }: StudentFilters) =>
+      search
+        ? Promise.resolve({ students: [mockStudent] })
+        : bus === "yes"
+          ? otherFilter.promise
+          : returning(),
+    );
+    fireEvent.click(
+      screen.getAllByRole("button", { name: /^Filter(?:,|$)/ })[0]!,
+    );
+    fireEvent.click((await screen.findAllByTestId("filter-bus"))[0]!);
+    fireEvent.click(
+      (await screen.findAllByRole("option", { name: "Buskind" }))[0]!,
+    );
+    await waitFor(() =>
+      expect(mockGetStudents).toHaveBeenCalledWith(
+        expect.objectContaining({ search: "", bus: "yes" }),
+      ),
+    );
+    fireEvent.click((await screen.findAllByTestId("filter-bus"))[0]!);
+    fireEvent.click(
+      (await screen.findAllByRole("option", { name: "Alle Kinder" }))[0]!,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Filter schließen" }));
+    expect(await screen.findByText("Keine Kinder gefunden")).toBeVisible();
+    expect(returning).toHaveBeenCalledTimes(1);
+    await act(async () => otherFilter.resolve({ students: [mockStudent] }));
+  });
+
+  it("does not offer unconfirmed probe rows after clearing a reopened search", async () => {
+    const { reload, rerender } = renderWithRealStudentReads("?search=Max");
+    await act(async () => {
+      await reload.get(rosterProbeKey)!();
+    });
+    const probe = deferred<{ students: (typeof mockStudent)[] }>();
+    const full = deferred<{ students: (typeof mockStudent)[] }>();
+    mockGetStudents
+      .mockImplementationOnce(() => probe.promise)
+      .mockImplementation(() => full.promise);
+    rerender(<StudentSearchPage key="reopened" />);
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "Suche löschen" })[0]!,
+    );
+    expect(
+      await screen.findByTestId("student-card-grid-skeleton"),
+    ).toBeVisible();
+    expect(screen.getByTestId("select-all-count")).toHaveTextContent("0");
+    const mila = { ...mockStudent, id: "8", first_name: "Mila" };
+    await act(async () => {
+      probe.resolve({ students: [mockStudent] });
+      full.resolve({ students: [mila] });
+    });
+    expect(await screen.findByTestId("student-card-8")).toBeVisible();
+  });
+
+  it("filters this opening's confirmed probe while the full roster is unavailable", async () => {
+    const { reload } = renderWithRealStudentReads("?search=Max");
+    await act(async () => {
+      await reload.get(rosterProbeKey)!();
+    });
+    const full = deferred<{ students: (typeof mockStudent)[] }>();
+    mockGetStudents.mockImplementation(() => full.promise);
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "Suche löschen" })[0]!,
+    );
+    expect(screen.getByTestId("student-card-7")).toBeVisible();
+    await waitFor(() =>
+      expect(mockGetStudents).toHaveBeenLastCalledWith(
+        expect.objectContaining({ search: "" }),
+      ),
+    );
+    const reads = mockGetStudents.mock.calls.length;
+    const [search] = screen.getAllByPlaceholderText("Name suchen…");
+    fireEvent.change(search!, { target: { value: "Ma" } });
+    await waitFor(() =>
+      expect(new URLSearchParams(window.location.search).get("search")).toBe(
+        "Ma",
+      ),
+    );
+    expect(mockGetStudents).toHaveBeenCalledTimes(reads);
+    await act(async () => full.reject(new ApiError("Unavailable", 503)));
+    expect(
+      await screen.findByRole("button", { name: "Wiederholen" }),
+    ).toBeVisible();
+    expect(screen.getByTestId("student-card-7")).toBeVisible();
+    fireEvent.change(search!, { target: { value: "Mila" } });
+    await waitFor(() =>
+      expect(screen.queryByTestId("student-card-7")).toBeNull(),
+    );
+    expect(screen.getByRole("button", { name: "Wiederholen" })).toBeVisible();
+    mockGetStudents.mockResolvedValue({ students: [mockStudent] });
+    fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
+    await waitFor(() =>
+      expect(mockGetStudents).toHaveBeenCalledTimes(reads + 1),
+    );
+    expect(mockGetStudents).toHaveBeenLastCalledWith(
+      expect.objectContaining({ search: "" }),
+    );
+  });
+
   it("does not mistake visible server start data for a finished roster refresh", async () => {
     const mila = { ...mockStudent, id: "8", first_name: "Mila" };
     const cached = { students: [mockStudent], truncatedTotal: null };

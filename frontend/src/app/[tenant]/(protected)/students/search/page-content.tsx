@@ -996,6 +996,17 @@ function isTransientRosterError(error: unknown): boolean {
   return code === "general.unavailable" || code === "general.server";
 }
 
+type SearchResult = Awaited<ReturnType<typeof fetchStudentSearch>>;
+type RosterResult = SearchResult & {
+  opening: symbol;
+  expandedRoster?: SearchResult;
+};
+
+function retainedProbeRoster(probe: RosterResult | undefined, opening: symbol) {
+  if (probe?.opening !== opening) return undefined;
+  return probe.pagesDeferred ? probe.expandedRoster : probe;
+}
+
 function SearchPageContent() {
   const router = useTenantRouter();
   // Use required: true to auto-redirect unauthenticated users (same pattern as /active-supervisions)
@@ -1054,9 +1065,6 @@ function SearchPageContent() {
   // as a transition: a key typed while the list renders is shown first.
   const [searchTerm, setSearchTerm] = useState(initial.search);
   const [linkedSearch, setLinkedSearch] = useState(initial.search !== "");
-  const [confirmedProbeKey, setConfirmedProbeKey] = useState<string | null>(
-    null,
-  );
   const [searchResetKey, setSearchResetKey] = useState(0);
   const [selectedGroupIds, setSelectedGroupIds] = useState(initial.groupIds);
   const [selectedSchoolClasses, setSelectedSchoolClasses] = useState(
@@ -1613,6 +1621,12 @@ function SearchPageContent() {
   const scopeKey = useSWRCacheKey();
   const scopedRosterKey = scopeKey(wholeListKey);
   const scopedProbeKey = scopeKey(rosterProbeKey);
+  // A return to the same SWR key is a new activation. Clearing the name is
+  // not: the full roster may still use the probe from this opening.
+  const probeOpening = useMemo(
+    () => Symbol(scopedProbeKey ?? undefined),
+    [scopedProbeKey],
+  );
   const heldRosterRefusal = useSyncExternalStore(
     subscribeRefusals,
     () => (scopedRosterKey === null ? undefined : refusalFor(scopedRosterKey)),
@@ -1656,10 +1670,8 @@ function SearchPageContent() {
       throw error;
     }
   }
-  type SearchResult = Awaited<ReturnType<typeof fetchStudentSearch>>;
-  type RosterResult = SearchResult & { expandedRoster?: SearchResult };
   const rosterReaders = useRef<{
-    key: string | null;
+    opening: symbol;
     readFull: () => SearchResult | undefined;
     readProbe: () => RosterResult | undefined;
   }>(null);
@@ -1672,13 +1684,11 @@ function SearchPageContent() {
         () => true,
       );
       const readers = rosterReaders.current;
-      if (!result.pagesDeferred || readers?.key !== scopedRosterKey)
-        return result;
-      const previous = readers.readProbe();
-      const expandedRoster = previous?.pagesDeferred
-        ? previous.expandedRoster
-        : previous;
-      return expandedRoster ? { ...result, expandedRoster } : result;
+      const expandedRoster =
+        result.pagesDeferred && readers?.opening === probeOpening
+          ? retainedProbeRoster(readers.readProbe(), probeOpening)
+          : undefined;
+      return { ...result, opening: probeOpening, expandedRoster };
     },
     {
       keepPreviousData: false,
@@ -1687,30 +1697,27 @@ function SearchPageContent() {
       revalidateIfStale: false,
       onSuccess() {
         if (scopedRosterKey !== null) liftRefusal(scopedRosterKey);
-        setConfirmedProbeKey(scopedProbeKey);
       },
     },
   );
   // An unconfirmed cached probe needs a real refresh, not another use of
-  // the deduped response (which never calls this opening's onSuccess).
-  const probeOpeningKey = useRosterProbe ? scopedProbeKey : null;
+  // a deduped response from another opening.
+  const probeConfirmed = rosterProbe.data?.opening === probeOpening;
   const refreshCachedProbe =
-    probeOpeningKey !== null &&
-    confirmedProbeKey !== probeOpeningKey &&
+    useRosterProbe &&
+    !probeConfirmed &&
     heldRosterRefusal === undefined &&
     rosterProbe.data !== undefined &&
     !rosterProbe.isValidating &&
     (!rosterProbe.error || isTransientRosterError(rosterProbe.error));
   const mutateRosterProbe = rosterProbe.mutate;
-  const attemptedProbeRefresh = useRef<string | null>(null);
+  const attemptedProbeRefresh = useRef<symbol | null>(null);
   useEffect(() => {
-    if (attemptedProbeRefresh.current === probeOpeningKey) return;
-    attemptedProbeRefresh.current = null;
-    if (refreshCachedProbe) {
-      attemptedProbeRefresh.current = probeOpeningKey;
+    if (refreshCachedProbe && attemptedProbeRefresh.current !== probeOpening) {
+      attemptedProbeRefresh.current = probeOpening;
       void mutateRosterProbe();
     }
-  }, [probeOpeningKey, refreshCachedProbe, mutateRosterProbe]);
+  }, [probeOpening, refreshCachedProbe, mutateRosterProbe]);
   const wholeList = useSWRAuth<SearchResult | undefined>(
     awaitsSearchFilters || useRosterProbe ? null : wholeListKey,
     async () => {
@@ -1726,12 +1733,13 @@ function SearchPageContent() {
       // Record it under the originating filters, even if they have changed.
       // Retain prior rows only if they are still readable for that key.
       const expandedRoster =
-        readers?.key === scopedRosterKey
-          ? (readers.readFull() ?? readers.readProbe()?.expandedRoster)
+        readers?.opening === probeOpening
+          ? (readers.readFull() ??
+            retainedProbeRoster(readers.readProbe(), probeOpening))
           : undefined;
       complete(() => {
         void rosterProbe.mutate(
-          { ...result, expandedRoster },
+          { ...result, opening: probeOpening, expandedRoster },
           { revalidate: false },
         );
       });
@@ -1745,7 +1753,7 @@ function SearchPageContent() {
         const readers = rosterReaders.current;
         if (
           result !== undefined &&
-          readers?.key === scopedRosterKey &&
+          readers?.opening === probeOpening &&
           readers.readProbe() !== undefined
         ) {
           // The replacement roster now owns detail previews for these filters.
@@ -1758,15 +1766,25 @@ function SearchPageContent() {
   const readRosterProbe = rosterProbe.readCurrent;
   useLayoutEffect(() => {
     rosterReaders.current = {
-      key: scopedRosterKey,
+      opening: probeOpening,
       readFull: () => readFullRoster?.().data,
       readProbe: () => readRosterProbe?.().data,
     };
     return () => {
       rosterReaders.current = null;
     };
-  }, [scopedRosterKey, readFullRoster, readRosterProbe]);
+  }, [probeOpening, readFullRoster, readRosterProbe]);
   const roster = useRosterProbe ? rosterProbe : wholeList;
+  const retainedRoster = retainedProbeRoster(rosterProbe.data, probeOpening);
+  const usingRetainedRoster =
+    !useRosterProbe &&
+    wholeList.data === undefined &&
+    retainedRoster !== undefined;
+  const rosterData = useRosterProbe
+    ? probeConfirmed
+      ? rosterProbe.data
+      : undefined
+    : (wholeList.data ?? retainedRoster);
   const rosterRefused =
     heldRosterRefusal !== undefined || isReadRefusal(roster.error);
   const rosterRefreshFailed = isTransientRosterError(roster.error);
@@ -1778,12 +1796,11 @@ function SearchPageContent() {
   // A saved term (or an edit before the roster is ready) is independent of
   // the roster read. Use the browser only once the current list fits in full.
   const hasCompleteList =
-    roster.data !== undefined &&
-    (roster.data.truncatedTotal ?? null) === null &&
+    rosterData !== undefined &&
+    (rosterData.truncatedTotal ?? null) === null &&
     (!roster.error || rosterRefreshFailed) &&
     !rosterRefused &&
-    !rosterReadDeferred &&
-    (!useRosterProbe || confirmedProbeKey === scopedProbeKey);
+    !rosterReadDeferred;
   // A refusal for the roster also denies its named projection.
   const needsServerSearch =
     searchTerm !== "" && !rosterRefused && !hasCompleteList;
@@ -1798,7 +1815,6 @@ function SearchPageContent() {
     { keepPreviousData: false },
   );
   const {
-    data: freshSearchData,
     isLoading,
     isValidating: isSearchResultValidating,
     error: resultError,
@@ -1806,16 +1822,14 @@ function SearchPageContent() {
   } = needsServerSearch ? namedSearch : roster;
   // A transient background error must not replace a usable roster with an
   // error page. SWR still logs the failure and retries the refresh.
-  const studentsError =
-    hasCompleteList && rosterRefreshFailed ? undefined : resultError;
+  const keepRosterAfterError =
+    !needsServerSearch &&
+    !rosterRefused &&
+    rosterRefreshFailed &&
+    (hasCompleteList || usingRetainedRoster);
+  const studentsError = keepRosterAfterError ? undefined : resultError;
   const rosterNeedsExpansion = searchTerm === "" && rosterReadDeferred;
-  // Clearing the name switches back to the full-roster key. Until it answers,
-  // keep already loaded rows, but never treat a stopped walk as a roster.
-  const retainedRoster = rosterProbe.data?.pagesDeferred
-    ? rosterProbe.data.expandedRoster
-    : rosterProbe.data;
-  const searchData =
-    freshSearchData ?? (searchTerm === "" ? retainedRoster : undefined);
+  const searchData = needsServerSearch ? namedSearch.data : rosterData;
   const isFinishingRoster = rosterNeedsExpansion && searchData === undefined;
   const searchRefused = isReadRefusal(studentsError);
   const studentsData =
@@ -2051,7 +2065,7 @@ function SearchPageContent() {
     setReloadCount((count) => count + 1);
   }, [activeRosterKey, studentsCacheKey]);
   const resumeRoster =
-    rosterNeedsExpansion && !isSearchResultValidating && !studentsError;
+    rosterNeedsExpansion && !isSearchResultValidating && !resultError;
   useEffect(() => {
     const requested = handledReloadRef.current !== reloadCount;
     handledReloadRef.current = reloadCount;
@@ -2216,15 +2230,15 @@ function SearchPageContent() {
   const clearLoadError = load.clear;
   const reloadStudentsRef = useRef<() => void>(() => undefined);
   useEffect(() => {
-    if (studentsError) {
-      void showLoadError(studentsError, {
+    if (resultError) {
+      void showLoadError(resultError, {
         object: "die Liste der Kinder",
         retry: () => reloadStudentsRef.current(),
       });
     } else {
       clearLoadError();
     }
-  }, [studentsError, showLoadError, clearLoadError]);
+  }, [resultError, showLoadError, clearLoadError]);
   const isPermissionError =
     searchRefused &&
     studentsError instanceof ApiError &&
@@ -3616,7 +3630,9 @@ function SearchPageContent() {
                 ...(parentAnnouncementsAvailable &&
                 rowsLoaded &&
                 !isSearchResultValidating &&
-                !hasLoadError &&
+                !resultError &&
+                (needsServerSearch ||
+                  (!usingRetainedRoster && !rosterReadDeferred)) &&
                 truncatedTotal === null &&
                 filteredStudents.length > 0
                   ? [
@@ -3718,6 +3734,7 @@ function SearchPageContent() {
         })()}
         empty={
           !hasLoadError &&
+          !keepRosterAfterError &&
           hasFetchedOnce &&
           !isInitializing &&
           !isAuthError &&
@@ -3836,6 +3853,10 @@ function SearchPageContent() {
           <ForbiddenPage embedded message={load.error.message} />
         ) : null}
         <div hidden={isPermissionError}>
+          <LoadErrorAlert
+            error={keepRosterAfterError ? load.error : null}
+            className="mb-3"
+          />
           <LoadErrorAlert error={filterOptionsLoad.error} className="mb-3" />
           {/* Planning-date context banner (#1939). The day chooser itself lives in
           the filter panel, in the "Anwesenheit" section right above the

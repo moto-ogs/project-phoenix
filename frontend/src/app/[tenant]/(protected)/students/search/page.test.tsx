@@ -2031,6 +2031,37 @@ describe("StudentSearchPage", () => {
       ).not.toBeInTheDocument();
     });
 
+    it("keeps the list but withholds letter recipients after a failed refresh", async () => {
+      await allowParentAnnouncements(true);
+      const swrModule = await import("~/lib/swr");
+      const roster = {
+        data: { students: mockStudents, truncatedTotal: null },
+        isLoading: false,
+        isValidating: false,
+        mutate: vi.fn(async () => undefined),
+      };
+      mockUseSWRAuthWithStudents(swrModule, {
+        ...roster,
+        error: new ApiError("Unavailable", 503),
+      });
+      const { rerender } = render(<StudentSearchPage />);
+      expect(await screen.findByTestId("alert-error")).toBeVisible();
+      expect(
+        screen.getByText(
+          `${mockStudents[0]!.first_name} ${mockStudents[0]!.second_name}`,
+        ),
+      ).toBeVisible();
+      expect(
+        screen.queryByTestId("overflow-Elternbrief schreiben"),
+      ).not.toBeInTheDocument();
+
+      mockUseSWRAuthWithStudents(swrModule, { ...roster, error: null });
+      rerender(<StudentSearchPage />);
+      expect(
+        await screen.findByTestId("overflow-Elternbrief schreiben"),
+      ).toBeVisible();
+    });
+
     it("offers no letter while a new search result is loading", async () => {
       await allowParentAnnouncements(true);
       const swrModule = await import("~/lib/swr");

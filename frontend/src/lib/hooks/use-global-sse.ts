@@ -36,6 +36,7 @@ import {
 import {
   authGeneration,
   useInvalidateFamily,
+  useInvalidateMatching,
   useLiveEventScope,
   usePublishLiveChannel,
 } from "~/lib/swr";
@@ -321,6 +322,7 @@ function currentStudentDetailId(): string | null {
 export function useGlobalSSE(): SSEHookState {
   const { data: session, status: sessionStatus } = useSession();
   const invalidateFamily = useInvalidateFamily();
+  const invalidateMatching = useInvalidateMatching();
   const refreshOwnTime = useOwnTimeRefresh();
   const { refresh: refreshSupervision } = useOptionalSupervision();
   const supervisionRefresh = useLatest(refreshSupervision);
@@ -616,12 +618,11 @@ export function useGlobalSSE(): SSEHookState {
         hasPendingGroupAccessEvent.current;
       const scopedEduGroupIds = new Set(pendingEduGroupIds.current);
       if (broadSearch || unfilteredSearchOnly || scopedEduGroupIds.size > 0) {
-        mutate(
+        void invalidateMatching(
           (key) =>
-            typeof key === "string" &&
-            key.includes(SEARCH_STUDENTS_KEY_PREFIX) &&
+            key.startsWith(SEARCH_STUDENTS_KEY_PREFIX) &&
             (broadSearch ||
-              key.includes(SEARCH_STUDENTS_ALL_GROUPS_KEY) ||
+              key.startsWith(SEARCH_STUDENTS_ALL_GROUPS_KEY) ||
               [...scopedEduGroupIds].some((gid) =>
                 searchStudentsKeyTargetsGroup(key, gid),
               )),
@@ -750,10 +751,7 @@ export function useGlobalSSE(): SSEHookState {
       // without this the open "Nach Laufgemeinschaft" view keeps listing the
       // deleted child, and every grouping the delete changed, until something
       // unrelated revalidates the list.
-      mutate(
-        (key) =>
-          typeof key === "string" && key.includes(SEARCH_STUDENTS_KEY_PREFIX),
-      ).catch((err) => {
+      void invalidateFamily(SEARCH_STUDENTS_KEY_PREFIX).catch((err) => {
         // Fire-and-forget: the screen keeps its data until the next event or load.
         logger.debug("swr_revalidation_failed", {
           error: err instanceof Error ? err.message : String(err),
@@ -1084,7 +1082,13 @@ export function useGlobalSSE(): SSEHookState {
     }
 
     resetPending();
-  }, [accepts, invalidateFamily, resetPending, supervisionRefresh]);
+  }, [
+    accepts,
+    invalidateFamily,
+    invalidateMatching,
+    resetPending,
+    supervisionRefresh,
+  ]);
 
   const scheduleFlush = useCallback(() => {
     const now = Date.now();

@@ -44,6 +44,11 @@ vi.mock("~/lib/swr", async (importOriginal) => ({
     mutate(
       (key: unknown) => typeof key === "string" && key.includes(`:${family}`),
     ),
+  useInvalidateMatching: () => (matches: (key: string) => boolean) =>
+    mutate(
+      (key: unknown) =>
+        typeof key === "string" && matches(key.slice(key.indexOf(":") + 1)),
+    ),
 }));
 
 vi.mock("swr", () => ({
