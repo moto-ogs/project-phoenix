@@ -45,7 +45,7 @@ func TestHolidayCriterionScopeWaitsForTheFirstOfficeAnswer(t *testing.T) {
 					return err
 				}
 				pidReady <- pid
-				return store.WriteHolidayCriteria(ctx, w.organization, []enrollment.HolidayCriterionInput{
+				return store.WriteHolidayCriteria(ctx, w.organization, "", []enrollment.HolidayCriterionInput{
 					{ID: ident.ID(criterion), Name: "Berufstätig", Question: "Sind Sie berufstätig?", Scope: enrollment.HolidayCriterionChild, Active: true},
 				}, 0)
 			})
@@ -94,7 +94,7 @@ func TestHolidayCriteriaSerializesTheFirstCatalogSaves(t *testing.T) {
 	var finished bool
 	var saveErr error
 	require.NoError(t, testpkg.WithinTraeger(runtimeCtx, w.organization, func(ctx context.Context) error {
-		if err := store.WriteHolidayCriteria(ctx, w.organization, []enrollment.HolidayCriterionInput{
+		if err := store.WriteHolidayCriteria(ctx, w.organization, "", []enrollment.HolidayCriterionInput{
 			{Name: "Erster Katalog", Question: "Sind Sie berufstätig?", Scope: enrollment.HolidayCriterionFamily, Active: true},
 		}, 0); err != nil {
 			return err
@@ -110,7 +110,7 @@ func TestHolidayCriteriaSerializesTheFirstCatalogSaves(t *testing.T) {
 					return err
 				}
 				pidReady <- pid
-				return store.WriteHolidayCriteria(ctx, w.organization, []enrollment.HolidayCriterionInput{
+				return store.WriteHolidayCriteria(ctx, w.organization, "", []enrollment.HolidayCriterionInput{
 					{Name: "Zweiter Katalog", Question: "Sind Sie alleinerziehend?", Scope: enrollment.HolidayCriterionFamily, Active: true},
 				}, 0)
 			})

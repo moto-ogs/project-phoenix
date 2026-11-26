@@ -15,6 +15,14 @@ func TestSystemActivityNamesAreExact(t *testing.T) {
 	assert.False(t, timetable.IsSystemActivityName("wc"))
 }
 
+func TestOpenRoomStayIsTheSystemActivityOnly(t *testing.T) {
+	t.Parallel()
+	assert.True(t, timetable.IsOpenRoomStay(timetable.Group{Name: timetable.OpenRoomActivityName, IsSystem: true}))
+	// A staff activity that merely carries the name stays an activity.
+	assert.False(t, timetable.IsOpenRoomStay(timetable.Group{Name: timetable.OpenRoomActivityName}))
+	assert.False(t, timetable.IsOpenRoomStay(timetable.Group{Name: timetable.SchulhofActivityName, IsSystem: true}))
+}
+
 func TestErrorCodeIsStable(t *testing.T) {
 	t.Parallel()
 	assert.Equal(t, "none", timetable.ErrorCode(nil))

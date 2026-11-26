@@ -90,12 +90,14 @@ func holidayPlacedRegistrations(decisions []enrollment.HolidayAllocationDecision
 
 // holidayAllocationBatch are the choices of one decision under the locks:
 // the pending bookings they name, by week, the locked weeks in ascending ID
-// and the criteria met of each booking.
+// and the catalog snapshot used to score each booking.
 type holidayAllocationBatch struct {
-	pending map[int64]enrollment.HolidayPendingBooking
-	byWeek  map[int64][]enrollment.HolidayAllocationChoice
-	weeks   []int64
-	met     func(enrollment.HolidayPendingBooking) []string
+	pending     map[int64]enrollment.HolidayPendingBooking
+	byWeek      map[int64][]enrollment.HolidayAllocationChoice
+	weeks       []int64
+	ranking     string
+	maxScore    int
+	metAndScore func(enrollment.HolidayPendingBooking) ([]string, int)
 }
 
 // lockChoices finds the pending booking of each choice, locks their weeks in
@@ -127,15 +129,16 @@ func (a *HolidayAllocation) lockChoices(ctx context.Context, organizationID int6
 	if len(batch.weeks) != len(batch.byWeek) {
 		return holidayAllocationBatch{}, enrollment.ErrHolidayAllocationChanged
 	}
-	criteria, err := store.ReadHolidayCriteria(ctx, organizationID)
+	catalog, err := store.ReadHolidayCriteriaCatalog(ctx, organizationID)
 	if err != nil {
-		return holidayAllocationBatch{}, fmt.Errorf("enrollment: read holiday criteria: %w", err)
+		return holidayAllocationBatch{}, err
 	}
 	answers, err := store.ReadHolidayCriterionAnswers(ctx, organizationID, period.ID.Int64(), 0)
 	if err != nil {
 		return holidayAllocationBatch{}, fmt.Errorf("enrollment: read holiday criterion answers: %w", err)
 	}
-	active := activeHolidayCriteria(criteria)
+	active := activeHolidayCriteria(catalog.Criteria)
+	weights, maxScore := holidayCriteriaWeights(active, catalog.Ranking)
 	values := holidayAllocationValues(period, active, answers)
 	names := []string{}
 	if period.HolidayWishRule {
@@ -144,8 +147,10 @@ func (a *HolidayAllocation) lockChoices(ctx context.Context, organizationID int6
 	for _, criterion := range active {
 		names = append(names, criterion.Name)
 	}
-	batch.met = func(booking enrollment.HolidayPendingBooking) []string {
-		return holidayCriteriaMet(names, values(booking))
+	batch.ranking, batch.maxScore = catalog.Ranking, maxScore
+	batch.metAndScore = func(booking enrollment.HolidayPendingBooking) ([]string, int) {
+		read := values(booking)
+		return holidayCriteriaMet(names, read), holidayCriteriaScore(read, weights)
 	}
 	return batch, nil
 }
@@ -246,11 +251,13 @@ func (a *HolidayAllocation) decideWeek(ctx context.Context, organizationID int64
 // booking until the decision is stored.
 func holidayDecisionOf(week enrollment.HolidayWeek, booking enrollment.HolidayQueuedBooking, batch holidayAllocationBatch, choice enrollment.HolidayAllocationChoice, rank int) enrollment.HolidayAllocationDecision {
 	read := batch.pending[booking.ID]
+	met, score := batch.metAndScore(read)
 	return enrollment.HolidayAllocationDecision{
 		ID: ident.ID(booking.ID), WeekID: week.ID, WeekStartsOn: week.StartsOn, WeekEndsOn: week.EndsOn,
 		RegistrationID: ident.ID(booking.RegistrationID), ChildID: ident.ID(booking.ChildID),
 		ChildFirstName: read.ChildFirstName, ChildLastName: read.ChildLastName,
-		Placement: choice.Placement, Proposal: choice.Proposal, Rank: rank, CriteriaMet: batch.met(read), Reason: choice.Reason,
+		Placement: choice.Placement, Proposal: choice.Proposal, Rank: rank, CriteriaMet: met, Reason: choice.Reason,
+		Ranking: batch.ranking, Score: &score, MaxScore: &batch.maxScore,
 	}
 }
 

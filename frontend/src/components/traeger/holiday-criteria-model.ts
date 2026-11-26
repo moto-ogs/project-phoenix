@@ -1,15 +1,19 @@
 /**
- * The editable list of the Träger's criteria (#4700): order is priority,
- * the templates a person can click, and the checks before saving. Field
+ * The editable list of the Träger's criteria (#4700) and how they count
+ * (#8135): by their order, all the same, or by points. Also the templates a
+ * person can click and the checks before saving. Field
  * names match the backend's `errors[].field` (`criteria.N.name`), so a
  * refusal lands at the same control as a local check.
  */
 
 import {
+  type HolidayCriteriaRanking,
+  type HolidayCriteriaRead,
   type HolidayCriterion,
   type HolidayCriterionInput,
   type HolidayCriterionScope,
   MAX_CRITERION_NAME,
+  MAX_CRITERION_POINTS,
   MAX_CRITERION_QUESTION,
   MAX_HOLIDAY_CRITERIA,
 } from "~/lib/traeger-holiday-allocation-api";
@@ -23,8 +27,62 @@ export interface CriterionDraft {
   readonly question: string;
   readonly scope: HolidayCriterionScope;
   readonly active: boolean;
+  /** The points as typed; they count with the ranking "points" only. */
+  readonly points: string;
   /** Parents answered it already: its scope stays. */
   readonly answered: boolean;
+}
+
+/** What the editor holds: the list and how it counts. */
+export interface CriteriaDraft {
+  readonly ranking: HolidayCriteriaRanking;
+  readonly items: readonly CriterionDraft[];
+}
+
+/**
+ * The three ways the criteria count, as the editor offers them. Every one
+ * ends at the arrival: who registered first comes first at a tie.
+ */
+export const CRITERIA_RANKINGS: readonly {
+  readonly value: HolidayCriteriaRanking;
+  readonly label: string;
+  readonly text: string;
+}[] = [
+  {
+    value: "priority",
+    label: "Nach Rangfolge",
+    text: "Das oberste Kriterium zählt am meisten, dann das nächste.",
+  },
+  {
+    value: "equal",
+    label: "Alle gleich",
+    text: "Jedes Kriterium zählt gleich viel. Wer mehr erfüllt, steht weiter oben.",
+  },
+  {
+    value: "points",
+    label: "Nach Punkten",
+    text: "Du gibst jedem Kriterium Punkte. Wer mehr Punkte hat, steht weiter oben.",
+  },
+];
+
+/** „1 Punkt“, „3 Punkte“. */
+export function pointsLabel(points: number): string {
+  return points === 1 ? "1 Punkt" : `${points} Punkte`;
+}
+
+/** The typed points as a whole number in the limits, else null. */
+export function parsePoints(text: string): number | null {
+  const trimmed = text.trim();
+  if (!/^\d{1,3}$/.test(trimmed)) return null;
+  const points = Number(trimmed);
+  return points >= 1 && points <= MAX_CRITERION_POINTS ? points : null;
+}
+
+/** One step of minus or plus, kept in the limits; a text that is no number starts at 1. */
+export function stepPoints(text: string, delta: -1 | 1): string {
+  const points = parsePoints(text);
+  if (points === null) return "1";
+  return String(Math.min(MAX_CRITERION_POINTS, Math.max(1, points + delta)));
 }
 
 /**
@@ -33,7 +91,7 @@ export interface CriterionDraft {
  */
 export const CRITERION_TEMPLATES: readonly Omit<
   CriterionDraft,
-  "key" | "id" | "active" | "answered"
+  "key" | "id" | "active" | "answered" | "points"
 >[] = [
   {
     name: "Beide Eltern berufstätig",
@@ -72,14 +130,24 @@ export function draftsFromCriteria(
   return [...criteria]
     .sort((a, b) => a.position - b.position)
     .map((criterion) => ({
-      key: nextKey(),
+      // Stable for a stored criterion, so the draft of an unchanged read is
+      // the same each time and a change taken back leaves no touched draft.
+      key: `stored-${criterion.id}`,
       id: criterion.id,
       name: criterion.name,
       question: criterion.question,
       scope: criterion.scope,
       active: criterion.active,
+      points: String(criterion.points),
       answered: criterion.answered,
     }));
+}
+
+export function draftFromRead(stored: HolidayCriteriaRead): CriteriaDraft {
+  return {
+    ranking: stored.ranking,
+    items: draftsFromCriteria(stored.criteria),
+  };
 }
 
 export function emptyCriterion(): CriterionDraft {
@@ -90,6 +158,7 @@ export function emptyCriterion(): CriterionDraft {
     question: "",
     scope: "family",
     active: true,
+    points: "1",
     answered: false,
   };
 }
@@ -124,9 +193,13 @@ export function moveCriterion(
   return next;
 }
 
-/** The checks before saving, keyed like the backend's field paths. */
+/**
+ * The checks before saving, keyed like the backend's field paths. Points are
+ * checked only where they count: with another ranking the field is hidden.
+ */
 export function validateCriteria(
   drafts: readonly CriterionDraft[],
+  ranking: HolidayCriteriaRanking = "priority",
 ): Record<string, string> {
   const errors: Record<string, string> = {};
   if (drafts.length > MAX_HOLIDAY_CRITERIA) {
@@ -152,11 +225,19 @@ export function validateCriteria(
       errors[`criteria.${index}.question`] =
         `Die Frage hat höchstens ${MAX_CRITERION_QUESTION} Zeichen.`;
     }
+    if (ranking === "points" && parsePoints(draft.points) === null) {
+      errors[`criteria.${index}.points`] =
+        `Bitte gib 1 bis ${MAX_CRITERION_POINTS} Punkte ein.`;
+    }
   });
   return errors;
 }
 
-/** The request body; its order is the priority. */
+/**
+ * The request body in the order of the list. Points that are no number can
+ * only be left behind a ranking that hides them; they go out as 0, which
+ * keeps the stored points of a criterion and gives a new one 1.
+ */
 export function inputsFromDrafts(
   drafts: readonly CriterionDraft[],
 ): HolidayCriterionInput[] {
@@ -166,6 +247,7 @@ export function inputsFromDrafts(
     question: draft.question.trim(),
     scope: draft.scope,
     active: draft.active,
+    points: parsePoints(draft.points) ?? 0,
   }));
 }
 
@@ -175,6 +257,21 @@ export function criteriaChanged(
   stored: readonly HolidayCriterion[],
 ): boolean {
   const saved = inputsFromDrafts(draftsFromCriteria(stored));
-  const current = inputsFromDrafts(drafts);
+  // The typed points compare as typed, so an emptied field counts as a change.
+  const current = drafts.map((draft, index) => ({
+    ...inputsFromDrafts([draft])[0],
+    points: parsePoints(draft.points) ?? `typed:${index}:${draft.points}`,
+  }));
   return JSON.stringify(saved) !== JSON.stringify(current);
+}
+
+/**
+ * The highest total a child can reach: the points of the criteria switched
+ * on, or their number when every one counts the same.
+ */
+export function highestScore(draft: CriteriaDraft): number {
+  const active = draft.items.filter((item) => item.active);
+  return draft.ranking === "points"
+    ? active.reduce((sum, item) => sum + (parsePoints(item.points) ?? 0), 0)
+    : active.length;
 }
