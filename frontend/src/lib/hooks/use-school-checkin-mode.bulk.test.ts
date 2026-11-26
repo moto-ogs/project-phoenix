@@ -14,8 +14,8 @@ vi.mock("~/lib/student-api", () => ({
   schoolCheckinStudentsBatch: mockSchoolCheckinStudentsBatch,
 }));
 
-vi.mock("swr", () => ({
-  mutate: mockGlobalMutate,
+vi.mock("~/lib/swr/hooks", () => ({
+  useInvalidateMatching: () => mockGlobalMutate,
 }));
 
 // The shared display path, reduced to what reaches the toast: the catalog

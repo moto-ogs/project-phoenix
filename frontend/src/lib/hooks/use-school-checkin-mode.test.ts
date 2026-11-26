@@ -13,8 +13,8 @@ vi.mock("~/lib/student-api", () => ({
   schoolCheckinStudent: mockSchoolCheckinStudent,
 }));
 
-vi.mock("swr", () => ({
-  mutate: mockGlobalMutate,
+vi.mock("~/lib/swr/hooks", () => ({
+  useInvalidateMatching: () => mockGlobalMutate,
 }));
 
 // The shared display path, reduced to what reaches the toast: the catalog
@@ -204,6 +204,20 @@ describe("useSchoolCheckinMode", () => {
       "out",
       undefined,
     );
+  });
+
+  it("counts the saved check-in even if invalidating the lists fails", async () => {
+    mockSchoolCheckinStudent.mockResolvedValueOnce({ changed: true });
+    mockGlobalMutate.mockRejectedValueOnce(new Error("Refresh failed"));
+    const { result } = renderHook(() => useSchoolCheckinMode());
+
+    await act(async () => {
+      await result.current.toggle("42", "abwesend");
+    });
+
+    // Anker: the write is counted as successful without a write-retry toast.
+    expect(result.current.successCount).toBe(1);
+    expect(mockToastError).not.toHaveBeenCalled();
   });
 
   it("toggle of a schulhof student calls action='out'", async () => {

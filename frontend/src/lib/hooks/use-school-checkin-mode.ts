@@ -7,7 +7,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { mutate as globalMutate } from "~/lib/swr/mutate";
+import { useInvalidateMatching } from "~/lib/swr/hooks";
 import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
 import {
   isNotCheckedInLocation,
@@ -186,28 +186,6 @@ function checkinModeSessionReducer(
   }
 }
 
-/**
- * Bundled SWR invalidation after a batch toggle (#2359): one revalidation
- * sweep for the whole batch instead of one per student (cf. #848 — bulk
- * events already arrive as a burst; the page must not multiply that).
- * student-detail matches on the bare prefix because any of the batch's
- * children may have an open detail cache entry.
- */
-async function invalidatePresenceCachesBulk(
-  placedInRoom: boolean,
-): Promise<void> {
-  await globalMutate(
-    (key) =>
-      typeof key === "string" &&
-      (key.includes(groupKeys.liveFamily) ||
-        key.includes(SEARCH_STUDENTS_KEY_PREFIX) ||
-        key.includes("tracking-supervisions-") ||
-        key.includes("tracking-indicators-") ||
-        key.includes(STUDENT_KEY_FAMILIES.detail) ||
-        (placedInRoom && isRoomPresenceKey(key))),
-  );
-}
-
 /** Room lists and room pages count the children a check-in placed (#6953). */
 function isRoomPresenceKey(key: string): boolean {
   return (
@@ -217,6 +195,14 @@ function isRoomPresenceKey(key: string): boolean {
     key.includes(roomKeys.family) ||
     key.includes("dashboard")
   );
+}
+
+function reportPresenceRefreshError(error: unknown): void {
+  // Readers display their own load errors. A failed invalidation must not
+  // turn a saved check-in into a failed write with a retry that writes again.
+  logger.warn("school_checkin_refresh_failed", {
+    error: error instanceof Error ? error.message : String(error),
+  });
 }
 
 interface UseSchoolCheckinModeOptions {
@@ -328,6 +314,26 @@ interface UseSchoolCheckinModeResult {
 export function useSchoolCheckinMode(
   options: UseSchoolCheckinModeOptions = {},
 ): UseSchoolCheckinModeResult {
+  const invalidateMatching = useInvalidateMatching();
+  const refreshPresence = useCallback(
+    async (placedInRoom: boolean, studentId?: string) =>
+      // One sweep per action or batch. Supersede earlier reads so their
+      // refusals cannot clear the search family after this refresh.
+      invalidateMatching(
+        (key) =>
+          typeof key === "string" &&
+          (key.includes(groupKeys.liveFamily) ||
+            key.includes(SEARCH_STUDENTS_KEY_PREFIX) ||
+            key.includes("tracking-supervisions-") ||
+            key.includes("tracking-indicators-") ||
+            (studentId === undefined
+              ? key.includes(STUDENT_KEY_FAMILIES.detail)
+              : key.endsWith(studentKeys.detail(studentId))) ||
+            (placedInRoom && isRoomPresenceKey(key))),
+        { expireInactive: true },
+      ),
+    [invalidateMatching],
+  );
   const targetRef = useRef(options.target ?? null);
   const onTargetRefusedRef = useRef(options.onTargetRefused);
   useLayoutEffect(() => {
@@ -481,15 +487,8 @@ export function useSchoolCheckinMode(
           );
         }
 
-        await globalMutate(
-          (key) =>
-            typeof key === "string" &&
-            (key.includes(groupKeys.liveFamily) ||
-              key.includes(SEARCH_STUDENTS_KEY_PREFIX) ||
-              key.includes("tracking-supervisions-") ||
-              key.includes("tracking-indicators-") ||
-              key.endsWith(studentKeys.detail(studentId)) ||
-              (target !== null && isRoomPresenceKey(key))),
+        await refreshPresence(target !== null, studentId).catch(
+          reportPresenceRefreshError,
         );
 
         // Bump the per-session counter so the ModeBar can surface "X
@@ -523,7 +522,7 @@ export function useSchoolCheckinMode(
         });
       }
     },
-    [pendingIds, showError, showMessage],
+    [pendingIds, refreshPresence, showError, showMessage],
   );
   useLayoutEffect(() => {
     latestToggleRef.current = toggle;
@@ -572,7 +571,9 @@ export function useSchoolCheckinMode(
             : schoolCheckinStudentsBatch(ids, action));
         }
 
-        await invalidatePresenceCachesBulk(target !== null);
+        await refreshPresence(target !== null).catch(
+          reportPresenceRefreshError,
+        );
         dispatchSession({ type: "addSuccesses", count: outcome.succeeded });
 
         // Clean run → summary toast right here (counts only, no names). A
@@ -653,7 +654,7 @@ export function useSchoolCheckinMode(
         }
       }
     },
-    [selectedIds, toast, showError],
+    [selectedIds, refreshPresence, toast, showError],
   );
 
   return {

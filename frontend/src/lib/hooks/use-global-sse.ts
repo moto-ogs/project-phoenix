@@ -605,6 +605,9 @@ export function useGlobalSSE(): SSEHookState {
         hasPendingArrivalScheduleEvent.current ||
         hasPendingPickupScheduleEvent.current ||
         hasPendingStudentUpdateEvent.current ||
+        // The companion grouping gets its links in the list response.
+        // A deletion may send only student_companions_changed.
+        hasPendingCompanionEvent.current ||
         // A group handover or leader change rewrites GetMyGroups and with it
         // the has_full_access of every row (modules/identityaccess/legacy/usercontext/
         // student_access.go), which decides whether a card shows absence,
@@ -626,6 +629,7 @@ export function useGlobalSSE(): SSEHookState {
               [...scopedEduGroupIds].some((gid) =>
                 searchStudentsKeyTargetsGroup(key, gid),
               )),
+          { expireInactive: true },
         ).catch((err) => {
           // Fire-and-forget: the screen keeps its data until the next event or load.
           logger.debug("swr_revalidation_failed", {
@@ -742,22 +746,6 @@ export function useGlobalSSE(): SSEHookState {
       // rename, photo upload or sick flag in the school would cost users
       // their work for changes that never touched the links.
       notifyStudentCompanionsChanged();
-
-      // The Kindersuche is the one companion view that does NOT fetch the links
-      // separately: its grouping rides along inside the student list response
-      // (companion_student_ids, only with include_companions=true), so the
-      // announcement above never reaches it. Deleting a linked child announces
-      // ONLY student_companions_changed — no student_updated, no checkin — so
-      // without this the open "Nach Laufgemeinschaft" view keeps listing the
-      // deleted child, and every grouping the delete changed, until something
-      // unrelated revalidates the list.
-      void invalidateFamily(SEARCH_STUDENTS_KEY_PREFIX).catch((err) => {
-        // Fire-and-forget: the screen keeps its data until the next event or load.
-        logger.debug("swr_revalidation_failed", {
-          error: err instanceof Error ? err.message : String(err),
-          scope: "student_companions",
-        });
-      });
     }
 
     // Arrival schedule changes affect derived "Kommt heute nicht" badges and

@@ -23,6 +23,8 @@ vi.unmock("swr");
 
 const {
   mockGetStudents,
+  mockCheckin,
+  mockBatchCheckin,
   mockUseSWRAuth,
   mockUseImmutableSWR,
   mockPush,
@@ -32,6 +34,8 @@ const {
   sessionState,
 } = vi.hoisted(() => ({
   mockGetStudents: vi.fn(),
+  mockCheckin: vi.fn(),
+  mockBatchCheckin: vi.fn(),
   mockUseSWRAuth: vi.fn(),
   mockUseImmutableSWR: vi.fn(),
   mockPush: vi.fn(),
@@ -162,6 +166,8 @@ vi.mock("~/lib/active-api", () => ({
 vi.mock("~/lib/student-api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/lib/student-api")>()),
   fetchStudents: (...args: unknown[]) => mockGetStudents(...args),
+  schoolCheckinStudent: mockCheckin,
+  schoolCheckinStudentsBatch: mockBatchCheckin,
   fetchSchoolClasses: vi.fn(() => Promise.resolve([])),
 }));
 
@@ -184,11 +190,15 @@ vi.mock("~/lib/swr", () => ({
 
 vi.mock("~/lib/swr/hooks", async (importOriginal) => {
   const actual = await importOriginal<typeof import("~/lib/swr/hooks")>();
+  const recordReload: ReturnType<typeof actual.useInvalidateMatching> = (
+    matches,
+    options,
+  ) => (options?.clear ? Promise.resolve([]) : mockRefreshSearch(matches));
   return {
     ...actual,
     useInvalidateMatching() {
       const invalidate = actual.useInvalidateMatching();
-      return realStudentReads ? invalidate : mockRefreshSearch;
+      return realStudentReads ? invalidate : recordReload;
     },
   };
 });
@@ -217,6 +227,7 @@ vi.mock("~/components/students/student-card", () => ({
 }));
 
 import { ApiError } from "~/lib/api-error";
+import { ToastProvider } from "~/contexts/ToastContext";
 import { liftAllRefusals, refusalFor } from "~/lib/access-refusal";
 import type { StudentFilters } from "~/lib/student-api";
 import { initialStudentSearch } from "~/lib/student-search-url";
@@ -284,20 +295,28 @@ function storedFilters() {
   return localStorage.getItem(STORAGE_KEY);
 }
 
-function renderOnSearchPage(search: string, wrapper?: typeof IsolatedSWRCache) {
+function renderOnSearchPage(
+  search: string,
+  wrapper?: typeof IsolatedSWRCache,
+  content = <StudentSearchPage />,
+) {
   window.history.replaceState(null, "", `/students/search${search}`);
   currentSearch = new URLSearchParams(search);
   const navLink = document.createElement("a");
   navLink.href = "/students/search";
   navLink.textContent = "Alle Kinder (Navigation)";
   document.body.appendChild(navLink);
-  const view = render(<StudentSearchPage />, { wrapper });
+  const view = render(content, { wrapper });
   return { ...view, navLink };
 }
 
 function renderWithRealStudentReads(
   search: string,
-  { defaultCache = false, fallback = {} as Record<string, unknown> } = {},
+  {
+    defaultCache = false,
+    fallback = {} as Record<string, unknown>,
+    content = <StudentSearchPage />,
+  } = {},
 ) {
   realStudentReads = true;
   const reload = new Map<string, () => Promise<unknown>>();
@@ -335,7 +354,11 @@ function renderWithRealStudentReads(
   }
   mockUseSWRAuth.mockImplementation(useStudentReads);
   return {
-    ...renderOnSearchPage(search, defaultCache ? undefined : CacheWithPreview),
+    ...renderOnSearchPage(
+      search,
+      defaultCache ? undefined : CacheWithPreview,
+      content,
+    ),
     reload,
     preview: (id: string) => preview(id),
   };
@@ -666,6 +689,42 @@ describe("StudentSearchPage: click on the navigation entry of this page (#3374)"
     expect(mockGetStudents).toHaveBeenCalledTimes(recordedCalls);
   });
 
+  it("retires cached and pending name reads when a complete roster takes over", async () => {
+    const roster = deferred<{ students: (typeof mockStudent)[] }>();
+    const lateName = deferred<{ students: (typeof mockStudent)[] }>();
+    const oldMila = { ...mockStudent, id: "8", first_name: "Mila" };
+    const newMila = { ...oldMila, id: "9" };
+    mockGetStudents.mockImplementation(({ search }: StudentFilters) =>
+      search ? Promise.resolve({ students: [oldMila] }) : roster.promise,
+    );
+    const { preview, reload, rerender } =
+      renderWithRealStudentReads("?search=Mila");
+    expect(await screen.findByTestId("student-card-8")).toBeVisible();
+    expect(preview("8")?.name).toBe("Mila Mustermann");
+
+    mockGetStudents.mockReturnValueOnce(lateName.promise);
+    act(() => void reload.get(namedKey)!());
+    await act(async () => roster.resolve({ students: [newMila] }));
+    // Anker: the roster now supplies the result and the detail preview.
+    expect(screen.getByTestId("student-card-9")).toBeVisible();
+    expect(preview("9")?.name).toBe("Mila Mustermann");
+    expect(preview("8")).toBeUndefined();
+
+    await act(async () => lateName.reject(new ApiError("Old refusal", 403)));
+    expect(screen.getByTestId("student-card-9")).toBeVisible();
+    expect(preview("9")?.name).toBe("Mila Mustermann");
+
+    const pending = deferred<{ students: (typeof mockStudent)[] }>();
+    mockGetStudents.mockReturnValue(pending.promise);
+    rerender(<StudentSearchPage key="saved-search-reopened" />);
+    // Anker: the reopened search has no rows to select while loading.
+    expect(screen.getByTestId("student-card-grid-skeleton")).toBeVisible();
+    expect(screen.getByTestId("select-all-count")).toHaveTextContent("0");
+    expect(screen.queryByTestId("student-card-8")).toBeNull();
+    await act(async () => pending.resolve({ students: [newMila] }));
+    expect(screen.getByTestId("student-card-9")).toBeVisible();
+  });
+
   it.each(["", "?search=Max"])(
     "keeps filtering a complete roster after a 503 (%s)",
     async (url) => {
@@ -734,6 +793,42 @@ describe("StudentSearchPage: click on the navigation entry of this page (#3374)"
     rerender(view("visible"));
 
     expect(await screen.findByText("Keine Kinder gefunden")).toBeVisible();
+  });
+
+  it("continues polling after transient failures but does not poll a refusal", async () => {
+    vi.useFakeTimers();
+    try {
+      const { reload } = renderWithRealStudentReads("?search=Max");
+      await act(async () => {
+        await reload.get(rosterProbeKey)!();
+      });
+      expect(screen.getByTestId("student-card-7")).toBeVisible();
+      const advancePoll = () =>
+        act(async () => {
+          await vi.advanceTimersByTimeAsync(LIVE_FALLBACK_INTERVAL_MS);
+        });
+      const unavailable = vi
+        .fn()
+        .mockRejectedValue(new ApiError("Unavailable", 503));
+      mockGetStudents.mockImplementation(unavailable);
+      await advancePoll();
+      expect(unavailable).toHaveBeenCalledTimes(1);
+      await advancePoll();
+      expect(unavailable).toHaveBeenCalledTimes(2);
+
+      mockGetStudents.mockResolvedValue({ students: [] });
+      await advancePoll();
+      expect(screen.getByText("Keine Kinder gefunden")).toBeVisible();
+
+      mockGetStudents.mockRejectedValue(new ApiError("Access refused", 403));
+      await advancePoll();
+      expect(refusalFor(scopedRosterKey)).toMatchObject({ status: 403 });
+      const reads = mockGetStudents.mock.calls.length;
+      await advancePoll();
+      expect(mockGetStudents).toHaveBeenCalledTimes(reads);
+    } finally {
+      releaseFakeTimers();
+    }
   });
 
   it("retries a cached probe failure once on each saved-search opening", async () => {
@@ -904,6 +999,41 @@ describe("StudentSearchPage: click on the navigation entry of this page (#3374)"
     expect(await screen.findByText("Keine Kinder gefunden")).toBeVisible();
   });
 
+  it("expands an incomplete saved search instead of restoring a cached full list", async () => {
+    const mila = { ...mockStudent, id: "8", first_name: "Mila" };
+    const { rerender, reload } = renderWithRealStudentReads("");
+    expect(await screen.findByTestId("student-card-7")).toBeVisible();
+    mockGetStudents.mockImplementation(({ search }: StudentFilters) =>
+      Promise.resolve({
+        students: [mila],
+        ...(search
+          ? {}
+          : { pagination: { total_pages: 25, total_records: 25000 } }),
+      }),
+    );
+    currentSearch = new URLSearchParams({ search: "Mila" });
+    window.history.replaceState(null, "", "/students/search?search=Mila");
+    rerender(<StudentSearchPage key="saved-search" />);
+    await act(async () => {
+      await reload.get(rosterProbeKey)!();
+    });
+    expect(await screen.findByTestId("student-card-8")).toBeVisible();
+
+    const full = deferred<{ students: (typeof mockStudent)[] }>();
+    const refreshFull = vi.fn(() => full.promise);
+    mockGetStudents.mockImplementation(refreshFull);
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "Suche löschen" })[0]!,
+    );
+
+    await waitFor(() => expect(refreshFull).toHaveBeenCalledTimes(1));
+    // Anker: the older roster is not selectable during the deferred read.
+    expect(screen.getByTestId("student-card-grid-skeleton")).toBeVisible();
+    expect(screen.getByTestId("select-all-count")).toHaveTextContent("0");
+    await act(async () => full.resolve({ students: [mila] }));
+    expect(await screen.findByTestId("student-card-8")).toBeVisible();
+  });
+
   it("does not use a late probe for previews after the full roster took over", async () => {
     const probe = deferred<{ students: (typeof mockStudent)[] }>();
     const mila = { ...mockStudent, id: "8", first_name: "Mila" };
@@ -1043,6 +1173,61 @@ describe("StudentSearchPage: click on the navigation entry of this page (#3374)"
     expect(await screen.findByTestId("student-card-8")).toBeVisible();
     expect(screen.getByTestId("select-all-count")).toHaveTextContent("1");
   });
+
+  it.each(["single", "bulk"] as const)(
+    "keeps the roster after a late refusal superseded by %s check-in",
+    async (kind) => {
+      const { useSchoolCheckinMode } = await vi.importActual<
+        typeof import("~/lib/hooks/use-school-checkin-mode")
+      >("~/lib/hooks/use-school-checkin-mode");
+      function CheckinAction() {
+        const checkin = useSchoolCheckinMode();
+        return (
+          <button
+            type="button"
+            onClick={() =>
+              void (kind === "single"
+                ? checkin.toggle("7", "abwesend")
+                : checkin.runBulk("in", ["7"]))
+            }
+          >
+            Test check-in
+          </button>
+        );
+      }
+      resetSWRScope({ revalidate: false });
+      mockCheckin.mockResolvedValue(undefined);
+      mockBatchCheckin.mockResolvedValue({
+        action: "in",
+        succeeded: 1,
+        failed: 0,
+        results: [{ studentId: "7", ok: true, changed: true }],
+      });
+      const { reload } = renderWithRealStudentReads("", {
+        defaultCache: true,
+        content: (
+          <ToastProvider>
+            <StudentSearchPage />
+            <CheckinAction />
+          </ToastProvider>
+        ),
+      });
+      expect(await screen.findByTestId("student-card-7")).toBeVisible();
+      const oldRoster = deferred<{ students: (typeof mockStudent)[] }>();
+      const mila = { ...mockStudent, id: "8", first_name: "Mila" };
+      mockGetStudents
+        .mockReturnValueOnce(oldRoster.promise)
+        .mockResolvedValue({ students: [mila] });
+      act(() => void reload.get(rosterKey)!());
+      fireEvent.click(screen.getByRole("button", { name: "Test check-in" }));
+      expect(await screen.findByTestId("student-card-8")).toBeVisible();
+      await act(async () => oldRoster.reject(new ApiError("Old refusal", 403)));
+      // Anker: the replacement roster remains usable for selection.
+      expect(screen.getByTestId("student-card-8")).toBeVisible();
+      expect(screen.getByTestId("select-all-count")).toHaveTextContent("1");
+      expect(refusalFor(scopedRosterKey)).toBeUndefined();
+    },
+  );
 
   it.each(["roster", "name"] as const)(
     "withdraws active and inactive name matches from record previews after a %s refusal",

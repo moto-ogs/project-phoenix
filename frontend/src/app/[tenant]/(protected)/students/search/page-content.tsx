@@ -47,6 +47,7 @@ import {
 import { rooms as roomKeys } from "~/lib/swr/rooms";
 import { groups as groupKeys } from "~/lib/swr/groups";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useSwrPollingRecovery } from "~/lib/hooks/use-swr-polling-recovery";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import {
   Suspense,
@@ -1787,19 +1788,19 @@ function SearchPageContent() {
   // until a completed full read retires it.
   const retainedRoster = retainedProbeRoster(rosterProbe.data, probeOpening);
   const usingRetainedRoster = !useRosterProbe && retainedRoster !== undefined;
+  // A deferred result from this opening needs a new full read, even if an
+  // older one is cached. A seed alone does not satisfy a stopped walk either.
+  const rosterReadDeferred =
+    rosterProbe.data?.pagesDeferred === true &&
+    (probeConfirmed || wholeList.readCurrent?.().data === undefined);
   const rosterData = useRosterProbe
     ? probeConfirmed
       ? rosterProbe.data
       : undefined
-    : (retainedRoster ?? wholeList.data);
+    : (retainedRoster ?? (rosterReadDeferred ? undefined : wholeList.data));
   const rosterRefused =
     heldRosterRefusal !== undefined || isReadRefusal(roster.error);
   const rosterRefreshFailed = isTransientRosterError(roster.error);
-  // SWR can fall back to the server seed after the live roster walk stopped.
-  // Those visible rows do not satisfy the deferred walk.
-  const rosterReadDeferred =
-    rosterProbe.data?.pagesDeferred === true &&
-    wholeList.readCurrent?.().data === undefined;
   // A saved term (or an edit before the roster is ready) is independent of
   // the roster read. Use the browser only once the current list fits in full.
   const hasCompleteList =
@@ -1824,6 +1825,44 @@ function SearchPageContent() {
       refreshInterval: needsServerSearch ? refreshInterval : 0,
     },
   );
+  useLayoutEffect(() => {
+    if (!hasCompleteList) return;
+    // The roster now answers every term for these filters. Retire the old
+    // projections and their pending reads before they can seed a preview.
+    void invalidateSearchKey(
+      (key) =>
+        key.startsWith(searchFamily) &&
+        key !== wholeListKey &&
+        key !== rosterProbeKey,
+      { clear: true },
+    );
+  }, [
+    hasCompleteList,
+    invalidateSearchKey,
+    searchFamily,
+    wholeListKey,
+    rosterProbeKey,
+  ]);
+  useSwrPollingRecovery(
+    refreshInterval > 0 &&
+      !rosterRefused &&
+      rosterRefreshFailed &&
+      !roster.isValidating
+      ? roster.error
+      : undefined,
+    roster.mutate,
+    refreshInterval,
+  );
+  useSwrPollingRecovery(
+    refreshInterval > 0 &&
+      needsServerSearch &&
+      isTransientRosterError(namedSearch.error) &&
+      !namedSearch.isValidating
+      ? namedSearch.error
+      : undefined,
+    namedSearch.mutate,
+    refreshInterval,
+  );
   const refreshRestoredSearch = useEffectEvent(() => {
     if (!useRosterProbe || !probeConfirmed || awaitsSearchFilters) return;
     void invalidateSearchKey(
@@ -1842,7 +1881,6 @@ function SearchPageContent() {
     isLoading,
     isValidating: isSearchResultValidating,
     error: resultError,
-    mutate: mutateStudents,
   } = needsServerSearch ? namedSearch : roster;
   // A transient background error must not replace a usable roster with an
   // error page. SWR still logs the failure and retries the refresh.
@@ -2099,20 +2137,15 @@ function SearchPageContent() {
     handledReloadRef.current = reloadCount;
     // A reset to a key not already being read starts a new fetch in SWR.
     // A reset from server search to the same roster still needs a reload.
-    if (requested && reloadRequestKeysRef.current.includes(studentsCacheKey)) {
+    if (
+      resumeRoster ||
+      (requested && reloadRequestKeysRef.current.includes(studentsCacheKey))
+    ) {
       // Supersede the old request as well as bypassing deduplication: its
       // late refusal must not invalidate the retried search's entire family.
       void invalidateSearchKey((key) => key === studentsCacheKey);
-    } else if (resumeRoster) {
-      void mutateStudents();
     }
-  }, [
-    reloadCount,
-    resumeRoster,
-    studentsCacheKey,
-    mutateStudents,
-    invalidateSearchKey,
-  ]);
+  }, [reloadCount, resumeRoster, studentsCacheKey, invalidateSearchKey]);
 
   // Clicking "Alle Kinder" in the navigation while already here means "start
   // over": drop search, filters and date and load the list fresh (#3374). The
