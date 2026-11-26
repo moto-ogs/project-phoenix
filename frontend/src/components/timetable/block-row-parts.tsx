@@ -100,25 +100,53 @@ export interface BlockRowPart {
   readonly text: string;
   /** Ein Ausfallgrund steht rot. */
   readonly danger?: boolean;
+  /**
+   * Wie der Teil schrumpft, wenn die Zeile nicht reicht: `room` kürzt
+   * mit „…“, `count` höchstens bis 60 % der Zeile, `staff` nie. Hat ein Teil diese
+   * Angabe, entfällt keiner mehr; sonst bleibt die alte Regel (ein Teil,
+   * der nicht passt, entfällt mit seinem Trenner).
+   */
+  readonly shrink?: "room" | "count" | "staff";
 }
+
+// Nur der Raum schrumpft mit „…“; die Kinder haben eine feste Obergrenze
+// (lange Angaben wie „3 nicht mehr im Raum“), das Personal bleibt ganz.
+// Schrumpften alle anteilig, kürzte schon ein halber Pixel „Julia K.“.
+const SHRINK_CLASS: Record<NonNullable<BlockRowPart["shrink"]>, string> = {
+  room: "min-w-0 shrink truncate",
+  count: "max-w-[60%] shrink-0 truncate",
+  staff: "shrink-0",
+};
 
 /**
  * Angabenzeile einer Blockzeile am Telefon: genau eine Zeile, gekürzt wird
  * an den Teilgrenzen. Ein Teil, der nicht mehr ganz passt, entfällt mit
  * seinem Trenner (statt „OGS-Raum 2 · 16 Kind…“); vorne steht das
  * Wichtigste (Raum, Kinder). Alle Angaben stehen am Ziel der Zeile.
+ * Tragen Teile `shrink`, entfällt keiner: Raum und Personal kürzen mit
+ * „…“, damit am SE nicht still ein Name fehlt, der am iPhone 15 steht.
  */
 export function BlockRowParts({
   parts,
 }: Readonly<{ parts: readonly BlockRowPart[] }>) {
+  const fits = parts.some((part) => part.shrink != null);
   return (
-    <span className="flex h-5 flex-wrap overflow-hidden">
+    <span
+      className={cn(
+        "flex h-5 overflow-hidden",
+        fits ? "min-w-0 flex-nowrap" : "flex-wrap",
+      )}
+    >
       {parts.map((part, index) => (
         <span
           key={part.key}
           className={cn(
             "whitespace-nowrap",
-            index === 0 && "min-w-0 truncate",
+            fits
+              ? part.shrink
+                ? SHRINK_CLASS[part.shrink]
+                : "shrink-0"
+              : index === 0 && "min-w-0 truncate",
             part.danger && "text-moto-red-strong",
           )}
         >
