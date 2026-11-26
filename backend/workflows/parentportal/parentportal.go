@@ -67,4 +67,5 @@ const (
 	KeyEnrollmentBookingsAuthoritative = care.KeyEnrollmentBookingsAuthoritative
 	KeyParentNewsEnabled               = care.KeyParentNewsEnabled
 	KeyEnrollmentCareFacilityTerm      = care.KeyEnrollmentCareFacilityTerm
+	KeyEnrollmentCareFacilityArticle   = care.KeyEnrollmentCareFacilityArticle
 )

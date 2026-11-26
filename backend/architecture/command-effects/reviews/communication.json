@@ -2421,6 +2421,16 @@
       "target_owner": "organization-tenancy"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/settings.ParentMessagingValues.CareFacilityArticle",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/communication/internal/parentmessages.Settings.CareFacilityArticle",
+      "reason": "Read-only target: communication reaches modules/settings.ParentMessagingValues.CareFacilityArticle (settings-platform) to decline the school's care name with its article in the guardian's new-message mail (#8136). No persistent, lock or scope effect.",
+      "source_owner": "communication",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings.ParentMessagingValues.CareFacilityArticle",
+      "target_owner": "settings-platform"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/settings.ParentMessagingValues.CareFacilityTerm",
       "classification": "query",
       "effect": "query",

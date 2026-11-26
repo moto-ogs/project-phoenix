@@ -76,3 +76,6 @@ func (groupThreadTestSettings) ParentMessageLeadershipEnabled(context.Context) (
 func (groupThreadTestSettings) CareFacilityTerm(context.Context) (string, error) {
 	return "OGS", nil
 }
+func (groupThreadTestSettings) CareFacilityArticle(context.Context) (string, error) {
+	return "die", nil
+}
