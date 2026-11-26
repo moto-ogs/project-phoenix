@@ -40,6 +40,7 @@ import { isPositiveInt64Id } from "~/lib/compare-ids";
 import { childrenConcept } from "~/lib/concepts/children";
 import { berlinTodayISO } from "~/lib/date-helpers";
 import { useBerlinTodayWithRefresh } from "~/lib/hooks/use-berlin-today";
+import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
 import { schoolClassLabel, schoolClassName } from "~/lib/school-class-label";
 import { IsolatedSWRCache, useInvalidateMatching } from "~/lib/swr";
@@ -232,6 +233,7 @@ function ChildrenContent({
   const [expired, setExpired] = useState<{
     page: TraegerChildrenPage;
     refreshing: boolean;
+    failure?: unknown;
   } | null>(null);
   const expiredPage = expired?.page === firstPage ? expired : null;
   if (expired && !expiredPage) setExpired(null);
@@ -283,6 +285,11 @@ function ChildrenContent({
     setLater(null);
     setCounted(null);
   }, [invalidate, listKey]);
+  const expiredError = useSwrLoadError(
+    expiredPage?.failure,
+    LIST_OBJECT,
+    clearList,
+  );
 
   const withdrawRefusedList = useCallback(
     (error: unknown) => {
@@ -324,6 +331,11 @@ function ChildrenContent({
         clearList();
         return;
       }
+      if (filter.search && next.children.length === 0 && matched > next.total) {
+        // An empty continuation cannot confirm how many children still match.
+        clearList();
+        return;
+      }
       // A renamed child can reappear after the cursor. Its newer position
       // and details replace the older row.
       const nextIDs = new Set(next.children.map(childRowKey));
@@ -337,9 +349,7 @@ function ChildrenContent({
         counts: {
           total: next.total,
           // An empty continuation does not carry a search count.
-          matched: next.children.length
-            ? next.matched
-            : (counts ?? page).matched,
+          matched: next.children.length ? next.matched : matched,
           schools: next.schools,
         },
       });
@@ -375,7 +385,7 @@ function ChildrenContent({
     beginPageRead,
     listKey,
     filter,
-    counts,
+    matched,
     clearList,
     withdrawRefusedList,
     showActionError,
@@ -429,10 +439,11 @@ function ChildrenContent({
       setCounted(null);
       try {
         await first.reloadOrThrow();
-      } finally {
+      } catch (failure) {
         setExpired((value) =>
-          value === attempt ? { page, refreshing: false } : value,
+          value === attempt ? { page, refreshing: false, failure } : value,
         );
+        throw failure;
       }
     },
   });
@@ -466,7 +477,7 @@ function ChildrenContent({
           </Button>
         ),
       }
-    : first.error;
+    : (first.error ?? (expiredPage?.failure ? expiredError : null));
   const noMatch = emptySearchText(search, []);
   // A search without a hit offers the way back. A list nobody can fill
   // from here is one sentence, not a stage.

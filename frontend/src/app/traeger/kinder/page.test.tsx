@@ -4,6 +4,7 @@ import {
   render,
   screen,
   waitFor,
+  waitForElementToBeRemoved,
 } from "@testing-library/react";
 import { Activity, useSyncExternalStore, type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -607,7 +608,7 @@ describe("TraegerChildrenPage", () => {
     expect(screen.queryByText("Zander, Mia")).not.toBeInTheDocument();
   });
 
-  it("keeps an expired list withdrawn when the export's refresh fails", async () => {
+  it("keeps an expired list withdrawn and offers a page retry after dismissing the toast", async () => {
     setTestClock("2026-11-26T22:59:30Z");
     const refresh = deferred<TraegerChildrenPage>();
     api.fetchTraegerChildren
@@ -627,12 +628,17 @@ describe("TraegerChildrenPage", () => {
     // Anker: the refresh is still pending while the rejected names are gone.
     expect(screen.queryByText("Zander, Mia")).not.toBeInTheDocument();
     await act(async () => refresh.reject(new ApiError("unavailable", 500)));
-    await screen.findByText((text) =>
-      text.includes(catalogText("general.server", "die Liste der Kinder")),
-    );
+    const closeToast = await screen.findByRole("button", { name: "Schließen" });
+    fireEvent.click(closeToast);
+    await waitForElementToBeRemoved(closeToast);
+    const retry = await screen.findByRole("button", { name: "Wiederholen" });
+    expect(retry).toBeVisible();
+    expect(
+      screen.getByText(catalogText("general.server", "die Liste der Kinder")),
+    ).toBeVisible();
     expect(screen.queryByText("Zander, Mia")).not.toBeInTheDocument();
     expect(downloadOption()).toBeDisabled();
-    fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
+    fireEvent.click(retry);
     await screen.findAllByText("Berg, Anna");
     expect(screen.queryByText("Zander, Mia")).not.toBeInTheDocument();
   });
@@ -872,6 +878,39 @@ describe("TraegerChildrenPage", () => {
     expect(
       screen.queryByRole("button", { name: /Weitere Kinder laden/ }),
     ).not.toBeInTheDocument();
+  });
+
+  it("reads the first page again when an empty continuation makes the search count impossible", async () => {
+    api.fetchTraegerChildren
+      .mockResolvedValueOnce(pageOf([BERG, ZANDER]))
+      .mockResolvedValueOnce(
+        pageOf([BERG], { total: 2, matched: 2, nextCursor: "second" }),
+      )
+      .mockResolvedValueOnce(pageOf([], { total: 1 }))
+      .mockResolvedValueOnce(pageOf([BERG], { total: 1, matched: 1 }));
+    renderPage();
+    await screen.findAllByText("Zander, Mia");
+    fireEvent.change(screen.getAllByPlaceholderText("Kind suchen")[0]!, {
+      target: { value: "er" },
+    });
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Weitere Kinder laden (1 von 2)",
+      }),
+    );
+
+    await waitFor(() =>
+      expect(api.fetchTraegerChildren).toHaveBeenCalledTimes(4),
+    );
+    expect(api.fetchTraegerChildren).toHaveBeenLastCalledWith({
+      schoolId: "",
+      search: "er",
+    });
+    await waitFor(() =>
+      expect(screen.getByText("gefunden").parentElement).toHaveTextContent(
+        /1\s*gefunden/,
+      ),
+    );
   });
 
   it("drops names and starts over when the continuation has fewer schools, even without rows", async () => {
