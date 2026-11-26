@@ -52,6 +52,8 @@ export function StaffExportButton({
   staffId,
   yearStart,
   asButton = false,
+  open: controlledOpen,
+  onOpenChange,
 }: {
   readonly staffId: string;
   readonly yearStart: Date;
@@ -60,9 +62,21 @@ export function StaffExportButton({
    * Telefon im „…“ der Kopfkarte verschwand.
    */
   readonly asButton?: boolean;
+  /**
+   * App (#8070, Runde 11): gesteuert von außen, etwa vom Eintrag im
+   * „…“-Blatt der Kopfkarte; dann zeigt der Baustein keinen eigenen Knopf.
+   */
+  readonly open?: boolean;
+  readonly onOpenChange?: (open: boolean) => void;
 }) {
   const yearStartISO = toISODate(yearStart);
-  const [open, setOpen] = useState(false);
+  const [ownOpen, setOwnOpen] = useState(false);
+  const controlled = controlledOpen !== undefined;
+  const open = controlled ? controlledOpen : ownOpen;
+  const setOpen = (next: boolean) => {
+    if (controlled) onOpenChange?.(next);
+    else setOwnOpen(next);
+  };
   const [range, setRange] = useState<DateRange | undefined>(() =>
     defaultRange(yearStart),
   );
@@ -105,7 +119,7 @@ export function StaffExportButton({
 
   return (
     <>
-      {asButton ? (
+      {controlled ? null : asButton ? (
         <Button
           type="button"
           variant="outline"
