@@ -111,6 +111,8 @@ func TestParentFamilyStartPositiveGrowthQueryBudget(t *testing.T) {
 		}
 		first := cards[chain.StudentID]
 		assert.True(t, first.Features.HasOpenChangeRequest, "own Stammdaten request")
+		assert.True(t, first.Features.PickupChangeCareDayEnded, "the changed closing time ends the care day of school A")
+		assert.False(t, cards[otherChild.ID].Features.PickupChangeCareDayEnded, "school B keeps its session end")
 		assert.Equal(t, "15:30", first.Today.PickupTime, "pickup of the child in care")
 		if n == 3 {
 			shared, protected := cards[children[1]], cards[children[2]]
@@ -152,6 +154,8 @@ func (s familyStartSeed) firstChild(studentID int64) {
 	testpkg.CreateTestPickupSchedule(s.t, s.db, studentID, int(time.Monday), s.staffID, "15:30")
 	testpkg.CreateTestAttendanceForDate(s.t, s.db, studentID, 0, s.deviceID, s.today, s.now.Add(-2*time.Hour), nil)
 	s.exec(`INSERT INTO users.student_data_change_requests (tenant_id,student_id,submitted_by,target,field_key,new_value,status) VALUES (?,?,?,'person','first_name','"Pending"'::jsonb,'pending')`, testpkg.Tenant(s.t), studentID, s.accountID)
+	// The school closes at 11:00 today (#8173): its care day is over at noon.
+	s.exec(`INSERT INTO schedule.opening_changes (tenant_id,start_date,end_date,opens_at,closes_at,reason) VALUES (?,?,?,'07:30','11:00','Zeugnisausgabe')`, testpkg.Tenant(s.t), s.today, s.today)
 }
 
 // sharedRequestChild is sick today, has a day exception and an open weekly
@@ -234,7 +238,7 @@ func familyStartGrowthRouter(t *testing.T, db *bun.DB, database transactionrunti
 		ArrivalSchedules: owners.NewParentArrivalSchedules(schedules.Arrivals), PickupSchedules: owners.NewParentPickupSchedules(schedules.Pickups),
 		Attendance:             owners.BindParentAttendance(presence),
 		FamilyProtectionEvents: owners.BindParentFamilyProtectionReads(sharing.FamilyProtection), ParentRequestShares: owners.BindParentRequestShareRecords(sharing.ParentRequestShare), ParentRequestEvents: owners.NewParentRequestEvents(sharing.ParentRequestEvent),
-		CarePlanPolicy: owners.NewParentCarePlanPolicy(),
+		CarePlanPolicy: owners.NewParentCarePlanPolicy(), ClosingTimes: OpeningChangeClosingTimes(),
 	})
 	router := chi.NewRouter()
 	router.Use(testpkg.TenantRuntimeMiddleware(t, db))
