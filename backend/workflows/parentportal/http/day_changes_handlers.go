@@ -43,14 +43,20 @@ type ChildDayChangeEntry struct {
 	PreviousRoomName *string        `json:"previous_room_name"`
 	ClosingName      *string        `json:"closing_name"`
 	ClosingTraeger   bool           `json:"closing_traeger"`
-	ClassName        *string        `json:"class_name"`
-	ClassTime        *string        `json:"class_time"`
+	// OpeningName, OpensAt and ClosesAt describe an opening change (#8170);
+	// PickupAfterClosing marks a changed pickup after its closing time.
+	OpeningName        *string `json:"opening_name"`
+	OpensAt            *string `json:"opens_at"`
+	ClosesAt           *string `json:"closes_at"`
+	PickupAfterClosing bool    `json:"pickup_after_closing"`
+	ClassName          *string `json:"class_name"`
+	ClassTime          *string `json:"class_time"`
 }
 
 // ChildDayChangeKinds are the kinds of the child's day.
 var ChildDayChangeKinds = []string{
 	"child_absent", "child_pickup_changed", "child_goes_alone", "class_trip",
-	"closing_day",
+	"closing_day", "opening_changed",
 	"activity_cancelled", "activity_reinstated", "activity_room_changed", "activity_lead_changed",
 	"class_dismissal_changed",
 }
@@ -107,6 +113,7 @@ func toChildDayChangesResponse(day parentService.ChildDay) ChildDayChangesRespon
 			ChildStatus: entry.ChildStatus, PickupTime: entry.PickupTime,
 			ActivityTitle: entry.ActivityTitle, RoomName: entry.RoomName, PreviousRoomName: entry.PreviousRoomName,
 			ClosingName: entry.ClosingName, ClosingTraeger: entry.ClosingTraeger,
+			OpeningName: entry.OpeningName, OpensAt: entry.OpensAt, ClosesAt: entry.ClosesAt, PickupAfterClosing: entry.PickupAfterClosing,
 			ClassName: entry.ClassName, ClassTime: entry.ClassTime,
 		})
 	}

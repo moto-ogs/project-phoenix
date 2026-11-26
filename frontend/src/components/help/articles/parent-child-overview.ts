@@ -30,7 +30,9 @@ export function parentChildOverviewTopic(): HelpTopic {
       "`Angaben`: persönliche Angaben, Klasse und Gesundheit.",
       "`Kontakte`: Abholberechtigte, Kontakte und verbundene Konten.",
       "Unter `Heute` stehen die Knöpfe zum Abmelden, zur Abholzeit und für eine Nachricht.",
-      "`Heute anders` nennt zum Beispiel: Ein Angebot fällt aus, ist in einem anderen Raum oder hat eine Vertretung. Dazu kommen eine geänderte Abholzeit, ein Schließtag, ein Ausflug oder eine Krankmeldung.",
+      "`Heute anders` nennt zum Beispiel: Ein Angebot fällt aus, ist in einem anderen Raum oder hat eine Vertretung. Dazu kommen eine geänderte Abholzeit, ein Schließtag, geänderte Öffnungszeiten, ein Ausflug oder eine Krankmeldung.",
+      // #8170: eine Abholzeit nach der geänderten Schließzeit bleibt stehen.
+      "Schließt die OGS heute früher und liegt deine Abholzeit danach, steht dort `Das ist nach der Schließung.` Die Abholzeit bleibt, wie sie ist. Sprich die Abholung mit der OGS ab.",
       "Namen von Betreuungskräften stehen bei `Heute anders` nie. Du siehst nur, was dein Kind betrifft.",
       "Was du selbst eingetragen hast, ist mit `Von dir eingetragen` markiert. So siehst du, dass es angekommen ist.",
       "Die Startseite zeigt `Heute anders` für jedes Kind in seiner eigenen Karte.",

@@ -43,6 +43,10 @@ function entry(
     previous_room_name: null,
     closing_name: null,
     closing_traeger: false,
+    opening_name: null,
+    opens_at: null,
+    closes_at: null,
+    pickup_after_closing: false,
     class_name: null,
     class_time: null,
     ...overrides,
@@ -69,6 +73,35 @@ function renderCard(changes: parentMeContract.ChildDayChangesResponse) {
 }
 
 describe("ChildDayChangesList in der Tageskarte", () => {
+  it("nennt die geänderte Öffnungszeit und eine Abholzeit danach (#8170)", () => {
+    const until = testClockDay(1);
+    renderCard(
+      day([
+        entry({
+          kind: "opening_changed",
+          opening_name: "Zeugnistage",
+          opens_at: "08:00",
+          closes_at: "13:00",
+          until,
+        }),
+        entry({
+          kind: "child_pickup_changed",
+          pickup_time: "14:30",
+          pickup_after_closing: true,
+        }),
+        entry({ kind: "child_pickup_changed", pickup_time: "12:00" }),
+      ]),
+    );
+    const items = within(screen.getByTestId("child-day-changes"))
+      .getAllByRole("listitem")
+      .map((item) => item.textContent);
+    expect(items).toEqual([
+      `Die OGS ist bis ${formatDate(until)} von 08:00 bis 13:00 Uhr geöffnet: Zeugnistage.`,
+      "Felix wird heute um 14:30 Uhr abgeholt. Das ist nach der Schließung.",
+      "Felix wird heute um 12:00 Uhr abgeholt.",
+    ]);
+  });
+
   it("nennt jede Änderung in einfacher Sprache und markiert die eigenen", () => {
     const until = testClockDay(2);
     renderCard(

@@ -17,6 +17,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/daychangesview"
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar"
+	schoolCalendarCompose "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/compose"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -33,24 +34,26 @@ type dayChangesChildBlocks interface {
 // ChildDayChangesSources are the owner reads of the child's day; all
 // required.
 type ChildDayChangesSources struct {
-	CarePlan      dayChangesCarePlan
-	Students      dayChangesStudents
-	ClosingDays   dayChangesClosingDayReads
-	Blocks        dayChangesChildBlocks
-	ClassArrivals dayChangesClassArrivals
-	Today         func() calendar.Date
+	CarePlan    dayChangesCarePlan
+	Students    dayChangesStudents
+	ClosingDays dayChangesClosingDayReads
+	// OpeningChanges is School Calendar's read of the opening changes (#8170).
+	OpeningChanges dayChangesOpeningChangeReads
+	Blocks         dayChangesChildBlocks
+	ClassArrivals  dayChangesClassArrivals
+	Today          func() calendar.Date
 }
 
 // NewChildDayChanges binds the child's sources to the projection and the
 // projection to the parents portal's port.
 func NewChildDayChanges(sources ChildDayChangesSources) (parentService.ChildDayChanges, error) {
-	if sources.CarePlan == nil || sources.Students == nil || sources.ClosingDays == nil || sources.Blocks == nil || sources.ClassArrivals == nil {
+	if sources.CarePlan == nil || sources.Students == nil || sources.ClosingDays == nil || sources.OpeningChanges == nil || sources.Blocks == nil || sources.ClassArrivals == nil {
 		return nil, fmt.Errorf("%w: child day sources", daychangesview.ErrDependencies)
 	}
 	query, err := daychangesview.NewChild(daychangesview.ChildDependencies{
 		Today: sources.Today, Isolation: dayChangesSavepoints{},
 		Children:   childDayChildren{sources: sources},
-		Closing:    childDayClosingDays{reads: sources.ClosingDays},
+		Closing:    childDayClosingDays{reads: sources.ClosingDays, openings: sources.OpeningChanges},
 		Activities: childDayActivities(sources.Blocks),
 		Classes:    childDayClasses{sources: sources},
 	})
@@ -204,17 +207,27 @@ func enteredBy(accountID int64, authors ...*int64) bool {
 }
 
 // childDayClosingDays is the closing days of the child's school and of its
-// current Träger. The name is the only free text the child's day carries.
+// current Träger, and the opening changes of the school (#8170). The name
+// of a closing day or an opening change is the only free text the child's
+// day carries.
 // The child's day has no sections: every entry concerns the child, so the
 // closed school stands above everything, as in the staff overview.
-type childDayClosingDays struct{ reads dayChangesClosingDayReads }
+type childDayClosingDays struct {
+	reads    dayChangesClosingDayReads
+	openings dayChangesOpeningChangeReads
+}
 
 func (s childDayClosingDays) ChildDayChanges(ctx context.Context, day calendar.Date, _ daychangesview.ChildFilter) ([]daychangesview.SourceEntry, error) {
 	days, err := s.reads.ListClosingDays(ctx, schoolcalendar.ClosingDayFilter{OverlappingFrom: day.String(), OverlappingTo: day.String()})
 	if err != nil {
 		return nil, fmt.Errorf("list closing days: %w", err)
 	}
-	entries := make([]daychangesview.SourceEntry, 0, len(days))
+	// The opening changes of the school (#8170), with the same rule.
+	openings, err := s.openings.ListOpeningChanges(ctx, day, day)
+	if err != nil {
+		return nil, fmt.Errorf("list opening changes: %w", err)
+	}
+	entries := make([]daychangesview.SourceEntry, 0, len(days)+len(openings))
 	for _, closing := range days {
 		since, until := closingDaySpan(closing, day)
 		entries = append(entries, daychangesview.SourceEntry{
@@ -222,7 +235,7 @@ func (s childDayClosingDays) ChildDayChanges(ctx context.Context, day calendar.D
 			Closing: &daychangesview.DayClosing{Name: closing.Reason, Traeger: closing.Traeger},
 		})
 	}
-	return entries, nil
+	return append(entries, openingChangeEntries(openings, day, nil, true)...), nil
 }
 
 // childDaySourceFunc lets a function serve as a source of the child's day.
@@ -316,6 +329,7 @@ func toParentDayChange(entry daychangesview.Entry) parentService.ChildDayChange 
 			out.ChildStatus = &status
 		}
 		out.PickupTime = child.PickupTime
+		out.PickupAfterClosing = child.AfterClosing
 	}
 	if entry.Activity != nil {
 		out.ActivityTitle = &entry.Activity.Title
@@ -328,6 +342,9 @@ func toParentDayChange(entry daychangesview.Entry) parentService.ChildDayChange 
 	}
 	if entry.Closing != nil {
 		out.ClosingName, out.ClosingTraeger = &entry.Closing.Name, entry.Closing.Traeger
+	}
+	if entry.Opening != nil {
+		out.OpeningName, out.OpensAt, out.ClosesAt = &entry.Opening.Name, &entry.Opening.OpensAt, &entry.Opening.ClosesAt
 	}
 	if entry.Class != nil {
 		out.ClassName, out.ClassTime = &entry.Class.Name, entry.Class.Time
@@ -358,6 +375,7 @@ func buildChildDayChanges(carePlan dayChangesCarePlan, students dayChangesStuden
 	}
 	return NewChildDayChanges(ChildDayChangesSources{
 		CarePlan: carePlan, Students: students, ClosingDays: closing,
-		Blocks: blocks, ClassArrivals: classDay, Today: today,
+		OpeningChanges: schoolCalendarCompose.NewOpeningChanges(),
+		Blocks:         blocks, ClassArrivals: classDay, Today: today,
 	})
 }
