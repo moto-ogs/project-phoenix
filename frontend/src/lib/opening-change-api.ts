@@ -20,7 +20,7 @@ export interface OpeningChange {
 }
 
 /** What the form sends for a new day. */
-export interface OpeningChangeInput {
+interface OpeningChangeInput {
   readonly startDate: string;
   readonly endDate: string;
   readonly opensAt: string;
@@ -28,9 +28,7 @@ export interface OpeningChangeInput {
   readonly reason: string;
 }
 
-export function mapOpeningChange(
-  raw: contract.OpeningChangeResponse,
-): OpeningChange {
+function mapOpeningChange(raw: contract.OpeningChangeResponse): OpeningChange {
   return {
     id: raw.id,
     startDate: raw.start_date ?? "",

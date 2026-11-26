@@ -77,9 +77,9 @@ func seedOpeningHours(rt *Runtime, today seedDate) error {
 		if weekday == "friday" {
 			closes = "15:00"
 		}
-		for edge, value := range map[string]string{"open": "07:30", "close": closes} {
-			key := "opening_hours." + weekday + "_" + edge
-			if _, err := rt.Client.Put("/api/settings/values/"+key, map[string]any{"value": value}); err != nil {
+		for _, setting := range [][2]string{{"open", "07:30"}, {"close", closes}} {
+			key := "opening_hours." + weekday + "_" + setting[0]
+			if _, err := rt.Client.Put("/api/settings/values/"+key, map[string]any{"value": setting[1]}); err != nil {
 				return fmt.Errorf("seed %s: %w", key, err)
 			}
 		}
