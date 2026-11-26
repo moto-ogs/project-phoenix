@@ -886,7 +886,7 @@ export const activitiesCatalogTopic =
       ],
       differences: [
         "Auf dem Handy steht statt `+ Aktivität` ein rundes Plus unten rechts.",
-        "`Schulhof Freispiel` und `WC` legt moto selbst an. Deine Namen sind fest, und `Löschen` fehlt.",
+        "`Schulhof Freispiel`, `WC` und `Offener Raum` legt moto selbst an. Ihre Namen sind fest, und `Löschen` fehlt.",
       ],
       troubleshootingDetails: [
         "Fehlt `Datenverwaltung` in der Seitenleiste? Dann fehlen dir die Leitungsrechte. Frage deine Leitung.",
@@ -5196,17 +5196,37 @@ export const mealPlanTopic = function mealPlanTopic(): HelpTopic {
     group: "elternarbeit",
     audience: "lead",
     icon: "UtensilsCrossed",
-    steps: [
-      "Klappe in der Seitenleiste `Eltern` auf.",
-      "Öffne `Speiseplan`.",
-      "Blättere oben unter dem Titel mit den Pfeilen zur gewünschten Woche. `Diese Woche` bringt dich zurück.",
-      "Trage bei einem Tag unter `Gericht eintragen…` das Gericht ein.",
-      "Trage bei Bedarf einen `Hinweis (optional)` dazu ein.",
-      "Öffne unter dem Gericht die Auswahl `Allergene` und hake die Allergene an. Danach stehen dort die Buchstaben, zum Beispiel `A, G`.",
-      "Mit `+ Gericht` ergänzt du ein zweites Gericht für denselben Tag.",
-      "Wähle `Speichern`.",
+    steps: [],
+    instructionGroups: [
+      {
+        title: "Gerichte eintragen",
+        steps: [
+          "Klappe in der Seitenleiste `Eltern` auf.",
+          "Öffne `Speiseplan`.",
+          "Blättere oben unter dem Titel mit den Pfeilen zur gewünschten Woche. `Diese Woche` bringt dich zurück.",
+          "Trage bei einem Tag unter `Gericht eintragen…` das Gericht ein.",
+          "Trage bei Bedarf einen `Hinweis (optional)` dazu ein.",
+          "Öffne unter dem Gericht die Auswahl `Allergene` und hake die Allergene an. Danach stehen dort die Buchstaben, zum Beispiel `A, G`.",
+          "Mit `+ Gericht` ergänzt du ein zweites Gericht für denselben Tag.",
+          "Wähle `Speichern`.",
+        ],
+      },
+      {
+        // Ausfall des Mittagessens an einem offenen Tag (#7656).
+        title: "Wenn das Essen an einem Tag ausfällt",
+        description:
+          "Zum Beispiel, wenn der Caterer nicht liefert. Die OGS bleibt offen.",
+        steps: [
+          "Öffne `Speiseplan` und blättere zur Woche des Tages.",
+          "Öffne beim Tag das Menü mit den drei Punkten.",
+          "Wähle `Essen fällt aus`.",
+          "Schreib unter `Grund` kurz, warum das Essen ausfällt.",
+          "Wähle `Speichern`.",
+        ],
+      },
     ],
-    result: "Der Plan erscheint sofort im Elternportal.",
+    result:
+      "Der Plan erscheint sofort im Elternportal. Fällt das Essen aus, steht beim Tag `Essen fällt aus` mit dem Grund.",
     notes: [
       "Pro Tag sind mehrere Gerichte möglich.",
       "Änderst du einen Tag, der schon Gerichte hatte, bekommen die Eltern einen Hinweis in moto. Das gilt nur für Kinder, die an dem Tag ein Essen gebucht haben. Mehrere Änderungen einer Woche in 10 Minuten werden ein Hinweis.",
@@ -5222,6 +5242,9 @@ export const mealPlanTopic = function mealPlanTopic(): HelpTopic {
       "Öffne `Tagesliste herunterladen` oder `Wochenliste herunterladen`. Wähle `PDF` oder `Excel`.",
       "Bis wann Eltern ändern können, legst du unter `Einstellungen` im Bereich `Mittagessen` fest.",
       "An Feiertagen und Schließtagen gibt es kein Essen. Die Wochenliste zeigt dort `kein Essen`.",
+      "Fällt das Essen aus, gelten die Buchungen des Tages nicht. Die Liste für die Küche ist leer, und der Tag wird im Monat nicht abgerechnet. Am Tag selbst sieht das Team den Ausfall mit dem Grund unter `Heute anders`.",
+      "Findet das Essen doch statt, wähle im Menü des Tages `Essen findet statt`. Dann gelten die Buchungen wieder. Den Grund änderst du mit `Grund ändern`.",
+      "Hast du den Monat schon freigegeben, ändert ein späterer Ausfall die Freigabe nicht. Gib den Monat dann neu frei.",
     ],
     differences: [
       "Deine Änderungen zählen erst mit `Speichern`. Vorher steht `Verwerfen` daneben.",
@@ -5231,6 +5254,8 @@ export const mealPlanTopic = function mealPlanTopic(): HelpTopic {
     troubleshootingDetails: [
       "Bekommen Eltern keinen Hinweis zu Änderungen? Prüfe unter `Einstellungen` den Schalter `Hinweis bei geändertem Speiseplan`. Für vergangene Tage gibt es keinen Hinweis.",
       "Meldet moto beim Speichern, dass jemand anderes den Speiseplan inzwischen geändert hat? Deine Änderungen bleiben stehen. Mit `Verwerfen` siehst du den neuen Stand. Mit `Speichern` ersetzt du ihn durch deine Änderungen.",
+      "Fehlt im Menü des Tages `Essen fällt aus`? Für vergangene Tage geht das nicht mehr. Oder deiner Rolle fehlt das Recht `Speiseplan pflegen und den Caterer verwalten`.",
+      "Lehnt moto `Essen fällt aus` ab? An Schließtagen und Feiertagen ist die OGS zu, dann gibt es ohnehin kein Essen.",
       "Fehlt `Speiseplan` in der Seitenleiste? Dann ist die Funktion für deine OGS ausgeschaltet, oder deiner Rolle fehlt das Recht `Mittagessen: Lesen`.",
     ],
     related: [
@@ -8577,11 +8602,13 @@ export const roomsTopic = function roomsTopic(
         title: "Einen Raum und seine Belegung ansehen",
         // #4372: die drei Begriffe einheitlich erklärt.
         description:
-          "`Belegt` heißt: Im Raum läuft gerade eine Aktivität. Ein offener Raum ist für Ortswechsel freigegeben, auch wenn dort nichts läuft. Unter `Aktuelle Aufsicht` stehen nur Aufsichten, die gerade laufen.",
+          "`Belegt` heißt: Im Raum läuft gerade eine Aktivität. `Frei` heißt: Gerade ist kein Kind im Raum. Ein offener Raum ist für Ortswechsel freigegeben, auch wenn dort nichts läuft. Unter `Aktuelle Aufsicht` stehen nur Aufsichten, die gerade laufen.",
         steps: [
           "Öffne `Räume` in der Seitenleiste.",
-          // #4372 (01.14): offene Räume stehen als eigene Gruppe oben.
-          "Gibt es offene Räume, stehen sie oben unter `Offene Räume`. Alle anderen stehen darunter unter `Weitere Räume`.",
+          // #4372 (01.14): offene Räume stehen als eigene Gruppe oben;
+          // #8130 benennt die übrigen nach dem, was sie trennt.
+          "Gibt es offene Räume, stehen sie oben unter `Offene Räume`. Dorthin dürfen Kinder jederzeit.",
+          "Alle anderen stehen darunter unter `Räume für Aktivitäten`. Dort sind Kinder nur, solange eine Aktivität läuft.",
           "Klappe eine Gruppe über den Pfeil rechts ein oder aus.",
           "Suche den Raum über `Raum suchen...`.",
           // Live geprueft: kein Knopf `Filter`, sondern ein Umschalter
@@ -13869,8 +13896,20 @@ export const traegerHolidayAllocationTopic =
             "Öffne oben rechts das Drei-Punkte-Menü. Wähle `Kriterien der Platzvergabe`.",
             "Wähle eine Vorlage oder `Eigenes Kriterium`.",
             "Gib den Namen und die `Frage an die Eltern` ein. Wähle bei `Gilt für`, ob die Frage für die Familie oder für jedes Kind gilt.",
-            "Bringe die Kriterien mit den Pfeilen in die richtige Reihenfolge. Das oberste Kriterium zählt am meisten.",
             "Wähle `Kriterien speichern`.",
+          ],
+        },
+        {
+          title: "Festlegen, wie die Kriterien zählen",
+          description:
+            "Das gilt für alle Ferien, die ihre Plätze nach Kriterien vergeben.",
+          steps: [
+            "Öffne `Kriterien der Platzvergabe`.",
+            "Wähle bei `Wie zählen die Kriterien?` eine Karte.",
+            "`Nach Rangfolge`: Bringe die Kriterien mit den Pfeilen in die richtige Reihenfolge. Das oberste Kriterium zählt am meisten.",
+            "`Alle gleich`: Jedes Kriterium zählt gleich viel. Wer mehr Kriterien erfüllt, steht weiter oben.",
+            "`Nach Punkten`: Gib bei jedem Kriterium die `Punkte` ein. Wer mehr Punkte hat, steht weiter oben.",
+            "Wähle `Kriterien speichern`. moto sortiert offene Anmeldungen und Wartelisten sofort neu.",
           ],
         },
         {
@@ -13914,7 +13953,9 @@ export const traegerHolidayAllocationTopic =
         "Die Eltern bekommen eine E-Mail mit dem Platz oder der Warteliste. Danach rücken Kinder von der Warteliste automatisch nach, wenn ein Platz frei wird. Die Warteliste ist nach deinen Kriterien sortiert, dann nach Eingang.",
       notes: [
         "moto schlägt nur vor. Jede Entscheidung trifft dein Büro. Unter `Verlauf der Entscheidungen` steht jede Entscheidung mit Vorschlag und Begründung.",
-        "Bei gleichen Kriterien zählt, wer sich zuerst angemeldet hat.",
+        "Bei Gleichstand zählt, wer sich zuerst angemeldet hat. Das gilt bei jeder Zählweise.",
+        "Bei `Alle gleich` und `Nach Punkten` steht im Reiter `Vergabe` bei jedem Kind der Stand, zum Beispiel `2 von 3 Kriterien erfüllt` oder `5 von 6 Punkten`.",
+        "Im `Verlauf der Entscheidungen` bleibt stehen, wie die Kriterien bei der Entscheidung gezählt haben.",
         "Sobald Antworten vorliegen, bleibt `Gilt für` beim Kriterium fest.",
         "Solange eine Woche offene Entscheidungen hat, rückt dort niemand nach. Nach der letzten Entscheidung können ältere Wartelisteneinträge nachrücken. Gerade auf die Warteliste gesetzte Kinder bleiben zunächst dort.",
         "Eine Prüfung des Büros zählt vor der Angabe der Eltern. Sie ändert den Vorschlag für offene Plätze.",
@@ -13925,6 +13966,7 @@ export const traegerHolidayAllocationTopic =
       differences: [
         "Bei einem Kriterium steht `ungeklärt`? Die Eltern haben dazu nichts gesagt, zum Beispiel weil das Kriterium später dazukam. Es zählt erst, wenn dein Büro es geprüft hat.",
         "Der Reiter `Vergabe` fehlt? Der Ferienzeitraum vergibt die Plätze nach Eingang.",
+        "Bei den Kriterien steht keine Priorität? Dann zählen sie gleich viel oder nach Punkten. Die Pfeile ändern dann nur die Reihenfolge der Fragen für die Eltern.",
         "Die Karten bei `Wie werden die Plätze vergeben?` lassen sich nicht wählen? Es gibt schon Anmeldungen.",
       ],
       troubleshootingDetails: [
@@ -14028,6 +14070,7 @@ export const traegerHolidayContributionTopic =
         "Hat ein Kind Mittagessen gebucht, steht es als eigene Zeile `Mittagessen` im Beitrag. Die Zeile nennt die Zahl der Essen und den Preis für ein Essen. Geschwisterermäßigung, Befreiung und Kostenübernahme gelten nur für die Betreuung. Das Essen zahlt die Familie voll.",
         "Eine Regel gilt nur für Anmeldungen, die nach der Änderung bestätigt werden. Bestätigte Anmeldungen behalten ihren Beitrag.",
         "Ob eine Familie befreit ist oder ein Kostenträger bezahlt, entscheidet das Träger-Büro beim Bestätigen. Für die Befreiung wählt es dort `Von der Zahlung befreien (Leistungsbezug)`. Diese Wahl gibt es nur, wenn eine Befreiungsregel gilt. Es zählt der erste gebuchte Tag.",
+        "Kommt der Bescheid erst nach dem Bestätigen, ändert das Träger-Büro den Zahler in der Anmeldung mit `Zahler ändern`. Die Grundpreise bleiben, wie sie festgehalten sind.",
         "Befreiung heißt: Niemand bezahlt. Bei einem Kostenträger bezahlt die Familie nichts, aber der Kostenträger bezahlt den Betrag. Am Anfang ist das der Betrag nach der Geschwisterermäßigung. Du kannst auch den vollen Preis wählen.",
         "Bezahlt der Kostenträger den vollen Preis, zählt sein Kind weiter als Geschwisterkind. Die anderen Kinder behalten ihre Ermäßigung.",
         "Einen Kostenträger, der schon gewählt wurde, kannst du nur ausschalten, nicht löschen. Änderst du seinen Namen, behalten bestätigte Beiträge und Rechnungen den alten Namen.",
@@ -14419,6 +14462,21 @@ export const traegerHolidayRegistrationReviewTopic =
           ],
         },
         {
+          title: "Zahler nach dem Bestätigen ändern",
+          description:
+            "Bringt die Familie den Bescheid erst nach dem Bestätigen? Dann änderst du, wer bezahlt. Du musst nichts stornieren und die Kinder nicht neu anmelden.",
+          steps: [
+            "Öffne die bestätigte Anmeldung und wähle den Reiter `Nachweise und Beitrag`.",
+            "Lade den Bescheid unter `Nachweis für den Leistungsbezug` mit `Nachweis hochladen` hoch, wenn du ihn hast.",
+            "Wähle unter `Ferienbeitrag` den Knopf `Zahler ändern`. Du findest ihn auch oben rechts im Menü mit den drei Punkten.",
+            "Wähle unter `Wer bezahlt den Beitrag?`: `Die Familie bezahlt`, `Von der Zahlung befreien (Leistungsbezug)` oder `Kosten übernimmt ein Kostenträger`. Beim Kostenträger wählst du darunter, welcher bezahlt.",
+            "Prüfe unter `Das ändert sich beim Speichern` für jedes Kind, was die Familie und was der Kostenträger danach bezahlt.",
+            "Schreibe in `Begründung`, warum du den Zahler änderst. Zum Beispiel: Bescheid nachgereicht.",
+            "Wähle `Änderung speichern`. Eltern bekommen dazu keine Nachricht von moto.",
+            "Im Reiter `Übersicht` steht die Änderung unter `Verlauf` als `Zahler geändert`, mit dem Zahler vorher, dem Zahler jetzt und deiner Begründung.",
+          ],
+        },
+        {
           title: "Mehrere auf einmal bestätigen",
           description:
             "moto bestätigt nur Anmeldungen, die keine Angabe mehr brauchen. Die Familie bezahlt dann den Beitrag. Bei offenen Anmeldungen prüfst du zuerst den Grund.",
@@ -14542,6 +14600,8 @@ export const traegerHolidayRegistrationReviewTopic =
         "Zusammenführen und Trennen rechnen auch einen schon bestätigten Beitrag neu. Der alte Beitrag bleibt gespeichert. Ein offener Abrechnungslauf zeigt den neuen Betrag.",
         "Stornierst du eine Anmeldung der Geschwister, gehört sie nicht mehr dazu. moto rechnet den Beitrag der anderen Geschwister sofort neu. Du musst nichts trennen.",
         "Gibt es für ein Geschwister-Kind schon eine Rechnung, bleibt die Rechnung, wie sie ist. moto rechnet den Beitrag trotzdem neu. Unter `Ferienbeitrag` steht dann `Rechnung prüfen`. Storniere die Rechnung. Der nächste Abrechnungslauf stellt dann den neuen Betrag aus.",
+        "Änderst du den Zahler und es gibt schon eine Rechnung, steht beim Ändern `Die Rechnung ist schon ausgestellt`. Die Rechnung bleibt, wie sie ist. Speichere und storniere die Rechnung danach in der Abrechnung. Der nächste Abrechnungslauf stellt dann den neuen Betrag aus. Ein Abrechnungslauf, der noch nicht freigegeben ist, rechnet sofort mit dem neuen Zahler.",
+        "Befreiung und Kostenübernahme gelten nur für die Betreuung. Das Mittagessen bezahlt die Familie weiter selbst.",
         "Jede Anmeldung bekommt weiter ihre eigene Rechnung und ihr eigenes Schreiben. Ein Schreiben nennt nie die Kinder oder Eltern der anderen Anmeldung.",
         "Alle bestätigten Anmeldungen der Geschwister bekommen dieselbe Debitorennummer. Beim Bestätigen steht die Nummer der Geschwister schon im Feld.",
         "Eine Familie ist die E-Mail-Adresse der Eltern, die anmelden. Groß- und Kleinschreibung zählt nicht. Die gemerkte Nummer bleibt, auch wenn die Anmeldung gelöscht ist. Du siehst und änderst sie unter `Abrechnung` im Reiter `Familien`. Ein anderer Träger und die Schulen sehen sie nicht.",
@@ -14554,6 +14614,7 @@ export const traegerHolidayRegistrationReviewTopic =
         "Beim Kind steht `An der Schule bekannt`? Die Schule aus der Anmeldung führt ein Kind mit gleichem Namen und Geburtsdatum. Du musst nichts tun.",
         "Auf dem Handy fehlt der Haken für alle Anmeldungen? Setze die Haken dort einzeln.",
         "Ein Kind ist als `Mögliche Doppelanmeldung` markiert? Ein Kind mit gleichem Namen und Geburtsdatum steht auch in einer anderen Anmeldung. Öffne beide und storniere die doppelte.",
+        "`Zahler ändern` fehlt? Die Anmeldung ist noch nicht bestätigt oder storniert. Vor dem Bestätigen wählst du den Zahler im Reiter `Übersicht`.",
         "Beim Bestätigen fehlt `Kosten übernimmt ein Kostenträger`? Dein Träger hat noch keinen aktiven Kostenträger. Die Abrechnung legt ihn in den Einstellungen unter `Abrechnungsvorgaben` an.",
         "Beim Bestätigen gibt es kein Feld `Debitorennummer`? Dein Träger fragt sie nicht ab. Das legst du in den Einstellungen unter `Allgemein` im Bereich `Ferienbetreuung` fest.",
       ],

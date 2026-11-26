@@ -8,13 +8,8 @@ import { FieldLabel } from "./field-label";
  * Fehler darunter, die Ids dazu und ihre Verknüpfung über
  * `aria-describedby`. `Input`, `Textarea`, `CustomSelect`, `DatePicker`,
  * `ISODatePicker`, `ISODateInput`, `WeekdayToggleGroup` und `TimeField`
- * bauen darauf; ein Feld schreibt diese Teile nicht selbst.
- *
- * Zwei Farben sind noch nicht angeglichen und bleiben, bis #6798 entscheidet,
- * benannte Abweichungen statt Klassen im Feld: Die Datumsfelder zeigen ihren
- * Fehler im helleren Rot (`errorTone="base"`), das Zeitfeld seinen Hinweis
- * in Grau-500 und 12 px (`hintTone="muted"`); alle anderen Sätze unter
- * einem Feld stehen in 14 px.
+ * bauen darauf; ein Feld schreibt diese Teile nicht selbst. Alle Felder
+ * zeigen Hinweis und Fehler in denselben Farben (#6798).
  */
 
 /** Ids eines Feldes und die Liste für `aria-describedby`. */
@@ -56,29 +51,21 @@ export function useFieldIds({
   };
 }
 
-const HINT_TONE_CLASS = {
-  default: "text-sm text-gray-600",
-  muted: "text-sm text-gray-500",
-} as const;
-
 /** Die Zeile unter einem Feld, die stehen bleibt und mitgelesen wird. */
 export function FieldHint({
   id,
   children,
-  tone = "default",
   visuallyHidden = false,
 }: Readonly<{
   id: string | undefined;
   children: ReactNode;
-  /** `muted`: Grau und Größe des Zeitfelds, siehe oben. */
-  tone?: keyof typeof HINT_TONE_CLASS;
   /** Nur für Vorleser, wenn das Umfeld den Hinweis schon sichtbar trägt. */
   visuallyHidden?: boolean;
 }>) {
   return (
     <p
       id={id}
-      className={visuallyHidden ? "sr-only" : `mt-1 ${HINT_TONE_CLASS[tone]}`}
+      className={visuallyHidden ? "sr-only" : "mt-1 text-sm text-gray-600"}
     >
       {children}
     </p>
@@ -89,15 +76,12 @@ export function FieldShell({
   ids,
   label,
   labelId,
-  labelFor,
   required = false,
   invalid = false,
   hint,
-  hintTone,
   hintHidden = false,
   error,
   errorLive = false,
-  errorTone,
   keepWrapper = false,
   className,
   children,
@@ -106,19 +90,15 @@ export function FieldShell({
   label?: ReactNode;
   /** Id der Beschriftung, wenn das Feld sie über `aria-labelledby` nennt. */
   labelId?: string;
-  /** Ziel der Beschriftung; Standard ist `ids.id`. */
-  labelFor?: string | null;
   /** Stern hinter der Beschriftung. */
   required?: boolean;
   /** Die Beschriftung wird rot wie der Fehler. */
   invalid?: boolean;
   hint?: ReactNode;
-  hintTone?: "default" | "muted";
   hintHidden?: boolean;
   error?: string | null;
   /** Fehler sofort vorlesen (`role="alert"`), für eine Prüfung beim Tippen. */
   errorLive?: boolean;
-  errorTone?: "strong" | "base";
   /**
    * Die Hülle auch ohne Beschriftung, Hinweis und Fehler rendern. `Input`
    * und `Textarea` brauchen sie, weil ihre Breite an ihr hängt.
@@ -134,7 +114,7 @@ export function FieldShell({
       {label ? (
         <FieldLabel
           id={labelId}
-          htmlFor={labelFor === null ? undefined : (labelFor ?? ids.id)}
+          htmlFor={ids.id}
           required={required}
           invalid={invalid}
         >
@@ -143,17 +123,12 @@ export function FieldShell({
       ) : null}
       {children}
       {hint ? (
-        <FieldHint id={ids.hintId} tone={hintTone} visuallyHidden={hintHidden}>
+        <FieldHint id={ids.hintId} visuallyHidden={hintHidden}>
           {hint}
         </FieldHint>
       ) : null}
       {ids.errorId ? (
-        <FieldErrorHint
-          id={ids.errorId}
-          message={error}
-          live={errorLive}
-          tone={errorTone}
-        />
+        <FieldErrorHint id={ids.errorId} message={error} live={errorLive} />
       ) : null}
     </div>
   );

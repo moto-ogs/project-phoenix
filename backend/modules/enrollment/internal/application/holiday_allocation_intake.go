@@ -24,7 +24,7 @@ type HolidayCriteriaReader interface {
 }
 
 // criterionQuestions are the questions of the active criteria a period by
-// criteria asks, in their priority; a period by arrival asks none.
+// criteria asks, in catalog order; a period by arrival asks none.
 func (h *HolidayRegistrations) criterionQuestions(ctx context.Context, organizationID int64, period enrollment.HolidayPeriod) ([]enrollment.HolidayCriterionQuestion, error) {
 	questions := []enrollment.HolidayCriterionQuestion{}
 	if period.AllocationMode != enrollment.HolidayAllocationCriteria {

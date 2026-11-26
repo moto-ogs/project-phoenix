@@ -65,6 +65,10 @@ func (c confirmedRegistration) RecordHolidaySiblings(context.Context, parentbill
 	return nil
 }
 
+func (c confirmedRegistration) RecordHolidayPayer(context.Context, parentbilling.HolidayReviewer, int64, int64, parentbilling.HolidayPayerRecord) error {
+	return nil
+}
+
 // settingsDouble is the Träger's switch for the debtor number (#5621).
 type settingsDouble struct{ asksDebtorNumber bool }
 

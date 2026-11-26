@@ -41,3 +41,9 @@ type HolidayPeriod struct {
 // YYYY-MM-DD set and the school holiday periods that touch the window. The
 // Meal Plan turns the periods into days itself.
 type CalendarFinder func(ctx context.Context, from, to string) (closed map[string]bool, holidays []HolidayPeriod, err error)
+
+// CancelledDaysFinder reads the days of the inclusive window [from, to] on
+// which the school cancelled lunch (#7656) as a YYYY-MM-DD set. The root
+// binds it beside CalendarFinder, as part of the school calendar the Meal
+// Plan reads: those days count as closed, marked as cancelled.
+type CancelledDaysFinder func(ctx context.Context, from, to string) (map[string]bool, error)

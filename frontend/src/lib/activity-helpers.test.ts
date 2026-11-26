@@ -405,6 +405,11 @@ describe("isSystemActivity", () => {
     expect(isSystemActivity(makeActivity("WC"))).toBe(true);
   });
 
+  // #8130: the backend protects the open-room activity like the other two.
+  it("returns true for Offener Raum", () => {
+    expect(isSystemActivity(makeActivity("Offener Raum"))).toBe(true);
+  });
+
   it("returns false for regular activity", () => {
     expect(isSystemActivity(makeActivity("Basteln"))).toBe(false);
   });

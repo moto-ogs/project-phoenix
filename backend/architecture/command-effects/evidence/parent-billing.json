@@ -825,6 +825,14 @@
       "target_owner": "enrollment"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingHolidayRegistrations.RecordHolidayPayer",
+      "binding_digest": "58c651e4d3b74a123e3ee80e5f41577d",
+      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.HolidayRegistrations.RecordHolidayPayer",
+      "source_owner": "parent-billing",
+      "target": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayPayerTrail.RecordHolidayPayer",
+      "target_owner": "enrollment"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingHolidayRegistrations.RecordHolidaySiblings",
       "binding_digest": "797f841c78ae6ca690267938f4e709a2",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.HolidayRegistrations.RecordHolidaySiblings",

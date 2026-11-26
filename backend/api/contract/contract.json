@@ -813,6 +813,14 @@
     },
     {
       "method": "DELETE",
+      "pattern": "/api/meal-plan/days/{date}/cancellation",
+      "portals": [
+        "tenant"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
       "pattern": "/api/meal-plan/participation/{studentId}/days/{date}",
       "portals": [
         "tenant"
@@ -4088,6 +4096,30 @@
         "elem": {
           "kind": "ref",
           "ref": "MealPlanWeekEntryResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/meal-plan/cancellations",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "from",
+          "kind": "date"
+        },
+        {
+          "name": "to",
+          "kind": "date"
+        }
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "MealCancellationResponse"
         }
       }
     },
@@ -12715,6 +12747,27 @@
       "response": {
         "kind": "ref",
         "ref": "HolidayFamilyDebtorNumber"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/holiday-contributions/{periodId}/registrations/{registrationId}/payer",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "benefits_exemption",
+          "kind": "bool"
+        },
+        {
+          "name": "cost_bearer_id",
+          "kind": "id"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "HolidayPayerPreviewResponse"
       }
     },
     {
@@ -22489,6 +22542,21 @@
     },
     {
       "method": "PUT",
+      "pattern": "/api/meal-plan/days/{date}/cancellation",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "MealCancellationRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "MealCancellationResponse"
+      }
+    },
+    {
+      "method": "PUT",
       "pattern": "/api/meal-plan/participation/{studentId}/days/{date}",
       "portals": [
         "tenant"
@@ -24800,6 +24868,21 @@
     },
     {
       "method": "PUT",
+      "pattern": "/traeger/holiday-contributions/{periodId}/registrations/{registrationId}/payer",
+      "portals": [
+        "org"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "HolidayPayerRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "HolidayContributionResponse"
+      }
+    },
+    {
+      "method": "PUT",
       "pattern": "/traeger/holiday-contributions/{periodId}/weeks/{weekId}/capacity",
       "portals": [
         "org"
@@ -25925,6 +26008,7 @@
         "closing_day",
         "group_substitution",
         "group_substitution_count",
+        "meal_cancelled",
         "meal_plan_changed",
         "shift_cancelled",
         "shift_changed",
@@ -52076,6 +52160,13 @@
           }
         },
         {
+          "name": "meal_cancelled",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
           "name": "participants",
           "schema": {
             "kind": "array",
@@ -53357,6 +53448,18 @@
         {
           "name": "note",
           "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "DayMealCancellation",
+      "go_type": "daychangesview.DayMealCancellation",
+      "fields": [
+        {
+          "name": "reason",
           "schema": {
             "kind": "string"
           }
@@ -56866,6 +56969,14 @@
             "kind": "ref",
             "nullable": true,
             "ref": "DayAppointment"
+          }
+        },
+        {
+          "name": "meal_cancellation",
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "DayMealCancellation"
           }
         }
       ]
@@ -63360,6 +63471,18 @@
           }
         },
         {
+          "name": "ranking",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "max_score",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
           "name": "criteria",
           "schema": {
             "kind": "array",
@@ -63406,6 +63529,12 @@
         },
         {
           "name": "rank",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "score",
           "schema": {
             "kind": "int"
           }
@@ -63546,6 +63675,26 @@
           "name": "rank",
           "schema": {
             "kind": "int"
+          }
+        },
+        {
+          "name": "ranking",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "score",
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "max_score",
+          "schema": {
+            "kind": "int",
+            "nullable": true
           }
         },
         {
@@ -64838,6 +64987,12 @@
       "go_type": "enrollment.HolidayCriteriaCatalog",
       "fields": [
         {
+          "name": "ranking",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
           "name": "criteria",
           "schema": {
             "kind": "array",
@@ -64891,6 +65046,13 @@
       "go_type": "enrollmenthttp.HolidayCriteriaRequest",
       "request": true,
       "fields": [
+        {
+          "name": "ranking",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
         {
           "name": "criteria",
           "optional": true,
@@ -64948,6 +65110,12 @@
         },
         {
           "name": "position",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "points",
           "schema": {
             "kind": "int"
           }
@@ -65082,6 +65250,12 @@
         },
         {
           "name": "position",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "points",
           "schema": {
             "kind": "int"
           }
@@ -66291,6 +66465,25 @@
       ]
     },
     {
+      "name": "HolidayPaidBy",
+      "go_type": "enrollment.HolidayPaidBy",
+      "fields": [
+        {
+          "name": "kind",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "cost_bearer_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "HolidayParentSetupResponse",
       "go_type": "account.HolidayParentSetupResponse",
       "fields": [
@@ -66367,6 +66560,183 @@
               "kind": "ref",
               "ref": "holidayParticipantResponse"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "HolidayPayer",
+      "go_type": "parentbilling.HolidayPayer",
+      "fields": [
+        {
+          "name": "kind",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "cost_bearer_id",
+          "schema": {
+            "kind": "id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "cost_bearer_name",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "HolidayPayerChange",
+      "go_type": "enrollment.HolidayPayerChange",
+      "fields": [
+        {
+          "name": "before",
+          "schema": {
+            "kind": "ref",
+            "ref": "HolidayPaidBy"
+          }
+        },
+        {
+          "name": "after",
+          "schema": {
+            "kind": "ref",
+            "ref": "HolidayPaidBy"
+          }
+        }
+      ]
+    },
+    {
+      "name": "HolidayPayerChildEffectResponse",
+      "go_type": "parentbillinghttp.HolidayPayerChildEffectResponse",
+      "fields": [
+        {
+          "name": "child_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "position",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "family_before_cents",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "family_after_cents",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "cost_bearer_before_cents",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "cost_bearer_after_cents",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "HolidayPayerPreviewResponse",
+      "go_type": "parentbillinghttp.HolidayPayerPreviewResponse",
+      "fields": [
+        {
+          "name": "current",
+          "schema": {
+            "kind": "ref",
+            "ref": "HolidayPayer"
+          }
+        },
+        {
+          "name": "chosen",
+          "schema": {
+            "kind": "ref",
+            "ref": "HolidayPayer"
+          }
+        },
+        {
+          "name": "changed",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "children",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "HolidayPayerChildEffectResponse"
+            }
+          }
+        },
+        {
+          "name": "exemption_available",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "invoiced",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "fingerprint",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "HolidayPayerRequest",
+      "go_type": "parentbillinghttp.HolidayPayerRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "benefits_exemption",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "cost_bearer_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "expected_fingerprint",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -68071,6 +68441,14 @@
           "optional": true,
           "schema": {
             "kind": "bool"
+          }
+        },
+        {
+          "name": "payer",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "HolidayPayerChange"
           }
         }
       ]
@@ -72954,6 +73332,38 @@
               "kind": "ref",
               "ref": "MasterDataChangeResponse"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "MealCancellationRequest",
+      "go_type": "mealplan.MealCancellationRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "MealCancellationResponse",
+      "go_type": "mealplan.MealCancellationResponse",
+      "fields": [
+        {
+          "name": "date",
+          "schema": {
+            "kind": "date"
+          }
+        },
+        {
+          "name": "reason",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -78757,6 +79167,13 @@
         },
         {
           "name": "closed",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "meal_cancelled",
+          "optional": true,
           "schema": {
             "kind": "bool"
           }
@@ -118942,6 +119359,13 @@
           }
         },
         {
+          "name": "meal_cancelled",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
           "name": "participants",
           "schema": {
             "kind": "array",
@@ -127783,6 +128207,13 @@
           "optional": true,
           "schema": {
             "kind": "bool"
+          }
+        },
+        {
+          "name": "points",
+          "optional": true,
+          "schema": {
+            "kind": "int"
           }
         }
       ]

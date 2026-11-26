@@ -10,5 +10,5 @@ import (
 // NewMealPlanResourceForTests binds the Meal Plan to the production protected
 // HTTP runtime of the staff portal, as the server mounts it at /meal-plan.
 func NewMealPlanResourceForTests(module mealplanModule.Capability) *mealplanAPI.Resource {
-	return newMealPlanResource(module, newMealPlanExportRenderer(), nil)
+	return newMealPlanResourceWith(module, nil, newMealPlanExportRenderer(), nil)
 }

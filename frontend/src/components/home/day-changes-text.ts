@@ -314,6 +314,14 @@ function appointmentChangedText(change: DayChange): string {
   return `${name} ist heute zu einer anderen Zeit.`;
 }
 
+/** Das Mittagessen fällt heute aus, mit dem Grund der Schule (#7656). */
+function mealCancelledText(change: DayChange): string {
+  const reason = change.mealCancellation?.reason.trim().replace(/\.$/, "");
+  return reason
+    ? `Das Mittagessen fällt heute aus: ${reason}.`
+    : "Das Mittagessen fällt heute aus.";
+}
+
 /** Der Satz je Art. Eine unbekannte Art zeigt die Übersicht nicht. */
 const DAY_CHANGE_TEXTS: Readonly<
   Record<string, (change: DayChange) => string>
@@ -354,6 +362,8 @@ const DAY_CHANGE_TEXTS: Readonly<
   appointment_changed: appointmentChangedText,
   // Nur die Kurzinfo (#7666); was es gibt, steht auf der Seite Speiseplan.
   meal_plan_changed: () => "Der Speiseplan für heute wurde geändert.",
+  // Das Mittagessen fällt aus, obwohl die OGS offen ist (#7656).
+  meal_cancelled: mealCancelledText,
 };
 
 export function dayChangeText(change: DayChange): string | null {

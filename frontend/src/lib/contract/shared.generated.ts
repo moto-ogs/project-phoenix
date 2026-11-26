@@ -30,7 +30,7 @@ export type GuardianPhoneType = (typeof GUARDIAN_PHONE_TYPE_VALUES)[number];
 export const GUARDIAN_RELATIONSHIP_TYPE_VALUES = ["guardian", "other", "parent", "relative"] as const;
 export type GuardianRelationshipType = (typeof GUARDIAN_RELATIONSHIP_TYPE_VALUES)[number];
 
-export const KIND_VALUES = ["activity_cancelled", "activity_lead_changed", "activity_reinstated", "activity_room_changed", "appointment_cancelled", "appointment_changed", "block_change_count", "block_staff_absent", "block_substitution", "child_absent", "child_goes_alone", "child_pickup_changed", "child_pickup_note", "child_pickup_person", "child_summary", "class_dismissal_changed", "class_trip", "closing_day", "group_substitution", "group_substitution_count", "meal_plan_changed", "shift_cancelled", "shift_changed", "shift_replacement", "staff_absent", "staff_absent_count", "staff_notice"] as const;
+export const KIND_VALUES = ["activity_cancelled", "activity_lead_changed", "activity_reinstated", "activity_room_changed", "appointment_cancelled", "appointment_changed", "block_change_count", "block_staff_absent", "block_substitution", "child_absent", "child_goes_alone", "child_pickup_changed", "child_pickup_note", "child_pickup_person", "child_summary", "class_dismissal_changed", "class_trip", "closing_day", "group_substitution", "group_substitution_count", "meal_cancelled", "meal_plan_changed", "shift_cancelled", "shift_changed", "shift_replacement", "staff_absent", "staff_absent_count", "staff_notice"] as const;
 export type Kind = (typeof KIND_VALUES)[number];
 
 export const LINK_TARGET_VALUES = ["calendar", "calendar_periods", "day_plan", "group_handovers", "meal_plan", "own_absences", "own_shift_plan", "school_calendar", "school_class", "school_supervisions", "shift_plan", "staff_absences", "staff_list", "staff_member", "staff_notices", "student", "substitution_plan"] as const;
@@ -952,6 +952,15 @@ export const DayAppointmentSchema: z.ZodType<DayAppointment, unknown> = object<D
   time_changed: bool,
 });
 
+/** Go: daychangesview.DayMealCancellation */
+export interface DayMealCancellation {
+  reason: string;
+}
+
+export const DayMealCancellationSchema: z.ZodType<DayMealCancellation, unknown> = object<DayMealCancellation>({
+  reason: str,
+});
+
 /** Go: daychangesview.Entry */
 export interface Entry {
   kind: OpenEnum<Kind>;
@@ -975,6 +984,7 @@ export interface Entry {
   previous_room: BlockRoom | null;
   class: DayClass | null;
   appointment: DayAppointment | null;
+  meal_cancellation: DayMealCancellation | null;
 }
 
 export const EntrySchema: z.ZodType<Entry, unknown> = object<Entry>({
@@ -999,6 +1009,7 @@ export const EntrySchema: z.ZodType<Entry, unknown> = object<Entry>({
   previous_room: nullable(BlockRoomSchema),
   class: nullable(DayClassSchema),
   appointment: nullable(DayAppointmentSchema),
+  meal_cancellation: nullable(DayMealCancellationSchema),
 });
 
 /** Go: daychangesview.Overview */
@@ -4723,6 +4734,28 @@ export const HolidayCriterionCheckSchema: z.ZodType<HolidayCriterionCheck, unkno
   checked: nullable(str),
 });
 
+/** Go: enrollment.HolidayPaidBy */
+export interface HolidayPaidBy {
+  kind: string;
+  cost_bearer_name?: string;
+}
+
+export const HolidayPaidBySchema: z.ZodType<HolidayPaidBy, unknown> = object<HolidayPaidBy>({
+  kind: str,
+  cost_bearer_name: optional(str),
+});
+
+/** Go: enrollment.HolidayPayerChange */
+export interface HolidayPayerChange {
+  before: HolidayPaidBy;
+  after: HolidayPaidBy;
+}
+
+export const HolidayPayerChangeSchema: z.ZodType<HolidayPayerChange, unknown> = object<HolidayPayerChange>({
+  before: HolidayPaidBySchema,
+  after: HolidayPaidBySchema,
+});
+
 /** Go: enrollment.HolidayRegistrationEventDetails */
 export interface HolidayRegistrationEventDetails {
   from?: string;
@@ -4740,6 +4773,7 @@ export interface HolidayRegistrationEventDetails {
   wish?: string;
   key?: string;
   given?: boolean;
+  payer?: HolidayPayerChange;
 }
 
 export const HolidayRegistrationEventDetailsSchema: z.ZodType<HolidayRegistrationEventDetails, unknown> = object<HolidayRegistrationEventDetails>({
@@ -4758,6 +4792,7 @@ export const HolidayRegistrationEventDetailsSchema: z.ZodType<HolidayRegistratio
   wish: optional(str),
   key: optional(str),
   given: optional(bool),
+  payer: optional(HolidayPayerChangeSchema),
 });
 
 /** Go: enrollment.HolidayRegistrationEvent */

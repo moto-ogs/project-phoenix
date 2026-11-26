@@ -27,34 +27,69 @@ import type {
   HolidayAllocationEntry,
   HolidayAllocationPlacement,
   HolidayAllocationWeek,
+  HolidayCriteriaRanking,
 } from "~/lib/traeger-holiday-allocation-api";
 import { traegerPath } from "~/lib/traeger-url";
 import {
   allocationChips,
   capacityBoundary,
   countLabel,
-  criterionRankLabel,
+  criterionLabel,
   freePlacesText,
+  scoreText,
+  waitsBehindForWish,
 } from "./holiday-allocation-model";
 import { HOLIDAY_PENDING_TONE } from "./holiday-placement";
 import { formatHolidayWeek } from "./holiday-registration-format";
 
 /**
- * The criteria of one entry: met as a neutral chip with its rank number,
- * open as „ungeklärt“. The number ties the chip to the criterion; colour
- * means status only (#7411).
+ * The criteria of one entry: met as a neutral chip, open as „ungeklärt“. By
+ * priority the rank number ties the chip to the criterion, by points its
+ * points stand behind the name; colour means status only (#7411). Where a
+ * total decides the order (#8135), it stands above the chips.
  */
 function AllocationCriteriaChips({
   entry,
   criteria,
+  ranking,
+  maxScore,
 }: Readonly<{
   entry: HolidayAllocationEntry;
   criteria: readonly HolidayAllocationCriterion[];
+  ranking: HolidayCriteriaRanking;
+  maxScore: number;
 }>) {
   const chips = allocationChips(entry, criteria);
-  if (chips.length === 0) {
+  const score = scoreText(ranking, entry.score, maxScore);
+  const behind = waitsBehindForWish(entry, ranking);
+  if (!score && !behind && chips.length === 0) {
     return <p className="text-xs text-gray-500">Kein Kriterium erfüllt</p>;
   }
+  return (
+    <div className="space-y-1.5">
+      {score ? (
+        <p className="text-sm font-medium text-gray-900">{score}</p>
+      ) : null}
+      {behind ? (
+        <p className="text-sm text-gray-600">
+          Kein Ferienwunsch in der OGS-Anmeldung. Steht darum hinter den
+          anderen.
+        </p>
+      ) : null}
+      {chips.length > 0 ? (
+        <AllocationChipList chips={chips} ranking={ranking} />
+      ) : null}
+    </div>
+  );
+}
+
+function AllocationChipList({
+  chips,
+  ranking,
+}: Readonly<{
+  chips: ReturnType<typeof allocationChips>;
+  ranking: HolidayCriteriaRanking;
+}>) {
   return (
     <ul
       className="flex max-w-full min-w-0 flex-wrap gap-1.5"
@@ -69,7 +104,7 @@ function AllocationCriteriaChips({
               wrap
               className="wrap-anywhere"
               icon={CircleHelp}
-              label={`${criterionRankLabel(chip.criterion.position, chip.criterion.name)}: ungeklärt`}
+              label={`${criterionLabel(chip.criterion, ranking === "points" ? "equal" : ranking)}: ungeklärt`}
               title="Keine Angabe. Zählt erst, wenn das Büro es geprüft hat."
             />
           ) : (
@@ -79,10 +114,7 @@ function AllocationCriteriaChips({
               wrap
               className="wrap-anywhere"
               icon={chip.checkedByOffice ? BadgeCheck : undefined}
-              label={criterionRankLabel(
-                chip.criterion.position,
-                chip.criterion.name,
-              )}
+              label={criterionLabel(chip.criterion, ranking)}
               title={
                 chip.checkedByOffice
                   ? "Vom Büro geprüft"
@@ -100,12 +132,16 @@ function AllocationRow({
   periodId,
   entry,
   criteria,
+  ranking,
+  maxScore,
   busy,
   onDecide,
 }: Readonly<{
   periodId: string;
   entry: HolidayAllocationEntry;
   criteria: readonly HolidayAllocationCriterion[];
+  ranking: HolidayCriteriaRanking;
+  maxScore: number;
   busy: boolean;
   onDecide: (placement: HolidayAllocationPlacement) => void;
 }>) {
@@ -148,7 +184,12 @@ function AllocationRow({
             {entry.days.length > 0 ? ` · ${holidayDayList(entry.days)}` : ""} ·
             Eingang {formatChatDateTime(entry.submittedAt)} Uhr
           </p>
-          <AllocationCriteriaChips entry={entry} criteria={criteria} />
+          <AllocationCriteriaChips
+            entry={entry}
+            criteria={criteria}
+            ranking={ranking}
+            maxScore={maxScore}
+          />
         </div>
       </div>
       <ResponsiveRowActions leading={36}>
@@ -203,6 +244,8 @@ export function HolidayAllocationWeekCard({
   week,
   hostSchoolName,
   criteria,
+  ranking,
+  maxScore,
   busy,
   onDecide,
   onTakeProposal,
@@ -211,6 +254,8 @@ export function HolidayAllocationWeekCard({
   week: HolidayAllocationWeek;
   hostSchoolName: string;
   criteria: readonly HolidayAllocationCriterion[];
+  ranking: HolidayCriteriaRanking;
+  maxScore: number;
   busy: boolean;
   onDecide: (
     entry: HolidayAllocationEntry,
@@ -302,6 +347,8 @@ export function HolidayAllocationWeekCard({
                 periodId={periodId}
                 entry={entry}
                 criteria={criteria}
+                ranking={ranking}
+                maxScore={maxScore}
                 busy={busy}
                 onDecide={(placement) => onDecide(entry, placement)}
               />

@@ -147,6 +147,8 @@ export interface DayChange {
   } | null;
   /** Nur bei den Arten `appointment_cancelled` und `appointment_changed`. */
   readonly appointment?: DayChangeAppointment | null;
+  /** Nur bei der Art `meal_cancelled` (#7656): der Grund der Schule. */
+  readonly mealCancellation?: { readonly reason: string } | null;
 }
 
 export interface DayChangesOverview {
@@ -270,6 +272,9 @@ function mapEntry(entry: Entry, day: string): DayChange {
         }
       : null,
     appointment: mapAppointment(entry.appointment ?? null),
+    mealCancellation: entry.meal_cancellation
+      ? { reason: entry.meal_cancellation.reason }
+      : null,
   };
 }
 

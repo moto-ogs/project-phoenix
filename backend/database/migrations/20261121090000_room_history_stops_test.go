@@ -75,6 +75,7 @@ func TestRoomHistoryStopsGoWithTheSchoolAndRollBack(t *testing.T) {
 	// history stops at the head; pickup persons go first.
 	require.NoError(t, studentPickupPersonsDown(ctx, db))
 	require.NoError(t, openingChangesDown(ctx, db))
+	require.NoError(t, mealCancellationsDown(ctx, db))
 	require.NoError(t, roomHistoryStopsDown(ctx, db))
 	var exists bool
 	require.NoError(t, db.NewRaw(`SELECT to_regclass('active.room_history_stops') IS NOT NULL`).Scan(ctx, &exists))

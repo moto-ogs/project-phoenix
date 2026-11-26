@@ -1,0 +1,20 @@
+{
+  "loadObject": "odwołane posiłki",
+  "notice": "Posiłek odwołany: {reason}",
+  "cancelErrorObject": "odwołanie posiłku",
+  "cancelSuccess": "Posiłek w dniu {day} jest odwołany.",
+  "title": "Posiłek odwołany: {day}",
+  "reasonRequired": "Najpierw wpisz powód.",
+  "saveTooltip": "Zapisuje odwołanie. Rezerwacje na ten dzień nie obowiązują.",
+  "description": "Dzieci nie dostaną tego dnia obiadu. Rezerwacje nie obowiązują i nie są rozliczane. Zespół widzi odwołanie w „Dzisiaj inaczej”.",
+  "reasonLabel": "Powód",
+  "reasonPlaceholder": "Na przykład: Caterer nie dostarcza posiłku.",
+  "restoreErrorObject": "posiłek",
+  "restoreSuccess": "Posiłek w dniu {day} odbędzie się ponownie.",
+  "cancelAction": "Posiłek odwołany",
+  "cancelDescription": "Zapisuje, że tego dnia nie ma obiadu.",
+  "changeReasonAction": "Zmień powód",
+  "changeReasonDescription": "Zmienia powód odwołania posiłku.",
+  "restoreAction": "Posiłek się odbędzie",
+  "restoreDescription": "Odwołuje anulowanie od razu. Rezerwacje znów obowiązują."
+}

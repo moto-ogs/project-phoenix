@@ -34,6 +34,17 @@ export const MealPlanWeekEntryResponseSchema: z.ZodType<MealPlanWeekEntryRespons
   allergens: nullable(arr(str)),
 });
 
+/** Go: mealplan.MealCancellationResponse */
+export interface MealCancellationResponse {
+  date: string;
+  reason: string;
+}
+
+export const MealCancellationResponseSchema: z.ZodType<MealCancellationResponse, unknown> = object<MealCancellationResponse>({
+  date: calendarDate,
+  reason: str,
+});
+
 /** Go: mealplan.MealPlanDishResponse */
 export interface MealPlanDishResponse {
   dish: string;
@@ -90,6 +101,7 @@ export const OrderChangeResponseSchema: z.ZodType<OrderChangeResponse, unknown> 
 export interface OrderDayResponse {
   date: string;
   closed: boolean;
+  meal_cancelled?: boolean;
   deadline: string;
   status: string;
   order_id?: string;
@@ -102,6 +114,7 @@ export interface OrderDayResponse {
 export const OrderDayResponseSchema: z.ZodType<OrderDayResponse, unknown> = object<OrderDayResponse>({
   date: calendarDate,
   closed: bool,
+  meal_cancelled: optional(bool),
   deadline: instant,
   status: str,
   order_id: optional(int64String),
@@ -147,6 +160,7 @@ export interface DailyListResponse {
   cutoff_time: string;
   deadline: string;
   closed: boolean;
+  meal_cancelled?: boolean;
   participants: DailyParticipantResponse[] | null;
   others?: DailyParticipantResponse[];
 }
@@ -156,6 +170,7 @@ export const DailyListResponseSchema: z.ZodType<DailyListResponse, unknown> = ob
   cutoff_time: str,
   deadline: instant,
   closed: bool,
+  meal_cancelled: optional(bool),
   participants: nullable(arr(DailyParticipantResponseSchema)),
   others: optional(arr(DailyParticipantResponseSchema)),
 });
@@ -165,6 +180,7 @@ export interface WeeklyDayResponse {
   date: string;
   deadline: string;
   closed: boolean;
+  meal_cancelled?: boolean;
   participants: DailyParticipantResponse[] | null;
 }
 
@@ -172,6 +188,7 @@ export const WeeklyDayResponseSchema: z.ZodType<WeeklyDayResponse, unknown> = ob
   date: calendarDate,
   deadline: instant,
   closed: bool,
+  meal_cancelled: optional(bool),
   participants: nullable(arr(DailyParticipantResponseSchema)),
 });
 
@@ -231,6 +248,11 @@ export interface SaveDayRequest {
   expected_version?: string;
 }
 
+/** Go: mealplan.MealCancellationRequest */
+export interface MealCancellationRequest {
+  reason?: string;
+}
+
 /** Go: mealplan.ChildDayRequest */
 export interface ChildDayRequest {
   participating?: boolean | null;
@@ -259,6 +281,12 @@ export interface SetDayRequest {
 }
 
 export const routes = {
+  "DELETE /api/meal-plan/days/{date}/cancellation": {
+    method: "DELETE",
+    pattern: "/api/meal-plan/days/{date}/cancellation",
+    portals: ["tenant"],
+    response: noData,
+  },
   "DELETE /api/meal-plan/participation/{studentId}/days/{date}": {
     method: "DELETE",
     pattern: "/api/meal-plan/participation/{studentId}/days/{date}",
@@ -284,6 +312,16 @@ export const routes = {
       "week_start": { kind: "date" },
     },
     response: success(z.array(MealPlanWeekEntryResponseSchema)),
+  },
+  "GET /api/meal-plan/cancellations": {
+    method: "GET",
+    pattern: "/api/meal-plan/cancellations",
+    portals: ["tenant"],
+    query: {
+      "from": { kind: "date" },
+      "to": { kind: "date" },
+    },
+    response: success(z.array(MealCancellationResponseSchema)),
   },
   "GET /api/meal-plan/days": {
     method: "GET",
@@ -370,6 +408,13 @@ export const routes = {
     portals: ["tenant"],
     request: requestBody<SaveDayRequest>(),
     response: success(MealPlanDayResponseSchema),
+  },
+  "PUT /api/meal-plan/days/{date}/cancellation": {
+    method: "PUT",
+    pattern: "/api/meal-plan/days/{date}/cancellation",
+    portals: ["tenant"],
+    request: requestBody<MealCancellationRequest>(),
+    response: success(MealCancellationResponseSchema),
   },
   "PUT /api/meal-plan/participation/{studentId}/days/{date}": {
     method: "PUT",

@@ -1,0 +1,20 @@
+{
+  "loadObject": "anulimet e drekës",
+  "notice": "Dreka anulohet: {reason}",
+  "cancelErrorObject": "anulimin e drekës",
+  "cancelSuccess": "Dreka më {day} anulohet.",
+  "title": "Dreka anulohet: {day}",
+  "reasonRequired": "Shkruaj së pari një arsye.",
+  "saveTooltip": "Ruhet anulimi. Rezervimet për këtë ditë nuk vlejnë.",
+  "description": "Fëmijët nuk marrin drekë këtë ditë. Rezervimet nuk vlejnë dhe nuk faturohen. Ekipi e sheh anulimin te „Sot ndryshe“.",
+  "reasonLabel": "Arsyeja",
+  "reasonPlaceholder": "Për shembull: Kateringu nuk e sjell drekën.",
+  "restoreErrorObject": "drekën",
+  "restoreSuccess": "Dreka më {day} zhvillohet përsëri.",
+  "cancelAction": "Dreka anulohet",
+  "cancelDescription": "Ruhet se këtë ditë nuk ka drekë.",
+  "changeReasonAction": "Ndrysho arsyen",
+  "changeReasonDescription": "Ndryshon arsyen pse dreka anulohet.",
+  "restoreAction": "Dreka zhvillohet",
+  "restoreDescription": "E tërheq menjëherë anulimin. Rezervimet vlejnë përsëri."
+}
