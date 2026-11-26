@@ -12,14 +12,11 @@ import { CatererProviders } from "~/app/caterer/providers";
 import { TraegerProviders } from "~/app/traeger/providers";
 import { _resetSessionTreeForTests } from "~/lib/session-tree";
 
-const { mockSession, passthrough, empty, readAccountContrast } = vi.hoisted(
-  () => ({
-    mockSession: vi.fn(),
-    passthrough: ({ children }: { children?: ReactNode }) => children,
-    empty: () => null,
-    readAccountContrast: vi.fn(),
-  }),
-);
+const { mockSession, passthrough, empty } = vi.hoisted(() => ({
+  mockSession: vi.fn(),
+  passthrough: ({ children }: { children?: ReactNode }) => children,
+  empty: () => null,
+}));
 vi.mock("next-auth/react", () => ({
   SessionProvider: passthrough,
   useSession: mockSession,
@@ -58,9 +55,8 @@ vi.mock("~/lib/tenant-context", () => ({ TenantProvider: passthrough }));
 vi.mock("~/components/auth/tenant-auth-wrapper", () => ({
   TenantAuthWrapper: passthrough,
 }));
-vi.mock("~/lib/contrast-account", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("~/lib/contrast-account")>()),
-  readAccountContrast,
+vi.mock("~/components/settings/contrast-account-sync", () => ({
+  ContrastAccountSync: empty,
 }));
 
 const messages: unknown[] = [];
@@ -83,7 +79,6 @@ beforeEach(() => {
   messages.length = 0;
   primeSessionCache(null);
   vi.stubGlobal("BroadcastChannel", RecordingChannel);
-  readAccountContrast.mockResolvedValue(null);
   mockSession.mockReturnValue(signedIn("A"));
 });
 

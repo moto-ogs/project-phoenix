@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef, useSyncExternalStore } from "react";
 import { useSession } from "next-auth/react";
 import {
   accountContrastMutationGeneration,
   applyContrastPreference,
   currentContrastPreference,
   hasPendingAccountContrastMutation,
+  subscribeToAccountContrastMutation,
 } from "~/lib/contrast-preference";
 import type { PortalKey } from "~/lib/portal-paths";
 
@@ -22,9 +23,35 @@ export function ContrastAccountSync({
   const { data: session, status } = useSession();
   const accountId = status === "authenticated" ? session?.user?.id : undefined;
   const isPreview = session?.user?.isPreview === true;
+  const isSavingAccountContrast = useSyncExternalStore(
+    subscribeToAccountContrastMutation,
+    hasPendingAccountContrastMutation,
+    () => false,
+  );
+  const lastSynced = useRef<
+    Readonly<{ accountId: string; portal: PortalKey }> | undefined
+  >(undefined);
+  const mustSyncAfterSave = useRef(false);
 
   useEffect(() => {
-    if (!accountId || isPreview || hasPendingAccountContrastMutation()) return;
+    if (!accountId) {
+      lastSynced.current = undefined;
+      mustSyncAfterSave.current = false;
+      return;
+    }
+    if (isPreview) return;
+    const wasSyncedForThisAccount =
+      lastSynced.current?.accountId === accountId &&
+      lastSynced.current.portal === portal;
+    if (isSavingAccountContrast) {
+      // Der Abgleich dieser Sitzung wurde wegen einer fremden, noch laufenden
+      // Speicherung übersprungen. Sobald sie endet, muss diese Sitzung laden.
+      mustSyncAfterSave.current ||= !wasSyncedForThisAccount;
+      return;
+    }
+    if (wasSyncedForThisAccount && !mustSyncAfterSave.current) return;
+    mustSyncAfterSave.current = false;
+    lastSynced.current = { accountId, portal };
     let cancelled = false;
     const generation = accountContrastMutationGeneration();
     // Erst nach der Anmeldung geladen: die Anmeldeseiten jedes Portals tragen
@@ -52,7 +79,7 @@ export function ContrastAccountSync({
     return () => {
       cancelled = true;
     };
-  }, [portal, accountId, isPreview]);
+  }, [portal, accountId, isPreview, isSavingAccountContrast]);
 
   return null;
 }

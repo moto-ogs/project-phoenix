@@ -13,6 +13,11 @@ export type ContrastPreference = "more" | "normal";
 
 let pendingAccountMutations = 0;
 let accountMutationGeneration = 0;
+const accountMutationListeners = new Set<() => void>();
+
+function notifyAccountMutationListeners(): void {
+  for (const listener of accountMutationListeners) listener();
+}
 
 /**
  * Marks a local account update so a response from an older account read cannot
@@ -21,17 +26,29 @@ let accountMutationGeneration = 0;
 export function beginAccountContrastMutation(): () => void {
   pendingAccountMutations += 1;
   accountMutationGeneration += 1;
+  notifyAccountMutationListeners();
   let ended = false;
   return () => {
     if (ended) return;
     ended = true;
     pendingAccountMutations -= 1;
+    notifyAccountMutationListeners();
   };
 }
 
 /** Whether an account update is queued or being saved in this browser. */
 export function hasPendingAccountContrastMutation(): boolean {
   return pendingAccountMutations > 0;
+}
+
+/** Meldet, wenn eine Kontospeicherung beginnt oder endet. */
+export function subscribeToAccountContrastMutation(
+  onChange: () => void,
+): () => void {
+  accountMutationListeners.add(onChange);
+  return () => {
+    accountMutationListeners.delete(onChange);
+  };
 }
 
 /** Changes whenever a local account update starts. */

@@ -181,4 +181,34 @@ describe("ContrastAccountSync", () => {
 
     expect(document.documentElement.dataset.contrast).toBe("more");
   });
+
+  it("syncs the next account after a previous account's save finishes", async () => {
+    signedIn();
+    const pendingSave = deferred<boolean | null>();
+    mocks.storeAccountContrast.mockReturnValue(pendingSave.promise);
+    mocks.readAccountContrast.mockResolvedValue(false);
+    const previousAccount = render(
+      <>
+        <ContrastAccountSync portal="tenant" />
+        <ContrastPreferenceSection portal="tenant" />
+      </>,
+    );
+
+    fireEvent.click(screen.getByRole("switch"));
+    await waitFor(() =>
+      expect(mocks.storeAccountContrast).toHaveBeenCalledWith("tenant", true),
+    );
+
+    mocks.useSession.mockReturnValue({
+      status: "authenticated",
+      data: { user: { id: "8", isPreview: false } },
+    });
+    previousAccount.unmount();
+    render(<ContrastAccountSync portal="tenant" />);
+    await act(async () => pendingSave.resolve(true));
+
+    await waitFor(() =>
+      expect(document.documentElement.dataset.contrast).toBe("normal"),
+    );
+  });
 });
