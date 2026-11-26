@@ -190,12 +190,24 @@ vi.mock("~/components/students/student-card", () => ({
 }));
 
 import { ApiError } from "~/lib/api-error";
-import { releaseFakeTimers } from "~/test/clock";
+import { initialStudentSearch } from "~/lib/student-search-url";
+import { studentKeys as studentKey } from "~/lib/swr/portal-keys";
+import { releaseFakeTimers, testClockDay } from "~/test/clock";
 import StudentSearchPage from "./page-content";
 
 const STORAGE_KEY = "student-search:last-filters:tenant-2:3";
 const STALL_MESSAGE =
   "Die Kinder laden gerade sehr lange. Bitte lade die Liste noch einmal.";
+const rosterKey = studentKey.search(
+  initialStudentSearch(new URLSearchParams(), testClockDay(0), true),
+);
+const namedKey = studentKey.search(
+  initialStudentSearch(
+    new URLSearchParams({ search: "Mila" }),
+    testClockDay(0),
+    true,
+  ),
+);
 
 const mockStudent = {
   id: "7",
@@ -293,9 +305,9 @@ describe("StudentSearchPage: click on the navigation entry of this page (#3374)"
     const [searchInput] = screen.getAllByPlaceholderText("Name suchen…");
     fireEvent.change(searchInput!, { target: { value: "Mila" } });
     // The term narrows the loaded list in the browser: Max is no match.
-    await waitFor(() => {
-      expect(screen.queryByTestId("student-card-7")).toBeNull();
-    });
+    // Anker: the local search finished with no matching children.
+    expect(await screen.findByText("Keine Kinder gefunden")).toBeVisible();
+    expect(screen.queryByTestId("student-card-7")).toBeNull();
     expect(new URLSearchParams(window.location.search).get("search")).toBe(
       "Mila",
     );
@@ -325,9 +337,9 @@ describe("StudentSearchPage: click on the navigation entry of this page (#3374)"
     expect(screen.getByTestId("student-card-7")).toBeTruthy();
 
     fireEvent.change(searchInput!, { target: { value: "muster frau" } });
-    await waitFor(() => {
-      expect(screen.queryByTestId("student-card-7")).toBeNull();
-    });
+    // Anker: the second search finished, rather than showing a skeleton.
+    expect(await screen.findByText("Keine Kinder gefunden")).toBeVisible();
+    expect(screen.queryByTestId("student-card-7")).toBeNull();
     expect(new Set(studentKeys)).toEqual(new Set([unfilteredKey]));
   });
 
@@ -343,7 +355,7 @@ describe("StudentSearchPage: click on the navigation entry of this page (#3374)"
     const rosterReader = mockUseSWRAuth.getMockImplementation()!;
     let matches: (typeof mockStudent)[] | undefined;
     mockUseSWRAuth.mockImplementation((key, fetcher, options) =>
-      typeof key === "string" && key.includes("-Mila-")
+      key === namedKey
         ? {
             data: matches
               ? { students: matches }
@@ -379,7 +391,7 @@ describe("StudentSearchPage: click on the navigation entry of this page (#3374)"
       studentsResponse = { data: undefined, isLoading: !error, error };
       const rosterReader = mockUseSWRAuth.getMockImplementation()!;
       mockUseSWRAuth.mockImplementation((key, fetcher, options) =>
-        typeof key === "string" && key.includes("-Mila-")
+        key === namedKey
           ? {
               data: {
                 students: [{ ...mockStudent, id: "8", first_name: "Mila" }],
@@ -393,11 +405,94 @@ describe("StudentSearchPage: click on the navigation entry of this page (#3374)"
       renderOnSearchPage("?search=Mila");
 
       expect(screen.getByTestId("student-card-8")).toBeTruthy();
-      expect(
-        studentKeys.some((key) => key.startsWith("search-students-gall--")),
-      ).toBe(true);
+      expect(studentKeys).toContain(rosterKey);
     },
   );
+
+  it.each([401, 403])(
+    "does not show cached name matches after the roster refuses access (%s)",
+    (status) => {
+      studentsResponse = { data: undefined, isLoading: true, error: undefined };
+      const rosterReader = mockUseSWRAuth.getMockImplementation()!;
+      mockUseSWRAuth.mockImplementation((key, fetcher, options) =>
+        key === namedKey
+          ? {
+              data: {
+                students: [{ ...mockStudent, id: "8", first_name: "Mila" }],
+              },
+              isLoading: false,
+              error: undefined,
+            }
+          : rosterReader(key, fetcher, options),
+      );
+      const { rerender } = renderOnSearchPage("?search=Mila");
+      expect(screen.getByTestId("student-card-8")).toBeVisible();
+      expect(screen.getByTestId("select-all-count")).toHaveTextContent("1");
+
+      studentsResponse = {
+        data: undefined,
+        isLoading: false,
+        error: new ApiError("Access refused", status),
+      };
+      rerender(<StudentSearchPage />);
+
+      // Anker: the same selection control now has no children to act on.
+      expect(screen.getByTestId("select-all-count")).toHaveTextContent("0");
+      expect(screen.queryByTestId("student-card-8")).toBeNull();
+    },
+  );
+
+  it("does not restore the old group when clearing search and group", async () => {
+    const rosterReader = mockUseSWRAuth.getMockImplementation()!;
+    mockUseSWRAuth.mockImplementation((key, fetcher, options) => {
+      if (key?.startsWith("search-students-gall-")) {
+        return {
+          isLoading: true,
+          data: options?.keepPreviousData ? studentsResponse.data : undefined,
+        };
+      }
+      return rosterReader(key, fetcher, options);
+    });
+    const { navLink } = renderOnSearchPage("?group_id=7&search=Max");
+    expect(screen.getByTestId("student-card-7")).toBeVisible();
+    expect(screen.getByTestId("select-all-count")).toHaveTextContent("1");
+
+    fireEvent.click(navLink);
+
+    expect(
+      await screen.findByTestId("student-card-grid-skeleton"),
+    ).toBeVisible();
+    expect(screen.getByTestId("select-all-count")).toHaveTextContent("0");
+  });
+
+  it("defers excess roster pages during a name lookup and resumes them on clear", async () => {
+    mockGetStudents.mockResolvedValue({
+      students: [mockStudent],
+      pagination: { total_pages: 25, total_records: 25000 },
+    });
+    let readRoster: (() => Promise<unknown>) | undefined;
+    const rosterReader = mockUseSWRAuth.getMockImplementation()!;
+    mockUseSWRAuth.mockImplementation((key, fetcher, options) => {
+      if (key === rosterKey) readRoster = fetcher;
+      return rosterReader(key, fetcher, options);
+    });
+    const { rerender } = renderOnSearchPage("?search=Max");
+
+    studentsResponse = {
+      data: await readRoster!(),
+      isLoading: false,
+      error: undefined,
+    };
+    expect(mockGetStudents).toHaveBeenCalledTimes(1);
+    rerender(<StudentSearchPage />);
+
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "Suche löschen" })[0]!,
+    );
+    await waitFor(() => expect(mockMutateStudents).toHaveBeenCalledTimes(1));
+    expect(await readRoster!()).toMatchObject({ truncatedTotal: 25000 });
+    expect(mockGetStudents).toHaveBeenCalledTimes(21);
+  });
 
   it("removes a restored name search from the URL", async () => {
     const { navLink } = renderOnSearchPage("?search=Mila");

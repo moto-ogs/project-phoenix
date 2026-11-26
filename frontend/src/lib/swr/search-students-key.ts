@@ -10,10 +10,8 @@ import { isPositiveInt64Id } from "../compare-ids";
  * use it here the invalidation matcher must be able to read the page's group
  * filter back out of its own cache key.
  *
- * Parsing it positionally is not possible: the key's first dynamic segment is
- * the free-text search term, which may itself contain dashes ("Anna-Lena").
- * So the scope is encoded in a fixed, unambiguous segment right after the
- * prefix — `search-students-g7-…` for the group filter "7",
+ * The group scope sits in a fixed segment before the encoded filters:
+ * `search-students-g7-…` for the group filter "7",
  * `search-students-g7.9-…` when several groups are selected (#2218),
  * `search-students-gall-…` when none is — and matched by
  * {@link searchStudentsKeyTargetsGroup} with the same whole-segment boundary

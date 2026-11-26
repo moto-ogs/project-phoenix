@@ -2,7 +2,6 @@ import type {
   AccountPageQuery,
   AccountScope,
 } from "~/lib/operator/account-pages";
-import { encodeMultiValueParam } from "~/lib/multi-value-param";
 import { compareIds } from "~/lib/compare-ids";
 import {
   SEARCH_STUDENTS_KEY_PREFIX,
@@ -512,10 +511,27 @@ function searchKey(params: {
   companions: boolean;
   years: readonly string[];
   pickupStatus: string;
-  /** The registration answer filter (#6954); only an active one adds a segment. */
+  /** The registration answer filter (#6954). */
   enrollmentAnswer?: string;
 }): string {
-  return `${SEARCH_STUDENTS_KEY_PREFIX}${searchStudentsGroupScope(params.groupIds)}-${params.search}-${encodeMultiValueParam([...params.schoolClasses])}-${params.roomId}-${params.dayStatus}-${params.date}-${params.isToday ? "today" : "planning"}-${params.photoState}-${params.bus}-${params.photoConsent}-${params.companions}-${encodeMultiValueParam([...params.years])}-${params.pickupStatus}${params.enrollmentAnswer ? `-a${params.enrollmentAnswer}` : ""}`;
+  const filters = [
+    params.search,
+    params.schoolClasses,
+    params.roomId,
+    params.dayStatus,
+    params.date,
+    params.isToday,
+    params.photoState,
+    params.bus,
+    params.photoConsent,
+    params.companions,
+    params.years,
+    params.pickupStatus,
+    params.enrollmentAnswer ?? "",
+  ];
+  // Free text, class names and answers may all contain separators. Encode the
+  // tuple without changing the leading group segment used for invalidation.
+  return `${SEARCH_STUDENTS_KEY_PREFIX}${searchStudentsGroupScope(params.groupIds)}-${encodeURIComponent(JSON.stringify(filters))}`;
 }
 
 const catererOverviewFamily = "caterer-overview-";

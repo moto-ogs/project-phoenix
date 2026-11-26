@@ -33,6 +33,10 @@ describe("foldForSearch", () => {
     );
   });
 
+  it("keeps contextual lowercase sigma for local name pickers", () => {
+    expect(foldForSearch("ΝΙΚΟΣ")).toBe(foldForSearch("Νίκος"));
+  });
+
   it("treats a missing value as empty", () => {
     expect(foldForSearch(null)).toBe("");
     expect(foldForSearch(undefined)).toBe("");

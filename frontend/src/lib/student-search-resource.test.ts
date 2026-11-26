@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { TEST_CLOCK_TODAY } from "~/test/clock";
+import { studentKeys } from "~/lib/swr/portal-keys";
 import {
   buildStudentSearchFilters,
   studentNameSearch,
@@ -20,6 +21,13 @@ const base: StudentSearchFilterInput = {
   pickupStatus: "all",
   companions: false,
 };
+
+it("keeps name terms and hyphenated classes distinct in the cache", () => {
+  const params = { ...base, photoState: "photos-disabled" };
+  expect(
+    studentKeys.search({ ...params, search: "-2", schoolClasses: ["3a"] }),
+  ).not.toBe(studentKeys.search({ ...params, schoolClasses: ["2-3a"] }));
+});
 
 describe("shared student search HTTP projection", () => {
   it("keeps the unfiltered today request slim and omits inactive filters", () => {

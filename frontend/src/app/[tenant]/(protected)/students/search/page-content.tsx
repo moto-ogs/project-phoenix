@@ -1,5 +1,6 @@
 "use client";
 
+import { isReadRefusal, markRefused } from "~/lib/access-refusal";
 import { ParentAttentionList } from "~/components/students/parent-attention-badge";
 import { useHasDeepScrollPosition } from "~/components/ui/navigation-scroll-position";
 import { StatusBadge } from "~/components/ui/status-badge";
@@ -31,6 +32,7 @@ import {
   type SearchParamReader,
 } from "~/lib/student-search-url";
 import { studentKeys } from "~/lib/swr/portal-keys";
+import { useSWRCacheKey } from "~/lib/swr/hooks";
 import { rooms as roomKeys } from "~/lib/swr/rooms";
 import { groups as groupKeys } from "~/lib/swr/groups";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
@@ -1482,8 +1484,6 @@ function SearchPageContent() {
   // Companion links are fetched only for the Laufgemeinschaft grouping — they
   // cost an extra backend query, and no other view reads them. Part of the
   // cache key so switching into that grouping triggers exactly one refetch.
-  // Sits BEFORE pickup_status on purpose: that filter must stay the key's last
-  // segment (asserted by the #1492 cache-key test).
   const wantsCompanions = groupMode === "companions";
   // The key carries selectedDate AND the today/non-today mode: when an
   // explicitly selected future date becomes today at midnight, selectedDate
@@ -1562,9 +1562,8 @@ function SearchPageContent() {
 
   // The group filter leads the key as a fixed `g{id}`/`gall` scope segment
   // (#2097) so the SSE flush can read it back and skip a refetch when a
-  // check-in event names a group this view does not show. It has to sit BEFORE
-  // the free-text term: the term may contain dashes ("Anna-Lena"), so no
-  // segment after it can be located positionally. See lib/swr/search-students-key.
+  // check-in event names a group this view does not show. See
+  // lib/swr/search-students-key.
   const wholeListParams = {
     groupIds: queryGroupIds,
     search: "",
@@ -1582,6 +1581,7 @@ function SearchPageContent() {
     enrollmentAnswer: serverEnrollmentAnswer,
   } satisfies StudentSearchFilterInput & { photoState: string };
   const wholeListKey = studentKeys.search(wholeListParams);
+  const scopedRosterKey = useSWRCacheKey()(wholeListKey);
   const wholeList = useSWRAuth(
     awaitsSearchFilters ? null : wholeListKey,
     () =>
@@ -1589,18 +1589,21 @@ function SearchPageContent() {
         buildStudentSearchFilters(wholeListParams),
         selectedDate,
         isToday,
+        { deferOverflowPages: searchTerm !== "" },
       ),
-    // Previous filters can stay visible in the normal list as before, but
-    // cannot establish completeness for a search with the new filters.
-    { keepPreviousData: searchTerm === "" },
+    // An earlier group's children cannot be selected while this one loads.
+    { keepPreviousData: false },
   );
+  const rosterRefused = isReadRefusal(wholeList.error);
   // A saved term (or an edit before the roster is ready) is independent of
   // the roster read. Use the browser only once the current list fits in full.
   const hasCompleteList =
     wholeList.data !== undefined &&
     (wholeList.data.truncatedTotal ?? null) === null &&
     !wholeList.error;
-  const needsServerSearch = searchTerm !== "" && !hasCompleteList;
+  // A refusal for the roster also denies its named projection.
+  const needsServerSearch =
+    searchTerm !== "" && !rosterRefused && !hasCompleteList;
   const namedSearchParams = { ...wholeListParams, search: searchTerm };
   const studentsCacheKey = needsServerSearch
     ? studentKeys.search(namedSearchParams)
@@ -1614,15 +1617,29 @@ function SearchPageContent() {
         isToday,
       ),
     // Until this term's answer arrives, no earlier rows can be selected.
-    { keepPreviousData: false },
+    {
+      keepPreviousData: false,
+      onError(error) {
+        // Clearing a refused name search must not uncover a cached roster.
+        if (scopedRosterKey && isReadRefusal(error)) {
+          markRefused(scopedRosterKey, error);
+        }
+      },
+    },
   );
   const {
-    data: studentsData,
-    isLoading: isSearching,
+    data: searchData,
+    isLoading,
     isValidating: isSearchResultValidating,
     error: studentsError,
     mutate: mutateStudents,
   } = needsServerSearch ? namedSearch : wholeList;
+  const isFinishingRoster =
+    searchTerm === "" && searchData?.pagesDeferred === true;
+  const searchRefused = isReadRefusal(studentsError);
+  const studentsData =
+    searchRefused || isFinishingRoster ? undefined : searchData;
+  const isSearching = isLoading || isFinishingRoster;
 
   // Any change to the result query — the server-side cache key or one of the
   // client-only filters — replaces the visual context a selection was made
@@ -1844,20 +1861,26 @@ function SearchPageContent() {
   // below, so a retry gets the full waiting time again.
   const [reloadCount, setReloadCount] = useState(0);
   const reloadRequestKeysRef = useRef<readonly string[]>([]);
+  const handledReloadRef = useRef(0);
   const requestReload = useCallback(() => {
     reloadRequestKeysRef.current = [wholeListKey, studentsCacheKey];
     setReloadCount((count) => count + 1);
   }, [wholeListKey, studentsCacheKey]);
+  const resumeRoster =
+    isFinishingRoster && !isSearchResultValidating && !studentsError;
   useEffect(() => {
-    if (reloadCount === 0) return;
+    const requested = handledReloadRef.current !== reloadCount;
+    handledReloadRef.current = reloadCount;
     // A reset to a key not already being read starts a new fetch in SWR.
     // A reset from server search to the same roster still needs a reload.
     // mutate() bypasses deduplication to replace a request that never answered.
-    if (reloadRequestKeysRef.current.includes(studentsCacheKey)) {
+    if (
+      resumeRoster ||
+      (requested && reloadRequestKeysRef.current.includes(studentsCacheKey))
+    ) {
       void mutateStudents();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once per requested reload; the key is read at that moment
-  }, [reloadCount]);
+  }, [reloadCount, resumeRoster, studentsCacheKey, mutateStudents]);
 
   // Clicking "Alle Kinder" in the navigation while already here means "start
   // over": drop search, filters and date and load the list fresh (#3374). The
@@ -1870,16 +1893,8 @@ function SearchPageContent() {
     }, [clearAllFilters, requestReload]),
   );
 
-  // keepPreviousData holds the previous request's rows until the new request
-  // resolves. Gate every date-sensitive derivation on the response's own
-  // requestDate AND today/planning mode so prior statuses, counts, and filter
-  // options are never presented under the newly selected date/mode (#1939).
-  // Non-date filter changes keep both tags equal, so only date OR mode switches
-  // gate. The mode tag is what catches the midnight rollover: selectedDate is
-  // unchanged when a future date becomes today, but requestIsToday flips, so a
-  // held planning response is still recognized as stale. An untagged response
-  // (requestDate absent, e.g. under test mocks) is treated as current, so this
-  // never gates a real fetch — only an in-flight date/mode transition.
+  // A planning response must not count as live after midnight even when
+  // the selected date itself is unchanged (#1939).
   const isDateTransition =
     studentsData?.requestDate !== undefined &&
     (studentsData.requestDate !== selectedDate ||
@@ -2021,7 +2036,9 @@ function SearchPageContent() {
     }
   }, [studentsError, showLoadError, clearLoadError]);
   const isPermissionError =
-    studentsError instanceof ApiError && studentsError.status === 403;
+    searchRefused &&
+    studentsError instanceof ApiError &&
+    studentsError.status === 403;
   const hasLoadError = studentsError !== undefined && studentsError !== null;
 
   // Fix P1: Detect when auth prevents fetching (user can't fetch but no error from SWR)
@@ -2037,14 +2054,8 @@ function SearchPageContent() {
   // hasFetchedOnce ist auch nach einem Fehler wahr (#2517).
   const rowsLoaded = studentsData !== undefined && !isDateTransition;
 
-  // Show the skeleton while the session is still resolving, while the first
-  // fetch is in progress (not yet hasFetchedOnce), or while a date switch is in
-  // flight: keepPreviousData still holds the previous day's rows, so show the
-  // skeleton instead of presenting them under the newly selected date (#1939).
-  // A fetch error wins, though: when the new date's request fails,
-  // keepPreviousData keeps the stale response so isDateTransition stays true.
-  // Without this guard the page would show the skeleton indefinitely instead
-  // of the error and its recovery guidance (#1939).
+  // Show the skeleton until the current list is ready. A read error takes
+  // precedence so recovery guidance stays visible.
   const showGridSkeleton =
     isInitializing ||
     isAuthError ||

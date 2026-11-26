@@ -2730,16 +2730,15 @@ describe("StudentSearchPage", () => {
       await waitFor(() => {
         expect(screen.getByTestId("filter-pickupStatus")).toBeInTheDocument();
       });
+      const unfilteredKey = studentKeys.at(-1);
+      expect(unfilteredKey).toBeDefined();
 
       fireEvent.change(screen.getByTestId("filter-pickupStatus"), {
         target: { value: "self" },
       });
 
       await waitFor(() => {
-        // pickup_status is the last segment of the students cache key, so a
-        // change to it must produce a key ending in the new value (forces SWR
-        // to refetch the now server-filtered page).
-        expect(studentKeys.some((key) => key.endsWith("-self"))).toBe(true);
+        expect(studentKeys.at(-1)).not.toBe(unfilteredKey);
       });
     });
 

@@ -46,7 +46,7 @@ import { SEARCH_STUDENTS_KEY_PREFIX } from "./search-students-key";
  *     aggregate (carries the selected session's visits since #2096)
  *   - `ogs-students-${groupId}` — OGS-Groups aggregated live view (#2056;
  *     `ogs-students-auto` on a cold start before a group is selected)
- *   - `search-students-g${groupFilter}-${term}-…` — Students Search list
+ *   - `search-students-g${groupFilter}-…` — Students Search list
  *     (the leading group scope segment is the #2097 SSE scoping anchor, see
  *     `lib/swr/search-students-key.ts`)
  */

@@ -57,7 +57,10 @@ export async function fetchStudentSearch(
   filters: StudentFilters,
   requestDate: string,
   requestIsToday: boolean,
-  fetchPage: typeof fetchStudents = fetchStudents,
+  {
+    fetchPage = fetchStudents,
+    deferOverflowPages = false,
+  }: { fetchPage?: typeof fetchStudents; deferOverflowPages?: boolean } = {},
 ) {
   const result = await fetchPage(filters);
   const students = [...result.students];
@@ -72,7 +75,11 @@ export async function fetchStudentSearch(
   // answer two windows out of two different row orders, and children then
   // appear twice or not at all (#2218 review).
   const totalPages = result.pagination?.total_pages ?? 1;
-  const lastPage = Math.min(totalPages, MAX_STUDENT_SEARCH_PAGES);
+  const exceedsPageCap = totalPages > MAX_STUDENT_SEARCH_PAGES;
+  const pagesDeferred = deferOverflowPages && exceedsPageCap;
+  const lastPage = pagesDeferred
+    ? 1
+    : Math.min(totalPages, MAX_STUDENT_SEARCH_PAGES);
   for (let page = 2; page <= lastPage; page++) {
     const nextPage = await fetchPage({ ...filters, page });
     students.push(...nextPage.students);
@@ -83,28 +90,30 @@ export async function fetchStudentSearch(
   // truncated list as the complete one, so the number the backend counted
   // travels along and the page says on screen that it is showing a part
   // (#2218 review). The log line stays for the server-side view.
-  let truncatedTotal: number | null = null;
-  if (totalPages > lastPage) {
-    truncatedTotal = result.pagination?.total_records ?? students.length;
+  const truncatedTotal = exceedsPageCap
+    ? (result.pagination?.total_records ?? students.length)
+    : null;
+  if (exceedsPageCap && !pagesDeferred) {
     logger.warn("student_search_pages_truncated", {
       total_pages: totalPages,
       fetched_pages: lastPage,
     });
   }
 
-  // Tag the response with the date AND today/planning mode it was fetched
-  // for so date-sensitive rendering can tell a fresh result apart from
-  // keepPreviousData holding the previous request's rows. The mode matters
-  // on top of the date: when a selected future date rolls over to today at
-  // midnight, requestDate is unchanged but the semantics flip from planning
-  // to live — the stale planning rows must not be shown under live presence
-  // badges and check-in controls (#1939).
+  // Tag the response with its date and today/planning mode. On a rollover,
+  // the date can stay the same while the mode flips to live (#1939).
   return {
     students,
     requestDate: requestDate,
     requestIsToday: requestIsToday,
     truncatedTotal,
+    ...(pagesDeferred ? { pagesDeferred } : {}),
   };
+}
+
+function foldStudentName(value: string): string {
+  // Go lowercases uppercase sigma to σ even at the end of a word.
+  return foldForSearch(value.replaceAll("Σ", "σ"));
 }
 
 /**
@@ -118,10 +127,10 @@ export async function fetchStudentSearch(
 export function studentNameSearch(
   search: string,
 ): (student: Pick<Student, "id" | "first_name" | "second_name">) => boolean {
-  const term = foldForSearch(search);
+  const term = foldStudentName(search);
   if (!term) return () => true;
   return (student) =>
-    foldForSearch(
+    foldStudentName(
       `${student.first_name ?? ""} ${student.second_name ?? ""}`,
     ).includes(term) || student.id.includes(term);
 }
