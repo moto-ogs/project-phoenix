@@ -180,6 +180,63 @@ export const ArrivalPickupTimesSchema: z.ZodType<ArrivalPickupTimes, unknown> = 
   schools: nullable(arr(SchoolArrivalPickupTimesSchema)),
 });
 
+/** Go: traegerview.SchoolChildCount */
+export interface SchoolChildCount {
+  id: string;
+  name: string;
+  slug: string;
+  subdomain: string;
+  city: string;
+  children: number;
+}
+
+export const SchoolChildCountSchema: z.ZodType<SchoolChildCount, unknown> = object<SchoolChildCount>({
+  id: int64String,
+  name: str,
+  slug: str,
+  subdomain: str,
+  city: str,
+  children: safeInt,
+});
+
+/** Go: traegerview.TraegerChild */
+export interface TraegerChild {
+  student_id: string;
+  school_id: string;
+  school_name: string;
+  first_name: string;
+  last_name: string;
+  school_class: string;
+  group_name: string;
+}
+
+export const TraegerChildSchema: z.ZodType<TraegerChild, unknown> = object<TraegerChild>({
+  student_id: int64String,
+  school_id: int64String,
+  school_name: str,
+  first_name: str,
+  last_name: str,
+  school_class: str,
+  group_name: str,
+});
+
+/** Go: traegerview.TraegerChildren */
+export interface TraegerChildren {
+  schools: SchoolChildCount[] | null;
+  total: number;
+  matched: number;
+  children: TraegerChild[] | null;
+  has_more: boolean;
+}
+
+export const TraegerChildrenSchema: z.ZodType<TraegerChildren, unknown> = object<TraegerChildren>({
+  schools: nullable(arr(SchoolChildCountSchema)),
+  total: safeInt,
+  matched: safeInt,
+  children: nullable(arr(TraegerChildSchema)),
+  has_more: bool,
+});
+
 /** Go: traegerview.ComparedSchool */
 export interface ComparedSchool {
   id: string;
@@ -636,6 +693,28 @@ export const routes = {
       "from": { kind: "date" },
       "school": { kind: "id" },
       "to": { kind: "date" },
+    },
+    response: fileAnswer,
+  },
+  "GET /traeger/schools/children": {
+    method: "GET",
+    pattern: "/traeger/schools/children",
+    portals: ["org"],
+    query: {
+      "offset": { kind: "int" },
+      "school_id": { kind: "id" },
+      "search": { kind: "string" },
+    },
+    response: success(TraegerChildrenSchema),
+  },
+  "GET /traeger/schools/children/export": {
+    method: "GET",
+    pattern: "/traeger/schools/children/export",
+    portals: ["org"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+      "school_id": { kind: "id" },
+      "search": { kind: "string" },
     },
     response: fileAnswer,
   },

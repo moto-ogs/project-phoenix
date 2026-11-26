@@ -75,6 +75,11 @@ func (rs *Resource) TraegerRouter(protectedTraegerRoutes func(chi.Router, func(c
 		// The comparison of the schools is a report too (#4715, ADR 0245).
 		r.With(common.RequiresPermission(identityaccess.TraegerRightReportsRead)).Get("/comparison", rs.comparison)
 		r.With(common.RequiresPermission(identityaccess.TraegerRightReportsRead)).Get("/comparison/export", rs.comparisonExport)
+		// The children of every school by name (#8137, ADR 0327) need
+		// "Verträge verwalten", the right that already opens the names of
+		// the utilization and of Soll und Ist.
+		r.With(common.RequiresPermission(identityaccess.TraegerRightContractsManage)).Get("/children", rs.children)
+		r.With(common.RequiresPermission(identityaccess.TraegerRightContractsManage)).Get("/children/export", rs.childrenExport)
 		r.With(common.RequiresPermission(identityaccess.TraegerRightOverviewRead)).Get("/{id}", rs.getSchool)
 	})
 	return r

@@ -530,6 +530,8 @@ export const portalRoutes = {
     traegerSchools["GET /traeger/schools/alerts/export"],
     traegerSchools["GET /traeger/schools/arrival-pickup-times"],
     traegerSchools["GET /traeger/schools/arrival-pickup-times/export"],
+    traegerSchools["GET /traeger/schools/children"],
+    traegerSchools["GET /traeger/schools/children/export"],
     traegerSchools["GET /traeger/schools/comparison"],
     traegerSchools["GET /traeger/schools/comparison/export"],
     traegerSchools["GET /traeger/schools/daily-attendance"],

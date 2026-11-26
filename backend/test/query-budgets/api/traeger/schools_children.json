@@ -1,0 +1,7 @@
+{
+  "scenario": "api.traeger.schools_children",
+  "max": 7,
+  "exact": true,
+  "description": "modules/traegerview — GET /traeger/schools/children (#8137, ADR 0327): the\nTräger row, the school IDs of the Träger, the school rows, the roster of\nthe Stichtagszahl rule, one page of names at People Directory, the school\nclass and group of the page's memberships and the group names of the\npage's schools in one administrative transaction. Flat in the number of\nschools and children. Not counted: the tenant binding of each shown\nschool's transaction, which writes the read to that school's access log,\nat most one per row of the page.",
+  "route": "GET /traeger/schools/children"
+}

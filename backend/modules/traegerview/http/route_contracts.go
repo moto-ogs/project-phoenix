@@ -17,6 +17,7 @@ func SchoolRouteContracts() []common.RouteContract {
 	format := []common.QueryParam{common.ListFormatQuery}
 	school := []common.QueryParam{common.ListFormatQuery, {Name: "school", Kind: common.QueryID}}
 	comparison := append([]common.QueryParam{{Name: "schools", Kind: common.QueryID, Repeated: true}}, window...)
+	children := []common.QueryParam{{Name: "school_id", Kind: common.QueryID}, {Name: "search", Kind: common.QueryString}}
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/", Portals: traegerPortal, Response: []traegerview.TraegerSchool{}},
 		{Method: "GET", Pattern: "/export", Portals: traegerPortal, Query: format, File: true},
@@ -35,6 +36,9 @@ func SchoolRouteContracts() []common.RouteContract {
 		{Method: "GET", Pattern: "/comparison", Portals: traegerPortal, Query: comparison, Response: traegerview.SchoolComparison{}},
 		{Method: "GET", Pattern: "/comparison/export", Portals: traegerPortal,
 			Query: append([]common.QueryParam{common.ListFormatQuery, {Name: "metrics", Kind: common.QueryString}}, comparison...), File: true},
+		{Method: "GET", Pattern: "/children", Portals: traegerPortal,
+			Query: append([]common.QueryParam{{Name: "offset", Kind: common.QueryInt}}, children...), Response: traegerview.TraegerChildren{}},
+		{Method: "GET", Pattern: "/children/export", Portals: traegerPortal, Query: append([]common.QueryParam{common.ListFormatQuery}, children...), File: true},
 		{Method: "GET", Pattern: "/{id}", Portals: traegerPortal, Response: traegerview.SchoolView{}},
 	}
 }
