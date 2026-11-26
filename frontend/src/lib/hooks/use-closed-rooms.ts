@@ -21,7 +21,7 @@ export function useClosedRoomsOnState(day: string | null | undefined): {
   readonly mutate: () => void;
 } {
   const validDay = day && /^\d{4}-\d{2}-\d{2}$/.test(day) ? day : null;
-  const { data, error } = useSWRAuth(
+  const { data, error, mutate } = useSWRAuth(
     validDay ? roomKeys.closures(validDay, validDay) : null,
     () => fetchRoomClosures(validDay!, validDay!),
   );
