@@ -72,7 +72,7 @@ func planChange(read schoolRead, application carecontract.Application, contract 
 	current, inForce := versionAt(contract.Versions, next.day)
 	base := []carecontract.Service{}
 	if inForce {
-		base = promised(current, next.day)
+		base = carriedServices(current, next.day)
 	}
 	booked := servicesAt(read, application, next.day)
 	services := withChange(base, booked.services, changedOfferings(read, application, contract.Versions, next, base, booked.services))
@@ -333,6 +333,16 @@ func promised(version carecontract.Version, day calendar.Date) []carecontract.Se
 		return []carecontract.Service{}
 	}
 	return activeServices(version.Services, day)
+}
+
+// carriedServices makes the old contract's implicit module ends explicit
+// before a new version can extend the overall contract end.
+func carriedServices(version carecontract.Version, day calendar.Date) []carecontract.Service {
+	services := promised(version, day)
+	for i := range services {
+		services[i].LastDay = earlier(services[i].LastDay, version.EndsOn)
+	}
+	return services
 }
 
 // activeServices are the services of a version that still run on a day:

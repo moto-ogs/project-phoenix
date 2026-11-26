@@ -48,7 +48,7 @@ func careFromBookings(read schoolRead, bookings, chosen []carecontract.Booking, 
 		result.offerings = append(result.offerings, offering.ID)
 		result.addPrice(offering.PriceCents)
 		result.phaseName = firstText(result.phaseName, offering.PhaseName)
-		result.starts = append(result.starts, booking.ValidFrom)
+		result.starts = append(result.starts, contiguousBookingStart(read, bookings, booking))
 	}
 	result.until = servicesUntil(result.services)
 	if result.unpriced {
@@ -56,6 +56,36 @@ func careFromBookings(read schoolRead, bookings, chosen []carecontract.Booking, 
 	}
 	sortServices(result.services)
 	return result
+}
+
+// contiguousBookingStart ignores splits of the same module and weekdays,
+// including ended rows. A gap or a different schedule starts a new promise.
+func contiguousBookingStart(read schoolRead, bookings []carecontract.Booking, booking carecontract.Booking) *calendar.Date {
+	start := booking.ValidFrom
+	for start != nil {
+		previous, found := precedingEquivalentBooking(read.offerings[booking.CareOfferingID], bookings, booking, *start)
+		if !found {
+			break
+		}
+		start = previous
+	}
+	return start
+}
+
+func precedingEquivalentBooking(offering carecontract.Offering, bookings []carecontract.Booking, selected carecontract.Booking, start calendar.Date) (*calendar.Date, bool) {
+	for _, booking := range bookings {
+		if booking.CareOfferingID != selected.CareOfferingID {
+			continue
+		}
+		clipped, ok := bookingWithinPhase(booking, offering, calendar.Date("0001-01-01"))
+		if !ok || (clipped.ValidFrom != nil && !clipped.ValidFrom.Before(start)) ||
+			(clipped.ValidUntil != nil && clipped.ValidUntil.Before(start)) ||
+			!sameDays(effectiveBookingDays(clipped, offering), effectiveBookingDays(selected, offering)) {
+			continue
+		}
+		return clipped.ValidFrom, true
+	}
+	return nil, false
 }
 
 // bookingServices follows each booked weekday through its continuations.

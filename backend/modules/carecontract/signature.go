@@ -141,6 +141,9 @@ type SigningView struct {
 	// AwaitsSignature tells that Version waits for the signature; false once
 	// signed or when nothing is to sign.
 	AwaitsSignature bool `json:"awaits_signature"`
+	// Amendment is true when this version amends an earlier concluded one.
+	// It follows the stored version history, also after signing and reopening.
+	Amendment bool `json:"amendment"`
 }
 
 // SigningContract is the version the parents sign, as the page shows it.

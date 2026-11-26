@@ -75,6 +75,8 @@ export interface SigningView {
   readonly signature: SigningSignature | null;
   /** The version waits for the parents' signature. */
   readonly awaitsSignature: boolean;
+  /** This version amends a concluded contract, including after signing. */
+  readonly amendment: boolean;
   /**
    * The version the parents have so far, when the one to sign is a changed
    * version (#4816); null for a first contract.
@@ -118,6 +120,7 @@ function mapSigningView(raw: sharedContract.SigningView): SigningView {
     priceCents: version.price_cents,
     services: mapServices(version.services),
     awaitsSignature: raw.awaits_signature,
+    amendment: raw.amendment,
     previous: raw.previous
       ? {
           effectiveFrom: requiredDay(

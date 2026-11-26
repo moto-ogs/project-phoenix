@@ -2890,6 +2890,7 @@ export interface SigningView {
   signature: SigningSignature | null;
   previous: SigningContract | null;
   awaits_signature: boolean;
+  amendment: boolean;
 }
 
 export const SigningViewSchema: z.ZodType<SigningView, unknown> = object<SigningView>({
@@ -2904,6 +2905,7 @@ export const SigningViewSchema: z.ZodType<SigningView, unknown> = object<Signing
   signature: nullable(SigningSignatureSchema),
   previous: nullable(SigningContractSchema),
   awaits_signature: bool,
+  amendment: bool,
 });
 
 /** Go: schoolsetuphttp.dismissalRequest */

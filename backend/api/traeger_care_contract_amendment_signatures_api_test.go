@@ -162,6 +162,7 @@ func TestCareContractChangeByTheSchoolWaitsForTheParentsSignature(t *testing.T) 
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	view := decodeSchoolPortalData[carecontract.SigningView](t, rec.Body.Bytes())
 	assert.True(t, view.AwaitsSignature)
+	assert.True(t, view.Amendment)
 	require.NotNil(t, view.Previous, "the parents see the version they have so far")
 	assert.Len(t, view.Previous.Services, 3, "Monday to Wednesday so far")
 	require.Len(t, view.Version.Services, 4, "and Thursday from October")
@@ -180,6 +181,7 @@ func TestCareContractChangeByTheSchoolWaitsForTheParentsSignature(t *testing.T) 
 	assert.Equal(t, http.StatusConflict, rec.Code, "another PDF than the one that waits is never signed")
 	rec = signChangedVersion(t, f, link)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	assert.True(t, decodeSchoolPortalData[carecontract.SigningView](t, rec.Body.Bytes()).Amendment)
 	detail = careContractDetail(t, f, contract)
 	assert.Equal(t, []string{"1:abgeloest", "2:wirksam"}, versionStatuses(detail), "the signature makes the version effective")
 	require.NotNil(t, detail.Versions[0].ValidUntil)
@@ -386,10 +388,12 @@ func TestCareContractSentButUnsignedFollowsAnApprovedChange(t *testing.T) {
 	rec = publicSigning(t, f.traeger, http.MethodGet, current, nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	view := decodeSchoolPortalData[carecontract.SigningView](t, rec.Body.Bytes())
+	assert.False(t, view.Amendment, "an unsigned replacement still concludes the first contract")
 	require.NotNil(t, view.Previous, "the parents see what changed since the version they got first")
 	assert.Len(t, view.Previous.Services, 3)
 	rec = signChangedVersion(t, f, current)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	assert.False(t, decodeSchoolPortalData[carecontract.SigningView](t, rec.Body.Bytes()).Amendment)
 	detail = careContractDetail(t, f, contract)
 	assert.Equal(t, carecontract.StatusActive, detail.Status)
 	assert.Equal(t, []string{"1:ueberholt", "2:wirksam"}, versionStatuses(detail), "concluded on the changed version")
@@ -514,6 +518,18 @@ func TestCareContractInboxOffersTheWaitingChangeToSign(t *testing.T) {
 		_, err := signing.SignInInbox(txCtx, f.office.organization, contract, reader, carecontract.SignatureInput{
 			Method: carecontract.SignatureDrawn, ImagePNG: signatureImage(t), NoticeAcknowledged: true, DocumentSHA256: view.DocumentSHA256})
 		return err
+	}))
+	// Reopen when the amendment is in force; before then the inbox correctly
+	// shows the original contract's confirmation.
+	effectiveSigning := owners.NewParentContractSigningForTests(&owners.CareContractTestMails{}, func() time.Time {
+		return time.Date(2027, 10, 2, 9, 0, 0, 0, time.UTC)
+	})
+	require.NoError(t, tenant.WithinTraeger(ctx, f.office.organization, func(txCtx context.Context) error {
+		reopened, err := effectiveSigning.InboxSigningView(txCtx, f.office.organization, contract, reader)
+		require.NoError(t, err)
+		assert.True(t, reopened.Amendment, "the signed amendment keeps its scope when reopened")
+		assert.False(t, reopened.AwaitsSignature)
+		return nil
 	}))
 	after := inbox()
 	assert.False(t, after.ChangeAwaitsSignature, "signed: nothing waits")

@@ -89,10 +89,7 @@ func contractLetter(record ContractRecord, head carecontract.Letterhead) Letter 
 		LetterBlock{Heading: "Vertragsangaben", Text: "Das gilt für diesen Vertrag:", Facts: termFacts(version, head)},
 		LetterBlock{Heading: "Gebuchte Betreuung", Text: "An diesen Tagen ist euer Kind in der Betreuung:", Facts: ServiceFacts(version.Services)},
 	)
-	if concluded := record.Concluded; concluded != nil && concluded.Method == carecontract.MethodWithApplication {
-		blocks = append(blocks, LetterBlock{Heading: "Vertragsschluss", Text: "Dieser Vertrag ist mit der Annahme der Anmeldung am " +
-			germanDate(calendar.DateFromTime(concluded.At)) + " geschlossen. Ihr müsst ihn nicht unterschreiben."})
-	}
+	blocks = append(blocks, conclusionBlocks(record)...)
 	if version.Terms.SpecialTermination {
 		// The date and notice period first, then the cases of the terms
 		// (#6349). A sent or concluded version keeps its stored PDF.
@@ -135,6 +132,20 @@ func contractLetter(record ContractRecord, head carecontract.Letterhead) Letter 
 		Closing: filled.Closing,
 		Footer:  textLines(head.FooterText),
 	}
+}
+
+func conclusionBlocks(record ContractRecord) []LetterBlock {
+	if record.Version.Number > 1 {
+		if record.Version.Status == carecontract.VersionRequested {
+			return []LetterBlock{{Heading: "Neue Fassung", Text: "Bitte unterschreibt diese neue Fassung."}}
+		}
+		return nil
+	}
+	if concluded := record.Concluded; concluded != nil && concluded.Method == carecontract.MethodWithApplication {
+		return []LetterBlock{{Heading: "Vertragsschluss", Text: "Dieser Vertrag ist mit der Annahme der Anmeldung am " +
+			germanDate(calendar.DateFromTime(concluded.At)) + " geschlossen. Ihr müsst ihn nicht unterschreiben."}}
+	}
+	return nil
 }
 
 // letterTemplate is the Träger's template of the contract, or the standard

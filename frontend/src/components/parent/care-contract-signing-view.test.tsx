@@ -37,6 +37,7 @@ const view: SigningView = {
   withdrawalNotice: ["Sie können den Vertrag widerrufen."],
   signature: null,
   awaitsSignature: true,
+  amendment: false,
   previous: null,
 };
 
@@ -144,6 +145,7 @@ describe("ContractSigningView for a changed version", () => {
   const change: SigningView = {
     ...view,
     status: "aktiv",
+    amendment: true,
     priceCents: 12000,
     services: [
       monday,
@@ -242,6 +244,75 @@ describe("ContractSigningView for a changed version", () => {
       await screen.findByRole("heading", {
         name: "Vielen Dank. Die neue Fassung ist unterschrieben.",
       }),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps the amendment confirmation when the signed page is reopened", async () => {
+    mocks.fetch.mockResolvedValue({
+      ...change,
+      amendment: true,
+      awaitsSignature: false,
+      previous: null,
+      signature: {
+        method: "drawn",
+        signerName: "Eva Muster",
+        signedAt: "2026-09-09T10:00:00Z",
+        earlyStartRequested: false,
+        withdrawalEndsOn: "2026-09-23",
+      },
+    });
+    renderView();
+    expect(
+      await screen.findByRole("heading", {
+        name: "Vielen Dank. Die neue Fassung ist unterschrieben.",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Dein Vertrag gilt dann wieder wie vorher/),
+    ).toBeInTheDocument();
+  });
+
+  it("confirms the whole contract when an unsigned replacement is signed", async () => {
+    mocks.fetch.mockResolvedValue({
+      ...change,
+      status: "versendet",
+      amendment: false,
+    });
+    mocks.sign.mockResolvedValue({
+      ...view,
+      status: "aktiv",
+      amendment: false,
+      awaitsSignature: false,
+      signature: {
+        method: "drawn",
+        signerName: "Eva Muster",
+        signedAt: "2026-09-09T10:00:00Z",
+        earlyStartRequested: false,
+        withdrawalEndsOn: "2026-09-23",
+      },
+    });
+    renderView();
+    fireEvent.click(
+      await screen.findByRole("checkbox", {
+        name: /Widerrufsbelehrung gelesen/,
+      }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Namen tippen" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Unterschrift bestätigen" }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Neue Fassung verbindlich unterschreiben",
+      }),
+    );
+    expect(
+      await screen.findByRole("heading", {
+        name: "Vielen Dank. Der Vertrag ist unterschrieben.",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Du kannst den Vertrag bis zum/),
     ).toBeInTheDocument();
   });
 

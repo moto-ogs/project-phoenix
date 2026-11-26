@@ -82,9 +82,6 @@ export function ContractSigningView({
   const [source] = useState(initialSource);
   const [view, setView] = useState<SigningView | null>(null);
   const [gone, setGone] = useState(false);
-  // The signed view no longer names the version before; the confirmation
-  // still says that a changed version was signed.
-  const [signedChange, setSignedChange] = useState(false);
   const invalidateFamily = useInvalidateFamily();
   const loadError = useApiLoadError();
   const { show: showLoadError, clear: clearLoadError } = loadError;
@@ -138,7 +135,7 @@ export function ContractSigningView({
     // changeable in the parents portal.
     return (
       <div ref={stepRef} className="space-y-5">
-        <SignedConfirmation view={view} change={signedChange} />
+        <SignedConfirmation view={view} />
         {source.kind === "inbox" ? (
           <ParentFamilyChildrenCard source={source} />
         ) : null}
@@ -166,7 +163,6 @@ export function ContractSigningView({
         source={source}
         view={view}
         onSigned={(next) => {
-          setSignedChange(view.previous !== null);
           setView(next);
           // Signed in the parents portal: the documents inbox shows it.
           if (source.kind === "inbox")
@@ -501,13 +497,11 @@ function SignForm({
   );
 }
 
-function SignedConfirmation({
-  view,
-  change,
-}: Readonly<{ view: SigningView; change: boolean }>) {
+function SignedConfirmation({ view }: Readonly<{ view: SigningView }>) {
   const t = useTranslations("careContractSigning");
   const locale = useLocale();
   const signature = view.signature;
+  const change = view.amendment;
   // The parents' own request counts as their agreement (#4816): nothing was
   // signed, so the page says why the version holds.
   const byRequest = signature?.method === "request";

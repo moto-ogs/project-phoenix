@@ -80,3 +80,43 @@ func TestSentContractFollowsAChangedStartWithUnchangedCare(t *testing.T) {
 		})
 	}
 }
+
+func TestExtendedContractKeepsTheCarriedModulesOriginalEnd(t *testing.T) {
+	t.Parallel()
+	contract := amendable()
+	contract.Latest.EndsOn = date(2031, 1, 31)
+	contract.Versions = []carecontract.Version{contract.Latest}
+	application := carecontract.Application{Bookings: []carecontract.Booking{
+		{CareOfferingID: 1, Days: []string{"mon"}, ValidFrom: date(2030, 8, 1), ValidUntil: date(2031, 2, 1)},
+		{CareOfferingID: 2, Days: []string{"thu"}, ValidFrom: date(2030, 10, 1), ValidUntil: date(2031, 7, 1)},
+	}}
+	today := *date(2030, 9, 1)
+	plan, reason := nextAmendment(amendmentRead(), application, contract, today)
+	require.Empty(t, reason)
+	require.NotNil(t, plan)
+	require.Len(t, plan.version.Services, 2)
+	assert.Equal(t, date(2031, 6, 30), plan.version.EndsOn)
+	assert.Equal(t, date(2031, 1, 31), plan.version.Services[0].LastDay)
+	assert.True(t, waitingCarries(amendmentRead(), application.Bookings, &plan.version, plan.version, today))
+}
+
+func TestUnsignedContractKeepsItsStartAcrossEquivalentBookingSplits(t *testing.T) {
+	t.Parallel()
+	for _, fixed := range []bool{false, true} {
+		t.Run(map[bool]string{false: "open", true: "fixed"}[fixed], func(t *testing.T) {
+			t.Parallel()
+			sent := SentContract{Version: amendable().Latest, NextNumber: 2}
+			if fixed {
+				months := 12
+				sent.Version.Terms.TermKind, sent.Version.Terms.TermMonths = carecontract.TermFixedMonths, &months
+				sent.Version.EndsOn = date(2031, 7, 31)
+			}
+			application := carecontract.Application{Bookings: []carecontract.Booking{
+				{CareOfferingID: 1, Days: []string{"mon"}, ValidFrom: date(2030, 8, 1), ValidUntil: date(2030, 10, 1)},
+				{CareOfferingID: 1, Days: []string{"mon"}, ValidFrom: date(2030, 10, 1)},
+			}}
+			_, changed := sentVersionNow(amendmentRead(), application, sent, *date(2030, 11, 1))
+			assert.False(t, changed, "splitting the same care changes neither the start nor the fixed term")
+		})
+	}
+}

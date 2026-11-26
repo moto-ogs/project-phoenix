@@ -102120,6 +102120,12 @@
           "schema": {
             "kind": "bool"
           }
+        },
+        {
+          "name": "amendment",
+          "schema": {
+            "kind": "bool"
+          }
         }
       ]
     },

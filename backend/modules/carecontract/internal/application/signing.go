@@ -540,7 +540,7 @@ func (s *Signatures) view(ctx context.Context, organizationID int64, record Cont
 	traeger := traegerName(letterhead, record.Version.Terms)
 	partner := firstText(record.Version.Terms.ContractPartner, traeger)
 	party, _ := recipient(record.Parties)
-	previous, err := s.previousVersion(ctx, organizationID, record)
+	previous, amendment, err := s.previousVersion(ctx, organizationID, record)
 	if err != nil {
 		return carecontract.SigningView{}, err
 	}
@@ -548,7 +548,7 @@ func (s *Signatures) view(ctx context.Context, organizationID int64, record Cont
 		ContractID: record.Summary.ID, OrganizationID: ident.ID(organizationID), Status: record.Summary.Status,
 		TraegerName: traeger, PartyName: fullName(party.FirstName, party.LastName), Version: signingContract(record.Version),
 		DocumentSHA256: document.SHA256, WithdrawalNotice: withdrawalNoticeParagraphs(withdrawalAddressee(partner, letterhead, reach)),
-		Previous: previous, AwaitsSignature: awaitsSignature(record),
+		Previous: previous, AwaitsSignature: awaitsSignature(record), Amendment: amendment,
 	}, nil
 }
 
@@ -556,14 +556,19 @@ func (s *Signatures) view(ctx context.Context, organizationID int64, record Cont
 // that waits for their signature (#4816), so the page shows what changes:
 // of an active contract the version in force on the day the change holds
 // from, of a contract not signed yet the version sent before. Nil for a
-// first version and for a version that does not wait.
-func (s *Signatures) previousVersion(ctx context.Context, organizationID int64, record ContractRecord) (*carecontract.SigningContract, error) {
-	if !awaitsSignature(record) || record.Version.Number <= 1 {
-		return nil, nil
+// first version and for a version that does not wait. The second answer
+// is the signature scope from the stored history, including after signing.
+func (s *Signatures) previousVersion(ctx context.Context, organizationID int64, record ContractRecord) (*carecontract.SigningContract, bool, error) {
+	if record.Version.Number <= 1 {
+		return nil, false, nil
 	}
 	versions, err := s.store.Versions(ctx, organizationID, record.Summary.ID.Int64())
 	if err != nil {
-		return nil, err
+		return nil, false, err
+	}
+	amendment := amendsConcludedVersion(record.Version, versions)
+	if !awaitsSignature(record) {
+		return nil, amendment, nil
 	}
 	day := record.Version.EffectiveFrom
 	if today := calendar.DateFromTime(s.clock.now()); day.Before(today) {
@@ -582,10 +587,22 @@ func (s *Signatures) previousVersion(ctx context.Context, organizationID int64, 
 		}
 	}
 	if previous == nil {
-		return nil, nil
+		return nil, amendment, nil
 	}
 	contract := signingContract(*previous)
-	return &contract, nil
+	return &contract, amendment, nil
+}
+
+// An unsigned version overtaken before the first conclusion is no contract
+// to amend. Replaced concluded versions still establish the original scope.
+func amendsConcludedVersion(current carecontract.Version, versions []carecontract.Version) bool {
+	for _, version := range versions {
+		if version.Number < current.Number && (version.Status == carecontract.VersionEffective ||
+			version.Status == carecontract.VersionSuperseded || version.Status == carecontract.VersionReplaced) {
+			return true
+		}
+	}
+	return false
 }
 
 func berlinStamp(at time.Time) string {
