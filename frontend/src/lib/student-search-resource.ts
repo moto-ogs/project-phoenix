@@ -1,4 +1,6 @@
+import { foldForSearch } from "~/lib/search-fold";
 import { fetchStudents, type StudentFilters } from "~/lib/student-api";
+import type { Student } from "~/lib/student-helpers";
 import { createLogger } from "~/lib/logger";
 
 const logger = createLogger({ component: "StudentSearch" });
@@ -101,6 +103,26 @@ export async function fetchStudentSearch(
     students,
     requestDate: requestDate,
     requestIsToday: requestIsToday,
+    requestSearch: filters.search ?? "",
     truncatedTotal,
   };
+}
+
+/**
+ * The name search of the child list, run in the browser on the loaded list so
+ * typing asks no server and keeps every child object (and its card) as it is.
+ * Same rule as the list endpoint's `matchesSearchFilter`
+ * (backend presenceprojection `list_helpers.go`), which the server export of
+ * the same term still applies: the folded text is part of „Vorname Nachname“
+ * or of the child's ID.
+ */
+export function studentNameSearch(
+  search: string,
+): (student: Pick<Student, "id" | "first_name" | "second_name">) => boolean {
+  const term = foldForSearch(search);
+  if (!term) return () => true;
+  return (student) =>
+    foldForSearch(
+      `${student.first_name ?? ""} ${student.second_name ?? ""}`,
+    ).includes(term) || student.id.includes(term);
 }

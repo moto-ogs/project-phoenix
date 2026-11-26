@@ -6,6 +6,7 @@ import { StatusBadge } from "~/components/ui/status-badge";
 import {
   buildStudentSearchFilters,
   fetchStudentSearch,
+  studentNameSearch,
   type StudentSearchFilterInput,
 } from "~/lib/student-search-resource";
 import {
@@ -36,6 +37,7 @@ import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import {
   Suspense,
+  startTransition,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -1027,9 +1029,12 @@ function SearchPageContent() {
   );
 
   // Search and filter state
-  // The search field keeps an immediate local draft and only calls this setter
-  // after its debounce. This avoids rendering the full result grid per key.
+  // The search field keeps an immediate local draft and reports the term
+  // after its debounce. The term then narrows the loaded list in the browser,
+  // as a transition: a key typed while the list renders is shown first.
   const [searchTerm, setSearchTerm] = useState(initial.search);
+  // Only a list too long to load in full sends the term to the server.
+  const [listIsPartial, setListIsPartial] = useState(false);
   const [searchResetKey, setSearchResetKey] = useState(0);
   const [selectedGroupIds, setSelectedGroupIds] = useState(initial.groupIds);
   const [selectedSchoolClasses, setSelectedSchoolClasses] = useState(
@@ -1116,7 +1121,7 @@ function SearchPageContent() {
 
   const updateSearchTerm = useCallback(
     (value: string) => {
-      setSearchTerm(value);
+      startTransition(() => setSearchTerm(value));
       updateUrlParams({ [SEARCH_QUERY_PARAM]: value });
     },
     [updateUrlParams],
@@ -1556,9 +1561,10 @@ function SearchPageContent() {
   // check-in event names a group this view does not show. It has to sit BEFORE
   // the free-text term: the term may contain dashes ("Anna-Lena"), so no
   // segment after it can be located positionally. See lib/swr/search-students-key.
+  const serverSearchTerm = listIsPartial ? searchTerm : "";
   const studentSearchParams = {
     groupIds: queryGroupIds,
-    search: searchTerm,
+    search: serverSearchTerm,
     schoolClasses: querySchoolClasses,
     roomId: effectiveRoomId,
     dayStatus: dayStatusFilter,
@@ -1588,7 +1594,7 @@ function SearchPageContent() {
   // counts visible cards only) cannot be the retry surface then; the
   // failure dialog therefore carries its own retry that executes its named
   // snapshot regardless of what the current filters show (review #2372).
-  const selectionScopeSignature = `${studentsCacheKey}|${effectiveEnrollmentAnswer}|${effectiveAttendanceFilter}|${encodeMultiValueParam(pickupTimeFilter)}|${arrivalTimeFilter}|${effectiveTrackingFilter}`;
+  const selectionScopeSignature = `${studentsCacheKey}|${searchTerm}|${effectiveEnrollmentAnswer}|${effectiveAttendanceFilter}|${encodeMultiValueParam(pickupTimeFilter)}|${arrivalTimeFilter}|${effectiveTrackingFilter}`;
   const clearCheckinSelection = schoolCheckin.clearSelection;
   useEffect(() => {
     clearCheckinSelection();
@@ -1605,6 +1611,8 @@ function SearchPageContent() {
     students: Student[];
     requestDate: string;
     requestIsToday: boolean;
+    /** The term this answer was filtered by on the server; "" for the whole list. */
+    requestSearch?: string;
     /**
      * Number of matching children the backend counted when the page walk could
      * not load them all, otherwise null. Never silently dropped: the list, the
@@ -1624,6 +1632,15 @@ function SearchPageContent() {
       keepPreviousData: true,
     },
   );
+
+  // Whether the whole list fits is known from an answer read without a term.
+  const wholeListIsPartial =
+    studentsData?.requestSearch === ""
+      ? (studentsData.truncatedTotal ?? null) !== null
+      : listIsPartial;
+  if (wholeListIsPartial !== listIsPartial) {
+    setListIsPartial(wholeListIsPartial);
+  }
 
   // Keep room state and room_id/room_name query params in sync without a
   // Next.js navigation, which would discard SWR data and flash the loading
@@ -1875,15 +1892,22 @@ function SearchPageContent() {
   // The children of the list's server filters and the registration answer:
   // what every count, card and bulk action below works on, as when the server
   // applied the answer.
-  const students = useMemo(
-    () =>
-      activeEnrollmentAnswerChildren
-        ? loadedStudents.filter((student) =>
-            activeEnrollmentAnswerChildren.has(student.id),
-          )
-        : loadedStudents,
-    [loadedStudents, activeEnrollmentAnswerChildren],
-  );
+  const students = useMemo(() => {
+    const browserTerm = serverSearchTerm ? "" : searchTerm;
+    if (!browserTerm && !activeEnrollmentAnswerChildren) return loadedStudents;
+    const matchesName = studentNameSearch(browserTerm);
+    return loadedStudents.filter(
+      (student) =>
+        matchesName(student) &&
+        (!activeEnrollmentAnswerChildren ||
+          activeEnrollmentAnswerChildren.has(student.id)),
+    );
+  }, [
+    loadedStudents,
+    activeEnrollmentAnswerChildren,
+    searchTerm,
+    serverSearchTerm,
+  ]);
 
   // The pickup times of the loaded children. A chosen time no child has (from
   // a link, or while the list loads) stays selectable so it can be lifted, but

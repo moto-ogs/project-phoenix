@@ -2047,7 +2047,7 @@ describe("StudentSearchPage — Unterwegs-Karte (#5026)", () => {
 
   it("keeps a name search on the way to and from the assignment page", async () => {
     currentSearch = new URLSearchParams({
-      search: "Mila",
+      search: "Max",
       view: "status",
     });
 
@@ -2060,11 +2060,11 @@ describe("StudentSearchPage — Unterwegs-Karte (#5026)", () => {
       "https://example.test",
     );
     expect(referrer.pathname).toBe("/students/search");
-    expect(referrer.searchParams.get("search")).toBe("Mila");
+    expect(referrer.searchParams.get("search")).toBe("Max");
     expect(referrer.searchParams.get("view")).toBe("status");
     expect(mockPageHeader).toHaveBeenLastCalledWith(
       expect.objectContaining({
-        search: expect.objectContaining({ value: "Mila" }),
+        search: expect.objectContaining({ value: "Max" }),
       }),
     );
   });
