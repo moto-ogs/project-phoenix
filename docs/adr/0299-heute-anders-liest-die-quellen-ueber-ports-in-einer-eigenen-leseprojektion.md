@@ -479,3 +479,34 @@ Projektion nutzt „change“.
   brauchen eigene Lesungen anderer Owner (Ankunfts-Ausnahmen je Kind bei
   Care Plan, Status-Tage, Klassen der Kinder; Termine bei Appointments),
   für die es im Budget keine Einsparung gibt.
+
+## Nachtrag 2026-11-26: Klassenausflug und Termine im Schulportal (#8155)
+
+- **Klassenausflug:** kein Eintrag der Projektion, sondern ein Feld
+  `trips` pro Klasse im Bericht `GET /school/class-day/assigned-classes`
+  (Owner Klassentag), den die Startseite ohnehin lädt. Pro Klasse und
+  Rückkehrzeit die Zahl der Kinder: eine Klassenfahrt (Status-Tag
+  `class_trip`) ohne Zeit, ein Tagesausflug (Ankunfts-Ausnahme je Kind mit
+  Grund „Ausflug“) mit der Zeit, zu der die Kinder in die OGS kommen. Kein
+  Kind, kein Grund. Den Grund der Ausnahme liefert Care Plan in der Lesung
+  der Betreuungstage mit, die der Bericht schon für „kommt heute nicht“
+  macht (`PlannedCareDay.ArrivalReason`); das Budget
+  `modules.classday.assigned_classes` bleibt bei 30. Der Block baut daraus
+  Einträge der Art `class_trip` unter „Betrifft dich“, mit dem Satz des
+  Staff-Portals. Die Schulverwaltung (`class_day:all_classes`) lädt den
+  Bericht nicht und sieht keine Ausflüge im Block.
+- **Termine:** neue Quelle `appointments` von `NewSchool`. Regel des
+  Kalenders in moto schule: `calendar:school` und ein Personaldatensatz,
+  sichtbar ist, was Appointments der Lehrkraft als Organisatorin oder
+  eingeladenem Personal zeigt. `calendar:own` gilt hier nicht. Die
+  Ausnahmen des Tages sind die des Staff-Portals; das Link-Ziel ist der
+  Kalender von moto schule. Ohne Recht bleibt die Quelle „geladen“ und leer.
+- **Budget:** Die Aufrufer-Kette las Person, Personal und Klassen in drei
+  Anweisungen. Personaldatensatz und Klassen gehören beide School
+  Membership und kommen jetzt in einer Anweisung
+  (`schoolmembership.StaffClassReads`). Die frei gewordene Anweisung nutzt
+  die Termin-Lesung; `school.day_changes.today` bleibt bei 10.
+- **Live:** Ein Tagesausflug meldet `arrival_schedule_changed` und erreicht
+  den Block als `class_day_changed`. Eine abgesagte oder geänderte
+  Termin-Ausnahme sendet kein Signal an das Schulportal; der Block holt sie
+  beim Fokus und beim erneuten Verbinden.

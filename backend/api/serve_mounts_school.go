@@ -16,6 +16,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/spf13/viper"
 
+	appointmentsModule "github.com/moto-ogs/project-phoenix/modules/appointments"
 	carePlanModule "github.com/moto-ogs/project-phoenix/modules/careplan"
 	classdayHTTP "github.com/moto-ogs/project-phoenix/modules/classday/http"
 	communicationModule "github.com/moto-ogs/project-phoenix/modules/communication"
@@ -132,7 +133,7 @@ func mountSchoolPortalRoutes(
 	planExport planexport.Service, chat owners.CommunicationMessaging, persons peopledirectory.Capability, notifications owners.DeliveryNotifications,
 	devices owners.DeliveryDevices, classDay ClassDayViews, identity identityaccess.Owner, calendarApp calendarCompose.Application,
 	announcements communicationModule.ParentAnnouncementCapability, shiftSeries workforceModule.ShiftPlanReferenceQuery, staff owners.StaffPermissionHolders,
-	hub realtime.Broadcaster, now func() time.Time,
+	hub realtime.Broadcaster, membership schoolMembershipModule.Capability, calendarAppointments appointmentsModule.Query, now func() time.Time,
 ) error {
 	pickupExtensions, err := careexit.NewPickupExtensions(timetableOwner, presence)
 	if err != nil {
@@ -179,7 +180,7 @@ func mountSchoolPortalRoutes(
 	// /api/calendar, behind calendar:school and the school-portal mantle.
 	schoolCalendar := calendarAPI.NewResource(calendarApp, nil, logger.With("handler", "school-calendar"))
 	school := NewSchoolPortalHTTP(SchoolPortalAuth(identity), SchoolPortalMFA(identity), portalauth.PasswordResetRoutes(identity, identityaccess.PasswordResetScopeSchool), classDayResource, timetableResource, staffMessaging, staffNotices, notificationRoutes, schoolCalendar)
-	parentLetters, dayChanges, err := schoolClassSurfaces(announcements, caller, classArrivals, calendar, classDay.Today, logger)
+	parentLetters, dayChanges, err := schoolClassSurfaces(announcements, caller, membership, calendarAppointments, classArrivals, calendar, classDay.Today, logger)
 	if err != nil {
 		return err
 	}
@@ -197,6 +198,7 @@ func mountSchoolPortalRoutes(
 // moto schule: her parent letters and "Heute anders".
 func schoolClassSurfaces(
 	announcements communicationModule.ParentAnnouncementCapability, caller *owners.CallerRows,
+	membership schoolMembershipModule.Capability, calendarAppointments appointmentsModule.Query,
 	classArrivals timetableModule.ClassArrivalQuery, calendar schoolcalendar.Calendar, today func() timezone.Date, logger *slog.Logger,
 ) (*announcementAPI.Resource, *dayChangesHTTP.SchoolResource, error) {
 	// Parent letters of a Lehrkraft to her classes (#4800): the OGS's
@@ -204,11 +206,17 @@ func schoolClassSurfaces(
 	parentLetters := announcementAPI.NewResource(announcements, newDeclarationReports(), time.Now)
 	parentLetters.Classes = classLetterCaller{caller.Caller()}
 	parentLetters.Letters = owners.NewParentLetterPrinter()
+	staff, err := schoolMembershipModule.StaffClassReadsOf(membership)
+	if err != nil {
+		return nil, nil, err
+	}
 	// "Heute anders" of moto schule (#7670) reads the class arrivals and
-	// the closing days already built for the timetable.
+	// the closing days already built for the timetable, the caller's staff
+	// record with its classes and her appointments (#8155).
 	dayChanges, err := NewSchoolDayChanges(SchoolDayChangesSources{
-		Caller: caller.Caller(), ClassArrivals: classArrivals, ClosingDays: calendar,
-		Today: today, Logger: logger.With("service", "school-day-changes"),
+		Caller: caller.Caller(), Staff: staff, ClassArrivals: classArrivals, ClosingDays: calendar,
+		Appointments: dayChangesAppointmentsOf(calendarAppointments),
+		Today:        today, Logger: logger.With("service", "school-day-changes"),
 	})
 	return parentLetters, dayChanges, err
 }

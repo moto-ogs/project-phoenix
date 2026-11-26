@@ -93,10 +93,12 @@ func TestAssignedClassesAPI(t *testing.T) {
 		}
 		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &shape))
 		for _, summary := range shape.Data.Classes {
-			assert.Len(t, summary, 3)
+			// The trips of the class (#8155) are counts per return time too.
+			assert.Len(t, summary, 4)
 			assert.Contains(t, summary, "totals")
 			assert.Contains(t, summary, "changes")
 			assert.Contains(t, summary, "school_class")
+			assert.JSONEq(t, `[]`, string(summary["trips"]))
 		}
 		statements := counter.Total()
 		if count == 1 {

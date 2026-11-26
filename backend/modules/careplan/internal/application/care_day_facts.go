@@ -329,6 +329,8 @@ func (p *carePlans) effectiveArrival(studentID int64, date calendar.Date) *carep
 	if exc, ok := p.arrivalExceptions[studentID][date]; ok {
 		result.IsException = true
 		result.ArrivalTime = exc.ExpectedArrival
+		// The exception's reason, as the arrival service reads it.
+		result.Notes = trimmed(exc.Reason)
 		if !exc.CreatedAt.IsZero() {
 			recorded := exc.CreatedAt
 			result.ChangedAt = &recorded
