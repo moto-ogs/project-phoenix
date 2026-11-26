@@ -2303,17 +2303,6 @@ function AppStudentCompactStatus({
   );
 }
 
-// iPhone SE: Die Statuszeile ist sichtbar nur 24 px hoch; ihre Trefferfläche
-// reicht bis an Titelzeile und Reiter (32 px), ohne sie zu überdecken.
-const SHORT_PHONE_HEAD = [
-  "phone:[@media(max-height:700px)]:relative",
-  "phone:[@media(max-height:700px)]:min-h-6",
-  "phone:[@media(max-height:700px)]:before:absolute",
-  "phone:[@media(max-height:700px)]:before:inset-x-0",
-  "phone:[@media(max-height:700px)]:before:-inset-y-1",
-  "phone:[@media(max-height:700px)]:before:content-['']",
-].join(" ");
-
 /**
  * Kopf der Kindakte in der App (#8070): Aufenthaltsort und die Zeiten des
  * Tages als eine Chip-Zeile, die bei Platzmangel seitlich scrollt. Die
@@ -2412,66 +2401,61 @@ function AppStudentHeadStatus({
   ]
     .filter((fact): fact is { text: string; sep: string } => Boolean(fact))
     .map((fact, index) => (index === 0 ? { ...fact, sep: "" } : fact));
-  // Die Zeilen beginnen an derselben Kante wie der Inhalt der Karten darunter
-  // (16 px Einzug der Statuszeile im Kopf). Die Chips brechen um statt
-  // seitlich zu scrollen: nichts liegt verborgen links oder rechts.
-  // Ein Tipp auf die Zeilen öffnet „Heute“ mit allem, was der Desktop unter
-  // dem Namen zeigt; der Pfeil am Ende sagt, dass es dort mehr gibt.
+  // Eine Zeile auf jedem Telefon (#8070): Chips und Angaben teilen sich die
+  // Zeile, damit die Kopfkarte unter 20 % der Höhe bleibt und am iPhone SE
+  // dasselbe zeigt wie am iPhone 15. Was nicht mehr passt, fällt als ganze
+  // Angabe weg (die Zeile bricht in eine verborgene Folgezeile um) und
+  // steht im Blatt „Heute“, das „Details“ am Zeilenende öffnet.
   return (
     <>
       <button
         type="button"
         onClick={() => setDetailsOpen(true)}
         aria-haspopup="dialog"
-        // Mindestens 44 px hoch: die Zeilen sind die Trefferfläche für „Heute“.
-        // iPhone SE (Höhe unter 700 px): Chips und Angaben teilen sich eine
-        // Zeile, damit die Kopfkarte unter 20 % der Höhe bleibt; was nicht
-        // mehr passt, fällt als ganze Angabe weg und steht in „Heute“.
-        className={`flex min-h-11 max-w-full min-w-full cursor-pointer items-center gap-1.5 text-left ${SHORT_PHONE_HEAD}`}
+        // Sichtbar 24 px hoch, dicht unter dem Namen; die Trefferfläche
+        // reicht bis an die Reiter, ohne Titelzeile oder Reiter zu überdecken.
+        data-app-head-status-tight=""
+        className="relative -mb-1 flex h-6 max-w-full min-w-full cursor-pointer items-center gap-2 text-left before:absolute before:inset-x-0 before:top-0 before:-bottom-1.5 before:content-['']"
       >
-        <span className="phone:[@media(max-height:700px)]:h-6 phone:[@media(max-height:700px)]:flex-row phone:[@media(max-height:700px)]:flex-wrap phone:[@media(max-height:700px)]:items-center phone:[@media(max-height:700px)]:gap-x-1.5 phone:[@media(max-height:700px)]:overflow-hidden flex min-w-0 flex-1 flex-col gap-1">
-          <span className="phone:[@media(max-height:700px)]:contents flex min-w-0 flex-wrap items-center gap-1.5 [&_*]:whitespace-nowrap">
-            <span className="shrink-0">{location}</span>
-            {late ? (
-              <span className="shrink-0">
-                <AppStudentLateBadge late={late} pickup={late === pickupLate} />
-              </span>
-            ) : null}
-            {items.length > 0 ? (
-              <span className="contents [&>*]:contents">
-                <TenantPageStats items={items} />
-              </span>
-            ) : null}
-          </span>
-          {facts.length > 0 ? (
-            <span
-              data-testid="app-head-facts"
-              className="phone:[@media(max-height:700px)]:contents flex h-5 flex-wrap gap-x-1 overflow-hidden text-sm leading-5 text-gray-600"
-            >
-              {facts.map((fact, index) => (
-                <span
-                  key={fact.text}
-                  // Die erste Angabe ist die wichtigste: passt sie allein
-                  // nicht, endet sie mit „…“ statt zu verschwinden. Ein
-                  // Komma hängt ohne Lücke an der Angabe davor.
-                  className={
-                    index === 0
-                      ? "max-w-full min-w-0 truncate"
-                      : `whitespace-nowrap${fact.sep === "," ? "-ml-1" : ""}`
-                  }
-                >
-                  {fact.sep}
-                  {fact.text}
-                </span>
-              ))}
+        <span
+          data-testid="app-head-facts"
+          className="flex h-6 min-w-0 flex-1 flex-wrap items-center gap-x-1.5 overflow-hidden text-sm leading-6 text-gray-600 [&>*]:whitespace-nowrap"
+        >
+          <span className="shrink-0">{location}</span>
+          {late ? (
+            <span className="shrink-0">
+              <AppStudentLateBadge late={late} pickup={late === pickupLate} />
             </span>
           ) : null}
+          {items.length > 0 ? (
+            <span className="contents [&>*]:contents">
+              <TenantPageStats items={items} />
+            </span>
+          ) : null}
+          {facts.map((fact, index) => (
+            <span
+              key={fact.text}
+              // Die erste Angabe ist die wichtigste: passt sie allein nicht,
+              // endet sie mit „…“ statt zu verschwinden. Ein Komma hängt
+              // ohne Lücke an der Angabe davor.
+              className={
+                index === 0
+                  ? "max-w-full min-w-0 truncate"
+                  : fact.sep === ","
+                    ? "-ml-1.5"
+                    : undefined
+              }
+            >
+              {fact.sep}
+              {fact.text}
+            </span>
+          ))}
         </span>
-        <span className="sr-only">, alle Angaben zu heute öffnen</span>
-        <ChevronRight
-          className="size-4 shrink-0 text-gray-500"
-          aria-hidden="true"
-        />
+        <span className="flex shrink-0 items-center text-sm leading-6 text-gray-500">
+          Details
+          <ChevronRight className="size-4" aria-hidden="true" />
+        </span>
+        <span className="sr-only">: alle Angaben zu heute</span>
       </button>
       <OverlaySheet
         open={detailsOpen}
@@ -2481,7 +2465,9 @@ function AppStudentHeadStatus({
       >
         {/* Das Orts-Abzeichen steht am Desktop rechtsbündig über „seit …“;
             im Blatt beginnt es links wie alle Zeilen darunter. */}
-        <div className="text-sm text-gray-700 [&_.items-end]:items-start">
+        {/* Bricht eine Zeile um, bleiben die Symbole 16 px breit: Die
+            Texte stehen bündig untereinander. */}
+        <div className="text-sm text-gray-700 [&_.items-end]:items-start [&_svg]:shrink-0">
           {details}
         </div>
       </OverlaySheet>
