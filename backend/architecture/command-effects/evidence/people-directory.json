@@ -11409,14 +11409,6 @@
       "target_owner": "identity-access"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/roots/owners.CallerRows.HasCurrentStaff",
-      "binding_digest": "f97adb909f0452b1c833ebc3995d3904",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.AttendanceRouteStaffSource.HasCurrentStaff",
-      "source_owner": "people-directory",
-      "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.CallerContext.HasCurrentStaff",
-      "target_owner": "identity-access"
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentChangeRecorder.RecordChangesForActor",
       "binding_digest": "d53afaaf35d0825de2e75e5cc5600c51",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.StudentChangeActorRecorder.RecordChangesForActor",
@@ -11839,14 +11831,6 @@
       "source_owner": "people-directory",
       "target": "github.com/moto-ogs/project-phoenix/modules/careplan/compose.CompanionRecords.CompanionDaysCoveredExcluding",
       "target_owner": "care-plan"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.AttendanceRouteStaffSource.HasCurrentStaff",
-      "binding_digest": "f97adb909f0452b1c833ebc3995d3904",
-      "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.currentStaffPresence.HasCurrentStaff",
-      "source_owner": "people-directory",
-      "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.CallerContext.HasCurrentStaff",
-      "target_owner": "identity-access"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.CountByGroupIDs",

@@ -546,7 +546,7 @@ func composeServeRoot(
 		func() error {
 			return mountSchoolPortalRoutes(router, tenant, db, logger, appUploads, limiters, studentPresence, timetableOwner, calendarAdmin,
 				materialization, lifecycle, planning, timetableRows.PlanningTracks, services.Users, schedules, caller, settings.Service,
-				careOfferings, planExport, chat, persons, notifications, deliveryDevices, classDay, identity, calendarApp, announcements, workTime, people.Staff, hub, env.Now)
+				careOfferings, planExport, chat, persons, notifications, deliveryDevices, classDay, identity, calendarApp, announcements, workTime, people.Staff, hub, membership, appointments, env.Now)
 		},
 		func() error {
 			enrollmentResource := newEnrollmentResource(logger, appUploads, settings.Service, config.Turnstile, careOfferings, flows, phases,

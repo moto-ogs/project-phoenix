@@ -57,6 +57,7 @@ import {
 } from "~/components/ui/page-header/OverflowMenu";
 import { PlanningContextBar } from "~/components/ui/planning/planning-context-bar";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
+import { MountOnFirstOpen } from "~/components/ui/mount-on-first-open";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { PlanLegend } from "~/components/ui/planning/plan-legend";
 import { SegmentedControl } from "~/components/ui/segmented-control";
@@ -2220,103 +2221,107 @@ function TimetablesContent() {
 
   const overlays = (
     <>
-      <InstanceDetailModal
-        instance={detailInstance}
-        studentsPending={detailStudentsPending}
-        studentsLoadError={detailStudentsLoadError}
-        onClose={() => handleSelectInstance(null)}
-        onLifecycleAction={handleLifecycle}
-        canManage={canManageSchedules}
-        fetchParticipantNames={!canReadTenantRosters}
-        seriesRosterMaintenance={selectedSeriesTemplate?.rosterMaintenance}
-        seriesRosterDeviation={
-          selectedSeriesTemplate
-            ? rosterDeviations.get(selectedSeriesTemplate.id)
-            : undefined
-        }
-        seriesManualRosterConfirmed={
-          selectedSeriesTemplate?.manualRosterConfirmed === true
-        }
-        rosterDecisionBusy={manualRosterBusy}
-        onConnectOffering={
-          canManageSchedules && selectedSeriesTemplate
-            ? (deviation) =>
-                setConnecting({ template: selectedSeriesTemplate, deviation })
-            : undefined
-        }
-        onSetManualRoster={
-          canManageSchedules && selectedSeriesTemplate
-            ? (confirmed) =>
-                void handleManualRoster(selectedSeriesTemplate, confirmed)
-            : undefined
-        }
-        seriesPeriodId={
-          selectedInstance
-            ? (selectedInstance.calendarPeriodId ??
-              findPeriodForDate(calendarPeriods, selectedInstance.date)?.id)
-            : undefined
-        }
-        onDeleteCancelled={
-          canManageSchedules ? handleDeleteCancelledInstance : undefined
-        }
-        onDeleteFollowing={
-          canManageSchedules ? handleDeleteFollowingInstances : undefined
-        }
-        onEdit={
-          canManageSchedules
-            ? (instance) => {
-                setEditingInstance(instance);
-                setEditingTemplate(null);
-                setConvertingInstance(null);
-                setEventDefaultRepeat("none");
-                setEventModalOpen(true);
-              }
-            : undefined
-        }
-        onRepeat={
-          canManageSchedules
-            ? (instance) => {
-                if (assignedPeriods.length === 0) {
-                  toast.warning(
-                    "Bitte lege zuerst einen Planungszeitraum für diese Woche an.",
-                  );
-                  openPeriodCreate();
-                  return;
+      <MountOnFirstOpen open={detailInstance !== null}>
+        <InstanceDetailModal
+          instance={detailInstance}
+          studentsPending={detailStudentsPending}
+          studentsLoadError={detailStudentsLoadError}
+          onClose={() => handleSelectInstance(null)}
+          onLifecycleAction={handleLifecycle}
+          canManage={canManageSchedules}
+          fetchParticipantNames={!canReadTenantRosters}
+          seriesRosterMaintenance={selectedSeriesTemplate?.rosterMaintenance}
+          seriesRosterDeviation={
+            selectedSeriesTemplate
+              ? rosterDeviations.get(selectedSeriesTemplate.id)
+              : undefined
+          }
+          seriesManualRosterConfirmed={
+            selectedSeriesTemplate?.manualRosterConfirmed === true
+          }
+          rosterDecisionBusy={manualRosterBusy}
+          onConnectOffering={
+            canManageSchedules && selectedSeriesTemplate
+              ? (deviation) =>
+                  setConnecting({ template: selectedSeriesTemplate, deviation })
+              : undefined
+          }
+          onSetManualRoster={
+            canManageSchedules && selectedSeriesTemplate
+              ? (confirmed) =>
+                  void handleManualRoster(selectedSeriesTemplate, confirmed)
+              : undefined
+          }
+          seriesPeriodId={
+            selectedInstance
+              ? (selectedInstance.calendarPeriodId ??
+                findPeriodForDate(calendarPeriods, selectedInstance.date)?.id)
+              : undefined
+          }
+          onDeleteCancelled={
+            canManageSchedules ? handleDeleteCancelledInstance : undefined
+          }
+          onDeleteFollowing={
+            canManageSchedules ? handleDeleteFollowingInstances : undefined
+          }
+          onEdit={
+            canManageSchedules
+              ? (instance) => {
+                  setEditingInstance(instance);
+                  setEditingTemplate(null);
+                  setConvertingInstance(null);
+                  setEventDefaultRepeat("none");
+                  setEventModalOpen(true);
                 }
-                setEditingInstance(null);
-                setEditingTemplate(null);
-                setConvertingInstance(instance);
-                setEventDefaultRepeat("weekly");
-                setEventModalOpen(true);
-              }
-            : undefined
-        }
-        staffNames={staffNames}
-        studentNames={studentNames}
-        onAttendancePatch={
-          canManageSchedules ? handleAttendancePatch : undefined
-        }
-        editDeferred={false}
-        suspended={
-          eventModalOpen ||
-          poolInstance !== null ||
-          periodModalOpen ||
-          connecting !== null
-        }
-        onOpenPool={setPoolInstance}
-        canManageStaffPool={canManageSchedules}
-      />
+              : undefined
+          }
+          onRepeat={
+            canManageSchedules
+              ? (instance) => {
+                  if (assignedPeriods.length === 0) {
+                    toast.warning(
+                      "Bitte lege zuerst einen Planungszeitraum für diese Woche an.",
+                    );
+                    openPeriodCreate();
+                    return;
+                  }
+                  setEditingInstance(null);
+                  setEditingTemplate(null);
+                  setConvertingInstance(instance);
+                  setEventDefaultRepeat("weekly");
+                  setEventModalOpen(true);
+                }
+              : undefined
+          }
+          staffNames={staffNames}
+          studentNames={studentNames}
+          onAttendancePatch={
+            canManageSchedules ? handleAttendancePatch : undefined
+          }
+          editDeferred={false}
+          suspended={
+            eventModalOpen ||
+            poolInstance !== null ||
+            periodModalOpen ||
+            connecting !== null
+          }
+          onOpenPool={setPoolInstance}
+          canManageStaffPool={canManageSchedules}
+        />
+      </MountOnFirstOpen>
 
-      <StaffPoolSlideOver
-        open={poolInstance !== null}
-        instance={poolInstance}
-        canManage={canManageSchedules}
-        onClose={() => setPoolInstance(null)}
-        onMoved={() => {
-          void tenantMutate(swrKey);
-          void tenantMutate(gapsSWRKey);
-        }}
-      />
+      <MountOnFirstOpen open={poolInstance !== null}>
+        <StaffPoolSlideOver
+          open={poolInstance !== null}
+          instance={poolInstance}
+          canManage={canManageSchedules}
+          onClose={() => setPoolInstance(null)}
+          onMoved={() => {
+            void tenantMutate(swrKey);
+            void tenantMutate(gapsSWRKey);
+          }}
+        />
+      </MountOnFirstOpen>
 
       {connecting && (
         <ConnectOfferingModal
@@ -2329,63 +2334,65 @@ function TimetablesContent() {
         />
       )}
 
-      <TimetableEventModal
-        canCheckShiftCoverage={canCheckShiftCoverage}
-        canManageCategories={canManageCategories}
-        canManagePlanningTracks={canManageSchedules}
-        canCreateExternalCaregiver={canCreateExternalCaregiver}
-        canGrantExternalView={canGrantExternalView}
-        canManageOfferings={hasPermission(session, "config:manage")}
-        isOpen={eventModalOpen}
-        onClose={() => {
-          setEventModalOpen(false);
-          setEditingInstance(null);
-          setEditingTemplate(null);
-          setConvertingInstance(null);
-          setEventDefaultRepeat("none");
-          setQuickPrefill(null);
-          setSeriesSource(null);
-        }}
-        defaultDate={
-          quickPrefill
-            ? careDayISO(quickPrefill.date, weekendOpen, todayISO)
-            : (firstCoveredDateISO ?? dayISO)
-        }
-        closingDayRanges={closingDayRanges}
-        closingDaysLoading={closingDaysLoading}
-        weekFrom={fromISO}
-        weekTo={workweekToISO}
-        calendarPeriods={modalCalendarPeriods}
-        planningPeriods={calendarPeriods}
-        defaultCalendarPeriodId={templatePeriodID ?? null}
-        showPeriodField={showTemplatePeriodField}
-        initialInstance={editingInstance}
-        initialSeries={editingTemplate}
-        convertInstance={convertingInstance}
-        onDeleteSeries={handleDeleteSeriesTemplate}
-        defaultRepeat={eventDefaultRepeat}
-        variant={quickPrefill ? "quick" : "full"}
-        defaultStartTime={quickPrefill?.startTime}
-        defaultEndTime={quickPrefill?.endTime}
-        defaultSource={seriesSource}
-        onSaved={(result) => {
-          void tenantMutate(swrKey);
-          void tenantMutate(gapsSWRKey);
-          if (templatePeriodID) {
-            void tenantMutate(
-              tenantDailyKeys.templates(templatePeriodID ?? ""),
-            );
+      <MountOnFirstOpen open={eventModalOpen}>
+        <TimetableEventModal
+          canCheckShiftCoverage={canCheckShiftCoverage}
+          canManageCategories={canManageCategories}
+          canManagePlanningTracks={canManageSchedules}
+          canCreateExternalCaregiver={canCreateExternalCaregiver}
+          canGrantExternalView={canGrantExternalView}
+          canManageOfferings={hasPermission(session, "config:manage")}
+          isOpen={eventModalOpen}
+          onClose={() => {
+            setEventModalOpen(false);
+            setEditingInstance(null);
+            setEditingTemplate(null);
+            setConvertingInstance(null);
+            setEventDefaultRepeat("none");
+            setQuickPrefill(null);
+            setSeriesSource(null);
+          }}
+          defaultDate={
+            quickPrefill
+              ? careDayISO(quickPrefill.date, weekendOpen, todayISO)
+              : (firstCoveredDateISO ?? dayISO)
           }
-          if (result.kind === "instance" && result.instance.id) {
-            updateUrlParams({ block: result.instance.id });
-          } else if (result.kind === "series" && result.linkedInstanceId) {
-            updateUrlParams({ block: result.linkedInstanceId });
-          }
-          setEditingInstance(null);
-          setEditingTemplate(null);
-          setConvertingInstance(null);
-        }}
-      />
+          closingDayRanges={closingDayRanges}
+          closingDaysLoading={closingDaysLoading}
+          weekFrom={fromISO}
+          weekTo={workweekToISO}
+          calendarPeriods={modalCalendarPeriods}
+          planningPeriods={calendarPeriods}
+          defaultCalendarPeriodId={templatePeriodID ?? null}
+          showPeriodField={showTemplatePeriodField}
+          initialInstance={editingInstance}
+          initialSeries={editingTemplate}
+          convertInstance={convertingInstance}
+          onDeleteSeries={handleDeleteSeriesTemplate}
+          defaultRepeat={eventDefaultRepeat}
+          variant={quickPrefill ? "quick" : "full"}
+          defaultStartTime={quickPrefill?.startTime}
+          defaultEndTime={quickPrefill?.endTime}
+          defaultSource={seriesSource}
+          onSaved={(result) => {
+            void tenantMutate(swrKey);
+            void tenantMutate(gapsSWRKey);
+            if (templatePeriodID) {
+              void tenantMutate(
+                tenantDailyKeys.templates(templatePeriodID ?? ""),
+              );
+            }
+            if (result.kind === "instance" && result.instance.id) {
+              updateUrlParams({ block: result.instance.id });
+            } else if (result.kind === "series" && result.linkedInstanceId) {
+              updateUrlParams({ block: result.linkedInstanceId });
+            }
+            setEditingInstance(null);
+            setEditingTemplate(null);
+            setConvertingInstance(null);
+          }}
+        />
+      </MountOnFirstOpen>
 
       {/* Erst bei Bedarf gemountet, wie die übrigen Dialoge dieser Fläche:
           ein dauerhaft eingehängter Dialog zieht seinen Kontext (Toasts) auch
@@ -2424,53 +2431,57 @@ function TimetablesContent() {
         />
       )}
 
-      <CalendarPeriodModal
-        linkClosingDays
-        isOpen={periodModalOpen}
-        onClose={() => setPeriodModalOpen(false)}
-        initial={null}
-        onSaved={() => {
-          // Refresh both caches: the period header button and the week grid
-          // can pick up the new state without a manual reload.
-          void tenantMutate("database-calendar-periods-list");
-          void tenantMutate(swrKey);
-        }}
-        onDeleted={() => {
-          void tenantMutate("database-calendar-periods-list");
-          void tenantMutate(swrKey);
-        }}
-        createDefaults={periodCreateDefaults}
-      />
+      <MountOnFirstOpen open={periodModalOpen}>
+        <CalendarPeriodModal
+          linkClosingDays
+          isOpen={periodModalOpen}
+          onClose={() => setPeriodModalOpen(false)}
+          initial={null}
+          onSaved={() => {
+            // Refresh both caches: the period header button and the week grid
+            // can pick up the new state without a manual reload.
+            void tenantMutate("database-calendar-periods-list");
+            void tenantMutate(swrKey);
+          }}
+          onDeleted={() => {
+            void tenantMutate("database-calendar-periods-list");
+            void tenantMutate(swrKey);
+          }}
+          createDefaults={periodCreateDefaults}
+        />
+      </MountOnFirstOpen>
 
-      <ConfirmationModal
-        isOpen={archivingTemplate !== null}
-        onClose={() => {
-          if (!archiveLoading) setArchivingTemplate(null);
-        }}
-        onConfirm={() => void handleArchiveTemplate()}
-        title="Regeltermin archivieren?"
-        confirmText="Archivieren"
-        cancelText="Abbrechen"
-        isConfirmLoading={archiveLoading}
-        loadingText="Wird archiviert…"
-      >
-        <div ref={archiveRef}>
-          <FormErrorAlert message={archiveErrors.error} className="mb-3" />
-        </div>
-        <p className="text-sm leading-relaxed text-gray-600">
-          Der Regeltermin
-          {archivingTemplate ? (
-            <>
-              {" "}
-              <span className="font-semibold text-gray-900">
-                „{archivingTemplate.name}“
-              </span>
-            </>
-          ) : null}{" "}
-          verschwindet aus der Liste. Bereits eingetragene Termine bleiben im
-          Betreuungsplan erhalten.
-        </p>
-      </ConfirmationModal>
+      <MountOnFirstOpen open={archivingTemplate !== null}>
+        <ConfirmationModal
+          isOpen={archivingTemplate !== null}
+          onClose={() => {
+            if (!archiveLoading) setArchivingTemplate(null);
+          }}
+          onConfirm={() => void handleArchiveTemplate()}
+          title="Regeltermin archivieren?"
+          confirmText="Archivieren"
+          cancelText="Abbrechen"
+          isConfirmLoading={archiveLoading}
+          loadingText="Wird archiviert…"
+        >
+          <div ref={archiveRef}>
+            <FormErrorAlert message={archiveErrors.error} className="mb-3" />
+          </div>
+          <p className="text-sm leading-relaxed text-gray-600">
+            Der Regeltermin
+            {archivingTemplate ? (
+              <>
+                {" "}
+                <span className="font-semibold text-gray-900">
+                  „{archivingTemplate.name}“
+                </span>
+              </>
+            ) : null}{" "}
+            verschwindet aus der Liste. Bereits eingetragene Termine bleiben im
+            Betreuungsplan erhalten.
+          </p>
+        </ConfirmationModal>
+      </MountOnFirstOpen>
     </>
   );
 

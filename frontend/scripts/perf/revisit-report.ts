@@ -1,6 +1,6 @@
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { median, OUT_DIR, REPEATS } from "./navigation-probe";
+import { median, OUT_DIR } from "./navigation-probe";
 import type { RevisitRole } from "./revisit-access";
 import type { measurePermissionChange } from "./revisit-permission";
 import type { measureParentSwitch } from "./revisit-context";
@@ -10,6 +10,7 @@ export interface Observation {
   role: RevisitRole;
   name: string;
   inPage: boolean;
+  auditedRead: boolean;
   profile: string;
   repeat: number;
   input: string;
@@ -75,6 +76,8 @@ export function writeReport(
     rttMs: number;
     desktopMbit: number;
     mobileMbit: number;
+    repeats: number;
+    mode: string;
   },
   switches: Switch[],
   results: Observation[],
@@ -106,7 +109,7 @@ export function writeReport(
     "",
     `CPU ×${metadata.cpuThrottle}, ${metadata.rttMs} ms RTT, Desktop ${metadata.desktopMbit} Mbit/s, Pixel 7 ${metadata.mobileMbit} Mbit/s. Abweichungen: „nah“ = Median 130–170 ms; „Last“ = mindestens ein Durchgang im Mittel unter 50 % freier Host-CPU. Kein kausaler Vergleich bei unterschiedlicher Last.`,
     "",
-    "Millisekunden: Median [Minimum–Maximum] aus drei Läufen. Ziel: je gültigem warmen bzw. Rückweg-Median < 150 ms. · = kein solcher History-Weg. Pro Zelle folgen RSC/JS/BFF (jeweils Median) und die tatsächlich sichtbaren Ladeanzeigen dieser Richtung. Einzelwerte und Ladeanzeigen je Lauf stehen im JSON.",
+    `Millisekunden: Median [Minimum–Maximum] aus ${metadata.repeats} Durchgängen (${metadata.mode}). Ziel: je gültigem warmen bzw. Rückweg-Median < 150 ms. · = kein solcher History-Weg. Pro Zelle folgen RSC/JS/BFF (jeweils Median) und die tatsächlich sichtbaren Ladeanzeigen dieser Richtung. Einzelwerte und Ladeanzeigen je Lauf stehen im JSON.`,
     "",
     "| Portal/Rolle | Ablauf | Profil/Eingabe | Erstbesuch | Warm 1 | Zurück 1 | Warm 4 | Zurück 4 | Inhaltskriterium |",
     "|---|---|---|---|---|---|---|---|---|",
@@ -122,7 +125,7 @@ export function writeReport(
         cells.push("·");
         continue;
       }
-      if (new Set(runs.map((r) => r.repeat)).size !== REPEATS)
+      if (new Set(runs.map((r) => r.repeat)).size !== metadata.repeats)
         throw new Error("Unvollständige Serie: " + first.name + "/" + step);
       const net = (["rsc", "scripts", "api"] as const)
         .map((k) => median(runs.map((r) => r[k])))
@@ -144,7 +147,11 @@ export function writeReport(
       summary.push({
         role: first.role,
         cohort: [
-          first.inPage ? "Seitenintern" : "Seitenwechsel",
+          first.auditedRead
+            ? "Protokollierter Lesezugriff (nicht wiederverwendbar)"
+            : first.inPage
+              ? "Seitenintern"
+              : "Seitenwechsel",
           first.profile,
           first.input,
         ].join(" · "),
@@ -160,6 +167,7 @@ export function writeReport(
         bff: runs.map((r) => r.api),
         loading: runs.map((r) => r.loading),
         criterion: first.criterion,
+        auditedRead: first.auditedRead,
       });
     }
     lines.push(
@@ -169,7 +177,8 @@ export function writeReport(
           first.name,
           first.profile + "/" + first.input,
           ...cells,
-          first.criterion,
+          first.criterion +
+            (first.auditedRead ? " (Abruf bei jedem Öffnen)" : ""),
         ].join(" | ") +
         " |",
     );
@@ -185,7 +194,9 @@ export function writeReport(
   for (const cohort of new Set(summary.map((row) => row.cohort))) {
     const cohortRows = summary.filter((row) => row.cohort === cohort);
     const counts = directions.map((step) => {
-      const eligible = cohortRows.filter((row) => row.step === step);
+      const eligible = cohortRows.filter(
+        (row) => row.step === step && !row.auditedRead,
+      );
       return eligible.length
         ? `${eligible.filter((row) => row.median < 150).length}/${eligible.length}`
         : "·";

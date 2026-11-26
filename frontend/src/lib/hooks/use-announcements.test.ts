@@ -158,7 +158,7 @@ describe("useAnnouncements", () => {
         // No SSE event announces them; route changes refetch (#5017).
         refreshInterval: 5 * 60_000,
         revalidateOnFocus: false,
-        revalidateOnMount: true,
+        revalidateIfStale: false,
         dedupingInterval: 5000,
         keepPreviousData: false,
       },

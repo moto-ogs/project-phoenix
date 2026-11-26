@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import { Suspense } from "react";
 import { SWRServerSeed } from "~/lib/swr/server-seed";
 import {
@@ -5,9 +6,10 @@ import {
   schoolCalendarWeek,
 } from "~/lib/school/page-seed.server";
 
-export default function PageLayout({
+export default async function PageLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  await connection();
   const { seed, claims } = schoolPageSeed([schoolCalendarWeek()]);
   return (
     <Suspense fallback={null}>

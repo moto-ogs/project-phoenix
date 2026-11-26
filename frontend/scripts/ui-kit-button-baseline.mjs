@@ -82,7 +82,7 @@ export const buttonRatchetAllowlist = [
   {
     rule: "no-hand-rolled-button",
     file: "src/components/help/help-view.tsx",
-    lines: [1060],
+    lines: [1061],
     reason: "Artikel-Navigation der Hilfe (aria-current), Navigationszeile",
   },
   {

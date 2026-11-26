@@ -67,7 +67,10 @@ export function useParentAttentionEnabled(): boolean {
  * Elternnachrichten lesen darf (users:read); Anfragen zählen nur für Personen,
  * die sie auch entscheiden dürfen.
  */
-function useParentAttentionMap(): ReadonlyMap<string, ParentAttention> | null {
+export function useParentAttentionMap(): ReadonlyMap<
+  string,
+  ParentAttention
+> | null {
   const enabled = useParentAttentionEnabled();
   const { data: session } = useSession();
   const elternAppBooked = useModuleBooked("eltern_app");
@@ -103,12 +106,4 @@ function useParentAttentionMap(): ReadonlyMap<string, ParentAttention> | null {
   }, [key, mutate]);
 
   return data ?? null;
-}
-
-/** Die Zahlen eines Kindes, oder null ohne neue Nachrichten und Anfragen. */
-export function useStudentParentAttention(
-  studentId: string,
-): ParentAttention | null {
-  const attention = useParentAttentionMap()?.get(studentId);
-  return attention && attention.total > 0 ? attention : null;
 }

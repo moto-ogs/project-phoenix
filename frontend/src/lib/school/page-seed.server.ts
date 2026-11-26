@@ -61,10 +61,10 @@ export function schoolPageSeed(
   reads: readonly SchoolPageRead[],
   dependent?: (token: string) => Promise<readonly SchoolPageRead[]>,
 ) {
-  const builtAt = Date.now();
   const seed = schoolSnapshot()
     .then(async (snapshot) => {
       if (!snapshot) return null;
+      const builtAt = Date.now();
       const token = snapshot.accessToken;
       const entries = (items: readonly SchoolPageRead[]) =>
         items
@@ -200,12 +200,12 @@ export const schoolInbox = {
 };
 
 export function schoolSupervisions() {
-  const builtAt = Date.now();
   const today = berlinTodayISO();
   const listKey = schoolPortalKeys.supervisions(today);
   const seed = schoolSnapshot()
     .then(async (snapshot) => {
       if (!snapshot) return null;
+      const builtAt = Date.now();
       const token = snapshot.accessToken;
       const value = seedRead("schoolSupervisions", async (signal) => {
         const { data } = await readContract(

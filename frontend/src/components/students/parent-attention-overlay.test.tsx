@@ -1,6 +1,9 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ParentAttentionBadge } from "./parent-attention-badge";
+import {
+  ParentAttentionBadge,
+  ParentAttentionList,
+} from "./parent-attention-badge";
 import { ParentAttentionOverlayProvider } from "~/lib/parent-attention-overlay";
 import ParentAttentionOverlayPage from "~/app/[tenant]/(protected)/@parentAttention/(.)parent-attention/[studentId]/page";
 
@@ -10,6 +13,7 @@ const mocks = vi.hoisted(() => ({
   replace: vi.fn(),
   scope: "school-a:staff-a",
   pathname: "/parent-attention/7",
+  readCounts: vi.fn(),
   attention: { messages: 2, requests: 1, total: 3 } as {
     messages: number;
     requests: number;
@@ -28,7 +32,11 @@ vi.mock("~/lib/swr", () => ({
   useSWRCacheKey: () => (key: string) => `${mocks.scope}:${key}`,
 }));
 vi.mock("~/lib/hooks/use-parent-attention", () => ({
-  useStudentParentAttention: () => mocks.attention,
+  useParentAttentionEnabled: () => true,
+  useParentAttentionMap: () => {
+    mocks.readCounts();
+    return mocks.attention ? new Map([["7", mocks.attention]]) : null;
+  },
 }));
 vi.mock("./parent-attention-dialog", () => ({
   ParentAttentionDialog: ({
@@ -50,7 +58,10 @@ vi.mock("./parent-attention-dialog", () => ({
 function view(overlay = false) {
   return (
     <ParentAttentionOverlayProvider>
-      <ParentAttentionBadge studentId="7" studentName="Mia Kurz" />
+      <ParentAttentionList>
+        <ParentAttentionBadge studentId="7" studentName="Mia Kurz" />
+        <ParentAttentionBadge studentId="8" studentName="Leon Kurz" />
+      </ParentAttentionList>
       {overlay ? <ParentAttentionOverlayPage /> : null}
     </ParentAttentionOverlayProvider>
   );
@@ -64,6 +75,17 @@ beforeEach(() => {
 });
 
 describe("parent attention route overlay", () => {
+  it("shares one count reader across the cards and shows only the child's own count", () => {
+    render(view());
+    expect(mocks.readCounts).toHaveBeenCalledOnce();
+    expect(
+      screen.getByRole("button", { name: /der Eltern von Mia Kurz öffnen/ }),
+    ).toBeVisible();
+    expect(
+      screen.queryByRole("button", { name: /der Eltern von Leon Kurz öffnen/ }),
+    ).not.toBeInTheDocument();
+  });
+
   it("opens the selected child in place, keeps the opening counts and closes with Back", () => {
     const { rerender } = render(view());
     fireEvent.click(

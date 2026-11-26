@@ -19,6 +19,10 @@ const { calls, snapshot, host, tenant } = vi.hoisted(() => ({
 vi.mock("next/headers", () => ({
   headers: async () => new Headers({ host: host.current }),
 }));
+vi.mock("next/server", async (original) => ({
+  ...(await original<typeof import("next/server")>()),
+  connection: async () => undefined,
+}));
 vi.mock("~/lib/portal-session-snapshot.server", () => ({
   readPortalSessionSnapshot: async () => snapshot.current,
 }));

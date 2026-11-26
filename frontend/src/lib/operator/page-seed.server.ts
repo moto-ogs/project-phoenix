@@ -48,7 +48,6 @@ export function operatorPageSeed(
   reads: readonly OperatorPageRead[],
   dependent?: (token: string) => Promise<readonly OperatorPageRead[]>,
 ) {
-  const builtAt = Date.now();
   const seed = readPortalSessionSnapshot("operator")
     .then(async (snapshot) => {
       if (
@@ -58,6 +57,7 @@ export function operatorPageSeed(
         snapshot.session.user.scope !== "platform"
       )
         return null;
+      const builtAt = Date.now();
       const token = snapshot.accessToken;
       const entries = (items: readonly OperatorPageRead[]) =>
         items.map(({ key, load, render = true }) => ({

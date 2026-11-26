@@ -6,9 +6,6 @@ import { problemResponse } from "~/lib/api-response-error.server";
 
 const logger = createLogger({ component: "SchoolSSEEventsRoute" });
 
-// REQUIRED for streaming - must use Node.js runtime
-export const runtime = "nodejs";
-
 /**
  * School-portal SSE proxy (#2208). Same streaming proxy as the tenant and
  * parent routes, authenticated with the school NextAuth session and proxied to

@@ -4041,12 +4041,6 @@ export const routes = {
     },
     response: success(ProjectionSchema),
   },
-  "GET /api/students/ogs-group-navigation": {
-    method: "GET",
-    pattern: "/api/students/ogs-group-navigation",
-    portals: ["tenant"],
-    response: success(z.array(NavigationGroupSchema)),
-  },
   "GET /api/students/pickup-change-notices": {
     method: "GET",
     pattern: "/api/students/pickup-change-notices",

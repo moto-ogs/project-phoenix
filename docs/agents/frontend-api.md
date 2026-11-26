@@ -575,12 +575,23 @@ copying a generic mapper. Preserve nullability and date-vs-instant semantics.
 Load eligible first-display reads in the server page, not in a link handler
 or on the first browser mount. Use
 [`SWRServerSeed`](../../frontend/src/lib/swr/server-seed.tsx) with the existing
-reader's key and mapper. Resolve the fresh snapshot for the actual portal
-before the reads. In a tenant page, use `readTenantPageContext` to bind the
-cookie to the host and resolved school. Go still checks the resource's
-permissions and relationships. Keep any server fetches out of shared caches.
+reader's key and mapper. With [Cache Components and Partial Prefetching](../../frontend/next.config.js),
+the link prefetches the neutral shell only. Wait for `connection()` before
+resolving the session and starting protected seeds. Use
+[`readTenantPageContext`](../../frontend/src/lib/tenant-page-seed.server.ts) to
+bind Team reads to the host and school, or
+[`readPortalSessionSnapshot`](../../frontend/src/lib/portal-session-snapshot.server.ts)
+for the actual portal. Both wait for the connection. Go still checks the
+resource's permissions and relationships.
 
-Use `seedRead` and `readContract` for each independently retriable answer.
+Keep protected reads and values out of Next's `use cache` directives. React's
+`cache()` in the snapshot helpers deduplicates within a server request.
+For a measured revisit bottleneck, a page can export
+`unstable_dynamicStaleTime` (seconds) to reuse its authorized payload in the
+same document. This does not extend seed validity or change invalidation.
+See the [protected session boundary](contracts.md#protected-tree-per-session-8082).
+
+Use `seedRead` and `readContract` for each independently retriable GET.
 Mark only entries needed for initial HTML as `render` and keep the seed
 under the page's loading boundary. Use `claims` for known keys so a client
 navigation waits for the same answer instead of starting a second GET.
@@ -591,6 +602,17 @@ Keep bearer tokens and raw backend errors on the server.
 The shell seeds only its own readers. An audited opening, a read with side
 effects, a write preview, an edit, a download or a read for later local
 interaction is not a seed. See [ADR 0311](../adr/0311-ein-speichern-traegt-den-gelesenen-stand.md).
+
+Record each new page's first-display reads in exactly one inventory row,
+including why a read stays at opening time or why no seed is needed:
+
+- [Team](server-seed-team.md) and [Team daily routes and data administration](server-seed-team-catalog.md)
+- [Parents and standalone pages](server-seed-parents-public.md)
+- [School, Träger, Operator and Caterer](server-seed-portals.md)
+
+Use the internal route template without query parameters in the first
+column. `app-route-invariants.test.ts` checks these inventories against the
+page tree, excluding parallel slots that reuse a route.
 
 ### Auth Token Flow
 

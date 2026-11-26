@@ -79,9 +79,9 @@ func TestAwaitingHolidayGroupsLeaveTheDailyGroupList(t *testing.T) {
 	t.Parallel()
 	f, holiday := holidayGroupFixture(futureWeek(2), futureWeek(3))
 
-	got, err := holidayGroupService(f, holiday).ListGroups(context.Background())
+	got, err := holidayGroupService(f, holiday).NavigationContext(context.Background())
 	require.NoError(t, err)
-	assert.Equal(t, []int64{1, 3}, groupIDs(got),
+	assert.Equal(t, []int64{1, 3}, groupIDs(got.Groups),
 		"the empty Feriengruppe of a later week waits outside the list; a regular group that is also Feriengruppe stays")
 	assert.Equal(t, 1, holiday.calls, "one read of the Feriengruppen per list")
 	assert.Equal(t, [][]int64{{31}}, f.participantsCalled, "only the waiting groups' children are asked for care, in one read")
@@ -121,9 +121,9 @@ func TestHolidayGroupWithAChildInCareTodayStays(t *testing.T) {
 		return map[int64]bool{22: true}, nil
 	}
 
-	got, err := holidayGroupService(f, holiday).ListGroups(context.Background())
+	got, err := holidayGroupService(f, holiday).NavigationContext(context.Background())
 	require.NoError(t, err)
-	assert.Equal(t, []int64{1, 2, 3}, groupIDs(got), "a child in care today brings the Feriengruppe back")
+	assert.Equal(t, []int64{1, 2, 3}, groupIDs(got.Groups), "a child in care today brings the Feriengruppe back")
 }
 
 func TestHolidayGroupOfAStartedWeekStays(t *testing.T) {
@@ -141,9 +141,9 @@ func TestHolidayGroupOfAStartedWeekStays(t *testing.T) {
 				weeks = append(weeks, HolidayGroupWeek{GroupID: 2, StartsOn: "2026-08-17", EndsOn: "2026-08-21"})
 			}
 			f, holiday := holidayGroupFixture(weeks...)
-			got, err := holidayGroupService(f, holiday).ListGroups(context.Background())
+			got, err := holidayGroupService(f, holiday).NavigationContext(context.Background())
 			require.NoError(t, err)
-			assert.Equal(t, []int64{1, 2, 3}, groupIDs(got), "a Feriengruppe whose week has begun is a daily group")
+			assert.Equal(t, []int64{1, 2, 3}, groupIDs(got.Groups), "a Feriengruppe whose week has begun is a daily group")
 			assert.Empty(t, f.participantsCalled, "no group waits, so no care is read")
 		})
 	}
@@ -152,14 +152,14 @@ func TestHolidayGroupOfAStartedWeekStays(t *testing.T) {
 func TestHolidayGroupWithoutWeeksIsAnOrdinaryGroup(t *testing.T) {
 	t.Parallel()
 	f, holiday := holidayGroupFixture()
-	got, err := holidayGroupService(f, holiday).ListGroups(context.Background())
+	got, err := holidayGroupService(f, holiday).NavigationContext(context.Background())
 	require.NoError(t, err)
-	assert.Equal(t, []int64{1, 2, 3}, groupIDs(got), "after its last week the group shows like any other")
+	assert.Equal(t, []int64{1, 2, 3}, groupIDs(got.Groups), "after its last week the group shows like any other")
 
 	f, _ = holidayGroupFixture()
-	got, err = holidayGroupService(f, nil).ListGroups(context.Background())
+	got, err = holidayGroupService(f, nil).NavigationContext(context.Background())
 	require.NoError(t, err)
-	assert.Equal(t, []int64{1, 2, 3}, groupIDs(got), "without the Feriengruppen read every group stays")
+	assert.Equal(t, []int64{1, 2, 3}, groupIDs(got.Groups), "without the Feriengruppen read every group stays")
 }
 
 func TestLiveGroupKeepsAnAwaitingHolidayGroupThatIsAskedFor(t *testing.T) {
@@ -182,7 +182,7 @@ func TestHolidayGroupsReadFailureFailsTheList(t *testing.T) {
 	t.Parallel()
 	f, holiday := holidayGroupFixture()
 	holiday.err = errors.New("enrollment unavailable")
-	_, err := holidayGroupService(f, holiday).ListGroups(context.Background())
+	_, err := holidayGroupService(f, holiday).NavigationContext(context.Background())
 	require.ErrorContains(t, err, "load holiday groups")
 }
 

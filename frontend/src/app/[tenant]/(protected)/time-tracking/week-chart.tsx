@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useMemo } from "react";
+import { memo, useDeferredValue, useMemo } from "react";
 import { BELOW_MD, useMediaQuery } from "~/lib/hooks/use-media-query";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import {
@@ -108,6 +108,7 @@ function WeekChartAxes({
         axisLine={false}
         tickMargin={4}
         fontSize={isMobile ? 10 : 12}
+        interval={0}
         tickFormatter={(value: number) => `${Math.round(value / 60)}h`}
         domain={[0, "auto"]}
       />
@@ -194,6 +195,9 @@ const WeekChart = memo(function WeekChart({
 }) {
   const isMobile = useMobileViewport();
   const chartData = useMemo(() => chartPoints(points), [points]);
+  // The clock actions and exact hours in the table need not wait for the
+  // plot's layout measurements. Keep the card's space in the first commit.
+  const plot = useDeferredValue(chartData, null);
 
   return (
     <SectionCard
@@ -201,17 +205,17 @@ const WeekChart = memo(function WeekChart({
       bodyClassName="flex min-h-0 flex-1 flex-col"
     >
       <div className="flex min-h-0 flex-1 flex-col">
-        <WeekChartHeader chartData={chartData} />
+        <WeekChartHeader chartData={plot ?? chartData} />
         {error ? (
           <LoadErrorAlert error={error} />
-        ) : (
+        ) : plot ? (
           <ChartContainer
             config={weekChartConfig}
             className="aspect-auto min-h-0 flex-1"
           >
-            <WeekChartPlot chartData={chartData} isMobile={isMobile} />
+            <WeekChartPlot chartData={plot} isMobile={isMobile} />
           </ChartContainer>
-        )}
+        ) : null}
       </div>
     </SectionCard>
   );

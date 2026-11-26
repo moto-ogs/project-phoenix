@@ -68,8 +68,7 @@ const SHELL_ENDPOINTS = [
   "/api/students/change-requests/pending-count",
   "/api/enrollment/admin/change-requests/pending-count",
   "/api/students/care-withdrawals",
-  "/api/groups/context",
-  "/api/active/supervisors/all",
+  "/api/active/supervision-context",
   "/api/active/schulhof/status",
   "/api/auth/account-tenants",
   "/api/auth/session",
@@ -530,7 +529,7 @@ test("measure revisit: reject a failed Caterer order row", async ({ page }) => {
 
 // Revisit shares the production server, throttle, network recorder and visible loading probe.
 test("measure revisit", async ({ browser }, testInfo) => {
-  // This serial, three-round study is local only; individual actions have short deadlines.
+  // The local study can outlast a normal test; individual actions still have short deadlines.
   test.setTimeout(4 * 60 * 60_000);
   await measureRevisits(browser, (ms) =>
     testInfo.setTimeout(testInfo.timeout + ms),

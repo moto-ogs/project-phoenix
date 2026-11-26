@@ -137,6 +137,23 @@ describe("useMediaQuery", () => {
     expect(result.current).toBe(true);
   });
 
+  it("teilt eine Browser-Abfrage zwischen unabhängigen Lesern", () => {
+    const matchMedia = vi.spyOn(window, "matchMedia");
+    try {
+      setViewportWidth(DESKTOP_WIDTH);
+      const first = renderHook(() => useMediaQuery(BELOW_MD));
+      const second = renderHook(() => useMediaQuery(BELOW_MD));
+      expect(matchMedia).toHaveBeenCalledExactlyOnceWith(BELOW_MD);
+      expect(first.result.current || second.result.current).toBe(false);
+
+      first.unmount();
+      setViewportWidth(390);
+      expect(second.result.current).toBe(true);
+    } finally {
+      matchMedia.mockRestore();
+    }
+  });
+
   it("meldet sich beim Unmount von genau der abonnierten Liste ab", () => {
     const lists: MediaQueryList[] = [];
     const realMatchMedia = window.matchMedia.bind(window);

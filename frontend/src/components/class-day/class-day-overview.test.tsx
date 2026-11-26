@@ -73,6 +73,7 @@ function assignedClasses(
     classes: [
       {
         school_class: "4a",
+        trips: [],
         totals: {
           students: 1,
           staying: schoolDay ? 1 : 0,

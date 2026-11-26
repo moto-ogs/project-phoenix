@@ -234,9 +234,7 @@ describe("loadShellBootstrap", () => {
     expect(shell.supervision).toEqual(context);
     expect(
       calledEndpoints().filter((path) =>
-        /ogs-group-navigation|groups\/supervised|supervisors\/all|is_open_room|supervision-context/.test(
-          path,
-        ),
+        /groups\/supervised|is_open_room|supervision-context/.test(path),
       ),
     ).toEqual(["/api/active/supervision-context"]);
     // The list itself, not only its count (#4989): badge, home block and
@@ -303,7 +301,6 @@ describe("loadShellBootstrap", () => {
     });
     const endpoints = calledEndpoints();
     expect(endpoints).not.toContain("/api/settings/schema");
-    expect(endpoints).not.toContain("/api/active/supervisors/all");
     expect(endpoints).not.toContain("/api/staff/absences/pending");
   });
 

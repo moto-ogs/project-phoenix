@@ -1,4 +1,5 @@
 import {
+  chromium,
   devices,
   type Browser,
   type BrowserContext,
@@ -10,6 +11,7 @@ import { cpus, loadavg } from "node:os";
 import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { berlinTodayISO } from "../../src/lib/date-helpers";
+import { secureLaunchOptions } from "../secure-chrome";
 import { gotoTolerant, PERF_ACTION_TIMEOUT } from "./access";
 import {
   armProbe,
@@ -35,6 +37,7 @@ import {
   openRevisitSession,
   readDayEvidence,
   revisitFixture,
+  type RevisitRole,
 } from "./revisit-access";
 import {
   armContentClock,
@@ -42,6 +45,7 @@ import {
   type Content,
 } from "./revisit-content";
 import { revisitTargets, type Stop, type Journey } from "./revisit-targets";
+import { revisitMode, revisitRoleHost } from "./revisit-mode";
 
 type Input = "click" | "keyboard" | "touch";
 type Session = {
@@ -123,6 +127,16 @@ async function measure(
       );
   }
   const records = recorder.records.filter((record) => !record.noise);
+  if (
+    stop.auditedRead &&
+    !records.some(
+      (record) =>
+        record.method === "GET" &&
+        record.status === 200 &&
+        stop.auditedRead?.test(record.path),
+    )
+  )
+    throw new Error("Vorgeschriebener Leseabruf fehlt: " + stop.content.path);
   const documents = records.filter(
     (record) => record.resourceType === "document",
   ).length;
@@ -186,7 +200,11 @@ async function runJourney(
     const rows: Sample[] = [];
     const visit = async (stop: Stop) => {
       await navigate(page, stop, input);
-      await ready(page, stop.content);
+      await ready(page, stop.content).catch((cause: unknown) => {
+        throw new Error("Zwischenziel fehlt: " + stop.content.criterion, {
+          cause,
+        });
+      });
     };
     const target = {
       ...journey.target,
@@ -323,7 +341,7 @@ async function waitForIdleWindow(
     assertMeasurementDay(day);
     const start = performance.now();
     const before = cpuTimes();
-    await delay(5000);
+    await delay(1000);
     const idle = idleSince(before);
     if (idle < 50) {
       console.log("Warte auf eine ruhige Maschine: " + idle + " % CPU frei.");
@@ -334,6 +352,53 @@ async function waitForIdleWindow(
       assertMeasurementDay(day);
       return idle;
     }
+  }
+}
+
+async function openSession(
+  browser: Browser,
+  role: RevisitRole,
+  fixture: ReturnType<typeof revisitFixture>,
+): Promise<Session> {
+  const setup = await browser.newContext({
+    locale: "de-DE",
+    timezoneId: "Europe/Berlin",
+  });
+  try {
+    const origin = await openRevisitSession(
+      await setup.newPage(),
+      role,
+      fixture,
+    );
+    return { origin, state: await setup.storageState() };
+  } finally {
+    await setup.close();
+  }
+}
+
+async function inRoleBrowser(
+  host: string,
+  origin: string,
+  measureRole: (browser: Browser) => Promise<void>,
+) {
+  const browser = await chromium.launch(
+    secureLaunchOptions({
+      headless: true,
+      args: [`--host-resolver-rules=MAP *.localhost ${host}`],
+    }),
+  );
+  try {
+    const page = await browser.newPage();
+    try {
+      const response = await page.goto(new URL("/help", origin).href);
+      if ((await response?.serverAddr())?.ipAddress !== host)
+        throw new Error(`Revisit browser is not connected to ${host}.`);
+    } finally {
+      await page.close();
+    }
+    await measureRole(browser);
+  } finally {
+    await browser.close();
   }
 }
 
@@ -365,11 +430,18 @@ export async function measureRevisits(
     : undefined;
   if (selected?.some((name) => !catalog.some((target) => target.name === name)))
     throw new Error("Unbekanntes PERF_REVISIT-Ziel.");
+  const requestedRepeats = process.env.PERF_REVISIT_REPEATS;
+  if (requestedRepeats !== undefined && (requestedRepeats !== "1" || !selected))
+    throw new Error(
+      "PERF_REVISIT_REPEATS=1 requires a PERF_REVISIT selection.",
+    );
+  const repeats = requestedRepeats === "1" ? 1 : REPEATS;
+  const mode = revisitMode();
   const journeys = catalog.filter(
     (target) => !selected || selected.includes(target.name),
   );
   const failures = new Map<string, Error>();
-  const roleOrder = new Set(journeys.map((journey) => journey.role));
+  const roles = [...new Set(journeys.map((journey) => journey.role))];
   const switches: Awaited<ReturnType<typeof measureParentSwitch>>[] = [];
   const results: Observation[] = [];
   let permission: Awaited<ReturnType<typeof measurePermissionChange>> = [];
@@ -406,7 +478,8 @@ export async function measureRevisits(
     baseApplicationTree: git("rev-parse", development + ":frontend/src"),
     backendTree: git("rev-parse", "HEAD:backend"),
     dirtyWorktree: Boolean(git("status", "--porcelain")),
-    repeats: REPEATS,
+    mode,
+    repeats,
   };
   const save = (complete = false) =>
     saveObservations(
@@ -414,23 +487,12 @@ export async function measureRevisits(
       switches,
       results,
     );
-  for (const role of roleOrder) {
-    const setup = await browser.newContext({
-      locale: "de-DE",
-      timezoneId: "Europe/Berlin",
-    });
-    let session: Session;
-    try {
-      const origin = await openRevisitSession(
-        await setup.newPage(),
-        role,
-        fixture,
-      );
-      session = { origin, state: await setup.storageState() };
-    } finally {
-      await setup.close();
-    }
-    for (let repeat = 1; repeat <= REPEATS; repeat++) {
+  async function measureRole(
+    active: Browser,
+    role: RevisitRole,
+    session: Session,
+  ) {
+    for (let repeat = 1; repeat <= repeats; repeat++) {
       for (const journey of journeys.filter((target) => target.role === role)) {
         for (const mobile of role === "parents" ? [false, true] : [false]) {
           const profile = mobile ? "Pixel 7" : "Desktop";
@@ -442,7 +504,7 @@ export async function measureRevisits(
           const before = cpuTimes();
           let samples: Sample[];
           try {
-            samples = await runJourney(browser, session, journey, mobile);
+            samples = await runJourney(active, session, journey, mobile);
           } catch (cause) {
             failures.set(
               key,
@@ -458,6 +520,7 @@ export async function measureRevisits(
               role,
               name: journey.name,
               inPage: Boolean(journey.inPage),
+              auditedRead: Boolean(journey.target.auditedRead),
               profile,
               repeat,
               load,
@@ -470,7 +533,37 @@ export async function measureRevisits(
       }
     }
   }
-  if (roleOrder.has("parents")) {
+  if (mode === "parallel") {
+    // Keep account setup and the permission-changing probes outside the role
+    // workloads. Browsers never share a context, cookies or a Next process.
+    const sessions = new Map<RevisitRole, Session>();
+    for (const role of roles)
+      sessions.set(role, await openSession(browser, role, fixture));
+    const runs = await Promise.allSettled(
+      [...sessions].map(([role, session]) =>
+        inRoleBrowser(revisitRoleHost(role)!, session.origin, (active) =>
+          measureRole(active, role, session),
+        ),
+      ),
+    );
+    for (const [index, run] of runs.entries()) {
+      if (run.status === "rejected")
+        failures.set(
+          roles[index]!,
+          new Error("Rollenmessung fehlgeschlagen", { cause: run.reason }),
+        );
+    }
+    results.sort((a, b) => roles.indexOf(a.role) - roles.indexOf(b.role));
+  } else {
+    for (const role of roles) {
+      await measureRole(
+        browser,
+        role,
+        await openSession(browser, role, fixture),
+      );
+    }
+  }
+  if (!selected && roles.includes("parents")) {
     permission = await measurePermissionChange(browser, fixture, admitTrial);
     save();
     for (let repeat = 1; repeat <= REPEATS; repeat++) {
@@ -484,7 +577,7 @@ export async function measureRevisits(
   if (failures.size)
     throw new AggregateError(
       [...failures.values()],
-      "Keine vollständige Baseline: " + [...failures.keys()].join(", "),
+      "Messreihe unvollständig: " + [...failures.keys()].join(", "),
     );
   assertMeasurementDay(simulation.day);
   writeReport(metadata, switches, results, permission);

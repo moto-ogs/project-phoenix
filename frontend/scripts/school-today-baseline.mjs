@@ -34,7 +34,6 @@ export default {
   "src/components/ui/calendar-shell.tsx": [
     "const thisYear = new Date().getFullYear();",
   ],
-  "src/components/home/home-card-rows.tsx": ["}).format(new Date());"],
   "src/components/home/now-strip.tsx": [
     "? startableOwnBlock(day.data ?? [], new Date())",
   ],

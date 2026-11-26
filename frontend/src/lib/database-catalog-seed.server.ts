@@ -409,11 +409,11 @@ export function readDatabaseCatalogSeed(
           ? tenantAdminKeys.role(selectedId)
           : null
       : null;
-  const builtAt = Date.now();
   const route = catalog === "index" ? "/database" : `/database/${catalog}`;
   const seed = readTenantPageContext(slug, PAGE_MODULES[route])
     .then((context) => {
       if (!context) return null;
+      const builtAt = Date.now();
       const { snapshot, session, token } = context;
       const entries: ServerSeedEntry[] = [];
       const list =

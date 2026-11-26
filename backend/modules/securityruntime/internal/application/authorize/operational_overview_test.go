@@ -32,6 +32,8 @@ func TestOperationalOverview(t *testing.T) {
 		{"admins denies staff", OverviewScopeAdmins, true, false, false, false},
 		{"all staff allows staff", OverviewScopeAllStaff, true, false, false, true},
 		{"all staff denies nonstaff", OverviewScopeAllStaff, false, false, false, false},
+		{"unknown scope keeps staff on own groups", "unknown", true, false, false, false},
+		{"unknown scope allows admin", "unknown", true, false, true, true},
 		{"school stays assignment-bound", OverviewScopeAllStaff, true, true, true, false},
 	}
 	for _, tt := range tests {

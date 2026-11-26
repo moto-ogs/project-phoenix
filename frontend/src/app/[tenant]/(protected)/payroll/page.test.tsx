@@ -280,7 +280,7 @@ describe("PayrollPage Versand an das Lohnbüro (#4805)", () => {
   });
 
   it("shows the e-mail address only for the e-mail way and saves it on blur", async () => {
-    render(<PayrollPage />);
+    const { rerender } = render(<PayrollPage />);
 
     // Anker: der SFTP-Weg ist gewählt und erklärt.
     expect(
@@ -294,6 +294,9 @@ describe("PayrollPage Versand an das Lohnbüro (#4805)", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "E-Mail" }));
 
+    await waitFor(() => expect(mutateMock).toHaveBeenCalled());
+    // The SWR stub stores the reloaded values without notifying its reader.
+    rerender(<PayrollPage />);
     const input = await screen.findByRole("textbox", {
       name: "E-Mail-Adresse des Lohnbüros",
     });

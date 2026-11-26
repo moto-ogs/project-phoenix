@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import { Suspense } from "react";
 import { KeyDateReportSeed } from "~/components/traeger/key-date-report-seed";
 import { latestKeyDate } from "~/components/traeger/key-date-report-model";
@@ -17,6 +18,7 @@ export default async function Page({
     stichtag?: string | string[];
   }>;
 }) {
+  await connection();
   const { vorlage, stichtag } = await searchParams;
   const templateId =
     (Array.isArray(vorlage) ? vorlage[0] : vorlage) ?? "standard";

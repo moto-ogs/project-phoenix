@@ -15,9 +15,9 @@ Paths below are relative to `frontend/` except `.github/` and `docs/`.
 - **Render budget** (Vitest, blocking): `expectIdleRenderBudget` from `src/test/render-budget.tsx` counts `<Profiler>` commits over 5 s of fake-timer idle and caps them at 20; `mobile-bottom-nav.test.tsx` and `sidebar.test.tsx` use it. A new effect loop in the shell trips this regardless of runner speed. Keep the cap; fix the loop. Reuse the helper for any new always-mounted component.
 - **Nightly counters** (`.github/workflows/perf-nightly.yml`, non-blocking): runs `pnpm run perf:trace` and `pnpm run perf:render` against a seeded backend on weeknights and via `workflow_dispatch`; the report lands in the job summary and as a 30-day artifact. Compare counters (requests per screen, duplicates, longest chain, renders per interaction) with `docs/perf/frontend-baseline-2026.md`; runner timings are not comparable across machines. Timing-based numbers (LCP, Lighthouse) are deliberately not gates.
 
-## Revisit baseline: all portals (#8080)
+## Revisit baseline: all portals
 
-The #8080 reference host for #8083 is **`rechenzentrum`** (Linux x86_64, 32 logical CPUs).
+The reference host is **`rechenzentrum`** (Linux x86_64, 32 logical CPUs).
 Use that same machine and browser version for both sides of a performance comparison;
 a Mac run is a smoke test, not its counterpart. Use a private clone, its own native
 backend bound to loopback (`PORT=127.0.0.1:<port>` for the server), and separate
@@ -25,9 +25,9 @@ loopback-only Postgres/Mailpit Compose ports. The benchmark binds Next to loopba
 
 ### Set up the reference host
 
-In a fresh, private clone, fetch the intended `development` and feature refs.
-The report records their merge base and `HEAD:frontend/src`; compare the latter
-to the product revision under test. Use `scripts/setup-dev.sh` to generate local
+In a fresh, private clone, check out the revision under test and fetch
+`origin/development`. The report records the merge base and `HEAD:frontend/src`;
+verify both against the intended comparison. Use `scripts/setup-dev.sh` to generate local
 credentials and certificates (keep setup and seed output private). In the private `.env`, choose a unique
 `COMPOSE_PROJECT_NAME` and five free ports (reference: frontend 14280, API 14281,
 Postgres 14282, Mailpit UI 14283 and SMTP 14284). Update the localhost URLs
@@ -69,13 +69,19 @@ unzip -q chrome-linux64.zip
 export CHROME_DIR="$PWD/chrome-linux64"
 ```
 
-On `rechenzentrum`, the single measurement command from the repository root is
-`bwrap --dev-bind / / --tmpfs /opt --dir /opt/google --ro-bind "$CHROME_DIR" /opt/google/chrome devbox run -- scripts/perf-revisit.sh`.
-The host's **bubblewrap** package exposes this Chrome only inside the benchmark
-process. For #8083, run flags off and on on **the same Berlin calendar day**,
-against the same prepared database and day receipt. If the comparison moves to
-a later day, start a new pair on a fresh seed and simulate once; do not append a
-second simulated day and compare it to the previous day's results.
+On `rechenzentrum`, run the reference configuration from the repository root:
+
+```sh
+PERF_REVISIT_MODE=parallel bwrap --dev-bind / / --tmpfs /opt --dir /opt/google \
+  --ro-bind "$CHROME_DIR" /opt/google/chrome devbox run -- scripts/perf-revisit.sh
+```
+
+The host's **bubblewrap** package exposes this Chrome only inside the benchmark.
+Compare modes or builds in a new paired study on **the same Berlin
+calendar day**, against the same database and day receipt. If that study
+crosses midnight, start with a fresh seed and simulate once. Compare with the
+reference below only where journeys, inputs and profiles match. Name product
+changes that landed between the observations.
 
 ### Prepare the fixture and repeat
 
@@ -97,9 +103,15 @@ port free. Check `uptime` and, if installed, `~/bin/agent-heavy --status` before
 From the repository root, **`devbox run -- scripts/perf-revisit.sh`** runs the
 existing `pnpm run perf:nav` Revisit test. Playwright builds and starts Next in
 production mode on the worktree port and stops it afterward. Do not substitute
-a dev server, a remote backend, a nightly trace or a CI runner. The test runs
-serially; allow time for all three rounds. `PERF_REVISIT` can select comma-separated
-journey names for diagnosis only. A partial result is not a baseline. The report identifies the measured checkout,
+a dev server, a remote backend, a nightly trace or a CI runner.
+`PERF_REVISIT=ziel,ziel PERF_REVISIT_REPEATS=1` runs a diagnosis with one round.
+Omit the repeat override to compare medians on a selection. Omit both for the
+full matrix (159 trials, three rounds). A partial result is not a baseline.
+`PERF_REVISIT_MODE=parallel` on Linux runs each measured role on its own Next
+process and browser, using the same build, public URLs and seed. Authentication
+setup and tests that change a relationship stay serial. Compare a representative
+selection in both modes before using parallel results as release evidence; use
+serial if the difference is material. The report identifies the measured checkout,
 its frontend and backend trees, its merge base and whether it was dirty.
 Page traversals, in-page actions and device/input variants have separate budget counts.
 
@@ -109,11 +121,18 @@ Page traversals, in-page actions and device/input variants have separate budget 
   authenticated accounts, real entity IDs and expected content; session cookies
   stay out of the reports. The source page settles before the first action.
   “First” means first visit to the target from a running app, not a hard document
-  load. The harness leaves the application's prefetch rules in place.
-  A `NavigationLink` does not prefetch on viewport entry. The direct click
-  has no hover dwell: pointer-down cancels its 80 ms hover timer. Visible
-  keyboard focus, by contrast, can start prefetch before Enter starts the
-  clock. Compare like inputs across revisions, not click against keyboard.
+  load. The harness leaves the application's prefetch rules in place. Links
+  can prefetch a reusable route shell on viewport entry. The authorized
+  page seed starts on navigation; valid SWR data can render immediately
+  without waiting for it. Where a route needs a request-bound payload,
+  a [route-local stale time](frontend-api.md#first-display-in-a-protected-page)
+  may reuse that payload in the same document without changing seed expiry
+  or invalidation.
+  Cached mount revalidation runs after the browser has had a paint opportunity.
+  Missing data and readers that opt out of deduplication still load at once.
+  The #8080 build instead started full route prefetch
+  on keyboard focus or after an 80 ms hover hold. The direct click has no
+  dwell. Compare like inputs, not click against keyboard.
 - Desktop: CPU ×4, 150 ms latency, 3 Mbit/s down, 1 Mbit/s up. Parents also use
   Pixel 7 touch at 1.6 Mbit/s down. Time starts at the browser event timestamp, including input queueing, for pointer-down,
   touch-start, Enter or the actual history traversal. No synthetic hover or
@@ -148,7 +167,7 @@ Page traversals, in-page actions and device/input variants have separate budget 
   action preparation through 1.5 s quiet (25 s cap) are counted, including runs
   below budget. RSC/JS/BFF are request counts, not necessarily transferred bodies.
   Visible loading indicators are recorded separately. Host load averages and
-  CPU idle percentage describe the shared machine, not just Chromium. Before the series and each individual trial, the harness waits for a five-second window with at least 50% CPU idle;
+  CPU idle percentage describe the shared machine, not just Chromium. Before the series and each individual trial, the harness measures a one-second window with at least 50% CPU idle;
   contention during a trial is recorded and marked, never used to discard slow values. A median within 20 ms of the budget is flagged, not evidence of a code-level difference. Host-admission waits do not use the four-hour browser budget. A run crossing Berlin midnight fails rather than mixing seed days.
 
 ### Coverage and evidence
@@ -180,12 +199,16 @@ today's denominators. Unpublished entries, directions and frequencies cannot be
 assigned a time by subtraction. Do not compare the new matrix as a paired
 24-row series. Its supplementary routes and short/long excursions are explicit.
 
-For the #8080 baseline, see the [per-journey results](../perf/revisit-8080/results.md),
-[raw observations](../perf/revisit-8080/observations.json), and [route catalog](../perf/revisit-8080/catalog.json).
-This run on `rechenzentrum` (Linux x86_64, Intel Core i9-14900K, 32 logical CPUs, 62 GiB RAM) used the product code at `development@764c20585d` and harness
-`50e3dfe271`. Across trials the shared host had
-96–98% idle CPU (median 97%); every trial began after a five-second window with at least 50% idle CPU. Contention during a trial is flagged in the results; it is not a code-level effect.
-The measured build includes the parent family-start, other portals’ server seeds and Caterer order overview (#8106, #8110, #8113), the care-plan reads (#8115) and provider KPIs (#8116). The login catalog and school class-count changes (#8117, #8118) landed later and are not measured here. For #8083, run the same command on `rechenzentrum` on its rollout revision before and after enabling the flags, with the same prepared fixture.
+Use the #8083 reference from merged `development@ea66dcbc5b` on
+`rechenzentrum`:
+[per-journey results](../perf/revisit-8083/results.md),
+[raw observations](../perf/revisit-8083/observations.json), and
+[route catalog](../perf/revisit-8083/catalog.json).
+This build already enables Cache Components and Partial Prefetching in
+[`next.config.js`](../../frontend/next.config.js). Use the checkout's
+configuration as-is when measuring the product.
+The [#8080 results](../perf/revisit-8080/results.md) remain the historical
+before-reference for #8083, not the baseline for new changes.
 
 Local outputs in `frontend/perf-results/navigation/`: `revisit.json` (per-run
 observations, profile, load, diagnostics and separate confirmation/denial),

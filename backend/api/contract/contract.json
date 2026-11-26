@@ -2320,20 +2320,6 @@
     },
     {
       "method": "GET",
-      "pattern": "/api/active/supervisors/all",
-      "portals": [
-        "tenant"
-      ],
-      "response": {
-        "kind": "array",
-        "elem": {
-          "kind": "ref",
-          "ref": "ActiveGroupResponse"
-        }
-      }
-    },
-    {
-      "method": "GET",
       "pattern": "/api/active/supervisors/staff/{staffId}/active",
       "portals": [
         "tenant"
@@ -6684,20 +6670,6 @@
       "response": {
         "kind": "ref",
         "ref": "Projection"
-      }
-    },
-    {
-      "method": "GET",
-      "pattern": "/api/students/ogs-group-navigation",
-      "portals": [
-        "tenant"
-      ],
-      "response": {
-        "kind": "array",
-        "elem": {
-          "kind": "ref",
-          "ref": "NavigationGroup"
-        }
       }
     },
     {
@@ -46714,6 +46686,17 @@
           "schema": {
             "kind": "int"
           }
+        },
+        {
+          "name": "trips",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ClassTripSummary"
+            }
+          }
         }
       ]
     },
@@ -46806,6 +46789,25 @@
         },
         {
           "name": "date_count",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ClassTripSummary",
+      "go_type": "classday.ClassTripSummary",
+      "fields": [
+        {
+          "name": "return_time",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "children",
           "schema": {
             "kind": "int"
           }

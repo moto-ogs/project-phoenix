@@ -30,6 +30,10 @@ type PlannedCareDay struct {
 	Status  CareDayStatus
 	Arrival *calendar.WallClock
 	Pickup  *calendar.WallClock
+	// ArrivalReason is the trimmed reason of the day's arrival exception
+	// behind Arrival, empty without one. The class-day view tells a day
+	// outing of the class from it ("Ausflug", #4799, #8155).
+	ArrivalReason string
 }
 
 // CareDayStatus is the derived per-child, per-day care-plan verdict.

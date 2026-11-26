@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import { Suspense } from "react";
 import CatererOverviewPage from "./page-content";
 import { loadCatererOverviewSeed } from "~/lib/caterer/page-seed.server";
@@ -6,7 +7,10 @@ import { berlinTodayISO } from "~/lib/date-helpers";
 import { SWRServerSeed } from "~/lib/swr/server-seed";
 import { catererKeys } from "~/lib/swr/portal-keys";
 
-export default function CatererPage() {
+export const unstable_dynamicStaleTime = 60;
+
+export default async function CatererPage() {
+  await connection();
   const today = berlinTodayISO();
   const days = periodDays(defaultPeriod(today), today);
   const from = days[0]!;

@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import { Suspense } from "react";
 import {
   CLASS_DAY_DATE_PARAM,
@@ -7,11 +8,14 @@ import { SWRServerSeed } from "~/lib/swr/server-seed";
 import { schoolHomeSeed } from "~/lib/school/page-seed.server";
 import SchoolHomePage from "./page-content";
 
+export const unstable_dynamicStaleTime = 60;
+
 export default async function Page({
   searchParams,
 }: {
   searchParams: Promise<{ [CLASS_DAY_DATE_PARAM]?: string | string[] }>;
 }) {
+  await connection();
   const raw = (await searchParams)[CLASS_DAY_DATE_PARAM];
   const date = classDayDateParam(Array.isArray(raw) ? raw[0] : raw);
   const { seed, claims } = schoolHomeSeed(date);

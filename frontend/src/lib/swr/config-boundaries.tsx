@@ -8,7 +8,7 @@
 
 // swr/no-direct-import permits package imports inside this shared wrapper only.
 import { SWRConfig } from "swr";
-import type { ReactNode } from "react";
+import { useLayoutEffect, useState, type ReactNode } from "react";
 
 /**
  * Server seeds of the session's shell under their full scoped keys:
@@ -37,13 +37,20 @@ export function SWRSeedBoundary({
 
 /**
  * A subtree with its own empty cache: nothing it loads is shared with the
- * portal, and a remount (another `key`) starts empty again. It takes no
- * configuration; the provider is created here and never handed out.
+ * portal, and every new reveal (a remount or a restored Activity) must read
+ * again. Used for data that requires an audited read before every disclosure.
  */
 export function IsolatedSWRCache({
   children,
 }: Readonly<{ children: ReactNode }>) {
+  const [reveal, setReveal] = useState(0);
+  // Activity disconnects layout effects but retains state and DOM. Replace
+  // the whole provider on return: a pending answer may still resolve into the
+  // old isolated map, but it cannot fill the new one.
+  useLayoutEffect(() => () => setReveal((current) => current + 1), []);
   return (
-    <SWRConfig value={{ provider: () => new Map() }}>{children}</SWRConfig>
+    <SWRConfig key={reveal} value={{ provider: () => new Map() }}>
+      {children}
+    </SWRConfig>
   );
 }

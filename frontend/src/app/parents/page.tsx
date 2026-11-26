@@ -4,6 +4,8 @@ import { ParentPageSkeleton } from "~/components/parent/parent-page";
 import { ParentStartPage } from "~/components/parent/start/parent-start-page";
 import { ParentPageSeed } from "~/app/parents/parent-page-seed";
 
+export const unstable_dynamicStaleTime = 60;
+
 const PageMessages = messageBoundary(
   "holidayRegistration.weekRange",
   "parentChild.today.pickupLabel",

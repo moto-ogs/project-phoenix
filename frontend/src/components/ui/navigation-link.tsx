@@ -2,84 +2,82 @@
 
 // `.js`: Die Layouttests rendern ButtonLink in Node ohne Bundler (#6570).
 import NextLink from "next/link.js";
-import { forwardRef, type ComponentProps } from "react";
+import { forwardRef, useContext, type ComponentProps } from "react";
+import { PortalScrollContext } from "./navigation-progress-store";
 import { useNavigationLinkProgress } from "./use-navigation-link-progress";
-import { useLinkIntentPrefetch } from "./use-link-intent-prefetch";
+import { isInternalPath, portalManagesScroll } from "./navigation-url";
 
 export type NavigationLinkProps = Omit<
   ComponentProps<typeof NextLink>,
   "href" | "prefetch"
 > & {
   readonly href: string;
-  /** `false` schaltet auch das Vorladen bei Absicht ab. */
+  /** `false` schaltet das Vorladen der Hülle ab. */
   readonly prefetch?: false;
+  /** Verlässt das App-Dokument, etwa für die öffentliche Hilfe. */
+  readonly nativeAnchor?: boolean;
 };
 
 /**
  * Der eine Link des Kits für interne Ziele (#6570): Seitenleiste, untere
  * Leiste, Kopfzeile, Seiteninhalt und `ButtonLink` nutzen ihn.
  *
- * Fortschritt: Der Link meldet seinen Wechsel beim Klick, also vor dem
- * Router-Dispatch, und verwirft die Meldung sofort, wenn ein eigener Handler
- * oder `onNavigate` den Klick abbricht.
- *
- * Vorladen erst bei Absicht (#2976, #4987): Ein sichtbarer Link lädt nichts.
- * Bleibt der Zeiger kurz auf ihm oder bekommt er Tastaturfokus, schaltet er
- * `prefetch` auf `true`. Eine Berührung beim Scrollen lädt nichts. Next lädt dann die volle
- * Zielseite samt ihrer JS-Module, nicht nur bis zur Ladehülle; der Klick
- * danach wartet nicht mehr auf den Code der Seite. Der Router hält diese
- * Daten nur im Speicher des Tabs; Logout und Schulwechsel laden die Seite
- * komplett neu und verwerfen ihn damit.
- *
- * In der Entwicklung lädt `next/link` selbst nichts vor, Links in einen neuen
- * Tab und fremde Ziele lässt diese Komponente aus.
+ * Next lädt die neutrale Hülle, nicht den URL-spezifischen Inhalt (#8083).
+ * Die Daten liefert der autorisierte Seitenseed oder der scoped SWR-Cache
+ * (#8079). Fremde Ziele, neue Tabs und `prefetch={false}` laden nichts vor.
  */
 const NavigationLink = forwardRef<HTMLAnchorElement, NavigationLinkProps>(
   function NavigationLink(
     {
       href,
       target,
-      prefetch: allowPrefetch,
+      prefetch,
+      nativeAnchor,
+      scroll,
       onClick,
       onNavigate,
-      onPointerDown,
-      onPointerEnter,
-      onPointerLeave,
-      onFocus,
-      onBlur,
+      children,
       ...anchorProps
     },
     ref,
   ) {
     const progress = useNavigationLinkProgress(href, onClick, onNavigate);
-    const intent = useLinkIntentPrefetch({
-      href,
-      target,
-      prefetch: allowPrefetch,
-      onPointerDown,
-      onPointerEnter,
-      onPointerLeave,
-      onFocus,
-      onBlur,
-    });
+    const portalScroll = useContext(PortalScrollContext);
+    if (nativeAnchor) {
+      return (
+        <a
+          {...anchorProps}
+          ref={ref}
+          href={href}
+          target={target}
+          onClick={onClick}
+        >
+          {children}
+        </a>
+      );
+    }
 
-    // Jeder Handler steht hier genau einmal; `anchorProps` enthält keinen von
-    // ihnen. Die Reihenfolge der Props entscheidet deshalb nichts.
+    const canPrefetch =
+      prefetch !== false &&
+      (!target || target === "_self") &&
+      isInternalPath(href);
+
     return (
       <NextLink
         {...anchorProps}
         ref={ref}
         href={href}
         target={target}
-        prefetch={intent.prefetch}
+        scroll={
+          scroll ??
+          (portalScroll && portalManagesScroll(href) ? false : undefined)
+        }
+        prefetch={canPrefetch ? "auto" : false}
         onClick={progress.onClick}
         onNavigate={progress.onNavigate}
-        onPointerDown={intent.onPointerDown}
-        onPointerEnter={intent.onPointerEnter}
-        onPointerLeave={intent.onPointerLeave}
-        onFocus={intent.onFocus}
-        onBlur={intent.onBlur}
-      />
+      >
+        {children}
+      </NextLink>
     );
   },
 );

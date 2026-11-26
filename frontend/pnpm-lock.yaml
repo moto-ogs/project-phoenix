@@ -24,7 +24,7 @@ packageExtensionsChecksum: sha256-or2gFU4LmOQQoBw9YGm4NKJ4uJ+cRNy3tGDZMVkeocc=
 
 patchedDependencies:
   swr@2.5.1:
-    hash: 5fe58ccdf4a8fce271e0e273098fb89db05937ab9f6d28ec7d556fb10e3c6886
+    hash: fa990c049a2e03ddce2a253aa2ab6d8d6baa4c06c7ac108715a22184f59c63e1
     path: patches/swr@2.5.1.patch
 
 importers:
@@ -111,7 +111,7 @@ importers:
         version: 0.35.5(@types/node@26.6.6)
       swr:
         specifier: ^2.5.1
-        version: 2.5.1(patch_hash=5fe58ccdf4a8fce271e0e273098fb89db05937ab9f6d28ec7d556fb10e3c6886)(react@19.3.1)
+        version: 2.5.1(patch_hash=fa990c049a2e03ddce2a253aa2ab6d8d6baa4c06c7ac108715a22184f59c63e1)(react@19.3.1)
       tailwind-merge:
         specifier: ^3.7.0
         version: 3.7.0
@@ -11071,7 +11071,7 @@ snapshots:
 
   supports-preserve-symlinks-flag@1.0.0: {}
 
-  swr@2.5.1(patch_hash=5fe58ccdf4a8fce271e0e273098fb89db05937ab9f6d28ec7d556fb10e3c6886)(react@19.3.1):
+  swr@2.5.1(patch_hash=fa990c049a2e03ddce2a253aa2ab6d8d6baa4c06c7ac108715a22184f59c63e1)(react@19.3.1):
     dependencies:
       dequal: 2.0.3
       react: 19.3.1

@@ -36,7 +36,6 @@ GET /api/students/ended-care -> basis
 GET /api/students/enrollment-answer-filters -> basis
 GET /api/students/offering-change-requests/course-waitlists -> basis
 GET /api/students/ogs-group-live -> basis
-GET /api/students/ogs-group-navigation -> basis
 GET /api/students/pickup-change-notices -> basis
 GET /api/students/privacy-consent/defaults -> basis
 GET /api/students/school-classes -> basis
