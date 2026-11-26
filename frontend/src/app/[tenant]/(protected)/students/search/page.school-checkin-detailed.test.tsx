@@ -18,6 +18,7 @@ import {
   within,
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ApiError } from "~/lib/api-error";
 
 const { mockToggleActive, mockToggleStudent, mockUseSchoolCheckinMode } =
   vi.hoisted(() => ({
@@ -439,6 +440,40 @@ describe("StudentSearchPage — check-in mode on detailed-mode tenants", () => {
         screen.queryByText("Aus der Betreuung abmelden?"),
       ).not.toBeInTheDocument();
     });
+  });
+
+  it("keeps stale cards read-only and discards an open room confirmation", async () => {
+    activateCheckinMode();
+    const freshReads = vi.mocked(useSWRAuth).getMockImplementation()!;
+    const { rerender } = render(<StudentSearchPage />);
+    fireEvent.click(await screen.findByTestId("student-card-11"));
+    expect(await screen.findByText("Raum 2")).toBeVisible();
+    vi.mocked(useSWRAuth).mockImplementation((key, fetcher, options) => {
+      const read = freshReads(key, fetcher, options);
+      return key?.startsWith("search-students-")
+        ? { ...read, error: new ApiError("Unavailable", 503), mutate: vi.fn() }
+        : read;
+    });
+    rerender(<StudentSearchPage />);
+    // Anker: the original row remains a normal detail link while stale.
+    expect(screen.getByTestId("student-card-11")).toHaveAttribute(
+      "data-checkin-mode",
+      "false",
+    );
+    expect(
+      screen.queryByRole("button", { name: "Geht nach Hause" }),
+    ).toBeNull();
+    expect(mockToggleStudent).not.toHaveBeenCalled();
+
+    vi.mocked(useSWRAuth).mockImplementation(freshReads);
+    rerender(<StudentSearchPage />);
+    expect(screen.getByTestId("student-card-11")).toHaveAttribute(
+      "data-checkin-mode",
+      "true",
+    );
+    expect(
+      screen.queryByRole("button", { name: "Geht nach Hause" }),
+    ).toBeNull();
   });
 
   it("checks a roomless present student out on a single tap", async () => {

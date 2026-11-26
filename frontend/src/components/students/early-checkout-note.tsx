@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { Button } from "~/components/ui/button";
 import { Modal } from "~/components/ui/modal";
 import { Textarea } from "~/components/ui/textarea";
@@ -104,6 +104,7 @@ export function useEarlyCheckoutDialog(
     note: string,
     reason?: SchoolCheckoutReason,
   ) => void,
+  enabled = true,
 ): {
   request: (target: EarlyCheckoutTarget) => boolean;
   dialog: ReactNode;
@@ -113,19 +114,23 @@ export function useEarlyCheckoutDialog(
     (EarlyCheckoutTarget & { plannedPickup: string }) | null
   >(null);
   const [note, setNote] = useState("");
+  useEffect(() => {
+    if (!enabled) setTarget(null);
+  }, [enabled]);
 
   const request = useCallback(
     (next: EarlyCheckoutTarget) => {
-      if (!next.plannedPickup || !isEarly(next.plannedPickup)) return false;
+      if (!enabled || !next.plannedPickup || !isEarly(next.plannedPickup))
+        return false;
       setNote("");
       setTarget({ ...next, plannedPickup: next.plannedPickup });
       return true;
     },
-    [isEarly],
+    [enabled, isEarly],
   );
 
   const confirm = (checkoutNote: string, reason?: SchoolCheckoutReason) => {
-    if (!target) return;
+    if (!enabled || !target) return;
     if (reason) onConfirm(target.studentId, checkoutNote, reason);
     else onConfirm(target.studentId, checkoutNote);
     setTarget(null);
@@ -133,7 +138,7 @@ export function useEarlyCheckoutDialog(
 
   const dialog = (
     <Modal
-      isOpen={target !== null}
+      isOpen={enabled && target !== null}
       onClose={() => setTarget(null)}
       title="Kind früher abmelden"
       mobileSheet

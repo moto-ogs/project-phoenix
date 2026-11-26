@@ -60,9 +60,11 @@ export async function fetchStudentSearch(
   {
     fetchPage = fetchStudents,
     shouldDeferOverflowPages,
+    beforeNextPage,
   }: {
     fetchPage?: typeof fetchStudents;
     shouldDeferOverflowPages?: () => boolean;
+    beforeNextPage?: () => void;
   } = {},
 ) {
   const result = await fetchPage(filters);
@@ -86,6 +88,7 @@ export async function fetchStudentSearch(
       pagesDeferred = true;
       break;
     }
+    beforeNextPage?.();
     const nextPage = await fetchPage({ ...filters, page });
     students.push(...nextPage.students);
   }

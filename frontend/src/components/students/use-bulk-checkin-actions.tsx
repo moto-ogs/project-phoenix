@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 
 import { Button } from "~/components/ui/button";
 import { Modal } from "~/components/ui/modal";
@@ -61,6 +61,7 @@ export function useBulkCheckinActions(
    * page then points at the children who are still missing (#4762).
    */
   onRunProcessed?: (action: SchoolCheckinAction) => void,
+  enabled = true,
 ): BulkCheckinActions {
   // Checking a child out of a room ends the running visit, so a batch with
   // children in rooms asks once (#2359). The dialog holds a SNAPSHOT of the
@@ -83,6 +84,9 @@ export function useBulkCheckinActions(
   } | null>(null);
   const [runningBulkAction, setRunningBulkAction] =
     useState<SchoolCheckinAction | null>(null);
+  useEffect(() => {
+    if (!enabled) setPendingBulkCheckout(null);
+  }, [enabled]);
 
   // Runs the bulk action for an explicit snapshot list. runBulk executes the
   // snapshot exactly as given — deliberately NOT intersected with the live
@@ -93,6 +97,7 @@ export function useBulkCheckinActions(
       targets: readonly BulkStudentRef[],
       reason?: SchoolCheckoutReason,
     ) => {
+      if (!enabled) return;
       // The snapshot names travel with the ids: after the run the hook
       // shrinks the selection to the failed students, and the failure
       // dialog must still name (and be able to retry) them.
@@ -131,12 +136,12 @@ export function useBulkCheckinActions(
         setRunningBulkAction(null);
       }
     },
-    [schoolCheckin, onRunProcessed],
+    [enabled, schoolCheckin, onRunProcessed],
   );
 
   const handleBulkAction = useCallback(
     (action: SchoolCheckinAction) => {
-      if (selectedStudents.length === 0) return;
+      if (!enabled || selectedStudents.length === 0) return;
       if (action === "out") {
         // Same rule as the single tap (#2220): checking a child out of a room
         // ends the running visit, so that asks first — once per batch.
@@ -154,7 +159,7 @@ export function useBulkCheckinActions(
       }
       void executeBulk(action, selectedStudents.map(toBulkStudentRef));
     },
-    [selectedStudents, executeBulk],
+    [enabled, selectedStudents, executeBulk],
   );
 
   const confirmBulkCheckout = (reason?: SchoolCheckoutReason) => {
@@ -167,7 +172,7 @@ export function useBulkCheckinActions(
   const dialogs = (
     <>
       <Modal
-        isOpen={pendingBulkCheckout !== null}
+        isOpen={enabled && pendingBulkCheckout !== null}
         onClose={() => setPendingBulkCheckout(null)}
         title="Ausgewählte Kinder abmelden?"
         mobileSheet
@@ -274,6 +279,7 @@ export function useBulkCheckinActions(
               type="button"
               variant="primary"
               size="md"
+              disabled={!enabled}
               onClick={() => {
                 if (!bulkFailures) return;
                 const {

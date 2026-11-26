@@ -1066,6 +1066,7 @@ function SearchPageContent() {
   // after its debounce. The term then narrows the loaded list in the browser,
   // as a transition: a key typed while the list renders is shown first.
   const [searchTerm, setSearchTerm] = useState(initial.search);
+  const [searchDraftPending, setSearchDraftPending] = useState(false);
   const [linkedSearch, setLinkedSearch] = useState(initial.search !== "");
   const [searchResetKey, setSearchResetKey] = useState(0);
   const [selectedGroupIds, setSelectedGroupIds] = useState(initial.groupIds);
@@ -1410,31 +1411,14 @@ function SearchPageContent() {
   // the school has web attendance switched off.
   const attendanceWebEnabled = useAttendanceWebEnabled();
   // Ohne users:checkin (etwa als Gast, ADR 0091) scheiterte jeder Tipp.
-  const checkinModeAvailable =
+  const checkinPermitted =
     isToday && attendanceWebEnabled && canCheckInChildren(session);
   // „Anmelden in“ (#6953): binary schools and sessions without the move
   // right see no target; a check-in then stays „Anwesend (ohne Raum)“.
   const checkinTarget = useCheckinTarget(
-    checkinModeAvailable && canCheckInToRooms(session),
+    checkinPermitted && canCheckInToRooms(session),
   );
   const refreshCheckinTargets = checkinTarget.refresh;
-  const schoolCheckin = useSchoolCheckinMode({
-    target: checkinTarget.target,
-    onTargetRefused: () => void refreshCheckinTargets(),
-  });
-  // A checkout well before today's pickup time asks for an optional reason
-  // (#3324); every other checkout keeps its current behaviour.
-  const earlyCheckout = useEarlyCheckoutDialog((studentId, note, reason) => {
-    void schoolCheckin.toggle(studentId, "anwesend", note, reason);
-  });
-  const requestEarlyCheckout = earlyCheckout.request;
-  // Checkout of a student who is currently in a room asks first and names the
-  // room; every roomless state stays a single tap (#2220).
-  const [pendingRoomCheckout, setPendingRoomCheckout] = useState<{
-    studentId: string;
-    studentName: string;
-    room: string;
-  } | null>(null);
   const {
     enabled: studentPhotosEnabled,
     isLoading: studentPhotosSettingLoading,
@@ -1656,7 +1640,7 @@ function SearchPageContent() {
         buildStudentSearchFilters(params),
         params.date,
         params.isToday,
-        { shouldDeferOverflowPages },
+        { shouldDeferOverflowPages, beforeNextPage: complete.assertCurrent },
       );
     } catch (error) {
       if (isReadRefusal(error)) {
@@ -1834,7 +1818,7 @@ function SearchPageContent() {
         key.startsWith(searchFamily) &&
         key !== wholeListKey &&
         key !== rosterProbeKey,
-      { clear: true },
+      { clear: "existing" },
     );
   }, [
     hasCompleteList,
@@ -1882,16 +1866,14 @@ function SearchPageContent() {
     isValidating: isSearchResultValidating,
     error: resultError,
   } = needsServerSearch ? namedSearch : roster;
-  // A transient background error must not replace a usable roster with an
-  // error page. SWR still logs the failure and retries the refresh.
-  const keepRosterAfterError =
-    !needsServerSearch &&
-    !rosterRefused &&
-    rosterRefreshFailed &&
-    (hasCompleteList || usingRetainedRoster);
-  const studentsError = keepRosterAfterError ? undefined : resultError;
-  const rosterNeedsExpansion = searchTerm === "" && rosterReadDeferred;
   const searchData = needsServerSearch ? namedSearch.data : rosterData;
+  // Cached rows of this exact key are still useful for lookup, not writes.
+  const keepResultsAfterError =
+    !rosterRefused &&
+    searchData !== undefined &&
+    isTransientRosterError(resultError);
+  const studentsError = keepResultsAfterError ? undefined : resultError;
+  const rosterNeedsExpansion = searchTerm === "" && rosterReadDeferred;
   const isFinishingRoster = rosterNeedsExpansion && searchData === undefined;
   const searchRefused = isReadRefusal(studentsError);
   const studentsData =
@@ -1899,6 +1881,33 @@ function SearchPageContent() {
       ? undefined
       : searchData;
   const isSearching = isLoading || isFinishingRoster;
+
+  const checkinModeAvailable =
+    checkinPermitted &&
+    !resultError &&
+    !rosterRefused &&
+    !(usingRetainedRoster && rosterReadDeferred);
+  const schoolCheckin = useSchoolCheckinMode({
+    enabled: checkinModeAvailable,
+    target: checkinTarget.target,
+    onTargetRefused: () => void refreshCheckinTargets(),
+  });
+  // A checkout well before today's pickup time asks for an optional reason
+  // (#3324); every other checkout keeps its current behaviour.
+  const earlyCheckout = useEarlyCheckoutDialog((studentId, note, reason) => {
+    void schoolCheckin.toggle(studentId, "anwesend", note, reason);
+  }, checkinModeAvailable);
+  const requestEarlyCheckout = earlyCheckout.request;
+  // Checkout of a student who is currently in a room asks first and names the
+  // room; every roomless state stays a single tap (#2220).
+  const [pendingRoomCheckout, setPendingRoomCheckout] = useState<{
+    studentId: string;
+    studentName: string;
+    room: string;
+  } | null>(null);
+  useEffect(() => {
+    if (!checkinModeAvailable) setPendingRoomCheckout(null);
+  }, [checkinModeAvailable]);
 
   // Any change to the result query — the server-side cache key or one of the
   // client-only filters — replaces the visual context a selection was made
@@ -3345,6 +3354,7 @@ function SearchPageContent() {
   const parentAnnouncementsAvailable = useParentAnnouncementsAvailable();
   const tenantSlug = useTenantSlugSafe();
   const writeParentLetter = () => {
+    if (searchDraftPending) return;
     const token = tenantSlug
       ? stashAnnouncementStudents(
           tenantSlug,
@@ -3409,6 +3419,7 @@ function SearchPageContent() {
     schoolCheckin,
     selectedStudentsForBulk,
     handleBulkRunProcessed,
+    checkinModeAvailable,
   );
   const { handleBulkAction, runningBulkAction } = bulkCheckin;
 
@@ -3558,6 +3569,7 @@ function SearchPageContent() {
   );
   const checkinClick = useCallback(
     (student: Student) => {
+      if (!checkinModeAvailable) return;
       const studentIdStr = student.id.toString();
       if (schoolCheckin.selectionActive) {
         schoolCheckin.toggleSelected(studentIdStr);
@@ -3586,7 +3598,7 @@ function SearchPageContent() {
       }
       void schoolCheckin.toggle(studentIdStr, checkinState);
     },
-    [schoolCheckin, requestEarlyCheckout],
+    [checkinModeAvailable, schoolCheckin, requestEarlyCheckout],
   );
   const checkinClickRef = useLatest(checkinClick);
   const handleCheckinClick = useCallback(
@@ -3703,6 +3715,7 @@ function SearchPageContent() {
                           "Öffnet einen neuen Brief an die Eltern der gezeigten Kinder.",
                         icon: <FileText className="h-4 w-4" aria-hidden />,
                         onClick: writeParentLetter,
+                        disabled: searchDraftPending,
                         badge: filteredStudents.length,
                       },
                     ]
@@ -3761,6 +3774,9 @@ function SearchPageContent() {
         search={{
           value: searchTerm,
           onChange: updateSearchTerm,
+          onDraftPendingChange: parentAnnouncementsAvailable
+            ? setSearchDraftPending
+            : undefined,
           placeholder: "Name suchen…",
           debounceMs: 300,
           resetKey: searchResetKey,
@@ -3795,7 +3811,7 @@ function SearchPageContent() {
         })()}
         empty={
           !hasLoadError &&
-          !keepRosterAfterError &&
+          !keepResultsAfterError &&
           hasFetchedOnce &&
           !isInitializing &&
           !isAuthError &&
@@ -3832,7 +3848,7 @@ function SearchPageContent() {
           first and names the room (#2220). Roomless states never reach
           this dialog — they stay a single tap. */}
             <Modal
-              isOpen={pendingRoomCheckout !== null}
+              isOpen={checkinModeAvailable && pendingRoomCheckout !== null}
               onClose={() => setPendingRoomCheckout(null)}
               title="Aus der Betreuung abmelden?"
               mobileSheet
@@ -3852,7 +3868,7 @@ function SearchPageContent() {
                     variant="surface"
                     size="md"
                     onClick={() => {
-                      if (!pendingRoomCheckout) return;
+                      if (!checkinModeAvailable || !pendingRoomCheckout) return;
                       void schoolCheckin.toggle(
                         pendingRoomCheckout.studentId,
                         "anwesend",
@@ -3870,7 +3886,7 @@ function SearchPageContent() {
                     variant="danger"
                     size="md"
                     onClick={() => {
-                      if (!pendingRoomCheckout) return;
+                      if (!checkinModeAvailable || !pendingRoomCheckout) return;
                       void schoolCheckin.toggle(
                         pendingRoomCheckout.studentId,
                         "anwesend",
@@ -3915,7 +3931,7 @@ function SearchPageContent() {
         ) : null}
         <div hidden={isPermissionError}>
           <LoadErrorAlert
-            error={keepRosterAfterError ? load.error : null}
+            error={keepResultsAfterError ? load.error : null}
             className="mb-3"
           />
           <LoadErrorAlert error={filterOptionsLoad.error} className="mb-3" />
@@ -4066,7 +4082,7 @@ function SearchPageContent() {
                     <StudentSelectionScope
                       visibleStudents={filteredStudents}
                       scopeKey={selectionScopeSignature}
-                      checkinAllowed={isToday}
+                      checkinAllowed={checkinModeAvailable}
                       exportContext={{
                         ...(isToday ? {} : { date: selectedDate }),
                         sort: sortMode,

@@ -1396,12 +1396,15 @@ export function useSWRRequestGuard() {
         !isSWRSessionPending() &&
         latestPrefix.current === prefix &&
         isStillCurrent(fullKey, started);
+      const assertCurrent = () => {
+        if (!isCurrent()) throw new DiscardedAnswer();
+      };
       return Object.assign(
         (complete: () => void): void => {
-          if (!isCurrent()) throw new DiscardedAnswer();
+          assertCurrent();
           complete();
         },
-        { isCurrent },
+        { isCurrent, assertCurrent },
       );
     },
     [prefix, origin],
@@ -1488,6 +1491,7 @@ function coalesceInvalidation(
   channel: string,
   matches: (key: string) => boolean,
   run: (match: (key: string) => boolean) => Promise<unknown[]>,
+  waitMs = 350,
 ): Promise<unknown[]> {
   const bursts =
     invalidationBursts.get(cache) ?? new Map<string, InvalidationBurst>();
@@ -1508,7 +1512,7 @@ function coalesceInvalidation(
       const finish = async () =>
         run((key) => batch.some((match) => match(key)));
       void finish().then(resolve, reject);
-    }, 350);
+    }, waitMs);
   });
   bursts.set(channel, { matches: batch, done });
   return done;
@@ -1530,19 +1534,24 @@ export function useInvalidateMatching() {
     (
       matches: (key: string) => boolean,
       options?: {
-        clear?: boolean;
+        /** `existing` retires only populated or pending keys, not future matches. */
+        clear?: boolean | "existing";
         expireInactive?: boolean;
         /** Union local and SSE invalidations for this channel in one short burst. */
         coalesce?: string;
+        coalesceMs?: number;
       },
     ) => {
       if (prefix === null || isSWRSessionPending()) return Promise.resolve([]);
       const scope = scopedSWRKey(prefix, "");
-      const mode = options?.clear
-        ? "clear"
-        : options?.expireInactive
-          ? "expire-inactive"
-          : "revalidate";
+      const mode =
+        options?.clear === "existing"
+          ? "clear-existing"
+          : options?.clear
+            ? "clear"
+            : options?.expireInactive
+              ? "expire-inactive"
+              : "revalidate";
       const run = (match: (key: string) => boolean) =>
         invalidateSWRKeys(
           cache,
@@ -1555,6 +1564,7 @@ export function useInvalidateMatching() {
             `${scope}${options.coalesce}:${mode}`,
             matches,
             run,
+            options.coalesceMs,
           )
         : run(matches);
     },

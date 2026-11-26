@@ -66,10 +66,10 @@ export function StudentSelectionScope({
   exportContext?: Pick<StudentExportFilters, "date" | "sort">;
   children: (selection: StudentTableSelection) => ReactNode;
 }>) {
-  const schoolCheckin = useSchoolCheckinMode();
   const { warning } = useToast();
   const attendanceWebEnabled = useAttendanceWebEnabled();
   const checkinEnabled = checkinAllowed && attendanceWebEnabled;
+  const schoolCheckin = useSchoolCheckinMode({ enabled: checkinEnabled });
   const clearSelection = schoolCheckin.clearSelection;
   useEffect(() => {
     clearSelection();
@@ -82,7 +82,12 @@ export function StudentSelectionScope({
       ),
     [visibleStudents, schoolCheckin.selectedIds],
   );
-  const bulkCheckin = useBulkCheckinActions(schoolCheckin, selectedStudents);
+  const bulkCheckin = useBulkCheckinActions(
+    schoolCheckin,
+    selectedStudents,
+    undefined,
+    checkinEnabled,
+  );
   const [isExportOpen, setIsExportOpen] = useState(false);
   const changeSelection = useCallback(
     (ids: readonly string[], selected: boolean) => {

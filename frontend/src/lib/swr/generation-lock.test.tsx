@@ -38,10 +38,12 @@ vi.mock("~/lib/session-cache", () => ({ announceSessionChange: vi.fn() }));
 import { useSWRConfig, type SWRConfiguration, type SWRResponse } from "swr";
 import { ApiError } from "~/lib/api-error";
 import { _resetPersonalStorageLeave } from "~/lib/personal-storage";
-import { setTestClock } from "~/test/clock";
+import { releaseFakeTimers, setTestClock } from "~/test/clock";
+import { SEARCH_STUDENTS_REFRESH_OPTIONS } from "./search-students-key";
 import {
   _resetSWRFallbacksForTests,
   bumpScopeGeneration,
+  currentSWRDataGeneration,
   dataGenerationOf,
   isCurrentSWRValue,
   isFallbackVisible,
@@ -51,7 +53,9 @@ import {
 import { swrConfig } from "./config";
 import {
   useDiscardRefusedEntity,
+  useInvalidateMatching,
   useSWRAuth,
+  useSWRPreload,
   useTenantMutate,
   useTenantMutateMatching,
   type ReaderOptions,
@@ -211,6 +215,73 @@ async function flush() {
     await new Promise((resolve) => setTimeout(resolve, 0));
   });
 }
+
+it("retires an existing preload without recording an empty or repeated clear", async () => {
+  const key = "search-students-gall-name";
+  const view = renderHook(() => ({
+    invalidate: useInvalidateMatching(),
+    preload: useSWRPreload(),
+  }));
+  const retire = () =>
+    view.result.current.invalidate((candidate) => candidate === key, {
+      clear: "existing",
+    });
+  const initial = currentSWRDataGeneration();
+  await act(async () => {
+    await retire();
+  });
+  expect(currentSWRDataGeneration()).toBe(initial);
+
+  const response = deferred<string>();
+  const pending = view.result.current.preload(key, () => response.promise);
+  await act(async () => {
+    await retire();
+  });
+  expect(currentSWRDataGeneration()).toBe(initial + 1);
+  await act(async () => {
+    await retire();
+  });
+  expect(currentSWRDataGeneration()).toBe(initial + 1);
+  response.resolve("old name");
+  await expect(pending).resolves.toBeUndefined();
+});
+
+it("combines a local attendance refresh and its delayed SSE echo", async () => {
+  const key = "search-students-gall-roster";
+  const fetcher = vi.fn(async () => "roster");
+  vi.useFakeTimers();
+  try {
+    const view = renderHook(() => ({
+      roster: useSWRAuth(key, fetcher),
+      invalidate: useInvalidateMatching(),
+    }));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(view.result.current.roster.data).toBe("roster");
+
+    const local = view.result.current.invalidate(
+      (candidate) => candidate.startsWith("search-students-"),
+      SEARCH_STUDENTS_REFRESH_OPTIONS,
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1_000);
+    });
+    const echo = view.result.current.invalidate(
+      (candidate) => candidate === key,
+      SEARCH_STUDENTS_REFRESH_OPTIONS,
+    );
+    expect(echo).toBe(local);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(
+        SEARCH_STUDENTS_REFRESH_OPTIONS.coalesceMs,
+      );
+    });
+    expect(fetcher).toHaveBeenCalledTimes(2);
+  } finally {
+    releaseFakeTimers();
+  }
+});
 
 function cachedData(name: string): unknown {
   return renderHook(() => useSWRConfig()).result.current.cache.get(FULL(name))

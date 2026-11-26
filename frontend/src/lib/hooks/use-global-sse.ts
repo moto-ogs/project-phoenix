@@ -60,6 +60,7 @@ import {
 import {
   SEARCH_STUDENTS_ALL_GROUPS_KEY,
   SEARCH_STUDENTS_KEY_PREFIX,
+  SEARCH_STUDENTS_REFRESH_OPTIONS,
   searchStudentsKeyTargetsGroup,
 } from "~/lib/swr/search-students-key";
 import {
@@ -629,7 +630,7 @@ export function useGlobalSSE(): SSEHookState {
               [...scopedEduGroupIds].some((gid) =>
                 searchStudentsKeyTargetsGroup(key, gid),
               )),
-          { expireInactive: true },
+          SEARCH_STUDENTS_REFRESH_OPTIONS,
         ).catch((err) => {
           // Fire-and-forget: the screen keeps its data until the next event or load.
           logger.debug("swr_revalidation_failed", {

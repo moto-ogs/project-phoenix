@@ -6,6 +6,7 @@ vi.mock("~/lib/supervision-context", () => ({
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { SSEEvent, SSEHookOptions, SSEHookState } from "~/lib/sse-types";
+import { SEARCH_STUDENTS_REFRESH_OPTIONS } from "~/lib/swr/search-students-key";
 
 const { session, sse, invalidatedFamilies, invalidateMatching, useSSESpy } =
   vi.hoisted(() => ({
@@ -168,7 +169,7 @@ it("supersedes roster and name reads affected by a checkout", () => {
   act(() => vi.advanceTimersByTime(MAX_FLUSH_WAIT_MS));
   expect(invalidateMatching).toHaveBeenCalledTimes(1);
   const [match, options] = invalidateMatching.mock.calls[0]!;
-  expect(options).toEqual({ expireInactive: true });
+  expect(options).toEqual(SEARCH_STUDENTS_REFRESH_OPTIONS);
   expect(match("search-students-g3-filter:roster-probe")).toBe(true);
   expect(match("search-students-g3-filter:Max")).toBe(true);
   expect(match("search-students-gall-filter:Max")).toBe(true);
@@ -181,7 +182,7 @@ it("expires inactive search results when companion links change", () => {
   act(() => vi.advanceTimersByTime(MAX_FLUSH_WAIT_MS));
   expect(invalidateMatching).toHaveBeenCalledTimes(1);
   const [match, options] = invalidateMatching.mock.calls[0]!;
-  expect(options).toEqual({ expireInactive: true });
+  expect(options).toEqual(SEARCH_STUDENTS_REFRESH_OPTIONS);
   expect(match("search-students-g3-filter:Max")).toBe(true);
   expect(match("search-students-g4-filter:Max")).toBe(true);
   expect(match("room-students-1")).toBe(false);

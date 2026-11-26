@@ -26,7 +26,10 @@ import {
 } from "~/lib/student-api";
 import { STUDENT_KEY_FAMILIES, studentKeys } from "~/lib/swr/portal-keys";
 import { groupKeys } from "~/lib/swr/groups-keys";
-import { SEARCH_STUDENTS_KEY_PREFIX } from "~/lib/swr/search-students-key";
+import {
+  SEARCH_STUDENTS_KEY_PREFIX,
+  SEARCH_STUDENTS_REFRESH_OPTIONS,
+} from "~/lib/swr/search-students-key";
 import { roomKeys } from "~/lib/swr/rooms-keys";
 
 /**
@@ -206,6 +209,8 @@ function reportPresenceRefreshError(error: unknown): void {
 }
 
 interface UseSchoolCheckinModeOptions {
+  /** A stale list can be read but must not start or retry a write. */
+  readonly enabled?: boolean;
   /**
    * Where a check-in puts the children (#6953); null or missing keeps
    * „Anwesend (ohne Raum)“. Only check-ins use it: a checkout ends the stay
@@ -314,6 +319,7 @@ interface UseSchoolCheckinModeResult {
 export function useSchoolCheckinMode(
   options: UseSchoolCheckinModeOptions = {},
 ): UseSchoolCheckinModeResult {
+  const enabled = options.enabled ?? true;
   const invalidateMatching = useInvalidateMatching();
   const refreshPresence = useCallback(
     async (placedInRoom: boolean, studentId?: string) =>
@@ -330,7 +336,7 @@ export function useSchoolCheckinMode(
               ? key.includes(STUDENT_KEY_FAMILIES.detail)
               : key.endsWith(studentKeys.detail(studentId))) ||
             (placedInRoom && isRoomPresenceKey(key))),
-        { expireInactive: true },
+        SEARCH_STUDENTS_REFRESH_OPTIONS,
       ),
     [invalidateMatching],
   );
@@ -450,7 +456,7 @@ export function useSchoolCheckinMode(
       checkoutNote?: string,
       checkoutReason?: SchoolCheckoutReason,
     ) => {
-      if (pendingIds.has(studentId)) return;
+      if (!enabled || pendingIds.has(studentId)) return;
 
       setPendingIds((prev) => {
         const next = new Set(prev);
@@ -522,7 +528,7 @@ export function useSchoolCheckinMode(
         });
       }
     },
-    [pendingIds, refreshPresence, showError, showMessage],
+    [enabled, pendingIds, refreshPresence, showError, showMessage],
   );
   useLayoutEffect(() => {
     latestToggleRef.current = toggle;
@@ -534,7 +540,7 @@ export function useSchoolCheckinMode(
       onlyIds?: readonly string[],
       checkoutReason?: SchoolCheckoutReason,
     ): Promise<SchoolCheckinBatchOutcome | null> => {
-      if (isBulkRunningRef.current) return null;
+      if (!enabled || isBulkRunningRef.current) return null;
       const target = action === "in" ? targetRef.current : null;
 
       // An explicit id list is a dialog's displayed snapshot and runs
@@ -654,7 +660,7 @@ export function useSchoolCheckinMode(
         }
       }
     },
-    [selectedIds, refreshPresence, toast, showError],
+    [enabled, selectedIds, refreshPresence, toast, showError],
   );
 
   return {
