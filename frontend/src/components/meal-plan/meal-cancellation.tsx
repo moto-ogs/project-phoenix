@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 
 import { Alert } from "~/components/ui/alert";
 import { EditActions } from "~/components/ui/edit-actions";
@@ -19,6 +20,7 @@ import {
   restoreMeal,
 } from "~/lib/meal-plan-api";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { parseISODate } from "~/lib/date-helpers";
 import { useInvalidateFamily, useSWRAuth } from "~/lib/swr";
 import { tenantContactKeys } from "~/lib/swr/tenant-contact-keys";
 import { tenantListKeys } from "~/lib/swr/tenant-list-keys";
@@ -27,6 +29,14 @@ const logger = createLogger({ component: "MealCancellation" });
 
 /** Die längste Begründung, wie das Backend sie annimmt. */
 const MAX_REASON = 200;
+
+function cancellationDayLabel(iso: string, locale: string): string {
+  return parseISODate(iso).toLocaleDateString(locale, {
+    weekday: "long",
+    day: "2-digit",
+    month: "2-digit",
+  });
+}
 
 /**
  * Die Tage einer Woche, an denen das Mittagessen ausfällt (#7656), als
@@ -37,6 +47,7 @@ export function useMealCancellations(
   fridayISO: string,
   enabled: boolean,
 ) {
+  const t = useTranslations("mealCancellation");
   const resource = useSWRAuth(
     enabled ? tenantListKeys.mealCancellations(mondayISO) : null,
     () => getMealCancellations(mondayISO, fridayISO),
@@ -47,7 +58,7 @@ export function useMealCancellations(
   }
   const { error: loadError } = useSwrResourceLoadError(
     [resource],
-    "die Ausfälle beim Essen",
+    t("loadObject"),
     () => resource.mutate(),
   );
   return {
@@ -72,12 +83,9 @@ function useRefreshMealDay() {
 export function MealCancellationNotice({
   reason,
 }: Readonly<{ reason: string }>) {
+  const t = useTranslations("mealCancellation");
   return (
-    <Alert
-      type="warning"
-      size="compact"
-      message={`Essen fällt aus: ${reason}`}
-    />
+    <Alert type="warning" size="compact" message={t("notice", { reason })} />
   );
 }
 
@@ -87,17 +95,18 @@ export function MealCancellationNotice({
  */
 export function MealCancellationModal({
   date,
-  dayLabel,
   initialReason,
   onClose,
 }: Readonly<{
   /** Der Tag; null hält das Fenster zu. */
   date: string | null;
-  dayLabel: string;
   initialReason: string;
   onClose: () => void;
 }>) {
+  const t = useTranslations("mealCancellation");
+  const locale = useLocale();
   const isOpen = date !== null;
+  const dayLabel = date ? cancellationDayLabel(date, locale) : "";
   const [reason, setReason] = useState(initialReason);
   const [openedFor, setOpenedFor] = useState<string | null>(null);
   if (date !== openedFor) {
@@ -121,11 +130,11 @@ export function MealCancellationModal({
           error: cause instanceof Error ? cause.message : String(cause),
         });
         if (op.isCurrent()) {
-          void showError(cause, { object: "Der Ausfall des Essens" });
+          void showError(cause, { object: t("cancelErrorObject") });
         }
         return;
       }
-      success(`Das Essen am ${dayLabel} fällt aus.`);
+      success(t("cancelSuccess", { day: dayLabel }));
       void refresh();
       if (op.isCurrent()) onClose();
     });
@@ -135,7 +144,7 @@ export function MealCancellationModal({
     <FormModal
       isOpen={isOpen}
       onClose={onClose}
-      title={`Essen fällt aus: ${dayLabel}`}
+      title={t("title", { day: dayLabel })}
       size="md"
       pending={submission}
       error={error}
@@ -145,24 +154,20 @@ export function MealCancellationModal({
           onSave={() => void save()}
           saving={submission.pending}
           disabled={!trimmed}
-          disabledReason={trimmed ? undefined : "Schreib zuerst einen Grund."}
-          saveTooltip="Trägt den Ausfall ein. Die Buchungen dieses Tages gelten dann nicht."
+          disabledReason={trimmed ? undefined : t("reasonRequired")}
+          saveTooltip={t("saveTooltip")}
         />
       }
     >
       <div className="space-y-4">
-        <p className="text-sm text-gray-600">
-          Die Kinder bekommen an diesem Tag kein Mittagessen. Die Buchungen
-          gelten nicht und werden nicht abgerechnet. Das Team sieht den Ausfall
-          unter „Heute anders“.
-        </p>
+        <p className="text-sm text-gray-600">{t("description")}</p>
         <Textarea
-          label="Grund"
+          label={t("reasonLabel")}
           required
           value={reason}
           maxLength={MAX_REASON}
           rows={2}
-          placeholder="Zum Beispiel: Der Caterer liefert nicht."
+          placeholder={t("reasonPlaceholder")}
           onChange={(event) => setReason(event.target.value)}
         />
       </div>
@@ -172,20 +177,22 @@ export function MealCancellationModal({
 
 /** Lässt das Essen an einem Tag wieder stattfinden. */
 export function useRestoreMeal() {
+  const t = useTranslations("mealCancellation");
+  const locale = useLocale();
   const { show } = useApiErrorDisplay();
   const { success } = useToast();
   const refresh = useRefreshMealDay();
-  return async (date: string, dayLabel: string) => {
+  return async (date: string) => {
     try {
       await restoreMeal(date);
     } catch (cause) {
       logger.error("meal_restore_failed", {
         error: cause instanceof Error ? cause.message : String(cause),
       });
-      void show(cause, { object: "Das Essen" });
+      void show(cause, { object: t("restoreErrorObject") });
       return;
     }
-    success(`Das Essen am ${dayLabel} findet wieder statt.`);
+    success(t("restoreSuccess", { day: cancellationDayLabel(date, locale) }));
     void refresh();
   };
 }

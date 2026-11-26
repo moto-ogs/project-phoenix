@@ -142,3 +142,39 @@ func TestMealCancellationClosesTheDayUntilItIsRemoved(t *testing.T) {
 		assert.Equal(t, 1, orders.Days[0].Total, "the original fixed order is visible again")
 	})
 }
+
+func TestRestoringMealCancelledBeforeDeadlineFixesTheOriginalOrder(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	ctx := testpkg.Ctx(t)
+	school := testpkg.Tenant(t)
+	student := testpkg.CreateTestStudent(t, db, "Mia", "Mittag", "2a")
+	account := testpkg.CreateTestAccount(t, db, "meal-cancellation-before-deadline")
+	wednesday := calendar.NewDate(2026, 9, 9)
+	_, err := db.ExecContext(ctx, `INSERT INTO schedule.meal_participation_schedules
+  (tenant_id, student_id, effective_from, monday, tuesday, wednesday, thursday, friday, changed_by_account_id)
+  VALUES (?, ?, ?, TRUE, TRUE, TRUE, TRUE, TRUE, ?)`, school, student.ID, wednesday, account.ID)
+	require.NoError(t, err)
+
+	now := time.Date(2026, 9, 9, 8, 0, 0, 0, testBerlin)
+	services, err := New(Dependencies{
+		DB: db, Settings: enabledTestSettings(nil), Observe: func(Observation) {},
+		Now:          func() time.Time { return now },
+		Participants: testParticipantFinder, ParticipantDays: testParticipantDaysFinder,
+		StudentNames: testStudentNames, LockStudent: testStudentLock,
+		Calendar: fixedCalendar(nil, nil), CancelledDays: NewMenuChanges().CancelledDays,
+	})
+	require.NoError(t, err)
+	plan, cancellations := services.Capability, services.Cancellations
+	date := mealplan.Date(wednesday.String())
+	require.NoError(t, cancellations.CancelMeal(ctx, mealplan.MealCancellation{Date: date, Reason: "Der Caterer liefert nicht"}))
+
+	now = time.Date(2026, 9, 9, 10, 0, 0, 0, testBerlin)
+	require.NoError(t, plan.SettleOrders(ctx), "the cancelled day must not fix an empty order")
+	require.NoError(t, cancellations.RestoreMeal(ctx, date))
+
+	orders, err := plan.Orders(ctx, date, date)
+	require.NoError(t, err)
+	require.Len(t, orders.Days, 1)
+	assert.Equal(t, 1, orders.Days[0].Total, "restoring after the deadline fixes the original registration")
+}

@@ -56,6 +56,7 @@
   "weekCountsLabel": "Number of meals per day",
   "weekCount": "{count, plural, one {# child} other {# children}}",
   "weekClosed": "no meal",
+  "weekMealCancelled": "lunch cancelled",
   "changeDescription": "Opens this child's registration. Parents see changes in the parent portal",
   "changeTooltip": "Opens a window to register or unregister a child.",
   "changePastReason": "You can no longer change past days.",

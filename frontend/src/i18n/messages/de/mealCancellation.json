@@ -1,0 +1,20 @@
+{
+  "loadObject": "die Ausfälle beim Essen",
+  "notice": "Essen fällt aus: {reason}",
+  "cancelErrorObject": "den Essensausfall",
+  "cancelSuccess": "Das Essen am {day} fällt aus.",
+  "title": "Essen fällt aus: {day}",
+  "reasonRequired": "Schreib zuerst einen Grund.",
+  "saveTooltip": "Trägt den Ausfall ein. Die Buchungen dieses Tages gelten dann nicht.",
+  "description": "Die Kinder bekommen an diesem Tag kein Mittagessen. Die Buchungen gelten nicht und werden nicht abgerechnet. Das Team sieht den Ausfall unter „Heute anders“.",
+  "reasonLabel": "Grund",
+  "reasonPlaceholder": "Zum Beispiel: Der Caterer liefert nicht.",
+  "restoreErrorObject": "das Essen",
+  "restoreSuccess": "Das Essen am {day} findet wieder statt.",
+  "cancelAction": "Essen fällt aus",
+  "cancelDescription": "Trägt ein, dass es an diesem Tag kein Mittagessen gibt.",
+  "changeReasonAction": "Grund ändern",
+  "changeReasonDescription": "Ändert den Grund, warum das Essen ausfällt.",
+  "restoreAction": "Essen findet statt",
+  "restoreDescription": "Nimmt den Ausfall sofort zurück. Die Buchungen gelten wieder."
+}

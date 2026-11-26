@@ -229,7 +229,7 @@ func buildOrderView(rules domain.OrderingRules, window orderWindow, current map[
 			// A weekly order freezes all remaining days at their earliest
 			// deadline, even when the view shows only part of the week.
 			start, end := domain.OrderPeriod(rules.Rhythm, date)
-			_, day.Deadline = openDays(rules, window.state, start, end, today)
+			_, day.Deadline = openDays(rules, window.state, window.days, start, end, today)
 		}
 		for _, change := range window.state.Changes {
 			if change.Date == date {

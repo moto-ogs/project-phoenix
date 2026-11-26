@@ -56,6 +56,7 @@
   "weekCountsLabel": "Essen pro Tag",
   "weekCount": "{count, plural, one {# Kind} other {# Kinder}}",
   "weekClosed": "kein Essen",
+  "weekMealCancelled": "Essen fällt aus",
   "changeDescription": "Öffnet die Anmeldung des Kindes. Eltern sehen Änderungen im Elternportal",
   "changeTooltip": "Öffnet ein Fenster, um ein Kind an- oder abzumelden.",
   "changePastReason": "Vergangene Tage kannst du nicht mehr ändern.",

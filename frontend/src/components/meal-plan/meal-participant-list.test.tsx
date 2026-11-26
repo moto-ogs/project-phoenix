@@ -1270,7 +1270,12 @@ describe("MealParticipantList", () => {
       weekStart: "2026-09-07",
       days: [
         { date: "2026-09-07", closed: false, participants: [mia] },
-        { date: "2026-09-08", closed: true, participants: [] },
+        {
+          date: "2026-09-08",
+          closed: true,
+          mealCancelled: true,
+          participants: [],
+        },
         { date: "2026-09-09", closed: false, participants: [] },
         { date: "2026-09-10", closed: false, participants: [] },
         { date: "2026-09-11", closed: false, participants: [] },
@@ -1284,10 +1289,10 @@ describe("MealParticipantList", () => {
     expect(
       (await screen.findByText("Essen pro Tag:")).parentElement,
     ).toHaveTextContent(
-      "Essen pro Tag: Mo 1 Kind · Di kein Essen · Mi 0 Kinder · Do 0 Kinder · Fr 0 Kinder",
+      "Essen pro Tag: Mo 1 Kind · Di Essen fällt aus · Mi 0 Kinder · Do 0 Kinder · Fr 0 Kinder",
     );
     expect(
-      within(screen.getByRole("table")).getAllByText("kein Essen").length,
+      within(screen.getByRole("table")).getAllByText("Essen fällt aus").length,
     ).toBeGreaterThan(0);
   });
 

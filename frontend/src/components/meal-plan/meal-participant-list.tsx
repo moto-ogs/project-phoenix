@@ -222,7 +222,11 @@ export function MealParticipantList({
   const weekRows = useMemo(() => weeklyRows(week), [week]);
   const closedDates = useMemo(
     () =>
-      new Set(week?.days.filter((day) => day.closed).map((day) => day.date)),
+      new Map(
+        week?.days
+          .filter((day) => day.closed)
+          .map((day) => [day.date, day.mealCancelled === true]),
+      ),
     [week],
   );
   const weekColumns = useMemo<DataTableColumn<WeeklyMealRow>[]>(() => {
@@ -240,7 +244,9 @@ export function MealParticipantList({
         stacked: "field",
         render: (row) =>
           closedDates.has(day) ? (
-            <span className="text-xs text-gray-500">{t("weekClosed")}</span>
+            <span className="text-xs text-gray-500">
+              {closedDates.get(day) ? t("weekMealCancelled") : t("weekClosed")}
+            </span>
           ) : row.dates.has(day) ? (
             <>
               <Check
@@ -424,7 +430,9 @@ export function MealParticipantList({
                 (day) =>
                   `${weekdayShort.format(parseISODate(day.date))} ${
                     day.closed
-                      ? t("weekClosed")
+                      ? day.mealCancelled
+                        ? t("weekMealCancelled")
+                        : t("weekClosed")
                       : t("weekCount", { count: day.participants.length })
                   }`,
               )

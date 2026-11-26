@@ -10,17 +10,21 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestOpenDaysSkipsPastAndOrderedDays(t *testing.T) {
+func TestOpenDaysSkipsPastCancelledAndOrderedDays(t *testing.T) {
 	t.Parallel()
 	rules := defaultOrderingRules("09:00")
 	monday, wednesday := calendar.NewDate(2026, 9, 14), calendar.NewDate(2026, 9, 16)
 	state := domain.OrderState{Orders: []domain.Order{{ID: 7, Days: []domain.Date{calendar.NewDate(2026, 9, 17)}}}}
+	days := domain.CalendarDays{
+		Closed:    map[domain.Date]bool{calendar.NewDate(2026, 9, 18): true},
+		Cancelled: map[domain.Date]bool{calendar.NewDate(2026, 9, 18): true},
+	}
 
-	open, deadline := openDays(rules, state, monday, monday.AddDays(6), wednesday)
-	assert.Equal(t, []domain.Date{wednesday, calendar.NewDate(2026, 9, 18)}, open, "Monday and Tuesday are over, Thursday is ordered, the weekend has no meal")
+	open, deadline := openDays(rules, state, days, monday, monday.AddDays(6), wednesday)
+	assert.Equal(t, []domain.Date{wednesday}, open, "Monday and Tuesday are over, Thursday is ordered, Friday has no lunch and the weekend has no meal")
 	assert.Equal(t, rules.FreezeAt(wednesday), deadline, "the earliest deadline among the open days")
 
-	none, zero := openDays(rules, state, monday, monday.AddDays(1), wednesday)
+	none, zero := openDays(rules, state, days, monday, monday.AddDays(1), wednesday)
 	assert.Empty(t, none)
 	assert.True(t, zero.IsZero())
 }

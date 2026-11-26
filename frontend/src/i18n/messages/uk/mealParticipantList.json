@@ -56,6 +56,7 @@
   "weekCountsLabel": "Кількість обідів на день",
   "weekCount": "{count, plural, one {# дитина} few {# дитини} many {# дітей} other {# дитини}}",
   "weekClosed": "немає харчування",
+  "weekMealCancelled": "обід скасовано",
   "changeDescription": "Відкриває запис цієї дитини. Батьки бачать зміни в батьківському порталі",
   "changeTooltip": "Відкриває вікно, щоб записати дитину або скасувати запис.",
   "changePastReason": "Минулі дні вже не можна змінити.",

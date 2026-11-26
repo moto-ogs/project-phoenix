@@ -56,6 +56,7 @@
   "weekCountsLabel": "Liczba posiłków na dzień",
   "weekCount": "{count, plural, one {# dziecko} few {# dzieci} many {# dzieci} other {# dziecka}}",
   "weekClosed": "brak posiłku",
+  "weekMealCancelled": "posiłek odwołany",
   "changeDescription": "Otwiera zapis tego dziecka. Rodzice widzą zmiany w portalu dla rodziców",
   "changeTooltip": "Otwiera okno, aby zapisać lub wypisać dziecko.",
   "changePastReason": "Minionych dni nie można już zmienić.",

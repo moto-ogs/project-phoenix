@@ -2,6 +2,7 @@
 
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
+import { useTranslations } from "next-intl";
 import {
   Copy,
   ClipboardPaste,
@@ -253,16 +254,15 @@ class PartlySaved extends Error {
 }
 
 export default function MealPlanPage() {
+  const cancellationT = useTranslations("mealCancellation");
   const toast = useToast();
   const router = useTenantRouter();
-  // Gate the initial fetch on session readiness: the staff session gate needs the
-  // client-side token, which isn't available for a tick on a hard reload /
-  // direct navigation. Without this gate the one-shot load races auth, throws
-  // "No authentication token available", and never retries — leaving the page
-  // permanently empty. `required` redirects an absent/expired session to login
-  // instead of hanging on the loading skeleton. Navigate via the tenant router
-  // rather than next/navigation's redirect(), which isn't supported from this
-  // client hook callback (it throws NEXT_REDIRECT instead of navigating).
+  // Gate initial fetch on session readiness. The client token lags one tick
+  // after hard reload/direct navigation, so a request otherwise races auth,
+  // visibly fails, and never retries.
+  // `required` redirects an absent/expired session instead of hanging on the
+  // loading skeleton. Use the tenant router; redirect() cannot navigate from
+  // this client hook callback.
   const { data: session, status } = useSession({
     required: true,
     onUnauthenticated() {
@@ -919,7 +919,6 @@ export default function MealPlanPage() {
               const isToday = date === today;
               const hasContent = dayHasContent(rows);
               const cancelledReason = cancellations.get(date);
-              const dayName = `${weekdayLabel(date)}, ${shortDate(date)}`;
               return (
                 <div
                   key={date}
@@ -980,34 +979,35 @@ export default function MealPlanPage() {
                               : cancelledReason === undefined
                                 ? [
                                     {
-                                      label: "Essen fällt aus",
+                                      label: cancellationT("cancelAction"),
                                       icon: (
                                         <UtensilsCrossed className="h-4 w-4" />
                                       ),
                                       description:
-                                        "Trägt ein, dass es an diesem Tag kein Mittagessen gibt.",
+                                        cancellationT("cancelDescription"),
                                       onClick: () => setCancelDate(date),
                                     },
                                   ]
                                 : [
                                     {
-                                      label: "Grund ändern",
+                                      label:
+                                        cancellationT("changeReasonAction"),
                                       icon: (
                                         <UtensilsCrossed className="h-4 w-4" />
                                       ),
-                                      description:
-                                        "Ändert den Grund, warum das Essen ausfällt.",
+                                      description: cancellationT(
+                                        "changeReasonDescription",
+                                      ),
                                       onClick: () => setCancelDate(date),
                                     },
                                     {
-                                      label: "Essen findet statt",
+                                      label: cancellationT("restoreAction"),
                                       icon: (
                                         <UtensilsCrossed className="h-4 w-4" />
                                       ),
                                       description:
-                                        "Nimmt den Ausfall sofort zurück. Die Buchungen gelten wieder.",
-                                      onClick: () =>
-                                        void restoreMeal(date, dayName),
+                                        cancellationT("restoreDescription"),
+                                      onClick: () => void restoreMeal(date),
                                     },
                                   ]),
                           ]}
@@ -1117,11 +1117,6 @@ export default function MealPlanPage() {
       {canEdit ? (
         <MealCancellationModal
           date={cancelDate}
-          dayLabel={
-            cancelDate
-              ? `${weekdayLabel(cancelDate)}, ${shortDate(cancelDate)}`
-              : ""
-          }
           initialReason={
             cancelDate ? (cancellations.get(cancelDate) ?? "") : ""
           }
