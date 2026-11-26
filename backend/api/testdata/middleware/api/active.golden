@@ -16,7 +16,6 @@ api.requestIDs.# > api/common.ProblemResponseMiddleware > api/common.TenantRunti
 	GET /api/active/groups/{id}/supervisors
 	GET /api/active/schulhof/status
 	GET /api/active/supervision-dashboard
-	GET /api/active/supervisors/all
 	GET /api/active/supervisors/staff/{staffId}/active
 	GET /api/active/visits/
 	POST /api/active/groups/{id}/claim

@@ -17892,16 +17892,6 @@
       "target_owner": "people-directory"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/api.activeStaffAccess.HasCurrentStaff",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.StaffAccess.HasCurrentStaff",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/internal/application.AttendanceRouteStaff.HasCurrentStaff; modules/peopledirectory/internal/application.AttendanceRouteStaff (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.AttendanceRouteStaff.HasCurrentStaff",
-      "target_owner": "people-directory"
-    },
-    {
       "adr": "0098",
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.SessionRepository.CheckRoomConflict",
       "classification": "platform",

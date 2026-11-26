@@ -89,12 +89,6 @@ vi.mock("~/lib/breadcrumb-context", () => ({
   ),
 }));
 
-vi.mock("~/lib/usercontext-context", () => ({
-  UserContextProvider: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="user-context-provider">{children}</div>
-  ),
-}));
-
 vi.mock("~/components/devices/device-pin-warning", () => ({
   DevicePinWarning: () => <div data-testid="device-pin-warning" />,
 }));

@@ -304,10 +304,18 @@ func checkSupervisionContextBudget(t *testing.T, api *goldenRuntime, f supervisi
 		require.Equal(t, http.StatusOK, res.Code, res.Body.String())
 		return res, counter.Queries()
 	}
-	legacyPaths := []string{"/api/students/ogs-group-navigation", "/api/me/groups/supervised", "/api/rooms/?is_open_room=true", "/api/active/supervisors/all"}
 	small := map[string]int{}
-	for _, size := range []string{"small", "large"} {
-		if size == "large" {
+	// Combined legacy response sizes measured on development (ea66dcbc5b)
+	// with these fixtures, before the old routes were removed.
+	for _, fixture := range []struct {
+		size          string
+		ownBytes      int
+		allStaffBytes int
+	}{
+		{size: "small", ownBytes: 2425, allStaffBytes: 3191},
+		{size: "large", ownBytes: 33641, allStaffBytes: 38399},
+	} {
+		if fixture.size == "large" {
 			growSupervisionContextFixture(t, f)
 		}
 		for _, scope := range []string{settings.OverviewScopeOwn, settings.OverviewScopeAllStaff} {
@@ -321,28 +329,18 @@ func checkSupervisionContextBudget(t *testing.T, api *goldenRuntime, f supervisi
 				require.Empty(t, counter.Operation(op))
 			}
 			querybudgets.AssertQueryBudget(t, "api.me.navigation.positive_growth", counter.Measurement(navigationSQL))
-			paths := legacyPaths[:3]
-			if scope == settings.OverviewScopeAllStaff {
-				paths = legacyPaths
-			}
-			var oldBytes, oldStatements int
-			for _, path := range paths {
-				response, queries := measure(path)
-				assertSupervisionTransactions(t, queries)
-				oldBytes += response.Body.Len()
-				oldStatements += len(queries)
-			}
 			response, queries := measure(supervisionContextURL)
 			assertSupervisionTransactions(t, queries)
 			measurement := counter.Measurement(queries)
+			legacyBytes := fixture.allStaffBytes
 			if scope == settings.OverviewScopeOwn {
 				querybudgets.AssertQueryBudget(t, "api.active.supervision_context.own", measurement)
+				legacyBytes = fixture.ownBytes
 			} else {
 				querybudgets.AssertQueryBudget(t, "api.active.supervision_context.all_staff", measurement)
 			}
-			require.Less(t, response.Body.Len(), oldBytes)
-			require.Less(t, len(queries), oldStatements)
-			if size == "small" {
+			require.Less(t, response.Body.Len(), legacyBytes, "%s %s: stay below the combined legacy response size", fixture.size, scope)
+			if fixture.size == "small" {
 				small[scope] = len(queries)
 			} else {
 				require.Equal(t, small[scope], len(queries), "batch statement count must stay flat")
@@ -355,7 +353,7 @@ func checkSupervisionContextBudget(t *testing.T, api *goldenRuntime, f supervisi
 				}
 				require.Len(t, data.Sessions.Items, wantSessions)
 			}
-			t.Logf("%s %s: requests %d → 1; transactions %d → 2; statements %d → %d; body bytes %d → %d", size, scope, len(paths), len(paths)*2, oldStatements, len(queries), oldBytes, response.Body.Len())
+			t.Logf("%s %s: %d statements, %d body bytes", fixture.size, scope, len(queries), response.Body.Len())
 		}
 	}
 	checkSupervisionContextSections(t, f, counter, measure)

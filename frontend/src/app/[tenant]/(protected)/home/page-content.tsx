@@ -77,7 +77,6 @@ import {
 import { useTenantAwarePath } from "~/lib/tenant-path";
 import { isScopeBooked, PAGE_MODULES } from "~/lib/module-register";
 import { useTenantRouter } from "~/lib/tenant-router";
-import { UserContextProvider } from "~/lib/usercontext-context";
 import { DashboardSkeleton } from "./page-skeleton";
 
 const logger = createLogger({ component: "HomePage" });
@@ -636,9 +635,5 @@ export default function HomePage() {
     return <DashboardSkeleton />;
   }
 
-  return (
-    <UserContextProvider>
-      <HomeContent />
-    </UserContextProvider>
-  );
+  return <HomeContent />;
 }

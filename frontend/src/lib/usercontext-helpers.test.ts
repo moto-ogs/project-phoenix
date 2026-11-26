@@ -1,11 +1,6 @@
-import type { ContextNavigationGroup } from "~/lib/contract/active.generated";
 import type * as meContract from "./contract/me.generated";
 import { describe, expect, it } from "vitest";
-import {
-  mapActiveGroupResponse,
-  mapNavigationEducationalGroupResponse,
-  mapStaffResponse,
-} from "./usercontext-helpers";
+import { mapStaffResponse } from "./usercontext-helpers";
 
 // The shapes the catalog proxy decodes (ADR 0270): IDs arrive as strings,
 // fields outside the contract never arrive. The decoder's own tests cover the
@@ -18,55 +13,6 @@ const ROW = {
 };
 
 describe("usercontext-helpers", () => {
-  describe("mapNavigationEducationalGroupResponse", () => {
-    it("preserves string IDs and builds room data from the navigation view", () => {
-      const navigationGroup: ContextNavigationGroup = {
-        id: "12345",
-        name: "Eulen",
-        room_id: "77",
-        room_name: "Blauer Raum",
-        via_substitution: true,
-        is_personal: true,
-      };
-
-      expect(mapNavigationEducationalGroupResponse(navigationGroup)).toEqual({
-        id: "12345",
-        name: "Eulen",
-        roomId: "77",
-        room: { id: "77", name: "Blauer Raum" },
-        viaSubstitution: true,
-      });
-    });
-  });
-
-  describe("mapActiveGroupResponse", () => {
-    const session: meContract.ActiveGroup = {
-      ...ROW,
-      id: "9",
-      start_time: "2026-09-09T10:00:00+02:00",
-      last_activity: "2026-09-09T10:00:00+02:00",
-      timeout_minutes: 30,
-      group_id: null,
-      room_id: "77",
-    };
-
-    // Go sends no name of its own (#2353): the view names the session by
-    // its room.
-    it("maps the session with its room", () => {
-      const result = mapActiveGroupResponse({
-        ...session,
-        room: { name: "Turnhalle", id: "77" } as NonNullable<
-          meContract.ActiveGroup["room"]
-        >,
-      });
-      expect(result).toEqual({
-        id: "9",
-        room_id: "77",
-        room: { id: "77", name: "Turnhalle" },
-      });
-    });
-  });
-
   describe("mapStaffResponse", () => {
     const staff: meContract.Staff = {
       ...ROW,

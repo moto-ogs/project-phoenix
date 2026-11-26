@@ -8,24 +8,6 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
-func (s *service) ListGroups(ctx context.Context) ([]NavigationGroup, error) {
-	if err := s.validateGroupDependencies(); err != nil {
-		return nil, err
-	}
-	caller, err := s.deps.Access.Caller(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("resolve caller access: %w", err)
-	}
-	groups, _, err := s.resolveGroups(ctx, caller, 0, true)
-	if err != nil {
-		return nil, err
-	}
-	if err := s.attachLeaders(ctx, groups); err != nil {
-		s.deps.Logger.Warn("load group leaders failed", "error", err)
-	}
-	return groups, nil
-}
-
 func (s *service) NavigationContext(ctx context.Context) (NavigationContext, error) {
 	result := NavigationContext{OwnGroupIDs: []ident.ID{}, OwnRoomNames: []string{}}
 	if err := s.validateGroupDependencies(); err != nil {
@@ -71,9 +53,6 @@ func (s *service) NavigationContext(ctx context.Context) (NavigationContext, err
 
 // attachLeaders names each group's Gruppenleitung with one bulk lookup.
 func (s *service) attachLeaders(ctx context.Context, groups []NavigationGroup) error {
-	if len(groups) == 0 {
-		return nil
-	}
 	ids := make([]int64, 0, len(groups))
 	for _, group := range groups {
 		ids = append(ids, group.ID.Int64())
@@ -104,7 +83,7 @@ func (s *service) sortGroups(groups []GroupRecord) {
 	slices.SortStableFunc(groups, func(a, b GroupRecord) int { return s.deps.Collate(a.Name, b.Name) })
 }
 
-func (s *service) resolveGroups(ctx context.Context, caller Caller, requestedGroupID int64, allowMissingRoomNames bool) ([]NavigationGroup, *GroupRecord, error) {
+func (s *service) resolveGroups(ctx context.Context, caller Caller, requestedGroupID int64) ([]NavigationGroup, *GroupRecord, error) {
 	visibleGroups, personalIDs, err := s.loadVisibleGroups(ctx, caller, s.deps.Groups.SupervisedGroups)
 	if err != nil {
 		return nil, nil, err
@@ -130,7 +109,7 @@ func (s *service) resolveGroups(ctx context.Context, caller Caller, requestedGro
 	if err != nil {
 		return nil, nil, fmt.Errorf("load substitution metadata: %w", err)
 	}
-	groups, err := s.mapGroups(ctx, visibleGroups, personalIDs, substituted, allowMissingRoomNames)
+	groups, err := s.mapGroups(ctx, visibleGroups, personalIDs, substituted)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -185,14 +164,10 @@ func selectGroup(groups []GroupRecord, personalIDs map[int64]bool, requestedGrou
 	return nil
 }
 
-func (s *service) mapGroups(ctx context.Context, groups []GroupRecord, personalIDs, substituted map[int64]bool, allowMissingRoomNames bool) ([]NavigationGroup, error) {
+func (s *service) mapGroups(ctx context.Context, groups []GroupRecord, personalIDs, substituted map[int64]bool) ([]NavigationGroup, error) {
 	roomNames, err := s.groupRoomNames(ctx, groups)
 	if err != nil {
-		if !allowMissingRoomNames {
-			return nil, fmt.Errorf("load group rooms: %w", err)
-		}
-		s.deps.Logger.Warn("load group rooms failed", "error", err)
-		roomNames = nil
+		return nil, fmt.Errorf("load group rooms: %w", err)
 	}
 	return navigationGroups(groups, personalIDs, substituted, roomNames), nil
 }
