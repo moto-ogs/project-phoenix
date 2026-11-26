@@ -135,6 +135,8 @@ import {
 import { OwnSupervisionView } from "~/components/active-supervisions/own-supervision-view";
 import { useSidebarMemory } from "~/lib/sidebar-memory";
 import { roomsConcept } from "~/lib/concepts/rooms";
+import { staffConcept } from "~/lib/concepts/staff";
+import { SectionCard } from "~/components/ui/section-card";
 import { transitConcept } from "~/lib/concepts/transit";
 
 const ACTIVE_SUPERVISIONS_INFO =
@@ -602,9 +604,9 @@ function MeinRaumPageContent() {
         Spontane Aktivität starten
       </Button>
     );
-    // Während eine Liste läuft, steht der Start im „…“-Menü der Kopfkarte,
-    // nicht als breiter Knopf unter den Kindern.
-    if (appHasRunningRoster) return null;
+    // Während eine Liste läuft, steht der Start im „…“-Menü der Kopfkarte
+    // und, damit man ihn ohne Menü findet, als leiser Knopf am Listenende.
+    if (appHasRunningRoster) return button;
     if (appStartablePlanned) return button;
     return <ActionBar>{button}</ActionBar>;
   };
@@ -1113,6 +1115,34 @@ function MeinRaumPageContent() {
             leadGroupMeta={appTransitLink}
             listFooter={
               <>
+                {headFacts.supervisorNames.length > 0 ? (
+                  // Wer die Aufsicht hat, wie am Computer unter dem Titel.
+                  // In der Kopfkarte ist am Telefon kein Platz, ohne die
+                  // Kinder aus dem ersten Bild zu schieben.
+                  <SectionCard title="Betreuung" titleSize="md">
+                    <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+                      <p className="flex min-w-0 items-center gap-2 text-sm text-gray-700">
+                        <MotoConceptIcon concept={staffConcept} size={16} />
+                        {headFacts.supervisorNames.join(", ")}
+                      </p>
+                      {additionalSupervisionActiveGroupId ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="compact"
+                          tooltip={ADD_SUPERVISOR_HINT}
+                          onClick={() =>
+                            setAddSupervisorTarget(
+                              additionalSupervisionActiveGroupId,
+                            )
+                          }
+                        >
+                          Betreuer hinzufügen
+                        </Button>
+                      ) : null}
+                    </div>
+                  </SectionCard>
+                ) : null}
                 {spontaneousStartBanner}
                 {transitSection ? (
                   // Zu ist die Karte nur eine Wiederholung der Zahl im
@@ -1271,7 +1301,9 @@ function MeinRaumPageContent() {
                 data-icon-only=""
                 className="shrink-0 text-sm text-gray-600 tabular-nums"
               >
-                {blockTimeRange(currentTimetableRoster.instance)}
+                {/* „seit 00:03“ las sich wie eine Dauer; mit „Uhr“ ist es
+                    die Uhrzeit, zu der der Block begann. */}
+                {blockTimeRange(currentTimetableRoster.instance)} Uhr
               </span>
             ) : null}
             {appHasRunningRoster ? (
