@@ -243,6 +243,8 @@ describe("inventory", () => {
     "src/lib/ogs-group-live-api.ts": "mentions storage in a comment only",
     "src/app/[tenant]/(protected)/ogs-groups/page-content.tsx":
       "sidebar memory",
+    "src/app/[tenant]/(protected)/students/search/page-content.tsx":
+      "key and storage access in search-filter-storage.ts",
     "src/app/[tenant]/(protected)/students/[id]/page-content.tsx":
       "sidebar memory",
     "src/components/dashboard/sidebar.tsx": "sidebar memory",
