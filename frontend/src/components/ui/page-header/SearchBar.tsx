@@ -148,7 +148,7 @@ function SearchBarContent({
         placeholder={placeholder}
         value={shownValue}
         onChange={(e) => handleChange(e.target.value)}
-        className={`w-full rounded-2xl border border-gray-500/80 bg-white text-gray-900 placeholder-gray-500 transition duration-200 focus:border-gray-900 focus:ring-0 focus:outline-none ${sizeClasses[size]} ${shownValue ? "pr-10" : ""} `}
+        className={`border-field-edge focus:border-field-focus w-full rounded-2xl border bg-white text-gray-900 placeholder-gray-500 transition duration-200 focus:ring-0 focus:outline-none ${sizeClasses[size]} ${shownValue ? "pr-10" : ""} `}
       />
 
       {shownValue && (

@@ -21,6 +21,7 @@ type operatorRow struct {
 	PasswordLockedUntil  *time.Time `bun:"password_locked_until,scanonly"`
 	PasswordFailedAt     *time.Time `bun:"password_failed_at,scanonly"`
 	CredentialGeneration int64      `bun:"credential_generation,scanonly"`
+	MoreContrast         *bool      `bun:"more_contrast,scanonly"` // only SetMoreContrast writes it
 	bun.BaseModel        `bun:"table:platform.operators,alias:operator"`
 	ID                   int64      `bun:"id,pk,autoincrement"`
 	Email                string     `bun:"email,notnull"`

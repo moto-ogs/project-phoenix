@@ -16,6 +16,7 @@
 export const CATALOG_OUTSIDE_MOUNTS = {
   tenant: [
     "/analytics-consent",
+    "/display-preferences",
     "/auth/invitations",
     "/auth/roles",
     "/auth/permissions",
@@ -35,12 +36,18 @@ export const CATALOG_OUTSIDE_MOUNTS = {
   parent: [
     "/analytics-consent",
     "/analytics-policy",
+    "/display-preferences",
     "/parent-news-attachments",
   ],
-  school: ["/analytics-consent", "/analytics-policy", "/school-staff-messages"],
-  org: [],
-  caterer: [],
-  platform: [],
+  school: [
+    "/analytics-consent",
+    "/analytics-policy",
+    "/display-preferences",
+    "/school-staff-messages",
+  ],
+  org: ["/display-preferences"],
+  caterer: ["/display-preferences"],
+  platform: ["/display-preferences"],
 } as const satisfies Record<string, readonly string[]>;
 
 /**

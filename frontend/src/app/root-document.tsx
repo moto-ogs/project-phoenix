@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { BackgroundWrapper } from "~/components/background-wrapper";
 import localFont from "next/font/local";
 import type { Metadata } from "next";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { getLocale, getMessages } from "next-intl/server";
 import { RouteTitle } from "~/components/page-title/route-title";
 import {
@@ -19,6 +19,10 @@ import {
 } from "~/lib/favicon-variants";
 import { getParentAppMetadata } from "~/i18n/parent-app-metadata";
 import type { AppLocale } from "~/i18n/locales";
+import {
+  CONTRAST_COOKIE_NAME,
+  parseContrastPreference,
+} from "~/lib/contrast-preference";
 
 const inter = localFont({
   src: "../fonts/inter-latin-variable.woff2",
@@ -121,12 +125,18 @@ export async function RootDocument({
   // client — is mounted only on the localized surfaces (parents layout +
   // public enrollment layout), not app-wide, so the German-only portals don't
   // ship the parent catalog.
-  const [locale, titleProps] = await Promise.all([
+  const [locale, titleProps, cookieStore] = await Promise.all([
     getLocale(),
     pageTitleProps(),
+    cookies(),
   ]);
+  // „Mehr Kontrast“ (Profil): ohne Wahl kein Attribut, dann gilt die
+  // Systemeinstellung prefers-contrast (globals.css).
+  const contrast = parseContrastPreference(
+    cookieStore.get(CONTRAST_COOKIE_NAME)?.value,
+  );
   return (
-    <html lang={locale}>
+    <html lang={locale} data-contrast={contrast}>
       <body
         className={`${inter.className} ${inter.variable} ${motoFont.variable}`}
       >

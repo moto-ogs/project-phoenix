@@ -290,7 +290,7 @@ describe("DatabaseSelect", () => {
       render(<DatabaseSelect {...defaultProps} />);
       expect(screen.getByRole("combobox")).toHaveClass(
         "focus-visible:outline-2",
-        "focus-visible:outline-gray-900",
+        "focus-visible:outline-field-focus",
       );
     });
   });

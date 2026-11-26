@@ -9,6 +9,7 @@ import {
   type CatalogRoute,
   type HandOffHead,
 } from "../contract/catalog-proxy.server";
+import { CATALOG_OUTSIDE_MOUNTS } from "../contract/catalog-outside-mounts";
 import { makePortalHandlers } from "../portal-handlers.server";
 
 /**
@@ -43,9 +44,16 @@ export const catalogProxy = (
   method: CatalogMethod,
   publicRoutes: readonly CatalogRoute[] = [],
 ) =>
-  makeCatalogProxy(operator, "/operator", routes, method, [], {
-    routes: publicRoutes,
-  });
+  makeCatalogProxy(
+    operator,
+    "/operator",
+    routes,
+    method,
+    CATALOG_OUTSIDE_MOUNTS.platform,
+    {
+      routes: publicRoutes,
+    },
+  );
 
 /**
  * The operator portal's proxy for a route file below its BFF prefix that Next would

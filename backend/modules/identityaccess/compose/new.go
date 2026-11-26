@@ -177,10 +177,7 @@ func newLifecycleAndRoles(service *application.Service, auth *application.Accoun
 		return nil, nil, nil, err
 	}
 	lifecycle, roles, err := newAccountLifecycle(service, auth, store, dependencies.Sessions, dependencies.Lifecycle, administration, runtime)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-	return administration, lifecycle, roles, nil
+	return administration, lifecycle, roles, err
 }
 
 func newRegistrationFlows(auth *application.AccountAuthentication, store *postgres.Store, lifecycle *application.AccountLifecycle, roles *application.RoleAdministration, dependencies Dependencies, runtime tenantRuntime) (*application.PasswordReset, *application.SchoolInvitation, *application.AccountProvisioning, error) {
@@ -193,10 +190,7 @@ func newRegistrationFlows(auth *application.AccountAuthentication, store *postgr
 		return nil, nil, nil, err
 	}
 	provisioning, err := newAccountProvisioning(store, lifecycle, dependencies.Sessions, dependencies.Lifecycle, runtime)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-	return resets, invitations, provisioning, nil
+	return resets, invitations, provisioning, err
 }
 
 // newPortalAccess composes the public demo access and the Träger-Büro
@@ -217,6 +211,12 @@ func newPortalAccess(dependencies Dependencies, auth *application.AccountAuthent
 		Credentials: auth.CheckPasswordLogin, Unit: runAdmin, InAdminUnit: auth.InAdminUnit, Expiry: deps.Expiry, Logger: deps.Logger, Now: dependencies.Now,
 	})
 	return demoAccess, traegerAccounts, err
+}
+
+// NewAccountDisplayPreferences serves the preferences beside Owner (ADR 0178).
+func NewAccountDisplayPreferences(db *bun.DB, unit tenant.UnitOfWork) identityaccess.AccountDisplayPreferences {
+	_, attach := application.BindTenantRuntime(nil, unit)
+	return application.NewDisplayPreferences(postgres.NewStore(db, time.Now), tenantRuntime{attach: attach, runner: tenant.NewTransactionRunner()})
 }
 
 // NewAccountBatchQuery exposes a read-sized capability without extending the

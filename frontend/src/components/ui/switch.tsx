@@ -49,9 +49,10 @@ export function Switch({
         "pointer-coarse:after:absolute pointer-coarse:after:-inset-2.5 pointer-coarse:after:content-['']",
         "focus-visible:ring-2 focus-visible:ring-gray-600 focus-visible:ring-offset-2 focus-visible:outline-none",
         "disabled:cursor-not-allowed disabled:opacity-50",
-        // Off, the light track carries a gray-500 edge: without it the
-        // switch stands at 1.2:1 against a white card (WCAG 1.4.11).
-        checked ? "bg-gray-900" : "border-gray-500 bg-gray-200",
+        // Off, the light track carries a gray-500 edge only under „Mehr
+        // Kontrast“ (`switch-edge`, globals.css); without it the switch
+        // stands at 1.2:1 against a white card (WCAG 1.4.11).
+        checked ? "bg-gray-900" : "border-switch-edge bg-gray-200",
         className,
       )}
       {...rest}

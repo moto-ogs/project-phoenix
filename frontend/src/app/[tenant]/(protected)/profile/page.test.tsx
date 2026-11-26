@@ -184,6 +184,10 @@ vi.mock("lucide-react", () => ({
   Cake: (props: Record<string, unknown>) => (
     <svg data-testid="cake-icon" {...props} />
   ),
+  // Used by the ContrastPreferenceSection („Mehr Kontrast“).
+  Contrast: (props: Record<string, unknown>) => (
+    <svg data-testid="contrast-icon" {...props} />
+  ),
   // Used by the PushInstallSteps inside the PushNotificationSection.
   Share: (props: Record<string, unknown>) => (
     <svg data-testid="share-icon" {...props} />

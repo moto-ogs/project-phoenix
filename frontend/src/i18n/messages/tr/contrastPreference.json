@@ -1,0 +1,6 @@
+{
+  "title": "Daha fazla kontrast",
+  "description": "Giriş alanları, seçim alanları, kutucuklar ve anahtarlar daha koyu bir çerçeve alır. Böylece onları daha kolay görürsün. Bu, her cihazda hesabın için geçerlidir.",
+  "label": "Alanlarda daha koyu çerçeveler",
+  "errorObject": "kontrast ayarın"
+}
