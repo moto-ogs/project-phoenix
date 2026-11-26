@@ -2,6 +2,7 @@ package application
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -81,6 +82,46 @@ func (c *cancellations) RestoreMeal(ctx context.Context, value mealplan.Date) er
 		}
 		return c.store.DeleteCancellation(txCtx, date)
 	}))
+}
+
+func (c *cancellations) ChildMealCancelledOn(ctx context.Context, studentID int64, value mealplan.Date) (cancelled bool, err error) {
+	date, err := calendar.ParseDate(string(value))
+	if studentID <= 0 || err != nil {
+		return false, mealplan.ErrInvalidMealDate
+	}
+	err = c.service.run(ctx, "read_child_meal_cancellation", func(txCtx context.Context) (domain.OperationStats, error) {
+		// A day without a cancellation, the common case, costs one statement.
+		stored, stats, err := c.store.FindCancellations(txCtx, date, date)
+		if err != nil || len(stored) == 0 {
+			return stats, err
+		}
+		rules, err := c.service.requireRegistration(txCtx)
+		if errors.Is(err, ErrDisabled) || errors.Is(err, ErrRegistrationDisabled) {
+			return stats, nil
+		}
+		if err != nil {
+			return stats, err
+		}
+		days, read, err := c.service.calendar.Days(txCtx, date, date)
+		stats = addStats(stats, read)
+		if err != nil || !days.Cancelled[date] {
+			return stats, err
+		}
+		// The booking as it stands without the cancellation: the day is
+		// open again for the child's regular days and day changes.
+		delete(days.Closed, date)
+		delete(days.Cancelled, date)
+		data, read, err := c.service.store.FindParticipation(txCtx, studentID, date, date)
+		stats = addStats(stats, read)
+		if err != nil {
+			return stats, err
+		}
+		for _, day := range c.service.resolveParticipation(data, date, date, rules, days, date).Days {
+			cancelled = cancelled || (day.Date == date && day.Registered)
+		}
+		return stats, nil
+	})
+	return cancelled, mapPublicError(err)
 }
 
 // requireOpenDay checks that lunch can be cancelled on the day: the meal

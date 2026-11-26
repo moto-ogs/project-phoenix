@@ -201,7 +201,7 @@ func TestChildDayChanges(t *testing.T) {
 		for _, source := range answer.Sources {
 			assert.Equal(t, "loaded", source.Status, source.Source)
 		}
-		assert.Len(t, answer.Sources, 4)
+		assert.Len(t, answer.Sources, 5)
 		assert.ElementsMatch(t, []string{
 			"closing_day Pädagogischer Tag",
 			"child_absent sick (du)",
