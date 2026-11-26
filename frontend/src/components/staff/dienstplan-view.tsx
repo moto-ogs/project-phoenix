@@ -206,7 +206,6 @@ function DienstplanContent() {
   const weekTo = weekDays[4] ?? "";
 
   const {
-    canManageAbsences,
     sortedStaff,
     shiftsByStaff,
     assignmentsByStaff,
@@ -351,7 +350,7 @@ function DienstplanContent() {
   // person → /time-tracking, others → the staff detail page). Reuses the
   // time-tracking page's SWR key so the request is deduped; null when the
   // account is not linked to a staff person.
-  // Without an own staff profile the request could only be refused.
+  // Known to have no own staff profile: the request could only be refused.
   const { data: ownStaff } = useSWRAuth(
     hasOwnStaff ? meKeys.key() : null,
     meKeys.fetcher,
@@ -462,6 +461,27 @@ function DienstplanContent() {
       ? noStaffEmpty
       : null;
 
+  // Öffnet den Schicht-Dialog; ohne Planungsrecht gibt es keinen, und die
+  // Raster bleiben eine Anzeige (#7351).
+  const openShiftEditor = canPlanShifts
+    ? (
+        member: StaffScheduleStaff,
+        date: string,
+        shift: StaffShift | null,
+        initialTimes?: { startTime: string; endTime: string },
+      ) =>
+        setModal({
+          mode: shift ? "edit" : "create",
+          staff: member,
+          date,
+          shift,
+          replacements: shift
+            ? allShifts.filter((s) => s.originShiftId === shift.id)
+            : [],
+          initialTimes,
+        })
+    : undefined;
+
   // Der Inhalt wird nur gerendert, wenn das Gerüst ihn durchlässt — bei
   // Laden, Fehler oder Leerzustand ersetzt `TenantPage` ihn vollständig.
   let content: ReactNode;
@@ -497,31 +517,16 @@ function DienstplanContent() {
           shiftTypes={shiftTypes ?? []}
           summary={summaryByStaff.get(personMember.id)}
           onCreate={
-            canPlanShifts
-              ? (date, startTime, endTime) =>
-                  setModal({
-                    mode: "create",
-                    staff: personMember,
-                    date,
-                    shift: null,
-                    replacements: [],
-                    initialTimes: { startTime, endTime },
-                  })
-              : undefined
+            openShiftEditor &&
+            ((date, startTime, endTime) =>
+              openShiftEditor(personMember, date, null, {
+                startTime,
+                endTime,
+              }))
           }
           onEdit={
-            canPlanShifts
-              ? (date, shift) =>
-                  setModal({
-                    mode: "edit",
-                    staff: personMember,
-                    date,
-                    shift,
-                    replacements: allShifts.filter(
-                      (s) => s.originShiftId === shift.id,
-                    ),
-                  })
-              : undefined
+            openShiftEditor &&
+            ((date, shift) => openShiftEditor(personMember, date, shift))
           }
         />
       </div>
@@ -558,24 +563,9 @@ function DienstplanContent() {
           reducedPath={reducedPath}
           currentStaffId={currentStaffId}
           reloadShifts={reloadShifts}
-          onCellClick={
-            canPlanShifts
-              ? (member, date, shift) =>
-                  setModal({
-                    mode: shift ? "edit" : "create",
-                    staff: member,
-                    date,
-                    shift,
-                    replacements: shift
-                      ? allShifts.filter((s) => s.originShiftId === shift.id)
-                      : [],
-                  })
-              : undefined
-          }
+          onCellClick={openShiftEditor}
           onSickReport={
-            canManageAbsences && canWriteAbsences
-              ? (member) => setSickModal(member)
-              : undefined
+            canWriteAbsences ? (member) => setSickModal(member) : undefined
           }
           onOpenPersonWeek={
             canViewHalbjahr
@@ -757,8 +747,6 @@ function DienstplanContent() {
     >
       <LoadErrorAlert error={periodsLoad.error} className="mb-3" />
       <LoadErrorAlert error={holidayWeeks.loadError} className="mb-3" />
-      {/* Abwesenheiten von vor #6847, deren Tage noch im Plan stehen
-          (#7021). Über dem Raster, weil sie jede Ansicht betreffen. */}
       {canEdit && !canPlanShifts && (
         // Ein dauerhafter Zustand, kein Ereignis: Hinweis im Inhalt, ohne X.
         <Alert
@@ -767,6 +755,8 @@ function DienstplanContent() {
           message="Du kannst den Dienstplan nur ansehen. Zum Planen brauchst du in dieser Schule ein eigenes Personalprofil. Die Leitung kann es anlegen."
         />
       )}
+      {/* Abwesenheiten von vor #6847, deren Tage noch im Plan stehen
+          (#7021). Über dem Raster, weil sie jede Ansicht betreffen. */}
       <AbsencePlanGaps
         enabled={sessionStatus === "authenticated" && canWriteAbsences}
         staffById={staffById}
