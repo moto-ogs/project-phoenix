@@ -41,11 +41,18 @@ entscheidet, wie moto beides erkennt und umsetzt.
 2. **Der eigene Antrag der Eltern ist die Unterschrift.** Der Abgleich
    prüft für jeden Tag, an dem sich die Buchungen ändern:
    - Es gibt eine freigegebene Elternanfrage mit diesem Wirkdatum.
-   - Das Konto, das sie abgeschickt hat, ist das Elternkonto einer
-     Vertragspartei (ADR 0088 §7).
-   - Die Buchungen dieses Tages setzen genau die Anfrage um: jedes
-     Betreuungsangebot, dessen Buchung an dem Tag beginnt oder endet, ist ab
-     dann mit den gewünschten Wochentagen gebucht oder gar nicht mehr.
+   - Das Konto, das sie abgeschickt hat, gehört einer Vertragspartei
+     (ADR 0088 §7): Es ist ihr Elternkonto. Kennt der Vertrag keines, weil
+     die Anmeldung ohne Konto kam, zählt wie im Postfach die Adresse des
+     Kontos.
+   - Die Buchungen dieses Tages setzen genau die Anfrage um: Jedes
+     Betreuungsangebot, dessen Buchung an dem Tag beginnt oder endet, und
+     jedes, das die Anfrage nennt, ist ab dann mit den gewünschten
+     Wochentagen gebucht oder gar nicht mehr. Eine Anfrage, die eine spätere
+     Freigabe überstimmt hat, belegt so nichts.
+   - Geprüft werden nur Tage, an denen sich eine Buchung nach dem Beginn der
+     geltenden Version ändert. Eine überfällige Änderung gilt ab heute und
+     steht mit älteren Tagen zusammen; die trägt die geltende Version schon.
 
    Trifft alles zu, wird die Version sofort `wirksam`. `contract_signatures`
    bekommt einen Eintrag mit dem Verfahren `request`, dem Konto, dem
@@ -60,7 +67,10 @@ entscheidet, wie moto beides erkennt und umsetzt.
    weiter. Im Zweifel fragt moto nach einer Unterschrift, nie umgekehrt.
 4. **Unterschrift über denselben Baustein.** Link, Eltern-App und
    Papiervertrag unterschreiben die wartende Version wie einen ersten Vertrag
-   (ADR 0155), mit Widerrufsbelehrung. Die Unterschrift stellt die Version in
+   (ADR 0155), mit Widerrufsbelehrung. Eine geänderte Fassung wird nur mit
+   der Prüfsumme des PDFs unterschrieben, das die Seite gezeigt hat, und der
+   Papiervertrag nennt seine Version: Hat inzwischen eine neuere Fassung die
+   gelesene überholt, lehnt moto ab. Die Unterschrift stellt die Version in
    die Zeitleiste, mit den Schritten von #4681: Sie löst die wirksame Version
    ab, geht vor eine geplante oder ersetzt die Version, die am selben Tag
    beginnt.
@@ -68,11 +78,14 @@ entscheidet, wie moto beides erkennt und umsetzt.
    Version ab dem Tag der Unterschrift: Keine Version reicht in die
    Vergangenheit, und bis dahin galt die alte. `agreed_from` hält das Datum
    fest, das im unterschriebenen PDF steht. Die Prüfsumme der Version zählt
-   dieses Datum, damit der Nachweis intakt bleibt.
+   dieses Datum, damit der Nachweis intakt bleibt. Die Request-Rolle darf
+   beide Daten nur in diesem einen Schritt schreiben (`guard_version_dates`).
 6. **Eine Änderung nach der anderen.** Solange eine Version wartet, plant
    der Abgleich dieselbe erste Änderung erneut. Trägt der Plan dieselbe
    Betreuung, bleibt die wartende Version. Trägt er eine andere, wird sie
-   `ueberholt` und eine neue wartet, mit neuem PDF und neuem Link. Nimmt die
+   `ueberholt` und eine neue wartet, mit neuem PDF und neuem Link. Auch
+   eine Version, die die Eltern inzwischen selbst beantragt haben, überholt
+   die wartende in derselben Transaktion. Nimmt die
    Schule die Änderung zurück, endet das Warten. `ueberholt` ist ein neuer
    Status: Die Version bleibt lesbar, galt nie und wird nie unterschrieben.
 7. **Versendete Verträge folgen auch.** Bucht das Kind vor der ersten
@@ -89,9 +102,10 @@ entscheidet, wie moto beides erkennt und umsetzt.
    Buchungsänderung bekommt ihr eingefrorenes PDF und geht auf dem Weg an die
    Eltern, auf dem der Vertrag bisher ging. Ging er nie per Mail (Papier,
    Import) oder nimmt die Adresse keine Mail an, bleibt es beim PDF, und das
-   Träger-Büro übergibt es. Wartet nur die vorige Mail noch, wartet die
-   Änderung bis zum nächsten Lauf. Fehlt der Briefkopf, hält der Lauf die
-   Änderung mit Grund zurück.
+   Träger-Büro übergibt es. Eine vorige Mail, die noch unterwegs ist, hält
+   die neue Fassung nicht auf: Der alte Link soll nie der einzige bleiben.
+   Fehlt der Briefkopf oder antwortet der Mail-Dienst nicht, hält der Lauf
+   die Änderung mit Grund zurück und versucht es beim nächsten Mal.
 10. **Lesen in Care Plan.** `care-contract` bekommt den Port
     `SchoolParentRequests`. Die Root bindet ihn an eine neue Lesefähigkeit von
     Care Plan (`ContractOfferingChanges`), in der Tenant-Transaktion der
