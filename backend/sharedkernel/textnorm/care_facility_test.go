@@ -23,7 +23,7 @@ func TestCareFacilityNameDeclinesEveryGender(t *testing.T) {
 	for _, tc := range cases {
 		name := NewCareFacilityName(tc.term, tc.stored)
 		assert.Equal(t, tc.term, name.Term())
-		assert.Equal(t, tc.article, name.Article(), tc.term)
+		assert.Equal(t, tc.article, CareArticle(tc.term, tc.stored), tc.term)
 		assert.Equal(t, tc.nominative, name.Nominative(), tc.term)
 		assert.Equal(t, tc.from, name.From(), tc.term)
 		assert.Equal(t, tc.yourCare, name.Your(), tc.term)

@@ -55,9 +55,6 @@ func NewCareFacilityName(term, storedArticle string) CareFacilityName {
 // Term is the bare name, "Hort".
 func (n CareFacilityName) Term() string { return n.term }
 
-// Article is "der", "die" or "das".
-func (n CareFacilityName) Article() string { return n.article }
-
 // Nominative is the subject of a sentence: "die OGS", "der Hort", "das
 // Lernhaus".
 func (n CareFacilityName) Nominative() string {
