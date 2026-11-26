@@ -142,6 +142,10 @@ export function activeSupervisionTopic(
       // Einstellung „Kinder nur über ‚Alle Kinder‘ finden“ (#1321).
       "Fehlt `Aktuelle Aufsicht` in der Navigation? Öffne `Alle Kinder`. Wähle im Menü mit den drei Punkten `Zur Aufsicht`.",
     ],
+    // Einstellung „Angebote auf der Kinderkarte“ (#6487, #8194), standardmäßig aus.
+    notes: [
+      "Die Karten können auch die Angebote des Tages zeigen, zum Beispiel „14:00–15:00 Töpfer-AG“. Deine Leitung schaltet das in den Einstellungen bei `Angebote auf der Kinderkarte` ein.",
+    ],
     troubleshooting: HELP_TOPICS.attendanceProblem,
     related: [HELP_TOPICS.rooms, HELP_TOPICS.ownGroups],
   };

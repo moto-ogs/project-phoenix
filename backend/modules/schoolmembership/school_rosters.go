@@ -22,4 +22,9 @@ type SchoolRosters interface {
 	// to the group, for the Träger's occupancy (#4676); a membership without
 	// a group is missing.
 	MembershipGroupIDsByTenant(ctx context.Context, schools []int64) (map[int64]map[int64]int64, error)
+	// MembershipPlacementsByTenant maps each of the given live memberships to
+	// its school class and to its OGS group, for the Träger's list of
+	// children (#8137, ADR 0327); a membership without a class or a group is
+	// missing from that map.
+	MembershipPlacementsByTenant(ctx context.Context, schools, memberships []int64) (classes map[int64]string, groups map[int64]int64, err error)
 }

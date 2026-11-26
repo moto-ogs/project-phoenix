@@ -148,6 +148,20 @@ func (s *OpeningChangeStore) UpdateOpeningChange(ctx context.Context, id int64, 
 	return openingChangeToDomain(row), nil
 }
 
+// LockOpeningChange reads a change of the school and holds it until the
+// transaction ends: the version a write replaces (#8178).
+func (s *OpeningChangeStore) LockOpeningChange(ctx context.Context, id int64) (schoolcalendar.OpeningChange, error) {
+	db, schoolID, err := s.database(ctx)
+	if err != nil {
+		return schoolcalendar.OpeningChange{}, err
+	}
+	var row openingChangeRow
+	if err := db.NewRaw(lockOpeningChangeQuery, schoolID, id).Scan(ctx, &row); err != nil {
+		return schoolcalendar.OpeningChange{}, openingChangeError("lock", err)
+	}
+	return openingChangeToDomain(row), nil
+}
+
 // DeleteOpeningChange removes a change.
 func (s *OpeningChangeStore) DeleteOpeningChange(ctx context.Context, id int64) error {
 	db, schoolID, err := s.database(ctx)

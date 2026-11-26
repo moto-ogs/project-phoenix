@@ -272,6 +272,22 @@ function wallTimeOnDate(time: string | undefined, clock: Date): number | null {
   }
 }
 
+/**
+ * Whether the Berlin wall-clock span start–end (HH:MM) contains the clock's
+ * instant. The end is exclusive: at 15:00 a block until 15:00 is over.
+ */
+export function isWallClockSpanRunning(
+  start: string,
+  end: string,
+  clock: Date,
+): boolean {
+  const from = wallTimeOnDate(start, clock);
+  const until = wallTimeOnDate(end, clock);
+  if (from === null || until === null) return false;
+  const instant = clock.getTime();
+  return from <= instant && instant < until;
+}
+
 function formatTimeDisplay(time?: string): string | undefined {
   if (!time) {
     return undefined;

@@ -21,6 +21,7 @@ import {
   GroupIcon,
   ActivityIcon,
   PickupTimeRow,
+  PlannedActivityRows,
   ArrivalTimeRow,
   StudentAbsenceRow,
   StudentPendingExcusedRow,
@@ -396,6 +397,12 @@ export function SupervisionStudentGrid({
                                 : undefined
                             }
                             now={now}
+                            prominent
+                          />
+                          {/* Tagesablauf (#8194): Kommen, Angebote, Gehen. */}
+                          <PlannedActivityRows
+                            activities={student.planned_activities}
+                            now={now}
                           />
                           <PickupTimeRow
                             pickupTime={studentPickup?.pickupTime}
@@ -410,6 +417,7 @@ export function SupervisionStudentGrid({
                                 : undefined
                             }
                             now={now}
+                            prominent
                           />
                         </>
                       );

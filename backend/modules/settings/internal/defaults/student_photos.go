@@ -21,10 +21,12 @@ var studentPhotosDefinitions = []config.Definition{
 	{
 		Key:   config.KeyStudentCardActivitiesEnabled,
 		Label: "Angebote auf der Kinderkarte",
-		// #6487: staff open their group and see at once which offerings a
-		// child has today between its arrival and pickup. Off until a
-		// school switches it on.
-		Description:     "Zeigt auf den Kinderkarten unter „Gruppen“ die Angebote, die ein Kind heute hat. Zum Beispiel: 14:00–15:00 Töpfer-AG.",
+		// #6487: staff see at once which offerings a child has today between
+		// its arrival and pickup, on every child card since #8194. Off until
+		// a school switches it on: switched on, each list pays three set
+		// reads, and the query budgets of "Gruppen" and "Aktuelle Aufsicht"
+		// leave no room for a read every school pays.
+		Description:     "Zeigt auf den Kinderkarten die Angebote, die ein Kind heute hat. Zum Beispiel: 14:00–15:00 Töpfer-AG. Das gilt für „Gruppen“, „Alle Kinder“ und „Aktuelle Aufsicht“.",
 		Type:            config.FieldBoolean,
 		Default:         false,
 		ReadPermission:  "config:read",

@@ -264,8 +264,9 @@ func buildSupervisionDashboard(
 		Presence: newSupervisionPresence(active, active),
 		Planning: newSupervisionPlanning(schedules.Pickups, schedules.Arrivals),
 		Settings: newSupervisionSettings(settings), Staff: NewTimetablePeople(users), Calendar: supervisionCalendar{}, Now: env.Now,
-		TeacherHints: newSupervisionTeacherHints(hints),
-		Handovers:    supervisionHandovers{reads: classHandoverReads{handovers: presence.Presence, staff: NewTimetablePeople(users)}},
+		TeacherHints:      newSupervisionTeacherHints(hints),
+		PlannedActivities: supervisionPlannedActivities{offerings: plannedOfferings{timetable: timetableOwner, blockTypes: lifecycle.BlockMetadata}},
+		Handovers:         supervisionHandovers{reads: classHandoverReads{handovers: presence.Presence, staff: NewTimetablePeople(users)}},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("compose supervision dashboard projection: %w", err)
