@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"testing"
@@ -44,6 +45,57 @@ func TestSeedCareContractChangeUsesContractChild(t *testing.T) {
 				assert.Empty(t, catalogs)
 				assert.Empty(t, requests)
 			}
+		})
+	}
+}
+
+// TestSeedCareContractSchoolChangeTakesOneDayOffAContractChild pins the seed
+// of #4816: the school books the child of an active contract again without
+// the last chosen weekday of its care, so the contract gets a version that
+// waits for the parents' signature. A contract whose change waits already
+// is left alone.
+func TestSeedCareContractSchoolChangeTakesOneDayOffAContractChild(t *testing.T) {
+	t.Parallel()
+	for name, waits := range map[string]bool{"a contract without a change": false, "a change waits already": true} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			var put []string
+			var body map[string]any
+			srv := newSeedHTTPTestServer(func(w seedHTTPResponseWriter, r *seedHTTPRequest) {
+				w.Header().Set("Content-Type", "application/json")
+				switch {
+				case r.URL.Path == "/traeger/contracts/":
+					_, _ = fmt.Fprintf(w, `{"data":{"contracts":[{"request_child_id":"38","student_id":"6","change_awaits_signature":%t}]}}`, waits)
+				case r.URL.Path == "/api/enrollment/admin/students/6/requests":
+					_, _ = fmt.Fprint(w, `{"data":[{"id":"31"}]}`)
+				case r.URL.Path == "/api/enrollment/admin/requests/31":
+					_, _ = fmt.Fprint(w, `{"data":{"children":[{"id":"38","offerings_version":"v1","offerings":[
+						{"offering_id":"1","selected_days":["mon","wed","fri"]},{"offering_id":"3"}]}]}}`)
+				case r.URL.Path == "/api/enrollment/admin/requests/31/children/38/offerings":
+					put = append(put, r.Method)
+					require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+					_, _ = fmt.Fprint(w, `{"data":{}}`)
+				default:
+					t.Errorf("unexpected request: %s", r.URL.Path)
+				}
+			})
+			defer srv.Close()
+			rt := &Runtime{Client: newTestClient(srv.URL, false)}
+
+			changed, err := seedCareContractSchoolChange(rt, AuthRef{})
+
+			require.NoError(t, err)
+			assert.Equal(t, !waits, changed)
+			if waits {
+				assert.Empty(t, put, "a second change would overtake the one that waits")
+				return
+			}
+			require.Equal(t, []string{"PUT"}, put)
+			assert.Equal(t, "v1", body["expected_version"])
+			assert.Equal(t, []any{
+				map[string]any{"offering_id": "1", "selected_days": []any{"mon", "wed"}},
+				map[string]any{"offering_id": "3"},
+			}, body["offerings"], "the first care with chosen days loses its last day; everything else stays")
 		})
 	}
 }
