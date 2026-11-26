@@ -117,6 +117,7 @@ func NewWorker(
 		StudentDocumentCleaner:       studentDocuments,
 		FileStoreCleaner:             newFileStoreCleaner(db, fileStore, logger, now, uploads),
 		Active:                       newSchedulerSessionMaintenance(active),
+		ClosingTimes:                 schoolCalendarCompose.NewOpeningChanges().ClosingTimeOn,
 		ActiveCleanup:                newSchedulerPresenceCleanup(reports.ActiveCleanup),
 		AuthCleanup:                  &identityaccessCompose.SessionMaintenance{AccountSessionMaintenance: identity, PasswordResets: identity},
 		InvitationCleanup:            identity,

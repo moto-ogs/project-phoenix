@@ -188,7 +188,7 @@ type buildState struct {
 	arrivals   map[int64]Arrival
 	pickups    map[int64]Pickup
 	timetable  map[int64]bool
-	careDayEnd string
+	careDayEnd *careDayEnd
 }
 
 func (s *service) LiveGroup(ctx context.Context, requestedGroupID int64) (*Projection, error) {
@@ -261,12 +261,7 @@ func (s *service) CountAtSchoolToday(ctx context.Context, studentIDs []int64) (i
 	if err != nil {
 		return 0, 0, fmt.Errorf("load timetable planning: %w", err)
 	}
-	careDayEnd, err := s.deps.Settings.CareDayEnd(ctx)
-	if err != nil {
-		return 0, 0, fmt.Errorf("resolve care day end: %w", err)
-	}
-
-	in := notHomeInputs{presence, arrivals, pickups, timetable, careDayEnd, s.deps.Calendar.Now()}
+	in := notHomeInputs{presence, arrivals, pickups, timetable, s.lazyCareDayEnd(ctx), s.deps.Calendar.Now()}
 	atSchool, inClass := 0, 0
 	for _, studentID := range studentIDs {
 		switch s.notHomeReason(in, studentID) {
@@ -275,6 +270,9 @@ func (s *service) CountAtSchoolToday(ctx context.Context, studentIDs []int64) (i
 		case notHomeInClass:
 			inClass++
 		}
+	}
+	if err := in.careDayEnd.failure(); err != nil {
+		return 0, 0, err
 	}
 	return atSchool, inClass, nil
 }
@@ -292,7 +290,7 @@ type notHomeInputs struct {
 	arrivals   map[int64]Arrival
 	pickups    map[int64]Pickup
 	timetable  map[int64]bool
-	careDayEnd string
+	careDayEnd *careDayEnd
 	now        time.Time
 }
 
@@ -300,7 +298,7 @@ type notHomeInputs struct {
 func (s *service) notHomeReason(in notHomeInputs, studentID int64) notHomeReason {
 	attendance, _ := in.presence.Attendance(studentID)
 	if attendance.InClass {
-		if s.deps.Planning.InClassUntilCareDayEnd(in.careDayEnd, in.now) {
+		if s.deps.Planning.InClassUntilCareDayEnd(in.careDayEnd.get(), in.now) {
 			return notHomeInClass
 		}
 		return notHomeNone
@@ -314,11 +312,13 @@ func (s *service) notHomeReason(in notHomeInputs, studentID int64) notHomeReason
 		inputs.Pickup = &pickup
 		pickupTime = pickup.PickupTime
 	}
+	decision := s.deps.Planning.DecideDay(inputs)
+	checkedIn := attendance.CheckInTime != nil
 	if s.deps.Planning.AtSchoolBeforeCheckIn(AtSchoolInputs{
-		Decision:   s.deps.Planning.DecideDay(inputs),
-		CheckedIn:  attendance.CheckInTime != nil,
+		Decision:   decision,
+		CheckedIn:  checkedIn,
 		PickupTime: pickupTime,
-		CareDayEnd: in.careDayEnd,
+		CareDayEnd: atSchoolCareDayEnd(in.careDayEnd, decision, checkedIn, pickupTime),
 		Now:        in.now,
 	}) {
 		return notHomeAtSchool
@@ -486,13 +486,12 @@ func (s *service) loadPlanning(ctx context.Context, state *buildState) error {
 	if err != nil {
 		return fmt.Errorf("load pending excused requests: %w", err)
 	}
-	careDayEnd, err := s.deps.Settings.CareDayEnd(ctx)
-	if err != nil {
-		return fmt.Errorf("resolve care day end: %w", err)
-	}
 	state.arrivals, state.pickups, state.timetable = arrivals, pickups, timetable
-	state.careDayEnd = careDayEnd
+	state.careDayEnd = s.lazyCareDayEnd(ctx)
 	s.applyPlanning(state, pending)
+	if err := state.careDayEnd.failure(); err != nil {
+		return err
+	}
 	if err := s.applyTeacherHints(ctx, state, ids); err != nil {
 		return err
 	}
@@ -531,7 +530,7 @@ const (
 // resolved, so it runs right after it. A child still "Im Unterricht" after the
 // care day's end reads "Abwesend" again (#5656).
 func (s *service) applyAtSchool(state *buildState, student *Student, decision DayDecision, attendance Attendance) {
-	if student.Location == inClassLocation && !s.deps.Planning.InClassUntilCareDayEnd(state.careDayEnd, s.deps.Calendar.Now()) {
+	if student.Location == inClassLocation && !s.deps.Planning.InClassUntilCareDayEnd(state.careDayEnd.get(), s.deps.Calendar.Now()) {
 		student.Location = absentLocation
 		student.LocationSince = nil
 		return
@@ -540,14 +539,14 @@ func (s *service) applyAtSchool(state *buildState, student *Student, decision Da
 		return
 	}
 	inputs := AtSchoolInputs{
-		Decision:   decision,
-		CheckedIn:  attendance.CheckInTime != nil,
-		CareDayEnd: state.careDayEnd,
-		Now:        s.deps.Calendar.Now(),
+		Decision:  decision,
+		CheckedIn: attendance.CheckInTime != nil,
+		Now:       s.deps.Calendar.Now(),
 	}
 	if pickup, ok := state.pickups[student.ID.Int64()]; ok {
 		inputs.PickupTime = pickup.PickupTime
 	}
+	inputs.CareDayEnd = atSchoolCareDayEnd(state.careDayEnd, decision, inputs.CheckedIn, inputs.PickupTime)
 	if s.deps.Planning.AtSchoolBeforeCheckIn(inputs) {
 		student.Location = atSchoolLocation
 		student.LocationSince = nil

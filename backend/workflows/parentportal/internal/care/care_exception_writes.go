@@ -229,14 +229,33 @@ func (s *Service) guardTodayPickupOpen(ctx context.Context, tenantID, studentID 
 	if alreadyLeft {
 		return ErrCareExceptionAlreadyLeft
 	}
-	careDayEnd, err := s.Settings.ResolveStringForTenantInTx(ctx, tenantID, KeySessionEndTime)
+	careDayEnd, err := s.careDayEndToday(ctx, tenantID, today)
 	if err != nil {
-		return fmt.Errorf("parent: resolve care day end: %w", err)
+		return err
 	}
 	if carerequests.CareDayEnded(careDayEnd, s.now()) {
 		return ErrPickupChangeCareDayEnded
 	}
 	return nil
+}
+
+// careDayEndToday is the school's care day end of today: the closing time of
+// a changed opening day (#8157), otherwise operations.session_end_time.
+func (s *Service) careDayEndToday(ctx context.Context, tenantID int64, today calendar.Date) (string, error) {
+	if s.ClosingTimes != nil {
+		closesAt, ok, err := s.ClosingTimes(ctx, today)
+		if err != nil {
+			return "", fmt.Errorf("parent: read the closing time of today: %w", err)
+		}
+		if ok {
+			return closesAt, nil
+		}
+	}
+	careDayEnd, err := s.Settings.ResolveStringForTenantInTx(ctx, tenantID, KeySessionEndTime)
+	if err != nil {
+		return "", fmt.Errorf("parent: resolve care day end: %w", err)
+	}
+	return careDayEnd, nil
 }
 
 func (s *Service) childAlreadyLeftToday(ctx context.Context, studentID int64, date, today calendar.Date) (bool, error) {

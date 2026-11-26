@@ -29,6 +29,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/grouplive"
 	groupliveCompose "github.com/moto-ogs/project-phoenix/modules/grouplive/compose"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	schoolCalendarCompose "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/compose"
 	educationService "github.com/moto-ogs/project-phoenix/modules/schoolstructure/contract"
 	"github.com/moto-ogs/project-phoenix/modules/securityruntime"
 	settingsplatform "github.com/moto-ogs/project-phoenix/modules/settings"
@@ -159,7 +160,7 @@ func newGroupLive(sources groupLiveSources, hints peopledirectory.SchoolDayHintQ
 			careDays: sources.CareDays, timetable: sources.Timetable, blockTypes: sources.BlockTypes,
 		},
 		Transfers:       groupLiveTransfers{substitutions: sources.Substitutions},
-		Settings:        groupLiveSettings{settings: sources.Settings},
+		Settings:        groupLiveSettings{settings: sources.Settings, closingTimes: schoolCalendarCompose.NewOpeningChanges().ClosingTimeOn, now: sources.Now},
 		Calendar:        groupLiveCalendar{now: sources.Now},
 		ExcusedRequests: sources.ExcusedRequests,
 		TeacherHints:    groupLiveTeacherHints(hints),
@@ -658,7 +659,13 @@ func (t groupLiveTransfers) GroupHandovers(ctx context.Context, groupID int64, d
 	return result, nil
 }
 
-type groupLiveSettings struct{ settings grouplive.Resolver }
+// groupLiveSettings binds the projection's settings. closingTimes is the
+// School Calendar's closing time of a changed opening day (#8157).
+type groupLiveSettings struct {
+	settings     grouplive.Resolver
+	closingTimes func(context.Context, calendar.Date) (string, bool, error)
+	now          func() time.Time
+}
 
 func (s groupLiveSettings) Prepare(ctx context.Context) (context.Context, error) {
 	return s.settings.Prefetch(ctx, []string{
@@ -675,7 +682,16 @@ func (s groupLiveSettings) Prepare(ctx context.Context) (context.Context, error)
 	})
 }
 
+// CareDayEnd is the session end of today: the closing time of a changed
+// opening day (#8157), otherwise operations.session_end_time.
 func (s groupLiveSettings) CareDayEnd(ctx context.Context) (string, error) {
+	closesAt, ok, err := s.closingTimes(ctx, calendar.DateFromTime(s.now()))
+	if err != nil {
+		return "", fmt.Errorf("read the closing time of today: %w", err)
+	}
+	if ok {
+		return closesAt, nil
+	}
 	return s.settings.ResolveString(ctx, settingsplatform.KeySessionEndTime)
 }
 

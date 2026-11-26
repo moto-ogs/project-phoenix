@@ -2,8 +2,11 @@ package application
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // scheduleSessionEndTask schedules the daily session end task using minute-polling.
@@ -48,12 +51,15 @@ func (s *Scheduler) checkAndRunSessionEnd(ctx context.Context, task *ScheduledTa
 			return nil
 		}
 
-		endTime := s.resolveStringSetting(tenantCtx, settingSessionEndTime, "18:00")
-		if !s.timeMatchesNow(endTime) {
+		if s.wasRunToday(&s.lastSessionEnd, tenantID) {
 			return nil
 		}
 
-		if s.wasRunToday(&s.lastSessionEnd, tenantID) {
+		endTime, err := s.sessionEndTimeToday(tenantCtx)
+		if err != nil {
+			return err
+		}
+		if !s.timeMatchesNow(endTime) {
 			return nil
 		}
 
@@ -73,6 +79,25 @@ func (s *Scheduler) checkAndRunSessionEnd(ctx context.Context, task *ScheduledTa
 		s.markRunTodayAfterCommit(tenantCtx, &s.lastSessionEnd, tenantID)
 		return nil
 	})
+}
+
+// sessionEndTimeToday is the school's session end of today: the closing
+// time of a changed opening day (#8157), otherwise
+// operations.session_end_time. It is read only until today's run is done,
+// one indexed statement per school and minute.
+func (s *Scheduler) sessionEndTimeToday(ctx context.Context) (string, error) {
+	endTime := s.resolveStringSetting(ctx, settingSessionEndTime, "18:00")
+	if s.closingTimes == nil {
+		return endTime, nil
+	}
+	closesAt, ok, err := s.closingTimes(ctx, calendar.DateFromTime(s.clock()))
+	if err != nil {
+		return "", fmt.Errorf("read the closing time of today: %w", err)
+	}
+	if ok {
+		return closesAt, nil
+	}
+	return endTime, nil
 }
 
 // executeSessionEndForTenant ends the tenant's daily sessions and completes

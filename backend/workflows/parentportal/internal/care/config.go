@@ -138,6 +138,10 @@ type Config struct {
 	// DayChanges is "Heute anders" of one child (#7671), bound by the root
 	// to the day changes projection. Nil answers the read with an error.
 	DayChanges ChildDayChanges
+	// ClosingTimes is the School Calendar's closing time of a changed
+	// opening day (#8157): it ends today's pickup changes in place of
+	// operations.session_end_time. Nil keeps the setting every day.
+	ClosingTimes ClosingTimes
 
 	// Best-effort notifiers, called after the commit only.
 	AbsenceNotifier AbsenceNotifier
@@ -148,6 +152,10 @@ type Config struct {
 	// RequestSharing is the parent request-sharing ledger. Required.
 	RequestSharing RequestSharer
 }
+
+// ClosingTimes answers the closing time "HH:MM" a changed opening day sets
+// for the school of the tenant transaction; ok is false on a day without one.
+type ClosingTimes func(ctx context.Context, day calendar.Date) (closesAt string, ok bool, err error)
 
 // EnrollmentSettings reports which schools have enrollment switched on.
 type EnrollmentSettings interface {

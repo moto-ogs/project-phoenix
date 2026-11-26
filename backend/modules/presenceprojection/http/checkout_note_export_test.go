@@ -176,10 +176,10 @@ func TestApplyAtSchoolLocation_InClassEndsWithTheCareDay(t *testing.T) {
 	now := time.Date(2026, 9, 29, 15, 0, 0, 0, calendar.Berlin)
 	since := now.Add(-6 * time.Hour)
 	responses := []StudentResponse{{ID: 1, HasFullAccess: true, Location: studentpresence.InClassLocationLabel, LocationSince: &since}}
-	applyAtSchoolLocation(responses, nil, nil, "16:00", now)
+	applyAtSchoolLocation(responses, nil, nil, func() string { return "16:00" }, now)
 	assert.Equal(t, studentpresence.InClassLocationLabel, responses[0].Location)
 
-	applyAtSchoolLocation(responses, nil, nil, "16:00", now.Add(time.Hour))
+	applyAtSchoolLocation(responses, nil, nil, func() string { return "16:00" }, now.Add(time.Hour))
 	assert.Equal(t, studentpresence.AbsentLocationLabel, responses[0].Location)
 	assert.Nil(t, responses[0].LocationSince, "the class checkout is not when the child got home")
 }

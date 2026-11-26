@@ -32,17 +32,17 @@ func (rs *Resource) CountAtSchoolToday(ctx context.Context, studentIDs []int64) 
 	if err != nil {
 		return 0, err
 	}
-	careDayEnd, err := rs.SettingsService.ResolveString(ctx, settingSessionEndTime)
-	if err != nil {
-		return 0, err
-	}
+	careDayEnd := rs.lazyCareDayEnd(ctx)
 
 	responses := make([]StudentResponse, len(studentIDs))
 	for i, id := range studentIDs {
 		responses[i] = StudentResponse{ID: ident.ID(id), HasFullAccess: true, Location: studentpresence.AbsentLocationLabel}
 	}
 	applyDayPlanning(responses, arrivals, pickups, attendances, timetableIDs, true)
-	applyAtSchoolLocation(responses, pickups, attendances, careDayEnd, rs.Now())
+	applyAtSchoolLocation(responses, pickups, attendances, careDayEnd.get, rs.Now())
+	if careDayEnd.err != nil {
+		return 0, careDayEnd.err
+	}
 
 	count := 0
 	for i := range responses {

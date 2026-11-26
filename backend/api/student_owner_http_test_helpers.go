@@ -12,6 +12,7 @@ import (
 
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 
+	schoolCalendarCompose "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/compose"
 	timetableCompose "github.com/moto-ogs/project-phoenix/modules/timetable/compose"
 
 	"github.com/go-chi/chi/v5"
@@ -158,6 +159,7 @@ func NewStudentHTTPTestResources(store transactionruntime.Database, unit tenant.
 			ArrivalScheduleService: live.ArrivalSchedule,
 			CareDayService:         live.CareDay,
 			CareLifecycleService:   lifecycle,
+			ClosingTimes:           schoolCalendarCompose.NewOpeningChanges().ClosingTimeOn,
 			CompanionService:       NewStudentHTTPTestCompanions(students, repoFactory.Student, peopleServices.PeopleDirectory, peopleServices.StudentAudit),
 			EnrollmentAnswers:      newStudentEnrollmentAnswerFilters(newStudentAnswers()), ExcusedRequestService: svc.ExcusedRequests,
 			InstanceService:       liveTimetable.Instance,
