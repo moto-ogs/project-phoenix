@@ -70,11 +70,11 @@ func firstAmendment(read schoolRead, application carecontract.Application, contr
 // carries it already.
 func planChange(read schoolRead, application carecontract.Application, contract AmendableContract, next change) (*amendmentPlan, string) {
 	current, inForce := versionAt(contract.Versions, next.day)
+	booked := servicesAt(read, application, next.day)
 	base := []carecontract.Service{}
 	if inForce {
-		base = carriedServices(current, next.day)
+		base = carriedServices(current, next.day, booked.services)
 	}
-	booked := servicesAt(read, application, next.day)
 	services := withChange(base, booked.services, changedOfferings(read, application, contract.Versions, next, base, booked.services))
 	if len(services) == 0 && len(booked.services) > 0 {
 		// Nothing the version promised is booked any more, but care goes on:
@@ -336,11 +336,18 @@ func promised(version carecontract.Version, day calendar.Date) []carecontract.Se
 }
 
 // carriedServices makes the old contract's implicit module ends explicit
-// before a new version can extend the overall contract end.
-func carriedServices(version carecontract.Version, day calendar.Date) []carecontract.Service {
+// before a new version can extend the overall contract end, and caps them
+// at the current booking ends. A longer booking never extends an old promise.
+func carriedServices(version carecontract.Version, day calendar.Date, booked []carecontract.Service) []carecontract.Service {
 	services := promised(version, day)
 	for i := range services {
 		services[i].LastDay = earlier(services[i].LastDay, version.EndsOn)
+		for _, booking := range booked {
+			if booking.CareOfferingID == services[i].CareOfferingID && booking.Weekday == services[i].Weekday {
+				services[i].LastDay = earlier(services[i].LastDay, booking.LastDay)
+				break
+			}
+		}
 	}
 	return services
 }

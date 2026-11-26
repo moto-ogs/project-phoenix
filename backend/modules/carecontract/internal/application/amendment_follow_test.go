@@ -100,6 +100,59 @@ func TestExtendedContractKeepsTheCarriedModulesOriginalEnd(t *testing.T) {
 	assert.True(t, waitingCarries(amendmentRead(), application.Bookings, &plan.version, plan.version, today))
 }
 
+func TestGeneratedAmendmentKeepsCarriedPromisesWithinBookings(t *testing.T) {
+	t.Parallel()
+	for name, promise := range map[string]*calendar.Date{"open ended": nil, "shorter promise": date(2031, 1, 31)} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			contract := amendable()
+			contract.Latest.Services[0].LastDay = promise
+			contract.Versions = []carecontract.Version{contract.Latest}
+			application := carecontract.Application{Bookings: []carecontract.Booking{
+				{CareOfferingID: 1, Days: []string{"mon"}, ValidFrom: date(2030, 8, 1), ValidUntil: date(2031, 2, 1)},
+				{CareOfferingID: 1, Days: []string{"mon"}, ValidFrom: date(2031, 2, 1), ValidUntil: date(2031, 7, 1)},
+				{CareOfferingID: 2, Days: []string{"thu"}, ValidFrom: date(2030, 10, 1)},
+			}}
+			today := *date(2030, 9, 1)
+			plan, reason := nextAmendment(amendmentRead(), application, contract, today)
+			require.Empty(t, reason)
+			require.NotNil(t, plan)
+			require.Len(t, plan.version.Services, 2)
+			assert.Nil(t, plan.version.EndsOn, "the new module continues indefinitely")
+			assert.Equal(t, earlier(promise, date(2031, 6, 30)), plan.version.Services[0].LastDay)
+			for _, day := range []calendar.Date{today, *date(2030, 11, 1)} {
+				planned, reason := nextAmendment(amendmentRead(), application, contract, day)
+				require.Empty(t, reason)
+				require.NotNil(t, planned)
+				assert.True(t, waitingCarries(amendmentRead(), application.Bookings, &plan.version, planned.version, day),
+					"unchanged bookings keep the waiting PDF and signing link, including after the planned start")
+			}
+		})
+	}
+}
+
+func TestUnsignedContractFollowsAnExtendedModuleDespiteAnUnchangedOverallEnd(t *testing.T) {
+	t.Parallel()
+	sent := SentContract{Version: amendable().Latest, NextNumber: 2}
+	sent.Version.Services[0].LastDay = date(2031, 1, 31)
+	sent.Version.Services = append(sent.Version.Services, carecontract.Service{
+		CareOfferingID: 2, Weekday: "thu", ModuleName: "Ganztag", EndsAt: "16:30",
+	})
+	application := carecontract.Application{Bookings: []carecontract.Booking{
+		{CareOfferingID: 1, Days: []string{"mon"}, ValidFrom: date(2030, 8, 1), ValidUntil: date(2031, 2, 1)},
+		{CareOfferingID: 1, Days: []string{"mon"}, ValidFrom: date(2031, 2, 1), ValidUntil: date(2031, 7, 1)},
+		{CareOfferingID: 2, Days: []string{"thu"}, ValidFrom: date(2030, 8, 1)},
+	}}
+	today := *date(2030, 9, 1)
+	version, changed := sentVersionNow(amendmentRead(), application, sent, today)
+	require.True(t, changed, "the first signature must cover the actual booking ends")
+	assert.Equal(t, date(2031, 6, 30), version.Services[0].LastDay)
+	assert.Nil(t, version.EndsOn)
+	sent.Version = version
+	_, changed = sentVersionNow(amendmentRead(), application, sent, today)
+	assert.False(t, changed)
+}
+
 func TestUnsignedContractKeepsItsStartAcrossEquivalentBookingSplits(t *testing.T) {
 	t.Parallel()
 	for _, fixed := range []bool{false, true} {

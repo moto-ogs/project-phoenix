@@ -160,7 +160,8 @@ func sameDays(a, b []string) bool {
 
 // waitingCarries tells whether the version that waits for a signature is
 // the planned one: the same care from the same day, with the same end of
-// the contract and of every module. A waiting version whose day has passed
+// the contract, with every module still booked at least as long as promised.
+// A waiting version whose day has passed
 // holds from the day of its signature, so the plan from today is still its
 // change. A waiting version that promises care longer than booked now is
 // never signed.
@@ -175,7 +176,20 @@ func waitingCarries(read schoolRead, bookings []carecontract.Booking, waiting *c
 	if planned.EffectiveFrom != day {
 		return false
 	}
-	return promisesBooked(read, bookings, *waiting, day)
+	return promisesCovered(read, bookings, *waiting, day)
+}
+
+// promisesCovered accepts a shorter carried promise: continuing bookings do
+// not require the parents to sign the same amendment again.
+func promisesCovered(read schoolRead, bookings []carecontract.Booking, version carecontract.Version, day calendar.Date) bool {
+	for _, service := range version.Services {
+		booked, ok := moduleBookedUntil(read, bookings, service, day)
+		promised := earlier(service.LastDay, version.EndsOn)
+		if !ok || (booked != nil && (promised == nil || booked.Before(*promised))) {
+			return false
+		}
+	}
+	return true
 }
 
 // promisesBooked tells whether every module of the version is booked from
