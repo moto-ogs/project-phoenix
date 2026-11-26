@@ -218,7 +218,7 @@ describe("RoomsPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Erklärung zu Räume" }));
     expect(
       screen.getByText(
-        "Hier siehst du, welche Räume frei oder belegt sind. Wähle einen Raum, um zu sehen, welche Kinder dort sind.",
+        "Hier siehst du, welche Räume frei oder belegt sind. „Frei“ heißt: Gerade ist niemand im Raum. Wähle einen Raum, um zu sehen, welche Kinder dort sind.",
       ),
     ).toBeInTheDocument();
   });
@@ -655,7 +655,7 @@ describe("RoomsPage", () => {
     render(<RoomsPage />);
 
     const openGroup = roomGroup("Offene Räume");
-    const otherGroup = roomGroup("Weitere Räume");
+    const otherGroup = roomGroup("Räume für Aktivitäten");
     // Offene Räume stehen vor den übrigen, beide alphabetisch.
     expect(
       openGroup.compareDocumentPosition(otherGroup) &
@@ -671,6 +671,52 @@ describe("RoomsPage", () => {
         .getAllByRole("link")
         .map((link) => link.getAttribute("aria-label")),
     ).toEqual(["Musikraum", "Raum 101"]);
+  });
+
+  // #8130: Beide Gruppen sagen unter dem Titel, was sie trennt, und ein
+  // freier offener Raum liest sich nicht wie ein buchbarer.
+  it("explains under each group heading how open rooms differ", () => {
+    vi.mocked(useSWRAuth).mockReturnValue({
+      data: [
+        ...mockRooms,
+        { id: "3", name: "Kreativraum", isOccupied: false, isOpenRoom: true },
+      ],
+      isLoading: false,
+      error: null,
+    } as never);
+
+    render(<RoomsPage />);
+
+    const openGroup = roomGroup("Offene Räume");
+    const activityGroup = roomGroup("Räume für Aktivitäten");
+    expect(
+      within(openGroup).getByText(
+        "Kinder dürfen jederzeit hierher, auch wenn keine Aktivität läuft.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(activityGroup).getByText(
+        "Kinder dürfen nur hierher, solange eine Aktivität läuft.",
+      ),
+    ).toBeInTheDocument();
+
+    // Der freie offene Raum ist leer, der freie übrige Raum buchbar.
+    const openTile = within(openGroup).getByRole("link", {
+      name: "Kreativraum",
+    });
+    expect(within(openTile).getByText("Frei")).toBeInTheDocument();
+    expect(
+      within(openTile).getByText("Gerade ist niemand hier"),
+    ).toBeInTheDocument();
+    expect(
+      within(openTile).queryByText("Für Aktivitäten buchbar"),
+    ).not.toBeInTheDocument();
+    const activityTile = within(activityGroup).getByRole("link", {
+      name: "Musikraum",
+    });
+    expect(
+      within(activityTile).getByText("Für Aktivitäten buchbar"),
+    ).toBeInTheDocument();
   });
 
   it("collapses and expands each room group on its own", () => {
@@ -699,7 +745,7 @@ describe("RoomsPage", () => {
     ).toHaveAttribute("aria-expanded", "false");
 
     fireEvent.click(
-      screen.getByRole("button", { name: "Weitere Räume einklappen" }),
+      screen.getByRole("button", { name: "Räume für Aktivitäten einklappen" }),
     );
     expect(screen.queryByText("Musikraum")).not.toBeInTheDocument();
 
@@ -722,7 +768,7 @@ describe("RoomsPage", () => {
       screen.queryByRole("heading", { name: "Offene Räume" }),
     ).not.toBeInTheDocument();
     expect(
-      screen.queryByRole("heading", { name: "Weitere Räume" }),
+      screen.queryByRole("heading", { name: "Räume für Aktivitäten" }),
     ).not.toBeInTheDocument();
     expect(screen.getByText("Musikraum")).toBeInTheDocument();
   });

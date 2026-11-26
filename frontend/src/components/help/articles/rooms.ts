@@ -56,11 +56,13 @@ export function roomsTopic(presenceMode: HelpPresenceMode): HelpTopic {
         title: "Einen Raum und seine Belegung ansehen",
         // #4372: die drei Begriffe einheitlich erklärt.
         description:
-          "`Belegt` heißt: Im Raum läuft gerade eine Aktivität. Ein offener Raum ist für Ortswechsel freigegeben, auch wenn dort nichts läuft. Unter `Aktuelle Aufsicht` stehen nur Aufsichten, die gerade laufen.",
+          "`Belegt` heißt: Im Raum läuft gerade eine Aktivität. `Frei` heißt: Gerade ist niemand im Raum. Ein offener Raum ist für Ortswechsel freigegeben, auch wenn dort nichts läuft. Unter `Aktuelle Aufsicht` stehen nur Aufsichten, die gerade laufen.",
         steps: [
           "Öffne `Räume` in der Seitenleiste.",
-          // #4372 (01.14): offene Räume stehen als eigene Gruppe oben.
-          "Gibt es offene Räume, stehen sie oben unter `Offene Räume`. Alle anderen stehen darunter unter `Weitere Räume`.",
+          // #4372 (01.14): offene Räume stehen als eigene Gruppe oben;
+          // #8130 benennt die übrigen nach dem, was sie trennt.
+          "Gibt es offene Räume, stehen sie oben unter `Offene Räume`. Dorthin dürfen Kinder jederzeit.",
+          "Alle anderen stehen darunter unter `Räume für Aktivitäten`. Dorthin dürfen Kinder nur, solange eine Aktivität läuft.",
           "Klappe eine Gruppe über den Pfeil rechts ein oder aus.",
           "Suche den Raum über `Raum suchen...`.",
           // Live geprueft: kein Knopf `Filter`, sondern ein Umschalter

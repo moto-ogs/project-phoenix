@@ -46,7 +46,9 @@ import {
 } from "~/lib/room-export-api";
 import { RoomsGridSkeleton } from "./page-skeleton";
 import { childrenConcept } from "~/lib/concepts/children";
+import { openRoomsConcept } from "~/lib/concepts/openRooms";
 import { roomsConcept } from "~/lib/concepts/rooms";
+import type { MotoConcept } from "~/lib/moto-concepts";
 import { staffConcept } from "~/lib/concepts/staff";
 import { foldForSearch } from "~/lib/search-fold";
 
@@ -73,7 +75,17 @@ interface Room {
 const COLLECTION_PATH = "/rooms";
 const TRANSIT_PATH = "/rooms/unterwegs";
 const ROOMS_INFO =
-  "Hier siehst du, welche Räume frei oder belegt sind. Wähle einen Raum, um zu sehen, welche Kinder dort sind.";
+  "Hier siehst du, welche Räume frei oder belegt sind. „Frei“ heißt: Gerade ist niemand im Raum. Wähle einen Raum, um zu sehen, welche Kinder dort sind.";
+
+// Die beiden Raumgruppen sagen, was sie trennt (#8130): „Offen“ ist die
+// dauerhafte Freigabe durch die Schule, „Frei“ und „Belegt“ die Lage gerade.
+// Beide Sätze sind gleich gebaut, damit der Unterschied auf einen Blick steht.
+const OPEN_ROOMS_TITLE = "Offene Räume";
+const OPEN_ROOMS_DESCRIPTION =
+  "Kinder dürfen jederzeit hierher, auch wenn keine Aktivität läuft.";
+const ACTIVITY_ROOMS_TITLE = "Räume für Aktivitäten";
+const ACTIVITY_ROOMS_DESCRIPTION =
+  "Kinder dürfen nur hierher, solange eine Aktivität läuft.";
 
 function RoomTile({
   room,
@@ -139,8 +151,12 @@ function RoomTile({
               )}
             {!room.isOccupied && (
               <>
+                {/* Ein freier offener Raum ist leer, nicht „buchbar“: sonst
+                    lesen sich „Offen“ und „Frei“ wie dasselbe (#8130). */}
                 <div className="text-sm text-gray-600">
-                  Für Aktivitäten buchbar
+                  {room.isOpenRoom
+                    ? "Gerade ist niemand hier"
+                    : "Für Aktivitäten buchbar"}
                 </div>
                 {room.capacity !== undefined && room.capacity > 0 && (
                   <div className="text-sm text-gray-600">
@@ -176,22 +192,30 @@ function RoomTileGrid({
  * Eine Raumgruppe der Übersicht: offene Räume oben, die übrigen darunter.
  * Beide lassen sich einklappen, damit eine lange Liste übersichtlich bleibt.
  * Mit eigener Fläche, weil die Gruppe Titel und Text trägt (BAUARTEN-SPEC,
- * Teil 3 §1: kein `bare` mit Titel).
+ * Teil 3 §1: kein `bare` mit Titel). Symbol und Satz unter dem Titel sagen,
+ * wodurch sich die Gruppen unterscheiden (#8130): offene Tür, geschlossene
+ * Tür.
  */
 function RoomGroup({
   title,
+  description,
+  concept,
   rooms,
   roomHref,
 }: {
   readonly title: string;
+  readonly description: string;
+  readonly concept: MotoConcept;
   readonly rooms: readonly Room[];
   readonly roomHref: (roomId: string) => string;
 }) {
   return (
     <SectionCard
       collapsible
+      concept={concept}
       title={title}
       titleBadge={<StatusBadge label={String(rooms.length)} tone="gray" />}
+      description={description}
     >
       <RoomTileGrid rooms={rooms} roomHref={roomHref} />
     </SectionCard>
@@ -619,13 +643,17 @@ function RoomsPageContent() {
             // leere weiße Fläche über den halben Bildschirm stehen.
             <div className="compact:gap-4 grid gap-6 max-sm:gap-3">
               <RoomGroup
-                title="Offene Räume"
+                title={OPEN_ROOMS_TITLE}
+                description={OPEN_ROOMS_DESCRIPTION}
+                concept={openRoomsConcept}
                 rooms={openRooms}
                 roomHref={roomHref}
               />
               {otherRooms.length > 0 ? (
                 <RoomGroup
-                  title="Weitere Räume"
+                  title={ACTIVITY_ROOMS_TITLE}
+                  description={ACTIVITY_ROOMS_DESCRIPTION}
+                  concept={roomsConcept}
                   rooms={otherRooms}
                   roomHref={roomHref}
                 />
