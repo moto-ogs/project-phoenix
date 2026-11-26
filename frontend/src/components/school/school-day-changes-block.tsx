@@ -9,7 +9,7 @@
 // geänderten Zeile. Aus demselben Bericht kommen die Ausflüge der Klassen.
 
 import { useSession } from "next-auth/react";
-import { useCallback, useId } from "react";
+import { useCallback, useId, useState } from "react";
 import type { ReactNode } from "react";
 
 import { classDayPath } from "~/components/class-day/routes";
@@ -19,13 +19,16 @@ import {
   dayChangeSpan,
   dayChangeText,
   sourceFailureText,
+  type DayChangesDay,
 } from "~/components/home/day-changes-text";
+import { DaySwitch, nextDayISO } from "~/components/home/day-switch";
 import { Alert } from "~/components/ui/alert";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { ListRow } from "~/components/ui/list-row";
 import NavigationLink from "~/components/ui/navigation-link";
 import { SectionCard } from "~/components/ui/section-card";
 import { SectionLabel } from "~/components/ui/section-label";
+import { trackEvent } from "~/lib/analytics";
 import { hasPermission } from "~/lib/auth-utils";
 import { dayChangesConcept } from "~/lib/concepts/dayChanges";
 import type * as schoolClassDayContract from "~/lib/contract/school-class-day.generated";
@@ -115,21 +118,25 @@ export function SchoolDayChangesBlock({
   const { data: session } = useSession();
   const today = useBerlinToday();
   const isToday = selectedDate === today;
+  // Die Vorschau auf morgen (#7657): Übersicht und Klassenbericht des
+  // nächsten Kalendertags. Die Links führen in den Klassentag dieses Tags.
+  const [day, setDay] = useState<DayChangesDay>("today");
+  const shown = day === "tomorrow" ? nextDayISO(today) : today;
   // Wer alle Klassen sieht (Schulverwaltung), hat die Zahlen der ganzen
   // Schule direkt darunter; der Block zählt nur eigene Klassen.
   const ownClassesOnly = !hasPermission(session, "class_day:all_classes");
   const changes = useSWRAuth<DayChangesOverview>(
-    session && isToday ? schoolPortalKeys.dayChanges(today) : null,
-    fetchSchoolDayChanges,
+    session && isToday ? schoolPortalKeys.dayChanges(shown) : null,
+    () => fetchSchoolDayChanges(day === "tomorrow" ? shown : undefined),
     { revalidateOnFocus: true },
   );
   // Derselbe Schlüssel wie die Klassenübersicht: an heute liest die Seite
   // den Bericht nur einmal.
   const classes = useSWRAuth(
     session && ownClassesOnly && isToday
-      ? schoolPortalKeys.assignedClasses(today)
+      ? schoolPortalKeys.assignedClasses(shown)
       : null,
-    () => fetchAssignedClasses(today),
+    () => fetchAssignedClasses(shown),
     { revalidateOnFocus: true },
   );
   const { mutate: reloadChanges } = changes;
@@ -178,13 +185,24 @@ export function SchoolDayChangesBlock({
       concept={dayChangesConcept}
       testId="school-day-changes"
       loading={loading && !loadError}
-      action={
-        <NavigationLink
-          href={schoolPath(NOTICES_ROUTE)}
-          className="text-sm font-medium text-gray-700 underline-offset-4 hover:underline"
-        >
-          Hinweise der Leitung
-        </NavigationLink>
+      actions={
+        <>
+          <DaySwitch
+            value={day}
+            onChange={(next) => {
+              if (next === "tomorrow") {
+                trackEvent("day_changes_tomorrow_shown");
+              }
+              setDay(next);
+            }}
+          />
+          <NavigationLink
+            href={schoolPath(NOTICES_ROUTE)}
+            className="text-sm font-medium text-gray-700 underline-offset-4 hover:underline"
+          >
+            Hinweise der Leitung
+          </NavigationLink>
+        </>
       }
     >
       <div aria-live="polite" className="space-y-4">
@@ -204,22 +222,29 @@ export function SchoolDayChangesBlock({
         ) : null}
         {overview && !loading && canReassure && noVisibleChanges ? (
           <p className="text-sm text-gray-600">
-            Heute läuft alles wie geplant.
+            {day === "tomorrow"
+              ? "Morgen läuft alles wie geplant."
+              : "Heute läuft alles wie geplant."}
           </p>
         ) : null}
         {own.length > 0 || trips.length > 0 || classLines.length > 0 ? (
           <DayChangeList title="Betrifft dich">
             {trips.map((entry, i) => (
-              <EntryRow key={`trip-${i}`} entry={entry} today={today} />
+              <EntryRow
+                key={`trip-${i}`}
+                entry={entry}
+                day={day}
+                date={shown}
+              />
             ))}
             {own.map((entry, i) => (
-              <EntryRow key={`you-${i}`} entry={entry} today={today} />
+              <EntryRow key={`you-${i}`} entry={entry} day={day} date={shown} />
             ))}
             {classLines.map((klass) => (
               <li key={klass.school_class}>
                 <ListRow
                   density="compact"
-                  href={`${schoolPath(classDayPath(klass.school_class, today))}#${DAY_CHANGE_ANCHOR}`}
+                  href={`${schoolPath(classDayPath(klass.school_class, shown))}#${DAY_CHANGE_ANCHOR}`}
                 >
                   <span className="text-sm text-gray-900">
                     {childChangesText(klass.school_class, klass.changes)}
@@ -232,7 +257,12 @@ export function SchoolDayChangesBlock({
         {school.length > 0 ? (
           <DayChangeList title="Schule">
             {school.map((entry, i) => (
-              <EntryRow key={`school-${i}`} entry={entry} today={today} />
+              <EntryRow
+                key={`school-${i}`}
+                entry={entry}
+                day={day}
+                date={shown}
+              />
             ))}
           </DayChangeList>
         ) : null}
@@ -261,15 +291,18 @@ function DayChangeList({
 
 function EntryRow({
   entry,
-  today,
+  day,
+  date,
 }: {
   readonly entry: DayChange;
-  readonly today: string;
+  readonly day: DayChangesDay;
+  /** Der gezeigte Tag, für den Klassentag hinter dem Link. */
+  readonly date: string;
 }) {
-  const text = dayChangeText(entry);
+  const text = dayChangeText(entry, day);
   if (!text) return null;
   const span = dayChangeSpan(entry);
-  const href = schoolHref(entry, today);
+  const href = schoolHref(entry, date);
   const body = (
     <span className="min-w-0 flex-1">
       <span className="block text-sm text-gray-900">{text}</span>

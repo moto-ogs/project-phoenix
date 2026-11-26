@@ -44,6 +44,7 @@ export type AnalyticsEvent =
   | "day_changes_entry_clicked"
   | "day_changes_show_all"
   | "day_changes_done_expanded"
+  | "day_changes_tomorrow_shown"
   // Selbstöffnende Flächen des Einstiegs (#7541), nur über
   // trackOnboardingSurface mit einer festen Fläche.
   | "onboarding_surface_shown"

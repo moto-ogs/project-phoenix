@@ -1262,3 +1262,75 @@ describe("Termine aus dem eigenen Kalender (#7663)", () => {
     ).not.toBeInTheDocument();
   });
 });
+
+describe("DayChangesBlock: Vorschau auf morgen (#7657)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    phone.value = false;
+  });
+
+  it("liest morgen über den Umschalter mit eigenem Schlüssel und Sätzen für morgen", async () => {
+    const { berlinTodayISO } = await import("~/lib/date-helpers");
+    const { nextDayISO } = await import("~/components/home/day-switch");
+    const tomorrow = nextDayISO(berlinTodayISO());
+    serve({
+      date: tomorrow,
+      entries: [
+        absent("Ben Kollege", "you"),
+        change({
+          kind: "closing_day",
+          closing: { name: "Brückentag", traeger: false },
+        }),
+      ],
+    });
+    render(<DayChangesBlock />);
+    const today = screen.getByRole("button", { name: "Heute" });
+    expect(today).toHaveAttribute("aria-pressed", "true");
+
+    fireEvent.click(screen.getByRole("button", { name: "Morgen" }));
+
+    expect(useSWRAuth).toHaveBeenLastCalledWith(
+      `home-day-changes:account-a:${tomorrow}`,
+      expect.any(Function),
+      { revalidateOnFocus: true },
+    );
+    expect(trackEvent).toHaveBeenCalledWith("day_changes_tomorrow_shown");
+    expect(screen.getByRole("button", { name: "Morgen" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByText("Ben Kollege ist morgen nicht da.")).toBeVisible();
+    expect(
+      screen.getByText("Die OGS ist morgen geschlossen: Brückentag."),
+    ).toBeVisible();
+    expect(screen.queryByText(/heute/)).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Heute" }));
+    expect(useSWRAuth).toHaveBeenLastCalledWith(
+      "home-day-changes:account-a",
+      expect.any(Function),
+      { revalidateOnFocus: true },
+    );
+    expect(screen.getByText("Ben Kollege ist heute nicht da.")).toBeVisible();
+    expect(trackEvent).toHaveBeenCalledTimes(1);
+  });
+
+  it("sagt ohne Einträge, dass morgen alles wie geplant läuft", () => {
+    serve({});
+    render(<DayChangesBlock />);
+    fireEvent.click(screen.getByRole("button", { name: "Morgen" }));
+    expect(screen.getByText("Morgen läuft alles wie geplant.")).toBeVisible();
+  });
+
+  it("gibt morgen bei einer ausgefallenen Quelle keine Entwarnung", () => {
+    serve({ failedSources: ["children"] });
+    render(<DayChangesBlock />);
+    fireEvent.click(screen.getByRole("button", { name: "Morgen" }));
+    expect(screen.queryByText(/läuft alles wie geplant/)).toBeNull();
+    expect(
+      screen.getByText(
+        "Krankmeldungen, Abholzeiten und Ausflüge der Kinder konnten gerade nicht geladen werden.",
+      ),
+    ).toBeVisible();
+  });
+});

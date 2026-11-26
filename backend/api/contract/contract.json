@@ -2775,6 +2775,12 @@
       "portals": [
         "tenant"
       ],
+      "query": [
+        {
+          "name": "date",
+          "kind": "date"
+        }
+      ],
       "response": {
         "kind": "ref",
         "ref": "Overview"
@@ -10849,6 +10855,12 @@
       "pattern": "/school/day-changes/today",
       "portals": [
         "school"
+      ],
+      "query": [
+        {
+          "name": "date",
+          "kind": "date"
+        }
       ],
       "response": {
         "kind": "ref",

@@ -369,9 +369,13 @@ export const homeKeys = {
   ownGroup: (accountId: string) => `home-own-group:${accountId}`,
   /**
    * „Heute anders“ (#7659): the day's changes as the account may see them.
-   * `dayChanges("")` is the prefix the SSE flush matches.
+   * `dayChanges("")` is the prefix the SSE flush matches. `date` is the
+   * preview on tomorrow (#7657); without it the key is today's.
    */
-  dayChanges: (accountId: string) => `home-day-changes:${accountId}`,
+  dayChanges: (accountId: string, date?: string) =>
+    date
+      ? `home-day-changes:${accountId}:${date}`
+      : `home-day-changes:${accountId}`,
 } as const;
 
 /**

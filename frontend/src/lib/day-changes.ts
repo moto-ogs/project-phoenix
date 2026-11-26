@@ -290,17 +290,36 @@ export function mapDayChanges(overview: Overview): DayChangesOverview {
   };
 }
 
-/** Liest die Übersicht der Sitzung über den Proxy des Staff-Portals. */
-export async function fetchDayChanges(): Promise<DayChangesOverview> {
-  return mapDayChanges(await bffJson("tenant", "GET /api/day-changes/today"));
+/**
+ * Liest die Übersicht der Sitzung über den Proxy des Staff-Portals. Ohne
+ * `date` liest das Backend heute; `date` nennt morgen für die Vorschau
+ * (#7657), einen anderen Tag lehnt es ab.
+ */
+export async function fetchDayChanges(
+  date?: string,
+): Promise<DayChangesOverview> {
+  return mapDayChanges(
+    await bffJson(
+      "tenant",
+      "GET /api/day-changes/today",
+      date ? { query: { date } } : {},
+    ),
+  );
 }
 
 /**
  * Liest die Übersicht von moto schule (#7670): Unterrichtsschluss der
- * eigenen Klassen und Schließtage. Die Kinder stehen im Klassentag.
+ * eigenen Klassen und Schließtage. Die Kinder stehen im Klassentag. `date`
+ * wie bei `fetchDayChanges` (#7657).
  */
-export async function fetchSchoolDayChanges(): Promise<DayChangesOverview> {
+export async function fetchSchoolDayChanges(
+  date?: string,
+): Promise<DayChangesOverview> {
   return mapDayChanges(
-    await bffJson("school", "GET /school/day-changes/today"),
+    await bffJson(
+      "school",
+      "GET /school/day-changes/today",
+      date ? { query: { date } } : {},
+    ),
   );
 }

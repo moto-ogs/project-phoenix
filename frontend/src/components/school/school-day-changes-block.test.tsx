@@ -1,4 +1,10 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CLASS_DAY_REFRESH_EVENT } from "~/components/class-day/use-class-day-refresh";
@@ -375,5 +381,53 @@ describe("useJumpToDayChange", () => {
     expect(document.activeElement).toHaveTextContent("Ben, heute krank");
     expect(scrollIntoView).toHaveBeenCalledTimes(1);
     window.location.hash = "";
+  });
+});
+
+describe("SchoolDayChangesBlock: Vorschau auf morgen (#7657)", () => {
+  beforeEach(() => {
+    requestedChangeKeys.mockReset();
+    state.today = "2026-09-09";
+    state.selectedDate = "2026-09-09";
+    state.permissions = ["class_day:read", "calendar:school"];
+    state.classes = { school_day: true, classes: [] };
+    state.overview = {
+      date: state.today,
+      failedSources: [],
+      entries: [
+        change({
+          kind: "class_dismissal_changed",
+          section: "you",
+          schoolClass: { name: "3a", time: "11:30", children: 0 },
+          link: { target: "school_class", staffId: null },
+        }),
+      ],
+    };
+  });
+
+  it("liest morgen und verlinkt in den Klassentag von morgen", async () => {
+    const { nextDayISO } = await import("~/components/home/day-switch");
+    const tomorrow = nextDayISO(state.today);
+    renderBlock();
+    expect(requestedChangeKeys).toHaveBeenLastCalledWith(
+      `school-day-changes-${state.today}`,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Morgen" }));
+
+    expect(requestedChangeKeys).toHaveBeenLastCalledWith(
+      `school-day-changes-${tomorrow}`,
+    );
+    const row = screen.getByRole("link", {
+      name: "Bei Klasse 3a endet der Unterricht morgen um 11:30 Uhr.",
+    });
+    expect(row.getAttribute("href")).toContain(`tag=${tomorrow}`);
+  });
+
+  it("sagt ohne Einträge, dass morgen alles wie geplant läuft", () => {
+    state.overview = { date: state.today, failedSources: [], entries: [] };
+    renderBlock();
+    fireEvent.click(screen.getByRole("button", { name: "Morgen" }));
+    expect(screen.getByText("Morgen läuft alles wie geplant.")).toBeVisible();
   });
 });

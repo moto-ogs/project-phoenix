@@ -16,12 +16,14 @@ import {
   dayChangeSpan,
   dayChangeText,
   sourceFailureText,
+  type DayChangesDay,
 } from "~/components/home/day-changes-text";
 import {
   trackEntryClick,
   useDayChangeHref,
 } from "~/components/home/day-change-link";
 import { DayNoticeRow } from "~/components/home/day-notice-row";
+import { DaySwitch, nextDayISO } from "~/components/home/day-switch";
 import { HOME_TWO_COLUMNS } from "~/components/home/home-card-rows";
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
@@ -37,6 +39,7 @@ import {
   type DayChange,
   type DayChangesOverview,
 } from "~/lib/day-changes";
+import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { useCurrentTimestamp } from "~/lib/hooks/use-current-timestamp";
 import { BELOW_SM, useMediaQuery } from "~/lib/hooks/use-media-query";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
@@ -75,9 +78,14 @@ const PHONE_SCHOOL_ROWS = 3;
 export function DayChangesBlock() {
   const { data: session } = useSession();
   const accountId = session?.user?.id ?? "";
+  // Die Vorschau auf morgen (#7657): derselbe Baustein für den nächsten
+  // Kalendertag, auch am Wochenende oder an einem Schließtag.
+  const [day, setDay] = useState<DayChangesDay>("today");
+  const tomorrow = nextDayISO(useBerlinToday());
+  const date = day === "tomorrow" ? tomorrow : undefined;
   const { data, error, isLoading, mutate } = useSWRAuth<DayChangesOverview>(
-    homeKeys.dayChanges(accountId),
-    fetchDayChanges,
+    homeKeys.dayChanges(accountId, date),
+    () => fetchDayChanges(date),
     // Abgleich beim Fokus des Fensters (#7659), zusätzlich zu den
     // SSE-Ereignissen und dem Abgleich nach erneuter Verbindung.
     { revalidateOnFocus: true },
@@ -90,6 +98,16 @@ export function DayChangesBlock() {
     <HomeCard
       title="Heute anders"
       leading={<HomeCardIcon concept={dayChangesConcept} />}
+      inlineActions
+      actions={
+        <DaySwitch
+          value={day}
+          onChange={(next) => {
+            if (next === "tomorrow") trackEvent("day_changes_tomorrow_shown");
+            setDay(next);
+          }}
+        />
+      }
     >
       <div data-home-card-fit="">
         {(() => {
@@ -97,10 +115,14 @@ export function DayChangesBlock() {
           if (!data) {
             return isLoading || error ? <DayChangesSkeleton /> : null;
           }
-          return <DayChangesContent overview={data} onChanged={mutate} />;
+          return (
+            <DayChangesContent overview={data} day={day} onChanged={mutate} />
+          );
         })()}
       </div>
-      <DayChangesAnnouncer overview={data} />
+      {/* Ein Wechsel des Tages ist keine neue Änderung: je Tag eine eigene
+          Ansage. */}
+      <DayChangesAnnouncer key={day} overview={data} />
     </HomeCard>
   );
 }
@@ -117,6 +139,7 @@ function DayChangesSkeleton() {
 
 /** Was die Übersicht zeigt: nur Arten, für die das Frontend einen Satz hat. */
 function shownEntries(overview: DayChangesOverview): DayChange[] {
+  // Welche Arten einen Satz haben, hängt nicht vom Tag ab.
   return overview.entries.filter((entry) => dayChangeText(entry) !== null);
 }
 
@@ -232,9 +255,11 @@ function changeMessage(
 
 function DayChangesContent({
   overview,
+  day,
   onChanged,
 }: {
   readonly overview: DayChangesOverview;
+  readonly day: DayChangesDay;
   /** Lädt die Übersicht neu, etwa nach einer Kenntnisnahme (#7667). */
   readonly onChanged: () => Promise<unknown>;
 }) {
@@ -252,7 +277,15 @@ function DayChangesContent({
   ));
 
   if (shown.length === 0 && failures.length === 0) {
-    return <HomeCardEmpty title="Heute läuft alles wie geplant." />;
+    return (
+      <HomeCardEmpty
+        title={
+          day === "tomorrow"
+            ? "Morgen läuft alles wie geplant."
+            : "Heute läuft alles wie geplant."
+        }
+      />
+    );
   }
   return (
     // Erst was die Person betrifft, darunter die Schule, beide über die
@@ -264,6 +297,7 @@ function DayChangesContent({
         <DayChangesSection
           title="Betrifft dich"
           entries={mine}
+          day={day}
           now={now}
           onChanged={onChanged}
         />
@@ -272,6 +306,7 @@ function DayChangesContent({
         <DayChangesSection
           title="Schule"
           entries={school}
+          day={day}
           now={now}
           onChanged={onChanged}
           folds
@@ -284,12 +319,14 @@ function DayChangesContent({
 function DayChangesSection({
   title,
   entries,
+  day,
   now,
   onChanged,
   folds = false,
 }: {
   readonly title: string;
   readonly entries: readonly DayChange[];
+  readonly day: DayChangesDay;
   /** Die Uhr des Browsers in Minuten-Schritten; 0 vor dem ersten Rendern. */
   readonly now: number;
   readonly onChanged: () => Promise<unknown>;
@@ -322,7 +359,7 @@ function DayChangesSection({
                 onChanged={onChanged}
               />
             ) : (
-              <DayChangeRow key={key} entry={entry} />
+              <DayChangeRow key={key} entry={entry} day={day} />
             ),
           )}
         </ul>
@@ -338,7 +375,7 @@ function DayChangesSection({
             tooltip={
               expanded
                 ? "Zeigt wieder nur die ersten Änderungen der Schule."
-                : "Zeigt alle Änderungen der Schule von heute."
+                : `Zeigt alle Änderungen der Schule von ${day === "tomorrow" ? "morgen" : "heute"}.`
             }
             onToggle={() => {
               if (!expanded) {
@@ -517,16 +554,21 @@ function withKeys(
 
 function DayChangeRow({
   entry,
+  day = "today",
   muted = false,
 }: {
   readonly entry: DayChange;
+  /** Der Tag der Sätze; „erledigt“ gibt es nur heute. */
+  readonly day?: DayChangesDay;
   /** Erledigt: grau, damit das Aktuelle vorne bleibt. */
   readonly muted?: boolean;
 }) {
   if (entry.childSummary) {
-    return <ChildSummaryRow entry={entry} summary={entry.childSummary} />;
+    return (
+      <ChildSummaryRow entry={entry} summary={entry.childSummary} day={day} />
+    );
   }
-  return <DayChangeLinkRow entry={entry} muted={muted} />;
+  return <DayChangeLinkRow entry={entry} day={day} muted={muted} />;
 }
 
 /**
@@ -537,9 +579,11 @@ function DayChangeRow({
 function ChildSummaryRow({
   entry,
   summary,
+  day,
 }: {
   readonly entry: DayChange;
   readonly summary: NonNullable<DayChange["childSummary"]>;
+  readonly day: DayChangesDay;
 }) {
   const hrefOf = useDayChangeHref();
   const [expanded, setExpanded] = useState(false);
@@ -561,7 +605,7 @@ function ChildSummaryRow({
       {expanded ? (
         <ul className="mt-1 space-y-1">
           {summary.items.map((item) => {
-            const text = childChangeText(item.kind, item.child);
+            const text = childChangeText(item.kind, item.child, day);
             if (!text) return null;
             const href = hrefOf(item.link);
             const body = (
@@ -594,13 +638,15 @@ function ChildSummaryRow({
 
 function DayChangeLinkRow({
   entry,
+  day,
   muted = false,
 }: {
   readonly entry: DayChange;
+  readonly day: DayChangesDay;
   readonly muted?: boolean;
 }) {
   const hrefOf = useDayChangeHref();
-  const text = dayChangeText(entry) ?? "";
+  const text = dayChangeText(entry, day) ?? "";
   const span = dayChangeSpan(entry);
   const href = hrefOf(entry.link);
   // Zeitraum und Ort stehen bei jeder Zeile an derselben Stelle: hinter dem
