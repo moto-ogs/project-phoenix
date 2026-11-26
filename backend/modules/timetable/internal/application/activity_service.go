@@ -265,7 +265,7 @@ func (s *ActivityService) UpdateGroup(ctx context.Context, group *activityContra
 	if err != nil {
 		return nil, &activityContract.ActivityError{Op: "update group", Err: err}
 	}
-	if timetable.IsSystemActivityName(existingGroup.Name) && group.Name != existingGroup.Name {
+	if existingGroup.IsSystem && group.Name != existingGroup.Name {
 		return nil, &activityContract.ActivityError{Op: "update group", Err: activityContract.ErrSystemActivityProtected}
 	}
 	if group.CategoryID != existingGroup.CategoryID {
@@ -300,7 +300,7 @@ func (s *ActivityService) DeleteGroup(ctx context.Context, id int64, requestingS
 		}
 		return &activityContract.ActivityError{Op: "delete group", Err: err}
 	}
-	if timetable.IsSystemActivityName(existingGroup.Name) {
+	if existingGroup.IsSystem {
 		return &activityContract.ActivityError{Op: "delete group", Err: activityContract.ErrSystemActivityProtected}
 	}
 	if existingGroup.IsTemplate {
