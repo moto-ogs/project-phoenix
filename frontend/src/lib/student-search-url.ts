@@ -64,8 +64,8 @@ const MULTI_VALUE_FILTER_PARAMS = new Set<FilterQueryParam>([
   "pickup_time",
 ]);
 
-export const BOOLEAN_FILTER_VALUES = ["all", "yes", "no"] as const;
-export const PICKUP_STATUS_FILTER_VALUES = [
+const BOOLEAN_FILTER_VALUES = ["all", "yes", "no"] as const;
+const PICKUP_STATUS_FILTER_VALUES = [
   "all",
   "self",
   "pickedUp",
@@ -101,7 +101,7 @@ export function keepOfferedYears(values: readonly string[]): string[] {
   );
 }
 
-export function parseYearParam(value: string | null | undefined): string[] {
+function parseYearParam(value: string | null | undefined): string[] {
   return keepOfferedYears(parseMultiValueParam(value));
 }
 
@@ -111,7 +111,7 @@ export function keepValidGroupIds(values: readonly string[]): string[] {
     .filter((groupId) => groupId !== "");
 }
 
-export function parseGroupIdsParam(value: string | null | undefined): string[] {
+function parseGroupIdsParam(value: string | null | undefined): string[] {
   return keepValidGroupIds(parseMultiValueParam(value));
 }
 
