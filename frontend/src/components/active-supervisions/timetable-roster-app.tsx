@@ -196,11 +196,6 @@ const CHECK_IN_WORDING = {
   doneAgain: (name: string) => `${name} ist wieder da.`,
 } as const;
 
-const ROW_ACTION_LABELS: Record<"check-in" | "check-out", string> = {
-  "check-in": CHECK_IN_WORDING.row,
-  "check-out": "Raum verlassen",
-};
-
 /** Alle Aktionen, die das Kind-Blatt anbietet, in der Reihenfolge der Liste. */
 function sheetActions(
   row: TimetableRosterRow,
@@ -653,16 +648,19 @@ export function TimetableRosterApp({
     // stünde dieselbe Aktion doppelt.
     if (isSplit) return undefined;
     const action = primaryRowAction(row, access);
-    if (action !== "check-in" && action !== "check-out") return undefined;
+    // „Raum verlassen“ steht nicht in jeder Zeile: zwölfmal derselbe Knopf
+    // machte die Liste zum Formular und schob Hinweise in eine dritte
+    // Zeile. Ein Tipp auf das Kind öffnet das Blatt, dort ist es die erste
+    // Aktion. „Ist da“ und „Wieder da“ bleiben in der Zeile: Sie betreffen
+    // nur die Kinder, die noch fehlen oder gegangen sind.
+    if (action !== "check-in") return undefined;
     const isBusy = busy === `${row.studentId}:${action}`;
     // Ausgeschrieben statt als Symbol: Ein Pfeil allein las sich als
     // „Abmelden“, ein Haken gar nicht. Ein gegangenes Kind ist „Wieder da“.
     const label =
-      action === "check-out"
-        ? ROW_ACTION_LABELS["check-out"]
-        : row.status === "expected"
-          ? CHECK_IN_WORDING.expected
-          : CHECK_IN_WORDING.returned;
+      row.status === "expected"
+        ? CHECK_IN_WORDING.expected
+        : CHECK_IN_WORDING.returned;
     return (
       <Button
         type="button"
@@ -672,11 +670,7 @@ export function TimetableRosterApp({
         isLoading={isBusy}
         disabled={busy !== null && !isBusy}
         aria-label={`${label}: ${childName(row)}`}
-        tooltip={
-          action === "check-in"
-            ? `${label}: ${CHECK_IN_TOOLTIP}`
-            : "Raum verlassen: Trägt das Kind sofort aus diesem Raum aus."
-        }
+        tooltip={`${label}: ${CHECK_IN_TOOLTIP}`}
         onClick={() => void runAction(action, row)}
       >
         {label}
@@ -1098,7 +1092,9 @@ function SupervisionChildSheet({
 const NO_STATUS: ChildDayStatus | null = null;
 
 const PICKUP_OVERDUE_STATUS: ChildDayStatus = {
-  value: "Abholung überfällig",
+  // Wie die Zeile („geht 15:30“) und die Angabe im Blatt („Geht 15:30,
+  // überfällig“): dieselbe Gehzeit, nicht ein zweites Wort „Abholung“.
+  value: "Gehzeit überfällig",
   tone: "absent",
 };
 
