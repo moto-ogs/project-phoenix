@@ -226,7 +226,7 @@ describe("payloadFromDraft", () => {
     const payload = payloadFromDraft(complete(), offer, "captcha");
     expect(payload.custody_confirmed).toBe(true);
     expect(payload.declaration_name).toBe("Eva Muster");
-    expect(payload.consent_version).toBe(5);
+    expect(payload.consent_version).toBe(6);
     // The retention the privacy text named (#6691).
     expect(payload.retention_days).toBe(365);
   });
@@ -722,7 +722,11 @@ describe("booking of days (#4701)", () => {
       "token",
     );
     expect(payload.children[0]?.bookings).toEqual([
-      { week_id: "11", time_model_id: "21", days: ["2027-01-04", "2027-01-05"] },
+      {
+        week_id: "11",
+        time_model_id: "21",
+        days: ["2027-01-04", "2027-01-05"],
+      },
     ]);
   });
 
