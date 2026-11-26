@@ -1775,6 +1775,38 @@ describe("HolidayRegistrationForm questions of the Träger (#5198)", () => {
       screen.getByLabelText(/Ich bin einverstanden, dass der Träger/),
     ).not.toBeChecked();
   });
+  // #8136: the consent texts got a new version while the form was open. The
+  // form reads the offer again and the parent agrees to the new texts.
+  it("loads the offer again and asks for both consents when the consent texts are stale", async () => {
+    mockSubmit.mockRejectedValue(
+      new ApiError("validation failed", 400, {
+        errors: [{ field: "consent_version", message: "not current" }],
+      }),
+    );
+    const reload = vi.fn().mockResolvedValue(undefined);
+    renderForm(null, offerWithQuestions, reload);
+    fillRegistration();
+    fireEvent.click(screen.getByRole("radio", { name: "Nein" }));
+    type(
+      screen.getByRole("textbox", {
+        name: /Wie haben Sie von den Ferien erfahren/,
+      }),
+      "Schule",
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Weiter zur Zusammenfassung" }),
+    );
+    await screen.findByText("Bitte prüfe deine Angaben");
+    fireEvent.click(screen.getByRole("button", { name: "Solve captcha" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Verbindlich anmelden" }),
+    );
+
+    await waitFor(() => expect(reload).toHaveBeenCalledTimes(1));
+    expect(
+      await screen.findByLabelText(/Ich bin einverstanden, dass der Träger/),
+    ).not.toBeChecked();
+  });
   // ADR 0311 rule 6: a failed read of the changed form says so instead of
   // claiming the parent sees the new form.
   it("names a failed read of the changed form", async () => {

@@ -70,6 +70,16 @@ import { parentKeys } from "~/lib/swr/parent-keys";
 
 /** The code of a refusal because the Träger changed the form (#5198). */
 const FORM_CHANGED = "enrollment.holiday_registration_form_changed";
+
+/**
+ * The consent texts got a new version while the form was open: the backend
+ * refuses the old one at `consent_version`, which no field of the form shows.
+ */
+function namesStaleConsentTexts(error: ApiError): boolean {
+  return (
+    error.errors?.some(({ field }) => field === "consent_version") ?? false
+  );
+}
 /** The code of a proof whose upload no longer counts (#5238). */
 const UPLOAD_EXPIRED = "enrollment.upload_expired";
 
@@ -191,25 +201,33 @@ export function HolidayRegistrationForm({
       // The form changed since it was read: the error path reads it again
       // and says when that fails (ADR 0311).
       let reload: (() => Promise<unknown>) | undefined;
-      if (err instanceof ApiError && err.code === FORM_CHANGED) {
-        // The privacy text may name another retention now (#6691): the
-        // parent agrees to the text the reloaded form shows, not the old one.
+      const formChanged = err instanceof ApiError && err.code === FORM_CHANGED;
+      const staleConsentTexts =
+        err instanceof ApiError && namesStaleConsentTexts(err);
+      if (formChanged || staleConsentTexts) {
+        // The consent texts may read differently now (#6691, #8136): the
+        // parent agrees to the texts the reloaded form shows, not the old
+        // ones.
         setDraft((current) => ({
           ...current,
           legalAcceptances: {},
           privacyConsent: false,
+          healthConsent: false,
         }));
+      }
+      if (formChanged) {
         reload = onFormChanged;
       } else if (
-        err instanceof ApiError &&
-        err.errors?.some(({ field }) =>
-          /^(children\.\d+\.)?criteria(?:\.|$)/.test(field),
-        )
+        staleConsentTexts ||
+        (err instanceof ApiError &&
+          err.errors?.some(({ field }) =>
+            /^(children\.\d+\.)?criteria(?:\.|$)/.test(field),
+          ))
       ) {
-        // The catalog can change without a new form version. Reload its
-        // questions so parents can answer them, keeping the entire draft.
-        // A failed read keeps the questions on screen; the field error says
-        // what to check.
+        // The consent texts and the catalog can change without a new form
+        // version. Read the offer again, keeping the rest of the draft, so
+        // the next submit names what the form shows. A failed read keeps
+        // the form on screen; the error says what to check.
         await onFormChanged?.().catch((reloadError: unknown) =>
           logger.warn("holiday_registration_offer_reload_failed", {
             error:

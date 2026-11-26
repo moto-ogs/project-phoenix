@@ -78,8 +78,20 @@ func TestConsentTextsNameTheCareTeamFromVersionSeven(t *testing.T) {
 
 	previous, ok := enrollment.HolidayConsentTextsOf(enrollment.HolidayConsentVersionInformalDeclaration, 365)
 	require.True(t, ok)
-	assert.Contains(t, previous.PrivacyConsent, "Die OGS, die mein Kind in einer Ferienwoche betreut,", "version 6 keeps its wording")
-	assert.Contains(t, previous.HealthConsent, "Der Träger und die OGS sehen", "version 6 keeps its wording")
+	assert.Equal(t, "Ich bin einverstanden, dass der Träger die Angaben für die Ferienbetreuung nutzt. "+
+		"Er löscht sie 365 Tage nach den Ferien. Gesundheitsangaben löscht er schon 92 Tage nach den Ferien. "+
+		"Die OGS, die mein Kind in einer Ferienwoche betreut, "+
+		"sieht Name und Telefon der zweiten sorgeberechtigten Person. Sie sieht auch die Antworten, "+
+		"die der Träger für sie freigibt. Gesundheitsangaben sieht sie nur, wenn ich zustimme. "+
+		"Die OGS sieht das schon vor der Ferienwoche. So kann sie sich vorbereiten. "+
+		"Die Liste der Kinder sieht sie bis zum letzten Tag der Woche. "+
+		"Name, Telefon und Antworten kann sie danach höchstens 7 Tage lesen. Dann werden sie gelöscht. "+
+		"Bekommt meine Rechnung eine Kundennummer der Gemeinde (Debitorennummer), behält der Träger sie für spätere Anmeldungen. "+
+		"Er löscht sie am Ende des dritten Jahres nach der letzten Anmeldung. "+
+		"Muss er Rechnungen länger aufbewahren, löscht er sie danach.", previous.PrivacyConsent, "version 6 keeps its wording word for word")
+	assert.Equal(t, "Ich bin einverstanden: Der Träger und die OGS sehen die Gesundheitsangaben meiner Kinder. "+
+		"Es geht um die OGS, die ein Kind in einer Ferienwoche betreut. "+
+		"Sie sieht die Angaben ab der Bestätigung bis zum letzten Tag der Woche.", previous.HealthConsent, "version 6 keeps its wording word for word")
 	previous.Version, previous.PrivacyConsent, previous.HealthConsent = current.Version, current.PrivacyConsent, current.HealthConsent
 	assert.Equal(t, previous, current, "version 7 changes only the privacy and the health text")
 
