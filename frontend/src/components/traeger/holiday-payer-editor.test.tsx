@@ -265,6 +265,40 @@ describe("HolidayPayerEditor", () => {
     await waitFor(() => expect(save()).not.toHaveAttribute("aria-disabled"));
   });
 
+  it("offers the family when the paying cost bearer is switched off", async () => {
+    mocks.fetchPreview.mockImplementation(() =>
+      Promise.resolve({
+        ...previewOf({ kind: "family", costBearerId: null }),
+        current: {
+          kind: "cost_bearer",
+          costBearerId: "4",
+          costBearerName: OFFICE.name,
+        },
+        changed: true,
+        exemptionAvailable: false,
+      }),
+    );
+    renderEditor({
+      costBearers: [],
+      contribution: {
+        ...FROZEN,
+        costBearerId: "4",
+        costBearerName: OFFICE.name,
+      },
+    });
+
+    fireEvent.click(
+      await screen.findByRole("radio", { name: /^Die Familie bezahlt/ }),
+    );
+    await waitFor(() => expect(save()).not.toHaveAttribute("aria-disabled"));
+    expect(
+      screen.queryByText(/keine Befreiungsregel und keinen Kostenträger/),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("radio", { name: /Kosten übernimmt/ }),
+    ).toBeNull();
+  });
+
   it("keeps the form open and reads the amounts again after a refusal of a changed state", async () => {
     const { onSaved } = renderEditor();
     mocks.changePayer.mockRejectedValue(

@@ -293,7 +293,10 @@ export function HolidayPayerEditor({
     setSaving(false);
   };
 
-  const hasChoice = exemptionAvailable || costBearers.length > 0;
+  // Back to the family stays a choice while someone else pays, also when the
+  // paying cost bearer is switched off and no other payer exists.
+  const hasChoice =
+    exemptionAvailable || costBearers.length > 0 || current.kind !== "family";
   let disabledReason: string | undefined;
   if (!changed) disabledReason = "Wähle zuerst einen anderen Zahler.";
   else if (!preview) disabledReason = "Die neuen Beträge werden berechnet.";

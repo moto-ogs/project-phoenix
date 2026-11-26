@@ -131,7 +131,7 @@ export function HolidayPayerChoiceField({
             </ChoiceTile>
           );
         })}
-        {payer === "cost_bearer" ? (
+        {payer === "cost_bearer" && costBearers.length > 0 ? (
           <div>
             <FieldLabel
               id={`${idPrefix}-cost-bearer-label`}
