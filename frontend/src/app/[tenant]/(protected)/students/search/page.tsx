@@ -66,7 +66,9 @@ import { answerQuestionLabel } from "~/lib/school-search";
 import { hasPermission } from "~/lib/auth-utils";
 import type { Student } from "~/lib/student-helpers";
 import type { Group, Room } from "~/lib/api";
+import { CalendarBlankIcon } from "@phosphor-icons/react";
 import { Button } from "~/components/ui/button";
+import { MotoDuotoneIcon } from "~/components/ui/moto-duotone-icon";
 import { DatePicker } from "~/components/ui/date-picker";
 import { DataTableStatusBadge } from "~/components/ui/data-table";
 import {
@@ -783,6 +785,14 @@ function compareByName(a: Student, b: Student) {
 
 // Ohne offenen Check-in zählt ein Kind als zuhause, wie in der Betriebszahl
 // „Zuhause“ der Startseite (#4588): ein Kind ohne bekannten Ort oder mit
+// Tag-Knöpfe im Filter: am Handy dieselben Chips wie die Reiter der App
+// (gewählt = `aria-pressed`), am Desktop wie heute Knopf und Umrandung.
+function dayChoice(selected: boolean, app: boolean) {
+  return app
+    ? ({ variant: "chip", size: "md", "aria-pressed": selected } as const)
+    : ({ variant: selected ? "primary" : "outline", size: "compact" } as const);
+}
+
 // „Kommt heute nicht“ ist nicht in der OGS. Statuszeile, Statusfilter und
 // „Gruppieren nach Status“ lesen diese eine Definition.
 const HOME_STATUSES: ReadonlySet<string> = new Set([
@@ -2562,8 +2572,7 @@ function SearchPageContent() {
             <div className="app:gap-2 flex flex-wrap gap-1.5">
               <Button
                 type="button"
-                size="compact"
-                variant={isToday ? "primary" : "outline"}
+                {...dayChoice(isToday, appView)}
                 onClick={() => updateSelectedDate(todayIso)}
                 tooltip="Zeigt, wo die Kinder heute gerade sind."
               >
@@ -2575,8 +2584,7 @@ function SearchPageContent() {
               {tomorrowIso <= maxDateIso && (
                 <Button
                   type="button"
-                  size="compact"
-                  variant={selectedDate === tomorrowIso ? "primary" : "outline"}
+                  {...dayChoice(selectedDate === tomorrowIso, appView)}
                   onClick={() => updateSelectedDate(tomorrowIso)}
                   tooltip="Zeigt, welche Kinder morgen laut Plan kommen."
                 >
@@ -3624,9 +3632,20 @@ function SearchPageContent() {
         filterPanel={{
           sections: appView
             ? [
-                ...filterSections.filter(
-                  (section) => section.title === "Anwesenheit",
-                ),
+                // Handy: Ein Haken vor „Anwesenheit“ las sich wie „gewählt“;
+                // ein Kalender sagt, dass es um den Tag geht.
+                ...filterSections
+                  .filter((section) => section.title === "Anwesenheit")
+                  .map((section) => ({
+                    ...section,
+                    icon: (
+                      <MotoDuotoneIcon
+                        icon={CalendarBlankIcon}
+                        tone="blue"
+                        size="100%"
+                      />
+                    ),
+                  })),
                 ...filterSections.filter(
                   (section) => section.title !== "Anwesenheit",
                 ),
