@@ -7201,7 +7201,7 @@ export const parentHolidayConsentsTopic =
         "moto fragt nach. Wähle noch einmal `Widerrufen`.",
       ],
       result:
-        "Die Einwilligung gilt ab jetzt nicht mehr. Die OGS, die dein Kind in den Ferien betreut, sieht das sofort. Der Träger sieht es auch.",
+        "Die Einwilligung gilt ab jetzt nicht mehr. Das Team, das dein Kind in den Ferien betreut, sieht das sofort. Der Träger sieht es auch.",
       notes: [
         "Die Einwilligungen sind freiwillig. Die Anmeldung gilt auch ohne sie.",
         "Ohne Elternkonto widerrufst du beim Träger, zum Beispiel per Mail. Er trägt den Widerruf in moto ein.",
@@ -7267,7 +7267,7 @@ export const parentHolidayRegistrationTopic =
       result:
         "Du bekommst eine E-Mail: Die Anmeldung ist eingegangen. Das ist noch keine Zusage. Der Träger schreibt dir, ob dein Kind einen Platz bekommt. In der E-Mail steht auch `Deine Erklärung` mit dem genauen Text. Hebe die E-Mail auf. Mit `Stand ansehen` in der E-Mail siehst du jederzeit, wie weit deine Anmeldung ist. In der Eltern-App siehst du den Stand unter `Ferienanmeldungen`.",
       notes: [
-        "Achtet der Träger auf den Ferienwunsch aus der OGS-Anmeldung, steht das über den Kindern. Mit Elternkonto siehst du beim Kind, was in der OGS-Anmeldung steht.",
+        "Achtet der Träger auf den Ferienwunsch aus der Anmeldung für das Schuljahr, steht das über den Kindern. Mit Elternkonto siehst du beim Kind, was in dieser Anmeldung steht.",
         "Ein Elternkonto brauchst du nicht. Mit Konto siehst du in der Eltern-App den Stand der Anmeldung, die Bestätigung und die Rechnung.",
         "Hast du bei `Möchtest du ein Elternkonto anlegen?` `Ja` gewählt? Dann bekommst du eine zweite E-Mail. Öffne den Link darin. Lege zweimal dein Passwort fest und wähle `Konto anlegen`. Danach wählst du `Anmelden`.",
         "Hast du schon ein Elternkonto? Dann steht nach dem Link `Du hast schon ein Elternkonto`. Wähle `Anmelden`. Dein Passwort bleibt gleich.",
@@ -7278,9 +7278,9 @@ export const parentHolidayRegistrationTopic =
         "Vergibt der Träger die Plätze nach festen Regeln? Dann steht im Formular `Fragen für die Platzvergabe`. Beantworte jede Frage mit Ja oder Nein. Das Büro kann nach einem Nachweis fragen. Nach dem Absenden steht bei jeder Woche `Platz offen`. Das Büro vergibt die Plätze. Du bekommst eine E-Mail.",
         "Nach dem Absenden siehst du bei jeder Woche `Platz` oder `Warteliste`. Ist eine Woche voll, steht dein Kind dort auf der Warteliste. Wird ein Platz frei, bekommt dein Kind ihn automatisch. Du bekommst dann eine E-Mail. Bei einer verbindlichen Anmeldung ist auch dieser Platz verbindlich.",
         "Liest du die Anmeldung in einer anderen Sprache? Dann steht unter jeder Erklärung eine Übersetzung. Es gilt der deutsche Text.",
-        "Gesundheitsangaben sehen der Träger und die OGS, die dein Kind in der Ferienwoche betreut. Nur wenn du zustimmst.",
-        "Die OGS, die dein Kind in einer Ferienwoche betreut, sieht Name und Telefon der zweiten sorgeberechtigten Person. Sie sieht auch die Antworten, die der Träger für sie freigibt. Zum Beispiel, ob dein Kind allein nach Hause gehen darf.",
-        "Die OGS sieht diese Angaben schon vor der Ferienwoche. So kann sie sich vorbereiten. Die Liste der Kinder sieht sie bis zum letzten Tag der Woche. Name, Telefon und Antworten kann sie danach höchstens 7 Tage lesen. Dann werden sie gelöscht. Gesundheitsangaben sieht sie nur bis zum letzten Tag der Woche.",
+        "Gesundheitsangaben sehen der Träger und das Team, das dein Kind in der Ferienwoche betreut. Nur wenn du zustimmst.",
+        "Das Team, das dein Kind in einer Ferienwoche betreut, sieht Name und Telefon der zweiten sorgeberechtigten Person. Es sieht auch die Antworten, die der Träger für das Team freigibt. Zum Beispiel, ob dein Kind allein nach Hause gehen darf.",
+        "Das Team sieht diese Angaben schon vor der Ferienwoche. So kann es sich vorbereiten. Die Liste der Kinder sieht es bis zum letzten Tag der Woche. Name, Telefon und Antworten kann es danach höchstens 7 Tage lesen. Dann werden sie gelöscht. Gesundheitsangaben sieht es nur bis zum letzten Tag der Woche.",
         "Ein Kind von einer anderen Schule kommt als Feriengast.",
         "Manche Ferien haben eine Grenze, zum Beispiel höchstens 5 Tage pro Kind. Dann steht sie über den Wochen. Eine ganze Woche zählt mit allen Tagen von Montag bis Freitag. Meldest du dein Kind ein zweites Mal an, zählen die Tage beider Anmeldungen zusammen.",
         "Ein Feiertag oder Schließtag ist bei den Tagen durchgestrichen. An diesem Tag ist keine Betreuung, du kannst ihn nicht wählen.",

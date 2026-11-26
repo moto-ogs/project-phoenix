@@ -27,7 +27,7 @@
   "toDocumentsTooltip": "Opens your documents with the confirmation and invoice.",
   "consents": {
     "title": "Consents",
-    "description": "Voluntary. You can withdraw or give each consent again at any time. The OGS caring for your child in the holidays sees the change at once.",
+    "description": "Voluntary. You can withdraw or give each consent again at any time. The team caring for your child in the holidays sees the change at once.",
     "states": {
       "given": "Given",
       "withdrawn": "Withdrawn",
@@ -45,7 +45,7 @@
     "grantAria": "Give consent “{title}”",
     "grantTooltip": "Gives the consent. moto asks you first.",
     "withdrawTitle": "Withdraw consent?",
-    "withdrawNote": "The withdrawal applies from now on. The OGS caring for your child in the holidays sees it at once.",
+    "withdrawNote": "The withdrawal applies from now on. The team caring for your child in the holidays sees it at once.",
     "withdrawConfirm": "Withdraw",
     "withdrawing": "Withdrawing …",
     "grantTitle": "Give consent?",
