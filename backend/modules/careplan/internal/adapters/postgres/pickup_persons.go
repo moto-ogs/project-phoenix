@@ -2,6 +2,8 @@ package postgres
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
@@ -125,6 +127,32 @@ func instant(value *time.Time) time.Time {
 		return time.Time{}
 	}
 	return *value
+}
+
+// LockGuardianPickupPermission locks one relationship's pickup permission
+// and returns whether it currently applies on the plan weekday. Permission
+// writes update this same row, so a withdrawal cannot pass between this check
+// and saving the day's pickup person.
+func (s *Store) LockGuardianPickupPermission(ctx context.Context, relationshipID int64, weekday int) (bool, domain.OperationStats, error) {
+	db, tenantID, err := s.databaseForWrite(ctx, "lock guardian pickup permission")
+	if err != nil {
+		return false, domain.OperationStats{}, err
+	}
+	stats := domain.OperationStats{Queries: 1}
+	started := time.Now()
+	var allowed bool
+	err = db.NewRaw(`SELECT can_pickup AND (pickup_weekdays IS NULL OR ? = ANY(pickup_weekdays))
+		FROM users.student_guardian_pickup_permissions
+		WHERE tenant_id = ? AND relationship_id = ?
+		FOR UPDATE`, weekday, tenantID, relationshipID).Scan(ctx, &allowed)
+	stats.StatementDuration = time.Since(started)
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, stats, nil
+	}
+	if err != nil {
+		return false, stats, fmt.Errorf("care plan postgres: lock guardian pickup permission: %w", err)
+	}
+	return allowed, stats, nil
 }
 
 // SavePickupPerson writes the one pickup person of the child's day. The

@@ -25,6 +25,9 @@ var (
 	// ErrPickupPersonNotCareDay refuses a day where the school does not run
 	// care.
 	ErrPickupPersonNotCareDay = errors.New("die Abholperson kann nur an einem Betreuungstag eingetragen werden")
+	// ErrPickupPersonGuardianNotAuthorized refuses a contact whose pickup
+	// permission no longer applies while the day's person is being saved.
+	ErrPickupPersonGuardianNotAuthorized = errors.New("the contact has no pickup permission for the child on this day")
 )
 
 // PickupPerson is who collects the child on ExceptionDate. GuardianProfileID
@@ -45,6 +48,15 @@ type PickupPerson struct {
 	// CreatedBy is the staff membership that set the value; nil after that
 	// membership was deleted.
 	CreatedBy *int64
+}
+
+// PickupPersonGuardianAuthorization names the relationship and plan weekday
+// whose pickup permission authorizes a named contact. Care Plan locks and
+// checks that permission in the same transaction that saves the day value.
+// A nil value authorizes a one-time person instead.
+type PickupPersonGuardianAuthorization struct {
+	RelationshipID int64
+	Weekday        int
 }
 
 // OneTime reports whether the person has no standing pickup permission.
@@ -68,9 +80,9 @@ type PickupPersons interface {
 	// days other than its today hides the persons of past days.
 	ListDayPickups(ctx context.Context, from, to calendar.Date, studentIDs []int64) ([]DayPickup, error)
 	// SetPickupPerson replaces the pickup person of the child's day under
-	// the care-day lock. The caller has checked that a named contact may
-	// collect the child on that day.
-	SetPickupPerson(ctx context.Context, person PickupPerson, staffID int64) (PickupPerson, error)
+	// the care-day lock. For a named contact, it locks and rechecks the
+	// current pickup permission before the upsert.
+	SetPickupPerson(ctx context.Context, person PickupPerson, staffID int64, guardian *PickupPersonGuardianAuthorization) (PickupPerson, error)
 	// DeletePickupPerson removes the pickup person of the child's day;
 	// false when the day had none.
 	DeletePickupPerson(ctx context.Context, studentID int64, date calendar.Date) (bool, error)

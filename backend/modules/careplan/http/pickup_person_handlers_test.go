@@ -1,6 +1,7 @@
 package careplanhttp_test
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -10,6 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api"
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/api/testutil"
+	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/modules/settings"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -24,6 +26,18 @@ type pickupPersonWire struct {
 	Name              string      `json:"name"`
 	GuardianProfileID *testpkg.ID `json:"guardian_profile_id"`
 	OneTime           bool        `json:"one_time"`
+}
+
+// revokePickupPermissionBeforeSave models a withdrawal after the handler has
+// read the contact but before Care Plan starts its transactional save.
+type revokePickupPermissionBeforeSave struct {
+	careplan.PickupPersons
+	revoke func()
+}
+
+func (p revokePickupPermissionBeforeSave) SetPickupPerson(ctx context.Context, person careplan.PickupPerson, staffID int64, guardian *careplan.PickupPersonGuardianAuthorization) (careplan.PickupPerson, error) {
+	p.revoke()
+	return p.PickupPersons.SetPickupPerson(ctx, person, staffID, guardian)
 }
 
 // The OGS names who collects a child on one day (#7655): a contact with a
@@ -157,6 +171,42 @@ func TestStudentPickupPersonRoutes_WeekendFollowingFridayUsesFridayContactPermis
 		require.Equal(t, http.StatusOK, rr.Code, "%s: %s", date, rr.Body.String())
 		assert.Contains(t, rr.Body.String(), `"name":"Freitag Berechtigt"`)
 	}
+}
+
+// A permission withdrawal between the initial contact lookup and the save
+// must refuse the request. The Care Plan transaction locks and rechecks the
+// permission row before it writes the pickup person.
+func TestStudentPickupPersonRoutes_RejectsPermissionRevokedBeforeSave(t *testing.T) {
+	t.Parallel()
+
+	tc := setupStudentsRoute(t, fixedCalendarClock)
+	student := testpkg.CreateTestStudent(t, tc.db, "Entzug", "Kind", "AP3")
+	_, account := testpkg.CreateTestTeacherWithAccount(t, tc.db, "Entzug", "Teacher")
+	guardian := testpkg.CreateTestGuardianProfileNamed(t, tc.db, "Abhol", "Berechtigt", "abhol-berechtigt")
+	testpkg.CreateTestStudentGuardianLink(t, tc.db, student.ID, guardian.ID, "pickup_only")
+
+	tc.resource.PickupPersons = revokePickupPermissionBeforeSave{
+		PickupPersons: tc.resource.PickupPersons,
+		revoke: func() {
+			_, err := tc.db.ExecContext(testpkg.Ctx(t), `UPDATE users.student_guardian_pickup_permissions SET can_pickup = FALSE
+				WHERE tenant_id = ? AND relationship_id IN (
+					SELECT id FROM users.student_guardian_relationships
+					WHERE tenant_id = ? AND student_id = ? AND guardian_profile_id = ?
+				)`, testpkg.Tenant(t), testpkg.Tenant(t), student.ID, guardian.ID)
+			require.NoError(t, err)
+		},
+	}
+
+	req := testutil.NewAuthenticatedRequest(t, http.MethodPut, fmt.Sprintf("/%d/pickup-persons/%s", student.ID, studentsTestToday), map[string]any{
+		"guardian_profile_id": fmt.Sprint(guardian.ID),
+	})
+	rr := authExec(t, tc, req, testutil.AdminTestClaims(int(account.ID)), []string{"admin:*"})
+	require.Equal(t, http.StatusBadRequest, rr.Code, rr.Body.String())
+	assert.Contains(t, rr.Body.String(), common.CodeCarePickupPersonNotAuthorized)
+
+	var count int
+	require.NoError(t, tc.db.NewRaw(`SELECT COUNT(*) FROM schedule.student_pickup_persons WHERE tenant_id = ? AND student_id = ?`, testpkg.Tenant(t), student.ID).Scan(testpkg.Ctx(t), &count))
+	assert.Zero(t, count)
 }
 
 // listedPickupPersons reads the pickup persons of the child's pickup data

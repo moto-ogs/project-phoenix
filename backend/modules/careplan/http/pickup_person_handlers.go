@@ -18,10 +18,6 @@ import (
 // one day, either a contact with a standing pickup permission or a one-time
 // person by name only.
 
-// errPickupPersonNotAuthorized refuses a contact that may not collect the
-// child on that day.
-var errPickupPersonNotAuthorized = errors.New("the contact has no pickup permission for the child on this day")
-
 // PickupPersonRequest is the body of PUT /students/{id}/pickup-persons/{date}:
 // exactly one of guardian_profile_id (a contact of the child with a pickup
 // permission) and name (a one-time person).
@@ -84,9 +80,9 @@ func (rs *Resource) putStudentPickupPerson(w http.ResponseWriter, r *http.Reques
 		renderScheduleAuthorError(w, r, err)
 		return
 	}
-	person, err := rs.pickupPersonOf(r.Context(), student.ID, date, req)
+	person, guardian, err := rs.pickupPersonOf(r.Context(), student.ID, date, req)
 	if err == nil {
-		person, err = rs.PickupPersons.SetPickupPerson(r.Context(), person, staffID)
+		person, err = rs.PickupPersons.SetPickupPerson(r.Context(), person, staffID, guardian)
 	}
 	if err != nil {
 		renderPickupPersonError(w, r, err)
@@ -121,20 +117,20 @@ func (rs *Resource) deleteStudentPickupPerson(w http.ResponseWriter, r *http.Req
 // pickupPersonOf builds the day value. A contact must be linked to the child
 // with a pickup permission that holds on the day's weekday; its name is
 // taken from the People Directory, never from the request.
-func (rs *Resource) pickupPersonOf(ctx context.Context, studentID int64, date calendar.Date, req *PickupPersonRequest) (careplan.PickupPerson, error) {
+func (rs *Resource) pickupPersonOf(ctx context.Context, studentID int64, date calendar.Date, req *PickupPersonRequest) (careplan.PickupPerson, *careplan.PickupPersonGuardianAuthorization, error) {
 	person := careplan.PickupPerson{StudentID: studentID, ExceptionDate: careplan.Date(date.String())}
 	if req.Name != nil && *req.Name != "" {
 		person.Name = *req.Name
-		return person, nil
+		return person, nil, nil
 	}
 	profileID := req.GuardianProfileID.Int64()
 	contacts, err := rs.PeopleDirectory.ListStudentGuardians(ctx, studentID)
 	if err != nil {
-		return careplan.PickupPerson{}, err
+		return careplan.PickupPerson{}, nil, err
 	}
 	weekday, err := calendar.PlanWeekday(ctx, date)
 	if err != nil {
-		return careplan.PickupPerson{}, err
+		return careplan.PickupPerson{}, nil, err
 	}
 	for _, contact := range contacts {
 		link := contact.Link
@@ -144,14 +140,14 @@ func (rs *Resource) pickupPersonOf(ctx context.Context, studentID int64, date ca
 		}
 		person.Name = strings.TrimSpace(contact.Guardian.FirstName + " " + contact.Guardian.LastName)
 		person.GuardianProfileID = &profileID
-		return person, nil
+		return person, &careplan.PickupPersonGuardianAuthorization{RelationshipID: link.ID, Weekday: weekday}, nil
 	}
-	return careplan.PickupPerson{}, errPickupPersonNotAuthorized
+	return careplan.PickupPerson{}, nil, careplan.ErrPickupPersonGuardianNotAuthorized
 }
 
 func renderPickupPersonError(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
-	case errors.Is(err, errPickupPersonNotAuthorized):
+	case errors.Is(err, careplan.ErrPickupPersonGuardianNotAuthorized):
 		renderError(w, r, common.ErrorInvalidRequestWithCode(err, common.CodeCarePickupPersonNotAuthorized))
 	case errors.Is(err, careplan.ErrPickupPersonInvalid), errors.Is(err, careplan.ErrPickupPersonPastDate),
 		errors.Is(err, careplan.ErrPickupPersonNotCareDay):

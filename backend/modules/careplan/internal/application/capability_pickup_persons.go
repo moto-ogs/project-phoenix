@@ -39,8 +39,11 @@ func (s *Service) ListDayPickups(ctx context.Context, from, to calendar.Date, st
 }
 
 // SetPickupPerson validates the value, takes the care-day lock every writer
-// of the child's day shares and replaces the day's pickup person.
-func (s *Service) SetPickupPerson(ctx context.Context, person careplan.PickupPerson, staffID int64) (careplan.PickupPerson, error) {
+// of the child's day shares and replaces the day's pickup person. A named
+// contact's permission row is locked and checked before the upsert, so a
+// concurrent withdrawal either commits first and refuses the write or waits
+// until the day value commits.
+func (s *Service) SetPickupPerson(ctx context.Context, person careplan.PickupPerson, staffID int64, guardian *careplan.PickupPersonGuardianAuthorization) (careplan.PickupPerson, error) {
 	date, err := s.pickupPersonDay(ctx, person.StudentID, person.ExceptionDate)
 	if err != nil {
 		return careplan.PickupPerson{}, err
@@ -50,11 +53,25 @@ func (s *Service) SetPickupPerson(ctx context.Context, person careplan.PickupPer
 		person.GuardianProfileID != nil && *person.GuardianProfileID <= 0 {
 		return careplan.PickupPerson{}, careplan.ErrPickupPersonInvalid
 	}
+	if person.GuardianProfileID == nil && guardian != nil || person.GuardianProfileID != nil &&
+		(guardian == nil || guardian.RelationshipID <= 0 || guardian.Weekday < 1 || guardian.Weekday > 5) {
+		return careplan.PickupPerson{}, careplan.ErrPickupPersonInvalid
+	}
 	person.CreatedBy = optionalStaff(staffID)
 	var saved careplan.PickupPerson
 	err = s.run(ctx, "save_pickup_person", func(txCtx context.Context, stats *domain.OperationStats) error {
 		if err := s.LockStudentAndExceptionDay(txCtx, person.StudentID, date.String()); err != nil {
 			return err
+		}
+		if guardian != nil {
+			allowed, permissionStats, err := s.pickupPersons.LockGuardianPickupPermission(txCtx, guardian.RelationshipID, guardian.Weekday)
+			stats.Add(permissionStats)
+			if err != nil {
+				return err
+			}
+			if !allowed {
+				return careplan.ErrPickupPersonGuardianNotAuthorized
+			}
 		}
 		var err error
 		saved, *stats, err = s.pickupPersons.SavePickupPerson(txCtx, person)
