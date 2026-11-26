@@ -24,7 +24,10 @@ import {
   useState,
 } from "react";
 
-import { blockStaffNames } from "~/components/timetable/block-row-parts";
+import {
+  blockStaffNames,
+  blockStaffShort,
+} from "~/components/timetable/block-row-parts";
 import type { TagesplanGroup } from "~/components/timetable/tagesplan-groups";
 import { Button } from "~/components/ui/button";
 import {
@@ -130,7 +133,7 @@ export function TagesplanDayBar({
       >
         <ChevronLeft className="size-5" aria-hidden="true" />
       </Button>
-      <div className="mx-1 flex min-w-0 flex-1 gap-0.5">
+      <div className="mx-1 flex min-w-0 flex-1 gap-1.5">
         {days.map((iso) => {
           const date = parseISODate(iso);
           const weekday = getGermanWeekdayShort(date);
@@ -254,7 +257,7 @@ function blockState(
   if (cancelled) label = "Fällt aus";
   else if (running) label = "Läuft";
   else if (instance.status === "completed") label = "Beendet";
-  else if (ended) label = isDuty ? "Vorbei" : "Nicht gestartet";
+  else if (ended) label = isDuty ? "Vorbei" : "Vorbei, nicht gestartet";
   return {
     running,
     openable,
@@ -338,7 +341,13 @@ export function TagesplanApp(props: TagesplanAppProps) {
                   (other) =>
                     other.id !== cell.instance.id &&
                     other.startTime > cell.instance.startTime &&
-                    roomOf(other) === roomOf(cell.instance),
+                    roomOf(other) === roomOf(cell.instance) &&
+                    // „Danach“ heißt heute: was noch kommt oder läuft.
+                    // Abends standen sonst längst vergangene Blöcke da.
+                    (!isToday ||
+                      other.status === "active" ||
+                      hasOpenEnd(other) ||
+                      other.endTime > nowHHMM),
                 )
                 .sort((a, b) => a.startTime.localeCompare(b.startTime))
             : [],
@@ -918,16 +927,24 @@ function BlockRow({
   };
   // Ein Ausfall trägt immer den roten Chip „Fällt aus“; das Wort steht
   // nicht noch einmal daneben, wohl aber sein Grund.
-  if (state.over && !state.cancelled) push("state", state.label);
+  // Vorbei: die Zeile ist grau und steht über der Jetzt-Linie; ein Wort
+  // steht nur, wenn der Block lief („Beendet“). „Vorbei, nicht gestartet“
+  // steht im Blatt. So bleibt die Angabenzeile einzeilig.
+  if (state.over && !state.cancelled && instance.status === "completed") {
+    push("state", state.label);
+  }
+
   if (state.cancelled) push("reason", instance.cancelReason, true);
-  if (state.isDuty && !state.over) push("duty", "Dienst");
+  if (state.isDuty) push("duty", "Dienst");
   push("room", state.room);
   push("count", count);
-  // Am Telefon eine Angabenzeile (Zeile 56–64 px): Gruppe und Personal
-  // stehen vollständig im Blatt, das die Zeile öffnet.
+  // Am Telefon Personal kurz („Julia K. +1“, Vertretung benannt): wer
+  // betreut, sucht man im Plan. Gruppe und alle Namen stehen im Blatt.
   if (wide) {
     push("group", instance.groupName);
     if (!state.cancelled) push("staff", staff);
+  } else if (!state.cancelled) {
+    push("staff", blockStaffShort(instance));
   }
   return (
     <CollectionRow

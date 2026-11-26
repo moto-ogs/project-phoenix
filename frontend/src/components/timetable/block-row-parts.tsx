@@ -68,3 +68,27 @@ export function blockStaffNames(
     )
     .join(", ");
 }
+
+/** „Julia Klein“ → „Julia K.“; ein einzelnes Wort bleibt, wie es ist. */
+function shortPersonName(displayName: string): string {
+  const words = displayName.trim().split(/\s+/);
+  const last = words.at(-1);
+  if (words.length < 2 || !last) return displayName;
+  return `${words.slice(0, -1).join(" ")} ${last.charAt(0)}.`;
+}
+
+/**
+ * Personal kurz für eine Zeile am Telefon: „Julia K. +1“. Eine Vertretung
+ * steht vorn und ist benannt („Claudia W. (Vertretung) +1“), weil sie heute
+ * anders ist als der Plan. Alle Namen stehen ausgeschrieben im Blatt.
+ */
+export function blockStaffShort(
+  block: Pick<PlannedTimetableInstance, "staffNames">,
+): string | null {
+  const names = block.staffNames ?? [];
+  const first = names.find((entry) => entry.isSubstitute) ?? names[0];
+  if (!first) return null;
+  const name = shortPersonName(first.displayName);
+  const label = first.isSubstitute ? `${name} (Vertretung)` : name;
+  return names.length > 1 ? `${label} +${names.length - 1}` : label;
+}

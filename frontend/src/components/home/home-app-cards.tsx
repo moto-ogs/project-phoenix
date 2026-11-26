@@ -1,13 +1,15 @@
 "use client";
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 
 import {
   dayLabel,
+  dayMonthLabel,
   describeCelebration,
 } from "~/components/dashboard/birthday-list";
 import { useBirthdayWeek } from "~/components/home/birthdays-block";
+import { blockStaffShort } from "~/components/timetable/block-row-parts";
 import { BlockState, blockStateLabel } from "~/components/home/day-flow-block";
 import {
   upcomingFirst,
@@ -172,8 +174,10 @@ export function MyDayCard() {
   return (
     <Collection
       label="Mein Tag"
-      // Beginn und Ende stehen auf Höhe des Titels wie im Tagesplan.
-      className="[&_[data-collection-row]>span:first-child]:self-start"
+      // Beginn und Ende stehen auf Höhe des Titels wie im Tagesplan. Nur
+      // die Zeitspalte: „Heute öffnen“ hat keine und bleibt mittig, sonst
+      // stand unter dem Text ein leerer Streifen.
+      className="[&_[data-collection-row]>span.shrink-0:first-child]:self-start"
     >
       <CollectionGroup
         title={<Head concept={carePlanConcept}>Mein Tag</Head>}
@@ -250,15 +254,14 @@ function MyDayRow({
         room,
         block.groupName,
         isDuty ? "Dienst" : blockChildrenLabel(block),
-        shortStaff(block),
+        blockStaffShort(block),
       ].filter((part): part is string => Boolean(part));
   const overLabel =
     block.status === "completed"
       ? "Beendet"
       : ended
-        ? isDuty
-          ? "Vorbei"
-          : "Nicht gestartet"
+        ? // Kurz wie im Tagesplan; „nicht gestartet“ steht dort im Blatt.
+          "Vorbei"
         : null;
   const tone = over ? "text-gray-600" : "text-gray-900";
   const stateText = startable
@@ -328,7 +331,7 @@ function MyDayRow({
         subtitle={
           parts.length > 0 ? (
             <span className={cn(cancelled && "text-moto-red-strong")}>
-              {parts.join(" · ")}
+              <NoOrphanParts parts={parts} />
             </span>
           ) : undefined
         }
@@ -351,15 +354,22 @@ function MyDayRow({
   );
 }
 
-/** Personal kurz: der erste Name, weitere als „+2“, wie im Tagesplan. */
-function shortStaff(block: PlannedTimetableInstance): string | null {
-  const names = block.staffNames ?? [];
-  const first = names[0];
-  if (!first) return null;
-  const name = first.isSubstitute
-    ? `${first.displayName} (Vertretung)`
-    : first.displayName;
-  return names.length > 1 ? `${name} +${names.length - 1}` : name;
+/**
+ * Angaben mit „ · “ dazwischen, die nur zwischen den Teilen umbrechen: kein
+ * „+3“ oder „7“ allein in der nächsten Zeile.
+ */
+function NoOrphanParts({ parts }: { readonly parts: readonly string[] }) {
+  return parts.map((part, index) => (
+    <Fragment key={`${index}-${part}`}>
+      {index > 0 ? " " : null}
+      <span className="inline-block max-w-full">
+        {part}
+        {index < parts.length - 1 ? (
+          <span className="text-gray-500"> ·</span>
+        ) : null}
+      </span>
+    </Fragment>
+  ));
 }
 
 // ─── Meine Gruppe ──────────────────────────────────────────────────────────
@@ -582,7 +592,9 @@ export function BirthdaysCard({
       <CollectionRow
         key={`${entry.kind}-${entry.id}`}
         leading={
-          <span className="w-[5.25rem] text-sm whitespace-nowrap text-gray-600 tabular-nums">
+          // Wochentag über dem Datum wie die Zeitspalte in „Mein Tag“: die
+          // Spalte bleibt schmal, die Angaben daneben brechen nicht um.
+          <span className="w-11 self-start text-sm leading-5 whitespace-nowrap text-gray-600 tabular-nums">
             {entry.isToday ? (
               <StatusBadge
                 label="Heute"
@@ -591,13 +603,24 @@ export function BirthdaysCard({
                 accessibleLabel={`Heute, ${dayLabel(entry.date)}`}
               />
             ) : (
-              dayLabel(entry.date)
+              <>
+                <span className="block font-semibold text-gray-900">
+                  {dayLabel(entry.date).split(",")[0]}
+                </span>
+                <span className="block">{dayMonthLabel(entry.date)}</span>
+              </>
             )}
           </span>
         }
         wrap
         title={entry.name}
-        subtitle={describeCelebration(entry, today) || undefined}
+        subtitle={
+          describeCelebration(entry, today) ? (
+            <NoOrphanParts
+              parts={describeCelebration(entry, today).split(" · ")}
+            />
+          ) : undefined
+        }
       />
     ));
   }
