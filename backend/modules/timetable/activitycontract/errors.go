@@ -78,8 +78,9 @@ var (
 	// demoted directly; another supervisor has to be made primary instead.
 	ErrPrimarySupervisorRequired = errors.New("at least one supervisor must remain primary")
 
-	// ErrSystemActivityProtected is returned when trying to delete or rename a system activity (Schulhof Freispiel, WC).
-	ErrSystemActivityProtected = errors.New("systemaktivität kann nicht gelöscht oder umbenannt werden")
+	// ErrSystemActivityProtected is returned when trying to delete, rename or
+	// recategorize a system activity (Schulhof Freispiel, WC, Offener Raum).
+	ErrSystemActivityProtected = errors.New("systemaktivität kann nicht gelöscht, umbenannt oder in eine andere kategorie verschoben werden")
 
 	// ErrTimetableTemplateProtected prevents the legacy activities API from
 	// bypassing recurring-template locks, lineage checks, and care-offering

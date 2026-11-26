@@ -1269,9 +1269,9 @@ function DetailRow({
   );
 }
 
-function useEventCareTerm(event: CalendarEvent): string {
-  const { termOf, termOfSchool } = useParentCareTerms();
+function useEventCareTerm(event: CalendarEvent) {
+  const { valuesOf, valuesOfSchool } = useParentCareTerms();
   return event.student_id
-    ? termOf(event.student_id)
-    : termOfSchool(event.school_name);
+    ? valuesOf(event.student_id)
+    : valuesOfSchool(event.school_name);
 }

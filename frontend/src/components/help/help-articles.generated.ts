@@ -886,7 +886,7 @@ export const activitiesCatalogTopic =
       ],
       differences: [
         "Auf dem Handy steht statt `+ Aktivität` ein rundes Plus unten rechts.",
-        "`Schulhof Freispiel`, `WC` und `Offener Raum` legt moto selbst an. Ihre Namen sind fest, und `Löschen` fehlt.",
+        "`Schulhof Freispiel`, `WC` und `Offener Raum` legt moto selbst an. Name und Kategorie sind fest, und `Löschen` fehlt.",
       ],
       troubleshootingDetails: [
         "Fehlt `Datenverwaltung` in der Seitenleiste? Dann fehlen dir die Leitungsrechte. Frage deine Leitung.",
@@ -8889,7 +8889,7 @@ export const settingsGuideTopic = function settingsGuideTopic(): HelpTopic {
         ordered: false,
         steps: [
           "`Online-Anmeldung`: Eltern melden ihr Kind über ein Formular im Internet an. Einschalten lässt sie sich erst mit einer Datenschutzinformation unter `Rechtstexte`.",
-          "`Name der Betreuung in Texten für Eltern`: So heißt deine Betreuung in den festen Texten der Anmeldung, der Eltern-App und in den E-Mails dazu. Auch Fehlermeldungen für Eltern und für dein Team nennen ihn. Wähle `OGS`, `GTS` oder `Eigener Name`. Deine eigenen Texte im Formular ändern sich nicht.",
+          "`Name der Betreuung in Texten für Eltern`: So heißt deine Betreuung in den festen Texten der Anmeldung, der Eltern-App und in den E-Mails dazu. Auch Fehlermeldungen für Eltern und für dein Team nennen ihn. Wähle `OGS`, `GTS` oder `Eigener Name`. Bei `Eigener Name` wählst du auch den Artikel, der zu deinem Namen passt, zum Beispiel „der Hort“. Deine eigenen Texte im Formular ändern sich nicht.",
           "`Empfänger für neue Anmeldungen`: Diese Adressen bekommen bei jeder neuen Anmeldung eine E-Mail.",
           "`Rechtstexte`: Was Eltern im Formular lesen und bestätigen, zum Beispiel die Datenschutzinformation.",
         ],

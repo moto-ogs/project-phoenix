@@ -57,10 +57,14 @@ type ActivitySupervisorResponse struct {
 
 // ActivityResponse represents an activity group API response
 type ActivityResponse struct {
-	ID              ident.ID                     `json:"id"`
-	Name            string                       `json:"name"`
-	MaxParticipants *int                         `json:"max_participants"`
-	IsOpen          bool                         `json:"is_open"`
+	ID              ident.ID `json:"id"`
+	Name            string   `json:"name"`
+	MaxParticipants *int     `json:"max_participants"`
+	IsOpen          bool     `json:"is_open"`
+	// IsSystem marks an activity moto provisions itself (Schulhof Freispiel,
+	// WC, Offener Raum): its name and category stay fixed and it cannot be
+	// deleted. A staff activity that only shares such a name is not one.
+	IsSystem        bool                         `json:"is_system"`
 	CategoryID      ident.ID                     `json:"category_id"`
 	PlannedRoomID   *ident.ID                    `json:"planned_room_id,omitempty"`
 	CreatedBy       *ident.ID                    `json:"created_by"`

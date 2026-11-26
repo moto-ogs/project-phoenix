@@ -28113,6 +28113,12 @@
           }
         },
         {
+          "name": "is_system",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
           "name": "category_id",
           "schema": {
             "kind": "id"
@@ -45705,6 +45711,12 @@
           "schema": {
             "kind": "string"
           }
+        },
+        {
+          "name": "care_facility_article",
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -55348,6 +55360,12 @@
         },
         {
           "name": "care_facility_term",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "care_facility_article",
           "schema": {
             "kind": "string"
           }
@@ -106652,6 +106670,12 @@
           }
         },
         {
+          "name": "care_facility_article",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
           "name": "renewal_terms",
           "optional": true,
           "schema": {
@@ -111235,6 +111259,12 @@
         },
         {
           "name": "care_facility_term",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "care_facility_article",
           "schema": {
             "kind": "string"
           }

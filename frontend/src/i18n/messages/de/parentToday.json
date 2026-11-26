@@ -3,8 +3,8 @@
   "sectionTitle": "Heute",
   "sectionDescription": "Tagesstatus und wichtige Aktionen auf einen Blick.",
   "statusLabel": "Aktueller Status",
-  "atOgs": "In der {careTerm}",
-  "notAtOgs": "Nicht in der {careTerm}",
+  "atOgs": "{careInCap}",
+  "notAtOgs": "Nicht {careIn}",
   "state": {
     "present": "Seit {time} Uhr da",
     "presentNoTime": "Heute da",
@@ -38,7 +38,7 @@
     "sickTooltip": "Öffnet das Formular, um dein Kind abzumelden.",
     "pickupTooltip": "Öffnet das Formular für eine Anfrage zur Abholzeit.",
     "pickupWithModeTooltip": "Öffnet das Formular für eine Anfrage zur Abholung.",
-    "messageTooltip": "Öffnet die Nachrichten mit der {careTerm} zu deinem Kind."
+    "messageTooltip": "Öffnet die Nachrichten mit {careDat} zu deinem Kind."
   },
   "changes": {
     "title": "Heute anders",
@@ -54,10 +54,10 @@
     "classTrip": "Die Klasse {class} ist heute auf Ausflug.",
     "classTripBack": "Die Klasse {class} ist heute auf Ausflug. Zurück um {time} Uhr.",
     "classDismissal": "Der Unterricht der Klasse {class} endet heute um {time} Uhr.",
-    "closingDay": "Die {careTerm} ist heute geschlossen: {name}.",
-    "closingDayUntil": "Die {careTerm} ist bis {date} geschlossen: {name}.",
-    "openingChanged": "Die {careTerm} ist heute von {opens} bis {closes} Uhr geöffnet: {name}.",
-    "openingChangedUntil": "Die {careTerm} ist bis {date} von {opens} bis {closes} Uhr geöffnet: {name}.",
+    "closingDay": "{careNomCap} ist heute geschlossen: {name}.",
+    "closingDayUntil": "{careNomCap} ist bis {date} geschlossen: {name}.",
+    "openingChanged": "{careNomCap} ist heute von {opens} bis {closes} Uhr geöffnet: {name}.",
+    "openingChangedUntil": "{careNomCap} ist bis {date} von {opens} bis {closes} Uhr geöffnet: {name}.",
     "mealCancelled": "Heute gibt es kein Mittagessen für {name}. Es wird nicht berechnet.",
     "pickupAfterClosing": "Das ist nach der Schließung. Bitte ändere die Abholung.",
     "activityCancelled": "{title} um {time} Uhr fällt heute aus.",

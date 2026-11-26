@@ -25,18 +25,8 @@ func (s *Intake) enqueueSubmissionEmails(ctx context.Context, tenantID int64, re
 	for _, c := range children {
 		childNames = append(childNames, fmt.Sprintf("%s %s", c.FirstName, c.LastName))
 	}
-	parentPayload := map[string]any{
-		enrollment.EnrollmentPayloadGuardianFirstName: request.GuardianFirstName,
-		enrollment.EnrollmentPayloadGuardianLastName:  request.GuardianLastName,
-		enrollment.EnrollmentPayloadGuardianEmail:     request.GuardianEmail,
-		enrollment.EnrollmentPayloadSchoolName:        brand.SchoolName,
-		enrollment.EnrollmentPayloadStatusURL:         statusURL,
-		enrollment.EnrollmentPayloadLogoURL:           brand.LogoURL,
-		enrollment.EnrollmentPayloadMotoLogoURL:       brand.MotoLogoURL,
-		enrollment.EnrollmentPayloadCareFacilityTerm:  brand.CareFacilityTerm,
-		enrollment.EnrollmentPayloadChildNames:        childNames,
-		enrollment.EnrollmentPayloadRecipientEmail:    request.GuardianEmail,
-	}
+	parentPayload := submissionMailPayload(request, brand, childNames, request.GuardianEmail)
+	parentPayload[enrollment.EnrollmentPayloadStatusURL] = statusURL
 	if err := s.deps.Outbox.EnqueueMail(ctx, Mail{
 		Kind: enrollment.MailKindSubmitted, Payload: parentPayload,
 		RelatedEntityType: enrollment.MailRelatedRequest, RelatedEntityID: request.ID,
@@ -48,18 +38,8 @@ func (s *Intake) enqueueSubmissionEmails(ctx context.Context, tenantID int64, re
 		return fmt.Errorf("admin notification recipients: %w", err)
 	}
 	for _, admin := range admins {
-		adminPayload := map[string]any{
-			enrollment.EnrollmentPayloadGuardianFirstName: request.GuardianFirstName,
-			enrollment.EnrollmentPayloadGuardianLastName:  request.GuardianLastName,
-			enrollment.EnrollmentPayloadGuardianEmail:     request.GuardianEmail,
-			enrollment.EnrollmentPayloadSchoolName:        brand.SchoolName,
-			enrollment.EnrollmentPayloadAdminURL:          fmt.Sprintf("%s/admin/enrollments/%d", s.deps.FrontendURL, request.ID),
-			enrollment.EnrollmentPayloadLogoURL:           brand.LogoURL,
-			enrollment.EnrollmentPayloadMotoLogoURL:       brand.MotoLogoURL,
-			enrollment.EnrollmentPayloadCareFacilityTerm:  brand.CareFacilityTerm,
-			enrollment.EnrollmentPayloadChildNames:        childNames,
-			enrollment.EnrollmentPayloadRecipientEmail:    admin,
-		}
+		adminPayload := submissionMailPayload(request, brand, childNames, admin)
+		adminPayload[enrollment.EnrollmentPayloadAdminURL] = fmt.Sprintf("%s/admin/enrollments/%d", s.deps.FrontendURL, request.ID)
 		if request.GuardianPhone != nil {
 			adminPayload[enrollment.EnrollmentPayloadGuardianPhone] = *request.GuardianPhone
 		}
@@ -71,6 +51,24 @@ func (s *Intake) enqueueSubmissionEmails(ctx context.Context, tenantID int64, re
 		}
 	}
 	return nil
+}
+
+// submissionMailPayload is what the parent confirmation and the admin
+// notification of one submission share: the family, the children and the
+// school branding with its care name and article (#6042, #8136).
+func submissionMailPayload(request *enrollment.Request, brand enrollment.MailBrand, childNames []string, recipient string) map[string]any {
+	return map[string]any{
+		enrollment.EnrollmentPayloadGuardianFirstName:   request.GuardianFirstName,
+		enrollment.EnrollmentPayloadGuardianLastName:    request.GuardianLastName,
+		enrollment.EnrollmentPayloadGuardianEmail:       request.GuardianEmail,
+		enrollment.EnrollmentPayloadSchoolName:          brand.SchoolName,
+		enrollment.EnrollmentPayloadLogoURL:             brand.LogoURL,
+		enrollment.EnrollmentPayloadMotoLogoURL:         brand.MotoLogoURL,
+		enrollment.EnrollmentPayloadCareFacilityTerm:    brand.CareFacilityTerm,
+		enrollment.EnrollmentPayloadCareFacilityArticle: brand.CareFacilityArticle,
+		enrollment.EnrollmentPayloadChildNames:          childNames,
+		enrollment.EnrollmentPayloadRecipientEmail:      recipient,
+	}
 }
 
 // adminNotificationRecipients is the configured address list plus, when
