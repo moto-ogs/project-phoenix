@@ -1350,6 +1350,8 @@ export const calendarPeriodsTopic = function calendarPeriodsTopic(): HelpTopic {
     notes: [
       "Ein Zeitraum, den noch nichts benutzt, trägt `Nicht verwendet`.",
       "An einem Tag mit geänderter Öffnungszeit enden die Sitzungen zur neuen Schließzeit. Danach können Eltern die Abholzeit für den Tag nicht mehr ändern.",
+      // #8170: Eltern sehen die geänderte Öffnungszeit in „Heute anders“.
+      "Eltern sehen die geänderte Öffnungszeit unter `Heute anders` bei ihrem Kind. Liegt eine Abholzeit nach der Schließzeit, steht das dabei. moto ändert die Abholzeit nicht.",
       // #6845: Schichtserien halten ihren Zeitraum fest.
       "Einen Zeitraum mit Schichtserien im Dienstplan kannst du nicht löschen, auch wenn die Serien beendet sind. Nimm stattdessen den Haken bei `Zeitraum im Plan verwenden` heraus.",
       "Ferienbetreuung an Schließtagen: Wähle beim Speichern der Serie `Auch an Schließtagen planen`. Trage bei `Letzter Tag` den letzten Ferientag ein. Dann endet die Serie mit den Ferien.",
@@ -6466,7 +6468,9 @@ export const parentChildOverviewTopic =
         "`Angaben`: persönliche Angaben, Klasse und Gesundheit.",
         "`Kontakte`: Abholberechtigte, Kontakte und verbundene Konten.",
         "Unter `Heute` stehen die Knöpfe zum Abmelden, zur Abholzeit und für eine Nachricht.",
-        "`Heute anders` nennt zum Beispiel: Ein Angebot fällt aus, ist in einem anderen Raum oder hat eine Vertretung. Dazu kommen eine geänderte Abholzeit, ein Schließtag, ein Ausflug oder eine Krankmeldung.",
+        "`Heute anders` nennt zum Beispiel: Ein Angebot fällt aus, ist in einem anderen Raum oder hat eine Vertretung. Dazu kommen eine geänderte Abholzeit, ein Schließtag, geänderte Öffnungszeiten, ein Ausflug oder eine Krankmeldung.",
+        // #8170: eine Abholzeit nach der geänderten Schließzeit bleibt stehen.
+        "Schließt die OGS heute früher und liegt deine Abholzeit danach, steht dort `Das ist nach der Schließung.` moto ändert die Abholzeit nicht. Wähle `Abholung ändern` und trage eine frühere Zeit ein.",
         "Namen von Betreuungskräften stehen bei `Heute anders` nie. Du siehst nur, was dein Kind betrifft.",
         "Was du selbst eingetragen hast, ist mit `Von dir eingetragen` markiert. So siehst du, dass es angekommen ist.",
         "Die Startseite zeigt `Heute anders` für jedes Kind in seiner eigenen Karte.",
@@ -8976,6 +8980,7 @@ export const settingsTopic = function settingsTopic(): HelpTopic {
       "Ohne Bundesland fehlen die Feiertage. Dann zeigt moto einen Hinweis mit dem Knopf `Bundesland eintragen`.",
       "Wer Blöcke starten oder beenden darf, legst du unter `Betrieb` fest: bei `Wer darf Blöcke starten?` und `Wer darf Blöcke beenden?`.",
       "`Das ganze Team` geht dort nur, wenn das Team alle Gruppen und Blöcke sieht.",
+      "Die Bereiche deines Trägers stehen am Ende unter `Vom Träger`. Am Handy findest du sie hinter `Mehr`.",
       "Manche Werte legt dein Träger für alle Schulen fest. Dort steht `Vom Träger festgelegt`.",
       "Du kannst davon abweichen. `Zurücksetzen` übernimmt wieder den Wert des Trägers.",
     ],
