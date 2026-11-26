@@ -163,6 +163,8 @@ const ENROLLMENT_LEGAL_TEXT_TO_TOGGLE_KEY: Record<string, string> = {
 const HIDDEN_COMPANION_SETTINGS = new Set([
   "enrollment.legal_agb_document_url",
   "enrollment.legal_agb_display_mode",
+  // The article of an own care name sits next to that name (#8136).
+  "enrollment.care_facility_article",
 ]);
 
 /**
@@ -211,10 +213,17 @@ function settingMatches(
   );
 }
 
+/** Settings edited inside another setting's row, by the key of that row. */
+const COMPANIONS_OF: Record<string, readonly string[]> = {
+  "enrollment.care_facility_term": ["enrollment.care_facility_article"],
+};
+
 /**
  * The items of a category that match a query. A query that hits the
  * category name itself returns every visible item, so a person searching
  * "Zeiterfassung" sees the whole block. Without a query, all visible items.
+ * A row also matches through the settings edited inside it: „Artikel“ finds
+ * the name of the care (#8136).
  */
 export function filterCategoryItems(
   category: SchemaCategory,
@@ -225,7 +234,15 @@ export function filterCategoryItems(
   if (textMatches(displayCategoryLabel(category), normalizedQuery)) {
     return visible;
   }
-  return visible.filter((item) => settingMatches(item, normalizedQuery));
+  return visible.filter(
+    (item) =>
+      settingMatches(item, normalizedQuery) ||
+      category.items.some(
+        (companion) =>
+          COMPANIONS_OF[item.key]?.includes(companion.key) === true &&
+          settingMatches(companion, normalizedQuery),
+      ),
+  );
 }
 
 export interface CategorySearchHit {

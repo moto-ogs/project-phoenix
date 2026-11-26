@@ -5,7 +5,11 @@ import { sessionBff } from "./session-bff";
  * tenant listing/switching (post-login).
  */
 
-import { normalizeCareFacilityTerm } from "~/lib/care-facility-term-value";
+import {
+  normalizeCareArticle,
+  normalizeCareFacilityTerm,
+  type CareArticle,
+} from "~/lib/care-facility-term-value";
 import { bffFileHref, bffJson } from "./bff-fetch";
 import { clearSessionCache } from "./session-cache";
 import { clearPersonalStorage } from "./personal-storage";
@@ -204,6 +208,12 @@ export interface TenantInfo {
    * `useCareFacilityTerm`, which also covers missing metadata.
    */
   careFacilityTerm?: string;
+  /**
+   * The article the German texts decline that term with
+   * (enrollment.care_facility_article, #8136); „die“ for the presets and for
+   * schools without a choice.
+   */
+  careFacilityArticle?: CareArticle;
 }
 
 /** Identity-only tenant row returned by list/switch endpoints. Feature and
@@ -378,6 +388,7 @@ export function projectTenantResolve(
     childSearchOnlyNavigation: data.child_search_only_navigation === true,
     simpleStaffNavigation: data.simple_staff_navigation === true,
     careFacilityTerm: normalizeCareFacilityTerm(data.care_facility_term),
+    careFacilityArticle: normalizeCareArticle(data.care_facility_article),
   };
 }
 

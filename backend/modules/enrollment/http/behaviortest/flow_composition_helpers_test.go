@@ -14,6 +14,7 @@ import (
 	enrollmentNative "github.com/moto-ogs/project-phoenix/modules/enrollment"
 	enrollmentCompose "github.com/moto-ogs/project-phoenix/modules/enrollment/compose"
 	enrollmentAPI "github.com/moto-ogs/project-phoenix/modules/enrollment/http"
+	"github.com/moto-ogs/project-phoenix/modules/settings"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 )
 
@@ -54,6 +55,13 @@ func (s notificationModeSettings) CareFacilityTerm(ctx context.Context) (string,
 		return "", nil
 	}
 	return s.settings.ResolveString(ctx, settingKeyCareFacilityTerm)
+}
+
+func (s notificationModeSettings) CareFacilityArticle(ctx context.Context) (string, error) {
+	if s.settings == nil {
+		return "", nil
+	}
+	return settings.ResolveCareFacilityArticle(ctx, s.settings)
 }
 
 // collectionSettings reads the grade and class collection toggles from a

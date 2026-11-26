@@ -4,7 +4,7 @@
   "download": "Als PDF herunterladen",
   "downloading": "Wird erstellt …",
   "integrityOk": "Text und Antworten sind seit der Veröffentlichung unverändert.",
-  "integrityBroken": "Achtung: Ein gespeicherter Eintrag wurde nachträglich verändert. Bitte wende dich an die {careTerm}.",
+  "integrityBroken": "Achtung: Ein gespeicherter Eintrag wurde nachträglich verändert. Bitte wende dich an {careAcc}.",
   "notFound": "Für dieses Kind gibt es noch keinen Nachweis. Er entsteht, sobald du auf ein Einverständnis geantwortet hast.",
   "generated": "Erstellt am {date} Uhr",
   "child": "Kind",

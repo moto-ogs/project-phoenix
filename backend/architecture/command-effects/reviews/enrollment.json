@@ -7501,6 +7501,16 @@
       "target_owner": "settings-platform"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.enrollmentIntakeSettings.CareFacilityArticle",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.IntakeSettings.CareFacilityArticle",
+      "reason": "Read-only target: enrollment reaches modules/settings.EnrollmentIntakeValues.CareFacilityArticle (settings-platform) through roots/owners.enrollmentIntakeSettings.CareFacilityArticle to decline the school's care name with its article on the token pages (#8136). No persistent, lock or scope effect.",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings.EnrollmentIntakeValues.CareFacilityArticle",
+      "target_owner": "settings-platform"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.enrollmentIntakeSettings.CareFacilityTerm",
       "classification": "query",
       "effect": "query",
@@ -7714,6 +7724,16 @@
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/timetable.RecurrenceWriteLock.LockRecurrenceWrites",
       "target_owner": "timetable-activities"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.enrollmentNotificationSettings.CareFacilityArticle",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.NotificationSettings.CareFacilityArticle",
+      "reason": "Read-only target: enrollment reaches modules/settings.ResolveCareFacilityArticle (settings-platform) through roots/owners.enrollmentNotificationSettings.CareFacilityArticle to decline the school's care name with its article in parent mails (#8136). Two setting reads; no persistent, lock or scope effect.",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings.ResolveCareFacilityArticle",
+      "target_owner": "settings-platform"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.enrollmentNotificationSettings.CareFacilityTerm",

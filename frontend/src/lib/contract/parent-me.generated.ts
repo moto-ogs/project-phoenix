@@ -648,6 +648,7 @@ export interface ChildFeaturesResponse {
   parent_news_enabled: boolean;
   reason_required: boolean;
   care_facility_term: string;
+  care_facility_article: string;
 }
 
 export const ChildFeaturesResponseSchema: z.ZodType<ChildFeaturesResponse, unknown> = object<ChildFeaturesResponse>({
@@ -680,6 +681,7 @@ export const ChildFeaturesResponseSchema: z.ZodType<ChildFeaturesResponse, unkno
   parent_news_enabled: bool,
   reason_required: bool,
   care_facility_term: str,
+  care_facility_article: str,
 });
 
 /** Go: parent.guardianPhoneResponse */

@@ -40,6 +40,7 @@ const (
 	KeyEarlyCheckoutNoteToleranceMinutes     = configModel.KeyEarlyCheckoutNoteToleranceMinutes
 	KeyEnrollmentBookingsAuthoritative       = configModel.KeyEnrollmentBookingsAuthoritative
 	KeyEnrollmentAutoInviteGuardianOnApprove = configModel.KeyEnrollmentAutoInviteGuardianOnApprove
+	KeyEnrollmentCareFacilityArticle         = configModel.KeyEnrollmentCareFacilityArticle
 	KeyEnrollmentCareFacilityTerm            = configModel.KeyEnrollmentCareFacilityTerm
 	KeyEnrollmentCareOfferingsEnabled        = configModel.KeyEnrollmentCareOfferingsEnabled
 	KeyEnrollmentCollectGradeLevel           = configModel.KeyEnrollmentCollectGradeLevel

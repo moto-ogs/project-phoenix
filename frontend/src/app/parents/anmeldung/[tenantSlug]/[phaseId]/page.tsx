@@ -34,6 +34,7 @@ import {
   CareFacilityTermScope,
   useCareTermTranslations,
 } from "~/lib/care-facility-term";
+import { careTermValuesOf } from "~/lib/care-facility-term-value";
 
 interface LoadedForm {
   readonly tenant: TenantInfo;
@@ -195,11 +196,13 @@ function ParentEnrollFormPageContent({ params }: PageProps) {
             // known once the tenant loaded; no wording is guessed before.
             kicker={
               loaded
-                ? t("parentEmbeddedKicker", {
-                    careTerm: normalizeCareFacilityTerm(
+                ? t(
+                    "parentEmbeddedKicker",
+                    careTermValuesOf(
                       loaded.tenant.careFacilityTerm,
+                      loaded.tenant.careFacilityArticle,
                     ),
-                  })
+                  )
                 : undefined
             }
             title={t("formEyebrow")}
@@ -229,6 +232,7 @@ function ParentEnrollFormPageContent({ params }: PageProps) {
           // not the account's schools the parents shell names (#6082).
           <CareFacilityTermScope
             term={normalizeCareFacilityTerm(loaded.tenant.careFacilityTerm)}
+            article={loaded.tenant.careFacilityArticle}
           >
             <EnrollmentForm
               phaseID={phaseId}

@@ -60,7 +60,7 @@ export function GroupThreadsSection({
 function GroupThreadRow({ thread }: Readonly<{ thread: GroupThreadSummary }>) {
   const t = useCareTermTranslations("parentGroupThreads");
   const tm = useCareTermTranslations("parentMessages");
-  const { termOfSchool } = useParentCareTerms();
+  const { valuesOfSchool } = useParentCareTerms();
   const locale = useLocale();
   const timestamp = formatChatDateTime(thread.last_message_at, locale);
   const compactTimestamp = thread.last_message_at
@@ -69,8 +69,8 @@ function GroupThreadRow({ thread }: Readonly<{ thread: GroupThreadSummary }>) {
   const unread = thread.unread > 0;
   const counterpart = thread.school_name
     ? tm("ogsTeam", {
+        ...valuesOfSchool(thread.school_name),
         school: thread.school_name,
-        careTerm: termOfSchool(thread.school_name),
       })
     : thread.counterpart_name;
 

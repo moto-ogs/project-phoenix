@@ -24,7 +24,7 @@
     "additionalGuardianLabel": "Weitere erziehungsberechtigte Person {index}",
     "extraKicker": "Zusatzfragen",
     "extraTitle": "Weitere Angaben",
-    "extraDescription": "Die {careTerm} benötigt diese Angaben zusätzlich zu den Basisdaten. Pflichtfragen sind mit einem Stern markiert.",
+    "extraDescription": "{careNomCap} benötigt diese Angaben zusätzlich zu den Basisdaten. Pflichtfragen sind mit einem Stern markiert.",
     "childrenKicker": "Schritt 2",
     "childrenTitle": "Kind oder Kinder",
     "childrenDescription": "Erfasse jedes Kind einzeln. Für Geschwister kannst du über die Schaltfläche weitere Kind-Daten hinzufügen.",
@@ -109,7 +109,7 @@
     "exactlyOneHint": "Wähle genau ein Angebot aus, das für dieses Kind gewünscht ist.",
     "atLeastOneHint": "Wähle mindestens ein Angebot aus, das für dieses Kind gewünscht ist.",
     "optionalHint": "Wähle die Angebote aus, die für dieses Kind gewünscht sind.",
-    "reviewHint": "Die {careTerm} prüft freie Plätze nach dem Absenden. Bitte beachte: Mit der Anmeldung zum Ganztagsangebot ist dein Kind laut Ganztagsschulerlass zu den angemeldeten Zeiten schulpflichtig.",
+    "reviewHint": "{careNomCap} prüft freie Plätze nach dem Absenden. Bitte beachte: Mit der Anmeldung zum Ganztagsangebot ist dein Kind laut Ganztagsschulerlass zu den angemeldeten Zeiten schulpflichtig.",
     "requiredBadge": "Pflicht",
     "automaticBadge": "automatisch",
     "chooseExactlyOne": "Bitte wähle genau ein Angebot aus.",
@@ -126,7 +126,7 @@
     "ruleAtMostOnePerDay": "Höchstens eines pro Tag",
     "availabilitySelectionRemoved": "Durch die geänderte Klassenstufe sind Betreuungsangebote nicht mehr verfügbar. Die zugehörige Auswahl, Betreuungstage und automatische Mitbuchungen wurden entfernt.",
     "chooseGradeFirst": "Wähle zuerst die Klassenstufe deines Kindes. Danach siehst du hier die passenden Betreuungsangebote.",
-    "noOfferingsForGrade": "Für die {grade}. Klasse gibt es hier keine passenden Betreuungsangebote. Bei Fragen wende dich bitte an die {careTerm}."
+    "noOfferingsForGrade": "Für die {grade}. Klasse gibt es hier keine passenden Betreuungsangebote. Bei Fragen wende dich bitte an {careAcc}."
   },
   "consent": {
     "agb": "Ich akzeptiere die AGB der Schule.",
@@ -138,7 +138,7 @@
     "emailTitle": "E-Mail-Kontakt",
     "photoTitle": "Fotoeinwilligung"
   },
-  "captchaMisconfigured": "Die Online-Anmeldung ist gerade nicht möglich. Das liegt nicht an dir. Bitte wende dich an die {careTerm}.",
+  "captchaMisconfigured": "Die Online-Anmeldung ist gerade nicht möglich. Das liegt nicht an dir. Bitte wende dich an {careAcc}.",
   "captchaHelp": {
     "hint": "Die Sicherheitsprüfung lädt nicht oder bleibt stehen?",
     "restart": "Prüfung neu starten",
@@ -251,7 +251,7 @@
     "care": "Gebuchte Angebote",
     "noCare": "Keine Angebote gebucht.",
     "hint": "Änderungen für {name} laufen jetzt über die Eltern-App.",
-    "noAccess": "Du kommst nicht in die Eltern-App? Bitte melde dich bei der {careTerm}."
+    "noAccess": "Du kommst nicht in die Eltern-App? Bitte melde dich {careBei}."
   },
   "upload": {
     "errorObject": "die Datei",
@@ -286,7 +286,7 @@
     "emptyDrawing": "Bitte unterschreibe im Feld.",
     "nameTooShort": "Bitte tippe deinen Namen.",
     "title": "Unterschrift",
-    "description": "Bitte unterschreibe die Anmeldung. Ohne Unterschrift geht sie nicht an die {careTerm}.",
+    "description": "Bitte unterschreibe die Anmeldung. Ohne Unterschrift geht sie nicht an {careAcc}.",
     "required": "Bitte unterschreibe die Anmeldung."
   },
   "buttonHints": {
@@ -296,10 +296,10 @@
     "removeChild": "Entfernt die Angaben zu diesem Kind sofort aus dem Formular.",
     "adopt": "Trägt dieses Kind mit seinen gespeicherten Angaben in die Anmeldung ein.",
     "adopted": "Dieses Kind steht schon in der Anmeldung.",
-    "submit": "Sendet die Anmeldung sofort an die {careTerm} und dir eine Bestätigung.",
+    "submit": "Sendet die Anmeldung sofort an {careAcc} und dir eine Bestätigung.",
     "previewSubmit": "In der Vorschau kannst du die Anmeldung nicht absenden.",
     "captchaPending": "Bitte schließe zuerst die Sicherheitsprüfung ab.",
-    "captchaUnavailable": "Absenden geht gerade nicht, bitte wende dich an die {careTerm}.",
+    "captchaUnavailable": "Absenden geht gerade nicht, bitte wende dich an {careAcc}.",
     "addPhone": "Fügt eine Zeile für eine weitere Telefonnummer hinzu.",
     "removePhone": "Entfernt diese Nummer sofort aus dem Formular.",
     "addContact": "Fügt Felder für einen weiteren Kontakt hinzu.",
