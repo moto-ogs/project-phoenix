@@ -35,8 +35,12 @@
   "pickupPerson": {
     "label": "Wer holt ab?",
     "none": "Wie immer",
-    "hint": "Nur Personen, die du bei den Kontakten eingetragen hast.",
-    "manageLink": "Neue Person bei den Kontakten eintragen"
+    "hint": "Wähle eine Person aus deinen Kontakten oder „Andere Person“.",
+    "manageLink": "Neue Person bei den Kontakten eintragen",
+    "other": "Andere Person",
+    "otherNameLabel": "Name der Person",
+    "otherNameHint": "Die Person zeigt bei der Abholung ihren Ausweis.",
+    "otherNameMissing": "Bitte schreib den Namen der Person auf."
   },
   "proofPdfTooltip": "Speichert den Nachweis als PDF auf diesem Gerät."
 }

@@ -30,7 +30,7 @@ export function parentChildOverviewTopic(): HelpTopic {
       "`Angaben`: persönliche Angaben, Klasse und Gesundheit.",
       "`Kontakte`: Abholberechtigte, Kontakte und verbundene Konten.",
       "Unter `Heute` stehen die Knöpfe zum Abmelden, zur Abholzeit und für eine Nachricht.",
-      "`Heute anders` nennt zum Beispiel: Ein Angebot fällt aus, ist in einem anderen Raum oder hat eine Vertretung. Dazu kommen eine geänderte Abholzeit, ein Schließtag, ein Ausflug oder eine Krankmeldung.",
+      "`Heute anders` nennt zum Beispiel: Ein Angebot fällt aus, ist in einem anderen Raum oder hat eine Vertretung. Dazu kommen eine geänderte Abholzeit, wer dein Kind abholt, ein Schließtag, ein Ausflug oder eine Krankmeldung.",
       "Namen von Betreuungskräften stehen bei `Heute anders` nie. Du siehst nur, was dein Kind betrifft.",
       "Was du selbst eingetragen hast, ist mit `Von dir eingetragen` markiert. So siehst du, dass es angekommen ist.",
       "Die Startseite zeigt `Heute anders` für jedes Kind in seiner eigenen Karte.",

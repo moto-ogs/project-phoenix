@@ -38,6 +38,8 @@ function entry(
     entered_by_you: false,
     child_status: null,
     pickup_time: null,
+    pickup_person_name: null,
+    pickup_person_one_time: false,
     activity_title: null,
     room_name: null,
     previous_room_name: null,
@@ -138,6 +140,29 @@ describe("ChildDayChangesList in der Tageskarte", () => {
     expect(
       screen.queryByText("Heute läuft alles wie geplant."),
     ).not.toBeInTheDocument();
+  });
+
+  // #8162: wer das Kind heute abholt, eine andere Person mit Ausweis.
+  it("nennt die Abholperson des Tages", () => {
+    renderCard(
+      day([
+        entry({
+          kind: "child_pickup_person",
+          pickup_person_name: "Tante Frieda",
+          pickup_person_one_time: true,
+          entered_by_you: true,
+        }),
+        entry({ kind: "child_pickup_person", pickup_person_name: "Oma Berta" }),
+        entry({ kind: "child_pickup_person", pickup_person_name: null }),
+      ]),
+    );
+    const items = within(screen.getByTestId("child-day-changes"))
+      .getAllByRole("listitem")
+      .map((item) => item.textContent);
+    expect(items).toEqual([
+      "Tante Frieda holt Felix heute ab und zeigt dabei den Ausweis.Von dir eingetragen",
+      "Oma Berta holt Felix heute ab.",
+    ]);
   });
 
   it("sagt ohne Änderungen, dass alles wie geplant läuft", () => {

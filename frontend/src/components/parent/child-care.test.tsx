@@ -3122,6 +3122,63 @@ describe("PickupTimeModal, Abholperson an einem Tag", () => {
     contacts.mockRestore();
   });
 
+  // #8162: eine Person, die keine Kontaktperson ist, mit Namen.
+  it("sends another person by name with the signature", async () => {
+    const contacts = vi
+      .spyOn(parentApi, "listChildGuardians")
+      .mockResolvedValue([]);
+    const { onSubmit, dateInput, reasonInput } = renderModal({
+      studentId: "1",
+    });
+
+    fireEvent.change(dateInput, { target: { value: "2026-09-15" } });
+    fireEvent.click(
+      await screen.findByRole("combobox", { name: "Wer holt ab?" }),
+    );
+    fireEvent.click(screen.getByRole("option", { name: "Andere Person" }));
+    if (reasonInput) {
+      fireEvent.change(reasonInput, { target: { value: "Tante holt ab" } });
+    }
+    fireEvent.click(screen.getByRole("button", { name: "Anfrage senden" }));
+    expect(
+      (await screen.findAllByText("Bitte schreib den Namen der Person auf."))
+        .length,
+    ).toBeGreaterThan(0);
+    expect(onSubmit).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByLabelText(/Name der Person/), {
+      target: { value: "  Tante   Frieda " },
+    });
+    expect(
+      await screen.findByText(
+        "Ich erlaube, dass Tante Frieda das Kind Felix Schneider am Dienstag, 15.09.2026 von der OGS abholt.",
+      ),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Namen tippen" }));
+    fireEvent.change(screen.getByLabelText("Dein Vor- und Nachname"), {
+      target: { value: "Sabine Muster" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Unterschrift bestätigen" }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Anfrage senden" }));
+
+    await waitFor(() =>
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          date: "2026-09-15",
+          pickupPersonName: "Tante Frieda",
+          signatureStatement:
+            "Ich erlaube, dass Tante Frieda das Kind Felix Schneider am Dienstag, 15.09.2026 von der OGS abholt.",
+        }),
+      ),
+    );
+    expect(onSubmit.mock.calls[0]?.[0]).not.toHaveProperty(
+      "pickupPersonGuardianProfileId",
+    );
+    contacts.mockRestore();
+  });
+
   it("shows a retryable error when the signature statement cannot load", async () => {
     vi.mocked(parentApi.getPickupSignatureStatement).mockRejectedValue(
       new ApiError("backend unavailable", 503),

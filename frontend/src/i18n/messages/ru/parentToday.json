@@ -51,6 +51,8 @@
     "pickupAt": "{name} сегодня заберут в {time}.",
     "notComing": "{name} сегодня не придёт.",
     "goesAlone": "{name} сегодня возвращается домой самостоятельно.",
+    "pickupPerson": "{person} сегодня забирает {name}.",
+    "pickupPersonOneTime": "{person} сегодня забирает {name} и показывает удостоверение личности.",
     "classTrip": "Класс {class} сегодня на экскурсии.",
     "classTripBack": "Класс {class} сегодня на экскурсии. Вернётся в {time}.",
     "classDismissal": "Уроки класса {class} сегодня заканчиваются в {time}.",

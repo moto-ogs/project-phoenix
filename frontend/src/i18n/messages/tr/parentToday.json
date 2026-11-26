@@ -51,6 +51,8 @@
     "pickupAt": "{name} bugün saat {time} alınacak.",
     "notComing": "{name} bugün gelmiyor.",
     "goesAlone": "{name} bugün eve yalnız gidiyor.",
+    "pickupPerson": "{person} bugün {name} adlı çocuğu alıyor.",
+    "pickupPersonOneTime": "{person} bugün {name} adlı çocuğu alıyor ve kimliğini gösteriyor.",
     "classTrip": "{class} sınıfı bugün gezide.",
     "classTripBack": "{class} sınıfı bugün gezide. Dönüş saat {time}.",
     "classDismissal": "{class} sınıfının dersleri bugün saat {time} bitiyor.",

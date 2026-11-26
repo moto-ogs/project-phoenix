@@ -39,6 +39,7 @@ function pickup(over: Partial<PickupChangeNotice> = {}): PickupChangeNotice {
     studentFirstName: "Noa",
     date: testClockDay(1),
     pickupTime: "15:00",
+    pickupPerson: "",
     withdrawn: false,
     informedAt: "2026-09-09T11:00:00Z",
     ...over,
@@ -93,6 +94,30 @@ describe("StaffNewsButton", () => {
     expect(noa).toHaveTextContent("Morgen: neue Abholzeit 15:00 Uhr");
     const ida = screen.getByRole("link", { name: /Ida/ });
     expect(ida).toHaveTextContent("wieder normale Abholzeit");
+  });
+
+  // #8162: a family named who collects the child.
+  it("names the pickup person a family asked for", () => {
+    mockNotes.mockReturnValue({ notices: [] });
+    mockPickups.mockReturnValue({
+      notices: [
+        pickup({ pickupTime: "", pickupPerson: "Tante Frieda" }),
+        pickup({
+          requestId: "23",
+          studentFirstName: "Ida",
+          pickupPerson: "Oma Berta",
+        }),
+      ],
+    });
+    render(<StaffNewsButton />);
+    fireEvent.click(screen.getByRole("button", { name: /Neu für dich/ }));
+
+    expect(screen.getByRole("link", { name: /Noa/ })).toHaveTextContent(
+      "Morgen: Tante Frieda holt ab",
+    );
+    expect(screen.getByRole("link", { name: /Ida/ })).toHaveTextContent(
+      "Morgen: neue Abholzeit 15:00 Uhr, Oma Berta holt ab",
+    );
   });
 });
 

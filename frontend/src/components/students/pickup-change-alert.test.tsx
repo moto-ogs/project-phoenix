@@ -185,6 +185,7 @@ function notice(over: Partial<PickupChangeNotice> = {}): PickupChangeNotice {
     studentFirstName: "Mia",
     date: "2026-09-10",
     pickupTime: "14:30",
+    pickupPerson: "",
     withdrawn: false,
     informedAt: "2026-09-09T11:00:00Z",
     ...over,
