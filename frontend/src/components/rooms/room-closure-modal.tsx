@@ -10,7 +10,6 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
-import { ISODatePicker } from "~/components/ui/date-picker";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { FormModal } from "~/components/ui/form-modal";
 import { FramedList } from "~/components/ui/framed-list";
@@ -182,32 +181,32 @@ export function RoomClosureModal({
           placeholder="z. B. Wasserschaden, Reinigung"
         />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <ISODatePicker
+          <Input
             id="room-closure-start"
             name="start_date"
+            type="date"
             label="Von"
             controlSize="large"
             value={startDate}
             min={today}
             max={latestStartDate}
-            onChange={(value) => {
+            onChange={(event) => {
+              const value = event.target.value;
               setStartDate(value);
               if (!endDate || endDate < value) setEndDate(value);
             }}
             error={formErrors.fieldError("start_date")}
-            calendarLayout="popover"
           />
-          <ISODatePicker
+          <Input
             id="room-closure-end"
             name="end_date"
+            type="date"
             label="Bis"
             controlSize="large"
             value={endDate}
             min={startDate || today}
-            defaultMonth={startDate}
-            onChange={setEndDate}
+            onChange={(event) => setEndDate(event.target.value)}
             error={formErrors.fieldError("end_date")}
-            calendarLayout="popover"
           />
         </div>
         <p className="text-xs text-gray-500">
