@@ -627,7 +627,7 @@ export function DatabaseForm<T = Record<string, unknown>>({
           }}
           required={field.required}
           invalid={hasError}
-          disabled={loadingOptions[field.name]}
+          disabled={field.disabled || loadingOptions[field.name]}
         />
         {field.helperText && (
           <p className="mt-1 text-xs text-gray-500">{field.helperText}</p>
@@ -700,7 +700,7 @@ export function DatabaseForm<T = Record<string, unknown>>({
             }
           }}
           invalid={hasError}
-          disabled={loadingOptions[field.name]}
+          disabled={field.disabled || loadingOptions[field.name]}
         />
 
         {field.helperText && (

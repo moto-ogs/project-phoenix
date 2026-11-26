@@ -38,4 +38,32 @@ describe("buildActivityFormSections", () => {
       "Systemaktivität: Name kann nicht geändert werden",
     );
   });
+
+  it("shows the category of a system activity locked instead of an empty choice", () => {
+    const sections = buildActivityFormSections({
+      ...baseActivity,
+      name: "WC",
+      ag_category_id: "7",
+      category_name: "WC",
+    });
+    const categoryField = sections
+      .flatMap((section) => section.fields)
+      .find((field) => field.name === "ag_category_id");
+
+    expect(categoryField?.disabled).toBe(true);
+    expect(categoryField?.helperText).toBe(
+      "Systemaktivität: Kategorie kann nicht geändert werden",
+    );
+    expect(categoryField?.options).toEqual([{ value: "7", label: "WC" }]);
+  });
+
+  it("keeps the category choice of regular activities", () => {
+    const sections = buildActivityFormSections(baseActivity);
+    const categoryField = sections
+      .flatMap((section) => section.fields)
+      .find((field) => field.name === "ag_category_id");
+
+    expect(categoryField?.disabled).toBeFalsy();
+    expect(typeof categoryField?.options).toBe("function");
+  });
 });

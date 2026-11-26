@@ -258,14 +258,16 @@ func (s *ActivityService) UpdateGroup(ctx context.Context, group *activityContra
 		return nil, &activityContract.ActivityError{Op: "update group", Err: activityContract.ErrNotOwner}
 	}
 
-	// Block renaming system activities (Schulhof Freispiel, WC).
+	// Block renaming system activities (Schulhof Freispiel, WC, Offener Raum)
+	// and moving them into another category: moto provisions both.
 	// Placed after CanModifyActivity to avoid an extra FindByID call — CanModifyActivity
 	// already fetches the group internally for non-admin users.
 	existingGroup, err := s.findMutableActivityGroup(ctx, group.ID)
 	if err != nil {
 		return nil, &activityContract.ActivityError{Op: "update group", Err: err}
 	}
-	if timetable.IsSystemActivityName(existingGroup.Name) && group.Name != existingGroup.Name {
+	if timetable.IsSystemActivityName(existingGroup.Name) &&
+		(group.Name != existingGroup.Name || group.CategoryID != existingGroup.CategoryID) {
 		return nil, &activityContract.ActivityError{Op: "update group", Err: activityContract.ErrSystemActivityProtected}
 	}
 	if group.CategoryID != existingGroup.CategoryID {
