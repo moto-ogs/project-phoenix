@@ -34,6 +34,8 @@ type pickupApprovalFixture struct {
 	departureID       int64
 	existingDeparture *careplan.DepartureException
 	writtenDeparture  *careplan.DepartureException
+	// The day's pickup person (#8162).
+	existingPerson *careplan.PickupPerson
 }
 
 func (f *pickupApprovalFixture) step(name string) error {
@@ -100,8 +102,14 @@ func (f *pickupApprovalFixture) SaveDeparture(_ context.Context, row careplan.De
 	return f.departureID, f.step("save-departure")
 }
 
-func (f *pickupApprovalFixture) CreateNote(_ context.Context, row careplan.PickupNote) (careplan.PickupNote, error) {
-	return row, f.step("save-note")
+func (f *pickupApprovalFixture) FindPickupPersonForDate(context.Context, int64, calendar.Date) (*careplan.PickupPerson, error) {
+	return f.existingPerson, f.step("pickup-person")
+}
+
+func (f *pickupApprovalFixture) SavePickupPerson(_ context.Context, row careplan.PickupPerson) (careplan.PickupPerson, error) {
+	row.ID = 1
+	f.existingPerson = &row
+	return row, f.step("save-pickup-person")
 }
 
 func newPickupApprovalFixture(t *testing.T) *pickupApprovalFixture {

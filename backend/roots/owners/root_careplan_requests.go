@@ -2,6 +2,7 @@ package owners
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -79,9 +80,13 @@ func BuildCarePlanRequests(
 		NewParentStudentGuardianReads(people.StudentGuardians),
 		NewParentGuardianPolicy(), pickupPermissions,
 	)
+	records, err := carePlanRequestRecordsOf(carePlan)
+	if err != nil {
+		return CarePlanRequests{}, err
+	}
 	requests := CarePlanRequests{PickupChangeTeam: newPickupChangeTeam(pickupReach, env)}
 	requests.CareRequests = NewCareScheduleRequestServiceWithPickupChangesAndPolicy(requests.PickupChangeTeam,
-		carePlan, persons, schedules.Arrivals, schedules.Pickups, NewLoggedStudentPresence(db, env.Logger, env.Now),
+		records, persons, schedules.Arrivals, schedules.Pickups, NewLoggedStudentPresence(db, env.Logger, env.Now),
 		schedules.AutoExcusal, carePlan, caller, emitter, hub,
 		reviews, permissions, events, env.Logger.With("service", "care-requests"), services.StudentAudit,
 		WithRequestShareVisibility(shares), WithCareRequestToday(env.Today), WithPickupPermissions(pickupPermissions), WithPickupPermissionApprovals(pickupPermissionApprovals),
@@ -185,4 +190,35 @@ func buildCarePlanDecisions(
 		return CarePlanRequests{}, fmt.Errorf("compose parent request coordinator: %w", err)
 	}
 	return requests, nil
+}
+
+// carePlanRequestRecords are the owner records the care requests write: the
+// capability plus the day's pickup person an approval names (#8162), which
+// the composed owner serves beside its capability.
+type carePlanRequestRecords struct {
+	careplan.Capability
+	careplan.PickupPersons
+	careplan.ApprovedPickupPersons
+}
+
+// CarePlanRequestRecords binds the records of the care requests from the
+// composed Care Plan owner; a miswired owner stops the root.
+func CarePlanRequestRecords(owner careplan.Capability) RequestRecords {
+	records, err := carePlanRequestRecordsOf(owner)
+	if err != nil {
+		panic(err.Error())
+	}
+	return records
+}
+
+func carePlanRequestRecordsOf(owner careplan.Capability) (carePlanRequestRecords, error) {
+	persons, err := CarePlanPickupPersons(owner)
+	if err != nil {
+		return carePlanRequestRecords{}, err
+	}
+	approved, ok := owner.(careplan.ApprovedPickupPersons)
+	if !ok {
+		return carePlanRequestRecords{}, errors.New("care plan: the composed owner serves no approved pickup persons")
+	}
+	return carePlanRequestRecords{Capability: owner, PickupPersons: persons, ApprovedPickupPersons: approved}, nil
 }

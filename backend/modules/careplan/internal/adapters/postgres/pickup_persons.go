@@ -27,6 +27,7 @@ type pickupPersonRow struct {
 	PersonName        string        `bun:"person_name,notnull"`
 	GuardianProfileID *int64        `bun:"guardian_profile_id"`
 	CreatedBy         *int64        `bun:"created_by"`
+	RequestedBy       *int64        `bun:"requested_by_guardian"`
 }
 
 // dayPickupRow is one child of the day with its Abholart, its pickup person,
@@ -47,6 +48,7 @@ type dayPickupRow struct {
 	PersonName          *string    `bun:"person_name"`
 	PersonGuardianID    *int64     `bun:"person_guardian_profile_id"`
 	PersonCreatedBy     *int64     `bun:"person_created_by"`
+	PersonRequestedBy   *int64     `bun:"person_requested_by_guardian"`
 	ExceptionDateString string     `bun:"exception_date"`
 }
 
@@ -88,7 +90,8 @@ func (s *Store) ListDayPickups(ctx context.Context, from, to calendar.Date, stud
 			d.departure_mode, d.reason AS departure_reason, d.created_by AS departure_created_by,
 			d.entered_by_traeger AS departure_entered_by_traeger,
 			p.id AS person_id, p.created_at AS person_created_at, p.updated_at AS person_updated_at,
-			p.person_name, p.guardian_profile_id AS person_guardian_profile_id, p.created_by AS person_created_by
+			p.person_name, p.guardian_profile_id AS person_guardian_profile_id, p.created_by AS person_created_by,
+			p.requested_by_guardian AS person_requested_by_guardian
 		FROM d FULL JOIN p ON p.student_id = d.student_id AND p.exception_date = d.exception_date
 		ORDER BY 2, 1`, tid, from, until, students).Scan(ctx, &rows)
 	stats.StatementDuration = time.Since(started)
@@ -115,6 +118,7 @@ func (row dayPickupRow) toPublic(tenantID int64) careplan.DayPickup {
 		person := careplan.PickupPerson{
 			ID: *row.PersonID, TenantID: tenantID, StudentID: row.StudentID, ExceptionDate: day,
 			Name: *row.PersonName, GuardianProfileID: row.PersonGuardianID, CreatedBy: row.PersonCreatedBy,
+			RequestedByGuardian: row.PersonRequestedBy,
 		}
 		person.CreatedAt, person.UpdatedAt = instant(row.PersonCreatedAt), instant(row.PersonUpdatedAt)
 		out.Person = &person
@@ -166,12 +170,14 @@ func (s *Store) SavePickupPerson(ctx context.Context, v careplan.PickupPerson) (
 	row := pickupPersonRow{
 		TenantID: tid, StudentID: v.StudentID, ExceptionDate: calendar.Date(v.ExceptionDate),
 		PersonName: v.Name, GuardianProfileID: v.GuardianProfileID, CreatedBy: v.CreatedBy,
+		RequestedBy: v.RequestedByGuardian,
 	}
 	query := db.NewInsert().Model(&row).ModelTableExpr(`schedule.student_pickup_persons`).
 		On(`CONFLICT (tenant_id, student_id, exception_date) DO UPDATE`).
 		Set(`person_name = EXCLUDED.person_name`).
 		Set(`guardian_profile_id = EXCLUDED.guardian_profile_id`).
-		Set(`created_by = EXCLUDED.created_by`)
+		Set(`created_by = EXCLUDED.created_by`).
+		Set(`requested_by_guardian = EXCLUDED.requested_by_guardian`)
 	stats, err := createStudentScheduleRow(ctx, query, "save pickup person")
 	return pickupPersonToPublic(row), stats, err
 }
@@ -187,6 +193,19 @@ func (s *Store) DeletePickupPerson(ctx context.Context, studentID int64, date ca
 		Where(`"student_pickup_person".tenant_id = ?`, tid).
 		Where(`"student_pickup_person".student_id = ?`, studentID).
 		Where(`"student_pickup_person".exception_date = ?`, calendarDate(date)), "delete pickup person")
+	return affected > 0, stats, err
+}
+
+// DeletePickupPersonByID removes one pickup person row and reports whether
+// it was there.
+func (s *Store) DeletePickupPersonByID(ctx context.Context, id int64) (bool, domain.OperationStats, error) {
+	db, tid, err := s.databaseForWrite(ctx, "delete pickup person by id")
+	if err != nil {
+		return false, domain.OperationStats{}, err
+	}
+	stats, affected, err := execute(ctx, db.NewDelete().TableExpr(`schedule.student_pickup_persons AS "student_pickup_person"`).
+		Where(`"student_pickup_person".tenant_id = ?`, tid).
+		Where(`"student_pickup_person".id = ?`, id), "delete pickup person by id")
 	return affected > 0, stats, err
 }
 
@@ -208,5 +227,6 @@ func pickupPersonToPublic(v pickupPersonRow) careplan.PickupPerson {
 	return careplan.PickupPerson{
 		ID: v.ID, TenantID: v.TenantID, CreatedAt: v.CreatedAt, UpdatedAt: v.UpdatedAt, StudentID: v.StudentID,
 		ExceptionDate: careplan.Date(v.ExceptionDate), Name: v.PersonName, GuardianProfileID: v.GuardianProfileID, CreatedBy: v.CreatedBy,
+		RequestedByGuardian: v.RequestedBy,
 	}
 }

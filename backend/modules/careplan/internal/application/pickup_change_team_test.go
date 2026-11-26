@@ -192,3 +192,29 @@ func TestPickupChangeTeamListsTheRequestsCurrentState(t *testing.T) {
 	_, err = team.ListUnreadPickupChangeNotices(t.Context(), 0)
 	require.ErrorIs(t, err, ErrPickupChangeNoticeInvalid)
 }
+
+// A family that names who collects the child tells the team too (#8162).
+// The device text names neither the child nor the person.
+func TestPickupChangeTeamTellsAboutThePickupPerson(t *testing.T) {
+	t.Parallel()
+	date := calendar.NewDate(2026, 11, 20)
+	notice := pickupNotice(date)
+	notice.PickupTime, notice.PickupPerson = "", "Tante Frieda"
+	withdrawn := notice
+	withdrawn.Withdrawn = true
+	for name, tc := range map[string]struct {
+		notice      careplan.PickupChangeNotice
+		title, body string
+	}{
+		"named":     {notice, "Abholperson geändert", "Ein Kind wird am Fr. 20.11.2026 von einer anderen Person abgeholt."},
+		"withdrawn": {withdrawn, "Abholperson zurückgenommen", "Für ein Kind gilt am Fr. 20.11.2026 wieder die normale Abholung."},
+	} {
+		store, reach := &pickupTeamStoreDouble{}, &pickupTeamReachDouble{responsible: []int64{11}}
+		require.NoError(t, newPickupTeam(store, reach).NotifyPickupChangeApproved(t.Context(), tc.notice), name)
+		assert.Equal(t, []int64{11}, store.upserted, name)
+		require.Len(t, reach.pushes, 1, name)
+		assert.Equal(t, tc.title, reach.pushes[0].Title, name)
+		assert.Equal(t, tc.body, reach.pushes[0].Body, name)
+		assert.NotContains(t, reach.pushes[0].Body, "Frieda", name)
+	}
+}

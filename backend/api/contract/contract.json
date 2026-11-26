@@ -25757,6 +25757,7 @@
         "child_absent",
         "child_goes_alone",
         "child_pickup_changed",
+        "child_pickup_person",
         "class_dismissal_changed",
         "class_trip",
         "closing_day"
@@ -45215,6 +45216,19 @@
           }
         },
         {
+          "name": "pickup_person_name",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "pickup_person_one_time",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
           "name": "activity_title",
           "schema": {
             "kind": "string",
@@ -55781,6 +55795,14 @@
             "kind": "id",
             "nullable": true,
             "no_id": true
+          }
+        },
+        {
+          "name": "pickup_person_name",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
           }
         },
         {
@@ -85387,6 +85409,13 @@
           }
         },
         {
+          "name": "pickup_person_one_time",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
           "name": "signed",
           "schema": {
             "kind": "bool"
@@ -109022,6 +109051,14 @@
           }
         },
         {
+          "name": "pickup_person_name",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
           "name": "signature",
           "optional": true,
           "schema": {
@@ -131921,6 +131958,13 @@
         },
         {
           "name": "pickup_time",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "pickup_person",
           "optional": true,
           "schema": {
             "kind": "string"

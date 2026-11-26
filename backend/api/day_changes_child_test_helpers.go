@@ -47,7 +47,7 @@ func NewChildDayChangesTestRouter(db transactionruntime.Database, unit tenant.Un
 		return nil, err
 	}
 	dayChanges, err := NewChildDayChanges(ChildDayChangesSources{
-		CarePlan: carePlan, Students: owners.MustNewPeopleDirectory(db), ClosingDays: owners.NewSchoolClosingDayReads(),
+		CarePlan: carePlan, DayPickups: mustCarePlanPickupPersons(carePlan), Students: owners.MustNewPeopleDirectory(db), ClosingDays: owners.NewSchoolClosingDayReads(),
 		Blocks: blocks, ClassArrivals: classDay, Today: func() calendar.Date { return today },
 	})
 	if err != nil {

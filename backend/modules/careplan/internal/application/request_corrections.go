@@ -121,10 +121,37 @@ func (s *RequestCorrections) revertPickup(ctx context.Context, request *carerequ
 			return err
 		}
 	}
+	if applied.PickupPersonID > 0 {
+		if err := s.revertPickupPerson(ctx, request, applied); err != nil {
+			return err
+		}
+	}
 	if applied.PickupNoteID > 0 {
 		return s.revertPickupNote(ctx, applied)
 	}
 	return nil
+}
+
+// revertPickupPerson deletes the day's pickup person the approval wrote
+// (#8162) while it is still the one the approval left. A past day has none:
+// the nightly retention deleted it.
+func (s *RequestCorrections) revertPickupPerson(ctx context.Context, request *carerequests.Request, applied carerequests.PickupApplied) error {
+	terms := carerequests.StoredPickupTerms(request.Payload)
+	if terms == nil {
+		return nil
+	}
+	row, err := dayPickupPerson(ctx, s.Records, request.StudentID, terms.Date)
+	if err != nil {
+		return err
+	}
+	if row == nil || row.ID != applied.PickupPersonID {
+		return nil
+	}
+	if pickupPersonVersion(*row) != applied.PickupPersonVersion {
+		return fmt.Errorf("%w: die Abholperson am %s wurde nach der Entscheidung geändert", careplan.ErrParentRequestCorrectionUnsupported, terms.Date.Format("02.01.2006"))
+	}
+	_, err = s.Records.DeleteApprovedPickupPerson(ctx, row.ID)
+	return err
 }
 
 // revertPickupNote deletes the day's collector note the approval wrote
@@ -209,12 +236,14 @@ func latestPickupRows(events []ports.RequestCorrectionEvent) (carerequests.Picku
 		pickupID, pickupOK := correctionExceptionID(event.Payload["pickup_exception_id"])
 		departureID, departureOK := correctionExceptionID(event.Payload["departure_exception_id"])
 		noteID, noteOK := correctionExceptionID(event.Payload["pickup_note_id"])
+		personID, personOK := correctionExceptionID(event.Payload["pickup_person_id"])
 		applied = carerequests.PickupApplied{
 			PickupExceptionID: pickupID, PickupExceptionVersion: correctionRowVersion(event.Payload["pickup_exception_version"]),
 			DepartureExceptionID: departureID, DepartureExceptionVersion: correctionRowVersion(event.Payload["departure_exception_version"]),
 			PickupNoteID: noteID, PickupNoteVersion: correctionRowVersion(event.Payload["pickup_note_version"]),
+			PickupPersonID: personID, PickupPersonVersion: correctionRowVersion(event.Payload["pickup_person_version"]),
 		}
-		found = pickupOK || departureOK || noteOK
+		found = pickupOK || departureOK || noteOK || personOK
 	}
 	return applied, found
 }

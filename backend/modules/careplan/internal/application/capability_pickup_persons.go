@@ -56,6 +56,42 @@ func (s *Service) SetPickupPerson(ctx context.Context, person careplan.PickupPer
 	return s.savePickupPerson(ctx, person, date, guardian)
 }
 
+// SaveApprovedPickupPerson writes the pickup person a family named in its
+// one-day request, as the OGS approval decided it (#8162). The approval holds
+// the care-day lock and rechecked a named contact itself: the signed request
+// grants the contact the one day, so no standing permission is needed.
+func (s *Service) SaveApprovedPickupPerson(ctx context.Context, person careplan.PickupPerson) (careplan.PickupPerson, error) {
+	person.Name = strings.Join(strings.Fields(person.Name), " ")
+	if person.StudentID <= 0 || person.ExceptionDate == "" || person.Name == "" ||
+		utf8.RuneCountInString(person.Name) > careplan.PickupPersonNameMaxLength ||
+		person.GuardianProfileID != nil && *person.GuardianProfileID <= 0 {
+		return careplan.PickupPerson{}, careplan.ErrPickupPersonInvalid
+	}
+	var saved careplan.PickupPerson
+	err := s.run(ctx, "save_approved_pickup_person", func(txCtx context.Context, stats *domain.OperationStats) error {
+		var err error
+		saved, *stats, err = s.pickupPersons.SavePickupPerson(txCtx, person)
+		return err
+	})
+	return saved, err
+}
+
+// DeleteApprovedPickupPerson deletes the one row a corrected approval wrote
+// (#8162). The correction holds the care-day lock and checked that the row
+// is still as the approval left it.
+func (s *Service) DeleteApprovedPickupPerson(ctx context.Context, id int64) (bool, error) {
+	if id <= 0 {
+		return false, careplan.ErrPickupPersonInvalid
+	}
+	deleted := false
+	err := s.run(ctx, "delete_approved_pickup_person", func(txCtx context.Context, stats *domain.OperationStats) error {
+		var err error
+		deleted, *stats, err = s.pickupPersons.DeletePickupPersonByID(txCtx, id)
+		return err
+	})
+	return deleted, err
+}
+
 func validatedPickupPerson(person careplan.PickupPerson, guardian *careplan.PickupPersonGuardianAuthorization) (careplan.PickupPerson, error) {
 	person.Name = strings.Join(strings.Fields(person.Name), " ")
 	if person.Name == "" || utf8.RuneCountInString(person.Name) > careplan.PickupPersonNameMaxLength ||

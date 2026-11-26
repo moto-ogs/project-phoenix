@@ -89,7 +89,7 @@ func (s *PickupApprovals) applyLegs(ctx context.Context, input carerequests.Pick
 		}
 	}
 	if change.PickupPerson != nil {
-		if applied.PickupNoteID, applied.PickupNoteVersion, err = s.applyPickupPerson(ctx, input, change, staffID); err != nil {
+		if applied.PickupPersonID, applied.PickupPersonVersion, err = s.applyPickupPerson(ctx, input, change, staffID); err != nil {
 			return applied, err
 		}
 	}
@@ -129,28 +129,48 @@ func (s *PickupApprovals) applyDepartureMode(ctx context.Context, input carerequ
 	return id, departureExceptionVersion(*row), nil
 }
 
-// applyPickupPerson writes the approval's last row. The insert returns the
-// note as stored, which is how this transaction leaves it.
+// applyPickupPerson writes the approval's last row: the day's pickup person
+// (#8162), the one value the group view, "Heute anders" and the day lists
+// show for who collects the child. Before #8162 the approval wrote a dated
+// pickup note; corrections still take those back. A named contact is
+// rechecked under its lock; a one-time person has only the name. A pickup
+// person the OGS set for the day wins, as for the Abholart; one an earlier
+// approved request named is replaced.
 func (s *PickupApprovals) applyPickupPerson(ctx context.Context, input carerequests.PickupApproval, change carerequests.PickupChange, staffID int64) (int64, string, error) {
-	if err := s.People.ValidatePickupPerson(ctx, input.StudentID, change.PickupPerson.GuardianProfileID); err != nil {
-		return 0, "", err
+	person := careplan.PickupPerson{
+		TenantID: input.TenantID, StudentID: input.StudentID, ExceptionDate: careplan.Date(change.Date),
+		Name: change.PickupPerson.Name, CreatedBy: optionalStaff(staffID),
 	}
-	note, err := s.Exceptions.CreateNote(ctx, careplan.PickupNote{
-		TenantID: input.TenantID, StudentID: input.StudentID, NoteDate: careplan.Date(change.Date),
-		Content: DayCollectorNote(change.PickupPerson.Name), CreatedBy: staffID,
-		EnteredByTraeger: careplan.EnteredByTraeger(ctx, staffID),
-	})
+	if input.GuardianAccountID > 0 {
+		requester := input.GuardianAccountID
+		person.RequestedByGuardian = &requester
+	}
+	if !change.PickupPerson.OneTime() {
+		if err := s.People.ValidatePickupPerson(ctx, input.StudentID, change.PickupPerson.GuardianProfileID); err != nil {
+			return 0, "", err
+		}
+		contact := change.PickupPerson.GuardianProfileID
+		person.GuardianProfileID = &contact
+	}
+	existing, err := s.Exceptions.FindPickupPersonForDate(ctx, input.StudentID, change.Date)
 	if err != nil {
-		return 0, "", fmt.Errorf("schedule: save approved day collector: %w", err)
+		return 0, "", fmt.Errorf("schedule: load pickup person for request: %w", err)
 	}
-	return note.ID, pickupNoteVersion(note), nil
-}
-
-// DayCollectorNote is the dated pickup note of an approved one-day collector
-// (#4780). The note shows wherever the OGS sees the day's pickup: the child
-// profile, the group view, the supervision and the day lists.
-func DayCollectorNote(name string) string {
-	return "Abholung durch " + name + " (Erlaubnis der Eltern)"
+	if existing != nil && existing.RequestedByGuardian == nil {
+		return 0, "", carerequests.ErrPickupChangeConflict
+	}
+	saved, err := s.Exceptions.SavePickupPerson(ctx, person)
+	if err != nil {
+		return 0, "", fmt.Errorf("schedule: save approved pickup person: %w", err)
+	}
+	stored, err := s.Exceptions.FindPickupPersonForDate(ctx, input.StudentID, change.Date)
+	if err == nil && stored == nil {
+		err = careplan.ErrStudentScheduleNotFound
+	}
+	if err != nil {
+		return 0, "", fmt.Errorf("schedule: read back approved pickup person: %w", err)
+	}
+	return saved.ID, pickupPersonVersion(*stored), nil
 }
 
 // saveApprovedDeparture writes the requested Abholart of the day. A value the

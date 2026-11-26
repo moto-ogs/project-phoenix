@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
-	"github.com/moto-ogs/project-phoenix/modules/careplan/carerequests"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/domain"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports"
 	carePlanPorts "github.com/moto-ogs/project-phoenix/modules/careplan/ports"
@@ -243,11 +242,29 @@ func (a pickupApprovalExceptions) SaveDeparture(ctx context.Context, value carep
 	return row.ID, err
 }
 
-func (a pickupApprovalExceptions) CreateNote(ctx context.Context, value careplan.PickupNote) (careplan.PickupNote, error) {
-	if value.StudentID <= 0 || value.NoteDate == "" || strings.TrimSpace(value.Content) == "" {
-		return careplan.PickupNote{}, carerequests.ErrInvalidPayload
+func (a pickupApprovalExceptions) FindPickupPersonForDate(ctx context.Context, id int64, date calendar.Date) (*careplan.PickupPerson, error) {
+	return dayPickupPerson(ctx, a.records, id, date)
+}
+
+func (a pickupApprovalExceptions) SavePickupPerson(ctx context.Context, value careplan.PickupPerson) (careplan.PickupPerson, error) {
+	return a.records.SaveApprovedPickupPerson(ctx, value)
+}
+
+// dayPickupPerson reads the pickup person of one child and day, nil for
+// none.
+func dayPickupPerson(ctx context.Context, records interface {
+	ListDayPickups(ctx context.Context, from, to calendar.Date, studentIDs []int64) ([]careplan.DayPickup, error)
+}, studentID int64, date calendar.Date) (*careplan.PickupPerson, error) {
+	pickups, err := records.ListDayPickups(ctx, date, date, []int64{studentID})
+	if err != nil {
+		return nil, err
 	}
-	return a.records.CreatePickupNote(ctx, value)
+	for _, pickup := range pickups {
+		if pickup.StudentID == studentID && pickup.Person != nil {
+			return pickup.Person, nil
+		}
+	}
+	return nil, nil
 }
 
 // NewPickupExcusalRows serves the pointer-based excusal rows from records.

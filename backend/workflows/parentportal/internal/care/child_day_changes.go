@@ -50,6 +50,11 @@ type ChildDayChange struct {
 	// PickupTime is the changed pickup ("15:04"); nil on
 	// child_pickup_changed means the child does not come.
 	PickupTime *string
+	// PickupPersonName is who collects the child today on
+	// child_pickup_person (#8162); PickupPersonOneTime marks a person who
+	// shows an ID card at the pickup.
+	PickupPersonName    *string
+	PickupPersonOneTime bool
 	// ActivityTitle, RoomName and PreviousRoomName describe a block.
 	ActivityTitle    *string
 	RoomName         *string

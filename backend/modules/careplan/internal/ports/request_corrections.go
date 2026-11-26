@@ -3,6 +3,8 @@ package ports
 import (
 	"context"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/carerequests"
 )
@@ -17,6 +19,10 @@ type RequestCorrectionRecords interface {
 	// FindPickupNote locks the note and returns nil when it is gone.
 	FindPickupNote(context.Context, int64) (*careplan.PickupNote, error)
 	DeletePickupNote(context.Context, int64) error
+	// ListDayPickups and DeleteApprovedPickupPerson take back the day's
+	// pickup person an approval wrote (#8162).
+	ListDayPickups(ctx context.Context, from, to calendar.Date, studentIDs []int64) ([]careplan.DayPickup, error)
+	DeleteApprovedPickupPerson(ctx context.Context, id int64) (bool, error)
 }
 
 type RequestCorrectionEvent struct {

@@ -54,6 +54,19 @@ type pickupPermissionFixture struct {
 
 func buildPickupPermissionService(t *testing.T) pickupPermissionFixture {
 	t.Helper()
+	return buildPickupPermissionServiceWith(t, parentSettingsStub{boolValues: map[string]bool{
+		parentService.KeyParentPickupChangeEnabled:       true,
+		parentService.KeyParentGuardianManagementEnabled: true,
+		parentService.KeyParentCareModeRequestEnabled:    true,
+	}, stringValues: map[string]string{
+		parentService.KeyGuardianParentInviteMode: parentService.ParentInviteModeDisabled,
+	}})
+}
+
+// buildPickupPermissionServiceWith builds the fixture over the given school
+// settings (#8162: the same-day cutoff).
+func buildPickupPermissionServiceWith(t *testing.T, settings parentSettingsStub) pickupPermissionFixture {
+	t.Helper()
 	db := testpkg.SetupTestDB(t)
 	timetableOwner := owners.MustNewUnobservedTimetable(testpkg.NewDatabase(t, db))
 	repos := api.NewRepositoryTestFactory(testpkg.NewDatabase(t, db))
@@ -70,7 +83,7 @@ func buildPickupPermissionService(t *testing.T) pickupPermissionFixture {
 		owners.NewParentGuardianPolicy(), permissions,
 	)
 	requests := owners.NewCareScheduleRequestServiceWithPickupChangesAndPolicy(nil,
-		repos.CarePlan(), persons, schedules.Arrivals, schedules.Pickups, presence,
+		owners.CarePlanRequestRecords(repos.CarePlan()), persons, schedules.Arrivals, schedules.Pickups, presence,
 		newPickupExcusal(t, db, repos.CarePlan(),
 			newPickupBaselineService(repos.CarePlan(), approvedOfferingProjection(t)),
 			timetableOwner, false,
@@ -108,16 +121,10 @@ func buildPickupPermissionService(t *testing.T) pickupPermissionFixture {
 		CareExceptions:      owners.NewParentCareExceptions(repos.CarePlan()),
 		Attendance:          parentAttendance(t, db),
 		CareRequests:        requests,
-		Settings: parentSettingsStub{boolValues: map[string]bool{
-			parentService.KeyParentPickupChangeEnabled:       true,
-			parentService.KeyParentGuardianManagementEnabled: true,
-			parentService.KeyParentCareModeRequestEnabled:    true,
-		}, stringValues: map[string]string{
-			parentService.KeyGuardianParentInviteMode: parentService.ParentInviteModeDisabled,
-		}},
-		Logger:         slog.Default(),
-		DataRequests:   owners.NewParentDataRequestCommands(repos.CarePlan()),
-		CarePlanPolicy: owners.NewParentCarePlanPolicy(),
+		Settings:            settings,
+		Logger:              slog.Default(),
+		DataRequests:        owners.NewParentDataRequestCommands(repos.CarePlan()),
+		CarePlanPolicy:      owners.NewParentCarePlanPolicy(),
 	})
 	return pickupPermissionFixture{svc: svc, db: db, requests: requests, care: repos.CarePlan()}
 }
@@ -691,13 +698,15 @@ func TestDayPickupPerson_SignedConfirmedAndOnlyThatDay(t *testing.T) {
 	approveCareRequest(t, f, chain.TenantID, created.ID)
 
 	tenantCtx := tenant.WithTenantID(ctx, chain.TenantID)
-	onDay, err := f.care.ListPickupNotes(tenantCtx, careplan.StudentScheduleFilter{StudentIDs: []int64{chain.StudentID}, Date: careplan.Date(pickupPermissionDay)})
+	onDay := dayPickupPersonOf(t, f, tenantCtx, chain.StudentID, pickupPermissionDay)
+	require.NotNil(t, onDay, "the confirmed collector is the pickup person of that day (#8162)")
+	assert.Equal(t, terms.PickupPersonName, onDay.Name)
+	require.NotNil(t, onDay.GuardianProfileID)
+	assert.Equal(t, contactID, *onDay.GuardianProfileID)
+	assert.Nil(t, dayPickupPersonOf(t, f, tenantCtx, chain.StudentID, pickupPermissionDay.AddDays(1)), "the collector is not set on the next day")
+	notes, err := f.care.ListPickupNotes(tenantCtx, careplan.StudentScheduleFilter{StudentIDs: []int64{chain.StudentID}, Date: careplan.Date(pickupPermissionDay)})
 	require.NoError(t, err)
-	require.Len(t, onDay, 1, "the confirmed collector is noted for that day")
-	assert.Contains(t, onDay[0].Content, terms.PickupPersonName)
-	nextDay, err := f.care.ListPickupNotes(tenantCtx, careplan.StudentScheduleFilter{StudentIDs: []int64{chain.StudentID}, Date: careplan.Date(pickupPermissionDay.AddDays(1))})
-	require.NoError(t, err)
-	assert.Empty(t, nextDay, "the collector is not noted on the next day")
+	assert.Empty(t, notes, "the collector is no longer a free-text note")
 
 	canPickup, _ := pickupWeekdays(t, f.db, chain.StudentID, contactID)
 	assert.False(t, canPickup, "a one-day collector does not become a standing pickup permission")

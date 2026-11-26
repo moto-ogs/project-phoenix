@@ -1601,6 +1601,7 @@ export interface pickupChangeNoticeResponse {
   student_first_name: string;
   date: string;
   pickup_time?: string;
+  pickup_person?: string;
   withdrawn: boolean;
   informed_at: string;
 }
@@ -1611,6 +1612,7 @@ export const pickupChangeNoticeResponseSchema: z.ZodType<pickupChangeNoticeRespo
   student_first_name: str,
   date: str,
   pickup_time: optional(str),
+  pickup_person: optional(str),
   withdrawn: bool,
   informed_at: instant,
 });

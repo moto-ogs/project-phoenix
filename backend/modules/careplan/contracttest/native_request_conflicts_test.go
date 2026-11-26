@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/moto-ogs/project-phoenix/roots/owners"
+
 	"github.com/moto-ogs/project-phoenix/modules/securityruntime"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
@@ -51,7 +53,7 @@ func TestNativeConflictStaffPickupWritesOnlyRequestedDay(t *testing.T) {
 		Records: owner, People: decisionPort, Guardians: decisionPort, Plans: decisionPort, Effects: decisionPort, Today: today,
 	})
 	require.NoError(t, err)
-	exceptions, err := compose.NewPickupApprovalExceptions(owner)
+	exceptions, err := compose.NewPickupApprovalExceptions(owners.CarePlanRequestRecords(owner))
 	require.NoError(t, err)
 	probe := &pickupApprovalFixture{staffID: staff.ID}
 	approvals, err := compose.NewPickupApprovals(compose.PickupApprovalDependencies{

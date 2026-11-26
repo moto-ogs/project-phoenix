@@ -22,6 +22,12 @@ const (
 	pickupChangedBody    = "Neue Abholzeit für ein Kind: %s um %s Uhr."
 	pickupWithdrawnTitle = "Abholzeit zurückgenommen"
 	pickupWithdrawnBody  = "Für ein Kind gilt %s wieder die normale Abholzeit."
+	// A family named who collects the child (#8162). The copy names neither
+	// the child nor the person: both show only in moto.
+	pickupPersonTitle          = "Abholperson geändert"
+	pickupPersonBody           = "Ein Kind wird %s von einer anderen Person abgeholt."
+	pickupPersonWithdrawnTitle = "Abholperson zurückgenommen"
+	pickupPersonWithdrawnBody  = "Für ein Kind gilt %s wieder die normale Abholung."
 )
 
 // MaxPickupChangeTeamNotices bounds the reader's unread list. It is a pointer
@@ -79,7 +85,7 @@ func (s *PickupChangeTeamService) NotifyPickupChangeApproved(ctx context.Context
 	if notice.StudentID <= 0 || notice.RequestID <= 0 || notice.Date == "" || notice.Date.Before(today) {
 		return nil
 	}
-	if !notice.Withdrawn && notice.PickupTime == "" {
+	if !notice.Withdrawn && notice.PickupTime == "" && notice.PickupPerson == "" {
 		return nil
 	}
 	return s.run(ctx, "notify_pickup_change_team", func(txCtx context.Context, stats *domain.OperationStats) error {
@@ -161,7 +167,7 @@ func (s *PickupChangeTeamService) unread(ctx context.Context, stats *domain.Oper
 			Date: terms.Date, Withdrawn: row.Status != carerequests.StatusApproved, InformedAt: row.InformedAt,
 		}
 		if !notice.Withdrawn {
-			notice.PickupTime = terms.PickupTime
+			notice.PickupTime, notice.PickupPerson = terms.PickupTime, terms.PickupPersonName
 		}
 		out = append(out, notice)
 	}
@@ -196,8 +202,14 @@ func withoutAccount(accountIDs []int64, excluded int64) []int64 {
 // which day the new or regular time applies to.
 func pickupChangeCopy(notice careplan.PickupChangeNotice) (string, string) {
 	day := "am " + germanWeekdayShort[notice.Date.Weekday()] + " " + notice.Date.Format("02.01.2006")
-	if notice.Withdrawn {
+	personOnly := notice.PickupTime == "" && notice.PickupPerson != ""
+	switch {
+	case notice.Withdrawn && personOnly:
+		return pickupPersonWithdrawnTitle, fmt.Sprintf(pickupPersonWithdrawnBody, day)
+	case notice.Withdrawn:
 		return pickupWithdrawnTitle, fmt.Sprintf(pickupWithdrawnBody, day)
+	case personOnly:
+		return pickupPersonTitle, fmt.Sprintf(pickupPersonBody, day)
 	}
 	return pickupChangedTitle, fmt.Sprintf(pickupChangedBody, day, notice.PickupTime)
 }

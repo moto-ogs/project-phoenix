@@ -109,9 +109,12 @@ func pickupRequestPayload(ctx context.Context, pickup ports.RequestSubmissionPic
 // wording (#4780).
 func addPickupPersonAndSignature(payload map[string]any, input carerequests.PickupChangeCreateInput) {
 	if input.PickupPerson != nil {
-		payload["pickup_person"] = map[string]any{
-			"guardian_profile_id": input.PickupPerson.GuardianProfileID, "name": strings.TrimSpace(input.PickupPerson.Name),
+		person := map[string]any{"name": strings.Join(strings.Fields(input.PickupPerson.Name), " ")}
+		// A one-time person (#8162) has no contact to name.
+		if !input.PickupPerson.OneTime() {
+			person["guardian_profile_id"] = input.PickupPerson.GuardianProfileID
 		}
+		payload["pickup_person"] = person
 	}
 	if input.Signature != nil {
 		payload["signature"] = map[string]any{"id": input.Signature.SignatureID, "statement": input.Signature.Statement}

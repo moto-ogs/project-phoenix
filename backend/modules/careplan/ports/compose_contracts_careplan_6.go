@@ -6,6 +6,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/carerequests"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 type RequestConflictRecords interface {
@@ -21,6 +22,10 @@ type RequestCorrectionRecords interface {
 	DeleteDepartureException(context.Context, int64) error
 	ListPickupNotes(context.Context, careplan.StudentScheduleFilter) ([]careplan.PickupNote, error)
 	DeletePickupNote(context.Context, int64) error
+	// ListDayPickups and DeleteApprovedPickupPerson take back the day's
+	// pickup person an approval wrote (#8162).
+	ListDayPickups(ctx context.Context, from, to calendar.Date, studentIDs []int64) ([]careplan.DayPickup, error)
+	DeleteApprovedPickupPerson(ctx context.Context, id int64) (bool, error)
 }
 
 type RequestDecisionRecords interface {

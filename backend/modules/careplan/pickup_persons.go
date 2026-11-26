@@ -48,6 +48,10 @@ type PickupPerson struct {
 	// CreatedBy is the staff membership that set the value; nil after that
 	// membership was deleted.
 	CreatedBy *int64
+	// RequestedByGuardian is the guardian account whose one-day request
+	// named the person (#8162); the OGS approval wrote the value. Nil for a
+	// value the staff set.
+	RequestedByGuardian *int64
 }
 
 // PickupPersonGuardianAuthorization names the relationship and plan weekday
@@ -69,6 +73,17 @@ type DayPickup struct {
 	Date      Date
 	Departure *DepartureException
 	Person    *PickupPerson
+}
+
+// ApprovedPickupPersons writes the pickup person a family named in its
+// one-day request, once the OGS approved it (#8162). The approval holds the
+// care-day lock and checked the named contact; only the care request
+// decisions call it.
+type ApprovedPickupPersons interface {
+	SaveApprovedPickupPerson(ctx context.Context, person PickupPerson) (PickupPerson, error)
+	// DeleteApprovedPickupPerson takes back the row an approval wrote when
+	// its decision is corrected; false when the row is gone.
+	DeleteApprovedPickupPerson(ctx context.Context, id int64) (bool, error)
 }
 
 // PickupPersons is the owner's capability for the pickup person of a day.

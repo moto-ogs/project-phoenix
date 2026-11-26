@@ -33,7 +33,10 @@ type dayChangesChildBlocks interface {
 // ChildDayChangesSources are the owner reads of the child's day; all
 // required.
 type ChildDayChangesSources struct {
-	CarePlan      dayChangesCarePlan
+	CarePlan dayChangesCarePlan
+	// DayPickups reads the child's Abholart and pickup person of the day
+	// (#8162) in one statement.
+	DayPickups    dayChangesDayPickups
 	Students      dayChangesStudents
 	ClosingDays   dayChangesClosingDayReads
 	Blocks        dayChangesChildBlocks
@@ -44,7 +47,7 @@ type ChildDayChangesSources struct {
 // NewChildDayChanges binds the child's sources to the projection and the
 // projection to the parents portal's port.
 func NewChildDayChanges(sources ChildDayChangesSources) (parentService.ChildDayChanges, error) {
-	if sources.CarePlan == nil || sources.Students == nil || sources.ClosingDays == nil || sources.Blocks == nil || sources.ClassArrivals == nil {
+	if sources.CarePlan == nil || sources.DayPickups == nil || sources.Students == nil || sources.ClosingDays == nil || sources.Blocks == nil || sources.ClassArrivals == nil {
 		return nil, fmt.Errorf("%w: child day sources", daychangesview.ErrDependencies)
 	}
 	query, err := daychangesview.NewChild(daychangesview.ChildDependencies{
@@ -75,9 +78,8 @@ func (sources ChildDayChangesSources) childClass(ctx context.Context, studentID 
 }
 
 // childDayChildren is the Kinder source of the child: its status, its
-// changed pickup, whether it goes home alone and its class trip. The pickup
-// notes stay out: they are free text, and the structured pickup person comes
-// with #7655.
+// changed pickup, whether it goes home alone, who collects it (#8162) and
+// its class trip. The pickup notes stay out: they are free text.
 type childDayChildren struct{ sources ChildDayChangesSources }
 
 func (s childDayChildren) ChildDayChanges(ctx context.Context, day calendar.Date, child daychangesview.ChildFilter) ([]daychangesview.SourceEntry, error) {
@@ -91,22 +93,18 @@ func (s childDayChildren) ChildDayChanges(ctx context.Context, day calendar.Date
 	if err != nil {
 		return nil, fmt.Errorf("list pickup exceptions: %w", err)
 	}
-	departures, err := s.sources.CarePlan.ListDepartureExceptions(ctx, careplan.StudentScheduleFilter{StudentIDs: ids, Date: date})
+	pickups, err := s.sources.DayPickups.ListDayPickups(ctx, day, day, ids)
 	if err != nil {
-		return nil, fmt.Errorf("list day departures: %w", err)
+		return nil, fmt.Errorf("list day pickups: %w", err)
 	}
 	arrivals, err := s.sources.CarePlan.ListArrivalExceptions(ctx, careplan.StudentScheduleFilter{StudentIDs: ids, Date: date})
 	if err != nil {
 		return nil, fmt.Errorf("list arrival exceptions: %w", err)
 	}
-	statusDays, exceptions, departures, arrivals = onlyChild(child.StudentID.Int64(), statusDays, exceptions, departures, arrivals)
+	statusDays, exceptions, pickups, arrivals = onlyChild(child.StudentID.Int64(), statusDays, exceptions, pickups, arrivals)
 	entries := childAbsence(statusDays, child.AccountID)
 	entries = append(entries, childPickup(exceptions, len(entries) > 0, child.AccountID)...)
-	for _, departure := range departures {
-		if departure.DepartureMode == careplan.DepartureModeAlone {
-			entries = append(entries, daychangesview.SourceEntry{Kind: daychangesview.KindChildGoesAlone, Involved: true})
-		}
-	}
+	entries = append(entries, childDayPickups(pickups, child.AccountID)...)
 	trips := classTripChildren(statusDays, arrivals)
 	if len(trips) == 0 {
 		return entries, nil
@@ -124,11 +122,11 @@ func (s childDayChildren) ChildDayChanges(ctx context.Context, day calendar.Date
 }
 
 // onlyChild keeps the rows of the child, whatever the owner's filter did.
-func onlyChild(studentID int64, statusDays []careplan.StudentStatusDay, exceptions []careplan.PickupException, departures []careplan.DepartureException, arrivals []careplan.ArrivalException) ([]careplan.StudentStatusDay, []careplan.PickupException, []careplan.DepartureException, []careplan.ArrivalException) {
+func onlyChild(studentID int64, statusDays []careplan.StudentStatusDay, exceptions []careplan.PickupException, pickups []careplan.DayPickup, arrivals []careplan.ArrivalException) ([]careplan.StudentStatusDay, []careplan.PickupException, []careplan.DayPickup, []careplan.ArrivalException) {
 	keep := func(id int64) bool { return id == studentID }
 	return filterRows(statusDays, func(r careplan.StudentStatusDay) bool { return keep(r.StudentID) }),
 		filterRows(exceptions, func(r careplan.PickupException) bool { return keep(r.StudentID) }),
-		filterRows(departures, func(r careplan.DepartureException) bool { return keep(r.StudentID) }),
+		filterRows(pickups, func(r careplan.DayPickup) bool { return keep(r.StudentID) }),
 		filterRows(arrivals, func(r careplan.ArrivalException) bool { return keep(r.StudentID) })
 }
 
@@ -189,6 +187,27 @@ func childPickup(exceptions []careplan.PickupException, absent bool, accountID i
 			Kind: daychangesview.KindChildPickupChanged, Involved: true, Child: child,
 			EnteredByYou: enteredBy(accountID, exception.CreatedByGuardian),
 		})
+	}
+	return entries
+}
+
+// childDayPickups is whether the child goes home alone and who collects it
+// today (#8162). The guardian reads the name of the person: a family named
+// it, or the OGS set it for the child. A person a request of the reading
+// guardian named is marked EnteredByYou.
+func childDayPickups(pickups []careplan.DayPickup, accountID int64) []daychangesview.SourceEntry {
+	entries := make([]daychangesview.SourceEntry, 0, len(pickups))
+	for _, pickup := range pickups {
+		if pickup.Departure != nil && pickup.Departure.DepartureMode == careplan.DepartureModeAlone {
+			entries = append(entries, daychangesview.SourceEntry{Kind: daychangesview.KindChildGoesAlone, Involved: true})
+		}
+		if person := pickup.Person; person != nil {
+			entries = append(entries, daychangesview.SourceEntry{
+				Kind: daychangesview.KindChildPickupPerson, Involved: true,
+				EnteredByYou: enteredBy(accountID, person.RequestedByGuardian),
+				Child:        &daychangesview.Child{PickupPerson: &daychangesview.ChildPickupPerson{Name: person.Name, OneTime: person.OneTime()}},
+			})
+		}
 	}
 	return entries
 }
@@ -316,6 +335,9 @@ func toParentDayChange(entry daychangesview.Entry) parentService.ChildDayChange 
 			out.ChildStatus = &status
 		}
 		out.PickupTime = child.PickupTime
+		if person := child.PickupPerson; person != nil {
+			out.PickupPersonName, out.PickupPersonOneTime = &person.Name, person.OneTime
+		}
 	}
 	if entry.Activity != nil {
 		out.ActivityTitle = &entry.Activity.Title
@@ -339,15 +361,15 @@ func toParentDayChange(entry daychangesview.Entry) parentService.ChildDayChange 
 // root builds anyway: Care Plan, People Directory, School Calendar, the class
 // arrivals and the operational day of Timetable. A failure is a wiring error
 // of the root, so the serve root stops at it.
-func mustBuildChildDayChanges(carePlan dayChangesCarePlan, students dayChangesStudents, closing dayChangesClosingDayReads, classArrivals timetable.ClassArrivalQuery, lifecycle owners.TimetableLifecycle, today func() calendar.Date) parentService.ChildDayChanges {
-	port, err := buildChildDayChanges(carePlan, students, closing, classArrivals, lifecycle, today)
+func mustBuildChildDayChanges(carePlan dayChangesCarePlan, dayPickups dayChangesDayPickups, students dayChangesStudents, closing dayChangesClosingDayReads, classArrivals timetable.ClassArrivalQuery, lifecycle owners.TimetableLifecycle, today func() calendar.Date) parentService.ChildDayChanges {
+	port, err := buildChildDayChanges(carePlan, dayPickups, students, closing, classArrivals, lifecycle, today)
 	if err != nil {
 		panic(fmt.Sprintf("compose the child's day changes: %v", err))
 	}
 	return port
 }
 
-func buildChildDayChanges(carePlan dayChangesCarePlan, students dayChangesStudents, closing dayChangesClosingDayReads, classArrivals timetable.ClassArrivalQuery, lifecycle owners.TimetableLifecycle, today func() calendar.Date) (parentService.ChildDayChanges, error) {
+func buildChildDayChanges(carePlan dayChangesCarePlan, dayPickups dayChangesDayPickups, students dayChangesStudents, closing dayChangesClosingDayReads, classArrivals timetable.ClassArrivalQuery, lifecycle owners.TimetableLifecycle, today func() calendar.Date) (parentService.ChildDayChanges, error) {
 	classDay, err := timetable.ClassArrivalDayOf(classArrivals)
 	if err != nil {
 		return nil, err
@@ -357,7 +379,7 @@ func buildChildDayChanges(carePlan dayChangesCarePlan, students dayChangesStuden
 		return nil, err
 	}
 	return NewChildDayChanges(ChildDayChangesSources{
-		CarePlan: carePlan, Students: students, ClosingDays: closing,
+		CarePlan: carePlan, DayPickups: dayPickups, Students: students, ClosingDays: closing,
 		Blocks: blocks, ClassArrivals: classDay, Today: today,
 	})
 }

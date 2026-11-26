@@ -18,7 +18,8 @@ type PickupChangeTerms struct {
 	// PickupPersonName is the one-day collector (#4780), "" for none.
 	PickupPersonName string
 	// PickupPersonGuardianProfileID lets the parent portal preselect the
-	// collector when its still-pending request is edited.
+	// collector when its still-pending request is edited; zero for a one-time
+	// person (#8162).
 	PickupPersonGuardianProfileID int64
 }
 

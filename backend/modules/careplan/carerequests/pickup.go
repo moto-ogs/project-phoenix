@@ -34,6 +34,9 @@ type PickupApproval struct {
 	Payload             json.RawMessage
 	ExpectedImpactToken *string
 	RequireImpactToken  bool
+	// GuardianAccountID submitted the request; the day's pickup person it
+	// names keeps it (#8162).
+	GuardianAccountID int64
 }
 
 // PickupApplied names the rows an approval wrote, so a later correction can
@@ -49,6 +52,10 @@ type PickupApplied struct {
 	// (#4780); PickupNoteVersion fingerprints it like the exceptions.
 	PickupNoteID      int64
 	PickupNoteVersion string
+	// PickupPersonID is the day's pickup person an approval writes since
+	// #8162, in place of the dated note; PickupPersonVersion fingerprints it.
+	PickupPersonID      int64
+	PickupPersonVersion string
 }
 
 // PickupApprovals applies the pickup leg of an already authorized request
@@ -136,7 +143,7 @@ func storedPickupPerson(raw any) (PickupPerson, bool) {
 	fields, _ := raw.(map[string]any)
 	id, _ := fields["guardian_profile_id"].(float64)
 	name, _ := fields["name"].(string)
-	if id <= 0 || strings.TrimSpace(name) == "" {
+	if id < 0 || strings.TrimSpace(name) == "" {
 		return PickupPerson{}, false
 	}
 	return PickupPerson{GuardianProfileID: int64(id), Name: name}, true

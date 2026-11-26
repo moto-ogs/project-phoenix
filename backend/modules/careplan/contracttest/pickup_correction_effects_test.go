@@ -41,7 +41,7 @@ func pickupCorrectionFixture(t *testing.T) (*careFixture, calendar.Date, int64) 
 		owners.NewParentStudentGuardianReads(f.reposPeople.StudentGuardian),
 		owners.NewParentGuardianPolicy(), nil)
 	f.svc = owners.NewCareScheduleRequestServiceWithPickupChangesAndPolicy(nil,
-		f.reposCare.CarePlan(), f.persons, f.schedules.Arrivals, f.schedules.Pickups,
+		owners.CarePlanRequestRecords(f.reposCare.CarePlan()), f.persons, f.schedules.Arrivals, f.schedules.Pickups,
 		newPickupChangePresence(t, f.db), f.autoExcusal, f.reposCare.CarePlan(), f.caller,
 		f.emitter(t, messagingOnSettings{}, nil), nil, testpkg.RequestReviewPolicy[*peopledirectory.StudentState]{UserContext: f.caller},
 		testpkg.PermissionsFromContext, f.reposPeople.ParentRequestEvent, slog.Default(), f.services.StudentAudit,
@@ -105,18 +105,21 @@ func assertCorrectionEffects(t *testing.T, f *careFixture, date calendar.Date, s
 	require.NoError(t, err)
 	notes, err := owner.ListPickupNotes(ctx, filter)
 	require.NoError(t, err)
+	person := correctionPickupPerson(t, f, date)
 	slot := testpkg.InstanceStudentByIDContext(t, ctx, f.db, slotID)
+	// The approved collector is the day's pickup person (#8162), no note.
+	assert.Empty(t, notes)
 	if approved {
 		require.Len(t, pickups, 1)
 		require.Len(t, departures, 1)
-		require.Len(t, notes, 1)
+		require.NotNil(t, person)
 		assert.Equal(t, studentpresence.SessionAttendanceAbsent, slot.Status)
 		require.NotNil(t, slot.PickupExceptionID)
 		assert.Equal(t, pickups[0].ID, *slot.PickupExceptionID)
 	} else {
 		assert.Empty(t, pickups)
 		assert.Empty(t, departures)
-		assert.Empty(t, notes)
+		assert.Nil(t, person)
 		assert.Equal(t, studentpresence.SessionAttendanceExpected, slot.Status)
 		assert.Nil(t, slot.Substatus)
 		assert.Nil(t, slot.PickupExceptionID)
@@ -362,29 +365,44 @@ func TestPickupCorrectionRefusesEditFromOverlappingTransaction(t *testing.T) {
 	}
 }
 
-// The approval wrote the day's collector note; staff then replaced its text
-// through the note editor (PUT /students/{id}/pickup-notes/{noteId}). The
-// correction must refuse instead of deleting the team's note.
-func TestPickupCorrectionRefusesStaffEditedCollectorNote(t *testing.T) {
+// The approval wrote the day's pickup person (#8162); staff then replaced
+// it for that day. The correction must refuse instead of deleting the
+// team's value.
+func TestPickupCorrectionRefusesStaffEditedPickupPerson(t *testing.T) {
 	t.Parallel()
 	f, date, slotID := pickupCorrectionFixture(t)
 	ctx := correctionContext(t, f)
 	row := correctionRequest(t, f, date, true)
-	notes, err := f.reposCare.CarePlan().ListPickupNotes(ctx, careplan.StudentScheduleFilter{StudentIDs: []int64{f.chain.StudentID}, Date: careplan.Date(date)})
+	person := correctionPickupPerson(t, f, date)
+	require.NotNil(t, person)
+	assert.Equal(t, "Sabine Schneider", person.Name)
+	require.NotNil(t, person.RequestedByGuardian, "the day value keeps the guardian who asked for it")
+	assert.Equal(t, f.chain.AccountID, *person.RequestedByGuardian)
+	// The staff day editor's write: another name, no requesting guardian.
+	_, err := f.db.ExecContext(ctx, `UPDATE schedule.student_pickup_persons SET person_name = 'Oma Erika', guardian_profile_id = NULL,
+		requested_by_guardian = NULL, created_by = ? WHERE tenant_id = ? AND id = ?`, f.staffID, f.chain.TenantID, person.ID)
 	require.NoError(t, err)
-	require.Len(t, notes, 1)
-	// The handler's model: the request body plus the preserved identity.
-	edited := &careplan.PickupNote{ID: notes[0].ID, TenantID: notes[0].TenantID, StudentID: f.chain.StudentID,
-		NoteDate: careplan.Date(date), Content: "Abholung durch Oma Erika", CreatedBy: notes[0].CreatedBy, CreatedAt: notes[0].CreatedAt}
-	require.NoError(t, testpkg.TenantCommand2(t, ctx, f.db, f.schedules.Pickups.UpdateStudentPickupNote, edited, careplan.PickupNoteVersion(notes[0])))
 
 	err = correctPickup(ctx, t, f, currentCorrectionRequest(t, f, row.ID), false)
-	require.ErrorContains(t, err, "die Abholnotiz am 26.08.2026 wurde nach der Entscheidung geändert")
+	require.ErrorContains(t, err, "die Abholperson am 26.08.2026 wurde nach der Entscheidung geändert")
 	assertCorrectionEffects(t, f, date, slotID, true)
-	notes, err = f.reposCare.CarePlan().ListPickupNotes(ctx, careplan.StudentScheduleFilter{StudentIDs: []int64{f.chain.StudentID}, Date: careplan.Date(date)})
+	person = correctionPickupPerson(t, f, date)
+	require.NotNil(t, person)
+	assert.Equal(t, "Oma Erika", person.Name)
+}
+
+// correctionPickupPerson is the child's pickup person of the day, nil for
+// none.
+func correctionPickupPerson(t *testing.T, f *careFixture, date calendar.Date) *careplan.PickupPerson {
+	t.Helper()
+	pickups, err := owners.CarePlanRequestRecords(f.reposCare.CarePlan()).ListDayPickups(correctionContext(t, f), date, date, []int64{f.chain.StudentID})
 	require.NoError(t, err)
-	require.Len(t, notes, 1)
-	assert.Equal(t, "Abholung durch Oma Erika", notes[0].Content)
+	for _, pickup := range pickups {
+		if pickup.Person != nil {
+			return pickup.Person
+		}
+	}
+	return nil
 }
 
 // Ledger entries written before row versions existed keep the guard they were
