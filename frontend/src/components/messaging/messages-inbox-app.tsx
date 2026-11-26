@@ -252,9 +252,11 @@ function InboxList({
               // axe label-content-name-mismatch): Person · Rolle, Abzeichen,
               // Zeit; dann das Kind und die Zahl der ungelesenen.
               aria-label={[
-                `${thread.guardian_name} · ${
-                  wide ? relation : relationshipLabel(thread.relationship_type)
-                }`,
+                // Ohne sichtbare Rolle beginnt er nur mit dem Namen; die
+                // Rolle folgt mit dem Kind („Elternteil von …“).
+                showRole
+                  ? `${thread.guardian_name} · ${wide ? relation : role}`
+                  : thread.guardian_name,
                 thread.audience === "leadership"
                   ? ` ${LEADERSHIP_AUDIENCE_LABEL}`
                   : "",
