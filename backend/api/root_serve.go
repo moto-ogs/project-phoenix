@@ -261,14 +261,8 @@ func composeServeRoot(
 		},
 		func() error {
 			presence = owners.BuildPresenceOwner(db, env.Logger, env.Now, devices, persons, rooms, membership, carePlan, timetableOwner, timetableRepos, people, structure)
-			builtFacilitiesRooms, err := buildFacilitiesRooms(db, env, presence.Presence, rooms, timetableOwner, membership, persons)
-			if err != nil {
-				return err
-			}
-			facilitiesRooms = builtFacilitiesRooms
-			substitutions = owners.NewGroupSubstitutionRepository(structure.Groups, membership, workTime, env.Today)
-			supervisions = owners.NewGroupSupervisionRecords(presence.SessionRecords, groups)
-			return nil
+			facilitiesRooms, substitutions, supervisions, err = buildFacilitiesPresence(db, env, presence, rooms, timetableOwner, membership, persons, groups, structure, workTime)
+			return err
 		},
 		func() (err error) {
 			timetableRows, err = owners.BuildTimetableOwner(db, env.Logger, env.Now, timetableOwner, timetableRepos, calendar, bookings, structure.Groups, hub, persons, people.Students)

@@ -110,12 +110,13 @@ describe("RoomClosuresSection (#7653)", () => {
     expect(screen.getAllByText("Heute gesperrt")).toHaveLength(1);
   });
 
-  it("refreshes all room lists after saving a closure", () => {
+  it("refreshes all room lists after saving a closure", async () => {
     swrState.data = [];
     renderSection();
 
+    fireEvent.click(screen.getByRole("button", { name: "Raum sperren" }));
     fireEvent.click(
-      screen.getByRole("button", { name: "Test-Sperre speichern" }),
+      await screen.findByRole("button", { name: "Test-Sperre speichern" }),
     );
 
     expect(invalidateMock).toHaveBeenCalledWith("room-closures-");

@@ -5,9 +5,11 @@ import (
 	facilitiesCompose "github.com/moto-ogs/project-phoenix/modules/facilities/compose"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	"github.com/moto-ogs/project-phoenix/modules/schoolmembership"
+	"github.com/moto-ogs/project-phoenix/modules/schoolstructure"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	transactionruntime "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose"
+	workforceCompose "github.com/moto-ogs/project-phoenix/modules/workforce/compose"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 )
 
@@ -38,4 +40,22 @@ func buildFacilitiesRooms(db transactionruntime.Database, env owners.RootEnviron
 		}),
 		OpenGroups: facilitiesCompose.NewOpenGroupCatalog(FacilitiesGroupSupervisions(presence), FacilitiesRoomSessions(presence), FacilitiesGroupVisits(presence)),
 	}, nil
+}
+
+// buildFacilitiesPresence joins the Facilities room views to the presence
+// owner and retains the supervision views that run over the same sources.
+func buildFacilitiesPresence(
+	db transactionruntime.Database, env owners.RootEnvironment,
+	presence owners.PresenceOwner, rooms facilitiesModule.Catalog,
+	timetableOwner timetable.Capability, membership schoolmembership.Capability,
+	persons peopledirectory.Capability, groups schoolstructure.Owner,
+	structure owners.StructureRows, workTime workforceCompose.WorkTime,
+) (FacilitiesRooms, owners.GroupSubstitutions, studentpresence.SupervisionRecords, error) {
+	facilitiesRooms, err := buildFacilitiesRooms(db, env, presence.Presence, rooms, timetableOwner, membership, persons)
+	if err != nil {
+		return FacilitiesRooms{}, nil, nil, err
+	}
+	return facilitiesRooms,
+		owners.NewGroupSubstitutionRepository(structure.Groups, membership, workTime, env.Today),
+		owners.NewGroupSupervisionRecords(presence.SessionRecords, groups), nil
 }

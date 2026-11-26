@@ -34,7 +34,29 @@ import {
 } from "~/lib/room-closures-api";
 import { useInvalidateFamily, useSWRAuth } from "~/lib/swr";
 import { roomKeys } from "~/lib/swr/rooms-keys";
-import { RoomClosureModal } from "./room-closure-modal";
+
+type RoomClosureModalComponent =
+  (typeof import("./room-closure-modal"))["RoomClosureModal"];
+
+let loadedRoomClosureModal: RoomClosureModalComponent | null = null;
+let roomClosureModalRequest: Promise<RoomClosureModalComponent> | null = null;
+
+// Der Dialog enthält zwei Datumsauswahlen und die Vorschau des Raumplans.
+// Er lädt erst, wenn die Schule eine neue Sperre anlegt.
+function loadRoomClosureModal(): Promise<RoomClosureModalComponent> {
+  if (loadedRoomClosureModal) return Promise.resolve(loadedRoomClosureModal);
+  roomClosureModalRequest ??= import("./room-closure-modal").then(
+    (module) => {
+      loadedRoomClosureModal = module.RoomClosureModal;
+      return loadedRoomClosureModal;
+    },
+    (error: unknown) => {
+      roomClosureModalRequest = null;
+      throw error;
+    },
+  );
+  return roomClosureModalRequest;
+}
 
 const logger = createLogger({ component: "RoomClosuresSection" });
 
@@ -68,11 +90,32 @@ export function RoomClosuresSection({
     void invalidate(roomKeys.family);
   };
   const [creating, setCreating] = useState(false);
+  const [RoomClosureModal, setRoomClosureModal] =
+    useState<RoomClosureModalComponent | null>(() => loadedRoomClosureModal);
   const [lifting, setLifting] = useState<RoomClosure | null>(null);
   const [liftPending, setLiftPending] = useState(false);
   const { success: toastSuccess } = useToast();
   const { show: showError } = useApiErrorDisplay();
   const retryLiftRef = useRef<() => void>(() => undefined);
+
+  const openCreate = () => {
+    if (RoomClosureModal) {
+      setCreating(true);
+      return;
+    }
+    void loadRoomClosureModal().then(
+      (Modal) => {
+        setRoomClosureModal(() => Modal);
+        setCreating(true);
+      },
+      (error: unknown) => {
+        void showError(error, {
+          object: "den Dialog zum Sperren des Raums",
+          retry: openCreate,
+        });
+      },
+    );
+  };
 
   const lift = async (closure: RoomClosure) => {
     setLiftPending(true);
@@ -107,7 +150,7 @@ export function RoomClosuresSection({
             type="button"
             variant="outline"
             size="md"
-            onClick={() => setCreating(true)}
+            onClick={openCreate}
             tooltip="Öffnet den Dialog, um den Raum für einen Zeitraum zu sperren."
           >
             Raum sperren
@@ -166,18 +209,20 @@ export function RoomClosuresSection({
 
       {canUpdate ? (
         <>
-          <RoomClosureModal
-            isOpen={creating}
-            onClose={() => setCreating(false)}
-            onSaved={() => {
-              refresh();
-              toastSuccess("Der Raum ist gesperrt.");
-            }}
-            roomId={roomId}
-            today={today}
-            canReadPlan={canReadPlan}
-            planHref={planHref}
-          />
+          {creating && RoomClosureModal ? (
+            <RoomClosureModal
+              isOpen
+              onClose={() => setCreating(false)}
+              onSaved={() => {
+                refresh();
+                toastSuccess("Der Raum ist gesperrt.");
+              }}
+              roomId={roomId}
+              today={today}
+              canReadPlan={canReadPlan}
+              planHref={planHref}
+            />
+          ) : null}
           <ConfirmationModal
             isOpen={lifting !== null}
             onClose={() => setLifting(null)}
