@@ -1,6 +1,6 @@
 "use client";
 
-import { MoreHorizontal } from "lucide-react";
+import { MoreHorizontal, Search } from "lucide-react";
 import {
   createContext,
   useContext,
@@ -83,6 +83,13 @@ export interface AppHeadProps {
    * die Symbol-Aktionen aus `actions`, ein Element steht an ihrer Stelle.
    */
   readonly compactActions?: true | ReactNode;
+  /**
+   * Reiter, Suche und Filter rollen mit der Kopfkarte weg, statt zu kleben
+   * (`appShrinkToTitle`): Beim Rollen bleibt nur die schmale Kopfkarte.
+   * Trägt die Leiste eine Suche, zeigt sie eine Lupe, die zurück nach oben
+   * ins Suchfeld springt.
+   */
+  readonly shrinkToTitle?: boolean;
   /** Reiter als Chips. */
   readonly tabs?: ReactNode;
   /** Suche, Filter oder ein Bedienband (`searchSlot`). */
@@ -114,6 +121,7 @@ export function AppTenantHead({
   statsInline = false,
   compactStats,
   compactActions,
+  shrinkToTitle = false,
   tabs,
   toolbar,
   printHideHeader = false,
@@ -135,7 +143,10 @@ export function AppTenantHead({
   // „…“ nur, wenn das Blatt etwas zeigt: Aktionen, Menüeinträge oder Info.
   const hasMenu = hasMenuEntries || info != null || actions != null;
   const hasToolbar = tabs != null || toolbar != null;
-  useStickyOffset(toolbarRef, scrolledAway);
+  // Mit `shrinkToTitle` klebt die Leiste nicht: Beim Rollen bleibt wie auf
+  // jeder Seite nur die schmale Kopfkarte stehen (Runde 19).
+  const toolbarSticks = !shrinkToTitle || inSplitDetail;
+  useStickyOffset(toolbarRef, scrolledAway, toolbarSticks);
   // Die Leiste hängt beim Scrollen ohne Fuge an der schmalen Kopfkarte:
   // eine Karte wie oben auf der Seite, kein Spalt, durch den Inhalt blitzt.
   let stickyTop = scrolledAway
@@ -261,7 +272,7 @@ export function AppTenantHead({
           ref={toolbarRef}
           data-app-page-toolbar=""
           className={cn(
-            `sticky ${Z_LAYER.nav} mt-1.5 -mb-1 space-y-1.5 px-1.5 py-1`,
+            `${toolbarSticks ? "sticky" : "relative"} ${Z_LAYER.nav} mt-1.5 -mb-1 space-y-1.5 px-1.5 py-1`,
             FLOATING_CARD,
             // Telefon: unten an der Kopfkarte, solange sie steht; klebt die
             // Leiste allein, ist sie wieder eine ganze Karte.
@@ -272,7 +283,7 @@ export function AppTenantHead({
             "phone:rounded-t-none phone:border-t-0 phone:px-4 phone:pt-0 phone:pb-2",
             printHideHeader && "print:hidden",
           )}
-          style={{ top: stickyTop }}
+          style={toolbarSticks ? { top: stickyTop } : undefined}
         >
           {tabs}
           {toolbar}
@@ -289,8 +300,11 @@ export function AppTenantHead({
         className={cn(
           `tablet:inset-x-8 fixed inset-x-4 ${Z_LAYER.nav} ${FIXED_LAYER_SHIFT} flex items-center gap-1 px-1.5 transition-[opacity,transform] duration-200 motion-reduce:transition-none`,
           FLOATING_CARD,
-          // Mit Leiste bilden schmale Kopfkarte und Leiste eine Karte.
-          hasToolbar && "phone:rounded-b-none phone:border-b-0",
+          // Mit klebender Leiste bilden schmale Kopfkarte und Leiste eine
+          // Karte.
+          hasToolbar &&
+            toolbarSticks &&
+            "phone:rounded-b-none phone:border-b-0",
           scrolledAway
             ? "translate-y-0 opacity-100"
             : "pointer-events-none -translate-y-2 opacity-0",
@@ -324,6 +338,29 @@ export function AppTenantHead({
         {/* Symbol-Aktionen wie die Lupe bleiben auf Wunsch der Seite auch
             beim Rollen erreichbar. `mr-2` ergänzt `gap-1` auf die 12 px, die
             zwei 44-px-Trefferflächen nebeneinander brauchen. */}
+        {shrinkToTitle && toolbar != null ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            aria-label="Suchen"
+            // `mr-2` ergänzt `gap-1` auf die 12 px zwischen zwei 44-px-
+            // Trefferflächen.
+            className={cn(hasMenu && "mr-2")}
+            tooltip="Springt nach oben ins Suchfeld."
+            onClick={() => {
+              const reduce = window.matchMedia(
+                "(prefers-reduced-motion: reduce)",
+              ).matches;
+              window.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" });
+              toolbarRef.current
+                ?.querySelector<HTMLInputElement>("input")
+                ?.focus({ preventScroll: true });
+            }}
+          >
+            <Search className="size-5" aria-hidden="true" />
+          </Button>
+        ) : null}
         {compactActions != null && compactActions !== false ? (
           <div
             data-app-head-compact-actions=""
@@ -387,11 +424,12 @@ export function AppTenantHead({
 function useStickyOffset(
   toolbarRef: RefObject<HTMLDivElement | null>,
   scrolledAway: boolean,
+  toolbarSticks: boolean,
 ) {
   useEffect(() => {
     const root = document.documentElement;
     const update = () => {
-      const toolbar = toolbarRef.current;
+      const toolbar = toolbarSticks ? toolbarRef.current : null;
       const top = toolbar
         ? Number.parseFloat(getComputedStyle(toolbar).top)
         : 0;
@@ -410,7 +448,7 @@ function useStickyOffset(
       observer?.disconnect();
       root.style.removeProperty("--app-sticky-offset");
     };
-  }, [toolbarRef, scrolledAway]);
+  }, [toolbarRef, scrolledAway, toolbarSticks]);
 }
 
 /**

@@ -129,6 +129,13 @@ export interface TenantPageProps extends TenantPageSearchRowProps {
    */
   readonly appCompactActions?: true | ReactNode;
   /**
+   * App (#8070, Runde 19): Reiter, Suche und Filter rollen mit der
+   * Kopfkarte weg, statt unter der schmalen Kopfkarte zu kleben; beim
+   * Rollen bleibt nur die schmale Titelzeile. Mit Suche zeigt sie eine
+   * Lupe, die nach oben ins Suchfeld springt.
+   */
+  readonly appShrinkToTitle?: boolean;
+  /**
    * Erklärung der Seite, die man zum Kennenlernen braucht, aber nicht jeden
    * Tag liest. Sie liegt hinter einem Info-Knopf neben dem Titel und kostet
    * im Alltag keine Zeile (#4385). Per Tipp, Klick und Tastatur erreichbar,
@@ -662,6 +669,7 @@ function TenantPageView({
   appStatsInline = false,
   appCompactStats,
   appCompactActions,
+  appShrinkToTitle,
   info,
   actions,
   leading,
@@ -924,6 +932,7 @@ function TenantPageView({
             statsInline={appStatsInline}
             compactStats={appCompactStats}
             compactActions={appCompactActions}
+            shrinkToTitle={appShrinkToTitle}
             printHideHeader={printHideHeader}
             tabs={tabs ? <AppTenantTabs {...tabs} /> : undefined}
             toolbar={
