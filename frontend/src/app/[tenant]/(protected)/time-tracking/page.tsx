@@ -638,6 +638,7 @@ function ClockInCard({
   laborDays,
   setTargetHref,
   app = false,
+  headSlot,
 }: {
   readonly currentSession: WorkSession | null;
   readonly breaks: WorkSessionBreak[];
@@ -665,6 +666,8 @@ function ClockInCard({
   readonly setTargetHref?: string;
   /** App-Oberfläche (#8070): Zustand oben, Hauptaktion in der ActionBar. */
   readonly app?: boolean;
+  /** Telefon (Runde 17): Platz der Stempeluhr in der Kopfkarte. */
+  readonly headSlot?: HTMLElement | null;
 }) {
   // Null until the staff member explicitly picks Vor Ort / Homeoffice / Abwesend.
   // No pre-selection per Issue #1368 — silent defaults are unacceptable for an
@@ -1040,6 +1043,8 @@ function ClockInCard({
         breakStepper={breakDurationStepper}
         breakSheetOpen={breakMenuOpen && !isOnBreak}
         onBreakSheetOpenChange={setBreakMenuOpen}
+        headSlot={headSlot}
+        nowClock={berlinClockFromISO(now.toISOString())}
       />
     );
   }
@@ -3465,6 +3470,12 @@ function TimeTrackingContent() {
   // dem Desktop bleibt es beim heutigen Aufbau.
   const device = useDeviceContext();
   const app = device.resolved && device.isApp;
+  // Telefon (Runde 17): Die Stempeluhr steht als Zeile in der Kopfkarte;
+  // sie rendert dorthin, sobald der Platz da ist.
+  const [clockHeadSlot, setClockHeadSlot] = useState<HTMLDivElement | null>(
+    null,
+  );
+  const clockInHead = app && device.layout === "phone";
   // WeekChart shows trailing 10 workdays from today; no UI to navigate it
   // anymore (the table owns its own range state). Kept as a constant so the
   // chart's data window stays anchored at "now".
@@ -4326,13 +4337,35 @@ function TimeTrackingContent() {
     <TenantPage
       title="Zeiterfassung"
       info={app ? TIME_TRACKING_APP_INFO : TIME_TRACKING_INFO}
-      statsLoading={metricsLoading}
+      statsLoading={metricsLoading && !clockInHead}
       // Laden kommt aus dem Gerüst (Bauart 3, Regel 5) — kein eigenes
       // Seiten-Skelett neben den Zuständen der TenantPage.
       loading={authStatus === "loading"}
       loadingLabel="Zeiterfassung wird geladen…"
       stats={
-        metricsLoad.error ? (
+        clockInHead ? (
+          <div className="space-y-1">
+            <div ref={setClockHeadSlot} />
+            {metricsLoad.error ? (
+              <LoadErrorAlert error={metricsLoad.error} />
+            ) : metricsPending ? null : (
+              <TenantPageStats
+                items={[
+                  {
+                    value: `${formatDuration(ownMetrics.week!.ist)} / ${formatDuration(ownMetrics.week!.soll)}`,
+                    label: "Woche",
+                  },
+                  {
+                    value: formatSignedDuration(
+                      ownMetrics.accountBalanceMinutes!,
+                    ),
+                    label: accountSinceLabel,
+                  },
+                ]}
+              />
+            )}
+          </div>
+        ) : metricsLoad.error ? (
           <LoadErrorAlert error={metricsLoad.error} />
         ) : metricsPending ? undefined : app ? (
           // App (#8070): zwei Zahlen mit eindeutigem Namen. Die Woche steht
@@ -4655,6 +4688,7 @@ function TimeTrackingContent() {
           clock={
             <ClockInCard
               app
+              headSlot={clockInHead ? clockHeadSlot : undefined}
               currentSession={currentSession ?? null}
               breaks={currentBreaks}
               onCheckIn={handleCheckIn}

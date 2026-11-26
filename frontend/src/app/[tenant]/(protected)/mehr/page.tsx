@@ -20,6 +20,7 @@ import {
 import { UnreadBadge } from "~/components/messaging/unread-badge";
 import { SchoolSearchSlot } from "~/components/search/school-search-slot";
 import { SpinnerIcon } from "~/components/ui/icons";
+import { IconTile } from "~/components/ui/icon-tile";
 import { ListRowLink } from "~/components/ui/list-row-link";
 import { ModuleLockMark } from "~/components/ui/module-lock-mark";
 import { NotificationBadge } from "~/components/ui/notification-badge";
@@ -55,13 +56,14 @@ import { useStaffNoticesPending } from "~/lib/hooks/use-staff-notices-pending";
 // Runde 13: „Nachrichten“ bleibt in der Gruppe „Eltern“ wie in der
 // Seitenleiste; oben gezogen ließ es die Gruppe leer, und „Eltern“ fehlte.
 const STAFF_FLOW_HREFS: readonly string[] = [
+  // Runde 11: Der Notfall stand ganz unten unter „Weiteres“; im Ernstfall
+  // muss er ohne Suchen erreichbar sein. Runde 17: erste Zeile von „Mein
+  // Tag“, rot hervorgehoben.
+  "/emergency",
   "/mein-dienstplan",
   "/calendar",
   "/time-tracking",
   "/absences",
-  // Runde 11: Der Notfall stand ganz unten unter „Weiteres“; im Ernstfall
-  // muss er ohne Suchen erreichbar sein.
-  "/emergency",
 ];
 
 type MenuItem = StaffBottomNavModel["displayAdditionalItems"][number];
@@ -112,6 +114,24 @@ function useRowCounters(): Readonly<Record<string, RowCounter>> {
 /** Symbol einer Zeile: dieselbe Größe und Farbe in jeder Zeile. */
 const ROW_ICON = "h-5 w-5 shrink-0 text-gray-600";
 
+/**
+ * Zeilenhöhe (Runde 17): 56 px, am kleinen Telefon (SE, flacher als
+ * 760 px) 44 px, damit acht Einträge ins erste Bild passen. Die
+ * Trefferfläche bleibt über 44 px.
+ */
+const ROW_HEIGHT =
+  "min-h-14 [@media(max-height:760px)]:min-h-11 [@media(max-height:760px)]:py-2.5";
+
+/**
+ * Eine Regel für alle Zähler (Runde 17): Blau zählt, was neu oder offen
+ * ist (Benachrichtigungen, Anfragen, Nachrichten, Hinweise). Rot steht nur
+ * für Dringendes, darum hier keine rote Zahl.
+ */
+const COUNT_TONE = "blue" as const;
+
+/** Der Notfall fällt auf (Runde 17): rotes Symbol auf hellrotem Grund. */
+const EMERGENCY_HREF = "/emergency";
+
 function MenuRows({
   items,
   model,
@@ -123,15 +143,38 @@ function MenuRows({
 }>) {
   return items.map((item) => {
     const counter = counters[item.href];
+    const emergency = item.href === EMERGENCY_HREF;
     return (
       <li key={item.href}>
         <ListRowLink
           href={model.resolveItemHref(item)}
-          className="min-h-14"
+          className={ROW_HEIGHT}
           icon={
-            <MobileNavIcon item={item} active={false} className={ROW_ICON} />
+            emergency ? (
+              <IconTile
+                size="xs"
+                shape="round"
+                tone="red"
+                className="-m-1.5"
+                icon={
+                  <MobileNavIcon
+                    item={item}
+                    active={false}
+                    className="h-5 w-5 shrink-0"
+                  />
+                }
+              />
+            ) : (
+              <MobileNavIcon item={item} active={false} className={ROW_ICON} />
+            )
           }
-          title={item.label}
+          title={
+            emergency ? (
+              <span className="font-semibold text-gray-900">{item.label}</span>
+            ) : (
+              item.label
+            )
+          }
           badge={
             item.locked ? (
               <ModuleLockMark />
@@ -142,9 +185,7 @@ function MenuRows({
                 noun="ungelesene Anmeldungen"
               />
             ) : counter && counter.count > 0 ? (
-              // Eine Farbe für „ungelesen/offen“ (Runde 11): Braun neben Blau
-              // las sich wie zwei Bedeutungen; Rot bleibt den
-              // Benachrichtigungen (wie am Reiter „Mehr“).
+              // Eine Farbe für „ungelesen/offen“ (Runde 11, 17): Blau.
               <UnreadBadge
                 count={counter.count}
                 tone="parents"
@@ -278,14 +319,15 @@ function MorePageContent() {
     <li>
       <ListRowLink
         onClick={openNotificationsSheet}
-        className="min-h-14"
+        className={ROW_HEIGHT}
         icon={<Bell className={ROW_ICON} aria-hidden="true" />}
         title="Benachrichtigungen"
         badge={
-          // Derselbe rote Zähler steht am Reiter „Mehr“.
+          // Blau wie jeder Zähler auf dieser Seite (Runde 17): neue
+          // Hinweise sind nicht dringend.
           <NotificationBadge
             count={model.feedUnreadCount}
-            tone="red"
+            tone={COUNT_TONE}
             size="md"
             max={NOTIFICATIONS_BADGE_MAX}
             ariaLabel={`${model.feedUnreadCount} neue Hinweise`}
@@ -301,8 +343,18 @@ function MorePageContent() {
       size: flows.length + (notificationsRow ? 1 : 0),
       rows: (
         <>
+          {/* Der Notfall vor allem anderen (Runde 17), dann die Glocke. */}
+          <MenuRows
+            items={flows.filter((item) => item.href === EMERGENCY_HREF)}
+            model={model}
+            counters={counters}
+          />
           {notificationsRow}
-          <MenuRows items={flows} model={model} counters={counters} />
+          <MenuRows
+            items={flows.filter((item) => item.href !== EMERGENCY_HREF)}
+            model={model}
+            counters={counters}
+          />
         </>
       ),
     });
@@ -321,7 +373,7 @@ function MorePageContent() {
     <li>
       <ListRowLink
         onClick={() => setLogoutOpen(true)}
-        className="min-h-14"
+        className={ROW_HEIGHT}
         chevron={false}
         icon={
           <MobileNavIcon
@@ -345,7 +397,7 @@ function MorePageContent() {
           <li>
             <ListRowLink
               href={model.tenantPath(model.profileUrl)}
-              className="min-h-14"
+              className={ROW_HEIGHT}
               icon={
                 <MobileNavIcon
                   item={{ iconKey: "profile" }}
@@ -367,7 +419,7 @@ function MorePageContent() {
           <li>
             <ListRowLink
               onClick={handleRefresh}
-              className="min-h-14"
+              className={ROW_HEIGHT}
               chevron={false}
               icon={<RotateCw className={ROW_ICON} aria-hidden="true" />}
               title="Daten aktualisieren"

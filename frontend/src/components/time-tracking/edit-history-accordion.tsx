@@ -238,9 +238,15 @@ export function EditHistoryAccordion({
                   <span className="w-12 shrink-0 text-gray-500">
                     {FIELD_LABELS[edit.fieldName] ?? edit.fieldName}
                   </span>
-                  <span className="text-moto-red line-through">
-                    {formatEditValue(edit.fieldName, edit.oldValue)}
-                  </span>
+                  {/* Ohne alten Wert wurde das Feld neu angelegt: kein rot
+                      durchgestrichener Strich, der wie ein Fehler aussieht. */}
+                  {edit.oldValue === null || edit.oldValue === "" ? (
+                    <span className="text-gray-500">neu</span>
+                  ) : (
+                    <span className="text-moto-red line-through">
+                      {formatEditValue(edit.fieldName, edit.oldValue)}
+                    </span>
+                  )}
                   <span className="text-gray-500">→</span>
                   <span className="text-moto-green-strong font-medium">
                     {formatEditValue(edit.fieldName, edit.newValue)}
