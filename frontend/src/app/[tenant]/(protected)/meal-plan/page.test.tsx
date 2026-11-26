@@ -36,7 +36,7 @@ const {
   rights,
   features,
 } = vi.hoisted(() => ({
-  features: { mealPlanEnabled: true },
+  features: { mealPlanEnabled: true, mealRegistrationEnabled: true },
   rights: { admin: true, permissions: [] as string[] },
   getMealPlanWeek: vi.fn(),
   getMealOrders: vi.fn(),
@@ -91,7 +91,7 @@ vi.mock("~/lib/meal-plan-api", async (importOriginal) => ({
 vi.mock("~/lib/tenant-context", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/lib/tenant-context")>()),
   useMealPlanEnabled: () => features.mealPlanEnabled,
-  useMealRegistrationEnabled: () => true,
+  useMealRegistrationEnabled: () => features.mealRegistrationEnabled,
 }));
 vi.mock("~/components/meal-plan/meal-participant-list", () => ({
   MealParticipantList: ({
@@ -130,6 +130,7 @@ function renderPage() {
 
 beforeEach(() => {
   getMealCancellations.mockResolvedValue([]);
+  features.mealRegistrationEnabled = true;
 });
 
 describe("Speiseplan: Statuszeile bei Ladefehler (#2517)", () => {
@@ -246,6 +247,18 @@ describe("Speiseplan: Ausfalltage bei Ladefehler (#7656)", () => {
     // Anker: Das geöffnete Tagesmenü zeigt, dass die Woche geladen ist.
     expect(await screen.findByText("Tag kopieren")).toBeInTheDocument();
     expect(screen.queryByText("Essen fällt aus")).not.toBeInTheDocument();
+  });
+
+  it("offers meal cancellations without meal registration", async () => {
+    features.mealRegistrationEnabled = false;
+
+    renderPage();
+
+    const actions = await screen.findByLabelText("Aktionen für Mittwoch");
+    fireEvent.click(actions);
+
+    expect(await screen.findByText("Essen fällt aus")).toBeInTheDocument();
+    expect(getMealOrders).not.toHaveBeenCalled();
   });
 });
 
