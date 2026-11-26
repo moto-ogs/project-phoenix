@@ -51,7 +51,7 @@
     },
     "parent_opening_change_changed": {
       "label": "Geänderte Öffnungszeit",
-      "description": "Wenn {careNom} an einem Tag zu anderen Zeiten öffnet oder früher schließt. Der Hinweis in moto kommt immer, die Mitteilung aufs Handy nur bei Tagen in den nächsten 14 Tagen."
+      "description": "Wenn {careNom} an einem Tag zu anderen Zeiten öffnet oder schließt. Der Hinweis in moto kommt immer, die Mitteilung aufs Handy nur bei Tagen in den nächsten 14 Tagen."
     },
     "parent_billing_document": {
       "label": "Neues Dokument vom Träger",

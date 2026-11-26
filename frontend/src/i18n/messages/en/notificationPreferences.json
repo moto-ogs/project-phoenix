@@ -51,7 +51,7 @@
     },
     "parent_opening_change_changed": {
       "label": "Changed opening hours",
-      "description": "When the {careTerm} opens at other times or closes earlier on a day. The notice in moto always comes; a phone notification only for days within the next 14 days."
+      "description": "When the {careTerm} opens or closes at other times on a day. The notice in moto always comes; a phone notification only for days within the next 14 days."
     },
     "parent_billing_document": {
       "label": "New document from the provider",

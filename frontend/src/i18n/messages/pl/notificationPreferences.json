@@ -51,7 +51,7 @@
     },
     "parent_opening_change_changed": {
       "label": "Zmienione godziny otwarcia",
-      "description": "Gdy {careTerm} w danym dniu jest otwarta w innych godzinach lub zamyka się wcześniej. Informacja w moto pojawia się zawsze, powiadomienie na telefon tylko dla dni w ciągu najbliższych 14 dni."
+      "description": "Gdy {careTerm} w danym dniu otwiera się lub zamyka w innych godzinach. Informacja w moto pojawia się zawsze, powiadomienie na telefon tylko dla dni w ciągu najbliższych 14 dni."
     },
     "parent_billing_document": {
       "label": "Nowy dokument od organizatora",

@@ -51,7 +51,7 @@
     },
     "parent_opening_change_changed": {
       "label": "Orari i ndryshuar",
-      "description": "Kur {careTerm}-ja në një ditë hapet në orë të tjera ose mbyllet më herët. Njoftimi në moto vjen gjithmonë, njoftimi në telefon vetëm për ditët në 14 ditët e ardhshme."
+      "description": "Kur {careTerm}-ja në një ditë hapet ose mbyllet në orë të tjera. Njoftimi në moto vjen gjithmonë, njoftimi në telefon vetëm për ditët në 14 ditët e ardhshme."
     },
     "parent_billing_document": {
       "label": "Dokument i ri nga ofruesi",

@@ -259,6 +259,12 @@ func TestOpeningChangeFeedFollowsTheWindowAndTheSchoolSwitch(t *testing.T) {
 	t.Parallel()
 	f := newOpeningFeedFixture(t, testpkg.Tenant(t))
 	leitung, staff := f.staff(t, "Leitung", true), f.staff(t, "Betreuung", true)
+	family := testpkg.CreateTestParentGuardianChain(t, f.db)
+	f.device(t, family.AccountID, "parent")
+	var traeger int64
+	require.NoError(t, f.db.QueryRowContext(context.Background(), `SELECT organization_id FROM platform.schools WHERE id = ?`, f.school).Scan(&traeger))
+	office := testpkg.CreateTestAccount(t, f.db, "opening-window-office")
+	testpkg.CreateTestTraegerMember(t, f.db, traeger, office.ID, identityaccess.TraegerRoleReadOnly)
 
 	// Only past days: nobody hears about it.
 	f.save(t, leitung, http.MethodPost, "", "2030-06-03", "2030-06-07", "12:00", "Vorbei")
@@ -291,14 +297,30 @@ func TestOpeningChangeFeedFollowsTheWindowAndTheSchoolSwitch(t *testing.T) {
 	assert.Equal(t, "Geänderte Öffnungszeit entfällt", entries[0].Title)
 	assert.Equal(t, "Die geänderte Öffnungszeit „Fest“ vom 25.06.2030 bis 26.06.2030 entfällt. Es gelten wieder die normalen Öffnungszeiten.", entries[0].Body)
 
-	// Within 14 days: a push.
-	f.save(t, leitung, http.MethodPost, "", "2030-06-11", "2030-06-11", "12:00", "Brückentag")
+	// The 14th day ahead still lies in the window: a push to staff and family.
+	assert.Zero(t, f.pushes(t, family.AccountID))
+	f.save(t, leitung, http.MethodPost, "", "2030-06-24", "2030-06-24", "12:00", "Brückentag")
 	assert.Len(t, f.entries(t, staff, f.school, "staff"), 3)
 	assert.Equal(t, 1, f.pushes(t, staff))
+	assert.Equal(t, 1, f.pushes(t, family.AccountID))
 
-	// A school that switched the type off gets neither entry nor push.
+	// A family that switched the push off still gets the entry.
+	consent := rootAPI.NewNotificationConsentTestStore(testpkg.NewDatabase(t, f.db))
+	require.NoError(t, testpkg.TenantCommand3(t, testpkg.Ctx(t), f.db, consent.RecordConsent, family.AccountID, deliveryContract.NotificationParentOpeningChangeChanged, false))
+	parentBefore := len(f.entries(t, family.AccountID, 0, "parent"))
+	f.save(t, leitung, http.MethodPost, "", "2030-06-12", "2030-06-12", "12:00", "Elternabend")
+	assert.Len(t, f.entries(t, family.AccountID, 0, "parent"), parentBefore+1)
+	assert.Equal(t, 1, f.pushes(t, family.AccountID), "the family switched the push off")
+	assert.Equal(t, 2, f.pushes(t, staff))
+
+	// A school that switched the type off gets neither entry nor push, for
+	// staff, families and the Träger-Büro alike.
+	parentBefore, bellBefore := len(f.entries(t, family.AccountID, 0, "parent")), len(f.entries(t, office.ID, traeger, "traeger"))
+	require.Positive(t, bellBefore)
 	testpkg.SetTestTenantSetting(t, f.db, f.school, "notifications.opening_change_enabled", "false")
 	f.save(t, leitung, http.MethodPost, "", "2030-06-13", "2030-06-13", "12:00", "Studientag")
-	assert.Len(t, f.entries(t, staff, f.school, "staff"), 3)
-	assert.Equal(t, 1, f.pushes(t, staff))
+	assert.Len(t, f.entries(t, staff, f.school, "staff"), 4)
+	assert.Len(t, f.entries(t, family.AccountID, 0, "parent"), parentBefore)
+	assert.Len(t, f.entries(t, office.ID, traeger, "traeger"), bellBefore)
+	assert.Equal(t, 2, f.pushes(t, staff))
 }

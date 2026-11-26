@@ -39,7 +39,7 @@ func registerOpeningChangeTypes() {
 	RegisterType(TypeDefinition{
 		Key:         TypeParentOpeningChangeChanged,
 		Label:       "Geänderte Öffnungszeit",
-		Description: "Wenn die Schule an einem Tag früher schließt oder anders öffnet. Der Hinweis in moto kommt immer, die Mitteilung aufs Handy nur bei Tagen in den nächsten 14 Tagen.",
+		Description: "Wenn die Schule an einem Tag zu anderen Zeiten öffnet oder schließt. Der Hinweis in moto kommt immer, die Mitteilung aufs Handy nur bei Tagen in den nächsten 14 Tagen.",
 		Group:       GroupAppointments,
 		Portal:      PortalParent,
 		TenantGate:  settingOpeningChangeEnabled,

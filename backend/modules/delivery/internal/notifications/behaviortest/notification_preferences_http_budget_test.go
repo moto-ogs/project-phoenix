@@ -319,7 +319,7 @@ func parentSchoolClosingDayBudgetRow() map[string]any {
 }
 
 func parentOpeningChangeBudgetRow() map[string]any {
-	return map[string]any{"key": "parent_opening_change_changed", "label": "Geänderte Öffnungszeit", "description": "Wenn die Schule an einem Tag früher schließt oder anders öffnet. Der Hinweis in moto kommt immer, die Mitteilung aufs Handy nur bei Tagen in den nächsten 14 Tagen.", "group": "termine", "enabled": true, "available": true}
+	return map[string]any{"key": "parent_opening_change_changed", "label": "Geänderte Öffnungszeit", "description": "Wenn die Schule an einem Tag zu anderen Zeiten öffnet oder schließt. Der Hinweis in moto kommt immer, die Mitteilung aufs Handy nur bei Tagen in den nächsten 14 Tagen.", "group": "termine", "enabled": true, "available": true}
 }
 
 var notificationBudgetCatalogues = map[string]string{

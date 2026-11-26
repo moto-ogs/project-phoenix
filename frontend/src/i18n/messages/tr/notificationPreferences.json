@@ -51,7 +51,7 @@
     },
     "parent_opening_change_changed": {
       "label": "Değişen açılış saatleri",
-      "description": "{careTerm} bir gün farklı saatlerde açıldığında veya daha erken kapandığında. moto'daki bildirim her zaman gelir, telefona bildirim yalnızca önümüzdeki 14 gün içindeki günler için gelir."
+      "description": "{careTerm} bir gün farklı saatlerde açıldığında veya kapandığında. moto'daki bildirim her zaman gelir, telefona bildirim yalnızca önümüzdeki 14 gün içindeki günler için gelir."
     },
     "parent_billing_document": {
       "label": "Kurumdan yeni belge",
