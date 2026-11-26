@@ -60,6 +60,7 @@
     "closingDayUntil": "{careTerm} зачинена до {date}: {name}.",
     "openingChanged": "{careTerm} сьогодні відчинена з {opens} до {closes}: {name}.",
     "openingChangedUntil": "До {date} {careTerm} відчинена з {opens} до {closes}: {name}.",
+    "mealCancelled": "Сьогодні обіду для {name} не буде. Плата за нього не стягується.",
     "pickupAfterClosing": "Це після закриття. Зміни, будь ласка, час, коли забереш дитину.",
     "activityCancelled": "{title} о {time} сьогодні скасовано.",
     "activityReinstated": "{title} о {time} сьогодні все ж відбудеться.",

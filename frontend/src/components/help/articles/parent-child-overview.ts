@@ -31,6 +31,8 @@ export function parentChildOverviewTopic(): HelpTopic {
       "`Kontakte`: Abholberechtigte, Kontakte und verbundene Konten.",
       "Unter `Heute` stehen die Knöpfe zum Abmelden, zur Abholzeit und für eine Nachricht.",
       "`Heute anders` nennt zum Beispiel: Ein Angebot fällt aus, ist in einem anderen Raum oder hat eine Vertretung. Dazu kommen eine geänderte Abholzeit, wer dein Kind abholt, ein Schließtag, geänderte Öffnungszeiten, ein Ausflug oder eine Krankmeldung.",
+      // Essensausfall im Elternportal (#8160): nur bei einer Buchung des Kindes.
+      "Fällt das Mittagessen aus und dein Kind ist an dem Tag angemeldet, steht das auch unter `Heute anders`. Der Tag wird nicht berechnet.",
       // #8170: eine Abholzeit nach der geänderten Schließzeit bleibt stehen.
       "Schließt die OGS heute früher und liegt deine Abholzeit danach, steht dort `Das ist nach der Schließung.` moto ändert die Abholzeit nicht. Wähle `Abholung ändern` und trage eine frühere Zeit ein.",
       "Namen von Betreuungskräften stehen bei `Heute anders` nie. Du siehst nur, was dein Kind betrifft.",

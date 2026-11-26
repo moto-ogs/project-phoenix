@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	mealplanModule "github.com/moto-ogs/project-phoenix/modules/mealplan"
 	schoolCalendarCompose "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/compose"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	transactionruntime "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose"
@@ -47,9 +48,18 @@ func NewChildDayChangesTestRouter(db transactionruntime.Database, unit tenant.Un
 	if err != nil {
 		return nil, err
 	}
+	settings, err := owners.NewSettingsTestModule(db, unit)
+	if err != nil {
+		return nil, err
+	}
+	people := NewPeopleRepositorySuiteFactory(db)
+	meals, err := owners.BuildMealPlanServicesAtForTests(db, settings.Settings, owners.NewStudentRootReads(people.Student), owners.MustNewPeopleDirectory(db), mealplanModule.MenuChangeNotices(nil), now)
+	if err != nil {
+		return nil, err
+	}
 	dayChanges, err := NewChildDayChanges(ChildDayChangesSources{
 		CarePlan: carePlan, DayPickups: mustCarePlanPickupPersons(carePlan), Students: owners.MustNewPeopleDirectory(db), ClosingDays: owners.NewSchoolClosingDayReads(), OpeningChanges: schoolCalendarCompose.NewOpeningChanges(),
-		Blocks: blocks, ClassArrivals: classDay, Today: func() calendar.Date { return today },
+		Blocks: blocks, ClassArrivals: classDay, Meals: meals.Cancellations, Today: func() calendar.Date { return today },
 	})
 	if err != nil {
 		return nil, err

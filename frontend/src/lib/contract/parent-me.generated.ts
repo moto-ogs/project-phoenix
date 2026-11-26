@@ -35,10 +35,10 @@ import {
   type SwitchOffRequest,
 } from "./shared.generated";
 
-export const CHILD_DAY_CHANGE_KIND_VALUES = ["activity_cancelled", "activity_lead_changed", "activity_reinstated", "activity_room_changed", "child_absent", "child_goes_alone", "child_pickup_changed", "child_pickup_person", "class_dismissal_changed", "class_trip", "closing_day", "opening_changed"] as const;
+export const CHILD_DAY_CHANGE_KIND_VALUES = ["activity_cancelled", "activity_lead_changed", "activity_reinstated", "activity_room_changed", "child_absent", "child_goes_alone", "child_pickup_changed", "child_pickup_person", "class_dismissal_changed", "class_trip", "closing_day", "meal_cancelled", "opening_changed"] as const;
 export type ChildDayChangeKind = (typeof CHILD_DAY_CHANGE_KIND_VALUES)[number];
 
-export const CHILD_DAY_SOURCE_VALUES = ["activities", "children", "classes", "closing_days"] as const;
+export const CHILD_DAY_SOURCE_VALUES = ["activities", "children", "classes", "closing_days", "meal_plan"] as const;
 export type ChildDaySource = (typeof CHILD_DAY_SOURCE_VALUES)[number];
 
 export const CHILD_DAY_SOURCE_STATE_VALUES = ["failed", "loaded"] as const;

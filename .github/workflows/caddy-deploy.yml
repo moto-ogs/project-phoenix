@@ -71,7 +71,7 @@ jobs:
       name: production
     permissions:
       contents: read
-      pull-requests: read
+      actions: read
     steps:
       # Full history, blobs on demand: the remote script accepts every version
       # main ever had as the live file. The triggering commit, not the branch
@@ -149,14 +149,14 @@ jobs:
 
       - name: Notify Slack
         if: always()
-        uses: ./.github/actions/notify-deploy-slack
+        uses: moto-ogs/deploy-notify@v1
         with:
-          webhook_url: ${{ secrets.SLACK_DEPLOY_WEBHOOK }}
-          job_status: ${{ job.status }}
+          slack_token: ${{ secrets.SLACK_BOT_TOKEN }}
+          channel: ${{ vars.SLACK_DEPLOY_CHANNEL }}
+          status: ${{ job.status }}
           environment: production
-          app_name: Caddy
+          app: Caddy
           exit_code: ${{ steps.deploy.outputs.deploy_exit }}
-          github_token: ${{ github.token }}
-          repository: ${{ github.repository }}
-          commit_url: ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}
-          sha: ${{ github.sha }}
+          exit_codes: deploy-remote
+          # The commits since the last Caddy deploy are application changes.
+          release_notes: 'false'
