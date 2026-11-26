@@ -100,9 +100,13 @@ function RowLine({
   klass: string | undefined;
   homeway: string | null;
 }>) {
-  const subtitle = [klass, student.group_name, homeway]
-    .filter(Boolean)
-    .join(" · ");
+  // Klasse und Gruppe bleiben ganz oder fallen als ganze Angabe weg; nur der
+  // Heimweg darf mit „…“ enden („Kürzung trifft das Unwichtige“).
+  let parts: { text: string; cut?: boolean }[] = [
+    klass ? { text: klass } : null,
+    student.group_name ? { text: student.group_name } : null,
+    homeway ? { text: homeway, cut: true } : null,
+  ].filter((part): part is { text: string; cut?: boolean } => Boolean(part));
   const now = useRowClock(undefined);
   const dayChange =
     isToday && student.has_full_access !== false
@@ -110,8 +114,7 @@ function RowLine({
       : undefined;
   let lead: ReactNode = null;
   // Neben einer Warnung folgen Klasse, Gruppe und Heimweg wie sonst; was
-  // nicht mehr passt, endet mit „…“ und steht ganz im Kind-Blatt.
-  let rest = subtitle;
+  // nicht mehr passt, steht ganz im Kind-Blatt.
   if (student.has_full_access !== false) {
     const overdue = isToday ? overdueTime(student, now) : null;
     if (overdue) {
@@ -145,8 +148,7 @@ function RowLine({
         </span>
       );
       // Der geänderte Heimweg steht schon vorn.
-      if (dayChange.mode)
-        rest = [klass, student.group_name].filter(Boolean).join(" · ");
+      if (dayChange.mode) parts = parts.filter((part) => !part.cut);
     } else if (student.teacher_hints?.length) {
       lead = (
         <span className="flex shrink-0 items-center gap-1 font-medium text-gray-700">
@@ -165,14 +167,29 @@ function RowLine({
       <PresenceHint status={hint.status} title={hint.title} />
     </span>
   ) : null;
-  if (!lead && !hintNode) return subtitle ? <>{subtitle}</> : null;
-  if (!lead) rest = subtitle;
+  if (!lead && !hintNode && parts.length === 0) return null;
+  // Eine Zeile hoch: Was nicht mehr in die Zeile passt, bricht in eine
+  // verborgene Folgezeile um, statt mitten im Wort zu enden. Der Heimweg
+  // bleibt stehen, solange 4 rem frei sind, und endet dann mit „…“.
+  const leading = Boolean(lead || hintNode);
   return (
-    <span className="flex min-w-0 items-center gap-1">
+    <span className="flex h-[1lh] min-w-0 flex-wrap items-center gap-x-1 overflow-hidden">
       {hintNode}
       {hintNode && lead ? <span aria-hidden="true">·</span> : null}
       {lead}
-      {rest ? <span className="truncate">· {rest}</span> : null}
+      {parts.map((part, index) => (
+        <span
+          key={part.text}
+          className={
+            part.cut
+              ? "max-w-max min-w-0 shrink grow basis-16 truncate"
+              : "shrink-0 whitespace-nowrap"
+          }
+        >
+          {leading || index > 0 ? "· " : ""}
+          {part.text}
+        </span>
+      ))}
     </span>
   );
 }
@@ -275,17 +292,20 @@ function alphabeticGroups(students: readonly Student[]): StudentListAppGroup[] {
   }));
 }
 
-// Kleine Telefone (iPhone SE, Höhe unter 700 px): Zeilen 47 statt 59 px und
-// Buchstabenköpfe 28 statt 36 px, damit bis über der Aktionsleiste sieben
-// Kinder ganz zu sehen sind. Alle Angaben bleiben, nur Innenabstand und
-// Zeilenhöhe der zweiten Zeile schrumpfen; die Zeile bleibt 44 px Ziel.
+// Kleine Telefone (iPhone SE, Höhe unter 700 px): Zeilen 44 statt 59 px und
+// Buchstabenköpfe 18 statt 36 px, damit bis über der Aktionsleiste acht
+// Kinder ganz zu sehen sind (129 + 2 × 18 + 8 × 44 = 517 px, Leiste ab
+// 521 px). Alle Angaben bleiben, nur Innenabstand und Zeilenhöhe der zweiten
+// Zeile schrumpfen; die Zeile bleibt 44 px hoch und damit 44 px Ziel.
 const SHORT_PHONE_DENSE = [
   "phone:[@media(max-height:700px)]:[&_[data-collection-row]]:min-h-11",
-  "phone:[@media(max-height:700px)]:[&_[data-collection-row]]:py-1",
+  "phone:[@media(max-height:700px)]:[&_[data-collection-row]]:py-[3px]",
   "phone:[@media(max-height:700px)]:[&_[data-row-target]+span]:mt-0",
-  "phone:[@media(max-height:700px)]:[&_[data-row-target]+span]:leading-[1.125rem]",
-  "phone:[@media(max-height:700px)]:[&_[data-collection-group]>div:first-child]:min-h-7",
-  "phone:[@media(max-height:700px)]:[&_[data-collection-group]>div:first-child]:py-1",
+  "phone:[@media(max-height:700px)]:[&_[data-row-target]+span]:leading-[1.0625rem]",
+  "phone:[@media(max-height:700px)]:[&_[data-collection-group]>div:first-child]:h-[1.125rem]",
+  "phone:[@media(max-height:700px)]:[&_[data-collection-group]>div:first-child]:min-h-0",
+  "phone:[@media(max-height:700px)]:[&_[data-collection-group]>div:first-child]:py-0",
+  "phone:[@media(max-height:700px)]:[&_[data-collection-group]_h3]:leading-[1.0625rem]",
 ].join(" ");
 
 export function StudentListApp({

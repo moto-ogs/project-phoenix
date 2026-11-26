@@ -2399,6 +2399,10 @@ function SearchPageContent() {
     [],
   );
 
+  // App (#8070): Kinder als Zeilenliste mit Kind-Blatt. Der An- und
+  // Abmeldemodus behält seine Karten; die Ansichtswahl gilt nur am Desktop.
+  const device = useDeviceContext();
+  const appView = device.resolved && device.isApp;
   const filterConfigs: FilterConfig[] = useMemo(
     () => [
       // Stufe / Klasse / Gruppe are multi-selects (#2218). None of them carries
@@ -2618,7 +2622,9 @@ function SearchPageContent() {
         onChange: (value: string | string[]) =>
           updateAttendanceFilter(value as StatusFilter),
         options: [
-          { value: "all", label: "Alle Status" },
+          // Handy: Das Blatt nennt den Abschnitt „Status“ schon; „Alle
+          // Status“ läse sich dort doppelt.
+          { value: "all", label: appView ? "Alle" : "Alle Status" },
           ...(isToday ? LIVE_STATUS_FILTER_OPTIONS : []),
           ...PLANNED_ABSENCE_STATUS_FILTER_OPTIONS,
         ],
@@ -2719,6 +2725,7 @@ function SearchPageContent() {
         : []),
     ],
     [
+      appView,
       selectedYears,
       selectedSchoolClasses,
       selectedGroupIds,
@@ -3118,10 +3125,6 @@ function SearchPageContent() {
   // Zahl ist sicherheitsrelevant und steht sonst nirgends ohne Weiteres. In
   // der Schule, im Unterricht und zuhause zählt die Liste selbst: gruppiert
   // „Nach Status“ steht die Zahl an jeder Gruppe.
-  // App (#8070): Kinder als Zeilenliste mit Kind-Blatt. Der An- und
-  // Abmeldemodus behält seine Karten; die Ansichtswahl gilt nur am Desktop.
-  const device = useDeviceContext();
-  const appView = device.resolved && device.isApp;
   const studentSummary = useMemo(() => {
     if (!rowsLoaded) return null;
     const total = students.length;
@@ -3168,14 +3171,14 @@ function SearchPageContent() {
       }
     }
     // App (#8070): Die Chips stehen in der Titelzeile neben „Alle Kinder“,
-    // also kurz: „16 da · 0 krank“. Die Gesamtzahl steht wie am Desktop als
-    // Zähler neben dem Filter.
+    // also kurz: „16 von 118 da · 0 krank“. Die Gesamtzahl steht im ersten
+    // Chip statt als zweiter, knopfartiger Zähler neben dem Filter.
     return (
       <TenantPageStats
         items={
           appView
             ? [
-                { value: inCare, label: "da" },
+                { value: inCare, label: `von ${total} da` },
                 { value: sick, label: "krank" },
               ]
             : [
@@ -3565,7 +3568,11 @@ function SearchPageContent() {
         // Der Zähler ändert sich mit der Filterung und gehört deshalb in
         // die Filterzeile, nicht in die Titelzeile.
         badge={
-          rowsLoaded
+          // Handy: Ungefiltert nennt der Chip der Titelzeile die Gesamtzahl
+          // („16 von 118 da“); der Zähler erscheint erst, wenn Suche oder
+          // Filter die Liste verkleinern („3 Kinder“).
+          rowsLoaded &&
+          !(appView && isToday && filteredStudents.length === students.length)
             ? {
                 count: filteredStudents.length,
                 icon: <MotoConceptIcon concept={childrenConcept} size={20} />,
