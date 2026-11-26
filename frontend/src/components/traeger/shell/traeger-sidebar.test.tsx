@@ -158,6 +158,32 @@ describe("TraegerSidebar", () => {
     expect(mainNav().queryByText("Finanzen")).toBeNull();
   });
 
+  it("offers the children of all schools only with „Verträge verwalten“ (#8137)", () => {
+    sessionUser.permissions = [
+      "traeger_overview:read",
+      "traeger_contracts:manage",
+    ];
+    const { unmount } = render(<TraegerSidebar />);
+    // The names of all children need the right that opens the contracts;
+    // the entry stands between the schools and their occupancy.
+    expect(linkNames(mainNav()).slice(0, 4)).toEqual([
+      "Dashboard",
+      "Schulen",
+      "Kinder",
+      "Belegung",
+    ]);
+    expect(mainNav().getByRole("link", { name: "Kinder" })).toHaveAttribute(
+      "href",
+      "/kinder",
+    );
+    unmount();
+
+    sessionUser.permissions = ["traeger_overview:read", "traeger_reports:read"];
+    render(<TraegerSidebar />);
+    expect(mainNav().getByRole("link", { name: "Belegung" })).toBeVisible();
+    expect(mainNav().queryByRole("link", { name: "Kinder" })).toBeNull();
+  });
+
   it("shows the Dashboard only with its right (#4674)", () => {
     sessionUser.permissions = [];
     render(<TraegerSidebar />);

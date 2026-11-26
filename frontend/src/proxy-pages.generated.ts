@@ -65,6 +65,7 @@ export const PORTAL_PAGES = {
     "/einstellungen",
     "/ferien",
     "/invite",
+    "/kinder",
     "/konto",
     "/login",
     "/nachweise",

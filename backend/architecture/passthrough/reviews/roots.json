@@ -1381,6 +1381,11 @@
       "reason": "ADR 0251 (#7173): Finite named forwarding debt under ADR 0090: Workforce's EndSpringerAccess names the end of a lifted block's access, Identity \u0026 Access ends the window of that block."
     },
     {
+      "decision": "0327",
+      "id": "api/traegerStudentNames.StudentNamesByTenant",
+      "reason": "ADR 0327 (#8137): Consumer-port adapter of the Träger projection's student names port; it translates the projection's name query into People Directory's and its named student profiles into the projection's StudentName vocabulary."
+    },
+    {
       "decision": "0090",
       "id": "api/weekProtocolAttendance.GroupDayAttendance",
       "reason": "Binds the weekly protocol's attendance port to the presence projection's group day logs and translates each log into Timetable's group day, naming every missing child by first and last name."
