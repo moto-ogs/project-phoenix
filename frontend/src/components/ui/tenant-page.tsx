@@ -129,6 +129,12 @@ export interface TenantPageProps extends TenantPageSearchRowProps {
    */
   readonly appCompactActions?: true | ReactNode;
   /**
+   * App (#8070, Runde 19): Suche und Reiter rollen mit der Kopfkarte weg,
+   * statt unter dem schmalen Kopf zu kleben. Für Seiten, deren Suche selten
+   * gebraucht wird (Mehr); eine Lupe über `appCompactActions` führt zurück.
+   */
+  readonly appToolbarScrollsAway?: boolean;
+  /**
    * Erklärung der Seite, die man zum Kennenlernen braucht, aber nicht jeden
    * Tag liest. Sie liegt hinter einem Info-Knopf neben dem Titel und kostet
    * im Alltag keine Zeile (#4385). Per Tipp, Klick und Tastatur erreichbar,
@@ -662,6 +668,7 @@ function TenantPageView({
   appStatsInline = false,
   appCompactStats,
   appCompactActions,
+  appToolbarScrollsAway = false,
   info,
   actions,
   leading,
@@ -924,6 +931,7 @@ function TenantPageView({
             statsInline={appStatsInline}
             compactStats={appCompactStats}
             compactActions={appCompactActions}
+            toolbarScrollsAway={appToolbarScrollsAway}
             printHideHeader={printHideHeader}
             tabs={tabs ? <AppTenantTabs {...tabs} /> : undefined}
             toolbar={
