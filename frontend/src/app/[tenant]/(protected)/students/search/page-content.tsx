@@ -288,7 +288,7 @@ function SearchPageContent() {
   const storageOwner = personalStorageOwner(session?.user);
   const hasUrlFilterParams = searchParamsHavePersistedFilters(searchParams);
   // Initial state comes from the URL only, so refreshes, history and copied
-  // links restore the same view. localStorage is unavailable on the server, so
+  // links restore the same view. The stored view is unavailable on the server, so
   // reading it during render made the first client render differ from the
   // server HTML (hydration mismatch, Sentry FRONTEND-17). The mount effect
   // below restores stored filters when the URL carries none.
