@@ -54,6 +54,6 @@
     "registerTooltip": "Öffnet die Anmeldung zu diesem Ferienangebot."
   },
   "childrenLoading": "Kinder werden geladen",
-  "noChildren": "Mit deinem Konto ist noch kein Kind verknüpft. Die {careTerm} deiner Schule kann das einrichten.",
+  "noChildren": "Mit deinem Konto ist noch kein Kind verknüpft. {careNomCap} deiner Schule kann das einrichten.",
   "errorObject": "die Übersicht deiner Kinder"
 }

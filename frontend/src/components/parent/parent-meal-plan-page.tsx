@@ -52,9 +52,10 @@ import { createLogger } from "~/lib/logger";
 import { usedMealAllergens } from "~/lib/meal-allergens";
 import {
   CareFacilityTermScope,
-  useCareFacilityTerm,
   useCareTermTranslations,
+  useCareTermValues,
 } from "~/lib/care-facility-term";
+import { careTermValuesOf } from "~/lib/care-facility-term-value";
 import {
   MealAllergenLegend,
   MealAllergenMarks,
@@ -93,6 +94,7 @@ interface ChildOption {
   registrationEnabled: boolean;
   /** The school's term for its care (#6082). */
   careTerm?: string;
+  careArticle?: string;
 }
 
 // Parents reach the current week and the three following weeks. The meal plan
@@ -1287,6 +1289,7 @@ export function ParentMealPlanPage({
           childName: `${child.first_name} ${child.last_name}`,
           registrationEnabled: childFeatures.meal_registration_enabled === true,
           careTerm: childFeatures.care_facility_term,
+          careArticle: childFeatures.care_facility_article,
         });
       }
     }
@@ -1314,10 +1317,19 @@ export function ParentMealPlanPage({
         null);
   // Der Plan gehört zur Schule des gewählten Kindes; seine Texte nennen die
   // Betreuung so, wie diese Schule sie nennt (#6082).
-  const accountTerm = useCareFacilityTerm();
-  const childTerm =
-    schools.find((school) => school.studentId === selectedStudent)?.careTerm ??
-    accountTerm;
+  const accountCare = useCareTermValues();
+  const careSchool = schools.find(
+    (school) => school.studentId === selectedStudent,
+  );
+  const selectedTerm = careSchool?.careTerm;
+  const selectedArticle = careSchool?.careArticle;
+  const childTerm = useMemo(
+    () =>
+      selectedTerm === undefined
+        ? accountCare
+        : careTermValuesOf(selectedTerm, selectedArticle),
+    [selectedTerm, selectedArticle, accountCare],
+  );
   const t = useCareTermTranslations("parentMealPlan", childTerm);
   // The school list loads once; its error text names no care term, so a
   // switch to a child with another term must not reload it and reset the
@@ -1448,7 +1460,7 @@ export function ParentMealPlanPage({
       : t("subtitleMealsOnly");
 
   return (
-    <CareFacilityTermScope term={childTerm}>
+    <CareFacilityTermScope care={childTerm}>
       <ParentPage
         header={
           <ParentPageHeader

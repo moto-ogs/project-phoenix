@@ -133,9 +133,9 @@ export const ERROR_CATALOG = {
       "care.care_request_field_disabled":
         "{object} ist hier zurzeit nicht verfügbar. Bitte frage deine Ansprechperson.",
       "care.child_care_ended":
-        "Die Betreuung dieses Kindes ist beendet. Änderungen sind nicht mehr möglich. Bei Fragen wende dich bitte an die {careTerm}.",
+        "Die Betreuung dieses Kindes ist beendet. Änderungen sind nicht mehr möglich. Bei Fragen wende dich bitte an {careAcc}.",
       "care.child_without_care_place":
-        "Dein Kind hat keinen Platz in der {careTerm}. Diese Funktion gibt es für dein Kind deshalb nicht.",
+        "Dein Kind hat keinen Platz {careIn}. Diese Funktion gibt es für dein Kind deshalb nicht.",
       "care.course_request_invalid":
         "{object} enthält ungültige Angaben. Bitte prüfe deine Eingaben.",
       "care.course_requests_disabled":
@@ -143,9 +143,9 @@ export const ERROR_CATALOG = {
       "care.declaration_action_not_allowed":
         "Das geht gerade nicht. Bitte lade die Seite neu und prüfe den aktuellen Stand.",
       "care.declaration_closed":
-        "Die Frist ist abgelaufen. Du kannst nicht mehr antworten. Bei Fragen wende dich bitte an die {careTerm}.",
+        "Die Frist ist abgelaufen. Du kannst nicht mehr antworten. Bei Fragen wende dich bitte an {careAcc}.",
       "care.declaration_not_permitted":
-        "Für dieses Kind darfst du nicht antworten. Bei Fragen wende dich an die {careTerm}.",
+        "Für dieses Kind darfst du nicht antworten. Bei Fragen wende dich an {careAcc}.",
       "care.declaration_password_incorrect":
         "Das Passwort stimmt nicht. Bitte versuche es noch einmal.",
       "care.declaration_password_required": "Bitte gib dein Passwort ein.",
@@ -166,7 +166,7 @@ export const ERROR_CATALOG = {
       "care.guardian_has_own_account":
         "Diese Person verwaltet ihre Kontaktdaten über ein eigenes Elternkonto. Sie kann die Angaben dort selbst ändern.",
       "care.guardian_invite_unavailable":
-        "Diese Einladung konnte gerade nicht gesendet werden. Bitte wende dich an die {careTerm}.",
+        "Diese Einladung konnte gerade nicht gesendet werden. Bitte wende dich an {careAcc}.",
       "care.guardian_management_disabled":
         "{object} ist hier zurzeit nicht verfügbar. Bitte frage deine Ansprechperson.",
       "care.guardian_no_change":
@@ -214,7 +214,7 @@ export const ERROR_CATALOG = {
       "care.pickup_change_disabled":
         "{object} ist hier zurzeit nicht verfügbar. Bitte frage deine Ansprechperson.",
       "care.pickup_permission_request_required":
-        "Eine neue Abholerlaubnis braucht deine Unterschrift. Die {careTerm} bestätigt sie dann.",
+        "Eine neue Abholerlaubnis braucht deine Unterschrift. {careNomCap} bestätigt sie dann.",
       "care.pickup_permission_unchanged":
         "Diese Person darf an diesen Tagen schon abholen.",
       "care.pickup_person_not_authorized":
@@ -248,7 +248,7 @@ export const ERROR_CATALOG = {
       "classday.absence_list_invalid_period":
         "Dieser Zeitraum geht nicht. Bis darf nicht vor Von liegen. Wähle höchstens ein Schuljahr.",
       "classday.absence_report_conflict":
-        "Für dieses Kind steht heute schon etwas, zum Beispiel eine frühere Abholung. Es wurde nichts gespeichert. Bitte sprich mit der {careTerm}.",
+        "Für dieses Kind steht heute schon etwas, zum Beispiel eine frühere Abholung. Es wurde nichts gespeichert. Bitte sprich mit {careDat}.",
       "classday.absence_report_no_school_day":
         "Heute ist kein Schultag. Eine Meldung lässt sich nur an Schultagen eintragen.",
       "classday.absence_report_not_found":
@@ -274,7 +274,7 @@ export const ERROR_CATALOG = {
       "classday.class_handover_unknown_child":
         "Ein Kind gehört nicht mehr zu dieser Klasse. Bitte lade die Seite neu.",
       "classday.class_trip_arrival_conflict":
-        "Die {careTerm} hat für ein Kind schon eine andere Ankunftszeit eingetragen. Es wurde nichts gespeichert. Bitte sprich mit der {careTerm}.",
+        "{careNomCap} hat für ein Kind schon eine andere Ankunftszeit eingetragen. Es wurde nichts gespeichert. Bitte sprich mit {careDat}.",
       "classday.class_trip_invalid_range":
         "Dieser Zeitraum geht nicht. Bitte wähle höchstens 31 Tage, das Ende nach dem Beginn.",
       "classday.class_trip_no_students": "Bitte wähle mindestens ein Kind aus.",
@@ -283,17 +283,17 @@ export const ERROR_CATALOG = {
       "classday.class_trip_return_time_multi_day":
         "Eine Rückkehrzeit geht nur für einen einzelnen Tag. Bitte lösche die Uhrzeit oder wähle einen Tag.",
       "classday.class_trip_return_time_weekend":
-        "Am Wochenende kommt kein Kind in die {careTerm}. Bitte lösche die Rückkehrzeit.",
+        "Am Wochenende kommt kein Kind in {careAcc}. Bitte lösche die Rückkehrzeit.",
       "classday.class_trip_status_conflict":
-        "Für ein Kind steht an einem dieser Tage schon etwas, zum Beispiel krank. Es wurde nichts gespeichert. Bitte sprich mit der {careTerm}.",
+        "Für ein Kind steht an einem dieser Tage schon etwas, zum Beispiel krank. Es wurde nichts gespeichert. Bitte sprich mit {careDat}.",
       "classday.class_trip_student_not_in_class":
         "Ein Kind ist nicht mehr in dieser Klasse. Bitte lade die Seite neu.",
       "classday.day_hint_class_empty":
-        "In dieser Klasse ist kein Kind in der {careTerm}. Ein Hinweis für die ganze Klasse ist deshalb nicht möglich.",
+        "In dieser Klasse ist kein Kind {careIn}. Ein Hinweis für die ganze Klasse ist deshalb nicht möglich.",
       "classday.day_hint_invalid":
         "Der Hinweis braucht einen Text. Er darf höchstens 500 Zeichen lang sein.",
       "classday.day_hint_not_today":
-        "Einen Hinweis für die {careTerm} kannst du nur für heute schreiben.",
+        "Einen Hinweis für {careAcc} kannst du nur für heute schreiben.",
       "classday.day_hint_student_not_in_class":
         "Dieses Kind ist heute nicht in deiner Klasse. Bitte lade die Seite neu.",
       "classday.homework_not_found":
@@ -339,7 +339,7 @@ export const ERROR_CATALOG = {
       "communication.poll_not_open":
         "{object} ist nicht mehr geöffnet. Bitte frage deine Ansprechperson.",
       "communication.staff_group_create_forbidden":
-        "Lehrkräfte können keinen Gruppenchat anlegen. Frag die {careTerm} danach.",
+        "Lehrkräfte können keinen Gruppenchat anlegen. Frag {careAcc} danach.",
       "communication.staff_group_manage_forbidden":
         "Nur wer den Gruppenchat angelegt hat und die {careTerm}-Leitung können ihn ändern.",
       "communication.staff_group_members_required":
@@ -951,7 +951,7 @@ export const ERROR_CATALOG = {
       "meals.order_not_found":
         "Diese Bestellung gibt es nicht. Bitte lade die Seite neu.",
       "meals.participation_manage_denied":
-        "Du darfst die Essensanmeldung ansehen, aber nicht ändern. Bitte wende dich an die {careTerm}.",
+        "Du darfst die Essensanmeldung ansehen, aber nicht ändern. Bitte wende dich an {careAcc}.",
       "meals.plan_disabled":
         "{object} ist hier zurzeit nicht verfügbar. Bitte frage deine Ansprechperson.",
       "meals.registration_disabled":
@@ -1542,7 +1542,7 @@ export const ERROR_CATALOG = {
       "students.pickup_change_completed":
         "Das Kind ist schon abgemeldet. Die Abholzeit lässt sich nicht mehr ändern.",
       "students.pickup_change_conflict":
-        "Für diesen Tag gibt es bereits einen Eintrag der {careTerm}. Prüfe, ob die gewünschte Änderung schon eingetragen ist. Falls ja, kannst du die Anfrage mit einer Begründung ablehnen. Der vorhandene Eintrag bleibt bestehen.",
+        "Für diesen Tag gibt es bereits einen Eintrag {careGen}. Prüfe, ob die gewünschte Änderung schon eingetragen ist. Falls ja, kannst du die Anfrage mit einer Begründung ablehnen. Der vorhandene Eintrag bleibt bestehen.",
       "students.pickup_change_expired":
         "Der Tag liegt in der Vergangenheit. Bitte lehne {object} ab.",
       "students.pickup_change_impact_changed":

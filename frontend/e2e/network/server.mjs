@@ -163,6 +163,7 @@ const api = createServer(async (req, res) => {
       child_search_only_navigation: false,
       simple_staff_navigation: false,
       care_facility_term: "OGS",
+      care_facility_article: "die",
     });
   } else if (sharedTenantCookie && portalReads.has(path)) {
     data = envelope([]);

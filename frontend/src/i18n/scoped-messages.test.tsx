@@ -1,3 +1,4 @@
+import { careTermValuesOf } from "~/lib/care-facility-term-value";
 import { createTranslator } from "next-intl";
 import { describe, expect, it, vi } from "vitest";
 import de from "./messages/de.generated";
@@ -47,8 +48,9 @@ describe("messages passed to the client", () => {
       messages: props.messages!,
       namespace: "parentVisibility",
     });
-    expect(visibility("ogs", { careTerm: "Hort" })).toBe(
-      "Für die Hort sichtbar",
+    // The German text declines the school's name with its article (#8136).
+    expect(visibility("ogs", careTermValuesOf("Hort", "der"))).toBe(
+      "Für den Hort sichtbar",
     );
     expect(props.messages).not.toHaveProperty("enrollmentForm");
   });

@@ -37,6 +37,40 @@ describe("care facility term (#6042)", () => {
     expect(result.current("reviewText")).toMatch(/^Die GTS prüft/);
   });
 
+  // #8136: a school with its own name chooses the article; every fixed
+  // German text declines the name with it.
+  it("declines the tenant's own name with its article", () => {
+    vi.mocked(useTenantSafe).mockReturnValue({
+      tenantSlug: "barnstorf",
+      tenant: {
+        careFacilityTerm: "Hort",
+        careFacilityArticle: "der",
+      } as TenantInfo,
+    } as ReturnType<typeof useTenantSafe>);
+    const { result } = renderHook(() =>
+      useCareTermTranslations("enrollmentPublic"),
+    );
+    expect(result.current("reviewTitle")).toBe("Prüfung durch den Hort");
+    expect(result.current("reviewText")).toMatch(/^Der Hort prüft/);
+    expect(result.current("disabled")).toContain("wende dich an den Hort,");
+  });
+
+  it("declines the name a status response reports to its scope", async () => {
+    function Status() {
+      useProvideCareFacilityTerm("Lernhaus", "das");
+      const t = useCareTermTranslations("enrollmentStatus");
+      return <p>{t("stepOneStatus")}</p>;
+    }
+    render(
+      <CareFacilityTermScope>
+        <Status />
+      </CareFacilityTermScope>,
+    );
+    expect(
+      await screen.findByText("Die Anmeldung liegt dem Lernhaus vor."),
+    ).toBeInTheDocument();
+  });
+
   it("keeps the caller's own values next to the term", () => {
     tenantWithTerm("Ganztag Nord");
     const { result } = renderHook(() =>

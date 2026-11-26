@@ -122,6 +122,7 @@ export function EnrollmentStatusView(props: Props) {
     <CareFacilityTermScope
       key={seed === undefined ? "live" : "seeded"}
       term={seed?.status.care_facility_term}
+      article={seed?.status.care_facility_article}
     >
       <EnrollmentStatusViewContent {...props} seed={seed} />
     </CareFacilityTermScope>
@@ -144,7 +145,10 @@ function EnrollmentStatusViewContent({
   const [status, setStatus] = useState<EnrollmentStatusDisplay | null>(
     seed?.status ?? null,
   );
-  useProvideCareFacilityTerm(status?.care_facility_term);
+  useProvideCareFacilityTerm(
+    status?.care_facility_term,
+    status?.care_facility_article,
+  );
   const [changeRequests, setChangeRequests] = useState<
     readonly StatusChangeRequest[]
   >(seed?.changes ?? []);
