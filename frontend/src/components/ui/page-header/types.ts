@@ -23,6 +23,8 @@ export interface PageHeaderSearch {
   readonly inputProps?: React.InputHTMLAttributes<HTMLInputElement>;
   /** See `SearchBarProps.debounceMs` — keeps typing out of the page's state. */
   readonly debounceMs?: number;
+  /** Whether the field shows a draft not yet reported to the page. */
+  readonly onDraftPendingChange?: (pending: boolean) => void;
   /** See `SearchBarProps.resetKey` — cancels a draft when a filter reset keeps the same value. */
   readonly resetKey?: string | number;
 }

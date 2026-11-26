@@ -57,11 +57,14 @@ export const traegerKeys = {
   // Nummernkreise dieser Stellen (#8040).
   issuerNumberRanges: () => "traeger-number-range-issuers",
   occupancy: () => "traeger-occupancy",
-  // Kinder aller Schulen mit Namen (#8137): die erste Seite je Schule und
-  // Suche; weitere Seiten lädt die Ansicht dazu. Jedes Lesen steht im
+  // Kinder aller Schulen mit Namen (#8137): die erste Seite je Tag, Schule
+  // und Suche; weitere Seiten lädt die Ansicht dazu. Jedes Lesen steht im
   // Zugriffsprotokoll der gezeigten Schulen.
-  children: (filter: { readonly schoolId: string; readonly search: string }) =>
-    `traeger-children-${encodeURIComponent(filter.schoolId)}-${encodeURIComponent(
+  children: (
+    day: string,
+    filter: { readonly schoolId: string; readonly search: string },
+  ) =>
+    `traeger-children-${day}-${encodeURIComponent(filter.schoolId)}-${encodeURIComponent(
       filter.search,
     )}`,
   // Ankunft und Abholung eines Zeitraums (#4714): Durchschnitte, keine Kinder.

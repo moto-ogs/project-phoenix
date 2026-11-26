@@ -34,9 +34,13 @@ func (o *Overview) Children(ctx context.Context, viewer traegerview.Viewer, filt
 	if err != nil {
 		return traegerview.TraegerChildren{}, err
 	}
+	day := calendar.DateFromTime(o.now())
+	if !cursor.Day.IsZero() && cursor.Day != day {
+		return traegerview.TraegerChildren{}, fmt.Errorf("%w: cursor is for another roster day", traegerview.ErrInvalidChildrenFilter)
+	}
 	result := traegerview.TraegerChildren{Schools: []traegerview.SchoolChildCount{}, Children: []traegerview.TraegerChild{}}
 	err = o.read(ctx, viewer.OrganizationID, func(adminCtx context.Context, ids []int64) error {
-		listed, err := o.listedChildren(adminCtx, ids, filter)
+		listed, err := o.listedChildren(adminCtx, ids, filter, day)
 		if err != nil {
 			return err
 		}
@@ -50,7 +54,7 @@ func (o *Overview) Children(ctx context.Context, viewer traegerview.Viewer, filt
 		}
 		if len(names) > traegerview.ChildrenPageSize {
 			names = names[:traegerview.ChildrenPageSize]
-			next, err := encodeChildrenCursor(names[len(names)-1], cursor.Page+1)
+			next, err := encodeChildrenCursor(names[len(names)-1], cursor.Page+1, day)
 			if err != nil {
 				return err
 			}
@@ -63,7 +67,7 @@ func (o *Overview) Children(ctx context.Context, viewer traegerview.Viewer, filt
 	if err != nil {
 		return traegerview.TraegerChildren{}, err
 	}
-	if err := o.record(ctx, viewer, traegerview.ResourceTypeTraegerChildren, o.today(), childSchools(result.Children), "list", cursor.Page); err != nil {
+	if err := o.record(ctx, viewer, traegerview.ResourceTypeTraegerChildren, childrenDayWindow(day), childSchools(result.Children), "list", cursor.Page); err != nil {
 		return traegerview.TraegerChildren{}, err
 	}
 	return result, nil
@@ -76,9 +80,10 @@ func (o *Overview) ChildrenExport(ctx context.Context, viewer traegerview.Viewer
 	if err != nil {
 		return traegerview.ChildrenExport{}, err
 	}
+	day := calendar.DateFromTime(o.now())
 	result := traegerview.ChildrenExport{Search: filter.Search, Children: []traegerview.TraegerChild{}}
 	err = o.read(ctx, viewer.OrganizationID, func(adminCtx context.Context, ids []int64) error {
-		listed, err := o.listedChildren(adminCtx, ids, filter)
+		listed, err := o.listedChildren(adminCtx, ids, filter, day)
 		if err != nil {
 			return err
 		}
@@ -95,7 +100,7 @@ func (o *Overview) ChildrenExport(ctx context.Context, viewer traegerview.Viewer
 	if err != nil {
 		return traegerview.ChildrenExport{}, err
 	}
-	if err := o.record(ctx, viewer, traegerview.ResourceTypeTraegerChildrenExport, o.today(), childSchools(result.Children), "export", 0); err != nil {
+	if err := o.record(ctx, viewer, traegerview.ResourceTypeTraegerChildrenExport, childrenDayWindow(day), childSchools(result.Children), "export", 0); err != nil {
 		return traegerview.ChildrenExport{}, err
 	}
 	return result, nil
@@ -103,15 +108,16 @@ func (o *Overview) ChildrenExport(ctx context.Context, viewer traegerview.Viewer
 
 // childrenCursor holds a sort boundary even if its child leaves the roster.
 type childrenCursor struct {
-	LastName  string `json:"last"`
-	FirstName string `json:"first"`
-	ID        int64  `json:"id"`
-	Page      int    `json:"page"`
+	LastName  string        `json:"last"`
+	FirstName string        `json:"first"`
+	ID        int64         `json:"id"`
+	Page      int           `json:"page"`
+	Day       calendar.Date `json:"day"`
 }
 
-func encodeChildrenCursor(last traegerview.StudentName, page int) (string, error) {
+func encodeChildrenCursor(last traegerview.StudentName, page int, day calendar.Date) (string, error) {
 	raw, err := json.Marshal(childrenCursor{
-		LastName: last.LastName, FirstName: last.FirstName, ID: last.StudentProfileID, Page: page,
+		LastName: last.LastName, FirstName: last.FirstName, ID: last.StudentProfileID, Page: page, Day: day,
 	})
 	if err != nil {
 		return "", fmt.Errorf("traeger view: encode children cursor: %w", err)
@@ -129,7 +135,7 @@ func decodeChildrenCursor(token string) (childrenCursor, error) {
 		return childrenCursor{}, invalid
 	}
 	var cursor childrenCursor
-	if json.Unmarshal(raw, &cursor) != nil || cursor.ID <= 0 || cursor.Page < 2 || cursor.Page == math.MaxInt ||
+	if json.Unmarshal(raw, &cursor) != nil || cursor.ID <= 0 || cursor.Page < 2 || cursor.Page == math.MaxInt || cursor.Day.IsZero() ||
 		strings.ContainsRune(cursor.LastName, 0) || strings.ContainsRune(cursor.FirstName, 0) {
 		return childrenCursor{}, invalid
 	}
@@ -146,16 +152,16 @@ func validChildrenFilter(viewer traegerview.Viewer, filter traegerview.ChildrenF
 	switch {
 	case filter.SchoolID < 0:
 		return filter, fmt.Errorf("%w: negative school", traegerview.ErrInvalidChildrenFilter)
+	case strings.ContainsRune(filter.Search, 0):
+		return filter, fmt.Errorf("%w: the search contains a NUL byte", traegerview.ErrInvalidChildrenFilter)
 	case len([]rune(filter.Search)) > traegerview.ChildrenSearchMaxLength:
 		return filter, fmt.Errorf("%w: the search exceeds %d characters", traegerview.ErrInvalidChildrenFilter, traegerview.ChildrenSearchMaxLength)
 	}
 	return filter, nil
 }
 
-// today is the Berlin day of the read, the range an access log entry of a
-// list without a period states.
-func (o *Overview) today() window {
-	day := calendar.DateFromTime(o.now())
+// The audit range covers the same Berlin day as the roster.
+func childrenDayWindow(day calendar.Date) window {
 	return window{from: day.BerlinMidnight(), to: day.AddDays(1).BerlinMidnight()}
 }
 
@@ -175,7 +181,7 @@ type listedChildren struct {
 // listedChildren reads the schools of the Träger and their rosters and
 // narrows them to the filter's school. A school outside ids is
 // ErrSchoolOutsideTraeger.
-func (o *Overview) listedChildren(adminCtx context.Context, ids []int64, filter traegerview.ChildrenFilter) (listedChildren, error) {
+func (o *Overview) listedChildren(adminCtx context.Context, ids []int64, filter traegerview.ChildrenFilter, day calendar.Date) (listedChildren, error) {
 	if filter.SchoolID > 0 && !slices.Contains(ids, filter.SchoolID) {
 		return listedChildren{}, traegerview.ErrSchoolOutsideTraeger
 	}
@@ -183,7 +189,7 @@ func (o *Overview) listedChildren(adminCtx context.Context, ids []int64, filter 
 	if err != nil {
 		return listedChildren{}, err
 	}
-	roster, err := o.rosters.ActiveStudentMembershipsByTenant(adminCtx, ids, o.now())
+	roster, err := o.rosters.ActiveStudentMembershipsByTenant(adminCtx, ids, day.BerlinMidnight())
 	if err != nil {
 		return listedChildren{}, err
 	}

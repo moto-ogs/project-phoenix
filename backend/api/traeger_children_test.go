@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -150,11 +151,19 @@ func TestTraegerChildrenNeedTheirRightAndAreLogged(t *testing.T) {
 	assert.Contains(t, body, "OGS Gezeigt")
 	assert.NotContains(t, body, "Winter", "the export follows the search")
 	assert.Equal(t, []int{1}, logged(shown, adminID, traegerview.ResourceTypeTraegerChildrenExport), "the export stands in the school's access log")
+
+	for _, path := range []string{"/traeger/schools/children", "/traeger/schools/children/export"} {
+		rec := traegerOccupancyRequest(t, router, path+"?search=som%00mer", admin, nil)
+		assert.Equal(t, http.StatusBadRequest, rec.Code, "%s must reject NUL in the search: %s", path, rec.Body.String())
+	}
 }
 
 func TestTraegerChildrenComeInPages(t *testing.T) {
 	t.Parallel()
-	db, router, _, _ := newTraegerPortal(t)
+	day := calendar.NewDate(2026, 11, 26)
+	midnight := day.AddDays(1).BerlinMidnight()
+	now := midnight.Add(-time.Second)
+	db, router, _, _ := newTraegerPortalAt(t, func() calendar.Date { return day }, func() time.Time { return now })
 	organization := traegerOrganization(t, db, "Träger Kinder Seiten", true)
 	school := testpkg.CreateTestSchoolInOrganization(t, db, organization, "OGS Viele Kinder")
 	for index := range traegerview.ChildrenPageSize + 2 {
@@ -174,6 +183,50 @@ func TestTraegerChildrenComeInPages(t *testing.T) {
 	assert.Equal(t, []string{"Nummer 050, Kind", "Nummer 051, Kind"}, childNames(rest.Children))
 	assert.Equal(t, traegerview.ChildrenPageSize+3, rest.Matched, "continuation retains the full match count")
 	assert.Empty(t, rest.NextCursor)
+
+	now = midnight
+	stale := traegerOccupancyRequest(t, router, "/traeger/schools/children?cursor="+url.QueryEscape(first.NextCursor), token, nil)
+	assert.Equal(t, http.StatusBadRequest, stale.Code, "yesterday's cursor must not read today's roster: %s", stale.Body.String())
+	today := traegerChildren(t, router, token, "")
+	assert.Equal(t, "Abele", today.Children[0].LastName, "a fresh opening starts from the beginning")
+}
+
+func TestTraegerChildrenAuditUsesTheRosterDayAcrossMidnight(t *testing.T) {
+	t.Parallel()
+	day := calendar.NewDate(2026, 11, 26)
+	midnight := day.AddDays(1).BerlinMidnight()
+	now := midnight.Add(-time.Second)
+	db, router, _, _ := newTraegerPortalAt(t, func() calendar.Date { return day }, func() time.Time {
+		at := now
+		now = midnight
+		return at
+	})
+	organization := traegerOrganization(t, db, "Träger Kinder Tageswechsel", true)
+	school := testpkg.CreateTestSchoolInOrganization(t, db, organization, "OGS Tageswechsel")
+	child := testpkg.CreateTestStudentForTenant(t, db, school, "Mia", "Zander", "2b")
+	testpkg.SetStudentLifecycle(t, db, child.ID, "active", nil, &day)
+	token, account := traegerChildrenSignIn(t, db, router, organization, identityaccess.TraegerRoleAdministration)
+
+	now = midnight.Add(-time.Second)
+	assert.Equal(t, []string{"Zander, Mia"}, childNames(traegerChildren(t, router, token, "").Children))
+	now = midnight.Add(-time.Second)
+	export := traegerOccupancyRequest(t, router, "/traeger/schools/children/export", token, nil)
+	require.Equal(t, http.StatusOK, export.Code, export.Body.String())
+	assert.Contains(t, export.Body.String(), "Zander")
+
+	var ranges []struct {
+		Start time.Time `bun:"range_start"`
+		End   time.Time `bun:"range_end"`
+	}
+	require.NoError(t, db.NewRaw(`SELECT range_start, range_end FROM audit.data_access_log
+		WHERE tenant_id = ? AND actor_account_id = ? AND resource_type IN (?, ?)`,
+		school, account, traegerview.ResourceTypeTraegerChildren, traegerview.ResourceTypeTraegerChildrenExport).
+		Scan(context.Background(), &ranges))
+	require.Len(t, ranges, 2)
+	for _, span := range ranges {
+		assert.True(t, span.Start.Equal(day.BerlinMidnight()), "start: %s", span.Start)
+		assert.True(t, span.End.Equal(midnight), "end: %s", span.End)
+	}
 }
 
 func TestTraegerChildrenQueryBudgetIsFlat(t *testing.T) {

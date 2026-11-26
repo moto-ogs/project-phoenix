@@ -76,6 +76,7 @@ interface SearchBarDraftProviderProps {
   readonly onChange: (next: string) => void;
   readonly debounceMs: number | undefined;
   readonly resetKey: string | number | undefined;
+  readonly onDraftPendingChange?: (pending: boolean) => void;
   readonly children: React.ReactNode;
 }
 
@@ -85,6 +86,7 @@ export function SearchBarDraftProvider({
   onChange,
   debounceMs,
   resetKey,
+  onDraftPendingChange,
   children,
 }: Readonly<SearchBarDraftProviderProps>) {
   const draftState = useDebouncedSearchValue(
@@ -93,6 +95,11 @@ export function SearchBarDraftProvider({
     debounceMs,
     resetKey,
   );
+  const draftPending = draftState.shownValue !== value;
+  // Actions outside the field must see the same pending state before paint.
+  React.useLayoutEffect(() => {
+    onDraftPendingChange?.(draftPending);
+  }, [draftPending, onDraftPendingChange]);
 
   return (
     <DebouncedSearchValueContext.Provider value={draftState}>

@@ -143,6 +143,7 @@ export function TenantPageSearchRow({
       value={search?.value ?? ""}
       onChange={search?.onChange ?? NOOP_SEARCH_CHANGE}
       debounceMs={search?.debounceMs}
+      onDraftPendingChange={search?.onDraftPendingChange}
       resetKey={search?.resetKey}
     >
       <div>

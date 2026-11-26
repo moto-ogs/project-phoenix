@@ -8,7 +8,15 @@
 // der gezeigten Schulen.
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  memo,
+  Suspense,
+  useCallback,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { emptySearchText } from "~/components/traeger/empty-search";
 import {
   traegerExportScope,
@@ -18,12 +26,19 @@ import { isRefusal } from "~/components/traeger/use-traeger-confirmed-resource";
 import { useFreshTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { useTraegerSchools } from "~/components/traeger/use-traeger-schools";
 import { Button } from "~/components/ui/button";
-import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
+import {
+  DataTable,
+  type DataTableColumn,
+  type DataTableMoreAction,
+} from "~/components/ui/data-table";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { ListSkeleton } from "~/components/ui/page-skeletons";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { useApiErrorDisplay } from "~/contexts/ToastContext";
+import { ApiError } from "~/lib/api-error";
 import { childrenConcept } from "~/lib/concepts/children";
+import { berlinTodayISO } from "~/lib/date-helpers";
+import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { createLogger } from "~/lib/logger";
 import { schoolClassLabel, schoolClassName } from "~/lib/school-class-label";
 import { IsolatedSWRCache } from "~/lib/swr";
@@ -102,6 +117,9 @@ function childColumns(showSchool: boolean): DataTableColumn<TraegerChild>[] {
 
 const HIDE_SCHOOL: ReadonlySet<string> = new Set(["school"]);
 const HIDE_NOTHING: ReadonlySet<string> = new Set();
+// A pending search only changes the menu, not the already drawn rows.
+const ChildrenTable = memo(DataTable<TraegerChild>);
+const childRowKey = (child: TraegerChild) => child.studentId;
 
 const plural = (count: number, one: string, many: string) =>
   count === 1 ? one : many;
@@ -111,13 +129,14 @@ function childFigures(
   page: TraegerChildrenPage,
   allSchools: boolean,
   searching: boolean,
+  matched: number,
 ) {
   const children = {
     value: page.total,
     label: plural(page.total, "Kind", "Kinder"),
   };
   if (searching) {
-    return [children, { value: page.matched, label: "gefunden" }];
+    return [children, { value: matched, label: "gefunden" }];
   }
   if (allSchools && page.schools.length > 1) {
     return [children, { value: page.schools.length, label: "Schulen" }];
@@ -160,43 +179,49 @@ function ChildrenContent({
   const router = useRouter();
   const searchParams = useSearchParams();
   const tab = searchParams?.get(SCHOOL_PARAM) ?? ALL_SCHOOLS;
+  // A bookmark scopes the request even when cached school metadata is stale.
+  const schoolId = tab === ALL_SCHOOLS ? "" : tab;
   const term = search.trim();
+  const day = useBerlinToday();
+  const [draftPending, setDraftPending] = useState(false);
   const { show: showActionError } = useApiErrorDisplay();
 
-  // Keep the last audited response's school metadata while a new list loads.
-  // Shared metadata is only the initial fallback, for tabs and validation alike.
-  const [counted, setCounted] = useState<
-    readonly TraegerSchoolChildCount[] | null
-  >(null);
+  // Keep counts between filters, but never carry yesterday's counts forward.
+  const [counted, setCounted] = useState<{
+    day: string;
+    schools: readonly TraegerSchoolChildCount[];
+  } | null>(null);
   const schools: readonly (Pick<TraegerSchoolChildCount, "id" | "name"> &
-    Partial<TraegerSchoolChildCount>)[] = counted ?? knownSchools ?? [];
-  const school = schools.find((entry) => entry.id === tab);
-  const schoolId =
-    tab !== ALL_SCHOOLS && (school || (!counted && !knownSchools)) ? tab : "";
+    Partial<TraegerSchoolChildCount>)[] =
+    (counted?.day === day ? counted.schools : knownSchools) ?? [];
+  const school = schools.find((entry) => entry.id === schoolId);
   const filter = useMemo(() => ({ schoolId, search: term }), [schoolId, term]);
   // Every page read stands in the access log of the schools it shows. So a
   // reiter or a search shows nothing until its own read answered, also when
   // the person comes back to one the tab has read before (ADR 0311).
-  const listKey = traegerKeys.children(filter);
+  const listKey = traegerKeys.children(day, filter);
   const first = useFreshTraegerResource(
     listKey,
     () => fetchTraegerChildren(filter),
     LIST_OBJECT,
   );
+  const { data: page, mutate, readCallbacks } = first;
   const beginPageRead = useSWRRequestGuard();
 
   // Later pages belong to the first page they continue; another reiter,
   // another search or a reload starts a new list and drops them.
   const [later, setLater] = useState<{
     readonly after: TraegerChildrenPage;
-    readonly children: readonly TraegerChild[];
+    readonly children: TraegerChild[];
     readonly nextCursor: string;
+    readonly matched: number;
   } | null>(null);
   const [loadingPage, setLoadingPage] = useState<TraegerChildrenPage | null>(
     null,
   );
-  const page = first.data;
-  if (page && page.schools !== counted) setCounted(page.schools);
+  if (page && (counted?.day !== day || page.schools !== counted.schools)) {
+    setCounted({ day, schools: page.schools });
+  }
 
   const shownPage = useRef<TraegerChildrenPage | null>(null);
   useLayoutEffect(() => {
@@ -207,35 +232,63 @@ function ChildrenContent({
   }, [page]);
   const continued = later && later.after === page ? later : null;
   const children = useMemo(
-    () => (page ? [...page.children, ...(continued?.children ?? [])] : []),
-    [page, continued],
+    () => continued?.children ?? (page ? [...page.children] : undefined),
+    [continued, page],
   );
   const nextCursor = continued?.nextCursor ?? page?.nextCursor;
+  const matched = continued?.matched ?? page?.matched ?? 0;
   const loadingMore = page !== null && loadingPage === page;
 
-  function withdrawRefusedList(error: unknown) {
-    if (!page || shownPage.current !== page || !isRefusal(error)) return;
-    first.readCallbacks.onError(error);
-    void first.mutate(undefined, { revalidate: false });
-    setLater(null);
-  }
+  const withdrawRefusedList = useCallback(
+    (error: unknown) => {
+      if (!page || shownPage.current !== page || !isRefusal(error)) return;
+      readCallbacks.onError(error);
+      void mutate(undefined, { revalidate: false });
+      setLater(null);
+    },
+    [page, readCallbacks, mutate],
+  );
 
-  const loadMore = async () => {
-    if (!page || !nextCursor || loadingMore) return;
+  const loadMore = useCallback(async () => {
+    if (
+      !page ||
+      !children ||
+      !nextCursor ||
+      loadingMore ||
+      berlinTodayISO() !== day
+    )
+      return;
     let complete: ReturnType<typeof beginPageRead> | undefined;
     setLoadingPage(page);
     try {
       complete = beginPageRead(listKey);
       const next = await fetchTraegerChildren(filter, nextCursor);
-      if (!complete.isCurrent() || shownPage.current !== page) return;
+      if (
+        !complete.isCurrent() ||
+        shownPage.current !== page ||
+        berlinTodayISO() !== day
+      )
+        return;
+      // A renamed child can reappear after the cursor. Its newer position
+      // and details replace the older row.
+      const nextIDs = new Set(next.children.map(childRowKey));
       setLater({
         after: page,
-        children: [...(continued?.children ?? []), ...next.children],
+        children: [
+          ...children.filter((child) => !nextIDs.has(child.studentId)),
+          ...next.children,
+        ],
         nextCursor: next.nextCursor,
+        matched: next.children.length ? next.matched : matched,
       });
     } catch (err) {
       // A superseded request must not change the new list or report an error.
-      if (!complete?.isCurrent() || shownPage.current !== page) return;
+      if (
+        !complete?.isCurrent() ||
+        shownPage.current !== page ||
+        berlinTodayISO() !== day
+      )
+        return;
       if (isRefusal(err)) {
         withdrawRefusedList(err);
       } else {
@@ -247,7 +300,37 @@ function ChildrenContent({
     } finally {
       setLoadingPage((current) => (current === page ? null : current));
     }
-  };
+  }, [
+    page,
+    children,
+    nextCursor,
+    loadingMore,
+    day,
+    beginPageRead,
+    listKey,
+    filter,
+    matched,
+    withdrawRefusedList,
+    showActionError,
+  ]);
+
+  const moreAction = useMemo<DataTableMoreAction | undefined>(
+    () =>
+      nextCursor && children
+        ? {
+            label:
+              children.length <= matched
+                ? `Weitere Kinder laden (${children.length} von ${matched})`
+                : "Weitere Kinder laden",
+            onClick: () => void loadMore(),
+            loading: loadingMore,
+            loadingText: "Wird geladen …",
+            disabled: loadingMore,
+            tooltip: "Zeigt die nächsten 50 Kinder unten in der Liste an.",
+          }
+        : undefined,
+    [nextCursor, children, matched, loadMore, loadingMore],
+  );
 
   const changeTab = (next: string) => {
     const params = new URLSearchParams(searchParams?.toString());
@@ -259,10 +342,13 @@ function ChildrenContent({
 
   const exportItems = useTraegerListExportItems({
     download: (format) => downloadTraegerChildren(format, filter),
-    scope: traegerExportScope(school?.name),
+    scope:
+      schoolId && !school
+        ? "Ausgewählte Schule"
+        : traegerExportScope(school?.name),
     fallbackName: "kinder",
     errorObject: LIST_OBJECT,
-    unavailable: !page,
+    unavailable: draftPending || !page,
     onError: withdrawRefusedList,
   });
 
@@ -272,11 +358,31 @@ function ChildrenContent({
   const columns = useMemo(() => childColumns(showSchool), [showSchool]);
   const searching = term !== "";
   const loading = !page && !first.error;
+  const error =
+    schoolId &&
+    first.error &&
+    first.failure instanceof ApiError &&
+    first.failure.code === "traeger.school_not_found"
+      ? {
+          ...first.error,
+          action: (
+            <Button
+              type="button"
+              variant="outline"
+              size="compact"
+              tooltip="Öffnet die Kinderliste aller Schulen."
+              onClick={() => changeTab(ALL_SCHOOLS)}
+            >
+              Alle Schulen anzeigen
+            </Button>
+          ),
+        }
+      : first.error;
   const noMatch = emptySearchText(search, []);
   // A search without a hit offers the way back. A list nobody can fill
   // from here is one sentence, not a stage.
   const empty =
-    !page || children.length > 0
+    !children || children.length > 0
       ? undefined
       : searching
         ? {
@@ -316,7 +422,7 @@ function ChildrenContent({
       stats={
         page ? (
           <TenantPageStats
-            items={childFigures(page, schoolId === "", searching)}
+            items={childFigures(page, schoolId === "", searching, matched)}
           />
         ) : null
       }
@@ -327,6 +433,7 @@ function ChildrenContent({
         onChange: onSearchChange,
         placeholder: "Kind suchen",
         debounceMs: SEARCH_PAUSE_MS,
+        onDraftPendingChange: setDraftPending,
       }}
       overflowMenu={exportItems}
       tabs={
@@ -348,32 +455,20 @@ function ChildrenContent({
             }
           : undefined
       }
-      error={first.error}
+      error={error}
       empty={empty}
       // A list loads in the shape of its rows.
       loading={loading ? <ListSkeleton rows={8} avatar={false} /> : false}
     >
-      {page ? (
-        <DataTable
+      {children ? (
+        <ChildrenTable
           columns={columns}
           rows={children}
-          getRowKey={(child) => child.studentId}
+          getRowKey={childRowKey}
           hiddenColumns={showSchool ? HIDE_NOTHING : HIDE_SCHOOL}
           stackedLayout="row"
           stackedDetailKey="class"
-          moreAction={
-            nextCursor
-              ? {
-                  label: `Weitere Kinder laden (${children.length} von ${page.matched})`,
-                  onClick: () => void loadMore(),
-                  loading: loadingMore,
-                  loadingText: "Wird geladen …",
-                  disabled: loadingMore,
-                  tooltip:
-                    "Zeigt die nächsten 50 Kinder unten in der Liste an.",
-                }
-              : undefined
-          }
+          moreAction={moreAction}
         />
       ) : null}
     </TenantPage>

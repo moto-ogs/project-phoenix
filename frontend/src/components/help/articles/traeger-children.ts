@@ -19,7 +19,7 @@ export function traegerChildrenTopic(): HelpTopic {
       "Tippe oben in `Kind suchen` einen Teil des Namens ein.",
       "Lies in der Zeile, an welcher Schule das Kind ist, in welcher Klasse und in welcher Gruppe.",
       "Stehen unten weitere Kinder, wähle `Weitere Kinder laden`.",
-      "Öffne oben rechts das Drei-Punkte-Menü. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`. Die Datei enthält die Kinder des offenen Reiters und deiner Suche.",
+      "Warte, bis die Suche fertig ist. Öffne dann oben rechts das Drei-Punkte-Menü. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`. Die Datei enthält die Kinder des offenen Reiters und deiner Suche.",
     ],
     result:
       "Du weißt, an welcher Schule ein Kind betreut wird, ohne die Schule zu öffnen.",
@@ -35,6 +35,7 @@ export function traegerChildrenTopic(): HelpTopic {
       "Steht bei Klasse oder Gruppe ein Strich, hat die Schule nichts eingetragen.",
     ],
     troubleshootingDetails: [
+      "Öffnet ein gespeicherter Link eine Schule, die nicht mehr zu deinem Träger gehört? Wähle `Alle Schulen anzeigen`.",
       "Fehlt ein Kind, führt die Schule es heute nicht mit Betreuungsplatz: Es hat die Schule verlassen, wartet noch auf seinen Start oder hat keinen Platz in der Betreuung.",
       "Du siehst hier keine Eltern, keine Verträge und keine Gesundheitsangaben. Verträge findest du unter `Verträge`.",
     ],

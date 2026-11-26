@@ -14,6 +14,7 @@ import type {
   TraegerChildrenPage,
 } from "~/lib/traeger-children-api";
 import { catalogText } from "~/test/error-catalog-text";
+import { releaseFakeTimers, setTestClock } from "~/test/clock";
 import { deferred } from "~/test/helpers/form-modal-pending";
 import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 
@@ -263,6 +264,96 @@ describe("TraegerChildrenPage", () => {
     );
   });
 
+  it("keeps a bookmarked school scoped even when shared school metadata is stale", async () => {
+    navigation.query = "schule=4";
+    api.fetchTraegerSchools.mockResolvedValue([BACH]);
+    renderPage();
+
+    await screen.findAllByText("Berg, Anna");
+    expect(screen.queryByText("Zander, Mia")).not.toBeInTheDocument();
+    expect(api.fetchTraegerChildren).toHaveBeenCalledExactlyOnceWith({
+      schoolId: LINDE.id,
+      search: "",
+    });
+    fireEvent.click(downloadOption());
+    expect(api.downloadTraegerChildren).toHaveBeenCalledWith("csv", {
+      schoolId: LINDE.id,
+      search: "",
+    });
+  });
+
+  it("offers an explicit switch to all schools after a removed-school bookmark is refused", async () => {
+    navigation.query = "schule=4";
+    api.fetchTraegerSchools.mockResolvedValue([BACH]);
+    api.fetchTraegerChildren.mockImplementation(
+      ({ schoolId }: { schoolId: string }) =>
+        schoolId
+          ? Promise.reject(
+              new ApiError("not found", 404, {
+                code: "traeger.school_not_found",
+              }),
+            )
+          : Promise.resolve(
+              pageOf([ZANDER], { schools: [{ ...BACH, children: 1 }] }),
+            ),
+    );
+    renderPage();
+    const showAll = await screen.findByRole("button", {
+      name: "Alle Schulen anzeigen",
+    });
+    expect(api.fetchTraegerChildren).toHaveBeenCalledExactlyOnceWith({
+      schoolId: LINDE.id,
+      search: "",
+    });
+    expect(screen.queryByRole("tablist")).not.toBeInTheDocument();
+    expect(downloadOption()).toBeDisabled();
+
+    fireEvent.click(showAll);
+    await screen.findAllByText("Zander, Mia");
+    expect(navigation.query).toBe("");
+    expect(api.fetchTraegerChildren).toHaveBeenLastCalledWith({
+      schoolId: "",
+      search: "",
+    });
+  });
+
+  it("only enables downloads after the visible search finishes loading", async () => {
+    renderPage();
+    await screen.findAllByText("Zander, Mia");
+    const [field] = screen.getAllByPlaceholderText("Kind suchen");
+    const searchResult = deferred<TraegerChildrenPage>();
+    api.fetchTraegerChildren.mockReturnValue(searchResult.promise);
+
+    vi.useFakeTimers();
+    try {
+      fireEvent.change(field!, { target: { value: "Berg" } });
+      const csv = downloadOption();
+      expect(csv).toBeDisabled();
+      fireEvent.click(csv);
+      expect(api.downloadTraegerChildren).not.toHaveBeenCalled();
+      await act(async () => vi.advanceTimersByTimeAsync(250));
+      expect(api.fetchTraegerChildren).toHaveBeenLastCalledWith({
+        schoolId: "",
+        search: "Berg",
+      });
+      expect(screen.getByRole("menuitem", { name: /CSV/ })).toBeDisabled();
+    } finally {
+      releaseFakeTimers();
+    }
+
+    await act(async () => {
+      searchResult.resolve(pageOf([BERG]));
+      await searchResult.promise;
+    });
+    const csv = screen.getByRole("menuitem", { name: /CSV/ });
+    expect(csv).toBeEnabled();
+    fireEvent.click(csv);
+    expect(api.downloadTraegerChildren).toHaveBeenCalledWith("csv", {
+      schoolId: "",
+      search: "Berg",
+    });
+  });
+
   it("waits for a fresh audited read when React restores the page", async () => {
     const view = (mode: "visible" | "hidden") => (
       <TraegerResourceTestProvider>
@@ -389,7 +480,10 @@ describe("TraegerChildrenPage", () => {
     expect(screen.getAllByPlaceholderText("Kind suchen")[0]).toHaveValue("");
   });
 
-  it("redraws only the search field while a name is typed", async () => {
+  it("does not redraw rows while a name is typed, including on a paged list", async () => {
+    api.fetchTraegerChildren.mockResolvedValueOnce(
+      pageOf([AKSOY, BERG, ZANDER], { matched: 4, nextCursor: "next-page" }),
+    );
     renderPage();
     await screen.findAllByText("Zander, Mia");
     const field = screen.getAllByPlaceholderText("Kind suchen")[0]!;
@@ -442,6 +536,71 @@ describe("TraegerChildrenPage", () => {
     expect(
       screen.queryByRole("button", { name: /Weitere Kinder laden/ }),
     ).not.toBeInTheDocument();
+  });
+
+  it("replaces a renamed child when it reappears and uses the new match count", async () => {
+    api.fetchTraegerChildren
+      .mockResolvedValueOnce(
+        pageOf([AKSOY, BERG], { matched: 3, nextCursor: "second" }),
+      )
+      .mockResolvedValueOnce(
+        pageOf([{ ...AKSOY, lastName: "Erler" }, ZANDER], {
+          matched: 5,
+          nextCursor: "third",
+        }),
+      );
+    renderPage();
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Weitere Kinder laden (2 von 3)",
+      }),
+    );
+
+    expect(
+      await screen.findByRole("button", {
+        name: "Weitere Kinder laden (3 von 5)",
+      }),
+    ).toBeVisible();
+    expect(screen.queryByText("Aksoy, Ömer")).not.toBeInTheDocument();
+    expect(screen.getByText("Erler, Ömer")).toBeVisible();
+  });
+
+  it("opens a fresh roster after Berlin midnight and discards yesterday's continuation", async () => {
+    setTestClock("2026-11-26T22:59:30Z");
+    const continuation = deferred<TraegerChildrenPage>();
+    const opening = deferred<TraegerChildrenPage>();
+    api.fetchTraegerChildren
+      .mockResolvedValueOnce(
+        pageOf([AKSOY], { matched: 2, nextCursor: "yesterday" }),
+      )
+      .mockReturnValueOnce(continuation.promise)
+      .mockReturnValueOnce(opening.promise);
+    vi.useFakeTimers();
+    try {
+      renderPage();
+      await act(async () => vi.advanceTimersByTimeAsync(0));
+      fireEvent.click(
+        screen.getByRole("button", { name: "Weitere Kinder laden (1 von 2)" }),
+      );
+      await act(async () => vi.advanceTimersByTimeAsync(60_000));
+      expect(api.fetchTraegerChildren).toHaveBeenCalledTimes(3);
+      expect(api.fetchTraegerChildren).toHaveBeenLastCalledWith({
+        schoolId: "",
+        search: "",
+      });
+      expect(screen.queryByText("Aksoy, Ömer")).not.toBeInTheDocument();
+      expect(schoolTab(BACH)).not.toHaveTextContent(/2$/);
+      await act(async () => {
+        continuation.resolve(pageOf([ZANDER]));
+        await continuation.promise;
+        opening.resolve(pageOf([BERG]));
+        await opening.promise;
+      });
+      expect(screen.getByText("Berg, Anna")).toBeVisible();
+      expect(screen.queryByText("Zander, Mia")).not.toBeInTheDocument();
+    } finally {
+      releaseFakeTimers();
+    }
   });
 
   it("shows no names of an earlier visit before the reiter's own read answers", async () => {
