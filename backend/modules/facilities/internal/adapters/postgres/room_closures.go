@@ -21,12 +21,14 @@ type roomClosureRow struct {
 	EndDate       calendar.Date `bun:"end_date,notnull,type:date"`
 	Reason        string        `bun:"reason,notnull"`
 	CreatedAt     time.Time     `bun:"created_at,nullzero,notnull,default:current_timestamp"`
+	// RoomName comes from the join of the list (#8161); never written.
+	RoomName string `bun:"room_name,scanonly"`
 }
 
 func (row roomClosureRow) closure() facilities.RoomClosure {
 	return facilities.RoomClosure{
 		ID: row.ID, RoomID: row.RoomID, StartDate: row.StartDate, EndDate: row.EndDate,
-		Reason: row.Reason, CreatedAt: row.CreatedAt,
+		Reason: row.Reason, CreatedAt: row.CreatedAt, RoomName: row.RoomName,
 	}
 }
 
@@ -121,8 +123,12 @@ func (s *Store) ListClosuresWithRoomLocks(ctx context.Context, filter facilities
 func (s *Store) listClosures(ctx context.Context, db bun.IDB, tenantID int64, filter facilities.RoomClosureFilter) ([]facilities.RoomClosure, domain.OperationStats, error) {
 	rows := []roomClosureRow{}
 	stats := domain.OperationStats{Queries: 1}
+	// The room's name joins in the same statement (#8161).
 	query := db.NewSelect().Model(&rows).
 		ModelTableExpr(`facilities.room_closures AS "closure"`).
+		ColumnExpr(`"closure".*`).
+		ColumnExpr(`"room".name AS room_name`).
+		Join(`JOIN facilities.rooms AS "room" ON "room".id = "closure".room_id AND "room".tenant_id = "closure".tenant_id`).
 		Where(`"closure".tenant_id = ?`, tenantID).
 		Where(`"closure".end_date >= ?`, filter.From).
 		Where(`"closure".start_date <= ?`, filter.Until).

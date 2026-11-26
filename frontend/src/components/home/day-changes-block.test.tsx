@@ -507,6 +507,38 @@ describe("DayChangesBlock: Speiseplan (#7666)", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("nennt den gesperrten Raum mit Grund und führt zur Raumseite (#8161)", () => {
+    serve({
+      entries: [
+        change({
+          kind: "room_closed",
+          roomName: "Werkraum",
+          until: "2026-09-11",
+          roomClosure: { reason: "Wasserschaden" },
+          link: { target: "room", staffId: null, roomId: "42" },
+        }),
+      ],
+    });
+    render(<DayChangesBlock />);
+
+    const link = screen.getByRole("link", {
+      name: /Der Raum „Werkraum“ ist heute gesperrt: Wasserschaden\./,
+    });
+    expect(link).toHaveAttribute("href", "/schule/rooms/42?tab=stammdaten");
+    expect(screen.getByText("bis 11.9.")).toBeInTheDocument();
+  });
+
+  it("nennt eine ausgefallene Quelle Räume und gibt keine Entwarnung", () => {
+    serve({ failedSources: ["room_closures"] });
+    render(<DayChangesBlock />);
+    expect(
+      screen.getByText("Gesperrte Räume konnten gerade nicht geladen werden."),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("Heute läuft alles wie geplant."),
+    ).not.toBeInTheDocument();
+  });
+
   it("nennt eine ausgefallene Quelle Speiseplan und gibt keine Entwarnung", () => {
     serve({ failedSources: ["meal_plan"] });
     render(<DayChangesBlock />);

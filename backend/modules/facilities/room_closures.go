@@ -38,6 +38,8 @@ type RoomClosure struct {
 	EndDate   calendar.Date
 	Reason    string
 	CreatedAt time.Time
+	// RoomName is the room's name, read with the closure (#8161).
+	RoomName string
 }
 
 // Covers reports whether the closure holds on the day.

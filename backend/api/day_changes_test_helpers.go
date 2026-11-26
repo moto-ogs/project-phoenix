@@ -73,8 +73,8 @@ func NewDayChangesTestResource(db transactionruntime.Database, unit tenant.UnitO
 		}),
 		ClosingDays:  owners.NewSchoolClosingDayReads(),
 		MealPlan:     mealplanCompose.NewMenuChanges(),
-		Appointments: dayChangesAppointmentsOf(calendarAppointments),
-		Today:        func() calendar.Date { return today }, Logger: slog.Default(),
+		Appointments: dayChangesAppointmentsOf(calendarAppointments), RoomClosures: NewRoomClosuresForTest(db),
+		Today: func() calendar.Date { return today }, Logger: slog.Default(),
 	})
 	if err != nil {
 		return nil, err

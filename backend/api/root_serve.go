@@ -523,7 +523,7 @@ func composeServeRoot(
 		},
 		func() error { return mountRequestFeed(router, tenant, db, logger, config.FrontendURL) },
 		func() error {
-			return mountModuleRoutes(tenant, settings.Service, caller, studentAnswers, persons.StudentNotes, activities, workforce.TimeTracking.Overview, audit.Persistence.DataAccessLog, env.Today, DayChangesSources{Assignments: membership, ClassArrivals: classArrivals, Caller: caller, Workforce: workTime, Names: newDayChangesStaffNames(services.Users), Groups: structure.Groups, CarePlan: carePlan, DayPickups: schedules.PickupPersons, Students: persons, ClosingDays: calendar, Notices: newDayChangesNoticeReads(db, calendarAdmin, timetableOwner, env.Now), Blocks: lifecycle.BlockDayChanges, BlockStaff: lifecycle.BlockStaffChanges, MealPlan: mealplanCompose.NewMenuChanges(), Appointments: dayChangesAppointmentsOf(appointments), Today: env.Today, Logger: logger.With("service", "day-changes")})
+			return mountModuleRoutes(tenant, settings.Service, caller, studentAnswers, persons.StudentNotes, activities, workforce.TimeTracking.Overview, audit.Persistence.DataAccessLog, env.Today, DayChangesSources{Assignments: membership, ClassArrivals: classArrivals, Caller: caller, Workforce: workTime, Names: newDayChangesStaffNames(services.Users), Groups: structure.Groups, CarePlan: carePlan, DayPickups: schedules.PickupPersons, Students: persons, ClosingDays: calendar, Notices: newDayChangesNoticeReads(db, calendarAdmin, timetableOwner, env.Now), Blocks: lifecycle.BlockDayChanges, BlockStaff: lifecycle.BlockStaffChanges, MealPlan: mealplanCompose.NewMenuChanges(), Appointments: dayChangesAppointmentsOf(appointments), RoomClosures: facilitiesRooms.Closures, Today: env.Today, Logger: logger.With("service", "day-changes")})
 		},
 		func() error {
 			return mountStudentRoutes(tenant, db, logger, deviceAuth, studentPresence, persons, services, membership, caller, reviewPolicy,
@@ -544,7 +544,7 @@ func composeServeRoot(
 		func() error {
 			return mountSchoolPortalRoutes(router, tenant, db, logger, appUploads, limiters, studentPresence, timetableOwner, calendarAdmin,
 				materialization, lifecycle, planning, timetableRows.PlanningTracks, services.Users, schedules, caller, settings.Service,
-				careOfferings, planExport, chat, persons, notifications, deliveryDevices, classDay, identity, calendarApp, announcements, workTime, people.Staff, hub, membership, appointments, env.Now)
+				careOfferings, planExport, chat, persons, notifications, deliveryDevices, classDay, identity, calendarApp, announcements, workTime, people.Staff, hub, membership, appointments, facilitiesRooms.Closures, env.Now)
 		},
 		func() error {
 			enrollmentResource := newEnrollmentResource(logger, appUploads, settings.Service, config.Turnstile, careOfferings, flows, phases,
