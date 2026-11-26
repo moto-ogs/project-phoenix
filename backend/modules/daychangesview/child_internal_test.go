@@ -43,6 +43,7 @@ func TestChildDayKeepsOtherSourcesWhenOneFails(t *testing.T) {
 		Closing:    source(SourceEntry{Kind: KindClosingDay, Involved: true, Closing: &DayClosing{Name: "Pädagogischer Tag"}}),
 		Activities: failing,
 		Classes:    source(),
+		Meals:      source(SourceEntry{Kind: KindMealCancelled, Involved: true}),
 	})
 	require.NoError(t, err)
 
@@ -53,9 +54,10 @@ func TestChildDayKeepsOtherSourcesWhenOneFails(t *testing.T) {
 		{Source: SourceClosingDays, Status: SourceLoaded},
 		{Source: SourceActivities, Status: SourceFailed},
 		{Source: SourceClasses, Status: SourceLoaded},
+		{Source: SourceMealPlan, Status: SourceLoaded},
 	}, overview.Sources)
-	assert.Equal(t, []ChildFilter{child, child, child}, seen, "every source reads the one child")
-	require.Len(t, overview.Entries, 2)
+	assert.Equal(t, []ChildFilter{child, child, child, child}, seen, "every source reads the one child")
+	require.Len(t, overview.Entries, 3)
 	assert.Equal(t, KindClosingDay, overview.Entries[0].Kind, "the closed school stands first")
 	assert.True(t, overview.Entries[1].EnteredByYou)
 
