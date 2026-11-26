@@ -154,13 +154,13 @@ func (s *Store) DeletePickupPerson(ctx context.Context, studentID int64, date ca
 }
 
 // DeletePastPickupPersons deletes every pickup person of a day before the
-// store's Berlin day (#7655, nightly retention).
-func (s *Store) DeletePastPickupPersons(ctx context.Context) (int, error) {
+// store's Berlin day less window (#7655, nightly retention).
+func (s *Store) DeletePastPickupPersons(ctx context.Context, window time.Duration) (int, error) {
 	db, tid, err := s.databaseForWrite(ctx, "delete past pickup persons")
 	if err != nil {
 		return 0, err
 	}
-	today := calendar.DateFromTime(s.currentTime())
+	today := calendar.DateFromTime(s.currentTime().Add(-window))
 	_, affected, err := execute(ctx, db.NewDelete().TableExpr(`schedule.student_pickup_persons AS "student_pickup_person"`).
 		Where(`"student_pickup_person".tenant_id = ?`, tid).
 		Where(`"student_pickup_person".exception_date < ?`, calendarDate(today)), "delete past pickup persons")

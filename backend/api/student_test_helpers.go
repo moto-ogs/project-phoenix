@@ -411,7 +411,6 @@ func newStudentTestModule(db transactionruntime.Database, unit tenant.UnitOfWork
 		Active:            activeService,
 		Settings:          settingsService,
 		Pickups:           pickupScheduleService,
-		DayPickups:        mustCarePlanPickupPersons(students.CarePlan),
 		Arrivals:          arrivalScheduleService,
 		PlannedStudentIDs: instanceService.GetPlannedStudentIDsByDate, Timetable: reposTimetable.Timetable, BlockTypes: NewTimetableBlockDisplayForTests(db),
 		CareDays:          careDayService,
@@ -419,7 +418,7 @@ func newStudentTestModule(db transactionruntime.Database, unit tenant.UnitOfWork
 		ExcusedRequests:   excusedRequestService,
 		StatusDays:        studentStatusDayService,
 		HolidayGroups:     enrollmentCompose.NewHolidayGuestBadgeList(timezone.CalendarDateClock(now)),
-		Logger:            logger.With("service", "ogs-group-live"), Now: now,
+		Logger:            logger.With("service", "ogs-group-live"), Now: now, DayPickups: mustCarePlanPickupPersons(students.CarePlan),
 	}, nil)
 	if err != nil {
 		return StudentTestModule{}, ActiveTestModule{}, StudentTestPeople{}, nil, nil, nil, fmt.Errorf("compose OGS group live projection: %w", err)

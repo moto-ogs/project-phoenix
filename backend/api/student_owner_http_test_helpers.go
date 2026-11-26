@@ -62,12 +62,6 @@ func NewStudentHTTPTestResources(store transactionruntime.Database, unit tenant.
 	if err != nil {
 		return nil, nil, nil, nil, nil, nil, nil, err
 	}
-	// The pickup person of a day decides on the suite's clock (#7655).
-	clockedCarePlan, err := NewClockedCarePlanForTests(store, clock)
-	if err != nil {
-		return nil, nil, nil, nil, nil, nil, nil, err
-	}
-	pickupPersons := mustCarePlanPickupPersons(clockedCarePlan)
 	repoFactoryTimetable := NewEnrollmentTimetableRows(store)
 	repoFactoryCare := NewEnrollmentCarePlanRows(store)
 	repoFactoryRooms := MustNewTimetableRoomRows(store)
@@ -150,13 +144,12 @@ func NewStudentHTTPTestResources(store transactionruntime.Database, unit tenant.
 			Persons:                  peopleCompose.NewStudentRoutePersons(livePeople.Users),
 			PickupAdjustmentService:  svc.PickupAdjustments,
 			PickupScheduleService:    live.PickupSchedule,
-			PickupPersons:            pickupPersons,
 			SettingsService:          liveSettings.Settings,
 			StudentAuditService:      peopleServices.PeopleDirectory,
 			StudentConsents:          NewStudentHTTPTestConsents(store),
 			StudentPhotos:            peopleServices.PeopleDirectory,
 			UserContextService:       caller,
-			WeeklyPlans:              svc.WeeklyPlans,
+			WeeklyPlans:              svc.WeeklyPlans, PickupPersons: mustClockedPickupPersons(store, clock),
 		},
 		projectionStudentsHTTP.ResourceConfig{
 			PrivacyConsents:        presence,
@@ -363,6 +356,16 @@ func studentHTTPTestRoomNames(rows owners.TimetableRoomRows) func(context.Contex
 		}
 		return names, nil
 	}
+}
+
+// mustClockedPickupPersons binds the pickup person of a day (#7655) from a
+// Care Plan owner on the given clock.
+func mustClockedPickupPersons(store transactionruntime.Database, clock func() time.Time) careplan.PickupPersons {
+	owner, err := NewClockedCarePlanForTests(store, clock)
+	if err != nil {
+		panic(err)
+	}
+	return mustCarePlanPickupPersons(owner)
 }
 
 // mustCarePlanPickupPersons binds the pickup person of a day (#7655) from the

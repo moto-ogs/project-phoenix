@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	dayChangesHTTP "github.com/moto-ogs/project-phoenix/modules/daychangesview/http"
 	mealplanCompose "github.com/moto-ogs/project-phoenix/modules/mealplan/compose"
 	calendarAPI "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/http"
@@ -38,9 +39,7 @@ func NewDayChangesTestResource(db transactionruntime.Database, unit tenant.UnitO
 	if err != nil {
 		return nil, err
 	}
-	// The Kinder reads take the day as a filter; Care Plan's clock stamps
-	// writes only. A shared clock adds no closure to its effect bindings.
-	carePlan, err := NewClockedCarePlanForTests(db, time.Now)
+	carePlan, dayPickups, err := dayChangesTestCarePlan(db, today)
 	if err != nil {
 		return nil, err
 	}
@@ -59,16 +58,6 @@ func NewDayChangesTestResource(db transactionruntime.Database, unit tenant.UnitO
 		return nil, err
 	}
 	classArrivals, err := owners.BuildClassArrivals(db, slog.Default())
-	if err != nil {
-		return nil, err
-	}
-	// The pickup person of a day shows only on its day and later (#7655):
-	// that read decides on the overview's day.
-	dayCarePlan, err := NewClockedCarePlanForTests(db, func() time.Time { return today.BerlinMidnight().Add(12 * time.Hour) })
-	if err != nil {
-		return nil, err
-	}
-	dayPickups, err := owners.CarePlanPickupPersons(dayCarePlan)
 	if err != nil {
 		return nil, err
 	}
@@ -91,6 +80,24 @@ func NewDayChangesTestResource(db transactionruntime.Database, unit tenant.UnitO
 		return nil, err
 	}
 	return dayChangesHTTP.NewResource(view), nil
+}
+
+// dayChangesTestCarePlan binds Care Plan's reads of the overview. The Kinder
+// reads take the day as a filter; Care Plan's clock stamps writes only. A
+// shared clock adds no closure to its effect bindings. The pickup person of
+// a day shows only on its day and later (#7655): that read decides on the
+// overview's day.
+func dayChangesTestCarePlan(db transactionruntime.Database, today calendar.Date) (careplan.Capability, careplan.PickupPersons, error) {
+	carePlan, err := NewClockedCarePlanForTests(db, time.Now)
+	if err != nil {
+		return nil, nil, err
+	}
+	dayCarePlan, err := NewClockedCarePlanForTests(db, func() time.Time { return today.BerlinMidnight().Add(12 * time.Hour) })
+	if err != nil {
+		return nil, nil, err
+	}
+	dayPickups, err := owners.CarePlanPickupPersons(dayCarePlan)
+	return carePlan, dayPickups, err
 }
 
 // NewDayChangesNoticeTestRouter serves Timetable's routes of the Hinweise

@@ -36,7 +36,7 @@ func (req *PickupPersonRequest) Bind(_ *http.Request) error {
 		req.Name = &trimmed
 	}
 	hasName := req.Name != nil && *req.Name != ""
-	hasContact := req.GuardianProfileID != nil && req.GuardianProfileID.Int64() > 0
+	hasContact := req.GuardianProfileID != nil && *req.GuardianProfileID > 0
 	if hasName == hasContact {
 		return errors.New("exactly one of guardian_profile_id and name is required")
 	}

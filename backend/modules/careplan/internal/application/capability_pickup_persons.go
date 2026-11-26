@@ -59,17 +59,15 @@ func (s *Service) SetPickupPerson(ctx context.Context, person careplan.PickupPer
 		return careplan.PickupPerson{}, careplan.ErrPickupPersonInvalid
 	}
 	person.CreatedBy = optionalStaff(staffID)
-	started := time.Now()
 	var saved careplan.PickupPerson
-	var stats domain.OperationStats
-	err = s.withinTenant(ctx, func(txCtx context.Context) error {
+	err = s.run(ctx, "save_pickup_person", func(txCtx context.Context, stats *domain.OperationStats) error {
 		if err := s.DayLocks.LockStudentAndExceptionDay(txCtx, person.StudentID, date.String()); err != nil {
 			return err
 		}
-		saved, stats, err = s.statusQueries.SavePickupPerson(txCtx, person)
+		var err error
+		saved, *stats, err = s.statusQueries.SavePickupPerson(txCtx, person)
 		return err
 	})
-	s.observeRequest("save_pickup_person", time.Since(started), stats, err)
 	return saved, err
 }
 
@@ -79,18 +77,15 @@ func (s *Service) DeletePickupPerson(ctx context.Context, studentID int64, date 
 	if _, err := s.pickupPersonDay(ctx, studentID, careplan.Date(date)); err != nil {
 		return false, err
 	}
-	started := time.Now()
 	deleted := false
-	var stats domain.OperationStats
-	err := s.withinTenant(ctx, func(txCtx context.Context) error {
+	err := s.run(ctx, "delete_pickup_person", func(txCtx context.Context, stats *domain.OperationStats) error {
 		if err := s.DayLocks.LockStudentAndExceptionDay(txCtx, studentID, date.String()); err != nil {
 			return err
 		}
 		var err error
-		deleted, stats, err = s.statusQueries.DeletePickupPerson(txCtx, studentID, date)
+		deleted, *stats, err = s.statusQueries.DeletePickupPerson(txCtx, studentID, date)
 		return err
 	})
-	s.observeRequest("delete_pickup_person", time.Since(started), stats, err)
 	return deleted, err
 }
 
