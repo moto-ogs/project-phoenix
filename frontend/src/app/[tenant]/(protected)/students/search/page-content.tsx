@@ -1678,13 +1678,25 @@ function SearchPageContent() {
       keepPreviousData: false,
       recoverDiscardedRefusals: false,
       isPaused: () => !useRosterProbe,
-      onSuccess(result) {
+      revalidateIfStale: false,
+      onSuccess() {
         if (scopedRosterKey !== null) liftRefusal(scopedRosterKey);
-        if (result.truncatedTotal === null)
-          setConfirmedProbeKey(scopedProbeKey);
+        setConfirmedProbeKey(scopedProbeKey);
       },
     },
   );
+  // An unconfirmed cached probe needs a real refresh, not another use of
+  // the deduped response (which never calls this opening's onSuccess).
+  const refreshCachedProbe =
+    useRosterProbe &&
+    confirmedProbeKey !== scopedProbeKey &&
+    rosterProbe.data !== undefined &&
+    !rosterProbe.isValidating &&
+    !rosterProbe.error;
+  const mutateRosterProbe = rosterProbe.mutate;
+  useEffect(() => {
+    if (refreshCachedProbe) void mutateRosterProbe();
+  }, [refreshCachedProbe, mutateRosterProbe]);
   const wholeList = useSWRAuth<SearchResult | undefined>(
     awaitsSearchFilters || useRosterProbe ? null : wholeListKey,
     async () => {
@@ -1734,12 +1746,18 @@ function SearchPageContent() {
   const roster = useRosterProbe ? rosterProbe : wholeList;
   const rosterRefused =
     heldRosterRefusal !== undefined || isReadRefusal(roster.error);
+  // SWR can fall back to the server seed after the live roster walk stopped.
+  // Those visible rows do not satisfy the deferred walk.
+  const rosterReadDeferred =
+    rosterProbe.data?.pagesDeferred === true &&
+    wholeList.readCurrent?.().data === undefined;
   // A saved term (or an edit before the roster is ready) is independent of
   // the roster read. Use the browser only once the current list fits in full.
   const hasCompleteList =
     roster.data !== undefined &&
     (roster.data.truncatedTotal ?? null) === null &&
     !roster.error &&
+    !rosterReadDeferred &&
     (!useRosterProbe || confirmedProbeKey === scopedProbeKey);
   // A refusal for the roster also denies its named projection.
   const needsServerSearch =
@@ -1761,10 +1779,7 @@ function SearchPageContent() {
     error: studentsError,
     mutate: mutateStudents,
   } = needsServerSearch ? namedSearch : roster;
-  const rosterNeedsExpansion =
-    searchTerm === "" &&
-    wholeList.data === undefined &&
-    rosterProbe.data?.pagesDeferred === true;
+  const rosterNeedsExpansion = searchTerm === "" && rosterReadDeferred;
   // Clearing the name switches back to the full-roster key. Until it answers,
   // keep already loaded rows, but never treat a stopped walk as a roster.
   const retainedRoster = rosterProbe.data?.pagesDeferred
@@ -2106,7 +2121,7 @@ function SearchPageContent() {
   const truncatedTotal =
     studentsData === undefined || isDateTransition
       ? null
-      : (freshSearchData?.truncatedTotal ?? null);
+      : (studentsData.truncatedTotal ?? null);
   const photoConsentDataAvailable =
     photoConsentFeatureAvailable &&
     (students.length === 0 ||

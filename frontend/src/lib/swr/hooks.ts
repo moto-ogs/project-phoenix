@@ -120,25 +120,43 @@ type OnError = NonNullable<SWRConfiguration["onError"]>;
 type Compare = NonNullable<SWRConfiguration["compare"]>;
 type OnErrorRetry = NonNullable<SWRConfiguration["onErrorRetry"]>;
 
+const pendingLockedReads = new WeakMap<
+  Cache,
+  Map<string, { replaced: boolean }>
+>();
+
 const generationLockMiddleware: Middleware =
   (useSWRNext) => (key, fetcher, config) => {
     let read = fetcher;
     if (typeof key === "string" && fetcher) {
       const locked = lockFetcher(key, fetcher);
       read = (...args) => {
-        const pending = locked(...args).catch((error: unknown) => {
-          // SWR checks request identity on fulfillment, but not on rejection.
-          // Let its timestamp check ignore an ended request without changing
-          // the replacement's loading state. A discarded seed still rejects
-          // and recovers when there is no replacement.
-          if (isDiscardedAnswer(error)) {
-            const { cache } = config as { cache?: Cache };
-            const active = cache && SWRGlobalState.get(cache)?.[2][key];
-            if (active && active[0] !== pending)
-              return undefined as Awaited<ReturnType<typeof locked>>;
-          }
-          throw error;
-        });
+        const { cache } = config as { cache?: Cache };
+        let reads = cache && pendingLockedReads.get(cache);
+        if (cache && !reads) {
+          reads = new Map();
+          pendingLockedReads.set(cache, reads);
+        }
+        const previous = reads?.get(key);
+        if (previous) previous.replaced = true;
+        const flight = { replaced: false };
+        reads?.set(key, flight);
+
+        const pending = locked(...args)
+          .catch((error: unknown) => {
+            // SWR checks request identity on fulfillment, but not rejection.
+            // Preserve the replacement's state even when its FETCH entry is
+            // already gone. A discarded seed without a replacement still rejects.
+            if (isDiscardedAnswer(error)) {
+              const active = cache && SWRGlobalState.get(cache)?.[2][key];
+              if (flight.replaced || (active && active[0] !== pending))
+                return undefined as Awaited<ReturnType<typeof locked>>;
+            }
+            throw error;
+          })
+          .finally(() => {
+            if (reads?.get(key) === flight) reads.delete(key);
+          });
         return pending;
       };
     }

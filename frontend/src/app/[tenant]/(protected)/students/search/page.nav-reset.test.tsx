@@ -209,7 +209,7 @@ import { ApiError } from "~/lib/api-error";
 import { liftAllRefusals, refusalFor } from "~/lib/access-refusal";
 import type { StudentFilters } from "~/lib/student-api";
 import { initialStudentSearch } from "~/lib/student-search-url";
-import { IsolatedSWRCache } from "~/lib/swr/config-boundaries";
+import { IsolatedSWRCache, SWRSeedBoundary } from "~/lib/swr/config-boundaries";
 import {
   useSWRAuth as useRealSWRAuth,
   type ReaderOptions,
@@ -282,7 +282,7 @@ function renderOnSearchPage(search: string, wrapper?: typeof IsolatedSWRCache) {
 
 function renderWithRealStudentReads(
   search: string,
-  { defaultCache = false } = {},
+  { defaultCache = false, fallback = {} as Record<string, unknown> } = {},
 ) {
   realStudentReads = true;
   const reload = new Map<string, () => Promise<unknown>>();
@@ -298,7 +298,9 @@ function renderWithRealStudentReads(
   function CacheWithPreview({ children }: { children: React.ReactNode }) {
     return (
       <IsolatedSWRCache>
-        {children}
+        <SWRSeedBoundary seed={{ fallback, cacheData: {} }}>
+          {children}
+        </SWRSeedBoundary>
         <PreviewProbe />
       </IsolatedSWRCache>
     );
@@ -557,38 +559,56 @@ describe("StudentSearchPage: click on the navigation entry of this page (#3374)"
     expect(screen.getByTestId("select-all-count")).toHaveTextContent("1");
   });
 
-  it("ignores a named refusal from the request replaced by retry", async () => {
-    const oldMila = deferred<{ students: (typeof mockStudent)[] }>();
-    const retryMila = deferred<{ students: (typeof mockStudent)[] }>();
-    const roster = deferred<{ students: (typeof mockStudent)[] }>();
-    const mila = { ...mockStudent, id: "8", first_name: "Mila" };
-    let milaReads = 0;
-    mockGetStudents.mockImplementation(({ search }: StudentFilters) => {
-      if (!search) return roster.promise;
-      if (search === "Max") return Promise.resolve({ students: [mockStudent] });
-      return ++milaReads === 1 ? oldMila.promise : retryMila.promise;
-    });
-    vi.useFakeTimers();
-    try {
-      renderWithRealStudentReads("?search=Mila");
-      act(() => vi.advanceTimersByTime(10_000));
-      fireEvent.click(screen.getByRole("button", { name: "Erneut laden" }));
-    } finally {
-      releaseFakeTimers();
-    }
-    await waitFor(() => expect(milaReads).toBe(2));
-    await act(async () => oldMila.reject(new ApiError("Old refusal", 403)));
-    expect(milaReads).toBe(2);
-    await act(async () => retryMila.resolve({ students: [mila] }));
-    expect(await screen.findByTestId("student-card-8")).toBeVisible();
+  it.each([false, true])(
+    "ignores a named refusal from the replaced request (retry failed: %s)",
+    async (retryFailed) => {
+      const oldMila = deferred<{ students: (typeof mockStudent)[] }>();
+      const retryMila = deferred<{ students: (typeof mockStudent)[] }>();
+      const roster = deferred<{ students: (typeof mockStudent)[] }>();
+      const mila = { ...mockStudent, id: "8", first_name: "Mila" };
+      let milaReads = 0;
+      mockGetStudents.mockImplementation(({ search }: StudentFilters) => {
+        if (!search) return roster.promise;
+        if (search === "Max")
+          return Promise.resolve({ students: [mockStudent] });
+        return ++milaReads === 1 ? oldMila.promise : retryMila.promise;
+      });
+      vi.useFakeTimers();
+      try {
+        renderWithRealStudentReads("?search=Mila");
+        act(() => vi.advanceTimersByTime(10_000));
+        fireEvent.click(screen.getByRole("button", { name: "Erneut laden" }));
+      } finally {
+        releaseFakeTimers();
+      }
+      await waitFor(() => expect(milaReads).toBe(2));
+      if (retryFailed) {
+        await act(async () =>
+          retryMila.reject(new ApiError("Retry failed", 503)),
+        );
+        expect(
+          await screen.findByRole("button", { name: "Wiederholen" }),
+        ).toBeVisible();
+      }
+      await act(async () => oldMila.reject(new ApiError("Old refusal", 403)));
+      expect(milaReads).toBe(2);
+      if (retryFailed) {
+        expect(
+          screen.getByRole("button", { name: "Wiederholen" }),
+        ).toBeVisible();
+        return;
+      }
+      await act(async () => retryMila.resolve({ students: [mila] }));
+      expect(await screen.findByTestId("student-card-8")).toBeVisible();
 
-    const [search] = screen.getAllByPlaceholderText("Name suchen…");
-    fireEvent.change(search!, { target: { value: "Max" } });
-    expect(await screen.findByTestId("student-card-7")).toBeVisible();
+      const [search] = screen.getAllByPlaceholderText("Name suchen…");
+      fireEvent.change(search!, { target: { value: "Max" } });
+      expect(await screen.findByTestId("student-card-7")).toBeVisible();
 
-    expect(screen.getByTestId("student-card-7")).toBeVisible();
-    expect(screen.getByTestId("select-all-count")).toHaveTextContent("1");
-  });
+      expect(screen.getByTestId("student-card-7")).toBeVisible();
+      expect(screen.getByTestId("select-all-count")).toHaveTextContent("1");
+    },
+  );
 
   it("uses saved name results until a current roster is confirmed", async () => {
     const freshRoster = deferred<{ students: (typeof mockStudent)[] }>();
@@ -599,12 +619,13 @@ describe("StudentSearchPage: click on the navigation entry of this page (#3374)"
       await reload.get(rosterProbeKey)!();
     });
 
+    const refreshed = vi.fn(() => freshRoster.promise);
     mockGetStudents.mockImplementation(({ search }: StudentFilters) =>
       search
         ? Promise.resolve({
             students: search === "Max" ? [mockStudent] : [mila],
           })
-        : freshRoster.promise,
+        : refreshed(),
     );
     currentSearch = new URLSearchParams({ search: "Mila" });
     window.history.replaceState(null, "", "/students/search?search=Mila");
@@ -620,15 +641,59 @@ describe("StudentSearchPage: click on the navigation entry of this page (#3374)"
     );
     expect(await screen.findByTestId("student-card-8")).toBeVisible();
 
-    await act(async () => {
-      const pending = reload.get(rosterProbeKey)!();
-      freshRoster.resolve({ students: [mila, mockStudent] });
-      await pending;
-    });
+    await waitFor(() => expect(refreshed).toHaveBeenCalledTimes(1));
+    await act(async () =>
+      freshRoster.resolve({ students: [mila, mockStudent] }),
+    );
     const recordedCalls = mockGetStudents.mock.calls.length;
     fireEvent.change(search!, { target: { value: "Max" } });
     expect(await screen.findByTestId("student-card-7")).toBeVisible();
     expect(mockGetStudents).toHaveBeenCalledTimes(recordedCalls);
+  });
+
+  it("does not mistake visible server start data for a finished roster refresh", async () => {
+    const mila = { ...mockStudent, id: "8", first_name: "Mila" };
+    const cached = { students: [mockStudent], truncatedTotal: null };
+    const { reload } = renderWithRealStudentReads("", {
+      fallback: { [scopedRosterKey]: cached },
+    });
+    expect(await screen.findByTestId("student-card-7")).toBeVisible();
+    await act(async () => {
+      await reload.get(rosterKey)!();
+    });
+
+    const [search] = screen.getAllByPlaceholderText("Name suchen…");
+    fireEvent.change(search!, { target: { value: "Mil" } });
+    expect(await screen.findByText("Keine Kinder gefunden")).toBeVisible();
+    mockGetStudents.mockImplementation(({ search, page }: StudentFilters) =>
+      Promise.resolve(
+        search
+          ? { students: [mila] }
+          : {
+              students: page ? [] : cached.students,
+              pagination: { total_pages: 25, total_records: 25000 },
+            },
+      ),
+    );
+    await act(async () => {
+      await reload.get(rosterKey)!();
+    });
+    expect(await screen.findByTestId("student-card-8")).toBeVisible();
+
+    const resumedRoster = vi.fn(async (_filters: StudentFilters) => ({
+      students: [mila],
+    }));
+    mockGetStudents.mockImplementation(resumedRoster);
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "Suche löschen" })[0]!,
+    );
+    await waitFor(() =>
+      expect(resumedRoster).toHaveBeenCalledWith(
+        expect.objectContaining({ search: "" }),
+      ),
+    );
+    expect(await screen.findByTestId("student-card-8")).toBeVisible();
+    expect(screen.queryByTestId("student-card-7")).toBeNull();
   });
 
   it("keeps loaded roster pages visible when clearing a name after a deferred refresh", async () => {
@@ -661,6 +726,9 @@ describe("StudentSearchPage: click on the navigation entry of this page (#3374)"
     expect(screen.getByTestId("student-card-7")).toBeVisible();
     expect(preview("7")?.name).toBe("Max Mustermann");
     expect(screen.getByTestId("select-all-count")).toHaveTextContent("1");
+    expect(
+      screen.getByText(/nur die ersten 1 von 25000 Kindern/),
+    ).toBeVisible();
 
     await act(async () => expansion.resolve({ students: [mila] }));
     // Anker: the retained rows were replaced by the new roster.

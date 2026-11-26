@@ -557,8 +557,10 @@ describe("StudentSearchPage", () => {
     mockUseSWRAuthWithStudents(swrModule, {
       data: { students: mockStudents },
       isLoading: false,
+      isValidating: false,
       error: null,
-    } as ReturnType<typeof swrModule.useSWRAuth>);
+      mutate: vi.fn(async () => undefined),
+    });
   });
 
   afterEach(() => {

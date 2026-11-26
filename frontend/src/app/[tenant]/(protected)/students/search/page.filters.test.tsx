@@ -2052,7 +2052,13 @@ describe("StudentSearchPage — Unterwegs-Karte (#5026)", () => {
     mockUseSWRAuth.mockImplementation((key: string | null) =>
       key === 'rooms-list-{"page":1,"pageSize":1000}'
         ? { data: [], isLoading: false, error: null }
-        : { data: { students: [mockStudent] }, isLoading: false, error: null },
+        : {
+            data: { students: [mockStudent] },
+            isLoading: false,
+            isValidating: false,
+            error: null,
+            mutate: vi.fn(async () => undefined),
+          },
     );
   });
 
