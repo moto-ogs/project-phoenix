@@ -261,6 +261,9 @@ const moduleNamesSQL = `ARRAY(SELECT s.module_name FROM care_contract.contract_v
 const summarySQL = `SELECT c.id, c.status, c.school_id, c.student_id, c.created_at, c.sent_at, c.concluded_at, c.conclusion_method,
 	c.conclusion_date_unknown, c.import_origin IS NOT NULL AS taken_over, c.ends_on, c.early_start_requested, c.import_origin IS NOT NULL AS imported,
 	c.request_child_id IS NOT NULL AS follows_bookings, c.request_child_id, c.updated_at,
+	(c.status = '` + carecontract.StatusActive + `' AND EXISTS (SELECT 1 FROM care_contract.contract_versions AS w
+		WHERE w.organization_id = c.organization_id AND w.contract_id = c.id
+			AND w.status = '` + carecontract.VersionRequested + `')) AS change_awaits_signature,
 	v.school_name, v.child_first_name, v.child_last_name, ` + moduleNamesSQL + ` AS module_names, v.effective_from,
 	COALESCE(p.first_name || ' ' || p.last_name, '') AS party_name, COALESCE(p.email, '') AS party_email
 	FROM care_contract.contracts AS c
@@ -282,6 +285,7 @@ const listContractsSQL = summarySQL + ` AND (? = '' OR c.status = ?) AND (? = 0 
 const contractSQL = summarySQL + ` AND c.id = ?`
 
 type summaryRow struct {
+	ChangeAwaits   bool          `bun:"change_awaits_signature"`
 	StudentID      *int64        `bun:"student_id"`
 	ID             int64         `bun:"id"`
 	Status         string        `bun:"status"`
@@ -320,6 +324,7 @@ func (r summaryRow) summary() carecontract.ContractSummary {
 		PartyName:   strings.TrimSpace(r.PartyName), PartyEmail: r.PartyEmail, EffectiveFrom: r.EffectiveFrom,
 		CreatedAt: r.CreatedAt, SentAt: r.SentAt, Concluded: r.concluded(), EndsOn: r.EndsOn,
 		Imported: r.Imported, FollowsBookings: r.FollowsBookings, RequestChildID: (*ident.ID)(r.RequestChildID),
+		ChangeAwaitsSignature: r.ChangeAwaits,
 	}
 }
 

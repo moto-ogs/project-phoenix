@@ -28,7 +28,8 @@ func (s signingErrorStore) Contract(context.Context, int64, int64, bool) (Contra
 	if s.stage == "contract" {
 		return ContractRecord{}, s.failure
 	}
-	return ContractRecord{Summary: carecontract.ContractSummary{Status: carecontract.StatusSent}}, nil
+	return ContractRecord{Summary: carecontract.ContractSummary{Status: carecontract.StatusSent},
+		Version: carecontract.Version{Status: carecontract.VersionRequested}}, nil
 }
 func (s signingErrorStore) CurrentDocument(context.Context, int64, int64, int64) (StoredDocument, error) {
 	if s.stage == "document" {

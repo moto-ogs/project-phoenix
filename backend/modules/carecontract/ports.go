@@ -29,6 +29,35 @@ type Booking struct {
 	ValidUntil     *calendar.Date
 }
 
+// ParentRequest is a request of the parents to change their child's care
+// that the school or the Träger-Büro approved (Care Plan's offering change,
+// #4816): who sent it and when, the day the approval applied it from, and
+// the modules with their weekdays the parents asked for from that day. A
+// module the request does not name is one the parents no longer want.
+type ParentRequest struct {
+	ID            int64
+	AccountID     int64
+	SubmittedAt   time.Time
+	EffectiveFrom calendar.Date
+	Offerings     []RequestedOffering
+}
+
+// RequestedOffering is one module of a ParentRequest with its weekdays
+// ("mon" to "sun").
+type RequestedOffering struct {
+	CareOfferingID int64
+	Days           []string
+}
+
+// SchoolParentRequests reads the approved requests of the parents for the
+// application children, in the tenant transaction of the school the caller
+// holds (Care Plan). A request the parents sent themselves proves their
+// agreement to the version it made (#4816, ADR 0088 section 3); without the
+// port every changed version waits for a signature.
+type SchoolParentRequests interface {
+	ApprovedParentRequests(ctx context.Context, requestChildIDs []int64) (map[int64][]ParentRequest, error)
+}
+
 // Application is an accepted application child of one school, with its
 // guardian and its bookings.
 type Application struct {
@@ -47,6 +76,9 @@ type Application struct {
 	ServiceStartDate  *calendar.Date
 	ActivateOn        *calendar.Date
 	Bookings          []Booking
+	// ParentRequests are the approved requests of the parents to change the
+	// child's care (#4816); the intake fills them in with the bookings.
+	ParentRequests []ParentRequest
 	// FamilyChildren is the number of children the parents stated on the
 	// registration (#6335); nil when they stated none.
 	FamilyChildren *FamilyStatement

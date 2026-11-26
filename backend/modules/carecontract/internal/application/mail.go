@@ -46,6 +46,7 @@ func RenderContractMail(_ context.Context, payload []byte) (carecontract.Rendere
 			SigningURL: mail.SigningURL, LinkExpiresOn: mail.LinkExpiresOn, SignedAt: mail.SignedAt,
 			SignerName: mail.SignerName, DocumentSHA256: mail.DocumentSHA256, EarlyStart: mail.EarlyStart,
 			WithdrawalEndsOn: mail.WithdrawalEndsOn, WithdrawalNotice: mail.WithdrawalNotice,
+			EffectiveFrom: mail.EffectiveFrom,
 		},
 		Filename: mail.Filename,
 		PDF:      mail.PDF,

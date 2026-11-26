@@ -62,6 +62,9 @@ type NewSignature struct {
 	SignedOn            calendar.Date
 	SignedAt            time.Time
 	RecordedByAccountID *int64
+	// ChangeRequestID is the parents' request that counts as the signature
+	// (carecontract.SignatureRequest, #4816); nil for every other method.
+	ChangeRequestID *int64
 }
 
 type StoredSignature struct {
@@ -85,8 +88,10 @@ type StoredSignature struct {
 // or reminder lies back far enough.
 type ReminderCandidate struct {
 	ContractID int64
-	Number     int
-	Recipient  string
+	// VersionID is the version that waits for the signature (#4816).
+	VersionID int64
+	Number    int
+	Recipient string
 }
 
 // SignatureStore persists the signatures, links and reminders of the
@@ -109,6 +114,9 @@ type SignatureStore interface {
 	Reminders(ctx context.Context, organizationID, contractID int64) ([]carecontract.Reminder, error)
 	DueReminders(ctx context.Context, organizationID, contractID int64, lastContactBefore time.Time, maxReminders int) ([]ReminderCandidate, error)
 	// InsertReminder records a reminder at the owner clock's instant at.
-	InsertReminder(ctx context.Context, organizationID, contractID int64, number int, outboxID int64, recipient string, at time.Time) error
+	InsertReminder(ctx context.Context, organizationID int64, candidate ReminderCandidate, outboxID int64, at time.Time) error
+	// VersionSignatures lists how the parents agreed to each signed version
+	// of the contract, oldest version first (#4816).
+	VersionSignatures(ctx context.Context, organizationID, contractID int64) ([]carecontract.VersionSignature, error)
 	InboxContractAddressed(ctx context.Context, organizationID, contractID int64, reader carecontract.InboxReader) (bool, error)
 }

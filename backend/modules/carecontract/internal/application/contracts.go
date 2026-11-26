@@ -251,6 +251,9 @@ func (c *Contracts) detail(ctx context.Context, reviewer carecontract.Reviewer, 
 		TermText: TermText(current.Terms, contractEnd(versions, current)), NoticeText: NoticeText(current.Terms),
 		FeeText: feeText(current), Corrections: corrections,
 	}
+	if detail.VersionSignatures, err = c.store.VersionSignatures(ctx, reviewer.OrganizationID, record.Summary.ID.Int64()); err != nil {
+		return carecontract.ContractDetail{}, err
+	}
 	return detail, c.addSignature(ctx, reviewer.OrganizationID, record, &detail)
 }
 
@@ -458,20 +461,78 @@ func (c *Contracts) send(ctx context.Context, reviewer carecontract.Reviewer, co
 	if err != nil {
 		return err
 	}
-	if record, err = c.sentVersionRecord(ctx, reviewer.OrganizationID, record); err != nil {
+	// A changed version that waits for the signature goes out again with a
+	// new link (#4816); any other send repeats the PDF the parents have.
+	purpose, err := c.waitingPurpose(ctx, reviewer.OrganizationID, &record)
+	if err != nil {
 		return err
 	}
-	return c.deliver(ctx, reviewer, record, destination)
+	if purpose == carecontract.MailPurposeContract {
+		if record, err = c.sentVersionRecord(ctx, reviewer.OrganizationID, record); err != nil {
+			return err
+		}
+	}
+	return c.deliver(ctx, reviewer, record, destination, purpose)
+}
+
+// waitingPurpose points the record of an active contract at its changed
+// version that waits for a signature and answers the mail that asks for it;
+// MailPurposeContract when none waits.
+func (c *Contracts) waitingPurpose(ctx context.Context, organizationID int64, record *ContractRecord) (string, error) {
+	if record.Summary.Status != carecontract.StatusActive {
+		return carecontract.MailPurposeContract, nil
+	}
+	waits, err := c.store.WaitingVersion(ctx, organizationID, record)
+	if err != nil || !waits {
+		return carecontract.MailPurposeContract, err
+	}
+	return carecontract.MailPurposeAmendment, nil
+}
+
+// deliverChange brings a changed version to the parents (#4816): it freezes
+// its PDF and sends it the way the contract went out before, by mail and
+// into the inbox, with a one-time link when the version waits for the
+// signature. A contract that never went out by mail (handed over on paper,
+// taken over from a file) and one whose address takes no mail (none, or
+// blocked) keep the frozen PDF only, and the trail names why: the
+// Träger-Büro hands it over or sends it again. A mail that only waits (the
+// last one is still on its way, or the provider cannot be asked) is an
+// error: the caller leaves the change for its next run. It acts for no
+// account, like the run that calls it.
+func (c *Contracts) deliverChange(ctx context.Context, organizationID int64, record ContractRecord, purpose string) error {
+	reviewer := carecontract.Reviewer{OrganizationID: organizationID}
+	held := "not_mailed"
+	mailings, err := c.store.Mailings(ctx, organizationID, record.Summary.ID.Int64())
+	if err != nil {
+		return err
+	}
+	if len(mailings) > 0 {
+		err := c.deliver(ctx, reviewer, record, "", purpose)
+		reason, _ := sendSkipReason(err)
+		if reason != carecontract.SkipRecipientMissing && reason != carecontract.SkipMailBlocked {
+			return err
+		}
+		held = reason
+	}
+	documentID, err := c.paperDocument(ctx, reviewer, record)
+	if err != nil {
+		return err
+	}
+	return trailContract(ctx, c.store, organizationID, 0, record, ActionSend, map[string]any{
+		"document_id": documentID, "version_number": record.Version.Number, "purpose": purpose, "mail_held_back": held,
+	})
 }
 
 // deliver sends the contract read under its row lock: it freezes the PDF of
-// a draft, enqueues the mail and records the send.
-func (c *Contracts) deliver(ctx context.Context, reviewer carecontract.Reviewer, record ContractRecord, destination string) error {
+// a draft, enqueues the mail and records the send. purpose picks the mail:
+// the contract itself, or a changed version (#4816), whose PDF is frozen
+// here too.
+func (c *Contracts) deliver(ctx context.Context, reviewer carecontract.Reviewer, record ContractRecord, destination, purpose string) error {
 	contractID := record.Summary.ID
 	if record.Summary.Status != carecontract.StatusDraft && record.Summary.Status != carecontract.StatusSent && record.Summary.Status != carecontract.StatusActive {
 		return carecontract.ErrContractNotSendable
 	}
-	if record.Summary.Status == carecontract.StatusActive && record.DocumentID == nil {
+	if record.Summary.Status == carecontract.StatusActive && record.DocumentID == nil && purpose == carecontract.MailPurposeContract {
 		return carecontract.ErrContractNotSendable
 	}
 	party, previousSends, err := c.deliveryParty(ctx, reviewer.OrganizationID, record, destination)
@@ -502,7 +563,7 @@ func (c *Contracts) deliver(ctx context.Context, reviewer carecontract.Reviewer,
 		Modules:   carecontract.JoinNames(ModuleNames(record.Version.Services)), Filename: file.Filename, PDF: file.Data,
 		IdempotencyKey: fmt.Sprintf("care-contract:%d:%d", contractID, previousSends+1),
 		SigningURL:     link.url, LinkExpiresOn: link.expiresOn,
-		Concluded: record.Concluded != nil,
+		Concluded: record.Concluded != nil, Purpose: purpose, EffectiveFrom: germanDate(record.Version.EffectiveFrom),
 	})
 	if err != nil {
 		return fmt.Errorf("care contract: enqueue mail: %w", err)
@@ -519,7 +580,9 @@ func (c *Contracts) deliver(ctx context.Context, reviewer carecontract.Reviewer,
 			return err
 		}
 	}
-	return trailContract(ctx, c.store, reviewer.OrganizationID, reviewer.AccountID, record, ActionSend, map[string]any{"document_id": documentID, "again": previousSends > 0})
+	return trailContract(ctx, c.store, reviewer.OrganizationID, reviewer.AccountID, record, ActionSend, map[string]any{
+		"document_id": documentID, "again": previousSends > 0, "version_number": record.Version.Number, "purpose": purpose,
+	})
 }
 
 // deliveryParty keeps delivery corrections separate from the frozen party.
@@ -595,7 +658,9 @@ func sameMailAddress(a, b string) bool {
 // or the handover on paper (#8030).
 func (c *Contracts) frozenDocument(ctx context.Context, reviewer carecontract.Reviewer, record ContractRecord) (carecontract.File, int64, error) {
 	if record.DocumentID != nil {
-		file, err := c.store.Document(ctx, reviewer.OrganizationID, record.Summary.ID.Int64())
+		// The PDF of the record's version: a changed version that waits has
+		// one of its own next to the PDF of the version in force (#4816).
+		file, _, err := c.store.VersionDocument(ctx, reviewer.OrganizationID, record.Version.ID.Int64())
 		return file, *record.DocumentID, err
 	}
 	// The PDF keeps the body that issued it (#4811): the one it prints.

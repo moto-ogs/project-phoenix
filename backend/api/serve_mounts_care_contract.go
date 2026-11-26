@@ -122,6 +122,7 @@ func careContractPorts(organizations HolidayOrganizations, settings TraegerBrand
 		Access:   careContractAccessLog{log: accessLog}, Runtime: owners.CareContractRuntime{},
 		Modes: careContractModes{settings: schoolSettings}, Mail: owners.CareContractPost{Delivery: delivery, Outcomes: outcomes},
 		Letterheads: letterheads, Issuers: issuers, Families: owners.NewCareContractFamilyNumbers(),
+		Requests: careContractParentRequests{changes: carePlanCompose.NewContractOfferingChanges()},
 	}
 }
 
@@ -282,6 +283,33 @@ func (b careContractBookings) Bookings(ctx context.Context, requestChildIDs []in
 		byChild[booking.RequestChildID] = append(byChild[booking.RequestChildID], carecontract.Booking{
 			CareOfferingID: booking.CareOfferingID, Days: booking.EffectiveSelectedDays(),
 			ValidFrom: careContractDate(booking.ValidFrom), ValidUntil: careContractDate(booking.ValidUntil),
+		})
+	}
+	return byChild, nil
+}
+
+// careContractParentRequests reads the approved requests of the parents
+// from Care Plan in the school's tenant transaction (#4816): the contract
+// takes a request the parents sent themselves as the signature of the
+// version it made.
+type careContractParentRequests struct {
+	changes careplan.ContractOfferingChanges
+}
+
+func (r careContractParentRequests) ApprovedParentRequests(ctx context.Context, requestChildIDs []int64) (map[int64][]carecontract.ParentRequest, error) {
+	approved, err := r.changes.ApprovedOfferingChanges(ctx, requestChildIDs)
+	if err != nil {
+		return nil, err
+	}
+	byChild := map[int64][]carecontract.ParentRequest{}
+	for _, change := range approved {
+		offerings := make([]carecontract.RequestedOffering, len(change.Selections))
+		for i, selection := range change.Selections {
+			offerings[i] = carecontract.RequestedOffering{CareOfferingID: selection.OfferingID, Days: selection.SelectedDays}
+		}
+		byChild[change.RequestChildID] = append(byChild[change.RequestChildID], carecontract.ParentRequest{
+			ID: change.ID, AccountID: change.SubmittedBy, SubmittedAt: change.SubmittedAt,
+			EffectiveFrom: calendar.Date(change.EffectiveFrom), Offerings: offerings,
 		})
 	}
 	return byChild, nil

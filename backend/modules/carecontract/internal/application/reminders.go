@@ -94,13 +94,16 @@ func (r *Reminders) remind(ctx context.Context, organizationID int64, letterhead
 	if err != nil {
 		return err
 	}
-	if record.Summary.Status != carecontract.StatusSent {
-		return nil
+	// The reminder asks for the signature of the version that waits: a sent
+	// contract's, or the changed version of an active one (#4816).
+	waits, err := waitingRecord(ctx, r.store, organizationID, &record)
+	if err != nil || !waits {
+		return err
 	}
 	// A resend or another reminder may have committed since candidate selection.
 	// Read the recipient, interval and reminder number again under the contract lock.
 	due, err := r.store.DueReminders(ctx, organizationID, candidate.ContractID, lastContactBefore, carecontract.MaxReminders)
-	if err != nil || len(due) == 0 {
+	if err != nil || len(due) == 0 || due[0].VersionID != record.Version.ID.Int64() {
 		return err
 	}
 	candidate = due[0]
@@ -128,16 +131,28 @@ func (r *Reminders) remind(ctx context.Context, organizationID int64, letterhead
 		GuardianName: fullName(party.FirstName, party.LastName), TraegerName: traegerName(letterhead, record.Version.Terms),
 		ChildName: fullName(record.Version.ChildFirstName, record.Version.ChildLastName),
 		Modules:   carecontract.JoinNames(ModuleNames(record.Version.Services)), Filename: document.File.Filename,
-		IdempotencyKey: fmt.Sprintf("care-contract:%d:reminder:%d", candidate.ContractID, candidate.Number),
+		IdempotencyKey: reminderKey(candidate, record.Version.Number),
 		Purpose:        carecontract.MailPurposeReminder, SigningURL: link.url, LinkExpiresOn: link.expiresOn,
 	})
 	if err != nil {
 		return fmt.Errorf("enqueue reminder: %w", err)
 	}
-	if err := r.store.InsertReminder(ctx, organizationID, candidate.ContractID, candidate.Number, outboxID, candidate.Recipient, r.clock.now()); err != nil {
+	if err := r.store.InsertReminder(ctx, organizationID, candidate, outboxID, r.clock.now()); err != nil {
 		return err
 	}
-	return trailContract(ctx, r.store, organizationID, 0, record, ports.ActionRemind, map[string]any{"number": candidate.Number})
+	return trailContract(ctx, r.store, organizationID, 0, record, ports.ActionRemind,
+		map[string]any{"number": candidate.Number, "version_number": record.Version.Number})
+}
+
+// reminderKey keeps one reminder mail per number and version. The first
+// version keeps the key it always had; a changed version counts anew
+// (#4816), so its key names the version.
+func reminderKey(candidate ports.ReminderCandidate, versionNumber int) string {
+	key := fmt.Sprintf("care-contract:%d:reminder:%d", candidate.ContractID, candidate.Number)
+	if versionNumber > 1 {
+		key += fmt.Sprintf(":v%d", versionNumber)
+	}
+	return key
 }
 
 func berlinDay(at time.Time) string {

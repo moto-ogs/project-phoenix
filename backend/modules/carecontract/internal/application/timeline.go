@@ -48,21 +48,29 @@ type change struct {
 // not carry yet; nil without a reason when it carries them all.
 func nextAmendment(read schoolRead, application carecontract.Application, contract AmendableContract,
 	today calendar.Date) (*amendmentPlan, string) {
-	plan, reason, _ := firstAmendment(read, application, contract, today)
+	plan, reason, _ := nextChange(read, application, contract, today)
 	return plan, reason
+}
+
+// nextChange answers nextAmendment with the change the plan comes from: the
+// day it holds from and the days it happened on.
+func nextChange(read schoolRead, application carecontract.Application, contract AmendableContract,
+	today calendar.Date) (*amendmentPlan, string, change) {
+	for _, next := range changeDays(read, application, contract, today) {
+		plan, reason := planChange(read, application, contract, next)
+		if plan != nil || reason != "" {
+			return plan, reason, next
+		}
+	}
+	return nil, "", change{}
 }
 
 // firstAmendment answers nextAmendment with the day the change holds from;
 // empty when the timeline carries every change.
 func firstAmendment(read schoolRead, application carecontract.Application, contract AmendableContract,
 	today calendar.Date) (*amendmentPlan, string, calendar.Date) {
-	for _, next := range changeDays(read, application, contract, today) {
-		plan, reason := planChange(read, application, contract, next)
-		if plan != nil || reason != "" {
-			return plan, reason, next.day
-		}
-	}
-	return nil, "", ""
+	plan, reason, next := nextChange(read, application, contract, today)
+	return plan, reason, next.day
 }
 
 // planChange is the version a change makes, or nil when the timeline

@@ -23,6 +23,11 @@ const (
 	SignatureDrawn = "drawn"
 	SignatureTyped = "typed"
 	SignaturePaper = "paper"
+	// SignatureRequest is no drawn signature: the parents asked for the
+	// change of their child's care themselves, and the school approved it.
+	// Their request, sent with their account, counts as the signature of the
+	// version it made (#4816, ADR 0088 section 3).
+	SignatureRequest = "request"
 )
 
 const (
@@ -99,9 +104,12 @@ type ContractSignature struct {
 }
 
 type Reminder struct {
-	Number    int       `json:"number"`
-	Recipient string    `json:"recipient"`
-	SentAt    time.Time `json:"sent_at"`
+	// VersionNumber is the version the reminder asked a signature for
+	// (#4816): a changed version is reminded anew.
+	VersionNumber int       `json:"version_number"`
+	Number        int       `json:"number"`
+	Recipient     string    `json:"recipient"`
+	SentAt        time.Time `json:"sent_at"`
 }
 
 // SigningView is what the parents read before they sign: the contract with
@@ -118,6 +126,14 @@ type SigningView struct {
 	DocumentSHA256   string            `json:"document_sha256"`
 	WithdrawalNotice []string          `json:"withdrawal_notice"`
 	Signature        *SigningSignature `json:"signature"`
+	// Previous is the version the parents have so far, set when Version is a
+	// changed version (#4816): of an active contract the version it follows,
+	// of a contract not yet signed the version sent before. The page shows
+	// what changes before the parents sign. Nil for a first contract.
+	Previous *SigningContract `json:"previous"`
+	// AwaitsSignature tells that Version waits for the signature; false once
+	// signed or when nothing is to sign.
+	AwaitsSignature bool `json:"awaits_signature"`
 }
 
 // SigningContract is the version the parents sign, as the page shows it.
@@ -274,4 +290,9 @@ const (
 	MailPurposeContract = ""
 	MailPurposeReminder = "reminder"
 	MailPurposeSigned   = "signed"
+	// MailPurposeAmendment asks for the signature of a changed version;
+	// MailPurposeAmended brings the changed version the parents asked for
+	// themselves and sign nothing for (#4816).
+	MailPurposeAmendment = "amendment"
+	MailPurposeAmended   = "amended"
 )
