@@ -39,6 +39,11 @@ export const HEAD_TITLE_SIZE = {
 export const PARENT_HEAD_ROW = {
   row: "flex flex-wrap items-start justify-between gap-3",
   title: "min-w-0 flex-1 basis-0",
+  /**
+   * Die Begrüßung der Startseite (`prominent`) behält ihr 20-px-Polster auch
+   * in `compact` und auf dem Telefon; über das Kartenpolster gelegt.
+   */
+  prominentSurface: "compact:p-5 max-sm:p-5",
 } as const;
 
 /**

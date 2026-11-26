@@ -202,30 +202,45 @@ async function titleBox(page: Page, selector: string) {
   };
 }
 
+// Die Startseite lädt mit `ParentPageSkeleton prominent`, ihr Kopf ist die
+// Begrüßung (`ParentPageHeader prominent`): größerer Titel, 20 px Rand auf
+// jeder Breite.
+const PARENT_CASES = [
+  { name: "page", skeleton: { rows: 1 }, head: { title: "Kinder" } },
+  {
+    name: "start page",
+    skeleton: { rows: 1, prominent: true },
+    head: { title: "Guten Tag, Sabine", prominent: true },
+  },
+] as const;
+
 test("the parents portal loading head matches ParentPageHeader", async ({
   page,
 }) => {
-  const skeletonMarkup = withParentIntl(
-    createElement(ParentSkeleton, { rows: 1 }),
-  );
-  const loadedMarkup = withParentIntl(
-    createElement(ParentHead, { title: "Kinder" }),
-  );
-  for (const viewport of VIEWPORTS) {
-    await page.setViewportSize(viewport);
-    for (const mobileHelp of viewport.width < 1024 ? [false, true] : [false]) {
-      const name = `${viewport.name}${mobileHelp ? ", mobile help" : ""}`;
-      await headHeight(page, skeletonMarkup, { mobileHelp });
-      // Die Zeile um den Titelbalken steht an der Stelle der Überschrift.
-      const skeleton = await titleBox(page, ".animate-pulse >> xpath=..");
-      await headHeight(page, loadedMarkup, { mobileHelp });
-      const loaded = await titleBox(page, "h1");
-      expect.soft(skeleton, name).toEqual(loaded);
-      // Kein Statusbalken: Der Elternkopf hat keine Statuszeile.
-      await headHeight(page, skeletonMarkup, { mobileHelp });
-      await expect
-        .soft(page.locator("header .animate-pulse"), name)
-        .toHaveCount(1);
+  for (const testCase of PARENT_CASES) {
+    const skeletonMarkup = withParentIntl(
+      createElement(ParentSkeleton, testCase.skeleton),
+    );
+    const loadedMarkup = withParentIntl(
+      createElement(ParentHead, testCase.head),
+    );
+    for (const viewport of VIEWPORTS) {
+      await page.setViewportSize(viewport);
+      for (const mobileHelp of viewport.width < 1024
+        ? [false, true]
+        : [false]) {
+        const name = `${testCase.name}, ${viewport.name}${mobileHelp ? ", mobile help" : ""}`;
+        await headHeight(page, skeletonMarkup, { mobileHelp });
+        // Kein Statusbalken: Der Elternkopf hat keine Statuszeile.
+        await expect
+          .soft(page.locator("header .animate-pulse"), name)
+          .toHaveCount(1);
+        // Die Zeile um den Titelbalken steht an der Stelle der Überschrift.
+        const skeleton = await titleBox(page, ".animate-pulse >> xpath=..");
+        await headHeight(page, loadedMarkup, { mobileHelp });
+        const loaded = await titleBox(page, "h1");
+        expect.soft(skeleton, name).toEqual(loaded);
+      }
     }
   }
 });

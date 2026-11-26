@@ -13,11 +13,7 @@
 import { useCallback, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 
-import {
-  ParentPage,
-  ParentPageHeader,
-  ParentPageSkeleton,
-} from "~/components/parent/parent-page";
+import { ParentPage, ParentPageHeader } from "~/components/parent/parent-page";
 import { ParentSection } from "~/components/parent/shell/parent-section";
 import { Alert } from "~/components/ui/alert";
 import { Button, ButtonLink } from "~/components/ui/button";
@@ -133,27 +129,33 @@ export function ParentContractNoticePage({
 
   const ended = options?.notice ?? null;
   return (
-    <ParentPage>
-      <ParentPageHeader
-        title={
-          ended
-            ? t("doneHeading")
-            : withdrawal
-              ? t("titleWithdrawal")
-              : t("title")
-        }
-        description={
-          ended
-            ? undefined
-            : withdrawal
-              ? t("descriptionWithdrawal")
-              : t("description")
-        }
-        backHref={DOCUMENTS_HREF}
-        backLabel={t("back")}
-      />
+    // Der Kopf steht schon während des Ladens; darunter lädt nur der Inhalt.
+    // Ein Seitenskelett hier zeigte einen zweiten Kopf, und dessen Platz
+    // für die Seitenhilfe nähme dem echten Kopf den Hilfe-Knopf (#6613).
+    <ParentPage
+      header={
+        <ParentPageHeader
+          title={
+            ended
+              ? t("doneHeading")
+              : withdrawal
+                ? t("titleWithdrawal")
+                : t("title")
+          }
+          description={
+            ended
+              ? undefined
+              : withdrawal
+                ? t("descriptionWithdrawal")
+                : t("description")
+          }
+          backHref={DOCUMENTS_HREF}
+          backLabel={t("back")}
+        />
+      }
+      loading={options === null && !loadError}
+    >
       {loadError ? <LoadErrorAlert error={loadError} /> : null}
-      {options === null && !loadError ? <ParentPageSkeleton rows={2} /> : null}
       {options && ended ? (
         <NoticeDone options={options} notice={ended} />
       ) : null}

@@ -11,11 +11,15 @@
 
 import type React from "react";
 
-import { CARD_FRAME, CARD_SURFACE_PADDING } from "~/components/ui/card-surface";
+import {
+  CARD_FRAME,
+  CARD_SURFACE_PADDING,
+  CARD_TITLE_SIZES,
+} from "~/components/ui/card-surface";
 import { ChoiceTile } from "~/components/ui/choice-tile";
 import { MobilePageHelpTarget } from "~/components/ui/mobile-page-help-target";
-import { SECTION_CARD_TITLE_SIZES } from "~/components/ui/section-card";
 import { Skeleton } from "~/components/ui/skeleton";
+import { cn } from "~/lib/utils";
 
 import {
   HEAD_CONTROL_HEIGHT,
@@ -81,7 +85,13 @@ const HEAD_GEOMETRY = {
   },
   "parent-page": {
     surface: CARD_SURFACE_PADDING,
-    titleLine: `h-lh ${SECTION_CARD_TITLE_SIZES.page}`,
+    titleLine: `h-lh ${CARD_TITLE_SIZES.page}`,
+    statusLine: null,
+  },
+  // Die Begrüßung der Startseite (`ParentPageHeader prominent`).
+  "parent-start": {
+    surface: cn(CARD_SURFACE_PADDING, PARENT_HEAD_ROW.prominentSurface),
+    titleLine: `h-lh ${CARD_TITLE_SIZES.display}`,
     statusLine: null,
   },
 } as const;
@@ -118,7 +128,8 @@ export function TenantPageHeaderSkeleton({
   controls?: boolean;
   /**
    * Welcher Kopf danach kommt. `parent-page` folgt `ParentPageHeader`:
-   * dessen Rand, Titelgröße und Titelzeile, ohne Statuszeile (#6613).
+   * dessen Rand, Titelgröße und Titelzeile, ohne Statuszeile (#6613);
+   * `parent-start` der Begrüßung (`prominent`) der Startseite.
    */
   matches?: keyof typeof HEAD_GEOMETRY;
 }> = {}) {
