@@ -170,6 +170,11 @@ func (s *Service) currentChildren(ctx context.Context, rules domain.OrderingRule
 		if _, ordered := window.state.OrderFor(date); !ordered && !all {
 			continue
 		}
+		// A cancelled lunch is a day-level state, not a removal of every
+		// child from its fixed order.
+		if window.days.Cancelled[date] {
+			continue
+		}
 		children, childStats, err := s.childrenOn(ctx, rules, date, rules.AbsenceCutoff(date), window.days, seen)
 		stats = addStats(stats, childStats)
 		if err != nil {
@@ -231,17 +236,25 @@ func buildOrderView(rules domain.OrderingRules, window orderWindow, current map[
 			start, end := domain.OrderPeriod(rules.Rhythm, date)
 			_, day.Deadline = openDays(rules, window.state, window.days, start, end, today)
 		}
-		for _, change := range window.state.Changes {
-			if change.Date == date {
-				day.Changes = append(day.Changes, change)
-			}
-		}
+		appendVisibleChanges(&day, window.state.Changes)
 		if day.Children == nil {
 			day.Children = map[int64]string{}
 		}
 		view.Days = append(view.Days, day)
 	}
 	return view
+}
+
+// appendVisibleChanges keeps a lunch cancellation as one day-level state.
+func appendVisibleChanges(day *domain.OrderDay, changes []domain.OrderChange) {
+	if day.MealCancelled {
+		return
+	}
+	for _, change := range changes {
+		if change.Date == day.Date {
+			day.Changes = append(day.Changes, change)
+		}
+	}
 }
 
 // setOrderedDay lays out a fixed order. A cancelled lunch keeps the stored

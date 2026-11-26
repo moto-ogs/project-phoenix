@@ -42,6 +42,7 @@ import {
   setDay,
   workWeekDates,
   type DishInput,
+  type MealOrderDay,
   type MealPlanDay,
   type MealPlanDish,
 } from "~/lib/meal-plan-api";
@@ -321,12 +322,7 @@ export default function MealPlanPage() {
   const [confirmReload, setConfirmReload] = useState(false);
   const [confirmCopyPrev, setConfirmCopyPrev] = useState(false);
 
-  // Berlin-anchored: meal-plan rows are stored as school calendar DATEs the
-  // backend derives from timezone.TodayDate(). A browser in another timezone
-  // (or around the Berlin/local midnight boundary) would otherwise open and
-  // save the wrong school week. Matches the parent meal-plan page.
-  // useBerlinToday re-renders on the Berlin midnight rollover so a page left
-  // mounted overnight follows the date instead of freezing on yesterday.
+  // Meal-plan rows use Berlin calendar dates; derive the displayed week there and follow Berlin midnight, matching the parent meal-plan page.
   const today = useBerlinToday();
 
   const mondayISO = useMemo(() => {
@@ -336,6 +332,8 @@ export default function MealPlanPage() {
   }, [today, weekOffset]);
 
   const weekDates = useMemo(() => workWeekDates(mondayISO), [mondayISO]);
+  const [orderDays, setOrderDays] = useState<MealOrderDay[] | null>(null);
+  useLayoutEffect(() => setOrderDays(null), [mondayISO]);
   // Die Tage ohne Mittagessen (#7656); nur wer verwaltet, trägt sie ein.
   const cancellationResource = useMealCancellations(
     mondayISO,
@@ -974,7 +972,9 @@ export default function MealPlanPage() {
                               disabled: !hasContent || editingLocked,
                             },
                             // Ein vergangener Tag bleibt, wie er war (#7656).
-                            ...(date < today || !cancellationResource.loaded
+                            ...(date < today ||
+                            !cancellationResource.loaded ||
+                            !canCancelMeal(date, orderDays)
                               ? []
                               : cancelledReason === undefined
                                 ? [
@@ -1128,6 +1128,7 @@ export default function MealPlanPage() {
         <MealOrderWeek
           mondayISO={mondayISO}
           canExportMonth={canReadParticipants}
+          onDaysLoaded={setOrderDays}
         />
       ) : null}
 
@@ -1178,5 +1179,17 @@ export default function MealPlanPage() {
         </StickyActionBar>
       )}
     </TenantPage>
+  );
+}
+
+function canCancelMeal(
+  date: string,
+  orderDays: MealOrderDay[] | null,
+): boolean {
+  return (
+    orderDays !== null &&
+    !orderDays.some(
+      (day) => day.date === date && day.closed && !day.mealCancelled,
+    )
   );
 }

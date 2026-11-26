@@ -185,6 +185,7 @@ describe("Speiseplan: Ausfalltage bei Ladefehler (#7656)", () => {
       days: [],
     });
     getMealCancellations.mockReset();
+    getMealCancellations.mockResolvedValue([]);
     rights.admin = true;
     rights.permissions = [];
     features.mealPlanEnabled = true;
@@ -207,6 +208,42 @@ describe("Speiseplan: Ausfalltage bei Ladefehler (#7656)", () => {
     const actions = await screen.findByLabelText("Aktionen für Montag");
     fireEvent.click(actions);
     // Anker: Das geöffnete Tagesmenü zeigt, dass der Wochenplan geladen ist.
+    expect(await screen.findByText("Tag kopieren")).toBeInTheDocument();
+    expect(screen.queryByText("Essen fällt aus")).not.toBeInTheDocument();
+  });
+
+  it("does not offer a meal cancellation for a closed day", async () => {
+    getMealOrders.mockResolvedValue({
+      rhythm: "daily",
+      detail: "total",
+      days: [
+        {
+          date: "2026-10-07",
+          closed: true,
+          deadline: "2026-10-07T09:00:00+02:00",
+          status: "open",
+          confirmedAt: null,
+          total: 0,
+          classes: [],
+          children: [],
+          changes: [],
+        },
+      ],
+    });
+
+    renderPage();
+
+    const openDayActions = await screen.findByLabelText(
+      "Aktionen für Dienstag",
+    );
+    fireEvent.click(openDayActions);
+    // Anker: Der offene Tag zeigt die Aktion erst nach geladener Ausfallliste.
+    expect(await screen.findByText("Essen fällt aus")).toBeInTheDocument();
+    fireEvent.click(openDayActions);
+
+    const actions = await screen.findByLabelText("Aktionen für Mittwoch");
+    fireEvent.click(actions);
+    // Anker: Das geöffnete Tagesmenü zeigt, dass die Woche geladen ist.
     expect(await screen.findByText("Tag kopieren")).toBeInTheDocument();
     expect(screen.queryByText("Essen fällt aus")).not.toBeInTheDocument();
   });
