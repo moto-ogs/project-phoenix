@@ -75,6 +75,8 @@ export interface AppHeadProps {
   readonly statusLine?: ReactNode;
   /** Kennzahlen in der Titelzeile statt darunter (`appStatsInline`). */
   readonly statsInline?: boolean;
+  /** Kurzstatus im schmalen Kopf beim Rollen (`appCompactStats`). */
+  readonly compactStats?: ReactNode;
   /** Reiter als Chips. */
   readonly tabs?: ReactNode;
   /** Suche, Filter oder ein Bedienband (`searchSlot`). */
@@ -104,11 +106,14 @@ export function AppTenantHead({
   overflowMenu,
   statusLine,
   statsInline = false,
+  compactStats,
   tabs,
   toolbar,
   printHideHeader = false,
 }: AppHeadProps) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const compactHeadStats =
+    compactStats ?? (statsInline && statusLine != null ? statusLine : null);
   // In der Detailspalte einer `SplitView` (iPad quer) scrollt die Spalte,
   // nicht die Seite: Kopfkarte und Leiste kleben oben an der Spalte, die
   // schmale Kopfkarte über die ganze Breite entfällt.
@@ -286,6 +291,20 @@ export function AppTenantHead({
         >
           {title}
         </p>
+        {/* Der wichtigste Status bleibt auch im schmalen Kopf stehen
+            (#8070): Kennzahlen der Titelzeile („16 da · 0 krank“) oder ein
+            eigener Kurzstatus der Seite. Für Vorleseprogramme steht er
+            schon im Kopf. */}
+        {compactHeadStats != null ? (
+          <AppHeadStatsContext.Provider value={true}>
+            <div
+              aria-hidden="true"
+              className="flex min-w-0 shrink-0 text-sm text-gray-600"
+            >
+              {compactHeadStats}
+            </div>
+          </AppHeadStatsContext.Provider>
+        ) : null}
         {menuButton}
       </div>
 
