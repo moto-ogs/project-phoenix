@@ -11,7 +11,10 @@ import { ButtonLink } from "~/components/ui/button";
 import { ChoiceTile } from "~/components/ui/choice-tile";
 import { Radio } from "~/components/ui/radio";
 import { SectionLabel } from "~/components/ui/section-label";
-import type { HolidayCriterion } from "~/lib/traeger-holiday-allocation-api";
+import type {
+  HolidayCriteriaRanking,
+  HolidayCriterion,
+} from "~/lib/traeger-holiday-allocation-api";
 import type { HolidayAllocationMode } from "~/lib/traeger-api";
 import { traegerPath } from "~/lib/traeger-url";
 
@@ -32,21 +35,41 @@ const MODES: readonly {
   },
 ];
 
-/** The active criteria as the line under the choice names them. */
-function activeCriteriaText(criteria: readonly HolidayCriterion[]): string {
+/** How the criteria count, as the line under the choice says it (#8135). */
+const RANKING_TEXT: Record<HolidayCriteriaRanking, string> = {
+  priority: "",
+  equal: " Alle zählen gleich viel.",
+  points: " Sie zählen nach Punkten.",
+};
+
+/**
+ * The active criteria as the line under the choice names them. A number in
+ * front is a rank, so it stands only where the order is the priority.
+ */
+function activeCriteriaText(
+  criteria: readonly HolidayCriterion[],
+  ranking: HolidayCriteriaRanking,
+): string {
   const active = criteria.filter((criterion) => criterion.active);
   const names = active
-    .map((criterion, index) => `${index + 1}. ${criterion.name}`)
+    .map((criterion, index) =>
+      ranking === "priority"
+        ? `${index + 1}. ${criterion.name}`
+        : criterion.name,
+    )
     .join(", ");
-  return active.length === 1
-    ? `1 Kriterium ist eingeschaltet: ${names}.`
-    : `${active.length} Kriterien sind eingeschaltet: ${names}.`;
+  const count =
+    active.length === 1
+      ? `1 Kriterium ist eingeschaltet: ${names}.`
+      : `${active.length} Kriterien sind eingeschaltet: ${names}.`;
+  return `${count}${RANKING_TEXT[ranking]}`;
 }
 
 export function HolidayAllocationModeField({
   value,
   locked,
   criteria,
+  ranking = "priority",
   onChange,
 }: Readonly<{
   value: HolidayAllocationMode;
@@ -54,6 +77,8 @@ export function HolidayAllocationModeField({
   locked: boolean;
   /** The Träger's criteria; undefined while they load or cannot be read. */
   criteria?: readonly HolidayCriterion[];
+  /** How the Träger's criteria count; the order is the priority by default. */
+  ranking?: HolidayCriteriaRanking;
   onChange: (mode: HolidayAllocationMode) => void;
 }>) {
   const activeCount =
@@ -112,7 +137,7 @@ export function HolidayAllocationModeField({
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-gray-700">
               {criteria && activeCount > 0
-                ? activeCriteriaText(criteria)
+                ? activeCriteriaText(criteria, ranking)
                 : "Die Kriterien gelten für alle Ferien deines Trägers."}{" "}
               moto schlägt nur vor. Jede Entscheidung trifft dein Büro.
             </p>

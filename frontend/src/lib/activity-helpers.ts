@@ -199,11 +199,18 @@ function mapScheduleToTime(
   };
 }
 
-// System activity names that cannot be deleted or renamed.
-// Must stay in sync with backend constants/activities.go.
-const SYSTEM_ACTIVITY_NAMES = ["Schulhof Freispiel", "WC"] as const;
+// System activity names that cannot be deleted or renamed. Must stay in sync
+// with `IsSystemActivityName` in backend/modules/timetable/timetable.go.
+const SYSTEM_ACTIVITY_NAMES = [
+  "Schulhof Freispiel",
+  "WC",
+  "Offener Raum",
+] as const;
 
-/** Returns true if the activity is a system activity (Schulhof Freispiel, WC). */
+/**
+ * Returns true if the activity is a system activity (Schulhof Freispiel, WC,
+ * Offener Raum).
+ */
 export function isSystemActivity(
   activity: Activity | null | undefined,
 ): boolean {

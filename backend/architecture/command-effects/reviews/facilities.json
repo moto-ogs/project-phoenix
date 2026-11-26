@@ -57,7 +57,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/facilities.ActivityGroupNames.ListActivityGroupNames",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/timetable.Capability.ListGroups; modules/timetable.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/timetable.Capability.ListGroups; modules/timetable.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim. Since #8130 the binding also marks the open-room stay activity through modules/timetable.IsOpenRoomStay; the ListGroups call and its effect are unchanged.",
       "source_owner": "facilities",
       "target": "github.com/moto-ogs/project-phoenix/modules/timetable.Capability.ListGroups",
       "target_owner": "timetable-activities"
@@ -67,7 +67,17 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/facilities.ActivityGroupNames.ListActivityGroupNames",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/timetable.Owner.ListGroups; modules/timetable.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/timetable.IsOpenRoomStay: pure predicate on the already loaded group that marks the open-room stay activity, so the occupancy label does not present it as an activity (#8130).",
+      "source_owner": "facilities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/timetable.IsOpenRoomStay",
+      "target_owner": "timetable-activities"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.roomActivityNames.ListActivityGroupNames",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/facilities.ActivityGroupNames.ListActivityGroupNames",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/timetable.Owner.ListGroups; modules/timetable.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. Since #8130 the binding also marks the open-room stay activity through modules/timetable.IsOpenRoomStay; the ListGroups call and its effect are unchanged.",
       "source_owner": "facilities",
       "target": "github.com/moto-ogs/project-phoenix/modules/timetable.Owner.ListGroups",
       "target_owner": "timetable-activities"
@@ -77,7 +87,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/facilities.ActivityGroupNames.ListActivityGroupNames",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/timetable.Query.ListGroups; modules/timetable.Query (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/timetable.Query.ListGroups; modules/timetable.Query (supplied contract method). May-bind method surface, not a production-call/liveness claim. Since #8130 the binding also marks the open-room stay activity through modules/timetable.IsOpenRoomStay; the ListGroups call and its effect are unchanged.",
       "source_owner": "facilities",
       "target": "github.com/moto-ogs/project-phoenix/modules/timetable.Query.ListGroups",
       "target_owner": "timetable-activities"
