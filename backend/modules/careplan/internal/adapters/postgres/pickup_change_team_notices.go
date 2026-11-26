@@ -151,7 +151,10 @@ func (s *PickupChangeTeamStore) ListUnreadPickupChangeNotices(ctx context.Contex
 			AND (NOT jsonb_exists("request".payload, 'pickup_person') OR ("person".requested_by_guardian = "request".submitted_by
 				AND "person".person_name = "request".payload->'pickup_person'->>'name'
 				AND COALESCE("person".guardian_profile_id::text, '') = COALESCE("request".payload->'pickup_person'->>'guardian_profile_id', '')))
-		) OR ("request".status = ? AND "exception".id IS NULL))`, requestApproved, requestRejected).
+			) OR ("request".status = ? AND (
+				(NULLIF("request".payload->>'pickup_time', '') IS NOT NULL AND "exception".id IS NULL)
+				OR (jsonb_exists("request".payload, 'pickup_person') AND "person".id IS NULL)
+			)))`, requestApproved, requestRejected).
 		OrderExpr(`"pickup_notice".informed_at DESC, "pickup_notice".request_id DESC`).
 		Limit(int64(limit))
 	stats := domain.OperationStats{Queries: 1}

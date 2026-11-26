@@ -28,6 +28,8 @@ const (
 	pickupPersonBody           = "Ein Kind wird %s von einer anderen Person abgeholt."
 	pickupPersonWithdrawnTitle = "Abholperson zurückgenommen"
 	pickupPersonWithdrawnBody  = "Für ein Kind gilt %s wieder die normale Abholung."
+	pickupBothTitle            = "Abholzeit und Abholperson geändert"
+	pickupBothBody             = "Neue Abholzeit und Abholperson für ein Kind: %s um %s Uhr."
 	pickupBothWithdrawnTitle   = "Abholzeit und Abholperson zurückgenommen"
 	pickupBothWithdrawnBody    = "Für ein Kind gelten %s wieder die normale Abholzeit und Abholung."
 )
@@ -211,6 +213,8 @@ func pickupChangeCopy(notice careplan.PickupChangeNotice) (string, string) {
 		return pickupPersonWithdrawnTitle, fmt.Sprintf(pickupPersonWithdrawnBody, day)
 	case notice.Withdrawn:
 		return pickupWithdrawnTitle, fmt.Sprintf(pickupWithdrawnBody, day)
+	case both:
+		return pickupBothTitle, fmt.Sprintf(pickupBothBody, day, notice.PickupTime)
 	case personOnly:
 		return pickupPersonTitle, fmt.Sprintf(pickupPersonBody, day)
 	}

@@ -218,6 +218,11 @@ func TestPickupChangeTeamTellsAboutThePickupPerson(t *testing.T) {
 			both.PickupTime = "15:00"
 			return both
 		}(), "Abholzeit und Abholperson zurückgenommen", "Für ein Kind gelten am Fr. 20.11.2026 wieder die normale Abholzeit und Abholung."},
+		"both": {func() careplan.PickupChangeNotice {
+			both := notice
+			both.PickupTime = "15:00"
+			return both
+		}(), "Abholzeit und Abholperson geändert", "Neue Abholzeit und Abholperson für ein Kind: am Fr. 20.11.2026 um 15:00 Uhr."},
 	} {
 		store, reach := &pickupTeamStoreDouble{}, &pickupTeamReachDouble{responsible: []int64{11}}
 		require.NoError(t, newPickupTeam(store, reach).NotifyPickupChangeApproved(t.Context(), tc.notice), name)
