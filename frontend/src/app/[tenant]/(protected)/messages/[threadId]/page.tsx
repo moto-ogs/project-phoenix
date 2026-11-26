@@ -1,6 +1,5 @@
 "use client";
 
-import { Avatar } from "~/components/ui/avatar";
 import type * as sharedContract from "~/lib/contract/shared.generated";
 import {
   attachmentIdArgs,
@@ -717,29 +716,10 @@ export function MessageThreadContent({
               {/* App: Die Zahl der Nachrichten des Desktop-Kopfs steht
                   direkt über der ersten Nachricht (Runde 13): oben in der
                   Karte stand sie allein über einer leeren Fläche. */}
-              {/* Runde 15: Wie in Chat-Apps beginnt der Verlauf mit der
-                  Person; bei wenigen Nachrichten stand oben eine leere
-                  weiße Fläche, die wie ein Ladefehler wirkte. */}
-              {isApp && !messagesLoading && sentCount > 0 && thread ? (
-                <div className="flex flex-col items-center gap-1 pt-4 pb-2 text-center">
-                  <Avatar
-                    name={thread.guardian_name}
-                    size="lg"
-                    tone="neutral"
-                    decorative
-                  />
-                  <p className="mt-1 text-sm font-semibold text-gray-900">
-                    {thread.guardian_name}
-                  </p>
-                  <p className="text-xs text-gray-500 tabular-nums">
-                    {relationshipLabel(thread.relationship_type)} von{" "}
-                    {thread.student_name} ·{" "}
-                    {sentCount === 1
-                      ? "1 Nachricht"
-                      : `${sentCount} Nachrichten`}
-                  </p>
-                </div>
-              ) : isApp && !messagesLoading && sentCount > 0 ? (
+              {/* Runde 17: Ohne Avatarblock; Name, Rolle und Kind stehen
+                  schon in der Kopfkarte. Es bleibt die Zahl der
+                  Nachrichten über der ersten. */}
+              {isApp && !messagesLoading && sentCount > 0 ? (
                 <p className="pt-1 pb-1 text-center text-xs text-gray-500 tabular-nums">
                   {sentCount === 1
                     ? "1 Nachricht in dieser Unterhaltung"

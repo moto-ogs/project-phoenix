@@ -279,29 +279,35 @@ function MessagesInboxContent() {
   // sonst verschwände das Suchfeld mit dem Ergebnis.
   const appFilterEmpty = isApp && !hasThreads && filtersActive && !loadFailed;
   const appSearchShown = isApp && (appSearchOpen || filtersActive);
-  const appSearchButton = isApp ? (
+  const toggleAppSearch = () => {
+    if (appSearchShown) {
+      setAppSearchOpen(false);
+      setSearchTerm("");
+      setOnlyUnread(false);
+    } else {
+      setAppSearchOpen(true);
+    }
+  };
+  // `inCompactHead`: dieselbe Lupe im schmalen Kopf beim Rollen (Runde 17),
+  // damit die Suche ohne Hochrollen erreichbar bleibt. Der schmale Kopf ist
+  // für Vorleseprogramme ausgeblendet; dort und per Tastatur wirkt die Lupe
+  // der Kopfkarte, darum steht diese nicht in der Tab-Folge.
+  const renderAppSearchButton = (inCompactHead: boolean) => (
     <Button
       type="button"
       variant="ghost"
       size="icon"
       aria-label={appSearchShown ? "Suche schließen" : "Nachrichten suchen"}
       aria-expanded={appSearchShown}
+      tabIndex={inCompactHead ? -1 : undefined}
       // Abstand zum „…“: beide behalten ihre 44-px-Trefferfläche.
-      className="mr-3"
+      className={inCompactHead ? "mr-1" : "mr-3"}
       tooltip={
         appSearchShown
           ? "Schließt Suche und Filter und zeigt wieder alle Unterhaltungen."
           : "Öffnet Suche und Filter über der Liste."
       }
-      onClick={() => {
-        if (appSearchShown) {
-          setAppSearchOpen(false);
-          setSearchTerm("");
-          setOnlyUnread(false);
-        } else {
-          setAppSearchOpen(true);
-        }
-      }}
+      onClick={toggleAppSearch}
     >
       {appSearchShown ? (
         <CheckIcon size={20} aria-hidden="true" />
@@ -309,7 +315,8 @@ function MessagesInboxContent() {
         <MagnifyingGlassIcon size={20} aria-hidden="true" />
       )}
     </Button>
-  ) : null;
+  );
+  const appSearchButton = isApp ? renderAppSearchButton(false) : null;
   const bodyReplaced =
     !showSkeleton && !hasThreads && !composeOpen && !appFilterEmpty;
 
@@ -318,9 +325,11 @@ function MessagesInboxContent() {
       info={MESSAGES_INFO}
       title="Nachrichten"
       tabs={messagesTabs("conversations")}
-      // App (Runde 15): Die Kennzahlen stehen wie auf den anderen Seiten als
-      // Chips im Kopf; „ungelesen“ filtert die Liste.
-      stats={inboxSummary}
+      // Runde 17: Am Telefon steht die Kopfkarte zweizeilig (Titel, Reiter);
+      // die Kennzahlen stehen am Ende der Liste, die ungelesenen
+      // Unterhaltungen sind fett und tragen ihre Zahl.
+      stats={isApp ? undefined : inboxSummary}
+      appCompactStats={isApp ? renderAppSearchButton(true) : undefined}
       statsLoading={showSkeleton}
       actions={isApp ? appSearchButton : composeButton}
       overflowMenu={[
@@ -427,6 +436,11 @@ function MessagesInboxContent() {
           <MessagesInboxApp
             threads={filteredThreads}
             listAction={isSplit ? appComposeButton : null}
+            summary={
+              threads === undefined
+                ? undefined
+                : `${threadList.length} ${threadList.length === 1 ? "Unterhaltung" : "Unterhaltungen"} · ${unreadThreads} ungelesen`
+            }
             empty={
               <EmptyState
                 variant="compact"

@@ -293,10 +293,12 @@ function InboxList({
                         : "flex h-lh flex-wrap items-baseline overflow-hidden",
                     )}
                   >
+                    {/* Runde 17: Ungelesene fett, gelesene normal: beim
+                        Überfliegen erkennbar, nicht nur am Abzeichen. */}
                     <span
                       className={cn(
                         !wide && "max-w-full truncate",
-                        unread && "font-semibold",
+                        unread ? "font-bold" : "font-normal",
                       )}
                     >
                       {thread.guardian_name}
@@ -346,7 +348,7 @@ function InboxList({
                     <span
                       className={cn(
                         "min-w-0 flex-1 truncate",
-                        unread && "text-gray-900",
+                        unread && "font-medium text-gray-900",
                       )}
                     >
                       {last}
@@ -369,7 +371,7 @@ function InboxList({
                       <span
                         className={cn(
                           "min-w-0 flex-1 truncate",
-                          unread && "text-gray-900",
+                          unread && "font-medium text-gray-900",
                         )}
                       >
                         {last}
