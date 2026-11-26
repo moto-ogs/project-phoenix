@@ -1088,8 +1088,10 @@ nothing. Invariants:
    shell, not a protected payload. The snapshot waits for `connection()`
    before checking the presented cookie or starting a seed; a shell prefetch
    does not run those reads. The authorized RSC response and SWR values stay
-   in that document. No protected value belongs in a shared Next cache,
-   public response or browser storage. Opening the school's shared notes
+   in that document, including any page-local router reuse. Follow the
+   [server-seed and Cache Components rules](frontend-api.md#first-display-in-a-protected-page).
+   No protected value belongs in a shared Next cache, public response or
+   browser storage. Opening the school's shared notes
    always requires another audited read; a hidden tree may not reuse that
    isolated SWR cache when it becomes visible again.
 6. **Leaving ends the tree.** Logouts drop the tree once the family is

@@ -1,12 +1,12 @@
 # Server seed inventory: School, Träger, Operator, Caterer
 
-Scope: the 137 `page.tsx` entry points in these four portals as of #8103, including their first-render readers. Paths use the internal portal prefix (omit it on the respective portal host). API routes and PyrePortal are not pages. URLs and cache keys select a resource, never grant access.
+Scope: `page.tsx` entry points in these four portals, with the internal prefix named above each table. Omit that prefix on the portal host. URLs and cache keys select a resource, never grant access.
 
-Every seeded GET starts through `readContract` with that portal's fresh snapshot and Go authorization. It uses the browser's existing key and result shape; `seedRead`'s budget drops only the incomplete key. RSC contains no bearer or error object. The existing `SWRServerSeed` controls generation matching, expiry, refusal, handoff and browser recovery; Next's data cache is not used. There is no separate intent loader for these keys. Portal layouts seed only their own readers (School notices badge; Träger organization and own profile), never requests on a public path with a cookie. Push permission, notification dialogs, live counters/revalidation, service workers and navigation actions retain their existing client ownership.
+Follow the [server-seed pattern](frontend-api.md#first-display-in-a-protected-page). School and Träger layouts seed their own readers (notice badge; organization and own profile) only on protected paths. A cookie on a public path does not start these seeds. Push permissions, notification dialogs, live revalidation, service workers and navigation actions stay in the browser.
 
 An audited GET stays on its prescribed browser/opening path even if its hook currently uses display SWR. In particular, see `backend/api/operator_routes.go` (`AuditReadAccess`), `backend/modules/classday/internal/application`, `backend/modules/parentbilling/internal/application`, and `backend/modules/traegerview/internal/application`. A token-only route cannot use a portal/account SWR seed; its public flow retains its own token and session checks.
 
-## School (16)
+## School
 
 | Route under `/school` | Seeded or already server-side | Other first readers and intentional exclusions |
 |---|---|---|
@@ -27,7 +27,7 @@ An audited GET stays on its prescribed browser/opening path even if its hook cur
 | `/reset-password` | None. | Token-gated reset flow, no first private SWR resource. |
 | `/tagesinformationen` | Today's leadership notices (shared with home and the shell badge). | Acknowledgement is an explicit write. |
 
-## Operator (19)
+## Operator
 
 | Route under `/operator` | Seeded or already server-side | Other first readers and intentional exclusions |
 |---|---|---|
@@ -51,7 +51,7 @@ An audited GET stays on its prescribed browser/opening path even if its hook cur
 | `/settings` | Own profile, passkey summaries and remembered devices. | Enrollment/revocation, password and e-mail changes stay on action. |
 | `/unregistered-tags` | Träger options. | `orgId`, `schoolId` and locally selected resolution filter; schools and scans are audited. Resolution is an action. |
 
-## Caterer (5)
+## Caterer
 
 | Route under `/caterer` | Seeded or already server-side | Other first readers and intentional exclusions |
 |---|---|---|
@@ -61,7 +61,7 @@ An audited GET stays on its prescribed browser/opening path even if its hook cur
 | `/login` | None. | Public sign-in, including account MFA/passkey challenge. |
 | `/reset-password` | None. | Public token-gated reset flow. |
 
-## Träger (97)
+## Träger
 
 | Route under `/traeger` | Seeded or already server-side | Other first readers and intentional exclusions |
 |---|---|---|
@@ -178,4 +178,4 @@ An audited GET stays on its prescribed browser/opening path even if its hook cur
 | Operator | `/operator/organizations` | Träger-name cell in the organization table. Count/stat cards are a separate key. |
 | Caterer | `/caterer` | Seeded school row with a numeric order total and no loading state in the selected week. |
 
-Measure hard load, cold navigation with and without intent, then warm/back navigation. Count the identical BFF GET for the seeded key separately from ordinary focus/SSE/refusal reloads. For Caterer also fail one supplied school inside the compact read: the aggregate must be incomplete and only that school retried. Revoke a supply during refresh: its row and cached details must disappear.
+Measure a cold document load separately. The [Revisit protocol](frontend-performance.md#revisit-baseline-all-portals) measures first and warm/back navigation from a running app. Count the identical BFF GET for the seeded key separately from ordinary focus/SSE/refusal reloads. For Caterer also fail one supplied school inside the compact read: the aggregate must be incomplete and only that school retried. Revoke a supply during refresh: its row and cached details must disappear.

@@ -4,22 +4,19 @@ Use the existing authenticated hooks. Each resource family owns its key,
 parameters and fetcher; pages do not give the same response a new name.
 
 ```tsx
-import { useSWRAuth, useSWRPreload, useInvalidateFamily } from "~/lib/swr";
+import { useSWRAuth, useInvalidateFamily } from "~/lib/swr";
 import { rooms } from "~/lib/swr/rooms";
 
 const params = { page: 1, pageSize: 500 };
 const response = useSWRAuth(rooms.key(params), () => rooms.fetcher(params));
-const preload = useSWRPreload();
 const invalidateFamily = useInvalidateFamily();
 
-// On intent, with the same parameters as the destination:
-// The destination owns load errors; intent must not show an error toast.
-void preload(rooms.key(params), () => rooms.fetcher(params)).catch(
-  () => undefined,
-);
 // After a write, refresh every parameter set, including preload-only keys:
 void invalidateFamily(rooms.family);
 ```
+
+For a page's first display, [seed the existing reader key on the server](../../../../docs/agents/frontend-api.md#first-display-in-a-protected-page).
+Links prefetch the route shell, not the reader's data.
 
 1. Factory keys are **unscoped**. The hooks add the authenticated portal,
    school and account through `scope.ts`. Never give an unscoped key to the
@@ -336,8 +333,9 @@ If the prefetched Flight payload supplies a promise that cannot settle, an
 open claim follows the real navigation's seed instead. Leaving the boundary
 or changing its session discards the claim through the same generation lock.
 
-`preload(key, fetcher, { intent: true })` is the speculative variant of the
-same locked writer. It skips an already current cached response and removes
+`SWRServerSeed` uses `preload(key, claimSeedValue, { intent: true })` internally
+to offer the server's promise, not to start a BFF request from a link.
+This locked writer skips an already current cached response and removes
 only its own failed preload promise atomically before rejecting, so a later
 page cannot take a promise between failure and cleanup. It runs its ordinary
 loader instead.
