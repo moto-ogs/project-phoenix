@@ -345,9 +345,7 @@ const inboxSQL = `SELECT c.id, c.school_id, v.child_first_name, v.child_last_nam
 	(SELECT MAX(s.signed_at) FROM care_contract.contract_signatures AS s
 		WHERE s.organization_id = c.organization_id AND s.contract_id = c.id) AS signed_at,
 	c.concluded_at, c.conclusion_method, c.conclusion_date_unknown, c.import_origin IS NOT NULL AS taken_over,
-	LEAST(c.withdrawal_informed_at, (SELECT CASE WHEN s.method <> '` + carecontract.SignaturePaper + `' THEN s.withdrawal_notice_at END
-		FROM care_contract.contract_signatures AS s WHERE s.organization_id = c.organization_id AND s.contract_id = c.id
-		ORDER BY s.signed_at DESC, s.id DESC LIMIT 1)) AS informed_at
+	LEAST(c.withdrawal_informed_at, (SELECT a.acknowledged_at FROM (` + acknowledgedSQL + `) AS a)) AS informed_at
 	FROM care_contract.contracts AS c
 	JOIN (SELECT contract_id, MIN(sent_at) AS first_sent FROM care_contract.contract_mailings
 		WHERE organization_id = ? AND lower(recipient_email) = lower(?) GROUP BY contract_id) AS m ON m.contract_id = c.id
