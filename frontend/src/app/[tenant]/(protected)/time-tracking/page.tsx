@@ -3062,6 +3062,7 @@ function EditSessionModal({
                     staffId={ownStaffId}
                     sessionId={session.id}
                     fetchEdits={fetchOwnSessionEdits}
+                    plain
                   />
                 </div>
               ) : null}
@@ -4333,24 +4334,17 @@ function TimeTrackingContent() {
           <TenantPageStats
             items={[
               {
-                value: `${formatDuration(ownMetrics.week!.ist)} / ${formatDuration(ownMetrics.week!.soll)}`,
+                // Schmale Leerzeichen um „/“: so passt „Saldo gesamt“ auch am
+                // SE (375 px) daneben.
+                value: `${formatDuration(ownMetrics.week!.ist)}\u2009/\u2009${formatDuration(ownMetrics.week!.soll)}`,
                 label: "Woche",
               },
               {
-                // „gesamt“: Es ist der Stand über alle Wochen, nicht der
-                // Saldo der Woche in der Liste (Runde 11). Am SE (< 380 px)
-                // liefe es neben der Woche über den Rand, dort nur „Saldo“.
-                value: (
-                  <>
-                    {formatSignedDuration(ownMetrics.accountBalanceMinutes!)}
-                    <span className="font-normal text-gray-700">
-                      {" "}
-                      Saldo
-                      <span className="max-[379px]:hidden"> gesamt</span>
-                    </span>
-                  </>
-                ),
-                label: "",
+                // „Gesamtsaldo“: Es ist der Stand über alle Wochen, nicht der
+                // Saldo der Woche in der Liste (Runde 11). Auf jedem Gerät
+                // dieselbe Beschriftung (Runde 13).
+                value: formatSignedDuration(ownMetrics.accountBalanceMinutes!),
+                label: "Gesamtsaldo",
               },
             ]}
           />

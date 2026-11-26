@@ -1279,6 +1279,7 @@ export function SessionEditHistory({
   sessionId,
   onEdit,
   fetchEdits,
+  plain = false,
 }: {
   readonly staffId: string;
   readonly sessionId: string | undefined;
@@ -1287,6 +1288,8 @@ export function SessionEditHistory({
     staffId: string,
     sessionId: string,
   ) => Promise<WorkSessionEdit[]>;
+  /** App: schlichte Liste im Blatt (`EditHistoryAccordion`). */
+  readonly plain?: boolean;
 }) {
   // Ohne eigenen Abrufer liest die Leitung über die Admin-Route; die eigene
   // Sicht auf /time-tracking reicht ihren Abrufer herein (#1842 AC8).
@@ -1319,6 +1322,7 @@ export function SessionEditHistory({
       edits={history.data ?? NO_EDITS}
       isLoading={sessionId != null && !history.data}
       onEdit={onEdit}
+      plain={plain}
     />
   );
 }

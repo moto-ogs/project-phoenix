@@ -647,7 +647,7 @@ export function AppDayList({
         // Wochenansicht: der Zeitraum steht schon im Kopf der Karte und die
         // Stunden der Woche in der Kopfkarte; die Gruppe nennt nur den Saldo.
         const single = weeks.length === 1 && header !== undefined;
-        // Die laufende Woche bis gestern; der Kopf nennt den Saldo „gesamt“,
+        // Die laufende Woche bis gestern; der Kopf nennt den „Gesamtsaldo“,
         // so widersprechen sich die zwei Zahlen nicht (Runde 11).
         const saldoLabel =
           single && partial
@@ -1028,7 +1028,7 @@ export function AppDayFactsPanel({ facts }: { readonly facts: AppDayFacts }) {
       <DataField label="Ist">
         {p && p.actualMinutes > 0 ? formatDuration(p.actualMinutes) : "–"}
       </DataField>
-      <DataField label="Gutgeschrieben">
+      <DataField label="Angerechnet">
         {credit > 0 ? formatDuration(credit) : "–"}
       </DataField>
       <DataField label="Saldo">
