@@ -357,6 +357,43 @@ func TestPickupChangeTeamShowsWithdrawnPickupPersonAlongsideTimeException(t *tes
 	assert.Equal(t, "Tante Frieda", unread[0].PickupPerson)
 }
 
+func TestPickupChangeTeamShowsLegacyApprovedPickupPersonFromDatedNote(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	ctx := testpkg.Ctx(t)
+	child := testpkg.CreateTestStudent(t, db, "Mia", "Altbestand", "2a")
+	parent := testpkg.CreateTestAccount(t, db, "legacy-pickup-person-parent")
+	reader := testpkg.CreateTestAccount(t, db, "legacy-pickup-person-reader")
+	staff := testpkg.CreateTestStaff(t, db, "OGS", "Freigabe")
+	date := pickupTeamToday.AddDays(1)
+	var request int64
+	require.NoError(t, db.NewRaw(`INSERT INTO schedule.care_schedule_change_requests
+		(tenant_id, student_id, submitted_by, request_kind, payload, status)
+		VALUES (?, ?, ?, 'pickup_change', ?::jsonb, 'approved') RETURNING id`,
+		tenant.FromContext(ctx), child.ID, parent.ID, fmt.Sprintf(`{"date":%q,"pickup_person":{"name":"Tante Frieda"}}`, date.String()),
+	).Scan(ctx, &request))
+	_, err := db.NewRaw(`INSERT INTO schedule.student_pickup_notes
+		(tenant_id, student_id, note_date, content, created_by)
+		VALUES (?, ?, ?, 'Abholung durch Tante Frieda (Erlaubnis der Eltern)', ?)`,
+		tenant.FromContext(ctx), child.ID, string(date), staff.ID,
+	).Exec(ctx)
+	require.NoError(t, err)
+
+	team := pickupTeam(&fixedPickupReach{responsible: []int64{reader.ID}})
+	approvePickup(t, db, ctx, team, careplan.PickupChangeNotice{
+		StudentID: child.ID, Date: date, PickupPerson: "Tante Frieda", RequestID: request,
+	})
+
+	unread := unreadPickups(t, db, ctx, team, reader.ID)
+	require.Len(t, unread, 1, "the legacy dated note still makes the approved person current")
+	assert.Equal(t, "Tante Frieda", unread[0].PickupPerson)
+
+	_, err = db.NewRaw(`UPDATE schedule.student_pickup_notes SET content = 'Andere Notiz'
+		WHERE tenant_id = ? AND student_id = ? AND note_date = ?`, tenant.FromContext(ctx), child.ID, string(date)).Exec(ctx)
+	require.NoError(t, err)
+	assert.Empty(t, unreadPickups(t, db, ctx, team, reader.ID), "a changed legacy note no longer confirms the request")
+}
+
 func TestPickupChangeTeamShowsWithdrawnPickupPersonWhenCorrectionRestoresEarlierPerson(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)

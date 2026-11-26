@@ -148,9 +148,16 @@ func (s *PickupChangeTeamStore) ListUnreadPickupChangeNotices(ctx context.Contex
 		Where(`(("request".status = ?
 			AND (NULLIF("request".payload->>'pickup_time', '') IS NOT NULL OR jsonb_exists("request".payload, 'pickup_person'))
 			AND (NULLIF("request".payload->>'pickup_time', '') IS NULL OR to_char("exception".pickup_time, 'HH24:MI') = "request".payload->>'pickup_time')
-			AND (NOT jsonb_exists("request".payload, 'pickup_person') OR ("person".requested_by_guardian = "request".submitted_by
+			AND (NOT jsonb_exists("request".payload, 'pickup_person') OR (("person".requested_by_guardian = "request".submitted_by
 				AND "person".person_name = "request".payload->'pickup_person'->>'name'
-				AND COALESCE("person".guardian_profile_id::text, '') = COALESCE("request".payload->'pickup_person'->>'guardian_profile_id', '')))
+				AND COALESCE("person".guardian_profile_id::text, '') = COALESCE("request".payload->'pickup_person'->>'guardian_profile_id', ''))
+				OR ("person".id IS NULL AND EXISTS (
+					SELECT 1 FROM schedule.student_pickup_notes AS "legacy_note"
+					WHERE "legacy_note".tenant_id = "request".tenant_id
+						AND "legacy_note".student_id = "request".student_id
+						AND "legacy_note".note_date = "pickup_notice".pickup_date
+						AND "legacy_note".content = concat('Abholung durch ', "request".payload->'pickup_person'->>'name', ' (Erlaubnis der Eltern)')
+				))))
 			) OR ("request".status = ? AND (
 				(NULLIF("request".payload->>'pickup_time', '') IS NOT NULL AND "exception".id IS NULL)
 				OR (jsonb_exists("request".payload, 'pickup_person') AND (

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Alert } from "~/components/ui/alert";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { usePickupChangeNotices } from "~/lib/hooks/use-pickup-change-notices";
@@ -130,11 +131,13 @@ function PickupPersonChangeLine({
   change,
   today,
 }: Readonly<{ change: PickupPersonChange; today: string }>) {
+  const t = useTranslations("pickupChangeAlert");
+  const day = pickupDayLabel(change.date, today);
   return (
     <span className="inline-flex flex-wrap items-center gap-2">
       {change.withdrawn
-        ? `${pickupDayLabel(change.date, today)}: Abholperson zurückgenommen`
-        : `${pickupDayLabel(change.date, today)}: ${change.person} holt ab`}
+        ? t("pickupPersonWithdrawn", { day })
+        : t("pickupPerson", { day, person: change.person })}
       <StatusBadge
         compact
         tone="red"
