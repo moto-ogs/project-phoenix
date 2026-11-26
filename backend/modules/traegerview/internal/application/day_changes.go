@@ -33,10 +33,9 @@ func (o *Overview) SchoolsDayChanges(ctx context.Context, organizationID int64) 
 	asOf := o.now()
 	day := calendar.DateFromTime(asOf)
 	result := traegerview.SchoolsDayChanges{Day: day, Schools: []traegerview.SchoolDayChanges{}, AsOf: asOf}
-	err := o.withinAdmin(ctx, func(adminCtx context.Context) error {
-		schools, err := o.dayChanges.Schools.TraegerSchoolsWithNames(adminCtx, organizationID)
-		if err != nil || len(schools) == 0 {
-			return err
+	err := o.read(ctx, organizationID, nil, func(adminCtx context.Context, schools []traegerview.TraegerSchool) error {
+		if len(schools) == 0 {
+			return nil
 		}
 		ids := make([]int64, 0, len(schools))
 		for _, school := range schools {

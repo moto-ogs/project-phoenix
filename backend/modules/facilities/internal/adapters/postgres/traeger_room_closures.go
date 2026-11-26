@@ -12,15 +12,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
-// NewTraegerRoomClosures counts on the caller's administrative transaction.
-func NewTraegerRoomClosures(transaction func(context.Context) (any, bool), admin func(context.Context) bool) facilities.TraegerRoomClosures {
-	return traegerRoomClosures{transaction: transaction, admin: admin}
-}
-
-type traegerRoomClosures struct {
-	transaction func(context.Context) (any, bool)
-	admin       func(context.Context) bool
-}
+var _ facilities.TraegerRoomClosures = traegerRooms{}
 
 // traegerClosedRoomsSQL counts the rooms of the given schools a closure
 // closes on the day. The filter on the school set is the boundary: the
@@ -29,7 +21,9 @@ const traegerClosedRoomsSQL = `SELECT tenant_id, COUNT(DISTINCT room_id) AS clos
 WHERE tenant_id = ANY(?0) AND start_date <= ?1 AND end_date >= ?1
 GROUP BY tenant_id`
 
-func (s traegerRoomClosures) ClosedRoomsByTenant(ctx context.Context, schools []int64, day calendar.Date) (map[int64]int, error) {
+// ClosedRoomsByTenant counts the closed rooms of the schools on the day
+// (#8146) on the caller's administrative transaction.
+func (s traegerRooms) ClosedRoomsByTenant(ctx context.Context, schools []int64, day calendar.Date) (map[int64]int, error) {
 	result := map[int64]int{}
 	if len(schools) == 0 {
 		return result, nil

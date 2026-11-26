@@ -12,16 +12,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
-// NewTraegerMealCancellations reads on the caller's administrative
-// transaction.
-func NewTraegerMealCancellations(transaction func(context.Context) (any, bool), admin func(context.Context) bool) mealplan.TraegerMealCancellations {
-	return traegerMealCancellations{transaction: transaction, admin: admin}
-}
-
-type traegerMealCancellations struct {
-	transaction func(context.Context) (any, bool)
-	admin       func(context.Context) bool
-}
+var _ mealplan.TraegerMealCancellations = (*MenuChanges)(nil)
 
 // traegerMealCancellationsSQL reads the schools of the set that cancelled
 // lunch on the day, without the reason. The filter on the school set is the
@@ -29,7 +20,10 @@ type traegerMealCancellations struct {
 const traegerMealCancellationsSQL = `SELECT tenant_id FROM schedule.meal_cancellations
 WHERE tenant_id = ANY(?0) AND date = ?1`
 
-func (s traegerMealCancellations) MealCancelledSchools(ctx context.Context, schools []int64, day calendar.Date) (map[int64]bool, error) {
+// MealCancelledSchools reads the schools of the set that cancelled lunch on
+// the day (#8146), only in the administrative transaction of the Träger
+// projection.
+func (s *MenuChanges) MealCancelledSchools(ctx context.Context, schools []int64, day calendar.Date) (map[int64]bool, error) {
 	result := map[int64]bool{}
 	if len(schools) == 0 {
 		return result, nil

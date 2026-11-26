@@ -245,9 +245,18 @@ func figureIDSet(ids []int64) map[int64]struct{} {
 }
 
 // read runs fn with the school set of the Träger in the projection's
-// administrative unit (ADR 0109, #5686).
-func (o *Overview) read(ctx context.Context, organizationID int64, fn func(adminCtx context.Context, schools []int64) error) error {
+// administrative unit (ADR 0109, #5686). A read that needs the schools'
+// names too passes named instead of fn (#8146): it gets the same school set
+// with the names, read in one statement, and fn is not called.
+func (o *Overview) read(ctx context.Context, organizationID int64, fn func(adminCtx context.Context, schools []int64) error, named ...func(adminCtx context.Context, schools []traegerview.TraegerSchool) error) error {
 	return o.withinAdmin(ctx, func(adminCtx context.Context) error {
+		if len(named) > 0 {
+			schools, err := o.dayChanges.Schools.TraegerSchoolsWithNames(adminCtx, organizationID)
+			if err != nil {
+				return err
+			}
+			return named[0](adminCtx, schools)
+		}
 		ids, err := o.schoolIDs.ListTraegerSchoolIDs(adminCtx, organizationID)
 		if err != nil {
 			return err

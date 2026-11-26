@@ -13,7 +13,9 @@ import (
 	"context"
 	"errors"
 
+	"github.com/moto-ogs/project-phoenix/modules/facilities"
 	facilitiesCompose "github.com/moto-ogs/project-phoenix/modules/facilities/compose"
+	"github.com/moto-ogs/project-phoenix/modules/mealplan"
 	mealplanCompose "github.com/moto-ogs/project-phoenix/modules/mealplan/compose"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar/traegercalendar"
@@ -42,9 +44,16 @@ func traegerDayChangePorts(organizations organizationtenancy.Capability, closing
 	if err != nil {
 		return traegerview.DayChangePorts{}, err
 	}
+	meals, err := mealplan.TraegerMealCancellationsOf(mealplanCompose.NewMenuChanges())
+	if err != nil {
+		return traegerview.DayChangePorts{}, err
+	}
+	rooms, err := facilities.TraegerRoomClosuresOf(facilitiesCompose.NewTraegerRooms())
+	if err != nil {
+		return traegerview.DayChangePorts{}, err
+	}
 	return traegerview.DayChangePorts{
-		Schools: traegerDayChangeSchools{schools: schools}, Days: traegerSchoolCalendarDays{days: days}, Blocks: blocks,
-		Meals: mealplanCompose.NewTraegerMealCancellations(), Rooms: facilitiesCompose.NewTraegerRoomClosures(),
+		Schools: traegerDayChangeSchools{schools: schools}, Days: traegerSchoolCalendarDays{days: days}, Blocks: blocks, Meals: meals, Rooms: rooms,
 	}, nil
 }
 
