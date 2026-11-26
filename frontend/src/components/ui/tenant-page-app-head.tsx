@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronRight, MoreHorizontal } from "lucide-react";
+import { MoreHorizontal } from "lucide-react";
 import {
   createContext,
   useContext,
@@ -8,6 +8,7 @@ import {
   useLayoutEffect,
   useRef,
   useState,
+  type CSSProperties,
   type KeyboardEvent,
   type ReactNode,
   type RefObject,
@@ -568,7 +569,8 @@ export function AppTenantTabs({
   label = "Seitenbereiche",
 }: AppTabsProps) {
   const navRef = useRef<HTMLElement>(null);
-  const edges = useScrollEdges(navRef, value);
+  useScrollActiveIntoView(navRef, value);
+  const chipPadding = useTabPeekPadding(navRef, items);
   // Reiter ohne eigene Adresse sind echte Reiter (`tablist`): Pfeiltasten
   // wechseln reihum, nur der gewählte liegt in der Tab-Reihenfolge (#6579).
   const asTabs = items.every((item) => !item.href);
@@ -588,11 +590,6 @@ export function AppTenantTabs({
       )
       ?.focus();
   };
-  const scrollOn = () => {
-    const node = navRef.current;
-    if (!node) return;
-    node.scrollBy({ left: node.clientWidth * 0.7, behavior: "smooth" });
-  };
   return (
     <div className="relative">
       <nav
@@ -603,9 +600,15 @@ export function AppTenantTabs({
         // 44-px-Trefferfläche der 32 px hohen Reiter ganz. Unten kein
         // negativer Rand: Sonst ragt das Suchfeld darunter in sie hinein.
         // Telefon: Die Reihe scrollt bis zum Kartenrand (Leiste `px-4`), der
-        // erste Reiter beginnt bündig mit dem Titel.
+        // erste Reiter beginnt bündig mit dem Titel. Am Kartenrand schaut
+        // nur der Rand des nächsten Reiters hervor: Die Reihe geht sichtbar
+        // weiter, ohne dass ein Wort halb ausgeblendet ist.
         className="phone:-mx-4 phone:px-4 -mx-2 -mt-1 flex [scrollbar-width:none] gap-1.5 overflow-x-auto px-2 py-1.5"
-        style={edgeMask(edges)}
+        style={
+          chipPadding === null
+            ? undefined
+            : ({ "--app-tab-px": `${chipPadding}px` } as CSSProperties)
+        }
       >
         {items.map((item) => {
           const active = item.value === value;
@@ -624,6 +627,7 @@ export function AppTenantTabs({
                 href={item.href}
                 variant="chip"
                 size="md"
+                className={TAB_CHIP_PADDING}
                 aria-current={active ? "page" : undefined}
                 noTooltip="Reiter: der Name sagt, wohin er führt."
               >
@@ -637,6 +641,7 @@ export function AppTenantTabs({
               type="button"
               variant="chip"
               size="md"
+              className={TAB_CHIP_PADDING}
               {...(asTabs
                 ? {
                     role: "tab",
@@ -655,50 +660,94 @@ export function AppTenantTabs({
           );
         })}
       </nav>
-      {/* Pfeil am Ende: Die Reihe geht sichtbar weiter, ein Tipp schiebt
-        die nächsten Reiter herein. */}
-      {edges.end ? (
-        <span className="phone:-right-3 absolute inset-y-0 -right-1 flex items-center">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            aria-label="Weitere Bereiche zeigen"
-            tooltip="Schiebt die Reiterleiste weiter nach rechts."
-            onClick={scrollOn}
-          >
-            <ChevronRight className="size-5" aria-hidden="true" />
-          </Button>
-        </span>
-      ) : null}
     </div>
   );
 }
 
-/** Weiche Kante, wo die Reihe weitergeht: Ein Reiter ist nie hart abgeschnitten. */
-function edgeMask(edges: { start: boolean; end: boolean }) {
-  if (!edges.start && !edges.end) return undefined;
-  const mask = `linear-gradient(to right, ${
-    edges.start ? "transparent 0, #000 2.5rem" : "#000 0"
-  }, ${edges.end ? "#000 calc(100% - 5rem), transparent calc(100% - 2.75rem)" : "#000 100%"})`;
-  return { maskImage: mask, WebkitMaskImage: mask };
-}
+// Innenabstand der Reiter; `useTabPeekPadding` passt ihn an, solange die
+// Reihe seitlich scrollt (Grundwert wie `variant="chip"`: 14 px).
+const TAB_CHIP_PADDING = "px-[var(--app-tab-px,0.875rem)]";
+const TAB_BASE_PADDING_PX = 14;
+// So weit schaut der erste nicht ganz sichtbare Reiter am Rand hervor: sein
+// Rahmen und ein Stück Innenabstand, kein angeschnittener Buchstabe.
+const TAB_PEEK_PX = 10;
+const TAB_MIN_PADDING_PX = 10;
+const TAB_MAX_PADDING_PX = 20;
 
 /**
- * Ob links bzw. rechts noch Reiter verborgen sind. Der aktive Reiter wird
- * beim Wechsel in den sichtbaren Bereich geschoben.
+ * Innenabstand der Reiter, wenn die Reihe breiter als die Karte ist: Alle
+ * Reiter im ersten Bild stehen ganz da, vom nächsten schaut nur der Rand
+ * hervor (`TAB_PEEK_PX`). `null`, solange alle Reiter passen.
  */
-function useScrollEdges(ref: RefObject<HTMLElement | null>, active: string) {
-  const [edges, setEdges] = useState({ start: false, end: false });
+function useTabPeekPadding(
+  ref: RefObject<HTMLElement | null>,
+  items: AppTabsProps["items"],
+): number | null {
+  const [padding, setPadding] = useState<number | null>(null);
+  const labels = items.map((item) => `${item.label}${item.badge ?? ""}`);
+  const key = labels.join("\u0000");
+  useLayoutEffect(() => {
+    const node = ref.current;
+    if (!node || typeof ResizeObserver === "undefined") return undefined;
+    const measure = () => {
+      const chips = [...node.children] as HTMLElement[];
+      if (chips.length === 0) return;
+      const current =
+        Number.parseFloat(getComputedStyle(chips[0]!).paddingLeft) ||
+        TAB_BASE_PADDING_PX;
+      // Breiten beim Grundabstand, unabhängig vom zuletzt gesetzten Wert.
+      const gap = Number.parseFloat(getComputedStyle(node).columnGap) || 0;
+      const start = Number.parseFloat(getComputedStyle(node).paddingLeft) || 0;
+      const widths = chips.map(
+        (chip) => chip.offsetWidth - 2 * current + 2 * TAB_BASE_PADDING_PX,
+      );
+      const total =
+        start + widths.reduce((sum, width) => sum + width + gap, -gap);
+      if (total <= node.clientWidth) {
+        setPadding(null);
+        return;
+      }
+      let left = start;
+      let index = 0;
+      while (
+        index < widths.length &&
+        left + widths[index]! <= node.clientWidth
+      ) {
+        left += widths[index]! + gap;
+        index += 1;
+      }
+      if (index === 0) {
+        setPadding(null);
+        return;
+      }
+      const peek = node.clientWidth - left;
+      const next = TAB_BASE_PADDING_PX + (peek - TAB_PEEK_PX) / (2 * index);
+      setPadding(
+        Math.round(
+          Math.min(TAB_MAX_PADDING_PX, Math.max(TAB_MIN_PADDING_PX, next)) * 10,
+        ) / 10,
+      );
+    };
+    measure();
+    // Auch die Reiter selbst: Nach dem Laden der Schrift werden sie breiter.
+    const observer = new ResizeObserver(measure);
+    observer.observe(node);
+    for (const chip of node.children) observer.observe(chip);
+    return () => observer.disconnect();
+  }, [ref, key]);
+  return padding;
+}
+
+/** Schiebt den aktiven Reiter beim Wechsel in den sichtbaren Bereich. */
+function useScrollActiveIntoView(
+  ref: RefObject<HTMLElement | null>,
+  active: string,
+) {
   useEffect(() => {
     const node = ref.current;
-    if (!node) return undefined;
-    const update = () => {
-      const max = node.scrollWidth - node.clientWidth;
-      setEdges({ start: node.scrollLeft > 2, end: node.scrollLeft < max - 2 });
-    };
+    if (!node) return;
     const current = node.querySelector<HTMLElement>(
-      "[aria-pressed='true'],[aria-current='page']",
+      "[aria-pressed='true'],[aria-current='page'],[aria-selected='true']",
     );
     if (current && node.scrollWidth > node.clientWidth) {
       const left = current.offsetLeft - node.offsetLeft;
@@ -706,17 +755,7 @@ function useScrollEdges(ref: RefObject<HTMLElement | null>, active: string) {
       if (left < node.scrollLeft || right > node.scrollLeft + node.clientWidth)
         node.scrollLeft = Math.max(0, left - 40);
     }
-    update();
-    node.addEventListener("scroll", update, { passive: true });
-    const observer =
-      typeof ResizeObserver === "undefined" ? null : new ResizeObserver(update);
-    observer?.observe(node);
-    return () => {
-      node.removeEventListener("scroll", update);
-      observer?.disconnect();
-    };
   }, [ref, active]);
-  return edges;
 }
 
 /** Ob ein Element seitlich scrollt (Inhalt breiter als die Fläche). */
