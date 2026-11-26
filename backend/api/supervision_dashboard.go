@@ -122,6 +122,7 @@ func (s supervisionSettings) Prepare(ctx context.Context) (context.Context, erro
 		settingsplatform.KeyOperationalOverviewScope,
 		settingsplatform.KeyGroupMode,
 		settingsplatform.KeyStudentPhotosEnabled,
+		settingsplatform.KeyStudentCardActivitiesEnabled,
 		settingsplatform.KeyWebSpontaneousActivities, settingsplatform.KeyWeekendFollowsFriday,
 		settingsplatform.KeyTrackingIndicatorsEnabled,
 		settingsplatform.KeyTrackingIndicator1,
@@ -132,6 +133,10 @@ func (s supervisionSettings) Prepare(ctx context.Context) (context.Context, erro
 
 func (s supervisionSettings) StudentPhotosEnabled(ctx context.Context) (bool, error) {
 	return s.settings.ResolveBool(ctx, settingsplatform.KeyStudentPhotosEnabled)
+}
+
+func (s supervisionSettings) StudentCardActivitiesEnabled(ctx context.Context) (bool, error) {
+	return s.settings.ResolveBool(ctx, settingsplatform.KeyStudentCardActivitiesEnabled)
 }
 
 func (s supervisionSettings) TrackingIndicatorLabels(ctx context.Context) ([]string, error) {

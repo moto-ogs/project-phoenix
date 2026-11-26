@@ -30,6 +30,7 @@ import {
   DepartureModeIcon,
   StudentInfoRow,
   PickupTimeRow,
+  PlannedActivityRows,
   ArrivalTimeRow,
   StudentAbsenceRow,
   StudentPendingExcusedRow,
@@ -41,7 +42,10 @@ import {
   getStudentAbsence,
   getStudentDayTimes,
 } from "~/lib/student-time-status";
-import { getDayPlanningNotComingLabel } from "~/lib/day-planning-helper";
+import {
+  getDayPlanningNotComingLabel,
+  hasActualAttendance,
+} from "~/lib/day-planning-helper";
 import { deriveCheckinState } from "~/lib/hooks/use-school-checkin-mode";
 import { isInClassLocation } from "~/lib/location-helper";
 import {
@@ -168,6 +172,28 @@ export function searchStudentDay(
     pickup,
     dayDepartureMode,
   };
+}
+
+/**
+ * Ein Kind, das an dem Tag per Ausnahme ohne Uhrzeit nicht kommt oder nicht
+ * abgeholt wird, zeigt keine Angebote: Die Zeile daneben sagt „Kommt heute
+ * nicht“. Wie unter „Gruppen“ (#6487) geht die tatsächliche Anwesenheit vor.
+ */
+function staysAwayByException(student: Student, isToday: boolean): boolean {
+  if (
+    isToday &&
+    (hasActualAttendance(student) ||
+      isInClassLocation(student.current_location))
+  ) {
+    return false;
+  }
+  const arrivalAbsent =
+    (student.arrival_is_exception ?? false) && !student.arrival_time;
+  const pickupAbsent =
+    (student.pickup_is_exception ?? false) &&
+    !student.pickup_time &&
+    !student.actual_pickup_time;
+  return arrivalAbsent || pickupAbsent;
 }
 
 interface SearchStudentCardProps {
@@ -343,7 +369,15 @@ function SearchStudentCardImpl({
                     day={getStudentDayTimes(student, {
                       ignoreCurrentAttendance: !isToday,
                     })}
+                    prominent
                   />
+                  {/* Tagesablauf (#8194): Kommen, Angebote, Gehen. */}
+                  {staysAwayByException(student, isToday) ? null : (
+                    <PlannedActivityRows
+                      activities={student.planned_activities}
+                      today={isToday}
+                    />
+                  )}
                   <PickupTimeRow
                     pickupTime={student.pickup_time ?? undefined}
                     actualTime={student.actual_pickup_time}
@@ -352,6 +386,7 @@ function SearchStudentCardImpl({
                     day={getStudentDayTimes(student, {
                       ignoreCurrentAttendance: !isToday,
                     })}
+                    prominent
                   />
                 </>
               );

@@ -1273,6 +1273,7 @@ function OGSGroupPageContent() {
                                 {notHereToday ? null : (
                                   <PlannedActivityRows
                                     activities={student.planned_activities}
+                                    now={now}
                                   />
                                 )}
                                 <PickupTimeRow
