@@ -54,7 +54,7 @@ const NFC_ONLY_TABS = new Set(["devices"]);
  * Symbol, unter dem ihn das Träger-Portal führt; nur „Dashboard“ weicht ab,
  * weil das Haus hier schon die Startseite meint.
  *
- * `traeger` stellt den Bereich unter „Vorgaben des Trägers“ (#8153): die
+ * `traeger` stellt den Bereich unter „Vom Träger“ (#8153): die
  * Schule sieht dort Werte ihres Trägers, die sie meist nur lesen kann. Die
  * Reihenfolge innerhalb einer Gruppe kommt aus dem Schema (`TabOrder` im
  * Backend). Wer in der Registry einen Bereich anlegt, trägt ihn hier und in
@@ -85,7 +85,10 @@ const TAB_PLACES: Record<
 };
 
 /** Die Überschrift über den Bereichen des Trägers (#8153). */
-export const TRAEGER_SECTIONS_HEADING = "Vorgaben des Trägers";
+// Nicht „Vorgaben“: der Kopf jedes Bereichs zählt „abweichend von der
+// Vorgabe“ und meint damit den Standardwert von moto. „Vom Träger“ passt zur
+// Marke „Vom Träger festgelegt“ an den einzelnen Werten.
+export const TRAEGER_SECTIONS_HEADING = "Vom Träger";
 
 /** Ob ein Bereich des Schemas einen festen Platz in der Seitenleiste hat. */
 export function settingsTabIsPlaced(key: string): boolean {
@@ -130,7 +133,7 @@ export interface SettingsSection {
   readonly id: string;
   readonly label: string;
   readonly icon: MotoConcept;
-  /** Steht unter „Vorgaben des Trägers“, nach den Bereichen der Schule. */
+  /** Steht unter „Vom Träger“, nach den Bereichen der Schule. */
   readonly traeger?: boolean;
 }
 
@@ -232,7 +235,7 @@ export function settingsSectionsFor(
         icon: settingsTabConcept(tab.key),
         ...(TAB_PLACES[tab.key]?.traeger ? { traeger: true } : {}),
       }));
-  // Die eigenen Bereiche der Schule zuerst, die Vorgaben des Trägers als
+  // Die eigenen Bereiche der Schule zuerst, die Bereiche des Trägers als
   // eigene Gruppe am Ende (#8153).
   return [
     ...schemaTabs.filter((tab) => !tab.traeger),

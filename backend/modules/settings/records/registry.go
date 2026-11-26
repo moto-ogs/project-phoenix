@@ -209,7 +209,7 @@ var TabOrder = []string{
 	"system",
 	"modules",
 	"startseite",
-	// Vorgaben des Trägers
+	// Bereiche des Trägers
 	"zustaendigkeiten",
 	"vertraege",
 	"ferien",

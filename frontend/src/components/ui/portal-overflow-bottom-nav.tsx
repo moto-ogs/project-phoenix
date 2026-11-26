@@ -45,7 +45,7 @@ export interface PortalOverflowNavItem {
   readonly separated?: boolean;
   /**
    * Eine Zwischenüberschrift über dem Eintrag im „Mehr"-Blatt, die eine
-   * Gruppe von Zielen benennt, etwa die Vorgaben des Trägers in den
+   * Gruppe von Zielen benennt, etwa die Bereiche des Trägers in den
    * Einstellungen (#8153). In der Leiste selbst steht sie nicht.
    */
   readonly heading?: string;

@@ -148,14 +148,14 @@ describe("staff settings navigation", () => {
     ).toHaveAttribute("href", "/schule-b/rooms");
   });
 
-  // #8153: die Vorgaben des Trägers stehen unter einer eigenen Überschrift.
+  // #8153: die Bereiche des Trägers stehen unter einer eigenen Überschrift.
   it("heads the areas of the Träger with their own heading", () => {
     sections.value = withTraegerAreas();
     render(
       <StaffSettingsSidebarNav collapsed={false} labelsMounted labelsVisible />,
     );
 
-    const heading = screen.getByText("Vorgaben des Trägers");
+    const heading = screen.getByText("Vom Träger");
     const own = screen.getByRole("link", { name: "Bereich 1" });
     const traeger = screen.getByRole("link", { name: "Briefkopf" });
     expect(
@@ -165,7 +165,7 @@ describe("staff settings navigation", () => {
       heading.compareDocumentPosition(traeger) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
-    expect(screen.getAllByText("Vorgaben des Trägers")).toHaveLength(1);
+    expect(screen.getAllByText("Vom Träger")).toHaveLength(1);
   });
 
   it("shows no Träger heading for a school without such areas", () => {
@@ -174,7 +174,7 @@ describe("staff settings navigation", () => {
     );
 
     expect(screen.getByRole("link", { name: "Bereich 0" })).toBeInTheDocument();
-    expect(screen.queryByText("Vorgaben des Trägers")).toBeNull();
+    expect(screen.queryByText("Vom Träger")).toBeNull();
   });
 
   it("heads the areas of the Träger behind Mehr on the phone", async () => {
@@ -184,7 +184,7 @@ describe("staff settings navigation", () => {
     fireEvent.click(screen.getByRole("button", { name: "Mehr" }));
 
     const sheetLink = await screen.findByRole("link", { name: "Briefkopf" });
-    const heading = screen.getByText("Vorgaben des Trägers");
+    const heading = screen.getByText("Vom Träger");
     expect(
       heading.compareDocumentPosition(sheetLink) &
         Node.DOCUMENT_POSITION_FOLLOWING,
