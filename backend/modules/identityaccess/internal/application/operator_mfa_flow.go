@@ -446,10 +446,16 @@ func (f *OperatorMFAFlows) VerifyOperatorTrustedDevice(ctx context.Context, oper
 	}
 	rawToken, ok := domain.VerifyTrustedDeviceToken(signedCookie, f.secret)
 	if !ok {
+		logOperatorTrustedDeviceRefused(f.logger, operatorID, deviceRefusalInvalidSignature, nil)
 		return false, nil
 	}
 	device, err := f.records.FindActiveTrustedDevice(ctx, operatorID, domain.HashTrustedDeviceToken(rawToken))
+	if errors.Is(err, identityaccess.ErrOperatorTrustedDeviceNotFound) {
+		logOperatorTrustedDeviceRefused(f.logger, operatorID, deviceRefusalNoActiveDevice, nil)
+		return false, nil
+	}
 	if err != nil {
+		logOperatorTrustedDeviceRefused(f.logger, operatorID, deviceRefusalLookupFailed, err)
 		return false, nil
 	}
 	_ = f.records.TouchTrustedDevice(ctx, device.ID, f.now())

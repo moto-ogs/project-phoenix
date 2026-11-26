@@ -2,6 +2,8 @@ package postgres
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
@@ -58,6 +60,11 @@ func (r *AccountMFARecords) FindActiveTrustedDevice(ctx context.Context, account
  WHERE account_id = ? AND `+trustedDevicePortal+` AND token_hash = ? AND revoked_at IS NULL AND expires_at > ?
  AND `+trustedDeviceCurrentCredential+` LIMIT 1`,
 		accountID, binding.TenantID, binding.OrganizationID, binding.ParentPortal, tokenHash, r.store.now()).Scan(ctx, &row)
+	// No matching device is an answer, not a failure: the caller tells the
+	// two apart (#8159).
+	if errors.Is(err, sql.ErrNoRows) {
+		return domain.AccountTrustedDevice{}, false, nil
+	}
 	return row, err == nil, err
 }
 
