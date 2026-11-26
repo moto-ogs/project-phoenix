@@ -30,7 +30,7 @@ export interface TraegerOpeningChangeInput {
   readonly schoolIds: readonly string[];
 }
 
-export function mapTraegerOpeningChange(
+function mapTraegerOpeningChange(
   raw: contract.OpeningChange,
 ): TraegerOpeningChange {
   return {
