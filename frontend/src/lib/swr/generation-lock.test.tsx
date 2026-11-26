@@ -42,6 +42,7 @@ import { setTestClock } from "~/test/clock";
 import {
   _resetSWRFallbacksForTests,
   bumpScopeGeneration,
+  dataGenerationOf,
   isCurrentSWRValue,
   isFallbackVisible,
   preloadSWR,
@@ -228,6 +229,36 @@ afterEach(() => {
   _setSWRCleanupForTests(true);
   resumeSWRSession();
   _resetPersonalStorageLeave();
+});
+
+it("keeps the old key's cache when its scheduled read sees a new fetcher", async () => {
+  const oldKey = "student-7-scheduled-read";
+  const newKey = "student-7-next-read";
+  const fullOldKey = FULL(oldKey);
+  const { cache } = renderHook(() => useSWRConfig()).result.current;
+  stampSWRValue(fullOldKey, "bisher", dataGenerationOf(fullOldKey));
+  cache.set(fullOldKey, { data: "bisher" });
+  const frames: FrameRequestCallback[] = [];
+  const frame = vi
+    .spyOn(window, "requestAnimationFrame")
+    .mockImplementation((callback) => frames.push(callback));
+  onTestFinished(() => frame.mockRestore());
+  const oldRead = vi.fn(async () => "alt");
+  const answer = deferred<string>();
+  const newRead = vi.fn(() => answer.promise);
+  const view = render(<Reader name={oldKey} fetcher={oldRead} />);
+  expect(screen.getByTestId(oldKey)).toHaveTextContent("bisher");
+  expect(frames).toHaveLength(1);
+  view.rerender(<Reader name={newKey} fetcher={newRead} />);
+  expect(newRead).toHaveBeenCalledTimes(1);
+
+  frames[0]!(0);
+  await flush();
+  expect(cache.get(fullOldKey)?.data).toBe("bisher");
+  expect(oldRead).not.toHaveBeenCalled();
+  expect(newRead).toHaveBeenCalledTimes(1);
+  await act(async () => answer.resolve("neu"));
+  expect(screen.getByTestId(newKey)).toHaveTextContent("neu");
 });
 
 describe.each([

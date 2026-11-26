@@ -131,6 +131,10 @@ const generationLockMiddleware: Middleware =
     if (typeof key === "string" && fetcher) {
       const locked = lockFetcher(key, fetcher);
       read = (...args) => {
+        // A delayed revalidation may use this fetcher for its previous key.
+        // Reject it without counting it as a replacement for this key.
+        if (typeof args[0] === "string" && args[0] !== key)
+          return locked(...args);
         const { cache } = config as { cache?: Cache };
         let reads = cache && pendingLockedReads.get(cache);
         if (cache && !reads) {

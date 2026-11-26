@@ -75,7 +75,7 @@ import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { ForbiddenPage } from "~/components/ui/forbidden-page";
 import { errorAlertActions } from "~/components/ui/form-error-alert";
 import { useApiLoadError } from "~/contexts/ToastContext";
-import { ApiError } from "~/lib/api-error";
+import { ApiError, errorClassCode } from "~/lib/api-error";
 import { SectionCard } from "~/components/ui/section-card";
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import {
@@ -990,6 +990,12 @@ function orderedRooms(
   });
 }
 
+function isTransientRosterError(error: unknown): boolean {
+  if (!(error instanceof ApiError)) return false;
+  const code = errorClassCode(error.status ?? 0);
+  return code === "general.unavailable" || code === "general.server";
+}
+
 function SearchPageContent() {
   const router = useTenantRouter();
   // Use required: true to auto-redirect unauthenticated users (same pattern as /active-supervisions)
@@ -1687,16 +1693,24 @@ function SearchPageContent() {
   );
   // An unconfirmed cached probe needs a real refresh, not another use of
   // the deduped response (which never calls this opening's onSuccess).
+  const probeOpeningKey = useRosterProbe ? scopedProbeKey : null;
   const refreshCachedProbe =
-    useRosterProbe &&
-    confirmedProbeKey !== scopedProbeKey &&
+    probeOpeningKey !== null &&
+    confirmedProbeKey !== probeOpeningKey &&
+    heldRosterRefusal === undefined &&
     rosterProbe.data !== undefined &&
     !rosterProbe.isValidating &&
-    !rosterProbe.error;
+    (!rosterProbe.error || isTransientRosterError(rosterProbe.error));
   const mutateRosterProbe = rosterProbe.mutate;
+  const attemptedProbeRefresh = useRef<string | null>(null);
   useEffect(() => {
-    if (refreshCachedProbe) void mutateRosterProbe();
-  }, [refreshCachedProbe, mutateRosterProbe]);
+    if (attemptedProbeRefresh.current === probeOpeningKey) return;
+    attemptedProbeRefresh.current = null;
+    if (refreshCachedProbe) {
+      attemptedProbeRefresh.current = probeOpeningKey;
+      void mutateRosterProbe();
+    }
+  }, [probeOpeningKey, refreshCachedProbe, mutateRosterProbe]);
   const wholeList = useSWRAuth<SearchResult | undefined>(
     awaitsSearchFilters || useRosterProbe ? null : wholeListKey,
     async () => {
@@ -1726,8 +1740,17 @@ function SearchPageContent() {
     {
       keepPreviousData: false,
       recoverDiscardedRefusals: false,
-      onSuccess() {
+      onSuccess(result) {
         if (scopedProbeKey !== null) liftRefusal(scopedProbeKey);
+        const readers = rosterReaders.current;
+        if (
+          result !== undefined &&
+          readers?.key === scopedRosterKey &&
+          readers.readProbe() !== undefined
+        ) {
+          // The replacement roster now owns detail previews for these filters.
+          void mutateRosterProbe(undefined, { revalidate: false });
+        }
       },
     },
   );
@@ -1746,6 +1769,7 @@ function SearchPageContent() {
   const roster = useRosterProbe ? rosterProbe : wholeList;
   const rosterRefused =
     heldRosterRefusal !== undefined || isReadRefusal(roster.error);
+  const rosterRefreshFailed = isTransientRosterError(roster.error);
   // SWR can fall back to the server seed after the live roster walk stopped.
   // Those visible rows do not satisfy the deferred walk.
   const rosterReadDeferred =
@@ -1756,7 +1780,8 @@ function SearchPageContent() {
   const hasCompleteList =
     roster.data !== undefined &&
     (roster.data.truncatedTotal ?? null) === null &&
-    !roster.error &&
+    (!roster.error || rosterRefreshFailed) &&
+    !rosterRefused &&
     !rosterReadDeferred &&
     (!useRosterProbe || confirmedProbeKey === scopedProbeKey);
   // A refusal for the roster also denies its named projection.
@@ -1776,9 +1801,13 @@ function SearchPageContent() {
     data: freshSearchData,
     isLoading,
     isValidating: isSearchResultValidating,
-    error: studentsError,
+    error: resultError,
     mutate: mutateStudents,
   } = needsServerSearch ? namedSearch : roster;
+  // A transient background error must not replace a usable roster with an
+  // error page. SWR still logs the failure and retries the refresh.
+  const studentsError =
+    hasCompleteList && rosterRefreshFailed ? undefined : resultError;
   const rosterNeedsExpansion = searchTerm === "" && rosterReadDeferred;
   // Clearing the name switches back to the full-roster key. Until it answers,
   // keep already loaded rows, but never treat a stopped walk as a roster.

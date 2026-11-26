@@ -651,6 +651,66 @@ describe("StudentSearchPage: click on the navigation entry of this page (#3374)"
     expect(mockGetStudents).toHaveBeenCalledTimes(recordedCalls);
   });
 
+  it.each(["", "?search=Max"])(
+    "keeps filtering a complete roster after a 503 (%s)",
+    async (url) => {
+      const { reload } = renderWithRealStudentReads(url);
+      const key = url ? rosterProbeKey : rosterKey;
+      await act(async () => {
+        await reload.get(key)!();
+      });
+      expect(await screen.findByTestId("student-card-7")).toBeVisible();
+      mockGetStudents.mockRejectedValue(new ApiError("Unavailable", 503));
+      await act(async () => {
+        await reload.get(key)!();
+      });
+      const reads = mockGetStudents.mock.calls.length;
+
+      const [search] = screen.getAllByPlaceholderText("Name suchen…");
+      fireEvent.change(search!, { target: { value: "Ma" } });
+      await waitFor(() =>
+        expect(new URLSearchParams(window.location.search).get("search")).toBe(
+          "Ma",
+        ),
+      );
+      expect(screen.getByTestId("student-card-7")).toBeVisible();
+      expect(mockGetStudents).toHaveBeenCalledTimes(reads);
+    },
+  );
+
+  it("retries a cached probe failure once on each saved-search opening", async () => {
+    const { reload, rerender } = renderWithRealStudentReads("?search=Max");
+    await act(async () => {
+      await reload.get(rosterProbeKey)!();
+    });
+    const failProbe = vi.fn(async () => {
+      throw new ApiError("Unavailable", 503);
+    });
+    mockGetStudents.mockImplementation(({ search }: StudentFilters) =>
+      search ? Promise.resolve({ students: [mockStudent] }) : failProbe(),
+    );
+    await act(async () => {
+      await reload.get(rosterProbeKey)!();
+    });
+    await act(async () =>
+      rerender(<StudentSearchPage key="while-unavailable" />),
+    );
+    expect(failProbe).toHaveBeenCalledTimes(2);
+
+    const mila = { ...mockStudent, id: "8", first_name: "Mila" };
+    const liveRoster = vi.fn(async () => ({ students: [mockStudent, mila] }));
+    mockGetStudents.mockImplementation(({ search }: StudentFilters) =>
+      search ? Promise.resolve({ students: [mockStudent] }) : liveRoster(),
+    );
+    await act(async () => rerender(<StudentSearchPage key="recovered" />));
+    expect(liveRoster).toHaveBeenCalledTimes(1);
+    const reads = mockGetStudents.mock.calls.length;
+    const [search] = screen.getAllByPlaceholderText("Name suchen…");
+    fireEvent.change(search!, { target: { value: "Mil" } });
+    expect(await screen.findByTestId("student-card-8")).toBeVisible();
+    expect(mockGetStudents).toHaveBeenCalledTimes(reads);
+  });
+
   it("does not mistake visible server start data for a finished roster refresh", async () => {
     const mila = { ...mockStudent, id: "8", first_name: "Mila" };
     const cached = { students: [mockStudent], truncatedTotal: null };
@@ -734,6 +794,7 @@ describe("StudentSearchPage: click on the navigation entry of this page (#3374)"
     // Anker: the retained rows were replaced by the new roster.
     expect(await screen.findByTestId("student-card-8")).toBeVisible();
     expect(screen.queryByTestId("student-card-7")).toBeNull();
+    expect(preview("7")).toBeUndefined();
   });
 
   it("rejects a roster answer from before the named search refused access", async () => {
