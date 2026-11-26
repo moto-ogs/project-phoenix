@@ -25909,6 +25909,7 @@
         "closing_day",
         "group_substitution",
         "group_substitution_count",
+        "meal_cancelled",
         "meal_plan_changed",
         "shift_cancelled",
         "shift_changed",

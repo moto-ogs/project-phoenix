@@ -337,14 +337,14 @@ export default function MealPlanPage() {
 
   const weekDates = useMemo(() => workWeekDates(mondayISO), [mondayISO]);
   // Die Tage ohne Mittagessen (#7656); nur wer verwaltet, trägt sie ein.
-  const cancellations = useMealCancellations(
+  const cancellationResource = useMealCancellations(
     mondayISO,
     weekDates[weekDates.length - 1] ?? mondayISO,
     status === "authenticated" && canReadPlan && mealPlanEnabled === true,
   );
+  const cancellations = cancellationResource.reasons;
   const [cancelDate, setCancelDate] = useState<string | null>(null);
   const restoreMeal = useRestoreMeal();
-
   const weekKey =
     status === "authenticated" && canReadPlan && mealPlanEnabled
       ? tenantListKeys.mealPlanWeek(mondayISO)
@@ -859,6 +859,7 @@ export default function MealPlanPage() {
     >
       <FormErrorAlert message={saveErrors.error} />
       <LoadErrorAlert error={draftForm.loadError} className="mb-4" />
+      <LoadErrorAlert error={cancellationResource.loadError} className="mb-4" />
       <LoadErrorAlert
         error={
           afterSave.error && {
@@ -871,7 +872,6 @@ export default function MealPlanPage() {
         }
         className="mb-4"
       />
-
       {/* Eine Karte für den Wochenplan: Titel, Erklärung und „Vorwoche
           übernehmen“ im Kopf, die fünf Tage randlos unter einer Trennlinie.
           overflow visible: die Allergen-Auswahl eines Gerichts darf über die
@@ -975,7 +975,7 @@ export default function MealPlanPage() {
                               disabled: !hasContent || editingLocked,
                             },
                             // Ein vergangener Tag bleibt, wie er war (#7656).
-                            ...(date < today
+                            ...(date < today || !cancellationResource.loaded
                               ? []
                               : cancelledReason === undefined
                                 ? [

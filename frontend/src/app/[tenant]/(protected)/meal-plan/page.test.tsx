@@ -28,15 +28,21 @@ function FreshSwrCache({ children }: { children: React.ReactNode }) {
   );
 }
 
-const { getMealPlanWeek, getMealOrders, setDay, rights, features } = vi.hoisted(
-  () => ({
-    features: { mealPlanEnabled: true },
-    rights: { admin: true, permissions: [] as string[] },
-    getMealPlanWeek: vi.fn(),
-    getMealOrders: vi.fn(),
-    setDay: vi.fn(),
-  }),
-);
+const {
+  getMealPlanWeek,
+  getMealOrders,
+  getMealCancellations,
+  setDay,
+  rights,
+  features,
+} = vi.hoisted(() => ({
+  features: { mealPlanEnabled: true },
+  rights: { admin: true, permissions: [] as string[] },
+  getMealPlanWeek: vi.fn(),
+  getMealOrders: vi.fn(),
+  getMealCancellations: vi.fn(),
+  setDay: vi.fn(),
+}));
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn() }),
@@ -78,6 +84,7 @@ vi.mock("~/lib/meal-plan-api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/lib/meal-plan-api")>()),
   getMealPlanWeek,
   getMealOrders,
+  getMealCancellations,
   setDay,
 }));
 
@@ -121,6 +128,10 @@ function renderPage() {
   );
 }
 
+beforeEach(() => {
+  getMealCancellations.mockResolvedValue([]);
+});
+
 describe("Speiseplan: Statuszeile bei Ladefehler (#2517)", () => {
   beforeEach(() => {
     getMealPlanWeek.mockReset();
@@ -130,6 +141,7 @@ describe("Speiseplan: Statuszeile bei Ladefehler (#2517)", () => {
       detail: "total",
       days: [],
     });
+    getMealCancellations.mockResolvedValue([]);
     rights.admin = true;
     rights.permissions = [];
   });
@@ -159,6 +171,44 @@ describe("Speiseplan: Statuszeile bei Ladefehler (#2517)", () => {
     expect(
       await screen.findByText(/0 von 5 Tagen geplant/),
     ).toBeInTheDocument();
+  });
+});
+
+describe("Speiseplan: Ausfalltage bei Ladefehler (#7656)", () => {
+  beforeEach(() => {
+    getMealPlanWeek.mockReset();
+    getMealPlanWeek.mockResolvedValue([]);
+    getMealOrders.mockReset();
+    getMealOrders.mockResolvedValue({
+      rhythm: "daily",
+      detail: "total",
+      days: [],
+    });
+    getMealCancellations.mockReset();
+    rights.admin = true;
+    rights.permissions = [];
+    features.mealPlanEnabled = true;
+  });
+
+  it("shows the load error and keeps cancellation actions unavailable", async () => {
+    getMealCancellations.mockRejectedValue(
+      new ApiError("cancellations exploded", 503, {
+        code: "general.unavailable",
+      }),
+    );
+
+    renderPage();
+
+    expect(
+      await screen.findByText(
+        catalogText("general.unavailable", "die Ausfälle beim Essen"),
+      ),
+    ).toBeInTheDocument();
+    const actions = await screen.findByLabelText("Aktionen für Montag");
+    fireEvent.click(actions);
+    // Anker: Das geöffnete Tagesmenü zeigt, dass der Wochenplan geladen ist.
+    expect(await screen.findByText("Tag kopieren")).toBeInTheDocument();
+    expect(screen.queryByText("Essen fällt aus")).not.toBeInTheDocument();
   });
 });
 

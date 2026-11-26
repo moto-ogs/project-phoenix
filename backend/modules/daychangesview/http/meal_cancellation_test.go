@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -12,8 +13,22 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api"
 	"github.com/moto-ogs/project-phoenix/api/testutil"
+	"github.com/moto-ogs/project-phoenix/modules/daychangesview"
+	daychangesviewhttp "github.com/moto-ogs/project-phoenix/modules/daychangesview/http"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
+
+func TestDayChangesContractDeclaresMealCancelledKind(t *testing.T) {
+	t.Parallel()
+	for _, enum := range daychangesviewhttp.RouteContracts()[0].Enums {
+		if reflect.TypeOf(enum.Type) != reflect.TypeOf(daychangesview.Kind("")) {
+			continue
+		}
+		assert.Contains(t, enum.Values, string(daychangesview.KindMealCancelled))
+		return
+	}
+	t.Fatal("day changes contract must declare the Kind enum")
+}
 
 // mealCancellationLines renders the cancelled lunch of the overview as
 // "section reason ->link".

@@ -18,6 +18,7 @@ import {
   getMealCancellations,
   restoreMeal,
 } from "~/lib/meal-plan-api";
+import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { useInvalidateFamily, useSWRAuth } from "~/lib/swr";
 import { tenantContactKeys } from "~/lib/swr/tenant-contact-keys";
 import { tenantListKeys } from "~/lib/swr/tenant-list-keys";
@@ -44,7 +45,16 @@ export function useMealCancellations(
   for (const cancellation of resource.data ?? []) {
     reasons.set(cancellation.date, cancellation.reason);
   }
-  return reasons;
+  const { error: loadError } = useSwrResourceLoadError(
+    [resource],
+    "die Ausfälle beim Essen",
+    () => resource.mutate(),
+  );
+  return {
+    reasons,
+    loadError,
+    loaded: resource.data !== undefined,
+  };
 }
 
 /** Lädt nach einem Ausfall alles neu, was den Tag zeigt. */
