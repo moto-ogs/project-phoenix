@@ -94,5 +94,5 @@ func (rs *Resource) restoreMeal(w http.ResponseWriter, r *http.Request) {
 		rs.runtime.ModuleFailure(w, r, err, "failed to restore the meal")
 		return
 	}
-	w.WriteHeader(http.StatusNoContent)
+	rs.runtime.Success(w, r, http.StatusNoContent, nil, "Meal restored")
 }

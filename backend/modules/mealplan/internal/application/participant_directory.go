@@ -84,10 +84,6 @@ func (d participantDirectory) FindCandidatesOnDates(ctx context.Context, dates [
 	return result, stats, nil
 }
 
-func NewSchoolCalendar(find mealplan.CalendarFinder) schoolCalendar {
-	return schoolCalendar{find: find}
-}
-
 // newMealCalendar is the school calendar that also closes the days the
 // school cancelled lunch on (#7656), so bookings, kitchen lists, orders and
 // the month treat them like closed days, and marks them as cancelled. Both

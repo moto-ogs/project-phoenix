@@ -106,10 +106,6 @@ func renderMealPlanFailure(w http.ResponseWriter, r *http.Request, err error, in
 	apiCommon.RenderError(w, r, renderer(err))
 }
 
-func newMealPlanResource(module mealplanModule.Capability, renderer SimpleListRenderer, menuChanged mealplanAPI.Middleware) *mealplanAPI.Resource {
-	return newMealPlanResourceWith(module, nil, renderer, menuChanged)
-}
-
 // newMealPlanResourceWith serves the Meal Plan with the school's days
 // without lunch (#7656); nil cancellations leave their routes out.
 func newMealPlanResourceWith(module mealplanModule.Capability, cancellations mealplanModule.MealCancellations, renderer SimpleListRenderer, menuChanged mealplanAPI.Middleware) *mealplanAPI.Resource {
