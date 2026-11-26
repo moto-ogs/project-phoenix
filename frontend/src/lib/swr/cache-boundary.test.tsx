@@ -131,6 +131,7 @@ const REVIEWED_EXPORTS: Record<string, string[]> = {
   hooks: [
     "MUTATION_OPTION_KEYS",
     "READER_OPTION_KEYS",
+    "getSWRInvalidationCheckpoint",
     "revalidateOrThrow",
     "useDiscardRefusedEntity",
     "useImmutableSWR",
@@ -233,7 +234,6 @@ const REVIEWED_EXPORTS: Record<string, string[]> = {
   "search-students-key": [
     "SEARCH_STUDENTS_ALL_GROUPS_KEY",
     "SEARCH_STUDENTS_KEY_PREFIX",
-    "SEARCH_STUDENTS_REFRESH_OPTIONS",
     "normalizeSearchStudentsGroupId",
     "searchStudentsGroupScope",
     "searchStudentsKeyTargetsGroup",

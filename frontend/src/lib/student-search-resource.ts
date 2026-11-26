@@ -69,6 +69,7 @@ export async function fetchStudentSearch(
 ) {
   const result = await fetchPage(filters);
   const students = [...result.students];
+  const totalRecords = result.pagination?.total_records;
 
   // Walk the remaining pages when the selection is larger than one page.
   // The first request stays untouched (no page parameter), so the common
@@ -82,6 +83,7 @@ export async function fetchStudentSearch(
   const totalPages = result.pagination?.total_pages ?? 1;
   const exceedsPageCap = totalPages > MAX_STUDENT_SEARCH_PAGES;
   let pagesDeferred = false;
+  let pagesInconsistent = false;
   const lastPage = Math.min(totalPages, MAX_STUDENT_SEARCH_PAGES);
   for (let page = 2; page <= lastPage; page++) {
     if (exceedsPageCap && shouldDeferOverflowPages?.()) {
@@ -90,8 +92,25 @@ export async function fetchStudentSearch(
     }
     beforeNextPage?.();
     const nextPage = await fetchPage({ ...filters, page });
+    if (
+      nextPage.pagination?.total_records !== totalRecords ||
+      nextPage.pagination?.total_pages !== totalPages
+    ) {
+      pagesInconsistent = true;
+      break;
+    }
     students.push(...nextPage.students);
   }
+  // The backend orders by id, but a deletion or insertion can move rows
+  // between pages. An incomplete or duplicated walk cannot answer names.
+  if (!exceedsPageCap && totalRecords !== undefined) {
+    pagesInconsistent ||= students.length !== totalRecords;
+  }
+  const uniqueStudents =
+    totalPages > 1
+      ? [...new Map(students.map((student) => [student.id, student])).values()]
+      : students;
+  pagesInconsistent ||= uniqueStudents.length !== students.length;
   // Past the bound the list is incomplete, and everything downstream — the
   // count badge, the grouping headers, the export scope — reads exactly the
   // rows loaded here. Reporting that as a finished result would present a
@@ -101,7 +120,7 @@ export async function fetchStudentSearch(
   const truncatedTotal = exceedsPageCap
     ? (result.pagination?.total_records ?? students.length)
     : null;
-  if (exceedsPageCap && !pagesDeferred) {
+  if (exceedsPageCap && !pagesDeferred && !pagesInconsistent) {
     logger.warn("student_search_pages_truncated", {
       total_pages: totalPages,
       fetched_pages: lastPage,
@@ -111,11 +130,12 @@ export async function fetchStudentSearch(
   // Tag the response with its date and today/planning mode. On a rollover,
   // the date can stay the same while the mode flips to live (#1939).
   return {
-    students,
+    students: uniqueStudents,
     requestDate: requestDate,
     requestIsToday: requestIsToday,
     truncatedTotal,
     ...(pagesDeferred ? { pagesDeferred } : {}),
+    ...(pagesInconsistent ? { pagesInconsistent } : {}),
   };
 }
 

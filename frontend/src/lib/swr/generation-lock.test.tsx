@@ -38,8 +38,7 @@ vi.mock("~/lib/session-cache", () => ({ announceSessionChange: vi.fn() }));
 import { useSWRConfig, type SWRConfiguration, type SWRResponse } from "swr";
 import { ApiError } from "~/lib/api-error";
 import { _resetPersonalStorageLeave } from "~/lib/personal-storage";
-import { releaseFakeTimers, setTestClock } from "~/test/clock";
-import { SEARCH_STUDENTS_REFRESH_OPTIONS } from "./search-students-key";
+import { setTestClock } from "~/test/clock";
 import {
   _resetSWRFallbacksForTests,
   bumpScopeGeneration,
@@ -52,6 +51,7 @@ import {
 } from "./generation";
 import { swrConfig } from "./config";
 import {
+  getSWRInvalidationCheckpoint,
   useDiscardRefusedEntity,
   useInvalidateMatching,
   useSWRAuth,
@@ -246,41 +246,37 @@ it("retires an existing preload without recording an empty or repeated clear", a
   await expect(pending).resolves.toBeUndefined();
 });
 
-it("combines a local attendance refresh and its delayed SSE echo", async () => {
+it("starts the local refresh immediately and skips only signals it already covers", async () => {
   const key = "search-students-gall-roster";
   const fetcher = vi.fn(async () => "roster");
-  vi.useFakeTimers();
-  try {
-    const view = renderHook(() => ({
-      roster: useSWRAuth(key, fetcher),
-      invalidate: useInvalidateMatching(),
-    }));
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(0);
-    });
-    expect(view.result.current.roster.data).toBe("roster");
-
-    const local = view.result.current.invalidate(
-      (candidate) => candidate.startsWith("search-students-"),
-      SEARCH_STUDENTS_REFRESH_OPTIONS,
-    );
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(1_000);
-    });
-    const echo = view.result.current.invalidate(
-      (candidate) => candidate === key,
-      SEARCH_STUDENTS_REFRESH_OPTIONS,
-    );
-    expect(echo).toBe(local);
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(
-        SEARCH_STUDENTS_REFRESH_OPTIONS.coalesceMs,
-      );
+  const view = renderHook(() => ({
+    roster: useSWRAuth(key, fetcher),
+    invalidate: useInvalidateMatching(),
+  }));
+  await waitFor(() => expect(view.result.current.roster.data).toBe("roster"));
+  const matches = (candidate: string) => candidate === key;
+  const echo = getSWRInvalidationCheckpoint();
+  await act(async () => {
+    const local = view.result.current.invalidate(matches, {
+      expireInactive: true,
     });
     expect(fetcher).toHaveBeenCalledTimes(2);
-  } finally {
-    releaseFakeTimers();
-  }
+    await local;
+    await view.result.current.invalidate(matches, {
+      expireInactive: true,
+      observedAt: echo,
+    });
+  });
+  expect(fetcher).toHaveBeenCalledTimes(2);
+
+  const laterSignal = getSWRInvalidationCheckpoint();
+  await act(async () => {
+    await view.result.current.invalidate(matches, {
+      expireInactive: true,
+      observedAt: laterSignal,
+    });
+  });
+  expect(fetcher).toHaveBeenCalledTimes(3);
 });
 
 function cachedData(name: string): unknown {

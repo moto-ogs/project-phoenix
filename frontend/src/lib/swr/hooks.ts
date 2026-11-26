@@ -1486,12 +1486,14 @@ interface InvalidationBurst {
 
 const invalidationBursts = new WeakMap<Cache, Map<string, InvalidationBurst>>();
 
+/** Record which invalidations had happened when a live signal arrived. */
+export const getSWRInvalidationCheckpoint = currentSWRGeneration;
+
 function coalesceInvalidation(
   cache: Cache,
   channel: string,
   matches: (key: string) => boolean,
   run: (match: (key: string) => boolean) => Promise<unknown[]>,
-  waitMs = 350,
 ): Promise<unknown[]> {
   const bursts =
     invalidationBursts.get(cache) ?? new Map<string, InvalidationBurst>();
@@ -1512,7 +1514,7 @@ function coalesceInvalidation(
       const finish = async () =>
         run((key) => batch.some((match) => match(key)));
       void finish().then(resolve, reject);
-    }, waitMs);
+    }, 350);
   });
   bursts.set(channel, { matches: batch, done });
   return done;
@@ -1539,7 +1541,8 @@ export function useInvalidateMatching() {
         expireInactive?: boolean;
         /** Union local and SSE invalidations for this channel in one short burst. */
         coalesce?: string;
-        coalesceMs?: number;
+        /** On revalidation, skip keys already invalidated since this signal. */
+        observedAt?: number;
       },
     ) => {
       if (prefix === null || isSWRSessionPending()) return Promise.resolve([]);
@@ -1552,10 +1555,15 @@ export function useInvalidateMatching() {
             : options?.expireInactive
               ? "expire-inactive"
               : "revalidate";
+      const observedAt = options?.clear ? undefined : options?.observedAt;
       const run = (match: (key: string) => boolean) =>
         invalidateSWRKeys(
           cache,
-          (key) => key.startsWith(scope) && match(key.slice(scope.length)),
+          (key) =>
+            key.startsWith(scope) &&
+            match(key.slice(scope.length)) &&
+            (observedAt === undefined ||
+              requestGenerationOf(key) <= observedAt),
           mode,
         );
       return options?.coalesce
@@ -1564,7 +1572,6 @@ export function useInvalidateMatching() {
             `${scope}${options.coalesce}:${mode}`,
             matches,
             run,
-            options.coalesceMs,
           )
         : run(matches);
     },

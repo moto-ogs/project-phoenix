@@ -41,6 +41,7 @@ import {
   usePublishLiveChannel,
 } from "~/lib/swr";
 import { mutate } from "~/lib/swr/mutate";
+import { getSWRInvalidationCheckpoint } from "~/lib/swr/hooks";
 import { useOwnTimeRefresh } from "./use-own-time-refresh";
 import {
   SWR_FAMILIES,
@@ -60,7 +61,6 @@ import {
 import {
   SEARCH_STUDENTS_ALL_GROUPS_KEY,
   SEARCH_STUDENTS_KEY_PREFIX,
-  SEARCH_STUDENTS_REFRESH_OPTIONS,
   searchStudentsKeyTargetsGroup,
 } from "~/lib/swr/search-students-key";
 import {
@@ -430,10 +430,12 @@ export function useGlobalSSE(): SSEHookState {
   // the burst's start time for the MAX_FLUSH_WAIT_MS cap.
   const burstStartedAt = useRef(0);
   const burstJitter = useRef(0);
+  const burstCheckpoint = useRef<number | undefined>(undefined);
 
   // SWR cache keys are tenant-prefixed by useSWRAuth (e.g. "tenant-slug:ogs-students-2").
   // All matchers must use includes() instead of startsWith() to match regardless of prefix.
   const resetPending = useCallback(() => {
+    burstCheckpoint.current = undefined;
     pendingGroupIds.current.clear();
     pendingStudentIds.current.clear();
     pendingOpenStudentIds.current.clear();
@@ -601,8 +603,7 @@ export function useGlobalSSE(): SSEHookState {
       const unfilteredSearchOnly =
         hasPendingUnscopedActiveEvent.current &&
         !hasPendingDashboardEvent.current;
-      const broadSearch =
-        hasPendingBroadOgsEvent.current ||
+      const structuralSearchChange =
         hasPendingArrivalScheduleEvent.current ||
         hasPendingPickupScheduleEvent.current ||
         hasPendingStudentUpdateEvent.current ||
@@ -620,6 +621,8 @@ export function useGlobalSSE(): SSEHookState {
         // crutch is gone, so the trigger has to be explicit. Rare event, so
         // the extra refetch costs nothing in practice.
         hasPendingGroupAccessEvent.current;
+      const broadSearch =
+        hasPendingBroadOgsEvent.current || structuralSearchChange;
       const scopedEduGroupIds = new Set(pendingEduGroupIds.current);
       if (broadSearch || unfilteredSearchOnly || scopedEduGroupIds.size > 0) {
         void invalidateMatching(
@@ -630,7 +633,18 @@ export function useGlobalSSE(): SSEHookState {
               [...scopedEduGroupIds].some((gid) =>
                 searchStudentsKeyTargetsGroup(key, gid),
               )),
-          SEARCH_STUDENTS_REFRESH_OPTIONS,
+          {
+            expireInactive: true,
+            // A local save can already have started a newer read since an
+            // attendance signal arrived. Access and other structural changes
+            // still refresh at this flush, as does a reconnect.
+            ...(structuralSearchChange ||
+            hasPendingActivityEvent.current ||
+            hasPendingUnscopedActiveEvent.current ||
+            burstCheckpoint.current === undefined
+              ? {}
+              : { observedAt: burstCheckpoint.current }),
+          },
         ).catch((err) => {
           // Fire-and-forget: the screen keeps its data until the next event or load.
           logger.debug("swr_revalidation_failed", {
@@ -1080,6 +1094,7 @@ export function useGlobalSSE(): SSEHookState {
   ]);
 
   const scheduleFlush = useCallback(() => {
+    burstCheckpoint.current = getSWRInvalidationCheckpoint();
     const now = Date.now();
     if (debounceTimer.current) {
       clearTimeout(debounceTimer.current);

@@ -25,14 +25,6 @@ import { isPositiveInt64Id } from "../compare-ids";
 /** Prefix shared by every Kindersuche list cache key. */
 export const SEARCH_STUDENTS_KEY_PREFIX = "search-students-";
 
-// Local writes and their SSE echoes share a burst. Allow for the global SSE
-// debounce (at most one second) before expiring the same lists a second time.
-export const SEARCH_STUDENTS_REFRESH_OPTIONS = {
-  expireInactive: true,
-  coalesce: SEARCH_STUDENTS_KEY_PREFIX,
-  coalesceMs: 1_250,
-} as const;
-
 /**
  * Prefix up to (excluding) the group scope, used by
  * {@link searchStudentsKeyTargetsGroup} to locate that segment in a key.

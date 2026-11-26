@@ -1605,7 +1605,6 @@ function SearchPageContent() {
   const useRosterProbe = linkedSearch && searchTerm !== "";
   const activeRosterKey = useRosterProbe ? rosterProbeKey : wholeListKey;
   const liveRefreshInterval = useLiveRefreshInterval();
-  const refreshInterval = awaitsSearchFilters ? 0 : liveRefreshInterval;
   const scopeKey = useSWRCacheKey();
   const scopedRosterKey = scopeKey(wholeListKey);
   const scopedProbeKey = scopeKey(rosterProbeKey);
@@ -1620,6 +1619,10 @@ function SearchPageContent() {
     () => (scopedRosterKey === null ? undefined : refusalFor(scopedRosterKey)),
     () => undefined,
   );
+  const refreshInterval =
+    awaitsSearchFilters || heldRosterRefusal !== undefined
+      ? 0
+      : liveRefreshInterval;
   const beginSearchRead = useSWRRequestGuard();
   const invalidateSearchFamily = useInvalidateFamily();
   const invalidateSearchKey = useInvalidateMatching();
@@ -1790,6 +1793,7 @@ function SearchPageContent() {
   const hasCompleteList =
     rosterData !== undefined &&
     (rosterData.truncatedTotal ?? null) === null &&
+    !rosterData.pagesInconsistent &&
     (!roster.error || rosterRefreshFailed) &&
     !rosterRefused &&
     !rosterReadDeferred;
@@ -1811,12 +1815,12 @@ function SearchPageContent() {
   );
   useLayoutEffect(() => {
     if (!hasCompleteList) return;
-    // The roster now answers every term for these filters. Retire the old
-    // projections and their pending reads before they can seed a preview.
+    // The roster now answers every term for these filters. A complete probe
+    // also supersedes the full-list cache, which may predate this opening.
     void invalidateSearchKey(
       (key) =>
         key.startsWith(searchFamily) &&
-        key !== wholeListKey &&
+        (useRosterProbe || key !== wholeListKey) &&
         key !== rosterProbeKey,
       { clear: "existing" },
     );
@@ -1826,6 +1830,7 @@ function SearchPageContent() {
     searchFamily,
     wholeListKey,
     rosterProbeKey,
+    useRosterProbe,
   ]);
   useSwrPollingRecovery(
     refreshInterval > 0 &&
@@ -1867,12 +1872,19 @@ function SearchPageContent() {
     error: resultError,
   } = needsServerSearch ? namedSearch : roster;
   const searchData = needsServerSearch ? namedSearch.data : rosterData;
+  // Clearing a saved search changes which reader is running, not where the
+  // visible rows came from. Keep the probe's error until the full read wins.
+  const displayedResultError =
+    resultError ??
+    (!needsServerSearch && usingRetainedRoster ? rosterProbe.error : undefined);
   // Cached rows of this exact key are still useful for lookup, not writes.
   const keepResultsAfterError =
     !rosterRefused &&
     searchData !== undefined &&
-    isTransientRosterError(resultError);
-  const studentsError = keepResultsAfterError ? undefined : resultError;
+    isTransientRosterError(displayedResultError);
+  const studentsError = keepResultsAfterError
+    ? undefined
+    : displayedResultError;
   const rosterNeedsExpansion = searchTerm === "" && rosterReadDeferred;
   const isFinishingRoster = rosterNeedsExpansion && searchData === undefined;
   const searchRefused = isReadRefusal(studentsError);
@@ -1884,7 +1896,8 @@ function SearchPageContent() {
 
   const checkinModeAvailable =
     checkinPermitted &&
-    !resultError &&
+    !displayedResultError &&
+    !studentsData?.pagesInconsistent &&
     !rosterRefused &&
     !(usingRetainedRoster && rosterReadDeferred);
   const schoolCheckin = useSchoolCheckinMode({
@@ -2135,12 +2148,10 @@ function SearchPageContent() {
     reloadRequestKeysRef.current = [activeRosterKey, studentsCacheKey];
     setReloadCount((count) => count + 1);
   }, [activeRosterKey, studentsCacheKey]);
-  // A cached full list may have suppressed SWR's read on handoff.
+  // An incomplete probe can leave a cached full list that suppresses SWR's
+  // read on handoff. A complete probe already retired that cache entry.
   const resumeRoster =
-    !needsServerSearch &&
-    (rosterNeedsExpansion || usingRetainedRoster) &&
-    !isSearchResultValidating &&
-    !resultError;
+    rosterNeedsExpansion && !isSearchResultValidating && !resultError;
   useEffect(() => {
     const requested = handledReloadRef.current !== reloadCount;
     handledReloadRef.current = reloadCount;
@@ -2235,6 +2246,8 @@ function SearchPageContent() {
     studentsData === undefined || isDateTransition
       ? null
       : (studentsData.truncatedTotal ?? null);
+  const paginationInconsistent =
+    !isDateTransition && studentsData?.pagesInconsistent === true;
   const photoConsentDataAvailable =
     photoConsentFeatureAvailable &&
     (students.length === 0 ||
@@ -2300,15 +2313,15 @@ function SearchPageContent() {
   const clearLoadError = load.clear;
   const reloadStudentsRef = useRef<() => void>(() => undefined);
   useEffect(() => {
-    if (resultError) {
-      void showLoadError(resultError, {
+    if (displayedResultError) {
+      void showLoadError(displayedResultError, {
         object: "die Liste der Kinder",
         retry: () => reloadStudentsRef.current(),
       });
     } else {
       clearLoadError();
     }
-  }, [resultError, showLoadError, clearLoadError]);
+  }, [displayedResultError, showLoadError, clearLoadError]);
   const isPermissionError =
     searchRefused &&
     studentsError instanceof ApiError &&
@@ -3703,10 +3716,11 @@ function SearchPageContent() {
                 ...(parentAnnouncementsAvailable &&
                 rowsLoaded &&
                 !isSearchResultValidating &&
-                !resultError &&
+                !displayedResultError &&
                 (needsServerSearch ||
                   (!usingRetainedRoster && !rosterReadDeferred)) &&
                 truncatedTotal === null &&
+                !paginationInconsistent &&
                 filteredStudents.length > 0
                   ? [
                       {
@@ -3812,6 +3826,7 @@ function SearchPageContent() {
         empty={
           !hasLoadError &&
           !keepResultsAfterError &&
+          !paginationInconsistent &&
           hasFetchedOnce &&
           !isInitializing &&
           !isAuthError &&
@@ -3964,13 +3979,23 @@ function SearchPageContent() {
           export all describe the rows it loaded. Without this the school would
           read a truncated list as the complete one, so the shortfall is named
           here instead of only in the log. */}
-          {truncatedTotal !== null && (
+          {paginationInconsistent ? (
             <div className="mb-3">
               <Alert
                 type="warning"
-                message={`Es werden nur die ersten ${students.length} von ${truncatedTotal} Kindern geladen. Anzahl, Gruppierung und Export beziehen sich allein auf diese Kinder; bitte die Filter enger setzen.`}
+                message="Die Kinderliste hat sich beim Laden geändert. Lade sie erneut oder suche nach einem Namen."
+                action={reloadAction}
               />
             </div>
+          ) : (
+            truncatedTotal !== null && (
+              <div className="mb-3">
+                <Alert
+                  type="warning"
+                  message={`Es werden nur die ersten ${students.length} von ${truncatedTotal} Kindern geladen. Anzahl, Gruppierung und Export beziehen sich allein auf diese Kinder; bitte die Filter enger setzen.`}
+                />
+              </div>
+            )
           )}
 
           {/* Unterwegs-Kinder einem Raum zuweisen (#5026): wie auf „Räume“

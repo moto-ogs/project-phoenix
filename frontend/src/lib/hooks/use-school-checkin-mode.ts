@@ -26,10 +26,7 @@ import {
 } from "~/lib/student-api";
 import { STUDENT_KEY_FAMILIES, studentKeys } from "~/lib/swr/portal-keys";
 import { groupKeys } from "~/lib/swr/groups-keys";
-import {
-  SEARCH_STUDENTS_KEY_PREFIX,
-  SEARCH_STUDENTS_REFRESH_OPTIONS,
-} from "~/lib/swr/search-students-key";
+import { SEARCH_STUDENTS_KEY_PREFIX } from "~/lib/swr/search-students-key";
 import { roomKeys } from "~/lib/swr/rooms-keys";
 
 /**
@@ -336,7 +333,7 @@ export function useSchoolCheckinMode(
               ? key.includes(STUDENT_KEY_FAMILIES.detail)
               : key.endsWith(studentKeys.detail(studentId))) ||
             (placedInRoom && isRoomPresenceKey(key))),
-        SEARCH_STUDENTS_REFRESH_OPTIONS,
+        { expireInactive: true },
       ),
     [invalidateMatching],
   );
