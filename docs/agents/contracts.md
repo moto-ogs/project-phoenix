@@ -910,7 +910,10 @@ overlays and person-bound providers under one `SessionTreeBoundary`
 `PortalProviders` and `TenantProviders`. A document renders one tree for
 one session; when it ends (invariant 4) nothing of it renders again, also
 not of routes React keeps hidden (`Activity`), and a new document shows
-the next session.
+the next session. Portal links into and out of the public help load a new
+document: the help never keeps a protected portal tree mounted. If a
+router Activity reconnects a boundary, the boundary checks its mark
+before paint, just as it does after hydration.
 
 One mechanism decides which session an answer, a deletion and a tree
 belong to: the **session mark** (`frontend/src/lib/session-mark.ts`), an
@@ -1079,7 +1082,16 @@ nothing. Invariants:
    it offers its way out.
 5. **A document's payloads belong to its one tree.** The shell snapshot and
    the page seeds (`SWRServerSeed`) of a document serve the tree of that
-   document; no tree of another session renders in it.
+   document; no tree of another session renders in it. Cache Components
+   and Partial Prefetching (#8083) let Next reuse route shells and keep
+   recently visited trees in memory. A normal link prefetches the reusable
+   shell, not a protected payload. The snapshot waits for `connection()`
+   before checking the presented cookie or starting a seed; a shell prefetch
+   does not run those reads. The authorized RSC response and SWR values stay
+   in that document. No protected value belongs in a shared Next cache,
+   public response or browser storage. Opening the school's shared notes
+   always requires another audited read; a hidden tree may not reuse that
+   isolated SWR cache when it becomes visible again.
 6. **Leaving ends the tree.** Logouts drop the tree once the family is
    revoked, before cleanup and the cookie deletion that may stall; without
    a revocation (#7209) the deletion decides: its failure keeps the page

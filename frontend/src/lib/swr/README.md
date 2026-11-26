@@ -324,17 +324,17 @@ optimistic action. The guard exposes no cache or writer and does not change
 SWR's view-bound `onSuccess` semantics. Keep each refused resource's existing
 factory-key predicate; do not clear other readable schools.
 
-## Navigation intent
+## Navigation and seed handoff
 
-Navigation data preloads must use `useSWRPreload` with the destination's exact
-factory key and fetcher. Code prefetch and data prefetch are independent:
-data waits for about 300 ms of pointer intent or keyboard focus (blur cancels).
-Touch starts no load: only a completed single-finger tap, with at most 8 px of
-movement, starts data intent; swipes and cancelled gestures do not.
-Do not preload audited reads, inaccessible resources, or speculative detail
-fields. A failed speculative request must not become the destination's load
-error. Scope changes discard pending answers, including work queued before
-the change. Respect Save-Data, `prefers-reduced-data` and slow connections; bound concurrency.
+Navigation links prefetch only the neutral route shell. Protected page data
+travels with the authorized server seed on navigation, not a second browser
+BFF prefetch. Keep audited openings and any GET with a side effect out of
+that payload. When a page claims a key, the generation-locked handoff uses
+the same key as the browser reader and suppresses a duplicate browser load.
+A missing, failed or expired seed leaves the original retry path in charge.
+If the prefetched Flight payload supplies a promise that cannot settle, an
+open claim follows the real navigation's seed instead. Leaving the boundary
+or changing its session discards the claim through the same generation lock.
 
 `preload(key, fetcher, { intent: true })` is the speculative variant of the
 same locked writer. It skips an already current cached response and removes
@@ -353,9 +353,3 @@ timers were suspended. Timer cleanup requires the original promise identity,
 and an expired pending request cannot trigger a handoff fallback. Expiry only
 evicts intent registry entries, never response data. General preloads retain
 their existing contract.
-Protected page data travels with the route's server seed, not a second
-browser BFF prefetch. The RSC intent prefetch waits for hover or keyboard
-focus; contact during scrolling does not load a page. Keep audited openings
-and any GET with a side effect out of that payload. When a page claims a key,
-the generation-locked handoff suppresses a duplicate browser load; a missing,
-failed or expired seed leaves the original retry path in charge.

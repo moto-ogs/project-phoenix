@@ -41,7 +41,6 @@ import {
 import { countedDayStatus } from "~/lib/presence-status";
 import { useStudentData } from "~/lib/hooks/use-student-data";
 import { useStudentEnrollmentExtraFields } from "~/lib/hooks/use-student-enrollment-extra-fields";
-import { useScrollToTop } from "~/lib/hooks/use-scroll-to-top";
 import { useLocalStorageValue } from "~/lib/hooks/use-local-storage-value";
 import { useSidebarMemory } from "~/lib/sidebar-memory";
 import { useSWRAuth, useTenantMutate, useSWRSeedFrom } from "~/lib/swr";
@@ -352,15 +351,8 @@ function buildStudentTabItems(tabs: StudentTabId[]) {
   return tabs.map((tab) => ({ value: tab as string, label: TAB_LABELS[tab] }));
 }
 
-// Shared classes for every tab panel. Every panel stays mounted; the inactive
-// ones are hidden via CSS (`data-[state=inactive]:hidden` → display:none, which
-// also removes them from the a11y tree). This is deliberate: the panel children
-// (CareScheduleManager, StudentGuardianManager) fetch on mount and do NOT cache,
-// so unmounting inactive panels would re-fire those network calls on every tab
-// revisit. Mounting all of them loads each once and keeps every section
-// reachable for deep links. Tradeoff, accepted on purpose: every section fetches
-// up front on page open (no lazy-per-tab win), but that matches the pre-tabs
-// behaviour where all sections rendered together, so it is not a regression.
+// A detail tab mounts its readers on first opening, including deep links.
+// Later tab changes keep its state and hide its DOM from the a11y tree.
 // Der Reiterinhalt ist EIN Kind des Gerüsts; die Karten darin bekommen
 // deshalb denselben 24-px-Rhythmus (mobil 12 px) wie die Karten der Seite.
 const TAB_CONTENT_CLASS =
@@ -382,6 +374,8 @@ function StudentTabPanel({
   children?: React.ReactNode;
 }>) {
   const active = value === activeTab;
+  const [opened, setOpened] = useState(active);
+  if (active && !opened) setOpened(true);
   return (
     <div
       role="tabpanel"
@@ -389,7 +383,7 @@ function StudentTabPanel({
       data-state={active ? "active" : "inactive"}
       className={className}
     >
-      {children}
+      {opened ? children : null}
     </div>
   );
 }
@@ -478,10 +472,6 @@ function StudentDetailPageContent() {
     },
     [pathname, searchParams],
   );
-
-  // Start at the top instead of inheriting the search list's scroll position
-  // (Next App Router maintains scroll when the new page is already in view).
-  useScrollToTop(studentId);
 
   // Use custom hook for data fetching
   const {
@@ -2049,21 +2039,6 @@ function LimitedAccessView({
     }),
     [canReadChild, studentId],
   );
-  // Siehe FullAccessView: das Änderungsprotokoll lädt erst beim ersten Öffnen.
-  const [protocolTabSeen, setProtocolTabSeen] = useState(
-    activeTab === "aenderungsprotokoll",
-  );
-  useEffect(() => {
-    if (activeTab === "aenderungsprotokoll") setProtocolTabSeen(true);
-  }, [activeTab]);
-  // Same lazy mount as the full view: document listing may trigger interrupted
-  // upload cleanup, so it waits until this permitted tab is actually opened.
-  const [documentsTabSeen, setDocumentsTabSeen] = useState(
-    activeTab === "dokumente",
-  );
-  useEffect(() => {
-    if (activeTab === "dokumente") setDocumentsTabSeen(true);
-  }, [activeTab]);
   return (
     <>
       <StudentTabPanel
@@ -2105,12 +2080,10 @@ function LimitedAccessView({
         activeTab={activeTab}
         className={TAB_CONTENT_CLASS}
       >
-        {documentsTabSeen && (
-          <StudentDokumenteTab
-            studentId={studentId}
-            canRecordAccidents={canRecordAccidents}
-          />
-        )}
+        <StudentDokumenteTab
+          studentId={studentId}
+          canRecordAccidents={canRecordAccidents}
+        />
       </StudentTabPanel>
 
       {tabs.includes("aenderungsprotokoll") && (
@@ -2119,17 +2092,15 @@ function LimitedAccessView({
           activeTab={activeTab}
           className={TAB_CONTENT_CLASS}
         >
-          {protocolTabSeen && (
-            <SectionCard
-              title="Änderungsprotokoll"
-              description="Was sich an Buchungen, Betreuungszeiten, Stammdaten und Abwesenheiten dieses Kindes geändert hat"
-            >
-              <AggregatedRequestList
-                view="history"
-                filters={changeProtocolFilters}
-              />
-            </SectionCard>
-          )}
+          <SectionCard
+            title="Änderungsprotokoll"
+            description="Was sich an Buchungen, Betreuungszeiten, Stammdaten und Abwesenheiten dieses Kindes geändert hat"
+          >
+            <AggregatedRequestList
+              view="history"
+              filters={changeProtocolFilters}
+            />
+          </SectionCard>
         </StudentTabPanel>
       )}
 
@@ -2236,41 +2207,6 @@ function FullAccessView({
     error: enrollmentExtraError,
     reload: reloadEnrollmentExtra,
   } = useStudentEnrollmentExtraFields(studentId, true);
-  // Lazy-mount the Nachrichten tab: ParentMessagesCard runs the inbox-projection
-  // query (two correlated COUNT subqueries) on mount, and forceMount would fire
-  // it for every student-detail load even when staff never open the tab — paging
-  // 40 profiles = 40 such queries. Defer until the tab is first opened, then keep
-  // it mounted (forceMount) so revisits don't refetch.
-  const [messagesTabSeen, setMessagesTabSeen] = useState(
-    activeTab === "nachrichten",
-  );
-  useEffect(() => {
-    if (activeTab === "nachrichten") setMessagesTabSeen(true);
-  }, [activeTab]);
-  // Same deal for Dokumente (#777): the list request also sweeps for storage
-  // cleanup left over from an interrupted upload, so firing it on every
-  // student-detail load would put that work behind page views that never open
-  // the tab. Mount on first open, then keep it mounted so revisits don't refetch.
-  const [documentsTabSeen, setDocumentsTabSeen] = useState(
-    activeTab === "dokumente",
-  );
-  useEffect(() => {
-    if (activeTab === "dokumente") setDocumentsTabSeen(true);
-  }, [activeTab]);
-  // Das Änderungsprotokoll fragt fünf Historien-Quellen ab (#2437) — erst beim
-  // ersten Öffnen laden, danach gemountet lassen.
-  const [protocolTabSeen, setProtocolTabSeen] = useState(
-    activeTab === "aenderungsprotokoll",
-  );
-  useEffect(() => {
-    if (activeTab === "aenderungsprotokoll") setProtocolTabSeen(true);
-  }, [activeTab]);
-  // Ebenso die Kartei (#3632): die Stammdaten zeigen die dauerhaften Hinweise
-  // ohnehin: die volle Chronik lädt erst, wenn jemand den Reiter öffnet.
-  const [notesTabSeen, setNotesTabSeen] = useState(activeTab === "notizen");
-  useEffect(() => {
-    if (activeTab === "notizen") setNotesTabSeen(true);
-  }, [activeTab]);
   return (
     <>
       <StudentTabPanel
@@ -2322,7 +2258,7 @@ function FullAccessView({
         activeTab={activeTab}
         className={TAB_CONTENT_CLASS}
       >
-        {notesTabSeen && tabs.includes("notizen") ? (
+        {tabs.includes("notizen") ? (
           <StudentNotizenTab
             studentId={studentId}
             active={activeTab === "notizen"}
@@ -2337,7 +2273,7 @@ function FullAccessView({
         activeTab={activeTab}
         className={TAB_CONTENT_CLASS}
       >
-        {studentId && messagesTabSeen && tabs.includes("nachrichten") && (
+        {studentId && tabs.includes("nachrichten") && (
           <ParentMessagesCard
             studentId={studentId}
             studentName={student?.name}
@@ -2365,7 +2301,7 @@ function FullAccessView({
           activeTab={activeTab}
           className={TAB_CONTENT_CLASS}
         >
-          {/* forceMounted for deep-linking; `active` gates the SWR read so it
+          {/* `active` gates the SWR read so it
                 only fires when the tab is actually open. Only rendered with
                 schedules:read, so the timetable fetch never 403s. */}
           <CarePlanView
@@ -2421,13 +2357,11 @@ function FullAccessView({
         activeTab={activeTab}
         className={TAB_CONTENT_CLASS}
       >
-        {documentsTabSeen && (
-          <StudentDokumenteTab
-            studentId={studentId}
-            canRecordAccidents={canRecordAccidents}
-            showParentRecords={showParentRecords}
-          />
-        )}
+        <StudentDokumenteTab
+          studentId={studentId}
+          canRecordAccidents={canRecordAccidents}
+          showParentRecords={showParentRecords}
+        />
       </StudentTabPanel>
 
       {tabs.includes("aenderungsprotokoll") && (
@@ -2436,17 +2370,15 @@ function FullAccessView({
           activeTab={activeTab}
           className={TAB_CONTENT_CLASS}
         >
-          {protocolTabSeen && (
-            <SectionCard
-              title="Änderungsprotokoll"
-              description="Was sich an Buchungen, Betreuungszeiten, Stammdaten und Abwesenheiten dieses Kindes geändert hat"
-            >
-              <AggregatedRequestList
-                view="history"
-                filters={changeProtocolFilters}
-              />
-            </SectionCard>
-          )}
+          <SectionCard
+            title="Änderungsprotokoll"
+            description="Was sich an Buchungen, Betreuungszeiten, Stammdaten und Abwesenheiten dieses Kindes geändert hat"
+          >
+            <AggregatedRequestList
+              view="history"
+              filters={changeProtocolFilters}
+            />
+          </SectionCard>
         </StudentTabPanel>
       )}
 

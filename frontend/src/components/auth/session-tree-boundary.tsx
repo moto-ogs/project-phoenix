@@ -484,13 +484,9 @@ export function SessionTreeBoundary({
     [sessionMark.name],
   );
 
-  // The page may have been rendered with a cookie that changed before it
-  // arrived (the inline check below hid it): decided before the first paint
-  // of the hydrated page.
-  const initialCheck = useRef(false);
+  // Check before the first paint, both after hydration and when a router
+  // Activity reconnects this boundary's effects after hiding it.
   useLayoutEffect(() => {
-    if (initialCheck.current) return;
-    initialCheck.current = true;
     const now = readSessionMark(sessionMark.name);
     const root = document.documentElement;
     // The value the inline check saw before hydration: another session then

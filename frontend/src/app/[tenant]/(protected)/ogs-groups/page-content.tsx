@@ -1,5 +1,6 @@
 "use client";
 
+import { ParentAttentionList } from "~/components/students/parent-attention-badge";
 import type * as studentsContract from "~/lib/contract/students.generated";
 import { knownEnum } from "~/lib/contract/known-enum";
 import { DAY_PLANNING_STATUS_VALUES } from "~/lib/student-wire";
@@ -33,6 +34,7 @@ import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
+import { MountOnFirstOpen } from "~/components/ui/mount-on-first-open";
 import { OGS_GROUPS_LABEL } from "~/lib/ogs-groups-navigation";
 import {
   OverflowMenu,
@@ -308,25 +310,8 @@ function getOgsStudentDay(
   };
 }
 
-// Content equality for the group list — used to keep a stable array
-// reference across sync-effect runs that change nothing.
-function areOgsGroupsEqual(a: OGSGroup[], b: OGSGroup[]): boolean {
-  if (a.length !== b.length) return false;
-  return a.every((group, i) => {
-    const other = b[i];
-    return (
-      !!other &&
-      group.id === other.id &&
-      group.name === other.name &&
-      group.roomId === other.roomId &&
-      group.roomName === other.roomName &&
-      group.studentCount === other.studentCount &&
-      group.presentCount === other.presentCount &&
-      group.viaSubstitution === other.viaSubstitution &&
-      group.isPersonal === other.isPersonal
-    );
-  });
-}
+const NO_ROOM_STATUS: Record<string, studentsContract.RoomStatus> = {};
+const NO_PICKUP_TIMES = new Map<string, OgsPickupInfo>();
 
 /**
  * Gruppenreiter für die Kopfkarte. Bis zu vier Gruppen stehen einzeln; ab der
@@ -358,7 +343,7 @@ function OGSGroupPageContent() {
   });
   const memory = useSidebarMemory();
 
-  const { setGroupAttendanceCount } = useGroupAttendanceCounts();
+  const { counts, setGroupAttendanceCount } = useGroupAttendanceCounts();
   const canAdministerGroups = hasEffectiveAdminScope(session);
 
   // Only binary-mode tenants expose the web check-in toggle; in detailed
@@ -394,12 +379,6 @@ function OGSGroupPageContent() {
     void schoolCheckin.toggle(studentId, "anwesend", note, reason);
   });
 
-  // Check if user has access to OGS groups
-  const [hasAccess, setHasAccess] = useState<boolean | null>(null);
-
-  // State variables for multiple groups
-  const [allGroups, setAllGroups] = useState<OGSGroup[]>([]);
-
   // Pre-select group from URL param (?group=<id>)
   const groupParam = searchParams.get("group");
   const rememberedGroupKey = memory.key("sidebar-last-group");
@@ -418,22 +397,12 @@ function OGSGroupPageContent() {
     }
     return null;
   });
-  const [students, setStudents] = useState<Student[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [attendanceFilter, setAttendanceFilter] = useState("all");
-  const [isLoading, setIsLoading] = useState(true);
-  const [roomStatus, setRoomStatus] = useState<
-    Record<string, studentsContract.RoomStatus>
-  >({});
 
   // State for desktop detection (die Gruppenreiter gibt es nur unterhalb lg)
   // Dieselbe Grenze wie die Seitenleiste (`lg:` in rem, folgt der Browserschrift).
   const isDesktop = useMediaQuery(AT_LEAST_LG);
-
-  // State for pickup times (part of the aggregated live response)
-  const [pickupTimes, setPickupTimes] = useState<Map<string, OgsPickupInfo>>(
-    new Map(),
-  );
 
   // Sort mode for student list
   const [sortMode, setSortMode] = useState<"default" | "pickup" | "arrival">(
@@ -452,7 +421,6 @@ function OGSGroupPageContent() {
   // only occurs on a cold start without URL param or persisted selection.
   const {
     data: liveData,
-    isLoading: isLiveLoading,
     error: liveError,
     mutate: reloadLive,
   } = useSWRAuth<OgsLiveViewData>(
@@ -488,66 +456,65 @@ function OGSGroupPageContent() {
   // running again just because the account changed.
   const liveDataOwner = useArrivalOwner(liveData, memory.owner);
   const memoryRef = useLatest(memory);
+  const liveNoAccess =
+    liveError instanceof ApiError &&
+    wireErrorCode(liveError.code) === "general.permission";
 
-  // Sync the aggregated live data with local state. The response is
-  // self-describing (groupId says which group its live sections belong to),
-  // so a snapshot kept alive by keepPreviousData during a group switch can
-  // never overwrite the newly selected group's view.
+  const dataGroupId = liveData?.groupId;
+  const mappedStudents = useMemo(
+    () => liveData?.students.map(mapStudentForOgsPage) ?? [],
+    [liveData],
+  );
+  const presentCount = useMemo(
+    () => countCheckedInStudents(mappedStudents),
+    [mappedStudents],
+  );
+  const allGroups = useMemo<OGSGroup[]>(
+    () =>
+      (liveData?.groups ?? [])
+        .map((group) => ({
+          ...group,
+          studentCount:
+            group.id === dataGroupId
+              ? mappedStudents.length
+              : counts[group.id]?.total,
+          presentCount:
+            group.id === dataGroupId ? presentCount : counts[group.id]?.present,
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name, "de")),
+    [liveData, dataGroupId, mappedStudents.length, presentCount, counts],
+  );
+  const selectedGroupExists = allGroups.some(
+    (group) => group.id === selectedGroupId,
+  );
+  // A retained response can still supply the group tabs, but not another
+  // group's children while the requested group is loading.
+  const matching =
+    liveData && (!selectedGroupExists || selectedGroupId === dataGroupId)
+      ? liveData
+      : undefined;
+  const [lastDisplayed, setLastDisplayed] = useState(matching);
+  const displayed =
+    matching ??
+    (lastDisplayed?.groupId === selectedGroupId ? lastDisplayed : undefined);
+  const students = useMemo(
+    () =>
+      matching
+        ? mappedStudents
+        : (displayed?.students.map(mapStudentForOgsPage) ?? []),
+    [matching, mappedStudents, displayed],
+  );
+  const roomStatus = displayed?.roomStatus ?? NO_ROOM_STATUS;
+  const pickupTimes = displayed?.pickupTimes ?? NO_PICKUP_TIMES;
+
   useEffect(() => {
-    if (!liveData) return;
-
-    if (liveData.groups.length === 0) {
-      setHasAccess(false);
-      setIsLoading(false);
-      return;
+    if (liveNoAccess || matching) {
+      setLastDisplayed(liveNoAccess ? undefined : matching);
     }
+  }, [liveNoAccess, matching]);
 
-    setHasAccess(true);
-
-    const dataGroupId = liveData.groupId;
-    const mappedStudents = liveData.students.map(mapStudentForOgsPage);
-    const presentCount = countCheckedInStudents(mappedStudents);
-
-    // Convert groups to OGSGroup format, sorted alphabetically by name.
-    // Counts for groups other than the loaded one are carried over from the
-    // previous state so tab labels don't flicker to "no count" on refresh.
-    const ogsGroups: OGSGroup[] = liveData.groups
-      .map((group) => ({
-        id: group.id,
-        name: group.name,
-        roomName: group.roomName,
-        roomId: group.roomId,
-        studentCount: undefined as number | undefined,
-        presentCount: undefined as number | undefined,
-        supervisorName: undefined,
-        viaSubstitution: group.viaSubstitution,
-        isPersonal: group.isPersonal,
-      }))
-      .sort((a, b) => a.name.localeCompare(b.name, "de"));
-
-    for (const group of ogsGroups) {
-      if (group.id === dataGroupId) {
-        group.studentCount = mappedStudents.length;
-        group.presentCount = presentCount;
-      }
-    }
-    setAllGroups((previousGroups) => {
-      const next = ogsGroups.map((group) => {
-        if (group.id === dataGroupId) return group;
-        const previous = previousGroups.find((p) => p.id === group.id);
-        return previous
-          ? {
-              ...group,
-              studentCount: previous.studentCount,
-              presentCount: previous.presentCount,
-            }
-          : group;
-      });
-      // Keep the previous array reference when nothing changed: the URL/
-      // localStorage restore effect depends on allGroups, and a fresh array
-      // per sync run would re-fire it on every revalidation.
-      return areOgsGroupsEqual(previousGroups, next) ? previousGroups : next;
-    });
+  useEffect(() => {
+    if (!liveData || liveNoAccess || allGroups.length === 0) return;
     if (dataGroupId) {
       setGroupAttendanceCount(dataGroupId, {
         present: presentCount,
@@ -561,8 +528,6 @@ function OGSGroupPageContent() {
     // group the response was resolved for. Persist it immediately so the
     // localStorage-restore effect below agrees with the adopted selection and
     // never "switches back" to a different default.
-    const selectedGroupExists =
-      !!selectedGroupId && ogsGroups.some((g) => g.id === selectedGroupId);
     if (!selectedGroupExists) {
       // The cold-start `auto` response already is the complete projection for
       // dataGroupId. Seed that group-specific key before changing state so the
@@ -577,9 +542,9 @@ function OGSGroupPageContent() {
           revalidate: true,
         });
       }
-      setSelectedGroupId(dataGroupId);
+      setSelectedGroupId(dataGroupId ?? null);
       if (dataGroupId) {
-        const resolvedGroup = ogsGroups.find(
+        const resolvedGroup = allGroups.find(
           (group) => group.id === dataGroupId,
         );
         const pageMemory = memoryRef.current;
@@ -594,19 +559,16 @@ function OGSGroupPageContent() {
         }
       }
     }
-
-    // Apply the live sections only when they describe the group being viewed.
-    if (!selectedGroupExists || selectedGroupId === dataGroupId) {
-      setStudents(mappedStudents);
-      setRoomStatus(liveData.roomStatus);
-      setPickupTimes(liveData.pickupTimes);
-      setIsLoading(false);
-    }
   }, [
     liveData,
+    allGroups,
+    dataGroupId,
     liveDataOwner,
+    liveNoAccess,
+    mappedStudents.length,
     memoryRef,
-    selectedGroupId,
+    presentCount,
+    selectedGroupExists,
     setGroupAttendanceCount,
     tenantMutate,
   ]);
@@ -656,27 +618,11 @@ function OGSGroupPageContent() {
   // degrading sections to empty arrays, so any error here means the page must
   // show an error state — never a plausible-looking empty view. A refusal
   // (no group led) is the page's own "no group" view, identified by its code.
-  const liveNoAccess =
-    liveError instanceof ApiError &&
-    wireErrorCode(liveError.code) === "general.permission";
   const error = useSwrLoadError(
     liveNoAccess ? null : liveError,
     "die Liste deiner OGS-Gruppe",
     () => reloadLive(),
   );
-  useEffect(() => {
-    if (liveError) {
-      if (liveNoAccess) setHasAccess(false);
-      setIsLoading(false);
-    }
-  }, [liveError, liveNoAccess]);
-
-  // Derive loading state from SWR
-  useEffect(() => {
-    if (isLiveLoading && !liveData) {
-      setIsLoading(true);
-    }
-  }, [isLiveLoading, liveData]);
 
   // Get current selected group — derived from ID, stable across re-sorts
   const currentGroup = useMemo(
@@ -686,8 +632,8 @@ function OGSGroupPageContent() {
   );
   const groupTransfer = useGroupTransferModal(
     currentGroup,
-    liveData && liveData.groupId === currentGroup?.id
-      ? liveData.transfers
+    displayed && displayed.groupId === currentGroup?.id
+      ? displayed.transfers
       : EMPTY_GROUP_TRANSFERS,
   );
 
@@ -700,7 +646,7 @@ function OGSGroupPageContent() {
 
   // Tracking indicators come straight from the aggregated live response; they
   // are display-only and need no local state.
-  const trackingIndicators = liveData?.trackingIndicators;
+  const trackingIndicators = displayed?.trackingIndicators;
 
   // Ref to track current group without triggering unnecessary re-renders
   const currentGroupRef = useRef<OGSGroup | null>(null);
@@ -715,23 +661,23 @@ function OGSGroupPageContent() {
   // Function to switch between groups (by ID — stable across re-sorts).
   // Changing the selection changes the SWR key; the aggregated fetcher then
   // loads everything (students, room status, pickup times, transfers) in one
-  // request and the sync effect applies it.
+  // request.
   const switchToGroup = (groupId: string) => {
     if (groupId === selectedGroupId) return;
     if (!allGroups.some((g) => g.id === groupId)) return;
 
-    setIsLoading(true);
     setSelectedGroupId(groupId);
-    setStudents([]); // Clear current students
-    setRoomStatus({}); // Clear room status
-    setPickupTimes(new Map());
+    setLastDisplayed(undefined);
   };
 
-  // Apply filters to students (ensure students is an array)
-  const filteredStudents = (Array.isArray(students) ? students : []).filter(
-    (student) =>
-      matchesSearchFilter(student, searchTerm) &&
-      matchesAttendanceFilter(student, attendanceFilter, roomStatus),
+  const filteredStudents = useMemo(
+    () =>
+      students.filter(
+        (student) =>
+          matchesSearchFilter(student, searchTerm) &&
+          matchesAttendanceFilter(student, attendanceFilter, roomStatus),
+      ),
+    [students, searchTerm, attendanceFilter, roomStatus],
   );
 
   // Sort students based on selected sort mode
@@ -1078,10 +1024,10 @@ function OGSGroupPageContent() {
   // actions) renders immediately and only the student-grid area
   // skeletonizes. Permission/access early-returns below only run once
   // showSkeleton clears.
-  const showSkeleton = isLoading || hasAccess === null;
+  const showSkeleton = !displayed && !liveError;
 
   // If user doesn't have access, show empty state
-  if (!showSkeleton && !hasAccess) {
+  if (liveNoAccess || (liveData && allGroups.length === 0 && !liveError)) {
     return (
       <TenantPage
         title={OGS_GROUPS_LABEL}
@@ -1169,207 +1115,214 @@ function OGSGroupPageContent() {
     if (sortedStudents.length > 0) {
       return (
         <div>
-          <CollectionGrid>
-            {sortedStudents.map((student) => {
-              const inGroupRoom = isStudentInGroupRoom(student, currentGroup);
-              const studentPickup = pickupTimes.get(student.id.toString());
-              const studentAbsence = getStudentAbsence({
-                sick: student.sick,
-                classTrip: student.class_trip,
-                excused: student.excused,
-                currentLocation: student.current_location,
-              });
+          <ParentAttentionList>
+            <CollectionGrid>
+              {sortedStudents.map((student) => {
+                const inGroupRoom = isStudentInGroupRoom(student, currentGroup);
+                const studentPickup = pickupTimes.get(student.id.toString());
+                const studentAbsence = getStudentAbsence({
+                  sick: student.sick,
+                  classTrip: student.class_trip,
+                  excused: student.excused,
+                  currentLocation: student.current_location,
+                });
 
-              const checkinState = deriveCheckinState(student.current_location);
-              const studentIdStr = student.id.toString();
-              const isGroupCardCheckinMode =
-                offersCheckinMode && schoolCheckin.isActive;
-              return (
-                <StudentCard
-                  key={student.id}
-                  studentId={student.id}
-                  firstName={student.first_name}
-                  lastName={student.second_name}
-                  photoUrl={student.photo_url ?? null}
-                  onClick={() =>
-                    router.push(`/students/${student.id}?from=/ogs-groups`)
-                  }
-                  checkinMode={isGroupCardCheckinMode}
-                  checkinState={checkinState}
-                  isCheckinPending={schoolCheckin.pendingIds.has(studentIdStr)}
-                  dayHomeChange={dayHomeChange(ogsStudentDay(student))}
-                  onCheckinClick={() => {
-                    if (
-                      checkinState !== "abwesend" &&
-                      checkinState !== "unknown" &&
-                      earlyCheckout.request({
-                        studentId: studentIdStr,
-                        studentName:
-                          `${student.first_name} ${student.second_name}`.trim(),
-                        plannedPickup: studentPickup?.pickupTime,
-                        room: null,
-                      })
-                    ) {
-                      return;
+                const checkinState = deriveCheckinState(
+                  student.current_location,
+                );
+                const studentIdStr = student.id.toString();
+                const isGroupCardCheckinMode =
+                  offersCheckinMode && schoolCheckin.isActive;
+                return (
+                  <StudentCard
+                    key={student.id}
+                    studentId={student.id}
+                    firstName={student.first_name}
+                    lastName={student.second_name}
+                    photoUrl={student.photo_url ?? null}
+                    onClick={() =>
+                      router.push(`/students/${student.id}?from=/ogs-groups`)
                     }
-                    void schoolCheckin.toggle(studentIdStr, checkinState);
-                  }}
-                  locationBadge={
-                    <StudentPresenceBadge
-                      student={student}
-                      displayMode="roomName"
-                      isGroupRoom={inGroupRoom}
-                      variant="modern"
-                      size="md"
-                      showLocationSince={isInClassLocation(
-                        student.current_location,
-                      )}
-                    />
-                  }
-                  extraContent={
-                    <>
-                      {student.school_class === HOLIDAY_GUEST_SCHOOL_CLASS && (
-                        <StudentInfoRow icon={<SchoolClassIcon />}>
-                          {holidayGuestLabel(student)}
-                        </StudentInfoRow>
-                      )}
-                      {student.pending_excused_note !== undefined && (
-                        <StudentPendingExcusedRow
-                          note={student.pending_excused_note}
-                        />
-                      )}
-                      {student.class_handover &&
-                        (student.class_handover.absent ? (
-                          <StudentAbsenceRow
-                            wording={HANDOVER_ABSENT_WORDING}
-                            label={handoverDetail(student.class_handover)}
-                          />
-                        ) : (
+                    checkinMode={isGroupCardCheckinMode}
+                    checkinState={checkinState}
+                    isCheckinPending={schoolCheckin.pendingIds.has(
+                      studentIdStr,
+                    )}
+                    dayHomeChange={dayHomeChange(ogsStudentDay(student))}
+                    onCheckinClick={() => {
+                      if (
+                        checkinState !== "abwesend" &&
+                        checkinState !== "unknown" &&
+                        earlyCheckout.request({
+                          studentId: studentIdStr,
+                          studentName:
+                            `${student.first_name} ${student.second_name}`.trim(),
+                          plannedPickup: studentPickup?.pickupTime,
+                          room: null,
+                        })
+                      ) {
+                        return;
+                      }
+                      void schoolCheckin.toggle(studentIdStr, checkinState);
+                    }}
+                    locationBadge={
+                      <StudentPresenceBadge
+                        student={student}
+                        displayMode="roomName"
+                        isGroupRoom={inGroupRoom}
+                        variant="modern"
+                        size="md"
+                        showLocationSince={isInClassLocation(
+                          student.current_location,
+                        )}
+                      />
+                    }
+                    extraContent={
+                      <>
+                        {student.school_class ===
+                          HOLIDAY_GUEST_SCHOOL_CLASS && (
                           <StudentInfoRow icon={<SchoolClassIcon />}>
-                            {handoverLine(student.class_handover)}
+                            {holidayGuestLabel(student)}
+                          </StudentInfoRow>
+                        )}
+                        {student.pending_excused_note !== undefined && (
+                          <StudentPendingExcusedRow
+                            note={student.pending_excused_note}
+                          />
+                        )}
+                        {student.class_handover &&
+                          (student.class_handover.absent ? (
+                            <StudentAbsenceRow
+                              wording={HANDOVER_ABSENT_WORDING}
+                              label={handoverDetail(student.class_handover)}
+                            />
+                          ) : (
+                            <StudentInfoRow icon={<SchoolClassIcon />}>
+                              {handoverLine(student.class_handover)}
+                            </StudentInfoRow>
+                          ))}
+                        {(student.teacher_hints ?? []).map((hint) => (
+                          <StudentInfoRow
+                            key={teacherHintKey(hint)}
+                            icon={
+                              <StickyNote
+                                className="h-3.5 w-3.5 text-gray-500"
+                                aria-hidden="true"
+                              />
+                            }
+                            wrap
+                          >
+                            {teacherHintText(hint)}
                           </StudentInfoRow>
                         ))}
-                      {(student.teacher_hints ?? []).map((hint) => (
-                        <StudentInfoRow
-                          key={teacherHintKey(hint)}
-                          icon={
-                            <StickyNote
-                              className="h-3.5 w-3.5 text-gray-500"
-                              aria-hidden="true"
-                            />
-                          }
-                          wrap
-                        >
-                          {teacherHintText(hint)}
-                        </StudentInfoRow>
-                      ))}
-                      {studentAbsence && !student.actual_pickup_time ? (
-                        <StudentAbsenceRow
-                          label={studentAbsence.label}
-                          note={combineTimeNotes(
-                            studentPickup?.notes,
-                            studentPickup?.dayNotes,
-                          )}
-                        />
-                      ) : (
-                        (() => {
-                          const dayPlanningNotComingLabel =
-                            getDayPlanningNotComingLabel(student);
-                          if (
-                            dayPlanningNotComingLabel &&
-                            !student.actual_pickup_time
-                          ) {
-                            return (
-                              <StudentAbsenceRow
-                                label={dayPlanningNotComingLabel}
-                                note={combineTimeNotes(
-                                  studentPickup?.notes,
-                                  studentPickup?.dayNotes,
-                                )}
-                              />
-                            );
-                          }
-                          const day = getOgsStudentDay(student, pickupTimes);
-                          const arrivalAbsent =
-                            (student.arrival_is_exception ?? false) &&
-                            !student.arrival_time;
-                          // As in day planning, attendance (including a return
-                          // to class) takes precedence over absence exceptions.
-                          const notHereToday =
-                            !hasActualAttendance(student) &&
-                            !isInClassLocation(student.current_location) &&
-                            (arrivalAbsent ||
-                              ((studentPickup?.isException ?? false) &&
-                                !studentPickup?.pickupTime &&
-                                !student.actual_pickup_time));
-                          return (
-                            <>
-                              <ArrivalTimeRow
-                                arrivalTime={student.arrival_time}
-                                actualTime={student.actual_arrival_time}
-                                isException={
-                                  student.arrival_is_exception ?? false
-                                }
-                                isAbsent={arrivalAbsent}
-                                notes={student.arrival_notes}
-                                now={now}
-                                day={day}
-                                prominent
-                              />
-                              {/* Tagesablauf (#6487): Kommen, Angebote, Gehen. */}
-                              {notHereToday ? null : (
-                                <PlannedActivityRows
-                                  activities={student.planned_activities}
+                        {studentAbsence && !student.actual_pickup_time ? (
+                          <StudentAbsenceRow
+                            label={studentAbsence.label}
+                            note={combineTimeNotes(
+                              studentPickup?.notes,
+                              studentPickup?.dayNotes,
+                            )}
+                          />
+                        ) : (
+                          (() => {
+                            const dayPlanningNotComingLabel =
+                              getDayPlanningNotComingLabel(student);
+                            if (
+                              dayPlanningNotComingLabel &&
+                              !student.actual_pickup_time
+                            ) {
+                              return (
+                                <StudentAbsenceRow
+                                  label={dayPlanningNotComingLabel}
+                                  note={combineTimeNotes(
+                                    studentPickup?.notes,
+                                    studentPickup?.dayNotes,
+                                  )}
                                 />
-                              )}
-                              <PickupTimeRow
-                                pickupTime={studentPickup?.pickupTime}
-                                actualTime={student.actual_pickup_time}
-                                isException={
-                                  studentPickup?.isException ?? false
-                                }
-                                notes={
-                                  studentPickup
-                                    ? combineTimeNotes(
-                                        studentPickup.notes,
-                                        studentPickup.dayNotes,
-                                      )
-                                    : undefined
-                                }
-                                now={now}
-                                day={day}
-                                prominent
-                              />
-                            </>
-                          );
-                        })()
-                      )}
-                      {/* Check-in-only avatar-clearance spacer — in navigation
+                              );
+                            }
+                            const day = getOgsStudentDay(student, pickupTimes);
+                            const arrivalAbsent =
+                              (student.arrival_is_exception ?? false) &&
+                              !student.arrival_time;
+                            // As in day planning, attendance (including a return
+                            // to class) takes precedence over absence exceptions.
+                            const notHereToday =
+                              !hasActualAttendance(student) &&
+                              !isInClassLocation(student.current_location) &&
+                              (arrivalAbsent ||
+                                ((studentPickup?.isException ?? false) &&
+                                  !studentPickup?.pickupTime &&
+                                  !student.actual_pickup_time));
+                            return (
+                              <>
+                                <ArrivalTimeRow
+                                  arrivalTime={student.arrival_time}
+                                  actualTime={student.actual_arrival_time}
+                                  isException={
+                                    student.arrival_is_exception ?? false
+                                  }
+                                  isAbsent={arrivalAbsent}
+                                  notes={student.arrival_notes}
+                                  now={now}
+                                  day={day}
+                                  prominent
+                                />
+                                {/* Tagesablauf (#6487): Kommen, Angebote, Gehen. */}
+                                {notHereToday ? null : (
+                                  <PlannedActivityRows
+                                    activities={student.planned_activities}
+                                  />
+                                )}
+                                <PickupTimeRow
+                                  pickupTime={studentPickup?.pickupTime}
+                                  actualTime={student.actual_pickup_time}
+                                  isException={
+                                    studentPickup?.isException ?? false
+                                  }
+                                  notes={
+                                    studentPickup
+                                      ? combineTimeNotes(
+                                          studentPickup.notes,
+                                          studentPickup.dayNotes,
+                                        )
+                                      : undefined
+                                  }
+                                  now={now}
+                                  day={day}
+                                  prominent
+                                />
+                              </>
+                            );
+                          })()
+                        )}
+                        {/* Check-in-only avatar-clearance spacer — in navigation
                           mode this surface now opts into an in-flow bottom row
                           (hint + avatar), so the card grows naturally. The
                           spacer remains necessary only for check-in mode,
                           where the hint disappears and the avatar still sits
                           as an absolute overlay. aria-hidden keeps screen
                           readers from announcing the empty box. */}
-                      {isGroupCardCheckinMode &&
-                      photosEnabled &&
-                      (trackingIndicators?.labels.length ?? 0) > 0 ? (
-                        <div aria-hidden className="h-9" />
-                      ) : null}
-                    </>
-                  }
-                  trackingIndicators={
-                    trackingIndicators?.labels.length ? (
-                      <TrackingIndicators
-                        labels={trackingIndicators.labels}
-                        results={trackingIndicators.results[student.id] ?? []}
-                      />
-                    ) : undefined
-                  }
-                />
-              );
-            })}
-          </CollectionGrid>
+                        {isGroupCardCheckinMode &&
+                        photosEnabled &&
+                        (trackingIndicators?.labels.length ?? 0) > 0 ? (
+                          <div aria-hidden className="h-9" />
+                        ) : null}
+                      </>
+                    }
+                    trackingIndicators={
+                      trackingIndicators?.labels.length ? (
+                        <TrackingIndicators
+                          labels={trackingIndicators.labels}
+                          results={trackingIndicators.results[student.id] ?? []}
+                        />
+                      ) : undefined
+                    }
+                  />
+                );
+              })}
+            </CollectionGrid>
+          </ParentAttentionList>
         </div>
       );
     }
@@ -1526,24 +1479,26 @@ function OGSGroupPageContent() {
           <>
             {earlyCheckout.dialog}
             {/* Group Transfer Modal */}
-            <GroupTransferModal
-              isOpen={groupTransfer.open}
-              onClose={() => groupTransfer.setOpen(false)}
-              group={
-                currentGroup
-                  ? {
-                      id: currentGroup.id,
-                      name: currentGroup.name,
-                      studentCount: currentGroup.studentCount,
-                    }
-                  : null
-              }
-              availableUsers={groupTransfer.users}
-              loadError={groupTransfer.loadError}
-              onTransfer={groupTransfer.transfer}
-              existingTransfers={groupTransfer.transfers}
-              onCancelTransfer={groupTransfer.cancel}
-            />
+            <MountOnFirstOpen open={groupTransfer.open}>
+              <GroupTransferModal
+                isOpen={groupTransfer.open}
+                onClose={() => groupTransfer.setOpen(false)}
+                group={
+                  currentGroup
+                    ? {
+                        id: currentGroup.id,
+                        name: currentGroup.name,
+                        studentCount: currentGroup.studentCount,
+                      }
+                    : null
+                }
+                availableUsers={groupTransfer.users}
+                loadError={groupTransfer.loadError}
+                onTransfer={groupTransfer.transfer}
+                existingTransfers={groupTransfer.transfers}
+                onCancelTransfer={groupTransfer.cancel}
+              />
+            </MountOnFirstOpen>
           </>
         }
       >

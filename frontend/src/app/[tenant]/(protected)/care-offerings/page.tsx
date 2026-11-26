@@ -17,11 +17,12 @@ import { readTenantPageContext } from "~/lib/tenant-page-seed.server";
 import PageContent from "./page-content";
 import { CareOfferingsSeed } from "./page-seed";
 
-async function loadSeed(slug: string, builtAt: number) {
+async function loadSeed(slug: string) {
   const context = await readTenantPageContext(slug, "online_anmeldung").catch(
     () => null,
   );
   if (!context || !hasPermission(context.session, "config:manage")) return null;
+  const builtAt = Date.now();
   const { snapshot, session, token } = context;
   const phases = seedRead("GET /api/enrollment/phases/", async (signal) => {
     const { data } = await readContract(routes["GET /api/enrollment/phases/"], {
@@ -101,7 +102,7 @@ export default async function CareOfferingsPage({
 }) {
   const { tenant } = await params;
   return (
-    <CareOfferingsSeed seed={loadSeed(tenant, Date.now())}>
+    <CareOfferingsSeed seed={loadSeed(tenant)}>
       <PageContent />
     </CareOfferingsSeed>
   );

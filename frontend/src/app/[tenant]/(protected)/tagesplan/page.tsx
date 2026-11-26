@@ -7,6 +7,8 @@ import { mapPlannedInstance } from "~/lib/timetable-operations-types";
 import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 import PageContent from "./page-content";
 
+export const unstable_dynamicStaleTime = 60;
+
 export default async function TagesplanPage({
   params,
   searchParams,

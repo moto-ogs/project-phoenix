@@ -1086,8 +1086,8 @@ html[data-chat-page-lock] body {
 }
 
 /* Fortschrittsbalken für Seitenwechsel (#2828). Liegt fest über der
-   Kopfzeile, verschiebt nichts und erscheint erst nach 150 ms — schnelle
-   Wechsel bleiben dadurch unsichtbar. Nur Kompositor-Eigenschaften. */
+   Kopfzeile und verschiebt nichts. Der Anbieter zeigt ihn erst nach 150 ms.
+   Nur Kompositor-Eigenschaften. */
 .moto-nav-progress {
   position: fixed;
   inset-inline: 0;
@@ -1098,7 +1098,7 @@ html[data-chat-page-lock] body {
   background-color: var(--color-moto-green);
   transform-origin: left center;
   opacity: 0;
-  animation: moto-nav-progress 6s cubic-bezier(0, 0.65, 0.25, 1) 150ms forwards;
+  animation: moto-nav-progress 6s cubic-bezier(0, 0.65, 0.25, 1) forwards;
 }
 
 @keyframes moto-nav-progress {
@@ -1121,7 +1121,7 @@ html[data-chat-page-lock] body {
 @media (prefers-reduced-motion: reduce) {
   .moto-nav-progress {
     transform: scaleX(1);
-    animation: moto-nav-progress-static 0s linear 150ms forwards;
+    animation: moto-nav-progress-static 0s linear forwards;
   }
 }
 

@@ -32,9 +32,9 @@ export async function loadStudentSearchSeed(
   slug: string,
   params: URLSearchParams,
 ) {
-  const builtAt = Date.now();
   const context = await readTenantPageContext(slug);
   if (!context || !canReadStudents(context.session)) return null;
+  const builtAt = Date.now();
   const { snapshot, token, session, tenant } = context;
   const initial = initialStudentSearch(
     params,

@@ -47,6 +47,7 @@ import { hasEffectiveAdminScope, hasPermission } from "~/lib/auth-utils";
 import { calendarPeriodService } from "~/lib/calendar-period-api";
 import { isValidISODate, parseISODate, toISODate } from "~/lib/date-helpers";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
+import { useAfterInitialPaint } from "~/lib/hooks/use-after-initial-paint";
 import { useClosingDaysState } from "~/lib/hooks/use-closing-days";
 import { usePlanningHolidayWeeks } from "~/lib/hooks/use-holiday-care";
 import { holidayCareDays } from "~/lib/holiday-care";
@@ -100,6 +101,7 @@ interface ModalState {
 }
 
 function DienstplanContent() {
+  const showHours = useAfterInitialPaint();
   const { data: session, status: sessionStatus } = useSession({
     required: true,
     onUnauthenticated() {
@@ -558,7 +560,7 @@ function DienstplanContent() {
         />
         {/* Stunden je Schichtart (#3819): dieselben Wochensummen wie im
             Zeilenkopf, aufgeteilt. Im reduzierten Pfad gibt es keine. */}
-        {!reducedPath && (
+        {!reducedPath && showHours && (
           <DienstplanHoursCard
             staff={sortedStaff}
             summaryByStaff={summaryByStaff}

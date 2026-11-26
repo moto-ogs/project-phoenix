@@ -13,7 +13,6 @@ import MealBillingContent from "./page-content";
 import { MealBillingSeed } from "./page-seed";
 
 async function loadMealBillingSeed(slug: string) {
-  const builtAt = Date.now();
   const context = await readTenantPageContext(slug, "mittagessen");
   if (!context || context.tenant.mealRegistrationEnabled !== true) return null;
   const { token, session, snapshot } = context;
@@ -25,6 +24,7 @@ async function loadMealBillingSeed(slug: string) {
     )
   )
     return null;
+  const builtAt = Date.now();
   const months = seedRead("mealBillingMonths", async (signal) =>
     (
       await readContract(routes["GET /api/meal-billing-months/"], {

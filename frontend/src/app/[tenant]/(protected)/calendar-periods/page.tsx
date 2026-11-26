@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import { TenantRouteSeed } from "../tenant-route-seed";
 import { readContract, seedRead } from "~/lib/server-seed.server";
 import { routes } from "~/lib/contract/timetable.generated";
@@ -26,6 +27,7 @@ export default async function CalendarPeriodsPage({
   params: Promise<{ tenant: string }>;
 }) {
   const { tenant } = await params;
+  await connection();
   const today = berlinTodayISO();
   return (
     <TenantRouteSeed

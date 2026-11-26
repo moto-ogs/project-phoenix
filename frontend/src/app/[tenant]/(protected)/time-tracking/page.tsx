@@ -3,6 +3,8 @@ import TimeTrackingContent, { TimeTrackingPageSkeleton } from "./page-content";
 import { loadTimeTrackingSeed } from "./page-seed.server";
 import { TimeTrackingSeed } from "./page-seed";
 
+export const unstable_dynamicStaleTime = 60;
+
 export default async function TimeTrackingPage({
   params,
 }: {

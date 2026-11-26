@@ -79,6 +79,7 @@ const mockPush = vi.fn();
 const mockReplace = vi.fn();
 const mockRedirect = vi.fn();
 vi.mock("next/navigation", () => ({
+  usePathname: () => "/active-supervisions",
   useRouter: () => ({ push: mockPush, replace: mockReplace }),
   useSearchParams: () => ({
     get: (key: string) =>

@@ -5,6 +5,7 @@
 // the person may pull children from other rooms, present children can come
 // along in the same step.
 
+import { ParentAttentionList } from "~/components/students/parent-attention-badge";
 import { useMemo, useRef, useState } from "react";
 import { DoorOpen } from "lucide-react";
 
@@ -283,53 +284,55 @@ export function RoomCheckinDialog({
             }
           />
         ) : (
-          <FramedList
-            maxHeight="lg"
-            header={
-              <span className="text-xs text-gray-600 tabular-nums">
-                {absentCount} abwesend
-                {canPullPresent
-                  ? ` · ${candidates.length - absentCount} schon anwesend`
-                  : ""}
-              </span>
-            }
-          >
-            {visible.map((candidate) => {
-              const id = candidate.student.id;
-              const checked = selected.has(id);
-              return (
-                <ChoiceTile
-                  key={id}
-                  as="label"
-                  htmlFor={`room-checkin-${id}`}
-                  selected={checked}
-                  tone="green"
-                  className="gap-3 rounded-none border-0"
-                >
-                  <Checkbox
-                    id={`room-checkin-${id}`}
-                    checked={checked}
-                    onChange={() => toggle(id)}
-                    disabled={saving}
-                  />
-                  <span className="min-w-0 flex-1">
-                    <CompactStudentCard
-                      studentId={id}
-                      firstName={candidate.student.first_name}
-                      lastName={candidate.student.second_name}
-                      schoolClass={candidate.student.school_class}
-                      groupName={candidate.student.group_name ?? undefined}
-                      photoUrl={candidate.student.photo_url ?? null}
-                      chrome="plain"
+          <ParentAttentionList>
+            <FramedList
+              maxHeight="lg"
+              header={
+                <span className="text-xs text-gray-600 tabular-nums">
+                  {absentCount} abwesend
+                  {canPullPresent
+                    ? ` · ${candidates.length - absentCount} schon anwesend`
+                    : ""}
+                </span>
+              }
+            >
+              {visible.map((candidate) => {
+                const id = candidate.student.id;
+                const checked = selected.has(id);
+                return (
+                  <ChoiceTile
+                    key={id}
+                    as="label"
+                    htmlFor={`room-checkin-${id}`}
+                    selected={checked}
+                    tone="green"
+                    className="gap-3 rounded-none border-0"
+                  >
+                    <Checkbox
+                      id={`room-checkin-${id}`}
+                      checked={checked}
+                      onChange={() => toggle(id)}
+                      disabled={saving}
                     />
-                  </span>
-                  <span className="shrink-0 text-xs text-gray-600">
-                    {candidate.where}
-                  </span>
-                </ChoiceTile>
-              );
-            })}
-          </FramedList>
+                    <span className="min-w-0 flex-1">
+                      <CompactStudentCard
+                        studentId={id}
+                        firstName={candidate.student.first_name}
+                        lastName={candidate.student.second_name}
+                        schoolClass={candidate.student.school_class}
+                        groupName={candidate.student.group_name ?? undefined}
+                        photoUrl={candidate.student.photo_url ?? null}
+                        chrome="plain"
+                      />
+                    </span>
+                    <span className="shrink-0 text-xs text-gray-600">
+                      {candidate.where}
+                    </span>
+                  </ChoiceTile>
+                );
+              })}
+            </FramedList>
+          </ParentAttentionList>
         )}
       </div>
     </Modal>

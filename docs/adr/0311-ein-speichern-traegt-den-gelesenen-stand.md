@@ -76,8 +76,10 @@ Variante 3.
   Leseschlüssel mit einem Seed füllen (#8077, #8079). Der Seed gehört zur
   frischen Portal-Sitzung mit ihrem Schul- bzw. Trägerkontext. Er ersetzt
   keinen neueren Stand. Ohne brauchbaren Seed lädt derselbe Leser normal
-  nach. Protokollierte Öffnungen, GETs mit Seiteneffekt und Schreibvorschauen
-  bleiben an die jeweilige Aktion gebunden, auch wenn der Link vorgeladen wird.
+  nach. Beim warmen Seitenwechsel zeigt die neutrale Hülle gültige SWR-Daten
+  derselben Sitzung, ohne auf den neuen Seed zu warten (#8083). Protokollierte
+  Öffnungen, GETs mit Seiteneffekt und Schreibvorschauen bleiben auch beim
+  Wiederanzeigen durch React Activity an die jeweilige Aktion gebunden.
 - `useFreshSWR` gilt nur noch als Übergang. Jede Stelle wird nach Punkt 1, 2
   oder 5 eingeordnet und umgestellt; danach bleibt nur das Lesen bei jedem
   Öffnen für protokollierte Zugriffe.

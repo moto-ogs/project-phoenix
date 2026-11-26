@@ -6,9 +6,6 @@ import { problemResponse } from "~/lib/api-response-error.server";
 
 const logger = createLogger({ component: "SSEEventsRoute" });
 
-// REQUIRED for streaming - must use Node.js runtime
-export const runtime = "nodejs";
-
 /**
  * SSE (Server-Sent Events) proxy endpoint for the tenant/staff portal.
  *
