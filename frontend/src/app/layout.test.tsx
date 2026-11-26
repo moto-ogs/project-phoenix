@@ -5,6 +5,7 @@ import { RootDocument } from "./root-document";
 
 const headerState = vi.hoisted(() => ({
   host: "moto-app.de",
+  contrastCookie: undefined as string | undefined,
 }));
 
 vi.mock("next/font/local", () => ({
@@ -20,6 +21,13 @@ vi.mock("next/headers", () => ({
       get: (name: string) =>
         name.toLowerCase() === "host" ? headerState.host : null,
     }),
+  cookies: () =>
+    Promise.resolve({
+      get: (name: string) =>
+        name === "moto_contrast" && headerState.contrastCookie
+          ? { value: headerState.contrastCookie }
+          : undefined,
+    }),
 }));
 
 const navigationState = vi.hoisted(() => ({ pathname: "/" }));
@@ -30,8 +38,16 @@ vi.mock("next/navigation", () => ({
 
 // Mock child components
 vi.mock("./providers", () => ({
-  Providers: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="providers">{children}</div>
+  Providers: ({
+    children,
+    moreContrast,
+  }: {
+    children: React.ReactNode;
+    moreContrast?: boolean;
+  }) => (
+    <div data-more-contrast={moreContrast} data-testid="providers">
+      {children}
+    </div>
   ),
 }));
 
@@ -44,6 +60,7 @@ vi.mock("~/components/background-wrapper", () => ({
 describe("RootLayout", () => {
   beforeEach(() => {
     headerState.host = "moto-app.de";
+    headerState.contrastCookie = undefined;
     navigationState.pathname = "/";
     vi.stubEnv("NEXT_PUBLIC_OPERATOR_HOSTNAME", "operator.moto-app.de");
     vi.stubEnv("NEXT_PUBLIC_PARENTS_HOSTNAME", "eltern.moto-app.de");
@@ -73,6 +90,19 @@ describe("RootLayout", () => {
     // Verify both wrapper components are present
     expect(getByTestId("providers")).toBeInTheDocument();
     expect(getByTestId("background-wrapper")).toBeInTheDocument();
+  });
+
+  it("passes the contrast cookie to the document and client providers", async () => {
+    headerState.contrastCookie = "more";
+
+    const documentElement = await RootDocument({ children: <div>Test</div> });
+    const { getByTestId } = render(documentElement);
+
+    expect(documentElement.props["data-contrast"]).toBe("more");
+    expect(getByTestId("providers")).toHaveAttribute(
+      "data-more-contrast",
+      "true",
+    );
   });
 
   // #7109: the title names the page and the portal of the host.
