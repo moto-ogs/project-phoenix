@@ -16,7 +16,7 @@ import (
 
 const (
 	recordCriteriaQuery = `SELECT DISTINCT criterion.id, criterion.name, criterion.question, criterion.scope,
-			(criterion.active AND criterion.archived_at IS NULL) AS active, criterion.position,
+			(criterion.active AND criterion.archived_at IS NULL) AS active, criterion.position, criterion.points,
 			(answer.criterion_id IS NOT NULL) AS answered
 		FROM enrollment.holiday_allocation_criteria AS criterion
 		LEFT JOIN enrollment.holiday_registration_criteria AS answer
@@ -56,7 +56,7 @@ func (s *HolidayRegistrationStore) ReadHolidayRecordCriteria(ctx context.Context
 	}
 	criteria := make([]enrollment.HolidayCriterion, len(rows))
 	for i, row := range rows {
-		criteria[i] = enrollment.HolidayCriterion(row)
+		criteria[i] = row.criterion()
 	}
 	return criteria, nil
 }

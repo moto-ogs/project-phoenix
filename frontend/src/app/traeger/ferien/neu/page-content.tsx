@@ -19,7 +19,8 @@ export default function NewTraegerHolidayPeriodPage() {
   const invalidate = useInvalidateFamily();
   const { schools, error } = useTraegerSchools();
   const listHref = traegerPath("/traeger/ferien");
-  const criteria = useTraegerHolidayCriteria().data?.criteria;
+  const criteriaRead = useTraegerHolidayCriteria().data;
+  const criteria = criteriaRead?.criteria;
 
   return (
     <TenantPage
@@ -36,6 +37,7 @@ export default function NewTraegerHolidayPeriodPage() {
           calendar={holidayCalendar}
           schools={schools}
           criteria={criteria}
+          criteriaRanking={criteriaRead?.ranking}
           onCancel={() => router.push(listHref)}
           onSaved={(period) => {
             void invalidate(traegerKeys.periodsFamily);

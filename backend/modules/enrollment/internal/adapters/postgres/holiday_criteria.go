@@ -22,59 +22,82 @@ import (
 // in the Träger transaction of the Träger it names and names it once more in
 // its filter, below the Träger policy.
 
-// The sort key of a booking by the criteria of its period (#4700) is one
-// flag per active criterion in the order of their priority, false when the
-// answer that counts (the Büro's check, else the parents' statement) says
-// yes. Arrays sort element by element, so a booking that meets a criterion
-// of higher priority comes first; an unknown answer counts as not met. A
-// period by arrival has the empty key, which keeps the order of arrival
-// (#4699). The surrounding statement names the registration "registration";
-// holidayCriteriaOrderHead + <alias of the child> + holidayCriteriaOrderTail
-// is the key.
+// The integer array sort key compares active criteria in catalog order in
+// priority mode, or sorts by descending count or points. The Büro's check
+// overrides the parents' statement; an unknown answer is not met. An arrival
+// period or an empty active catalog has no criterion sort key. The surrounding
+// statement names the registration "registration" and supplies the child alias.
 const (
-	holidayCriteriaOrderHead = `(SELECT COALESCE(
-			array_agg(NOT COALESCE(answer.checked, answer.stated, false) ORDER BY criterion.position, criterion.id), '{}'::boolean[])
-		FROM enrollment.holiday_periods AS ordered_period
-		JOIN enrollment.holiday_allocation_criteria AS criterion
-			ON criterion.organization_id = ordered_period.organization_id AND criterion.active AND criterion.archived_at IS NULL
-		LEFT JOIN enrollment.holiday_registration_criteria AS answer
-			ON answer.organization_id = criterion.organization_id AND answer.criterion_id = criterion.id
-			AND answer.holiday_registration_id = registration.id
-			AND answer.holiday_registration_child_id IS NOT DISTINCT FROM (CASE WHEN criterion.scope = 'child' THEN `
+	holidayCriteriaOrderHead = `(SELECT CASE
+   WHEN count(*) = 0 THEN '{}'::int[]
+   ELSE CASE COALESCE(max(rules.criteria_ranking), 'priority')
+    WHEN 'equal' THEN ARRAY[-(count(*) FILTER (WHERE effective.met))::int]
+    WHEN 'points' THEN ARRAY[-COALESCE(sum(criterion.points) FILTER (WHERE effective.met), 0)::int]
+    ELSE array_agg(CASE WHEN effective.met THEN 0 ELSE 1 END ORDER BY criterion.position, criterion.id)
+   END END
+  FROM enrollment.holiday_periods AS ordered_period
+  JOIN enrollment.holiday_allocation_criteria AS criterion
+   ON criterion.organization_id = ordered_period.organization_id AND criterion.active AND criterion.archived_at IS NULL
+  LEFT JOIN enrollment.holiday_allocation_rules AS rules ON rules.organization_id = ordered_period.organization_id
+  LEFT JOIN enrollment.holiday_registration_criteria AS answer
+   ON answer.organization_id = criterion.organization_id AND answer.criterion_id = criterion.id
+   AND answer.holiday_registration_id = registration.id
+   AND answer.holiday_registration_child_id IS NOT DISTINCT FROM (CASE WHEN criterion.scope = 'child' THEN `
 	holidayCriteriaOrderTail = `.id END)
-		WHERE ordered_period.organization_id = registration.organization_id AND ordered_period.id = registration.holiday_period_id
-			AND ordered_period.allocation_mode = 'criteria')`
+  CROSS JOIN LATERAL (VALUES (COALESCE(answer.checked, answer.stated, false))) AS effective(met)
+  WHERE ordered_period.organization_id = registration.organization_id AND ordered_period.id = registration.holiday_period_id
+   AND ordered_period.allocation_mode = 'criteria')`
 	// holidayCriteriaOrderKey is the key of a child named "child".
 	holidayCriteriaOrderKey = holidayCriteriaOrderHead + "child" + holidayCriteriaOrderTail
-	// holidayPlaceOrderKey orders the bookings of a week for the waiting
-	// list and the proposal, before the arrival: the holiday care wish of a
-	// period that takes it into account first (#4703), as the criterion of
-	// highest priority, then the criteria of the Träger (#4700).
+	// Order by the separate holiday wish rule first (#4703), then by the
+	// catalog ranking, before the caller's arrival tie-breaks.
 	holidayPlaceOrderKey = holidayWishDeferredChild + `, ` + holidayCriteriaOrderKey
 )
 
 const (
-	holidayCriteriaQuery = `SELECT criterion.id, criterion.name, criterion.question, criterion.scope, criterion.active, criterion.position,
-			EXISTS (SELECT 1 FROM enrollment.holiday_registration_criteria AS answer
-				WHERE answer.organization_id = criterion.organization_id AND answer.criterion_id = criterion.id) AS answered
-		FROM enrollment.holiday_allocation_criteria AS criterion
-		WHERE criterion.organization_id = ? AND criterion.archived_at IS NULL
-		ORDER BY criterion.position, criterion.id`
-	// archiveHolidayCriteriaQuery archives every criterion the list leaves
-	// out; answers and decisions keep naming it.
-	archiveHolidayCriteriaQuery = `UPDATE enrollment.holiday_allocation_criteria
-		SET archived_at = ?, active = false, updated_at = ?, updated_by_account_id = NULLIF(?::bigint, 0)
-		WHERE organization_id = ? AND archived_at IS NULL AND NOT (id = ANY(?::bigint[]))`
-	updateHolidayCriterionQuery = `UPDATE enrollment.holiday_allocation_criteria
-		SET name = ?, question = ?, scope = ?, active = ?, position = ?, updated_at = ?, updated_by_account_id = NULLIF(?::bigint, 0)
-		WHERE organization_id = ? AND id = ? AND archived_at IS NULL`
-	insertHolidayCriterionQuery = `INSERT INTO enrollment.holiday_allocation_criteria
-			(organization_id, name, question, scope, active, position, updated_by_account_id, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, NULLIF(?::bigint, 0), ?, ?)`
+	holidayCriteriaQuery = `SELECT COALESCE(criterion.id, 0) AS id, criterion.name, criterion.question,
+   criterion.scope, criterion.active, criterion.position, criterion.points,
+   COALESCE(rules.criteria_ranking, 'priority') AS ranking,
+   EXISTS (SELECT 1 FROM enrollment.holiday_registration_criteria AS answer
+    WHERE answer.organization_id = criterion.organization_id AND answer.criterion_id = criterion.id) AS answered
+  FROM (VALUES (?::bigint)) AS org(id)
+  LEFT JOIN enrollment.holiday_allocation_rules AS rules ON rules.organization_id = org.id
+  LEFT JOIN enrollment.holiday_allocation_criteria AS criterion ON criterion.organization_id = org.id AND criterion.archived_at IS NULL
+  ORDER BY criterion.position, criterion.id`
+	// A replacement archives absent IDs, updates known IDs and inserts new
+	// criteria in one statement. A foreign or archived ID changes nothing.
+	replaceHolidayCriteriaQuery = `WITH input AS (
+   SELECT * FROM jsonb_to_recordset(?::jsonb) AS criterion(
+    id bigint, name text, question text, scope text, active boolean, points smallint, position smallint)
+  ), archived AS (
+   UPDATE enrollment.holiday_allocation_criteria AS criterion
+   SET archived_at = ?, active = false, updated_at = ?, updated_by_account_id = NULLIF(?::bigint, 0)
+   WHERE criterion.organization_id = ? AND criterion.archived_at IS NULL
+    AND NOT EXISTS (SELECT 1 FROM input WHERE input.id = criterion.id)
+  ), updated AS (
+   UPDATE enrollment.holiday_allocation_criteria AS criterion
+   SET name = input.name, question = input.question, scope = input.scope, active = input.active,
+    position = input.position, points = COALESCE(NULLIF(input.points, 0), criterion.points),
+    updated_at = ?, updated_by_account_id = NULLIF(?::bigint, 0)
+   FROM input
+   WHERE criterion.organization_id = ? AND criterion.archived_at IS NULL AND criterion.id = input.id
+  )
+  INSERT INTO enrollment.holiday_allocation_criteria
+   (organization_id, name, question, scope, active, points, position, updated_by_account_id, created_at, updated_at)
+  SELECT ?, name, question, scope, active, COALESCE(NULLIF(points, 0), 1), position, NULLIF(?::bigint, 0), ?, ?
+  FROM input WHERE id = 0 ORDER BY position`
+	upsertHolidayAllocationRulesQuery = `INSERT INTO enrollment.holiday_allocation_rules AS rules
+   (organization_id, criteria_ranking, updated_at, updated_by_account_id)
+  VALUES (?, COALESCE(NULLIF(?, ''), 'priority'), ?, NULLIF(?::bigint, 0))
+  ON CONFLICT (organization_id) DO UPDATE SET
+   criteria_ranking = COALESCE(NULLIF(?, ''), rules.criteria_ranking),
+   updated_at = EXCLUDED.updated_at, updated_by_account_id = EXCLUDED.updated_by_account_id`
 	// The catalog lock serializes replacements even before its first row
 	// exists. Row locks also coordinate with concurrent first answers.
-	lockHolidayCriteriaCatalogQuery = `SELECT pg_advisory_xact_lock(hashtextextended('enrollment.holiday_allocation_criteria:' || ?::text, 0))`
-	lockHolidayCriteriaQuery        = `SELECT id FROM enrollment.holiday_allocation_criteria
+	holidayCriteriaCatalogLockKey    = `hashtextextended('enrollment.holiday_allocation_criteria:' || ?::text, 0)`
+	lockHolidayCriteriaCatalogQuery  = `SELECT pg_advisory_xact_lock(` + holidayCriteriaCatalogLockKey + `)`
+	shareHolidayCriteriaCatalogQuery = `SELECT pg_advisory_xact_lock_shared(` + holidayCriteriaCatalogLockKey + `)`
+	lockHolidayCriteriaQuery         = `SELECT id FROM enrollment.holiday_allocation_criteria
 		WHERE organization_id = ? AND archived_at IS NULL ORDER BY id FOR UPDATE`
 	insertHolidayCriterionAnswersQuery = `INSERT INTO enrollment.holiday_registration_criteria
 			(organization_id, holiday_period_id, holiday_registration_id, holiday_registration_child_id, criterion_id, stated)
@@ -123,25 +146,44 @@ type holidayCriterionRow struct {
 	Scope    string   `bun:"scope"`
 	Active   bool     `bun:"active"`
 	Position int      `bun:"position"`
+	Points   int      `bun:"points"`
 	Answered bool     `bun:"answered"`
+	Ranking  string   `bun:"ranking"`
 }
 
-// ReadHolidayCriteria reads the criteria of the Träger by priority, archived
-// ones left out.
+func (row holidayCriterionRow) criterion() enrollment.HolidayCriterion {
+	return enrollment.HolidayCriterion{
+		ID: row.ID, Name: row.Name, Question: row.Question, Scope: row.Scope,
+		Active: row.Active, Position: row.Position, Points: row.Points, Answered: row.Answered,
+	}
+}
+
+// ReadHolidayCriteria reads the ordered criteria for intake and review.
 func (s *HolidayRegistrationStore) ReadHolidayCriteria(ctx context.Context, organizationID int64) ([]enrollment.HolidayCriterion, error) {
+	catalog, err := s.ReadHolidayCriteriaCatalog(ctx, organizationID)
+	return catalog.Criteria, err
+}
+
+// ReadHolidayCriteriaCatalog reads the ranking and its criteria in one
+// statement, including the ranking for an empty catalog.
+func (s *HolidayRegistrationStore) ReadHolidayCriteriaCatalog(ctx context.Context, organizationID int64) (enrollment.HolidayCriteriaCatalog, error) {
 	db, err := traegerDB(ctx, organizationID)
 	if err != nil {
-		return nil, err
+		return enrollment.HolidayCriteriaCatalog{}, err
 	}
 	var rows []holidayCriterionRow
 	if err := db.NewRaw(holidayCriteriaQuery, organizationID).Scan(ctx, &rows); err != nil {
-		return nil, fmt.Errorf("enrollment postgres: read holiday criteria: %w", err)
+		return enrollment.HolidayCriteriaCatalog{}, fmt.Errorf("enrollment postgres: read holiday criteria catalog: %w", err)
 	}
-	criteria := make([]enrollment.HolidayCriterion, len(rows))
-	for i, row := range rows {
-		criteria[i] = enrollment.HolidayCriterion(row)
+	catalog := enrollment.HolidayCriteriaCatalog{
+		Ranking: rows[0].Ranking, Criteria: make([]enrollment.HolidayCriterion, 0, len(rows)),
 	}
-	return criteria, nil
+	for _, row := range rows {
+		if row.ID != 0 {
+			catalog.Criteria = append(catalog.Criteria, row.criterion())
+		}
+	}
+	return catalog, nil
 }
 
 // LockHolidayCriteriaCatalog shares the catalog replacement lock with an
@@ -157,10 +199,23 @@ func (s *HolidayRegistrationStore) LockHolidayCriteriaCatalog(ctx context.Contex
 	return nil
 }
 
+// ShareHolidayCriteriaCatalog prevents a concurrent catalog write from
+// changing the sort between reading the weights and the pending bookings.
+func (s *HolidayRegistrationStore) ShareHolidayCriteriaCatalog(ctx context.Context, organizationID int64) error {
+	db, err := traegerDB(ctx, organizationID)
+	if err != nil {
+		return err
+	}
+	if _, err := db.NewRaw(shareHolidayCriteriaCatalogQuery, organizationID).Exec(ctx); err != nil {
+		return fmt.Errorf("enrollment postgres: lock holiday criteria catalog: %w", err)
+	}
+	return nil
+}
+
 // WriteHolidayCriteria makes criteria the criteria of the Träger in their
 // order: a known ID is changed, a zero ID added, every other one archived.
 // An ID of another Träger or an archived one changes nothing.
-func (s *HolidayRegistrationStore) WriteHolidayCriteria(ctx context.Context, organizationID int64, criteria []enrollment.HolidayCriterionInput, actorAccountID int64) error {
+func (s *HolidayRegistrationStore) WriteHolidayCriteria(ctx context.Context, organizationID int64, ranking string, criteria []enrollment.HolidayCriterionInput, actorAccountID int64) error {
 	db, err := traegerDB(ctx, organizationID)
 	if err != nil {
 		return err
@@ -181,30 +236,40 @@ func (s *HolidayRegistrationStore) WriteHolidayCriteria(ctx context.Context, org
 	if err := checkHolidayCriteriaScopes(current, criteria); err != nil {
 		return err
 	}
-	kept := []int64{}
-	for _, criterion := range criteria {
-		if criterion.ID > 0 {
-			kept = append(kept, criterion.ID.Int64())
-		}
+	input, err := encodeHolidayCriteria(criteria)
+	if err != nil {
+		return err
 	}
 	now := holidayNow(s.now)
-	if _, err := db.NewRaw(archiveHolidayCriteriaQuery, now, now, actorAccountID, organizationID, pgdialect.Array(kept)).Exec(ctx); err != nil {
-		return fmt.Errorf("enrollment postgres: archive holiday criteria: %w", err)
+	if _, err := db.NewRaw(replaceHolidayCriteriaQuery, input, now, now, actorAccountID, organizationID,
+		now, actorAccountID, organizationID, organizationID, actorAccountID, now, now).Exec(ctx); err != nil {
+		return fmt.Errorf("enrollment postgres: replace holiday criteria: %w", err)
 	}
-	for i, criterion := range criteria {
-		var err error
-		if criterion.ID > 0 {
-			_, err = db.NewRaw(updateHolidayCriterionQuery, criterion.Name, criterion.Question, criterion.Scope, criterion.Active, i+1,
-				now, actorAccountID, organizationID, criterion.ID).Exec(ctx)
-		} else {
-			_, err = db.NewRaw(insertHolidayCriterionQuery, organizationID, criterion.Name, criterion.Question, criterion.Scope, criterion.Active,
-				i+1, actorAccountID, now, now).Exec(ctx)
-		}
-		if err != nil {
-			return fmt.Errorf("enrollment postgres: write holiday criterion: %w", err)
-		}
+	if _, err := db.NewRaw(upsertHolidayAllocationRulesQuery, organizationID, ranking, now, actorAccountID, ranking).Exec(ctx); err != nil {
+		return fmt.Errorf("enrollment postgres: save holiday allocation rules: %w", err)
 	}
 	return nil
+}
+
+func encodeHolidayCriteria(criteria []enrollment.HolidayCriterionInput) (string, error) {
+	type row struct {
+		ID       int64  `json:"id"`
+		Name     string `json:"name"`
+		Question string `json:"question"`
+		Scope    string `json:"scope"`
+		Active   bool   `json:"active"`
+		Points   int    `json:"points"`
+		Position int    `json:"position"`
+	}
+	rows := make([]row, len(criteria))
+	for i, criterion := range criteria {
+		rows[i] = row{criterion.ID.Int64(), criterion.Name, criterion.Question, criterion.Scope, criterion.Active, criterion.Points, i + 1}
+	}
+	encoded, err := json.Marshal(rows)
+	if err != nil {
+		return "", fmt.Errorf("enrollment postgres: encode holiday criteria: %w", err)
+	}
+	return string(encoded), nil
 }
 
 // checkHolidayCriteriaScopes keeps answered criteria attached to the same
@@ -435,19 +500,19 @@ func (s *HolidayRegistrationStore) DecideHolidayBookings(ctx context.Context, or
 const (
 	insertHolidayAllocationDecisionsQuery = `INSERT INTO enrollment.holiday_allocation_decisions
 			(organization_id, holiday_period_id, holiday_registration_id, holiday_registration_child_id, holiday_period_week_id,
-			 week_starts_on, week_ends_on, placement, proposal, rank, criteria_met, reason, decided_by_account_id)
+			 week_starts_on, week_ends_on, placement, proposal, rank, criteria_met, reason, decided_by_account_id, criteria_ranking, score, max_score)
 		SELECT ?, ?, decision.registration_id, decision.child_id, decision.week_id, decision.starts_on, decision.ends_on,
 			decision.placement, decision.proposal, decision.rank,
 			COALESCE((SELECT array_agg(met.name ORDER BY met.ordinality) FROM jsonb_array_elements_text(decision.criteria_met::jsonb)
 				WITH ORDINALITY AS met(name, ordinality)), '{}'),
-			decision.reason, NULLIF(?::bigint, 0)
-		FROM unnest(?::bigint[], ?::bigint[], ?::bigint[], ?::date[], ?::date[], ?::text[], ?::text[], ?::int[], ?::text[], ?::text[])
-			AS decision(registration_id, child_id, week_id, starts_on, ends_on, placement, proposal, rank, criteria_met, reason)
+			decision.reason, NULLIF(?::bigint, 0), decision.ranking, decision.score, decision.max_score
+		FROM unnest(?::bigint[], ?::bigint[], ?::bigint[], ?::date[], ?::date[], ?::text[], ?::text[], ?::int[], ?::text[], ?::text[], ?::text[], ?::int[], ?::int[])
+			AS decision(registration_id, child_id, week_id, starts_on, ends_on, placement, proposal, rank, criteria_met, reason, ranking, score, max_score)
 		RETURNING id`
 	holidayAllocationDecisionsQuery = `SELECT decision.id, decision.holiday_period_week_id, decision.week_starts_on, decision.week_ends_on,
 			decision.holiday_registration_id, decision.holiday_registration_child_id, child.first_name, child.last_name,
 			decision.placement, decision.proposal, decision.rank, decision.criteria_met, decision.reason,
-			decision.decided_at, decision.decided_by_account_id
+			decision.decided_at, decision.decided_by_account_id, decision.criteria_ranking, decision.score, decision.max_score
 		FROM enrollment.holiday_allocation_decisions AS decision
 		JOIN enrollment.holiday_registration_children AS child
 			ON child.organization_id = decision.organization_id AND child.id = decision.holiday_registration_child_id
@@ -470,6 +535,7 @@ func (s *HolidayRegistrationStore) InsertHolidayAllocationDecisions(ctx context.
 	registrations, children, weeks, ranks := make([]int64, n), make([]int64, n), make([]int64, n), make([]int, n)
 	startsOn, endsOn := make([]string, n), make([]string, n)
 	placements, proposals, met, reasons := make([]string, n), make([]string, n), make([]string, n), make([]string, n)
+	rankings, scores, maxScores := make([]string, n), make([]*int, n), make([]*int, n)
 	for i, decision := range decisions {
 		encoded, err := json.Marshal(decision.CriteriaMet)
 		if err != nil {
@@ -478,12 +544,13 @@ func (s *HolidayRegistrationStore) InsertHolidayAllocationDecisions(ctx context.
 		registrations[i], children[i], weeks[i], ranks[i] = decision.RegistrationID.Int64(), decision.ChildID.Int64(), decision.WeekID.Int64(), decision.Rank
 		startsOn[i], endsOn[i] = decision.WeekStartsOn.String(), decision.WeekEndsOn.String()
 		placements[i], proposals[i], met[i], reasons[i] = decision.Placement, decision.Proposal, string(encoded), decision.Reason
+		rankings[i], scores[i], maxScores[i] = decision.Ranking, decision.Score, decision.MaxScore
 	}
 	var ids []int64
 	if err := db.NewRaw(insertHolidayAllocationDecisionsQuery, organizationID, periodID, actorAccountID,
 		pgdialect.Array(registrations), pgdialect.Array(children), pgdialect.Array(weeks), pgdialect.Array(startsOn),
 		pgdialect.Array(endsOn), pgdialect.Array(placements), pgdialect.Array(proposals), pgdialect.Array(ranks),
-		pgdialect.Array(met), pgdialect.Array(reasons)).Scan(ctx, &ids); err != nil {
+		pgdialect.Array(met), pgdialect.Array(reasons), pgdialect.Array(rankings), pgdialect.Array(scores), pgdialect.Array(maxScores)).Scan(ctx, &ids); err != nil {
 		return nil, fmt.Errorf("enrollment postgres: insert holiday allocation decisions: %w", err)
 	}
 	return ids, nil
@@ -503,6 +570,9 @@ type holidayAllocationDecisionRow struct {
 	Placement          string        `bun:"placement"`
 	Proposal           string        `bun:"proposal"`
 	Rank               int           `bun:"rank"`
+	Ranking            string        `bun:"criteria_ranking"`
+	Score              *int          `bun:"score"`
+	MaxScore           *int          `bun:"max_score"`
 	CriteriaMet        []string      `bun:"criteria_met,array"`
 	Reason             string        `bun:"reason"`
 	DecidedAt          time.Time     `bun:"decided_at"`
@@ -530,6 +600,7 @@ func (s *HolidayRegistrationStore) ReadHolidayAllocationDecisions(ctx context.Co
 			ID: ident.ID(row.ID), WeekID: ident.ID(row.WeekID), WeekStartsOn: row.WeekStartsOn, WeekEndsOn: row.WeekEndsOn,
 			RegistrationID: ident.ID(row.RegistrationID), ChildID: ident.ID(row.ChildID), ChildFirstName: row.ChildFirstName, ChildLastName: row.ChildLastName,
 			Placement: row.Placement, Proposal: row.Proposal, Rank: row.Rank, CriteriaMet: met, Reason: row.Reason,
+			Ranking: row.Ranking, Score: row.Score, MaxScore: row.MaxScore,
 			DecidedAt: row.DecidedAt, DecidedByAccountID: (*ident.ID)(row.DecidedByAccountID),
 		}
 	}

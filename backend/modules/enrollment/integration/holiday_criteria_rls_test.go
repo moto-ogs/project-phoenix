@@ -7,10 +7,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/uptrace/bun"
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/modules/enrollment/internal/adapters/postgres"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/tenant"
 
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
@@ -61,10 +63,10 @@ func TestHolidayAllocationStatementsKeepTheirTraegerBeneathRLS(t *testing.T) {
 		require.NoError(t, err)
 		assert.Empty(t, recordCriteria, "A exports no criterion of B, including answered ones")
 
-		require.NoError(t, store.WriteHolidayCriteria(ctx, own.organization, []enrollment.HolidayCriterionInput{
+		require.NoError(t, store.WriteHolidayCriteria(ctx, own.organization, "", []enrollment.HolidayCriterionInput{
 			{ID: ident.ID(criterion), Name: "Übernommen", Question: "Von A?", Scope: enrollment.HolidayCriterionChild, Active: false},
 		}, 0))
-		require.NoError(t, store.WriteHolidayCriteria(ctx, own.organization, nil, 0), "an empty list archives A's criteria only")
+		require.NoError(t, store.WriteHolidayCriteria(ctx, own.organization, "", nil, 0), "an empty list archives A's criteria only")
 
 		answers, err := store.ReadHolidayCriterionAnswers(ctx, own.organization, foreign.period, 0)
 		require.NoError(t, err)
@@ -88,6 +90,16 @@ func TestHolidayAllocationStatementsKeepTheirTraegerBeneathRLS(t *testing.T) {
 		return nil
 	}))
 
+	require.NoError(t, testpkg.WithinTraeger(ctx, foreign.organization, func(ctx context.Context) error {
+		decisions, err := store.ReadHolidayAllocationDecisions(ctx, foreign.organization, foreign.period)
+		require.NoError(t, err)
+		require.Len(t, decisions, 1)
+		assert.Equal(t, enrollment.HolidayCriteriaRankingPriority, decisions[0].Ranking)
+		assert.Nil(t, decisions[0].Score, "decisions predating scores keep NULL")
+		assert.Nil(t, decisions[0].MaxScore)
+		return nil
+	}))
+
 	var name, placement string
 	var archived bool
 	var checked *bool
@@ -102,4 +114,48 @@ func TestHolidayAllocationStatementsKeepTheirTraegerBeneathRLS(t *testing.T) {
 	assert.Equal(t, 1, answers, "A takes back no answer of B")
 	require.NoError(t, db.NewRaw(`SELECT placement FROM enrollment.holiday_registration_bookings WHERE id = ?`, booking).Scan(bg, &placement))
 	assert.Equal(t, "pending", placement)
+}
+
+// The portal role can manage its own catalog rule without seeing or writing
+// another Träger's row even when a SQL statement omits the Träger filter.
+func TestHolidayAllocationRulesAreIsolatedByRLS(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	own := newPlacesWeek(t, db, "Träger Rang A")
+	foreign := newPlacesWeek(t, db, "Träger Rang B")
+	other := newPlacesWeek(t, db, "Träger Rang C")
+	base := testpkg.ContextWithTenantRuntime(t.Context(), testpkg.TenantRuntime(t, db))
+	_, err := db.ExecContext(base, `INSERT INTO enrollment.holiday_allocation_rules (organization_id, criteria_ranking)
+  VALUES (?, 'points')`, foreign.organization)
+	require.NoError(t, err)
+
+	require.NoError(t, testpkg.WithinTraeger(base, own.organization, func(ctx context.Context) error {
+		tx, ok := tenant.TransactionFromContext(ctx)
+		require.True(t, ok)
+		db := tx.(bun.Tx)
+		_, err := db.ExecContext(ctx, `INSERT INTO enrollment.holiday_allocation_rules (organization_id, criteria_ranking)
+   VALUES (?, 'equal')`, own.organization)
+		require.NoError(t, err)
+		var visible []string
+		require.NoError(t, db.NewRaw(`SELECT criteria_ranking FROM enrollment.holiday_allocation_rules`).Scan(ctx, &visible))
+		assert.Equal(t, []string{"equal"}, visible)
+		result, err := db.ExecContext(ctx, `UPDATE enrollment.holiday_allocation_rules SET criteria_ranking = 'priority'`)
+		require.NoError(t, err)
+		n, err := result.RowsAffected()
+		require.NoError(t, err)
+		assert.EqualValues(t, 1, n)
+		return nil
+	}))
+	err = testpkg.WithinTraeger(base, own.organization, func(ctx context.Context) error {
+		tx, ok := tenant.TransactionFromContext(ctx)
+		require.True(t, ok)
+		_, err := tx.(bun.Tx).ExecContext(ctx, `INSERT INTO enrollment.holiday_allocation_rules (organization_id)
+   VALUES (?)`, other.organization)
+		return err
+	})
+	require.ErrorContains(t, err, "row-level security policy")
+	var foreignRanking string
+	require.NoError(t, db.NewRaw(`SELECT criteria_ranking FROM enrollment.holiday_allocation_rules
+  WHERE organization_id = ?`, foreign.organization).Scan(base, &foreignRanking))
+	assert.Equal(t, "points", foreignRanking)
 }

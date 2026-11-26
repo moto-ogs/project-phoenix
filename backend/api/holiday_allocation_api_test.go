@@ -26,6 +26,7 @@ import (
 type allocationCandidateBody struct {
 	BookingID      wireID `json:"booking_id"`
 	Rank           int    `json:"rank"`
+	Score          int    `json:"score"`
 	RegistrationID wireID `json:"registration_id"`
 	ChildFirstName string `json:"child_first_name"`
 	Proposal       string `json:"proposal"`
@@ -38,9 +39,12 @@ type allocationCandidateBody struct {
 
 type allocationBoardBody struct {
 	AllocationMode string `json:"allocation_mode"`
+	Ranking        string `json:"ranking"`
+	MaxScore       int    `json:"max_score"`
 	Criteria       []struct {
-		ID   wireID `json:"id"`
-		Name string `json:"name"`
+		ID     wireID `json:"id"`
+		Name   string `json:"name"`
+		Points int    `json:"points"`
 	} `json:"criteria"`
 	Weeks []struct {
 		WeekID  wireID                    `json:"week_id"`
@@ -53,12 +57,17 @@ type allocationBoardBody struct {
 		Placement      string   `json:"placement"`
 		Proposal       string   `json:"proposal"`
 		Rank           int      `json:"rank"`
+		Ranking        string   `json:"ranking"`
+		Score          *int     `json:"score"`
+		MaxScore       *int     `json:"max_score"`
 		CriteriaMet    []string `json:"criteria_met"`
 		Reason         string   `json:"reason"`
 	} `json:"decisions"`
 }
 
 type criteriaBody struct {
+	Ranking string `json:"ranking"`
+	Version string `json:"version"`
 	Periods []struct {
 		ID wireID `json:"id"`
 	} `json:"periods"`
@@ -68,6 +77,7 @@ type criteriaBody struct {
 		Scope    string `json:"scope"`
 		Active   bool   `json:"active"`
 		Position int    `json:"position"`
+		Points   int    `json:"points"`
 	} `json:"criteria"`
 }
 

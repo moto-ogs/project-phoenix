@@ -60,7 +60,8 @@ export default function TraegerHolidayPeriodPage() {
     fetchError: schoolsFailure,
   } = useTraegerSchools();
   const listHref = traegerPath("/traeger/ferien");
-  const criteria = useTraegerHolidayCriteria().data?.criteria;
+  const criteriaRead = useTraegerHolidayCriteria().data;
+  const criteria = criteriaRead?.criteria;
 
   const saved = useCallback(
     (next: HolidayPeriod) => {
@@ -131,6 +132,7 @@ export default function TraegerHolidayPeriodPage() {
             period={period}
             schools={schools}
             criteria={criteria}
+            criteriaRanking={criteriaRead?.ranking}
             onDirtyChange={setDirty}
             onCancel={() => router.push(listHref)}
             onSaved={saved}

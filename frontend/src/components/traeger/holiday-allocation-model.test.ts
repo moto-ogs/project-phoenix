@@ -7,13 +7,16 @@ import {
 import {
   allocationChips,
   capacityBoundary,
+  criterionLabel,
   criterionRankLabel,
+  decisionCriteriaText,
   deviatesFromProposal,
   freePlacesText,
   openWeeks,
   proposalDecisions,
   proposalSummary,
   proposalSummaryText,
+  scoreText,
 } from "./holiday-allocation-model";
 
 describe("holiday allocation model (#4700)", () => {
@@ -121,5 +124,79 @@ describe("holiday allocation model (#4700)", () => {
   it("names a criterion by its rank, never by a colour (#7411)", () => {
     expect(criterionRankLabel(1, "Geschwisterkind")).toBe("1. Geschwisterkind");
     expect(criterionRankLabel(6, "Alleinerziehend")).toBe("6. Alleinerziehend");
+  });
+
+  // #8135: the list explains its order per way of counting.
+  it("names a criterion by its rank, alone, or with its points", () => {
+    const [first] = allocationBoard().criteria;
+    expect(criterionLabel(first!, "priority")).toBe(
+      "1. Beide Eltern berufstätig",
+    );
+    expect(criterionLabel(first!, "equal")).toBe("Beide Eltern berufstätig");
+    expect(criterionLabel(first!, "points")).toBe(
+      "Beide Eltern berufstätig · 3 Punkte",
+    );
+    // The holiday care wish stays the step before the Träger's criteria.
+    const wish = { ...first!, id: "0", name: "Ferienwunsch", points: 0 };
+    expect(criterionLabel(wish, "priority")).toBe("1. Ferienwunsch");
+    expect(criterionLabel(wish, "equal")).toBe("Zuerst: Ferienwunsch");
+    expect(criterionLabel(wish, "points")).toBe("Zuerst: Ferienwunsch");
+  });
+
+  it("states what an entry reaches where a total decides the order", () => {
+    expect(scoreText("priority", 2, 3)).toBeNull();
+    expect(scoreText("equal", 2, 3)).toBe("2 von 3 Kriterien erfüllt");
+    expect(scoreText("equal", 0, 1)).toBe("0 von 1 Kriterium erfüllt");
+    expect(scoreText("points", 5, 6)).toBe("5 von 6 Punkten");
+    expect(scoreText("points", 1, 1)).toBe("1 von 1 Punkt");
+    // Without a criterion of the Träger there is no total to state.
+    expect(scoreText("equal", 0, 0)).toBeNull();
+    expect(scoreText("points", null, null)).toBeNull();
+  });
+
+  it("keeps the count of a decision with the criteria it met", () => {
+    const decision = {
+      id: "1",
+      weekId: "51",
+      weekStartsOn: "2027-07-05",
+      weekEndsOn: "2027-07-09",
+      registrationId: "7",
+      childId: "9",
+      childFirstName: "Mia",
+      childLastName: "Muster",
+      placement: "placed" as const,
+      proposal: "placed" as const,
+      rank: 1,
+      criteriaMet: ["Beide Eltern berufstätig"],
+      reason: "",
+      decidedAt: "2026-09-02T08:00:00Z",
+      ranking: "points" as const,
+      score: 3,
+      maxScore: 5,
+    };
+    expect(decisionCriteriaText(decision)).toBe(
+      "3 von 5 Punkten: Beide Eltern berufstätig",
+    );
+    expect(
+      decisionCriteriaText({ ...decision, ranking: "priority" as const }),
+    ).toBe("Beide Eltern berufstätig");
+    expect(
+      decisionCriteriaText({
+        ...decision,
+        ranking: "equal" as const,
+        score: 0,
+        maxScore: 2,
+        criteriaMet: [],
+      }),
+    ).toBe("0 von 2 Kriterien erfüllt");
+    // A decision from before #8135 has no score.
+    expect(
+      decisionCriteriaText({
+        ...decision,
+        score: null,
+        maxScore: null,
+        criteriaMet: [],
+      }),
+    ).toBe("–");
   });
 });
