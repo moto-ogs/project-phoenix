@@ -55,6 +55,7 @@ vi.mock("~/lib/hooks/use-media-query", async (importOriginal) => ({
 
 const mockPush = vi.fn();
 vi.mock("next/navigation", () => ({
+  usePathname: () => "/active-supervisions",
   useRouter: () => ({ push: mockPush, replace: vi.fn() }),
   useSearchParams: () => ({
     get: (key: string) => (key === "session" ? state.sessionParam : null),

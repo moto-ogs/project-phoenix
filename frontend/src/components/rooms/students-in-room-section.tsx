@@ -14,6 +14,9 @@
 
 "use client";
 
+import { ParentAttentionList } from "~/components/students/parent-attention-badge";
+import { useHasDeepScrollPosition } from "~/components/ui/navigation-scroll-position";
+import { useInitialPaintViewport } from "~/lib/hooks/use-after-initial-paint";
 import { Alert } from "~/components/ui/alert";
 import { EmptyState } from "~/components/ui/empty-state";
 import { me as meKeys } from "~/lib/swr/me";
@@ -817,6 +820,14 @@ function StudentsInRoomBody({
 }: StudentsInRoomBodyProps) {
   const tenantPath = useTenantAwarePath();
   const { enabled: photosEnabled } = useStudentPhotosEnabled();
+  const viewport = useInitialPaintViewport(true);
+  const deepScroll = useHasDeepScrollPosition();
+  // The section starts below the room heading and facts. A complete first
+  // viewport needs at most this many single-column rows, including the gap.
+  const initialRowCount =
+    viewport && !deepScroll
+      ? Math.max(1, Math.ceil((viewport.height - 128) / 48))
+      : students.length;
   if (loadError) {
     return <LoadErrorAlert error={loadError} />;
   }
@@ -854,22 +865,26 @@ function StudentsInRoomBody({
     // Single column inside the slide-over: the panel is ~512px, so a
     // multi-column grid would either truncate names or shrink the rows
     // below useful tap-target size on touch.
-    <div className="flex flex-col gap-2">
-      {students.map((student) => (
-        <SelectableStudentRow
-          key={student.id}
-          student={student}
-          selectable={
-            selectable && selectableStudentIds.has(String(student.id))
-          }
-          isSelected={selectedStudentIds.has(String(student.id))}
-          onToggleSelection={() => onToggleStudentSelection(String(student.id))}
-          href={tenantPath(
-            `/students/${student.id}?from=${encodeURIComponent(fromReferrer)}`,
-          )}
-        />
-      ))}
-    </div>
+    <ParentAttentionList>
+      <div className="flex flex-col gap-2">
+        {students.slice(0, initialRowCount).map((student) => (
+          <SelectableStudentRow
+            key={student.id}
+            student={student}
+            selectable={
+              selectable && selectableStudentIds.has(String(student.id))
+            }
+            isSelected={selectedStudentIds.has(String(student.id))}
+            onToggleSelection={() =>
+              onToggleStudentSelection(String(student.id))
+            }
+            href={tenantPath(
+              `/students/${student.id}?from=${encodeURIComponent(fromReferrer)}`,
+            )}
+          />
+        ))}
+      </div>
+    </ParentAttentionList>
   );
 }
 

@@ -10,6 +10,7 @@ import { UserPlus } from "lucide-react";
 import { Alert } from "~/components/ui/alert";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { Button } from "~/components/ui/button";
+import { MountOnFirstOpen } from "~/components/ui/mount-on-first-open";
 import {
   SectionCard,
   SectionCollapseToggle,
@@ -49,6 +50,7 @@ export type OpenRoomBlockContext = Omit<
 > & {
   readonly attendanceWebEnabled: boolean;
   readonly showTimetableCounts: boolean;
+  readonly openingRosterRows?: number;
   /** The present-children endpoint reads the tenant-wide student directory. */
   readonly canReadPresentChildren: boolean;
   /** Offers „Rest des Tages“ when the caller may record partial absences. */
@@ -274,44 +276,7 @@ function OpenRoomBlock({
   }
 >) {
   const { session, block } = section;
-  const {
-    attendanceWebEnabled,
-    showTimetableCounts,
-    canReadPresentChildren,
-    canExcuseRestOfDay,
-    studentProfileHref,
-    overviewEnabled,
-    onAddSupervisor,
-    onHandOver,
-    onRosterGroups,
-    rosterRowFilter,
-    presentPickerAutoOpenInstanceId,
-    onPresentPickerAutoOpened,
-    ...actionOptions
-  } = context;
   const [collapsed, setCollapsed] = useState(!narrowed && !section.isOwn);
-  // Reading a foreign block's roster needs the school-wide overview (#2380).
-  // Without it the section shows the block's children from the room.
-  const canViewRoster = block.canOperate || overviewEnabled;
-  const roster = useTimetableRoster({
-    selectedTimetableInstanceId:
-      !collapsed && canViewRoster ? block.instanceId : null,
-    currentRoomId: undefined,
-  });
-  const currentRoster = roster.currentTimetableRoster;
-  const rosterRows = currentRoster?.rows;
-  const rosterGroups = rosterRows?.map((row) => row.groupName);
-  useEffect(() => {
-    if (rosterGroups) {
-      onRosterGroups?.(block.instanceId, rosterGroups);
-    }
-  }, [block.instanceId, onRosterGroups, rosterGroups]);
-  const actions = useTimetableActions({
-    ...actionOptions,
-    activeTimetableInstanceId: roster.activeTimetableInstanceId,
-    currentTimetableRoster: roster.currentTimetableRoster,
-    mutateRoster: roster.mutateRoster,
-  });
 
   const title = session.title;
   const nfcEnabled = useNFCEnabled();
@@ -322,8 +287,8 @@ function OpenRoomBlock({
   const headActions = sectionActions(
     section.assignableSessionId,
     session.isUserSupervising ? session.activeGroupId : null,
-    onAddSupervisor,
-    onHandOver,
+    context.onAddSupervisor,
+    context.onHandOver,
   );
   const header = (
     <SectionCard
@@ -355,7 +320,93 @@ function OpenRoomBlock({
     />
   );
 
-  if (collapsed) return header;
+  return (
+    <>
+      {collapsed ? header : null}
+      <MountOnFirstOpen open={!collapsed}>
+        <OpenRoomBlockBody
+          section={section}
+          context={context}
+          collapsed={collapsed}
+          onCollapse={() => setCollapsed(true)}
+          header={header}
+          occupancy={occupancy}
+          headActions={headActions}
+          students={students}
+          filteredStudents={filteredStudents}
+          grid={grid}
+        />
+      </MountOnFirstOpen>
+    </>
+  );
+}
+
+function OpenRoomBlockBody({
+  section,
+  context,
+  collapsed,
+  onCollapse,
+  header,
+  occupancy,
+  headActions,
+  students,
+  filteredStudents,
+  grid,
+}: Readonly<
+  SectionChildren & {
+    section: OpenRoomBlockSection;
+    context: OpenRoomBlockContext;
+    collapsed: boolean;
+    onCollapse: () => void;
+    header: ReactNode;
+    occupancy: Occupancy;
+    headActions: ReactNode;
+  }
+>) {
+  const { session, block } = section;
+  const {
+    attendanceWebEnabled,
+    showTimetableCounts,
+    openingRosterRows,
+    canReadPresentChildren,
+    canExcuseRestOfDay,
+    studentProfileHref,
+    overviewEnabled,
+    onAddSupervisor: _onAddSupervisor,
+    onHandOver: _onHandOver,
+    onRosterGroups,
+    rosterRowFilter,
+    presentPickerAutoOpenInstanceId,
+    onPresentPickerAutoOpened,
+    ...actionOptions
+  } = context;
+  // Reading a foreign block's roster needs the school-wide overview (#2380).
+  // Without it the section shows the block's children from the room.
+  const canViewRoster = block.canOperate || overviewEnabled;
+  const roster = useTimetableRoster({
+    selectedTimetableInstanceId:
+      !collapsed && canViewRoster ? block.instanceId : null,
+    currentRoomId: undefined,
+  });
+  const currentRoster = roster.currentTimetableRoster;
+  const rosterRows = currentRoster?.rows;
+  useEffect(() => {
+    if (rosterRows) {
+      onRosterGroups?.(
+        block.instanceId,
+        rosterRows.map((row) => row.groupName),
+      );
+    }
+  }, [block.instanceId, onRosterGroups, rosterRows]);
+  const actions = useTimetableActions({
+    ...actionOptions,
+    activeTimetableInstanceId: roster.activeTimetableInstanceId,
+    currentTimetableRoster: roster.currentTimetableRoster,
+    mutateRoster: roster.mutateRoster,
+  });
+
+  if (collapsed) return null;
+  const title = session.title;
 
   if (currentRoster) {
     return (
@@ -365,6 +416,7 @@ function OpenRoomBlock({
           <Alert type="info" message={actions.moveNotice} />
         ) : null}
         <TimetableRosterContent
+          openingRowLimit={openingRosterRows}
           addStudentSearch={actions.addStudentSearch}
           addStudentError={actions.addStudentError}
           attendanceWebEnabled={attendanceWebEnabled}
@@ -380,7 +432,7 @@ function OpenRoomBlock({
             <SectionCollapseToggle
               title={title}
               collapsed={false}
-              onToggle={() => setCollapsed(true)}
+              onToggle={onCollapse}
             />
           }
           onAddStudent={actions.handleAddUnplannedStudent}

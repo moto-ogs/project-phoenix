@@ -1,5 +1,6 @@
 "use client";
 
+import { ParentAttentionList } from "~/components/students/parent-attention-badge";
 import { useInitialPaintViewport } from "~/lib/hooks/use-after-initial-paint";
 import { teacherHintKey, teacherHintText } from "~/lib/student-helpers";
 import { StickyNote } from "lucide-react";
@@ -263,169 +264,171 @@ export function SupervisionStudentGrid({
 
   return (
     <div>
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-3">
-        {cards.map((student) => {
-          const studentPickup = pickupTimesData?.get(student.id.toString());
-          const studentArrival = arrivalTimesData?.get(student.id.toString());
-          const presentStudent = withActiveSupervisionPresence(student);
-          const arrivalExceptionAbsent =
-            (studentArrival?.isException ?? false) &&
-            !studentArrival?.expectedArrival;
+      <ParentAttentionList>
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-3">
+          {cards.map((student) => {
+            const studentPickup = pickupTimesData?.get(student.id.toString());
+            const studentArrival = arrivalTimesData?.get(student.id.toString());
+            const presentStudent = withActiveSupervisionPresence(student);
+            const arrivalExceptionAbsent =
+              (studentArrival?.isException ?? false) &&
+              !studentArrival?.expectedArrival;
 
-          return (
-            <StudentCard
-              key={student.id}
-              studentId={student.id}
-              firstName={student.first_name}
-              lastName={student.second_name}
-              photoUrl={student.photo_url ?? null}
-              onClick={() => onOpenStudent(student.id.toString())}
-              dayHomeChange={dayHomeChange(
-                supervisionStudentDay(
-                  student,
-                  pickupTimesData,
-                  arrivalTimesData,
-                  now,
-                ),
-              )}
-              locationBadge={
-                <StudentPresenceBadge
-                  student={presentStudent}
-                  displayMode="contextAware"
-                  userGroups={[...myGroupIds]}
-                  groupRooms={[...myGroupRooms]}
-                  variant="modern"
-                  size="md"
-                />
-              }
-              extraContent={
-                <>
-                  {student.school_class && (
-                    <StudentInfoRow icon={<SchoolClassIcon />}>
-                      {holidayGuestLabel(student) ?? student.school_class}
-                    </StudentInfoRow>
-                  )}
-                  {student.group_name && (
-                    <StudentInfoRow icon={<GroupIcon />}>
-                      Gruppe: {student.group_name}
-                    </StudentInfoRow>
-                  )}
-                  {student.activity_name && (
-                    <StudentInfoRow icon={<ActivityIcon />}>
-                      Angebot: {student.activity_name}
-                    </StudentInfoRow>
-                  )}
-                  {student.independent && !student.activity_name && (
-                    <StudentInfoRow icon={<ActivityIcon />}>
-                      Ohne Angebot
-                    </StudentInfoRow>
-                  )}
-                  {student.pending_excused_note !== undefined && (
-                    <StudentPendingExcusedRow
-                      note={student.pending_excused_note}
-                    />
-                  )}
-                  {student.class_handover &&
-                    (student.class_handover.absent ? (
-                      <StudentAbsenceRow
-                        wording={HANDOVER_ABSENT_WORDING}
-                        label={handoverDetail(student.class_handover)}
-                      />
-                    ) : (
+            return (
+              <StudentCard
+                key={student.id}
+                studentId={student.id}
+                firstName={student.first_name}
+                lastName={student.second_name}
+                photoUrl={student.photo_url ?? null}
+                onClick={() => onOpenStudent(student.id.toString())}
+                dayHomeChange={dayHomeChange(
+                  supervisionStudentDay(
+                    student,
+                    pickupTimesData,
+                    arrivalTimesData,
+                    now,
+                  ),
+                )}
+                locationBadge={
+                  <StudentPresenceBadge
+                    student={presentStudent}
+                    displayMode="contextAware"
+                    userGroups={[...myGroupIds]}
+                    groupRooms={[...myGroupRooms]}
+                    variant="modern"
+                    size="md"
+                  />
+                }
+                extraContent={
+                  <>
+                    {student.school_class && (
                       <StudentInfoRow icon={<SchoolClassIcon />}>
-                        {handoverLine(student.class_handover)}
+                        {holidayGuestLabel(student) ?? student.school_class}
+                      </StudentInfoRow>
+                    )}
+                    {student.group_name && (
+                      <StudentInfoRow icon={<GroupIcon />}>
+                        Gruppe: {student.group_name}
+                      </StudentInfoRow>
+                    )}
+                    {student.activity_name && (
+                      <StudentInfoRow icon={<ActivityIcon />}>
+                        Angebot: {student.activity_name}
+                      </StudentInfoRow>
+                    )}
+                    {student.independent && !student.activity_name && (
+                      <StudentInfoRow icon={<ActivityIcon />}>
+                        Ohne Angebot
+                      </StudentInfoRow>
+                    )}
+                    {student.pending_excused_note !== undefined && (
+                      <StudentPendingExcusedRow
+                        note={student.pending_excused_note}
+                      />
+                    )}
+                    {student.class_handover &&
+                      (student.class_handover.absent ? (
+                        <StudentAbsenceRow
+                          wording={HANDOVER_ABSENT_WORDING}
+                          label={handoverDetail(student.class_handover)}
+                        />
+                      ) : (
+                        <StudentInfoRow icon={<SchoolClassIcon />}>
+                          {handoverLine(student.class_handover)}
+                        </StudentInfoRow>
+                      ))}
+                    {(student.teacher_hints ?? []).map((hint) => (
+                      <StudentInfoRow
+                        key={teacherHintKey(hint)}
+                        icon={
+                          <StickyNote
+                            className="h-3.5 w-3.5 text-gray-500"
+                            aria-hidden="true"
+                          />
+                        }
+                        wrap
+                      >
+                        {teacherHintText(hint)}
                       </StudentInfoRow>
                     ))}
-                  {(student.teacher_hints ?? []).map((hint) => (
-                    <StudentInfoRow
-                      key={teacherHintKey(hint)}
-                      icon={
-                        <StickyNote
-                          className="h-3.5 w-3.5 text-gray-500"
-                          aria-hidden="true"
-                        />
+                    {(() => {
+                      const absence = getStudentAbsence({
+                        sick: presentStudent.sick,
+                        classTrip: presentStudent.class_trip,
+                        excused: presentStudent.excused,
+                      });
+                      if (absence && !presentStudent.actual_pickup_time) {
+                        return <StudentAbsenceRow label={absence.label} />;
                       }
-                      wrap
-                    >
-                      {teacherHintText(hint)}
-                    </StudentInfoRow>
-                  ))}
-                  {(() => {
-                    const absence = getStudentAbsence({
-                      sick: presentStudent.sick,
-                      classTrip: presentStudent.class_trip,
-                      excused: presentStudent.excused,
-                    });
-                    if (absence && !presentStudent.actual_pickup_time) {
-                      return <StudentAbsenceRow label={absence.label} />;
-                    }
-                    const dayPlanningNotComingLabel =
-                      getDayPlanningNotComingLabel(presentStudent);
-                    if (
-                      dayPlanningNotComingLabel &&
-                      !presentStudent.actual_pickup_time
-                    ) {
+                      const dayPlanningNotComingLabel =
+                        getDayPlanningNotComingLabel(presentStudent);
+                      if (
+                        dayPlanningNotComingLabel &&
+                        !presentStudent.actual_pickup_time
+                      ) {
+                        return (
+                          <StudentAbsenceRow
+                            label={dayPlanningNotComingLabel}
+                            note={combineTimeNotes(
+                              studentPickup?.notes,
+                              studentPickup?.dayNotes,
+                            )}
+                          />
+                        );
+                      }
                       return (
-                        <StudentAbsenceRow
-                          label={dayPlanningNotComingLabel}
-                          note={combineTimeNotes(
-                            studentPickup?.notes,
-                            studentPickup?.dayNotes,
-                          )}
-                        />
+                        <>
+                          <ArrivalTimeRow
+                            arrivalTime={studentArrival?.expectedArrival}
+                            actualTime={student.actual_arrival_time}
+                            isException={
+                              !arrivalExceptionAbsent &&
+                              (studentArrival?.isException ?? false)
+                            }
+                            isAbsent={false}
+                            notes={
+                              studentArrival && !arrivalExceptionAbsent
+                                ? combineTimeNotes(
+                                    studentArrival.notes,
+                                    studentArrival.dayNotes,
+                                  )
+                                : undefined
+                            }
+                            now={now}
+                          />
+                          <PickupTimeRow
+                            pickupTime={studentPickup?.pickupTime}
+                            actualTime={student.actual_pickup_time}
+                            isException={studentPickup?.isException ?? false}
+                            notes={
+                              studentPickup
+                                ? combineTimeNotes(
+                                    studentPickup.notes,
+                                    studentPickup.dayNotes,
+                                  )
+                                : undefined
+                            }
+                            now={now}
+                          />
+                        </>
                       );
-                    }
-                    return (
-                      <>
-                        <ArrivalTimeRow
-                          arrivalTime={studentArrival?.expectedArrival}
-                          actualTime={student.actual_arrival_time}
-                          isException={
-                            !arrivalExceptionAbsent &&
-                            (studentArrival?.isException ?? false)
-                          }
-                          isAbsent={false}
-                          notes={
-                            studentArrival && !arrivalExceptionAbsent
-                              ? combineTimeNotes(
-                                  studentArrival.notes,
-                                  studentArrival.dayNotes,
-                                )
-                              : undefined
-                          }
-                          now={now}
-                        />
-                        <PickupTimeRow
-                          pickupTime={studentPickup?.pickupTime}
-                          actualTime={student.actual_pickup_time}
-                          isException={studentPickup?.isException ?? false}
-                          notes={
-                            studentPickup
-                              ? combineTimeNotes(
-                                  studentPickup.notes,
-                                  studentPickup.dayNotes,
-                                )
-                              : undefined
-                          }
-                          now={now}
-                        />
-                      </>
-                    );
-                  })()}
-                </>
-              }
-              trackingIndicators={
-                trackingData?.labels.length ? (
-                  <TrackingIndicators
-                    labels={trackingData.labels}
-                    results={trackingData.results[student.id] ?? []}
-                  />
-                ) : undefined
-              }
-            />
-          );
-        })}
-      </div>
+                    })()}
+                  </>
+                }
+                trackingIndicators={
+                  trackingData?.labels.length ? (
+                    <TrackingIndicators
+                      labels={trackingData.labels}
+                      results={trackingData.results[student.id] ?? []}
+                    />
+                  ) : undefined
+                }
+              />
+            );
+          })}
+        </div>
+      </ParentAttentionList>
     </div>
   );
 }

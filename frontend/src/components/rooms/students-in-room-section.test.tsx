@@ -67,6 +67,7 @@ vi.mock("~/lib/tenant-router", () => ({
 }));
 
 vi.mock("next/navigation", () => ({
+  usePathname: () => "/rooms/1",
   useSearchParams: () => mockUseSearchParams(),
 }));
 

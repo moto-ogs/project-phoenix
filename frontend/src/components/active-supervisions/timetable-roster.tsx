@@ -644,6 +644,7 @@ interface TimetableRosterSectionProps {
   readonly studentProfileHref?: (row: TimetableRosterRow) => string;
   readonly onHomework?: (row: TimetableRosterRow) => void;
   readonly rows: TimetableRosterRow[];
+  readonly openingRowLimit: number;
   readonly showTimetableCounts: boolean;
   readonly title: string;
 }
@@ -662,6 +663,7 @@ function TimetableRosterSection({
   studentProfileHref,
   onHomework,
   rows,
+  openingRowLimit,
   showTimetableCounts,
   title,
 }: TimetableRosterSectionProps) {
@@ -669,6 +671,8 @@ function TimetableRosterSection({
   const bodyId = useId();
   if (rows.length === 0) return null;
   const countLabel = showTimetableCounts ? ` (${rows.length})` : "";
+  const openingRows =
+    openingRowLimit < rows.length ? rows.slice(0, openingRowLimit) : rows;
 
   return (
     <section className="moto-content-surface overflow-hidden rounded-lg border">
@@ -693,7 +697,7 @@ function TimetableRosterSection({
       </SectionCollapseHead>
       {collapsed ? null : (
         <div id={bodyId}>
-          {rows.map((row) => (
+          {openingRows.map((row) => (
             <TimetableRosterStudentRow
               key={`${row.studentId}-${row.status}-${row.visitId ?? "planned"}`}
               actionAccess={actionAccess}
@@ -1072,6 +1076,8 @@ interface TimetableRosterContentProps {
    * Zahlen im Kopf bleiben die des ganzen Blocks. Ohne Filter alle Zeilen.
    */
   readonly rowFilter?: ((row: TimetableRosterRow) => boolean) | null;
+  /** Rows below the first viewport follow after paint on a staff navigation. */
+  readonly openingRowLimit?: number;
   /** Fehler des Nachtragens; steht im Dialog „Kind ungeplant hinzufügen“. */
   readonly addStudentError?: FormErrorInput;
 }
@@ -1176,6 +1182,7 @@ export function TimetableRosterContent({
   studentProfileHref,
   onSearchChange,
   rowFilter = null,
+  openingRowLimit = Infinity,
   addStudentError,
 }: TimetableRosterContentProps) {
   const now = useMinuteClock();
@@ -1380,6 +1387,25 @@ export function TimetableRosterContent({
     onHomework: homeworkEnabled ? openHomework : undefined,
     showTimetableCounts,
   };
+  const lists = [
+    { key: "present", title: "Anwesend", rows: visible.present },
+    { key: "unplanned", title: unplannedTitle, rows: visible.unplanned },
+    { key: "expected", title: "Erwartet", rows: visible.expected },
+    { key: "later", title: "Kommt später", rows: visible.arrivingLater },
+    {
+      key: "unscheduled",
+      title: "Heute nicht eingeplant",
+      rows: visible.notScheduled,
+    },
+    { key: "absent", title: "Entschuldigt / Abwesend", rows: visible.absent },
+    {
+      key: "departed",
+      title: "Nicht mehr im Raum",
+      rows: visible.departed,
+      defaultCollapsed: !isNarrowed,
+    },
+  ];
+  let openingRowsLeft = isNarrowed ? Infinity : openingRowLimit;
 
   return (
     <div className="space-y-4">
@@ -1534,42 +1560,19 @@ export function TimetableRosterContent({
           folds from its head. A search or filter remounts the lists open so
           every hit shows; clearing it restores the opening state. */}
       <Fragment key={isNarrowed ? "narrowed" : "all"}>
-        <TimetableRosterSection
-          title="Anwesend"
-          rows={visible.present}
-          {...sectionProps}
-        />
-        <TimetableRosterSection
-          title={unplannedTitle}
-          rows={visible.unplanned}
-          {...sectionProps}
-        />
-        <TimetableRosterSection
-          title="Erwartet"
-          rows={visible.expected}
-          {...sectionProps}
-        />
-        <TimetableRosterSection
-          title="Kommt später"
-          rows={visible.arrivingLater}
-          {...sectionProps}
-        />
-        <TimetableRosterSection
-          title="Heute nicht eingeplant"
-          rows={visible.notScheduled}
-          {...sectionProps}
-        />
-        <TimetableRosterSection
-          title="Entschuldigt / Abwesend"
-          rows={visible.absent}
-          {...sectionProps}
-        />
-        <TimetableRosterSection
-          title="Nicht mehr im Raum"
-          rows={visible.departed}
-          defaultCollapsed={!isNarrowed}
-          {...sectionProps}
-        />
+        {lists.map(({ key, rows, ...list }) => {
+          const limit = openingRowsLeft;
+          openingRowsLeft = Math.max(0, openingRowsLeft - rows.length);
+          return (
+            <TimetableRosterSection
+              key={key}
+              rows={rows}
+              openingRowLimit={limit}
+              {...list}
+              {...sectionProps}
+            />
+          );
+        })}
       </Fragment>
     </div>
   );

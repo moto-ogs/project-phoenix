@@ -1,6 +1,6 @@
 import { renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useStudentParentAttention } from "./use-parent-attention";
+import { useParentAttentionMap } from "./use-parent-attention";
 import type { InboxThread } from "~/lib/parent-messages-api";
 import type { AggregatedOpenRequest } from "~/lib/change-request-list-api";
 import type { ParentAttention } from "~/lib/parent-attention";
@@ -81,7 +81,7 @@ beforeEach(() => {
 describe("parent attention availability and live refresh", () => {
   it("retains independent request counts when the Eltern-App is not booked", async () => {
     mocks.booked = false;
-    renderHook(() => useStudentParentAttention("7"));
+    renderHook(useParentAttentionMap);
     const fetcher = mocks.swr.mock.calls[0]?.[1];
     expect(fetcher).toBeDefined();
     const result = await fetcher?.();
@@ -93,12 +93,12 @@ describe("parent attention availability and live refresh", () => {
   it("does not request data when neither source is available", () => {
     mocks.booked = false;
     mocks.reviewsRequests = false;
-    renderHook(() => useStudentParentAttention("7"));
+    renderHook(useParentAttentionMap);
     expect(mocks.swr.mock.calls[0]?.[0]).toBeNull();
   });
 
   it("uses bounded live-aware polling so a focused list can recover lost events", () => {
-    const { rerender } = renderHook(() => useStudentParentAttention("7"));
+    const { rerender } = renderHook(useParentAttentionMap);
     expect(mocks.swr.mock.lastCall?.[2].refreshInterval).toBe(60000);
     mocks.interval = 300000;
     rerender();

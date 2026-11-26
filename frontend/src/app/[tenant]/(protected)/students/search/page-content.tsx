@@ -1,5 +1,7 @@
 "use client";
 
+import { ParentAttentionList } from "~/components/students/parent-attention-badge";
+import { useHasDeepScrollPosition } from "~/components/ui/navigation-scroll-position";
 import { StatusBadge } from "~/components/ui/status-badge";
 import {
   buildStudentSearchFilters,
@@ -3284,16 +3286,17 @@ function SearchPageContent() {
   // client remount. The opening document still renders the complete list;
   // grouping and bulk selection always use and render the complete result.
   const viewport = useInitialPaintViewport();
+  const deepScroll = useHasDeepScrollPosition();
   const desktopViewport = viewport && viewport.width >= 1024;
   // On desktop the shell, page heading and search controls consume at least
   // 160px vertically. The shell and main padding leave at least 64px outside
   // the grid horizontally. Keep a full row at the lower edge as well.
   const initialCardCount =
-    !viewport || schoolCheckin.isActive
+    !viewport || schoolCheckin.isActive || deepScroll
       ? Infinity
       : desktopViewport
         ? Math.max(1, Math.floor((viewport.width - 64) / 320)) *
-          Math.max(1, Math.ceil((viewport.height - 160) / 96))
+          Math.max(1, Math.ceil((viewport.height - 160) / 128))
         : Math.max(1, Math.floor(viewport.width / 320)) *
           Math.ceil(viewport.height / 112);
   const renderMemoizedStudentCard = (student: Student) => {
@@ -3789,38 +3792,42 @@ function SearchPageContent() {
                 // und ersetzen den Inhalt dort.
                 if (effectiveGroupMode !== "none") {
                   return (
-                    <div className="space-y-6">
-                      {groupedStudents.map((group) => (
-                        // Der Gruppentitel steht auf der Fläche seiner Karte,
-                        // nicht frei auf dem gemusterten Grund (BAUARTEN-SPEC,
-                        // Teil 3).
-                        <div key={group.key} data-testid="student-group">
-                          <SectionCard
-                            title={group.label}
-                            action={
-                              <StatusBadge
-                                label={String(group.items.length)}
-                                tone="gray"
-                                compact
-                              />
-                            }
-                          >
-                            <CollectionGrid>
-                              {group.items.map(renderMemoizedStudentCard)}
-                            </CollectionGrid>
-                          </SectionCard>
-                        </div>
-                      ))}
-                    </div>
+                    <ParentAttentionList>
+                      <div className="space-y-6">
+                        {groupedStudents.map((group) => (
+                          // Der Gruppentitel steht auf der Fläche seiner Karte,
+                          // nicht frei auf dem gemusterten Grund (BAUARTEN-SPEC,
+                          // Teil 3).
+                          <div key={group.key} data-testid="student-group">
+                            <SectionCard
+                              title={group.label}
+                              action={
+                                <StatusBadge
+                                  label={String(group.items.length)}
+                                  tone="gray"
+                                  compact
+                                />
+                              }
+                            >
+                              <CollectionGrid>
+                                {group.items.map(renderMemoizedStudentCard)}
+                              </CollectionGrid>
+                            </SectionCard>
+                          </div>
+                        ))}
+                      </div>
+                    </ParentAttentionList>
                   );
                 }
 
                 return (
-                  <CollectionGrid>
-                    {sortedStudents
-                      .slice(0, initialCardCount)
-                      .map(renderMemoizedStudentCard)}
-                  </CollectionGrid>
+                  <ParentAttentionList>
+                    <CollectionGrid>
+                      {sortedStudents
+                        .slice(0, initialCardCount)
+                        .map(renderMemoizedStudentCard)}
+                    </CollectionGrid>
+                  </ParentAttentionList>
                 );
               })()}
             </StudentCardClockProvider>

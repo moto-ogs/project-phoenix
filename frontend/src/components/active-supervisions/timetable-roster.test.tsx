@@ -65,6 +65,7 @@ function renderRoster(
   attendanceWebEnabled = false,
   onConfirmExpected: (rows: TimetableRosterRow[]) => Promise<void> = vi.fn(),
   showTimetableCounts = false,
+  openingRowLimit?: number,
 ) {
   render(
     <TimetableRosterContent
@@ -76,6 +77,7 @@ function renderRoster(
       isConfirmingExpected={false}
       roster={value}
       showTimetableCounts={showTimetableCounts}
+      openingRowLimit={openingRowLimit}
       canAddUnplanned={false}
       onAddStudent={vi.fn()}
       onComplete={vi.fn()}
@@ -85,6 +87,30 @@ function renderRoster(
     />,
   );
 }
+
+it("keeps the first row usable and the real counts while later rows wait for paint", () => {
+  renderRoster(
+    roster(
+      [
+        rosterRow("1", "Anwesend oben", "13:00", {
+          currentlyPresent: true,
+          status: "present",
+        }),
+        rosterRow("2", "Erwartet weiter unten", "13:10"),
+      ],
+      true,
+    ),
+    true,
+    vi.fn(),
+    true,
+    1,
+  );
+
+  expect(screen.getByText("Anwesend oben")).toBeVisible();
+  expect(screen.getByRole("button", { name: "Raum verlassen" })).toBeEnabled();
+  expect(screen.getByText("Erwartet (1)")).toBeVisible();
+  expect(screen.queryByText("Erwartet weiter unten")).not.toBeInTheDocument();
+});
 
 describe("TimetableRosterContent pickup times", () => {
   it("shows a pickup time on every roster section and a neutral placeholder when none exists", () => {
