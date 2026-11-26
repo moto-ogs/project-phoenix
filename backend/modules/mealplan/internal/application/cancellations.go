@@ -95,33 +95,42 @@ func (c *cancellations) ChildMealCancelledOn(ctx context.Context, studentID int6
 		if err != nil || len(stored) == 0 {
 			return stats, err
 		}
-		rules, err := c.service.requireRegistration(txCtx)
-		if errors.Is(err, ErrDisabled) || errors.Is(err, ErrRegistrationDisabled) {
-			return stats, nil
-		}
-		if err != nil {
-			return stats, err
-		}
-		days, read, err := c.service.calendar.Days(txCtx, date, date)
-		stats = addStats(stats, read)
-		if err != nil || !days.Cancelled[date] {
-			return stats, err
-		}
-		// The booking as it stands without the cancellation: the day is
-		// open again for the child's regular days and day changes.
-		delete(days.Closed, date)
-		delete(days.Cancelled, date)
-		data, read, err := c.service.store.FindParticipation(txCtx, studentID, date, date)
-		stats = addStats(stats, read)
-		if err != nil {
-			return stats, err
-		}
-		for _, day := range c.service.resolveParticipation(data, date, date, rules, days, date).Days {
-			cancelled = cancelled || (day.Date == date && day.Registered)
-		}
-		return stats, nil
+		var booked domain.OperationStats
+		cancelled, booked, err = c.bookedOnCancelledDay(txCtx, studentID, date)
+		return addStats(stats, booked), err
 	})
 	return cancelled, mapPublicError(err)
+}
+
+// bookedOnCancelledDay reports whether the child is booked on a day whose
+// lunch was cancelled: the booking as it stands without the cancellation,
+// by the regular days and day changes, before absences. Without meal
+// registration no child is booked.
+func (c *cancellations) bookedOnCancelledDay(ctx context.Context, studentID int64, date domain.Date) (bool, domain.OperationStats, error) {
+	rules, err := c.service.requireRegistration(ctx)
+	if errors.Is(err, ErrDisabled) || errors.Is(err, ErrRegistrationDisabled) {
+		return false, domain.OperationStats{}, nil
+	}
+	if err != nil {
+		return false, domain.OperationStats{}, err
+	}
+	days, stats, err := c.service.calendar.Days(ctx, date, date)
+	if err != nil || !days.Cancelled[date] {
+		return false, stats, err
+	}
+	delete(days.Closed, date)
+	delete(days.Cancelled, date)
+	data, read, err := c.service.store.FindParticipation(ctx, studentID, date, date)
+	stats = addStats(stats, read)
+	if err != nil {
+		return false, stats, err
+	}
+	for _, day := range c.service.resolveParticipation(data, date, date, rules, days, date).Days {
+		if day.Date == date && day.Registered {
+			return true, stats, nil
+		}
+	}
+	return false, stats, nil
 }
 
 // requireOpenDay checks that lunch can be cancelled on the day: the meal
