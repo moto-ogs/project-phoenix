@@ -9,11 +9,11 @@ import { mapOwnPeriod } from "./own-period-read";
 import { ownTimeSeedKeys } from "./page-seed-keys";
 
 export async function loadTimeTrackingSeed(slug: string) {
-  const builtAt = Date.now();
   const context = await readTenantPageContext(slug, "zeiterfassung");
   if (!context || !hasPermission(context.session, "time_tracking:own"))
     return null;
 
+  const builtAt = Date.now();
   const { snapshot, token } = context;
   const today = berlinTodayISO();
   const { start, year, overview, period, leave } = ownTimeSeedKeys(today);

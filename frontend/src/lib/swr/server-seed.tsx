@@ -102,6 +102,24 @@ const fallbacks = new WeakMap<
 
 const subscribeNothing = () => () => {};
 
+type SeedSource = ServerSeed | PromiseLike<ServerSeed | null>;
+const REPLACED_SEED = Symbol("replaced seed");
+
+interface SeedOffer {
+  readonly seed: SeedSource;
+  readonly generation: string;
+  readonly replaced: Promise<typeof REPLACED_SEED>;
+  readonly replace: () => void;
+}
+
+function seedOffer(seed: SeedSource, generation: string): SeedOffer {
+  let replace!: () => void;
+  const replaced = new Promise<typeof REPLACED_SEED>((resolve) => {
+    replace = () => resolve(REPLACED_SEED);
+  });
+  return { seed, generation, replaced, replace };
+}
+
 function isFreshSeed(builtAt: number): boolean {
   return Math.abs(Date.now() - builtAt) <= SERVER_SEED_MAX_AGE_MS;
 }
@@ -121,7 +139,7 @@ function isThenable(value: unknown): value is PromiseLike<ServerSeed | null> {
  * also for a prefetched payload that mounts only now.
  */
 async function seededValue(
-  seed: ServerSeed | PromiseLike<ServerSeed | null>,
+  seed: SeedSource,
   key: string,
   fullKey: string,
   generation: string,
@@ -153,6 +171,28 @@ async function seededValue(
   return value;
 }
 
+async function claimSeedValue(
+  source: { readonly current: SeedOffer | null },
+  key: string,
+  fullKey: string,
+  generation: string,
+): Promise<unknown> {
+  while (source.current) {
+    const offer = source.current;
+    if (offer.generation !== generation) break;
+    try {
+      const value = await Promise.race([
+        seededValue(offer.seed, key, fullKey, generation),
+        offer.replaced,
+      ]);
+      if (value !== REPLACED_SEED && source.current === offer) return value;
+    } catch (error) {
+      if (source.current === offer) throw error;
+    }
+  }
+  throw new DiscardedAnswer();
+}
+
 /**
  * Offers the seed's keys as locked intent preloads. A leaf before the page:
  * its layout effect runs before any reader below mounts and loads.
@@ -164,7 +204,7 @@ function SeedHandoff({
   claimsFrom,
   generation,
 }: Readonly<{
-  seed: ServerSeed | PromiseLike<ServerSeed | null> | null;
+  seed: SeedSource | null;
   /** The seed as hydration read it: its keys are offered before any reader mounts. */
   resolved: ServerSeed | null;
   claims: readonly (string | null)[];
@@ -174,8 +214,28 @@ function SeedHandoff({
   const preload = useSWRPreload();
   const scoped = useSWRCacheKey();
   const { cache } = useSWRConfig();
+  const latestOffer = useRef<SeedOffer | null>(null);
+
+  // Flight can briefly render a prefetched seed promise that never settles.
+  // A reader may already have consumed its preload when the navigation's
+  // payload replaces it. Let that same claim follow the new payload.
+  useLayoutEffect(
+    () => () => {
+      const previous = latestOffer.current;
+      latestOffer.current = null;
+      previous?.replace();
+    },
+    [],
+  );
   useLayoutEffect(() => {
+    const previous = latestOffer.current;
+    if (previous?.seed !== seed || previous?.generation !== generation) {
+      latestOffer.current =
+        seed && generation !== null ? seedOffer(seed, generation) : null;
+      previous?.replace();
+    }
     if (!seed || generation === null) return;
+    const current = latestOffer.current;
     offered.add(seed);
     let keys = offeredKeys.get(seed);
     if (!keys) {
@@ -185,11 +245,16 @@ function SeedHandoff({
     const known = keys;
     const offer = (key: string) => {
       const fullKey = scoped(key);
-      if (known.has(key) || fullKey === null) return;
+      if (latestOffer.current !== current || known.has(key) || fullKey === null)
+        return;
       known.add(key);
-      void preload(key, () => seededValue(seed, key, fullKey, generation), {
-        intent: true,
-      }).catch(() => undefined);
+      void preload(
+        key,
+        () => claimSeedValue(latestOffer, key, fullKey, generation),
+        {
+          intent: true,
+        },
+      ).catch(() => undefined);
     };
     for (const key of claims) if (key !== null) offer(key);
     resolved?.entries.forEach((entry) => offer(entry.key));

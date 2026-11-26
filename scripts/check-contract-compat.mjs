@@ -33,6 +33,13 @@ const RETIRED_STAFF_NAVIGATION_FIELDS = new Set([
   "educational_groups", "incomplete", "supervised_groups", "unavailable_sections",
 ]);
 
+// ADR 0270: the staff shell has already switched to supervision-context.
+// Only the two old tenant-only GET responses may leave without deprecation.
+const RETIRED_SUPERVISION_ROUTES = new Map([
+  ["GET /api/active/supervisors/all", "presence.ActiveGroupResponse"],
+  ["GET /api/students/ogs-group-navigation", "grouplive.NavigationGroup"],
+]);
+
 export function breakingChanges(base, head) {
   const breaking = [];
   const baseTypes = new Map(base.types.map((type) => [type.name, type]));
@@ -84,7 +91,12 @@ export function breakingChanges(base, head) {
     const key = `${route.method} ${route.pattern}`;
     const next = headRoutes.get(key);
     if (!next) {
-      if (!route.deprecated) breaking.push(`${key}: route removed without a release as deprecated`);
+      const retiredType = RETIRED_SUPERVISION_ROUTES.get(key);
+      const retiredSupervisionRoute = retiredType !== undefined
+        && route.portals.length === 1 && route.portals[0] === "tenant"
+        && route.response?.kind === "array" && route.response.elem.kind === "ref"
+        && baseTypes.get(route.response.elem.ref)?.go_type === retiredType;
+      if (!route.deprecated && !retiredSupervisionRoute) breaking.push(`${key}: route removed without a release as deprecated`);
       continue;
     }
     for (const portal of route.portals) {

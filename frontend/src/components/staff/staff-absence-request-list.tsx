@@ -10,7 +10,13 @@
  * Eltern-Reiter, damit beide Reiter gleich aussehen.
  */
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useState,
+} from "react";
 
 import { TrayIcon } from "@phosphor-icons/react/ssr";
 import { useSession } from "next-auth/react";
@@ -197,7 +203,7 @@ export function StaffAbsenceRequestList({
   // Solange geladen wird, meldet die Liste `null`: der Seitenkopf zeigt dann
   // einen Skelett-Balken statt einer falschen Null.
   const reportedCount = loading || failed ? null : (rows?.length ?? null);
-  useEffect(() => {
+  useLayoutEffect(() => {
     onCountChange?.(reportedCount);
   }, [onCountChange, reportedCount]);
 

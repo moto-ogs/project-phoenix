@@ -2,6 +2,8 @@
 
 Erste systematische Messung des Tenant-Frontends (Issue #2938). Jede Aussage hier hat eine Zahl aus einem der vier Messläufe: Playwright-Traces gegen den Prod-Server, Proxy-Metriken, Turbopack-Bundle-Analyse, react-scan gegen den Dev-Server. Der Mess-Harness liegt unter `frontend/scripts/perf/` und ist wiederholbar (siehe Anhang).
 
+Die folgenden Messungen dokumentieren den damaligen Stand. Referenz für Seitenwechsel nach #8083: [Revisit-Messung](revisit-8083/results.md).
+
 ## Kurzfassung
 
 1. **Die Bottom-Navigation lief auf jeder Seite in einer Render-Schleife.** Rund 2.100 Renders pro Sekunde im Leerlauf, auf dem Dashboard 89.771 Renders in 40 Sekunden. Ursache: ein Effekt in `MobileBottomNav`, der bei jedem Render ein neues State-Objekt setzt. Der Fix (State nur bei Änderung setzen) ist in diesem PR; danach 0 Renders im Leerlauf.
@@ -105,7 +107,7 @@ weiterhin auf.
 
 Abgebrochene Requests: pro Aufruf 10 bis 28 `fetch`-Requests auf Seitenpfade (`/students/search`, `/rooms`, `/ogs-groups`, `/anfragen`, `/settings`, `/staff`, `/time-tracking`, …), die der Browser wieder abbricht. Das sind die Router-Prefetches der `next/link`-Einträge in Seitenleiste und Bottom-Nav. Folge-Issue #2976.
 
-Nachmessung nach #2976 (Shell-Links über `NavLink`, seit #6570 `NavigationLink`: kein Viewport-Prefetch, Prefetch erst bei Hover, Fokus oder Touch-Beginn; gleicher Harness, Stand 2026-09-04, frischer Seed): `cold.requests.failed` ist auf 17 von 18 kalten Aufrufen leer. Der eine Ausreißer (Dashboard, Lauf 3) zeigt 2 abgebrochene Prefetches, `/ogs-groups` und `/students/search`, und die kommen aus den Karten im Seiteninhalt des Dashboards (`InfoCard href`), nicht aus der Seitenleiste. Inhaltslinks nutzen weiter `next/link` mit Standard-Prefetch; das ist gewollt, weil sie wenige sind und auf den nächsten Klick zielen.
+Nachmessung nach #2976 (2026-09-04, gleicher Harness, frischer Seed): Shell-Links luden erst bei Hover, Fokus oder Touch-Beginn vor. `cold.requests.failed` war bei 17 von 18 kalten Aufrufen leer. Die zwei abgebrochenen Prefetches im dritten Dashboard-Lauf kamen aus den Inhaltskarten (`InfoCard href`), nicht aus der Seitenleiste. Seit #8083 lädt `NavigationLink` beim Eintritt ins Sichtfeld nur die neutrale Routenhülle vor.
 
 ## Seitenwechsel statt Seitenaufruf (#2828)
 
@@ -128,7 +130,7 @@ Damit sind die Fragen aus dem Issue beantwortet:
 1. **Kein Full-Reload.** Null Dokument-Requests pro Wechsel, in allen drei Läufen. Die App-Shell wird nicht neu aufgebaut: die Marke auf dem Hüllen-Knoten überlebt jeden Wechsel.
 2. **2 bis 6 API-Requests pro Wechsel**, praktisch alles Seitendaten. Der einzige Hüllen-Endpunkt, der bei jedem Wechsel erneut läuft, ist `GET /api/platform/announcements/unread`: `useAnnouncements` holt ihn bei jedem Pfadwechsel absichtlich neu, damit eine neue Ankündigung an einem ruhigen Moment erscheint und nicht mitten in einer Eingabe. Das bleibt so. (`/api/settings/schema` taucht einmalig beim ersten Aufruf von /settings auf.)
 3. **Layout-Daten werden bereits einmal geladen und behalten** — das ist #2973. Die 18 Hüllen-Requests des kalten Aufrufs wiederholen sich beim Wechsel nicht.
-4. **Prefetching ist in Ordnung** — das ist #2976. Der Link wird bei Hover, Fokus oder Touch-Beginn vorgeladen.
+4. **Im damaligen Build** startete Prefetching bei Hover, Fokus oder Touch-Beginn (#2976).
 
 Was blieb, war das Sichtbare: die geteilte Ladehülle `(protected)/loading.tsx` zeigte einen allgemeinen Kringel in Inhaltshöhe. Auf jeder Seite ohne eigenes Skelett — 59 der 76 geschützten Seiten — sprang das Layout beim Wechsel erst auf Kringelhöhe zusammen, dann auf das Skelett der Zielseite, dann auf den Inhalt. Drei Zustände für einen Wechsel.
 

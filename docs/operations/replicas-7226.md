@@ -147,6 +147,20 @@ hash of every container of `server`, `worker` and `frontend`. Deploys and
 rollbacks run it after the health wait; a mismatch fails the release, which
 then rolls back. Run it by hand after every manual scaling step.
 
+### Next HTML, RSC and prefetch
+
+Caddy preserves the request host, RSC and prefetch headers, the `_rsc`
+query parameter, and Next's `Vary` and `Cache-Control` responses. The
+shared cacheable output is limited to public assets and neutral shells.
+Request-bound HTML and RSC are private; BFF data keeps `private, no-store`.
+If a CDN caches public shells, its key must preserve the host and full URL
+including `_rsc`. Do not add a cache rule that treats HTML, Flight and
+prefetch responses as interchangeable. See the
+[Next.js CDN guide](https://nextjs.org/docs/app/guides/cdn-caching).
+
+No sticky routing or shared private cache is required. In-process caches
+may differ only for public data where that difference is harmless.
+
 ## Scaling
 
 Scale changes go through the repository, so the next deploy keeps them.

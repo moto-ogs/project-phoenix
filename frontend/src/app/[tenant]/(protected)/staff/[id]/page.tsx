@@ -1,7 +1,10 @@
+import { connection } from "next/server";
 import { berlinTodayISO } from "~/lib/date-helpers";
 import { loadStaffDetailSeed } from "./staff-detail-seed.server";
 import PageContent from "./page-content";
 import { StaffDetailSeed } from "./page-seed";
+
+export const unstable_dynamicStaleTime = 60;
 
 export default async function StaffDetailPage({
   params,
@@ -16,6 +19,7 @@ export default async function StaffDetailPage({
   ]);
   const first = (value: string | string[] | undefined) =>
     (Array.isArray(value) ? value[0] : value) ?? null;
+  await connection();
   const builtAt = Date.now();
   const opening = {
     id,

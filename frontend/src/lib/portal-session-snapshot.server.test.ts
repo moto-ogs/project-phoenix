@@ -11,6 +11,7 @@ const { requestHeaders } = vi.hoisted(() => ({
 vi.mock("next/headers", () => ({
   headers: vi.fn(async () => requestHeaders.current),
 }));
+vi.mock("next/server", () => ({ connection: vi.fn(async () => undefined) }));
 const { familyState } = vi.hoisted(() => ({
   familyState: vi.fn<() => Promise<SessionFamilyState>>(),
 }));

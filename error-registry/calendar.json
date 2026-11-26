@@ -17,6 +17,18 @@
       "class": "permission",
       "parameters": [],
       "legacy": "calendar.no_staff_profile"
+    },
+    {
+      "code": "calendar.opening_change_invalid",
+      "class": "input",
+      "parameters": [],
+      "legacy": "calendar.opening_change_invalid"
+    },
+    {
+      "code": "calendar.opening_change_not_found",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "calendar.opening_change_not_found"
     }
   ]
 }

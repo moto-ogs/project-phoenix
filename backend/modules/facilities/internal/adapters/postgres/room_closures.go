@@ -80,7 +80,7 @@ func (s *Store) ListClosures(ctx context.Context, filter facilities.RoomClosureF
 	if err != nil {
 		return nil, domain.OperationStats{}, err
 	}
-	return s.listClosures(ctx, db, tenantID, filter, "")
+	return s.listClosures(ctx, db, tenantID, filter)
 }
 
 // ListClosuresWithRoomLocks locks every selected room FOR UPDATE while
@@ -142,7 +142,7 @@ func (s *Store) ListClosuresWithRoomLocks(ctx context.Context, filter facilities
 	return result, stats, nil
 }
 
-func (s *Store) listClosures(ctx context.Context, db bun.IDB, tenantID int64, filter facilities.RoomClosureFilter, extra string, args ...any) ([]facilities.RoomClosure, domain.OperationStats, error) {
+func (s *Store) listClosures(ctx context.Context, db bun.IDB, tenantID int64, filter facilities.RoomClosureFilter) ([]facilities.RoomClosure, domain.OperationStats, error) {
 	rows := []roomClosureRow{}
 	stats := domain.OperationStats{Queries: 1}
 	query := db.NewSelect().Model(&rows).
@@ -156,9 +156,6 @@ func (s *Store) listClosures(ctx context.Context, db bun.IDB, tenantID int64, fi
 	}
 	if len(filter.RoomIDs) > 0 {
 		query = query.Where(`"closure".room_id IN (?)`, bun.List(filter.RoomIDs))
-	}
-	if extra != "" {
-		query = query.Where(extra, args...)
 	}
 	if err := query.Scan(ctx); err != nil {
 		return nil, stats, fmt.Errorf("facilities postgres: list room closures: %w", err)

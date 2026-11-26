@@ -9,6 +9,8 @@ import createNextIntlPlugin from "next-intl/plugin";
 /** @type {import("next").NextConfig} */
 const config = {
   output: "standalone",
+  cacheComponents: true,
+  partialPrefetching: true,
   experimental: {
     optimizePackageImports: ["@phosphor-icons/react"],
   },

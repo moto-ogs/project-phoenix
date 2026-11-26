@@ -46,10 +46,10 @@ const TRUSTED_DEVICES_KEY = tenantAdminKeys.trustedDevices("caterer");
 const ACCOUNT_CLAIMS = [FACTOR_KEY, PASSKEYS_KEY, TRUSTED_DEVICES_KEY];
 
 export function catererAccountSeed() {
-  const builtAt = Date.now();
   const seed = catererSnapshot()
     .then((snapshot) => {
       if (!snapshot) return null;
+      const builtAt = Date.now();
       const token = snapshot.accessToken;
       const factor = seedRead("catererFactor", async (signal) => {
         const { data } = await readContract(

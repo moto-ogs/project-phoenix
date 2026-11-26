@@ -24,7 +24,7 @@ func TestVisitReadsRespectDisabledHistory(t *testing.T) {
 	testpkg.CreateTestVisit(t, tc.db, student.ID, group.ID, exit.Add(-time.Hour), &exit)
 	paths := []string{"/active/visits?active=false", "/active/visits"}
 	for _, enabled := range []bool{false, true} {
-		require.NoError(t, tc.settings.SetBool(testpkg.Ctx(t), "gdpr.attendance_log_enabled", enabled, nil, nil))
+		require.NoError(t, tc.setBool(testpkg.Ctx(t), "gdpr.attendance_log_enabled", enabled, nil, nil))
 		for _, path := range paths {
 			req := testutil.NewJSONRequest(t, "GET", path, nil)
 			rr := testutil.ExecuteWithAuthPermissions(t, router, req, testutil.AdminTestClaims(1), []string{permissions.GroupsRead})

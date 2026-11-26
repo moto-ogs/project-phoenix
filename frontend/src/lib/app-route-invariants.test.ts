@@ -45,6 +45,42 @@ describe("Next.js app route filesystem invariants", () => {
 
 const sourceRoot = path.resolve(import.meta.dirname, "..");
 
+it("lists every page exactly once in the server-seed inventories", () => {
+  const appRoot = path.join(sourceRoot, "app");
+  const pages = readdirSync(appRoot, { recursive: true, withFileTypes: true })
+    .filter((file) => file.isFile() && file.name === "page.tsx")
+    .map((file) => path.relative(appRoot, file.parentPath).split(path.sep))
+    // Parallel slots reuse a canonical route; groups do not appear in it.
+    .filter((segments) => !segments.some((segment) => segment.startsWith("@")))
+    .map(
+      (segments) =>
+        `/${segments.filter((segment) => !segment.startsWith("(")).join("/")}`,
+    );
+
+  const inventories = [
+    ["server-seed-team.md", "/[tenant]"],
+    ["server-seed-team-catalog.md", "/[tenant]"],
+    ["server-seed-parents-public.md", "/"],
+    ["server-seed-portals.md", "/"],
+  ] as const;
+  const listed: string[] = [];
+  for (const [name, defaultPrefix] of inventories) {
+    const file = path.resolve(sourceRoot, "../../docs/agents", name);
+    let prefix: string = defaultPrefix;
+    for (const line of readFileSync(file, "utf8").split(/\r?\n/)) {
+      const section = /^\| Route under `([^`]+)` \|/.exec(line)?.[1];
+      if (section) prefix = section;
+      const route = /^\| `([^\s`]+)` \|/.exec(line)?.[1];
+      if (!route || route.startsWith("@") || route.endsWith(".tsx")) continue;
+      listed.push(path.posix.join(prefix, route).replace(/\/$/, "") || "/");
+    }
+  }
+
+  expect(listed.sort(), "Update docs/agents/server-seed-*.md").toEqual(
+    pages.sort(),
+  );
+});
+
 // These first displays are the rollout's critical paths. Their client
 // readers remain the recovery path, but cannot own the initial request again.
 const seededEntrypoints = [

@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import { berlinTodayISO } from "~/lib/date-helpers";
 import {
   closingDays,
@@ -8,7 +9,8 @@ import { SWRServerSeed } from "~/lib/swr/server-seed";
 import { traegerPageSeed } from "~/lib/traeger/page-seed.server";
 import TraegerClosingDaysPage from "./page-content";
 
-export default function Page() {
+export default async function Page() {
+  await connection();
   const year = berlinTodayISO().slice(0, 4);
   const from = `${year}-01-01`;
   const to = `${year}-12-31`;

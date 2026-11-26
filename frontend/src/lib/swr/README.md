@@ -4,22 +4,19 @@ Use the existing authenticated hooks. Each resource family owns its key,
 parameters and fetcher; pages do not give the same response a new name.
 
 ```tsx
-import { useSWRAuth, useSWRPreload, useInvalidateFamily } from "~/lib/swr";
+import { useSWRAuth, useInvalidateFamily } from "~/lib/swr";
 import { rooms } from "~/lib/swr/rooms";
 
 const params = { page: 1, pageSize: 500 };
 const response = useSWRAuth(rooms.key(params), () => rooms.fetcher(params));
-const preload = useSWRPreload();
 const invalidateFamily = useInvalidateFamily();
 
-// On intent, with the same parameters as the destination:
-// The destination owns load errors; intent must not show an error toast.
-void preload(rooms.key(params), () => rooms.fetcher(params)).catch(
-  () => undefined,
-);
 // After a write, refresh every parameter set, including preload-only keys:
 void invalidateFamily(rooms.family);
 ```
+
+For a page's first display, [seed the existing reader key on the server](../../../../docs/agents/frontend-api.md#first-display-in-a-protected-page).
+Links prefetch the route shell, not the reader's data.
 
 1. Factory keys are **unscoped**. The hooks add the authenticated portal,
    school and account through `scope.ts`. Never give an unscoped key to the
@@ -324,20 +321,21 @@ optimistic action. The guard exposes no cache or writer and does not change
 SWR's view-bound `onSuccess` semantics. Keep each refused resource's existing
 factory-key predicate; do not clear other readable schools.
 
-## Navigation intent
+## Navigation and seed handoff
 
-Navigation data preloads must use `useSWRPreload` with the destination's exact
-factory key and fetcher. Code prefetch and data prefetch are independent:
-data waits for about 300 ms of pointer intent or keyboard focus (blur cancels).
-Touch starts no load: only a completed single-finger tap, with at most 8 px of
-movement, starts data intent; swipes and cancelled gestures do not.
-Do not preload audited reads, inaccessible resources, or speculative detail
-fields. A failed speculative request must not become the destination's load
-error. Scope changes discard pending answers, including work queued before
-the change. Respect Save-Data, `prefers-reduced-data` and slow connections; bound concurrency.
+Navigation links prefetch only the neutral route shell. Protected page data
+travels with the authorized server seed on navigation, not a second browser
+BFF prefetch. Keep audited openings and any GET with a side effect out of
+that payload. When a page claims a key, the generation-locked handoff uses
+the same key as the browser reader and suppresses a duplicate browser load.
+A missing, failed or expired seed leaves the original retry path in charge.
+If the prefetched Flight payload supplies a promise that cannot settle, an
+open claim follows the real navigation's seed instead. Leaving the boundary
+or changing its session discards the claim through the same generation lock.
 
-`preload(key, fetcher, { intent: true })` is the speculative variant of the
-same locked writer. It skips an already current cached response and removes
+`SWRServerSeed` uses `preload(key, claimSeedValue, { intent: true })` internally
+to offer the server's promise, not to start a BFF request from a link.
+This locked writer skips an already current cached response and removes
 only its own failed preload promise atomically before rejecting, so a later
 page cannot take a promise between failure and cleanup. It runs its ordinary
 loader instead.
@@ -353,9 +351,3 @@ timers were suspended. Timer cleanup requires the original promise identity,
 and an expired pending request cannot trigger a handoff fallback. Expiry only
 evicts intent registry entries, never response data. General preloads retain
 their existing contract.
-Protected page data travels with the route's server seed, not a second
-browser BFF prefetch. The RSC intent prefetch waits for hover or keyboard
-focus; contact during scrolling does not load a page. Keep audited openings
-and any GET with a side effect out of that payload. When a page claims a key,
-the generation-locked handoff suppresses a duplicate browser load; a missing,
-failed or expired seed leaves the original retry path in charge.

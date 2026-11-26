@@ -21,14 +21,14 @@ type FacilitiesRooms struct {
 	Closures facilitiesModule.Closures
 }
 
-// buildFacilitiesRooms builds into the retained room service, the open
-// groups of the yard over Student Presence and the room closures.
-func buildFacilitiesRooms(into *FacilitiesRooms, db transactionruntime.Database, env owners.RootEnvironment, presence studentpresence.Owner, rooms facilitiesModule.Catalog, timetableOwner timetable.Capability, membership schoolmembership.Capability, persons peopledirectory.Capability) error {
+// buildFacilitiesRooms builds the retained room service, the open groups of
+// the yard over Student Presence and the room closures.
+func buildFacilitiesRooms(db transactionruntime.Database, env owners.RootEnvironment, presence studentpresence.Owner, rooms facilitiesModule.Catalog, timetableOwner timetable.Capability, membership schoolmembership.Capability, persons peopledirectory.Capability) (FacilitiesRooms, error) {
 	closures, err := owners.BuildRoomClosures(db, env.Now)
 	if err != nil {
-		return owners.StepError("compose room closures", err)
+		return FacilitiesRooms{}, owners.StepError("compose room closures", err)
 	}
-	*into = FacilitiesRooms{
+	return FacilitiesRooms{
 		Closures: closures,
 		RoomService: facilitiesCompose.NewRoomService(facilitiesCompose.RoomServiceConfig{
 			Rooms:     rooms,
@@ -37,6 +37,5 @@ func buildFacilitiesRooms(into *FacilitiesRooms, db transactionruntime.Database,
 			Today:     env.Today,
 		}),
 		OpenGroups: facilitiesCompose.NewOpenGroupCatalog(FacilitiesGroupSupervisions(presence), FacilitiesRoomSessions(presence), FacilitiesGroupVisits(presence)),
-	}
-	return nil
+	}, nil
 }

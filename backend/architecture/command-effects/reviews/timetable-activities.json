@@ -40735,6 +40735,28 @@
       "target_owner": "settings-platform"
     },
     {
+      "adr": "0067",
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableRoomClosures.RoomClosedOn",
+      "classification": "leaf",
+      "effect": "lock",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.RoomClosures.RoomClosedOn",
+      "reason": "Guarded leaf command (lock): Timetable asks Facilities to lock a selected room before creating or moving an instance. The ambient tenant transaction holds the lock through the appointment write, serializing it with CloseRoom so a new appointment cannot be committed in a closed room (#7653).",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/facilities.Closures.RoomClosedOn",
+      "target_owner": "facilities"
+    },
+    {
+      "adr": "0067",
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableRoomClosures.RoomClosureRanges",
+      "classification": "leaf",
+      "effect": "lock",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.RoomClosures.RoomClosureRanges",
+      "reason": "Guarded leaf command (lock): Timetable asks Facilities to lock all rooms in a materialization batch before it creates occurrences. The shared tenant transaction keeps those locks through the batch, serializing it with CloseRoom while the batch skips closed dates (#7653).",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/facilities.Closures.RoomClosureRanges",
+      "target_owner": "facilities"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/timetable/compose.OwnerRooms.AllRoomNames",
       "classification": "query",
       "effect": "query",

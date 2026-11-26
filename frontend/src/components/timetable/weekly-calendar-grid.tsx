@@ -37,7 +37,7 @@ import {
 import { Alert } from "~/components/ui/alert";
 import { CapacityStrip } from "~/components/ui/planning/capacity-strip";
 import { EmptyState } from "~/components/ui/empty-state";
-import { PlanAddAffordance } from "~/components/ui/planning/plan-add-affordance";
+import { PLAN_ADD_AFFORDANCE } from "~/components/ui/planning/plan-add-affordance";
 import { SectionCard } from "~/components/ui/section-card";
 import {
   assignBlockLanes,
@@ -56,6 +56,7 @@ import type { EnrichedInstance } from "~/lib/timetable-types";
 
 import { InstanceBlock, type BlockStaffing } from "./instance-block";
 import { StatusDot } from "~/components/ui/status-dot";
+import { useInitialPaintViewport } from "~/lib/hooks/use-after-initial-paint";
 import { PlanningDayChip } from "~/components/ui/planning/planning-context-bar";
 
 // Grid template columns: narrow time gutter + day columns. Mobile shows a
@@ -246,6 +247,23 @@ export function WeeklyCalendarGrid({
     (_, i) => renderStartHour + i,
   );
   const gridHeightPx = (renderEndHour - renderStartHour) * hourHeightPx;
+  const viewport = useInitialPaintViewport();
+  // A fresh scroller begins at its top. No slot or block farther down than
+  // the whole viewport can be visible on that first paint. Reserve the full
+  // grid height and add those empty-slot controls after the visible part.
+  // Render a single day's complete, usable plan in one commit.
+  const initialGridBottom =
+    !viewport || weekDays.length === 1 ? Infinity : viewport.height;
+  const slotHours = hours.slice(
+    0,
+    Math.min(hours.length - 1, Math.ceil(initialGridBottom / hourHeightPx)),
+  );
+  const halfHourHeight = hourHeightPx / 2;
+  // The evenly spaced lines are decoration, not one DOM node per line and day.
+  const gridLines = `linear-gradient(to bottom,
+    var(--color-gray-50) 0 1px, transparent 1px ${halfHourHeight}px,
+    var(--color-gray-100) ${halfHourHeight}px ${halfHourHeight + 1}px,
+    transparent ${halfHourHeight + 1}px ${hourHeightPx}px)`;
 
   // Re-render every minute so the now-line moves smoothly.
   const [nowTick, setNowTick] = useState(() => Date.now());
@@ -283,37 +301,25 @@ export function WeeklyCalendarGrid({
   // Scrollleiste sitzt am Fuß des Rasters, oft unter dem Bildschirmrand,
   // und macOS blendet sie ohnehin aus.
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [scrollEdges, setScrollEdges] = useState({
-    left: false,
-    right: false,
-    // Breite einer sichtbaren senkrechten Scrollleiste (Windows, Linux):
-    // der rechte Schatten steht davor, nicht darauf.
-    scrollbarPx: 0,
-  });
+  const leftShadowRef = useRef<HTMLDivElement>(null);
+  const rightShadowRef = useRef<HTMLDivElement>(null);
   const updateScrollEdges = useCallback(() => {
     const scroller = scrollRef.current;
-    if (!scroller) return;
-    const next = {
-      left: scroller.scrollLeft > 0,
-      right:
-        scroller.scrollLeft + scroller.clientWidth < scroller.scrollWidth - 1,
-      scrollbarPx: scroller.offsetWidth - scroller.clientWidth,
-    };
-    setScrollEdges((prev) =>
-      prev.left === next.left &&
-      prev.right === next.right &&
-      prev.scrollbarPx === next.scrollbarPx
-        ? prev
-        : next,
-    );
+    const leftShadow = leftShadowRef.current;
+    const rightShadow = rightShadowRef.current;
+    if (!scroller || !leftShadow || !rightShadow) return;
+    const { scrollLeft, scrollWidth, clientWidth, offsetWidth } = scroller;
+    // These measurements affect only decoration, not the rows and blocks.
+    // Updating the shadows directly keeps a scroll or resize from rendering
+    // the entire calendar again before the browser can paint.
+    const hideLeft = scrollLeft <= 0;
+    const hideRight = scrollLeft + clientWidth >= scrollWidth - 1;
+    if (leftShadow.hidden !== hideLeft) leftShadow.hidden = hideLeft;
+    if (rightShadow.hidden !== hideRight) rightShadow.hidden = hideRight;
+    // A visible vertical scrollbar (Windows/Linux) sits beside the shadow.
+    const right = `${offsetWidth - clientWidth}px`;
+    if (rightShadow.style.right !== right) rightShadow.style.right = right;
   }, []);
-  useEffect(() => {
-    const scroller = scrollRef.current;
-    if (!scroller || typeof ResizeObserver === "undefined") return;
-    const observer = new ResizeObserver(updateScrollEdges);
-    observer.observe(scroller);
-    return () => observer.disconnect();
-  }, [updateScrollEdges]);
 
   // Liegt heute außerhalb des sichtbaren Ausschnitts (breite Tage davor),
   // rückt das Raster beim Öffnen einer Woche die heutige Spalte ins Bild;
@@ -342,28 +348,41 @@ export function WeeklyCalendarGrid({
       shownWeekRef.current = weekKey;
       userMovedRef.current = false;
     }
-    if (!userMovedRef.current) {
-      const todayColumn = scroller.querySelector<HTMLElement>(
-        "[data-today-column]",
-      );
-      const gutter = scroller.querySelector<HTMLElement>("[data-time-gutter]");
-      if (!todayColumn || todayColumn.offsetParent === null) {
-        scroller.scrollLeft = 0;
-      } else {
-        const left = todayColumn.offsetLeft - (gutter?.offsetWidth ?? 0);
-        const right = todayColumn.offsetLeft + todayColumn.offsetWidth;
-        if (
-          left < scroller.scrollLeft ||
-          right > scroller.scrollLeft + scroller.clientWidth
-        ) {
-          scroller.scrollLeft = Math.max(left, 0);
+    const alignWeek = () => {
+      if (!userMovedRef.current) {
+        const todayColumn = scroller.querySelector<HTMLElement>(
+          "[data-today-column]",
+        );
+        const gutter =
+          scroller.querySelector<HTMLElement>("[data-time-gutter]");
+        if (!todayColumn || todayColumn.offsetParent === null) {
+          scroller.scrollLeft = 0;
+        } else {
+          const left = todayColumn.offsetLeft - (gutter?.offsetWidth ?? 0);
+          const right = todayColumn.offsetLeft + todayColumn.offsetWidth;
+          if (
+            left < scroller.scrollLeft ||
+            right > scroller.scrollLeft + scroller.clientWidth
+          ) {
+            scroller.scrollLeft = Math.max(left, 0);
+          }
         }
+        // The browser clamps what was requested to the actual scroll width.
+        ownScrollLeftRef.current = scroller.scrollLeft;
       }
-      // Gelesen, nicht gesetzt: der Browser begrenzt den Wert auf die
-      // tatsächliche Scrollbreite.
-      ownScrollLeftRef.current = scroller.scrollLeft;
+      updateScrollEdges();
+    };
+    if (typeof ResizeObserver === "undefined") {
+      alignWeek();
+      return;
     }
-    updateScrollEdges();
+    // Observe the viewport and its inner width. Read geometry after the
+    // browser has laid out the revealed grid, instead of forcing layout.
+    const observer = new ResizeObserver(alignWeek);
+    observer.observe(scroller);
+    if (scroller.firstElementChild)
+      observer.observe(scroller.firstElementChild);
+    return () => observer.disconnect();
   }, [
     weekKey,
     todayISO,
@@ -575,6 +594,7 @@ export function WeeklyCalendarGrid({
               {/* Day columns */}
               {weekDays.map((day, dayIndex) => {
                 const iso = toISODate(day);
+                const dayLabel = formatDayHeader(day);
                 const isToday = iso === todayISO;
                 const dayInstances = grouped.get(iso) ?? [];
                 const closingReason = closingDays?.get(iso);
@@ -612,31 +632,16 @@ export function WeeklyCalendarGrid({
                     className={`relative min-w-0 border-l border-gray-200 ${backgroundClass} ${dayIndex === safeSelectedIndex ? "" : "hidden sm:block"}`}
                     style={{ height: `${gridHeightPx}px` }}
                   >
-                    {/* Hour grid lines */}
-                    {hours.slice(1, -1).map((hour) => {
-                      const top = (hour - renderStartHour) * hourHeightPx;
-                      return (
-                        <div
-                          key={hour}
-                          className="pointer-events-none absolute right-0 left-0 border-t border-gray-100"
-                          style={{ top: `${top}px` }}
-                        />
-                      );
-                    })}
-
-                    {/* Half-hour grid lines (lighter) */}
-                    {hours.slice(0, -1).map((hour) => {
-                      const top =
-                        (hour - renderStartHour) * hourHeightPx +
-                        hourHeightPx / 2;
-                      return (
-                        <div
-                          key={`half-${hour}`}
-                          className="pointer-events-none absolute right-0 left-0 border-t border-gray-50"
-                          style={{ top: `${top}px` }}
-                        />
-                      );
-                    })}
+                    <div
+                      aria-hidden
+                      className="pointer-events-none absolute inset-x-0 bottom-0"
+                      style={{
+                        top: halfHourHeight,
+                        backgroundImage: gridLines,
+                        backgroundSize: `100% ${hourHeightPx}px`,
+                        backgroundRepeat: "repeat-y",
+                      }}
+                    />
 
                     {/* Betreuungszeit der Ferienbetreuung: unter den Klickflächen
                     und Terminen, damit beide bedienbar bleiben. */}
@@ -654,7 +659,7 @@ export function WeeklyCalendarGrid({
                     handlers without z-index tricks. */}
                     {onSlotClick &&
                       !planningDisabled &&
-                      hours.slice(0, -1).map((hour) => (
+                      slotHours.map((hour) => (
                         <button
                           key={`slot-${hour}`}
                           type="button"
@@ -663,18 +668,13 @@ export function WeeklyCalendarGrid({
                           // users create events via the "Neu" menu instead.
                           tabIndex={-1}
                           onClick={() => onSlotClick(iso, hour)}
-                          aria-label={`Neuen Termin anlegen: ${formatDayHeader(day)}, ${String(hour).padStart(2, "0")}:00 Uhr`}
-                          className="group absolute inset-x-0 flex items-center justify-center p-0.5 focus-visible:ring-2 focus-visible:ring-gray-600 focus-visible:outline-none focus-visible:ring-inset"
+                          aria-label={`Neuen Termin anlegen: ${dayLabel}, ${String(hour).padStart(2, "0")}:00 Uhr`}
+                          className={`absolute inset-x-0 before:inset-0.5 focus-visible:ring-2 focus-visible:ring-gray-600 focus-visible:outline-none focus-visible:ring-inset ${PLAN_ADD_AFFORDANCE}`}
                           style={{
                             top: `${(hour - renderStartHour) * hourHeightPx}px`,
                             height: `${hourHeightPx}px`,
                           }}
-                        >
-                          {/* Dieselbe Anlege-Geste wie in den Zellen von Dienstplan
-                          und ResourceGrid (#2031) statt der früheren Textpille
-                          "+ Termin". */}
-                          <PlanAddAffordance />
-                        </button>
+                        />
                       ))}
 
                     {/* Event blocks */}
@@ -685,6 +685,7 @@ export function WeeklyCalendarGrid({
                         hourHeightPx,
                         renderStartHour,
                       );
+                      if (top >= initialGridBottom) return null;
                       const widthPct = 100 / laneCount;
                       return (
                         <InstanceBlock
@@ -762,19 +763,18 @@ export function WeeklyCalendarGrid({
             </div>
           )}
         </div>
-        {scrollEdges.left && (
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-y-0 left-10 z-40 w-4 bg-linear-to-r from-gray-900/10 to-transparent sm:left-16"
-          />
-        )}
-        {scrollEdges.right && (
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-y-0 z-40 w-4 bg-linear-to-l from-gray-900/10 to-transparent"
-            style={{ right: scrollEdges.scrollbarPx }}
-          />
-        )}
+        <div
+          ref={leftShadowRef}
+          aria-hidden
+          hidden
+          className="pointer-events-none absolute inset-y-0 left-10 z-40 w-4 bg-linear-to-r from-gray-900/10 to-transparent sm:left-16"
+        />
+        <div
+          ref={rightShadowRef}
+          aria-hidden
+          hidden
+          className="pointer-events-none absolute inset-y-0 z-40 w-4 bg-linear-to-l from-gray-900/10 to-transparent"
+        />
       </div>
 
       {legend ? (

@@ -39,6 +39,9 @@ func TestRoomClosuresGoWithTheSchoolAndRollBack(t *testing.T) {
 	require.Equal(t, "db_done", result.Status, "preflight, deletion and residual checks pass: %v", result.ErrorCode)
 	assert.EqualValues(t, 1, result.RowCounts["facilities.room_closures"], "the one closure of the school")
 
+	// The opening changes (#7654) follow the room closures at the head, so
+	// roll them back first just as the migration runner does.
+	require.NoError(t, openingChangesDown(ctx, db))
 	require.NoError(t, roomClosuresDown(ctx, db))
 	var exists bool
 	require.NoError(t, db.NewRaw(`SELECT to_regclass('facilities.room_closures') IS NOT NULL`).Scan(ctx, &exists))
@@ -49,4 +52,6 @@ func TestRoomClosuresGoWithTheSchoolAndRollBack(t *testing.T) {
 	require.Equal(t, "db_done", eraseSchoolAsCLI(t, db, other, beginErasure(t, db, other)).Status, "the erasure works after the rollback")
 
 	require.NoError(t, roomClosuresUp(ctx, db), "the migration applies again")
+	require.NoError(t, openingChangesUp(ctx, db), "the later migration applies again")
+	require.NoError(t, applyRepeatableDefinitions(ctx, db))
 }

@@ -39,6 +39,8 @@ const {
   tenantMutateMock: vi.fn(() => Promise.resolve()),
 }));
 
+vi.unmock("swr");
+
 vi.mock("next-auth/react", () => ({ useSession: vi.fn() }));
 
 vi.mock("next/navigation", () => ({

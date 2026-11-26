@@ -43,7 +43,9 @@ func TestParentLetterCopiesGoWithTheSchoolAndRollBack(t *testing.T) {
 
 	// The device history (#2321) follows the letter copies at the head; it goes first.
 	// The room history stops (#3844) follow the device history at the head; they go first.
-	// The room closures (#7653) follow the room history stops at the head; they go first.
+	// The opening changes (#7654) follow the room closures at the head; they go first.
+	require.NoError(t, openingChangesDown(ctx, db))
+	// The room closures (#7653) follow the room history stops at the head; they go next.
 	require.NoError(t, roomClosuresDown(ctx, db))
 	require.NoError(t, roomHistoryStopsDown(ctx, db))
 	require.NoError(t, deviceLifecycleEventsDown(ctx, db))
@@ -64,6 +66,8 @@ func TestParentLetterCopiesGoWithTheSchoolAndRollBack(t *testing.T) {
 	require.NoError(t, roomHistoryStopsUp(ctx, db))
 	// And the room closures (#7653).
 	require.NoError(t, roomClosuresUp(ctx, db))
+	// And the opening changes (#7654).
+	require.NoError(t, openingChangesUp(ctx, db))
 	require.NoError(t, applyRepeatableDefinitions(ctx, db))
 	assert.True(t, exists())
 	erases("the erasure works after the copies are back")

@@ -30,7 +30,9 @@ func TestDeviceLifecycleEventsGoWithTheSchoolAndRollBack(t *testing.T) {
 	assert.EqualValues(t, 1, result.RowCounts["audit.device_lifecycle_events"], "the one entry of the school")
 
 	// The room history stops (#3844) follow the device history at the head; they go first.
-
+	// The opening changes (#7654) follow the room closures at the head; they go first.
+	require.NoError(t, openingChangesDown(ctx, db))
+	// The room closures (#7653) follow the room history stops at the head; they go next.
 	require.NoError(t, roomClosuresDown(ctx, db))
 	require.NoError(t, roomHistoryStopsDown(ctx, db))
 

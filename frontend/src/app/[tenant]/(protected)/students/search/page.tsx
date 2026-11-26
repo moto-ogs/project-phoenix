@@ -2,6 +2,10 @@ import { loadStudentSearchSeed } from "~/lib/student-search-seed.server";
 import StudentSearchContent from "./page-content";
 import { StudentSearchSeed } from "./page-seed";
 
+// Revisit the client payload without waiting for a new seed. The list itself
+// still revalidates through its session-scoped SWR readers.
+export const unstable_dynamicStaleTime = 60;
+
 export default async function StudentSearchPage({
   params,
   searchParams,

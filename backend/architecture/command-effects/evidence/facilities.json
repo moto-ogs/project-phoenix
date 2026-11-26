@@ -457,6 +457,14 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/facilities/internal/application.Closures.RoomClosureRanges",
+      "binding_digest": "af68292ba2ffea03dd10ccc591ae6324",
+      "port": "github.com/moto-ogs/project-phoenix/modules/facilities.Closures.RoomClosureRanges",
+      "source_owner": "facilities",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
+      "target_owner": "tenant-runtime"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/facilities.Capability.CreateRoom",
       "binding_digest": "0f5c726f93909b594bdeb12d4e6f97c4",
       "port": "github.com/moto-ogs/project-phoenix/modules/facilities.Command.CreateRoom",

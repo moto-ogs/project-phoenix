@@ -1,5 +1,8 @@
 "use client";
 
+import { MountOnFirstOpen } from "~/components/ui/mount-on-first-open";
+import { useHasDeepScrollPosition } from "~/components/ui/navigation-scroll-position";
+import { useInitialPaintViewport } from "~/lib/hooks/use-after-initial-paint";
 import { useState, Suspense, useMemo, useCallback } from "react";
 import { UserPlus } from "lucide-react";
 import { useSession } from "next-auth/react";
@@ -158,6 +161,14 @@ function MeinRaumPageContent() {
   // Display clock for relative pickup information only. The dashboard's
   // school day and spontaneous-start window come exclusively from the backend.
   const now = useMinuteClock();
+  const openingViewport = useInitialPaintViewport(true);
+  const deepScroll = useHasDeepScrollPosition();
+  // Rows have 20px of vertical padding plus at least one 24px name line.
+  // The portal and both roster headings take at least 128px above them.
+  const openingRosterRows =
+    openingViewport && !deepScroll
+      ? Math.max(1, Math.ceil((openingViewport.height - 128) / 44))
+      : undefined;
 
   // SSE is handled globally by TenantAuthWrapper - no page-level setup
   // needed. When relevant events occur, global SSE invalidates the
@@ -777,6 +788,7 @@ function MeinRaumPageContent() {
             clearReopenable: reopen.clearReopenable,
             attendanceWebEnabled,
             showTimetableCounts,
+            openingRosterRows,
             canReadPresentChildren: hasPermission(session, "users:read"),
             canExcuseRestOfDay: hasPermission(session, "users:update"),
             studentProfileHref,
@@ -802,6 +814,7 @@ function MeinRaumPageContent() {
             </div>
           )}
           <TimetableRosterContent
+            openingRowLimit={openingRosterRows}
             addStudentSearch={actions.addStudentSearch}
             addStudentError={actions.addStudentError}
             attendanceWebEnabled={attendanceWebEnabled}
@@ -938,24 +951,28 @@ function MeinRaumPageContent() {
       }
       overlays={
         <>
-          <CompleteInstanceModal
-            isOpen={actions.showCompleteConfirmation}
-            roster={currentTimetableRoster}
-            isCompleting={actions.isCompletingInstance}
-            error={actions.completeError}
-            onClose={() => actions.setShowCompleteConfirmation(false)}
-            onConfirm={() => void actions.confirmCompleteTimetableInstance()}
-          />
+          <MountOnFirstOpen open={actions.showCompleteConfirmation}>
+            <CompleteInstanceModal
+              isOpen={actions.showCompleteConfirmation}
+              roster={currentTimetableRoster}
+              isCompleting={actions.isCompletingInstance}
+              error={actions.completeError}
+              onClose={() => actions.setShowCompleteConfirmation(false)}
+              onConfirm={() => void actions.confirmCompleteTimetableInstance()}
+            />
+          </MountOnFirstOpen>
           {/* Schulhof Release Supervision Modal */}
-          <ReleaseSupervisionModal
-            isOpen={schulhof.showReleaseModal}
-            onClose={() => schulhof.setShowReleaseModal(false)}
-            onConfirm={() =>
-              schulhof.handleReleaseSupervision().catch(() => undefined)
-            }
-            isConfirmLoading={schulhof.isReleasingSupervision}
-            error={schulhof.releaseError}
-          />
+          <MountOnFirstOpen open={schulhof.showReleaseModal}>
+            <ReleaseSupervisionModal
+              isOpen={schulhof.showReleaseModal}
+              onClose={() => schulhof.setShowReleaseModal(false)}
+              onConfirm={() =>
+                schulhof.handleReleaseSupervision().catch(() => undefined)
+              }
+              isConfirmLoading={schulhof.isReleasingSupervision}
+              error={schulhof.releaseError}
+            />
+          </MountOnFirstOpen>
           {addSupervisorTarget ? (
             <AddSupervisorModal
               activeGroupId={addSupervisorTarget}

@@ -20,7 +20,11 @@ const state = vi.hoisted(() => ({
   classes: undefined as
     | {
         school_day: boolean;
-        classes: { school_class: string; changes: number }[];
+        classes: {
+          school_class: string;
+          changes: number;
+          trips?: { return_time: string | null; children: number }[];
+        }[];
       }
     | undefined,
   permissions: ["class_day:read"] as string[],
@@ -176,6 +180,84 @@ describe("SchoolDayChangesBlock", () => {
         name: "Jemand aus dem Team übernimmt heute „Mittagsaufsicht“ für dich.",
       }),
     ).toHaveAttribute("href", "/school/aufsichten");
+  });
+
+  it("zeigt Ausflüge der eigenen Klassen ohne Kind und Grund und führt zum Klassentag", () => {
+    state.overview = { date: "2026-09-09", failedSources: [], entries: [] };
+    state.classes = {
+      school_day: true,
+      classes: [
+        {
+          school_class: "3a",
+          changes: 1,
+          trips: [
+            { return_time: null, children: 1 },
+            { return_time: "13:30", children: 22 },
+          ],
+        },
+        { school_class: "4b", changes: 0, trips: [] },
+      ],
+    };
+    renderBlock();
+    const own = screen.getByRole("region", { name: "Betrifft dich" });
+    const outing = within(own).getByRole("link", {
+      name: "22 Kinder aus Klasse 3a sind heute auf Ausflug und kommen um 13:30 Uhr zurück.",
+    });
+    expect(outing.getAttribute("href")).toMatch(
+      /^\/school\/klasse\?klasse=3a&tag=\d{4}-\d{2}-\d{2}$/,
+    );
+    expect(
+      within(own).getByRole("link", {
+        name: "1 Kind aus Klasse 3a ist heute den ganzen Tag unterwegs.",
+      }),
+    ).toBeInTheDocument();
+    expect(within(own).queryByText(/4b/)).toBeNull();
+  });
+
+  it("zeigt abgesagte und geänderte eigene Termine und führt zum Kalender", () => {
+    state.overview = {
+      date: "2026-09-09",
+      failedSources: [],
+      entries: [
+        change({
+          kind: "appointment_cancelled",
+          section: "you",
+          appointment: {
+            id: "7",
+            occurrenceDate: "2026-09-09",
+            title: "Konferenz",
+            location: "Lehrerzimmer",
+            locationChanged: false,
+            timeChanged: false,
+          },
+          link: { target: "school_calendar", staffId: null },
+        }),
+        change({
+          kind: "appointment_changed",
+          section: "you",
+          appointment: {
+            id: "8",
+            occurrenceDate: "2026-09-09",
+            title: "Elternabend 3a",
+            location: "Raum 12",
+            locationChanged: true,
+            timeChanged: false,
+          },
+          link: { target: "school_calendar", staffId: null },
+        }),
+      ],
+    };
+    state.classes = { school_day: true, classes: [] };
+    renderBlock();
+    const own = screen.getByRole("region", { name: "Betrifft dich" });
+    expect(
+      within(own).getByRole("link", { name: /„Konferenz“ fällt heute aus\./ }),
+    ).toHaveAttribute("href", "/school/kalender");
+    expect(
+      within(own).getByRole("link", {
+        name: "„Elternabend 3a“ ist heute an einem anderen Ort. Neuer Ort: Raum 12.",
+      }),
+    ).toHaveAttribute("href", "/school/kalender");
   });
 
   it("sagt ohne Änderung, dass alles wie geplant läuft", () => {

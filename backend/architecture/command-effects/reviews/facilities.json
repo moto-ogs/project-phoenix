@@ -612,6 +612,17 @@
     },
     {
       "adr": "0098",
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/facilities/internal/application.Closures.RoomClosureRanges",
+      "classification": "platform",
+      "effect": "scope",
+      "port": "github.com/moto-ogs/project-phoenix/modules/facilities.Closures.RoomClosureRanges",
+      "reason": "Platform protocol participation (scope): facilities reaches tenant.WithinCurrentTenant (tenant-runtime) through *modules/facilities/internal/application.Closures.RoomClosureRanges. The caller enters the platform contract inside its own unit; the locked room rows remain held through the caller's write (ADR 0098).",
+      "source_owner": "facilities",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/modules/facilities.Capability.CreateRoom",
       "classification": "platform",
       "effect": "lock",

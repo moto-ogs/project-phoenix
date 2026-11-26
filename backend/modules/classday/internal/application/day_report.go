@@ -65,6 +65,9 @@ type classDayFacts struct {
 	pickupChangedAt    map[int64]time.Time
 	arrivalCancelledAt map[int64]time.Time
 	notScheduled       map[int64]bool
+	// tripReturn is the return time ("15:04") of a child on a day outing
+	// of the class (#8155).
+	tripReturn map[int64]string
 }
 
 func newClassDayFacts() classDayFacts {
@@ -80,6 +83,7 @@ func newClassDayFacts() classDayFacts {
 		pickupChangedAt:    map[int64]time.Time{},
 		arrivalCancelledAt: map[int64]time.Time{},
 		notScheduled:       map[int64]bool{},
+		tripReturn:         map[int64]string{},
 	}
 }
 

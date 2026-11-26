@@ -858,6 +858,17 @@
     },
     {
       "method": "DELETE",
+      "pattern": "/api/opening-changes/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "CalendarStatusResponse"
+      }
+    },
+    {
+      "method": "DELETE",
       "pattern": "/api/parent-announcements/{announcementId}",
       "portals": [
         "tenant"
@@ -2316,20 +2327,6 @@
       "response": {
         "kind": "ref",
         "ref": "DashboardProjection"
-      }
-    },
-    {
-      "method": "GET",
-      "pattern": "/api/active/supervisors/all",
-      "portals": [
-        "tenant"
-      ],
-      "response": {
-        "kind": "array",
-        "elem": {
-          "kind": "ref",
-          "ref": "ActiveGroupResponse"
-        }
       }
     },
     {
@@ -4511,6 +4508,30 @@
       "response": {
         "kind": "ref",
         "ref": "pushPublicKeyResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/opening-changes/",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "from",
+          "kind": "date"
+        },
+        {
+          "name": "to",
+          "kind": "date"
+        }
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "OpeningChangeResponse"
+        }
       }
     },
     {
@@ -6712,20 +6733,6 @@
       "response": {
         "kind": "ref",
         "ref": "Projection"
-      }
-    },
-    {
-      "method": "GET",
-      "pattern": "/api/students/ogs-group-navigation",
-      "portals": [
-        "tenant"
-      ],
-      "response": {
-        "kind": "array",
-        "elem": {
-          "kind": "ref",
-          "ref": "NavigationGroup"
-        }
       }
     },
     {
@@ -15651,6 +15658,21 @@
     },
     {
       "method": "POST",
+      "pattern": "/api/opening-changes/",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "OpeningChangeRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "OpeningChangeResponse"
+      }
+    },
+    {
+      "method": "POST",
       "pattern": "/api/parent-announcements/",
       "portals": [
         "tenant"
@@ -22586,6 +22608,21 @@
         "ref": "preferenceRequest"
       },
       "no_data": true
+    },
+    {
+      "method": "PUT",
+      "pattern": "/api/opening-changes/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "OpeningChangeRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "OpeningChangeResponse"
+      }
     },
     {
       "method": "PUT",
@@ -46709,6 +46746,17 @@
           "schema": {
             "kind": "int"
           }
+        },
+        {
+          "name": "trips",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ClassTripSummary"
+            }
+          }
         }
       ]
     },
@@ -46801,6 +46849,25 @@
         },
         {
           "name": "date_count",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ClassTripSummary",
+      "go_type": "classday.ClassTripSummary",
+      "fields": [
+        {
+          "name": "return_time",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "children",
           "schema": {
             "kind": "int"
           }
@@ -77065,6 +77132,107 @@
           "optional": true,
           "schema": {
             "kind": "number"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OpeningChangeRequest",
+      "go_type": "staffcalendarhttp.OpeningChangeRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "start_date",
+          "optional": true,
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "end_date",
+          "optional": true,
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "opens_at",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "closes_at",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OpeningChangeResponse",
+      "go_type": "staffcalendarhttp.OpeningChangeResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "start_date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "end_date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "opens_at",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "closes_at",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "reason",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
           }
         }
       ]

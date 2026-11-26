@@ -20,6 +20,18 @@ type ClassSummary struct {
 	SchoolClass string    `json:"school_class"`
 	Totals      DayTotals `json:"totals"`
 	Changes     int       `json:"changes"`
+	// Trips are the children of the class on a trip today (#8155), one
+	// entry per return time: a Klassenfahrt (status day) without one, a day
+	// outing with the time the children come to the OGS. Never a child or a
+	// reason; empty on a day without a trip.
+	Trips []ClassTripSummary `json:"trips"`
+}
+
+// ClassTripSummary is the number of children of a class on a trip with one
+// return time ("15:04"), nil for a trip over the whole day.
+type ClassTripSummary struct {
+	ReturnTime *string `json:"return_time"`
+	Children   int     `json:"children"`
 }
 
 type AssignedClasses interface {

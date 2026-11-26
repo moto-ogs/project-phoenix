@@ -28,7 +28,6 @@ export function traegerPageSeed(
   reads: readonly TraegerPageRead[],
   dependent?: (token: string) => Promise<readonly TraegerPageRead[]>,
 ) {
-  const builtAt = Date.now();
   const seed = readPortalSessionSnapshot("traeger")
     .then(async (snapshot) => {
       if (
@@ -40,6 +39,7 @@ export function traegerPageSeed(
         snapshot.session.user.tenantId != null
       )
         return null;
+      const builtAt = Date.now();
       const token = snapshot.accessToken;
       const load = ({ load, module, after }: TraegerPageRead) => {
         const start = () =>

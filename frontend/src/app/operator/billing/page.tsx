@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import { Suspense } from "react";
 import { berlinTodayISO } from "~/lib/date-helpers";
 import {
@@ -9,7 +10,8 @@ import {
 import { SWRServerSeed } from "~/lib/swr/server-seed";
 import OperatorBillingPage from "./page-content";
 
-export default function Page() {
+export default async function Page() {
+  await connection();
   const period = `${berlinTodayISO().slice(0, 8)}01`;
   const { seed, claims } = operatorPageSeed([
     billingKeyDay,

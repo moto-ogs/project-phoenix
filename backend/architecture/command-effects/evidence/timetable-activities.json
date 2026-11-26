@@ -30521,6 +30521,22 @@
       "target_owner": "settings-platform"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableRoomClosures.RoomClosedOn",
+      "binding_digest": "1714e67940bef27813a59de6bac9ec6f",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.RoomClosures.RoomClosedOn",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/facilities.Closures.RoomClosedOn",
+      "target_owner": "facilities"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timetableRoomClosures.RoomClosureRanges",
+      "binding_digest": "d0834d888508e048b124387130074029",
+      "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.RoomClosures.RoomClosureRanges",
+      "source_owner": "timetable-activities",
+      "target": "github.com/moto-ogs/project-phoenix/modules/facilities.Closures.RoomClosureRanges",
+      "target_owner": "facilities"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/timetable/compose.OwnerRooms.AllRoomNames",
       "binding_digest": "5ff3f020fd63919c013adc760bdc6d56",
       "port": "github.com/moto-ogs/project-phoenix/modules/timetable/ports.RoomNames.AllRoomNames",

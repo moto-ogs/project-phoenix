@@ -26,13 +26,12 @@ import (
 var ogsLivePerms = []string{"users:read", "groups:read"}
 
 type ogsLiveGroup struct {
-	ID              string   `json:"id"`
-	Name            string   `json:"name"`
-	RoomID          *string  `json:"room_id"`
-	RoomName        string   `json:"room_name"`
-	ViaSubstitution bool     `json:"via_substitution"`
-	IsPersonal      bool     `json:"is_personal"`
-	Leaders         []string `json:"leaders"`
+	ID              string  `json:"id"`
+	Name            string  `json:"name"`
+	RoomID          *string `json:"room_id"`
+	RoomName        string  `json:"room_name"`
+	ViaSubstitution bool    `json:"via_substitution"`
+	IsPersonal      bool    `json:"is_personal"`
 }
 
 type ogsLiveEnvelope struct {
@@ -78,15 +77,6 @@ func groupPersonalState(groups []ogsLiveGroup) map[string]bool {
 	return result
 }
 
-func decodeOGSGroupNavigation(t *testing.T, body []byte) []ogsLiveGroup {
-	t.Helper()
-	var envelope struct {
-		Data []ogsLiveGroup `json:"data"`
-	}
-	require.NoError(t, json.Unmarshal(body, &envelope))
-	return envelope.Data
-}
-
 func TestOGSGroupLive_GroupVisibilityScope(t *testing.T) {
 	t.Parallel()
 
@@ -104,19 +94,13 @@ func TestOGSGroupLive_GroupVisibilityScope(t *testing.T) {
 		rr := authExec(t, tc, req, testutil.TeacherTestClaims(int(ownerAccount.ID)), ogsLivePerms)
 		require.Equal(t, http.StatusOK, rr.Code, "body: %s", rr.Body.String())
 
-		states := groupPersonalState(decodeOGSLive(t, rr.Body.Bytes()).Data.Groups)
 		assert.Equal(t, map[string]bool{
 			strconv.FormatInt(ownedGroup.ID, 10): true,
 			strconv.FormatInt(otherGroup.ID, 10): false,
-		}, states)
-
-		navigationReq := testutil.NewRequest("GET", "/ogs-group-navigation", nil)
-		navigationRR := authExec(t, tc, navigationReq, testutil.TeacherTestClaims(int(ownerAccount.ID)), []string{"groups:read"})
-		require.Equal(t, http.StatusOK, navigationRR.Code, "body: %s", navigationRR.Body.String())
-		assert.Equal(t, states, groupPersonalState(decodeOGSGroupNavigation(t, navigationRR.Body.Bytes())))
+		}, groupPersonalState(decodeOGSLive(t, rr.Body.Bytes()).Data.Groups))
 	})
 
-	t.Run("all_staff keeps personal navigation without groups:read", func(t *testing.T) {
+	t.Run("all_staff keeps personal groups without groups:read", func(t *testing.T) {
 		setOGSLiveOverviewScope(t, tc, settings.OverviewScopeAllStaff)
 		req := testutil.NewRequest("GET", "/ogs-group-live", nil)
 		rr := authExec(t, tc, req, testutil.TeacherTestClaims(int(ownerAccount.ID)), []string{"users:read"})
@@ -125,23 +109,6 @@ func TestOGSGroupLive_GroupVisibilityScope(t *testing.T) {
 		assert.Equal(t, map[string]bool{
 			strconv.FormatInt(ownedGroup.ID, 10): true,
 		}, groupPersonalState(decodeOGSLive(t, rr.Body.Bytes()).Data.Groups))
-
-		navigationReq := testutil.NewRequest("GET", "/ogs-group-navigation", nil)
-		navigationRR := authExec(t, tc, navigationReq, testutil.TeacherTestClaims(int(ownerAccount.ID)), []string{"users:read"})
-		require.Equal(t, http.StatusOK, navigationRR.Code, "body: %s", navigationRR.Body.String())
-		assert.Equal(t, map[string]bool{
-			strconv.FormatInt(ownedGroup.ID, 10): true,
-		}, groupPersonalState(decodeOGSGroupNavigation(t, navigationRR.Body.Bytes())))
-	})
-
-	t.Run("legacy caregiver without permissions keeps personal navigation", func(t *testing.T) {
-		setOGSLiveOverviewScope(t, tc, settings.OverviewScopeAllStaff)
-		navigationReq := testutil.NewRequest("GET", "/ogs-group-navigation", nil)
-		navigationRR := authExec(t, tc, navigationReq, testutil.TeacherTestClaims(int(ownerAccount.ID)), nil)
-		require.Equal(t, http.StatusOK, navigationRR.Code, "body: %s", navigationRR.Body.String())
-		assert.Equal(t, map[string]bool{
-			strconv.FormatInt(ownedGroup.ID, 10): true,
-		}, groupPersonalState(decodeOGSGroupNavigation(t, navigationRR.Body.Bytes())))
 	})
 
 	t.Run("personal scope hides groups without a fixed or transferred responsibility", func(t *testing.T) {
@@ -155,55 +122,6 @@ func TestOGSGroupLive_GroupVisibilityScope(t *testing.T) {
 			strconv.FormatInt(ownedGroup.ID, 10): true,
 		}, states)
 	})
-}
-
-// TestOGSGroupNavigation_NamesTheGroupLeadership pins the group selection's
-// leadership line (#4351): each group names its assigned Gruppenleitung, a
-// group without one names nobody, and the list reads them in one bulk lookup
-// whatever the number of groups and teachers.
-func TestOGSGroupNavigation_NamesTheGroupLeadership(t *testing.T) {
-	t.Parallel()
-	testpkg.SetupIsolatedTestDB(t)
-	tc := setupStudentsRoute(t)
-	setOGSLiveOverviewScope(t, tc, settings.OverviewScopeAllStaff)
-	owner, ownerAccount := testpkg.CreateTestTeacherWithAccount(t, tc.db, "Lena", "Leitung")
-	colleague, _ := testpkg.CreateTestTeacherWithAccount(t, tc.db, "Karl", "Kollege")
-	ownedGroup := testpkg.CreateTestEducationGroup(t, tc.db, "Leitung Eigene")
-	sharedGroup := testpkg.CreateTestEducationGroup(t, tc.db, "Leitung Geteilt")
-	unledGroup := testpkg.CreateTestEducationGroup(t, tc.db, "Leitung Ohne")
-	testpkg.CreateTestGroupTeacher(t, tc.db, ownedGroup.ID, owner.ID)
-	testpkg.CreateTestGroupTeacher(t, tc.db, sharedGroup.ID, owner.ID)
-	testpkg.CreateTestGroupTeacher(t, tc.db, sharedGroup.ID, colleague.ID)
-
-	counter := testpkg.CaptureQueries(t, tc.db)
-	run := func() map[string][]string {
-		counter.Reset()
-		req := testutil.NewRequest("GET", "/ogs-group-navigation", nil)
-		rr := authExec(t, tc, req, testutil.TeacherTestClaims(int(ownerAccount.ID)), ogsLivePerms)
-		require.Equal(t, http.StatusOK, rr.Code, "body: %s", rr.Body.String())
-		leaders := map[string][]string{}
-		for _, group := range decodeOGSGroupNavigation(t, rr.Body.Bytes()) {
-			leaders[group.ID] = group.Leaders
-		}
-		return leaders
-	}
-	id := func(value int64) string { return strconv.FormatInt(value, 10) }
-
-	leaders := run()
-	smallCount := counter.Total()
-	assert.Equal(t, []string{"Lena Leitung"}, leaders[id(ownedGroup.ID)])
-	assert.ElementsMatch(t, []string{"Karl Kollege", "Lena Leitung"}, leaders[id(sharedGroup.ID)])
-	require.Contains(t, leaders, id(unledGroup.ID), "a group without leadership stays in the list")
-	assert.Empty(t, leaders[id(unledGroup.ID)], "a group without leadership names nobody")
-
-	for i := range 3 {
-		extra := testpkg.CreateTestEducationGroup(t, tc.db, fmt.Sprintf("Leitung Extra %d", i))
-		teacher, _ := testpkg.CreateTestTeacherWithAccount(t, tc.db, "Extra", fmt.Sprintf("Leitung%d", i))
-		testpkg.CreateTestGroupTeacher(t, tc.db, extra.ID, teacher.ID)
-	}
-	run()
-	assert.Equal(t, smallCount, counter.Total(), "leadership is one bulk lookup, not one per group")
-	querybudgets.AssertQueryBudget(t, "api.students.ogs_group_navigation", counter.Measurement(counter.Queries()))
 }
 
 func TestOGSGroupLive_AdminSeesAllGroupsInPersonalScope(t *testing.T) {
@@ -224,19 +142,6 @@ func TestOGSGroupLive_AdminSeesAllGroupsInPersonalScope(t *testing.T) {
 		strconv.FormatInt(first.ID, 10):  false,
 		strconv.FormatInt(second.ID, 10): false,
 	}, states)
-}
-
-func TestOGSGroupNavigation_ReturnsServerErrorWithoutService(t *testing.T) {
-	t.Parallel()
-
-	tc := setupStudentsRoute(t)
-	tc.resource.OGSGroupLiveService = nil
-	_, account := testpkg.CreateTestTeacherWithAccount(t, tc.db, "Navigation", "Service")
-	req := testutil.NewRequest("GET", "/ogs-group-navigation", nil)
-	rr := authExec(t, tc, req, testutil.TeacherTestClaims(int(account.ID)), nil)
-
-	assert.Equal(t, http.StatusInternalServerError, rr.Code, "body: %s", rr.Body.String())
-	assert.Contains(t, rr.Body.String(), "OGS group live service is not configured")
 }
 
 func TestOGSGroupLive_HandoverMovesGroupIntoPersonalSection(t *testing.T) {

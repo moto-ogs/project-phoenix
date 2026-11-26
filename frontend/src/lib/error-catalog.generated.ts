@@ -43,6 +43,10 @@ export const ERROR_CATALOG = {
         "Dafür brauchst du in dieser Schule ein eigenes Personalprofil. Bitte frage die Leitung.",
       "calendar.occurrence_unavailable":
         "Diesen Termin gibt es nicht mehr, er wurde vielleicht abgesagt. Bitte lade den Kalender neu.",
+      "calendar.opening_change_invalid":
+        "Bitte prüfe die markierten Angaben zur geänderten Öffnungszeit.",
+      "calendar.opening_change_not_found":
+        "Diese geänderte Öffnungszeit gibt es nicht mehr. Bitte lade die Seite neu.",
       "care_contract.application_not_found":
         "Diese Anmeldung gibt es nicht mehr oder sie ist nicht angenommen. Bitte lade die Seite neu.",
       "care_contract.change_contract_not_active":

@@ -318,17 +318,30 @@ export const ArrivalExceptionBlockStartResponseSchema: z.ZodType<ArrivalExceptio
   start: str,
 });
 
+/** Go: classday.ClassTripSummary */
+export interface ClassTripSummary {
+  return_time: string | null;
+  children: number;
+}
+
+export const ClassTripSummarySchema: z.ZodType<ClassTripSummary, unknown> = object<ClassTripSummary>({
+  return_time: nullable(str),
+  children: safeInt,
+});
+
 /** Go: classday.ClassSummary */
 export interface ClassSummary {
   school_class: string;
   totals: DayTotals;
   changes: number;
+  trips: ClassTripSummary[] | null;
 }
 
 export const ClassSummarySchema: z.ZodType<ClassSummary, unknown> = object<ClassSummary>({
   school_class: str,
   totals: DayTotalsSchema,
   changes: safeInt,
+  trips: nullable(arr(ClassTripSummarySchema)),
 });
 
 /** Go: classday.AssignedClassesReport */

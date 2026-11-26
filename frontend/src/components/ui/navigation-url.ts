@@ -14,6 +14,11 @@ export function isInternalPath(href: string): boolean {
   );
 }
 
+/** The shell owns path scroll; Next still handles explicit fragment links. */
+export function portalManagesScroll(href: string): boolean {
+  return isInternalPath(href) && !href.includes("#");
+}
+
 /** Pfad und Query in einer Form, die Router-Commit und Link vergleichbar macht. */
 export function normalizedUrl(pathname: string, search: string): string {
   const normalizedSearch = new URLSearchParams(search).toString();

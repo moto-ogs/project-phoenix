@@ -65,15 +65,12 @@ func NewRecords(dependencies RecordsDependencies) (schoolcalendar.Days, error) {
 type AdministrationDependencies struct {
 	DB      *bun.DB
 	Observe func(Observation)
-	// RecurrenceGate serializes period administration against every
-	// recurrence-derived write of the tenant (shared recurrence lock).
+	// RecurrenceGate serializes the administration against recurrence writes (shared lock).
 	RecurrenceGate func(context.Context) error
-	// CareOfferingGuard refuses a period change (replacement set) or
-	// removal (replacement nil) a linked care offering still needs, as
-	// schoolcalendar.ErrCalendarPeriodRequiredByCareOffering in the chain.
+	// CareOfferingGuard refuses a change (replacement set) or removal (nil) a linked care
+	// offering still needs, as schoolcalendar.ErrCalendarPeriodRequiredByCareOffering.
 	CareOfferingGuard func(ctx context.Context, periodID int64, replacement *schoolcalendar.CalendarPeriodFields) error
-	// Today names the current calendar day in YYYY-MM-DD. Nil means the
-	// Berlin calendar day, the school's day.
+	// Today names the current day in YYYY-MM-DD; nil is the Berlin day, the school's day.
 	Today func() string
 	// ClosingDayNotices tells the school of a changed closing day (#7144).
 	ClosingDayNotices schoolcalendar.ClosingDayNotices
@@ -89,15 +86,13 @@ func NewAdministration(records schoolcalendar.Days, dependencies AdministrationD
 	if today == nil {
 		today = application.BerlinDay(time.Now)
 	}
-	service, err := application.WithAdministration(records, application.Administration{
+	return application.WithAdministration(records, application.Administration{
 		Transaction: writeTransaction, RecurrenceGate: dependencies.RecurrenceGate,
 		CareOfferingGuard: dependencies.CareOfferingGuard, Today: today, ClosingDayNotices: dependencies.ClosingDayNotices,
 	}, dependencies.Observe)
-	return service, err
 }
 
-// writeTransaction joins the ambient tenant transaction (tenant middleware, recurrence gate, scheduler loops) and otherwise
-// opens one for the tenant in context, so the recurrence gate always holds a transaction-scoped lock.
+// writeTransaction joins the ambient tenant transaction or opens one, so the recurrence gate always holds a transaction lock.
 func writeTransaction(ctx context.Context, fn func(context.Context) error) error {
 	return postgres.WriteTransactionBinding(ctx, fn, tenant.WithinCurrentTenant)
 }
@@ -120,6 +115,11 @@ func NewSchoolVacations(federalState func(context.Context) (string, error), sour
 // NewTraegerClosingDays builds a Träger's closing days (#4702) in its Träger transaction (ADR 0105) over its schools; notices tells the parents of affected holiday bookings (#6434).
 func NewTraegerClosingDays(schools traegercalendar.Schools, notices traegercalendar.HolidayNotices) traegercalendar.ClosingDays {
 	return application.NewTraegerClosingDays(postgres.NewTraegerClosingDayStore(), schools, notices)
+}
+
+// NewOpeningChanges composes the opening changes of a school (#7654) over the ambient tenant transaction.
+func NewOpeningChanges() schoolcalendar.OpeningChanges {
+	return postgres.NewOpeningChangeStore(postgres.NewCompositionDatabase())
 }
 
 // NewHolidayClosureEvents composes the notices of ADR 0196 over the caller's school or Träger transaction; today is the root's day clock.

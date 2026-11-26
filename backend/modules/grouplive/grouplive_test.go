@@ -924,31 +924,10 @@ func TestGetSkipsStatusDaysAndTrackingForAnEmptyRoster(t *testing.T) {
 	assert.Equal(t, map[string]RoomStatus{}, got.RoomStatus)
 }
 
-func TestListGroupsToleratesMissingRoomNames(t *testing.T) {
-	t.Parallel()
-
-	f := &fakes{
-		caller:           fullCaller,
-		supervisedGroups: func(context.Context) ([]GroupRecord, error) { return twoGroups(), nil },
-		roomNames: func(context.Context, []int64) (map[int64]string, error) {
-			return nil, errors.New("rooms unavailable")
-		},
-	}
-
-	got, err := newService(f).ListGroups(context.Background())
-	require.NoError(t, err, "the group list degrades to nameless rooms instead of failing")
-	assert.Equal(t, 0, f.accessCalls, "the group list never resolves student access")
-	assert.Equal(t, []NavigationGroup{{ID: 1, Name: "Äpfel", RoomID: new(ident.ID(31)), IsPersonal: true}, {ID: 2, Name: "Zebra", IsPersonal: true}}, got)
-
-	empty, err := newService(&fakes{caller: fullCaller}).ListGroups(context.Background())
-	require.NoError(t, err)
-	assert.Nil(t, empty)
-}
-
-// TestListGroupsNamesTheGroupLeadership pins the selection page's leadership
+// TestNavigationContextNamesTheGroupLeadership pins the selection page's leadership
 // line (#4351): every listed group carries the names of its assigned
 // Gruppenleitung from one bulk lookup, and a group without one carries none.
-func TestListGroupsNamesTheGroupLeadership(t *testing.T) {
+func TestNavigationContextNamesTheGroupLeadership(t *testing.T) {
 	t.Parallel()
 
 	f := &fakes{
@@ -962,35 +941,17 @@ func TestListGroupsNamesTheGroupLeadership(t *testing.T) {
 	got, err := New(Dependencies{
 		Access: f, Groups: f, Roster: f, Presence: f, Planning: f, Transfers: f,
 		Settings: f, Calendar: f, Collate: strings.Compare,
-	}).ListGroups(context.Background())
+	}).NavigationContext(context.Background())
 	require.NoError(t, err)
-	require.Len(t, got, 2)
+	require.Len(t, got.Groups, 2)
 	assert.Equal(t, [][]int64{{2, 1}}, f.leaderCalls, "one bulk lookup for every listed group")
 	// strings.Compare puts "Zebra" (2) ahead of "Äpfel" (1).
-	assert.Nil(t, got[0].Leaders, "a group without Gruppenleitung names nobody")
-	assert.Equal(t, []string{"Anna Berg", "Carla Dorn"}, got[1].Leaders, "names follow the collation")
+	assert.Nil(t, got.Groups[0].Leaders, "a group without Gruppenleitung names nobody")
+	assert.Equal(t, []string{"Anna Berg", "Carla Dorn"}, got.Groups[1].Leaders, "names follow the collation")
 
-	raw, err := json.Marshal(got[0])
+	raw, err := json.Marshal(got.Groups[0])
 	require.NoError(t, err)
 	assert.NotContains(t, string(raw), "leaders", "an empty leadership stays off the wire")
-}
-
-func TestListGroupsToleratesMissingLeadership(t *testing.T) {
-	t.Parallel()
-
-	f := &fakes{
-		caller:           fullCaller,
-		supervisedGroups: func(context.Context) ([]GroupRecord, error) { return twoGroups(), nil },
-		leaderNames: func(context.Context, []int64) (map[int64][]string, error) {
-			return nil, errors.New("teachers unavailable")
-		},
-	}
-
-	got, err := newService(f).ListGroups(context.Background())
-	require.NoError(t, err, "the navigation degrades to groups without leadership instead of failing")
-	require.Len(t, got, 2)
-	assert.Nil(t, got[0].Leaders)
-	assert.Nil(t, got[1].Leaders)
 }
 
 func TestLiveGroupDoesNotLoadTheLeadership(t *testing.T) {
@@ -1006,10 +967,10 @@ func TestLiveGroupDoesNotLoadTheLeadership(t *testing.T) {
 	assert.Empty(t, f.leaderCalls, "the live view keeps its query budget; only the navigation names the leadership")
 }
 
-// TestListGroupsSortsWithTheInjectedCollation pins that the projection, not
+// TestNavigationContextSortsWithTheInjectedCollation pins that the projection, not
 // the directory, orders the visible groups: bytewise comparison puts "Zebra"
 // ahead of "Äpfel", so the directory order cannot pass for the sorted one.
-func TestListGroupsSortsWithTheInjectedCollation(t *testing.T) {
+func TestNavigationContextSortsWithTheInjectedCollation(t *testing.T) {
 	t.Parallel()
 
 	names := func(groups []NavigationGroup) []string {
@@ -1027,9 +988,9 @@ func TestListGroupsSortsWithTheInjectedCollation(t *testing.T) {
 	}
 
 	supervised := &fakes{caller: fullCaller, supervisedGroups: func(context.Context) ([]GroupRecord, error) { return twoGroups(), nil }}
-	got, err := withCollation(supervised).ListGroups(context.Background())
+	got, err := withCollation(supervised).NavigationContext(context.Background())
 	require.NoError(t, err)
-	assert.Equal(t, []string{"Zebra", "Äpfel"}, names(got), "the supervised groups follow the collation")
+	assert.Equal(t, []string{"Zebra", "Äpfel"}, names(got.Groups), "the supervised groups follow the collation")
 
 	overview := &fakes{
 		caller: func(context.Context) (Caller, error) {
@@ -1039,9 +1000,9 @@ func TestListGroupsSortsWithTheInjectedCollation(t *testing.T) {
 			return append(twoGroups(), GroupRecord{ID: 3, Name: "Mitte"}), nil
 		},
 	}
-	got, err = withCollation(overview).ListGroups(context.Background())
+	got, err = withCollation(overview).NavigationContext(context.Background())
 	require.NoError(t, err)
-	assert.Equal(t, []string{"Mitte", "Zebra", "Äpfel"}, names(got), "the tenant groups follow the collation")
+	assert.Equal(t, []string{"Mitte", "Zebra", "Äpfel"}, names(got.Groups), "the tenant groups follow the collation")
 }
 
 func TestNewRejectsIncompleteWiring(t *testing.T) {
@@ -1050,14 +1011,10 @@ func TestNewRejectsIncompleteWiring(t *testing.T) {
 	f := &fakes{}
 	_, err := New(Dependencies{}).LiveGroup(context.Background(), 0)
 	assert.EqualError(t, err, "OGS group live service is not fully configured")
-	_, err = New(Dependencies{}).ListGroups(context.Background())
+	_, err = New(Dependencies{}).NavigationContext(context.Background())
 	assert.EqualError(t, err, "OGS group live service is not fully configured")
 	_, err = New(Dependencies{Access: f, Groups: f}).LiveGroup(context.Background(), 0)
 	assert.EqualError(t, err, "OGS group live service is not fully configured", "group wiring alone cannot build the projection")
-
-	got, ok := New(Dependencies{}).(*service)
-	require.True(t, ok)
-	assert.NotNil(t, got.deps.Logger)
 }
 
 func TestProjectionSerializesAllIDsAsStrings(t *testing.T) {

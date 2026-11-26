@@ -1,12 +1,33 @@
 import { renderHook } from "@testing-library/react";
+import { useLayoutEffect } from "react";
 import { describe, expect, it, vi } from "vitest";
+import { setTestClock } from "~/test/clock";
 
 vi.mock("~/lib/hooks/use-media-query", () => ({
   BELOW_SM: "not all and (min-width: 40rem)",
   useMediaQuery: () => false,
 }));
 
-import { upcomingFirst, useHomeCardRows } from "./home-card-rows";
+import {
+  upcomingFirst,
+  useBerlinClock,
+  useHomeCardRows,
+} from "./home-card-rows";
+
+describe("useBerlinClock", () => {
+  it("has the Berlin time on the first client navigation commit", () => {
+    setTestClock("2026-11-25T10:20:00+01:00");
+    const commits = vi.fn();
+    renderHook(() => {
+      const now = useBerlinClock();
+      useLayoutEffect(() => {
+        commits(now);
+      }, [now]);
+    });
+
+    expect(commits).toHaveBeenNthCalledWith(1, "10:20");
+  });
+});
 
 describe("upcomingFirst", () => {
   it("behält vergangene Einträge für den Restzähler und zeigt die neuesten", () => {

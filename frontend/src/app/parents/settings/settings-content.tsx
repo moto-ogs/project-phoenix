@@ -87,6 +87,7 @@ export default function ParentSettingsContent() {
               ) : (
                 <ButtonLink
                   href={installHelpHref}
+                  nativeAnchor
                   variant="surface"
                   size="md"
                   tooltip={t("appInstallGuideTooltip")}

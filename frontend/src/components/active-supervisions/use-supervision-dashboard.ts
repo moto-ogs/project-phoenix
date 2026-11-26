@@ -250,7 +250,14 @@ export function useSupervisionDashboard(
   const [restoredSessionId] = useState(() => cachedSessionId(dashboardData));
 
   // Selection state — genuine UI state, not a copy of server data.
-  const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
+  const [selectedRoomId, setSelectedRoomId] = useState(() =>
+    restoredSessionId &&
+    !roomParam &&
+    (!sessionParam || sessionParam === restoredSessionId) &&
+    memory.read("supervision-last-session") === restoredSessionId
+      ? restoredSessionId
+      : null,
+  );
   const [selectedOpenRoomId, setSelectedOpenRoomId] = useState<string | null>(
     null,
   );
@@ -270,7 +277,9 @@ export function useSupervisionDashboard(
   // "derive, don't copy": ONE snapshot adjusted during render (the React
   // "storing information from previous renders" pattern), replacing the
   // former dozen per-field setState copies.
-  const [snapshot, setSnapshot] = useState<BFFDashboardResponse | null>(null);
+  const [snapshot, setSnapshot] = useState<BFFDashboardResponse | null>(() =>
+    isDashboardLoading ? null : (dashboardData ?? null),
+  );
   const [snapshotSessionKey, setSnapshotSessionKey] = useState(sessionKey);
   if (snapshotSessionKey !== sessionKey) {
     // Another account or set of rights on this tenant. Do not retain the

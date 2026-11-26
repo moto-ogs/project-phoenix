@@ -210,6 +210,7 @@ describe("TenantProviders with a server snapshot", () => {
       "seed school-a:1:user-context",
       "seed school-a:1:staff-supervision-context",
       "seed school-a:1:reminders",
+      "seed school-a:1:user-announcements-unread",
       "seed school-a:1:staff-notices-today:1",
       "seed school-a:1:badge-messages-unread:1",
       "child",
@@ -232,11 +233,12 @@ describe("TenantProviders with a server snapshot", () => {
       </TenantProviders>,
     );
 
-    expect(mockSwrMutate).toHaveBeenCalledTimes(5);
+    expect(mockSwrMutate).toHaveBeenCalledTimes(6);
     for (const [key, seed] of [
       ["school-a:1:user-context", shell.userContext],
       ["school-a:1:staff-supervision-context", shell.supervision],
       ["school-a:1:reminders", shell.reminders],
+      ["school-a:1:user-announcements-unread", shell.announcements],
       ["school-a:1:staff-notices-today:1", shell.staffNoticesToday],
       // A badge count the server loaded; a count it left out seeds nothing.
       ["school-a:1:badge-messages-unread:1", shell.counts.messagesUnread],

@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/modules/classday"
 	"github.com/moto-ogs/project-phoenix/modules/classday/internal/ports"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -175,12 +176,17 @@ func (s *dayReports) classDayCancellations(ctx context.Context, studentIDs []int
 	if s.careDays == nil || len(studentIDs) == 0 {
 		return cancelled, nil
 	}
-	statuses, err := s.careDays.ResolveForDate(ctx, studentIDs, date)
+	planned, err := s.careDays.ResolvePlannedForDate(ctx, studentIDs, date)
 	if err != nil {
 		return nil, fmt.Errorf("class day report: resolve care days: %w", err)
 	}
-	for studentID, status := range statuses {
-		switch status {
+	for studentID, day := range planned {
+		// A day outing of the class (#4799) is each child's arrival
+		// exception with the reason "Ausflug" and the return time (#8155).
+		if day.Status.Expected() && day.Arrival != nil && classday.IsClassTripArrival(day.ArrivalReason) {
+			facts.tripReturn[studentID] = day.Arrival.Time().Format("15:04")
+		}
+		switch day.Status {
 		case ports.CareDayCancelled:
 			cancelled[studentID] = true
 		case ports.CareDayNotScheduled:

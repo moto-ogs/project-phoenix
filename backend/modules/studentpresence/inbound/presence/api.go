@@ -20,7 +20,6 @@ type Resource struct {
 	protectedRoutes func(chi.Router, func(chi.Router, common.Middleware))
 	logger          *slog.Logger
 	runtime         RequestRuntime
-	authorization   Authorization
 }
 
 // getLogger returns the logger required by resource construction.
@@ -29,7 +28,7 @@ func (rs *Resource) getLogger() *slog.Logger {
 }
 
 // NewResource creates a new active resource
-func NewResource(operations PresenceOperations, personService People, userContextService StaffAccess, settingsService Settings, protectedRoutes func(chi.Router, func(chi.Router, common.Middleware)), logger *slog.Logger, presence PresenceQueries, runtime RequestRuntime, authorization Authorization, displaySettings DisplaySettings) *Resource {
+func NewResource(operations PresenceOperations, personService People, userContextService StaffAccess, settingsService Settings, protectedRoutes func(chi.Router, func(chi.Router, common.Middleware)), logger *slog.Logger, presence PresenceQueries, runtime RequestRuntime, displaySettings DisplaySettings) *Resource {
 	if logger == nil {
 		panic("active API: logger is required")
 	}
@@ -45,9 +44,6 @@ func NewResource(operations PresenceOperations, personService People, userContex
 	if runtime.TenantID == nil || runtime.MarkRollback == nil || runtime.Now == nil {
 		panic("active API: tenant request runtime is required")
 	}
-	if authorization.OperationalOverview == nil {
-		panic("active API: overview authorization is required")
-	}
 	if displaySettings == nil {
 		panic("active API: display settings facts are required")
 	}
@@ -61,7 +57,6 @@ func NewResource(operations PresenceOperations, personService People, userContex
 		protectedRoutes:    protectedRoutes,
 		logger:             logger,
 		runtime:            runtime,
-		authorization:      authorization,
 	}
 }
 
@@ -123,7 +118,6 @@ func (rs *Resource) registerSupervisorRoutes(r chi.Router, withTx common.Middlew
 	r.Route("/supervisors", func(r chi.Router) {
 		// Read operations
 		r.With(common.RequireActiveGroupRead(), withTx).Get("/staff/{staffId}/active", rs.getStaffActiveSupervisions)
-		r.With(common.RequireActiveGroupRead(), withTx).Get("/all", rs.getAllActiveSupervisions)
 
 		// Write operations
 		r.With(common.RequireActiveGroupUpdate(), withTx).Post(routeEndByID, rs.endSupervision)
