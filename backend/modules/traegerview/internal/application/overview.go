@@ -60,7 +60,7 @@ var (
 func New(ports traegerview.Ports, rows SchoolRows, renderer ReportRenderer, withinAdmin func(context.Context, func(context.Context) error) error) (*Overview, error) {
 	if ports.SchoolIDs == nil || rows == nil || ports.Trail == nil || ports.Persons == nil || ports.Staff == nil || ports.Bureau == nil || ports.Recorder == nil || ports.Holiday == nil || ports.Rosters == nil || ports.Present == nil || ports.Sick == nil || ports.OnSite == nil ||
 		ports.Enrollments == nil || ports.Alerts == nil || !occupancyPortsBound(ports.Occupancy) || ports.Known.Children == nil || ports.Known.Namesakes == nil || !utilizationPortsBound(ports.Utilization) || ports.Times == nil || !reportPortsBound(ports.Reports) || renderer == nil ||
-		ports.Daily.Days == nil || ports.Daily.Absences == nil || ports.Daily.States == nil || ports.DayChanges.Closings == nil || ports.DayChanges.Blocks == nil || !childrenPortsBound(ports.Children) || ports.Now == nil || withinAdmin == nil {
+		ports.Daily.Days == nil || ports.Daily.Absences == nil || ports.Daily.States == nil || !dayChangePortsBound(ports.DayChanges) || !childrenPortsBound(ports.Children) || ports.Now == nil || withinAdmin == nil {
 		return nil, errors.New("traeger view: school IDs, rows, access trail, persons, staff, Träger-Büro addresses, access recorder, holiday trail, school figures, open enrollments, alert thresholds, occupancy reads, known child reads, utilization reads, arrival and pickup times, report reads, the report renderer, the daily attendance reads, the day change reads, the children reads, the clock and the administrative transaction are required")
 	}
 	return &Overview{

@@ -75,3 +75,10 @@ func NewClosures(dependencies Dependencies) (facilities.Closures, error) {
 func NewTraegerRooms() facilities.TraegerRooms {
 	return postgres.NewTraegerRooms(tenant.TransactionFromContext, tenant.IsAdminTx)
 }
+
+// NewTraegerRoomClosures composes the count of the closed rooms of "Heute
+// anders" in the Träger-Portal (#8146) on the caller's administrative
+// transaction.
+func NewTraegerRoomClosures() facilities.TraegerRoomClosures {
+	return postgres.NewTraegerRoomClosures(tenant.TransactionFromContext, tenant.IsAdminTx)
+}

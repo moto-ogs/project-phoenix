@@ -57,3 +57,10 @@ func NewBoundSettings(mealPlanEnabled, mealRegistrationEnabled func(context.Cont
 func NewMenuChanges() mealplan.MenuChanges {
 	return postgres.NewMenuChanges(postgres.NewDatabase(tenant.TransactionFromContext, tenant.TenantFromContext))
 }
+
+// NewTraegerMealCancellations composes the read of the schools without lunch
+// of "Heute anders" in the Träger-Portal (#8146) on the caller's
+// administrative transaction.
+func NewTraegerMealCancellations() mealplan.TraegerMealCancellations {
+	return postgres.NewTraegerMealCancellations(tenant.TransactionFromContext, tenant.IsAdminTx)
+}

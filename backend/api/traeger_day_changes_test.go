@@ -53,6 +53,30 @@ func insertDayBlock(t *testing.T, db *bun.DB, school int64, day calendar.Date, s
 	testpkg.CreateTestActivityInstanceForTenant(t, db, school, day, room.ID, testpkg.ActivityInstanceOpts{Title: title, Status: status})
 }
 
+// insertOpeningChange changes the opening hours of school on from..to.
+func insertOpeningChange(t *testing.T, db *bun.DB, school int64, from, to calendar.Date, opens, closes, reason string) {
+	t.Helper()
+	_, err := db.ExecContext(context.Background(), `INSERT INTO schedule.opening_changes (tenant_id, start_date, end_date, opens_at, closes_at, reason) VALUES (?, ?, ?, ?::time, ?::time, ?)`,
+		school, from, to, opens, closes, reason)
+	require.NoError(t, err)
+}
+
+// insertMealCancellation cancels lunch of school on day.
+func insertMealCancellation(t *testing.T, db *bun.DB, school int64, day calendar.Date, reason string) {
+	t.Helper()
+	_, err := db.ExecContext(context.Background(), `INSERT INTO schedule.meal_cancellations (tenant_id, date, reason) VALUES (?, ?, ?)`, school, day, reason)
+	require.NoError(t, err)
+}
+
+// insertRoomClosure closes a new room of school from..to.
+func insertRoomClosure(t *testing.T, db *bun.DB, school int64, from, to calendar.Date, room, reason string) {
+	t.Helper()
+	created := testpkg.CreateTestRoomForTenant(t, db, school, room)
+	_, err := db.ExecContext(context.Background(), `INSERT INTO facilities.room_closures (tenant_id, room_id, start_date, end_date, reason) VALUES (?, ?, ?, ?, ?)`,
+		school, created.ID, from, to, reason)
+	require.NoError(t, err)
+}
+
 func traegerDayChangesOf(t *testing.T, got traegerview.SchoolsDayChanges, school int64) traegerview.SchoolDayChanges {
 	t.Helper()
 	for _, row := range got.Schools {

@@ -15,15 +15,33 @@ export interface TraegerDayClosing {
   readonly until: string | null;
 }
 
+/** Changed opening hours of the school today (#8146), without a reason. */
+export interface TraegerDayOpening {
+  /** Opening time, "08:00". */
+  readonly opensAt: string;
+  /** Closing time, "12:30". */
+  readonly closesAt: string;
+  /** First day, only when the change began before today. */
+  readonly since: string | null;
+  /** Last day, only when the change goes on after today. */
+  readonly until: string | null;
+}
+
 /** One school of the Träger with what runs differently today. */
 export interface TraegerSchoolDayChanges extends TraegerSchool {
   readonly closingDays: readonly TraegerDayClosing[];
   /** Cancelled blocks of the timetable today; a number, never a name. */
   readonly cancelledBlocks: number;
+  /** Changed opening hours today (#8146). */
+  readonly openingChanges: readonly TraegerDayOpening[];
+  /** Lunch does not take place today (#8146); never the reason. */
+  readonly mealCancelled: boolean;
+  /** Rooms closed today (#8146); a number, never a name or a reason. */
+  readonly closedRooms: number;
 }
 
 /**
- * „Heute anders“ of the Träger (#7672): only the schools with a change
+ * „Heute anders“ of the Träger (#7672, #8146): only the schools with a change
  * today, ordered by name. No person, no reason.
  */
 export interface TraegerSchoolsDayChanges {
@@ -52,6 +70,14 @@ function mapTraegerSchoolsDayChanges(
         until: closing.until,
       })),
       cancelledBlocks: school.cancelled_blocks,
+      openingChanges: (school.opening_changes ?? []).map((opening) => ({
+        opensAt: opening.opens_at,
+        closesAt: opening.closes_at,
+        since: opening.since,
+        until: opening.until,
+      })),
+      mealCancelled: school.meal_cancelled,
+      closedRooms: school.closed_rooms,
     })),
     asOf: changes.as_of,
   };
