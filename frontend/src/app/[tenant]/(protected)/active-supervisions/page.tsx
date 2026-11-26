@@ -472,21 +472,24 @@ function MeinRaumPageContent() {
     supervisionOccupancy,
     nfcEnabled,
   );
-  // In der App: Abzeichen (Aktiv, Eigene Aufsicht) und Chips „13 / 20 da“,
+  // In der App: Abzeichen (Aktiv, Eigene Aufsicht) und Chips „13 da · max. 20“,
   // Raum, Betreuende in einer Zeile unter dem Titel, wie heute in der
   // Kopfkarte, nur kompakt. Steht dort „Eigene Aufsicht“ und gibt es nur
   // eine Betreuung, ist das die angemeldete Person: Ihr Name entfällt, damit
   // die Zeile auch am kleinen Telefon nicht abgeschnitten wird.
+  // „13 da · max. 20“ statt „13 / 20 da“: Die zweite Zahl ist die
+  // Teilnehmergrenze, nicht die Zahl der Kinder in der Liste; als Bruch las
+  // sie sich wie „7 fehlen“.
+  const appCountLabel =
+    supervisionOccupancy.limit != null && supervisionOccupancy.limit > 0
+      ? `${supervisionCount} da · max. ${supervisionOccupancy.limit}`
+      : `${supervisionCount} da`;
   const appSupervisionSummaryFor = (hideSoleOwnSupervisor: boolean) =>
     supervisionName ? (
       <TenantPageStats
         items={[
           {
-            label:
-              supervisionOccupancy.limit != null &&
-              supervisionOccupancy.limit > 0
-                ? `${supervisionCount} / ${supervisionOccupancy.limit} da`
-                : `${supervisionCount} da`,
+            label: appCountLabel,
           },
           ...(supervisionOverbookedHint ? [{ label: OVERBOOKED_LABEL }] : []),
           ...(headFacts.roomName ? [{ label: headFacts.roomName }] : []),
@@ -504,11 +507,11 @@ function MeinRaumPageContent() {
     <TenantPageStats
       items={[
         {
-          label:
-            supervisionOccupancy.limit != null && supervisionOccupancy.limit > 0
-              ? `${supervisionCount} / ${supervisionOccupancy.limit} da`
-              : `${supervisionCount} da`,
+          label: appCountLabel,
         },
+        // Der Raum bleibt auch im schmalen Kopf: Er sagt, welche Aufsicht
+        // gerade offen ist, wenn der Titel nur die Aktivität nennt.
+        ...(headFacts.roomName ? [{ label: headFacts.roomName }] : []),
       ]}
     />
   ) : undefined;
