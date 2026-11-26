@@ -57,7 +57,7 @@ func (c *NoticedOpeningChanges) CreateOpeningChange(ctx context.Context, input s
 // UpdateOpeningChange replaces a change and tells the school what it was
 // and what it is now.
 func (c *NoticedOpeningChanges) UpdateOpeningChange(ctx context.Context, id int64, input schoolcalendar.OpeningChangeInput) (schoolcalendar.OpeningChange, error) {
-	previous, err := c.OpeningChangeStore.LockOpeningChange(ctx, id)
+	previous, err := c.LockOpeningChange(ctx, id)
 	if err != nil {
 		return schoolcalendar.OpeningChange{}, err
 	}
@@ -75,7 +75,7 @@ func (c *NoticedOpeningChanges) UpdateOpeningChange(ctx context.Context, id int6
 
 // DeleteOpeningChange removes a change and tells the school which one.
 func (c *NoticedOpeningChanges) DeleteOpeningChange(ctx context.Context, id int64) error {
-	previous, err := c.OpeningChangeStore.LockOpeningChange(ctx, id)
+	previous, err := c.LockOpeningChange(ctx, id)
 	if err != nil {
 		return err
 	}
