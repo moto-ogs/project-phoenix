@@ -35,9 +35,10 @@ import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { ListSkeleton } from "~/components/ui/page-skeletons";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { useApiErrorDisplay } from "~/contexts/ToastContext";
-import { ApiError } from "~/lib/api-error";
+import { ApiError, isChangedSinceRead } from "~/lib/api-error";
 import { isPositiveInt64Id } from "~/lib/compare-ids";
 import { childrenConcept } from "~/lib/concepts/children";
+import { berlinTodayISO } from "~/lib/date-helpers";
 import { useBerlinTodayWithRefresh } from "~/lib/hooks/use-berlin-today";
 import { createLogger } from "~/lib/logger";
 import { schoolClassLabel, schoolClassName } from "~/lib/school-class-label";
@@ -51,6 +52,7 @@ import {
   type TraegerChildrenPage,
   type TraegerSchoolChildCount,
 } from "~/lib/traeger-children-api";
+import { sameSetMembers } from "~/lib/utils";
 
 const logger = createLogger({ component: "TraegerChildrenPage" });
 
@@ -131,22 +133,26 @@ const childRowKey = (child: TraegerChild) => child.studentId;
 const plural = (count: number, one: string, many: string) =>
   count === 1 ? one : many;
 
+type ChildrenCounts = Pick<
+  TraegerChildrenPage,
+  "total" | "matched" | "schools"
+>;
+
 /** Die Statuszeile: Kinder des offenen Reiters, bei einer Suche die Treffer. */
 function childFigures(
-  page: TraegerChildrenPage,
+  counts: ChildrenCounts,
   allSchools: boolean,
   searching: boolean,
-  matched: number,
 ) {
   const children = {
-    value: page.total,
-    label: plural(page.total, "Kind", "Kinder"),
+    value: counts.total,
+    label: plural(counts.total, "Kind", "Kinder"),
   };
   if (searching) {
-    return [children, { value: matched, label: "gefunden" }];
+    return [children, { value: counts.matched, label: "gefunden" }];
   }
-  if (allSchools && page.schools.length > 1) {
-    return [children, { value: page.schools.length, label: "Schulen" }];
+  if (allSchools && counts.schools.length > 1) {
+    return [children, { value: counts.schools.length, label: "Schulen" }];
   }
   return [children];
 }
@@ -199,10 +205,6 @@ function ChildrenContent({
     day: string;
     schools: readonly TraegerSchoolChildCount[];
   } | null>(null);
-  const schools: readonly (Pick<TraegerSchoolChildCount, "id" | "name"> &
-    Partial<TraegerSchoolChildCount>)[] =
-    (counted?.day === day ? counted.schools : knownSchools) ?? [];
-  const school = schools.find((entry) => entry.id === schoolId);
   const filter = useMemo(() => ({ schoolId, search: term }), [schoolId, term]);
   // Every page read stands in the access log of the schools it shows. So a
   // reiter or a search shows nothing until its own read answered, also when
@@ -210,7 +212,18 @@ function ChildrenContent({
   const listKey = invalidSchool ? null : traegerKeys.children(day, filter);
   const first = useFreshTraegerResource(
     listKey,
-    () => fetchTraegerChildren(filter),
+    async () => {
+      const result = await fetchTraegerChildren(filter);
+      // The browser's midnight check can run after a queued response. A
+      // newer server date is valid when the browser clock lags behind.
+      if (!result.rosterDate || result.rosterDate < berlinTodayISO()) {
+        refreshDay();
+        throw new ApiError("Children roster is no longer current", 503, {
+          code: "general.unavailable",
+        });
+      }
+      return result;
+    },
     LIST_OBJECT,
   );
   const { data: page, readCallbacks } = first;
@@ -223,15 +236,11 @@ function ChildrenContent({
     readonly after: TraegerChildrenPage;
     readonly children: TraegerChild[];
     readonly nextCursor: string;
-    readonly matched: number;
+    readonly counts: ChildrenCounts;
   } | null>(null);
   const [loadingPage, setLoadingPage] = useState<TraegerChildrenPage | null>(
     null,
   );
-  if (page && (counted?.day !== day || page.schools !== counted.schools)) {
-    setCounted({ day, schools: page.schools });
-  }
-
   const shownPage = useRef<TraegerChildrenPage | null>(null);
   useLayoutEffect(() => {
     shownPage.current = page;
@@ -240,24 +249,39 @@ function ChildrenContent({
     };
   }, [page]);
   const continued = later && later.after === page ? later : null;
+  const counts = continued?.counts ?? page;
+  if (counts && (counted?.day !== day || counted.schools !== counts.schools)) {
+    setCounted({ day, schools: counts.schools });
+  }
+  const schools: readonly (Pick<TraegerSchoolChildCount, "id" | "name"> &
+    Partial<TraegerSchoolChildCount>)[] =
+    counts?.schools ??
+    (counted?.day === day ? counted.schools : knownSchools) ??
+    [];
+  const school = schools.find((entry) => entry.id === schoolId);
   const children = useMemo(
     () => continued?.children ?? (page ? [...page.children] : undefined),
     [continued, page],
   );
   const nextCursor = continued?.nextCursor ?? page?.nextCursor;
-  const matched = continued?.matched ?? page?.matched ?? 0;
+  const matched = counts?.matched ?? 0;
   const loadingMore = page !== null && loadingPage === page;
+
+  const clearList = useCallback(() => {
+    // End this opening and its in-flight reads; a cache write alone would
+    // leave the opening's held answer eligible to reappear.
+    void invalidate((key) => key === listKey, { clear: true });
+    setLater(null);
+    setCounted(null);
+  }, [invalidate, listKey]);
 
   const withdrawRefusedList = useCallback(
     (error: unknown) => {
       if (!page || shownPage.current !== page || !isRefusal(error)) return;
       readCallbacks.onError(error);
-      // End this opening and its in-flight reads; a cache write alone would
-      // leave the opening's held answer eligible to reappear.
-      void invalidate((key) => key === listKey, { clear: true });
-      setLater(null);
+      clearList();
     },
-    [page, readCallbacks, invalidate, listKey],
+    [page, readCallbacks, clearList],
   );
 
   const loadMore = useCallback(async () => {
@@ -277,6 +301,19 @@ function ChildrenContent({
         refreshDay() !== day
       )
         return;
+      if (
+        next.rosterDate !== page.rosterDate ||
+        (filter.schoolId === "" &&
+          !sameSetMembers(
+            page.schools.map((entry) => entry.id),
+            next.schools.map((entry) => entry.id),
+          ))
+      ) {
+        // The cursor skips rows of a changed roster. Old rows may also
+        // belong to a school this Träger is no longer allowed to see.
+        clearList();
+        return;
+      }
       // A renamed child can reappear after the cursor. Its newer position
       // and details replace the older row.
       const nextIDs = new Set(next.children.map(childRowKey));
@@ -287,7 +324,9 @@ function ChildrenContent({
           ...next.children,
         ],
         nextCursor: next.nextCursor,
-        matched: next.children.length ? next.matched : matched,
+        counts: next.children.length
+          ? { total: next.total, matched: next.matched, schools: next.schools }
+          : (counts ?? page),
       });
     } catch (err) {
       // A superseded request must not change the new list or report an error.
@@ -299,6 +338,8 @@ function ChildrenContent({
         return;
       if (isRefusal(err)) {
         withdrawRefusedList(err);
+      } else if (isChangedSinceRead(err)) {
+        clearList();
       } else {
         logger.error("traeger_children_load_more_failed", {
           error: err instanceof Error ? err.message : String(err),
@@ -319,7 +360,8 @@ function ChildrenContent({
     beginPageRead,
     listKey,
     filter,
-    matched,
+    counts,
+    clearList,
     withdrawRefusedList,
     showActionError,
   ]);
@@ -359,6 +401,7 @@ function ChildrenContent({
         : traegerExportScope(school?.name),
     fallbackName: "kinder",
     errorObject: LIST_OBJECT,
+    errorMessageSuffix: school ? `Download für „${school.name}“.` : undefined,
     unavailable: draftPending || !page?.rosterDate,
     onError: withdrawRefusedList,
     reloadOnChanged: async () => {
@@ -437,9 +480,9 @@ function ChildrenContent({
       title={TITLE}
       info="Hier stehen alle Kinder, die deine Schulen heute mit Betreuungsplatz führen. Jeder Reiter zeigt eine Schule, „Alle“ zeigt alle zusammen. Du siehst Name, Schule, Klasse und Gruppe. moto hält im Zugriffsprotokoll der Schule fest, wer die Liste öffnet oder herunterlädt."
       stats={
-        page ? (
+        counts ? (
           <TenantPageStats
-            items={childFigures(page, schoolId === "", searching, matched)}
+            items={childFigures(counts, schoolId === "", searching)}
           />
         ) : null
       }

@@ -618,10 +618,15 @@ describe("TraegerChildrenPage", () => {
     fireEvent.click(screen.getByRole("tab", { name: "Alle" }));
     await screen.findAllByText("Zander, Mia");
     await act(async () => {
-      download.reject(new ApiError("not found", 404));
+      download.reject(
+        new ApiError("not found", 404, { code: "traeger.school_not_found" }),
+      );
       await download.promise.catch(() => undefined);
     });
 
+    expect(
+      await screen.findByText(/Download für „OGS Zur Linde“/),
+    ).toBeVisible();
     expect(screen.getAllByText("Zander, Mia")[0]).toBeVisible();
     expect(downloadOption()).toBeEnabled();
   });
@@ -748,18 +753,39 @@ describe("TraegerChildrenPage", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("replaces a renamed child when it reappears and uses the new match count", async () => {
+  it("replaces a renamed child and updates all counts from the continuation", async () => {
     api.fetchTraegerChildren
       .mockResolvedValueOnce(
-        pageOf([AKSOY, BERG], { matched: 3, nextCursor: "second" }),
+        pageOf([AKSOY, BERG], {
+          total: 3,
+          matched: 3,
+          nextCursor: "second",
+        }),
+      )
+      .mockResolvedValueOnce(
+        pageOf([AKSOY, BERG], {
+          total: 3,
+          matched: 3,
+          nextCursor: "filtered-second",
+        }),
       )
       .mockResolvedValueOnce(
         pageOf([{ ...AKSOY, lastName: "Erler" }, ZANDER], {
+          schools: [
+            { ...BACH, children: 4 },
+            { ...LINDE, children: 1 },
+          ],
+          total: 5,
           matched: 5,
           nextCursor: "third",
         }),
       );
     renderPage();
+    await screen.findAllByText("Berg, Anna");
+    fireEvent.change(screen.getAllByPlaceholderText("Kind suchen")[0]!, {
+      target: { value: "er" },
+    });
+    await screen.findByText("gefunden");
     fireEvent.click(
       await screen.findByRole("button", {
         name: "Weitere Kinder laden (2 von 3)",
@@ -773,6 +799,60 @@ describe("TraegerChildrenPage", () => {
     ).toBeVisible();
     expect(screen.queryByText("Aksoy, Ömer")).not.toBeInTheDocument();
     expect(screen.getByText("Erler, Ömer")).toBeVisible();
+    expect(schoolTab(BACH)).toHaveTextContent(/4$/);
+    expect(
+      screen.getByText("Kinder", { selector: "span" }).parentElement,
+    ).toHaveTextContent(/5\s*Kinder/);
+  });
+
+  it("drops names and starts over when the continuation has fewer schools, even without rows", async () => {
+    const fresh = deferred<TraegerChildrenPage>();
+    const remainingSchools = [{ ...BACH, children: 1 }];
+    api.fetchTraegerChildren
+      .mockResolvedValueOnce(pageOf([AKSOY, BERG], { nextCursor: "old-scope" }))
+      .mockResolvedValueOnce(pageOf([], { schools: remainingSchools }))
+      .mockReturnValueOnce(fresh.promise);
+    renderPage();
+    await screen.findAllByText("Berg, Anna");
+    fireEvent.click(
+      screen.getByRole("button", { name: /Weitere Kinder laden/ }),
+    );
+
+    await waitFor(() =>
+      expect(api.fetchTraegerChildren).toHaveBeenCalledTimes(3),
+    );
+    expect(api.fetchTraegerChildren).toHaveBeenLastCalledWith({
+      schoolId: "",
+      search: "",
+    });
+    expect(screen.queryByText("Berg, Anna")).not.toBeInTheDocument();
+    expect(downloadOption()).toBeDisabled();
+    await act(async () =>
+      fresh.resolve(pageOf([ZANDER], { schools: remainingSchools })),
+    );
+    expect(screen.getByText("Zander, Mia")).toBeVisible();
+  });
+
+  it("starts over after the server refuses an expired cursor before the browser reaches midnight", async () => {
+    setTestClock("2026-11-26T22:59:30Z");
+    api.fetchTraegerChildren
+      .mockResolvedValueOnce(pageOf([AKSOY], { nextCursor: "yesterday" }))
+      .mockRejectedValueOnce(
+        new ApiError("changed", 409, { code: "general.changed_since_read" }),
+      )
+      .mockResolvedValueOnce(pageOf([BERG], { rosterDate: "2026-11-27" }));
+    renderPage();
+    fireEvent.click(
+      await screen.findByRole("button", { name: /Weitere Kinder laden/ }),
+    );
+
+    await screen.findAllByText("Berg, Anna");
+    expect(screen.queryByText("Aksoy, Ömer")).not.toBeInTheDocument();
+    expect(api.fetchTraegerChildren).toHaveBeenCalledTimes(3);
+    expect(api.fetchTraegerChildren).toHaveBeenLastCalledWith({
+      schoolId: "",
+      search: "",
+    });
   });
 
   it("loads the new day's first page when the first click after midnight precedes the date poll", async () => {
@@ -835,6 +915,27 @@ describe("TraegerChildrenPage", () => {
     } finally {
       releaseFakeTimers();
     }
+  });
+
+  it("never shows a first page from before midnight if its answer arrives after midnight", async () => {
+    setTestClock("2026-11-26T22:59:30Z");
+    const yesterday = pageOf([AKSOY]);
+    const old = deferred<TraegerChildrenPage>();
+    const fresh = deferred<TraegerChildrenPage>();
+    api.fetchTraegerChildren
+      .mockReturnValueOnce(old.promise)
+      .mockReturnValueOnce(fresh.promise);
+    renderPage();
+    await waitFor(() =>
+      expect(api.fetchTraegerChildren).toHaveBeenCalledTimes(1),
+    );
+
+    setTestClock("2026-11-26T23:00:00Z");
+    await act(async () => old.resolve(yesterday));
+    expect(api.fetchTraegerChildren).toHaveBeenCalledTimes(2);
+    await act(async () => fresh.resolve(pageOf([BERG])));
+    expect(screen.getByText("Berg, Anna")).toBeVisible();
+    expect(screen.queryByText("Aksoy, Ömer")).not.toBeInTheDocument();
   });
 
   it("shows no names of an earlier visit before the reiter's own read answers", async () => {

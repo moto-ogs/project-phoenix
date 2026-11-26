@@ -37,7 +37,7 @@ func (o *Overview) Children(ctx context.Context, viewer traegerview.Viewer, filt
 	}
 	day := calendar.DateFromTime(o.now())
 	if !cursor.Day.IsZero() && cursor.Day != day {
-		return traegerview.TraegerChildren{}, fmt.Errorf("%w: cursor is for another roster day", traegerview.ErrInvalidChildrenFilter)
+		return traegerview.TraegerChildren{}, readstate.ErrChanged
 	}
 	result := traegerview.TraegerChildren{RosterDate: day, Schools: []traegerview.SchoolChildCount{}, Children: []traegerview.TraegerChild{}}
 	err = o.read(ctx, viewer.OrganizationID, func(adminCtx context.Context, ids []int64) error {

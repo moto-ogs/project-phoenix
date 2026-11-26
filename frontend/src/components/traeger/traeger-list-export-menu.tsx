@@ -68,6 +68,8 @@ interface TraegerListDownloadOptions {
   readonly fallbackName: string;
   /** The object of the error message: „die Belegung“. */
   readonly errorObject: string;
+  /** Identifies the download even if the selected tab has since changed. */
+  readonly errorMessageSuffix?: string;
   /** The data behind the export is not there yet. */
   readonly unavailable?: boolean;
   /**
@@ -87,6 +89,7 @@ function useTraegerListDownload({
   download: fetchFile,
   fallbackName,
   errorObject,
+  errorMessageSuffix,
   onError,
   reloadOnChanged,
 }: TraegerListDownloadOptions) {
@@ -107,6 +110,7 @@ function useTraegerListDownload({
       });
       await showActionError(err, {
         object: errorObject,
+        messageSuffix: errorMessageSuffix,
         reload: reloadOnChanged,
       });
     } finally {

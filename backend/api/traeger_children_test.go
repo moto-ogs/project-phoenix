@@ -116,7 +116,9 @@ func TestTraegerChildrenListTheChildrenOfEverySchoolByName(t *testing.T) {
 // 7).
 func TestTraegerChildrenNeedTheirRightAndAreLogged(t *testing.T) {
 	t.Parallel()
-	db, router, _, _ := newTraegerPortal(t)
+	day := calendar.NewDate(2026, 11, 26)
+	now := day.BerlinMidnight().Add(12 * time.Hour)
+	db, router, _, _ := newTraegerPortalAt(t, func() calendar.Date { return day }, func() time.Time { return now })
 	organization := traegerOrganization(t, db, "Träger Kinder Protokoll", true)
 	shown := testpkg.CreateTestSchoolInOrganization(t, db, organization, "OGS Gezeigt")
 	empty := testpkg.CreateTestSchoolInOrganization(t, db, organization, "OGS Ohne Kind")
@@ -187,7 +189,10 @@ func TestTraegerChildrenComeInPages(t *testing.T) {
 
 	now = midnight
 	stale := traegerOccupancyRequest(t, router, "/traeger/schools/children?cursor="+url.QueryEscape(first.NextCursor), token, nil)
-	assert.Equal(t, http.StatusBadRequest, stale.Code, "yesterday's cursor must not read today's roster: %s", stale.Body.String())
+	assert.Equal(t, http.StatusConflict, stale.Code, "yesterday's cursor must not read today's roster: %s", stale.Body.String())
+	assert.Equal(t, "general.changed_since_read", refusalOf(t, stale).Code)
+	malformed := traegerOccupancyRequest(t, router, "/traeger/schools/children?cursor=not-a-cursor", token, nil)
+	assert.Equal(t, http.StatusBadRequest, malformed.Code, malformed.Body.String())
 	today := traegerChildren(t, router, token, "")
 	assert.Equal(t, "Abele", today.Children[0].LastName, "a fresh opening starts from the beginning")
 }

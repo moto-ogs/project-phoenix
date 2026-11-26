@@ -145,8 +145,9 @@ type ChildrenPorts struct {
 type ChildDirectory interface {
 	// Children returns one page of the children of the Träger. A school of
 	// another Träger is ErrSchoolOutsideTraeger, a filter outside its bounds
-	// ErrInvalidChildrenFilter. The access log of each school with a row on
-	// the page records the read with the viewer's account.
+	// ErrInvalidChildrenFilter and a cursor for another day readstate.ErrChanged.
+	// The access log of each school with a row on the page records the read
+	// with the viewer's account.
 	Children(ctx context.Context, viewer Viewer, filter ChildrenFilter) (TraegerChildren, error)
 	// ChildrenExport returns every child of the filter for the file. The
 	// access log of each school with a row records the export with the
