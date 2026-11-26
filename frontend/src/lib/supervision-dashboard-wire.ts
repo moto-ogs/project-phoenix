@@ -230,6 +230,12 @@ export function mapSupervisionDashboard(wire: DashboardProjection) {
       author_name: hint.author_name,
       school_class: hint.school_class,
     })),
+    plannedActivities: (wire.planned_activities ?? []).map((activity) => ({
+      studentId: activity.student_id,
+      title: activity.title,
+      start_time: activity.start_time,
+      end_time: activity.end_time,
+    })),
     arrivalTimes: (wire.arrival_times ?? []).map((a) => ({
       studentId: a.student_id,
       date: a.date,

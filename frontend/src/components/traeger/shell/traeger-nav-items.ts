@@ -26,6 +26,7 @@ import { billingConcept } from "~/lib/concepts/billing";
 import { careContractsConcept } from "~/lib/concepts/careContracts";
 import { careTimesConcept } from "~/lib/concepts/careTimes";
 import { changeHistoryConcept } from "~/lib/concepts/changeHistory";
+import { childrenConcept } from "~/lib/concepts/children";
 import { closingDaysConcept } from "~/lib/concepts/closingDays";
 import { contributionsConcept } from "~/lib/concepts/contributions";
 import { dashboardConcept } from "~/lib/concepts/dashboard";
@@ -54,7 +55,7 @@ import { utilizationConcept } from "~/lib/concepts/utilization";
 const ACCOUNTS_RIGHT = "traeger_accounts:manage";
 /** Das Recht, das die Ferienzeiträume (#4659) und die Anmeldephasen (#4704) öffnet. */
 const ENROLLMENT_RIGHT = "traeger_enrollment:manage";
-/** Das Recht, das die Betreuungsverträge öffnet (#4678). */
+/** Das Recht, das die Betreuungsverträge (#4678) und die Kinder aller Schulen mit Namen (#8137) öffnet. */
 const CONTRACTS_RIGHT = "traeger_contracts:manage";
 /** Das Recht, das „Länger als gebucht“ ohne Namen (#4683), die Auslastung (#4713), „Ankunft und Abholung“ (#4714), den Standortvergleich (#4715) und die Tagesmeldung (#4717) öffnet. */
 const REPORTS_RIGHT = "traeger_reports:read";
@@ -124,6 +125,14 @@ const TRAEGER_NAV_GROUPS: readonly TraegerNavGroup[] = [
         label: "Schulen",
         concept: schoolsConcept,
         right: null,
+      },
+      {
+        // Alle Kinder der Schulen mit Namen, ein Reiter je Schule (#8137).
+        key: "kinder",
+        href: "/traeger/kinder",
+        label: "Kinder",
+        concept: childrenConcept,
+        right: CONTRACTS_RIGHT,
       },
       {
         // Die Kinder von heute je Schule, Gruppe und Betreuungsform (#4676).

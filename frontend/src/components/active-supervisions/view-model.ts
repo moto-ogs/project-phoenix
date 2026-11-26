@@ -642,6 +642,8 @@ function mapVisitToSupervisionStudent(
     roomColor?: string | null;
     groupNameToId?: Map<string, string>;
     teacherHints?: ReadonlyMap<string, studentsContract.TeacherHint[]>;
+    /** Angebote des Tages (#8194), je Kind. */
+    plannedActivities?: ReadonlyMap<string, studentsContract.PlannedActivity[]>;
   },
 ): ActiveSupervisionStudent {
   const nameParts = visit.studentName?.split(" ") ?? ["", ""];
@@ -680,6 +682,7 @@ function mapVisitToSupervisionStudent(
         : new Date(visit.checkInTime),
     photo_url: visit.photoUrl,
     teacher_hints: options.teacherHints?.get(visit.studentId),
+    planned_activities: options.plannedActivities?.get(visit.studentId),
   } as ActiveSupervisionStudent;
 }
 
@@ -691,6 +694,8 @@ export function mapVisitsToSupervisionStudents(
     groupNameToId?: Map<string, string>;
     /** Hinweise der Lehrkraft für heute (#4795), je Kind. */
     teacherHints?: ReadonlyMap<string, studentsContract.TeacherHint[]>;
+    /** Angebote des Tages (#8194), je Kind. */
+    plannedActivities?: ReadonlyMap<string, studentsContract.PlannedActivity[]>;
   },
 ): ActiveSupervisionStudent[] {
   return visits

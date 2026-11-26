@@ -13552,6 +13552,62 @@
     },
     {
       "method": "GET",
+      "pattern": "/traeger/schools/children",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "cursor",
+          "kind": "string"
+        },
+        {
+          "name": "school_id",
+          "kind": "id"
+        },
+        {
+          "name": "search",
+          "kind": "string"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "TraegerChildren"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/schools/children/export",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "csv",
+            "pdf",
+            "xlsx"
+          ]
+        },
+        {
+          "name": "roster_date",
+          "kind": "date"
+        },
+        {
+          "name": "school_id",
+          "kind": "id"
+        },
+        {
+          "name": "search",
+          "kind": "string"
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
       "pattern": "/traeger/schools/comparison",
       "portals": [
         "org"
@@ -52840,6 +52896,17 @@
             "elem": {
               "kind": "ref",
               "ref": "SupervisionTeacherHint"
+            }
+          }
+        },
+        {
+          "name": "planned_activities",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "SupervisionPlannedActivity"
             }
           }
         }
@@ -96087,6 +96154,48 @@
       ]
     },
     {
+      "name": "SchoolChildCount",
+      "go_type": "traegerview.SchoolChildCount",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "slug",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "subdomain",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "city",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "children",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
       "name": "SchoolClassesRequest",
       "go_type": "staff.SchoolClassesRequest",
       "request": true,
@@ -102460,6 +102569,17 @@
           }
         },
         {
+          "name": "planned_activities",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "StudentListPlannedActivity"
+            }
+          }
+        },
+        {
           "name": "departure_modes",
           "optional": true,
           "schema": {
@@ -108568,6 +108688,30 @@
       ]
     },
     {
+      "name": "StudentListPlannedActivity",
+      "go_type": "presenceprojectionhttp.StudentListPlannedActivity",
+      "fields": [
+        {
+          "name": "title",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "start_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end_time",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "StudentMoveResult",
       "go_type": "studentpresence.StudentMoveResult",
       "fields": [
@@ -110475,6 +110619,36 @@
         {
           "name": "note",
           "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SupervisionPlannedActivity",
+      "go_type": "supervisiondashboard.SupervisionPlannedActivity",
+      "fields": [
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "title",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "start_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end_time",
           "schema": {
             "kind": "string"
           }
@@ -112588,6 +112762,107 @@
           "optional": true,
           "schema": {
             "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "TraegerChild",
+      "go_type": "traegerview.TraegerChild",
+      "fields": [
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "school_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "school_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_class",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "group_name",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "TraegerChildren",
+      "go_type": "traegerview.TraegerChildren",
+      "fields": [
+        {
+          "name": "roster_date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "schools",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "SchoolChildCount"
+            }
+          }
+        },
+        {
+          "name": "total",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "matched",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "children",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "TraegerChild"
+            }
+          }
+        },
+        {
+          "name": "next_cursor",
+          "schema": {
+            "kind": "string"
           }
         }
       ]

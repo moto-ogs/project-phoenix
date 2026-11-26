@@ -1,11 +1,13 @@
 "use client";
 
 import React from "react";
+import { FieldErrorHint } from "~/components/ui/field-error-hint";
 import { useLatest } from "~/lib/hooks/use-latest";
 import type { SearchBarProps } from "./types";
 
 interface DebouncedSearchValue {
   readonly shownValue: string;
+  readonly draftError?: string;
   readonly handleChange: (next: string) => void;
   readonly commitNow: (next: string) => void;
 }
@@ -25,10 +27,12 @@ function useDebouncedSearchValue(
   onChange: (next: string) => void,
   debounceMs: number | undefined,
   resetKey: string | number | undefined,
+  validateDraft?: (draft: string) => string | undefined,
 ): DebouncedSearchValue {
   const [draft, setDraft] = React.useState(value);
   const timeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const onChangeRef = useLatest(onChange);
+  const validate = useLatest(validateDraft);
 
   React.useEffect(() => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
@@ -44,17 +48,18 @@ function useDebouncedSearchValue(
 
   const handleChange = React.useCallback(
     (next: string) => {
+      if (debounceMs || validate.current) setDraft(next);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      if (validate.current?.(next)) return;
       if (!debounceMs) {
         onChangeRef.current(next);
         return;
       }
-      setDraft(next);
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
       timeoutRef.current = setTimeout(() => {
         onChangeRef.current(next);
       }, debounceMs);
     },
-    [debounceMs, onChangeRef],
+    [debounceMs, onChangeRef, validate],
   );
 
   // The clear button is an explicit action, not typing: it reports at once so
@@ -68,7 +73,13 @@ function useDebouncedSearchValue(
     [onChangeRef],
   );
 
-  return { shownValue: debounceMs ? draft : value, handleChange, commitNow };
+  const shownValue = debounceMs || validateDraft ? draft : value;
+  return {
+    shownValue,
+    draftError: validateDraft?.(shownValue),
+    handleChange,
+    commitNow,
+  };
 }
 
 interface SearchBarDraftProviderProps {
@@ -76,6 +87,8 @@ interface SearchBarDraftProviderProps {
   readonly onChange: (next: string) => void;
   readonly debounceMs: number | undefined;
   readonly resetKey: string | number | undefined;
+  readonly onDraftPendingChange?: (pending: boolean) => void;
+  readonly validateDraft?: (draft: string) => string | undefined;
   readonly children: React.ReactNode;
 }
 
@@ -85,6 +98,8 @@ export function SearchBarDraftProvider({
   onChange,
   debounceMs,
   resetKey,
+  onDraftPendingChange,
+  validateDraft,
   children,
 }: Readonly<SearchBarDraftProviderProps>) {
   const draftState = useDebouncedSearchValue(
@@ -92,7 +107,13 @@ export function SearchBarDraftProvider({
     onChange,
     debounceMs,
     resetKey,
+    validateDraft,
   );
+  const draftPending = draftState.shownValue !== value;
+  // Actions outside the field must see the same pending state before paint.
+  React.useLayoutEffect(() => {
+    onDraftPendingChange?.(draftPending);
+  }, [draftPending, onDraftPendingChange]);
 
   return (
     <DebouncedSearchValueContext.Provider value={draftState}>
@@ -109,7 +130,9 @@ function SearchBarContent({
   inputProps,
   draftState,
 }: Readonly<SearchBarProps & { readonly draftState: DebouncedSearchValue }>) {
-  const { shownValue, handleChange, commitNow } = draftState;
+  const { shownValue, draftError, handleChange, commitNow } = draftState;
+  const hintId = React.useId();
+  const describedBy = inputProps?.["aria-describedby"];
   const sizeClasses = {
     // By finger 16 px: smaller text makes iOS zoom into the field.
     sm: "py-2 pl-9 pr-3 text-sm pointer-coarse:text-base",
@@ -124,58 +147,67 @@ function SearchBarContent({
   };
 
   return (
-    <div className={`relative ${className}`}>
-      <svg
-        className={`absolute top-1/2 left-3 -translate-y-1/2 transform ${iconSizeClasses[size]} text-gray-400`}
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-        />
-      </svg>
-
-      <input
-        {...inputProps}
-        // A search only filters the page and holds no draft: a tab of an
-        // earlier release may reload over it (lib/deployment-reload.ts).
-        data-search-field=""
-        type="text"
-        placeholder={placeholder}
-        value={shownValue}
-        onChange={(e) => handleChange(e.target.value)}
-        className={`w-full rounded-2xl border border-gray-500/80 bg-white text-gray-900 placeholder-gray-500 transition duration-200 focus:border-gray-900 focus:ring-0 focus:outline-none ${sizeClasses[size]} ${shownValue ? "pr-10" : ""} `}
-      />
-
-      {shownValue && (
-        <button
-          type="button"
-          aria-label="Suche löschen"
-          onClick={() => {
-            commitNow("");
-            onClear?.();
-          }}
-          className="absolute top-1/2 right-2 -translate-y-1/2 transform rounded-full p-1 transition-colors hover:bg-gray-100 md:right-3"
+    <div className={className}>
+      <div className="relative">
+        <svg
+          className={`absolute top-1/2 left-3 -translate-y-1/2 transform ${iconSizeClasses[size]} text-gray-400`}
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
         >
-          <svg
-            className={`${iconSizeClasses[size]} text-gray-400`}
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+          />
+        </svg>
+
+        <input
+          {...inputProps}
+          // A search only filters the page and holds no draft: a tab of an
+          // earlier release may reload over it (lib/deployment-reload.ts).
+          data-search-field=""
+          type="text"
+          placeholder={placeholder}
+          value={shownValue}
+          aria-invalid={draftError ? true : inputProps?.["aria-invalid"]}
+          aria-describedby={
+            draftError
+              ? [describedBy, hintId].filter(Boolean).join(" ")
+              : describedBy
+          }
+          onChange={(e) => handleChange(e.target.value)}
+          className={`w-full rounded-2xl border border-gray-500/80 bg-white text-gray-900 placeholder-gray-500 transition duration-200 focus:border-gray-900 focus:ring-0 focus:outline-none ${sizeClasses[size]} ${shownValue ? "pr-10" : ""} `}
+        />
+
+        {shownValue && (
+          <button
+            type="button"
+            aria-label="Suche löschen"
+            onClick={() => {
+              commitNow("");
+              onClear?.();
+            }}
+            className="absolute top-1/2 right-2 -translate-y-1/2 transform rounded-full p-1 transition-colors hover:bg-gray-100 md:right-3"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
-        </button>
-      )}
+            <svg
+              className={`${iconSizeClasses[size]} text-gray-400`}
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        )}
+      </div>
+      <FieldErrorHint id={hintId} message={draftError} live />
     </div>
   );
 }

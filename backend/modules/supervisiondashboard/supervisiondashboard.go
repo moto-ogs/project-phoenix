@@ -60,7 +60,10 @@ type Dependencies struct {
 	Calendar Calendar
 	// TeacherHints reads the Lehrkraft's day hints (#4795).
 	TeacherHints TeacherHintReader
-	Now          func() time.Time
+	// PlannedActivities reads the day's offerings for the child cards
+	// (#8194); nil attaches none.
+	PlannedActivities PlannedActivityReader
+	Now               func() time.Time
 	// Handovers is optional (#4794): without it no child is marked.
 	Handovers HandoverReader
 }
@@ -307,6 +310,10 @@ type DashboardProjection struct {
 	// TeacherHints are today's hints of the Lehrkraft (#4795) for the
 	// children in the projection, oldest first; with users:read only.
 	TeacherHints []SupervisionTeacherHint `json:"teacher_hints"`
+	// PlannedActivities are today's offerings of the children in the
+	// projection (#8194), between arrival and pickup on the card; behind
+	// the planning gate and the school's setting.
+	PlannedActivities []SupervisionPlannedActivity `json:"planned_activities"`
 }
 
 func emptyProjection() *DashboardProjection {
@@ -322,6 +329,7 @@ func emptyProjection() *DashboardProjection {
 		PickupTimes:        []DashboardPickupTime{},
 		ArrivalTimes:       []ArrivalTime{},
 		TeacherHints:       []SupervisionTeacherHint{},
+		PlannedActivities:  []SupervisionPlannedActivity{},
 	}
 }
 
@@ -636,6 +644,9 @@ func (s *service) loadPresenceSections(ctx context.Context, projection *Dashboar
 		return err
 	}
 	if err := s.loadTeacherHints(ctx, projection, caller, studentIDs, fullAccess, businessDay); err != nil {
+		return err
+	}
+	if err := s.loadPlannedActivities(ctx, projection, caller, studentIDs, fullAccess, businessDay); err != nil {
 		return err
 	}
 	return s.applyClassHandovers(ctx, projection, caller, businessDay)

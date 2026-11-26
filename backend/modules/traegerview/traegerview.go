@@ -234,6 +234,9 @@ type Ports struct {
 	Daily DailyAttendancePorts
 	// DayChanges are the reads behind "Heute anders" (#7672).
 	DayChanges DayChangePorts
+	// Children are the reads behind the children of the Träger by name
+	// (#8137, ADR 0327).
+	Children ChildrenPorts
 }
 
 // Overview answers the Träger-Portal reads.

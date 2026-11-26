@@ -101,6 +101,10 @@ export interface BFFDashboardResponse {
   }>;
   // Hinweise der Lehrkraft für heute (#4795), je Kind.
   teacherHints?: Array<{ studentId: string } & studentsContract.TeacherHint>;
+  // Angebote der Kinder heute (#8194), je Kind nach Beginn.
+  plannedActivities?: Array<
+    { studentId: string } & studentsContract.PlannedActivity
+  >;
   arrivalTimes?: Array<{
     studentId: string;
     date: string;

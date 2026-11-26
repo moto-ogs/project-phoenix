@@ -22,6 +22,9 @@ export function studentSearchTopic(
   // weil `eltern-einladen` nur fuer die Leitung sichtbar ist.
   const inviteNote =
     "Eltern vieler Kinder auf einmal einladen geht nicht in `Alle Kinder`. Das geht nur in `Datenverwaltung` unter `Kinderdaten`.";
+  // Einstellung „Angebote auf der Kinderkarte“ (#6487, #8194), standardmäßig aus.
+  const plannedActivitiesNote =
+    "Die Karten können auch die Angebote des Tages zeigen, zum Beispiel „14:00–15:00 Töpfer-AG“. Deine Leitung schaltet das in den Einstellungen bei `Angebote auf der Kinderkarte` ein.";
   // #5026: ohne Räume (Binärmodus) gibt es keine Zuweisung.
   const transitNotes =
     presenceMode === "binary"
@@ -156,7 +159,7 @@ export function studentSearchTopic(
       "Fehlt im Filter `Anmeldung`? Den Filter sehen nur Mitarbeitende, die auch die Angaben aus der Anmeldung beim Kind sehen. Er erscheint erst, wenn Eltern in der Online-Anmeldung eigene Fragen der Schule beantwortet haben.",
       ...(presenceDifference ? [presenceDifference] : []),
     ],
-    notes: [...transitNotes, inviteNote],
+    notes: [...transitNotes, inviteNote, plannedActivitiesNote],
     troubleshooting: HELP_TOPICS.missingChildOrGroup,
     related: [
       HELP_TOPICS.schoolSearch,
