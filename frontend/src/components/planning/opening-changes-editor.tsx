@@ -30,7 +30,7 @@ import {
   openingChangeService,
 } from "~/lib/opening-change-api";
 import { useSWRAuth } from "~/lib/swr";
-import { openingChangeKeys } from "~/lib/swr/staff-keys";
+import { closingDayKeys } from "~/lib/swr/staff-keys";
 
 const logger = createLogger({ component: "OpeningChangesEditor" });
 
@@ -47,7 +47,7 @@ export function OpeningChangesEditor() {
   const today = useBerlinToday();
   const from = shiftDays(today, -30);
   const to = shiftDays(today, 365);
-  const list = useSWRAuth(openingChangeKeys.list(from, to), () =>
+  const list = useSWRAuth(closingDayKeys.openingChanges(from, to), () =>
     openingChangeService.list(from, to),
   );
   const { data, error: listError, mutate } = list;
