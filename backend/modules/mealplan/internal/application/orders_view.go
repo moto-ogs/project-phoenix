@@ -16,6 +16,11 @@ import (
 func (s *Service) orderView(ctx context.Context, from, to domain.Date) (view domain.OrderView, err error) {
 	err = s.run(ctx, "read_orders", func(txCtx context.Context) (domain.OperationStats, error) {
 		rules, rulesErr := s.requireRegistration(txCtx)
+		if errors.Is(rulesErr, ErrRegistrationDisabled) {
+			var stats domain.OperationStats
+			view, stats, err = s.calendarOrderView(txCtx, from, to)
+			return stats, err
+		}
 		if rulesErr != nil {
 			return domain.OperationStats{}, rulesErr
 		}
@@ -24,6 +29,27 @@ func (s *Service) orderView(ctx context.Context, from, to domain.Date) (view dom
 		return stats, err
 	})
 	return view, err
+}
+
+// calendarOrderView keeps the order-day calendar available while meal
+// registration is disabled. There are no orders, deadlines, or children in
+// that configuration; callers only receive the closed-day state needed to
+// keep meal-plan actions within the calendar's bounds.
+func (s *Service) calendarOrderView(ctx context.Context, from, to domain.Date) (domain.OrderView, domain.OperationStats, error) {
+	days, stats, err := s.calendar.Days(ctx, from, to)
+	if err != nil {
+		return domain.OrderView{}, stats, err
+	}
+	view := domain.OrderView{Rules: domain.OrderingRules{Rhythm: domain.RhythmDaily, Detail: domain.DetailTotal}}
+	for date := from; !date.After(to); date = date.AddDays(1) {
+		if date.Weekday() == time.Saturday || date.Weekday() == time.Sunday {
+			continue
+		}
+		view.Days = append(view.Days, domain.OrderDay{
+			Date: date, Closed: days.Closed[date], MealCancelled: days.Cancelled[date], Unordered: true,
+		})
+	}
+	return view, stats, nil
 }
 
 // orderWindow is everything settling a window needs: the calendar of its

@@ -37,6 +37,7 @@ import { isReadStateRefusal } from "~/lib/api-error";
 import { formatWeekLabel, parseISODate, toISODate } from "~/lib/date-helpers";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import {
+  getMealOrders,
   getMealPlanWeek,
   mondayOf,
   setDay,
@@ -55,6 +56,7 @@ import {
 } from "~/lib/hooks/use-swr-load-error";
 import { useSWRAuth } from "~/lib/swr";
 import { useDraftOn } from "~/lib/swr/read-draft";
+import { tenantContactKeys } from "~/lib/swr/tenant-contact-keys";
 import { tenantListKeys } from "~/lib/swr/tenant-list-keys";
 import {
   useMealPlanEnabled,
@@ -332,11 +334,32 @@ export default function MealPlanPage() {
   }, [today, weekOffset]);
 
   const weekDates = useMemo(() => workWeekDates(mondayISO), [mondayISO]);
-  const [orderDays, setOrderDays] = useState<MealOrderDay[] | null>([]);
-  useLayoutEffect(
-    () => setOrderDays(mealRegistrationEnabled ? null : []),
-    [mondayISO, mealRegistrationEnabled],
+  const [orderDays, setOrderDays] = useState<MealOrderDay[] | null>(null);
+  useLayoutEffect(() => setOrderDays(null), [mondayISO]);
+  // Ohne Anmeldung zeigt die Seite keine Bestellung. Sie lädt deren reine
+  // Tagesprojektion dennoch, damit ein Ausfall nicht auf einem Schließtag
+  // angeboten wird. Sie enthält keine Bestell- oder Kinddaten.
+  const cancellationOrderDays = useSWRAuth(
+    status === "authenticated" &&
+      canReadPlan &&
+      mealPlanEnabled === true &&
+      !mealRegistrationEnabled
+      ? tenantContactKeys.mealOrders(
+          mondayISO,
+          weekDates[weekDates.length - 1] ?? mondayISO,
+        )
+      : null,
+    () =>
+      getMealOrders(mondayISO, weekDates[weekDates.length - 1] ?? mondayISO),
   );
+  const { error: cancellationOrderDaysLoadError } = useSwrResourceLoadError(
+    [cancellationOrderDays],
+    "die Bestellung",
+    () => cancellationOrderDays.mutate(),
+  );
+  const cancellationDays = mealRegistrationEnabled
+    ? orderDays
+    : (cancellationOrderDays.data?.days ?? null);
   // Die Tage ohne Mittagessen (#7656); nur wer verwaltet, trägt sie ein.
   const cancellationResource = useMealCancellations(
     mondayISO,
@@ -861,6 +884,7 @@ export default function MealPlanPage() {
       <FormErrorAlert message={saveErrors.error} />
       <LoadErrorAlert error={draftForm.loadError} className="mb-4" />
       <LoadErrorAlert error={cancellationResource.loadError} className="mb-4" />
+      <LoadErrorAlert error={cancellationOrderDaysLoadError} className="mb-4" />
       <LoadErrorAlert
         error={
           afterSave.error && {
@@ -977,7 +1001,7 @@ export default function MealPlanPage() {
                             // Ein vergangener Tag bleibt, wie er war (#7656).
                             ...(date < today ||
                             !cancellationResource.loaded ||
-                            !canCancelMeal(date, orderDays)
+                            !canCancelMeal(date, cancellationDays)
                               ? []
                               : cancelledReason === undefined
                                 ? [

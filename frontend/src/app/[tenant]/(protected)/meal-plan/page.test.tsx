@@ -249,7 +249,7 @@ describe("Speiseplan: Ausfalltage bei Ladefehler (#7656)", () => {
     expect(screen.queryByText("Essen fällt aus")).not.toBeInTheDocument();
   });
 
-  it("offers meal cancellations without meal registration", async () => {
+  it("offers meal cancellations without meal registration after loading calendar days", async () => {
     features.mealRegistrationEnabled = false;
 
     renderPage();
@@ -257,7 +257,54 @@ describe("Speiseplan: Ausfalltage bei Ladefehler (#7656)", () => {
     const actions = await screen.findByLabelText("Aktionen für Mittwoch");
     fireEvent.click(actions);
     expect(await screen.findByText("Essen fällt aus")).toBeInTheDocument();
-    expect(getMealOrders).not.toHaveBeenCalled();
+    expect(getMealOrders).toHaveBeenCalledWith("2026-10-05", "2026-10-09");
+  });
+
+  it("does not offer a meal cancellation for a closed day without meal registration", async () => {
+    features.mealRegistrationEnabled = false;
+    getMealOrders.mockResolvedValue({
+      rhythm: "daily",
+      detail: "total",
+      days: [
+        {
+          date: "2026-10-07",
+          closed: true,
+          deadline: "0001-01-01T00:00:00Z",
+          status: "unordered",
+          confirmedAt: null,
+          total: 0,
+          classes: [],
+          children: [],
+          changes: [],
+        },
+      ],
+    });
+
+    renderPage();
+
+    const actions = await screen.findByLabelText("Aktionen für Mittwoch");
+    fireEvent.click(actions);
+    expect(await screen.findByText("Tag kopieren")).toBeInTheDocument();
+    expect(screen.queryByText("Essen fällt aus")).not.toBeInTheDocument();
+  });
+
+  it("keeps meal cancellations unavailable when calendar days cannot load without meal registration", async () => {
+    features.mealRegistrationEnabled = false;
+    getMealOrders.mockRejectedValue(
+      new ApiError("orders exploded", 503, { code: "general.unavailable" }),
+    );
+
+    renderPage();
+
+    expect(
+      await screen.findByText(
+        catalogText("general.unavailable", "die Bestellung"),
+      ),
+    ).toBeInTheDocument();
+    const actions = await screen.findByLabelText("Aktionen für Mittwoch");
+    fireEvent.click(actions);
+    expect(await screen.findByText("Tag kopieren")).toBeInTheDocument();
+    expect(screen.queryByText("Essen fällt aus")).not.toBeInTheDocument();
   });
 });
 

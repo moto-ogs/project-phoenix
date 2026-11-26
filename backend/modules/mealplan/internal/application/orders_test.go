@@ -1,14 +1,70 @@
 package application
 
 import (
+	"context"
 	"testing"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/mealplan"
 	"github.com/moto-ogs/project-phoenix/modules/mealplan/internal/domain"
+	"github.com/moto-ogs/project-phoenix/modules/mealplan/internal/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+type calendarOrderViewCalendar struct{ days domain.CalendarDays }
+
+func (c calendarOrderViewCalendar) Days(context.Context, domain.Date, domain.Date) (domain.CalendarDays, domain.OperationStats, error) {
+	return c.days, domain.OperationStats{}, nil
+}
+
+type calendarOrderViewSettings struct{}
+
+func (calendarOrderViewSettings) MealPlanEnabled(context.Context) (bool, error) {
+	return true, nil
+}
+
+func (calendarOrderViewSettings) MealRegistrationEnabled(context.Context) (bool, error) {
+	return false, nil
+}
+
+func (calendarOrderViewSettings) MealOrderingSettings(context.Context) (ports.OrderingSettings, error) {
+	return ports.OrderingSettings{}, nil
+}
+
+func TestOrdersWithoutMealRegistrationExposeOnlyCalendarDays(t *testing.T) {
+	t.Parallel()
+	monday, closed, cancelled := calendar.NewDate(2026, 9, 7), calendar.NewDate(2026, 9, 9), calendar.NewDate(2026, 9, 10)
+	service := New(
+		seamStore{},
+		struct{ ports.Directory }{},
+		calendarOrderViewCalendar{days: domain.CalendarDays{
+			Closed:    map[domain.Date]bool{closed: true, cancelled: true},
+			Cancelled: map[domain.Date]bool{cancelled: true},
+		}},
+		calendarOrderViewSettings{},
+		seamTransaction{},
+		func(ports.Observation) {},
+		time.Now,
+		nil,
+	)
+
+	week, err := service.Capability.Orders(context.Background(), mealplan.Date(monday), mealplan.Date(monday.AddDays(4)))
+	require.NoError(t, err)
+	require.Len(t, week.Days, 5)
+	assert.Equal(t, mealplan.OrderUnordered, week.Days[0].Status)
+	assert.True(t, week.Days[2].Closed)
+	assert.False(t, week.Days[2].MealCancelled)
+	assert.True(t, week.Days[3].Closed)
+	assert.True(t, week.Days[3].MealCancelled)
+	for _, day := range week.Days {
+		assert.Zero(t, day.Total)
+		assert.Empty(t, day.Classes)
+		assert.Empty(t, day.Children)
+		assert.Empty(t, day.Changes)
+	}
+}
 
 func TestOpenDaysSkipsPastCancelledAndOrderedDays(t *testing.T) {
 	t.Parallel()
