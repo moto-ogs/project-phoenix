@@ -62,7 +62,6 @@ import {
   type DayChangesOverview,
 } from "~/lib/day-changes";
 import { useDeviceContext } from "~/lib/device-context";
-import { useMediaQuery } from "~/lib/hooks/use-media-query";
 import type {
   HomeBlockAccess,
   HomeBlockContext,
@@ -186,7 +185,6 @@ export function HomeApp({
   const tenantPath = useTenantAwarePath();
   const dayPlanHref = useDayPlanHref();
   const clock = useBerlinClock();
-  const shortScreen = useMediaQuery("(max-height: 700px)");
 
   const dayChanges = useSWRAuth<DayChangesOverview>(
     has("section.day_changes") ? homeKeys.dayChanges(accountId) : null,
@@ -249,7 +247,7 @@ export function HomeApp({
         ),
         // Der Titel bricht um statt „Neuer Notfallplan …“ am SE.
         wrap: true,
-        meta: <StatusBadge label="Bitte bestätigen" tone="blue" size="xs" />,
+        meta: <StatusBadge label="Zur Kenntnis nehmen" tone="blue" size="xs" />,
       },
       detail: <NoticeDetail notice={entry.notice} onChanged={retry} />,
       sheet: { kind: "notice", notice: entry.notice },
@@ -406,10 +404,28 @@ export function HomeApp({
           ? [tenantPath("/students/search"), supervisionHref ?? ""]
           : []
       }
+      withoutStart={layout === "phone"}
     />
   );
+  // Steht ein eigener Block zum Start an, ist „Aufsicht starten“ die
+  // Hauptaktion der Leiste (wie in der Jetzt-Zone des Desktops), auch wenn
+  // daneben schon eine Aufsicht läuft: Die Jetzt-Karte nennt dann diesen
+  // Block als „Nicht gestartet“, und zur laufenden Aufsicht führt die Pill.
+  const startInBar = layout === "phone" ? now.startable : null;
   const actionBar = (
-    <HomeActionBar stamp={stamp} supervisionHref={supervisionHref} />
+    <HomeActionBar
+      stamp={stamp}
+      supervisionHref={supervisionHref}
+      start={
+        startInBar
+          ? {
+              busy: now.busyId === startInBar.id,
+              disabled: now.busyId !== null,
+              onStart: () => void now.start(startInBar),
+            }
+          : null
+      }
+    />
   );
   const extra =
     rest.length > 0 ? (
@@ -429,9 +445,10 @@ export function HomeApp({
     loadError,
     showTodo: has("section.day_changes") || has("section.open_requests"),
     onChanged: retry,
-    // Am kleinen Telefon (SE) zwei Änderungen statt drei: „Mein Tag“ rückt
-    // näher an das erste Bild; alle stehen hinter „Alle anzeigen“.
-    previewLimit: layout === "phone" && shortScreen ? 2 : undefined,
+    // Am Telefon zwei Änderungen statt drei, auf jedem Telefon gleich (die
+    // Kürzung hängt nicht an der Bildhöhe): „Mein Tag“ rückt ins erste
+    // Bild; alle stehen hinter „Alle anzeigen · N weitere“.
+    previewLimit: layout === "phone" ? 2 : undefined,
   };
 
   if (isSplit) {
@@ -645,6 +662,7 @@ function HomeLists({
           include={isDayChange}
           limit={previewLimit}
           lead={notices.length > 0 ? notices.map(row) : undefined}
+          leadCount={notices.length}
           onShowAll={() => setSheetId(dayChanges.entry.id)}
         />
       ) : null}
@@ -792,6 +810,7 @@ function NowCard({
   stamp,
   running,
   withoutHrefs = NO_HREFS,
+  withoutStart = false,
 }: {
   readonly now: ReturnType<typeof useHomeNow>;
   readonly stamp: ReturnType<typeof useHomeStamp>;
@@ -799,6 +818,8 @@ function NowCard({
   readonly running?: PlannedTimetableInstance;
   /** Wege, die Leiste oder Pill schon tragen (nur Telefon). */
   readonly withoutHrefs?: readonly string[];
+  /** Die Leiste startet den eigenen Block (nur Telefon). */
+  readonly withoutStart?: boolean;
 }) {
   const tenantPath = useTenantAwarePath();
   const stamped = stamp.state.kind === "in" || stamp.state.kind === "done";
@@ -806,8 +827,10 @@ function NowCard({
   const checkOut = stamp.state.kind === "in";
   // Wie am Desktop: die Wege des Moments („Zur Aufsicht“ bzw. „Aufsicht
   // starten“, „Alle Kinder“) stehen in der Karte, Ausstempeln daneben.
-  const actions = now.actions.filter(
-    (action) => action.kind !== "link" || !withoutHrefs.includes(action.href),
+  const actions = now.actions.filter((action) =>
+    action.kind === "link"
+      ? !withoutHrefs.includes(action.href)
+      : !withoutStart,
   );
   const footer = !now.loading && (actions.length > 0 || checkOut);
   // Zwei Zeilen: Uhrzeit klein vor dem Blocktitel, darunter Zustand, Raum,
@@ -938,20 +961,26 @@ function NowCard({
 
 /**
  * Die Leiste über der Pill trägt, was man auf der Startseite gerade am
- * häufigsten braucht. Läuft der eigene Block: „Zur Aufsicht“, daneben
- * Einstempeln, falls man es noch nicht ist. Sonst nur Einstempeln, solange
- * man heute noch nicht eingestempelt ist. Ausstempeln steht in der
- * Jetzt-Karte.
+ * häufigsten braucht. Steht der eigene Block zum Start an: „Aufsicht
+ * starten“. Sonst, solange der eigene Block läuft: „Zur Aufsicht“.
+ * Daneben Einstempeln, falls man es heute noch nicht ist; sonst nur
+ * Einstempeln. Ausstempeln steht in der Jetzt-Karte.
  */
 function HomeActionBar({
   stamp,
   supervisionHref,
+  start,
 }: {
   readonly stamp: ReturnType<typeof useHomeStamp>;
   readonly supervisionHref: string | null;
+  readonly start: {
+    readonly busy: boolean;
+    readonly disabled: boolean;
+    readonly onStart: () => void;
+  } | null;
 }) {
   const checkIn = stamp.state.kind === "out";
-  if (!checkIn && !supervisionHref) return null;
+  if (!checkIn && !supervisionHref && !start) return null;
   /* VORSCHLAG zu Produktentscheid 4 (Epic #8070): Stempeln als neuer
      Einstieg auf der Startseite; Logik in `useHomeStamp`. */
   const checkInButton = checkIn ? (
@@ -968,6 +997,23 @@ function HomeActionBar({
       Einstempeln
     </Button>
   ) : null;
+  if (start) {
+    return (
+      <ActionBar secondary={checkInButton ?? undefined}>
+        <Button
+          type="button"
+          variant="primary"
+          size="md"
+          className="flex-1 whitespace-nowrap"
+          disabled={start.disabled}
+          onClick={start.onStart}
+          tooltip={START_OWN_BLOCK_TOOLTIP}
+        >
+          {start.busy ? "Startet..." : "Aufsicht starten"}
+        </Button>
+      </ActionBar>
+    );
+  }
   if (!supervisionHref) return <ActionBar>{checkInButton}</ActionBar>;
   return (
     <ActionBar secondary={checkInButton ?? undefined}>

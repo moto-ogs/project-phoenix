@@ -9,7 +9,10 @@ import {
   describeCelebration,
 } from "~/components/dashboard/birthday-list";
 import { useBirthdayWeek } from "~/components/home/birthdays-block";
-import { blockStaffShort } from "~/components/timetable/block-row-parts";
+import {
+  BlockRowParts,
+  blockStaffShort,
+} from "~/components/timetable/block-row-parts";
 import { BlockState, blockStateLabel } from "~/components/home/day-flow-block";
 import {
   upcomingFirst,
@@ -44,6 +47,7 @@ import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import type { MotoConcept } from "~/lib/moto-concepts";
 import { useSWRAuth } from "~/lib/swr";
 import { homeKeys } from "~/lib/swr/portal-keys";
+import { startableOwnBlock } from "~/lib/home-now";
 import { useTenantAwarePath } from "~/lib/tenant-path";
 import { timetableOperationsApi } from "~/lib/timetable-operations-api";
 import { canStartPlannedInstance } from "~/lib/timetable-lifecycle";
@@ -94,6 +98,7 @@ export function MyDayCard() {
   const dayPlanLabel = useDayPlanLabel();
   const tenantPath = useTenantAwarePath();
   const now = useBerlinClock();
+  const clockNow = useMinuteClock();
   const { data, error, isLoading, mutate } = useSWRAuth<
     PlannedTimetableInstance[]
   >(
@@ -106,6 +111,10 @@ export function MyDayCard() {
     { refreshInterval: 5 * 60 * 1000 },
   );
   const { start, busyId } = useStartOwnBlock({ onFailure: () => mutate() });
+  // Den ersten startbereiten eigenen Block startet die Leiste über der Pill
+  // („Aufsicht starten“); seine Zeile trägt dann den Zustand statt eines
+  // Knopfs und behält die ganze Breite für ihre Angaben.
+  const barStartId = startableOwnBlock(data ?? [], clockNow)?.id ?? null;
   const loadError = useSwrLoadError(error, "die Karte „Mein Tag“", () =>
     mutate(),
   );
@@ -162,6 +171,7 @@ export function MyDayCard() {
             tenantPath={tenantPath}
             busy={busyId === block.id}
             onStart={start}
+            startInBar={barStartId === block.id}
           />
         ))}
         {nowIndex === shown.length && hidden === 0 ? (
@@ -220,6 +230,7 @@ function MyDayRow({
   tenantPath,
   busy,
   onStart,
+  startInBar = false,
 }: {
   readonly block: PlannedTimetableInstance;
   readonly now: string;
@@ -228,12 +239,16 @@ function MyDayRow({
   readonly tenantPath: (path: string) => string;
   readonly busy: boolean;
   readonly onStart: (block: PlannedTimetableInstance) => void;
+  /** Die Leiste über der Pill startet diesen Block. */
+  readonly startInBar?: boolean;
 }) {
   const running = block.status === "active";
   const cancelled = block.status === "cancelled";
   const clock = useMinuteClock();
   const startable =
-    block.status === "planned" && canStartPlannedInstance(block, clock);
+    !startInBar &&
+    block.status === "planned" &&
+    canStartPlannedInstance(block, clock);
   const isDuty = block.isDuty === true;
   const ended =
     block.status === "planned" && now !== "" && block.endTime <= now;
@@ -331,14 +346,13 @@ function MyDayRow({
         }
         subtitle={
           parts.length > 0 ? (
-            <span
-              className={cn(
-                "block truncate",
-                cancelled && "text-moto-red-strong",
-              )}
-            >
-              {parts.join(" · ")}
-            </span>
+            <BlockRowParts
+              parts={parts.map((text, index) => ({
+                key: String(index),
+                text,
+                danger: cancelled,
+              }))}
+            />
           ) : undefined
         }
         action={
