@@ -9,7 +9,7 @@ import { ListRow } from "~/components/ui/list-row";
 import Link from "~/components/ui/navigation-link";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { useApiErrorDisplay } from "~/contexts/ToastContext";
-import { trackEvent } from "~/lib/analytics";
+import { trackEntryClick } from "~/components/home/day-change-link";
 import type { DayChange, DayChangeNotice } from "~/lib/day-changes";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { createLogger } from "~/lib/logger";
@@ -123,9 +123,7 @@ export function DayNoticeRow({
       // des Eintrags, nie Titel oder ID.
       onClickCapture={(event) => {
         if (event.target instanceof Element && event.target.closest("a")) {
-          trackEvent("day_changes_entry_clicked", {
-            day_change_kind: entry.kind,
-          });
+          trackEntryClick(entry.kind);
         }
       }}
     >

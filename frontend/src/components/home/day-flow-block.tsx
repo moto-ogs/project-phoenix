@@ -9,20 +9,19 @@ import {
   HomeCardEmpty,
   HomeCardIcon,
 } from "~/components/home/home-card";
-import { StatusBadge } from "~/components/ui/status-badge";
 import { blockTintStyle } from "~/components/timetable/block-row-parts";
-import { useOperationalOverviewScope } from "~/lib/tenant-context";
-import { formatMinutesAhead, minutesBetween } from "~/lib/home-clock";
-import { timetableOperationsApi } from "~/lib/timetable-operations-api";
+import { minutesBetween } from "~/lib/home-clock";
 import type { PlannedTimetableInstance } from "~/lib/timetable-operations-types";
-import { useSWRAuth } from "~/lib/swr";
-import { homeKeys } from "~/lib/swr/portal-keys";
 import { useCarePlanTodayTarget } from "~/lib/hooks/use-day-plan-href";
+import { useHomeBlockAccess } from "~/lib/hooks/use-home-block-access";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useTodayBlocks } from "~/lib/hooks/use-today-blocks";
 import {
   BlockRowBody,
   blockRowState,
+  BlockState,
   NowLine,
+  openUntil,
 } from "~/components/home/home-block-row";
 import {
   HomeCardLink,
@@ -64,26 +63,12 @@ const SOON_MINUTES = 60;
  * stehen noch drei Blöcke da, und drei Rasterzeilen wären dann halb leer.
  * Ist der Tag vorbei, steht ein Satz da statt der letzten Blöcke.
  *
- * Bewusst `scope: "day"` statt des Standardfensters: das liefert nur, was in
- * den nächsten 15 Minuten beginnt, und lässt einen gerade laufenden Block
- * ganz weg.
- *
- * Bewusst ohne Kinderlisten: die Startseite ist eine Übersicht, und die
- * Namen gehören in den Termin (GDPR).
+ * Welche Blöcke die Karte liest, sagt `useTodayBlocks`.
  */
 export function DayFlowBlock() {
-  const { opensPlan, dayHref, blockHref } = useCarePlanTodayTarget();
-  const { data, error, isLoading, mutate } = useSWRAuth<
-    PlannedTimetableInstance[]
-  >(
-    homeKeys.dayFlow(),
-    () =>
-      timetableOperationsApi.plannedNow({
-        scope: "day",
-        includeRoster: false,
-      }),
-    { refreshInterval: 5 * 60 * 1000 },
-  );
+  const { opensPlan, label, tooltip, dayHref, blockHref } =
+    useCarePlanTodayTarget();
+  const { data, error, isLoading, mutate } = useTodayBlocks();
   const loadError = useSwrLoadError(
     error,
     "die Karte „Betreuungsplan heute“",
@@ -93,7 +78,7 @@ export function DayFlowBlock() {
   const now = useBerlinClock();
   // Eigene Blöcke sind in ihrer Farbe hinterlegt wie im Tagesplan (#4350),
   // aber nur, wo eigene und fremde nebeneinander stehen.
-  const showMine = useOperationalOverviewScope() === "all_staff";
+  const showMine = useHomeBlockAccess().seesAllBlocks;
   const blocks = data ?? [];
   // Ab dem Block, der gerade läuft: sonst stünde um 16 Uhr immer noch die
   // Frühbetreuung oben in der Karte.
@@ -113,7 +98,6 @@ export function DayFlowBlock() {
   // Was vor jetzt lag, steht nicht mehr als Zeile da. Die Karte nennt die
   // Zahl, damit drei Zeilen am Nachmittag nicht wie der ganze Tag aussehen.
   const earlier = blocks.length - open.length;
-  const label = opensPlan ? "Plan öffnen" : "Heute öffnen";
 
   return (
     <HomeCard
@@ -124,11 +108,7 @@ export function DayFlowBlock() {
         <HomeCardLink
           href={dayHref(today)}
           label={`Betreuungsplan heute: ${label}`}
-          tooltip={
-            opensPlan
-              ? "Öffnet den Betreuungsplan von heute."
-              : "Öffnet deinen Tagesplan für heute."
-          }
+          tooltip={tooltip}
         >
           {label}
         </HomeCardLink>
@@ -235,20 +215,6 @@ export function DayFlowBlock() {
 }
 
 /**
- * Bis wann ein Block für die Karte offen ist. Ein Block, der laut Server
- * noch läuft, zählt als „jetzt", auch wenn seine geplante Endzeit vorbei ist:
- * die Jetzt-Zone zählt ihn ebenfalls mit. Ein vorzeitig beendeter Block ist
- * vorbei, auch wenn seine geplante Zeit noch läuft.
- */
-export function openUntil(
-  block: Pick<PlannedTimetableInstance, "status" | "endTime">,
-): string {
-  if (block.status === "active") return "24:00";
-  if (block.status === "completed") return "00:00";
-  return block.endTime;
-}
-
-/**
  * Links vor der Jetzt-Linie: wie viele Blöcke heute schon vorbei sind, als
  * Weg in den Tag. Ohne das läse sich die Karte nachmittags, als hätte der
  * Tag nur drei Termine.
@@ -324,44 +290,5 @@ function PlanRow({
         <span className="sr-only">{`${mine ? ", Mein Block" : ""}, ${opensPlan ? "im Betreuungsplan öffnen" : "unter Heute öffnen"}`}</span>
       </ListRow>
     </li>
-  );
-}
-
-/**
- * Der Zustand eines Blocks relativ zur Uhr — dieselben Wörter wie im
- * Tagesplan („Läuft", „Nicht gestartet", „Fällt aus"), und für das Kommende
- * die Zeit bis zum Beginn statt eines „Geplant", das nichts sagt. „Mein Tag"
- * nutzt dieselbe Marke, damit beide Karten dieselbe Sprache sprechen.
- */
-export function BlockState({
-  block,
-  now,
-}: {
-  readonly block: PlannedTimetableInstance;
-  readonly now: string;
-}) {
-  if (block.status === "cancelled") {
-    return <StatusBadge tone="red" label="Fällt aus" />;
-  }
-  if (block.status === "active") {
-    return <StatusBadge tone="green" label="Läuft" />;
-  }
-  if (block.status === "completed") {
-    return <StatusBadge tone="gray" label="Beendet" />;
-  }
-  // Ein Dienst (#3822) wird nie gestartet; "Nicht gestartet" wäre falsch.
-  if (block.isDuty === true && (block.isOverdue || block.startTime <= now)) {
-    return null;
-  }
-  if (block.isOverdue || (now !== "" && block.startTime <= now)) {
-    return <StatusBadge tone="warning" label="Nicht gestartet" />;
-  }
-  // Ohne Uhr (vor dem ersten Rendern im Browser) gibt es keinen Abstand.
-  if (now === "") return null;
-  return (
-    <StatusBadge
-      tone="blue"
-      label={formatMinutesAhead(minutesBetween(now, block.startTime))}
-    />
   );
 }

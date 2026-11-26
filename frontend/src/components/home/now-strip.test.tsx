@@ -64,8 +64,11 @@ vi.mock("~/components/home/home-card-rows", () => ({
   useBerlinClock: () => "10:20",
 }));
 vi.mock("~/lib/hooks/use-day-plan-href", () => ({
-  useDayPlanHref: () => "/test-tenant/tagesplan",
-  useDayPlanLabel: () => "Heute öffnen",
+  useDayPlanLink: () => ({
+    href: "/test-tenant/tagesplan",
+    label: "Heute öffnen",
+    tooltip: "Öffnet deinen Tagesplan für heute.",
+  }),
 }));
 vi.mock("~/lib/tenant-path", () => ({
   useTenantAwarePath: () => (path: string) => `/test-tenant${path}`,

@@ -39,8 +39,11 @@ vi.mock("~/lib/tenant-router", () => ({
   useTenantRouter: () => router,
 }));
 vi.mock("~/lib/hooks/use-day-plan-href", () => ({
-  useDayPlanHref: () => "/test-tenant/tagesplan",
-  useDayPlanLabel: () => "Heute öffnen",
+  useDayPlanLink: () => ({
+    href: "/test-tenant/tagesplan",
+    label: "Heute öffnen",
+    tooltip: "Öffnet deinen Tagesplan für heute.",
+  }),
 }));
 vi.mock("~/lib/timetable-operations-api", () => ({
   timetableOperationsApi: api,

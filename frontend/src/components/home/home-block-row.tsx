@@ -1,12 +1,14 @@
 import { Fragment, type ReactNode } from "react";
 
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
+import { StatusBadge } from "~/components/ui/status-badge";
 import { blockStaffNames } from "~/components/timetable/block-row-parts";
 import {
   blockChildrenLabel,
   blockEndLine,
   hasOpenEnd,
 } from "~/lib/block-children";
+import { formatMinutesAhead, minutesBetween } from "~/lib/home-clock";
 import type { PlannedTimetableInstance } from "~/lib/timetable-operations-types";
 import { roomsConcept } from "~/lib/concepts/rooms";
 import { staffConcept } from "~/lib/concepts/staff";
@@ -32,6 +34,30 @@ export function blockRowState(block: PlannedTimetableInstance, now: string) {
   // hervortritt, wie im Tagesplan.
   const over = block.status === "completed" || ended;
   return { running, cancelled, isDuty, ended, missed: ended && !isDuty, over };
+}
+
+/**
+ * Bis wann ein Block für die Karte offen ist. Ein Block, der laut Server
+ * noch läuft, zählt als „jetzt", auch wenn seine geplante Endzeit vorbei ist:
+ * die Jetzt-Zone zählt ihn ebenfalls mit. Ein vorzeitig beendeter Block ist
+ * vorbei, auch wenn seine geplante Zeit noch läuft.
+ */
+export function openUntil(
+  block: Pick<PlannedTimetableInstance, "status" | "endTime">,
+): string {
+  if (block.status === "active") return "24:00";
+  if (block.status === "completed") return "00:00";
+  return block.endTime;
+}
+
+/**
+ * Wie `openUntil`, aber ohne Regel für `completed`: „Mein Tag“ ist älter als
+ * #8134, ein vorzeitig beendeter eigener Block bleibt dort bis zu seiner Endzeit.
+ */
+export function openUntilKeepingCompleted(
+  block: Pick<PlannedTimetableInstance, "status" | "endTime">,
+): string {
+  return block.status === "active" ? "24:00" : block.endTime;
 }
 
 /** „13:00 bis 14:00“ oder „seit 15:16“, für den vorgelesenen Namen. */
@@ -169,5 +195,45 @@ export function BlockRowBody({
         </span>
       </span>
     </>
+  );
+}
+
+/**
+ * Der Zustand eines Blocks relativ zur Uhr — dieselben Wörter wie im
+ * Tagesplan („Läuft", „Nicht gestartet", „Fällt aus"), und für das Kommende
+ * die Zeit bis zum Beginn statt eines „Geplant", das nichts sagt. „Mein Tag"
+ * nutzt dieselbe Marke, damit beide Karten dieselbe Sprache sprechen.
+ */
+export function BlockState({
+  block,
+  now,
+}: {
+  readonly block: PlannedTimetableInstance;
+  readonly now: string;
+}) {
+  const { running, cancelled, isDuty } = blockRowState(block, now);
+  if (cancelled) {
+    return <StatusBadge tone="red" label="Fällt aus" />;
+  }
+  if (running) {
+    return <StatusBadge tone="green" label="Läuft" />;
+  }
+  if (block.status === "completed") {
+    return <StatusBadge tone="gray" label="Beendet" />;
+  }
+  // Ein Dienst (#3822) wird nie gestartet; "Nicht gestartet" wäre falsch.
+  if (isDuty && (block.isOverdue || block.startTime <= now)) {
+    return null;
+  }
+  if (block.isOverdue || (now !== "" && block.startTime <= now)) {
+    return <StatusBadge tone="warning" label="Nicht gestartet" />;
+  }
+  // Ohne Uhr (vor dem ersten Rendern im Browser) gibt es keinen Abstand.
+  if (now === "") return null;
+  return (
+    <StatusBadge
+      tone="blue"
+      label={formatMinutesAhead(minutesBetween(now, block.startTime))}
+    />
   );
 }

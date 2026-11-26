@@ -29,6 +29,10 @@ vi.mock("~/lib/hooks/use-day-plan-href", () => ({
         : "/test-tenant/tagesplan";
     return {
       opensPlan: viewer.opensPlan,
+      label: viewer.opensPlan ? "Plan öffnen" : "Heute öffnen",
+      tooltip: viewer.opensPlan
+        ? "Öffnet den Betreuungsplan von heute."
+        : "Öffnet deinen Tagesplan für heute.",
       dayHref: (date?: string) => planHref(date),
       blockHref: (target: { date: string; id: string }) =>
         planHref(target.date, target.id),
@@ -52,8 +56,19 @@ vi.mock("~/lib/tenant-context", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/lib/tenant-context")>()),
   useOperationalOverviewScope: () => overviewScope.current,
 }));
+// Wer alle Blöcke sieht, sagt `useHomeBlockAccess`: die Einstellung der
+// Schule oder die Admin-Rolle.
+const account = vi.hoisted(() => ({ roles: ["user"] as string[] }));
+vi.mock("next-auth/react", () => ({
+  useSession: () => ({
+    data: {
+      user: { id: "1", roles: account.roles, permissions: [] },
+      expires: "2099-12-31",
+    },
+  }),
+}));
 
-import { DayFlowBlock, openUntil } from "./day-flow-block";
+import { DayFlowBlock } from "./day-flow-block";
 
 function block(
   overrides: Partial<PlannedTimetableInstance> = {},
@@ -109,6 +124,7 @@ describe("Betreuungsplan heute (#2180, #8134)", () => {
     swr.error = undefined;
     swr.isLoading = false;
     overviewScope.current = "all_staff";
+    account.roles = ["user"];
     viewer.opensPlan = true;
   });
 
@@ -170,6 +186,29 @@ describe("Betreuungsplan heute (#2180, #8134)", () => {
       name: /Basteln(?!.*Mein Block).* ?, im Betreuungsplan öffnen\b/,
     });
     expect(own.style.backgroundColor).toBe("");
+  });
+
+  // Die Leitung sieht alle Blöcke, auch wenn die Schule nur die eigene
+  // Einteilung zeigt: dann stehen eigene und fremde nebeneinander.
+  it("hinterlegt eigene Blöcke für die Leitung auch bei enger Sicht der Schule", () => {
+    overviewScope.current = "own";
+    account.roles = ["admin"];
+    swr.data = [
+      block({
+        id: "1",
+        title: "Basteln",
+        isAssigned: true,
+        planningTrackColor: "#5080D8",
+      }),
+      block({ id: "2", title: "Fußball-AG", startTime: "14:00" }),
+    ];
+
+    render(<DayFlowBlock />);
+
+    const own = screen.getByRole("link", {
+      name: /Basteln.*, Mein Block ?, im Betreuungsplan öffnen\b/,
+    });
+    expect(own).toHaveStyle({ backgroundColor: "#5080D81A" });
   });
 
   // Dieselbe Zeile wie in „Mein Tag“ (#8134): Beginn und Ende, Name und
@@ -467,20 +506,5 @@ describe("Betreuungsplan heute (#2180, #8134)", () => {
     ).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
     expect(swr.mutate).toHaveBeenCalled();
-  });
-});
-
-describe("openUntil (#8134)", () => {
-  it("hält einen laufenden Block offen und schließt einen beendeten", () => {
-    expect(openUntil({ status: "planned", endTime: "09:00" })).toBe("09:00");
-    // Läuft laut Server noch, obwohl seine Zeit um ist.
-    expect(openUntil({ status: "active", endTime: "09:00" }) > "23:59").toBe(
-      true,
-    );
-    // Vorzeitig beendet, obwohl seine Zeit noch läuft.
-    expect(openUntil({ status: "completed", endTime: "09:00" }) > "00:01").toBe(
-      false,
-    );
-    expect(openUntil({ status: "cancelled", endTime: "09:00" })).toBe("09:00");
   });
 });

@@ -5,7 +5,19 @@ import { useCallback, useMemo } from "react";
 
 import { hasEffectiveAdminScope, isCaregiver } from "~/lib/auth-utils";
 import { canOpenCarePlan } from "~/lib/care-plan-access";
+import { STAFF_FLAT_PAGES } from "~/lib/section-navigation";
 import { useTenantAwarePath } from "~/lib/tenant-path";
+
+const TODAY_PATH = STAFF_FLAT_PAGES.tagesplan.href;
+const CARE_PLAN_PATH = STAFF_FLAT_PAGES.carePlan.href;
+
+/** Ein Weiterlink der Startseite: Ziel, Linktext und Erklärung (#6777). */
+export interface HomeDayLink {
+  readonly href: string;
+  readonly label: string;
+  /** Welche Seite der Link öffnet, als ein Satz. */
+  readonly tooltip: string;
+}
 
 /**
  * Wohin „der Tag" für diese Person führt.
@@ -22,21 +34,27 @@ import { useTenantAwarePath } from "~/lib/tenant-path";
  * Navigation gar nicht hat. Ändert sich die Regel in der Seitenleiste, gehört
  * sie hier mit geändert.
  */
-export function useDayPlanHref(): string {
-  const tenantPath = useTenantAwarePath();
-  const adminOnly = useAdminOnly();
-  return tenantPath(adminOnly ? "/betreuungsplan" : "/tagesplan");
-}
-
-/** Wie der Weiterlink heißt — die Seite trägt je Rolle einen anderen Namen. */
-export function useDayPlanLabel(): string {
-  return useAdminOnly() ? "Zum Betreuungsplan" : "Heute öffnen";
-}
-
-/** Ein reines Adminkonto: ohne „Heute“ in der Navigation. */
-function useAdminOnly(): boolean {
+export function useDayPlanLink(): HomeDayLink {
   const { data: session } = useSession();
-  return hasEffectiveAdminScope(session) && !isCaregiver(session);
+  const tenantPath = useTenantAwarePath();
+  // Ein reines Adminkonto: ohne „Heute“ in der Navigation. Die Seite trägt
+  // je Rolle einen anderen Namen.
+  const adminOnly = hasEffectiveAdminScope(session) && !isCaregiver(session);
+  return useMemo(
+    () =>
+      adminOnly
+        ? {
+            href: tenantPath(CARE_PLAN_PATH),
+            label: "Zum Betreuungsplan",
+            tooltip: "Öffnet den Betreuungsplan der Schule.",
+          }
+        : {
+            href: tenantPath(TODAY_PATH),
+            label: "Heute öffnen",
+            tooltip: "Öffnet deinen Tagesplan für heute.",
+          },
+    [adminOnly, tenantPath],
+  );
 }
 
 /**
@@ -55,6 +73,10 @@ function useAdminOnly(): boolean {
 export function useCarePlanTodayTarget(): {
   /** Führt die Karte in den Betreuungsplan (sonst nach „Heute“)? */
   readonly opensPlan: boolean;
+  /** Der Text des Weiterlinks auf den Tag. */
+  readonly label: string;
+  /** Welche Seite der Weiterlink öffnet, als ein Satz (#6777). */
+  readonly tooltip: string;
   /** Der Tag im Plan; ohne Datum der heutige. */
   readonly dayHref: (date?: string) => string;
   /** Der geöffnete Termin im Plan. */
@@ -68,17 +90,21 @@ export function useCarePlanTodayTarget(): {
   const opensPlan = canOpenCarePlan(session);
   const planHref = useCallback(
     (date?: string, blockId?: string) => {
-      if (!opensPlan) return tenantPath("/tagesplan");
+      if (!opensPlan) return tenantPath(TODAY_PATH);
       const query = new URLSearchParams({ view: "tag" });
       if (date) query.set("d", date);
       if (blockId) query.set("block", blockId);
-      return tenantPath(`/betreuungsplan?${query.toString()}`);
+      return tenantPath(`${CARE_PLAN_PATH}?${query.toString()}`);
     },
     [opensPlan, tenantPath],
   );
   return useMemo(
     () => ({
       opensPlan,
+      label: opensPlan ? "Plan öffnen" : "Heute öffnen",
+      tooltip: opensPlan
+        ? "Öffnet den Betreuungsplan von heute."
+        : "Öffnet deinen Tagesplan für heute.",
       dayHref: (date) => planHref(date),
       blockHref: (block) => planHref(block.date, block.id),
     }),

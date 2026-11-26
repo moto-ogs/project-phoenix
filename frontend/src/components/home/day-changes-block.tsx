@@ -13,12 +13,14 @@ import {
   childChangeText,
   childSummaryCounts,
   childSummaryTitle,
-  dayChangeHref,
-  dayChangeLinkHref,
   dayChangeSpan,
   dayChangeText,
   sourceFailureText,
 } from "~/components/home/day-changes-text";
+import {
+  trackEntryClick,
+  useDayChangeHref,
+} from "~/components/home/day-change-link";
 import { DayNoticeRow } from "~/components/home/day-notice-row";
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
@@ -35,12 +37,10 @@ import {
   type DayChangesOverview,
 } from "~/lib/day-changes";
 import { useCurrentTimestamp } from "~/lib/hooks/use-current-timestamp";
-import { useDayPlanHref } from "~/lib/hooks/use-day-plan-href";
 import { BELOW_SM, useMediaQuery } from "~/lib/hooks/use-media-query";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { useSWRAuth } from "~/lib/swr";
 import { homeKeys } from "~/lib/swr/portal-keys";
-import { useTenantAwarePath } from "~/lib/tenant-path";
 import { cn } from "~/lib/utils";
 
 /**
@@ -482,11 +482,6 @@ function DayChangeRow({
   return <DayChangeLinkRow entry={entry} muted={muted} />;
 }
 
-/** Klick auf einen Eintrag: nur die Art, nie Namen oder IDs. */
-function trackEntryClick(kind: string) {
-  trackEvent("day_changes_entry_clicked", { day_change_kind: kind });
-}
-
 /**
  * Die Kinder einer Gruppe oder Klasse außerhalb der eigenen Gruppen (#7665):
  * eine Zeile mit den Zahlen, die die Kinder einzeln aufklappt. So erschlägt
@@ -499,7 +494,7 @@ function ChildSummaryRow({
   readonly entry: DayChange;
   readonly summary: NonNullable<DayChange["childSummary"]>;
 }) {
-  const tenantPath = useTenantAwarePath();
+  const hrefOf = useDayChangeHref();
   const [expanded, setExpanded] = useState(false);
   return (
     <li className="overflow-hidden rounded-xl">
@@ -521,7 +516,7 @@ function ChildSummaryRow({
           {summary.items.map((item) => {
             const text = childChangeText(item.kind, item.child);
             if (!text) return null;
-            const href = dayChangeLinkHref(item.link);
+            const href = hrefOf(item.link);
             const body = (
               <span className="block min-w-0 flex-1 text-sm text-gray-900">
                 {text}
@@ -535,7 +530,7 @@ function ChildSummaryRow({
                 }
               >
                 {href ? (
-                  <ListRow href={tenantPath(href)} density="compact">
+                  <ListRow href={href} density="compact">
                     {body}
                   </ListRow>
                 ) : (
@@ -557,19 +552,10 @@ function DayChangeLinkRow({
   readonly entry: DayChange;
   readonly muted?: boolean;
 }) {
-  const tenantPath = useTenantAwarePath();
-  const dayPlanHref = useDayPlanHref();
+  const hrefOf = useDayChangeHref();
   const text = dayChangeText(entry) ?? "";
   const span = dayChangeSpan(entry);
-  const path = dayChangeHref(entry);
-  // Der Tagesplan heißt je Rolle anders (#7662): die Leitung ohne Gruppe
-  // plant im Betreuungsplan.
-  const href =
-    path === null
-      ? null
-      : entry.link?.target === "day_plan"
-        ? dayPlanHref
-        : tenantPath(path);
+  const href = hrefOf(entry.link);
   // Zeitraum und Ort stehen bei jeder Zeile an derselben Stelle: hinter dem
   // Satz, kleiner und grau. Eine lange Änderung, die vor heute begann
   // („… · seit 3.11.“), ist ganz grau, damit sie die neuen nicht verdrängt.

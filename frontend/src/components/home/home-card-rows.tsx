@@ -47,17 +47,6 @@ export function HomeCardLink({
 }
 
 /**
- * Erklärung am Weiterlink „Zum Betreuungsplan“ / „Heute öffnen“ (#6777):
- * `useDayPlanHref` führt reine Adminkonten in den Betreuungsplan, alle
- * anderen in ihren Tagesplan.
- */
-export function dayPlanLinkTooltip(dayPlanHref: string): string {
-  return dayPlanHref.endsWith("/betreuungsplan")
-    ? "Öffnet den Betreuungsplan der Schule."
-    : "Öffnet deinen Tagesplan für heute.";
-}
-
-/**
  * Die aktuelle Berliner Uhrzeit als „HH:MM", halbminütlich nachgezogen.
  *
  * Im Server-HTML und bei der Hydrierung bleibt die Uhr leer, damit ein

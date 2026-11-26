@@ -7,10 +7,7 @@ import {
   hasRole,
   isCaregiver,
 } from "~/lib/auth-utils";
-import {
-  CARE_PLAN_MANAGE_PERMISSION,
-  CARE_PLAN_READ_PERMISSIONS,
-} from "~/lib/care-plan-access";
+import { canOpenCarePlan } from "~/lib/care-plan-access";
 import { useChangeRequestAccess } from "~/lib/hooks/use-change-request-access";
 import { useHasOwnStaff } from "~/lib/hooks/use-user-context";
 import {
@@ -98,10 +95,10 @@ export interface StaffNavItem {
   /** Alle Rechte der Route (wie `RequiresAllPermissions`). */
   readonly requiresAllPermissions?: readonly string[];
   /**
-   * Wer die Seite bearbeiten darf, sieht sie auch ohne die Leserechte oben:
-   * das Recht allein öffnet den Eintrag (Betreuungsplan, #8134).
+   * Eine Seite mit eigener Zugangsregel entscheidet nach Admin-Rolle und
+   * `requiresAdmin` allein über ihren Eintrag (Betreuungsplan, #8134).
    */
-  readonly managePermission?: string;
+  readonly canOpen?: (session: Session | null) => boolean;
   /** Nur für die Rolle Admin (Planungsseiten ohne Recht für andere). */
   readonly requiresAdmin?: boolean;
   /** Bei offener Betreuung öffnet auch dieses Recht die Seite (#4769). */
@@ -162,8 +159,7 @@ export const STAFF_NAV_ITEMS: readonly StaffNavItem[] = [
     // nicht am Anwesenheitsmodus.
     ...STAFF_FLAT_PAGES.carePlan,
     concept: carePlanConcept,
-    requiresAllPermissions: CARE_PLAN_READ_PERMISSIONS,
-    managePermission: CARE_PLAN_MANAGE_PERMISSION,
+    canOpen: canOpenCarePlan,
     setting: "timetable",
   },
   {
@@ -346,12 +342,7 @@ export function staffNavItemPermitted(
   if (item.requiresOwnStaff && !viewer.hasOwnStaff) return false;
   if (viewer.isAdmin) return true;
   if (item.requiresAdmin) return false;
-  if (
-    item.managePermission !== undefined &&
-    hasPermission(viewer.session, item.managePermission)
-  ) {
-    return true;
-  }
+  if (item.canOpen !== undefined) return item.canOpen(viewer.session);
   if (
     viewer.openCareGroupMode &&
     item.openCarePermission !== undefined &&

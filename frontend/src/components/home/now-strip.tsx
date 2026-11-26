@@ -26,17 +26,16 @@ import {
   type HomeNowState,
 } from "~/lib/home-now";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
+import { useTodayBlocks } from "~/lib/hooks/use-today-blocks";
 import { useHasOwnStaff } from "~/lib/hooks/use-user-context";
 import { createLogger } from "~/lib/logger";
 import { ownShiftService } from "~/lib/shift-api";
 import type { OwnAssignment } from "~/lib/shift-helpers";
 import { useOptionalSupervision } from "~/lib/supervision-context";
 import { useSWRAuth } from "~/lib/swr";
-import { homeKeys, timeTrackingKeys } from "~/lib/swr/portal-keys";
+import { timeTrackingKeys } from "~/lib/swr/portal-keys";
 import { dashboardKeys } from "~/lib/swr/shell-keys";
 import { useTenantAwarePath } from "~/lib/tenant-path";
-import { timetableOperationsApi } from "~/lib/timetable-operations-api";
-import type { PlannedTimetableInstance } from "~/lib/timetable-operations-types";
 import { presentConcept } from "~/lib/concepts/present";
 import { roomsConcept } from "~/lib/concepts/rooms";
 
@@ -101,12 +100,7 @@ export function NowStrip({
     () => ownShiftService.getOwnAssignments(today, today),
     { revalidateOnFocus: false, errorRetryCount: 1 },
   );
-  const day = useSWRAuth<PlannedTimetableInstance[]>(
-    wantsDay ? homeKeys.dayFlow() : null,
-    () =>
-      timetableOperationsApi.plannedNow({ scope: "day", includeRoster: false }),
-    { refreshInterval: 5 * 60 * 1000 },
-  );
+  const day = useTodayBlocks({ enabled: wantsDay });
   const school = wantsSchool ? day : { data: undefined, error: undefined };
   const analytics = useSWRAuth<DashboardAnalytics>(
     wantsAnalytics ? dashboardKeys.analytics() : null,

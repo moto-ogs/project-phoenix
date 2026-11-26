@@ -8,14 +8,12 @@ import { ListRow } from "~/components/ui/list-row";
 import Link from "~/components/ui/navigation-link";
 import { SkeletonRows } from "~/components/ui/skeleton";
 import { StatusBadge } from "~/components/ui/status-badge";
-import { BlockState } from "~/components/home/day-flow-block";
 import {
   HomeCard,
   HomeCardEmpty,
   HomeCardIcon,
 } from "~/components/home/home-card";
 import {
-  dayPlanLinkTooltip,
   HomeCardLink,
   HomeMoreRow,
   upcomingFirst,
@@ -26,18 +24,18 @@ import {
   BlockRowBody,
   blockRowState,
   blockSpokenTime,
+  BlockState,
   NowLine,
+  openUntilKeepingCompleted,
 } from "~/components/home/home-block-row";
-import { useDayPlanHref, useDayPlanLabel } from "~/lib/hooks/use-day-plan-href";
+import { useDayPlanLink } from "~/lib/hooks/use-day-plan-href";
 import {
   START_OWN_BLOCK_TOOLTIP,
   useStartOwnBlock,
 } from "~/components/home/use-start-own-block";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
-import { useSWRAuth } from "~/lib/swr";
-import { homeKeys } from "~/lib/swr/portal-keys";
+import { useTodayBlocks } from "~/lib/hooks/use-today-blocks";
 import { useTenantAwarePath } from "~/lib/tenant-path";
-import { timetableOperationsApi } from "~/lib/timetable-operations-api";
 import { canStartPlannedInstance } from "~/lib/timetable-lifecycle";
 import type { PlannedTimetableInstance } from "~/lib/timetable-operations-types";
 import { carePlanConcept } from "~/lib/concepts/carePlan";
@@ -63,22 +61,14 @@ const MAX_ROWS = 5;
  * Karten auf dem Brett, fragt die Seite den Server nur einmal.
  */
 export function MyDayBlock() {
-  const dayPlanHref = useDayPlanHref();
-  const dayPlanLabel = useDayPlanLabel();
-  const dayPlanTooltip = dayPlanLinkTooltip(dayPlanHref);
+  const {
+    href: dayPlanHref,
+    label: dayPlanLabel,
+    tooltip: dayPlanTooltip,
+  } = useDayPlanLink();
   const tenantPath = useTenantAwarePath();
   const now = useBerlinClock();
-  const { data, error, isLoading, mutate } = useSWRAuth<
-    PlannedTimetableInstance[]
-  >(
-    homeKeys.dayFlow(),
-    () =>
-      timetableOperationsApi.plannedNow({
-        scope: "day",
-        includeRoster: false,
-      }),
-    { refreshInterval: 5 * 60 * 1000 },
-  );
+  const { data, error, isLoading, mutate } = useTodayBlocks();
 
   // Derselbe Weg wie „Aufsicht starten" in der Jetzt-Zone.
   const { start, busyId: startBusyId } = useStartOwnBlock({
@@ -101,7 +91,7 @@ export function MyDayBlock() {
   // auch wenn seine geplante Endzeit schon vorbei ist.
   const { items: relevant, allPast } = upcomingFirst(
     mine,
-    (block) => (block.status === "active" ? "24:00" : block.endTime),
+    openUntilKeepingCompleted,
     now,
   );
   const { shown, hidden } = useHomeCardRows(relevant, MAX_ROWS, {
