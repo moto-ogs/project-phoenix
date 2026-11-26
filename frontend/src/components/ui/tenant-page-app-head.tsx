@@ -78,6 +78,11 @@ export interface AppHeadProps {
   readonly statsInline?: boolean;
   /** Kurzstatus im schmalen Kopf beim Rollen (`appCompactStats`). */
   readonly compactStats?: ReactNode;
+  /**
+   * Symbol-Aktionen im schmalen Kopf (`appCompactActions`): `true` behält
+   * die Symbol-Aktionen aus `actions`, ein Element steht an ihrer Stelle.
+   */
+  readonly compactActions?: true | ReactNode;
   /** Reiter als Chips. */
   readonly tabs?: ReactNode;
   /** Suche, Filter oder ein Bedienband (`searchSlot`). */
@@ -108,6 +113,7 @@ export function AppTenantHead({
   statusLine,
   statsInline = false,
   compactStats,
+  compactActions,
   tabs,
   toolbar,
   printHideHeader = false,
@@ -315,6 +321,24 @@ export function AppTenantHead({
             </div>
           </AppHeadStatsContext.Provider>
         ) : null}
+        {/* Symbol-Aktionen wie die Lupe bleiben auf Wunsch der Seite auch
+            beim Rollen erreichbar. `mr-2` ergänzt `gap-1` auf die 12 px, die
+            zwei 44-px-Trefferflächen nebeneinander brauchen. */}
+        {compactActions != null && compactActions !== false ? (
+          <div
+            data-app-head-compact-actions=""
+            className={cn(
+              "flex shrink-0 items-center gap-3 empty:hidden",
+              hasMenu && "mr-2",
+            )}
+          >
+            {compactActions === true ? (
+              <div className={ICON_ACTIONS_ONLY}>{actions}</div>
+            ) : (
+              compactActions
+            )}
+          </div>
+        ) : null}
         {menuButton}
       </div>
 
@@ -477,14 +501,17 @@ function MenuEntries({
     fn();
   };
   return (
-    <div className="-mx-2 flex flex-col">
+    // `-mx-3`: Die Zeilen haben 12 px Innenabstand; so beginnt ihr Text
+    // bündig mit dem Blatttitel und „Über diese Seite“ (Runde 17), die
+    // Tippfläche reicht trotzdem fast bis an den Blattrand.
+    <div className="-mx-3 flex flex-col">
       {entries.map((entry, index) => {
         if ("kind" in entry && entry.kind === "separator") {
           return <hr key={index} className="my-1 border-gray-100" />;
         }
         if ("kind" in entry && entry.kind === "header") {
           return (
-            <SectionLabel key={index} as="h3" className="px-2 pt-2 pb-1">
+            <SectionLabel key={index} as="h3" className="px-3 pt-2 pb-1">
               {entry.label}
             </SectionLabel>
           );
@@ -511,7 +538,7 @@ function MenuEntries({
               key={index}
               href={entry.href}
               onClick={() => run(entry.onClick)}
-              className="flex min-h-11 flex-col justify-center rounded-xl px-2 py-2 text-sm active:bg-gray-100"
+              className="flex min-h-11 flex-col justify-center rounded-xl px-3 py-2 text-sm active:bg-gray-100"
             >
               <span
                 className={

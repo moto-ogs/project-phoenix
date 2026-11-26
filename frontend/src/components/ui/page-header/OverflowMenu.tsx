@@ -604,7 +604,12 @@ export function OverflowMenu({
               tabIndex={-1}
               onKeyDown={onMenuKey}
               {...(inSheet
-                ? { className: "outline-none" }
+                ? {
+                    // Das Blatt rückt seinen Inhalt 8 px ein, die Einträge
+                    // ihren Text noch einmal 12 px: `-mx-1` setzt den Text
+                    // bündig unter den Blatttitel (16 px, Runde 17).
+                    className: "-mx-1 outline-none",
+                  }
                 : {
                     style: {
                       ...menuStyle,
