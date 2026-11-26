@@ -1760,6 +1760,8 @@ export const ERROR_CATALOG = {
         "Ein Kind ist inzwischen nach Hause gegangen. Der Termin lässt sich nicht wieder öffnen.",
       "timetable.reopen_supervision_changed":
         "Die Betreuung wurde nach dem Abschluss geändert. Der Termin lässt sich nicht wieder öffnen.",
+      "timetable.room_closed":
+        "Dieser Raum ist an diesem Tag gesperrt. Bitte wähle einen anderen Raum.",
       "timetable.room_occupied":
         "In diesem Raum läuft schon eine andere Gruppe. Bitte wähle einen anderen Raum.",
       "timetable.school_vacation_not_found":
