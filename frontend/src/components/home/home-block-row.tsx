@@ -109,11 +109,18 @@ export function BlockRowBody({
   block,
   now,
   titleAddon,
+  metaLines = 1,
 }: {
   readonly block: PlannedTimetableInstance;
   readonly now: string;
   /** Hinter dem Namen, etwa „Vertretung“ am eigenen Block. */
   readonly titleAddon?: ReactNode;
+  /**
+   * So viele Zeilen darf die Metazeile ab `sm` haben. Eine Karte mit fester
+   * Höhe bleibt bei einer; eine, die mit ihrem Inhalt wächst, nimmt zwei,
+   * damit der Name der Vertretung nicht bei „Claudia Wagn…“ endet.
+   */
+  readonly metaLines?: 1 | 2;
 }) {
   const { running, cancelled, isDuty, ended, missed, over } = blockRowState(
     block,
@@ -185,7 +192,9 @@ export function BlockRowBody({
         {/* Am Handy bricht die Zeile um: dort wächst die Karte mit ihrem
             Inhalt, und abgeschnitten bliebe neben der Marke oft nur der
             Raum, ohne das Team. */}
-        <span className="block truncate text-xs text-gray-500 max-sm:line-clamp-3 max-sm:whitespace-normal">
+        <span
+          className={`block text-xs text-gray-500 max-sm:line-clamp-3 ${metaLines === 2 ? "sm:line-clamp-2" : "sm:truncate"}`}
+        >
           {/* „Fällt aus“ sagt die Marke rechts; hier steht der Grund. */}
           {cancelled && block.cancelReason
             ? block.cancelReason

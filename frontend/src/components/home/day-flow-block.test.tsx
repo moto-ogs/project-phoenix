@@ -160,10 +160,10 @@ describe("Betreuungsplan heute (#2180, #8134)", () => {
     render(<DayFlowBlock />);
 
     const own = screen.getByRole("link", {
-      name: /Basteln.*, Mein Block ?, im Betreuungsplan öffnen\b/,
+      name: /Basteln.*Dein Block.*, im Betreuungsplan öffnen\b/,
     });
     const other = screen.getByRole("link", {
-      name: /Fußball-AG(?!.*Mein Block).* ?, im Betreuungsplan öffnen\b/,
+      name: /Fußball-AG(?!.*Dein Block).* ?, im Betreuungsplan öffnen\b/,
     });
     expect(own).toHaveStyle({ backgroundColor: "#5080D81A" });
     expect(own).not.toHaveClass("border-l-4");
@@ -183,7 +183,7 @@ describe("Betreuungsplan heute (#2180, #8134)", () => {
     render(<DayFlowBlock />);
 
     const own = screen.getByRole("link", {
-      name: /Basteln(?!.*Mein Block).* ?, im Betreuungsplan öffnen\b/,
+      name: /Basteln(?!.*Dein Block).* ?, im Betreuungsplan öffnen\b/,
     });
     expect(own.style.backgroundColor).toBe("");
   });
@@ -206,7 +206,7 @@ describe("Betreuungsplan heute (#2180, #8134)", () => {
     render(<DayFlowBlock />);
 
     const own = screen.getByRole("link", {
-      name: /Basteln.*, Mein Block ?, im Betreuungsplan öffnen\b/,
+      name: /Basteln.*Dein Block.*, im Betreuungsplan öffnen\b/,
     });
     expect(own).toHaveStyle({ backgroundColor: "#5080D81A" });
   });
@@ -393,12 +393,56 @@ describe("Betreuungsplan heute (#2180, #8134)", () => {
       screen.getByText("Für heute ist nichts mehr geplant"),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Alle 4 Blöcke von heute sind vorbei."),
+      screen.getByText(
+        "Alle 4 Blöcke von heute sind vorbei. Davon: 4 wurden nicht gestartet.",
+      ),
     ).toBeInTheDocument();
     expect(screen.queryAllByRole("listitem")).toHaveLength(0);
     expect(
       screen.getByRole("link", { name: "Betreuungsplan heute: Plan öffnen" }),
     ).toBeInTheDocument();
+  });
+
+  it("nennt abends, was ausgefallen ist", () => {
+    swr.data = [
+      block({
+        id: "1",
+        startTime: "03:00",
+        endTime: "04:00",
+        status: "completed",
+      }),
+      block({
+        id: "2",
+        startTime: "04:00",
+        endTime: "05:00",
+        status: "cancelled",
+      }),
+    ];
+
+    render(<DayFlowBlock />);
+
+    expect(
+      screen.getByText(
+        "Alle 2 Blöcke von heute sind vorbei. Davon: 1 ist ausgefallen.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  // Ein Ausfall hinter „Noch 8 Blöcke ansehen“ bliebe sonst unsichtbar.
+  it("nennt am Rest der Liste, wie viele der nicht gezeigten Blöcke ausfallen", () => {
+    const day = hourly(13, 8);
+    swr.data = day.map((entry, index) =>
+      index === 12 ? { ...entry, status: "cancelled" as const } : entry,
+    );
+
+    const { container } = render(<DayFlowBlock />);
+
+    expect(
+      container.querySelector('[data-plan-more="narrow"]'),
+    ).toHaveTextContent(/Noch 9 Blöcke ansehen.*1 fällt aus/);
+    expect(
+      container.querySelector('[data-plan-more="wide"]'),
+    ).toHaveTextContent(/Noch 4 Blöcke ansehen.*1 fällt aus/);
   });
 
   // Die Karte ist so hoch wie ihr Inhalt: nachmittags stünden drei

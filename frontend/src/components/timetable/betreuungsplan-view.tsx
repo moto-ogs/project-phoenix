@@ -2054,7 +2054,8 @@ function TimetablesContent() {
   // ist ehrlicher als eine falsche).
   // Reiner Text in der Kontextzeile (#2031): dort stehen alle Angaben als
   // ruhiger Text, eine gerahmte Pille daneben wäre das dritte Formvokabular in
-  // einer Zeile. Als Link unterstrichen bei Hover.
+  // einer Zeile. Als Link unterstrichen, damit er als Weg zur Anmeldung
+  // erkennbar ist, auch ohne Maus.
   const demandOriginTextClass = "text-xs text-gray-600";
   const demandOriginChip =
     !canReadEnrollmentPhases || phasesError ? null : phasesData ===
@@ -2063,7 +2064,7 @@ function TimetablesContent() {
     ) : demandOrigin.href ? (
       <Link
         href={tenantPath(demandOrigin.href)}
-        className={`${demandOriginTextClass} hover:underline`}
+        className={`${demandOriginTextClass} underline underline-offset-2 hover:text-gray-900`}
       >
         {demandOrigin.label}
       </Link>
@@ -2560,8 +2561,8 @@ function TimetablesContent() {
           {/* Was über den Zeitraum sagt, bleibt beisammen und bricht als
               Gruppe um: Schuljahr, woher der Bedarf kommt und wo Personal
               fehlt. Vorher stand „5 Lücken“ allein in einer dritten Zeile.
-              Am Telefon füllen die Teile die Zeilen der Filter mit auf. */}
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 empty:hidden max-sm:contents">
+              Erst die beiden Bedienelemente, dann der Link. */}
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 empty:hidden">
             {periodsReady && calendarPeriods.length > 0 && (
               <PeriodSwitcherDropdown
                 periods={calendarPeriods}
@@ -2574,7 +2575,6 @@ function TimetablesContent() {
                 canManage={canManageSchedules}
               />
             )}
-            {demandOriginChip}
             {shouldLoadGaps && !gapsError && (
               <GapJumpList
                 gaps={gaps}
@@ -2584,6 +2584,7 @@ function TimetablesContent() {
                 }
               />
             )}
+            {demandOriginChip}
           </div>
         </PlanningContextBar>
       }

@@ -131,6 +131,7 @@ export function HomeMoreRow({
   href,
   label,
   singular,
+  note,
 }: {
   readonly hidden: number;
   readonly href: string;
@@ -138,6 +139,11 @@ export function HomeMoreRow({
   readonly label: string;
   /** Dasselbe in der Einzahl — „Noch 1 Hinweis", nicht „Noch 1 Hinweise". */
   readonly singular?: string;
+  /**
+   * Was unter dem Rest nicht untergehen darf, etwa „1 fällt aus“: eine
+   * Ausnahme hinter der Kappung bliebe sonst unsichtbar.
+   */
+  readonly note?: string;
 }) {
   if (hidden <= 0) return null;
   return (
@@ -146,6 +152,13 @@ export function HomeMoreRow({
       className="mt-2 block shrink-0 text-sm font-medium text-gray-600 transition-colors hover:text-gray-900"
     >
       Noch {hidden} {hidden === 1 && singular ? singular : label} ansehen
+      {note ? (
+        <span className="font-normal text-gray-500">
+          <span aria-hidden="true"> · </span>
+          <span className="sr-only">, </span>
+          {note}
+        </span>
+      ) : null}
     </Link>
   );
 }

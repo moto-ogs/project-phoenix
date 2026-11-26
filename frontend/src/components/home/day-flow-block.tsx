@@ -1,5 +1,8 @@
 "use client";
 
+import { Check } from "lucide-react";
+
+import { EmptyState } from "~/components/ui/empty-state";
 import { ListRow } from "~/components/ui/list-row";
 import Link from "~/components/ui/navigation-link";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
@@ -136,13 +139,15 @@ export function DayFlowBlock() {
           // wie offene Arbeit lesen. Der Weg in den Tag steht im Kopf.
           if (allPast) {
             return (
-              <HomeCardEmpty
+              // Klein und links, nicht die große Leerfläche: die Karte steht
+              // oben auf der Seite und soll abends „Heute anders“ nicht aus
+              // dem Bild schieben.
+              <EmptyState
+                variant="compact"
+                tone="neutral"
+                icon={<Check aria-hidden />}
                 title="Für heute ist nichts mehr geplant"
-                description={
-                  blocks.length === 1
-                    ? "Der eine Block von heute ist vorbei."
-                    : `Alle ${blocks.length} Blöcke von heute sind vorbei.`
-                }
+                description={dayOverText(blocks, now)}
               />
             );
           }
@@ -189,6 +194,7 @@ export function DayFlowBlock() {
                       href={dayHref(today)}
                       label="Blöcke"
                       singular="Block"
+                      note={cancelledNote(open, narrow.shown)}
                     />
                   </li>
                 ) : null}
@@ -202,6 +208,7 @@ export function DayFlowBlock() {
                       href={dayHref(today)}
                       label="Blöcke"
                       singular="Block"
+                      note={cancelledNote(open, wide.shown)}
                     />
                   </li>
                 ) : null}
@@ -212,6 +219,51 @@ export function DayFlowBlock() {
       </div>
     </HomeCard>
   );
+}
+
+/**
+ * Was abends von den Blöcken des Tages zu sagen bleibt: dass sie vorbei sind,
+ * und was dabei nicht nach Plan lief. Ohne die Zeilen stünde ein Ausfall
+ * sonst nirgends mehr auf der Karte.
+ */
+function dayOverText(
+  blocks: readonly PlannedTimetableInstance[],
+  now: string,
+): string {
+  const cancelled = blocks.filter((block) => block.status === "cancelled");
+  const missed = blocks.filter((block) => blockRowState(block, now).missed);
+  const done =
+    blocks.length === 1
+      ? "Der eine Block von heute ist vorbei."
+      : `Alle ${blocks.length} Blöcke von heute sind vorbei.`;
+  const exceptions = [
+    cancelled.length === 1
+      ? "1 ist ausgefallen"
+      : cancelled.length > 1
+        ? `${cancelled.length} sind ausgefallen`
+        : null,
+    missed.length === 1
+      ? "1 wurde nicht gestartet"
+      : missed.length > 1
+        ? `${missed.length} wurden nicht gestartet`
+        : null,
+  ].filter((part) => part !== null);
+  return exceptions.length > 0
+    ? `${done} Davon: ${exceptions.join(", ")}.`
+    : done;
+}
+
+/** „1 fällt aus“, wenn unter den nicht gezeigten Blöcken ein Ausfall ist. */
+function cancelledNote(
+  all: readonly PlannedTimetableInstance[],
+  shown: readonly PlannedTimetableInstance[],
+): string | undefined {
+  const visible = new Set(shown.map((block) => block.id));
+  const count = all.filter(
+    (block) => block.status === "cancelled" && !visible.has(block.id),
+  ).length;
+  if (count === 0) return undefined;
+  return count === 1 ? "1 fällt aus" : `${count} fallen aus`;
 }
 
 /**
@@ -284,10 +336,23 @@ function PlanRow({
           over || farAhead ? undefined : <BlockState block={block} now={now} />
         }
       >
-        <BlockRowBody block={block} now={now} />
-        {/* Named by what the row shows (WCAG 2.5.3, #7112); the mark and
-            the target follow hidden. */}
-        <span className="sr-only">{`${mine ? ", Mein Block" : ""}, ${opensPlan ? "im Betreuungsplan öffnen" : "unter Heute öffnen"}`}</span>
+        <BlockRowBody
+          block={block}
+          now={now}
+          metaLines={2}
+          // Die Tönung allein las sich neben „Läuft“ als „läuft auch“: das
+          // Wort sagt, was sie meint.
+          titleAddon={
+            mine ? (
+              <span className="ml-2 text-xs font-normal text-gray-600">
+                Dein Block
+              </span>
+            ) : null
+          }
+        />
+        {/* Named by what the row shows (WCAG 2.5.3, #7112); the target
+            follows hidden. */}
+        <span className="sr-only">{`, ${opensPlan ? "im Betreuungsplan öffnen" : "unter Heute öffnen"}`}</span>
       </ListRow>
     </li>
   );
