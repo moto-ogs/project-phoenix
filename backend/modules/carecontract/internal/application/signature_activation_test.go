@@ -72,9 +72,11 @@ func TestSignedChangeJoinsTheTimeline(t *testing.T) {
 			t.Parallel()
 			store := &activationStore{versions: c.timeline}
 			record := ContractRecord{Version: activationVersion(9, carecontract.VersionRequested, "2028-03-01")}
-			require.NoError(t, activateSigned(context.Background(), store, 1, record, calendar.Date(c.signedOn)))
+			from, err := activateSigned(context.Background(), store, 1, record, calendar.Date(c.signedOn))
+			require.NoError(t, err)
 			require.NotNil(t, store.activated)
 			assert.Equal(t, c.want, *store.activated)
+			assert.Equal(t, c.want.EffectiveFrom, from, "the confirmation shows the day the version holds from")
 		})
 	}
 }
@@ -87,7 +89,7 @@ func TestSignedChangeThatEndedIsNotSigned(t *testing.T) {
 	record := ContractRecord{Version: activationVersion(9, carecontract.VersionRequested, "2028-03-01")}
 	record.Version.EndsOn = &ended
 	store := &activationStore{versions: []carecontract.Version{activationVersion(1, carecontract.VersionEffective, "2027-08-01")}}
-	err := activateSigned(context.Background(), store, 1, record, calendar.NewDate(2028, 3, 20))
+	_, err := activateSigned(context.Background(), store, 1, record, calendar.NewDate(2028, 3, 20))
 	require.ErrorIs(t, err, carecontract.ErrContractNotSignable)
 	assert.Nil(t, store.activated)
 }

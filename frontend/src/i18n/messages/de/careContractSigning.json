@@ -76,5 +76,6 @@
   "submitChangeTooltip": "Stimmt der neuen Fassung sofort verbindlich zu.",
   "signedTitleChange": "Vielen Dank. Die neue Fassung ist unterschrieben.",
   "requestTitle": "Diese Fassung gilt. Du musst nichts unterschreiben.",
-  "signedByRequest": "Du hast diese Änderung selbst beantragt. Dein Antrag vom {date} gilt als deine Zustimmung."
+  "signedByRequest": "Du hast diese Änderung selbst beantragt. Dein Antrag vom {date} gilt als deine Zustimmung.",
+  "afterFrom": "Neu ab {date}"
 }

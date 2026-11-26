@@ -334,6 +334,22 @@ func unchangedSinceSent(sent *SentState, document StoredDocument, versionChecksu
 	return nil
 }
 
+// reviewedDocument refuses a signature for another PDF than the one the
+// signer read (#4816): while the page was open, a changed version may have
+// overtaken the one it showed. A changed version always needs the checksum
+// of the PDF the page showed; a first contract has one PDF and takes a
+// signature without it, as before.
+func reviewedDocument(record ContractRecord, document StoredDocument, input carecontract.SignatureInput) error {
+	reviewed := strings.TrimSpace(input.DocumentSHA256)
+	if reviewed == "" && record.Version.Number <= 1 {
+		return nil
+	}
+	if reviewed != document.SHA256 {
+		return fmt.Errorf("%w: the signer read another version", carecontract.ErrContractNotSignable)
+	}
+	return nil
+}
+
 // signer is who signs, how the signer was identified, and what was sent to
 // the signer.
 type signer struct {
@@ -355,6 +371,9 @@ func (s *Signatures) sign(ctx context.Context, organizationID int64, record Cont
 	if err != nil {
 		return carecontract.SigningView{}, err
 	}
+	if err := reviewedDocument(record, document, input); err != nil {
+		return carecontract.SigningView{}, err
+	}
 	if !input.NoticeAcknowledged {
 		return carecontract.SigningView{}, carecontract.ErrWithdrawalNoticeRequired
 	}
@@ -366,30 +385,20 @@ func (s *Signatures) sign(ctx context.Context, organizationID int64, record Cont
 	if signerName == "" {
 		return carecontract.SigningView{}, carecontract.ErrSignatureInvalid
 	}
-	auditID, err := s.ports.Ledger.RecordContractSignature(ctx, carecontract.ContractSignatureEntry{
-		OrganizationID: organizationID, VersionID: record.Version.ID.Int64(), SignerAccountID: who.accountID,
-		SignerName: signerName, DocumentSHA256: document.SHA256, SignedAt: now, Input: input,
-	})
-	if err != nil {
-		return carecontract.SigningView{}, err
-	}
-	documentID := document.ID
-	if err := s.store.InsertSignature(ctx, organizationID, NewSignature{
-		ContractID: record.Summary.ID.Int64(), VersionID: record.Version.ID.Int64(), DocumentID: &documentID, Method: input.Method,
-		Channel: who.channel, AuditSignatureID: &auditID, SignerName: signerName, SignerAccountID: who.accountID,
-		SigningLinkID: who.linkID, VersionSHA256: checksum, DocumentSHA256: document.SHA256, WithdrawalNoticeAt: &now,
-		EarlyStartRequested: input.EarlyStart, SignedOn: calendar.DateFromTime(now), SignedAt: now,
-	}); err != nil {
+	if err := s.recordSignature(ctx, organizationID, record, document, input, who, signed{name: signerName, checksum: checksum, at: now}); err != nil {
 		return carecontract.SigningView{}, err
 	}
 	accountID := int64(0)
 	if who.accountID != nil {
 		accountID = *who.accountID
 	}
-	status, err := s.takeEffect(ctx, organizationID, accountID, record, input.Method, now)
+	status, from, err := s.takeEffect(ctx, organizationID, accountID, record, input.Method, now)
 	if err != nil {
 		return carecontract.SigningView{}, err
 	}
+	// A version signed after the day its PDF names holds from today: the
+	// confirmation shows that day.
+	record.Version.EffectiveFrom = from
 	if err := trailContract(ctx, s.store, organizationID, accountID, record, ports.ActionSign, map[string]any{
 		"via": who.channel, "method": input.Method, "document_sha256": document.SHA256, "version_sha256": checksum,
 		"early_start": input.EarlyStart, "status": status, "version_number": record.Version.Number,
@@ -406,15 +415,45 @@ func (s *Signatures) sign(ctx context.Context, organizationID int64, record Cont
 	return view, s.confirm(ctx, organizationID, record, document, view, party)
 }
 
+// signed is a drawn or typed signature as it is recorded: the signer's
+// name, the checksum of the version and the instant.
+type signed struct {
+	name     string
+	checksum string
+	at       time.Time
+}
+
+// recordSignature stores the drawn or typed signature in the ledger of the
+// Audit Platform and with the contract's version.
+func (s *Signatures) recordSignature(ctx context.Context, organizationID int64, record ContractRecord, document StoredDocument,
+	input carecontract.SignatureInput, who signer, entry signed) error {
+	auditID, err := s.ports.Ledger.RecordContractSignature(ctx, carecontract.ContractSignatureEntry{
+		OrganizationID: organizationID, VersionID: record.Version.ID.Int64(), SignerAccountID: who.accountID,
+		SignerName: entry.name, DocumentSHA256: document.SHA256, SignedAt: entry.at, Input: input,
+	})
+	if err != nil {
+		return err
+	}
+	documentID := document.ID
+	return s.store.InsertSignature(ctx, organizationID, NewSignature{
+		ContractID: record.Summary.ID.Int64(), VersionID: record.Version.ID.Int64(), DocumentID: &documentID, Method: input.Method,
+		Channel: who.channel, AuditSignatureID: &auditID, SignerName: entry.name, SignerAccountID: who.accountID,
+		SigningLinkID: who.linkID, VersionSHA256: entry.checksum, DocumentSHA256: document.SHA256, WithdrawalNoticeAt: &entry.at,
+		EarlyStartRequested: input.EarlyStart, SignedOn: calendar.DateFromTime(entry.at), SignedAt: entry.at,
+	})
+}
+
 // takeEffect lets the signed version take effect: the signature of a sent
 // contract concludes it, the signature of a changed version of an active
 // contract moves that version into the timeline (#4816). Either way the
-// contract is aktiv afterwards.
-func (s *Signatures) takeEffect(ctx context.Context, organizationID, accountID int64, record ContractRecord, method string, now time.Time) (string, error) {
+// contract is aktiv afterwards; the day is the one the version holds from.
+func (s *Signatures) takeEffect(ctx context.Context, organizationID, accountID int64, record ContractRecord, method string, now time.Time) (string, calendar.Date, error) {
 	if record.Summary.Status == carecontract.StatusSent {
-		return concludeSigned(ctx, s.store, organizationID, accountID, record, method, now)
+		status, err := concludeSigned(ctx, s.store, organizationID, accountID, record, method, now)
+		return status, record.Version.EffectiveFrom, err
 	}
-	return carecontract.StatusActive, activateSigned(ctx, s.store, organizationID, record, calendar.DateFromTime(now))
+	from, err := activateSigned(ctx, s.store, organizationID, record, calendar.DateFromTime(now))
+	return carecontract.StatusActive, from, err
 }
 
 // signedView is the page after the signature, with the last day of the

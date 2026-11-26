@@ -76,5 +76,6 @@
   "submitChangeTooltip": "Agrees to the new version right away, with binding effect.",
   "signedTitleChange": "Thank you. The new version is signed.",
   "requestTitle": "This version is valid. You do not need to sign anything.",
-  "signedByRequest": "You asked for this change yourself. Your request of {date} counts as your consent."
+  "signedByRequest": "You asked for this change yourself. Your request of {date} counts as your consent.",
+  "afterFrom": "New from {date}"
 }

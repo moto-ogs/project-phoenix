@@ -49723,6 +49723,13 @@
           "schema": {
             "kind": "bool"
           }
+        },
+        {
+          "name": "document_sha256",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -101824,6 +101831,13 @@
           "optional": true,
           "schema": {
             "kind": "bool"
+          }
+        },
+        {
+          "name": "document_sha256",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]

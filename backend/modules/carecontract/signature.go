@@ -71,13 +71,20 @@ type SignatureInput struct {
 	TypedName          string `json:"typed_name"`
 	NoticeAcknowledged bool   `json:"withdrawal_notice_acknowledged"`
 	EarlyStart         bool   `json:"early_start_requested"`
+	// DocumentSHA256 is the checksum of the PDF the signing page showed
+	// (SigningView.DocumentSHA256). A changed version is signed only with it
+	// (#4816): a newer version may have overtaken the one the signer read.
+	DocumentSHA256 string `json:"document_sha256"`
 }
 
 type PaperInput struct {
-	SignerName string
-	SignedOn   calendar.Date
-	Filename   string
-	PDF        []byte
+	// VersionNumber is the version the office recorded the scan for; 0
+	// names none and takes the version that waits.
+	VersionNumber int
+	SignerName    string
+	SignedOn      calendar.Date
+	Filename      string
+	PDF           []byte
 }
 
 // ContractSignature is the signature of the contract's current version.

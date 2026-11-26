@@ -80,7 +80,8 @@ func amendEveryTraeger(ctx context.Context, organizations organizationtenancy.Ca
 			continue
 		}
 		run, err := amendments.AmendFromBookings(ctx, organization.ID.Int64())
-		amended += len(run.Amended)
+		// A version that waits for the parents' signature is work of the run too.
+		amended += len(run.Amended) + len(run.Awaiting)
 		if err != nil {
 			failures = append(failures, fmt.Errorf("care contract amendments of Träger %d: %w", organization.ID, err))
 			continue

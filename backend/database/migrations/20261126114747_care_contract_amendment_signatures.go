@@ -44,7 +44,10 @@ func init() {
 //   - agreed_from keeps the effective date the signed document names when
 //     the signature came after that day. The version then holds from the day
 //     of the signature (no version reaches into the past), and the checksum
-//     of the signed version still counts the date the parents read.
+//     of the signed version still counts the date the parents read. The
+//     request role may write both dates only in that one step, the
+//     signature of a waiting version (guard_version_dates): a date changed
+//     in place would reorder signed periods past the timeline trigger.
 //   - A signature of the method request records the parents' own request
 //     for the change, approved by the school: the request is the proof, no
 //     drawn or typed signature exists. change_request_id names Care Plan's
@@ -61,6 +64,22 @@ ALTER TABLE care_contract.contract_versions ADD CONSTRAINT chk_contract_versions
 COMMENT ON COLUMN care_contract.contract_versions.agreed_from IS
 	'Effective date the signed document names when the signature came later and the version holds from the day of the signature (#4816).';
 GRANT UPDATE (effective_from, agreed_from) ON care_contract.contract_versions TO phoenix_tenant;
+CREATE OR REPLACE FUNCTION care_contract.guard_version_dates() RETURNS trigger
+LANGUAGE plpgsql AS $$
+BEGIN
+	IF current_user = 'phoenix_tenant'
+		AND (NEW.effective_from IS DISTINCT FROM OLD.effective_from OR NEW.agreed_from IS DISTINCT FROM OLD.agreed_from)
+		AND NOT (OLD.status = 'beantragt' AND NEW.status IN ('wirksam', 'abgeloest')) THEN
+		RAISE EXCEPTION 'care contract version % keeps its effective date', OLD.id
+			USING ERRCODE = 'check_violation';
+	END IF;
+	RETURN NEW;
+END;
+$$;
+DROP TRIGGER IF EXISTS guard_care_contract_version_dates ON care_contract.contract_versions;
+CREATE TRIGGER guard_care_contract_version_dates
+	BEFORE UPDATE OF effective_from, agreed_from ON care_contract.contract_versions
+	FOR EACH ROW EXECUTE FUNCTION care_contract.guard_version_dates();
 
 ALTER TABLE care_contract.contract_versions DROP CONSTRAINT chk_contract_versions_status;
 ALTER TABLE care_contract.contract_versions ADD CONSTRAINT chk_contract_versions_status
@@ -216,6 +235,8 @@ $$;
 ALTER TABLE care_contract.contract_versions DROP CONSTRAINT chk_contract_versions_status;
 ALTER TABLE care_contract.contract_versions ADD CONSTRAINT chk_contract_versions_status
 	CHECK (status IN ('beantragt', 'wirksam', 'abgeloest', 'abgelehnt', 'ersetzt'));
+DROP TRIGGER IF EXISTS guard_care_contract_version_dates ON care_contract.contract_versions;
+DROP FUNCTION IF EXISTS care_contract.guard_version_dates();
 REVOKE UPDATE (effective_from, agreed_from) ON care_contract.contract_versions FROM phoenix_tenant;
 ALTER TABLE care_contract.contract_versions DROP CONSTRAINT IF EXISTS chk_contract_versions_agreed_from;
 ALTER TABLE care_contract.contract_versions DROP COLUMN IF EXISTS agreed_from;

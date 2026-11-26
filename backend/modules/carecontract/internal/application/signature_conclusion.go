@@ -65,8 +65,9 @@ func waitingRecord(ctx context.Context, store Store, organizationID int64, recor
 // version reaches into the past, and the version in force held until the
 // signature. The step is the one of a new version (timeline.go): it
 // replaces the version starting on its day, goes before a planned one, or
-// follows the version in force as the newest.
-func activateSigned(ctx context.Context, store Store, organizationID int64, record ContractRecord, today calendar.Date) error {
+// follows the version in force as the newest. It answers the day the
+// version holds from.
+func activateSigned(ctx context.Context, store Store, organizationID int64, record ContractRecord, today calendar.Date) (calendar.Date, error) {
 	signed := record.Version
 	activation := ports.VersionActivation{VersionID: signed.ID.Int64(), Status: carecontract.VersionEffective, EffectiveFrom: signed.EffectiveFrom}
 	if signed.EffectiveFrom.Before(today) {
@@ -74,11 +75,11 @@ func activateSigned(ctx context.Context, store Store, organizationID int64, reco
 		activation.EffectiveFrom, activation.AgreedFrom = today, &agreed
 	}
 	if signed.EndsOn != nil && signed.EndsOn.Before(activation.EffectiveFrom) {
-		return fmt.Errorf("%w: the changed version ended before it was signed", carecontract.ErrContractNotSignable)
+		return "", fmt.Errorf("%w: the changed version ended before it was signed", carecontract.ErrContractNotSignable)
 	}
 	versions, err := store.Versions(ctx, organizationID, record.Summary.ID.Int64())
 	if err != nil {
-		return err
+		return "", err
 	}
 	for _, version := range versions {
 		effective := version.Status == carecontract.VersionEffective || version.Status == carecontract.VersionSuperseded
@@ -94,9 +95,9 @@ func activateSigned(ctx context.Context, store Store, organizationID int64, reco
 	}
 	err = store.ActivateVersion(ctx, organizationID, record.Summary.ID.Int64(), activation)
 	if errors.Is(err, ports.ErrVersionMoved) {
-		return fmt.Errorf("%w: %w", carecontract.ErrContractNotSignable, err)
+		return "", fmt.Errorf("%w: %w", carecontract.ErrContractNotSignable, err)
 	}
-	return err
+	return activation.EffectiveFrom, err
 }
 
 // versionChecksum is the SHA-256 of the structured version the parents

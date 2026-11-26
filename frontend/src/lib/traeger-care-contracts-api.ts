@@ -945,12 +945,20 @@ export async function recordPaperSignature(
     readonly file: File;
     readonly signerName: string;
     readonly signedOn: string;
+    /**
+     * The version the dialog named (#4816): the scan is refused when
+     * another version waits by now.
+     */
+    readonly versionNumber?: number;
   },
 ): Promise<void> {
   const form = new FormData();
   form.append("file", input.file);
   form.append("signer_name", input.signerName);
   form.append("signed_on", input.signedOn);
+  if (input.versionNumber !== undefined) {
+    form.append("version_number", String(input.versionNumber));
+  }
   await bffJson("org", "POST /traeger/contracts/{id}/paper-signature", {
     params: { id },
     body: form,

@@ -144,6 +144,11 @@ function mapSigningView(raw: sharedContract.SigningView): SigningView {
 }
 
 interface SigningInput {
+  /**
+   * The checksum of the PDF the page showed: a changed version is signed
+   * only with it, since a newer one may have overtaken it meanwhile (#4816).
+   */
+  readonly documentSha256: string;
   readonly signature: SignatureValue;
   readonly noticeAcknowledged: boolean;
   readonly earlyStart: boolean;
@@ -160,6 +165,7 @@ function signBody(
       : { typed_name: input.signature.typedName }),
     withdrawal_notice_acknowledged: input.noticeAcknowledged,
     early_start_requested: input.earlyStart,
+    document_sha256: input.documentSha256,
   };
 }
 

@@ -46,12 +46,22 @@ func (r *signedRequest) requestID() any {
 
 // parentConsent answers the request that proves the parents' agreement to
 // the change, or nil when the change needs a signature. Every day the
-// change comes from needs a request of a party that took effect on it and
-// that the bookings of that day carry out exactly; the newest one signs.
-func parentConsent(read schoolRead, application carecontract.Application, parties []ports.PartyAccount, next change) *signedRequest {
+// change comes from on which a booking of care changed needs a request of a
+// party that took effect on it and that the bookings of that day carry out
+// exactly; the newest one signs. Days the version in force carries already
+// (its own start and everything before it) ask for nothing: a change that
+// holds from today groups them with the day it really happened on.
+func parentConsent(read schoolRead, application carecontract.Application, contract AmendableContract, next change) *signedRequest {
+	var carried calendar.Date
+	if current, inForce := versionAt(contract.Versions, next.day); inForce && current.EffectiveFrom != next.day {
+		carried = current.EffectiveFrom
+	}
 	var consent *signedRequest
 	for _, origin := range next.origins {
-		found := requestOn(read, application, parties, origin)
+		if !origin.After(carried) || !careChangesOn(read, application.Bookings, origin) {
+			continue
+		}
+		found := requestOn(read, application, contract.Parties, origin)
 		if found == nil {
 			return nil
 		}
@@ -62,8 +72,16 @@ func parentConsent(read schoolRead, application carecontract.Application, partie
 	return consent
 }
 
+// careChangesOn tells whether a booking of care starts or ends on day.
+func careChangesOn(read schoolRead, bookings []carecontract.Booking, day calendar.Date) bool {
+	return slices.ContainsFunc(bookings, func(booking carecontract.Booking) bool {
+		_, care := read.offerings[booking.CareOfferingID]
+		return care && (sameDay(booking.ValidFrom, day) || sameDay(booking.ValidUntil, day))
+	})
+}
+
 // requestOn is the request of a party that took effect on day and whose
-// modules and weekdays the bookings changed on that day carry.
+// modules and weekdays the bookings of that day carry.
 func requestOn(read schoolRead, application carecontract.Application, parties []ports.PartyAccount, day calendar.Date) *signedRequest {
 	for _, request := range application.ParentRequests {
 		if request.EffectiveFrom != day {
@@ -77,13 +95,14 @@ func requestOn(read schoolRead, application carecontract.Application, parties []
 	return nil
 }
 
-// bookingsCarry tells whether the bookings changed on day are what the
+// bookingsCarry tells whether the care booked from day on is what the
 // request asked for: every care module whose booking starts or ends on the
-// day is booked from then on with the weekdays of the request, or no longer
-// at all when the request does not name it. A day no booking changed on
-// carries no request.
+// day, and every care module the request names, is booked from then on with
+// the weekdays of the request, or not at all when the request does not name
+// it. So a request another approval overruled since (one of its modules is
+// gone again) proves nothing.
 func bookingsCarry(read schoolRead, bookings []carecontract.Booking, request carecontract.ParentRequest, day calendar.Date) bool {
-	touched := map[int64]bool{}
+	compared := map[int64]bool{}
 	booked := map[int64][]string{}
 	for _, booking := range bookings {
 		offering, care := read.offerings[booking.CareOfferingID]
@@ -91,18 +110,23 @@ func bookingsCarry(read schoolRead, bookings []carecontract.Booking, request car
 			continue
 		}
 		if sameDay(booking.ValidFrom, day) || sameDay(booking.ValidUntil, day) {
-			touched[booking.CareOfferingID] = true
+			compared[booking.CareOfferingID] = true
 		}
 		if runsOn(booking, day) {
 			booked[booking.CareOfferingID] = append(booked[booking.CareOfferingID], effectiveBookingDays(booking, offering)...)
 		}
 	}
-	for offeringID := range touched {
+	for _, requested := range request.Offerings {
+		if _, care := read.offerings[requested.CareOfferingID]; care {
+			compared[requested.CareOfferingID] = true
+		}
+	}
+	for offeringID := range compared {
 		if !sameDays(booked[offeringID], requestedDays(read, request, offeringID)) {
 			return false
 		}
 	}
-	return len(touched) > 0
+	return len(compared) > 0
 }
 
 // runsOn tells whether the booking holds on day; its ValidUntil is the
@@ -133,15 +157,21 @@ func sameDays(a, b []string) bool {
 // waitingCarries tells whether the version that waits for a signature is
 // the planned one: the same care from the same day. A waiting version whose
 // day has passed holds from the day of its signature, so the plan from
-// today is still its change. As on the timeline (sameCare), the day a
-// module is booked until does not count: a module booked longer since is
-// the next change, from the day after the version's promise ends.
+// today is still its change. The contract's end counts: a waiting version
+// that promises care longer than booked now is never signed. As on the
+// timeline (sameCare), the day a single module is booked until does not
+// count: a module booked longer since is the next change, from the day
+// after the version's promise ends.
 func waitingCarries(waiting *carecontract.Version, planned carecontract.Version, today calendar.Date) bool {
-	if waiting == nil || !sameCare(waiting.Services, planned.Services) {
+	if waiting == nil || !sameCare(waiting.Services, planned.Services) || !sameEnd(waiting.EndsOn, planned.EndsOn) {
 		return false
 	}
 	return waiting.EffectiveFrom == planned.EffectiveFrom ||
 		(waiting.EffectiveFrom.Before(today) && planned.EffectiveFrom == today)
+}
+
+func sameEnd(a, b *calendar.Date) bool {
+	return (a == nil) == (b == nil) && (a == nil || *a == *b)
 }
 
 // recordRequest stores the parents' request as the signature of the version

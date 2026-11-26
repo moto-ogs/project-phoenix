@@ -131,7 +131,7 @@ func (c *Conclusions) amendContract(ctx context.Context, organizationID int64, r
 	if plan == nil {
 		return c.dropWaiting(ctx, organizationID, contract)
 	}
-	consent := parentConsent(read, application, contract.Parties, next)
+	consent := parentConsent(read, application, contract, next)
 	if consent == nil && waitingCarries(contract.Waiting, plan.version, today) {
 		return nil
 	}
@@ -167,12 +167,31 @@ func (c *Conclusions) nextVersion(ctx context.Context, organizationID int64, con
 		if err != nil || !unchanged {
 			return err
 		}
+		if consent != nil {
+			if overtaken, err := c.overtakeWaiting(txCtx, organizationID, contract); err != nil || !overtaken {
+				return err
+			}
+		}
 		if record, amended, err = c.storeVersion(txCtx, organizationID, record, change); err != nil || !amended {
 			return err
 		}
 		return c.recordRequest(txCtx, organizationID, record, consent)
 	})
 	return amended && reason == "", reason, err
+}
+
+// overtakeWaiting ends the wait of the contract's waiting version, if one
+// waits: the version the parents asked for themselves takes its place, and
+// its link must sign nothing any more. False when another write moved it.
+func (c *Conclusions) overtakeWaiting(ctx context.Context, organizationID int64, contract AmendableContract) (bool, error) {
+	if contract.Waiting == nil {
+		return true, nil
+	}
+	err := c.intake.store.OvertakeVersion(ctx, organizationID, contract.ID, contract.Waiting.ID.Int64())
+	if errors.Is(err, ports.ErrVersionMoved) {
+		return false, nil
+	}
+	return err == nil, err
 }
 
 // amend runs one write of a contract's versions in the contract's own

@@ -82,7 +82,9 @@ func (s *Signatures) RecordPaperSignature(ctx context.Context, reviewer carecont
 	if err != nil {
 		return err
 	}
-	if !waits || record.DocumentID == nil {
+	// The office names the version of the scan: a changed version may have
+	// overtaken it since the page was read.
+	if !waits || record.DocumentID == nil || (input.VersionNumber != 0 && input.VersionNumber != record.Version.Number) {
 		return carecontract.ErrContractNotSignable
 	}
 	document, err := s.store.CurrentDocument(ctx, reviewer.OrganizationID, contractID, record.Version.ID.Int64())
@@ -103,7 +105,7 @@ func (s *Signatures) RecordPaperSignature(ctx context.Context, reviewer carecont
 	}); err != nil {
 		return err
 	}
-	status, err := s.takeEffect(ctx, reviewer.OrganizationID, reviewer.AccountID, record, carecontract.SignaturePaper, now)
+	status, _, err := s.takeEffect(ctx, reviewer.OrganizationID, reviewer.AccountID, record, carecontract.SignaturePaper, now)
 	if err != nil {
 		return err
 	}

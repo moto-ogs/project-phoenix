@@ -495,10 +495,9 @@ func (c *Contracts) waitingPurpose(ctx context.Context, organizationID int64, re
 // signature. A contract that never went out by mail (handed over on paper,
 // taken over from a file) and one whose address takes no mail (none, or
 // blocked) keep the frozen PDF only, and the trail names why: the
-// Träger-Büro hands it over or sends it again. A mail that only waits (the
-// last one is still on its way, or the provider cannot be asked) is an
-// error: the caller leaves the change for its next run. It acts for no
-// account, like the run that calls it.
+// Träger-Büro hands it over or sends it again. A mail the provider delays
+// or cannot be asked about is an error: the caller leaves the change for
+// its next run. It acts for no account, like the run that calls it.
 func (c *Contracts) deliverChange(ctx context.Context, organizationID int64, record ContractRecord, purpose string) error {
 	reviewer := carecontract.Reviewer{OrganizationID: organizationID}
 	held := "not_mailed"
@@ -529,13 +528,14 @@ func (c *Contracts) deliverChange(ctx context.Context, organizationID int64, rec
 // here too.
 func (c *Contracts) deliver(ctx context.Context, reviewer carecontract.Reviewer, record ContractRecord, destination, purpose string) error {
 	contractID := record.Summary.ID
-	if record.Summary.Status != carecontract.StatusDraft && record.Summary.Status != carecontract.StatusSent && record.Summary.Status != carecontract.StatusActive {
+	if !sendable(record, purpose) {
 		return carecontract.ErrContractNotSendable
 	}
-	if record.Summary.Status == carecontract.StatusActive && record.DocumentID == nil && purpose == carecontract.MailPurposeContract {
-		return carecontract.ErrContractNotSendable
-	}
-	party, previousSends, err := c.deliveryParty(ctx, reviewer.OrganizationID, record, destination)
+	// The run that follows the bookings sends a changed version although the
+	// mail before is still on its way: another PDF, and the old link must not
+	// stay the only one (#4816). An office send still waits for it.
+	queuedAllowed := purpose != carecontract.MailPurposeContract && reviewer.AccountID == 0
+	party, previousSends, err := c.deliveryParty(ctx, reviewer.OrganizationID, record, destination, queuedAllowed)
 	if err != nil {
 		return err
 	}
@@ -585,9 +585,22 @@ func (c *Contracts) deliver(ctx context.Context, reviewer carecontract.Reviewer,
 	})
 }
 
+// sendable tells whether the contract goes out: a draft, a sent or an
+// active one. An active contract repeats its stored PDF; only a changed
+// version (#4816) gets its PDF frozen with the send.
+func sendable(record ContractRecord, purpose string) bool {
+	switch record.Summary.Status {
+	case carecontract.StatusDraft, carecontract.StatusSent:
+		return true
+	case carecontract.StatusActive:
+		return record.DocumentID != nil || purpose != carecontract.MailPurposeContract
+	}
+	return false
+}
+
 // deliveryParty keeps delivery corrections separate from the frozen party.
 // A failed destination is corrected by a new mailing, never by editing history.
-func (c *Contracts) deliveryParty(ctx context.Context, organizationID int64, record ContractRecord, destination string) (carecontract.Party, int, error) {
+func (c *Contracts) deliveryParty(ctx context.Context, organizationID int64, record ContractRecord, destination string, queuedAllowed bool) (carecontract.Party, int, error) {
 	party, ok := recipient(record.Parties)
 	if !ok {
 		return carecontract.Party{}, 0, carecontract.ErrRecipientMissing
@@ -596,7 +609,7 @@ func (c *Contracts) deliveryParty(ctx context.Context, organizationID int64, rec
 	if err != nil {
 		return carecontract.Party{}, 0, err
 	}
-	if len(mailings) > 0 && mailings[0].State == carecontract.MailQueued {
+	if len(mailings) > 0 && mailings[0].State == carecontract.MailQueued && !queuedAllowed {
 		return carecontract.Party{}, 0, carecontract.ErrMailPending
 	}
 	if destination != "" && ((record.Summary.Status != carecontract.StatusSent && record.Summary.Status != carecontract.StatusActive) || record.DocumentID == nil || len(mailings) == 0 || mailings[0].State != carecontract.MailFailed) {

@@ -111,29 +111,9 @@ func seedOneDayLess(rt *Runtime, parentAuth AuthRef, studentID int64) (bool, err
 // contract whose change waits already, or without a fitting contract,
 // changes nothing.
 func seedCareContractSchoolChange(rt *Runtime, auth AuthRef) (bool, error) {
-	raw, err := rt.Client.GetWithAuth(auth, "/traeger/contracts/?status=aktiv")
+	children, err := seedContractChildrenWithoutChange(rt, auth)
 	if err != nil {
-		return false, fmt.Errorf("list the active care contracts: %w", err)
-	}
-	var list struct {
-		Data struct {
-			Contracts []struct {
-				RequestChildID        *ident.ID `json:"request_child_id"`
-				ChangeAwaitsSignature bool      `json:"change_awaits_signature"`
-			} `json:"contracts"`
-		} `json:"data"`
-	}
-	if err := parseJSON(raw, &list); err != nil {
 		return false, err
-	}
-	children := []int64{}
-	for _, contract := range list.Data.Contracts {
-		if contract.ChangeAwaitsSignature {
-			return false, nil
-		}
-		if contract.RequestChildID != nil {
-			children = append(children, int64(*contract.RequestChildID))
-		}
 	}
 	for _, request := range rt.Enrollment.Requests {
 		for _, childID := range request.ChildIDs {
@@ -149,6 +129,42 @@ func seedCareContractSchoolChange(rt *Runtime, auth AuthRef) (bool, error) {
 	return false, nil
 }
 
+// seedContractChildrenWithoutChange lists the application children of the
+// active contracts; none once a change of one of them waits already.
+func seedContractChildrenWithoutChange(rt *Runtime, auth AuthRef) ([]int64, error) {
+	raw, err := rt.Client.GetWithAuth(auth, "/traeger/contracts/?status=aktiv")
+	if err != nil {
+		return nil, fmt.Errorf("list the active care contracts: %w", err)
+	}
+	var list struct {
+		Data struct {
+			Contracts []struct {
+				RequestChildID        *ident.ID `json:"request_child_id"`
+				ChangeAwaitsSignature bool      `json:"change_awaits_signature"`
+			} `json:"contracts"`
+		} `json:"data"`
+	}
+	if err := parseJSON(raw, &list); err != nil {
+		return nil, err
+	}
+	children := []int64{}
+	for _, contract := range list.Data.Contracts {
+		if contract.ChangeAwaitsSignature {
+			return nil, nil
+		}
+		if contract.RequestChildID != nil {
+			children = append(children, int64(*contract.RequestChildID))
+		}
+	}
+	return children, nil
+}
+
+// seedBookedOffering is one booked offering of an application child.
+type seedBookedOffering struct {
+	OfferingID   string   `json:"offering_id"`
+	SelectedDays []string `json:"selected_days"`
+}
+
 // seedSchoolTakesOneDay books the child's offerings again from in two weeks
 // without the last weekday of the first offering with at least two chosen
 // days, as the school's correction editor does. It answers false for a
@@ -161,11 +177,8 @@ func seedSchoolTakesOneDay(rt *Runtime, requestID, childID int64) (bool, error) 
 	var detail struct {
 		Data struct {
 			Children []struct {
-				ID        ident.ID `json:"id"`
-				Offerings []struct {
-					OfferingID   string   `json:"offering_id"`
-					SelectedDays []string `json:"selected_days"`
-				} `json:"offerings"`
+				ID        ident.ID             `json:"id"`
+				Offerings []seedBookedOffering `json:"offerings"`
 			} `json:"children"`
 		} `json:"data"`
 	}
@@ -173,23 +186,9 @@ func seedSchoolTakesOneDay(rt *Runtime, requestID, childID int64) (bool, error) 
 		return false, err
 	}
 	for _, child := range detail.Data.Children {
-		if int64(child.ID) != childID {
+		offerings, changed := seedOneDayLessOf(child.Offerings)
+		if int64(child.ID) != childID || !changed {
 			continue
-		}
-		offerings, changed := []map[string]any{}, false
-		for _, offering := range child.Offerings {
-			days := slices.Clone(offering.SelectedDays)
-			if !changed && len(days) > 1 {
-				days, changed = days[:len(days)-1], true
-			}
-			booked := map[string]any{"offering_id": offering.OfferingID}
-			if len(days) > 0 {
-				booked["selected_days"] = days
-			}
-			offerings = append(offerings, booked)
-		}
-		if !changed {
-			return false, nil
 		}
 		if _, err := putReadChildOfferings(rt, rt.TenantAuth, requestID, childID, map[string]any{
 			"offerings": offerings, "reason": "Die Gruppe ist an diesem Tag voll",
@@ -200,4 +199,22 @@ func seedSchoolTakesOneDay(rt *Runtime, requestID, childID int64) (bool, error) 
 		return true, nil
 	}
 	return false, nil
+}
+
+// seedOneDayLessOf are the offerings as booked, without the last weekday of
+// the first one with at least two chosen days; false when none has two.
+func seedOneDayLessOf(booked []seedBookedOffering) ([]map[string]any, bool) {
+	offerings, changed := []map[string]any{}, false
+	for _, offering := range booked {
+		days := slices.Clone(offering.SelectedDays)
+		if !changed && len(days) > 1 {
+			days, changed = days[:len(days)-1], true
+		}
+		entry := map[string]any{"offering_id": offering.OfferingID}
+		if len(days) > 0 {
+			entry["selected_days"] = days
+		}
+		offerings = append(offerings, entry)
+	}
+	return offerings, changed
 }

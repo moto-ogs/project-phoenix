@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -63,6 +65,19 @@ func bookLateCare(t *testing.T, f careContractFixture) int64 {
 			care_offering_id, manual_selected_days, valid_from) VALUES (?, ?, ?, '[]'::jsonb, DATE '2027-10-01')`, f.school, f.child, late.ID)
 	require.NoError(t, err)
 	return late.ID
+}
+
+// signChangedVersion signs the version of the link as the signing page
+// does: with the checksum of the PDF the page showed.
+func signChangedVersion(t *testing.T, f careContractFixture, link string) *httptest.ResponseRecorder {
+	t.Helper()
+	rec := publicSigning(t, f.traeger, http.MethodGet, link, nil)
+	if rec.Code != http.StatusOK {
+		return rec
+	}
+	body := amendmentSignature(t)
+	body["document_sha256"] = decodeSchoolPortalData[carecontract.SigningView](t, rec.Body.Bytes()).DocumentSHA256
+	return publicSigning(t, f.traeger, http.MethodPost, link+"/sign", body)
 }
 
 func amendCareContracts(t *testing.T, f careContractFixture) carecontract.AmendmentRun {
@@ -158,6 +173,12 @@ func TestCareContractChangeByTheSchoolWaitsForTheParentsSignature(t *testing.T) 
 	assert.Equal(t, link, lastSigningLink(t, f, contract), "and sends no second mail")
 
 	rec = publicSigning(t, f.traeger, http.MethodPost, link+"/sign", amendmentSignature(t))
+	assert.Equal(t, http.StatusConflict, rec.Code, "a changed version is signed only with the checksum of the PDF the page showed")
+	stale := amendmentSignature(t)
+	stale["document_sha256"] = strings.Repeat("0", 64)
+	rec = publicSigning(t, f.traeger, http.MethodPost, link+"/sign", stale)
+	assert.Equal(t, http.StatusConflict, rec.Code, "another PDF than the one that waits is never signed")
+	rec = signChangedVersion(t, f, link)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	detail = careContractDetail(t, f, contract)
 	assert.Equal(t, []string{"1:abgeloest", "2:wirksam"}, versionStatuses(detail), "the signature makes the version effective")
@@ -342,16 +363,11 @@ func TestCareContractSentButUnsignedFollowsAnApprovedChange(t *testing.T) {
 	f := newCareContractFixture(t, "Träger Vertrag Versendet Änderung")
 	require.Equal(t, http.StatusOK, putTemplate(t, f.traeger, f.office.token, f.school, f.offering, careContractTemplate).Code)
 	contract, outdated := sentCareContract(t, f, f.child)
-	// While the contract's mail is still on its way, the change waits for
-	// the next run: no version is made that the parents never get.
+	// The school drops the Wednesday before the parents signed. The first
+	// mail is still on its way: the changed version goes out all the same,
+	// so the outdated link never stays the only one.
 	_, err := f.db.ExecContext(context.Background(), `UPDATE enrollment.care_offerings SET available_days = '["mon","tue"]'::jsonb WHERE id = ?`, f.offering)
 	require.NoError(t, err)
-	held := amendCareContracts(t, f)
-	assert.Empty(t, held.Awaiting)
-	assert.Equal(t, []carecontract.AmendmentSkip{{ContractID: contract, Reason: carecontract.SkipMailPending}}, held.Skipped)
-	assert.Equal(t, []string{"1:beantragt"}, versionStatuses(careContractDetail(t, f, contract)))
-	settleContractMails(t, f)
-	// The school dropped the Wednesday before the parents signed.
 	run := amendCareContracts(t, f)
 	require.Len(t, run.Awaiting, 1)
 	assert.Equal(t, 2, run.Awaiting[0].VersionNumber)
@@ -372,7 +388,7 @@ func TestCareContractSentButUnsignedFollowsAnApprovedChange(t *testing.T) {
 	view := decodeSchoolPortalData[carecontract.SigningView](t, rec.Body.Bytes())
 	require.NotNil(t, view.Previous, "the parents see what changed since the version they got first")
 	assert.Len(t, view.Previous.Services, 3)
-	rec = publicSigning(t, f.traeger, http.MethodPost, current+"/sign", amendmentSignature(t))
+	rec = signChangedVersion(t, f, current)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	detail = careContractDetail(t, f, contract)
 	assert.Equal(t, carecontract.StatusActive, detail.Status)
@@ -473,10 +489,38 @@ func TestCareContractInboxOffersTheWaitingChangeToSign(t *testing.T) {
 	require.NoError(t, tenant.WithinTraeger(ctx, f.office.organization, func(txCtx context.Context) error {
 		_, err := signing.SignInInbox(txCtx, f.office.organization, contract, reader, carecontract.SignatureInput{
 			Method: carecontract.SignatureDrawn, ImagePNG: signatureImage(t), NoticeAcknowledged: true})
+		assert.ErrorIs(t, err, carecontract.ErrContractNotSignable, "the inbox signs a changed version only with the checksum of the PDF it showed")
+		return nil
+	}))
+	require.NoError(t, tenant.WithinTraeger(ctx, f.office.organization, func(txCtx context.Context) error {
+		_, err := signing.SignInInbox(txCtx, f.office.organization, contract, reader, carecontract.SignatureInput{
+			Method: carecontract.SignatureDrawn, ImagePNG: signatureImage(t), NoticeAcknowledged: true, DocumentSHA256: view.DocumentSHA256})
 		return err
 	}))
 	after := inbox()
 	assert.False(t, after.ChangeAwaitsSignature, "signed: nothing waits")
 	assert.False(t, after.CanSign)
 	assert.Equal(t, []string{"1:abgeloest", "2:wirksam"}, versionStatuses(careContractDetail(t, f, contract)))
+}
+
+// TestCareContractRequestOfThePartyOvertakesAWaitingChange pins that a
+// version the parents asked for themselves takes the place of one that
+// still waits: the link of the waiting version signs nothing afterwards.
+func TestCareContractRequestOfThePartyOvertakesAWaitingChange(t *testing.T) {
+	t.Parallel()
+	f := newCareContractFixture(t, "Träger Vertrag Änderung Antrag überholt")
+	contract := signedCareContract(t, f)
+	late := bookLateCare(t, f)
+	require.Len(t, amendCareContracts(t, f).Awaiting, 1)
+	waitingLink := lastSigningLink(t, f, contract)
+
+	// The party asks for the same care from the same day; the school
+	// approves it.
+	approveParentRequest(t, f, partyAccount(t, f, contract, "antrag-ueberholt"), late)
+	run := amendCareContracts(t, f)
+	require.Len(t, run.Amended, 1, "the request signs the change")
+	assert.Equal(t, 3, run.Amended[0].VersionNumber)
+	assert.Equal(t, []string{"1:abgeloest", "2:ueberholt", "3:wirksam"}, versionStatuses(careContractDetail(t, f, contract)))
+	rec := publicSigning(t, f.traeger, http.MethodGet, waitingLink, nil)
+	assert.Equal(t, http.StatusGone, rec.Code, "the overtaken version is never signed")
 }

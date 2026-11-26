@@ -76,5 +76,6 @@
   "submitChangeTooltip": "Od razu wiążąco akceptuje nową wersję.",
   "signedTitleChange": "Dziękujemy. Nowa wersja jest podpisana.",
   "requestTitle": "Ta wersja obowiązuje. Nie musisz nic podpisywać.",
-  "signedByRequest": "Sam poprosiłeś o tę zmianę. Twój wniosek z {date} liczy się jako Twoja zgoda."
+  "signedByRequest": "Sam poprosiłeś o tę zmianę. Twój wniosek z {date} liczy się jako Twoja zgoda.",
+  "afterFrom": "Nowe od {date}"
 }

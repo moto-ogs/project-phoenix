@@ -15,7 +15,12 @@ import { FormModal } from "~/components/ui/form-modal";
 import { useFormModalPending } from "~/components/ui/use-form-modal-pending";
 import { Input } from "~/components/ui/input";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
-import { berlinTodayISO, parseISODate, toISODate } from "~/lib/date-helpers";
+import {
+  berlinTodayISO,
+  formatDate,
+  parseISODate,
+  toISODate,
+} from "~/lib/date-helpers";
 import type { RefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { createLogger } from "~/lib/logger";
 import {
@@ -27,15 +32,25 @@ const logger = createLogger({ component: "CareContractPaperModal" });
 
 export function PaperSignatureModal({
   contract,
+  change = false,
   onClose,
   onSaved,
 }: Readonly<{
   contract: CareContractDetail;
+  /**
+   * The scan signs a changed version of a contract in force (#4816), not
+   * the contract's first conclusion.
+   */
+  change?: boolean;
   onClose: () => void;
   /** Closes the dialog and reloads the contract; never rejects (#6652). */
   onSaved: RefreshAfterWrite;
 }>) {
   const party = contract.parties[0];
+  // The version that waits for the signature; the scan belongs to it.
+  const waiting = contract.versions.find(
+    (version) => version.status === "beantragt",
+  );
   const [signerName, setSignerName] = useState(
     party ? `${party.firstName} ${party.lastName}`.trim() : "",
   );
@@ -67,6 +82,7 @@ export function PaperSignatureModal({
           file,
           signerName,
           signedOn: toISODate(signedOn),
+          versionNumber: waiting?.number,
         });
       } catch (err) {
         logger.error("traeger_care_contract_paper_failed", {
@@ -76,7 +92,11 @@ export function PaperSignatureModal({
         void formError.show(err, { object: "der Papiervertrag" });
         return;
       }
-      success("Der Papiervertrag ist erfasst. Der Vertrag ist jetzt aktiv.");
+      success(
+        change && waiting
+          ? `Die Unterschrift ist erfasst. Version ${waiting.number} gilt jetzt als unterschrieben.`
+          : "Der Papiervertrag ist erfasst. Der Vertrag ist jetzt aktiv.",
+      );
       if (op.isCurrent()) await onSaved();
     });
   };
@@ -86,7 +106,11 @@ export function PaperSignatureModal({
       isOpen
       onClose={onClose}
       pending={submission}
-      title="Papiervertrag erfassen"
+      title={
+        change && waiting
+          ? `Unterschrift für Version ${waiting.number} erfassen`
+          : "Papiervertrag erfassen"
+      }
       error={formError.error}
       footer={
         <>
@@ -108,19 +132,23 @@ export function PaperSignatureModal({
             disabledReason={missingText}
             isLoading={saving}
             loadingText="Wird erfasst …"
-            tooltip="Speichert das PDF und schließt den Vertrag sofort ab."
+            tooltip={
+              change
+                ? "Speichert das PDF. Die geänderte Fassung gilt danach als unterschrieben."
+                : "Speichert das PDF und schließt den Vertrag sofort ab."
+            }
             onClick={() => void save()}
           >
-            Vertrag abschließen
+            {change ? "Unterschrift erfassen" : "Vertrag abschließen"}
           </Button>
         </>
       }
     >
       <div className="space-y-4">
         <p className="text-sm text-gray-600">
-          Für Eltern ohne Internet oder einen Vertrag, den es nur auf Papier
-          gibt. Lade den unterschriebenen Vertrag als PDF hoch. Danach ist der
-          Vertrag aktiv.
+          {change && waiting
+            ? `Haben die Eltern Version ${waiting.number} auf Papier unterschrieben? Lade genau diese Fassung als PDF hoch. Sie gilt danach ab ${formatDate(waiting.effectiveFrom)}, frühestens ab heute. Bis dahin gilt Version ${contract.version.number}.`
+            : "Für Eltern ohne Internet oder einen Vertrag, den es nur auf Papier gibt. Lade den unterschriebenen Vertrag als PDF hoch. Danach ist der Vertrag aktiv."}
         </p>
         <Input
           controlSize="compact"

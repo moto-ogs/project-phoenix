@@ -147,6 +147,7 @@ export function CareContractWaitingChangeCard({
       {paperOpen ? (
         <PaperSignatureModal
           contract={contract}
+          change
           onClose={() => setPaperOpen(false)}
           onSaved={() => {
             setPaperOpen(false);

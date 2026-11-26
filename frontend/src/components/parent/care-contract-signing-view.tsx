@@ -153,6 +153,7 @@ export function ContractSigningView({
         <ContractChangeOverview
           previous={view.previous}
           services={view.services}
+          effectiveFrom={view.effectiveFrom}
         />
       ) : (
         <BookedCare view={view} />
@@ -418,6 +419,7 @@ function SignForm({
     try {
       onSigned(
         await signContract(source, {
+          documentSha256: view.documentSha256,
           signature,
           noticeAcknowledged: notice,
           earlyStart,

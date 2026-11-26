@@ -88,11 +88,15 @@ function ChangedDay({ day }: Readonly<{ day: DayChange<SigningService> }>) {
 export function ContractChangeOverview({
   previous,
   services,
+  effectiveFrom,
 }: Readonly<{
   previous: SigningVersionFacts;
   services: readonly SigningService[];
+  /** The day the new version holds from ("YYYY-MM-DD"). */
+  effectiveFrom: string;
 }>) {
   const t = useTranslations("careContractSigning");
+  const locale = useLocale();
   const days = careChanges(previous.services, services);
   const changed = days.filter((day) => day.kind !== "same").length;
   return (
@@ -111,6 +115,26 @@ export function ContractChangeOverview({
         />
       }
     >
+      {/* The columns name themselves from sm on; on a phone every changed
+          day carries „Bisher“ and „Neu“ in front of its two lines. */}
+      {changed > 0 ? (
+        <div
+          aria-hidden="true"
+          className="mb-2 hidden gap-4 border-b border-gray-100 pb-2 text-sm font-semibold text-gray-600 sm:flex"
+        >
+          <span className="w-28 shrink-0" />
+          <span className="grid min-w-0 flex-1 grid-cols-[1fr_auto_1fr] gap-x-3">
+            <span>{t("before")}</span>
+            <span className="w-4" />
+            <span>
+              {t("afterFrom", {
+                date: formatDate(effectiveFrom, false, locale),
+              })}
+            </span>
+          </span>
+          <span className="w-24 shrink-0" />
+        </div>
+      ) : null}
       <ul className="divide-y divide-gray-100">
         {days.map((day) => (
           <li

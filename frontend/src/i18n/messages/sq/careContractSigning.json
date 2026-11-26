@@ -76,5 +76,6 @@
   "submitChangeTooltip": "E pranon menjëherë versionin e ri në mënyrë detyruese.",
   "signedTitleChange": "Faleminderit. Versioni i ri është nënshkruar.",
   "requestTitle": "Ky version vlen. Nuk duhet të nënshkruash asgjë.",
-  "signedByRequest": "Këtë ndryshim e kërkove vetë. Kërkesa jote e datës {date} vlen si pëlqimi yt."
+  "signedByRequest": "Këtë ndryshim e kërkove vetë. Kërkesa jote e datës {date} vlen si pëlqimi yt.",
+  "afterFrom": "E re nga {date}"
 }
