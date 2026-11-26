@@ -91,14 +91,17 @@ type HolidayPayerTrail interface {
 // registration. Both operations run in the Träger transaction of the
 // session's Träger, which the caller opens.
 type HolidayPayerChanges interface {
-	// HolidayPayerChange previews the change to choice and stores nothing.
+	// PreviewHolidayPayer previews the change to choice and stores nothing.
 	// A registration that is not confirmed is
 	// ErrHolidayRegistrationStateConflict; the refusals of a cost bearer and
 	// of the exemption are those of the confirmation.
-	HolidayPayerChange(ctx context.Context, reviewer HolidayReviewer, periodID, registrationID int64, choice HolidayPayerChoice) (HolidayPayerPreview, error)
+	PreviewHolidayPayer(ctx context.Context, reviewer HolidayReviewer, periodID, registrationID int64, choice HolidayPayerChoice) (HolidayPayerPreview, error)
 	// ChangeHolidayPayer freezes a new version of the contribution with the
 	// chosen payer, under the locks of a confirmation, and records the
-	// change with reason in the audit trail of the registration. It
+	// change with reason in the audit trail of the registration. Like a
+	// confirmation it computes the sibling group again: another confirmed
+	// registration of the group that no issued invoice bills gets a new
+	// version when its contribution differs. It
 	// refuses a preview other than the one the office read
 	// (expectedFingerprint, readstate.ErrChanged). A choice that is the
 	// payer already changes and records nothing. The answer is the

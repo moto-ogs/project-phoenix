@@ -341,12 +341,12 @@ export interface HolidayPayerChoice {
 }
 
 /** Who pays, with the copied name of a cost bearer ("" otherwise). */
-export interface HolidayPayer extends HolidayPayerChoice {
+interface HolidayPayer extends HolidayPayerChoice {
   readonly costBearerName: string;
 }
 
 /** What a payer change does to one child, in whole cent. */
-export interface HolidayPayerChildEffect {
+interface HolidayPayerChildEffect {
   readonly childId: string;
   readonly position: number;
   readonly familyBeforeCents: number;

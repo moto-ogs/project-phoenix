@@ -116,6 +116,10 @@ func TestPayerOfAConfirmedRegistrationChangesWithItsContribution(t *testing.T) {
 	require.Equal(t, http.StatusOK, f.confirmWith(t, f.siblings, map[string]any{"benefits_exemption": false}).Code)
 	assert.Equal(t, int64(12375), f.contribution(t, f.siblings).TotalCents)
 
+	// The family brings the notice after the confirmation: the office
+	// uploads it and changes the payer of the confirmed registration.
+	proof := uploadOfficeProof(t, f, f.office.token, f.siblings, "bescheid.pdf", proofPDF)
+	require.Equal(t, http.StatusCreated, proof.Code, proof.Body.String())
 	rec = f.payerPreview(t, f.office.token, f.siblings, payerQuery(takeover))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	preview := decodeSchoolPortalData[payerPreviewBody](t, rec.Body.Bytes())
@@ -293,4 +297,30 @@ func TestPayerChangeTakesTheCostBearerBeforeTheDiscount(t *testing.T) {
 
 	rec = f.payerPreview(t, f.office.token, f.siblings, "?benefits_exemption=true")
 	assertRefusedWith(t, rec, http.StatusConflict, "parent_billing.benefits_exemption_unavailable")
+}
+
+// TestPayerChangeLeavesTheOtherRegistrationsOfTheGroup pins that the payer
+// of one registration moves no sibling from another registration: Mara
+// (67,50 €) stays the first child and Tom keeps his half, whoever pays.
+func TestPayerChangeLeavesTheOtherRegistrationsOfTheGroup(t *testing.T) {
+	t.Parallel()
+	f := newReviewFixture(t, "Träger Zahlerwechsel Gruppe")
+	billing := traegerColleague(t, f, identityaccess.TraegerRoleBilling)
+	createContributionRule(t, f, billing, siblingHalf())
+	office := createCostBearer(t, f, billing, youthOffice())
+	dearer := f.submitChild(t, f.period, f.offer, "zahler.eins@example.org", "Mara", 1)
+	cheaper := f.submitChild(t, f.period, f.offer, "zahler.zwei@example.org", "Tom", 0)
+	require.Equal(t, http.StatusOK, f.merge(t, f.office.token, dearer, cheaper).Code)
+	require.Equal(t, http.StatusOK, f.confirmWith(t, dearer, map[string]any{}).Code)
+	require.Equal(t, http.StatusOK, f.confirmWith(t, cheaper, map[string]any{}).Code)
+	before := f.contributionVersions(t, dearer)
+
+	rec := f.payerPreview(t, f.office.token, cheaper, fmt.Sprintf("?cost_bearer_id=%d", office.ID))
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	assert.Equal(t, []string{"family 2250>0 bearer 0>2250"}, payerEffects(decodeSchoolPortalData[payerPreviewBody](t, rec.Body.Bytes())),
+		"Tom stays the second child of the group")
+	require.Equal(t, http.StatusOK, f.changePayer(t, cheaper, map[string]any{"cost_bearer_id": fmt.Sprint(office.ID)}, "Bescheid").Code)
+	assert.Equal(t, []string{"base:4500", "sibling:-2250", "cost_takeover:-2250"}, lineKinds(f.contribution(t, cheaper).Children[0].Lines))
+	assert.Equal(t, before, f.contributionVersions(t, dearer), "the sibling of the other registration keeps its version")
+	assert.Empty(t, f.payerHistory(t, dearer), "and its history names no payer change")
 }

@@ -99,7 +99,7 @@ func (rs *HolidayResource) payerPreview(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	choice := capability.HolidayPayerChoice{BenefitsExemption: exemption != nil && *exemption, CostBearerID: costBearerID}
-	preview, err := rs.payers.HolidayPayerChange(r.Context(), reviewer, periodID, registrationID, choice)
+	preview, err := rs.payers.PreviewHolidayPayer(r.Context(), reviewer, periodID, registrationID, choice)
 	if err != nil {
 		renderHolidayError(w, r, err)
 		return

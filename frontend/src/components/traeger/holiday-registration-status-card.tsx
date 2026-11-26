@@ -60,7 +60,7 @@ import { useReadDraftForm } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
 import { useActionOn, useDraftOn } from "~/lib/swr/read-draft";
 import { holidayRegistrationChildCardId } from "./holiday-registration-child-card";
-import { HolidayPayerChoice } from "./holiday-payer-choice";
+import { HolidayPayerChoiceField } from "./holiday-payer-choice";
 import { traegerPath } from "~/lib/traeger-url";
 import {
   cancelHolidayRegistration,
@@ -332,8 +332,6 @@ function DebtorNumberField({
   );
 }
 
-type Payer = HolidayPayerKind;
-
 const NO_COST_BEARERS: readonly CostBearerChoice[] = [];
 
 const NO_CHILD_NUMBERS: readonly HolidayChildDebtorNumber[] = [];
@@ -542,7 +540,7 @@ function useHolidayRegistrationStatus({
   );
   const exemptionAvailable = contribution?.exemptionAvailable ?? false;
   const invoiced = contribution?.invoiced ?? false;
-  let payer: Payer = "family";
+  let payer: HolidayPayerKind = "family";
   if (
     costBearerId &&
     costBearers.some((bearer) => bearer.id === costBearerId)
@@ -734,7 +732,7 @@ function useHolidayRegistrationStatus({
   const choosesPayer =
     registration.status === "received" &&
     (exemptionAvailable || costBearers.length > 0);
-  const changePayer = (next: Payer) => {
+  const changePayer = (next: HolidayPayerKind) => {
     if (next === "cost_bearer") {
       onCostBearerChange?.(costBearerId ?? costBearers[0]?.id ?? null);
       return;
@@ -1024,7 +1022,7 @@ function useHolidayRegistrationStatus({
           </p>
         ) : null}
         {choosesPayer ? (
-          <HolidayPayerChoice
+          <HolidayPayerChoiceField
             payer={payer}
             exemptionAvailable={exemptionAvailable}
             costBearers={costBearers}

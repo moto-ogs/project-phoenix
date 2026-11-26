@@ -522,7 +522,7 @@ func NewParentBillingHTTP(organizations HolidayOrganizations, settings TraegerBr
 	review, places, allocation, _ := enrollmentCompose.NewHolidayRegistrationReview(healthData, holidayTraegerMail{delivery: delivery}, newHolidayOfficeTraeger(organizations), holidayCalendar, nil, now)
 	registrations := parentBillingHolidayRegistrations{
 		links:  newHolidayRegistrations(organizations, delivery, healthData, holidayCalendar, settings, traegerModules, logger.With("service", "parent-billing-holiday-registrations"), now),
-		review: review,
+		review: review, payers: review.(enrollmentOwner.HolidayPayerTrail),
 	}
 	rules := parentBillingHTTP.NewRuleResource(parentBillingCompose.NewContributionRules(now),
 		common.RequiresPermission(identityaccess.TraegerRightBillingManage))
@@ -540,6 +540,7 @@ func NewParentBillingHTTP(organizations HolidayOrganizations, settings TraegerBr
 type parentBillingHolidayRegistrations struct {
 	links  enrollmentOwner.HolidayRegistrations
 	review enrollmentOwner.HolidayRegistrationReview
+	payers enrollmentOwner.HolidayPayerTrail // nil where no payer changes (#8158)
 }
 
 func (b parentBillingHolidayRegistrations) ResolveHolidayLink(ctx context.Context, token string) (parentbilling.HolidayLink, error) {
@@ -623,20 +624,18 @@ func (b parentBillingHolidayRegistrations) RecordHolidaySiblings(ctx context.Con
 	return parentBillingHolidayError(b.review.RecordHolidaySiblings(ctx, enrollmentOwner.HolidayReviewer(reviewer), periodID, registrationID, action, siblingIDs))
 }
 
-// RecordHolidayPayer records a payer change of a confirmed registration
-// through the review, which locks the registration and appends the entry
-// (#8158, ADR 0325). The payer keeps its kind and the copy of the cost
-// bearer's name; the ID stays with the Elternabrechnung.
+// RecordHolidayPayer records a payer change through the review, which locks
+// the registration and appends the entry (#8158, ADR 0325). The cost
+// bearer's ID stays with the Elternabrechnung.
 func (b parentBillingHolidayRegistrations) RecordHolidayPayer(ctx context.Context, reviewer parentbilling.HolidayReviewer, periodID, registrationID int64, record parentbilling.HolidayPayerRecord) error {
-	trail, ok := b.review.(enrollmentOwner.HolidayPayerTrail)
-	if !ok {
-		return errors.New("parent billing: the holiday review records no payer change")
+	if b.payers == nil {
+		return errors.New("parent billing: this binding records no payer change")
 	}
 	change := enrollmentOwner.HolidayPayerChange{
 		Before: enrollmentOwner.HolidayPaidBy{Kind: record.Before.Kind, CostBearerName: record.Before.CostBearerName},
 		After:  enrollmentOwner.HolidayPaidBy{Kind: record.After.Kind, CostBearerName: record.After.CostBearerName},
 	}
-	return parentBillingHolidayError(trail.RecordHolidayPayer(ctx, enrollmentOwner.HolidayReviewer(reviewer), periodID, registrationID, change, record.Reason))
+	return parentBillingHolidayError(b.payers.RecordHolidayPayer(ctx, enrollmentOwner.HolidayReviewer(reviewer), periodID, registrationID, change, record.Reason))
 }
 
 // parentBillingBillingRegistrations binds the billing run's port to

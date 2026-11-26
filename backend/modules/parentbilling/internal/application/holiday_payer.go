@@ -11,17 +11,18 @@ import (
 )
 
 // The payer of a confirmed holiday registration (#8158, ADR 0325). The
-// change computes the registration again within its sibling group, from the
-// base prices the confirmation froze and with the chain settings the group
-// froze (ADR 0115 addendum #5664), and overrides only who pays. The sibling
-// rule ranks by base price or age, never by the payer, so no other
-// registration of the group changes.
+// change computes the registration again within its sibling group, like the
+// confirmation of a further registration of the group: from the base prices
+// the confirmation froze, with the chain settings the group froze (ADR 0115
+// addendum #5664) and the rules valid on the first booked day, and
+// overrides who pays. The sibling rule ranks by base price or age, never by
+// the payer, so the change itself moves no other registration of the group.
 
 var _ parentbilling.HolidayPayerChanges = (*HolidayContributions)(nil)
 
-// HolidayPayerChange previews the change. Enrollment checks the Träger and
+// PreviewHolidayPayer previews the change. Enrollment checks the Träger and
 // records the read of the registration.
-func (h *HolidayContributions) HolidayPayerChange(ctx context.Context, reviewer parentbilling.HolidayReviewer, periodID, registrationID int64, choice parentbilling.HolidayPayerChoice) (parentbilling.HolidayPayerPreview, error) {
+func (h *HolidayContributions) PreviewHolidayPayer(ctx context.Context, reviewer parentbilling.HolidayReviewer, periodID, registrationID int64, choice parentbilling.HolidayPayerChoice) (parentbilling.HolidayPayerPreview, error) {
 	if reviewer.OrganizationID <= 0 || reviewer.AccountID <= 0 {
 		return parentbilling.HolidayPayerPreview{}, errTraegerRequired
 	}
@@ -64,7 +65,7 @@ func (h *HolidayContributions) ChangeHolidayPayer(ctx context.Context, reviewer 
 	if err != nil {
 		return parentbilling.HolidayContribution{}, err
 	}
-	registration, members, err := h.lockedPayerGroup(ctx, reviewer, periodID, registrationID)
+	registration, members, issued, err := h.lockedPayerGroup(ctx, reviewer, periodID, registrationID)
 	if err != nil {
 		return parentbilling.HolidayContribution{}, err
 	}
@@ -77,7 +78,7 @@ func (h *HolidayContributions) ChangeHolidayPayer(ctx context.Context, reviewer 
 	}
 	if preview.Changed {
 		record := parentbilling.HolidayPayerRecord{Before: preview.Current, After: preview.Chosen, Reason: reason}
-		if err := h.freezePayer(ctx, reviewer, periodID, registration.ID, record, next); err != nil {
+		if err := h.freezePayer(ctx, reviewer, periodID, registration.ID, record, next, members, issued); err != nil {
 			return parentbilling.HolidayContribution{}, err
 		}
 	}
@@ -92,28 +93,34 @@ func (h *HolidayContributions) ChangeHolidayPayer(ctx context.Context, reviewer 
 }
 
 // lockedPayerGroup holds the invoices of the period and the period in
-// Enrollment, then reads the registration and its sibling group.
-func (h *HolidayContributions) lockedPayerGroup(ctx context.Context, reviewer parentbilling.HolidayReviewer, periodID, registrationID int64) (parentbilling.HolidayRegistration, []siblingMember, error) {
-	groups, _, err := h.lockSiblings(ctx, reviewer, periodID)
+// Enrollment, then reads the registration, its sibling group and the
+// registrations an issued invoice bills.
+func (h *HolidayContributions) lockedPayerGroup(ctx context.Context, reviewer parentbilling.HolidayReviewer, periodID, registrationID int64) (parentbilling.HolidayRegistration, []siblingMember, map[int64]bool, error) {
+	groups, issued, err := h.lockSiblings(ctx, reviewer, periodID)
 	if err != nil {
-		return parentbilling.HolidayRegistration{}, nil, err
+		return parentbilling.HolidayRegistration{}, nil, nil, err
 	}
 	registration, err := h.registrations.HolidayRegistration(ctx, reviewer, periodID, registrationID)
 	if err != nil {
-		return parentbilling.HolidayRegistration{}, nil, err
+		return parentbilling.HolidayRegistration{}, nil, nil, err
 	}
 	ids := []int64{registration.ID}
 	if group, grouped := groupOf(groups, registration.ID); grouped {
 		ids = ident.Int64s(group.RegistrationIDs)
 	}
 	members, err := h.readSiblings(ctx, reviewer, periodID, ids, &registration)
-	return registration, members, err
+	return registration, members, issued, err
 }
 
 // freezePayer records the change in the audit trail of the registration,
-// which refuses one that is not confirmed, and freezes the new version.
+// which refuses one that is not confirmed, and freezes the new version, also
+// of a registration an issued invoice bills: the invoice keeps its own
+// positions. Then it freezes the rest of the group again like a
+// confirmation, so the group stays one calculation; a registration an
+// issued invoice bills and one whose exemption no rule allows any more keep
+// their contribution.
 func (h *HolidayContributions) freezePayer(ctx context.Context, reviewer parentbilling.HolidayReviewer, periodID, registrationID int64,
-	record parentbilling.HolidayPayerRecord, next parentbilling.HolidayContribution,
+	record parentbilling.HolidayPayerRecord, next parentbilling.HolidayContribution, members []siblingMember, issued map[int64]bool,
 ) error {
 	if err := h.registrations.RecordHolidayPayer(ctx, reviewer, periodID, registrationID, record); err != nil {
 		return err
@@ -121,7 +128,13 @@ func (h *HolidayContributions) freezePayer(ctx context.Context, reviewer parentb
 	if err := h.store.InsertHolidayContributions(ctx, reviewer.OrganizationID, periodID, registrationID, reviewer.AccountID, next); err != nil {
 		return fmt.Errorf("parent billing: freeze holiday contribution with the new payer: %w", err)
 	}
-	return nil
+	group := slices.Clone(members)
+	for i := range group {
+		if group[i].id() == registrationID {
+			group[i].frozen = &next
+		}
+	}
+	return h.refreeze(ctx, reviewer, periodID, group, issued, true)
 }
 
 // payerChange computes the registration with the chosen payer within its

@@ -76,7 +76,7 @@ const WISHES = ["yes", "no"] as const;
 const PAYER_KINDS = ["family", "exemption", "cost_bearer"] as const;
 
 /** Who pays a contribution, as the history of a registration names it. */
-export interface HolidayPaidBy {
+interface HolidayPaidBy {
   readonly kind: (typeof PAYER_KINDS)[number];
   /** The name of the cost bearer; "" otherwise. */
   readonly costBearerName: string;

@@ -33,7 +33,7 @@ import {
   changeHolidayPayer,
   fetchHolidayPayerChange,
   type HolidayContribution,
-  type HolidayPayerChoice as PayerChoice,
+  type HolidayPayerChoice,
   type HolidayPayerKind,
   type HolidayPayerPreview,
 } from "~/lib/traeger-contributions-api";
@@ -43,7 +43,7 @@ import type {
 } from "~/lib/traeger-holiday-registrations-api";
 import { formatEuro } from "./contribution-format";
 import {
-  HolidayPayerChoice,
+  HolidayPayerChoiceField,
   holidayPayerOf,
   holidayPayerText,
 } from "./holiday-payer-choice";
@@ -54,7 +54,7 @@ const logger = createLogger({ component: "HolidayPayerEditor" });
 /** As the backend bounds the reason (HolidayPayerReasonMaxLength). */
 const REASON_MAX_LENGTH = 500;
 
-function sameChoice(a: PayerChoice, b: PayerChoice): boolean {
+function sameChoice(a: HolidayPayerChoice, b: HolidayPayerChoice): boolean {
   return (
     a.kind === b.kind &&
     (a.kind !== "cost_bearer" || a.costBearerId === b.costBearerId)
@@ -108,21 +108,15 @@ function PayerEffects({
     pick: (child: HolidayPayerPreview["children"][number]) => number,
   ) => preview.children.reduce((total, child) => total + pick(child), 0);
   const rows = (
-    key: string,
     family: readonly [number, number],
     costBearer: readonly [number, number],
-    suffix = "",
   ) => (
     <DataGrid columns={1}>
-      <DataField label={`Die Familie bezahlt${suffix}`} inline>
+      <DataField label="Die Familie bezahlt" inline>
         <AmountChange before={family[0]} after={family[1]} />
       </DataField>
       {namesCostBearer ? (
-        <DataField
-          key={`${key}-cost-bearer`}
-          label={`Der Kostenträger bezahlt${suffix}`}
-          inline
-        >
+        <DataField label="Der Kostenträger bezahlt" inline>
           <AmountChange before={costBearer[0]} after={costBearer[1]} />
         </DataField>
       ) : null}
@@ -136,7 +130,6 @@ function PayerEffects({
             {childName(child.childId, child.position)}
           </p>
           {rows(
-            child.childId,
             [child.familyBeforeCents, child.familyAfterCents],
             [child.costBearerBeforeCents, child.costBearerAfterCents],
           )}
@@ -146,7 +139,6 @@ function PayerEffects({
         <div className="space-y-2 border-t border-gray-200 pt-3">
           <p className="text-sm font-semibold text-gray-900">Alle Kinder</p>
           {rows(
-            "total",
             [
               sum((child) => child.familyBeforeCents),
               sum((child) => child.familyAfterCents),
@@ -197,7 +189,7 @@ export function HolidayPayerEditor({
   onCancel: () => void;
 }>) {
   const current = holidayPayerOf(contribution);
-  const [choice, setChoice] = useState<PayerChoice>({
+  const [choice, setChoice] = useState<HolidayPayerChoice>({
     kind: current.kind,
     costBearerId: current.costBearerId,
   });
@@ -358,7 +350,7 @@ export function HolidayPayerEditor({
                   an. Danach kannst du hier den Zahler ändern.
                 </p>
               ) : (
-                <HolidayPayerChoice
+                <HolidayPayerChoiceField
                   idPrefix="holiday-payer-change"
                   payer={choice.kind}
                   exemptionAvailable={exemptionAvailable}

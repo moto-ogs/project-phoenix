@@ -826,7 +826,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingHolidayRegistrations.RecordHolidayPayer",
-      "binding_digest": "8b39f101ef54832c7faa255269995fd5",
+      "binding_digest": "58c651e4d3b74a123e3ee80e5f41577d",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.HolidayRegistrations.RecordHolidayPayer",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayPayerTrail.RecordHolidayPayer",

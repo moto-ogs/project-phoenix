@@ -26,11 +26,15 @@ Kostenträger und keine Zeile in dessen Erstattungsliste.
    eingefrorene: Einfrieren sperrt Stornieren und Umbuchen, nicht den Zahler.
    Das Recht ist „Anmeldung verwalten“, wie beim Bestätigen.
 2. **Neue Fassung statt Änderung.** Der Wechsel rechnet die Anmeldung in ihrer
-   Geschwistergruppe neu, mit den Grundpreisen und den Einstellungen der Kette,
-   die sie festgehalten hat (ADR 0115, Nachtrag #5664 Punkt 5), und setzt nur
-   den Zahler neu. Das Ergebnis ist eine neue Fassung des festgehaltenen
-   Beitrags; die alte bleibt. Der Rang der Geschwister hängt nicht vom Zahler
-   ab, darum ändert sich keine andere Anmeldung der Gruppe.
+   Geschwistergruppe neu, wie das Bestätigen einer weiteren Anmeldung der
+   Gruppe: mit den Grundpreisen und den Einstellungen der Kette, die sie
+   festgehalten hat (ADR 0115, Nachtrag #5664 Punkt 5), und den Regeln, die am
+   ersten gebuchten Tag gelten. Neu gesetzt wird der Zahler. Das Ergebnis ist
+   eine neue Fassung des festgehaltenen Beitrags; die alte bleibt. Der Rang der
+   Geschwister hängt nicht vom Zahler ab, darum bewegt der Wechsel selbst keine
+   andere Anmeldung der Gruppe. Weicht deren Beitrag aus anderem Grund vom
+   neu gerechneten ab, bekommt sie wie beim Bestätigen eine neue Fassung; eine
+   Anmeldung mit ausgestellter Rechnung behält ihre.
 3. **Sperren und gelesener Stand.** Der Befehl hält den gewählten Kostenträger,
    die Rechnungen des Zeitraums und den Zeitraum in Enrollment, in der
    Reihenfolge der Bestätigung. Er speichert nur die Vorschau, die das Büro

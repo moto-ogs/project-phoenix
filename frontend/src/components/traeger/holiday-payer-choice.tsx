@@ -53,7 +53,7 @@ export function holidayPayerText(payer: {
   }
 }
 
-export function HolidayPayerChoice({
+export function HolidayPayerChoiceField({
   idPrefix = "holiday-registration",
   payer,
   exemptionAvailable,
