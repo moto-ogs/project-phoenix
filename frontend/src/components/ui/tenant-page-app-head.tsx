@@ -477,14 +477,17 @@ function MenuEntries({
     fn();
   };
   return (
-    <div className="-mx-2 flex flex-col">
+    // `-mx-3`: Die Zeilen haben 12 px Innenabstand; so beginnt ihr Text
+    // bündig mit dem Blatttitel und „Über diese Seite“ (Runde 17), die
+    // Tippfläche reicht trotzdem fast bis an den Blattrand.
+    <div className="-mx-3 flex flex-col">
       {entries.map((entry, index) => {
         if ("kind" in entry && entry.kind === "separator") {
           return <hr key={index} className="my-1 border-gray-100" />;
         }
         if ("kind" in entry && entry.kind === "header") {
           return (
-            <SectionLabel key={index} as="h3" className="px-2 pt-2 pb-1">
+            <SectionLabel key={index} as="h3" className="px-3 pt-2 pb-1">
               {entry.label}
             </SectionLabel>
           );
@@ -511,7 +514,7 @@ function MenuEntries({
               key={index}
               href={entry.href}
               onClick={() => run(entry.onClick)}
-              className="flex min-h-11 flex-col justify-center rounded-xl px-2 py-2 text-sm active:bg-gray-100"
+              className="flex min-h-11 flex-col justify-center rounded-xl px-3 py-2 text-sm active:bg-gray-100"
             >
               <span
                 className={
