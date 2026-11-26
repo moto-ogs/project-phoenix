@@ -652,6 +652,8 @@ function TodayTimeStatusInlineRow({
   absentReason?: string;
 }>) {
   const now = useMinuteClock();
+  const device = useDeviceContext();
+  const isApp = device.resolved && device.isApp;
 
   if (isAbsent) {
     return (
@@ -681,6 +683,14 @@ function TodayTimeStatusInlineRow({
 
   const plannedDisplay = plannedTime?.slice(0, 5);
   const showPlannedHint = Boolean(plannedTime && actualTime);
+  // Handy (#8070): „früher als geplant: 09:15“ statt „-475 min früh“; die
+  // Minutenzahl liest sich als Rohwert. Der Desktop bleibt wie heute.
+  const relation =
+    status.diffMinutes === undefined || status.diffMinutes === 0
+      ? null
+      : status.diffMinutes < 0
+        ? "früher"
+        : "später";
 
   return (
     <span
@@ -702,7 +712,13 @@ function TodayTimeStatusInlineRow({
         >
           {status.displayTime ?? "–"}
         </span>
-        {showPlannedHint && plannedDisplay && (
+        {showPlannedHint && plannedDisplay && isApp ? (
+          <span className="ml-1 text-gray-500">
+            ({relation ? `${relation} als geplant` : "geplant"}:{" "}
+            {plannedDisplay})
+          </span>
+        ) : null}
+        {showPlannedHint && plannedDisplay && !isApp && (
           <span className="ml-1 text-gray-500">
             (geplant: {plannedDisplay}
             {status.detailAnnotation ? `, ${status.detailAnnotation}` : ""})
