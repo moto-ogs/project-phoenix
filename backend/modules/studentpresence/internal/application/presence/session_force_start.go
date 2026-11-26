@@ -94,15 +94,18 @@ func (s *service) lockForceStart(ctx context.Context, activityID, deviceID int64
 	if err != nil {
 		return nil, 0, &ActiveError{Op: opForceStartSession, Err: err}
 	}
-	if err := s.refuseClosedRoom(ctx, finalRoomID, opForceStartSession); err != nil {
-		return nil, 0, err
-	}
 	cohort, err := s.discoverForceStartCohort(ctx, activityID, deviceID)
 	if err != nil {
 		return nil, 0, err
 	}
 	sources := appendActiveGroupID(slices.Clone(cohort.activityIDs), cohort.deviceSessionID)
 	if err := s.SchoolPresence.PrepareVisitWrites(ctx, studentpresence.VisitWriteScope{GroupIDs: sources, DeviceID: deviceID, RoomID: finalRoomID}); err != nil {
+		return nil, 0, err
+	}
+	// Match the visit writer's session-lock-before-room-row order so a scan
+	// and a force start cannot deadlock while the closure check serializes
+	// the final room choice with a concurrent closure.
+	if err := s.refuseClosedRoom(ctx, finalRoomID, opForceStartSession); err != nil {
 		return nil, 0, err
 	}
 	*prepared = cohort

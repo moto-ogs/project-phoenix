@@ -138,14 +138,6 @@ vi.mock("~/components/rooms/room-detail-content", () => ({
   RoomDetailSkeleton: () => <div data-testid="room-detail-skeleton" />,
 }));
 
-// Die Sperren (#7653) haben ihren eigenen Test; hier zählt der Zugriff auf den
-// Reiter und die Weitergabe des Schreibrechts.
-vi.mock("~/components/rooms/room-closures-section", () => ({
-  RoomClosuresSection: ({ canUpdate }: { canUpdate: boolean }) => (
-    <div data-testid="room-closures" data-can-update={String(canUpdate)} />
-  ),
-}));
-
 vi.mock("~/components/rooms/room-stammdaten-tab", () => ({
   RoomStammdatenTab: ({
     onSave,
@@ -176,6 +168,11 @@ vi.mock("~/components/rooms/room-stammdaten-tab", () => ({
 // Der Reiter „Plan“ (#4768) hat seine eigenen Tests (room-plan-tab.test.tsx);
 // hier zählt, wann die Seite ihn zeigt und was sie ihm übergibt.
 vi.mock("~/components/rooms/room-plan-lazy", () => ({
+  // Die Sperren (#7653) haben ihren eigenen Test; hier zählt der Zugriff auf
+  // den Reiter und die Weitergabe des Schreibrechts.
+  RoomClosuresSection: ({ canUpdate }: { canUpdate: boolean }) => (
+    <div data-testid="room-closures" data-can-update={String(canUpdate)} />
+  ),
   RoomPlanControls: ({
     planHref,
     planLinkLabel,

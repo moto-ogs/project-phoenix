@@ -123,11 +123,14 @@ func (s *service) executeSessionStart(ctx context.Context, activityID, deviceID 
 		if err != nil {
 			return err
 		}
-		if err := s.refuseClosedRoom(txCtx, finalRoomID, operation); err != nil {
-			return err
-		}
 		if err := s.SchoolPresence.PrepareVisitWrites(txCtx, studentpresence.VisitWriteScope{DeviceID: deviceID, RoomID: finalRoomID}); err != nil {
 			return &ActiveError{Op: operation, Err: err}
+		}
+		// Visit writes take the room-session lock before they touch the room
+		// row. Keep that order when the closure read locks the room as well:
+		// a concurrent scan must wait, not form a lock cycle with this start.
+		if err := s.refuseClosedRoom(txCtx, finalRoomID, operation); err != nil {
+			return err
 		}
 		if err := s.SchoolPresence.LockRoomSessionWrites(txCtx, finalRoomID); err != nil {
 			return &ActiveError{Op: operation, Err: ErrDatabaseOperation}

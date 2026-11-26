@@ -11,3 +11,9 @@ export const RoomPlanControls = dynamic(() =>
 export const RoomPlanTab = dynamic(() =>
   import("./room-plan-tab").then((mod) => mod.RoomPlanTab),
 );
+
+// Der Sperrbereich lädt seinen Dialog und den Terminabgleich erst auf dem
+// Stammdaten-Reiter nach. Die Raumübersicht bleibt dadurch klein.
+export const RoomClosuresSection = dynamic(() =>
+  import("./room-closures-section").then((mod) => mod.RoomClosuresSection),
+);

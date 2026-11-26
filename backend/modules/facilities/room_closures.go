@@ -76,18 +76,3 @@ type Closures interface {
 	// the window. Timetable uses this one batched read while materializing.
 	RoomClosureRanges(ctx context.Context, roomIDs []int64, from, until calendar.Date) ([]RoomClosure, error)
 }
-
-// ClosedRoomsOn maps each room closed on the day to the closure that closes
-// it; with several, the one ending last.
-func ClosedRoomsOn(closures []RoomClosure, day calendar.Date) map[int64]RoomClosure {
-	closed := make(map[int64]RoomClosure)
-	for _, closure := range closures {
-		if !closure.Covers(day) {
-			continue
-		}
-		if current, ok := closed[closure.RoomID]; !ok || closure.EndDate.After(current.EndDate) {
-			closed[closure.RoomID] = closure
-		}
-	}
-	return closed
-}

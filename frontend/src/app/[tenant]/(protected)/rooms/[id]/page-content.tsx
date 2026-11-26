@@ -24,7 +24,6 @@ import {
   RoomDetailSkeleton,
   useRoomDetail,
 } from "~/components/rooms/room-detail-content";
-import { RoomClosuresSection } from "~/components/rooms/room-closures-section";
 import { RoomStammdatenTab } from "~/components/rooms/room-stammdaten-tab";
 import {
   parseRoomPlanView,
@@ -34,6 +33,7 @@ import {
 import {
   RoomPlanControls,
   RoomPlanTab,
+  RoomClosuresSection,
 } from "~/components/rooms/room-plan-lazy";
 import { roomsConfig } from "~/components/database/configs/rooms.config";
 import {
