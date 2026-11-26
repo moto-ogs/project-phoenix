@@ -81,7 +81,7 @@ export function studentAppQuickActions(
       label: props.isExcused ? "Entschuldigung aufheben" : "Entschuldigen",
       hint: props.isExcused
         ? "Nimmt die Entschuldigung zurück, moto fragt vorher nach."
-        : "Markiert das Kind als entschuldigt, moto fragt vorher nach.",
+        : "Das Kind fehlt aus einem anderen Grund als Krankheit, moto fragt vorher nach.",
       run: props.onExcused,
       loading: props.excusedLoading,
     });

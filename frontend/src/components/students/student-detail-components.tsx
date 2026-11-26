@@ -931,6 +931,11 @@ export function PersonalInfoReadOnly({
         appLayout ? undefined : <IconTile tone="green" icon={<PersonIcon />} />
       }
       inlineActions={appLayout}
+      // App: Der Stift ist 40 px hoch; mit gleicher Zeilenhöhe steht der
+      // Titel auf derselben Mitte statt oben bündig darüber.
+      titleClassName={
+        appLayout && showEditButton && onEditClick ? "leading-10" : undefined
+      }
       action={
         showEditButton && onEditClick ? (
           appLayout ? (
