@@ -393,9 +393,7 @@ describe("Betreuungsplan heute (#2180, #8134)", () => {
       screen.getByText("Für heute ist nichts mehr geplant"),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(
-        "Heute standen 4 Blöcke im Plan. 4 Blöcke wurden in moto nicht gestartet. „Plan öffnen“ zeigt sie.",
-      ),
+      screen.getByText("4 von 4 Blöcken wurden in moto nicht gestartet."),
     ).toBeInTheDocument();
     expect(screen.queryAllByRole("listitem")).toHaveLength(0);
     expect(
@@ -422,9 +420,7 @@ describe("Betreuungsplan heute (#2180, #8134)", () => {
     render(<DayFlowBlock />);
 
     expect(
-      screen.getByText(
-        "Heute standen 2 Blöcke im Plan. Ausgefallen: „Lernzeit Jahrgang 1“.",
-      ),
+      screen.getByText("Ausgefallen: „Lernzeit Jahrgang 1“."),
     ).toBeInTheDocument();
   });
 
@@ -446,6 +442,13 @@ describe("Betreuungsplan heute (#2180, #8134)", () => {
     expect(
       container.querySelector('[data-plan-more="wide"]'),
     ).toHaveTextContent("Noch 3 Blöcke ansehen");
+    // Der Rest steht an der Lücke, vor der festgehaltenen Zeile: so liest
+    // niemand „bis 15 Uhr ist nichts mehr“.
+    const more = container.querySelector('[data-plan-more="narrow"]')!;
+    const pinned = screen.getByText("Block 13").closest("li")!;
+    expect(
+      more.compareDocumentPosition(pinned) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
   // Die Karte ist so hoch wie ihr Inhalt: nachmittags stünden drei

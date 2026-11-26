@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useState, type ReactNode } from "react";
-import { ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import { useSession } from "next-auth/react";
 
 import {
@@ -334,7 +334,7 @@ function DayChangesSection({
           <FoldButton
             expanded={expanded}
             controls={listId}
-            marker
+            more
             tooltip={
               expanded
                 ? "Zeigt wieder nur die ersten Änderungen der Schule."
@@ -380,23 +380,27 @@ function listClass(rows: number): string {
 }
 
 /**
- * Die Klappe am Ende eines Abschnitts: „15 weitere anzeigen“ und „3 erledigt“
- * sehen gleich aus, weil beide dasselbe tun.
+ * Die Klappe am Ende eines Abschnitts. „15 weitere anzeigen“ trägt den Pfeil
+ * hinten wie jede lange Liste des Kits (`more`); „3 erledigt“ ist eine eigene
+ * Gruppe und trägt ihn vorn.
  */
 function FoldButton({
   expanded,
   controls,
   tooltip,
   onToggle,
-  marker = false,
+  more = false,
   children,
 }: {
   readonly expanded: boolean;
   readonly controls: string;
   readonly tooltip: string;
   readonly onToggle: () => void;
-  /** Kennzeichnet „N weitere anzeigen“ als Ziel für den Fokus eines Hinweises. */
-  readonly marker?: boolean;
+  /**
+   * „N weitere anzeigen“ statt einer Gruppe. Der Knopf ist dann auch das
+   * Ziel für den Fokus eines Hinweises, der hinter ihm steht.
+   */
+  readonly more?: boolean;
   readonly children: ReactNode;
 }) {
   return (
@@ -408,18 +412,29 @@ function FoldButton({
         className="-ml-2"
         aria-expanded={expanded}
         aria-controls={controls}
-        data-day-changes-more={marker ? "" : undefined}
+        data-day-changes-more={more ? "" : undefined}
         tooltip={tooltip}
         onClick={onToggle}
       >
-        <ChevronRight
-          aria-hidden
-          className={cn(
-            "h-3.5 w-3.5 shrink-0 text-gray-500 transition-transform",
-            expanded && "rotate-90",
-          )}
-        />
+        {more ? null : (
+          <ChevronRight
+            aria-hidden
+            className={cn(
+              "h-3.5 w-3.5 shrink-0 text-gray-500 transition-transform",
+              expanded && "rotate-90",
+            )}
+          />
+        )}
         {children}
+        {more ? (
+          <ChevronDown
+            aria-hidden
+            className={cn(
+              "h-3.5 w-3.5 shrink-0 text-gray-500 transition-transform",
+              expanded && "rotate-180",
+            )}
+          />
+        ) : null}
       </Button>
     </div>
   );

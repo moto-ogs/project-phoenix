@@ -1086,7 +1086,7 @@ export const appOverviewTopic = function appOverviewTopic(): HelpTopic {
           "Tippe auf eine Zeile. Sie öffnet den Termin im `Betreuungsplan`. Hast du den Plan nicht in der Seitenleiste, öffnet sich `Heute`.",
           "Links neben `Jetzt` steht, wie viele Blöcke heute schon vorbei sind. Tippe darauf, um den ganzen Tag zu sehen.",
           "Passen nicht alle Blöcke auf die Karte? Darunter steht, wie viele noch kommen.",
-          "Fällt ein Block aus, steht er immer auf der Karte, auch wenn nicht alle Blöcke Platz haben.",
+          "Fällt ein Block aus, steht er immer auf der Karte, auch wenn nicht alle Blöcke Platz haben. Das gilt auch für deine eigenen Blöcke.",
           "Sind alle Blöcke vorbei, steht dort `Für heute ist nichts mehr geplant`. Die Karte nennt dann, was ausgefallen ist und was nicht gestartet wurde. `Plan öffnen` zeigt dir den ganzen Tag.",
           "Die Karte fehlt bei dir? Wähle `Anpassen`, dann `Bausteine` und dann `Betreuungsplan heute`.",
           // Karte nur mit Betreuungsplan, Leserecht und schulweiter Sicht

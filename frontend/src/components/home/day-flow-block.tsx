@@ -1,5 +1,6 @@
 "use client";
 
+import { Fragment } from "react";
 import { Check, TriangleAlert } from "lucide-react";
 
 import { EmptyState } from "~/components/ui/empty-state";
@@ -89,11 +90,19 @@ export function DayFlowBlock() {
   const { items: open, allPast } = upcomingFirst(blocks, openUntil, now);
   // Eine Spalte und zwei Spalten kappen verschieden. Die schmale Auswahl ist
   // immer Teil der breiten: dieselbe Liste, vom selben Ende her gekürzt.
-  // Was ausfällt, steht immer als Zeile da, auch hinter der Kappung: genau
-  // auf diesen Block muss die Leitung handeln.
-  const narrow = keepCancelled(open, useHomeCardRows(open, COLUMN_ROWS).shown);
-  const wide = keepCancelled(open, useHomeCardRows(open, WIDE_ROWS).shown);
-  const inNarrow = new Set(narrow.shown.map((block) => block.id));
+  const narrow = useHomeCardRows(open, COLUMN_ROWS).shown;
+  const wide = useHomeCardRows(open, WIDE_ROWS).shown;
+  const inNarrow = new Set(narrow.map((block) => block.id));
+  const inWide = new Set(wide.map((block) => block.id));
+  // Was ausfällt und was der Person selbst gehört, steht immer als Zeile da,
+  // auch hinter der Kappung: auf genau diese Blöcke muss sie handeln.
+  const pinned = (block: PlannedTimetableInstance) =>
+    block.status === "cancelled" || (showMine && block.isAssigned);
+  const rows = open.filter((block) => inWide.has(block.id) || pinned(block));
+  const hiddenBeyond = (shown: ReadonlySet<string>) =>
+    open.filter((block) => !shown.has(block.id) && !pinned(block)).length;
+  const narrowHidden = hiddenBeyond(inNarrow);
+  const wideHidden = hiddenBeyond(inWide);
   // Zwei Spalten nur, wenn eine nicht reicht: zwei oder drei Blöcke
   // nebeneinander läse man quer statt erst nach unten.
   const columns = open.length > COLUMN_ROWS ? HOME_TWO_COLUMNS : "";
@@ -155,7 +164,7 @@ export function DayFlowBlock() {
                   )
                 }
                 title="Für heute ist nichts mehr geplant"
-                description={dayOverText(blocks, now, label)}
+                description={dayOverText(blocks, now)}
               />
             );
           }
@@ -180,44 +189,48 @@ export function DayFlowBlock() {
                   feine Linie zwischen den Spalten sagt: erst links nach unten
                   lesen, dann rechts. */}
               <ul className={`-mb-1 ${columns}`}>
-                {wide.shown.map((block) => (
-                  <PlanRow
-                    key={block.id}
-                    block={block}
-                    now={now}
-                    mine={showMine && block.isAssigned}
-                    href={blockHref(block)}
-                    opensPlan={opensPlan}
-                    wideOnly={!inNarrow.has(block.id)}
-                  />
+                {rows.map((block) => (
+                  <Fragment key={block.id}>
+                    <PlanRow
+                      block={block}
+                      now={now}
+                      mine={showMine && block.isAssigned}
+                      href={blockHref(block)}
+                      opensPlan={opensPlan}
+                      wideOnly={!inNarrow.has(block.id) && !pinned(block)}
+                    />
+                    {/* Der Rest steht dort, wo Blöcke fehlen: nach der
+                        letzten Zeile der Reihe, vor dem, was danach noch
+                        festgehalten ist. Je Breite ein eigener Rest, eine
+                        Spalte kappt früher. */}
+                    {block.id === narrow.at(-1)?.id && narrowHidden > 0 ? (
+                      <li
+                        className="mb-1 break-inside-avoid @3xl:hidden"
+                        data-plan-more="narrow"
+                      >
+                        <HomeMoreRow
+                          hidden={narrowHidden}
+                          href={dayHref(today)}
+                          label="Blöcke"
+                          singular="Block"
+                        />
+                      </li>
+                    ) : null}
+                    {block.id === wide.at(-1)?.id && wideHidden > 0 ? (
+                      <li
+                        className="mb-1 hidden break-inside-avoid @3xl:block"
+                        data-plan-more="wide"
+                      >
+                        <HomeMoreRow
+                          hidden={wideHidden}
+                          href={dayHref(today)}
+                          label="Blöcke"
+                          singular="Block"
+                        />
+                      </li>
+                    ) : null}
+                  </Fragment>
                 ))}
-                {/* Je Breite ein eigener Rest: eine Spalte kappt früher. */}
-                {narrow.hidden > 0 ? (
-                  <li
-                    className="mb-1 break-inside-avoid @3xl:hidden"
-                    data-plan-more="narrow"
-                  >
-                    <HomeMoreRow
-                      hidden={narrow.hidden}
-                      href={dayHref(today)}
-                      label="Blöcke"
-                      singular="Block"
-                    />
-                  </li>
-                ) : null}
-                {wide.hidden > 0 ? (
-                  <li
-                    className="mb-1 hidden break-inside-avoid @3xl:block"
-                    data-plan-more="wide"
-                  >
-                    <HomeMoreRow
-                      hidden={wide.hidden}
-                      href={dayHref(today)}
-                      label="Blöcke"
-                      singular="Block"
-                    />
-                  </li>
-                ) : null}
               </ul>
             </>
           );
@@ -235,19 +248,16 @@ export function DayFlowBlock() {
 function dayOverText(
   blocks: readonly PlannedTimetableInstance[],
   now: string,
-  /** Der Knopf im Kopf der Karte, der die Blöcke des Tages zeigt. */
-  openLabel: string,
 ): string {
   const cancelled = blocks.filter((block) => block.status === "cancelled");
   const missed = blocks.filter((block) => blockRowState(block, now).missed);
-  // „Standen im Plan“, nicht „sind vorbei“: neben einem Ausfall wäre das
-  // zweite nicht wahr.
-  const done =
-    blocks.length === 1
-      ? "Heute stand 1 Block im Plan."
-      : `Heute standen ${blocks.length} Blöcke im Plan.`;
-  // Ein oder zwei Ausfälle beim Namen: wer abends nach der Abholung gefragt
-  // wird, muss dafür nicht in den Plan wechseln.
+  if (cancelled.length === 0 && missed.length === 0) {
+    return blocks.length === 1
+      ? "Der eine Block von heute ist vorbei."
+      : `Alle ${blocks.length} Blöcke von heute sind vorbei.`;
+  }
+  // Ein oder zwei Ausfälle beim Namen und mit Grund: wer abends nach der
+  // Abholung gefragt wird, muss dafür nicht in den Plan wechseln.
   const cancelledText =
     cancelled.length === 0
       ? null
@@ -259,31 +269,12 @@ function dayOverText(
                 : `„${block.title}“`,
             )
             .join(" und ")}.`
-        : `${cancelled.length} Blöcke sind ausgefallen.`;
+        : `${cancelled.length} von ${blocks.length} Blöcken sind ausgefallen.`;
   const missedText =
     missed.length === 0
       ? null
-      : missed.length === 1
-        ? `1 Block wurde in moto nicht gestartet. „${openLabel}“ zeigt ihn.`
-        : `${missed.length} Blöcke wurden in moto nicht gestartet. „${openLabel}“ zeigt sie.`;
-  return [done, cancelledText, missedText]
-    .filter((part) => part !== null)
-    .join(" ");
-}
-
-/**
- * Die gezeigten Zeilen und dazu jeder Block, der ausfällt, in der
- * Reihenfolge des Tages. `hidden` zählt, was danach noch fehlt.
- */
-function keepCancelled(
-  all: readonly PlannedTimetableInstance[],
-  shown: readonly PlannedTimetableInstance[],
-): { shown: readonly PlannedTimetableInstance[]; hidden: number } {
-  const visible = new Set(shown.map((block) => block.id));
-  const kept = all.filter(
-    (block) => visible.has(block.id) || block.status === "cancelled",
-  );
-  return { shown: kept, hidden: all.length - kept.length };
+      : `${missed.length} von ${blocks.length} Blöcken ${missed.length === 1 ? "wurde" : "wurden"} in moto nicht gestartet.`;
+  return [cancelledText, missedText].filter((part) => part !== null).join(" ");
 }
 
 /** Kein Block ist ausgefallen oder ungestartet geblieben. */

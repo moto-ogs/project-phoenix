@@ -2205,18 +2205,9 @@ function TimetablesContent() {
                 // Die Konflikte nennt der Hinweis direkt unter dem Kopf, mit
                 // dem Weg zu jedem einzelnen. Dieselbe Zahl hier noch einmal
                 // stand doppelt da (#8134).
-                // Mit Zeitraum: am Telefon zeigt die Wochenansicht einen
-                // Tag, und „42 Termine“ ließ offen, was gezählt ist. „Gezeigt“
-                // statt „diese“: beim Blättern ist es nicht die laufende Woche.
                 {
                   value: instanceCount,
-                  label: `${instanceCount === 1 ? "Termin" : "Termine"} ${
-                    view === "month"
-                      ? "im gezeigten Monat"
-                      : view === "day"
-                        ? "am gezeigten Tag"
-                        : "in der gezeigten Woche"
-                  }`,
+                  label: instanceCount === 1 ? "Termin" : "Termine",
                 },
               ]
         }
