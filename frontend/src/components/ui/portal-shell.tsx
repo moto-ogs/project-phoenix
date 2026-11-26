@@ -121,11 +121,13 @@ export function PortalShell({
            * stuenden zwei Varianten fuer dasselbe Padding nebeneinander.
            * Die 7rem unten halten die mobile Leiste frei; sie gibt es nur
            * unter `lg`, deshalb traegt die flache Desktop-Stufe sie nicht.
+           * App: Das Seitenende steht 16 px ueber der Aktionsleiste, ohne
+           * Leiste 16 px ueber der Pill (Fallback 0,625rem zum Pill-Abstand).
            */}
           <main
             id={MAIN_CONTENT_ID}
             tabIndex={-1}
-            className="compact:p-5 compact:max-lg:pb-[calc(7rem+env(safe-area-inset-bottom))] app:pb-[calc(5.75rem+env(safe-area-inset-bottom)+var(--app-action-bar-space,0px))] flex min-w-0 flex-1 flex-col p-8 focus:outline-none max-md:p-4 max-md:pb-[calc(7rem+env(safe-area-inset-bottom))]"
+            className="compact:p-5 compact:max-lg:pb-[calc(7rem+env(safe-area-inset-bottom))] app:pb-[calc(5.75rem+env(safe-area-inset-bottom)+var(--app-action-bar-space,0.625rem))] flex min-w-0 flex-1 flex-col p-8 focus:outline-none max-md:p-4 max-md:pb-[calc(7rem+env(safe-area-inset-bottom))]"
           >
             <div className={`relative ${Z_LAYER.raised} ${contentClassName}`}>
               {children}

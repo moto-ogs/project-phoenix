@@ -251,9 +251,10 @@ export function AppTenantHead({
             // Telefon: unten an der Kopfkarte, solange sie steht; klebt die
             // Leiste allein, ist sie wieder eine ganze Karte.
             "phone:mt-0 phone:mb-0",
-            // Unten und seitlich 8 px wie zwischen Kopfzeile und Leiste: Das
-            // Suchfeld sitzt nicht auf der Kartenkante.
-            "phone:rounded-t-none phone:border-t-0 phone:px-2 phone:pt-0 phone:pb-2",
+            // Seitlich 16 px: Suchfeld, Reiter und Segmente beginnen bündig
+            // mit dem Titel und den Kennzahlen darüber. Unten 8 px wie
+            // zwischen Kopfzeile und Leiste.
+            "phone:rounded-t-none phone:border-t-0 phone:px-4 phone:pt-0 phone:pb-2",
             printHideHeader && "print:hidden",
           )}
           style={{ top: stickyTop }}
@@ -601,7 +602,9 @@ export function AppTenantTabs({
         // `py-1.5 -mt-1`: Die Leiste schneidet senkrecht mit ab; so bleibt die
         // 44-px-Trefferfläche der 32 px hohen Reiter ganz. Unten kein
         // negativer Rand: Sonst ragt das Suchfeld darunter in sie hinein.
-        className="-mx-2 -mt-1 flex [scrollbar-width:none] gap-1.5 overflow-x-auto px-2 py-1.5"
+        // Telefon: Die Reihe scrollt bis zum Kartenrand (Leiste `px-4`), der
+        // erste Reiter beginnt bündig mit dem Titel.
+        className="phone:-mx-4 phone:px-4 -mx-2 -mt-1 flex [scrollbar-width:none] gap-1.5 overflow-x-auto px-2 py-1.5"
         style={edgeMask(edges)}
       >
         {items.map((item) => {
@@ -655,7 +658,7 @@ export function AppTenantTabs({
       {/* Pfeil am Ende: Die Reihe geht sichtbar weiter, ein Tipp schiebt
         die nächsten Reiter herein. */}
       {edges.end ? (
-        <span className="absolute inset-y-0 -right-1 flex items-center">
+        <span className="phone:-right-3 absolute inset-y-0 -right-1 flex items-center">
           <Button
             type="button"
             variant="ghost"
