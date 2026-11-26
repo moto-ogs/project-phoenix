@@ -110,6 +110,9 @@ var traegerCoreActions = map[RouteKey]CoreAction{
 	// Träger as well.
 	{http.MethodPut, "/traeger/holiday-contributions/{periodId}/registrations/{registrationId}/debtor-number"}:        notCaptured,
 	{http.MethodPut, "/traeger/holiday-contributions/{periodId}/registrations/{registrationId}/child-debtor-numbers"}: notCaptured,
+	// The payer of a confirmed registration (#8158) belongs to the Träger
+	// too.
+	{http.MethodPut, "/traeger/holiday-contributions/{periodId}/registrations/{registrationId}/payer"}: notCaptured,
 	// The cost bearers of a Träger and the cost takeover (#5627) belong to
 	// the Träger too, and so does the proof the Träger-Büro uploads.
 	{http.MethodPost, "/traeger/cost-bearers/"}:                                              notCaptured,

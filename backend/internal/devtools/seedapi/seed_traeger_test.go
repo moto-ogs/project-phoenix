@@ -105,7 +105,7 @@ func TestSeedTraegerHolidayPeriodStepPublishesAPeriodAtTheTraegerSchools(t *test
 	var calls []string
 	var period map[string]any
 	var registrations []map[string]any
-	var correction, release, confirmation, takeover, costBearer map[string]any
+	var correction, release, confirmation, takeover, payer, costBearer map[string]any
 	var merges []map[string]any
 	var capacity map[string]any
 	var proofs int
@@ -162,6 +162,14 @@ func TestSeedTraegerHolidayPeriodStepPublishesAPeriodAtTheTraegerSchools(t *test
 			assert.NoError(t, err)
 			assert.NoError(t, json.Unmarshal(raw, &takeover))
 			_, _ = w.Write([]byte(`{"status":"success","data":{"id":10}}`))
+		case "/traeger/holiday-contributions/5/registrations/10/payer":
+			// The preview of the payer change and its save (#8158).
+			if r.Method == http.MethodPut {
+				raw, err := io.ReadAll(r.Body)
+				assert.NoError(t, err)
+				assert.NoError(t, json.Unmarshal(raw, &payer))
+			}
+			_, _ = w.Write([]byte(`{"status":"success","data":{"fingerprint":"zahler-10"}}`))
 		case "/traeger/cost-bearers/":
 			raw, err := io.ReadAll(r.Body)
 			assert.NoError(t, err)
@@ -243,6 +251,10 @@ func TestSeedTraegerHolidayPeriodStepPublishesAPeriodAtTheTraegerSchools(t *test
 		"POST /traeger/cost-bearers/ Bearer traeger-token",
 		"GET /traeger/holiday-contributions/5/registrations/10 Bearer traeger-token",
 		"POST /traeger/holiday-contributions/5/registrations/10/confirm Bearer traeger-token",
+		// The notice came after the confirmation: the cost bearer takes over
+		// (#8158).
+		"GET /traeger/holiday-contributions/5/registrations/10/payer Bearer traeger-token",
+		"PUT /traeger/holiday-contributions/5/registrations/10/payer Bearer traeger-token",
 		"POST /traeger/holiday-registrations/link-key ",
 		"POST /traeger/holiday-contributions/5/sibling-groups Bearer traeger-token",
 		// A fourth sibling joins the group and is cancelled (#5662).
@@ -304,9 +316,12 @@ func TestSeedTraegerHolidayPeriodStepPublishesAPeriodAtTheTraegerSchools(t *test
 		"the Träger-Büro asks for the debtor number and confirms the siblings with theirs (#5621); the family keeps its own (#6692)")
 	assert.Equal(t, "Fachdienst Jugend des Landkreises Musterstadt", costBearer["name"], "the Abrechnung keeps an invented cost bearer (#5627)")
 	assert.Equal(t, true, costBearer["active"])
-	assert.Equal(t, map[string]any{"benefits_exemption": false, "cost_bearer_id": "7", "debtor_number": "10472",
+	assert.Equal(t, map[string]any{"benefits_exemption": false, "debtor_number": "10472",
 		"expected_fingerprint": "vorschau-10"}, takeover,
-		"the Träger-Büro confirms the second registration with the cost takeover by that cost bearer (#5627)")
+		"the Träger-Büro confirms the second registration as paid by the family")
+	assert.Equal(t, map[string]any{"cost_bearer_id": "7", "reason": "Bescheid über Grundsicherung nachgereicht",
+		"expected_fingerprint": "zahler-10"}, payer,
+		"and lets that cost bearer take over once the notice is there (#5627, #8158)")
 	weeks, ok := period["weeks"].([]any)
 	require.True(t, ok)
 	require.Len(t, weeks, 2)

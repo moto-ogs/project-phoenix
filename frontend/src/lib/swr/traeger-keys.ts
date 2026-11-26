@@ -112,6 +112,12 @@ export const traegerKeys = {
     `traeger-holiday-period-contribution-${encodeURIComponent(
       id,
     )}-${encodeURIComponent(registrationId)}`,
+  // Vorschau eines Zahlerwechsels (#8158): `payer` ist "family",
+  // "exemption" oder die Kennung des Kostenträgers.
+  holidayPayerChange: (id: string, registrationId: string, payer: string) =>
+    `traeger-holiday-period-payer-change-${encodeURIComponent(
+      id,
+    )}-${encodeURIComponent(registrationId)}-${encodeURIComponent(payer)}`,
   holidayFamilyDebtorNumber: (id: string, registrationId: string) =>
     `traeger-holiday-period-family-debtor-number-${encodeURIComponent(
       id,

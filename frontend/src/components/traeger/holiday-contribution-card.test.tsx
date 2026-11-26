@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import {
   HOLIDAY_CONTRIBUTION,
@@ -74,6 +74,46 @@ describe("HolidayContributionCard", () => {
         "Festgehalten am 08.09.2026. Spätere Preise und Regeln ändern ihn nicht.",
       ),
     ).toBeInTheDocument();
+  });
+
+  it("names who pays a confirmed contribution and opens the change of the payer (#8158)", () => {
+    const onChangePayer = vi.fn();
+    render(
+      <HolidayContributionCard
+        contribution={{
+          ...HOLIDAY_CONTRIBUTION,
+          frozen: true,
+          confirmedAt: "2026-09-08T10:00:00Z",
+          costBearerId: "4",
+          costBearerName: "Fachdienst Jugend",
+        }}
+        registration={{ ...HOLIDAY_REGISTRATION, status: "confirmed" }}
+        onChangePayer={onChangePayer}
+      />,
+    );
+
+    expect(screen.getByText("Wer bezahlt")).toBeInTheDocument();
+    expect(
+      screen.getByText("Kostenträger: Fachdienst Jugend"),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Zahler ändern" }));
+    expect(onChangePayer).toHaveBeenCalledTimes(1);
+  });
+
+  it("offers no change of the payer before the confirmation", () => {
+    render(
+      <HolidayContributionCard
+        contribution={HOLIDAY_CONTRIBUTION}
+        registration={HOLIDAY_REGISTRATION}
+      />,
+    );
+
+    // Anker: Die Vorschau ist da.
+    expect(screen.getByText("Lia Muster")).toBeInTheDocument();
+    expect(screen.queryByText("Wer bezahlt")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Zahler ändern" }),
+    ).not.toBeInTheDocument();
   });
 
   it("links an applied rule to the Abrechnungsvorgaben, but not a plain price (#5685)", () => {

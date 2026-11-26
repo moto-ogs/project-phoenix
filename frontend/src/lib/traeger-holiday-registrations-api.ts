@@ -56,6 +56,7 @@ const EVENT_ACTIONS = [
   "allocate",
   "criteria_check",
   "consent",
+  "payer",
 ] as const satisfies readonly string[];
 
 type HolidayRegistrationEventAction = (typeof EVENT_ACTIONS)[number];
@@ -72,6 +73,25 @@ const PLACEMENTS: readonly HolidayPlacement[] = [
 ];
 const DECIDED_PLACEMENTS = ["placed", "waitlisted"] as const;
 const WISHES = ["yes", "no"] as const;
+const PAYER_KINDS = ["family", "exemption", "cost_bearer"] as const;
+
+/** Who pays a contribution, as the history of a registration names it. */
+export interface HolidayPaidBy {
+  readonly kind: (typeof PAYER_KINDS)[number];
+  /** The name of the cost bearer; "" otherwise. */
+  readonly costBearerName: string;
+}
+
+/** A payer of a kind this build does not know is left out. */
+function paidByFromBackend(payer: {
+  readonly kind: string;
+  readonly cost_bearer_name?: string;
+}): HolidayPaidBy | undefined {
+  const kind = knownEnum(PAYER_KINDS, payer.kind);
+  return kind
+    ? { kind, costBearerName: payer.cost_bearer_name ?? "" }
+    : undefined;
+}
 const WISH_SOURCES = ["account", "office"] as const;
 const CONTACT_KINDS: readonly HolidayRegistrationContact["kind"][] = [
   "emergency",
@@ -320,6 +340,14 @@ export interface HolidayRegistrationEvent {
    * again in the parents portal (#8038); absent for other actions.
    */
   readonly consent?: { readonly key: string; readonly given: boolean };
+  /**
+   * Who paid before and who pays after a change of the payer of a confirmed
+   * registration (#8158); `reason` says why. Absent for other actions.
+   */
+  readonly payer?: {
+    readonly before: HolidayPaidBy;
+    readonly after: HolidayPaidBy;
+  };
 }
 
 /** "yes"/"no" as the office checked it, null for not checked. */
@@ -575,10 +603,13 @@ function historyFromBackend(
         : knownEnum(DECIDED_PLACEMENTS, details.placement);
     const wish =
       details.wish === undefined ? "" : knownEnum(WISHES, details.wish);
+    const paidBefore = details.payer && paidByFromBackend(details.payer.before);
+    const paidAfter = details.payer && paidByFromBackend(details.payer.after);
     if (
       !action ||
       (details.placement !== undefined && !placement) ||
-      wish === undefined
+      wish === undefined ||
+      (details.payer !== undefined && !(paidBefore && paidAfter))
     ) {
       return [];
     }
@@ -603,6 +634,9 @@ function historyFromBackend(
           : {}),
         ...(details.key && details.given !== undefined
           ? { consent: { key: details.key, given: details.given } }
+          : {}),
+        ...(paidBefore && paidAfter
+          ? { payer: { before: paidBefore, after: paidAfter } }
           : {}),
       },
     ];

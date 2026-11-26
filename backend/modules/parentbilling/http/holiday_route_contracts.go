@@ -22,6 +22,8 @@ func HolidayRouteContracts(registration any) []common.RouteContract {
 		{Method: "PUT", Pattern: "/{periodId}/weeks/{weekId}/capacity", Portals: portals, Request: HolidayCapacityRequest{}, Response: capability.HolidayPlaceChange{}},
 		{Method: "PUT", Pattern: key + "/debtor-number", Portals: portals, Request: HolidayDebtorNumberRequest{}, Response: capability.HolidayDebtorNumber{}},
 		{Method: "GET", Pattern: key + "/family-debtor-number", Portals: portals, Response: capability.HolidayFamilyDebtorNumber{}},
+		{Method: "GET", Pattern: key + "/payer", Portals: portals, Query: preview, Response: HolidayPayerPreviewResponse{}},
+		{Method: "PUT", Pattern: key + "/payer", Portals: portals, Request: HolidayPayerRequest{}, Response: HolidayContributionResponse{}},
 		{Method: "PUT", Pattern: key + "/child-debtor-numbers", Portals: portals, Request: HolidayChildDebtorNumbersRequest{}, Response: capability.HolidayFamilyDebtorNumber{}},
 		{Method: "GET", Pattern: "/{periodId}/sibling-groups", Portals: portals, Response: []capability.HolidaySiblingGroup{}},
 		{Method: "POST", Pattern: "/{periodId}/sibling-groups", Portals: portals, Request: HolidaySiblingMergeRequest{}, Response: capability.HolidaySiblingGroup{}},

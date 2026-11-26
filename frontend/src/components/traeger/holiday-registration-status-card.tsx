@@ -23,11 +23,8 @@ import {
 } from "react";
 import { Alert } from "~/components/ui/alert";
 import { Button, ButtonLink } from "~/components/ui/button";
-import { ChoiceTile } from "~/components/ui/choice-tile";
-import { CustomSelect } from "~/components/ui/custom-select";
 import { DataField, DataGrid } from "~/components/ui/data-field";
 import { EditActions } from "~/components/ui/edit-actions";
-import { FieldLabel } from "~/components/ui/field-label";
 import { JumpButton } from "~/components/ui/jump-button";
 import {
   FormErrorAlert,
@@ -36,7 +33,6 @@ import {
 import NavigationLink from "~/components/ui/navigation-link";
 import { ConfirmationModal } from "~/components/ui/modal";
 import { Input } from "~/components/ui/input";
-import { Radio } from "~/components/ui/radio";
 import { SectionCard } from "~/components/ui/section-card";
 import { enrollmentsConcept } from "~/lib/concepts/enrollments";
 import {
@@ -64,6 +60,7 @@ import { useReadDraftForm } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
 import { useActionOn, useDraftOn } from "~/lib/swr/read-draft";
 import { holidayRegistrationChildCardId } from "./holiday-registration-child-card";
+import { HolidayPayerChoice } from "./holiday-payer-choice";
 import { traegerPath } from "~/lib/traeger-url";
 import {
   cancelHolidayRegistration,
@@ -75,6 +72,7 @@ import {
   type HolidayChildDebtorNumber,
   type HolidayContribution,
   type HolidayFamilyDebtorNumbers,
+  type HolidayPayerKind,
 } from "~/lib/traeger-contributions-api";
 import {
   changeHolidayRegistration,
@@ -334,7 +332,7 @@ function DebtorNumberField({
   );
 }
 
-type Payer = "family" | "exemption" | "cost_bearer";
+type Payer = HolidayPayerKind;
 
 const NO_COST_BEARERS: readonly CostBearerChoice[] = [];
 
@@ -342,110 +340,6 @@ const NO_CHILD_NUMBERS: readonly HolidayChildDebtorNumber[] = [];
 
 /** The confirmation was not ready to send (a second click): nothing to show. */
 const CONFIRM_SKIPPED = new Error("holiday confirmation was not ready");
-
-/**
- * Who pays the contribution a confirmation freezes (#5627): the family,
- * nobody (the exemption) or a cost bearer of the Träger. Exemption and cost
- * takeover exclude each other; each option shows only when the Träger has
- * an exemption rule or an active cost bearer.
- */
-function PayerChoice({
-  payer,
-  exemptionAvailable,
-  costBearers,
-  costBearerId,
-  onPayerChange,
-  onCostBearerChange,
-}: Readonly<{
-  payer: Payer;
-  exemptionAvailable: boolean;
-  costBearers: readonly CostBearerChoice[];
-  costBearerId: string | null;
-  onPayerChange: (payer: Payer) => void;
-  onCostBearerChange: (id: string) => void;
-}>) {
-  const options: { value: Payer; label: string; description: string }[] = [
-    {
-      value: "family",
-      label: "Die Familie bezahlt",
-      description: "Die Familie bekommt eine Rechnung über den Betrag.",
-    },
-  ];
-  if (exemptionAvailable) {
-    options.push({
-      value: "exemption",
-      label: "Von der Zahlung befreien (Leistungsbezug)",
-      description: "Dann gilt die Befreiungsregel. Niemand bezahlt den Betrag.",
-    });
-  }
-  if (costBearers.length > 0) {
-    options.push({
-      value: "cost_bearer",
-      label: "Kosten übernimmt ein Kostenträger",
-      description:
-        "Die Familie bezahlt nichts. Du forderst den Betrag beim Kostenträger an.",
-    });
-  }
-  return (
-    <fieldset className="space-y-2">
-      <legend className="mb-2 text-sm font-medium text-gray-700">
-        Wer bezahlt den Beitrag?
-      </legend>
-      <div className="flex flex-col gap-2 sm:max-w-xl">
-        {options.map((option) => {
-          const id = `holiday-registration-payer-${option.value}`;
-          return (
-            <ChoiceTile
-              key={option.value}
-              htmlFor={id}
-              selected={payer === option.value}
-              className="items-start p-3"
-            >
-              <Radio
-                id={id}
-                name="payer"
-                value={option.value}
-                checked={payer === option.value}
-                onChange={() => onPayerChange(option.value)}
-                className="mt-0.5"
-              />
-              <span className="min-w-0 flex-1">
-                <span className="block text-sm font-medium text-gray-900">
-                  {option.label}
-                </span>
-                <span className="mt-0.5 block text-sm font-normal text-gray-600">
-                  {option.description}
-                </span>
-              </span>
-            </ChoiceTile>
-          );
-        })}
-        {payer === "cost_bearer" ? (
-          <div>
-            <FieldLabel
-              id="holiday-registration-cost-bearer-label"
-              htmlFor="holiday-registration-cost-bearer"
-            >
-              Kostenträger
-            </FieldLabel>
-            <CustomSelect
-              id="holiday-registration-cost-bearer"
-              name="cost_bearer_id"
-              ariaLabelledBy="holiday-registration-cost-bearer-label"
-              value={costBearerId ?? ""}
-              options={costBearers.map((bearer) => ({
-                value: bearer.id,
-                label: bearer.name,
-              }))}
-              onChange={onCostBearerChange}
-              wrapLabels
-            />
-          </div>
-        ) : null}
-      </div>
-    </fieldset>
-  );
-}
 
 /** The props of the status, as the page passes them. */
 export interface HolidayRegistrationStatusProps {
@@ -1130,7 +1024,7 @@ function useHolidayRegistrationStatus({
           </p>
         ) : null}
         {choosesPayer ? (
-          <PayerChoice
+          <HolidayPayerChoice
             payer={payer}
             exemptionAvailable={exemptionAvailable}
             costBearers={costBearers}

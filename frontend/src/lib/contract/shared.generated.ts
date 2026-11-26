@@ -4723,6 +4723,28 @@ export const HolidayCriterionCheckSchema: z.ZodType<HolidayCriterionCheck, unkno
   checked: nullable(str),
 });
 
+/** Go: enrollment.HolidayPaidBy */
+export interface HolidayPaidBy {
+  kind: string;
+  cost_bearer_name?: string;
+}
+
+export const HolidayPaidBySchema: z.ZodType<HolidayPaidBy, unknown> = object<HolidayPaidBy>({
+  kind: str,
+  cost_bearer_name: optional(str),
+});
+
+/** Go: enrollment.HolidayPayerChange */
+export interface HolidayPayerChange {
+  before: HolidayPaidBy;
+  after: HolidayPaidBy;
+}
+
+export const HolidayPayerChangeSchema: z.ZodType<HolidayPayerChange, unknown> = object<HolidayPayerChange>({
+  before: HolidayPaidBySchema,
+  after: HolidayPaidBySchema,
+});
+
 /** Go: enrollment.HolidayRegistrationEventDetails */
 export interface HolidayRegistrationEventDetails {
   from?: string;
@@ -4740,6 +4762,7 @@ export interface HolidayRegistrationEventDetails {
   wish?: string;
   key?: string;
   given?: boolean;
+  payer?: HolidayPayerChange;
 }
 
 export const HolidayRegistrationEventDetailsSchema: z.ZodType<HolidayRegistrationEventDetails, unknown> = object<HolidayRegistrationEventDetails>({
@@ -4758,6 +4781,7 @@ export const HolidayRegistrationEventDetailsSchema: z.ZodType<HolidayRegistratio
   wish: optional(str),
   key: optional(str),
   given: optional(bool),
+  payer: optional(HolidayPayerChangeSchema),
 });
 
 /** Go: enrollment.HolidayRegistrationEvent */
