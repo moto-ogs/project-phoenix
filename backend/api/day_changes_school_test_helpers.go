@@ -6,6 +6,7 @@ import (
 	"log/slog"
 
 	dayChangesHTTP "github.com/moto-ogs/project-phoenix/modules/daychangesview/http"
+	"github.com/moto-ogs/project-phoenix/modules/schoolmembership"
 	transactionruntime "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose"
 	"github.com/moto-ogs/project-phoenix/roots/owners"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -23,8 +24,21 @@ func NewSchoolDayChangesTestResource(db transactionruntime.Database, unit tenant
 	if err != nil {
 		return nil, err
 	}
+	membership, err := owners.NewSchoolMembership(db)
+	if err != nil {
+		return nil, err
+	}
+	staff, err := schoolmembership.StaffClassReadsOf(membership)
+	if err != nil {
+		return nil, err
+	}
+	calendarAppointments, err := NewAppointments(db)
+	if err != nil {
+		return nil, err
+	}
 	return NewSchoolDayChanges(SchoolDayChangesSources{
-		Caller: caller.Caller(), ClassArrivals: classArrivals, ClosingDays: owners.NewSchoolClosingDayReads(),
-		Today: func() calendar.Date { return today }, Logger: slog.Default(),
+		Caller: caller.Caller(), Staff: staff, ClassArrivals: classArrivals, ClosingDays: owners.NewSchoolClosingDayReads(),
+		Appointments: dayChangesAppointmentsOf(calendarAppointments),
+		Today:        func() calendar.Date { return today }, Logger: slog.Default(),
 	})
 }

@@ -23,47 +23,52 @@ import (
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	"github.com/moto-ogs/project-phoenix/modules/daychangesview"
 	dayChangesHTTP "github.com/moto-ogs/project-phoenix/modules/daychangesview/http"
+	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar"
+	"github.com/moto-ogs/project-phoenix/modules/schoolmembership"
 	"github.com/moto-ogs/project-phoenix/modules/securityruntime"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
-// schoolDayChangesCaller is Identity & Access's read of the caller's classes
-// and staff record.
+// schoolDayChangesCaller is Identity & Access's read of the caller's person;
+// the request memoizes it.
 type schoolDayChangesCaller interface {
-	MySchoolClasses(ctx context.Context) ([]string, error)
-	// StaffID is the caller's staff record; the request memoizes it.
-	StaffID(ctx context.Context) (int64, error)
+	Person(ctx context.Context) (identityaccess.CallerPerson, error)
 }
 
 // SchoolDayChangesSources are the owner reads of the school portal's
-// overview; all required except Logger.
+// overview; all required except Logger. Staff is School Membership's read of
+// the caller's staff record and classes in one statement (#8155): it saves
+// the statement the appointments of the Lehrkraft need.
 type SchoolDayChangesSources struct {
 	Caller        schoolDayChangesCaller
+	Staff         schoolmembership.StaffClassReads
 	ClassArrivals timetable.ClassArrivalQuery
 	ClosingDays   dayChangesClosingDayReads
+	Appointments  dayChangesAppointmentReads
 	Today         func() calendar.Date
 	Logger        *slog.Logger
 }
 
 // NewSchoolDayChanges binds the sources to the projection's ports.
 func NewSchoolDayChanges(sources SchoolDayChangesSources) (*dayChangesHTTP.SchoolResource, error) {
-	if sources.Caller == nil || sources.ClassArrivals == nil || sources.ClosingDays == nil {
+	if sources.Caller == nil || sources.Staff == nil || sources.ClassArrivals == nil || sources.ClosingDays == nil || sources.Appointments == nil {
 		return nil, fmt.Errorf("%w: school sources", daychangesview.ErrDependencies)
 	}
 	schoolDay, err := timetable.SchoolDayChangesOf(sources.ClassArrivals)
 	if err != nil {
 		return nil, err
 	}
-	day := schoolDayChangesRead{caller: sources.Caller, query: schoolDay}
+	day := schoolDayChangesRead{caller: schoolDayCallerRead{person: sources.Caller, staff: sources.Staff}, query: schoolDay}
 	view, err := daychangesview.NewSchool(daychangesview.SchoolDependencies{
 		Today:        sources.Today,
 		Isolation:    schoolDayChangesSavepoints{},
 		Closing:      schoolDayChangesClosingDays{reads: sources.ClosingDays},
-		Classes:      schoolDayChangesClasses{caller: sources.Caller, day: day},
+		Classes:      schoolDayChangesClasses{day: day},
 		Supervisions: schoolDayChangesSupervisions{day: day},
+		Appointments: schoolDayChangesAppointments{caller: day.caller, reads: sources.Appointments},
 		Logger:       sources.Logger,
 	})
 	if err != nil {
@@ -76,12 +81,11 @@ func NewSchoolDayChanges(sources SchoolDayChangesSources) (*dayChangesHTTP.Schoo
 // classes. A caller reaching every class (Schulverwaltung) sees every class
 // under "Schule"; a Lehrkraft only her own, under "Betrifft dich".
 type schoolDayChangesClasses struct {
-	caller schoolDayChangesCaller
-	day    schoolDayChangesRead
+	day schoolDayChangesRead
 }
 
 func (s schoolDayChangesClasses) ClassChanges(ctx context.Context, day calendar.Date) ([]daychangesview.SourceEntry, error) {
-	changes, _, err := s.day.read(ctx, day)
+	changes, caller, err := s.day.read(ctx, day)
 	if err != nil {
 		return nil, err
 	}
@@ -91,18 +95,14 @@ func (s schoolDayChangesClasses) ClassChanges(ctx context.Context, day calendar.
 	}
 	everyClass := securityruntime.HasPermission(permissions.ClassDayAllClasses, sessiontoken.PermissionsFromCtx(ctx))
 	mine := map[string]bool{}
-	if !everyClass {
-		classes, err := s.caller.MySchoolClasses(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("resolve caller classes: %w", err)
-		}
-		for _, class := range classes {
-			mine[classKey(class)] = true
-		}
+	for _, class := range caller.classes {
+		mine[classKey(class)] = true
 	}
 	entries := []daychangesview.SourceEntry{}
 	for _, row := range rows {
-		own := mine[classKey(row.SchoolClass)]
+		// A caller reaching every class sees them under "Schule", her own
+		// assignments too (#7670).
+		own := !everyClass && mine[classKey(row.SchoolClass)]
 		if !own && !everyClass {
 			continue
 		}

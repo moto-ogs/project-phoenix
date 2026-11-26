@@ -21,6 +21,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/daychangesview"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/modules/schoolmembership"
 	"github.com/moto-ogs/project-phoenix/modules/securityruntime"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -43,45 +44,91 @@ func (schoolDayChangesSavepoints) IsFatal(err error) bool {
 
 type schoolDayMemoKey struct{}
 
-// schoolDayMemo holds Timetable's read of one day for the sources of one
-// savepoint. A failed read is not kept: the next savepoint reads again.
+// schoolDayMemo holds the caller and Timetable's read of one day for the
+// sources of one savepoint. A failed read is not kept: the next savepoint
+// reads again.
 type schoolDayMemo struct {
-	day     calendar.Date
+	caller     schoolDayCaller
+	callerRead bool
+	day        calendar.Date
+	changes    timetable.SchoolDayChanges
+	dayRead    bool
+}
+
+// schoolDayCaller is the caller's staff record (0 without one, which reads
+// no blocks and no appointments) and the classes assigned to it.
+type schoolDayCaller struct {
 	staffID int64
-	changes timetable.SchoolDayChanges
-	read    bool
+	classes []string
+}
+
+// schoolDayCallerRead resolves the caller: the person from Identity &
+// Access, then the staff record and its classes in one School Membership
+// statement (#8155).
+type schoolDayCallerRead struct {
+	person schoolDayChangesCaller
+	staff  schoolmembership.StaffClassReads
+}
+
+func (r schoolDayCallerRead) resolve(ctx context.Context) (schoolDayCaller, error) {
+	memo, _ := ctx.Value(schoolDayMemoKey{}).(*schoolDayMemo)
+	if memo != nil && memo.callerRead {
+		return memo.caller, nil
+	}
+	caller, err := r.read(ctx)
+	if err != nil {
+		return schoolDayCaller{}, err
+	}
+	if memo != nil {
+		memo.caller, memo.callerRead = caller, true
+	}
+	return caller, nil
+}
+
+func (r schoolDayCallerRead) read(ctx context.Context) (schoolDayCaller, error) {
+	person, err := r.person.Person(ctx)
+	switch {
+	case errors.Is(err, identityaccess.ErrCallerNotLinkedToPerson):
+		return schoolDayCaller{}, nil
+	case err != nil:
+		return schoolDayCaller{}, fmt.Errorf("resolve caller person: %w", err)
+	}
+	staffID, classes, found, err := r.staff.FindStaffClassesByPerson(ctx, person.ID)
+	if err != nil {
+		return schoolDayCaller{}, fmt.Errorf("resolve caller staff: %w", err)
+	}
+	if !found {
+		return schoolDayCaller{}, nil
+	}
+	return schoolDayCaller{staffID: staffID, classes: classes}, nil
 }
 
 // schoolDayChangesRead is Timetable's read of the day for the caller's
 // staff record.
 type schoolDayChangesRead struct {
-	caller schoolDayChangesCaller
+	caller schoolDayCallerRead
 	query  timetable.SchoolDayChangeQuery
 }
 
 // read returns the day's class changes and the changed blocks the caller is
-// on, with the caller's staff ID (0 without a staff record, which reads no
-// blocks).
-func (r schoolDayChangesRead) read(ctx context.Context, day calendar.Date) (timetable.SchoolDayChanges, int64, error) {
-	memo, _ := ctx.Value(schoolDayMemoKey{}).(*schoolDayMemo)
-	if memo != nil && memo.read && memo.day == day {
-		return memo.changes, memo.staffID, nil
-	}
-	staffID, err := r.caller.StaffID(ctx)
-	switch {
-	case errors.Is(err, identityaccess.ErrCallerNotLinkedToStaff), errors.Is(err, identityaccess.ErrCallerNotLinkedToPerson):
-		staffID = 0
-	case err != nil:
-		return timetable.SchoolDayChanges{}, 0, fmt.Errorf("resolve caller staff: %w", err)
-	}
-	changes, err := r.query.SchoolDayChanges(ctx, day, staffID)
+// on, with the caller.
+func (r schoolDayChangesRead) read(ctx context.Context, day calendar.Date) (timetable.SchoolDayChanges, schoolDayCaller, error) {
+	caller, err := r.caller.resolve(ctx)
 	if err != nil {
-		return timetable.SchoolDayChanges{}, 0, fmt.Errorf("list school day changes: %w", err)
+		return timetable.SchoolDayChanges{}, schoolDayCaller{}, err
+	}
+	memo, _ := ctx.Value(schoolDayMemoKey{}).(*schoolDayMemo)
+	if memo != nil && memo.dayRead && memo.day == day {
+		return memo.changes, caller, nil
+	}
+	changes, err := r.query.SchoolDayChanges(ctx, day, caller.staffID)
+	if err != nil {
+		return timetable.SchoolDayChanges{}, schoolDayCaller{}, fmt.Errorf("list school day changes: %w", err)
 	}
 	if memo != nil {
-		*memo = schoolDayMemo{day: day, staffID: staffID, changes: changes, read: true}
+		memo.day, memo.changes, memo.dayRead = day, changes, true
 	}
-	return changes, staffID, nil
+	return changes, caller, nil
 }
 
 // schoolDayChangesSupervisions is the Aufsichten source.
@@ -92,10 +139,11 @@ func (s schoolDayChangesSupervisions) SupervisionChanges(ctx context.Context, da
 		// The account has no Aufsichten of its own: no entries, not a failure.
 		return nil, nil
 	}
-	changes, staffID, err := s.day.read(ctx, day)
+	changes, caller, err := s.day.read(ctx, day)
 	if err != nil {
 		return nil, err
 	}
+	staffID := caller.staffID
 	if staffID == 0 {
 		return nil, nil
 	}

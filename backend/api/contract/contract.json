@@ -46658,6 +46658,17 @@
           "schema": {
             "kind": "int"
           }
+        },
+        {
+          "name": "trips",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ClassTripSummary"
+            }
+          }
         }
       ]
     },
@@ -46750,6 +46761,25 @@
         },
         {
           "name": "date_count",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ClassTripSummary",
+      "go_type": "classday.ClassTripSummary",
+      "fields": [
+        {
+          "name": "return_time",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "children",
           "schema": {
             "kind": "int"
           }
