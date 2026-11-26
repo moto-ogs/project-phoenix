@@ -66,7 +66,9 @@ type Closures interface {
 	CloseRoom(context.Context, CloseRoom) (RoomClosure, error)
 	ReopenRoom(ctx context.Context, roomID, closureID int64) error
 	ListRoomClosures(context.Context, RoomClosureFilter) ([]RoomClosure, error)
-	// RoomClosedOn reports whether a closure closes the room on the day.
+	// RoomClosedOn locks the room and reports whether a closure closes it on
+	// the day. A caller that writes in the ambient tenant transaction keeps
+	// the lock until its write commits or rolls back.
 	RoomClosedOn(ctx context.Context, roomID int64, day calendar.Date) (bool, error)
 	// RoomClosureRanges locks the rooms and lists their closures overlapping
 	// the window. Timetable uses this one batched read while materializing.

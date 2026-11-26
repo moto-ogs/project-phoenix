@@ -103,12 +103,12 @@ func (c *Closures) ListRoomClosures(ctx context.Context, filter facilities.RoomC
 	return result, err
 }
 
-// RoomClosedOn reports whether the school closed the room on the day: the
-// kiosk's session start refuses such a room (#7653). Session starts do not
-// create a planned appointment, so they need the current verdict but not the
-// exclusive room lock that timetable writes take below.
+// RoomClosedOn reports whether the school closed the room on the day. Its
+// locking read serializes every room-using write, including a kiosk session
+// start, with a concurrent CloseRoom. The caller's ambient transaction keeps
+// the lock until it either commits the write or rolls it back.
 func (c *Closures) RoomClosedOn(ctx context.Context, roomID int64, day calendar.Date) (closed bool, err error) {
-	closures, err := c.ListRoomClosures(ctx, facilities.RoomClosureFilter{RoomID: &roomID, From: day, Until: day})
+	closures, err := c.RoomClosureRanges(ctx, []int64{roomID}, day, day)
 	return len(closures) > 0, err
 }
 

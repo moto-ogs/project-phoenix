@@ -96,8 +96,50 @@ func (s *Store) ListClosuresWithRoomLocks(ctx context.Context, filter facilities
 	if len(filter.RoomIDs) == 0 {
 		return []facilities.RoomClosure{}, domain.OperationStats{}, nil
 	}
-	lock := `"closure".room_id IN (SELECT "room".id FROM facilities.rooms AS "room" WHERE "room".tenant_id = ? AND "room".id IN (?) FOR UPDATE)`
-	return s.listClosures(ctx, db, tenantID, filter, lock, tenantID, bun.In(filter.RoomIDs))
+	// The locked rooms must be the left side of the join. A closure-first
+	// query skips its locking subquery when a room has no closure yet, leaving
+	// a concurrent CloseRoom able to pass an appointment or session start.
+	// This shape visits and locks every requested room before it examines its
+	// optional closure rows.
+	type lockedClosureRow struct {
+		ID        *int64         `bun:"id"`
+		RoomID    *int64         `bun:"room_id"`
+		StartDate *calendar.Date `bun:"start_date"`
+		EndDate   *calendar.Date `bun:"end_date"`
+		Reason    *string        `bun:"reason"`
+		CreatedAt *time.Time     `bun:"created_at"`
+	}
+	rows := []lockedClosureRow{}
+	stats := domain.OperationStats{Queries: 1}
+	if err := db.NewRaw(`
+		SELECT "closure".id, "closure".room_id, "closure".start_date, "closure".end_date, "closure".reason, "closure".created_at
+		FROM (
+			SELECT "room".id
+			FROM facilities.rooms AS "room"
+			WHERE "room".tenant_id = ? AND "room".id IN (?)
+			FOR UPDATE
+		) AS "locked_room"
+		LEFT JOIN facilities.room_closures AS "closure"
+			ON "closure".tenant_id = ?
+			AND "closure".room_id = "locked_room".id
+			AND "closure".end_date >= ?
+			AND "closure".start_date <= ?
+		ORDER BY "locked_room".id ASC, "closure".start_date ASC NULLS LAST, "closure".id ASC NULLS LAST`,
+		tenantID, bun.List(filter.RoomIDs), tenantID, filter.From, filter.Until).Scan(ctx, &rows); err != nil {
+		return nil, stats, fmt.Errorf("facilities postgres: list locked room closures: %w", err)
+	}
+	result := make([]facilities.RoomClosure, 0, len(rows))
+	for _, row := range rows {
+		if row.ID == nil {
+			continue
+		}
+		result = append(result, facilities.RoomClosure{
+			ID: *row.ID, RoomID: *row.RoomID, StartDate: *row.StartDate, EndDate: *row.EndDate,
+			Reason: *row.Reason, CreatedAt: *row.CreatedAt,
+		})
+	}
+	stats.Rows = int64(len(result))
+	return result, stats, nil
 }
 
 func (s *Store) listClosures(ctx context.Context, db bun.IDB, tenantID int64, filter facilities.RoomClosureFilter, extra string, args ...any) ([]facilities.RoomClosure, domain.OperationStats, error) {
@@ -113,7 +155,7 @@ func (s *Store) listClosures(ctx context.Context, db bun.IDB, tenantID int64, fi
 		query = query.Where(`"closure".room_id = ?`, *filter.RoomID)
 	}
 	if len(filter.RoomIDs) > 0 {
-		query = query.Where(`"closure".room_id IN (?)`, bun.In(filter.RoomIDs))
+		query = query.Where(`"closure".room_id IN (?)`, bun.List(filter.RoomIDs))
 	}
 	if extra != "" {
 		query = query.Where(extra, args...)
