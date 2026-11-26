@@ -254,8 +254,17 @@ function PlannedShiftsInfo({
   return (
     <div className={className}>
       {active.map((shift) => (
-        <div key={shift.id} className="flex flex-wrap items-center gap-1.5">
-          <span className="text-gray-500">Geplant:</span>
+        <div
+          key={shift.id}
+          // App: 4 px Abstand, damit „Geplant“, Schichtart und Zeit am SE
+          // in eine Zeile passen (Runde 15).
+          className={
+            app
+              ? "flex flex-wrap items-center gap-1"
+              : "flex flex-wrap items-center gap-1.5"
+          }
+        >
+          <span className="text-gray-500">{app ? "Geplant" : "Geplant:"}</span>
           {shift.shiftTypeName && (
             // Schichtart pill: the color is tenant-defined data the backend
             // embeds (#1844), not a brand hue; without one the pill falls
@@ -270,11 +279,10 @@ function PlannedShiftsInfo({
               {shift.originShiftId && (
                 <StatusBadge label="Vertretung" tone="blue" compact />
               )}
+              {/* Runde 15: Die Pause steht in der Zeile von heute in der
+                  Woche darunter; so bleibt der Dienst am SE eine Zeile. */}
               <span className="whitespace-nowrap tabular-nums">
                 {shift.startTime}–{shift.endTime}
-                {shift.breakMinutes > 0
-                  ? ` · Pause ${shift.breakMinutes} min`
-                  : ""}
               </span>
             </>
           ) : (
@@ -4285,38 +4293,33 @@ function TimeTrackingContent() {
     );
   }
 
-  // App (#8070): Woche/Monat und Dienstplan stehen oben in der Karte der
-  // Tage, nicht in der Kopfkarte: Der Kopf bleibt am SE unter 20 % der
-  // Höhe (Runde 11), und die Wahl steht bei dem, was sie umschaltet.
-  const appViewToolbar = (
-    <div
-      // 16 px Einzug wie die Zeilen darunter (Runde 13).
-      className="flex items-center gap-2 px-4 pt-2 pb-1"
-      data-app-tt-toolbar=""
-    >
-      <SegmentedControl
-        ariaLabel="Zeitraum-Ansicht"
-        items={APP_VIEW_MODE_ITEMS}
-        value={viewMode}
-        onChange={setViewMode}
-        className="flex-1"
-        fullWidth
-      />
-      {ownStaffId && dienstplanBooked ? (
-        // Ohne Rahmen und Schatten (Runde 13): ein Kasten neben dem
-        // Umschalter las sich wie eine Karte in der Karte.
-        <ButtonLink
-          href={tenantPath("/mein-dienstplan")}
-          variant="ghost"
-          size="md"
-          tooltip="Öffnet deine geplanten Schichten der Woche."
-        >
-          <CalendarRange className="mr-1.5 h-4 w-4 shrink-0" aria-hidden />
-          <span className="whitespace-nowrap">Dienstplan</span>
-        </ButtonLink>
-      ) : null}
-    </div>
+  // App (#8070): Woche/Monat steht oben in der Karte der Tage, nicht in der
+  // Kopfkarte: Der Kopf bleibt am SE unter 20 % der Höhe (Runde 11), und
+  // die Wahl steht bei dem, was sie umschaltet. Runde 15: in derselben
+  // Zeile wie die Pfeile; „Mein Dienstplan“ steht wie am Desktop bei den
+  // Kopfaktionen (im „…“-Menü), damit am SE die Woche ins erste Bild passt.
+  const appViewToggle = (
+    <SegmentedControl
+      ariaLabel="Zeitraum-Ansicht"
+      items={APP_VIEW_MODE_ITEMS}
+      value={viewMode}
+      onChange={setViewMode}
+    />
   );
+  const appRangeLabel =
+    viewMode === "month"
+      ? monthAnchor.toLocaleDateString("de-DE", {
+          timeZone: "Europe/Berlin",
+          month: "short",
+          year: "numeric",
+        })
+      : (rangeLabel.split(" · ")[0] ?? rangeLabel);
+  // Seit wann der Saldo im Kopf zählt; die Liste nennt den Saldo der Woche.
+  const accountSinceLabel =
+    ownMetrics.accountStart.getMonth() === 0 &&
+    ownMetrics.accountStart.getDate() === 1
+      ? `Saldo ${ownMetrics.accountStart.getFullYear()}`
+      : `Saldo seit ${ownMetrics.accountStart.getDate()}.${ownMetrics.accountStart.getMonth() + 1}.`;
 
   return (
     <TenantPage
@@ -4341,12 +4344,11 @@ function TimeTrackingContent() {
                 label: "Woche",
               },
               {
-                // „Saldo“ wie am Desktop und auf jedem Telefon gleich (Runde
-                // 13); „Saldo gesamt“ passte am SE nicht neben die Woche.
-                // Den Wochensaldo nennt die Liste „Saldo diese Woche bis
-                // gestern“.
+                // Runde 15: mit Zeitraum („Saldo 2026“), wie „Saldo seit
+                // 1. Januar 2026“ im Stundenkonto; der Saldo an der Woche
+                // in der Liste zählt nur diese Woche bis gestern.
                 value: formatSignedDuration(ownMetrics.accountBalanceMinutes!),
-                label: "Saldo",
+                label: accountSinceLabel,
               },
             ]}
           />
@@ -4430,6 +4432,17 @@ function TimeTrackingContent() {
                   "Öffnet die Auswahl von Zeitraum und Format für den Zeitnachweis.",
                 onClick: () => setExportOpen(true),
               },
+              ...(dienstplanBooked
+                ? [
+                    {
+                      label: "Mein Dienstplan",
+                      description:
+                        "Öffnet deine geplanten Schichten der Woche.",
+                      href: tenantPath("/mein-dienstplan"),
+                      onClick: () => undefined,
+                    },
+                  ]
+                : []),
             ]
           : undefined
       }
@@ -4673,9 +4686,9 @@ function TimeTrackingContent() {
               monthAnchor={monthAnchor}
               rangeBar={
                 <>
-                  {appViewToolbar}
                   <AppRangeBar
-                    label={rangeLabel.replace(/\.(\d{4})$/, ".")}
+                    leading={appViewToggle}
+                    label={appRangeLabel}
                     onPrevious={goToPreviousRange}
                     onNext={goToNextRange}
                     previousLabel={
