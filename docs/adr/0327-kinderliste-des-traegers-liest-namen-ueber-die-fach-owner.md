@@ -71,7 +71,9 @@ Structure. Ein Träger hat 2 bis über 100 Schulen mit je 50 bis 400 Kindern.
    Seite setzt hinter diesen drei Werten der letzten Zeile an. Ein Kind,
    das davor hinzukommt oder wegfällt, verschiebt die Grenze nicht. Ein
    Seitenzeiger gilt nur für seinen Berliner Kalendertag. Beim Tageswechsel
-   beginnt die Liste mit einem neuen protokollierten Abruf. Die Suche
+   beginnt die Liste mit einem neuen protokollierten Abruf. Auch ein
+   Download braucht den Tag der angezeigten Liste und verweigert nach dem
+   Tageswechsel, bis die Liste neu gelesen wurde. Die Suche
    trifft einen Teil von „Vorname Nachname“, „Nachname Vorname“ oder
    „Nachname, Vorname“, wie die Liste den Namen zeigt, ohne Groß- und
    Kleinschreibung und Akzente. Der Suchtext steht nicht im

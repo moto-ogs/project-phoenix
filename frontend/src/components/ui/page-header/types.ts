@@ -25,6 +25,8 @@ export interface PageHeaderSearch {
   readonly debounceMs?: number;
   /** Whether the field shows a draft not yet reported to the page. */
   readonly onDraftPendingChange?: (pending: boolean) => void;
+  /** Returns a field error for a draft that must not be applied. */
+  readonly validateDraft?: (draft: string) => string | undefined;
   /** See `SearchBarProps.resetKey` — cancels a draft when a filter reset keeps the same value. */
   readonly resetKey?: string | number;
 }

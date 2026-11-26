@@ -753,6 +753,7 @@ async function readThrough<T>(
   current: OpeningSource<T>,
   flight: number,
 ): Promise<OpeningFlight<T>> {
+  const generation = dataGenerationOf(current.fullKey);
   for (let tries = 0; ; tries += 1) {
     try {
       const data = await current.mutate(
@@ -761,12 +762,20 @@ async function readThrough<T>(
       );
       // Undefined: a scope or data bump dropped the run; the bump
       // started a new opening.
+      if (dataGenerationOf(current.fullKey) !== generation) {
+        return { ok: true, flight, data: undefined };
+      }
       if (data !== undefined) {
         liftRefusal(current.fullKey);
         current.onSuccess?.(data);
       }
       return { ok: true, flight, data };
     } catch (error) {
+      // A data bump ended this opening, not just its request. Only the new
+      // opening may read through it, including after an external refusal.
+      if (dataGenerationOf(current.fullKey) !== generation) {
+        return { ok: true, flight, data: undefined };
+      }
       if (isDiscardedAnswer(error) && tries < 2) continue;
       if (!isDiscardedAnswer(error)) {
         if (isAccessRefusal(error) && current.shown !== undefined) {
@@ -835,20 +844,21 @@ export function useOpeningRead<T>(
     false,
   );
 
+  const [held, setHeld] = useState<{
+    serial: number;
+    flight: number;
+    data: T;
+  }>();
   // A new serial per opening: A → B → A must not find A's first answer.
   const [track, setTrack] = useState({ opening, serial: 0 });
   let serial = track.serial;
   if (track.opening !== opening) {
     serial = track.serial + 1;
     setTrack({ opening, serial });
+    setHeld(undefined);
   }
   const [attempt, setAttempt] = useState({ serial, count: 0 });
   const count = attempt.serial === serial ? attempt.count : 0;
-  const [held, setHeld] = useState<{
-    serial: number;
-    flight: number;
-    data: T;
-  }>();
   const [failed, setFailed] = useState<{
     serial: number;
     flight: number;

@@ -35,6 +35,7 @@ export interface TraegerSchoolChildCount {
 }
 
 export interface TraegerChildrenPage {
+  readonly rosterDate: string | null;
   /** Every school of the Träger by name, whatever the filter. */
   readonly schools: readonly TraegerSchoolChildCount[];
   /** The children of the chosen school, or of all schools. */
@@ -71,6 +72,7 @@ export async function fetchTraegerChildren(
   cursor?: string,
 ): Promise<TraegerChildrenPage> {
   const body = await bffJson("org", "GET /traeger/schools/children", {
+    errorMessage: "Could not read the Träger children list",
     query: {
       school_id: filter.schoolId || undefined,
       search: filter.search || undefined,
@@ -78,6 +80,7 @@ export async function fetchTraegerChildren(
     },
   });
   return {
+    rosterDate: body.roster_date,
     schools: (body.schools ?? []).map((school) => ({
       id: school.id,
       name: school.name,
@@ -94,10 +97,13 @@ export async function fetchTraegerChildren(
 export function downloadTraegerChildren(
   format: TraegerListFormat,
   filter: TraegerChildrenFilter,
+  rosterDate: string,
 ): Promise<TraegerListFile> {
   return downloadTraegerList(
     bffFile("org", "GET /traeger/schools/children/export", {
+      errorMessage: "Could not download the Träger children list",
       query: listExportQuery(format, {
+        roster_date: rosterDate,
         school_id: filter.schoolId,
         search: filter.search,
       }),

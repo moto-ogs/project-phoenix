@@ -38,7 +38,7 @@ func SchoolRouteContracts() []common.RouteContract {
 			Query: append([]common.QueryParam{common.ListFormatQuery, {Name: "metrics", Kind: common.QueryString}}, comparison...), File: true},
 		{Method: "GET", Pattern: "/children", Portals: traegerPortal,
 			Query: append([]common.QueryParam{{Name: "cursor", Kind: common.QueryString}}, children...), Response: traegerview.TraegerChildren{}},
-		{Method: "GET", Pattern: "/children/export", Portals: traegerPortal, Query: append([]common.QueryParam{common.ListFormatQuery}, children...), File: true},
+		{Method: "GET", Pattern: "/children/export", Portals: traegerPortal, Query: append([]common.QueryParam{common.ListFormatQuery, {Name: "roster_date", Kind: common.QueryDate}}, children...), File: true},
 		{Method: "GET", Pattern: "/{id}", Portals: traegerPortal, Response: traegerview.SchoolView{}},
 	}
 }

@@ -75,6 +75,8 @@ interface TraegerListDownloadOptions {
    * once the session or the right is gone.
    */
   readonly onError?: (error: unknown) => void;
+  /** Reads the new list when the file's precondition has changed. */
+  readonly reloadOnChanged?: () => Promise<unknown>;
 }
 
 /**
@@ -86,6 +88,7 @@ function useTraegerListDownload({
   fallbackName,
   errorObject,
   onError,
+  reloadOnChanged,
 }: TraegerListDownloadOptions) {
   const { show: showActionError } = useApiErrorDisplay();
   const [busy, setBusy] = useState<TraegerListFormat | null>(null);
@@ -102,7 +105,10 @@ function useTraegerListDownload({
         format,
         error: err instanceof Error ? err.message : String(err),
       });
-      await showActionError(err, { object: errorObject });
+      await showActionError(err, {
+        object: errorObject,
+        reload: reloadOnChanged,
+      });
     } finally {
       setBusy(null);
     }

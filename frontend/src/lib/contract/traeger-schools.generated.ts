@@ -222,6 +222,7 @@ export const TraegerChildSchema: z.ZodType<TraegerChild, unknown> = object<Traeg
 
 /** Go: traegerview.TraegerChildren */
 export interface TraegerChildren {
+  roster_date: string | null;
   schools: SchoolChildCount[] | null;
   total: number;
   matched: number;
@@ -230,6 +231,7 @@ export interface TraegerChildren {
 }
 
 export const TraegerChildrenSchema: z.ZodType<TraegerChildren, unknown> = object<TraegerChildren>({
+  roster_date: nullable(calendarDate),
   schools: nullable(arr(SchoolChildCountSchema)),
   total: safeInt,
   matched: safeInt,
@@ -713,6 +715,7 @@ export const routes = {
     portals: ["org"],
     query: {
       "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+      "roster_date": { kind: "date" },
       "school_id": { kind: "id" },
       "search": { kind: "string" },
     },

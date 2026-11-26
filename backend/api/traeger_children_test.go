@@ -139,11 +139,12 @@ func TestTraegerChildrenNeedTheirRightAndAreLogged(t *testing.T) {
 	}
 	assert.Empty(t, logged(shown, readOnlyID, traegerview.ResourceTypeTraegerChildren), "a refused read reads nothing")
 
-	require.Len(t, traegerChildren(t, router, admin, "").Children, 2)
+	page := traegerChildren(t, router, admin, "")
+	require.Len(t, page.Children, 2)
 	assert.Equal(t, []int{2}, logged(shown, adminID, traegerview.ResourceTypeTraegerChildren), "the read stands in the school's access log with its rows")
 	assert.Empty(t, logged(empty, adminID, traegerview.ResourceTypeTraegerChildren), "a school without a row on the page gets no entry")
 
-	export := traegerOccupancyRequest(t, router, "/traeger/schools/children/export?search=sommer", admin, nil)
+	export := traegerOccupancyRequest(t, router, "/traeger/schools/children/export?search=sommer&roster_date="+page.RosterDate.String(), admin, nil)
 	require.Equal(t, http.StatusOK, export.Code, export.Body.String())
 	assert.Contains(t, export.Header().Get("Content-Disposition"), "kinder")
 	body := export.Body.String()
@@ -153,7 +154,7 @@ func TestTraegerChildrenNeedTheirRightAndAreLogged(t *testing.T) {
 	assert.Equal(t, []int{1}, logged(shown, adminID, traegerview.ResourceTypeTraegerChildrenExport), "the export stands in the school's access log")
 
 	for _, path := range []string{"/traeger/schools/children", "/traeger/schools/children/export"} {
-		rec := traegerOccupancyRequest(t, router, path+"?search=som%00mer", admin, nil)
+		rec := traegerOccupancyRequest(t, router, path+"?search=som%00mer&roster_date="+page.RosterDate.String(), admin, nil)
 		assert.Equal(t, http.StatusBadRequest, rec.Code, "%s must reject NUL in the search: %s", path, rec.Body.String())
 	}
 }
@@ -208,9 +209,18 @@ func TestTraegerChildrenAuditUsesTheRosterDayAcrossMidnight(t *testing.T) {
 	token, account := traegerChildrenSignIn(t, db, router, organization, identityaccess.TraegerRoleAdministration)
 
 	now = midnight.Add(-time.Second)
-	assert.Equal(t, []string{"Zander, Mia"}, childNames(traegerChildren(t, router, token, "").Children))
+	page := traegerChildren(t, router, token, "")
+	assert.Equal(t, day, page.RosterDate)
+	assert.Equal(t, []string{"Zander, Mia"}, childNames(page.Children))
+	path := "/traeger/schools/children/export?roster_date=" + page.RosterDate.String()
+	stale := traegerOccupancyRequest(t, router, path, token, nil)
+	assert.Equal(t, http.StatusConflict, stale.Code, stale.Body.String())
+	assert.Contains(t, stale.Body.String(), "general.changed_since_read")
+	assert.Empty(t, stale.Header().Get("Content-Disposition"), "no file for a different roster day")
+	missing := traegerOccupancyRequest(t, router, "/traeger/schools/children/export", token, nil)
+	assert.Equal(t, http.StatusBadRequest, missing.Code, "the roster date is required")
 	now = midnight.Add(-time.Second)
-	export := traegerOccupancyRequest(t, router, "/traeger/schools/children/export", token, nil)
+	export := traegerOccupancyRequest(t, router, path, token, nil)
 	require.Equal(t, http.StatusOK, export.Code, export.Body.String())
 	assert.Contains(t, export.Body.String(), "Zander")
 

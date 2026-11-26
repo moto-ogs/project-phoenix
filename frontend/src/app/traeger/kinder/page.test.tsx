@@ -8,6 +8,7 @@ import {
 import { Activity, useSyncExternalStore, type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "~/lib/api-error";
+import { berlinTodayISO } from "~/lib/date-helpers";
 import { bumpScopeGeneration } from "~/lib/swr/generation";
 import type {
   TraegerChild,
@@ -115,6 +116,7 @@ const pageOf = (
   children: readonly TraegerChild[],
   rest: Partial<TraegerChildrenPage> = {},
 ): TraegerChildrenPage => ({
+  rosterDate: berlinTodayISO(),
   schools: SCHOOLS,
   total: children.length,
   matched: children.length,
@@ -243,10 +245,11 @@ describe("TraegerChildrenPage", () => {
     );
     await screen.findAllByText("Berg, Anna");
     fireEvent.click(downloadOption());
-    expect(api.downloadTraegerChildren).toHaveBeenCalledWith("csv", {
-      schoolId: LINDE.id,
-      search: "",
-    });
+    expect(api.downloadTraegerChildren).toHaveBeenCalledWith(
+      "csv",
+      { schoolId: LINDE.id, search: "" },
+      berlinTodayISO(),
+    );
   });
 
   it("switches to all schools when navigation removes the school parameter", async () => {
@@ -276,10 +279,11 @@ describe("TraegerChildrenPage", () => {
       search: "",
     });
     fireEvent.click(downloadOption());
-    expect(api.downloadTraegerChildren).toHaveBeenCalledWith("csv", {
-      schoolId: LINDE.id,
-      search: "",
-    });
+    expect(api.downloadTraegerChildren).toHaveBeenCalledWith(
+      "csv",
+      { schoolId: LINDE.id, search: "" },
+      berlinTodayISO(),
+    );
   });
 
   it("offers an explicit switch to all schools after a removed-school bookmark is refused", async () => {
@@ -317,6 +321,50 @@ describe("TraegerChildrenPage", () => {
     });
   });
 
+  it("offers a reset for a malformed bookmark without reading any school", async () => {
+    navigation.query = "schule=0";
+    api.fetchTraegerSchools.mockResolvedValue([BACH]);
+    renderPage();
+
+    expect(downloadOption()).toBeDisabled();
+    expect(api.fetchTraegerChildren).not.toHaveBeenCalled();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Alle Schulen anzeigen" }),
+    );
+    await screen.findAllByText("Zander, Mia");
+    expect(api.fetchTraegerChildren).toHaveBeenCalledExactlyOnceWith({
+      schoolId: "",
+      search: "",
+    });
+  });
+
+  it("keeps an overlong search at the field and accepts a trimmed 100-code-point search", async () => {
+    renderPage();
+    await screen.findAllByText("Zander, Mia");
+    const [field] = screen.getAllByPlaceholderText("Kind suchen");
+    const allowed = "𐐷".repeat(100);
+    vi.useFakeTimers();
+    try {
+      fireEvent.change(field!, { target: { value: allowed + "x" } });
+      expect(field).toHaveAccessibleDescription(
+        "Kürze deine Suche auf höchstens 100 Zeichen.",
+      );
+      await act(async () => vi.advanceTimersByTimeAsync(250));
+      expect(api.fetchTraegerChildren).toHaveBeenCalledTimes(1);
+      expect(downloadOption()).toBeDisabled();
+
+      fireEvent.change(field!, { target: { value: " " + allowed + " " } });
+      expect(field).not.toHaveAttribute("aria-invalid", "true");
+      await act(async () => vi.advanceTimersByTimeAsync(250));
+      expect(api.fetchTraegerChildren).toHaveBeenLastCalledWith({
+        schoolId: "",
+        search: allowed,
+      });
+    } finally {
+      releaseFakeTimers();
+    }
+  });
+
   it("only enables downloads after the visible search finishes loading", async () => {
     renderPage();
     await screen.findAllByText("Zander, Mia");
@@ -348,10 +396,11 @@ describe("TraegerChildrenPage", () => {
     const csv = screen.getByRole("menuitem", { name: /CSV/ });
     expect(csv).toBeEnabled();
     fireEvent.click(csv);
-    expect(api.downloadTraegerChildren).toHaveBeenCalledWith("csv", {
-      schoolId: "",
-      search: "Berg",
-    });
+    expect(api.downloadTraegerChildren).toHaveBeenCalledWith(
+      "csv",
+      { schoolId: "", search: "Berg" },
+      berlinTodayISO(),
+    );
   });
 
   it("waits for a fresh audited read when React restores the page", async () => {
@@ -392,6 +441,7 @@ describe("TraegerChildrenPage", () => {
     );
     renderPage();
     await screen.findAllByText("Berg, Anna");
+    api.fetchTraegerChildren.mockRejectedValue(new ApiError("not found", 404));
 
     fireEvent.click(downloadOption());
 
@@ -399,6 +449,134 @@ describe("TraegerChildrenPage", () => {
       expect(screen.queryByText("Berg, Anna")).not.toBeInTheDocument(),
     );
     expect(downloadOption()).toBeDisabled();
+  });
+
+  it("discards an older answer for the same filter after a download refusal", async () => {
+    const old = deferred<TraegerChildrenPage>();
+    const fresh = deferred<TraegerChildrenPage>();
+    api.fetchTraegerChildren
+      .mockReturnValueOnce(old.promise)
+      .mockResolvedValueOnce(pageOf([BERG]))
+      .mockResolvedValueOnce(pageOf([ZANDER]))
+      .mockReturnValueOnce(fresh.promise);
+    api.downloadTraegerChildren.mockRejectedValue(new ApiError("refused", 403));
+    renderPage();
+    await waitFor(() =>
+      expect(api.fetchTraegerChildren).toHaveBeenCalledTimes(1),
+    );
+    fireEvent.click(schoolTab(LINDE));
+    await screen.findAllByText("Berg, Anna");
+    fireEvent.click(screen.getByRole("tab", { name: "Alle" }));
+    await screen.findAllByText("Zander, Mia");
+    fireEvent.click(downloadOption());
+
+    await waitFor(() =>
+      expect(api.fetchTraegerChildren).toHaveBeenCalledTimes(4),
+    );
+    await act(async () => {
+      old.resolve(pageOf([AKSOY]));
+      await old.promise;
+    });
+    expect(screen.queryByText("Aksoy, Ömer")).not.toBeInTheDocument();
+    expect(screen.queryByText("Zander, Mia")).not.toBeInTheDocument();
+    expect(api.fetchTraegerChildren).toHaveBeenCalledTimes(4);
+
+    await act(async () => {
+      fresh.resolve(pageOf([BERG]));
+      await fresh.promise;
+    });
+    expect(screen.getByText("Berg, Anna")).toBeVisible();
+  });
+
+  it("logs neither the searched name nor the cursor when the BFF returns an error", async () => {
+    const realApi = await vi.importActual<
+      typeof import("~/lib/traeger-children-api")
+    >("~/lib/traeger-children-api");
+    const search = "VertraulicherSuchname";
+    const cursor = btoa(
+      JSON.stringify({ first: "Testkind", last: "Cursorname" }),
+    );
+    const fetchMock = vi.fn<typeof fetch>().mockImplementation(
+      async () =>
+        new Response("{}", {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        }),
+    );
+    const errors = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    vi.stubGlobal("fetch", fetchMock);
+    try {
+      renderPage();
+      await screen.findAllByText("Zander, Mia");
+      api.fetchTraegerChildren.mockResolvedValueOnce(
+        pageOf([BERG], { matched: 2, nextCursor: cursor }),
+      );
+      fireEvent.change(screen.getAllByPlaceholderText("Kind suchen")[0]!, {
+        target: { value: search },
+      });
+      const more = await screen.findByRole("button", {
+        name: /Weitere Kinder laden/,
+      });
+      api.fetchTraegerChildren.mockImplementationOnce(
+        realApi.fetchTraegerChildren,
+      );
+      fireEvent.click(more);
+      await screen.findByText(
+        catalogText("general.server", "die nächsten Kinder"),
+      );
+
+      api.downloadTraegerChildren.mockImplementationOnce(
+        realApi.downloadTraegerChildren,
+      );
+      fireEvent.click(downloadOption());
+      await screen.findByText(
+        catalogText("general.server", "die Liste der Kinder"),
+      );
+
+      const urls = fetchMock.mock.calls.map(
+        ([input]) => new URL(String(input), "http://localhost").searchParams,
+      );
+      expect(urls[0]?.get("cursor")).toBe(cursor);
+      expect(urls.map((query) => query.get("search"))).toEqual([
+        search,
+        search,
+      ]);
+      const logs = JSON.stringify(errors.mock.calls);
+      expect(logs).toContain("traeger_children_load_more_failed");
+      expect(logs).toContain("traeger_list_export_failed");
+      expect(logs).not.toContain(search);
+      expect(logs).not.toContain(cursor);
+    } finally {
+      errors.mockRestore();
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("sends the displayed roster date and reads again when that date is refused", async () => {
+    const rosterDate = "2026-11-26";
+    setTestClock("2026-11-26T22:59:30Z");
+    api.fetchTraegerChildren
+      .mockResolvedValueOnce(pageOf([ZANDER], { rosterDate }))
+      .mockResolvedValueOnce(pageOf([BERG], { rosterDate: "2026-11-27" }));
+    api.downloadTraegerChildren.mockRejectedValue(
+      new ApiError("changed", 409, {
+        code: "general.changed_since_read",
+      }),
+    );
+    renderPage();
+    await screen.findAllByText("Zander, Mia");
+    setTestClock("2026-11-26T23:00:00Z");
+    fireEvent.click(downloadOption());
+
+    expect(api.downloadTraegerChildren).toHaveBeenCalledExactlyOnceWith(
+      "csv",
+      { schoolId: "", search: "" },
+      rosterDate,
+    );
+    await screen.findAllByText("Berg, Anna");
+    expect(screen.queryByText("Zander, Mia")).not.toBeInTheDocument();
   });
 
   it("keeps another school's results if the previous school's export is refused late", async () => {
@@ -480,16 +658,20 @@ describe("TraegerChildrenPage", () => {
     expect(screen.getAllByPlaceholderText("Kind suchen")[0]).toHaveValue("");
   });
 
-  it("does not redraw rows while a name is typed, including on a paged list", async () => {
+  it("disables pagination on the first keystroke without redrawing on each letter", async () => {
     api.fetchTraegerChildren.mockResolvedValueOnce(
       pageOf([AKSOY, BERG, ZANDER], { matched: 4, nextCursor: "next-page" }),
     );
     renderPage();
     await screen.findAllByText("Zander, Mia");
     const field = screen.getAllByPlaceholderText("Kind suchen")[0]!;
+    fireEvent.change(field, { target: { value: "z" } });
+    const more = screen.getByRole("button", { name: /Weitere Kinder laden/ });
+    expect(more).toBeDisabled();
+    fireEvent.click(more);
+    expect(api.fetchTraegerChildren).toHaveBeenCalledTimes(1);
     const drawn = rowDraws.mock.calls.length;
 
-    fireEvent.change(field, { target: { value: "z" } });
     fireEvent.change(field, { target: { value: "za" } });
 
     // Anchor: the field shows what was typed.

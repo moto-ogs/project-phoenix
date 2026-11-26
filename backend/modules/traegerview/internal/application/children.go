@@ -12,6 +12,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/traegerview"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 var _ traegerview.ChildDirectory = (*Overview)(nil)
@@ -38,7 +39,7 @@ func (o *Overview) Children(ctx context.Context, viewer traegerview.Viewer, filt
 	if !cursor.Day.IsZero() && cursor.Day != day {
 		return traegerview.TraegerChildren{}, fmt.Errorf("%w: cursor is for another roster day", traegerview.ErrInvalidChildrenFilter)
 	}
-	result := traegerview.TraegerChildren{Schools: []traegerview.SchoolChildCount{}, Children: []traegerview.TraegerChild{}}
+	result := traegerview.TraegerChildren{RosterDate: day, Schools: []traegerview.SchoolChildCount{}, Children: []traegerview.TraegerChild{}}
 	err = o.read(ctx, viewer.OrganizationID, func(adminCtx context.Context, ids []int64) error {
 		listed, err := o.listedChildren(adminCtx, ids, filter, day)
 		if err != nil {
@@ -75,12 +76,15 @@ func (o *Overview) Children(ctx context.Context, viewer traegerview.Viewer, filt
 
 // ChildrenExport returns every child of the filter for the file. It is a
 // read of the same names, so each school with a row records it.
-func (o *Overview) ChildrenExport(ctx context.Context, viewer traegerview.Viewer, filter traegerview.ChildrenFilter) (traegerview.ChildrenExport, error) {
+func (o *Overview) ChildrenExport(ctx context.Context, viewer traegerview.Viewer, filter traegerview.ChildrenFilter, rosterDate calendar.Date) (traegerview.ChildrenExport, error) {
 	filter, err := validChildrenFilter(viewer, filter)
 	if err != nil {
 		return traegerview.ChildrenExport{}, err
 	}
 	day := calendar.DateFromTime(o.now())
+	if rosterDate != day {
+		return traegerview.ChildrenExport{}, readstate.ErrChanged
+	}
 	result := traegerview.ChildrenExport{Search: filter.Search, Children: []traegerview.TraegerChild{}}
 	err = o.read(ctx, viewer.OrganizationID, func(adminCtx context.Context, ids []int64) error {
 		listed, err := o.listedChildren(adminCtx, ids, filter, day)

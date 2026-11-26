@@ -8,6 +8,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/traegerview"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // children answers GET /traeger/schools/children: one page of the children
@@ -53,7 +54,12 @@ func (rs *Resource) childrenExport(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
-	export, err := rs.reports.ChildrenExport(r.Context(), viewer, filter)
+	rosterDate, err := calendar.ParseDate(r.URL.Query().Get("roster_date"))
+	if err != nil {
+		common.RenderError(w, r, common.ErrorInvalidRequest(fmt.Errorf("%w: roster_date must be a calendar date", traegerview.ErrInvalidChildrenFilter)))
+		return
+	}
+	export, err := rs.reports.ChildrenExport(r.Context(), viewer, filter, rosterDate)
 	if err != nil {
 		renderChildrenError(w, r, err)
 		return

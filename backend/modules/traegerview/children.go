@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
@@ -77,6 +78,7 @@ type SchoolChildCount struct {
 // of all schools; Matched counts those of them the search matches and is 0
 // on a page behind the last child.
 type TraegerChildren struct {
+	RosterDate calendar.Date      `json:"roster_date"`
 	Schools    []SchoolChildCount `json:"schools"`
 	Total      int                `json:"total"`
 	Matched    int                `json:"matched"`
@@ -149,5 +151,5 @@ type ChildDirectory interface {
 	// ChildrenExport returns every child of the filter for the file. The
 	// access log of each school with a row records the export with the
 	// viewer's account.
-	ChildrenExport(ctx context.Context, viewer Viewer, filter ChildrenFilter) (ChildrenExport, error)
+	ChildrenExport(ctx context.Context, viewer Viewer, filter ChildrenFilter, rosterDate calendar.Date) (ChildrenExport, error)
 }

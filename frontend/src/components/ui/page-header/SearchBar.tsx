@@ -1,11 +1,13 @@
 "use client";
 
 import React from "react";
+import { FieldErrorHint } from "~/components/ui/field-error-hint";
 import { useLatest } from "~/lib/hooks/use-latest";
 import type { SearchBarProps } from "./types";
 
 interface DebouncedSearchValue {
   readonly shownValue: string;
+  readonly draftError?: string;
   readonly handleChange: (next: string) => void;
   readonly commitNow: (next: string) => void;
 }
@@ -25,10 +27,12 @@ function useDebouncedSearchValue(
   onChange: (next: string) => void,
   debounceMs: number | undefined,
   resetKey: string | number | undefined,
+  validateDraft?: (draft: string) => string | undefined,
 ): DebouncedSearchValue {
   const [draft, setDraft] = React.useState(value);
   const timeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const onChangeRef = useLatest(onChange);
+  const validate = useLatest(validateDraft);
 
   React.useEffect(() => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
@@ -44,17 +48,18 @@ function useDebouncedSearchValue(
 
   const handleChange = React.useCallback(
     (next: string) => {
+      if (debounceMs || validate.current) setDraft(next);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      if (validate.current?.(next)) return;
       if (!debounceMs) {
         onChangeRef.current(next);
         return;
       }
-      setDraft(next);
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
       timeoutRef.current = setTimeout(() => {
         onChangeRef.current(next);
       }, debounceMs);
     },
-    [debounceMs, onChangeRef],
+    [debounceMs, onChangeRef, validate],
   );
 
   // The clear button is an explicit action, not typing: it reports at once so
@@ -68,7 +73,13 @@ function useDebouncedSearchValue(
     [onChangeRef],
   );
 
-  return { shownValue: debounceMs ? draft : value, handleChange, commitNow };
+  const shownValue = debounceMs || validateDraft ? draft : value;
+  return {
+    shownValue,
+    draftError: validateDraft?.(shownValue),
+    handleChange,
+    commitNow,
+  };
 }
 
 interface SearchBarDraftProviderProps {
@@ -77,6 +88,7 @@ interface SearchBarDraftProviderProps {
   readonly debounceMs: number | undefined;
   readonly resetKey: string | number | undefined;
   readonly onDraftPendingChange?: (pending: boolean) => void;
+  readonly validateDraft?: (draft: string) => string | undefined;
   readonly children: React.ReactNode;
 }
 
@@ -87,6 +99,7 @@ export function SearchBarDraftProvider({
   debounceMs,
   resetKey,
   onDraftPendingChange,
+  validateDraft,
   children,
 }: Readonly<SearchBarDraftProviderProps>) {
   const draftState = useDebouncedSearchValue(
@@ -94,6 +107,7 @@ export function SearchBarDraftProvider({
     onChange,
     debounceMs,
     resetKey,
+    validateDraft,
   );
   const draftPending = draftState.shownValue !== value;
   // Actions outside the field must see the same pending state before paint.
@@ -116,7 +130,9 @@ function SearchBarContent({
   inputProps,
   draftState,
 }: Readonly<SearchBarProps & { readonly draftState: DebouncedSearchValue }>) {
-  const { shownValue, handleChange, commitNow } = draftState;
+  const { shownValue, draftError, handleChange, commitNow } = draftState;
+  const hintId = React.useId();
+  const describedBy = inputProps?.["aria-describedby"];
   const sizeClasses = {
     // By finger 16 px: smaller text makes iOS zoom into the field.
     sm: "py-2 pl-9 pr-3 text-sm pointer-coarse:text-base",
@@ -154,6 +170,12 @@ function SearchBarContent({
         type="text"
         placeholder={placeholder}
         value={shownValue}
+        aria-invalid={draftError ? true : inputProps?.["aria-invalid"]}
+        aria-describedby={
+          draftError
+            ? [describedBy, hintId].filter(Boolean).join(" ")
+            : describedBy
+        }
         onChange={(e) => handleChange(e.target.value)}
         className={`w-full rounded-2xl border border-gray-500/80 bg-white text-gray-900 placeholder-gray-500 transition duration-200 focus:border-gray-900 focus:ring-0 focus:outline-none ${sizeClasses[size]} ${shownValue ? "pr-10" : ""} `}
       />
@@ -183,6 +205,7 @@ function SearchBarContent({
           </svg>
         </button>
       )}
+      <FieldErrorHint id={hintId} message={draftError} live />
     </div>
   );
 }

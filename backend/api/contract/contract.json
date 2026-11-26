@@ -13552,6 +13552,10 @@
           ]
         },
         {
+          "name": "roster_date",
+          "kind": "date"
+        },
+        {
           "name": "school_id",
           "kind": "id"
         },
@@ -112540,6 +112544,13 @@
       "name": "TraegerChildren",
       "go_type": "traegerview.TraegerChildren",
       "fields": [
+        {
+          "name": "roster_date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
         {
           "name": "schools",
           "schema": {

@@ -36,12 +36,13 @@ import { ListSkeleton } from "~/components/ui/page-skeletons";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { useApiErrorDisplay } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
+import { isPositiveInt64Id } from "~/lib/compare-ids";
 import { childrenConcept } from "~/lib/concepts/children";
 import { berlinTodayISO } from "~/lib/date-helpers";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { createLogger } from "~/lib/logger";
 import { schoolClassLabel, schoolClassName } from "~/lib/school-class-label";
-import { IsolatedSWRCache } from "~/lib/swr";
+import { IsolatedSWRCache, useInvalidateMatching } from "~/lib/swr";
 import { useSWRRequestGuard } from "~/lib/swr/hooks";
 import { traegerKeys } from "~/lib/swr/traeger-keys";
 import {
@@ -62,6 +63,13 @@ const SCHOOL_PARAM = "schule";
 const LIST_OBJECT = "die Liste der Kinder";
 /** So lange wartet das Suchfeld nach dem letzten Buchstaben, bevor es sucht. */
 const SEARCH_PAUSE_MS = 250;
+const SEARCH_MAX_LENGTH = 100;
+
+function validateSearch(draft: string) {
+  return Array.from(draft.trim()).length > SEARCH_MAX_LENGTH
+    ? `Kürze deine Suche auf höchstens ${SEARCH_MAX_LENGTH} Zeichen.`
+    : undefined;
+}
 
 function Plain({ value }: Readonly<{ value: string }>) {
   return <span className="text-sm text-gray-700">{value || "–"}</span>;
@@ -181,6 +189,7 @@ function ChildrenContent({
   const tab = searchParams?.get(SCHOOL_PARAM) ?? ALL_SCHOOLS;
   // A bookmark scopes the request even when cached school metadata is stale.
   const schoolId = tab === ALL_SCHOOLS ? "" : tab;
+  const invalidSchool = tab !== ALL_SCHOOLS && !isPositiveInt64Id(tab);
   const term = search.trim();
   const day = useBerlinToday();
   const [draftPending, setDraftPending] = useState(false);
@@ -199,13 +208,14 @@ function ChildrenContent({
   // Every page read stands in the access log of the schools it shows. So a
   // reiter or a search shows nothing until its own read answered, also when
   // the person comes back to one the tab has read before (ADR 0311).
-  const listKey = traegerKeys.children(day, filter);
+  const listKey = invalidSchool ? null : traegerKeys.children(day, filter);
   const first = useFreshTraegerResource(
     listKey,
     () => fetchTraegerChildren(filter),
     LIST_OBJECT,
   );
-  const { data: page, mutate, readCallbacks } = first;
+  const { data: page, readCallbacks } = first;
+  const invalidate = useInvalidateMatching();
   const beginPageRead = useSWRRequestGuard();
 
   // Later pages belong to the first page they continue; another reiter,
@@ -243,10 +253,12 @@ function ChildrenContent({
     (error: unknown) => {
       if (!page || shownPage.current !== page || !isRefusal(error)) return;
       readCallbacks.onError(error);
-      void mutate(undefined, { revalidate: false });
+      // End this opening and its in-flight reads; a cache write alone would
+      // leave the opening's held answer eligible to reappear.
+      void invalidate((key) => key === listKey, { clear: true });
       setLater(null);
     },
-    [page, readCallbacks, mutate],
+    [page, readCallbacks, invalidate, listKey],
   );
 
   const loadMore = useCallback(async () => {
@@ -255,6 +267,7 @@ function ChildrenContent({
       !children ||
       !nextCursor ||
       loadingMore ||
+      draftPending ||
       berlinTodayISO() !== day
     )
       return;
@@ -305,6 +318,7 @@ function ChildrenContent({
     children,
     nextCursor,
     loadingMore,
+    draftPending,
     day,
     beginPageRead,
     listKey,
@@ -325,11 +339,11 @@ function ChildrenContent({
             onClick: () => void loadMore(),
             loading: loadingMore,
             loadingText: "Wird geladen …",
-            disabled: loadingMore,
+            disabled: loadingMore || draftPending,
             tooltip: "Zeigt die nächsten 50 Kinder unten in der Liste an.",
           }
         : undefined,
-    [nextCursor, children, matched, loadMore, loadingMore],
+    [nextCursor, children, matched, loadMore, loadingMore, draftPending],
   );
 
   const changeTab = (next: string) => {
@@ -341,15 +355,19 @@ function ChildrenContent({
   };
 
   const exportItems = useTraegerListExportItems({
-    download: (format) => downloadTraegerChildren(format, filter),
+    download: (format) =>
+      downloadTraegerChildren(format, filter, page?.rosterDate ?? ""),
     scope:
       schoolId && !school
         ? "Ausgewählte Schule"
         : traegerExportScope(school?.name),
     fallbackName: "kinder",
     errorObject: LIST_OBJECT,
-    unavailable: draftPending || !page,
+    unavailable: draftPending || !page?.rosterDate,
     onError: withdrawRefusedList,
+    reloadOnChanged: async () => {
+      if (page && shownPage.current === page) await first.reloadOrThrow();
+    },
   });
 
   // One school per reiter, or one school at all: its column would repeat
@@ -357,27 +375,30 @@ function ChildrenContent({
   const showSchool = schoolId === "" && schools.length > 1;
   const columns = useMemo(() => childColumns(showSchool), [showSchool]);
   const searching = term !== "";
-  const loading = !page && !first.error;
-  const error =
-    schoolId &&
-    first.error &&
-    first.failure instanceof ApiError &&
-    first.failure.code === "traeger.school_not_found"
-      ? {
-          ...first.error,
-          action: (
-            <Button
-              type="button"
-              variant="outline"
-              size="compact"
-              tooltip="Öffnet die Kinderliste aller Schulen."
-              onClick={() => changeTab(ALL_SCHOOLS)}
-            >
-              Alle Schulen anzeigen
-            </Button>
-          ),
-        }
-      : first.error;
+  const loading = !invalidSchool && !page && !first.error;
+  const schoolError = invalidSchool
+    ? { message: "Der Link enthält keine gültige Schule." }
+    : schoolId &&
+        first.failure instanceof ApiError &&
+        first.failure.code === "traeger.school_not_found"
+      ? first.error
+      : undefined;
+  const error = schoolError
+    ? {
+        ...schoolError,
+        action: (
+          <Button
+            type="button"
+            variant="outline"
+            size="compact"
+            tooltip="Öffnet die Kinderliste aller Schulen."
+            onClick={() => changeTab(ALL_SCHOOLS)}
+          >
+            Alle Schulen anzeigen
+          </Button>
+        ),
+      }
+    : first.error;
   const noMatch = emptySearchText(search, []);
   // A search without a hit offers the way back. A list nobody can fill
   // from here is one sentence, not a stage.
@@ -434,6 +455,7 @@ function ChildrenContent({
         placeholder: "Kind suchen",
         debounceMs: SEARCH_PAUSE_MS,
         onDraftPendingChange: setDraftPending,
+        validateDraft: validateSearch,
       }}
       overflowMenu={exportItems}
       tabs={
