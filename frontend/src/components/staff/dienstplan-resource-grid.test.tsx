@@ -154,6 +154,8 @@ interface RenderOverrides {
   onOpenPersonWeek?: (staff: StaffScheduleStaff) => void;
   weekDays?: readonly string[];
   todayIso?: string;
+  /** Without onCellClick the grid is a display only (#7351). */
+  readOnly?: boolean;
 }
 
 function renderGrid(overrides: RenderOverrides = {}) {
@@ -170,7 +172,7 @@ function renderGrid(overrides: RenderOverrides = {}) {
       shiftTypes={overrides.shiftTypes ?? []}
       reducedPath={overrides.reducedPath}
       currentStaffId={overrides.currentStaffId}
-      onCellClick={onCellClick}
+      onCellClick={overrides.readOnly ? undefined : onCellClick}
       onSickReport={overrides.onSickReport}
       onOpenPersonWeek={overrides.onOpenPersonWeek}
     />,
@@ -721,6 +723,35 @@ describe("DienstplanResourceGrid reduced path", () => {
 
     fireEvent.click(screen.getByRole("menuitem", { name: "Krank melden" }));
     expect(onSickReport).toHaveBeenCalledWith(member);
+  });
+});
+
+describe("DienstplanResourceGrid read-only", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  // #7351: wer nicht planen darf, sieht den Plan ohne Anlege-, Bearbeiten-
+  // und Verschieben-Flächen; ein Klick könnte nur abgelehnt werden.
+  it("shows shifts without create, edit or move controls on desktop and phone", () => {
+    for (const compact of [false, true]) {
+      mocks.useMediaQuery.mockReturnValue(compact);
+      const { unmount } = renderGrid({
+        readOnly: true,
+        shiftsByStaff: shiftMap("2026-07-06", [baseShift()]),
+      });
+
+      expect(screen.getAllByText("08:00–12:00").length).toBeGreaterThan(0);
+      expect(
+        screen.queryByRole("button", { name: /08:00–12:00/ }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: /^Schicht anlegen/ }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: /Aktionen zur Schicht/ }),
+      ).not.toBeInTheDocument();
+      unmount();
+    }
+    mocks.useMediaQuery.mockReturnValue(false);
   });
 });
 

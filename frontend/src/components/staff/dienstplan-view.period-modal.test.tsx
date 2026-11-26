@@ -60,6 +60,11 @@ vi.mock("~/lib/swr", () => ({
   useTenantMutateMatching: () => () => Promise.resolve(),
 }));
 
+// Das eigene Personalprofil entscheidet, ob der Plan bearbeitbar ist (#7351).
+vi.mock("~/lib/hooks/use-user-context", () => ({
+  useHasOwnStaff: () => true,
+}));
+
 vi.mock("~/lib/hooks/use-berlin-today", () => ({
   useBerlinToday: () => "2026-07-06",
 }));

@@ -52,6 +52,8 @@ import { useClosingDaysState } from "~/lib/hooks/use-closing-days";
 import { usePlanningHolidayWeeks } from "~/lib/hooks/use-holiday-care";
 import { holidayCareDays } from "~/lib/holiday-care";
 import { useDienstplanData } from "~/lib/hooks/use-dienstplan-data";
+import { useHasOwnStaff } from "~/lib/hooks/use-user-context";
+import { useShellAuthSafe } from "~/lib/shell-auth-context";
 import { useUrlParams } from "~/lib/hooks/use-url-params";
 import { createLogger } from "~/lib/logger";
 import type { StaffScheduleStaff, StaffShift } from "~/lib/shift-helpers";
@@ -116,6 +118,16 @@ function DienstplanContent() {
   // über das Wildcard-Recht). Am Rollennamen `admin` festgemacht, kam eine
   // Leitungsrolle, die die Schule selbst anlegt, nie in den Dienstplan (#3469).
   const canEdit = hasPermission(session, "time_tracking:manage");
+  // Jede Planänderung braucht einen Urheber: das eigene Personalprofil der
+  // Schule oder, über den Träger, den Vermerk des Träger-Büros (ADR 0084,
+  // Nachtrag 2). Ohne beides lehnt der Server ab; der Plan bleibt dann eine
+  // Anzeige und sagt vorher, warum (#7351). Krankmeldung und Übernahme von
+  // Abwesenheiten bleiben dem Personal der Schule vorbehalten. Solange der
+  // Nutzerkontext lädt oder fehlschlägt, gilt das Profil als vorhanden.
+  const hasOwnStaff = useHasOwnStaff(sessionStatus === "authenticated");
+  const viaTraeger = useShellAuthSafe()?.isViaTraeger === true;
+  const canPlanShifts = canEdit && (hasOwnStaff || viaTraeger);
+  const canWriteAbsences = canEdit && hasOwnStaff;
   // Die Halbjahres-Sicht zeigt Soll-/Plan-Abgleiche aus /overview. Dieser
   // Endpunkt verlangt zusätzlich `schedules:read`; Tab und Deep-Link sind
   // darum weiterhin auf beide Berechtigungen gegated, auch wenn die
@@ -339,9 +351,12 @@ function DienstplanContent() {
   // person → /time-tracking, others → the staff detail page). Reuses the
   // time-tracking page's SWR key so the request is deduped; null when the
   // account is not linked to a staff person.
-  const { data: ownStaff } = useSWRAuth(meKeys.key(), meKeys.fetcher, {
-    revalidateOnFocus: false,
-  });
+  // Without an own staff profile the request could only be refused.
+  const { data: ownStaff } = useSWRAuth(
+    hasOwnStaff ? meKeys.key() : null,
+    meKeys.fetcher,
+    { revalidateOnFocus: false },
+  );
   const currentStaffId = ownStaff?.id ?? null;
 
   // Person der Ansicht "person": aus `staff`, sonst die eigene Person, sonst
@@ -481,26 +496,32 @@ function DienstplanContent() {
           typesById={typesById}
           shiftTypes={shiftTypes ?? []}
           summary={summaryByStaff.get(personMember.id)}
-          onCreate={(date, startTime, endTime) =>
-            setModal({
-              mode: "create",
-              staff: personMember,
-              date,
-              shift: null,
-              replacements: [],
-              initialTimes: { startTime, endTime },
-            })
+          onCreate={
+            canPlanShifts
+              ? (date, startTime, endTime) =>
+                  setModal({
+                    mode: "create",
+                    staff: personMember,
+                    date,
+                    shift: null,
+                    replacements: [],
+                    initialTimes: { startTime, endTime },
+                  })
+              : undefined
           }
-          onEdit={(date, shift) =>
-            setModal({
-              mode: "edit",
-              staff: personMember,
-              date,
-              shift,
-              replacements: allShifts.filter(
-                (s) => s.originShiftId === shift.id,
-              ),
-            })
+          onEdit={
+            canPlanShifts
+              ? (date, shift) =>
+                  setModal({
+                    mode: "edit",
+                    staff: personMember,
+                    date,
+                    shift,
+                    replacements: allShifts.filter(
+                      (s) => s.originShiftId === shift.id,
+                    ),
+                  })
+              : undefined
           }
         />
       </div>
@@ -537,19 +558,24 @@ function DienstplanContent() {
           reducedPath={reducedPath}
           currentStaffId={currentStaffId}
           reloadShifts={reloadShifts}
-          onCellClick={(member, date, shift) =>
-            setModal({
-              mode: shift ? "edit" : "create",
-              staff: member,
-              date,
-              shift,
-              replacements: shift
-                ? allShifts.filter((s) => s.originShiftId === shift.id)
-                : [],
-            })
+          onCellClick={
+            canPlanShifts
+              ? (member, date, shift) =>
+                  setModal({
+                    mode: shift ? "edit" : "create",
+                    staff: member,
+                    date,
+                    shift,
+                    replacements: shift
+                      ? allShifts.filter((s) => s.originShiftId === shift.id)
+                      : [],
+                  })
+              : undefined
           }
           onSickReport={
-            canManageAbsences ? (member) => setSickModal(member) : undefined
+            canManageAbsences && canWriteAbsences
+              ? (member) => setSickModal(member)
+              : undefined
           }
           onOpenPersonWeek={
             canViewHalbjahr
@@ -733,8 +759,16 @@ function DienstplanContent() {
       <LoadErrorAlert error={holidayWeeks.loadError} className="mb-3" />
       {/* Abwesenheiten von vor #6847, deren Tage noch im Plan stehen
           (#7021). Über dem Raster, weil sie jede Ansicht betreffen. */}
+      {canEdit && !canPlanShifts && (
+        // Ein dauerhafter Zustand, kein Ereignis: Hinweis im Inhalt, ohne X.
+        <Alert
+          type="info"
+          className="mb-3"
+          message="Du kannst den Dienstplan nur ansehen. Zum Planen brauchst du in dieser Schule ein eigenes Personalprofil. Die Leitung kann es anlegen."
+        />
+      )}
       <AbsencePlanGaps
-        enabled={sessionStatus === "authenticated" && canEdit}
+        enabled={sessionStatus === "authenticated" && canWriteAbsences}
         staffById={staffById}
         onPlansChanged={refreshAfterPlanMutation}
         onShowWeek={(day) => updateUrlParams({ d: day, view: null })}
