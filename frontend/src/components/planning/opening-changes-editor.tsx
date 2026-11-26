@@ -215,6 +215,8 @@ export function OpeningChangesEditor() {
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
         onSaved={() => void mutate()}
+        minDate={from}
+        maxDate={to}
       />
 
       <ConfirmDeleteModal

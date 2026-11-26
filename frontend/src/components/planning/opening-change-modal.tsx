@@ -57,10 +57,15 @@ export function OpeningChangeModal({
   isOpen,
   onClose,
   onSaved,
+  minDate,
+  maxDate,
 }: Readonly<{
   isOpen: boolean;
   onClose: () => void;
   onSaved: () => void;
+  /** Keep new entries inside the editor's loaded range. */
+  minDate: string;
+  maxDate: string;
 }>) {
   const [form, setForm] = useState<OpeningChangeForm>(EMPTY_FORM);
   const setField = <K extends keyof OpeningChangeForm>(
@@ -177,6 +182,8 @@ export function OpeningChangeModal({
             required
             controlSize="large"
             value={form.startDate}
+            min={minDate}
+            max={maxDate}
             onChange={(value) =>
               setForm((current) => ({
                 ...current,
@@ -197,8 +204,9 @@ export function OpeningChangeModal({
             required
             controlSize="large"
             value={form.endDate}
-            min={form.startDate || undefined}
-            defaultMonth={form.startDate}
+            min={form.startDate || minDate}
+            max={maxDate}
+            defaultMonth={form.startDate || minDate}
             onChange={(value) => setField("endDate", value)}
             error={formErrors.fieldError("end_date")}
             calendarLayout="popover"
