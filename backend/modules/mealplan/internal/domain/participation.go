@@ -54,6 +54,9 @@ type SickDay struct {
 type CalendarDays struct {
 	Closed  map[Date]bool
 	Holiday map[Date]bool
+	// Cancelled are the closed days on which only lunch is cancelled while
+	// the school is open (#7656); every one of them is in Closed too.
+	Cancelled map[Date]bool
 }
 
 // HolidayPeriod is one school holiday period, both ends inclusive.
@@ -153,11 +156,14 @@ type DailyParticipant struct {
 // DailyList is the kitchen's list of a day. Deadline is when the day's
 // order is fixed; CutoffTime is its clock time.
 type DailyList struct {
-	Date         Date
-	CutoffTime   string
-	Deadline     time.Time
-	Closed       bool
-	Participants []DailyParticipant
+	Date       Date
+	CutoffTime string
+	Deadline   time.Time
+	Closed     bool
+	// MealCancelled marks a closed day on which only lunch is cancelled
+	// (#7656).
+	MealCancelled bool
+	Participants  []DailyParticipant
 	// Others are the enrolled children who do not eat that day, for the
 	// school's late changes.
 	Others []DailyParticipant

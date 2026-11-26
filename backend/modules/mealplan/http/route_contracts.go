@@ -59,6 +59,8 @@ type ContractTypes struct {
 	Orders, DailyList, WeeklyList, ChildParticipation, ChildDay, ChildSchedule, ScheduleChanged any
 	BillingMonths, BillingMonth, BillingMonthRelease                                            any
 	Week, Day, Days, SaveDay, SavedDay                                                          any
+	// Cancellations, Cancellation and CancelMeal are the days without lunch (#7656).
+	Cancellations, Cancellation, CancelMeal any
 }
 
 // RouteContractTypes names the bodies of the meal plan and Mensa month routes.
@@ -71,5 +73,6 @@ func RouteContractTypes() ContractTypes {
 		BillingMonthRelease: BillingMonthReleaseRequest{},
 		Week:                []MealPlanWeekEntryResponse{}, Day: SetDayRequest{},
 		Days: []MealPlanDayResponse{}, SaveDay: SaveDayRequest{}, SavedDay: MealPlanDayResponse{},
+		Cancellations: []MealCancellationResponse{}, Cancellation: MealCancellationResponse{}, CancelMeal: MealCancellationRequest{},
 	}
 }

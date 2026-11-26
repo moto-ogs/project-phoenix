@@ -1,26 +1,86 @@
 package application
 
 import (
+	"context"
 	"testing"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/mealplan"
 	"github.com/moto-ogs/project-phoenix/modules/mealplan/internal/domain"
+	"github.com/moto-ogs/project-phoenix/modules/mealplan/internal/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestOpenDaysSkipsPastAndOrderedDays(t *testing.T) {
+type calendarOrderViewCalendar struct{ days domain.CalendarDays }
+
+func (c calendarOrderViewCalendar) Days(context.Context, domain.Date, domain.Date) (domain.CalendarDays, domain.OperationStats, error) {
+	return c.days, domain.OperationStats{}, nil
+}
+
+type calendarOrderViewSettings struct{}
+
+func (calendarOrderViewSettings) MealPlanEnabled(context.Context) (bool, error) {
+	return true, nil
+}
+
+func (calendarOrderViewSettings) MealRegistrationEnabled(context.Context) (bool, error) {
+	return false, nil
+}
+
+func (calendarOrderViewSettings) MealOrderingSettings(context.Context) (ports.OrderingSettings, error) {
+	return ports.OrderingSettings{}, nil
+}
+
+func TestOrdersWithoutMealRegistrationExposeOnlyCalendarDays(t *testing.T) {
+	t.Parallel()
+	monday, closed, cancelled := calendar.NewDate(2026, 9, 7), calendar.NewDate(2026, 9, 9), calendar.NewDate(2026, 9, 10)
+	service := New(
+		seamStore{},
+		struct{ ports.Directory }{},
+		calendarOrderViewCalendar{days: domain.CalendarDays{
+			Closed:    map[domain.Date]bool{closed: true, cancelled: true},
+			Cancelled: map[domain.Date]bool{cancelled: true},
+		}},
+		calendarOrderViewSettings{},
+		seamTransaction{},
+		func(ports.Observation) {},
+		time.Now,
+		nil,
+	)
+
+	week, err := service.Capability.Orders(context.Background(), mealplan.Date(monday), mealplan.Date(monday.AddDays(4)))
+	require.NoError(t, err)
+	require.Len(t, week.Days, 5)
+	assert.Equal(t, mealplan.OrderUnordered, week.Days[0].Status)
+	assert.True(t, week.Days[2].Closed)
+	assert.False(t, week.Days[2].MealCancelled)
+	assert.True(t, week.Days[3].Closed)
+	assert.True(t, week.Days[3].MealCancelled)
+	for _, day := range week.Days {
+		assert.Zero(t, day.Total)
+		assert.Empty(t, day.Classes)
+		assert.Empty(t, day.Children)
+		assert.Empty(t, day.Changes)
+	}
+}
+
+func TestOpenDaysSkipsPastCancelledAndOrderedDays(t *testing.T) {
 	t.Parallel()
 	rules := defaultOrderingRules("09:00")
 	monday, wednesday := calendar.NewDate(2026, 9, 14), calendar.NewDate(2026, 9, 16)
 	state := domain.OrderState{Orders: []domain.Order{{ID: 7, Days: []domain.Date{calendar.NewDate(2026, 9, 17)}}}}
+	days := domain.CalendarDays{
+		Closed:    map[domain.Date]bool{calendar.NewDate(2026, 9, 18): true},
+		Cancelled: map[domain.Date]bool{calendar.NewDate(2026, 9, 18): true},
+	}
 
-	open, deadline := openDays(rules, state, monday, monday.AddDays(6), wednesday)
-	assert.Equal(t, []domain.Date{wednesday, calendar.NewDate(2026, 9, 18)}, open, "Monday and Tuesday are over, Thursday is ordered, the weekend has no meal")
+	open, deadline := openDays(rules, state, days, monday, monday.AddDays(6), wednesday)
+	assert.Equal(t, []domain.Date{wednesday}, open, "Monday and Tuesday are over, Thursday is ordered, Friday has no lunch and the weekend has no meal")
 	assert.Equal(t, rules.FreezeAt(wednesday), deadline, "the earliest deadline among the open days")
 
-	none, zero := openDays(rules, state, monday, monday.AddDays(1), wednesday)
+	none, zero := openDays(rules, state, days, monday, monday.AddDays(1), wednesday)
 	assert.Empty(t, none)
 	assert.True(t, zero.IsZero())
 }

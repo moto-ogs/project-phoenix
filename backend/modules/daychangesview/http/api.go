@@ -50,7 +50,7 @@ func RouteContracts() []common.RouteContract {
 				string(daychangesview.KindBlockChangeCount),
 				string(daychangesview.KindClassTrip), string(daychangesview.KindClassDismissalChanged),
 				string(daychangesview.KindAppointmentCancelled), string(daychangesview.KindAppointmentChanged),
-				string(daychangesview.KindMealPlanChanged),
+				string(daychangesview.KindMealPlanChanged), string(daychangesview.KindMealCancelled),
 			}},
 			{Type: daychangesview.ChildStatus(""), Values: []string{string(daychangesview.ChildSick), string(daychangesview.ChildExcused)}},
 			{Type: daychangesview.PersonRole(""), Values: []string{

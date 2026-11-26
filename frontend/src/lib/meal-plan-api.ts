@@ -70,6 +70,8 @@ export interface DailyMealList {
   deadline: string;
   // A closing day or public holiday: nobody eats.
   closed: boolean;
+  // Closed because the school cancelled lunch while it is open (#7656).
+  mealCancelled?: boolean;
   participants: DailyMealParticipant[];
   // Enrolled children who do not eat that day; only when asked for.
   others: DailyMealParticipant[];
@@ -81,6 +83,7 @@ export interface WeeklyMealList {
   days: Array<{
     date: string;
     closed: boolean;
+    mealCancelled?: boolean;
     participants: DailyMealParticipant[];
   }>;
 }
@@ -165,6 +168,7 @@ export function mapDailyMealList(data: wire.DailyListResponse): DailyMealList {
     cutoffTime: data.cutoff_time,
     deadline: data.deadline,
     closed: data.closed,
+    mealCancelled: data.meal_cancelled,
     participants: (data.participants ?? []).map(dailyParticipant),
     others: (data.others ?? []).map(dailyParticipant),
   };
@@ -268,6 +272,7 @@ export async function getWeeklyMealParticipants(
     days: (data.days ?? []).map((day) => ({
       date: day.date,
       closed: day.closed,
+      mealCancelled: day.meal_cancelled,
       participants: (day.participants ?? []).map(dailyParticipant),
     })),
   };
@@ -333,6 +338,8 @@ const DETAILS = ["total", "by_class"] as const;
 export interface MealOrderDay {
   date: string;
   closed: boolean;
+  // Closed because the school cancelled lunch while it is open (#7656).
+  mealCancelled?: boolean;
   // RFC 3339 instant: the deadline of the day or of its order.
   deadline: string;
   status: MealOrderStatus;
@@ -367,6 +374,7 @@ export function mapMealOrders(data: wire.OrdersResponse): MealOrders {
     days: (data.days ?? []).map((day) => ({
       date: day.date,
       closed: day.closed,
+      mealCancelled: day.meal_cancelled,
       deadline: day.deadline,
       status: knownEnum(ORDER_STATUSES, day.status) ?? "open",
       confirmedAt: day.confirmed_at ?? null,
@@ -427,4 +435,39 @@ export async function downloadMealDeliveries(
     filenameFromDisposition(response) ??
       `lieferliste-${from}-bis-${to}.${format}`,
   );
+}
+
+/** A day without lunch although the school is open (#7656). */
+export interface MealCancellation {
+  date: string;
+  reason: string;
+}
+
+/** The days without lunch of [from, to]. */
+export async function getMealCancellations(
+  from: string,
+  to: string,
+): Promise<MealCancellation[]> {
+  const rows = await bffJson("tenant", "GET /api/meal-plan/cancellations", {
+    query: { from, to },
+    errorMessage: "meal cancellations load failed",
+  });
+  return rows.map((row) => ({ date: row.date, reason: row.reason }));
+}
+
+/** Cancels lunch on a day, or replaces the reason of a cancelled day. */
+export async function cancelMeal(date: string, reason: string): Promise<void> {
+  await bffJson("tenant", "PUT /api/meal-plan/days/{date}/cancellation", {
+    params: { date },
+    body: { reason },
+    errorMessage: "meal cancellation failed",
+  });
+}
+
+/** Lets lunch take place again on a day: the bookings apply again. */
+export async function restoreMeal(date: string): Promise<void> {
+  await bffJson("tenant", "DELETE /api/meal-plan/days/{date}/cancellation", {
+    params: { date },
+    errorMessage: "meal restore failed",
+  });
 }

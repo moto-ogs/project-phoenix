@@ -167,6 +167,8 @@ var coreActions = map[RouteKey]CoreAction{
 	{http.MethodDelete, "/api/meal-plan/{date}"}:                                                           notCaptured,
 	{http.MethodPut, "/api/meal-plan/{date}"}:                                                              notCaptured,
 	{http.MethodPut, "/api/meal-plan/days/{date}"}:                                                         notCaptured,
+	{http.MethodDelete, "/api/meal-plan/days/{date}/cancellation"}:                                         notCaptured,
+	{http.MethodPut, "/api/meal-plan/days/{date}/cancellation"}:                                            notCaptured,
 	{http.MethodDelete, "/api/meal-plan/participation/{studentId}/days/{date}"}:                            notCaptured,
 	{http.MethodPut, "/api/meal-plan/participation/{studentId}/days/{date}"}:                               notCaptured,
 	{http.MethodPut, "/api/meal-plan/participation/{studentId}/schedule"}:                                  notCaptured,

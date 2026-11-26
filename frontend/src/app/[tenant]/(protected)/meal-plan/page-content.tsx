@@ -2,7 +2,15 @@
 
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
-import { Copy, ClipboardPaste, Plus, Trash2, X } from "lucide-react";
+import { useTranslations } from "next-intl";
+import {
+  Copy,
+  ClipboardPaste,
+  UtensilsCrossed,
+  Plus,
+  Trash2,
+  X,
+} from "lucide-react";
 
 import { Button } from "~/components/ui/button";
 import { StickyActionBar } from "~/components/ui/sticky-action-bar";
@@ -29,11 +37,13 @@ import { isReadStateRefusal } from "~/lib/api-error";
 import { formatWeekLabel, parseISODate, toISODate } from "~/lib/date-helpers";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import {
+  getMealOrders,
   getMealPlanWeek,
   mondayOf,
   setDay,
   workWeekDates,
   type DishInput,
+  type MealOrderDay,
   type MealPlanDay,
   type MealPlanDish,
 } from "~/lib/meal-plan-api";
@@ -46,6 +56,7 @@ import {
 } from "~/lib/hooks/use-swr-load-error";
 import { useSWRAuth } from "~/lib/swr";
 import { useDraftOn } from "~/lib/swr/read-draft";
+import { tenantContactKeys } from "~/lib/swr/tenant-contact-keys";
 import { tenantListKeys } from "~/lib/swr/tenant-list-keys";
 import {
   useMealPlanEnabled,
@@ -56,6 +67,12 @@ import { MealParticipantList } from "~/components/meal-plan/meal-participant-lis
 import { MealCaterer } from "~/components/meal-plan/meal-caterer";
 import { MealBillingReleaseLink } from "~/components/meal-plan/meal-billing-release-link";
 import { MealOrderWeek } from "~/components/meal-plan/meal-order-week";
+import {
+  MealCancellationModal,
+  MealCancellationNotice,
+  useMealCancellations,
+  useRestoreMeal,
+} from "~/components/meal-plan/meal-cancellation";
 import {
   MealAllergenLegend,
   MealAllergenMarks,
@@ -240,16 +257,15 @@ class PartlySaved extends Error {
 }
 
 export default function MealPlanPage() {
+  const cancellationT = useTranslations("mealCancellation");
   const toast = useToast();
   const router = useTenantRouter();
-  // Gate the initial fetch on session readiness: the staff session gate needs the
-  // client-side token, which isn't available for a tick on a hard reload /
-  // direct navigation. Without this gate the one-shot load races auth, throws
-  // "No authentication token available", and never retries — leaving the page
-  // permanently empty. `required` redirects an absent/expired session to login
-  // instead of hanging on the loading skeleton. Navigate via the tenant router
-  // rather than next/navigation's redirect(), which isn't supported from this
-  // client hook callback (it throws NEXT_REDIRECT instead of navigating).
+  // Gate initial fetch on session readiness. The client token lags one tick
+  // after hard reload/direct navigation, so a request otherwise races auth,
+  // visibly fails, and never retries.
+  // `required` redirects an absent/expired session instead of hanging on the
+  // loading skeleton. Use the tenant router; redirect() cannot navigate from
+  // this client hook callback.
   const { data: session, status } = useSession({
     required: true,
     onUnauthenticated() {
@@ -308,12 +324,7 @@ export default function MealPlanPage() {
   const [confirmReload, setConfirmReload] = useState(false);
   const [confirmCopyPrev, setConfirmCopyPrev] = useState(false);
 
-  // Berlin-anchored: meal-plan rows are stored as school calendar DATEs the
-  // backend derives from timezone.TodayDate(). A browser in another timezone
-  // (or around the Berlin/local midnight boundary) would otherwise open and
-  // save the wrong school week. Matches the parent meal-plan page.
-  // useBerlinToday re-renders on the Berlin midnight rollover so a page left
-  // mounted overnight follows the date instead of freezing on yesterday.
+  // Meal-plan rows use Berlin calendar dates; derive the displayed week there and follow Berlin midnight, matching the parent meal-plan page.
   const today = useBerlinToday();
 
   const mondayISO = useMemo(() => {
@@ -323,7 +334,41 @@ export default function MealPlanPage() {
   }, [today, weekOffset]);
 
   const weekDates = useMemo(() => workWeekDates(mondayISO), [mondayISO]);
-
+  const [orderDays, setOrderDays] = useState<MealOrderDay[] | null>(null);
+  useLayoutEffect(() => setOrderDays(null), [mondayISO]);
+  // Ohne Anmeldung zeigt die Seite keine Bestellung. Sie lädt deren reine
+  // Tagesprojektion dennoch, damit ein Ausfall nicht auf einem Schließtag
+  // angeboten wird. Sie enthält keine Bestell- oder Kinddaten.
+  const cancellationOrderDays = useSWRAuth(
+    status === "authenticated" &&
+      canReadPlan &&
+      mealPlanEnabled === true &&
+      !mealRegistrationEnabled
+      ? tenantContactKeys.mealOrders(
+          mondayISO,
+          weekDates[weekDates.length - 1] ?? mondayISO,
+        )
+      : null,
+    () =>
+      getMealOrders(mondayISO, weekDates[weekDates.length - 1] ?? mondayISO),
+  );
+  const { error: cancellationOrderDaysLoadError } = useSwrResourceLoadError(
+    [cancellationOrderDays],
+    "die Bestellung",
+    () => cancellationOrderDays.mutate(),
+  );
+  const cancellationDays = mealRegistrationEnabled
+    ? orderDays
+    : (cancellationOrderDays.data?.days ?? null);
+  // Die Tage ohne Mittagessen (#7656); nur wer verwaltet, trägt sie ein.
+  const cancellationResource = useMealCancellations(
+    mondayISO,
+    weekDates[weekDates.length - 1] ?? mondayISO,
+    status === "authenticated" && canReadPlan && mealPlanEnabled === true,
+  );
+  const cancellations = cancellationResource.reasons;
+  const [cancelDate, setCancelDate] = useState<string | null>(null);
+  const restoreMeal = useRestoreMeal();
   const weekKey =
     status === "authenticated" && canReadPlan && mealPlanEnabled
       ? tenantListKeys.mealPlanWeek(mondayISO)
@@ -838,6 +883,8 @@ export default function MealPlanPage() {
     >
       <FormErrorAlert message={saveErrors.error} />
       <LoadErrorAlert error={draftForm.loadError} className="mb-4" />
+      <LoadErrorAlert error={cancellationResource.loadError} className="mb-4" />
+      <LoadErrorAlert error={cancellationOrderDaysLoadError} className="mb-4" />
       <LoadErrorAlert
         error={
           afterSave.error && {
@@ -850,7 +897,6 @@ export default function MealPlanPage() {
         }
         className="mb-4"
       />
-
       {/* Eine Karte für den Wochenplan: Titel, Erklärung und „Vorwoche
           übernehmen“ im Kopf, die fünf Tage randlos unter einer Trennlinie.
           overflow visible: die Allergen-Auswahl eines Gerichts darf über die
@@ -897,6 +943,7 @@ export default function MealPlanPage() {
               const rows = drafts[date] ?? [];
               const isToday = date === today;
               const hasContent = dayHasContent(rows);
+              const cancelledReason = cancellations.get(date);
               return (
                 <div
                   key={date}
@@ -951,6 +998,45 @@ export default function MealPlanPage() {
                               destructive: true,
                               disabled: !hasContent || editingLocked,
                             },
+                            // Ein vergangener Tag bleibt, wie er war (#7656).
+                            ...(date < today ||
+                            !cancellationResource.loaded ||
+                            !canCancelMeal(date, cancellationDays)
+                              ? []
+                              : cancelledReason === undefined
+                                ? [
+                                    {
+                                      label: cancellationT("cancelAction"),
+                                      icon: (
+                                        <UtensilsCrossed className="h-4 w-4" />
+                                      ),
+                                      description:
+                                        cancellationT("cancelDescription"),
+                                      onClick: () => setCancelDate(date),
+                                    },
+                                  ]
+                                : [
+                                    {
+                                      label:
+                                        cancellationT("changeReasonAction"),
+                                      icon: (
+                                        <UtensilsCrossed className="h-4 w-4" />
+                                      ),
+                                      description: cancellationT(
+                                        "changeReasonDescription",
+                                      ),
+                                      onClick: () => setCancelDate(date),
+                                    },
+                                    {
+                                      label: cancellationT("restoreAction"),
+                                      icon: (
+                                        <UtensilsCrossed className="h-4 w-4" />
+                                      ),
+                                      description:
+                                        cancellationT("restoreDescription"),
+                                      onClick: () => void restoreMeal(date),
+                                    },
+                                  ]),
                           ]}
                         />
                       )}
@@ -958,6 +1044,9 @@ export default function MealPlanPage() {
                   </div>
 
                   <div className="flex flex-1 flex-col gap-3 p-3">
+                    {cancelledReason !== undefined ? (
+                      <MealCancellationNotice reason={cancelledReason} />
+                    ) : null}
                     {rows.map((row, idx) => (
                       <InsetPanel
                         key={row.clientId}
@@ -1052,10 +1141,21 @@ export default function MealPlanPage() {
         </div>
       </SectionCard>
 
+      {canEdit ? (
+        <MealCancellationModal
+          date={cancelDate}
+          initialReason={
+            cancelDate ? (cancellations.get(cancelDate) ?? "") : ""
+          }
+          onClose={() => setCancelDate(null)}
+        />
+      ) : null}
+
       {canReadOrders ? (
         <MealOrderWeek
           mondayISO={mondayISO}
           canExportMonth={canReadParticipants}
+          onDaysLoaded={setOrderDays}
         />
       ) : null}
 
@@ -1106,5 +1206,17 @@ export default function MealPlanPage() {
         </StickyActionBar>
       )}
     </TenantPage>
+  );
+}
+
+function canCancelMeal(
+  date: string,
+  orderDays: MealOrderDay[] | null,
+): boolean {
+  return (
+    orderDays !== null &&
+    !orderDays.some(
+      (day) => day.date === date && day.closed && !day.mealCancelled,
+    )
   );
 }

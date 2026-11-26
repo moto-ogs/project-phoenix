@@ -140,6 +140,9 @@ const (
 	// KindMealPlanChanged: today's menu changed after it was published
 	// (#7666). Never the dishes; the meal plan page shows them.
 	KindMealPlanChanged Kind = "meal_plan_changed"
+	// KindMealCancelled: lunch does not take place today although the school
+	// is open (#7656); MealCancellation carries the school's reason.
+	KindMealCancelled Kind = "meal_cancelled"
 )
 
 // ChildStatus is the status of an absent child, as on the detail page.
@@ -312,6 +315,12 @@ type DayClass struct {
 	Children int     `json:"children"`
 }
 
+// DayMealCancellation is today's cancelled lunch (#7656). Reason is the
+// school's own text ("Der Caterer liefert nicht").
+type DayMealCancellation struct {
+	Reason string `json:"reason"`
+}
+
 // BlockRoom is the room an entry names.
 type BlockRoom struct {
 	ID   ident.ID `json:"id"`
@@ -380,6 +389,8 @@ type SourceEntry struct {
 	Class *DayClass
 	// Appointment is set on the appointment kinds only (#7663).
 	Appointment *DayAppointment
+	// MealCancellation is set on KindMealCancelled only (#7656).
+	MealCancellation *DayMealCancellation
 	// EnteredByYou marks a change the reading guardian entered itself, in
 	// the child's day of the parents portal (#7671).
 	EnteredByYou bool
@@ -419,6 +430,8 @@ type Entry struct {
 	Class *DayClass `json:"class"`
 	// Appointment is set on the appointment kinds only (#7663).
 	Appointment *DayAppointment `json:"appointment"`
+	// MealCancellation is set on KindMealCancelled only (#7656).
+	MealCancellation *DayMealCancellation `json:"meal_cancellation"`
 	// EnteredByYou: see SourceEntry. Never set in the staff overview.
 	EnteredByYou bool `json:"-"`
 }
@@ -486,8 +499,9 @@ type AppointmentChanges interface {
 	AppointmentChanges(ctx context.Context, day calendar.Date) ([]SourceEntry, error)
 }
 
-// MealPlanChanges is the Essen port: whether the menu of the day changed,
-// for every staff account of the school (#7666). It carries no dish.
+// MealPlanChanges is the Essen port: whether the menu of the day changed
+// (#7666) or lunch is cancelled (#7656), for every staff account of the
+// school. It carries no dish.
 type MealPlanChanges interface {
 	MealPlanChanges(ctx context.Context, day calendar.Date) ([]SourceEntry, error)
 }
@@ -690,7 +704,7 @@ func toEntry(entry SourceEntry) Entry {
 		People: people, Group: entry.Group, Link: entry.Link, Count: entry.Count, Notice: entry.Notice,
 		Closing: entry.Closing, Opening: entry.Opening, Child: entry.Child, ChildSummary: entry.ChildSummary,
 		Activity: entry.Activity, Room: entry.Room, PreviousRoom: entry.PreviousRoom,
-		Class: entry.Class, Appointment: entry.Appointment, EnteredByYou: entry.EnteredByYou,
+		Class: entry.Class, Appointment: entry.Appointment, MealCancellation: entry.MealCancellation, EnteredByYou: entry.EnteredByYou,
 	}
 }
 

@@ -148,7 +148,7 @@ func studentPickupPersonsUp(ctx context.Context, db *bun.DB) error {
 // studentPickupPersonsFingerprint is the incoming-FK fingerprint of the
 // school erasure plan with the pickup persons; the repeatable preflight
 // checks it.
-const studentPickupPersonsFingerprint = "958d12b0a65d72530ca6aef2703d47cfefd699f0ae0b3ede51d4976f68776d5a"
+const studentPickupPersonsFingerprint = "ea48f0cbdec255647f99ec81aae866d5ab4c2936bd36fb1ddf1a27f6970d9da4"
 
 // studentPickupPersonsErasureLines are the lines the repeatable school and
 // demo erasures carry for the pickup persons, per function. The down takes

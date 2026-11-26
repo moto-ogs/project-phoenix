@@ -765,13 +765,6 @@
     },
     {
       "build": "production",
-      "evidence": "func (s dayChangesMealPlan) MealPlanChanges(ctx context.Context, day calendar.Date) ([]daychangesview.SourceEntry, error) {\n\tchanged, err := s.reads.MenuChangedOn(ctx, mealplan.Date(day.String()))\n\tif err != nil {\n\t\treturn nil, fmt.Errorf(\"read meal plan change: %w\", err)\n\t}\n\tif !changed {\n\t\treturn nil, nil\n\t}\n\tentry := daychangesview.SourceEntry{Kind: daychangesview.KindMealPlanChanged}\n\tif mealPlanAllowed(ctx, mealplanAPI.AccessRead) {\n\t\tentry.Link = \u0026daychangesview.Link{Target: daychangesview.LinkMealPlan}\n\t}\n\treturn []daychangesview.SourceEntry{entry}, nil\n}",
-      "form": "unclassified-evidence",
-      "id": "api/dayChangesMealPlan.MealPlanChanges",
-      "owner": "roots"
-    },
-    {
-      "build": "production",
       "evidence": "func (p emergencySnapshotPersonNames) ByIDs(ctx context.Context, personIDs []int64) (map[int64]emergencysnapshot.Person, error) {\n\tif len(personIDs) == 0 {\n\t\treturn map[int64]emergencysnapshot.Person{}, nil\n\t}\n\trows, err := p.facade.ListPersonsByID(ctx, personIDs)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make(map[int64]emergencysnapshot.Person, len(rows))\n\tfor _, row := range rows {\n\t\tresult[row.ID] = emergencysnapshot.Person{ID: row.ID, FirstName: row.FirstName, LastName: row.LastName}\n\t}\n\treturn result, nil\n}",
       "form": "unclassified-evidence",
       "id": "api/emergencySnapshotPersonNames.ByIDs",
