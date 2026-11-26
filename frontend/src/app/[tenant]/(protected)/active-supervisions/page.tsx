@@ -149,8 +149,9 @@ const ACTIVE_SUPERVISIONS_BINARY_MODE_INFO =
 
 /**
  * Telefon, Titelzeile: Zustand und Zeit des Blocks als ein Abzeichen.
- * „seit 00:03“ allein las sich wie eine Dauer; mit „Uhr“ ist es die Uhrzeit,
- * zu der der Block begann. „Beendet“ steht schon in der Chipzeile.
+ * „seit 00:03“ allein las sich wie eine Dauer; „Läuft seit 00:03“ nennt den
+ * Beginn wie Startseite und Tagesplan. „Beendet“ steht schon in der
+ * Chipzeile.
  */
 function appRunStateLabel(
   instance: Parameters<typeof blockTimeRange>[0] & {
@@ -159,10 +160,9 @@ function appRunStateLabel(
 ): string {
   const range = blockTimeRange(instance);
   if (instance.status === "completed") return `${range} Uhr`;
-  const state = rosterRunState(instance.status).label;
-  return range.startsWith("seit")
-    ? `${state} ${range} Uhr`
-    : `${state} · ${range} Uhr`;
+  // Ein Wort für den laufenden Block wie auf Startseite und Tagesplan
+  // („Läuft seit 01:20“), nicht „Aktiv seit 01:20 Uhr“ (Runde 19).
+  return range.startsWith("seit") ? `Läuft ${range}` : `Läuft · ${range}`;
 }
 
 function hasSameGroupNames(
@@ -1366,6 +1366,22 @@ function MeinRaumPageContent() {
       // Beim Rollen bleibt im schmalen Kopf die Zahl der Kinder stehen, wie
       // auf den anderen Seiten der Kurzstatus.
       appCompactStats={appMode ? appCompactCount : undefined}
+      // Die Lupe bleibt auch im schmalen Kopf: In der langen Liste ist die
+      // Suche sonst erst nach dem Zurückrollen erreichbar (Runde 19).
+      appCompactActions={
+        appMode && appHasRunningRoster ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            aria-label="Kinder suchen"
+            tooltip="Öffnet Suche und Filter für die Kinderliste."
+            onClick={() => setSearchSheetOpen(true)}
+          >
+            <Search className="size-5" aria-hidden="true" />
+          </Button>
+        ) : undefined
+      }
       back={isSharedRoomView}
       backHref={
         currentOpenRoom ? `/rooms/${currentOpenRoom.roomId}` : undefined
@@ -1380,7 +1396,7 @@ function MeinRaumPageContent() {
               // Telefon schon voll; in der Titelzeile ist Platz. Die Kopfkarte
               // zeigt in der Titelzeile nur `data-icon-only`-Elemente, im
               // „…“-Blatt keine: die Zeit steht nur hier.
-              // Als Abzeichen „Aktiv seit 01:20 Uhr“: Der Zustand gehört
+              // Als Abzeichen „Läuft seit 01:20“: Der Zustand gehört
               // zur Zeit, frei neben der Lupe las sie sich wie ein Fremdkörper.
               <span data-icon-only="" className="shrink-0 tabular-nums">
                 <StatusBadge
