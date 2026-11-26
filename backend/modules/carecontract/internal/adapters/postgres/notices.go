@@ -43,9 +43,18 @@ type noticeRow struct {
 	AccountID              *int64         `bun:"account_id"`
 }
 
+// acknowledgedSQL reads the withdrawal evidence the signatures of contract
+// c carry (#4679, #4816): the earliest acknowledgement of the notice among
+// its online signatures and the wish to begin care early. A changed version
+// signed later, on paper or by the parents' own request, hides none of it;
+// a paper signature carries no acknowledgement.
+const acknowledgedSQL = `SELECT MIN(s.withdrawal_notice_at) AS acknowledged_at, bool_or(s.early_start_requested) AS early_start
+	FROM care_contract.contract_signatures AS s
+	WHERE s.organization_id = c.organization_id AND s.contract_id = c.id AND s.method <> '` + carecontract.SignaturePaper + `'`
+
 // NoticeState reads the first and last day of the contract's effective
-// versions, the withdrawal notice and the declaration made, in one
-// statement.
+// versions, the withdrawal notice with the acknowledgements of its
+// signatures and the declaration made, in one statement.
 func (Store) NoticeState(ctx context.Context, organizationID, contractID int64) (ports.NoticeState, error) {
 	db, err := traegerDB(ctx, organizationID)
 	if err != nil {
@@ -58,14 +67,17 @@ func (Store) NoticeState(ctx context.Context, organizationID, contractID int64) 
 		StudentID   *int64         `bun:"student_id"`
 		Party       *int64         `bun:"party_account_id"`
 	}
-	err = db.NewRaw(`SELECT c.withdrawal_informed_at, c.early_start_requested, c.student_id,
+	err = db.NewRaw(`SELECT LEAST(c.withdrawal_informed_at, a.acknowledged_at) AS withdrawal_informed_at,
+			(c.early_start_requested OR COALESCE(a.early_start, false)) AS early_start_requested, c.student_id,
 			(SELECT p.account_id FROM care_contract.contract_parties AS p
 				WHERE p.organization_id = c.organization_id AND p.contract_id = c.id ORDER BY p.id LIMIT 1) AS party_account_id,
 			(SELECT v.ends_on FROM care_contract.contract_versions AS v
 				WHERE v.organization_id = c.organization_id AND v.contract_id = c.id
 					AND v.status IN `+effectiveStatusSQL+`
 				ORDER BY v.effective_from DESC LIMIT 1) AS contract_end
-		FROM care_contract.contracts AS c WHERE c.organization_id = ? AND c.id = ?`,
+		FROM care_contract.contracts AS c
+		LEFT JOIN LATERAL (`+acknowledgedSQL+`) AS a ON true
+		WHERE c.organization_id = ? AND c.id = ?`,
 		organizationID, contractID).Scan(ctx, &row)
 	if errors.Is(err, sql.ErrNoRows) {
 		return ports.NoticeState{}, carecontract.ErrContractNotFound

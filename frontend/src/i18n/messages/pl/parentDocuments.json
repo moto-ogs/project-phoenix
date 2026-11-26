@@ -53,5 +53,10 @@
   "cancelContractTooltip": "Otwiera wypowiedzenie; wysyłasz je dopiero na następnej stronie.",
   "withdrawContractTooltip": "Otwiera odstąpienie; wysyłasz je dopiero na następnej stronie.",
   "showConfirmationTooltip": "Pokazuje wypowiedzenie z datą końca umowy i potwierdzeniem.",
-  "showWithdrawalTooltip": "Pokazuje odstąpienie wraz z potwierdzeniem."
+  "showWithdrawalTooltip": "Pokazuje odstąpienie wraz z potwierdzeniem.",
+  "changeAwaitsSignature": "Zmiana czeka na Twój podpis",
+  "changeNote": "Opieka zmienia się od {date}. Podpisz nową wersję. Do tego czasu umowa obowiązuje jak dotąd.",
+  "signChange": "Zobacz zmianę i podpisz",
+  "signChangeTooltip": "Otwiera nową wersję. Widzisz, co się zmienia, i możesz podpisać.",
+  "changeStartsOn": "Zmiana od"
 }

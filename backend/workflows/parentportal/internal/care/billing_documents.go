@@ -64,6 +64,10 @@ type BillingDocument struct {
 	// Replaced marks a sent contract version that a change on its own first
 	// day replaced (#4681); it holds on no day.
 	Replaced bool
+	// ChangeAwaitsSignature marks a changed version of an active contract
+	// that waits for the parents' signature (#4816): the version before
+	// holds until they sign.
+	ChangeAwaitsSignature bool
 	// EndsOn is the last day of a terminated contract (#4682). CanEndContract
 	// tells that the contract is active and the account's relationship to
 	// its child grants parent_portal.enrollment.submit, the right a

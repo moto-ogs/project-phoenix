@@ -28,7 +28,8 @@ func (s signingErrorStore) Contract(context.Context, int64, int64, bool) (Contra
 	if s.stage == "contract" {
 		return ContractRecord{}, s.failure
 	}
-	return ContractRecord{Summary: carecontract.ContractSummary{Status: carecontract.StatusSent}}, nil
+	return ContractRecord{Summary: carecontract.ContractSummary{Status: carecontract.StatusSent},
+		Version: carecontract.Version{Status: carecontract.VersionRequested}}, nil
 }
 func (s signingErrorStore) CurrentDocument(context.Context, int64, int64, int64) (StoredDocument, error) {
 	if s.stage == "document" {
@@ -38,7 +39,7 @@ func (s signingErrorStore) CurrentDocument(context.Context, int64, int64, int64)
 }
 func (s signingErrorStore) InsertEvents(context.Context, int64, []Event) error { return s.failure }
 
-func (signingErrorStore) InboxContractAddressed(context.Context, int64, int64, carecontract.InboxReader) (bool, error) {
+func (signingErrorStore) InboxContractAddressed(context.Context, int64, int64, int64, carecontract.InboxReader) (bool, error) {
 	return true, nil
 }
 

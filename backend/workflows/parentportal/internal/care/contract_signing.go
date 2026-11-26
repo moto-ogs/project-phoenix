@@ -38,6 +38,8 @@ type ContractSignatureInput struct {
 	TypedName          string `json:"typed_name"`
 	NoticeAcknowledged bool   `json:"withdrawal_notice_acknowledged"`
 	EarlyStart         bool   `json:"early_start_requested"`
+	// DocumentSHA256 is the checksum of the PDF the page showed (#4816).
+	DocumentSHA256 string `json:"document_sha256"`
 }
 
 // ContractSigningView is the contract as the Betreuungsvertrag shows it to

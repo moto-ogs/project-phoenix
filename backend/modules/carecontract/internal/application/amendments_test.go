@@ -476,3 +476,10 @@ func TestContinuingCareInAnotherModuleReplacesAnUnbookedPlan(t *testing.T) {
 	assert.Equal(t, []carecontract.Service{{Weekday: "mon", CareOfferingID: 2, ModuleName: "Ganztag", EndsAt: "16:30"}},
 		plan.version.Services)
 }
+
+// nextAmendment is nextChange without the change the plan comes from.
+func nextAmendment(read schoolRead, application carecontract.Application, contract AmendableContract,
+	today calendar.Date) (*amendmentPlan, string) {
+	plan, reason, _ := nextChange(read, application, contract, today)
+	return plan, reason
+}

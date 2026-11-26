@@ -57,10 +57,13 @@ type bookedVersionRow struct {
 	Services      string         `bun:"services"`
 }
 
-// bookedCareSQL reads every version of the children's contracts that
-// overlaps the window and is neither rejected nor replaced, the newest
-// effective version of a child first. A replaced version holds on no day
-// (#4681), so it never enters the Soll, whatever the order of the versions.
+// schoolVersionSQL admits concluded versions and the offer awaiting a first
+// signature. Unsigned amendments and overtaken versions hold on no day.
+const schoolVersionSQL = `(v.status IN ` + effectiveStatusSQL + ` OR
+	(v.status = '` + carecontract.VersionRequested + `' AND c.status = '` + carecontract.StatusSent + `'))`
+
+// bookedCareSQL reads every eligible version of the children's contracts
+// that overlaps the window, the newest effective version of a child first.
 //
 // The Soll counts more contracts than VersionsInForce on purpose (ADR 0156
 // point 1, #6107): a sent contract whose version is still beantragt books
@@ -77,7 +80,7 @@ const bookedCareSQL = `SELECT * FROM (
 	FROM care_contract.contracts AS c
 	JOIN care_contract.contract_versions AS v ON v.contract_id = c.id AND v.organization_id = c.organization_id
 	WHERE c.school_id = ? AND c.student_id = ANY(?) AND c.status NOT IN (?, '` + carecontract.StatusWithdrawn + `')
-		AND v.status NOT IN (?, ?) AND v.effective_from <= ?
+		AND ` + schoolVersionSQL + ` AND v.effective_from <= ?
 		AND (c.ends_on IS NULL OR v.effective_from <= c.ends_on)) AS b
 	WHERE b.ends_on IS NULL OR b.ends_on >= ?
 	ORDER BY b.student_id, b.effective_from DESC, b.version_number DESC, b.contract_id DESC`
@@ -96,7 +99,7 @@ func (BookedCare) BookedCare(ctx context.Context, studentIDs []int64, from, to c
 	}
 	var rows []bookedVersionRow
 	if err := db.NewRaw(bookedCareSQL, school, pgdialect.Array(studentIDs), carecontract.StatusDraft,
-		carecontract.VersionRejected, carecontract.VersionReplaced, to, from).Scan(ctx, &rows); err != nil {
+		to, from).Scan(ctx, &rows); err != nil {
 		return nil, fmt.Errorf("care contract postgres: read booked care: %w", err)
 	}
 	for _, row := range rows {

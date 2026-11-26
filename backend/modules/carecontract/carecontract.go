@@ -55,6 +55,10 @@ const (
 	// VersionReplaced is a version that a change on its own first day
 	// replaced (#4681): it stays in the history and holds on no day.
 	VersionReplaced = "ersetzt"
+	// VersionOvertaken is a requested version nobody signed (#4816): a newer
+	// version overtook it, or the school took its change back. It stays in
+	// the history and holds on no day.
+	VersionOvertaken = "ueberholt"
 )
 
 const (
@@ -331,6 +335,10 @@ type ContractSummary struct {
 	// without one. The office names it to take the binding of an imported
 	// contract off again (ADR 0309, "Der Weg zurück").
 	RequestChildID *ident.ID `json:"request_child_id"`
+	// ChangeAwaitsSignature tells that a changed version of an active
+	// contract waits for the parents' signature (#4816); the version in
+	// force holds until then.
+	ChangeAwaitsSignature bool `json:"change_awaits_signature"`
 }
 
 // ContractList is the filtered list with the count of every status over all
@@ -370,6 +378,22 @@ type Version struct {
 	// effective version starts, else its own end. Nil while it holds open
 	// ended or is no effective version.
 	ValidUntil *calendar.Date `json:"valid_until"`
+	// AgreedFrom is the effective date the signed document names when the
+	// parents signed a changed version after that day (#4816): the version
+	// then holds from the day of the signature, EffectiveFrom. Nil for
+	// every other version.
+	AgreedFrom *calendar.Date `json:"agreed_from,omitempty"`
+}
+
+// VersionSignature tells how the parents agreed to one version (#4816): a
+// drawn or typed signature, a paper contract, or their own request for the
+// change (SignatureRequest).
+type VersionSignature struct {
+	VersionNumber int       `json:"version_number"`
+	Method        string    `json:"method"`
+	Channel       string    `json:"channel"`
+	SignerName    string    `json:"signer_name"`
+	SignedAt      time.Time `json:"signed_at"`
 }
 
 type Party struct {
@@ -434,6 +458,9 @@ type ContractDetail struct {
 	// Reminders the reminder mails while it waits (#4679, signature.go).
 	Signature *ContractSignature `json:"signature"`
 	Reminders []Reminder         `json:"reminders"`
+	// VersionSignatures tell for every signed version how the parents
+	// agreed to it, oldest first (#4816).
+	VersionSignatures []VersionSignature `json:"version_signatures"`
 	// Versions are all versions of the contract, oldest first (#4681). The
 	// version above is the one in force today, else the next one.
 	Versions []Version `json:"versions"`
@@ -593,6 +620,10 @@ type InboxContract struct {
 	// „Vertrag widerrufen“ of § 356a BGB. The declaration page decides on
 	// the exact day.
 	CanWithdraw bool `json:"can_withdraw"`
+	// ChangeAwaitsSignature tells that the row shows a changed version of
+	// an active contract that waits for the signature (#4816): the earlier
+	// version holds until the parents sign.
+	ChangeAwaitsSignature bool `json:"change_awaits_signature"`
 }
 
 // Inbox serves the contracts of one Träger in the parents' inbox (ADR 0088
@@ -634,6 +665,10 @@ type ContractMail struct {
 	// Concluded tells that the contract is concluded already (Weg b): the
 	// parents receive it for their records and sign nothing.
 	Concluded bool `json:"concluded,omitempty"`
+	// EffectiveFrom is the German date a changed version holds from (#4816).
+	EffectiveFrom string `json:"effective_from,omitempty"`
+	// Amendment asks for another signature on a change to a concluded contract.
+	Amendment bool `json:"amendment,omitempty"`
 }
 
 // RenderedContractMail is the mail the worker sends.
@@ -663,6 +698,9 @@ type ContractMailContent struct {
 	WithdrawalEndsOn string
 	WithdrawalNotice []string
 	Concluded        bool
+	// EffectiveFrom is the day a changed version holds from (#4816).
+	EffectiveFrom string
+	Amendment     bool
 }
 
 type ContractMailRenderer func(ctx context.Context, payload []byte) (RenderedContractMail, error)

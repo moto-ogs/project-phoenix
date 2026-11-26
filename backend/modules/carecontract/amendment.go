@@ -66,7 +66,11 @@ var ErrVersionNotFound = errors.New("care contract version not found")
 // changed, why.
 type AmendmentRun struct {
 	Amended []AmendedContract `json:"amended"`
-	Skipped []AmendmentSkip   `json:"skipped"`
+	// Awaiting are the changed versions that wait for the parents'
+	// signature (#4816): the school or the Träger changed the care, or the
+	// contract is not signed yet.
+	Awaiting []AmendedContract `json:"awaiting"`
+	Skipped  []AmendmentSkip   `json:"skipped"`
 }
 
 type AmendedContract struct {
