@@ -2205,9 +2205,17 @@ function TimetablesContent() {
                 // Die Konflikte nennt der Hinweis direkt unter dem Kopf, mit
                 // dem Weg zu jedem einzelnen. Dieselbe Zahl hier noch einmal
                 // stand doppelt da (#8134).
+                // Mit Zeitraum: am Telefon zeigt die Wochenansicht einen
+                // Tag, und „42 Termine“ ließ offen, was gezählt ist.
                 {
                   value: instanceCount,
-                  label: instanceCount === 1 ? "Termin" : "Termine",
+                  label: `${instanceCount === 1 ? "Termin" : "Termine"} ${
+                    view === "month"
+                      ? "in diesem Monat"
+                      : view === "day"
+                        ? "an diesem Tag"
+                        : "in dieser Woche"
+                  }`,
                 },
               ]
         }

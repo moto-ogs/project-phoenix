@@ -394,7 +394,7 @@ describe("Betreuungsplan heute (#2180, #8134)", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Alle 4 Blöcke von heute sind vorbei. Davon: 4 wurden nicht gestartet.",
+        "Alle 4 Blöcke von heute sind vorbei. 4 Blöcke wurden nicht gestartet.",
       ),
     ).toBeInTheDocument();
     expect(screen.queryAllByRole("listitem")).toHaveLength(0);
@@ -423,7 +423,7 @@ describe("Betreuungsplan heute (#2180, #8134)", () => {
 
     expect(
       screen.getByText(
-        "Alle 2 Blöcke von heute sind vorbei. Davon: 1 ist ausgefallen.",
+        "Alle 2 Blöcke von heute sind vorbei. Ausgefallen: „Lernzeit Jahrgang 1“.",
       ),
     ).toBeInTheDocument();
   });

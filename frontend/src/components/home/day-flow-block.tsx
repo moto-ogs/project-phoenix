@@ -236,21 +236,23 @@ function dayOverText(
     blocks.length === 1
       ? "Der eine Block von heute ist vorbei."
       : `Alle ${blocks.length} Blöcke von heute sind vorbei.`;
-  const exceptions = [
-    cancelled.length === 1
-      ? "1 ist ausgefallen"
-      : cancelled.length > 1
-        ? `${cancelled.length} sind ausgefallen`
-        : null,
-    missed.length === 1
-      ? "1 wurde nicht gestartet"
-      : missed.length > 1
-        ? `${missed.length} wurden nicht gestartet`
-        : null,
-  ].filter((part) => part !== null);
-  return exceptions.length > 0
-    ? `${done} Davon: ${exceptions.join(", ")}.`
-    : done;
+  // Ein oder zwei Ausfälle beim Namen: wer abends nach der Abholung gefragt
+  // wird, muss dafür nicht in den Plan wechseln.
+  const cancelledText =
+    cancelled.length === 0
+      ? null
+      : cancelled.length <= 2
+        ? `Ausgefallen: ${cancelled.map((block) => `„${block.title}“`).join(" und ")}.`
+        : `${cancelled.length} Blöcke sind ausgefallen.`;
+  const missedText =
+    missed.length === 0
+      ? null
+      : missed.length === 1
+        ? "1 Block wurde nicht gestartet."
+        : `${missed.length} Blöcke wurden nicht gestartet.`;
+  return [done, cancelledText, missedText]
+    .filter((part) => part !== null)
+    .join(" ");
 }
 
 /** „1 fällt aus“, wenn unter den nicht gezeigten Blöcken ein Ausfall ist. */

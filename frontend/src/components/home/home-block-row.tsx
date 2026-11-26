@@ -184,7 +184,9 @@ export function BlockRowBody({
       </span>
       <span className="min-w-0 flex-1">
         <span
-          className={`block truncate text-sm ${over ? "text-gray-500" : "text-gray-900"} ${running ? "font-semibold" : "font-medium"}`}
+          // Am Telefon bricht der Name um: abgeschnitten stünde vom Zusatz
+          // dahinter nur „Dein Bl…“ da.
+          className={`block text-sm sm:truncate ${over ? "text-gray-500" : "text-gray-900"} ${running ? "font-semibold" : "font-medium"}`}
         >
           {block.title}
           {titleAddon}
