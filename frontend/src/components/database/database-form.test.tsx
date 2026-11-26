@@ -946,6 +946,47 @@ describe("DatabaseForm", () => {
     ).toBeInTheDocument();
   });
 
+  it("locks a disabled select on its stored value and still submits it", async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    const sectionsWithLockedSelect: FormSection[] = [
+      {
+        title: "Auswahl",
+        fields: [
+          {
+            name: "role",
+            label: "Rolle",
+            type: "select",
+            required: true,
+            disabled: true,
+            helperText: "Fest vorgegeben",
+            options: [{ value: "admin", label: "Administrator" }],
+          },
+        ],
+      },
+    ];
+
+    render(
+      <DatabaseForm
+        {...defaultProps}
+        sections={sectionsWithLockedSelect}
+        initialData={{ role: "admin" }}
+        onSubmit={onSubmit}
+      />,
+    );
+
+    const select = screen.getByRole("combobox");
+    expect(select).toBeDisabled();
+    expect(select).toHaveTextContent("Administrator");
+    expect(select).toHaveAccessibleDescription("Fest vorgegeben");
+
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({ role: "admin" }),
+      );
+    });
+  });
+
   it("renders textarea fields", () => {
     const sectionsWithTextarea: FormSection[] = [
       {

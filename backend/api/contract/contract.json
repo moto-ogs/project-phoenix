@@ -28166,6 +28166,12 @@
           }
         },
         {
+          "name": "is_system",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
           "name": "category_id",
           "schema": {
             "kind": "id"

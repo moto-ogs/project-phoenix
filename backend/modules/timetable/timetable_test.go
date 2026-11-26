@@ -8,13 +8,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestSystemActivityNamesAreExact(t *testing.T) {
-	t.Parallel()
-	assert.True(t, timetable.IsSystemActivityName(timetable.SchulhofActivityName))
-	assert.True(t, timetable.IsSystemActivityName(timetable.WCActivityName))
-	assert.False(t, timetable.IsSystemActivityName("wc"))
-}
-
 func TestOpenRoomStayIsTheSystemActivityOnly(t *testing.T) {
 	t.Parallel()
 	assert.True(t, timetable.IsOpenRoomStay(timetable.Group{Name: timetable.OpenRoomActivityName, IsSystem: true}))

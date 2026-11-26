@@ -1,6 +1,6 @@
 {
   "activity_not_owner": "Du kannst nur Aktivitäten ändern, die du angelegt hast oder betreust.",
-  "activity_system_protected": "Diese Aktivität gehört fest zu moto. Sie lässt sich nicht umbenennen oder löschen.",
+  "activity_system_protected": "Diese Aktivität gehört fest zu moto. Du kannst ihren Namen und ihre Kategorie nicht ändern und sie nicht löschen.",
   "activity_template_protected": "Diese Aktivität ist ein Regeltermin. Bitte ändere sie im Betreuungsplan.",
   "ambiguous_template_instance_delete": "Dieser Termin lässt sich nicht einzeln löschen. Die Serie hat an diesem Tag mehrere Termine.",
   "attendance_entry_not_found": "Diesen Eintrag gibt es nicht mehr. Bitte lade die Seite neu.",
