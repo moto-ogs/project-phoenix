@@ -146,9 +146,9 @@ func (s *PickupChangeTeamStore) ListUnreadPickupChangeNotices(ctx context.Contex
 		Where(`"pickup_notice".read_at IS NULL`).
 		Where(`"pickup_notice".pickup_date >= ?`, string(from)).
 		Where(`(("request".status = ?
-			AND (NULLIF("request".payload->>'pickup_time', '') IS NOT NULL OR "request".payload ? 'pickup_person')
+			AND (NULLIF("request".payload->>'pickup_time', '') IS NOT NULL OR jsonb_exists("request".payload, 'pickup_person'))
 			AND (NULLIF("request".payload->>'pickup_time', '') IS NULL OR to_char("exception".pickup_time, 'HH24:MI') = "request".payload->>'pickup_time')
-			AND (NOT ("request".payload ? 'pickup_person') OR ("person".requested_by_guardian = "request".submitted_by
+			AND (NOT jsonb_exists("request".payload, 'pickup_person') OR ("person".requested_by_guardian = "request".submitted_by
 				AND "person".person_name = "request".payload->'pickup_person'->>'name'
 				AND COALESCE("person".guardian_profile_id::text, '') = COALESCE("request".payload->'pickup_person'->>'guardian_profile_id', '')))
 		) OR ("request".status = ? AND "exception".id IS NULL))`, requestApproved, requestRejected).

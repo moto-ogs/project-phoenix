@@ -5317,6 +5317,11 @@
     },
     {
       "decision": "0090",
+      "id": "roots/owners/requestDecisionAdapter.LockStudentAndExceptionDay",
+      "reason": "Finite named forwarding debt under ADR 0090, not a new floor; removal/deepening pending."
+    },
+    {
+      "decision": "0090",
       "id": "roots/owners/requestDecisionAdapter.Snapshot",
       "reason": "Finite named forwarding debt under ADR 0090, not a new floor; removal/deepening pending."
     },
