@@ -57,5 +57,6 @@
   "changeAwaitsSignature": "Ndryshimi pret nënshkrimin tënd",
   "changeNote": "Kujdesi ndryshon nga {date}. Të lutem nënshkruaj versionin e ri. Deri atëherë kontrata vlen si deri tani.",
   "signChange": "Shiko ndryshimin dhe nënshkruaj",
-  "signChangeTooltip": "Hap versionin e ri. Sheh çfarë ndryshon dhe mund të nënshkruash."
+  "signChangeTooltip": "Hap versionin e ri. Sheh çfarë ndryshon dhe mund të nënshkruash.",
+  "changeStartsOn": "Ndryshimi nga"
 }

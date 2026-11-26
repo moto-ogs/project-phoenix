@@ -57,5 +57,6 @@
   "changeAwaitsSignature": "Änderung wartet auf deine Unterschrift",
   "changeNote": "Die Betreuung ändert sich ab dem {date}. Bitte unterschreibe die neue Fassung. Bis dahin gilt dein Vertrag wie bisher.",
   "signChange": "Änderung ansehen und unterschreiben",
-  "signChangeTooltip": "Öffnet die neue Fassung. Du siehst, was sich ändert, und kannst unterschreiben."
+  "signChangeTooltip": "Öffnet die neue Fassung. Du siehst, was sich ändert, und kannst unterschreiben.",
+  "changeStartsOn": "Änderung ab"
 }

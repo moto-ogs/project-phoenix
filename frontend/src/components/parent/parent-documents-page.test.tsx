@@ -380,6 +380,8 @@ describe("ParentDocumentsPage", () => {
         "Die Betreuung ändert sich ab dem 01.10.2026. Bitte unterschreibe die neue Fassung. Bis dahin gilt dein Vertrag wie bisher.",
       ),
     ).toBeInTheDocument();
+    // The contract began long ago: the date is the day of the change.
+    expect(screen.getByText("Änderung ab")).toBeInTheDocument();
     expect(
       screen.getByRole("link", {
         name: deMessages.parentDocuments.signChange,

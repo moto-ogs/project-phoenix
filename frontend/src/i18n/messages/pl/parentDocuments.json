@@ -57,5 +57,6 @@
   "changeAwaitsSignature": "Zmiana czeka na Twój podpis",
   "changeNote": "Opieka zmienia się od {date}. Podpisz nową wersję. Do tego czasu umowa obowiązuje jak dotąd.",
   "signChange": "Zobacz zmianę i podpisz",
-  "signChangeTooltip": "Otwiera nową wersję. Widzisz, co się zmienia, i możesz podpisać."
+  "signChangeTooltip": "Otwiera nową wersję. Widzisz, co się zmienia, i możesz podpisać.",
+  "changeStartsOn": "Zmiana od"
 }

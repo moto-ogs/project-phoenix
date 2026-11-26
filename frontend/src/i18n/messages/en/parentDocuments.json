@@ -57,5 +57,6 @@
   "changeAwaitsSignature": "Change waits for your signature",
   "changeNote": "The care changes from {date}. Please sign the new version. Until then your contract stays as it is.",
   "signChange": "View the change and sign",
-  "signChangeTooltip": "Opens the new version. You see what changes and can sign."
+  "signChangeTooltip": "Opens the new version. You see what changes and can sign.",
+  "changeStartsOn": "Change from"
 }

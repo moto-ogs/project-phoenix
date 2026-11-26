@@ -334,7 +334,9 @@ function ParentDocumentCard({
             <DataField label={t("bookedCare")}>
               {document.period_name}
             </DataField>
-            <DataField label={t("startsOn")}>
+            {/* A contract in force began long ago: the date of a waiting
+                change is the day the change starts, not the contract. */}
+            <DataField label={t(changeAwaits ? "changeStartsOn" : "startsOn")}>
               {formatDate(document.service_from, false, locale)}
             </DataField>
           </>

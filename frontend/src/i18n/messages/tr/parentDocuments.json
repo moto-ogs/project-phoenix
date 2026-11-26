@@ -57,5 +57,6 @@
   "changeAwaitsSignature": "Değişiklik imzanı bekliyor",
   "changeNote": "Bakım {date} tarihinden itibaren değişiyor. Lütfen yeni sürümü imzala. O zamana kadar sözleşmen eskisi gibi geçerli.",
   "signChange": "Değişikliği gör ve imzala",
-  "signChangeTooltip": "Yeni sürümü açar. Neyin değiştiğini görür ve imzalayabilirsin."
+  "signChangeTooltip": "Yeni sürümü açar. Neyin değiştiğini görür ve imzalayabilirsin.",
+  "changeStartsOn": "Değişiklik başlangıcı"
 }
