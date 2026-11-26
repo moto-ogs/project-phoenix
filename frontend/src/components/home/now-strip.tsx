@@ -292,6 +292,7 @@ export function NowText({
   wrap = false,
   lead,
   extra,
+  aside,
   withoutDate = false,
 }: {
   readonly state: HomeNowState;
@@ -304,8 +305,10 @@ export function NowText({
   readonly today: string;
   /** App: steht vor der Überschrift (die Uhrzeit). */
   readonly lead?: ReactNode;
-  /** App: steht am Ende der Angabenzeile (Zähler). */
+  /** App: steht am Ende der Angabenzeile (Stempelzustand). */
   readonly extra?: ReactNode;
+  /** App: steht rechts in der Titelzeile (Kinder da). */
+  readonly aside?: ReactNode;
   /**
    * App (#8070): nie kürzen; die Angaben brechen nur zwischen den Teilen um
    * („Aula · Ende offen ·“ / „danach 12:00 Mittagessen“).
@@ -320,6 +323,7 @@ export function NowText({
           wrap={wrap}
           lead={lead}
           extra={extra}
+          aside={aside}
           headline={block.title}
           badges={
             <>
@@ -341,11 +345,15 @@ export function NowText({
           detail={[
             block.roomName ? (
               <Fragment key="room">
-                <MotoConceptIcon
-                  concept={roomsConcept}
-                  size={14}
-                  className="mr-1 inline-block align-[-2px]"
-                />
+                {/* App: ohne Symbol wie die Zeilen von „Mein Tag“; so passen
+                    Raum, Ende und „danach …“ am SE in eine Zeile. */}
+                {wrap ? null : (
+                  <MotoConceptIcon
+                    concept={roomsConcept}
+                    size={14}
+                    className="mr-1 inline-block align-[-2px]"
+                  />
+                )}
                 {block.roomName}
               </Fragment>
             ) : null,
@@ -368,6 +376,7 @@ export function NowText({
           wrap={wrap}
           lead={lead}
           extra={extra}
+          aside={aside}
           headline={`Als Nächstes: ${block.title}`}
           badges={
             <>
@@ -402,6 +411,7 @@ export function NowText({
           wrap={wrap}
           lead={lead}
           extra={extra}
+          aside={aside}
           headline="Für heute ist alles erledigt"
           detail={[
             state.count === 1
@@ -430,6 +440,7 @@ export function NowText({
           wrap={wrap}
           lead={lead}
           extra={extra}
+          aside={aside}
           headline={headline}
           badges={
             notStarted > 0 ? (
@@ -455,6 +466,7 @@ export function NowText({
           wrap={wrap}
           lead={lead}
           extra={extra}
+          aside={aside}
           headline={
             withoutDate && analytics
               ? childrenPresent(analytics.studentsPresent)
@@ -486,18 +498,21 @@ export function NowRunningText({
   next,
   lead,
   extra,
+  aside,
 }: {
   readonly block: PlannedTimetableInstance;
   /** Der nächste eigene Einsatz, falls einer kommt. */
   readonly next: { readonly startTime: string; readonly title: string } | null;
   readonly lead?: ReactNode;
   readonly extra?: ReactNode;
+  readonly aside?: ReactNode;
 }) {
   return (
     <Lines
       wrap
       lead={lead}
       extra={extra}
+      aside={aside}
       headline={block.title}
       badges={
         <>
@@ -508,16 +523,7 @@ export function NowRunningText({
         </>
       }
       detail={[
-        block.roomName ? (
-          <Fragment key="room">
-            <MotoConceptIcon
-              concept={roomsConcept}
-              size={14}
-              className="mr-1 inline-block align-[-2px]"
-            />
-            {block.roomName}
-          </Fragment>
-        ) : null,
+        block.roomName,
         blockEndLine(block),
         next ? `danach ${next.startTime} ${next.title}` : null,
       ]}
@@ -542,10 +548,12 @@ function Lines({
   wrap = false,
   lead,
   extra,
+  aside,
 }: {
   readonly wrap?: boolean;
   readonly lead?: ReactNode;
   readonly extra?: ReactNode;
+  readonly aside?: ReactNode;
   readonly headline: string;
   readonly badges?: ReactNode;
   // Raumangaben tragen ihr Symbol wie in den Blockzeilen (#4350).
@@ -553,39 +561,43 @@ function Lines({
 }) {
   const parts = detail.filter(Boolean);
   if (wrap) {
+    // App (#8070): zwei feste Zeilen. Oben Uhrzeit, Titel und Zustand, rechts
+    // die Kinder da; darunter Raum, Ende und was danach kommt. Bricht die
+    // Angabenzeile um, beginnt die neue Zeile ohne Trenner und keine endet
+    // auf „·“: Der Punkt steht vor jedem Teil und fällt am Zeilenanfang in
+    // den abgeschnittenen Rand (`-ml-3` in `overflow-hidden`).
+    const items = extra ? [...parts, extra] : parts;
     return (
       <div className="min-w-0 flex-1">
-        <p className="flex min-w-0 items-baseline gap-2 text-base leading-6 font-semibold text-gray-900">
-          {lead}
-          <span className="min-w-0">{headline}</span>
-        </p>
-        {parts.length > 0 || badges || extra ? (
-          <p className="mt-0.5 text-sm leading-6 text-gray-500">
-            {/* Der Zustand steht vorn in der Angabenzeile, nicht als eigene
-                Zeile unter einer langen Überschrift. */}
+        <div className="flex items-start gap-3">
+          <p className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2 text-base leading-6 font-semibold text-gray-900">
+            {lead}
+            <span className="min-w-0">{headline}</span>
             {badges ? (
-              <span className="mr-1.5 inline-flex items-center gap-1 align-middle">
+              <span className="inline-flex items-center gap-1 self-center font-normal">
                 {badges}
               </span>
             ) : null}
-            {parts.map((part, index) => (
-              <Fragment key={index}>
-                {index > 0 ? " " : null}
-                <span className="inline-block max-w-full">
-                  {part}
-                  {index < parts.length - 1 ? " ·" : null}
-                </span>
-              </Fragment>
-            ))}
-            {extra ? (
-              <>
-                {" "}
-                <span className="inline-flex flex-wrap items-center gap-1 align-middle">
-                  {extra}
-                </span>
-              </>
-            ) : null}
           </p>
+          {aside ? (
+            <span className="shrink-0 text-sm leading-6 text-gray-500">
+              {aside}
+            </span>
+          ) : null}
+        </div>
+        {items.length > 0 ? (
+          <div className="mt-0.5 overflow-hidden text-sm leading-6 text-gray-500">
+            <p className="-ml-3 flex flex-wrap items-center">
+              {items.map((part, index) => (
+                <span
+                  key={index}
+                  className="relative min-w-0 pl-3 before:absolute before:left-1 before:content-['·']"
+                >
+                  {part}
+                </span>
+              ))}
+            </p>
+          </div>
         ) : null}
       </div>
     );
