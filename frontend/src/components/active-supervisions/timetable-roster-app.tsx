@@ -593,22 +593,28 @@ export function TimetableRosterApp({
       const overdue = overduePickupColor(row, now, roster.instance.date);
       parts.push({
         key: "pickup",
-        // Überfällig wie in der Kindersuche: Warnzeichen und Farbe.
+        // Überfällig wie in der Kindersuche: Warnzeichen und Farbe nur mit
+        // dem Wort, sonst liest sich jede rote Zeile gleich dringend.
         node: overdue ? (
           <span
             className="flex items-center gap-0.5 font-medium"
             style={{ color: overdue }}
           >
             <AlertTriangle className="size-3.5 shrink-0" aria-hidden="true" />
-            geht {pickup}
-            <span className="sr-only">, überfällig</span>
+            geht {pickup}, überfällig
           </span>
         ) : (
           `geht ${pickup}`
         ),
       });
     };
-    if (key !== "gone" && notice) parts.push({ key: "notice", node: notice });
+    // Ein Kind, das da ist, braucht keinen Ankunftsplan mehr: „Keine
+    // Ankunft geplant“ las sich neben ihm wie ein Widerspruch. Das Kind-Blatt
+    // nennt den Hinweis weiter.
+    const arrivalPlanGap =
+      rowPlanningWarning(row)?.kind === "missing_arrival_schedule";
+    if (notice && (key === "missing" || (key === "present" && !arrivalPlanGap)))
+      parts.push({ key: "notice", node: notice });
     if (key === "missing") {
       const arrival = upcomingArrivalTime(
         row.warnings,
@@ -817,12 +823,12 @@ export function TimetableRosterApp({
         aria-label="Kinder hinzufügen"
         className="gap-1.5"
       >
-        {/* Neben Übergeben und Beenden reicht die Breite am Telefon nur für
-            das kurze Wort; der volle Name steht im Vorleseprogramm. Am
-            Telefon bis 408 px (SE, iPhone 15) ragte der Knopf mit dem Plus über
-            die Leiste: dort steht nur das Wort. */}
-        <Plus aria-hidden="true" className="size-4 max-[25.5rem]:hidden" />
-        Hinzufügen
+        {/* Neben Übergeben und Beenden reicht die Breite am Telefon nicht
+            für „Kinder hinzufügen“; „+ Kinder“ sagt, was dazukommt (allein
+            „Hinzufügen“ ließ offen, ob Kinder oder Betreuer). Der volle Name
+            steht im Vorleseprogramm. */}
+        <Plus aria-hidden="true" className="size-4" />
+        Kinder
       </Button>
     );
   } else if (addStudentEnabled) {
@@ -836,8 +842,8 @@ export function TimetableRosterApp({
         aria-label="Kind hinzufügen"
         className="gap-1.5"
       >
-        <Plus aria-hidden="true" className="size-4 max-[25.5rem]:hidden" />
-        Hinzufügen
+        <Plus aria-hidden="true" className="size-4" />
+        Kind
       </Button>
     );
   }
@@ -935,6 +941,8 @@ export function TimetableRosterApp({
             : false
         }
         href={sheetRow ? studentProfileHref?.(sheetRow) : undefined}
+        canRead={studentProfileHref !== undefined}
+        roomId={roster.instance.roomId}
         lines={sheetRow ? linesFor(sheetRow) : null}
         actions={sheetRow ? contextFor(sheetRow, true) : null}
         onClose={() => setSheetChildId(null)}
@@ -1034,10 +1042,11 @@ export function TimetableRosterApp({
 function useRosterStudent(
   row: TimetableRosterRow | null,
   canRead: boolean,
+  roomId?: string,
 ): { student: Student | null; loaded: boolean } {
   const today = berlinTodayISO();
-  const search: StudentSearchFilterInput = {
-    search: row ? childName(row) : "",
+  const base: StudentSearchFilterInput = {
+    search: "",
     groupIds: [],
     schoolClasses: [],
     years: [],
@@ -1050,17 +1059,36 @@ function useRosterStudent(
     pickupStatus: "all",
     companions: false,
   };
+  // Die Kinder im Raum lädt das Blatt vorab, mit einer Abfrage, sobald die
+  // Aufsicht steht: Das Blatt zeigt beim Öffnen gleich Ankunft, Gehzeit und
+  // Heimweg (#8070), statt kurz nur Klasse und Gruppe.
+  const inRoom: StudentSearchFilterInput = { ...base, roomId: roomId ?? "" };
+  const room = useSWRAuth(
+    canRead && roomId && roomId !== "0"
+      ? studentKeys.search({ ...inRoom, photoState: "aufsicht" })
+      : null,
+    () => fetchStudentSearch(buildStudentSearchFilters(inRoom), today, true),
+    { revalidateOnFocus: false },
+  );
+  const roomMatch = row
+    ? room.data?.students.find((student) => student.id === row.studentId)
+    : undefined;
+  // Wer nicht (mehr) im Raum ist, kommt einzeln über den Namen.
+  const search: StudentSearchFilterInput = {
+    ...base,
+    search: row ? childName(row) : "",
+  };
   const slim = useSWRAuth(
-    row && canRead
+    row && canRead && !roomMatch && !room.isLoading
       ? studentKeys.search({ ...search, photoState: "aufsicht" })
       : null,
     () => fetchStudentSearch(buildStudentSearchFilters(search), today, true),
     { revalidateOnFocus: false },
   );
   if (!row) return { student: null, loaded: false };
-  const match = slim.data?.students.find(
-    (student) => student.id === row.studentId,
-  );
+  const match =
+    roomMatch ??
+    slim.data?.students.find((student) => student.id === row.studentId);
   if (match) return { student: match, loaded: true };
   const [first, ...rest] = childName(row).split(" ");
   return {
@@ -1089,6 +1117,8 @@ function SupervisionChildSheet({
   row,
   pickupOverdue,
   href,
+  canRead,
+  roomId,
   lines,
   actions,
   onClose,
@@ -1096,11 +1126,14 @@ function SupervisionChildSheet({
   row: TimetableRosterRow | null;
   pickupOverdue: boolean;
   href?: string;
+  /** Darf die Akten lesen: dann lädt das Blatt die Kinder im Raum vorab. */
+  canRead: boolean;
+  roomId: string;
   lines: ReactNode;
   actions: ReactNode;
   onClose: () => void;
 }>) {
-  const { student, loaded } = useRosterStudent(row, href !== undefined);
+  const { student, loaded } = useRosterStudent(row, canRead, roomId);
   return (
     <ChildSheet
       student={student}
