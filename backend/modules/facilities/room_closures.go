@@ -11,14 +11,16 @@ import (
 // RoomClosureReasonMaxLength bounds the reason of a closure in characters.
 const RoomClosureReasonMaxLength = 200
 
-// RoomClosureMaxDays bounds one closure to a school year; a room closed for
-// longer is removed or archived instead.
+// RoomClosureMaxDays bounds one closure to a school year and how far ahead it
+// may begin. The latter keeps every permitted closure in the room page's
+// upcoming-closures window. A room closed longer is removed or archived
+// instead.
 const RoomClosureMaxDays = 366
 
 var (
 	// ErrInvalidRoomClosure rejects a closure without reason, with an end
-	// before its start, one that ended before today or one longer than
-	// RoomClosureMaxDays.
+	// before its start, one that ended before today, starts beyond the
+	// upcoming-closures window or lasts longer than RoomClosureMaxDays.
 	ErrInvalidRoomClosure = errors.New("invalid room closure")
 	// ErrRoomClosureNotFound reports a closure the school does not have for
 	// the room.

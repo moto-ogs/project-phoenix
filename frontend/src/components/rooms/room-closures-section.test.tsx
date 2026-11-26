@@ -8,18 +8,24 @@ import { testClockDay } from "~/test/clock";
 import { RoomClosuresSection } from "./room-closures-section";
 
 const { swrState, reopenMock, invalidateMock } = vi.hoisted(() => ({
-  swrState: { data: undefined as RoomClosure[] | undefined },
+  swrState: {
+    data: undefined as RoomClosure[] | undefined,
+    key: undefined as string | null | undefined,
+  },
   reopenMock: vi.fn(),
   invalidateMock: vi.fn(),
 }));
 
 vi.mock("~/lib/swr", () => ({
-  useSWRAuth: () => ({
-    data: swrState.data,
-    error: undefined,
-    isLoading: false,
-    mutate: vi.fn(),
-  }),
+  useSWRAuth: (key: string | null) => {
+    swrState.key = key;
+    return {
+      data: swrState.data,
+      error: undefined,
+      isLoading: false,
+      mutate: vi.fn(),
+    };
+  },
   useInvalidateFamily: () => invalidateMock,
 }));
 
@@ -48,6 +54,7 @@ describe("RoomClosuresSection (#7653)", () => {
   beforeEach(() => {
     reopenMock.mockReset().mockResolvedValue(undefined);
     invalidateMock.mockReset();
+    swrState.key = undefined;
   });
 
   it("says the room is open while it has no closure", () => {
@@ -60,6 +67,15 @@ describe("RoomClosuresSection (#7653)", () => {
     expect(
       screen.getByRole("button", { name: "Raum sperren" }),
     ).toBeInTheDocument();
+  });
+
+  it("loads through the last day a new closure may start", () => {
+    swrState.data = [];
+    renderSection();
+
+    expect(swrState.key).toBe(
+      `room-closures-${testClockDay(0)}-${testClockDay(365)}-10`,
+    );
   });
 
   it("lists each closure with reason and period and marks today's", () => {

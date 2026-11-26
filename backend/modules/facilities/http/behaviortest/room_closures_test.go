@@ -98,15 +98,21 @@ func TestRoomClosures_PermissionTenantAndLifecycle(t *testing.T) {
 
 	t.Run("an invalid closure is refused", func(t *testing.T) {
 		for name, body := range map[string]map[string]string{
-			"end before start":    closureBody("2026-12-02", "2026-11-30", "Wasserschaden"),
-			"ended before today":  closureBody("2026-11-20", "2026-11-24", "Wasserschaden"),
-			"without reason":      closureBody("2026-11-30", "2026-11-30", "   "),
-			"longer than a year":  closureBody("2026-11-30", "2027-12-01", "Umbau"),
-			"date without format": closureBody("30.11.2026", "2026-11-30", "Wasserschaden"),
+			"end before start":                   closureBody("2026-12-02", "2026-11-30", "Wasserschaden"),
+			"ended before today":                 closureBody("2026-11-20", "2026-11-24", "Wasserschaden"),
+			"starts beyond the room page window": closureBody("2027-11-26", "2027-11-26", "Umbau"),
+			"without reason":                     closureBody("2026-11-30", "2026-11-30", "   "),
+			"longer than a year":                 closureBody("2026-11-30", "2027-12-01", "Umbau"),
+			"date without format":                closureBody("30.11.2026", "2026-11-30", "Wasserschaden"),
 		} {
 			rr := keeper.do(t, http.MethodPost, closuresPath, body)
 			assert.Equal(t, http.StatusBadRequest, rr.Code, "%s: %s", name, rr.Body.String())
 		}
+	})
+
+	t.Run("the last day in the room page window is allowed", func(t *testing.T) {
+		rr := keeper.do(t, http.MethodPost, closuresPath, closureBody("2027-11-25", "2027-11-25", "Umbau"))
+		assert.Equal(t, http.StatusCreated, rr.Code, rr.Body.String())
 	})
 
 	var closure httpadapter.RoomClosureResponse

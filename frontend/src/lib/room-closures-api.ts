@@ -14,7 +14,7 @@ export interface RoomClosure {
   readonly reason: string;
 }
 
-/** Längste Sperre in Tagen, wie das Backend sie annimmt. */
+/** Längste Sperre und maximaler Vorlauf, wie das Backend sie annimmt. */
 export const ROOM_CLOSURE_MAX_DAYS = 366;
 /** Höchstzahl Zeichen im Grund. */
 export const ROOM_CLOSURE_REASON_MAX_LENGTH = 200;

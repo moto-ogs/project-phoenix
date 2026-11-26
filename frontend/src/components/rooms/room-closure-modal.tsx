@@ -62,6 +62,7 @@ export function RoomClosureModal({
   const [startDate, setStartDate] = useState(today);
   const [endDate, setEndDate] = useState(today);
   const [reason, setReason] = useState("");
+  const latestStartDate = addCalendarDays(today, ROOM_CLOSURE_MAX_DAYS - 1);
   const save = useFormModalPending(isOpen);
   const formRef = useRef<HTMLDivElement>(null);
   const formErrors = useApiFormError(formRef);
@@ -188,6 +189,7 @@ export function RoomClosureModal({
             controlSize="large"
             value={startDate}
             min={today}
+            max={latestStartDate}
             onChange={(value) => {
               setStartDate(value);
               if (!endDate || endDate < value) setEndDate(value);
@@ -279,6 +281,12 @@ function closureFieldErrors(
   if (!reason.trim()) fields.reason = "Bitte gib einen Grund an.";
   if (!startDate) fields.start_date = "Bitte wähle den ersten Tag.";
   if (!endDate) fields.end_date = "Bitte wähle den letzten Tag.";
+  if (
+    startDate &&
+    addCalendarDays(today, ROOM_CLOSURE_MAX_DAYS - 1) < startDate
+  )
+    fields.start_date =
+      "Du kannst den Raum höchstens ein Jahr im Voraus sperren.";
   if (startDate && endDate && endDate < startDate)
     fields.end_date = "Der letzte Tag darf nicht vor dem ersten liegen.";
   else if (endDate && endDate < today)

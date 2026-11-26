@@ -163,6 +163,8 @@ func validateClosure(input facilities.CloseRoom, today calendar.Date) error {
 		return fmt.Errorf("%w: the end date lies before the start date", facilities.ErrInvalidRoomClosure)
 	case input.EndDate.Before(today):
 		return fmt.Errorf("%w: the period ended before today", facilities.ErrInvalidRoomClosure)
+	case today.DaysUntil(input.StartDate) >= facilities.RoomClosureMaxDays:
+		return fmt.Errorf("%w: a closure starts at most %d days in advance", facilities.ErrInvalidRoomClosure, facilities.RoomClosureMaxDays-1)
 	case input.StartDate.DaysUntil(input.EndDate) >= facilities.RoomClosureMaxDays:
 		return fmt.Errorf("%w: a closure lasts at most %d days", facilities.ErrInvalidRoomClosure, facilities.RoomClosureMaxDays)
 	case input.Reason == "":
