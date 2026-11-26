@@ -4,6 +4,7 @@ import {
   arr,
   bool,
   calendarDate,
+  int64String,
   nullable,
   object,
   optional,
@@ -42,7 +43,7 @@ export interface SchoolDays {
 }
 
 export const SchoolDaysSchema: z.ZodType<SchoolDays, unknown> = object<SchoolDays>({
-  id: str,
+  id: int64String,
   name: str,
   start_date: str,
   end_date: str,
@@ -80,7 +81,7 @@ export const ParentConferenceSlotSchema: z.ZodType<ParentConferenceSlot, unknown
   start_time: str,
   end_time: str,
   booked: bool,
-  student_id: optional(str),
+  student_id: optional(int64String),
   student_name: optional(str),
 });
 
@@ -96,10 +97,11 @@ export interface ParentConferenceView {
   location?: string;
   booked_count: number;
   slots: ParentConferenceSlot[] | null;
+  version: string;
 }
 
 export const ParentConferenceViewSchema: z.ZodType<ParentConferenceView, unknown> = object<ParentConferenceView>({
-  id: str,
+  id: int64String,
   school_class: str,
   date: nullable(calendarDate),
   start_time: str,
@@ -109,6 +111,7 @@ export const ParentConferenceViewSchema: z.ZodType<ParentConferenceView, unknown
   location: optional(str),
   booked_count: safeInt,
   slots: nullable(arr(ParentConferenceSlotSchema)),
+  version: str,
 });
 
 /** Go: portal.SchoolParentConferenceList */
@@ -154,6 +157,34 @@ export interface ParentConferenceRequest {
   location?: string | null;
 }
 
+/** Go: staffcalendarhttp.SchoolAppointmentUpdateRequest */
+export interface SchoolAppointmentUpdateRequest {
+  title?: string;
+  description?: string | null;
+  location?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
+  start_time?: string;
+  end_time?: string;
+  all_day?: boolean;
+  school_event_type?: string;
+  parents?: string;
+  classes?: string[] | null;
+  expected_version?: string;
+}
+
+/** Go: staffcalendarhttp.ParentConferenceUpdateRequest */
+export interface ParentConferenceUpdateRequest {
+  school_class?: string;
+  date?: string | null;
+  start_time?: string;
+  end_time?: string;
+  slot_minutes?: number;
+  breaks?: ParentConferenceBreak[] | null;
+  location?: string | null;
+  expected_version?: string;
+}
+
 export const routes = {
   "DELETE /school/calendar/appointments/{appointmentId}": {
     method: "DELETE",
@@ -189,13 +220,6 @@ export const routes = {
     portals: ["school"],
     response: success(SchoolParentConferenceListSchema),
   },
-  "GET /school/calendar/parent-conferences/{conferenceId}": {
-    method: "GET",
-    pattern: "/school/calendar/parent-conferences/{conferenceId}",
-    portals: ["school"],
-    deprecated: true,
-    response: success(ParentConferenceViewSchema),
-  },
   "POST /school/calendar/appointments": {
     method: "POST",
     pattern: "/school/calendar/appointments",
@@ -227,14 +251,14 @@ export const routes = {
     method: "PUT",
     pattern: "/school/calendar/appointments/{appointmentId}",
     portals: ["school"],
-    request: requestBody<SchoolAppointmentRequest>(),
+    request: requestBody<SchoolAppointmentUpdateRequest>(),
     response: success(AppointmentDetailSchema),
   },
   "PUT /school/calendar/parent-conferences/{conferenceId}": {
     method: "PUT",
     pattern: "/school/calendar/parent-conferences/{conferenceId}",
     portals: ["school"],
-    request: requestBody<ParentConferenceRequest>(),
+    request: requestBody<ParentConferenceUpdateRequest>(),
     response: success(ParentConferenceViewSchema),
   },
 } as const;

@@ -7,6 +7,8 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
+
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -17,7 +19,7 @@ func TestQualificationIDsStayDecimalStringsOnTheWire(t *testing.T) {
 
 	largeID := int64(9007199254740993)
 	typeID := largeID + 1
-	kindEncoded, err := json.Marshal(toQualificationTypeResponse(workforce.QualificationType{ID: largeID}))
+	kindEncoded, err := wire.Marshal(toQualificationTypeResponse(workforce.QualificationType{ID: largeID}))
 	require.NoError(t, err)
 	assert.Contains(t, string(kindEncoded), `"id":"9007199254740993"`)
 
@@ -26,7 +28,7 @@ func TestQualificationIDsStayDecimalStringsOnTheWire(t *testing.T) {
 		QualificationID: &largeID,
 		TypeID:          &typeID,
 	})
-	encoded, err := json.Marshal(entry)
+	encoded, err := wire.Marshal(entry)
 	require.NoError(t, err)
 	assert.JSONEq(t, `{"staff_id":"9007199254740993","qualification_id":"9007199254740993","type_id":"9007199254740994","name":"","acquired_on":null,"expires_on":null,"status":"","mandatory":false}`, string(encoded))
 

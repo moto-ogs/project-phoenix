@@ -60,15 +60,15 @@ import (
 // debit file of the issued runs at /traeger/sepa-debits (#4697), the finance
 // exports with their protocol at /traeger/finance-exports (#4693), and the
 // details the Träger still has to enter at /traeger/required-details (#7177).
-func mountParentBillingRoutes(root, publicLink chi.Router, organizations HolidayOrganizations, settings TraegerBrandingSettings, schoolSettings owners.MealAttendanceSchoolSettings, marks owners.MealAttendanceMarks, delivery deliveryRuntime.Capability, outcomes deliveryRuntime.EmailOutcomes, healthData enrollmentOwner.HolidayHealthCipher, bankData parentbilling.BankDataCipher, holidayCalendar enrollmentOwner.HolidaySchoolCalendar, today func() calendar.Date, now func() time.Time, logger *slog.Logger) {
-	rules, holiday := NewParentBillingHTTP(organizations, settings, delivery, healthData, holidayCalendar, today, now, logger)
+func mountParentBillingRoutes(root, publicLink chi.Router, organizations HolidayOrganizations, settings TraegerBrandingSettings, schoolSettings owners.MealAttendanceSchoolSettings, marks owners.MealAttendanceMarks, delivery deliveryRuntime.Capability, outcomes deliveryRuntime.EmailOutcomes, healthData enrollmentOwner.HolidayHealthCipher, bankData parentbilling.BankDataCipher, holidayCalendar enrollmentOwner.HolidaySchoolCalendar, traegerModules TraegerBookedModules, today func() calendar.Date, now func() time.Time, logger *slog.Logger) {
+	rules, holiday := NewParentBillingHTTP(organizations, settings, delivery, healthData, holidayCalendar, traegerModules, today, now, logger)
 	root.Mount("/traeger/contribution-rules", rules.TraegerRouter(ProtectedTraegerRoutes))
 	root.Mount("/traeger/cost-bearers", rules.CostBearerRouter(ProtectedTraegerRoutes))
 	root.Mount("/traeger/holiday-contributions", holiday.TraegerRouter(ProtectedTraegerRoutes))
 	// The quote belongs to the public holiday registration and shares its
 	// request limit (#6726).
 	publicLink.Mount(holidayQuoteMount, holiday.QuoteRouter())
-	runs, documentKinds := NewBillingRunHTTP(settings, delivery, outcomes, healthData, bankData, today, now)
+	runs, documentKinds := NewBillingRunHTTP(settings, schoolSettings, delivery, outcomes, healthData, bankData, today, now)
 	root.Mount("/traeger/billing-runs", runs.RunRouter(ProtectedTraegerRoutes))
 	root.Mount("/traeger/number-ranges", runs.NumberRangeRouter(ProtectedTraegerRoutes))
 	root.Mount("/traeger/billing-document-kinds", documentKinds.Router(ProtectedTraegerRoutes))
@@ -92,10 +92,10 @@ func mountParentBillingRoutes(root, publicLink chi.Router, organizations Holiday
 	root.Mount("/traeger/billing-terms", terms.TermsRouter(ProtectedTraegerRoutes))
 	root.Mount("/traeger/family-billing", terms.FamilyRouter(ProtectedTraegerRoutes))
 	root.Mount("/traeger/billing-run-due-dates", terms.DueDateRouter(ProtectedTraegerRoutes))
-	mandates := NewSEPAMandateHTTP(settings, bankData, today, now)
+	mandates := NewSEPAMandateHTTP(settings, schoolSettings, bankData, today, now)
 	root.Mount("/traeger/sepa-creditor", mandates.CreditorRouter(ProtectedTraegerRoutes))
 	root.Mount("/traeger/sepa-mandates", mandates.MandateRouter(ProtectedTraegerRoutes))
-	debits := parentBillingCompose.NewSEPADebits(newParentBillingLetterheads(settings), bankData, securityruntime.Fingerprint, today, now)
+	debits := parentBillingCompose.NewSEPADebits(newParentBillingLetterheads(settings, schoolSettings), bankData, securityruntime.Fingerprint, today, now)
 	root.Mount("/traeger/sepa-debits", newSEPADebitResource(debits).Router(ProtectedTraegerRoutes))
 	root.Mount("/traeger/finance-exports", NewFinanceExportHTTP(financeExports, bookingAccounts).Router(ProtectedTraegerRoutes))
 	transfers := NewTraegerExportTransfers(bankData, now, logger)
@@ -113,9 +113,9 @@ func newSEPADebitResource(debits parentbilling.SEPADebits) *parentBillingHTTP.SE
 // Betreuungsvertrag, which name the family of a contract, and to the field
 // independent bank-data cipher of the root; its import checks a debtor
 // number in the format of the Träger (#6675); today and now are the root's clocks.
-func NewSEPAMandateHTTP(settings TraegerBrandingSettings, cipher parentbilling.BankDataCipher, today func() calendar.Date, now func() time.Time) *parentBillingHTTP.SEPAMandateResource {
+func NewSEPAMandateHTTP(settings TraegerBrandingSettings, schoolSettings owners.ResponsibilitySchoolSettings, cipher parentbilling.BankDataCipher, today func() calendar.Date, now func() time.Time) *parentBillingHTTP.SEPAMandateResource {
 	contracts := parentBillingCareContracts{contracts: careContractCompose.NewContractVersions()}
-	return parentBillingHTTP.NewSEPAMandateResource(parentBillingCompose.NewSEPAMandates(contracts, cipher, parentBillingSettings{settings: settings}, today, now),
+	return parentBillingHTTP.NewSEPAMandateResource(parentBillingCompose.NewSEPAMandates(contracts, cipher, parentBillingSettings{settings: settings}, owners.BillingIssuers{Responsible: owners.NewSchoolResponsibilities(schoolSettings)}, today, now),
 		common.RequiresPermission(identityaccess.TraegerRightBillingManage), traegerListRenderer(NewSimpleListRenderer()), today)
 }
 
@@ -147,9 +147,9 @@ func NewCareBillingHTTP(organizations HolidayOrganizations, settings TraegerBran
 	contracts := parentBillingCareContracts{contracts: careContractCompose.NewContractVersions()}
 	billing, reductions := parentBillingCompose.NewCareBilling(contracts,
 		parentBillingCareSchools{organizations: organizations}, parentBillingSettings{settings: settings}, newParentBillingCareMeals(schoolSettings, marks),
-		newParentBillingLetterheads(settings), today, now)
+		newParentBillingLetterheads(settings, schoolSettings), today, now)
 	post := parentBillingLetterPost{settings: settings, delivery: delivery, outcomes: outcomes}
-	letters := parentBillingCompose.NewCareLetters(newParentBillingLetterheads(settings), contracts, post, post, bankData, today, now)
+	letters := parentBillingCompose.NewCareLetters(newParentBillingLetterheads(settings, schoolSettings), contracts, post, post, bankData, today, now)
 	requireBilling, lists := common.RequiresPermission(identityaccess.TraegerRightBillingManage), traegerListRenderer(NewSimpleListRenderer())
 	return parentBillingHTTP.NewCareBillingResource(billing, billing, letters, requireBilling, lists), parentBillingHTTP.NewCareReductionResource(reductions, requireBilling, lists),
 		parentBillingHTTP.NewCareMealTariffResource(billing, requireBilling), parentBillingHTTP.NewFamilyChildrenResource(reductions,
@@ -166,9 +166,9 @@ func NewCareNoticeHTTP(organizations HolidayOrganizations, settings TraegerBrand
 ) *parentBillingHTTP.CareNoticeResource {
 	contracts := parentBillingCareContracts{contracts: careContractCompose.NewContractVersions()}
 	notices := parentBillingCompose.NewCareFeeNotices(contracts, parentBillingCareSchools{organizations: organizations},
-		parentBillingSettings{settings: settings}, newParentBillingCareMeals(schoolSettings, marks), newParentBillingLetterheads(settings), today, now)
+		parentBillingSettings{settings: settings}, newParentBillingCareMeals(schoolSettings, marks), newParentBillingLetterheads(settings, schoolSettings), today, now)
 	post := parentBillingLetterPost{settings: settings, delivery: delivery, outcomes: outcomes}
-	letters := parentBillingCompose.NewCareNoticeLetters(newParentBillingLetterheads(settings), contracts, post, post, now)
+	letters := parentBillingCompose.NewCareNoticeLetters(newParentBillingLetterheads(settings, schoolSettings), contracts, post, post, now)
 	return parentBillingHTTP.NewCareNoticeResource(notices, letters, common.RequiresPermission(identityaccess.TraegerRightBillingManage),
 		traegerListRenderer(NewSimpleListRenderer()))
 }
@@ -250,7 +250,8 @@ func (c parentBillingCareContracts) Recipients(ctx context.Context, organization
 	recipients := make(map[int64]parentbilling.CareRecipient, len(parties))
 	for contractID, party := range parties {
 		recipients[contractID] = parentbilling.CareRecipient{FirstName: party.FirstName, LastName: party.LastName, Email: party.Email,
-			ContractDraft: party.ContractDraft}
+			ContractDraft: party.ContractDraft, FamilyContractID: party.FamilyContractID,
+			SchoolID: party.ContractSchoolID}
 	}
 	return recipients, nil
 }
@@ -291,7 +292,9 @@ func concludedRecipients(ctx context.Context, contracts carecontract.ContractBil
 		if party.ContractDraft {
 			continue
 		}
-		recipients[contractID] = parentbilling.CareRecipient{FirstName: party.FirstName, LastName: party.LastName, Email: party.Email}
+		recipients[contractID] = parentbilling.CareRecipient{FirstName: party.FirstName, LastName: party.LastName, Email: party.Email,
+			FamilyContractID: party.FamilyContractID,
+			SchoolID:         party.ContractSchoolID}
 	}
 	return recipients, nil
 }
@@ -302,14 +305,14 @@ func concludedRecipients(ctx context.Context, contracts carecontract.ContractBil
 // mail of the letters to Delivery and the letterhead of the Träger; and the
 // kind of document per service (#4688) to the document templates of the
 // Träger; today and now are the root's clocks.
-func NewBillingRunHTTP(settings TraegerBrandingSettings, delivery deliveryRuntime.Capability, outcomes deliveryRuntime.EmailOutcomes, healthData enrollmentOwner.HolidayHealthCipher, bankData parentbilling.BankDataCipher, today func() calendar.Date, now func() time.Time) (*parentBillingHTTP.BillingRunResource, *parentBillingHTTP.DocumentKindResource) {
+func NewBillingRunHTTP(settings TraegerBrandingSettings, schoolSettings owners.ResponsibilitySchoolSettings, delivery deliveryRuntime.Capability, outcomes deliveryRuntime.EmailOutcomes, healthData enrollmentOwner.HolidayHealthCipher, bankData parentbilling.BankDataCipher, today func() calendar.Date, now func() time.Time) (*parentBillingHTTP.BillingRunResource, *parentBillingHTTP.DocumentKindResource) {
 	review, _, _, _ := enrollmentCompose.NewHolidayRegistrationReview(healthData, nil, nil, nil, nil, now)
 	registrations := parentBillingBillingRegistrations{periods: enrollmentCompose.NewHolidayPeriods(now, nil), review: review,
 		hosts: enrollmentCompose.NewHolidayWeekHosts()}
 	requireBilling := common.RequiresPermission(identityaccess.TraegerRightBillingManage)
-	runs, kinds := parentBillingCompose.NewBillingRuns(registrations, parentBillingSettings{settings: settings}, newParentBillingLetterheads(settings), parentBillingActorNames{names: owners.NewTraegerMemberNames()}, today, now)
+	runs, kinds := parentBillingCompose.NewBillingRuns(registrations, parentBillingSettings{settings: settings}, newParentBillingLetterheads(settings, schoolSettings), parentBillingActorNames{names: owners.NewTraegerMemberNames()}, today, now)
 	return parentBillingHTTP.NewBillingRunResource(runs, runs, runs,
-			parentBillingCompose.NewBillingLetters(newParentBillingLetterheads(settings), bankData, today, now),
+			parentBillingCompose.NewBillingLetters(newParentBillingLetterheads(settings, schoolSettings), bankData, today, now),
 			parentBillingCompose.NewBillingLetterMail(parentBillingLetterPost{settings: settings, delivery: delivery, outcomes: outcomes}, now),
 			requireBilling, traegerListRenderer(NewSimpleListRenderer())),
 		parentBillingHTTP.NewDocumentKindResource(kinds, requireBilling)
@@ -428,10 +431,11 @@ type parentBillingLetterheads struct {
 }
 
 // newParentBillingLetterheads builds the letterhead of the holiday and the
-// monthly letters.
-func newParentBillingLetterheads(settings TraegerBrandingSettings) parentBillingLetterheads {
-	return parentBillingLetterheads{masterData: organizationTenancyCompose.NewTraegerMasterData(),
-		templates: organizationTenancyCompose.NewTraegerDocumentTemplates(), settings: settings}
+// monthly letters with the issuer of each school (#8040).
+func newParentBillingLetterheads(settings TraegerBrandingSettings, schoolSettings owners.ResponsibilitySchoolSettings) owners.BillingLetterheads {
+	return owners.BillingLetterheads{TraegerLetterheads: parentBillingLetterheads{masterData: organizationTenancyCompose.NewTraegerMasterData(),
+		templates: organizationTenancyCompose.NewTraegerDocumentTemplates(), settings: settings},
+		BillingIssuers: owners.BillingIssuers{Responsible: owners.NewSchoolResponsibilities(schoolSettings)}}
 }
 
 func (b parentBillingLetterheads) Letterhead(ctx context.Context, reviewer parentbilling.HolidayReviewer) (parentbilling.Letterhead, error) {
@@ -514,17 +518,17 @@ func (b parentBillingLetterheads) DocumentTemplate(ctx context.Context, organiza
 // holidayCalendar names the host schools' days without care, which no
 // rebooking may book (#4702). now is the root clock of the holiday
 // registrations' links (ADR 0275), today its Berlin day.
-func NewParentBillingHTTP(organizations HolidayOrganizations, settings TraegerBrandingSettings, delivery deliveryRuntime.Capability, healthData enrollmentOwner.HolidayHealthCipher, holidayCalendar enrollmentOwner.HolidaySchoolCalendar, today func() calendar.Date, now func() time.Time, logger *slog.Logger) (*parentBillingHTTP.RuleResource, *parentBillingHTTP.HolidayResource) {
+func NewParentBillingHTTP(organizations HolidayOrganizations, settings TraegerBrandingSettings, delivery deliveryRuntime.Capability, healthData enrollmentOwner.HolidayHealthCipher, holidayCalendar enrollmentOwner.HolidaySchoolCalendar, traegerModules TraegerBookedModules, today func() calendar.Date, now func() time.Time, logger *slog.Logger) (*parentBillingHTTP.RuleResource, *parentBillingHTTP.HolidayResource) {
 	review, places, allocation, _ := enrollmentCompose.NewHolidayRegistrationReview(healthData, holidayTraegerMail{delivery: delivery}, newHolidayOfficeTraeger(organizations), holidayCalendar, nil, now)
 	registrations := parentBillingHolidayRegistrations{
-		links:  newHolidayRegistrations(organizations, delivery, healthData, holidayCalendar, settings, logger.With("service", "parent-billing-holiday-registrations"), now),
-		review: review,
+		links:  newHolidayRegistrations(organizations, delivery, healthData, holidayCalendar, settings, traegerModules, logger.With("service", "parent-billing-holiday-registrations"), now),
+		review: review, payers: review.(enrollmentOwner.HolidayPayerTrail),
 	}
 	rules := parentBillingHTTP.NewRuleResource(parentBillingCompose.NewContributionRules(now),
 		common.RequiresPermission(identityaccess.TraegerRightBillingManage))
 	contributions, allocationBilling := parentBillingCompose.NewHolidayContributions(registrations, parentBillingSettings{settings: settings}, today, now)
 	placeChanges := parentBillingPlaceChanges{workflow: newHolidayAllocation(allocationBilling, review, places, allocation)}
-	holiday := parentBillingHTTP.NewHolidayResource(contributions, placeChanges,
+	holiday := parentBillingHTTP.NewHolidayResource(contributions, contributions.(parentbilling.HolidayPayerChanges), placeChanges,
 		common.RequiresPermission(identityaccess.TraegerRightEnrollmentManage))
 	return rules, holiday
 }
@@ -536,6 +540,7 @@ func NewParentBillingHTTP(organizations HolidayOrganizations, settings TraegerBr
 type parentBillingHolidayRegistrations struct {
 	links  enrollmentOwner.HolidayRegistrations
 	review enrollmentOwner.HolidayRegistrationReview
+	payers enrollmentOwner.HolidayPayerTrail // nil where no payer changes (#8158)
 }
 
 func (b parentBillingHolidayRegistrations) ResolveHolidayLink(ctx context.Context, token string) (parentbilling.HolidayLink, error) {
@@ -619,6 +624,20 @@ func (b parentBillingHolidayRegistrations) RecordHolidaySiblings(ctx context.Con
 	return parentBillingHolidayError(b.review.RecordHolidaySiblings(ctx, enrollmentOwner.HolidayReviewer(reviewer), periodID, registrationID, action, siblingIDs))
 }
 
+// RecordHolidayPayer records a payer change through the review, which locks
+// the registration and appends the entry (#8158, ADR 0325). The cost
+// bearer's ID stays with the Elternabrechnung.
+func (b parentBillingHolidayRegistrations) RecordHolidayPayer(ctx context.Context, reviewer parentbilling.HolidayReviewer, periodID, registrationID int64, record parentbilling.HolidayPayerRecord) error {
+	if b.payers == nil {
+		return errors.New("parent billing: this binding records no payer change")
+	}
+	change := enrollmentOwner.HolidayPayerChange{
+		Before: enrollmentOwner.HolidayPaidBy{Kind: record.Before.Kind, CostBearerName: record.Before.CostBearerName},
+		After:  enrollmentOwner.HolidayPaidBy{Kind: record.After.Kind, CostBearerName: record.After.CostBearerName},
+	}
+	return parentBillingHolidayError(b.payers.RecordHolidayPayer(ctx, enrollmentOwner.HolidayReviewer(reviewer), periodID, registrationID, change, record.Reason))
+}
+
 // parentBillingBillingRegistrations binds the billing run's port to
 // Enrollment: the period of the session's Träger and its confirmed
 // registrations through the review, which records the read in the period's
@@ -692,7 +711,7 @@ func (b parentBillingBillingRegistrations) ConfirmedHolidayRegistrations(ctx con
 		children := make([]parentbilling.HolidayBillingChild, len(registration.Children))
 		for j, child := range registration.Children {
 			children[j] = parentbilling.HolidayBillingChild{ID: child.ID.Int64(), FirstName: child.FirstName, LastName: child.LastName,
-				BirthDate: child.BirthDate}
+				BirthDate: child.BirthDate, HomeSchoolID: (*int64)(child.HomeSchoolID)}
 		}
 		registrations[i] = parentbilling.HolidayBillingRegistration{
 			ID: registration.ID.Int64(), GuardianFirstName: registration.GuardianFirstName, GuardianLastName: registration.GuardianLastName,

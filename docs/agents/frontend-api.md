@@ -50,9 +50,9 @@ slash is dropped and each parameter encoded.
   invitations) go without gate and renewal; a pattern names its portal
   (`/caterer/…` → `/api/caterer/…`), one under `/api` stays as it is.
 - **401:** one table in `bff-fetch.ts` holds where the portals differ. Staff:
-  the session gate before the request and one renewal with a retry
+  the session gate before the request and, for replayable calls, one renewal with a retry
   (`requireTenantSession`, `renewTenantSession` in `lib/session-cache.ts`),
-  then sign-out; `authRefusals` names codes that refuse
+  or sign-out if renewal fails; `authRefusals` names codes that refuse
   only the operation. Operator: to `/operator/login`. Parents: to
   `/parents/login`, except for the call's explicit `authRefusals` (e.g. a
   wrong MFA confirmation code or current password). Träger, moto schule and
@@ -67,7 +67,11 @@ slash is dropped and each parameter encoded.
   reasons in the [BFF boundary rules](../../frontend/scripts/oxlint-plugin-bff-boundary.mjs).
   `bff-boundary/only-listed-uncontracted` rejects access outside that list
   and forwarding the helper, including renamed imports and re-exports.
-  The list only shrinks.
+  Each entry permits exactly one call for a file, portal, method and address.
+  A second call or an unused entry fails lint. The enrollment bootstrap adds
+  the Staff profile in its named route until #5018.
+  Only `session-bff.ts` can import the session route constructor. Routes
+  that live only in the BFF use keys checked against their route files.
 - **Wait:** a refusal with `Retry-After` (429, 503) carries the wait as
   `retryAfterSeconds` on the `ApiError` (`apiErrorFromResponse`).
 - **Keepalive cleanup:** `keepalive: true` starts the request immediately.
@@ -80,7 +84,8 @@ slash is dropped and each parameter encoded.
   copy the answer into a hand-written type.
 - **One transport:** use `bffJson` for JSON and `bffFile` for files.
   `bff-boundary/no-raw-browser-transport` rejects access to global `fetch`,
-  `XMLHttpRequest` and `navigator.sendBeacon` outside the same plugin's
+  `XMLHttpRequest`, `navigator.sendBeacon`, `EventSource` and `WebSocket`
+  outside the same plugin's
   shrink-only infrastructure list. It also rejects names of retired fetch
   helpers. `bff-boundary/no-numeric-identifier` rejects coercions such as
   `Number(room.id)`, `+room.id`, arithmetic and `BigInt(id)`. For generated
@@ -88,9 +93,11 @@ slash is dropped and each parameter encoded.
   has no contract provenance, ID-shaped names are a fallback. Keep IDs as
   text and use `compareIds` for ordering decimal IDs without rounding.
   All three rules run in `pnpm run check`.
-  `scripts/backend-wire-types.mjs`
+  `frontend/scripts/backend-wire-types.mjs` (run by
+  `frontend/scripts/backend-wire-types.node-test.mjs`)
   finds hand-written wire types by their form (two `snake_case` fields of
-  their own, a generated type imported under another name, a type that only
+  their own in an interface, object alias or union branch, a generated type
+  imported under another name, a type that only
   renames a generated one); its baseline only shrinks.
 - **Tests:** a client test stubs the global `fetch` and mocks the session
   gate with
@@ -101,7 +108,16 @@ slash is dropped and each parameter encoded.
   `bffFile(portal, route, options)` from the same module: the same path,
   portal table and ApiError, resolving to the successful `Response` whose
   body and `Content-Disposition` the caller reads. A link the browser opens
-  itself (`<a href>`) stays a plain URL.
+  itself (`<a href>`, image or navigation) uses `bffFileHref(portal, route,
+  { params, query })`. It accepts only registered GET file keys with their
+  typed path parameters and query. For other registered addresses use `bffPath(portal, key, { params, query })`.
+  Do not assemble a registered BFF address separately.
+- **Deploy skew:** every call names its bundle's `NEXT_DEPLOYMENT_ID`, and
+  the proxy refuses a call from another deployment with 412
+  `general.route_not_found` before any route runs (`lib/deployment-skew.ts`).
+  The tab then reloads by itself unless a typed-in form is on screen, a
+  dialog is open or a navigation guard is active; only then the caller shows
+  the „neue Version“ message (`lib/deployment-reload.ts`).
 
 ## Environment & API URLs — Fail Fast, No Defaults
 
@@ -111,7 +127,6 @@ checklist. Local values belong in `.env.local` using `.env.example` as the templ
 
 | Variable                           | Scope           | Purpose                                                       |
 | ---------------------------------- | --------------- | ------------------------------------------------------------- |
-| `NEXT_PUBLIC_API_URL`              | Client + Server | Public backend URL; validated, read by no frontend code       |
 | `API_URL`                          | Server only     | Backend URL for route handlers (Docker: `http://server:8080`) |
 | `NEXTAUTH_URL` / `NEXTAUTH_SECRET` | Server          | NextAuth base URL + JWT secret                                |
 | `SKIP_ENV_VALIDATION`              | Build           | `true` skips env validation (Docker builds)                   |
@@ -120,7 +135,7 @@ checklist. Local values belong in `.env.local` using `.env.example` as the templ
 
 ### Server-Only Import Isolation (`.server.ts`)
 
-Server-only wrappers carry a `.server.ts` suffix (`lib/route-wrapper.server.ts`, `lib/api-helpers.server.ts`, `lib/operator/route-wrapper.server.ts`, `lib/parent/route-wrapper.server.ts`).
+Server-only wrappers carry a `.server.ts` suffix (`lib/route-wrapper.server.ts`, `lib/operator/route-wrapper.server.ts`, `lib/parent/route-wrapper.server.ts`).
 
 Read the existing server-only wrappers and keep server auth/env imports out
 of client components. Modules outside `src/server/`, `src/app/api/` and
@@ -149,16 +164,35 @@ or write a `Backend*` interface for a registered route.
   job fail on a stale file.
 - A portal forwards its backend routes through one catalog proxy, so a new
   backend route needs no pass-through `route.ts`. `app/api/proxy-routes.test.ts`
-  fails on a `route.ts` whose only code is `proxyGet(...)` and its siblings.
-- Read with `contractGet(entry, options)`; write with
+  rejects retired forwarding helpers even in a route with its own code, and
+  checks the whole production source tree for registered BFF addresses
+  built from literals, concatenations, templates, constants or helper returns.
+  The host router’s incoming-path comparisons are not address builders.
+- In named routes, layouts and server modules, read with
+  `contractGet(entry, options)`; write with
   `contractWrite(entry, body, options)`. Import the entry from its
-  generated resource file. The entry types the write body and decodes the
+  generated resource file. The entry types the address and write body and decodes the
   full answer, with or without an envelope. A malformed answer is a 502,
   never an empty value. A request type has optional fields because Go
   reads absent keys as zero values; Go's `Bind` still validates the body.
+  A read with response variants selects its decoder and answer type from the
+  query, or uses the registered default when the variant is omitted:
+
+  ```ts
+  import { contractGet } from "~/lib/contract/client.server";
+  import { routes } from "~/lib/contract/students.generated";
+
+  const reply = await contractGet(routes["GET /api/students/"], {
+    token,
+    query: { view: "names" },
+  });
+  ```
+
 - Pass `token` when the caller holds the bearer, or omit it for a public
-  or pre-session step. Pass `endpoint` for the path with its parameters
-  filled in, or to add query parameters. For a session-bound route that
+  or pre-session step. Pass typed `params`; the entry supplies the backend
+  path. For a named browser route with registered query keys, pass the incoming
+  `request` so the transport forwards them. Other server calls pass typed
+  `query`. There is no endpoint override. For a session-bound route that
   uses `backendFetch`, hand that transport to the contract helper as
   `send`; it keeps the portal's renewal policy.
 - Return `contractResponse(reply, request)` for decoded JSON that the BFF
@@ -177,24 +211,31 @@ or write a `Backend*` interface for a registered route.
   that determines its shape. Narrow such values at the point of use.
   A typed response may also carry a documented `LegacyJSON` alternative
   when recorded data predates the typed shape.
-- A registered enum is typed as its
-  known values but decodes any string; narrow it with `knownEnum`.
+- An open enum names the values this build knows but accepts any string;
+  narrow it with `knownEnum`.
 - A day is a `calendar.Date`, an instant a `time.Time`. A string field that
   carries a day or a wall-clock time says so in its tag: `contract:"date"`
   (`YYYY-MM-DD`) or `contract:"clock"` (`HH:MM`); the decoder then rejects
   another form. Closed value sets are registered in `Enums`.
 - An identifier is an `ident.ID` in every role, a count an `int`; the
-  generator rejects a bare `int64` and a response shape that
-  depends on a query parameter. Every answer sends identifiers as strings,
-  and the generated decoder (`int64String`) takes nothing else (ADR 0300).
+  generator rejects a bare `int64`. Use a discriminator in the response
+  body or a separate path for a second shape. Only legacy
+  `GET /api/students/` registers query-selected variants. Identifiers travel
+  as decimal strings and decode with
+  `int64String` (ADR 0300). An identifier-shaped field that carries genuine
+  text instead stays a string, with a Go `contract_text` reason.
   A sign-in step or another route its portal's route file serves is typed
-  too (`RouteFile`) and stays out of every proxy allowlist. The catalog
+  too (`RouteFile`) and stays out of every proxy allowlist. `BrowserPath`
+  exposes its exact same-origin address to `bffPath`; without it, only the
+  server can use the Go key. `BrowserOwnContract` excludes the key from
+  `bffJson` when the route file changes the request or answer. If the route
+  file uses another HTTP method, name it in `BrowserMethod` (demo status). The catalog
   lines outside the contract (`Outside`: a device, webhook or protocol
   endpoint) only shrink: `scripts/check-contract-shrink.mjs <base>` fails on
   a new one unless a new ADR names its catalog line
   ([new route](new-route.md#routes-outside-the-contract)).
-- In a request type an identifier is a `string`; for one release Go still
-  reads a JSON number there (`ident.ID`). A request type with its own
+- In a request type an identifier is a `string`; Go rejects a JSON number
+  for an `ident.ID` at the HTTP boundary. A request type with its own
   `UnmarshalJSON` needs an entry in `Readers`
   (`backend/api/route_contracts.go`), or the generator stops; an own reader
   does not make an `int64` an identifier.
@@ -232,13 +273,21 @@ The key is the scope claim of the portal's session token
   session or calls the backend.
 - Only the registered query parameters are forwarded, every path segment is
   encoded again, and the answer is checked against the route's decoder.
-  Session, the single 401 renewal, body limit and `Idempotency-Key` come
-  from the portal's handlers (`makePortalHandlers`). The answer is the
+  The portal's handlers (`makePortalHandlers`) supply the session and
+  the single 401 renewal. The catalog proxy forwards `Idempotency-Key`
+  for POST, PUT and PATCH. The answer is the
   backend's envelope with the decoded data: `{ status, data, message }`, a
   paginated list also `pagination`, as `common.Response` writes them.
-- The BFF path must equal the backend path below the portal's prefix. A
-  route whose BFF path differs (`/api/operator/provisioning/schools` for
-  `/operator/schools`) moves its callers to the backend's path first.
+  The proxy retains the backend's success status for every method. A
+  backend 204 still goes through the decoder and remains bodyless; a
+  data-bearing DELETE with no answer fails with 502. The proxy
+  and the server contract client share JSON reading: unreadable 2xx
+  answers (including truncated JSON) are 502. After a write that may
+  have committed, they carry `general.write_answer_unreadable`; reads
+  and routes marked `NoCommit` keep the retryable error.
+- The catalog proxy uses the backend path below the portal's prefix. A
+  named `RouteFile` can instead register an exact `BrowserPath`. Both the
+  file link and the browser transport use that path.
 - Next prefers an existing route file over the proxy. Keep a file only for
   what is specific to the browser: portal policy, session handling, a file
   or upload with behavior the contract cannot name, login/MFA, or the SSE
@@ -247,9 +296,9 @@ The key is the scope claim of the portal's session token
 - A file answer registers `File: true`, a multipart upload `Multipart: true`
   with `MaxBodyBytes` and `TooLargeCode` (ADR 0270, addendum 2026-11-19).
   The proxy streams both unread: the file with the headers of
-  `fileResponse`, every answer `private, no-store`; the upload once, without
+  `fileResponse`, with `private, no-store` by default; the upload once, without
   a retry after a renewal, and 413 with `TooLargeCode` above the limit. Such
-  a route has no entry in `src/test/private-download-routes.ts`. The backend
+  a route needs no BFF route file. The backend
   names the file's `Content-Type` and `Content-Disposition` itself; the proxy
   adds no fallback. A BFF-side ID, query or format check moves to the Go
   handler, and the client sends the backend's parameters and body as they are.
@@ -259,16 +308,22 @@ The key is the scope claim of the portal's session token
   when it says `private` and not `public`. Every refusal stays
   `private, no-store`.
 - A file of the portal `public` (a token link) needs `PublicFile`, the reason
-  its link alone may open it; the generator refuses an unmarked public file,
-  a public upload, and a marker on any other route. The proxy fetches it
+  its link alone may open it; the generator refuses an unmarked public file
+  and a marker on any other route. A public multipart upload needs its own
+  `PublicUpload` reason as well as the usual size limit and error code.
+  The two enrollment uploads register this in
+  `backend/modules/enrollment/http/public_route_contracts.go`. The proxy
+  sends them without a session or bearer. The proxy fetches a public file
   without session, bearer, body and `Idempotency-Key`, `sendBackend` adds the
   client IP for the backend's limiter of the link, and every answer is
-  `private, no-store` (ADR 0270, addendum "Öffentliche Datei-Routen"). The
+  `private, no-store` unless the route declares `FileCache` (ADR 0270,
+  addendum "Öffentliche Datei-Routen"). The
   link's path prefix needs log redaction in `lib/log-redaction.ts` and
   `backend/middleware/log_redaction.go`.
 - A file the browser may keep names its Cache-Control in `FileCache`, one
   of the reviewed `FileCache*` values; a public value needs `PublicFile`.
-  `ConditionalGet` forwards `If-None-Match`/`If-Modified-Since` and hands a
+  `ConditionalGet` on a public or session GET file with `FileCache`
+  forwards `If-None-Match`/`If-Modified-Since` and hands a
   304 back with `ETag` and `Last-Modified`. Only the served file keeps the
   value; refusals stay `private, no-store` (ADR 0270, addendum of
   2026-11-20). `FileCache` takes precedence over `PrivateCache` when both
@@ -279,12 +334,11 @@ The key is the scope claim of the portal's session token
   every method it exports is registered. `TestARegisteredRouteRunsBehindTheScopeOfItsOnePortal`
   (`backend/api`) fails when the route does not run behind that portal's
   scope middleware.
-- A route file with a dynamic segment wins over the proxy too:
-  `billing-families/[id]` answers `billing-families/debtor-number-format`.
-  No route file may stand in front of a path on the catalog proxy allowlist;
-  only the hand-off files below `/api/auth` that pass the request to
-  `catalogProxyUnder` do. `app/api/catalog-route-selection.test.ts` fails
-  otherwise.
+- A route file with a dynamic segment can shadow the proxy too. No route
+  file may stand in front of a path on the catalog proxy allowlist except
+  an Auth.js hand-off that uses `catalogProxyUnder`. Hand-offs live under
+  the relevant portal's `auth` path, not just `/api/auth`.
+  `app/api/catalog-route-selection.test.ts` checks the route selection.
 - A route file that calls the backend itself must name at least one backend
   path outside the catalog proxy allowlists, such as a `RouteFile` sign-in
   step or an `Outside` stream. `app/api/route-backend-paths.test.ts` fails a
@@ -297,8 +351,9 @@ The key is the scope claim of the portal's session token
   `lib/contract/shared.generated.ts`, and imported by both resource files.
 - A route that answers 204 or the envelope without data registers
   `NoData: true` in place of a response type. Its decoder (`noData`) takes
-  exactly those two answers, and the BFF answers `{ status: "success",
-  data: null }` with the backend's message (a DELETE: 204).
+  exactly those two answers. A 204 remains bodyless. Other success statuses
+  keep their status and answer `{ status: "success", data: null }` with the
+  backend's message, including for DELETE.
 - A client type reads an identifier as `string`, never `number`.
 
 The registered routes are the entries of `portals.generated.ts`.
@@ -316,7 +371,7 @@ the portal object its entry module exports (`tenantPortal`, `parentPortal`,
 `post`, `put`, `patch`, `del`) runs inside the portal's `withAuth`, reads the
 session, renews it once on a backend 401 and answers errors through
 `handleApiError`. The helpers that read the session (`backendFetch`,
-`forwardToBackend`, `runWithRenewal`) throw outside that wrapper;
+`runWithRenewal`) throw outside that wrapper;
 `src/app/api/route-session-coverage.test.ts` runs every route and fails on a
 session read outside it. Success answers the backend's envelope
 `{ status: "success", data }` (`successResponse` in
@@ -328,23 +383,101 @@ Pre-session steps that forward a limited proof use `authStepProxy`: it calls
 `contractWrite` with the generated entry and wraps its decoded answer in
 `successResponse`. A 204 stays bodyless. A `RouteFile` JSON answer must
 pass through the generated decoder; `route-backend-paths.test.ts` rejects
-a raw call. The demo access routes have no Go contract and wrap plain
-success with `envelopedBackendSuccess`. Do not move a route across
+a raw call. The demo access route files decode their conditional backend
+`RouteFile` contracts with `contractGet` or `contractWrite` before wrapping
+plain successes. Browser calls build their addresses with `bffPath` but
+keep the route file's browser-facing payload and method. Do not move a route across
 portal auth boundaries to share code. Streaming SSE uses its documented
 exception in [the SSE contract](realtime.md).
 
 No route file calls `fetch`; both contract helpers go through `sendBackend`. A file a named route answers goes through `fileResponse`
 (`lib/file-response.server.ts`: streaming, the backend's file headers,
 `nosniff` by default, `no-store` unless the route names a cache policy, a
-backend error as its problem body). An upload the BFF must check before
-forwarding uses `createFileUploadHandler` (`lib/file-upload-wrapper.server.ts`;
-`settings/login-image` checks the image and purges the tenant cache).
+backend error as its problem body). The login-image upload uses the catalog
+multipart path: Go validates the file, while the proxy bounds transport bytes
+and clears the school's lookup after a successful write.
+
+Go owns validation of the domain request. Two named adapters check or map
+only what they need to assemble that request:
+
+- Tenant and operator school settings writes check the registry key's path
+  segment before forwarding from `settings/values/[key]`. They keep the
+  existing 400 for malformed segments; Go decides which keys and values are
+  allowed. The named handlers invalidate the tenant cache after a write.
+- `/api/invitations/accept` adapts the browser form to Go's
+  `/auth/invitations/{token}/accept`: it moves the token to the encoded path,
+  maps the camelCase form fields and resolves an owner session only for
+  existing-account acceptance. Go validates the invitation and form values.
+
+Use `problemResponse` directly from `lib/api-response-error.server.ts`.
 
 Read the affected portal's route wrapper before changing a handler; retain the
-affected endpoint's error contract. Logout forwards backend errors unchanged
-even though the browser always clears its local session.
+affected endpoint's error contract. Logout uses the same error policy. If the
+request gets no answer, the browser keeps the session and offers a retry. A
+401 means there is no active session to revoke. Other failures that get an
+HTTP answer end the local session and show that server revocation could not be
+confirmed.
 
 Context params are async in Next.js 16: `params: Promise<...>` — always `await`.
+
+### Own time-tracking reads (#8078, #8081)
+
+Use the three tenant entries in `time-tracking.generated.ts` with `bffJson`.
+They need `time_tracking:own` and Zeiterfassung and infer the staff member
+from the session. Do not send a staff ID. The standard catalog proxy forwards
+each read once on a live session; there is no page-specific proxy.
+
+- `period?view=week|month&start=YYYY-MM-DD`: pass a Monday or month start.
+  `start` to `end` is the displayed period. `week_start` to `week_end` is
+  the full ISO-week span used for session and labor warnings. A night block
+  can begin before either span. `days` covers every displayed day;
+  `has_target: false` means the target is unknown, not zero. Observe the
+  selected block's `version` when saving a correction (ADR 0311).
+  Only a month request carries `month_summary`. Its
+  `planned_shift_state` governs `planned_shift_minutes`: show a missing
+  plan only when the state is `ready` and minutes are absent. Hide the shift
+  comparison when `not_booked`; show a load failure when `unavailable`.
+- `overview`: current Berlin day, open block with pauses, today's absence
+  warning and assignments, ten weekday chart points, clock subtotals and
+  current week/month figures. `as_of` timestamps the figures; the client may
+  advance the live clock without fetching history. `account_balance_minutes:
+  null` means the account has not started. Do not enable stamping on a failed
+  read: a null session or absence is authoritative only in a success.
+- `leave-overview`: current Berlin year, quota, four counts, eight recent
+  non-question requests at most, all open questions, own allowances and the
+  initial mail outcomes. When `mails.state` is `ready`, use
+  `mails.awaiting_feedback` to decide if fast polling of the existing small
+  mail read is needed (#8094). Load the full year's absences and the
+  absence-type catalog only when their dialogs need them.
+
+For shifts, `not_booked` means Dienstplan is off; `unavailable` is a read
+failure. Assignments remain part of Basis and have a separate read status.
+For assignments and mail as well, only `ready` can mean an empty result.
+The page opens the three RAM-only `useSWRAuth` families in parallel. The
+period key uses the view and its canonical Berlin start, never previous data.
+The clock and leave keys use the Berlin day and year. The page uses the shell's
+known missing-profile state to avoid any own reads; a real authorization failure
+is not the missing-profile state.
+
+On a write, one short invalidation burst combines the local response and SSE
+echo. Its predicate refreshes mounted readers and expires affected cached
+periods without fetching them. `staff_leave_changed` invalidates the same
+time views as `staff_time_tracking_changed`, plus leave and the open vacation
+form's year list. Both are contentless tenant signals (ADR 0310). Timetable
+events update the clock's assignments; a closing-day change also affects the
+period. A reconnect reconciles all three. No historic period polls. The chart
+and clock advance today's actual time from the snapshot and its open block,
+not a second history reader. Only advance the week and month totals when
+`today_counts_in_totals` is true.
+
+The Admin table and the home assignment card still have their original reads.
+The session editor receives the selected block and the rejecting
+`revalidateOrThrow` of that period (ADR 0311). Action-bound reads keep their
+existing routes: audit history, export, annual absence overlap and the
+absence-type catalog. Run the seeded GET budget with
+`PERF_PORT=<native-frontend-port> pnpm run perf:render time-tracking.perf.ts`
+in `frontend/`; only the seeded measurement accepts `PERF_BASELINE=1` for
+the pre-#8081 page.
 
 ### Backend calls
 
@@ -371,11 +504,23 @@ sets `NoRetryAfterRenewal` for a catalog route or passes
 `retry: { off: "<reason>" }` to the named route's session transport;
 `src/app/api/credential-retry.test.ts` proves the credential goes out once
 after a 401. `contractGet` and `contractWrite` send once by default. Only a
-portal's session transport or wrapper can renew and repeat the call. The SSE stream
-and the cached tenant resolve call `sendBackend` without that wrapper; the
-stream keeps its connection open past the header timeout. A route
-param in a backend path is encoded (`requirePathSegmentParam`,
-`encodeURIComponent`); a query key never replaces a route param. Why and
+portal's session transport or wrapper can renew and repeat the call.
+In the browser, the staff client does not renew or replay a multipart call
+or a route marked `NoRetryAfterRenewal` after a 401. A logout cleanup can
+pass `skipAuthRecovery: true` to send the usual typed call with cookies but
+without the browser's session gate, renewal or login redirect.
+The Staff shell reads its startup data through the generated decoders;
+a failed optional read is left out so the browser can load it normally.
+`tenant-resolve.server.ts` uses the public `GET /auth/tenant/resolve`
+entry without a session. Its own per-replica cache coalesces concurrent
+lookups and keeps decoded successes and 404s for 60 seconds. Explicit
+invalidation clears both; other failures are not cached. The unregistered SSE
+stream uses `sendBackend` directly and keeps its connection open past the
+header timeout. Before streaming begins, connection failures use
+`handleApiError`, like the named and catalog JSON routes. A route
+param in a backend path is encoded by `fillRoutePath` for a contract call;
+encode it with `encodeURIComponent` when building an unregistered path.
+A query key never replaces a route param. Why and
 the full chain:
 [Client IP and rate limits](contracts.md#client-ip-and-rate-limits).
 
@@ -383,11 +528,13 @@ the full chain:
 
 Backend error responses have one wire contract: the portal handlers
 (`makePortalHandlers`, under the catalog proxy and every named route)
-propagate `ApiResponseError` through `handleApiError`; the public JSON
-proxies and file responses use `forwardBackendResponse`. These paths retain the
-backend status, body bytes, `Content-Type`, and `Retry-After`. Do not parse and
-rebuild an error body, infer status from an error string, or substitute a
-message when the backend returned an empty body. Locally generated errors
+and public JSON proxies propagate `ApiResponseError` through `handleApiError`;
+file responses use `forwardBackendResponse`. Both retain status
+and `Retry-After` and replace 5xx bodies with safe Problem Details. The
+forwarder streams other error bodies with their content type; the handler
+instead replaces invalid or empty bodies and adds the BFF request ID to a
+valid problem when it is missing. Use these helpers rather than
+rebuilding errors in each route. Locally generated errors
 (validation, missing session, network failure) are separate from backend
 responses.
 
@@ -401,12 +548,9 @@ passkeys, demo access, invitations, Auth.js endpoints) wraps its handler in
 exported handler that is neither built by a policy factory nor listed with a
 reason in its exception table, and for every re-export (`export * from`,
 `export { GET } from`) in a route file. Files, images and event streams keep their own
-headers. A private file a route file answers additionally uses
-`withPrivateDownloadNoStore` around the outer portal handler and an entry in
-`src/test/private-download-routes.ts` (empty: every private file is a catalog
-route, answered `private, no-store` by the proxy). `route-cache-policy.test.ts`
-scans file constructors and download paths for missing entries; the SSE routes
-are its only `NON_DOWNLOAD_RESOURCES`.
+headers. The catalog serves private files. `route-cache-policy.test.ts`
+checks file constructors and download paths; only the SSE routes are
+listed as `NON_DOWNLOAD_RESOURCES`.
 
 Sentry ownership follows the same boundary: forwarding a backend HTTP error,
 including 5xx, creates no BFF event. A caught network failure or BFF exception
@@ -426,9 +570,73 @@ Inspect the domain's existing mapper, such as
 [room response mapping](../../frontend/src/lib/room-helpers.ts), rather than
 copying a generic mapper. Preserve nullability and date-vs-instant semantics.
 
+### First display in a protected page
+
+Load eligible first-display reads in the server page, not in a link handler
+or on the first browser mount. Use
+[`SWRServerSeed`](../../frontend/src/lib/swr/server-seed.tsx) with the existing
+reader's key and mapper. With [Cache Components and Partial Prefetching](../../frontend/next.config.js),
+the link prefetches the neutral shell only. Wait for `connection()` before
+resolving the session and starting protected seeds. Use
+[`readTenantPageContext`](../../frontend/src/lib/tenant-page-seed.server.ts) to
+bind Team reads to the host and school, or
+[`readPortalSessionSnapshot`](../../frontend/src/lib/portal-session-snapshot.server.ts)
+for the actual portal. Both wait for the connection. Go still checks the
+resource's permissions and relationships.
+
+Keep protected reads and values out of Next's `use cache` directives. React's
+`cache()` in the snapshot helpers deduplicates within a server request.
+For a measured revisit bottleneck, a page can export
+`unstable_dynamicStaleTime` (seconds) to reuse its authorized payload in the
+same document. This does not extend seed validity or change invalidation.
+See the [protected session boundary](contracts.md#protected-tree-per-session-8082).
+
+Use `seedRead` and `readContract` for each independently retriable GET.
+Mark only entries needed for initial HTML as `render` and keep the seed
+under the page's loading boundary. Use `claims` for known keys so a client
+navigation waits for the same answer instead of starting a second GET.
+Missing, refused and timed-out entries fall back to their existing browser
+reader and its error UI. Pass only the displayed projection across RSC.
+Keep bearer tokens and raw backend errors on the server.
+
+The shell seeds only its own readers. An audited opening, a read with side
+effects, a write preview, an edit, a download or a read for later local
+interaction is not a seed. See [ADR 0311](../adr/0311-ein-speichern-traegt-den-gelesenen-stand.md).
+
+Record each new page's first-display reads in exactly one inventory row,
+including why a read stays at opening time or why no seed is needed:
+
+- [Team](server-seed-team.md) and [Team daily routes and data administration](server-seed-team-catalog.md)
+- [Parents and standalone pages](server-seed-parents-public.md)
+- [School, Träger, Operator and Caterer](server-seed-portals.md)
+
+Use the internal route template without query parameters in the first
+column. `app-route-invariants.test.ts` checks these inventories against the
+page tree, excluding parallel slots that reuse a route.
+
 ### Auth Token Flow
 
 Go sends the access and refresh tokens to the BFF, not to the browser.
 Auth.js stores them in the encrypted httpOnly cookie. Server handlers forward
 the bearer to Go and renew it as needed. For password, MFA, and passkey
 steps, see [Login, refresh, and MFA](contracts.md#login-refresh-and-mfa). Invitation/password-reset token flows live at `app/invite/`, `app/[tenant]/(public)/invite/`, `app/reset-password/`, with API clients in `lib/invitation-api.ts` / `lib/invitation-helpers.ts` — use these instead of hitting backend routes directly.
+
+### Mail delivery polling
+
+Enrollment, appointment and absence readers reconcile quiet results every five
+minutes and when the tab regains focus. Delivery's `awaiting_feedback` keeps
+the 15-second cadence (30 seconds for absences) only while a send is active.
+Plain SMTP or fallback acceptance stays **accepted**, not delivered, and uses
+the slow cadence. A tracked provider acceptance waits up to 24 hours; a
+provider-reported delay follows Delivery's five-day limit. Settled chats stop
+polling; new messages refresh their mail status.
+
+### Operator account pages
+
+The three account GETs (platform, organization, school) answer a single
+50-row page through the generated paginated envelope (ADR 0324). Keep the
+first-page key scoped by filter and sort; pass `pagination.next_cursor`
+unchanged for “Mehr laden”. A new scope, order, search or successful write
+invalidates the continuation. Do not sort or truncate the loaded rows a
+second time in the table. Seed only the first page for the initial URL, with
+the same key and query the browser uses.

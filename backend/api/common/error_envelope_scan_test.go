@@ -34,6 +34,8 @@ const (
 //     common.ErrResponse or declares `status` as the HTTP status number,
 //     `detail` and `code` as strings, and never `error` or `message`. The
 //     codes its literals name must be registered.
+//   - Structured members of an error body belong under details, not alongside
+//     the envelope's standard members.
 //   - A struct with an `error` member next to `code`, or a map literal with an
 //     "error" or "message" key next to "code", "detail" or an error status
 //     ("error" or an http.Status* constant >= 400), is the pre-#2520
@@ -83,11 +85,13 @@ func TestErrorEnvelopeScanFindsEachViolation(t *testing.T) {
 		`api/bad/bad.go:42:71: error body problem code is "care.not_registered", which is not in error-registry/`,
 		`api/bad/bad.go:45:9: map literal writes the legacy "error" member next to an error status; render the shared envelope`,
 		`api/bad/bad.go:49:6: struct rowFailure writes the legacy "error" member next to "code"; render the shared envelope`,
+		`api/bad/bad.go:63:2: error member "conflicts" belongs in details`,
 		`api/bad/bad.go:67:9: map literal writes the legacy "message" member next to an error status; render the shared envelope`,
 		`api/bad/bad.go:71:9: map literal writes an error body without a "code"; render the shared envelope`,
 		`api/bad/bad.go:75:9: map literal writes an error body without a "code"; render the shared envelope`,
 		`api/bad/bad.go:84:2: WriteHeader with an error status is followed by a raw body; render the shared envelope`,
 		`api/bad/bad.go:94:6: error body titledProblem: has no "code" member`,
+		`api/bad/bad.go:104:2: error member "because" belongs in details`,
 	}
 	sort.Strings(want)
 	if strings.Join(violations, "\n") != strings.Join(want, "\n") {
@@ -229,6 +233,13 @@ func checkMapBody(file *sourceFile, lit *ast.CompositeLit, statuses map[string]i
 		}
 	}
 	if _, hasCode := keys["code"]; hasCode {
+		if errorStatus || (hasStatus && keys["detail"] != nil) {
+			for key, value := range keys {
+				if !problemMember(key) {
+					report(value.Pos(), "error member %q belongs in details", key)
+				}
+			}
+		}
 		return
 	}
 	_, hasDetail := keys["detail"]
@@ -254,6 +265,11 @@ func checkErrorBody(shapes map[string]*structShape, shape *structShape, report f
 			report(shape.pos, "error body %s: carries the legacy %q member; the text belongs in \"detail\"", shape.name, legacy)
 		}
 	}
+	for member, field := range shape.members {
+		if member != "error" && member != "message" && !problemMember(member) {
+			report(field.pos, "error member %q belongs in details", member)
+		}
+	}
 	if embedsShared(shapes, shape, 0) {
 		return
 	}
@@ -268,6 +284,15 @@ func checkErrorBody(shapes map[string]*structShape, shape *structShape, report f
 		} else if member.typeName != "string" {
 			report(shape.pos, "error body %s: %s must be a string, not %s", shape.name, required, member.typeName)
 		}
+	}
+}
+
+func problemMember(name string) bool {
+	switch name {
+	case "type", "title", "status", "detail", "instance", "code", "errors", "details":
+		return true
+	default:
+		return false
 	}
 }
 

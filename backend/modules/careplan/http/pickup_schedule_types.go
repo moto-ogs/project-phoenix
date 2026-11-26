@@ -4,7 +4,6 @@ import (
 	"context"
 	errors "errors"
 	http "net/http"
-	strconv "strconv"
 	time "time"
 
 	careplan "github.com/moto-ogs/project-phoenix/modules/careplan"
@@ -22,12 +21,12 @@ type PickupScheduleResponse struct {
 	Notes       *string  `json:"notes,omitempty"`
 	// Source marks the row's provenance: "staff" (manually maintained) or
 	// "care_offering" (booking-derived Angebots-Gehzeit).
-	Source           string   `json:"source"`
-	CareOfferingID   *string  `json:"care_offering_id,omitempty"`
-	CareOfferingName string   `json:"care_offering_name,omitempty"`
-	CreatedBy        ident.ID `json:"created_by"`
-	CreatedAt        string   `json:"created_at"`
-	UpdatedAt        string   `json:"updated_at"`
+	Source           string    `json:"source"`
+	CareOfferingID   *ident.ID `json:"care_offering_id,omitempty"`
+	CareOfferingName string    `json:"care_offering_name,omitempty"`
+	CreatedBy        ident.ID  `json:"created_by"`
+	CreatedAt        string    `json:"created_at"`
+	UpdatedAt        string    `json:"updated_at"`
 }
 
 // PickupExceptionResponse represents a pickup exception in API responses
@@ -72,6 +71,9 @@ type PickupDataResponse struct {
 	// DepartureExceptions is the Abholart of single days (#3945) in the same
 	// window as Exceptions.
 	DepartureExceptions []DepartureExceptionResponse `json:"departure_exceptions"`
+	// PickupPersons is who collects the child on single days (#7655), in
+	// the same window as Exceptions.
+	PickupPersons []PickupPersonResponse `json:"pickup_persons"`
 	// WeeklyPlanVersion is the token of the child's weekly plan the weekly
 	// editor sends back with its save (ADR 0311); only the read sets it.
 	WeeklyPlanVersion string `json:"weekly_plan_version,omitempty"`
@@ -316,7 +318,7 @@ func mapScheduleToResponse(s *careplan.PickupSchedule) PickupScheduleResponse {
 		resp.Source = careplan.ScheduleSourceStaff
 	}
 	if s.CareOfferingID != nil {
-		id := strconv.FormatInt(*s.CareOfferingID, 10)
+		id := ident.ID(*s.CareOfferingID)
 		resp.CareOfferingID = &id
 	}
 	return resp

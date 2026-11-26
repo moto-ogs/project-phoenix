@@ -83,10 +83,15 @@ func renderPickupResetStillNeeded(err error) render.Renderer {
 	if !errors.As(err, &stillNeeded) {
 		return common.ErrorInternalServer(err)
 	}
-	return common.ErrorConflictWithDetails(err, common.CodeStudentsPickupResetStillNeeded, map[string]any{
-		"needed_until":  stillNeeded.NeededUntil.Format(pickupResetDateLayout),
-		"possible_from": stillNeeded.PossibleFrom.Format(pickupResetDateLayout),
+	return common.ErrorConflictWithDetails(err, common.CodeStudentsPickupResetStillNeeded, PickupResetDetails{
+		NeededUntil:  stillNeeded.NeededUntil.Format(pickupResetDateLayout),
+		PossibleFrom: stillNeeded.PossibleFrom.Format(pickupResetDateLayout),
 	})
+}
+
+type PickupResetDetails struct {
+	NeededUntil  string `json:"needed_until"`
+	PossibleFrom string `json:"possible_from"`
 }
 
 // pickupResetDateLayout is the German date the catalog text shows; the

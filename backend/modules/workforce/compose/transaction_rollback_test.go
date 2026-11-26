@@ -78,7 +78,7 @@ func TestWorkTimeModelUpdate_RollsBackEveryWriteAndRetriesCleanly(t *testing.T) 
 	require.NoError(t, err)
 
 	revision := workforce.UpdateWorkTimeModel{
-		ID: created.ID,
+		ID: created.ID, ExpectedVersion: workforce.WorkTimeModelVersion(created),
 		WorkTimeModelFields: workforce.WorkTimeModelFields{
 			Name:               "Rollback safety",
 			RotationLength:     1,

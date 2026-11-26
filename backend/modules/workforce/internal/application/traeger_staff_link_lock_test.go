@@ -150,8 +150,8 @@ func TestLinkRefusesARecordChangedBeforeItsLock(t *testing.T) {
 }
 
 // The link moves a school's bank row to the record as it read it. A row the
-// school entered or changed since stays at the school, and the link reports
-// the change: a new IBAN is neither deleted nor taken over unseen.
+// school entered or changed since stays at the school, held back for the
+// trail: a new IBAN is neither deleted nor taken over unseen.
 func TestHandOverKeepsABankRowTheLinkDidNotRead(t *testing.T) {
 	t.Parallel()
 	actor := workforce.TraegerStaffActor{OrganizationID: 1, AccountID: 9}
@@ -161,17 +161,16 @@ func TestHandOverKeepsABankRowTheLinkDidNotRead(t *testing.T) {
 
 	store := &linkLockStore{bank: newer, holdAt: linkLockLinkedAt.Add(time.Second)}
 	none := bankRowState(nil)
-	outcome, err := linkLockService(store).handOverSchool(context.Background(), actor, link, nil, &none)
+	held, err := linkLockService(store).handOverSchool(context.Background(), actor, link, nil, &none)
 	require.NoError(t, err)
-	assert.True(t, outcome.changed)
-	assert.NotNil(t, outcome.held)
+	assert.NotNil(t, held)
 	assert.False(t, store.deleted, "the school keeps the row the link did not read")
 
 	read := bankRowState(newer)
 	store = &linkLockStore{bank: newer}
-	outcome, err = linkLockService(store).handOverSchool(context.Background(), actor, link, nil, &read)
+	held, err = linkLockService(store).handOverSchool(context.Background(), actor, link, nil, &read)
 	require.NoError(t, err)
-	assert.False(t, outcome.changed)
+	assert.Nil(t, held)
 	assert.True(t, store.deleted, "the row the link read moves to the record")
 }
 
@@ -186,7 +185,7 @@ func linkLockRecord() domain.TraegerStaffRecord {
 // A row the link held back stays at the school on every later write of the
 // record (UpdatePersonnelNumber, the bank values, a hire): its catch-up does
 // not delete a value the Personalverwaltung has not seen. The link names the
-// kept values in the Träger's trail and refuses as changed.
+// kept values in the Träger's trail.
 func TestHandOverKeepsAHeldBankRowOnLaterWrites(t *testing.T) {
 	t.Parallel()
 	actor := workforce.TraegerStaffActor{OrganizationID: 1, AccountID: 9}
@@ -198,7 +197,9 @@ func TestHandOverKeepsAHeldBankRowOnLaterWrites(t *testing.T) {
 	service := linkLockService(store)
 
 	planned := map[employmentKey]string{{2, 10}: bankRowState(nil)}
-	require.ErrorIs(t, service.handOver(context.Background(), actor, record, planned), readstate.ErrChanged)
+	held, err := service.handOver(context.Background(), actor, record, planned)
+	require.NoError(t, err)
+	assert.Equal(t, []int64{record.Links[0].SchoolID}, held, "the link's answer names the school that kept its row")
 	require.Len(t, store.trail, 1)
 	assert.Equal(t, domain.StaffChangeNotChosen, store.trail[0].Kind)
 	assert.Equal(t, domain.StaffFieldIBAN, store.trail[0].Field)
@@ -211,7 +212,9 @@ func TestHandOverKeepsAHeldBankRowOnLaterWrites(t *testing.T) {
 	assert.Equal(t, actor.AccountID, store.accesses[0].ActorAccountID)
 	assert.Equal(t, actorRoleTraeger, store.accesses[0].ActorRole)
 
-	require.NoError(t, service.handOver(context.Background(), actor, record, nil))
+	held, err = service.handOver(context.Background(), actor, record, nil)
+	require.NoError(t, err)
+	assert.Empty(t, held, "the catch-up names no school")
 	assert.False(t, store.deleted, "the held row survives the next write")
 	assert.Len(t, store.trail, 1, "the catch-up adds no entry of its own")
 	assert.Len(t, store.accesses, 1, "the catch-up reads no mask")
@@ -224,25 +227,34 @@ func TestHandOverCatchUpMovesARowFromBeforeTheLink(t *testing.T) {
 	actor := workforce.TraegerStaffActor{OrganizationID: 1, AccountID: 9}
 	store := &linkLockStore{bank: []domain.StaffFinancialData{{StaffID: 10, IBANSealed: []byte("sealed-old"), UpdatedAt: linkLockLinkedAt.Add(-time.Hour)}}}
 
-	require.NoError(t, linkLockService(store).handOver(context.Background(), actor, linkLockRecord(), nil))
+	held, err := linkLockService(store).handOver(context.Background(), actor, linkLockRecord(), nil)
+	require.NoError(t, err)
+	assert.Empty(t, held)
 	assert.True(t, store.deleted)
 	assert.Empty(t, store.trail)
 }
 
-// A link whose school row changed since its read is refused as changed
-// (ADR 0311) once the school is through, also when the row is gone: the
-// record holds what the link read, the person sees the new state.
-func TestHandOverRefusesALinkWhoseBankRowChanged(t *testing.T) {
+// A school row that changed between the link's read and the school's lock
+// is never answered as changed: the record is saved by then, and a refusal
+// after a committed write would say nothing was saved (ADR 0311). A row the
+// school removed meanwhile leaves nothing to hold or delete.
+func TestHandOverAnswersASavedLinkWhoseBankRowChangedAfterItsRead(t *testing.T) {
 	t.Parallel()
 	actor := workforce.TraegerStaffActor{OrganizationID: 1, AccountID: 9}
 	read := []domain.StaffFinancialData{{StaffID: 10, IBANSealed: []byte("sealed-read")}}
 
 	store := &linkLockStore{}
 	planned := map[employmentKey]string{{2, 10}: bankRowState(read)}
-	require.ErrorIs(t, linkLockService(store).handOver(context.Background(), actor, linkLockRecord(), planned), readstate.ErrChanged)
+	held, err := linkLockService(store).handOver(context.Background(), actor, linkLockRecord(), planned)
+	require.NoError(t, err)
+	assert.Empty(t, held, "a removed row leaves nothing held")
+	assert.False(t, store.deleted)
+	assert.Empty(t, store.trail)
 
 	store = &linkLockStore{bank: read}
-	require.NoError(t, linkLockService(store).handOver(context.Background(), actor, linkLockRecord(), planned))
+	held, err = linkLockService(store).handOver(context.Background(), actor, linkLockRecord(), planned)
+	require.NoError(t, err)
+	assert.Empty(t, held, "the row the link read moves without a notice")
 	assert.True(t, store.deleted)
 }
 
@@ -262,8 +274,9 @@ func TestHandOverNamesAHeldRowWhenALaterSchoolFails(t *testing.T) {
 	service.ports.Runtime = linkLockRuntime{failSchool: 3}
 
 	planned := map[employmentKey]string{{2, 10}: bankRowState(nil)}
-	err := service.handOver(context.Background(), actor, record, planned)
+	held, err := service.handOver(context.Background(), actor, record, planned)
 	require.Error(t, err)
+	assert.Equal(t, []int64{record.Links[0].SchoolID}, held)
 	assert.NotErrorIs(t, err, readstate.ErrChanged, "the failed school decides the answer")
 	require.Len(t, store.trail, 1, "the held row of school 2 has its trail entry")
 	assert.Equal(t, domain.StaffChangeNotChosen, store.trail[0].Kind)

@@ -41,7 +41,7 @@ type seriesExceptionOperations interface {
 type shiftTypeOperations interface {
 	CreateShiftType(context.Context, workforce.ShiftType) (workforce.ShiftType, error)
 	FindShiftType(context.Context, int64) (workforce.ShiftType, error)
-	UpdateShiftType(context.Context, workforce.ShiftType) (workforce.ShiftType, error)
+	UpdateShiftType(ctx context.Context, shiftType workforce.ShiftType, expectedVersion string) (workforce.ShiftType, error)
 	// RemoveShiftType deletes an unreferenced type and archives a type that
 	// planned shifts or series still carry (#6845).
 	RemoveShiftType(context.Context, int64) (workforce.ShiftTypeRemoval, error)

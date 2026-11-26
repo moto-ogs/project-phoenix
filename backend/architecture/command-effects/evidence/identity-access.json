@@ -1298,7 +1298,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.AccountPasskeyFlows.FinishAccountPasskeyLogin",
-      "binding_digest": "5231dd4d4c7a481b26ee643cff7b1e7f",
+      "binding_digest": "eace1311207b53d52763d1cb2a6830fd",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.AccountPasskeyFlows.FinishAccountPasskeyLogin",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
@@ -1306,7 +1306,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.AccountPasskeyFlows.FinishAccountPasskeyLogin",
-      "binding_digest": "50c7ba2615e78a061fe564c53896d7b8",
+      "binding_digest": "68956a6d8442f8c4ecbc504dc3388a92",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.AccountPasskeyFlows.FinishAccountPasskeyLogin",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
@@ -1330,7 +1330,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.FinishAccountPasskeyLogin",
-      "binding_digest": "5231dd4d4c7a481b26ee643cff7b1e7f",
+      "binding_digest": "eace1311207b53d52763d1cb2a6830fd",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.AccountPasskeyFlows.FinishAccountPasskeyLogin",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
@@ -1338,7 +1338,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.FinishAccountPasskeyLogin",
-      "binding_digest": "50c7ba2615e78a061fe564c53896d7b8",
+      "binding_digest": "68956a6d8442f8c4ecbc504dc3388a92",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.AccountPasskeyFlows.FinishAccountPasskeyLogin",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
@@ -2074,7 +2074,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.CallerEngine.UpdateProfile",
-      "binding_digest": "e51f97f1628d069917c86b9f8fc30e91",
+      "binding_digest": "b11e1b7e06931b9a245b006fadf38973",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.CallerProfiles.UpdateProfile",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.AccountLifecycleCommand.RenamePerson",
@@ -2090,7 +2090,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.CallerEngine.UpdateProfile",
-      "binding_digest": "154158958150bd15297429590bb301a9",
+      "binding_digest": "d2c4258efb6d43b2eea4614a30d505ab",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.CallerProfiles.UpdateProfile",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.RenamePerson",
@@ -2106,7 +2106,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.CallerEngine.UpdateProfile",
-      "binding_digest": "f264a01cdd13e613d7e2bbabd3f18c82",
+      "binding_digest": "3f7d727cf6e52ff0684667093d0445f6",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.CallerProfiles.UpdateProfile",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.RenamePerson",
@@ -2148,14 +2148,6 @@
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.CallerEngine.MySupervisedSessionIDs",
       "binding_digest": "191156d5b80ba40bb96364cc325f6fe9",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.CallerReach.MySupervisedSessionIDs",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListSupervisedLiveGroups",
-      "target_owner": "student-presence"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.CallerEngine.Navigation",
-      "binding_digest": "191156d5b80ba40bb96364cc325f6fe9",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.CallerReach.Navigation",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListSupervisedLiveGroups",
       "target_owner": "student-presence"
@@ -2282,7 +2274,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.CatererAccess.CatererMFAStatus",
-      "binding_digest": "a8fa3c6998f732481dbd1c22bb0554c4",
+      "binding_digest": "6b721a899258d1312118b61961857b2b",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.CatererSecondFactor.CatererMFAStatus",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
@@ -2290,7 +2282,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.CatererAccess.CatererMFAStatus",
-      "binding_digest": "09362e6ca10dd1d14413dab99cce6cab",
+      "binding_digest": "48eccd001ce7364fc030222aa5d7c8b9",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.CatererSecondFactor.CatererMFAStatus",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
@@ -2298,7 +2290,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.CatererAccess.CatererMFAStatus",
-      "binding_digest": "45c1cbd46e106c67998f201bb8d399c4",
+      "binding_digest": "e0ba889bfbccf8fdf3f3280ee5e86c56",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.CatererSecondFactor.CatererMFAStatus",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
@@ -2306,7 +2298,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.CatererAccess.ConfirmCatererMFA",
-      "binding_digest": "c50d3253f7f7e104ef3be9cfaa9adbe8",
+      "binding_digest": "9724162ac5e87f885b8a0a0c48ad8779",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.CatererSecondFactor.ConfirmCatererMFA",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
@@ -2322,7 +2314,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.CatererAccess.ConfirmCatererMFA",
-      "binding_digest": "9bea2199f549c2c2a340290f0d0d50a0",
+      "binding_digest": "adcf2b6636baea42136cfbb2521fb7ae",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.CatererSecondFactor.ConfirmCatererMFA",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
@@ -2330,7 +2322,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.CatererAccess.ConfirmCatererMFA",
-      "binding_digest": "8c885f5391c8fed69f606240fdd4ded9",
+      "binding_digest": "549e5422b6d5d61cf79af0ddbc71c5cf",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.CatererSecondFactor.ConfirmCatererMFA",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
@@ -2338,7 +2330,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.CatererAccess.DisableCatererMFA",
-      "binding_digest": "a8fa3c6998f732481dbd1c22bb0554c4",
+      "binding_digest": "6b721a899258d1312118b61961857b2b",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.CatererSecondFactor.DisableCatererMFA",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
@@ -2354,7 +2346,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.CatererAccess.DisableCatererMFA",
-      "binding_digest": "09362e6ca10dd1d14413dab99cce6cab",
+      "binding_digest": "48eccd001ce7364fc030222aa5d7c8b9",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.CatererSecondFactor.DisableCatererMFA",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
@@ -2362,7 +2354,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.CatererAccess.DisableCatererMFA",
-      "binding_digest": "45c1cbd46e106c67998f201bb8d399c4",
+      "binding_digest": "e0ba889bfbccf8fdf3f3280ee5e86c56",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.CatererSecondFactor.DisableCatererMFA",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
@@ -2402,7 +2394,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.CatererAccess.ListCatererTrustedDevices",
-      "binding_digest": "a8fa3c6998f732481dbd1c22bb0554c4",
+      "binding_digest": "6b721a899258d1312118b61961857b2b",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.CatererSecondFactor.ListCatererTrustedDevices",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
@@ -2410,7 +2402,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.CatererAccess.ListCatererTrustedDevices",
-      "binding_digest": "09362e6ca10dd1d14413dab99cce6cab",
+      "binding_digest": "48eccd001ce7364fc030222aa5d7c8b9",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.CatererSecondFactor.ListCatererTrustedDevices",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
@@ -2418,7 +2410,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.CatererAccess.ListCatererTrustedDevices",
-      "binding_digest": "45c1cbd46e106c67998f201bb8d399c4",
+      "binding_digest": "e0ba889bfbccf8fdf3f3280ee5e86c56",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.CatererSecondFactor.ListCatererTrustedDevices",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
@@ -2442,7 +2434,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.CatererAccess.RevokeCatererTrustedDevice",
-      "binding_digest": "a8fa3c6998f732481dbd1c22bb0554c4",
+      "binding_digest": "6b721a899258d1312118b61961857b2b",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.CatererSecondFactor.RevokeCatererTrustedDevice",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
@@ -2450,7 +2442,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.CatererAccess.RevokeCatererTrustedDevice",
-      "binding_digest": "09362e6ca10dd1d14413dab99cce6cab",
+      "binding_digest": "48eccd001ce7364fc030222aa5d7c8b9",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.CatererSecondFactor.RevokeCatererTrustedDevice",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
@@ -2458,7 +2450,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.CatererAccess.RevokeCatererTrustedDevice",
-      "binding_digest": "45c1cbd46e106c67998f201bb8d399c4",
+      "binding_digest": "e0ba889bfbccf8fdf3f3280ee5e86c56",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.CatererSecondFactor.RevokeCatererTrustedDevice",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
@@ -2466,7 +2458,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.CatererAccess.StartCatererMFA",
-      "binding_digest": "a8fa3c6998f732481dbd1c22bb0554c4",
+      "binding_digest": "6b721a899258d1312118b61961857b2b",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.CatererSecondFactor.StartCatererMFA",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
@@ -2482,7 +2474,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.CatererAccess.StartCatererMFA",
-      "binding_digest": "09362e6ca10dd1d14413dab99cce6cab",
+      "binding_digest": "48eccd001ce7364fc030222aa5d7c8b9",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.CatererSecondFactor.StartCatererMFA",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
@@ -2490,7 +2482,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.CatererAccess.StartCatererMFA",
-      "binding_digest": "45c1cbd46e106c67998f201bb8d399c4",
+      "binding_digest": "e0ba889bfbccf8fdf3f3280ee5e86c56",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.CatererSecondFactor.StartCatererMFA",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
@@ -2530,7 +2522,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.CatererAccess.FinishCatererPasskeyLogin",
-      "binding_digest": "6df704a366aeefc8ca326c56d4958180",
+      "binding_digest": "4676fc5dac3d6fa215c125fb544b62e1",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.CatererSignIn.FinishCatererPasskeyLogin",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
@@ -2546,7 +2538,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.CatererAccess.FinishCatererPasskeyLogin",
-      "binding_digest": "a6595e9ffd6a2dcefdfe6f481855a544",
+      "binding_digest": "66f42a7cf2780c5fc01fb48267da428e",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.CatererSignIn.FinishCatererPasskeyLogin",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
@@ -2554,7 +2546,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.CatererAccess.FinishCatererPasskeyLogin",
-      "binding_digest": "2a299386911788a1d4d7fb7c83a8a22d",
+      "binding_digest": "423e09299d29090e09d8fdf16b6ca63f",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.CatererSignIn.FinishCatererPasskeyLogin",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
@@ -2578,7 +2570,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.CatererAccess.LoginCaterer",
-      "binding_digest": "5231dd4d4c7a481b26ee643cff7b1e7f",
+      "binding_digest": "eace1311207b53d52763d1cb2a6830fd",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.CatererSignIn.LoginCaterer",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
@@ -2586,7 +2578,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.CatererAccess.LoginCaterer",
-      "binding_digest": "50c7ba2615e78a061fe564c53896d7b8",
+      "binding_digest": "68956a6d8442f8c4ecbc504dc3388a92",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.CatererSignIn.LoginCaterer",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
@@ -2610,7 +2602,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.CatererAccess.VerifyCatererMFA",
-      "binding_digest": "6df704a366aeefc8ca326c56d4958180",
+      "binding_digest": "4676fc5dac3d6fa215c125fb544b62e1",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.CatererSignIn.VerifyCatererMFA",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
@@ -2626,7 +2618,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.CatererAccess.VerifyCatererMFA",
-      "binding_digest": "62d97da1aedd3e446abeca0768f1b038",
+      "binding_digest": "cf02049048f611fec835a0d4ded63064",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.CatererSignIn.VerifyCatererMFA",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
@@ -2634,7 +2626,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.CatererAccess.VerifyCatererMFA",
-      "binding_digest": "2a299386911788a1d4d7fb7c83a8a22d",
+      "binding_digest": "423e09299d29090e09d8fdf16b6ca63f",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.CatererSignIn.VerifyCatererMFA",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
@@ -2674,7 +2666,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.DemoAccessEngine.RedeemDemoAccess",
-      "binding_digest": "dc21f923cc94e3babd615e0abd23652d",
+      "binding_digest": "e73e7d797fb293b8cacea70d8a858ba3",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.DemoAccessEngine.RedeemDemoAccess",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
@@ -2682,7 +2674,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.DemoAccessEngine.RedeemDemoAccess",
-      "binding_digest": "50c7ba2615e78a061fe564c53896d7b8",
+      "binding_digest": "68956a6d8442f8c4ecbc504dc3388a92",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.DemoAccessEngine.RedeemDemoAccess",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
@@ -4266,7 +4258,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.AcceptTraegerInvitation",
-      "binding_digest": "c8526b70851a7949865a20d17fe417dc",
+      "binding_digest": "8407b4a8f7084bea969e189f5d959a6f",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.AcceptTraegerInvitation",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
@@ -4282,7 +4274,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.AcceptTraegerInvitation",
-      "binding_digest": "96afd9d06ed75ed2cadd54f20704dbfc",
+      "binding_digest": "9d6c9512b40dff0da6a9355460b61d3c",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.AcceptTraegerInvitation",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
@@ -4290,7 +4282,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.AcceptTraegerInvitation",
-      "binding_digest": "2d4b8b90b7d8fefcced27747b7c4d814",
+      "binding_digest": "479a4c436581ec8b78f934078d4bb816",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.AcceptTraegerInvitation",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
@@ -6002,7 +5994,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.FinishAccountPasskeyLogin",
-      "binding_digest": "5231dd4d4c7a481b26ee643cff7b1e7f",
+      "binding_digest": "eace1311207b53d52763d1cb2a6830fd",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.FinishAccountPasskeyLogin",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
@@ -6010,7 +6002,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.FinishAccountPasskeyLogin",
-      "binding_digest": "50c7ba2615e78a061fe564c53896d7b8",
+      "binding_digest": "68956a6d8442f8c4ecbc504dc3388a92",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.FinishAccountPasskeyLogin",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
@@ -6706,7 +6698,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.IssueSchoolTokensForVerifiedMFA",
-      "binding_digest": "5231dd4d4c7a481b26ee643cff7b1e7f",
+      "binding_digest": "eace1311207b53d52763d1cb2a6830fd",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.IssueSchoolTokensForVerifiedMFA",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
@@ -6714,7 +6706,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.IssueSchoolTokensForVerifiedMFA",
-      "binding_digest": "50c7ba2615e78a061fe564c53896d7b8",
+      "binding_digest": "68956a6d8442f8c4ecbc504dc3388a92",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.IssueSchoolTokensForVerifiedMFA",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
@@ -6746,7 +6738,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.IssueTokensForPasskey",
-      "binding_digest": "5231dd4d4c7a481b26ee643cff7b1e7f",
+      "binding_digest": "eace1311207b53d52763d1cb2a6830fd",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.IssueTokensForPasskey",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
@@ -6754,7 +6746,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.IssueTokensForPasskey",
-      "binding_digest": "50c7ba2615e78a061fe564c53896d7b8",
+      "binding_digest": "68956a6d8442f8c4ecbc504dc3388a92",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.IssueTokensForPasskey",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
@@ -6778,7 +6770,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.IssueTokensForVerifiedMFA",
-      "binding_digest": "5231dd4d4c7a481b26ee643cff7b1e7f",
+      "binding_digest": "eace1311207b53d52763d1cb2a6830fd",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.IssueTokensForVerifiedMFA",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
@@ -6786,7 +6778,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.IssueTokensForVerifiedMFA",
-      "binding_digest": "50c7ba2615e78a061fe564c53896d7b8",
+      "binding_digest": "68956a6d8442f8c4ecbc504dc3388a92",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.IssueTokensForVerifiedMFA",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
@@ -6810,7 +6802,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.IssueTraegerTokensForVerifiedMFA",
-      "binding_digest": "5231dd4d4c7a481b26ee643cff7b1e7f",
+      "binding_digest": "eace1311207b53d52763d1cb2a6830fd",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.IssueTraegerTokensForVerifiedMFA",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
@@ -6818,7 +6810,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.IssueTraegerTokensForVerifiedMFA",
-      "binding_digest": "50c7ba2615e78a061fe564c53896d7b8",
+      "binding_digest": "68956a6d8442f8c4ecbc504dc3388a92",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.IssueTraegerTokensForVerifiedMFA",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
@@ -7289,22 +7281,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.ListSchoolAccountListings",
-      "binding_digest": "320226bfa8a6488747b6798147203eb9",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.ListSchoolAccountListings",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.ListSchoolAccountListings",
-      "binding_digest": "6e3cf37d5efd970adc63246bb98d06aa",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.ListSchoolAccountListings",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
-      "target_owner": "tenant-runtime"
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.ListSchoolAccountRoleNames",
       "binding_digest": "6e3cf37d5efd970adc63246bb98d06aa",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.ListSchoolAccountRoleNames",
@@ -7410,7 +7386,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.LoginSchoolAtTenantWithMFAGate",
-      "binding_digest": "5231dd4d4c7a481b26ee643cff7b1e7f",
+      "binding_digest": "eace1311207b53d52763d1cb2a6830fd",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.LoginSchoolAtTenantWithMFAGate",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
@@ -7418,7 +7394,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.LoginSchoolAtTenantWithMFAGate",
-      "binding_digest": "50c7ba2615e78a061fe564c53896d7b8",
+      "binding_digest": "68956a6d8442f8c4ecbc504dc3388a92",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.LoginSchoolAtTenantWithMFAGate",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
@@ -7442,7 +7418,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.LoginSchoolWithMFAGate",
-      "binding_digest": "5231dd4d4c7a481b26ee643cff7b1e7f",
+      "binding_digest": "eace1311207b53d52763d1cb2a6830fd",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.LoginSchoolWithMFAGate",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
@@ -7450,7 +7426,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.LoginSchoolWithMFAGate",
-      "binding_digest": "50c7ba2615e78a061fe564c53896d7b8",
+      "binding_digest": "68956a6d8442f8c4ecbc504dc3388a92",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.LoginSchoolWithMFAGate",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
@@ -7474,7 +7450,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.LoginTraeger",
-      "binding_digest": "5231dd4d4c7a481b26ee643cff7b1e7f",
+      "binding_digest": "eace1311207b53d52763d1cb2a6830fd",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.LoginTraeger",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
@@ -7482,7 +7458,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.LoginTraeger",
-      "binding_digest": "50c7ba2615e78a061fe564c53896d7b8",
+      "binding_digest": "68956a6d8442f8c4ecbc504dc3388a92",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.LoginTraeger",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
@@ -7506,7 +7482,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.LoginWithMFAGate",
-      "binding_digest": "5231dd4d4c7a481b26ee643cff7b1e7f",
+      "binding_digest": "eace1311207b53d52763d1cb2a6830fd",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.LoginWithMFAGate",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
@@ -7514,7 +7490,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.LoginWithMFAGate",
-      "binding_digest": "50c7ba2615e78a061fe564c53896d7b8",
+      "binding_digest": "68956a6d8442f8c4ecbc504dc3388a92",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.LoginWithMFAGate",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
@@ -7674,7 +7650,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.RefreshOperatorToken",
-      "binding_digest": "6208afba9c2240b52938a2b839fd5ad0",
+      "binding_digest": "f0e8c0489f067496e70a1d3a964aa6b8",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.RefreshOperatorToken",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
@@ -7682,7 +7658,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.RefreshOperatorToken",
-      "binding_digest": "7f01b283e5a9e6fce21ebc25988a76a3",
+      "binding_digest": "1a03a8e4c9b451f304539667ed30b7fb",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.RefreshOperatorToken",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
@@ -7690,7 +7666,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.RefreshTokenWithAudit",
-      "binding_digest": "f84a4afa34fe1d61877261265104bc8e",
+      "binding_digest": "e8e4d4b4830961328f4dbb1e11f61bbf",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.RefreshTokenWithAudit",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
@@ -7706,7 +7682,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.RefreshTokenWithAudit",
-      "binding_digest": "bac1fc95b8243eaca4f114e18e3eac48",
+      "binding_digest": "4472634177572cbec57efb74aea10cae",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.RefreshTokenWithAudit",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
@@ -7714,7 +7690,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.RefreshTokenWithAudit",
-      "binding_digest": "207cd93fecdd165a3fa4831dfcccfabd",
+      "binding_digest": "4f07eeb3545ba9376c60c3d5ed4aea2b",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.RefreshTokenWithAudit",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
@@ -8874,7 +8850,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.StartTraegerSchoolSession",
-      "binding_digest": "5231dd4d4c7a481b26ee643cff7b1e7f",
+      "binding_digest": "eace1311207b53d52763d1cb2a6830fd",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.StartTraegerSchoolSession",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
@@ -8882,7 +8858,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.StartTraegerSchoolSession",
-      "binding_digest": "50c7ba2615e78a061fe564c53896d7b8",
+      "binding_digest": "68956a6d8442f8c4ecbc504dc3388a92",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.StartTraegerSchoolSession",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
@@ -8898,7 +8874,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.SwitchTenant",
-      "binding_digest": "5231dd4d4c7a481b26ee643cff7b1e7f",
+      "binding_digest": "eace1311207b53d52763d1cb2a6830fd",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.SwitchTenant",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
@@ -8906,7 +8882,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.SwitchTenant",
-      "binding_digest": "50c7ba2615e78a061fe564c53896d7b8",
+      "binding_digest": "68956a6d8442f8c4ecbc504dc3388a92",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.SwitchTenant",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
@@ -9202,7 +9178,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.ValidateSessionTokens",
-      "binding_digest": "f84a4afa34fe1d61877261265104bc8e",
+      "binding_digest": "e8e4d4b4830961328f4dbb1e11f61bbf",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.ValidateSessionTokens",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
@@ -9210,7 +9186,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.ValidateSessionTokens",
-      "binding_digest": "2d95a051c54c3d5f231ac431a8eebc53",
+      "binding_digest": "4e26147bf7588965ce2eb2242bdec8cd",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.ValidateSessionTokens",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
@@ -9218,7 +9194,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.ValidateSessionTokens",
-      "binding_digest": "1fa91e23c621738fd5b164f2a197cfb6",
+      "binding_digest": "e8f0f639ade83c3ba18c727d98e44f28",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.ValidateSessionTokens",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
@@ -9418,7 +9394,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.ParentAccess.ConfirmParentMFA",
-      "binding_digest": "c50d3253f7f7e104ef3be9cfaa9adbe8",
+      "binding_digest": "9724162ac5e87f885b8a0a0c48ad8779",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.ParentSecondFactor.ConfirmParentMFA",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
@@ -9434,7 +9410,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.ParentAccess.ConfirmParentMFA",
-      "binding_digest": "9bea2199f549c2c2a340290f0d0d50a0",
+      "binding_digest": "adcf2b6636baea42136cfbb2521fb7ae",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.ParentSecondFactor.ConfirmParentMFA",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
@@ -9442,7 +9418,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.ParentAccess.ConfirmParentMFA",
-      "binding_digest": "8c885f5391c8fed69f606240fdd4ded9",
+      "binding_digest": "549e5422b6d5d61cf79af0ddbc71c5cf",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.ParentSecondFactor.ConfirmParentMFA",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
@@ -9450,7 +9426,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.ParentAccess.DisableParentMFA",
-      "binding_digest": "a8fa3c6998f732481dbd1c22bb0554c4",
+      "binding_digest": "6b721a899258d1312118b61961857b2b",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.ParentSecondFactor.DisableParentMFA",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
@@ -9466,7 +9442,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.ParentAccess.DisableParentMFA",
-      "binding_digest": "09362e6ca10dd1d14413dab99cce6cab",
+      "binding_digest": "48eccd001ce7364fc030222aa5d7c8b9",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.ParentSecondFactor.DisableParentMFA",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
@@ -9474,7 +9450,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.ParentAccess.DisableParentMFA",
-      "binding_digest": "45c1cbd46e106c67998f201bb8d399c4",
+      "binding_digest": "e0ba889bfbccf8fdf3f3280ee5e86c56",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.ParentSecondFactor.DisableParentMFA",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
@@ -9482,7 +9458,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.ParentAccess.ListParentTrustedDevices",
-      "binding_digest": "a8fa3c6998f732481dbd1c22bb0554c4",
+      "binding_digest": "6b721a899258d1312118b61961857b2b",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.ParentSecondFactor.ListParentTrustedDevices",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
@@ -9490,7 +9466,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.ParentAccess.ListParentTrustedDevices",
-      "binding_digest": "09362e6ca10dd1d14413dab99cce6cab",
+      "binding_digest": "48eccd001ce7364fc030222aa5d7c8b9",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.ParentSecondFactor.ListParentTrustedDevices",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
@@ -9498,7 +9474,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.ParentAccess.ListParentTrustedDevices",
-      "binding_digest": "45c1cbd46e106c67998f201bb8d399c4",
+      "binding_digest": "e0ba889bfbccf8fdf3f3280ee5e86c56",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.ParentSecondFactor.ListParentTrustedDevices",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
@@ -9506,7 +9482,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.ParentAccess.ParentMFAStatus",
-      "binding_digest": "a8fa3c6998f732481dbd1c22bb0554c4",
+      "binding_digest": "6b721a899258d1312118b61961857b2b",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.ParentSecondFactor.ParentMFAStatus",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
@@ -9514,7 +9490,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.ParentAccess.ParentMFAStatus",
-      "binding_digest": "09362e6ca10dd1d14413dab99cce6cab",
+      "binding_digest": "48eccd001ce7364fc030222aa5d7c8b9",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.ParentSecondFactor.ParentMFAStatus",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
@@ -9522,7 +9498,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.ParentAccess.ParentMFAStatus",
-      "binding_digest": "45c1cbd46e106c67998f201bb8d399c4",
+      "binding_digest": "e0ba889bfbccf8fdf3f3280ee5e86c56",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.ParentSecondFactor.ParentMFAStatus",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
@@ -9530,7 +9506,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.ParentAccess.RevokeParentTrustedDevice",
-      "binding_digest": "a8fa3c6998f732481dbd1c22bb0554c4",
+      "binding_digest": "6b721a899258d1312118b61961857b2b",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.ParentSecondFactor.RevokeParentTrustedDevice",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
@@ -9538,7 +9514,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.ParentAccess.RevokeParentTrustedDevice",
-      "binding_digest": "09362e6ca10dd1d14413dab99cce6cab",
+      "binding_digest": "48eccd001ce7364fc030222aa5d7c8b9",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.ParentSecondFactor.RevokeParentTrustedDevice",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
@@ -9546,7 +9522,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.ParentAccess.RevokeParentTrustedDevice",
-      "binding_digest": "45c1cbd46e106c67998f201bb8d399c4",
+      "binding_digest": "e0ba889bfbccf8fdf3f3280ee5e86c56",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.ParentSecondFactor.RevokeParentTrustedDevice",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
@@ -9554,7 +9530,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.ParentAccess.StartParentMFA",
-      "binding_digest": "a8fa3c6998f732481dbd1c22bb0554c4",
+      "binding_digest": "6b721a899258d1312118b61961857b2b",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.ParentSecondFactor.StartParentMFA",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
@@ -9570,7 +9546,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.ParentAccess.StartParentMFA",
-      "binding_digest": "09362e6ca10dd1d14413dab99cce6cab",
+      "binding_digest": "48eccd001ce7364fc030222aa5d7c8b9",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.ParentSecondFactor.StartParentMFA",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
@@ -9578,7 +9554,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.ParentAccess.StartParentMFA",
-      "binding_digest": "45c1cbd46e106c67998f201bb8d399c4",
+      "binding_digest": "e0ba889bfbccf8fdf3f3280ee5e86c56",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.ParentSecondFactor.StartParentMFA",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
@@ -9602,7 +9578,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.ParentAccess.LoginParent",
-      "binding_digest": "5231dd4d4c7a481b26ee643cff7b1e7f",
+      "binding_digest": "eace1311207b53d52763d1cb2a6830fd",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.ParentSignIn.LoginParent",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
@@ -9610,7 +9586,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.ParentAccess.LoginParent",
-      "binding_digest": "50c7ba2615e78a061fe564c53896d7b8",
+      "binding_digest": "68956a6d8442f8c4ecbc504dc3388a92",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.ParentSignIn.LoginParent",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
@@ -9634,7 +9610,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.ParentAccess.VerifyParentMFA",
-      "binding_digest": "6df704a366aeefc8ca326c56d4958180",
+      "binding_digest": "4676fc5dac3d6fa215c125fb544b62e1",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.ParentSignIn.VerifyParentMFA",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
@@ -9650,7 +9626,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.ParentAccess.VerifyParentMFA",
-      "binding_digest": "62d97da1aedd3e446abeca0768f1b038",
+      "binding_digest": "cf02049048f611fec835a0d4ded63064",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.ParentSignIn.VerifyParentMFA",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
@@ -9658,7 +9634,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.ParentAccess.VerifyParentMFA",
-      "binding_digest": "2a299386911788a1d4d7fb7c83a8a22d",
+      "binding_digest": "423e09299d29090e09d8fdf16b6ca63f",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.ParentSignIn.VerifyParentMFA",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
@@ -9913,22 +9889,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.ListSchoolAccountListings",
-      "binding_digest": "320226bfa8a6488747b6798147203eb9",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.SchoolAccountListings.ListSchoolAccountListings",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.ListSchoolAccountListings",
-      "binding_digest": "6e3cf37d5efd970adc63246bb98d06aa",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.SchoolAccountListings.ListSchoolAccountListings",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
-      "target_owner": "tenant-runtime"
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.IssueSchoolTokensForVerifiedMFA",
       "binding_digest": "31cba1dda7cc11385ff9cbeaade9b6a6",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.SchoolAccountLogin.IssueSchoolTokensForVerifiedMFA",
@@ -9946,7 +9906,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.IssueSchoolTokensForVerifiedMFA",
-      "binding_digest": "5231dd4d4c7a481b26ee643cff7b1e7f",
+      "binding_digest": "eace1311207b53d52763d1cb2a6830fd",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.SchoolAccountLogin.IssueSchoolTokensForVerifiedMFA",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
@@ -9954,7 +9914,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.IssueSchoolTokensForVerifiedMFA",
-      "binding_digest": "50c7ba2615e78a061fe564c53896d7b8",
+      "binding_digest": "68956a6d8442f8c4ecbc504dc3388a92",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.SchoolAccountLogin.IssueSchoolTokensForVerifiedMFA",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
@@ -9978,7 +9938,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.LoginSchoolAtTenantWithMFAGate",
-      "binding_digest": "5231dd4d4c7a481b26ee643cff7b1e7f",
+      "binding_digest": "eace1311207b53d52763d1cb2a6830fd",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.SchoolAccountLogin.LoginSchoolAtTenantWithMFAGate",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
@@ -9986,7 +9946,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.LoginSchoolAtTenantWithMFAGate",
-      "binding_digest": "50c7ba2615e78a061fe564c53896d7b8",
+      "binding_digest": "68956a6d8442f8c4ecbc504dc3388a92",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.SchoolAccountLogin.LoginSchoolAtTenantWithMFAGate",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
@@ -10010,7 +9970,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.LoginSchoolWithMFAGate",
-      "binding_digest": "5231dd4d4c7a481b26ee643cff7b1e7f",
+      "binding_digest": "eace1311207b53d52763d1cb2a6830fd",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.SchoolAccountLogin.LoginSchoolWithMFAGate",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
@@ -10018,7 +9978,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.LoginSchoolWithMFAGate",
-      "binding_digest": "50c7ba2615e78a061fe564c53896d7b8",
+      "binding_digest": "68956a6d8442f8c4ecbc504dc3388a92",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.SchoolAccountLogin.LoginSchoolWithMFAGate",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
@@ -11322,7 +11282,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.TraegerPortalIdentity.IssueTraegerTokensForVerifiedMFA",
-      "binding_digest": "5231dd4d4c7a481b26ee643cff7b1e7f",
+      "binding_digest": "eace1311207b53d52763d1cb2a6830fd",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerAccountLogin.IssueTraegerTokensForVerifiedMFA",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
@@ -11330,7 +11290,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.TraegerPortalIdentity.IssueTraegerTokensForVerifiedMFA",
-      "binding_digest": "50c7ba2615e78a061fe564c53896d7b8",
+      "binding_digest": "68956a6d8442f8c4ecbc504dc3388a92",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerAccountLogin.IssueTraegerTokensForVerifiedMFA",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
@@ -11354,7 +11314,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.TraegerPortalIdentity.LoginTraeger",
-      "binding_digest": "5231dd4d4c7a481b26ee643cff7b1e7f",
+      "binding_digest": "eace1311207b53d52763d1cb2a6830fd",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerAccountLogin.LoginTraeger",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
@@ -11362,7 +11322,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.TraegerPortalIdentity.LoginTraeger",
-      "binding_digest": "50c7ba2615e78a061fe564c53896d7b8",
+      "binding_digest": "68956a6d8442f8c4ecbc504dc3388a92",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerAccountLogin.LoginTraeger",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
@@ -11370,7 +11330,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.TraegerPortalIdentity.AcceptTraegerInvitation",
-      "binding_digest": "c8526b70851a7949865a20d17fe417dc",
+      "binding_digest": "8407b4a8f7084bea969e189f5d959a6f",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerAccountManagement.AcceptTraegerInvitation",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
@@ -11386,7 +11346,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.TraegerPortalIdentity.AcceptTraegerInvitation",
-      "binding_digest": "96afd9d06ed75ed2cadd54f20704dbfc",
+      "binding_digest": "9d6c9512b40dff0da6a9355460b61d3c",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerAccountManagement.AcceptTraegerInvitation",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
@@ -11394,7 +11354,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.TraegerPortalIdentity.AcceptTraegerInvitation",
-      "binding_digest": "2d4b8b90b7d8fefcced27747b7c4d814",
+      "binding_digest": "479a4c436581ec8b78f934078d4bb816",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerAccountManagement.AcceptTraegerInvitation",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
@@ -11481,6 +11441,142 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/api.traegerRolePeople.AccountNames",
+      "binding_digest": "b817c225e9e1f53b32e51193dc16ea45",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRolePeople.AccountNames",
+      "source_owner": "identity-access",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.ListPersonsByAccount",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.traegerRoleRuntime.WithinExclusive",
+      "binding_digest": "2954643ce7b7fe97991a6037f1544cbd",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRoleRuntime.WithinExclusive",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinExclusive",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.traegerRoleRuntime.WithinSchool",
+      "binding_digest": "bfa11418ec7ca8493b66c7c61984f695",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRoleRuntime.WithinSchool",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.NewTenantID",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.traegerRoleRuntime.WithinSchool",
+      "binding_digest": "7b31cc809beace1579627a8accc7185d",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRoleRuntime.WithinSchool",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTenant",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.traegerRoleRuntime.WithinTraeger",
+      "binding_digest": "589fb0341ccdc788fc7724ba4768bec4",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRoleRuntime.WithinTraeger",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTraeger",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.traegerRoleSchools.TraegerSchools",
+      "binding_digest": "fe9982a75f61b67ea6e272a171cc31bd",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRoleSchools.TraegerSchools",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.ListSchoolsByOrganization",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.traegerRoleSchools.TraegerSchools",
+      "binding_digest": "cbe3bd5da0dc720a4ce66e92671ed851",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRoleSchools.TraegerSchools",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.ListSchoolsByOrganization",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.traegerRoleSchools.TraegerSchools",
+      "binding_digest": "3dbd58353820f3655d8c296d6b85630d",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRoleSchools.TraegerSchools",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.School.IsDeleted",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.TraegerSchoolRoles.CreateTraegerSchoolRole",
+      "binding_digest": "31cba1dda7cc11385ff9cbeaade9b6a6",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRoles.CreateTraegerSchoolRole",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.TraegerSchoolRoles.CreateTraegerSchoolRole",
+      "binding_digest": "88113579b0fcf9cb756a23768c428619",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRoles.CreateTraegerSchoolRole",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.TraegerSchoolRoles.CreateTraegerSchoolRole",
+      "binding_digest": "6e3cf37d5efd970adc63246bb98d06aa",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRoles.CreateTraegerSchoolRole",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.TraegerSchoolRoles.RemoveTraegerSchoolRole",
+      "binding_digest": "31cba1dda7cc11385ff9cbeaade9b6a6",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRoles.RemoveTraegerSchoolRole",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.TraegerSchoolRoles.RemoveTraegerSchoolRole",
+      "binding_digest": "88113579b0fcf9cb756a23768c428619",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRoles.RemoveTraegerSchoolRole",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.TraegerSchoolRoles.RemoveTraegerSchoolRole",
+      "binding_digest": "6e3cf37d5efd970adc63246bb98d06aa",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRoles.RemoveTraegerSchoolRole",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.TraegerSchoolRoles.UpdateTraegerSchoolRole",
+      "binding_digest": "31cba1dda7cc11385ff9cbeaade9b6a6",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRoles.UpdateTraegerSchoolRole",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.TraegerSchoolRoles.UpdateTraegerSchoolRole",
+      "binding_digest": "88113579b0fcf9cb756a23768c428619",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRoles.UpdateTraegerSchoolRole",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.TraegerSchoolRoles.UpdateTraegerSchoolRole",
+      "binding_digest": "6e3cf37d5efd970adc63246bb98d06aa",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolRoles.UpdateTraegerSchoolRole",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
+      "target_owner": "tenant-runtime"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/api.TraegerPortalIdentity.StartTraegerSchoolSession",
       "binding_digest": "31cba1dda7cc11385ff9cbeaade9b6a6",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolSessions.StartTraegerSchoolSession",
@@ -11490,7 +11586,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.TraegerPortalIdentity.StartTraegerSchoolSession",
-      "binding_digest": "5231dd4d4c7a481b26ee643cff7b1e7f",
+      "binding_digest": "eace1311207b53d52763d1cb2a6830fd",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolSessions.StartTraegerSchoolSession",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
@@ -11498,7 +11594,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.TraegerPortalIdentity.StartTraegerSchoolSession",
-      "binding_digest": "50c7ba2615e78a061fe564c53896d7b8",
+      "binding_digest": "68956a6d8442f8c4ecbc504dc3388a92",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.TraegerSchoolSessions.StartTraegerSchoolSession",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
@@ -11530,10 +11626,18 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.callerLiveTopics.StaffSessionIDs",
-      "binding_digest": "23ff4fa425efdaf89169eca7a5c9be6c",
+      "binding_digest": "89f8b04bf4a7b832faaeb65d866b3303",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.CallerLiveTopics.StaffSessionIDs",
       "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.QueryGroupSupervisions",
+      "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.StaffSupervisionAssignments.StaffSupervisionSessionIDs",
+      "target_owner": "student-presence"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.callerLiveTopics.StaffSessionIDs",
+      "binding_digest": "9dc5bf28e357dfd73bedfca62cb3c989",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.CallerLiveTopics.StaffSessionIDs",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.StaffSupervisionAssignmentsOf",
       "target_owner": "student-presence"
     },
     {
@@ -12402,7 +12506,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.IssueSchoolTokensForVerifiedMFA",
-      "binding_digest": "5231dd4d4c7a481b26ee643cff7b1e7f",
+      "binding_digest": "eace1311207b53d52763d1cb2a6830fd",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.AccountSessions.IssueSchoolTokensForVerifiedMFA",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
@@ -12410,7 +12514,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.IssueSchoolTokensForVerifiedMFA",
-      "binding_digest": "50c7ba2615e78a061fe564c53896d7b8",
+      "binding_digest": "68956a6d8442f8c4ecbc504dc3388a92",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.AccountSessions.IssueSchoolTokensForVerifiedMFA",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
@@ -12434,7 +12538,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.IssueTokensForPasskey",
-      "binding_digest": "5231dd4d4c7a481b26ee643cff7b1e7f",
+      "binding_digest": "eace1311207b53d52763d1cb2a6830fd",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.AccountSessions.IssueTokensForPasskey",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
@@ -12442,7 +12546,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.IssueTokensForPasskey",
-      "binding_digest": "50c7ba2615e78a061fe564c53896d7b8",
+      "binding_digest": "68956a6d8442f8c4ecbc504dc3388a92",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.AccountSessions.IssueTokensForPasskey",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
@@ -12466,7 +12570,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.IssueTokensForVerifiedMFA",
-      "binding_digest": "5231dd4d4c7a481b26ee643cff7b1e7f",
+      "binding_digest": "eace1311207b53d52763d1cb2a6830fd",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.AccountSessions.IssueTokensForVerifiedMFA",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
@@ -12474,7 +12578,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.IssueTokensForVerifiedMFA",
-      "binding_digest": "50c7ba2615e78a061fe564c53896d7b8",
+      "binding_digest": "68956a6d8442f8c4ecbc504dc3388a92",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.AccountSessions.IssueTokensForVerifiedMFA",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
@@ -12498,7 +12602,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.IssueTraegerTokensForVerifiedMFA",
-      "binding_digest": "5231dd4d4c7a481b26ee643cff7b1e7f",
+      "binding_digest": "eace1311207b53d52763d1cb2a6830fd",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.AccountSessions.IssueTraegerTokensForVerifiedMFA",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
@@ -12506,7 +12610,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.IssueTraegerTokensForVerifiedMFA",
-      "binding_digest": "50c7ba2615e78a061fe564c53896d7b8",
+      "binding_digest": "68956a6d8442f8c4ecbc504dc3388a92",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.AccountSessions.IssueTraegerTokensForVerifiedMFA",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
@@ -12802,7 +12906,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.LoginSchoolAtTenantWithMFAGate",
-      "binding_digest": "5231dd4d4c7a481b26ee643cff7b1e7f",
+      "binding_digest": "eace1311207b53d52763d1cb2a6830fd",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.AccountSessions.LoginSchoolAtTenantWithMFAGate",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
@@ -12810,7 +12914,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.LoginSchoolAtTenantWithMFAGate",
-      "binding_digest": "50c7ba2615e78a061fe564c53896d7b8",
+      "binding_digest": "68956a6d8442f8c4ecbc504dc3388a92",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.AccountSessions.LoginSchoolAtTenantWithMFAGate",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
@@ -12834,7 +12938,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.LoginSchoolWithMFAGate",
-      "binding_digest": "5231dd4d4c7a481b26ee643cff7b1e7f",
+      "binding_digest": "eace1311207b53d52763d1cb2a6830fd",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.AccountSessions.LoginSchoolWithMFAGate",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
@@ -12842,7 +12946,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.LoginSchoolWithMFAGate",
-      "binding_digest": "50c7ba2615e78a061fe564c53896d7b8",
+      "binding_digest": "68956a6d8442f8c4ecbc504dc3388a92",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.AccountSessions.LoginSchoolWithMFAGate",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
@@ -12866,7 +12970,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.LoginTraeger",
-      "binding_digest": "5231dd4d4c7a481b26ee643cff7b1e7f",
+      "binding_digest": "eace1311207b53d52763d1cb2a6830fd",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.AccountSessions.LoginTraeger",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
@@ -12874,7 +12978,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.LoginTraeger",
-      "binding_digest": "50c7ba2615e78a061fe564c53896d7b8",
+      "binding_digest": "68956a6d8442f8c4ecbc504dc3388a92",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.AccountSessions.LoginTraeger",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
@@ -12898,7 +13002,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.LoginWithMFAGate",
-      "binding_digest": "5231dd4d4c7a481b26ee643cff7b1e7f",
+      "binding_digest": "eace1311207b53d52763d1cb2a6830fd",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.AccountSessions.LoginWithMFAGate",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
@@ -12906,7 +13010,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.LoginWithMFAGate",
-      "binding_digest": "50c7ba2615e78a061fe564c53896d7b8",
+      "binding_digest": "68956a6d8442f8c4ecbc504dc3388a92",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.AccountSessions.LoginWithMFAGate",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
@@ -12946,7 +13050,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.RefreshTokenWithAudit",
-      "binding_digest": "f84a4afa34fe1d61877261265104bc8e",
+      "binding_digest": "e8e4d4b4830961328f4dbb1e11f61bbf",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.AccountSessions.RefreshTokenWithAudit",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
@@ -12962,7 +13066,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.RefreshTokenWithAudit",
-      "binding_digest": "bac1fc95b8243eaca4f114e18e3eac48",
+      "binding_digest": "4472634177572cbec57efb74aea10cae",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.AccountSessions.RefreshTokenWithAudit",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
@@ -12970,7 +13074,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.RefreshTokenWithAudit",
-      "binding_digest": "207cd93fecdd165a3fa4831dfcccfabd",
+      "binding_digest": "4f07eeb3545ba9376c60c3d5ed4aea2b",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.AccountSessions.RefreshTokenWithAudit",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
@@ -13594,7 +13698,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.StartTraegerSchoolSession",
-      "binding_digest": "5231dd4d4c7a481b26ee643cff7b1e7f",
+      "binding_digest": "eace1311207b53d52763d1cb2a6830fd",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.AccountSessions.StartTraegerSchoolSession",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
@@ -13602,7 +13706,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.StartTraegerSchoolSession",
-      "binding_digest": "50c7ba2615e78a061fe564c53896d7b8",
+      "binding_digest": "68956a6d8442f8c4ecbc504dc3388a92",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.AccountSessions.StartTraegerSchoolSession",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
@@ -13618,7 +13722,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.SwitchTenant",
-      "binding_digest": "5231dd4d4c7a481b26ee643cff7b1e7f",
+      "binding_digest": "eace1311207b53d52763d1cb2a6830fd",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.AccountSessions.SwitchTenant",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
@@ -13626,7 +13730,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.SwitchTenant",
-      "binding_digest": "50c7ba2615e78a061fe564c53896d7b8",
+      "binding_digest": "68956a6d8442f8c4ecbc504dc3388a92",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.AccountSessions.SwitchTenant",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
@@ -13650,7 +13754,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.ValidateSessionTokens",
-      "binding_digest": "f84a4afa34fe1d61877261265104bc8e",
+      "binding_digest": "e8e4d4b4830961328f4dbb1e11f61bbf",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.AccountSessions.ValidateSessionTokens",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
@@ -13658,7 +13762,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.ValidateSessionTokens",
-      "binding_digest": "2d95a051c54c3d5f231ac431a8eebc53",
+      "binding_digest": "4e26147bf7588965ce2eb2242bdec8cd",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.AccountSessions.ValidateSessionTokens",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
@@ -13666,7 +13770,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.ValidateSessionTokens",
-      "binding_digest": "1fa91e23c621738fd5b164f2a197cfb6",
+      "binding_digest": "e8f0f639ade83c3ba18c727d98e44f28",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.AccountSessions.ValidateSessionTokens",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
@@ -13738,7 +13842,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess.DemoAccess.RedeemDemoAccess",
-      "binding_digest": "dc21f923cc94e3babd615e0abd23652d",
+      "binding_digest": "e73e7d797fb293b8cacea70d8a858ba3",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.DemoAccesses.RedeemDemoAccess",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
@@ -13746,7 +13850,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess.DemoAccess.RedeemDemoAccess",
-      "binding_digest": "50c7ba2615e78a061fe564c53896d7b8",
+      "binding_digest": "68956a6d8442f8c4ecbc504dc3388a92",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.DemoAccesses.RedeemDemoAccess",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
@@ -14394,7 +14498,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.authSchoolDirectory.GetSchoolBySubdomain",
-      "binding_digest": "152dd913f036efa7c46981bdf51174ba",
+      "binding_digest": "807dc227d45d76987a15b72f1acc4ea9",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.SchoolDirectory.GetSchoolBySubdomain",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.FindSchool",
@@ -14402,7 +14506,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.authSchoolDirectory.GetSchoolBySubdomain",
-      "binding_digest": "2147abe8328c4b10cfd7dc7367713958",
+      "binding_digest": "f0d89ea93a71380986800f2074eccdc9",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.SchoolDirectory.GetSchoolBySubdomain",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.FindSchoolBySlug",
@@ -14410,7 +14514,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.authSchoolDirectory.GetSchoolBySubdomain",
-      "binding_digest": "0b39b6232e5074bd4bbd5a341091aca1",
+      "binding_digest": "545edeeb55816aa81b060b6e76830ffe",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.SchoolDirectory.GetSchoolBySubdomain",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.FindSchoolBySubdomain",
@@ -14418,7 +14522,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.authSchoolDirectory.GetSchoolBySubdomain",
-      "binding_digest": "be48fa0e90be298781f1221b617db6b3",
+      "binding_digest": "74dbbca45504f179003b8556685e40e2",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.SchoolDirectory.GetSchoolBySubdomain",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.FindVisibleTraegerName",
@@ -14426,7 +14530,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.authSchoolDirectory.GetSchoolBySubdomain",
-      "binding_digest": "036cfdbdd664173a576a3681de577b7c",
+      "binding_digest": "b372a9e091f8636509ddccf1b90d0a1b",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.SchoolDirectory.GetSchoolBySubdomain",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.ListOrganizationsByID",
@@ -14434,7 +14538,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.authSchoolDirectory.GetSchoolBySubdomain",
-      "binding_digest": "b4be75024f2f4a161e3b90c814989e84",
+      "binding_digest": "08f35cce6aef6538ad5c5f5bed8d0225",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.SchoolDirectory.GetSchoolBySubdomain",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.FindSchool",
@@ -14442,7 +14546,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.authSchoolDirectory.GetSchoolBySubdomain",
-      "binding_digest": "82fb4f17d589562bc70afa67e5ca71e2",
+      "binding_digest": "209273c4260dc10b42a6d8336cbc0f0d",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.SchoolDirectory.GetSchoolBySubdomain",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.FindSchoolBySlug",
@@ -14450,7 +14554,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.authSchoolDirectory.GetSchoolBySubdomain",
-      "binding_digest": "d275df0249ee42833f374e88f9c1eb37",
+      "binding_digest": "b1d0180f40191ae4227f3958ba4b350a",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.SchoolDirectory.GetSchoolBySubdomain",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.FindSchoolBySubdomain",
@@ -14458,7 +14562,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.authSchoolDirectory.GetSchoolBySubdomain",
-      "binding_digest": "20d0bfad22148fb1683addbb0c68818f",
+      "binding_digest": "48e8adf9df7e9c2afe44b2999f3166c4",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.SchoolDirectory.GetSchoolBySubdomain",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.FindVisibleTraegerName",
@@ -14466,7 +14570,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.authSchoolDirectory.GetSchoolBySubdomain",
-      "binding_digest": "6aacaf12f93132977a989903f4818cf6",
+      "binding_digest": "95aa336440319c882a404fb23d691847",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.SchoolDirectory.GetSchoolBySubdomain",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.ListOrganizationsByID",
@@ -14474,7 +14578,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.authSchoolDirectory.GetSchoolBySubdomain",
-      "binding_digest": "1d5b049270b47ca758ae3fdffc7502aa",
+      "binding_digest": "7bce1d71ef918fc45815f2c9e036f7d9",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account.SchoolDirectory.GetSchoolBySubdomain",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.School.IsDeleted",
@@ -14607,62 +14711,6 @@
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure/compose.LegacyGroupRepository.FindByIDs",
       "target_owner": "school-structure"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/roots/owners.CallerRows.NavigationRow",
-      "binding_digest": "aaa83ebf80d633fae1429a8b5e56bc19",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/me.Rows.NavigationRow",
-      "source_owner": "identity-access",
-      "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.Staff.SetTenantID",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/roots/owners.CallerRows.NavigationRow",
-      "binding_digest": "0c7477758e55085768836182be56de81",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/me.Rows.NavigationRow",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StaffRepository.FindByID",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/roots/owners.CallerRows.NavigationRow",
-      "binding_digest": "563b22780feb242c70d531c83826e9c8",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/me.Rows.NavigationRow",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.FindStaff",
-      "target_owner": "school-membership"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/roots/owners.CallerRows.NavigationRow",
-      "binding_digest": "dd0cf1c4145d670da94abaea63f9a285",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/me.Rows.NavigationRow",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.FindStaff",
-      "target_owner": "school-membership"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/roots/owners.CallerRows.NavigationRow",
-      "binding_digest": "92e25360d4f56536f12b633cc93a4970",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/me.Rows.NavigationRow",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/modules/schoolstructure/compose.LegacyGroupRepository.FindByIDs",
-      "target_owner": "school-structure"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/roots/owners.CallerRows.NavigationRow",
-      "binding_digest": "6a4e220a0383c3f49fd204b3be21676f",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/me.Rows.NavigationRow",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.SessionRecords.SessionRows",
-      "target_owner": "student-presence"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/roots/owners.CallerRows.NavigationRow",
-      "binding_digest": "d964a959087deb1fc45a93b9b4041fae",
-      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/me.Rows.NavigationRow",
-      "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence/compose.SessionRecords.SessionRows",
-      "target_owner": "student-presence"
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/roots/owners.CallerRows.SessionRows",
@@ -15026,7 +15074,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.operatorIdentityCapabilities.RefreshOperatorToken",
-      "binding_digest": "6208afba9c2240b52938a2b839fd5ad0",
+      "binding_digest": "f0e8c0489f067496e70a1d3a964aa6b8",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/operator.Capability.RefreshOperatorToken",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
@@ -15034,7 +15082,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.operatorIdentityCapabilities.RefreshOperatorToken",
-      "binding_digest": "7f01b283e5a9e6fce21ebc25988a76a3",
+      "binding_digest": "1a03a8e4c9b451f304539667ed30b7fb",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/operator.Capability.RefreshOperatorToken",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
@@ -15506,7 +15554,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.AccountAuthentication.IssueTokensForPasskey",
-      "binding_digest": "5231dd4d4c7a481b26ee643cff7b1e7f",
+      "binding_digest": "eace1311207b53d52763d1cb2a6830fd",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.accountPasskeySessions.IssueTokensForPasskey",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
@@ -15514,7 +15562,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.AccountAuthentication.IssueTokensForPasskey",
-      "binding_digest": "50c7ba2615e78a061fe564c53896d7b8",
+      "binding_digest": "68956a6d8442f8c4ecbc504dc3388a92",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.accountPasskeySessions.IssueTokensForPasskey",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
@@ -15906,10 +15954,18 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.CallerLiveTopics.StaffSessionIDs",
-      "binding_digest": "23ff4fa425efdaf89169eca7a5c9be6c",
+      "binding_digest": "89f8b04bf4a7b832faaeb65d866b3303",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/ports.CallerLiveTopics.StaffSessionIDs",
       "source_owner": "identity-access",
-      "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.QueryGroupSupervisions",
+      "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.StaffSupervisionAssignments.StaffSupervisionSessionIDs",
+      "target_owner": "student-presence"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.CallerLiveTopics.StaffSessionIDs",
+      "binding_digest": "9dc5bf28e357dfd73bedfca62cb3c989",
+      "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/ports.CallerLiveTopics.StaffSessionIDs",
+      "source_owner": "identity-access",
+      "target": "github.com/moto-ogs/project-phoenix/modules/studentpresence.StaffSupervisionAssignmentsOf",
       "target_owner": "student-presence"
     },
     {
@@ -15994,7 +16050,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.CallerPeople.RenamePerson",
-      "binding_digest": "e51f97f1628d069917c86b9f8fc30e91",
+      "binding_digest": "b11e1b7e06931b9a245b006fadf38973",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/ports.CallerPeople.RenamePerson",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.AccountLifecycleCommand.RenamePerson",
@@ -16002,7 +16058,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.CallerPeople.RenamePerson",
-      "binding_digest": "154158958150bd15297429590bb301a9",
+      "binding_digest": "d2c4258efb6d43b2eea4614a30d505ab",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/ports.CallerPeople.RenamePerson",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.RenamePerson",
@@ -16010,7 +16066,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.CallerPeople.RenamePerson",
-      "binding_digest": "f264a01cdd13e613d7e2bbabd3f18c82",
+      "binding_digest": "3f7d727cf6e52ff0684667093d0445f6",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/ports.CallerPeople.RenamePerson",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.RenamePerson",
@@ -16202,7 +16258,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.AccountAuthentication.IssueDemoParentTokens",
-      "binding_digest": "5231dd4d4c7a481b26ee643cff7b1e7f",
+      "binding_digest": "eace1311207b53d52763d1cb2a6830fd",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/ports.DemoSessions.IssueDemoParentTokens",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
@@ -16210,7 +16266,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.AccountAuthentication.IssueDemoParentTokens",
-      "binding_digest": "50c7ba2615e78a061fe564c53896d7b8",
+      "binding_digest": "68956a6d8442f8c4ecbc504dc3388a92",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/ports.DemoSessions.IssueDemoParentTokens",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
@@ -16234,7 +16290,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.AccountAuthentication.IssueDemoTokens",
-      "binding_digest": "5231dd4d4c7a481b26ee643cff7b1e7f",
+      "binding_digest": "eace1311207b53d52763d1cb2a6830fd",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/ports.DemoSessions.IssueDemoTokens",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
@@ -16242,7 +16298,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.AccountAuthentication.IssueDemoTokens",
-      "binding_digest": "50c7ba2615e78a061fe564c53896d7b8",
+      "binding_digest": "68956a6d8442f8c4ecbc504dc3388a92",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/ports.DemoSessions.IssueDemoTokens",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
@@ -16258,7 +16314,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.AccountAuthentication.IssueDemoTraegerTokens",
-      "binding_digest": "5231dd4d4c7a481b26ee643cff7b1e7f",
+      "binding_digest": "eace1311207b53d52763d1cb2a6830fd",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/ports.DemoSessions.IssueDemoTraegerTokens",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinAdmin",
@@ -16266,7 +16322,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.AccountAuthentication.IssueDemoTraegerTokens",
-      "binding_digest": "50c7ba2615e78a061fe564c53896d7b8",
+      "binding_digest": "68956a6d8442f8c4ecbc504dc3388a92",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/ports.DemoSessions.IssueDemoTraegerTokens",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.WithinCurrentTenant",
@@ -19050,7 +19106,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.callerPeople.RenamePerson",
-      "binding_digest": "e51f97f1628d069917c86b9f8fc30e91",
+      "binding_digest": "b11e1b7e06931b9a245b006fadf38973",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.CallerPeople.RenamePerson",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.AccountLifecycleCommand.RenamePerson",
@@ -19058,7 +19114,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.callerPeople.RenamePerson",
-      "binding_digest": "154158958150bd15297429590bb301a9",
+      "binding_digest": "d2c4258efb6d43b2eea4614a30d505ab",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.CallerPeople.RenamePerson",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.RenamePerson",
@@ -19066,7 +19122,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.callerPeople.RenamePerson",
-      "binding_digest": "f264a01cdd13e613d7e2bbabd3f18c82",
+      "binding_digest": "3f7d727cf6e52ff0684667093d0445f6",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.CallerPeople.RenamePerson",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.RenamePerson",
@@ -19490,7 +19546,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.guardianInvitationDelivery.EnqueueWelcomeEmail",
-      "binding_digest": "5e1efccb8dc76bf9e5272d199737e399",
+      "binding_digest": "c23e652fbb7a5cf1c1c4f9f5a2b10962",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.GuardianInvitationDelivery.EnqueueWelcomeEmail",
       "source_owner": "identity-access",
       "target": "*github.com/moto-ogs/project-phoenix/modules/delivery/compose.EmailOutbox.Enqueue",
@@ -19498,7 +19554,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.guardianInvitationDelivery.EnqueueWelcomeEmail",
-      "binding_digest": "f46542f32372fc72a487fa9fc90e662d",
+      "binding_digest": "33665aff1321f6e9c1848bd9ea9616fc",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.GuardianInvitationDelivery.EnqueueWelcomeEmail",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveBool",
@@ -19506,7 +19562,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.guardianInvitationDelivery.EnqueueWelcomeEmail",
-      "binding_digest": "567c671146a8f46df915972a33b53fec",
+      "binding_digest": "0aef55faa4c0aa83dc3ad3253687075d",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.GuardianInvitationDelivery.EnqueueWelcomeEmail",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveBoolForTenantInTx",
@@ -19514,7 +19570,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.guardianInvitationDelivery.EnqueueWelcomeEmail",
-      "binding_digest": "d11086815a16139c30c0e959f038edb1",
+      "binding_digest": "ca2e1001fd3a28554ae38a50bcfc12f0",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.GuardianInvitationDelivery.EnqueueWelcomeEmail",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveString",
@@ -19522,7 +19578,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.guardianInvitationDelivery.EnqueueWelcomeEmail",
-      "binding_digest": "15af7b26fe0b3a4032a62d7fe71301ae",
+      "binding_digest": "e64d3d9075be0fcd90f0b47992e4ebd7",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.GuardianInvitationDelivery.EnqueueWelcomeEmail",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveStringForTenantInTx",
@@ -21391,6 +21447,14 @@
       "source_owner": "identity-access",
       "target": "*github.com/moto-ogs/project-phoenix/modules/communication/http/parentannouncements.Resource.SchoolRouter",
       "target_owner": "communication"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/daychangesview/http.SchoolResource.SchoolRouter",
+      "binding_digest": "9a9d175cf4e24d2204ebaa55d783882e",
+      "port": "github.com/moto-ogs/project-phoenix/modules/schoolportal.SchoolRouter.SchoolRouter",
+      "source_owner": "identity-access",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/daychangesview/http.SchoolResource.SchoolRouter",
+      "target_owner": "day-changes-view"
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/schoolcalendar/http.Resource.SchoolRouter",

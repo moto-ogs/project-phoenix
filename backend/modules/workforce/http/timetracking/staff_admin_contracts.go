@@ -6,10 +6,10 @@ import (
 	"slices"
 	"time"
 
-	"github.com/go-chi/render"
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // AdminSessionResponse is a work session as the admin session writes answer
@@ -90,7 +90,7 @@ type RebookAbsencesBody struct {
 // its id.
 func decodeRebookAbsences(r *http.Request) (workforce.RebookAbsencesRequest, error) {
 	var body RebookAbsencesBody
-	if err := render.DecodeJSON(r.Body, &body); err != nil {
+	if err := wire.DecodeAndDrain(r.Body, &body); err != nil {
 		return workforce.RebookAbsencesRequest{}, err
 	}
 	if slices.Contains(body.AbsenceIDs, 0) {
@@ -127,8 +127,6 @@ func StaffAdminRouteContracts() []common.RouteContract {
 		route("GET", "/{id}/schedule", nil, ScheduleResponse{}),
 		route("PUT", "/{id}/schedule", ScheduleUpdateRequest{}, ScheduleResponse{}),
 		route("GET", "/{id}/time-tracking/month-summary", nil, workforce.MonthSummary{}, yearMonth...),
-		// The daily table never asks for ?target_only=true, so the proxy
-		// forwards the range only and the answer is always the projection.
 		route("GET", "/{id}/time-tracking/schedule-targets", nil, []workforce.DailyProjection{},
 			common.QueryParam{Name: "from", Kind: common.QueryDate}, common.QueryParam{Name: "to", Kind: common.QueryDate}),
 		route("GET", "/{id}/time-tracking/comp-time-preview", nil, workforce.CompTimeBalancePreview{},
@@ -139,7 +137,7 @@ func StaffAdminRouteContracts() []common.RouteContract {
 		route("GET", "/{id}/time-tracking/sessions/{sessionId}/edits", nil, []workforce.WorkSessionEditView{}),
 		route("POST", "/{id}/absences/rebook", RebookAbsencesBody{}, workforce.AbsenceRebookingResult{}),
 		route("DELETE", "/{id}/absences/{absenceId}", nil, nil),
-		route("GET", "/absences/mails", nil, AbsenceDecisionMailsResponse{}, common.QueryParam{Name: "ids", Kind: common.QueryString}),
+		route("GET", "/absences/mails", nil, AbsenceDecisionMailsResponse{}, common.QueryParam{Name: "ids", Kind: common.QueryID, Repeated: true}),
 		route("DELETE", "/{id}/documents/{documentId}", nil, StammdatenAck{}),
 		route("GET", "/{id}/documents", nil, StaffDocumentListResponse{}, common.QueryParam{Name: "category", Kind: common.QueryString}),
 		{Method: "POST", Pattern: "/{id}/documents", Portals: portals, Multipart: true,

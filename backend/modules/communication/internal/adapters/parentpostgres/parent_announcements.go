@@ -348,12 +348,33 @@ func (s *AnnouncementStore) UpdateDraft(ctx context.Context, announcement *domai
 		return fmt.Errorf("update parent announcement draft: %w", err)
 	}
 	announcement.UpdatedAt = updatedAt
-	return s.ClearEngagement(ctx, announcement.ID)
+	return s.clearEngagementRows(ctx, announcement.ID)
 }
 
 // ClearEngagement drops every read/acknowledgement and poll answer of an
-// announcement. RLS pins both deletes to the current tenant.
+// announcement whose content changed outside its own row (an attachment),
+// and stamps the row as changed: its version is what a publication confirms
+// (ADR 0311). RLS pins every statement to the current tenant.
 func (s *AnnouncementStore) ClearEngagement(ctx context.Context, announcementID int64) error {
+	db, scope, err := s.database(ctx)
+	if err != nil {
+		return err
+	}
+	// The table's trigger stamps updated_at with the database clock.
+	touch := db.NewUpdate().
+		Model((*parentAnnouncementRow)(nil)).
+		ModelTableExpr(parentAnnouncementTableExpr).
+		Set(`updated_at = "parent_announcement".updated_at`).
+		Where(`"parent_announcement".id = ?`, announcementID)
+	if _, err := withTenant(touch, parentAnnouncementAlias, scope).Exec(ctx); err != nil {
+		return fmt.Errorf("stamp parent announcement change: %w", err)
+	}
+	return s.clearEngagementRows(ctx, announcementID)
+}
+
+// clearEngagementRows drops every read/acknowledgement and poll answer of an
+// announcement.
+func (s *AnnouncementStore) clearEngagementRows(ctx context.Context, announcementID int64) error {
 	db, _, err := s.database(ctx)
 	if err != nil {
 		return err

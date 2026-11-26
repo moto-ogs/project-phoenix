@@ -214,9 +214,7 @@ export async function deleteGuardian(
     params: { id: guardianId },
     query: {
       force: opts.force ? "true" : undefined,
-      expected_link_ids: opts.expectedAffectedLinkIds?.length
-        ? opts.expectedAffectedLinkIds.join(",")
-        : undefined,
+      expected_link_ids: opts.expectedAffectedLinkIds,
     },
     errorMessage: "Failed to delete guardian",
   });
@@ -493,7 +491,7 @@ export interface PendingApproval {
   roleUpgrade: boolean;
 }
 
-function mapPendingApproval(
+export function mapPendingApproval(
   data: guardiansContract.pendingApprovalResponse,
 ): PendingApproval {
   return {

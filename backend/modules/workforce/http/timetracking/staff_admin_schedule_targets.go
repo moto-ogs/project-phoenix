@@ -10,7 +10,7 @@ import (
 )
 
 // getStaffScheduleTargets handles
-// GET /api/staff/{id}/time-tracking/schedule-targets?from=&to=&target_only=true — the admin-side
+// GET /api/staff/{id}/time-tracking/schedule-targets?from=&to= — the admin-side
 // twin of the own endpoint, feeding the daily table the same per-day Soll,
 // Gutschrift, Ist and Saldo the Monatskarte is computed from (#1842, #2443).
 // The path keeps its name: it is the same resolution, now returning the whole
@@ -30,16 +30,6 @@ func (rs *StaffAdminResource) getStaffScheduleTargets(w http.ResponseWriter, r *
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
-	if r.URL.Query().Get("target_only") == "true" {
-		targets, err := rs.WorkTimeMonthService.DailyTargets(r.Context(), staffID, from.String(), to.String())
-		if err != nil {
-			rs.renderScheduleTargetsError(w, r, staffID, err)
-			return
-		}
-		common.Respond(w, r, http.StatusOK, targets, "Schedule targets retrieved successfully")
-		return
-	}
-
 	projection, err := rs.WorkTimeMonthService.DailyProjection(r.Context(), staffID, from.String(), to.String())
 	if err != nil {
 		rs.renderScheduleTargetsError(w, r, staffID, err)

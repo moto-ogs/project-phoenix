@@ -54,6 +54,16 @@ func TestAnUndatedCorrectionOfABoundContract(t *testing.T) {
 			require.NoError(t, err)
 			_, err = conclusion.AmendFromBookings(ctx, f.office.organization)
 			require.NoError(t, err)
+			// The school booked the late care, so its version waits for the
+			// parents' signature (#4816). They sign: it replaces the version
+			// that starts on the same day.
+			for _, signed := range []string{
+				`UPDATE care_contract.contract_versions SET status = 'ersetzt' WHERE contract_id = ? AND status = 'wirksam'`,
+				`UPDATE care_contract.contract_versions SET status = 'wirksam' WHERE contract_id = ? AND status = 'beantragt'`,
+			} {
+				_, err = f.db.ExecContext(ctx, signed, f.mia)
+				require.NoError(t, err)
+			}
 			versions := f.versions(t, f.mia)
 			require.Equal(t, 1, f.count(t, `SELECT COUNT(*) FROM care_contract.contract_versions AS v
 		JOIN care_contract.contract_version_services AS s ON s.contract_version_id = v.id
@@ -75,6 +85,8 @@ func TestAnUndatedCorrectionOfABoundContract(t *testing.T) {
 					RequestID: requestID, ChildID: miaChild, ActorAccountID: actor.ID, ActorRole: "admin", Reason: "Korrektur",
 					Offerings:     []enrollmentOwner.OfferingAdjustmentSelection{{OfferingID: f.offering}, {OfferingID: late.ID, ExtendToPhaseEnd: extend}},
 					EffectiveFrom: c.effectiveFrom,
+					// The office corrects the bookings it read (ADR 0311).
+					ExpectedVersion: readOfferingsVersion(ctx, decisions, requestID, miaChild),
 				})
 				return err
 			}))
@@ -85,6 +97,7 @@ func TestAnUndatedCorrectionOfABoundContract(t *testing.T) {
 				assert.Equal(t, 1, f.count(t, `SELECT COUNT(*) FROM enrollment.care_offering_bookings WHERE tenant_id = ? AND request_child_id = ?
 		AND care_offering_id = ? AND valid_until = DATE '2028-02-01'`, f.school, miaChild, late.ID), "the late care keeps its end")
 				assert.Empty(t, amended.Amended, "the care did not change: no version")
+				assert.Empty(t, amended.Awaiting, "and none that waits for a signature")
 				assert.Equal(t, versions, f.versions(t, f.mia))
 				return
 			}
@@ -92,7 +105,9 @@ func TestAnUndatedCorrectionOfABoundContract(t *testing.T) {
 		JOIN enrollment.phases AS p ON p.id = ? WHERE b.tenant_id = ? AND b.request_child_id = ?
 		AND b.care_offering_id = ? AND b.valid_until = p.service_end_date + 1`, f.phase, f.school, miaChild, late.ID),
 				"the late care runs to the end of the phase")
-			assert.Len(t, amended.Amended, 1, "the extension makes a version")
+			// The office decided the extension, the parents asked for nothing:
+			// since #4816 its version waits for their signature.
+			assert.Len(t, amended.Awaiting, 1, "the extension makes a version")
 			assert.Equal(t, 1, f.count(t, `SELECT COUNT(*) FROM care_contract.contract_versions AS v
 		JOIN care_contract.contract_version_services AS s ON s.contract_version_id = v.id
 		WHERE v.contract_id = ? AND v.effective_from = DATE '2028-02-01' AND s.care_offering_id = ? AND s.last_day IS NULL`,

@@ -61,7 +61,7 @@ import {
   upcomingAfter,
   type SupervisionStartState,
   type SupervisionViewIntent,
-} from "./view-model";
+} from "~/lib/school/supervision-view-model";
 
 const logger = createLogger({ component: "SchoolSupervisionsView" });
 
@@ -237,6 +237,9 @@ export function SchoolSupervisionsView() {
       err: unknown,
       object: string,
       retry: (() => void) | undefined,
+      // Reads what the action confirmed again after a refusal of a changed
+      // state (ADR 0311); the message waits for it.
+      reload?: () => Promise<unknown>,
     ) => {
       logger.error(event, {
         error: err instanceof Error ? err.message : String(err),
@@ -245,6 +248,7 @@ export function SchoolSupervisionsView() {
         object,
         messageSuffix: schoolCapacityHint(err),
         retry,
+        reload,
       });
     },
     [showActionError],
@@ -378,11 +382,13 @@ export function SchoolSupervisionsView() {
         err,
         "das Beenden der Aufsicht",
         () => retryRef.current.complete(),
+        // The children still checked in changed since the list was read.
+        reloadRosterAfterRefusal,
       );
     } finally {
       setBusyId(null);
     }
-  }, [afterWrite, openId, report, roster]);
+  }, [afterWrite, openId, report, reloadRosterAfterRefusal, roster]);
 
   useLayoutEffect(() => {
     retryRef.current = {

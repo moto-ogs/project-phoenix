@@ -1,13 +1,16 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { Button } from "~/components/ui/button";
 import { CustomSelect } from "~/components/ui/custom-select";
 import { DataField, DataGrid } from "~/components/ui/data-field";
 import { InfoSection } from "~/components/ui/info-section";
 import { EditActions } from "~/components/ui/edit-actions";
 import type { FormError } from "~/components/ui/form-error";
-import { FormErrorAlert } from "~/components/ui/form-error-alert";
+import {
+  FormErrorAlert,
+  LoadErrorAlert,
+} from "~/components/ui/form-error-alert";
 import { Input } from "~/components/ui/input";
 import { SuggestInput } from "~/components/ui/suggest-input";
 import { MotoDuotoneIcon } from "~/components/ui/moto-duotone-icon";
@@ -19,11 +22,13 @@ import {
 } from "~/lib/account-role-assignment";
 import { getRoleDisplayName } from "~/lib/auth-helpers";
 import { useApiFormError } from "~/contexts/ToastContext";
-import { isChangedSinceRead } from "~/lib/api-error";
+import { isChangedSinceRead, isReadStateRefusal } from "~/lib/api-error";
+import { useReadDraftForm } from "~/lib/hooks/use-swr-load-error";
+import { useDraftOn } from "~/lib/swr/read-draft";
 import { createLogger } from "~/lib/logger";
 import { displayEmail } from "~/lib/demo-build";
 import { useClipboardCopy } from "~/lib/use-clipboard-copy";
-import type { Teacher } from "~/lib/teacher-api";
+import type { SavedPerson, Teacher } from "~/lib/teacher-api";
 import { changeHistoryConcept } from "~/lib/concepts/changeHistory";
 import { feedbackConcept } from "~/lib/concepts/feedback";
 import { messagesConcept } from "~/lib/concepts/messages";
@@ -35,19 +40,24 @@ const logger = createLogger({ component: "StaffKontoTab" });
 /**
  * Was der Bearbeiten-Zustand speichert. Nur die Felder, die die Person
  * ändern darf, sind gesetzt: ohne users:update fehlen Vorname und Nachname,
- * ohne Betreuungsprofil die Position, ohne Rollenwechsel `role_id`.
+ * ohne Betreuungsprofil die Position, ohne Rollenwechsel `roleId`.
  */
 export type KontoDraft = Readonly<
   Partial<Pick<Teacher, "first_name" | "last_name" | "role" | "staff_notes">>
 > & {
   /** Neue Systemrolle, nur wenn sie sich von der aktuellen unterscheidet. */
-  readonly role_id?: string;
+  readonly roleId?: string;
   /**
    * Die Version der Rollen, die das Feld zeigte, als die Person die Rolle
-   * wählte (ADR 0311); gesetzt mit `role_id`. Ein späteres Nachladen ändert
+   * wählte (ADR 0311); gesetzt mit `roleId`. Ein späteres Nachladen ändert
    * sie nicht, sonst ersetzte das Speichern eine inzwischen vergebene Rolle.
    */
-  readonly role_version?: string;
+  readonly roleVersion?: string;
+  /**
+   * Der Datensatz, auf dem der Entwurf ruht (ADR 0311): seine Stände gehen
+   * mit Name, Position und Notizen zurück, nicht die einer späteren Lesung.
+   */
+  readonly record?: Teacher;
 };
 
 /** Der Bearbeiten-Zustand des Reiters. */
@@ -79,7 +89,12 @@ export interface KontoEditing {
    * gemeinsame Fehlerweg Code, Feldfehler und Vorgangskennung liest (#2511);
    * scheitert erst der Rollenwechsel, als `KontoRoleSaveError`.
    */
-  readonly onSave: (draft: KontoDraft) => Promise<void>;
+  readonly onSave: (draft: KontoDraft) => Promise<Teacher | void>;
+  /**
+   * Liest den gespeicherten Datensatz nach einer Ablehnung oder einem
+   * Speichern; lehnt ab, wenn das Lesen scheitert (ADR 0311, Regel 6).
+   */
+  readonly reload: () => Promise<Teacher | void>;
 }
 
 /**
@@ -87,9 +102,26 @@ export interface KontoEditing {
  * Systemrolle ist gescheitert. Die Meldung nennt dann die Systemrolle.
  */
 export class KontoRoleSaveError extends Error {
-  constructor(cause: unknown) {
+  /** Der gespeicherte Datensatz; ein weiteres Speichern ruht auf ihm. */
+  readonly saved: Teacher | undefined;
+  constructor(cause: unknown, saved?: Teacher) {
     super("account role change failed", { cause });
     this.name = "KontoRoleSaveError";
+    this.saved = saved;
+  }
+}
+
+/**
+ * Der Name ist gespeichert, Position und Notizen nicht. Ein weiteres
+ * Speichern ruht auf dem gespeicherten Namen und seinem Stand (ADR 0311):
+ * es sendet den Namen nicht noch einmal mit dem alten Stand.
+ */
+export class KontoNameSavedError extends Error {
+  readonly person: SavedPerson;
+  constructor(cause: unknown, person: SavedPerson) {
+    super("staff record save failed after the name was saved", { cause });
+    this.name = "KontoNameSavedError";
+    this.person = person;
   }
 }
 
@@ -107,6 +139,50 @@ interface Draft {
   roleId: string;
   /** Die Version der Rollen bei der ersten Wahl einer Rolle (ADR 0311). */
   roleVersion?: string;
+}
+
+/** Die Stände, auf denen Name (Person) und Datensatz ruhen (ADR 0311). */
+interface KontoToken {
+  readonly record: string;
+  readonly person: string;
+}
+
+const kontoToken = (record: Teacher): KontoToken => ({
+  record: record.version ?? "",
+  person: record.person_version ?? "",
+});
+
+const kontoDraftOf = (record: Teacher): Draft => ({
+  firstName: record.first_name ?? "",
+  lastName: record.last_name ?? "",
+  position: record.role ?? "",
+  notes: record.staff_notes ?? "",
+  roleId: "",
+});
+
+/**
+ * Was dieses Bearbeiten schon gespeichert hat, ohne dass das Speichern als
+ * Ganzes gelang: der Datensatz, auf dem ein weiteres Speichern ruht, solange
+ * der Entwurf noch auf dem Stand `token` steht.
+ */
+interface PartlySaved {
+  readonly token: KontoToken;
+  readonly record: Teacher;
+}
+
+const OBJECT = "das Konto";
+
+/**
+ * Name, Position oder Notizen haben sich seit dem Lesen geändert. Eine
+ * Ablehnung der Rollen nach gespeichertem Datensatz zählt nicht dazu: der
+ * Datensatz steht, nur das Rollenfeld liest neu.
+ */
+function isRecordRefusal(error: unknown): boolean {
+  if (error instanceof KontoRoleSaveError) return false;
+  if (error instanceof KontoNameSavedError) {
+    return isReadStateRefusal(error.cause);
+  }
+  return isReadStateRefusal(error);
 }
 
 function formatTimestamp(iso: string): string {
@@ -143,7 +219,7 @@ const staffIcon = (
  * Betreuung) stehen im Kebab der Kopfkarte.
  */
 export function KontoTab({ teacher, editing }: KontoTabProps) {
-  const [draft, setDraft] = useState<Draft | null>(null);
+  const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   // Nach einem erfolgreichen Datensatz-Update darf „Wiederholen“ nur den
@@ -151,47 +227,106 @@ export function KontoTab({ teacher, editing }: KontoTabProps) {
   // gesetzt, damit der normale Submit-Handler den aktuellen Rollenentwurf
   // nimmt, aber die bereits gespeicherten Felder auslässt.
   const retryRoleOnlyRef = useRef(false);
+  const partlySavedRef = useRef<PartlySaved | null>(null);
   // The public demo hides its technical seed addresses (#5033).
   const email = displayEmail(teacher.email);
   const errors = useApiFormError(formRef);
+  const reloadRef = useRef(editing?.reload);
+  useLayoutEffect(() => {
+    reloadRef.current = editing?.reload;
+  });
+  // Der Entwurf ruht auf dem Datensatz beim Öffnen (ADR 0311): eine neuere
+  // Lesung füllt ihn nur nach, solange nichts geändert ist; nach einer
+  // Ablehnung zeigt er den gespeicherten Stand, Speichern wartet auf ihn.
+  const edit = useDraftOn<Teacher, Draft, KontoToken, Teacher | void>(
+    {
+      opening: editing && open ? teacher.id : null,
+      data: teacher,
+      reload: async () => (await reloadRef.current?.()) ?? undefined,
+    },
+    {
+      token: kontoToken,
+      toDraft: kontoDraftOf,
+      // Nach einem Speichern schließt der Entwurf, die Seite liest den
+      // Datensatz selbst neu; ohne Antwort (nur die Rolle) bleibt die Basis.
+      answer: (saved, base) => saved ?? base,
+      isRefusal: isRecordRefusal,
+    },
+  );
+  const form = useReadDraftForm(edit, errors, OBJECT);
 
   const displayRole = teacher.account_role
     ? getRoleDisplayName(teacher.account_role)
     : null;
   const trimmedQualifications = teacher.qualifications?.trim() ?? "";
   const trimmedNotes = teacher.staff_notes?.trim() ?? "";
-  const isEditing = editing !== undefined && draft !== null;
+  const draft = editing && open ? (edit.draft ?? null) : null;
+  const isEditing = draft !== null;
 
   const startEditing = () => {
     if (!editing) return;
-    setDraft({
-      firstName: teacher.first_name ?? "",
-      lastName: teacher.last_name ?? "",
-      position: teacher.role ?? "",
-      notes: teacher.staff_notes ?? "",
-      roleId: "",
-    });
+    partlySavedRef.current = null;
+    setOpen(true);
     errors.clear();
     editing.onEditingChange(true);
   };
 
   const stopEditing = () => {
-    setDraft(null);
+    partlySavedRef.current = null;
+    setOpen(false);
     errors.clear();
     editing?.onEditingChange(false);
   };
 
+  const { setDraft } = edit;
   const patchDraft = (patch: Partial<Draft>) =>
-    setDraft((current) => (current ? { ...current, ...patch } : current));
+    setDraft((current) => ({ ...current, ...patch }));
+
+  /** Der Datensatz, auf dem dieses Speichern ruht. */
+  const saveBase = (): Teacher | undefined => {
+    const partly = partlySavedRef.current;
+    if (
+      partly &&
+      edit.token !== undefined &&
+      partly.token.record === edit.token.record &&
+      partly.token.person === edit.token.person
+    ) {
+      return partly.record;
+    }
+    return edit.base;
+  };
+
+  const rememberPartlySaved = (err: unknown) => {
+    const token = edit.token;
+    const base = saveBase();
+    if (token === undefined || base === undefined) return;
+    if (err instanceof KontoRoleSaveError && err.saved) {
+      partlySavedRef.current = { token, record: err.saved };
+    } else if (
+      err instanceof KontoNameSavedError &&
+      err.person.person_version !== undefined
+    ) {
+      partlySavedRef.current = { token, record: { ...base, ...err.person } };
+    }
+  };
 
   const handleSave = async () => {
     if (!editing || !draft) return;
+    // Nichts geht raus, bevor der gespeicherte Stand gelesen ist; ein
+    // gezeigter Ladefehler bleibt dann stehen.
+    if (!form.begin()) return;
     const retryRoleOnly = retryRoleOnlyRef.current;
     retryRoleOnlyRef.current = false;
     const assignment = editing.roleAssignment;
     const selectedRoleId = draft.roleId;
+    const base = saveBase();
 
+    const savesRecord =
+      !retryRoleOnly &&
+      (editing.canEditStaffFields || editing.canEditPersonFields);
     const payload: KontoDraft = {
+      // Name, Position und Notizen ruhen auf dem Datensatz des Entwurfs.
+      ...(savesRecord ? { record: base } : {}),
       ...(!retryRoleOnly && editing.canEditStaffFields
         ? {
             staff_notes: draft.notes,
@@ -213,22 +348,35 @@ export function KontoTab({ teacher, editing }: KontoTabProps) {
       !assignment.currentIsLehrkraft &&
       selectedRoleId !== "" &&
       currentSelectableRoleId(assignment) !== selectedRoleId
-        ? { role_id: selectedRoleId, role_version: draft.roleVersion ?? "" }
+        ? { roleId: selectedRoleId, roleVersion: draft.roleVersion ?? "" }
         : {}),
     };
 
     setSaving(true);
-    errors.clear();
     try {
-      await editing.onSave(payload);
-      stopEditing();
-    } catch (err) {
+      const result = await edit.submit(() => editing.onSave(payload));
+      if (result.ok) {
+        stopEditing();
+        return;
+      }
+      const err = result.error;
       logger.error("konto_save_failed", {
         staff_id: teacher.id,
         error: err instanceof Error ? err.message : String(err),
       });
+      rememberPartlySaved(err);
       const roleOnly = err instanceof KontoRoleSaveError;
-      const cause = roleOnly ? err.cause : err;
+      const cause =
+        err instanceof KontoRoleSaveError || err instanceof KontoNameSavedError
+          ? err.cause
+          : err;
+      if (!roleOnly && result.refused) {
+        // Jemand hat Name, Position oder Notizen seit dem Lesen geändert
+        // (ADR 0311): Der Entwurf bleibt offen und zeigt den gespeicherten
+        // Stand mit der Meldung, ohne „Wiederholen“.
+        await errors.show(cause, { object: OBJECT, reload: result.reload });
+        return;
+      }
       if (roleOnly && isChangedSinceRead(cause)) {
         // Die Rollen haben sich seit dem Lesen geändert (ADR 0311): Das Feld
         // zeigt wieder die gespeicherte Rolle, die die Seite neu liest. Ein
@@ -238,7 +386,7 @@ export function KontoTab({ teacher, editing }: KontoTabProps) {
         return;
       }
       await errors.show(cause, {
-        object: roleOnly ? "die Rolle" : "das Konto",
+        object: roleOnly ? "die Rolle" : OBJECT,
         // Der Datensatz ist bei KontoRoleSaveError bereits gespeichert. Der
         // aktuelle Rollenentwurf geht noch einmal raus, ohne Name, Position
         // oder Notizen eines anderen Bearbeitungsstands zu überschreiben.
@@ -270,6 +418,7 @@ export function KontoTab({ teacher, editing }: KontoTabProps) {
         ) : undefined
       }
     >
+      {isEditing ? <LoadErrorAlert error={form.loadError} /> : null}
       {isEditing && draft && editing ? (
         <KontoEditForm
           formRef={formRef}

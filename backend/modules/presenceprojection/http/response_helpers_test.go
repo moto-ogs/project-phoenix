@@ -255,7 +255,7 @@ func TestPopulatePhotoFields_FeatureDisabled(t *testing.T) {
 
 	populatePhotoFields(&resp, student, false, true)
 
-	assert.Empty(t, resp.PhotoURL, "feature off must suppress photo_url")
+	assert.Empty(t, resp.PhotoVersion, "feature off must suppress photo_version")
 	assert.Nil(t, resp.PhotoConsentGiven, "feature off must leave consent flag unset (nil)")
 	assert.Nil(t, resp.PhotoConsentGivenAt)
 	assert.Nil(t, resp.PhotoConsentGivenBy)
@@ -278,7 +278,7 @@ func TestPopulatePhotoFields_FeatureEnabled_NoFullAccess(t *testing.T) {
 
 	populatePhotoFields(&resp, student, true, false /* hasFullAccess */)
 
-	assert.Empty(t, resp.PhotoURL, "no full access must suppress photo_url even when feature is on")
+	assert.Empty(t, resp.PhotoVersion, "no full access must suppress photo_version even when feature is on")
 	require.NotNil(t, resp.PhotoConsentGiven, "consent flag must still surface so the UI can render the badge")
 	assert.True(t, *resp.PhotoConsentGiven)
 	require.NotNil(t, resp.PhotoConsentGivenAt)
@@ -304,8 +304,8 @@ func TestPopulatePhotoFields_FullAccess_PhotoAndConsent(t *testing.T) {
 
 	populatePhotoFields(&resp, student, true, true)
 
-	assert.Equal(t, "/api/students/123/photo/foo.jpg", resp.PhotoURL,
-		"full-access response must serialize the rewritten serve URL, not the raw stored path")
+	assert.Equal(t, "foo.jpg", resp.PhotoVersion,
+		"full-access response must serialize the filename, not the stored path")
 	require.NotNil(t, resp.PhotoConsentGiven)
 	assert.True(t, *resp.PhotoConsentGiven)
 	require.NotNil(t, resp.PhotoConsentGivenAt)
@@ -329,7 +329,7 @@ func TestPopulatePhotoFields_FullAccess_ConsentNoPhoto(t *testing.T) {
 
 	populatePhotoFields(&resp, student, true, true)
 
-	assert.Empty(t, resp.PhotoURL)
+	assert.Empty(t, resp.PhotoVersion)
 	require.NotNil(t, resp.PhotoConsentGiven)
 	assert.True(t, *resp.PhotoConsentGiven, "consent without a photo must still surface as true")
 	require.NotNil(t, resp.PhotoConsentGivenAt)
@@ -337,7 +337,7 @@ func TestPopulatePhotoFields_FullAccess_ConsentNoPhoto(t *testing.T) {
 }
 
 // TestPopulatePhotoFields_FullAccess_NoConsent — feature on, full
-// access, but the parent has not recorded consent. PhotoURL must
+// access, but the parent has not recorded consent. PhotoVersion must
 // remain empty and PhotoConsentGiven must be a non-nil *bool pointing
 // at false so the frontend can render the checkbox unticked. The nil
 // case is reserved for "feature off" (TestPopulatePhotoFields_FeatureDisabled).
@@ -349,7 +349,7 @@ func TestPopulatePhotoFields_FullAccess_NoConsent(t *testing.T) {
 
 	populatePhotoFields(&resp, student, true, true)
 
-	assert.Empty(t, resp.PhotoURL)
+	assert.Empty(t, resp.PhotoVersion)
 	require.NotNil(t, resp.PhotoConsentGiven, "feature on with no consent must surface false (not nil)")
 	assert.False(t, *resp.PhotoConsentGiven,
 		"nil reserved for feature-off; explicit false here lets the UI distinguish 'never consented' from 'feature off'")
@@ -372,8 +372,8 @@ func TestPopulatePhotoFields_FullAccess_PhotoButNoConsentAt(t *testing.T) {
 
 	populatePhotoFields(&resp, student, true, true)
 
-	assert.Equal(t, "/api/students/2/photo/orphan.jpg", resp.PhotoURL,
-		"hasFullAccess + photo_path must still surface the URL even when consent metadata is missing")
+	assert.Equal(t, "orphan.jpg", resp.PhotoVersion,
+		"hasFullAccess + photo_path must still surface the photo version even when consent metadata is missing")
 	require.NotNil(t, resp.PhotoConsentGiven)
 	assert.False(t, *resp.PhotoConsentGiven)
 	assert.Nil(t, resp.PhotoConsentGivenAt)

@@ -14,6 +14,7 @@ import { createLogger } from "~/lib/logger";
 import type { PortalAuth } from "~/server/auth/portal-auth";
 import type { PortalDescriptor } from "~/server/auth/portals";
 import type { ServerSession } from "~/server/auth/session-types";
+import { endsAnotherSession } from "~/server/auth/session-cookie-writes";
 
 const logger = createLogger({ component: "PortalLogoutRoute" });
 
@@ -51,6 +52,11 @@ export function createLogoutRoute(
 
   return session.withAuth(async (request: NextRequest) => {
     try {
+      // Another tab signed in on the cookie since this exit began (#8082):
+      // nothing of the session it names is left here to revoke, and the new
+      // one is not this exit's.
+      if (endsAnotherSession(request))
+        return problemResponse(401, "No active session", request);
       const token = logoutToken(portal, await auth());
       if (!token) return problemResponse(401, "No active session", request);
 

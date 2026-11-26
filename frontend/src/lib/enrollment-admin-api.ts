@@ -121,7 +121,7 @@ export type AdminExistingChildCandidate = Omit<
   "phase_request"
 > & { phase_request?: AdminCandidatePhaseRequest };
 
-function candidateFromContract(
+export function candidateFromContract(
   candidate: enrollmentContract.AdminExistingChildCandidate,
 ): AdminExistingChildCandidate {
   const { phase_request: other, ...rest } = candidate;
@@ -208,7 +208,7 @@ export function fromImportedContract(request: {
   return request.submission_source === "contract_import";
 }
 
-function requestSummaryFromContract(
+export function requestSummaryFromContract(
   summary: enrollmentContract.AdminRequestSummary,
 ): AdminRequestSummary {
   const { children, ...rest } = summary;
@@ -231,7 +231,7 @@ export type AdminEnrollmentChangeRequest = Omit<
   request?: AdminRequestSummary;
 };
 
-function adminChangeRequestFromContract(
+export function adminChangeRequestFromContract(
   request: enrollmentContract.ChangeRequestResponse,
 ): AdminEnrollmentChangeRequest {
   const { request: summary, ...rest } = changeRequestFromContract(request);
@@ -345,11 +345,10 @@ export type ExistingChildChoice =
 /** The choice in the wire fields the decision and the manual enrollment take. */
 export function existingChildChoiceFields(
   choice: ExistingChildChoice | undefined,
-): {
-  existing_student_id?: string;
-  create_new_student?: true;
-  shown_existing_student_ids?: string[];
-} {
+): Pick<
+  enrollmentContract.AdminDecideRequest,
+  "existing_student_id" | "create_new_student" | "shown_existing_student_ids"
+> {
   if (!choice) return {};
   return "existingStudentId" in choice
     ? { existing_student_id: choice.existingStudentId }
@@ -670,10 +669,16 @@ export type AdminChildOfferingsUpdate = AdminRequestChild & {
   roster_impact?: studentsContract.rosterImpactResponse;
 };
 
+/**
+ * Corrects the child's bookings over the `offerings_version` the office
+ * read (ADR 0311); the server refuses another one with
+ * `general.changed_since_read`.
+ */
 export async function updateAdminChildOfferings(
   requestId: string,
   childId: string,
   input: UpdateAdminChildOfferingsInput,
+  version: string,
 ): Promise<AdminChildOfferingsUpdate> {
   const { roster_impact: rosterImpact, ...child } = await bffJson(
     "tenant",
@@ -685,6 +690,7 @@ export async function updateAdminChildOfferings(
         reason: input.reason,
         complete_withdrawal_confirmed:
           input.completeWithdrawalConfirmed === true,
+        expected_version: version,
       },
       errorMessage: "Betreuungsangebote konnten nicht gespeichert werden",
     },

@@ -6,9 +6,10 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/go-chi/render"
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -53,6 +54,26 @@ func (rs *Resource) listAbsences(w http.ResponseWriter, r *http.Request) {
 	common.Respond(w, r, http.StatusOK, absences, "Absences retrieved successfully")
 }
 
+// OwnAbsenceRequest is the body of POST /api/time-tracking/absences, a staff
+// member's own absence. It confirms no preview: the own booking refuses a
+// Freizeitausgleich, the only absence a Leitung confirms against a
+// projection (ADR 0311), so it carries no expected_fingerprint.
+type OwnAbsenceRequest struct {
+	AbsenceType   string    `json:"absence_type"`
+	AbsenceTypeID *ident.ID `json:"absence_type_id"`
+	DateStart     string    `json:"date_start"`
+	DateEnd       string    `json:"date_end"`
+	HalfDay       bool      `json:"half_day"`
+	Note          string    `json:"note"`
+}
+
+func (req OwnAbsenceRequest) absence() workforce.CreateAbsenceRequest {
+	return workforce.CreateAbsenceRequest{
+		AbsenceType: req.AbsenceType, AbsenceTypeID: req.AbsenceTypeID, DateStart: req.DateStart,
+		DateEnd: req.DateEnd, HalfDay: req.HalfDay, Note: req.Note,
+	}
+}
+
 // createAbsence handles POST /api/time-tracking/absences
 func (rs *Resource) createAbsence(w http.ResponseWriter, r *http.Request) {
 	userClaims := rs.identity(r.Context())
@@ -62,11 +83,12 @@ func (rs *Resource) createAbsence(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req workforce.CreateAbsenceRequest
-	if err := render.DecodeJSON(r.Body, &req); err != nil {
+	var body OwnAbsenceRequest
+	if err := wire.DecodeAndDrain(r.Body, &body); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
+	req := body.absence()
 
 	// Self-service passes the caller as subject AND creator; the account id
 	// makes the #1843 sick-cascade protocol entries carry a real actor.
@@ -101,7 +123,7 @@ func (rs *Resource) updateAbsence(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req workforce.UpdateAbsenceRequest
-	if err := render.DecodeJSON(r.Body, &req); err != nil {
+	if err := wire.DecodeAndDrain(r.Body, &req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}

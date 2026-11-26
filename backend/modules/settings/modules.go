@@ -100,6 +100,99 @@ func (b *ModuleBooking) RequireForTenant(ctx context.Context, tenantID int64, mo
 	return nil
 }
 
+// ModuleBatchReader reads settings of several schools in one batch. The
+// settings service serves it with ResolveManyForTenants, which joins an
+// administrative transaction and never opens a school transaction.
+type ModuleBatchReader interface {
+	ResolveManyForTenants(ctx context.Context, tenantIDs []int64, keys []string) (map[int64]*configModel.SettingsSnapshot, error)
+}
+
+// ErrSchoolSwitchesMissing reports a batch read that left out a school.
+var ErrSchoolSwitchesMissing = errors.New("settings: no module switches for a school")
+
+// ModulesBookedByAnySchool lists, in catalog order, the modules at least
+// one of the schools books. It is the rule for a session that spans the
+// schools of a Träger (#6052): the switches stay per school, and a module
+// counts for the Träger once one of its schools books it, as the parents
+// portal stays open while one guardian school books Eltern-App (#4895).
+// Without schools nothing is booked. A failed or incomplete read is an
+// error, never a booking decision.
+func ModulesBookedByAnySchool(ctx context.Context, reader ModuleBatchReader, schoolIDs []int64) ([]ModuleKey, error) {
+	if len(schoolIDs) == 0 {
+		return []ModuleKey{}, nil
+	}
+	snapshots, err := reader.ResolveManyForTenants(ctx, schoolIDs, ModuleSettingKeys())
+	if err != nil {
+		return nil, err
+	}
+	return modulesBookedIn(snapshots, schoolIDs)
+}
+
+// modulesBookedIn reduces the switches of the schools to the modules at
+// least one of them books. Every school needs its snapshot.
+func modulesBookedIn(snapshots map[int64]*configModel.SettingsSnapshot, schoolIDs []int64) ([]ModuleKey, error) {
+	for _, schoolID := range schoolIDs {
+		if snapshots[schoolID] == nil {
+			return nil, fmt.Errorf("%w: school %d", ErrSchoolSwitchesMissing, schoolID)
+		}
+	}
+	return BookedModules(func(key string) (bool, error) {
+		for _, schoolID := range schoolIDs {
+			booked, err := snapshots[schoolID].Bool(key)
+			if err != nil || booked {
+				return booked, err
+			}
+		}
+		return false, nil
+	})
+}
+
+// TraegerSchoolLister lists the undeleted schools of an active Träger. The
+// root binds it to Organisation & Tenancy.
+type TraegerSchoolLister interface {
+	ListTraegerSchoolIDs(ctx context.Context, organizationID int64) ([]int64, error)
+}
+
+// TraegerModuleBooking answers which modules count as booked for a Träger
+// (#6052): the modules at least one of its schools books
+// (ModulesBookedByAnySchool). The Träger portal locks its routes and its
+// navigation with it. Callers inside a Träger transaction hand in a context
+// without it: the row security of that transaction hides the settings of
+// the schools (ADR 0105).
+type TraegerModuleBooking struct {
+	schools TraegerSchoolLister
+	reader  ModuleBatchReader
+}
+
+// NewTraegerModuleBooking binds the answer to the schools of a Träger and
+// the batch read of the settings service. A missing source is a composition
+// error.
+func NewTraegerModuleBooking(schools TraegerSchoolLister, reader ModuleBatchReader) (*TraegerModuleBooking, error) {
+	if schools == nil || reader == nil {
+		return nil, errors.New("settings: TraegerModuleBooking requires the schools of a Träger and a settings reader")
+	}
+	return &TraegerModuleBooking{schools: schools, reader: reader}, nil
+}
+
+// BookedModules lists the modules that count as booked for the Träger, in
+// catalog order. A failed read is an error, never a booking decision. It
+// combines its two sources itself, the schools and their switches, like
+// ModulesBookedByAnySchool for a caller that already holds the schools.
+func (b *TraegerModuleBooking) BookedModules(ctx context.Context, organizationID int64) ([]ModuleKey, error) {
+	schoolIDs, err := b.schools.ListTraegerSchoolIDs(ctx, organizationID)
+	if err != nil {
+		return nil, err
+	}
+	if len(schoolIDs) == 0 {
+		return []ModuleKey{}, nil
+	}
+	snapshots, err := b.reader.ResolveManyForTenants(ctx, schoolIDs, ModuleSettingKeys())
+	if err != nil {
+		return nil, err
+	}
+	return modulesBookedIn(snapshots, schoolIDs)
+}
+
 // BookedModules lists the booked modules in catalog order from one batch
 // of resolved settings, for a reader that already holds a snapshot.
 func BookedModules(readBool func(key string) (bool, error)) ([]ModuleKey, error) {

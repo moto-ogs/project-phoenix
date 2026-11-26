@@ -50,5 +50,25 @@ export function mapTeacherResponse(data: StaffRecordResponse): Teacher {
     staff_id: data.id,
     teacher_id: data.teacher_id,
     person,
+    version: data.version,
+    person_version: person?.version,
+  };
+}
+
+/** The shared list and account-position picker do not need staff notes or contact records. */
+export function mapTeacherDirectoryRow(teacher: Teacher): Teacher {
+  return {
+    id: teacher.id,
+    name: teacher.name,
+    first_name: teacher.first_name,
+    last_name: teacher.last_name,
+    role: teacher.role,
+    role_form: teacher.role_form,
+    account_role: teacher.account_role,
+    email: teacher.email,
+    specialization: teacher.specialization,
+    avatar: teacher.avatar,
+    is_external: teacher.is_external,
+    external_account_status: teacher.external_account_status,
   };
 }

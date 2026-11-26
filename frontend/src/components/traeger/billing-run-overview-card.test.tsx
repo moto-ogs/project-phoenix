@@ -496,7 +496,7 @@ describe("BillingRunOverviewCard letter preview (#5692)", () => {
     });
 
     expect(
-      screen.getByText("Je Kind eine Rechnung, auch für Geschwister."),
+      screen.getByText("Pro Kind eine Rechnung, auch für Geschwister."),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("button", {

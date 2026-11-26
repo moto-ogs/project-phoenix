@@ -100,3 +100,19 @@ type MailOutbox struct {
 	// notifications do, for the school of ctx and in its transaction.
 	Enqueue func(ctx context.Context, relatedType string, absenceID int64, address string) error
 }
+
+// AbsenceTypeReader reads one absence type of the caller's school.
+type AbsenceTypeReader interface {
+	FindStaffAbsenceType(context.Context, int64) (workforce.StaffAbsenceType, error)
+}
+
+// AbsenceTypeVersion reads the stored type and returns the token an edit of
+// it sends back (ADR 0311), the way a form reads it before saving.
+func AbsenceTypeVersion(t testing.TB, ctx context.Context, types AbsenceTypeReader, id int64) string {
+	t.Helper()
+	stored, err := types.FindStaffAbsenceType(ctx, id)
+	if err != nil {
+		t.Fatalf("read absence type %d: %v", id, err)
+	}
+	return workforce.AbsenceTypeVersion(stored)
+}

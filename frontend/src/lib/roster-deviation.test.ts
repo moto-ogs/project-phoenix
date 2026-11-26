@@ -334,10 +334,10 @@ describe("selection helpers", () => {
       schoolClasses: ["1b"],
     };
     expect(previewQuery(selection, "2026-10-28").toString()).toBe(
-      "offering_ids=3%2C4&school_classes=1b&from=2026-10-28",
+      "offering_ids=3&offering_ids=4&school_classes=1b&from=2026-10-28",
     );
     expect(previewQuery(selection).toString()).toBe(
-      "offering_ids=3%2C4&school_classes=1b",
+      "offering_ids=3&offering_ids=4&school_classes=1b",
     );
     expect(
       connectionBody(selection, {

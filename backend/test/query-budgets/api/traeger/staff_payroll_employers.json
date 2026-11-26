@@ -1,0 +1,7 @@
+{
+  "scenario": "api.traeger.staff_payroll_employers",
+  "max": 8,
+  "exact": true,
+  "description": "modules/workforce — GET /traeger/staff-exports/payroll/employers (#8041, ADR 0320)\nat a Träger with two schools, one of them employed by a Gemeinde: the Träger's\nschools, the binding of the Träger transaction, its release, which body\nemploys at each school (the bodies of the Träger's own schools in one\nstatement, #8040, and the settings responsibility.* in one batch read) and the stored payroll values in one statement. Flat in the\nnumber of schools and employers.",
+  "route": "GET /traeger/staff-exports/payroll/employers"
+}

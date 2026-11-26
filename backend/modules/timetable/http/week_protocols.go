@@ -20,6 +20,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/securityruntime"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
 
@@ -243,7 +244,7 @@ func (rs *WeekProtocolResource) close(w http.ResponseWriter, r *http.Request) {
 	// A closing without a body names no read protocol; the owner refuses it
 	// as changed since read.
 	var req weekProtocolCloseRequest
-	if err := render.DecodeJSON(r.Body, &req); err != nil && !errors.Is(err, io.EOF) {
+	if err := wire.DecodeAndDrain(r.Body, &req); err != nil && !errors.Is(err, io.EOF) {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
 		return
 	}
@@ -392,7 +393,7 @@ type weekProtocolDayNoteInput struct {
 
 func decodeWeekProtocolNotes(r *http.Request) (timetable.WeekProtocolNotes, error) {
 	var req weekProtocolNotesRequest
-	if err := render.DecodeJSON(r.Body, &req); err != nil {
+	if err := wire.DecodeAndDrain(r.Body, &req); err != nil {
 		return timetable.WeekProtocolNotes{}, errors.New("invalid request body")
 	}
 	notes := timetable.WeekProtocolNotes{WeekNote: req.WeekNote, Days: map[calendar.Date]string{}, ExpectedVersion: req.ExpectedVersion}

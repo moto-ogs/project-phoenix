@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 const problemContentType = "application/problem+json"
@@ -102,7 +103,7 @@ func problemResponseHandler(next http.Handler, logger func() *slog.Logger) http.
 				slog.String("code", problemStringField(body, "code")),
 			)
 		}
-		encoded, err := json.Marshal(body)
+		encoded, err := wire.Marshal(body)
 		if err != nil {
 			slog.Default().ErrorContext(r.Context(), "failed to encode problem response", slog.String("error", err.Error()))
 			return
@@ -132,26 +133,39 @@ func readProblemBody(capture *problemWriter, contentType string) map[string]json
 	return body
 }
 
-// departsFromEnvelope reports a body that is not the shared envelope yet:
-// a legacy `error` or `message` text, a status member other than the HTTP
-// status number, or no code.
+// departsFromEnvelope reports a legacy member, mismatched status, or missing code.
 func departsFromEnvelope(body map[string]json.RawMessage, status int) bool {
-	_, hasMessage := body["message"]
-	_, hasError := body["error"]
-	return hasMessage || hasError || problemStatusField(body) != status || problemStringField(body, "code") == ""
+	for member := range body {
+		if !isProblemMember(member) {
+			return true
+		}
+	}
+	return problemStatusField(body) != status || problemStringField(body, "code") == ""
+}
+
+func isProblemMember(member string) bool {
+	switch member {
+	case "type", "title", "status", "detail", "instance", "code", "errors", "details":
+		return true
+	default:
+		return false
+	}
 }
 
 // addProblemFields completes the RFC 9457 envelope. Shared renderers already
 // supplied every member. A direct writer's text moves from `error` or
 // `message` into `detail`, its status member becomes the HTTP status number
 // and a missing or unregistered code becomes the class code of the status.
-// Further members stay as RFC 9457 extensions.
+// Domain payloads belong in details, never beside it.
 func addProblemFields(body map[string]json.RawMessage, status int, requestID string) {
 	if problemStringField(body, "detail") == "" {
 		setProblemString(body, "detail", problemDetail(body, status))
 	}
-	delete(body, "error")
-	delete(body, "message")
+	for member := range body {
+		if !isProblemMember(member) {
+			delete(body, member)
+		}
+	}
 	body["status"] = json.RawMessage(strconv.Itoa(status))
 	code := problemStringField(body, "code")
 	codeReplaced := false

@@ -2,7 +2,6 @@ package httpadapter
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -11,6 +10,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	authorize "github.com/moto-ogs/project-phoenix/modules/securityruntime"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -54,7 +54,6 @@ func (rs *Resource) getActivityStudents(w http.ResponseWriter, r *http.Request) 
 			ID: ident.ID(student.ID),
 			// Default name values if no person data
 			FirstName: "Student",
-			LastName:  fmt.Sprintf("%d", student.ID),
 		}
 
 		// Check if student has person data
@@ -103,7 +102,7 @@ func (rs *Resource) updateGroupEnrollments(w http.ResponseWriter, r *http.Reques
 
 	// Parse request
 	var req BatchEnrollmentRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := wire.Decode(r.Body, &req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}

@@ -418,7 +418,7 @@ describe("ClassTripBulkStatusModal in moto schule (#4799)", () => {
       new ApiError("conflict", 409, {
         code: "classday.class_trip_status_conflict",
         details: {
-          conflicts: [{ student_id: 12, date: "2026-05-26", status: "sick" }],
+          conflicts: [{ student_id: "12", date: "2026-05-26", status: "sick" }],
           conflict_count: 1,
         },
       }),

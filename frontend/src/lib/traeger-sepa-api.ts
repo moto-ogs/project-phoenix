@@ -71,6 +71,8 @@ export interface SepaMandate {
   readonly creditorId: string;
   /** False after the Träger changed its creditor identifier: a new mandate is needed. */
   readonly creditorCurrent: boolean;
+  /** The Schulträger or the Gemeinde the mandate is given to (#8040); empty for the Träger. */
+  readonly issuerName?: string;
   /** The IBAN with only country and last four characters visible. */
   readonly ibanMasked: string;
   readonly bic: string;
@@ -109,7 +111,7 @@ export interface SepaMandateEvent {
   readonly importLine: number | null;
 }
 
-function creditorFromBackend(
+export function creditorFromBackend(
   creditor: traegerSepaCreditorContract.SEPACreditor,
 ): SepaCreditor {
   return {
@@ -137,6 +139,7 @@ function mandateFromBackend(
     accountHolder: mandate.account_holder,
     creditorId: mandate.creditor_id,
     creditorCurrent: mandate.creditor_current,
+    issuerName: mandate.issuer?.name ?? "",
     ibanMasked: mandate.iban_masked,
     bic: mandate.bic,
     source: knownEnum(MANDATE_SOURCE_VALUES, mandate.source),

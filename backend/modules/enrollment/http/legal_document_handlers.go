@@ -39,7 +39,7 @@ func (rs *Resource) uploadLegalDocument(w http.ResponseWriter, r *http.Request) 
 		// the allowed format and limit (#2515).
 		render.Status(r, http.StatusBadRequest)
 		common.RenderError(w, r, common.ErrorInvalidRequestWithDetails(err, common.CodeEnrollmentLegalDocumentInvalid,
-			map[string]any{"max_mb": maxEnrollmentLegalDocumentSize / (1024 * 1024)}))
+			common.SizeLimitDetails{MaxMB: maxEnrollmentLegalDocumentSize / (1024 * 1024)}))
 		return
 	}
 	defer common.CloseFile(uploaded.File)

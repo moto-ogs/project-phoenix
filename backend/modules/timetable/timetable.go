@@ -8,6 +8,8 @@ import (
 	"errors"
 	"regexp"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 const (
@@ -88,6 +90,22 @@ type Category struct {
 
 func (c Category) IsArchived() bool { return c.ArchivedAt != nil }
 
+// CategoryVersion is the token of a category as its form shows it (ADR
+// 0311): name, description, colour and whether it is archived. Not
+// updated_at: linking the category to a shift type moves that column too,
+// and the link is no part of the category's form.
+func CategoryVersion(c Category) string {
+	return readstate.Fingerprint([]any{c.Name, c.Description, c.Color, c.IsArchived()})
+}
+
+// CategoryShiftTypeLinkVersion is the token of the category's link to a
+// shift type (ADR 0311). The shift-type form shows which categories belong
+// to the type and sends the link token of every category it read; a link
+// write refuses a category whose link it changes when the link moved since.
+func CategoryShiftTypeLinkVersion(c Category) string {
+	return readstate.Fingerprint([]any{c.ID, c.ShiftTypeID})
+}
+
 func (c Category) ColorOrDefault() string {
 	if c.Color == "" {
 		return DefaultCategoryColor
@@ -102,11 +120,15 @@ type CreateCategory struct {
 	IsSystem    bool
 }
 
+// UpdateCategory is an edit of a category. ExpectedVersion is the
+// CategoryVersion its form was filled from; an edit of a category changed
+// since, or one without a version, is refused with readstate.ErrChanged.
 type UpdateCategory struct {
-	ID          int64
-	Name        string
-	Description string
-	Color       string
+	ID              int64
+	Name            string
+	Description     string
+	Color           string
+	ExpectedVersion string
 }
 
 // CareExitEnrollment is the reversible snapshot used when a student's care
@@ -252,7 +274,13 @@ type CategoryCommand interface {
 	RestoreCategory(context.Context, int64) (Category, error)
 	DeleteCategory(context.Context, int64) error
 	SetCategoryShiftTypeID(context.Context, int64, *int64) error
-	SetCategoryShiftTypeLinks(context.Context, int64, []int64) error
+	// SetCategoryShiftTypeLinks links the given categories to a shift type
+	// and unlinks the type's other categories. expected holds the
+	// CategoryShiftTypeLinkVersion per category id as the caller read it;
+	// every category whose link the write changes must carry its current
+	// token, or the write is refused with readstate.ErrChanged. A nil map is
+	// a caller that read no links (a new shift type) and checks nothing.
+	SetCategoryShiftTypeLinks(ctx context.Context, shiftTypeID int64, categoryIDs []int64, expected map[int64]string) error
 }
 
 // CareExitEnrollmentCommand ends and restores the activity enrollments of
@@ -348,6 +376,10 @@ func ErrorCode(err error) string {
 	}
 }
 
-func IsSystemActivityName(name string) bool {
-	return name == SchulhofActivityName || name == WCActivityName || name == OpenRoomActivityName
+// IsOpenRoomStay reports the shared system activity whose room sessions hold
+// the independent stays of released rooms (#3066). Children do not take part
+// in it, so views must not present it as a running activity (#8130). A staff
+// activity that only carries the name is not it.
+func IsOpenRoomStay(group Group) bool {
+	return group.IsSystem && group.Name == OpenRoomActivityName
 }

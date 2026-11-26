@@ -7,6 +7,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/domain"
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // Nachweisarten (#4808): the kinds of proof of a school.
@@ -77,6 +78,15 @@ func (q *QualificationTypes) updateQualificationType(ctx context.Context, id int
 	if err != nil {
 		return domain.QualificationType{}, err
 	}
+	// Lock, then read the kinds after the lock, then check what the form
+	// read (ADR 0311).
+	locked, _, err := q.records.store.LockQualificationType(ctx, id)
+	if err != nil {
+		return domain.QualificationType{}, err
+	}
+	if !locked {
+		return domain.QualificationType{}, domain.ErrQualificationTypeNotFound
+	}
 	existing, _, err := q.records.store.ListQualificationTypes(ctx)
 	if err != nil {
 		return domain.QualificationType{}, err
@@ -84,6 +94,9 @@ func (q *QualificationTypes) updateQualificationType(ctx context.Context, id int
 	current, ok := findQualificationType(existing, id)
 	if !ok {
 		return domain.QualificationType{}, domain.ErrQualificationTypeNotFound
+	}
+	if err := readstate.Check(input.ExpectedVersion, workforce.QualificationTypeVersion(qualificationTypeToPublic(current))); err != nil {
+		return domain.QualificationType{}, err
 	}
 	value.ID = id
 	if input.Archived {

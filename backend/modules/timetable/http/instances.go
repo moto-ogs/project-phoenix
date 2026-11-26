@@ -13,7 +13,6 @@ package timetablehttp
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"io"
 	"log/slog"
@@ -21,10 +20,12 @@ import (
 	"strings"
 
 	"github.com/go-chi/render"
+
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // StartInstanceResponse is the 200 body for POST /instances/{id}/start. Warnings
@@ -223,7 +224,7 @@ func (rs *Resource) cancelInstance(w http.ResponseWriter, r *http.Request) {
 	var notice *GuardianNoticeRequest
 	if r.Body != nil {
 		var body CancelInstanceRequest
-		if err := json.NewDecoder(r.Body).Decode(&body); err != nil && !errors.Is(err, io.EOF) {
+		if err := wire.Decode(r.Body, &body); err != nil && !errors.Is(err, io.EOF) {
 			common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid JSON body")))
 			return
 		}
@@ -311,6 +312,9 @@ func staticConflict(message, code string) func(error) render.Renderer {
 // potentially wrong 4xx for a real database failure.
 var instanceLifecycleErrorRules = []common.ErrorRule{
 	{Target: timetable.ErrInvalidInstanceReference, Render: common.ErrorInvalidRequest},
+	{Target: timetable.ErrRoomClosed, Render: func(err error) render.Renderer {
+		return common.ErrorConflictOnField(err, common.CodeTimetableRoomClosed, "room_id")
+	}},
 	{Target: timetable.ErrGuardianNoticeInvalid, Render: codedOr(common.CodeTimetableGuardianNoticeInvalid)},
 	{
 		Target: timetable.ErrInstanceReinstateEnded,

@@ -2,13 +2,10 @@ package enrollmenthttp
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
-	"net/url"
-	"strconv"
 	"strings"
 	"time"
 
@@ -18,6 +15,8 @@ import (
 	"github.com/go-chi/render"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -26,7 +25,7 @@ import (
 // StatusResponse is the public status-page payload. ChildID is
 // stringified so the frontend keeps its int64-as-string convention.
 type StatusResponse struct {
-	RequestID         string                `json:"request_id"`
+	RequestID         ident.ID              `json:"request_id"`
 	GuardianFirstName string                `json:"guardian_first_name"`
 	GuardianLastName  string                `json:"guardian_last_name"`
 	GuardianEmail     string                `json:"guardian_email"`
@@ -57,6 +56,9 @@ type StatusResponse struct {
 	// page's fixed texts (#6042). The token page runs on the parents host
 	// without a school context, so it travels with the status.
 	CareFacilityTerm string `json:"care_facility_term"`
+	// CareFacilityArticle is the article the German texts decline that
+	// term with (#8136).
+	CareFacilityArticle string `json:"care_facility_article"`
 	// RenewalTerms are the required blocks of the form in force for a
 	// renewal, which the parents accept for the new phase (#6456). Left out
 	// while no child waits for its renewal.
@@ -67,7 +69,7 @@ type StatusResponse struct {
 // page sends back with the ticks, the blocks, and when the parents last
 // accepted exactly these.
 type StatusRenewalTermsResponse struct {
-	FormSchemaID     string       `json:"form_schema_id"`
+	FormSchemaID     ident.ID     `json:"form_schema_id"`
 	TermsFingerprint string       `json:"terms_fingerprint"`
 	Blocks           []LegalBlock `json:"blocks"`
 	ConfirmedAt      *time.Time   `json:"confirmed_at,omitempty"`
@@ -84,11 +86,11 @@ type StatusGuardianResponse struct {
 
 // StatusChildResponse is one row in StatusResponse.Children.
 type StatusChildResponse struct {
-	ID           string  `json:"id"`
-	FirstName    string  `json:"first_name"`
-	LastName     string  `json:"last_name"`
-	Status       string  `json:"status"`
-	StatusReason *string `json:"status_reason,omitempty"`
+	ID           ident.ID `json:"id"`
+	FirstName    string   `json:"first_name"`
+	LastName     string   `json:"last_name"`
+	Status       string   `json:"status"`
+	StatusReason *string  `json:"status_reason,omitempty"`
 	// Locked marks a child that is already taken over into care. Its data
 	// stays readable through the status link, but changes to it run through
 	// the parent app only (ADR 0003).
@@ -106,6 +108,7 @@ type EditBootstrapResponse struct {
 	CareOfferingsEnabled      bool                      `json:"care_offerings_enabled"`
 	GradeLevelMax             int                       `json:"grade_level_max"`
 	CareFacilityTerm          string                    `json:"care_facility_term"`
+	CareFacilityArticle       string                    `json:"care_facility_article"`
 	LegalTexts                PublicLegalTextsResponse  `json:"legal_texts"`
 	Draft                     EditDraftResponse         `json:"draft"`
 	EditMode                  string                    `json:"edit_mode"`
@@ -116,11 +119,11 @@ type EditBootstrapResponse struct {
 }
 
 type EditDraftResponse struct {
-	RequestID           string                      `json:"request_id"`
+	RequestID           ident.ID                    `json:"request_id"`
 	StatusToken         string                      `json:"status_token"`
-	TenantID            string                      `json:"tenant_id"`
+	TenantID            ident.ID                    `json:"tenant_id"`
 	TenantSubdomain     string                      `json:"tenant_subdomain"`
-	PhaseID             string                      `json:"phase_id"`
+	PhaseID             ident.ID                    `json:"phase_id"`
 	GuardianFirstName   string                      `json:"guardian_first_name"`
 	GuardianLastName    string                      `json:"guardian_last_name"`
 	GuardianEmail       string                      `json:"guardian_email"`
@@ -139,7 +142,7 @@ type EditDraftGuardianResponse struct {
 }
 
 type EditDraftChildResponse struct {
-	ID                string                         `json:"id"`
+	ID                ident.ID                       `json:"id"`
 	FirstName         string                         `json:"first_name"`
 	LastName          string                         `json:"last_name"`
 	DateOfBirth       string                         `json:"date_of_birth"`
@@ -147,7 +150,7 @@ type EditDraftChildResponse struct {
 	TargetSchoolClass *string                        `json:"target_school_class,omitempty"`
 	HolidayCareWish   *bool                          `json:"holiday_care_wish,omitempty"`
 	CustomData        map[string]any                 `json:"custom_data" contract_json:"Answer values follow the school's versioned form schema"`
-	OfferingIDs       []string                       `json:"offering_ids"`
+	OfferingIDs       []ident.ID                     `json:"offering_ids"`
 	OfferingDays      []EditDraftOfferingDayResponse `json:"offering_days,omitempty"`
 	// Locked marks a child that is already taken over into care: the change
 	// form shows it read-only and points to the parent app (ADR 0003).
@@ -155,7 +158,7 @@ type EditDraftChildResponse struct {
 }
 
 type EditDraftOfferingDayResponse struct {
-	OfferingID            string   `json:"offering_id"`
+	OfferingID            ident.ID `json:"offering_id"`
 	SelectedDays          []string `json:"selected_days"`
 	ManualSelectedDays    []string `json:"manual_selected_days,omitempty"`
 	AutomaticSelectedDays []string `json:"automatic_selected_days,omitempty"`
@@ -163,19 +166,20 @@ type EditDraftOfferingDayResponse struct {
 
 // getStatusSignatureProof answers GET /requests/{statusToken}/signature-proof:
 // the proof of the parent's signature on a path of its own, which the
-// frontend's catalog proxy serves as a public file (#2352). It is the status
-// read with ?format=pdf, so token resolution and its transaction stay one.
+// frontend's catalog proxy serves as a public file (#2352).
 func (rs *Resource) getStatusSignatureProof(w http.ResponseWriter, r *http.Request) {
-	proof := r.Clone(r.Context())
-	proof.URL.RawQuery = url.Values{"format": {"pdf"}}.Encode()
-	rs.getStatus(w, proof)
+	rs.getStatus(w, r, true)
 }
 
 // getStatus returns the per-child status for a token-bearing parent.
 // Public route — caller must wrap in admin-tx because there's no JWT.
 // With ?format=pdf it answers the proof of the parent's signature (#4786)
 // instead, for the request the same token names.
-func (rs *Resource) getStatus(w http.ResponseWriter, r *http.Request) {
+func (rs *Resource) getStatusResponse(w http.ResponseWriter, r *http.Request) {
+	rs.getStatus(w, r, wantsStatusProofPDF(r))
+}
+
+func (rs *Resource) getStatus(w http.ResponseWriter, r *http.Request, proof bool) {
 	if rs.RequestService == nil {
 		common.RenderError(w, r, common.ErrorInternalServer(errors.New("enrollment request service not configured")))
 		return
@@ -192,7 +196,7 @@ func (rs *Resource) getStatus(w http.ResponseWriter, r *http.Request) {
 		statusErr   error
 	)
 	err := withinAdmin(r.Context(), func(adminCtx context.Context) error {
-		view, invalidLink, statusErr = rs.loadPublicStatusView(adminCtx, token, wantsStatusProofPDF(r))
+		view, invalidLink, statusErr = rs.loadPublicStatusView(adminCtx, token, proof)
 		return statusErr
 	})
 	if err != nil {
@@ -203,7 +207,7 @@ func (rs *Resource) getStatus(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, common.ErrorInternalServerWrap("failed to load enrollment status", err))
 		return
 	}
-	if wantsStatusProofPDF(r) {
+	if proof {
 		rs.writeStatusSignatureProof(w, r, view)
 		return
 	}
@@ -232,14 +236,15 @@ func (rs *Resource) loadPublicStatusView(ctx context.Context, token string, proo
 
 // statusView is everything the status page and its proof show.
 type statusView struct {
-	req       *capability.Request
-	children  []*capability.RequestChild
-	guardians []*capability.RequestGuardian
-	editMode  string
-	careTerm  string
-	terms     *capability.RenewalTerms
-	proof     *SignatureProof
-	signature *StatusSignature
+	req         *capability.Request
+	children    []*capability.RequestChild
+	guardians   []*capability.RequestGuardian
+	editMode    string
+	careTerm    string
+	careArticle string
+	terms       *capability.RenewalTerms
+	proof       *SignatureProof
+	signature   *StatusSignature
 	// signatureUnavailable means the optional status read failed. The public
 	// response then fails closed and only offers the full edit form.
 	signatureUnavailable bool
@@ -258,6 +263,7 @@ func (rs *Resource) loadStatusView(ctx context.Context, token string) (view stat
 		return view, nil, fmt.Errorf("status: compute status page: %w", serverErr)
 	}
 	view.editMode, view.careTerm, view.terms = page.EditMode, page.CareFacilityTerm, page.RenewalTerms
+	view.careArticle = page.CareFacilityArticle
 	rs.loadStatusGuardians(ctx, token, &view)
 	return view, nil, nil
 }
@@ -313,6 +319,7 @@ func (rs *Resource) respondStatus(w http.ResponseWriter, r *http.Request, token 
 	req := view.req
 	resp, anyLocked := newStatusResponse(req, view.editMode, view.children, view.guardians)
 	resp.CareFacilityTerm = view.careTerm
+	resp.CareFacilityArticle = view.careArticle
 	resp.RenewalTerms = newStatusRenewalTerms(view.terms)
 	if view.signatureUnavailable {
 		resp.SignatureRequired = true
@@ -336,7 +343,7 @@ func newStatusRenewalTerms(terms *capability.RenewalTerms) *StatusRenewalTermsRe
 		blocks = []LegalBlock{}
 	}
 	return &StatusRenewalTermsResponse{
-		FormSchemaID:     strconv.FormatInt(terms.FormSchemaID, 10),
+		FormSchemaID:     ident.ID(terms.FormSchemaID),
 		TermsFingerprint: terms.TermsFingerprint,
 		Blocks:           blocks,
 		ConfirmedAt:      terms.ConfirmedAt,
@@ -347,7 +354,7 @@ func newStatusRenewalTerms(terms *capability.RenewalTerms) *StatusRenewalTermsRe
 // whether any child is taken over into care.
 func newStatusResponse(req *capability.Request, editMode string, children []*capability.RequestChild, guardians []*capability.RequestGuardian) (StatusResponse, bool) {
 	resp := StatusResponse{
-		RequestID:         strconv.FormatInt(req.ID, 10),
+		RequestID:         ident.ID(req.ID),
 		GuardianFirstName: req.GuardianFirstName,
 		GuardianLastName:  req.GuardianLastName,
 		GuardianEmail:     req.GuardianEmail,
@@ -361,7 +368,7 @@ func newStatusResponse(req *capability.Request, editMode string, children []*cap
 		locked := ChildTakenOver(c)
 		anyLocked = anyLocked || locked
 		resp.Children = append(resp.Children, StatusChildResponse{
-			ID:           strconv.FormatInt(c.ID, 10),
+			ID:           ident.ID(c.ID),
 			FirstName:    c.FirstName,
 			LastName:     c.LastName,
 			Status:       c.Status,
@@ -441,6 +448,7 @@ func (rs *Resource) getEditBootstrap(w http.ResponseWriter, r *http.Request) {
 		CareOfferingsEnabled:      draft.CareOfferingsEnabled,
 		GradeLevelMax:             draft.GradeLevelMax,
 		CareFacilityTerm:          draft.CareFacilityTerm,
+		CareFacilityArticle:       draft.CareFacilityArticle,
 		LegalTexts: PublicLegalTextsResponse{
 			AGB:                 draft.LegalTexts.AGB,
 			DSGVO:               draft.LegalTexts.DSGVO,
@@ -460,10 +468,10 @@ func (rs *Resource) getEditBootstrap(w http.ResponseWriter, r *http.Request) {
 
 func toEditDraftResponse(draft *EditDraft) EditDraftResponse {
 	resp := EditDraftResponse{
-		RequestID:           strconv.FormatInt(draft.Request.ID, 10),
+		RequestID:           ident.ID(draft.Request.ID),
 		StatusToken:         draft.Request.StatusToken,
-		TenantID:            strconv.FormatInt(draft.Request.TenantID, 10),
-		PhaseID:             strconv.FormatInt(draft.Request.PhaseID, 10),
+		TenantID:            ident.ID(draft.Request.TenantID),
+		PhaseID:             ident.ID(draft.Request.PhaseID),
 		GuardianFirstName:   draft.Request.GuardianFirstName,
 		GuardianLastName:    draft.Request.GuardianLastName,
 		GuardianEmail:       draft.Request.GuardianEmail,
@@ -508,7 +516,7 @@ func toEditDraftChildResponses(draft *EditDraft) []EditDraftChildResponse {
 
 func toEditDraftChildResponse(child *capability.RequestChild, offeringLinks []*RequestChildOffering) EditDraftChildResponse {
 	response := EditDraftChildResponse{
-		ID:                strconv.FormatInt(child.ID, 10),
+		ID:                ident.ID(child.ID),
 		FirstName:         child.FirstName,
 		LastName:          child.LastName,
 		DateOfBirth:       string(child.DateOfBirth),
@@ -516,11 +524,11 @@ func toEditDraftChildResponse(child *capability.RequestChild, offeringLinks []*R
 		TargetSchoolClass: child.TargetSchoolClass,
 		HolidayCareWish:   child.HolidayCareWish,
 		CustomData:        formAnswerMap(child.CustomData),
-		OfferingIDs:       []string{},
+		OfferingIDs:       []ident.ID{},
 		Locked:            ChildTakenOver(child),
 	}
 	for _, link := range offeringLinks {
-		response.OfferingIDs = append(response.OfferingIDs, strconv.FormatInt(link.CareOfferingID, 10))
+		response.OfferingIDs = append(response.OfferingIDs, ident.ID(link.CareOfferingID))
 		if offeringDay := toEditDraftOfferingDayResponse(link); offeringDay != nil {
 			response.OfferingDays = append(response.OfferingDays, *offeringDay)
 		}
@@ -537,7 +545,7 @@ func toEditDraftOfferingDayResponse(link *RequestChildOffering) *EditDraftOfferi
 		manualDays = link.SelectedDays
 	}
 	return &EditDraftOfferingDayResponse{
-		OfferingID:            strconv.FormatInt(link.CareOfferingID, 10),
+		OfferingID:            ident.ID(link.CareOfferingID),
 		SelectedDays:          link.SelectedDays,
 		ManualSelectedDays:    manualDays,
 		AutomaticSelectedDays: link.AutomaticSelectedDays,
@@ -621,7 +629,7 @@ func (rs *Resource) replaceStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	common.Respond(w, r, http.StatusOK, SubmitEnrollmentResponse{
-		RequestID: strconv.FormatInt(result.Request.ID, 10),
+		RequestID: ident.ID(result.Request.ID),
 		StatusURL: result.StatusURL,
 		Warnings:  result.Warnings,
 	}, "Request updated")
@@ -641,7 +649,7 @@ func mapEditError(w http.ResponseWriter, r *http.Request, err error) {
 // WithdrawRequest is the wire shape for POST /requests/{token}/withdraw.
 // Optional child_id; omit to withdraw every non-terminal child.
 type WithdrawRequest struct {
-	ChildID *string `json:"child_id,omitempty"`
+	ChildID *ident.IDOrNone `json:"child_id,omitempty"`
 }
 
 func (req *WithdrawRequest) Bind(_ *http.Request) error { return nil }
@@ -661,19 +669,18 @@ func (rs *Resource) withdrawStatus(w http.ResponseWriter, r *http.Request) {
 	// The body is optional; render.Bind requires a body but we tolerate
 	// empty payloads (omit child_id = withdraw all). Decode manually.
 	if r.Body != nil && r.ContentLength != 0 {
-		if err := json.NewDecoder(r.Body).Decode(body); err != nil {
+		if err := wire.Decode(r.Body, body); err != nil {
 			common.RenderError(w, r, common.ErrorInvalidRequest(err))
 			return
 		}
 	}
 	var childID int64
-	if body.ChildID != nil && *body.ChildID != "" {
-		v, err := strconv.ParseInt(*body.ChildID, 10, 64)
-		if err != nil || v <= 0 {
+	if body.ChildID != nil && !body.ChildID.IsZero() {
+		childID = body.ChildID.Int64()
+		if childID <= 0 {
 			common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid child_id")))
 			return
 		}
-		childID = v
 	}
 
 	err := rs.RequestService.Withdraw(r.Context(), token, childID)
@@ -699,8 +706,8 @@ type ConfirmRenewalRequest struct {
 	ConsentFlags ConsentFlagsInput `json:"consent_flags,omitzero" contract_refines:"The typed checkbox input still reads the full legacy JSON value domain"`
 	// FormSchemaID is the renewal_terms.form_schema_id the page showed; "0"
 	// for the tenant-wide blocks.
-	FormSchemaID     string `json:"form_schema_id"`
-	TermsFingerprint string `json:"terms_fingerprint"`
+	FormSchemaID     *ident.ID `json:"form_schema_id"`
+	TermsFingerprint string    `json:"terms_fingerprint"`
 }
 
 // ConfirmRenewalResponse reports how many child rows were transitioned
@@ -713,14 +720,13 @@ type ConfirmRenewalResponse struct {
 // version is a bad request.
 func renewalConfirmation(r *http.Request) (capability.RenewalConfirmation, error) {
 	body := ConfirmRenewalRequest{}
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err := wire.Decode(r.Body, &body); err != nil {
 		return capability.RenewalConfirmation{}, fmt.Errorf("decode renewal confirmation: %w", err)
 	}
-	formSchemaID, err := strconv.ParseInt(strings.TrimSpace(body.FormSchemaID), 10, 64)
-	if err != nil || formSchemaID < 0 {
+	if body.FormSchemaID == nil || *body.FormSchemaID < 0 {
 		return capability.RenewalConfirmation{}, errors.New("form_schema_id is required")
 	}
-	return capability.RenewalConfirmation{ConsentFlags: formValues(body.ConsentFlags.values()), DisplayedFormSchemaID: formSchemaID, TermsFingerprint: body.TermsFingerprint}, nil
+	return capability.RenewalConfirmation{ConsentFlags: formValues(body.ConsentFlags.values()), DisplayedFormSchemaID: body.FormSchemaID.Int64(), TermsFingerprint: body.TermsFingerprint}, nil
 }
 
 // confirmRenewal handles POST /requests/{statusToken}/confirm-renewal: the

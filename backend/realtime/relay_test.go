@@ -68,3 +68,39 @@ func TestNotificationEventWithoutStoredCopyStaysLocal(t *testing.T) {
 	assert.True(t, published)
 	assert.NotContains(t, payload, "notification_id", "only notifications carry a stored ID")
 }
+
+func TestOwnTimeInvalidationsAcrossReplicas(t *testing.T) {
+	t.Parallel()
+	var payload string
+	producer, err := NewRelayedHub(nil, func(s string) error { payload = s; return nil }, nil)
+	require.NoError(t, err)
+	consumer, err := NewRelayedHub(nil, func(string) error { return nil }, nil)
+	require.NoError(t, err)
+	client := &Client{Channel: make(chan Event, 4), SubscribedGroups: make(map[string]bool)}
+	consumer.Register(client, 7, nil)
+
+	for _, tc := range []struct {
+		kind   EventType
+		source *string
+		want   EventData
+	}{
+		{EventStaffLeaveChanged, nil, EventData{}},
+		{EventStaffingDeviationChanged, new("closing_days"), EventData{Source: new("closing_days")}},
+		{EventStaffingDeviationChanged, new("arbitrary"), EventData{}},
+		{EventStaffLeaveChanged, new("closing_days"), EventData{}},
+	} {
+		require.NoError(t, producer.BroadcastToTenant(7, NewEvent(tc.kind, "", EventData{Source: tc.source})))
+		if tc.want.Source == nil {
+			require.NotContains(t, payload, `"source"`)
+		}
+		require.NoError(t, consumer.ReceiveSignal(payload))
+		require.Len(t, client.Channel, 1)
+		got := <-client.Channel
+		require.Equal(t, tc.kind, got.Type)
+		require.Equal(t, tc.want, got.Data)
+	}
+
+	require.NoError(t, consumer.ReceiveSignal(`{"school_id":7,"audience":"tenant","origin":"foreign","type":"staffing_deviation_changed","ids":{"source":"arbitrary"}}`))
+	require.Len(t, client.Channel, 1)
+	require.Equal(t, EventData{}, (<-client.Channel).Data)
+}

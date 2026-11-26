@@ -29,7 +29,7 @@ through `devbox run` when the current process has not loaded the project environ
 | Full container stack | `docker compose --profile full up -d`, logs via `docker compose logs -f server` |
 | Frontend quality | `cd frontend && pnpm run check` |
 | Frontend E2E flows | seeded native stack, then `scripts/dev-native.sh frontend pnpm run test:e2e` |
-| Synthetic network E2E suites | `cd frontend && pnpm run test:network` / `pnpm run test:tenant-switch`, no stack needed ([ports](#synthetic-network-e2e-suites)) |
+| Synthetic network E2E suites | `cd frontend && pnpm run test:network` / `pnpm run test:tenant-switch` / `pnpm run test:session-tree`, no stack needed ([ports](#synthetic-network-e2e-suites)) |
 | Backend suite | `cd backend && ../scripts/run-go-toolchain.sh go test ./...` |
 | Backend suite with immediate sweep | `scripts/run-go-toolchain.sh scripts/test-backend.sh` |
 | Backend unit-only loop | `cd backend && ../scripts/run-go-toolchain.sh go test -short ./...` (skips DB tests) |
@@ -148,7 +148,9 @@ switch to `--single-process` or turn Chrome's own sandbox off instead.
 ### Synthetic network E2E suites
 
 `test:network` and `test:tenant-switch` start their own synthetic fixture API
-and `next dev` through `frontend/e2e/network/server.mjs`. They need no seeded
+and `next dev` through `frontend/e2e/network/server.mjs`; `test:session-tree`
+(#8082) builds and serves a production build (`next build`, `next start`,
+several minutes cold) and keeps Chrome's back-forward cache on. They need no seeded
 database, backend or native app server, unlike the seeded `test:e2e`. They also
 ignore `PORT` and the worktree's `FRONTEND_HOST_PORT`, so they never compete
 with a running native dev loop.
@@ -157,6 +159,7 @@ with a running native dev loop.
 |---|---|---|
 | `test:network` | `NETWORK_E2E_PORT` (13843) | `NETWORK_E2E_API_PORT` (18443) |
 | `test:tenant-switch` | `TENANT_SWITCH_PORT` (13845) | `TENANT_SWITCH_API_PORT` (18445) |
+| `test:session-tree` | `SESSION_TREE_PORT` (13847) | `SESSION_TREE_API_PORT` (18447) |
 
 The config, server and specs read the same variables, so origins, readiness
 URL, fixture calls and route matchers follow the chosen ports. Two runs of the
@@ -693,9 +696,11 @@ auth reservation expires after three minutes, so a crashed replica cannot
 hold a burst slot indefinitely. Requests whose outcome is lost stay charged.
 
 Each Next.js replica caches the school settings returned by the tenant
-lookup for at most 60 seconds. A settings write invalidates the tag on the
-replica that handled it. The first request after expiry on any other replica
-waits for a fresh lookup. An open browser tab needs a refresh or navigation
+lookup for at most 60 seconds. A settings write clears the school's lookup on
+the replica that handled it; provisioning and Träger name writes clear that
+replica's lookup cache, including remembered 404s. The first request after
+expiry on any other replica waits for a fresh lookup. An open tab needs a
+refresh or navigation
 that makes a new lookup to see the change.
 
 | State kept in a process | Effect of adding replicas |
@@ -982,11 +987,9 @@ cd frontend && pnpm run test:screenshots        # pipeline test against the runn
   plus the same file as `product-screenshots.zip`: the newest images are always
   at `https://github.com/moto-ogs/project-phoenix/releases/latest/download/product-screenshots.zip`
   (PyrePortal does the same for the kiosk). A rerun of the same version replaces
-  both ZIPs. Pull requests into `main` that
-  touch the pipeline run the capture without the release asset; pull requests
-  into `development` do not run it. To test a pipeline change on a feature
-  branch, start it by hand (`gh workflow run product-screenshots.yml --ref
-  <branch>`).
+  both ZIPs. Pull requests do not trigger capture. To test a pipeline change
+  on a feature branch, start it by hand (`gh workflow run
+  product-screenshots.yml --ref <branch>`).
 - Only Berlin weekdays: on a weekend the run stops before seeding; start it by
   hand on the next weekday from the release tag.
 - A broken shot fails the capture job, and the release-asset job never starts,

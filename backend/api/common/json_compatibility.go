@@ -3,6 +3,8 @@ package common
 import (
 	"bytes"
 	"encoding/json"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // LegacyJSON writes the typed Value for current data and keeps an older
@@ -29,5 +31,5 @@ func (field LegacyJSON[T]) MarshalJSON() ([]byte, error) {
 	if field.Legacy != nil {
 		return json.Marshal(field.Legacy)
 	}
-	return json.Marshal(field.Value)
+	return wire.Marshal(field.Value)
 }

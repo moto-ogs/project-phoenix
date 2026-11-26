@@ -71,15 +71,15 @@ function knownValues(values: Record<string, number> | null): ComparisonValues {
   return result;
 }
 
-function comparisonQuery(query: ComparisonQuery) {
+export function comparisonQuery(query: ComparisonQuery) {
   return {
     from: query.from,
     to: query.to,
-    schools: query.schoolIds.join(",") || undefined,
+    schools: query.schoolIds,
   };
 }
 
-function comparisonFromBackend(
+export function comparisonFromBackend(
   body: traegerSchoolsContract.SchoolComparison,
 ): TraegerComparison {
   return {
@@ -120,12 +120,14 @@ export function downloadTraegerComparison(
 ): Promise<TraegerListFile> {
   return downloadTraegerList(
     bffFile("org", "GET /traeger/schools/comparison/export", {
-      query: listExportQuery(format, {
-        from: query.from,
-        to: query.to,
-        schools: query.schoolIds.join(","),
-        metrics: metrics.join(","),
-      }),
+      query: {
+        ...listExportQuery(format, {
+          from: query.from,
+          to: query.to,
+          metrics: metrics.join(","),
+        }),
+        schools: query.schoolIds,
+      },
     }),
   );
 }

@@ -56,7 +56,7 @@ vi.mock("~/components/messaging/new-message-modal", () => ({
   NewMessageModal: () => null,
 }));
 
-import MessagesPage from "./page";
+import MessagesPage from "./page-content";
 
 /**
  * Findet die Statuszeile aus genau diesen Angaben. Die Angaben stehen ohne

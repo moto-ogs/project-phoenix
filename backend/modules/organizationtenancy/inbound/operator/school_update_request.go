@@ -26,6 +26,9 @@ type updateSchoolRequest struct {
 	// ChildQuota is the Kinderkontingent (#3567): absent keeps it, null
 	// removes it, an object sets it.
 	ChildQuota ChildQuotaField `json:"child_quota"`
+	// ExpectedVersion is the school's version the form was read with
+	// (ADR 0311).
+	ExpectedVersion string `json:"expected_version"`
 }
 
 func (req *updateSchoolRequest) Bind(_ *http.Request) error {

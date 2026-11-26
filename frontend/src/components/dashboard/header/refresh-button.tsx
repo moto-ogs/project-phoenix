@@ -17,7 +17,7 @@ export function RefreshButton({
 }: {
   readonly drawer?: boolean;
 }) {
-  // parentNav is provided in every shell (full catalog in the parents portal,
+  // parentNav is provided in every shell (parent shell messages,
   // German-only mirror via ShellIntlProvider in the staff/operator shells),
   // so the German label is unchanged there and only the parent portal localizes.
   const t = useTranslations("parentNav");

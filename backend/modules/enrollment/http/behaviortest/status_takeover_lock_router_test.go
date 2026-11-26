@@ -24,6 +24,7 @@ import (
 	capability "github.com/moto-ogs/project-phoenix/modules/enrollment"
 	enrollmentCompose "github.com/moto-ogs/project-phoenix/modules/enrollment/compose"
 	enrollmentAPI "github.com/moto-ogs/project-phoenix/modules/enrollment/http"
+	"github.com/moto-ogs/project-phoenix/modules/settings"
 	transactionFailures "github.com/moto-ogs/project-phoenix/modules/transactionruntime"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
@@ -122,6 +123,10 @@ func (s notifyModeSettings) NotifyPerDecision(ctx context.Context) (string, erro
 
 func (s notifyModeSettings) CareFacilityTerm(ctx context.Context) (string, error) {
 	return s.settings.ResolveString(ctx, settingKeyCareFacilityTerm)
+}
+
+func (s notifyModeSettings) CareFacilityArticle(ctx context.Context) (string, error) {
+	return settings.ResolveCareFacilityArticle(ctx, s.settings)
 }
 
 func setupTakeoverLockTest(t *testing.T, redeemableInvitation ...bool) *takeoverLockEnv {
@@ -290,7 +295,7 @@ func (env *takeoverLockEnv) postChangeRequest(t *testing.T, body string) *httpte
 // children travel, gradeLina/gradeTimo decide which one the parent changed.
 func (env *takeoverLockEnv) changeRequestBody(gradeLina, gradeTimo int) string {
 	return fmt.Sprintf(`{
-		"phase_id": %d,
+		"phase_id": "%d",
 		"guardian_first_name": "Anna",
 		"guardian_last_name": "Beispiel",
 		"guardian_email": "takeover-lock@example.com",
@@ -400,12 +405,16 @@ func TestPublicStatus_CarriesTheSchoolsCareFacilityTerm(t *testing.T) {
 	t.Parallel()
 	env := setupTakeoverLockTest(t)
 
-	status := decodeStatus(t, env.get(t, "/requests/"+env.token))
+	statusRec := env.get(t, "/requests/"+env.token)
+	status := decodeStatus(t, statusRec)
 	assert.Equal(t, takeoverCareFacilityTerm, status.Data.CareFacilityTerm)
 
 	bootstrap := env.get(t, "/requests/"+env.token+"/edit-bootstrap")
 	require.Equal(t, http.StatusOK, bootstrap.Code, bootstrap.Body.String())
 	assert.Contains(t, bootstrap.Body.String(), `"care_facility_term":"GTS"`)
+	// The preset is feminine whatever article is stored (#8136).
+	assert.Contains(t, statusRec.Body.String(), `"care_facility_article":"die"`)
+	assert.Contains(t, bootstrap.Body.String(), `"care_facility_article":"die"`)
 }
 
 func TestPublicStatus_AllChildrenTakenOverLeavesNoChangeForm(t *testing.T) {

@@ -142,6 +142,7 @@ export interface HolidayCriterion {
   scope: string;
   active: boolean;
   position: number;
+  points: number;
   answered: boolean;
 }
 
@@ -152,6 +153,7 @@ export const HolidayCriterionSchema: z.ZodType<HolidayCriterion, unknown> = obje
   scope: str,
   active: bool,
   position: safeInt,
+  points: safeInt,
   answered: bool,
 });
 
@@ -168,12 +170,14 @@ export const HolidayCriterionPeriodSchema: z.ZodType<HolidayCriterionPeriod, unk
 
 /** Go: enrollment.HolidayCriteriaCatalog */
 export interface HolidayCriteriaCatalog {
+  ranking: string;
   criteria: HolidayCriterion[] | null;
   periods: HolidayCriterionPeriod[] | null;
   version: string;
 }
 
 export const HolidayCriteriaCatalogSchema: z.ZodType<HolidayCriteriaCatalog, unknown> = object<HolidayCriteriaCatalog>({
+  ranking: str,
   criteria: nullable(arr(HolidayCriterionSchema)),
   periods: nullable(arr(HolidayCriterionPeriodSchema)),
   version: str,
@@ -185,6 +189,7 @@ export interface HolidayCriterionRef {
   name: string;
   scope: string;
   position: number;
+  points: number;
 }
 
 export const HolidayCriterionRefSchema: z.ZodType<HolidayCriterionRef, unknown> = object<HolidayCriterionRef>({
@@ -192,6 +197,7 @@ export const HolidayCriterionRefSchema: z.ZodType<HolidayCriterionRef, unknown> 
   name: str,
   scope: str,
   position: safeInt,
+  points: safeInt,
 });
 
 /** Go: enrollment.HolidayCriterionValue */
@@ -211,6 +217,7 @@ export const HolidayCriterionValueSchema: z.ZodType<HolidayCriterionValue, unkno
 export interface HolidayAllocationCandidate {
   booking_id: string;
   rank: number;
+  score: number;
   registration_id: string;
   submitted_at: string;
   child_id: string;
@@ -225,6 +232,7 @@ export interface HolidayAllocationCandidate {
 export const HolidayAllocationCandidateSchema: z.ZodType<HolidayAllocationCandidate, unknown> = object<HolidayAllocationCandidate>({
   booking_id: int64String,
   rank: safeInt,
+  score: safeInt,
   registration_id: int64String,
   submitted_at: instant,
   child_id: int64String,
@@ -274,6 +282,9 @@ export interface HolidayAllocationDecision {
   placement: string;
   proposal: string;
   rank: number;
+  ranking: string;
+  score: number | null;
+  max_score: number | null;
   criteria_met: string[] | null;
   reason: string;
   decided_at: string;
@@ -292,6 +303,9 @@ export const HolidayAllocationDecisionSchema: z.ZodType<HolidayAllocationDecisio
   placement: str,
   proposal: str,
   rank: safeInt,
+  ranking: str,
+  score: nullable(safeInt),
+  max_score: nullable(safeInt),
   criteria_met: nullable(arr(str)),
   reason: str,
   decided_at: instant,
@@ -301,6 +315,8 @@ export const HolidayAllocationDecisionSchema: z.ZodType<HolidayAllocationDecisio
 /** Go: enrollment.HolidayAllocationBoard */
 export interface HolidayAllocationBoard {
   allocation_mode: string;
+  ranking: string;
+  max_score: number;
   criteria: HolidayCriterionRef[] | null;
   weeks: HolidayAllocationWeek[] | null;
   decisions: HolidayAllocationDecision[] | null;
@@ -308,6 +324,8 @@ export interface HolidayAllocationBoard {
 
 export const HolidayAllocationBoardSchema: z.ZodType<HolidayAllocationBoard, unknown> = object<HolidayAllocationBoard>({
   allocation_mode: str,
+  ranking: str,
+  max_score: safeInt,
   criteria: nullable(arr(HolidayCriterionRefSchema)),
   weeks: nullable(arr(HolidayAllocationWeekSchema)),
   decisions: nullable(arr(HolidayAllocationDecisionSchema)),
@@ -576,7 +594,7 @@ export interface HolidayFormDocument {
 }
 
 export const HolidayFormDocumentSchema: z.ZodType<HolidayFormDocument, unknown> = object<HolidayFormDocument>({
-  id: str,
+  id: int64String,
   filename: str,
   size: safeInt,
 });
@@ -588,10 +606,12 @@ export interface holidayCriterionRequest {
   question?: string;
   scope?: string;
   active?: boolean;
+  points?: number;
 }
 
 /** Go: enrollmenthttp.HolidayCriteriaRequest */
 export interface HolidayCriteriaRequest {
+  ranking?: string;
   criteria?: holidayCriterionRequest[] | null;
   expected_version?: string;
 }
@@ -855,6 +875,12 @@ export const routes = {
     pattern: "/traeger/holiday-periods/{id}/publish",
     portals: ["org"],
     response: success(HolidayPeriodSchema),
+  },
+  "POST /traeger/holiday-periods/{id}/registrations/{registrationId}/consents/{key}/withdraw": {
+    method: "POST",
+    pattern: "/traeger/holiday-periods/{id}/registrations/{registrationId}/consents/{key}/withdraw",
+    portals: ["org"],
+    response: success(HolidayRegistrationDetailSchema),
   },
   "POST /traeger/holiday-periods/{id}/registrations/{registrationId}/freeze": {
     method: "POST",

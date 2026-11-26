@@ -13,6 +13,8 @@ import (
 	"context"
 	"errors"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // ErrNotConfigured reports a missing queue or access port.
@@ -88,16 +90,16 @@ const (
 	bulkIneligiblePastText = "Diese Anfrage betrifft nur vergangene Tage."
 )
 
-// Item is one request of any of the four types. Data holds the unchanged
-// per-type projection (queue shape for view=open, history shape for
-// view=history), discriminated by RequestType.
+// Item is one request of any of the four types. On the wire it is an item of
+// the open list, and the member named like RequestType carries its queue
+// projection; HistoryPageOf turns the items of a history page into HistoryItem.
 type Item struct {
 	RequestType string `json:"request_type"`
 	// OccurredAt is the instant the row is ordered by: the submission on the
 	// open view, the decision in the history. The client merges this list with
 	// the separately gated Anmeldungsänderungen (#2435) on it.
 	OccurredAt      time.Time `json:"occurred_at"`
-	StudentID       string    `json:"student_id"`
+	StudentID       ident.ID  `json:"student_id"`
 	StudentName     string    `json:"student_name"`
 	GroupName       string    `json:"group_name,omitempty"`
 	ExpectedVersion string    `json:"expected_version"`
@@ -131,22 +133,13 @@ type Item struct {
 	// partial absence holds, date -> "HH:MM" (#5698). Absence requests only;
 	// approving them replaces those entries after an explicit confirmation.
 	PartialAbsenceFromByDate map[string]string `json:"partial_absence_from_by_date,omitempty"`
-	// CanCorrect marks a decided request whose decision staff can still
-	// rewrite. History rows only; false where the type keeps no pre-decision
-	// state to revert to, and for rows that were never really decided
-	// (withdrawn, marked done, closed by a care end).
-	CanCorrect      bool `json:"can_correct,omitempty"`
-	FamilyProtected bool `json:"family_protected"`
+	FamilyProtected          bool              `json:"family_protected"`
 	// SubmittedByName is who filed the request (#4359), and
 	// SubmittedByRelationship their stored relationship to the child. Both
 	// are omitted when the school does not know the filer (any more) or keeps
 	// no relationship; the client then names nobody rather than guessing.
 	SubmittedByName         string `json:"submitted_by_name,omitempty"`
 	SubmittedByRelationship string `json:"submitted_by_relationship,omitempty"`
-	// Data is the projection of the open list under the old member name; the
-	// typed members below replace it, and the history has its own path.
-	// Deprecated for one release (#7808).
-	Data any `json:"data" contract_json:"The originating request owner supplies a different DTO for each inbox item kind"`
 	// MasterData, CareSchedule, Offering and Excused carry the projection
 	// of the open list: the member named like RequestType is set.
 	MasterData   *MasterDataChangeRequestResponse `json:"master_data,omitempty"`
@@ -155,10 +148,8 @@ type Item struct {
 	Excused      *StaffExcusedRequestResponse     `json:"excused,omitempty"`
 	// payload is Row.Payload, kept for the history item.
 	payload Payload
-	// studentID is StudentID as the owner queues report it. The wire carries
-	// the string (backend int64 IDs map to frontend strings); the decorations
-	// key on this instead of parsing the string back.
-	studentID int64
+	// canCorrect is Row.CanCorrect, kept for the history item.
+	canCorrect bool
 	// submittedBy is Row.SubmittedBy; the wire carries the name instead.
 	submittedBy int64
 }
@@ -169,7 +160,7 @@ type Item struct {
 type HistoryItem struct {
 	RequestType     string    `json:"request_type"`
 	OccurredAt      time.Time `json:"occurred_at"`
-	StudentID       string    `json:"student_id"`
+	StudentID       ident.ID  `json:"student_id"`
 	StudentName     string    `json:"student_name"`
 	GroupName       string    `json:"group_name,omitempty"`
 	ExpectedVersion string    `json:"expected_version"`
@@ -201,7 +192,7 @@ func HistoryPageOf(page Page) HistoryPage {
 		history.Items = append(history.Items, HistoryItem{
 			RequestType: item.RequestType, OccurredAt: item.OccurredAt, StudentID: item.StudentID,
 			StudentName: item.StudentName, GroupName: item.GroupName, ExpectedVersion: item.ExpectedVersion,
-			CanCorrect: item.CanCorrect, FamilyProtected: item.FamilyProtected,
+			CanCorrect: item.canCorrect, FamilyProtected: item.FamilyProtected,
 			SubmittedByName: item.SubmittedByName, SubmittedByRelationship: item.SubmittedByRelationship,
 			MasterData: item.payload.MasterDataHistory, CareSchedule: item.payload.CareScheduleHistory,
 			Offering: item.payload.OfferingHistory, Excused: item.payload.ExcusedHistory,

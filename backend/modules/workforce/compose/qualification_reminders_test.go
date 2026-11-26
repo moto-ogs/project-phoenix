@@ -9,6 +9,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -95,8 +96,18 @@ func withinCreate(t *testing.T, ctx context.Context, types workforce.StaffQualif
 	})
 }
 
+// withinUpdate saves a kind the way its form does: over the version the
+// list answered just before (ADR 0311). A kind the list does not show gets
+// no version.
 func withinUpdate(t *testing.T, ctx context.Context, types workforce.StaffQualificationTypes, id int64, input workforce.QualificationTypeInput) (workforce.QualificationType, error) {
 	t.Helper()
+	listed, err := within(t, ctx, types.ListQualificationTypes)
+	require.NoError(t, err)
+	for _, kind := range listed {
+		if kind.ID == id {
+			input.ExpectedVersion = workforce.QualificationTypeVersion(kind)
+		}
+	}
 	return within(t, ctx, func(c context.Context) (workforce.QualificationType, error) {
 		return types.UpdateQualificationType(c, id, input)
 	})
@@ -137,6 +148,18 @@ func TestQualificationTypesStartWithTheStandardListPerSchool(t *testing.T) {
 	archived, err := withinUpdate(t, ctx, types, created.ID, workforce.QualificationTypeInput{Name: "Hygieneschulung", ReminderLeadWeeks: 4, Archived: true})
 	require.NoError(t, err)
 	assert.True(t, archived.Archived)
+
+	// ADR 0311: a save from the form read before the archive, or one
+	// without a version, is refused and writes nothing.
+	for name, version := range map[string]string{"outdated": workforce.QualificationTypeVersion(created), "missing": ""} {
+		_, err = within(t, ctx, func(c context.Context) (workforce.QualificationType, error) {
+			return types.UpdateQualificationType(c, created.ID, workforce.QualificationTypeInput{Name: "Überschrieben", ReminderLeadWeeks: 4, ExpectedVersion: version})
+		})
+		require.ErrorIs(t, err, readstate.ErrChanged, name)
+	}
+	stored, err := within(t, ctx, types.ListQualificationTypes)
+	require.NoError(t, err)
+	assert.Equal(t, "Hygieneschulung", standardTypeByID(t, stored, created.ID).Name, "a refused save writes nothing")
 
 	foreignTenant := testpkg.UniqueTestTenantID(t)
 	testpkg.EnsureTestTenant(t, db, foreignTenant)
@@ -401,4 +424,15 @@ func TestQualificationRemindersSkipARetiredSchool(t *testing.T) {
 	notices, mails := deliveries.counts()
 	assert.Zero(t, notices, "a retired school notifies no one")
 	assert.Zero(t, mails, "a retired school mails no one")
+}
+
+func standardTypeByID(t *testing.T, types []workforce.QualificationType, id int64) workforce.QualificationType {
+	t.Helper()
+	for _, kind := range types {
+		if kind.ID == id {
+			return kind
+		}
+	}
+	t.Fatalf("qualification type %d is not listed", id)
+	return workforce.QualificationType{}
 }

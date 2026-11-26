@@ -1,6 +1,26 @@
 import type { ErrorCode } from "~/lib/error-codes.generated";
 import { parseRetryAfter } from "~/lib/retry-after";
 
+const catalogValues = new WeakMap<ApiError, Record<string, unknown>>();
+
+export function apiErrorCatalogValues(
+  error: ApiError,
+): Record<string, unknown> {
+  return catalogValues.get(error) ?? {};
+}
+
+async function decodeCatalogValues(error: ApiError): Promise<void> {
+  if (!error.code || !error.details) return;
+  const { problemDetails } =
+    await import("~/lib/contract/problem-details.generated");
+  const code = error.code as keyof typeof problemDetails;
+  if (!Object.hasOwn(problemDetails, code)) return;
+  const decoded = problemDetails[code].safeParse(error.details);
+  if (decoded.success && isProblemRecord(decoded.data)) {
+    catalogValues.set(error, decoded.data);
+  }
+}
+
 /**
  * Types a wire code for comparison against registry codes, so a literal that
  * is not in error-registry/ fails the type check. The value itself is not
@@ -16,6 +36,7 @@ export class ApiError extends Error {
   code?: ErrorCode;
   /** Backend diagnostic detail. It is for logs, never for user-facing copy. */
   detail?: string;
+  /** @rawProblemDetails Read business fields through a generated decoder. */
   details?: Record<string, unknown>;
   errors?: { field: string; reason: string }[];
   instance?: string;
@@ -23,10 +44,7 @@ export class ApiError extends Error {
   retryAfterSeconds?: number;
   /** No HTTP response arrived; the status is a stand-in (unavailableApiError). */
   noResponse?: boolean;
-  /**
-   * The parsed RFC 9457 body, for the extension members of a domain refusal
-   * (a 409's `conflicts`). Undefined when the body was not JSON.
-   */
+  /** @rawProblemEnvelope Parsed envelope, for passing to a generated refusal decoder. */
   declare readonly problem?: Readonly<Record<string, unknown>>;
 
   constructor(
@@ -81,14 +99,23 @@ const LEGACY_READ_STATE_CODES: ReadonlySet<ErrorCode> = new Set<ErrorCode>([
   "enrollment.traeger_preview_stale",
   "grade_transition.preview_stale",
   "meals.billing_month_changed",
+  "meals.day_changed",
   "parent_billing.billing_run_changed",
   "parent_billing.family_children_import_changed",
   "parent_billing.sepa_debits_changed",
   "parent_billing.sepa_import_changed",
   "parent_billing.sepa_mandate_text_changed",
+  "pickup.preview_stale",
+  "students.care_exit_preview_changed",
+  "students.care_request_plan_changed",
   "students.change_request_stale",
   "students.companions_changed",
+  "students.deletion_constraints_changed",
   "students.deletion_preview_changed",
+  "students.pickup_change_impact_changed",
+  "timetable.closing_day_notice_changed",
+  "timetable.completion_confirmation_stale",
+  "timetable.template_booking_gap_stale",
   "traeger.closing_day_bookings_changed",
   "workforce.traeger_staff_import_changed",
 ]);
@@ -148,8 +175,6 @@ export interface ProblemBody {
   code: ErrorCode;
   errors?: { field: string; reason: string }[];
   details?: Record<string, unknown>;
-  /** Companion-plan 409 of the student PUT (CompanionPlanConflictError). */
-  conflicts?: unknown[];
 }
 
 /**
@@ -180,6 +205,7 @@ export function problemTitle(status: number): string {
     404: "Not Found",
     405: "Method Not Allowed",
     409: "Conflict",
+    412: "Precondition Failed",
     413: "Content Too Large",
     422: "Unprocessable Content",
     429: "Too Many Requests",
@@ -252,14 +278,8 @@ export function apiErrorFromBody(
   status: number,
   body: unknown,
 ): ApiError {
-  const data =
-    body && typeof body === "object" ? (body as Record<string, unknown>) : {};
-  const details =
-    data.details &&
-    typeof data.details === "object" &&
-    !Array.isArray(data.details)
-      ? (data.details as Record<string, unknown>)
-      : undefined;
+  const data = isProblemRecord(body) ? body : {};
+  const details = isProblemRecord(data.details) ? data.details : undefined;
   const errors = Array.isArray(data.errors)
     ? data.errors.filter(
         (entry): entry is { field: string; reason: string } =>
@@ -286,12 +306,18 @@ export function apiErrorFromBody(
   return error;
 }
 
+export function isProblemRecord(
+  value: unknown,
+): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
 /**
  * For clients that already read the body as text: keeps their message and
  * takes code, field errors and request ID from the envelope when the text is
  * JSON.
  */
-export function apiErrorFromText(
+function apiErrorFromText(
   message: string,
   status: number,
   text: string,
@@ -321,6 +347,11 @@ export async function apiErrorFromResponse(
     // Body already consumed or the stream broke: the status still classifies.
   }
   const error = apiErrorFromText(message, response.status, text);
+  try {
+    await decodeCatalogValues(error);
+  } catch {
+    // An unavailable lazy chunk must not hide the original refusal.
+  }
   // A refusal with a wait (429, 503) tells the screen when to try again.
   let retryAfter: number | null = null;
   try {

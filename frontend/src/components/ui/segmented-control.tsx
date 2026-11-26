@@ -131,6 +131,8 @@ export function SegmentedControl<T extends string>({
   // dürfen die Segmente gemeinsam höher machen, statt aus ihnen zu ragen.
   // Schriftgröße `text-sm`, nicht `text-xs`: ein Bedienelement ist kein
   // Kleingedrucktes (Typo-Boden, TENANT-PAGE-SPEC).
+  // Ausnahme: Bei voller Breite gilt die Mindestbreite am Telefon nicht, die
+  // Segmente teilen sich dort die Breite (#8128).
   const height =
     fullWidth && !iconOnly
       ? "h-auto min-h-8 py-1 max-sm:min-h-9 pointer-coarse:min-h-9"
@@ -207,8 +209,12 @@ export function SegmentedControl<T extends string>({
               onClick={() => onChange(item.value)}
               // Ein langes Wort („Homeoffice") passt am Telefon nicht in ein
               // Drittel der Breite: weniger Rand, Silbentrennung, notfalls
-              // Umbruch im Wort, statt in das Nachbarsegment zu laufen.
-              className={`${base} rounded-md [overflow-wrap:anywhere] hyphens-auto max-sm:px-2 ${
+              // Umbruch im Wort, statt in das Nachbarsegment zu laufen. Aus
+              // demselben Grund gilt die Mindestbreite am Telefon nicht: fünf
+              // Segmente zu 84 px (fünf Jahre, #8128) ragten sonst über den
+              // Rand, und das letzte war abgeschnitten. Unter 360 px reicht
+              // der schmalere Rand, damit eine Jahreszahl ganz bleibt.
+              className={`${base} rounded-md [overflow-wrap:anywhere] hyphens-auto max-[359px]:px-1 max-sm:min-w-0 min-[360px]:max-sm:px-2 ${
                 active
                   ? "bg-white text-gray-900 shadow-sm"
                   : "text-gray-600 hover:text-gray-900"

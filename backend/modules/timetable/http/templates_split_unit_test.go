@@ -4,9 +4,10 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 func TestUpdateTemplatePlanningTrackThreeState(t *testing.T) {
@@ -20,7 +21,7 @@ func TestUpdateTemplatePlanningTrackThreeState(t *testing.T) {
 	}{
 		{name: "omitted preserves", wantProvided: false},
 		{name: "null clears", fragment: `"planning_track_id": null`, wantProvided: true},
-		{name: "number assigns", fragment: `"planning_track_id": 42`, wantProvided: true, wantValue: testInt64Ptr(42)},
+		{name: "string assigns", fragment: `"planning_track_id": "42"`, wantProvided: true, wantValue: testInt64Ptr(42)},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -52,7 +53,7 @@ func TestBuildTemplateSplitInputPlanningTrackThreeState(t *testing.T) {
 	}{
 		{name: "omitted inherits", wantProvided: false},
 		{name: "null clears", fragment: `"planning_track_id": null`, wantProvided: true},
-		{name: "number assigns", fragment: `"planning_track_id": 42`, wantProvided: true, wantValue: testInt64Ptr(42)},
+		{name: "string assigns", fragment: `"planning_track_id": "42"`, wantProvided: true, wantValue: testInt64Ptr(42)},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -85,8 +86,8 @@ func splitBodyJSON(requiredStaffFragment string) string {
 		"weekdays": [1],
 		"start_time": "14:00",
 		"end_time": "15:00",
-		"room_id": 3,
-		"category_id": 2,
+		"room_id": "3",
+		"category_id": "2",
 		` + rs + `
 		"effective_date": "2026-05-04"
 	}`
@@ -220,7 +221,7 @@ func TestBuildTemplateSplitInput_SourceFieldsThreeState(t *testing.T) {
 	t.Run("values -> set (provided)", func(t *testing.T) {
 		req := &splitTemplateRequest{}
 		require.NoError(t, json.Unmarshal([]byte(splitBodyJSON(
-			`"source_care_offering_ids": [7, 9], "source_grade_levels": [2, 3]`)), req))
+			`"source_care_offering_ids": ["7", "9"], "source_grade_levels": [2, 3]`)), req))
 
 		in, err := buildTemplateSplitInput(100, req)
 		require.NoError(t, err)
@@ -242,8 +243,8 @@ func TestSplitTemplateRequestBind_RejectsWeekendWeekdays(t *testing.T) {
 		"weekdays": [6],
 		"start_time": "14:00",
 		"end_time": "15:00",
-		"room_id": 3,
-		"category_id": 2,
+		"room_id": "3",
+		"category_id": "2",
 		"effective_date": "2026-05-04"
 	}`), req))
 

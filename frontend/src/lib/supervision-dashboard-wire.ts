@@ -9,6 +9,7 @@ import type {
   Visit,
 } from "~/lib/contract/active.generated";
 import type { DepartureMode } from "~/lib/departure-plan";
+import { studentPhotoHref } from "~/lib/student-photo-href";
 import type { CareDayStatus } from "~/lib/timetable-types";
 import type { PlannedTimetableInstance } from "~/lib/timetable-operations-types";
 
@@ -33,7 +34,9 @@ function toSupervisionVisit(v: Visit | OpenRoomStudent) {
     excused: v.excused,
     excusedSince: v.excused_since,
     classHandover: v.class_handover,
-    photoUrl: v.photo_url,
+    photoUrl: v.photo_version
+      ? studentPhotoHref(v.student_id, v.photo_version)
+      : undefined,
   };
 }
 
@@ -226,6 +229,12 @@ export function mapSupervisionDashboard(wire: DashboardProjection) {
       body: hint.body,
       author_name: hint.author_name,
       school_class: hint.school_class,
+    })),
+    plannedActivities: (wire.planned_activities ?? []).map((activity) => ({
+      studentId: activity.student_id,
+      title: activity.title,
+      start_time: activity.start_time,
+      end_time: activity.end_time,
     })),
     arrivalTimes: (wire.arrival_times ?? []).map((a) => ({
       studentId: a.student_id,

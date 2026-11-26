@@ -12,6 +12,10 @@ Punkte 4 und 5 und [ADR 0040](0040-every-role-may-import-the-shared-kernel.md).
 Sie fügt das Paket `sharedkernel/ident` zum Owner `shared-kernel` (Rolle
 `contract`) hinzu, keine Regel, keine Tabelle und keine Route.
 
+> Geltender Stand: Alle Rollen verwenden `ident.ID`. Die HTTP-Naht
+> schreibt und liest Dezimalstrings; gespeichertes JSON bleibt numerisch.
+> Die Nachträge dokumentieren die Zwischenschritte und Geräte-Ausnahmen.
+
 ## Kontext
 
 Phase 2 lässt Go auf allen angemeldeten Routen Kennungen als JSON-String
@@ -53,7 +57,7 @@ Der Typ aus ADR 0270, `common.ID`, liegt in `api/common`. Das dürfen nur
    Prüfcode, eine geänderte Pflichtliste würde die Basis ablehnen. Die
    Liste folgt in einem eigenen Schritt, wenn sie gebraucht wird.
 4. **Phase 2 geht in einem Deploy hinaus, nicht in zwei Releases.**
-   Abweichend von ADR 0270 Punkt 5 und dem ersten Nachtrag wechselt jedes
+   Abweichend vom zuerst geplanten Wechsel in zwei Releases wechselt jedes
    Feld direkt auf `ID` und den strengen Decoder `int64String`, ohne die
    Zwischenmarke `contract:"legacy-id"`. Bewusst gegen
    „expand, then contract“ in einem Release liegen:
@@ -131,10 +135,19 @@ was eine Antwort-Kennung als Zahl zuließ:
    fest.
 4. **`/auth/tenant/resolve` steht im Vertrag** als öffentliche Route.
    `tenant_id` und `organization_id` reisen als String; das Frontend ruft
-   sie über `/api/auth/tenant/resolve` und den Katalog-Proxy, die
+   sie im Browser über `/api/auth/tenant/resolve` und den Katalog-Proxy
+   auf, im Server über denselben Routeneintrag mit `contractGet`.
+   Der Server-Cache speichert dekodierte Treffer und 404 und prüft bekannte
+   Branding-Felder. `contractGet` nimmt den Slug im getypten `query` entgegen.
+   Bei Varianten-Reads gilt dieselbe Kennungsprüfung im jeweils ausgewählten
+   Decoder (siehe [ADR 0270](0270-der-vertrag-zwischen-go-und-frontend-entsteht-aus-der-go-registrierung.md)).
+   Die
    Schulkennung der Oberfläche (`TenantInfo.tenantId`) ist ein String. Die
    Schulkennung im Sitzungstoken bleibt eine Zahl; die Vergleiche wandeln sie
    in Text.
+
+Die HTTP-Hüllen `OptionalJSON` und `DeferredJSON` nutzen auch beim
+   Lesen ihrer inneren Werte den strengen Wire-Decoder.
 
 Der Wächter gegen neue Zahl-Kennungen ist damit der Generator selbst;
 `scripts/check-contract-shrink.mjs` vergleicht nur noch die Routen ohne
@@ -194,3 +207,65 @@ Entscheidung:
    vorigen Frontends senden in vielen Körpern Zahlen; ein strenger Leser
    bräche sie beim Deploy (ADR 0270, „expand, then contract“). Nach dem
    nächsten Release liest `ident.ID.UnmarshalJSON` nur noch einen String.
+
+## Nachtrag vom 2026-11-24: `ident.ID` liest weiter Zahlen
+
+Punkt 3 vom 2026-11-22 entfällt. Der strenge Leser wurde nach dem Release
+1.16.0 erprobt (#7723) und brach das Zurücklesen von gespeichertem JSON, das
+nach dem Nachtrag vom 2026-11-21 Zahlen trägt (Betreuungsverträge,
+Ferienanmeldungen), und den Seeder, der Zahlen sendet.
+
+1. `ident.ID.UnmarshalJSON` liest weiter String oder Zahl.
+2. Ob und wo eine Zahl vom Client abgelehnt wird, entscheidet #7987.
+3. `scripts/check-contract-compat.mjs` lässt `lax_id` der Basis nicht mehr zu
+   `id` werden; die Art trägt kein Release mehr.
+
+## Nachtrag vom 2026-11-24: Strenge beim Lesen der HTTP-Anfrage
+
+Dieser Nachtrag beantwortet die offene Frage aus Punkt 2 des vorigen Nachtrags (#7987).
+
+1. HTTP-Anfragen lesen `ident.ID` nur als Dezimalstring. `api/common`
+   setzt den Decoder für `render.Bind`. Handler und eigene Request-Leser,
+   die JSON selbst lesen, verwenden `wire.Decode` oder `wire.Unmarshal`.
+   Die Kiosk-Geräte-API behält ihre numerischen Felder.
+2. `encoding/json` schreibt `ident.ID` weiterhin als Zahl und liest
+   Zahlen wie Strings. Das betrifft unter anderem die gespeicherten
+   Betreuungsverträge und den Verlauf von Ferienanmeldungen.
+3. Seeder und Simulation schreiben ihre HTTP-Körper mit `wire.Marshal`.
+   Ihre Portal-Kennungen sind `ident.ID`; numerische Kiosk-Felder bleiben
+   `int64`.
+
+## Text unter einem Kennungsnamen
+
+Auch Kennungen in RFC-9457-`details` sind auf der HTTP-Naht
+Dezimalstrings. Strukturierte Fehlerwerte verwenden `ident.ID` und
+denselben `wire`-Encoder wie Erfolgsantworten und SSE. Der Browser prüft
+erzeugte Dezimalstrings auf kanonische Schreibweise und den
+vorzeichenbehafteten 64-Bit-Wertebereich. Der Go-Wächter vergleicht den
+gerenderten Typ mit der Registrierung des Fehlercodes. Die Middleware
+leitet Kennungen unverändert weiter. Die Kiosk-API
+`/api/iot/*` behält numerische Kennungen auch in ihren Fehlerdetails.
+
+`ident.IDOrNone` bildet bestehende Felder ab, die für eine fehlende
+Kennung `""` senden oder annehmen. Der Vertrag kennt beide Fälle als
+Dezimal-ID oder Leerwert. Neue optionale Felder verwenden `*ident.ID`.
+Für Nachrichten trägt SSE `sender_account_id` als Kennung; `source` ist
+kein Browser-Ersatz dafür.
+
+`id`, `*_id` und `*_ids` sind Hinweise, keine Typen. Eine Bigint-Kennung
+trägt `ident.ID`, keine von Hand formatierte Go-Zeichenkette. Ein Feld
+mit echtem Text unter einem Kennungsnamen nennt in
+`contract_text:"Begründung"` sein Format oder seine Herkunft, zum
+Beispiel ein RFID-Tag, eine SEPA-Gläubigerkennung oder ein
+Kalenderschlüssel aus mehreren Teilen. Der Vertrag führt die Begründung
+als `text_reason`. Der Ratchet lehnt unmarkierten Text unter einem
+Kennungsnamen ab. Er verfolgt auch direkt oder über lokale Bindungen
+formatierte Ganzzahlen in JSON-Struct-Feldern, unabhängig vom Feldnamen.
+
+## Nachtrag vom 2026-11-24: Sitzungen
+
+Neu ausgestellte Sitzungs-JWTs tragen Konto-, Schul-, Träger- und
+Vorschau-Admin-Kennungen als Dezimalstrings. Die Sitzungsprüfung übernimmt
+die Claims einschließlich der Herkunft der Rollen. Auth.js und der Browser
+vergleichen die Kennungen ohne numerische Umwandlung. Alte signierte
+Zahl-Claims werden nur im exakt darstellbaren Bereich gelesen.

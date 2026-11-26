@@ -29,7 +29,14 @@ const {
   mockUseSession: vi.fn(),
 }));
 
-vi.mock("~/lib/swr", () => ({ useSWRAuth: mockUseSWRAuth }));
+// These cases create appointments; the edit form's detail read
+// (preload, reload after a refusal) is not reached.
+vi.mock("~/lib/swr", () => ({
+  useTenantMutate: () => vi.fn(),
+  useSWRAuth: mockUseSWRAuth,
+  useSWRPreload: () => () => Promise.resolve(undefined),
+  revalidateOrThrow: () => Promise.reject(new Error("not reached")),
+}));
 
 // Personalprofil in dieser Schule laut Nutzerkontext (#7306).
 const ownStaff = vi.hoisted(() => ({ present: true }));
@@ -70,7 +77,7 @@ import type {
   CalendarRecipientOptions,
   CalendarResponse,
 } from "~/lib/personal-calendar-api";
-import StaffCalendarPage from "./page";
+import StaffCalendarPage from "./page-content";
 
 const TITLE = "Termin erstellen";
 const FOOTER = ["Abbrechen", /Speichert/];

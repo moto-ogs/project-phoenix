@@ -35,6 +35,10 @@ const (
 	// (enrollment.care_facility_term, #6042) for the mail header. A payload
 	// enqueued before it existed has none; the header then says "OGS".
 	EnrollmentPayloadCareFacilityTerm = "care_facility_term"
+	// EnrollmentPayloadCareFacilityArticle is the article of that term
+	// (#8136). A payload queued before the article existed has none and
+	// renders with "die".
+	EnrollmentPayloadCareFacilityArticle = "care_facility_article"
 )
 
 // StatusURL builds the parent-facing status link sent in the submitted,
@@ -132,6 +136,9 @@ type MailBrand struct {
 	LogoURL          string
 	MotoLogoURL      string
 	CareFacilityTerm string
+	// CareFacilityArticle is the article of that term: "der", "die" or
+	// "das" (#8136).
+	CareFacilityArticle string
 }
 
 // Notifications is Enrollment's side of the parent and admin mails: the
@@ -212,11 +219,12 @@ type CaptchaVerifier interface {
 // RequestMailOutcome is what became of one mail to the family of an application
 // (#5934). Kind is one of the MailKind values.
 type RequestMailOutcome struct {
-	Kind        string     `json:"kind"`
-	Outcome     string     `json:"outcome"`
-	AddressMark string     `json:"address_mark,omitempty"`
-	Stopped     bool       `json:"stopped,omitempty"`
-	OutcomeAt   *time.Time `json:"outcome_at,omitempty"`
+	AwaitingFeedback bool       `json:"awaiting_feedback,omitempty"`
+	Kind             string     `json:"kind"`
+	Outcome          string     `json:"outcome"`
+	AddressMark      string     `json:"address_mark,omitempty"`
+	Stopped          bool       `json:"stopped,omitempty"`
+	OutcomeAt        *time.Time `json:"outcome_at,omitempty"`
 	// CreatedAt is when the mail came about; the mails of a holiday
 	// registration carry it, so two mails of one kind stay apart (#6976).
 	CreatedAt *time.Time `json:"created_at,omitempty"`

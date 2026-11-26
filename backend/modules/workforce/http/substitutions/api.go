@@ -22,6 +22,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -52,7 +53,7 @@ type Failure struct {
 	Err     error
 	// Details and Field come from a refusal that names its values and the
 	// request field it is about (#2516).
-	Details map[string]any
+	Details workforce.SubstitutionRefusalValues
 	Field   string
 }
 
@@ -279,12 +280,11 @@ func assignmentResponseOf(requested workforce.SubstitutionTargetType, created *w
 
 func decodeAssignment(body io.Reader) (assignmentRequest, error) {
 	var request assignmentRequest
-	decoder := json.NewDecoder(body)
-	decoder.DisallowUnknownFields()
+	decoder := wire.NewObjectDecoder(body)
 	if err := decoder.Decode(&request); err != nil {
 		return assignmentRequest{}, err
 	}
-	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+	if err := decoder.Decode(&struct{}{}); !errors.Is(err, io.EOF) {
 		return assignmentRequest{}, errors.New("request body must contain one JSON object")
 	}
 	return request, nil
@@ -312,7 +312,7 @@ func RouteContractTypes() ContractTypes {
 
 func (rs *Resource) end(w http.ResponseWriter, r *http.Request) {
 	var request endRequest
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+	if err := wire.Decode(r.Body, &request); err != nil {
 		rs.runtime.Failure(w, r, invalidRequest("Die Anfrage ist ungültig.", codeInvalidTarget))
 		return
 	}
@@ -433,11 +433,11 @@ func (rs *Resource) renderModuleError(w http.ResponseWriter, r *http.Request, er
 
 func classify(err error) Failure {
 	spec := internalModuleError
-	var details map[string]any
+	var details workforce.SubstitutionRefusalValues
 	field := ""
 	if operation, ok := errors.AsType[*workforce.SubstitutionOperationError](err); ok {
 		spec = operationErrorSpec(operation)
-		details, field = refusalDetails(operation.Details), operation.Field
+		details, field = operation.Details, operation.Field
 	} else {
 		for _, candidate := range moduleErrorSpecs {
 			if errors.Is(err, candidate.target) {
@@ -484,20 +484,4 @@ func operationErrorSpec(operation *workforce.SubstitutionOperationError) moduleE
 
 var internalModuleError = moduleErrorSpec{
 	status: http.StatusInternalServerError, code: codeInternal, message: "Das hat leider nicht geklappt. Bitte versuche es noch einmal.",
-}
-
-// refusalDetails puts the values a schedule refusal names into wire form;
-// nil when it names none (#2516).
-func refusalDetails(values workforce.SubstitutionRefusalValues) map[string]any {
-	details := map[string]any{}
-	if values.Date != "" {
-		details["date"] = values.Date
-	}
-	if values.Max > 0 {
-		details["max"] = values.Max
-	}
-	if len(details) == 0 {
-		return nil
-	}
-	return details
 }

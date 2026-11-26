@@ -161,12 +161,12 @@ func (l *CareNoticeLetters) CreateCareNoticeLetters(ctx context.Context, reviewe
 	if err != nil {
 		return parentbilling.CareNoticeLetters{}, fmt.Errorf("parent billing: read letterhead: %w", err)
 	}
-	if err := noticeLetterheadComplete(head, missing); err != nil {
+	if err := noticeLetterheadsComplete(head, missing); err != nil {
 		return parentbilling.CareNoticeLetters{}, err
 	}
 	created := make([]int64, 0, len(missing))
 	for _, notice := range missing {
-		file, err := l.renderer.RenderLetter(feeNoticeLetter(notice, head), careNoticeFilename(notice))
+		file, err := l.renderer.RenderLetter(feeNoticeLetter(notice, issuerLetterhead(head, notice.Issuer)), careNoticeFilename(notice))
 		if err != nil {
 			return parentbilling.CareNoticeLetters{}, fmt.Errorf("parent billing: render notice letter: %w", err)
 		}
@@ -264,7 +264,7 @@ func (l *CareNoticeLetters) MailCareNoticeLetters(ctx context.Context, reviewer 
 				return parentbilling.BillingLetterSeries{}, err
 			}
 		}
-		if err := l.send(ctx, reviewer, &current, notice, traeger); err != nil {
+		if err := l.send(ctx, reviewer, &current, notice, mailSenderOf(notice.Issuer, traeger)); err != nil {
 			return parentbilling.BillingLetterSeries{}, err
 		}
 		series.Queued++
@@ -317,7 +317,7 @@ func (l *CareNoticeLetters) MailCareNoticeLetter(ctx context.Context, reviewer p
 	if err != nil {
 		return parentbilling.CareNoticeMailing{}, err
 	}
-	if err := l.send(ctx, reviewer, &current, notice, traeger); err != nil {
+	if err := l.send(ctx, reviewer, &current, notice, mailSenderOf(notice.Issuer, traeger)); err != nil {
 		return parentbilling.CareNoticeMailing{}, err
 	}
 	sends := current.sends[record.ID]
@@ -579,6 +579,17 @@ func (l *CareNoticeLetters) traegerName(ctx context.Context, organizationID int6
 func (l *CareNoticeLetters) recordRead(ctx context.Context, reviewer parentbilling.HolidayReviewer, runID int64, details map[string]any) error {
 	if err := l.store.InsertCareNoticeRunEvent(ctx, reviewer.OrganizationID, runID, reviewer.AccountID, runEventRead, details); err != nil {
 		return fmt.Errorf("parent billing: record notice letter read: %w", err)
+	}
+	return nil
+}
+
+// noticeLetterheadsComplete checks the letterhead of each notice: each
+// prints its issuer's sender and account (#8040).
+func noticeLetterheadsComplete(head parentbilling.Letterhead, notices []parentbilling.CareNotice) error {
+	for _, notice := range notices {
+		if err := noticeLetterheadComplete(issuerLetterhead(head, notice.Issuer), []parentbilling.CareNotice{notice}); err != nil {
+			return err
+		}
 	}
 	return nil
 }

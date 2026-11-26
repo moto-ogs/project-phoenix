@@ -21,6 +21,7 @@ type (
 	AmendableContract = ports.AmendableContract
 	SentDocument      = ports.SentDocument
 	VersionStep       = ports.VersionStep
+	SentContract      = ports.SentContract
 )
 
 const (

@@ -17,9 +17,6 @@ import { ActionHint } from "./action-hint";
 import { buttonClassName } from "./button";
 import { FileTypeIcon } from "./file-type-icon";
 
-/** One file of a message, in the shape every chat delivers. */
-type MessageAttachmentItem = Readonly<sharedContract.AttachmentResponse>;
-
 export interface MessageAttachmentLabels {
   /** "Bild öffnen: {name}" */
   readonly openImage: (filename: string) => string;
@@ -47,7 +44,9 @@ const GERMAN_LABELS: MessageAttachmentLabels = {
 const MAX_TILES = 4;
 
 /** A single picture keeps its own shape between portrait 3:4 and wide 16:9. */
-function singleAspect(item: MessageAttachmentItem): number {
+function singleAspect(
+  item: Readonly<sharedContract.AttachmentResponse>,
+): number {
   if (!item.width || !item.height) return 4 / 3;
   return Math.min(16 / 9, Math.max(3 / 4, item.width / item.height));
 }
@@ -66,9 +65,9 @@ export function MessageAttachments({
   loadFile,
   labels = GERMAN_LABELS,
 }: Readonly<{
-  attachments: readonly MessageAttachmentItem[];
-  /** Builds the address that saves one attachment. */
-  downloadUrl: (attachmentId: string) => string;
+  attachments: readonly Readonly<sharedContract.AttachmentResponse>[];
+  /** Builds the attachment address for saving or inline display. */
+  downloadUrl: (attachmentId: string, inline?: boolean) => string;
   /** Which edge the block hugs: the sender's own messages sit at the end. */
   align?: "start" | "end";
   /**
@@ -85,7 +84,7 @@ export function MessageAttachments({
   // The viewer pages in the order the message shows them: pictures, files.
   const ordered = [...images, ...files];
   const viewerItems: ViewerItem[] = ordered.map((item) => ({
-    src: `${downloadUrl(item.id)}?inline=1`,
+    src: downloadUrl(item.id, true),
     name: item.filename,
     contentType: item.content_type,
     sizeBytes: item.size_bytes,
@@ -142,7 +141,7 @@ export function MessageAttachments({
               >
                 {/* eslint-disable-next-line @next/next/no-img-element -- private, session-bound file; next/image cannot fetch it */}
                 <img
-                  src={`${downloadUrl(item.id)}?inline=1`}
+                  src={downloadUrl(item.id, true)}
                   alt={item.filename}
                   loading="lazy"
                   decoding="async"
@@ -185,7 +184,7 @@ export function MessageAttachments({
               >
                 {item.filename}
               </button>
-              <span className="block text-xs text-gray-500">
+              <span className="block text-sm text-gray-500">
                 {kind ? `${kind} · ` : ""}
                 {formatAttachmentSize(item.size_bytes)}
               </span>

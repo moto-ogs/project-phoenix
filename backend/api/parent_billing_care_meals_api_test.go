@@ -69,7 +69,7 @@ func releaseMealMonth(t *testing.T, db *bun.DB, organizationID, schoolID, studen
 }
 
 func mealPrice(schoolID int64, validFrom, mode string, cents int64) map[string]any {
-	return map[string]any{"school_id": schoolID, "valid_from": validFrom, "mode": mode, "amount_cents": cents}
+	return map[string]any{"school_id": fmt.Sprint(schoolID), "valid_from": validFrom, "mode": mode, "amount_cents": cents}
 }
 
 // Hardt (MK-001) through the routes: November and December 2029 released
@@ -342,7 +342,7 @@ func TestCareMealExcludedChildGetsNoMensaPosition(t *testing.T) {
 
 	run := f.startRun(t, careMonth)
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/exclusions"),
-		map[string]any{"contract_id": mia, "service": "care", "reason": "Rückfrage"})
+		map[string]any{"contract_id": fmt.Sprint(mia), "service": "care", "reason": "Rückfrage"})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	reviewed := f.run(t, int64(run.ID))
 	rec = traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(int64(run.ID), "/release"), careRelease(reviewed))
@@ -743,11 +743,11 @@ func TestCareMealExclusionLeavesOutOnlyTheChosenInvoice(t *testing.T) {
 	mia := preview.Invoices[0].ContractID
 	exclude := func(service, reason string) *httptest.ResponseRecorder {
 		return traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(runID, "/exclusions"),
-			map[string]any{"contract_id": mia, "service": service, "reason": reason})
+			map[string]any{"contract_id": fmt.Sprint(mia), "service": service, "reason": reason})
 	}
 	include := func(service string) *httptest.ResponseRecorder {
 		return traegerJSON(t, f.traeger, f.office.token, http.MethodPost, careRunPath(runID, "/inclusions"),
-			map[string]any{"contract_id": mia, "service": service})
+			map[string]any{"contract_id": fmt.Sprint(mia), "service": service})
 	}
 	read := func() careExclusionRun {
 		return decodeExclusionRun(t, traegerJSON(t, f.traeger, f.office.token, http.MethodGet, careRunPath(runID, ""), nil))
@@ -810,7 +810,7 @@ func TestCareExclusionSwitchBetweenEqualInvoicesChangesTheFingerprint(t *testing
 	releaseMealMonth(t, db, f.office.organization, school, testpkg.UniqueTestTenantID(t), "2029-12-01", "Mia", 1)
 	run := f.startRun(t, careMonth)
 	exclusion := func(path, service string, extra map[string]any) careExclusionRun {
-		body := map[string]any{"contract_id": mia, "service": service}
+		body := map[string]any{"contract_id": fmt.Sprint(mia), "service": service}
 		for key, value := range extra {
 			body[key] = value
 		}

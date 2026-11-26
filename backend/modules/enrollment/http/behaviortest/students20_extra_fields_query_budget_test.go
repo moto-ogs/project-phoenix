@@ -4,9 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strconv"
 	"testing"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	"github.com/moto-ogs/project-phoenix/api"
 	"github.com/moto-ogs/project-phoenix/api/testutil"
@@ -53,7 +54,7 @@ func TestStudents20ExtraFieldsGrowthQueryBudget(t *testing.T) {
 			sibling.CreatedStudentID = &other.ID
 			sibling.CustomData = testFormValues(map[string]any{"child_note": "sibling only"})
 			require.NoError(t, testpkg.TenantCommand1(t, testpkg.Ctx(t), tc.db, f.env.repos.Enrollment().InsertChild, sibling))
-			expected = append([]enrollmentHTTP.StudentEnrollmentExtraFieldGroup{{RequestID: strconv.FormatInt(request.ID, 10), PhaseName: f.env.phase.Name, SubmittedAt: request.SubmittedAt, Fields: []enrollmentHTTP.StudentEnrollmentExtraField{{Key: "child_note", Label: "Child note", Type: "text", Value: fmt.Sprintf("value%02d", i)}}}}, expected...)
+			expected = append([]enrollmentHTTP.StudentEnrollmentExtraFieldGroup{{RequestID: ident.ID(request.ID), PhaseName: f.env.phase.Name, SubmittedAt: request.SubmittedAt, Fields: []enrollmentHTTP.StudentEnrollmentExtraField{{Key: "child_note", Label: "Child note", Type: "text", Value: fmt.Sprintf("value%02d", i)}}}}, expected...)
 		}
 		counter.Reset()
 		req := testutil.NewRequest(http.MethodGet, fmt.Sprintf("/api/students/%d/enrollment-extra-fields", child.ID), nil)

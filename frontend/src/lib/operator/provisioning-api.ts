@@ -1,4 +1,10 @@
-import { bffJson, bffJsonUncontracted } from "~/lib/bff-fetch";
+import {
+  accountPage,
+  type AccountPage,
+  type AccountPageQuery,
+  type AccountScope,
+} from "./account-pages";
+import { bffJson } from "~/lib/bff-fetch";
 import type * as operatorDevicesContract from "~/lib/contract/operator-devices.generated";
 import type * as operatorSchoolsContract from "~/lib/contract/operator-schools.generated";
 import type * as operatorUnregisteredTagScansContract from "~/lib/contract/operator-unregistered-tag-scans.generated";
@@ -14,8 +20,6 @@ import type {
   School,
   SchoolSummary,
   Invitation,
-  SchoolAccount,
-  OrgAccount,
   OperatorDevice,
   OperatorPerson,
   UnregisteredTagScan,
@@ -147,22 +151,32 @@ class OperatorProvisioningService {
     return mapSchool(result);
   }
 
-  async listSchoolAccounts(schoolId: string): Promise<SchoolAccount[]> {
-    const data = await bffJson(
+  async listAccountPage(
+    scope: AccountScope,
+    query: AccountPageQuery,
+  ): Promise<AccountPage> {
+    if (scope.kind === "school") {
+      const { data, pagination } = await bffJson(
+        "platform",
+        "GET /operator/schools/{id}/accounts",
+        { params: { id: scope.id }, query },
+      );
+      return accountPage(data.map(mapSchoolAccount), pagination);
+    }
+    if (scope.kind === "organization") {
+      const { data, pagination } = await bffJson(
+        "platform",
+        "GET /operator/organizations/{id}/accounts",
+        { params: { id: scope.id }, query },
+      );
+      return accountPage(data.map(mapOrgAccount), pagination);
+    }
+    const { data, pagination } = await bffJson(
       "platform",
-      "GET /operator/schools/{id}/accounts",
-      { params: { id: schoolId } },
+      "GET /operator/accounts",
+      { query },
     );
-    return data.map(mapSchoolAccount);
-  }
-
-  async listOrganizationAccounts(orgId: string): Promise<OrgAccount[]> {
-    const data = await bffJson(
-      "platform",
-      "GET /operator/organizations/{id}/accounts",
-      { params: { id: orgId } },
-    );
-    return data.map(mapOrgAccount);
+    return accountPage(data.map(mapOrgAccount), pagination);
   }
 
   /** The caterers with the state of their two-factor sign-in (#4497). */
@@ -307,11 +321,6 @@ class OperatorProvisioningService {
       { params: { id: orgId } },
     );
     return mapSampleChildrenResult(result);
-  }
-
-  async listAllAccounts(): Promise<OrgAccount[]> {
-    const data = await bffJson("platform", "GET /operator/accounts");
-    return data.map(mapOrgAccount);
   }
 
   async listAllDevices(): Promise<OperatorDevice[]> {
@@ -564,23 +573,3 @@ class OperatorProvisioningService {
 }
 
 export const operatorProvisioningService = new OperatorProvisioningService();
-
-/**
- * Purges the Next.js ISR cache for the given tenant subdomain slugs so stale
- * tenant-resolution does not linger (~5 min) after a slug change, delete,
- * restore, or active-flag toggle. Fire-and-forget: on failure the cache
- * self-heals within its TTL, so callers must never block success flow.
- */
-export async function revalidateTenantCache(slugs: string[]): Promise<void> {
-  if (slugs.length === 0) return;
-  try {
-    await bffJsonUncontracted<unknown>(
-      "platform",
-      "POST",
-      "/api/operator/provisioning/revalidate-tenant",
-      { body: { slugs } },
-    );
-  } catch {
-    // Cache self-heals in ≤5 min; don't block the success flow.
-  }
-}

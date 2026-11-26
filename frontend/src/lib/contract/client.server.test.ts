@@ -1,3 +1,5 @@
+import { routes as roomsRoutes } from "./rooms.generated";
+import { routes as studentRoutes } from "./students.generated";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { ApiError } from "~/lib/api-error";
@@ -36,14 +38,81 @@ const schema = success(z.object({ name: z.string() }));
 const read = () =>
   contractGet(
     { method: "GET", pattern: "/api/rows/{id}", response: schema },
-    { endpoint: "/api/rows/1", token: "token" },
+    { params: { id: "1" }, token: "token" },
   );
+
+it("types the Staff bootstrap query and does not accept an address override", () => {
+  const checks = () => {
+    const rooms = roomsRoutes["GET /api/rooms/"];
+    void contractGet(rooms, { query: { is_open_room: true } });
+    // @ts-expect-error: this field is not registered
+    void contractGet(rooms, { query: { isOpenRoom: true } });
+    // @ts-expect-error: the route itself owns the address
+    void contractGet(rooms, { endpoint: "/api/students" });
+    void contractGet(studentRoutes["GET /api/students/"], {
+      // @ts-expect-error: the route does not register this variant
+      query: { view: "compact" },
+    });
+  };
+  expect(checks).toBeTypeOf("function");
+});
 
 describe("contractGet", () => {
   const consoleSpies = suppressConsole("error");
 
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  it("decodes the students names variant selected by the query", async () => {
+    const student = {
+      id: "9007199254740993",
+      first_name: "Ada",
+      last_name: "Lovelace",
+    };
+    mockApiGet.mockResolvedValueOnce({
+      status: "success",
+      data: [student],
+      pagination: {
+        current_page: 1,
+        page_size: 20,
+        total_pages: 1,
+        total_records: 1,
+      },
+    });
+    const result = await contractGet(studentRoutes["GET /api/students/"], {
+      token: "token",
+      query: { view: "names" },
+    });
+    expect(mockApiGet).toHaveBeenCalledWith(
+      "/api/students/?view=names",
+      "token",
+    );
+    expect(result).toMatchObject({ ok: true, value: { data: [student] } });
+    if (result.ok) {
+      const checkType = () => {
+        // @ts-expect-error: the names variant does not return a school class
+        return result.value.data[0]?.school_class;
+      };
+      expect(checkType).toBeTypeOf("function");
+    }
+  });
+
+  it("does not accept the names payload when the default students variant was requested", async () => {
+    mockApiGet.mockResolvedValueOnce({
+      status: "success",
+      data: [{ id: "1", first_name: "Ada", last_name: "Lovelace" }],
+      pagination: {
+        current_page: 1,
+        page_size: 20,
+        total_pages: 1,
+        total_records: 1,
+      },
+    });
+    await expect(
+      contractGet(studentRoutes["GET /api/students/"], { token: "token" }),
+    ).resolves.toMatchObject({ ok: false, error: { status: 502 } });
+    expect(mockApiGet).toHaveBeenCalledWith("/api/students/", "token");
   });
 
   it("hands out the decoded answer", async () => {
@@ -125,13 +194,16 @@ describe("contractGet", () => {
 describe("contractWrite", () => {
   const consoleSpies = suppressConsole("error");
   const answer = { status: "success", data: { name: "Ada" } };
-  const entry = <M extends "POST" | "PUT">(method: M, pattern: string) => ({
+  const entry = <M extends "POST" | "PUT", P extends string>(
+    method: M,
+    pattern: P,
+  ) => ({
     method,
     pattern,
     request: requestBody<{ name?: string }>(),
     response: schema,
   });
-  const create = entry("POST", "/api/rows/");
+  const create = entry("POST", "/api/rows");
   const update = entry("PUT", "/api/rows/{id}");
 
   beforeEach(() => {
@@ -141,11 +213,7 @@ describe("contractWrite", () => {
   it("posts the body and decodes the answer", async () => {
     mockApiPost.mockResolvedValueOnce(answer);
     await expect(
-      contractWrite(
-        create,
-        { name: "Ada" },
-        { endpoint: "/api/rows", token: "token" },
-      ),
+      contractWrite(create, { name: "Ada" }, { token: "token" }),
     ).resolves.toMatchObject({ ok: true, value: answer });
     expect(mockApiPost).toHaveBeenCalledExactlyOnceWith("/api/rows", "token", {
       name: "Ada",
@@ -159,7 +227,7 @@ describe("contractWrite", () => {
       {
         name: "Ada",
       },
-      { endpoint: "/api/rows/1", token: "token" },
+      { params: { id: "1" }, token: "token" },
     );
     expect(result.ok).toBe(true);
     expect(mockApiPut).toHaveBeenCalledWith("/api/rows/1", "token", {
@@ -176,7 +244,7 @@ describe("contractWrite", () => {
           // @ts-expect-error the route binds a string name
           name: 7,
         },
-        { endpoint: "/api/rows/1", token: "token" },
+        { params: { id: "1" }, token: "token" },
       );
     expect(send).toBeTypeOf("function");
   });
@@ -191,7 +259,7 @@ describe("contractWrite", () => {
     const result = await contractWrite(
       update,
       {},
-      { endpoint: "/api/rows/1", token: "token" },
+      { params: { id: "1" }, token: "token" },
     );
     expect(!result.ok && result.error).toMatchObject({
       status: 409,
@@ -204,17 +272,13 @@ describe("contractWrite", () => {
     // The backend has stored the write; general.unavailable would offer
     // to send it again (#7563).
     mockApiPost.mockResolvedValueOnce({ status: "success", data: {} });
-    const result = await contractWrite(
-      create,
-      {},
-      { endpoint: "/api/rows", token: "token" },
-    );
+    const result = await contractWrite(create, {}, { token: "token" });
     expect(!result.ok && result.error).toMatchObject({
       status: 502,
       code: "general.write_answer_unreadable",
     });
     expect(consoleSpies.error).toHaveBeenCalledWith("contract_decode_failed", {
-      route: "POST /api/rows/",
+      route: "POST /api/rows",
       write: true,
       issues: ["data.name: invalid_type"],
     });
@@ -291,7 +355,7 @@ describe("contractWrite", () => {
   it("lets a failure that is no backend response pass through", async () => {
     mockApiPut.mockRejectedValueOnce(new TypeError("aborted"));
     await expect(
-      contractWrite(update, {}, { endpoint: "/api/rows/1", token: "token" }),
+      contractWrite(update, {}, { params: { id: "1" }, token: "token" }),
     ).rejects.toThrow("aborted");
   });
 });

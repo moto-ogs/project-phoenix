@@ -3,8 +3,8 @@
   "sectionTitle": "Heute",
   "sectionDescription": "Tagesstatus und wichtige Aktionen auf einen Blick.",
   "statusLabel": "Aktueller Status",
-  "atOgs": "In der {careTerm}",
-  "notAtOgs": "Nicht in der {careTerm}",
+  "atOgs": "{careInCap}",
+  "notAtOgs": "Nicht {careIn}",
   "state": {
     "present": "Seit {time} Uhr da",
     "presentNoTime": "Heute da",
@@ -38,6 +38,32 @@
     "sickTooltip": "Öffnet das Formular, um dein Kind abzumelden.",
     "pickupTooltip": "Öffnet das Formular für eine Anfrage zur Abholzeit.",
     "pickupWithModeTooltip": "Öffnet das Formular für eine Anfrage zur Abholung.",
-    "messageTooltip": "Öffnet die Nachrichten mit der {careTerm} zu deinem Kind."
+    "messageTooltip": "Öffnet die Nachrichten mit {careDat} zu deinem Kind."
+  },
+  "changes": {
+    "title": "Heute anders",
+    "allAsPlanned": "Heute läuft alles wie geplant.",
+    "partial": "Nicht alle Änderungen konnten geladen werden. Schau später noch einmal nach.",
+    "loadObject": "die Änderungen für heute",
+    "enteredByYou": "Von dir eingetragen",
+    "sick": "{name} ist heute krank gemeldet.",
+    "excused": "{name} ist heute entschuldigt.",
+    "pickupAt": "{name} wird heute um {time} Uhr abgeholt.",
+    "notComing": "{name} kommt heute nicht.",
+    "goesAlone": "{name} geht heute allein nach Hause.",
+    "classTrip": "Die Klasse {class} ist heute auf Ausflug.",
+    "classTripBack": "Die Klasse {class} ist heute auf Ausflug. Zurück um {time} Uhr.",
+    "classDismissal": "Der Unterricht der Klasse {class} endet heute um {time} Uhr.",
+    "closingDay": "{careNomCap} ist heute geschlossen: {name}.",
+    "closingDayUntil": "{careNomCap} ist bis {date} geschlossen: {name}.",
+    "openingChanged": "{careNomCap} ist heute von {opens} bis {closes} Uhr geöffnet: {name}.",
+    "openingChangedUntil": "{careNomCap} ist bis {date} von {opens} bis {closes} Uhr geöffnet: {name}.",
+    "mealCancelled": "Heute gibt es kein Mittagessen für {name}. Es wird nicht berechnet.",
+    "pickupAfterClosing": "Das ist nach der Schließung. Bitte ändere die Abholung.",
+    "regularPickupAfterClosing": "Im Wochenplan steht: {name} wird um {time} Uhr abgeholt.",
+    "activityCancelled": "{title} um {time} Uhr fällt heute aus.",
+    "activityReinstated": "{title} um {time} Uhr findet heute doch statt.",
+    "activityRoomChanged": "{title} um {time} Uhr findet heute in {room} statt.",
+    "activityLeadChanged": "{title} um {time} Uhr hat heute eine Vertretung."
   }
 }

@@ -5,7 +5,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("vaul", async () => {
@@ -243,6 +243,33 @@ describe("SlideOver", () => {
         screen.getByText("Inhalt").closest("[data-direction]"),
       ).toHaveAttribute("data-direction", "bottom");
     });
+  });
+
+  it("mounts a panel that opens on a phone once, from the bottom (#8013)", async () => {
+    matches = true;
+    const mounted = vi.fn();
+    function Content() {
+      useEffect(() => {
+        mounted();
+      }, []);
+      return <span>Inhalt</span>;
+    }
+
+    render(
+      <SlideOver defaultOpen>
+        <SlideOverContent>
+          <Content />
+        </SlideOverContent>
+      </SlideOver>,
+    );
+
+    expect(
+      screen.getByText("Inhalt").closest("[data-direction]"),
+    ).toHaveAttribute("data-direction", "bottom");
+    // A rebuild from the desktop direction would mount the content again:
+    // autofocus and the content's own effects would run twice.
+    await act(async () => {});
+    expect(mounted).toHaveBeenCalledOnce();
   });
 
   it("dims and blurs the page with the shared overlay backdrop", () => {

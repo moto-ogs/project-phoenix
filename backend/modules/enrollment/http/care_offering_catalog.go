@@ -13,7 +13,9 @@ type CareOfferingCatalog interface {
 	ListByPhase(ctx context.Context, phaseID int64) ([]*CareOffering, error)
 	GetByID(ctx context.Context, id int64) (*CareOffering, error)
 	Create(ctx context.Context, offering *CareOffering) (*CareOffering, error)
-	Update(ctx context.Context, offering *CareOffering) error
+	// Update saves the offering over the version its author read; another
+	// one is readstate.ErrChanged (ADR 0311).
+	Update(ctx context.Context, offering *CareOffering, expectedVersion string) error
 	Delete(ctx context.Context, id int64) error
 	Clone(ctx context.Context, sourceID int64, targetPhaseID int64) (*CareOffering, error)
 	ListBookingStats(ctx context.Context, phaseID int64) ([]CareOfferingBookingStat, error)
@@ -28,7 +30,7 @@ type CareOfferingCatalogOwner interface {
 	ListByPhase(ctx context.Context, phaseID int64) ([]*capability.CareOffering, error)
 	GetByID(ctx context.Context, id int64) (*capability.CareOffering, error)
 	Create(ctx context.Context, offering *capability.CareOffering) (*capability.CareOffering, error)
-	Update(ctx context.Context, offering *capability.CareOffering) error
+	Update(ctx context.Context, offering *capability.CareOffering, expectedVersion string) error
 	Delete(ctx context.Context, id int64) error
 	Clone(ctx context.Context, sourceID int64, targetPhaseID int64) (*capability.CareOffering, error)
 	ListBookingStats(ctx context.Context, phaseID int64) ([]CareOfferingBookingStat, error)
@@ -73,13 +75,14 @@ func (c careOfferingCatalog) Create(ctx context.Context, offering *CareOffering)
 	return decodedCareOffering(c.owner.Create(ctx, value))
 }
 
-// Update saves the offering and refreshes it with the stored state.
-func (c careOfferingCatalog) Update(ctx context.Context, offering *CareOffering) error {
+// Update saves the offering over the version its author read and refreshes
+// it with the stored state.
+func (c careOfferingCatalog) Update(ctx context.Context, offering *CareOffering, expectedVersion string) error {
 	value, err := careOfferingInput(offering)
 	if err != nil {
 		return err
 	}
-	if err := c.owner.Update(ctx, value); err != nil {
+	if err := c.owner.Update(ctx, value, expectedVersion); err != nil {
 		return err
 	}
 	stored, err := careOfferingValue(value)

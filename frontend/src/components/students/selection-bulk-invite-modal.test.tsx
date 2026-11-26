@@ -148,15 +148,55 @@ describe("SelectionBulkInviteModal", () => {
         "Für diese Auswahl gibt es niemanden einzuladen.",
       ),
     ).toBeVisible();
+    // The refusal shows once the new counts are there, without a retry.
+    expect(
+      await screen.findByText(/Du siehst jetzt den neuen Stand/),
+    ).toBeVisible();
     expect(
       screen.queryByRole("button", { name: "Wiederholen" }),
     ).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Einladen" })).toHaveAttribute(
-      "aria-disabled",
-      "true",
-    );
+    expect(
+      await screen.findByRole("button", { name: "Einladen" }),
+    ).toHaveAttribute("aria-disabled", "true");
     expect(bulkInvite).toHaveBeenCalledTimes(3);
     expect(toastSuccess).not.toHaveBeenCalled();
+  });
+
+  it("names a failed recount after a refusal and sends nothing until it counted", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    bulkInvite
+      .mockResolvedValueOnce(result({ invited: 3 }))
+      .mockRejectedValueOnce(
+        new ApiError("changed", 409, { code: "general.changed_since_read" }),
+      )
+      .mockRejectedValueOnce(
+        new ApiError("down", 503, { code: "general.unavailable" }),
+      )
+      .mockResolvedValueOnce(result({ invited: 2, fingerprint: "now" }));
+    renderModal();
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "3 Eltern einladen" }),
+    );
+    // The refusal's „Du siehst jetzt den neuen Stand“ would be false: the
+    // failed recount is named, and its retry only counts again.
+    expect(
+      await screen.findByText(/Der neue Stand konnte nicht geladen werden\./),
+    ).toBeVisible();
+    expect(screen.queryByText(/Du siehst jetzt den neuen Stand/)).toBeNull();
+    expect(bulkInvite).toHaveBeenCalledTimes(3);
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Wiederholen" })[0]!);
+    const send = await screen.findByRole("button", {
+      name: "2 Eltern einladen",
+    });
+    expect(bulkInvite).toHaveBeenCalledTimes(4);
+    expect(bulkInvite).toHaveBeenLastCalledWith(["4", "9"], {
+      dryRun: true,
+      resendOpen: false,
+      notifyActive: false,
+    });
+    expect(send).not.toHaveAttribute("aria-disabled", "true");
   });
 
   it("allows submitting a preview containing only existing accounts", async () => {

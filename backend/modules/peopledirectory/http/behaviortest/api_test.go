@@ -10,12 +10,13 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	usersHTTP "github.com/moto-ogs/project-phoenix/modules/peopledirectory/http"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 // fakeDirectory records the calls the adapter makes and answers from a
@@ -244,19 +245,22 @@ func TestUpdatePersonKeepsStoredLinksWhenBodyOmitsThem(t *testing.T) {
 	h.accounts[5] = "five@example.com"
 	h.accounts[6] = "six@example.com"
 
-	recorder := h.do(t, http.MethodPut, "/users/7", map[string]any{"first_name": "New", "last_name": "Name"})
+	recorder := h.do(t, http.MethodPut, "/users/7", map[string]any{"first_name": "New", "last_name": "Name", "expected_version": "read"})
 	require.Equal(t, http.StatusOK, recorder.Code)
+	require.NotNil(t, directory.updated.ExpectedVersion, "the route always hands the read's version to the owner")
+	assert.Equal(t, "read", *directory.updated.ExpectedVersion)
+	assert.Contains(t, string(decode(t, recorder).Data), `"version":`, "the answer carries the saved person's version")
 	require.NotNil(t, directory.updated.AccountID)
 	assert.EqualValues(t, 5, *directory.updated.AccountID)
 	require.NotNil(t, directory.updated.TagID)
 	assert.Equal(t, "AABB", *directory.updated.TagID)
 
-	repointed := h.do(t, http.MethodPut, "/users/7", map[string]any{"first_name": "New", "last_name": "Name", "account_id": 6})
+	repointed := h.do(t, http.MethodPut, "/users/7", map[string]any{"first_name": "New", "last_name": "Name", "account_id": "6"})
 	require.Equal(t, http.StatusOK, repointed.Code)
 	assert.EqualValues(t, 6, *directory.updated.AccountID)
 	assert.Contains(t, string(decode(t, repointed).Data), `"email":"six@example.com"`)
 
-	unknownAccount := h.do(t, http.MethodPut, "/users/7", map[string]any{"first_name": "New", "last_name": "Name", "account_id": 9})
+	unknownAccount := h.do(t, http.MethodPut, "/users/7", map[string]any{"first_name": "New", "last_name": "Name", "account_id": "9"})
 	assert.Equal(t, http.StatusNotFound, unknownAccount.Code)
 
 	missing := h.do(t, http.MethodPut, "/users/8", map[string]any{"first_name": "New", "last_name": "Name"})

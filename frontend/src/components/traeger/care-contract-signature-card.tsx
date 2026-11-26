@@ -2,21 +2,25 @@
 
 // Die Unterschrift eines Betreuungsvertrags im Träger-Büro (#4679): wer wann
 // auf welchem Weg unterschrieben hat, ob die Prüfsummen noch stimmen, und
-// solange der Vertrag wartet, die Erinnerungen. Ein Vertrag, den die Eltern
-// auf Papier unterschrieben haben, wird hier mit seinem PDF erfasst.
+// solange der Vertrag wartet, die Erinnerungen. Für Eltern ohne Internet
+// übergibt das Büro einen Entwurf hier auf Papier: moto friert das PDF ein,
+// das gedruckt wird (#8030). Den unterschriebenen Vertrag erfasst das Büro
+// dann mit seinem PDF.
 
-import { Download, Upload } from "lucide-react";
+import { Download, Printer, Upload } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useState } from "react";
 
+import { handedOverOnPaper } from "~/components/traeger/care-contract-format";
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { DataField, DataGrid } from "~/components/ui/data-field";
 import { InsetPanel } from "~/components/ui/inset-panel";
+import { ConfirmationModal } from "~/components/ui/modal";
 import { SectionCard } from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
-import { useApiErrorDisplay } from "~/contexts/ToastContext";
+import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
 import {
   formatBerlinDate,
   formatBerlinTime,
@@ -28,7 +32,9 @@ import { createLogger } from "~/lib/logger";
 import {
   type CareContractDetail,
   type ContractSignature,
+  downloadCareContract,
   downloadPaperSignature,
+  handOverCareContractOnPaper,
 } from "~/lib/traeger-care-contracts-api";
 import { labelOf } from "~/lib/label-of";
 
@@ -60,6 +66,7 @@ const METHOD_LABELS: Record<
   drawn: "Gezeichnet",
   typed: "Getippter Name",
   paper: "Papier mit Unterschrift",
+  request: "Eigener Antrag der Eltern, freigegeben",
 };
 
 /** The card is shown for a contract that waits or is signed. */
@@ -68,6 +75,10 @@ export function CareContractSignatureCard({
   onChanged,
 }: Readonly<{ contract: CareContractDetail; onChanged: () => Promise<void> }>) {
   const [paperOpen, setPaperOpen] = useState(false);
+  const [confirmHandover, setConfirmHandover] = useState(false);
+  const [handingOver, setHandingOver] = useState(false);
+  const actionError = useApiErrorDisplay();
+  const { success } = useToast();
   // The reload after the paper contract stands above the card, also after
   // the dialog closed (#6652).
   const afterPaper = useRefreshAfterWrite(
@@ -75,26 +86,72 @@ export function CareContractSignatureCard({
     onChanged,
   );
   const signature = contract.signature;
-  const waiting =
-    contract.status === "entwurf" || contract.status === "versendet";
+  const onPaper = handedOverOnPaper(contract);
+
+  // Downloads the PDF the handover froze. Success is reported only once the
+  // file is there; a failed download leaves the handover done, so its error
+  // names the way to the PDF and offers to try again.
+  const downloadHandedOver = async (): Promise<void> => {
+    try {
+      const file = await downloadCareContract(contract.id);
+      downloadBlob(file.blob, file.filename);
+      success("Der Vertrag ist übergeben. Drucke das PDF aus.");
+    } catch (err) {
+      logger.error("traeger_care_contract_paper_handover_download_failed", {
+        error: err instanceof Error ? err.message : String(err),
+      });
+      void actionError.show(err, {
+        object: "das PDF",
+        messageSuffix:
+          "Der Vertrag ist trotzdem übergeben. Du findest das PDF oben im Menü unter „PDF herunterladen“.",
+        retry: () => void downloadHandedOver(),
+      });
+    }
+  };
+
+  // Freezes the PDF, then downloads exactly that PDF for printing. The
+  // dialog waits for both and closes once.
+  const handOver = async () => {
+    setHandingOver(true);
+    let handedOver = false;
+    try {
+      await handOverCareContractOnPaper(contract.id);
+      handedOver = true;
+    } catch (err) {
+      logger.error("traeger_care_contract_paper_handover_failed", {
+        error: err instanceof Error ? err.message : String(err),
+      });
+      void actionError.show(err, { object: "der Vertrag" });
+    }
+    if (handedOver) await downloadHandedOver();
+    setHandingOver(false);
+    setConfirmHandover(false);
+    if (handedOver) await afterPaper.refresh();
+  };
 
   return (
     <>
       <SectionCard
         title="Unterschrift"
         description={
-          signature
-            ? "So haben die Eltern den Vertrag unterschrieben."
-            : contract.concluded
-              ? contract.concluded.method === "mit_anmeldung"
-                ? "Der Vertrag ist bereits mit der Annahme der Anmeldung abgeschlossen."
-                : "Der Vertrag ist bereits abgeschlossen."
-              : contract.status === "versendet"
-                ? "Die Eltern unterschreiben in der Eltern-App oder über den Link in der Mail."
-                : "Nach dem Senden können die Eltern online unterschreiben."
+          signature?.method === "request"
+            ? "Die Eltern haben die Änderung selbst beantragt. Ihr Antrag gilt als Unterschrift der aktuellen Fassung."
+            : signature
+              ? "So haben die Eltern den Vertrag unterschrieben."
+              : contract.concluded
+                ? contract.concluded.method === "mit_anmeldung"
+                  ? "Der Vertrag ist bereits mit der Annahme der Anmeldung abgeschlossen."
+                  : "Der Vertrag ist bereits abgeschlossen."
+                : onPaper
+                  ? "Die Eltern unterschreiben den Vertrag auf Papier."
+                  : contract.status === "versendet"
+                    ? "Die Eltern unterschreiben in der Eltern-App oder über den Link in der Mail."
+                    : "Nach dem Senden können die Eltern online unterschreiben."
         }
         titleBadge={
-          signature ? (
+          signature?.method === "request" ? (
+            <StatusBadge label="Durch Antrag bestätigt" tone="green" />
+          ) : signature ? (
             <StatusBadge label="Unterschrieben" tone="green" />
           ) : contract.concluded ? (
             <StatusBadge label="Abgeschlossen" tone="green" />
@@ -103,7 +160,18 @@ export function CareContractSignatureCard({
           ) : null
         }
         action={
-          waiting && !signature ? (
+          contract.status === "entwurf" ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="md"
+              tooltip="Öffnet ein Fenster. Danach lädst du das PDF zum Ausdrucken."
+              onClick={() => setConfirmHandover(true)}
+            >
+              <Printer className="mr-2 h-4 w-4" aria-hidden="true" />
+              Auf Papier übergeben
+            </Button>
+          ) : contract.status === "versendet" && !signature ? (
             <Button
               type="button"
               variant="outline"
@@ -124,6 +192,29 @@ export function CareContractSignatureCard({
           <WaitingDetails contract={contract} />
         )}
       </SectionCard>
+      <ConfirmationModal
+        isOpen={confirmHandover}
+        title="Vertrag auf Papier übergeben?"
+        confirmText="Übergeben und PDF laden"
+        confirmVariant="warning"
+        confirmTooltip="Speichert das PDF so, wie es jetzt ist, und lädt es herunter."
+        isConfirmLoading={handingOver}
+        loadingText="Wird übergeben …"
+        onClose={() => setConfirmHandover(false)}
+        onConfirm={() => void handOver()}
+      >
+        <div className="space-y-3 text-sm text-gray-700">
+          <p>
+            moto speichert den Vertrag jetzt als PDF. Drucke es aus und gib es
+            den Eltern. Die Eltern bekommen keine Mail.
+          </p>
+          <p>
+            Danach gilt der Vertrag als versendet. Verwerfen geht dann nicht
+            mehr. Den unterschriebenen Vertrag erfasst du später mit
+            „Papiervertrag erfassen“.
+          </p>
+        </div>
+      </ConfirmationModal>
       {paperOpen ? (
         <PaperSignatureModal
           contract={contract}
@@ -144,6 +235,9 @@ function SignatureDetails({
 }: Readonly<{ contractId: string; signature: ContractSignature }>) {
   const actionError = useApiErrorDisplay();
   const paper = signature.method === "paper";
+  // The parents asked for the change themselves (#4816): no drawn
+  // signature, the request is the proof.
+  const request = signature.method === "request";
 
   const downloadPaper = async () => {
     try {
@@ -161,10 +255,14 @@ function SignatureDetails({
     <div className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_14rem]">
         <DataGrid columns={1}>
-          <DataField label="Unterschrieben von">
+          <DataField label={request ? "Beantragt von" : "Unterschrieben von"}>
             {signature.signerName}
           </DataField>
-          <DataField label={paper ? "Unterschrieben am" : "Zeitpunkt"}>
+          <DataField
+            label={
+              paper ? "Unterschrieben am" : request ? "Antrag vom" : "Zeitpunkt"
+            }
+          >
             {paper
               ? formatDate(signature.signedOn)
               : `${formatBerlinDate(signature.signedAt)}, ${formatBerlinTime(signature.signedAt)} Uhr`}
@@ -223,13 +321,15 @@ function SignatureDetails({
         title={signature.intact ? "Prüfsumme stimmt" : "Prüfsumme stimmt nicht"}
         message={
           signature.intact
-            ? "Das unterschriebene PDF passt zum gespeicherten Nachweis."
+            ? request
+              ? "Das PDF der Fassung passt zum gespeicherten Nachweis."
+              : "Das unterschriebene PDF passt zum gespeicherten Nachweis."
             : "Der gespeicherte Nachweis wurde verändert. Melde das dem moto-Team."
         }
         className="[&>div]:min-w-0"
         details={
           <p className="mt-2 text-sm">
-            Unterschriebenes PDF (SHA-256):{" "}
+            {request ? "PDF der Fassung" : "Unterschriebenes PDF"} (SHA-256):{" "}
             <span className="font-mono break-all">
               {signature.documentSha256}
             </span>
@@ -256,21 +356,47 @@ function WaitingDetails({
   if (contract.status === "entwurf") {
     return (
       <p className="text-sm text-gray-600">
-        Haben die Eltern schon auf Papier unterschrieben? Dann erfasst du den
-        Vertrag mit „Papiervertrag erfassen“.
+        Haben die Eltern kein Internet? Dann wähle „Auf Papier übergeben“ und
+        gib ihnen den Ausdruck.
       </p>
     );
   }
+  if (handedOverOnPaper(contract)) {
+    return (
+      <p className="text-sm text-gray-600">
+        Die Eltern haben den Vertrag auf Papier bekommen. Erinnerungen per Mail
+        gibt es dafür nicht. Hast du den unterschriebenen Vertrag zurück? Dann
+        wähle „Papiervertrag erfassen“.
+      </p>
+    );
+  }
+  // A sent contract follows the bookings (#4816): the reminders count for
+  // the version that waits now.
+  const waiting = contract.versions.find(
+    (version) => version.status === "beantragt",
+  );
+  const reminders = contract.reminders.filter(
+    (reminder) => !waiting || reminder.versionNumber === waiting.number,
+  );
+  const overtaken = contract.versions.some(
+    (version) => version.status === "ueberholt",
+  );
   return (
     <div className="space-y-3">
+      {overtaken && waiting ? (
+        <Alert
+          type="info"
+          message={`Die Betreuung hat sich geändert, bevor die Eltern unterschrieben haben. Sie haben deshalb Version ${waiting.number} als neue Fassung bekommen. Die frühere Fassung kann niemand mehr unterschreiben.`}
+        />
+      ) : null}
       <p className="text-sm text-gray-600">
         Bis zur Unterschrift bekommen die Eltern Erinnerungen per Mail. Nach wie
         vielen Tagen, legst du unter „Einstellungen“ → „Allgemein“ →
         „Betreuungsverträge“ fest.
       </p>
-      {contract.reminders.length > 0 ? (
+      {reminders.length > 0 ? (
         <ol className="space-y-2">
-          {contract.reminders.map((reminder) => (
+          {reminders.map((reminder) => (
             <li
               key={reminder.number}
               className="flex items-center justify-between gap-3 text-sm"

@@ -83,12 +83,12 @@ describe("tenant-api", () => {
       );
     });
 
-    it("returns base path for empty string", () => {
-      expect(loginImageSrc("")).toBe("/api/public/login-image/");
+    it("uses the moto logo when the stored value is empty", () => {
+      expect(loginImageSrc("")).toBe("/images/moto_transparent.webp");
     });
 
     it("returns base path for trailing slash", () => {
-      expect(loginImageSrc("/")).toBe("/api/public/login-image/");
+      expect(loginImageSrc("/")).toBe("/images/moto_transparent.webp");
     });
   });
 
@@ -101,14 +101,14 @@ describe("tenant-api", () => {
       const backendData = {
         status: "success",
         data: {
-          tenant_id: 1,
+          tenant_id: "1",
           slug: "demo-school",
           name: "Demo School",
           subdomain: "demo",
           organization_id: 10,
           organization_name: "Org A",
           hidden: false,
-          settings: { primaryColor: "#ff0000" },
+          settings: { primaryColor: "#ff0000", logoUrl: 123, schoolKey: true },
           grade_level_max: 13,
         },
       };
@@ -128,14 +128,15 @@ describe("tenant-api", () => {
       );
       expect(result).toEqual({
         careFacilityTerm: "OGS",
-        tenantId: 1,
+        careFacilityArticle: "die",
+        tenantId: "1",
         slug: "demo-school",
         name: "Demo School",
         subdomain: "demo",
         organizationId: 10,
         organizationName: "Org A",
         hidden: false,
-        settings: { primaryColor: "#ff0000" },
+        settings: { primaryColor: "#ff0000", schoolKey: true },
         // Missing presence_mode on a backend response defaults to "detailed"
         // — matches backend's own safe fallback.
         presenceMode: "detailed",
@@ -195,7 +196,7 @@ describe("tenant-api", () => {
 
     it("normalizes explicit enabled and disabled tenant settings", async () => {
       const tenantData = {
-        tenant_id: 2,
+        tenant_id: "2",
         slug: "settings-school",
         name: "Settings School",
         subdomain: "settings",
@@ -265,7 +266,7 @@ describe("tenant-api", () => {
 
     it("maps the Analyse-Freigabe and never widens an unreadable sample", async () => {
       const tenantData = {
-        tenant_id: 3,
+        tenant_id: "3",
         slug: "analyse-school",
         name: "Analyse School",
         subdomain: "analyse",
@@ -335,7 +336,7 @@ describe("tenant-api", () => {
       const backendData = {
         status: "success",
         data: {
-          tenant_id: 2,
+          tenant_id: "2",
           slug: "binary-school",
           name: "Binary School",
           subdomain: "binary",
@@ -361,7 +362,7 @@ describe("tenant-api", () => {
           JSON.stringify({
             status: "success",
             data: {
-              tenant_id: 3,
+              tenant_id: "3",
               slug: "traeger-school",
               name: "Träger School",
               subdomain: "traeger",
@@ -391,7 +392,7 @@ describe("tenant-api", () => {
           JSON.stringify({
             status: "success",
             data: {
-              tenant_id: 4,
+              tenant_id: "4",
               slug: "barnstorf",
               name: "Grundschule Barnstorf",
               subdomain: "barnstorf",
@@ -411,11 +412,44 @@ describe("tenant-api", () => {
       expect((await resolveTenant("barnstorf"))?.careFacilityTerm).toBe("OGS");
     });
 
+    // #8136: the article of a school's own name; missing metadata is „die“.
+    it("carries the care facility article", async () => {
+      const respond = (extra: Record<string, unknown>) =>
+        new Response(
+          JSON.stringify({
+            status: "success",
+            data: {
+              tenant_id: "2",
+              slug: "barnstorf",
+              name: "Barnstorf",
+              subdomain: "barnstorf",
+              organization_id: "20",
+              organization_name: "Org B",
+              settings: {},
+              ...extra,
+            },
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      vi.mocked(global.fetch)
+        .mockResolvedValueOnce(
+          respond({ care_facility_term: "Hort", care_facility_article: "der" }),
+        )
+        .mockResolvedValueOnce(respond({ care_facility_term: "Hort" }));
+
+      expect((await resolveTenant("barnstorf"))?.careFacilityArticle).toBe(
+        "der",
+      );
+      expect((await resolveTenant("barnstorf"))?.careFacilityArticle).toBe(
+        "die",
+      );
+    });
+
     it("derives nfcEnabled from the booked NFC module", async () => {
       const backendData = {
         status: "success",
         data: {
-          tenant_id: 2,
+          tenant_id: "2",
           slug: "nfc-school",
           name: "NFC School",
           subdomain: "nfc",
@@ -443,7 +477,7 @@ describe("tenant-api", () => {
       const backendData = {
         status: "success",
         data: {
-          tenant_id: 2,
+          tenant_id: "2",
           slug: "basis-school",
           name: "Basis School",
           subdomain: "basis",
@@ -473,7 +507,7 @@ describe("tenant-api", () => {
         const backendData = {
           status: "success",
           data: {
-            tenant_id: 3,
+            tenant_id: "3",
             slug: "demo",
             name: "Demo",
             subdomain: "demo",
@@ -504,7 +538,7 @@ describe("tenant-api", () => {
         const backendData = {
           status: "success",
           data: {
-            tenant_id: 3,
+            tenant_id: "3",
             slug: "demo",
             name: "Demo",
             subdomain: "demo",
@@ -535,7 +569,7 @@ describe("tenant-api", () => {
         const backendData = {
           status: "success",
           data: {
-            tenant_id: 3,
+            tenant_id: "3",
             slug: "demo",
             name: "Demo",
             subdomain: "demo",
@@ -560,7 +594,7 @@ describe("tenant-api", () => {
       const backendData = {
         status: "success",
         data: {
-          tenant_id: 3,
+          tenant_id: "3",
           slug: "display-school",
           name: "Display School",
           subdomain: "display",
@@ -584,7 +618,7 @@ describe("tenant-api", () => {
       const backendData = {
         status: "success",
         data: {
-          tenant_id: 3,
+          tenant_id: "3",
           slug: "demo-ogs",
           name: "Demo-OGS",
           subdomain: "demo-ogs",
@@ -610,7 +644,7 @@ describe("tenant-api", () => {
       const backendData = {
         status: "success",
         data: {
-          tenant_id: 3,
+          tenant_id: "3",
           slug: "weird-school",
           name: "Weird",
           subdomain: "weird",
@@ -634,7 +668,7 @@ describe("tenant-api", () => {
       const backendData = {
         status: "success",
         data: {
-          tenant_id: 1,
+          tenant_id: "1",
           slug: "demo",
           name: "Demo",
           subdomain: "demo",
@@ -786,7 +820,7 @@ describe("tenant-api", () => {
       const data = {
         data: [
           {
-            tenant_id: 1,
+            tenant_id: "1",
             slug: "school-a",
             name: "School A",
             subdomain: "school-a",
@@ -794,7 +828,7 @@ describe("tenant-api", () => {
             organization_name: "Org Alpha",
           },
           {
-            tenant_id: 2,
+            tenant_id: "2",
             slug: "school-b",
             name: "School B",
             subdomain: "school-b",
@@ -818,7 +852,7 @@ describe("tenant-api", () => {
       });
       expect(result).toHaveLength(2);
       expect(result[0]).toEqual({
-        tenantId: 1,
+        tenantId: "1",
         slug: "school-a",
         name: "School A",
         subdomain: "school-a",

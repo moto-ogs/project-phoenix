@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"sort"
 	"testing"
 
 	"github.com/go-chi/chi/v5"
@@ -115,18 +114,9 @@ func assertBudgetSchema(t *testing.T, raw json.RawMessage, portal string) map[st
 	for i, key := range records.TabOrder {
 		tabRank[key] = i
 	}
-	var extra []string
-	for _, tab := range schema.Tabs {
-		if _, ok := tabRank[tab.Key]; !ok {
-			extra = append(extra, tab.Key)
-		}
-	}
-	sort.Strings(extra)
-	for i, key := range extra {
-		tabRank[key] = len(records.TabOrder) + i
-	}
 	lastTab := -1
 	for _, tab := range schema.Tabs {
+		require.Contains(t, tabRank, tab.Key, "every area has a fixed place (#8153)")
 		require.Greater(t, tabRank[tab.Key], lastTab)
 		lastTab = tabRank[tab.Key]
 		require.Equal(t, tab.Key, tab.Label)

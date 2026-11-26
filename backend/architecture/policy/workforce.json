@@ -329,6 +329,10 @@
       "write_owner": "workforce"
     },
     {
+      "name": "workforce.payroll_employers",
+      "write_owner": "workforce"
+    },
+    {
       "name": "workforce.staff_contract_targets",
       "write_owner": "workforce"
     },

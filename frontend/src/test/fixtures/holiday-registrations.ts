@@ -222,6 +222,7 @@ export const HOLIDAY_CONTRIBUTION: HolidayContribution = {
   benefitsExemption: false,
   frozen: false,
   confirmedAt: null,
+  fingerprint: "vorschau-1",
 };
 
 /** The health information of HOLIDAY_REGISTRATION, read apart (#4722). */
@@ -261,6 +262,7 @@ export const PARENT_HOLIDAY_REGISTRATION_ENTRIES: HolidayRegistrationEntriesResp
         last_day: "2027-01-08",
         submitted_at: "2026-09-08T09:30:00Z",
         status: "received",
+        consents: [],
         children: [
           {
             first_name: "Mia",
@@ -284,6 +286,7 @@ export const PARENT_HOLIDAY_REGISTRATION_ENTRIES: HolidayRegistrationEntriesResp
         last_day: "2026-10-23",
         submitted_at: "2026-08-20T07:00:00Z",
         status: "confirmed",
+        consents: [],
         children: [
           {
             first_name: "Mia",
@@ -319,6 +322,7 @@ export const PARENT_HOLIDAY_REGISTRATION_ENTRIES: HolidayRegistrationEntriesResp
         last_day: "2026-07-24",
         submitted_at: "2026-05-02T10:00:00Z",
         status: "cancelled",
+        consents: [],
         children: [
           {
             first_name: "Mia",

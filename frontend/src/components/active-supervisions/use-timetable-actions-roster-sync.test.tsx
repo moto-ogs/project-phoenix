@@ -31,7 +31,7 @@ vi.mock("~/contexts/ToastContext", () => ({
 // The hook reads the session for the account-bound sidebar memory (#5000).
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
-    data: { user: { id: "7", tenantId: 1 } },
+    data: { user: { id: "7", tenantId: "1" } },
     status: "authenticated",
   }),
 }));

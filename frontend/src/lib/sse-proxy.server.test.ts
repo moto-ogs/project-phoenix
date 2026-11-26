@@ -18,7 +18,7 @@ afterEach(() => {
 
 it("forwards an SSE backend error without inventing a connection message", async () => {
   const body =
-    '{"code":"stream_conflict","details":{"id":"42"},"errors":[],"instance":"/api/sse/events"}';
+    '{"type":"about:blank","title":"Conflict","status":409,"detail":"Stream conflict","code":"general.business_rejection","details":{"id":"42"},"errors":[],"instance":"/api/sse/events"}';
   const mockFetch = vi.fn().mockResolvedValue(
     new Response(body, {
       status: 409,
@@ -81,7 +81,8 @@ it("reports an unreachable SSE backend exactly once with the request ID", async 
     logger,
   });
 
-  expect(response.status).toBe(500);
+  expect(response.status).toBe(503);
+  expect(await response.json()).toMatchObject({ code: "general.unavailable" });
   expect(captureException).toHaveBeenCalledExactlyOnceWith(failure, {
     tags: { request_id: "0b6f3f4e-5c1d-4a52-9d57-2d3c1b5e8f10" },
   });

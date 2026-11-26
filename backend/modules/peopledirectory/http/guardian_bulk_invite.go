@@ -1,13 +1,12 @@
 package users
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
-	"strconv"
 
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // Bulk invitation (#3378): a school whose children and contacts already
@@ -33,7 +32,7 @@ type bulkInviteRequest struct {
 }
 
 type bulkInviteProblemResponse struct {
-	GuardianProfileID string   `json:"guardian_profile_id"`
+	GuardianProfileID ident.ID `json:"guardian_profile_id"`
 	GuardianName      string   `json:"guardian_name"`
 	StudentNames      []string `json:"student_names"`
 	Reason            string   `json:"reason"`
@@ -70,7 +69,7 @@ func (rs *GuardianResource) bulkInviteGuardians(w http.ResponseWriter, r *http.R
 		return
 	}
 	var body bulkInviteRequest
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err := wire.Decode(r.Body, &body); err != nil {
 		rs.failMessage(w, r, FailureInvalidRequest, "invalid request body")
 		return
 	}
@@ -134,7 +133,7 @@ func newBulkInviteResponse(dryRun bool, result GuardianBulkInviteResult) bulkInv
 			names = []string{}
 		}
 		response.Problems = append(response.Problems, bulkInviteProblemResponse{
-			GuardianProfileID: strconv.FormatInt(problem.GuardianProfileID, 10),
+			GuardianProfileID: ident.ID(problem.GuardianProfileID),
 			GuardianName:      problem.GuardianName, StudentNames: names, Reason: problem.Reason,
 		})
 	}

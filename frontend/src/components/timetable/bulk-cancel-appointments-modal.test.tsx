@@ -6,6 +6,8 @@ import {
 } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { SessionProvider } from "next-auth/react";
+import { useTenantMutateMatching } from "~/lib/swr";
+import { tenantDailyKeys } from "~/lib/swr/tenant-daily-keys";
 import { SWRConfig } from "~/lib/swr/testing";
 import type { DateRange } from "react-day-picker";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -28,7 +30,7 @@ vi.mock("~/lib/timetable-api", () => ({
 
 vi.mock("~/lib/swr", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/lib/swr")>()),
-  useTenantMutateMatching: () => mockRefreshPlan,
+  useTenantMutateMatching: vi.fn(() => mockRefreshPlan),
 }));
 
 vi.mock("~/contexts/ToastContext", async (importOriginal) => ({
@@ -224,6 +226,10 @@ describe("BulkCancelAppointmentsModal", () => {
     await waitFor(() =>
       expect(mockToastSuccess).toHaveBeenCalledWith("6 Termine sind abgesagt."),
     );
+    expect(mockRefreshPlan).toHaveBeenCalled();
+    const detail = tenantDailyKeys.planInstanceDetail("42", "2026-10-12");
+    const prefixes = vi.mocked(useTenantMutateMatching).mock.lastCall?.[0];
+    expect(prefixes?.some((prefix) => detail.startsWith(prefix))).toBe(true);
   });
 
   it("zeigt einen Fehler beim Zählen vor Ort und zählt mit Wiederholen neu", async () => {

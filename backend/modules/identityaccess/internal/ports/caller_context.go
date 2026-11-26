@@ -27,7 +27,7 @@ type CallerAccounts interface {
 type CallerPeople interface {
 	FindPersonByAccount(ctx context.Context, accountID int64) (person domain.CallerPerson, found bool, err error)
 	CreatePerson(ctx context.Context, accountID int64, firstName, lastName string) error
-	RenamePerson(ctx context.Context, personID int64, firstName, lastName *string) error
+	RenamePerson(ctx context.Context, personID int64, firstName, lastName *string, expectedVersion string) error
 }
 
 // CallerMembership resolves the staff member and teacher of a person.

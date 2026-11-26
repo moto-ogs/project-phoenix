@@ -6,6 +6,7 @@
 // behält sein PDF und lässt sich erneut senden. Ein abgeschlossener Vertrag
 // (#4680) zeigt, wann und wie er zustande kam; erneut senden lässt er sich mit demselben PDF.
 
+import { useTraegerModuleBooked } from "~/lib/traeger-booked-modules";
 import { FamilyBillingStatusCard } from "~/components/traeger/family-billing-status-card";
 import { SepaMandateStatusCard } from "~/components/traeger/sepa-mandate-status-card";
 import {
@@ -34,6 +35,7 @@ import {
   formatConclusion,
   formatService,
   knownConclusionAt,
+  handedOverOnPaper,
   serviceDays,
 } from "~/components/traeger/care-contract-format";
 import { CareContractChangeCard } from "~/components/traeger/care-contract-change-card";
@@ -42,6 +44,7 @@ import { CareContractChildLinkModal } from "~/components/traeger/care-contract-c
 import {
   CONTRACT_DELIVERY_SECTION_ID,
   CONTRACT_DETAIL_TABS,
+  CONTRACT_CHANGE_SECTION_ID,
   CONTRACT_VERSIONS_SECTION_ID,
   ContractDetailTabsProvider,
   ContractSectionJump,
@@ -58,6 +61,11 @@ import {
   plannedVersionText,
 } from "~/components/traeger/care-contract-versions";
 import { CareContractSignatureCard } from "~/components/traeger/care-contract-signature-card";
+import {
+  CareContractWaitingChangeCard,
+  waitingChange,
+  waitingChangeText,
+} from "~/components/traeger/care-contract-waiting-change-card";
 import {
   useFreshTraegerResource,
   useTraegerResource,
@@ -322,7 +330,7 @@ function TraegerVertragView() {
     if (skip) warning(`Nicht gesendet: ${SEND_SKIP_LABELS[skip.reason]}.`);
     else
       success(
-        contract.status === "entwurf"
+        contract.mailings.length === 0
           ? "Der Vertrag ist unterwegs: per Mail und in die Eltern-App."
           : "Der Vertrag ist noch einmal unterwegs.",
       );
@@ -451,6 +459,12 @@ function TraegerVertragView() {
   };
 
   const isDraft = contract?.status === "entwurf";
+  // A contract handed over on paper (#8030) is versendet without a mail:
+  // its first mail is no second send.
+  const firstMail =
+    isDraft ||
+    (contract?.status === "versendet" && handedOverOnPaper(contract));
+  const billingBooked = useTraegerModuleBooked("elternbeitraege") === true;
   const canSend =
     isDraft || contract?.status === "versendet" || contract?.status === "aktiv";
   const lastMail = contract?.mailings[0];
@@ -469,6 +483,8 @@ function TraegerVertragView() {
     contract.endsOn < comingVersion.effectiveFrom
       ? undefined
       : comingVersion;
+  // A changed version that waits for the parents' signature (#4816).
+  const waiting = contract ? waitingChange(contract) : undefined;
   // An active or ended contract shows its versions, so the office sees where
   // an approved change will appear; a draft has only its first version.
   const showVersions =
@@ -523,9 +539,13 @@ function TraegerVertragView() {
     });
   }
   if (contract && sendInHead) {
+    // A draft's PDF is a preview that says so on every page (#8030): the
+    // parents sign only the PDF a send or the handover on paper froze.
     headMenu.push({
-      label: "PDF herunterladen",
-      description: "Speichert den Vertrag als PDF auf deinem Gerät.",
+      label: isDraft ? "Vorschau herunterladen" : "PDF herunterladen",
+      description: isDraft
+        ? "Speichert die Vorschau als PDF. Sie ist nicht zum Unterschreiben."
+        : "Speichert den Vertrag als PDF auf deinem Gerät.",
       icon: <Download className="h-4 w-4" aria-hidden="true" />,
       onClick: () => void download(),
     });
@@ -621,7 +641,7 @@ function TraegerVertragView() {
                   isLoading={sending}
                   loadingText="Wird gesendet …"
                   tooltip={
-                    isDraft
+                    firstMail
                       ? "moto fragt vorher nach, dann geht der Vertrag per E-Mail und in die Eltern-App."
                       : "moto fragt vorher nach, dann geht der Vertrag noch einmal an die Eltern."
                   }
@@ -629,7 +649,7 @@ function TraegerVertragView() {
                   onClick={() => setConfirmingSend(true)}
                 >
                   <Send className="mr-2 h-4 w-4" aria-hidden="true" />
-                  {isDraft ? "Vertrag senden" : "Erneut senden"}
+                  {firstMail ? "Vertrag senden" : "Erneut senden"}
                 </Button>
               ) : (
                 <Button
@@ -683,8 +703,10 @@ function TraegerVertragView() {
               so the button asks first and names who gets it. */}
           <ConfirmationModal
             isOpen={confirmingSend}
-            title={isDraft ? "Vertrag senden?" : "Vertrag noch einmal senden?"}
-            confirmText={isDraft ? "Vertrag senden" : "Erneut senden"}
+            title={
+              firstMail ? "Vertrag senden?" : "Vertrag noch einmal senden?"
+            }
+            confirmText={firstMail ? "Vertrag senden" : "Erneut senden"}
             isConfirmLoading={sending}
             loadingText="Wird gesendet …"
             onClose={() => setConfirmingSend(false)}
@@ -784,6 +806,22 @@ function TraegerVertragView() {
         <ContractDetailTabsProvider openTab={openTab}>
           <LoadErrorAlert error={afterSend.error} />
           <StatusNotice contract={contract} />
+          {/* The tab „Unterschrift und Versand“ opens with the card of the
+              changed version itself; the notice would only repeat it. */}
+          {waiting && activeTab !== "versand" ? (
+            <Alert
+              type="warning"
+              message={waitingChangeText(waiting, contract.version.number)}
+              action={
+                <ContractSectionJump
+                  targetId={CONTRACT_CHANGE_SECTION_ID}
+                  tooltip="Springt zur geänderten Fassung mit ihren Erinnerungen."
+                >
+                  Zur geänderten Fassung
+                </ContractSectionJump>
+              }
+            />
+          ) : null}
           {planned ? (
             <Alert
               type="info"
@@ -867,8 +905,8 @@ function TraegerVertragView() {
                 title="Gebuchte Betreuung"
                 description={
                   contract.versions.length > 1
-                    ? `Je Wochentag das Modul und bis wann das Kind betreut wird. So gilt es in Version ${contract.version.number}.`
-                    : "Je Wochentag das Modul und bis wann das Kind betreut wird."
+                    ? `Pro Wochentag das Modul und bis wann das Kind betreut wird. So gilt es in Version ${contract.version.number}.`
+                    : "Pro Wochentag das Modul und bis wann das Kind betreut wird."
                 }
               >
                 <DataGrid>
@@ -931,8 +969,11 @@ function TraegerVertragView() {
                   of its own. Not on a draft, which can be discarded with
                   what hangs on it, and not on a contract that is over: the
                   family's running contract carries it, and the retention
-                  moves it to the family's next contract (#7862). */}
-              {isDraft ||
+                  moves it to the family's next contract (#7862). Payment and
+                  mandate belong to Elternbeiträge und Abrechnung: without
+                  that module the contract shows neither (#6052). */}
+              {!billingBooked ||
+              isDraft ||
               contract.status === "beendet" ||
               contract.status === "widerrufen" ||
               (contract.endsOn && contract.endsOn < today) ? null : (
@@ -940,13 +981,20 @@ function TraegerVertragView() {
               )}
               {/* A mandate hangs on its contract; discarding a draft
                   would take it along, so a draft gets none (#7862). */}
-              {party?.email && !isDraft ? (
+              {billingBooked && party?.email && !isDraft ? (
                 <SepaMandateStatusCard contractId={contract.id} />
               ) : null}
             </>
           ) : null}
           {activeTab === "versand" ? (
             <>
+              {waiting ? (
+                <CareContractWaitingChangeCard
+                  contract={contract}
+                  waiting={waiting}
+                  onChanged={afterCardWrite}
+                />
+              ) : null}
               <CareContractSignatureCard
                 contract={contract}
                 onChanged={afterCardWrite}
@@ -996,7 +1044,7 @@ function TraegerVertragView() {
                 description={
                   contract.mailings.length > 0
                     ? undefined
-                    : contract.signature?.method === "paper"
+                    : handedOverOnPaper(contract)
                       ? "Auf Papier übergeben, nicht per Mail."
                       : "Noch nicht gesendet."
                 }
@@ -1125,6 +1173,7 @@ function TraegerVertragView() {
                 <CareContractVersions
                   contractId={contract.id}
                   versions={contract.versions}
+                  signatures={contract.versionSignatures}
                   end={{
                     withdrawn: contract.status === "widerrufen",
                     endsOn:

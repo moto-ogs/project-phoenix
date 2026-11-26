@@ -1,6 +1,8 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ApiError } from "~/lib/api-error";
 import { setTestClock } from "~/test/clock";
+import { catalogText } from "~/test/error-catalog-text";
 import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import type { StaffRecordDetail } from "~/lib/traeger-staff-api";
 
@@ -10,11 +12,13 @@ const { api, mockPush, mockReplace } = vi.hoisted(() => ({
   api: {
     fetchStaffRecord: vi.fn(),
     updateStaffPersonnelNumber: vi.fn(),
+    updateStaffEmployerNumber: vi.fn(),
     updateStaffPerson: vi.fn(),
     revealStaffFinancial: vi.fn(),
     updateStaffFinancial: vi.fn(),
     dissolveStaffRecord: vi.fn(),
     createStaffContract: vi.fn(),
+    updateStaffContract: vi.fn(),
   },
   mockPush: vi.fn(),
   mockReplace: vi.fn(),
@@ -75,6 +79,10 @@ const RECORD: StaffRecordDetail = {
       staffId: "11",
       active: true,
       viaPool: false,
+      employerName: "",
+      employerBody: "",
+      employerPersonnelNumber: null,
+      employerNumberVersion: "number-v1",
     },
     {
       schoolId: "2",
@@ -82,9 +90,19 @@ const RECORD: StaffRecordDetail = {
       staffId: "22",
       active: false,
       viaPool: false,
+      employerName: "Gemeinde Hardt",
+      employerBody: "gemeinde",
+      employerPersonnelNumber: null,
+      employerNumberVersion: "number-v2",
     },
   ],
-  financial: { iban: "•••• 3000", taxId: null, socialSecurityNumber: null },
+  personVersion: "person-v1",
+  financial: {
+    iban: "•••• 3000",
+    taxId: null,
+    socialSecurityNumber: null,
+    version: "financial-v1",
+  },
   changes: [
     {
       kind: "not_chosen",
@@ -122,10 +140,12 @@ const RECORD: StaffRecordDetail = {
   ],
   contracts: [],
   unsyncedSchools: [],
+  heldBankSchools: [],
 };
 
 const CONTRACT = {
   id: "9",
+  version: "contract-v1",
   kind: "part_time" as const,
   startsOn: "2026-08-01",
   endsOn: null,
@@ -185,6 +205,10 @@ describe("TraegerStaffRecordPage", () => {
   it("shows the Einsatzorte, the masked bank values and the trail in their tabs", async () => {
     renderPage();
     expect(await screen.findByText("Einsatzorte")).toBeInTheDocument();
+    // The Gemeinde employs the staff of the second school (#4811); the
+    // Träger's own Einsatzort names no employer.
+    expect(screen.getAllByText(/^Arbeitgeber:/)).toHaveLength(1);
+    expect(screen.getByText("Arbeitgeber: Gemeinde Hardt")).toBeInTheDocument();
     expect(screen.getByText("Beendet")).toBeInTheDocument();
     expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
       "Stammdaten",
@@ -350,6 +374,45 @@ describe("TraegerStaffRecordPage", () => {
     expect(await within(card!).findByText("70005")).toBeInTheDocument();
   });
 
+  // #8041: Bei einer Gemeinde kann die Person eine eigene Nummer haben.
+  it("saves the personnel number with the Gemeinde of an Einsatzort", async () => {
+    api.updateStaffEmployerNumber.mockResolvedValue({
+      ...RECORD,
+      employments: RECORD.employments.map((employment) =>
+        employment.schoolId === "2"
+          ? { ...employment, employerPersonnelNumber: "9001" }
+          : employment,
+      ),
+    });
+    renderPage();
+    const card = (
+      await screen.findByText("Personalnummer", {
+        selector: "h2",
+      })
+    ).closest("section");
+    expect(card).not.toBeNull();
+    expect(
+      within(card!).getByText("Bei Gemeinde Hardt (OGS Süd)"),
+    ).toBeInTheDocument();
+    expect(within(card!).getByText("Wie beim Träger")).toBeInTheDocument();
+    fireEvent.click(within(card!).getByRole("button", { name: /Bearbeiten/ }));
+    fireEvent.change(
+      within(card!).getByLabelText("Bei Gemeinde Hardt (OGS Süd)"),
+      { target: { value: "9001" } },
+    );
+    fireEvent.click(within(card!).getByRole("button", { name: "Speichern" }));
+    await vi.waitFor(() =>
+      expect(api.updateStaffEmployerNumber).toHaveBeenCalledWith(
+        "5",
+        "2",
+        "9001",
+        "number-v2",
+      ),
+    );
+    expect(api.updateStaffPersonnelNumber).not.toHaveBeenCalled();
+    expect(await within(card!).findByText("9001")).toBeInTheDocument();
+  });
+
   // #7379: Name und Geburtstag korrigiert die Personalverwaltung in der Akte.
   it("corrects name and birthday and refuses an empty name", async () => {
     let answer: () => void = () => undefined;
@@ -408,11 +471,11 @@ describe("TraegerStaffRecordPage", () => {
     );
     fireEvent.click(within(card!).getByRole("button", { name: "Speichern" }));
     await vi.waitFor(() =>
-      expect(api.updateStaffPerson).toHaveBeenCalledWith("5", {
-        firstName: "Myra",
-        lastName: "Sommer-Berg",
-        birthday: "1990-04-12",
-      }),
+      expect(api.updateStaffPerson).toHaveBeenCalledWith(
+        "5",
+        { firstName: "Myra", lastName: "Sommer-Berg", birthday: "1990-04-12" },
+        "person-v1",
+      ),
     );
     // While saving, nothing typed can get lost.
     expect(firstName).toBeDisabled();
@@ -508,5 +571,148 @@ describe("TraegerStaffRecordPage", () => {
       },
     );
     expect(within(dialog).getByText("5,5 Std. pro Woche")).toBeInTheDocument();
+  });
+
+  // ADR 0311: a save rests on the state the edit opened on. A colleague's
+  // change since is refused; the edit stays open on the stored state.
+  const changed = () =>
+    new ApiError("changed", 409, { code: "general.changed_since_read" });
+
+  it("keeps the person open on the stored record after a refusal", async () => {
+    api.updateStaffPerson
+      .mockRejectedValueOnce(changed())
+      .mockResolvedValue(undefined);
+    renderPage();
+    const card = (
+      await screen.findByText("Person", { selector: "h2" })
+    ).closest("section");
+    fireEvent.click(within(card!).getByRole("button", { name: /Bearbeiten/ }));
+    fireEvent.change(within(card!).getByLabelText(/Vorname/), {
+      target: { value: "Myra" },
+    });
+    api.fetchStaffRecord.mockResolvedValue({
+      ...RECORD,
+      lastName: "Sommer",
+      personVersion: "person-v2",
+    });
+    fireEvent.click(within(card!).getByRole("button", { name: "Speichern" }));
+
+    expect(
+      await within(card!).findByText(
+        catalogText("general.changed_since_read", "die Person"),
+      ),
+    ).toBeInTheDocument();
+    expect(api.updateStaffPerson.mock.calls.at(-1)?.[2]).toBe("person-v1");
+    await vi.waitFor(() =>
+      expect(within(card!).getByLabelText(/Nachname/)).toHaveValue("Sommer"),
+    );
+    expect(within(card!).getByLabelText(/Vorname/)).toHaveValue("Mira");
+
+    fireEvent.change(within(card!).getByLabelText(/Vorname/), {
+      target: { value: "Myra" },
+    });
+    fireEvent.click(within(card!).getByRole("button", { name: "Speichern" }));
+    await vi.waitFor(() =>
+      expect(api.updateStaffPerson.mock.calls.at(-1)?.[2]).toBe("person-v2"),
+    );
+  });
+
+  it("shows the stored bank values after a refusal and saves over their version", async () => {
+    api.revealStaffFinancial
+      .mockResolvedValueOnce({
+        iban: "DE89370400440532013000",
+        taxId: null,
+        socialSecurityNumber: null,
+        version: "financial-v1",
+      })
+      .mockResolvedValue({
+        iban: "DE02120300000000202051",
+        taxId: "12345678911",
+        socialSecurityNumber: null,
+        version: "financial-v2",
+      });
+    api.updateStaffFinancial
+      .mockRejectedValueOnce(changed())
+      .mockResolvedValue(undefined);
+    address.search = "tab=bank-und-steuer";
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: /Bearbeiten/ }));
+    const iban = await screen.findByLabelText("IBAN");
+    expect(iban).toHaveValue("DE89370400440532013000");
+    fireEvent.change(iban, { target: { value: "DE75512108001245126199" } });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    expect(
+      await screen.findByText(
+        catalogText("general.changed_since_read", "die Bank- und Steuerdaten"),
+      ),
+    ).toBeInTheDocument();
+    expect(api.updateStaffFinancial.mock.calls.at(-1)?.[2]).toBe(
+      "financial-v1",
+    );
+    await vi.waitFor(() =>
+      expect(screen.getByLabelText("IBAN")).toHaveValue(
+        "DE02120300000000202051",
+      ),
+    );
+    expect(screen.getByLabelText("Steuer-ID")).toHaveValue("12345678911");
+
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await vi.waitFor(() =>
+      expect(api.updateStaffFinancial.mock.calls.at(-1)?.[2]).toBe(
+        "financial-v2",
+      ),
+    );
+  });
+
+  it("keeps the contract dialog open on the stored contract after a refusal", async () => {
+    setTestClock("2026-09-09T12:00:00+02:00");
+    const contract = { ...CONTRACT, version: "contract-v1" };
+    api.fetchStaffRecord.mockResolvedValue({
+      ...RECORD,
+      contracts: [contract],
+    });
+    api.updateStaffContract.mockRejectedValueOnce(changed());
+    address.search = "tab=vertraege";
+    renderPage();
+    fireEvent.click(
+      await screen.findByRole("button", { name: /^Aktionen für den Vertrag/ }),
+    );
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: /Vertrag ändern/ }),
+    );
+    const dialog = await screen.findByRole("dialog", {
+      name: "Vertrag ändern",
+    });
+    fireEvent.click(within(dialog).getByRole("switch"));
+    api.fetchStaffRecord.mockResolvedValue({
+      ...RECORD,
+      contracts: [{ ...contract, kind: "minijob", version: "contract-v2" }],
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Speichern" }));
+
+    expect(
+      await within(dialog).findByText(
+        catalogText("general.changed_since_read", "den Arbeitsvertrag"),
+      ),
+    ).toBeInTheDocument();
+    expect(api.updateStaffContract.mock.calls.at(-1)?.[3]).toBe("contract-v1");
+    await vi.waitFor(() =>
+      expect(within(dialog).getByRole("switch")).not.toBeChecked(),
+    );
+    expect(
+      within(dialog).getByRole("radio", { name: /Minijob/ }),
+    ).toBeChecked();
+
+    api.updateStaffContract.mockResolvedValue({
+      ...RECORD,
+      contracts: [{ ...contract, kind: "minijob", version: "contract-v3" }],
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Speichern" }));
+    await vi.waitFor(() =>
+      expect(api.updateStaffContract.mock.calls.at(-1)?.[3]).toBe(
+        "contract-v2",
+      ),
+    );
   });
 });

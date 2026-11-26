@@ -28,8 +28,6 @@ var ErrForbiddenGroup = errors.New("caller does not supervise the requested acti
 // wired.
 var ErrIncompleteDependencies = errors.New("supervision dashboard projection is not fully configured")
 
-const studentPhotoStoredURLPrefix = "/uploads/student-photos/"
-
 // SpontaneousStartBlockedWeekend is the reason code for a weekend business
 // day on which no spontaneous session may start.
 const SpontaneousStartBlockedWeekend = "weekend"
@@ -62,7 +60,10 @@ type Dependencies struct {
 	Calendar Calendar
 	// TeacherHints reads the Lehrkraft's day hints (#4795).
 	TeacherHints TeacherHintReader
-	Now          func() time.Time
+	// PlannedActivities reads the day's offerings for the child cards
+	// (#8194); nil attaches none.
+	PlannedActivities PlannedActivityReader
+	Now               func() time.Time
 	// Handovers is optional (#4794): without it no child is marked.
 	Handovers HandoverReader
 }
@@ -267,7 +268,8 @@ type Visit struct {
 	SickSince         *time.Time `json:"sick_since,omitempty"`
 	Excused           bool       `json:"excused"`
 	ExcusedSince      *time.Time `json:"excused_since,omitempty"`
-	PhotoURL          string     `json:"photo_url,omitempty"`
+	PhotoVersion      string     `json:"photo_version,omitempty"`
+	PhotoURL          string     `json:"photo_url,omitempty"` // legacy BFF alias
 	// ClassHandover: today's handover of the child to the OGS (#4794).
 	ClassHandover *SupervisionClassHandover `json:"class_handover,omitempty"`
 }
@@ -308,6 +310,10 @@ type DashboardProjection struct {
 	// TeacherHints are today's hints of the Lehrkraft (#4795) for the
 	// children in the projection, oldest first; with users:read only.
 	TeacherHints []SupervisionTeacherHint `json:"teacher_hints"`
+	// PlannedActivities are today's offerings of the children in the
+	// projection (#8194), between arrival and pickup on the card; behind
+	// the planning gate and the school's setting.
+	PlannedActivities []SupervisionPlannedActivity `json:"planned_activities"`
 }
 
 func emptyProjection() *DashboardProjection {
@@ -323,6 +329,7 @@ func emptyProjection() *DashboardProjection {
 		PickupTimes:        []DashboardPickupTime{},
 		ArrivalTimes:       []ArrivalTime{},
 		TeacherHints:       []SupervisionTeacherHint{},
+		PlannedActivities:  []SupervisionPlannedActivity{},
 	}
 }
 
@@ -639,6 +646,9 @@ func (s *service) loadPresenceSections(ctx context.Context, projection *Dashboar
 	if err := s.loadTeacherHints(ctx, projection, caller, studentIDs, fullAccess, businessDay); err != nil {
 		return err
 	}
+	if err := s.loadPlannedActivities(ctx, projection, caller, studentIDs, fullAccess, businessDay); err != nil {
+		return err
+	}
 	return s.applyClassHandovers(ctx, projection, caller, businessDay)
 }
 
@@ -689,8 +699,8 @@ func (s *service) buildVisit(row VisitRecord, attendance map[int64]Attendance, f
 	}
 	// Same full-access gate the single endpoint used: without it, avatar
 	// requests for out-of-scope students would 403 in the byte-serve path.
-	if photosEnabled && fullAccess && row.PhotoPath != nil {
-		visit.PhotoURL = buildPhotoURL(row.StudentID, *row.PhotoPath)
+	if photosEnabled && fullAccess {
+		visit.PhotoVersion = row.PhotoVersion
 	}
 	return visit
 }
@@ -701,13 +711,6 @@ func (s *service) clock(at *time.Time) *string {
 	}
 	formatted := s.deps.Calendar.Clock(*at)
 	return &formatted
-}
-
-func buildPhotoURL(studentID int64, storedURL string) string {
-	if storedURL == "" || !strings.HasPrefix(storedURL, studentPhotoStoredURLPrefix) {
-		return storedURL
-	}
-	return fmt.Sprintf("/api/students/%d/photo/%s", studentID, strings.TrimPrefix(storedURL, studentPhotoStoredURLPrefix))
 }
 
 func (s *service) loadTracking(ctx context.Context, studentIDs []int64) (DashboardTrackingIndicators, error) {

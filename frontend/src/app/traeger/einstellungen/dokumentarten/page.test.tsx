@@ -17,6 +17,10 @@ vi.mock("~/lib/traeger-document-kinds-api", async (importOriginal) => ({
   ...(await importOriginal<object>()),
   ...kindsApi,
 }));
+vi.mock("~/lib/traeger-billing-issuers-api", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  fetchBillingIssuerStatuses: vi.fn().mockResolvedValue([]),
+}));
 vi.mock("~/lib/traeger-url", () => ({
   traegerPath: (path: string) => path.replace(/^\/traeger/, "") || "/",
 }));
@@ -26,7 +30,7 @@ vi.mock("next-auth/react", () => ({
       user: {
         id: "A",
         scope: "org",
-        orgId: 7,
+        orgId: "7",
         permissions: session.permissions,
       },
     },
@@ -34,7 +38,7 @@ vi.mock("next-auth/react", () => ({
   }),
 }));
 
-import TraegerDocumentKindsPage from "./page";
+import TraegerDocumentKindsPage from "./page-content";
 
 function overview(
   care: "invoice" | "fee_notice",
@@ -108,6 +112,7 @@ describe("TraegerDocumentKindsPage", () => {
       expect(kindsApi.saveDocumentKind).toHaveBeenCalledWith(
         "care",
         "fee_notice",
+        undefined,
       ),
     );
     // A fee notice without the legal remedy says what to do first.

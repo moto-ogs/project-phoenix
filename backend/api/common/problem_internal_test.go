@@ -16,8 +16,8 @@ import (
 
 // ProblemResponseMiddleware logs every body it has to repair (#2507). The
 // check must flag a status other than the HTTP status number, an `error` or
-// `message` text and a missing code, and leave the shared envelope alone
-// (#2520).
+// `message` text, a missing code or a business field beside details, and
+// leave the shared envelope alone (#2520).
 func TestDepartsFromEnvelope(t *testing.T) {
 	t.Parallel()
 
@@ -31,6 +31,7 @@ func TestDepartsFromEnvelope(t *testing.T) {
 		`{"status":"Conflict","error":"taken"}`:                                                 true,
 		`{"status":409,"message":"taken","code":"general.business_rejection"}`:                  true,
 		`{"conflicts":[],"message":"taken"}`:                                                    true,
+		`{"status":409,"detail":"taken","code":"general.business_rejection","conflicts":[]}`:    true,
 		`{"status":"success","data":{},"message":"conflict"}`:                                   true,
 	} {
 		var decoded map[string]json.RawMessage

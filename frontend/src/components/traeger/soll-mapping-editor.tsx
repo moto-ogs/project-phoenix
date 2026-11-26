@@ -486,7 +486,7 @@ export function SollMappingEditor({
           <Alert
             type="info"
             className="mt-4"
-            message="Mit Erlöskonto oder Kostenstelle hat die Datei eine Zeile je Konto einer Rechnung. Der Betrag ist dann der Teil der Rechnung auf diesem Konto."
+            message="Mit Erlöskonto oder Kostenstelle hat die Datei eine Zeile pro Konto einer Rechnung. Der Betrag ist dann der Teil der Rechnung auf diesem Konto."
             action={
               <ButtonLink
                 href={traegerPath(BOOKING_ACCOUNTS_PATH)}

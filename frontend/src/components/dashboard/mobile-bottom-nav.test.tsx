@@ -1,3 +1,4 @@
+import { deriveSupervision } from "~/lib/supervision-derive";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { releaseFakeTimers } from "~/test/clock";
 import { render, screen, fireEvent, act } from "@testing-library/react";
@@ -329,6 +330,7 @@ describe("MobileBottomNav", () => {
     mockUseSearchParams.mockReturnValue(createMockSearchParams());
     mockUseSession.mockReturnValue(createMockSession(false));
     mockUseSupervision.mockReturnValue({
+      ...deriveSupervision(),
       hasGroups: true,
       isSupervising: false,
       isLoadingGroups: false,
@@ -865,6 +867,7 @@ describe("MobileBottomNav", () => {
         ),
       );
       mockUseSupervision.mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: true,
         isSupervising: true,
         isLoadingGroups: false,
@@ -1043,7 +1046,6 @@ describe("MobileBottomNav", () => {
       fireEvent.click(screen.getByRole("button", { name: "Mehr" }));
 
       for (const label of [
-        "Betreuungsplan",
         "Dienstplan",
         "Anmeldungen",
         "Elternzugänge",
@@ -1052,6 +1054,25 @@ describe("MobileBottomNav", () => {
       ]) {
         expect(screen.queryByText(label)).not.toBeInTheDocument();
       }
+      // #8134: der Plan steht im Tagesbetrieb und damit für das ganze Team
+      // im Mehr-Menü; geplant wird weiter nur mit schedules:manage.
+      expect(
+        screen.getByRole("link", { name: "Betreuungsplan" }),
+      ).toHaveAttribute("href", "/test-tenant/betreuungsplan");
+    });
+
+    it("hält den schulweiten Betreuungsplan von der AG-Leitung fern (#8134)", () => {
+      mockHasPermission.mockImplementation(
+        (_session: unknown, permission: string) =>
+          permission === "schedules:read",
+      );
+
+      render(<MobileBottomNav />);
+      fireEvent.click(screen.getByRole("button", { name: "Mehr" }));
+
+      // Anker: das Menü ist offen und zeigt die Seiten für alle.
+      expect(screen.getByRole("link", { name: "Dateien" })).toBeInTheDocument();
+      expect(screen.queryByText("Betreuungsplan")).not.toBeInTheDocument();
     });
   });
 
@@ -1249,6 +1270,7 @@ describe("MobileBottomNav", () => {
     beforeEach(() => {
       mockIsAdmin.mockReturnValue(false);
       mockUseSupervision.mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: true,
         isSupervising: true,
         isLoadingGroups: false,
@@ -1536,6 +1558,7 @@ describe("MobileBottomNav", () => {
       mockIsAdmin.mockReturnValue(true);
       mockUseSession.mockReturnValue(createMockSession(true));
       mockUseSupervision.mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: true,
         isSupervising: true,
         isLoadingGroups: false,
@@ -1877,6 +1900,7 @@ describe("MobileBottomNav", () => {
   describe("supervision-based visibility", () => {
     it("shows supervision-related links when user has groups", () => {
       mockUseSupervision.mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: true,
         isSupervising: false,
         isLoadingGroups: false,
@@ -1897,6 +1921,7 @@ describe("MobileBottomNav", () => {
 
     it("shows supervision-related links when user is actively supervising", () => {
       mockUseSupervision.mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: false,
         isSupervising: true,
         isLoadingGroups: false,
@@ -1919,6 +1944,7 @@ describe("MobileBottomNav", () => {
       mockIsAdmin.mockReturnValue(true);
       mockUseSession.mockReturnValue(createMockSession(true));
       mockUseSupervision.mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: true,
         isSupervising: true,
         isLoadingGroups: false,
@@ -1941,6 +1967,7 @@ describe("MobileBottomNav", () => {
       mockIsAdmin.mockReturnValue(true);
       mockUseSession.mockReturnValue(createMockSession(true));
       mockUseSupervision.mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: true,
         isSupervising: true,
         isLoadingGroups: false,
@@ -1965,6 +1992,7 @@ describe("MobileBottomNav", () => {
       mockIsAdmin.mockReturnValue(true);
       mockUseSession.mockReturnValue(createMockSession(true));
       mockUseSupervision.mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: false,
         isSupervising: false,
         isLoadingGroups: true,
@@ -1990,6 +2018,7 @@ describe("MobileBottomNav", () => {
       mockIsAdmin.mockReturnValue(true);
       mockUseSession.mockReturnValue(createMockSession(true));
       mockUseSupervision.mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: false,
         isSupervising: true,
         isLoadingGroups: false,
@@ -2014,6 +2043,7 @@ describe("MobileBottomNav", () => {
       mockIsAdmin.mockReturnValue(true);
       mockUseSession.mockReturnValue(createMockSession(true));
       mockUseSupervision.mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: false,
         isSupervising: false,
         isLoadingGroups: false,

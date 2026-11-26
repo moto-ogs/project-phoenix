@@ -172,6 +172,44 @@ export function careOfferingFromContract(
   };
 }
 
+export type PhaseOccupancyOffering = Pick<
+  CareOffering,
+  "id" | "name" | "capacity" | "is_active"
+>;
+
+export function mapPhaseOccupancyOffering({
+  id,
+  name,
+  capacity,
+  is_active,
+}: PhaseOccupancyOffering): PhaseOccupancyOffering {
+  return { id, name, capacity, is_active };
+}
+
+/** The enrollment overview only needs counts, not catalog rows. */
+export function careOfferingCountsByPhase(
+  offerings: readonly Pick<
+    sharedContract.CareOfferingResponse,
+    "phase_id" | "is_active"
+  >[],
+): Record<string, { total: number; active: number }> {
+  const counts: Record<string, { total: number; active: number }> = {};
+  for (const offering of offerings) {
+    const count = (counts[offering.phase_id] ??= { total: 0, active: 0 });
+    count.total++;
+    if (offering.is_active) count.active++;
+  }
+  return counts;
+}
+
+export async function fetchCareOfferingCounts() {
+  return careOfferingCountsByPhase(
+    await bffJson("tenant", "GET /api/enrollment/care-offerings/", {
+      errorMessage: "Betreuungsangebote konnten nicht geladen werden",
+    }),
+  );
+}
+
 export async function listCareOfferings(
   phaseId?: string | null,
 ): Promise<CareOffering[]> {
@@ -197,14 +235,19 @@ export async function createCareOffering(
   );
 }
 
+/**
+ * Saves the offering over the version its editor read (ADR 0311); the
+ * server refuses another one with `general.changed_since_read`.
+ */
 export async function updateCareOffering(
   id: string,
   input: CareOfferingInput,
+  version: string,
 ): Promise<CareOffering> {
   return careOfferingFromContract(
     await bffJson("tenant", "PUT /api/enrollment/care-offerings/{id}/", {
       params: { id },
-      body: input,
+      body: { ...input, expected_version: version },
       errorMessage: "Betreuungsangebot konnte nicht gespeichert werden",
     }),
   );

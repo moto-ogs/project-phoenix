@@ -1,7 +1,6 @@
 package account
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -9,6 +8,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/portalauth"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 
 	"github.com/go-chi/render"
 )
@@ -29,24 +29,26 @@ type SessionClaimsResponse struct {
 	Username      string   `json:"username,omitempty"`
 	FirstName     string   `json:"first_name,omitempty"`
 	LastName      string   `json:"last_name,omitempty"`
-	Roles         []string `json:"roles,omitempty"`
-	Permissions   []string `json:"permissions,omitempty"`
+	Roles         []string `json:"roles,omitzero"`
+	RoleIsSystem  []bool   `json:"role_is_system"`
+	Permissions   []string `json:"permissions,omitzero"`
 	IsAdmin       bool     `json:"is_admin,omitempty"`
 	Scope         string   `json:"scope,omitempty"`
 	TenantID      ident.ID `json:"tenant_id,omitempty"`
 	OrgID         ident.ID `json:"org_id,omitempty"`
-	FamilyID      string   `json:"family_id,omitempty"`
+	FamilyID      string   `json:"family_id,omitempty" contract_text:"refresh token family key"`
 	ReadOnly      bool     `json:"read_only,omitempty"`
 	ActingAdminID ident.ID `json:"acting_admin_id,omitempty"`
-	PreviewID     string   `json:"preview_id,omitempty"`
+	PreviewID     string   `json:"preview_id,omitempty" contract_text:"session preview key"`
 	ViaTraeger    bool     `json:"via_traeger,omitempty"`
-	ExpiresAt     int64    `json:"exp,omitempty" contract:"number"`
+	IssuedAt      int64    `json:"iat" contract:"number"`
+	ExpiresAt     int64    `json:"exp" contract:"number"`
 }
 
 func (rs *Resource) validateSession(w http.ResponseWriter, r *http.Request) {
 	var input SessionValidationRequest
 	r.Body = http.MaxBytesReader(w, r.Body, 32*1024)
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+	if err := wire.Decode(r.Body, &input); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid session validation request")))
 		return
 	}
@@ -71,10 +73,10 @@ func (rs *Resource) validateSession(w http.ResponseWriter, r *http.Request) {
 func sessionClaimsResponse(claims identityaccess.SessionClaims) SessionClaimsResponse {
 	return SessionClaimsResponse{
 		ID: ident.ID(claims.AccountID), Sub: claims.Email, Username: claims.Username, FirstName: claims.FirstName, LastName: claims.LastName,
-		Roles: claims.Roles, Permissions: claims.Permissions, IsAdmin: claims.IsAdmin, Scope: claims.Scope,
+		Roles: claims.Roles, RoleIsSystem: claims.RoleIsSystem, Permissions: claims.Permissions, IsAdmin: claims.IsAdmin, Scope: claims.Scope,
 		TenantID: ident.ID(claims.TenantID), OrgID: ident.ID(claims.OrgID), FamilyID: claims.FamilyID,
 		ReadOnly: claims.ReadOnly, ActingAdminID: ident.ID(claims.ActingAdminID), PreviewID: claims.PreviewID, ViaTraeger: claims.ViaTraeger,
-		ExpiresAt: claims.ExpiresAt,
+		IssuedAt: claims.IssuedAt, ExpiresAt: claims.ExpiresAt,
 	}
 }
 

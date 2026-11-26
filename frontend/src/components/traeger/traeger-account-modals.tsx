@@ -5,8 +5,15 @@ import { EditActions } from "~/components/ui/edit-actions";
 import { FormModal } from "~/components/ui/form-modal";
 import { useFormModalPending } from "~/components/ui/use-form-modal-pending";
 import { Input } from "~/components/ui/input";
-import { useApiFormError, useToast } from "~/contexts/ToastContext";
+import { LoadErrorAlert } from "~/components/ui/form-error-alert";
+import {
+  useApiErrorDisplay,
+  useApiFormError,
+  useToast,
+} from "~/contexts/ToastContext";
 import type { RefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
+import { useReadDraftForm } from "~/lib/hooks/use-swr-load-error";
+import { useDraftOn } from "~/lib/swr/read-draft";
 import { createLogger } from "~/lib/logger";
 import {
   changeTraegerMemberName,
@@ -19,7 +26,7 @@ import {
   TRAEGER_NAME_HINT,
   TRAEGER_NAME_MAX_LENGTH,
 } from "~/lib/traeger-person-name";
-import type { TraegerRole } from "~/lib/traeger-roles";
+import { TRAEGER_ROLES, type TraegerRole } from "~/lib/traeger-roles";
 import { TraegerRoleChoice } from "./traeger-role-choice";
 
 const logger = createLogger({ component: "TraegerAccountModals" });
@@ -160,62 +167,121 @@ const LAST_LEADER_REASON =
 
 const LAST_LEADER_LOCK = { leadership: LAST_LEADER_REASON } as const;
 
+const MEMBER_GONE =
+  "Diese Person gehört nicht mehr zum Träger-Büro. Die Rollen sind nicht geändert.";
+
 /**
  * Changes the roles of a person of the Träger-Büro (#4650). The person's
  * open session picks the new rights up within a few minutes. Leitung stays
  * checked for the only person holding it (#5471); the backend refuses the
  * change as well.
+ *
+ * The choice rests on the roles as they were read (ADR 0311): a newer list
+ * refills it only while nothing is ticked, the save sends their version,
+ * and after a refusal the stored roles show; nothing is sent until they are
+ * read.
  */
 export function ChangeTraegerRolesModal({
   member,
   members,
+  reload,
   onClose,
+  onSaved,
   onChanged,
 }: Readonly<{
   member: TraegerMember | null;
   members: readonly TraegerMember[];
+  /** Reads the people again; rejects when the read fails (ADR 0311). */
+  reload: () => Promise<readonly TraegerMember[]>;
   onClose: () => void;
+  /** The person as saved, with the new version, at once into the list. */
+  onSaved: (member: TraegerMember) => void;
   /** Reloads the list; never rejects (#6652). */
   onChanged: RefreshAfterWrite;
 }>) {
+  const accountId = member?.accountId ?? null;
+  const { showMessage } = useApiErrorDisplay();
+  const find = (list: readonly TraegerMember[]) =>
+    list.find((other) => other.accountId === accountId);
+  const edit = useDraftOn<
+    TraegerMember,
+    readonly TraegerRole[],
+    string | undefined,
+    TraegerMember
+  >(
+    {
+      opening: accountId,
+      data: find(members) ?? member ?? undefined,
+      // A person removed meanwhile closes the dialog: there is nothing
+      // left to save, and the list no longer shows them.
+      reload: async () => {
+        const found = find(await reload());
+        if (!found) {
+          onClose();
+          showMessage(MEMBER_GONE);
+        }
+        return found;
+      },
+    },
+    {
+      token: (stored) => stored.version,
+      // In the order the choice keeps, so ticking a role off and on again
+      // leaves the draft untouched.
+      toDraft: (stored) =>
+        TRAEGER_ROLES.filter((role) => stored.roles.includes(role)),
+      answer: (saved) => saved,
+    },
+  );
+  const stored = edit.base ?? member;
+  const roles = edit.draft ?? [];
   const isLastLeader =
-    member?.roles.includes("leadership") === true &&
+    stored?.roles.includes("leadership") === true &&
     members.filter((other) => other.roles.includes("leadership")).length <= 1;
-  const [roles, setRoles] = useState<TraegerRole[]>([]);
   const save = useFormModalPending(member !== null);
   const saving = save.pending;
   const formRef = useRef<HTMLFormElement>(null);
   const formErrors = useApiFormError(formRef);
   const { clear: clearErrors } = formErrors;
+  const form = useReadDraftForm(edit, formErrors, "die Rollen der Person");
   const { success } = useToast();
 
   useEffect(() => {
-    if (!member) return;
-    setRoles([...member.roles]);
+    if (accountId === null) return;
     clearErrors();
-  }, [member, clearErrors]);
+  }, [accountId, clearErrors]);
 
   const submit = async () => {
-    if (!member) return;
-    formErrors.clear();
+    // Enter submits too: nothing goes out before the stored roles are read,
+    // and the shown error stays.
+    if (!member || !form.begin()) return;
     if (roles.length === 0) {
       formErrors.invalid(ROLES_REQUIRED, { roles: ROLES_REQUIRED });
       return;
     }
     await save.run(async (op) => {
-      try {
-        await changeTraegerRoles(member.accountId, roles);
-      } catch (err) {
-        logger.error("traeger_roles_change_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        if (!op.isCurrent()) return;
-        void formErrors.show(err, { object: "die Rollenvergabe" });
+      const result = await edit.submit((version, draft) =>
+        changeTraegerRoles(member.accountId, draft, version),
+      );
+      if (result.ok) {
+        onSaved(result.saved);
+        if (op.isCurrent()) onClose();
+        success("Die Rollen sind geändert.");
+        await onChanged();
         return;
       }
-      if (op.isCurrent()) onClose();
-      success("Die Rollen sind geändert.");
-      await onChanged();
+      logger.error("traeger_roles_change_failed", {
+        error:
+          result.error instanceof Error
+            ? result.error.message
+            : String(result.error),
+      });
+      if (!op.isCurrent()) return;
+      // Changed since it was read: `reload` shows the stored roles instead
+      // of the choice, without a retry (ADR 0311).
+      void formErrors.show(result.error, {
+        object: "die Rollenvergabe",
+        reload: result.refused ? result.reload : undefined,
+      });
     });
   };
 
@@ -245,6 +311,7 @@ export function ChangeTraegerRolesModal({
           void submit();
         }}
       >
+        <LoadErrorAlert error={form.loadError} />
         <p className="text-sm text-gray-600">
           Rollen für{" "}
           <span className="font-medium wrap-anywhere">{member?.email}</span>.
@@ -253,7 +320,7 @@ export function ChangeTraegerRolesModal({
         </p>
         <TraegerRoleChoice
           value={roles}
-          onChange={setRoles}
+          onChange={(next) => edit.setDraft(next)}
           disabled={saving}
           error={formErrors.fieldError("roles")}
           locked={isLastLeader ? LAST_LEADER_LOCK : undefined}

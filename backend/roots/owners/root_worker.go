@@ -201,6 +201,23 @@ func workerTracer(tracer *observability.Tracer) schedulerPorts.WorkerTracer {
 	}
 }
 
+// composeWorkerPresence builds Student Presence and the room closures its
+// activity starts consume before the worker enters its scheduled jobs.
+func composeWorkerPresence(
+	db transactionruntime.Database, env RootEnvironment, devices devicefleet.Capability, persons *peopleCompose.Directory,
+	rooms facilitiesModule.Catalog, membership schoolMembershipModule.Owner, carePlan carePlanModule.Owner,
+	timetableOwner timetable.Owner, timetableRepos TimetableRepositories, people PeopleRows, structure StructureRows,
+	groups schoolstructure.Query, workTime workforceCompose.WorkTime,
+) (PresenceOwner, GroupSubstitutions, studentpresence.SupervisionRecords, facilitiesModule.Closures, error) {
+	presence := BuildPresenceOwner(db, env.Logger, env.Now, devices, persons, rooms, membership, carePlan, timetableOwner, timetableRepos, people, structure)
+	closures, err := BuildRoomClosures(db, env.Now)
+	if err != nil {
+		return PresenceOwner{}, nil, nil, nil, StepError("compose room closures", err)
+	}
+	return presence, NewGroupSubstitutionRepository(structure.Groups, membership, workTime, env.Today),
+		NewGroupSupervisionRecords(presence.SessionRecords, groups), closures, nil
+}
+
 // ComposeWorker builds the owners the Worker's jobs need as local values,
 // in the build order of the owner graph, without the HTTP router, and starts
 // the Worker over them through newWorker, the function the server root
@@ -299,6 +316,7 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 		facilities       facilitiesModule.Capability
 		outbox           *deliveryModule.Worker
 		staffGroups      schoolstructure.StaffGroupQuery
+		roomClosures     facilitiesModule.Closures
 	)
 	err = RunRootSteps(
 		func() (err error) { tokens, err = tokensFor(); return },
@@ -359,11 +377,10 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 			devices, err = NewDeviceFleet(db, env.Now)
 			return StepError("compose device fleet", err)
 		},
-		func() error {
-			presence = BuildPresenceOwner(db, env.Logger, env.Now, devices, persons, rooms, membership, carePlan, timetableOwner, timetableRepos, people, structure)
-			substitutions = NewGroupSubstitutionRepository(structure.Groups, membership, workTime, env.Today)
-			supervisions = NewGroupSupervisionRecords(presence.SessionRecords, groups)
-			return nil
+		func() (err error) {
+			presence, substitutions, supervisions, roomClosures, err = composeWorkerPresence(
+				db, env, devices, persons, rooms, membership, carePlan, timetableOwner, timetableRepos, people, structure, groups, workTime)
+			return
 		},
 		func() (err error) {
 			timetableRows, err = BuildTimetableOwner(db, env.Logger, env.Now, timetableOwner, timetableRepos, calendar, bookings, structure.Groups, hub, persons, people.Students)
@@ -439,7 +456,7 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 		},
 		func() (err error) {
 			active, err = BuildActivePresence(db, unit, env, hub, settings.Service, presence, presencePeople, carePlanRows, people,
-				services.Users, rooms, devices, timetableRows, days, side.AutoCheckIn, emitter, tracker, principal)
+				services.Users, rooms, roomClosures, devices, timetableRows, days, side.AutoCheckIn, emitter, tracker, principal)
 			return
 		},
 		func() (err error) {
@@ -455,12 +472,8 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 			return
 		},
 		func() (err error) {
-			materialization, err = BuildTimetableMaterialization(db, env, hub, timetableRows, people, calendar, workTime)
-			return
-		},
-		func() (err error) {
-			lifecycle, err = BuildTimetableLifecycle(db, env, hub, timetableRows, days, people, careRows, presence, supervisions,
-				WorkforceShiftRows(workTime), schedules, carePlan, active, materialization, announcements, settings.Service, NewTimetableSickReports(workTime), NewTimetableStaffNotices(notifications, membership, timetableOwner, workTime).WithGuardianContacts(persons))
+			materialization, lifecycle, err = BuildWorkerTimetableServices(db, env, hub, timetableRows, days, people, persons, careRows, calendar,
+				presence, supervisions, workTime, schedules, carePlan, active, announcements, settings.Service, notifications, membership, timetableOwner)
 			return
 		},
 		func() (err error) {
@@ -555,7 +568,7 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 	return NewWorker(db, env.Logger, env.Now, appUploads, tracer, hub, settings.Service, audit.Command, audit.Persistence.DataAccessLog, deviceFleet, carePlan, persons, people,
 		organizations, identity, facilities, timetableRepos, workTime, staffAdmin, workforce, active, reports, lifecycle, days,
 		materialization, schedules, requests.Documents, services, persons.Owner, studentAudit, notices, flows, studentDeletion, feedback, calendarApp,
-		notifications, deliveryDevices.PWAUsage, chat.StaffMessaging, outbox, reminders, fileStore, announcements, mealPlan, schoolNames(tracker), plannedExits, dayLog, env.HealthData, CareContractRemindersJob(db.UnitOfWork(), organizations, settings.Traeger, delivery.Runtime.Module, delivery.Runtime.EmailOutcomes, env.Links.ParentsURL, env.Now), careContracts(organizations, settings, delivery.Runtime.Module, delivery.Runtime.EmailOutcomes, audit.Persistence.DataAccessLog, NewCareContractSchoolHolidays(settings.Service, calendar), env.Links.ParentsURL), HolidayClosureNotificationsJob(db.UnitOfWork(), NewHolidaySchoolCalendar(settings.Service, calendar, organizations), calendar, organizations, HolidayClosureMail{Delivery: delivery.Runtime.Module, TraegerMails: delivery.Runtime.TraegerMails}, env.Logger, env.Now))
+		notifications, deliveryDevices.PWAUsage, chat.StaffMessaging, outbox, reminders, fileStore, announcements, mealPlan, schoolNames(tracker), plannedExits, dayLog, env.HealthData, CareContractRemindersJob(db.UnitOfWork(), organizations, settings.Traeger, delivery.Runtime.Module, delivery.Runtime.EmailOutcomes, env.Links.ParentsURL, env.Now), careContracts(organizations, settings, delivery.Runtime.Module, delivery.Runtime.EmailOutcomes, audit.Persistence.DataAccessLog, NewCareContractSchoolHolidays(settings.Service, calendar), env.Links.ParentsURL, identity), HolidayClosureNotificationsJob(db.UnitOfWork(), NewHolidaySchoolCalendar(settings.Service, calendar, organizations), calendar, organizations, HolidayClosureMail{Delivery: delivery.Runtime.Module, TraegerMails: delivery.Runtime.TraegerMails}, env.Logger, env.Now))
 }
 
 func buildWorkerAnalyticsSettings(db transactionruntime.Database, unit rootUnitOfWork, env RootEnvironment, organizations organizationtenancy.Capability, hub *realtime.Hub, bookings enrollmentPhaseRestrictions, tracker ProductEventTracker, bind func(ProductEventTracker, settingsValues.TenantReader, bool) ProductEventTracker) (SettingsOwner, ProductEventTracker, error) {
@@ -573,5 +586,6 @@ func workerMealPlan(db transactionruntime.Database, settings SettingsOwner, peop
 	if err != nil {
 		return nil, err
 	}
-	return BuildServeMealPlan(db, mealPlanSettings, NewStudentRootReads(people.Students), persons, calendar, nil)
+	plan, err := BuildServeMealPlan(db, mealPlanSettings, NewStudentRootReads(people.Students), persons, calendar, nil)
+	return plan.Capability, err
 }

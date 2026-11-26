@@ -10,7 +10,7 @@ import type { TraegerSchool } from "~/lib/traeger-api";
 import { catalogText } from "~/test/error-catalog-text";
 import { setTestClock, testClockDay } from "~/test/clock";
 import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
-import TraegerContractEnrollmentPage from "./page";
+import TraegerContractEnrollmentPage from "./page-content";
 
 const api = vi.hoisted(() => ({
   previewContractEnrollments: vi.fn(),

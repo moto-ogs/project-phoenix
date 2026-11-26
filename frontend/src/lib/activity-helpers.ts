@@ -31,6 +31,8 @@ export type Activity = Pick<
   supervisors?: ActivitySupervisor[];
   ag_category_id: ActivityResponse["category_id"];
   category_name?: string;
+  /** moto provisions it (Schulhof Freispiel, WC, Offener Raum). */
+  is_system?: ActivityResponse["is_system"];
   // Parsed instants.
   created_at: Date;
   updated_at: Date;
@@ -65,6 +67,16 @@ export type ActivityCategory = Pick<
    * list endpoint reports it.
    */
   usageCount?: number;
+  /**
+   * The stored state of the category's form (ADR 0311); an edit sends it
+   * back as `expected_version`. Only the category routes carry it.
+   */
+  version?: string;
+  /**
+   * The stored state of the category's link to a shift type; a shift-type
+   * edit sends it for every category it read (ADR 0311).
+   */
+  shiftTypeLinkVersion?: string;
   // Parsed instants.
   created_at: Date;
   updated_at: Date;
@@ -189,18 +201,15 @@ function mapScheduleToTime(
   };
 }
 
-// System activity names that cannot be deleted or renamed.
-// Must stay in sync with backend constants/activities.go.
-const SYSTEM_ACTIVITY_NAMES = ["Schulhof Freispiel", "WC"] as const;
-
-/** Returns true if the activity is a system activity (Schulhof Freispiel, WC). */
+/**
+ * Returns true if moto provisions the activity (Schulhof Freispiel, WC,
+ * Offener Raum): its name and category stay fixed and it cannot be deleted.
+ * The backend flag decides; a team's own activity may share such a name.
+ */
 export function isSystemActivity(
   activity: Activity | null | undefined,
 ): boolean {
-  if (!activity) return false;
-  return SYSTEM_ACTIVITY_NAMES.includes(
-    activity.name as (typeof SYSTEM_ACTIVITY_NAMES)[number],
-  );
+  return activity?.is_system === true;
 }
 
 // Mapping functions for backend to frontend types
@@ -226,6 +235,7 @@ export function mapActivityResponse(
       ? String(backendActivity.planned_room_id)
       : undefined,
     category_name: backendActivity.category?.name,
+    is_system: backendActivity.is_system,
     version: backendActivity.version,
   };
 }
@@ -246,6 +256,8 @@ export function mapActivityCategoryResponse(
     isSystem: backendCategory.is_system ?? false,
     archivedAt: backendCategory.archived_at,
     usageCount: backendCategory.usage_count,
+    version: backendCategory.version,
+    shiftTypeLinkVersion: backendCategory.shift_type_link_version,
     created_at: new Date(backendCategory.created_at),
     updated_at: new Date(backendCategory.updated_at),
   };

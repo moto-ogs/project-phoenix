@@ -4,10 +4,11 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"strconv"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/carerequests"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	parentService "github.com/moto-ogs/project-phoenix/workflows/parentportal"
 )
 
@@ -52,7 +53,7 @@ type CareScheduleWeekdayResponse struct {
 // PendingCareRequestResponse is the child's open change request on the read
 // view, with the same "current → requested" diff staff see.
 type PendingCareRequestResponse struct {
-	ID              string                          `json:"id"`
+	ID              ident.ID                        `json:"id"`
 	CreatedAt       string                          `json:"created_at"`
 	Diff            []ParentCareRequestDiffResponse `json:"diff"`
 	SubmittedBySelf bool                            `json:"submitted_by_self"`
@@ -146,7 +147,7 @@ func toCareScheduleResponse(v *parentService.ChildCareSchedule) CareScheduleResp
 	}
 	if v.PendingRequest != nil {
 		resp.PendingRequest = &PendingCareRequestResponse{
-			ID:              strconv.FormatInt(v.PendingRequest.ID, 10),
+			ID:              ident.ID(v.PendingRequest.ID),
 			CreatedAt:       v.PendingRequest.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 			Diff:            toCareRequestDiffResponses(v.PendingRequest.Diff),
 			SubmittedBySelf: v.PendingRequest.SubmittedBySelf,
@@ -185,7 +186,7 @@ func (rs *Resource) createCareScheduleRequest(w http.ResponseWriter, r *http.Req
 		return
 	}
 	var body CareScheduleRequestBody
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err := wire.Decode(r.Body, &body); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
 		return
 	}

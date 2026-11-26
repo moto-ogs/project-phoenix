@@ -8,7 +8,7 @@ import { bffFile } from "~/lib/bff-fetch";
 // Nur mit dem Recht „Konten verwalten“ (Rolle Leitung, #5471).
 
 import { useEffect, useState } from "react";
-import { signOut, useSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { Pencil, Trash2, Undo2, UserPen, UserPlus, Users } from "lucide-react";
 import {
   ChangeTraegerMemberNameModal,
@@ -16,7 +16,7 @@ import {
   InviteTraegerAccountModal,
 } from "~/components/traeger/traeger-account-modals";
 import { isRefusal } from "~/components/traeger/use-traeger-confirmed-resource";
-import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
+import { useFreshTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { TraegerAccountHistory } from "~/components/traeger/traeger-account-history";
 import { useTraegerListExportItems } from "~/components/traeger/traeger-list-export-menu";
 import { Button } from "~/components/ui/button";
@@ -31,6 +31,7 @@ import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { formatDate, formatTime } from "~/lib/date-helpers";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { createLogger } from "~/lib/logger";
+import { leaveRemovedSession } from "~/lib/shell-auth-context";
 import { useInvalidateFamily, useInvalidateMatching } from "~/lib/swr";
 import { traegerKeys } from "~/lib/swr/traeger-keys";
 import {
@@ -46,7 +47,6 @@ import {
   listExportQuery,
 } from "~/lib/traeger-list-export";
 import { TRAEGER_ROLE_LABELS, type TraegerRole } from "~/lib/traeger-roles";
-import { traegerPath } from "~/lib/traeger-url";
 
 const logger = createLogger({ component: "TraegerAccountsPage" });
 
@@ -63,12 +63,14 @@ type Pending =
 export default function TraegerAccountsPage() {
   const { data: session } = useSession();
   const ownEmail = session?.user?.email ?? "";
-  const reader = useTraegerResource(
+  // Every read of the people is logged in the history („Liste angesehen“,
+  // ADR 0311 rule 1): each opening reads once, never from the cache.
+  const reader = useFreshTraegerResource(
     traegerKeys.buero(),
     fetchTraegerBuero,
     "die Liste der Personen",
   );
-  const { mutate } = reader;
+  const { mutate, reloadOrThrow } = reader;
   const [exportRefusal, setExportRefusal] = useState<unknown>();
   const refused = reader.refused || exportRefusal !== undefined;
   const buero: TraegerBuero = (refused ? null : reader.data) ?? NO_BUERO;
@@ -114,9 +116,13 @@ export default function TraegerAccountsPage() {
     "die Anzeige des Träger-Büros",
     async () => {
       void invalidateFamily(traegerKeys.accountHistoryFamily);
-      await mutate(fetchTraegerBuero(), { revalidate: false });
+      await reloadOrThrow();
     },
   );
+
+  // Reads the people again for a refused role change; rejects when the read
+  // fails, where SWR would resolve with the old list (ADR 0311).
+  const reloadMembers = async () => (await reloadOrThrow()).members;
 
   const closeConfirm = () => {
     setPending(null);
@@ -132,8 +138,7 @@ export default function TraegerAccountsPage() {
         await removeTraegerMember(pending.member.accountId);
         if (pending.member.email === ownEmail) {
           // Wer sich selbst entfernt, hat keinen Zugang mehr.
-          await signOut({ redirect: false });
-          window.location.assign(traegerPath("/traeger/login"));
+          await leaveRemovedSession("traeger");
           return;
         }
         success("Die Person ist aus dem Träger-Büro entfernt.");
@@ -385,7 +390,9 @@ export default function TraegerAccountsPage() {
           <ChangeTraegerRolesModal
             member={refused ? null : editing}
             members={buero.members}
+            reload={reloadMembers}
             onClose={() => setEditing(null)}
+            onSaved={showSavedMember}
             onChanged={afterWrite.refresh}
           />
           <ChangeTraegerMemberNameModal
@@ -453,7 +460,6 @@ export default function TraegerAccountsPage() {
         isLoading={reader.loading}
         loadingRowCount={3}
         defaultSortKey="name"
-        stackedOnMobile
         emptyState={
           <EmptyState
             icon={<Users className="h-12 w-12" aria-hidden="true" />}
@@ -472,7 +478,6 @@ export default function TraegerAccountsPage() {
             getRowKey={(invitation) => invitation.id}
             rowHasInteractiveControls
             defaultSortKey="email"
-            stackedOnMobile
           />
         </SectionCard>
       ) : null}

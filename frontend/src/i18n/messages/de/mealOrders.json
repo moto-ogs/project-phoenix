@@ -4,9 +4,10 @@
   "day": "Tag",
   "status": "Stand",
   "meals": "Essen",
-  "byClass": "Je Klasse",
+  "byClass": "Pro Klasse",
   "changes": "Nachmeldungen",
   "closed": "{careTerm} geschlossen",
+  "mealCancelled": "Essen fällt aus",
   "open": "Offen",
   "deadline": "Frist",
   "ordered": "Bestellt",
@@ -16,7 +17,7 @@
   "monthHeader": "Monatsübersicht",
   "monthExport": "Exportieren…",
   "monthDialogTitle": "Monatsübersicht exportieren",
-  "monthDialogDescription": "Die bestellten Essen je Kind in einem Monat, zum Beispiel für die Essenspauschale.",
+  "monthDialogDescription": "Die bestellten Essen pro Kind in einem Monat, zum Beispiel für die Essenspauschale.",
   "monthLabel": "Monat",
   "downloadLoading": "Wird erstellt…",
   "errorObject": "die Bestellung",
@@ -30,5 +31,5 @@
   "errorObjectDelivery": "die Lieferliste",
   "deliveryDownloadDescription": "Lädt die Lieferliste dieser Woche herunter",
   "monthExportDescription": "Öffnet ein Fenster, um Monat und Format zu wählen",
-  "monthDownloadDescription": "Lädt die bestellten Essen je Kind für diesen Monat herunter"
+  "monthDownloadDescription": "Lädt die bestellten Essen pro Kind für diesen Monat herunter"
 }

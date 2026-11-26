@@ -688,6 +688,68 @@ describe("CaregiverBlockerResolutionPanel", () => {
     });
   });
 
+  it("names a failed read after a refusal and resolves nothing until it is read", async () => {
+    let reads = 0;
+    mockFetch.mockImplementation((url: string, init?: RequestInit) => {
+      if ((init?.method ?? "GET") === "GET" && url === "/api/groups/14") {
+        reads += 1;
+        return Promise.resolve(
+          reads === 2
+            ? {
+                ok: false,
+                status: 503,
+                text: async () =>
+                  JSON.stringify({ code: "general.unavailable" }),
+              }
+            : storedGroups(["30", "31"]),
+        );
+      }
+      return Promise.resolve({
+        ok: false,
+        status: 409,
+        text: async () => JSON.stringify({ code: "general.changed_since_read" }),
+      });
+    });
+
+    render(
+      <CaregiverBlockerResolutionPanel
+        active
+        state={createState({
+          groupAssignments: [
+            {
+              id: "10",
+              groupId: "14",
+              groupName: "Gruppe Gelb",
+              teacherId: "30",
+              teacherIds: ["30", "31"],
+            },
+          ],
+        })}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /^Aktionen für/ }));
+    await waitFor(() =>
+      expect(screen.getByRole("menuitem", { name: "Entfernen" })).toBeEnabled(),
+    );
+    fireEvent.click(screen.getByRole("menuitem", { name: "Entfernen" }));
+    fireEvent.click(screen.getByRole("button", { name: "Ja, entfernen" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Ohne Ersatz entfernen" }),
+    );
+
+    // „Du siehst jetzt den neuen Stand“ would be false: the failed read is
+    // named, and the group waits for a read that succeeds.
+    expect(
+      await screen.findByText(/Der neue Stand konnte nicht geladen werden\./),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Du siehst jetzt den neuen Stand/),
+    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /^Aktionen für/ }));
+    expect(screen.getByRole("menuitem", { name: "Entfernen" })).toBeDisabled();
+  });
+
   it("weist auf den Rückweg hin, sobald nichts mehr offen ist", () => {
     render(<CaregiverBlockerResolutionPanel active state={createState()} />);
 

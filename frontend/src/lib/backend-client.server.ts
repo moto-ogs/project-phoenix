@@ -97,11 +97,9 @@ function assertNoDotSegments(path: string): void {
 /** The tenant, organization and scope of a call's token, for log and metric. */
 function bearerClaims(bearer: string | null | undefined) {
   const claims = bearer ? decodeJwtPayload(bearer) : null;
-  const number = (value: unknown) =>
-    typeof value === "number" ? value : undefined;
   return {
-    tenantId: number(claims?.tenant_id),
-    orgId: number(claims?.org_id),
+    tenantId: claims?.tenant_id,
+    orgId: claims?.org_id,
     scope: typeof claims?.scope === "string" ? claims.scope : undefined,
   };
 }
@@ -202,47 +200,21 @@ export async function sendBackend(
 
 /** The JSON of a successful backend answer; an error answer throws. */
 export async function readBackendJson<T>(response: Response): Promise<T> {
-  if (!response.ok) {
-    // A refusal's status still applies if the body stream breaks. In
-    // particular, losing a 401 here must not turn a revoked session live.
-    const body = await response.text().catch(() => null);
-    throw new ApiResponseError(response.status, body ?? "", {
-      retryAfter: response.headers?.get?.("Retry-After") ?? null,
-      contentType: response.headers?.get?.("Content-Type") ?? null,
-      bodyInterrupted: body === null,
-    });
-  }
+  if (!response.ok) throw await readBackendError(response);
   if (response.status === 204) return undefined as T;
   return (await response.json()) as T;
 }
 
-/**
- * The backend's JSON for a token the caller holds, envelope included; an
- * error answer throws ApiResponseError. The one JSON path of every portal:
- * the portal handlers' `api` and the tenant's `apiGet`/`apiPost`/… use it,
- * and a 401 is repeated by the route handler around it, per endpoint.
- */
-export async function backendJson<T>(
-  method: BackendMethod,
-  endpoint: string,
-  token: string,
-  body?: unknown,
-  options: Pick<BackendCall, "idempotencyKey" | "request" | "signal"> = {},
-): Promise<T> {
-  const response = await sendBackend(endpoint, token, {
-    method,
-    json: body ?? undefined,
-    ...options,
+/** Reads a refusal without losing its status if the body stream breaks. */
+export async function readBackendError(
+  response: Response,
+): Promise<ApiResponseError> {
+  const body = await response.text().catch(() => null);
+  return new ApiResponseError(response.status, body ?? "", {
+    retryAfter: response.headers?.get?.("Retry-After") ?? null,
+    contentType: response.headers?.get?.("Content-Type") ?? null,
+    bodyInterrupted: body === null,
   });
-  return readBackendJson<T>(response);
-}
-
-/** The `data` of the backend's `{ status, data, message }` envelope. */
-export function unwrapEnvelope<T>(json: unknown): T {
-  if (typeof json === "object" && json !== null && "data" in json) {
-    return (json as { data: T }).data;
-  }
-  return json as T;
 }
 
 /** One portal's session, as its Auth.js instance reads it. */

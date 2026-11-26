@@ -10,6 +10,7 @@ import { knownEnum } from "./contract/known-enum";
 import type {
   QualificationEntryResponse,
   QualificationTypeResponse,
+  TraegerProofResponse,
 } from "./contract/staff.generated";
 
 export type QualificationStatus =
@@ -26,6 +27,8 @@ export interface QualificationType {
   readonly reminderLeadWeeks: number;
   readonly mandatory: boolean;
   readonly archived: boolean;
+  /** The stored state an edit sends back as `expected_version` (ADR 0311). */
+  readonly version: string;
 }
 
 export interface QualificationTypeInput {
@@ -86,6 +89,7 @@ function mapQualificationType(
     reminderLeadWeeks: data.reminder_lead_weeks,
     mandatory: data.mandatory,
     archived: data.archived,
+    version: data.version,
   };
 }
 
@@ -99,6 +103,16 @@ function mapEntry(data: QualificationEntryResponse): QualificationEntry {
     expiresOn: data.expires_on,
     status: status(data.status),
     mandatory: data.mandatory,
+  };
+}
+
+export function mapTraegerProof(
+  proof: TraegerProofResponse,
+): TraegerProofStatus {
+  return {
+    typeName: proof.type_name,
+    status: status(proof.status),
+    expiresOn: proof.expires_on ?? "",
   };
 }
 
@@ -136,16 +150,18 @@ class StaffQualificationService {
     return mapQualificationType(type);
   }
 
+  /** `expectedVersion`: the version of the kind the form read (ADR 0311). */
   async updateType(
     id: string,
     input: QualificationTypeInput,
+    expectedVersion: string,
   ): Promise<QualificationType> {
     const type = await bffJson(
       "tenant",
       "PUT /api/staff/qualification-types/{typeId}",
       {
         params: { typeId: id },
-        body: typeBody(input),
+        body: { ...typeBody(input), expected_version: expectedVersion },
         errorMessage: "Nachweisart konnte nicht gespeichert werden",
       },
     );
@@ -184,11 +200,7 @@ class StaffQualificationService {
         errorMessage: "Nachweise des Trägers konnten nicht geladen werden",
       },
     );
-    return proofs.map((proof) => ({
-      typeName: proof.type_name,
-      status: status(proof.status),
-      expiresOn: proof.expires_on ?? "",
-    }));
+    return proofs.map(mapTraegerProof);
   }
 
   async ownEntries(): Promise<QualificationEntry[]> {

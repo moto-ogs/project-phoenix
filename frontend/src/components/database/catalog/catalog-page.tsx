@@ -341,7 +341,14 @@ export function CatalogPage<T extends CatalogItem>({
         logger.error(event, {
           error: err instanceof Error ? err.message : String(err),
         });
-        void showWriteError(err, { object: errorObject });
+        // Seit dem Lesen geändert (ADR 0311): die Meldung zeigt erst den neu
+        // gelesenen Stand, eine Zeilenaktion danach geht von ihm aus.
+        void showWriteError(err, {
+          object: errorObject,
+          reload: async () => {
+            await onChanged();
+          },
+        });
         setBusy(false);
         return { saved: false, refreshed: false };
       }
@@ -349,7 +356,7 @@ export function CatalogPage<T extends CatalogItem>({
       setBusy(false);
       return { saved: true, refreshed: await refreshAfterWrite() };
     },
-    [refreshAfterWrite, showWriteError, errorObject],
+    [refreshAfterWrite, showWriteError, errorObject, onChanged],
   );
 
   const handleCreate = useCallback(

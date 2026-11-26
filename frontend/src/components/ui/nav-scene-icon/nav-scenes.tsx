@@ -117,6 +117,16 @@ export const NAV_SCENES: Readonly<Record<string, NavScene>> = {
       </>
     ),
   },
+  ClockAfternoonIcon: {
+    description: "der Zeiger läuft einmal durch den Tag bis zum Nachmittag",
+    render: () => (
+      <>
+        <circle cx="128" cy="128" r="96" />
+        <path className="ns-hour" d="M128,128H184" />
+        <path className="ns-min" d="M128,128L168,168" />
+      </>
+    ),
+  },
   UserIcon: {
     description: "schaut sich um, zuckt mit den Schultern",
     render: () => (
@@ -1061,6 +1071,19 @@ export const NAV_SCENES: Readonly<Record<string, NavScene>> = {
           pathLength={1}
           d="M186,208l15,15l29-30"
         />
+      </>
+    ),
+  },
+  UserGearIcon: {
+    description: "das Zahnrad dreht eine halbe Runde weiter",
+    render: () => (
+      <>
+        <circle cx="108" cy="100" r="60" />
+        <path d="M24,200c20-25,50-40,84-40s64,15,84,40" />
+        <g className="ns-cog">
+          <circle cx="224" cy="136" r="16" />
+          <path d="M224,106v8M224,158v8M243,125l7-4M243,147l7,4M205,125l-7-4M205,147l-7,4" />
+        </g>
       </>
     ),
   },

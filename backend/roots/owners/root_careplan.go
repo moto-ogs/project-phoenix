@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 
@@ -121,6 +122,20 @@ type CarePlanSchedules struct {
 	PartialAbsences  careplan.PartialAbsenceService
 	Arrivals         careplan.ArrivalScheduleService
 	OfferingDays     careplan.OfferingDayRoster
+	// PickupPersons is who collects a child on one day (#7655).
+	PickupPersons careplan.PickupPersons
+}
+
+// CarePlanPickupPersons binds the pickup person of a day (#7655) from the
+// composed Care Plan owner, which serves it beside its capability. The root
+// checks the type instead of adding a composition line, like the work-time
+// staff day of "Heute anders" (#7903).
+func CarePlanPickupPersons(owner careplan.Capability) (careplan.PickupPersons, error) {
+	persons, ok := owner.(careplan.PickupPersons)
+	if !ok {
+		return nil, errors.New("care plan: the composed owner serves no pickup persons")
+	}
+	return persons, nil
 }
 
 // bookingsAuthoritative reports whether the approved bookings supply the
@@ -209,6 +224,11 @@ func buildCarePlanPlans(db transactionruntime.Database, logger *slog.Logger, car
 	if err != nil {
 		return CarePlanSchedules{}, err
 	}
+	persons, err := CarePlanPickupPersons(carePlan)
+	if err != nil {
+		return CarePlanSchedules{}, err
+	}
 	schedules.AutoExcusal, schedules.Pickups, schedules.PartialAbsences, schedules.Arrivals = excusal, pickups, partialAbsences, arrivals
+	schedules.PickupPersons = persons
 	return schedules, nil
 }

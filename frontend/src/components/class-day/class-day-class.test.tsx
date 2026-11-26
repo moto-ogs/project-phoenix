@@ -1015,6 +1015,46 @@ describe("ClassDayClass", () => {
       expect(handOver).toHaveBeenCalledTimes(1);
     });
 
+    it("names a failed read after a refusal and hands over nothing until it is read", async () => {
+      vi.spyOn(console, "error").mockImplementation(() => undefined);
+      const handOver = vi
+        .fn()
+        .mockRejectedValueOnce(
+          new ApiError("changed", 409, { code: "general.changed_since_read" }),
+        );
+      let fail = false;
+      render(
+        <ClassDayClass
+          schoolClass="4a"
+          fetchClassDay={() =>
+            fail
+              ? Promise.reject(
+                  new ApiError("down", 503, { code: "general.unavailable" }),
+                )
+              : Promise.resolve(handoverReport())
+          }
+          handOverClass={handOver}
+          withdrawClassHandover={() => Promise.resolve()}
+        />,
+      );
+      fireEvent.click(
+        await screen.findByRole("button", { name: "Klasse übergeben" }),
+      );
+      fail = true;
+      fireEvent.click(screen.getByRole("button", { name: "Übergeben" }));
+
+      // „Du siehst jetzt den neuen Stand“ would be false: the failed read is
+      // named, and the handover waits for a read that succeeds.
+      expect(
+        await screen.findByText(/Der neue Stand konnte nicht geladen werden\./),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByText(/Du siehst jetzt den neuen Stand/),
+      ).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: "Übergeben" }));
+      expect(handOver).toHaveBeenCalledTimes(1);
+    });
+
     it("takes the handover back only after the confirmation", async () => {
       const withdraw = vi.fn(() => Promise.resolve());
       render(
@@ -1592,7 +1632,7 @@ describe("ClassDayClass class trips (#4799)", () => {
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
     data: {
-      user: { id: "teacher", scope: "school", tenantId: 1 },
+      user: { id: "teacher", scope: "school", tenantId: "1" },
       expires: "2099-01-01",
     },
     status: "authenticated",

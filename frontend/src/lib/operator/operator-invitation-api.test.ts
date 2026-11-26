@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import type * as operatorInvitationsContract from "~/lib/contract/operator-invitations.generated";
 import { ApiError } from "~/lib/api-error";
 import type { OperatorInvitationValidationResponse } from "~/lib/contract/operator-auth.generated";
-import type { SessionBffRoute } from "~/lib/session-bff";
+import type { SessionBffRoute } from "~/lib/session-bff-route";
 
 // Hoist mocks
 const { mockBffJson } = vi.hoisted(() => ({
@@ -16,12 +16,12 @@ vi.mock("~/lib/bff-fetch", async (importOriginal) => {
     ...original,
     bffJson: (
       portal: "public",
-      route: string | SessionBffRoute<unknown>,
+      route: string | SessionBffRoute<unknown, unknown>,
       options?: { body?: unknown },
     ) =>
       typeof route === "string"
         ? mockBffJson(portal, route, options)
-        : original.bffJson(portal, route, options),
+        : original.bffJson(portal, route, { ...options, body: options?.body }),
   };
 });
 

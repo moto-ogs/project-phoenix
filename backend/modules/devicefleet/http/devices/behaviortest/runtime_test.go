@@ -3,7 +3,6 @@ package devices_test
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -47,7 +46,15 @@ func testRuntime(fleet devicefleet.Capability) devices.Runtime {
 		},
 		Success: testutil.RespondSuccess,
 		Failure: func(w http.ResponseWriter, r *http.Request, status int, err error, message string) {
-			testutil.RespondCoded(w, r, status, "", err, nil, message)
+			// Like common.RenderError, the root's renderer answers a business
+			// rejection the resource leaves unclassified with 409 and its code
+			// (ADR 0311).
+			code := ""
+			var rejection interface{ ErrorCode() string }
+			if status >= http.StatusInternalServerError && errors.As(err, &rejection) {
+				status, code = http.StatusConflict, rejection.ErrorCode()
+			}
+			testutil.RespondCoded(w, r, status, code, err, nil, message)
 		},
 		ConflictOnField: func(w http.ResponseWriter, r *http.Request, err error, code, field string) {
 			render.Status(r, http.StatusConflict)
@@ -56,12 +63,8 @@ func testRuntime(fleet devicefleet.Capability) devices.Runtime {
 				"errors": []map[string]string{{"field": field, "reason": err.Error()}},
 			})
 		},
-		ConflictWithDetails: func(w http.ResponseWriter, r *http.Request, err error, code string, details map[string]any) {
-			wire := make(map[string]string, len(details))
-			for key, value := range details {
-				wire[key] = fmt.Sprint(value)
-			}
-			testutil.RespondCoded(w, r, http.StatusConflict, code, err, wire, "")
+		ConflictWithDetails: func(w http.ResponseWriter, r *http.Request, err error, code string, details any) {
+			testutil.RespondCodedDetails(w, r, http.StatusConflict, code, err, details, "")
 		},
 		// The behaviour suite runs no kiosk sessions; the API suite
 		// (api/device_removal_test.go) covers the session guard.

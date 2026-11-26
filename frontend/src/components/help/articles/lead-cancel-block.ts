@@ -19,8 +19,8 @@ export function leadCancelBlockTopic(): HelpTopic {
     icon: "CalendarCheck",
     requirements: ["Du darfst den Betreuungsplan bearbeiten."],
     steps: [
-      "Klappe in der Seitenleiste `Planung` auf.",
-      "Öffne `Betreuungsplan` und wähle den Termin.",
+      "Öffne in der Seitenleiste unter `Tagesbetrieb` den `Betreuungsplan`.",
+      "Wähle den Termin.",
       "Wähle `Absagen`.",
       "Lass den Haken bei `Eltern per App und E-Mail informieren` gesetzt, wenn die Familien Bescheid bekommen sollen.",
       "Prüfe `Betreff` und `Text an die Eltern`. moto schlägt beides vor.",

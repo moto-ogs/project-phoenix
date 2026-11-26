@@ -26,7 +26,7 @@ const SESSION_REPORTED_KEY_PREFIX = "moto-pwa-usage-reported.";
 export async function reportStandaloneUsage(
   portal: PushPortal,
   accountID: string,
-  tenantID?: number,
+  tenantID?: string,
 ): Promise<void> {
   if (!isStandaloneApp()) return;
 

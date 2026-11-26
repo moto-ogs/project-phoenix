@@ -1,3 +1,4 @@
+import { parentFamilyFixture } from "~/test/parent-family-fixture";
 import {
   act,
   fireEvent,
@@ -15,6 +16,8 @@ import { ToastProvider } from "~/contexts/ToastContext";
 import deMessages from "~/i18n/messages/de.generated";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
+
+const family = parentFamilyFixture(() => mocks.today);
 
 vi.unmock("swr");
 
@@ -60,14 +63,13 @@ const WEEK_ERROR = catalogText(
 );
 
 const mocks = vi.hoisted(() => ({
-  getChildFeatures: vi.fn(),
   getChildMealPlan: vi.fn(),
   getMealParticipation: vi.fn(),
   replaceMealParticipationSchedule: vi.fn(),
   setMealParticipationDay: vi.fn(),
   setMealParticipationWeek: vi.fn(),
   clearMealParticipationDay: vi.fn(),
-  listMyChildren: vi.fn(),
+
   today: "2026-08-12",
 }));
 
@@ -80,14 +82,13 @@ vi.mock("next-auth/react", () => ({
 }));
 
 vi.mock("~/lib/parent-api", () => ({
-  getChildFeatures: mocks.getChildFeatures,
+  getFamilyStart: vi.fn(),
   getChildMealPlan: mocks.getChildMealPlan,
   getMealParticipation: mocks.getMealParticipation,
   replaceMealParticipationSchedule: mocks.replaceMealParticipationSchedule,
   setMealParticipationDay: mocks.setMealParticipationDay,
   setMealParticipationWeek: mocks.setMealParticipationWeek,
   clearMealParticipationDay: mocks.clearMealParticipationDay,
-  listMyChildren: mocks.listMyChildren,
 }));
 
 vi.mock("~/lib/hooks/use-berlin-today", () => ({
@@ -102,8 +103,10 @@ import {
 describe("ParentMealPlanPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+
+    family.mockRead();
     mocks.today = "2026-08-12";
-    mocks.listMyChildren.mockResolvedValue([
+    family.children.mockResolvedValue([
       {
         student_id: "child-1",
         tenant_id: "school-1",
@@ -112,7 +115,7 @@ describe("ParentMealPlanPage", () => {
         school_name: "OGS Am Berg",
       },
     ]);
-    mocks.getChildFeatures.mockResolvedValue({
+    family.features.mockResolvedValue({
       meal_plan_enabled: true,
       meal_registration_enabled: false,
     });
@@ -122,7 +125,7 @@ describe("ParentMealPlanPage", () => {
   // A child at a school with another care term (#6082) names its own term
   // and stays selected: the term switch must not reload the school list.
   it("keeps the chosen child of a school with another care term", async () => {
-    mocks.listMyChildren.mockResolvedValue([
+    family.children.mockResolvedValue([
       {
         student_id: "child-1",
         tenant_id: "school-1",
@@ -138,7 +141,7 @@ describe("ParentMealPlanPage", () => {
         school_name: "Grundschule Barnstorf",
       },
     ]);
-    mocks.getChildFeatures.mockImplementation((studentId: string) =>
+    family.features.mockImplementation((studentId: string) =>
       Promise.resolve({
         meal_plan_enabled: true,
         meal_registration_enabled: false,
@@ -169,7 +172,7 @@ describe("ParentMealPlanPage", () => {
   });
 
   it("keeps the final page geometry while the meal plan is loading", () => {
-    mocks.listMyChildren.mockReturnValue(new Promise(() => {}));
+    family.children.mockReturnValue(new Promise(() => {}));
 
     render(<ParentMealPlanPage />);
 
@@ -259,7 +262,7 @@ describe("ParentMealPlanPage", () => {
   });
 
   it("opens the meal plan at the school a notice links to", async () => {
-    mocks.listMyChildren.mockResolvedValue([
+    family.children.mockResolvedValue([
       {
         student_id: "child-1",
         tenant_id: "school-1",
@@ -326,7 +329,7 @@ describe("ParentMealPlanPage", () => {
     });
 
     beforeEach(() => {
-      mocks.getChildFeatures.mockResolvedValue({
+      family.features.mockResolvedValue({
         meal_plan_enabled: true,
         meal_registration_enabled: true,
       });
@@ -533,6 +536,24 @@ describe("ParentMealPlanPage", () => {
     ).not.toBeInTheDocument();
   });
 
+  // The phone puts today first, as its own card; like every other day card
+  // it names the date, not only the weekday (#7915).
+  it("names the date on today's card, also on a phone", async () => {
+    mocks.getChildMealPlan.mockResolvedValue([
+      { date: "2026-08-12", position: 0, dish: "Gemüse-Lasagne" },
+    ]);
+
+    render(<ParentMealPlanPage />);
+
+    await screen.findAllByText("Gemüse-Lasagne");
+    const todayBadges = screen.getAllByText("Heute");
+    // Phone card and desktop column each mark today.
+    expect(todayBadges).toHaveLength(2);
+    for (const badge of todayBadges) {
+      expect(badge.parentElement!.parentElement).toHaveTextContent("12.08.");
+    }
+  });
+
   it("marks each dish with its allergens and explains the letters (#4777)", async () => {
     mocks.getChildMealPlan.mockResolvedValue([
       {
@@ -573,7 +594,7 @@ describe("ParentMealPlanPage", () => {
   });
 
   it("combines meals and participation while keeping regular days compact", async () => {
-    mocks.listMyChildren.mockResolvedValue([
+    family.children.mockResolvedValue([
       {
         student_id: "child-1",
         tenant_id: "school-1",
@@ -589,7 +610,7 @@ describe("ParentMealPlanPage", () => {
         school_name: "OGS Am Park",
       },
     ]);
-    mocks.getChildFeatures.mockResolvedValue({
+    family.features.mockResolvedValue({
       meal_plan_enabled: true,
       meal_registration_enabled: true,
     });
@@ -766,7 +787,7 @@ describe("ParentMealPlanPage", () => {
   });
 
   it("hides participation and the open editor immediately when the write denies read access", async () => {
-    mocks.getChildFeatures.mockResolvedValue({
+    family.features.mockResolvedValue({
       meal_plan_enabled: true,
       meal_registration_enabled: true,
     });
@@ -832,7 +853,7 @@ describe("ParentMealPlanPage", () => {
   });
 
   it("keeps dishes and participation visible while a saved day revalidates", async () => {
-    mocks.getChildFeatures.mockResolvedValue({
+    family.features.mockResolvedValue({
       meal_plan_enabled: true,
       meal_registration_enabled: true,
     });
@@ -897,7 +918,7 @@ describe("ParentMealPlanPage", () => {
   });
 
   it("shows the school's per-day deadlines", async () => {
-    mocks.getChildFeatures.mockResolvedValue({
+    family.features.mockResolvedValue({
       meal_plan_enabled: true,
       meal_registration_enabled: true,
     });
@@ -931,7 +952,7 @@ describe("ParentMealPlanPage", () => {
   });
 
   it("marks each participation state with its own icon next to the text", async () => {
-    mocks.getChildFeatures.mockResolvedValue({
+    family.features.mockResolvedValue({
       meal_plan_enabled: true,
       meal_registration_enabled: true,
     });
@@ -984,7 +1005,7 @@ describe("ParentMealPlanPage", () => {
   });
 
   it("switches the icon with the draft while a day is being changed", async () => {
-    mocks.getChildFeatures.mockResolvedValue({
+    family.features.mockResolvedValue({
       meal_plan_enabled: true,
       meal_registration_enabled: true,
     });
@@ -1024,7 +1045,7 @@ describe("ParentMealPlanPage", () => {
   });
 
   it("distinguishes missing children from a disabled school meal plan", async () => {
-    mocks.listMyChildren.mockResolvedValue([]);
+    family.children.mockResolvedValue([]);
 
     const first = render(<ParentMealPlanPage />);
 
@@ -1037,14 +1058,14 @@ describe("ParentMealPlanPage", () => {
       ),
     ).not.toBeInTheDocument();
 
-    mocks.listMyChildren.mockResolvedValue([
+    family.children.mockResolvedValue([
       {
         student_id: "child-1",
         tenant_id: "school-1",
         school_name: "OGS Am Berg",
       },
     ]);
-    mocks.getChildFeatures.mockResolvedValue({
+    family.features.mockResolvedValue({
       meal_plan_enabled: false,
       meal_registration_enabled: false,
     });
@@ -1061,7 +1082,7 @@ describe("ParentMealPlanPage", () => {
   });
 
   it("shows a load error when resolving the schools fails", async () => {
-    mocks.listMyChildren.mockRejectedValue(unavailable());
+    family.children.mockRejectedValue(unavailable());
 
     render(<ParentMealPlanPage />);
 
@@ -1109,7 +1130,7 @@ describe("ParentMealPlanPage", () => {
   });
 
   it("promises the participation days once the meal registration is switched on", async () => {
-    mocks.getChildFeatures.mockResolvedValue({
+    family.features.mockResolvedValue({
       meal_plan_enabled: true,
       meal_registration_enabled: true,
     });
@@ -1166,7 +1187,7 @@ describe("ParentMealPlanPage", () => {
   });
 
   it("carries no subtitle while no plan can be shown", async () => {
-    mocks.listMyChildren.mockReturnValue(new Promise(() => {}));
+    family.children.mockReturnValue(new Promise(() => {}));
 
     let view = render(<ParentMealPlanPage />);
 
@@ -1177,7 +1198,7 @@ describe("ParentMealPlanPage", () => {
     expect(screen.queryByText(SUBTITLE_MEALS_ONLY)).not.toBeInTheDocument();
 
     // No linked child.
-    mocks.listMyChildren.mockResolvedValue([]);
+    family.children.mockResolvedValue([]);
     view.unmount();
     view = render(<ParentMealPlanPage key="no-children" />);
     expect(
@@ -1189,7 +1210,7 @@ describe("ParentMealPlanPage", () => {
     expect(screen.queryByText(SUBTITLE_MEALS_ONLY)).not.toBeInTheDocument();
 
     // Meal plan switched off for the school.
-    mocks.listMyChildren.mockResolvedValue([
+    family.children.mockResolvedValue([
       {
         student_id: "child-1",
         tenant_id: "school-1",
@@ -1198,7 +1219,7 @@ describe("ParentMealPlanPage", () => {
         school_name: "OGS Am Berg",
       },
     ]);
-    mocks.getChildFeatures.mockResolvedValue({
+    family.features.mockResolvedValue({
       meal_plan_enabled: false,
       meal_registration_enabled: false,
     });
@@ -1214,14 +1235,14 @@ describe("ParentMealPlanPage", () => {
     view.unmount();
 
     // Resolving the schools failed.
-    mocks.listMyChildren.mockRejectedValue(unavailable());
+    family.children.mockRejectedValue(unavailable());
     render(<ParentMealPlanPage key="schools-error" />);
     expect(await screen.findByText(SCHOOLS_ERROR)).toBeInTheDocument();
     expect(screen.queryByText(SUBTITLE_MEALS_ONLY)).not.toBeInTheDocument();
   });
 
   it("reloads the schools from the load error's Wiederholen", async () => {
-    mocks.listMyChildren.mockRejectedValueOnce(unavailable());
+    family.children.mockRejectedValueOnce(unavailable());
 
     render(<ParentMealPlanPage />);
 
@@ -1233,7 +1254,7 @@ describe("ParentMealPlanPage", () => {
       ),
     ).toBeInTheDocument();
     expect(screen.queryByText(SCHOOLS_ERROR)).not.toBeInTheDocument();
-    expect(mocks.listMyChildren).toHaveBeenCalledTimes(2);
+    expect(family.children).toHaveBeenCalledTimes(2);
   });
 
   it("reloads the week from the load error's Wiederholen", async () => {
@@ -1276,7 +1297,7 @@ describe("ParentMealPlanPage", () => {
     };
 
     beforeEach(() => {
-      mocks.getChildFeatures.mockResolvedValue({
+      family.features.mockResolvedValue({
         meal_plan_enabled: true,
         meal_registration_enabled: true,
       });
@@ -1644,7 +1665,7 @@ describe("ParentMealPlanPage", () => {
     });
 
     beforeEach(() => {
-      mocks.getChildFeatures.mockResolvedValue({
+      family.features.mockResolvedValue({
         meal_plan_enabled: true,
         meal_registration_enabled: true,
       });
@@ -1936,7 +1957,7 @@ describe("ParentMealPlanPage", () => {
     it.each(["child", "school", "week"])(
       "invalidates a failed registration retry after changing %s",
       async (context) => {
-        mocks.listMyChildren.mockResolvedValue([
+        family.children.mockResolvedValue([
           {
             student_id: "child-1",
             tenant_id: "school-1",
@@ -2038,7 +2059,7 @@ describe("ParentMealPlanPage", () => {
     });
 
     it("keeps the selected week when the other school has no registration", async () => {
-      mocks.listMyChildren.mockResolvedValue([
+      family.children.mockResolvedValue([
         {
           student_id: "child-1",
           tenant_id: "school-1",
@@ -2054,7 +2075,7 @@ describe("ParentMealPlanPage", () => {
           school_name: "OGS Am Park",
         },
       ]);
-      mocks.getChildFeatures.mockImplementation(async (studentId: string) => ({
+      family.features.mockImplementation(async (studentId: string) => ({
         meal_plan_enabled: true,
         meal_registration_enabled: studentId === "child-1",
       }));

@@ -59,7 +59,7 @@ import type { InfoDisplay } from "~/lib/display-helpers";
 import { SWRConfig } from "~/lib/swr/testing";
 import { SWRScopeBoundary } from "~/lib/swr/scope-boundary";
 import { resetSWRScope, resumeSWRSession } from "~/lib/swr/scope";
-import InfoDisplaysPage from "./page";
+import InfoDisplaysPage from "./page-content";
 
 const display: InfoDisplay = {
   id: "1",
@@ -71,7 +71,7 @@ const neighbour: InfoDisplay = { ...display, id: "2", name: "Mensa" };
 function signedIn(id = "A") {
   return {
     data: {
-      user: { id, tenantId: 1, roles: ["admin"], permissions: [] },
+      user: { id, tenantId: "1", roles: ["admin"], permissions: [] },
       expires: "2099-01-01",
     } satisfies Session,
     status: "authenticated",

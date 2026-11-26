@@ -1,3 +1,4 @@
+import { parentFamilyFixture } from "~/test/parent-family-fixture";
 import { act, renderHook, screen, waitFor } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import type { ReactNode } from "react";
@@ -10,6 +11,8 @@ import { useChildCare } from "./child-care";
 import { useChildMasterData } from "./child-master-data";
 import { BookedCareSection } from "./child/booked-care-section";
 import type * as parentMeContract from "~/lib/contract/parent-me.generated";
+
+const family = parentFamilyFixture();
 
 vi.unmock("swr");
 vi.mock("~/lib/parent-api", async (importOriginal) => ({
@@ -48,7 +51,9 @@ function deferred<T>() {
 
 beforeEach(() => {
   vi.restoreAllMocks();
-  vi.spyOn(parentApi, "listMyChildren").mockResolvedValue([child]);
+
+  family.mockRead();
+  family.children.mockResolvedValue([child]);
 });
 
 // The child page's sections share one cached read per child and endpoint
@@ -76,7 +81,7 @@ describe("shared child requests (#4994)", () => {
       .spyOn(parentApi, "getChildCareSchedule")
       .mockReturnValueOnce(oldSchedule.promise)
       .mockResolvedValue(freshSchedule);
-    vi.spyOn(parentApi, "getChildFeatures").mockResolvedValue(features);
+    family.features.mockResolvedValue(features);
     vi.spyOn(parentApi, "getChildCareOfferings").mockResolvedValue({
       offerings: [],
       can_request: false,
@@ -125,9 +130,7 @@ describe("shared child requests (#4994)", () => {
   // Betreuung und Angaben brauchen beide die Schulschalter; auf einer
   // Kindseite holt sie nur ein Abruf.
   it("laedt die Schulschalter fuer Betreuung und Angaben einmal", async () => {
-    const getFeatures = vi
-      .spyOn(parentApi, "getChildFeatures")
-      .mockResolvedValue(features);
+    const getFeatures = family.features.mockResolvedValue(features);
     const getSchedule = vi
       .spyOn(parentApi, "getChildCareSchedule")
       .mockResolvedValue(schedule);

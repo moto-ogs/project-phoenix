@@ -9,13 +9,14 @@ package staffmessaging
 import (
 	"encoding/json"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/communication"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // Resource is the internal messaging HTTP resource.
@@ -83,9 +84,9 @@ func (rs *Resource) registerGroupAdminRoutes(r chi.Router, withTx common.Middlew
 
 // InboxThreadResponse is one row of the caller's conversation list.
 type InboxThreadResponse struct {
-	ThreadID             string `json:"thread_id"`
-	CounterpartAccountID string `json:"counterpart_account_id"`
-	CounterpartName      string `json:"counterpart_name"`
+	ThreadID             ident.ID       `json:"thread_id"`
+	CounterpartAccountID ident.IDOrNone `json:"counterpart_account_id"`
+	CounterpartName      string         `json:"counterpart_name"`
 	// CounterpartRoleKind: "lehrkraft" | "admin" | "staff" (#2208).
 	CounterpartRoleKind string `json:"counterpart_role_kind"`
 	LastMessageAt       string `json:"last_message_at,omitempty"`
@@ -102,17 +103,17 @@ type InboxThreadResponse struct {
 
 // MessageResponse is one chat message.
 type MessageResponse struct {
-	ClientMessageID string `json:"client_message_id,omitempty"`
-	ID              string `json:"id"`
-	SenderAccountID string `json:"sender_account_id"`
-	SenderName      string `json:"sender_name"`
-	Body            string `json:"body"`
-	CreatedAt       string `json:"created_at"`
+	ClientMessageID string   `json:"client_message_id,omitempty" contract_text:"client-supplied message deduplication key"`
+	ID              ident.ID `json:"id"`
+	SenderAccountID ident.ID `json:"sender_account_id"`
+	SenderName      string   `json:"sender_name"`
+	Body            string   `json:"body"`
+	CreatedAt       string   `json:"created_at"`
 	// Group chats only (#4776): who of the members read the message and how
 	// many members could have.
-	ReadByAccountIDs         []string `json:"read_by_account_ids,omitempty"`
-	EligibleReaderAccountIDs []string `json:"eligible_reader_account_ids,omitempty"`
-	ReaderCount              int      `json:"reader_count"`
+	ReadByAccountIDs         []ident.ID `json:"read_by_account_ids,omitempty"`
+	EligibleReaderAccountIDs []ident.ID `json:"eligible_reader_account_ids,omitempty"`
+	ReaderCount              int        `json:"reader_count"`
 	// Attachments are the photos and files of the message (#6685).
 	Attachments []AttachmentResponse `json:"attachments,omitempty"`
 }
@@ -120,12 +121,12 @@ type MessageResponse struct {
 // AttachmentResponse is one file of a message: the stored snapshot
 // (communication.MessageAttachment) with the wire's types.
 type AttachmentResponse struct {
-	ID          string `json:"id"`
-	Filename    string `json:"filename"`
-	SizeBytes   int    `json:"size_bytes"`
-	ContentType string `json:"content_type"`
-	Width       int    `json:"width,omitempty"`
-	Height      int    `json:"height,omitempty"`
+	ID          ident.ID `json:"id"`
+	Filename    string   `json:"filename"`
+	SizeBytes   int      `json:"size_bytes"`
+	ContentType string   `json:"content_type"`
+	Width       int      `json:"width,omitempty"`
+	Height      int      `json:"height,omitempty"`
 }
 
 // toAttachmentResponses reads the snapshot a message stores. The store
@@ -143,21 +144,21 @@ func toAttachmentResponses(snapshot json.RawMessage) []AttachmentResponse {
 
 // openThreadRequest is the body of POST /threads/open.
 type openThreadRequest struct {
-	AccountID string `json:"account_id"`
+	AccountID ident.ID `json:"account_id"`
 }
 
 // postMessageRequest is the body of POST /threads/{threadID}.
 type postMessageRequest struct {
-	ClientMessageID string `json:"client_message_id,omitempty"`
+	ClientMessageID string `json:"client_message_id,omitempty" contract_text:"client-supplied message deduplication key"`
 	Body            string `json:"body"`
 	// AttachmentIDs names the uploads the message carries (#6685).
-	AttachmentIDs []string `json:"attachment_ids,omitempty"`
+	AttachmentIDs []ident.ID `json:"attachment_ids,omitempty"`
 }
 
 // ThreadDetailResponse is the chat window payload.
 type ThreadDetailResponse struct {
-	ThreadID             string            `json:"thread_id"`
-	CounterpartAccountID string            `json:"counterpart_account_id"`
+	ThreadID             ident.ID          `json:"thread_id"`
+	CounterpartAccountID ident.IDOrNone    `json:"counterpart_account_id"`
 	CounterpartName      string            `json:"counterpart_name"`
 	CounterpartRoleKind  string            `json:"counterpart_role_kind"`
 	Messages             []MessageResponse `json:"messages"`
@@ -170,15 +171,15 @@ type ThreadDetailResponse struct {
 
 // MemberResponse is one person in a group chat.
 type MemberResponse struct {
-	AccountID string `json:"account_id"`
-	Name      string `json:"name"`
-	RoleKind  string `json:"role_kind"`
+	AccountID ident.ID `json:"account_id"`
+	Name      string   `json:"name"`
+	RoleKind  string   `json:"role_kind"`
 }
 
 // RecipientResponse is one addressable colleague.
 type RecipientResponse struct {
-	AccountID string `json:"account_id"`
-	Name      string `json:"name"`
+	AccountID ident.ID `json:"account_id"`
+	Name      string   `json:"name"`
 	// RoleKind: "lehrkraft" | "admin" | "staff" (#2208).
 	RoleKind string `json:"role_kind"`
 }
@@ -187,13 +188,13 @@ func toMessageResponses(messages []communication.StaffMessage, viewer ...int64) 
 	out := make([]MessageResponse, 0, len(messages))
 	for _, m := range messages {
 		out = append(out, MessageResponse{
-			ID:              strconv.FormatInt(m.ID, 10),
-			SenderAccountID: strconv.FormatInt(m.SenderAccountID, 10),
+			ID:              ident.ID(m.ID),
+			SenderAccountID: ident.ID(m.SenderAccountID),
 			SenderName:      m.SenderName,
 			ClientMessageID: clientMessageIDForViewer(m.ClientMessageID, m.SenderAccountID, viewer), Body: m.Body,
 			CreatedAt:                m.CreatedAt.Format(time.RFC3339),
-			ReadByAccountIDs:         formatIDs(m.ReadByAccountIDs),
-			EligibleReaderAccountIDs: formatIDs(m.EligibleReaderAccountIDs),
+			ReadByAccountIDs:         ident.IDs(m.ReadByAccountIDs),
+			EligibleReaderAccountIDs: ident.IDs(m.EligibleReaderAccountIDs),
 			ReaderCount:              m.ReaderCount,
 			Attachments:              toAttachmentResponses(m.Attachments),
 		})
@@ -201,20 +202,9 @@ func toMessageResponses(messages []communication.StaffMessage, viewer ...int64) 
 	return out
 }
 
-func formatIDs(ids []int64) []string {
-	if ids == nil {
-		return nil
-	}
-	out := make([]string, 0, len(ids))
-	for _, id := range ids {
-		out = append(out, strconv.FormatInt(id, 10))
-	}
-	return out
-}
-
 func toThreadDetail(d *communication.StaffMessageThread, viewer ...int64) ThreadDetailResponse {
 	response := ThreadDetailResponse{
-		ThreadID:  strconv.FormatInt(d.ThreadID, 10),
+		ThreadID:  ident.ID(d.ThreadID),
 		Messages:  toMessageResponses(d.Messages, viewer...),
 		Kind:      d.Kind,
 		GroupName: d.GroupName,
@@ -222,7 +212,7 @@ func toThreadDetail(d *communication.StaffMessageThread, viewer ...int64) Thread
 		Members:   toMemberResponses(d.Members),
 	}
 	if d.Kind == "direct" {
-		response.CounterpartAccountID = strconv.FormatInt(d.CounterpartAccountID, 10)
+		response.CounterpartAccountID = ident.Optional(d.CounterpartAccountID)
 		response.CounterpartName = d.CounterpartName
 		response.CounterpartRoleKind = d.CounterpartRoleKind
 	}
@@ -232,7 +222,7 @@ func toThreadDetail(d *communication.StaffMessageThread, viewer ...int64) Thread
 func toMemberResponses(members []communication.StaffThreadMember) []MemberResponse {
 	out := make([]MemberResponse, 0, len(members))
 	for _, m := range members {
-		out = append(out, MemberResponse{AccountID: strconv.FormatInt(m.AccountID, 10), Name: m.Name, RoleKind: m.RoleKind})
+		out = append(out, MemberResponse{AccountID: ident.ID(m.AccountID), Name: m.Name, RoleKind: m.RoleKind})
 	}
 	return out
 }
@@ -252,8 +242,8 @@ func (rs *Resource) listInbox(w http.ResponseWriter, r *http.Request) {
 	out := make([]InboxThreadResponse, 0, len(rows))
 	for _, row := range rows {
 		item := InboxThreadResponse{
-			ThreadID:             strconv.FormatInt(row.ThreadID, 10),
-			CounterpartAccountID: strconv.FormatInt(row.CounterpartAccountID, 10),
+			ThreadID:             ident.ID(row.ThreadID),
+			CounterpartAccountID: ident.Optional(row.CounterpartAccountID),
 			CounterpartName:      row.CounterpartName,
 			CounterpartRoleKind:  row.CounterpartRoleKind,
 			LastMessageBody:      row.LastMessageBody,
@@ -263,9 +253,6 @@ func (rs *Resource) listInbox(w http.ResponseWriter, r *http.Request) {
 			GroupName:            row.GroupName,
 			MemberCount:          row.MemberCount,
 			LastSenderName:       row.LastSenderName,
-		}
-		if row.CounterpartAccountID == 0 {
-			item.CounterpartAccountID = ""
 		}
 		if row.LastMessageAt != nil {
 			item.LastMessageAt = row.LastMessageAt.Format(time.RFC3339)
@@ -298,7 +285,7 @@ func (rs *Resource) listRecipients(w http.ResponseWriter, r *http.Request) {
 	out := make([]RecipientResponse, 0, len(rows))
 	for _, row := range rows {
 		out = append(out, RecipientResponse{
-			AccountID: strconv.FormatInt(row.AccountID, 10),
+			AccountID: ident.ID(row.AccountID),
 			Name:      row.Name,
 			RoleKind:  row.RoleKind,
 		})
@@ -308,12 +295,12 @@ func (rs *Resource) listRecipients(w http.ResponseWriter, r *http.Request) {
 
 func (rs *Resource) openThread(w http.ResponseWriter, r *http.Request) {
 	var body openThreadRequest
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err := wire.Decode(r.Body, &body); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
-	accountID, err := strconv.ParseInt(body.AccountID, 10, 64)
-	if err != nil || accountID <= 0 {
+	accountID := body.AccountID.Int64()
+	if accountID <= 0 {
 		common.RenderError(w, r, common.ErrorInvalidRequestMessage("Ungültige Empfänger-ID."))
 		return
 	}
@@ -345,7 +332,7 @@ func (rs *Resource) postMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var body postMessageRequest
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err := wire.Decode(r.Body, &body); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}

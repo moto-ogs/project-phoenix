@@ -35,13 +35,17 @@ export const CONTRACT_DELIVERY_SECTION_ID = "vertrag-versand";
 export const CONTRACT_NOTICE_SECTION_ID = "vertrag-beenden";
 /** The card „Versionen“. */
 export const CONTRACT_VERSIONS_SECTION_ID = "vertrag-versionen";
+/** The card „Geänderte Fassung“ of a change that waits (#4816). */
+export const CONTRACT_CHANGE_SECTION_ID = "vertrag-geaenderte-fassung";
 
 type ContractSectionId =
+  | typeof CONTRACT_CHANGE_SECTION_ID
   | typeof CONTRACT_DELIVERY_SECTION_ID
   | typeof CONTRACT_NOTICE_SECTION_ID
   | typeof CONTRACT_VERSIONS_SECTION_ID;
 
 const SECTION_TABS: Record<ContractSectionId, ContractDetailTab> = {
+  [CONTRACT_CHANGE_SECTION_ID]: "versand",
   [CONTRACT_DELIVERY_SECTION_ID]: "versand",
   [CONTRACT_NOTICE_SECTION_ID]: "kuendigung",
   [CONTRACT_VERSIONS_SECTION_ID]: "versionen",

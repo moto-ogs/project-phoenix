@@ -200,8 +200,8 @@ func threeChildren(offer holidayOfferBody, email string, version int) map[string
 	children := body["children"].([]map[string]any)
 	children[0]["allergies"] = ""
 	children = append(children, map[string]any{
-		"first_name": "Mia", "last_name": "Muster", "birth_date": "2019-06-02", "home_school_id": offer.Schools[1].ID,
-		"bookings": []map[string]any{{"week_id": offer.Weeks[0].ID, "time_model_id": offer.Weeks[0].TimeModels[0].ID}},
+		"first_name": "Mia", "last_name": "Muster", "birth_date": "2019-06-02", "home_school_id": fmt.Sprint(offer.Schools[1].ID),
+		"bookings": []map[string]any{{"week_id": fmt.Sprint(offer.Weeks[0].ID), "time_model_id": fmt.Sprint(offer.Weeks[0].TimeModels[0].ID)}},
 	})
 	body["children"] = children
 	body["health_consent"] = false

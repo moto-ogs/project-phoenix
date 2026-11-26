@@ -10,6 +10,14 @@
  */
 import type { Session } from "next-auth";
 import { hasPermission } from "~/lib/auth-utils";
+import type { ModuleKey } from "~/lib/modules";
+import {
+  TRAEGER_DASHBOARD_PATH,
+  TRAEGER_MODULES_SETTINGS_PATH,
+  seesLockedTraegerModules,
+  traegerModuleOfPath,
+  traegerModuleVisibility,
+} from "~/lib/traeger-modules";
 import { isTraegerNavActive } from "./traeger-nav-active";
 import type { MotoConcept } from "~/lib/moto-concepts";
 import { arrivalPickupConcept } from "~/lib/concepts/arrivalPickup";
@@ -18,6 +26,7 @@ import { billingConcept } from "~/lib/concepts/billing";
 import { careContractsConcept } from "~/lib/concepts/careContracts";
 import { careTimesConcept } from "~/lib/concepts/careTimes";
 import { changeHistoryConcept } from "~/lib/concepts/changeHistory";
+import { childrenConcept } from "~/lib/concepts/children";
 import { closingDaysConcept } from "~/lib/concepts/closingDays";
 import { contributionsConcept } from "~/lib/concepts/contributions";
 import { dashboardConcept } from "~/lib/concepts/dashboard";
@@ -25,11 +34,14 @@ import { documentsConcept } from "~/lib/concepts/documents";
 import { enrollmentsConcept } from "~/lib/concepts/enrollments";
 import { helpConcept } from "~/lib/concepts/help";
 import { holidayWeeksConcept } from "~/lib/concepts/holidayWeeks";
+import { listsConcept } from "~/lib/concepts/lists";
 import { parentsConcept } from "~/lib/concepts/parents";
 import { payrollConcept } from "~/lib/concepts/payroll";
 import { peopleConcept } from "~/lib/concepts/people";
+import { rolesConcept } from "~/lib/concepts/roles";
 import { reportsConcept } from "~/lib/concepts/reports";
 import { schoolComparisonConcept } from "~/lib/concepts/schoolComparison";
+import { organizationsConcept } from "~/lib/concepts/organizations";
 import { schoolsConcept } from "~/lib/concepts/schools";
 import { settingsConcept } from "~/lib/concepts/settings";
 import { staffConcept } from "~/lib/concepts/staff";
@@ -43,7 +55,7 @@ import { utilizationConcept } from "~/lib/concepts/utilization";
 const ACCOUNTS_RIGHT = "traeger_accounts:manage";
 /** Das Recht, das die Ferienzeiträume (#4659) und die Anmeldephasen (#4704) öffnet. */
 const ENROLLMENT_RIGHT = "traeger_enrollment:manage";
-/** Das Recht, das die Betreuungsverträge öffnet (#4678). */
+/** Das Recht, das die Betreuungsverträge (#4678) und die Kinder aller Schulen mit Namen (#8137) öffnet. */
 const CONTRACTS_RIGHT = "traeger_contracts:manage";
 /** Das Recht, das „Länger als gebucht“ ohne Namen (#4683), die Auslastung (#4713), „Ankunft und Abholung“ (#4714), den Standortvergleich (#4715) und die Tagesmeldung (#4717) öffnet. */
 const REPORTS_RIGHT = "traeger_reports:read";
@@ -61,6 +73,8 @@ const ACCESS_LOG_RIGHT = "traeger_access_log:read";
  * „Abrechnung" (#5685). Jede Rolle mit „Abrechnung" hat auch dieses Recht.
  */
 const OVERVIEW_RIGHT = "traeger_overview:read";
+/** Das Recht, das die Rollen für das Personal der Schulen öffnet (#4810). */
+const SETTINGS_RIGHT = "traeger_settings:manage";
 
 export interface TraegerNavItem {
   /** Stabiler Schlüssel für Listen und Tests. */
@@ -78,6 +92,12 @@ export interface TraegerNavItem {
    * liegen muss; ohne Angabe gilt der Eintrag überall (#4717).
    */
   readonly federalState?: string;
+  /**
+   * Der Eintrag gehört zu einem moto-Modul, das keine Schule des Trägers
+   * gebucht hat (#6052). Nur wer das Träger-Büro leitet, sieht ihn: mit
+   * Schloss, und die Seite erklärt, wer das Modul bucht.
+   */
+  readonly locked?: true;
 }
 
 export interface TraegerNavGroup {
@@ -105,6 +125,14 @@ const TRAEGER_NAV_GROUPS: readonly TraegerNavGroup[] = [
         label: "Schulen",
         concept: schoolsConcept,
         right: null,
+      },
+      {
+        // Alle Kinder der Schulen mit Namen, ein Reiter je Schule (#8137).
+        key: "kinder",
+        href: "/traeger/kinder",
+        label: "Kinder",
+        concept: childrenConcept,
+        right: CONTRACTS_RIGHT,
       },
       {
         // Die Kinder von heute je Schule, Gruppe und Betreuungsform (#4676).
@@ -355,11 +383,28 @@ const TRAEGER_SETTINGS_NAV_ITEMS: readonly TraegerNavItem[] = [
     right: ACCOUNTS_RIGHT,
   },
   {
+    key: "schulrollen",
+    href: "/traeger/einstellungen/schulrollen",
+    label: "Rollen für Schulen",
+    shortLabel: "Rollen",
+    concept: rolesConcept,
+    right: SETTINGS_RIGHT,
+  },
+  {
     key: "briefkopf",
     href: "/traeger/einstellungen/briefkopf",
     label: "Briefkopf und Vorlagen",
     shortLabel: "Briefkopf",
     concept: documentsConcept,
+    right: OVERVIEW_RIGHT,
+  },
+  {
+    // Wer Verträge schließt, abrechnet und Personal anstellt (#4811).
+    key: "zustaendigkeiten",
+    href: "/traeger/einstellungen/zustaendigkeiten",
+    label: "Zuständigkeiten",
+    shortLabel: "Zuständig",
+    concept: organizationsConcept,
     right: OVERVIEW_RIGHT,
   },
   {
@@ -386,6 +431,17 @@ const TRAEGER_SETTINGS_NAV_ITEMS: readonly TraegerNavItem[] = [
     concept: changeHistoryConcept,
     right: ACCESS_LOG_RIGHT,
   },
+  {
+    // Welche moto-Module der Träger gebucht hat (#6052); wie „Module“ in
+    // den Einstellungen einer Schule. „moto-Module“, weil „Modul“ im
+    // Träger-Portal auch die Betreuungsmodule eines Vertrags meint.
+    key: "moto-module",
+    href: TRAEGER_MODULES_SETTINGS_PATH,
+    label: "moto-Module",
+    shortLabel: "Module",
+    concept: listsConcept,
+    right: OVERVIEW_RIGHT,
+  },
 ];
 
 /**
@@ -411,13 +467,18 @@ const NO_FEDERAL_STATES: readonly string[] = [];
 export function traegerNavGroupsFor(
   session: Session | null,
   federalStates: readonly string[] = NO_FEDERAL_STATES,
+  bookedModules: readonly ModuleKey[] | null = null,
 ): readonly TraegerNavGroup[] {
   return TRAEGER_NAV_GROUPS.map((group) => ({
     ...group,
-    items: visibleFor(group.items, session).filter(
-      (item) =>
-        item.federalState === undefined ||
-        federalStates.includes(item.federalState),
+    items: visibleFor(
+      group.items.filter(
+        (item) =>
+          item.federalState === undefined ||
+          federalStates.includes(item.federalState),
+      ),
+      session,
+      bookedModules,
     ),
   })).filter((group) => group.items.length > 0);
 }
@@ -443,17 +504,38 @@ export function traegerNavGroupKeyFor(
  */
 export function traegerSettingsNavItemsFor(
   session: Session | null,
+  bookedModules: readonly ModuleKey[] | null = null,
 ): readonly TraegerNavItem[] {
-  return visibleFor(TRAEGER_SETTINGS_NAV_ITEMS, session);
+  return visibleFor(TRAEGER_SETTINGS_NAV_ITEMS, session, bookedModules);
 }
 
+/**
+ * Die Einträge, die Rechte und gebuchte Module öffnen. Das Modul eines
+ * Eintrags steht im Register (`~/lib/traeger-modules`), nicht hier. Ohne
+ * bekannte Module (`null`: der Rahmen lädt noch) fehlt nichts und nichts
+ * trägt ein Schloss.
+ */
 function visibleFor(
   items: readonly TraegerNavItem[],
   session: Session | null,
+  bookedModules: readonly ModuleKey[] | null,
 ): readonly TraegerNavItem[] {
-  return items.filter(
-    (item) => item.right === null || hasPermission(session, item.right),
-  );
+  const seesLocked = seesLockedTraegerModules(session);
+  return items.flatMap((item) => {
+    if (item.right !== null && !hasPermission(session, item.right)) return [];
+    const visibility = traegerModuleVisibility(
+      traegerModuleOfPath(item.href),
+      bookedModules,
+      seesLocked,
+    );
+    if (visibility === "open") return [item];
+    // Das Dashboard ist das Startziel: ohne sein Modul fehlt es für alle,
+    // auch für die Leitung; die Schulliste übernimmt.
+    if (visibility === "hidden" || item.href === TRAEGER_DASHBOARD_PATH) {
+      return [];
+    }
+    return [{ ...item, locked: true }];
+  });
 }
 
 /** Eine Seite, die die Suche des Träger-Portals findet (#7648). */
@@ -467,6 +549,8 @@ export interface TraegerSearchPage {
   readonly concept: MotoConcept;
   /** Die Hilfe öffnet in einem neuen Tab, wie in der Leiste. */
   readonly newTab?: true;
+  /** Die Seite gehört zu einem nicht gebuchten moto-Modul (#6052). */
+  readonly locked?: true;
 }
 
 /**
@@ -477,23 +561,32 @@ export interface TraegerSearchPage {
 export function traegerSearchPagesFor(
   session: Session | null,
   federalStates?: readonly string[],
+  bookedModules: readonly ModuleKey[] | null = null,
 ): readonly TraegerSearchPage[] {
-  const main = traegerNavGroupsFor(session, federalStates).flatMap((group) =>
+  const main = traegerNavGroupsFor(
+    session,
+    federalStates,
+    bookedModules,
+  ).flatMap((group) =>
     group.items.map((item) => ({
       key: item.key,
       href: item.href,
       label: item.label,
       area: group.label,
       concept: item.concept,
+      locked: item.locked,
     })),
   );
-  const settings = traegerSettingsNavItemsFor(session).map((item) => ({
-    key: item.key,
-    href: item.href,
-    label: item.label,
-    area: TRAEGER_SETTINGS_NAV.label,
-    concept: item.concept,
-  }));
+  const settings = traegerSettingsNavItemsFor(session, bookedModules).map(
+    (item) => ({
+      key: item.key,
+      href: item.href,
+      label: item.label,
+      area: TRAEGER_SETTINGS_NAV.label,
+      concept: item.concept,
+      locked: item.locked,
+    }),
+  );
   return [
     ...main,
     ...settings,

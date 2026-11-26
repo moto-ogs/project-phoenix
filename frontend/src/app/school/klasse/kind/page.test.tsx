@@ -1,4 +1,5 @@
 import { act, render, screen } from "@testing-library/react";
+import { Activity } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.unmock("swr");
@@ -13,7 +14,7 @@ vi.mock("next/navigation", () => ({
 }));
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
-    data: { user: { id: "teacher", tenantId: 7, scope: "school" } },
+    data: { user: { id: "teacher", tenantId: "7", scope: "school" } },
     status: "authenticated",
   }),
 }));
@@ -57,43 +58,65 @@ describe("shared notes disclosure", () => {
   });
 
   // Keep the parent cache alive across page openings, as the portal does.
-  function Opening({ open }: { open: boolean }) {
+  function Opening({
+    open,
+    preserve = false,
+  }: {
+    open: boolean;
+    preserve?: boolean;
+  }) {
     return (
       <SWRConfig value={{ provider: () => new Map() }}>
-        <ToastProvider>{open ? <Page /> : null}</ToastProvider>
+        <ToastProvider>
+          {preserve ? (
+            <Activity mode={open ? "visible" : "hidden"}>
+              <Page />
+            </Activity>
+          ) : open ? (
+            <Page />
+          ) : null}
+        </ToastProvider>
       </SWRConfig>
     );
   }
 
-  it("requires a fresh successful read on reopening within the deduplication interval", async () => {
-    const view = render(<Opening open />);
-    expect(
-      await screen.findByText("Freigegebene Beobachtung"),
-    ).toBeInTheDocument();
-    view.rerender(<Opening open={false} />);
-    let resolveRead!: (value: typeof notes) => void;
-    fetchNotes.mockReturnValue(
-      new Promise<typeof notes>((resolve) => {
-        resolveRead = resolve;
-      }),
-    );
-    view.rerender(<Opening open />);
+  it.each([
+    { preserve: false, reopening: "remount" },
+    { preserve: true, reopening: "Activity restore" },
+  ])(
+    "requires a successful read after $reopening within the deduplication interval",
+    async ({ preserve }) => {
+      const view = render(<Opening open preserve={preserve} />);
+      expect(
+        await screen.findByText("Freigegebene Beobachtung"),
+      ).toBeInTheDocument();
+      view.rerender(<Opening open={false} preserve={preserve} />);
+      let resolveRead!: (value: typeof notes) => void;
+      fetchNotes.mockReturnValue(
+        new Promise<typeof notes>((resolve) => {
+          resolveRead = resolve;
+        }),
+      );
+      view.rerender(<Opening open preserve={preserve} />);
 
-    // Anker: die neue Öffnung wartet auf ihren eigenen Abruf.
-    expect(
-      await screen.findByLabelText("Beobachtungen werden geladen…"),
-    ).toBeInTheDocument();
-    expect(fetchNotes).toHaveBeenCalledTimes(2);
-    expect(
-      screen.queryByText("Freigegebene Beobachtung"),
-    ).not.toBeInTheDocument();
-    expect(screen.queryByText("Ida Beobachtung")).not.toBeInTheDocument();
-    await act(async () => resolveRead({ ...notes, notes: [] }));
-    expect(await screen.findByText("Keine Beobachtungen")).toBeInTheDocument();
-    expect(
-      screen.queryByText("Freigegebene Beobachtung"),
-    ).not.toBeInTheDocument();
-  });
+      // Anker: die neue Öffnung wartet auf ihren eigenen Abruf.
+      expect(
+        await screen.findByLabelText("Beobachtungen werden geladen…"),
+      ).toBeInTheDocument();
+      expect(fetchNotes).toHaveBeenCalledTimes(2);
+      expect(
+        screen.queryByText("Freigegebene Beobachtung"),
+      ).not.toBeInTheDocument();
+      expect(screen.queryByText("Ida Beobachtung")).not.toBeInTheDocument();
+      await act(async () => resolveRead({ ...notes, notes: [] }));
+      expect(
+        await screen.findByText("Keine Beobachtungen"),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByText("Freigegebene Beobachtung"),
+      ).not.toBeInTheDocument();
+    },
+  );
 
   it("removes the child's name and notes after a denied revalidation and revisit", async () => {
     const view = render(<Opening open />);

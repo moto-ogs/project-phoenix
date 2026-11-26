@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   arr,
   bool,
+  int64String,
   nullable,
   num,
   object,
@@ -29,10 +30,11 @@ export interface AbsenceTypeResponse {
   kept_by_traeger: boolean;
   offered: boolean;
   school_limit_days: number | null;
+  version: string;
 }
 
 export const AbsenceTypeResponseSchema: z.ZodType<AbsenceTypeResponse, unknown> = object<AbsenceTypeResponse>({
-  id: str,
+  id: int64String,
   name: str,
   base_type: str,
   is_active: bool,
@@ -42,6 +44,7 @@ export const AbsenceTypeResponseSchema: z.ZodType<AbsenceTypeResponse, unknown> 
   kept_by_traeger: bool,
   offered: bool,
   school_limit_days: nullable(num),
+  version: str,
 });
 
 /** Go: absencetypes.AllowanceSummaryResponse */
@@ -62,8 +65,8 @@ export interface AllowanceSummaryResponse {
 }
 
 export const AllowanceSummaryResponseSchema: z.ZodType<AllowanceSummaryResponse, unknown> = object<AllowanceSummaryResponse>({
-  staff_id: str,
-  absence_type_id: str,
+  staff_id: int64String,
+  absence_type_id: int64String,
   year: safeInt,
   entitled_days: num,
   taken_days: num,
@@ -107,6 +110,7 @@ export interface UpdateAbsenceTypeRequest {
   requestable?: boolean | null;
   offered?: boolean | null;
   school_limit_days?: number | null;
+  expected_version?: string;
 }
 
 /** Go: absencetypes.SetAllowanceRequest */

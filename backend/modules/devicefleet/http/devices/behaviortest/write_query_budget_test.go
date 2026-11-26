@@ -13,14 +13,15 @@ import (
 
 	answer "github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 
+	"github.com/stretchr/testify/require"
+	"github.com/uptrace/bun"
+
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/modules/devicefleet"
 	devices "github.com/moto-ogs/project-phoenix/modules/devicefleet/http/devices"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
-	"github.com/stretchr/testify/require"
-	"github.com/uptrace/bun"
 )
 
 // Independent wire contract, not a process facade DTO or an owner composition.
@@ -36,6 +37,7 @@ type deviceWriteBudgetWire struct {
 	IsOnline       bool      `json:"is_online"`
 	CreatedAt      string    `json:"created_at"`
 	UpdatedAt      string    `json:"updated_at"`
+	Version        string    `json:"version"`
 	APIKey         *string   `json:"api_key,omitempty"`
 }
 
@@ -86,7 +88,10 @@ func TestDeviceWriteQueryBudgets(t *testing.T) {
 						method, path, permission, status = http.MethodPut, fmt.Sprintf("/%d", before.ID), "devices:manage", http.StatusOK
 					}
 					name := "After"
-					body := map[string]any{"device_id": id, "device_type": "terminal", "name": name, "status": "active", "registered_by_id": ident.ID(person.ID)}
+					body := map[string]any{"device_id": id, "device_type": "terminal", "name": name, "status": "active", "registered_by_id": fmt.Sprint(ident.ID(person.ID))}
+					if method == http.MethodPut {
+						body["expected_version"] = deviceVersion(t, router, path)
+					}
 					request := testutil.NewAuthenticatedRequest(t, method, path, body, testutil.WithClaims(t, testutil.DefaultTestClaims()), testutil.WithPermissions(permission))
 					ctx, cancel := context.WithTimeout(request.Context(), 10*time.Second)
 					var dbStart, dbEnd time.Time
@@ -136,7 +141,7 @@ func TestDeviceWriteQueryBudgets(t *testing.T) {
 					require.Equal(t, testpkg.Tenant(t), row.TenantID)
 					assertDeviceWriteBudgetRow(t, want, row)
 					lastSeen := row.LastSeen.Format(time.RFC3339)
-					require.Equal(t, deviceWriteBudgetWire{ID: ident.ID(row.ID), DeviceID: id, DeviceType: "terminal", Name: &name, Status: "active", LastSeen: &lastSeen, RegisteredByID: (*ident.ID)(&person.ID), RoomName: roomName, IsOnline: true, CreatedAt: row.CreatedAt.Format(time.RFC3339), UpdatedAt: row.UpdatedAt.Format(time.RFC3339)}, wire)
+					require.Equal(t, deviceWriteBudgetWire{ID: ident.ID(row.ID), DeviceID: id, DeviceType: "terminal", Name: &name, Status: "active", LastSeen: &lastSeen, RegisteredByID: (*ident.ID)(&person.ID), RoomName: roomName, IsOnline: true, CreatedAt: row.CreatedAt.Format(time.RFC3339), UpdatedAt: row.UpdatedAt.Format(time.RFC3339), Version: devicefleet.DeviceVersion(&row)}, wire)
 					require.Equal(t, 1, len(counter.Operation("INSERT"))+len(counter.Operation("UPDATE")))
 					inserts := 0
 					if scenario == "create-no-room" {
@@ -154,8 +159,9 @@ func TestDeviceWriteQueryBudgets(t *testing.T) {
 					rooms := 0
 					if roomID != nil {
 						// The edit names a status, so it reads the device under
-						// its row lock without the room (#2317).
-						rooms = 3
+						// its row lock without the room (#2317); the owner's
+						// read-state check locks it again, also without the room.
+						rooms = 2
 					}
 					require.Equal(t, rooms, countDeviceWriteBudgetSelects(queries.Statements, "facilities.rooms"))
 					switch scenario {

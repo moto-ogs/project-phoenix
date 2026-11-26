@@ -17,6 +17,7 @@ import (
 	departure "github.com/moto-ogs/project-phoenix/modules/peopledirectory/departure"
 	securityruntime "github.com/moto-ogs/project-phoenix/modules/securityruntime"
 	calendar "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	tenant "github.com/moto-ogs/project-phoenix/tenant"
 )
@@ -528,15 +529,14 @@ func companionConflictRenderer(err error) render.Renderer {
 	if !errors.As(err, &conflictErr) {
 		return nil
 	}
-	return &CompanionConflictResponse{
-		ErrResponse: &common.ErrResponse{
-			Err:            conflictErr,
-			HTTPStatusCode: http.StatusConflict,
-			Detail:         conflictErr.Error(),
-			Code:           common.CodeStudentsCompanionPlanConflict,
-		},
-		Conflicts: conflictErr.Conflicts,
+	details := CompanionConflictDetails{Conflicts: make([]companionConflictDetail, 0, len(conflictErr.Conflicts))}
+	for _, conflict := range conflictErr.Conflicts {
+		details.Conflicts = append(details.Conflicts, companionConflictDetail{
+			StudentID: ident.ID(conflict.StudentID),
+			Weekdays:  conflict.Weekdays,
+		})
 	}
+	return common.ErrorConflictWithDetails(conflictErr, common.CodeStudentsCompanionPlanConflict, details)
 }
 
 // updateStudentTxErrorRenderer maps the applyStudentUpdate transaction error to

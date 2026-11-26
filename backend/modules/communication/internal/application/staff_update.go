@@ -2,7 +2,10 @@ package application
 
 import (
 	"context"
+	"fmt"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // prepareCreate validates a new announcement: the common fields, the shape of
@@ -52,4 +55,25 @@ func (s *service) prepareUpdate(ctx context.Context, a *StaffParentAnnouncement,
 		return nil, nil, err
 	}
 	return targets, options, nil
+}
+
+// lockAsRead loads an announcement under its row lock for a write of the
+// caller, which may change it, and refuses it unless it is the state the
+// author read: expectedVersion is the token of its updated_at (ADR 0311).
+// Not found and a foreign class letter refuse before the token is compared.
+func (s *service) lockAsRead(ctx context.Context, id int64, expectedVersion, operation string) (*StaffParentAnnouncement, error) {
+	a, err := s.repo.FindByIDForUpdate(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("announcement: load for %s: %w", operation, err)
+	}
+	if a == nil {
+		return nil, ErrNotFound
+	}
+	if err := guardClassLetterWrite(ctx, a); err != nil {
+		return nil, err
+	}
+	if err := readstate.Check(expectedVersion, readstate.Of(a.UpdatedAt)); err != nil {
+		return nil, err
+	}
+	return a, nil
 }

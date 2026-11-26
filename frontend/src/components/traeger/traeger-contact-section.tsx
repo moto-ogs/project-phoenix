@@ -18,11 +18,23 @@ const SETTINGS_RIGHT = "traeger_settings:manage";
 export function TraegerContactSection({
   masterData,
   letterheadText,
+  refreshLetterhead,
+  reload,
+  write,
   onSaved,
 }: Readonly<{
-  masterData: Pick<TraegerMasterData, "contact" | "withdrawal">;
+  masterData: Pick<
+    TraegerMasterData,
+    "contact" | "withdrawal" | "contactVersion" | "withdrawalVersion"
+  >;
   /** Der Absender aus dem Briefkopf; die Belehrung nennt ihn mit Anschrift. */
   letterheadText: string;
+  /** Liest den Briefkopf neu, wenn jemand aus seinem Tab zurückkommt. */
+  refreshLetterhead: () => Promise<unknown>;
+  /** Liest die Stammdaten nach einer Ablehnung neu; scheitert laut. */
+  reload: () => Promise<TraegerMasterData>;
+  /** Übernimmt die Antwort eines Speicherns in die gelesenen Stammdaten. */
+  write: (change: Partial<TraegerMasterData>) => Promise<unknown>;
   onSaved: () => Promise<unknown>;
 }>) {
   const { data: session } = useSession();
@@ -37,13 +49,30 @@ export function TraegerContactSection({
       )}
       <TraegerContactCard
         contact={masterData.contact}
+        version={masterData.contactVersion}
         canEdit={canEdit}
+        reload={async () => {
+          const read = await reload();
+          return { value: read.contact, version: read.contactVersion };
+        }}
+        write={(saved) =>
+          write({ contact: saved.value, contactVersion: saved.version })
+        }
         onSaved={onSaved}
       />
       <TraegerWithdrawalContactCard
         withdrawal={masterData.withdrawal}
+        version={masterData.withdrawalVersion}
+        reload={async () => {
+          const read = await reload();
+          return { value: read.withdrawal, version: read.withdrawalVersion };
+        }}
+        write={(saved) =>
+          write({ withdrawal: saved.value, withdrawalVersion: saved.version })
+        }
         contact={masterData.contact}
         letterheadText={letterheadText}
+        refreshLetterhead={refreshLetterhead}
         canEdit={canEdit}
         onSaved={onSaved}
       />

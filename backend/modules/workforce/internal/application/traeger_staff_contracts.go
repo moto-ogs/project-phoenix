@@ -51,10 +51,11 @@ func (t *TraegerStaff) CreateContract(ctx context.Context, actor workforce.Traeg
 }
 
 // UpdateContract changes kind and last day. A new last day must not reach
-// before the first open day of any Einsatzort, nor may the former one.
+// before the first open day of any Einsatzort, nor may the former one. A
+// contract changed since the dialog read it is refused (ADR 0311).
 func (t *TraegerStaff) UpdateContract(ctx context.Context, actor workforce.TraegerStaffActor, recordID, contractID int64, input workforce.TraegerContractTermsInput) (workforce.TraegerStaffRecordDetail, error) {
 	return t.writeContract(ctx, actor, recordID, false, func(scene contractScene) (contractWrite, error) {
-		current, err := scene.contract(contractID)
+		current, err := scene.readContract(contractID, input.ExpectedVersion)
 		if err != nil {
 			return contractWrite{}, err
 		}
@@ -114,10 +115,11 @@ func weeksUntil(contract domain.TraegerStaffContract) []domain.ContractHolidayWe
 // ChangeContractSoll sets a new Soll for the named Einsatzorte from a day on.
 // An Einsatzort that already has a Soll in this contract changes only from
 // its first open day on; one that joins the contract may start earlier, the
-// mirror then starts at the first open day.
+// mirror then starts at the first open day. A contract changed since the
+// dialog read it is refused (ADR 0311).
 func (t *TraegerStaff) ChangeContractSoll(ctx context.Context, actor workforce.TraegerStaffActor, recordID, contractID int64, input workforce.TraegerContractSollInput) (workforce.TraegerStaffRecordDetail, error) {
 	return t.writeContract(ctx, actor, recordID, false, func(scene contractScene) (contractWrite, error) {
-		current, err := scene.contract(contractID)
+		current, err := scene.readContract(contractID, input.ExpectedVersion)
 		if err != nil {
 			return contractWrite{}, err
 		}
@@ -418,7 +420,7 @@ func dayRunText(first, last string, single bool, minutes int) string {
 	case minutes == 0:
 		return first + "–" + last + " frei"
 	default:
-		return first + "–" + last + " je " + hoursText(minutes)
+		return first + "–" + last + " " + hoursText(minutes) + " pro Tag"
 	}
 }
 

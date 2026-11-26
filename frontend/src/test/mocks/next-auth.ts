@@ -10,7 +10,7 @@ export function mockSessionData(
       name: string;
       email: string;
       role: string;
-      tenantId: number;
+      tenantId: string;
     }>;
     expires: string;
   }>,

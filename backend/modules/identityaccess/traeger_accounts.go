@@ -5,6 +5,8 @@ import (
 	"errors"
 	"slices"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // Träger-Büro account management (ADR 0084 section 4, #4650): a person with
@@ -59,6 +61,20 @@ type TraegerMember struct {
 	Name        string
 	Roles       []string
 	ActivatedAt *time.Time
+	// Version is the read-state token of the member's role set
+	// (TraegerRolesVersion, ADR 0311): a role change sends it back.
+	Version string
+}
+
+// TraegerRolesVersion is the read-state token of an account's role set at a
+// Träger (ADR 0311): the fingerprint of the roles in ascending order, so the
+// order a store returns them in does not change it. The member list and the
+// role change derive it from the same rows.
+func TraegerRolesVersion(roles []string) string {
+	// Never nil, so no roles and an empty read give one token.
+	sorted := append(make([]string, 0, len(roles)), roles...)
+	slices.Sort(sorted)
+	return readstate.Fingerprint(sorted)
 }
 
 // TraegerInvitation is an open invitation into the Träger-Büro. Token is set
@@ -200,7 +216,11 @@ type TraegerAccountManagement interface {
 	ListTraegerBuero(ctx context.Context, actor TraegerActor) (TraegerBuero, error)
 	InviteTraegerAccount(ctx context.Context, actor TraegerActor, email string, roles []string) (TraegerInvitation, error)
 	RevokeTraegerInvitation(ctx context.Context, actor TraegerActor, invitationID int64) error
-	ChangeTraegerRoles(ctx context.Context, actor TraegerActor, accountID int64, roles []string) (TraegerMember, error)
+	// ChangeTraegerRoles answers the member with the Version of the stored
+	// set. expectedVersion is the Version of the member the change was made
+	// from; a role set changed since is refused with readstate.ErrChanged
+	// (ADR 0311), so nobody reverts a colleague's grant unseen.
+	ChangeTraegerRoles(ctx context.Context, actor TraegerActor, accountID int64, roles []string, expectedVersion string) (TraegerMember, error)
 	RemoveTraegerMember(ctx context.Context, actor TraegerActor, accountID int64) error
 	// ListTraegerAccountHistory lists the changes of the Träger-Büro of the
 	// query, newest first.

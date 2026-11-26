@@ -105,8 +105,8 @@ export function SepaMandateStatusView({
             ? "Mit diesem Mandat kann nicht mehr abgebucht werden: Es ist verfallen oder galt nur für eine Abbuchung. Widerrufe es und erfasse ein neues."
             : inForce && !inForce.creditorCurrent
               ? plainFallback
-                ? "Das Mandat gilt für deine frühere Gläubiger-ID. Bis ein neues da ist, wird nicht abgebucht."
-                : "Das Mandat gilt für deine frühere Gläubiger-ID. Bis ein neues da ist, bekommt die Familie eine Rechnung zum Überweisen."
+                ? "Das Mandat gilt für eine andere Gläubiger-ID als die der Stelle, die hier abrechnet. Bis ein neues da ist, wird nicht abgebucht."
+                : "Das Mandat gilt für eine andere Gläubiger-ID als die der Stelle, die hier abrechnet. Bis ein neues da ist, bekommt die Familie eine Rechnung zum Überweisen."
               : inForce
                 ? `Mandatsreferenz ${inForce.reference} · Konto ${inForce.ibanMasked}`
                 : plainFallback

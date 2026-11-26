@@ -1,6 +1,6 @@
 {
   "child_not_enrolled": "{object} mümkün değil. Çocuk bu gün bakımda değil.",
-  "day_changed": "Başka biri yemek planını bu arada değiştirdi. Yeni hâlini görmek için “Verwerfen”i seçin. Kendi değişikliklerinizle değiştirmek için “Speichern”i seçin.",
+  "day_changed": "Başka biri yemek planının bu gününü bu arada değiştirdi. Şimdi güncel durumu görüyorsunuz. Kontrol edin ve tekrar kaydedin.",
   "day_closed": "{object} mümkün değil. Okul bu gün kapalı.",
   "day_past": "{object} artık mümkün değil. Bu gün geçti.",
   "invalid_allergens": "Alerjenler kaydedilemedi. Lütfen yeniden seçin.",
@@ -16,7 +16,7 @@
   "not_supplied": "Artık bu okula yemek sağlamıyorsunuz. Lütfen okula danışın.",
   "order_not_found": "Bu sipariş mevcut değil. Lütfen sayfayı yeniden yükleyin.",
   "supply_active": "{object} şu anda mümkün değil. Okula hâlâ bir yemek firması yemek sağlıyor. Önce bu tedariki sonlandırın.",
-  "participation_manage_denied": "Yemek kayıtlarını görüntüleyebilirsiniz, ancak değiştiremezsiniz. Lütfen okul sonrası bakım ekibine başvurun.",
+  "participation_manage_denied": "Yemek kayıtlarını görüntüleyebilirsiniz, ancak değiştiremezsiniz. Lütfen {careTerm} ile iletişime geçin.",
   "billing_month_running": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
   "billing_month_released": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
   "billing_month_changed": "{object} değiştirilemedi. Güncel durumu kontrol edin.",

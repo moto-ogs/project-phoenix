@@ -22,7 +22,9 @@ func ContractRouteContracts() []common.RouteContract {
 		{Method: "GET", Pattern: "/{id}/document", Portals: traegerPortal, File: true},
 		{Method: "GET", Pattern: "/{id}/versions/{number}/document", Portals: traegerPortal, File: true},
 		{Method: "GET", Pattern: "/{id}/paper-signature", Portals: traegerPortal, File: true},
-		// The handler answers 204; the catalog proxy answers it as no data.
+		// The handlers answer 204; the catalog proxy answers it as no data.
+		// The handover freezes the PDF that /{id}/document then answers (#8030).
+		{Method: "POST", Pattern: "/{id}/paper-handover", Portals: traegerPortal, NoData: true},
 		{Method: "POST", Pattern: "/{id}/paper-signature", Portals: traegerPortal, Multipart: true,
 			MaxBodyBytes: carecontract.PaperMaxBytes + paperFormOverhead, TooLargeCode: common.CodeCareContractPaperDocumentInvalid, NoData: true},
 		{Method: "POST", Pattern: "/", Portals: traegerPortal, Request: CreateRequest{}, Response: carecontract.CreateResult{}},
@@ -172,7 +174,7 @@ func SigningRouteContracts() []common.RouteContract {
 func ApplicationRouteContracts() []common.RouteContract {
 	return []common.RouteContract{{
 		Method: "GET", Pattern: "/", Portals: []common.PortalScope{common.PortalTenant},
-		Query:    []common.QueryParam{{Name: "request_child_ids", Kind: common.QueryString}},
+		Query:    []common.QueryParam{{Name: "request_child_ids", Kind: common.QueryID, Repeated: true}},
 		Response: []ApplicationContractResponse{},
 		Enums: []common.EnumContract{{
 			Name: "ApplicationContractStatus", Fields: []string{"ApplicationContractResponse.status"},

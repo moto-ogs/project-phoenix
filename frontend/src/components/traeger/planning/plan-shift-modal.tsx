@@ -15,6 +15,7 @@ import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
 import { CustomSelect } from "~/components/ui/custom-select";
 import { ISODatePicker } from "~/components/ui/date-picker";
 import { EditActions } from "~/components/ui/edit-actions";
+import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { FormModal } from "~/components/ui/form-modal";
 import { Input } from "~/components/ui/input";
 import { Textarea } from "~/components/ui/textarea";
@@ -22,6 +23,8 @@ import { useFormModalPending } from "~/components/ui/use-form-modal-pending";
 import { useApiFormError } from "~/contexts/ToastContext";
 import { formatDate } from "~/lib/date-helpers";
 import { createLogger } from "~/lib/logger";
+import { useReadDraftForm } from "~/lib/hooks/use-swr-load-error";
+import { useDraftOn } from "~/lib/swr/read-draft";
 import {
   changeTraegerShift,
   planTraegerShift,
@@ -55,13 +58,23 @@ export type PlanShiftTarget =
     };
 
 interface Draft {
-  schoolId: string;
-  date: string;
-  startTime: string;
-  endTime: string;
-  breakMinutes: string;
-  notes: string;
+  readonly schoolId: string;
+  readonly date: string;
+  readonly startTime: string;
+  readonly endTime: string;
+  readonly breakMinutes: string;
+  readonly notes: string;
 }
+
+/** The version an edit confirms; a new shift confirms none. */
+const targetToken = (target: PlanShiftTarget) =>
+  target.kind === "edit" ? target.shift.version : "";
+
+/** A changed shift's answer is the stored shift. */
+const savedTarget = (
+  saved: TraegerPlanningShift,
+  base: PlanShiftTarget,
+): PlanShiftTarget => (base.kind === "edit" ? { ...base, shift: saved } : base);
 
 function draftOf(target: PlanShiftTarget): Draft {
   if (target.kind === "edit") {
@@ -117,14 +130,20 @@ export function PlanShiftModal({
   target,
   onClose,
   onSaved,
+  reloadShift,
 }: Readonly<{
   target: PlanShiftTarget | null;
   onClose: () => void;
   /** Nach dem Speichern oder Löschen, mit dem Satz für die Erfolgsmeldung. */
   onSaved: (message: string) => void;
+  /**
+   * Liest die Woche nach einem abgelehnten Ändern neu und gibt dem Dialog
+   * die gespeicherte Schicht (ADR 0311), auch als Antwort; nichts, wenn sie
+   * fehlt. Lehnt ab, wenn das Lesen scheitert.
+   */
+  reloadShift: () => Promise<PlanShiftTarget | undefined>;
 }>) {
   const isOpen = target !== null;
-  const [draft, setDraft] = useState<Draft | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const save = useFormModalPending(isOpen);
   const remove = useFormModalPending(confirmDelete);
@@ -135,15 +154,39 @@ export function PlanShiftModal({
   const { clear: clearErrors } = errors;
   const { clear: clearDeleteErrors } = deleteErrors;
   const { reset: resetWorkingTime } = workingTime;
+  // Fehler und Entwurf gehören zu einer Öffnung: die gespeicherte Schicht
+  // nach einer Ablehnung hat dieselbe Kennung, ihre Meldung bleibt stehen.
+  const openedKey =
+    target === null
+      ? null
+      : target.kind === "edit"
+        ? `edit:${target.shift.id}`
+        : `create:${target.person.recordId}:${target.date}`;
+  // Die Felder sind ein Entwurf auf der Schicht, mit der der Dialog öffnete
+  // (ADR 0311): ein Ändern schickt ihren Stand, eine neuere füllt nur
+  // unberührte Felder. Nach einer Ablehnung zeigt er die gespeicherte
+  // Schicht und Speichern wartet, bis sie gelesen ist.
+  const edit = useDraftOn<PlanShiftTarget, Draft, string, TraegerPlanningShift>(
+    { opening: openedKey, data: target ?? undefined, reload: reloadShift },
+    { token: targetToken, toDraft: draftOf, answer: savedTarget },
+  );
+  const { draft, setDraft } = edit;
+  const form = useReadDraftForm(
+    target?.kind === "edit" ? edit : null,
+    errors,
+    "die Schicht",
+  );
+  useEffect(() => {
+    if (openedKey === null) return;
+    clearErrors();
+    clearDeleteErrors();
+  }, [openedKey, clearErrors, clearDeleteErrors]);
 
   useEffect(() => {
     if (!target) return;
-    setDraft(draftOf(target));
     setConfirmDelete(false);
-    clearErrors();
-    clearDeleteErrors();
     resetWorkingTime();
-  }, [target, clearErrors, clearDeleteErrors, resetWorkingTime]);
+  }, [target, resetWorkingTime]);
 
   if (!target || !draft) return null;
 
@@ -158,9 +201,11 @@ export function PlanShiftModal({
     person.sites.find((site) => site.schoolId === draft.schoolId)?.schoolName ??
     (editing ? target.shift.schoolName : "");
   const set = (patch: Partial<Draft>) =>
-    setDraft((current) => (current ? { ...current, ...patch } : current));
+    setDraft((current) => ({ ...current, ...patch }));
 
   const submit = async () => {
+    // Nichts geht vor dem Lesen der gespeicherten Schicht hinaus.
+    if (!form.begin()) return;
     const invalid = draftErrors(draft);
     if (Object.keys(invalid).length > 0) {
       errors.invalid("Bitte prüfe die markierten Felder.", invalid);
@@ -178,7 +223,26 @@ export function PlanShiftModal({
     await save.run(async (op) => {
       try {
         if (target.kind === "edit") {
-          await changeTraegerShift(person.recordId, target.shift.id, input);
+          const { shift } = target;
+          const result = await edit.submit((expectedVersion) =>
+            changeTraegerShift(person.recordId, shift.id, {
+              ...input,
+              expectedVersion,
+            }),
+          );
+          if (!result.ok) {
+            if (result.skipped) return;
+            if (!result.refused) throw result.error;
+            // Seit dem Lesen geändert: die Meldung wartet auf die
+            // gespeicherte Schicht, ohne Wiederholen.
+            if (op.isCurrent()) {
+              await errors.show(result.error, {
+                object: "die Schicht",
+                reload: result.reload,
+              });
+            }
+            return;
+          }
         } else {
           await planTraegerShift(person.recordId, input);
         }
@@ -259,6 +323,8 @@ export function PlanShiftModal({
               onCancel={onClose}
               onSave={() => formRef.current?.requestSubmit()}
               saving={save.pending}
+              disabled={form.waitReason !== undefined}
+              disabledReason={form.waitReason}
               saveLabel={editing ? "Speichern" : "Planen"}
               saveTooltip={
                 editing
@@ -278,6 +344,9 @@ export function PlanShiftModal({
             void submit();
           }}
         >
+          {/* Das Lesen nach einer Ablehnung scheiterte: Speichern wartet,
+              bis die gespeicherte Schicht da ist. */}
+          <LoadErrorAlert error={form.loadError} />
           <p className="text-sm text-gray-700">
             <span className="font-medium text-gray-900">{name}</span>
             {editing && target.shift.fromSeries

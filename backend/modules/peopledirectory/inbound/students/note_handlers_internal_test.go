@@ -11,6 +11,7 @@ import (
 	peopleModule "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -55,7 +56,7 @@ func TestDecodeStudentNoteBodyDefaultsAndRejects(t *testing.T) {
 func TestParseNoteSubject(t *testing.T) {
 	t.Parallel()
 
-	activity, group := "7", "9"
+	activity, group := ident.Optional(7), ident.Optional(9)
 
 	t.Run("one occurrence is an activity and a day", func(t *testing.T) {
 		t.Parallel()
@@ -97,7 +98,7 @@ func TestParseNoteSubject(t *testing.T) {
 		t.Parallel()
 		empty := ""
 		subject, err := parseNoteSubject(studentNoteRequestBody{
-			SubjectDate: &empty, ActivityGroupID: &empty, EducationGroupID: &empty,
+			SubjectDate: &empty, ActivityGroupID: new(ident.IDOrNone), EducationGroupID: new(ident.IDOrNone),
 		}, noteSubjectToday)
 		require.NoError(t, err)
 		assert.Nil(t, subject.Date)
@@ -107,9 +108,8 @@ func TestParseNoteSubject(t *testing.T) {
 
 	t.Run("a non-numeric reference is refused", func(t *testing.T) {
 		t.Parallel()
-		broken := "abc"
-		_, err := parseNoteSubject(studentNoteRequestBody{ActivityGroupID: &broken}, noteSubjectToday)
-		require.ErrorContains(t, err, "activity_group_id")
+		_, status := noteBody(t, `{"body":"Notiz","activity_group_id":"abc"}`)
+		require.Equal(t, http.StatusBadRequest, status)
 	})
 }
 
@@ -198,7 +198,7 @@ func TestBuildNoteSubjectsResponse(t *testing.T) {
 		{ID: 7, Name: "Fußball-AG"}, {ID: 12, Name: "Schach"},
 	})
 	assert.Equal(t, []noteSubjectActivity{
-		{ID: "7", Name: "Fußball-AG"}, {ID: "12", Name: "Schach"},
+		{ID: 7, Name: "Fußball-AG"}, {ID: 12, Name: "Schach"},
 	}, response.Activities)
 
 	// A child without enrollments still answers with an empty list, so the

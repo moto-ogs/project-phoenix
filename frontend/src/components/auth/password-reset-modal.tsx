@@ -116,7 +116,7 @@ export function PasswordResetModal({
   const formId = useId();
   const formRef = useRef<HTMLFormElement>(null);
   const emailRef = useRef<HTMLInputElement>(null);
-  const errorPath = useApiFormError(formRef);
+  const errorPath = useApiFormError(formRef, { preloadPresenter: isOpen });
   const [email, setEmail] = useState(isOpen ? initialEmail.trim() : "");
   // The dialog stays mounted while closed: each opening takes the login
   // form's address anew.

@@ -3,7 +3,7 @@ import { expect, it, vi } from "vitest";
 
 const { session, useSSE } = vi.hoisted(() => ({
   session: {
-    user: { id: "7", tenantId: 1, roles: ["user"] },
+    user: { id: "7", tenantId: "1", roles: ["user"] },
   },
   useSSE: vi.fn(() => ({
     status: "idle",
@@ -32,7 +32,7 @@ it("suspends the school stream while the provider still names another school", (
     expect.objectContaining({ enabled: true }),
   );
 
-  session.user = { ...session.user, tenantId: 2 };
+  session.user = { ...session.user, tenantId: "2" };
   view.rerender();
   expect(useSSE).toHaveBeenLastCalledWith(
     "/api/sse/events",
@@ -48,7 +48,7 @@ it("suspends the school stream while the provider still names another school", (
     expect.objectContaining({ enabled: false }),
   );
 
-  session.user = { ...session.user, tenantId: 1 };
+  session.user = { ...session.user, tenantId: "1" };
   view.rerender();
   expect(useSSE).toHaveBeenLastCalledWith(
     "/api/sse/events",

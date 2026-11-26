@@ -84,6 +84,10 @@ type Folder struct {
 	RoleIDs    []int64
 	AccountIDs []int64
 	CreatedAt  time.Time
+	// Version is the token an update sends back; DeleteFingerprint the one
+	// a delete confirms its dialog with (ADR 0311).
+	Version           string
+	DeleteFingerprint string
 }
 
 // FolderOverview is the folder list plus what the caller may do, so the UI
@@ -104,6 +108,9 @@ type FolderInput struct {
 	Visibility string
 	RoleIDs    []int64
 	AccountIDs []int64
+	// ExpectedVersion is the Version of the folder an update was made on
+	// (ADR 0311); a new folder has none.
+	ExpectedVersion string
 }
 
 // File is one stored file as the caller may see it.
@@ -190,9 +197,15 @@ type Attachment struct {
 // AttachmentList is the attachment list of one announcement. Editable is
 // false once the announcement is published; it stays true when only the
 // limit is reached, because removing must remain possible.
+//
+// Version is the announcement's version the list belongs to (ADR 0311). It
+// is read before the attachments: a change committed in between makes the
+// list newer than the version, never older, so a publication that sends
+// the version is refused rather than confirming files nobody saw.
 type AttachmentList struct {
 	Attachments []Attachment
 	Editable    bool
+	Version     string
 }
 
 // FolderQuery reads folders and their audience options.
@@ -206,8 +219,9 @@ type FolderCommand interface {
 	CreateFolder(ctx context.Context, input FolderInput, actor Actor) (Folder, error)
 	UpdateFolder(ctx context.Context, folderID int64, input FolderInput, actor Actor) (Folder, error)
 	// DeleteFolder queues cleanup for every file still on disk and removes the
-	// folder; the file rows cascade. Bytes are removed by the sweep.
-	DeleteFolder(ctx context.Context, folderID int64, actor Actor) error
+	// folder whose DeleteFingerprint is expectedFingerprint; the file rows
+	// cascade. Bytes are removed by the sweep.
+	DeleteFolder(ctx context.Context, folderID int64, expectedFingerprint string, actor Actor) error
 }
 
 // FileQuery reads the files of visible folders.
@@ -257,10 +271,13 @@ func TenantReads(files Capability) (TenantAttachmentReads, error) {
 	return reads, nil
 }
 
-// AttachmentCommand changes the attachments of a draft announcement.
+// AttachmentCommand changes the attachments of a draft announcement. Both
+// carry the version of the draft the editor holds and answer the version
+// the change stamped (ADR 0311): the attachments are part of what a
+// publication confirms.
 type AttachmentCommand interface {
-	UploadAttachment(ctx context.Context, announcementID int64, upload Upload, actor Actor) (Attachment, error)
-	DeleteAttachment(ctx context.Context, announcementID, attachmentID int64, actor Actor) error
+	UploadAttachment(ctx context.Context, announcementID int64, expectedVersion string, upload Upload, actor Actor) (Attachment, string, error)
+	DeleteAttachment(ctx context.Context, announcementID, attachmentID int64, expectedVersion string, actor Actor) (string, error)
 }
 
 // AttachmentPurger is the promise the Communication owner relies on: intents

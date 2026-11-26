@@ -15,6 +15,7 @@ import (
 	"github.com/go-chi/render"
 	validation "github.com/go-ozzo/ozzo-validation"
 	"github.com/moto-ogs/project-phoenix/modules/facilities"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
@@ -97,12 +98,13 @@ type Runtime struct {
 }
 
 type Resource struct {
-	rooms   facilities.Capability
-	runtime Runtime
+	rooms    facilities.Capability
+	closures facilities.Closures
+	runtime  Runtime
 }
 
-func newRoomResource(rooms facilities.Capability, runtime Runtime) *Resource {
-	if rooms == nil || runtime.Protected == nil || runtime.Permission == nil ||
+func newRoomResource(rooms facilities.Capability, closures facilities.Closures, runtime Runtime) *Resource {
+	if rooms == nil || closures == nil || runtime.Protected == nil || runtime.Permission == nil ||
 		runtime.ParseID == nil || runtime.Pagination == nil || runtime.Success == nil ||
 		runtime.Paginated == nil || runtime.NoContent == nil || runtime.Failure == nil ||
 		runtime.Occupancy == nil || runtime.HistoryConfig == nil || runtime.HistoryAllowed == nil ||
@@ -111,7 +113,7 @@ func newRoomResource(rooms facilities.Capability, runtime Runtime) *Resource {
 		runtime.ReadUsers == "" || runtime.Create == "" || runtime.Update == "" || runtime.Delete == "" {
 		panic("rooms HTTP: all dependencies are required")
 	}
-	return &Resource{rooms: rooms, runtime: runtime}
+	return &Resource{rooms: rooms, closures: closures, runtime: runtime}
 }
 
 func (rs *Resource) Router() chi.Router {
@@ -119,14 +121,17 @@ func (rs *Resource) Router() chi.Router {
 	router.Use(render.SetContentType(render.ContentTypeJSON))
 	rs.runtime.Protected(router, func(protected chi.Router, withTx Middleware) {
 		protected.With(rs.runtime.Permission(rs.runtime.Read), withTx).Get("/", rs.listRooms)
+		protected.With(rs.runtime.Permission(rs.runtime.Read), withTx).Get("/closures", rs.listRoomClosures)
 		protected.With(rs.runtime.Permission(rs.runtime.Read), rs.runtime.Permission(rs.runtime.ReadUsers), withTx).Post("/export", rs.exportSnapshot)
 		protected.With(rs.runtime.Permission(rs.runtime.Read), withTx).Get("/{id}", rs.getRoom)
-		protected.With(rs.runtime.Permission(rs.runtime.Read), withTx).Get("/by-category", rs.getRoomsByCategory)
 		protected.With(rs.runtime.Permission(rs.runtime.Read), withTx).Get("/{id}/history", rs.GetRoomHistory)
 		protected.With(rs.runtime.Permission(rs.runtime.Create), withTx).Post("/", rs.createRoom)
 		protected.With(rs.runtime.Permission(rs.runtime.Update), withTx).Put("/{id}", rs.updateRoom)
 		protected.With(rs.runtime.Permission(rs.runtime.Delete), withTx).Delete("/{id}", rs.deleteRoom)
 		protected.With(rs.runtime.Permission(rs.runtime.Delete), withTx).Get("/{id}/removal-impact", rs.roomRemovalImpact)
+		// Closing a room is part of keeping it (#7653): rooms:update.
+		protected.With(rs.runtime.Permission(rs.runtime.Update), withTx).Post("/{id}/closures", rs.closeRoom)
+		protected.With(rs.runtime.Permission(rs.runtime.Update), withTx).Delete("/{id}/closures/{closureId}", rs.reopenRoom)
 	})
 	return router
 }
@@ -199,6 +204,14 @@ func (rs *Resource) listRooms(w http.ResponseWriter, r *http.Request) {
 	}
 	if value := r.URL.Query().Get("category"); value != "" {
 		filter.Category = &value
+	}
+	if value := r.URL.Query().Get("open_on"); value != "" {
+		date, err := calendar.ParseDate(value)
+		if err != nil {
+			rs.runtime.Failure(w, r, FailureInvalid, errors.New("open_on must be a date (YYYY-MM-DD)"), "invalid_request")
+			return
+		}
+		filter.OpenOn = &date
 	}
 	// is_open_room selects by the permanent release (#3065). Absent means "no
 	// opinion" — the navigation asks for released rooms, every other caller
@@ -298,24 +311,6 @@ func (rs *Resource) updateRoom(w http.ResponseWriter, r *http.Request) {
 	rs.runtime.Success(w, r, http.StatusOK, simpleRoomResponse(room), "Room updated successfully")
 }
 
-func (rs *Resource) getRoomsByCategory(w http.ResponseWriter, r *http.Request) {
-	category := r.URL.Query().Get("category")
-	if category == "" {
-		rs.runtime.Failure(w, r, FailureInvalid, errors.New("category parameter is required"), "invalid_request")
-		return
-	}
-	rooms, err := rs.rooms.ListRooms(r.Context(), facilities.RoomFilter{Category: &category})
-	if err != nil {
-		rs.failure(w, r, err)
-		return
-	}
-	responses := make([]RoomResponse, 0, len(rooms))
-	for _, room := range rooms {
-		responses = append(responses, simpleRoomResponse(room))
-	}
-	rs.runtime.Success(w, r, http.StatusOK, responses, "Rooms retrieved successfully")
-}
-
 // ErrHistoryDisabled refuses the room history of a school whose attendance
 // log is switched off; the root answers it with its registered code.
 var ErrHistoryDisabled = errors.New("feature_disabled")
@@ -410,9 +405,10 @@ func classifyFailure(err error) (FailureKind, string) {
 	kind, code := FailureInternal, facilities.ErrorCode(err)
 	switch {
 	case errors.Is(err, facilities.ErrInvalidRoom), errors.Is(err, facilities.ErrSystemRoomNameReserved),
-		errors.Is(err, facilities.ErrRoomColorReserved), errors.Is(err, facilities.ErrToiletRoomNotReleasable):
+		errors.Is(err, facilities.ErrRoomColorReserved), errors.Is(err, facilities.ErrToiletRoomNotReleasable),
+		errors.Is(err, facilities.ErrInvalidRoomClosure):
 		kind = FailureInvalid
-	case errors.Is(err, facilities.ErrRoomNotFound):
+	case errors.Is(err, facilities.ErrRoomNotFound), errors.Is(err, facilities.ErrRoomClosureNotFound):
 		kind = FailureNotFound
 	case errors.Is(err, facilities.ErrSystemRoomProtected):
 		kind = FailureForbidden

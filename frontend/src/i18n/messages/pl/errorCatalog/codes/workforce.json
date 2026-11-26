@@ -50,6 +50,8 @@
   "session_note_required": "Nie udało się zapisać: {object}. Sprawdź wpisane dane.",
   "session_not_found": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
   "session_not_owned": "Nie masz dostępu do: {object}. Skontaktuj się ze szkołą.",
+  "terminal_only_stamping": "Nie masz dostępu do: {object}. Skontaktuj się ze szkołą.",
+  "terminal_only_time_edit": "Nie masz dostępu do: {object}. Skontaktuj się ze szkołą.",
   "session_check_in_in_future": "Nie udało się zapisać: {object}. Sprawdź wpisane dane.",
   "session_times_invalid": "Nie udało się zapisać: {object}. Sprawdź wpisane dane.",
   "shift_changed": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
@@ -127,6 +129,8 @@
   "pool_block_taken": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
   "pool_springer_not_found": "Nie udało się zapisać: {object}. Sprawdź wpisane dane.",
   "pool_springer_busy": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
+  "traeger_payroll_employer_invalid": "Nie udało się zapisać: {object}. Sprawdź wpisane dane.",
   "traeger_payroll_not_ready": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
+  "traeger_staff_employer_changed": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
   "no_staff_profile": "Nie masz dostępu do: {object}. Skontaktuj się ze szkołą."
 }

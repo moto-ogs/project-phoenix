@@ -176,10 +176,11 @@ func (s *Reports) classListEntryRows(ctx context.Context, schoolClass string, al
 	if s.deps.ClassListEntries == nil {
 		return nil, nil
 	}
-	if allClasses {
-		schoolClass = ""
+	var classes []string
+	if !allClasses {
+		classes = []string{schoolClass}
 	}
-	entries, err := s.deps.ClassListEntries.ListClassListEntries(ctx, schoolClass)
+	entries, err := s.deps.ClassListEntries.ListClassListEntries(ctx, classes)
 	if err != nil {
 		return nil, fmt.Errorf("class roster report: list class list entries: %w", err)
 	}
@@ -199,21 +200,20 @@ func (s *Reports) classListEntryRows(ctx context.Context, schoolClass string, al
 // never take part in care; they come back separately, graduates excluded,
 // so the roster lists them as "Keine Betreuung".
 func (s *Reports) classRosterStudents(ctx context.Context, filters enrollmentNative.ClassRosterFilters) ([]*RosterStudent, []*RosterStudent, error) {
-	schoolClass := ""
+	var classes []string
 	if !filters.AllClasses {
-		schoolClass = filters.SchoolClass
+		classes = []string{filters.SchoolClass}
 	}
-	students, err := s.deps.Students.ListClassRoster(ctx, schoolClass)
+	today := s.today()
+	return s.rosterStudents(ctx, classes, classRosterCareDate(filters, today), today)
+}
+
+func (s *Reports) rosterStudents(ctx context.Context, classes []string, day, today calendar.Date) ([]*RosterStudent, []*RosterStudent, error) {
+	students, err := s.deps.Students.ListClassRoster(ctx, classes)
 	if err != nil {
 		return nil, nil, fmt.Errorf("class roster report: list students: %w", err)
 	}
-	if !filters.AllClasses {
-		students = studentsInClass(students, filters.SchoolClass)
-	} else {
-		students = studentsWithClass(students)
-	}
-	today := s.today()
-	day := classRosterCareDate(filters, today)
+	students = studentsInClasses(students, classes)
 	students, withoutPlace := splitWithoutCarePlace(students, day)
 	students, err = s.filterClassParticipation(ctx, students, day, today)
 	if err != nil {
@@ -264,20 +264,18 @@ func (s *RosterStudent) inClassTimeBeforeCareOn(day calendar.Date) bool {
 		!day.Before(*s.ClassTimeFrom) && !day.After(*s.ClassTimeUntil)
 }
 
-func studentsInClass(students []*RosterStudent, schoolClass string) []*RosterStudent {
-	result := students[:0]
-	for _, student := range students {
-		if student != nil && strings.EqualFold(strings.TrimSpace(student.SchoolClass), strings.TrimSpace(schoolClass)) {
-			result = append(result, student)
-		}
+func studentsInClasses(students []*RosterStudent, classes []string) []*RosterStudent {
+	allowed := make(map[string]bool, len(classes))
+	for _, class := range classes {
+		allowed[strings.ToLower(strings.TrimSpace(class))] = true
 	}
-	return result
-}
-
-func studentsWithClass(students []*RosterStudent) []*RosterStudent {
 	result := students[:0]
 	for _, student := range students {
-		if student != nil && strings.TrimSpace(student.SchoolClass) != "" {
+		if student == nil {
+			continue
+		}
+		class := strings.ToLower(strings.TrimSpace(student.SchoolClass))
+		if class != "" && (classes == nil || allowed[class]) {
 			result = append(result, student)
 		}
 	}
@@ -309,9 +307,8 @@ func (s *Reports) filterClassParticipation(ctx context.Context, students []*Rost
 }
 
 // classRosterForStudents builds the roster for an already-loaded student
-// set. The class day view merges the roster of EVERY covering phase for every
-// class on the teachers' landing page, so it loads the class once and reuses
-// it across phases instead of re-querying identical students per phase.
+// set. The full class sheet merges EVERY covering phase, reusing the
+// loaded students rather than querying them again per phase.
 // Callers pass normalized, validated filters.
 func (s *Reports) classRosterForStudents(ctx context.Context, filters enrollmentNative.ClassRosterFilters, students []*RosterStudent) (*enrollmentNative.ClassRosterReport, error) {
 	if err := s.classRosterConfigured(filters); err != nil {
@@ -470,15 +467,9 @@ func (s *Reports) loadClassRosterEnrollments(ctx context.Context, filters enroll
 // loadClassRosterCatalog reads the phase's offerings, the request schemas
 // and whether the offering catalog constrains the care days.
 func (s *Reports) loadClassRosterCatalog(ctx context.Context, filters enrollmentNative.ClassRosterFilters, in *classRosterInputs, requests []*enrollmentNative.Request) error {
-	offerings, err := s.deps.Offerings.ListByPhase(ctx, filters.PhaseID)
-	if err != nil {
-		return fmt.Errorf("class roster report: list offerings: %w", err)
-	}
-	in.offeringByID = make(map[int64]*offeringContract.CareOfferingRecord, len(offerings))
-	for _, offering := range offerings {
-		if offering != nil {
-			in.offeringByID[offering.ID] = offering
-		}
+	var err error
+	if in.offeringByID, err = s.classRosterOfferings(ctx, filters.PhaseID); err != nil {
+		return err
 	}
 	if in.schemas, err = s.loadSchemas(ctx, requests); err != nil {
 		return err
@@ -487,14 +478,30 @@ func (s *Reports) loadClassRosterCatalog(ctx context.Context, filters enrollment
 	return err
 }
 
+func (s *Reports) classRosterOfferings(ctx context.Context, phaseID int64) (map[int64]*offeringContract.CareOfferingRecord, error) {
+	offerings, err := s.deps.Offerings.ListByPhase(ctx, phaseID)
+	if err != nil {
+		return nil, fmt.Errorf("class roster report: list offerings: %w", err)
+	}
+	byID := make(map[int64]*offeringContract.CareOfferingRecord, len(offerings))
+	for _, offering := range offerings {
+		if offering != nil {
+			byID[offering.ID] = offering
+		}
+	}
+	return byID, nil
+}
+
 // attachClassRosterSelections picks every student's newest approved
 // enrollment and attaches its offering selections on the roster's offering
 // date and its request guardians. It returns the offering date.
 func (s *Reports) attachClassRosterSelections(ctx context.Context, filters enrollmentNative.ClassRosterFilters, in *classRosterInputs, reads *classRosterEnrollmentReads) (calendar.Date, error) {
 	enrollments, approvedChildIDs := classRosterApprovedEnrollments(reads.children, classRosterRequestsByID(reads.requests), classRosterStudentsByID(in.students))
-	offeringDate := enrollmentNative.ReportOfferingDate(s.today(), in.phase)
+	var offeringDate calendar.Date
 	if filters.OfferingDate != nil {
 		offeringDate = *filters.OfferingDate
+	} else {
+		offeringDate = enrollmentNative.ReportOfferingDate(s.today(), in.phase)
 	}
 	values, err := s.deps.Children.RequestChildOfferingsForChildrenAtDate(ctx, approvedChildIDs, enrollmentNative.Date(offeringDate))
 	links := enrollmentNative.RequestChildOfferingRecordsOf(values)

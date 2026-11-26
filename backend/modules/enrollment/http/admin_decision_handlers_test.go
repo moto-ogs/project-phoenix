@@ -25,6 +25,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/testutil/routetest"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // mockDecisionService is a hand-rolled fake that records inputs and
@@ -748,9 +749,9 @@ func TestDecideAdminChildHandler_PossiblyEnrolledNamesTheCandidates(t *testing.T
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
 	assert.Equal(t, "enrollment.child_possibly_enrolled", body.Code)
 	require.Len(t, body.Details.Candidates, 1)
-	assert.Equal(t, "501", body.Details.Candidates[0].StudentID)
+	assert.Equal(t, "501", body.Details.Candidates[0].StudentID.String())
 	require.NotNil(t, body.Details.Candidates[0].PhaseRequest)
-	assert.Equal(t, AdminCandidatePhaseRequest{RequestID: "77", ChildStatus: "approved", GuardianFirstName: "Eva", GuardianLastName: "Bestand"}, *body.Details.Candidates[0].PhaseRequest)
+	assert.Equal(t, AdminCandidatePhaseRequest{RequestID: 77, ChildStatus: "approved", GuardianFirstName: "Eva", GuardianLastName: "Bestand"}, *body.Details.Candidates[0].PhaseRequest)
 }
 
 func TestDecideAdminChildHandler_RejectsInvalidShownStudentIDs(t *testing.T) {
@@ -970,4 +971,32 @@ func TestAttachExistingChildCandidates_ExistingStudentsPhaseOffersNoNewChild(t *
 	attachExistingChildCandidates(children, []*capability.RequestChild{{ID: 7}, {ID: 8}}, map[int64][]capability.ExistingChildCandidate{7: {{StudentID: 3}}}, true)
 	assert.True(t, children[0].ExistingChildOnly, "a required choice of an existing_students phase offers no new child")
 	assert.False(t, children[1].ExistingChildOnly, "a child without a choice carries no flag")
+}
+
+// The detail answers the token of the child's bookings, the correction
+// sends it back and its answer carries the new one; a correction over
+// changed bookings answers 409 general.changed_since_read (ADR 0311).
+func TestAdminChildOfferings_CarryTheReadVersion(t *testing.T) {
+	t.Parallel()
+
+	mock := &mockDecisionService{
+		getResult:            makeReqSummary(1234, 5678, makeChildSummary(99, "Lara", "Beispiel", capability.ChildStatusApproved)),
+		listChildOffResult:   map[int64]ChildOfferingSet{99: {Version: "bookings-1"}},
+		updateChildOffResult: makeChildSummary(99, "Lara", "Beispiel", capability.ChildStatusApproved),
+	}
+	router := buildAdminDecisionRouter(mock)
+	w := executeAdminJSON(t, router, http.MethodGet, "/enrollment/admin/requests/1234", nil)
+	require.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Body.String(), `"offerings_version":"bookings-1"`, "a child without bookings has a version too")
+
+	body := map[string]any{"reason": "Korrektur", "offerings": []map[string]any{}, "expected_version": "bookings-1"}
+	w = executeAdminJSON(t, router, http.MethodPut, "/enrollment/admin/requests/1234/children/99/offerings", body)
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+	assert.Equal(t, "bookings-1", mock.updateChildOffInput.ExpectedVersion)
+	assert.Contains(t, w.Body.String(), `"offerings_version":"bookings-1"`, "the answer carries the version of the stored bookings")
+
+	mock.updateChildOffResult, mock.updateChildOffErr = nil, readstate.ErrChanged
+	w = executeAdminJSON(t, router, http.MethodPut, "/enrollment/admin/requests/1234/children/99/offerings", body)
+	assert.Equal(t, http.StatusConflict, w.Code)
+	assert.Contains(t, w.Body.String(), readstate.ChangedCode)
 }

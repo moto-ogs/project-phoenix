@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocale } from "next-intl";
 import { CalendarRange, FileSpreadsheet, FileText } from "lucide-react";
 
@@ -47,9 +47,11 @@ const NO_DAYS: MealOrderDay[] = [];
 export function MealOrderWeek({
   mondayISO,
   canExportMonth,
+  onDaysLoaded,
 }: Readonly<{
   mondayISO: string;
   canExportMonth: boolean;
+  onDaysLoaded?: (days: MealOrderDay[] | null) => void;
 }>) {
   const t = useCareTermTranslations("mealOrders");
   const locale = useLocale();
@@ -90,6 +92,10 @@ export function MealOrderWeek({
   );
   const days: MealOrderDay[] = orders.data?.days ?? NO_DAYS;
   const loading = orders.data === undefined && !orders.error;
+  useEffect(
+    () => onDaysLoaded?.(orders.data?.days ?? null),
+    [onDaysLoaded, orders.data],
+  );
 
   async function downloadDeliveries(format: DeliveryFormat) {
     setDeliveryBusy(format);
@@ -213,7 +219,9 @@ export function MealOrderWeek({
         key: "status",
         header: t("status"),
         render: (day) =>
-          day.closed ? (
+          day.mealCancelled ? (
+            <StatusBadge label={t("mealCancelled")} tone="gray" />
+          ) : day.closed ? (
             <StatusBadge label={t("closed")} tone="gray" />
           ) : day.status === "unordered" ? (
             <StatusBadge label={t("unordered")} tone="gray" />
@@ -313,7 +321,6 @@ export function MealOrderWeek({
           rows={days}
           getRowKey={(day) => day.date}
           isLoading={loading}
-          stackedOnMobile
           caption={t("caption")}
         />
       )}

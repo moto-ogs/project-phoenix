@@ -59,5 +59,7 @@
   "endNoticeTitle": "Wiadomość organizatora o zakończeniu umowy",
   "submitTerminationTooltip": "Od razu wysyła wypowiedzenie do organu prowadzącego.",
   "submitWithdrawalTooltip": "Od razu wysyła odstąpienie do organu prowadzącego.",
-  "submitDisabledReason": "Najpierw wybierz jedną z możliwości powyżej."
+  "submitDisabledReason": "Najpierw wybierz jedną z możliwości powyżej.",
+  "reloadingReason": "Aktualne terminy są jeszcze wczytywane.",
+  "reloadFailedReason": "Nie udało się wczytać aktualnych terminów. Dotknij „Spróbuj ponownie” w komunikacie powyżej."
 }

@@ -4,7 +4,7 @@ import type * as timetableContract from "./contract/timetable.generated";
  * Client for the later-pickup block decisions (#3261). A child who is picked
  * up later than before may be on no block for the extra time; the backend
  * keeps an open task until the Leitung picks one or more blocks, or none.
- * Calls the Next.js proxy routes under /api/timetable/pickup-extensions.
+ * Calls the catalog BFF under /api/timetable/pickup-extensions.
  */
 
 type PickupExtensionKind = "day" | "weekday";
@@ -34,7 +34,19 @@ export interface PickupExtension {
   readonly blocks: readonly PickupExtensionBlock[];
 }
 
-function mapPickupExtension(
+export type PickupExtensionReminder = Pick<
+  PickupExtension,
+  "studentName" | "kind" | "date" | "weekday" | "effectiveFrom" | "pickupTime"
+>;
+
+export function mapPickupExtensionReminder(
+  task: PickupExtension,
+): PickupExtensionReminder {
+  const { studentName, kind, date, weekday, effectiveFrom, pickupTime } = task;
+  return { studentName, kind, date, weekday, effectiveFrom, pickupTime };
+}
+
+export function mapPickupExtension(
   raw: timetableContract.pickupExtensionResponse,
 ): PickupExtension {
   return {

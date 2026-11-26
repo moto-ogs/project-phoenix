@@ -22,6 +22,7 @@
   "logo_not_found": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
   "logo_too_large": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
   "master_data_invalid": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
+  "school_party_creditor_account_conflict": "Bu alacaklı kimliği {school_name} için başka bir hesapla zaten kayıtlı. Aynı hesabı girin veya alacaklı kimliğini kontrol edin.",
   "member_not_found": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
   "no_membership": "{object} için erişim izniniz yok. Okulla iletişime geçin.",
   "report_template_invalid": "Lütfen şablonun bilgilerini kontrol edin.",
@@ -29,6 +30,9 @@
   "report_template_not_found": "Bu şablon artık yok. Lütfen sayfayı yenileyin.",
   "school_not_found": "{object} için erişim izniniz yok. Okulla iletişime geçin.",
   "school_requires_code": "{object} için erişim izniniz yok. Okulla iletişime geçin.",
+  "school_role_name_taken": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
+  "school_role_name_used_at_school": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
+  "school_role_not_found": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
   "second_factor_required": "{object} için erişim izniniz yok. Okulla iletişime geçin.",
   "shared_document_not_found": "Kurum bu belgeyi artık paylaşmıyor. Lütfen sayfayı yenileyin."
 }

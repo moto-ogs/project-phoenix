@@ -42,6 +42,12 @@ const regressions = [
   "(() => { let index: string; for (index in keys) Number(keys[index]); })()",
   "(() => { for (const key of keys) Number(key); })()",
   "Number(firstKey)",
+  "(() => { const coerce = Number; return coerce(row.id); })()",
+  "(() => { const { BigInt: coerce } = globalThis; return coerce(row.id); })()",
+  "(() => { function read(value: string) { return Number(value); } return read(row.id); })()",
+  "(() => { function read(value: string) { return Number(value); } return [row.id].map(read); })()",
+  "(() => { const read = (value: string) => BigInt(value); const alias = read; return alias(row.id); })()",
+  "(() => { function read(value: string) { return +value; } return read(row.id); })()",
   "Array.from(readonlyKeys, BigInt)",
   "genericKeys.map(Number)",
   "Array.from(query.group_id ?? [], BigInt)",
@@ -125,5 +131,7 @@ describe("bff-boundary/no-numeric-identifier", () => {
     expect(reported, result.output).toEqual(
       regressions.map((line) => `void (${line});`),
     );
-  });
+    // Ein einziger oxlint-Lauf mit Typinformation: lokal etwa 2,5 s, auf
+    // dem ausgelasteten CI-Shard über den 5-s-Standard von Vitest.
+  }, 30_000);
 });

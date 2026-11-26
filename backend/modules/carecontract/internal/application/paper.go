@@ -20,18 +20,19 @@ import (
 
 var pdfMagic = []byte("%PDF-")
 
-// RecordPaperSignature stores the signed paper PDF of a draft or sent
-// contract and concludes it, in the caller's Träger transaction. A draft's
-// PDF is frozen first, so the version keeps the text the parents signed.
-func (s *Signatures) RecordPaperSignature(ctx context.Context, reviewer carecontract.Reviewer, contractID int64, input carecontract.PaperInput) error {
+// HandOverOnPaper freezes the PDF the Träger-Büro prints and hands to the
+// parents (#8030), in the caller's Träger transaction and under the
+// contract's row lock. A draft becomes versendet without a mail: no mailing
+// means no link and no reminder. A sent contract keeps its frozen PDF, which
+// the office prints again; only the handover itself enters the trail. The
+// paper signature then binds this PDF, whatever
+// letterhead, template or master data change before the scan is uploaded.
+func (s *Signatures) HandOverOnPaper(ctx context.Context, reviewer carecontract.Reviewer, contractID int64) error {
 	if err := checkReviewer(reviewer); err != nil {
 		return err
 	}
 	if s.contracts == nil {
-		return errors.New("care contract: the paper signature needs the contracts")
-	}
-	if err := checkPaper(&input, calendar.DateFromTime(s.clock.now())); err != nil {
-		return err
+		return errors.New("care contract: the paper handover needs the contracts")
 	}
 	record, err := s.store.Contract(ctx, reviewer.OrganizationID, contractID, true)
 	if err != nil {
@@ -40,23 +41,60 @@ func (s *Signatures) RecordPaperSignature(ctx context.Context, reviewer carecont
 	if record.Summary.Status != carecontract.StatusDraft && record.Summary.Status != carecontract.StatusSent {
 		return carecontract.ErrContractNotSignable
 	}
-	if _, _, err := s.contracts.frozenDocument(ctx, reviewer, record); err != nil {
+	documentID, err := s.contracts.paperDocument(ctx, reviewer, record)
+	if err != nil {
 		return err
 	}
-	now := s.clock.now()
+	// Printing a handed-over or mailed contract again changes nothing: the
+	// trail holds the handover once, the read of its PDF holds the print.
+	if record.Summary.Status != carecontract.StatusDraft && record.DocumentID != nil {
+		return nil
+	}
 	if record.Summary.Status == carecontract.StatusDraft {
-		// The parents got the contract on paper: it counts as sent then.
-		if err := s.store.MarkSent(ctx, reviewer.OrganizationID, contractID, now); err != nil {
+		if err := s.store.MarkSent(ctx, reviewer.OrganizationID, contractID, s.clock.now()); err != nil {
 			return err
 		}
+	}
+	return trailContract(ctx, s.store, reviewer.OrganizationID, reviewer.AccountID, record, ports.ActionSend,
+		map[string]any{"via": carecontract.ChannelOffice, "document_id": documentID})
+}
+
+// RecordPaperSignature stores the signed paper PDF of a sent contract and
+// concludes it, or of the changed version of an active contract, which then
+// takes effect (#4816), in the caller's Träger transaction. The parents signed the
+// PDF frozen when the contract was handed over on paper or sent by mail
+// (#8030): a draft, or a current version without its frozen PDF, is not
+// signable, and the upload never renders the contract again.
+func (s *Signatures) RecordPaperSignature(ctx context.Context, reviewer carecontract.Reviewer, contractID int64, input carecontract.PaperInput) error {
+	if err := checkReviewer(reviewer); err != nil {
+		return err
+	}
+	if err := checkPaper(&input, calendar.DateFromTime(s.clock.now())); err != nil {
+		return err
+	}
+	record, err := s.store.Contract(ctx, reviewer.OrganizationID, contractID, true)
+	if err != nil {
+		return err
+	}
+	// The scan signs the version that waits: a sent contract's, or the
+	// changed version of an active one (#4816).
+	waits, err := waitingRecord(ctx, s.store, reviewer.OrganizationID, &record)
+	if err != nil {
+		return err
+	}
+	// The office names the version of the scan: a changed version may have
+	// overtaken it since the page was read.
+	// A changed version always needs it; a first contract has one version
+	// and takes a scan without it, as before.
+	named := input.VersionNumber != 0 || record.Version.Number <= 1
+	if !waits || record.DocumentID == nil || !named || (input.VersionNumber != 0 && input.VersionNumber != record.Version.Number) {
+		return carecontract.ErrContractNotSignable
 	}
 	document, err := s.store.CurrentDocument(ctx, reviewer.OrganizationID, contractID, record.Version.ID.Int64())
 	if err != nil {
 		return err
 	}
-	// The record was read before the PDF froze: the conclusion sees the
-	// contract as it is now, sent with its frozen PDF.
-	record.Summary.Status, record.DocumentID = carecontract.StatusSent, &document.ID
+	now := s.clock.now()
 	checksum, err := versionChecksum(s.ports.Links.Fingerprint, record.Version)
 	if err != nil {
 		return err
@@ -70,13 +108,13 @@ func (s *Signatures) RecordPaperSignature(ctx context.Context, reviewer carecont
 	}); err != nil {
 		return err
 	}
-	status, err := concludeSigned(ctx, s.store, reviewer.OrganizationID, reviewer.AccountID, record, carecontract.SignaturePaper, now)
+	status, _, err := s.takeEffect(ctx, reviewer.OrganizationID, reviewer.AccountID, record, carecontract.SignaturePaper, now)
 	if err != nil {
 		return err
 	}
 	return trailContract(ctx, s.store, reviewer.OrganizationID, reviewer.AccountID, record, ports.ActionSign, map[string]any{
 		"via": carecontract.ChannelOffice, "method": carecontract.SignaturePaper, "document_sha256": document.SHA256,
-		"version_sha256": checksum, "signed_on": input.SignedOn.String(), "status": status,
+		"version_sha256": checksum, "signed_on": input.SignedOn.String(), "status": status, "version_number": record.Version.Number,
 	})
 }
 

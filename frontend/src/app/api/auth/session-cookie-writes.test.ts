@@ -1,3 +1,4 @@
+import { sessionClaims } from "~/test/helpers/session-claims";
 import {
   afterAll,
   beforeAll,
@@ -31,7 +32,7 @@ const SESSION = {
 const backend = vi.fn<typeof fetch>();
 /** The answer of Identity & Access on the session's family. */
 let familyStatus = 200;
-let familyBody: Record<string, unknown> = { id: "7" };
+let familyBody: Record<string, unknown> = { ...sessionClaims() };
 const NOT_BOOKED = { status: 403, code: "module.not_booked" };
 
 function familyChecks() {
@@ -56,7 +57,7 @@ afterAll(() => {
 });
 beforeEach(() => {
   familyStatus = 200;
-  familyBody = { id: "7" };
+  familyBody = { ...sessionClaims() };
   backend.mockReset();
   backend.mockImplementation(async (url) => {
     const target = String(url);
@@ -524,4 +525,184 @@ describe("BFF route of a portal (#5399)", () => {
       expect(written(answer)).toHaveLength(cookies);
     },
   );
+});
+
+// #8082: the mark beside a session cookie tells every tab, also those of the
+// other school subdomains under the shared tenant cookie, that its family
+// changed.
+describe("session mark (#8082)", () => {
+  const TENANT = "authjs.session-token";
+  const MARK = "authjs.session-mark";
+  const tenantRequest = (cookie: string) =>
+    new Request("http://school-a.localhost:3000/api/me/profile", {
+      headers: { cookie },
+    });
+  const tenantSession = (family: string, token = family) => ({
+    ...SESSION,
+    scope: "",
+    token: jwt({ id: 7, family_id: family, token }),
+  });
+  const markOf = (answer: Response) =>
+    answer.headers
+      .getSetCookie()
+      .filter((cookie) => cookie.startsWith(`${MARK}=`));
+
+  it("marks a new family, keeps the mark through a rotation and changes it for a preview", async () => {
+    const first = await gateSessionCookieWrites(
+      tenantRequest(""),
+      response(
+        `${TENANT}=${await sealed(tenantSession("family-1"), TENANT)}; Path=/`,
+      ),
+    );
+    const [mark] = markOf(first);
+    expect(mark).toMatch(
+      /^authjs\.session-mark=[\w-]{22}; Path=\/; SameSite=Lax$/,
+    );
+    // The tab that asked reads which mark its own answer wrote.
+    expect(first.headers.get("X-Moto-Session-Mark")).toBe(mark!.split(";")[0]);
+    // The mark names no account, school or token.
+    expect(mark).not.toContain("family-1");
+    const value = mark!.split(";")[0]!.slice(MARK.length + 1);
+
+    const presented = `${TENANT}=${await sealed(tenantSession("family-1"), TENANT)}; ${MARK}=${value}`;
+    const rotated = await gateSessionCookieWrites(
+      tenantRequest(presented),
+      response(
+        `${TENANT}=${await sealed(tenantSession("family-1", "rotated"), TENANT)}; Path=/`,
+      ),
+    );
+    // Anker: the rotation itself leaves.
+    expect(written(rotated, TENANT)).toHaveLength(1);
+    // Written again with it: a late answer may carry an older session than
+    // the cookie holds by then.
+    expect(markOf(rotated)).toEqual([mark]);
+    // A rotation within the presented family is no step of the asking tab:
+    // its answer names no mark, also when another tab's login brought it.
+    expect(rotated.headers.get("X-Moto-Session-Mark")).toBeNull();
+    const preview = await gateSessionCookieWrites(
+      tenantRequest(presented),
+      response(
+        `${TENANT}=${await sealed({ ...tenantSession("family-1"), token: jwt({ id: 9, family_id: "family-1", preview_id: "preview-1" }) }, TENANT)}; Path=/`,
+      ),
+    );
+    // A preview keeps the admin's family but is another view.
+    expect(markOf(preview)).toHaveLength(1);
+    expect(markOf(preview)[0]).not.toBe(mark);
+
+    const switched = await gateSessionCookieWrites(
+      tenantRequest(presented),
+      response(
+        `${TENANT}=${await sealed(tenantSession("family-2"), TENANT)}; Path=/`,
+      ),
+    );
+    const [next] = markOf(switched);
+    expect(next).toBeDefined();
+    expect(next).not.toContain(value);
+  });
+
+  const endingRequest = (cookie: string, ends: string) =>
+    new Request("http://school-a.localhost:3000/api/auth/signout", {
+      method: "POST",
+      headers: { cookie, "X-Moto-End-Session": ends },
+    });
+  const deletion = () => response(`${TENANT}=; Path=/; Max-Age=0`);
+  const deletes = (answer: Response) =>
+    answer.headers
+      .getSetCookie()
+      .some((cookie) => cookie.startsWith(`${TENANT}=;`));
+
+  it("deletes nothing of a session the exit does not name", async () => {
+    // A session from before marks names "-" and goes with its own cookie.
+    const unmarked = `${TENANT}=${await sealed(tenantSession("family-0"), TENANT)}`;
+    expect(
+      deletes(
+        await gateSessionCookieWrites(
+          endingRequest(unmarked, "tenant -"),
+          deletion(),
+        ),
+      ),
+    ).toBe(true);
+    const [mark] = markOf(
+      await gateSessionCookieWrites(
+        tenantRequest(""),
+        response(
+          `${TENANT}=${await sealed(tenantSession("family-1"), TENANT)}; Path=/`,
+        ),
+      ),
+    );
+    const named = mark!.split(";")[0]!.slice(MARK.length + 1);
+    // Another school's tab signed in with family-2 before the request left:
+    // the request carries its session and its mark.
+    const replacing = `${TENANT}=${await sealed(tenantSession("family-2"), TENANT)}; ${MARK}=family-2-mark`;
+
+    const refused = await gateSessionCookieWrites(
+      endingRequest(replacing, `tenant ${named}`),
+      deletion(),
+    );
+    expect(deletes(refused)).toBe(false);
+    expect(markOf(refused)).toEqual([]);
+    expect(refused.headers.get("X-Moto-Session-Replaced")).toBe("1");
+
+    // Control: the named session itself goes.
+    const own = `${TENANT}=${await sealed(tenantSession("family-1"), TENANT)}; ${MARK}=${named}`;
+    const ended = await gateSessionCookieWrites(
+      endingRequest(own, `tenant ${named}`),
+      deletion(),
+    );
+    expect(deletes(ended)).toBe(true);
+    expect(ended.headers.get("X-Moto-Session-Replaced")).toBeNull();
+  });
+
+  it("names the marks a request carried in its answer", async () => {
+    const answer = await gateSessionCookieWrites(
+      tenantRequest(`${MARK}=family-a; other=1`),
+      response(),
+    );
+    // Which session the answer describes, also after the cookie changed.
+    expect(answer.headers.get("X-Moto-Presented-Session-Mark")).toBe(
+      `${MARK}=family-a`,
+    );
+  });
+
+  it("deletes the mark with the session, not with a leftover chunk", async () => {
+    const presented = `${TENANT}=${await sealed(tenantSession("family-1"), TENANT)}; ${MARK}=abc`;
+    const ended = await gateSessionCookieWrites(
+      tenantRequest(presented),
+      response(`${TENANT}=; Path=/; Max-Age=0`),
+    );
+    expect(markOf(ended)).toEqual([
+      `${MARK}=; Max-Age=0; Path=/; SameSite=Lax`,
+    ]);
+    const cleanup = await gateSessionCookieWrites(
+      tenantRequest(presented),
+      response(`${TENANT}.1=; Path=/; Max-Age=0`),
+    );
+    // Anker: the cleanup itself leaves.
+    expect(written(cleanup, TENANT)).toHaveLength(1);
+    expect(markOf(cleanup)).toEqual([]);
+  });
+
+  it("marks every portal's session beside its own cookie", async () => {
+    const parent = {
+      ...SESSION,
+      token: jwt({ id: 7, family_id: "family-3", scope: "parent" }),
+    };
+    const answer = await gateSessionCookieWrites(
+      request(""),
+      response(`${NAME}=${await sealed(parent)}; Path=/`),
+    );
+    // Anker: the portal's own session leaves.
+    expect(written(answer)).toHaveLength(1);
+    expect(
+      answer.headers
+        .getSetCookie()
+        .filter((cookie) => cookie.startsWith("parent.session-mark=")),
+    ).toEqual([
+      expect.stringMatching(
+        /^parent\.session-mark=[\w-]{22}; Path=\/; SameSite=Lax$/,
+      ),
+    ]);
+    // The tenant's mark stays untouched.
+    expect(markOf(answer)).toEqual([]);
+  });
 });

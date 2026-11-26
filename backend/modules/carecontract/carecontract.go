@@ -21,6 +21,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // The states of a contract (ADR 0088 section 2). The Träger-Büro reaches
@@ -54,6 +55,10 @@ const (
 	// VersionReplaced is a version that a change on its own first day
 	// replaced (#4681): it stays in the history and holds on no day.
 	VersionReplaced = "ersetzt"
+	// VersionOvertaken is a requested version nobody signed (#4816): a newer
+	// version overtook it, or the school took its change back. It stays in
+	// the history and holds on no day.
+	VersionOvertaken = "ueberholt"
 )
 
 const (
@@ -164,6 +169,11 @@ type OfferingTemplate struct {
 	PriceCents   *int              `json:"price_cents"`
 	Active       bool              `json:"active"`
 	Template     *ContractTemplate `json:"template"`
+	// IssuerName names the Schulträger or the Gemeinde that concludes the
+	// contracts of the school in place of the Träger (#4811); empty for
+	// the Träger. A contract partner the conditions name wins over it, so
+	// the form warns where both differ.
+	IssuerName string `json:"issuer_name"`
 	// AcceptanceText is the complete saved conditions text for the enrollment
 	// form. It is empty without a template or an explicit contract partner.
 	AcceptanceText string `json:"acceptance_text"`
@@ -176,6 +186,19 @@ type OfferingTemplate struct {
 	// contract PDF prints them; empty without a template.
 	TermText   string `json:"term_text"`
 	NoticeText string `json:"notice_text"`
+	// Version is the read state of the offering's template (ADR 0311): a
+	// save sends it back and is refused once the template changed.
+	Version string `json:"version"`
+}
+
+// TemplateVersion is the read-state token of an offering's template: the
+// row's updated_at, which its trigger bumps on every update; an offering
+// without a template has readstate.Absent, so a first save is bound too.
+func TemplateVersion(template *ContractTemplate) string {
+	if template == nil {
+		return readstate.Absent
+	}
+	return readstate.Of(template.UpdatedAt)
 }
 
 // CandidateKey names one accepted application child.
@@ -312,6 +335,10 @@ type ContractSummary struct {
 	// without one. The office names it to take the binding of an imported
 	// contract off again (ADR 0309, "Der Weg zurück").
 	RequestChildID *ident.ID `json:"request_child_id"`
+	// ChangeAwaitsSignature tells that a changed version of an active
+	// contract waits for the parents' signature (#4816); the version in
+	// force holds until then.
+	ChangeAwaitsSignature bool `json:"change_awaits_signature"`
 }
 
 // ContractList is the filtered list with the count of every status over all
@@ -351,6 +378,22 @@ type Version struct {
 	// effective version starts, else its own end. Nil while it holds open
 	// ended or is no effective version.
 	ValidUntil *calendar.Date `json:"valid_until"`
+	// AgreedFrom is the effective date the signed document names when the
+	// parents signed a changed version after that day (#4816): the version
+	// then holds from the day of the signature, EffectiveFrom. Nil for
+	// every other version.
+	AgreedFrom *calendar.Date `json:"agreed_from,omitempty"`
+}
+
+// VersionSignature tells how the parents agreed to one version (#4816): a
+// drawn or typed signature, a paper contract, or their own request for the
+// change (SignatureRequest).
+type VersionSignature struct {
+	VersionNumber int       `json:"version_number"`
+	Method        string    `json:"method"`
+	Channel       string    `json:"channel"`
+	SignerName    string    `json:"signer_name"`
+	SignedAt      time.Time `json:"signed_at"`
 }
 
 type Party struct {
@@ -362,6 +405,14 @@ type Party struct {
 	// billing reads (ContractBilling) fill it: a draft can be discarded, so
 	// nothing of the billing may hang on it (#7770).
 	ContractDraft bool `json:"-"`
+	// FamilyContractID is the leading contract of the family the office
+	// joined the contract to (#7161, ADR 0319), zero when it leads or is
+	// alone. Only the billing reads fill it.
+	FamilyContractID int64 `json:"-"`
+	// ContractSchoolID is the place of care of the party's contract. Only
+	// the billing reads fill it: its school's issuer takes the mandate
+	// (#8040).
+	ContractSchoolID int64 `json:"-"`
 }
 
 // Mailing is one send of the contract with the state of its mail.
@@ -400,13 +451,16 @@ type ContractDetail struct {
 	Version  Version   `json:"version"`
 	Parties  []Party   `json:"parties"`
 	Mailings []Mailing `json:"mailings"`
-	// DocumentFrozen tells that the PDF was rendered at the first send and
-	// no longer follows the template.
+	// DocumentFrozen tells that the PDF was rendered at the first send or
+	// the handover on paper (#8030) and no longer follows the template.
 	DocumentFrozen bool `json:"document_frozen"`
 	// Signature is the signature of the current version, nil until signed;
 	// Reminders the reminder mails while it waits (#4679, signature.go).
 	Signature *ContractSignature `json:"signature"`
 	Reminders []Reminder         `json:"reminders"`
+	// VersionSignatures tell for every signed version how the parents
+	// agreed to it, oldest first (#4816).
+	VersionSignatures []VersionSignature `json:"version_signatures"`
 	// Versions are all versions of the contract, oldest first (#4681). The
 	// version above is the one in force today, else the next one.
 	Versions []Version `json:"versions"`
@@ -481,6 +535,16 @@ type Contracts interface {
 	// when it was sent, else a rendering with the current template that
 	// stores nothing.
 	VersionDocument(ctx context.Context, reviewer Reviewer, contractID int64, number int) (File, error)
+	// ContractFamilies lists the contracts without a mail address with their
+	// families and the newest changes of the families (#7161, ADR 0319).
+	ContractFamilies(ctx context.Context, reviewer Reviewer) (ContractFamilySet, error)
+	// JoinContractFamily joins the contracts to one family. A contract of
+	// another Träger is ErrContractNotFound, one that may not join a
+	// FamilyRefusal, another version than the stored one readstate.ErrChanged.
+	JoinContractFamily(ctx context.Context, reviewer Reviewer, input FamilyJoinInput) (ContractFamilySet, error)
+	// LeaveContractFamily gives a contract led by another its own family
+	// back, with the same refusals.
+	LeaveContractFamily(ctx context.Context, reviewer Reviewer, contractID int64, expectedVersion string) (ContractFamilySet, error)
 }
 
 // ContractExportLimit is the most contracts one export holds; a filter with
@@ -507,8 +571,10 @@ type Intake interface {
 	// Templates lists every offering of the Träger's schools with its
 	// template.
 	Templates(ctx context.Context, reviewer Reviewer) ([]OfferingTemplate, error)
-	// SaveTemplate creates or replaces the template of one offering.
-	SaveTemplate(ctx context.Context, reviewer Reviewer, schoolID, offeringID int64, input TemplateInput) (OfferingTemplate, error)
+	// SaveTemplate creates or replaces the template of one offering; it
+	// refuses with readstate.ErrChanged once the template differs from the
+	// version its author read (expectedVersion, TemplateVersion).
+	SaveTemplate(ctx context.Context, reviewer Reviewer, schoolID, offeringID int64, input TemplateInput, expectedVersion string) (OfferingTemplate, error)
 	// ConclusionModes tells for every school of the Träger how its contracts
 	// come about: ModeSendLater (Weg a) or ModeOnAcceptance (Weg b).
 	ConclusionModes(ctx context.Context, reviewer Reviewer) ([]SchoolConclusion, error)
@@ -554,6 +620,10 @@ type InboxContract struct {
 	// „Vertrag widerrufen“ of § 356a BGB. The declaration page decides on
 	// the exact day.
 	CanWithdraw bool `json:"can_withdraw"`
+	// ChangeAwaitsSignature tells that the row shows a changed version of
+	// an active contract that waits for the signature (#4816): the earlier
+	// version holds until the parents sign.
+	ChangeAwaitsSignature bool `json:"change_awaits_signature"`
 }
 
 // Inbox serves the contracts of one Träger in the parents' inbox (ADR 0088
@@ -595,6 +665,10 @@ type ContractMail struct {
 	// Concluded tells that the contract is concluded already (Weg b): the
 	// parents receive it for their records and sign nothing.
 	Concluded bool `json:"concluded,omitempty"`
+	// EffectiveFrom is the German date a changed version holds from (#4816).
+	EffectiveFrom string `json:"effective_from,omitempty"`
+	// Amendment asks for another signature on a change to a concluded contract.
+	Amendment bool `json:"amendment,omitempty"`
 }
 
 // RenderedContractMail is the mail the worker sends.
@@ -624,6 +698,9 @@ type ContractMailContent struct {
 	WithdrawalEndsOn string
 	WithdrawalNotice []string
 	Concluded        bool
+	// EffectiveFrom is the day a changed version holds from (#4816).
+	EffectiveFrom string
+	Amendment     bool
 }
 
 type ContractMailRenderer func(ctx context.Context, payload []byte) (RenderedContractMail, error)

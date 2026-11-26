@@ -74,7 +74,7 @@ export interface studentNoteDeletedResponse {
 }
 
 export const studentNoteDeletedResponseSchema: z.ZodType<studentNoteDeletedResponse, unknown> = object<studentNoteDeletedResponse>({
-  id: str,
+  id: int64String,
 });
 
 /** Go: careplanhttp.partialAbsenceDeletedResponse */
@@ -187,6 +187,7 @@ export interface StudentResponse {
   day_planning_label?: string;
   pending_excused_note?: string;
   class_handover?: ClassHandover;
+  photo_version?: string;
   photo_url?: string;
   photo_consent_given?: boolean;
   photo_consent_given_at?: string;
@@ -251,6 +252,7 @@ export const StudentResponseSchema: z.ZodType<StudentResponse, unknown> = object
   day_planning_label: optional(str),
   pending_excused_note: optional(str),
   class_handover: optional(ClassHandoverSchema),
+  photo_version: optional(str),
   photo_url: optional(str),
   photo_consent_given: optional(bool),
   photo_consent_given_at: optional(instant),
@@ -280,6 +282,19 @@ export const NameStudentResponseSchema: z.ZodType<NameStudentResponse, unknown> 
   last_name: str,
 });
 
+/** Go: presenceprojectionhttp.StudentListPlannedActivity */
+export interface StudentListPlannedActivity {
+  title: string;
+  start_time: string;
+  end_time: string;
+}
+
+export const StudentListPlannedActivitySchema: z.ZodType<StudentListPlannedActivity, unknown> = object<StudentListPlannedActivity>({
+  title: str,
+  start_time: str,
+  end_time: str,
+});
+
 /** Go: presenceprojectionhttp.SlimStudentResponse */
 export interface SlimStudentResponse {
   id: string;
@@ -303,6 +318,7 @@ export interface SlimStudentResponse {
   pending_excused_note?: string;
   teacher_hints?: TeacherHint[];
   class_handover?: ClassHandover;
+  planned_activities?: StudentListPlannedActivity[];
   departure_modes?: OpenEnum<DepartureMode>[];
   departure_label?: string;
   departure_is_exception?: boolean;
@@ -315,6 +331,7 @@ export interface SlimStudentResponse {
   actual_arrival_time?: string;
   actual_pickup_time?: string;
   companion_student_ids?: string[];
+  photo_version?: string;
   photo_url?: string;
   photo_consent_given?: boolean;
   has_full_access: boolean;
@@ -342,6 +359,7 @@ export const SlimStudentResponseSchema: z.ZodType<SlimStudentResponse, unknown> 
   pending_excused_note: optional(str),
   teacher_hints: optional(arr(TeacherHintSchema)),
   class_handover: optional(ClassHandoverSchema),
+  planned_activities: optional(arr(StudentListPlannedActivitySchema)),
   departure_modes: optional(arr(str)),
   departure_label: optional(str),
   departure_is_exception: optional(bool),
@@ -354,6 +372,7 @@ export const SlimStudentResponseSchema: z.ZodType<SlimStudentResponse, unknown> 
   actual_arrival_time: optional(clockTime),
   actual_pickup_time: optional(clockTime),
   companion_student_ids: optional(arr(int64String)),
+  photo_version: optional(str),
   photo_url: optional(str),
   photo_consent_given: optional(bool),
   has_full_access: bool,
@@ -458,8 +477,8 @@ export interface CareRequestDetailResponse {
 }
 
 export const CareRequestDetailResponseSchema: z.ZodType<CareRequestDetailResponse, unknown> = object<CareRequestDetailResponse>({
-  id: str,
-  student_id: str,
+  id: int64String,
+  student_id: int64String,
   first_name: str,
   last_name: str,
   status: str,
@@ -490,8 +509,8 @@ export interface careWithdrawalResponse {
 }
 
 export const careWithdrawalResponseSchema: z.ZodType<careWithdrawalResponse, unknown> = object<careWithdrawalResponse>({
-  id: str,
-  student_id: optional(str),
+  id: int64String,
+  student_id: optional(int64String),
   first_name: optional(str),
   last_name: optional(str),
   school_class: optional(str),
@@ -592,8 +611,8 @@ export interface MasterDataChangeRequestResponse {
 }
 
 export const MasterDataChangeRequestResponseSchema: z.ZodType<MasterDataChangeRequestResponse, unknown> = object<MasterDataChangeRequestResponse>({
-  id: str,
-  student_id: str,
+  id: int64String,
+  student_id: int64String,
   first_name: str,
   last_name: str,
   target: str,
@@ -614,7 +633,7 @@ export interface AffectedCareBlock {
 }
 
 export const AffectedCareBlockSchema: z.ZodType<AffectedCareBlock, unknown> = object<AffectedCareBlock>({
-  id: str,
+  id: int64String,
   title: str,
   start_time: str,
   end_time: str,
@@ -640,8 +659,8 @@ export interface CareRequestResponse {
 }
 
 export const CareRequestResponseSchema: z.ZodType<CareRequestResponse, unknown> = object<CareRequestResponse>({
-  id: str,
-  student_id: str,
+  id: int64String,
+  student_id: int64String,
   first_name: str,
   last_name: str,
   status: str,
@@ -674,7 +693,7 @@ export interface OfferingRequestDiffResponse {
 }
 
 export const OfferingRequestDiffResponseSchema: z.ZodType<OfferingRequestDiffResponse, unknown> = object<OfferingRequestDiffResponse>({
-  offering_id: str,
+  offering_id: int64String,
   label: str,
   old: str,
   new: str,
@@ -682,7 +701,7 @@ export const OfferingRequestDiffResponseSchema: z.ZodType<OfferingRequestDiffRes
   automatic_days: optional(str),
   rule_days: optional(str),
   new_when_excluded: optional(str),
-  trigger_ids: optional(arr(str)),
+  trigger_ids: optional(arr(int64String)),
   trigger_names: optional(arr(str)),
   optoutable: optional(bool),
   is_course: optional(bool),
@@ -696,7 +715,7 @@ export interface OfferingRequestUnchangedResponse {
 }
 
 export const OfferingRequestUnchangedResponseSchema: z.ZodType<OfferingRequestUnchangedResponse, unknown> = object<OfferingRequestUnchangedResponse>({
-  offering_id: str,
+  offering_id: int64String,
   label: str,
   days: str,
 });
@@ -721,8 +740,8 @@ export interface OfferingRequestResponse {
 }
 
 export const OfferingRequestResponseSchema: z.ZodType<OfferingRequestResponse, unknown> = object<OfferingRequestResponse>({
-  id: str,
-  student_id: str,
+  id: int64String,
+  student_id: int64String,
   student_name: str,
   status: str,
   effective_from: str,
@@ -754,8 +773,8 @@ export interface StaffExcusedRequestResponse {
 }
 
 export const StaffExcusedRequestResponseSchema: z.ZodType<StaffExcusedRequestResponse, unknown> = object<StaffExcusedRequestResponse>({
-  id: str,
-  student_id: str,
+  id: int64String,
+  student_id: int64String,
   first_name: str,
   last_name: str,
   absence_status: str,
@@ -786,13 +805,9 @@ export interface Item {
   current_value_changed?: boolean;
   current_status_by_date?: Record<string, string>;
   partial_absence_from_by_date?: Record<string, string>;
-  /** @deprecated leaves the contract with the next release */
-  can_correct?: boolean;
   family_protected: boolean;
   submitted_by_name?: string;
   submitted_by_relationship?: string;
-  /** @deprecated leaves the contract with the next release */
-  data: unknown | null;
   master_data?: MasterDataChangeRequestResponse;
   care_schedule?: CareRequestResponse;
   offering?: OfferingRequestResponse;
@@ -802,7 +817,7 @@ export interface Item {
 export const ItemSchema: z.ZodType<Item, unknown> = object<Item>({
   request_type: str,
   occurred_at: instant,
-  student_id: str,
+  student_id: int64String,
   student_name: str,
   group_name: optional(str),
   expected_version: str,
@@ -817,11 +832,9 @@ export const ItemSchema: z.ZodType<Item, unknown> = object<Item>({
   current_value_changed: optional(bool),
   current_status_by_date: optional(rec(str)),
   partial_absence_from_by_date: optional(rec(str)),
-  can_correct: optional(bool),
   family_protected: bool,
   submitted_by_name: optional(str),
   submitted_by_relationship: optional(str),
-  data: nullable(json),
   master_data: optional(MasterDataChangeRequestResponseSchema),
   care_schedule: optional(CareRequestResponseSchema),
   offering: optional(OfferingRequestResponseSchema),
@@ -882,8 +895,8 @@ export interface MasterDataChangeRequestHistoryResponse {
 }
 
 export const MasterDataChangeRequestHistoryResponseSchema: z.ZodType<MasterDataChangeRequestHistoryResponse, unknown> = object<MasterDataChangeRequestHistoryResponse>({
-  id: str,
-  student_id: str,
+  id: int64String,
+  student_id: int64String,
   first_name: str,
   last_name: str,
   target: str,
@@ -916,8 +929,8 @@ export interface CareRequestHistoryResponse {
 }
 
 export const CareRequestHistoryResponseSchema: z.ZodType<CareRequestHistoryResponse, unknown> = object<CareRequestHistoryResponse>({
-  id: str,
-  student_id: str,
+  id: int64String,
+  student_id: int64String,
   first_name: str,
   last_name: str,
   status: str,
@@ -939,7 +952,7 @@ export interface OfferingRequestRequestedResponse {
 }
 
 export const OfferingRequestRequestedResponseSchema: z.ZodType<OfferingRequestRequestedResponse, unknown> = object<OfferingRequestRequestedResponse>({
-  offering_id: str,
+  offering_id: int64String,
   label: str,
   new: str,
 });
@@ -967,8 +980,8 @@ export interface OfferingRequestHistoryResponse {
 }
 
 export const OfferingRequestHistoryResponseSchema: z.ZodType<OfferingRequestHistoryResponse, unknown> = object<OfferingRequestHistoryResponse>({
-  id: str,
-  student_id: str,
+  id: int64String,
+  student_id: int64String,
   student_name: str,
   status: str,
   effective_from: str,
@@ -1005,8 +1018,8 @@ export interface StaffExcusedRequestHistoryResponse {
 }
 
 export const StaffExcusedRequestHistoryResponseSchema: z.ZodType<StaffExcusedRequestHistoryResponse, unknown> = object<StaffExcusedRequestHistoryResponse>({
-  id: str,
-  student_id: str,
+  id: int64String,
+  student_id: int64String,
   first_name: str,
   last_name: str,
   absence_status: str,
@@ -1032,8 +1045,8 @@ export interface DirectCorrectionResponse {
 }
 
 export const DirectCorrectionResponseSchema: z.ZodType<DirectCorrectionResponse, unknown> = object<DirectCorrectionResponse>({
-  id: str,
-  student_id: str,
+  id: int64String,
+  student_id: int64String,
   student_name: str,
   changed_at: instant,
   changed_by_name: str,
@@ -1063,7 +1076,7 @@ export interface HistoryItem {
 export const HistoryItemSchema: z.ZodType<HistoryItem, unknown> = object<HistoryItem>({
   request_type: str,
   occurred_at: instant,
-  student_id: str,
+  student_id: int64String,
   student_name: str,
   group_name: optional(str),
   expected_version: str,
@@ -1196,7 +1209,7 @@ export interface dayLogStudent {
 }
 
 export const dayLogStudentSchema: z.ZodType<dayLogStudent, unknown> = object<dayLogStudent>({
-  student_id: str,
+  student_id: int64String,
   first_name: str,
   last_name: str,
   school_class: str,
@@ -1241,7 +1254,7 @@ export interface dayLogGroup {
 }
 
 export const dayLogGroupSchema: z.ZodType<dayLogGroup, unknown> = object<dayLogGroup>({
-  group_id: str,
+  group_id: int64String,
   name: str,
   students: nullable(arr(dayLogStudentSchema)),
   counters: dayLogCountersSchema,
@@ -1273,7 +1286,7 @@ export interface endedCareResponse {
 }
 
 export const endedCareResponseSchema: z.ZodType<endedCareResponse, unknown> = object<endedCareResponse>({
-  student_id: str,
+  student_id: int64String,
   first_name: str,
   last_name: str,
   school_class: optional(str),
@@ -1338,8 +1351,8 @@ export interface CourseWaitlistEntryResponse {
 }
 
 export const CourseWaitlistEntryResponseSchema: z.ZodType<CourseWaitlistEntryResponse, unknown> = object<CourseWaitlistEntryResponse>({
-  request_id: str,
-  student_id: str,
+  request_id: int64String,
+  student_id: int64String,
   student_name: str,
   rank: safeInt,
   submitted_at: instant,
@@ -1357,7 +1370,7 @@ export interface CourseWaitlistResponse {
 }
 
 export const CourseWaitlistResponseSchema: z.ZodType<CourseWaitlistResponse, unknown> = object<CourseWaitlistResponse>({
-  activity_group_id: str,
+  activity_group_id: int64String,
   name: str,
   participant_limit: nullable(safeInt),
   participants: safeInt,
@@ -1453,6 +1466,7 @@ export interface Student {
   arrival_notes?: string;
   actual_arrival_time?: string;
   actual_pickup_time?: string;
+  photo_version?: string;
   photo_url?: string;
   teacher_hints?: GroupLiveTeacherHint[];
   planned_activities?: PlannedActivity[];
@@ -1482,6 +1496,7 @@ export const StudentSchema: z.ZodType<Student, unknown> = object<Student>({
   arrival_notes: optional(str),
   actual_arrival_time: optional(str),
   actual_pickup_time: optional(str),
+  photo_version: optional(str),
   photo_url: optional(str),
   teacher_hints: optional(arr(GroupLiveTeacherHintSchema)),
   planned_activities: optional(arr(PlannedActivitySchema)),
@@ -1509,6 +1524,17 @@ export const DayNoteSchema: z.ZodType<DayNote, unknown> = object<DayNote>({
   content: str,
 });
 
+/** Go: grouplive.PickupPerson */
+export interface PickupPerson {
+  name: string;
+  one_time: boolean;
+}
+
+export const PickupPersonSchema: z.ZodType<PickupPerson, unknown> = object<PickupPerson>({
+  name: str,
+  one_time: bool,
+});
+
 /** Go: grouplive.PickupTime */
 export interface PickupTime {
   student_id: string;
@@ -1519,6 +1545,7 @@ export interface PickupTime {
   notes?: string;
   day_notes?: DayNote[];
   day_departure_mode?: string;
+  day_pickup_person?: PickupPerson;
 }
 
 export const PickupTimeSchema: z.ZodType<PickupTime, unknown> = object<PickupTime>({
@@ -1530,6 +1557,7 @@ export const PickupTimeSchema: z.ZodType<PickupTime, unknown> = object<PickupTim
   notes: optional(str),
   day_notes: optional(arr(DayNoteSchema)),
   day_departure_mode: optional(str),
+  day_pickup_person: optional(PickupPersonSchema),
 });
 
 /** Go: grouplive.TrackingIndicators */
@@ -1593,8 +1621,8 @@ export interface pickupChangeNoticeResponse {
 }
 
 export const pickupChangeNoticeResponseSchema: z.ZodType<pickupChangeNoticeResponse, unknown> = object<pickupChangeNoticeResponse>({
-  request_id: str,
-  student_id: str,
+  request_id: int64String,
+  student_id: int64String,
   student_first_name: str,
   date: str,
   pickup_time: optional(str),
@@ -1622,7 +1650,7 @@ export interface statusDayOverviewGroup {
 }
 
 export const statusDayOverviewGroupSchema: z.ZodType<statusDayOverviewGroup, unknown> = object<statusDayOverviewGroup>({
-  id: str,
+  id: int64String,
   name: str,
 });
 
@@ -1643,12 +1671,12 @@ export interface statusDayOverviewEntry {
 }
 
 export const statusDayOverviewEntrySchema: z.ZodType<statusDayOverviewEntry, unknown> = object<statusDayOverviewEntry>({
-  id: str,
-  student_id: str,
+  id: int64String,
+  student_id: int64String,
   first_name: str,
   last_name: str,
   school_class: str,
-  group_id: str,
+  group_id: int64String,
   group_name: str,
   date: str,
   status: str,
@@ -1689,8 +1717,8 @@ export interface studentNoteTeamNoticeResponse {
 }
 
 export const studentNoteTeamNoticeResponseSchema: z.ZodType<studentNoteTeamNoticeResponse, unknown> = object<studentNoteTeamNoticeResponse>({
-  note_id: str,
-  student_id: str,
+  note_id: int64String,
+  student_id: int64String,
   student_first_name: str,
   student_last_name: str,
   author_name: optional(str),
@@ -1799,6 +1827,7 @@ export interface StudentDetailResponse {
   day_planning_label?: string;
   pending_excused_note?: string;
   class_handover?: ClassHandover;
+  photo_version?: string;
   photo_url?: string;
   photo_consent_given?: boolean;
   photo_consent_given_at?: string;
@@ -1874,6 +1903,7 @@ export const StudentDetailResponseSchema: z.ZodType<StudentDetailResponse, unkno
   day_planning_label: optional(str),
   pending_excused_note: optional(str),
   class_handover: optional(ClassHandoverSchema),
+  photo_version: optional(str),
   photo_url: optional(str),
   photo_consent_given: optional(bool),
   photo_consent_given_at: optional(instant),
@@ -2082,7 +2112,7 @@ export interface attendanceSlotEntry {
 }
 
 export const attendanceSlotEntrySchema: z.ZodType<attendanceSlotEntry, unknown> = object<attendanceSlotEntry>({
-  instance_id: str,
+  instance_id: int64String,
   instance_status: optional(str),
   title: str,
   start_time: str,
@@ -2146,7 +2176,7 @@ export interface attendanceHistoryResponse {
 }
 
 export const attendanceHistoryResponseSchema: z.ZodType<attendanceHistoryResponse, unknown> = object<attendanceHistoryResponse>({
-  student_id: str,
+  student_id: int64String,
   days: nullable(arr(attendanceHistoryDaySchema)),
   range: attendanceHistoryRangeSchema,
   clamped: bool,
@@ -2164,7 +2194,7 @@ export interface changeHistoryEntry {
 }
 
 export const changeHistoryEntrySchema: z.ZodType<changeHistoryEntry, unknown> = object<changeHistoryEntry>({
-  id: str,
+  id: int64String,
   field: str,
   old_value: str,
   new_value: str,
@@ -2223,8 +2253,8 @@ export interface AccidentReportResponse {
 export const AccidentReportResponseSchema: z.ZodType<AccidentReportResponse, unknown> = object<AccidentReportResponse>({
   status: str,
   version: optional(safeInt),
-  supersedes_id: optional(str),
-  superseded_by_id: optional(str),
+  supersedes_id: optional(int64String),
+  superseded_by_id: optional(int64String),
   signed_at: optional(instant),
   signed_digitally: bool,
   occurred_at: instant,
@@ -2337,7 +2367,7 @@ export interface StudentEnrollmentExtraFieldGroup {
 }
 
 export const StudentEnrollmentExtraFieldGroupSchema: z.ZodType<StudentEnrollmentExtraFieldGroup, unknown> = object<StudentEnrollmentExtraFieldGroup>({
-  request_id: str,
+  request_id: int64String,
   phase_name: str,
   submitted_at: instant,
   fields: nullable(arr(StudentEnrollmentExtraFieldSchema)),
@@ -2351,7 +2381,7 @@ export interface familyProtectionResponse {
 }
 
 export const familyProtectionResponseSchema: z.ZodType<familyProtectionResponse, unknown> = object<familyProtectionResponse>({
-  student_id: str,
+  student_id: int64String,
   enabled: bool,
   unchanged: optional(bool),
 });
@@ -2363,7 +2393,7 @@ export interface noteSubjectActivity {
 }
 
 export const noteSubjectActivitySchema: z.ZodType<noteSubjectActivity, unknown> = object<noteSubjectActivity>({
-  id: str,
+  id: int64String,
   name: str,
 });
 
@@ -2399,18 +2429,18 @@ export interface studentNoteResponse {
 }
 
 export const studentNoteResponseSchema: z.ZodType<studentNoteResponse, unknown> = object<studentNoteResponse>({
-  id: str,
-  student_id: str,
+  id: int64String,
+  student_id: int64String,
   kind: str,
   visibility: str,
   category: optional(str),
   body: str,
   origin: str,
-  author_account_id: optional(str),
+  author_account_id: optional(int64String),
   author_name: optional(str),
   subject_date: optional(str),
-  activity_group_id: optional(str),
-  education_group_id: optional(str),
+  activity_group_id: optional(int64String),
+  education_group_id: optional(int64String),
   shared_with_school: bool,
   can_edit: bool,
   can_delete: bool,
@@ -2472,7 +2502,7 @@ export const PickupScheduleResponseSchema: z.ZodType<PickupScheduleResponse, unk
   pickup_time: str,
   notes: optional(str),
   source: str,
-  care_offering_id: optional(str),
+  care_offering_id: optional(int64String),
   care_offering_name: optional(str),
   created_by: int64String,
   created_at: str,
@@ -2567,6 +2597,27 @@ export const DepartureExceptionResponseSchema: z.ZodType<DepartureExceptionRespo
   updated_at: str,
 });
 
+/** Go: careplanhttp.PickupPersonResponse */
+export interface PickupPersonResponse {
+  id: string;
+  student_id: string;
+  exception_date: string;
+  name: string;
+  guardian_profile_id?: string;
+  one_time: boolean;
+  updated_at: string;
+}
+
+export const PickupPersonResponseSchema: z.ZodType<PickupPersonResponse, unknown> = object<PickupPersonResponse>({
+  id: int64String,
+  student_id: int64String,
+  exception_date: str,
+  name: str,
+  guardian_profile_id: optional(int64String),
+  one_time: bool,
+  updated_at: str,
+});
+
 /** Go: careplanhttp.PickupDataResponse */
 export interface PickupDataResponse {
   schedules: PickupScheduleResponse[] | null;
@@ -2574,6 +2625,7 @@ export interface PickupDataResponse {
   exceptions: PickupExceptionResponse[] | null;
   notes: PickupNoteResponse[] | null;
   departure_exceptions: DepartureExceptionResponse[] | null;
+  pickup_persons: PickupPersonResponse[] | null;
   weekly_plan_version?: string;
 }
 
@@ -2583,6 +2635,7 @@ export const PickupDataResponseSchema: z.ZodType<PickupDataResponse, unknown> = 
   exceptions: nullable(arr(PickupExceptionResponseSchema)),
   notes: nullable(arr(PickupNoteResponseSchema)),
   departure_exceptions: nullable(arr(DepartureExceptionResponseSchema)),
+  pickup_persons: nullable(arr(PickupPersonResponseSchema)),
   weekly_plan_version: optional(str),
 });
 
@@ -2813,7 +2866,7 @@ export interface careExitImpactResponse {
 }
 
 export const careExitImpactResponseSchema: z.ZodType<careExitImpactResponse, unknown> = object<careExitImpactResponse>({
-  student_id: str,
+  student_id: int64String,
   first_name: str,
   last_name: str,
   school_class: optional(str),
@@ -2958,6 +3011,7 @@ export interface DecideExcusedRequestBody {
 export interface studentExportFilters {
   search?: string;
   group_id?: string;
+  group_ids?: string[] | null;
   room_id?: string;
   year?: string;
   school_class?: string;
@@ -3012,7 +3066,7 @@ export interface adjustedRosterTemplateResponse {
 }
 
 export const adjustedRosterTemplateResponseSchema: z.ZodType<adjustedRosterTemplateResponse, unknown> = object<adjustedRosterTemplateResponse>({
-  template_id: str,
+  template_id: int64String,
   name: str,
   removed_weekdays: nullable(arr(safeInt)),
   added_weekdays: nullable(arr(safeInt)),
@@ -3028,7 +3082,7 @@ export interface manualRosterTemplateResponse {
 }
 
 export const manualRosterTemplateResponseSchema: z.ZodType<manualRosterTemplateResponse, unknown> = object<manualRosterTemplateResponse>({
-  template_id: str,
+  template_id: int64String,
   name: str,
   weekdays: nullable(arr(safeInt)),
   via_target: bool,
@@ -3092,7 +3146,7 @@ export interface OfferingRequestPreviewSelectionResponse {
 }
 
 export const OfferingRequestPreviewSelectionResponseSchema: z.ZodType<OfferingRequestPreviewSelectionResponse, unknown> = object<OfferingRequestPreviewSelectionResponse>({
-  offering_id: str,
+  offering_id: int64String,
   new: str,
   removed: optional(bool),
 });
@@ -3107,7 +3161,7 @@ export interface ManualPlanningConflictResponse {
 }
 
 export const ManualPlanningConflictResponseSchema: z.ZodType<ManualPlanningConflictResponse, unknown> = object<ManualPlanningConflictResponse>({
-  activity_group_id: str,
+  activity_group_id: int64String,
   activity_group_name: str,
   days: nullable(arr(str)),
   first_date: str,
@@ -3158,7 +3212,7 @@ export interface schoolCheckinBatchResult {
 }
 
 export const schoolCheckinBatchResultSchema: z.ZodType<schoolCheckinBatchResult, unknown> = object<schoolCheckinBatchResult>({
-  student_id: str,
+  student_id: int64String,
   ok: bool,
   changed: bool,
   status: optional(str),
@@ -3288,10 +3342,14 @@ export interface PartialAbsenceRequest {
 
 /** Go: students.studentPhotoUploadedResponse */
 export interface studentPhotoUploadedResponse {
+  student_id: string;
+  photo_version: string;
   photo_url: string;
 }
 
 export const studentPhotoUploadedResponseSchema: z.ZodType<studentPhotoUploadedResponse, unknown> = object<studentPhotoUploadedResponse>({
+  student_id: int64String,
+  photo_version: str,
   photo_url: str,
 });
 
@@ -3363,7 +3421,7 @@ export interface pickupAdjustmentSelectionResponse {
 }
 
 export const pickupAdjustmentSelectionResponseSchema: z.ZodType<pickupAdjustmentSelectionResponse, unknown> = object<pickupAdjustmentSelectionResponse>({
-  offering_id: str,
+  offering_id: int64String,
   selected_days: nullable(arr(str)),
 });
 
@@ -3376,7 +3434,7 @@ export interface pickupAdjustmentMatchResponse {
 }
 
 export const pickupAdjustmentMatchResponseSchema: z.ZodType<pickupAdjustmentMatchResponse, unknown> = object<pickupAdjustmentMatchResponse>({
-  offering_id: str,
+  offering_id: int64String,
   name: str,
   selected_days: nullable(arr(str)),
   selections: nullable(arr(pickupAdjustmentSelectionResponseSchema)),
@@ -3406,7 +3464,7 @@ export interface pickupAdjustmentCatalogItemResponse {
 }
 
 export const pickupAdjustmentCatalogItemResponseSchema: z.ZodType<pickupAdjustmentCatalogItemResponse, unknown> = object<pickupAdjustmentCatalogItemResponse>({
-  offering_id: str,
+  offering_id: int64String,
   name: str,
   description: optional(str),
   days_of_week_mode: str,
@@ -3438,7 +3496,7 @@ export interface pickupAdjustmentCatalogResponse {
 }
 
 export const pickupAdjustmentCatalogResponseSchema: z.ZodType<pickupAdjustmentCatalogResponse, unknown> = object<pickupAdjustmentCatalogResponse>({
-  phase_id: str,
+  phase_id: int64String,
   phase_name: str,
   selection_mode: str,
   earliest_effective_from: str,
@@ -3454,7 +3512,7 @@ export interface pickupAdjustmentConsequenceSelectionResponse {
 }
 
 export const pickupAdjustmentConsequenceSelectionResponseSchema: z.ZodType<pickupAdjustmentConsequenceSelectionResponse, unknown> = object<pickupAdjustmentConsequenceSelectionResponse>({
-  offering_id: str,
+  offering_id: int64String,
   state: str,
   days: nullable(arr(str)),
 });
@@ -3469,7 +3527,7 @@ export interface pickupAdjustmentConflictResponse {
 }
 
 export const pickupAdjustmentConflictResponseSchema: z.ZodType<pickupAdjustmentConflictResponse, unknown> = object<pickupAdjustmentConflictResponse>({
-  activity_group_id: str,
+  activity_group_id: int64String,
   activity_group_name: str,
   days: nullable(arr(str)),
   first_date: str,
@@ -3663,6 +3721,12 @@ export interface PickupNoteUpdateRequest {
   expected_version?: string;
 }
 
+/** Go: careplanhttp.PickupPersonRequest */
+export interface PickupPersonRequest {
+  guardian_profile_id?: string | null;
+  name?: string | null;
+}
+
 /** Go: careplanhttp.BulkPickupScheduleRequest */
 export interface BulkPickupScheduleRequest {
   schedules?: PickupScheduleRequest[] | null;
@@ -3752,6 +3816,12 @@ export const routes = {
   "DELETE /api/students/{id}/pickup-notes/{noteId}": {
     method: "DELETE",
     pattern: "/api/students/{id}/pickup-notes/{noteId}",
+    portals: ["tenant"],
+    response: noData,
+  },
+  "DELETE /api/students/{id}/pickup-persons/{date}": {
+    method: "DELETE",
+    pattern: "/api/students/{id}/pickup-persons/{date}",
     portals: ["tenant"],
     response: noData,
   },
@@ -3860,14 +3930,10 @@ export const routes = {
     portals: ["tenant"],
     query: {
       "cursor": { kind: "string" },
-      "from": { kind: "date" },
       "limit": { kind: "int" },
       "search": { kind: "string" },
-      "status": { kind: "string" },
       "student_id": { kind: "id" },
-      "to": { kind: "date" },
       "types": { kind: "string" },
-      "view": { kind: "string", values: ["history", "open"] },
     },
     response: success(PageSchema),
   },
@@ -3989,12 +4055,6 @@ export const routes = {
       "group_id": { kind: "id" },
     },
     response: success(ProjectionSchema),
-  },
-  "GET /api/students/ogs-group-navigation": {
-    method: "GET",
-    pattern: "/api/students/ogs-group-navigation",
-    portals: ["tenant"],
-    response: success(z.array(NavigationGroupSchema)),
   },
   "GET /api/students/pickup-change-notices": {
     method: "GET",
@@ -4616,6 +4676,13 @@ export const routes = {
     portals: ["tenant"],
     request: requestBody<PickupNoteUpdateRequest>(),
     response: success(PickupNoteResponseSchema),
+  },
+  "PUT /api/students/{id}/pickup-persons/{date}": {
+    method: "PUT",
+    pattern: "/api/students/{id}/pickup-persons/{date}",
+    portals: ["tenant"],
+    request: requestBody<PickupPersonRequest>(),
+    response: success(PickupPersonResponseSchema),
   },
   "PUT /api/students/{id}/pickup-schedules": {
     method: "PUT",

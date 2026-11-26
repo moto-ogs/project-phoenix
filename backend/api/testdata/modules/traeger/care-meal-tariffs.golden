@@ -1,3 +1,3 @@
-DELETE /traeger/care-meal-tariffs/{schoolID}/{validFrom} -> basis
-GET /traeger/care-meal-tariffs/ -> basis
-PUT /traeger/care-meal-tariffs/ -> basis
+DELETE /traeger/care-meal-tariffs/{schoolID}/{validFrom} -> elternbeitraege
+GET /traeger/care-meal-tariffs/ -> elternbeitraege
+PUT /traeger/care-meal-tariffs/ -> elternbeitraege

@@ -250,7 +250,14 @@ export function useSupervisionDashboard(
   const [restoredSessionId] = useState(() => cachedSessionId(dashboardData));
 
   // Selection state — genuine UI state, not a copy of server data.
-  const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
+  const [selectedRoomId, setSelectedRoomId] = useState(() =>
+    restoredSessionId &&
+    !roomParam &&
+    (!sessionParam || sessionParam === restoredSessionId) &&
+    memory.read("supervision-last-session") === restoredSessionId
+      ? restoredSessionId
+      : null,
+  );
   const [selectedOpenRoomId, setSelectedOpenRoomId] = useState<string | null>(
     null,
   );
@@ -270,7 +277,9 @@ export function useSupervisionDashboard(
   // "derive, don't copy": ONE snapshot adjusted during render (the React
   // "storing information from previous renders" pattern), replacing the
   // former dozen per-field setState copies.
-  const [snapshot, setSnapshot] = useState<BFFDashboardResponse | null>(null);
+  const [snapshot, setSnapshot] = useState<BFFDashboardResponse | null>(() =>
+    isDashboardLoading ? null : (dashboardData ?? null),
+  );
   const [snapshotSessionKey, setSnapshotSessionKey] = useState(sessionKey);
   if (snapshotSessionKey !== sessionKey) {
     // Another account or set of rights on this tenant. Do not retain the
@@ -482,6 +491,18 @@ export function useSupervisionDashboard(
     return byStudent;
   }, [snapshot?.teacherHints]);
 
+  // Angebote des Tages (#8194) je Kind, für die Karten der Aufsicht.
+  const plannedActivitiesByStudent = useMemo(() => {
+    const byStudent = new Map<string, studentsContract.PlannedActivity[]>();
+    for (const { studentId, ...activity } of snapshot?.plannedActivities ??
+      []) {
+      const own = byStudent.get(studentId);
+      if (own) own.push(activity);
+      else byStudent.set(studentId, [activity]);
+    }
+    return byStudent;
+  }, [snapshot?.plannedActivities]);
+
   const students = useMemo<ActiveSupervisionStudent[]>(() => {
     if (currentOpenRoom) {
       // Everyone the room currently holds, from every session running in it,
@@ -490,6 +511,7 @@ export function useSupervisionDashboard(
         roomName: currentOpenRoom.name,
         groupNameToId: groupNameToIdMap,
         teacherHints: teacherHintsByStudent,
+        plannedActivities: plannedActivitiesByStudent,
       });
     }
     if (!snapshot) return [];
@@ -502,10 +524,12 @@ export function useSupervisionDashboard(
       roomColor: resolvedRoom.roomColor,
       groupNameToId: groupNameToIdMap,
       teacherHints: teacherHintsByStudent,
+      plannedActivities: plannedActivitiesByStudent,
     });
   }, [
     snapshot,
     teacherHintsByStudent,
+    plannedActivitiesByStudent,
     currentOpenRoom,
     selectedOpenRoomId,
     groupNameToIdMap,

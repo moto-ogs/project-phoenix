@@ -42,11 +42,23 @@ func (s CareDay) Expected() bool {
 	return s != CareDayNotScheduled && s != CareDayCancelled
 }
 
+// PlannedCareDay is a child's care-day verdict with the arrival time of
+// the day and the reason of the arrival exception behind it, empty without
+// one (#8155): a day outing of the class is such an exception ("Ausflug").
+type PlannedCareDay struct {
+	Status        CareDay
+	Arrival       *calendar.WallClock
+	ArrivalReason string
+}
+
 // CareDays resolves the care-day verdict of many children on one date.
 type CareDays interface {
 	// ResolveForDate returns the verdict of every requested child. Children
 	// without an entry are unknown.
 	ResolveForDate(ctx context.Context, studentIDs []int64, date calendar.Date) (map[int64]CareDay, error)
+	// ResolvePlannedForDate is the same read with the planned arrival of
+	// the day; it costs no statement more.
+	ResolvePlannedForDate(ctx context.Context, studentIDs []int64, date calendar.Date) (map[int64]PlannedCareDay, error)
 }
 
 // EffectiveTimes reads the effective (plan plus day exceptions) arrival and

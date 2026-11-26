@@ -113,7 +113,7 @@
       "target_owner": "security-runtime"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingLetterheads.DocumentTemplate",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingLetterheads.DocumentTemplate",
       "binding_digest": "1f1249ec33828daf238129ac77804c9f",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingDocumentTemplates.DocumentTemplate",
       "source_owner": "parent-billing",
@@ -121,11 +121,107 @@
       "target_owner": "organization-tenancy"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingLetterheads.DocumentTemplate",
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.BillingLetterheads.DocumentTemplate",
       "binding_digest": "1f1249ec33828daf238129ac77804c9f",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingDocumentTemplates.DocumentTemplate",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.TraegerDocumentTemplates.Current",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingLetterheads.SchoolBillingIssuers",
+      "binding_digest": "e89602d5b68cc2c463c82c1d946958f3",
+      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingDocumentTemplates.SchoolBillingIssuers",
+      "source_owner": "parent-billing",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.ResponsibleParties.ResponsibleParties",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingLetterheads.SchoolBillingIssuers",
+      "binding_digest": "2cf1c004da2c053d2ee65e72419045f5",
+      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingDocumentTemplates.SchoolBillingIssuers",
+      "source_owner": "parent-billing",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.SchoolParty.SenderText",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingLetterheads.SchoolBillingIssuers",
+      "binding_digest": "aea1bad552d65eb63cfaf4c881cb0575",
+      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingDocumentTemplates.SchoolBillingIssuers",
+      "source_owner": "parent-billing",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.SchoolResponsibilities.ResponsibleParties",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.BillingLetterheads.SchoolBillingIssuers",
+      "binding_digest": "e89602d5b68cc2c463c82c1d946958f3",
+      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingDocumentTemplates.SchoolBillingIssuers",
+      "source_owner": "parent-billing",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.ResponsibleParties.ResponsibleParties",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.BillingLetterheads.SchoolBillingIssuers",
+      "binding_digest": "2cf1c004da2c053d2ee65e72419045f5",
+      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingDocumentTemplates.SchoolBillingIssuers",
+      "source_owner": "parent-billing",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.SchoolParty.SenderText",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.BillingLetterheads.SchoolBillingIssuers",
+      "binding_digest": "aea1bad552d65eb63cfaf4c881cb0575",
+      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingDocumentTemplates.SchoolBillingIssuers",
+      "source_owner": "parent-billing",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.SchoolResponsibilities.ResponsibleParties",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingDocumentTemplates.SchoolBillingIssuers",
+      "binding_digest": "e89602d5b68cc2c463c82c1d946958f3",
+      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingIssuers.SchoolBillingIssuers",
+      "source_owner": "parent-billing",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.ResponsibleParties.ResponsibleParties",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingDocumentTemplates.SchoolBillingIssuers",
+      "binding_digest": "2cf1c004da2c053d2ee65e72419045f5",
+      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingIssuers.SchoolBillingIssuers",
+      "source_owner": "parent-billing",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.SchoolParty.SenderText",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingDocumentTemplates.SchoolBillingIssuers",
+      "binding_digest": "aea1bad552d65eb63cfaf4c881cb0575",
+      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingIssuers.SchoolBillingIssuers",
+      "source_owner": "parent-billing",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.SchoolResponsibilities.ResponsibleParties",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.BillingIssuers.SchoolBillingIssuers",
+      "binding_digest": "e89602d5b68cc2c463c82c1d946958f3",
+      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingIssuers.SchoolBillingIssuers",
+      "source_owner": "parent-billing",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.ResponsibleParties.ResponsibleParties",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.BillingIssuers.SchoolBillingIssuers",
+      "binding_digest": "2cf1c004da2c053d2ee65e72419045f5",
+      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingIssuers.SchoolBillingIssuers",
+      "source_owner": "parent-billing",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.SchoolParty.SenderText",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.BillingIssuers.SchoolBillingIssuers",
+      "binding_digest": "aea1bad552d65eb63cfaf4c881cb0575",
+      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingIssuers.SchoolBillingIssuers",
+      "source_owner": "parent-billing",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.SchoolResponsibilities.ResponsibleParties",
       "target_owner": "organization-tenancy"
     },
     {
@@ -177,7 +273,7 @@
       "target_owner": "settings-platform"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingLetterheads.DocumentTemplate",
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.BillingLetterheads.DocumentTemplate",
       "binding_digest": "1f1249ec33828daf238129ac77804c9f",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingLetterheads.DocumentTemplate",
       "source_owner": "parent-billing",
@@ -185,7 +281,7 @@
       "target_owner": "organization-tenancy"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingLetterheads.Letterhead",
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.BillingLetterheads.Letterhead",
       "binding_digest": "bcd0b16a3ba5d502814e58f52abb3268",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingLetterheads.Letterhead",
       "source_owner": "parent-billing",
@@ -193,7 +289,7 @@
       "target_owner": "settings-platform"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingLetterheads.Letterhead",
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.BillingLetterheads.Letterhead",
       "binding_digest": "b9245c55006f2c6e20fd3e45aa9df202",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingLetterheads.Letterhead",
       "source_owner": "parent-billing",
@@ -201,7 +297,7 @@
       "target_owner": "organization-tenancy"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingLetterheads.Letterhead",
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.BillingLetterheads.Letterhead",
       "binding_digest": "59cea925f91263f0197a9b8a2ca1a432",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingLetterheads.Letterhead",
       "source_owner": "parent-billing",
@@ -209,11 +305,35 @@
       "target_owner": "organization-tenancy"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingLetterheads.Letterhead",
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.BillingLetterheads.Letterhead",
       "binding_digest": "03af5c57b733bdedc3d02c260add11e3",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingLetterheads.Letterhead",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.TraegerMasterData.Profile",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.BillingLetterheads.SchoolBillingIssuers",
+      "binding_digest": "e89602d5b68cc2c463c82c1d946958f3",
+      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingLetterheads.SchoolBillingIssuers",
+      "source_owner": "parent-billing",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.ResponsibleParties.ResponsibleParties",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.BillingLetterheads.SchoolBillingIssuers",
+      "binding_digest": "2cf1c004da2c053d2ee65e72419045f5",
+      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingLetterheads.SchoolBillingIssuers",
+      "source_owner": "parent-billing",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.SchoolParty.SenderText",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.BillingLetterheads.SchoolBillingIssuers",
+      "binding_digest": "aea1bad552d65eb63cfaf4c881cb0575",
+      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingLetterheads.SchoolBillingIssuers",
+      "source_owner": "parent-billing",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.SchoolResponsibilities.ResponsibleParties",
       "target_owner": "organization-tenancy"
     },
     {
@@ -274,7 +394,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingCareContracts.Recipients",
-      "binding_digest": "505ff39d2c92b92ea5a412573b0c3703",
+      "binding_digest": "ca5f2cf2786e9e72cfe57b93384d1a2f",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.CareContracts.Recipients",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/carecontract.ContractBilling.BillingRecipients",
@@ -282,7 +402,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingTermContracts.Recipients",
-      "binding_digest": "1c07bc5b593be4d2e948ef7dddba3b44",
+      "binding_digest": "715d73581b1f32868ca447b8503672fc",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.CareContracts.Recipients",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/carecontract.ContractBilling.BillingRecipients",
@@ -410,7 +530,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.parentMandateParties.Recipients",
-      "binding_digest": "f69ffb6388cf02fbf0b9b291f2824e37",
+      "binding_digest": "e01ac87587490d8c31e0a71a732ed8ba",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.ContractParties.Recipients",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/carecontract.ContractBilling.BillingRecipients",
@@ -562,7 +682,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingBillingRegistrations.ConfirmedHolidayRegistrations",
-      "binding_digest": "038deea1836a1bf6b7908d8b294dff64",
+      "binding_digest": "2ee3098694847adc107a88a395fd7ff6",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.HolidayBillingRegistrations.ConfirmedHolidayRegistrations",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayRegistrationReview.ListHolidayRegistrationRecipients",
@@ -705,6 +825,14 @@
       "target_owner": "enrollment"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingHolidayRegistrations.RecordHolidayPayer",
+      "binding_digest": "58c651e4d3b74a123e3ee80e5f41577d",
+      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.HolidayRegistrations.RecordHolidayPayer",
+      "source_owner": "parent-billing",
+      "target": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayPayerTrail.RecordHolidayPayer",
+      "target_owner": "enrollment"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingHolidayRegistrations.RecordHolidaySiblings",
       "binding_digest": "797f841c78ae6ca690267938f4e709a2",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.HolidayRegistrations.RecordHolidaySiblings",
@@ -802,18 +930,10 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.schoolModuleSwitches.BookedModules",
-      "binding_digest": "e9921933eb1f808541d358c4cfdc1a1f",
+      "binding_digest": "23d913184a693e6983718f32e48eeca7",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.SchoolModules.BookedModules",
       "source_owner": "parent-billing",
-      "target": "*github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsSnapshot.Bool",
-      "target_owner": "settings-platform"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/api.schoolModuleSwitches.BookedModules",
-      "binding_digest": "854fdf9be853b6d2ebf6742aacc65d35",
-      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.SchoolModules.BookedModules",
-      "source_owner": "parent-billing",
-      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveManyForTenants",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings.ModulesBookedByAnySchool",
       "target_owner": "settings-platform"
     },
     {
@@ -850,7 +970,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/parentbilling.CareContracts.Recipients",
-      "binding_digest": "608bfc018d5b7dbd06bc0e2fc3eb9e5c",
+      "binding_digest": "0313c4bc694c09b3b6a49332aca39418",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling/internal/application.CareLetterRecipients.Recipients",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/carecontract.ContractBilling.BillingRecipients",

@@ -230,7 +230,7 @@ function scaleColumns(
       className: "align-top",
       stackedRender: (row) => (
         <span>
-          <span className="text-gray-600">{daysLabel(days)} je Woche: </span>
+          <span className="text-gray-600">{daysLabel(days)} pro Woche: </span>
           {cell(row, days)}
         </span>
       ),
@@ -330,7 +330,6 @@ export function CarePriceListCard({
           // Five or more price columns: narrower cells keep the price from
           // the 2nd child on one line from the laptop on.
           dense
-          stackedOnMobile
         />
       </div>
     );
@@ -413,7 +412,7 @@ export function CarePriceListCard({
                 scaleRows.some(rowHasSiblingLine),
               ),
               PRICE_FORM_LABELS.days_per_week,
-              "Jeder Betrag ist der Monatspreis bei so vielen gebuchten Tagen je Woche.",
+              "Jeder Betrag ist der Monatspreis bei so vielen gebuchten Tagen pro Woche.",
             )}
           </>
         )}

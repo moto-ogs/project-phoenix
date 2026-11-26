@@ -1,5 +1,7 @@
 {
   "occurrence_unavailable": "Bu tarih artık yok. İptal edilmiş olabilir. Lütfen takvimi yeniden yükleyin.",
   "federal_state_missing": "Okul için henüz eyalet belirlenmedi. Bu yüzden resmi tatiller eksik. Yönetim bunu ayarlardan girebilir.",
-  "no_staff_profile": "{object} için erişim izniniz yok. Okulla iletişime geçin."
+  "no_staff_profile": "{object} için erişim izniniz yok. Okulla iletişime geçin.",
+  "opening_change_invalid": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
+  "opening_change_not_found": "{object} değiştirilemedi. Güncel durumu kontrol edin."
 }

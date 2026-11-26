@@ -4,7 +4,7 @@ import { cache } from "react";
 import { withServerSessionMutation } from "./session-mutation";
 import * as Sentry from "@sentry/nextjs";
 import type { NextAuthRequest, NextAuthResult } from "next-auth";
-import type { NextRequest } from "next/server";
+import { NextRequest } from "next/server";
 import { applyPrivateNoStore } from "~/lib/private-no-store";
 import { REQUEST_ID_HEADER } from "~/lib/request-id";
 import type { RouteContext } from "~/lib/route-wrapper-utils.server";
@@ -87,9 +87,15 @@ export function createResponseAwareAuth(
       const freshReader = rawAuth(async (request) =>
         Response.json(request.auth),
       ) as ResponseRouteHandler;
+      // Auth.js may reconstruct its input to apply AUTH_URL. The route may
+      // already have consumed the body; the session read only needs headers.
+      const sessionRequest = new NextRequest(current.request.url, {
+        headers: current.request.headers,
+        signal: current.request.signal,
+      });
       // Every caller holds a backend 401: renew now, not at the expiry.
       const response = await withForcedSessionRenewal(() =>
-        freshReader(current.request),
+        freshReader(sessionRequest),
       );
       current.freshCookies.push(...response.headers.getSetCookie());
 

@@ -16,6 +16,8 @@ import (
 	"testing"
 )
 
+const unmarkedTextIdentifier = ": unmarked text identifier"
+
 // TestNoNumericIdentifierRatchet holds #7808: no type at the client seam
 // reads or writes an identifier as a JSON number. An identifier is an
 // ident.ID, which every answer writes as a string (ADR 0300). The generator
@@ -28,7 +30,8 @@ import (
 // *_ids and whose type is an integer, a pointer, list or map of one, or a
 // named integer type, unless the field carries contract:"number". That tag
 // is allowed only in the kiosk device API (deviceAPI): PyrePortal v1.11.5
-// reads numeric identifiers there. There is no other exception list.
+// reads numeric identifiers there. Text identifiers must state why they
+// are text.
 func TestNoNumericIdentifierRatchet(t *testing.T) {
 	t.Parallel()
 	root, err := findBackendRoot()
@@ -40,17 +43,19 @@ func TestNoNumericIdentifierRatchet(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	integers := namedIntegerTypes(files, module)
-	var found []string
+	integers := namedScalarTypes(files, module, builtinIntegers, true)
+	textTypes := namedScalarTypes(files, module, builtinStrings, false)
+	found := formattedIdentifierFields(files, module, integers, textTypes)
+	found = append(found, problemIdentifierOrigins(files, module, integers)...)
 	for _, file := range files {
 		if !seamPackage(file.dir) {
 			continue
 		}
-		found = append(found, numericIdentifierFields(file, module, integers)...)
+		found = append(found, numericIdentifierFields(file, module, integers, textTypes)...)
 	}
 	sort.Strings(found)
 	if len(found) > 0 {
-		t.Fatalf("an identifier travels as text: use ident.ID (ADR 0300, #7808); contract:\"number\" belongs only to the kiosk device API:\n%s", strings.Join(found, "\n"))
+		t.Fatalf("use ident.ID for bigint identifiers, contract_text:\"reason\" for text, and contract:\"number\" only for kiosk identifiers (ADR 0300):\n%s", strings.Join(found, "\n"))
 	}
 }
 
@@ -63,7 +68,14 @@ func seamPackage(dir string) bool {
 	case parts[0] == "api":
 		return true
 	case (parts[0] == "modules" || parts[0] == "workflows") && len(parts) >= 3:
-		return parts[2] == "http" || parts[2] == "inbound"
+		for _, part := range parts[2:] {
+			if part == "internal" {
+				return false
+			}
+			if part == "http" || part == "inbound" {
+				return true
+			}
+		}
 	}
 	return false
 }
@@ -110,7 +122,7 @@ func parseBackendSources(root, module string) ([]parsedSource, error) {
 			return nil
 		}
 		fset := token.NewFileSet()
-		file, err := parser.ParseFile(fset, full, nil, parser.SkipObjectResolution)
+		file, err := parser.ParseFile(fset, full, nil, 0)
 		if err != nil {
 			return err
 		}
@@ -145,10 +157,9 @@ var builtinIntegers = map[string]bool{
 	"uint": true, "uint8": true, "uint16": true, "uint32": true, "uint64": true,
 }
 
-// namedIntegerTypes returns "importpath.Name" of every named type whose
-// underlying type is an integer. ident.ID is the identifier type, written as
-// a string in every answer, and not one of them.
-func namedIntegerTypes(files []parsedSource, module string) map[string]bool {
+var builtinStrings = map[string]bool{"string": true}
+
+func namedScalarTypes(files []parsedSource, module string, builtins map[string]bool, excludeIdent bool) map[string]bool {
 	type spec struct {
 		file *parsedSource
 		expr ast.Expr
@@ -167,28 +178,28 @@ func namedIntegerTypes(files []parsedSource, module string) map[string]bool {
 			}
 		}
 	}
-	integers := map[string]bool{}
+	named := map[string]bool{}
 	for changed := true; changed; {
 		changed = false
 		for name, s := range specs {
-			if integers[name] || name == module+"/sharedkernel/ident.ID" {
+			if named[name] || (excludeIdent && name == module+"/sharedkernel/ident.ID") {
 				continue
 			}
-			if key, builtin := typeKey(s.expr, s.file, module); builtin || integers[key] {
-				integers[name] = true
+			if key, builtin := typeKey(s.expr, s.file, module, builtins); builtin || named[key] {
+				named[name] = true
 				changed = true
 			}
 		}
 	}
-	return integers
+	return named
 }
 
 // typeKey names the type of a plain or qualified identifier: the builtin
 // integer flag, or "importpath.Name".
-func typeKey(expr ast.Expr, file *parsedSource, module string) (string, bool) {
+func typeKey(expr ast.Expr, file *parsedSource, module string, builtins map[string]bool) (string, bool) {
 	switch e := expr.(type) {
 	case *ast.Ident:
-		if builtinIntegers[e.Name] {
+		if builtins[e.Name] {
 			return "", true
 		}
 		return module + "/" + file.dir + "." + e.Name, false
@@ -200,9 +211,8 @@ func typeKey(expr ast.Expr, file *parsedSource, module string) (string, bool) {
 	return "", false
 }
 
-// numericInteger tells whether a field type is an integer, or a pointer,
-// list or map of one.
-func numericInteger(expr ast.Expr, file *parsedSource, module string, integers map[string]bool) bool {
+// scalarField also checks the elements of pointers, lists and maps.
+func scalarField(expr ast.Expr, file *parsedSource, module string, builtins, named map[string]bool) bool {
 	for {
 		switch e := expr.(type) {
 		case *ast.StarExpr:
@@ -215,8 +225,8 @@ func numericInteger(expr ast.Expr, file *parsedSource, module string, integers m
 			expr = e.Value
 			continue
 		}
-		key, builtin := typeKey(expr, file, module)
-		return builtin || integers[key]
+		key, builtin := typeKey(expr, file, module, builtins)
+		return builtin || named[key]
 	}
 }
 
@@ -227,7 +237,7 @@ func identifierName(name string) bool {
 // numericIdentifierFields reports the fields of one file that break the
 // rule, as "file:line Type.Field: reason". It reads every struct of the file,
 // also an anonymous one inside a function, which a handler may encode.
-func numericIdentifierFields(file parsedSource, module string, integers map[string]bool) []string {
+func numericIdentifierFields(file parsedSource, module string, integers, textTypes map[string]bool) []string {
 	type scope struct {
 		node ast.Node
 		name string
@@ -265,11 +275,20 @@ func numericIdentifierFields(file parsedSource, module string, integers map[stri
 		}
 		tag := reflect.StructTag(raw)
 		name, _, _ := strings.Cut(tag.Get("json"), ",")
-		if !identifierName(name) || !numericInteger(field.Type, &file, module, integers) {
+		if !identifierName(name) {
 			return true
 		}
 		typeName := enclosing(field.Pos())
 		at := fmt.Sprintf("%s:%d %s.%s", file.rel, file.fset.Position(field.Pos()).Line, typeName, field.Names[0].Name)
+		if scalarField(field.Type, &file, module, builtinStrings, textTypes) {
+			if strings.TrimSpace(tag.Get("contract_text")) == "" {
+				found = append(found, at+unmarkedTextIdentifier)
+			}
+			return true
+		}
+		if !scalarField(field.Type, &file, module, builtinIntegers, integers) {
+			return true
+		}
 		number := tag.Get("contract") == "number"
 		device := deviceAPI(file.dir, typeName)
 		switch {
@@ -295,6 +314,7 @@ func TestNumericIdentifierScannerFindsEachForm(t *testing.T) {
 import "github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 type count int64
+type externalKey string
 
 type row struct {
 	ID       int64      'json:"id"'
@@ -305,6 +325,9 @@ type row struct {
 	Text     ident.ID   'json:"text_id"'
 	Texts    []ident.ID 'json:"text_ids"'
 	Amount   int64      'json:"amount_cents" contract:"number"'
+	Plain    string     'json:"foo_id"'
+	Named    externalKey 'json:"named_id"'
+	UUID     string     'json:"uuid_id" contract_text:"UUID from identity provider"'
 	Untagged int64
 }
 
@@ -323,7 +346,8 @@ func handler() any {
 		parsed := parsedSource{dir: dir, rel: dir + "/x.go", fset: fset, file: file,
 			imports: map[string]string{"ident": module + "/sharedkernel/ident"}}
 		var found []string
-		for _, hit := range numericIdentifierFields(parsed, module, namedIntegerTypes([]parsedSource{parsed}, module)) {
+		files := []parsedSource{parsed}
+		for _, hit := range numericIdentifierFields(parsed, module, namedScalarTypes(files, module, builtinIntegers, true), namedScalarTypes(files, module, builtinStrings, false)) {
 			_, rest, _ := strings.Cut(hit, " ")
 			found = append(found, rest)
 		}
@@ -335,6 +359,8 @@ func handler() any {
 		"row.Members: numeric identifier",
 		"row.Counted: numeric identifier",
 		"row.Tagged: contract:\"number\" on an identifier outside the kiosk device API",
+		"row.Plain: unmarked text identifier",
+		"row.Named: unmarked text identifier",
 		"handler.Inline: numeric identifier",
 	}
 	if got := scan("modules/x/http"); !slices.Equal(got, want) {
@@ -345,12 +371,14 @@ func handler() any {
 		"row.Owner: a kiosk identifier says contract:\"number\"",
 		"row.Members: a kiosk identifier says contract:\"number\"",
 		"row.Counted: a kiosk identifier says contract:\"number\"",
+		"row.Plain: unmarked text identifier",
+		"row.Named: unmarked text identifier",
 		"handler.Inline: a kiosk identifier says contract:\"number\"",
 	}
 	if got := scan("modules/devicescan/http/x"); !slices.Equal(got, kiosk) {
 		t.Errorf("kiosk package:\n got %q\nwant %q", got, kiosk)
 	}
-	if !seamPackage("modules/x/http") || !seamPackage("workflows/x/inbound/y") || !seamPackage("api/x") || seamPackage("modules/x") || seamPackage("modules/x/internal/http") {
+	if !seamPackage("modules/x/http") || !seamPackage("modules/careplan/requestfeed/http") || !seamPackage("workflows/x/inbound/y") || !seamPackage("api/x") || seamPackage("modules/x") || seamPackage("modules/x/internal/http") {
 		t.Error("seamPackage covers the api root and every http and inbound role")
 	}
 }

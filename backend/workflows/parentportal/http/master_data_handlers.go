@@ -4,12 +4,13 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"strconv"
 
 	"github.com/go-chi/chi/v5"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	parentService "github.com/moto-ogs/project-phoenix/workflows/parentportal"
 )
@@ -18,7 +19,7 @@ import (
 // ids, dates as YYYY-MM-DD, the calling guardian's own contact data, and the
 // child's pending Track B change requests.
 type MasterDataResponse struct {
-	StudentID string `json:"student_id"`
+	StudentID ident.ID `json:"student_id"`
 
 	// Identity — Track B editable, read-only here.
 	FirstName string  `json:"first_name"`
@@ -35,14 +36,14 @@ type MasterDataResponse struct {
 	HealthInfo *string `json:"health_info,omitempty"`
 
 	// Calling guardian's own contact data — Track A editable.
-	GuardianProfileID      string  `json:"guardian_profile_id"`
-	Email                  *string `json:"email,omitempty"`
-	AddressStreet          *string `json:"address_street,omitempty"`
-	AddressCity            *string `json:"address_city,omitempty"`
-	AddressPostalCode      *string `json:"address_postal_code,omitempty"`
-	PreferredContactMethod string  `json:"preferred_contact_method"`
-	LanguagePreference     string  `json:"language_preference"`
-	PrimaryPhone           *string `json:"primary_phone,omitempty"`
+	GuardianProfileID      ident.ID `json:"guardian_profile_id"`
+	Email                  *string  `json:"email,omitempty"`
+	AddressStreet          *string  `json:"address_street,omitempty"`
+	AddressCity            *string  `json:"address_city,omitempty"`
+	AddressPostalCode      *string  `json:"address_postal_code,omitempty"`
+	PreferredContactMethod string   `json:"preferred_contact_method"`
+	LanguagePreference     string   `json:"language_preference"`
+	PrimaryPhone           *string  `json:"primary_phone,omitempty"`
 
 	// Permanent weekday departure config — Track B editable, read-only here.
 	DepartureDays         parentService.DepartureDays         `json:"departure_days,omitempty"`
@@ -53,7 +54,7 @@ type MasterDataResponse struct {
 
 // MasterDataChangeResponse is one change-request row in the parent view.
 type MasterDataChangeResponse struct {
-	ID        string          `json:"id"`
+	ID        ident.ID        `json:"id"`
 	Target    string          `json:"target"`
 	FieldKey  string          `json:"field_key"`
 	OldValue  json.RawMessage `json:"old_value,omitempty" contract_json:"The requested student field selects the master-data value type"`
@@ -82,7 +83,7 @@ func dateStrPtr(d *timezone.Date) *string {
 
 func toMasterDataResponse(d *parentService.ChildMasterData, accountID int64) MasterDataResponse {
 	resp := MasterDataResponse{
-		StudentID:              strconv.FormatInt(d.StudentID, 10),
+		StudentID:              ident.ID(d.StudentID),
 		FirstName:              d.FirstName,
 		LastName:               d.LastName,
 		Birthday:               dateStrPtr(d.Birthday),
@@ -91,7 +92,7 @@ func toMasterDataResponse(d *parentService.ChildMasterData, accountID int64) Mas
 		EnrolledFrom:           dateStrPtr(d.EnrolledFrom),
 		EnrolledUntil:          dateStrPtr(d.EnrolledUntil),
 		HealthInfo:             d.HealthInfo,
-		GuardianProfileID:      strconv.FormatInt(d.GuardianProfileID, 10),
+		GuardianProfileID:      ident.ID(d.GuardianProfileID),
 		Email:                  d.Email,
 		AddressStreet:          d.AddressStreet,
 		AddressCity:            d.AddressCity,
@@ -105,7 +106,7 @@ func toMasterDataResponse(d *parentService.ChildMasterData, accountID int64) Mas
 	}
 	for _, c := range d.PendingChanges {
 		resp.PendingChanges = append(resp.PendingChanges, MasterDataChangeResponse{
-			ID:        strconv.FormatInt(c.ID, 10),
+			ID:        ident.ID(c.ID),
 			Target:    c.Target,
 			FieldKey:  c.FieldKey,
 			OldValue:  c.OldValue,
@@ -156,7 +157,7 @@ func (rs *Resource) updateMasterDataField(w http.ResponseWriter, r *http.Request
 	}
 
 	var req UpdateMasterDataRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := wire.Decode(r.Body, &req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
 		return
 	}
@@ -174,7 +175,7 @@ type MasterDataChangeRequestBody struct {
 	Changes []MasterDataChangeInput `json:"changes"`
 	// RecipientGuardianProfileIDs travel with the creation so the share is
 	// written in the same transaction (#2267); empty shares with nobody.
-	RecipientGuardianProfileIDs []string `json:"recipient_guardian_profile_ids"`
+	RecipientGuardianProfileIDs []ident.ID `json:"recipient_guardian_profile_ids"`
 }
 
 // MasterDataChangeInput is one proposed Track B field change.
@@ -188,7 +189,7 @@ func toMasterDataChangeResponses(rows []*parentService.StudentDataChangeRequest,
 	out := make([]MasterDataChangeResponse, 0, len(rows))
 	for _, c := range rows {
 		out = append(out, MasterDataChangeResponse{
-			ID:        strconv.FormatInt(c.ID, 10),
+			ID:        ident.ID(c.ID),
 			Target:    c.Target,
 			FieldKey:  c.FieldKey,
 			OldValue:  c.OldValue,
@@ -214,8 +215,7 @@ func (rs *Resource) submitMasterDataRequest(w http.ResponseWriter, r *http.Reque
 	}
 
 	var body MasterDataChangeRequestBody
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
+	if !decodeCreateBody(w, r, &body) {
 		return
 	}
 	changes := make([]parentService.MasterDataFieldChange, 0, len(body.Changes))

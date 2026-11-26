@@ -34,7 +34,6 @@ export default {
   "src/components/ui/calendar-shell.tsx": [
     "const thisYear = new Date().getFullYear();",
   ],
-  "src/components/home/home-card-rows.tsx": ["}).format(new Date());"],
   "src/components/home/now-strip.tsx": [
     "? startableOwnBlock(day.data ?? [], new Date())",
   ],
@@ -104,8 +103,4 @@ export default {
     "const closed = new Date(survey.closes_at) <= new Date();",
   ],
   "src/app/api/health/route.ts": ["timestamp: new Date().toISOString(),"],
-  "src/app/[tenant]/(protected)/time-tracking/page.tsx": [
-    "const now = new Date();",
-    "const now = new Date();",
-  ],
 };

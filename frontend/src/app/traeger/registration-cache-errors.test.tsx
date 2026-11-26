@@ -13,8 +13,8 @@ import {
   HOLIDAY_REGISTRATION_LIST,
   HOLIDAY_SCHOOLS,
 } from "~/test/fixtures/holiday-registrations";
-import RegistrationsPage from "./ferien/[id]/anmeldungen/page";
-import RegistrationPage from "./ferien/[id]/anmeldungen/[registrationId]/page";
+import RegistrationsPage from "./ferien/[id]/anmeldungen/page-content";
+import RegistrationPage from "./ferien/[id]/anmeldungen/[registrationId]/page-content";
 
 vi.unmock("swr");
 const { period, schools } = vi.hoisted(() => ({
@@ -50,7 +50,7 @@ vi.mock("~/lib/traeger-contributions-api", () => ({
 }));
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
-    data: { user: { id: "A", scope: "org", orgId: 7 } },
+    data: { user: { id: "A", scope: "org", orgId: "7" } },
     status: "authenticated",
   }),
 }));

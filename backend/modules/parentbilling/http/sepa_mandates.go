@@ -71,7 +71,7 @@ func (rs *SEPAMandateResource) MandateRouter(protectedTraegerRoutes func(chi.Rou
 
 // SEPACreditorRequest is the body of PUT /traeger/sepa-creditor.
 type SEPACreditorRequest struct {
-	CreditorID          string `json:"creditor_id"`
+	CreditorID          string `json:"creditor_id" contract_text:"SEPA creditor identifier"`
 	PrenotificationDays int    `json:"prenotification_days"`
 	MissingMandate      string `json:"missing_mandate"`
 	// ExpectedVersion is the version of the creditor as it was read (ADR
@@ -250,7 +250,12 @@ func mandateKey(w http.ResponseWriter, r *http.Request) (capability.HolidayRevie
 // names the field only, never the value: the request may carry an IBAN.
 func renderMandateError(w http.ResponseWriter, r *http.Request, err error, invalidCode string) {
 	var fields validation.Errors
+	var creditorConflict *capability.IssuerCreditorConflictError
 	switch {
+	case errors.As(err, &creditorConflict):
+		// A body bills with this creditor identifier (#8040).
+		common.RenderError(w, r, common.ErrorConflictWithDetails(err, common.CodeParentBillingIssuerCreditorIsTraegers,
+			BillingIssuerDetails{IssuerKey: creditorConflict.Issuer.Key, IssuerName: creditorConflict.Issuer.Name}))
 	case errors.As(err, &fields):
 		common.RenderError(w, r, common.ErrorInvalidRequestWithCode(err, invalidCode))
 	case errors.Is(err, capability.ErrSEPAMandateNotFound):

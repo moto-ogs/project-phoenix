@@ -39,7 +39,7 @@ func TestPhaseDeleteProtectsMovedTraegerOffering(t *testing.T) {
 			return err
 		}
 		offering.PhaseID = created.ID
-		if _, err = catalog.UpdateOffering(ctx, offering); err != nil {
+		if _, err = catalog.UpdateOffering(ctx, offering, offering.Version); err != nil {
 			return err
 		}
 		err = phases.DeletePhase(ctx, created.ID)

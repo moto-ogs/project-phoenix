@@ -59,6 +59,7 @@ export interface ContractSummary {
   imported: boolean;
   follows_bookings: boolean;
   request_child_id: string | null;
+  change_awaits_signature: boolean;
 }
 
 export const ContractSummarySchema: z.ZodType<ContractSummary, unknown> = object<ContractSummary>({
@@ -81,6 +82,7 @@ export const ContractSummarySchema: z.ZodType<ContractSummary, unknown> = object
   imported: bool,
   follows_bookings: bool,
   request_child_id: nullable(int64String),
+  change_awaits_signature: bool,
 });
 
 /** Go: carecontract.ContractList */
@@ -210,6 +212,7 @@ export interface Version {
   created_at: string;
   source: string;
   valid_until: string | null;
+  agreed_from?: string;
 }
 
 export const VersionSchema: z.ZodType<Version, unknown> = object<Version>({
@@ -229,6 +232,7 @@ export const VersionSchema: z.ZodType<Version, unknown> = object<Version>({
   created_at: instant,
   source: str,
   valid_until: nullable(calendarDate),
+  agreed_from: optional(calendarDate),
 });
 
 /** Go: carecontract.Party */
@@ -300,15 +304,34 @@ export const ContractSignatureSchema: z.ZodType<ContractSignature, unknown> = ob
 
 /** Go: carecontract.Reminder */
 export interface Reminder {
+  version_number: number;
   number: number;
   recipient: string;
   sent_at: string;
 }
 
 export const ReminderSchema: z.ZodType<Reminder, unknown> = object<Reminder>({
+  version_number: safeInt,
   number: safeInt,
   recipient: str,
   sent_at: instant,
+});
+
+/** Go: carecontract.VersionSignature */
+export interface VersionSignature {
+  version_number: number;
+  method: string;
+  channel: string;
+  signer_name: string;
+  signed_at: string;
+}
+
+export const VersionSignatureSchema: z.ZodType<VersionSignature, unknown> = object<VersionSignature>({
+  version_number: safeInt,
+  method: str,
+  channel: str,
+  signer_name: str,
+  signed_at: instant,
 });
 
 /** Go: carecontract.ContractCorrection */
@@ -351,12 +374,14 @@ export interface ContractDetail {
   imported: boolean;
   follows_bookings: boolean;
   request_child_id: string | null;
+  change_awaits_signature: boolean;
   version: Version;
   parties: Party[] | null;
   mailings: Mailing[] | null;
   document_frozen: boolean;
   signature: ContractSignature | null;
   reminders: Reminder[] | null;
+  version_signatures: VersionSignature[] | null;
   versions: Version[] | null;
   term_text: string;
   notice_text: string;
@@ -384,12 +409,14 @@ export const ContractDetailSchema: z.ZodType<ContractDetail, unknown> = object<C
   imported: bool,
   follows_bookings: bool,
   request_child_id: nullable(int64String),
+  change_awaits_signature: bool,
   version: VersionSchema,
   parties: nullable(arr(PartySchema)),
   mailings: nullable(arr(MailingSchema)),
   document_frozen: bool,
   signature: nullable(ContractSignatureSchema),
   reminders: nullable(arr(ReminderSchema)),
+  version_signatures: nullable(arr(VersionSignatureSchema)),
   versions: nullable(arr(VersionSchema)),
   term_text: str,
   notice_text: str,
@@ -544,6 +571,12 @@ export const routes = {
     portals: ["org"],
     request: requestBody<SendRequest>(),
     response: success(SendResultSchema),
+  },
+  "POST /traeger/contracts/{id}/paper-handover": {
+    method: "POST",
+    pattern: "/traeger/contracts/{id}/paper-handover",
+    portals: ["org"],
+    response: noData,
   },
   "POST /traeger/contracts/{id}/paper-signature": {
     method: "POST",

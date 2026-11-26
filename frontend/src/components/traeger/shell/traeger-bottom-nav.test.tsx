@@ -160,17 +160,41 @@ describe("TraegerBottomNav", () => {
     ).toHaveAttribute("href", "/einstellungen/zugriffsprotokoll");
   });
 
-  it("shows only the settings the rights open, all in the bar while they fit", () => {
+  it("shows only the settings the rights open and moves the rest to Mehr", async () => {
     sessionUser.permissions = ["traeger_overview:read"];
     mockPathname.mockReturnValue("/einstellungen");
     render(<TraegerBottomNav />);
 
-    expect(bar().getAllByRole("link")).toHaveLength(4);
-    expect(bar().queryByRole("button", { name: "Mehr" })).toBeNull();
+    // „Übersicht lesen“ opens five pages: Zuständigkeiten (#4811) and
+    // moto-Module (#6052) joined them. The way back and three pages fit the
+    // bar, the other two wait under Mehr.
+    expect(
+      bar()
+        .getAllByRole("link")
+        .map((link) => link.textContent),
+    ).toEqual([
+      "Zurück zur App",
+      "Allgemein",
+      "Briefkopf und Vorlagen",
+      "Zuständigkeiten",
+    ]);
     expect(bar().getByRole("link", { name: "Allgemein" })).toHaveAttribute(
       "aria-current",
       "page",
     );
+
+    fireEvent.click(bar().getByRole("button", { name: "Mehr" }));
+    const drawer = within(await screen.findByRole("dialog"));
+    expect(
+      drawer.getByRole("link", { name: "Abrechnungsvorgaben" }),
+    ).toHaveAttribute("href", "/einstellungen/abrechnung");
+    expect(drawer.getByRole("link", { name: "moto-Module" })).toHaveAttribute(
+      "href",
+      "/einstellungen/module",
+    );
+    expect(
+      drawer.queryByRole("link", { name: "Zugriffsprotokoll" }),
+    ).toBeNull();
   });
 
   it("carries the magnifier that opens the search, before Mehr (#7648)", async () => {
@@ -209,5 +233,29 @@ describe("TraegerBottomNav", () => {
     );
     expect(bar().queryByRole("button", { name: "Suchen" })).toBeNull();
     expect(bar().getByRole("button", { name: "Mehr" })).toBeInTheDocument();
+  });
+
+  // #6052: the bar shows open pages only; a page of a moto module that is
+  // not booked stands behind Mehr with its lock.
+  it("keeps pages of a module that is not booked behind Mehr, with a lock", async () => {
+    sessionUser.permissions = [
+      "traeger_enrollment:manage",
+      "traeger_billing:manage",
+      "traeger_accounts:manage",
+    ];
+    render(<TraegerBottomNav bookedModules={["ferienbetreuung"]} />);
+
+    expect(
+      bar()
+        .getAllByRole("link")
+        .map((link) => link.textContent),
+    ).toEqual(["Schulen", "Ferienbetreuung", "Anmeldephasen"]);
+    fireEvent.click(bar().getByRole("button", { name: "Mehr" }));
+    const drawer = within(await screen.findByRole("dialog"));
+    const locked = drawer.getByRole("link", {
+      name: /^Abrechnungsläufe ?, nicht gebucht$/,
+    });
+    expect(locked).toHaveAttribute("href", "/abrechnung");
+    expect(drawer.getByRole("link", { name: "Hilfe" })).toBeInTheDocument();
   });
 });

@@ -18,6 +18,8 @@ import (
 	"github.com/go-chi/render"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 type mockCareOfferingService struct {
@@ -38,6 +40,7 @@ type mockCareOfferingService struct {
 	createResult            *CareOffering
 	createErr               error
 	updateInput             *CareOffering
+	updateVersion           string
 	updateErr               error
 	deleteID                int64
 	deleteErr               error
@@ -73,8 +76,9 @@ func (m *mockCareOfferingService) Create(_ context.Context, o *CareOffering) (*C
 	m.createInput = o
 	return m.createResult, m.createErr
 }
-func (m *mockCareOfferingService) Update(_ context.Context, o *CareOffering) error {
+func (m *mockCareOfferingService) Update(_ context.Context, o *CareOffering, expectedVersion string) error {
 	m.updateInput = o
+	m.updateVersion = expectedVersion
 	return m.updateErr
 }
 func (m *mockCareOfferingService) Delete(_ context.Context, id int64) error {
@@ -100,7 +104,6 @@ func buildCareOfferingRouter(svc CareOfferingCatalog) chi.Router {
 	r.Use(render.SetContentType(render.ContentTypeJSON))
 	r.Get("/enrollment/care-offerings", rs.listCareOfferings)
 	r.Get("/enrollment/care-offerings/booking-stats", rs.listCareOfferingBookingStats)
-	r.Get("/enrollment/care-offerings/{id}", rs.getCareOffering)
 	r.Post("/enrollment/care-offerings", rs.createCareOffering)
 	r.Put("/enrollment/care-offerings/{id}", rs.updateCareOffering)
 	r.Delete("/enrollment/care-offerings/{id}", rs.deleteCareOffering)
@@ -137,7 +140,7 @@ func makeOfferingModel(id, phaseID int64, name string) *CareOffering {
 
 func validOfferingBody(phaseID int64, name string) map[string]any {
 	return map[string]any{
-		"phase_id":              phaseID,
+		"phase_id":              fmt.Sprint(phaseID),
 		"name":                  name,
 		"days_of_week_mode":     "fixed",
 		"available_days":        []string{"mon", "tue"},
@@ -195,53 +198,6 @@ func TestListCareOfferingsHandler_ServiceErrorReturnsGeneric500(t *testing.T) {
 	mock := &mockCareOfferingService{listErr: errors.New("synthetic boom")}
 	router := buildCareOfferingRouter(mock)
 	w := executeCareJSON(t, router, http.MethodGet, "/enrollment/care-offerings", nil)
-	assert.Equal(t, http.StatusInternalServerError, w.Code)
-	assert.NotContains(t, w.Body.String(), "synthetic boom")
-}
-
-// --- getCareOffering -------------------------------------------------
-
-func TestGetCareOfferingHandler_NilServiceReturns500(t *testing.T) {
-	t.Parallel()
-
-	router := buildCareOfferingRouter(nil)
-	w := executeCareJSON(t, router, http.MethodGet, "/enrollment/care-offerings/1234", nil)
-	assert.Equal(t, http.StatusInternalServerError, w.Code)
-}
-
-func TestGetCareOfferingHandler_InvalidIDRejected(t *testing.T) {
-	t.Parallel()
-
-	router := buildCareOfferingRouter(&mockCareOfferingService{})
-	w := executeCareJSON(t, router, http.MethodGet, "/enrollment/care-offerings/notanumber", nil)
-	assert.Equal(t, http.StatusBadRequest, w.Code)
-}
-
-func TestGetCareOfferingHandler_HappyPath(t *testing.T) {
-	t.Parallel()
-
-	mock := &mockCareOfferingService{getByIDResult: makeOfferingModel(1234, 5678, "OGS")}
-	router := buildCareOfferingRouter(mock)
-	w := executeCareJSON(t, router, http.MethodGet, "/enrollment/care-offerings/1234", nil)
-	require.Equal(t, http.StatusOK, w.Code)
-	assert.Equal(t, int64(1234), mock.getByIDID)
-}
-
-func TestGetCareOfferingHandler_NotFoundReturns404(t *testing.T) {
-	t.Parallel()
-
-	mock := &mockCareOfferingService{getByIDErr: capability.ErrCareOfferingNotFound}
-	router := buildCareOfferingRouter(mock)
-	w := executeCareJSON(t, router, http.MethodGet, "/enrollment/care-offerings/1234", nil)
-	assert.Equal(t, http.StatusNotFound, w.Code)
-}
-
-func TestGetCareOfferingHandler_ServiceErrorReturnsGeneric500(t *testing.T) {
-	t.Parallel()
-
-	mock := &mockCareOfferingService{getByIDErr: errors.New("synthetic boom")}
-	router := buildCareOfferingRouter(mock)
-	w := executeCareJSON(t, router, http.MethodGet, "/enrollment/care-offerings/1234", nil)
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
 	assert.NotContains(t, w.Body.String(), "synthetic boom")
 }
@@ -527,7 +483,7 @@ func TestCloneCareOfferingHandler_NilServiceReturns500(t *testing.T) {
 
 	router := buildCareOfferingRouter(nil)
 	w := executeCareJSON(t, router, http.MethodPost, "/enrollment/care-offerings/1234/clone",
-		map[string]any{"target_phase_id": 5678})
+		map[string]any{"target_phase_id": "5678"})
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
 }
 
@@ -536,7 +492,7 @@ func TestCloneCareOfferingHandler_InvalidIDRejected(t *testing.T) {
 
 	router := buildCareOfferingRouter(&mockCareOfferingService{})
 	w := executeCareJSON(t, router, http.MethodPost, "/enrollment/care-offerings/notanumber/clone",
-		map[string]any{"target_phase_id": 5678})
+		map[string]any{"target_phase_id": "5678"})
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
 
@@ -546,7 +502,7 @@ func TestCloneCareOfferingHandler_HappyPath(t *testing.T) {
 	mock := &mockCareOfferingService{cloneResult: makeOfferingModel(9999, 5678, "Clone")}
 	router := buildCareOfferingRouter(mock)
 	w := executeCareJSON(t, router, http.MethodPost, "/enrollment/care-offerings/1234/clone",
-		map[string]any{"target_phase_id": 5678})
+		map[string]any{"target_phase_id": "5678"})
 	require.Equal(t, http.StatusCreated, w.Code)
 	assert.Equal(t, int64(1234), mock.cloneSource, "source id from URL must be forwarded")
 	assert.Equal(t, int64(5678), mock.cloneTarget, "target phase from body must be forwarded")
@@ -558,7 +514,7 @@ func TestCloneCareOfferingHandler_ServiceErrorReturnsGeneric500(t *testing.T) {
 	mock := &mockCareOfferingService{cloneErr: errors.New("synthetic boom")}
 	router := buildCareOfferingRouter(mock)
 	w := executeCareJSON(t, router, http.MethodPost, "/enrollment/care-offerings/1234/clone",
-		map[string]any{"target_phase_id": 5678})
+		map[string]any{"target_phase_id": "5678"})
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
 	assert.NotContains(t, w.Body.String(), "synthetic boom")
 }
@@ -668,7 +624,8 @@ func TestCareOfferingRouter_BookingStatsIsNotTreatedAsAnID(t *testing.T) {
 		r.Get("/", rs.listCareOfferings)
 		r.Get("/booking-stats", rs.listCareOfferingBookingStats)
 		r.Route("/{id}", func(r chi.Router) {
-			r.Get("/", rs.getCareOffering)
+			r.Put("/", rs.updateCareOffering)
+			r.Delete("/", rs.deleteCareOffering)
 		})
 	})
 
@@ -676,5 +633,22 @@ func TestCareOfferingRouter_BookingStatsIsNotTreatedAsAnID(t *testing.T) {
 
 	require.Equal(t, http.StatusOK, w.Code)
 	assert.Equal(t, int64(42), mock.bookingStatsPhaseID)
-	assert.Zero(t, mock.getByIDID, "the {id} route must not have matched")
+}
+
+// The editor's read version travels to the catalog, and a refusal over a
+// changed offering answers 409 general.changed_since_read (ADR 0311).
+func TestUpdateCareOfferingHandler_SendsTheReadVersionAndAnswersAChangedOne(t *testing.T) {
+	t.Parallel()
+
+	mock := &mockCareOfferingService{getByIDResult: makeOfferingModel(1234, 5678, "X")}
+	body := validOfferingBody(5678, "X")
+	body["expected_version"] = "v1"
+	w := executeCareJSON(t, buildCareOfferingRouter(mock), http.MethodPut, "/enrollment/care-offerings/1234", body)
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+	assert.Equal(t, "v1", mock.updateVersion)
+
+	mock = &mockCareOfferingService{getByIDResult: makeOfferingModel(1234, 5678, "X"), updateErr: readstate.ErrChanged}
+	w = executeCareJSON(t, buildCareOfferingRouter(mock), http.MethodPut, "/enrollment/care-offerings/1234", body)
+	assert.Equal(t, http.StatusConflict, w.Code)
+	assert.Contains(t, w.Body.String(), readstate.ChangedCode)
 }

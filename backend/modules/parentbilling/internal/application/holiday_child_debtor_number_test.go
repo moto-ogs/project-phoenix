@@ -48,7 +48,9 @@ func TestHolidayChildNumbersReadTheFormatAndStoredNumbersOnce(t *testing.T) {
 			})
 			inputs = append(inputs, parentbilling.HolidayChildDebtorNumberInput{ChildID: ident.ID(id), DebtorNumber: "60101"})
 		}
-		entered, err := h.enteredChildNumbers(context.Background(), 7, registration, inputs)
+		stored, err := h.store.ChildDebtorNumbers(context.Background(), 7)
+		require.NoError(t, err)
+		entered, err := h.enteredChildNumbers(context.Background(), 7, registration, stored, inputs)
 		require.NoError(t, err)
 		assert.Len(t, entered, count)
 		assert.Equal(t, 1, reads.formats, "one format read regardless of the number of children")

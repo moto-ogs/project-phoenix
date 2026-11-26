@@ -372,7 +372,7 @@ func mealLabel(position parentbilling.BillingPosition) string {
 	if lunches == 1 {
 		return "Mittagessen, 1 Essen zu " + formatEuro(price)
 	}
-	return fmt.Sprintf("Mittagessen, %d Essen zu je %s", lunches, formatEuro(price))
+	return fmt.Sprintf("Mittagessen, %d Essen für %s pro Essen", lunches, formatEuro(price))
 }
 
 // positionLabel names a position in one line, as the letters of a

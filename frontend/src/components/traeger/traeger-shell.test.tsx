@@ -11,8 +11,7 @@ import { BreadcrumbProvider } from "~/lib/breadcrumb-context";
 import { TraegerShellProvider } from "~/lib/shell-auth-context";
 import { _resetTraegerHostCache } from "~/lib/traeger-url";
 
-const { mockSignOut, mockPathname, sessionUser } = vi.hoisted(() => ({
-  mockSignOut: vi.fn(),
+const { mockPathname, sessionUser } = vi.hoisted(() => ({
   mockPathname: vi.fn(() => "/"),
   sessionUser: {
     name: "Petra Büro",
@@ -29,7 +28,6 @@ vi.mock("next/navigation", async (importOriginal) => ({
 }));
 
 vi.mock("next-auth/react", () => ({
-  signOut: mockSignOut,
   useSession: () => ({
     data: { user: sessionUser },
     status: "authenticated",
@@ -73,17 +71,30 @@ async function signOutThroughProfileMenu() {
   fireEvent.click(await screen.findByRole("button", { name: /Abmelden/ }));
   // The shared header asks before it signs out (#5145).
   const dialog = await screen.findByRole("dialog");
-  expect(mockSignOut).not.toHaveBeenCalled();
+  expect(fetch).not.toHaveBeenCalledWith(
+    "/api/traeger/auth/signout",
+    expect.anything(),
+  );
   fireEvent.click(within(dialog).getByRole("button", { name: "Abmelden" }));
+}
+
+// Auth.js' signout protocol and the server's revocation, as the shell's
+// logout runs them (#8082: no SDK, no trailing session lookup).
+const onSignOut = vi.hoisted(() => ({ current: () => undefined as void }));
+async function authAnswer(url: string): Promise<Response> {
+  if (url.endsWith("/auth/csrf")) return Response.json({ csrfToken: "csrf" });
+  if (url.endsWith("/auth/signout")) {
+    onSignOut.current();
+    return Response.json({ url: "/login" });
+  }
+  return new Response(null, { status: 204 });
 }
 
 describe("TraegerShell", () => {
   beforeEach(() => {
-    mockSignOut.mockReset();
-    mockSignOut.mockResolvedValue(undefined);
     mockPathname.mockReturnValue("/");
     sessionUser.permissions = [];
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null)));
+    vi.stubGlobal("fetch", vi.fn(authAnswer));
     vi.spyOn(window.location, "assign").mockImplementation(() => undefined);
     // The test page counts as the Träger host.
     vi.stubEnv("NEXT_PUBLIC_TRAEGER_HOSTNAME", window.location.host);
@@ -128,7 +139,11 @@ describe("TraegerShell", () => {
       "/api/traeger/auth/logout",
       expect.objectContaining({ method: "POST" }),
     );
-    expect(mockSignOut).toHaveBeenCalledWith({ redirect: false });
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/traeger/auth/signout",
+      expect.objectContaining({ method: "POST" }),
+    );
+    expect(fetch).not.toHaveBeenCalledWith("/api/traeger/auth/session");
   });
 
   it("leaves no personal entries of the account on the device (#5000)", async () => {
@@ -136,13 +151,12 @@ describe("TraegerShell", () => {
     sessionStorage.setItem("timetable-reopenable-instance", '{"title":"AG"}');
     localStorage.setItem("sidebar-collapsed", "true");
     let leftAtSignOut: (string | null)[] = [];
-    mockSignOut.mockImplementation(() => {
+    onSignOut.current = () => {
       leftAtSignOut = [
         localStorage.getItem("moto:personal-storage-owner"),
         sessionStorage.getItem("timetable-reopenable-instance"),
       ];
-      return Promise.resolve(undefined);
-    });
+    };
     renderPortal();
 
     await signOutThroughProfileMenu();
@@ -153,6 +167,7 @@ describe("TraegerShell", () => {
     expect(leftAtSignOut).toEqual([null, null]);
     expect(localStorage.getItem("sidebar-collapsed")).toBe("true");
     localStorage.clear();
+    onSignOut.current = () => undefined;
   });
 
   // #5145: the shared header with the Träger's name, the page title and the

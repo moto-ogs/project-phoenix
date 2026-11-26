@@ -98,7 +98,7 @@ func (rs *Resource) parseTodayFutureDateRange(w http.ResponseWriter, r *http.Req
 	if inclusiveDayCount(parsedFrom, parsedTo) > timetable.MaxTimetableReadRangeDays {
 		common.RenderError(w, r, common.ErrorInvalidRequestWithDetails(
 			fmt.Errorf("date range exceeds maximum of %d days", timetable.MaxTimetableReadRangeDays),
-			common.CodeTimetableWindowTooLarge, map[string]any{"max_days": timetable.MaxTimetableReadRangeDays}))
+			common.CodeTimetableWindowTooLarge, timetable.RefusalValues{MaxDays: timetable.MaxTimetableReadRangeDays}))
 		return calendar.Date(""), calendar.Date(""), false
 	}
 	if parsedFrom.Before(rs.todayDate()) {

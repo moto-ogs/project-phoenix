@@ -32,6 +32,7 @@ export interface ProfileResponse {
   rfid_card?: string;
   bio?: string;
   settings?: string;
+  version: string;
 }
 
 export const ProfileResponseSchema: z.ZodType<ProfileResponse, unknown> = object<ProfileResponse>({
@@ -47,6 +48,7 @@ export const ProfileResponseSchema: z.ZodType<ProfileResponse, unknown> = object
   rfid_card: optional(str),
   bio: optional(str),
   settings: optional(str),
+  version: str,
 });
 
 /** Go: domain.GroupRoom */
@@ -476,23 +478,15 @@ export const SchoolSwitchesSchema: z.ZodType<SchoolSwitches, unknown> = object<S
   timetable_day_end_time: str,
 });
 
-/** Go: identityaccess.NavigationResponse[github.com/moto-ogs/project-phoenix/modules/peopledirectory.Staff,*github.com/moto-ogs/project-phoenix/roots/owners.CallerGroupRow,*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.ActiveGroup] */
+/** Go: identityaccess.NavigationResponse[*github.com/moto-ogs/project-phoenix/modules/peopledirectory.Staff] */
 export interface NavigationResponse {
   current_staff: Staff | null;
-  educational_groups: (CallerGroupRow | null)[] | null;
-  incomplete: boolean;
   school_switches: SchoolSwitches;
-  supervised_groups: (ActiveGroup | null)[] | null;
-  unavailable_sections: string[] | null;
 }
 
 export const NavigationResponseSchema: z.ZodType<NavigationResponse, unknown> = object<NavigationResponse>({
   current_staff: nullable(StaffSchema),
-  educational_groups: nullable(arr(nullable(CallerGroupRowSchema))),
-  incomplete: bool,
   school_switches: SchoolSwitchesSchema,
-  supervised_groups: nullable(arr(nullable(ActiveGroupSchema))),
-  unavailable_sections: nullable(arr(str)),
 });
 
 /** Go: me.ProfileUpdateRequest */
@@ -501,6 +495,7 @@ export interface ProfileUpdateRequest {
   last_name?: string | null;
   username?: string | null;
   bio?: string | null;
+  expected_version?: string;
 }
 
 export const routes = {

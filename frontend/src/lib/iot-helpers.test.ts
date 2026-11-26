@@ -30,6 +30,7 @@ describe("iot-helpers", () => {
         is_online: true,
         created_at: "2024-01-01T00:00:00Z",
         updated_at: "2024-01-15T10:30:00Z",
+        version: "v-123",
         api_key: "test-api-key",
       };
 
@@ -46,6 +47,7 @@ describe("iot-helpers", () => {
         is_online: true,
         created_at: "2024-01-01T00:00:00Z",
         updated_at: "2024-01-15T10:30:00Z",
+        version: "v-123",
         api_key: "test-api-key",
       });
     });
@@ -59,6 +61,7 @@ describe("iot-helpers", () => {
         is_online: false,
         created_at: "2024-01-01T00:00:00Z",
         updated_at: "2024-01-15T10:30:00Z",
+        version: "v-123",
       };
 
       const result = mapDeviceResponse(backendDevice);

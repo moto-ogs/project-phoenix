@@ -47,7 +47,7 @@ func (m WorkforceMails) MailOutcomes(ctx context.Context, relatedIDs []int64, re
 		}
 		for _, report := range reports {
 			outcomes = append(outcomes, workforce.MailOutcome{
-				MailID: report.MailID, RelatedType: report.RelatedType, RelatedID: report.RelatedID, Outcome: string(report.Outcome),
+				AwaitingFeedback: report.AwaitingFeedback, MailID: report.MailID, RelatedType: report.RelatedType, RelatedID: report.RelatedID, Outcome: string(report.Outcome),
 			})
 		}
 	}

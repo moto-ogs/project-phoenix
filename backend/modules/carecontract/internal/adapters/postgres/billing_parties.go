@@ -24,10 +24,14 @@ func (Store) PartiesOf(ctx context.Context, organizationID int64, contractIDs []
 		Email      string `bun:"email"`
 		HasAccount bool   `bun:"has_account"`
 		Draft      bool   `bun:"draft"`
+		// Family is the leading contract the office joined the contract
+		// to (#7161, ADR 0319).
+		Family   *int64 `bun:"family_contract_id"`
+		SchoolID int64  `bun:"school_id"`
 	}
 	if err := db.NewRaw(`SELECT c.id AS contract_id, p.id AS party_id, COALESCE(p.first_name, '') AS first_name,
 			COALESCE(p.last_name, '') AS last_name, COALESCE(p.email, '') AS email, p.account_id IS NOT NULL AS has_account,
-			c.status = ? AS draft
+			c.status = ? AS draft, c.family_contract_id, c.school_id
 		FROM care_contract.contracts AS c
 		LEFT JOIN care_contract.contract_parties AS p ON p.organization_id = c.organization_id AND p.contract_id = c.id
 		WHERE c.organization_id = ? AND c.id = ANY(?)
@@ -40,12 +44,12 @@ func (Store) PartiesOf(ctx context.Context, organizationID int64, contractIDs []
 			// A contract without a party (ADR 0232) still is a contract of
 			// the Träger: it is named with an empty party that keeps only
 			// whether it is a draft (#7862).
-			parties[row.ContractID] = []carecontract.Party{{ContractDraft: row.Draft}}
+			parties[row.ContractID] = []carecontract.Party{{ContractDraft: row.Draft, FamilyContractID: family(row.Family), ContractSchoolID: row.SchoolID}}
 			continue
 		}
 		parties[row.ContractID] = append(parties[row.ContractID], carecontract.Party{
 			FirstName: row.FirstName, LastName: row.LastName, Email: row.Email, HasAccount: row.HasAccount,
-			ContractDraft: row.Draft,
+			ContractDraft: row.Draft, FamilyContractID: family(row.Family), ContractSchoolID: row.SchoolID,
 		})
 	}
 	return parties, nil
@@ -93,4 +97,12 @@ func (Store) ContractFamilyEmails(ctx context.Context, organizationID int64, ema
 		return nil, fmt.Errorf("care contract postgres: read family membership: %w", err)
 	}
 	return families, nil
+}
+
+// family is the stored leading contract, zero without one.
+func family(id *int64) int64 {
+	if id == nil {
+		return 0
+	}
+	return *id
 }

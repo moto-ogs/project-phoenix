@@ -1,17 +1,18 @@
 package parent
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/go-chi/chi/v5"
+
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/absencerecords"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	parentService "github.com/moto-ogs/project-phoenix/workflows/parentportal"
 )
@@ -37,7 +38,7 @@ type SubmitSickNoteRequest struct {
 	// RecipientGuardianProfileIDs are the co-guardians the family picked for
 	// this request. They travel WITH the creation so the share is written in
 	// the same transaction (#2267); empty shares with nobody.
-	RecipientGuardianProfileIDs []string `json:"recipient_guardian_profile_ids"`
+	RecipientGuardianProfileIDs []ident.ID `json:"recipient_guardian_profile_ids"`
 }
 
 // SickNoteEnvelopeResponse is the answer of the sick-note create: the status
@@ -62,8 +63,8 @@ func pendingSickNoteRequest(result *parentService.SickNoteResult, accountID int6
 // StatusDayResponse mirrors the staff status-day shape but is the
 // parent-facing projection: stringified ids, date as YYYY-MM-DD.
 type StatusDayResponse struct {
-	ID         string    `json:"id"`
-	StudentID  string    `json:"student_id"`
+	ID         ident.ID  `json:"id"`
+	StudentID  ident.ID  `json:"student_id"`
 	Date       string    `json:"date"`
 	Status     string    `json:"status"`
 	ReportedAt time.Time `json:"reported_at"`
@@ -73,8 +74,8 @@ type StatusDayResponse struct {
 
 func toStatusDayResponse(d *parentService.StudentStatusDaySnapshot) StatusDayResponse {
 	return StatusDayResponse{
-		ID:         strconv.FormatInt(d.ID, 10),
-		StudentID:  strconv.FormatInt(d.StudentID, 10),
+		ID:         ident.ID(d.ID),
+		StudentID:  ident.ID(d.StudentID),
 		Date:       d.Date.String(),
 		Status:     d.Status,
 		ReportedAt: d.ReportedAt,
@@ -86,8 +87,8 @@ func toStatusDayResponse(d *parentService.StudentStatusDaySnapshot) StatusDayRes
 // ParentExcusedRequestResponse is the legacy-named parent projection of a
 // pending or recently decided absence approval request.
 type ParentExcusedRequestResponse struct {
-	ID             string     `json:"id"`
-	StudentID      string     `json:"student_id"`
+	ID             ident.ID   `json:"id"`
+	StudentID      ident.ID   `json:"student_id"`
 	AbsenceStatus  string     `json:"absence_status"`
 	Status         string     `json:"status"`
 	Dates          []string   `json:"dates"`
@@ -111,8 +112,8 @@ func toParentExcusedRequestResponse(req *parentService.ExcusedAbsenceRequestSnap
 		dates = append(dates, d.String())
 	}
 	return ParentExcusedRequestResponse{
-		ID:             strconv.FormatInt(req.ID, 10),
-		StudentID:      strconv.FormatInt(req.StudentID, 10),
+		ID:             ident.ID(req.ID),
+		StudentID:      ident.ID(req.StudentID),
 		AbsenceStatus:  req.AbsenceStatus,
 		Status:         req.Status,
 		Dates:          dates,
@@ -139,8 +140,7 @@ func (rs *Resource) submitSickNote(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req SubmitSickNoteRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
+	if !decodeCreateBody(w, r, &req) {
 		return
 	}
 
@@ -306,6 +306,9 @@ type ChildFeaturesResponse struct {
 	// CareFacilityTerm is the school's term for its care („OGS“, „GTS“,
 	// #6082): the portal names this child's care with it.
 	CareFacilityTerm string `json:"care_facility_term"`
+	// CareFacilityArticle is the article the German texts decline that
+	// term with: "der", "die" or "das" (#8136).
+	CareFacilityArticle string `json:"care_facility_article"`
 }
 
 // getChildFeatures returns the resolved parent-portal feature flags for the
@@ -325,7 +328,11 @@ func (rs *Resource) getChildFeatures(w http.ResponseWriter, r *http.Request) {
 		renderParentWriteError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, ChildFeaturesResponse{
+	common.Respond(w, r, http.StatusOK, toChildFeaturesResponse(flags), "Child features retrieved")
+}
+
+func toChildFeaturesResponse(flags parentService.ChildFeatureFlags) ChildFeaturesResponse {
+	return ChildFeaturesResponse{
 		ConferenceBookAllowed:         flags.ConferenceBookAllowed,
 		CareEnded:                     flags.CareEnded,
 		WithoutCarePlace:              flags.WithoutCarePlace,
@@ -355,7 +362,8 @@ func (rs *Resource) getChildFeatures(w http.ResponseWriter, r *http.Request) {
 		NewsEnabled:                   flags.NewsEnabled,
 		ReasonRequired:                flags.ReasonRequired,
 		CareFacilityTerm:              flags.CareFacilityTerm,
-	}, "Child features retrieved")
+		CareFacilityArticle:           flags.CareFacilityArticle,
+	}
 }
 
 // --- Meal plan (Essensplan) ---
@@ -488,7 +496,7 @@ func (rs *Resource) replaceMealParticipation(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	var request ReplaceMealParticipationRequest
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+	if err := wire.Decode(r.Body, &request); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid JSON body")))
 		return
 	}
@@ -515,7 +523,7 @@ func (rs *Resource) setMealParticipationDay(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	var request SetMealParticipationDayRequest
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil || request.Participating == nil {
+	if err := wire.Decode(r.Body, &request); err != nil || request.Participating == nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("participating is required")))
 		return
 	}
@@ -548,7 +556,7 @@ func (rs *Resource) setMealParticipationWeek(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	var request SetMealParticipationDayRequest
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil || request.Participating == nil {
+	if err := wire.Decode(r.Body, &request); err != nil || request.Participating == nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("participating is required")))
 		return
 	}

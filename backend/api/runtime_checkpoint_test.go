@@ -16,13 +16,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	deliveryModule "github.com/moto-ogs/project-phoenix/modules/delivery/runtime"
 	facilitiesModule "github.com/moto-ogs/project-phoenix/modules/facilities"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	timetableModule "github.com/moto-ogs/project-phoenix/modules/timetable"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
-	"github.com/stretchr/testify/require"
 )
 
 var runtimeCheckpointOutput = flag.String("runtime-checkpoint-output", "", "write the opt-in #3019 runtime measurement JSON to this file")
@@ -244,13 +245,13 @@ func measureRuntimeCheckpoint(t *testing.T, production *Runtime) {
 				{"enrollment.schema-rename-conflict", "PATCH", "/api/enrollment/schema/" + checkpointSchemaID, 409, true, `{"name":"Checkpoint Reserved Schema"}`},
 				{"enrollment.schema-publish-version", "PUT", "/api/enrollment/schema/" + checkpointSchemaID, 201, true, `{"fields":[]}`},
 				{"enrollment.public-submit", "POST", "/api/enrollment/" + slug + "/submit", 201, false,
-					fmt.Sprintf(`{"phase_id":%d,"guardian_first_name":"Checkpoint","guardian_last_name":"Applicant","guardian_email":"checkpoint-{{attempt}}@example.test","consent_flags":{"agb":true,"data_processing":true,"email_contact":true,"photo":true},"children":[{"first_name":"Checkpoint","last_name":"Child{{attempt}}","date_of_birth":"2018-04-15","target_grade_level":2}]}`, phase.ID)},
+					fmt.Sprintf(`{"phase_id":"%d","guardian_first_name":"Checkpoint","guardian_last_name":"Applicant","guardian_email":"checkpoint-{{attempt}}@example.test","consent_flags":{"agb":true,"data_processing":true,"email_contact":true,"photo":true},"children":[{"first_name":"Checkpoint","last_name":"Child{{attempt}}","date_of_birth":"2018-04-15","target_grade_level":2}]}`, phase.ID)},
 				throttled,
 				emailThrottled,
 			}
 			if *runtimeCheckpointEnrollmentParents {
 				parentSubmit := checkpointScenario{"enrollment.parent-submit", "POST", "/parent/enrollments/" + parentSubdomain + "/submit", 201, true,
-					fmt.Sprintf(`{"phase_id":%d,"guardian_first_name":"Checkpoint","guardian_last_name":"Parent","guardian_email":"checkpoint-parent-{{attempt}}@example.test","consent_flags":{"agb":true,"data_processing":true,"email_contact":true,"photo":true},"children":[{"first_name":"Checkpoint","last_name":"ParentChild{{attempt}}","date_of_birth":"2018-04-15","target_grade_level":2}]}`, phase.ID)}
+					fmt.Sprintf(`{"phase_id":"%d","guardian_first_name":"Checkpoint","guardian_last_name":"Parent","guardian_email":"checkpoint-parent-{{attempt}}@example.test","consent_flags":{"agb":true,"data_processing":true,"email_contact":true,"photo":true},"children":[{"first_name":"Checkpoint","last_name":"ParentChild{{attempt}}","date_of_birth":"2018-04-15","target_grade_level":2}]}`, phase.ID)}
 				scenarios = append(scenarios, parentSubmit)
 				wrongScope := parentSubmit
 				wrongScope.Name = "enrollment.parent-submit-wrong-scope"

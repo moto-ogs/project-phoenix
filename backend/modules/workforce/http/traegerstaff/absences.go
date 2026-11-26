@@ -51,6 +51,10 @@ type AbsenceTypeRequest struct {
 	CarryoverUntil   string  `json:"carryover_until"`
 	Requestable      bool    `json:"requestable"`
 	IsActive         *bool   `json:"is_active"`
+	// ExpectedVersion is the type's version an update was made on; a type
+	// changed since is refused with general.changed_since_read (ADR 0311).
+	// A create ignores it.
+	ExpectedVersion string `json:"expected_version"`
 }
 
 func (req *AbsenceTypeRequest) Bind(*http.Request) error { return nil }
@@ -60,6 +64,7 @@ func (req *AbsenceTypeRequest) toInput() workforce.TraegerAbsenceTypeInput {
 	return workforce.TraegerAbsenceTypeInput{
 		Name: req.Name, AllowanceEnabled: req.AllowanceEnabled, StandardDays: req.StandardDays,
 		CarryoverUntil: req.CarryoverUntil, Requestable: req.Requestable, IsActive: active,
+		ExpectedVersion: req.ExpectedVersion,
 	}
 }
 

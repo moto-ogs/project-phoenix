@@ -194,7 +194,7 @@ func TestCreateActivity_Success(t *testing.T) {
 		"name":             fmt.Sprintf("NewActivity-%d", time.Now().UnixNano()),
 		"max_participants": 15,
 		"is_open":          true,
-		"category_id":      category.ID,
+		"category_id":      fmt.Sprint(category.ID),
 	}
 
 	req := testutil.NewAuthenticatedRequest(t, "POST", "/activities", body)
@@ -220,7 +220,7 @@ func TestCreateActivity_BadRequest_MissingName(t *testing.T) {
 	body := map[string]interface{}{
 		"max_participants": 15,
 		"is_open":          true,
-		"category_id":      category.ID,
+		"category_id":      fmt.Sprint(category.ID),
 	}
 
 	req := testutil.NewAuthenticatedRequest(t, "POST", "/activities", body)
@@ -259,7 +259,7 @@ func TestCreateActivity_AllowsNoParticipantLimit(t *testing.T) {
 		"name":             "OpenSportsHall",
 		"max_participants": nil,
 		"is_open":          true,
-		"category_id":      category.ID,
+		"category_id":      fmt.Sprint(category.ID),
 	}
 
 	req := testutil.NewAuthenticatedRequest(t, "POST", "/activities", body)
@@ -294,7 +294,7 @@ func TestUpdateActivity_Success(t *testing.T) {
 		"name":             fmt.Sprintf("UpdatedActivity-%d", time.Now().UnixNano()),
 		"max_participants": 25,
 		"is_open":          false,
-		"category_id":      activity.CategoryID,
+		"category_id":      fmt.Sprint(activity.CategoryID),
 		"expected_version": activityVersion(t, ctx, activity.ID),
 	}
 
@@ -313,7 +313,7 @@ func TestUpdateActivity_DetailReadFailureRollsBackAndRetries(t *testing.T) {
 	activity := testpkg.CreateTestActivityGroup(t, ctx.db, "Before detail failure")
 	body := map[string]interface{}{
 		"name": "After detail failure", "max_participants": 25,
-		"is_open": false, "category_id": activity.CategoryID,
+		"is_open": false, "category_id": fmt.Sprint(activity.CategoryID),
 		"expected_version": activityVersion(t, ctx, activity.ID),
 	}
 	wantErr := errors.New("detail read failed")
@@ -345,7 +345,7 @@ func TestUpdateActivity_NotFound(t *testing.T) {
 		"name":             "SomeActivity",
 		"max_participants": 10,
 		"is_open":          true,
-		"category_id":      category.ID,
+		"category_id":      fmt.Sprint(category.ID),
 	}
 
 	req := testutil.NewAuthenticatedRequest(t, "PUT", "/activities/99999", body)
@@ -521,7 +521,7 @@ func TestUnenrollStudent_Success(t *testing.T) {
 	student := testpkg.CreateTestStudent(t, ctx.db, "Unenroll", "Student", "1a")
 
 	// First enroll the student
-	enrollReq := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/activities/%d/students", activity.ID), map[string]any{"student_ids": []int64{student.ID}})
+	enrollReq := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/activities/%d/students", activity.ID), map[string]any{"student_ids": []string{fmt.Sprint(student.ID)}})
 	enrollRr := testutil.ExecuteWithAuth(t, ctx.router, enrollReq, testutil.DefaultTestClaims())
 	require.Equal(t, http.StatusOK, enrollRr.Code, "Enrollment failed: %s", enrollRr.Body.String())
 
@@ -558,7 +558,7 @@ func TestBatchEnrollment_Success(t *testing.T) {
 	student2 := testpkg.CreateTestStudent(t, ctx.db, "Batch", "Student2", "1b")
 
 	body := map[string]interface{}{
-		"student_ids": []int64{student1.ID, student2.ID},
+		"student_ids": []string{fmt.Sprint(student1.ID), fmt.Sprint(student2.ID)},
 	}
 
 	req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/activities/%d/students", activity.ID), body)
@@ -619,7 +619,7 @@ func TestQuickCreateActivity_Success(t *testing.T) {
 
 	body := map[string]interface{}{
 		"name":             fmt.Sprintf("QuickActivity-%d", time.Now().UnixNano()),
-		"category_id":      category.ID,
+		"category_id":      fmt.Sprint(category.ID),
 		"max_participants": 10,
 	}
 
@@ -644,7 +644,7 @@ func TestQuickCreateActivity_BadRequest_MissingName(t *testing.T) {
 	category := testpkg.CreateTestActivityCategory(t, ctx.db, fmt.Sprintf("QuickBad-%d", time.Now().UnixNano()))
 
 	body := map[string]interface{}{
-		"category_id":      category.ID,
+		"category_id":      fmt.Sprint(category.ID),
 		"max_participants": 10,
 	}
 

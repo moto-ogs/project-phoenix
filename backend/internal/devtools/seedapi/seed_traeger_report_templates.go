@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // seedTraegerReportTemplatesStep gives the demo Träger the two report
@@ -25,7 +27,7 @@ var seedTraegerReportDistricts = []string{"Nord", "Süd"}
 func seedTraegerReportTemplates(schools []int64) []map[string]any {
 	districts := make([]map[string]any, 0, len(schools))
 	for i, school := range schools {
-		districts = append(districts, map[string]any{"school_id": school, "district": seedTraegerReportDistricts[i%len(seedTraegerReportDistricts)]})
+		districts = append(districts, map[string]any{"school_id": ident.ID(school), "district": seedTraegerReportDistricts[i%len(seedTraegerReportDistricts)]})
 	}
 	return []map[string]any{
 		{

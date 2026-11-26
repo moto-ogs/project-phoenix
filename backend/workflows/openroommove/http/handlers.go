@@ -2,15 +2,16 @@ package openroommovehttp
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
+
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/moto-ogs/project-phoenix/workflows/openroommove"
 )
 
@@ -49,7 +50,7 @@ type checkInStudentsToOpenRoomRequest struct {
 // of the ordinary move; the destination only has to be released.
 func (rs *Resource) moveStudentsToOpenRoom(w http.ResponseWriter, r *http.Request) {
 	var req moveStudentsToOpenRoomRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := wire.Decode(r.Body, &req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
 		return
 	}
@@ -86,7 +87,7 @@ func (rs *Resource) moveStudentsToOpenRoom(w http.ResponseWriter, r *http.Reques
 // every source-side right of moveStudentsToOpenRoom.
 func (rs *Resource) checkInStudentsToOpenRoom(w http.ResponseWriter, r *http.Request) {
 	var req checkInStudentsToOpenRoomRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := wire.Decode(r.Body, &req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
 		return
 	}
@@ -148,6 +149,8 @@ func (rs *Resource) openRoomMoveErrorRenderer(err error) render.Renderer {
 		return common.ErrorNotFound(err)
 	case errors.Is(err, openroommove.ErrRoomNotReleased):
 		return common.ErrorConflictWithCode(err, common.CodeRoomsNotReleased)
+	case errors.Is(err, openroommove.ErrRoomClosed):
+		return common.ErrorConflictWithCode(err, common.CodeRoomsRoomClosed)
 	}
 	return rs.RenderPresenceError(err)
 }

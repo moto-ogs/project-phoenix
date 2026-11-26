@@ -183,39 +183,6 @@ func TestCallerRows_GetMyGroups(t *testing.T) {
 	})
 }
 
-func TestCallerContext_Navigation(t *testing.T) {
-	t.Parallel()
-	db := testpkg.SetupTestDB(t)
-	caller := setupCallerRows(t, db).Caller()
-
-	t.Run("returns one complete navigation projection", func(t *testing.T) {
-		staff, account := testpkg.CreateTestStaffWithAccount(t, db, "Navigation", "Staff")
-		group := testpkg.CreateTestEducationGroup(t, db, "Navigation Group")
-		today := testpkg.TodayDate()
-		testpkg.CreateTestGroupSubstitution(t, db, group.ID, nil, staff.ID, today, today.AddDays(1))
-
-		result, err := testpkg.TenantQuery0(t, callerCtx(t, account.ID), db, caller.Navigation)
-
-		require.NoError(t, err)
-		assert.Equal(t, staff.ID, result.StaffID)
-		require.Len(t, result.Groups, 1)
-		assert.Equal(t, group.ID, result.Groups[0].ID)
-		assert.True(t, result.Groups[0].ViaSubstitution)
-		assert.Empty(t, result.SupervisedSessionIDs)
-	})
-
-	t.Run("keeps current staff null for a non-staff account", func(t *testing.T) {
-		_, account := testpkg.CreateTestPersonWithAccount(t, db, "Navigation", "NonStaff")
-
-		result, err := testpkg.TenantQuery0(t, callerCtx(t, account.ID), db, caller.Navigation)
-
-		require.NoError(t, err)
-		assert.Zero(t, result.StaffID)
-		assert.Empty(t, result.Groups)
-		assert.Empty(t, result.SupervisedSessionIDs)
-	})
-}
-
 func TestCallerContext_MyActivityGroupIDs(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)
@@ -342,8 +309,9 @@ func TestCallerContext_UpdateProfile(t *testing.T) {
 
 		first, last := "UpdatedFirst", "UpdatedLast"
 		result, err := caller.UpdateProfile(callerCtx(t, account.ID), identityaccess.CallerProfileUpdate{
-			FirstName: &first,
-			LastName:  &last,
+			FirstName:       &first,
+			LastName:        &last,
+			ExpectedVersion: readProfileVersion(t, db, caller, account.ID),
 		})
 
 		require.NoError(t, err)
@@ -358,7 +326,8 @@ func TestCallerContext_UpdateProfile(t *testing.T) {
 		// Unique username to avoid a duplicate key error.
 		uniqueUsername := fmt.Sprintf("newusername_%d", time.Now().UnixNano())
 		result, err := caller.UpdateProfile(callerCtx(t, account.ID), identityaccess.CallerProfileUpdate{
-			Username: &uniqueUsername,
+			Username:        &uniqueUsername,
+			ExpectedVersion: readProfileVersion(t, db, caller, account.ID),
 		})
 
 		require.NoError(t, err)
@@ -370,7 +339,9 @@ func TestCallerContext_UpdateProfile(t *testing.T) {
 		_, account := testpkg.CreateTestPersonWithAccount(t, db, "Bio", "Update")
 
 		bio := "This is my bio"
-		result, err := caller.UpdateProfile(callerCtx(t, account.ID), identityaccess.CallerProfileUpdate{Bio: &bio})
+		result, err := caller.UpdateProfile(callerCtx(t, account.ID), identityaccess.CallerProfileUpdate{
+			Bio: &bio, ExpectedVersion: readProfileVersion(t, db, caller, account.ID),
+		})
 
 		require.NoError(t, err)
 		assert.Equal(t, "This is my bio", result.Bio)
@@ -380,6 +351,16 @@ func TestCallerContext_UpdateProfile(t *testing.T) {
 		_, err := caller.UpdateProfile(context.Background(), identityaccess.CallerProfileUpdate{})
 		require.Error(t, err)
 	})
+}
+
+// readProfileVersion reads the caller's profile version the way the profile
+// page does before an edit (ADR 0311).
+func readProfileVersion(t *testing.T, db *bun.DB, caller identityaccess.CallerContext, accountID int64) string {
+	t.Helper()
+	profile, err := testpkg.TenantQuery0(t, callerCtx(t, accountID), db, caller.Profile)
+	require.NoError(t, err)
+	require.NotNil(t, profile.Person)
+	return identityaccess.ProfileVersion(profile)
 }
 
 func TestCallerContext_UpdateAvatar(t *testing.T) {

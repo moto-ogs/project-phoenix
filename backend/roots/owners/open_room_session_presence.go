@@ -24,7 +24,15 @@ type OpenRoomSessionPresence struct {
 }
 
 func (s OpenRoomSessionPresence) GetStaffActiveGroupIDs(ctx context.Context, staffID int64) ([]int64, error) {
-	return activeStaffGroupIDs(ctx, s.Presence, staffID)
+	assignments, err := studentpresence.StaffSupervisionAssignmentsOf(s.Presence)
+	if err != nil {
+		return nil, err
+	}
+	ids, err := assignments.StaffSupervisionSessionIDs(ctx, staffID)
+	if err != nil {
+		return nil, &studentpresence.OperationError{Op: "GetStaffActiveSupervisions", Err: studentpresence.ErrDatabaseOperation}
+	}
+	return ids, nil
 }
 
 func (s OpenRoomSessionPresence) ListRunningSessionIDs(ctx context.Context) ([]int64, error) {
@@ -100,18 +108,6 @@ func (s OpenRoomSessionPresence) SessionSupervisorStaffIDs(ctx context.Context, 
 
 type groupSupervisionQuery interface {
 	QueryGroupSupervisions(context.Context, studentpresence.GroupSupervisionFilter) ([]studentpresence.GroupSupervision, error)
-}
-
-func activeStaffGroupIDs(ctx context.Context, presence groupSupervisionQuery, staffID int64) ([]int64, error) {
-	rows, err := supervisionsToday(ctx, presence, studentpresence.GroupSupervisionFilter{StaffID: &staffID}, "GetStaffActiveSupervisions")
-	if err != nil {
-		return nil, err
-	}
-	ids := make([]int64, 0, len(rows))
-	for _, row := range rows {
-		ids = append(ids, row.GroupID)
-	}
-	return ids, nil
 }
 
 // supervisionsToday reads the supervisions running today under the filter.

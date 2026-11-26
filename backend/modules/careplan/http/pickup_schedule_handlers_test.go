@@ -8,12 +8,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestGetStudentPickupSchedules(t *testing.T) {
@@ -212,6 +213,31 @@ func TestUpdateStudentPickupSchedules(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, rr.Code, "Body: %s", rr.Body.String())
 	})
+}
+
+func TestUpdateStudentPickupSchedulesKeepsDayPickupPersons(t *testing.T) {
+	t.Parallel()
+
+	tc := setupStudentsRoute(t, fixedCalendarClock)
+	student := testpkg.CreateTestStudent(t, tc.db, "Abholperson", "Wochenplan", "PP1")
+	_, account := testpkg.CreateTestTeacherWithAccount(t, tc.db, "Abholperson", "Wochenplan")
+	date := studentsTestToday.AddDays(1)
+	testpkg.CreateTestPickupPerson(t, tc.db, student.ID, date, 0, "Onkel Ali", 0)
+
+	req := testutil.NewAuthenticatedRequest(t, http.MethodPut, fmt.Sprintf("/%d/pickup-schedules", student.ID), map[string]any{
+		"schedules":        []map[string]any{{"weekday": 1, "pickup_time": "15:30"}},
+		"expected_version": weeklyPlanVersion(t, tc, student.ID),
+	})
+	rr := authExec(t, tc, req, testutil.AdminTestClaims(int(account.ID)), []string{"admin:*"})
+	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+
+	var response struct {
+		Data struct {
+			PickupPersons []pickupPersonWire `json:"pickup_persons"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &response))
+	assert.Equal(t, []pickupPersonWire{{ExceptionDate: date.String(), Name: "Onkel Ali", OneTime: true}}, response.Data.PickupPersons)
 }
 
 func TestCreateStudentPickupException(t *testing.T) {
@@ -754,7 +780,7 @@ func TestBulkUpsertPickupSchedules(t *testing.T) {
 	_, account := testpkg.CreateTestTeacherWithAccount(t, tc.db, "BulkPickupAPI", "Teacher")
 
 	body := map[string]any{
-		"student_ids": []int64{student1.ID, student2.ID},
+		"student_ids": []string{fmt.Sprint(student1.ID), fmt.Sprint(student2.ID)},
 		"schedules":   []map[string]any{{"weekday": 3, "pickup_time": "16:20"}},
 	}
 	req := testutil.NewAuthenticatedRequest(t, "POST", "/pickup-schedules/bulk", body)

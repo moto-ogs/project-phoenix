@@ -13,13 +13,22 @@ func NewParentArrivalSchedules(source careplan.ArrivalScheduleService) parentpor
 		return nil
 	}
 	return parentportal.NewArrivalSchedules(parentportal.ArrivalSchedulesCallbacks{
-		GetStudentArrivalExceptionForDate: func(ctx context.Context, id int64, date calendar.Date) (*parentportal.ArrivalExceptionSnapshot, error) {
-			value, err := source.GetStudentArrivalExceptionForDate(ctx, id, date)
-			return parentCarePlanPointer(value, parentCarePlanFromOwnerArrivalException), err
+		GetStudentArrivalExceptionsForDate: func(ctx context.Context, ids []int64, date calendar.Date) (map[int64]*parentportal.ArrivalExceptionSnapshot, error) {
+			values, err := source.GetStudentArrivalExceptionsForDate(ctx, ids, date)
+			if values == nil {
+				return nil, err
+			}
+			out := make(map[int64]*parentportal.ArrivalExceptionSnapshot, len(values))
+			for id, value := range values {
+				out[id] = parentCarePlanPointer(value, parentCarePlanFromOwnerArrivalException)
+			}
+			return out, err
 		},
-		GetStudentArrivalScheduleForWeekday: func(ctx context.Context, id int64, weekday int) (*parentportal.ArrivalScheduleSnapshot, error) {
-			value, err := source.GetStudentArrivalScheduleForWeekday(ctx, id, weekday)
-			return parentCarePlanPointer(value, parentCarePlanFromOwnerArrivalSchedule), err
+		GetWeeklySchedulesByStudentIDsAndWeekday: func(ctx context.Context, ids []int64, weekday int) ([]*parentportal.ArrivalScheduleSnapshot, error) {
+			value, err := source.GetWeeklySchedulesByStudentIDsAndWeekday(ctx, ids, weekday)
+			return parentCarePlanSlice(value, func(value *careplan.ArrivalSchedule) *parentportal.ArrivalScheduleSnapshot {
+				return parentCarePlanPointer(value, parentCarePlanFromOwnerArrivalSchedule)
+			}), err
 		},
 		GetStudentArrivalSchedules: func(ctx context.Context, id int64) ([]*parentportal.ArrivalScheduleSnapshot, error) {
 			value, err := source.GetStudentArrivalSchedules(ctx, id)

@@ -2,7 +2,6 @@ package common
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -161,13 +160,22 @@ type ErrResponse struct {
 	// react to a conflict without having to refetch and pattern-match local
 	// state. Populated by helpers like ErrorConflictWithDetails. Keys are
 	// snake_case to match the rest of the API's wire format.
-	Details map[string]any `json:"details,omitempty"`
+	Details any `json:"details,omitempty"`
 }
+
+// Installed by testhooks. Check at the renderer, before JSON erases the
+// identity of the Go type that supplied the payload.
+var problemDetailsObserver func(*http.Request, string, any) error
 
 // Render implements the render.Renderer interface for ErrResponse
 func (e *ErrResponse) Render(_ http.ResponseWriter, r *http.Request) error {
 	if e.Code == "" {
 		e.Code = ErrorClassCode(e.HTTPStatusCode)
+	}
+	if e.Details != nil && problemDetailsObserver != nil {
+		if err := problemDetailsObserver(r, e.Code, e.Details); err != nil {
+			return err
+		}
 	}
 	e.Type = problemType(e.Code, e.HTTPStatusCode)
 	e.Title = problemTitle(e.HTTPStatusCode)
@@ -278,7 +286,7 @@ func ErrorForbiddenWithCode(err error, code string) render.Renderer {
 
 // ErrorForbiddenWithDetails returns a 403 with a stable code and the values
 // its message names, for a refusal the client explains itself (#4893).
-func ErrorForbiddenWithDetails(err error, code string, details map[string]any) render.Renderer {
+func ErrorForbiddenWithDetails(err error, code string, details any) render.Renderer {
 	resp := newErrResponse(http.StatusForbidden, err)
 	resp.Code = code
 	resp.Details = details
@@ -289,11 +297,13 @@ func ErrorForbiddenWithDetails(err error, code string, details map[string]any) r
 // school that has not booked module (#4893, #4895). The module key and its
 // name travel in details, so the client explains the missing module.
 func ErrorModuleNotBooked(err error, module, moduleLabel string) render.Renderer {
-	details := map[string]any{"module": module}
-	if moduleLabel != "" {
-		details["module_label"] = moduleLabel
-	}
+	details := ModuleNotBookedDetails{Module: module, ModuleLabel: moduleLabel}
 	return ErrorForbiddenWithDetails(err, CodeModuleNotBooked, details)
+}
+
+type ModuleNotBookedDetails struct {
+	Module      string `json:"module"`
+	ModuleLabel string `json:"module_label,omitempty"`
 }
 
 // ErrorNotFound returns a 404 Not Found error response
@@ -373,7 +383,7 @@ func ErrorConflictOnField(err error, code, field string) render.Renderer {
 // and a structured details payload. Use this when the frontend needs concrete
 // fields (e.g. the conflicting session_id) to drive a follow-up action — it
 // removes the dependency on whichever local state happens to be loaded.
-func ErrorConflictWithDetails(err error, code string, details map[string]any) render.Renderer {
+func ErrorConflictWithDetails(err error, code string, details any) render.Renderer {
 	return &ErrResponse{
 		Err:            err,
 		HTTPStatusCode: http.StatusConflict,
@@ -386,7 +396,7 @@ func ErrorConflictWithDetails(err error, code string, details map[string]any) re
 // ErrorInvalidRequestWithDetails returns a 400 Bad Request carrying a stable
 // code and the values the refused input names (#2514), so the client words
 // the limit itself instead of reading the message.
-func ErrorInvalidRequestWithDetails(err error, code string, details map[string]any) render.Renderer {
+func ErrorInvalidRequestWithDetails(err error, code string, details any) render.Renderer {
 	resp := newErrResponse(http.StatusBadRequest, err)
 	resp.Code = code
 	resp.Details = details
@@ -418,11 +428,7 @@ func ErrorBusinessRejection(err error) render.Renderer {
 	if !errors.As(err, &rejection) {
 		return ErrorInternalServer(err)
 	}
-	details, detailErr := detailsObject(rejection.ErrorDetails())
-	if detailErr != nil {
-		return ErrorInternalServer(fmt.Errorf("encode %s details: %w", rejection.ErrorCode(), detailErr))
-	}
-	return ErrorConflictWithDetails(rejection, rejection.ErrorCode(), details)
+	return ErrorConflictWithDetails(rejection, rejection.ErrorCode(), rejection.ErrorDetails())
 }
 
 // ErrorBusinessRejectionOr renders like ErrorBusinessRejection. An error
@@ -436,22 +442,6 @@ func ErrorBusinessRejectionOr(fallbackCode string) func(error) render.Renderer {
 		}
 		return ErrorConflictWithCode(err, fallbackCode)
 	}
-}
-
-// detailsObject turns a rejection's typed details into the wire map.
-func detailsObject(value any) (map[string]any, error) {
-	if value == nil {
-		return nil, nil
-	}
-	encoded, err := json.Marshal(value)
-	if err != nil {
-		return nil, err
-	}
-	details := map[string]any{}
-	if err := json.Unmarshal(encoded, &details); err != nil {
-		return nil, err
-	}
-	return details, nil
 }
 
 // ErrorConflictMessage returns a 409 Conflict with a user-facing message string.
@@ -485,7 +475,7 @@ func ErrorInvalidRequestMessageWithCode(message, code string) render.Renderer {
 
 // ErrorInvalidRequestMessageWithCodeAndDetails returns a 400 with user-facing
 // copy, a stable domain code and structured values named by that copy.
-func ErrorInvalidRequestMessageWithCodeAndDetails(message, code string, details map[string]any) render.Renderer {
+func ErrorInvalidRequestMessageWithCodeAndDetails(message, code string, details any) render.Renderer {
 	resp := ErrorInvalidRequestMessageWithCode(message, code).(*ErrResponse)
 	resp.Details = details
 	return resp

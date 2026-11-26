@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar/portal/internal/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/collation"
 )
@@ -90,7 +92,7 @@ func (s *service) staffRecipientOptions(ctx context.Context, query string, limit
 		}
 		name := staffName(row)
 		if matchesRecipientQuery(name, query) {
-			staffOptions = append(staffOptions, StaffOption{ID: formatID(row.ID), Name: name})
+			staffOptions = append(staffOptions, StaffOption{ID: ident.ID(row.ID), Name: name})
 			if len(staffOptions) >= limit {
 				break
 			}
@@ -127,7 +129,7 @@ func (s *service) parentRecipientOptions(ctx context.Context, query recipientQue
 			break
 		}
 		if _, ok := activeParents[parent.ID]; ok && visible[parent.ID] {
-			parentOptions = append(parentOptions, ParentOption{ID: formatID(parent.ID), Name: guardianName(parent)})
+			parentOptions = append(parentOptions, ParentOption{ID: ident.ID(parent.ID), Name: guardianName(parent)})
 		}
 	}
 	return parentOptions, nil
@@ -169,7 +171,7 @@ func (s *service) groupRecipientOptions(ctx context.Context, query string, limit
 	groupOptions := make([]GroupOption, 0, min(limit, len(groups)))
 	for _, group := range groups {
 		if matchesRecipientQuery(group.Name, query) {
-			groupOptions = append(groupOptions, GroupOption{ID: formatID(group.ID), Name: group.Name})
+			groupOptions = append(groupOptions, GroupOption{ID: ident.ID(group.ID), Name: group.Name})
 			if len(groupOptions) >= limit {
 				break
 			}
@@ -206,13 +208,13 @@ func (s *service) studentRecipientOptions(ctx context.Context, query string, lim
 		if !matchesRecipientQuery(name, query) {
 			continue
 		}
-		var groupID *string
+		var groupID *ident.ID
 		if row.GroupID != nil {
-			value := formatID(*row.GroupID)
+			value := ident.ID(*row.GroupID)
 			groupID = &value
 		}
 		studentOptions = append(studentOptions, StudentOption{
-			ID:          formatID(row.ID),
+			ID:          ident.ID(row.ID),
 			Name:        name,
 			SchoolClass: row.SchoolClass,
 			GroupID:     groupID,

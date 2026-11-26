@@ -18,7 +18,7 @@ import type { ApplicationContractResponse } from "~/lib/contract/care-contracts.
 import { formatBerlinDate, formatDate } from "~/lib/date-helpers";
 import type { AdminRequestChild } from "~/lib/enrollment-admin-api";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
-import { notBookedModuleOf } from "~/lib/module-not-booked";
+import { isModuleNotBooked } from "~/lib/module-not-booked";
 import { useSWRAuth } from "~/lib/swr";
 import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
 import type {
@@ -97,7 +97,7 @@ export function AdminEnrollmentContracts({
     ids.length > 0 ? enrollmentKeys.applicationContracts(requestId, ids) : null,
     () => getApplicationContracts(ids),
   );
-  const notBooked = notBookedModuleOf(error) !== null;
+  const notBooked = isModuleNotBooked(error);
   const load = useSwrResourceLoadError(
     [{ data, error: notBooked ? undefined : error }],
     "die Betreuungsverträge",

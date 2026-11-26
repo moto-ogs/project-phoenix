@@ -55,6 +55,7 @@ type testTimetableOptions struct {
 	materialization            timetableModule.MaterializationCapability
 	nonWorkingDays             timetableModule.NonWorkingDayCalendar
 	instances                  timetableModule.InstanceLifecycleCapability
+	offeringSources            timetableModule.OfferingSourceSupport
 }
 
 // testTimetableData builds the Timetable owner's template writes, planner
@@ -97,6 +98,7 @@ func testTimetableWith(db *bun.DB, options testTimetableOptions, clocks ...func(
 		Materialization:            options.materialization,
 		NonWorkingDays:             options.nonWorkingDays,
 		Instances:                  options.instances,
+		OfferingSources:            options.offeringSources,
 	}
 	if len(clocks) > 0 && clocks[0] != nil {
 		composed.Clock = clocks[0]
@@ -126,6 +128,7 @@ type TimetableOptions struct {
 	Materialization            timetableModule.MaterializationCapability
 	NonWorkingDays             timetableModule.NonWorkingDayCalendar
 	Instances                  timetableModule.InstanceLifecycleCapability
+	OfferingSources            timetableModule.OfferingSourceSupport
 	Clock                      func() time.Time
 }
 

@@ -79,7 +79,7 @@ func TestSchoolStaffMessagesCrossPortal(t *testing.T) {
 	recipients := decodeData[[]staffmessaging.RecipientResponse](t, rec.Body.Bytes())
 	var ogsRecipient *staffmessaging.RecipientResponse
 	for i := range recipients {
-		if recipients[i].AccountID == fmt.Sprint(ogsAccount.ID) {
+		if recipients[i].AccountID.String() == fmt.Sprint(ogsAccount.ID) {
 			ogsRecipient = &recipients[i]
 		}
 	}
@@ -96,7 +96,7 @@ func TestSchoolStaffMessagesCrossPortal(t *testing.T) {
 	require.NotEmpty(t, opened.ThreadID)
 	assert.Equal(t, "staff", opened.CounterpartRoleKind)
 
-	req = httptest.NewRequest(http.MethodPost, "/school/staff-messages/threads/"+opened.ThreadID,
+	req = httptest.NewRequest(http.MethodPost, "/school/staff-messages/threads/"+opened.ThreadID.String(),
 		strings.NewReader(`{"body":"Lena aus der 2a war heute sehr müde.","client_message_id":"5419-lost-response"}`))
 	req.Header.Set("Content-Type", "application/json")
 	rec = testutil.ExecuteWithAuth(t, schoolRouter, req, teacherClaims)
@@ -105,7 +105,7 @@ func TestSchoolStaffMessagesCrossPortal(t *testing.T) {
 	// The first response is lost. Retrying the identical attempt must return
 	// the persisted message rather than append another one.
 	first := decodeData[staffmessaging.MessageResponse](t, rec.Body.Bytes())
-	req = httptest.NewRequest(http.MethodPost, "/school/staff-messages/threads/"+opened.ThreadID,
+	req = httptest.NewRequest(http.MethodPost, "/school/staff-messages/threads/"+opened.ThreadID.String(),
 		strings.NewReader(`{"body":"Lena aus der 2a war heute sehr müde.","client_message_id":"5419-lost-response"}`))
 	req.Header.Set("Content-Type", "application/json")
 	rec = testutil.ExecuteWithAuth(t, schoolRouter, req, teacherClaims)
@@ -125,19 +125,19 @@ func TestSchoolStaffMessagesCrossPortal(t *testing.T) {
 	assert.Equal(t, 1, inbox[0].UnreadCount)
 
 	// 4. The Betreuungskraft answers through the tenant mount ...
-	req = httptest.NewRequest(http.MethodPost, "/threads/"+opened.ThreadID,
+	req = httptest.NewRequest(http.MethodPost, "/threads/"+opened.ThreadID.String(),
 		strings.NewReader(`{"body":"Danke, wir achten drauf."}`))
 	req.Header.Set("Content-Type", "application/json")
 	rec = testutil.ExecuteWithAuth(t, tenantRouter, req, ogsClaims)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
 	// ... and the Lehrkraft reads both messages through the school mount.
-	req = httptest.NewRequest(http.MethodGet, "/school/staff-messages/threads/"+opened.ThreadID, nil)
+	req = httptest.NewRequest(http.MethodGet, "/school/staff-messages/threads/"+opened.ThreadID.String(), nil)
 	rec = testutil.ExecuteWithAuth(t, schoolRouter, req, teacherClaims)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	detail := decodeData[staffmessaging.ThreadDetailResponse](t, rec.Body.Bytes())
 	require.Len(t, detail.Messages, 2)
-	assert.Equal(t, fmt.Sprint(ogsAccount.ID), detail.Messages[1].SenderAccountID)
+	assert.Equal(t, fmt.Sprint(ogsAccount.ID), detail.Messages[1].SenderAccountID.String())
 
 	req = httptest.NewRequest(http.MethodGet, "/school/staff-messages/unread-count", nil)
 	rec = testutil.ExecuteWithAuth(t, schoolRouter, req, teacherClaims)

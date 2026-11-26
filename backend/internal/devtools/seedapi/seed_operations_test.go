@@ -43,17 +43,21 @@ func TestSeedOperationsDemoStepCreatesOperationalPlanningData(t *testing.T) {
 		"/api/settings/values/operations.meal_registration_enabled",
 		"/api/timetable/closing-days",
 	}
+	for _, weekday := range []string{"monday", "tuesday", "wednesday", "thursday", "friday"} {
+		want = append(want, "/api/settings/values/opening_hours."+weekday+"_open", "/api/settings/values/opening_hours."+weekday+"_close")
+	}
+	want = append(want, "/api/opening-changes/")
 	for _, day := range demoMealDates(todaySeedDate()) {
 		want = append(want, "/api/meal-plan/days/"+day)
 	}
 	want = append(want, "/api/shift-types/defaults", "/api/staff-shifts", "/api/staff-shifts")
 	assert.Equal(t, want, paths)
 	require.Len(t, shifts, 2)
-	assert.EqualValues(t, 17, shifts[0]["staff_id"])
-	assert.EqualValues(t, 81, shifts[0]["shift_type_id"])
+	assert.Equal(t, "17", shifts[0]["staff_id"])
+	assert.Equal(t, "81", shifts[0]["shift_type_id"])
 	// The second Schichtart lands in the same week, the day after.
-	assert.EqualValues(t, 17, shifts[1]["staff_id"])
-	assert.EqualValues(t, 82, shifts[1]["shift_type_id"])
+	assert.Equal(t, "17", shifts[1]["staff_id"])
+	assert.Equal(t, "82", shifts[1]["shift_type_id"])
 	first, err := time.Parse(seedDateLayout, shifts[0]["date"].(string))
 	require.NoError(t, err)
 	assert.Equal(t, first.AddDate(0, 0, 1).Format(seedDateLayout), shifts[1]["date"])

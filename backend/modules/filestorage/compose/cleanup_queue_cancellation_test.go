@@ -36,6 +36,9 @@ func cleanupOwnerFixture(t *testing.T, db *bun.DB, mode string) cleanupOwnerOper
 	objects := &memoryObjects{objects: map[string][]byte{}}
 	fixture := cleanupOwnerOperation{names: []string{"z-first.pdf", "a-second.pdf", "m-third.pdf"}, objects: objects}
 	var oldOwnerID int64
+	// The folder delete confirms the files its dialog named, read once the
+	// fixture's files are in place.
+	var confirmDelete func()
 	if mode == "folder" {
 		files, _, err := api.NewFileStoreTestModule(testpkg.NewDatabase(t, db), testpkg.TenantRuntime(t, db), objects)
 		require.NoError(t, err)
@@ -45,7 +48,18 @@ func cleanupOwnerFixture(t *testing.T, db *bun.DB, mode string) cleanupOwnerOper
 		other, err := files.CreateFolder(ctx, filestorage.FolderInput{Name: "Cancellation sentinel", Visibility: "all_staff"}, actor)
 		require.NoError(t, err)
 		fixture.ownerID, oldOwnerID = folder.ID, other.ID
-		fixture.run = func(ctx context.Context) error { return files.DeleteFolder(ctx, folder.ID, actor) }
+		var fingerprint string
+		confirmDelete = func() {
+			overview, err := files.ListFolders(ctx, actor)
+			require.NoError(t, err)
+			for _, listed := range overview.Folders {
+				if listed.ID == folder.ID {
+					fingerprint = listed.DeleteFingerprint
+				}
+			}
+			require.NotEmpty(t, fingerprint)
+		}
+		fixture.run = func(ctx context.Context) error { return files.DeleteFolder(ctx, folder.ID, fingerprint, actor) }
 	} else {
 		fixture.ownerID = testpkg.CreateTestParentAnnouncement(t, db, account.ID, "Cancellation subject").ID
 		oldOwnerID = testpkg.CreateTestParentAnnouncement(t, db, account.ID, "Cancellation sentinel").ID
@@ -70,6 +84,9 @@ func cleanupOwnerFixture(t *testing.T, db *bun.DB, mode string) cleanupOwnerOper
 	for _, name := range fixture.names {
 		_, err := objects.SavePrivate(ctx, cleanupProbeKind(mode), tenantID, name, bytes.NewBufferString("%PDF-cancellation"))
 		require.NoError(t, err)
+	}
+	if confirmDelete != nil {
+		confirmDelete()
 	}
 	return fixture
 }

@@ -39,7 +39,7 @@ var parentBillingDefinitions = []config.Definition{
 	{
 		Key:             config.KeyParentBillingDebtorNumberScope,
 		Levels:          config.LevelTraeger,
-		Label:           "Debitorennummer gilt je",
+		Label:           "Debitorennummer zuordnen",
 		Description:     "Zahler: Jeder Rechnungsempfänger hat eine Nummer, Geschwister teilen sie. Kind: Jedes Kind hat eine eigene Nummer. Wenn du umstellst, bleiben alle gespeicherten Nummern erhalten, und ausgestellte Rechnungen behalten ihre Nummer. Neue Rechnungen nehmen ab dann die Nummer nach der neuen Einstellung. Fehlt sie dort, bleibt die Rechnung ohne Nummer.",
 		Type:            config.FieldSelect,
 		Default:         "payer",

@@ -631,7 +631,10 @@ describe("updateStudent", () => {
       .mockResolvedValueOnce(
         problem(409, {
           detail: "linked child may not walk along",
-          conflicts: [{ student_id: 42, weekdays: ["mon"] }],
+          code: "students.companion_plan_conflict",
+          details: {
+            conflicts: [{ student_id: "9007199254740993", weekdays: ["mon"] }],
+          },
         }),
       )
       .mockResolvedValueOnce(
@@ -647,7 +650,9 @@ describe("updateStudent", () => {
     expect(conflict).toBeInstanceOf(CompanionPlanConflictError);
     expect(conflict).toMatchObject({
       status: 409,
-      conflicts: [{ companion_student_id: "42", weekdays: ["mon"] }],
+      conflicts: [
+        { companion_student_id: "9007199254740993", weekdays: ["mon"] },
+      ],
     });
 
     const sickExcused = await updateStudent("1", { first_name: "A" }).catch(
@@ -703,8 +708,11 @@ describe("updateStudent", () => {
       .mockResolvedValueOnce(
         problem(409, {
           detail: "companion may not walk along on this day",
-          conflicts: [{ student_id: 7, weekdays: ["mon"] }],
-          details: { other: 1 },
+          code: "students.companion_plan_conflict",
+          details: {
+            other: 1,
+            conflicts: [{ student_id: "7", weekdays: ["mon"] }],
+          },
         }),
       )
       .mockResolvedValueOnce(ok(null))
@@ -727,7 +735,10 @@ describe("updateStudent", () => {
     expect(conflict).toBeInstanceOf(CompanionPlanConflictError);
     expect(conflict).toMatchObject({
       status: 409,
-      details: { other: 1, privacy_consent_saved: true },
+      details: {
+        other: 1,
+        conflicts: [{ student_id: "7", weekdays: ["mon"] }],
+      },
     });
     expect(isPrivacyConsentSaved(conflict)).toBe(true);
     expect(isCompanionsChanged(stale)).toBe(true);
@@ -809,7 +820,9 @@ describe("guarded student deletion", () => {
 
 describe("student photo", () => {
   it("posts the photo as multipart form data and answers its URL", async () => {
-    fetchMock.mockResolvedValueOnce(ok({ photo_url: "/uploads/p.jpg" }));
+    fetchMock.mockResolvedValueOnce(
+      ok({ student_id: "7", photo_version: "p.jpg" }),
+    );
 
     const result = await uploadStudentPhoto(
       "7",
@@ -817,7 +830,7 @@ describe("student photo", () => {
       { consentAcknowledged: true },
     );
 
-    expect(result).toEqual({ photoUrl: "/uploads/p.jpg" });
+    expect(result).toEqual({ photoUrl: "/api/students/7/photo/p.jpg" });
     expect(calledUrl()).toBe("/api/students/7/photo");
     const body = calledInit().body as FormData;
     expect(body).toBeInstanceOf(FormData);
@@ -826,7 +839,9 @@ describe("student photo", () => {
   });
 
   it("keeps the file name of a File and sends no consent unasked", async () => {
-    fetchMock.mockResolvedValueOnce(ok({ photo_url: "/uploads/p.jpg" }));
+    fetchMock.mockResolvedValueOnce(
+      ok({ student_id: "7", photo_version: "p.jpg" }),
+    );
 
     await uploadStudentPhoto(
       "7",

@@ -8,7 +8,10 @@ import type { LucideIcon } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { IconTile } from "~/components/ui/icon-tile";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
-import { CARD_SURFACE_PADDING } from "~/components/ui/card-surface";
+import {
+  CARD_SURFACE_PADDING,
+  CARD_TITLE_SIZES,
+} from "~/components/ui/card-surface";
 import { SectionCardSurface } from "~/components/ui/section-card-surface";
 import { Z_LAYER } from "~/components/ui/overlay-styles";
 import type { MotoConcept } from "~/lib/moto-concepts";
@@ -22,16 +25,11 @@ const ZONE_PADDING_X = "compact:px-4 px-5 max-sm:px-4";
 const ZONE_PADDING_TOP = "compact:pt-4 pt-5 max-sm:pt-4";
 const ZONE_PADDING_BOTTOM = "compact:pb-4 pb-5 max-sm:pb-4";
 
-// Die Titelstufen einer Karte. `lg` steht als hervorgehobener Abschnitt mittig
-// neben der Symbolfläche, `page` und `display` tragen den Seitenkopf des
-// Elternportals (`display` die Begrüßung auf der Startseite).
-const TITLE_SIZES = {
-  sm: "text-sm",
-  md: "text-base",
-  lg: "flex min-h-9 items-center text-xl leading-tight tracking-tight sm:min-h-10",
-  page: "text-xl leading-tight tracking-tight break-words sm:text-2xl",
-  display: "text-2xl leading-tight tracking-tight break-words sm:text-[28px]",
-} as const;
+/**
+ * Abstand zwischen Kopf und Inhalt, in allen drei Stufen. Wer `bodyClassName`
+ * setzt, um Layout anzuhängen, setzt diesen Wert davor, statt ihn abzuschreiben.
+ */
+export const SECTION_CARD_BODY_GAP = "compact:mt-3 mt-4 max-sm:mt-3";
 
 function SectionCardLoadingRows({ rows }: Readonly<{ rows: number }>) {
   return (
@@ -351,9 +349,9 @@ export function SectionCard({
    */
   namedRegion?: boolean;
   /** Schriftstufe des Titels; die Größe kommt nie über `titleClassName`. */
-  titleSize?: keyof typeof TITLE_SIZES;
+  titleSize?: keyof typeof CARD_TITLE_SIZES;
   titleClassName?: string;
-  /** Overrides the default `mt-4` spacing above the body. */
+  /** Overrides the default spacing above the body (`SECTION_CARD_BODY_GAP`). */
   bodyClassName?: string;
   className?: string;
   overflow?: "hidden" | "visible";
@@ -424,7 +422,9 @@ export function SectionCard({
   let surfacePadding = "";
   if (padding === "default" && !zoned) surfacePadding = CARD_SURFACE_PADDING;
   const bodySpacing =
-    hasHeader && !bare ? (bodyClassName ?? "compact:mt-3 mt-4") : bodyClassName;
+    hasHeader && !bare
+      ? (bodyClassName ?? SECTION_CARD_BODY_GAP)
+      : bodyClassName;
   const bodyClasses = zoned
     ? cn(
         !flush && ZONE_PADDING_X,
@@ -495,7 +495,7 @@ export function SectionCard({
                       id={namedRegion ? headingId : undefined}
                       className={cn(
                         "font-semibold text-balance text-gray-900",
-                        TITLE_SIZES[titleSize],
+                        CARD_TITLE_SIZES[titleSize],
                         titleClassName,
                       )}
                     >

@@ -10,7 +10,7 @@ import {
   useOpenCareGroupMode,
   usePresenceMode,
 } from "~/lib/tenant-context";
-import { isHelpTopicAvailable } from "~/lib/help-topic-availability";
+import { helpTopicForRole } from "~/lib/help-topic-availability";
 import {
   buildHelpHref,
   type HelpRole,
@@ -72,14 +72,15 @@ export function ContextHelpLink({
   // sind aber fuer die Leitung geschrieben. Dann fuehrte der Knopf in eine
   // fremde Seitenleiste mit einer Brotkrume, die es fuer die Rolle nicht gibt.
   // Lieber kein Fragezeichen als eines, das in die falsche Anleitung fuehrt.
-  const hasArticleForRole = useMemo(
-    () =>
-      isHelpTopicAvailable(topic, role, presenceMode, groupMode, nfcEnabled),
+  // Eine Seite fuer Leitung und Team (Betreuungsplan, #8134) fuehrt jede Rolle
+  // in ihren eigenen Artikel.
+  const topicForRole = useMemo(
+    () => helpTopicForRole(topic, role, presenceMode, groupMode, nfcEnabled),
     [groupMode, nfcEnabled, presenceMode, role, topic],
   );
 
   const href = buildContextHelpHref({
-    topic,
+    topic: topicForRole ?? topic,
     role,
     nfcEnabled,
     presenceMode,
@@ -87,11 +88,12 @@ export function ContextHelpLink({
     returnTo,
   });
 
-  if (!hasArticleForRole) return null;
+  if (!topicForRole) return null;
 
   return (
     <ButtonLink
       href={href}
+      nativeAnchor
       variant="ghost"
       size="icon"
       aria-label="Hilfe zu dieser Seite"

@@ -27,7 +27,11 @@ type letterRepo struct {
 }
 
 func (r *letterRepo) FindByID(_ context.Context, _ int64) (*StaffParentAnnouncement, error) {
-	return r.announcement, nil
+	return asStored(r.announcement), nil
+}
+
+func (r *letterRepo) FindByIDForUpdate(ctx context.Context, id int64) (*StaffParentAnnouncement, error) {
+	return r.FindByID(ctx, id)
 }
 
 func (r *letterRepo) ListTargets(_ context.Context, _ int64) ([]*StaffParentAnnouncementTarget, error) {
@@ -182,7 +186,7 @@ func TestPublishLetterMailCarriesBodyAndAckHint(t *testing.T) {
 	outbox := &letterOutbox{}
 	svc := newLetterService(repo, outbox, &letterDeliveries{})
 
-	if _, err := svc.Publish(context.Background(), 42); err != nil {
+	if _, err := publishAsRead(context.Background(), svc, 42); err != nil {
 		t.Fatalf("Publish: %v", err)
 	}
 	if len(outbox.requests) != 1 {
@@ -232,7 +236,7 @@ func TestPublishStandardAnnouncementStaysUntracked(t *testing.T) {
 			t.Errorf("delivery rows written %d times, want 0 for a plain Mitteilung", deliveries.replaced)
 		}
 	}()
-	_, _ = svc.Publish(context.Background(), 42)
+	_, _ = publishAsRead(context.Background(), svc, 42)
 }
 
 // The matrix has to show the people who get nothing — that is the data the
@@ -252,7 +256,7 @@ func TestPublishLetterRecordsUnreachableRecipients(t *testing.T) {
 	deliveries := &letterDeliveries{}
 	svc := newLetterService(repo, outbox, deliveries)
 
-	if _, err := svc.Publish(context.Background(), 42); err != nil {
+	if _, err := publishAsRead(context.Background(), svc, 42); err != nil {
 		t.Fatalf("Publish: %v", err)
 	}
 	if len(outbox.requests) != 1 {
@@ -296,7 +300,7 @@ func TestPublishLetterAllContactsMailsGuardiansWithoutPortal(t *testing.T) {
 	deliveries := &letterDeliveries{}
 	svc := newLetterService(repo, outbox, deliveries)
 
-	if _, err := svc.Publish(context.Background(), 42); err != nil {
+	if _, err := publishAsRead(context.Background(), svc, 42); err != nil {
 		t.Fatalf("Publish: %v", err)
 	}
 	if len(outbox.requests) != 2 {
@@ -340,7 +344,7 @@ func TestPublishLetterSharedAddressSendsOnce(t *testing.T) {
 	deliveries := &letterDeliveries{}
 	svc := newLetterService(repo, outbox, deliveries)
 
-	if _, err := svc.Publish(context.Background(), 42); err != nil {
+	if _, err := publishAsRead(context.Background(), svc, 42); err != nil {
 		t.Fatalf("Publish: %v", err)
 	}
 	if len(outbox.requests) != 1 {
@@ -372,7 +376,7 @@ func TestPublishLetterSharedAddressKeepsPortalPromptForAccessibleGuardian(t *tes
 	outbox := &letterOutbox{}
 	svc := newLetterService(repo, outbox, &letterDeliveries{})
 
-	if _, err := svc.Publish(context.Background(), 42); err != nil {
+	if _, err := publishAsRead(context.Background(), svc, 42); err != nil {
 		t.Fatalf("Publish: %v", err)
 	}
 	if len(outbox.requests) != 1 {
@@ -399,7 +403,7 @@ func TestUnpublishDropsDeliveryRows(t *testing.T) {
 	deliveries := &letterDeliveries{}
 	svc := newLetterService(repo, &letterOutbox{}, deliveries)
 
-	if _, err := svc.Publish(context.Background(), 42); err != nil {
+	if _, err := publishAsRead(context.Background(), svc, 42); err != nil {
 		t.Fatalf("Publish: %v", err)
 	}
 	if len(deliveries.rows) == 0 {

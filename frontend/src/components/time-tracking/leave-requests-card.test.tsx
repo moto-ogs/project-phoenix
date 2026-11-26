@@ -13,6 +13,11 @@ import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
 import { ABSENCES_REFRESH_EVENT } from "~/lib/absence-helpers";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
+import { berlinTodayISO } from "~/lib/date-helpers";
+import type {
+  OwnLeaveOverview,
+  OwnTimeAbsence,
+} from "~/lib/contract/time-tracking.generated";
 import type { StaffAbsence } from "~/lib/time-tracking-helpers";
 
 import { LeaveRequestsCard } from "./leave-requests-card";
@@ -20,8 +25,10 @@ import { LeaveRequestsCard } from "./leave-requests-card";
 const mocks = vi.hoisted(() => ({
   cancelAbsence: vi.fn(),
   getAbsences: vi.fn(),
-  getQuestionedAbsences: vi.fn(),
-  getVacationQuota: vi.fn(),
+  questions: vi.fn(),
+  getLeaveOverview: vi.fn(),
+  recent: vi.fn(),
+  quota: vi.fn(),
   resubmitAbsence: vi.fn(),
   toastError: vi.fn(),
   toastSuccess: vi.fn(),
@@ -34,6 +41,57 @@ const mocks = vi.hoisted(() => ({
     } => ({ mails: {}, loadError: null }),
   ),
 }));
+
+function wireAbsence(row: StaffAbsence): OwnTimeAbsence {
+  return {
+    id: row.id,
+    absence_type: row.absenceType,
+    absence_type_id: row.absenceTypeId ?? undefined,
+    absence_type_label: row.absenceTypeLabel,
+    date_start: row.dateStart,
+    date_end: row.dateEnd,
+    half_day: row.halfDay,
+    start_half_day: row.startHalfDay,
+    end_half_day: row.endHalfDay,
+    note: row.note,
+    status: row.status,
+    decision_note: row.decisionNote,
+    requested_at: row.requestedAt,
+    duration_days: row.durationDays,
+    working_days: row.workingDays ?? undefined,
+  };
+}
+
+async function leaveOverview(): Promise<OwnLeaveOverview> {
+  const today = berlinTodayISO();
+  const quota = await mocks.quota();
+  const recent: StaffAbsence[] = await mocks.recent();
+  const questions: StaffAbsence[] = await mocks.questions();
+  return {
+    year: Number(today.slice(0, 4)),
+    quota: { taken_before_days: 0, ...quota },
+    counts: {
+      question: questions.length,
+      reserved: recent.filter((row) => row.status === "requested").length,
+      approved: recent.filter(
+        (row) =>
+          (row.status === "approved" || row.status === "reported") &&
+          row.dateEnd >= today,
+      ).length,
+      declined: recent.filter((row) => row.status === "declined").length,
+    },
+    recent: recent
+      .filter((row) => row.status !== "question")
+      .sort((a, b) => b.requestedAt.localeCompare(a.requestedAt))
+      .slice(0, 8)
+      .map(wireAbsence),
+    questions: [...questions]
+      .sort((a, b) => b.requestedAt.localeCompare(a.requestedAt))
+      .map(wireAbsence),
+    allowances: [],
+    mails: { state: "ready", awaiting_feedback: false, absences: {} },
+  };
+}
 
 vi.mock("~/components/ui/modal", () => ({
   ConfirmationModal: ({
@@ -71,8 +129,7 @@ vi.mock("~/lib/time-tracking-api", () => ({
   timeTrackingService: {
     cancelAbsence: mocks.cancelAbsence,
     getAbsences: mocks.getAbsences,
-    getQuestionedAbsences: mocks.getQuestionedAbsences,
-    getVacationQuota: mocks.getVacationQuota,
+    getLeaveOverview: mocks.getLeaveOverview,
     resubmitAbsence: mocks.resubmitAbsence,
   },
 }));
@@ -119,15 +176,17 @@ describe("LeaveRequestsCard resubmitted requests", () => {
   beforeEach(() => {
     mocks.cancelAbsence.mockReset();
     mocks.getAbsences.mockReset();
-    mocks.getQuestionedAbsences.mockReset();
-    mocks.getVacationQuota.mockReset();
+    mocks.recent.mockReset();
+    mocks.getLeaveOverview.mockImplementation(leaveOverview);
+    mocks.questions.mockReset();
+    mocks.quota.mockReset();
     mocks.resubmitAbsence.mockReset();
     mocks.toastError.mockReset();
     mocks.toastSuccess.mockReset();
     mocks.cancelAbsence.mockResolvedValue(undefined);
-    mocks.getAbsences.mockResolvedValue([resubmittedVacation()]);
-    mocks.getQuestionedAbsences.mockResolvedValue([]);
-    mocks.getVacationQuota.mockResolvedValue({
+    mocks.recent.mockResolvedValue([resubmittedVacation()]);
+    mocks.questions.mockResolvedValue([]);
+    mocks.quota.mockResolvedValue({
       staff_id: 42,
       year: 2027,
       entitled_days: 20,
@@ -164,7 +223,7 @@ describe("LeaveRequestsCard resubmitted requests", () => {
     expect(
       await screen.findByText("Vorherige Rückfrage der Leitung:"),
     ).toBeVisible();
-    mocks.getVacationQuota.mockRejectedValueOnce(
+    mocks.quota.mockRejectedValueOnce(
       new ApiError("offline", 503, { code: "general.unavailable" }),
     );
     fireEvent.click(screen.getByRole("button", { name: "Stornieren" }));
@@ -181,9 +240,7 @@ describe("LeaveRequestsCard resubmitted requests", () => {
       "Der Antrag ist storniert.",
     );
     fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
-    await waitFor(() =>
-      expect(mocks.getVacationQuota).toHaveBeenCalledTimes(3),
-    );
+    await waitFor(() => expect(mocks.quota).toHaveBeenCalledTimes(3));
     expect(mocks.cancelAbsence).toHaveBeenCalledTimes(1);
   });
 
@@ -215,11 +272,8 @@ describe("LeaveRequestsCard resubmitted requests", () => {
       decisionNote: "",
       requestedAt: `${currentYear}-06-${String(index + 1).padStart(2, "0")}T08:00:00Z`,
     }));
-    mocks.getAbsences.mockResolvedValue([...recentRequests, oldQuestion]);
-    mocks.getQuestionedAbsences.mockResolvedValue([
-      oldQuestion,
-      crossYearQuestion,
-    ]);
+    mocks.recent.mockResolvedValue([...recentRequests, oldQuestion]);
+    mocks.questions.mockResolvedValue([oldQuestion, crossYearQuestion]);
 
     renderWithCache(<LeaveRequestsCard />);
 
@@ -245,8 +299,8 @@ describe("LeaveRequestsCard resubmitted requests", () => {
       note: "",
       status: "question",
     };
-    mocks.getAbsences.mockResolvedValue([]);
-    mocks.getQuestionedAbsences.mockResolvedValue([question]);
+    mocks.recent.mockResolvedValue([]);
+    mocks.questions.mockResolvedValue([question]);
     mocks.resubmitAbsence.mockRejectedValue(
       new ApiError("Server weg", 500, {
         code: "general.server",
@@ -291,7 +345,7 @@ describe("LeaveRequestsCard resubmitted requests", () => {
   });
 
   it("shows a failed load in the card instead of empty tiles", async () => {
-    mocks.getVacationQuota.mockRejectedValue(
+    mocks.quota.mockRejectedValue(
       new ApiError("down", 503, {
         code: "general.unavailable",
         instance: "req-leave",
@@ -309,7 +363,7 @@ describe("LeaveRequestsCard resubmitted requests", () => {
     expect(
       screen.getByRole("button", { name: "Urlaub beantragen" }),
     ).toBeDisabled();
-    mocks.getVacationQuota.mockResolvedValue({
+    mocks.quota.mockResolvedValue({
       staff_id: 42,
       year: 2027,
       entitled_days: 20,
@@ -350,17 +404,14 @@ describe("LeaveRequestsCard resubmitted requests", () => {
     "counts an absence through the Berlin end date in %s",
     async (zone, instant) => {
       setSchoolDateClock(zone, instant, "2027-06-01");
-      mocks.getAbsences.mockResolvedValue([
+      mocks.recent.mockResolvedValue([
         { ...resubmittedVacation(), dateEnd: "2027-06-01", status: "approved" },
       ]);
       renderWithCache(<LeaveRequestsCard />);
       await screen.findByText("20 Tage Anspruch für 2027");
       const tile = screen.getAllByText("Genehmigt")[0]!.parentElement!;
       expect(tile).toHaveTextContent("1");
-      expect(mocks.getAbsences).toHaveBeenCalledWith(
-        "2027-01-01",
-        "2027-12-31",
-      );
+      expect(mocks.getAbsences).not.toHaveBeenCalled();
     },
   );
 });
@@ -368,14 +419,16 @@ describe("LeaveRequestsCard resubmitted requests", () => {
 describe("LeaveRequestsCard mail to the Leitung (#7058)", () => {
   beforeEach(() => {
     mocks.getAbsences.mockReset();
-    mocks.getQuestionedAbsences.mockReset();
-    mocks.getVacationQuota.mockReset();
-    mocks.getAbsences.mockResolvedValue([
+    mocks.recent.mockReset();
+    mocks.getLeaveOverview.mockImplementation(leaveOverview);
+    mocks.questions.mockReset();
+    mocks.quota.mockReset();
+    mocks.recent.mockResolvedValue([
       resubmittedVacation(),
       { ...resubmittedVacation(), id: "18", status: "approved" },
     ]);
-    mocks.getQuestionedAbsences.mockResolvedValue([]);
-    mocks.getVacationQuota.mockResolvedValue({
+    mocks.questions.mockResolvedValue([]);
+    mocks.quota.mockResolvedValue({
       staff_id: 42,
       year: 2027,
       entitled_days: 20,
@@ -388,10 +441,9 @@ describe("LeaveRequestsCard mail to the Leitung (#7058)", () => {
     // decided request 18 never shows one, even when the answer names it.
     mocks.useOwnAbsenceRequestMails.mockImplementation(
       (waitingIds: readonly string[]) => {
-        const mails: Record<
-          string,
-          Record<string, number>
-        > = waitingIds.includes("17")
+        const mails: Record<string, Record<string, number>> = waitingIds.some(
+          (id) => id.startsWith("17-"),
+        )
           ? {
               "17": { undeliverable: 1, delivered: 1 },
               "18": { delivered: 1 },
@@ -413,7 +465,10 @@ describe("LeaveRequestsCard mail to the Leitung (#7058)", () => {
     renderWithCache(<LeaveRequestsCard />);
 
     expect(await screen.findByText("Mail an die Leitung")).toBeInTheDocument();
-    expect(mocks.useOwnAbsenceRequestMails).toHaveBeenLastCalledWith(["17"]);
+    expect(mocks.useOwnAbsenceRequestMails).toHaveBeenLastCalledWith(
+      [expect.stringMatching(/^17-/)],
+      expect.objectContaining({ state: "ready" }),
+    );
     expect(screen.getByText("1 nicht zustellbar")).toBeInTheDocument();
     expect(
       screen.getByText(
@@ -430,7 +485,7 @@ function TenantSWR({ children }: { children: React.ReactNode }) {
   return (
     <SessionProvider
       session={{
-        user: { id: "staff-test", tenantId: 1 },
+        user: { id: "staff-test", tenantId: "1" },
         expires: "2099-01-01",
       }}
       refetchOnWindowFocus={false}

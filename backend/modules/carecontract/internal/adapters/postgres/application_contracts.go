@@ -42,10 +42,10 @@ const applicationContractsSQL = `SELECT c.id AS contract_id, c.request_child_id,
 		CASE WHEN v.id IS NULL OR c.status = ? THEN '[]' ELSE ` + servicesSQL + ` END AS services
 	FROM care_contract.contracts AS c
 	LEFT JOIN LATERAL (
-		SELECT cv.id, cv.organization_id, cv.effective_from
-		FROM care_contract.contract_versions AS cv
-		WHERE cv.contract_id = c.id AND cv.organization_id = c.organization_id AND cv.status NOT IN (?, ?)
-		ORDER BY cv.version_number DESC
+		SELECT v.id, v.organization_id, v.effective_from
+		FROM care_contract.contract_versions AS v
+		WHERE v.contract_id = c.id AND v.organization_id = c.organization_id AND ` + schoolVersionSQL + `
+		ORDER BY v.version_number DESC
 		LIMIT 1) AS v ON true
 	WHERE c.school_id = ? AND c.request_child_id = ANY(?) AND c.status <> ?
 	ORDER BY c.request_child_id, c.id`
@@ -61,7 +61,7 @@ func (BookedCare) ApplicationContracts(ctx context.Context, requestChildIDs []in
 		return nil, err
 	}
 	var rows []applicationContractRow
-	if err := db.NewRaw(applicationContractsSQL, carecontract.StatusWithdrawn, carecontract.VersionRejected, carecontract.VersionReplaced, school,
+	if err := db.NewRaw(applicationContractsSQL, carecontract.StatusWithdrawn, school,
 		pgdialect.Array(requestChildIDs), carecontract.StatusDraft).Scan(ctx, &rows); err != nil {
 		return nil, fmt.Errorf("care contract postgres: read application contracts: %w", err)
 	}

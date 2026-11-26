@@ -36,7 +36,7 @@ vi.mock("vaul", () => import("~/test/mocks/vaul"));
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
     data: {
-      user: { id: "1", scope: "tenant", tenantId: 42 },
+      user: { id: "1", scope: "tenant", tenantId: "42" },
       expires: "2099-01-01",
     },
     status: "authenticated",
@@ -99,7 +99,7 @@ vi.mock("~/lib/care-offering-booking-stats", async (importOriginal) => ({
   fetchCareOfferingBookingStats: mocks.fetchCareOfferingBookingStats,
 }));
 vi.mock("~/lib/timetable-api", () => ({
-  timetableService: { getTemplates: mocks.getTemplates },
+  timetableService: { getOfferingTemplates: mocks.getTemplates },
 }));
 vi.mock("~/lib/calendar-period-api", () => ({
   calendarPeriodService: { list: mocks.listCalendarPeriods },

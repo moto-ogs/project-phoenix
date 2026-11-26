@@ -19,15 +19,16 @@ import {
   SearchBarDraftProvider,
   SharedSearchBar,
 } from "./page-header/SearchBar";
-import type {
-  ActiveFilter,
-  FilterConfig,
-  FilterPanelAnchor,
-  FilterSection,
-  OverflowMenuEntry,
-  PageHeaderBadge,
-  PageHeaderFilterPanel,
-  PageHeaderSearch,
+import {
+  isFilterRestricting,
+  type ActiveFilter,
+  type FilterConfig,
+  type FilterPanelAnchor,
+  type FilterSection,
+  type OverflowMenuEntry,
+  type PageHeaderBadge,
+  type PageHeaderFilterPanel,
+  type PageHeaderSearch,
 } from "./page-header/types";
 
 /** Die Such- und Filter-Props von `TenantPage`. */
@@ -101,24 +102,12 @@ export function TenantPageSearchRow({
   );
   const previousDesktopFilterLayoutRef = useRef(isDesktopFilterLayout);
 
-  // Check if any filters are active (not in their default state). Custom
-  // filters are skipped: their `value`/`options` are unused stubs (see
-  // FilterConfig.render), so the first-option comparison below would read an
-  // empty string against `undefined` and mark them active in every default
-  // state. A custom control owns its own rendering and reports its state
-  // through `activeFilters` like any other filter.
-  const hasActiveFilters = useMemo(() => {
-    return filters.some((filter) => {
-      if (filter.type === "custom") return false;
-      // A multi-select reports its value as an array and treats the empty
-      // selection as its default ("alle"), so the first-option comparison
-      // below would mark it active in every default state — an array is never
-      // equal to an option string.
-      if (Array.isArray(filter.value)) return filter.value.length > 0;
-      const defaultValue = filter.options[0]?.value;
-      return filter.value !== defaultValue;
-    });
-  }, [filters]);
+  // Check if any filters are active (not in their default state), with the
+  // rule the inline filter chips use (#6734).
+  const hasActiveFilters = useMemo(
+    () => filters.some(isFilterRestricting),
+    [filters],
+  );
 
   const activeFilterCount =
     usesFilterPanel && activeFilters.length > 0
@@ -154,6 +143,8 @@ export function TenantPageSearchRow({
       value={search?.value ?? ""}
       onChange={search?.onChange ?? NOOP_SEARCH_CHANGE}
       debounceMs={search?.debounceMs}
+      onDraftPendingChange={search?.onDraftPendingChange}
+      validateDraft={search?.validateDraft}
       resetKey={search?.resetKey}
     >
       <div>

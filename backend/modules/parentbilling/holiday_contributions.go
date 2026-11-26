@@ -199,6 +199,19 @@ type HolidayContribution struct {
 	// sibling was cancelled (#5662). The invoice keeps its amount; the
 	// Träger-Büro corrects it with a cancellation or credit note (#4690).
 	CorrectionNeeded bool `json:"correction_needed,omitempty"`
+	// Fingerprint is the token of a preview (ADR 0311): the confirmation
+	// sends it back and freezes only the contribution it names. Empty on a
+	// frozen contribution and on a quote.
+	Fingerprint string `json:"fingerprint,omitempty"`
+}
+
+// HolidayConfirmationRead is what the office read before it confirmed
+// (ADR 0311): the Fingerprint of the preview, and, when the confirmation
+// sends the numbers of the children, the Version of the numbers it read
+// (HolidayFamilyDebtorNumber.Version).
+type HolidayConfirmationRead struct {
+	Fingerprint         string
+	ChildNumbersVersion string
 }
 
 // IssuedContribution is what the issued invoice of a registration billed,
@@ -400,6 +413,9 @@ type HolidayRegistrations interface {
 	// HolidaySiblingsSplit or HolidaySiblingsCancelled, with the other
 	// registrations it names.
 	RecordHolidaySiblings(ctx context.Context, reviewer HolidayReviewer, periodID, registrationID int64, action string, siblingIDs []int64) error
+	// HolidayPayerTrail records a payer change of a confirmed registration
+	// (#8158).
+	HolidayPayerTrail
 }
 
 // HolidayBillingSettings is the Träger level of the settings system as the
@@ -522,9 +538,13 @@ type HolidayContributions interface {
 	// FamilyDebtorNumberConflict. childNumbers, when the Träger keeps the
 	// number per child (#7007), are the numbers of the children instead:
 	// each is its child's from then on, and when the Träger asks for a
-	// number, a child without one is a validation error.
+	// number, a child without one is a validation error. read names the
+	// preview and the numbers the office read; a contribution or numbers
+	// that changed since, and an empty token, are readstate.ErrChanged
+	// (ADR 0311).
 	ConfirmHolidayRegistration(ctx context.Context, reviewer HolidayReviewer, periodID, registrationID int64, benefitsExemption bool,
-		costBearerID int64, debtorNumber, familyChoice string, childNumbers []HolidayChildDebtorNumberInput) (HolidayConfirmation, error)
+		costBearerID int64, debtorNumber, familyChoice string, childNumbers []HolidayChildDebtorNumberInput,
+		read HolidayConfirmationRead) (HolidayConfirmation, error)
 	// CancelHolidayRegistration cancels the registration through Enrollment
 	// in the caller's Träger transaction (#5662). In a sibling group it
 	// takes the registration out of the group and computes the frozen
@@ -551,7 +571,10 @@ type HolidayContributions interface {
 	// confirmed registration (#7007), as at its confirmation; each change is
 	// recorded in the trail of the number. A child of another registration
 	// is ErrChildNotFound, a registration that is not confirmed
-	// ErrHolidayRegistrationStateConflict.
+	// ErrHolidayRegistrationStateConflict. expectedVersion is the Version of
+	// the numbers the office read; numbers changed since, and an empty
+	// token, are readstate.ErrChanged (ADR 0311). The answer carries the
+	// Version of the numbers now stored.
 	SetHolidayChildDebtorNumbers(ctx context.Context, reviewer HolidayReviewer, periodID, registrationID int64,
-		numbers []HolidayChildDebtorNumberInput) (HolidayFamilyDebtorNumber, error)
+		numbers []HolidayChildDebtorNumberInput, expectedVersion string) (HolidayFamilyDebtorNumber, error)
 }

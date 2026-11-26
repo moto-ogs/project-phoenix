@@ -31,13 +31,16 @@ func (seedOperationsDemoStep) Run(_ context.Context, rt *Runtime) error {
 	if err := seedClosingDay(rt, today); err != nil {
 		return err
 	}
+	if err := seedOpeningHours(rt, today); err != nil {
+		return err
+	}
 	if err := seedMealPlan(rt, today); err != nil {
 		return err
 	}
 	if err := seedStaffShift(rt, today, staffIDs[0]); err != nil {
 		return err
 	}
-	fmt.Println("  1 closing day, 2 weeks of meal plan and 1 staff shift created")
+	fmt.Println("  1 closing day, opening hours with 1 shorter day, 2 weeks of meal plan and 1 staff shift created")
 	return nil
 }
 
@@ -61,6 +64,35 @@ func seedClosingDay(rt *Runtime, today seedDate) error {
 		"reason":     "Pädagogischer Tag",
 	}); err != nil {
 		return fmt.Errorf("seed closing day: %w", err)
+	}
+	return nil
+}
+
+// seedOpeningHours enters the regular opening hours of the school week and
+// one shorter day (#7654): the OGS opens at 07:30 and closes at 16:00, on
+// Friday at 15:00, and on the day of the report cards at noon.
+func seedOpeningHours(rt *Runtime, today seedDate) error {
+	for _, weekday := range []string{"monday", "tuesday", "wednesday", "thursday", "friday"} {
+		closes := "16:00"
+		if weekday == "friday" {
+			closes = "15:00"
+		}
+		for _, setting := range [][2]string{{"open", "07:30"}, {"close", closes}} {
+			key := "opening_hours." + weekday + "_" + setting[0]
+			if _, err := rt.Client.Put("/api/settings/values/"+key, map[string]any{"value": setting[1]}); err != nil {
+				return fmt.Errorf("seed %s: %w", key, err)
+			}
+		}
+	}
+	shortDay := today.AddDays(33)
+	if _, err := rt.Client.Post("/api/opening-changes/", map[string]any{
+		"start_date": shortDay.String(),
+		"end_date":   shortDay.String(),
+		"opens_at":   "07:30",
+		"closes_at":  "12:00",
+		"reason":     "Zeugnisausgabe",
+	}); err != nil {
+		return fmt.Errorf("seed opening change: %w", err)
 	}
 	return nil
 }
@@ -111,7 +143,7 @@ func seedStaffShift(rt *Runtime, today seedDate, staffID int64) error {
 	}
 	shiftDate := nextWeekday(today.UTCMidnight().AddDate(0, 0, 1), time.Monday)
 	if _, err := rt.Client.Post("/api/staff-shifts", map[string]any{
-		"staff_id":      staffID,
+		"staff_id":      ident.ID(staffID),
 		"date":          shiftDate.Format(seedDateLayout),
 		"start_time":    lateDutyStart,
 		"end_time":      lateDutyEnd,
@@ -134,12 +166,12 @@ func seedStaffShift(rt *Runtime, today seedDate, staffID int64) error {
 		return nil
 	}
 	if _, err := rt.Client.Post("/api/staff-shifts", map[string]any{
-		"staff_id":      staffID,
+		"staff_id":      ident.ID(staffID),
 		"date":          shiftDate.AddDate(0, 0, 1).Format(seedDateLayout),
 		"start_time":    "13:00",
 		"end_time":      "15:00",
 		"break_minutes": 0,
-		"shift_type_id": preparationID,
+		"shift_type_id": ident.ID(preparationID),
 		"notes":         "Vorbereitung und Dienstversammlung",
 	}); err != nil {
 		return fmt.Errorf("seed second staff shift: %w", err)

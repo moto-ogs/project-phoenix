@@ -346,7 +346,7 @@ vi.mock("~/components/auth/role-guard", () => ({
 }));
 
 import { useSWRAuth } from "~/lib/swr";
-import OGSGroupPage from "./page";
+import OGSGroupPage from "./page-content";
 
 describe("OGSGroupPage — school check-in wiring", () => {
   beforeEach(() => {

@@ -127,14 +127,28 @@ func (s *SurveyStore) FindSurvey(ctx context.Context, id int64, lock bool) (*com
 	if err != nil {
 		return nil, err
 	}
-	row := new(surveyRow)
-	query := db.NewSelect().Model(row).Where("sv.id = ? AND sv.tenant_id = ?", id, tenantID)
 	if lock {
-		query = query.For("UPDATE")
-	} else {
-		query = query.Column("sv.*").ColumnExpr(participantCountColumn)
+		// The lock comes first, the read in a statement of its own: a
+		// statement that waited for the lock still counts from the snapshot
+		// it took before, and would miss an answer committed meanwhile. The
+		// count is what a delete compares with its dialog
+		// (communication.SurveyDeleteFingerprint); the lock holds off the key
+		// share a new participation takes on the row.
+		var locked []int64
+		if err := db.NewSelect().Table("users.surveys").Column("id").
+			Where("id = ? AND tenant_id = ?", id, tenantID).For("UPDATE").
+			Scan(ctx, &locked); err != nil {
+			return nil, fmt.Errorf("lock survey: %w", err)
+		}
+		if len(locked) == 0 {
+			return nil, nil
+		}
 	}
-	return withQuestions(ctx, db, row, query.Scan(ctx))
+	row := new(surveyRow)
+	err = db.NewSelect().Model(row).Column("sv.*").ColumnExpr(participantCountColumn).
+		Where("sv.id = ? AND sv.tenant_id = ?", id, tenantID).
+		Scan(ctx)
+	return withQuestions(ctx, db, row, err)
 }
 
 // FindPortalSurvey returns the published parent survey an announcement of the

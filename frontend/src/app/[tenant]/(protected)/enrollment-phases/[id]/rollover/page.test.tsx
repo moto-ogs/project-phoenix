@@ -59,14 +59,14 @@ vi.mock("~/components/enrollment/rollover-form", () => ({
   ),
 }));
 
-import MobileRolloverPage from "./page";
+import MobileRolloverPage from "./page-content";
 
 async function renderPage() {
   await act(async () => {
     render(
       <SessionProvider
         session={{
-          user: { id: "staff-7", scope: "tenant", tenantId: 42 },
+          user: { id: "staff-7", scope: "tenant", tenantId: "42" },
           expires: "2099-01-01",
         }}
         refetchOnWindowFocus={false}

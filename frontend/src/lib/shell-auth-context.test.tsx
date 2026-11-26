@@ -37,7 +37,18 @@ interface MockSessionReturn {
   status: "authenticated" | "loading" | "unauthenticated";
 }
 
-vi.mock("~/lib/tenant-session-cookie", () => ({ signOutTenant: mockSignOut }));
+const replaced = vi.hoisted(() => ({
+  session: vi.fn((_portal: string, _mark: string) => false),
+  leave: vi.fn(),
+}));
+vi.mock("~/lib/tenant-session-cookie", () => ({
+  signOutTenant: mockSignOut,
+  signOutPortal: mockSignOut,
+  tenantSessionReplaced: () => false,
+  sessionReplaced: replaced.session,
+  leaveReplacedSession: replaced.leave,
+  SessionReplaced: class SessionReplaced extends Error {},
+}));
 
 vi.mock("next-auth/react", () => ({
   useSession: (): MockSessionReturn => mockUseSession() as MockSessionReturn,
@@ -94,11 +105,13 @@ import {
   SchoolShellProvider,
   CatererShellProvider,
   endTraegerSession,
+  leaveRemovedSession,
   useShellAuth,
 } from "./shell-auth-context";
 import { installSessionEndBarrier } from "./session-end-state";
 import { LOGOUT_NOT_REVOKED_KEY } from "./session-cache";
 import { portalAuthPath, portalLoginPath } from "./portal-paths";
+import { _resetSessionTreeForTests, sessionTreeState } from "./session-tree";
 import { sidebarMemoryKey } from "./sidebar-memory";
 import { ApiError } from "./api-error";
 import { errorLogFields } from "./error-log";
@@ -343,7 +356,9 @@ describe("TeacherShellProvider", () => {
   });
 
   it("deletes the tenant cookie with cancellation and navigates on logout", async () => {
-    const mockFetch = vi.fn().mockResolvedValue(new Response(null));
+    const mockFetch = vi
+      .fn()
+      .mockResolvedValue(new Response(null, { status: 204 }));
     vi.stubGlobal("fetch", mockFetch);
     mockUseSession.mockReturnValue({
       data: { user: { name: "User", email: "user@example.com", roles: [] } },
@@ -356,13 +371,14 @@ describe("TeacherShellProvider", () => {
       await result.current.logout();
 
       expect(mockFetch).toHaveBeenCalledWith("/api/auth/logout", {
+        headers: { "X-Moto-End-Session": "tenant -" },
         method: "POST",
         signal: expect.any(AbortSignal) as AbortSignal,
         credentials: "include",
         cache: "no-store",
       });
       expect(mockSignOut).toHaveBeenCalledWith(
-        { callbackUrl: "/" },
+        { callbackUrl: "/", revoked: true, mark: "" },
         expect.any(AbortSignal),
       );
     } finally {
@@ -371,7 +387,9 @@ describe("TeacherShellProvider", () => {
   });
 
   it("fires backend logout and clears session cache on teacher logout", async () => {
-    const mockFetch = vi.fn().mockResolvedValue(new Response(null));
+    const mockFetch = vi
+      .fn()
+      .mockResolvedValue(new Response(null, { status: 204 }));
     vi.stubGlobal("fetch", mockFetch);
 
     mockUseSession.mockReturnValue({
@@ -384,6 +402,7 @@ describe("TeacherShellProvider", () => {
     await result.current.logout();
 
     expect(mockFetch).toHaveBeenCalledWith("/api/auth/logout", {
+      headers: { "X-Moto-End-Session": "tenant -" },
       method: "POST",
       signal: expect.any(AbortSignal) as AbortSignal,
       credentials: "include",
@@ -398,7 +417,9 @@ describe("TeacherShellProvider", () => {
   // genauso wie per Klick — und muss deshalb auch im Protokoll enden, bevor
   // der Logout die Admin-Familie widerruft.
   it("ends a running staff preview before logging out", async () => {
-    const mockFetch = vi.fn().mockResolvedValue(new Response(null));
+    const mockFetch = vi
+      .fn()
+      .mockResolvedValue(new Response(null, { status: 204 }));
     vi.stubGlobal("fetch", mockFetch);
     mockEndStaffPreview.mockResolvedValue(undefined);
     mockUseSession.mockReturnValue({
@@ -422,7 +443,7 @@ describe("TeacherShellProvider", () => {
       // muss im Protokoll stehen, bevor der Logout die Sitzung löscht.
       expect(mockEndStaffPreview).toHaveBeenCalledOnce();
       expect(mockSignOut).toHaveBeenCalledWith(
-        { callbackUrl: "/" },
+        { callbackUrl: "/", revoked: true, mark: "" },
         expect.any(AbortSignal),
       );
       expect(mockEndStaffPreview.mock.invocationCallOrder[0]).toBeLessThan(
@@ -451,7 +472,9 @@ describe("TeacherShellProvider", () => {
   });
 
   it("logs out even when ending the preview fails", async () => {
-    const mockFetch = vi.fn().mockResolvedValue(new Response(null));
+    const mockFetch = vi
+      .fn()
+      .mockResolvedValue(new Response(null, { status: 204 }));
     vi.stubGlobal("fetch", mockFetch);
     mockEndStaffPreview.mockRejectedValue(new Error("audit endpoint down"));
     mockUseSession.mockReturnValue({
@@ -470,7 +493,7 @@ describe("TeacherShellProvider", () => {
       const { result } = renderHook(() => useShellAuth(), { wrapper });
       await result.current.logout();
       expect(mockSignOut).toHaveBeenCalledWith(
-        { callbackUrl: "/" },
+        { callbackUrl: "/", revoked: true, mark: "" },
         expect.any(AbortSignal),
       );
     } finally {
@@ -523,11 +546,20 @@ describe("TeacherShellProvider", () => {
       status: "authenticated",
     });
 
+    // Auth.js deletes the cookie: only then the account's data goes.
+    mockSignOut.mockImplementationOnce(
+      async ({ onDeleted }: { onDeleted?: () => void }) => onDeleted?.(),
+    );
     const { result } = renderHook(() => useShellAuth(), { wrapper });
     await result.current.logout();
 
     expect(mockSignOut).toHaveBeenCalledWith(
-      { callbackUrl: "/" },
+      {
+        callbackUrl: "/",
+        revoked: false,
+        mark: "",
+        onDeleted: expect.any(Function),
+      },
       expect.any(AbortSignal),
     );
     expect(mockClearSessionCache).toHaveBeenCalled();
@@ -652,7 +684,7 @@ describe("TeacherShellProvider", () => {
     await result.current.logout();
 
     expect(mockSignOut).toHaveBeenCalledWith(
-      { callbackUrl: "/" },
+      { callbackUrl: "/", revoked: true, mark: "" },
       expect.any(AbortSignal),
     );
     vi.unstubAllGlobals();
@@ -675,11 +707,11 @@ describe("TeacherShellProvider", () => {
     await Promise.resolve();
     expect(mockSignOut).not.toHaveBeenCalled();
 
-    finishBackendLogout?.(new Response(null));
+    finishBackendLogout?.(new Response(null, { status: 204 }));
     await logout;
 
     expect(mockSignOut).toHaveBeenCalledWith(
-      { callbackUrl: "/" },
+      { callbackUrl: "/", revoked: true, mark: "" },
       expect.any(AbortSignal),
     );
     vi.unstubAllGlobals();
@@ -891,7 +923,10 @@ describe("OperatorShellProvider", () => {
     expect(result.current.user?.roles).toEqual(["operator"]);
   });
 
-  it("calls signOut with operator login callbackUrl", async () => {
+  it("signs out and opens the operator login after the tree went (#8082)", async () => {
+    const assign = vi
+      .spyOn(window.location, "assign")
+      .mockImplementation(() => undefined);
     mockUseSession.mockReturnValue({
       data: {
         user: {
@@ -907,9 +942,15 @@ describe("OperatorShellProvider", () => {
 
     await result.current.logout();
 
-    expect(mockSignOut).toHaveBeenCalledWith({
-      callbackUrl: "/operator/login",
-    });
+    // The SDK only deletes the cookie; the document leaves once the tree
+    // is gone, to the operator login.
+    expect(mockSignOut).toHaveBeenCalledWith(
+      "/api/operator/auth",
+      "/operator/login",
+      { portal: "operator", mark: "" },
+    );
+    expect(assign).toHaveBeenCalledWith("/operator/login");
+    assign.mockRestore();
   });
 
   it("clears session cache on operator logout", async () => {
@@ -1025,7 +1066,10 @@ describe("logout leaves no personal entries behind (#5000)", () => {
     vi.clearAllMocks();
     localStorage.clear();
     sessionStorage.clear();
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null)));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(new Response(null, { status: 204 })),
+    );
     // The check runs when the cookie goes: nothing may outlive the session.
     mockSignOut.mockImplementation(() => {
       leftAtSignOut = [
@@ -1040,7 +1084,7 @@ describe("logout leaves no personal entries behind (#5000)", () => {
       data: {
         user: {
           id: "7",
-          tenantId: 1,
+          tenantId: "1",
           name: "Mia Lehrerin",
           email: "mia@example.com",
           roles: [],
@@ -1235,7 +1279,11 @@ describe("a hosted portal's logout opens its own login", () => {
 
       await result.current.logout();
 
-      expect(mockSignOut).toHaveBeenCalledWith({ redirect: false });
+      expect(mockSignOut).toHaveBeenCalledWith(
+        expect.stringMatching(/^\/api\/(school|caterer|parent)\/auth$/),
+        "/login",
+        expect.objectContaining({ mark: "" }),
+      );
       expect(window.location.assign).toHaveBeenCalledWith("/login");
     },
   );
@@ -1270,7 +1318,9 @@ describe("endTraegerSession (#6955)", () => {
       beginSessionEnd: begin,
       fetchThroughSessionBarrier: (send, input, init) => send(input, init),
     });
-    vi.spyOn(window.location, "assign").mockImplementation(() => undefined);
+    vi.spyOn(window.location, "assign")
+      .mockImplementation(() => undefined)
+      .mockClear();
     localStorage.setItem("supervision-last-session", "Gruppe Sonne");
   });
 
@@ -1292,7 +1342,11 @@ describe("endTraegerSession (#6955)", () => {
     );
     expect(localStorage.getItem("supervision-last-session")).toBeNull();
     expect(mockClearSessionCache).toHaveBeenCalled();
-    expect(mockSignOut).toHaveBeenCalledWith({ redirect: false });
+    expect(mockSignOut).toHaveBeenCalledWith(
+      "/api/traeger/auth",
+      portalLoginPath("traeger"),
+      { portal: "traeger", mark: "" },
+    );
     expect(window.location.assign).toHaveBeenCalledWith(
       portalLoginPath("traeger"),
     );
@@ -1313,10 +1367,97 @@ describe("endTraegerSession (#6955)", () => {
     await endTraegerSession();
 
     expect(fail).not.toHaveBeenCalled();
-    expect(mockSignOut).toHaveBeenCalledWith({ redirect: false });
+    expect(mockSignOut).toHaveBeenCalledWith(
+      "/api/traeger/auth",
+      portalLoginPath("traeger"),
+      { portal: "traeger", mark: "" },
+    );
     expect(localStorage.getItem("supervision-last-session")).toBeNull();
     expect(sessionStorage.getItem(LOGOUT_NOT_REVOKED_KEY)).toBe("1");
     sessionStorage.removeItem(LOGOUT_NOT_REVOKED_KEY);
+  });
+
+  it("keeps the page and its retry when neither revocation nor cookie deletion worked", async () => {
+    _resetSessionTreeForTests();
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({ status: 500, code: "general.server", detail: "x" }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/problem+json" },
+        },
+      ),
+    );
+    mockSignOut.mockRejectedValue(new Error("Logout refused"));
+
+    await expect(endTraegerSession()).rejects.toThrow("Logout refused");
+
+    // The live cookie would sign the person back in: nothing pretends it
+    // ended (#7209, #8082).
+    expect(sessionTreeState().leaving).toBe(false);
+    expect(window.location.assign).not.toHaveBeenCalled();
+    // The session stays, and with it its data and the shared owner that
+    // other tabs of the account bind to.
+    expect(localStorage.getItem("supervision-last-session")).toBe(
+      "Gruppe Sonne",
+    );
+    sessionStorage.removeItem(LOGOUT_NOT_REVOKED_KEY);
+  });
+
+  it("ends nothing when another tab's sign-in took the portal's cookie", async () => {
+    // The logout route revokes nothing of the new session (401: nothing of
+    // the named one left); this device's data and the cookie stay its own.
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({ status: 401, code: "general.unauthorized" }),
+        {
+          status: 401,
+          headers: { "Content-Type": "application/problem+json" },
+        },
+      ),
+    );
+    fetchMock.mockClear();
+    replaced.session.mockImplementation((portal) => portal === "traeger");
+
+    try {
+      await endTraegerSession();
+    } finally {
+      replaced.session.mockImplementation(() => false);
+    }
+
+    const [, init] = fetchMock.mock.calls[0]!;
+    expect(new Headers(init?.headers).get("X-Moto-End-Session")).toBe(
+      "traeger -",
+    );
+    expect(mockSignOut).not.toHaveBeenCalled();
+    expect(localStorage.getItem("supervision-last-session")).toBe(
+      "Gruppe Sonne",
+    );
+    expect(replaced.leave).toHaveBeenCalled();
+  });
+
+  it("leaves another tab's new session its data when it signed in during the revocation", async () => {
+    let revoked = false;
+    vi.spyOn(globalThis, "fetch").mockImplementation(async () => {
+      revoked = true;
+      return new Response(null, { status: 204 });
+    });
+    replaced.session.mockImplementation(
+      (portal) => portal === "traeger" && revoked,
+    );
+
+    try {
+      await endTraegerSession();
+    } finally {
+      replaced.session.mockImplementation(() => false);
+    }
+
+    // The account's data on this device now belongs to the new session.
+    expect(localStorage.getItem("supervision-last-session")).toBe(
+      "Gruppe Sonne",
+    );
+    expect(mockSignOut).not.toHaveBeenCalled();
+    expect(replaced.leave).toHaveBeenCalled();
   });
 
   it("keeps the session and its data when the logout route is unreachable", async () => {
@@ -1328,6 +1469,47 @@ describe("endTraegerSession (#6955)", () => {
     expect(mockSignOut).not.toHaveBeenCalled();
     expect(localStorage.getItem("supervision-last-session")).toBe(
       "Gruppe Sonne",
+    );
+  });
+});
+
+describe("leaveRemovedSession (#8082)", () => {
+  beforeEach(() => {
+    _resetSessionTreeForTests();
+    mockClearSessionCache.mockReset();
+    vi.spyOn(window.location, "assign")
+      .mockImplementation(() => undefined)
+      .mockClear();
+  });
+
+  it("shows nothing of the session while Auth.js does not answer", async () => {
+    let answer: () => void = () => undefined;
+    mockSignOut.mockReset().mockReturnValue(
+      new Promise<void>((resolve) => {
+        answer = resolve;
+      }),
+    );
+
+    const leaving = leaveRemovedSession("traeger");
+
+    expect(sessionTreeState().leaving).toBe(true);
+    expect(mockClearSessionCache).toHaveBeenCalled();
+    expect(window.location.assign).not.toHaveBeenCalled();
+    answer();
+    await leaving;
+    expect(window.location.assign).toHaveBeenCalledWith(
+      portalLoginPath("traeger"),
+    );
+  });
+
+  it("leaves for the login also when the cookie deletion fails", async () => {
+    mockSignOut.mockReset().mockRejectedValue(new Error("Logout refused"));
+
+    await leaveRemovedSession("traeger");
+
+    expect(sessionTreeState().leaving).toBe(true);
+    expect(window.location.assign).toHaveBeenCalledWith(
+      portalLoginPath("traeger"),
     );
   });
 });

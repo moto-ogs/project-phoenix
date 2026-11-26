@@ -1,17 +1,21 @@
 package catererportalhttp
 
 import (
-	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
+
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/mealplan"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/moto-ogs/project-phoenix/workflows/catererportal"
 )
 
@@ -27,14 +31,43 @@ type PreviewResponse struct {
 
 // SchoolResponse is a school the caterer supplies.
 type SchoolResponse struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
+	ID   ident.ID `json:"id"`
+	Name string   `json:"name"`
 }
 
 // SchoolsResponse is the caterer and its schools.
 type SchoolsResponse struct {
-	CatererName string           `json:"caterer_name"`
-	Schools     []SchoolResponse `json:"schools"`
+	CatererName string                  `json:"caterer_name"`
+	Schools     []SchoolSummaryResponse `json:"schools"`
+}
+
+// SchoolSummaryResponse is one currently supplied school, without detail rows.
+type SchoolSummaryResponse struct {
+	ID              ident.ID                `json:"id"`
+	Name            string                  `json:"name"`
+	DeliveryAddress string                  `json:"delivery_address"`
+	StartedAt       *time.Time              `json:"started_at,omitempty"`
+	Names           bool                    `json:"names"`
+	ByClass         bool                    `json:"by_class"`
+	Failure         *SummaryFailureResponse `json:"failure,omitempty"`
+	Days            []SummaryDayResponse    `json:"days"`
+}
+
+// SummaryFailureResponse exposes only the registered error identity, never diagnostics.
+type SummaryFailureResponse struct {
+	Status int    `json:"status"`
+	Code   string `json:"code"`
+}
+
+type SummaryDayResponse struct {
+	Date     string    `json:"date" contract:"date"`
+	Closed   bool      `json:"closed"`
+	Deadline time.Time `json:"deadline"`
+	Status   string    `json:"status"`
+	OrderID  ident.ID  `json:"order_id,omitempty"`
+	Total    int       `json:"total"`
+	Added    int       `json:"added"`
+	Removed  int       `json:"removed"`
 }
 
 // OrderChildResponse is a child in an order; names reach the caterer only while
@@ -65,7 +98,7 @@ type DayResponse struct {
 	Closed      bool                 `json:"closed"`
 	Deadline    time.Time            `json:"deadline"`
 	Status      string               `json:"status"`
-	OrderID     string               `json:"order_id,omitempty"`
+	OrderID     ident.ID             `json:"order_id,omitempty"`
 	ConfirmedAt *time.Time           `json:"confirmed_at,omitempty"`
 	Total       int                  `json:"total"`
 	Classes     []ClassCountResponse `json:"classes"`
@@ -89,7 +122,7 @@ type acceptRequest struct {
 }
 
 func schoolResponse(school catererportal.School) SchoolResponse {
-	return SchoolResponse{ID: strconv.FormatInt(school.ID, 10), Name: school.Name}
+	return SchoolResponse{ID: ident.ID(school.ID), Name: school.Name}
 }
 
 func childResponse(child mealplan.OrderChild) OrderChildResponse {
@@ -103,7 +136,7 @@ func dayResponse(day mealplan.OrderDay) DayResponse {
 		Children: make([]OrderChildResponse, 0, len(day.Children)), Changes: make([]ChangeResponse, 0, len(day.Changes)),
 	}
 	if day.OrderID > 0 {
-		response.OrderID = strconv.FormatInt(day.OrderID, 10)
+		response.OrderID = ident.ID(day.OrderID)
 	}
 	for _, count := range day.Classes {
 		response.Classes = append(response.Classes, ClassCountResponse(count))
@@ -147,7 +180,7 @@ func (rs *Resource) acceptInvitation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var request acceptRequest
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil || request.Password == "" {
+	if err := wire.Decode(r.Body, &request); err != nil || request.Password == "" {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("password is required")))
 		return
 	}
@@ -162,18 +195,60 @@ func (rs *Resource) acceptInvitation(w http.ResponseWriter, r *http.Request) {
 	common.RespondNoContent(w, r)
 }
 
-// getSchools names the caterer and the schools it supplies.
+// getSchools returns the order overview; a retry may select one supplied school.
 func (rs *Resource) getSchools(w http.ResponseWriter, r *http.Request) {
-	schools, err := rs.portal.Schools(r.Context(), rs.currentAccountID(r.Context()))
+	from, to, ok := orderWindow(w, r)
+	if !ok {
+		return
+	}
+	var id int64
+	if r.URL.Query().Has("school_id") {
+		var err error
+		id, err = strconv.ParseInt(r.URL.Query().Get("school_id"), 10, 64)
+		if err != nil || id <= 0 {
+			common.RenderError(w, r, common.ErrorInvalidRequest(errInvalidID))
+			return
+		}
+	}
+	schools, err := rs.portal.OrderOverview(r.Context(), rs.currentAccountID(r.Context()), id, from, to)
 	if err != nil {
 		renderFailure(w, r, err)
 		return
 	}
-	response := SchoolsResponse{CatererName: schools.CatererName, Schools: make([]SchoolResponse, 0, len(schools.Schools))}
+	response := SchoolsResponse{CatererName: schools.CatererName, Schools: make([]SchoolSummaryResponse, 0, len(schools.Schools))}
 	for _, school := range schools.Schools {
-		response.Schools = append(response.Schools, schoolResponse(school))
+		row := SchoolSummaryResponse{ID: ident.ID(school.ID), Name: school.Name, DeliveryAddress: school.DeliveryAddress, Names: school.Summary.Names, ByClass: school.Summary.ByClass, Failure: summaryFailure(r, school), Days: make([]SummaryDayResponse, 0, len(school.Summary.Days))}
+		if !school.StartedAt.IsZero() {
+			row.StartedAt = &school.StartedAt
+		}
+		for _, day := range school.Summary.Days {
+			row.Days = append(row.Days, SummaryDayResponse{Date: day.Date.String(), Closed: day.Closed, Deadline: day.Deadline, Status: string(day.Status), OrderID: ident.ID(day.OrderID), Total: day.Total, Added: day.Added, Removed: day.Removed})
+		}
+		response.Schools = append(response.Schools, row)
 	}
-	common.Respond(w, r, http.StatusOK, response, "Schools retrieved")
+	common.Respond(w, r, http.StatusOK, response, "Order overview retrieved")
+}
+
+func summaryFailure(r *http.Request, school catererportal.SchoolSummary) *SummaryFailureResponse {
+	if school.Failure == nil {
+		return nil
+	}
+	failure := common.RenderWithRules(school.Failure, errorRules, common.ErrorInternalServerRenderer("school order overview failed"))
+	status, code := http.StatusInternalServerError, common.CodeGeneralServer
+	if problem, ok := failure.(*common.ErrResponse); ok {
+		status, code = problem.HTTPStatusCode, problem.Code
+		if code == "" {
+			code = common.ErrorClassCode(status)
+		}
+	}
+	if status >= 500 {
+		slog.WarnContext(r.Context(), "school order overview failed",
+			"school_id", school.ID,
+			"code", code,
+			"error", school.Failure,
+		)
+	}
+	return &SummaryFailureResponse{Status: status, Code: code}
 }
 
 // getSchoolOrders returns one school's orders of [from, to].
@@ -183,10 +258,8 @@ func (rs *Resource) getSchoolOrders(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errInvalidID))
 		return
 	}
-	from, fromErr := mealplan.ParseDate(r.URL.Query().Get("from"))
-	to, toErr := mealplan.ParseDate(r.URL.Query().Get("to"))
-	if fromErr != nil || toErr != nil {
-		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("from and to must be in YYYY-MM-DD format")))
+	from, to, ok := orderWindow(w, r)
+	if !ok {
 		return
 	}
 	orders, err := rs.portal.SchoolOrders(r.Context(), rs.currentAccountID(r.Context()), schoolID, from, to)
@@ -217,4 +290,14 @@ func (rs *Resource) confirmOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	common.RespondNoContent(w, r)
+}
+
+func orderWindow(w http.ResponseWriter, r *http.Request) (mealplan.Date, mealplan.Date, bool) {
+	from, fromErr := mealplan.ParseDate(r.URL.Query().Get("from"))
+	to, toErr := mealplan.ParseDate(r.URL.Query().Get("to"))
+	if fromErr != nil || toErr != nil {
+		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("from and to must be in YYYY-MM-DD format")))
+		return "", "", false
+	}
+	return from, to, true
 }

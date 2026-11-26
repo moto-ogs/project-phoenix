@@ -172,7 +172,8 @@ export const PORTALS = {
       refresh: ACCOUNT_REFRESH,
       logout: ACCOUNT_LOGOUT,
     },
-    snapshotClaims: ({ tenantId }) => typeof tenantId === "number",
+    snapshotClaims: ({ tenantId }) =>
+      typeof tenantId === "string" && /^[1-9]\d*$/.test(tenantId),
     tenantFeatures: true,
   },
   operator: {
@@ -243,7 +244,7 @@ export const PORTALS = {
     },
     // School tokens are tenant-bound; the portal keys its data cache on it.
     snapshotClaims: ({ tenantId }) =>
-      typeof tenantId === "number" && tenantId > 0,
+      typeof tenantId === "string" && /^[1-9]\d*$/.test(tenantId),
   },
   caterer: {
     key: "caterer",
@@ -284,7 +285,7 @@ export const PORTALS = {
     // A Träger session never names a school (ADR 0084): a school session of
     // the Absprung lives in the tenant cookie.
     snapshotClaims: ({ tenantId, orgId }) =>
-      typeof orgId === "number" && orgId > 0 && tenantId == null,
+      typeof orgId === "string" && /^[1-9]\d*$/.test(orgId) && tenantId == null,
   },
 } as const satisfies Record<PortalKey, PortalDescriptor>;
 

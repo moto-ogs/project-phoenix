@@ -44,7 +44,7 @@ let inflight: Promise<Awaited<ReturnType<typeof getSession>>> | null = null;
 // Track the tenant ID of the cached session.
 // When the user switches tenants, the new session will have a different tenant_id,
 // which automatically invalidates the stale cache entry.
-let cachedTenantId: number | undefined;
+let cachedTenantId: string | undefined;
 
 // Parallel requests of one page are refused together; the provider needs to
 // hear it once. Its next answer (primeSessionCache) re-arms the report.
@@ -128,7 +128,7 @@ export function primeSessionCache(
     if (hasSessionAccess(cached?.session) || inflight) clearSessionCache();
     return;
   }
-  cachedTenantId = (session.user as { tenantId?: number }).tenantId;
+  cachedTenantId = session.user.tenantId;
   cached = { session, expiry: Date.now() + PROVIDER_TTL_MS };
   // A lookup still in flight predates this session; its result must not
   // overwrite the fresher seed (see the invariant in getCachedSession).
@@ -188,9 +188,7 @@ export async function getCachedSession() {
     // Verify the cached session still belongs to the same tenant.
     // After a tenant switch, the session's tenant_id changes, so a cache miss
     // forces a fresh getSession() with the updated JWT.
-    const sessionTenantId = (
-      cached.session?.user as { tenantId?: number } | undefined
-    )?.tenantId;
+    const sessionTenantId = cached.session?.user?.tenantId;
     if (sessionTenantId === cachedTenantId) {
       return cached.session;
     }
@@ -221,8 +219,7 @@ export async function getCachedSession() {
         announceSessionChange();
       }
       if (inflight === request) {
-        cachedTenantId = (session?.user as { tenantId?: number } | undefined)
-          ?.tenantId;
+        cachedTenantId = session?.user?.tenantId;
         cached = { session, expiry: Date.now() + TTL_MS };
       }
       return session;

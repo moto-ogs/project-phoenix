@@ -2,7 +2,6 @@ package account_test
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"strings"
@@ -64,12 +63,7 @@ func sessionClaims(t *testing.T, e demoEnv, token string) testutil.Claims {
 	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
 	var tokens portalauth.TokenResponse
 	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &tokens))
-	segments := strings.Split(tokens.AccessToken, ".")
-	require.Len(t, segments, 3)
-	payload, err := base64.RawURLEncoding.DecodeString(segments[1])
-	require.NoError(t, err)
-	var claims testutil.Claims
-	require.NoError(t, json.Unmarshal(payload, &claims))
+	claims := (demoSession{AccessToken: tokens.AccessToken}).claims(t)
 	return claims
 }
 

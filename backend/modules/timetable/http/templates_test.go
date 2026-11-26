@@ -14,6 +14,10 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/uptrace/bun"
+
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar"
 	"github.com/moto-ogs/project-phoenix/modules/settings"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
@@ -21,11 +25,9 @@ import (
 	timetablePorts "github.com/moto-ogs/project-phoenix/modules/timetable/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"github.com/uptrace/bun"
 )
 
 func templateDateStringPtr(date *calendar.Date) *string {
@@ -314,7 +316,7 @@ func doTemplateJSON(t *testing.T, router http.Handler, method, path string, body
 	if body == nil {
 		reader = bytes.NewReader(nil)
 	} else {
-		b, err := json.Marshal(body)
+		b, err := wire.Marshal(body)
 		require.NoError(t, err)
 		reader = bytes.NewReader(b)
 	}
@@ -347,13 +349,13 @@ func createTemplateBody(s *templateSetup, name string) map[string]any {
 		"weekdays":         []int{timetable.WeekdayMonday, timetable.WeekdayWednesday},
 		"start_time":       "12:00",
 		"end_time":         "12:50",
-		"room_id":          s.roomID,
-		"category_id":      s.category.ID,
+		"room_id":          fmt.Sprint(s.roomID),
+		"category_id":      fmt.Sprint(s.category.ID),
 		"max_participants": 25,
 		"week_pattern":     1,
-		"student_ids":      []int64{s.studentA, s.studentA, 0, s.studentB},
-		"staff_ids":        []int64{s.staffA, s.staffB, s.staffA, -50},
-		"primary_staff_id": s.staffB,
+		"student_ids":      []string{fmt.Sprint(s.studentA), fmt.Sprint(s.studentA), fmt.Sprint(0), fmt.Sprint(s.studentB)},
+		"staff_ids":        []string{fmt.Sprint(s.staffA), fmt.Sprint(s.staffB), fmt.Sprint(s.staffA), fmt.Sprint(-50)},
+		"primary_staff_id": fmt.Sprint(s.staffB),
 	}
 }
 
@@ -390,7 +392,7 @@ func TestTemplateCreateListGetUpdateArchive(t *testing.T) {
 	body := createTemplateBody(s, "Tpl-CreateListUpdate")
 	body["materialize_from"] = "2026-05-04"
 	body["materialize_to"] = "2026-05-08"
-	body["education_group_id"] = educationGroup.ID
+	body["education_group_id"] = fmt.Sprint(educationGroup.ID)
 
 	w := doTemplateJSON(t, router, http.MethodPost, "/templates", body)
 	require.Equal(t, http.StatusCreated, w.Code, "body=%s", w.Body.String())
@@ -446,13 +448,13 @@ func TestTemplateCreateListGetUpdateArchive(t *testing.T) {
 
 	updateBody := createTemplateBody(s, "Tpl-Updated")
 	updateBody["type"] = timetable.GroupTypeActivity
-	updateBody["education_group_id"] = educationGroup.ID
+	updateBody["education_group_id"] = fmt.Sprint(educationGroup.ID)
 	updateBody["weekdays"] = []int{timetable.WeekdayFriday}
 	updateBody["start_time"] = "13:15"
 	updateBody["end_time"] = "14:00"
-	updateBody["student_ids"] = []int64{s.studentB}
-	updateBody["staff_ids"] = []int64{s.staffA}
-	updateBody["primary_staff_id"] = s.staffA
+	updateBody["student_ids"] = []string{fmt.Sprint(s.studentB)}
+	updateBody["staff_ids"] = []string{fmt.Sprint(s.staffA)}
+	updateBody["primary_staff_id"] = fmt.Sprint(s.staffA)
 	updateW := doTemplateJSON(t, router, http.MethodPut, fmt.Sprintf("/templates/%d", created.TemplateID), updateBody)
 	require.Equal(t, http.StatusOK, updateW.Code, "body=%s", updateW.Body.String())
 	updated := decodeTemplateData[templateResponse](t, updateW)
@@ -571,8 +573,8 @@ func TestListTemplates_CapacityFields(t *testing.T) {
 	body := createTemplateBody(s, "Tpl-Capacity")
 	// Only one staff member assigned against two enrolled students, so at a
 	// ratio of 1 the required count (2) exceeds the assigned count (1).
-	body["staff_ids"] = []int64{s.staffA}
-	body["primary_staff_id"] = s.staffA
+	body["staff_ids"] = []string{fmt.Sprint(s.staffA)}
+	body["primary_staff_id"] = fmt.Sprint(s.staffA)
 
 	w := doTemplateJSON(t, router, http.MethodPost, "/templates", body)
 	require.Equal(t, http.StatusCreated, w.Code, "body=%s", w.Body.String())
@@ -706,7 +708,7 @@ func TestTemplateCreate_MultipleTargetsRejectsCrossTenantEducationGroup(t *testi
 	otherGroup := testpkg.CreateTestEducationGroupForTenant(t, s.db, otherTenant.TenantID, "Tpl-Cross-Tenant")
 
 	body := createTemplateBody(s, fmt.Sprintf("Tpl-Cross-Tenant-Target-%d", time.Now().UnixNano()))
-	body["education_group_id"] = otherGroup.ID
+	body["education_group_id"] = fmt.Sprint(otherGroup.ID)
 	body["target_group_type"] = timetable.TargetGroupTypeSchoolClass
 	body["targets"] = []map[string]any{
 		{"type": timetable.TargetGroupTypeSchoolClass, "school_class": "1a"},
@@ -730,18 +732,18 @@ func TestTemplateUpdate_MultipleTargetsRejectsCrossTenantEducationGroup(t *testi
 	otherGroup := testpkg.CreateTestEducationGroupForTenant(t, s.db, otherTenant.TenantID, "Tpl-Update-Cross-Tenant")
 
 	body := createTemplateBody(s, fmt.Sprintf("Tpl-Update-Target-%d", time.Now().UnixNano()))
-	body["education_group_id"] = currentGroup.ID
+	body["education_group_id"] = fmt.Sprint(currentGroup.ID)
 	body["target_group_type"] = timetable.TargetGroupTypeEducationGroup
 	body["targets"] = []map[string]any{
-		{"type": timetable.TargetGroupTypeEducationGroup, "education_group_id": currentGroup.ID},
+		{"type": timetable.TargetGroupTypeEducationGroup, "education_group_id": fmt.Sprint(currentGroup.ID)},
 	}
 	createdResponse := doTemplateJSON(t, router, http.MethodPost, "/templates", body)
 	require.Equal(t, http.StatusCreated, createdResponse.Code, "body=%s", createdResponse.Body.String())
 	created := decodeTemplateData[createTemplateResponse](t, createdResponse)
 
 	body["targets"] = []map[string]any{
-		{"type": timetable.TargetGroupTypeEducationGroup, "education_group_id": currentGroup.ID},
-		{"type": timetable.TargetGroupTypeEducationGroup, "education_group_id": otherGroup.ID},
+		{"type": timetable.TargetGroupTypeEducationGroup, "education_group_id": fmt.Sprint(currentGroup.ID)},
+		{"type": timetable.TargetGroupTypeEducationGroup, "education_group_id": fmt.Sprint(otherGroup.ID)},
 	}
 	response := doTemplateJSON(t, router, http.MethodPut, fmt.Sprintf("/templates/%d", created.TemplateID), body)
 
@@ -780,7 +782,7 @@ func TestTemplateCreateRejectsForeignTopLevelEducationGroupWithDynamicTargets(t 
 	body := createTemplateBody(s, name)
 	body["target_group_type"] = timetable.TargetGroupTypeGrade
 	body["target_grade_level"] = 3
-	body["education_group_id"] = foreignGroup.ID
+	body["education_group_id"] = fmt.Sprint(foreignGroup.ID)
 	body["targets"] = []map[string]any{{
 		"type":        timetable.TargetGroupTypeGrade,
 		"grade_level": 3,
@@ -878,7 +880,7 @@ func TestTemplateCreateValidationAndMaterializationFailure(t *testing.T) {
 		{name: "invalid start time", mutate: func(b map[string]any) { b["start_time"] = "bad" }},
 		{name: "end before start", mutate: func(b map[string]any) { b["end_time"] = "11:00" }},
 		{name: "invalid week pattern", mutate: func(b map[string]any) { b["week_pattern"] = 9 }},
-		{name: "missing category", mutate: func(b map[string]any) { b["category_id"] = 0 }},
+		{name: "missing category", mutate: func(b map[string]any) { b["category_id"] = fmt.Sprint(0) }},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -929,7 +931,7 @@ func TestTemplateUpdateValidationAndNotFound(t *testing.T) {
 	}{
 		{name: "missing name", path: "/templates/500", mutate: func(b map[string]any) { b["name"] = "" }, want: http.StatusBadRequest},
 		{name: "invalid type", path: "/templates/500", mutate: func(b map[string]any) { b["type"] = "broken" }, want: http.StatusBadRequest},
-		{name: "missing room", path: "/templates/500", mutate: func(b map[string]any) { b["room_id"] = 0 }, want: http.StatusBadRequest},
+		{name: "missing room", path: "/templates/500", mutate: func(b map[string]any) { b["room_id"] = fmt.Sprint(0) }, want: http.StatusBadRequest},
 		{name: "invalid start", path: "/templates/500", mutate: func(b map[string]any) { b["start_time"] = "nope" }, want: http.StatusBadRequest},
 		{name: "invalid end", path: "/templates/500", mutate: func(b map[string]any) { b["end_time"] = "nope" }, want: http.StatusBadRequest},
 		{name: "end before start", path: "/templates/500", mutate: func(b map[string]any) { b["end_time"] = "11:00" }, want: http.StatusBadRequest},
@@ -1004,11 +1006,11 @@ func TestListTemplatesFiltersByPeriod(t *testing.T) {
 	periodB := createTemplateTestPeriod(t, s.db, "TplPeriodB")
 
 	bodyA := createTemplateBody(s, "Tpl-Period-A")
-	bodyA["calendar_period_id"] = periodA.ID
+	bodyA["calendar_period_id"] = fmt.Sprint(periodA.ID)
 	require.Equal(t, http.StatusCreated, doTemplateJSON(t, router, http.MethodPost, "/templates", bodyA).Code)
 
 	bodyB := createTemplateBody(s, "Tpl-Period-B")
-	bodyB["calendar_period_id"] = periodB.ID
+	bodyB["calendar_period_id"] = fmt.Sprint(periodB.ID)
 	require.Equal(t, http.StatusCreated, doTemplateJSON(t, router, http.MethodPost, "/templates", bodyB).Code)
 
 	bodyGlobal := createTemplateBody(s, "Tpl-Period-Global")
@@ -1057,10 +1059,10 @@ func TestUpdateTemplatePeopleScopesReplacementToSelectedPeriod(t *testing.T) {
 	periodB := createTemplateTestPeriod(t, s.db, "TplPeoplePeriodB")
 
 	body := createTemplateBody(s, "Tpl-People-Period-A")
-	body["calendar_period_id"] = periodA.ID
-	body["student_ids"] = []int64{s.studentA}
-	body["staff_ids"] = []int64{s.staffA}
-	body["primary_staff_id"] = s.staffA
+	body["calendar_period_id"] = fmt.Sprint(periodA.ID)
+	body["student_ids"] = []string{fmt.Sprint(s.studentA)}
+	body["staff_ids"] = []string{fmt.Sprint(s.staffA)}
+	body["primary_staff_id"] = fmt.Sprint(s.staffA)
 	w := doTemplateJSON(t, router, http.MethodPost, "/templates", body)
 	require.Equal(t, http.StatusCreated, w.Code, "body=%s", w.Body.String())
 	created := decodeTemplateData[createTemplateResponse](t, w)
@@ -1089,10 +1091,10 @@ func TestUpdateTemplatePeopleScopesReplacementToSelectedPeriod(t *testing.T) {
 	})
 
 	updateBody := createTemplateBody(s, "Tpl-People-Period-A")
-	updateBody["calendar_period_id"] = periodA.ID
-	updateBody["student_ids"] = []int64{studentD.ID}
-	updateBody["staff_ids"] = []int64{staffD.ID}
-	updateBody["primary_staff_id"] = staffD.ID
+	updateBody["calendar_period_id"] = fmt.Sprint(periodA.ID)
+	updateBody["student_ids"] = []string{fmt.Sprint(studentD.ID)}
+	updateBody["staff_ids"] = []string{fmt.Sprint(staffD.ID)}
+	updateBody["primary_staff_id"] = fmt.Sprint(staffD.ID)
 	updateW := doTemplateJSON(t, router, http.MethodPut, fmt.Sprintf("/templates/%d", created.TemplateID), updateBody)
 	require.Equal(t, http.StatusOK, updateW.Code, "body=%s", updateW.Body.String())
 
@@ -1167,13 +1169,13 @@ func TestUpdateTemplateCanMoveToAnotherCalendarPeriod(t *testing.T) {
 	periodB := createTemplateTestPeriod(t, s.db, "Tpl-Move-Period-B")
 
 	createBody := createTemplateBody(s, "Tpl-Move-Period")
-	createBody["calendar_period_id"] = periodA.ID
+	createBody["calendar_period_id"] = fmt.Sprint(periodA.ID)
 	createdW := doTemplateJSON(t, router, http.MethodPost, "/templates", createBody)
 	require.Equal(t, http.StatusCreated, createdW.Code, "body=%s", createdW.Body.String())
 	created := decodeTemplateData[createTemplateResponse](t, createdW)
 
 	updateBody := createTemplateBody(s, "Tpl-Moved-Period")
-	updateBody["calendar_period_id"] = periodB.ID
+	updateBody["calendar_period_id"] = fmt.Sprint(periodB.ID)
 	updatedW := doTemplateJSON(t, router, http.MethodPut, fmt.Sprintf("/templates/%d", created.TemplateID), updateBody)
 	require.Equal(t, http.StatusOK, updatedW.Code, "body=%s", updatedW.Body.String())
 	updated := decodeTemplateData[templateResponse](t, updatedW)
@@ -1194,7 +1196,7 @@ func TestGetTemplateExposesProtectedStudentWeekdays(t *testing.T) {
 	period := createTemplateTestPeriod(t, s.db, "Tpl-Protected-Read")
 
 	body := createTemplateBody(s, "Tpl-Protected-Read")
-	body["calendar_period_id"] = period.ID
+	body["calendar_period_id"] = fmt.Sprint(period.ID)
 	body["student_ids"] = []int64{}
 	createdW := doTemplateJSON(t, router, http.MethodPost, "/templates", body)
 	require.Equal(t, http.StatusCreated, createdW.Code, "body=%s", createdW.Body.String())
@@ -1247,8 +1249,8 @@ func TestListTemplatesEnrollmentCountIsPeriodTolerant(t *testing.T) {
 
 	// Template 1: schedules AND roster scoped to P via the regular create path.
 	bodyP := createTemplateBody(s, "Tpl-Tolerant-P")
-	bodyP["calendar_period_id"] = periodP.ID
-	bodyP["student_ids"] = []int64{s.studentA, s.studentB}
+	bodyP["calendar_period_id"] = fmt.Sprint(periodP.ID)
+	bodyP["student_ids"] = []string{fmt.Sprint(s.studentA), fmt.Sprint(s.studentB)}
 	wP := doTemplateJSON(t, router, http.MethodPost, "/templates", bodyP)
 	require.Equal(t, http.StatusCreated, wP.Code, "body=%s", wP.Body.String())
 	createdP := decodeTemplateData[createTemplateResponse](t, wP)
@@ -1279,7 +1281,7 @@ func TestListTemplatesEnrollmentCountIsPeriodTolerant(t *testing.T) {
 	// open-row display roster but must still drive capacity while its window
 	// overlaps the selected period.
 	bodyBounded := createTemplateBody(s, "Tpl-Tolerant-Bounded")
-	bodyBounded["calendar_period_id"] = periodP.ID
+	bodyBounded["calendar_period_id"] = fmt.Sprint(periodP.ID)
 	bodyBounded["student_ids"] = []int64{}
 	bodyBounded["staff_ids"] = []int64{}
 	delete(bodyBounded, "primary_staff_id")
@@ -1753,7 +1755,7 @@ func createCapacityTemplate(
 ) int64 {
 	t.Helper()
 	body := createTemplateBody(s, name)
-	body["calendar_period_id"] = periodID
+	body["calendar_period_id"] = fmt.Sprint(periodID)
 	body["weekdays"] = weekdays
 	body["week_pattern"] = weekPattern
 	body["student_ids"] = []int64{}
@@ -2049,7 +2051,7 @@ func TestTemplateCreateWithStartDateStampsValidity(t *testing.T) {
 	period := createTemplateTestPeriod(t, s.db, "TplStartDatePeriod")
 
 	body := createTemplateBody(s, "Tpl-StartDate")
-	body["calendar_period_id"] = period.ID
+	body["calendar_period_id"] = fmt.Sprint(period.ID)
 	body["start_date"] = "2026-08-13"
 	w := doTemplateJSON(t, router, http.MethodPost, "/templates", body)
 	require.Equal(t, http.StatusCreated, w.Code, "body=%s", w.Body.String())
@@ -2109,20 +2111,20 @@ func TestTemplateCreateStartDateValidation(t *testing.T) {
 
 	// Period runs 2026-01-01 to 2026-12-31 (createTemplateTestPeriod).
 	outside := createTemplateBody(s, "Tpl-StartDate-Outside")
-	outside["calendar_period_id"] = period.ID
+	outside["calendar_period_id"] = fmt.Sprint(period.ID)
 	outside["start_date"] = "2027-01-01"
 	w = doTemplateJSON(t, router, http.MethodPost, "/templates", outside)
 	assert.Equal(t, http.StatusBadRequest, w.Code, "body=%s", w.Body.String())
 	assert.Contains(t, w.Body.String(), "start_date must lie within the calendar period")
 
 	before := createTemplateBody(s, "Tpl-StartDate-Before")
-	before["calendar_period_id"] = period.ID
+	before["calendar_period_id"] = fmt.Sprint(period.ID)
 	before["start_date"] = "2025-12-31"
 	w = doTemplateJSON(t, router, http.MethodPost, "/templates", before)
 	assert.Equal(t, http.StatusBadRequest, w.Code, "body=%s", w.Body.String())
 
 	omitted := createTemplateBody(s, "Tpl-StartDate-Omitted")
-	omitted["calendar_period_id"] = period.ID
+	omitted["calendar_period_id"] = fmt.Sprint(period.ID)
 	w = doTemplateJSON(t, router, http.MethodPost, "/templates", omitted)
 	require.Equal(t, http.StatusCreated, w.Code, "body=%s", w.Body.String())
 	created := decodeTemplateData[createTemplateResponse](t, w)

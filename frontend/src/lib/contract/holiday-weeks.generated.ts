@@ -18,9 +18,11 @@ import {
   HolidayGuestContactSchema,
   HolidayHostAnswerSchema,
   HolidayHostHealthSchema,
+  HolidayRegistrationConsentSchema,
   type HolidayGuestContact,
   type HolidayHostAnswer,
   type HolidayHostHealth,
+  type HolidayRegistrationConsent,
 } from "./shared.generated";
 
 /** Go: enrollment.HolidayDayCount */
@@ -235,6 +237,7 @@ export interface holidayParticipantResponse {
   second_guardian: HolidayHostGuardian | null;
   answers: HolidayHostAnswer[] | null;
   health: HolidayHostHealth | null;
+  consents: HolidayRegistrationConsent[] | null;
   home_school_name: string;
 }
 
@@ -251,6 +254,7 @@ export const holidayParticipantResponseSchema: z.ZodType<holidayParticipantRespo
   second_guardian: nullable(HolidayHostGuardianSchema),
   answers: nullable(arr(HolidayHostAnswerSchema)),
   health: nullable(HolidayHostHealthSchema),
+  consents: nullable(arr(HolidayRegistrationConsentSchema)),
   home_school_name: str,
 });
 

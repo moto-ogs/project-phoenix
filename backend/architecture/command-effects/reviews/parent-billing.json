@@ -141,7 +141,7 @@
       "target_owner": "security-runtime"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingLetterheads.DocumentTemplate",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingLetterheads.DocumentTemplate",
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingDocumentTemplates.DocumentTemplate",
@@ -151,13 +151,133 @@
       "target_owner": "organization-tenancy"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingLetterheads.DocumentTemplate",
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.BillingLetterheads.DocumentTemplate",
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingDocumentTemplates.DocumentTemplate",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.TraegerDocumentTemplates.Current: the newest version of the Träger's template of the kind of document a billing run issues (invoice, fee notice or confirmation letter), or its standard template, read in the Träger transaction under the Träger policy of platform.traeger_document_templates; the template names no person. The release reads the legal remedy of the fee notice, the letters its text (#4688).",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.TraegerDocumentTemplates.Current: the newest version of the Träger's template of the kind of document a billing run issues (invoice, fee notice or confirmation letter), or its standard template, read in the Träger transaction under the Träger policy of platform.traeger_document_templates; the template names no person. The release reads the legal remedy of the fee notice, the letters its text (#4688). Reviewed again for #8040: the root binds it through roots/owners.BillingLetterheads, which only adds the issuers of the schools; this read is unchanged.",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.TraegerDocumentTemplates.Current",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingLetterheads.SchoolBillingIssuers",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingDocumentTemplates.SchoolBillingIssuers",
+      "reason": "Reviewed read: the Schulträger or the Gemeinde that bills the parents of each school of the Träger in effect (#8040, ADR 0322), from the master data of platform.school_responsible_parties under the Träger policy of the caller's Träger transaction and the settings responsibility.billing of the schools, read in an administrative read of their own (ADR 0318 point 4). No row changes, no locking read.",
+      "source_owner": "parent-billing",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.ResponsibleParties.ResponsibleParties",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingLetterheads.SchoolBillingIssuers",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingDocumentTemplates.SchoolBillingIssuers",
+      "reason": "Reviewed value method: joins the stored name and address of the body into the sender text its documents print (#8040); no data access.",
+      "source_owner": "parent-billing",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.SchoolParty.SenderText",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingLetterheads.SchoolBillingIssuers",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingDocumentTemplates.SchoolBillingIssuers",
+      "reason": "Reviewed read: the Schulträger or the Gemeinde that bills the parents of each school of the Träger in effect (#8040, ADR 0322), from the master data of platform.school_responsible_parties under the Träger policy of the caller's Träger transaction and the settings responsibility.billing of the schools, read in an administrative read of their own (ADR 0318 point 4). No row changes, no locking read.",
+      "source_owner": "parent-billing",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.SchoolResponsibilities.ResponsibleParties",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.BillingLetterheads.SchoolBillingIssuers",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingDocumentTemplates.SchoolBillingIssuers",
+      "reason": "Reviewed read: the Schulträger or the Gemeinde that bills the parents of each school of the Träger in effect (#8040, ADR 0322), from the master data of platform.school_responsible_parties under the Träger policy of the caller's Träger transaction and the settings responsibility.billing of the schools, read in an administrative read of their own (ADR 0318 point 4). No row changes, no locking read.",
+      "source_owner": "parent-billing",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.ResponsibleParties.ResponsibleParties",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.BillingLetterheads.SchoolBillingIssuers",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingDocumentTemplates.SchoolBillingIssuers",
+      "reason": "Reviewed value method: joins the stored name and address of the body into the sender text its documents print (#8040); no data access.",
+      "source_owner": "parent-billing",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.SchoolParty.SenderText",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.BillingLetterheads.SchoolBillingIssuers",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingDocumentTemplates.SchoolBillingIssuers",
+      "reason": "Reviewed read: the Schulträger or the Gemeinde that bills the parents of each school of the Träger in effect (#8040, ADR 0322), from the master data of platform.school_responsible_parties under the Träger policy of the caller's Träger transaction and the settings responsibility.billing of the schools, read in an administrative read of their own (ADR 0318 point 4). No row changes, no locking read.",
+      "source_owner": "parent-billing",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.SchoolResponsibilities.ResponsibleParties",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingDocumentTemplates.SchoolBillingIssuers",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingIssuers.SchoolBillingIssuers",
+      "reason": "Reviewed read: the Schulträger or the Gemeinde that bills the parents of each school of the Träger in effect (#8040, ADR 0322), from the master data of platform.school_responsible_parties under the Träger policy of the caller's Träger transaction and the settings responsibility.billing of the schools, read in an administrative read of their own (ADR 0318 point 4). No row changes, no locking read.",
+      "source_owner": "parent-billing",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.ResponsibleParties.ResponsibleParties",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingDocumentTemplates.SchoolBillingIssuers",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingIssuers.SchoolBillingIssuers",
+      "reason": "Reviewed value method: joins the stored name and address of the body into the sender text its documents print (#8040); no data access.",
+      "source_owner": "parent-billing",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.SchoolParty.SenderText",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingDocumentTemplates.SchoolBillingIssuers",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingIssuers.SchoolBillingIssuers",
+      "reason": "Reviewed read: the Schulträger or the Gemeinde that bills the parents of each school of the Träger in effect (#8040, ADR 0322), from the master data of platform.school_responsible_parties under the Träger policy of the caller's Träger transaction and the settings responsibility.billing of the schools, read in an administrative read of their own (ADR 0318 point 4). No row changes, no locking read.",
+      "source_owner": "parent-billing",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.SchoolResponsibilities.ResponsibleParties",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.BillingIssuers.SchoolBillingIssuers",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingIssuers.SchoolBillingIssuers",
+      "reason": "Reviewed read: the Schulträger or the Gemeinde that bills the parents of each school of the Träger in effect (#8040, ADR 0322), from the master data of platform.school_responsible_parties under the Träger policy of the caller's Träger transaction and the settings responsibility.billing of the schools, read in an administrative read of their own (ADR 0318 point 4). No row changes, no locking read.",
+      "source_owner": "parent-billing",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.ResponsibleParties.ResponsibleParties",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.BillingIssuers.SchoolBillingIssuers",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingIssuers.SchoolBillingIssuers",
+      "reason": "Reviewed value method: joins the stored name and address of the body into the sender text its documents print (#8040); no data access.",
+      "source_owner": "parent-billing",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.SchoolParty.SenderText",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.BillingIssuers.SchoolBillingIssuers",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingIssuers.SchoolBillingIssuers",
+      "reason": "Reviewed read: the Schulträger or the Gemeinde that bills the parents of each school of the Träger in effect (#8040, ADR 0322), from the master data of platform.school_responsible_parties under the Träger policy of the caller's Träger transaction and the settings responsibility.billing of the schools, read in an administrative read of their own (ADR 0318 point 4). No row changes, no locking read.",
+      "source_owner": "parent-billing",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.SchoolResponsibilities.ResponsibleParties",
       "target_owner": "organization-tenancy"
     },
     {
@@ -223,54 +343,84 @@
       "target_owner": "settings-platform"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingLetterheads.DocumentTemplate",
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.BillingLetterheads.DocumentTemplate",
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingLetterheads.DocumentTemplate",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.TraegerDocumentTemplates.Current: the newest version of the Träger's template of the kind of document a billing run issues (invoice, fee notice or confirmation letter), or its standard template, read in the Träger transaction under the Träger policy of platform.traeger_document_templates; the template names no person. The release reads the legal remedy of the fee notice, the letters its text (#4688).",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.TraegerDocumentTemplates.Current: the newest version of the Träger's template of the kind of document a billing run issues (invoice, fee notice or confirmation letter), or its standard template, read in the Träger transaction under the Träger policy of platform.traeger_document_templates; the template names no person. The release reads the legal remedy of the fee notice, the letters its text (#4688). Reviewed again for #8040: the root binds it through roots/owners.BillingLetterheads, which only adds the issuers of the schools; this read is unchanged.",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.TraegerDocumentTemplates.Current",
       "target_owner": "organization-tenancy"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingLetterheads.Letterhead",
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.BillingLetterheads.Letterhead",
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingLetterheads.Letterhead",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/settings/compose.TraegerSettings.TraegerTextsAndBools: the colour, letterhead and footer and the payment text (#5622) of the session's Träger (its value or the registry default), read in its Träger transaction for the confirmation letters (ADR 0112, ADR 0121). The same binding then reads the Träger's template of the confirmation letter (#4677, ADR 0152). Reviewed again for #5691: the binding also copies the layout of the table of amounts from the template version it read; no read or write changes. Reviewed again for #5624: the same single read of the Träger's settings now also takes its switch of the GiroCode (parent_billing.print_transfer_qr or the registry default, on); off leaves the transfer code out of every letter. No write, no further statement.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/settings/compose.TraegerSettings.TraegerTextsAndBools: the colour, letterhead and footer and the payment text (#5622) of the session's Träger (its value or the registry default), read in its Träger transaction for the confirmation letters (ADR 0112, ADR 0121). The same binding then reads the Träger's template of the confirmation letter (#4677, ADR 0152). Reviewed again for #5691: the binding also copies the layout of the table of amounts from the template version it read; no read or write changes. Reviewed again for #5624: the same single read of the Träger's settings now also takes its switch of the GiroCode (parent_billing.print_transfer_qr or the registry default, on); off leaves the transfer code out of every letter. No write, no further statement. Reviewed again for #8040: the root binds it through roots/owners.BillingLetterheads, which only adds the issuers of the schools; this read is unchanged.",
       "source_owner": "parent-billing",
       "target": "*github.com/moto-ogs/project-phoenix/modules/settings/compose.TraegerSettings.TraegerTextsAndBools",
       "target_owner": "settings-platform"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingLetterheads.Letterhead",
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.BillingLetterheads.Letterhead",
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingLetterheads.Letterhead",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.TraegerDocumentTemplates.Current: the newest version of the session's Träger's template of the confirmation letter, or the standard template, read in its Träger transaction under the Träger policy of platform.traeger_document_templates (#4677, ADR 0152). Reviewed again for #5691: the binding also copies the layout of the table of amounts from the template version it read; no read or write changes. Reviewed again for #5624: the binding also reads the Träger's switch of the GiroCode; this read is unchanged.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.TraegerDocumentTemplates.Current: the newest version of the session's Träger's template of the confirmation letter, or the standard template, read in its Träger transaction under the Träger policy of platform.traeger_document_templates (#4677, ADR 0152). Reviewed again for #5691: the binding also copies the layout of the table of amounts from the template version it read; no read or write changes. Reviewed again for #5624: the binding also reads the Träger's switch of the GiroCode; this read is unchanged. Reviewed again for #8040: the root binds it through roots/owners.BillingLetterheads, which only adds the issuers of the schools; this read is unchanged.",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.TraegerDocumentTemplates.Current",
       "target_owner": "organization-tenancy"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingLetterheads.Letterhead",
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.BillingLetterheads.Letterhead",
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingLetterheads.Letterhead",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.TraegerMasterData.LogoImage: the stored logo of the session's Träger, read in its Träger transaction for the confirmation letters; the logo carries no person and is read without a log entry (ADR 0112 point 6, ADR 0121). Reviewed again for #5622: the binding now also passes the payment text from the settings read; this read is unchanged. The same binding then reads the Träger's template of the confirmation letter (#4677, ADR 0152). Reviewed again for #5691: the binding also copies the layout of the table of amounts from the template version it read; no read or write changes. Reviewed again for #5624: the binding also reads the Träger's switch of the GiroCode; this read is unchanged.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.TraegerMasterData.LogoImage: the stored logo of the session's Träger, read in its Träger transaction for the confirmation letters; the logo carries no person and is read without a log entry (ADR 0112 point 6, ADR 0121). Reviewed again for #5622: the binding now also passes the payment text from the settings read; this read is unchanged. The same binding then reads the Träger's template of the confirmation letter (#4677, ADR 0152). Reviewed again for #5691: the binding also copies the layout of the table of amounts from the template version it read; no read or write changes. Reviewed again for #5624: the binding also reads the Träger's switch of the GiroCode; this read is unchanged. Reviewed again for #8040: the root binds it through roots/owners.BillingLetterheads, which only adds the issuers of the schools; this read is unchanged.",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.TraegerMasterData.LogoImage",
       "target_owner": "organization-tenancy"
     },
     {
       "adr": "0067",
-      "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingLetterheads.Letterhead",
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.BillingLetterheads.Letterhead",
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingLetterheads.Letterhead",
-      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target modules/organizationtenancy.TraegerMasterData.Profile: Organisation \u0026 Tenancy reads the contact person and the bank accounts of the session's Träger and appends the read to platform.traeger_master_data_audit (ADR 0112 point 6) in the caller's Träger transaction before the Elternabrechnung renders the confirmation letters; the route rolls back on any later refusal, including a payment text that names a missing debtor number (ADR 0121, #5622). The same binding then reads the Träger's template of the confirmation letter (#4677, ADR 0152). Reviewed again for #5691: the binding also copies the layout of the table of amounts from the template version it read; no read or write changes. Reviewed again for #5624: the binding also reads the Träger's switch of the GiroCode; this read is unchanged.",
+      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target modules/organizationtenancy.TraegerMasterData.Profile: Organisation \u0026 Tenancy reads the contact person and the bank accounts of the session's Träger and appends the read to platform.traeger_master_data_audit (ADR 0112 point 6) in the caller's Träger transaction before the Elternabrechnung renders the confirmation letters; the route rolls back on any later refusal, including a payment text that names a missing debtor number (ADR 0121, #5622). The same binding then reads the Träger's template of the confirmation letter (#4677, ADR 0152). Reviewed again for #5691: the binding also copies the layout of the table of amounts from the template version it read; no read or write changes. Reviewed again for #5624: the binding also reads the Träger's switch of the GiroCode; this read is unchanged. Reviewed again for #8040: the root binds it through roots/owners.BillingLetterheads, which only adds the issuers of the schools; this read is unchanged.",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.TraegerMasterData.Profile",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.BillingLetterheads.SchoolBillingIssuers",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingLetterheads.SchoolBillingIssuers",
+      "reason": "Reviewed read: the Schulträger or the Gemeinde that bills the parents of each school of the Träger in effect (#8040, ADR 0322), from the master data of platform.school_responsible_parties under the Träger policy of the caller's Träger transaction and the settings responsibility.billing of the schools, read in an administrative read of their own (ADR 0318 point 4). No row changes, no locking read.",
+      "source_owner": "parent-billing",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.ResponsibleParties.ResponsibleParties",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.BillingLetterheads.SchoolBillingIssuers",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingLetterheads.SchoolBillingIssuers",
+      "reason": "Reviewed value method: joins the stored name and address of the body into the sender text its documents print (#8040); no data access.",
+      "source_owner": "parent-billing",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.SchoolParty.SenderText",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.BillingLetterheads.SchoolBillingIssuers",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.BillingLetterheads.SchoolBillingIssuers",
+      "reason": "Reviewed read: the Schulträger or the Gemeinde that bills the parents of each school of the Träger in effect (#8040, ADR 0322), from the master data of platform.school_responsible_parties under the Träger policy of the caller's Träger transaction and the settings responsibility.billing of the schools, read in an administrative read of their own (ADR 0318 point 4). No row changes, no locking read.",
+      "source_owner": "parent-billing",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.SchoolResponsibilities.ResponsibleParties",
       "target_owner": "organization-tenancy"
     },
     {
@@ -348,7 +498,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.CareContracts.Recipients",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/carecontract.ContractBilling.BillingRecipients: the party each monthly invoice of the given contracts of the session's Träger goes to, read in its Träger transaction; the monthly run copies it and records the read in its own trail (#4684). It also marks a draft contract, so the Elternabrechnung refuses a SEPA mandate on a draft, which its discard would take along (#7862).",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/carecontract.ContractBilling.BillingRecipients: the party each monthly invoice of the given contracts of the session's Träger goes to, read in its Träger transaction; the monthly run copies it and records the read in its own trail (#4684). It also marks a draft contract, so the Elternabrechnung refuses a SEPA mandate on a draft, which its discard would take along (#7862). Reviewed again for #8040: the binding also copies the school of each contract from the same read, whose issuer takes a mandate; no further read or write.",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/carecontract.ContractBilling.BillingRecipients",
       "target_owner": "care-contract"
@@ -358,7 +508,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.CareContracts.Recipients",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/carecontract.ContractBilling.BillingRecipients: the party each monthly invoice of the given contracts of the session's Träger goes to, read in its Träger transaction; the monthly run copies it and records the read in its own trail (#4684). For the billing terms the binding leaves out the contracts that are still drafts (#7770); the read and its effect are unchanged.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/carecontract.ContractBilling.BillingRecipients: the party each monthly invoice of the given contracts of the session's Träger goes to, read in its Träger transaction; the monthly run copies it and records the read in its own trail (#4684). For the billing terms the binding leaves out the contracts that are still drafts (#7770); the read and its effect are unchanged. Reviewed again for #8040: the binding also copies the school of each contract from the same read; no further read or write.",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/carecontract.ContractBilling.BillingRecipients",
       "target_owner": "care-contract"
@@ -521,7 +671,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.ContractParties.Recipients",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/carecontract.ContractBilling.BillingRecipients: the name of the billing party of the one contract the parents portal checked, read in its Träger transaction to propose the account holder of a new online SEPA mandate (#4696). It also marks a draft contract, so the Elternabrechnung refuses a SEPA mandate on a draft, which its discard would take along (#7862).",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/carecontract.ContractBilling.BillingRecipients: the name of the billing party of the one contract the parents portal checked, read in its Träger transaction to propose the account holder of a new online SEPA mandate (#4696). It also marks a draft contract, so the Elternabrechnung refuses a SEPA mandate on a draft, which its discard would take along (#7862). Reviewed again for #8040: the binding also copies the school of the contract from the same read, whose issuer the parents give the mandate to; no further read or write.",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/carecontract.ContractBilling.BillingRecipients",
       "target_owner": "care-contract"
@@ -713,7 +863,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.HolidayBillingRegistrations.ConfirmedHolidayRegistrations",
-      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target modules/enrollment.HolidayRegistrationReview.ListHolidayRegistrationRecipients with the status filter confirmed: Enrollment checks the period of the session's Träger, reads the confirmed registrations with the postal address of the parent (#5625), the debtor number of the family (#5621) and the date of birth of each child for its own number (#7007) and appends the list read to the period's audit trail (ADR 0114) in the caller's Träger transaction before the Elternabrechnung builds the preview or issues the invoices of a billing run (ADR 0119). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
+      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target modules/enrollment.HolidayRegistrationReview.ListHolidayRegistrationRecipients with the status filter confirmed: Enrollment checks the period of the session's Träger, reads the confirmed registrations with the postal address of the parent (#5625), the debtor number of the family (#5621) and the date of birth of each child for its own number (#7007) and appends the list read to the period's audit trail (ADR 0114) in the caller's Träger transaction before the Elternabrechnung builds the preview or issues the invoices of a billing run (ADR 0119). The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged. Reviewed again for #8040: the binding also copies the home school of each child from the same read, whose issuer bills the child; no further read or write.",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayRegistrationReview.ListHolidayRegistrationRecipients",
       "target_owner": "enrollment"
@@ -895,6 +1045,17 @@
     },
     {
       "adr": "0067",
+      "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingHolidayRegistrations.RecordHolidayPayer",
+      "classification": "leaf",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.HolidayRegistrations.RecordHolidayPayer",
+      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/enrollment.HolidayPayerTrail.RecordHolidayPayer: Enrollment checks the reason and the payer kinds, locks the period and the registration, refuses a registration that is not confirmed and appends the payer before and after with the reason to the registration's audit trail in the caller's Träger transaction (#8158, ADR 0325); the Elternabrechnung writes the new contribution version under its period billing lock in the same unit and the route rolls back on any refusal. The binding copies the kind and the name of each payer and keeps the cost bearer's ID with the Elternabrechnung.",
+      "source_owner": "parent-billing",
+      "target": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayPayerTrail.RecordHolidayPayer",
+      "target_owner": "enrollment"
+    },
+    {
+      "adr": "0067",
       "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingHolidayRegistrations.RecordHolidaySiblings",
       "classification": "leaf",
       "effect": "mutation",
@@ -1022,19 +1183,9 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.SchoolModules.BookedModules",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/settings/records.SettingsSnapshot.Bool: reads a module switch (module.vertraege, module.elternbeitraege, module.ferienbetreuung) of a school of the Träger from the snapshot of the batch read, for the details the Träger still has to enter (#7177).",
+      "reason": "Read-only: resolve the module switches of the Träger's schools in one administrative read of its own (tenant.ContextWithoutTransaction): the Träger transaction of the request hides school settings by row security and shares nothing with it (ADR 0105); no write, lock or change of the request's scope (#7177). Since #6052 the binding reads through modules/settings.ModulesBookedByAnySchool, the rule the lock of the Träger portal uses: a module counts once one school books it. The same batch read (ResolveManyForTenants) and the same three switches as before.",
       "source_owner": "parent-billing",
-      "target": "*github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsSnapshot.Bool",
-      "target_owner": "settings-platform"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/api.schoolModuleSwitches.BookedModules",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.SchoolModules.BookedModules",
-      "reason": "Read-only: resolve the module switches of the Träger's schools in one administrative read of its own (tenant.ContextWithoutTransaction): the Träger transaction of the request hides school settings by row security and shares nothing with it (ADR 0105); no write, lock or change of the request's scope (#7177).",
-      "source_owner": "parent-billing",
-      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveManyForTenants",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings.ModulesBookedByAnySchool",
       "target_owner": "settings-platform"
     },
     {
@@ -1086,7 +1237,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling/internal/application.CareLetterRecipients.Recipients",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/carecontract.ContractBilling.BillingRecipients: the party each monthly invoice of the given contracts of the session's Träger goes to now, read in its Träger transaction before a letter is sent, so a letter only goes to the address that is still the contract's billing party (#4684, ADR 0165). Reviewed again for #7770: the party the target answers also says whether its contract is still a draft; this binding does not read it, and no read or write changes. It also marks a draft contract, so the Elternabrechnung refuses a SEPA mandate on a draft, which its discard would take along (#7862).",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/carecontract.ContractBilling.BillingRecipients: the party each monthly invoice of the given contracts of the session's Träger goes to now, read in its Träger transaction before a letter is sent, so a letter only goes to the address that is still the contract's billing party (#4684, ADR 0165). Reviewed again for #7770: the party the target answers also says whether its contract is still a draft; this binding does not read it, and no read or write changes. It also marks a draft contract, so the Elternabrechnung refuses a SEPA mandate on a draft, which its discard would take along (#7862). Reviewed again for #8040: the parties now also name the school of each contract; no further read or write.",
       "source_owner": "parent-billing",
       "target": "github.com/moto-ogs/project-phoenix/modules/carecontract.ContractBilling.BillingRecipients",
       "target_owner": "care-contract"

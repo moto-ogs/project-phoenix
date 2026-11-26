@@ -14,6 +14,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
+import { errorFromProblem } from "~/test/helpers/problem-response";
 import { catalogText } from "~/test/error-catalog-text";
 import { deferred } from "~/test/helpers/form-modal-pending";
 import { releaseFakeTimers, setTestClock, testClockDay } from "~/test/clock";
@@ -28,7 +29,7 @@ function Providers({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <SessionProvider
       session={{
-        user: { id: "staff-7", scope: "tenant", tenantId: 42 },
+        user: { id: "staff-7", scope: "tenant", tenantId: "42" },
         expires: "2099-01-01",
       }}
       refetchOnWindowFocus={false}
@@ -208,7 +209,11 @@ describe("AdminEnrollmentDetail mail updates", () => {
     mocks.getAdminRequestMails
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([
-        { kind: "enrollment_waitlisted", outcome: "queued" },
+        {
+          kind: "enrollment_waitlisted",
+          outcome: "queued",
+          awaiting_feedback: true,
+        },
       ])
       .mockResolvedValue([
         { kind: "enrollment_waitlisted", outcome: "delivered" },
@@ -494,7 +499,9 @@ describe("AdminEnrollmentDetail child that may already be enrolled", () => {
         new ApiError("child may already be enrolled", 409, {
           code: "enrollment.child_possibly_enrolled",
           details: {
-            candidates: request.children[0]?.possible_existing_children,
+            candidates: request.children[0]?.possible_existing_children?.map(
+              (child) => ({ ...child, student_id: "7" }),
+            ),
           },
         }),
       )
@@ -519,7 +526,7 @@ describe("AdminEnrollmentDetail child that may already be enrolled", () => {
         "child-1",
         "approved",
         undefined,
-        { createNewStudent: true, shownStudentIds: ["student-7"] },
+        { createNewStudent: true, shownStudentIds: ["7"] },
       );
     });
   });
@@ -896,9 +903,13 @@ describe("AdminEnrollmentDetail Kinderkontingent (#3570)", () => {
       children: [{ ...heldChild, review_reason: null }],
     });
     mocks.decideAdminChild.mockRejectedValue(
-      new ApiError("child quota reached", 409, {
+      await errorFromProblem("child quota reached", 409, {
         code: "students.child_quota_reached",
-        details: { booked_places: 50, occupied_places: 50 },
+        details: {
+          booked_places: 50,
+          occupied_places: 50,
+          requested_places: 1,
+        },
       }),
     );
 

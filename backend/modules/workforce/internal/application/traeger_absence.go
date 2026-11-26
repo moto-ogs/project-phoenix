@@ -8,6 +8,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/domain"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // The Abwesenheitsarten of a Träger (#4710, ADR 0089 section 10 with its
@@ -69,7 +70,9 @@ func (t *TraegerStaff) CreateAbsenceType(ctx context.Context, actor workforce.Tr
 }
 
 // UpdateAbsenceType rewrites a type and carries it into every school. A new
-// name needs a type no school has booked yet: bookings keep their name.
+// name needs a type no school has booked yet: bookings keep their name. A
+// type changed since the form read it is refused (ADR 0311): before the
+// schools are read, and again under the lock the write takes.
 func (t *TraegerStaff) UpdateAbsenceType(ctx context.Context, actor workforce.TraegerStaffActor, id int64, input workforce.TraegerAbsenceTypeInput) (workforce.TraegerAbsenceType, error) {
 	value := traegerAbsenceTypeOf(actor.OrganizationID, id, input)
 	if reason := value.TraegerAbsenceTypeReason(); reason != "" {
@@ -79,7 +82,10 @@ func (t *TraegerStaff) UpdateAbsenceType(ctx context.Context, actor workforce.Tr
 	err := t.released(ctx, actor, func(ctx context.Context) error {
 		var err error
 		current, err = t.store.FindTraegerAbsenceType(ctx, actor.OrganizationID, id, false)
-		return err
+		if err != nil {
+			return err
+		}
+		return readstate.Check(input.ExpectedVersion, absenceTypeVersion(current))
 	})
 	if err != nil {
 		return workforce.TraegerAbsenceType{}, err
@@ -90,7 +96,12 @@ func (t *TraegerStaff) UpdateAbsenceType(ctx context.Context, actor workforce.Tr
 		}
 	}
 	err = t.released(ctx, actor, func(ctx context.Context) error {
-		if _, err := t.store.FindTraegerAbsenceType(ctx, actor.OrganizationID, id, true); err != nil {
+		// One row FOR UPDATE: after a wait the row comes back as committed.
+		locked, err := t.store.FindTraegerAbsenceType(ctx, actor.OrganizationID, id, true)
+		if err != nil {
+			return err
+		}
+		if err := readstate.Check(input.ExpectedVersion, absenceTypeVersion(locked)); err != nil {
 			return err
 		}
 		value, err = t.store.SaveTraegerAbsenceType(ctx, value)
@@ -223,6 +234,7 @@ func publicTraegerAbsenceType(value domain.TraegerAbsenceType, schools []workfor
 		ID: ident.ID(value.ID), Name: value.Name, AllowanceEnabled: value.AllowanceEnabled, StandardDays: value.StandardDays,
 		CarryoverUntil: value.CarryoverUntil, Requestable: value.Requestable, IsActive: value.IsActive,
 		Schools: make([]workforce.TraegerAbsenceTypeSchool, 0, len(schools)), CreatedAt: value.CreatedAt,
+		Version: absenceTypeVersion(value),
 	}
 	for _, school := range schools {
 		entry := workforce.TraegerAbsenceTypeSchool{SchoolID: school.ID, SchoolName: school.Name}

@@ -409,7 +409,7 @@ func TestUpdatePhaseHandler_ReportsCareBeyondShortenedEnd(t *testing.T) {
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
 	assert.Equal(t, "1234", body.Data.ID, "the saved phase stays the response body")
 	assert.Equal(t, []CareBeyondEndResponse{{
-		StudentID: "77", FirstName: "Mia", LastName: "Lang", SchoolClass: "2b", CareEnd: "2028-07-31", PhaseEnd: "2028-06-30",
+		StudentID: 77, FirstName: "Mia", LastName: "Lang", SchoolClass: "2b", CareEnd: "2028-07-31", PhaseEnd: "2028-06-30",
 	}}, body.Data.CareBeyondEnd)
 
 	plain := executePhaseJSON(t, buildPhaseRouter(&mockPhaseService{getByIDResult: makePhaseModel(1234, "Updated")}), http.MethodPut, "/enrollment/phases/1234", validPhaseBody("Updated"))
@@ -806,7 +806,7 @@ func TestCreatePhaseHandler_CalendarPeriodIDRoundtrip(t *testing.T) {
 	}
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &envelope))
 	require.NotNil(t, envelope.Data.CalendarPeriodID)
-	assert.Equal(t, "42", *envelope.Data.CalendarPeriodID)
+	assert.Equal(t, "42", envelope.Data.CalendarPeriodID.String())
 }
 
 func TestCreatePhaseHandler_BadCalendarPeriodIDReturns400(t *testing.T) {

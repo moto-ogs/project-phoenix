@@ -20,7 +20,7 @@ func TestStaffSendConcurrentRetriesAndAccountScope(t *testing.T) {
 	opened := f.do(t, a, http.MethodPost, "/threads/open", fmt.Sprintf(`{"account_id":%q}`, b.idString()))
 	require.Equal(t, http.StatusOK, opened.Code, opened.Body.String())
 	thread := decodeData[staffmessaging.ThreadDetailResponse](t, opened.Body.Bytes())
-	path := "/threads/" + thread.ThreadID
+	path := "/threads/" + thread.ThreadID.String()
 	const input = `{"body":"Hallo","client_message_id":"concurrent-send"}`
 	// Start overlapping requests in separate transactions. Assert through the API.
 	var wg sync.WaitGroup
@@ -32,7 +32,7 @@ func TestStaffSendConcurrentRetriesAndAccountScope(t *testing.T) {
 				results <- response.Body.String()
 				return
 			}
-			results <- decodeData[staffmessaging.MessageResponse](t, response.Body.Bytes()).ID
+			results <- decodeData[staffmessaging.MessageResponse](t, response.Body.Bytes()).ID.String()
 		})
 	}
 	wg.Wait()
@@ -67,7 +67,7 @@ func TestStaffSendConcurrentRetriesAndAccountScope(t *testing.T) {
 	openSecond := second.do(t, otherA, http.MethodPost, "/threads/open", fmt.Sprintf(`{"account_id":%q}`, otherB.idString()))
 	require.Equal(t, http.StatusOK, openSecond.Code, openSecond.Body.String())
 	secondThread := decodeData[staffmessaging.ThreadDetailResponse](t, openSecond.Body.Bytes())
-	sent := second.do(t, otherA, http.MethodPost, "/threads/"+secondThread.ThreadID, input)
+	sent := second.do(t, otherA, http.MethodPost, "/threads/"+secondThread.ThreadID.String(), input)
 	require.Equal(t, http.StatusOK, sent.Code, sent.Body.String())
 	require.NotEqual(t, first, decodeData[staffmessaging.MessageResponse](t, sent.Body.Bytes()).ID)
 	forbidden := second.do(t, otherA, http.MethodPost, path, input)
@@ -84,7 +84,7 @@ func TestStaffSendKeyByteLimit(t *testing.T) {
 	for _, key := range []string{strings.Repeat("x", 128), strings.Repeat("ä", 64), strings.Repeat("x", 129), strings.Repeat("ä", 65)} {
 		payload, err := json.Marshal(map[string]string{"body": "Hallo", "client_message_id": key})
 		require.NoError(t, err)
-		response := f.do(t, a, http.MethodPost, "/threads/"+thread.ThreadID, string(payload))
+		response := f.do(t, a, http.MethodPost, "/threads/"+thread.ThreadID.String(), string(payload))
 		if len(key) <= 128 {
 			require.Equal(t, http.StatusOK, response.Code, response.Body.String())
 			continue

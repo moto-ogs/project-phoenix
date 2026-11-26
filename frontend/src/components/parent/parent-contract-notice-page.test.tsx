@@ -55,6 +55,20 @@ describe("ParentContractNoticePage (#4682, § 312k BGB)", () => {
     vi.clearAllMocks();
   });
 
+  // Der Kopf steht schon während des Ladens; ein zweiter Ladekopf darunter
+  // nähme ihm unter `lg` den Hilfe-Knopf (#6613).
+  it("keeps one head while the contract loads", () => {
+    mocks.fetchMyContractNoticeOptions.mockReturnValue(new Promise(() => {}));
+
+    render(<ParentContractNoticePage organizationId="2" contractId="27" />);
+
+    expect(screen.getByRole("heading", { level: 1 })).toBeInTheDocument();
+    expect(screen.getAllByRole("banner")).toHaveLength(1);
+    expect(
+      screen.getByRole("status", { name: "Inhalt wird geladen" }),
+    ).toHaveAttribute("aria-busy", "true");
+  });
+
   it("terminates with „Jetzt kündigen“ and shows the confirmation", async () => {
     mocks.fetchMyContractNoticeOptions.mockResolvedValue(active);
     mocks.declareMyContractNotice.mockResolvedValue({

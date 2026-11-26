@@ -7,7 +7,7 @@ import {
 } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "~/contexts/ToastContext";
-import { ApiError } from "~/lib/api-error";
+import { errorFromProblem } from "~/test/helpers/problem-response";
 
 function render(ui: React.ReactElement) {
   return renderPlain(ui, { wrapper: ToastProvider });
@@ -34,6 +34,7 @@ import { DeviceSlotsModal } from "./device-slots-modal";
 import type { SchoolSummary } from "~/lib/operator/provisioning-helpers";
 
 const school: SchoolSummary = {
+  version: "v-1",
   id: "10",
   organizationId: "1",
   organizationName: "Test Org",
@@ -102,7 +103,7 @@ describe("DeviceSlotsModal (#2312)", () => {
 
   it("warns below the registered devices and leaves the decision to moto", async () => {
     mockSetSlots.mockRejectedValue(
-      new ApiError("below", 409, {
+      await errorFromProblem("below", 409, {
         code: "provisioning.device_slots_below_occupied",
         details: { device_slots: 2, occupied: 3 },
       }),
@@ -143,7 +144,7 @@ describe("DeviceSlotsModal (#2312)", () => {
 
   it("keeps the backend's refusal in the dialog", async () => {
     mockSetSlots.mockRejectedValue(
-      new ApiError("below", 409, {
+      await errorFromProblem("below", 409, {
         code: "provisioning.device_slots_below_occupied",
         details: { device_slots: 5, occupied: 6 },
       }),

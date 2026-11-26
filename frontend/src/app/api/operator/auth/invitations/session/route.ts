@@ -8,7 +8,10 @@ import {
 import { operatorErrorResponse } from "~/lib/operator/route-wrapper.server";
 import { withPrivateNoStore } from "~/lib/private-no-store";
 import type { OperatorInvitationFlow } from "~/lib/session-bff";
-import { successResponse } from "~/lib/route-wrapper-utils.server";
+import {
+  invalidJsonResponse,
+  successResponse,
+} from "~/lib/route-wrapper-utils.server";
 
 const MAX_TOKEN_LENGTH = 4096;
 
@@ -17,11 +20,7 @@ async function POSTHandler(request: NextRequest): Promise<NextResponse> {
   try {
     body = await request.json();
   } catch {
-    return operatorErrorResponse(
-      400,
-      "general.input",
-      "Invalid JSON request body",
-    );
+    return invalidJsonResponse(request);
   }
 
   const token =
@@ -36,6 +35,7 @@ async function POSTHandler(request: NextRequest): Promise<NextResponse> {
       400,
       "general.input",
       "Missing or oversized invitation token",
+      request,
     );
   }
 

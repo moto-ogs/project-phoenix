@@ -636,7 +636,7 @@ export function OverflowMenu({
                         {entry.label}
                       </p>
                       {entry.description ? (
-                        <p className="mt-0.5 text-xs text-gray-500">
+                        <p className="mt-0.5 text-sm text-gray-500">
                           {entry.description}
                         </p>
                       ) : null}
@@ -692,7 +692,7 @@ export function OverflowMenu({
                           <span
                             id={`${menuId}-${index}-description`}
                             aria-hidden="true"
-                            className="text-xs font-normal text-gray-500"
+                            className="text-sm font-normal text-gray-500"
                           >
                             {entry.description}
                           </span>
@@ -749,7 +749,7 @@ export function OverflowMenu({
                         <span
                           id={`${menuId}-${index}-description`}
                           aria-hidden="true"
-                          className="text-xs font-normal text-gray-500"
+                          className="text-sm font-normal text-gray-500"
                         >
                           {item.description}
                         </span>

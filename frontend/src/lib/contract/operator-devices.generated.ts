@@ -40,12 +40,12 @@ export interface deviceHistoryResponse {
 }
 
 export const deviceHistoryResponseSchema: z.ZodType<deviceHistoryResponse, unknown> = object<deviceHistoryResponse>({
-  id: str,
+  id: int64String,
   action: str,
   actor_kind: str,
   changes: nullable(rec(deviceHistoryChangeSchema)),
   occurred_at: instant,
-  school_id: str,
+  school_id: int64String,
   school_name: str,
 });
 

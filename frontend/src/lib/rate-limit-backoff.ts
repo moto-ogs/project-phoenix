@@ -1,4 +1,4 @@
-import { wireErrorCode } from "~/lib/api-error";
+import { problemBody, problemTitle, wireErrorCode } from "~/lib/api-error";
 import type { ErrorCode } from "~/lib/error-codes.generated";
 import { PORTAL_KEYS, portalLogPath } from "~/lib/portal-paths";
 
@@ -129,45 +129,6 @@ export function pauseClientLogShipping(
   );
 }
 
-export function rateLimitBlockedError(method?: string): Error | null {
-  const remaining = remainingRateLimitMs(method);
-  if (typeof window === "undefined" || remaining === 0) {
-    return null;
-  }
-  const seconds = Math.max(1, Math.ceil(remaining / 1000));
-  const error = new Error("API request blocked (429)") as Error & {
-    status: number;
-    response: { status: number; headers: { "retry-after": string } };
-  };
-  error.status = 429;
-  error.response = { status: 429, headers: { "retry-after": String(seconds) } };
-  return error;
-}
-
-export function recordRateLimit(
-  retryAfter: string | null,
-  method?: string,
-): void {
-  rateLimitSeconds(retryAfter, method);
-}
-
-function startsWithRateLimitCode(suffix: string): boolean {
-  let normalized = suffix.trimStart();
-  if (normalized.startsWith(":")) normalized = normalized.slice(1).trimStart();
-  if (normalized.startsWith("(")) normalized = normalized.slice(1);
-  return /^429(?:\D|$)/.test(normalized);
-}
-
-function hasAdjacentRateLimitCode(message: string): boolean {
-  const normalized = message.toLowerCase();
-  return ["api error", "http", "failed"].some((context) =>
-    normalized
-      .split(context)
-      .slice(1)
-      .some((suffix) => startsWithRateLimitCode(suffix)),
-  );
-}
-
 export function isRateLimitError(error: unknown): boolean {
   let status: unknown;
   if (typeof error === "object" && error !== null) {
@@ -187,8 +148,7 @@ export function isRateLimitError(error: unknown): boolean {
       return true;
     }
   }
-  if (!(error instanceof Error)) return false;
-  return hasAdjacentRateLimitCode(error.message);
+  return false;
 }
 
 export function installRateLimitFetchGuard(): () => void {
@@ -201,13 +161,16 @@ export function installRateLimitFetchGuard(): () => void {
     const remaining = remainingRateLimitMs(method);
     if (guardedApiRequest(input) && remaining > 0) {
       const seconds = Math.max(1, Math.ceil(remaining / 1000));
-      return new Response(JSON.stringify({ error: "Bitte kurz warten." }), {
-        status: 429,
-        headers: {
-          "Content-Type": "application/json",
-          "Retry-After": seconds.toString(),
+      return Response.json(
+        problemBody(429, problemTitle(429), { code: REQUEST_LIMIT_CODE }),
+        {
+          status: 429,
+          headers: {
+            "Content-Type": "application/problem+json",
+            "Retry-After": seconds.toString(),
+          },
         },
-      });
+      );
     }
 
     const response = await originalFetch(input, init);

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/domain"
+	"github.com/moto-ogs/project-phoenix/tenant"
 	"github.com/uptrace/bun"
 )
 
@@ -31,6 +32,26 @@ type staffQualificationTypeRow struct {
 	ArchivedAt        *time.Time `bun:"archived_at"`
 	CreatedAt         time.Time  `bun:"created_at,nullzero,notnull"`
 	UpdatedAt         time.Time  `bun:"updated_at,nullzero,notnull"`
+}
+
+// LockQualificationType locks the kind's row; the update reads the kinds
+// after it. The update changes no key column, so FOR NO KEY UPDATE lets a
+// qualification that references the kind through its FK check.
+func (s *Store) LockQualificationType(ctx context.Context, id int64) (bool, domain.OperationStats, error) {
+	db, scope, err := s.database(ctx)
+	if err != nil {
+		return false, domain.OperationStats{}, err
+	}
+	if err := tenant.OrderLock(ctx, tenant.LockLeaf, tableStaffQualificationTypes); err != nil {
+		return false, domain.OperationStats{}, err
+	}
+	row := &staffQualificationTypeRow{}
+	query := withTenant(db.NewSelect().Model(row).
+		ModelTableExpr(tableStaffQualificationTypes+` AS "staff_qualification_type"`).
+		Column("staff_qualification_type.id").
+		Where(`"staff_qualification_type".id = ?`, id).
+		For("NO KEY UPDATE"), aliasStaffQualificationType, scope)
+	return scanOne(ctx, query, "lock staff qualification type")
 }
 
 // ListQualificationTypes returns every kind of the school: live ones first in

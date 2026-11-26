@@ -1,6 +1,7 @@
 package application
 
 import (
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -41,4 +42,48 @@ func TestCountMembersKeepsOnlyTheRoster(t *testing.T) {
 	const onSite, away, leaver int64 = 30, 31, 32
 
 	assert.Equal(t, 1, countMembers([]int64{onSite, away}, []int64{onSite, leaver}))
+}
+
+func TestSchoolFigureCountsPreserveInputMultiplicity(t *testing.T) {
+	t.Parallel()
+	roster := map[int64]int64{10: 20, 11: 21}
+	present := []int64{10, 10, 99}
+	assert.Equal(t, 2, countStudents(roster, present))
+	assert.Equal(t, 1, countSick(roster, []int64{10, 11, 11, 99}, []int64{20, 21, 21}, present))
+	assert.Equal(t, 2, countMembers([]int64{30, 30}, []int64{30, 30, 99}))
+}
+
+func BenchmarkSchoolFigureCounts(b *testing.B) {
+	for _, size := range []int{50, 300, 1000} {
+		b.Run(strconv.Itoa(size), func(b *testing.B) {
+			roster := make(map[int64]int64, size)
+			var present, days, flags, staff, onSite []int64
+			for i := range size {
+				student := int64(17*i + 103)
+				membership := student + 100000
+				roster[student] = membership
+				if i%2 == 0 {
+					present = append(present, student)
+				}
+				if i%13 == 0 {
+					days = append(days, student)
+				}
+				if i%23 == 0 {
+					flags = append(flags, membership)
+				}
+				if i%10 == 0 {
+					staff = append(staff, student)
+					if i%30 != 0 {
+						onSite = append(onSite, student)
+					}
+				}
+			}
+			b.ReportAllocs()
+			for b.Loop() {
+				countStudents(roster, present)
+				countSick(roster, days, flags, present)
+				countMembers(staff, onSite)
+			}
+		})
+	}
 }

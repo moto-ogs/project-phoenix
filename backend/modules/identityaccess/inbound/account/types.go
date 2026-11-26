@@ -175,6 +175,10 @@ type TenantResolveResponse struct {
 	// status page and the embedded parent form fill it into their fixed
 	// texts before anyone signs in. A lookup error fails the shell request.
 	CareFacilityTerm string `json:"care_facility_term"`
+	// CareFacilityArticle is the article the German texts decline that
+	// term with: "der", "die" or "das" (#8136). The presets and schools
+	// without a choice read "die".
+	CareFacilityArticle string `json:"care_facility_article"`
 	// TraegerName is the Träger the school portal shows (#4656). It is set
 	// only while the Träger runs more than one operational school; a Träger
 	// with a single OGS sees no Träger level, so the field is omitted.
@@ -212,6 +216,7 @@ type tenantShellSettings struct {
 	childSearchOnlyNavigation bool
 	simpleStaffNavigation     bool
 	careFacilityTerm          string
+	careFacilityArticle       string
 }
 
 // SwitchTenantRequest represents the switch-tenant request payload
@@ -278,7 +283,7 @@ type RegisterRequest struct {
 	// requests that may never arrive.
 	FirstName string  `json:"first_name,omitempty"`
 	LastName  string  `json:"last_name,omitempty"`
-	TagID     *string `json:"tag_id,omitempty"`
+	TagID     *string `json:"tag_id,omitempty" contract_text:"RFID tag code, not a database row ID"`
 }
 
 // Bind validates the register request
@@ -354,7 +359,7 @@ type LinkToTenantRequest struct {
 	// Identity fields, same meaning as on RegisterRequest (#2222).
 	FirstName string  `json:"first_name,omitempty"`
 	LastName  string  `json:"last_name,omitempty"`
-	TagID     *string `json:"tag_id,omitempty"`
+	TagID     *string `json:"tag_id,omitempty" contract_text:"RFID tag code, not a database row ID"`
 }
 
 func (req *LinkToTenantRequest) Bind(_ *http.Request) error {
@@ -428,6 +433,10 @@ type UpdateRoleRequest struct {
 	Name        string  `json:"name"`
 	Description string  `json:"description"`
 	BaseRole    *string `json:"base_role,omitempty"`
+	// ExpectedVersion is the version of the role the change was made from
+	// (ADR 0311); a role changed since answers 409
+	// general.changed_since_read.
+	ExpectedVersion string `json:"expected_version"`
 }
 
 // ReplaceRolePermissionsRequest contains the complete target set for a role.
@@ -542,10 +551,17 @@ type RoleResponse struct {
 	BaseRole    *string  `json:"base_role,omitempty"`
 	// SchoolPortal marks a school role made from the Lehrkraft template: its
 	// accounts use moto schule like the Lehrkraft role (#4574).
-	SchoolPortal bool     `json:"school_portal"`
-	CreatedAt    string   `json:"created_at"`
-	UpdatedAt    string   `json:"updated_at"`
-	Permissions  []string `json:"permissions,omitempty"`
+	SchoolPortal bool `json:"school_portal"`
+	// FromTraeger marks a role the Träger of the school gives (#4810): the
+	// school assigns it but does not change or delete it.
+	FromTraeger bool   `json:"from_traeger"`
+	CreatedAt   string `json:"created_at"`
+	UpdatedAt   string `json:"updated_at"`
+	// Version is the read-state token of the role's master data (ADR 0311):
+	// an edit sends it back as expected_version. The permission selection
+	// carries its own.
+	Version     string   `json:"version"`
+	Permissions []string `json:"permissions,omitempty"`
 }
 
 // PermissionResponse represents a permission response

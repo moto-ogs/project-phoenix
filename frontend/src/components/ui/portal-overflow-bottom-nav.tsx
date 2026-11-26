@@ -11,6 +11,7 @@ import {
   PortalNavSheetLink,
 } from "~/components/ui/portal-bottom-nav";
 import { PortalMoreBottomNav } from "~/components/ui/portal-more-bottom-nav";
+import { SectionLabel } from "~/components/ui/section-label";
 import type { MotoConcept } from "~/lib/moto-concepts";
 
 const PADDING = "px-4";
@@ -42,6 +43,20 @@ export interface PortalOverflowNavItem {
   readonly newTab?: boolean;
   /** Eine Linie trennt den Eintrag im „Mehr"-Blatt von den Arbeitsbereichen. */
   readonly separated?: boolean;
+  /**
+   * Eine Zwischenüberschrift über dem Eintrag im „Mehr"-Blatt, die eine
+   * Gruppe von Zielen benennt, etwa die Bereiche des Trägers in den
+   * Einstellungen (#8153). In der Leiste selbst steht sie nicht; neben
+   * `separated` trägt der Eintrag nur dessen Linie.
+   */
+  readonly heading?: string;
+  /**
+   * Ein Zeichen hinter dem Namen im „Mehr"-Blatt, etwa das Schloss eines
+   * nicht gebuchten Moduls (#6052). Ein Eintrag mit Zeichen steht nie in
+   * der Leiste: dort trägt nur das aktive Ziel seinen Namen, das Zeichen
+   * hätte keinen Platz.
+   */
+  readonly mark?: ReactNode;
 }
 
 /**
@@ -93,9 +108,30 @@ export function PortalOverflowBottomNav({
   const [moreOpen, setMoreOpen] = useState(false);
 
   const slots = search ? MAX_SLOTS - 1 : MAX_SLOTS;
-  const crowded = items.length > slots;
-  const barItems = crowded ? items.slice(0, slots - 1) : items;
-  const moreItems = crowded ? items.slice(slots - 1) : [];
+  const marked = items.some((item) => item.mark);
+  const crowded = marked || items.length > slots;
+  // With a marked target the bar takes the first work areas without a mark;
+  // what follows the separating line (the help) never moves up for it. The
+  // sheet keeps the order of the list for everything else.
+  const separatedAt = items.findIndex((item) => item.separated);
+  const barPool = marked
+    ? items
+        .slice(0, separatedAt === -1 ? items.length : separatedAt)
+        .filter((item) => !item.mark)
+    : items;
+  const barItems = crowded ? barPool.slice(0, slots - 1) : items;
+  const moreItems = crowded
+    ? items.filter((item) => !barItems.includes(item))
+    : [];
+  // Eine Gruppenüberschrift kann an einem sichtbaren Eintrag der Leiste
+  // hängen. Das Blatt beginnt dann später in derselben Gruppe und muss die
+  // Überschrift selbst wiederholen.
+  const firstMoreItemHeading = moreItems[0]?.heading
+    ? undefined
+    : barItems.reduceRight<string | undefined>(
+        (heading, item) => heading ?? item.heading,
+        undefined,
+      );
 
   const linkProps = (item: PortalOverflowNavItem) => ({
     href: item.href,
@@ -171,21 +207,31 @@ export function PortalOverflowBottomNav({
         // die Liste: die Liste scrollt in ihr, sonst lägen die unteren Ziele
         // außer Reichweite.
         <ul className="min-h-0 space-y-2 overflow-y-auto px-4 pt-6 pb-[calc(2rem+env(safe-area-inset-bottom))]">
-          {moreItems.map((item) => (
-            <li
-              key={item.key}
-              className={
-                item.separated
-                  ? "mt-5 border-t border-gray-200 pt-5"
-                  : undefined
-              }
-            >
-              <PortalNavSheetLink
-                {...linkProps(item)}
-                onClick={() => setMoreOpen(false)}
-              />
-            </li>
-          ))}
+          {moreItems.map((item, index) => {
+            const heading =
+              item.heading ?? (index === 0 ? firstMoreItemHeading : undefined);
+            return (
+              <li
+                key={item.key}
+                className={
+                  item.separated
+                    ? "mt-5 border-t border-gray-200 pt-5"
+                    : heading
+                      ? "pt-4"
+                      : undefined
+                }
+              >
+                {heading ? (
+                  <SectionLabel className="mb-2 px-4">{heading}</SectionLabel>
+                ) : null}
+                <PortalNavSheetLink
+                  {...linkProps(item)}
+                  badge={item.mark}
+                  onClick={() => setMoreOpen(false)}
+                />
+              </li>
+            );
+          })}
         </ul>
       }
     >

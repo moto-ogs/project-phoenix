@@ -65,7 +65,10 @@ describe("demo reset route", () => {
   it("leaves an unknown role out of the fragment", async () => {
     fetchMock.mockResolvedValue(
       Response.json(
-        { entry_url: "https://demo.example/demo#token=secret-token" },
+        {
+          status: "preparing",
+          entry_url: "https://demo.example/demo#token=secret-token",
+        },
         { status: 202 },
       ),
     );
@@ -90,7 +93,13 @@ describe("demo reset route", () => {
   it("passes the backend's refusal through", async () => {
     fetchMock.mockResolvedValue(
       Response.json(
-        { status: "error", code: "identity.demo_access_expired" },
+        {
+          type: "about:blank",
+          title: "Gone",
+          status: 410,
+          detail: "Demo access expired",
+          code: "identity.demo_access_expired",
+        },
         { status: 410 },
       ),
     );
@@ -103,11 +112,11 @@ describe("demo reset route", () => {
     });
   });
 
-  it("answers 500 when the backend cannot be reached", async () => {
+  it("answers 503 when the backend cannot be reached", async () => {
     fetchMock.mockRejectedValue(new Error("connection refused"));
 
     const response = await reset(request({ role: "lead" }, "secret-token"));
 
-    expect(response.status).toBe(500);
+    expect(response.status).toBe(503);
   });
 });

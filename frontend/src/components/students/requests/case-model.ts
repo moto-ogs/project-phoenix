@@ -7,7 +7,6 @@
 
 import type { CareWithdrawalCompletion } from "~/lib/care-exit-api";
 import type {
-  AggregatedHistoryRequest,
   AggregatedOpenRequest,
   RequestReviewMetadata,
 } from "~/lib/change-request-list-api";
@@ -18,7 +17,8 @@ import {
   type StaffValueInput,
 } from "./request-copy";
 
-export type AnyItem = AggregatedOpenRequest | AggregatedHistoryRequest;
+import type { AnyItem } from "~/lib/request-feed-resource";
+export type { AnyItem } from "~/lib/request-feed-resource";
 
 /** Eine offene Anfrage einer der vier Arten, also mit Prüf-Metadaten. */
 export type ReviewItem = Exclude<

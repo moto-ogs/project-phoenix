@@ -10,6 +10,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // What became of the absence request mails (#7058). Both are reads of their
@@ -23,14 +24,16 @@ const maxAbsenceMailIDs = 200
 // mail that told the applicant about a decision or a question. An absence
 // without such a mail is absent.
 type AbsenceDecisionMailsResponse struct {
-	Absences map[string]string `json:"absences"`
+	AwaitingFeedback bool                `json:"awaiting_feedback"`
+	Absences         map[ident.ID]string `json:"absences"`
 }
 
 // AbsenceRequestMailsResponse maps an absence ID to the mails of its latest
 // notice to the approvers, counted by outcome. An absence without a notice
 // mail is absent.
 type AbsenceRequestMailsResponse struct {
-	Absences map[string]map[string]int `json:"absences"`
+	AwaitingFeedback bool                        `json:"awaiting_feedback"`
+	Absences         map[ident.ID]map[string]int `json:"absences"`
 }
 
 // getAbsenceDecisionMails handles GET /api/staff/absences/mails?ids=1,2: the
@@ -38,20 +41,20 @@ type AbsenceRequestMailsResponse struct {
 // every request of the school, so the IDs need no further check; Delivery
 // answers inside the tenant only.
 func (rs *StaffAdminResource) getAbsenceDecisionMails(w http.ResponseWriter, r *http.Request) {
-	ids, err := parseAbsenceMailIDs(r.URL.Query().Get("ids"))
+	ids, err := parseAbsenceMailIDs(strings.Join(r.URL.Query()["ids"], ","))
 	if err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
-	mails, err := rs.absenceMails.AbsenceDecisionMails(r.Context(), ids)
+	mails, active, err := rs.absenceMails.AbsenceDecisionMails(r.Context(), ids)
 	if err != nil {
 		rs.logger.Error("failed to read absence decision mails", "error", err.Error())
 		common.RenderError(w, r, common.ErrorInternalServer(err))
 		return
 	}
-	out := AbsenceDecisionMailsResponse{Absences: make(map[string]string, len(mails))}
+	out := AbsenceDecisionMailsResponse{AwaitingFeedback: active, Absences: make(map[ident.ID]string, len(mails))}
 	for id, outcome := range mails {
-		out.Absences[strconv.FormatInt(id, 10)] = outcome
+		out.Absences[ident.ID(id)] = outcome
 	}
 	common.Respond(w, r, http.StatusOK, out, "Absence mails retrieved")
 }
@@ -77,14 +80,14 @@ func (rs *Resource) getOwnAbsenceRequestMails(w http.ResponseWriter, r *http.Req
 			ids = append(ids, absence.ID.Int64())
 		}
 	}
-	mails, err := rs.absenceMails.AbsenceRequestMails(r.Context(), ids)
+	mails, active, err := rs.absenceMails.AbsenceRequestMails(r.Context(), ids)
 	if err != nil {
 		common.RenderError(w, r, common.ErrorInternalServer(err))
 		return
 	}
-	out := AbsenceRequestMailsResponse{Absences: make(map[string]map[string]int, len(mails))}
+	out := AbsenceRequestMailsResponse{AwaitingFeedback: active, Absences: make(map[ident.ID]map[string]int, len(mails))}
 	for id, counts := range mails {
-		out.Absences[strconv.FormatInt(id, 10)] = counts
+		out.Absences[ident.ID(id)] = counts
 	}
 	common.Respond(w, r, http.StatusOK, out, "Absence mails retrieved")
 }

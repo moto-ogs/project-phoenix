@@ -65,11 +65,12 @@ func TestAbsenceTypeAllowanceIsSetAndReadThroughTheRoutes(t *testing.T) {
 
 	var created struct {
 		Data struct {
-			ID string `json:"id"`
+			ID      string `json:"id"`
+			Version string `json:"version"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(send(http.MethodPost, "/api/absence-types/", map[string]any{"name": "Bildungsurlaub"}, http.StatusCreated), &created))
-	send(http.MethodPut, "/api/absence-types/"+created.Data.ID, map[string]any{"allowance_enabled": true}, http.StatusOK)
+	send(http.MethodPut, "/api/absence-types/"+created.Data.ID, map[string]any{"allowance_enabled": true, "expected_version": created.Data.Version}, http.StatusOK)
 	path := fmt.Sprintf("/api/absence-types/%s/allowances/%d", created.Data.ID, staff.ID)
 
 	readVersion := func() string {

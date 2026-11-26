@@ -1,23 +1,22 @@
 package careplanhttp
 
 import (
-	json "encoding/json"
 	errors "errors"
 	http "net/http"
-	strconv "strconv"
 	time "time"
 
 	common "github.com/moto-ogs/project-phoenix/api/common"
 	careplan "github.com/moto-ogs/project-phoenix/modules/careplan"
 	sessiontoken "github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // pickupChangeNoticeResponse is one unread marker of a changed pickup time
 // (#6855). It names the child by first name only; the link opens the child.
 type pickupChangeNoticeResponse struct {
-	RequestID        string    `json:"request_id"`
-	StudentID        string    `json:"student_id"`
+	RequestID        ident.ID  `json:"request_id"`
+	StudentID        ident.ID  `json:"student_id"`
 	StudentFirstName string    `json:"student_first_name"`
 	Date             string    `json:"date"`
 	PickupTime       string    `json:"pickup_time,omitempty"`
@@ -55,7 +54,7 @@ func (rs *Resource) readPickupChangeNotices(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	var body pickupChangeNoticesReadRequest
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err := wire.Decode(r.Body, &body); err != nil {
 		renderError(w, r, common.ErrorInvalidRequest(errors.New("invalid pickup change notice revisions")))
 		return
 	}
@@ -86,7 +85,7 @@ func renderPickupChangeNotices(notices []careplan.PickupChangeTeamNotice) []pick
 	out := make([]pickupChangeNoticeResponse, 0, len(notices))
 	for _, notice := range notices {
 		out = append(out, pickupChangeNoticeResponse{
-			RequestID: strconv.FormatInt(notice.RequestID, 10), StudentID: strconv.FormatInt(notice.StudentID, 10),
+			RequestID: ident.ID(notice.RequestID), StudentID: ident.ID(notice.StudentID),
 			StudentFirstName: notice.StudentFirstName, Date: notice.Date.String(), PickupTime: notice.PickupTime,
 			Withdrawn: notice.Withdrawn, InformedAt: notice.InformedAt,
 		})

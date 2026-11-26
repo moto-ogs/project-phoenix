@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
-import { signOut, useSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { mutate } from "~/lib/swr";
 import { hasSessionAccess } from "~/lib/session-access";
 import { clearSessionCache } from "~/lib/session-cache";
@@ -25,6 +25,18 @@ import { credentialError } from "~/components/auth/credential-error";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { useApiErrorDisplay, useApiLoadError } from "~/contexts/ToastContext";
 import { isTenantSessionEnding } from "~/lib/tenant-session-end";
+import {
+  beginSessionExit,
+  reloadDocument,
+  sessionExitRunning,
+  sessionTreeState,
+} from "~/lib/session-tree";
+import {
+  readSessionMark,
+  sessionMarkName,
+  shownSessionMark,
+} from "~/lib/session-mark";
+import { signOutSession } from "~/lib/tenant-session-cookie";
 import { Loading } from "~/components/ui/loading";
 import { SCHOOL_SIGN_IN_LABEL, schoolSignInTooltip } from "./school-sign-in";
 
@@ -42,6 +54,50 @@ const NO_ACCESS = [
 interface TenantGuardProps {
   readonly children: React.ReactNode;
   readonly redirect?: (url: string) => void;
+}
+
+// The school a switch loaded this tab's document for, and how often in a row
+// (#3375, #8082): a session that keeps the other school after its switch
+// would otherwise load the document again and again. A school ID and a
+// count, no personal data; gone with the tab.
+const SWITCH_RELOADS_KEY = "moto.tenant-switch-reloads";
+const SWITCH_RELOADS_WINDOW_MS = 60_000;
+
+function switchReloads(tenantId: string | null): number {
+  try {
+    const raw = sessionStorage.getItem(SWITCH_RELOADS_KEY);
+    const noted = raw ? (JSON.parse(raw) as Record<string, unknown>) : null;
+    return noted?.tenantId === tenantId &&
+      typeof noted.count === "number" &&
+      typeof noted.at === "number" &&
+      Date.now() - noted.at < SWITCH_RELOADS_WINDOW_MS
+      ? noted.count
+      : 0;
+  } catch {
+    return 0;
+  }
+}
+
+/** Notes one more document the switch loads; false when nothing kept it. */
+function noteSwitchReload(tenantId: string | null): boolean {
+  const count = switchReloads(tenantId) + 1;
+  try {
+    sessionStorage.setItem(
+      SWITCH_RELOADS_KEY,
+      JSON.stringify({ tenantId, count, at: Date.now() }),
+    );
+  } catch {
+    // Storage unavailable or full: checked below.
+  }
+  return switchReloads(tenantId) === count;
+}
+
+function clearSwitchReloads(): void {
+  try {
+    sessionStorage.removeItem(SWITCH_RELOADS_KEY);
+  } catch {
+    // Nothing kept.
+  }
 }
 
 function browserRedirect(url: string): void {
@@ -94,16 +150,6 @@ installSessionTenantMismatchObserver();
  * Absprung from the Träger portal (#4654) is exempt for the same reason.
  */
 
-/**
- * The school a session is bound to. The session claim is a number; the
- * school of the page names its identifier as a string (#2342).
- */
-function sessionSchoolOf(
-  session: { user?: { tenantId?: number } } | null | undefined,
-): string | undefined {
-  const claim = session?.user?.tenantId;
-  return claim === undefined ? undefined : String(claim);
-}
 export function TenantGuard(props: TenantGuardProps) {
   const pathname = usePathname();
   const { tenant } = useTenant();
@@ -140,6 +186,8 @@ function GuardedTenant({
     targetTenantId: null as string | null,
     count: 0,
   });
+  // "Erneut versuchen" asked for the next switch (see noteSwitchReload).
+  const retryAsked = useRef(false);
   const switchInFlight = useRef(false);
   const [failedTenantId, setFailedTenantId] = useState<string | null>(null);
   const [mfaRequiredTenantId, setMfaRequiredTenantId] = useState<string | null>(
@@ -153,12 +201,15 @@ function GuardedTenant({
   const [recheck, setRecheck] = useState(0);
   // Why the switch failed, from the shared error path (#2517). Empty when
   // the switch went through but the old school kept coming back.
+  const preloadPresenter = status === "authenticated" && !onLoginEntry;
   const {
     error: switchError,
     show: showSwitchError,
     clear: clearSwitchError,
-  } = useApiLoadError();
-  const { show: showActionError } = useApiErrorDisplay();
+  } = useApiLoadError({ preloadPresenter });
+  const { show: showActionError } = useApiErrorDisplay(undefined, {
+    preloadPresenter,
+  });
   const [signingOutOperator, setSigningOutOperator] = useState(false);
   const [signingOutExpiredSession, setSigningOutExpiredSession] =
     useState(false);
@@ -209,7 +260,7 @@ function GuardedTenant({
   );
 
   const checkSessionSchool = useCallback(() => {
-    if (isTenantSessionEnding()) return;
+    if (isTenantSessionEnding() || sessionExitRunning()) return;
     const run = ++refusalRun.current;
     setRefusal("checking");
     const deadline = Date.now() + REFUSAL_CHECK_MS;
@@ -296,7 +347,7 @@ function GuardedTenant({
         const known = current.session;
         if (
           hasSessionAccess(known) &&
-          sessionSchoolOf(known) !== current.tenant?.tenantId
+          known?.user?.tenantId !== current.tenant?.tenantId
         ) {
           return;
         }
@@ -310,19 +361,21 @@ function GuardedTenant({
   // refusal, hands over to the mismatch handling below. An answer with this
   // tab's school counts only as the check's own result.
   const providerNamesOtherSchool =
-    hasSessionAccess(session) && sessionSchoolOf(session) !== tenant?.tenantId;
+    hasSessionAccess(session) && session?.user?.tenantId !== tenant?.tenantId;
   useEffect(() => {
     if (refusal === null || !providerNamesOtherSchool) return;
     refusalRun.current += 1;
     setRefusal(null);
   }, [refusal, providerNamesOtherSchool, setRefusal]);
 
-  const sessionTenantId = sessionSchoolOf(session);
+  const sessionTenantId = session?.user?.tenantId;
   const sessionScope = session?.user?.scope;
   // The browser session carries no token (#5005); a stripped session always
   // carries an error.
   const sessionHasAccess = hasSessionAccess(session);
   const sessionError = session?.error;
+  // Which session the errored answer describes (#8082).
+  const sessionMark = session?.sessionMark ?? "";
   const urlTenantId = tenant?.tenantId ?? null;
   const urlSlug = tenant?.slug;
   // The backend resolves switch targets by subdomain, not by the slug
@@ -358,7 +411,10 @@ function GuardedTenant({
 
       try {
         if (isTenantSessionEnding()) return;
-        await signOut({ redirect: false });
+        // Only the ended session (the one the session answer described):
+        // the exit of session cookies keeps one another school's tab signed
+        // in with meanwhile (#8082).
+        await signOutSession("tenant", sessionMark);
       } catch (err) {
         logger.warn("invalid_session_signout_failed", {
           error: err instanceof Error ? err.message : String(err),
@@ -367,7 +423,14 @@ function GuardedTenant({
         if (!isTenantSessionEnding()) redirect("/?error=SessionExpired");
       }
     })();
-  }, [status, sessionHasAccess, sessionError, redirect, onLoginEntry]);
+  }, [
+    status,
+    sessionHasAccess,
+    sessionError,
+    sessionMark,
+    redirect,
+    onLoginEntry,
+  ]);
 
   // Operator session on tenant subdomain — sign out immediately
   useEffect(() => {
@@ -393,7 +456,7 @@ function GuardedTenant({
       }
 
       try {
-        await signOut({ redirect: false });
+        await signOutSession("tenant", shownSessionMark());
       } catch (err) {
         logger.warn("operator_signout_failed", {
           error: err instanceof Error ? err.message : String(err),
@@ -425,6 +488,7 @@ function GuardedTenant({
 
     // No mismatch — reset guard for future switches
     if (sessionTenantId === urlTenantId) {
+      clearSwitchReloads();
       switchAttempts.current = { targetTenantId: null, count: 0 };
       setFailedTenantId(null);
       setMfaRequiredTenantId(null);
@@ -444,16 +508,30 @@ function GuardedTenant({
     }
 
     if (switchInFlight.current) return;
+    // This document leaves for another school (the switcher, #8082): no
+    // switch back to this one.
+    if (sessionExitRunning()) return;
 
     // A switch that went through can still leave the old school behind: every
     // API response re-issues the session cookie it was asked with, so a
     // request of the old session that answers after the BFF session switch writes the old
     // school back (#3375). Those requests settle, so a bounded number of
     // repeats gets through; after that the person decides, not a spinner.
-    if (switchAttempts.current.count >= MAX_SWITCH_ATTEMPTS) {
+    if (
+      switchAttempts.current.count >= MAX_SWITCH_ATTEMPTS ||
+      switchReloads(urlTenantId) >= MAX_SWITCH_ATTEMPTS
+    ) {
       setFailedTenantId(urlTenantId);
       return;
     }
+    // The switch loads a new document: the bound across documents needs its
+    // note first. Without one, only the person's own retry switches, once
+    // per click (no loop of reloads).
+    if (!noteSwitchReload(urlTenantId) && !retryAsked.current) {
+      setFailedTenantId(urlTenantId);
+      return;
+    }
+    retryAsked.current = false;
     switchAttempts.current.count += 1;
     switchInFlight.current = true;
     const switchTargetTenantId = urlTenantId;
@@ -468,6 +546,9 @@ function GuardedTenant({
 
     void (async () => {
       let signingOut = false;
+      // The session the switch request carries: a refusal ends that one, not
+      // a sign-in that took the cookie since (#8082).
+      let markOfSwitch = "";
       try {
         // Ein Schulwechsel beendet die Mitarbeiter-Vorschau (#2893): erst
         // die Admin-Sitzung wiederherstellen, dann mit deren Token wechseln
@@ -475,31 +556,49 @@ function GuardedTenant({
         if (session?.user?.isPreview) {
           await performEndStaffPreview(update, mutate);
         }
-        await performTenantSwitch(urlSubdomain!, mutate);
-
-        // Refetch session to trigger re-render with new tenant
-        await update();
-        // While the cookie held the other school, the BFF refused this tab's
-        // requests (#5130). Mounted views load again under this school.
-        await mutate(() => true);
+        markOfSwitch = readSessionMark(
+          sessionMarkName("tenant", clientEnv.NEXT_PUBLIC_TENANT_DOMAIN),
+        );
+        // The switch is an exit of the document's session (#8082): its own
+        // answer drops the tree, and the document loads anew below.
+        const endExit = beginSessionExit();
+        try {
+          await performTenantSwitch(urlSubdomain!, mutate);
+        } catch (switchErr) {
+          endExit();
+          throw switchErr;
+        }
 
         logger.info("tenant_auto_switched", {
           from_tenant_id: sessionTenantId,
           to_slug: urlSubdomain,
         });
+        // A new document of this school: nothing of the session before stays,
+        // also not the router's memory of its pages (#5130, #8082).
+        signingOut = true;
+        reloadDocument();
       } catch (err) {
         logger.error("tenant_auto_switch_failed", {
           error: err instanceof Error ? err.message : String(err),
           status: errorStatus(err),
           target_slug: urlSubdomain,
         });
+        // The cookie changed during the switch (the staff preview ended):
+        // the tree left, no way out shows in it any more; the next document
+        // decides with the session the cookie holds (#8082).
+        if (sessionTreeState().leaving) {
+          signingOut = true;
+          reloadDocument();
+          return;
+        }
 
         if (
           err instanceof ApiError &&
           err.code === "identity.tenant_access_denied"
         ) {
           try {
-            await signOut({ callbackUrl: "/" });
+            await signOutSession("tenant", markOfSwitch);
+            window.location.href = "/";
             signingOut = true;
           } catch (signOutErr) {
             logger.warn("tenant_auto_switch_signout_failed", {
@@ -683,6 +782,11 @@ function GuardedTenant({
                     size="md"
                     tooltip={`Versucht noch einmal, zu ${tenant.name} zu wechseln.`}
                     onClick={() => {
+                      // The person asks again: a new budget, also for the
+                      // documents the switch loads, and one switch even if
+                      // the tab cannot keep the count.
+                      clearSwitchReloads();
+                      retryAsked.current = true;
                       switchAttempts.current = {
                         targetTenantId: urlTenantId,
                         count: 0,
@@ -700,8 +804,11 @@ function GuardedTenant({
                     variant="outline"
                     tooltip="Meldet dich ab und öffnet die Anmeldung."
                     onClick={() => {
-                      void signOut({ callbackUrl: "/" }).catch(
-                        (err: unknown) => {
+                      void signOutSession("tenant", shownSessionMark())
+                        .then(() => {
+                          window.location.href = "/";
+                        })
+                        .catch((err: unknown) => {
                           logger.warn("tenant_relogin_signout_failed", {
                             error:
                               err instanceof Error ? err.message : String(err),
@@ -709,8 +816,7 @@ function GuardedTenant({
                           void showActionError(err, {
                             object: "die Abmeldung",
                           });
-                        },
-                      );
+                        });
                     }}
                   >
                     Neu anmelden

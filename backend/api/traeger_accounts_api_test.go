@@ -14,6 +14,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"slices"
+	"strconv"
 	"testing"
 	"time"
 
@@ -98,6 +100,7 @@ type traegerBueroAnswer struct {
 		Email     string   `json:"email"`
 		Name      string   `json:"name"`
 		Roles     []string `json:"roles"`
+		Version   string   `json:"version"`
 	} `json:"members"`
 	Invitations []struct {
 		ID    wireID   `json:"id"`
@@ -111,6 +114,19 @@ func traegerBueroList(t *testing.T, router http.Handler, token string) traegerBu
 	rec := traegerCall(t, router, http.MethodGet, "/traeger/accounts/", token, nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	return decodeSchoolPortalData[traegerBueroAnswer](t, rec.Body.Bytes())
+}
+
+// traegerRolesBody is the body of a role change made from the member list
+// the session reads: the roles and the member's version (ADR 0311).
+func traegerRolesBody(t *testing.T, router http.Handler, token string, accountID int64, roles ...string) map[string]any {
+	t.Helper()
+	for _, member := range traegerBueroList(t, router, token).Members {
+		if int64(member.AccountID) == accountID {
+			return map[string]any{"roles": roles, "expected_version": member.Version}
+		}
+	}
+	t.Fatalf("account %d is not in the member list", accountID)
+	return nil
 }
 
 // invite invites the address and returns the link token from the mail.
@@ -190,7 +206,7 @@ func TestTraegerInvitationCreatesAnAccountWithTheInvitedRole(t *testing.T) {
 	code, answer := traegerSignIn(t, router, address, password, 0)
 	require.Equal(t, http.StatusOK, code, "the acceptance created the membership")
 	claims := traegerTokenClaims(t, answer.AccessToken)
-	assert.Equal(t, float64(organizationID), claims["org_id"])
+	assert.Equal(t, strconv.FormatInt(organizationID, 10), claims["org_id"])
 	assert.ElementsMatch(t, []any{identityaccess.TraegerRightOverviewRead, identityaccess.TraegerRightBillingManage,
 		identityaccess.TraegerRightFinanceExport, identityaccess.TraegerRightReportsRead}, claims["permissions"], "the role bundles the rights of the ADR")
 
@@ -285,7 +301,7 @@ func TestTraegerKeepsItsLastLeader(t *testing.T) {
 	rec := traegerCall(t, router, http.MethodDelete, fmt.Sprintf("/traeger/accounts/%d", first.ID), firstSession.AccessToken, nil)
 	assert.Equal(t, http.StatusConflict, rec.Code, "the last person with Leitung cannot remove themselves")
 	assert.Contains(t, rec.Body.String(), "traeger.last_administrator")
-	rec = traegerCall(t, router, http.MethodPut, fmt.Sprintf("/traeger/accounts/%d/roles", first.ID), firstSession.AccessToken, map[string]any{"roles": []string{identityaccess.TraegerRoleAdministration, identityaccess.TraegerRoleSchoolAccess}})
+	rec = traegerCall(t, router, http.MethodPut, fmt.Sprintf("/traeger/accounts/%d/roles", first.ID), firstSession.AccessToken, traegerRolesBody(t, router, firstSession.AccessToken, first.ID, identityaccess.TraegerRoleAdministration, identityaccess.TraegerRoleSchoolAccess))
 	assert.Equal(t, http.StatusConflict, rec.Code, "nor give the role away")
 
 	second, _ := traegerMember(t, db, router, organizationID, identityaccess.TraegerRoleLeadership)
@@ -302,7 +318,9 @@ func TestTraegerKeepsItsLastLeader(t *testing.T) {
 	_, _, err := identity.RefreshTokenWithAudit(ctx, firstSession.RefreshToken, "", "", "")
 	assert.Error(t, err, "the removed person's session cannot be renewed")
 	assert.NotEqual(t, first.ID, second.ID)
-	assert.Equal(t, []string{"member_removed"}, traegerLedger(t, db, organizationID))
+	// The list read that gave the refused role change its version is
+	// recorded as every read of the list (ADR 0311).
+	assert.Equal(t, []string{"members_listed", "member_removed"}, traegerLedger(t, db, organizationID))
 }
 
 // TestTraegerLeadershipPassesOnWithinTheBuero: Leitung grants Leitung, gives
@@ -316,15 +334,15 @@ func TestTraegerLeadershipPassesOnWithinTheBuero(t *testing.T) {
 	colleague, colleagueSession := traegerMember(t, db, router, organizationID, identityaccess.TraegerRoleAdministration)
 
 	rec := traegerCall(t, router, http.MethodPut, fmt.Sprintf("/traeger/accounts/%d/roles", leader.ID), leaderSession.AccessToken,
-		map[string]any{"roles": []string{identityaccess.TraegerRoleAdministration}})
+		traegerRolesBody(t, router, leaderSession.AccessToken, leader.ID, identityaccess.TraegerRoleAdministration))
 	assert.Equal(t, http.StatusConflict, rec.Code, "the only Leitung cannot give it away")
 	assert.Contains(t, rec.Body.String(), "traeger.last_administrator")
 
 	rec = traegerCall(t, router, http.MethodPut, fmt.Sprintf("/traeger/accounts/%d/roles", colleague.ID), leaderSession.AccessToken,
-		map[string]any{"roles": []string{identityaccess.TraegerRoleAdministration, identityaccess.TraegerRoleLeadership}})
+		traegerRolesBody(t, router, leaderSession.AccessToken, colleague.ID, identityaccess.TraegerRoleAdministration, identityaccess.TraegerRoleLeadership))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	rec = traegerCall(t, router, http.MethodPut, fmt.Sprintf("/traeger/accounts/%d/roles", leader.ID), leaderSession.AccessToken,
-		map[string]any{"roles": []string{identityaccess.TraegerRoleAdministration}})
+		traegerRolesBody(t, router, leaderSession.AccessToken, leader.ID, identityaccess.TraegerRoleAdministration))
 	require.Equal(t, http.StatusOK, rec.Code, "with a second Leitung the first may give its own away: %s", rec.Body.String())
 
 	rec = traegerCall(t, router, http.MethodGet, "/traeger/accounts/", leaderSession.AccessToken, nil)
@@ -346,7 +364,7 @@ func TestTraegerRoleChangeReachesTheSessionAtItsNextRefresh(t *testing.T) {
 
 	rec := traegerCall(t, router, http.MethodPut, fmt.Sprintf("/traeger/accounts/%d/roles", colleague.ID), admin.AccessToken, map[string]any{"roles": []string{"unknown"}})
 	assert.Equal(t, http.StatusBadRequest, rec.Code, "only the Träger roles exist")
-	rec = traegerCall(t, router, http.MethodPut, fmt.Sprintf("/traeger/accounts/%d/roles", colleague.ID), admin.AccessToken, map[string]any{"roles": []string{identityaccess.TraegerRolePersonnel, identityaccess.TraegerRoleReadOnly}})
+	rec = traegerCall(t, router, http.MethodPut, fmt.Sprintf("/traeger/accounts/%d/roles", colleague.ID), admin.AccessToken, traegerRolesBody(t, router, admin.AccessToken, colleague.ID, identityaccess.TraegerRolePersonnel, identityaccess.TraegerRoleReadOnly))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), `"roles":["personnel","read_only"]`)
 
@@ -365,6 +383,57 @@ func TestTraegerRoleChangeReachesTheSessionAtItsNextRefresh(t *testing.T) {
 	assert.Equal(t, []string{identityaccess.TraegerRolePersonnel, identityaccess.TraegerRoleReadOnly}, change.After, "and after the change")
 }
 
+// TestTraegerRoleChangeSavesOnlyOverTheReadRoles: a role change made from an
+// older member list is refused with general.changed_since_read and changes,
+// records and mails nothing; one without a version too. The current version
+// saves, and the version it answers saves the next change without a new
+// read (ADR 0311).
+func TestTraegerRoleChangeSavesOnlyOverTheReadRoles(t *testing.T) {
+	t.Parallel()
+	db, router, _, _ := newTraegerAccountsPortal(t)
+	organizationID := traegerBuero(t, db, "Träger Lesestand")
+	_, admin := traegerMember(t, db, router, organizationID, identityaccess.TraegerRoleLeadership)
+	colleague, _ := traegerMember(t, db, router, organizationID, identityaccess.TraegerRoleReadOnly)
+	path := fmt.Sprintf("/traeger/accounts/%d/roles", colleague.ID)
+	stale := traegerRolesBody(t, router, admin.AccessToken, colleague.ID, identityaccess.TraegerRoleBilling)
+
+	rec := traegerCall(t, router, http.MethodPut, path, admin.AccessToken, traegerRolesBody(t, router, admin.AccessToken, colleague.ID, identityaccess.TraegerRolePersonnel))
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	saved := decodeSchoolPortalData[struct {
+		Version string `json:"version"`
+	}](t, rec.Body.Bytes())
+	require.NotEqual(t, stale["expected_version"], saved.Version, "the answer carries the stored set's version")
+
+	for name, body := range map[string]map[string]any{
+		"older version": stale,
+		"no version":    {"roles": []string{identityaccess.TraegerRoleBilling}},
+	} {
+		rec = traegerCall(t, router, http.MethodPut, path, admin.AccessToken, body)
+		assert.Equal(t, http.StatusConflict, rec.Code, name)
+		assert.Contains(t, rec.Body.String(), "general.changed_since_read", name)
+	}
+	assert.Equal(t, []string{identityaccess.TraegerRolePersonnel}, traegerMemberRoles(t, router, admin.AccessToken, colleague.ID), "a refused change writes nothing")
+	changes := slices.DeleteFunc(traegerLedger(t, db, organizationID), func(action string) bool { return action == "members_listed" })
+	assert.Equal(t, []string{"roles_changed"}, changes, "and records nothing")
+
+	rec = traegerCall(t, router, http.MethodPut, path, admin.AccessToken,
+		map[string]any{"roles": []string{identityaccess.TraegerRoleBilling}, "expected_version": saved.Version})
+	require.Equal(t, http.StatusOK, rec.Code, "the answered version saves again without a read: %s", rec.Body.String())
+	assert.Equal(t, []string{identityaccess.TraegerRoleBilling}, traegerMemberRoles(t, router, admin.AccessToken, colleague.ID))
+}
+
+// traegerMemberRoles reads the member's roles from the member list.
+func traegerMemberRoles(t *testing.T, router http.Handler, token string, accountID int64) []string {
+	t.Helper()
+	for _, member := range traegerBueroList(t, router, token).Members {
+		if int64(member.AccountID) == accountID {
+			return member.Roles
+		}
+	}
+	t.Fatalf("account %d is not in the member list", accountID)
+	return nil
+}
+
 // TestTraegerWithdrawnRoleEndsTheSessionAtOnce: a role taken away ends the
 // person's Träger sessions, so the per-request family check of the serving
 // root (#5194) refuses the access token that still carries the withdrawn
@@ -380,7 +449,7 @@ func TestTraegerWithdrawnRoleEndsTheSessionAtOnce(t *testing.T) {
 	require.Equal(t, http.StatusForbidden, rec.Code, "the live session reaches the route authorization: %s", rec.Body.String())
 
 	rec = traegerCall(t, gated, http.MethodPut, fmt.Sprintf("/traeger/accounts/%d/roles", colleague.ID), admin.AccessToken,
-		map[string]any{"roles": []string{identityaccess.TraegerRoleReadOnly}})
+		traegerRolesBody(t, gated, admin.AccessToken, colleague.ID, identityaccess.TraegerRoleReadOnly))
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
 	rec = traegerCall(t, gated, http.MethodGet, "/traeger/accounts/", session.AccessToken, nil)

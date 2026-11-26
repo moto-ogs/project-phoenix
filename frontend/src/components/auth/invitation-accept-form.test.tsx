@@ -15,9 +15,9 @@ import { catalogText } from "~/test/error-catalog-text";
 import { InvitationAcceptForm } from "./invitation-accept-form";
 import type { InvitationValidation } from "~/lib/invitation-helpers";
 
-// Mock next-auth/react
-vi.mock("next-auth/react", () => ({
-  signOut: vi.fn(() => Promise.resolve({ redirect: false })),
+// The form ends the tree's session through Auth.js' protocol (#8082).
+vi.mock("~/lib/tenant-session-cookie", () => ({
+  signOutPortal: vi.fn(() => Promise.resolve()),
 }));
 
 // Mock next/navigation
@@ -71,7 +71,11 @@ describe("InvitationAcceptForm", () => {
 
   it("renders the form with invitation details", async () => {
     render(
-      <InvitationAcceptForm token="test-token" invitation={mockInvitation} />,
+      <InvitationAcceptForm
+        portal="tenant"
+        token="test-token"
+        invitation={mockInvitation}
+      />,
     );
 
     await waitFor(() => {
@@ -82,7 +86,11 @@ describe("InvitationAcceptForm", () => {
 
   it("displays invitation role and position", async () => {
     render(
-      <InvitationAcceptForm token="test-token" invitation={mockInvitation} />,
+      <InvitationAcceptForm
+        portal="tenant"
+        token="test-token"
+        invitation={mockInvitation}
+      />,
     );
 
     await waitFor(() => {
@@ -94,7 +102,11 @@ describe("InvitationAcceptForm", () => {
 
   it("renders all required form fields", async () => {
     render(
-      <InvitationAcceptForm token="test-token" invitation={mockInvitation} />,
+      <InvitationAcceptForm
+        portal="tenant"
+        token="test-token"
+        invitation={mockInvitation}
+      />,
     );
 
     await waitFor(() => {
@@ -107,7 +119,11 @@ describe("InvitationAcceptForm", () => {
 
   it("pre-fills first name and last name from invitation", async () => {
     render(
-      <InvitationAcceptForm token="test-token" invitation={mockInvitation} />,
+      <InvitationAcceptForm
+        portal="tenant"
+        token="test-token"
+        invitation={mockInvitation}
+      />,
     );
 
     await waitFor(() => {
@@ -123,7 +139,11 @@ describe("InvitationAcceptForm", () => {
 
   it("displays password requirements", async () => {
     render(
-      <InvitationAcceptForm token="test-token" invitation={mockInvitation} />,
+      <InvitationAcceptForm
+        portal="tenant"
+        token="test-token"
+        invitation={mockInvitation}
+      />,
     );
 
     await waitFor(() => {
@@ -138,7 +158,11 @@ describe("InvitationAcceptForm", () => {
 
   it("renders submit button", async () => {
     render(
-      <InvitationAcceptForm token="test-token" invitation={mockInvitation} />,
+      <InvitationAcceptForm
+        portal="tenant"
+        token="test-token"
+        invitation={mockInvitation}
+      />,
     );
 
     await waitFor(() => {
@@ -150,7 +174,11 @@ describe("InvitationAcceptForm", () => {
 
   it("allows toggling password visibility", async () => {
     render(
-      <InvitationAcceptForm token="test-token" invitation={mockInvitation} />,
+      <InvitationAcceptForm
+        portal="tenant"
+        token="test-token"
+        invitation={mockInvitation}
+      />,
     );
 
     await waitFor(() => {
@@ -162,7 +190,11 @@ describe("InvitationAcceptForm", () => {
 
   it("displays expiration date", async () => {
     render(
-      <InvitationAcceptForm token="test-token" invitation={mockInvitation} />,
+      <InvitationAcceptForm
+        portal="tenant"
+        token="test-token"
+        invitation={mockInvitation}
+      />,
     );
 
     await waitFor(() => {
@@ -172,7 +204,11 @@ describe("InvitationAcceptForm", () => {
 
   it("handles form input changes", async () => {
     render(
-      <InvitationAcceptForm token="test-token" invitation={mockInvitation} />,
+      <InvitationAcceptForm
+        portal="tenant"
+        token="test-token"
+        invitation={mockInvitation}
+      />,
     );
 
     const firstNameInput =
@@ -189,6 +225,7 @@ describe("InvitationAcceptForm", () => {
 
     render(
       <InvitationAcceptForm
+        portal="tenant"
         token="test-token"
         invitation={invitationWithoutPosition}
       />,
@@ -208,6 +245,7 @@ describe("InvitationAcceptForm", () => {
 
     render(
       <InvitationAcceptForm
+        portal="tenant"
         token="test-token"
         invitation={invitationWithoutName}
       />,
@@ -228,7 +266,11 @@ describe("InvitationAcceptForm", () => {
     };
 
     render(
-      <InvitationAcceptForm token="test-token" invitation={invitationNoName} />,
+      <InvitationAcceptForm
+        portal="tenant"
+        token="test-token"
+        invitation={invitationNoName}
+      />,
     );
 
     const submitButton = await screen.findByRole("button", {
@@ -252,7 +294,11 @@ describe("InvitationAcceptForm", () => {
 
   it("validates password mismatch", async () => {
     render(
-      <InvitationAcceptForm token="test-token" invitation={mockInvitation} />,
+      <InvitationAcceptForm
+        portal="tenant"
+        token="test-token"
+        invitation={mockInvitation}
+      />,
     );
 
     const passwordInput = await screen.findByLabelText(/^Passwort$/);
@@ -274,7 +320,11 @@ describe("InvitationAcceptForm", () => {
 
   it("validates weak password", async () => {
     render(
-      <InvitationAcceptForm token="test-token" invitation={mockInvitation} />,
+      <InvitationAcceptForm
+        portal="tenant"
+        token="test-token"
+        invitation={mockInvitation}
+      />,
     );
 
     const passwordInput = await screen.findByLabelText(/^Passwort$/);
@@ -297,7 +347,11 @@ describe("InvitationAcceptForm", () => {
 
   it("shows success state after successful submission", async () => {
     render(
-      <InvitationAcceptForm token="test-token" invitation={mockInvitation} />,
+      <InvitationAcceptForm
+        portal="tenant"
+        token="test-token"
+        invitation={mockInvitation}
+      />,
     );
 
     const passwordInput = await screen.findByLabelText(/^Passwort$/);
@@ -324,7 +378,11 @@ describe("InvitationAcceptForm", () => {
     );
 
     render(
-      <InvitationAcceptForm token="test-token" invitation={mockInvitation} />,
+      <InvitationAcceptForm
+        portal="tenant"
+        token="test-token"
+        invitation={mockInvitation}
+      />,
     );
 
     const passwordInput = await screen.findByLabelText(/^Passwort$/);
@@ -359,7 +417,11 @@ describe("InvitationAcceptForm", () => {
     );
 
     render(
-      <InvitationAcceptForm token="test-token" invitation={mockInvitation} />,
+      <InvitationAcceptForm
+        portal="tenant"
+        token="test-token"
+        invitation={mockInvitation}
+      />,
     );
 
     const passwordInput = await screen.findByLabelText(/^Passwort$/);
@@ -389,7 +451,11 @@ describe("InvitationAcceptForm", () => {
     mockAcceptInvitation.mockRejectedValueOnce(new ApiError("Conflict", 409));
 
     render(
-      <InvitationAcceptForm token="test-token" invitation={mockInvitation} />,
+      <InvitationAcceptForm
+        portal="tenant"
+        token="test-token"
+        invitation={mockInvitation}
+      />,
     );
 
     const passwordInput = await screen.findByLabelText(/^Passwort$/);
@@ -418,7 +484,11 @@ describe("InvitationAcceptForm", () => {
     );
 
     render(
-      <InvitationAcceptForm token="test-token" invitation={mockInvitation} />,
+      <InvitationAcceptForm
+        portal="tenant"
+        token="test-token"
+        invitation={mockInvitation}
+      />,
     );
 
     const passwordInput = await screen.findByLabelText(/^Passwort$/);
@@ -448,7 +518,11 @@ describe("InvitationAcceptForm", () => {
     );
 
     render(
-      <InvitationAcceptForm token="test-token" invitation={mockInvitation} />,
+      <InvitationAcceptForm
+        portal="tenant"
+        token="test-token"
+        invitation={mockInvitation}
+      />,
     );
 
     const passwordInput = await screen.findByLabelText(/^Passwort$/);
@@ -478,7 +552,11 @@ describe("InvitationAcceptForm", () => {
     mockAcceptInvitation.mockRejectedValueOnce({});
 
     render(
-      <InvitationAcceptForm token="test-token" invitation={mockInvitation} />,
+      <InvitationAcceptForm
+        portal="tenant"
+        token="test-token"
+        invitation={mockInvitation}
+      />,
     );
 
     const passwordInput = await screen.findByLabelText(/^Passwort$/);
@@ -513,7 +591,11 @@ describe("InvitationAcceptForm", () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     try {
       render(
-        <InvitationAcceptForm token="test-token" invitation={mockInvitation} />,
+        <InvitationAcceptForm
+          portal="tenant"
+          token="test-token"
+          invitation={mockInvitation}
+        />,
       );
 
       const passwordInput = await screen.findByLabelText(/^Passwort$/);
@@ -544,12 +626,20 @@ describe("InvitationAcceptForm", () => {
     }
   });
 
-  it("falls back to router.push when no tenant subdomain", async () => {
+  it("opens the login in a new document when no tenant subdomain", async () => {
     mockAcceptInvitation.mockResolvedValueOnce({ tenantSubdomain: undefined });
+    // The signout dropped this document's tree (#8082).
+    const assign = vi
+      .spyOn(window.location, "assign")
+      .mockImplementation(() => undefined);
     vi.useFakeTimers({ shouldAdvanceTime: true });
 
     render(
-      <InvitationAcceptForm token="test-token" invitation={mockInvitation} />,
+      <InvitationAcceptForm
+        portal="tenant"
+        token="test-token"
+        invitation={mockInvitation}
+      />,
     );
 
     const passwordInput = await screen.findByLabelText(/^Passwort$/);
@@ -565,14 +655,16 @@ describe("InvitationAcceptForm", () => {
     await act(() => vi.advanceTimersByTimeAsync(1600));
     await waitFor(
       () => {
-        expect(mockPush).toHaveBeenCalledWith("/");
+        expect(assign).toHaveBeenCalledWith("/");
       },
       { timeout: 3000 },
     );
+    assign.mockRestore();
   });
 
   it("shows manual redirect button when signOut fails instead of auto-redirecting", async () => {
-    const { signOut } = await import("next-auth/react");
+    const { signOutPortal: signOut } =
+      await import("~/lib/tenant-session-cookie");
     vi.mocked(signOut).mockRejectedValueOnce(new Error("signOut failed"));
 
     const originalEnv = process.env.NEXT_PUBLIC_TENANT_DOMAIN;
@@ -588,7 +680,11 @@ describe("InvitationAcceptForm", () => {
 
     try {
       render(
-        <InvitationAcceptForm token="test-token" invitation={mockInvitation} />,
+        <InvitationAcceptForm
+          portal="tenant"
+          token="test-token"
+          invitation={mockInvitation}
+        />,
       );
 
       const passwordInput = await screen.findByLabelText(/^Passwort$/);
@@ -644,7 +740,8 @@ describe("InvitationAcceptForm", () => {
   });
 
   it("redirects when signOut retry succeeds", async () => {
-    const { signOut } = await import("next-auth/react");
+    const { signOutPortal: signOut } =
+      await import("~/lib/tenant-session-cookie");
     vi.mocked(signOut).mockRejectedValueOnce(new Error("signOut failed"));
 
     const originalEnv = process.env.NEXT_PUBLIC_TENANT_DOMAIN;
@@ -660,7 +757,11 @@ describe("InvitationAcceptForm", () => {
 
     try {
       render(
-        <InvitationAcceptForm token="test-token" invitation={mockInvitation} />,
+        <InvitationAcceptForm
+          portal="tenant"
+          token="test-token"
+          invitation={mockInvitation}
+        />,
       );
 
       const passwordInput = await screen.findByLabelText(/^Passwort$/);
@@ -679,7 +780,7 @@ describe("InvitationAcceptForm", () => {
       });
 
       // Retry succeeds — should redirect
-      vi.mocked(signOut).mockResolvedValueOnce({ url: "" });
+      vi.mocked(signOut).mockResolvedValueOnce(undefined);
       fireEvent.click(screen.getByRole("button", { name: /Zur Anmeldung/i }));
 
       await waitFor(() => {
@@ -701,7 +802,11 @@ describe("InvitationAcceptForm", () => {
     );
 
     render(
-      <InvitationAcceptForm token="test-token" invitation={mockInvitation} />,
+      <InvitationAcceptForm
+        portal="tenant"
+        token="test-token"
+        invitation={mockInvitation}
+      />,
     );
 
     const passwordInput = await screen.findByLabelText(/^Passwort$/);
@@ -739,6 +844,7 @@ describe("InvitationAcceptForm", () => {
 
       render(
         <InvitationAcceptForm
+          portal="tenant"
           token="test-token"
           invitation={invitationNoName}
         />,
@@ -769,7 +875,11 @@ describe("InvitationAcceptForm", () => {
       Element.prototype.scrollIntoView = vi.fn();
 
       render(
-        <InvitationAcceptForm token="test-token" invitation={mockInvitation} />,
+        <InvitationAcceptForm
+          portal="tenant"
+          token="test-token"
+          invitation={mockInvitation}
+        />,
       );
 
       const passwordInput = await screen.findByLabelText(/^Passwort$/);

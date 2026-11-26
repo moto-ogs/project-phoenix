@@ -25,7 +25,7 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: mockPush }),
 }));
 
-import TraegerHolidayPeriodsPage from "./page";
+import TraegerHolidayPeriodsPage from "./page-content";
 
 const period: HolidayPeriod = {
   id: "5",
@@ -114,7 +114,7 @@ function render(ui: React.ReactElement) {
 
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
-    data: { user: { id: "A", scope: "org", orgId: 7 } },
+    data: { user: { id: "A", scope: "org", orgId: "7" } },
     status: "authenticated",
   }),
 }));

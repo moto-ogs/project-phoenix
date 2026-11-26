@@ -39,5 +39,31 @@
     "pickupTooltip": "Farklı alınış saati istemek için formu açar.",
     "pickupWithModeTooltip": "Alınış değişikliği istemek için formu açar.",
     "messageTooltip": "Çocuğunuzla ilgili {careTerm} mesajlarını açar."
+  },
+  "changes": {
+    "title": "Bugün farklı",
+    "allAsPlanned": "Bugün her şey planlandığı gibi.",
+    "partial": "Tüm değişiklikler yüklenemedi. Lütfen daha sonra tekrar bak.",
+    "loadObject": "bugünkü değişiklikler",
+    "enteredByYou": "Senin girdiğin",
+    "sick": "{name} bugün hasta bildirildi.",
+    "excused": "{name} bugün izinli.",
+    "pickupAt": "{name} bugün saat {time} alınacak.",
+    "notComing": "{name} bugün gelmiyor.",
+    "goesAlone": "{name} bugün eve yalnız gidiyor.",
+    "classTrip": "{class} sınıfı bugün gezide.",
+    "classTripBack": "{class} sınıfı bugün gezide. Dönüş saat {time}.",
+    "classDismissal": "{class} sınıfının dersleri bugün saat {time} bitiyor.",
+    "closingDay": "{careTerm} bugün kapalı: {name}.",
+    "closingDayUntil": "{careTerm} {date} tarihine kadar kapalı: {name}.",
+    "openingChanged": "{careTerm} bugün {opens} ile {closes} arasında açık: {name}.",
+    "openingChangedUntil": "{careTerm} {date} tarihine kadar {opens} ile {closes} arasında açık: {name}.",
+    "mealCancelled": "Bugün {name} için öğle yemeği yok. Ücreti alınmayacak.",
+    "pickupAfterClosing": "Bu, kapanış saatinden sonra. Lütfen alma saatini değiştir.",
+    "regularPickupAfterClosing": "Haftalık plana göre {name} saat {time} alınıyor.",
+    "activityCancelled": "Saat {time} {title} bugün yapılmıyor.",
+    "activityReinstated": "Saat {time} {title} bugün yine de yapılıyor.",
+    "activityRoomChanged": "Saat {time} {title} bugün {room} odasında.",
+    "activityLeadChanged": "Saat {time} {title} bugün bir yedek öğretmen yönetiyor."
   }
 }

@@ -95,7 +95,7 @@ func TestStatusSignatureFailureDoesNotHideJSONStatus(t *testing.T) {
 	request = request.WithContext(context.WithValue(signatureResilienceTestContext(t, &adminTransactions, &savepointActions), chi.RouteCtxKey, route))
 	response := httptest.NewRecorder()
 
-	rs.getStatus(response, request)
+	rs.getStatusResponse(response, request)
 
 	require.Equal(t, http.StatusOK, response.Code, response.Body.String())
 	var body struct {
@@ -127,7 +127,7 @@ func TestStatusSignatureProofFailureStillRejectsPDF(t *testing.T) {
 	request = request.WithContext(context.WithValue(signatureResilienceTestContext(t, &adminTransactions, &savepointActions), chi.RouteCtxKey, route))
 	response := httptest.NewRecorder()
 
-	rs.getStatus(response, request)
+	rs.getStatusResponse(response, request)
 
 	require.Equal(t, http.StatusInternalServerError, response.Code, response.Body.String())
 	assert.Zero(t, service.statusSignatureCalls, "the PDF loads its complete proof directly")

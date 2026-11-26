@@ -37,9 +37,12 @@ type announcementRow struct {
 	TargetOrgIDs    []int64    `bun:"target_org_ids,array"`
 	TargetTenantIDs []int64    `bun:"target_tenant_ids,array"`
 	// CreatedBy is nil once the author's operator account was deleted (#4047).
-	CreatedBy *int64    `bun:"created_by"`
-	CreatedAt time.Time `bun:"created_at"`
-	UpdatedAt time.Time `bun:"updated_at"`
+	CreatedBy *int64 `bun:"created_by"`
+	// nullzero lets a new row take the columns' DEFAULT NOW() instead of
+	// the zero time; updated_at is the edit version (ADR 0311), which a zero
+	// time cannot carry.
+	CreatedAt time.Time `bun:"created_at,nullzero"`
+	UpdatedAt time.Time `bun:"updated_at,nullzero"`
 }
 
 type viewRow struct {

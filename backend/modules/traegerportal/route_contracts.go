@@ -73,7 +73,9 @@ func InvitationRouteContracts() []common.RouteContract {
 // names the route.
 func SessionRouteContracts() []common.RouteContract {
 	step := func(pattern string, request, response any) common.RouteContract {
+		browserPath := "/api/traeger/auth" + pattern
 		return common.RouteContract{
+			BrowserPath: browserPath, BrowserOwnContract: browserPath != "",
 			Method: "POST", Pattern: pattern, Portals: traegerPortal, RouteFile: common.RouteFileSession,
 			Request: request, Response: response, Plain: true,
 		}
@@ -85,5 +87,19 @@ func SessionRouteContracts() []common.RouteContract {
 		step("/mfa/enroll/start", nil, portalauth.EnrollStartResponse{}),
 		step("/mfa/enroll/confirm", TraegerMFAVerifyRequest{}, portalauth.TokenResponse{}),
 		step("/mfa/step-up/verify", common.MFAVerifyRequest{}, portalauth.TokenResponse{}),
+	}
+}
+
+// SchoolRoleRouteContracts registers the roles the Träger gives the staff of
+// all its schools (#4810), with patterns relative to /traeger/school-roles.
+// The preview of a removal changes nothing; the removal answers no data.
+func SchoolRoleRouteContracts() []common.RouteContract {
+	return []common.RouteContract{
+		{Method: "GET", Pattern: "/", Portals: traegerPortal, Response: SchoolRoleListResponse{}},
+		{Method: "GET", Pattern: "/catalog", Portals: traegerPortal, Response: SchoolRoleCatalogResponse{}},
+		{Method: "POST", Pattern: "/", Portals: traegerPortal, Request: SchoolRoleRequest{}, Response: SchoolRoleResponse{}},
+		{Method: "PUT", Pattern: "/{id}", Portals: traegerPortal, Request: SchoolRoleRequest{}, Response: SchoolRoleResponse{}},
+		{Method: "GET", Pattern: "/{id}/removal-preview", Portals: traegerPortal, Response: SchoolRoleRemovalResponse{}},
+		{Method: "POST", Pattern: "/{id}/removal", Portals: traegerPortal, Request: SchoolRoleRemovalRequest{}, NoData: true},
 	}
 }

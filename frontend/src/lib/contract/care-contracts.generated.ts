@@ -78,7 +78,7 @@ export const routes = {
     pattern: "/api/care-contracts/",
     portals: ["tenant"],
     query: {
-      "request_child_ids": { kind: "string" },
+      "request_child_ids": { kind: "id", repeated: true },
     },
     response: success(z.array(ApplicationContractResponseSchema)),
   },

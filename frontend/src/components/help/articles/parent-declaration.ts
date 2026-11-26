@@ -35,7 +35,7 @@ export function parentDeclarationTopic(): HelpTopic {
       "Wähle `Veröffentlichen`.",
     ],
     result:
-      "Die Eltern sehen die Anfrage im Eltern-Portal. Den Stand je Kind siehst du beim Öffnen unter `Stand der Antworten`.",
+      "Die Eltern sehen die Anfrage im Eltern-Portal. Den Stand pro Kind siehst du beim Öffnen unter `Stand der Antworten`.",
     notes: [
       "Eltern können eine Zustimmung jederzeit widerrufen. Das geht auch nach der Frist, nach dem Zurückziehen und wenn `Elternmitteilungen (Neuigkeiten)` aus ist.",
       "Mit `Mit Unterschrift` unterschreiben Eltern ihre Zustimmung mit dem Finger oder der Maus. Ablehnen geht ohne Unterschrift. Die Unterschrift steht im Nachweis der Eltern und in `Bericht als PDF`.",

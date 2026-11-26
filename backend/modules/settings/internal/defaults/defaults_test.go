@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	config "github.com/moto-ogs/project-phoenix/modules/settings/records"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -38,6 +39,8 @@ func TestAllSettingsRegistered(t *testing.T) {
 		"operations.federal_state",
 		// Term for the care in fixed parent texts (#6042).
 		"enrollment.care_facility_term",
+		// Article of a school's own care name (#8136).
+		"enrollment.care_facility_article",
 		// Saturday and Sunday on Friday's plan, demo schools only (#3921).
 		"operations.weekend_follows_friday",
 		"gdpr.data_cleanup_enabled",
@@ -2590,6 +2593,39 @@ func TestCareFacilityTermSetting(t *testing.T) {
 	}
 }
 
+// A school with its own care name chooses the article (#8136). Without a
+// choice every school keeps "die", and every preset name is feminine, so the
+// texts of existing schools do not change.
+func TestCareFacilityArticleSetting(t *testing.T) {
+	t.Parallel()
+
+	def := config.GetDefinition(config.KeyEnrollmentCareFacilityArticle)
+	require.NotNil(t, def, "enrollment.care_facility_article should be registered")
+	assert.Equal(t, config.FieldSelect, def.Type)
+	assert.Equal(t, "die", def.Default)
+	assert.Equal(t, config.AccessShared, def.AccessPolicy)
+	assert.Equal(t, "config:update", def.WritePermission)
+	require.NotNil(t, def.Options)
+	values := make([]any, 0, len(def.Options.Static))
+	for _, option := range def.Options.Static {
+		values = append(values, option.Value)
+	}
+	assert.Equal(t, []any{"der", "die", "das"}, values)
+
+	term := config.GetDefinition(config.KeyEnrollmentCareFacilityTerm)
+	require.NotNil(t, term)
+	assert.Equal(t, term.Tab, def.Tab)
+	assert.Equal(t, term.Category, def.Category)
+	assert.Equal(t, term.SortOrder+1, def.SortOrder, "sits directly under the name it belongs to")
+	for _, preset := range term.Options.Static {
+		name, ok := preset.Value.(string)
+		require.True(t, ok)
+		for _, stored := range []string{"der", "die", "das"} {
+			assert.Equal(t, "die", textnorm.CareArticle(name, stored), "preset %s is feminine", name)
+		}
+	}
+}
+
 // #6851, #6852: both credits are off by default, so existing schools keep
 // their results; the rounding direction only shows while rounding is on.
 func TestTimeTrackingCreditSettings(t *testing.T) {
@@ -2642,4 +2678,31 @@ func assertLegalTextVisibility(t *testing.T, key string, def *config.Definition)
 	assert.Equalf(t, config.KeyEnrollmentEnabled, def.DependsOn.Key, "setting %q has unexpected DependsOn parent", key)
 	assert.Equal(t, "eq", def.DependsOn.Condition)
 	assert.Equal(t, true, def.DependsOn.Value)
+}
+
+// The regular opening hours are optional clock times the school team may
+// change (#7654): one opening and one closing time per school day, empty by
+// default, so a school that enters none has no opening hours.
+func TestOpeningHoursSettings(t *testing.T) {
+	t.Parallel()
+
+	assert.Equal(t, "opening_hours.monday_open", config.OpeningHoursKey("monday", config.OpeningHoursOpen))
+	sortOrder := 0
+	for _, weekday := range config.OpeningHoursWeekdays {
+		for _, edge := range []string{config.OpeningHoursOpen, config.OpeningHoursClose} {
+			sortOrder++
+			def := config.GetDefinition(config.OpeningHoursKey(weekday, edge))
+			require.NotNilf(t, def, "%s %s should be registered", weekday, edge)
+			assert.Equal(t, config.FieldTime, def.Type)
+			assert.Equal(t, "", def.Default)
+			assert.Equal(t, "config:read", def.ReadPermission)
+			assert.Equal(t, "config:update", def.WritePermission)
+			assert.Equal(t, config.AccessShared, def.AccessPolicy)
+			assert.Equal(t, "operations", def.Tab)
+			assert.Equal(t, "oeffnungszeiten", def.Category)
+			assert.Equal(t, sortOrder, def.SortOrder)
+		}
+	}
+	assert.Equal(t, "Schließt am Freitag", config.GetDefinition(config.OpeningHoursKey("friday", config.OpeningHoursClose)).Label)
+	assert.Nil(t, config.GetDefinition(config.OpeningHoursKey("saturday", config.OpeningHoursOpen)))
 }

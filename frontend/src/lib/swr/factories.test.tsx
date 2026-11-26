@@ -29,8 +29,8 @@ const { owner } = vi.hoisted(() => ({
   owner: {
     id: "account-7",
     scope: "tenant",
-    tenantId: 42,
-    orgId: 84,
+    tenantId: "42",
+    orgId: "84",
     slug: "school-a" as string | null,
   },
 }));
@@ -50,8 +50,8 @@ beforeEach(() => {
   Object.assign(owner, {
     id: "account-7",
     scope: "tenant",
-    tenantId: 42,
-    orgId: 84,
+    tenantId: "42",
+    orgId: "84",
     slug: "school-a",
   });
 });

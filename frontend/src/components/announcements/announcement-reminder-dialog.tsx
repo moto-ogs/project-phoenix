@@ -20,6 +20,12 @@ import type { RefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
 import { createLogger } from "~/lib/logger";
 import { updateAnnouncementReminder } from "~/lib/parent-announcements-api";
 import type { Announcement } from "~/lib/parent-announcements-api";
+import {
+  readStateWaitReason,
+  useReadDraftForm,
+} from "~/lib/hooks/use-swr-load-error";
+import { LoadErrorAlert } from "~/components/ui/form-error-alert";
+import { useDraftOn } from "~/lib/swr/read-draft";
 
 const logger = createLogger({ component: "AnnouncementReminderDialog" });
 
@@ -66,8 +72,33 @@ export function reminderError(
   return null;
 }
 
+/** The reminder as the dialog edits it: a Berlin day, a clock, a text. */
+interface ReminderDraft {
+  readonly day: Date | null;
+  readonly time: string;
+  readonly text: string;
+}
+
+function reminderDraftOf(announcement: Announcement): ReminderDraft {
+  return {
+    day: announcement.reminder_at
+      ? berlinDayFromISO(announcement.reminder_at)
+      : null,
+    time: announcement.reminder_at
+      ? berlinClockFromISO(announcement.reminder_at)
+      : DEFAULT_REMINDER_TIME,
+    text: announcement.reminder_text ?? "",
+  };
+}
+
 interface AnnouncementReminderDialogProps {
+  /** Die Mitteilung, wie die Seite sie gerade liest. */
   readonly announcement: Announcement;
+  /**
+   * Liest die Mitteilung neu, nachdem der Server eine inzwischen geänderte
+   * Erinnerung abgelehnt hat; lehnt bei einem Fehler ab (ADR 0311).
+   */
+  readonly reload: () => Promise<Announcement | undefined>;
   readonly onClose: () => void;
   /** Läuft nach dem erfolgreichen Speichern, vor dem Schließen (neu laden). */
   /** Reloads the announcement; never rejects (#6652). */
@@ -82,21 +113,29 @@ interface AnnouncementReminderDialogProps {
  */
 export function AnnouncementReminderDialog({
   announcement,
+  reload,
   onClose,
   onSaved,
 }: AnnouncementReminderDialogProps) {
-  const hasReminder = Boolean(announcement.reminder_at);
-  const [day, setDay] = useState<Date | null>(
-    announcement.reminder_at
-      ? berlinDayFromISO(announcement.reminder_at)
-      : null,
+  // The reminder as read when the dialog opened; a newer read refills it
+  // only while untouched, and saving sends that version (ADR 0311).
+  const edit = useDraftOn<Announcement, ReminderDraft, string, Announcement>(
+    { opening: announcement.id, data: announcement, reload },
+    {
+      token: (read) => read.version,
+      toDraft: reminderDraftOf,
+      answer: (saved) => saved,
+    },
   );
-  const [time, setTime] = useState(
-    announcement.reminder_at
-      ? berlinClockFromISO(announcement.reminder_at)
-      : DEFAULT_REMINDER_TIME,
-  );
-  const [text, setText] = useState(announcement.reminder_text ?? "");
+  const shown = edit.base ?? announcement;
+  const hasReminder = Boolean(shown.reminder_at);
+  const { day, time, text } = edit.draft ?? reminderDraftOf(announcement);
+  const setDay = (next: Date | null) =>
+    edit.setDraft((draft) => ({ ...draft, day: next }));
+  const setTime = (next: string) =>
+    edit.setDraft((draft) => ({ ...draft, time: next }));
+  const setText = (next: string) =>
+    edit.setDraft((draft) => ({ ...draft, text: next }));
   // Welche Aktion läuft, für die Beschriftung; die Sperre hält `save` (#6533).
   const [pending, setPending] = useState<"save" | "remove" | null>(null);
   const save = useFormModalPending();
@@ -108,11 +147,10 @@ export function AnnouncementReminderDialog({
   const formErrors = useApiFormError(formRef);
   // Fehler beim Entfernen bleiben im offenen Bestätigungsdialog.
   const removeErrors = useApiFormError();
+  const form = useReadDraftForm(edit, formErrors, "die Erinnerung");
   const latestSubmitRef = useRef<(remove: boolean) => void>(() => undefined);
 
-  const expiresAt = announcement.expires_at
-    ? new Date(announcement.expires_at)
-    : null;
+  const expiresAt = shown.expires_at ? new Date(shown.expires_at) : null;
 
   const submit = async (remove: boolean) => {
     if (!remove && !day) {
@@ -128,26 +166,40 @@ export function AnnouncementReminderDialog({
         return;
       }
     }
-    formErrors.clear();
+    // Nothing goes out before the stored reminder is read after a refusal.
+    if (!form.begin()) return;
     removeErrors.clear();
     await save.run(async (op) => {
       setPending(remove ? "remove" : "save");
-      try {
-        await updateAnnouncementReminder(announcement.id, {
+      const result = await edit.submit((version) =>
+        updateAnnouncementReminder(announcement.id, {
           reminder_at: remove || !day ? null : berlinDateTimeISO(day, time),
           reminder_text: remove || !text.trim() ? null : text.trim(),
-        });
-      } catch (err) {
+          expected_version: version,
+        }),
+      );
+      if (!result.ok) {
+        if ("skipped" in result && result.skipped) {
+          setPending(null);
+          return;
+        }
         logger.error("announcement_reminder_update_failed", {
-          error: err instanceof Error ? err.message : String(err),
+          error:
+            result.error instanceof Error
+              ? result.error.message
+              : String(result.error),
         });
         if (!op.isCurrent()) return;
-        await (remove ? removeErrors : formErrors).show(err, {
-          object: remove
-            ? "das Entfernen der Erinnerung"
-            : "das Speichern der Erinnerung",
-          retry: () => latestSubmitRef.current(remove),
-        });
+        const object = remove
+          ? "das Entfernen der Erinnerung"
+          : "das Speichern der Erinnerung";
+        // Changed meanwhile: `reload` shows the stored reminder, no retry.
+        await (remove ? removeErrors : formErrors).show(
+          result.error,
+          result.refused
+            ? { object, reload: result.reload }
+            : { object, retry: () => latestSubmitRef.current(remove) },
+        );
         setPending(null);
         return;
       }
@@ -210,7 +262,12 @@ export function AnnouncementReminderDialog({
                 type="button"
                 size="md"
                 onClick={() => void submit(false)}
-                disabled={pending !== null}
+                disabled={pending !== null || !edit.canSubmit}
+                disabledReason={
+                  pending === null
+                    ? readStateWaitReason(edit.status)
+                    : undefined
+                }
                 tooltip="Plant die Erinnerung zur gewählten Zeit an alle Empfänger."
                 className="flex-1 sm:flex-none"
               >
@@ -221,6 +278,7 @@ export function AnnouncementReminderDialog({
         }
       >
         <div ref={formRef} className="space-y-4">
+          <LoadErrorAlert error={form.loadError} />
           <p className="text-sm text-gray-600">
             moto schickt „{announcement.title}“ zu diesem Zeitpunkt noch einmal
             an alle Empfänger, auch wenn sie schon{" "}

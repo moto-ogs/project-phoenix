@@ -41,7 +41,7 @@ func (d Document) Violations(route Route, answer Answer) []string {
 		return []string{"the route registers a file, not the envelope"}
 	}
 	body := bytes.TrimSpace(answer.Body)
-	if route.NoData && len(body) == 0 {
+	if route.NoData && answer.Status == 204 && len(body) == 0 {
 		return nil
 	}
 	if route.Plain {
@@ -111,6 +111,9 @@ func (c *checker) value(at string, s Schema, raw json.RawMessage) {
 		if !s.Nullable {
 			c.failf(at, "null where the contract names no null")
 		}
+		return
+	}
+	if s.Kind == KindID && s.NoID && string(raw) == `""` {
 		return
 	}
 	switch s.Kind {

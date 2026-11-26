@@ -5,6 +5,8 @@ package realtime
 import (
 	"strconv"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // EventType represents the type of SSE event
@@ -118,6 +120,10 @@ const (
 	// schedules, or planned shifts. It carries no staff identifier: authorized
 	// clients re-fetch their permission-scoped time-tracking views.
 	EventStaffTimeTrackingChanged EventType = "staff_time_tracking_changed"
+
+	// EventStaffLeaveChanged invalidates staff absence and working-time views.
+	// The school signal carries no staff identity or absence content.
+	EventStaffLeaveChanged EventType = "staff_leave_changed"
 
 	// Active supervision refresh event — a tenant-wide signal emitted by
 	// timetable operations, schedule instance lifecycle changes, and the overdue
@@ -276,7 +282,7 @@ const (
 // Event represents a Server-Sent Event that will be broadcast to clients
 type Event struct {
 	Type          EventType `json:"type"`
-	ActiveGroupID string    `json:"active_group_id"`
+	ActiveGroupID string    `json:"active_group_id" contract_text:"a topic is a decimal ID, edu:<ID>, or empty for tenant events"`
 	Data          EventData `json:"data"`
 	Timestamp     time.Time `json:"timestamp"`
 	// notificationID names the stored copy of a notification event, which
@@ -298,12 +304,12 @@ func (e Event) WithNotificationID(id int64) Event {
 // event-specific GDPR contract and must not expose sensitive data.
 type EventData struct {
 	// Student-related fields (for check-in/check-out events)
-	StudentID *string `json:"student_id,omitempty"`
+	StudentID *string `json:"student_id,omitempty" contract_text:"internal relay ID before the SSE projection"`
 
 	// StudentIDs carries the affected students on a bulk_student_checkout or
 	// bulk_student_checkin event. The client adds each to its per-student
 	// detail-cache invalidation set; the refetch itself is topic-driven.
-	StudentIDs *[]string `json:"student_ids,omitempty"`
+	StudentIDs *[]string `json:"student_ids,omitempty" contract_text:"internal relay IDs before the SSE projection"`
 
 	// GroupIDs carries the affected educational (OGS) group ids on
 	// active_supervision_changed / dashboard_counts_changed / student_checkin / student_checkout /
@@ -315,18 +321,18 @@ type EventData struct {
 	// broadly"; emitters MUST omit the field entirely (nil) instead of sending
 	// an empty array, which clients would read as "scope to nothing" and
 	// silently drop the invalidation.
-	GroupIDs *[]string `json:"group_ids,omitempty"`
+	GroupIDs *[]string `json:"group_ids,omitempty" contract_text:"internal relay IDs before the SSE projection"`
 
 	// Activity session fields (for activity_start/end/update events)
 	ActivityName  *string   `json:"activity_name,omitempty"`
-	RoomID        *string   `json:"room_id,omitempty"`
+	RoomID        *string   `json:"room_id,omitempty" contract_text:"internal room ID before the SSE projection"`
 	RoomName      *string   `json:"room_name,omitempty"`
-	SupervisorIDs *[]string `json:"supervisor_ids,omitempty"`
+	SupervisorIDs *[]string `json:"supervisor_ids,omitempty" contract_text:"internal supervisor IDs before the SSE projection"`
 
 	// Instance lifecycle fields (for instance_* events, WP-B9). String-typed
 	// so the Event envelope's ActiveGroupID convention stays consistent and
 	// so empty values serialize cleanly via omitempty.
-	InstanceID        *string `json:"instance_id,omitempty"`
+	InstanceID        *string `json:"instance_id,omitempty" contract_text:"internal relay ID before the SSE projection"`
 	InstanceDate      *string `json:"instance_date,omitempty"`       // YYYY-MM-DD
 	InstanceStartTime *string `json:"instance_start_time,omitempty"` // HH:MM:SS
 
@@ -343,7 +349,7 @@ type EventData struct {
 	// refetching the heavy inbox projection on every message tenant-wide. Trigger
 	// only; the client still refetches the affected thread via the API.
 	//
-	// NOTE: ThreadID, StudentID, and Source (guardian account id) are all cleared
+	// NOTE: ThreadID, StudentID and SenderAccountID are all cleared
 	// for the staff fan-out by staffSafeParentMessage so an unauthorized staffer
 	// cannot observe which child/guardian — or which specific conversation — a
 	// thread concerns from raw SSE traffic (student read access,
@@ -352,7 +358,8 @@ type EventData struct {
 	// could still correlate future parent_message events to that conversation, so
 	// it is stripped too. The addressed guardian's own clients still receive the
 	// full event.
-	ThreadID *string `json:"thread_id,omitempty"`
+	ThreadID        *string   `json:"thread_id,omitempty" contract_text:"internal relay ID before the SSE projection"`
+	SenderAccountID *ident.ID `json:"-"` // projected separately from source text
 
 	// Source tracking
 	Source *string `json:"source,omitempty"` // "rfid", "manual", "automated"
@@ -403,6 +410,7 @@ func staffSafeParentMessage(event Event) Event {
 	safe.Data.ThreadID = nil
 	safe.Data.StudentID = nil
 	safe.Data.Source = nil
+	safe.Data.SenderAccountID = nil
 	return safe
 }
 
@@ -452,11 +460,10 @@ func NewParentMessageUnreadChangedEvent() Event {
 
 // NewStaffMessageEvent builds the EventStaffMessage SSE event for the
 // OGS-internal chat. It carries the thread id (see EventStaffMessage on why
-// that is safe here) and the sender account as Source, so the sender's own tabs
+// that is safe here) and the sender account, so the sender's own tabs
 // can skip the refetch their own send already triggered.
 func NewStaffMessageEvent(senderAccountID, threadID int64) Event {
-	sid := strconv.FormatInt(senderAccountID, 10)
-	data := EventData{Source: &sid}
+	data := EventData{SenderAccountID: new(ident.ID(senderAccountID))}
 	if threadID > 0 {
 		tid := strconv.FormatInt(threadID, 10)
 		data.ThreadID = &tid
@@ -492,11 +499,10 @@ func NewInstanceOverdueRefreshEvent(instanceID int64) Event {
 }
 
 // parentMessageData builds the shared payload for the parent-messaging events:
-// the guardian account as Source plus the (optional) thread/student filter. One
+// the guardian account plus the (optional) thread/student filter. One
 // home so the new-message and read events can never drift in shape.
 func parentMessageData(guardianAccountID, threadID, studentID int64) EventData {
-	gid := strconv.FormatInt(guardianAccountID, 10)
-	data := EventData{Source: &gid}
+	data := EventData{SenderAccountID: new(ident.ID(guardianAccountID))}
 	if threadID > 0 {
 		tid := strconv.FormatInt(threadID, 10)
 		data.ThreadID = &tid

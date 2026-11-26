@@ -2,7 +2,7 @@
 
 import type * as staffContract from "~/lib/contract/staff.generated";
 import type { RoleForm } from "~/lib/position-title";
-import { bffJson } from "./bff-fetch";
+import { bffFileHref, bffJson } from "./bff-fetch";
 import type { ActiveGroupResponse } from "~/lib/contract/active.generated";
 import { ApiError } from "~/lib/api-error";
 import {
@@ -40,8 +40,10 @@ export function staffAvatarUrl(
 ): string | undefined {
   if (!avatar) return undefined;
   const version = avatar.split("/").pop();
-  const base = `/api/staff/${staffId}/avatar`;
-  return version ? `${base}?v=${encodeURIComponent(version)}` : base;
+  return bffFileHref("tenant", "GET /api/staff/{id}/avatar", {
+    params: { id: staffId },
+    query: { v: version || undefined },
+  });
 }
 
 /**
@@ -84,7 +86,7 @@ export interface Staff {
   firstName: string;
   lastName: string;
   email?: string;
-  /** Profilbild über `/api/staff/[id]/avatar`, fehlt ohne Bild (#4432). */
+  /** Profilbild über den registrierten Avatar-Endpunkt, fehlt ohne Bild (#4432). */
   avatarUrl?: string;
   role?: string; // Display role (custom position from teacher profile)
   roleForm?: RoleForm; // Form der Position aus den Stammdaten
@@ -401,8 +403,16 @@ export function mapStaffRecord(staff: StaffRecordResponse): Staff {
   };
 }
 
+export function mapStaffList(
+  staff: readonly StaffRecord[],
+  activeGroups: readonly ActiveGroupResponse[],
+): Staff[] {
+  const staffGroupsMap = buildStaffGroupsMap(activeGroups);
+  return staff.map((entry) => mapStaffMember(entry, staffGroupsMap));
+}
+
 /** A former employment of the Ehemalige filter (#3403). */
-function mapFormerStaff(entry: FormerStaffResponse): FormerStaff {
+export function mapFormerStaff(entry: FormerStaffResponse): FormerStaff {
   return {
     id: entry.id,
     firstName: entry.first_name,
@@ -431,13 +441,7 @@ class StaffService {
       bffJson("tenant", "GET /api/staff/"),
       fetchActiveGroups(),
     ]);
-    const staffGroupsMap = buildStaffGroupsMap(activeGroups);
-
-    const mappedStaff = staffList.map((staff) =>
-      mapStaffMember(staff, staffGroupsMap),
-    );
-
-    return applyStaffFilters(mappedStaff, filters);
+    return applyStaffFilters(mapStaffList(staffList, activeGroups), filters);
   }
 
   // Records an external caregiver (#3823) with the chosen access (ADR 0091);
@@ -500,7 +504,7 @@ class StaffService {
   }
 }
 
-function minimalProfile(
+export function minimalProfile(
   profile: MinimalStaffProfileResponse,
   profileType: "financial" | "document",
 ): Staff {
@@ -546,6 +550,11 @@ export interface StaffSchedule {
   // True while a contract of the Träger keeps the Soll (#4706): the school
   // reads it but changes neither the model nor a Sonderarbeitszeit.
   keptByTraeger?: boolean;
+  /**
+   * Stand des gespeicherten Modells (ADR 0311); Speichern sendet ihn.
+   * Jede Antwort trägt ihn, nur Beispieldaten lassen ihn weg.
+   */
+  version?: string;
 }
 
 const SCHEDULE_MODES: readonly StaffSchedule["mode"][] = ["template", "custom"];
@@ -561,7 +570,7 @@ function mapScheduleEntries(
   }));
 }
 
-function mapScheduleResponse(data: ScheduleResponse): StaffSchedule {
+export function mapScheduleResponse(data: ScheduleResponse): StaffSchedule {
   return {
     mode: knownEnum(SCHEDULE_MODES, data.mode) ?? "custom",
     model: data.model
@@ -578,6 +587,7 @@ function mapScheduleResponse(data: ScheduleResponse): StaffSchedule {
     weeklyTotals: data.weekly_totals ?? [],
     validFrom: (data.valid_from ?? "").slice(0, 10),
     keptByTraeger: data.kept_by_traeger,
+    version: data.version,
   };
 }
 
@@ -611,13 +621,22 @@ class StaffScheduleService {
     );
   }
 
+  /**
+   * Speichert das Modell auf dem Stand `expectedVersion`, den der Editor
+   * beim Öffnen las (ADR 0311).
+   */
   async updateSchedule(
     staffId: string,
     update: UpdateScheduleRequest,
+    expectedVersion: string,
   ): Promise<StaffSchedule> {
     const body: ScheduleUpdateRequest =
       update.mode === "template"
-        ? { mode: "template", model_id: update.modelId }
+        ? {
+            mode: "template",
+            model_id: update.modelId,
+            expected_version: expectedVersion,
+          }
         : {
             mode: "custom",
             rotation_length: update.rotationLength,
@@ -629,6 +648,7 @@ class StaffScheduleService {
               start_time: e.startTime,
             })),
             save_as_template: update.saveAsTemplate,
+            expected_version: expectedVersion,
           };
     return mapScheduleResponse(
       await bffJson("tenant", "PUT /api/staff/{id}/schedule", {
@@ -658,6 +678,8 @@ export interface WorkTimeModel {
   archivedAt: string | null;
   /** Nur aus `listWithUsage`: so viele Personen erreicht eine Änderung. */
   assignedStaffCount?: number;
+  /** The stored state an edit sends back as `expected_version` (ADR 0311). */
+  version: string;
 }
 
 interface WorkTimeModelInput {
@@ -681,7 +703,7 @@ function workTimeModelBody(input: WorkTimeModelInput) {
   };
 }
 
-function mapWorkTimeModel(m: ModelResponse): WorkTimeModel {
+export function mapWorkTimeModel(m: ModelResponse): WorkTimeModel {
   return {
     id: m.id,
     name: m.name,
@@ -690,6 +712,7 @@ function mapWorkTimeModel(m: ModelResponse): WorkTimeModel {
     entries: mapScheduleEntries(m.entries),
     weeklyTotals: m.weekly_totals ?? [],
     archivedAt: m.archived_at ?? null,
+    version: m.version,
     ...(m.assigned_staff_count === undefined
       ? {}
       : { assignedStaffCount: m.assigned_staff_count }),
@@ -744,10 +767,15 @@ class WorkTimeModelService {
     return mapWorkTimeModel(model);
   }
 
-  async update(id: string, input: WorkTimeModelInput): Promise<WorkTimeModel> {
+  /** `expectedVersion`: the version of the template the form read (ADR 0311). */
+  async update(
+    id: string,
+    input: WorkTimeModelInput,
+    expectedVersion: string,
+  ): Promise<WorkTimeModel> {
     const model = await bffJson("tenant", "PUT /api/work-time-models/{id}", {
       params: { id },
-      body: workTimeModelBody(input),
+      body: { ...workTimeModelBody(input), expected_version: expectedVersion },
       errorMessage: "Vorlage konnte nicht gespeichert werden",
     });
     return mapWorkTimeModel(model);
@@ -875,6 +903,44 @@ export interface StaffHistoryDetails {
 const SESSION_STATUSES = ["present", "home_office"] as const;
 const SESSION_SOURCES = ["app", "nfc", "unknown"] as const;
 
+export function mapStaffHistoryDetails(
+  history: sharedContract.HistoryResponse,
+): StaffHistoryDetails {
+  return {
+    sessions: (history.sessions ?? []).map((row) => ({
+      id: row.id,
+      date: row.date,
+      status: knownEnum(SESSION_STATUSES, row.status),
+      source: knownEnum(SESSION_SOURCES, row.source),
+      check_in_time: row.check_in_time,
+      check_out_time: row.check_out_time ?? null,
+      notes: row.notes,
+      auto_checked_out: row.auto_checked_out,
+      break_minutes: row.break_minutes,
+      net_minutes: row.net_minutes,
+      breaks: (row.breaks ?? []).flatMap((item) =>
+        item === null
+          ? []
+          : [
+              {
+                id: item.id,
+                started_at: item.started_at,
+                ended_at: item.ended_at,
+                duration_minutes: item.duration_minutes,
+              },
+            ],
+      ),
+      edit_count: row.edit_count,
+      audit_count: row.audit_count,
+      pack_up_minutes: row.pack_up_minutes,
+      rounding_minutes: row.rounding_minutes,
+      version: row.version,
+    })),
+    weeklySummaries: mapWeeklySummaries(history.weekly_summaries),
+    laborDays: (history.labor_days ?? []).map(mapWorkDayLaborHint),
+  };
+}
+
 class StaffHistoryService {
   async getHistory(
     staffId: string,
@@ -896,17 +962,7 @@ class StaffHistoryService {
       "GET /api/staff/{id}/time-tracking/history",
       { params: { id: staffId }, query: { from, to } },
     );
-    return {
-      sessions: (history.sessions ?? []).map((row) => ({
-        ...row,
-        status: knownEnum(SESSION_STATUSES, row.status),
-        source: knownEnum(SESSION_SOURCES, row.source),
-        check_out_time: row.check_out_time ?? null,
-        breaks: (row.breaks ?? []).filter((item) => item !== null),
-      })),
-      weeklySummaries: mapWeeklySummaries(history.weekly_summaries),
-      laborDays: (history.labor_days ?? []).map(mapWorkDayLaborHint),
-    };
+    return mapStaffHistoryDetails(history);
   }
 }
 
@@ -939,6 +995,29 @@ export type StaffAbsenceRow = Pick<
       | "duration_days"
     >
   >;
+
+export function mapStaffAbsenceRow(
+  row: sharedContract.StaffAbsenceResponse,
+): StaffAbsenceRow {
+  return {
+    id: row.id,
+    staff_id: row.staff_id,
+    absence_type: row.absence_type,
+    absence_type_id: row.absence_type_id,
+    absence_type_label: row.absence_type_label,
+    date_start: row.date_start,
+    date_end: row.date_end,
+    half_day: row.half_day,
+    start_half_day: row.start_half_day,
+    end_half_day: row.end_half_day,
+    note: row.note,
+    status: row.status,
+    working_days: row.working_days,
+    decision_note: row.decision_note,
+    requested_at: row.requested_at,
+    duration_days: row.duration_days,
+  };
+}
 
 // Eine Zeile des Anfragen-Moduls (#2433): der Antrag plus die Namen, die die
 // Liste anzeigt. Leere Namen heißen "Unbekannt" (gelöschtes Konto).
@@ -1021,7 +1100,7 @@ class StaffAbsenceService {
       params: { id: staffId },
       query: { from, to },
     });
-    return absences ?? [];
+    return (absences ?? []).map(mapStaffAbsenceRow);
   }
 
   async getVacationQuota(
@@ -1041,15 +1120,7 @@ class StaffAbsenceService {
 
   async setVacationQuota(
     staffId: string,
-    payload: {
-      year: number;
-      entitled_days: number;
-      carryover_days: number;
-      /** Pflicht: erscheint im Änderungsprotokoll (#3256). */
-      reason: string;
-      /** Version des gelesenen Anspruchs (ADR 0311). */
-      expected_version: string;
-    },
+    payload: Required<staffContract.VacationQuotaRequest>,
   ): Promise<sharedContract.VacationQuotaSummary> {
     const quota = await bffJson(
       "tenant",
@@ -1148,19 +1219,18 @@ class StaffAbsenceService {
   // Ob die Mails zu Entscheidungen und Rückfragen bei der Person ankamen
   // (#7058): je Antrag das Ergebnis der neuesten Mail. Ein Antrag ohne Mail
   // fehlt.
-  async decisionMails(
-    absenceIds: readonly string[],
-  ): Promise<Record<string, MailOutcome>> {
-    if (absenceIds.length === 0) return {};
-    const mails = await bffJson("tenant", "GET /api/staff/absences/mails", {
-      query: { ids: absenceIds.join(",") },
-    });
+  async decisionMails(absenceIds: readonly string[]) {
     const outcomes: Record<string, MailOutcome> = {};
+    if (absenceIds.length === 0)
+      return { mails: outcomes, awaitingFeedback: false };
+    const mails = await bffJson("tenant", "GET /api/staff/absences/mails", {
+      query: { ids: absenceIds },
+    });
     for (const [id, outcome] of Object.entries(mails.absences ?? {})) {
       const known = knownMailOutcome(outcome);
       if (known) outcomes[id] = known;
     }
-    return outcomes;
+    return { mails: outcomes, awaitingFeedback: mails.awaiting_feedback };
   }
 
   // Rückfrage: moves a requested absence into status "question" with a
@@ -1186,7 +1256,7 @@ class StaffAbsenceService {
   // absent server-side (#1843). Returns the created StaffAbsence row.
   async createAbsence(
     staffId: string,
-    body: sharedContract.CreateAbsenceRequest,
+    body: staffContract.CreateAbsenceRequest,
   ): Promise<StaffAbsenceRow> {
     return bffJson("tenant", "POST /api/staff/{id}/absences", {
       params: { id: staffId },
@@ -1386,40 +1456,53 @@ class StaffMonthSummaryService {
     from: string,
     to: string,
   ): Promise<ReadonlyMap<string, DayProjection>> {
-    // Windows are MAX_TARGET_RANGE_DAYS calendar days INCLUSIVE — one day
-    // inside the endpoint's cap, which counts the gap between the bounds
-    // rather than the days. Nothing rides on the last day of headroom, and a
-    // whole-window stride keeps the arithmetic obvious.
-    const windows: { from: string; to: string }[] = [];
-    const end = parseISODate(to);
-    for (
-      let cursor = parseISODate(from);
-      cursor <= end;
-      cursor = addDays(cursor, MAX_TARGET_RANGE_DAYS)
-    ) {
-      const windowEnd = addDays(cursor, MAX_TARGET_RANGE_DAYS - 1);
-      windows.push({
-        from: toISODate(cursor),
-        to: toISODate(windowEnd > end ? end : windowEnd),
-      });
-    }
-
-    // Bound the fan-out: a "Gesamt" range on a years-old account produces one
-    // window per ~year, and a plain Promise.all would fire them all at once —
-    // one overview render then opens dozens of simultaneous DB-backed requests
-    // per staff member. A small pool keeps the endpoint (and its RLS-scoped
-    // queries) from being hammered while still overlapping the round-trips.
-    const chunks = await mapWithConcurrency(
-      windows,
-      MAX_TARGET_RANGE_CONCURRENCY,
-      (w) => this.getDailyProjection(staffId, w.from, w.to),
+    return loadStaffProjectionRange(from, to, ({ from, to }) =>
+      this.getDailyProjection(staffId, from, to),
     );
-    const merged = new Map<string, DayProjection>();
-    for (const chunk of chunks) {
-      for (const [day, projection] of chunk) merged.set(day, projection);
-    }
-    return merged;
   }
+}
+
+export async function loadStaffProjectionRange(
+  from: string,
+  to: string,
+  read: (window: {
+    from: string;
+    to: string;
+  }) => Promise<ReadonlyMap<string, DayProjection>>,
+): Promise<ReadonlyMap<string, DayProjection>> {
+  // Windows are MAX_TARGET_RANGE_DAYS calendar days INCLUSIVE — one day
+  // inside the endpoint's cap, which counts the gap between the bounds
+  // rather than the days. Nothing rides on the last day of headroom, and a
+  // whole-window stride keeps the arithmetic obvious.
+  const windows: { from: string; to: string }[] = [];
+  const end = parseISODate(to);
+  for (
+    let cursor = parseISODate(from);
+    cursor <= end;
+    cursor = addDays(cursor, MAX_TARGET_RANGE_DAYS)
+  ) {
+    const windowEnd = addDays(cursor, MAX_TARGET_RANGE_DAYS - 1);
+    windows.push({
+      from: toISODate(cursor),
+      to: toISODate(windowEnd > end ? end : windowEnd),
+    });
+  }
+
+  // Bound the fan-out: a "Gesamt" range on a years-old account produces one
+  // window per ~year, and a plain Promise.all would fire them all at once —
+  // one overview render then opens dozens of simultaneous DB-backed requests
+  // per staff member. A small pool keeps the endpoint (and its RLS-scoped
+  // queries) from being hammered while still overlapping the round-trips.
+  const chunks = await mapWithConcurrency(
+    windows,
+    MAX_TARGET_RANGE_CONCURRENCY,
+    read,
+  );
+  const merged = new Map<string, DayProjection>();
+  for (const chunk of chunks) {
+    for (const [day, projection] of chunk) merged.set(day, projection);
+  }
+  return merged;
 }
 
 // Upper bound on projection windows fetched at once by
@@ -1666,6 +1749,16 @@ class StaffMonthCloseService {
 // Personalnummer (#1417): payroll identifier maintained on the Stammdaten
 // tab. time_tracking:manage backend-side — callers gate rendering on the
 // permission so no request fires without it.
+export function mapStaffPayrollNumber(
+  number: staffContract.PayrollNumberResponse,
+): StaffPayrollNumber {
+  return {
+    personnelNumber: number.personnel_number,
+    keptByTraeger: number.kept_by_traeger ?? false,
+    version: number.version,
+  };
+}
+
 class StaffPayrollNumberService {
   async get(staffId: string): Promise<StaffPayrollNumber> {
     const number = await bffJson(
@@ -1675,11 +1768,7 @@ class StaffPayrollNumberService {
         params: { id: staffId },
       },
     );
-    return {
-      personnelNumber: number.personnel_number,
-      keptByTraeger: number.kept_by_traeger ?? false,
-      version: number.version,
-    };
+    return mapStaffPayrollNumber(number);
   }
 
   /** Sends the version the form read (ADR 0311); answers the new one. */

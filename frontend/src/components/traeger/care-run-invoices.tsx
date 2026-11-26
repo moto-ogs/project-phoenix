@@ -53,6 +53,8 @@ import { labelOf } from "~/lib/label-of";
 interface SchoolGroup {
   readonly schoolId: string;
   readonly schoolName: string;
+  /** Who issues the invoices of the school (#8040); empty for the Träger. */
+  readonly issuerName: string;
   readonly invoices: CareInvoice[];
   readonly totalCents: number;
 }
@@ -64,6 +66,7 @@ function bySchool(invoices: readonly CareInvoice[]): SchoolGroup[] {
     const group = groups.get(invoice.schoolId) ?? {
       schoolId: invoice.schoolId,
       schoolName: invoice.schoolName,
+      issuerName: invoice.issuerName ?? "",
       invoices: [],
       totalCents: 0,
     };
@@ -106,7 +109,7 @@ function PositionLine({
           {step !== null ? (
             <span>
               <span className="font-medium text-gray-700">
-                {daysLabel(step)} je Woche
+                {daysLabel(step)} pro Woche
               </span>{" "}
               (
               {position.weekdays
@@ -483,13 +486,13 @@ export function CareRunInvoices({
           key={group.schoolId}
           title={group.schoolName}
           overflow={interactive ? "visible" : undefined}
-          description={
+          description={`${group.issuerName ? `${group.issuerName} stellt diese Schreiben aus. ` : ""}${
             !released
               ? "Vorschau. Jede Rechnung bekommt ihre Nummer erst bei der Freigabe."
               : letterColumns
                 ? "Ausgestellte Rechnungen. Sie ändern sich nicht mehr. „An die Familie“ zeigt, ob das Schreiben schon gesendet ist."
                 : "Ausgestellte Rechnungen. Sie ändern sich nicht mehr."
-          }
+          }`}
           titleBadge={
             <span className="text-sm font-normal text-gray-600 tabular-nums">
               {invoiceCountLabel(group.invoices.length)} ·{" "}
@@ -503,7 +506,6 @@ export function CareRunInvoices({
             rows={invoiceRows(group.invoices, letters)}
             getRowKey={(row) => row.key}
             rowHasInteractiveControls={interactive}
-            stackedOnMobile
           />
         </SectionCard>
       ))}
@@ -551,7 +553,7 @@ export function CareUnpricedCard({
                   {entries
                     .map((entry) =>
                       entry.weekday === ""
-                        ? `${entry.moduleName} mit ${daysLabel(entry.daysPerWeek ?? 0)} je Woche`
+                        ? `${entry.moduleName} mit ${daysLabel(entry.daysPerWeek ?? 0)} pro Woche`
                         : `${entry.moduleName} am ${labelOf(WEEKDAY_LONG, entry.weekday, "–")}`,
                     )
                     .join(", ")}

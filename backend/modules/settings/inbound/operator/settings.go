@@ -11,15 +11,17 @@ package operator
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
+	"slices"
 
 	"github.com/go-chi/chi/v5"
+
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/settings"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // errAdminOnlyForOperator explains why an operator may not touch an
@@ -57,12 +59,9 @@ func guardOperatorDirectManagedSettingWrite(w http.ResponseWriter, r *http.Reque
 type SettingsResource struct {
 	// settings owns the reads and the set/reset orchestration (presence-mode
 	// guard, tenant transaction, side-effect hook, SSE broadcast).
-	settings settings.OperatorSchoolSettings
-	// schoolService lets the resource emit `school_slug` in set/reset
-	// responses so the frontend operator proxy can bust the slug-keyed
-	// `tenant-${slug}` Next.js cache after tenant-resolve-affecting
-	// toggles (currently only operations.student_photos_enabled).
-	schoolService SchoolLookup
+	settings             settings.OperatorSchoolSettings
+	schoolService        SchoolLookup
+	tenantLookupSettings []string
 	// operatorID names the authenticated operator who changes a value.
 	operatorID OperatorIdentity
 }
@@ -74,10 +73,10 @@ type OperatorIdentity func(ctx context.Context) int64
 // SettingsConfig holds the operator settings routes' dependencies.
 type SettingsConfig struct {
 	Settings settings.OperatorSchoolSettings
-	// Schools enriches the response with the school's slug so the frontend
-	// operator proxy can additionally bust the `tenant-${slug}` Next.js cache
-	// for tenant-resolve-affecting settings (e.g. student_photos_enabled).
+	// Schools reads the key of the cached school lookup (its subdomain).
 	Schools SchoolLookup
+	// TenantLookupSettings names the settings read by that lookup.
+	TenantLookupSettings []string
 	// OperatorID records who set or reset a value. Required.
 	OperatorID OperatorIdentity
 }
@@ -88,9 +87,10 @@ func NewSettingsResource(cfg SettingsConfig) *SettingsResource {
 		panic("operator settings: SettingsConfig.OperatorID is required")
 	}
 	return &SettingsResource{
-		settings:      cfg.Settings,
-		schoolService: cfg.Schools,
-		operatorID:    cfg.OperatorID,
+		settings:             cfg.Settings,
+		schoolService:        cfg.Schools,
+		tenantLookupSettings: cfg.TenantLookupSettings,
+		operatorID:           cfg.OperatorID,
 	}
 }
 
@@ -103,50 +103,26 @@ type revealedSettingValue struct {
 	Value any `json:"value" contract_json:"The revealed setting's registered kind determines its value type"`
 }
 
-// requiresPhotoMutationResponse gates which keys name the school slug in
-// the set/reset answer. Today only the photo-feature flag needs the slug for
-// cache busting.
-func requiresPhotoMutationResponse(key string) bool {
-	return key == settings.KeyStudentPhotosEnabled
-}
-
-// schoolSettingMutationResponse is the answer of a set or reset: one shape
-// for every key (#7808). It carries the school slug back to the frontend
-// for the photo-feature flag so the operator proxy can bust the
-// `tenant-${slug}` Next.js cache. The slug is omitted for every other key
-// and when the lookup fails (the mutation already committed by then —
-// failing the response would lie about the underlying state).
+// schoolSettingMutationResponse carries the lookup slug for writes that
+// change the school lookup. If it is unavailable after the write commits,
+// the caller can invalidate all lookups without reporting a failed write.
 type schoolSettingMutationResponse struct {
 	SchoolSlug string `json:"school_slug,omitempty"`
 }
 
-// mutationResponse answers a set or reset of key; only the photo-feature
-// flag names the slug.
 func (rs *SettingsResource) mutationResponse(ctx context.Context, schoolID int64, key string) schoolSettingMutationResponse {
-	if !requiresPhotoMutationResponse(key) {
+	if rs.schoolService == nil || !slices.Contains(rs.tenantLookupSettings, key) {
 		return schoolSettingMutationResponse{}
 	}
-	return schoolSettingMutationResponse{SchoolSlug: rs.resolveSchoolSlug(ctx, schoolID)}
-}
-
-// resolveSchoolSlug fetches the school's slug for inclusion in the mutation
-// response. Failures are logged but never propagated — the slug is only
-// used for cache invalidation, and a missed bust is recoverable (cache TTL
-// is 5 min) whereas a 500 here would mislead the operator about whether the
-// setting actually persisted.
-func (rs *SettingsResource) resolveSchoolSlug(ctx context.Context, schoolID int64) string {
-	if rs.schoolService == nil {
-		return ""
-	}
-	slug, err := rs.schoolService.SchoolSlug(ctx, schoolID)
+	slug, err := rs.schoolService.SchoolSubdomain(ctx, schoolID)
 	if err != nil {
 		slog.Warn("operator settings: school slug lookup failed",
 			slog.Int64("school_id", schoolID),
 			slog.Any("error", err),
 		)
-		return ""
+		return schoolSettingMutationResponse{}
 	}
-	return slug
+	return schoolSettingMutationResponse{SchoolSlug: slug}
 }
 
 // GetSchoolSettingsSchema returns the full settings schema with resolved values for a school.
@@ -181,7 +157,7 @@ func (rs *SettingsResource) SetSchoolSettingValue(w http.ResponseWriter, r *http
 	}
 
 	var req setSchoolSettingRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := wire.Decode(r.Body, &req); err != nil {
 		common.RenderError(w, r, common.OperatorInvalidRequest(err))
 		return
 	}
@@ -297,23 +273,41 @@ func renderOperatorSettingsError(w http.ResponseWriter, r *http.Request, err err
 // attendanceWindowRejection names the window that blocks the write (#3957):
 // the retention a visible window may not exceed, or the visible window a
 // retention may not undercut.
-func attendanceWindowRejection(window *settings.AttendanceWindowError) (string, map[string]any) {
+func attendanceWindowRejection(window *settings.AttendanceWindowError) (string, any) {
 	if window.VisibleWritten() {
-		return common.CodeSettingsAttendanceVisibleExceedsRetention, map[string]any{"retention_days": window.RetentionDays}
+		return common.CodeSettingsAttendanceVisibleExceedsRetention, RetentionDaysDetails{RetentionDays: window.RetentionDays}
 	}
-	return common.CodeSettingsAttendanceRetentionBelowVisible, map[string]any{"visible_days": window.VisibleDays}
+	return common.CodeSettingsAttendanceRetentionBelowVisible, VisibleDaysDetails{VisibleDays: window.VisibleDays}
 }
 
 // moduleDependencyRejection names the modules that block a module switch
 // (#4892): the prerequisites a booking lacks, or the booked modules a
 // cancellation would leave without their prerequisite.
-func moduleDependencyRejection(rejection *settings.ModuleDependencyError) (string, map[string]any) {
+func moduleDependencyRejection(rejection *settings.ModuleDependencyError) (string, any) {
 	if rejection.Booking {
-		return common.CodeSettingsModuleRequires, map[string]any{
-			"module": rejection.Module.Label, "required": rejection.ConflictLabels(),
+		return common.CodeSettingsModuleRequires, ModuleRequiresDetails{
+			Module: rejection.Module.Label, Required: rejection.ConflictLabels(),
 		}
 	}
-	return common.CodeSettingsModuleRequiredBy, map[string]any{
-		"module": rejection.Module.Label, "dependents": rejection.ConflictLabels(),
+	return common.CodeSettingsModuleRequiredBy, ModuleRequiredByDetails{
+		Module: rejection.Module.Label, Dependents: rejection.ConflictLabels(),
 	}
+}
+
+type RetentionDaysDetails struct {
+	RetentionDays int `json:"retention_days"`
+}
+
+type VisibleDaysDetails struct {
+	VisibleDays int `json:"visible_days"`
+}
+
+type ModuleRequiresDetails struct {
+	Module   string `json:"module"`
+	Required string `json:"required"`
+}
+
+type ModuleRequiredByDetails struct {
+	Module     string `json:"module"`
+	Dependents string `json:"dependents"`
 }

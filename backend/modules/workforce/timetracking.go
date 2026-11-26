@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"strconv"
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
@@ -63,14 +62,6 @@ var (
 	ErrWorkTimeModelArchived = errors.New("work time model is archived")
 )
 
-func formatOptionalID(id *int64) *string {
-	if id == nil {
-		return nil
-	}
-	value := strconv.FormatInt(*id, 10)
-	return &value
-}
-
 // BreakDurationUpdate corrects one break's duration inside a session edit.
 // ident.ID reads the break id as a decimal string, so a browser never rounds
 // it while correcting recorded intervals.
@@ -128,31 +119,6 @@ type SessionResponse struct {
 	// Version is the token of the block and its breaks; a correction sends
 	// it back as expected_version (ADR 0311).
 	Version string `json:"version"`
-}
-
-// MarshalJSON preserves exact history IDs and the calculated break-minute field.
-func (sr SessionResponse) MarshalJSON() ([]byte, error) {
-	// wire.Marshal keeps the identifiers of the breaks strings, as the
-	// answer writes them (ADR 0300).
-	type alias SessionResponse
-	if sr.WorkSession == nil {
-		return wire.Marshal(alias(sr))
-	}
-	return wire.Marshal(struct {
-		alias
-		ID        string  `json:"id"`
-		TenantID  string  `json:"tenant_id"`
-		StaffID   string  `json:"staff_id"`
-		CreatedBy string  `json:"created_by"`
-		UpdatedBy *string `json:"updated_by,omitempty"`
-	}{
-		alias:     alias(sr),
-		ID:        strconv.FormatInt(sr.ID, 10),
-		TenantID:  strconv.FormatInt(sr.TenantID, 10),
-		StaffID:   strconv.FormatInt(sr.StaffID, 10),
-		CreatedBy: strconv.FormatInt(sr.CreatedBy, 10),
-		UpdatedBy: formatOptionalID(sr.UpdatedBy),
-	})
 }
 
 // WorkWeekSummary aggregates the recorded work of one ISO week.
@@ -238,6 +204,9 @@ type ScheduleUpdateInput struct {
 	RotationAnchorDate, ValidFrom string
 	Entries                       []ScheduleEntry
 	SaveAsTemplateName            string
+	// ExpectedVersion is the ScheduleVersion of the schedule the form
+	// showed (ADR 0311); another one, also an empty one, is refused.
+	ExpectedVersion string
 }
 
 // WorkSessionHistory reads and exports session history for both staff and administrators.
@@ -284,13 +253,10 @@ type WorkSessions interface {
 	AdminWorkSessions
 }
 
-// StaffAbsenceResponse is an absence with its derived duration. AbsenceTypeID
-// shadows the record's field on the wire so the BIGINT arrives as a lossless
-// decimal string.
+// StaffAbsenceResponse is an absence with its derived duration.
 type StaffAbsenceResponse struct {
 	*StaffAbsence
-	DurationDays  int     `json:"duration_days"`
-	AbsenceTypeID *string `json:"absence_type_id,omitempty"`
+	DurationDays int `json:"duration_days"`
 }
 
 // StaffAbsenceRequestItem is one request of the Anfragen module: the absence
@@ -312,8 +278,9 @@ type CreateAbsenceRequest struct {
 	// ExpectedFingerprint confirms a Freizeitausgleich that takes the
 	// Stundenkonto below zero (#2873): the Fingerprint of the preview the
 	// Leitung confirmed. The Leitung's booking refuses an overdraft whose
-	// projection differs with general.changed_since_read (ADR 0311); a staff
-	// member's own request asks no confirmation and ignores it.
+	// projection differs with general.changed_since_read (ADR 0311). A staff
+	// member's own absence confirms nothing; its route takes the
+	// OwnAbsenceRequest of the HTTP adapter, which has no such field.
 	ExpectedFingerprint string `json:"expected_fingerprint"`
 }
 
@@ -338,7 +305,7 @@ func (r *UpdateAbsenceRequest) UnmarshalJSON(data []byte) error {
 	var presence struct {
 		AbsenceTypeID json.RawMessage `json:"absence_type_id"`
 	}
-	if err := json.Unmarshal(data, (*plain)(r)); err != nil {
+	if err := wire.Unmarshal(data, (*plain)(r)); err != nil {
 		return err
 	}
 	if err := json.Unmarshal(data, &presence); err != nil {
@@ -580,7 +547,6 @@ type MonthSummary struct {
 // WorkTimeMonths is the Monatskarte read model.
 type WorkTimeMonths interface {
 	MonthSummary(ctx context.Context, staffID int64, year, month int) (*MonthSummary, error)
-	DailyTargets(ctx context.Context, staffID int64, from, to string) ([]DailyTarget, error)
 	DailyProjection(ctx context.Context, staffID int64, from, to string) ([]DailyProjection, error)
 }
 

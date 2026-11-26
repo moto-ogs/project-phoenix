@@ -2,11 +2,12 @@ package common
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
 	"strings"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 
 	validation "github.com/go-ozzo/ozzo-validation"
 	"github.com/go-ozzo/ozzo-validation/is"
@@ -62,7 +63,7 @@ type PasswordResetConfirmRequest struct {
 // reads.
 func (routes PasswordResetRoutes) ServeInitiate(w http.ResponseWriter, r *http.Request) {
 	var request PasswordResetRequest
-	err := json.NewDecoder(r.Body).Decode(&request)
+	err := wire.Decode(r.Body, &request)
 	email := strings.ToLower(strings.TrimSpace(request.Email))
 	if err != nil || validation.Validate(email, validation.Required, is.Email) != nil {
 		RenderError(w, r, ErrorInvalidRequest(errors.New("a valid email is required")))
@@ -89,7 +90,7 @@ func (routes PasswordResetRoutes) ServeInitiate(w http.ResponseWriter, r *http.R
 // ServeConfirm sets a new password through a reset link.
 func (routes PasswordResetRoutes) ServeConfirm(w http.ResponseWriter, r *http.Request) {
 	var request PasswordResetConfirmRequest
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil || request.Token == "" || request.NewPassword == "" {
+	if err := wire.Decode(r.Body, &request); err != nil || request.Token == "" || request.NewPassword == "" {
 		RenderError(w, r, ErrorInvalidRequest(errors.New("token and new_password are required")))
 		return
 	}

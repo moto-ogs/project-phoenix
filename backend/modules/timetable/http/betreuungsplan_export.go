@@ -8,16 +8,18 @@
 package timetablehttp
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
 
 	"github.com/go-chi/render"
+
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/modules/planexport"
+	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
 
@@ -46,7 +48,7 @@ func (rs *Resource) exportBetreuungsplan(w http.ResponseWriter, r *http.Request)
 	}
 
 	var req betreuungsplanExportRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := wire.Decode(r.Body, &req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid JSON body")))
 		return
 	}
@@ -103,7 +105,7 @@ func planExportInvalidRenderer(err error) render.Renderer {
 	switch {
 	case errors.Is(err, planexport.ErrRangeTooLarge):
 		return common.ErrorInvalidRequestWithDetails(err, common.CodeTimetableExportRangeTooLarge,
-			map[string]any{"max_weeks": planexport.MaxExportWeeks})
+			timetable.RefusalValues{MaxWeeks: planexport.MaxExportWeeks})
 	case errors.Is(err, planexport.ErrRangeReversed):
 		return common.ErrorInvalidOnField(err, common.CodeTimetableExportEndBeforeStart, "to")
 	default:

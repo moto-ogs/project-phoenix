@@ -140,7 +140,7 @@ func TestTraegerRemembersTheDeviceOnlyWhenAsked(t *testing.T) {
 	assert.Equal(t, 1, traegerDeviceRows(t, db, account.ID, organization), "at the only Träger of the account, without a school")
 	var session traegerLoginAnswer
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &session))
-	assert.Equal(t, float64(organization), traegerTokenClaims(t, session.AccessToken)["org_id"])
+	assert.Equal(t, strconv.FormatInt(organization, 10), traegerTokenClaims(t, session.AccessToken)["org_id"])
 	added := portal.mail.Messages()
 	require.NotEmpty(t, added)
 	notice := added[len(added)-1]
@@ -156,7 +156,7 @@ func TestTraegerRemembersTheDeviceOnlyWhenAsked(t *testing.T) {
 	require.Equal(t, http.StatusOK, code)
 	assert.Equal(t, "authenticated", remembered.Status, "the remembered device replaces the code")
 	require.NotEmpty(t, remembered.RefreshToken)
-	assert.Equal(t, float64(organization), traegerTokenClaims(t, remembered.AccessToken)["org_id"])
+	assert.Equal(t, strconv.FormatInt(organization, 10), traegerTokenClaims(t, remembered.AccessToken)["org_id"])
 	assert.True(t, traegerSessionVerified(t, db, account.ID), "a device-proven session records its second factor")
 	_, _, err = identity.RefreshTokenWithAudit(tenant.WithUnitOfWork(context.Background(), unit), remembered.RefreshToken, "", "", "")
 	require.NoError(t, err, "a device-proven Träger session refreshes")

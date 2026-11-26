@@ -140,6 +140,8 @@ const PUBLIC_MODULES = new Set(
     "tenant-contact-keys",
     "tenant-list-keys",
     "shell-keys",
+    "supervision-keys",
+    "supervision",
     "parent-keys",
     "parent-inbox-keys",
     "rooms-keys",
@@ -154,6 +156,10 @@ const PUBLIC_MODULES = new Set(
     "room-derived-caches",
     // #5011: optimistic overlays; commits go through the locked writers.
     "optimistic",
+    // #8077: page seeds of the server; they hand values only to the locked
+    // intent preload and the stamped fallback.
+    "server-seed",
+    "session-generation",
   ].map((name) => (name ? `${SWR_DIR}/${name}` : SWR_DIR)),
 );
 const SOURCE_EXTENSIONS = [".ts", ".tsx", ".js", ".jsx", ".mjs"];
@@ -365,6 +371,7 @@ const KEYED_HOOKS = new Set([
   "useSWRAuth",
   "useOpeningRead",
   "useConfirmedSWR",
+  "useMailStatusRead",
   "useImmutableSWR",
   "useTraegerResource",
   "useFreshTraegerResource",
@@ -374,6 +381,7 @@ const KEYED_HOOKS = new Set([
 const KEY_FORWARDERS = new Set([
   "src/components/traeger/use-traeger-resource.ts",
   "src/lib/hooks/use-confirmed-resource.ts",
+  "src/lib/hooks/use-mail-status-read.ts",
   "src/lib/hooks/use-unread-count.ts",
 ]);
 

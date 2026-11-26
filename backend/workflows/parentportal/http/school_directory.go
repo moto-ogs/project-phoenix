@@ -1,6 +1,12 @@
 package parent
 
-import "context"
+import (
+	"context"
+	"errors"
+)
+
+// ErrInvalidSchoolSubdomain is the directory's input validation failure.
+var ErrInvalidSchoolSubdomain = errors.New("invalid tenant subdomain")
 
 // EnrollmentSchool is the part of a school the parent enrollment routes
 // read.

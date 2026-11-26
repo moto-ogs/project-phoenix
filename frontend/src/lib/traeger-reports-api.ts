@@ -110,9 +110,14 @@ export interface ReportTemplate {
   readonly keyDateDay: number;
   readonly districts: readonly ReportTemplateDistrict[];
   readonly updatedAt: string | null;
+  /** Der gelesene Stand, den eine Änderung mitschickt (ADR 0311). */
+  readonly version: string;
 }
 
-export type ReportTemplateInput = Omit<ReportTemplate, "id" | "updatedAt">;
+export type ReportTemplateInput = Omit<
+  ReportTemplate,
+  "id" | "updatedAt" | "version"
+>;
 
 function isSection(value: string): value is ReportSection {
   return (REPORT_SECTIONS as readonly string[]).includes(value);
@@ -171,7 +176,7 @@ function groupFromBackend(
   };
 }
 
-function reportFromBackend(
+export function reportFromBackend(
   body: traegerReportsContract.KeyDateReport,
 ): KeyDateReport {
   const window = body.absence_window;
@@ -217,6 +222,7 @@ function templateFromBackend(
       district: entry.district,
     })),
     updatedAt: template.updated_at,
+    version: template.version,
   };
 }
 
@@ -237,7 +243,7 @@ function templateToBackend(
   };
 }
 
-function reportQuery(keyDate: string, templateId: string | null) {
+export function reportQuery(keyDate: string, templateId: string | null) {
   return { key_date: keyDate, template: templateId || undefined };
 }
 
@@ -274,7 +280,14 @@ export async function downloadKeyDateReport(
 
 /** Die Vorlagen des Trägers, nach Namen. */
 export async function fetchReportTemplates(): Promise<ReportTemplate[]> {
-  const body = await bffJson("org", "GET /traeger/report-templates/");
+  return mapReportTemplates(
+    await bffJson("org", "GET /traeger/report-templates/"),
+  );
+}
+
+export function mapReportTemplates(
+  body: traegerReportTemplatesContract.TraegerReportTemplate[],
+): ReportTemplate[] {
   return body.map(templateFromBackend);
 }
 
@@ -288,14 +301,19 @@ export async function createReportTemplate(
   );
 }
 
+/**
+ * Ändert eine Vorlage über dem Stand, mit dem sie gelesen wurde (ADR 0311);
+ * eine inzwischen geänderte Vorlage antwortet `general.changed_since_read`.
+ */
 export async function updateReportTemplate(
   id: string,
   input: ReportTemplateInput,
+  expectedVersion: string,
 ): Promise<ReportTemplate> {
   return templateFromBackend(
     await bffJson("org", "PUT /traeger/report-templates/{id}", {
       params: { id },
-      body: templateToBackend(input),
+      body: { ...templateToBackend(input), expected_version: expectedVersion },
     }),
   );
 }

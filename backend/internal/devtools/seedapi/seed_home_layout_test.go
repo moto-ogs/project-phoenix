@@ -17,6 +17,11 @@ func TestSeedHomeLayoutStepUsesStartPageAPIs(t *testing.T) {
 		body map[string]any
 	}
 	srv := newSeedHTTPTestServer(func(w seedHTTPResponseWriter, r *seedHTTPRequest) {
+		if r.Method == "GET" {
+			// The layout read the prescription rests on (ADR 0311).
+			_, _ = fmt.Fprint(w, `{"status":"success","data":{"policies_version":"v1"}}`)
+			return
+		}
 		body := map[string]any{}
 		require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
 		requests = append(requests, struct {
@@ -41,5 +46,6 @@ func TestSeedHomeLayoutStepUsesStartPageAPIs(t *testing.T) {
 			"section.day_changes":     "required",
 			"section.recent_activity": "disabled",
 		},
+		"expected_version": "v1",
 	}, requests[1].body)
 }

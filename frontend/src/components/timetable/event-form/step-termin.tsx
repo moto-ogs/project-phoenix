@@ -4,6 +4,7 @@ import { Repeat } from "lucide-react";
 
 import { CatalogManageLink } from "~/components/database/catalog/catalog-manage-link";
 import { Alert } from "~/components/ui/alert";
+import { roomClosureHint, type RoomClosure } from "~/lib/room-closures-api";
 import { CustomSelect } from "~/components/ui/custom-select";
 import { ISODatePicker } from "~/components/ui/date-picker";
 import { RequiredMark } from "~/components/ui/field-label";
@@ -55,6 +56,8 @@ export interface StepTerminProps {
   ) => void;
   fieldErrors: Record<string, string>;
   rooms: RoomOption[];
+  /** Die am Datum gesperrten Räume (#7653), je Raum mit seiner Sperre. */
+  closedRooms?: ReadonlyMap<string, RoomClosure>;
   categories: CategoryOption[];
   planningTracks?: PlanningTrack[];
   loadingRefs: boolean;
@@ -83,6 +86,8 @@ export interface StepTerminProps {
   canManagePlanningTracks?: boolean;
 }
 
+const NO_CLOSED_ROOMS: ReadonlyMap<string, RoomClosure> = new Map();
+
 const isWeekendDay = (date: Date) => date.getDay() === 0 || date.getDay() === 6;
 const EMPTY_PLANNING_TRACKS: PlanningTrack[] = [];
 
@@ -98,6 +103,7 @@ export function StepTermin({
   update,
   fieldErrors,
   rooms,
+  closedRooms = NO_CLOSED_ROOMS,
   categories,
   planningTracks = EMPTY_PLANNING_TRACKS,
   loadingRefs,
@@ -111,6 +117,11 @@ export function StepTermin({
   canManagePlanningTracks = false,
 }: Readonly<StepTerminProps>) {
   const isDuty = form.type === "duty";
+  // An einem gesperrten Tag ist der Raum nicht wählbar (#7653); ein schon
+  // gewählter bleibt mit Hinweis stehen, die Leitung verlegt ihn selbst.
+  const selectedClosure = form.roomId
+    ? closedRooms.get(form.roomId)
+    : undefined;
   let dateHint: string | undefined;
   if (isEditingSeries) {
     dateHint = seriesStartEdit
@@ -295,12 +306,19 @@ export function StepTermin({
                   ? "Kein Raum"
                   : "Raum auswählen …",
             },
-            ...rooms.map((room) => ({
-              value: room.id,
-              label: room.building
+            ...rooms.map((room) => {
+              const name = room.building
                 ? `${room.building} - ${room.name}`
-                : room.name,
-            })),
+                : room.name;
+              const closure = closedRooms.get(room.id);
+              return closure
+                ? {
+                    value: room.id,
+                    label: `${name} (${roomClosureHint(closure)})`,
+                    disabled: room.id !== form.roomId,
+                  }
+                : { value: room.id, label: name };
+            }),
           ]}
           onChange={(next) => update("roomId", next)}
           disabled={loadingRefs}
@@ -319,6 +337,14 @@ export function StepTermin({
             Optional. Ein Dienst kann auch ohne Raum stattfinden.
           </p>
         )}
+        {selectedClosure ? (
+          <Alert
+            type="warning"
+            size="compact"
+            className="mt-2"
+            message={`Der Raum ist an diesem Tag gesperrt: ${selectedClosure.reason}. Wähle einen anderen Raum.`}
+          />
+        ) : null}
       </Field>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">

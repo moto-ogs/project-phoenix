@@ -79,6 +79,10 @@ type UpdateContractRequest struct {
 	Kind   string         `json:"kind"`
 	EndsOn *calendar.Date `json:"ends_on"`
 	Pool   bool           `json:"pool"`
+	// ExpectedVersion is the contract's version the dialog opened on; a
+	// contract changed since is refused with general.changed_since_read
+	// (ADR 0311).
+	ExpectedVersion string `json:"expected_version"`
 }
 
 func (req *UpdateContractRequest) Bind(*http.Request) error { return nil }
@@ -93,7 +97,9 @@ func (rs *RecordsResource) updateContract(w http.ResponseWriter, r *http.Request
 		common.RenderError(w, r, common.ErrorInvalidOnField(err, common.CodeWorkforceTraegerContractInvalid, "kind"))
 		return
 	}
-	detail, err := rs.contracts.UpdateContract(r.Context(), session, id, contractID, workforce.TraegerContractTermsInput{Kind: req.Kind, EndsOn: req.EndsOn, Pool: req.Pool})
+	detail, err := rs.contracts.UpdateContract(r.Context(), session, id, contractID, workforce.TraegerContractTermsInput{
+		Kind: req.Kind, EndsOn: req.EndsOn, Pool: req.Pool, ExpectedVersion: req.ExpectedVersion,
+	})
 	respondContract(w, r, http.StatusOK, detail, err, "Contract updated successfully")
 }
 
@@ -109,6 +115,10 @@ func (rs *RecordsResource) deleteContract(w http.ResponseWriter, r *http.Request
 type ContractSollRequest struct {
 	ValidFrom calendar.Date     `json:"valid_from"`
 	Sites     []SiteSollPayload `json:"sites"`
+	// ExpectedVersion is the contract's version the dialog opened on; a
+	// contract changed since is refused with general.changed_since_read
+	// (ADR 0311).
+	ExpectedVersion string `json:"expected_version"`
 }
 
 func (req *ContractSollRequest) Bind(*http.Request) error {
@@ -129,7 +139,7 @@ func (rs *RecordsResource) changeContractSoll(w http.ResponseWriter, r *http.Req
 		return
 	}
 	detail, err := rs.contracts.ChangeContractSoll(r.Context(), session, id, contractID, workforce.TraegerContractSollInput{
-		ValidFrom: req.ValidFrom, Sites: sitesInput(req.Sites),
+		ValidFrom: req.ValidFrom, Sites: sitesInput(req.Sites), ExpectedVersion: req.ExpectedVersion,
 	})
 	respondContract(w, r, http.StatusOK, detail, err, "Contract Soll changed successfully")
 }
@@ -213,10 +223,10 @@ func renderContractError(w http.ResponseWriter, r *http.Request, err error) {
 		renderError(w, r, err)
 		return
 	}
-	details := map[string]any{"field": contractErr.Field, "school": contractErr.SchoolName, "school_id": contractErr.SchoolID}
+	details := StaffContractDetails{Field: contractErr.Field, School: contractErr.SchoolName, SchoolID: ident.ID(contractErr.SchoolID)}
 	if !contractErr.Day.IsZero() {
-		details["day"] = contractErr.Day.Format("02.01.2006")
-		details["date"] = contractErr.Day.String()
+		details.Day = contractErr.Day.Format("02.01.2006")
+		details.Date = contractErr.Day.String()
 	}
 	switch {
 	case errors.Is(err, workforce.ErrTraegerContractMonthClosed):
@@ -228,4 +238,12 @@ func renderContractError(w http.ResponseWriter, r *http.Request, err error) {
 	default:
 		common.RenderError(w, r, common.ErrorInvalidOnField(err, common.CodeWorkforceTraegerContractInvalid, contractErr.Field))
 	}
+}
+
+type StaffContractDetails struct {
+	Field    string   `json:"field"`
+	School   string   `json:"school"`
+	SchoolID ident.ID `json:"school_id"`
+	Day      string   `json:"day,omitempty"`
+	Date     string   `json:"date,omitempty"`
 }

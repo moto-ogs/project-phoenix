@@ -10,13 +10,13 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/moto-ogs/project-phoenix/api/testutil"
-	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
-	usersAPI "github.com/moto-ogs/project-phoenix/modules/peopledirectory/http"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
-	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/moto-ogs/project-phoenix/api/testutil"
+	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
+	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
 // The tests in the guardians_composition_* files drive the composed
@@ -846,18 +846,18 @@ func TestGuardianComposition_LinkGuardianValidation(t *testing.T) {
 	admin := testutil.AdminTestClaims(999)
 
 	testutil.AssertForbidden(t, ctx.do(t, nonStaffClaims(t, "users:update"), http.MethodPost, "/students/1/guardians", map[string]any{
-		"guardian_profile_id": 1, "relationship_type": "parent", "is_primary": true,
+		"guardian_profile_id": "1", "relationship_type": "parent", "is_primary": true,
 		"is_emergency_contact": true, "can_pickup": true, "emergency_priority": 1,
 	}))
 	testutil.AssertBadRequest(t, ctx.do(t, testutil.DefaultTestClaims(), http.MethodPost, "/students/invalid/guardians", map[string]any{
-		"guardian_profile_id": 1, "relationship_type": "parent", "emergency_priority": 1,
+		"guardian_profile_id": "1", "relationship_type": "parent", "emergency_priority": 1,
 	}))
 
 	studentID, _ := ctx.createStudent("Link", "TestStudent", "1a")
 	for name, body := range map[string]map[string]any{
 		"missing guardian id":        {"relationship_type": "parent", "emergency_priority": 1},
-		"missing relationship type":  {"guardian_profile_id": 1, "emergency_priority": 1},
-		"invalid emergency priority": {"guardian_profile_id": 1, "relationship_type": "parent", "emergency_priority": 0},
+		"missing relationship type":  {"guardian_profile_id": "1", "emergency_priority": 1},
+		"invalid emergency priority": {"guardian_profile_id": "1", "relationship_type": "parent", "emergency_priority": 0},
 	} {
 		t.Run(name, func(t *testing.T) {
 			testutil.AssertBadRequest(t, ctx.do(t, admin, http.MethodPost, fmt.Sprintf("/students/%d/guardians", studentID), body))
@@ -872,7 +872,7 @@ func TestGuardianComposition_LinkGuardianEchoesTheStoredLink(t *testing.T) {
 	studentID, _ := ctx.createStudent("Link", "Echo", "1a")
 
 	rr := ctx.do(t, testutil.AdminTestClaims(999), http.MethodPost, fmt.Sprintf("/students/%d/guardians", studentID), map[string]any{
-		"guardian_profile_id": guardianID, "relationship_type": "parent", "guardian_role": "primary_guardian",
+		"guardian_profile_id": fmt.Sprint(guardianID), "relationship_type": "parent", "guardian_role": "primary_guardian",
 		"is_primary": true, "can_pickup": true, "emergency_priority": 1,
 	})
 	testutil.AssertSuccessResponse(t, rr, http.StatusCreated)
@@ -887,7 +887,7 @@ func TestGuardianComposition_LinkGuardianEchoesTheStoredLink(t *testing.T) {
 
 	// Re-linking is idempotent and returns the existing link unchanged.
 	rr = ctx.do(t, testutil.AdminTestClaims(999), http.MethodPost, fmt.Sprintf("/students/%d/guardians", studentID), map[string]any{
-		"guardian_profile_id": guardianID, "relationship_type": "parent", "guardian_role": "pickup_only", "emergency_priority": 1,
+		"guardian_profile_id": fmt.Sprint(guardianID), "relationship_type": "parent", "guardian_role": "pickup_only", "emergency_priority": 1,
 	})
 	testutil.AssertSuccessResponse(t, rr, http.StatusCreated)
 	assert.Equal(t, "primary_guardian", dataObject(t, rr.Body.Bytes())["guardian_role"])
@@ -1225,6 +1225,6 @@ func TestGuardianComposition_BulkInviteRefusesAStalePreviewAsConflict(t *testing
 
 	require.Equal(t, http.StatusConflict, rr.Code, rr.Body.String())
 	assert.Equal(t, readstate.ChangedCode, testutil.ParseJSONResponse(t, rr.Body.Bytes())["code"])
-	assert.Equal(t, usersAPI.FailureConflict, guardianFailureKind(ClassifyGuardianInvitationFailure(fmt.Errorf("bulk invite: %w", readstate.ErrChanged))),
-		"the response metric counts the kind's status, 409")
+	// The response metric counts the rendered 409: the adapter classifies
+	// every business rejection (TestGuardianReadStateRefusalsCountAsConflicts).
 }

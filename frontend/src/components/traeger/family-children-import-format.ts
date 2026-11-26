@@ -42,7 +42,7 @@ export const FAMILY_IMPORT_FIELD_HINTS: Partial<
   children:
     "Alle Kinder der Familie, auch Geschwister ohne Vertrag. Eine ganze Zahl von 1 bis 20.",
   valid_from:
-    "Nur wenn deine Datei den Tag je Kind nennt. Eine leere Zelle bekommt den Tag, den du darunter für die ganze Datei wählst.",
+    "Nur wenn deine Datei den Tag pro Kind nennt. Eine leere Zelle bekommt den Tag, den du darunter für die ganze Datei wählst.",
 };
 
 const FAMILY_IMPORT_STATUS: Record<

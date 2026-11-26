@@ -5,11 +5,12 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 // Access-control goldens of the guardian surface: which permission unlocks
@@ -17,7 +18,7 @@ import (
 
 func relationshipBody(guardianID int64, role string) map[string]any {
 	return map[string]any{
-		"guardian_profile_id": guardianID,
+		"guardian_profile_id": fmt.Sprint(guardianID),
 		"relationship_type":   "parent",
 		"guardian_role":       role,
 		"emergency_priority":  1,
@@ -147,7 +148,7 @@ func TestGuardianComposition_WriteRoutesAllowStaffWithRequiredPermissions(t *tes
 	existingBatchGuardianID, _ := ctx.createGuardian("allowed-batch-existing")
 	require.Equal(t, http.StatusCreated, ctx.status(t, updateClaims, http.MethodPost,
 		fmt.Sprintf("/students/%d/guardians/batch", existingBatchStudentID), map[string]any{"guardians": []map[string]any{{
-			"guardian_profile_id": existingBatchGuardianID,
+			"guardian_profile_id": fmt.Sprint(existingBatchGuardianID),
 			"relationship_type":   "parent",
 			"guardian_role":       "pickup_only",
 			"emergency_priority":  1,

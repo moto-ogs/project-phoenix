@@ -4,6 +4,14 @@
 // docs/agents/frontend-api.md#browser-calls.
 import type { z } from "zod";
 import {
+  browserRoutePaths,
+  noCommitRoutes,
+  tenantNoRetryRoutes,
+} from "./contract/browser-traits.generated";
+import { commits } from "./contract/commit";
+import { reloadForNewDeployment } from "./deployment-reload";
+import { DEPLOYMENT_ID_HEADER, deploymentId } from "./deployment-skew";
+import {
   ApiError,
   apiErrorFromResponse,
   unavailableApiError,
@@ -12,9 +20,16 @@ import type {
   portalRoutes,
   routeFileRoutes,
 } from "./contract/portals.generated";
+import {
+  fillRoutePath,
+  routeSearch,
+  type ParamsOf,
+  type QueryOf,
+  type QueryValue,
+} from "./contract/address";
 import type { RequestBody } from "./contract/runtime";
 import type { ErrorCode } from "./error-codes.generated";
-import type { SessionBffRoute } from "./session-bff";
+import type { SessionBffRoute } from "./session-bff-route";
 import { renewTenantSession, requireTenantSession } from "./session-cache";
 
 /**
@@ -33,32 +48,8 @@ type Method = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 type AnyRoute<P extends Portal> =
   | (typeof portalRoutes)[P][number]
   | (P extends keyof typeof routeFileRoutes
-      ? (typeof routeFileRoutes)[P][number]
+      ? Extract<(typeof routeFileRoutes)[P][number], { browserPath: string }>
       : never);
-
-/**
- * A sign-in, second factor, renewal or switch step: its route file keeps the
- * tokens and answers the BFF's own `{ status, data }` (#7833). The generated
- * answer is the backend's, not the browser's, so these steps are no routes
- * of bffJson under their Go keys; the BFF defines its own browser entries.
- */
-const SESSION_STEP =
-  "the answer carries or ends the tokens the portal's route file turns into its session cookie";
-
-type RouteFileReason = {
-  [
-    P in keyof typeof routeFileRoutes
-  ]: (typeof routeFileRoutes)[P][number] extends infer R
-    ? R extends { routeFile: infer T extends string }
-      ? T
-      : never
-    : never;
-}[keyof typeof routeFileRoutes];
-
-// Fails to compile once the generator words the reason differently, so the
-// session steps never slip into bffJson with the backend's answer type.
-const sessionStepAnchor: RouteFileReason = SESSION_STEP;
-void sessionStepAnchor;
 
 // A JSON route: its answer is one decoder, or one per variant that a query
 // parameter picks (GET /api/students/ and its `view`). File answers, the
@@ -66,7 +57,7 @@ void sessionStepAnchor;
 // routes of this helper.
 type JsonRoute<P extends Portal> = Exclude<
   Extract<AnyRoute<P>, { response: z.ZodType } | { variantParam: string }>,
-  { routeFile: typeof SESSION_STEP } | { plain: true }
+  { browserOwnContract: true } | { plain: true }
 >;
 
 type KeyOf<R> = R extends {
@@ -94,7 +85,7 @@ type FileRouteOf<P extends Portal, K extends FileRouteKey<P>> =
     : never;
 
 /** A registered JSON route of the portal: `"GET /api/activities/categories"`. */
-export type RouteKey<P extends Portal> = KeyOf<JsonRoute<P>>;
+type RouteKey<P extends Portal> = KeyOf<JsonRoute<P>>;
 
 type RouteOf<P extends Portal, K extends RouteKey<P>> =
   JsonRoute<P> extends infer R
@@ -104,17 +95,6 @@ type RouteOf<P extends Portal, K extends RouteKey<P>> =
         : never
       : never
     : never;
-
-type ParamNames<S extends string> =
-  S extends `${string}{${infer N}}${infer Rest}` ? N | ParamNames<Rest> : never;
-
-type QueryValue =
-  | string
-  | number
-  | boolean
-  | null
-  | undefined
-  | readonly (string | number | boolean)[];
 
 /** The variant names of a route with response variants. */
 type VariantOf<R> = R extends {
@@ -142,7 +122,7 @@ type Answer<R, V> = R extends { variantParam: string; response: infer M }
  * What the call resolves to: the `data` of the answer, a paginated list
  * also its `pagination`; `null` for a route without data and for a 204.
  */
-export type BffResult<R, V = never> =
+type BffResult<R, V = never> =
   Answer<R, [V] extends [never] ? DefaultVariant<R> : V> extends {
     data: infer D;
     pagination: infer G;
@@ -159,43 +139,6 @@ type BodyOf<R> = R extends { request: RequestBody<infer B> }
   : R extends { request: { kind: "multipart" } }
     ? { body: FormData }
     : { body?: never };
-
-type ParamsOf<R> = R extends { pattern: infer T extends string }
-  ? [ParamNames<T>] extends [never]
-    ? { params?: never }
-    : { params: Record<ParamNames<T>, string> }
-  : never;
-
-type VariantQuery<R, V> = R extends { variantParam: infer N extends string }
-  ? { [key in N]?: V }
-  : unknown;
-
-type QueryScalar = {
-  string: string;
-  id: string;
-  // A YYYY-MM-DD string on the wire. Go validates the calendar date.
-  date: string;
-  int: number;
-  bool: boolean;
-};
-
-type ScalarOf<Q> = Q extends { values: readonly (infer Value extends string)[] }
-  ? Value
-  : Q extends { kind: infer Kind extends keyof QueryScalar }
-    ? QueryScalar[Kind]
-    : never;
-
-type QueryOf<R, V> = R extends { query: infer Q }
-  ? {
-      query?: {
-        -readonly [
-          K in keyof Q as R extends { variantParam: K } ? never : K
-        ]?: Q[K] extends { repeated: true }
-          ? readonly ScalarOf<Q[K]>[]
-          : ScalarOf<Q[K]>;
-      } & VariantQuery<R, V>;
-    }
-  : { query?: never };
 
 /** The query accepted by a generated route entry. */
 export type BffQuery<R> = NonNullable<QueryOf<R, VariantOf<R>>["query"]>;
@@ -221,7 +164,11 @@ interface CallOptions {
    * without a browser session lookup or renewal; the BFF authenticates it.
    */
   keepalive?: boolean;
+  /** During logout, send credentials but skip browser session handling. */
+  skipAuthRecovery?: boolean;
 }
+
+type SendOptions = CallOptions & { noRetryAfterRenewal?: boolean };
 
 type BffOptions<R, V> = CallOptions & BodyOf<R> & ParamsOf<R> & QueryOf<R, V>;
 
@@ -239,7 +186,7 @@ interface PortalRow {
   send: (
     url: string,
     init: RequestInit,
-    options: CallOptions,
+    options: SendOptions,
   ) => Promise<Response>;
 }
 
@@ -293,12 +240,17 @@ const sendPlain = (url: string, init: RequestInit) =>
 async function sendTenant(
   url: string,
   init: RequestInit,
-  { authRefusals }: CallOptions,
+  { authRefusals, noRetryAfterRenewal }: SendOptions,
 ): Promise<Response> {
   if (init.keepalive) return transport(url, init);
   await requireTenantSession();
   const response = await transport(url, init);
-  if (response.status !== 401) return response;
+  if (
+    response.status !== 401 ||
+    noRetryAfterRenewal ||
+    init.body instanceof FormData
+  )
+    return response;
   if (await isAuthRefusal(response, authRefusals)) return response;
   await renewTenantSession();
   return transport(url, init);
@@ -357,20 +309,18 @@ const PORTALS: Readonly<Record<Portal, PortalRow>> = {
 };
 
 /** The BFF path of a backend pattern, with its parameters filled in. */
-export function bffPath(
+function browserPath(
   portal: Portal,
   pattern: string,
   params: Readonly<Record<string, string>> = {},
   query?: Readonly<Record<string, QueryValue>>,
-): string {
+  key?: string,
+): `/api/${string}` {
+  const explicit = key && browserRoutePathsForPortal(portal)?.[key];
+  if (explicit)
+    return `${fillRoutePath(explicit, params)}${routeSearch(query)}` as `/api/${string}`;
   const { mount, bff } = PORTALS[portal];
-  const filled = pattern.replaceAll(/\{([^}]+)\}/g, (_, name: string) => {
-    const value = params[name];
-    if (value === undefined || value === "") {
-      throw new Error(`bffJson: missing path parameter ${name} of ${pattern}`);
-    }
-    return encodeURIComponent(value);
-  });
+  const filled = fillRoutePath(pattern, params);
   const underMount =
     mount !== "" && (filled === mount || filled.startsWith(`${mount}/`));
   // A public pattern under /api (enrollment links) is its BFF path already.
@@ -378,16 +328,55 @@ export function bffPath(
   const path = (
     atBff ? filled : bff + (underMount ? filled.slice(mount.length) : filled)
   ).replace(/\/+$/, "");
-  const search = new URLSearchParams();
-  for (const [key, value] of Object.entries(query ?? {})) {
-    if (value === undefined || value === null) continue;
-    for (const item of Array.isArray(value) ? value : [value]) {
-      search.append(key, String(item));
-    }
-  }
-  const qs = search.toString();
-  return qs ? `${path}?${qs}` : path;
+  return `${path}${routeSearch(query)}` as `/api/${string}`;
 }
+
+function browserRoutePathsForPortal(
+  portal: Portal,
+): Readonly<Record<string, string>> | undefined {
+  return (
+    browserRoutePaths as Partial<
+      Record<Portal, Readonly<Record<string, string>>>
+    >
+  )[portal];
+}
+
+type AddressRoute<P extends Portal, K extends KeyOf<AnyRoute<P>>> =
+  AnyRoute<P> extends infer R
+    ? R extends unknown
+      ? KeyOf<R> extends K
+        ? R
+        : never
+      : never
+    : never;
+
+/** Same-origin address for a registered route, including named route files. */
+export function bffPath<P extends Portal, K extends KeyOf<AnyRoute<P>>>(
+  portal: P,
+  route: K,
+  ...[options]: object extends PathOptions<AddressRoute<P, K>>
+    ? [options?: PathOptions<AddressRoute<P, K>>]
+    : [options: PathOptions<AddressRoute<P, K>>]
+): `/api/${string}` {
+  const opts = options as
+    | {
+        params?: Record<string, string>;
+        query?: Record<string, QueryValue>;
+      }
+    | undefined;
+  return browserPath(
+    portal,
+    route.slice(route.indexOf(" ") + 1),
+    opts?.params,
+    opts?.query,
+    route,
+  );
+}
+
+type BrowserPattern<R> = R extends { browserPath: infer P extends string }
+  ? { pattern: P }
+  : R;
+type PathOptions<R> = ParamsOf<BrowserPattern<R>> & QueryOf<R, VariantOf<R>>;
 
 /** Sends through the portal's row; a failure is the ApiError. */
 async function send(
@@ -395,9 +384,17 @@ async function send(
   method: Method,
   url: string,
   init: RequestInit,
-  options: CallOptions,
+  options: SendOptions,
 ): Promise<Response> {
-  const response = await PORTALS[portal].send(url, init, options);
+  const response = options.skipAuthRecovery
+    ? await sendPlain(url, init)
+    : await PORTALS[portal].send(url, init, options);
+  // The proxy refused a call of a tab older than the server; for a read that
+  // loses nothing, the tab reloads and the call never settles
+  // (deployment-reload.ts).
+  if (reloadForNewDeployment(response, method === "GET")) {
+    return new Promise<never>(() => {});
+  }
   if (!response.ok) {
     throw await apiErrorFromResponse(
       response,
@@ -407,21 +404,28 @@ async function send(
   return response;
 }
 
-/** The fetch init of a call: JSON serialized, FormData as is. */
+/**
+ * The fetch init of a call: JSON serialized, FormData as is, and the
+ * deployment of this bundle, so a tab older than the server is refused
+ * before the route runs (`deployment-skew.ts`).
+ */
 function requestInit(
   method: Method,
   { body, signal, headers, keepalive }: CallOptions & { body?: unknown },
 ): RequestInit {
   const isForm = body instanceof FormData;
   const json = body !== undefined && !isForm;
+  const deployment = deploymentId();
   return {
     method,
     ...(signal && { signal }),
     ...(keepalive && { keepalive }),
-    ...((json || headers) && {
-      headers: json
-        ? { "Content-Type": "application/json", ...headers }
-        : { ...headers },
+    ...((json || headers || deployment) && {
+      headers: {
+        ...(json && { "Content-Type": "application/json" }),
+        ...(deployment && { [DEPLOYMENT_ID_HEADER]: deployment }),
+        ...headers,
+      },
     }),
     ...(body !== undefined && { body: isForm ? body : JSON.stringify(body) }),
   };
@@ -431,7 +435,8 @@ async function call<T>(
   portal: Portal,
   method: Method,
   url: string,
-  options: CallOptions & { body?: unknown },
+  options: SendOptions & { body?: unknown },
+  noCommit?: string,
 ): Promise<T> {
   const { errorMessage } = options;
   const init = requestInit(method, options);
@@ -450,10 +455,9 @@ async function call<T>(
     // The proxy decodes every answer, so this is a broken BFF route. A
     // write may have happened: the person reloads before trying again.
     throw new ApiError(message(502), 502, {
-      code:
-        method === "GET"
-          ? "general.unavailable"
-          : "general.write_answer_unreadable",
+      code: commits({ method, noCommit })
+        ? "general.write_answer_unreadable"
+        : "general.unavailable",
     });
   }
   const { data, pagination } = answer as {
@@ -480,8 +484,13 @@ async function call<T>(
  */
 export function bffJson<T>(
   portal: Portal,
-  route: SessionBffRoute<T>,
-  options?: CallOptions & { body?: unknown },
+  route: SessionBffRoute<T, undefined>,
+  options?: CallOptions & { body?: undefined },
+): Promise<T>;
+export function bffJson<T, B>(
+  portal: Portal,
+  route: SessionBffRoute<T, B>,
+  options: CallOptions & { body: NoInfer<B> },
 ): Promise<T>;
 export function bffJson<
   P extends Portal,
@@ -494,7 +503,7 @@ export function bffJson<
 ): Promise<BffResult<RouteOf<P, K>, V>>;
 export function bffJson(
   portal: Portal,
-  route: string | SessionBffRoute<unknown>,
+  route: string | SessionBffRoute<unknown, unknown>,
   options?: CallOptions,
 ): Promise<unknown> {
   const space = typeof route === "string" ? route.indexOf(" ") : -1;
@@ -503,11 +512,53 @@ export function bffJson(
     params?: Record<string, string>;
     query?: Record<string, QueryValue>;
   };
-  if (typeof route !== "string")
-    return call(portal, route.method, route.path, opts);
+  if (typeof route !== "string") {
+    if (portal !== route.portal) {
+      throw new Error("The session step belongs to a different portal");
+    }
+    return call(route.portal, route.method, route.path, opts);
+  }
   const method = route.slice(0, space) as Method;
-  const url = bffPath(portal, route.slice(space + 1), opts.params, opts.query);
-  return call(portal, method, url, opts);
+  const url = browserPath(
+    portal,
+    route.slice(space + 1),
+    opts.params,
+    opts.query,
+    route,
+  );
+  return call(
+    portal,
+    method,
+    url,
+    {
+      ...opts,
+      noRetryAfterRenewal:
+        portal === "tenant" && tenantNoRetryRoutes.has(route),
+    },
+    noCommitRoutes.has(route) ? route : undefined,
+  );
+}
+
+type FileHrefOptions<R> = ParamsOf<R> & QueryOf<R, never>;
+
+/** Same-origin address for a registered GET file route (link, image or navigation). */
+export function bffFileHref<
+  P extends Portal,
+  K extends Extract<FileRouteKey<P>, `GET ${string}`>,
+>(
+  portal: P,
+  route: K,
+  ...[options]: object extends FileHrefOptions<FileRouteOf<P, K>>
+    ? [options?: FileHrefOptions<FileRouteOf<P, K>>]
+    : [options: FileHrefOptions<FileRouteOf<P, K>>]
+): string {
+  const opts = options as
+    | {
+        params?: Record<string, string>;
+        query?: Record<string, QueryValue>;
+      }
+    | undefined;
+  return browserPath(portal, route.slice(4), opts?.params, opts?.query, route);
 }
 
 /**
@@ -527,8 +578,17 @@ export async function bffFile<P extends Portal, K extends FileRouteKey<P>>(
     params?: Record<string, string>;
     query?: Record<string, QueryValue>;
   };
-  const url = bffPath(portal, route.slice(space + 1), opts.params, opts.query);
-  return send(portal, method, url, requestInit(method, opts), opts);
+  const url = browserPath(
+    portal,
+    route.slice(space + 1),
+    opts.params,
+    opts.query,
+    route,
+  );
+  return send(portal, method, url, requestInit(method, opts), {
+    ...opts,
+    noRetryAfterRenewal: portal === "tenant" && tenantNoRetryRoutes.has(route),
+  });
 }
 
 /**

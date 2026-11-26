@@ -4,14 +4,21 @@ import { testClockDay } from "~/test/clock";
 
 vi.mock("vaul", () => import("~/test/mocks/vaul"));
 
-const { mockUseSWRAuth, mockCreate, mockReplace, mockMutate, mockSearch } =
-  vi.hoisted(() => ({
-    mockUseSWRAuth: vi.fn(),
-    mockCreate: vi.fn(),
-    mockReplace: vi.fn(),
-    mockMutate: vi.fn(),
-    mockSearch: { value: "" },
-  }));
+const {
+  mockUseSWRAuth,
+  mockCreate,
+  mockUpdate,
+  mockReplace,
+  mockMutate,
+  mockSearch,
+} = vi.hoisted(() => ({
+  mockUseSWRAuth: vi.fn(),
+  mockCreate: vi.fn(),
+  mockUpdate: vi.fn(),
+  mockReplace: vi.fn(),
+  mockMutate: vi.fn(),
+  mockSearch: { value: "" },
+}));
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: mockReplace, push: vi.fn() }),
@@ -27,17 +34,24 @@ vi.mock("next-auth/react", () => ({
 vi.mock("~/components/ui/date-picker", async () =>
   (await import("~/test/mocks/date-picker")).datePickerModuleMock(),
 );
-vi.mock("~/lib/swr", () => ({ useSWRAuth: mockUseSWRAuth }));
+vi.mock("~/lib/swr", () => ({
+  useSWRAuth: mockUseSWRAuth,
+  // The read of the stored state after a refusal (ADR 0311).
+  revalidateOrThrow: (read: { mutate: () => Promise<unknown> }) =>
+    read.mutate(),
+}));
 vi.mock("~/lib/school-url", () => ({ schoolPath: (path: string) => path }));
 vi.mock("~/lib/parent-conferences", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/lib/parent-conferences")>()),
   fetchSchoolParentConferences: vi.fn(),
   createSchoolParentConference: mockCreate,
+  updateSchoolParentConference: mockUpdate,
 }));
 
 import { ToastProvider } from "~/contexts/ToastContext";
 import type { ParentConference } from "~/lib/parent-conferences";
-import SchoolParentConferencePage from "./page";
+import { ApiError } from "~/lib/api-error";
+import SchoolParentConferencePage from "./page-content";
 
 const day: ParentConference = {
   id: "5",
@@ -48,6 +62,7 @@ const day: ParentConference = {
   slot_minutes: 15,
   breaks: [],
   location: "Raum 12",
+  version: "v1",
   booked_count: 1,
   slots: [
     {
@@ -159,5 +174,61 @@ describe("Elternsprechtag in moto schule (#4801)", () => {
       slot_minutes: 15,
       breaks: [],
     });
+  });
+
+  // ADR 0311: a family that booked after the Lehrkraft opened the change
+  // must not lose its slot unseen. The change goes out on the day as read;
+  // a refusal shows the stored day and saves on its version.
+  it("changes a day on the version it was read at and shows the stored day after a refusal", async () => {
+    const upcoming: ParentConference = { ...day, date: testClockDay(14) };
+    const stored: ParentConference = {
+      ...upcoming,
+      location: "Aula",
+      booked_count: 2,
+      version: "v2",
+    };
+    let shown = upcoming;
+    mockSearch.value = "sprechtag=5";
+    mockUseSWRAuth.mockImplementation(() => ({
+      data: { classes: ["2a"], conferences: [shown] },
+      error: undefined,
+      isLoading: false,
+      mutate: mockMutate,
+    }));
+    mockMutate.mockImplementation(async () => {
+      shown = stored;
+      return { classes: ["2a"], conferences: [stored] };
+    });
+    mockUpdate
+      .mockRejectedValueOnce(
+        new ApiError("changed", 409, { code: "general.changed_since_read" }),
+      )
+      .mockResolvedValueOnce({ ...stored, version: "v3" });
+    renderPage();
+
+    fireEvent.click(screen.getByRole("button", { name: "Ändern" }));
+    const room = screen.getByLabelText("Raum (freiwillig)");
+    expect(room).toHaveValue("Raum 12");
+    fireEvent.change(room, { target: { value: "Raum 14" } });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() =>
+      expect(mockUpdate).toHaveBeenCalledWith(
+        "5",
+        expect.objectContaining({ location: "Raum 14" }),
+        "v1",
+      ),
+    );
+    await waitFor(() =>
+      expect(screen.getByLabelText("Raum (freiwillig)")).toHaveValue("Aula"),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() =>
+      expect(mockUpdate).toHaveBeenLastCalledWith(
+        "5",
+        expect.objectContaining({ location: "Aula" }),
+        "v2",
+      ),
+    );
   });
 });

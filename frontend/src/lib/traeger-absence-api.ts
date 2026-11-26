@@ -1,3 +1,4 @@
+import type { z } from "zod";
 import { bffJson } from "~/lib/bff-fetch";
 /**
  * Abwesenheitsarten und Kontingente des Trägers (#4710, ADR 0089 §10 mit
@@ -35,6 +36,9 @@ export interface TraegerAbsenceType {
   readonly requestable: boolean;
   readonly isActive: boolean;
   readonly schools: readonly TraegerAbsenceTypeSchool[];
+  /** Stand der Felder; Bearbeiten und Aus-/Einschalten schicken ihn zurück
+   *  (ADR 0311). */
+  readonly version: string;
 }
 
 export interface TraegerAbsenceTypeList {
@@ -106,6 +110,7 @@ function mapType(
       offered: school.offered,
       schoolLimitDays: school.school_limit_days,
     })),
+    version: data.version,
   };
 }
 
@@ -158,7 +163,16 @@ function typeBody(
 }
 
 export async function fetchTraegerAbsenceTypes(): Promise<TraegerAbsenceTypeList> {
-  const data = await bffJson("org", "GET /traeger/absence-types/");
+  return mapTraegerAbsenceTypes(
+    await bffJson("org", "GET /traeger/absence-types/"),
+  );
+}
+
+export function mapTraegerAbsenceTypes(
+  data: z.output<
+    (typeof traegerAbsenceTypesContract.routes)["GET /traeger/absence-types/"]["response"]
+  >["data"],
+): TraegerAbsenceTypeList {
   return {
     released: data.release !== null,
     schoolCount: (data.schools ?? []).length,
@@ -176,14 +190,16 @@ export async function createTraegerAbsenceType(
   );
 }
 
+/** Schreibt die Art neu, auf dem Stand `expectedVersion` (ADR 0311). */
 export async function updateTraegerAbsenceType(
   id: string,
   input: TraegerAbsenceTypeInput,
+  expectedVersion: string,
 ): Promise<TraegerAbsenceType> {
   return mapType(
     await bffJson("org", "PUT /traeger/absence-types/{id}", {
       params: { id },
-      body: typeBody(input),
+      body: { ...typeBody(input), expected_version: expectedVersion },
     }),
   );
 }

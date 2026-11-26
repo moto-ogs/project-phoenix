@@ -61,5 +61,6 @@
   "invitation_mail_delayed": "Nie udało się teraz wysłać zaproszenia. Spróbuj ponownie.",
   "mail_blocked_at_provider": "Ten adres jest zablokowany. Ponowne wysłanie nie pomoże. Sprawę musi wyjaśnić pomoc techniczna moto.",
   "mail_block_unreadable": "Nie można teraz sprawdzić, czy ten adres jest zablokowany. Spróbuj ponownie później.",
-  "logout_not_revoked": "Wylogowano Cię na tym urządzeniu. moto nie mogło jednak całkiem zakończyć logowania. Zakończy się ono później samo. Korzystasz z cudzego urządzenia? Zmień wtedy hasło."
+  "logout_not_revoked": "Wylogowano Cię na tym urządzeniu. moto nie mogło jednak całkiem zakończyć logowania. Zakończy się ono później samo. Korzystasz z cudzego urządzenia? Zmień wtedy hasło.",
+  "role_from_traeger": "Nie masz dostępu do: {object}. Skontaktuj się ze szkołą."
 }

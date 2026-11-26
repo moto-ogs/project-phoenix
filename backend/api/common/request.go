@@ -2,11 +2,34 @@ package common
 
 import (
 	"errors"
+	"io"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
+
+// ParseIDQuery reads a repeated ID query and accepts the former comma-list
+// spelling so an already-open browser tab can still send the same filter.
+func ParseIDQuery(values []string) ([]int64, error) {
+	if len(values) == 0 || (len(values) == 1 && values[0] == "") {
+		return nil, nil
+	}
+	ids := make([]int64, 0, len(values))
+	for _, value := range values {
+		for part := range strings.SplitSeq(value, ",") {
+			id, err := strconv.ParseInt(strings.TrimSpace(part), 10, 64)
+			if err != nil || id <= 0 {
+				return nil, errors.New("expected positive identifiers")
+			}
+			ids = append(ids, id)
+		}
+	}
+	return ids, nil
+}
 
 // DefaultPage is the default page number for pagination
 const DefaultPage = 1
@@ -97,4 +120,15 @@ func ParsePositiveInt64IDWithError(w http.ResponseWriter, r *http.Request, param
 		return 0, false
 	}
 	return id, true
+}
+
+// DecodeReadStateBody reads the token body of a command on a read state
+// (ADR 0311): an expected version or fingerprint. A request without a body
+// decodes to the empty token, which the owner refuses as a changed state;
+// only a body that is not JSON is an error.
+func DecodeReadStateBody(r *http.Request, dst any) error {
+	if err := wire.Decode(r.Body, dst); err != nil && !errors.Is(err, io.EOF) {
+		return err
+	}
+	return nil
 }

@@ -111,6 +111,9 @@ describe("getTraegerHelpTopicForPath", () => {
     expect(getTraegerHelpTopicForPath("/einstellungen/mitglieder")).toBe(
       HELP_TOPICS.traegerAccounts,
     );
+    expect(getTraegerHelpTopicForPath("/einstellungen/schulrollen")).toBe(
+      HELP_TOPICS.traegerSchoolRoles,
+    );
     expect(
       getTraegerHelpTopicForPath("/traeger/einstellungen/zugriffsprotokoll"),
     ).toBe(HELP_TOPICS.traegerAccessLog);

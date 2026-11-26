@@ -1,3 +1,4 @@
+import type * as wire from "~/lib/contract/holiday-guests.generated";
 /**
  * Client der Teilnehmerliste für die ausrichtende OGS (#4665). Spricht mit
  * den Next.js-Routen unter /api/holiday-weeks, die mit dem Mitarbeiter-JWT an
@@ -138,6 +139,32 @@ interface HolidayHostGuardian {
   readonly phone: string;
 }
 
+/**
+ * Eine freiwillige Einwilligung aus der Ferienanmeldung (#8038, ADR 0321),
+ * live aus der Anmeldung: Ein Widerruf der Eltern steht mit dem nächsten
+ * Abruf hier. `changedAt` ist, seit wann sie gilt oder seit wann sie
+ * widerrufen ist; `null`, wenn die Eltern sie nie gegeben haben.
+ */
+export interface HolidayHostConsent {
+  readonly key: string;
+  readonly title: string;
+  readonly label: string;
+  readonly given: boolean;
+  readonly changedAt: string | null;
+}
+
+function mapConsents(
+  consents: readonly shared.HolidayRegistrationConsent[] | null | undefined,
+): HolidayHostConsent[] {
+  return (consents ?? []).map((consent) => ({
+    key: consent.key,
+    title: consent.title,
+    label: consent.label,
+    given: consent.given,
+    changedAt: consent.changed_at,
+  }));
+}
+
 export interface HolidayParticipant {
   readonly childId: string;
   readonly firstName: string;
@@ -156,6 +183,8 @@ export interface HolidayParticipant {
   readonly answers: HolidayHostAnswer[];
   /** `null` ohne Gesundheitsangaben oder ohne Zustimmung der Eltern. */
   readonly health: HolidayHostHealth | null;
+  /** Die freiwilligen Einwilligungen der Anmeldung; leer, wenn das Formular keine fragt. */
+  readonly consents: HolidayHostConsent[];
 }
 
 export interface HolidayParticipantList {
@@ -177,7 +206,7 @@ export function formatHolidayHostAnswer(
   return answer.value;
 }
 
-function mapWeek(week: weeks.HostedHolidayWeek): HostedHolidayWeek {
+export function mapWeek(week: weeks.HostedHolidayWeek): HostedHolidayWeek {
   return {
     id: week.id,
     periodName: week.period_name,
@@ -242,6 +271,7 @@ function mapHolidayParticipantList(
       secondGuardian: participant.second_guardian,
       answers: mapAnswers(participant.answers),
       health: mapHealth(participant.health),
+      consents: mapConsents(participant.consents),
     })),
   };
 }
@@ -324,6 +354,23 @@ export interface HolidayGuestSheet {
   readonly answers: HolidayHostAnswer[];
   /** `null` ohne Gesundheitsangaben oder ohne Zustimmung der Eltern. */
   readonly health: HolidayHostHealth | null;
+  /**
+   * Ob die Heimatschule gerade eine Foto-Einwilligung für das Kind hat
+   * (#4721). moto fragt bei jedem Abruf neu; ein Widerruf der Eltern gilt
+   * deshalb sofort. `null` ohne Heimatschule beim Träger und nach der Woche.
+   */
+  readonly homePhotoConsent: boolean | null;
+  /**
+   * Ob Raumverlauf und Stimmung an der Heimatschule gerade gestoppt sind
+   * (#8037), live gelesen wie die Foto-Einwilligung. `null` in denselben
+   * Fällen.
+   */
+  readonly homeRoomHistoryStopped: boolean | null;
+  /**
+   * Die freiwilligen Einwilligungen aus der Ferienanmeldung (#8038), live
+   * gelesen. Leer ohne Einwilligungen im Formular und nach der Woche.
+   */
+  readonly consents: HolidayHostConsent[];
   /** Nach dem letzten Tag der Woche: nur noch sieben Tage zum Nachlesen. */
   readonly readOnly: boolean;
 }
@@ -351,15 +398,38 @@ export interface HolidayGuestBadge {
  * Die Hinweise aller Feriengäste, die die Schule heute betreut (#5630).
  * Vor und nach ihrer Woche stehen Gäste in keiner Liste und haben keinen.
  */
-export async function fetchHolidayGuestBadges(): Promise<HolidayGuestBadge[]> {
+export function holidayGuestIds(
+  students: readonly {
+    readonly id: string;
+    readonly school_class?: string | null;
+  }[],
+): string[] {
+  return students
+    .filter((student) => student.school_class === HOLIDAY_GUEST_SCHOOL_CLASS)
+    .map((student) => student.id);
+}
+
+export function mapHolidayGuestBadges(
+  badges: readonly wire.HolidayGuestBadge[],
+  studentIds: readonly string[],
+): HolidayGuestBadge[] {
+  const visible = new Set(studentIds);
+  return badges
+    .filter((badge) => visible.has(badge.student_id))
+    .map((badge) => ({
+      studentId: badge.student_id,
+      schoolName: badge.school_name,
+    }));
+}
+
+export async function fetchHolidayGuestBadges(
+  studentIds: readonly string[],
+): Promise<HolidayGuestBadge[]> {
   const badges = await bffJson("tenant", "GET /api/holiday-guests/", {
     errorMessage:
       "Die Hinweise zu den Feriengästen konnten nicht geladen werden",
   });
-  return badges.map((badge) => ({
-    studentId: badge.student_id,
-    schoolName: badge.school_name,
-  }));
+  return mapHolidayGuestBadges(badges, studentIds);
 }
 
 /** Was die Wahl der Feriengruppe bewirkt hat. */
@@ -393,13 +463,19 @@ export async function fetchHolidayGuestGroups(): Promise<HolidayGuestGroup[]> {
   const groups = await bffJson("tenant", "GET /api/holiday-guests/groups", {
     errorMessage: "Die Feriengruppen konnten nicht geladen werden",
   });
-  return groups.map((group) => ({
+  return groups.map(mapHolidayGuestGroup);
+}
+
+export function mapHolidayGuestGroup(
+  group: wire.HolidayGuestGroup,
+): HolidayGuestGroup {
+  return {
     groupId: group.group_id,
     weekId: group.week_id,
     startsOn: day(group.starts_on),
     endsOn: day(group.ends_on),
     guests: group.guests,
-  }));
+  };
 }
 
 /** „04.–08.01.2027“, über Monate „29.06.–03.07.2027“, über Jahre ganz. */
@@ -503,6 +579,9 @@ export async function fetchHolidayGuestSheet(
     pickupContacts: sheet.pickup_contacts ?? [],
     answers: mapAnswers(sheet.answers),
     health: mapHealth(sheet.health),
+    homePhotoConsent: sheet.home_photo_consent ?? null,
+    homeRoomHistoryStopped: sheet.home_room_history_stopped ?? null,
+    consents: mapConsents(sheet.consents),
     readOnly: sheet.read_only,
   };
 }
@@ -596,11 +675,17 @@ export async function fetchHolidayOwnChildAssignments(
         "Die eigenen Kinder der Ferienwoche konnten nicht geladen werden",
     },
   );
-  return entries.map((entry) => ({
+  return entries.map(mapHolidayOwnChildAssignment);
+}
+
+export function mapHolidayOwnChildAssignment(
+  entry: weeks.HolidayOwnChildAssignment,
+): HolidayOwnChildAssignment {
+  return {
     childId: entry.child_id,
     assignment: assignmentState(entry.assignment),
     studentId: entry.student_id,
-  }));
+  };
 }
 
 // ─── Eigene Kinder in Ferienwochen anderer OGS (#6679) ──────────────────────

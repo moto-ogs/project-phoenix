@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { Skeleton } from "~/components/ui/skeleton";
 import { ChildDayCard } from "~/components/parent/child/child-day-card";
+import { ChildDayChanges } from "~/components/parent/child/child-day-changes";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import {
   NewsDetailModal,
@@ -42,8 +43,10 @@ import { pollsConcept } from "~/lib/concepts/polls";
 import { parentMessagesConcept } from "~/lib/concepts/parentMessages";
 
 import { useSWRAuth, useInvalidateMatching } from "~/lib/swr";
+import { PARENT_START_CALENDAR_DAYS } from "~/lib/parent-page-seed-keys";
 import { parentKeys } from "~/lib/swr/parent-keys";
 import { useCareTermTranslations } from "~/lib/care-facility-term";
+import type { CareTermValues } from "~/lib/care-facility-term-value";
 import {
   ParentChildCareTermScope,
   useParentCareTerms,
@@ -57,8 +60,6 @@ import {
 import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
 /** Wie weit nach vorn Termineinladungen fuer "Zu erledigen" gesucht werden. */
-
-const APPOINTMENT_LOOKAHEAD_DAYS = 90;
 
 const TODO_TIME_FORMATTERS = new Map<string, Intl.DateTimeFormat>();
 const TODO_DATE_FORMATTERS = new Map<string, Intl.DateTimeFormat>();
@@ -200,7 +201,7 @@ export function ParentStartPage() {
     load,
   );
   const loading =
-    (!!failure && !loadError) ||
+    (data.children.length === 0 && !!failure && !loadError) ||
     (!childrenResource.data && !childrenResource.error) ||
     (!!childrenResource.data &&
       ((!featuresResource.data && !featuresResource.error) ||
@@ -292,6 +293,14 @@ function StartChildCard({
         today={today}
         features={features}
         statusAside={pickupAside}
+        dayChanges={
+          child.without_care_place ? undefined : (
+            <ChildDayChanges
+              studentId={child.student_id}
+              firstName={child.first_name}
+            />
+          )
+        }
         actionDisplay="compact"
       />
     </ParentChildCareTermScope>
@@ -374,7 +383,7 @@ const EMPTY_SOURCES: TodoSources = {
  */
 function StartTodoSection() {
   const t = useCareTermTranslations("parentStart");
-  const { termOf } = useParentCareTerms();
+  const { valuesOf } = useParentCareTerms();
   const locale = useLocale();
   const invalidate = useInvalidateMatching();
   const load = useCallback(
@@ -397,11 +406,11 @@ function StartTodoSection() {
     PARENT_RESOURCE_OPTIONS,
   );
   const calendar = useSWRAuth(
-    parentKeys.calendar(today),
+    parentKeys.calendar(today, PARENT_START_CALENDAR_DAYS),
     async () => {
       const from = parseISODate(today);
       const to = new Date(from);
-      to.setDate(to.getDate() + APPOINTMENT_LOOKAHEAD_DAYS);
+      to.setDate(to.getDate() + PARENT_START_CALENDAR_DAYS);
       return getParentCalendar(from, to);
     },
     PARENT_RESOURCE_OPTIONS,
@@ -440,8 +449,8 @@ function StartTodoSection() {
   );
 
   const items = useMemo(
-    () => buildTodoItems(sources, locale, t, setOpenAnnouncementId, termOf),
-    [sources, locale, t, termOf],
+    () => buildTodoItems(sources, locale, t, setOpenAnnouncementId, valuesOf),
+    [sources, locale, t, valuesOf],
   );
 
   const openAnnouncement =
@@ -502,7 +511,7 @@ function buildTodoItems(
   locale: string,
   t: StartTranslator,
   openAnnouncement: (id: string) => void,
-  termOf: (studentId: string) => string,
+  valuesOf: (studentId: string) => CareTermValues,
 ): TodoItem[] {
   const openAnnouncements = sources.announcements.filter(
     (item) =>
@@ -543,7 +552,7 @@ function buildTodoItems(
     ),
     ...appointments.map((event) => todoFromAppointment(event, locale, t)),
     ...threads.map((thread) =>
-      todoFromThread(thread, locale, t, termOf(thread.student_id)),
+      todoFromThread(thread, locale, t, valuesOf(thread.student_id)),
     ),
     ...notices.map((item) =>
       todoFromAnnouncement(item, locale, t, false, openAnnouncement),
@@ -616,7 +625,7 @@ function todoFromThread(
   thread: ThreadSummary,
   locale: string,
   t: StartTranslator,
-  careTerm: string,
+  care: CareTermValues,
 ): TodoItem {
   return {
     key: `thread-${thread.thread_id}`,
@@ -626,8 +635,8 @@ function todoFromThread(
         ? t("todo.messageTitleOne")
         : t("todo.messageTitleMany", { count: thread.unread }),
     context: t("todo.messageContext", {
+      ...care,
       name: thread.student_name,
-      careTerm,
     }),
     meta: formatTodoTimestamp(thread.last_message_at, locale, t("todo.today")),
     unread: true,

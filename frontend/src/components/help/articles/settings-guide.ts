@@ -34,8 +34,9 @@ export function settingsGuideTopic(): HelpTopic {
           "`Team-Chat für Mitarbeitende`: Das Team schreibt sich Nachrichten. Eltern sehen davon nichts.",
           // #7208: Ausschalten beendet auch jede Foto-Einwilligung.
           "`Kinderfotos`: Fotos bei den Kindern. Nur mit Einwilligung der Eltern. Beim Ausschalten löscht moto alle Fotos sofort. Auch alle Foto-Einwilligungen enden. Nach dem Wiedereinschalten braucht jedes Foto eine neue Einwilligung.",
-          "`Angebote auf der Kinderkarte`: Die Kinderkarten unter `Gruppen` zeigen die Angebote des Tages mit Uhrzeit.",
+          "`Angebote auf der Kinderkarte`: Die Kinderkarten zeigen die Angebote des Tages mit Uhrzeit. Das gilt für `Gruppen`, `Alle Kinder` und `Aktuelle Aufsicht`.",
           "`Automatisch ausstempeln`: moto wartet nach Dienstende die eingestellte Zeit. Dann stempelt es aus. Das gilt nur bei einem geplanten Dienst.",
+          "`Betreuer stempeln nur am NFC-Tablet`: Wer keine Zeiten anderer verwalten darf, stempelt nur noch mit dem eigenen Armband am Tablet. In der App geht das für diese Personen nicht mehr. Die Leitung stempelt weiter in der App und trägt fehlende Zeiten nach, zum Beispiel für `Unterwegs`. Den Schalter gibt es nur mit NFC-Tablets.",
           "`Wegpackzeit beim Ausstempeln (Minuten)`: Diese Minuten zählt moto bei jedem Ausstempeln dazu, etwa für das Aufräumen. Nicht beim Pausenbeginn und nicht beim automatischen Ausstempeln.",
           "`Arbeitszeit runden` und `Wie gerundet wird`: moto rundet die Dauer jedes Arbeitsblocks. Die Reihenfolge: gestempelte Dauer, plus Wegpackzeit, dann runden, dann Pause abziehen. Die gestempelten Uhrzeiten bleiben sichtbar.",
           "Wegpackzeit und Rundung gelten für Arbeitsblöcke, die nach der Änderung enden. Frühere Tage bleiben, wie sie sind.",
@@ -91,7 +92,7 @@ export function settingsGuideTopic(): HelpTopic {
         ordered: false,
         steps: [
           "`Online-Anmeldung`: Eltern melden ihr Kind über ein Formular im Internet an. Einschalten lässt sie sich erst mit einer Datenschutzinformation unter `Rechtstexte`.",
-          "`Name der Betreuung in Texten für Eltern`: So heißt deine Betreuung in den festen Texten der Anmeldung, der Eltern-App und in den E-Mails dazu. Wähle `OGS`, `GTS` oder `Eigener Name`. Deine eigenen Texte im Formular ändern sich nicht.",
+          "`Name der Betreuung in Texten für Eltern`: So heißt deine Betreuung in den festen Texten der Anmeldung, der Eltern-App und in den E-Mails dazu. Auch Fehlermeldungen für Eltern und für dein Team nennen ihn. Wähle `OGS`, `GTS` oder `Eigener Name`. Bei `Eigener Name` wählst du auch den Artikel, der zu deinem Namen passt, zum Beispiel „der Hort“. Deine eigenen Texte im Formular ändern sich nicht.",
           "`Empfänger für neue Anmeldungen`: Diese Adressen bekommen bei jeder neuen Anmeldung eine E-Mail.",
           "`Rechtstexte`: Was Eltern im Formular lesen und bestätigen, zum Beispiel die Datenschutzinformation.",
         ],

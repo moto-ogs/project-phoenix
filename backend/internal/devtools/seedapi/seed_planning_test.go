@@ -17,6 +17,7 @@ func TestSeedPlanningDemoStepCreatesRealPlanningFlows(t *testing.T) {
 	var paths []string
 	var templates []map[string]any
 	deviations := map[string]map[string]any{}
+	var pickupPerson map[string]any
 	srv := newSeedHTTPTestServer(func(w seedHTTPResponseWriter, r *seedHTTPRequest) {
 		paths = append(paths, r.URL.Path)
 		w.Header().Set("Content-Type", "application/json")
@@ -29,6 +30,9 @@ func TestSeedPlanningDemoStepCreatesRealPlanningFlows(t *testing.T) {
 			var deviation map[string]any
 			require.NoError(t, json.NewDecoder(r.Body).Decode(&deviation))
 			deviations[r.URL.Path] = deviation
+		}
+		if strings.HasPrefix(r.URL.Path, "/api/students/32/pickup-persons/") {
+			require.NoError(t, json.NewDecoder(r.Body).Decode(&pickupPerson))
 		}
 		if r.URL.Path == "/api/timetable/instances" {
 			assert.Equal(t, todaySeedDate().AddDays(1).String(), r.URL.Query().Get("from"), "deviations planned ahead leave today alone")
@@ -71,6 +75,9 @@ func TestSeedPlanningDemoStepCreatesRealPlanningFlows(t *testing.T) {
 		}
 		if strings.HasPrefix(path, "/api/students/32/departure-exceptions/") {
 			paths[i] = "/api/students/32/departure-exceptions/{weekday}"
+		}
+		if strings.HasPrefix(path, "/api/students/32/pickup-persons/") {
+			paths[i] = "/api/students/32/pickup-persons/{weekday}"
 		}
 		if strings.HasPrefix(path, "/api/students/31/departure-exceptions/") {
 			paths[i] = "/api/students/31/departure-exceptions/{weekday}"
@@ -121,6 +128,7 @@ func TestSeedPlanningDemoStepCreatesRealPlanningFlows(t *testing.T) {
 		// mark two Kinderkarten.
 		"/api/students/33/pickup-exceptions",
 		"/api/students/32/departure-exceptions/{weekday}",
+		"/api/students/32/pickup-persons/{weekday}",
 		// „Heute anders“ (#7665): goes home alone and a pickup note today.
 		"/api/students/31/departure-exceptions/{weekday}",
 		"/api/students/33/pickup-notes",
@@ -146,17 +154,18 @@ func TestSeedPlanningDemoStepCreatesRealPlanningFlows(t *testing.T) {
 		"/api/students/37/pickup-schedules",
 		"/api/students/37/pickup-schedules",
 	}, paths)
+	assert.Equal(t, map[string]any{"name": "Oma Frieda"}, pickupPerson)
 	require.Len(t, templates, 9)
 	monday := seedDate{Time: mostRecentWeekday(todaySeedDate().UTCMidnight(), time.Monday)}.String()
 	assert.Equal(t, "care", templates[0]["type"])
 	assert.Equal(t, "gruppe", templates[0]["target_group_type"])
-	assert.EqualValues(t, 23, templates[0]["education_group_id"])
-	assert.EqualValues(t, 31, templates[0]["planning_track_id"])
+	assert.Equal(t, "23", templates[0]["education_group_id"])
+	assert.Equal(t, "31", templates[0]["planning_track_id"])
 	assert.Equal(t, "edge_hours", templates[0]["list_kind"])
 	assert.NotEmpty(t, templates[0]["weekday_assignments"])
 	// The Frühbetreuung is led by the two colleagues in the Frühdienst, and
 	// Felix (21) and Noah (32) of the screenshots come after school.
-	assert.Equal(t, []any{float64(27), float64(28)}, templates[0]["staff_ids"])
+	assert.Equal(t, []any{"27", "28"}, templates[0]["staff_ids"])
 	assert.NotContains(t, templates[0]["student_ids"], float64(21))
 	assert.NotContains(t, templates[0]["student_ids"], float64(32))
 	assert.Len(t, templates[0]["student_ids"], 12)
@@ -183,23 +192,23 @@ func TestSeedPlanningDemoStepCreatesRealPlanningFlows(t *testing.T) {
 	assert.Equal(t, "klasse", templates[4]["target_group_type"])
 	assert.Equal(t, "Klasse 1b", templates[4]["target_school_class"])
 	assert.Equal(t, "edge_hours", templates[4]["list_kind"])
-	assert.Equal(t, []any{float64(31), float64(32), float64(33), float64(35), float64(37), float64(38), float64(41)}, templates[4]["student_ids"])
+	assert.Equal(t, []any{"31", "32", "33", "35", "37", "38", "41"}, templates[4]["student_ids"])
 	// #3822: duties without children; the Busaufsicht waits with the bus
 	// children in the Aula and lies in the fourth staff member's Spätdienst.
 	assert.Equal(t, "Essensausgabe", templates[5]["name"])
 	assert.Equal(t, "duty", templates[5]["type"])
-	assert.EqualValues(t, 44, templates[5]["room_id"])
+	assert.Equal(t, "44", templates[5]["room_id"])
 	assert.EqualValues(t, 2, templates[5]["required_staff"])
 	assert.Equal(t, "Busaufsicht", templates[6]["name"])
 	assert.Equal(t, "duty", templates[6]["type"])
-	assert.EqualValues(t, 46, templates[6]["room_id"], "a Dienst shown without a place reads as unplanned")
+	assert.Equal(t, "46", templates[6]["room_id"], "a Dienst shown without a place reads as unplanned")
 	assert.Nil(t, templates[6]["student_ids"])
-	assert.Equal(t, []any{float64(29)}, templates[6]["staff_ids"])
+	assert.Equal(t, []any{"29"}, templates[6]["staff_ids"])
 	// #3261: an afternoon block with children and an office appointment
 	// without children, which the later-pickup choice must leave out.
 	assert.Equal(t, "Freies Spiel", templates[7]["name"])
 	assert.Equal(t, "none", templates[7]["target_group_type"])
-	assert.Equal(t, []any{float64(38), float64(39), float64(40), float64(41), float64(42), float64(43)}, templates[7]["student_ids"])
+	assert.Equal(t, []any{"38", "39", "40", "41", "42", "43"}, templates[7]["student_ids"])
 	assert.Equal(t, []any{float64(1), float64(2), float64(3), float64(4), float64(5)}, templates[7]["weekdays"])
 	assert.Equal(t, "Teamsitzung", templates[8]["name"])
 	assert.Nil(t, templates[8]["student_ids"])
@@ -209,8 +218,8 @@ func TestSeedPlanningDemoStepCreatesRealPlanningFlows(t *testing.T) {
 	// the colleague in the Frühdienst for the same reason.
 	assert.Equal(t, map[string]any{"cancel": true, "cancel_reason": "Teamfortbildung"}, deviations["/api/timetable/instances/64/deviations"])
 	substitution := deviations["/api/timetable/instances/62/deviations"]["substitutions"].([]any)[0].(map[string]any)
-	assert.EqualValues(t, 27, substitution["absent_staff_id"])
-	assert.EqualValues(t, 45, substitution["substitute_staff_id"])
+	assert.Equal(t, "27", substitution["absent_staff_id"])
+	assert.Equal(t, "45", substitution["substitute_staff_id"])
 	assert.Equal(t, "Vertretung wegen Fortbildung", substitution["reason"])
 	absence := deviations["/api/timetable/instances/62/deviations"]["absences"].([]any)[0].(map[string]any)
 	assert.Equal(t, "Fortbildung", absence["reason"])

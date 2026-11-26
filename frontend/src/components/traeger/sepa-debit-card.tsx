@@ -5,7 +5,9 @@
 // Bestätigung, dass es das getan hat. moto bucht nichts ab. Der Download
 // ändert nichts; erst die Bestätigung zählt die Abbuchung und macht aus der
 // ersten Lastschrift eines Mandats eine Folgelastschrift. Lastschriften, die
-// nicht in die Datei dürfen, stehen mit Grund darunter.
+// nicht in die Datei dürfen, stehen mit Grund darunter. Rechnet ein
+// Schulträger oder eine Gemeinde eine Schule selbst ab (#8040), hat sie eine
+// eigene Datei mit ihrer Gläubiger-ID und ihrem Konto: eine Karte je Stelle.
 
 import { CheckCircle2, DownloadIcon, LandmarkIcon } from "lucide-react";
 import { type ReactNode, useState } from "react";
@@ -64,6 +66,15 @@ const STEPS = [
   "Im Online-Banking hochladen",
   "Hier bestätigen",
 ] as const;
+
+/** A body's file goes to the body, which submits it at its bank. */
+function issuerSteps(name: string) {
+  return [
+    "Datei herunterladen",
+    `An ${name} weitergeben`,
+    "Hier bestätigen",
+  ] as const;
+}
 
 /** Why the file and its confirmation wait while the Träger has no account. */
 const ACCOUNT_MISSING_REASON =
@@ -154,6 +165,7 @@ export function SepaDebitCard({
   runId,
   title = "Lastschrift",
   control,
+  issuerKey = "",
 }: Readonly<{
   kind: SepaDebitRunKind;
   runId: string;
@@ -161,6 +173,9 @@ export function SepaDebitCard({
   /** A choice the card shows on top, e.g. the month of the installments;
    * with it the card stays when nothing is to collect. */
   control?: ReactNode;
+  /** The file of a body that bills a school itself (#8040); empty for
+   * the Träger's own file, which also shows the bodies' files. */
+  issuerKey?: string;
 }>) {
   const {
     data: run,
@@ -168,8 +183,8 @@ export function SepaDebitCard({
     mutate,
     reload,
   } = useTraegerResource(
-    traegerBillingRunKeys.sepaDebitRun(kind, runId),
-    () => fetchSepaDebitRun(kind, runId),
+    traegerBillingRunKeys.sepaDebitRun(kind, runId, issuerKey),
+    () => fetchSepaDebitRun(kind, runId, issuerKey),
     "die Lastschrift",
   );
   const [downloaded, setDownloaded] = useState<{
@@ -204,7 +219,7 @@ export function SepaDebitCard({
   const download = async () => {
     setDownloading(true);
     try {
-      const file = await downloadSepaDebitFile(kind, runId);
+      const file = await downloadSepaDebitFile(kind, runId, issuerKey);
       downloadBlob(file.blob, file.filename);
       setDownloaded({
         key: runKey,
@@ -225,9 +240,12 @@ export function SepaDebitCard({
     if (!run || !downloadedId) return;
     setSubmitting(true);
     try {
-      await mutate(await submitSepaDebits(kind, runId, downloadedId), {
-        revalidate: false,
-      });
+      await mutate(
+        await submitSepaDebits(kind, runId, downloadedId, issuerKey),
+        {
+          revalidate: false,
+        },
+      );
       setConfirming(false);
       success("Die Lastschriften sind als eingereicht vermerkt.");
     } catch (err) {
@@ -256,25 +274,42 @@ export function SepaDebitCard({
     );
   }
   if (!run) return <SectionCard title={title} loading />;
+  // The files of the bodies that bill a school of the run themselves.
+  const bodyFiles =
+    issuerKey === ""
+      ? (run.issuers ?? []).map((issuer) => (
+          <SepaDebitCard
+            key={issuer.key}
+            kind={kind}
+            runId={runId}
+            issuerKey={issuer.key}
+            title={`Lastschrift von ${issuer.name}`}
+          />
+        ))
+      : null;
   if (run.count + run.submitted.length + run.left.length === 0) {
     // A run in which no family pays by direct debit has no file.
-    if (!control) return null;
+    if (!control) return <>{bodyFiles}</>;
     return (
-      <SectionCard title={title} icon={LandmarkIcon}>
-        <div className="flex flex-col gap-4">
-          {control}
-          <EmptyState
-            variant="compact"
-            title="Keine Lastschrift in diesem Monat"
-            description="In diesem Monat zieht kein Bescheid eine Rate per Lastschrift ein."
-          />
-        </div>
-      </SectionCard>
+      <>
+        <SectionCard title={title} icon={LandmarkIcon}>
+          <div className="flex flex-col gap-4">
+            {control}
+            <EmptyState
+              variant="compact"
+              title="Keine Lastschrift in diesem Monat"
+              description="In diesem Monat zieht kein Bescheid eine Rate per Lastschrift ein."
+            />
+          </div>
+        </SectionCard>
+        {bodyFiles}
+      </>
     );
   }
 
   const pending = run.count > 0;
   const fileBlocked = run.accountMissing;
+  const body = run.issuer;
   return (
     <>
       <SectionCard
@@ -288,16 +323,18 @@ export function SepaDebitCard({
           ) : null
         }
         description={
-          pending
-            ? "Die Bank bucht die Beiträge ab, nicht moto. Lade die Datei herunter und im Online-Banking hoch. Bestätige es danach hier."
-            : run.submitted.length > 0
-              ? `Die Datei ist eingereicht${run.submittedAt ? ` (${formatDate(run.submittedAt)})` : ""}. Die Bank bucht am Fälligkeitstag ab.`
-              : "In diesem Lauf darf keine Lastschrift in die Datei. Die Gründe stehen unten."
+          pending && body
+            ? `${body.name} zieht diese Beiträge mit eigener Gläubiger-ID auf das eigene Konto ein. Gib die Datei an ${body.name} weiter und bestätige es danach hier.`
+            : pending
+              ? "Die Bank bucht die Beiträge ab, nicht moto. Lade die Datei herunter und im Online-Banking hoch. Bestätige es danach hier."
+              : run.submitted.length > 0
+                ? `Die Datei ist eingereicht${run.submittedAt ? ` (${formatDate(run.submittedAt)})` : ""}. Die Bank bucht am Fälligkeitstag ab.`
+                : "In diesem Lauf darf keine Lastschrift in die Datei. Die Gründe stehen unten."
         }
         actions={
           pending ? (
             <>
-              {fileBlocked ? null : (
+              {fileBlocked || body ? null : (
                 <HandoverMenu
                   run={handoverRun}
                   recipients={handover.recipients}
@@ -315,7 +352,11 @@ export function SepaDebitCard({
                 variant="primary"
                 size="md"
                 disabled={fileBlocked}
-                disabledReason={ACCOUNT_MISSING_REASON}
+                disabledReason={
+                  body
+                    ? `Trage zuerst das Konto von ${body.name} bei der Schule ein.`
+                    : ACCOUNT_MISSING_REASON
+                }
                 tooltip="Lädt die Lastschriftdatei (SEPA) für dein Online-Banking herunter."
                 className="gap-2"
                 isLoading={downloading}
@@ -348,7 +389,23 @@ export function SepaDebitCard({
         <div className="flex flex-col gap-5">
           {control}
           {handover.notice}
-          {fileBlocked ? (
+          {fileBlocked && body ? (
+            <Alert
+              type="warning"
+              title={`Konto von ${body.name} fehlt`}
+              message={`Die Datei braucht das Konto, auf das die Beiträge gehen. Trage es unter Einstellungen → Zuständigkeiten bei der Schule ein.`}
+              action={
+                <ButtonLink
+                  href={traegerPath("/traeger/einstellungen/zustaendigkeiten")}
+                  variant="surface"
+                  size="compact"
+                  tooltip="Öffnet die Zuständigkeiten mit den Angaben der Stellen pro Schule."
+                >
+                  Zuständigkeiten öffnen
+                </ButtonLink>
+              }
+            />
+          ) : fileBlocked ? (
             <Alert
               type="warning"
               title="Konto des Trägers fehlt"
@@ -373,14 +430,18 @@ export function SepaDebitCard({
           ) : null}
           {pending && !downloadedId ? (
             <p className="text-sm text-gray-600">
-              {recipientOfFormat(handover.recipients, "pain008")?.ready ||
-              handover.recipientHidden
+              {!body &&
+              (recipientOfFormat(handover.recipients, "pain008")?.ready ||
+                handover.recipientHidden)
                 ? "Lade zuerst die Datei herunter oder übergib sie. Danach kannst du das Einreichen bestätigen."
                 : "Lade zuerst die Datei herunter. Danach kannst du das Einreichen bestätigen."}
             </p>
           ) : null}
           {pending ? (
-            <WizardStepper steps={STEPS} current={downloadedId ? 1 : 0} />
+            <WizardStepper
+              steps={body ? issuerSteps(body.name) : STEPS}
+              current={downloadedId ? 1 : 0}
+            />
           ) : null}
           {pending ? (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -423,12 +484,12 @@ export function SepaDebitCard({
               columns={kind === "notice-months" ? noticeRateColumns : columns}
               rows={[...(pending ? run.debits : run.submitted)]}
               getRowKey={(debit) => debit.id}
-              stackedOnMobile
             />
           ) : null}
         </div>
       </SectionCard>
       {run.left.length > 0 ? <SepaDebitsLeftCard left={run.left} /> : null}
+      {bodyFiles}
       {handover.dialog}
       <ConfirmationModal
         isOpen={confirming}

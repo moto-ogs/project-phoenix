@@ -11,8 +11,9 @@ import type {
   MailProviderBlock,
   MailOutcome,
 } from "~/lib/email-delivery-status";
-import { bffFile, bffJson } from "~/lib/bff-fetch";
+import { bffFile, bffFileHref, bffJson } from "~/lib/bff-fetch";
 import type * as parentAnnouncementsContract from "~/lib/contract/parent-announcements.generated";
+import type * as attachmentContract from "~/lib/contract/announcement-attachments.generated";
 import type * as sharedContract from "~/lib/contract/shared.generated";
 import { downloadBlob, filenameFromDisposition } from "~/lib/file-download";
 
@@ -120,6 +121,18 @@ export function isClassLetter(announcement: Announcement): boolean {
 /** True when the announcement asks the parents a question. */
 export function isPoll(announcement: Announcement): boolean {
   return announcement.response_type !== "none";
+}
+
+/** Published polls, letters and declarations show their own status panels. */
+export function showAnnouncementReadStats(announcement: Announcement): boolean {
+  return (
+    announcement.status === "draft" ||
+    !(
+      isPoll(announcement) ||
+      isLetter(announcement) ||
+      isDeclaration(announcement)
+    )
+  );
 }
 
 /** The tally of a poll: per option, how many reached children picked it. */
@@ -338,14 +351,14 @@ export type DeclarationStatus = Omit<
   submissions: DeclarationSubmission[];
 };
 
-const BASE = "/api/parent-announcements";
+const BASE = "tenant";
 
 /**
  * The routes of a class letter in moto schule (#4800): the same announcement
- * calls behind the school session. Every call below takes the base; the OGS
+ * calls behind the school session. Every call below takes the portal selector; the OGS
  * portal uses the default.
  */
-export const SCHOOL_PARENT_LETTERS_BASE = "/api/school/parent-letters";
+export const SCHOOL_PARENT_LETTERS_BASE = "school";
 
 /** Where an announcement call goes: the OGS portal or moto schule. */
 export type AnnouncementApiBase =
@@ -372,7 +385,7 @@ export function withApiBase<T>(
   return base === undefined ? call(id) : call(id, base);
 }
 
-function toAnnouncement(
+export function toAnnouncement(
   announcement: sharedContract.announcementResponse,
 ): Announcement {
   // The backend writes the enum values listed above.
@@ -461,14 +474,19 @@ export async function createAnnouncement(
   );
 }
 
+/**
+ * Speichert den Entwurf, der mit `expectedVersion` gelesen wurde (ADR 0311);
+ * hat ihn jemand seitdem geändert, lehnt der Server ab.
+ */
 export async function updateAnnouncement(
   id: string,
   input: AnnouncementInput,
+  expectedVersion: string,
 ): Promise<Announcement> {
   return toAnnouncement(
     await bffJson("tenant", "PUT /api/parent-announcements/{announcementId}", {
       params: { announcementId: id },
-      body: input,
+      body: { ...input, expected_version: expectedVersion },
       errorMessage: "Elternmitteilung konnte nicht gespeichert werden",
     }),
   );
@@ -512,12 +530,18 @@ export async function deleteAnnouncement(
   );
 }
 
+/**
+ * Veröffentlicht den Entwurf, wie er gelesen wurde: `expectedVersion` ist
+ * seine `version` (ADR 0311).
+ */
 export async function publishAnnouncement(
   id: string,
+  expectedVersion: string,
   base: AnnouncementApiBase = BASE,
 ): Promise<Announcement> {
   const errorMessage = "Elternmitteilung konnte nicht veröffentlicht werden";
   const params = { announcementId: id };
+  const body = { expected_version: expectedVersion };
   return toAnnouncement(
     await onPortal(
       base,
@@ -525,13 +549,13 @@ export async function publishAnnouncement(
         bffJson(
           "tenant",
           "POST /api/parent-announcements/{announcementId}/publish",
-          { params, errorMessage },
+          { params, body, errorMessage },
         ),
       () =>
         bffJson(
           "school",
           "POST /school/parent-letters/{announcementId}/publish",
-          { params, errorMessage },
+          { params, body, errorMessage },
         ),
     ),
   );
@@ -598,6 +622,12 @@ export async function fetchPollResults(id: string): Promise<PollResults> {
       errorMessage: "Umfrageergebnis konnte nicht geladen werden",
     },
   );
+  return mapPollResults(results);
+}
+
+export function mapPollResults(
+  results: parentAnnouncementsContract.pollResultsResponse,
+): PollResults {
   return { ...results, options: results.options ?? [] };
 }
 
@@ -610,6 +640,12 @@ export async function fetchPollChildren(id: string): Promise<PollChild[]> {
       errorMessage: "Antwortliste konnte nicht geladen werden",
     },
   );
+  return mapPollChildren(children);
+}
+
+export function mapPollChildren(
+  children: parentAnnouncementsContract.pollChildResponse[],
+): PollChild[] {
   return children.map((child) => ({
     ...child,
     answer_labels: child.answer_labels ?? [],
@@ -665,6 +701,12 @@ export async function fetchLetterStatus(
         { params, errorMessage },
       ),
   );
+  return mapLetterStatus(status);
+}
+
+export function mapLetterStatus(
+  status: sharedContract.letterStatusResponse,
+): LetterStatus {
   return {
     ...status,
     // The backend writes the enum values listed above.
@@ -698,6 +740,12 @@ export async function fetchDeclarationStatus(
         { params, errorMessage },
       ),
   );
+  return mapDeclarationStatus(status);
+}
+
+export function mapDeclarationStatus(
+  status: sharedContract.declarationStatusResponse,
+): DeclarationStatus {
   const summary = Object.fromEntries(
     DECLARATION_SUMMARY_KEYS.map((key) => [key, status.summary?.[key] ?? 0]),
   ) as Record<(typeof DECLARATION_SUMMARY_KEYS)[number], number>;
@@ -850,6 +898,12 @@ export async function fetchAnnouncementRecipients(
         { params, errorMessage },
       ),
   );
+  return mapAnnouncementRecipients(recipients);
+}
+
+export function mapAnnouncementRecipients(
+  recipients: sharedContract.recipientResponse[],
+): AnnouncementRecipient[] {
   // The backend writes the statuses listed above.
   return recipients as AnnouncementRecipient[];
 }
@@ -861,15 +915,14 @@ export async function fetchAnnouncementRecipients(
  * Empfängerkreis bei.
  */
 
-const ATTACHMENTS_BASE = "/api/announcement-attachments";
-
 /**
  * Die Anhänge einer Mitteilung mit `max_count` (Höchstzahl je Mitteilung),
- * `max_bytes` (Größengrenze je Datei) und `editable` (false, sobald die
- * Mitteilung veröffentlicht ist).
+ * `max_bytes` (Größengrenze je Datei), `editable` (false, sobald die
+ * Mitteilung veröffentlicht ist) und `announcement_version`: der Stand des
+ * Entwurfs, zu dem die Liste gehört (ADR 0311).
  */
 export type AnnouncementAttachmentList = Omit<
-  sharedContract.AnnouncementAttachmentListResponse,
+  attachmentContract.StaffAttachmentListResponse,
   "attachments"
 > & {
   attachments: sharedContract.AnnouncementAttachmentResponse[];
@@ -889,10 +942,17 @@ export async function fetchAnnouncementAttachments(
   return { ...list, attachments: list.attachments ?? [] };
 }
 
+/**
+ * Lädt eine Datei an den Entwurf der Version `expectedVersion` (ADR 0311).
+ * Die Anhänge gehören zu dem Stand, den die Veröffentlichung bestätigt: die
+ * Antwort trägt die neue Version des Entwurfs, die das nächste Speichern
+ * oder Veröffentlichen schickt.
+ */
 export function uploadAnnouncementAttachment(
   announcementId: string,
   file: File,
-): Promise<sharedContract.AnnouncementAttachmentResponse> {
+  expectedVersion: string,
+): Promise<attachmentContract.UploadedAttachmentResponse> {
   const form = new FormData();
   form.append("file", file);
   return bffJson(
@@ -900,32 +960,46 @@ export function uploadAnnouncementAttachment(
     "POST /api/announcement-attachments/{announcementId}",
     {
       params: { announcementId },
+      query: { expected_version: expectedVersion },
       body: form,
       errorMessage: "Die Datei konnte nicht hochgeladen werden",
     },
   );
 }
 
+/** Entfernt einen Anhang vom Entwurf der Version `expectedVersion` und
+ * antwortet die neue Version des Entwurfs (ADR 0311). */
 export async function deleteAnnouncementAttachment(
   announcementId: string,
   attachmentId: string,
-): Promise<void> {
-  await bffJson(
+  expectedVersion: string,
+): Promise<string> {
+  const removed = await bffJson(
     "tenant",
     "DELETE /api/announcement-attachments/{announcementId}/{attachmentId}",
     {
       params: { announcementId, attachmentId },
+      body: { expected_version: expectedVersion },
       errorMessage: "Der Anhang konnte nicht entfernt werden",
     },
   );
+  return removed.announcement_version;
 }
 
 /** Adresse, unter der das Personal einen Anhang zur Kontrolle öffnet. */
 export function announcementAttachmentDownloadUrl(
   announcementId: string,
   attachmentId: string,
+  inline = false,
 ): string {
-  return `${ATTACHMENTS_BASE}/${encodeURIComponent(announcementId)}/${encodeURIComponent(attachmentId)}/download`;
+  return bffFileHref(
+    "tenant",
+    "GET /api/announcement-attachments/{announcementId}/{attachmentId}/download",
+    {
+      params: { announcementId, attachmentId },
+      query: inline ? { inline: "1" } : {},
+    },
+  );
 }
 
 // --- Serienbriefe (#4813) ----------------------------------------------------

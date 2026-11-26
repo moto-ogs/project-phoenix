@@ -24,7 +24,7 @@ vi.mock("~/lib/hooks/use-student-photos-enabled", () => ({
 const owner = vi.hoisted(() => ({ id: "account-a", school: "school-a" }));
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
-    data: { user: { id: owner.id, scope: "tenant", tenantId: 42 } },
+    data: { user: { id: owner.id, scope: "tenant", tenantId: "42" } },
     status: "authenticated",
   }),
 }));

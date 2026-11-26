@@ -10,8 +10,10 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
+
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
@@ -157,26 +159,13 @@ func (rs *StaffAdminResource) listAbsenceRequests(w http.ResponseWriter, r *http
 	}
 	responses := make([]absenceRequestResponse, len(items))
 	for i, item := range items {
-		responses[i] = absenceRequestResponse{
-			StaffAbsenceRequestItem: item,
-			ID:                      strconv.FormatInt(item.ID.Int64(), 10),
-			StaffID:                 strconv.FormatInt(item.StaffID.Int64(), 10),
-		}
-		if item.ApprovedBy != nil {
-			approvedBy := strconv.FormatInt((*item.ApprovedBy).Int64(), 10)
-			responses[i].ApprovedBy = &approvedBy
-		}
+		responses[i] = absenceRequestResponse{StaffAbsenceRequestItem: item}
 	}
 	common.Respond(w, r, http.StatusOK, responses, "Absence requests retrieved")
 }
 
-// absenceRequestResponse keeps the three identifiers lossless for JavaScript
-// consumers. The embedded service response provides all non-ID fields.
 type absenceRequestResponse struct {
 	*workforce.StaffAbsenceRequestItem
-	ID         string  `json:"id"`
-	StaffID    string  `json:"staff_id"`
-	ApprovedBy *string `json:"approved_by,omitempty"`
 }
 
 // approveAbsence handles POST /api/staff/absences/{absenceId}/approve
@@ -198,7 +187,7 @@ func (rs *StaffAdminResource) approveAbsence(w http.ResponseWriter, r *http.Requ
 	}
 	var req workforce.VacationDecisionRequest
 	if r.ContentLength > 0 {
-		if err := render.DecodeJSON(r.Body, &req); err != nil {
+		if err := wire.DecodeAndDrain(r.Body, &req); err != nil {
 			common.RenderError(w, r, common.ErrorInvalidRequest(err))
 			return
 		}
@@ -252,7 +241,7 @@ func (rs *StaffAdminResource) denyAbsence(w http.ResponseWriter, r *http.Request
 		return
 	}
 	var req workforce.VacationDecisionRequest
-	if err := render.DecodeJSON(r.Body, &req); err != nil {
+	if err := wire.DecodeAndDrain(r.Body, &req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
@@ -291,7 +280,7 @@ func (rs *StaffAdminResource) questionAbsence(w http.ResponseWriter, r *http.Req
 		return
 	}
 	var req workforce.VacationDecisionRequest
-	if err := render.DecodeJSON(r.Body, &req); err != nil {
+	if err := wire.DecodeAndDrain(r.Body, &req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
@@ -331,7 +320,7 @@ func (rs *StaffAdminResource) setStaffVacationQuota(w http.ResponseWriter, r *ht
 		return
 	}
 	var body VacationQuotaRequest
-	if err := render.DecodeJSON(r.Body, &body); err != nil {
+	if err := wire.DecodeAndDrain(r.Body, &body); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
@@ -418,7 +407,7 @@ func (rs *StaffAdminResource) adminUpdateStaffSession(w http.ResponseWriter, r *
 	}
 
 	var updates workforce.SessionUpdateRequest
-	if err := render.DecodeJSON(r.Body, &updates); err != nil {
+	if err := wire.DecodeAndDrain(r.Body, &updates); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
@@ -463,7 +452,7 @@ func (rs *StaffAdminResource) adminCreateStaffSession(w http.ResponseWriter, r *
 	}
 
 	var req workforce.AdminCreateSessionRequest
-	if err := render.DecodeJSON(r.Body, &req); err != nil {
+	if err := wire.DecodeAndDrain(r.Body, &req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
@@ -655,7 +644,7 @@ func (rs *StaffAdminResource) adminCreateStaffAbsence(w http.ResponseWriter, r *
 		return
 	}
 	var req workforce.CreateAbsenceRequest
-	if err := render.DecodeJSON(r.Body, &req); err != nil {
+	if err := wire.DecodeAndDrain(r.Body, &req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}

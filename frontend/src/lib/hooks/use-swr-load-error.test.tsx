@@ -2,10 +2,16 @@ import { renderHook, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
+import type { ReadDraftStatus } from "~/lib/swr/read-draft";
 import { useReadDraftForm } from "./use-swr-load-error";
 
 function draft(canSubmit: boolean, error?: unknown) {
-  return { canSubmit, error, retryLoad: vi.fn() };
+  const status: ReadDraftStatus = canSubmit
+    ? "ready"
+    : error
+      ? "loadFailed"
+      : "reloading";
+  return { canSubmit, error, retryLoad: vi.fn(), status };
 }
 
 // ADR 0311, rules 4 and 6: the one order of a form on a read draft.
@@ -55,5 +61,25 @@ describe("useReadDraftForm", () => {
 
     rerender({ formError: "shown" });
     expect(result.current.loadError).toBeNull();
+  });
+
+  it("names why saving waits, and nothing for a form that creates", () => {
+    const { result, rerender } = renderHook(
+      ({ edit }: { edit: ReturnType<typeof draft> | null }) =>
+        useReadDraftForm(edit, { error: null, clear: vi.fn() }, "die Regel"),
+      {
+        wrapper: ToastProvider,
+        initialProps: { edit: draft(false) as ReturnType<typeof draft> | null },
+      },
+    );
+    expect(result.current.waitReason).toBe(
+      "Die gespeicherten Angaben werden noch geladen.",
+    );
+    rerender({ edit: draft(false, new ApiError("down", 503)) });
+    expect(result.current.waitReason).toMatch(/konnten nicht geladen werden/);
+    rerender({ edit: draft(true) });
+    expect(result.current.waitReason).toBeUndefined();
+    rerender({ edit: null });
+    expect(result.current.waitReason).toBeUndefined();
   });
 });

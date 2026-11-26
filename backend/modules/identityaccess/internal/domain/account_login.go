@@ -103,6 +103,7 @@ type SessionClaims struct {
 	// ViaTraeger marks a school session opened through the Träger (ADR 0084
 	// section 5): its school access rests on the Träger, not on a mapping.
 	ViaTraeger bool
+	IssuedAt   int64
 	ExpiresAt  int64
 }
 
@@ -271,7 +272,10 @@ const (
 	AuthEventTenantSwitch             = "tenant_switch"
 	// AuthEventTraegerSchoolSwitch is the Absprung of the Träger-Büro into
 	// the school (ADR 0084 section 5, #4654), filed in the school's ledger.
-	AuthEventTraegerSchoolSwitch   = "traeger_school_switch"
+	AuthEventTraegerSchoolSwitch = "traeger_school_switch"
+	// AuthEventTraegerRoleChanged is a change the Träger-Büro made to the
+	// copy of one of its roles, filed in the school's ledger (#4810).
+	AuthEventTraegerRoleChanged    = "traeger_role_changed"
 	AuthEventMFAEmailSent          = "mfa_email_sent"
 	AuthEventMFAVerified           = "mfa_verified"
 	AuthEventMFAFailed             = "mfa_failed"
@@ -306,8 +310,22 @@ type AuthEvent struct {
 	CompletedWipe *CompletedWipeEvidence
 	// MFA is set on the mfa_* events (#3331).
 	MFA *MFAEvidence
-	// OrganizationID is the Träger of a traeger_school_switch event.
+	// OrganizationID is the Träger of a traeger_school_switch or
+	// traeger_role_changed event.
 	OrganizationID int64
+	// TraegerRole is set on traeger_role_changed events (#4810).
+	TraegerRole *TraegerRoleEvidence
+}
+
+// TraegerRoleEvidence describes what the Träger-Büro changed on the copy of
+// one of its roles at a school (#4810, ADR 0317). Action is created, updated
+// or removed; HoldersRemoved counts the people a removal took the role from.
+type TraegerRoleEvidence struct {
+	Action         string
+	RoleID         int64
+	RoleName       string
+	TraegerRoleID  int64
+	HoldersRemoved int
 }
 
 // TenantAccessEvidence describes an operator-led change of the school

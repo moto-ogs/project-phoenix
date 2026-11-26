@@ -39,6 +39,7 @@ func (rs *Resource) mountAccountRoutes(r chi.Router, authRateLimiter func(http.H
 	r.Get("/me/profile", rs.getMyProfile)
 	r.Put("/me/profile", rs.updateMyProfile)
 	r.Get("/me/children", rs.listMyChildren)
+	r.Get("/me/family-start", rs.familyStart)
 
 	// Cross-tenant enrollable schools list — every (school, open
 	// phase) the parent could enroll a new child at, with a flag
@@ -123,6 +124,9 @@ func (rs *Resource) mountEnrollmentRoutes(r chi.Router) {
 	// The holiday registrations linked to the account (ADR 0216): what
 	// became of them, without health information, address or contacts.
 	r.Get("/me/holiday-registration-entries", rs.listHolidayRegistrationEntries)
+	// The parents withdraw a voluntary consent of a registration or give it
+	// again (#8038, ADR 0321).
+	r.Put("/me/holiday-registration-entries/{registrationId}/consents/{key}", rs.setHolidayRegistrationConsent)
 }
 
 func (rs *Resource) mountChildStatusRoutes(r chi.Router) {
@@ -133,6 +137,7 @@ func (rs *Resource) mountChildStatusRoutes(r chi.Router) {
 	//   - care-exception: set or clear a one-day pickup time
 	r.Get("/me/children/{studentId}/features", rs.getChildFeatures)
 	r.Get("/me/children/{studentId}/today", rs.getChildTodayStatus)
+	r.Get("/me/children/{studentId}/day-changes", rs.getChildDayChanges)
 	r.Get("/me/children/{studentId}/consents", rs.getChildConsents)
 	r.Put("/me/children/{studentId}/consents/photo", rs.grantPhotoConsent)
 	r.Delete("/me/children/{studentId}/consents/photo", rs.withdrawPhotoConsent)

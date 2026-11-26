@@ -21,7 +21,7 @@ vi.mock("next/image", () => ({
   ),
 }));
 
-import RootPage from "./page";
+import { TenantPicker as RootPage } from "./tenant-picker";
 
 // ============================================================================
 // Tests
@@ -49,12 +49,30 @@ describe("RootPage", () => {
     expect(screen.getByText("Laden...")).toBeInTheDocument();
   });
 
+  it("uses the public list from the server without a browser request", () => {
+    render(
+      <RootPage
+        initialSchools={[
+          { slug: "school-a", name: "Testschule A", subdomain: "school-a" },
+        ]}
+      />,
+    );
+
+    const select = screen.getByRole("combobox");
+    expect(select).toBeEnabled();
+    fireEvent.click(select);
+    expect(
+      screen.getByRole("option", { name: "Testschule A" }),
+    ).toBeInTheDocument();
+    expect(mockListAllTenants).not.toHaveBeenCalled();
+  });
+
   it("renders tenant options in select after loading", async () => {
     mockListAllTenants.mockResolvedValue({
       status: "ok",
       tenants: [
         {
-          tenantId: 0,
+          tenantId: "0",
           slug: "school-a",
           name: "Testschule A",
           subdomain: "school-a",
@@ -63,7 +81,7 @@ describe("RootPage", () => {
           settings: {},
         },
         {
-          tenantId: 0,
+          tenantId: "0",
           slug: "school-b",
           name: "Testschule B",
           subdomain: "school-b",
@@ -94,7 +112,7 @@ describe("RootPage", () => {
       status: "ok",
       tenants: [
         {
-          tenantId: 0,
+          tenantId: "0",
           slug: "school-a",
           name: "School A",
           subdomain: "school-a",
@@ -121,7 +139,7 @@ describe("RootPage", () => {
       status: "ok",
       tenants: [
         {
-          tenantId: 0,
+          tenantId: "0",
           slug: "school-a",
           name: "School A",
           subdomain: "school-a",
@@ -152,7 +170,7 @@ describe("RootPage", () => {
       status: "ok",
       tenants: [
         {
-          tenantId: 0,
+          tenantId: "0",
           slug: "school-a",
           name: "School A",
           subdomain: "school-a",
@@ -192,7 +210,7 @@ describe("RootPage", () => {
       status: "ok",
       tenants: [
         {
-          tenantId: 0,
+          tenantId: "0",
           slug: "school-a",
           name: "School A",
           subdomain: "school-a",

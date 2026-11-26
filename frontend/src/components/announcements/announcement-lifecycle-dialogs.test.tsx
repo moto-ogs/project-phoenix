@@ -1,5 +1,11 @@
 import "@testing-library/jest-dom/vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { FormErrorAlert } from "~/components/ui/form-error-alert";
 import type { FormErrorInput } from "~/components/ui/form-error";
@@ -76,6 +82,7 @@ vi.mock("~/components/ui/confirm-delete-modal", () => ({
 
 const announcement: Announcement = {
   id: "7",
+  version: "2026-09-01T08:00:00Z",
   title: "Sommerfest",
   body: "Am Freitag.",
   priority: "info",
@@ -105,6 +112,7 @@ describe("lifecycle dialogs", () => {
     const onClose = vi.fn();
     render(
       <PublishAnnouncementDialog
+        reload={vi.fn(() => Promise.resolve())}
         announcement={announcement}
         onClose={onClose}
         onDone={onDone}
@@ -118,8 +126,75 @@ describe("lifecycle dialogs", () => {
     fireEvent.click(screen.getByRole("button", { name: "Bestätigen" }));
 
     await waitFor(() => expect(onClose).toHaveBeenCalled());
-    expect(publishMock).toHaveBeenCalledWith("7");
+    // The version of the draft the dialog shows (ADR 0311).
+    expect(publishMock).toHaveBeenCalledWith(
+      "7",
+      "2026-09-01T08:00:00Z",
+      undefined,
+    );
     expect(onDone).toHaveBeenCalled();
+  });
+
+  // ADR 0311: a draft changed since the dialog opened is refused; the dialog
+  // reads the stored draft, says so without „Wiederholen“ and stays open.
+  it("shows the stored draft after a refusal and offers no retry", async () => {
+    publishMock.mockRejectedValueOnce(
+      new ApiError("changed since it was read", 409, {
+        code: "general.changed_since_read",
+      }),
+    );
+    const reload = vi.fn(() => Promise.resolve());
+    const onClose = vi.fn();
+    render(
+      <PublishAnnouncementDialog
+        reload={reload}
+        announcement={announcement}
+        onClose={onClose}
+        onDone={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Bestätigen" }));
+
+    expect(await screen.findByText(/inzwischen geändert/)).toBeInTheDocument();
+    expect(reload).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("button", { name: "Wiederholen" })).toBeNull();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  // ADR 0311, rule 6: a failed read of the stored draft stays as the load
+  // error, and the stale version is not sent again.
+  it("sends nothing again while the stored draft could not be read", async () => {
+    publishMock.mockRejectedValue(
+      new ApiError("changed since it was read", 409, {
+        code: "general.changed_since_read",
+      }),
+    );
+    const reload = vi.fn(() =>
+      Promise.reject(
+        new ApiError("down", 503, { code: "general.unavailable" }),
+      ),
+    );
+    render(
+      <PublishAnnouncementDialog
+        reload={reload}
+        announcement={announcement}
+        onClose={vi.fn()}
+        onDone={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Bestätigen" }));
+    await waitFor(() => expect(reload).toHaveBeenCalled());
+    expect(
+      await screen.findByText(/neue Stand konnte nicht geladen werden/),
+    ).toBeInTheDocument();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Bestätigen" }));
+      await Promise.resolve();
+    });
+
+    expect(publishMock).toHaveBeenCalledTimes(1);
   });
 
   // #2517: Katalogtext statt Serversatz, Wiederholen im Dialog.
@@ -132,6 +207,7 @@ describe("lifecycle dialogs", () => {
     const onClose = vi.fn();
     render(
       <PublishAnnouncementDialog
+        reload={vi.fn(() => Promise.resolve())}
         announcement={announcement}
         onClose={onClose}
         onDone={vi.fn()}
@@ -438,8 +514,9 @@ describe("class letters of a Lehrkraft (#4800)", () => {
     const onClose = vi.fn();
     render(
       <PublishAnnouncementDialog
+        reload={vi.fn(() => Promise.resolve())}
         announcement={{ ...classLetter, status: "draft" }}
-        apiBase="/api/school/parent-letters"
+        apiBase="school"
         onClose={onClose}
         onDone={vi.fn()}
       />,
@@ -447,6 +524,10 @@ describe("class letters of a Lehrkraft (#4800)", () => {
     fireEvent.click(screen.getByRole("button", { name: "Bestätigen" }));
 
     await waitFor(() => expect(onClose).toHaveBeenCalled());
-    expect(publishMock).toHaveBeenCalledWith("7", "/api/school/parent-letters");
+    expect(publishMock).toHaveBeenCalledWith(
+      "7",
+      "2026-09-01T08:00:00Z",
+      "school",
+    );
   });
 });

@@ -12,7 +12,7 @@ import {
 // The remembered names belong to the signed-in school and account (#5000).
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
-    data: { user: { id: "7", tenantId: 1 } },
+    data: { user: { id: "7", tenantId: "1" } },
     status: "authenticated",
   }),
 }));
@@ -82,6 +82,28 @@ describe("useSetBreadcrumb", () => {
     );
 
     expect(breadcrumbResult?.breadcrumb).toEqual(data);
+  });
+
+  it("publishes to the header without rendering the publishing page again", () => {
+    const renderPage = vi.fn();
+    function Page() {
+      renderPage();
+      useSetBreadcrumb({ roomName: "Raum 1" });
+      return null;
+    }
+    function Header() {
+      return <div>{useBreadcrumb().breadcrumb.roomName}</div>;
+    }
+
+    render(
+      <BreadcrumbProvider>
+        <Page />
+        <Header />
+      </BreadcrumbProvider>,
+    );
+
+    expect(screen.getByText("Raum 1")).toBeInTheDocument();
+    expect(renderPage).toHaveBeenCalledOnce();
   });
 
   it("clears breadcrumb data on unmount", () => {

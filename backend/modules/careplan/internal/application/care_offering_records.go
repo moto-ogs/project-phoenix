@@ -42,8 +42,24 @@ func (c *CareOfferingCatalog) listValidated(ctx context.Context, filter careplan
 		if err := normalizeLoadedAvailabilityRule(&offerings[i]); err != nil {
 			return nil, err
 		}
+		offerings[i].Version = careplan.CareOfferingVersion(offerings[i])
 	}
 	return offerings, nil
+}
+
+// lockedVersion locks the offering's row and answers the version of what
+// it stores, read as the catalog's reads answer it (ADR 0311).
+func (c *CareOfferingCatalog) lockedVersion(ctx context.Context, id int64) (string, error) {
+	locked, err := c.listValidated(ctx, careplan.CareOfferingFilter{
+		IDs: []int64{id}, LockForUpdate: true, Order: careplan.OfferingOrderID,
+	}, "failed to lock care offering")
+	if err != nil {
+		return "", err
+	}
+	if len(locked) == 0 {
+		return "", fmt.Errorf("care offering %d: %w", id, careplan.ErrCareOfferingNotFound)
+	}
+	return locked[0].Version, nil
 }
 
 func (c *CareOfferingCatalog) listByIDs(ctx context.Context, ids []int64) ([]careplan.CareOffering, error) {

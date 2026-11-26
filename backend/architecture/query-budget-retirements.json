@@ -393,5 +393,35 @@
     "scenario": "api.auth.accounts.list.positive_growth",
     "route": "GET /auth/accounts/",
     "issue": 7808
+  },
+  {
+    "scenario": "api.rooms.by_category",
+    "route": "GET /api/rooms/by-category",
+    "issue": 7723
+  },
+  {
+    "scenario": "api.grade_transitions.growth.detail",
+    "route": "GET /api/admin/grade-transitions/{id}/",
+    "issue": 7723
+  },
+  {
+    "scenario": "api.school.calendar.parent_conference_detail",
+    "route": "GET /school/calendar/parent-conferences/{conferenceId}",
+    "issue": 7723
+  },
+  {
+    "scenario": "api.active.presence20.supervisors_all.n3",
+    "route": "GET /api/active/supervisors/all",
+    "issue": 8084
+  },
+  {
+    "scenario": "api.active.presence20.supervisors_all.n8",
+    "route": "GET /api/active/supervisors/all",
+    "issue": 8084
+  },
+  {
+    "scenario": "api.students.ogs_group_navigation",
+    "route": "GET /api/students/ogs-group-navigation",
+    "issue": 8084
   }
 ]

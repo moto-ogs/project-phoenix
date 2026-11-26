@@ -1,5 +1,6 @@
 "use client";
 
+import type { OfferingChangeInput } from "~/lib/offering-change-input";
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useLocale } from "next-intl";
 
@@ -133,12 +134,7 @@ export function OfferingChangeRequestModal({
   childName?: string;
   onClose: () => void;
   onSubmit?: (
-    input: {
-      offerings: parentMeContract.OfferingSelectionBody[];
-      effective_from: string;
-      note?: string;
-      complete_withdrawal_confirmed?: boolean;
-    },
+    input: OfferingChangeInput,
     recipientGuardianProfileIds: string[],
   ) => Promise<void | string>;
   /**

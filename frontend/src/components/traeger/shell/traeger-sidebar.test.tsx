@@ -158,6 +158,32 @@ describe("TraegerSidebar", () => {
     expect(mainNav().queryByText("Finanzen")).toBeNull();
   });
 
+  it("offers the children of all schools only with „Verträge verwalten“ (#8137)", () => {
+    sessionUser.permissions = [
+      "traeger_overview:read",
+      "traeger_contracts:manage",
+    ];
+    const { unmount } = render(<TraegerSidebar />);
+    // The names of all children need the right that opens the contracts;
+    // the entry stands between the schools and their occupancy.
+    expect(linkNames(mainNav()).slice(0, 4)).toEqual([
+      "Dashboard",
+      "Schulen",
+      "Kinder",
+      "Belegung",
+    ]);
+    expect(mainNav().getByRole("link", { name: "Kinder" })).toHaveAttribute(
+      "href",
+      "/kinder",
+    );
+    unmount();
+
+    sessionUser.permissions = ["traeger_overview:read", "traeger_reports:read"];
+    render(<TraegerSidebar />);
+    expect(mainNav().getByRole("link", { name: "Belegung" })).toBeVisible();
+    expect(mainNav().queryByRole("link", { name: "Kinder" })).toBeNull();
+  });
+
   it("shows the Dashboard only with its right (#4674)", () => {
     sessionUser.permissions = [];
     render(<TraegerSidebar />);
@@ -176,10 +202,14 @@ describe("TraegerSidebar", () => {
       "Allgemein",
       "Mitglieder und Rollen",
       "Briefkopf und Vorlagen",
+      // Wer Verträge schließt, abrechnet und Personal anstellt (#4811).
+      "Zuständigkeiten",
       "Abrechnungsvorgaben",
       // Dokumentart je Leistung, für die Rolle „Abrechnung“ (#4688).
       "Dokumentarten",
       "Zugriffsprotokoll",
+      // #6052: der Stand der moto-Module, für alle mit dem Recht der Übersicht.
+      "moto-Module",
     ]);
     expect(
       settingsNav().getByRole("link", { name: "Zugriffsprotokoll" }),
@@ -216,7 +246,9 @@ describe("TraegerSidebar", () => {
       "Zurück zur App",
       "Allgemein",
       "Briefkopf und Vorlagen",
+      "Zuständigkeiten",
       "Abrechnungsvorgaben",
+      "moto-Module",
     ]);
     unmount();
 
@@ -429,5 +461,77 @@ describe("TraegerSidebar", () => {
     expect(
       await screen.findByRole("combobox", { name: "Suchen" }),
     ).toBeInTheDocument();
+  });
+
+  // #6052: pages of a moto module no school of the Träger booked.
+  describe("moto modules that are not booked", () => {
+    it("shows them with a lock to who leads the office, and drops the Dashboard", () => {
+      sessionUser.permissions = ALL_RIGHTS;
+      render(<TraegerSidebar bookedModules={["ferienbetreuung"]} />);
+
+      // The Dashboard is the start page: without Träger-Übersicht the
+      // school list takes over, also for who leads the office.
+      expect(mainNav().queryByRole("link", { name: /Dashboard/ })).toBeNull();
+      expect(
+        mainNav().getByRole("link", { name: "Ferienbetreuung" }),
+      ).toBeInTheDocument();
+      for (const name of ["Belegung", "Abrechnungsläufe"]) {
+        const link = mainNav().getByRole("link", {
+          name: new RegExp(`^${name} ?, nicht gebucht$`),
+        });
+        expect(
+          within(link).getByTitle(
+            "Keine Schule deines Trägers hat dieses moto-Modul gebucht",
+          ),
+        ).toBeInTheDocument();
+      }
+      expect(
+        mainNav().getByRole("link", { name: "Schulen" }),
+      ).toBeInTheDocument();
+    });
+
+    it("hides them from everyone else", () => {
+      sessionUser.permissions = [
+        "traeger_overview:read",
+        "traeger_enrollment:manage",
+        "traeger_billing:manage",
+      ];
+      render(<TraegerSidebar bookedModules={["ferienbetreuung"]} />);
+
+      expect(linkNames(mainNav())).toEqual([
+        "Schulen",
+        "Ferienbetreuung",
+        "Anmeldephasen",
+        "Schließtage",
+        "Dokumente",
+      ]);
+    });
+
+    it("locks nothing while the booked modules load", () => {
+      sessionUser.permissions = ALL_RIGHTS;
+      render(<TraegerSidebar bookedModules={null} />);
+
+      expect(
+        mainNav().getByRole("link", { name: "Dashboard" }),
+      ).toBeInTheDocument();
+      expect(
+        mainNav().getByRole("link", { name: "Abrechnungsläufe" }),
+      ).toBeInTheDocument();
+    });
+
+    it("marks Dokumentarten in the settings", () => {
+      mockPathname.mockReturnValue("/einstellungen");
+      sessionUser.permissions = ALL_RIGHTS;
+      render(<TraegerSidebar bookedModules={[]} />);
+
+      expect(
+        settingsNav().getByRole("link", {
+          name: /^Dokumentarten ?, nicht gebucht$/,
+        }),
+      ).toBeInTheDocument();
+      expect(
+        settingsNav().getByRole("link", { name: "Abrechnungsvorgaben" }),
+      ).toBeInTheDocument();
+    });
   });
 });

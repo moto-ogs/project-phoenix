@@ -26,6 +26,7 @@ import (
 type allocationCandidateBody struct {
 	BookingID      wireID `json:"booking_id"`
 	Rank           int    `json:"rank"`
+	Score          int    `json:"score"`
 	RegistrationID wireID `json:"registration_id"`
 	ChildFirstName string `json:"child_first_name"`
 	Proposal       string `json:"proposal"`
@@ -38,9 +39,12 @@ type allocationCandidateBody struct {
 
 type allocationBoardBody struct {
 	AllocationMode string `json:"allocation_mode"`
+	Ranking        string `json:"ranking"`
+	MaxScore       int    `json:"max_score"`
 	Criteria       []struct {
-		ID   wireID `json:"id"`
-		Name string `json:"name"`
+		ID     wireID `json:"id"`
+		Name   string `json:"name"`
+		Points int    `json:"points"`
 	} `json:"criteria"`
 	Weeks []struct {
 		WeekID  wireID                    `json:"week_id"`
@@ -53,12 +57,17 @@ type allocationBoardBody struct {
 		Placement      string   `json:"placement"`
 		Proposal       string   `json:"proposal"`
 		Rank           int      `json:"rank"`
+		Ranking        string   `json:"ranking"`
+		Score          *int     `json:"score"`
+		MaxScore       *int     `json:"max_score"`
 		CriteriaMet    []string `json:"criteria_met"`
 		Reason         string   `json:"reason"`
 	} `json:"decisions"`
 }
 
 type criteriaBody struct {
+	Ranking string `json:"ranking"`
+	Version string `json:"version"`
 	Periods []struct {
 		ID wireID `json:"id"`
 	} `json:"periods"`
@@ -68,6 +77,7 @@ type criteriaBody struct {
 		Scope    string `json:"scope"`
 		Active   bool   `json:"active"`
 		Position int    `json:"position"`
+		Points   int    `json:"points"`
 	} `json:"criteria"`
 }
 
@@ -147,7 +157,7 @@ func (a allocationFixture) decide(t *testing.T, decisions ...map[string]any) *ht
 }
 
 func decision(candidate allocationCandidateBody, placement, reason string) map[string]any {
-	return map[string]any{"booking_id": candidate.BookingID, "placement": placement, "proposal": candidate.Proposal, "reason": reason}
+	return map[string]any{"booking_id": fmt.Sprint(candidate.BookingID), "placement": placement, "proposal": candidate.Proposal, "reason": reason}
 }
 
 func (a allocationFixture) errorCode(t *testing.T, rec *httptest.ResponseRecorder) string {
@@ -300,7 +310,7 @@ func TestHolidayAllocationHoldsFreePlacesForThePendingBookings(t *testing.T) {
 
 	// The existing waiting child has priority over the last pending child.
 	rec = traegerJSON(t, a.traeger, a.office.token, http.MethodPut, a.registrationPath(int64(second.ID), "/criteria"),
-		map[string]any{"checks": []map[string]any{{"criterion_id": a.working, "checked": "yes"}}})
+		map[string]any{"checks": []map[string]any{{"criterion_id": fmt.Sprint(a.working), "checked": "yes"}}})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	// A billing failure after promotion must roll back the decision, the
 	// placement, both mails and the contribution in the same transaction.
@@ -339,7 +349,7 @@ func TestHolidayAllocationOfficeCheckCountsBeforeTheStatement(t *testing.T) {
 	assert.Equal(t, late.ID, a.board(t).Weeks[0].Pending[0].RegistrationID)
 
 	rec := traegerJSON(t, a.traeger, a.office.token, http.MethodPut, a.registrationPath(int64(late.ID), "/criteria"),
-		map[string]any{"checks": []map[string]any{{"criterion_id": a.working, "child_id": nil, "checked": "no"}}})
+		map[string]any{"checks": []map[string]any{{"criterion_id": fmt.Sprint(a.working), "child_id": nil, "checked": "no"}}})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), `"checked":"no"`)
 	pending := a.board(t).Weeks[0].Pending
@@ -347,7 +357,7 @@ func TestHolidayAllocationOfficeCheckCountsBeforeTheStatement(t *testing.T) {
 	assert.Equal(t, "office", pending[1].Criteria[0].Source)
 
 	rec = traegerJSON(t, a.traeger, a.office.token, http.MethodPut, a.registrationPath(int64(late.ID), "/criteria"),
-		map[string]any{"checks": []map[string]any{{"criterion_id": a.working, "child_id": nil, "checked": nil}}})
+		map[string]any{"checks": []map[string]any{{"criterion_id": fmt.Sprint(a.working), "child_id": nil, "checked": nil}}})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Equal(t, late.ID, a.board(t).Weeks[0].Pending[0].RegistrationID, "taking the check back restores the statement")
 }

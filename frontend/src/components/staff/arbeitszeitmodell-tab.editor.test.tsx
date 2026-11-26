@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
   mutate: vi.fn(),
   toastError: vi.fn(),
   templates: [] as unknown[],
+  scheduleData: undefined as StaffSchedule | undefined,
 }));
 
 const schedule: StaffSchedule = {
@@ -23,13 +24,21 @@ const schedule: StaffSchedule = {
   entries: [{ weekIndex: 0, dayOfWeek: 0, targetMinutes: 267 }],
   weeklyTotals: [267],
   validFrom: "2026-08-10",
+  version: "schedule-v1",
 };
 
 vi.mock("~/lib/swr", () => ({
   useInvalidateMatching: () => mocks.mutate,
+  // The stored state a reload answers (ADR 0311, rule 6).
+  revalidateOrThrow: (read: { mutate: () => Promise<unknown> }) =>
+    read.mutate(),
   useSWRAuth: (key: string | null) => {
     if (key === "staff-schedule-42") {
-      return { data: schedule, isLoading: false, mutate: mocks.mutateSchedule };
+      return {
+        data: mocks.scheduleData ?? schedule,
+        isLoading: false,
+        mutate: mocks.mutateSchedule,
+      };
     }
     // The four-week preview's daily Soll stays pending in these editor tests.
     if (key?.startsWith("staff-schedule-targets-preview-")) {
@@ -87,6 +96,7 @@ describe("Arbeitszeitmodell decimal-hours editor", () => {
     mocks.mutate.mockReset();
     mocks.toastError.mockReset();
     mocks.templates = [];
+    mocks.scheduleData = undefined;
   });
 
   function openEditor() {
@@ -233,11 +243,15 @@ describe("Arbeitszeitmodell decimal-hours editor", () => {
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
 
     await waitFor(() =>
-      expect(mocks.updateSchedule).toHaveBeenCalledWith("42", {
-        mode: "custom",
-        rotationLength: 1,
-        entries: [{ weekIndex: 0, dayOfWeek: 0, targetMinutes: 267 }],
-      }),
+      expect(mocks.updateSchedule).toHaveBeenCalledWith(
+        "42",
+        {
+          mode: "custom",
+          rotationLength: 1,
+          entries: [{ weekIndex: 0, dayOfWeek: 0, targetMinutes: 267 }],
+        },
+        "schedule-v1",
+      ),
     );
   });
 
@@ -309,14 +323,86 @@ describe("Arbeitszeitmodell decimal-hours editor", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
     await waitFor(() =>
-      expect(mocks.updateSchedule).toHaveBeenCalledWith("42", {
-        mode: "custom",
-        rotationLength: 2,
-        entries: [
-          { weekIndex: 0, dayOfWeek: 0, targetMinutes: 267 },
-          { weekIndex: 1, dayOfWeek: 1, targetMinutes: 60 },
-        ],
-      }),
+      expect(mocks.updateSchedule).toHaveBeenCalledWith(
+        "42",
+        {
+          mode: "custom",
+          rotationLength: 2,
+          entries: [
+            { weekIndex: 0, dayOfWeek: 0, targetMinutes: 267 },
+            { weekIndex: 1, dayOfWeek: 1, targetMinutes: 60 },
+          ],
+        },
+        "schedule-v1",
+      ),
+    );
+  });
+
+  it("keeps the editor open on the stored model when it changed since opening", async () => {
+    // ADR 0311: Speichern sendet den Stand beim Öffnen. Hat jemand das
+    // Modell inzwischen geändert, bleibt der Editor offen, zeigt das
+    // gespeicherte Modell und meldet es ohne „Wiederholen“. Gesendet wird
+    // erst wieder auf dem neu gelesenen Stand.
+    const stored: StaffSchedule = {
+      ...schedule,
+      entries: [{ weekIndex: 0, dayOfWeek: 0, targetMinutes: 360 }],
+      weeklyTotals: [360],
+      version: "schedule-v2",
+    };
+    let answerReload: () => void = () => undefined;
+    mocks.mutateSchedule.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          answerReload = () => {
+            mocks.scheduleData = stored;
+            resolve(stored);
+          };
+        }),
+    );
+    mocks.updateSchedule
+      .mockRejectedValueOnce(
+        new ApiError("changed", 409, { code: "general.changed_since_read" }),
+      )
+      .mockResolvedValueOnce(stored);
+    openEditor();
+
+    fireEvent.change(
+      screen.getByRole("textbox", { name: "Dezimalstunden Montag" }),
+      { target: { value: "5" } },
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    await waitFor(() => expect(mocks.mutateSchedule).toHaveBeenCalledTimes(1));
+    expect(mocks.updateSchedule).toHaveBeenCalledWith(
+      "42",
+      expect.anything(),
+      "schedule-v1",
+    );
+    // Bis das gespeicherte Modell gelesen ist, geht nichts raus.
+    expect(
+      screen.queryByRole("button", { name: "Speichern" }),
+    ).not.toBeInTheDocument();
+
+    answerReload();
+    await waitFor(() =>
+      expect(
+        screen.getByRole("textbox", { name: "Dezimalstunden Montag" }),
+      ).toHaveValue("6"),
+    );
+    expect(await screen.findByText(/inzwischen geändert/)).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Wiederholen" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Bearbeiten" }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() => expect(mocks.updateSchedule).toHaveBeenCalledTimes(2));
+    expect(mocks.updateSchedule).toHaveBeenLastCalledWith(
+      "42",
+      expect.anything(),
+      "schedule-v2",
     );
   });
 });

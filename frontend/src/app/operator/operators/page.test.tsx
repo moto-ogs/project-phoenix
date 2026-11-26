@@ -98,7 +98,7 @@ vi.mock("~/components/ui/modal", () => ({
     ) : null,
 }));
 
-import OperatorOperatorsPage from "./page";
+import OperatorOperatorsPage from "./page-content";
 
 const sampleData: OperatorInvitationsData = {
   invitations: [

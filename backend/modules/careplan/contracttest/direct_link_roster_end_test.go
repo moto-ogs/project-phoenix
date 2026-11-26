@@ -181,7 +181,7 @@ func TestDecide_DirectLinkEndingEarlyKeepsTheChildOnTheRosterOfItsSource(t *test
 	require.NoError(t, env.db.NewRaw(`SELECT request_id FROM enrollment.request_children WHERE tenant_id = ? AND id = ?`,
 		testpkg.Tenant(t), childID).Scan(ctx, &requestID))
 	switchDate := calendar.NewDate(2026, 11, 2)
-	_, err := testpkg.TenantQuery1(t, ctx, env.db, env.decision.UpdateChildOfferings, enrollmentTest.UpdateChildOfferingsInput{
+	_, err := testpkg.TenantQuery1(t, ctx, env.db, correctOverRead(env.decision), enrollmentTest.UpdateChildOfferingsInput{
 		RequestID: requestID, ChildID: childID, ActorAccountID: env.creatorID, ActorRole: "admin", Reason: "Wochentage bestätigt",
 		EffectiveFrom: &switchDate,
 		Offerings:     []enrollmentTest.OfferingAdjustmentSelection{{OfferingID: direct.ID}, {OfferingID: source.ID}},
@@ -256,7 +256,7 @@ func TestUpdateChildOfferings_DatedChangeKeepsDirectRowBesideMultiSourceRoster(t
 	require.NoError(t, env.db.NewRaw(`SELECT request_id FROM enrollment.request_children WHERE tenant_id = ? AND id = ?`,
 		testpkg.Tenant(t), childID).Scan(ctx, &requestID))
 	switchDate := calendar.NewDate(2027, 3, 1)
-	_, err := testpkg.TenantQuery1(t, ctx, env.db, env.decision.UpdateChildOfferings, enrollmentTest.UpdateChildOfferingsInput{
+	_, err := testpkg.TenantQuery1(t, ctx, env.db, correctOverRead(env.decision), enrollmentTest.UpdateChildOfferingsInput{
 		RequestID: requestID, ChildID: childID, ActorAccountID: env.creatorID, ActorRole: "admin", Reason: "Mittwoch dazu",
 		EffectiveFrom: &switchDate,
 		Offerings: []enrollmentTest.OfferingAdjustmentSelection{

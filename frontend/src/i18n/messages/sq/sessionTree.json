@@ -1,0 +1,8 @@
+{
+  "checking": "Po kontrollohet hyrja...",
+  "leaving": "Faqja po ringarkohet...",
+  "changed": "Hyrja jote ndryshoi në një skedë ose dritare tjetër. Ringarko faqen për të vazhduar.",
+  "unconfirmed": "moto nuk mund të kontrollojë tani nëse je ende i identifikuar. Ringarko faqen pas pak.",
+  "reload": "Ringarko faqen",
+  "reloadHint": "Ringarkon faqen me hyrjen tënde aktuale."
+}

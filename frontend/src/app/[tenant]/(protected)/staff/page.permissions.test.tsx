@@ -10,7 +10,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
-import StaffPage from "./page";
+import StaffPage from "./page-content";
 
 const getTimeAccounts = vi.hoisted(() => vi.fn());
 const getDashboardSummary = vi.hoisted(() => vi.fn());
@@ -438,7 +438,7 @@ describe("/staff — Berechtigungs-Split", () => {
     ) => boolean;
     expect(isAffectedKey("tenant:staff-time-accounts-2026-8")).toBe(true);
     expect(isAffectedKey("tenant:staff-month-summary-12-2026-8")).toBe(true);
-    expect(isAffectedKey("tenant:time-tracking-month-summary-2026-8")).toBe(
+    expect(isAffectedKey("tenant:time-tracking-period-month-2026-08-01")).toBe(
       true,
     );
     expect(isAffectedKey("tenant:staff-list")).toBe(false);

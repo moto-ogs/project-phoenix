@@ -12,6 +12,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"testing"
 	"time"
 
@@ -32,6 +33,7 @@ import (
 	transactionFailures "github.com/moto-ogs/project-phoenix/modules/transactionruntime"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -271,10 +273,22 @@ func (m manualEnrollmentRouter) postManualEnrollmentForm(t *testing.T, formSchem
 	if terms == "" {
 		terms = phaseTerms(t, m.requests, m.phase.ID)
 	}
-	payload, err := json.Marshal(enrollmentAPI.AdminManualApprovedEnrollmentRequest{
-		ExistingStudentID:       existingStudentID,
+	var shown []ident.ID
+	for _, raw := range shownStudentIDs {
+		id, err := strconv.ParseInt(raw, 10, 64)
+		require.NoError(t, err)
+		shown = append(shown, ident.ID(id))
+	}
+	var existing ident.IDOrNone
+	if existingStudentID != "" {
+		id, parseErr := strconv.ParseInt(existingStudentID, 10, 64)
+		require.NoError(t, parseErr)
+		existing = ident.Optional(id)
+	}
+	payload, err := wire.Marshal(enrollmentAPI.AdminManualApprovedEnrollmentRequest{
+		ExistingStudentID:       existing,
 		CreateNewStudent:        createNewStudent,
-		ShownExistingStudentIDs: shownStudentIDs,
+		ShownExistingStudentIDs: shown,
 		SubmitEnrollmentRequest: enrollmentAPI.SubmitEnrollmentRequest{
 			GuardianFirstName: "Anna", GuardianLastName: "Beispiel",
 			GuardianEmail: fmt.Sprintf("manuell-%d@example.test", testpkg.Tenant(t)),

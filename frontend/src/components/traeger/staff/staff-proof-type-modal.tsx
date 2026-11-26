@@ -3,16 +3,19 @@
 // Eine Nachweisart des Trägers anlegen oder ändern (#4707): Name, wie lange
 // ein Nachweis gilt, wie viele Wochen vorher moto warnt und ob jede Person
 // ihn braucht. Archivieren statt Löschen: eingetragene Nachweise behalten
-// ihre Art.
+// ihre Art. Eine Änderung ruht auf dem Stand der Art beim Öffnen (ADR 0311).
 
 import { useEffect, useRef, useState } from "react";
 import { EditActions } from "~/components/ui/edit-actions";
+import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { FormModal } from "~/components/ui/form-modal";
 import { Input } from "~/components/ui/input";
 import { SwitchRow } from "~/components/ui/switch";
 import { useFormModalPending } from "~/components/ui/use-form-modal-pending";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
+import { useReadDraftForm } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
+import { useDraftOn } from "~/lib/swr/read-draft";
 import {
   saveStaffProofType,
   type StaffProofType,
@@ -60,33 +63,67 @@ function wholeNumber(value: string, min: number, max: number): number | null {
 
 export function StaffProofTypeModal({
   target,
+  types,
+  reload,
   onClose,
   onSaved,
 }: Readonly<{
   target: StaffProofTypeTarget;
+  /** The kinds as the page shows them now. */
+  types: readonly StaffProofType[];
+  /** Reads the kinds again after a refused change; rejects on failure. */
+  reload: () => Promise<readonly StaffProofType[]>;
   onClose: () => void;
   onSaved: (kind: StaffProofType) => void;
 }>) {
-  const [draft, setDraft] = useState<Draft | null>(null);
+  const [created, setCreated] = useState<Draft>(() => draftOf("new"));
+  const existing = target !== null && target !== "new" ? target : null;
+  // A change rests on the kind as the dialog opened on it (ADR 0311): a
+  // newer read refills only an untouched form, a refused save shows the
+  // stored kind, and nothing goes out until it is read.
+  const stored = existing
+    ? (types.find((kind) => kind.id === existing.id) ?? existing)
+    : undefined;
+  const change = useDraftOn<StaffProofType, Draft, string, StaffProofType>(
+    {
+      opening: stored ? `proof-type:${stored.id}` : null,
+      data: stored,
+      reload: async () => {
+        const found = (await reload()).find((kind) => kind.id === existing?.id);
+        if (!found) throw new Error("proof type is gone");
+        return found;
+      },
+    },
+    { token: (read) => read.version, toDraft: draftOf },
+  );
+  const draft = existing ? (change.draft ?? draftOf(existing)) : created;
   const save = useFormModalPending(target !== null);
   const formRef = useRef<HTMLFormElement>(null);
   const formErrors = useApiFormError(formRef);
   const { clear: clearErrors } = formErrors;
+  const form = useReadDraftForm(
+    existing ? change : null,
+    formErrors,
+    "die Nachweisart",
+  );
   const { success } = useToast();
 
   useEffect(() => {
     if (target === null) return;
-    setDraft(draftOf(target));
+    if (target === "new") setCreated(draftOf("new"));
     clearErrors();
   }, [target, clearErrors]);
 
   const set = (patch: Partial<Draft>) =>
-    setDraft((current) => (current ? { ...current, ...patch } : current));
-  const existing = target !== null && target !== "new" ? target : null;
+    existing
+      ? change.setDraft((current) => ({ ...current, ...patch }))
+      : setCreated((current) => ({ ...current, ...patch }));
 
   const submit = async () => {
-    if (target === null || !draft) return;
-    formErrors.clear();
+    if (target === null) return;
+    // Enter submits too: a change goes out only after the stored kind is
+    // read, and the shown error stays until then.
+    if (!form.begin()) return;
     const fieldErrors: Record<string, string> = {};
     const name = draft.name.trim();
     if (!name) fieldErrors.name = "Bitte trage einen Namen ein.";
@@ -106,24 +143,40 @@ export function StaffProofTypeModal({
       formErrors.invalid("Bitte prüfe die markierten Felder.", fieldErrors);
       return;
     }
+    const input = {
+      name,
+      validityMonths: validity,
+      reminderLeadWeeks: lead,
+      mandatory: draft.mandatory,
+      archived: draft.archived,
+    };
     await save.run(async (op) => {
-      try {
-        const saved = await saveStaffProofType(existing?.id ?? null, {
-          name,
-          validityMonths: validity,
-          reminderLeadWeeks: lead,
-          mandatory: draft.mandatory,
-          archived: draft.archived,
-        });
-        if (op.isCurrent()) onSaved(saved);
-        success(`Die Nachweisart „${saved.name}“ ist gespeichert.`);
-      } catch (err) {
-        logger.error("traeger_staff_proof_type_save_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        if (!op.isCurrent()) return;
-        void formErrors.show(err, { object: "die Nachweisart" });
+      const result = existing
+        ? await change.submit((version) =>
+            saveStaffProofType({ id: existing.id, version }, input),
+          )
+        : await saveStaffProofType(null, input).then(
+            (saved) => ({ ok: true, saved }) as const,
+            (error: unknown) => ({ ok: false, error, refused: false }) as const,
+          );
+      if (result.ok) {
+        if (op.isCurrent()) onSaved(result.saved);
+        success(`Die Nachweisart „${result.saved.name}“ ist gespeichert.`);
+        return;
       }
+      logger.error("traeger_staff_proof_type_save_failed", {
+        error:
+          result.error instanceof Error
+            ? result.error.message
+            : String(result.error),
+      });
+      if (!op.isCurrent()) return;
+      // Changed since the dialog opened: `reload` shows the stored kind in
+      // the form, without a retry (ADR 0311).
+      void formErrors.show(result.error, {
+        object: "die Nachweisart",
+        reload: "reload" in result ? result.reload : undefined,
+      });
     });
   };
 
@@ -144,12 +197,14 @@ export function StaffProofTypeModal({
           onCancel={onClose}
           onSave={() => formRef.current?.requestSubmit()}
           saving={save.pending}
+          disabled={existing !== null && !change.canSubmit}
+          disabledReason={form.waitReason}
           saveLabel={existing ? "Änderungen speichern" : "Nachweisart anlegen"}
           saveTooltip="Speichert die Nachweisart. Stand und Warnung aller Akten richten sich danach."
         />
       }
     >
-      {draft ? (
+      {target !== null ? (
         <form
           ref={formRef}
           noValidate
@@ -159,6 +214,7 @@ export function StaffProofTypeModal({
             void submit();
           }}
         >
+          <LoadErrorAlert error={form.loadError} />
           <Input
             controlSize="compact"
             id="name"

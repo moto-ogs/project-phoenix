@@ -54,6 +54,8 @@ func careContractMailRenderer(render carecontract.ContractMailRenderer, defaultF
 				"DocumentSHA256": mail.Content.DocumentSHA256, "EarlyStart": mail.Content.EarlyStart,
 				"WithdrawalEndsOn": mail.Content.WithdrawalEndsOn, "WithdrawalNotice": mail.Content.WithdrawalNotice,
 				"Concluded": mail.Content.Concluded,
+				// The changed version of #4816: the day it holds from.
+				"EffectiveFrom": mail.Content.EffectiveFrom, "Amendment": mail.Content.Amendment,
 			},
 			Attachments: careContractAttachments(mail),
 		}, nil

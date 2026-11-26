@@ -19,7 +19,7 @@ import (
 // these tests do not exercise stubbed out to their empty answers.
 func newReleaseTestService(owner facilitiesModule.Capability) Service {
 	return NewServiceWithConfig(ServiceConfig{
-		Rooms: owner,
+		Rooms: owner, Today: fixedServiceToday,
 		Occupancy: func(_ context.Context, rooms []facilitiesModule.Room) ([]RoomWithOccupancy, error) {
 			result := make([]RoomWithOccupancy, 0, len(rooms))
 			for index := range rooms {

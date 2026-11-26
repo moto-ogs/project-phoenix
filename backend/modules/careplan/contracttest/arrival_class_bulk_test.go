@@ -67,7 +67,7 @@ func TestBulkUpsertBySchoolClassWritesTheClassTimetable(t *testing.T) {
 	testpkg.CreateTestArrivalSchedule(t, db, second.ID, timetable.WeekdayMonday, staff.ID, "")
 
 	result, err := svc.BulkUpsertArrivalSchedules(ctx,
-		careplan.ArrivalScheduleBulkFilter{SchoolClass: "7c", ExpectedVersion: unstoredClassVersion},
+		careplan.ArrivalScheduleBulkFilter{SchoolClass: "7c", ExpectedVersion: classArrivalVersion(t, ctx, db, svc, "7c")},
 		[]careplan.ArrivalScheduleInput{{Weekday: timetable.WeekdayMonday, ArrivalTime: "11:45"}},
 		staff.ID,
 	)

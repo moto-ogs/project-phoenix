@@ -1,3 +1,4 @@
+import { bffFileHref } from "./bff-fetch";
 import type * as meContract from "./contract/me.generated";
 import { createLogger } from "~/lib/logger";
 
@@ -16,6 +17,8 @@ export interface Profile {
   updatedAt: string;
   lastLogin?: string | null;
   settings?: ProfileSettings;
+  /** The read-state token of the profile; an edit sends it back (ADR 0311). */
+  version: string;
 }
 
 export interface ProfileSettings {
@@ -44,6 +47,8 @@ export interface ProfileUpdateRequest {
   bio?: string;
   avatar?: string;
   settings?: ProfileSettings;
+  /** The version of the profile the edit was made from (ADR 0311). */
+  expectedVersion?: string;
 }
 
 // The decoded answer of the catalog proxy (#2353), mapped to the view.
@@ -68,7 +73,11 @@ export function mapProfileResponse(data: meContract.ProfileResponse): Profile {
     const filename = avatarUrl.split("/").pop();
     if (filename) {
       // Use authenticated API route that goes through Next.js
-      avatarUrl = `/api/me/profile/avatar/${filename}`;
+      avatarUrl = bffFileHref(
+        "tenant",
+        "GET /api/me/profile/avatar/{filename}",
+        { params: { filename } },
+      );
     }
   }
 
@@ -85,6 +94,7 @@ export function mapProfileResponse(data: meContract.ProfileResponse): Profile {
     updatedAt: data.updated_at,
     lastLogin: data.last_login,
     settings,
+    version: data.version,
   };
 }
 
@@ -107,6 +117,9 @@ export function mapProfileUpdateRequest(
   }
   if (request.avatar !== undefined) {
     mapped.avatar = request.avatar;
+  }
+  if (request.expectedVersion !== undefined) {
+    mapped.expected_version = request.expectedVersion;
   }
   if (request.settings !== undefined) {
     // Convert settings to JSON string if needed

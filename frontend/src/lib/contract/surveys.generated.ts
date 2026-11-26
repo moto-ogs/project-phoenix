@@ -5,6 +5,7 @@ import {
   bool,
   fileAnswer,
   instant,
+  int64String,
   nullable,
   num,
   object,
@@ -16,7 +17,13 @@ import {
 } from "./runtime";
 import {
   deletedResponseSchema,
+  type versionRequest,
 } from "./shared.generated";
+
+/** Go: announcement.fingerprintRequest */
+export interface fingerprintRequest {
+  expected_fingerprint?: string;
+}
 
 /** Go: announcement.surveyTargetWire */
 export interface surveyTargetWire {
@@ -27,7 +34,7 @@ export interface surveyTargetWire {
 
 export const surveyTargetWireSchema: z.ZodType<surveyTargetWire, unknown> = object<surveyTargetWire>({
   target_type: str,
-  ref_id: optional(str),
+  ref_id: optional(int64String),
   ref_text: optional(str),
 });
 
@@ -38,7 +45,7 @@ export interface surveyOptionResponse {
 }
 
 export const surveyOptionResponseSchema: z.ZodType<surveyOptionResponse, unknown> = object<surveyOptionResponse>({
-  id: str,
+  id: int64String,
   label: str,
 });
 
@@ -53,7 +60,7 @@ export interface surveyQuestionResponse {
 }
 
 export const surveyQuestionResponseSchema: z.ZodType<surveyQuestionResponse, unknown> = object<surveyQuestionResponse>({
-  id: str,
+  id: int64String,
   position: safeInt,
   kind: str,
   prompt: str,
@@ -77,10 +84,12 @@ export interface surveyResponse {
   participant_count: number;
   targets: surveyTargetWire[] | null;
   questions: surveyQuestionResponse[] | null;
+  version: string;
+  fingerprint: string;
 }
 
 export const surveyResponseSchema: z.ZodType<surveyResponse, unknown> = object<surveyResponse>({
-  id: str,
+  id: int64String,
   title: str,
   intro: str,
   audience: str,
@@ -94,6 +103,8 @@ export const surveyResponseSchema: z.ZodType<surveyResponse, unknown> = object<s
   participant_count: safeInt,
   targets: nullable(arr(surveyTargetWireSchema)),
   questions: nullable(arr(surveyQuestionResponseSchema)),
+  version: str,
+  fingerprint: str,
 });
 
 /** Go: announcement.surveyToAnswerResponse */
@@ -107,7 +118,7 @@ export interface surveyToAnswerResponse {
 }
 
 export const surveyToAnswerResponseSchema: z.ZodType<surveyToAnswerResponse, unknown> = object<surveyToAnswerResponse>({
-  id: str,
+  id: int64String,
   title: str,
   intro: str,
   anonymous: bool,
@@ -126,7 +137,7 @@ export interface surveyFormSurvey {
 }
 
 export const surveyFormSurveySchema: z.ZodType<surveyFormSurvey, unknown> = object<surveyFormSurvey>({
-  id: str,
+  id: int64String,
   title: str,
   intro: str,
   anonymous: bool,
@@ -156,7 +167,7 @@ export interface surveyRespondentAnswerResponse {
 }
 
 export const surveyRespondentAnswerResponseSchema: z.ZodType<surveyRespondentAnswerResponse, unknown> = object<surveyRespondentAnswerResponse>({
-  question_id: str,
+  question_id: int64String,
   options: nullable(arr(str)),
   scale_value: optional(safeInt),
   text: optional(str),
@@ -181,7 +192,7 @@ export interface surveyOptionCountResponse {
 }
 
 export const surveyOptionCountResponseSchema: z.ZodType<surveyOptionCountResponse, unknown> = object<surveyOptionCountResponse>({
-  option_id: str,
+  option_id: int64String,
   label: str,
   count: safeInt,
 });
@@ -203,7 +214,7 @@ export interface surveyQuestionResultResponse {
 }
 
 export const surveyQuestionResultResponseSchema: z.ZodType<surveyQuestionResultResponse, unknown> = object<surveyQuestionResultResponse>({
-  question_id: str,
+  question_id: int64String,
   position: safeInt,
   kind: str,
   prompt: str,
@@ -225,7 +236,7 @@ export interface surveyHighlightResponse {
 }
 
 export const surveyHighlightResponseSchema: z.ZodType<surveyHighlightResponse, unknown> = object<surveyHighlightResponse>({
-  question_id: str,
+  question_id: int64String,
   prompt: str,
   average: num,
 });
@@ -245,7 +256,7 @@ export interface surveyResultsResponse {
 }
 
 export const surveyResultsResponseSchema: z.ZodType<surveyResultsResponse, unknown> = object<surveyResultsResponse>({
-  survey_id: str,
+  survey_id: int64String,
   title: str,
   anonymous: bool,
   status: str,
@@ -282,6 +293,7 @@ export interface surveyRequest {
   closes_at?: string | null;
   targets?: surveyTargetRequest[] | null;
   questions?: surveyQuestionRequest[] | null;
+  expected_version?: string;
 }
 
 /** Go: announcement.surveyAnswerRequest */
@@ -320,6 +332,7 @@ export const routes = {
     method: "DELETE",
     pattern: "/api/surveys/{surveyId}",
     portals: ["tenant"],
+    request: requestBody<fingerprintRequest>(),
     response: success(deletedResponseSchema),
   },
   "GET /api/surveys/": {
@@ -388,6 +401,7 @@ export const routes = {
     method: "POST",
     pattern: "/api/surveys/{surveyId}/publish",
     portals: ["tenant"],
+    request: requestBody<versionRequest>(),
     response: success(surveyResponseSchema),
   },
   "POST /api/surveys/{surveyId}/remind": {

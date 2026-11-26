@@ -11,11 +11,13 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	appointmentcap "github.com/moto-ogs/project-phoenix/modules/appointments"
 	calendarSvc "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/portal"
 	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 type fakeCalendarService struct {
@@ -345,7 +347,7 @@ func TestCreateAppointmentParsesPayload(t *testing.T) {
 		"end_time":"10:30",
 		"delivery_mode":"rsvp_required",
 		"recurrence":{"frequency":"weekly","interval_count":2,"weekdays":["monday"]},
-		"targets":[{"type":"staff","id":42}]
+		"targets":[{"type":"staff","id":"42"}]
 	}`
 	req := httptest.NewRequest(http.MethodPost, "/appointments", strings.NewReader(body))
 	w := httptest.NewRecorder()
@@ -684,4 +686,20 @@ func TestRecipientOptionsMapsUnknownError(t *testing.T) {
 	rs.recipientOptions(w, req)
 
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
+}
+
+// An update over a stale read answers 409 general.changed_since_read through
+// the shared renderer; the calendar keeps no case of its own (ADR 0311).
+func TestUpdateAppointmentAnswersAStaleReadWithItsCode(t *testing.T) {
+	t.Parallel()
+
+	rs := &Resource{service: &fakeCalendarService{updateErr: fmt.Errorf("update: %w", readstate.ErrChanged)}}
+	body := `{"title":"Planning","start_date":"2026-01-06","end_date":"2026-01-06","start_time":"10:00","end_time":"11:00","expected_version":"old"}`
+	req := requestWithURLParam(httptest.NewRequest(http.MethodPut, "/appointments/41", strings.NewReader(body)), "appointmentId", "41")
+	w := httptest.NewRecorder()
+
+	rs.updateAppointment(w, req)
+
+	assert.Equal(t, http.StatusConflict, w.Code)
+	assert.Contains(t, w.Body.String(), `"code":"`+readstate.ChangedCode+`"`)
 }

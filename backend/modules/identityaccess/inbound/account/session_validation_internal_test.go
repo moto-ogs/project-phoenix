@@ -8,9 +8,12 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
+	"github.com/moto-ogs/project-phoenix/modules/identityaccess/tokenprimitives"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/stretchr/testify/require"
 )
 
@@ -105,13 +108,35 @@ func TestValidateSession_AnswersRefusalsAsTheRefresh(t *testing.T) {
 // identifiers travel as strings like every answer's (ADR 0300, #7808).
 func TestValidateSessionAnswersTheClaimsWithStringIdentifiers(t *testing.T) {
 	t.Parallel()
-	rs := &Resource{Sessions: &sessionValidationStub{claims: identityaccess.SessionClaims{
-		AccountID: 5, Email: "a@test.local", Scope: "tenant", TenantID: 9007199254740993, ExpiresAt: 1795382896,
-	}}}
+	claims := identityaccess.SessionClaims{
+		AccountID: 9007199254740993, Email: "a@test.local", Username: "test", FirstName: "Test", LastName: "User",
+		Roles: []string{"user"}, RoleIsSystem: []bool{false}, Permissions: []string{"students:read"},
+		IsAdmin: true, Scope: "tenant", TenantID: 9007199254740995, OrgID: 9007199254740997,
+		FamilyID: "family", ReadOnly: true, ActingAdminID: 9007199254740999, PreviewID: "preview",
+		ViaTraeger: true, IssuedAt: 1795380000, ExpiresAt: 1795382896,
+	}
+	assertSessionClaimParity(t, claims, "tenant")
+}
+
+func TestValidateSessionPreservesEmptyOperatorPermissions(t *testing.T) {
+	t.Parallel()
+	assertSessionClaimParity(t, identityaccess.SessionClaims{
+		AccountID: 42, Email: "operator:42", Scope: "platform",
+		Roles: []string{"operator"}, RoleIsSystem: []bool{true}, Permissions: []string{},
+		IssuedAt: 1795380000, ExpiresAt: 1795382896,
+	}, "platform")
+}
+
+func assertSessionClaimParity(t *testing.T, claims identityaccess.SessionClaims, portal string) {
+	t.Helper()
+	rs := &Resource{Sessions: &sessionValidationStub{claims: claims}}
 	rr := httptest.NewRecorder()
 	testutil.ServeAtRoute(rr, httptest.NewRequest(http.MethodPost, "/auth/session/validate",
-		strings.NewReader(`{"access_token":"a","portal":"tenant"}`)), "/auth/session/validate", rs.validateSession)
+		strings.NewReader(`{"access_token":"a","portal":"`+portal+`"}`)), "/auth/session/validate", rs.validateSession)
 
 	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
-	require.JSONEq(t, `{"id":"5","sub":"a@test.local","scope":"tenant","tenant_id":"9007199254740993","exp":1795382896}`, rr.Body.String())
+	signed, err := wire.Marshal(tokenprimitives.EncodeAccess(tokenprimitives.AccessClaims(claims),
+		time.Unix(claims.IssuedAt, 0), time.Unix(claims.ExpiresAt, 0)))
+	require.NoError(t, err)
+	require.JSONEq(t, string(signed), rr.Body.String())
 }

@@ -28,7 +28,7 @@ func TestParentMessageWireContractPreservesJSONPayloadAndStringIDs(t *testing.T)
 		AppliedBy: &appliedBy, DecisionReason: "bestätigt", ReadByStaff: true, ReadByGuardian: true,
 	}})
 
-	encoded, err := json.Marshal(response)
+	encoded, err := wire.Marshal(response)
 	require.NoError(t, err)
 	assert.JSONEq(t, `[{"id":"7","sender_kind":"guardian","sender_name":"Erika","body":"Ja","created_at":"2026-09-04T08:15:00Z","kind":"request","event_type":"care","request_type":"pickup","request_status":"open","payload":{"answer":"Ja"},"ref_table":"schedule.requests","ref_id":"12","applied_by":"34","decision_reason":"bestätigt","read_by_staff":true,"read_by_guardian":true}]`, string(encoded))
 }
@@ -214,7 +214,7 @@ func TestReadersWireContract(t *testing.T) {
 			School:   communication.ParentMessageSchoolReaders{Kind: communication.ParentMessageReadersLeadership, Names: []string{"Swantje M.", ""}},
 		},
 	})
-	body, err := json.Marshal(struct {
+	body, err := wire.Marshal(struct {
 		Audience string          `json:"audience"`
 		Readers  ReadersResponse `json:"readers"`
 	}{detail.Audience, detail.Readers})
@@ -223,7 +223,7 @@ func TestReadersWireContract(t *testing.T) {
 		"guardian":{"account_id":"9","name":"Sabine Schneider","relationship_type":"parent"},
 		"school":{"kind":"leadership","names":["Swantje M."],"unnamed_count":1}}}`, string(body))
 
-	team, err := json.Marshal(toReadersResponse(communication.ParentMessageReaders{
+	team, err := wire.Marshal(toReadersResponse(communication.ParentMessageReaders{
 		School: communication.ParentMessageSchoolReaders{Kind: communication.ParentMessageReadersAllStaff},
 	}))
 	require.NoError(t, err)

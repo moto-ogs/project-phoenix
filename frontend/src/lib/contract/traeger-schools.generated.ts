@@ -180,6 +180,65 @@ export const ArrivalPickupTimesSchema: z.ZodType<ArrivalPickupTimes, unknown> = 
   schools: nullable(arr(SchoolArrivalPickupTimesSchema)),
 });
 
+/** Go: traegerview.SchoolChildCount */
+export interface SchoolChildCount {
+  id: string;
+  name: string;
+  slug: string;
+  subdomain: string;
+  city: string;
+  children: number;
+}
+
+export const SchoolChildCountSchema: z.ZodType<SchoolChildCount, unknown> = object<SchoolChildCount>({
+  id: int64String,
+  name: str,
+  slug: str,
+  subdomain: str,
+  city: str,
+  children: safeInt,
+});
+
+/** Go: traegerview.TraegerChild */
+export interface TraegerChild {
+  student_id: string;
+  school_id: string;
+  school_name: string;
+  first_name: string;
+  last_name: string;
+  school_class: string;
+  group_name: string;
+}
+
+export const TraegerChildSchema: z.ZodType<TraegerChild, unknown> = object<TraegerChild>({
+  student_id: int64String,
+  school_id: int64String,
+  school_name: str,
+  first_name: str,
+  last_name: str,
+  school_class: str,
+  group_name: str,
+});
+
+/** Go: traegerview.TraegerChildren */
+export interface TraegerChildren {
+  roster_date: string | null;
+  schools: SchoolChildCount[] | null;
+  total: number;
+  matched: number;
+  children: TraegerChild[] | null;
+  next_cursor: string;
+}
+
+export const TraegerChildrenSchema: z.ZodType<TraegerChildren, unknown> = object<TraegerChildren>({
+  roster_date: nullable(calendarDate),
+  schools: nullable(arr(SchoolChildCountSchema)),
+  total: safeInt,
+  matched: safeInt,
+  children: nullable(arr(TraegerChildSchema)),
+  next_cursor: str,
+});
+
 /** Go: traegerview.ComparedSchool */
 export interface ComparedSchool {
   id: string;
@@ -318,6 +377,55 @@ export const DailyAttendanceSchema: z.ZodType<DailyAttendance, unknown> = object
   summary: DailyAttendanceSummarySchema,
   days: nullable(arr(DailyAttendanceDaySchema)),
   schools: nullable(arr(SchoolDailyAttendanceSchema)),
+});
+
+/** Go: traegerview.SchoolDayClosing */
+export interface SchoolDayClosing {
+  name: string;
+  traeger: boolean;
+  since: string | null;
+  until: string | null;
+}
+
+export const SchoolDayClosingSchema: z.ZodType<SchoolDayClosing, unknown> = object<SchoolDayClosing>({
+  name: str,
+  traeger: bool,
+  since: nullable(calendarDate),
+  until: nullable(calendarDate),
+});
+
+/** Go: traegerview.SchoolDayChanges */
+export interface SchoolDayChanges {
+  id: string;
+  name: string;
+  slug: string;
+  subdomain: string;
+  city: string;
+  closing_days: SchoolDayClosing[] | null;
+  cancelled_blocks: number;
+}
+
+export const SchoolDayChangesSchema: z.ZodType<SchoolDayChanges, unknown> = object<SchoolDayChanges>({
+  id: int64String,
+  name: str,
+  slug: str,
+  subdomain: str,
+  city: str,
+  closing_days: nullable(arr(SchoolDayClosingSchema)),
+  cancelled_blocks: safeInt,
+});
+
+/** Go: traegerview.SchoolsDayChanges */
+export interface SchoolsDayChanges {
+  day: string | null;
+  schools: SchoolDayChanges[] | null;
+  as_of: string;
+}
+
+export const SchoolsDayChangesSchema: z.ZodType<SchoolsDayChanges, unknown> = object<SchoolsDayChanges>({
+  day: nullable(calendarDate),
+  schools: nullable(arr(SchoolDayChangesSchema)),
+  as_of: instant,
 });
 
 /** Go: traegerview.OccupancyGroup */
@@ -590,13 +698,36 @@ export const routes = {
     },
     response: fileAnswer,
   },
+  "GET /traeger/schools/children": {
+    method: "GET",
+    pattern: "/traeger/schools/children",
+    portals: ["org"],
+    query: {
+      "cursor": { kind: "string" },
+      "school_id": { kind: "id" },
+      "search": { kind: "string" },
+    },
+    response: success(TraegerChildrenSchema),
+  },
+  "GET /traeger/schools/children/export": {
+    method: "GET",
+    pattern: "/traeger/schools/children/export",
+    portals: ["org"],
+    query: {
+      "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+      "roster_date": { kind: "date" },
+      "school_id": { kind: "id" },
+      "search": { kind: "string" },
+    },
+    response: fileAnswer,
+  },
   "GET /traeger/schools/comparison": {
     method: "GET",
     pattern: "/traeger/schools/comparison",
     portals: ["org"],
     query: {
       "from": { kind: "date" },
-      "schools": { kind: "string" },
+      "schools": { kind: "id", repeated: true },
       "to": { kind: "date" },
     },
     response: success(SchoolComparisonSchema),
@@ -609,7 +740,7 @@ export const routes = {
       "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
       "from": { kind: "date" },
       "metrics": { kind: "string" },
-      "schools": { kind: "string" },
+      "schools": { kind: "id", repeated: true },
       "to": { kind: "date" },
     },
     response: fileAnswer,
@@ -634,6 +765,12 @@ export const routes = {
       "to": { kind: "date" },
     },
     response: fileAnswer,
+  },
+  "GET /traeger/schools/day-changes": {
+    method: "GET",
+    pattern: "/traeger/schools/day-changes",
+    portals: ["org"],
+    response: success(SchoolsDayChangesSchema),
   },
   "GET /traeger/schools/export": {
     method: "GET",

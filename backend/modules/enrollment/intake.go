@@ -265,6 +265,9 @@ type CareOffering struct {
 	PickupTimes               map[string]string
 	Translations              json.RawMessage
 	AutoAddTriggerOfferingIDs []int64
+	// Version is the catalog's token of the offering a save sends back
+	// (ADR 0311); only the catalog administration's reads set it.
+	Version string
 }
 
 // HasFixedDays reports whether the offering books all its available days
@@ -319,6 +322,9 @@ type RequestStatus struct {
 type StatusPage struct {
 	EditMode         string
 	CareFacilityTerm string
+	// CareFacilityArticle is the article of that term: "der", "die" or
+	// "das" (#8136).
+	CareFacilityArticle string
 	// RenewalTerms are the conditions a renewal asks the parents to accept
 	// for the new care phase (#6456); nil while no child of the request
 	// waits for a renewal decision.
@@ -371,6 +377,8 @@ type EditDraft struct {
 	// CareFacilityTerm is the school's term for its care in the fixed texts
 	// of the reopened form (#6042).
 	CareFacilityTerm string
+	// CareFacilityArticle is the article of that term (#8136).
+	CareFacilityArticle string
 }
 
 // IntakeSubmissions stores submissions and the parent's later changes. Each

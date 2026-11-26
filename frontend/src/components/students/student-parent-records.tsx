@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useId, useState, type ReactNode } from "react";
 
 import {
   DECLARATION_ACTION_LABEL,
@@ -181,15 +181,17 @@ function LetterGroup({
   letters: readonly parentAnnouncementsContract.studentLetterResponse[];
 }>) {
   const fold = useFold(letters);
+  const headingId = useId();
+  const listId = useId();
   const confirmed = letters.filter((letter) => letter.acknowledged_at).length;
   return (
-    <section aria-labelledby="kind-elternbriefe">
+    <section aria-labelledby={headingId}>
       <ListGroupHeader
-        title={<span id="kind-elternbriefe">Elternbriefe</span>}
+        title={<span id={headingId}>Elternbriefe</span>}
         meta={`${confirmed} von ${letters.length} bestätigt`}
         className="mb-3"
       />
-      <ResponsiveActionList id="kind-elternbriefe-liste">
+      <ResponsiveActionList id={listId}>
         {fold.visible.map((letter) => (
           <RecordRow
             key={letter.announcement_id}
@@ -214,7 +216,7 @@ function LetterGroup({
         <FoldToggle
           hidden={fold.hidden}
           expanded={fold.expanded}
-          controls="kind-elternbriefe-liste"
+          controls={listId}
           onToggle={fold.toggle}
         />
       )}
@@ -230,6 +232,8 @@ function DeclarationGroup({
   declarations: readonly StudentParentDeclaration[];
 }>) {
   const fold = useFold(declarations);
+  const headingId = useId();
+  const listId = useId();
   const [downloading, setDownloading] = useState<string | null>(null);
   const downloadErrors = useApiErrorDisplay();
   const waiting = declarations.filter(
@@ -271,13 +275,13 @@ function DeclarationGroup({
   };
 
   return (
-    <section aria-labelledby="kind-einverstaendnisse">
+    <section aria-labelledby={headingId}>
       <ListGroupHeader
-        title={<span id="kind-einverstaendnisse">Einverständnisse</span>}
+        title={<span id={headingId}>Einverständnisse</span>}
         meta={summary}
         className="mb-3"
       />
-      <ResponsiveActionList id="kind-einverstaendnisse-liste">
+      <ResponsiveActionList id={listId}>
         {fold.visible.map((declaration) => (
           <RecordRow
             key={declaration.announcement_id}
@@ -314,7 +318,7 @@ function DeclarationGroup({
         <FoldToggle
           hidden={fold.hidden}
           expanded={fold.expanded}
-          controls="kind-einverstaendnisse-liste"
+          controls={listId}
           onToggle={fold.toggle}
         />
       )}

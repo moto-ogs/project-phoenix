@@ -3,12 +3,12 @@ package parent
 import (
 	"errors"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 	parentService "github.com/moto-ogs/project-phoenix/workflows/parentportal"
 )
@@ -19,8 +19,8 @@ import (
 
 // BillingDocumentResponse is one document in the inbox.
 type BillingDocumentResponse struct {
-	ID             string        `json:"id"`
-	OrganizationID string        `json:"organization_id"`
+	ID             ident.ID      `json:"id"`
+	OrganizationID ident.ID      `json:"organization_id"`
 	TraegerName    string        `json:"traeger_name"`
 	Kind           string        `json:"kind"`
 	Number         string        `json:"number"`
@@ -37,6 +37,9 @@ type BillingDocumentResponse struct {
 	SignedAt       *time.Time `json:"signed_at,omitempty"`
 	// Replaced marks a contract version replaced by a later change (#4681).
 	Replaced bool `json:"replaced"`
+	// ChangeAwaitsSignature marks a changed version of an active contract
+	// that waits for the parents' signature (#4816).
+	ChangeAwaitsSignature bool `json:"change_awaits_signature"`
 	// EndsOn is the last day of a terminated contract (#4682).
 	EndsOn *timezone.Date `json:"ends_on,omitempty"`
 	// CanEndContract tells that the account may withdraw or terminate the
@@ -73,12 +76,13 @@ func (rs *Resource) respondInbox(w http.ResponseWriter, r *http.Request, inbox p
 	out := make([]BillingDocumentResponse, len(documents))
 	for i, document := range documents {
 		out[i] = BillingDocumentResponse{
-			ID: strconv.FormatInt(document.ID, 10), OrganizationID: strconv.FormatInt(document.OrganizationID, 10),
+			ID: ident.ID(document.ID), OrganizationID: ident.ID(document.OrganizationID),
 			TraegerName: document.TraegerName, Kind: document.Kind, Number: document.Number, PeriodName: document.PeriodName,
 			ServiceFrom: document.ServiceFrom, ServiceUntil: document.ServiceUntil, IssuedOn: document.IssuedOn,
 			TotalCents: int(document.TotalCents), ChildNames: document.ChildNames, SentAt: document.SentAt,
 			ContractStatus: document.ContractStatus, SignedAt: document.SignedAt, CanSign: document.CanSign, Replaced: document.Replaced,
-			SEPAMandate: document.SEPAMandate, EndsOn: document.EndsOn, CanEndContract: document.CanEndContract, CanWithdrawContract: document.CanWithdrawContract,
+			ChangeAwaitsSignature: document.ChangeAwaitsSignature,
+			SEPAMandate:           document.SEPAMandate, EndsOn: document.EndsOn, CanEndContract: document.CanEndContract, CanWithdrawContract: document.CanWithdrawContract,
 		}
 	}
 	common.Respond(w, r, http.StatusOK, out, "Documents retrieved")

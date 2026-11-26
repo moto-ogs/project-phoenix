@@ -54,14 +54,14 @@ func checkCheckInToTarget(t *testing.T, graph *goldenRuntime) {
 	}
 
 	child := testpkg.CreateTestStudent(t, db, "Mila", "Anmelden", "2a").ID
-	groupBody := fmt.Sprintf(`{"student_ids":[%d],"target_active_group_id":%d}`, child, supervised.ID)
+	groupBody := fmt.Sprintf(`{"student_ids":["%d"],"target_active_group_id":"%d"}`, child, supervised.ID)
 
 	code, body := post("/api/active/visits/check-in-to-group", groupBody, token("visits:update"))
 	require.Equal(t, http.StatusForbidden, code, "the check-in right is required: %s", body)
 	assert.Zero(t, openAttendance(child))
 
 	code, body = post("/api/active/visits/check-in-to-group",
-		fmt.Sprintf(`{"student_ids":[%d],"target_active_group_id":%d}`, child, unsupervised.ID), staff)
+		fmt.Sprintf(`{"student_ids":["%d"],"target_active_group_id":"%d"}`, child, unsupervised.ID), staff)
 	require.Equal(t, http.StatusForbidden, code, "a room without supervision is no target: %s", body)
 	assert.Zero(t, openAttendance(child), "a refused placement leaves no check-in behind")
 
@@ -79,9 +79,25 @@ func checkCheckInToTarget(t *testing.T, graph *goldenRuntime) {
 	assert.Equal(t, 1, openAttendance(child))
 	assert.Equal(t, []int64{supervised.ID}, openVisitSessions(t, db, child), "the child is in the room, not in transit")
 
+	closed := testpkg.CreateTestOpenRoom(t, db, "Anmelden Gesperrter Raum")
+	closeRoomToday(t, db, testpkg.Tenant(t), closed.ID)
+	closedCheckInChild := testpkg.CreateTestStudent(t, db, "Nora", "Gesperrt", "2a").ID
+	code, body = post("/api/active/visits/check-in-to-room",
+		fmt.Sprintf(`{"student_ids":["%d"],"target_room_id":"%d"}`, closedCheckInChild, closed.ID), staff)
+	require.Equal(t, http.StatusConflict, code, body)
+	assert.Contains(t, body, `"code":"rooms.room_closed"`)
+	assert.Zero(t, openAttendance(closedCheckInChild), "a closed room does not check a child in")
+
+	admin := testpkg.MintLiveSessionJWT(t, db, testutil.AdminTestClaimsForTenant(int(account.ID), testpkg.Tenant(t)))
+	code, body = post("/api/active/visits/move-to-room",
+		fmt.Sprintf(`{"student_ids":["%d"],"target_room_id":"%d"}`, child, closed.ID), admin)
+	require.Equal(t, http.StatusConflict, code, body)
+	assert.Contains(t, body, `"code":"rooms.room_closed"`)
+	assert.Equal(t, []int64{supervised.ID}, openVisitSessions(t, db, child), "a closed room does not move a child")
+
 	yardChild := testpkg.CreateTestStudent(t, db, "Jonas", "Anmelden", "2a").ID
 	code, body = post("/api/active/visits/check-in-to-room",
-		fmt.Sprintf(`{"student_ids":[%d],"target_room_id":%d}`, yardChild, gym.ID), staff)
+		fmt.Sprintf(`{"student_ids":["%d"],"target_room_id":"%d"}`, yardChild, gym.ID), staff)
 	require.Equal(t, http.StatusOK, code, body)
 	var stay struct {
 		Data struct {
@@ -98,9 +114,8 @@ func checkCheckInToTarget(t *testing.T, graph *goldenRuntime) {
 
 	// The placed child moves on into the released room, ending its stay in
 	// the supervised room. An admin needs no source supervision.
-	admin := testpkg.MintLiveSessionJWT(t, db, testutil.AdminTestClaimsForTenant(int(account.ID), testpkg.Tenant(t)))
 	code, body = post("/api/active/visits/move-to-room",
-		fmt.Sprintf(`{"student_ids":[%d],"target_room_id":%d}`, child, gym.ID), admin)
+		fmt.Sprintf(`{"student_ids":["%d"],"target_room_id":"%d"}`, child, gym.ID), admin)
 	require.Equal(t, http.StatusOK, code, body)
 	var moved struct {
 		Data struct {
@@ -117,7 +132,7 @@ func checkCheckInToTarget(t *testing.T, graph *goldenRuntime) {
 	transitChild := testpkg.CreateTestStudent(t, db, "Ida", "Anmelden", "2a").ID
 	testpkg.CreateTestAttendance(t, db, transitChild, colleague.ID, device.ID, time.Now(), nil)
 	code, body = post("/api/active/visits/transit/assign",
-		fmt.Sprintf(`{"student_ids":[%d],"active_group_id":%d}`, transitChild, supervised.ID), admin)
+		fmt.Sprintf(`{"student_ids":["%d"],"active_group_id":"%d"}`, transitChild, supervised.ID), admin)
 	require.Equal(t, http.StatusOK, code, body)
 	var assigned struct {
 		Data struct {

@@ -122,7 +122,7 @@ func TestBootstrapTenant_DemoSchoolJoinsExistingOrganization(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, int64(4207), bootstrap.OrganizationID)
-	assert.InDelta(t, 4207, requests["/operator/schools"]["organization_id"], 0)
+	assert.Equal(t, "4207", requests["/operator/schools"]["organization_id"])
 	assert.Equal(t, "OGS Nord", requests["/operator/schools"]["name"])
 	assert.Equal(t, "ogs-nord", requests["/operator/schools"]["slug"])
 	assert.Equal(t, "ines.lindner@demo-ogs-nord.moto-ogs.de", requests["/operator/schools/2/invite-admin"]["email"])
@@ -233,7 +233,7 @@ func TestFixedSeeder_SeedStaffAccounts_NamesOneCaregiverAfterTheVisitor(t *testi
 	assert.Equal(t, 1, names["Anna Müller"], "the visitor's name appears exactly once")
 	assert.Equal(t, 1, names["Julia Klein"], "the seed person of the same name takes the displaced name")
 	assert.Equal(t, "Anna", registered[visitorStaffIndex]["first_name"])
-	assert.InDelta(t, 1, registered[visitorStaffIndex]["role_id"], 0)
+	assert.Equal(t, "1", registered[visitorStaffIndex]["role_id"])
 	assert.Equal(t, "Julia Klein", fs.staffCredentials[visitorStaffIndex].Name, "the internal key keeps the seed name")
 	visitor := DemoStaff[visitorStaffIndex]
 	assert.Equal(t, fs.accountIDs[visitor.FirstName+" "+visitor.LastName], savedAccountID)

@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // Nachweisarten, Nachweise list and reminders (#4808). Workforce owns the
@@ -48,13 +50,23 @@ type QualificationType struct {
 	Archived          bool
 }
 
-// QualificationTypeInput is the full editable state of a kind.
+// QualificationTypeInput is the full editable state of a kind. An update
+// carries the QualificationTypeVersion its form was read from in
+// ExpectedVersion (ADR 0311); a create ignores it.
 type QualificationTypeInput struct {
 	Name              string
 	ValidityMonths    *int
 	ReminderLeadWeeks int
 	Mandatory         bool
 	Archived          bool
+	ExpectedVersion   string
+}
+
+// QualificationTypeVersion is the token of a kind as its form shows it (ADR
+// 0311). A fingerprint over the shown fields rather than updated_at: the
+// form needs no timestamp, and the trigger would add nothing it shows.
+func QualificationTypeVersion(kind QualificationType) string {
+	return readstate.Fingerprint([]any{kind.StandardKey, kind.Name, kind.ValidityMonths, kind.ReminderLeadWeeks, kind.Mandatory, kind.Archived})
 }
 
 // StaffQualificationTypes administers the kinds of the school. The list

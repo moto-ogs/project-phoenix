@@ -4,7 +4,7 @@ import { SWRConfig } from "~/lib/swr/testing";
 import { useSWRAuth } from "~/lib/swr";
 import { messageKeys } from "~/lib/swr/portal-keys";
 import { ToastProvider } from "~/contexts/ToastContext";
-import GroupMessagePage from "./page";
+import GroupMessagePage from "./page-content";
 
 vi.unmock("swr");
 vi.mock(
@@ -14,7 +14,7 @@ vi.mock(
 const owner = vi.hoisted(() => ({ account: "7", school: "schule" }));
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
-    data: { user: { id: owner.account, tenantId: 1 } },
+    data: { user: { id: owner.account, tenantId: "1" } },
     status: "authenticated",
   }),
 }));

@@ -40,6 +40,8 @@ import {
   toISODate,
 } from "~/lib/date-helpers";
 import { ApiError } from "~/lib/api-error";
+import { useReadDraftForm } from "~/lib/hooks/use-swr-load-error";
+import { useActionOn } from "~/lib/swr/read-draft";
 import { traegerContractKeys } from "~/lib/swr/traeger-contract-keys";
 import { traegerPath } from "~/lib/traeger-url";
 import { createLogger } from "~/lib/logger";
@@ -98,11 +100,27 @@ export function RecordNoticeModal({
   const form = useRef<HTMLFormElement>(null);
   const formErrors = useApiFormError(form);
   const { success } = useToast();
-  const { data: choices, error: optionsError } = useTraegerResource(
+  const {
+    data: choices,
+    error: optionsError,
+    reloadOrThrow: reloadChoices,
+  } = useTraegerResource(
     isOpen ? traegerContractKeys.noticeOn(contractId, receivedOn) : null,
     () => fetchContractNoticeOptions(contractId, receivedOn),
     "die Kündigung",
   );
+  // From a refusal until the new dates are read, nothing is sent: the
+  // shown end date would be refused again (ADR 0311, rule 4). Other dates
+  // lift that, also after a failed read; a new opening starts unlocked.
+  const record = useActionOn(
+    {
+      opening: isOpen ? contractId : null,
+      data: choices ?? undefined,
+      reload: reloadChoices,
+    },
+    { token: (read) => [read.ordinaryEndsOn, read.specialEndsOn] },
+  );
+  const readForm = useReadDraftForm(record, formErrors, "die Kündigung");
   const withdrawalOpen = choices?.withdrawalUntil != null;
   // A choice the dates of this receipt no longer allow falls back.
   const [checked, setChecked] = useState<ContractNoticeOptions | null>(null);
@@ -127,14 +145,14 @@ export function RecordNoticeModal({
 
   const submit = async () => {
     if (!choices || optionsError || missingText) return;
-    formErrors.clear();
+    if (!readForm.begin()) return;
     const recordedMessage =
       kind === "widerruf"
         ? "Der Widerruf ist eingetragen. Die Eltern bekommen eine Bestätigung per E-Mail."
         : "Die Kündigung ist eingetragen. Die Eltern bekommen eine Bestätigung per E-Mail.";
     await save.run(async (op) => {
-      try {
-        const next = await recordContractNotice(contractId, {
+      const result = await record.submit(() =>
+        recordContractNotice(contractId, {
           kind,
           terminationKind,
           receivedOn,
@@ -146,40 +164,49 @@ export function RecordNoticeModal({
                   // The end date the office saw: the backend refuses a changed one.
                   expectedEndsOn:
                     (terminationKind === "sonderkuendigung"
-                      ? choices?.specialEndsOn
-                      : choices?.ordinaryEndsOn) ?? undefined,
+                      ? choices.specialEndsOn
+                      : choices.ordinaryEndsOn) ?? undefined,
                 }),
-        });
+        }),
+      );
+      if (result.ok) {
         success(recordedMessage);
-        if (op.isCurrent()) onRecorded(next);
-      } catch (err) {
-        logger.error("traeger_care_contract_notice_record_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        // After a lost connection the notice may be recorded all the same, its
-        // mail to the parents sent: read the contract again before a second
-        // try could record it twice.
-        if (connectionLost(err)) {
-          const recorded = await fetchContractNoticeOptions(contractId).catch(
-            (readErr: unknown) => {
-              // The original error stays the message; this read only spares
-              // a second entry.
-              logger.warn("traeger_care_contract_notice_recheck_failed", {
-                error:
-                  readErr instanceof Error ? readErr.message : String(readErr),
-              });
-              return null;
-            },
-          );
-          if (recorded?.notice) {
-            success(recordedMessage);
-            if (op.isCurrent()) onRecorded(recorded);
-            return;
-          }
-        }
-        if (!op.isCurrent()) return;
-        void formErrors.show(err, { object: "die Kündigung" });
+        if (op.isCurrent()) onRecorded(result.saved);
+        return;
       }
+      if (result.skipped) return;
+      const err = result.error;
+      logger.error("traeger_care_contract_notice_record_failed", {
+        error: err instanceof Error ? err.message : String(err),
+      });
+      // After a lost connection the notice may be recorded all the same, its
+      // mail to the parents sent: read the contract again before a second
+      // try could record it twice.
+      if (connectionLost(err)) {
+        const recorded = await fetchContractNoticeOptions(contractId).catch(
+          (readErr: unknown) => {
+            // The original error stays the message; this read only spares
+            // a second entry.
+            logger.warn("traeger_care_contract_notice_recheck_failed", {
+              error:
+                readErr instanceof Error ? readErr.message : String(readErr),
+            });
+            return null;
+          },
+        );
+        if (recorded?.notice) {
+          success(recordedMessage);
+          if (op.isCurrent()) onRecorded(recorded);
+          return;
+        }
+      }
+      if (!op.isCurrent()) return;
+      // The end date moved since it was shown (ADR 0311): `reload` shows
+      // the new one before the office declares again.
+      void formErrors.show(err, {
+        object: "die Kündigung",
+        reload: result.reload,
+      });
     });
   };
 
@@ -215,9 +242,13 @@ export function RecordNoticeModal({
               saving ||
               !choices ||
               Boolean(optionsError) ||
-              Boolean(missingText)
+              Boolean(missingText) ||
+              !record.canSubmit
             }
-            disabledReason={missingText}
+            // While the dates load the button waits without a reason.
+            disabledReason={
+              missingText ?? (choices ? readForm.waitReason : undefined)
+            }
             tooltip={`Trägt ${kind === "widerruf" ? "den Widerruf" : "die Kündigung"} ein und schickt den Eltern sofort eine Bestätigung.`}
             isLoading={saving}
             loadingText="Wird eingetragen …"
@@ -261,7 +292,11 @@ export function RecordNoticeModal({
             invalid={Boolean(formErrors.fieldError("received_on"))}
           />
         </div>
-        {optionsError ? <LoadErrorAlert error={optionsError} /> : null}
+        {optionsError ? (
+          <LoadErrorAlert error={optionsError} />
+        ) : (
+          <LoadErrorAlert error={readForm.loadError} />
+        )}
         {choices ? (
           <>
             {withdrawalOpen ? (
@@ -561,6 +596,7 @@ export function RejectReasonModal({
   receivedOn,
   endsOn,
   onRejected,
+  reload,
 }: Readonly<{
   isOpen: boolean;
   onClose: () => void;
@@ -570,28 +606,49 @@ export function RejectReasonModal({
   /** The ordinary end the declaration then holds to. */
   endsOn: string;
   onRejected: (next: ContractNoticeOptions) => void;
+  /** Reads the notice options again; rejects when the read fails. */
+  reload: () => Promise<unknown>;
 }>) {
   const save = useFormModalPending(isOpen);
   const saving = save.pending;
   const formErrors = useApiFormError();
   const { success } = useToast();
+  // From a refusal until the new end is read, nothing is sent: the shown
+  // end would be refused again (ADR 0311, rule 4). Another end lifts that,
+  // also after a failed read; a new opening starts unlocked.
+  const decide = useActionOn(
+    { opening: isOpen ? contractId : null, data: endsOn, reload },
+    { token: (end) => end },
+  );
+  const readForm = useReadDraftForm(decide, formErrors, "die Entscheidung");
 
   const submit = async () => {
-    formErrors.clear();
+    if (!readForm.begin()) return;
     await save.run(async (op) => {
-      try {
-        const next = await rejectContractNoticeReason(contractId, endsOn);
+      const result = await decide.submit(() =>
+        rejectContractNoticeReason(contractId, endsOn),
+      );
+      if (result.ok) {
         success(
           `Die Kündigung gilt jetzt als ordentliche Kündigung zum ${formatDate(endsOn)}.`,
         );
-        if (op.isCurrent()) onRejected(next);
-      } catch (err) {
-        logger.error("traeger_care_contract_notice_reason_rejection_failed", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        if (!op.isCurrent()) return;
-        void formErrors.show(err, { object: "die Entscheidung" });
+        if (op.isCurrent()) onRejected(result.saved);
+        return;
       }
+      if (result.skipped) return;
+      logger.error("traeger_care_contract_notice_reason_rejection_failed", {
+        error:
+          result.error instanceof Error
+            ? result.error.message
+            : String(result.error),
+      });
+      if (!op.isCurrent()) return;
+      // The end moved since it was shown (ADR 0311): `reload` shows the
+      // new one here before the office decides again.
+      void formErrors.show(result.error, {
+        object: "die Entscheidung",
+        reload: result.reload,
+      });
     });
   };
 
@@ -603,6 +660,8 @@ export function RejectReasonModal({
       title="Grund nicht anerkennen"
       confirmText="Grund nicht anerkennen"
       isConfirmLoading={saving}
+      isConfirmDisabled={!decide.canSubmit}
+      confirmDisabledReason={readForm.waitReason}
       isDismissDisabled={saving}
       isBackdropDismissDisabled
       loadingText="Wird eingetragen …"
@@ -610,6 +669,7 @@ export function RejectReasonModal({
     >
       <div className="space-y-5">
         <FormErrorAlert message={formErrors.error} />
+        <LoadErrorAlert error={readForm.loadError} />
         <p className="text-sm text-gray-700">
           Dann gilt die Kündigung als ordentliche Kündigung. Der Vertrag endet
           zum nächsten möglichen Termin. Wir zählen ab dem Tag, an dem die

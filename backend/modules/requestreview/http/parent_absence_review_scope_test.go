@@ -12,6 +12,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan/excusedrequests"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/masterdatarequests"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/modules/requestreview"
 	"github.com/moto-ogs/project-phoenix/modules/settings"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/require"
@@ -43,7 +44,7 @@ func TestParentAbsenceReviewScopeKeepsReadsAndDecisionsConsistent(t *testing.T) 
 	}
 	checkReads := func(actor sessiontoken.AppClaims, allowed bool) {
 		t.Helper()
-		list := authExec(t, tc, testutil.NewRequest("GET", "/change-requests?types=excused&view=open", nil), actor, perms)
+		list := authExec(t, tc, testutil.NewRequest("GET", "/change-requests?types=excused", nil), actor, perms)
 		require.Equal(t, http.StatusOK, list.Code, list.Body.String())
 		var listed struct {
 			Data struct {
@@ -84,7 +85,7 @@ func TestParentAbsenceReviewScopeKeepsReadsAndDecisionsConsistent(t *testing.T) 
 	decide := func(actor sessiontoken.AppClaims, want int) {
 		t.Helper()
 		rr := authExec(t, tc, testutil.NewAuthenticatedRequest(t, "POST", fmt.Sprintf("/excused-absence-requests/%d/decide", requestID),
-			map[string]any{"approve": false, "reason": "Termin entfällt", "expected_version": testpkg.ExcusedRequestVersion(t, requestID)}), actor, perms)
+			map[string]any{"approve": false, "reason": "Termin entfällt", "expected_version": queueVersion(t, tc, requestreview.TypeExcused, requestID)}), actor, perms)
 		require.Equal(t, want, rr.Code, rr.Body.String())
 	}
 
@@ -113,13 +114,13 @@ func TestParentAbsenceReviewScopeKeepsReadsAndDecisionsConsistent(t *testing.T) 
 	testpkg.InsertTestMasterDataChangeRequest(t, tc.db, (*testpkg.MasterDataChangeRequestRow)(masterData))
 	perms = []string{"users:read", "users:update", "users:absence"}
 	checkReads(unassigned, true)
-	otherQueue := authExec(t, tc, testutil.NewRequest("GET", "/change-requests?types=master_data&view=open", nil), unassigned, perms)
+	otherQueue := authExec(t, tc, testutil.NewRequest("GET", "/change-requests?types=master_data", nil), unassigned, perms)
 	require.Equal(t, http.StatusOK, otherQueue.Code, otherQueue.Body.String())
 	var otherList aggListEnvelope
 	require.NoError(t, json.Unmarshal(otherQueue.Body.Bytes(), &otherList))
 	require.Empty(t, otherList.Data.Items, "absence delegation does not expose other parent requests")
 	otherDecision := authExec(t, tc, testutil.NewAuthenticatedRequest(t, "POST", fmt.Sprintf("/master-data-change-requests/%d/decide", masterData.ID),
-		map[string]any{"approve": false, "reason": "Nicht freigegeben", "expected_version": testpkg.MasterDataRequestVersion(t, masterData.ID)}), unassigned, perms)
+		map[string]any{"approve": false, "reason": "Nicht freigegeben", "expected_version": queueVersion(t, tc, requestreview.TypeMasterData, masterData.ID)}), unassigned, perms)
 	require.Equal(t, http.StatusForbidden, otherDecision.Code, otherDecision.Body.String())
 	decide(unassigned, http.StatusOK)
 
@@ -144,28 +145,16 @@ func TestParentAbsenceReviewScopeKeepsReadsAndDecisionsConsistent(t *testing.T) 
 		return err
 	}))
 	// A stale mixed selection must not partially approve its allowed absence.
-	adminList := authExec(t, tc, testutil.NewRequest("GET", "/change-requests?view=open", nil),
+	adminList := authExec(t, tc, testutil.NewRequest("GET", "/change-requests", nil),
 		testutil.AdminTestClaims(int(account.ID)), perms)
 	require.Equal(t, http.StatusOK, adminList.Code, adminList.Body.String())
-	var pending struct {
-		Data struct {
-			Items []struct {
-				RequestType     string          `json:"request_type"`
-				ExpectedVersion string          `json:"expected_version"`
-				Data            json.RawMessage `json:"data"`
-			} `json:"items"`
-		} `json:"data"`
-	}
+	var pending aggListEnvelope
 	require.NoError(t, json.Unmarshal(adminList.Body.Bytes(), &pending))
 	require.Len(t, pending.Data.Items, 2)
 	refs := make([]map[string]string, 0, 2)
 	for _, item := range pending.Data.Items {
-		var payload struct {
-			ID string `json:"id"`
-		}
-		require.NoError(t, json.Unmarshal(item.Data, &payload))
 		require.NotEmpty(t, item.ExpectedVersion)
-		refs = append(refs, map[string]string{"kind": item.RequestType, "id": payload.ID, "expected_version": item.ExpectedVersion})
+		refs = append(refs, map[string]string{"kind": item.RequestType, "id": item.requestID(t), "expected_version": item.ExpectedVersion})
 	}
 	bulk := authExec(t, tc, testutil.NewAuthenticatedRequest(t, "POST", "/change-requests/bulk-approve",
 		map[string]any{"requests": refs, "reason": "Gemeinsam geprüft"}), unassigned, perms)
@@ -178,7 +167,7 @@ func TestParentAbsenceReviewScopeKeepsReadsAndDecisionsConsistent(t *testing.T) 
 	require.NoError(t, err)
 	require.Zero(t, statusCount)
 	approved := authExec(t, tc, testutil.NewAuthenticatedRequest(t, "POST", fmt.Sprintf("/excused-absence-requests/%d/decide", requestID),
-		map[string]any{"approve": true, "reason": "Geprüft", "expected_version": testpkg.ExcusedRequestVersion(t, requestID)}), unassigned, perms)
+		map[string]any{"approve": true, "reason": "Geprüft", "expected_version": queueVersion(t, tc, requestreview.TypeExcused, requestID)}), unassigned, perms)
 	require.Equal(t, http.StatusOK, approved.Code, approved.Body.String())
 	var status testpkg.StudentStatusDayRow
 	require.NoError(t, tc.db.NewSelect().Model(&status).Where("student_id = ?", chain.StudentID).

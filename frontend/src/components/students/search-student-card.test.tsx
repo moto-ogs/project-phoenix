@@ -66,6 +66,91 @@ function renderCard(props: Partial<Parameters<typeof SearchStudentCard>[0]>) {
 }
 
 describe("SearchStudentCard", () => {
+  // #8194: dieselbe Zeile wie unter „Gruppen“, zwischen Ankunft und Gehzeit.
+  it("lists the day's offerings between arrival and pickup", () => {
+    const withOfferings = {
+      ...student,
+      planned_activities: [
+        { title: "Töpfer-AG", start_time: "14:00", end_time: "15:00" },
+        { title: "Handball", start_time: "15:15", end_time: "16:00" },
+      ],
+    } as unknown as Student;
+    render(renderCard({ student: withOfferings }));
+
+    const offerings = screen.getByRole("list", { name: "Angebote heute" });
+    expect(
+      Array.from(offerings.querySelectorAll("li")).map(
+        (item) => item.textContent,
+      ),
+    ).toEqual(["14:00–15:00 Töpfer-AG", "15:15–16:00 Handball"]);
+    const arrival = screen.getByText("Ankunftszeit: 08:00 Uhr");
+    const pickup = screen.getByText("Gehzeit: 16:00 Uhr");
+    expect(
+      arrival.compareDocumentPosition(offerings) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      offerings.compareDocumentPosition(pickup) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    // Kommen und Gehen stehen fett wie unter „Gruppen“ (#6487).
+    expect(arrival.closest("[data-prominent]")).toHaveClass("font-semibold");
+    expect(pickup.closest("[data-prominent]")).toHaveClass("font-semibold");
+  });
+
+  it("names the offerings of another day without „heute“", () => {
+    const withOfferings = {
+      ...student,
+      planned_activities: [
+        { title: "Töpfer-AG", start_time: "14:00", end_time: "15:00" },
+      ],
+    } as unknown as Student;
+    render(renderCard({ student: withOfferings, isToday: false }));
+
+    expect(
+      screen.getByRole("list", { name: "Angebote an diesem Tag" }),
+    ).toHaveTextContent("14:00–15:00 Töpfer-AG");
+  });
+
+  it("hides the offerings of a child an exception keeps away, unless it is there", () => {
+    const away = {
+      ...student,
+      current_location: "Zuhause",
+      arrival_time: undefined,
+      arrival_is_exception: true,
+      planned_activities: [
+        { title: "Töpfer-AG", start_time: "14:00", end_time: "15:00" },
+      ],
+    } as unknown as Student;
+    const { unmount } = render(renderCard({ student: away }));
+    expect(screen.getAllByText(/Kommt heute nicht/).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/Töpfer-AG/)).not.toBeInTheDocument();
+    unmount();
+
+    // Tatsächliche Anwesenheit geht vor, wie unter „Gruppen“ (#6487).
+    render(
+      renderCard({
+        student: { ...away, current_location: "Anwesend" } as Student,
+      }),
+    );
+    expect(screen.getByText(/Töpfer-AG/)).toBeInTheDocument();
+  });
+
+  it("shows no offerings on the card of a child that does not come", () => {
+    const sick = {
+      ...student,
+      sick: true,
+      current_location: "Zuhause",
+      planned_activities: [
+        { title: "Töpfer-AG", start_time: "14:00", end_time: "15:00" },
+      ],
+    } as unknown as Student;
+    render(renderCard({ student: sick }));
+
+    expect(screen.getByText(/Kommt heute nicht/)).toBeInTheDocument();
+    expect(screen.queryByText(/Töpfer-AG/)).not.toBeInTheDocument();
+  });
+
   it("renders the child with class, group and the two time rows", () => {
     render(renderCard({}));
 

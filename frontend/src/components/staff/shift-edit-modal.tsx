@@ -34,14 +34,14 @@ import {
 } from "~/lib/calendar-period-helpers";
 import { berlinTodayISO, parseISODate, toISODate } from "~/lib/date-helpers";
 import {
+  readStateWaitReason,
+  useReadDraftForm,
   useReadDraftLoadError,
   useSwrResourceLoadError,
 } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
 import { useSWRAuth } from "~/lib/swr";
 import { databaseKeys } from "~/lib/swr/portal-keys";
-import { useReadDraft } from "~/lib/swr/read-draft";
-import { staffTimeKeys } from "~/lib/swr/staff-keys";
 import {
   copyStableObjectKey,
   getStableObjectKey,
@@ -64,6 +64,14 @@ import {
 } from "~/lib/timetable-helpers";
 
 import {
+  dayBeforeISO,
+  useShiftEditDraft,
+  type ReplacementRow,
+  type SeriesEditorFields,
+  type ShiftFields,
+  type StoredShift,
+} from "./shift-edit-draft";
+import {
   formatWeekdays,
   RhythmPicker,
   WeekdayPicker,
@@ -77,10 +85,25 @@ const STAFF_SHIFT_MAX_BREAK_MINUTES = 300;
 // Stable empty default so the optional staffOptions prop does not create a new
 // array reference each render (oxlint react/no-object-type-as-default-prop).
 const EMPTY_STAFF_OPTIONS: readonly StaffScheduleStaff[] = [];
+/** Both reads after one refusal; rejects when either fails. */
+function readBoth(
+  first: (() => Promise<unknown>) | undefined,
+  second: () => Promise<unknown>,
+): () => Promise<unknown> {
+  return () => Promise.all([first?.(), second()]);
+}
+
+/** No reload given: a refused save stays locked with this load error. */
+function reloadShiftUnavailable(): Promise<never> {
+  return Promise.reject(new Error("the stored shift cannot be read again"));
+}
+
 // Stable empty default for the optional existingReplacements prop (same
 // rationale as EMPTY_STAFF_OPTIONS).
 const EMPTY_REPLACEMENTS: readonly StaffShift[] = [];
 const WEEKDAY_REQUIRED_MESSAGE = "Bitte wähle mindestens einen Wochentag aus.";
+// Stable empty default while the series rule is not read yet.
+const NO_WEEKDAYS: readonly number[] = [];
 
 // Create/edit modal for one planned shift (Dienstplan). Times are plain
 // "HH:MM" strings end-to-end — no Date/ISO conversion, which sidesteps the
@@ -115,68 +138,13 @@ interface ShiftEditModalProps {
   readonly initialEndTime?: string;
   readonly onClose: () => void;
   readonly onSaved: () => void;
-}
-
-/** One replacement (Vertretung) covering a cancelled shift. Several rows split
- *  a single gap across people (#1841). breakMinutes/shiftTypeId are carried
- *  per row (not editable in this modal) so re-saving the origin preserves each
- *  cover's own values instead of clobbering them with 0 / the origin's type. */
-interface ReplacementRow {
-  staffId: string;
-  startTime: string;
-  endTime: string;
-  breakMinutes: number;
-  shiftTypeId: string;
-}
-
-interface OccurrenceDraft {
-  readonly startTime: string;
-  readonly endTime: string;
-  readonly breakMinutesStr: string;
-  readonly shiftTypeId: string;
-}
-
-/** The series editor's fields as one rule fills them. */
-interface SeriesEditorFields extends OccurrenceDraft {
-  readonly weekdays: readonly number[];
-  readonly biweekly: boolean;
-  readonly abPattern: 1 | 2;
-  /** Inclusive, as the picker shows it. */
-  readonly validUntil: string;
-  readonly includeSchoolBreaks: boolean;
-}
-
-function seriesEditorFields(rule: SeriesRule): SeriesEditorFields {
-  return {
-    weekdays: [...rule.weekdays].sort((a, b) => a - b),
-    biweekly: rule.weekPattern !== 0,
-    abPattern: rule.weekPattern === 2 ? 2 : 1,
-    // Stored valid_until is exclusive, the picker inclusive.
-    validUntil: rule.validUntil ? dayBeforeISO(rule.validUntil) : "",
-    includeSchoolBreaks: rule.includeSchoolBreaks,
-    startTime: rule.startTime,
-    endTime: rule.endTime,
-    breakMinutesStr: String(rule.breakMinutes),
-    shiftTypeId: rule.shiftTypeId ?? "",
-  };
-}
-
-function sameSeriesEditorFields(
-  a: SeriesEditorFields,
-  b: SeriesEditorFields,
-): boolean {
-  return (
-    a.weekdays.length === b.weekdays.length &&
-    a.weekdays.every((day, i) => day === b.weekdays[i]) &&
-    a.biweekly === b.biweekly &&
-    a.abPattern === b.abPattern &&
-    a.validUntil === b.validUntil &&
-    a.includeSchoolBreaks === b.includeSchoolBreaks &&
-    a.startTime === b.startTime &&
-    a.endTime === b.endTime &&
-    a.breakMinutesStr === b.breakMinutesStr &&
-    a.shiftTypeId === b.shiftTypeId
-  );
+  /**
+   * Reads the stored shift again after a refused save and hands it in as
+   * `shift` and `existingReplacements`; answers it (nothing when the shift
+   * is gone) and rejects when the read fails (ADR 0311). Without it a
+   * refusal keeps saving locked with the load error.
+   */
+  readonly reloadShift?: () => Promise<StoredShift | undefined | void>;
 }
 
 export function ShiftEditModal({
@@ -193,8 +161,9 @@ export function ShiftEditModal({
   initialEndTime,
   onClose,
   onSaved,
+  reloadShift = reloadShiftUnavailable,
 }: ShiftEditModalProps) {
-  const initial = useMemo(() => {
+  const seedTimes = useMemo(() => {
     if (shift) {
       return {
         startTime: shift.startTime,
@@ -222,17 +191,72 @@ export function ShiftEditModal({
       shiftTypeId: "",
     };
   }, [shift, initialStartTime, initialEndTime]);
-
-  const [startTime, setStartTime] = useState(initial.startTime);
-  const [endTime, setEndTime] = useState(initial.endTime);
-  // "" = no shift type. An inactive type still attached to this shift is kept
-  // as an option so editing a shift doesn't silently drop it.
-  const [shiftTypeId, setShiftTypeId] = useState(initial.shiftTypeId);
-  // Raw string so the field can be cleared while typing; parsed on submit
-  // (same rationale as AdminSessionEditModal).
-  const [breakMinutesStr, setBreakMinutesStr] = useState(
-    String(initial.breakMinutes),
+  const seed = useMemo<ShiftFields>(
+    () => ({
+      startTime: seedTimes.startTime,
+      endTime: seedTimes.endTime,
+      breakMinutesStr: String(seedTimes.breakMinutes),
+      shiftTypeId: seedTimes.shiftTypeId,
+      changeReason: "",
+      cancelled: false,
+      replacements: [],
+    }),
+    [seedTimes],
   );
+
+  // The shift and its covers as the planner opened them (ADR 0311): the
+  // day's draft rests on them, and an edit or a cancellation sends their
+  // versions; the server refuses a shift or a cover set changed since.
+  // After a refusal `reloadShift` hands in the stored shift, the draft shows
+  // it, and saving waits for that read.
+  const stored = useMemo<StoredShift | null>(
+    () =>
+      mode === "edit" && shift ? { shift, covers: existingReplacements } : null,
+    [mode, shift, existingReplacements],
+  );
+  const drafts = useShiftEditDraft({
+    opening: !isOpen
+      ? null
+      : stored
+        ? `edit:${stored.shift.id}`
+        : `create:${staffId}:${date}:${seed.startTime}-${seed.endTime}`,
+    stored,
+    seed,
+    reloadShift,
+  });
+  const { day, series: seriesRead, seriesEditOpen, leaveSeriesEdit } = drafts;
+  // The times, break and type on screen: the day's, or the rule's while the
+  // series editor is open.
+  const { startTime, endTime, breakMinutesStr, shiftTypeId } = drafts.fields;
+  const { setFields } = drafts;
+  const setStartTime = (value: string) => setFields({ startTime: value });
+  const setEndTime = (value: string) => setFields({ endTime: value });
+  const setBreakMinutesStr = (value: string) =>
+    setFields({ breakMinutesStr: value });
+  const setShiftTypeId = (value: string) => setFields({ shiftTypeId: value });
+  // Flexible daily changes (#1841): optional reason, "Ausfall" (leave the gap
+  // open), and one or more replacements that split the gap across people.
+  const { changeReason, cancelled, replacements } = day.draft ?? seed;
+  const setDayFields = (patch: Partial<ShiftFields>) =>
+    day.setDraft((current) => ({ ...current, ...patch }));
+  const setReplacements = (
+    next: (rows: readonly ReplacementRow[]) => readonly ReplacementRow[],
+  ) =>
+    day.setDraft((current) => ({
+      ...current,
+      replacements: next(current.replacements),
+    }));
+  // The series editor's own fields, on the rule behind the shift (#2028).
+  const seriesFields = seriesRead.draft;
+  const seriesWeekdays = seriesFields?.weekdays ?? NO_WEEKDAYS;
+  const seriesBiweekly = seriesFields?.biweekly ?? false;
+  const seriesAbPattern = seriesFields?.abPattern ?? 1;
+  // Inclusive "Gültig bis" as shown in the picker; the stored valid_until is
+  // exclusive (converted on load and on save).
+  const seriesValidUntil = seriesFields?.validUntil ?? "";
+  const seriesIncludeSchoolBreaks = seriesFields?.includeSchoolBreaks ?? false;
+  const setSeriesFields = (patch: Partial<SeriesEditorFields>) =>
+    seriesRead.setDraft((current) => ({ ...current, ...patch }));
   // Every write runs through the panel's pending contract (#6593), also
   // the ones started from the delete confirmation or the scope question
   // while the panel is hidden behind them. A late answer must not close or
@@ -264,11 +288,6 @@ export function ShiftEditModal({
   // Which scope the last series save chose, so a retry repeats it.
   const scopeChoiceRef = useRef<"single" | "following" | null>(null);
 
-  // Flexible daily changes (#1841): optional reason, "Ausfall" (leave the gap
-  // open), and one or more replacements that split the gap across people.
-  const [changeReason, setChangeReason] = useState("");
-  const [cancelled, setCancelled] = useState(false);
-  const [replacements, setReplacements] = useState<ReplacementRow[]>([]);
   // A replacement shift itself is never cancelled or re-covered from here.
   const isReplacementRow = shift?.originShiftId != null;
 
@@ -292,29 +311,6 @@ export function ShiftEditModal({
     null,
   );
 
-  // Serienbearbeitung (#2028): the rule behind this shift, plus the state of
-  // the "Alle Termine der Serie" editor. The rule is loaded whenever a series
-  // row is opened so its rhythm is visible right away instead of only after
-  // the user tries to save.
-  const [seriesEditOpen, setSeriesEditOpen] = useState(false);
-  const [seriesWeekdays, setSeriesWeekdays] = useState<number[]>([]);
-  const [seriesBiweekly, setSeriesBiweekly] = useState(false);
-  const [seriesAbPattern, setSeriesAbPattern] = useState<1 | 2>(1);
-  // The series editor temporarily reuses the occurrence fields. Keep their
-  // draft so returning to the occurrence cannot turn a later single save into
-  // an unintended series value.
-  const [occurrenceDraft, setOccurrenceDraft] =
-    useState<OccurrenceDraft | null>(null);
-  // The fields the series editor was filled with: whether the person has
-  // typed since.
-  const [seriesEditFill, setSeriesEditFill] =
-    useState<SeriesEditorFields | null>(null);
-  // Inclusive "Gültig bis" as shown in the picker; the stored valid_until is
-  // exclusive (converted on load and on save).
-  const [seriesValidUntil, setSeriesValidUntil] = useState("");
-  const [seriesIncludeSchoolBreaks, setSeriesIncludeSchoolBreaks] =
-    useState(false);
-
   const clearFormError = formErrors.clear;
   const clearDeleteError = deleteErrors.clear;
   const isSeriesRow = mode === "edit" && shift?.seriesId != null;
@@ -322,15 +318,22 @@ export function ShiftEditModal({
   // begin at that slot, so every editor hint must describe the same date.
   const seriesEffectiveDate = shift?.seriesOccurrenceDate ?? date;
 
+  // Errors belong to one opening: a different shift or a new opening starts
+  // without them. The reload after a refusal hands in the stored shift with
+  // the same id; its message stays until the person acts (ADR 0311).
+  const openedShiftId = isOpen ? (shift?.id ?? "") : null;
+  useEffect(() => {
+    if (openedShiftId === null) return;
+    clearFormError();
+    clearDeleteError();
+  }, [openedShiftId, clearFormError, clearDeleteError]);
+
+  // The dialog's questions and the create-only series section start anew
+  // on opening and when the stored shift arrives after a refusal; the
+  // fields are the draft's.
   useEffect(() => {
     if (!isOpen) return;
     resetWorkingTime();
-    setStartTime(initial.startTime);
-    setEndTime(initial.endTime);
-    setBreakMinutesStr(String(initial.breakMinutes));
-    setShiftTypeId(initial.shiftTypeId);
-    clearFormError();
-    clearDeleteError();
     setConfirmDeleteOpen(false);
     setRepeatEnabled(false);
     setWeekdays([isoWeekdayOf(date)]);
@@ -341,33 +344,8 @@ export function ShiftEditModal({
     setSeriesNotice(null);
     setIncludeSchoolBreaks(false);
     setScopeQuestion(null);
-    setSeriesEditOpen(false);
-    setOccurrenceDraft(null);
-    setSeriesEditFill(null);
-    setChangeReason(shift?.changeReason ?? "");
-    setCancelled(shift?.cancelled ?? false);
-    // Seed the replacement rows from the covers already attached to this shift
-    // so reopening a cancelled shift preserves them; saving would otherwise send
-    // an empty set and the backend would delete every existing cover (#1841).
-    setReplacements(
-      existingReplacements.map((cover) => ({
-        staffId: cover.staffId,
-        startTime: cover.startTime,
-        endTime: cover.endTime,
-        breakMinutes: cover.breakMinutes,
-        shiftTypeId: cover.shiftTypeId ?? "",
-      })),
-    );
-  }, [
-    isOpen,
-    initial,
-    date,
-    shift,
-    existingReplacements,
-    clearFormError,
-    clearDeleteError,
-    resetWorkingTime,
-  ]);
+    leaveSeriesEdit();
+  }, [isOpen, seed, date, stored, resetWorkingTime, leaveSeriesEdit]);
 
   // Calendar periods load once the series section is opened; the period is
   // required (it bounds the series and anchors Woche A/B). A series row needs
@@ -389,40 +367,19 @@ export function ShiftEditModal({
     chosenPeriodId ||
     (periods ? (findPeriodForDate(periods, date)?.id ?? "") : "");
 
-  // The rule behind a series shift (#2028). Loaded on open so the modal can
-  // state the rhythm up front — "Diese Schicht ist Teil einer Serie" alone
-  // does not tell the planner what the series actually does. Every series
-  // write sends the version of the rule on screen (ADR 0311): the day's edit
-  // confirms the rule shown when the modal opened, an untouched series
-  // editor follows a newer read, a touched one keeps the rule it opened
-  // from. The server refuses a series changed since.
-  const seriesId = shift?.seriesId ?? null;
-  const seriesEditorTouched =
-    seriesEditFill !== null &&
-    !sameSeriesEditorFields(seriesEditFill, {
-      weekdays: seriesWeekdays,
-      biweekly: seriesBiweekly,
-      abPattern: seriesAbPattern,
-      validUntil: seriesValidUntil,
-      includeSchoolBreaks: seriesIncludeSchoolBreaks,
-      startTime,
-      endTime,
-      breakMinutesStr,
-      shiftTypeId,
-    });
-  const seriesRead = useReadDraft<SeriesRule, SeriesRule, string, SeriesResult>(
-    {
-      key:
-        isOpen && mode === "edit" && seriesId !== null
-          ? staffTimeKeys.shiftSeries(seriesId)
-          : null,
-      fetcher: () => staffShiftSeriesService.getSeries(seriesId ?? ""),
-      token: (rule) => rule.version,
-      follow: seriesEditOpen && !seriesEditorTouched,
-    },
-  );
   const seriesRule: SeriesRule | null = seriesRead.base ?? null;
   const seriesRuleLoadError = useReadDraftLoadError(seriesRead, "die Serie");
+  const dayForm = useReadDraftForm(
+    stored ? day : null,
+    formErrors,
+    "die Schicht",
+  );
+  // A series write also confirms the opened occurrence (its version): it
+  // waits for both reads.
+  const seriesWriteReady = seriesRead.canSubmit && day.canSubmit;
+  const seriesWaitReason = !seriesRead.canSubmit
+    ? readStateWaitReason(seriesRead.status)
+    : dayForm.waitReason;
 
   const selectedPeriod = useMemo(
     () => periods?.find((p) => p.id === periodId) ?? null,
@@ -488,7 +445,7 @@ export function ShiftEditModal({
     const dates = materializedRecurrenceDates({
       period: seriesPeriod,
       fromISO: from,
-      weekdays: seriesWeekdays,
+      weekdays: [...seriesWeekdays],
       weekPattern: seriesRuleWeekPattern,
       validUntil:
         seriesValidUntil === "" ? undefined : dayAfterISO(seriesValidUntil),
@@ -573,13 +530,16 @@ export function ShiftEditModal({
         // hidden break would otherwise submit a break longer than the shift and
         // the backend rejects the whole save. Clamp the preserved break to the
         // edited duration so it can never exceed the window (#1841).
-        if (patch.startTime !== undefined || patch.endTime !== undefined) {
-          const maxBreak = shiftDurationMinutes(next.startTime, next.endTime);
-          if (maxBreak !== null && next.breakMinutes > maxBreak) {
-            next.breakMinutes = maxBreak;
-          }
-        }
-        return copyStableObjectKey(row, next);
+        const maxBreak =
+          patch.startTime !== undefined || patch.endTime !== undefined
+            ? shiftDurationMinutes(next.startTime, next.endTime)
+            : null;
+        return copyStableObjectKey(
+          row,
+          maxBreak !== null && next.breakMinutes > maxBreak
+            ? { ...next, breakMinutes: maxBreak }
+            : next,
+        );
       }),
     );
   };
@@ -589,60 +549,30 @@ export function ShiftEditModal({
   };
 
   const toggleSeriesWeekday = (value: number) => {
-    setSeriesWeekdays((current) =>
-      current.includes(value)
-        ? current.filter((v) => v !== value)
-        : [...current, value].sort((a, b) => a - b),
-    );
+    setSeriesFields({
+      weekdays: seriesWeekdays.includes(value)
+        ? seriesWeekdays.filter((v) => v !== value)
+        : [...seriesWeekdays, value].sort((a, b) => a - b),
+    });
   };
 
   /** Opens the series editor: the same shift modal, but editing the rule
    *  behind the shift (weekdays, rhythm, window, validity) instead of the
-   *  single day. */
-  const fillSeriesEditor = (rule: SeriesRule) => {
-    const fields = seriesEditorFields(rule);
-    setSeriesWeekdays([...fields.weekdays]);
-    setSeriesBiweekly(fields.biweekly);
-    setSeriesAbPattern(fields.abPattern);
-    setSeriesValidUntil(fields.validUntil);
-    setSeriesIncludeSchoolBreaks(fields.includeSchoolBreaks);
-    setStartTime(fields.startTime);
-    setEndTime(fields.endTime);
-    setBreakMinutesStr(fields.breakMinutesStr);
-    setShiftTypeId(fields.shiftTypeId);
-    setSeriesEditFill(fields);
-  };
-
+   *  single day. An untouched editor follows a newer read of the rule (the
+   *  plan reloads after every colleague's change), so it shows the rule it
+   *  saves against. */
   const openSeriesEdit = () => {
     // The button stays disabled until the rule has loaded.
     if (!seriesRule) return;
     formErrors.clear();
-    setOccurrenceDraft({ startTime, endTime, breakMinutesStr, shiftTypeId });
-    fillSeriesEditor(seriesRule);
-    setSeriesEditOpen(true);
+    drafts.openSeriesEdit();
   };
-
-  // An untouched editor follows a newer read of the rule (the plan reloads
-  // after every colleague's change): the editor shows the rule it saves
-  // against.
-  const newerSeriesRule =
-    seriesEditOpen &&
-    seriesRule !== null &&
-    seriesEditFill !== null &&
-    !seriesEditorTouched &&
-    !sameSeriesEditorFields(seriesEditFill, seriesEditorFields(seriesRule))
-      ? seriesRule
-      : null;
-  useEffect(() => {
-    // fillSeriesEditor only calls state setters.
-    if (newerSeriesRule) fillSeriesEditor(newerSeriesRule);
-  }, [newerSeriesRule]);
 
   /** Writes the edited rule through the existing split: it takes effect from
    *  this occurrence onwards, days before it keep the old rule. That is the
    *  one behaviour a series edit has — no second write path (#2028). */
   const saveSeriesRule = async () => {
-    if (!seriesRule || !shift || !seriesRead.canSubmit) return;
+    if (!seriesRule || !shift || !seriesWriteReady) return;
     if (!validateInputs()) return;
     if (seriesWeekdays.length === 0) {
       formErrors.invalid(WEEKDAY_REQUIRED_MESSAGE);
@@ -657,11 +587,12 @@ export function ShiftEditModal({
         staffShiftSeriesService.splitSeries(seriesRule.id, {
           effectiveDate: seriesEffectiveDate,
           occurrenceShiftId: shift.id,
+          expectedOccurrenceVersion: day.token?.version ?? "",
           startTime,
           endTime,
           breakMinutes: breakMinutes ?? 0,
           shiftTypeId: shiftTypeId === "" ? null : shiftTypeId,
-          weekdays: seriesWeekdays,
+          weekdays: [...seriesWeekdays],
           weekPattern: seriesRuleWeekPattern,
           // The picker is inclusive, the API's valid_until exclusive.
           validUntil:
@@ -694,19 +625,6 @@ export function ShiftEditModal({
     });
   };
 
-  /** Back from the series editor to this day, with the day's own draft. */
-  const leaveSeriesEdit = () => {
-    if (occurrenceDraft) {
-      setStartTime(occurrenceDraft.startTime);
-      setEndTime(occurrenceDraft.endTime);
-      setBreakMinutesStr(occurrenceDraft.breakMinutesStr);
-      setShiftTypeId(occurrenceDraft.shiftTypeId);
-    }
-    setSeriesEditOpen(false);
-    setOccurrenceDraft(null);
-    setSeriesEditFill(null);
-  };
-
   /** A colleague changed the series since it was read (ADR 0311): the modal
    *  shows the stored rule again once `reload` read it (the editor reopens
    *  from it), and the plan reloads. A failed read is a load error, and
@@ -717,7 +635,14 @@ export function ShiftEditModal({
   ) => {
     if (seriesEditOpen) leaveSeriesEdit();
     onSaved();
-    void formErrors.show(err, { object: "die Serie", reload });
+    // A split effective today also rewrote the opened occurrence and checks
+    // its version: the day's draft takes the refusal too, so the next write
+    // waits for the stored occurrence and sends its version.
+    const readAgain =
+      seriesEffectiveDate === berlinTodayISO()
+        ? readBoth(reload, day.refuse())
+        : reload;
+    void formErrors.show(err, { object: "die Serie", reload: readAgain });
   };
 
   const toggleWeekday = (value: number) => {
@@ -851,43 +776,62 @@ export function ShiftEditModal({
           const wasCancelled = shift.cancelled ?? false;
           const cancellationInvolved =
             !isReplacementRow && (cancelled || wasCancelled);
-          if (cancellationInvolved) {
-            await staffShiftService.applyCancellation(shift.id, {
-              cancelled,
-              changeReason,
-              // Carry the shift's own edited window/type so a time change made in
-              // the same save is applied to the origin, not silently dropped, and
-              // a reactivation re-checks overlap against the edited window (#1841).
-              startTime,
-              endTime,
-              breakMinutes: breakMinutes ?? 0,
-              shiftTypeId: resolvedShiftTypeId,
-              // Each cover keeps its own break and shift type — a replacement may
-              // have been edited directly in the grid to differ from the origin,
-              // so re-saving the origin must not reset them (#1841).
-              replacements: cancelled
-                ? replacements.map((row) => ({
-                    staffId: row.staffId,
-                    startTime: row.startTime,
-                    endTime: row.endTime,
-                    breakMinutes: row.breakMinutes,
-                    shiftTypeId:
-                      row.shiftTypeId === "" ? null : row.shiftTypeId,
-                  }))
-                : [],
-              workingTime: workingTime.current(),
-            });
-          } else {
-            await staffShiftService.updateShift(shift.id, {
-              staffId,
-              date,
-              startTime,
-              endTime,
-              breakMinutes: breakMinutes ?? 0,
-              shiftTypeId: resolvedShiftTypeId,
-              changeReason,
-              workingTime: workingTime.current(),
-            });
+          // Sends over the shift and covers the draft rests on (ADR 0311).
+          const result = await day.submit((token) =>
+            cancellationInvolved
+              ? staffShiftService.applyCancellation(shift.id, {
+                  cancelled,
+                  changeReason,
+                  // Carry the shift's own edited window/type so a time change made in
+                  // the same save is applied to the origin, not silently dropped, and
+                  // a reactivation re-checks overlap against the edited window (#1841).
+                  startTime,
+                  endTime,
+                  breakMinutes: breakMinutes ?? 0,
+                  shiftTypeId: resolvedShiftTypeId,
+                  // Each cover keeps its own break and shift type — a replacement may
+                  // have been edited directly in the grid to differ from the origin,
+                  // so re-saving the origin must not reset them (#1841).
+                  replacements: cancelled
+                    ? replacements.map((row) => ({
+                        staffId: row.staffId,
+                        startTime: row.startTime,
+                        endTime: row.endTime,
+                        breakMinutes: row.breakMinutes,
+                        shiftTypeId:
+                          row.shiftTypeId === "" ? null : row.shiftTypeId,
+                      }))
+                    : [],
+                  workingTime: workingTime.current(),
+                  expectedVersion: token?.version ?? "",
+                  expectedReplacementVersions: Object.fromEntries(
+                    token?.covers ?? [],
+                  ),
+                })
+              : staffShiftService.updateShift(shift.id, {
+                  staffId,
+                  date,
+                  startTime,
+                  endTime,
+                  breakMinutes: breakMinutes ?? 0,
+                  shiftTypeId: resolvedShiftTypeId,
+                  changeReason,
+                  workingTime: workingTime.current(),
+                  expectedVersion: token?.version ?? "",
+                }),
+          );
+          if (!result.ok) {
+            if (result.skipped) return;
+            if (!result.refused) throw result.error;
+            // Changed since the modal opened: the message waits for the
+            // stored shift, which reseeds the form; no retry resends.
+            if (op.isCurrent()) {
+              await formErrors.show(result.error, {
+                object: "die Schicht",
+                reload: result.reload,
+              });
+            }
+            return;
           }
         } else {
           await staffShiftService.createShift({
@@ -924,7 +868,7 @@ export function ShiftEditModal({
   const splitSeriesFromHere = async () => {
     const seriesId = shift?.seriesId;
     // The choice stays disabled until the rule and its version are loaded.
-    if (!shift || !seriesId || !seriesRead.canSubmit) return;
+    if (!shift || !seriesId || !seriesWriteReady) return;
     await runWrite("save", async (op) => {
       try {
         // The version of the rule on screen since the modal opened.
@@ -932,6 +876,7 @@ export function ShiftEditModal({
           staffShiftSeriesService.splitSeries(seriesId, {
             effectiveDate: seriesEffectiveDate,
             occurrenceShiftId: shift.id,
+            expectedOccurrenceVersion: day.token?.version ?? "",
             startTime,
             endTime,
             breakMinutes: breakMinutes ?? 0,
@@ -969,6 +914,8 @@ export function ShiftEditModal({
 
   const handleSubmit = async () => {
     scopeChoiceRef.current = null;
+    // Nothing goes out before the stored shift is read (ADR 0311).
+    if (!dayForm.begin()) return;
     if (!validateInputs()) return;
     if (mode === "create" && repeatEnabled) {
       await createSeries();
@@ -1105,10 +1052,17 @@ export function ShiftEditModal({
         isLoading={isSaving}
         loadingText="Speichern…"
         disabled={
-          isSaving || !timesValid || !breakValid || seriesWeekdays.length === 0
+          isSaving ||
+          !timesValid ||
+          !breakValid ||
+          seriesWeekdays.length === 0 ||
+          !seriesWriteReady
         }
         disabledReason={
-          timeBlockedReason(timesValid, breakValid) ?? WEEKDAY_BLOCKED_REASON
+          timeBlockedReason(timesValid, breakValid) ??
+          (seriesWeekdays.length === 0
+            ? WEEKDAY_BLOCKED_REASON
+            : seriesWaitReason)
         }
         tooltip="Ändert die Serie ab diesem Termin, frühestens ab morgen."
       >
@@ -1166,12 +1120,18 @@ export function ShiftEditModal({
         isLoading={isSaving}
         loadingText="Speichern…"
         disabled={
-          isSaving || isDeleting || !timesValid || !breakValid || !seriesValid
+          isSaving ||
+          isDeleting ||
+          !timesValid ||
+          !breakValid ||
+          !seriesValid ||
+          (stored !== null && !day.canSubmit)
         }
         disabledReason={
           isDeleting
             ? undefined
             : (timeBlockedReason(timesValid, breakValid) ??
+              dayForm.waitReason ??
               (weekdays.length === 0
                 ? WEEKDAY_BLOCKED_REASON
                 : "Wähle zuerst einen Planungszeitraum aus."))
@@ -1230,6 +1190,9 @@ export function ShiftEditModal({
             <SlideOverTitle>{title}</SlideOverTitle>
           </SlideOverHeader>
           <SlideOverBody error={seriesNotice ? null : formErrors.error}>
+            {/* The read after a refused save failed; the form's alert
+                names it while it shows the refusal. */}
+            <LoadErrorAlert error={dayForm.loadError} />
             {seriesNotice ? (
               <div className="space-y-3 text-sm">
                 <p className="text-gray-700">Die Serie wurde gespeichert.</p>
@@ -1342,7 +1305,9 @@ export function ShiftEditModal({
                       {...fieldControl("change_reason")}
                       value={changeReason}
                       maxLength={200}
-                      onChange={(e) => setChangeReason(e.target.value)}
+                      onChange={(e) =>
+                        setDayFields({ changeReason: e.target.value })
+                      }
                       placeholder="z. B. Krankheit, Fortbildung, Tausch"
                     />
                     {fieldHint("change_reason")}
@@ -1379,9 +1344,13 @@ export function ShiftEditModal({
                     <FieldGroup label="Wochenrhythmus">
                       <RhythmPicker
                         biweekly={seriesBiweekly}
-                        onBiweeklyChange={setSeriesBiweekly}
+                        onBiweeklyChange={(next) =>
+                          setSeriesFields({ biweekly: next })
+                        }
                         abPattern={seriesAbPattern}
-                        onAbPatternChange={setSeriesAbPattern}
+                        onAbPatternChange={(next) =>
+                          setSeriesFields({ abPattern: next })
+                        }
                         periodHasCycle={seriesPeriodHasCycle}
                         weekHint={
                           seriesDefaultAbPattern !== null
@@ -1408,13 +1377,16 @@ export function ShiftEditModal({
                       around the DatePicker re-dispatches clicks. */}
                       <FieldGroup label="Gültig bis (optional)">
                         <DatePicker
+                          ariaLabel="Gültig bis (optional)"
                           value={
                             seriesValidUntil === ""
                               ? null
                               : parseISODate(seriesValidUntil)
                           }
                           onChange={(picked) =>
-                            setSeriesValidUntil(picked ? toISODate(picked) : "")
+                            setSeriesFields({
+                              validUntil: picked ? toISODate(picked) : "",
+                            })
                           }
                           placeholder="Datum auswählen"
                         />
@@ -1423,7 +1395,9 @@ export function ShiftEditModal({
                     <SchoolBreaksCheckbox
                       id="shift-series-edit-school-breaks"
                       checked={seriesIncludeSchoolBreaks}
-                      onChange={setSeriesIncludeSchoolBreaks}
+                      onChange={(next) =>
+                        setSeriesFields({ includeSchoolBreaks: next })
+                      }
                     />
                     {/* Say it before the save fails: a segment whose last day has
                     arrived has nothing left for the re-plan to change (#2028). */}
@@ -1455,7 +1429,9 @@ export function ShiftEditModal({
                           // would erase the existing covers for a reactivation that was
                           // never submitted — and re-checking must bring them back
                           // rather than silently wiping every cover on save (#1841).
-                          onChange={(e) => setCancelled(e.target.checked)}
+                          onChange={(e) =>
+                            setDayFields({ cancelled: e.target.checked })
+                          }
                         />
                         <span className="text-sm font-medium text-gray-800">
                           Diese Schicht fällt aus
@@ -1638,6 +1614,7 @@ export function ShiftEditModal({
                           child (see FieldGroup comment below). */}
                           <FieldGroup label="Gültig bis (optional)">
                             <DatePicker
+                              ariaLabel="Gültig bis (optional)"
                               value={
                                 validUntil === ""
                                   ? null
@@ -1742,11 +1719,13 @@ export function ShiftEditModal({
             label: "Ab jetzt dauerhaft",
             description:
               "Die Serie wird ab diesem Datum geteilt und mit den neuen Zeiten fortgeführt.",
-            disabled: !seriesRead.canSubmit,
+            disabled: !seriesWriteReady,
             disabledReason:
               seriesRead.status === "loadFailed"
                 ? "Lade zuerst die Serie neu."
-                : "Die Serie wird noch geladen.",
+                : !seriesRead.canSubmit
+                  ? "Die Serie wird noch geladen."
+                  : seriesWaitReason,
           },
         ]}
         onSelect={handleScopeSelect}
@@ -1852,14 +1831,6 @@ function FieldGroup({
 function dayAfterISO(isoDate: string): string {
   const d = parseISODate(isoDate);
   d.setDate(d.getDate() + 1);
-  return toISODate(d);
-}
-
-// Inverse of dayAfterISO: turns the stored exclusive valid_until back into the
-// inclusive "Gültig bis" the picker and the summary line show.
-function dayBeforeISO(isoDate: string): string {
-  const d = parseISODate(isoDate);
-  d.setDate(d.getDate() - 1);
   return toISODate(d);
 }
 

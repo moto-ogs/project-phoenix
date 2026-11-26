@@ -17,7 +17,11 @@ export function mutate(
     options?: boolean | { revalidate?: boolean },
   ]
 ): Promise<unknown> {
-  const [key, data, options] = args;
+  // Read by index: Safari 26 threw where SWR's own mutate destructured its
+  // rest parameter (#8031).
+  const key = args[0];
+  const data = args[1];
+  const options = args[2];
   // SWR counts the arguments: `mutate(key)` revalidates, while an explicit
   // `undefined` clears the entry. Pass the call through as given.
   if (args.length < 2) return swrMutate(key);

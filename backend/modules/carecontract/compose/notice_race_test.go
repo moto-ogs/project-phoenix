@@ -74,10 +74,20 @@ func TestTerminationHoldsTheLockAndTheAmendmentAddsNoVersion(t *testing.T) {
 	notices := compose.NewNotices(compose.ContractPorts{Holidays: holidaysDouble{}, Letterheads: letterheadDouble{}, Post: &postDouble{}, Runtime: runtime, Access: school,
 		Ledger: ledgerDouble{}, Links: testSigningLinks()},
 		compose.NoticePorts{Holidays: holidaysDouble{}, Templates: noticeTemplatesDouble{}, Post: &noticePostDouble{}, Sender: noticeSenderDouble{}}, time.Now)
+	// The office reads the end it declares to (ADR 0311), outside the held
+	// transaction.
+	reviewer := carecontract.Reviewer{OrganizationID: f.organization, AccountID: account}
+	shown, err := compose.NewNotices(compose.ContractPorts{Holidays: holidaysDouble{}, Letterheads: letterheadDouble{}, Post: &postDouble{}, Runtime: runtimeDouble{},
+		Access: school, Ledger: ledgerDouble{}, Links: testSigningLinks()},
+		compose.NoticePorts{Holidays: holidaysDouble{}, Templates: noticeTemplatesDouble{}, Post: &noticePostDouble{}, Sender: noticeSenderDouble{}}, time.Now).
+		NoticeOptions(f.ctx, reviewer, f.contract, received)
+	require.NoError(t, err)
+	require.NotNil(t, shown.OrdinaryEndsOn)
 	terminated := make(chan error, 1)
 	go func() {
-		_, err := notices.DeclareNotice(f.ctx, carecontract.Reviewer{OrganizationID: f.organization, AccountID: account}, f.contract,
-			carecontract.NoticeInput{Kind: carecontract.NoticeTermination, TerminationKind: carecontract.TerminationOrdinary, ReceivedOn: received})
+		_, err := notices.DeclareNotice(f.ctx, reviewer, f.contract,
+			carecontract.NoticeInput{Kind: carecontract.NoticeTermination, TerminationKind: carecontract.TerminationOrdinary, ReceivedOn: received,
+				ExpectedEndsOn: *shown.OrdinaryEndsOn})
 		terminated <- err
 	}()
 	select {

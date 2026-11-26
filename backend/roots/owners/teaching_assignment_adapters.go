@@ -357,9 +357,10 @@ func (r *GroupTeacherRepositoryBinding) RemoveTeacherAssignment(ctx context.Cont
 	return r.Delete(ctx, assignmentID)
 }
 
-// TeacherAssignmentIDs maps each teacher of the group to its assignment.
+// TeacherAssignmentIDs locks the group's assignments in the caller's unit
+// and maps each teacher of the group to its assignment.
 func (r *GroupTeacherRepositoryBinding) TeacherAssignmentIDs(ctx context.Context, groupID int64) (map[int64]int64, error) {
-	assignments, err := r.FindByGroup(ctx, groupID)
+	assignments, err := r.list(ctx, schoolmembership.GroupAssignmentFilter{GroupIDs: []int64{groupID}, ForUpdate: true}, "lock by group")
 	if err != nil {
 		return nil, err
 	}

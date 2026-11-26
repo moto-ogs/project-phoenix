@@ -15,6 +15,7 @@
 // selbst aus und zeigt deshalb nie einen Block, dessen Öffnen mit 403
 // scheitern würde.
 
+import { useOptionalSupervision } from "~/lib/supervision-context";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import {
@@ -478,6 +479,7 @@ function ParallelGroup({
 
 export function TagesplanView() {
   const searchParams = useSearchParams();
+  const { refresh: refreshSupervision } = useOptionalSupervision();
   const router = useTenantRouter();
   const timetableEnabled = useTimetableEnabled();
   const overviewScope = useOperationalOverviewScope();
@@ -560,27 +562,31 @@ export function TagesplanView() {
     async (instance: PlannedTimetableInstance) => {
       setStartBusyId(instance.id);
       try {
-        const result = await timetableOperationsApi.start(instance.id);
+        const result = await timetableOperationsApi
+          .start(instance.id)
+          .catch(async (err: unknown) => {
+            logger.error("tagesplan_start_failed", {
+              instance_id: instance.id,
+              error: err instanceof Error ? err.message : String(err),
+            });
+            void showActionError(err, {
+              object: "das Starten des Termins",
+              retry: () => latestStartRef.current(instance),
+            });
+            await reloadList();
+            return undefined;
+          });
+        if (!result) return;
         // Die Seitenleiste soll die neue Aufsicht sofort zeigen, auch ohne
         // Live-Ereignis (etwa für die AG-Leitung, #4573).
-        window.dispatchEvent(new CustomEvent("phoenix:supervision-stale"));
+        await refreshSupervision(["sessions"]);
         saveScrollPosition(day);
         router.push(`/active-supervisions?session=${result.activeGroupId}`);
-      } catch (err) {
-        logger.error("tagesplan_start_failed", {
-          instance_id: instance.id,
-          error: err instanceof Error ? err.message : String(err),
-        });
-        void showActionError(err, {
-          object: "das Starten des Termins",
-          retry: () => latestStartRef.current(instance),
-        });
-        await reloadList();
       } finally {
         setStartBusyId(null);
       }
     },
-    [day, reloadList, router, showActionError],
+    [day, refreshSupervision, reloadList, router, showActionError],
   );
 
   useLayoutEffect(() => {

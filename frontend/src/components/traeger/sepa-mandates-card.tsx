@@ -54,10 +54,7 @@ import {
   mandateState,
   nextDebitLabel,
 } from "./sepa-format";
-import {
-  useFreshTraegerResource,
-  useTraegerResource,
-} from "./use-traeger-resource";
+import { useFreshTraegerResource } from "./use-traeger-resource";
 
 const logger = createLogger({ component: "SepaMandatesCard" });
 
@@ -161,7 +158,7 @@ function HistoryModal({
   );
   // The people of the Träger-Büro name the accounts; a role that may not
   // read them sees the account number instead, without an error.
-  const { data: buero } = useTraegerResource(
+  const { data: buero } = useFreshTraegerResource(
     mandate ? traegerKeys.buero() : null,
     fetchTraegerBuero,
     "die Personen des Träger-Büros",
@@ -340,10 +337,15 @@ function FamilyMandates({
               ) : null}
               <DataField label="Gläubiger-ID">
                 <span className="font-mono">{inForce.creditorId}</span>
+                {inForce.issuerName ? (
+                  <span className="block text-gray-500">
+                    Für {inForce.issuerName}
+                  </span>
+                ) : null}
                 {inForce.creditorCurrent ? null : (
                   <span className="text-moto-red-strong block">
-                    Gilt nicht mehr: deine Gläubiger-ID hat sich geändert.
-                    Widerrufe dieses Mandat und erfasse das neue.
+                    Gilt nicht mehr für diesen Vertrag: Hier zieht eine andere
+                    Gläubiger-ID ein. Erfasse dafür ein neues Mandat.
                   </span>
                 )}
               </DataField>
@@ -607,7 +609,6 @@ export function SepaMandatesCard({
           rowHasInteractiveControls
           // Seven columns on a laptop: narrower cells keep every one in view.
           dense
-          stackedOnMobile
         />
       ) : mandates ? (
         <EmptyState

@@ -10,6 +10,8 @@ import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import { ApiError } from "~/lib/api-error";
 import type { SettingsSchema } from "~/lib/settings-api";
 import type {
+  PayrollEmployer,
+  PayrollFile,
   PayrollReport,
   TimeReport,
 } from "~/lib/traeger-staff-exports-api";
@@ -22,6 +24,8 @@ const api = vi.hoisted(() => ({
   fetchTimeReport: vi.fn(),
   downloadPayrollFile: vi.fn(),
   downloadTimeFile: vi.fn(),
+  fetchPayrollEmployers: vi.fn(),
+  savePayrollEmployer: vi.fn(),
 }));
 const settingsApi = vi.hoisted(() => ({
   saveTraegerSettingValue: vi.fn(),
@@ -64,7 +68,7 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => navigation.params,
 }));
 
-import TraegerPayrollExportPage from "./page";
+import TraegerPayrollExportPage from "./page-content";
 
 // The month `back` months before the month of the test day.
 function monthBefore(back: number): { year: number; month: number } {
@@ -95,7 +99,26 @@ const NOT_READY: PayrollReport = {
   noWageType: false,
   openSchools: ["OGS Nord"],
   contractChanges: [],
+  form: "traeger",
+  files: [],
+  employers: [],
+  inSeveralFiles: [],
   ready: false,
+};
+
+const TRAEGER_FILE: PayrollFile = {
+  key: "traeger",
+  employers: [{ body: "traeger", name: "" }],
+  schools: ["OGS Nord"],
+  consultantNumber: "29098",
+  clientNumber: "55003",
+  people: 2,
+  lineCount: 4,
+  missingClient: false,
+  withoutNumber: [],
+  duplicates: [],
+  splitNumbers: [],
+  ready: true,
 };
 
 const READY: PayrollReport = {
@@ -103,7 +126,19 @@ const READY: PayrollReport = {
   withoutNumber: [],
   missingClient: false,
   openSchools: [],
+  files: [TRAEGER_FILE],
   ready: true,
+};
+
+const GEMEINDE: PayrollEmployer = {
+  schoolId: "2",
+  schoolName: "OGS Süd",
+  body: "gemeinde",
+  name: "Gemeinde Hardt",
+  consultantNumber: "",
+  clientNumber: "",
+  costCenter: "",
+  version: "absent",
 };
 
 const TIMES: TimeReport = {
@@ -156,6 +191,7 @@ describe("TraegerPayrollExportPage", () => {
     navigation.params = new URLSearchParams();
     api.fetchPayrollReport.mockResolvedValue(NOT_READY);
     api.fetchTimeReport.mockResolvedValue(TIMES);
+    api.fetchPayrollEmployers.mockResolvedValue([]);
     schema.data = payrollSchema({
       "traeger_payroll.datev_consultant_number": "",
       "traeger_payroll.wage_type.regelarbeit.minijob": "200",
@@ -453,6 +489,207 @@ describe("TraegerPayrollExportPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
     expect(await screen.findByText("1 bis 4 Ziffern.")).toBeInTheDocument();
     expect(settingsApi.saveTraegerSettingValue).not.toHaveBeenCalled();
+  });
+
+  it("holds the one file until the Gemeinde has its Kostenstelle", async () => {
+    api.fetchPayrollReport.mockResolvedValue({
+      ...READY,
+      files: [{ ...TRAEGER_FILE, ready: false }],
+      employers: [
+        {
+          schoolId: "2",
+          schoolName: "OGS Süd",
+          body: "gemeinde",
+          name: "Gemeinde Hardt",
+          missingClient: false,
+          missingCostCenter: true,
+        },
+      ],
+      ready: false,
+    });
+    renderPage();
+    expect(
+      await screen.findByText(
+        "Für Gemeinde Hardt (OGS Süd) fehlt die Kostenstelle.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Stunden anderer Arbeitgeber tragen ihre Kostenstelle/),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Herunterladen/ }),
+    ).toHaveAttribute("aria-disabled", "true");
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Einrichtung öffnen, um die Kostenstelle von Gemeinde Hardt (OGS Süd) einzutragen",
+      }),
+    );
+    expect(navigation.replace).toHaveBeenCalledWith("?tab=einrichtung", {
+      scroll: false,
+    });
+  });
+
+  it("downloads each file of the form per employer on its own", async () => {
+    api.fetchPayrollReport.mockResolvedValue({
+      ...READY,
+      form: "arbeitgeber",
+      files: [
+        { ...TRAEGER_FILE, key: "29098-55003" },
+        {
+          ...TRAEGER_FILE,
+          key: "s2-gemeinde",
+          employers: [{ body: "gemeinde", name: "Gemeinde Hardt" }],
+          schools: ["OGS Süd"],
+          consultantNumber: "",
+          clientNumber: "",
+          missingClient: true,
+          ready: false,
+        },
+      ],
+      employers: [
+        {
+          schoolId: "2",
+          schoolName: "OGS Süd",
+          body: "gemeinde",
+          name: "Gemeinde Hardt",
+          missingClient: true,
+          missingCostCenter: false,
+        },
+      ],
+      inSeveralFiles: [
+        { recordId: "11", firstName: "Mira", lastName: "Sommer" },
+      ],
+      ready: false,
+    });
+    api.downloadPayrollFile.mockResolvedValue({
+      blob: new Blob(["x"]),
+      filename: null,
+    });
+    renderPage();
+    expect(
+      await screen.findByText(
+        "Für Gemeinde Hardt (OGS Süd) fehlen Berater- und Mandantennummer.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/In mehreren Dateien: Mira Sommer\./),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Teilweise bereit")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", {
+        name: "Datei für Gemeinde Hardt herunterladen",
+      }),
+    ).toHaveAttribute("aria-disabled", "true");
+    const traeger = screen.getByRole("button", {
+      name: "Datei für Träger herunterladen",
+    });
+    await waitFor(() =>
+      expect(traeger).not.toHaveAttribute("aria-disabled", "true"),
+    );
+    fireEvent.click(traeger);
+    await waitFor(() =>
+      expect(download.downloadBlob).toHaveBeenCalledWith(
+        expect.any(Blob),
+        `lohnexport_datev_lodas_${LAST_SUFFIX}_29098-55003.txt`,
+      ),
+    );
+    expect(api.downloadPayrollFile).toHaveBeenCalledWith(
+      LAST.year,
+      LAST.month,
+      "datev_lodas",
+      "29098-55003",
+    );
+  });
+
+  it("holds a file in which one person would have two numbers", async () => {
+    api.fetchPayrollReport.mockResolvedValue({
+      ...READY,
+      form: "arbeitgeber",
+      files: [
+        {
+          ...TRAEGER_FILE,
+          key: "1234-567",
+          employers: [{ body: "gemeinde", name: "Gemeinde Hardt" }],
+          splitNumbers: [
+            {
+              person: { recordId: "11", firstName: "Mira", lastName: "Sommer" },
+              numbers: ["100", "7"],
+            },
+          ],
+          ready: false,
+        },
+      ],
+      ready: false,
+    });
+    renderPage();
+    expect(
+      await screen.findByText(
+        "Mira Sommer stünde in der Datei für Gemeinde Hardt unter zwei Personalnummern (100 und 7). Trag bei jedem Einsatzort dieses Arbeitgebers dieselbe Nummer ein.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Personalakte von Mira Sommer öffnen" }),
+    ).toHaveAttribute("href", "/traeger/personal/11");
+  });
+
+  it("switches to one file per employer and saves the numbers of the Gemeinde", async () => {
+    navigation.params = new URLSearchParams("tab=einrichtung");
+    schema.data = payrollSchema({
+      "traeger_payroll.file_form": "traeger",
+      "traeger_payroll.datev_consultant_number": "29098",
+    });
+    api.fetchPayrollEmployers.mockResolvedValue([GEMEINDE]);
+    settingsApi.saveTraegerSettingValue.mockResolvedValue(undefined);
+    api.savePayrollEmployer.mockResolvedValue(undefined);
+    renderPage();
+    expect(await screen.findByText("Kostenstelle fehlt")).toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole("radio", { name: /Eine Datei pro Arbeitgeber/ }),
+    );
+    expect(
+      await screen.findByText("Berater- und Mandantennummer fehlen"),
+    ).toBeInTheDocument();
+    fireEvent.change(
+      screen.getByRole("textbox", {
+        name: "Beraternummer von Gemeinde Hardt an OGS Süd",
+      }),
+      { target: { value: "29098" } },
+    );
+    fireEvent.change(
+      screen.getByRole("textbox", {
+        name: "Mandantennummer von Gemeinde Hardt an OGS Süd",
+      }),
+      { target: { value: "55005" } },
+    );
+    expect(await screen.findByText("Vollständig")).toBeInTheDocument();
+    const bar = screen.getByText("2 Änderungen").parentElement as HTMLElement;
+    fireEvent.click(within(bar).getByRole("button", { name: "Speichern" }));
+    await waitFor(() =>
+      expect(api.savePayrollEmployer).toHaveBeenCalledWith(GEMEINDE, {
+        consultantNumber: "29098",
+        clientNumber: "55005",
+        costCenter: "",
+      }),
+    );
+    expect(settingsApi.saveTraegerSettingValue).toHaveBeenCalledWith(
+      "traeger_payroll.file_form",
+      "arbeitgeber",
+    );
+  });
+
+  it("refuses a Kostenstelle with letters before it saves", async () => {
+    navigation.params = new URLSearchParams("tab=einrichtung");
+    api.fetchPayrollEmployers.mockResolvedValue([GEMEINDE]);
+    renderPage();
+    fireEvent.change(
+      await screen.findByRole("textbox", {
+        name: "Kostenstelle von Gemeinde Hardt an OGS Süd",
+      }),
+      { target: { value: "47a" } },
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    expect(await screen.findByText("1 bis 8 Ziffern.")).toBeInTheDocument();
+    expect(api.savePayrollEmployer).not.toHaveBeenCalled();
   });
 
   it("explains a Träger without the release instead of the export", async () => {

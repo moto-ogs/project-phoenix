@@ -54,11 +54,11 @@ func (rs *Resource) listVisits(w http.ResponseWriter, r *http.Request) {
 	common.Respond(w, r, http.StatusOK, responses, "Visits retrieved successfully")
 }
 
-// parseActiveGroupIDs parses the comma-separated active_group_ids query
+// parseActiveGroupIDs parses repeated or comma-separated active_group_ids query
 // parameter used by room moves to load visits for several source sessions in
 // one request. Invalid IDs are rejected rather than silently skipped.
 func parseActiveGroupIDs(w http.ResponseWriter, r *http.Request) ([]int64, bool) {
-	raw := r.URL.Query().Get("active_group_ids")
+	raw := strings.Join(r.URL.Query()["active_group_ids"], ",")
 	if raw == "" {
 		return nil, true
 	}

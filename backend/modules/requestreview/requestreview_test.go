@@ -5,10 +5,12 @@ import (
 	"encoding/json"
 	"errors"
 	"net/url"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -190,6 +192,15 @@ func parse(t *testing.T, raw string) ListQuery {
 	return q
 }
 
+func parseHistory(t *testing.T, raw string) ListQuery {
+	t.Helper()
+	values, err := url.ParseQuery(raw)
+	require.NoError(t, err)
+	q, err := ParseHistoryQuery(values)
+	require.NoError(t, err)
+	return q
+}
+
 func TestConflictScanUsesTheRequestDay(t *testing.T) {
 	t.Parallel()
 	f := newFixture()
@@ -243,13 +254,13 @@ func TestPendingCountUsesOneRequestDay(t *testing.T) {
 // markedPayload carries the row id through the merge; the merge never reads
 // the projection.
 func markedPayload(id int64) Payload {
-	return Payload{DirectCorrection: &DirectCorrectionResponse{ID: strconv.FormatInt(id, 10)}}
+	return Payload{DirectCorrection: &DirectCorrectionResponse{ID: ident.ID(id)}}
 }
 
 func itemIDs(page Page) []string {
 	ids := make([]string, 0, len(page.Items))
 	for _, item := range page.Items {
-		ids = append(ids, item.RequestType+":"+item.payload.DirectCorrection.ID)
+		ids = append(ids, item.RequestType+":"+item.payload.DirectCorrection.ID.String())
 	}
 	return ids
 }
@@ -278,14 +289,19 @@ func TestNewRequiresQueuesAndAccess(t *testing.T) {
 func TestParseListQueryValidatesTheWire(t *testing.T) {
 	t.Parallel()
 	for _, raw := range []string{
-		"view=archive", "types=unknown", "status=approved", "from=2026-08-01", "to=2026-08-01",
-		"view=history&status=pending", "view=history&from=01.08.2026", "view=history&from=2026-08-02&to=2026-08-01",
+		"types=unknown",
 		"limit=0", "limit=x", "student_id=0", "student_id=abc", "cursor=%21%21%21", "cursor=bm90LWpzb24",
 	} {
 		values, err := url.ParseQuery(raw)
 		require.NoError(t, err, raw)
 		_, err = ParseListQuery(values)
 		assert.ErrorIs(t, err, ErrInvalidQuery, raw)
+	}
+	for _, raw := range []string{"status=pending", "from=01.08.2026", "from=2026-08-02&to=2026-08-01", "types=unknown"} {
+		values, err := url.ParseQuery(raw)
+		require.NoError(t, err, raw)
+		_, err = ParseHistoryQuery(values)
+		assert.ErrorIs(t, err, ErrInvalidQuery, "history: "+raw)
 	}
 
 	q := parse(t, "types=excused,master_data,excused&limit=500&search=%20Emma%20")
@@ -294,10 +310,16 @@ func TestParseListQueryValidatesTheWire(t *testing.T) {
 	assert.Equal(t, "Emma", q.Search)
 	assert.False(t, q.History)
 
+	// The open list registers no history filter and reads none.
+	unfiltered := parse(t, "status=approved&from=2026-08-01&to=2026-08-19")
+	assert.Empty(t, unfiltered.Statuses)
+	assert.True(t, unfiltered.From.IsZero())
+	assert.True(t, unfiltered.To.IsZero())
+
 	open := parse(t, "types=direct_correction,offering")
 	assert.Equal(t, []string{TypeOffering}, open.Types, "corrections have no open state")
 
-	history := parse(t, "view=history&status=approved,withdrawn&from=2026-08-01&to=2026-08-19&student_id=42")
+	history := parseHistory(t, "status=approved,withdrawn&from=2026-08-01&to=2026-08-19&student_id=42")
 	assert.True(t, history.History)
 	assert.Equal(t, map[string]struct{}{"approved": {}, "withdrawn": {}}, history.Statuses)
 	assert.Equal(t, int64(42), history.StudentID)
@@ -323,7 +345,7 @@ func TestListMergesQueuesNewestFirstWithDeterministicTieBreak(t *testing.T) {
 	assert.Equal(t, []string{"offering:9", "master_data:3", "care_schedule:7", "excused:5", "excused:4", "master_data:1"}, itemIDs(page))
 	assert.Empty(t, page.NextCursor)
 	assert.Equal(t, "admin", page.ReviewAccess)
-	assert.Equal(t, "1", page.Items[1].StudentID)
+	assert.Equal(t, "1", page.Items[1].StudentID.String())
 	assert.Equal(t, "Anna Adler", page.Items[1].StudentName)
 	assert.Equal(t, base.Add(-time.Minute), page.Items[1].OccurredAt)
 	assert.Equal(t, base.Add(-time.Minute).UTC().Format(time.RFC3339Nano), page.Items[1].ExpectedVersion)
@@ -343,7 +365,7 @@ func TestListOpenViewOfOnlyCorrectionsIsEmpty(t *testing.T) {
 	f.offering.open = []Row{openRow(TypeOffering, 3, 3, "Cara Cruz", base)}
 	f.excused.open = []Row{openRow(TypeExcused, 4, 4, "Dora Dahl", base)}
 
-	page, err := f.query().ListRequests(context.Background(), parse(t, "view=open&types=direct_correction"))
+	page, err := f.query().ListRequests(context.Background(), parse(t, "types=direct_correction"))
 	require.NoError(t, err)
 	assert.Empty(t, page.Items)
 	assert.Empty(t, page.NextCursor)
@@ -485,23 +507,23 @@ func TestHistoryFiltersStatusAndDecisionRangeAndListsCorrections(t *testing.T) {
 	f.excused.history = []Row{historyRow(TypeExcused, 4, 1, "Anna", base.Add(-time.Hour), "withdrawn")}
 	f.corrections.history = []Row{historyRow(TypeDirectCorrection, 5, 1, "Anna", base.Add(-2*time.Hour), "")}
 
-	page, err := f.query().ListRequests(context.Background(), parse(t, "view=history"))
+	page, err := f.query().ListRequests(context.Background(), parseHistory(t, ""))
 	require.NoError(t, err)
 	assert.Equal(t, []string{"master_data:1", "excused:4", "direct_correction:5", "master_data:2", "master_data:3"}, itemIDs(page))
 	assert.Empty(t, page.ReviewAccess, "history omits the review reach")
-	assert.False(t, page.Items[0].CanCorrect, "auto-applied rows were never decided")
-	assert.True(t, page.Items[3].CanCorrect)
+	assert.False(t, page.Items[0].canCorrect, "auto-applied rows were never decided")
+	assert.True(t, page.Items[3].canCorrect)
 	assert.Empty(t, f.master.openCalls, "history never touches the open queues")
 
-	page, err = f.query().ListRequests(context.Background(), parse(t, "view=history&status=approved"))
+	page, err = f.query().ListRequests(context.Background(), parseHistory(t, "status=approved"))
 	require.NoError(t, err)
 	assert.Equal(t, []string{"master_data:1", "master_data:3"}, itemIDs(page), "auto-applied counts as approved")
 
-	page, err = f.query().ListRequests(context.Background(), parse(t, "view=history&from=2026-08-09&to=2026-08-10"))
+	page, err = f.query().ListRequests(context.Background(), parseHistory(t, "from=2026-08-09&to=2026-08-10"))
 	require.NoError(t, err)
 	assert.Equal(t, []string{"master_data:1", "excused:4", "direct_correction:5", "master_data:2"}, itemIDs(page))
 
-	page, err = f.query().ListRequests(context.Background(), parse(t, "view=history&types=direct_correction"))
+	page, err = f.query().ListRequests(context.Background(), parseHistory(t, "types=direct_correction"))
 	require.NoError(t, err)
 	assert.Equal(t, []string{"direct_correction:5"}, itemIDs(page))
 }
@@ -517,12 +539,12 @@ func TestHistoryCursorAdvancesPastFilteredRows(t *testing.T) {
 	}
 	f.master.history = append(f.master.history, historyRow(TypeMasterData, 1, 1, "Anna", base.Add(-300*time.Minute), "approved"))
 
-	first, err := f.query().ListRequests(context.Background(), parse(t, "view=history&status=approved&types=master_data"))
+	first, err := f.query().ListRequests(context.Background(), parseHistory(t, "status=approved&types=master_data"))
 	require.NoError(t, err)
 	assert.Empty(t, first.Items, "the scan budget ends before the approved row")
 	require.NotEmpty(t, first.NextCursor, "an underfilled page still hands out a cursor")
 
-	second, err := f.query().ListRequests(context.Background(), parse(t, "view=history&status=approved&types=master_data&cursor="+first.NextCursor))
+	second, err := f.query().ListRequests(context.Background(), parseHistory(t, "status=approved&types=master_data&cursor="+first.NextCursor))
 	require.NoError(t, err)
 	assert.Equal(t, []string{"master_data:1"}, itemIDs(second))
 	assert.Empty(t, second.NextCursor)
@@ -594,7 +616,7 @@ func TestOpenPageDecoratesGroupsAndFamilyProtection(t *testing.T) {
 	assert.True(t, page.Items[1].FamilyProtected)
 	assert.Equal(t, []int64{1, 2}, f.students.got)
 
-	history, err := f.query().ListRequests(context.Background(), parse(t, "view=history"))
+	history, err := f.query().ListRequests(context.Background(), parseHistory(t, ""))
 	require.NoError(t, err)
 	assert.Empty(t, history.Items)
 }
@@ -633,7 +655,7 @@ func TestListNamesWhoFiledEachRequest(t *testing.T) {
 
 	f.master.history = []Row{submittedRow(historyRow(TypeMasterData, 5, 1, "Felix", base, "approved"), 10)}
 	f.corrections.history = []Row{historyRow(TypeDirectCorrection, 6, 1, "Felix", base.Add(-time.Minute), "")}
-	history, err := f.query().ListRequests(context.Background(), parse(t, "view=history"))
+	history, err := f.query().ListRequests(context.Background(), parseHistory(t, ""))
 	require.NoError(t, err)
 	require.Len(t, history.Items, 2)
 	assert.Equal(t, "Klaus Schneider", history.Items[0].SubmittedByName, "the history names the filer too")
@@ -737,18 +759,17 @@ func TestItemWireShapeIsStable(t *testing.T) {
 	row.BulkEligible = true
 	row.ConflictKeys = []string{"absence:2026-08-10"}
 	row.SubmittedBy = 10
-	row.Payload = Payload{Excused: &StaffExcusedRequestResponse{ID: "1"}}
+	row.Payload = Payload{Excused: &StaffExcusedRequestResponse{ID: 1}}
 	f.excused.open = []Row{row}
 	f.submitters = &fakeSubmitters{known: map[SubmitterKey]Submitter{{StudentID: 1, AccountID: 10}: {Name: "Klaus Adler", RelationshipType: "parent"}}}
 
 	page, err := f.query().ListRequests(context.Background(), parse(t, "types=excused"))
 	require.NoError(t, err)
-	raw, err := json.Marshal(page)
+	raw, err := wire.Marshal(page)
 	require.NoError(t, err)
-	excused, err := json.Marshal(row.Payload.Excused)
+	excused, err := wire.Marshal(row.Payload.Excused)
 	require.NoError(t, err)
-	// The open projection travels in the member named like the type and,
-	// for one release, under the deprecated data member too.
+	// The open projection travels in the member named like the type.
 	assert.JSONEq(t, strings.ReplaceAll(`{
 		"items": [{
 			"request_type": "excused",
@@ -765,7 +786,6 @@ func TestItemWireShapeIsStable(t *testing.T) {
 			"family_protected": false,
 			"submitted_by_name": "Klaus Adler",
 			"submitted_by_relationship": "parent",
-			"data": EXCUSED,
 			"excused": EXCUSED
 		}],
 		"review_access": "admin"
@@ -792,7 +812,7 @@ func TestHistoryPageCarriesEachProjectionInItsMember(t *testing.T) {
 	history := HistoryPageOf(page)
 	require.Len(t, history.Items, len(TypeOrder))
 	for _, item := range history.Items {
-		raw, err := json.Marshal(item)
+		raw, err := wire.Marshal(item)
 		require.NoError(t, err)
 		var members map[string]json.RawMessage
 		require.NoError(t, json.Unmarshal(raw, &members))

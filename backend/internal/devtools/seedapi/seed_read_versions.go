@@ -3,6 +3,8 @@ package api
 import (
 	"fmt"
 	"maps"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // readSeedVersion reads the version a save of the record at path sends back
@@ -25,5 +27,68 @@ func putReadPhase(rt *Runtime, auth AuthRef, path string, body map[string]any) e
 	sent := maps.Clone(body)
 	sent["expected_version"] = version
 	_, err = rt.Client.PutWithAuth(auth, path, sent)
+	return err
+}
+
+// putReadChildOfferings corrects a child's bookings over the
+// offerings_version the request detail answers right before, as the
+// correction editor does (ADR 0311), and returns the answer.
+func putReadChildOfferings(rt *Runtime, auth AuthRef, requestID, childID int64, body map[string]any) ([]byte, error) {
+	raw, err := rt.Client.GetWithAuth(auth, fmt.Sprintf("/api/enrollment/admin/requests/%d", requestID))
+	if err != nil {
+		return nil, fmt.Errorf("read enrollment request %d: %w", requestID, err)
+	}
+	var detail struct {
+		Data struct {
+			Children []struct {
+				ID               ident.ID `json:"id"`
+				OfferingsVersion string   `json:"offerings_version"`
+			} `json:"children"`
+		} `json:"data"`
+	}
+	if err := parseJSON(raw, &detail); err != nil {
+		return nil, fmt.Errorf("parse enrollment request %d: %w", requestID, err)
+	}
+	sent := maps.Clone(body)
+	for _, child := range detail.Data.Children {
+		if int64(child.ID) == childID {
+			sent["expected_version"] = child.OfferingsVersion
+		}
+	}
+	if _, ok := sent["expected_version"]; !ok {
+		return nil, fmt.Errorf("enrollment request %d has no child %d", requestID, childID)
+	}
+	return rt.Client.PutWithAuth(auth, fmt.Sprintf("/api/enrollment/admin/requests/%d/children/%d/offerings", requestID, childID), sent)
+}
+
+// postReadHolidayConfirmation confirms a holiday registration over the
+// preview it reads first with the payer of body, as the registration page
+// does (ADR 0311): the preview's fingerprint, and with child_debtor_numbers
+// the version of the children's numbers read now.
+func postReadHolidayConfirmation(rt *Runtime, auth AuthRef, periodID, registrationID int64, body map[string]any) error {
+	path := fmt.Sprintf("/traeger/holiday-contributions/%d/registrations/%d", periodID, registrationID)
+	exemption, _ := body["benefits_exemption"].(bool)
+	query := fmt.Sprintf("?benefits_exemption=%t", exemption)
+	if bearer, ok := body["cost_bearer_id"]; ok {
+		query = fmt.Sprintf("?benefits_exemption=false&cost_bearer_id=%v", bearer)
+	}
+	raw, err := rt.Client.GetWithAuth(auth, path+query)
+	if err != nil {
+		return fmt.Errorf("read the contribution of registration %d: %w", registrationID, err)
+	}
+	fingerprint, err := seedReadToken(raw, "fingerprint")
+	if err != nil {
+		return err
+	}
+	sent := maps.Clone(body)
+	sent["expected_fingerprint"] = fingerprint
+	if _, numbers := body["child_debtor_numbers"]; numbers {
+		version, err := readSeedVersion(rt, auth, path+"/family-debtor-number", "the numbers of the children")
+		if err != nil {
+			return err
+		}
+		sent["expected_child_debtor_numbers_version"] = version
+	}
+	_, err = rt.Client.PostWithAuth(auth, path+"/confirm", sent)
 	return err
 }

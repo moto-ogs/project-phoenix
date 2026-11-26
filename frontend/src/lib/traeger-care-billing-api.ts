@@ -328,6 +328,8 @@ export interface CareInvoice {
   readonly familyEmail?: string;
   readonly schoolId: string;
   readonly schoolName: string;
+  /** The Schulträger or the Gemeinde that issues it (#8040); empty for the Träger. */
+  readonly issuerName?: string;
   readonly childFirstName: string;
   readonly childLastName: string;
   readonly recipient: {
@@ -721,7 +723,7 @@ export function moduleFromBackend(
   };
 }
 
-function tariffsFromBackend(
+export function tariffsFromBackend(
   body: traegerCareTariffsContract.CareTariffs,
 ): CareTariffs {
   return {
@@ -780,6 +782,7 @@ function invoiceFromBackend(
     familyEmail: invoice.family_email,
     schoolId: id(invoice.school_id),
     schoolName: invoice.school_name,
+    issuerName: invoice.issuer?.name ?? "",
     childFirstName: invoice.child_first_name,
     childLastName: invoice.child_last_name,
     recipient: {
@@ -992,7 +995,12 @@ export async function deleteCarePriceList(
 }
 
 export async function fetchCareRuns(): Promise<CareRunList> {
-  const body = await bffJson("org", "GET /traeger/care-billing-runs/");
+  return mapCareRuns(await bffJson("org", "GET /traeger/care-billing-runs/"));
+}
+
+export function mapCareRuns(
+  body: traegerCareBillingRunsContract.CareRunList,
+): CareRunList {
   return {
     runs: (body.runs ?? []).map(runFromBackend),
     suggestedMonth: requiredDay(

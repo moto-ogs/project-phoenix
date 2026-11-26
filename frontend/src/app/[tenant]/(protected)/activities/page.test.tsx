@@ -12,7 +12,7 @@ import { catalogText } from "~/test/error-catalog-text";
 import { MODULE_KEYS } from "~/lib/modules";
 import type { TenantInfo } from "~/lib/tenant-api";
 import { useBookedModules, useTenantSafe } from "~/lib/tenant-context";
-import ActivitiesPage from "./page";
+import ActivitiesPage from "./page-content";
 
 const { mockToastSuccess, mockPush, mockRedirect } = vi.hoisted(() => ({
   mockToastSuccess: vi.fn(),

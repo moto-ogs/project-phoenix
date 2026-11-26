@@ -58,7 +58,7 @@ function deferred<T>() {
 
 function signedIn(user: Partial<Session["user"]> = {}) {
   return {
-    data: { user: { id: "A", tenantId: 1, ...user }, expires: "2099-01-01" },
+    data: { user: { id: "A", tenantId: "1", ...user }, expires: "2099-01-01" },
     status: "authenticated" as const,
   };
 }

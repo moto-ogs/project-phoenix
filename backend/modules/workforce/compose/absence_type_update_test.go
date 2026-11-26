@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/modules/workforce/workforcetest"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
@@ -29,7 +30,7 @@ func TestUpdateCustomAbsenceTypeContract(t *testing.T) {
 		{name: "Urlaub", want: workforce.ErrAbsenceTypeNameReserved},
 		{name: " taken ", want: workforce.ErrAbsenceTypeNameTaken},
 	} {
-		_, err := capability.UpdateAbsenceType(ctx, workforce.UpdateAbsenceType{ID: created.ID, Name: &tc.name, IsActive: &disabled})
+		_, err := capability.UpdateAbsenceType(ctx, workforce.UpdateAbsenceType{ID: created.ID, ExpectedVersion: workforcetest.AbsenceTypeVersion(t, ctx, capability, created.ID), Name: &tc.name, IsActive: &disabled})
 		require.ErrorIs(t, err, tc.want)
 	}
 	unchanged, err := capability.FindStaffAbsenceType(ctx, created.ID)
@@ -38,7 +39,7 @@ func TestUpdateCustomAbsenceTypeContract(t *testing.T) {
 
 	renamed := "  Renamed  "
 	enabled := true
-	updated, err := capability.UpdateAbsenceType(ctx, workforce.UpdateAbsenceType{ID: created.ID, Name: &renamed, AllowanceEnabled: &enabled})
+	updated, err := capability.UpdateAbsenceType(ctx, workforce.UpdateAbsenceType{ID: created.ID, ExpectedVersion: workforcetest.AbsenceTypeVersion(t, ctx, capability, created.ID), Name: &renamed, AllowanceEnabled: &enabled})
 	require.NoError(t, err)
 	assert.Equal(t, "Renamed", updated.Name)
 	assert.True(t, updated.AllowanceEnabled)
@@ -50,9 +51,9 @@ func TestUpdateCustomAbsenceTypeContract(t *testing.T) {
 	_, err = capability.CreateStaffAbsence(ctx, absence)
 	require.NoError(t, err)
 	newName := "Changed history"
-	_, err = capability.UpdateAbsenceType(ctx, workforce.UpdateAbsenceType{ID: created.ID, Name: &newName, IsActive: &disabled})
+	_, err = capability.UpdateAbsenceType(ctx, workforce.UpdateAbsenceType{ID: created.ID, ExpectedVersion: workforcetest.AbsenceTypeVersion(t, ctx, capability, created.ID), Name: &newName, IsActive: &disabled})
 	require.ErrorIs(t, err, workforce.ErrAbsenceTypeInUse)
-	updated, err = capability.UpdateAbsenceType(ctx, workforce.UpdateAbsenceType{ID: created.ID, Name: &renamed, IsActive: &disabled})
+	updated, err = capability.UpdateAbsenceType(ctx, workforce.UpdateAbsenceType{ID: created.ID, ExpectedVersion: workforcetest.AbsenceTypeVersion(t, ctx, capability, created.ID), Name: &renamed, IsActive: &disabled})
 	require.NoError(t, err, "an unchanged normalized name may be deactivated after use")
 	assert.False(t, updated.IsActive)
 	assert.Equal(t, "Renamed", updated.Name)

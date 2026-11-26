@@ -1,10 +1,14 @@
+import { sessionMarkName, validSessionMark } from "~/lib/session-mark";
 import type { Session } from "next-auth";
 import type { JWT } from "next-auth/jwt";
 import { getToken } from "next-auth/jwt";
 import { headers } from "next/headers";
+import { connection } from "next/server";
+import { cache } from "react";
 import { env } from "~/env";
 import { tenantSessionCookieName } from "~/lib/session-cookie-exit.server";
 import { toBrowserSession } from "~/server/auth/browser-session";
+import { sessionIdentifier } from "~/server/auth/jwt-payload";
 import {
   PORTALS,
   type PortalDescriptor,
@@ -61,7 +65,7 @@ async function readFreshPortalToken(
   const cookie = (await headers()).get("cookie");
   if (!cookie) return null;
   const cookieName = sessionCookieName(key);
-  const token = await getToken({
+  const cookieToken = await getToken({
     // The cookie header alone: getToken would otherwise fall back to an
     // Authorization bearer value, which is no portal cookie.
     req: { headers: new Headers({ cookie }) },
@@ -69,11 +73,17 @@ async function readFreshPortalToken(
     cookieName,
     salt: cookieName,
   });
+  if (!cookieToken) return null;
+  const token = {
+    ...cookieToken,
+    tenantId: sessionIdentifier(cookieToken.tenantId),
+    orgId: sessionIdentifier(cookieToken.orgId),
+    actingAdminId: sessionIdentifier(cookieToken.actingAdminId),
+  };
 
   const portal: PortalDescriptor = PORTALS[key];
   const now = Date.now();
   if (
-    !token ||
     !portal.scopes.includes(token.scope) ||
     (portal.snapshotClaims && !portal.snapshotClaims(token)) ||
     typeof token.id !== "string" ||
@@ -102,11 +112,17 @@ async function readFreshPortalToken(
 /**
  * The layout snapshot of a portal: the same projection the session route
  * answers with (serverSessionFromJwt, then toBrowserSession), so the first
- * render shows what the provider's poll later confirms.
+ * render shows what the provider's poll later confirms. One read per server
+ * render: a page loader (#8077) shares the layout's family check.
  */
-export async function readPortalSessionSnapshot(
+export const readPortalSessionSnapshot = cache(readSnapshot);
+
+async function readSnapshot(
   key: PortalKey,
 ): Promise<PortalSessionSnapshot | null> {
+  // Headers alone are available in a runtime shell prefetch. Wait for a real
+  // navigation before resolving a family or starting any authenticated seed.
+  await connection();
   const fresh = await readFreshPortalToken(key);
   if (!fresh?.token.token) return null;
   const { token, notBooked } = fresh;
@@ -121,8 +137,25 @@ export async function readPortalSessionSnapshot(
     },
   });
   return {
-    session: toBrowserSession(session),
+    // The booking as the family answers it, like the session route does: the
+    // first render and the provider's poll show one identity (#8082).
+    session: toBrowserSession(notBooked ? { ...session, notBooked } : session),
     accessToken,
     notBooked,
   };
+}
+
+/**
+ * The session mark this page renders with (#8082, ~/lib/session-mark): the
+ * tree it shows belongs to it. "" without one.
+ */
+export async function readRenderedSessionMark(key: PortalKey): Promise<string> {
+  const name = sessionMarkName(key, env.TENANT_DOMAIN);
+  for (const part of ((await headers()).get("cookie") ?? "").split(";")) {
+    const separator = part.indexOf("=");
+    // Only a mark's own form passes: the value goes into the page's HTML.
+    if (separator > 0 && part.slice(0, separator).trim() === name)
+      return validSessionMark(part.slice(separator + 1).trim());
+  }
+  return "";
 }

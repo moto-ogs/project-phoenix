@@ -3,7 +3,8 @@ package timetracking
 import (
 	"errors"
 	"net/http"
-	"strconv"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
@@ -43,30 +44,30 @@ func (rs *StaffAdminResource) registerPayrollRuleRoutes(r chi.Router, withTx com
 
 // PayrollWageTypeResponse is one wage type; IDs travel as strings.
 type PayrollWageTypeResponse struct {
-	ID     string `json:"id"`
-	Name   string `json:"name"`
-	Number string `json:"number"`
-	Unit   string `json:"unit"`
+	ID     ident.ID `json:"id"`
+	Name   string   `json:"name"`
+	Number string   `json:"number"`
+	Unit   string   `json:"unit"`
 }
 
 // PayrollSurchargeRuleResponse is one rule; the window is null for Sunday
 // and holiday rules.
 type PayrollSurchargeRuleResponse struct {
-	ID                string `json:"id"`
-	Kind              string `json:"kind"`
-	WindowStartMinute *int   `json:"window_start_minute"`
-	WindowEndMinute   *int   `json:"window_end_minute"`
-	RateType          string `json:"rate_type"`
-	RateHundredths    int    `json:"rate_hundredths"`
-	WageTypeID        string `json:"wage_type_id"`
+	ID                ident.ID `json:"id"`
+	Kind              string   `json:"kind"`
+	WindowStartMinute *int     `json:"window_start_minute"`
+	WindowEndMinute   *int     `json:"window_end_minute"`
+	RateType          string   `json:"rate_type"`
+	RateHundredths    int      `json:"rate_hundredths"`
+	WageTypeID        ident.ID `json:"wage_type_id"`
 }
 
 // PayrollAbsenceTypeResponse is one school absence type and its wage type.
 type PayrollAbsenceTypeResponse struct {
-	ID         string  `json:"id"`
-	Name       string  `json:"name"`
-	IsActive   bool    `json:"is_active"`
-	WageTypeID *string `json:"wage_type_id"`
+	ID         ident.ID  `json:"id"`
+	Name       string    `json:"name"`
+	IsActive   bool      `json:"is_active"`
+	WageTypeID *ident.ID `json:"wage_type_id"`
 }
 
 // PayrollRulesResponse is the payroll rule block of /payroll.
@@ -76,16 +77,14 @@ type PayrollRulesResponse struct {
 	AbsenceTypes   []PayrollAbsenceTypeResponse   `json:"absence_types"`
 }
 
-func idString(id int64) string { return strconv.FormatInt(id, 10) }
-
 func toPayrollWageTypeResponse(value workforce.PayrollWageType) PayrollWageTypeResponse {
-	return PayrollWageTypeResponse{ID: idString(value.ID), Name: value.Name, Number: value.Number, Unit: value.Unit}
+	return PayrollWageTypeResponse{ID: ident.ID(value.ID), Name: value.Name, Number: value.Number, Unit: value.Unit}
 }
 
 func toPayrollSurchargeRuleResponse(value workforce.PayrollSurchargeRule) PayrollSurchargeRuleResponse {
 	response := PayrollSurchargeRuleResponse{
-		ID: idString(value.ID), Kind: value.Kind, RateType: value.RateType,
-		RateHundredths: value.RateHundredths, WageTypeID: idString(value.WageTypeID),
+		ID: ident.ID(value.ID), Kind: value.Kind, RateType: value.RateType,
+		RateHundredths: value.RateHundredths, WageTypeID: ident.ID(value.WageTypeID),
 	}
 	if value.Kind == workforce.SurchargeKindNight {
 		start, end := value.WindowStartMinute, value.WindowEndMinute
@@ -107,9 +106,9 @@ func toPayrollRulesResponse(overview *workforce.PayrollRulesOverview) PayrollRul
 		response.SurchargeRules = append(response.SurchargeRules, toPayrollSurchargeRuleResponse(rule))
 	}
 	for _, absenceType := range overview.AbsenceTypes {
-		entry := PayrollAbsenceTypeResponse{ID: idString(absenceType.AbsenceTypeID), Name: absenceType.Name, IsActive: absenceType.IsActive}
+		entry := PayrollAbsenceTypeResponse{ID: ident.ID(absenceType.AbsenceTypeID), Name: absenceType.Name, IsActive: absenceType.IsActive}
 		if absenceType.WageTypeID != nil {
-			id := idString(*absenceType.WageTypeID)
+			id := ident.ID(*absenceType.WageTypeID)
 			entry.WageTypeID = &id
 		}
 		response.AbsenceTypes = append(response.AbsenceTypes, entry)
@@ -127,45 +126,38 @@ func (p *PayrollWageTypeRequest) Bind(*http.Request) error { return nil }
 // PayrollSurchargeRuleRequest creates or changes a rule. wage_type_id is the
 // string ID of the wage type.
 type PayrollSurchargeRuleRequest struct {
-	Kind              string `json:"kind"`
-	WindowStartMinute *int   `json:"window_start_minute"`
-	WindowEndMinute   *int   `json:"window_end_minute"`
-	RateType          string `json:"rate_type"`
-	RateHundredths    int    `json:"rate_hundredths"`
-	WageTypeID        string `json:"wage_type_id"`
-
-	input workforce.PayrollSurchargeRuleInput
+	Kind              string   `json:"kind"`
+	WindowStartMinute *int     `json:"window_start_minute"`
+	WindowEndMinute   *int     `json:"window_end_minute"`
+	RateType          string   `json:"rate_type"`
+	RateHundredths    int      `json:"rate_hundredths"`
+	WageTypeID        ident.ID `json:"wage_type_id"`
 }
 
 func (p *PayrollSurchargeRuleRequest) Bind(*http.Request) error {
-	wageTypeID, err := strconv.ParseInt(p.WageTypeID, 10, 64)
-	if err != nil || wageTypeID <= 0 {
+	if p.WageTypeID <= 0 {
 		return errors.New("wage_type_id must be the ID of a wage type")
 	}
-	p.input = workforce.PayrollSurchargeRuleInput{
-		Kind: p.Kind, WindowStartMinute: p.WindowStartMinute, WindowEndMinute: p.WindowEndMinute,
-		RateType: p.RateType, RateHundredths: p.RateHundredths, WageTypeID: wageTypeID,
-	}
 	return nil
+}
+
+func (p *PayrollSurchargeRuleRequest) input() workforce.PayrollSurchargeRuleInput {
+	return workforce.PayrollSurchargeRuleInput{
+		Kind: p.Kind, WindowStartMinute: p.WindowStartMinute, WindowEndMinute: p.WindowEndMinute,
+		RateType: p.RateType, RateHundredths: p.RateHundredths, WageTypeID: p.WageTypeID.Int64(),
+	}
 }
 
 // PayrollAbsenceTypeRequest books an absence type onto a wage type; null
 // books it with its category again.
 type PayrollAbsenceTypeRequest struct {
-	WageTypeID *string `json:"wage_type_id"`
-
-	wageTypeID *int64
+	WageTypeID *ident.ID `json:"wage_type_id"`
 }
 
 func (p *PayrollAbsenceTypeRequest) Bind(*http.Request) error {
-	if p.WageTypeID == nil {
-		return nil
-	}
-	id, err := strconv.ParseInt(*p.WageTypeID, 10, 64)
-	if err != nil || id <= 0 {
+	if p.WageTypeID != nil && *p.WageTypeID <= 0 {
 		return errors.New("wage_type_id must be the ID of a wage type or null")
 	}
-	p.wageTypeID = &id
 	return nil
 }
 
@@ -234,7 +226,7 @@ func (rs *StaffAdminResource) createPayrollSurchargeRule(w http.ResponseWriter, 
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
-	created, err := rs.PayrollRules.CreateSurchargeRule(r.Context(), rs.payrollActor(r), req.input)
+	created, err := rs.PayrollRules.CreateSurchargeRule(r.Context(), rs.payrollActor(r), req.input())
 	if err != nil {
 		renderPayrollRuleError(w, r, err)
 		return
@@ -252,7 +244,7 @@ func (rs *StaffAdminResource) updatePayrollSurchargeRule(w http.ResponseWriter, 
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
-	updated, err := rs.PayrollRules.UpdateSurchargeRule(r.Context(), rs.payrollActor(r), id, req.input)
+	updated, err := rs.PayrollRules.UpdateSurchargeRule(r.Context(), rs.payrollActor(r), id, req.input())
 	if err != nil {
 		renderPayrollRuleError(w, r, err)
 		return
@@ -282,7 +274,7 @@ func (rs *StaffAdminResource) setPayrollAbsenceTypeWageType(w http.ResponseWrite
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
-	if err := rs.PayrollRules.SetAbsenceTypeWageType(r.Context(), rs.payrollActor(r), id, req.wageTypeID); err != nil {
+	if err := rs.PayrollRules.SetAbsenceTypeWageType(r.Context(), rs.payrollActor(r), id, (*int64)(req.WageTypeID)); err != nil {
 		renderPayrollRuleError(w, r, err)
 		return
 	}

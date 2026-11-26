@@ -8,11 +8,7 @@ import {
 } from "~/lib/contract/route-response.server";
 import { routes } from "~/lib/contract/enrollment.generated";
 import { createLogger } from "~/lib/logger";
-import { problemResponse } from "~/lib/api-helpers.server";
-import {
-  LATE_INVITE_QUERY_PARAM,
-  withLateInviteQuery,
-} from "~/lib/enrollment-http";
+import { problemResponse } from "~/lib/api-response-error.server";
 
 const logger = createLogger({ component: "EnrollmentFormBootstrapRoute" });
 
@@ -28,12 +24,7 @@ async function GETHandler(request: NextRequest, context: RouteContext) {
         "GET /api/enrollment/form-bootstrap/public/{tenantSlug}/{phaseId}"
       ],
       {
-        endpoint: withLateInviteQuery(
-          `/api/enrollment/form-bootstrap/public/${encodeURIComponent(
-            tenantSlug,
-          )}/${encodeURIComponent(phaseId)}`,
-          request.nextUrl.searchParams.get(LATE_INVITE_QUERY_PARAM),
-        ),
+        params: { tenantSlug, phaseId },
         request,
       },
     );

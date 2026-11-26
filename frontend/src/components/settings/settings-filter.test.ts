@@ -107,6 +107,12 @@ describe("displayCategoryLabel", () => {
       for (const match of source.matchAll(/Category:\s*"([^"]+)"/g)) {
         backendCategoryKeys.add(match[1]!);
       }
+      // Die Lohnwerte des Trägers nennen ihre Kategorie als Argument (#8132).
+      for (const match of source.matchAll(
+        /traegerPayrollDefinition\([^,()]+(?:\([^()]*\))?,\s*"([^"]+)"/g,
+      )) {
+        backendCategoryKeys.add(match[1]!);
+      }
     }
 
     expect(Object.keys(categoryLabels).sort()).toEqual(
@@ -143,6 +149,32 @@ describe("filterCategoryItems", () => {
   it("returns the visible items without a query", () => {
     const items = filterCategoryItems(tabs[0]!.categories[0]!, "");
     expect(items.map((item) => item.key)).toEqual(["parent.sick_note"]);
+  });
+
+  // The article of an own care name is edited next to that name (#8136),
+  // so it is no row of its own; a search for it finds the name.
+  it("lists the care name without a row for its article", () => {
+    const category = {
+      key: "allgemein",
+      label: "allgemein",
+      items: [
+        setting({
+          key: "enrollment.care_facility_term",
+          label: "Name der Betreuung in Texten für Eltern",
+        }),
+        setting({
+          key: "enrollment.care_facility_article",
+          label: "Artikel zum eigenen Namen der Betreuung",
+        }),
+      ],
+    };
+    expect(filterCategoryItems(category, "").map((item) => item.key)).toEqual([
+      "enrollment.care_facility_term",
+    ]);
+    expect(
+      filterCategoryItems(category, "artikel").map((item) => item.key),
+    ).toEqual(["enrollment.care_facility_term"]);
+    expect(filterCategoryItems(category, "xyz")).toEqual([]);
   });
 
   it("matches label and description", () => {
@@ -184,10 +216,10 @@ describe("categorySummary / changedCount", () => {
     const items = ["A", "B", "C", "D", "E"].map((label) =>
       setting({ key: label, label }),
     );
-    expect(categorySummary(items.slice(0, 2))).toBe("A, B");
-    expect(categorySummary(items.slice(0, 3))).toBe("A, B, C");
-    expect(categorySummary(items.slice(0, 4))).toBe("A, B, C und 1 weitere");
-    expect(categorySummary(items)).toBe("A, B, C und 2 weitere");
+    expect(categorySummary(items.slice(0, 2))).toBe("A · B");
+    expect(categorySummary(items.slice(0, 3))).toBe("A · B · C");
+    expect(categorySummary(items.slice(0, 4))).toBe("A · B · C · 1 weitere");
+    expect(categorySummary(items)).toBe("A · B · C · 2 weitere");
   });
 
   it("counts settings that differ from their default", () => {

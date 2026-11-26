@@ -11,6 +11,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/modules/communication"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -25,6 +27,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	provisioningAPI "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/inbound/operator"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -186,7 +189,7 @@ func TestOperatorRoutesRotateAndTransferADevice(t *testing.T) {
 	require.NoError(t, err)
 
 	var created operatorRouteDevice
-	f.call(t, http.MethodPost, "/operator/devices/", map[string]any{"school_id": sourceID, "device_id": fmt.Sprintf("route-device-%d", sourceID), "device_type": "rfid_terminal"}, &created)
+	f.call(t, http.MethodPost, "/operator/devices/", map[string]any{"school_id": fmt.Sprint(sourceID), "device_id": fmt.Sprintf("route-device-%d", sourceID), "device_type": "rfid_terminal"}, &created)
 	_, firstHash := f.storedDevice(t, int64(created.ID))
 
 	var rotated operatorRouteDevice
@@ -202,7 +205,7 @@ func TestOperatorRoutesRotateAndTransferADevice(t *testing.T) {
 	assert.True(t, status.CanTransfer, "an idle device can move")
 
 	var moved operatorRouteDevice
-	f.call(t, http.MethodPost, fmt.Sprintf("/operator/devices/%d/transfer", created.ID), map[string]int64{"target_school_id": target.ID.Int64()}, &moved)
+	f.call(t, http.MethodPost, fmt.Sprintf("/operator/devices/%d/transfer", created.ID), map[string]string{"target_school_id": fmt.Sprint(target.ID.Int64())}, &moved)
 	assert.Equal(t, target.ID.Int64(), int64(moved.SchoolID))
 	var tenantID int64
 	require.NoError(t, f.db.NewSelect().TableExpr("iot.devices").Column("tenant_id").Where("id = ?", moved.ID).Scan(testpkg.Ctx(t), &tenantID))
@@ -333,7 +336,7 @@ func TestOperatorRoutesPublishAnAnnouncementAndReadItsViews(t *testing.T) {
 	base := fmt.Sprintf("/operator/announcements/%d", announcement.ID)
 
 	_, viewer := testpkg.CreateTestPersonWithAccount(t, db, "Route", "Leserin")
-	f.call(t, http.MethodPost, base+"/publish", nil, nil)
+	f.call(t, http.MethodPost, base+"/publish", map[string]any{"expected_edit_version": communication.AnnouncementEditVersion(*announcement)}, nil)
 	var publishedAt *time.Time
 	require.NoError(t, db.NewSelect().TableExpr("platform.announcements").Column("published_at").Where("id = ?", announcement.ID).Scan(testpkg.Ctx(t), &publishedAt))
 	assert.NotNil(t, publishedAt, "the announcement is published")
@@ -420,4 +423,53 @@ func TestOperatorRoutesListUnregisteredTagScansOfATraeger(t *testing.T) {
 	require.NotNil(t, resolved.ResolutionNote)
 	assert.Equal(t, "Karte ausgetauscht", *resolved.ResolutionNote)
 	assert.NotNil(t, resolved.ResolvedAt, "the scan is handled")
+}
+
+// The operator edits a school as the school list showed it (ADR 0311): an
+// edit on the version before another edit, or on none, is refused with
+// general.changed_since_read and writes nothing; a change of the device
+// slots, which has a write of its own, leaves the version as it was.
+func TestOperatorRoutesSchoolEditCarriesTheReadVersion(t *testing.T) {
+	t.Parallel()
+	f := newOperatorProvisioningRoutes(t)
+	organizationID, schoolID := provisionTestSchool(t, f.db, f.service, f.operatorID, "route-version")
+	read := func() organizationtenancy.SchoolSummary {
+		t.Helper()
+		var schools []organizationtenancy.SchoolSummary
+		f.call(t, http.MethodGet, "/operator/schools/summaries", nil, &schools)
+		for _, school := range schools {
+			if school.ID.Int64() == schoolID {
+				return school
+			}
+		}
+		t.Fatalf("the summaries list no school %d", schoolID)
+		return organizationtenancy.SchoolSummary{}
+	}
+	edit := func(school organizationtenancy.SchoolSummary, name, version string) *httptest.ResponseRecorder {
+		t.Helper()
+		var payload bytes.Buffer
+		require.NoError(t, json.NewEncoder(&payload).Encode(map[string]any{
+			"organization_id": fmt.Sprint(organizationID), "name": name, "slug": school.Slug, "subdomain": school.Subdomain,
+			"active": school.Active, "hidden": school.Hidden, "expected_version": version,
+		}))
+		req := httptest.NewRequest(http.MethodPut, fmt.Sprintf("/operator/schools/%d", schoolID), &payload)
+		req.Header.Set("Content-Type", "application/json")
+		req = req.WithContext(context.WithValue(f.ctx, sessiontoken.CtxClaims, sessiontoken.AppClaims{ID: int(f.operatorID), Scope: "platform"}))
+		rec := httptest.NewRecorder()
+		f.router.ServeHTTP(rec, req)
+		return rec
+	}
+	first := read()
+	require.NotEmpty(t, first.Version)
+	f.call(t, http.MethodPut, fmt.Sprintf("/operator/schools/%d/device-slots", schoolID), map[string]any{"device_slots": 3}, nil)
+	assert.Equal(t, first.Version, read().Version, "the device slots are no part of the version")
+
+	rec := edit(first, "Grundschule Neu", first.Version)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	for _, stale := range []string{first.Version, ""} {
+		rec = edit(first, "Grundschule Alt", stale)
+		require.Equal(t, http.StatusConflict, rec.Code, "version %q: %s", stale, rec.Body.String())
+		assert.Contains(t, rec.Body.String(), readstate.ChangedCode)
+	}
+	assert.Equal(t, "Grundschule Neu", read().Name, "the refused edits wrote nothing")
 }

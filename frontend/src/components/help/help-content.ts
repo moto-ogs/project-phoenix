@@ -233,6 +233,7 @@ const PARENT_DRAFT_TOPICS: readonly HelpTopic[] = [
   articles.parentEnrollTopic(),
   articles.parentEnrollStatusTopic(),
   articles.parentHolidayRegistrationTopic(),
+  articles.parentHolidayConsentsTopic(),
 
   // --- Wenn etwas nicht klappt ---
   articles.parentAccountProblemTopic(),
@@ -251,9 +252,11 @@ const TRAEGER_TOPICS: readonly HelpTopic[] = [
   articles.traegerSchoolComparisonTopic(),
   articles.traegerReportsTopic(),
   articles.traegerSchoolViewTopic(),
+  articles.traegerChildrenTopic(),
   articles.traegerSchoolSwitchTopic(),
   articles.traegerTestSystemTopic(),
   articles.traegerAccountsTopic(),
+  articles.traegerSchoolRolesTopic(),
   articles.traegerHolidayPeriodTopic(),
   articles.traegerClosingDaysTopic(),
   articles.traegerHolidayFormTopic(),
@@ -293,7 +296,9 @@ const TRAEGER_TOPICS: readonly HelpTopic[] = [
   articles.traegerBriefkopfTopic(),
   articles.traegerDocumentTemplatesTopic(),
   articles.traegerDocumentKindsTopic(),
+  articles.traegerResponsibilitiesTopic(),
   articles.traegerSettingsTopic(),
+  articles.traegerModulesTopic(),
 ];
 
 const TEACHER_DRAFT_TOPICS: readonly HelpTopic[] = [

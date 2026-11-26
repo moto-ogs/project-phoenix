@@ -1,25 +1,25 @@
 package parent
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	parentService "github.com/moto-ogs/project-phoenix/workflows/parentportal"
 )
 
 // Parent surveys (#4781): the form of a survey entry and its answers.
 
 type parentSurveyOptionResponse struct {
-	ID    string `json:"id"`
-	Label string `json:"label"`
+	ID    ident.ID `json:"id"`
+	Label string   `json:"label"`
 }
 
 type parentSurveyQuestionResponse struct {
-	ID       string                       `json:"id"`
+	ID       ident.ID                     `json:"id"`
 	Position int                          `json:"position"`
 	Kind     string                       `json:"kind"`
 	Prompt   string                       `json:"prompt"`
@@ -28,7 +28,7 @@ type parentSurveyQuestionResponse struct {
 }
 
 type parentSurveyFormSurvey struct {
-	ID        string                         `json:"id"`
+	ID        ident.ID                       `json:"id"`
 	Title     string                         `json:"title"`
 	Intro     string                         `json:"intro"`
 	Anonymous bool                           `json:"anonymous"`
@@ -48,15 +48,15 @@ func toSurveyFormResponse(f *parentService.SurveyForm) SurveyFormResponse {
 	for _, q := range f.Questions {
 		options := make([]parentSurveyOptionResponse, 0, len(q.Options))
 		for _, o := range q.Options {
-			options = append(options, parentSurveyOptionResponse{ID: strconv.FormatInt(o.ID, 10), Label: o.Label})
+			options = append(options, parentSurveyOptionResponse{ID: ident.ID(o.ID), Label: o.Label})
 		}
 		questions = append(questions, parentSurveyQuestionResponse{
-			ID: strconv.FormatInt(q.ID, 10), Position: q.Position, Kind: q.Kind, Prompt: q.Prompt, Required: q.Required, Options: options,
+			ID: ident.ID(q.ID), Position: q.Position, Kind: q.Kind, Prompt: q.Prompt, Required: q.Required, Options: options,
 		})
 	}
 	return SurveyFormResponse{
 		Survey: parentSurveyFormSurvey{
-			ID: strconv.FormatInt(f.SurveyID, 10), Title: f.Title, Intro: f.Intro, Anonymous: f.Anonymous, ClosesAt: f.ClosesAt, Questions: questions,
+			ID: ident.ID(f.SurveyID), Title: f.Title, Intro: f.Intro, Anonymous: f.Anonymous, ClosesAt: f.ClosesAt, Questions: questions,
 		},
 		SchoolName: f.SchoolName, Participated: f.Participated,
 	}
@@ -68,10 +68,10 @@ type SurveySubmittedResponse struct {
 }
 
 type parentSurveyAnswerRequest struct {
-	QuestionID string   `json:"question_id"`
-	OptionIDs  []string `json:"option_ids,omitempty"`
-	ScaleValue *int     `json:"scale_value,omitempty"`
-	Text       *string  `json:"text,omitempty"`
+	QuestionID ident.ID   `json:"question_id"`
+	OptionIDs  []ident.ID `json:"option_ids,omitempty"`
+	ScaleValue *int       `json:"scale_value,omitempty"`
+	Text       *string    `json:"text,omitempty"`
 }
 
 type parentSurveyAnswersRequest struct {
@@ -80,22 +80,20 @@ type parentSurveyAnswersRequest struct {
 
 func decodeSurveyAnswers(r *http.Request) ([]parentService.SurveyAnswer, error) {
 	var req parentSurveyAnswersRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := wire.Decode(r.Body, &req); err != nil {
 		return nil, errors.New("invalid request body")
 	}
 	out := make([]parentService.SurveyAnswer, 0, len(req.Answers))
 	for _, a := range req.Answers {
-		questionID, err := strconv.ParseInt(a.QuestionID, 10, 64)
-		if err != nil || questionID <= 0 {
+		if a.QuestionID <= 0 {
 			return nil, errors.New("invalid question_id")
 		}
-		answer := parentService.SurveyAnswer{QuestionID: questionID, ScaleValue: a.ScaleValue, Text: a.Text}
-		for _, raw := range a.OptionIDs {
-			id, err := strconv.ParseInt(raw, 10, 64)
-			if err != nil || id <= 0 {
+		answer := parentService.SurveyAnswer{QuestionID: a.QuestionID.Int64(), ScaleValue: a.ScaleValue, Text: a.Text}
+		for _, id := range a.OptionIDs {
+			if id <= 0 {
 				return nil, errors.New("invalid option id")
 			}
-			answer.OptionIDs = append(answer.OptionIDs, id)
+			answer.OptionIDs = append(answer.OptionIDs, id.Int64())
 		}
 		out = append(out, answer)
 	}

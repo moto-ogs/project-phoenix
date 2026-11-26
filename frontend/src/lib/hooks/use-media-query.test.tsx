@@ -114,6 +114,18 @@ describe("useMediaQuery", () => {
     expect(renderToString(<Probe />)).toContain("false");
   });
 
+  it("kennt die Breite schon im ersten Render, wenn es im Client eingehängt wird (#8013)", () => {
+    setViewportWidth(390);
+    const seen: boolean[] = [];
+    renderHook(() => {
+      const matches = useMediaQuery(BELOW_MD);
+      seen.push(matches);
+      return matches;
+    });
+
+    expect(seen[0]).toBe(true);
+  });
+
   it("folgt einer Verengung über eine Bruchteil-Grenze bei 20 px Schrift", () => {
     setDefaultFontSize(20);
     setViewportWidth(960);
@@ -123,6 +135,23 @@ describe("useMediaQuery", () => {
     setViewportWidth(959.5);
 
     expect(result.current).toBe(true);
+  });
+
+  it("teilt eine Browser-Abfrage zwischen unabhängigen Lesern", () => {
+    const matchMedia = vi.spyOn(window, "matchMedia");
+    try {
+      setViewportWidth(DESKTOP_WIDTH);
+      const first = renderHook(() => useMediaQuery(BELOW_MD));
+      const second = renderHook(() => useMediaQuery(BELOW_MD));
+      expect(matchMedia).toHaveBeenCalledExactlyOnceWith(BELOW_MD);
+      expect(first.result.current || second.result.current).toBe(false);
+
+      first.unmount();
+      setViewportWidth(390);
+      expect(second.result.current).toBe(true);
+    } finally {
+      matchMedia.mockRestore();
+    }
   });
 
   it("meldet sich beim Unmount von genau der abonnierten Liste ab", () => {

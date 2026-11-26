@@ -1,3 +1,4 @@
+import { sessionClaims } from "~/test/helpers/session-claims";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { RequestCookies } from "next/dist/server/web/spec-extension/cookies";
@@ -81,14 +82,15 @@ const LOGIN = {
 } as const;
 
 const backend = vi.fn();
-const claims = (scope: string) => ({
-  id: "42",
-  sub: "local@example.test",
-  tenant_id: "7",
-  org_id: "9",
-  scope,
-  exp: Math.floor(Date.now() / 1000) + 900,
-});
+const claims = (scope: string) =>
+  sessionClaims({
+    id: "42",
+    sub: "local@example.test",
+    tenant_id: "7",
+    org_id: "9",
+    scope,
+    exp: Math.floor(Date.now() / 1000) + 900,
+  });
 const pair = () => ({
   status: "authenticated",
   access_token: `e30.${Buffer.from(JSON.stringify(claims(""))).toString("base64url")}.synthetic`,
@@ -261,7 +263,13 @@ describe.each(portals)(
       },
     );
     it("preserves wrong-portal refusal from the backend", async () => {
-      const problem = { code: "identity.use_parent_portal", status: 403 };
+      const problem = {
+        type: "about:blank",
+        title: "Forbidden",
+        detail: "Use the parent portal",
+        code: "identity.use_parent_portal",
+        status: 403,
+      };
       backend.mockResolvedValueOnce(Response.json(problem, { status: 403 }));
       const response = await LOGIN[portal].login(request(portal));
       expect(response.status).toBe(403);
@@ -390,6 +398,7 @@ describe.each([
             role,
             src: "fair",
             fixed_role: true,
+            traeger: false,
             secret: "must-not-leak",
           },
         }),
@@ -433,7 +442,12 @@ describe.each([
       .mockResolvedValueOnce(
         Response.json({
           ...pair(),
-          demo: { access_id: "4711", role: otherRole, fixed_role: true },
+          demo: {
+            access_id: "4711",
+            role: otherRole,
+            fixed_role: true,
+            traeger: false,
+          },
         }),
       )
       .mockResolvedValueOnce(new Response(null, { status: 204 }));
@@ -483,7 +497,15 @@ it.each(["operator", "schule", "caterer"])(
 it("selects the parent demo cookie using the proxy-owned original host", async () => {
   backend
     .mockResolvedValueOnce(
-      Response.json({ ...pair(), demo: { access_id: "4711", role: "parent" } }),
+      Response.json({
+        ...pair(),
+        demo: {
+          access_id: "4711",
+          role: "parent",
+          fixed_role: false,
+          traeger: false,
+        },
+      }),
     )
     .mockResolvedValueOnce(Response.json(claims("parent")));
   const req = request("parents", { token: "demo-link-proof", role: "lead" });
@@ -495,7 +517,12 @@ it("selects the parent demo cookie using the proxy-owned original host", async (
     status: "success",
     data: {
       session_created: true,
-      demo: { access_id: "4711", role: "parent", traeger: false },
+      demo: {
+        access_id: "4711",
+        role: "parent",
+        fixed_role: false,
+        traeger: false,
+      },
     },
   });
   expect(response.headers.getSetCookie()).toContainEqual(
@@ -505,7 +532,15 @@ it("selects the parent demo cookie using the proxy-owned original host", async (
 it("keeps demo session validation and rollback failures token-free", async () => {
   backend
     .mockResolvedValueOnce(
-      Response.json({ ...pair(), demo: { access_id: "4711", role: "parent" } }),
+      Response.json({
+        ...pair(),
+        demo: {
+          access_id: "4711",
+          role: "parent",
+          fixed_role: false,
+          traeger: false,
+        },
+      }),
     )
     .mockResolvedValueOnce(new Response(null, { status: 401 }))
     .mockRejectedValueOnce(new Error("offline"));

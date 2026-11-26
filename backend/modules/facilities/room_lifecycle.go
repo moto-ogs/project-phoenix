@@ -3,6 +3,7 @@ package facilities
 import (
 	"strings"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
@@ -115,6 +116,8 @@ type RoomFilter struct {
 	// nil means "either"; the pointer keeps "unreleased only" expressible,
 	// which a plain bool could not distinguish from "no opinion".
 	IsOpenRoom *bool
+	// OpenOn keeps the rooms no closure closes on the day (#7653).
+	OpenOn *calendar.Date
 }
 
 // RoomPage is one bounded room-list result plus the count before pagination.

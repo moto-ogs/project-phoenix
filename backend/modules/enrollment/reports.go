@@ -42,6 +42,9 @@ type Reports interface {
 	// (#4802), built once for the whole school; each row names its class.
 	// Children without a class are not on it. It writes no access log.
 	SchoolRosterDay(ctx context.Context, date calendar.Date) (*ClassRosterDay, error)
+	// AssignedClassRoster reads only the classes named by the caller. An
+	// empty set never expands to the whole school.
+	AssignedClassRoster(ctx context.Context, classes []string, date calendar.Date, weekday string) (ClassRosterFacts, error)
 }
 
 // ReportOfferingDate selects the current point within a phase. Reports for a
@@ -187,10 +190,8 @@ type ClassRosterFilters struct {
 	// SkipGuardianData omits the guardian-facing enrichments (emergency
 	// contacts, request guardians, companion links). The class day view
 	// keeps only Registered/OfferingsByDay/Arrival-/PickupByDay and serves
-	// no guardian contact data at all (#1772) — and it rebuilds the roster
-	// per covering phase for every class on the teachers' landing page, so
-	// these three queries would be pure fan-out waste there. Internal-only,
-	// never bound from a request.
+	// no guardian contact data at all (#1772). Internal-only, never bound
+	// from a request.
 	SkipGuardianData bool `json:"-"`
 }
 
@@ -257,6 +258,21 @@ type ClassRosterGuardian struct {
 	Name  string `json:"name"`
 	Email string `json:"email,omitempty"`
 	Phone string `json:"phone,omitempty"`
+}
+
+// ClassRosterFacts describes membership and approved offerings without the
+// names, schedules or departure plans needed by the full roster.
+type ClassRosterFacts struct {
+	EnrollmentKnown bool
+	Students        []ClassRosterStudentFact
+	ListEntries     map[string]int
+}
+
+type ClassRosterStudentFact struct {
+	StudentID        int64
+	SchoolClass      string
+	WithoutCarePlace bool
+	HasOffering      bool
 }
 
 // ClassRosterDay is the roster of one class on one calendar day (#1772):

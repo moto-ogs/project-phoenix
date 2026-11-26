@@ -1,8 +1,8 @@
 import "@testing-library/jest-dom/vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import ClassListPage from "./page";
+import ClassListPage from "./page-content";
 import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
@@ -15,6 +15,19 @@ vi.mock("next/navigation", () => ({
 
 vi.mock("next-auth/react", () => ({
   useSession: () => ({ data: null, status: "authenticated" }),
+}));
+
+const auth = vi.hoisted(() => ({ permitted: false }));
+vi.mock("~/lib/auth-utils", () => ({
+  hasPermission: () => auth.permitted,
+}));
+
+const api = vi.hoisted(() => ({
+  updateClassListEntry: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
+}));
+vi.mock("~/lib/class-list-entries-api", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/class-list-entries-api")>()),
+  updateClassListEntry: api.updateClassListEntry,
 }));
 
 vi.mock("~/lib/tenant-path", () => ({
@@ -32,6 +45,9 @@ const swr = vi.hoisted(() => new Map<string, SwrSlot>());
 vi.mock("~/lib/swr", () => ({
   useSWRAuth: (key: string) => swr.get(key),
   useTenantMutate: () => vi.fn(() => Promise.resolve()),
+  // The read of the stored state after a refusal (ADR 0311).
+  revalidateOrThrow: (read: SwrSlot) =>
+    (read.mutate as () => Promise<unknown>)(),
 }));
 
 function slot(data: unknown, error?: unknown): SwrSlot {
@@ -52,6 +68,7 @@ const entry = {
   lastName: "Ohne",
   schoolClass: "1a",
   matchingStudentIds: [],
+  version: "v1",
 };
 
 function renderPage() {
@@ -79,6 +96,66 @@ beforeEach(() => {
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.clearAllMocks();
+  auth.permitted = false;
+});
+
+describe("Klassenliste: Eintrag bearbeiten (ADR 0311)", () => {
+  it("saves on the entry as read and shows the stored entry after a refusal", async () => {
+    auth.permitted = true;
+    const stored = { ...entry, firstName: "Leah", version: "v2" };
+    const entries = slot([entry]);
+    // A read answers the stored entry, as SWR's cache then holds it.
+    entries.mutate.mockImplementation(async () => {
+      entries.data = [stored];
+      return [stored];
+    });
+    swr.set("class-list-entries", entries);
+    swr.set("class-list-roster-students", slot([]));
+    api.updateClassListEntry
+      .mockRejectedValueOnce(
+        new ApiError("changed", 409, { code: "general.changed_since_read" }),
+      )
+      .mockResolvedValueOnce({ ...stored, lastName: "Neu", version: "v3" });
+
+    renderPage();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Aktionen für Lea Ohne" }),
+    );
+    fireEvent.click(await screen.findByText("Bearbeiten"));
+    const firstName = screen.getByLabelText("Vorname");
+    expect(firstName).toHaveValue("Lea");
+    fireEvent.change(firstName, { target: { value: "Lena" } });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    await waitFor(() =>
+      expect(api.updateClassListEntry).toHaveBeenCalledWith(
+        "e1",
+        { firstName: "Lena", lastName: "Ohne", schoolClass: "1a" },
+        "v1",
+      ),
+    );
+    // The refusal reads the stored entry and shows it in the dialog.
+    await waitFor(() =>
+      expect(screen.getByLabelText("Vorname")).toHaveValue("Leah"),
+    );
+    expect(
+      await screen.findByText(
+        catalogText("general.changed_since_read", "das Speichern des Eintrags"),
+      ),
+    ).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Nachname"), {
+      target: { value: "Neu" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() =>
+      expect(api.updateClassListEntry).toHaveBeenLastCalledWith(
+        "e1",
+        { firstName: "Leah", lastName: "Neu", schoolClass: "1a" },
+        "v2",
+      ),
+    );
+  });
 });
 
 describe("Klassenliste: Zähler bei Ladefehler (#2517)", () => {

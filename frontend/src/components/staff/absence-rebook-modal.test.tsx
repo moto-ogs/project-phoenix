@@ -82,6 +82,7 @@ const sickLeave: AbsenceType = {
   keptByTraeger: false,
   offered: true,
   schoolLimitDays: null,
+  version: "v1",
 };
 
 function friday(id: string, day: string): StaffAbsenceRow {
@@ -407,7 +408,7 @@ function TenantSWR({ children }: { children: React.ReactNode }) {
   return (
     <SessionProvider
       session={{
-        user: { id: "staff-test", tenantId: 1 },
+        user: { id: "staff-test", tenantId: "1" },
         expires: "2099-01-01",
       }}
       refetchOnWindowFocus={false}

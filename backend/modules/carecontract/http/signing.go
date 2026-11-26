@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
@@ -63,6 +64,21 @@ func renderParentSignatureError(w http.ResponseWriter, r *http.Request, err erro
 	renderSignatureError(w, r, err)
 }
 
+// handOverOnPaper freezes the PDF the office prints for the parents
+// (#8030); the office then downloads it from /{id}/document.
+func (rs *Resource) handOverOnPaper(w http.ResponseWriter, r *http.Request) {
+	reviewer, id, ok := contractKey(w, r)
+	if !ok {
+		return
+	}
+	if err := rs.paper.HandOverOnPaper(r.Context(), reviewer, id); err != nil {
+		tenant.MarkRollback(r.Context())
+		renderSignatureError(w, r, err)
+		return
+	}
+	common.RespondNoContent(w, r)
+}
+
 // paperFormOverhead leaves room for the form fields beside the PDF.
 const paperFormOverhead = 64 << 10
 
@@ -91,6 +107,13 @@ func (rs *Resource) recordPaper(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	input := carecontract.PaperInput{SignerName: r.FormValue("signer_name"), Filename: header.Filename, PDF: data}
+	// The version the dialog showed, so the scan never lands on another one.
+	if raw := strings.TrimSpace(r.FormValue("version_number")); raw != "" {
+		if input.VersionNumber, err = strconv.Atoi(raw); err != nil || input.VersionNumber <= 0 {
+			renderError(w, r, &carecontract.ValidationError{Fields: map[string]string{"version_number": "invalid"}})
+			return
+		}
+	}
 	if raw := strings.TrimSpace(r.FormValue("signed_on")); raw != "" {
 		if input.SignedOn, err = calendar.ParseDate(raw); err != nil {
 			renderError(w, r, &carecontract.ValidationError{Fields: map[string]string{"signed_on": "invalid"}})

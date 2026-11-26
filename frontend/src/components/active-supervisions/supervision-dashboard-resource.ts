@@ -38,28 +38,30 @@ export interface BFFDashboardResponse {
     name: string;
     room?: { name: string };
   }>;
-  firstRoomVisits: Array<{
-    studentId: string;
-    studentName: string;
-    schoolClass: string;
-    groupName: string;
-    activeGroupId: string;
-    checkInTime: string;
-    actualArrivalTime?: string;
-    actualPickupTime?: string;
-    isActive: boolean;
-    sick?: boolean;
-    sickSince?: string;
-    excused?: boolean;
-    excusedSince?: string;
-    class_trip?: boolean;
-    class_trip_since?: string;
-    // Übergabe nach dem Unterricht (#4794).
-    classHandover?: studentsContract.ClassHandover;
-    // Authenticated proxy URL — backend rewrites the raw /uploads path
-    // to /api/students/{id}/photo/{filename} before sending it down.
-    photoUrl?: string;
-  }>;
+  firstRoomVisits: Array<
+    Partial<
+      Pick<studentsContract.StudentResponse, "class_trip" | "class_trip_since">
+    > & {
+      studentId: string;
+      studentName: string;
+      schoolClass: string;
+      groupName: string;
+      activeGroupId: string;
+      checkInTime: string;
+      actualArrivalTime?: string;
+      actualPickupTime?: string;
+      isActive: boolean;
+      sick?: boolean;
+      sickSince?: string;
+      excused?: boolean;
+      excusedSince?: string;
+      // Übergabe nach dem Unterricht (#4794).
+      classHandover?: studentsContract.ClassHandover;
+      // Authenticated proxy URL — backend rewrites the raw /uploads path
+      // to /api/students/{id}/photo/{filename} before sending it down.
+      photoUrl?: string;
+    }
+  >;
   firstRoomId: string | null;
   schulhofStatus: SchulhofStatusResponse | null;
   // Every permanently released room with its full occupancy (#3065). Optional
@@ -99,6 +101,10 @@ export interface BFFDashboardResponse {
   }>;
   // Hinweise der Lehrkraft für heute (#4795), je Kind.
   teacherHints?: Array<{ studentId: string } & studentsContract.TeacherHint>;
+  // Angebote der Kinder heute (#8194), je Kind nach Beginn.
+  plannedActivities?: Array<
+    { studentId: string } & studentsContract.PlannedActivity
+  >;
   arrivalTimes?: Array<{
     studentId: string;
     date: string;

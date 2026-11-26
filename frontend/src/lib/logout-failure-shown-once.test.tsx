@@ -15,7 +15,13 @@ import {
 
 const { mockSignOut } = vi.hoisted(() => ({ mockSignOut: vi.fn() }));
 
-vi.mock("~/lib/tenant-session-cookie", () => ({ signOutTenant: mockSignOut }));
+vi.mock("~/lib/tenant-session-cookie", () => ({
+  signOutTenant: mockSignOut,
+  tenantSessionReplaced: () => false,
+  sessionReplaced: () => false,
+  leaveReplacedSession: vi.fn(),
+  SessionReplaced: class SessionReplaced extends Error {},
+}));
 
 vi.mock("next-auth/react", () => ({
   useSession: () => ({

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/moto-ogs/project-phoenix/api/common"
 	peopleValues "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 
 	"github.com/moto-ogs/project-phoenix/modules/grouplive"
@@ -78,7 +79,9 @@ func (p groupRosterPeople) GroupMembers(ctx context.Context, groupID int64) ([]g
 		member := grouplive.RosterStudent{
 			ID: student.ID, FirstName: person.FirstName, LastName: person.LastName,
 			SchoolClass: student.SchoolClass, SickSince: student.SickSince, ExcusedSince: student.ExcusedSince,
-			PhotoPath: student.PhotoPath,
+		}
+		if student.PhotoPath != nil {
+			member.PhotoVersion = common.StudentPhotoVersion(*student.PhotoPath)
 		}
 		if student.Sick != nil {
 			member.Sick = *student.Sick

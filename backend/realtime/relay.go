@@ -365,30 +365,40 @@ type invalidationData struct {
 }
 
 func invalidationFromEvent(kind EventType, data EventData) invalidationData {
-	return invalidationData{
+	signal := invalidationData{
 		StudentID: numericID(data.StudentID), StudentIDs: numericIDs(data.StudentIDs),
 		GroupIDs: numericIDs(data.GroupIDs), InstanceID: numericID(data.InstanceID),
 		ThreadID: numericID(data.ThreadID), Reason: invalidationReason(data.Reason),
-		Source: staffMessageSource(kind, data.Source),
 	}
+	// Keep the relay's existing source key for rolling restarts. The ID
+	// lives separately from arbitrary source text in the HTTP projection.
+	if kind == EventStaffMessage && data.SenderAccountID != nil && *data.SenderAccountID > 0 {
+		signal.Source = new(data.SenderAccountID.String())
+	} else {
+		signal.Source = closingDaySource(kind, data.Source)
+	}
+	return signal
 }
 
 func (data invalidationData) eventData(kind EventType) EventData {
-	return EventData{
+	event := EventData{
 		StudentID: numericID(data.StudentID), StudentIDs: numericIDs(data.StudentIDs),
 		GroupIDs: numericIDs(data.GroupIDs), InstanceID: numericID(data.InstanceID),
 		ThreadID: numericID(data.ThreadID), Reason: invalidationReason(data.Reason),
-		Source: staffMessageSource(kind, data.Source),
 	}
+	if kind == EventStaffMessage {
+		event.SenderAccountID = parseEventID(data.Source)
+	} else {
+		event.Source = closingDaySource(kind, data.Source)
+	}
+	return event
 }
 
-// Only staff messages need the numeric sender for read-cursor suppression.
-// Other sources remain local; arbitrary source text is never relayed.
-func staffMessageSource(kind EventType, source *string) *string {
-	if kind != EventStaffMessage {
-		return nil
+func closingDaySource(kind EventType, source *string) *string {
+	if kind == EventStaffingDeviationChanged && source != nil && *source == "closing_days" {
+		return source
 	}
-	return numericID(source)
+	return nil
 }
 
 func numericID(id *string) *string {
@@ -476,7 +486,7 @@ func invalidationReason(reason *string) *string {
 
 func relayEventType(kind EventType) bool {
 	switch kind {
-	case EventStudentCheckIn, EventStudentCheckOut, EventStudentUpdated, EventStudentCompanionsChanged, EventBulkStudentCheckOut, EventBulkStudentCheckIn, EventActivityStart, EventActivityEnd, EventActivityUpdate, EventInstanceStarted, EventInstanceCompleted, EventInstanceCancelled, EventInstanceOverdue, EventStaffingDeviationChanged, EventDashboardCountsChanged, EventGroupAccessChanged, EventStaffTimeTrackingChanged, EventActiveSupervisionChanged, EventArrivalScheduleChanged, EventPickupScheduleChanged, EventChangeRequestsChanged, EventStaffNoticesChanged, EventMealPlanChanged, EventCalendarAppointmentsChanged, EventTenantSettingsChanged, EventParentMessage, EventParentMessageRead, EventParentMessageUnreadChanged, EventStaffMessage, EventParentChildUpdated, EventClassDayChanged, EventNotificationFeedChanged:
+	case EventStudentCheckIn, EventStudentCheckOut, EventStudentUpdated, EventStudentCompanionsChanged, EventBulkStudentCheckOut, EventBulkStudentCheckIn, EventActivityStart, EventActivityEnd, EventActivityUpdate, EventInstanceStarted, EventInstanceCompleted, EventInstanceCancelled, EventInstanceOverdue, EventStaffingDeviationChanged, EventDashboardCountsChanged, EventGroupAccessChanged, EventStaffTimeTrackingChanged, EventStaffLeaveChanged, EventActiveSupervisionChanged, EventArrivalScheduleChanged, EventPickupScheduleChanged, EventChangeRequestsChanged, EventStaffNoticesChanged, EventMealPlanChanged, EventCalendarAppointmentsChanged, EventTenantSettingsChanged, EventParentMessage, EventParentMessageRead, EventParentMessageUnreadChanged, EventStaffMessage, EventParentChildUpdated, EventClassDayChanged, EventNotificationFeedChanged:
 		return true
 	default:
 		return false

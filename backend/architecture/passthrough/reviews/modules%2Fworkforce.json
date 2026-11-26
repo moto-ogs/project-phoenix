@@ -867,11 +867,6 @@
     },
     {
       "decision": "0090",
-      "id": "modules/workforce/internal/planning/shiftTypeAdministration.CreateShiftType",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "modules/workforce/internal/planning/shiftTypeAdministration.DeleteShiftType",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },

@@ -23,7 +23,10 @@
 
 import { CoverageIndicator } from "~/components/ui/planning/coverage-indicator";
 import { EmptyState } from "~/components/ui/empty-state";
-import { SectionCard } from "~/components/ui/section-card";
+import {
+  SectionCard,
+  SECTION_CARD_BODY_GAP,
+} from "~/components/ui/section-card";
 import { SECTION_LABEL_CLASS } from "~/components/ui/section-label";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { ListGroupHeader } from "~/components/ui/list-group-header";
@@ -146,7 +149,7 @@ export function VertretungWeekList({
       loading={gapsLoading}
       overflow="visible"
       className={cn("flex flex-col", className)}
-      bodyClassName="compact:mt-3 mt-4 flex min-h-0 flex-1 flex-col"
+      bodyClassName={`${SECTION_CARD_BODY_GAP} flex min-h-0 flex-1 flex-col`}
       testId="vertretung-week-list"
     >
       {gapsNotice != null && (

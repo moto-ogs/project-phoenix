@@ -2,12 +2,12 @@ package portalauth
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 var (
@@ -25,7 +25,7 @@ type SwitchOffRequest struct {
 // the password change.
 func SwitchOffFactor(w http.ResponseWriter, r *http.Request, disable func(ctx context.Context, currentPassword string, client Client) error, refuse Refusal) {
 	var request SwitchOffRequest
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil || request.CurrentPassword == "" {
+	if err := wire.Decode(r.Body, &request); err != nil || request.CurrentPassword == "" {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errPasswordRequired))
 		return
 	}

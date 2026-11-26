@@ -37,11 +37,14 @@ type workSessionService struct {
 	staffRepo WorkSessionStaff
 	// externalCaregivers keeps the auto-stamp off external caregivers.
 	externalCaregivers ExternalCaregiverStaff
-	scheduleRepo       WorkSessionSchedules
-	workModelRepo      WorkSessionTimeModels
-	settings           settingsResolver
-	staffShiftRepo     WorkSessionShifts
-	holidayReader      HolidayDatesReader
+	// timeTrackingManagers exempts the leadership from terminal-only stamping.
+	timeTrackingManagers TimeTrackingManagerStaff
+	scheduleRepo         WorkSessionSchedules
+	workModelRepo        WorkSessionTimeModels
+	templateLocks        WorkTimeTemplateLocks
+	settings             settingsResolver
+	staffShiftRepo       WorkSessionShifts
+	holidayReader        HolidayDatesReader
 	// weeklyOverrides re-prices Sonderarbeitszeit weeks; nil keeps them.
 	weeklyOverrides WeeklyTargetOverrides
 	broadcaster     EventPublisher

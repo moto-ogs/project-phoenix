@@ -1,5 +1,10 @@
 import { ApiError } from "~/lib/api-error";
-import { bffFile, bffJson, bffJsonUncontracted } from "~/lib/bff-fetch";
+import {
+  bffFile,
+  bffJson,
+  bffJsonUncontracted,
+  bffPath,
+} from "~/lib/bff-fetch";
 import { knownEnum, requiredEnum } from "~/lib/contract/known-enum";
 import type * as enrollmentContract from "~/lib/contract/enrollment.generated";
 import type * as sharedContract from "~/lib/contract/shared.generated";
@@ -18,7 +23,6 @@ import {
   formLabelsFromContract,
   type EnrollmentFormLabels,
 } from "~/lib/enrollment-change-request-diff";
-import { withLateInviteQuery } from "~/lib/enrollment-http";
 import {
   publicFormSchemaFromContract,
   publicLegalBlockFromContract,
@@ -100,7 +104,7 @@ export type PublicPhase = Omit<
   translations?: Translations;
 };
 
-function publicPhaseFromContract(
+export function publicPhaseFromContract(
   phase: sharedContract.PublicPhase,
 ): PublicPhase {
   const { translations, ...rest } = phase;
@@ -231,16 +235,23 @@ export async function fetchPublicEnrollmentBootstrap(
 ): Promise<PublicEnrollmentBootstrap> {
   // Its own route file adds the signed-in staff member's profile, so the
   // path has no Go contract of its own.
-  const path = withLateInviteQuery(
-    `/api/enrollment/form-bootstrap/public/${encodeURIComponent(
-      tenantSlug,
-    )}/${encodeURIComponent(phaseId)}`,
-    options.lateInviteToken,
-  );
+  const lateInvite = options.lateInviteToken?.trim();
   return bootstrapFromContract(
-    await bffJsonUncontracted<BootstrapAnswer>("public", "GET", path, {
-      errorMessage: "Anmeldeformular konnte nicht geladen werden",
-    }),
+    await bffJsonUncontracted<BootstrapAnswer>(
+      "public",
+      "GET",
+      bffPath(
+        "tenant",
+        "GET /api/enrollment/form-bootstrap/public/{tenantSlug}/{phaseId}",
+        {
+          params: { tenantSlug, phaseId },
+          query: lateInvite ? { late_invite: lateInvite } : {},
+        },
+      ),
+      {
+        errorMessage: "Anmeldeformular konnte nicht geladen werden",
+      },
+    ),
   );
 }
 
@@ -346,7 +357,17 @@ export type StatusResponse = Omit<
   renewal_terms?: StatusRenewalTerms;
 };
 
-function statusFromContract(
+export type EnrollmentStatusDisplay = Omit<
+  StatusResponse,
+  "request_id" | "signature"
+> & {
+  signature?: Pick<
+    EnrollmentSignature,
+    "method" | "typed_name" | "signer_name" | "signed_at" | "integrity_ok"
+  >;
+};
+
+export function statusFromContract(
   status: enrollmentContract.StatusResponse,
 ): StatusResponse {
   const {

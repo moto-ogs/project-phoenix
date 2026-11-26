@@ -34,7 +34,7 @@ async function freshModule() {
 }
 
 // The browser session carries no token (#5005); `id` tells sessions apart.
-function session(id: string, tenantId = 1) {
+function session(id: string, tenantId = "1") {
   return mockSessionData({ user: { id, tenantId } });
 }
 
@@ -106,20 +106,35 @@ describe("getCachedSession", () => {
   it("clears API and log-shipping backoff with the session context", async () => {
     const { clearSessionCache } = await freshModule();
     const {
+      installRateLimitFetchGuard,
       isClientLogShippingPaused,
       pauseClientLogShipping,
-      rateLimitBlockedError,
-      recordRateLimit,
+      remainingRateLimitMs,
     } = await import("./rate-limit-backoff");
 
-    recordRateLimit("17", "PATCH");
+    const previousFetch = window.fetch;
+    window.fetch = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response("rate limited", {
+          status: 429,
+          headers: { "Retry-After": "17" },
+        }),
+      );
+    const restore = installRateLimitFetchGuard();
+    try {
+      await fetch("/api/students/1", { method: "PATCH" });
+    } finally {
+      restore();
+      window.fetch = previousFetch;
+    }
     pauseClientLogShipping("17");
-    expect(rateLimitBlockedError("PATCH")).not.toBeNull();
+    expect(remainingRateLimitMs("PATCH")).toBeGreaterThan(0);
     expect(isClientLogShippingPaused()).toBe(true);
 
     clearSessionCache();
 
-    expect(rateLimitBlockedError("PATCH")).toBeNull();
+    expect(remainingRateLimitMs("PATCH")).toBe(0);
     expect(isClientLogShippingPaused()).toBe(false);
   });
 
@@ -466,15 +481,15 @@ describe("primeSessionCache when the sign-in ends or changes", () => {
   // provider's next poll (4 min) instead of the 10 s window of #5116.
   it("keeps a primed session until shortly after the provider's next poll", async () => {
     const { getCachedSession, primeSessionCache } = await freshModule();
-    primeSessionCache(session("primed", 1));
-    mockGetSession.mockResolvedValueOnce(session("primed", 2));
+    primeSessionCache(session("primed", "1"));
+    mockGetSession.mockResolvedValueOnce(session("primed", "2"));
 
     now.mockReturnValue(1_000_000 + 10_001);
-    expect((await getCachedSession())?.user?.tenantId).toBe(1);
+    expect((await getCachedSession())?.user?.tenantId).toBe("1");
     expect(mockGetSession).not.toHaveBeenCalled();
 
     now.mockReturnValue(1_000_000 + 270_001);
-    expect((await getCachedSession())?.user?.tenantId).toBe(2);
+    expect((await getCachedSession())?.user?.tenantId).toBe("2");
     expect(mockGetSession).toHaveBeenCalledTimes(1);
   });
 
@@ -483,18 +498,18 @@ describe("primeSessionCache when the sign-in ends or changes", () => {
   it("drops a primed session once the BFF refuses another school's session", async () => {
     const { getCachedSession, primeSessionCache } = await freshModule();
     const { apiErrorFromBody } = await import("./api-error");
-    primeSessionCache(session("primed", 1));
-    mockGetSession.mockResolvedValueOnce(session("primed", 2));
+    primeSessionCache(session("primed", "1"));
+    mockGetSession.mockResolvedValueOnce(session("primed", "2"));
 
     // Anker: the primed session serves without a lookup until the refusal.
-    expect((await getCachedSession())?.user?.tenantId).toBe(1);
+    expect((await getCachedSession())?.user?.tenantId).toBe("1");
     expect(mockGetSession).not.toHaveBeenCalled();
 
     apiErrorFromBody("Request refused", 409, {
       code: "identity.session_tenant_mismatch",
     });
 
-    expect((await getCachedSession())?.user?.tenantId).toBe(2);
+    expect((await getCachedSession())?.user?.tenantId).toBe("2");
     expect(mockGetSession).toHaveBeenCalledTimes(1);
   });
 
@@ -554,28 +569,28 @@ describe("primeSessionCache when the sign-in ends or changes", () => {
   // Kontowechsel und Schulwechsel.
   it("replaces the previous account's session with the provider's next answer", async () => {
     const { getCachedSession, primeSessionCache } = await freshModule();
-    primeSessionCache(session("account-a", 1));
+    primeSessionCache(session("account-a", "1"));
 
-    primeSessionCache(session("account-b", 1));
+    primeSessionCache(session("account-b", "1"));
     expect((await getCachedSession())?.user?.id).toBe("account-b");
 
-    primeSessionCache(session("account-b", 2));
+    primeSessionCache(session("account-b", "2"));
     const result = await getCachedSession();
     expect(result?.user?.id).toBe("account-b");
-    expect(result?.user?.tenantId).toBe(2);
+    expect(result?.user?.tenantId).toBe("2");
     expect(mockGetSession).not.toHaveBeenCalled();
   });
 
   it("asks the session route after a switch flow cleared the cache", async () => {
     const { clearSessionCache, getCachedSession, primeSessionCache } =
       await freshModule();
-    primeSessionCache(session("account-a", 1));
-    mockGetSession.mockResolvedValueOnce(session("account-a", 2));
+    primeSessionCache(session("account-a", "1"));
+    mockGetSession.mockResolvedValueOnce(session("account-a", "2"));
 
     clearSessionCache();
     const result = await getCachedSession();
 
-    expect(result?.user?.tenantId).toBe(2);
+    expect(result?.user?.tenantId).toBe("2");
     expect(mockGetSession).toHaveBeenCalledTimes(1);
   });
 

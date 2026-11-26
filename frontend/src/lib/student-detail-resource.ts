@@ -1,10 +1,6 @@
 import type * as studentsContract from "~/lib/contract/students.generated";
 import { fetchStudent } from "~/lib/student-api";
 import type { Student } from "~/lib/student-helpers";
-import { userContextService } from "~/lib/usercontext-api";
-import { createLogger } from "~/lib/logger";
-
-const logger = createLogger({ component: "StudentData" });
 
 /**
  * Blanks what a caller without read access must not see. The absence
@@ -44,15 +40,6 @@ function gateForAccess(
   };
 }
 
-/**
- * Helper to extract room names from groups
- */
-function extractRoomNames(
-  groups: Array<{ room?: { name?: string } }>,
-): string[] {
-  return groups.map((group) => group.room?.name).filter(Boolean) as string[];
-}
-
 export interface StudentDetailResponse {
   student: Student;
   hasFullAccess: boolean;
@@ -62,34 +49,13 @@ export interface StudentDetailResponse {
   attendanceLogEnabled: boolean;
   feedbackEnabled: boolean;
   supervisors: studentsContract.SupervisorContact[];
-  myGroups: string[];
-  myGroupRooms: string[];
-  mySupervisedRooms: string[];
 }
 
-/** Canonical complete detail projection, shared with navigation intent. */
+/** Complete detail projection for the browser's child record read. */
 export async function fetchStudentDetail(
   studentId: string,
 ): Promise<StudentDetailResponse> {
-  // Fetch student data and user context in parallel
-  const [student, groups, supervisedGroups] = await Promise.all([
-    fetchStudent(studentId),
-    // Own groups only refine access hints on the page; without them the
-    // child still loads, just without the "my group" shortcuts.
-    userContextService.getMyEducationalGroups().catch((err) => {
-      logger.debug("fetch_educational_groups_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      return [];
-    }),
-    // Same for supervised rooms: optional context, not the child itself.
-    userContextService.getMySupervisedGroups().catch((err) => {
-      logger.debug("fetch_supervised_groups_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      return [];
-    }),
-  ]);
+  const student = await fetchStudent(studentId);
 
   const hasAccess = student.has_full_access ?? false;
   const hasAbsenceWriteAccess = student.has_absence_write_access ?? false;
@@ -98,10 +64,6 @@ export async function fetchStudentDetail(
     hasAccess,
     hasAbsenceWriteAccess,
   );
-
-  const ogsGroupRoomNames = extractRoomNames(groups);
-  const groupIds = groups.map((group) => group.id);
-  const roomNames = extractRoomNames(supervisedGroups);
 
   return {
     student: extendedStudent,
@@ -112,8 +74,5 @@ export async function fetchStudentDetail(
     attendanceLogEnabled: student.attendance_log_enabled ?? false,
     feedbackEnabled: student.feedback_enabled ?? false,
     supervisors: student.group_supervisors ?? [],
-    myGroups: groupIds,
-    myGroupRooms: ogsGroupRoomNames,
-    mySupervisedRooms: roomNames,
   };
 }

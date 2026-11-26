@@ -51,13 +51,23 @@ func DocumentKindChoices(service string) []string {
 	return nil
 }
 
-// DefaultDocumentKind is the kind a service issues without a choice: what
-// it issued before #4688.
+// DefaultDocumentKind is the kind a service of the Träger issues without a
+// choice: what it issued before #4688.
 func DefaultDocumentKind(service string) string {
 	if choices := DocumentKindChoices(service); len(choices) > 0 {
 		return choices[0]
 	}
 	return ""
+}
+
+// DefaultIssuerDocumentKind is the kind a service of an issuer issues
+// without a choice (#8040, ADR 0322): the Träger its default, a Schulträger
+// or a Gemeinde a fee notice.
+func DefaultIssuerDocumentKind(issuerKey, service string) string {
+	if issuerKey != "" && ValidDocumentKind(service, DocumentKindFeeNotice) {
+		return DocumentKindFeeNotice
+	}
+	return DefaultDocumentKind(service)
 }
 
 // ValidDocumentKind reports whether service issues kind.
@@ -76,7 +86,8 @@ type ServiceDocumentKind struct {
 
 // DocumentKindOverview is the kind of every service and whether the
 // template of the fee notice has its legal remedy, so the Abrechnung sees
-// before a release what is missing.
+// before a release what is missing. Services are the Träger's; the kinds of
+// a Schulträger or a Gemeinde stand in its BillingIssuerStatus (#8040).
 type DocumentKindOverview struct {
 	Services []ServiceDocumentKind `json:"services"`
 	// LegalRemedySet reports a legal remedy in the current template of the
@@ -98,9 +109,12 @@ type DocumentKindState struct {
 // BillingDocumentTemplates is the Träger's current template of a kind of
 // document as the billing reads it. The root binds it to the document
 // templates of Organisation & Tenancy (ADR 0152); it runs in the Träger
-// transaction of the organization and reads no personal data.
+// transaction of the organization and reads no personal data. The issuers
+// of the schools come with it (#8040): a release freezes template and issuer
+// together.
 type BillingDocumentTemplates interface {
 	DocumentTemplate(ctx context.Context, organizationID int64, documentKind string) (LetterTemplate, error)
+	BillingIssuers
 }
 
 // BillingDocumentKinds lets the Abrechnung of a Träger read and choose the
@@ -108,5 +122,8 @@ type BillingDocumentTemplates interface {
 // caller opens.
 type BillingDocumentKinds interface {
 	ListDocumentKinds(ctx context.Context, organizationID int64) (DocumentKindOverview, error)
-	SetDocumentKind(ctx context.Context, organizationID int64, service, documentKind string) (DocumentKindOverview, error)
+	// SetDocumentKind chooses the kind of a service of an issuer: issuerKey
+	// is empty for the Träger, else the creditor identifier of a body that
+	// bills a school of the Träger.
+	SetDocumentKind(ctx context.Context, organizationID int64, issuerKey, service, documentKind string) (DocumentKindOverview, error)
 }

@@ -1,27 +1,36 @@
+const refreshContext = vi.hoisted(() => vi.fn(async () => undefined));
+vi.mock("~/lib/supervision-context", () => ({
+  useOptionalSupervision: () => ({ refresh: refreshContext }),
+}));
+
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { SSEEvent, SSEHookOptions, SSEHookState } from "~/lib/sse-types";
 
-const { session, sse, invalidatedFamilies, useSSESpy } = vi.hoisted(() => ({
-  session: {
-    current: { id: "account-7", tenantId: 1, roles: ["user"] } as {
-      id: string;
-      tenantId: number;
-      roles: string[];
+const { session, sse, invalidatedFamilies, invalidateMatching, useSSESpy } =
+  vi.hoisted(() => ({
+    session: {
+      current: { id: "account-7", tenantId: "1", roles: ["user"] } as {
+        id: string;
+        tenantId: string;
+        roles: string[];
+      },
     },
-  },
-  sse: {
-    state: {
-      status: "connected",
-      isConnected: true,
-      error: null,
-      reconnectAttempts: 0,
-    } as SSEHookState,
-    handlers: [] as ((event: SSEEvent) => void)[],
-  },
-  invalidatedFamilies: [] as string[],
-  useSSESpy: { lastReconnectKey: undefined as string | number | undefined },
-}));
+    sse: {
+      state: {
+        status: "connected",
+        isConnected: true,
+        error: null,
+        reconnectAttempts: 0,
+      } as SSEHookState,
+      handlers: [] as ((event: SSEEvent) => void)[],
+    },
+    invalidatedFamilies: [] as string[],
+    invalidateMatching: vi.fn((_matches: (key: string) => boolean) =>
+      Promise.resolve([]),
+    ),
+    useSSESpy: { lastReconnectKey: undefined as string | number | undefined },
+  }));
 
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
@@ -48,6 +57,7 @@ vi.mock("~/lib/swr", async (importOriginal) => ({
     invalidatedFamilies.push(family);
     return Promise.resolve([]);
   },
+  useInvalidateMatching: () => invalidateMatching,
 }));
 vi.mock("~/lib/swr/mutate", () => ({
   mutate: vi.fn(() => Promise.resolve()),
@@ -74,7 +84,7 @@ const OWN = ownSupervisionKeys.family;
 // Keys of the scoped cache as SWR's global mutate sees them.
 const INVENTORY = [
   "school-a:account-7:active-supervision-dashboard-0-224",
-  "school-a:account-7:time-tracking-month-summary-2026-9",
+  "school-a:account-7:time-tracking-schedule-targets-2026-09-07-2026-09-13",
   "school-a:account-7:staff-dashboard-summary-month",
   "school-a:account-7:ogs-students-3",
   "school-a:account-7:timetable-week-2026-09-07",
@@ -137,12 +147,14 @@ function reconnect(view: { rerender: () => void }) {
 }
 
 beforeEach(() => {
+  refreshContext.mockClear();
   vi.useFakeTimers();
   vi.spyOn(Math, "random").mockReturnValue(0);
   vi.mocked(mutate).mockClear();
+  invalidateMatching.mockClear();
   invalidatedFamilies.length = 0;
   sse.handlers = [];
-  session.current = { id: "account-7", tenantId: 1, roles: ["user"] };
+  session.current = { id: "account-7", tenantId: "1", roles: ["user"] };
   setVisibility("visible");
   resumeSWRSession();
 });
@@ -226,7 +238,7 @@ describe("useGlobalSSE: own supervision family (#5017)", () => {
     fire(event("staff_time_tracking_changed"));
     act(() => vi.advanceTimersByTime(MAX_FLUSH_WAIT_MS));
     expect(matchedKeys()).toEqual([
-      "school-a:account-7:time-tracking-month-summary-2026-9",
+      "school-a:account-7:time-tracking-schedule-targets-2026-09-07-2026-09-13",
       "school-a:account-7:staff-dashboard-summary-month",
     ]);
   });
@@ -241,7 +253,7 @@ describe("useGlobalSSE: reconcile after a reconnect (#5017)", () => {
     expect(invalidatedFamilies).toContain(OWN);
   });
 
-  it("refreshes the counters but spares form drafts, sidebar and subscription", () => {
+  it("refreshes the counters and supervision but spares form drafts and subscription", () => {
     const view = renderConnected();
     const reconnectKey = useSSESpy.lastReconnectKey;
     const formDrafts = vi.fn();
@@ -263,7 +275,7 @@ describe("useGlobalSSE: reconcile after a reconnect (#5017)", () => {
         "phoenix:reminders-stale",
       ]),
     );
-    expect(dispatched).not.toContain("phoenix:supervision-stale");
+    expect(refreshContext.mock.calls).toEqual([[undefined, "reconcile"]]);
     expect(formDrafts).not.toHaveBeenCalled();
     expect(useSSESpy.lastReconnectKey).toBe(reconnectKey);
     dispatch.mockRestore();
@@ -271,30 +283,26 @@ describe("useGlobalSSE: reconcile after a reconnect (#5017)", () => {
   });
 
   it.each(["activity_end", "group_access_changed"] as const)(
-    "preserves a queued %s sidebar notification during reconnect",
+    "folds a queued %s into the full read on recovery",
     (type) => {
       const view = renderConnected();
-      const dispatch = vi.spyOn(window, "dispatchEvent");
       fire(event(type));
-      // Reconnect before the event's debounce timer flushes.
       reconnect(view);
       expect(invalidatedFamilies).toContain(OWN);
-      const notifications = dispatch.mock.calls
-        .map(([e]) => e)
-        .filter((e) => e.type === "phoenix:supervision-stale");
-      expect(notifications).toHaveLength(1);
-      expect((notifications[0] as CustomEvent).detail).toEqual(
-        type === "activity_end" ? { groupsOnly: false } : null,
-      );
+      expect(refreshContext.mock.calls).toEqual([[undefined, undefined]]);
       act(() => vi.advanceTimersByTime(MAX_FLUSH_WAIT_MS));
-      expect(
-        dispatch.mock.calls.filter(
-          ([e]) => e.type === "phoenix:supervision-stale",
-        ),
-      ).toHaveLength(1);
-      dispatch.mockRestore();
+      expect(refreshContext).toHaveBeenCalledTimes(1);
     },
   );
+
+  it("unions mixed triggers without waking the identity navigation", () => {
+    renderConnected();
+    fire(event("activity_end"));
+    fire(event("group_access_changed"));
+    act(() => vi.advanceTimersByTime(MAX_FLUSH_WAIT_MS));
+    expect(refreshContext.mock.calls).toEqual([[["groups", "sessions"]]]);
+    expect(invalidatedFamilies).toContain(OWN);
+  });
 
   it("reconciles once, a moment after the first connection", () => {
     setStatus("idle");
@@ -413,6 +421,57 @@ describe("useGlobalSSE: reconcile after a reconnect (#5017)", () => {
   });
 });
 
+describe("useGlobalSSE: own time-tracking reads (#8081)", () => {
+  const keys = {
+    overview: "time-tracking-overview-2026-09-09",
+    period: "time-tracking-period-week-2026-09-07",
+    leave: "time-tracking-leave-overview-2026",
+    vacationDialog: "time-tracking-absences-2026-01-01-2026-12-31",
+    unrelated: "time-tracking-config",
+  };
+
+  function refreshedReads() {
+    expect(invalidateMatching).toHaveBeenCalledTimes(1);
+    const [matches] = invalidateMatching.mock.calls[0]!;
+    return Object.entries(keys)
+      .filter(([, key]) => matches(key))
+      .map(([name]) => name);
+  }
+
+  it.each([
+    [event("staff_time_tracking_changed"), ["overview", "period"]],
+    [
+      event("staff_leave_changed"),
+      ["overview", "period", "leave", "vacationDialog"],
+    ],
+    [
+      event("staffing_deviation_changed", { source: "closing_days" }),
+      ["overview", "period"],
+    ],
+    [
+      event("staffing_deviation_changed", { source: "instance_update" }),
+      ["overview"],
+    ],
+    [event("instance_started"), ["overview"]],
+  ])("refreshes only the affected reads for %j", (event, expected) => {
+    renderConnected();
+    fire(event);
+    expect(refreshedReads()).toEqual(expected);
+  });
+
+  it("reloads all own reads after a reconnect, but not on initial connect", () => {
+    const view = renderConnected();
+    expect(invalidateMatching).not.toHaveBeenCalled();
+    reconnect(view);
+    expect(refreshedReads()).toEqual([
+      "overview",
+      "period",
+      "leave",
+      "vacationDialog",
+    ]);
+  });
+});
+
 describe("useGlobalSSE: events of another school or account (#5017)", () => {
   it("ignores an event the stream of the previous account still delivers", () => {
     const view = renderConnected();
@@ -445,24 +504,18 @@ describe("useGlobalSSE: events of another school or account (#5017)", () => {
   });
 
   it.each(["activity_end", "group_access_changed"] as const)(
-    "drops a queued %s sidebar notification after an account change",
+    "drops a queued %s after an account change, then reconciles the new stream",
     (type) => {
       const view = renderConnected();
-      const dispatch = vi.spyOn(window, "dispatchEvent");
       fire(event(type));
       session.current = { ...session.current, id: "account-8" };
       view.rerender();
+      act(() => vi.advanceTimersByTime(MAX_FLUSH_WAIT_MS));
+      expect(refreshContext).toHaveBeenCalledTimes(0);
       reconnect(view);
-      // Anker: a later reconnect reconciles the new account's caches.
       reconnect(view);
       expect(invalidatedFamilies).toContain(OWN);
-      act(() => vi.advanceTimersByTime(MAX_FLUSH_WAIT_MS));
-      expect(
-        dispatch.mock.calls.filter(
-          ([e]) => e.type === "phoenix:supervision-stale",
-        ),
-      ).toHaveLength(0);
-      dispatch.mockRestore();
+      expect(refreshContext.mock.calls).toEqual([[undefined, "reconcile"]]);
     },
   );
 

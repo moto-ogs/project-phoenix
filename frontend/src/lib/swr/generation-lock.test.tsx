@@ -1,4 +1,10 @@
-import { act, render, renderHook, screen } from "@testing-library/react";
+import {
+  act,
+  render,
+  renderHook,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import type { Session } from "next-auth";
 import {
   cloneElement,
@@ -88,7 +94,7 @@ function answers(first: string, later: string) {
 
 function signedIn(user: Partial<Session["user"]> = {}) {
   return {
-    data: { user: { id: "A", tenantId: 1, ...user }, expires: "2099-01-01" },
+    data: { user: { id: "A", tenantId: "1", ...user }, expires: "2099-01-01" },
     status: "authenticated" as const,
   };
 }
@@ -159,7 +165,7 @@ const OPERATIONS: [string, Operation][] = [
     // names the school the shared cookie now holds.
     "school mismatch (provider names another school)",
     (rerender) => {
-      mockUseSession.mockReturnValue(signedIn({ tenantId: 2 }));
+      mockUseSession.mockReturnValue(signedIn({ tenantId: "2" }));
       rerender();
     },
   ],
@@ -335,7 +341,8 @@ describe.each([
           answer.resolve("frisch");
           await flush();
           expect(screen.getByTestId(key)).toHaveTextContent("frisch");
-          expect(fetcher).toHaveBeenCalledTimes(2);
+          // The unrelated key revalidates its valid fallback after paint.
+          await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(2));
           expect(isFallbackVisible(FULL(key))).toBe(true);
         },
       );
@@ -371,8 +378,7 @@ describe.each([
       "leer",
     );
     expect(seen["student-7-unseen-dropped"]).not.toContain("veraltet");
-    await flush();
-    expect(fetcher).toHaveBeenCalledTimes(2);
+    await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(2));
   });
 
   it("rejects a tenant write from a passive effect after the boundary reset", async () => {

@@ -108,27 +108,29 @@ func RespondInvalidRequest(w http.ResponseWriter, r *http.Request, err error) {
 // root's failure renderer in HTTP adapter tests that must not import the
 // shared HTTP package themselves.
 func RespondCoded(w http.ResponseWriter, r *http.Request, status int, code string, err error, details map[string]string, clientMessage string) {
+	var payload any
+	if len(details) > 0 {
+		payload = details
+	}
+	RespondCodedDetails(w, r, status, code, err, payload, clientMessage)
+}
+
+// RespondCodedDetails retains a portal adapter's typed refusal payload.
+func RespondCodedDetails(w http.ResponseWriter, r *http.Request, status int, code string, err error, details any, clientMessage string) {
 	message := clientMessage
 	if message == "" && err != nil {
 		message = err.Error()
-	}
-	var payload map[string]any
-	if len(details) > 0 {
-		payload = make(map[string]any, len(details))
-		for key, value := range details {
-			payload[key] = value
-		}
 	}
 	if code == "" {
 		code = ClassCode(status)
 	}
 	render.Status(r, status)
 	render.JSON(w, r, struct {
-		Status  int            `json:"status"`
-		Detail  string         `json:"detail"`
-		Code    string         `json:"code"`
-		Details map[string]any `json:"details,omitempty"`
-	}{Status: status, Detail: message, Code: code, Details: payload})
+		Status  int    `json:"status"`
+		Detail  string `json:"detail"`
+		Code    string `json:"code"`
+		Details any    `json:"details,omitempty"`
+	}{Status: status, Detail: message, Code: code, Details: details})
 }
 
 func ErrorResponder(resolve func(error) (int, error)) func(http.ResponseWriter, *http.Request, error, string) {
@@ -181,7 +183,7 @@ func NewAuthenticatedRequest(t *testing.T, method, target string, body interface
 
 	var reader io.Reader
 	if body != nil {
-		jsonBytes, err := json.Marshal(body)
+		jsonBytes, err := wire.Marshal(body)
 		if err != nil {
 			t.Fatalf("failed to marshal JSON body: %v", err)
 		}
@@ -204,7 +206,7 @@ func NewJSONRequest(t *testing.T, method, target string, body interface{}) *http
 
 	var reader io.Reader
 	if body != nil {
-		jsonBytes, err := json.Marshal(body)
+		jsonBytes, err := wire.Marshal(body)
 		if err != nil {
 			t.Fatalf("failed to marshal JSON body: %v", err)
 		}

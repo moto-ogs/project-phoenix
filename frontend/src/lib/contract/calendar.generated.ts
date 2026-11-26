@@ -2,8 +2,10 @@
 import { z } from "zod";
 import {
   arr,
+  bool,
   calendarDate,
   fileAnswer,
+  int64String,
   nullable,
   object,
   optional,
@@ -24,11 +26,13 @@ import {
 
 /** Go: portal.AppointmentMails */
 export interface AppointmentMails {
+  awaiting_feedback?: boolean;
   kinds: Record<string, Record<string, number> | null> | null;
   not_arrived: Record<string, string[] | null> | null;
 }
 
 export const AppointmentMailsSchema: z.ZodType<AppointmentMails, unknown> = object<AppointmentMails>({
+  awaiting_feedback: optional(bool),
   kinds: nullable(rec(nullable(rec(safeInt)))),
   not_arrived: nullable(rec(nullable(arr(str)))),
 });
@@ -79,7 +83,7 @@ export interface StaffOption {
 }
 
 export const StaffOptionSchema: z.ZodType<StaffOption, unknown> = object<StaffOption>({
-  id: str,
+  id: int64String,
   name: str,
 });
 
@@ -90,7 +94,7 @@ export interface ParentOption {
 }
 
 export const ParentOptionSchema: z.ZodType<ParentOption, unknown> = object<ParentOption>({
-  id: str,
+  id: int64String,
   name: str,
 });
 
@@ -101,7 +105,7 @@ export interface GroupOption {
 }
 
 export const GroupOptionSchema: z.ZodType<GroupOption, unknown> = object<GroupOption>({
-  id: str,
+  id: int64String,
   name: str,
 });
 
@@ -114,10 +118,10 @@ export interface StudentOption {
 }
 
 export const StudentOptionSchema: z.ZodType<StudentOption, unknown> = object<StudentOption>({
-  id: str,
+  id: int64String,
   name: str,
   school_class: optional(str),
-  group_id: optional(str),
+  group_id: optional(int64String),
 });
 
 /** Go: portal.RecipientOptions */
@@ -184,6 +188,7 @@ export interface updateAppointmentRequest {
   overview_visibility?: string;
   recurrence?: RecurrenceRequest | null;
   send_email?: boolean | null;
+  expected_version?: string;
 }
 
 export const routes = {

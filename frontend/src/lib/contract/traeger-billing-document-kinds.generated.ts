@@ -3,29 +3,16 @@ import { z } from "zod";
 import {
   arr,
   bool,
-  instant,
   nullable,
   object,
   requestBody,
   safeInt,
-  str,
   success,
 } from "./runtime";
-
-/** Go: parentbilling.ServiceDocumentKind */
-export interface ServiceDocumentKind {
-  service: string;
-  document_kind: string;
-  choices: string[] | null;
-  updated_at: string | null;
-}
-
-export const ServiceDocumentKindSchema: z.ZodType<ServiceDocumentKind, unknown> = object<ServiceDocumentKind>({
-  service: str,
-  document_kind: str,
-  choices: nullable(arr(str)),
-  updated_at: nullable(instant),
-});
+import {
+  ServiceDocumentKindSchema,
+  type ServiceDocumentKind,
+} from "./shared.generated";
 
 /** Go: parentbilling.DocumentKindOverview */
 export interface DocumentKindOverview {
@@ -43,6 +30,7 @@ export const DocumentKindOverviewSchema: z.ZodType<DocumentKindOverview, unknown
 /** Go: parentbillinghttp.DocumentKindRequest */
 export interface DocumentKindRequest {
   document_kind?: string;
+  issuer_key?: string;
 }
 
 export const routes = {

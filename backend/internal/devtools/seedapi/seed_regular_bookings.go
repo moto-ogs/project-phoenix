@@ -256,7 +256,7 @@ func (s seedRegularBookingsStep) book(rt *Runtime, auth AuthRef, studentID int64
 	}
 	offerings := rt.Enrollment.Offerings
 	body := map[string]any{
-		"phase_id":            rt.Enrollment.PhaseID,
+		"phase_id":            ident.ID(rt.Enrollment.PhaseID),
 		"guardian_first_name": guardian.FirstName,
 		"guardian_last_name":  guardian.LastName,
 		"guardian_email":      guardian.Email,
@@ -268,10 +268,10 @@ func (s seedRegularBookingsStep) book(rt *Runtime, auth AuthRef, studentID int64
 			"last_name":          child.LastName,
 			"date_of_birth":      demoStudentBirthday(index, child, rt.FixedSeeder.seedDay),
 			"target_grade_level": grade,
-			"offering_ids":       []int64{offerings[careKey], offerings["mittagessen"]},
+			"offering_ids":       []ident.ID{ident.ID(offerings[careKey]), ident.ID(offerings["mittagessen"])},
 			"offering_days": []map[string]any{
-				{"offering_id": offerings[careKey], "selected_days": days},
-				{"offering_id": offerings["mittagessen"], "selected_days": days},
+				{"offering_id": ident.ID(offerings[careKey]), "selected_days": days},
+				{"offering_id": ident.ID(offerings["mittagessen"]), "selected_days": days},
 			},
 			"custom_data": seedEnrollmentChildAnswers(child.FirstName, child.LastName),
 		}},

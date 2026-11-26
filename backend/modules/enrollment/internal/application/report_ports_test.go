@@ -37,7 +37,7 @@ type fakeClassRosterStudentRepo struct {
 	listCalls int
 }
 
-func (r *fakeClassRosterStudentRepo) ListClassRoster(_ context.Context, _ string) ([]*RosterStudent, error) {
+func (r *fakeClassRosterStudentRepo) ListClassRoster(_ context.Context, _ []string) ([]*RosterStudent, error) {
 	r.listCalls++
 	return r.students, nil
 }
@@ -282,14 +282,17 @@ type fakeClassListEntries struct {
 	entries []ClassListEntry
 }
 
-func (r *fakeClassListEntries) ListClassListEntries(_ context.Context, schoolClass string) ([]ClassListEntry, error) {
-	if schoolClass == "" {
+func (r *fakeClassListEntries) ListClassListEntries(_ context.Context, classes []string) ([]ClassListEntry, error) {
+	if classes == nil {
 		return r.entries, nil
 	}
-	key := strings.ToLower(strings.TrimSpace(schoolClass))
+	allowed := make(map[string]bool, len(classes))
+	for _, class := range classes {
+		allowed[strings.ToLower(strings.TrimSpace(class))] = true
+	}
 	var out []ClassListEntry
 	for _, entry := range r.entries {
-		if strings.ToLower(strings.TrimSpace(entry.SchoolClass)) == key {
+		if allowed[strings.ToLower(strings.TrimSpace(entry.SchoolClass))] {
 			out = append(out, entry)
 		}
 	}

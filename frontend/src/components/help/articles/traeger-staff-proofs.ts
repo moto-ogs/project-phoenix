@@ -4,7 +4,8 @@ import { HELP_TOPICS } from "~/lib/help-topics";
 /**
  * `/traeger/nachweise` (#4707, ADR 0238): Nachweise der Personalakten mit
  * Ablaufwarnung. Nachweisarten einstellen, Nachweise in der Akte eintragen,
- * die Ablaufliste lesen und herunterladen, die Arten der Schulen zuordnen.
+ * die Ablaufliste lesen und herunterladen, die Nachweisarten der Schulen
+ * zuordnen.
  */
 export function traegerStaffProofsTopic(): HelpTopic {
   return {
@@ -56,10 +57,11 @@ export function traegerStaffProofsTopic(): HelpTopic {
       {
         title: "Die Nachweisarten der Schulen zuordnen",
         description:
-          "So erinnert moto nur einmal an dasselbe Führungszeugnis: vom Träger, nicht noch einmal von der Schule.",
+          "Jede Schule hat eigene Nachweisarten, oft mit demselben Namen wie deine. Ordnest du sie zu, erinnert bei Personen mit Personalakte nur dein Träger. Die Schule erinnert dann nicht noch einmal.",
         steps: [
-          "Öffne den Reiter `Arten der Schulen`.",
-          "Wähle bei jeder Art der Schule die passende Art deines Trägers.",
+          "Wähle in der Navigation `Personalnachweise`.",
+          "Öffne den Reiter `Zuordnung der Schulen`.",
+          "Wähle bei jeder `Nachweisart der Schule` die passende `Nachweisart deines Trägers`.",
           "Wähle `Zuordnung speichern`.",
         ],
       },
@@ -75,7 +77,7 @@ export function traegerStaffProofsTopic(): HelpTopic {
     ],
     differences: [
       "Du siehst `Personalnachweise` nicht in der Navigation: dir fehlt die Rolle `Personal`.",
-      "Im Reiter `Arten der Schulen` steht bei einer Schule keine Art: Die Schule hat noch keine Nachweisarten angelegt.",
+      "Im Reiter `Zuordnung der Schulen` steht bei einer Schule keine Art: Die Schule hat noch keine Nachweisarten angelegt.",
     ],
     troubleshootingDetails: [
       "„Eine Nachweisart mit diesem Namen gibt es schon“: Wähle einen anderen Namen, oder hole die archivierte Art zurück.",

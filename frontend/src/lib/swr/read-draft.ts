@@ -38,7 +38,9 @@ export interface DraftOptions<T, D, K, A> {
   /** Whether two drafts are the same; default: equal as JSON. */
   readonly same?: (a: D, b: D) => boolean;
   /**
-   * After a refusal: the draft on the stored state `to`. Default: the
+   * After a refusal: the draft on the stored state `to`, given the draft
+   * as it is when `to` arrives (input typed while the read failed
+   * included) and the base `from` the refused save rested on. Default: the
    * stored state alone (the input is gone). Only a surface that already
    * keeps drafts keeps input here (the meal plan's days).
    */
@@ -105,6 +107,13 @@ export type ReadDraftResult<A> =
       readonly error: unknown;
       /** The state changed since it was read (rule 3). */
       readonly refused: boolean;
+      /** The write reached the backend; only its local read update failed. */
+      readonly persisted?: true;
+      /**
+       * Nothing was sent: the surface was not ready (a second click before
+       * the render). Nothing to show.
+       */
+      readonly skipped?: true;
       /**
        * For `show(error, { reload })`: the read of the stored state that
        * the refusal started, then a new one per call. Rejects on failure.
@@ -141,6 +150,23 @@ export interface ReadDraft<T, D, K, A> {
    * failed read only the input goes; sending still waits for a read.
    */
   readonly discard: () => void;
+  /**
+   * The surface's own write moved the stored state to `read` without
+   * touching what the draft edits (an attachment of an announcement, whose
+   * answer names the draft's new version): the draft keeps its input and
+   * rests on `read`, so the next save is not refused for that write. Only a
+   * write whose server check took the draft's token may hand its answer
+   * here; otherwise `read` could carry another person's change unseen.
+   * Ignored unless the draft is ready.
+   */
+  readonly adopt: (read: T) => void;
+  /**
+   * The surface's own write of that kind (`adopt`) was refused because the
+   * stored state changed: the draft takes the path of a refused save (rules
+   * 3 and 4), and the stored state read again replaces the input. Answers
+   * the reload for `show(error, { reload })`; it rejects on failure.
+   */
+  readonly refuse: () => () => Promise<unknown>;
 }
 
 type Phase = "ready" | "saving" | "refused" | "reloading" | "loadFailed";
@@ -153,10 +179,11 @@ interface DraftState<T, D> {
   readonly phase: Phase;
   readonly loadError?: unknown;
   /**
-   * After a refusal: the refused draft on its base, for `rebase`, until
+   * After a refusal: the base the refused draft rested on. `rebase` moves
+   * the draft as it is when the stored state arrives from it, until
    * the stored state is read (`retryLoad` keeps it, `discard` drops it).
    */
-  readonly refused?: { readonly draft: D; readonly base: T };
+  readonly refused?: { readonly base: T };
   /**
    * The stored state arrives through `data` (a list the caller reloads):
    * a read with another token than `base` settles the draft.
@@ -208,7 +235,7 @@ export function useReadDraft<T, D = T, K = unknown, A = unknown>(
 /** The rules of `useReadDraft` on a read the caller owns. */
 /**
  * The draft on `read`, ready to send: after a refusal `rebase` may keep the
- * refused input.
+ * input typed on the refused base.
  */
 function settled<T, D>(
   prev: DraftState<T, D>,
@@ -220,7 +247,9 @@ function settled<T, D>(
   const stored = toDraft(read);
   const draft =
     prev.refused && rebase
-      ? rebase(prev.refused.draft, prev.refused.base, read)
+      ? // The draft as it is now: input typed after the refusal, while the
+        // stored state could not be read, rests on the same base.
+        rebase(prev.draft, prev.refused.base, read)
       : // Input typed after a save rests on the saved draft: a read that
         // brings exactly it keeps the input; any other state replaces it.
         !prev.refused && prev.saved !== undefined && same(stored, prev.saved)
@@ -351,6 +380,35 @@ export function useDraftOn<T, D = T, K = unknown, A = unknown>(
     [settle, update],
   );
 
+  /**
+   * Rule 3: the draft waits on the base the refused write rested on for the
+   * stored state read again. Answers the reload: first the read started
+   * here, then a new one per call.
+   */
+  const refused = useCallback(
+    (forKey: string, base: T) => {
+      update(forKey, (prev) => ({
+        ...prev,
+        phase: "refused",
+        refused: { base },
+      }));
+      const first = readAgain(forKey);
+      // Not silent: a failure is the draft's `error` (status `loadFailed`),
+      // which the surface shows; the caller may also never ask for this
+      // promise.
+      first.catch(() => undefined);
+      let asked = false;
+      return () => {
+        if (!asked) {
+          asked = true;
+          return first;
+        }
+        return readAgain(forKey);
+      };
+    },
+    [readAgain, update],
+  );
+
   const submit = useCallback(
     async (
       send: (token: K, draft: D) => Promise<A>,
@@ -361,6 +419,7 @@ export function useDraftOn<T, D = T, K = unknown, A = unknown>(
           ok: false,
           error: new Error("read draft is not ready"),
           refused: false,
+          skipped: true,
         };
       }
       const { key: forKey, base, draft } = sent;
@@ -372,24 +431,7 @@ export function useDraftOn<T, D = T, K = unknown, A = unknown>(
         saved = await send(given.token(base), draft);
       } catch (error) {
         if ((given.isRefusal ?? isReadStateRefusal)(error)) {
-          update(forKey, (prev) => ({
-            ...prev,
-            phase: "refused",
-            refused: { draft, base },
-          }));
-          const first = readAgain(forKey);
-          // Not silent: a failure is the draft's `error` (status
-          // `loadFailed`), which the surface shows; the caller may also
-          // never ask for this promise.
-          first.catch(() => undefined);
-          let asked = false;
-          const reload = () => {
-            if (!asked) {
-              asked = true;
-              return first;
-            }
-            return readAgain(forKey);
-          };
+          const reload = refused(forKey, base);
           return { ok: false, error, refused: true, reload };
         }
         update(forKey, (prev) => ({ ...prev, phase: "ready" }));
@@ -397,7 +439,20 @@ export function useDraftOn<T, D = T, K = unknown, A = unknown>(
       }
       const stored = given.answer?.(saved, base);
       if (stored !== undefined) {
-        await latest.current.source.write?.(stored);
+        try {
+          await latest.current.source.write?.(stored);
+        } catch (error) {
+          // The write itself succeeded. Keep its draft until a fresh read
+          // confirms the stored state, rather than leaving the editor saving.
+          update(forKey, (prev) => ({
+            ...prev,
+            phase: "loadFailed",
+            loadError: error,
+            saved: draft,
+            touched: !latest.current.same(prev.draft, draft),
+          }));
+          return { ok: false, error, refused: false, persisted: true };
+        }
         settle(forKey, stored);
       } else {
         update(forKey, (prev) => ({
@@ -412,7 +467,7 @@ export function useDraftOn<T, D = T, K = unknown, A = unknown>(
       }
       return { ok: true, saved };
     },
-    [readAgain, settle, update],
+    [readAgain, refused, settle, update],
   );
 
   const setDraft = useCallback(
@@ -464,6 +519,33 @@ export function useDraftOn<T, D = T, K = unknown, A = unknown>(
     settle(now.key, stored);
   }, [settle, update]);
 
+  const adopt = useCallback(
+    (read: T) => {
+      const { state: now } = latest.current;
+      if (now === null) return;
+      update(now.key, (prev) =>
+        prev.phase !== "ready"
+          ? prev
+          : {
+              ...prev,
+              base: read,
+              touched: !latest.current.same(
+                prev.draft,
+                prev.saved ?? latest.current.toDraft(read),
+              ),
+            },
+      );
+    },
+    [update],
+  );
+
+  const refuse = useCallback(() => {
+    const { state: now, source: read } = latest.current;
+    if (now !== null) return refused(now.key, now.base);
+    // No draft yet: nothing to hold back, the stored state is read again.
+    return () => read.reload();
+  }, [refused]);
+
   const openFailed = source.error !== undefined;
   const phase: ReadDraftStatus = openFailed
     ? "loadFailed"
@@ -485,5 +567,218 @@ export function useDraftOn<T, D = T, K = unknown, A = unknown>(
     retryLoad,
     submit,
     discard,
+    adopt,
+    refuse,
+  };
+}
+
+/**
+ * The read an action rests on, for `useActionOn`: the record or list the
+ * surface shows.
+ */
+export interface ActionSource<T> {
+  /** One surface opening (a page's record, a dialog); `null` closes it. */
+  readonly opening: string | null;
+  /** The newest read; the action sends what it shows. */
+  readonly data: T | undefined;
+  /**
+   * Reads the stored state again and rejects on failure; its answer
+   * arrives through `data`.
+   */
+  readonly reload: () => Promise<unknown>;
+}
+
+export interface ActionOptions<T, K> {
+  /** The read state's token: a version, a fingerprint, a list of them. */
+  readonly token: (read: T) => K;
+  /** The refusal of a changed state; default `isReadStateRefusal`. */
+  readonly isRefusal?: (error: unknown) => boolean;
+}
+
+/**
+ * An action without a draft (a switch, a row action, a dialog that sends
+ * what it shows): `status`, `canSubmit`, `error` and `retryLoad` as on a
+ * `ReadDraft`, so `useReadDraftLoadError` and `useReadDraftForm` take it.
+ */
+export interface ReadAction {
+  readonly status: ReadDraftStatus;
+  /** Only `ready` sends: no refusal waits for its read, no send is out. */
+  readonly canSubmit: boolean;
+  /** The failed read after a refusal (status `loadFailed`). */
+  readonly error: unknown;
+  readonly retryLoad: () => void;
+  /** Sends what the surface shows. Never throws. */
+  readonly submit: <A>(send: () => Promise<A>) => Promise<ReadDraftResult<A>>;
+}
+
+type ActionPhase = "ready" | "saving" | "reloading" | "loadFailed";
+
+interface ActionState {
+  readonly key: string;
+  readonly phase: ActionPhase;
+  /** The token the server refused, as JSON. */
+  readonly refused?: string;
+  /** The read on its way; an older one's answer is dropped. */
+  readonly read?: number;
+  readonly loadError?: unknown;
+}
+
+const notReady = {
+  ok: false,
+  error: new Error("read action is not ready"),
+  refused: false,
+  skipped: true,
+} as const;
+
+/**
+ * Rules 3, 4 and 6 of `useDraftOn` for an action without a draft: from a
+ * refusal nothing is sent until the stored state is there, because the
+ * shown token would be refused again. It is there when the read after the
+ * refusal succeeded, or when any read arrives whose token differs from the
+ * refused one (a revalidation, a refresh after another write), also after
+ * that read failed and its message was closed. A failed read keeps the
+ * action locked and is `error`: show it on the surface
+ * (`useReadDraftLoadError`, in a form `useReadDraftForm`), never only in a
+ * toast its reader can close. `submit` also locks while the send is on its
+ * way, so a second click sends nothing on the same token. A new `opening`
+ * starts unlocked.
+ */
+export function useActionOn<T, K = unknown>(
+  source: ActionSource<T>,
+  options: ActionOptions<T, K>,
+): ReadAction {
+  const key = source.opening;
+  const [state, setState] = useState<ActionState | null>(null);
+  let current = state;
+  if (key === null) {
+    if (current !== null) {
+      current = null;
+      setState(null);
+    }
+  } else if (current === null || current.key !== key) {
+    current = { key, phase: "ready" };
+    setState(current);
+  } else if (
+    (current.phase === "reloading" || current.phase === "loadFailed") &&
+    current.refused !== undefined &&
+    source.data !== undefined &&
+    asJSON(options.token(source.data)) !== current.refused
+  ) {
+    // A read of another state than the refused one arrived: it shows, and
+    // sending goes on from it. A read still on its way is dropped.
+    current = { key, phase: "ready" };
+    setState(current);
+  }
+
+  const latest = useRef({ state: current, source, options });
+  useLayoutEffect(() => {
+    latest.current = { state: current, source, options };
+  });
+  // Synchronous for a second click before the render.
+  const busy = useRef(false);
+  const reads = useRef(0);
+
+  const update = useCallback(
+    (forKey: string, next: (prev: ActionState) => ActionState) => {
+      setState((prev) =>
+        prev !== null && prev.key === forKey ? next(prev) : prev,
+      );
+    },
+    [],
+  );
+
+  /** Reads again while a refusal waits; a lifted lock stays lifted. */
+  const readAgain = useCallback(
+    async (forKey: string) => {
+      const read = ++reads.current;
+      update(forKey, (prev) =>
+        prev.phase === "reloading" || prev.phase === "loadFailed"
+          ? { ...prev, phase: "reloading", read, loadError: undefined }
+          : prev,
+      );
+      try {
+        await latest.current.source.reload();
+      } catch (error) {
+        update(forKey, (prev) =>
+          prev.read === read && prev.phase === "reloading"
+            ? { ...prev, phase: "loadFailed", loadError: error }
+            : prev,
+        );
+        throw error;
+      }
+      update(forKey, (prev) =>
+        prev.read === read ? { key: prev.key, phase: "ready" } : prev,
+      );
+    },
+    [update],
+  );
+
+  const submit = useCallback(
+    async <A>(send: () => Promise<A>): Promise<ReadDraftResult<A>> => {
+      const { state: now, source: from, options: given } = latest.current;
+      if (
+        busy.current ||
+        now === null ||
+        now.phase !== "ready" ||
+        from.data === undefined
+      ) {
+        return notReady;
+      }
+      busy.current = true;
+      const forKey = now.key;
+      const shown = asJSON(given.token(from.data));
+      update(forKey, (prev) => ({ ...prev, phase: "saving" }));
+      try {
+        const saved = await send();
+        update(forKey, (prev) =>
+          prev.phase === "saving" ? { key: prev.key, phase: "ready" } : prev,
+        );
+        return { ok: true, saved };
+      } catch (error) {
+        if (!(given.isRefusal ?? isReadStateRefusal)(error)) {
+          update(forKey, (prev) =>
+            prev.phase === "saving" ? { key: prev.key, phase: "ready" } : prev,
+          );
+          return { ok: false, error, refused: false };
+        }
+        update(forKey, (prev) => ({
+          key: prev.key,
+          phase: "reloading",
+          refused: shown,
+        }));
+        const first = readAgain(forKey);
+        // Not silent: a failure is `error` (status `loadFailed`), which the
+        // surface shows; the caller may also never ask for this promise.
+        first.catch(() => undefined);
+        let asked = false;
+        const reload = () => {
+          if (!asked) {
+            asked = true;
+            return first;
+          }
+          return readAgain(forKey);
+        };
+        return { ok: false, error, refused: true, reload };
+      } finally {
+        busy.current = false;
+      }
+    },
+    [readAgain, update],
+  );
+
+  // A failure of this read shows as `error` again.
+  const retryLoad = useCallback(() => {
+    const { state: now } = latest.current;
+    if (now !== null) void readAgain(now.key).catch(() => undefined);
+  }, [readAgain]);
+
+  const status: ReadDraftStatus =
+    current === null || source.data === undefined ? "loading" : current.phase;
+  return {
+    status,
+    canSubmit: status === "ready",
+    error: current?.phase === "loadFailed" ? current.loadError : undefined,
+    retryLoad,
+    submit,
   };
 }

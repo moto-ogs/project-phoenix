@@ -33,7 +33,7 @@ vi.mock("next-auth/react", () => ({
       user: {
         id: "A",
         scope: "org",
-        orgId: 7,
+        orgId: "7",
         permissions: ["traeger_overview:read", "traeger_settings:manage"],
       },
     },
@@ -60,7 +60,7 @@ vi.mock("~/lib/traeger-billing-families-api", async (importOriginal) => ({
 }));
 
 import { useDebtorNumberSettings } from "~/components/traeger/use-debtor-number-format";
-import TraegerSettingsPage from "./page";
+import TraegerSettingsPage from "./page-content";
 
 /** A page elsewhere that shows the debtor number format (#6675). */
 function DebtorScope() {
@@ -741,7 +741,7 @@ function render(ui: React.ReactElement) {
 
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
-    data: { user: { id: "A", scope: "org", orgId: 7 } },
+    data: { user: { id: "A", scope: "org", orgId: "7" } },
     status: "authenticated",
   }),
 }));

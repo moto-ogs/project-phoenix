@@ -25,7 +25,7 @@ vi.mock("next-auth/react", async (importOriginal) => ({
       user: {
         id: "traeger-test",
         scope: "org",
-        orgId: 7,
+        orgId: "7",
         permissions: session.permissions,
       },
     },
@@ -41,7 +41,7 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(route.search),
 }));
 
-import TraegerAbrechnungPage from "./page";
+import TraegerAbrechnungPage from "./page-content";
 
 vi.unmock("swr");
 

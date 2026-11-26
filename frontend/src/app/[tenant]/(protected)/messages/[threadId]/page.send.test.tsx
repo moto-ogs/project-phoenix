@@ -31,7 +31,7 @@ vi.mock("next/navigation", () => ({
 
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
-    data: { user: { id: "7", tenantId: 1 }, expires: "2099-01-01" },
+    data: { user: { id: "7", tenantId: "1" }, expires: "2099-01-01" },
     status: "authenticated",
   }),
 }));
@@ -136,7 +136,9 @@ async function typeAndSend(text: string) {
 describe("Eltern-Nachricht senden: Ablehnung je Code", () => {
   beforeEach(() => {
     mockFetchThread.mockReset().mockResolvedValue(thread);
-    mockFetchThreadMails.mockReset().mockResolvedValue({});
+    mockFetchThreadMails
+      .mockReset()
+      .mockResolvedValue({ mails: {}, awaitingFeedback: false });
     mockPostMessage.mockReset();
     tenantFlags.messagingEnabled = true;
   });
@@ -309,7 +311,10 @@ describe("E-Mail-Status unter der eigenen Nachricht", () => {
   });
 
   it("zeigt eine zugestellte Mail still neben der Uhrzeit", async () => {
-    mockFetchThreadMails.mockReset().mockResolvedValue({ m2: "delivered" });
+    mockFetchThreadMails.mockReset().mockResolvedValue({
+      mails: { m2: "delivered" },
+      awaitingFeedback: false,
+    });
     render(<MessageThreadPage />, { wrapper: Fresh });
     expect(await screen.findByText("Zugestellt")).toBeInTheDocument();
     expect(mockFetchThreadMails).toHaveBeenCalledWith("t1");
@@ -317,7 +322,10 @@ describe("E-Mail-Status unter der eigenen Nachricht", () => {
   });
 
   it("nennt den nächsten Schritt, wenn die Mail nicht ankam", async () => {
-    mockFetchThreadMails.mockReset().mockResolvedValue({ m2: "undeliverable" });
+    mockFetchThreadMails.mockReset().mockResolvedValue({
+      mails: { m2: "undeliverable" },
+      awaitingFeedback: false,
+    });
     render(<MessageThreadPage />, { wrapper: Fresh });
     expect(await screen.findByText("Nicht zustellbar")).toBeInTheDocument();
     expect(

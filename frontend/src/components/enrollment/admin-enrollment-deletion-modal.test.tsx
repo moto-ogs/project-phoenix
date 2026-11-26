@@ -63,7 +63,7 @@ function Modal({ isOpen }: Readonly<{ isOpen: boolean }>) {
   return (
     <SessionProvider
       session={{
-        user: { id: "staff-7", scope: "tenant", tenantId: 42 },
+        user: { id: "staff-7", scope: "tenant", tenantId: "42" },
         expires: "2099-01-01",
       }}
       refetchOnWindowFocus={false}

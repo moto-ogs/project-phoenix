@@ -44,6 +44,8 @@ export interface StaffProofType {
   readonly archived: boolean;
   /** Das Führungszeugnis: moto speichert das Ergebnis, kein Dokument. */
   readonly policeCertificate: boolean;
+  /** Stand der Felder; eine Änderung schickt ihn zurück (ADR 0311). */
+  readonly version: string;
 }
 
 export interface StaffProofTypeInput {
@@ -132,6 +134,7 @@ function mapType(
     mandatory: kind.mandatory,
     archived: kind.archived,
     policeCertificate: kind.police_certificate,
+    version: kind.version,
   };
 }
 
@@ -156,7 +159,7 @@ export function mapStaffProof(
   };
 }
 
-function mapSchoolKinds(
+export function mapSchoolKinds(
   data: traegerStaffProofsContract.TraegerSchoolProofKinds[],
 ): SchoolProofKinds[] {
   return data.map((school) => ({
@@ -208,18 +211,22 @@ function typeBody(
   };
 }
 
+/**
+ * Legt eine Nachweisart an (`changed` null) oder ändert sie auf dem Stand
+ * `changed.version`, den der Dialog beim Öffnen las (ADR 0311).
+ */
 export async function saveStaffProofType(
-  id: string | null,
+  changed: { readonly id: string; readonly version: string } | null,
   input: StaffProofTypeInput,
 ): Promise<StaffProofType> {
   return mapType(
-    await (id === null
+    await (changed === null
       ? bffJson("org", "POST /traeger/staff-proofs/types", {
           body: typeBody(input),
         })
       : bffJson("org", "PUT /traeger/staff-proofs/types/{id}", {
-          params: { id },
-          body: typeBody(input),
+          params: { id: changed.id },
+          body: { ...typeBody(input), expected_version: changed.version },
         })),
   );
 }

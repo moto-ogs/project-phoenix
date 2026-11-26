@@ -35,9 +35,10 @@ vi.mock("~/lib/traeger-sepa-api", async (importOriginal) => ({
   ...api,
 }));
 vi.mock("~/lib/traeger-url", () => ({ traegerPath: (path: string) => path }));
-vi.mock("~/lib/traeger-api", () => ({
-  fetchTraegerBuero: () => Promise.resolve({ members: [] }),
-}));
+const fetchTraegerBuero = vi.hoisted(() =>
+  vi.fn(() => Promise.resolve({ members: [] })),
+);
+vi.mock("~/lib/traeger-api", () => ({ fetchTraegerBuero }));
 const bffJson = vi.hoisted(() => vi.fn());
 vi.mock("~/lib/bff-fetch", () => ({ bffJson }));
 
@@ -81,6 +82,7 @@ function renderCard() {
 describe("SepaMandatesCard (#4695)", () => {
   beforeEach(() => {
     for (const fn of Object.values(api)) fn.mockReset();
+    fetchTraegerBuero.mockClear();
     api.fetchSepaMandateCollections.mockResolvedValue([]);
   });
 
@@ -227,6 +229,9 @@ describe("SepaMandatesCard (#4695)", () => {
     await waitFor(() =>
       expect(api.fetchSepaMandateHistory).toHaveBeenCalledTimes(2),
     );
+    // The people that name the accounts are logged on every read
+    // (ADR 0311 rule 1): each opening reads them once more.
+    await waitFor(() => expect(fetchTraegerBuero).toHaveBeenCalledTimes(2));
     expect(
       within(screen.getByRole("dialog")).getByText("Wird geladen …"),
     ).toBeVisible();

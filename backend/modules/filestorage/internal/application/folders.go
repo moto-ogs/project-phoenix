@@ -10,6 +10,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/filestorage/internal/domain"
 	"github.com/moto-ogs/project-phoenix/modules/filestorage/internal/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/collation"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // ListFolders returns the folders the actor may see plus what the actor may
@@ -113,7 +114,7 @@ func (s *Service) UpdateFolder(ctx context.Context, folderID int64, value filest
 
 // DeleteFolder queues cleanup for every file still on disk and removes the
 // folder; the file rows cascade. Bytes are removed by the sweep.
-func (s *Service) DeleteFolder(ctx context.Context, folderID int64, who filestorage.Actor) error {
+func (s *Service) DeleteFolder(ctx context.Context, folderID int64, expectedFingerprint string, who filestorage.Actor) error {
 	actor := s.actor(who)
 	return s.run("delete_folder", func(o *op) error {
 		if err := requireManager(actor); err != nil {
@@ -123,7 +124,7 @@ func (s *Service) DeleteFolder(ctx context.Context, folderID int64, who filestor
 			return err
 		}
 		return s.write(ctx, o, func(txCtx context.Context, o *op) error {
-			return s.deleteFolderRecord(txCtx, o, folderID, actor)
+			return s.deleteFolderRecord(txCtx, o, folderID, expectedFingerprint, actor)
 		})
 	})
 }
@@ -296,14 +297,23 @@ func (s *Service) folderManagementOverview(ctx context.Context, o *op, overview 
 	return audiences, nil
 }
 
-func (s *Service) deleteFolderRecord(txCtx context.Context, o *op, folderID int64, actor domain.Actor) error {
-	folder, found, stats, err := s.deps.Folders.FindByID(txCtx, folderID)
+func (s *Service) deleteFolderRecord(txCtx context.Context, o *op, folderID int64, expectedFingerprint string, actor domain.Actor) error {
+	folder, found, stats, err := s.deps.Folders.FindByIDForUpdate(txCtx, folderID)
 	o.add(stats)
 	if err != nil {
 		return err
 	}
 	if !found {
 		return filestorage.ErrNotFound
+	}
+	// The dialog named the files that go with the folder; a file uploaded
+	// or deleted since then refuses the delete (ADR 0311).
+	live, err := s.liveFileIDs(txCtx, o, folderID)
+	if err != nil {
+		return err
+	}
+	if err := readstate.Check(expectedFingerprint, domain.FolderContentsFingerprint(live)); err != nil {
+		return err
 	}
 	// Every object still on disk gets an immediately eligible intent
 	// BEFORE the rows cascade away; the intents are all that survive.
@@ -333,13 +343,17 @@ func (s *Service) deleteFolderRecord(txCtx context.Context, o *op, folderID int6
 }
 
 func (s *Service) updateFolderRecord(txCtx context.Context, o *op, folderID int64, input filestorage.FolderInput, actor domain.Actor, audience domain.Audience) (view domain.FolderView, err error) {
-	existing, found, stats, err := s.deps.Folders.FindByID(txCtx, folderID)
+	existing, found, stats, err := s.deps.Folders.FindByIDForUpdate(txCtx, folderID)
 	o.add(stats)
 	if err != nil {
 		return view, err
 	}
 	if !found {
 		return view, filestorage.ErrNotFound
+	}
+	// The edit was made on the stored folder (ADR 0311).
+	if err := readstate.Check(input.ExpectedVersion, domain.FolderVersion(existing)); err != nil {
+		return view, err
 	}
 	if err := s.validateAudience(txCtx, audience); err != nil {
 		return view, err
@@ -356,6 +370,27 @@ func (s *Service) updateFolderRecord(txCtx context.Context, o *op, folderID int6
 	if err != nil {
 		return view, err
 	}
-	view = domain.FolderView{FolderListItem: domain.FolderListItem{Folder: folder}, Audience: audience}
+	// The answer is a whole list item: its file count and the delete
+	// fingerprint over the files the folder keeps.
+	live, err := s.liveFileIDs(txCtx, o, folder.ID)
+	if err != nil {
+		return view, err
+	}
+	view = domain.FolderView{FolderListItem: domain.FolderListItem{Folder: folder, FileCount: int64(len(live)), FileIDs: live}, Audience: audience}
 	return view, s.record(txCtx, actor, ports.EventFolderUpdated, &folder.ID, nil, nil, folderEventDetail(folder, audience))
+}
+
+// liveFileIDs lists the ids of the files a folder holds, as its list item
+// counts them.
+func (s *Service) liveFileIDs(ctx context.Context, o *op, folderID int64) ([]int64, error) {
+	documents, stats, err := s.deps.Files.ListByOwner(ctx, folderID)
+	o.add(stats)
+	if err != nil {
+		return nil, err
+	}
+	ids := make([]int64, 0, len(documents))
+	for _, document := range documents {
+		ids = append(ids, document.ID)
+	}
+	return ids, nil
 }

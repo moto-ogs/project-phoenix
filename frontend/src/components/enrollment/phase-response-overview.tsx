@@ -234,7 +234,6 @@ export function PhaseResponseOverview({
           getRowKey={(child) => child.studentId}
           defaultSortKey="child"
           defaultSortDirection="asc"
-          stackedOnMobile
           emptyState={
             <ResponseEmptyState
               view={view}

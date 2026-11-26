@@ -2,12 +2,10 @@ import type { ReactNode } from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { mockUpdateSchool, mockRevalidateTenantCache, mockLoggerError } =
-  vi.hoisted(() => ({
-    mockUpdateSchool: vi.fn(),
-    mockRevalidateTenantCache: vi.fn(),
-    mockLoggerError: vi.fn(),
-  }));
+const { mockUpdateSchool, mockLoggerError } = vi.hoisted(() => ({
+  mockUpdateSchool: vi.fn(),
+  mockLoggerError: vi.fn(),
+}));
 
 vi.mock("~/components/ui/modal", () => ({
   Modal: ({
@@ -34,8 +32,6 @@ vi.mock("~/lib/operator/provisioning-api", () => ({
   operatorProvisioningService: {
     updateSchool: (...args: unknown[]) => mockUpdateSchool(...args),
   },
-  revalidateTenantCache: (...args: unknown[]) =>
-    mockRevalidateTenantCache(...args),
 }));
 
 vi.mock("~/lib/operator/provisioning-helpers", async (importOriginal) => {
@@ -61,6 +57,7 @@ import { EditSchoolModal } from "./edit-school-modal";
 import type { Organization, School } from "~/lib/operator/provisioning-helpers";
 
 const mockOrg: Organization = {
+  version: "v-1",
   id: "1",
   name: "Test Org",
   slug: "test-org",
@@ -72,6 +69,7 @@ const mockOrg: Organization = {
 };
 
 const mockSchool: School = {
+  version: "v-1",
   id: "10",
   organizationId: "1",
   name: "Test School",
@@ -105,6 +103,7 @@ describe("EditSchoolModal", () => {
   it("renders visibility toggle with Sichtbar when school is not hidden", () => {
     render(
       <EditSchoolModal
+        reload={vi.fn()}
         isOpen={true}
         onClose={onClose}
         school={mockSchool}
@@ -123,6 +122,7 @@ describe("EditSchoolModal", () => {
     const hiddenSchool = { ...mockSchool, hidden: true };
     render(
       <EditSchoolModal
+        reload={vi.fn()}
         isOpen={true}
         onClose={onClose}
         school={hiddenSchool}
@@ -138,6 +138,7 @@ describe("EditSchoolModal", () => {
   it("toggles visibility state when switch is clicked", () => {
     render(
       <EditSchoolModal
+        reload={vi.fn()}
         isOpen={true}
         onClose={onClose}
         school={mockSchool}
@@ -157,10 +158,10 @@ describe("EditSchoolModal", () => {
 
   it("sends hidden=true when saving with visibility toggled off", async () => {
     mockUpdateSchool.mockResolvedValue(mockSchool);
-    mockRevalidateTenantCache.mockResolvedValue(undefined);
 
     render(
       <EditSchoolModal
+        reload={vi.fn()}
         isOpen={true}
         onClose={onClose}
         school={mockSchool}
@@ -186,22 +187,18 @@ describe("EditSchoolModal", () => {
         }),
       );
     });
-    // #6652: the portal cache reloads with the page, outside the write's
-    // catch; the dialog hands over the subdomains to reload.
-    await waitFor(() =>
-      expect(onUpdated).toHaveBeenCalledWith(["test-school", "test-school"]),
-    );
+    await waitFor(() => expect(onUpdated).toHaveBeenCalledOnce());
   });
 
-  // #6652: the portal cache reloads after the write and outside its catch: a
+  // #6652: the page reloads after the write and outside its catch: a
   // failed reload is no failed change and leaves no retry that saves again.
-  it("closes a saved change even when the portal cache reload would fail", async () => {
+  it("closes a saved change even when the page reload fails", async () => {
     mockUpdateSchool.mockResolvedValue(mockSchool);
-    mockRevalidateTenantCache.mockRejectedValue(new Error("cache down"));
     const updated = vi.fn().mockResolvedValue(false);
 
     render(
       <EditSchoolModal
+        reload={vi.fn()}
         isOpen={true}
         onClose={onClose}
         school={mockSchool}
@@ -215,7 +212,7 @@ describe("EditSchoolModal", () => {
     fireEvent.click(screen.getByText("Speichern"));
 
     await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
-    expect(updated).toHaveBeenCalledWith(["test-school", "test-school"]);
+    expect(updated).toHaveBeenCalledOnce();
     expect(mockUpdateSchool).toHaveBeenCalledTimes(1);
     expect(
       screen.queryByText(/Die Änderung an der Schule/),
@@ -226,6 +223,7 @@ describe("EditSchoolModal", () => {
     mockUpdateSchool.mockResolvedValue(mockSchool);
     render(
       <EditSchoolModal
+        reload={vi.fn()}
         isOpen={true}
         onClose={onClose}
         school={mockSchool}
@@ -254,6 +252,7 @@ describe("EditSchoolModal", () => {
 
       render(
         <EditSchoolModal
+          reload={vi.fn()}
           isOpen={true}
           onClose={onClose}
           school={{ ...mockSchool, email: "" }}
@@ -291,6 +290,7 @@ describe("EditSchoolModal", () => {
   it("warns at the email field while the reply address is missing (#7174)", () => {
     render(
       <EditSchoolModal
+        reload={vi.fn()}
         isOpen={true}
         onClose={onClose}
         school={{ ...mockSchool, email: "" }}
@@ -318,6 +318,7 @@ describe("EditSchoolModal", () => {
   it("keeps the plain hint for a school whose replies arrive", () => {
     render(
       <EditSchoolModal
+        reload={vi.fn()}
         isOpen={true}
         onClose={onClose}
         school={mockSchool}
@@ -338,6 +339,7 @@ describe("EditSchoolModal", () => {
 
     render(
       <EditSchoolModal
+        reload={vi.fn()}
         isOpen={true}
         onClose={onClose}
         school={mockSchool}

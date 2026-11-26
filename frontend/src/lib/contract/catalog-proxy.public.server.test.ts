@@ -29,9 +29,6 @@ const portal = {
   post: session,
   put: session,
   patch: session,
-  api: vi.fn(() => {
-    throw new Error("a public route reached the session client");
-  }),
 } as unknown as Parameters<typeof makeCatalogProxy>[0];
 
 const row = success(z.object({ name: z.string() }));
@@ -313,8 +310,8 @@ describe("makeCatalogProxy, public routes", () => {
   it("answers a backend 204 as a result without data", async () => {
     fetchMock.mockResolvedValueOnce(new Response(null, { status: 204 }));
     const response = await call("POST", ["rows", "public", "tok", "withdraw"]);
-    expect(response.status).toBe(200);
-    expect(((await response.json()) as { data: unknown }).data).toBeNull();
+    expect(response.status).toBe(204);
+    expect(await response.text()).toBe("");
   });
 
   it("refuses an answer outside the contract with 502", async () => {
@@ -377,7 +374,7 @@ describe("makeCatalogProxy, public routes", () => {
       );
       // The backend's limiter of the link keys on the client address.
       expect(sentHeaders()["X-Forwarded-For"]).toBe("172.20.0.4");
-      expect(portal.api).not.toHaveBeenCalled();
+      expect(sessionReads).toBe(0);
     });
 
     it("opens a POST link without a body or idempotency key", async () => {
@@ -560,7 +557,6 @@ describe("makeCatalogProxy, public routes", () => {
       expect(names).not.toContain("idempotency-key");
       expect(sentHeaders()["X-Forwarded-For"]).toBe("172.20.0.4");
       expect(sessionReads).toBe(0);
-      expect(portal.api).not.toHaveBeenCalled();
     });
 
     it("answers a body over the limit 413 with the route's code, before the backend", async () => {

@@ -7,29 +7,6 @@ export type RouteContext = {
   params: Promise<Record<string, string | string[] | undefined>>;
 };
 
-export function buildQueryString(request: NextRequest): string {
-  const queryParams = new URLSearchParams();
-  request.nextUrl.searchParams.forEach((value, key) => {
-    queryParams.append(key, value);
-  });
-  const qs = queryParams.toString();
-  return qs ? `?${qs}` : "";
-}
-
-/** Only the listed keys, first non-empty value each, in the listed order. */
-export function allowedQueryString(
-  request: NextRequest,
-  allowed: readonly string[],
-): string {
-  const forwarded = new URLSearchParams();
-  for (const key of allowed) {
-    const value = request.nextUrl.searchParams.get(key);
-    if (value) forwarded.set(key, value);
-  }
-  const qs = forwarded.toString();
-  return qs ? `?${qs}` : "";
-}
-
 /**
  * The route params, then every query parameter the route does not name, so a
  * query key never replaces a route param (`/x/5?id=7` keeps id 5). Without an
@@ -78,8 +55,19 @@ export async function parseRequestBody<B>(
   try {
     return JSON.parse(text) as B;
   } catch {
-    throw bffError(400, "request body is not valid JSON");
+    throw bffError(400, "Invalid JSON", { code: "general.input" });
   }
+}
+
+export function invalidJsonResponse(
+  request: Request,
+): NextResponse<ProblemBody> {
+  return problemResponse(
+    400,
+    "Invalid JSON",
+    { code: "general.input" },
+    request,
+  );
 }
 
 /**
@@ -87,7 +75,7 @@ export async function parseRequestBody<B>(
  * beyond, also without a Content-Length, so an oversized payload is never
  * buffered whole. Null means too large.
  */
-export async function readBoundedBody(
+async function readBoundedBody(
   request: Request,
   limit: number,
 ): Promise<Uint8Array<ArrayBuffer> | null> {
@@ -116,7 +104,7 @@ export async function readBoundedBody(
   return body;
 }
 
-export function bodyTooLargeError(maxBodyBytes: number): Error {
+function bodyTooLargeError(maxBodyBytes: number): Error {
   return bffError(413, `request body exceeds ${maxBodyBytes} bytes`, {
     details: { max_bytes: maxBodyBytes },
   });
@@ -150,8 +138,7 @@ export function isStringParam(param: unknown): param is string {
 
 /**
  * A required, non-empty string route param; anything else is the request's
- * mistake (400). This does not URL-encode the value; use
- * requirePathSegmentParam for path interpolation.
+ * mistake (400). This does not URL-encode the value.
  */
 export function requireStringParam(
   params: Record<string, unknown>,
@@ -162,18 +149,4 @@ export function requireStringParam(
     throw bffError(400, `Invalid ${key} parameter`);
   }
   return value;
-}
-
-export function encodePathSegment(param: string): string {
-  return encodeURIComponent(param);
-}
-
-/**
- * Returns a required route param encoded for use as one URL path segment.
- */
-export function requirePathSegmentParam(
-  params: Record<string, unknown>,
-  key = "id",
-): string {
-  return encodePathSegment(requireStringParam(params, key));
 }

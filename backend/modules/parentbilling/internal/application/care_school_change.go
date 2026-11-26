@@ -103,7 +103,7 @@ type schoolChangePart struct {
 func contractFamilies(byContract map[int64][]parentbilling.CareContractVersion, recipients map[int64]parentbilling.CareRecipient) map[int64]string {
 	families := make(map[int64]string, len(byContract))
 	for contractID := range byContract {
-		families[contractID] = parentbilling.ContractFamilyKey(recipients[contractID].Email, contractID)
+		families[contractID] = recipients[contractID].FamilyOf(contractID)
 	}
 	return families
 }

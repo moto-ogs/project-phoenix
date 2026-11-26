@@ -5,9 +5,11 @@ import type * as sharedContract from "./contract/shared.generated";
 import type { PortalKey } from "./portal-paths";
 import {
   sessionBff,
+  type EnrollmentScope,
   type SessionAuthenticated,
-  type SessionBffRoute,
+  type SessionLoginBody,
 } from "./session-bff";
+import type { SessionBffRoute } from "./session-bff-route";
 import { signInAnswer, type SignInAnswer } from "./sign-in-answer";
 
 export type LoginScope = PortalKey;
@@ -21,9 +23,9 @@ export type MFAResult = SessionAuthenticated;
  * the operator's start answers 204, `null`). The steps run without a session
  * (`public`); enrollment sends the login's enrollment token as its bearer.
  */
-function postSignInStep<T>(
-  route: SessionBffRoute<T>,
-  body: unknown,
+function postSignInStep<T, B>(
+  route: SessionBffRoute<T, B>,
+  body: NoInfer<B>,
   bearerToken?: string,
 ): Promise<T> {
   return bffJson("public", route, {
@@ -47,7 +49,7 @@ export async function login(
   // Tenant login requires a tenant slug. School login accepts one only for
   // a handoff from the OGS portal, where it pins a multi-school Lehrkraft to
   // the school they selected.
-  const payload =
+  const payload: SessionLoginBody =
     scope === "tenant" || (scope === "school" && params.tenantSlug)
       ? {
           email: params.email,
@@ -122,7 +124,7 @@ export async function resendChallenge(
  * that challenge; the operator answers 204 and returns null.
  */
 export async function enrollStart(
-  scope: LoginScope,
+  scope: EnrollmentScope,
   bearerToken: string,
 ): Promise<string | null> {
   const answer = await postSignInStep(
@@ -142,7 +144,7 @@ export async function enrollStart(
  * backend mints and answers with its status only.
  */
 export async function enrollConfirm(
-  scope: LoginScope,
+  scope: EnrollmentScope,
   bearerToken: string,
   code: string,
   challengeToken: string | null,

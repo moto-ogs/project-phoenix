@@ -22,6 +22,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	peopleCompose "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose"
+	schoolCalendarCompose "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/compose"
 	"github.com/moto-ogs/project-phoenix/modules/securityruntime"
 	settingsCompose "github.com/moto-ogs/project-phoenix/modules/settings/compose"
 	transactionruntime "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose"
@@ -50,7 +51,7 @@ func BuildParentPortal(
 	enrollment EnrollmentRows, notices EnrollmentNotices, announcements communication.ParentAnnouncementCapability, audit AuditOwner,
 	organizations organizationtenancy.Query, contractNotices parentportal.ContractNoticesPort, contractSigning carecontract.InboxSigning,
 	contractHolidays carecontract.SchoolHolidays,
-	mandates parentportal.SEPAMandatesPort,
+	mandates parentportal.SEPAMandatesPort, dayChanges parentportal.ChildDayChanges,
 ) (*parentportal.Portal, error) {
 	surveys, err := communication.SurveysOf(announcements)
 	if err != nil {
@@ -79,7 +80,7 @@ func BuildParentPortal(
 		CareProfiles:    profiles, ChildRepo: children, EnrollablePhaseRepo: NewParentPhaseReads(carePlanCompose.NewParentPhaseQueries(portal.ParentEnrollablePhase)),
 		EnrollmentSettings: settings, EnrollmentRequestRepo: NewParentEnrollmentReads(carePlanCompose.NewParentEnrollmentQueries(portal.ParentEnrollmentRequest)),
 		GuardianProfileRepo: NewParentGuardianProfileReads(people.GuardianProfiles), Attendance: BindParentAttendance(presence.Presence), StatusDayRepo: carePlanRows.StatusDays,
-		MealPlan: mealPlan, StudentRepo: NewParentStudentReads(people.Students), CarePlan: NewParentCarePlanCommands(carePlan, schedules.AutoExcusal), DataRequests: NewParentDataRequestCommands(carePlan), People: persons,
+		MealPlan: mealPlan, DayChanges: dayChanges, ClosingTimes: schoolCalendarCompose.NewOpeningChanges().ClosingTimeOn, StudentRepo: NewParentStudentReads(people.Students), CarePlan: NewParentCarePlanCommands(carePlan, schedules.AutoExcusal), DataRequests: NewParentDataRequestCommands(carePlan), People: persons,
 		Settings: BindParentSettings(settings), StudentUpdates: BindParentStudentUpdates(hub),
 		PersonRepo: NewParentPersonReads(people.Persons), ChangeRequestRepo: NewParentDataRequestReads(carePlan),
 		CareRequestRepo: NewParentCareRequestReads(carePlan), ExcusedRequestRepo: NewParentExcusedRequestReads(carePlanRows.ExcusedRequestRows),
@@ -100,7 +101,7 @@ func BuildParentPortal(
 		Memberships: NewParentSchoolMembershipLock(db), InvitationAccounts: NewParentInvitationAccountLock(db), GuardianInvites: NewParentGuardianAccess(identity), GuardianInvitations: NewGuardianInvitationReads(identity), InvalidateInvites: NewGuardianInvitationInvalidation(db, env.Now),
 		StudentGuardianRepo: NewParentStudentGuardianReads(people.StudentGuardians), GuardianPhoneRepo: NewParentGuardianPhoneReads(peopleCompose.NewGuardianPhoneNumberRepository(db.Pool())),
 		StudentConsents: NewParentStudentConsents(services.StudentConsents, MustNewRoomHistoryStops(db)), StudentPhotos: photos, ChildDataAccess: NewParentChildDataAccess(audit.Persistence.DataAccessLog),
-		HolidayWishes: NewParentHolidayWishes(wishProofs), HolidayAnnouncements: NewParentHolidayAnnouncements(), HolidayRegistrations: NewParentHolidayRegistrations(organizations), HolidayAccountProofs: NewParentHolidayAccountProofs(env.HealthData, env.Now),
+		HolidayWishes: NewParentHolidayWishes(wishProofs), HolidayAnnouncements: NewParentHolidayAnnouncements(), HolidayRegistrations: NewParentHolidayRegistrations(organizations, env.Now), HolidayAccountProofs: NewParentHolidayAccountProofs(env.HealthData, env.Now),
 		AbsenceNotifier: bindParentAbsenceNotifier(notifications.AbsenceNotifier), CarePeriods: parentportal.NewCarePeriodReads(enrollment.ParentCarePeriods.CarePeriods),
 		OfferingHistory: parentportal.NewOfferingHistoryReads(enrollment.ParentOfferingHistory.OfferingHistory), CareOfferingRepo: NewParentCareOfferingReads(notices.CareOfferings),
 		OfferingChanges: NewParentOfferingChangeRequests(requests.OfferingChanges), Logger: env.Logger.With("service", "parent"), Now: env.Now,

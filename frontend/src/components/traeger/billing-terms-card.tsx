@@ -374,7 +374,7 @@ export function BillingTermsCard({
   return (
     <SectionCard
       title="Zahlung und Rechnungen"
-      description="So zahlen die Familien je Leistung, und was auf einer Rechnung steht. Änderungen gelten ab dem nächsten Lauf."
+      description="So zahlen die Familien pro Leistung, und was auf einer Rechnung steht. Änderungen gelten ab dem nächsten Lauf."
       overflow="visible"
     >
       <DataTable
@@ -383,7 +383,6 @@ export function BillingTermsCard({
         getRowKey={(row) => row.terms.service}
         onRowClick={setEditing}
         rowHasInteractiveControls
-        stackedOnMobile
       />
       <ServiceTermsModal
         row={editing}

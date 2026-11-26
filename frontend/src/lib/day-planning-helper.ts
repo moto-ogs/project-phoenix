@@ -82,6 +82,28 @@ export function getStudentPresenceBadgePlanning(student: DayPlanningStudent): {
 }
 
 /** Whether the child is checked in on site right now (room, yard, on the way). */
+/**
+ * Whether a day exception without a time keeps the child away: it does not
+ * come (arrival) or is not picked up (pickup). Actual attendance, also a
+ * return to class, wins over the exception (#6487). The child cards use it to
+ * leave the day's offerings off (#8194). Another planning day has no
+ * attendance yet: pass `ignoreCurrentAttendance`.
+ */
+export function dayExceptionKeepsAway(
+  student: Pick<DayPlanningStudent, "actual_arrival_time" | "current_location">,
+  exception: Readonly<{ arrivalAbsent: boolean; pickupAbsent: boolean }>,
+  options?: Readonly<{ ignoreCurrentAttendance?: boolean }>,
+): boolean {
+  if (
+    !options?.ignoreCurrentAttendance &&
+    (hasActualAttendance(student) ||
+      isInClassLocation(student.current_location))
+  ) {
+    return false;
+  }
+  return exception.arrivalAbsent || exception.pickupAbsent;
+}
+
 export function hasActualAttendance(
   student: Pick<DayPlanningStudent, "actual_arrival_time" | "current_location">,
 ): boolean {

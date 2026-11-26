@@ -61,12 +61,7 @@ function noStaffProfileError(): ApiError {
 // strings while building the request: Number() would silently change an ID
 // past 2^53 before the API can validate it.
 function normalizePositiveStaffID(value: string): string | null {
-  try {
-    const id = BigInt(value);
-    return id > 0n ? id.toString() : null;
-  } catch {
-    return null;
-  }
+  return /^[1-9]\d{0,18}$/.test(value) ? value : null;
 }
 
 interface TimetableActionsOptions {
@@ -242,8 +237,8 @@ export function useTimetableActions(
   });
 
   // Starting, ending or reopening a block changes which supervisions run.
-  // The sidebar („Aktuelle Aufsichten“) keeps its own copy and otherwise only
-  // hears SSE, which may drop events. So the own action reloads both lists;
+  // The shared context cannot rely on lossy SSE after our own write, so the
+  // action reloads its sessions as well as the separately mounted page;
   // a failed reload leaves the next refresh to fix it and never reports the
   // write itself as failed. No extra SWR key bump afterwards: it fetched the
   // same aggregate a second time and kept the old view on screen meanwhile
@@ -253,11 +248,7 @@ export function useTimetableActions(
   // nur (#6652).
   const lifecycleAfterWrite = useRefreshAfterWrite(
     "die Anzeige der Aufsicht",
-    () =>
-      Promise.all([
-        mutateDashboard(),
-        refreshSupervision({ silent: true, force: true }),
-      ]),
+    () => Promise.all([mutateDashboard(), refreshSupervision(["sessions"])]),
   );
   const reloadAfterLifecycleChange = lifecycleAfterWrite.refresh;
 
@@ -639,10 +630,13 @@ export function useTimetableActions(
         status: errorStatus(err),
       });
       reloadAfterDenial(err);
-      // Der Fehler bleibt im offenen Bestätigungsdialog.
+      // Der Fehler bleibt im offenen Bestätigungsdialog. Haben sich die
+      // eingecheckten Kinder seit dem Lesen geändert, wartet er auf die neu
+      // gelesene Liste (ADR 0311).
       void showCompleteError(err, {
         object: "das Beenden der Aktivität",
         retry: () => retryRef.current.complete(),
+        reload: reloadRosterAfterRefusal,
       });
     } finally {
       setIsCompletingInstance(false);
@@ -655,6 +649,7 @@ export function useTimetableActions(
     rememberReopenable,
     reloadAfterDenial,
     reloadAfterLifecycleChange,
+    reloadRosterAfterRefusal,
     setSelectedTimetableInstanceId,
     showCompleteError,
   ]);

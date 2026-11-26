@@ -11,6 +11,9 @@ import (
 
 type Store interface {
 	WeekProtocolStore
+	// CountCancelledInstancesByTenant counts the day's cancelled instances
+	// per school in the caller's administrative transaction (#7672).
+	CountCancelledInstancesByTenant(context.Context, []int64, calendar.Date) (map[int64]int, domain.OperationStats, error)
 	ListReplannableActivityInstanceIDs(context.Context, string, *string, *int64, bool) ([]int64, domain.OperationStats, error)
 	DeleteActivityInstancesByID(context.Context, []int64) (int64, domain.OperationStats, error)
 	ListRemovedWeekendActivityInstanceIDs(context.Context, int64, []int, string) ([]int64, domain.OperationStats, error)
@@ -41,6 +44,9 @@ type Store interface {
 	UpdateCategoryIfActive(context.Context, int64, timetable.CreateCategory) (timetable.Category, bool, domain.OperationStats, error)
 	SetCategoryArchivedAt(context.Context, int64, *time.Time) (timetable.Category, bool, domain.OperationStats, error)
 	SetCategoryShiftTypeLinks(context.Context, int64, []int64) (domain.OperationStats, error)
+	// LockShiftTypeLinkCategories locks the categories linked to the shift
+	// type and the given ones, ascending, and reads them after the lock.
+	LockShiftTypeLinkCategories(ctx context.Context, shiftTypeID int64, categoryIDs []int64) ([]timetable.Category, domain.OperationStats, error)
 	SetCategoryShiftTypeID(context.Context, int64, *int64) (domain.OperationStats, error)
 	DeleteCategory(context.Context, int64) (domain.OperationStats, error)
 	LockStudentEnrollmentsForCareExit(context.Context, []int64, string) (domain.OperationStats, error)

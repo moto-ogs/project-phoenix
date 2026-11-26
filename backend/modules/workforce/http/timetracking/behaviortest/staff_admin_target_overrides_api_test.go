@@ -148,8 +148,13 @@ func TestTargetOverridesAPI_RejectsOverlap(t *testing.T) {
 	rec = ctx.post(path, overrideBody("2026-10-23", "2026-10-30", 300), "time_tracking:manage")
 	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), "Sonderarbeitszeit (19.10.2026 bis 23.10.2026)")
-	assert.Contains(t, rec.Body.String(), `"code":"workforce.target_override_overlap"`)
-	assert.Contains(t, rec.Body.String(), `"details":{"end_date":"23.10.2026","start_date":"19.10.2026"}`)
+	var problem struct {
+		Code    string          `json:"code"`
+		Details json.RawMessage `json:"details"`
+	}
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &problem), rec.Body.String())
+	assert.Equal(t, "workforce.target_override_overlap", problem.Code)
+	assert.JSONEq(t, `{"end_date":"23.10.2026","start_date":"19.10.2026"}`, string(problem.Details))
 
 	rec = ctx.post(path, overrideBody("2026-10-26", "2026-10-30", 300), "time_tracking:manage")
 	require.Equal(t, http.StatusCreated, rec.Code, "the day after the range is free: %s", rec.Body.String())

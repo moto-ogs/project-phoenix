@@ -4,11 +4,8 @@
  * IDs ihrer Uploads. Die Grenzen hier spiegeln das Backend
  * (modules/communication/message_attachments.go), das sie erneut prüft.
  */
-import { bffFile, bffJson, bffPath } from "~/lib/bff-fetch";
+import { bffFile, bffJson, bffFileHref } from "~/lib/bff-fetch";
 import type * as sharedContract from "~/lib/contract/shared.generated";
-
-/** Ein Anhang, wie ihn der Upload und jede Unterhaltung liefert. */
-export type MessageAttachment = Readonly<sharedContract.UploadResponse>;
 
 export const MAX_MESSAGE_ATTACHMENTS = 5;
 export const MAX_MESSAGE_ATTACHMENT_MB = 10;
@@ -58,9 +55,9 @@ export interface MessageAttachmentRoutes {
   readonly upload: (
     file: File,
     signal?: AbortSignal,
-  ) => Promise<MessageAttachment>;
-  /** Die Adresse, die einen Anhang speichert (`<a href>`, `<img src>`). */
-  readonly downloadUrl: (attachmentId: string) => string;
+  ) => Promise<Readonly<sharedContract.UploadResponse>>;
+  /** Builds the address for saving or viewing an attachment. */
+  readonly downloadUrl: (attachmentId: string, inline?: boolean) => string;
   /**
    * Lädt die Bytes eines Anhangs für die Ansicht in der Seite: ein PDF zeigt
    * der Betrachter aus einer Object-URL, weil die App sich nicht rahmen lässt.
@@ -86,10 +83,17 @@ export const PARENT_MESSAGE_ATTACHMENTS: MessageAttachmentRoutes = {
       signal,
       errorMessage: UPLOAD_FAILED,
     }),
-  downloadUrl: (attachmentId) =>
-    bffPath("tenant", "/api/messages/attachments/{attachmentId}/download", {
-      attachmentId,
-    }),
+  downloadUrl: (attachmentId, inline) =>
+    bffFileHref(
+      "tenant",
+      "GET /api/messages/attachments/{attachmentId}/download",
+      {
+        params: {
+          attachmentId,
+        },
+        query: inline ? { inline: "1" } : {},
+      },
+    ),
   loadFile: (attachmentId) =>
     bffFile("tenant", "GET /api/messages/attachments/{attachmentId}/download", {
       params: { attachmentId },
@@ -105,11 +109,11 @@ export const STAFF_MESSAGE_ATTACHMENTS: MessageAttachmentRoutes = {
       signal,
       errorMessage: UPLOAD_FAILED,
     }),
-  downloadUrl: (attachmentId) =>
-    bffPath(
+  downloadUrl: (attachmentId, inline) =>
+    bffFileHref(
       "tenant",
-      "/api/staff-messages/attachments/{attachmentId}/download",
-      { attachmentId },
+      "GET /api/staff-messages/attachments/{attachmentId}/download",
+      { params: { attachmentId }, query: inline ? { inline: "1" } : {} },
     ),
   loadFile: (attachmentId) =>
     bffFile(
@@ -132,11 +136,11 @@ export const SCHOOL_STAFF_MESSAGE_ATTACHMENTS: MessageAttachmentRoutes = {
       signal,
       errorMessage: UPLOAD_FAILED,
     }),
-  downloadUrl: (attachmentId) =>
-    bffPath(
+  downloadUrl: (attachmentId, inline) =>
+    bffFileHref(
       "school",
-      "/school-staff-messages/attachments/{attachmentId}/download",
-      { attachmentId },
+      "GET /school-staff-messages/attachments/{attachmentId}/download",
+      { params: { attachmentId }, query: inline ? { inline: "1" } : {} },
     ),
   loadFile: (attachmentId) =>
     bffFile(
@@ -166,11 +170,14 @@ export function guardianMessageAttachments(
           errorMessage: UPLOAD_FAILED,
         },
       ),
-    downloadUrl: (attachmentId) =>
-      bffPath(
+    downloadUrl: (attachmentId, inline) =>
+      bffFileHref(
         "parent",
-        "/parent/me/messages/children/{studentId}/attachments/{attachmentId}/download",
-        { studentId, attachmentId },
+        "GET /parent/me/messages/children/{studentId}/attachments/{attachmentId}/download",
+        {
+          params: { studentId, attachmentId },
+          query: inline ? { inline: "1" } : {},
+        },
       ),
     loadFile: (attachmentId) =>
       bffFile(
@@ -190,7 +197,7 @@ export function guardianMessageAttachments(
  * es, damit eine Nachricht nur mit Text genau wie bisher gesendet wird.
  */
 export function attachmentIdArgs(
-  attachments: readonly MessageAttachment[],
+  attachments: readonly Readonly<sharedContract.UploadResponse>[],
 ): [] | [string[]] {
   return attachments.length === 0
     ? []

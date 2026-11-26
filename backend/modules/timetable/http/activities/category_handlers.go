@@ -37,6 +37,10 @@ type ActivityCategoryRequest struct {
 	Name        string `json:"name"`
 	Description string `json:"description,omitempty"`
 	Color       string `json:"color,omitempty"`
+	// ExpectedVersion is the version of the category an edit replaces (ADR
+	// 0311); an edit of a category changed since is refused. A create
+	// ignores it.
+	ExpectedVersion string `json:"expected_version,omitempty"`
 }
 
 // Bind validates and normalizes the category payload.
@@ -64,6 +68,8 @@ func (req *ActivityCategoryRequest) toInput() activityContract.CategoryInput {
 		Name:        req.Name,
 		Description: req.Description,
 		Color:       req.Color,
+
+		ExpectedVersion: req.ExpectedVersion,
 	}
 }
 
@@ -98,7 +104,7 @@ func (rs *Resource) listCategories(w http.ResponseWriter, r *http.Request) {
 		if category.IsArchived() && !includeArchived {
 			continue
 		}
-		responses = append(responses, newCategoryResponse(category))
+		responses = append(responses, newEditableCategoryResponse(category))
 	}
 
 	// Keep the existing usage error path for requests already cancelled
@@ -131,7 +137,7 @@ func (rs *Resource) createCategory(ctx context.Context, req *ActivityCategoryReq
 		return ActivityCategoryResponse{}, err
 	}
 
-	return newCategoryResponse(created), nil
+	return newEditableCategoryResponse(created), nil
 }
 
 // updateCategory renames a category and updates its description/color.
@@ -154,7 +160,7 @@ func (rs *Resource) updateCategory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	common.Respond(w, r, http.StatusOK, newCategoryResponse(updated), "Category updated successfully")
+	common.Respond(w, r, http.StatusOK, newEditableCategoryResponse(updated), "Category updated successfully")
 }
 
 // archiveCategory retires a category. Nothing is deleted — existing Termine
@@ -164,7 +170,7 @@ func (rs *Resource) archiveCategory(ctx context.Context, id int64) (ActivityCate
 	if err != nil {
 		return ActivityCategoryResponse{}, err
 	}
-	return newCategoryResponse(archived), nil
+	return newEditableCategoryResponse(archived), nil
 }
 
 // restoreCategory brings an archived category back into the pickers.
@@ -173,5 +179,5 @@ func (rs *Resource) restoreCategory(ctx context.Context, id int64) (ActivityCate
 	if err != nil {
 		return ActivityCategoryResponse{}, err
 	}
-	return newCategoryResponse(restored), nil
+	return newEditableCategoryResponse(restored), nil
 }

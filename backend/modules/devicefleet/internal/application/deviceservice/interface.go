@@ -13,7 +13,7 @@ type Service interface {
 	CreateDevice(ctx context.Context, device *devicefleet.Device) error
 	GetDeviceByID(ctx context.Context, id int64) (*devicefleet.Device, error)
 	GetDeviceByDeviceID(ctx context.Context, deviceID string) (*devicefleet.Device, error)
-	UpdateDevice(ctx context.Context, device *devicefleet.Device) error
+	UpdateDevice(ctx context.Context, device *devicefleet.Device, expectedVersion string) error
 	DeleteDevice(ctx context.Context, id int64) error
 	ListDevices(ctx context.Context, filters map[string]interface{}) ([]*devicefleet.Device, error)
 

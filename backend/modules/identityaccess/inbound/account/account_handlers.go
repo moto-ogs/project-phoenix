@@ -81,7 +81,6 @@ func (rs *Resource) disableCaregiverCapability(w http.ResponseWriter, r *http.Re
 func caregiverCapabilityErrorRenderer(err error) render.Renderer {
 	if blocked, ok := errors.AsType[caregiverCapabilityBlocked](err); ok {
 		return common.NewCaregiverCapabilityBlockedResponse(
-			http.StatusConflict,
 			blocked.Error(),
 			blocked.CaregiverCapabilityBlockers(),
 		)

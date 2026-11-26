@@ -1,3 +1,4 @@
+import { invalidJsonResponse } from "~/lib/route-wrapper-utils.server";
 import { captureBffException } from "~/lib/sentry-bff.server";
 import type { NextRequest } from "next/server";
 import { contractWrite } from "~/lib/contract/client.server";
@@ -5,7 +6,7 @@ import { contractResponse } from "~/lib/contract/route-response.server";
 import { routes } from "~/lib/contract/auth-invitations.generated";
 import { createLogger } from "~/lib/logger";
 import { withInvitationOwnerSession } from "~/lib/invitation-owner-session.server";
-import { problemResponse } from "~/lib/api-helpers.server";
+import { problemResponse } from "~/lib/api-response-error.server";
 import { withPrivateNoStore } from "~/lib/private-no-store";
 
 const logger = createLogger({ component: "InvitationAcceptRoute" });
@@ -26,7 +27,7 @@ async function POSTHandler(request: NextRequest) {
     try {
       body = (await request.clone().json()) as AcceptInvitationBody;
     } catch {
-      return problemResponse(400, "Invalid JSON", request);
+      return invalidJsonResponse(request);
     }
     if (!body.token) {
       return problemResponse(400, "Missing invitation token", request);
@@ -45,7 +46,7 @@ async function POSTHandler(request: NextRequest) {
         routes["POST /auth/invitations/{token}/accept"],
         payload,
         {
-          endpoint: `/auth/invitations/${encodeURIComponent(token)}/accept`,
+          params: { token },
           token: ownerToken,
           request,
         },

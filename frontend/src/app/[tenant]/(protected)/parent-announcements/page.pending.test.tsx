@@ -8,6 +8,7 @@ import {
 } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { SessionProvider } from "next-auth/react";
+import { ToastProvider } from "~/contexts/ToastContext";
 import { SWRConfig } from "~/lib/swr/testing";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -99,7 +100,7 @@ import {
   updateAnnouncement,
   type Announcement,
 } from "~/lib/parent-announcements-api";
-import ParentAnnouncementsPage from "./page";
+import ParentAnnouncementsPage from "./page-content";
 
 vi.unmock("swr");
 
@@ -109,12 +110,12 @@ function render(ui: ReactElement) {
   return rtlRender(
     <SessionProvider
       session={{
-        user: { id: "staff-7", scope: "tenant", tenantId: 42 },
+        user: { id: "staff-7", scope: "tenant", tenantId: "42" },
         expires: "2099-01-01",
       }}
     >
       <SWRConfig value={{ provider: () => new Map(), errorRetryCount: 0 }}>
-        {ui}
+        <ToastProvider>{ui}</ToastProvider>
       </SWRConfig>
     </SessionProvider>,
   );
@@ -124,6 +125,7 @@ const TITLE = "Elternmitteilung bearbeiten";
 
 const draft: Announcement = {
   id: "1",
+  version: "2026-09-01T08:00:00Z",
   title: "Sommerfest",
   body: "Am Freitag.",
   priority: "info",
@@ -163,6 +165,7 @@ describe("Elternmitteilungen: Speichern sperrt das Panel (#6593)", () => {
       max_count: 5,
       max_bytes: 1,
       editable: true,
+      announcement_version: draft.version,
     });
   });
 
@@ -229,8 +232,9 @@ describe("Elternmitteilungen: Speichern sperrt das Panel (#6593)", () => {
       max_count: 5,
       max_bytes: 1,
       editable: true,
+      announcement_version: draft.version,
     });
-    const answer = deferred<void>();
+    const answer = deferred<string>();
     vi.mocked(deleteAnnouncementAttachment).mockReturnValue(answer.promise);
     render(<ParentAnnouncementsPage />);
 
@@ -245,7 +249,7 @@ describe("Elternmitteilungen: Speichern sperrt das Panel (#6593)", () => {
     expect(remove).toBeDisabled();
 
     await act(async () => {
-      answer.resolve();
+      answer.resolve("v-after-removal");
     });
 
     expectSlideOverUnlocked(TITLE);

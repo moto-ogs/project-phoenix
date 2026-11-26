@@ -239,7 +239,7 @@ func TestShiftTypeService_UpdateShiftType_Branches(t *testing.T) {
 
 	t.Run("non-positive id is not found", func(t *testing.T) {
 		svc := NewShiftTypeService(&shiftTypeMockRepo{}, nil)
-		_, err := svc.UpdateShiftType(ctx, withID(0))
+		_, err := svc.UpdateShiftType(ctx, withID(0), "")
 		require.ErrorIs(t, err, ErrShiftTypeNotFound)
 	})
 
@@ -249,7 +249,7 @@ func TestShiftTypeService_UpdateShiftType_Branches(t *testing.T) {
 				return nil, errRowNotFound
 			},
 		}, nil)
-		_, err := svc.UpdateShiftType(ctx, withID(5))
+		_, err := svc.UpdateShiftType(ctx, withID(5), "")
 		require.ErrorIs(t, err, ErrShiftTypeNotFound)
 	})
 
@@ -259,7 +259,7 @@ func TestShiftTypeService_UpdateShiftType_Branches(t *testing.T) {
 				return nil, errors.New("db down")
 			},
 		}, nil)
-		_, err := svc.UpdateShiftType(ctx, withID(5))
+		_, err := svc.UpdateShiftType(ctx, withID(5), "")
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "find shift type")
 	})
@@ -270,7 +270,7 @@ func TestShiftTypeService_UpdateShiftType_Branches(t *testing.T) {
 				return nil, nil
 			},
 		}, nil)
-		_, err := svc.UpdateShiftType(ctx, withID(5))
+		_, err := svc.UpdateShiftType(ctx, withID(5), "")
 		require.ErrorIs(t, err, ErrShiftTypeNotFound)
 	})
 
@@ -282,7 +282,7 @@ func TestShiftTypeService_UpdateShiftType_Branches(t *testing.T) {
 		}, nil)
 		bad := withID(5)
 		bad.Name = "   "
-		_, err := svc.UpdateShiftType(ctx, bad)
+		_, err := svc.UpdateShiftType(ctx, bad, "")
 		require.ErrorIs(t, err, ErrShiftTypeInvalid)
 	})
 
@@ -297,7 +297,7 @@ func TestShiftTypeService_UpdateShiftType_Branches(t *testing.T) {
 				return nil, errors.New("list failed")
 			},
 		}, nil)
-		_, err := svc.UpdateShiftType(ctx, withID(5))
+		_, err := svc.UpdateShiftType(ctx, withID(5), "")
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "list failed")
 		assert.Equal(t, 1, calls)
@@ -314,7 +314,7 @@ func TestShiftTypeService_UpdateShiftType_Branches(t *testing.T) {
 				return []*workforce.ShiftTypeRecord{other}, nil
 			},
 		}, nil)
-		_, err := svc.UpdateShiftType(ctx, withID(5))
+		_, err := svc.UpdateShiftType(ctx, withID(5), "")
 		require.ErrorIs(t, err, ErrShiftTypeNameTaken)
 	})
 
@@ -327,7 +327,7 @@ func TestShiftTypeService_UpdateShiftType_Branches(t *testing.T) {
 				return errors.New("update boom")
 			},
 		}, nil)
-		_, err := svc.UpdateShiftType(ctx, withID(5))
+		_, err := svc.UpdateShiftType(ctx, withID(5), "")
 		require.Error(t, err)
 		assert.NotErrorIs(t, err, ErrShiftTypeNameTaken)
 		assert.Contains(t, err.Error(), "update boom")
@@ -343,7 +343,7 @@ func TestShiftTypeService_UpdateShiftType_Branches(t *testing.T) {
 		}, nil)
 		in := withID(5)
 		in.TenantID = 0
-		got, err := svc.UpdateShiftType(ctx, in)
+		got, err := svc.UpdateShiftType(ctx, in, "")
 		require.NoError(t, err)
 		assert.Equal(t, int64(77), got.TenantID)
 	})
@@ -507,7 +507,7 @@ func (m *shiftTypeMockRepo) FindShiftType(ctx context.Context, id int64) (workfo
 	}
 	return shiftTypeRowToCapability(row), err
 }
-func (m *shiftTypeMockRepo) UpdateShiftType(ctx context.Context, v workforce.ShiftType) (workforce.ShiftType, error) {
+func (m *shiftTypeMockRepo) UpdateShiftType(ctx context.Context, v workforce.ShiftType, _ string) (workforce.ShiftType, error) {
 	row := shiftTypeToRow(v)
 	err := m.Update(ctx, row)
 	return shiftTypeRowToCapability(row), err

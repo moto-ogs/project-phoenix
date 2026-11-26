@@ -1,4 +1,11 @@
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SWRConfig } from "~/lib/swr/testing";
 import { SWRScopeBoundary } from "~/lib/swr/scope-boundary";
@@ -8,26 +15,30 @@ import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
 import type {
+  AccountPage,
+  AccountPageQuery,
+  AccountScope,
+  AccountSort,
+} from "~/lib/operator/account-pages";
+import type {
   OperatorPerson,
   OrganizationSummary,
   SchoolSummary,
 } from "~/lib/operator/provisioning-helpers";
-import AccountsPage from "./accounts/page";
-import DevicesPage from "./devices/page";
-import PersonsPage from "./persons/page";
-import TagsPage from "./unregistered-tags/page";
-import OrganizationPage from "./organizations/[slug]/page";
-import SchoolPage from "./organizations/[slug]/schools/[schoolSlug]/page";
+import AccountsPage from "./accounts/page-content";
+import DevicesPage from "./devices/page-content";
+import PersonsPage from "./persons/page-content";
+import TagsPage from "./unregistered-tags/page-content";
+import OrganizationPage from "./organizations/[slug]/page-content";
+import SchoolPage from "./organizations/[slug]/schools/[schoolSlug]/page-content";
 
 vi.unmock("swr");
 const { state, api } = vi.hoisted(() => ({
-  state: { query: "schoolId=10", replace: vi.fn() },
+  state: { query: "schoolId=10", account: "account-a", replace: vi.fn() },
   api: {
     listOrganizations: vi.fn(),
     listSchools: vi.fn(),
-    listSchoolAccounts: vi.fn(),
-    listAllAccounts: vi.fn(),
-    listOrganizationAccounts: vi.fn(),
+    listAccountPage: vi.fn(),
     listSchoolDevices: vi.fn(),
     listAllDevices: vi.fn(),
     listOrganizationDevices: vi.fn(),
@@ -42,7 +53,7 @@ const { state, api } = vi.hoisted(() => ({
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
     data: {
-      user: { id: "account-a", scope: "platform" },
+      user: { id: state.account, scope: "platform" },
       expires: "2099-01-01",
     },
     status: "authenticated",
@@ -60,26 +71,51 @@ vi.mock("next/navigation", () => ({
 vi.mock("~/lib/breadcrumb-context", () => ({ useSetBreadcrumb: vi.fn() }));
 vi.mock("~/lib/operator/provisioning-api", () => ({
   operatorProvisioningService: api,
-  revalidateTenantCache: vi.fn(),
 }));
 vi.mock("~/components/operator/accounts-table", () => ({
   AccountsTable: ({
+    accounts,
+    moreAction,
+    serverSort,
     onManageTenantAccess,
   }: {
+    accounts: AccountPage["rows"];
+    moreAction?: { label: string; onClick: () => void; loading?: boolean };
+    serverSort: { onChange: (sort: AccountSort) => void };
     onManageTenantAccess?: (account: object) => void;
   }) => (
-    <button
-      onClick={() =>
-        onManageTenantAccess?.({
-          accountId: "1",
-          firstName: "Test",
-          lastName: "Person",
-          email: "person@example.test",
-        })
-      }
-    >
-      Zugang ändern
-    </button>
+    <>
+      {accounts.map((account) => (
+        <p key={account.accountId}>{account.email}</p>
+      ))}
+      <button
+        type="button"
+        onClick={() => serverSort.onChange({ key: "email", direction: "desc" })}
+      >
+        Nach E-Mail sortieren
+      </button>
+      {moreAction && (
+        <button
+          type="button"
+          disabled={moreAction.loading}
+          onClick={moreAction.onClick}
+        >
+          {moreAction.label}
+        </button>
+      )}
+      <button
+        onClick={() =>
+          onManageTenantAccess?.({
+            accountId: "1",
+            firstName: "Test",
+            lastName: "Person",
+            email: "person@example.test",
+          })
+        }
+      >
+        Zugang ändern
+      </button>
+    </>
   ),
 }));
 vi.mock("~/components/operator/account-tenant-access-modal", () => ({
@@ -110,6 +146,7 @@ vi.mock("~/components/operator/delete-person-modal", () => ({
 }));
 
 const org: OrganizationSummary = {
+  version: "v-1",
   id: "1",
   name: "Träger A",
   slug: "org-a",
@@ -124,6 +161,7 @@ const org: OrganizationSummary = {
   personenCount: 0,
 };
 const school: SchoolSummary = {
+  version: "v-1",
   id: "10",
   organizationId: "1",
   organizationName: org.name,
@@ -157,23 +195,25 @@ function deferred<T>() {
 }
 function renderPage(children: React.ReactNode) {
   const cache = new Map();
-  const view = render(
+  const frame = (content: React.ReactNode) => (
     <SWRConfig value={{ provider: () => cache }}>
       <ToastProvider>
         <SWRScopeBoundary />
-        {children}
+        {content}
       </ToastProvider>
-    </SWRConfig>,
+    </SWRConfig>
   );
-  return { ...view, cache };
+  const view = render(frame(children));
+  return { ...view, rerenderPage: () => view.rerender(frame(children)), cache };
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
   state.query = "schoolId=10";
+  state.account = "account-a";
   api.listOrganizations.mockResolvedValue([org]);
   api.listSchools.mockResolvedValue([{ ...school, organization: org }]);
-  api.listSchoolAccounts.mockResolvedValue([]);
+  api.listAccountPage.mockResolvedValue({ rows: [], total: 0 });
   api.listSchoolDevices.mockResolvedValue([]);
   api.listSchoolPersons.mockResolvedValue([]);
   api.listUnregisteredTagScans.mockResolvedValue([]);
@@ -187,9 +227,130 @@ beforeEach(() => {
   });
 });
 
+const accountPage = (name: string, cursor?: string): AccountPage => ({
+  rows: [
+    {
+      accountId: name,
+      email: `${name}@example.test`,
+      active: true,
+      firstName: "",
+      lastName: "",
+      roleName: "",
+      pedagogicRole: "",
+      status: "active",
+      hasAdminRole: false,
+      hasUserRole: false,
+      hasCaregiverProfile: false,
+      isActiveCaregiver: false,
+    },
+  ],
+  total: cursor ? 101 : 1,
+  cursor,
+});
+
+describe("operator account pagination with real SWR", () => {
+  it.each(["sort", "search", "school", "account"] as const)(
+    "discards displayed and in-flight pages after a %s change",
+    async (change) => {
+      const late = deferred<AccountPage>();
+      const otherSchool = { ...school, id: "20", name: "Schule B" };
+      api.listSchools.mockResolvedValue([
+        { ...school, organization: org },
+        { ...otherSchool, organization: org },
+      ]);
+      api.listAccountPage.mockImplementation(
+        (scope: AccountScope, query: AccountPageQuery) => {
+          if (query.cursor === "second")
+            return Promise.resolve(accountPage("second", "third"));
+          if (query.cursor === "third") return late.promise;
+          const changed =
+            (scope.kind === "school" && scope.id === otherSchool.id) ||
+            query.sort === "email" ||
+            Boolean(query.search) ||
+            state.account !== "account-a";
+          return Promise.resolve(
+            changed ? accountPage("fresh") : accountPage("first", "second"),
+          );
+        },
+      );
+      const view = renderPage(<AccountsPage />);
+      expect(await screen.findByText("first@example.test")).toBeVisible();
+      fireEvent.click(screen.getByRole("button", { name: "Mehr laden" }));
+      expect(await screen.findByText("second@example.test")).toBeVisible();
+      expect(screen.getByText("first@example.test")).toBeVisible();
+      expect(api.listAccountPage).toHaveBeenLastCalledWith(
+        { kind: "school", id: "10" },
+        { sort: "name", direction: "asc", search: "", cursor: "second" },
+      );
+
+      fireEvent.click(screen.getByRole("button", { name: "Mehr laden" }));
+      expect(screen.getByRole("button", { name: "Mehr laden" })).toBeDisabled();
+      switch (change) {
+        case "sort":
+          fireEvent.click(
+            screen.getByRole("button", { name: "Nach E-Mail sortieren" }),
+          );
+          break;
+        case "search":
+          fireEvent.change(screen.getByRole("searchbox"), {
+            target: { value: "fresh" },
+          });
+          expect(
+            screen.queryByText("second@example.test"),
+          ).not.toBeInTheDocument();
+          expect(
+            screen.queryByRole("button", { name: "Mehr laden" }),
+          ).not.toBeInTheDocument();
+          break;
+        case "school":
+          state.query = "schoolId=20";
+          view.rerenderPage();
+          break;
+        case "account":
+          state.account = "account-b";
+          view.rerenderPage();
+          break;
+      }
+      expect(await screen.findByText("fresh@example.test")).toBeVisible();
+      await act(async () => late.resolve(accountPage("third")));
+      expect(screen.getByText("fresh@example.test")).toBeVisible();
+      expect(screen.queryByText("first@example.test")).not.toBeInTheDocument();
+      expect(screen.queryByText("second@example.test")).not.toBeInTheDocument();
+      expect(screen.queryByText("third@example.test")).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Mehr laden" }),
+      ).not.toBeInTheDocument();
+    },
+  );
+
+  it("restarts at page one when retrying a failed continuation", async () => {
+    api.listAccountPage
+      .mockResolvedValueOnce(accountPage("first", "second"))
+      .mockRejectedValueOnce(new ApiError("down", 503))
+      .mockResolvedValueOnce(accountPage("reloaded"));
+
+    renderPage(<AccountsPage />);
+    expect(await screen.findByText("first@example.test")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Mehr laden" }));
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent(
+      catalogText("general.unavailable", "die Liste der Konten"),
+    );
+    expect(screen.getByText("first@example.test")).toBeVisible();
+    fireEvent.click(within(alert).getByRole("button", { name: "Wiederholen" }));
+
+    expect(await screen.findByText("reloaded@example.test")).toBeVisible();
+    expect(api.listAccountPage).toHaveBeenLastCalledWith(
+      { kind: "school", id: "10" },
+      { sort: "name", direction: "asc", search: "" },
+    );
+    expect(screen.queryByText("first@example.test")).not.toBeInTheDocument();
+  });
+});
+
 describe("operator reads with real SWR", () => {
   it.each([
-    ["accounts", AccountsPage, api.listSchoolAccounts],
+    ["accounts", AccountsPage, api.listAccountPage],
     ["devices", DevicesPage, api.listSchoolDevices],
     ["persons", PersonsPage, api.listSchoolPersons],
     ["RFID", TagsPage, api.listUnregisteredTagScans],
@@ -198,22 +359,27 @@ describe("operator reads with real SWR", () => {
     async (_name, Page, read) => {
       api.listSchools.mockReturnValue(new Promise(() => undefined));
       renderPage(<Page />);
-      await waitFor(() =>
-        expect(read).toHaveBeenCalledWith(
-          _name === "RFID"
-            ? {
-                organizationId: undefined,
-                schoolId: "10",
-                resolved: "unresolved",
-              }
-            : "10",
-        ),
-      );
+      await waitFor(() => {
+        if (_name === "accounts") {
+          expect(read).toHaveBeenCalledWith(
+            { kind: "school", id: "10" },
+            { sort: "name", direction: "asc", search: "" },
+          );
+        } else if (_name === "RFID") {
+          expect(read).toHaveBeenCalledWith({
+            organizationId: undefined,
+            schoolId: "10",
+            resolved: "unresolved",
+          });
+        } else {
+          expect(read).toHaveBeenCalledWith("10");
+        }
+      });
     },
   );
 
   describe.each([
-    ["accounts", AccountsPage, api.listSchoolAccounts, "die Liste der Konten"],
+    ["accounts", AccountsPage, api.listAccountPage, "die Liste der Konten"],
     ["devices", DevicesPage, api.listSchoolDevices, "die Liste der Geräte"],
   ] as const)("%s load failures", (_name, Page, read, object) => {
     it.each(["pending", "failed"])(
@@ -235,7 +401,14 @@ describe("operator reads with real SWR", () => {
         const retry = within(
           message.closest<HTMLElement>('[role="alert"]')!,
         ).getByRole("button", { name: "Wiederholen" });
-        expect(read).toHaveBeenCalledWith("10");
+        if (read === api.listAccountPage) {
+          expect(read).toHaveBeenCalledWith(
+            { kind: "school", id: "10" },
+            { sort: "name", direction: "asc", search: "" },
+          );
+        } else {
+          expect(read).toHaveBeenCalledWith("10");
+        }
         act(() => retry.click());
         await waitFor(() => expect(read).toHaveBeenCalledTimes(2));
       },
@@ -258,7 +431,7 @@ describe("operator reads with real SWR", () => {
     });
     expect(await screen.findByText("Schule A")).toBeInTheDocument();
     expect(api.getSchoolPWAUsage).toHaveBeenCalledWith("10");
-    expect(api.listSchoolAccounts).not.toHaveBeenCalled();
+    expect(api.listAccountPage).not.toHaveBeenCalled();
     // Anker: the matched school is fully resolved, not a permanent skeleton.
     expect(screen.getByText("Schule A")).toBeInTheDocument();
     expect(api.listOrganizationSchools).not.toHaveBeenCalled();
@@ -273,7 +446,10 @@ describe("operator reads with real SWR", () => {
     });
     expect(await screen.findByText("Schule A")).toBeInTheDocument();
     await waitFor(() =>
-      expect(api.listSchoolAccounts).toHaveBeenCalledWith("10"),
+      expect(api.listAccountPage).toHaveBeenCalledWith(
+        { kind: "school", id: "10" },
+        { sort: "name", direction: "asc", search: "" },
+      ),
     );
     expect(api.getSchoolPWAUsage).not.toHaveBeenCalled();
     expect(api.listOrganizationSchools).not.toHaveBeenCalled();
@@ -293,7 +469,7 @@ describe("operator reads with real SWR", () => {
     ).toBeInTheDocument();
     // Anker: the wrong-organization route has resolved to its explicit not-found view.
     expect(screen.getByText("Schule nicht gefunden.")).toBeInTheDocument();
-    expect(api.listSchoolAccounts).not.toHaveBeenCalled();
+    expect(api.listAccountPage).not.toHaveBeenCalled();
     expect(api.getSchoolPWAUsage).not.toHaveBeenCalled();
   });
 
@@ -419,7 +595,10 @@ describe("operator reads with real SWR", () => {
     const summary = vi.fn(async () => `Übersicht ${revision}`);
     function DetailReaders() {
       const account = useSWRAuth(
-        operatorProvisioningKeys.orgAccounts("1"),
+        operatorProvisioningKeys.accountPage(
+          { kind: "organization", id: "1" },
+          { sort: "schoolName", direction: "asc" },
+        ),
         detail,
       );
       const count = useSWRAuth(
@@ -432,7 +611,10 @@ describe("operator reads with real SWR", () => {
         </p>
       );
     }
-    api.listSchoolAccounts.mockResolvedValue([{ accountId: "1" }]);
+    api.listAccountPage.mockResolvedValue({
+      rows: [{ accountId: "1" }],
+      total: 1,
+    });
     renderPage(
       <>
         <AccountsPage />

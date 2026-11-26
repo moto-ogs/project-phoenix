@@ -221,7 +221,7 @@ const ChartTooltipContent = React.forwardRef<
       <div
         ref={ref}
         className={cn(
-          "grid min-w-[8rem] items-start gap-1.5 rounded-lg border border-gray-200/50 bg-white px-2.5 py-1.5 text-xs shadow-xl",
+          "grid min-w-[8rem] items-start gap-1.5 rounded-lg border border-gray-200/50 bg-white px-2.5 py-1.5 text-sm shadow-xl",
           className,
         )}
       >

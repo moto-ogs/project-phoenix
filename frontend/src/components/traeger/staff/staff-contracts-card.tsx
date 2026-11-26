@@ -327,7 +327,6 @@ function ContractPanel({
         columns={sollColumns()}
         rows={rows}
         getRowKey={(row) => row.site.schoolId}
-        stackedOnMobile
       />
       {!ended && earliest ? (
         <p className="text-sm text-gray-500">
@@ -347,9 +346,12 @@ function ContractPanel({
 
 export function StaffContractsCard({
   record,
+  reload,
   onChanged,
 }: Readonly<{
   record: StaffRecordDetail;
+  /** Reads the record again; rejects when the read fails (ADR 0311). */
+  reload: () => Promise<StaffRecordDetail>;
   onChanged: (record: StaffRecordDetail) => void;
 }>) {
   const today = useBerlinToday();
@@ -413,7 +415,7 @@ export function StaffContractsCard({
     <SectionCard
       concept={timeTrackingConcept}
       title="Arbeitsverträge"
-      description="Vertrag und Soll je Schule. Die Schulen rechnen damit in ihrer Zeiterfassung, auch in den Ferien."
+      description="Vertrag und Soll pro Schule. Die Schulen rechnen damit in ihrer Zeiterfassung, auch in den Ferien."
       action={
         <Button
           size="md"
@@ -422,7 +424,7 @@ export function StaffContractsCard({
           className="gap-2"
           disabled={activeSchools === 0}
           disabledReason="Die Person arbeitet an keiner Schule mehr."
-          tooltip="Öffnet ein Fenster für einen neuen Vertrag mit Soll je Schule."
+          tooltip="Öffnet ein Fenster für einen neuen Vertrag mit Soll pro Schule."
           onClick={() => open({ kind: "create" })}
         >
           <PlusIcon className="h-4 w-4" aria-hidden="true" />
@@ -463,6 +465,7 @@ export function StaffContractsCard({
           record={record}
           contract={dialog.contract}
           today={today}
+          reload={reload}
           onClose={close}
           onSaved={saved}
         />
@@ -479,6 +482,7 @@ export function StaffContractsCard({
         <ContractTermsDialog
           record={record}
           contract={dialog.contract}
+          reload={reload}
           onClose={close}
           onSaved={saved}
         />

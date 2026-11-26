@@ -22,7 +22,7 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/einstellungen/briefkopf/vorlagen",
 }));
 
-import TraegerVorlagenPage from "./page";
+import TraegerVorlagenPage from "./page-content";
 
 describe("TraegerVorlagenPage", () => {
   beforeEach(() => {

@@ -217,6 +217,8 @@ func OwnTraegerHolidayPeriods(tb testing.TB, db *bun.DB, organizationID int64) {
 		// answers and decisions went with the registrations.
 		_, err = db.ExecContext(context.Background(), `DELETE FROM enrollment.holiday_allocation_criteria WHERE organization_id = ?`, organizationID)
 		require.NoError(tb, err, "Failed to clean up test holiday criteria")
+		_, err = db.ExecContext(context.Background(), `DELETE FROM enrollment.holiday_allocation_rules WHERE organization_id = ?`, organizationID)
+		require.NoError(tb, err, "Failed to clean up test holiday allocation rules")
 		_, err = db.ExecContext(context.Background(), `DELETE FROM enrollment.holiday_registration_deletions WHERE organization_id = ?`, organizationID)
 		require.NoError(tb, err, "Failed to clean up the test holiday registration deletion log")
 		_, err = db.ExecContext(context.Background(), `DELETE FROM enrollment.holiday_registration_rate_limits WHERE organization_id = ?`, organizationID)
@@ -306,7 +308,7 @@ func OwnTraegerCareContracts(tb testing.TB, db *bun.DB, organizationID int64) {
 func OwnTraegerMasterData(tb testing.TB, db *bun.DB, organizationID int64) {
 	tb.Helper()
 	tb.Cleanup(func() {
-		for _, table := range []string{"platform.traeger_master_data_audit", "platform.traeger_document_templates", "platform.traeger_report_templates", "platform.traeger_bank_accounts", "platform.traeger_profiles"} {
+		for _, table := range []string{"platform.traeger_master_data_audit", "platform.school_responsible_parties", "platform.traeger_document_templates", "platform.traeger_report_templates", "platform.traeger_bank_accounts", "platform.traeger_profiles"} {
 			_, err := db.ExecContext(context.Background(), `DELETE FROM `+table+` WHERE organization_id = ?`, organizationID)
 			require.NoError(tb, err, "Failed to clean up test Träger master data")
 		}

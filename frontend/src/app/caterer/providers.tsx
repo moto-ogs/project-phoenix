@@ -8,9 +8,19 @@ import { PortalProviders } from "~/components/auth/portal-providers";
 export function CatererProviders({
   children,
   session,
-}: Readonly<{ children: React.ReactNode; session?: Session | null }>) {
+  sessionMark,
+}: Readonly<{
+  children: React.ReactNode;
+  session?: Session | null;
+  /** The session mark the page was rendered with (#8082). */
+  sessionMark: string;
+}>) {
   return (
-    <PortalProviders portal="caterer" session={session}>
+    <PortalProviders
+      portal="caterer"
+      session={session}
+      sessionMark={sessionMark}
+    >
       <PortalAnalyticsSession surface="caterer" />
       {children}
     </PortalProviders>

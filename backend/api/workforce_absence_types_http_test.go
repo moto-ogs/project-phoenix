@@ -110,6 +110,7 @@ func TestAbsenceTypesRouteCarryoverAndPreview(t *testing.T) {
 	type typeData struct {
 		ID             string  `json:"id"`
 		CarryoverUntil *string `json:"carryover_until"`
+		Version        string  `json:"version"`
 	}
 	decodeType := func(body []byte) typeData {
 		var envelope struct {
@@ -127,7 +128,7 @@ func TestAbsenceTypesRouteCarryoverAndPreview(t *testing.T) {
 	assert.Equal(t, "03-31", *typ.CarryoverUntil)
 
 	invalid := testutil.ExecuteRequest(router, testutil.NewAuthenticatedRequest(t, "PUT", "/"+typ.ID, map[string]any{
-		"carryover_until": "02-29",
+		"carryover_until": "02-29", "expected_version": typ.Version,
 	}, testutil.WithJWTBearer(token)))
 	assert.Equal(t, http.StatusBadRequest, invalid.Code, invalid.Body.String())
 

@@ -114,26 +114,17 @@ func parseOptionalCapabilityDate(value, field string) (*calendar.Date, error) {
 	return &date, nil
 }
 
-type workTimeMonthCapability struct {
-	months WorkTimeMonthService
-}
-
-// WorkTimeMonthCapability serves workforce.WorkTimeMonths from the retained
-// month service.
-func WorkTimeMonthCapability(months WorkTimeMonthService) workforce.WorkTimeMonths {
-	if months == nil {
-		panic("work time month capability: month service is required")
-	}
-	return workTimeMonthCapability{months: months}
-}
-
-func (c workTimeMonthCapability) MonthSummary(ctx context.Context, staffID int64, year, month int) (*workforce.MonthSummary, error) {
-	summary, err := c.months.GetMonthSummary(ctx, staffID, year, month)
+func (s *workTimeMonthService) MonthSummary(ctx context.Context, staffID int64, year, month int) (*workforce.MonthSummary, error) {
+	summary, err := s.GetMonthSummary(ctx, staffID, year, month)
 	if err != nil {
 		return nil, mapTimeTrackingFailure(err)
 	}
+	return publicMonthSummary(summary), nil
+}
+
+func publicMonthSummary(summary *MonthSummary) *workforce.MonthSummary {
 	if summary == nil {
-		return nil, nil
+		return nil
 	}
 	result := &workforce.MonthSummary{
 		StaffID: ident.ID(summary.StaffID), Year: summary.Year, Month: summary.Month, CarryInMinutes: summary.CarryInMinutes,
@@ -158,34 +149,15 @@ func (c workTimeMonthCapability) MonthSummary(ctx context.Context, staffID int64
 			})
 		}
 	}
-	return result, nil
+	return result
 }
 
-func (c workTimeMonthCapability) DailyTargets(ctx context.Context, staffID int64, from, to string) ([]workforce.DailyTarget, error) {
+func (s *workTimeMonthService) DailyProjection(ctx context.Context, staffID int64, from, to string) ([]workforce.DailyProjection, error) {
 	fromDate, toDate, err := parseCapabilityRange(from, to)
 	if err != nil {
 		return nil, err
 	}
-	targets, err := c.months.GetDailyTargets(ctx, staffID, fromDate, toDate)
-	if err != nil {
-		return nil, mapTimeTrackingFailure(err)
-	}
-	if targets == nil {
-		return nil, nil
-	}
-	result := make([]workforce.DailyTarget, 0, len(targets))
-	for _, target := range targets {
-		result = append(result, workforce.DailyTarget{Date: target.Date.String(), TargetMinutes: target.TargetMinutes})
-	}
-	return result, nil
-}
-
-func (c workTimeMonthCapability) DailyProjection(ctx context.Context, staffID int64, from, to string) ([]workforce.DailyProjection, error) {
-	fromDate, toDate, err := parseCapabilityRange(from, to)
-	if err != nil {
-		return nil, err
-	}
-	days, err := c.months.GetDailyProjection(ctx, staffID, fromDate, toDate)
+	days, err := s.GetDailyProjection(ctx, staffID, fromDate, toDate)
 	if err != nil {
 		return nil, mapTimeTrackingFailure(err)
 	}

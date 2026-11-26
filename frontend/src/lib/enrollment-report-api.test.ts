@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { CareUsageReportResponse } from "~/lib/contract/enrollment.generated";
 
 vi.mock(
   "~/lib/session-cache",
@@ -17,14 +18,13 @@ import {
   exportPhaseClassRoster,
   getCareUsageReport,
   type CareUsageFilters,
-  type CareUsageReport,
 } from "./enrollment-report-api";
 
 const originalFetch = globalThis.fetch;
 const originalCreateObjectURL = URL.createObjectURL;
 const originalRevokeObjectURL = URL.revokeObjectURL;
 
-function report(overrides: Partial<CareUsageReport> = {}): CareUsageReport {
+function report(): CareUsageReportResponse {
   return {
     phase: { id: "42", name: "Schuljahr 2026/27" },
     filters: {
@@ -77,11 +77,11 @@ function report(overrides: Partial<CareUsageReport> = {}): CareUsageReport {
         guardian_first_name: "Grace",
         guardian_last_name: "Hopper",
         guardian_email: "grace@example.test",
+        guardian_phone: "+49 251 123456",
         submission_source: "public",
         submitted_at: "2026-04-12T08:30:00Z",
       },
     ],
-    ...overrides,
   };
 }
 
@@ -133,7 +133,14 @@ describe("getCareUsageReport", () => {
     };
     const actual = await getCareUsageReport(filters);
 
-    expect(actual).toStrictEqual(expected);
+    // These fields belong to server-generated exports, not the phase view.
+    const { rows, ...reportData } = expected;
+    expect(actual).toStrictEqual({
+      ...reportData,
+      rows: rows?.map(
+        ({ date_of_birth: _birthDate, guardian_phone: _phone, ...row }) => row,
+      ),
+    });
     expect(seenInit).toEqual(expect.objectContaining({ method: "GET" }));
     expect(seenURL).toBe(
       "/api/enrollment/admin/reports/care-usage?phase_id=42&status=approved&care_offering_ids=7&care_offering_ids=8&day_count=0&grade_level=1&weekday=mon&pickup_time=14%3A30&search=Ada",

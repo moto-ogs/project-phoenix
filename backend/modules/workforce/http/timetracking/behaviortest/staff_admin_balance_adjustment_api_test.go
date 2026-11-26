@@ -12,10 +12,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/moto-ogs/project-phoenix/api/testutil"
-	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/moto-ogs/project-phoenix/api/testutil"
+	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
 // insertWorkSession writes one closed active.work_sessions row (the wire
@@ -26,14 +27,14 @@ func insertWorkSession(t *testing.T, tc *testContext, staffID int64, day string,
 	t.Helper()
 	tenantID := testpkg.Tenant(t)
 	row := map[string]any{
-		"staff_id":       staffID,
+		"staff_id":       fmt.Sprint(staffID),
 		"date":           day,
 		"status":         "present",
 		"source":         "app",
 		"check_in_time":  checkIn,
 		"check_out_time": checkOut,
-		"created_by":     staffID,
-		"tenant_id":      tenantID,
+		"created_by":     fmt.Sprint(staffID),
+		"tenant_id":      fmt.Sprint(tenantID),
 	}
 	_, err := tc.db.NewInsert().
 		Model(&row).

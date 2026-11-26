@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/modules/workforce/workforcetest"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
@@ -45,20 +46,20 @@ func TestAbsenceTypeCarryoverRule(t *testing.T) {
 	require.Len(t, listed, 1)
 	assert.Equal(t, "03-31", listed[0].CarryoverUntil)
 
-	renamed, err := svc.UpdateAbsenceType(ctx, workforce.UpdateAbsenceType{ID: typ.ID, Name: stringPtr("Krank-Urlaub")})
+	renamed, err := svc.UpdateAbsenceType(ctx, workforce.UpdateAbsenceType{ID: typ.ID, ExpectedVersion: workforcetest.AbsenceTypeVersion(t, ctx, svc, typ.ID), Name: stringPtr("Krank-Urlaub")})
 	require.NoError(t, err)
 	assert.Equal(t, "03-31", renamed.CarryoverUntil, "an update without the rule keeps it")
 
-	moved, err := svc.UpdateAbsenceType(ctx, workforce.UpdateAbsenceType{ID: typ.ID, CarryoverUntil: stringPtr("05-31")})
+	moved, err := svc.UpdateAbsenceType(ctx, workforce.UpdateAbsenceType{ID: typ.ID, ExpectedVersion: workforcetest.AbsenceTypeVersion(t, ctx, svc, typ.ID), CarryoverUntil: stringPtr("05-31")})
 	require.NoError(t, err)
 	assert.Equal(t, "05-31", moved.CarryoverUntil)
 
-	ended, err := svc.UpdateAbsenceType(ctx, workforce.UpdateAbsenceType{ID: typ.ID, CarryoverUntil: stringPtr("")})
+	ended, err := svc.UpdateAbsenceType(ctx, workforce.UpdateAbsenceType{ID: typ.ID, ExpectedVersion: workforcetest.AbsenceTypeVersion(t, ctx, svc, typ.ID), CarryoverUntil: stringPtr("")})
 	require.NoError(t, err)
 	assert.Empty(t, ended.CarryoverUntil, "an empty rule lets the rest expire on 31.12.")
 
 	for _, invalid := range []string{"02-29", "3-31", "13-01"} {
-		_, err = svc.UpdateAbsenceType(ctx, workforce.UpdateAbsenceType{ID: typ.ID, CarryoverUntil: stringPtr(invalid)})
+		_, err = svc.UpdateAbsenceType(ctx, workforce.UpdateAbsenceType{ID: typ.ID, ExpectedVersion: workforcetest.AbsenceTypeVersion(t, ctx, svc, typ.ID), CarryoverUntil: stringPtr(invalid)})
 		require.ErrorIs(t, err, workforce.ErrAbsenceTypeInvalid, invalid)
 	}
 	_, err = svc.CreateAbsenceType(ctx, workforce.CreateAbsenceType{Name: "Falsch", AllowanceEnabled: true, CarryoverUntil: "04-31"})

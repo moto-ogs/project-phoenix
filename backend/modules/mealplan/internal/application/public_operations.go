@@ -208,7 +208,7 @@ func (s *Service) DailyList(ctx context.Context, date mealplan.Date) (mealplan.D
 }
 
 func publicDailyList(list domain.DailyList) mealplan.DailyList {
-	result := mealplan.DailyList{Date: mealplan.Date(list.Date.String()), CutoffTime: list.CutoffTime, Deadline: list.Deadline, Closed: list.Closed, Participants: make([]mealplan.DailyParticipant, 0, len(list.Participants))}
+	result := mealplan.DailyList{Date: mealplan.Date(list.Date.String()), CutoffTime: list.CutoffTime, Deadline: list.Deadline, Closed: list.Closed, MealCancelled: list.MealCancelled, Participants: make([]mealplan.DailyParticipant, 0, len(list.Participants))}
 	for _, participant := range list.Participants {
 		result.Participants = append(result.Participants, mealplan.DailyParticipant(participant))
 	}
@@ -232,14 +232,6 @@ func (s *Service) Orders(ctx context.Context, from, to mealplan.Date) (mealplan.
 		return mealplan.OrderWeek{}, mapPublicError(err)
 	}
 	return publicOrderWeek(view), nil
-}
-
-func (s *Service) CatererOrders(ctx context.Context, since time.Time, from, to mealplan.Date) (mealplan.OrderWeek, error) {
-	start, end, err := readWindow(from, to)
-	if err != nil {
-		return mealplan.OrderWeek{}, err
-	}
-	return s.catererOrders(ctx, since, start.String(), end.String())
 }
 
 func (s *Service) ConfirmOrder(ctx context.Context, orderID int64, since time.Time, accountID int64) error {
@@ -345,16 +337,15 @@ func publicOrderWeek(view domain.OrderView) mealplan.OrderWeek {
 	return week
 }
 
-func publicOrderDay(day domain.OrderDay, names map[int64]domain.DailyCandidate) mealplan.OrderDay {
-	child := func(studentID int64, schoolClass string) mealplan.OrderChild {
-		name := names[studentID]
-		return mealplan.OrderChild{StudentID: studentID, FirstName: name.FirstName, LastName: name.LastName, SchoolClass: schoolClass}
-	}
-	counts := day.Children
+func orderCounts(day domain.OrderDay) map[int64]string {
 	if day.Order != nil {
-		counts = day.FrozenChildren
+		return day.FrozenChildren
 	}
-	result := mealplan.OrderDay{Date: mealplan.Date(day.Date.String()), Closed: day.Closed, Deadline: day.Deadline, Status: mealplan.OrderOpen, Total: len(counts)}
+	return day.Children
+}
+
+func orderDayHeader(day domain.OrderDay) mealplan.OrderDay {
+	result := mealplan.OrderDay{Date: mealplan.Date(day.Date.String()), Closed: day.Closed, MealCancelled: day.MealCancelled, Deadline: day.Deadline, Status: mealplan.OrderOpen, Total: len(orderCounts(day))}
 	if day.Unordered {
 		result.Status = mealplan.OrderUnordered
 	}
@@ -364,6 +355,16 @@ func publicOrderDay(day domain.OrderDay, names map[int64]domain.DailyCandidate) 
 			result.Status = mealplan.OrderConfirmed
 		}
 	}
+	return result
+}
+
+func publicOrderDay(day domain.OrderDay, names map[int64]domain.DailyCandidate) mealplan.OrderDay {
+	child := func(studentID int64, schoolClass string) mealplan.OrderChild {
+		name := names[studentID]
+		return mealplan.OrderChild{StudentID: studentID, FirstName: name.FirstName, LastName: name.LastName, SchoolClass: schoolClass}
+	}
+	counts := orderCounts(day)
+	result := orderDayHeader(day)
 	for _, count := range domain.CountByClass(counts) {
 		result.Classes = append(result.Classes, mealplan.ClassCount(count))
 	}

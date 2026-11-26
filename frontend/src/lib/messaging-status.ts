@@ -10,9 +10,13 @@
  * compile until both are updated.
  */
 
+import type * as sharedContract from "~/lib/contract/shared.generated";
+import type {
+  ParentMessageResponse,
+  ThreadSummaryResponse,
+} from "~/lib/contract/parent-me.generated";
 import type * as messagesContract from "~/lib/contract/messages.generated";
 import { knownEnum } from "~/lib/contract/known-enum";
-import type { MessageAttachment } from "~/lib/message-attachments";
 import { formatDate } from "~/lib/date-helpers";
 
 /** Who sent a message: the guardian, the OGS staff, or a system event. */
@@ -66,7 +70,7 @@ export type ChatMessage = Omit<
   readonly request_status?: RequestStatus;
   readonly payload?: Record<string, unknown>;
   /** Fotos und Dateien der Nachricht (#6685). */
-  readonly attachments?: readonly MessageAttachment[];
+  readonly attachments?: readonly Readonly<sharedContract.UploadResponse>[];
 };
 
 /** The fields chatMessageFieldsOf reads out of a wire message. */
@@ -281,14 +285,10 @@ function pickupChangeWithMode(message: {
  * (matching the previous behavior for unknown events).
  */
 export function parentEventI18nDescriptor(
-  message: {
-    readonly kind?: MessageKind;
-    readonly event_type?: string;
-    readonly request_status?: string;
-    readonly request_type?: string;
-    readonly decision_reason?: string;
-    readonly payload?: Record<string, unknown>;
-  },
+  message: Pick<
+    ParentMessageResponse,
+    "event_type" | "request_status" | "request_type" | "decision_reason"
+  > & { kind?: MessageKind; payload?: Record<string, unknown> },
   locale = "de-DE",
 ): { key: string; values?: Record<string, string> } | null {
   if (message.kind !== "event") {
@@ -371,13 +371,13 @@ export function parentEventI18nDescriptor(
  * still renders the reason.
  */
 export function parentThreadPreviewI18nDescriptor(
-  thread: {
-    readonly last_message_kind?: string;
-    readonly last_event_type?: string;
-    readonly last_request_type?: string;
-    readonly last_request_status?: string;
-    readonly last_message_payload?: Record<string, unknown>;
-  },
+  thread: Pick<
+    ThreadSummaryResponse,
+    | "last_message_kind"
+    | "last_event_type"
+    | "last_request_type"
+    | "last_request_status"
+  > & { last_message_payload?: Record<string, unknown> },
   locale = "de-DE",
 ): { key: string; values?: Record<string, string> } | null {
   if (thread.last_message_kind === "request") {

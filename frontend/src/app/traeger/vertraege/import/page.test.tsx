@@ -9,7 +9,7 @@ import type {
 } from "~/lib/traeger-care-contract-import-api";
 import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { traegerContractKeys } from "~/lib/swr/traeger-contract-keys";
-import TraegerContractImportPage from "./page";
+import TraegerContractImportPage from "./page-content";
 
 const api = vi.hoisted(() => ({
   previewContractImport: vi.fn(),
@@ -24,7 +24,7 @@ vi.unmock("swr");
 vi.mock("next-auth/react", () => ({
   SessionProvider: ({ children }: { children: ReactNode }) => children,
   useSession: () => ({
-    data: { user: { id: "A", scope: "org", orgId: 7 } },
+    data: { user: { id: "A", scope: "org", orgId: "7" } },
   }),
 }));
 vi.mock("~/lib/auth-utils", () => ({ hasPermission: () => true }));
@@ -393,7 +393,9 @@ describe("Vertragsimport", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("Kein Zugang zur Eltern-App.")).toBeInTheDocument();
     expect(
-      screen.getByText("Geschwister bleiben getrennte Familien."),
+      screen.getByText(
+        "Geschwister sind zuerst getrennte Familien. Du führst sie danach zusammen.",
+      ),
     ).toBeInTheDocument();
     expect(
       screen.getByText(

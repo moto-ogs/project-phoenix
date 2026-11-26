@@ -1,18 +1,15 @@
-"use client";
-
-import { Suspense, useMemo } from "react";
-import { useTranslations } from "next-intl";
+import { Suspense } from "react";
+import { getTranslations } from "next-intl/server";
 import { ResetPasswordPageContent } from "~/components/auth/reset-password-page-content";
 import { AuthShellSkeleton } from "~/components/auth/auth-shell";
 import { buildParentAuthShellCopy } from "~/components/auth/parent-auth-shell-copy";
 
-export default function ParentResetPasswordPage() {
-  const t = useTranslations("parentPasswordResetPage");
-  const tAuthShell = useTranslations("parentAuthShell");
-  const testimonialPanelCopy = useMemo(
-    () => buildParentAuthShellCopy(tAuthShell),
-    [tAuthShell],
-  );
+export default async function ParentResetPasswordPage() {
+  const [t, tAuthShell] = await Promise.all([
+    getTranslations("parentPasswordResetPage"),
+    getTranslations("parentAuthShell"),
+  ]);
+  const testimonialPanelCopy = buildParentAuthShellCopy(tAuthShell);
 
   return (
     <Suspense fallback={<AuthShellSkeleton />}>

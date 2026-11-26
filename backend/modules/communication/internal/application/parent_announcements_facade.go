@@ -98,8 +98,8 @@ func (p *parentAnnouncements) DeleteParentAnnouncement(ctx context.Context, id i
 	return mapParentAnnouncementError(p.service.Delete(ctx, id))
 }
 
-func (p *parentAnnouncements) PublishParentAnnouncement(ctx context.Context, id int64) (*communication.ParentAnnouncement, error) {
-	row, err := p.service.Publish(ctx, id)
+func (p *parentAnnouncements) PublishParentAnnouncement(ctx context.Context, id int64, expectedVersion string) (*communication.ParentAnnouncement, error) {
+	row, err := p.service.Publish(ctx, id, expectedVersion)
 	return mapParentAnnouncement(row), mapParentAnnouncementError(err)
 }
 
@@ -215,7 +215,9 @@ func (p *parentAnnouncements) ResendParentAnnouncementEmails(ctx context.Context
 }
 
 func (p *parentAnnouncements) UpdateParentAnnouncementReminder(ctx context.Context, id int64, input communication.ParentAnnouncementReminderInput) (*communication.ParentAnnouncement, error) {
-	row, err := p.service.UpdateReminder(ctx, id, ReminderInput{ReminderAt: input.ReminderAt, ReminderText: input.ReminderText})
+	row, err := p.service.UpdateReminder(ctx, id, ReminderInput{
+		ReminderAt: input.ReminderAt, ReminderText: input.ReminderText, ExpectedVersion: input.ExpectedVersion,
+	})
 	return mapParentAnnouncement(row), mapParentAnnouncementError(err)
 }
 
@@ -244,9 +246,9 @@ func (p *parentAnnouncements) CareCancellationReachFor(ctx context.Context, stud
 	return &communication.CareCancellationReach{FamilyCount: reach.FamilyCount}, mapParentAnnouncementError(err)
 }
 
-func (p *parentAnnouncements) AnnouncementExists(ctx context.Context, id int64) (bool, error) {
-	exists, err := p.service.AnnouncementExists(ctx, id)
-	return exists, mapParentAnnouncementError(err)
+func (p *parentAnnouncements) AnnouncementExists(ctx context.Context, id int64) (string, bool, error) {
+	version, exists, err := p.service.AnnouncementExists(ctx, id)
+	return version, exists, mapParentAnnouncementError(err)
 }
 
 func (p *parentAnnouncements) AnnouncementEditable(ctx context.Context, id int64) (bool, error) {
@@ -254,13 +256,14 @@ func (p *parentAnnouncements) AnnouncementEditable(ctx context.Context, id int64
 	return editable, mapParentAnnouncementError(err)
 }
 
-func (p *parentAnnouncements) LockAnnouncementForAttachmentChange(ctx context.Context, id int64) (bool, bool, error) {
-	exists, editable, err := p.service.LockAnnouncementForAttachmentChange(ctx, id)
+func (p *parentAnnouncements) LockAnnouncementForAttachmentChange(ctx context.Context, id int64, expectedVersion string) (bool, bool, error) {
+	exists, editable, err := p.service.LockAnnouncementForAttachmentChange(ctx, id, expectedVersion)
 	return exists, editable, mapParentAnnouncementError(err)
 }
 
-func (p *parentAnnouncements) ResetAnnouncementEngagement(ctx context.Context, id int64) error {
-	return mapParentAnnouncementError(p.service.ResetAnnouncementEngagement(ctx, id))
+func (p *parentAnnouncements) ResetAnnouncementEngagement(ctx context.Context, id int64) (string, error) {
+	version, err := p.service.ResetAnnouncementEngagement(ctx, id)
+	return version, mapParentAnnouncementError(err)
 }
 
 func mapParentAnnouncementInput(input communication.ParentAnnouncementInput) Input {
@@ -275,8 +278,9 @@ func mapParentAnnouncementInput(input communication.ParentAnnouncementInput) Inp
 		ResponseDeadline: input.ResponseDeadline, Options: input.Options,
 		DeliveryMode: input.DeliveryMode, EmailAudience: input.EmailAudience,
 		ReminderAt: input.ReminderAt, ReminderText: input.ReminderText,
-		Declaration: StaffAnnouncementDeclarationSettings(input.Declaration),
-		Sender:      (*ClassLetterSender)(input.Sender),
+		Declaration:     StaffAnnouncementDeclarationSettings(input.Declaration),
+		Sender:          (*ClassLetterSender)(input.Sender),
+		ExpectedVersion: input.ExpectedVersion,
 	}
 }
 

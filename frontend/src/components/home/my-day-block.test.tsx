@@ -39,8 +39,11 @@ vi.mock("~/lib/tenant-router", () => ({
   useTenantRouter: () => router,
 }));
 vi.mock("~/lib/hooks/use-day-plan-href", () => ({
-  useDayPlanHref: () => "/test-tenant/tagesplan",
-  useDayPlanLabel: () => "Heute öffnen",
+  useDayPlanLink: () => ({
+    href: "/test-tenant/tagesplan",
+    label: "Heute öffnen",
+    tooltip: "Öffnet deinen Tagesplan für heute.",
+  }),
 }));
 vi.mock("~/lib/timetable-operations-api", () => ({
   timetableOperationsApi: api,
@@ -330,6 +333,8 @@ describe("MyDayBlock (#2180)", () => {
     expect(screen.queryByText(/von 0/)).not.toBeInTheDocument();
   });
 
+  // „Fällt aus“ sagt die Marke rechts; die Metazeile nennt den Grund und
+  // wiederholt das Wort nicht (#8134).
   it("nennt einen abgesagten Block mit Grund", () => {
     swr.data = [
       block({ status: "cancelled", cancelReason: "Lehrkraft krank" }),
@@ -337,7 +342,8 @@ describe("MyDayBlock (#2180)", () => {
 
     render(<MyDayBlock />);
 
-    expect(screen.getByText("Fällt aus · Lehrkraft krank")).toBeInTheDocument();
+    expect(screen.getAllByText(/Fällt aus/)).toHaveLength(1);
+    expect(screen.getByText("Lehrkraft krank")).toBeInTheDocument();
   });
 
   it("sagt es, wenn heute kein eigener Block ansteht", () => {

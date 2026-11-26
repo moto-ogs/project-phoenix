@@ -166,7 +166,7 @@ func (rs *Resource) mountPublicRoutes(r chi.Router) {
 	r.Get("/legal/{tenantSlug}", rs.publicLegalTexts)
 	r.Post("/{tenantSlug}/submit", rs.submitEnrollment)
 	r.Post("/{tenantSlug}/uploads", rs.uploadEnrollmentFile)
-	r.Get("/requests/{statusToken}", rs.getStatus)
+	r.Get("/requests/{statusToken}", rs.getStatusResponse)
 	r.Get("/requests/{statusToken}/signature-proof", rs.getStatusSignatureProof)
 	r.Get("/requests/{statusToken}/edit-bootstrap", rs.getEditBootstrap)
 	r.Patch("/requests/{statusToken}", rs.patchStatus)
@@ -203,7 +203,6 @@ func (rs *Resource) mountConfigRoutes(r chi.Router) {
 		r.With(common.RequiresPermission("config:read")).Get("/booking-stats", rs.listCareOfferingBookingStats)
 		r.With(common.RequiresPermission("config:manage")).Post("/", rs.createCareOffering)
 		r.Route("/{id}", func(r chi.Router) {
-			r.With(common.RequiresPermission("config:read")).Get("/", rs.getCareOffering)
 			r.With(common.RequiresPermission("config:manage")).Put("/", rs.updateCareOffering)
 			r.With(common.RequiresPermission("config:manage")).Delete("/", rs.deleteCareOffering)
 			r.With(common.RequiresPermission("config:manage")).Post("/clone", rs.cloneCareOffering)

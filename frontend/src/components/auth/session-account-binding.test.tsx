@@ -42,7 +42,7 @@ const { primeSessionCache } = await import("~/lib/session-cache");
 
 function signedIn(id: string) {
   return {
-    data: { user: { id, tenantId: 1 }, expires: "2099-01-01" } as Session,
+    data: { user: { id, tenantId: "1" }, expires: "2099-01-01" } as Session,
     status: "authenticated" as const,
   };
 }

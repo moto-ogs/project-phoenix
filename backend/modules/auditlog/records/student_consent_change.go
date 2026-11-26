@@ -33,6 +33,10 @@ type StudentConsentChange struct {
 	Action         string `bun:"action,notnull" json:"action"`
 	Source         string `bun:"source,notnull" json:"source"`
 	ActorAccountID *int64 `bun:"actor_account_id" json:"actor_account_id,omitempty"`
+	// TextVersion names the wording the grant confirmed (#8039). NULL where
+	// moto does not know the wording: withdrawals, enrollment, import and
+	// migration snapshots, and every entry recorded before the column.
+	TextVersion *string `bun:"text_version" json:"text_version,omitempty"`
 }
 
 type StudentConsentChangeRepository interface {

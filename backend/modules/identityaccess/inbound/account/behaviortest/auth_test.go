@@ -28,6 +28,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	identityaccessCompose "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose"
 	authAPI "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/account"
+	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/modules/settings"
 	transactionFailures "github.com/moto-ogs/project-phoenix/modules/transactionruntime"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
@@ -277,7 +278,7 @@ func TestRegister(t *testing.T) {
 			"username":         username,
 			"password":         "SecurePass123!",
 			"confirm_password": "SecurePass123!",
-			"role_id":          validRoleID,
+			"role_id":          fmt.Sprint(validRoleID),
 			"first_name":       "Test",
 			"last_name":        "Register",
 		}
@@ -307,7 +308,7 @@ func TestRegister(t *testing.T) {
 			"username":         username1,
 			"password":         "SecurePass123!",
 			"confirm_password": "SecurePass123!",
-			"role_id":          validRoleID,
+			"role_id":          fmt.Sprint(validRoleID),
 			"first_name":       "Dupe",
 			"last_name":        "Register",
 		}
@@ -335,7 +336,7 @@ func TestRegister(t *testing.T) {
 			"username":         fmt.Sprintf("weakpassuser_%d", time.Now().UnixNano()),
 			"password":         "weak",
 			"confirm_password": "weak",
-			"role_id":          validRoleID,
+			"role_id":          fmt.Sprint(validRoleID),
 		}
 
 		req := testutil.NewJSONRequest(t, "POST", "/auth/register", body)
@@ -352,7 +353,7 @@ func TestRegister(t *testing.T) {
 			"username":         fmt.Sprintf("mismatchuser_%d", time.Now().UnixNano()),
 			"password":         "SecurePass123!",
 			"confirm_password": "DifferentPass123!",
-			"role_id":          validRoleID,
+			"role_id":          fmt.Sprint(validRoleID),
 		}
 
 		req := testutil.NewJSONRequest(t, "POST", "/auth/register", body)
@@ -369,7 +370,7 @@ func TestRegister(t *testing.T) {
 			"username":         fmt.Sprintf("invaliduser_%d", time.Now().UnixNano()),
 			"password":         "SecurePass123!",
 			"confirm_password": "SecurePass123!",
-			"role_id":          validRoleID,
+			"role_id":          fmt.Sprint(validRoleID),
 		}
 
 		req := testutil.NewJSONRequest(t, "POST", "/auth/register", body)
@@ -386,7 +387,7 @@ func TestRegister(t *testing.T) {
 			"username":         "ab",
 			"password":         "SecurePass123!",
 			"confirm_password": "SecurePass123!",
-			"role_id":          validRoleID,
+			"role_id":          fmt.Sprint(validRoleID),
 		}
 
 		req := testutil.NewJSONRequest(t, "POST", "/auth/register", body)
@@ -409,7 +410,7 @@ func TestRegister(t *testing.T) {
 					"username":         fmt.Sprintf("noname_%s_%d", missing, time.Now().UnixNano()),
 					"password":         "SecurePass123!",
 					"confirm_password": "SecurePass123!",
-					"role_id":          validRoleID,
+					"role_id":          fmt.Sprint(validRoleID),
 				}
 				if missing != "first_name" {
 					body["first_name"] = "Namenlos"
@@ -452,7 +453,7 @@ func TestRegisterRejectsGuardianRole(t *testing.T) {
 		"username":         fmt.Sprintf("guardianrole_%d", time.Now().UnixNano()),
 		"password":         "SecurePass123!",
 		"confirm_password": "SecurePass123!",
-		"role_id":          guardianRole.ID,
+		"role_id":          fmt.Sprint(guardianRole.ID),
 	}
 
 	req := testutil.NewJSONRequest(t, "POST", "/auth/register", body)
@@ -474,7 +475,7 @@ func TestRegisterRequiresAdminAuth(t *testing.T) {
 			"username":         fmt.Sprintf("authuser_%d", time.Now().UnixNano()),
 			"password":         "SecurePass123!",
 			"confirm_password": "SecurePass123!",
-			"role_id":          1,
+			"role_id":          "1",
 		}
 	}
 
@@ -553,7 +554,7 @@ func TestRegisterRequiresAdminAuth(t *testing.T) {
 			"username":         fmt.Sprintf("zerorole_%d", time.Now().UnixNano()),
 			"password":         "SecurePass123!",
 			"confirm_password": "SecurePass123!",
-			"role_id":          0,
+			"role_id":          "0",
 		}
 
 		req := testutil.NewJSONRequest(t, "POST", "/auth/register", body)
@@ -571,7 +572,7 @@ func TestRegisterRequiresAdminAuth(t *testing.T) {
 			"username":         fmt.Sprintf("negrole_%d", time.Now().UnixNano()),
 			"password":         "SecurePass123!",
 			"confirm_password": "SecurePass123!",
-			"role_id":          -1,
+			"role_id":          fmt.Sprint(-1),
 		}
 
 		req := testutil.NewJSONRequest(t, "POST", "/auth/register", body)
@@ -588,7 +589,7 @@ func TestRegisterRequiresAdminAuth(t *testing.T) {
 			"username":         fmt.Sprintf("badrole_%d", time.Now().UnixNano()),
 			"password":         "SecurePass123!",
 			"confirm_password": "SecurePass123!",
-			"role_id":          99999,
+			"role_id":          "99999",
 		}
 		req := testutil.NewJSONRequest(t, "POST", "/auth/register", body)
 		req.Header.Set("Authorization", "Bearer "+adminToken)
@@ -606,7 +607,7 @@ func TestRegisterRequiresAdminAuth(t *testing.T) {
 			"username":         username,
 			"password":         "SecurePass123!",
 			"confirm_password": "SecurePass123!",
-			"role_id":          validRoleID,
+			"role_id":          fmt.Sprint(validRoleID),
 			"first_name":       "Admin",
 			"last_name":        "Register",
 		}
@@ -991,8 +992,9 @@ func TestRoleManagement_BaseRole(t *testing.T) {
 
 		// Update name only — no base_role in payload
 		body := map[string]string{
-			"name":        fmt.Sprintf("renamed-%d", time.Now().UnixNano()),
-			"description": "Updated desc",
+			"name":             fmt.Sprintf("renamed-%d", time.Now().UnixNano()),
+			"description":      "Updated desc",
+			"expected_version": readRoleVersion(t, router, adminClaims, role.ID),
 		}
 		req := testutil.NewJSONRequest(t, "PUT", fmt.Sprintf("/auth/roles/%d", role.ID), body)
 		rr := testutil.ExecuteWithAuthPermissions(t, router, req, adminClaims, []string{"roles:update"})
@@ -1045,9 +1047,10 @@ func TestRoleManagement_BaseRole(t *testing.T) {
 
 		// Update to a different base_role
 		body := map[string]string{
-			"name":        fmt.Sprintf("changed-%d", time.Now().UnixNano()),
-			"description": "Changed base_role",
-			"base_role":   "guardian",
+			"name":             fmt.Sprintf("changed-%d", time.Now().UnixNano()),
+			"description":      "Changed base_role",
+			"base_role":        "guardian",
+			"expected_version": readRoleVersion(t, router, adminClaims, role.ID),
 		}
 		req := testutil.NewJSONRequest(t, "PUT", fmt.Sprintf("/auth/roles/%d", role.ID), body)
 		rr := testutil.ExecuteWithAuthPermissions(t, router, req, adminClaims, []string{"roles:update"})
@@ -1107,8 +1110,9 @@ func TestRoleUpdate(t *testing.T) {
 		role := testpkg.CreateTestRole(t, tc.db, "UpdateTestRole")
 
 		body := map[string]string{
-			"name":        fmt.Sprintf("updated-role-%d", time.Now().UnixNano()),
-			"description": "Updated description",
+			"name":             fmt.Sprintf("updated-role-%d", time.Now().UnixNano()),
+			"description":      "Updated description",
+			"expected_version": readRoleVersion(t, router, adminClaims, role.ID),
 		}
 
 		req := testutil.NewJSONRequest(t, "PUT", fmt.Sprintf("/auth/roles/%d", role.ID), body)
@@ -1140,6 +1144,116 @@ func TestRoleUpdate(t *testing.T) {
 
 		testutil.AssertForbidden(t, rr)
 	})
+
+	// ADR 0311: an edit saves only over the role it was read from. A stale
+	// or missing version is refused and writes nothing; the version the
+	// master-data PUT answers saves the next edit without a read. The
+	// permission selection carries its own version: a real change of the
+	// selection refuses no edit of the master data read before it, and an
+	// edit of the master data refuses no selection read before it.
+	t.Run("update saves only over the read version", func(t *testing.T) {
+		role := testpkg.CreateTestRole(t, tc.db, "VersionedRole")
+		granted := testpkg.CreateTestPermission(t, tc.db, "VersionedRoleGranted", "versioned", "read")
+		replacement := testpkg.CreateTestPermission(t, tc.db, "VersionedRoleReplacement", "versioned", "update")
+		path := fmt.Sprintf("/auth/roles/%d/master-data/", role.ID)
+		selectionPath := fmt.Sprintf("/auth/roles/%d/permission-selection/", role.ID)
+		edit := func(name, version string) *httptest.ResponseRecorder {
+			body := map[string]string{"name": name, "description": "Stand", "expected_version": version}
+			return testutil.ExecuteWithAuthPermissions(t, router, testutil.NewJSONRequest(t, "PUT", path, body), adminClaims, []string{"roles:update"})
+		}
+		readSelection := func() (string, []string) {
+			rr := testutil.ExecuteWithAuthPermissions(t, router, testutil.NewJSONRequest(t, "GET", selectionPath, nil), adminClaims, []string{"roles:manage"})
+			testutil.AssertSuccessResponse(t, rr, http.StatusOK)
+			var body struct {
+				Data struct {
+					Version     string `json:"version"`
+					Permissions []struct {
+						Name string `json:"name"`
+					} `json:"permissions"`
+				} `json:"data"`
+			}
+			require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &body))
+			names := make([]string, 0, len(body.Data.Permissions))
+			for _, permission := range body.Data.Permissions {
+				names = append(names, permission.Name)
+			}
+			return body.Data.Version, names
+		}
+		replaceSelection := func(permissionID int64, version string) *httptest.ResponseRecorder {
+			return testutil.ExecuteWithAuthPermissions(t, router, testutil.NewJSONRequest(t, "PUT", selectionPath,
+				map[string]any{"permission_ids": []string{fmt.Sprint(permissionID)}, "expected_version": version}), adminClaims, []string{"roles:manage"})
+		}
+		initialSelection, _ := readSelection()
+		testutil.AssertSuccessResponse(t, replaceSelection(granted.ID, initialSelection), http.StatusOK)
+
+		read := readRoleVersion(t, router, adminClaims, role.ID)
+		selectionRead, names := readSelection()
+		require.Equal(t, []string{granted.Name}, names)
+
+		first := fmt.Sprintf("first-%d", time.Now().UnixNano())
+		rr := edit(first, read)
+		testutil.AssertSuccessResponse(t, rr, http.StatusOK)
+		saved := testutil.ParseJSONResponse(t, rr.Body.Bytes())["data"].(map[string]interface{})
+		assert.Equal(t, first, saved["name"])
+		answered, _ := saved["version"].(string)
+		require.NotEmpty(t, answered)
+		require.NotEqual(t, read, answered, "the save answers the stored version")
+
+		for name, version := range map[string]string{"older version": read, "no version": ""} {
+			rr = edit(fmt.Sprintf("stale-%d", time.Now().UnixNano()), version)
+			assert.Equal(t, http.StatusConflict, rr.Code, name)
+			assert.Contains(t, rr.Body.String(), "general.changed_since_read", name)
+		}
+		getRr := testutil.ExecuteWithAuthPermissions(t, router, testutil.NewJSONRequest(t, "GET", fmt.Sprintf("/auth/roles/%d", role.ID), nil), adminClaims, []string{"roles:read"})
+		testutil.AssertSuccessResponse(t, getRr, http.StatusOK)
+		assert.Equal(t, first, testutil.ParseJSONResponse(t, getRr.Body.Bytes())["data"].(map[string]interface{})["name"], "a refused edit writes nothing")
+
+		// The selection read before the master-data save still saves.
+		testutil.AssertSuccessResponse(t, replaceSelection(replacement.ID, selectionRead), http.StatusOK)
+		_, names = readSelection()
+		assert.Equal(t, []string{replacement.Name}, names, "the selection save writes the change")
+
+		// The master-data version answered before the selection save still saves.
+		second := fmt.Sprintf("second-%d", time.Now().UnixNano())
+		rr = edit(second, answered)
+		testutil.AssertSuccessResponse(t, rr, http.StatusOK)
+		assert.Equal(t, second, testutil.ParseJSONResponse(t, rr.Body.Bytes())["data"].(map[string]interface{})["name"])
+	})
+
+	// The deprecated PUT /auth/roles/{id}/ keeps its empty answer for one
+	// release (ADR 0270) but saves only over the read version as well.
+	t.Run("deprecated update refuses a stale or missing version", func(t *testing.T) {
+		role := testpkg.CreateTestRole(t, tc.db, "DeprecatedVersionedRole")
+		read := readRoleVersion(t, router, adminClaims, role.ID)
+		legacyPath := fmt.Sprintf("/auth/roles/%d/", role.ID)
+		edit := func(name, version string) *httptest.ResponseRecorder {
+			body := map[string]string{"name": name, "description": "Stand", "expected_version": version}
+			return testutil.ExecuteWithAuthPermissions(t, router, testutil.NewJSONRequest(t, "PUT", legacyPath, body), adminClaims, []string{"roles:update"})
+		}
+		first := fmt.Sprintf("legacy-first-%d", time.Now().UnixNano())
+		rr := edit(first, read)
+		require.Equal(t, http.StatusNoContent, rr.Code, rr.Body.String())
+
+		for name, version := range map[string]string{"older version": read, "no version": ""} {
+			rr = edit(fmt.Sprintf("legacy-stale-%d", time.Now().UnixNano()), version)
+			assert.Equal(t, http.StatusConflict, rr.Code, name)
+			assert.Contains(t, rr.Body.String(), "general.changed_since_read", name)
+		}
+		getRr := testutil.ExecuteWithAuthPermissions(t, router, testutil.NewJSONRequest(t, "GET", fmt.Sprintf("/auth/roles/%d", role.ID), nil), adminClaims, []string{"roles:read"})
+		testutil.AssertSuccessResponse(t, getRr, http.StatusOK)
+		assert.Equal(t, first, testutil.ParseJSONResponse(t, getRr.Body.Bytes())["data"].(map[string]interface{})["name"], "a refused edit writes nothing")
+	})
+}
+
+// readRoleVersion reads the role's version the way the edit form does.
+func readRoleVersion(t *testing.T, router chi.Router, claims sessiontoken.AppClaims, roleID int64) string {
+	t.Helper()
+	req := testutil.NewJSONRequest(t, "GET", fmt.Sprintf("/auth/roles/%d", roleID), nil)
+	rr := testutil.ExecuteWithAuthPermissions(t, router, req, claims, []string{"roles:read"})
+	testutil.AssertSuccessResponse(t, rr, http.StatusOK)
+	version, _ := testutil.ParseJSONResponse(t, rr.Body.Bytes())["data"].(map[string]interface{})["version"].(string)
+	require.NotEmpty(t, version, "the role read carries its version")
+	return version
 }
 
 // TestRolePermissionAssignment tests role permission assignment endpoints
@@ -1217,7 +1331,7 @@ func TestRolePermissionAssignment(t *testing.T) {
 		require.NoError(t, json.Unmarshal(read.Body.Bytes(), &selection))
 
 		req := testutil.NewJSONRequest(t, "PUT", fmt.Sprintf("/auth/roles/%d/permissions", role.ID), map[string]any{
-			"permission_ids":   []int64{99999},
+			"permission_ids":   []string{fmt.Sprint(99999)},
 			"expected_version": selection.Data.Version,
 		})
 		rr := testutil.ExecuteWithAuthPermissions(t, router, req, adminClaims, []string{"roles:manage"})
@@ -1432,7 +1546,7 @@ func TestInvitationManagement(t *testing.T) {
 			"email":      "invalid-email",
 			"first_name": "Test",
 			"last_name":  "User",
-			"role_id":    1,
+			"role_id":    "1",
 		}
 
 		req := testutil.NewJSONRequest(t, "POST", "/auth/invitations", body)
@@ -1714,7 +1828,7 @@ func TestInvitationCreateSuccess(t *testing.T) {
 		inviteeEmail := fmt.Sprintf("invitee-%d@test.local", time.Now().UnixNano())
 		body := map[string]interface{}{
 			"email":      inviteeEmail,
-			"role_id":    role.ID,
+			"role_id":    fmt.Sprint(role.ID),
 			"first_name": "Test",
 			"last_name":  "Invitee",
 		}
@@ -1745,7 +1859,7 @@ func TestInvitationCreateSuccess(t *testing.T) {
 		inviteeEmail := fmt.Sprintf("slug-test-%d@test.local", time.Now().UnixNano())
 		createBody := map[string]interface{}{
 			"email":      inviteeEmail,
-			"role_id":    role.ID,
+			"role_id":    fmt.Sprint(role.ID),
 			"first_name": "Slug",
 			"last_name":  "Test",
 		}
@@ -1807,7 +1921,7 @@ func TestLinkToTenant(t *testing.T) {
 		// The identity fields are required for a staff-tier role (#2222).
 		body := map[string]interface{}{
 			"email":      email,
-			"role_id":    validRoleID,
+			"role_id":    fmt.Sprint(validRoleID),
 			"first_name": "Link",
 			"last_name":  "Success",
 		}
@@ -1828,7 +1942,7 @@ func TestLinkToTenant(t *testing.T) {
 	t.Run("returns 404 for non-existent email", func(t *testing.T) {
 		body := map[string]interface{}{
 			"email":      fmt.Sprintf("nonexistent-%d@example.com", time.Now().UnixNano()),
-			"role_id":    validRoleID,
+			"role_id":    fmt.Sprint(validRoleID),
 			"first_name": "Nicht",
 			"last_name":  "Vorhanden",
 		}
@@ -1843,7 +1957,7 @@ func TestLinkToTenant(t *testing.T) {
 	t.Run("returns 401 without auth", func(t *testing.T) {
 		body := map[string]interface{}{
 			"email":   "someone@example.com",
-			"role_id": validRoleID,
+			"role_id": fmt.Sprint(validRoleID),
 		}
 
 		req := testutil.NewJSONRequest(t, "POST", "/auth/link-to-tenant", body)
@@ -1915,7 +2029,7 @@ func TestCreateInvitationRequiresRoleGrantAuthority(t *testing.T) {
 
 	body := map[string]any{
 		"email":   fmt.Sprintf("invitee-%d@example.com", time.Now().UnixNano()),
-		"role_id": role.ID,
+		"role_id": fmt.Sprint(role.ID),
 	}
 
 	req := testutil.NewJSONRequest(t, "POST", "/auth/invitations", body)
@@ -1950,7 +2064,7 @@ func TestRoleAssignmentEndpointsRejectEscalation(t *testing.T) {
 			"email":    fmt.Sprintf("newadmin-%d@example.com", time.Now().UnixNano()),
 			"username": fmt.Sprintf("newadmin%d", time.Now().UnixNano()),
 			"password": "Test1234%",
-			"role_id":  adminRole.ID,
+			"role_id":  fmt.Sprint(adminRole.ID),
 		}
 		req := testutil.NewJSONRequest(t, "POST", "/auth/register", body)
 		rr := testutil.ExecuteWithAuthPermissions(t, router, req, claims, betreuer)
@@ -1961,7 +2075,7 @@ func TestRoleAssignmentEndpointsRejectEscalation(t *testing.T) {
 	t.Run("link-to-tenant rejects users:create", func(t *testing.T) {
 		body := map[string]any{
 			"email":   account.Email,
-			"role_id": adminRole.ID,
+			"role_id": fmt.Sprint(adminRole.ID),
 		}
 		req := testutil.NewJSONRequest(t, "POST", "/auth/link-to-tenant", body)
 		rr := testutil.ExecuteWithAuthPermissions(t, router, req, claims, betreuer)
@@ -1977,7 +2091,7 @@ func TestRoleAssignmentEndpointsRejectEscalation(t *testing.T) {
 			"username":         fmt.Sprintf("realadmin%d", time.Now().UnixNano()),
 			"password":         "Test1234%",
 			"confirm_password": "Test1234%",
-			"role_id":          adminRole.ID,
+			"role_id":          fmt.Sprint(adminRole.ID),
 			"first_name":       "Echter",
 			"last_name":        "Admin",
 		}

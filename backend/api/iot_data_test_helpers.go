@@ -114,7 +114,7 @@ func NewIoTDataTestModule(db transactionruntime.Database, unit tenant.UnitOfWork
 		return fail(err)
 	}
 	facility := facilitiesCompose.NewRoomService(facilitiesCompose.RoomServiceConfig{
-		Rooms: rooms, Occupancy: facilitiesCompose.OccupancyProjection(RoomOccupancyPresence{Source: owners.NewLoggedStudentPresence(db, slog.Default())}, roomActivityNames{r.Timetable}, membership, people),
+		Rooms: rooms, Today: calendar.CalendarDateClock(), Occupancy: facilitiesCompose.OccupancyProjection(RoomOccupancyPresence{Source: owners.NewLoggedStudentPresence(db, slog.Default())}, roomActivityNames{r.Timetable}, membership, people),
 		History: facilitiesCompose.HistoryProjection(RoomHistoryPresence{Source: owners.NewLoggedStudentPresence(db, slog.Default())}, roomActivityNames{r.Timetable}, membership, people),
 	})
 	// Data routes also resolve people and RFID tags, beyond activity staff reads.

@@ -12,9 +12,16 @@ import (
 )
 
 // ParentRequestVersion is the version a reader of one parent-request row
-// sends back as expected_version (ADR 0311): the token of its stored
-// updated_at, as the lists emit it. The row must exist: a missing row has
-// no version, and a test of a missing row sends its own token.
+// sends back as expected_version (ADR 0311): readstate.Of over its stored
+// updated_at, the function every read of these rows emits. The row must
+// exist: a missing row has no version, and a test of a missing row sends
+// its own token.
+//
+// It is for tests whose router or service has no read of the request (the
+// decide routes' queue lives in Request Review). A test that can read the
+// request reads its version from there instead, as the reviewer and the
+// parent do (requestreview/http queueVersion), so the read's token is the
+// one the decision proves.
 func ParentRequestVersion(t testing.TB, table string, id int64) string {
 	t.Helper()
 	return ParentRequestVersionIn(t, SetupTestDB(t), table, id)

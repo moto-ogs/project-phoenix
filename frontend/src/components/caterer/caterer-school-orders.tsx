@@ -6,6 +6,7 @@ import { Button } from "~/components/ui/button";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { useApiErrorDisplay } from "~/contexts/ToastContext";
+import { changeCounts } from "~/lib/caterer-orders";
 import { schoolClassLabel } from "~/lib/school-class-label";
 import {
   type CatererOrderChild,
@@ -61,22 +62,6 @@ function childLabel(child: CatererOrderChild): string {
 /** Ein Tag, an dem nichts geliefert wird, zeigt keine Zahl. */
 function delivers(day: CatererOrderDay | undefined): day is CatererOrderDay {
   return Boolean(day && !day.closed && day.status !== "unordered");
-}
-
-/** Die Kinder, die nach der Frist dazukamen oder abgemeldet wurden. */
-function changeCounts(
-  day: CatererOrderDay,
-  schoolClass?: string,
-): { added: number; removed: number } {
-  let added = 0;
-  let removed = 0;
-  for (const change of day.changes) {
-    if (schoolClass !== undefined && change.child.schoolClass !== schoolClass)
-      continue;
-    if (change.delta > 0) added += change.delta;
-    else removed -= change.delta;
-  }
-  return { added, removed };
 }
 
 /** Eine Zahl mit den Nachmeldungen daneben, wie in der Übersicht. */
@@ -359,7 +344,6 @@ export function CatererSchoolOrders({
       rows={rows}
       getRowKey={(row) => row.key}
       rowClassName={(row) => (row.kind === "total" ? "bg-gray-50" : "")}
-      stackedOnMobile
       caption={`Bestellung von ${school.name} an den gewählten Tagen`}
     />
   );

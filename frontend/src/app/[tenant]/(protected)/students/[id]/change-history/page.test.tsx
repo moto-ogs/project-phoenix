@@ -12,7 +12,7 @@ import { useInvalidateFamily } from "~/lib/swr";
 import { studentKeys } from "~/lib/swr/portal-keys";
 import { SWRConfig } from "~/lib/swr/testing";
 import { catalogText } from "~/test/error-catalog-text";
-import StudentChangeHistoryPage from "./page";
+import StudentChangeHistoryPage from "./page-content";
 
 vi.unmock("swr");
 
@@ -25,10 +25,7 @@ vi.mock("next-auth/react", () => ({
 
 // The child's detail also reads the account's own groups; none here.
 vi.mock("~/lib/usercontext-api", () => ({
-  userContextService: {
-    getMyEducationalGroups: () => Promise.resolve([]),
-    getMySupervisedGroups: () => Promise.resolve([]),
-  },
+  userContextService: {},
 }));
 
 // Real SWR with a fresh cache per render.

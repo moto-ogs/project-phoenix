@@ -9,6 +9,7 @@ import {
   nullable,
   object,
   optional,
+  paginated,
   requestBody,
   str,
   success,
@@ -120,7 +121,13 @@ export const routes = {
     method: "GET",
     pattern: "/operator/accounts",
     portals: ["platform"],
-    response: success(z.array(OrganizationAccountSchema)),
+    query: {
+      "cursor": { kind: "string" },
+      "direction": { kind: "string" },
+      "search": { kind: "string" },
+      "sort": { kind: "string" },
+    },
+    response: paginated(z.array(OrganizationAccountSchema)),
   },
   "GET /operator/accounts/{accountId}/mfa/global-override": {
     method: "GET",

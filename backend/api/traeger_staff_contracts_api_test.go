@@ -32,6 +32,7 @@ type contractRecordBody struct {
 		Kind     string  `json:"kind"`
 		StartsOn string  `json:"starts_on"`
 		EndsOn   *string `json:"ends_on"`
+		Version  string  `json:"version"`
 		Sites    []struct {
 			SchoolID       wireID `json:"school_id"`
 			SchoolName     string `json:"school_name"`
@@ -99,7 +100,7 @@ func TestTraegerStaffContractsCarryTheSollIntoEachSchool(t *testing.T) {
 	require.NoError(t, err)
 
 	rec := traegerLink(t, router, office.token, map[string]any{
-		"members": []map[string]int64{{"school_id": north, "staff_id": miraNorth.ID}, {"school_id": south, "staff_id": miraSouth.ID}},
+		"members": []map[string]string{{"school_id": fmt.Sprint(north), "staff_id": fmt.Sprint(miraNorth.ID)}, {"school_id": fmt.Sprint(south), "staff_id": fmt.Sprint(miraSouth.ID)}},
 	})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	recordID := decode[staffRecordBody](t, rec).ID
@@ -110,8 +111,8 @@ func TestTraegerStaffContractsCarryTheSollIntoEachSchool(t *testing.T) {
 		rec := traegerJSON(t, router, office.token, http.MethodPost, contracts, map[string]any{
 			"kind": "part_time", "starts_on": "2026-08-01",
 			"sites": []map[string]any{
-				{"school_id": north, "staff_id": miraNorth.ID, "weekday_minutes": []int{300, 300, 300, 300, 0}},
-				{"school_id": south, "staff_id": miraSouth.ID, "weekday_minutes": []int{0, 0, 0, 0, 240}},
+				{"school_id": fmt.Sprint(north), "staff_id": fmt.Sprint(miraNorth.ID), "weekday_minutes": []int{300, 300, 300, 300, 0}},
+				{"school_id": fmt.Sprint(south), "staff_id": fmt.Sprint(miraSouth.ID), "weekday_minutes": []int{0, 0, 0, 0, 240}},
 			},
 		})
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
@@ -132,9 +133,9 @@ func TestTraegerStaffContractsCarryTheSollIntoEachSchool(t *testing.T) {
 	})
 
 	t.Run("a change of the Soll cannot reach into a closed month", func(t *testing.T) {
-		rec := traegerJSON(t, router, office.token, http.MethodPost, fmt.Sprintf("%s/%d/soll", contracts, contractID), map[string]any{
+		rec := traegerContractWrite(t, router, office.token, http.MethodPost, fmt.Sprintf("%s/%d/soll", contracts, contractID), recordID, contractID, map[string]any{
 			"valid_from": "2026-10-15",
-			"sites":      []map[string]any{{"school_id": north, "staff_id": miraNorth.ID, "weekday_minutes": []int{480, 480, 480, 480, 480}}},
+			"sites":      []map[string]any{{"school_id": fmt.Sprint(north), "staff_id": fmt.Sprint(miraNorth.ID), "weekday_minutes": []int{480, 480, 480, 480, 480}}},
 		})
 		require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 		var refusal contractRefusal
@@ -145,9 +146,9 @@ func TestTraegerStaffContractsCarryTheSollIntoEachSchool(t *testing.T) {
 	})
 
 	t.Run("a new Soll from a day on starts a new version", func(t *testing.T) {
-		rec := traegerJSON(t, router, office.token, http.MethodPost, fmt.Sprintf("%s/%d/soll", contracts, contractID), map[string]any{
+		rec := traegerContractWrite(t, router, office.token, http.MethodPost, fmt.Sprintf("%s/%d/soll", contracts, contractID), recordID, contractID, map[string]any{
 			"valid_from": "2026-12-01",
-			"sites":      []map[string]any{{"school_id": north, "staff_id": miraNorth.ID, "weekday_minutes": []int{480, 480, 480, 480, 480}}},
+			"sites":      []map[string]any{{"school_id": fmt.Sprint(north), "staff_id": fmt.Sprint(miraNorth.ID), "weekday_minutes": []int{480, 480, 480, 480, 480}}},
 		})
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		versions := schoolSchedule(t, db, north, miraNorth.ID)
@@ -155,19 +156,48 @@ func TestTraegerStaffContractsCarryTheSollIntoEachSchool(t *testing.T) {
 		assert.Equal(t, scheduleVersion{ValidFrom: "2026-11-01", ValidUntil: new("2026-12-01"), Minutes: []int{300, 300, 300, 300, 0}}, versions[1])
 		assert.Equal(t, scheduleVersion{ValidFrom: "2026-12-01", Minutes: []int{480, 480, 480, 480, 480}}, versions[2])
 		changes := decode[contractRecordBody](t, rec).Changes
-		assert.Equal(t, "ab 01.12.2026: Mo–Fr je 8 Std. (40 Std. pro Woche)", changes[0].Value)
+		assert.Equal(t, "ab 01.12.2026: Mo–Fr 8 Std. pro Tag (40 Std. pro Woche)", changes[0].Value)
+	})
+
+	// ADR 0311: both dialogs save only over the contract they opened on;
+	// the answer carries the new version for the next save.
+	t.Run("a contract change refuses a contract changed since the dialog read it", func(t *testing.T) {
+		stale := traegerContractVersion(t, router, office.token, recordID, contractID)
+		rec := traegerContractWrite(t, router, office.token, http.MethodPost, fmt.Sprintf("%s/%d/soll", contracts, contractID), recordID, contractID, map[string]any{
+			"valid_from": "2027-01-01",
+			"sites":      []map[string]any{{"school_id": fmt.Sprint(south), "staff_id": fmt.Sprint(miraSouth.ID), "weekday_minutes": []int{0, 0, 0, 120, 240}}},
+		})
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		answered := decode[contractRecordBody](t, rec).Contracts[0].Version
+		assert.Equal(t, traegerContractVersion(t, router, office.token, recordID, contractID), answered, "the answer carries the stored version")
+		assert.NotEqual(t, stale, answered)
+		schedule := schoolSchedule(t, db, south, miraSouth.ID)
+		for _, version := range []string{stale, ""} {
+			rec = traegerJSON(t, router, office.token, http.MethodPost, fmt.Sprintf("%s/%d/soll", contracts, contractID), map[string]any{
+				"valid_from": "2027-01-01", "expected_version": version,
+				"sites": []map[string]any{{"school_id": fmt.Sprint(south), "staff_id": fmt.Sprint(miraSouth.ID), "weekday_minutes": []int{0, 0, 0, 0, 240}}},
+			})
+			assertStaffRefusal(t, rec, http.StatusConflict, "general.changed_since_read")
+			rec = traegerJSON(t, router, office.token, http.MethodPut, fmt.Sprintf("%s/%d", contracts, contractID), map[string]any{
+				"kind": "minijob", "expected_version": version,
+			})
+			assertStaffRefusal(t, rec, http.StatusConflict, "general.changed_since_read")
+		}
+		assert.Equal(t, schedule, schoolSchedule(t, db, south, miraSouth.ID), "the colleague's Soll stays")
+		assert.Equal(t, 1, staffSchoolValue(t, db, `SELECT COUNT(*) FROM workforce.staff_contracts WHERE id = ? AND kind = 'part_time' AND ends_on IS NULL`, contractID))
+		assert.Equal(t, answered, traegerContractVersion(t, router, office.token, recordID, contractID), "a refusal writes nothing")
 	})
 
 	t.Run("holiday weeks become Sonderarbeitszeiten, never over the school's own", func(t *testing.T) {
 		weeks := fmt.Sprintf("%s/%d/holiday-weeks", contracts, contractID)
 		rec := traegerJSON(t, router, office.token, http.MethodPost, weeks, map[string]any{
-			"school_id": south, "staff_id": miraSouth.ID, "from_week": "2026-12-21", "to_week": "2026-12-21", "weekday_minutes": []int{240, 240, 240, 0, 0},
+			"school_id": fmt.Sprint(south), "staff_id": fmt.Sprint(miraSouth.ID), "from_week": "2026-12-21", "to_week": "2026-12-21", "weekday_minutes": []int{240, 240, 240, 0, 0},
 		})
 		require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 		assert.Equal(t, "workforce.traeger_holiday_week_school_override", refusalOf(t, rec).Code)
 
 		rec = traegerJSON(t, router, office.token, http.MethodPost, weeks, map[string]any{
-			"school_id": north, "staff_id": miraNorth.ID, "from_week": "2026-12-21", "to_week": "2026-12-28", "weekday_minutes": []int{360, 360, 360, 0, 0},
+			"school_id": fmt.Sprint(north), "staff_id": fmt.Sprint(miraNorth.ID), "from_week": "2026-12-21", "to_week": "2026-12-28", "weekday_minutes": []int{360, 360, 360, 0, 0},
 		})
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 		assert.Len(t, decode[contractRecordBody](t, rec).Contracts[0].HolidayWeeks, 2)
@@ -176,7 +206,7 @@ func TestTraegerStaffContractsCarryTheSollIntoEachSchool(t *testing.T) {
 
 		// A week added by mistake goes again; the other weeks stay.
 		rec = traegerJSON(t, router, office.token, http.MethodPost, weeks, map[string]any{
-			"school_id": north, "staff_id": miraNorth.ID, "from_week": "2026-12-14", "to_week": "2026-12-14", "weekday_minutes": []int{120, 0, 0, 0, 0},
+			"school_id": fmt.Sprint(north), "staff_id": fmt.Sprint(miraNorth.ID), "from_week": "2026-12-14", "to_week": "2026-12-14", "weekday_minutes": []int{120, 0, 0, 0, 0},
 		})
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 		require.Len(t, decode[contractRecordBody](t, rec).Contracts[0].HolidayWeeks, 3)
@@ -219,7 +249,7 @@ func TestTraegerStaffContractsCarryTheSollIntoEachSchool(t *testing.T) {
 	})
 
 	t.Run("an end drops the later holiday weeks and ends the Soll", func(t *testing.T) {
-		rec := traegerJSON(t, router, office.token, http.MethodPut, fmt.Sprintf("%s/%d", contracts, contractID), map[string]any{
+		rec := traegerContractWrite(t, router, office.token, http.MethodPut, fmt.Sprintf("%s/%d", contracts, contractID), recordID, contractID, map[string]any{
 			"kind": "part_time", "ends_on": "2026-12-31",
 		})
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
@@ -304,13 +334,13 @@ func TestTraegerStaffContractKeepsTheTemplateAndGivesItBack(t *testing.T) {
 	require.NoError(t, err)
 
 	rec := traegerLink(t, router, office.token, map[string]any{
-		"members": []map[string]int64{{"school_id": north, "staff_id": lea.ID}},
+		"members": []map[string]string{{"school_id": fmt.Sprint(north), "staff_id": fmt.Sprint(lea.ID)}},
 	})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	contracts := fmt.Sprintf("/traeger/staff-records/%d/contracts", decode[staffRecordBody](t, rec).ID)
 	rec = traegerJSON(t, router, office.token, http.MethodPost, contracts, map[string]any{
 		"kind": "minijob", "starts_on": "2026-12-01",
-		"sites": []map[string]any{{"school_id": north, "staff_id": lea.ID, "weekday_minutes": []int{120, 0, 120, 0, 120}}},
+		"sites": []map[string]any{{"school_id": fmt.Sprint(north), "staff_id": fmt.Sprint(lea.ID), "weekday_minutes": []int{120, 0, 120, 0, 120}}},
 	})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	contractID := decode[contractRecordBody](t, rec).Contracts[0].ID

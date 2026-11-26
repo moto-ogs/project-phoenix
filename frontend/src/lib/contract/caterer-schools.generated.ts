@@ -5,6 +5,7 @@ import {
   bool,
   calendarDate,
   instant,
+  int64String,
   noData,
   nullable,
   object,
@@ -14,6 +15,74 @@ import {
   success,
 } from "./runtime";
 
+/** Go: catererportalhttp.SummaryFailureResponse */
+export interface SummaryFailureResponse {
+  status: number;
+  code: string;
+}
+
+export const SummaryFailureResponseSchema: z.ZodType<SummaryFailureResponse, unknown> = object<SummaryFailureResponse>({
+  status: safeInt,
+  code: str,
+});
+
+/** Go: catererportalhttp.SummaryDayResponse */
+export interface SummaryDayResponse {
+  date: string;
+  closed: boolean;
+  deadline: string;
+  status: string;
+  order_id?: string;
+  total: number;
+  added: number;
+  removed: number;
+}
+
+export const SummaryDayResponseSchema: z.ZodType<SummaryDayResponse, unknown> = object<SummaryDayResponse>({
+  date: calendarDate,
+  closed: bool,
+  deadline: instant,
+  status: str,
+  order_id: optional(int64String),
+  total: safeInt,
+  added: safeInt,
+  removed: safeInt,
+});
+
+/** Go: catererportalhttp.SchoolSummaryResponse */
+export interface SchoolSummaryResponse {
+  id: string;
+  name: string;
+  delivery_address: string;
+  started_at?: string;
+  names: boolean;
+  by_class: boolean;
+  failure?: SummaryFailureResponse;
+  days: SummaryDayResponse[] | null;
+}
+
+export const SchoolSummaryResponseSchema: z.ZodType<SchoolSummaryResponse, unknown> = object<SchoolSummaryResponse>({
+  id: int64String,
+  name: str,
+  delivery_address: str,
+  started_at: optional(instant),
+  names: bool,
+  by_class: bool,
+  failure: optional(SummaryFailureResponseSchema),
+  days: nullable(arr(SummaryDayResponseSchema)),
+});
+
+/** Go: catererportalhttp.SchoolsResponse */
+export interface SchoolsResponse {
+  caterer_name: string;
+  schools: SchoolSummaryResponse[] | null;
+}
+
+export const SchoolsResponseSchema: z.ZodType<SchoolsResponse, unknown> = object<SchoolsResponse>({
+  caterer_name: str,
+  schools: nullable(arr(SchoolSummaryResponseSchema)),
+});
+
 /** Go: catererportalhttp.SchoolResponse */
 export interface SchoolResponse {
   id: string;
@@ -21,19 +90,8 @@ export interface SchoolResponse {
 }
 
 export const SchoolResponseSchema: z.ZodType<SchoolResponse, unknown> = object<SchoolResponse>({
-  id: str,
+  id: int64String,
   name: str,
-});
-
-/** Go: catererportalhttp.SchoolsResponse */
-export interface SchoolsResponse {
-  caterer_name: string;
-  schools: SchoolResponse[] | null;
-}
-
-export const SchoolsResponseSchema: z.ZodType<SchoolsResponse, unknown> = object<SchoolsResponse>({
-  caterer_name: str,
-  schools: nullable(arr(SchoolResponseSchema)),
 });
 
 /** Go: catererportalhttp.ClassCountResponse */
@@ -94,7 +152,7 @@ export const DayResponseSchema: z.ZodType<DayResponse, unknown> = object<DayResp
   closed: bool,
   deadline: instant,
   status: str,
-  order_id: optional(str),
+  order_id: optional(int64String),
   confirmed_at: optional(instant),
   total: safeInt,
   classes: nullable(arr(ClassCountResponseSchema)),
@@ -126,6 +184,11 @@ export const routes = {
     method: "GET",
     pattern: "/caterer/schools",
     portals: ["caterer"],
+    query: {
+      "from": { kind: "date" },
+      "school_id": { kind: "id" },
+      "to": { kind: "date" },
+    },
     response: success(SchoolsResponseSchema),
   },
   "GET /caterer/schools/{schoolId}/orders": {

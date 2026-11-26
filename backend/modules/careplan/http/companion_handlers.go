@@ -54,14 +54,15 @@ func companionPlanErrorRenderer(err error) render.Renderer {
 	return nil
 }
 
-// CompanionConflictResponse is the 409 body: the companions whose own departure
-// plan does not permit the requested days. The client turns it into the
-// "Tom darf donnerstags noch nicht mit anderen Kindern gehen. Ergänzen?"
-// confirmation and resends with extend_companion_plans. The shared error
-// envelope carries status, detail and code; Conflicts is an extension member.
-type CompanionConflictResponse struct {
-	*common.ErrResponse
-	Conflicts []careplan.CompanionConflict `json:"conflicts"`
+// companionConflictDetail names the child and days the client may confirm.
+type companionConflictDetail struct {
+	StudentID ident.ID `json:"student_id"`
+	Weekdays  []string `json:"weekdays"`
+}
+
+// CompanionConflictDetails is the browser's departure confirmation payload.
+type CompanionConflictDetails struct {
+	Conflicts []companionConflictDetail `json:"conflicts"`
 }
 
 // CompanionEntry is one submitted link. ident.ID reads the companion id as a

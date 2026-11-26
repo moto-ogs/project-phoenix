@@ -48,7 +48,7 @@ export async function sessionTenantMismatchResponse(
   session: ServerSession | null,
 ): Promise<Response | null> {
   const sessionTenantId = session?.user?.tenantId;
-  if (typeof sessionTenantId !== "number") return null;
+  if (sessionTenantId === undefined) return null;
   if (MISMATCH_EXEMPT_PATHS.has(request.nextUrl.pathname)) return null;
 
   const host = getOriginalRequestHost(request);
@@ -75,8 +75,9 @@ export async function sessionTenantMismatchResponse(
       )
     ).tenant_id;
   } catch (error) {
-    const status =
-      error instanceof TenantResolveStatusError ? error.status : undefined;
+    const lookup =
+      error instanceof TenantResolveStatusError ? error : undefined;
+    const status = lookup?.status;
     logger.warn("tenant_host_resolve_failed", {
       status,
       error: error instanceof Error ? error.message : String(error),
@@ -84,12 +85,15 @@ export async function sessionTenantMismatchResponse(
     return problemResponse(
       status === 429 ? 429 : 503,
       "The school of this host could not be resolved",
+      undefined,
       request,
+      status === 429 && lookup?.retryAfter
+        ? { "Retry-After": lookup.retryAfter }
+        : undefined,
     );
   }
 
-  // The session claim is a number, the resolved school a string (#2342).
-  if (hostTenantId === String(sessionTenantId)) return null;
+  if (hostTenantId === sessionTenantId) return null;
 
   return mismatchResponse(request, {
     session_tenant_id: sessionTenantId,

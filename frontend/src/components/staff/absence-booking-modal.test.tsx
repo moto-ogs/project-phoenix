@@ -82,6 +82,7 @@ const regeneration: AbsenceType = {
   keptByTraeger: false,
   offered: true,
   schoolLimitDays: null,
+  version: "v1",
 };
 const conversion: AbsenceType = {
   id: "13",
@@ -94,6 +95,7 @@ const conversion: AbsenceType = {
   keptByTraeger: false,
   offered: true,
   schoolLimitDays: null,
+  version: "v1",
 };
 const trip: AbsenceType = {
   id: "14",
@@ -106,6 +108,7 @@ const trip: AbsenceType = {
   keptByTraeger: false,
   offered: true,
   schoolLimitDays: null,
+  version: "v1",
 };
 
 function vacationQuota(year: number, remaining: number) {
@@ -810,7 +813,7 @@ function TenantSWR({ children }: { children: React.ReactNode }) {
   return (
     <SessionProvider
       session={{
-        user: { id: "staff-test", tenantId: 1 },
+        user: { id: "staff-test", tenantId: "1" },
         expires: "2099-01-01",
       }}
       refetchOnWindowFocus={false}

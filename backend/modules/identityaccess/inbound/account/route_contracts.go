@@ -48,6 +48,10 @@ func AdminRouteContracts(caregiverState any) []common.RouteContract {
 	// version a role change sends back.
 	deprecatedAccountRoles := route("GET", "/accounts/{accountId}/roles/", nil, []RoleResponse{})
 	deprecatedAccountRoles.Deprecated = true
+	// Deprecated for one release (ADR 0270): the master-data PUT answers the
+	// stored role with its version.
+	deprecatedUpdateRole := route("PUT", "/roles/{id}/", UpdateRoleRequest{}, nil)
+	deprecatedUpdateRole.Deprecated = true
 	listRoles.Query = []common.QueryParam{{Name: "name", Kind: common.QueryString}}
 	listPermissions := route("GET", "/permissions/", nil, []PermissionResponse{})
 	listPermissions.Query = []common.QueryParam{
@@ -58,7 +62,8 @@ func AdminRouteContracts(caregiverState any) []common.RouteContract {
 		listRoles,
 		route("POST", "/roles/", CreateRoleRequest{}, RoleResponse{}),
 		route("GET", "/roles/{id}/", nil, RoleResponse{}),
-		route("PUT", "/roles/{id}/", UpdateRoleRequest{}, nil),
+		deprecatedUpdateRole,
+		route("PUT", "/roles/{id}/master-data/", UpdateRoleRequest{}, RoleResponse{}),
 		route("DELETE", "/roles/{id}/", nil, nil),
 		deprecatedRolePermissions,
 		route("GET", "/roles/{roleId}/permission-selection/", nil, RolePermissionsResponse{}),
@@ -143,12 +148,18 @@ func PublicRouteContracts() []common.RouteContract {
 func SessionRouteContracts() []common.RouteContract {
 	portals := []common.PortalScope{common.PortalTenant}
 	step := func(pattern string, request, response any) common.RouteContract {
+		browserPath := "/api/auth" + pattern
+		if pattern == "/refresh" || pattern == "/session/validate" {
+			browserPath = ""
+		}
 		return common.RouteContract{
+			BrowserPath: browserPath, BrowserOwnContract: browserPath != "",
 			Method: "POST", Pattern: pattern, Portals: portals, RouteFile: common.RouteFileSession,
 			Request: request, Response: response, NoData: response == nil, Plain: response != nil,
 		}
 	}
 	accept := step("/invitations/{token}/accept", AcceptInvitationRequest{}, AcceptInvitationResponse{})
+	accept.BrowserPath = "/api/invitations/accept"
 	accept.Plain = false
 	accept.RouteFile = "the route file attaches the signed-in owner's session to the accept"
 	end := step("/staff-preview/end", StaffPreviewEndRequest{}, nil)

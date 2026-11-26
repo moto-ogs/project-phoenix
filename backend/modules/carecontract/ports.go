@@ -29,6 +29,38 @@ type Booking struct {
 	ValidUntil     *calendar.Date
 }
 
+// ParentRequest is a request of the parents to change their child's care
+// that the school or the Träger-Büro approved (Care Plan's offering change,
+// #4816): who sent it and when, the day the approval applied it from, and
+// the modules with their weekdays the parents asked for from that day. A
+// module the request does not name is one the parents no longer want.
+type ParentRequest struct {
+	ID        int64
+	AccountID int64
+	// AccountEmail is the address of that account: a party of the contract
+	// is known by its account or, like in the inbox, by its address.
+	AccountEmail  string
+	SubmittedAt   time.Time
+	EffectiveFrom calendar.Date
+	Offerings     []RequestedOffering
+}
+
+// RequestedOffering is one module of a ParentRequest with its weekdays
+// ("mon" to "sun").
+type RequestedOffering struct {
+	CareOfferingID int64
+	Days           []string
+}
+
+// SchoolParentRequests reads the approved requests of the parents for the
+// application children, in the tenant transaction of the school the caller
+// holds (Care Plan). A request the parents sent themselves proves their
+// agreement to the version it made (#4816, ADR 0088 section 3); without the
+// port every changed version waits for a signature.
+type SchoolParentRequests interface {
+	ApprovedParentRequests(ctx context.Context, requestChildIDs []int64) (map[int64][]ParentRequest, error)
+}
+
 // Application is an accepted application child of one school, with its
 // guardian and its bookings.
 type Application struct {
@@ -47,6 +79,9 @@ type Application struct {
 	ServiceStartDate  *calendar.Date
 	ActivateOn        *calendar.Date
 	Bookings          []Booking
+	// ParentRequests are the approved requests of the parents to change the
+	// child's care (#4816); the intake fills them in with the bookings.
+	ParentRequests []ParentRequest
 	// FamilyChildren is the number of children the parents stated on the
 	// registration (#6335); nil when they stated none.
 	FamilyChildren *FamilyStatement
@@ -188,6 +223,40 @@ func (h Letterhead) Reach() WithdrawalReach {
 		ContactPhone: h.ContactPhone, ContactEmail: h.ContactEmail,
 		WithdrawalPhone: h.WithdrawalPhone, WithdrawalEmail: h.WithdrawalEmail,
 	}
+}
+
+// Issuer is the body that concludes the contracts of a school in place of
+// the Träger (#4811): the school's Schulträger or Gemeinde, as its contract
+// names it. SenderText is its name and its address, one line each, the
+// shape of the Träger's letterhead text.
+type Issuer struct {
+	SenderText   string `json:"sender_text"`
+	ContactName  string `json:"contact_name"`
+	ContactPhone string `json:"contact_phone"`
+	ContactEmail string `json:"contact_email"`
+}
+
+// Letterhead is the Träger's letterhead as the issuer signs with it: its
+// own name, address and contact person. The colour and the template stay;
+// the Träger's logo and footer do not stand on another body's letter.
+func (i Issuer) Letterhead(head Letterhead) Letterhead {
+	head.SenderText, head.FooterText, head.Logo = i.SenderText, "", nil
+	head.ContactName, head.ContactPhone, head.ContactEmail = i.ContactName, i.ContactPhone, i.ContactEmail
+	head.WithdrawalPhone, head.WithdrawalEmail = "", ""
+	return head
+}
+
+// Reach is where the withdrawal notice says parents reach the issuer.
+func (i Issuer) Reach() WithdrawalReach {
+	return WithdrawalReach{ContactPhone: i.ContactPhone, ContactEmail: i.ContactEmail}
+}
+
+// SchoolIssuers names per school the body that concludes its contracts
+// when that is not the Träger (#4811), in the caller's Träger transaction.
+// A school the Träger itself concludes for has no entry. The roots bind it
+// to the responsibilities of Organisation & Tenancy.
+type SchoolIssuers interface {
+	SchoolIssuers(ctx context.Context, organizationID int64, schoolIDs []int64) (map[int64]Issuer, error)
 }
 
 // Letterheads reads the letterhead in the Träger transaction of the

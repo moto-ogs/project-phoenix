@@ -54,7 +54,7 @@ export function CopyField({
       <code
         className={cn(
           "min-w-0 flex-1 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 break-all text-gray-700 select-all",
-          monospace ? "font-mono text-xs" : "font-sans text-sm",
+          monospace ? "font-mono text-sm" : "font-sans text-sm",
         )}
       >
         {value}

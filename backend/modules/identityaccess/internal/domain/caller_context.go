@@ -50,23 +50,6 @@ type CallerPerson struct {
 	UpdatedAt time.Time
 }
 
-// CallerGroup is one of the caller's educational groups.
-type CallerGroup struct {
-	ID              int64
-	ViaSubstitution bool
-}
-
-// CallerNavigation is the identity projection the shared frontend context
-// reads in one request. Group-derived sections are optional: a failed
-// section is listed in UnavailableSections instead of failing the whole.
-type CallerNavigation struct {
-	Groups               []CallerGroup
-	SupervisedSessionIDs []int64
-	StaffID              int64
-	Incomplete           bool
-	UnavailableSections  []string
-}
-
 // SSESubscription is the resolved topic set for a live-update client.
 type SSESubscription struct {
 	StaffID        int64
@@ -99,11 +82,13 @@ type CallerProfile struct {
 }
 
 // CallerProfileUpdate names the self-editable fields; nil leaves a field.
+// ExpectedVersion is the version of the profile the edit was made from.
 type CallerProfileUpdate struct {
-	FirstName *string
-	LastName  *string
-	Username  *string
-	Bio       *string
+	FirstName       *string
+	LastName        *string
+	Username        *string
+	Bio             *string
+	ExpectedVersion string
 }
 
 // CallerError names the failed caller-context operation. The text format is

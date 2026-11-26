@@ -1,8 +1,9 @@
 import { captureBffException } from "~/lib/sentry-bff.server";
 import { type NextRequest, NextResponse } from "next/server";
-import { sendBackend } from "~/lib/backend-client.server";
+import { contractGet } from "~/lib/contract/client.server";
+import { routes } from "~/lib/contract/demo-access.generated";
 import { createLogger } from "~/lib/logger";
-import { DEMO_TOKEN_COOKIE, demoBackendPath } from "../forward";
+import { DEMO_TOKEN_COOKIE } from "../forward";
 import { withPrivateNoStore } from "~/lib/private-no-store";
 import { requiredPortalHostname } from "~/lib/portal-paths";
 
@@ -47,14 +48,12 @@ async function readySchoolUrl(
   token: string,
 ): Promise<string | null> {
   try {
-    const response = await sendBackend(demoBackendPath("status"), token, {
+    const reply = await contractGet(routes["GET /demo/access/status"], {
+      token,
       request,
     });
-    if (!response.ok) return null;
-    const body = (await response.json()) as {
-      status?: string;
-      school_url?: string;
-    };
+    if (!reply.ok) return null;
+    const body = reply.value;
     return body.status === "ready" && body.school_url?.startsWith("http")
       ? body.school_url.replace(/\/+$/, "")
       : null;

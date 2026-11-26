@@ -102,18 +102,48 @@ describe("groups", () => {
 });
 
 describe("roles", () => {
-  // The route answers without the role; mapping that answer threw after the
-  // role was saved.
-  it("resolves a saved role without an answer to null", async () => {
+  // The master-data PUT carries the version the edit was made from and
+  // answers the stored role with its new version (ADR 0311).
+  it("saves over the read version and answers the stored role", async () => {
     fetchMock.mockResolvedValueOnce(
-      Response.json({ status: "success", data: null }),
+      Response.json({
+        status: "success",
+        data: {
+          id: "4",
+          name: "Springkraft",
+          description: "",
+          is_system: false,
+          base_role: "user",
+          school_portal: false,
+          created_at: "2026-01-01T00:00:00Z",
+          updated_at: "2026-01-02T00:00:00Z",
+          version: "v2",
+        },
+      }),
     );
 
     await expect(
-      rolesConfig.api.update!("4", { name: "Springkraft", baseRole: "user" }),
-    ).resolves.toBeNull();
+      rolesConfig.api.update!(
+        "4",
+        { name: "Springkraft", baseRole: "user" },
+        {
+          id: "4",
+          name: "Springkraft",
+          description: "",
+          isSystem: false,
+          createdAt: "2026-01-01T00:00:00Z",
+          updatedAt: "2026-01-01T00:00:00Z",
+          version: "v1",
+        },
+      ),
+    ).resolves.toMatchObject({ id: "4", version: "v2" });
     const [url, init] = fetchMock.mock.calls[0] ?? [];
-    expect(url).toBe("/api/auth/roles/4");
+    expect(url).toBe("/api/auth/roles/4/master-data");
     expect(init?.method).toBe("PUT");
+    expect(JSON.parse(String(init?.body))).toEqual({
+      name: "Springkraft",
+      base_role: "user",
+      expected_version: "v1",
+    });
   });
 });

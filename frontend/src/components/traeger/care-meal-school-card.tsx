@@ -67,7 +67,7 @@ function columns(currentMonth: string): DataTableColumn<CareMealTariff>[] {
         <span className="text-gray-900 tabular-nums">
           {formatEuro(tariff.amountCents)}
           <span className="text-gray-500">
-            {tariff.mode === "per_meal" ? " je Essen" : " je Kind und Monat"}
+            {tariff.mode === "per_meal" ? " pro Essen" : " pro Kind und Monat"}
           </span>
         </span>
       ),
@@ -173,7 +173,6 @@ export function CareMealSchoolCard({
           columns={columns(currentMonth)}
           rows={[...stands].reverse()}
           getRowKey={(tariff) => tariff.validFrom}
-          stackedOnMobile
         />
       ) : null}
     </SectionCard>

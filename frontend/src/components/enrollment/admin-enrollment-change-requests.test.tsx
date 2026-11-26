@@ -60,7 +60,7 @@ vi.mock("next-auth/react", async (importOriginal) => ({
         token: "t",
         permissions: ["schedules:manage"],
         scope: "tenant",
-        tenantId: 42,
+        tenantId: "42",
       },
     },
     status: "authenticated",

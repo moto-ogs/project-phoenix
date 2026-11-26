@@ -35,7 +35,7 @@ vi.mock("~/lib/swr", async (importOriginal) => ({
   useSWRAuth: (key: string | null) =>
     key?.startsWith("group-message-mails-")
       ? {
-          data: state.mails,
+          data: { mails: state.mails, awaitingFeedback: false },
           error: undefined,
           isLoading: false,
           mutate: mailsMutate,
@@ -45,7 +45,7 @@ vi.mock("~/lib/swr", async (importOriginal) => ({
 // The send overlay (#5011) is bound to the signed-in session's scope.
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
-    data: { user: { id: "1", tenantId: 1 }, expires: "2099-01-01" },
+    data: { user: { id: "1", tenantId: "1" }, expires: "2099-01-01" },
     status: "authenticated",
   }),
 }));
@@ -65,7 +65,7 @@ vi.mock("~/lib/parent-group-threads-api", async (importOriginal) => ({
   ...(await importOriginal()),
   ...api,
 }));
-import GroupMessagePage from "./page";
+import GroupMessagePage from "./page-content";
 
 /**
  * Findet die Statuszeile aus genau diesen Angaben. Die Angaben stehen ohne

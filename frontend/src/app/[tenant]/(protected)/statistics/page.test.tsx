@@ -23,7 +23,7 @@ function render(ui: ReactElement) {
   return rtlRender(
     <SessionProvider
       session={{
-        user: { id: "staff-7", scope: "tenant", tenantId: 42 },
+        user: { id: "staff-7", scope: "tenant", tenantId: "42" },
         expires: "2099-01-01",
       }}
     >
@@ -257,7 +257,7 @@ describe("Statistik — Bereich Kurse (#2891)", () => {
     await openCourses();
     await waitFor(() => expect(screen.getByText("Fußball")).toBeVisible());
 
-    fireEvent.click(screen.getByRole("button", { name: "Je Kind" }));
+    fireEvent.click(screen.getByRole("button", { name: "Pro Kind" }));
 
     await waitFor(() =>
       expect(screen.getByText("Bauer, Mia")).toBeInTheDocument(),

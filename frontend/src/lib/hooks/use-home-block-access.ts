@@ -3,14 +3,10 @@
 import { useMemo } from "react";
 import { useSession } from "next-auth/react";
 
-import {
-  hasEffectiveAdminScope,
-  hasPermission,
-  isCaregiver,
-} from "~/lib/auth-utils";
-import { canOpenRequestsPage } from "~/lib/change-request-access";
+import { homeBlockAccess } from "~/lib/home-block-access";
 import type { HomeBlockAccess } from "~/lib/home-blocks";
 import { useOptionalSupervision } from "~/lib/supervision-context";
+import { useOperationalOverviewScope } from "~/lib/tenant-context";
 
 /**
  * Die Rechte der angemeldeten Person in der Form, die der Bausteinkatalog der
@@ -29,25 +25,15 @@ import { useOptionalSupervision } from "~/lib/supervision-context";
  */
 export function useHomeBlockAccess(): HomeBlockAccess {
   const { data: session } = useSession();
-  const requestsPage = canOpenRequestsPage(session);
-  const adminScope = hasEffectiveAdminScope(session);
-  const caresForGroups = isCaregiver(session);
   const { groups } = useOptionalSupervision();
   // Die Übersicht kann auch fremde Gruppen der Schule enthalten. Nur das
   // personengebundene Kennzeichen öffnet die Karte „Meine Gruppe“.
   const hasOwnGroups = groups.some((group) => group.is_personal === true);
 
+  const overviewScope = useOperationalOverviewScope();
+
   return useMemo(
-    () => ({
-      isAdminScope: adminScope,
-      // Adminzuschnitt kommt überall durch, wie in der Seitenleiste: das
-      // Backend lässt ein Wildcard-Recht denselben Weg gehen.
-      has: (permission: string) =>
-        adminScope || hasPermission(session, permission),
-      canOpenRequestsPage: requestsPage,
-      caresForGroups,
-      hasOwnGroups,
-    }),
-    [session, adminScope, requestsPage, caresForGroups, hasOwnGroups],
+    () => homeBlockAccess(session, hasOwnGroups, overviewScope),
+    [session, hasOwnGroups, overviewScope],
   );
 }

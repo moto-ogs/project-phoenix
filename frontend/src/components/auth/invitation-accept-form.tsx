@@ -4,8 +4,17 @@ import { Check } from "lucide-react";
 import { EmptyState } from "~/components/ui/empty-state";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 // eslint-disable-next-line no-restricted-imports -- redirect targets root login, not tenant route
-import { useRouter } from "next/navigation";
-import { signOut } from "next-auth/react";
+import type { PortalKey } from "~/lib/portal-paths";
+import {
+  readSessionMark,
+  sessionMarkName,
+  shownSessionMark,
+  treeTracked,
+} from "~/lib/session-mark";
+import { PORTAL_ROUTES } from "~/lib/portal-paths";
+import { signOutPortal } from "~/lib/tenant-session-cookie";
+import { reloadDocument, sessionTreeState } from "~/lib/session-tree";
+import { clientEnv } from "~/env.client";
 import { FieldErrorHint } from "~/components/ui/field-error-hint";
 import { FieldLabel } from "~/components/ui/field-label";
 import { Input } from "~/components/ui/input";
@@ -27,6 +36,29 @@ import { InsetPanel } from "~/components/ui/inset-panel";
 
 const logger = createLogger({ component: "InvitationAccept" });
 
+/**
+ * Ends the session of `mark` before the new account signs in (#8082). The
+ * cookie another tab's sign-in took meanwhile is kept by the exit of session
+ * cookies: that is no signout here, the person is still signed in.
+ */
+async function endOwnSession(portal: PortalKey, mark: string): Promise<void> {
+  try {
+    await signOutPortal(
+      PORTAL_ROUTES[portal].basePath,
+      window.location.origin,
+      {
+        portal,
+        mark,
+      },
+    );
+  } catch (error) {
+    // The cookie went before the answer broke: the page's tree left with it,
+    // and this document loads the session the cookie holds now.
+    if (sessionTreeState().leaving) reloadDocument();
+    throw error;
+  }
+}
+
 interface InvitationAcceptFormProps {
   readonly token: string;
   readonly invitation: InvitationValidation;
@@ -37,6 +69,8 @@ interface InvitationAcceptFormProps {
    * instead of the tenant portal.
    */
   readonly redirectToPath?: string;
+  /** The portal whose session the form ends before the new account signs in. */
+  readonly portal: PortalKey;
 }
 
 /** Prüfung vor dem Senden. Schlüssel sind die Feldnamen des Backends. */
@@ -61,8 +95,8 @@ export function InvitationAcceptForm({
   token,
   invitation,
   redirectToPath,
+  portal,
 }: InvitationAcceptFormProps) {
-  const router = useRouter();
   const [firstName, setFirstName] = useState(invitation.firstName ?? "");
   const [lastName, setLastName] = useState(invitation.lastName ?? "");
   const [password, setPassword] = useState("");
@@ -70,6 +104,7 @@ export function InvitationAcceptForm({
   // Fehler über den gemeinsamen Weg (#2517): Katalogtext im Fehlerkasten,
   // Feldfehler am Feld. Vor der Anmeldung heißt 401 "abgelehnt".
   const formRef = useRef<HTMLFormElement>(null);
+  const endingMark = useRef("");
   const formErrors = useApiFormError(formRef);
   const latestSubmitRef = useRef<() => void>(() => undefined);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -114,6 +149,14 @@ export function InvitationAcceptForm({
 
     try {
       setIsSubmitting(true);
+      // The session this page showed when the person accepted (on a page
+      // without a tree, the one the cookie held then): another tab's sign-in
+      // meanwhile is not the one to end (#8082).
+      endingMark.current = treeTracked()
+        ? shownSessionMark()
+        : readSessionMark(
+            sessionMarkName(portal, clientEnv.NEXT_PUBLIC_TENANT_DOMAIN),
+          );
       const result = await acceptInvitation(token, {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
@@ -140,7 +183,7 @@ export function InvitationAcceptForm({
       // bounce back as the old account instead of being able to log in
       // as the newly created one.
       try {
-        await signOut({ redirect: false });
+        await endOwnSession(portal, endingMark.current);
       } catch (signOutError) {
         logger.warn("sign_out_after_invite_failed", {
           error:
@@ -161,7 +204,8 @@ export function InvitationAcceptForm({
           globalThis.window.location.href = redirectUrl;
           return;
         }
-        router.push(redirectToPath ?? "/");
+        // A new document: the signout dropped this one's tree (#8082).
+        globalThis.window.location.assign(redirectToPath ?? "/");
       }, 1500);
     } catch (err) {
       logger.error("invitation_accept_failed", {
@@ -191,7 +235,7 @@ export function InvitationAcceptForm({
 
   const handleManualRedirect = async () => {
     try {
-      await signOut({ redirect: false });
+      await endOwnSession(portal, endingMark.current);
     } catch {
       // signOut failed again — don't redirect, the old session would
       // cause the login page to bounce the user back as the old account.
@@ -203,7 +247,8 @@ export function InvitationAcceptForm({
     if (tenantRedirectUrl) {
       globalThis.window.location.href = tenantRedirectUrl;
     } else {
-      router.push(redirectToPath ?? "/");
+      // A new document: the signout dropped this one's tree (#8082).
+      globalThis.window.location.assign(redirectToPath ?? "/");
     }
   };
 

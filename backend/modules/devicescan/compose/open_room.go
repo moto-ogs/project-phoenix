@@ -30,6 +30,6 @@ type OpenRoomMoveFunc func(ctx context.Context, studentID, roomID int64) (OpenRo
 // OpenRoomRefusals names the move workflow's own refusals, which the
 // device-scan module cannot import.
 type OpenRoomRefusals struct {
-	RoomNotFound    error
-	RoomNotReleased error
+	RoomNotFound, RoomNotReleased error
+	RoomClosed                    error
 }

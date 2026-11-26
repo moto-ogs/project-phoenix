@@ -190,7 +190,6 @@ export const PhoneOneLineList: StoryObj<typeof DataTable<ChildRow>> = {
     rows: childRows,
     getRowKey: (row) => row.id,
     onRowClick: () => undefined,
-    stackedOnMobile: true,
     stackedLayout: "row",
     stackedDetailKey: "arrival",
   },
@@ -262,7 +261,6 @@ export const PhoneCardsWithDetailsAndSummary: StoryObj<
     columns: dayColumns,
     rows: dayRows,
     getRowKey: (row) => row.id,
-    stackedOnMobile: true,
     expandable: {
       rowLabel: (row, expanded) =>
         `${row.day}: Verlauf ${expanded ? "schließen" : "öffnen"}`,
@@ -286,5 +284,74 @@ export const PhoneCardsWithDetailsAndSummary: StoryObj<
             ],
           }
         : null,
+  },
+};
+
+interface GroupFigures {
+  id: string;
+  group: string;
+  children: number;
+  present: number;
+  sick: number;
+  excused: number;
+  unexplained: number;
+  rate: string;
+}
+
+const groupFigures: GroupFigures[] = [
+  {
+    id: "1",
+    group: "Bärengruppe",
+    children: 24,
+    present: 412,
+    sick: 18,
+    excused: 9,
+    unexplained: 2,
+    rate: "93 %",
+  },
+  {
+    id: "2",
+    group: "Fuchsgruppe",
+    children: 21,
+    present: 365,
+    sick: 25,
+    excused: 4,
+    unexplained: 5,
+    rate: "91 %",
+  },
+];
+
+const figure = (
+  key: Exclude<keyof GroupFigures, "id" | "group">,
+  header: string,
+): DataTableColumn<GroupFigures> => ({
+  key,
+  header,
+  align: "right",
+  className: "tabular-nums whitespace-nowrap",
+  render: (r) => r[key],
+});
+
+// A comparison table stays a table on a phone (#7912): it scrolls sideways,
+// the first column stays put, the fade at the edge shows more columns.
+export const PhoneComparisonScroll: StoryObj<typeof DataTable<GroupFigures>> = {
+  args: {
+    columns: [
+      {
+        key: "group",
+        header: "Gruppe",
+        className: "whitespace-nowrap font-medium",
+        render: (r) => r.group,
+      },
+      figure("children", "Kinder"),
+      figure("present", "Anwesend"),
+      figure("sick", "Krank"),
+      figure("excused", "Entschuldigt"),
+      figure("unexplained", "Ohne Meldung"),
+      figure("rate", "Quote"),
+    ],
+    rows: groupFigures,
+    getRowKey: (row) => row.id,
+    mobileScroll: { reason: "Anwesenheitszahlen pro Gruppe zum Vergleichen" },
   },
 };

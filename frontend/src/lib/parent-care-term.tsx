@@ -4,8 +4,15 @@ import { createContext, useContext, useMemo, type ReactNode } from "react";
 import {
   CareFacilityTermScope,
   normalizeCareFacilityTerm,
-  useCareFacilityTerm,
+  useCareTermValues,
 } from "~/lib/care-facility-term";
+import {
+  careFacilityName,
+  careTermValues,
+  careTermValuesOf,
+  type CareFacilityName,
+  type CareTermValues,
+} from "~/lib/care-facility-term-value";
 import {
   useParentChildren,
   useParentFeatures,
@@ -36,6 +43,11 @@ interface ParentCareTerms {
   readonly account: string | undefined;
   /** The term of one child's school, else the account's term. */
   readonly forChild: (studentId: string | undefined) => string | undefined;
+  /**
+   * The term of the account's children at one school, else the account's
+   * term: for a text that names a school, not a child (a parent letter).
+   */
+  readonly forSchool: (schoolName: string | undefined) => string | undefined;
   /** The `{careTerm}` value for one child's row in a list of children. */
   readonly termOf: (studentId: string | undefined) => string;
   /**
@@ -43,14 +55,36 @@ interface ParentCareTerms {
    * group message): the term of the account's children at that school.
    */
   readonly termOfSchool: (schoolName: string | undefined) => string;
+  /** The declined term for texts without a child (#8136). */
+  readonly accountCare: CareTermValues | undefined;
+  /** The declined term of one child's school, else the account's. */
+  readonly careForChild: (
+    studentId: string | undefined,
+  ) => CareTermValues | undefined;
+  /** The declined term of one school, else the account's. */
+  readonly careForSchool: (
+    schoolName: string | undefined,
+  ) => CareTermValues | undefined;
+  /** Every care placeholder for one child's row: spread it into the values. */
+  readonly valuesOf: (studentId: string | undefined) => CareTermValues;
+  /** Every care placeholder for a row that names a school. */
+  readonly valuesOfSchool: (schoolName: string | undefined) => CareTermValues;
 }
+
+const DEFAULT_CARE = careTermValuesOf(undefined);
 
 /** Outside the parents shell no school is known: every text says „OGS“. */
 const NO_TERMS: ParentCareTerms = {
   account: undefined,
   forChild: () => undefined,
+  forSchool: () => undefined,
   termOf: () => normalizeCareFacilityTerm(undefined),
   termOfSchool: () => normalizeCareFacilityTerm(undefined),
+  accountCare: undefined,
+  careForChild: () => undefined,
+  careForSchool: () => undefined,
+  valuesOf: () => DEFAULT_CARE,
+  valuesOfSchool: () => DEFAULT_CARE,
 };
 
 const ParentCareTermsContext = createContext<ParentCareTerms>(NO_TERMS);
@@ -63,26 +97,42 @@ function useLoadedParentCareTerms(enabled: boolean): ParentCareTerms {
   const { data: children } = useParentChildren(enabled);
   const { data: features } = useParentFeatures(enabled ? children : undefined);
   return useMemo(() => {
-    const byChild = new Map<string, string>();
-    const bySchool = new Map<string, string>();
+    const byChild = new Map<string, CareTermValues>();
+    const bySchool = new Map<string, CareTermValues>();
+    const names: CareFacilityName[] = [];
     for (const child of children ?? []) {
-      const term = features?.[child.student_id]?.care_facility_term;
+      const childFeatures = features?.[child.student_id];
+      const term = childFeatures?.care_facility_term;
       if (term === undefined) continue;
-      byChild.set(child.student_id, term);
-      bySchool.set(child.school_name, term);
+      const name = careFacilityName(term, childFeatures?.care_facility_article);
+      const care = careTermValues(name);
+      names.push(name);
+      byChild.set(child.student_id, care);
+      bySchool.set(child.school_name, care);
     }
-    const account = accountCareTerm([...byChild.values()]);
-    const forChild = (studentId: string | undefined) =>
-      (studentId === undefined ? undefined : byChild.get(studentId)) ?? account;
+    // Every form names each school once: „die OGS/der Hort“ (#6082, #8136).
+    const accountCare = names.length > 0 ? careTermValues(names) : undefined;
+    const careForChild = (studentId: string | undefined) =>
+      (studentId === undefined ? undefined : byChild.get(studentId)) ??
+      accountCare;
+    const careForSchool = (schoolName: string | undefined) =>
+      (schoolName === undefined ? undefined : bySchool.get(schoolName)) ??
+      accountCare;
+    const valuesOf = (studentId: string | undefined) =>
+      careForChild(studentId) ?? DEFAULT_CARE;
+    const valuesOfSchool = (schoolName: string | undefined) =>
+      careForSchool(schoolName) ?? DEFAULT_CARE;
     return {
-      account,
-      forChild,
-      termOf: (studentId) => normalizeCareFacilityTerm(forChild(studentId)),
-      termOfSchool: (schoolName) =>
-        normalizeCareFacilityTerm(
-          (schoolName === undefined ? undefined : bySchool.get(schoolName)) ??
-            account,
-        ),
+      account: accountCare?.careTerm,
+      forChild: (studentId) => careForChild(studentId)?.careTerm,
+      forSchool: (schoolName) => careForSchool(schoolName)?.careTerm,
+      termOf: (studentId) => valuesOf(studentId).careTerm,
+      termOfSchool: (schoolName) => valuesOfSchool(schoolName).careTerm,
+      accountCare,
+      careForChild,
+      careForSchool,
+      valuesOf,
+      valuesOfSchool,
     };
   }, [children, features]);
 }
@@ -106,7 +156,7 @@ export function ParentCareTermScope({
   const terms = useLoadedParentCareTerms(enabled);
   return (
     <ParentCareTermsContext.Provider value={terms}>
-      <CareFacilityTermScope term={terms.account}>
+      <CareFacilityTermScope care={terms.accountCare}>
         {children}
       </CareFacilityTermScope>
     </ParentCareTermsContext.Provider>
@@ -125,7 +175,24 @@ export function ParentChildCareTermScope({
   readonly studentId: string | undefined;
   readonly children: ReactNode;
 }) {
-  const inherited = useCareFacilityTerm();
-  const term = useParentCareTerms().forChild(studentId) ?? inherited;
-  return <CareFacilityTermScope term={term}>{children}</CareFacilityTermScope>;
+  const inherited = useCareTermValues();
+  const care = useParentCareTerms().careForChild(studentId) ?? inherited;
+  return <CareFacilityTermScope care={care}>{children}</CareFacilityTermScope>;
+}
+
+/**
+ * Gives every text inside the care term of one school, for a part that
+ * belongs to a school rather than a child: a parent letter and the refusals
+ * of its answer (#6258). Until the term loaded it keeps the inherited one.
+ */
+export function ParentSchoolCareTermScope({
+  schoolName,
+  children,
+}: {
+  readonly schoolName: string | undefined;
+  readonly children: ReactNode;
+}) {
+  const inherited = useCareTermValues();
+  const care = useParentCareTerms().careForSchool(schoolName) ?? inherited;
+  return <CareFacilityTermScope care={care}>{children}</CareFacilityTermScope>;
 }

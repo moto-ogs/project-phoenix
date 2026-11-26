@@ -9,13 +9,16 @@ import {
   int64String,
   nullable,
   object,
+  optional,
   requestBody,
   safeInt,
   str,
   success,
 } from "./runtime";
 import {
+  BillingIssuerSchema,
   SEPADebitSchema,
+  type BillingIssuer,
   type SEPADebit,
 } from "./shared.generated";
 
@@ -51,6 +54,8 @@ export interface SEPADebitRun {
   submitted: SEPADebit[] | null;
   left: SEPADebit[] | null;
   submitted_at: string | null;
+  issuer?: BillingIssuer;
+  issuers: BillingIssuer[] | null;
 }
 
 export const SEPADebitRunSchema: z.ZodType<SEPADebitRun, unknown> = object<SEPADebitRun>({
@@ -69,6 +74,8 @@ export const SEPADebitRunSchema: z.ZodType<SEPADebitRun, unknown> = object<SEPAD
   submitted: nullable(arr(SEPADebitSchema)),
   left: nullable(arr(SEPADebitSchema)),
   submitted_at: nullable(instant),
+  issuer: optional(BillingIssuerSchema),
+  issuers: nullable(arr(BillingIssuerSchema)),
 });
 
 /** Go: parentbillinghttp.SEPADebitSubmissionRequest */
@@ -81,18 +88,27 @@ export const routes = {
     method: "GET",
     pattern: "/traeger/sepa-debits/{kind}/{id}",
     portals: ["org"],
+    query: {
+      "issuer": { kind: "string" },
+    },
     response: success(SEPADebitRunSchema),
   },
   "GET /traeger/sepa-debits/{kind}/{id}/file": {
     method: "GET",
     pattern: "/traeger/sepa-debits/{kind}/{id}/file",
     portals: ["org"],
+    query: {
+      "issuer": { kind: "string" },
+    },
     response: fileAnswer,
   },
   "POST /traeger/sepa-debits/{kind}/{id}/submission": {
     method: "POST",
     pattern: "/traeger/sepa-debits/{kind}/{id}/submission",
     portals: ["org"],
+    query: {
+      "issuer": { kind: "string" },
+    },
     request: requestBody<SEPADebitSubmissionRequest>(),
     response: success(SEPADebitRunSchema),
   },

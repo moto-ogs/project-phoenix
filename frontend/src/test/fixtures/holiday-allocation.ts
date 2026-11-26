@@ -22,6 +22,7 @@ export function allocationEntry(
       { criterionId: "1", value: "yes", source: "parent" },
       { criterionId: "2", value: "no", source: "parent" },
     ],
+    score: 1,
     proposal: "placed",
     ...overrides,
   };
@@ -65,6 +66,7 @@ export function allocationWeek(
           { criterionId: "1", value: "no", source: "parent" },
           { criterionId: "2", value: "no", source: "parent" },
         ],
+        score: 0,
         proposal: "waitlisted",
       }),
     ],
@@ -76,18 +78,22 @@ export function allocationBoard(
   overrides: Partial<HolidayAllocationBoard> = {},
 ): HolidayAllocationBoard {
   return {
+    ranking: "priority",
+    maxScore: 2,
     criteria: [
       {
         id: "1",
         name: "Beide Eltern berufstätig",
         scope: "family",
         position: 1,
+        points: 3,
       },
       {
         id: "2",
         name: "Geschwisterkind ist schon angemeldet",
         scope: "child",
         position: 2,
+        points: 2,
       },
     ],
     weeks: [allocationWeek()],

@@ -104,8 +104,29 @@ type Role struct {
 	// SchoolPortal marks a school role made from the Lehrkraft template: it
 	// opens moto schule like the system role lehrkraft (#4574).
 	SchoolPortal bool
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	// TraegerRoleID names the Träger role this school role is the copy of
+	// (#4810, ADR 0317); nil for a role of the school's own. The school
+	// assigns a copy but does not change or delete it.
+	TraegerRoleID *int64
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+}
+
+// RoleChange is the master data an edit of a custom role writes. A nil
+// BaseRole keeps the stored one.
+type RoleChange struct {
+	Name        string
+	Description string
+	BaseRole    *string
+}
+
+// RoleVersion is the read-state token of a role's master data (ADR 0311):
+// its change time. The BEFORE UPDATE trigger update_roles_updated_at sets
+// updated_at on every write of the row; the permission selection lives in
+// other rows and carries its own token (IDSetVersion), so saving one never
+// refuses a following save of the other.
+func RoleVersion(role Role) string {
+	return readstate.Of(role.UpdatedAt)
 }
 
 // AssignableSchoolRole is a role the policy allows for a school, with the
@@ -183,8 +204,11 @@ type RoleCommand interface {
 	// permissions. The copy is taken once; later changes to the template do
 	// not reach the role.
 	CreateRole(ctx context.Context, name, description string, baseRole *string, template ...RoleTemplate) (Role, error)
-	// UpdateRole writes name, description and base role of a custom role.
-	UpdateRole(ctx context.Context, role Role) error
+	// UpdateRole writes name, description and base role of a custom role
+	// and answers the stored role. expectedVersion is the RoleVersion of the
+	// role the change was made from; a role changed since is refused with
+	// readstate.ErrChanged (ADR 0311).
+	UpdateRole(ctx context.Context, id int64, change RoleChange, expectedVersion string) (Role, error)
 	DeleteRole(ctx context.Context, id int64) error
 	// AssignRoleToAccount assigns the role and completes the school identity
 	// a staff-tier role owes, in one transaction.

@@ -50,6 +50,8 @@
   "session_note_required": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
   "session_not_found": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
   "session_not_owned": "{object} için erişim izniniz yok. Okulla iletişime geçin.",
+  "terminal_only_stamping": "{object} için erişim izniniz yok. Okulla iletişime geçin.",
+  "terminal_only_time_edit": "{object} için erişim izniniz yok. Okulla iletişime geçin.",
   "session_check_in_in_future": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
   "session_times_invalid": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
   "shift_changed": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
@@ -127,6 +129,8 @@
   "pool_block_taken": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
   "pool_springer_not_found": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
   "pool_springer_busy": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
+  "traeger_payroll_employer_invalid": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
   "traeger_payroll_not_ready": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
+  "traeger_staff_employer_changed": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
   "no_staff_profile": "{object} için erişim izniniz yok. Okulla iletişime geçin."
 }

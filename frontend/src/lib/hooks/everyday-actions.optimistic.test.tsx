@@ -106,7 +106,7 @@ const meals: MealParticipation = {
 function signedIn(id = "A") {
   return {
     data: {
-      user: { id, tenantId: 1 },
+      user: { id, tenantId: "1" },
       expires: "2099-01-01",
     } satisfies Session,
     status: "authenticated",
@@ -141,10 +141,14 @@ function deferred() {
 }
 function useIn() {
   const reader = useSWRAuth<WorkSession | null>(
-    timeTrackingKeys.current(),
+    timeTrackingKeys.overview("2026-09-09"),
     mocks.current,
   );
-  const action = useOptimisticStamp(reader.data, reader.mutate, "2026-09-09");
+  const action = useOptimisticStamp(
+    reader.data,
+    (session) => void reader.mutate(session, { revalidate: false }),
+    "2026-09-09",
+  );
   return {
     data:
       action.data === undefined
@@ -156,10 +160,14 @@ function useIn() {
 }
 function useOut() {
   const reader = useSWRAuth<WorkSession | null>(
-    timeTrackingKeys.current(),
+    timeTrackingKeys.overview("2026-09-09"),
     mocks.current,
   );
-  const action = useOptimisticStamp(reader.data, reader.mutate, "2026-09-09");
+  const action = useOptimisticStamp(
+    reader.data,
+    (session) => void reader.mutate(session, { revalidate: false }),
+    "2026-09-09",
+  );
   return {
     data:
       action.data === undefined
@@ -239,7 +247,7 @@ function usePolicies() {
   const hook = useHomeLayout();
   return {
     data: hook.isReady ? hook.state.policies.news === "required" : undefined,
-    run: () => hook.savePolicies({ news: "required" }),
+    run: () => hook.savePolicies({ news: "required" }, "v1"),
     ready: hook.isReady,
   };
 }
@@ -377,22 +385,22 @@ it("keeps confirmed policies separate from optimistic updates and rollback", asy
     wrapper: Wrapper,
   });
   await waitFor(() => expect(result.current.isReady).toBe(true));
-  const confirmed = result.current.confirmedPolicies;
+  const confirmed = result.current.confirmed?.policies;
   expect(confirmed).toBe(layout.policies);
   let task!: Promise<unknown>;
   act(() => {
     task = result.current
-      .savePolicies({ news: "required" })
+      .savePolicies({ news: "required" }, "v1")
       .catch(() => undefined);
   });
   expect(result.current.state.policies).toEqual({ news: "required" });
-  expect(result.current.confirmedPolicies).toBe(confirmed);
+  expect(result.current.confirmed?.policies).toBe(confirmed);
   await act(async () => {
     pending.reject(new ApiError("diag", 500));
     await task;
   });
   expect(result.current.state.policies).toEqual(layout.policies);
-  expect(result.current.confirmedPolicies).toBe(confirmed);
+  expect(result.current.confirmed?.policies).toBe(confirmed);
   unmount();
 });
 
@@ -404,12 +412,16 @@ it("clears the current session after checkout and permits another check-in", asy
   const { result, unmount } = renderHook(
     () => {
       const reader = useSWRAuth<WorkSession | null>(
-        timeTrackingKeys.current(),
+        timeTrackingKeys.overview("2026-09-09"),
         mocks.current,
       );
       return {
         reader,
-        action: useOptimisticStamp(reader.data, reader.mutate, "2026-09-09"),
+        action: useOptimisticStamp(
+          reader.data,
+          (session) => void reader.mutate(session, { revalidate: false }),
+          "2026-09-09",
+        ),
       };
     },
     { wrapper: Wrapper },

@@ -1,73 +1,19 @@
-"use client";
-
-// Eine Berichtsvorlage des Trägers ändern (#4716).
-
-import { useParams, useRouter } from "next/navigation";
+import { reportTemplates } from "~/lib/traeger/metrics-seed-reads.server";
+import { Suspense } from "react";
+import { SWRServerSeed } from "~/lib/swr/server-seed";
 import {
-  ReportTemplateForm,
-  templateInputOf,
-} from "~/components/traeger/report-template-form";
-import { useReportTemplates } from "~/components/traeger/use-report-templates";
-import { useTraegerSchools } from "~/components/traeger/use-traeger-schools";
-import { TenantPage } from "~/components/ui/tenant-page";
-import { useInvalidateFamily } from "~/lib/swr";
-import { traegerReportKeys } from "~/lib/swr/traeger-report-keys";
-import { updateReportTemplate } from "~/lib/traeger-reports-api";
-import { traegerPath } from "~/lib/traeger-url";
+  traegerPageSeed,
+  traegerSchools,
+} from "~/lib/traeger/page-seed.server";
+import EditReportTemplatePage from "./page-content";
 
-export default function EditReportTemplatePage() {
-  const router = useRouter();
-  const { id } = useParams<{ id: string }>();
-  const { schools, error: schoolsError } = useTraegerSchools();
-  const { templates, error: templatesError, mutate } = useReportTemplates();
-  const invalidateFamily = useInvalidateFamily();
-  const listHref = traegerPath("/traeger/berichte");
-  const template = templates?.find((entry) => entry.id === id) ?? null;
-  const error = schoolsError ?? templatesError;
-  const ready = schools !== null && templates !== null;
-
+export default function Page() {
+  const { seed, claims } = traegerPageSeed([reportTemplates, traegerSchools]);
   return (
-    <TenantPage
-      title={template?.name ?? "Vorlage"}
-      info="Änderungen gelten für jeden Bericht, den du danach mit dieser Vorlage erstellst."
-      back
-      backHref={listHref}
-      backLabel="Zurück zu den Berichten"
-      error={error}
-      loading={!error && !ready}
-      empty={
-        ready && !template
-          ? {
-              title: "Vorlage nicht gefunden",
-              description:
-                "Vielleicht hat jemand sie gelöscht. Unter „Berichte“ stehen alle Vorlagen deines Trägers.",
-            }
-          : null
-      }
-    >
-      {ready && template ? (
-        <ReportTemplateForm
-          key={template.id}
-          initial={templateInputOf(template)}
-          schools={schools}
-          takenNames={templates
-            .filter((entry) => entry.id !== template.id)
-            .map((entry) => entry.name)}
-          saveLabel="Speichern"
-          onSave={(input) => updateReportTemplate(template.id, input)}
-          onCancel={() => router.push(listHref)}
-          onSaved={(saved) => {
-            void mutate();
-            // A report already read with this template shows its old sections.
-            void invalidateFamily(traegerReportKeys.keyDateReportFamily);
-            router.push(
-              traegerPath(
-                `/traeger/berichte?vorlage=${encodeURIComponent(saved.id)}`,
-              ),
-            );
-          }}
-        />
-      ) : null}
-    </TenantPage>
+    <Suspense fallback={null}>
+      <SWRServerSeed seed={seed} claims={claims} render>
+        <EditReportTemplatePage />
+      </SWRServerSeed>
+    </Suspense>
   );
 }

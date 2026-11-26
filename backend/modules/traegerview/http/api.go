@@ -5,6 +5,7 @@
 package traegerviewhttp
 
 import (
+	"context"
 	"errors"
 	"net/http"
 
@@ -21,17 +22,25 @@ type Resource struct {
 	overview traegerview.Overview
 	reports  traegerview.Reports
 	lists    common.ListRenderer
+	modules  BookedModules
 }
+
+// BookedModules names the keys of the moto modules that count as booked for
+// a Träger, in catalog order (#6052). The root binds it to the module
+// switches of the Träger's schools: a module counts once one of them books
+// it.
+type BookedModules func(ctx context.Context, organizationID int64) ([]string, error)
 
 // NewResource builds the resource. reports answers the heatmap of arrival
 // and pickup times (#4714), the comparison of schools (#4715) and the daily
 // attendance report of Mecklenburg-Vorpommern (#4717); lists renders the
-// exports as PDF, Excel or CSV (#4718).
-func NewResource(overview traegerview.Overview, reports traegerview.Reports, lists common.ListRenderer) *Resource {
-	if overview == nil || reports == nil || lists == nil {
-		panic("traeger view http: the overview, the reports and the list renderer are required")
+// exports as PDF, Excel or CSV (#4718); modules names the booked modules the
+// frame of the portal locks its navigation with (#6052).
+func NewResource(overview traegerview.Overview, reports traegerview.Reports, lists common.ListRenderer, modules BookedModules) *Resource {
+	if overview == nil || reports == nil || lists == nil || modules == nil {
+		panic("traeger view http: the overview, the reports, the list renderer and the booked modules are required")
 	}
-	return &Resource{overview: overview, reports: reports, lists: lists}
+	return &Resource{overview: overview, reports: reports, lists: lists, modules: modules}
 }
 
 // TraegerRouter returns the routes mounted at /traeger/schools inside the
@@ -46,6 +55,8 @@ func (rs *Resource) TraegerRouter(protectedTraegerRoutes func(chi.Router, func(c
 		r.With(common.RequiresPermission(identityaccess.TraegerRightOverviewRead)).Get("/export", rs.listSchoolsExport)
 		r.With(common.RequiresPermission(identityaccess.TraegerRightOverviewRead)).Get("/alerts", rs.schoolsAlerts)
 		r.With(common.RequiresPermission(identityaccess.TraegerRightOverviewRead)).Get("/alerts/export", rs.schoolsAlertsExport)
+		// "Heute anders" (#7672): closing days and cancelled blocks per school.
+		r.With(common.RequiresPermission(identityaccess.TraegerRightOverviewRead)).Get("/day-changes", rs.schoolsDayChanges)
 		r.With(common.RequiresPermission(identityaccess.TraegerRightOverviewRead)).Get("/occupancy", rs.occupancy)
 		r.With(common.RequiresPermission(identityaccess.TraegerRightOverviewRead)).Get("/occupancy/export", rs.occupancyExport)
 		// The utilization over time is a report (#4713, ADR 0241): the
@@ -64,6 +75,11 @@ func (rs *Resource) TraegerRouter(protectedTraegerRoutes func(chi.Router, func(c
 		// The comparison of the schools is a report too (#4715, ADR 0245).
 		r.With(common.RequiresPermission(identityaccess.TraegerRightReportsRead)).Get("/comparison", rs.comparison)
 		r.With(common.RequiresPermission(identityaccess.TraegerRightReportsRead)).Get("/comparison/export", rs.comparisonExport)
+		// The children of every school by name (#8137, ADR 0327) need
+		// "Verträge verwalten", the right that already opens the names of
+		// the utilization and of Soll und Ist.
+		r.With(common.RequiresPermission(identityaccess.TraegerRightContractsManage)).Get("/children", rs.children)
+		r.With(common.RequiresPermission(identityaccess.TraegerRightContractsManage)).Get("/children/export", rs.childrenExport)
 		r.With(common.RequiresPermission(identityaccess.TraegerRightOverviewRead)).Get("/{id}", rs.getSchool)
 	})
 	return r
@@ -73,7 +89,9 @@ func (rs *Resource) TraegerRouter(protectedTraegerRoutes func(chi.Router, func(c
 // inside the Träger route group: the Träger of the session, which the portal
 // frame names and marks as a test system (#4658), with the federal states of
 // its schools, so the frame offers the daily attendance report of
-// Mecklenburg-Vorpommern only there (#4717). It needs the overview right
+// Mecklenburg-Vorpommern only there (#4717), and with the moto modules that
+// count as booked for the Träger, so the frame locks the pages of the others
+// (#6052). It needs the overview right
 // every Träger role holds; the Träger name and its test mark are no personal
 // data, so the read is not written to the access log.
 func (rs *Resource) TraegerOrganizationRouter(protectedTraegerRoutes func(chi.Router, func(chi.Router, common.Middleware))) chi.Router {
@@ -96,6 +114,10 @@ func (rs *Resource) getTraeger(w http.ResponseWriter, r *http.Request) {
 	if err == nil {
 		states, err = rs.reports.FederalStates(r.Context(), principal.OrganizationID())
 	}
+	var modules []string
+	if err == nil {
+		modules, err = rs.modules(r.Context(), principal.OrganizationID())
+	}
 	if errors.Is(err, traegerview.ErrTraegerUnavailable) {
 		common.RenderError(w, r, common.ErrorUnauthorized(common.ErrUnauthorized))
 		return
@@ -104,13 +126,16 @@ func (rs *Resource) getTraeger(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, common.ErrorInternalServer(err))
 		return
 	}
-	common.Respond(w, r, http.StatusOK, TraegerFrame{Traeger: traeger, FederalStates: states}, "Träger retrieved successfully")
+	common.Respond(w, r, http.StatusOK, TraegerFrame{Traeger: traeger, FederalStates: states, BookedModules: modules}, "Träger retrieved successfully")
 }
 
 // TraegerFrame is the Träger of the session as the portal frame reads it.
 type TraegerFrame struct {
 	traegerview.Traeger
 	FederalStates []string `json:"federal_states"`
+	// BookedModules are the keys of the moto modules that count as booked
+	// for the Träger: at least one of its schools books them (#6052).
+	BookedModules []string `json:"booked_modules"`
 }
 
 // listSchools answers GET /traeger/schools: every school of the Träger of the
@@ -184,5 +209,26 @@ func (rs *Resource) schoolsAlerts(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, common.ErrorInternalServer(err))
 	default:
 		common.Respond(w, r, http.StatusOK, alerts, "School alerts retrieved successfully")
+	}
+}
+
+// schoolsDayChanges answers GET /traeger/schools/day-changes: "Heute anders"
+// of every school of the Träger of the session that has a change today
+// (#7672). It names no person and no reason, so the read is not written to
+// the access log (ADR 0084 section 7).
+func (rs *Resource) schoolsDayChanges(w http.ResponseWriter, r *http.Request) {
+	principal, err := common.CurrentPrincipal(r.Context())
+	if err != nil || principal.OrganizationID() <= 0 {
+		common.RenderError(w, r, common.ErrorUnauthorized(common.ErrUnauthorized))
+		return
+	}
+	changes, err := rs.reports.SchoolsDayChanges(r.Context(), principal.OrganizationID())
+	switch {
+	case errors.Is(err, traegerview.ErrTraegerUnavailable):
+		common.RenderError(w, r, common.ErrorUnauthorized(common.ErrUnauthorized))
+	case err != nil:
+		common.RenderError(w, r, common.ErrorInternalServer(err))
+	default:
+		common.Respond(w, r, http.StatusOK, changes, "School day changes retrieved successfully")
 	}
 }

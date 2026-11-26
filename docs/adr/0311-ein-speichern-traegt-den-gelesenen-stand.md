@@ -72,6 +72,14 @@ Variante 3.
 
 ## Folgen
 
+- Beim ersten Anzeigen einer Seite darf ihr Server-Render den vorhandenen
+  Leseschlüssel mit einem Seed füllen (#8077, #8079). Der Seed gehört zur
+  frischen Portal-Sitzung mit ihrem Schul- bzw. Trägerkontext. Er ersetzt
+  keinen neueren Stand. Ohne brauchbaren Seed lädt derselbe Leser normal
+  nach. Beim warmen Seitenwechsel zeigt die neutrale Hülle gültige SWR-Daten
+  derselben Sitzung, ohne auf den neuen Seed zu warten (#8083). Protokollierte
+  Öffnungen, GETs mit Seiteneffekt und Schreibvorschauen bleiben auch beim
+  Wiederanzeigen durch React Activity an die jeweilige Aktion gebunden.
 - `useFreshSWR` gilt nur noch als Übergang. Jede Stelle wird nach Punkt 1, 2
   oder 5 eingeordnet und umgestellt; danach bleibt nur das Lesen bei jedem
   Öffnen für protokollierte Zugriffe.
@@ -82,6 +90,10 @@ Variante 3.
   `useDraftOn`, und `show(error, { reload })` zeigt eine Ablehnung erst mit
   dem neu gelesenen Stand oder mit dessen Ladefehler
   (`frontend/src/lib/swr/README.md`, „Reading and saving“).
+- Die eigene Zeiterfassung (#8081) nimmt `version` aus dem gewählten Block
+  des `period`-Reads. Bei einer Ablehnung lädt genau dieser Zeitraum mit
+  `revalidateOrThrow` neu. Die Stempeluhr kann den Tabellen-Lesestand nicht
+  ersetzen und liest unabhängig davon weiter.
 - Die Elternanfragen verlieren ihre vier Fehlerwerte und den leeren Token, der
   die Prüfung übersprang. Ihr Token ist `readstate.Of(updated_at)` ohne
   eigene Funktion; ein Stand ohne Zeile (Ankunftszeiten einer Klasse) hat den
@@ -106,3 +118,11 @@ Variante 3.
 - Der Speiseplan (#7930) liest und schickt ein Token je Tag. Seine alten
   Routen, die den gelesenen Tag statt eines Tokens schicken (#7898), bleiben
   ein Release lang und prüfen über dieselbe Funktion.
+- Die Ankündigungen des Operator-Portals nennen ihren Token `edit_version`
+  (`expected_edit_version`), weil `version` dort die Release-Bezeichnung ist.
+- Auch die Fehlerrenderer des Operator-Portals führen keinen eigenen Fall:
+  `common.OperatorInternal` behält den Fehler, damit `common.RenderError` die
+  Ablehnung darin hebt (#7986).
+- Die Anhänge einer Elternmitteilung gehören zu dem Stand, den ihre
+  Veröffentlichung bestätigt: Hochladen und Entfernen schicken die Version
+  des Entwurfs, stempeln ihn und antworten seine neue Version (#7986).

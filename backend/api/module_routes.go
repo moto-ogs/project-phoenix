@@ -28,7 +28,8 @@ type moduleRouteRule struct {
 // The lock in api.TenantScopeMiddleware refuses every module route except
 // the surfaces in moduleRoutesLockedElsewhere. Kiosk routes carry no session;
 // gateDeviceAuthentication locks them behind the device authenticator
-// (#4896).
+// (#4896). The Träger portal binds a Träger, not a school;
+// api.TraegerScopeMiddleware locks its routes (#6052).
 var moduleRouteRules = []moduleRouteRule{
 	// Infrastructure, sign-in and the operator portal.
 	{"/", moduleRouteBasis},
@@ -47,17 +48,15 @@ var moduleRouteRules = []moduleRouteRule{
 	// #4805: the payroll office's one-time link. The file was already sent;
 	// only a close of a school that books Zeiterfassung queues one.
 	{"/public/payroll-download", moduleRouteBasis},
-	// #4679: the one-time link to sign a care contract of a Träger. The
-	// contract lives at the Träger, not at a booked school module.
+	// #4679: the one-time link to sign a care contract of a Träger. Only a
+	// Träger with Verträge und Dokumente sends one; parents finish what the
+	// office already sent, like the payroll office its download (#6052).
 	{"/public/care-contract-signing", moduleRouteBasis},
 	// The return of a school's or Träger's data on a change of provider
 	// (Data Act, ADR 0201) belongs to every contract, whatever its modules.
 	{"/public/data-return", moduleRouteBasis},
 	{"/public/enrollment-legal-documents", settings.ModuleOnlineAnmeldung},
 	{"/public/enrollment-form-legal-documents", settings.ModuleOnlineAnmeldung},
-	// #5199: public period PDFs, no person data or school membership.
-	// Enrollment resolves the published link and its current form under Träger RLS.
-	{"/traeger/holiday-registrations/*/documents", moduleRouteBasis},
 
 	// Portals and devices (#4895, #4896).
 	{"/auth/guardian-invitations", settings.ModuleElternApp},
@@ -72,7 +71,75 @@ var moduleRouteRules = []moduleRouteRule{
 	{"/school-sse", settings.ModuleUnterrichtVormittag},
 	// Fotos und Dateien des Team-Chats im Schulportal (#6685).
 	{"/school-staff-messages", settings.ModuleUnterrichtVormittag},
+
+	// The Träger portal (#6052). Its frame is moto Basis: sign-in, the
+	// office's accounts, the school list and a school's detail, settings and
+	// master data, the Träger's documents, closing days, enrollment phases
+	// and Personal. A module counts for the Träger once one of its schools
+	// books it; TraegerScopeMiddleware locks the routes below.
 	{"/traeger", moduleRouteBasis},
+
+	// Träger-Übersicht: the dashboard, occupancy, utilization, arrival and
+	// pickup, the comparison of schools, the daily report and the reports.
+	{"/traeger/schools/alerts", settings.ModuleTraegerUebersicht},
+	{"/traeger/schools/day-changes", settings.ModuleTraegerUebersicht},
+	{"/traeger/schools/occupancy", settings.ModuleTraegerUebersicht},
+	{"/traeger/schools/utilization", settings.ModuleTraegerUebersicht},
+	{"/traeger/schools/*/utilization", settings.ModuleTraegerUebersicht},
+	{"/traeger/schools/arrival-pickup-times", settings.ModuleTraegerUebersicht},
+	{"/traeger/schools/comparison", settings.ModuleTraegerUebersicht},
+	{"/traeger/schools/daily-attendance", settings.ModuleTraegerUebersicht},
+	{"/traeger/reports", settings.ModuleTraegerUebersicht},
+	{"/traeger/report-templates", settings.ModuleTraegerUebersicht},
+	// "Länger als gebucht" is an evaluation behind the right "Berichte lesen".
+	{"/traeger/care-time-overruns", settings.ModuleTraegerUebersicht},
+
+	// Ferienbetreuung: holiday periods, their registrations and what one
+	// registration costs. The public registration link carries no session.
+	{"/traeger/holiday-periods", settings.ModuleFerienbetreuung},
+	{"/traeger/holiday-contributions", settings.ModuleFerienbetreuung},
+	{"/traeger/holiday-registrations", settings.ModuleFerienbetreuung},
+	{"/traeger/holiday-quotes", settings.ModuleFerienbetreuung},
+
+	// Verträge und Dokumente: care contracts with templates, signature,
+	// notices, import and corrections.
+	{"/traeger/contracts", settings.ModuleVertraege},
+	{"/traeger/contract-templates", settings.ModuleVertraege},
+	{"/traeger/contract-notices", settings.ModuleVertraege},
+	{"/traeger/contract-imports", settings.ModuleVertraege},
+	{"/traeger/contract-corrections", settings.ModuleVertraege},
+	{"/traeger/contract-child-links", settings.ModuleVertraege},
+	{"/traeger/contract-enrollments", settings.ModuleVertraege},
+	{"/traeger/contract-changes", settings.ModuleVertraege},
+
+	// Elternbeiträge und Abrechnung: billing runs, invoices and letters,
+	// monthly contributions, SEPA and the finance export.
+	{"/traeger/billing-runs", settings.ModuleElternbeitraege},
+	{"/traeger/billing-run-due-dates", settings.ModuleElternbeitraege},
+	{"/traeger/billing-document-kinds", settings.ModuleElternbeitraege},
+	{"/traeger/billing-families", settings.ModuleElternbeitraege},
+	{"/traeger/billing-terms", settings.ModuleElternbeitraege},
+	{"/traeger/number-ranges", settings.ModuleElternbeitraege},
+	{"/traeger/family-billing", settings.ModuleElternbeitraege},
+	{"/traeger/family-children", settings.ModuleElternbeitraege},
+	{"/traeger/cost-bearers", settings.ModuleElternbeitraege},
+	// The rules of the holiday contribution stand on the billing defaults
+	// behind the right "Abrechnung", beside the number ranges.
+	{"/traeger/contribution-rules", settings.ModuleElternbeitraege},
+	{"/traeger/care-billing-runs", settings.ModuleElternbeitraege},
+	{"/traeger/care-tariffs", settings.ModuleElternbeitraege},
+	{"/traeger/care-meal-tariffs", settings.ModuleElternbeitraege},
+	{"/traeger/care-rules", settings.ModuleElternbeitraege},
+	{"/traeger/care-evidences", settings.ModuleElternbeitraege},
+	{"/traeger/care-cost-shares", settings.ModuleElternbeitraege},
+	{"/traeger/care-notice-runs", settings.ModuleElternbeitraege},
+	{"/traeger/sepa-creditor", settings.ModuleElternbeitraege},
+	{"/traeger/sepa-mandates", settings.ModuleElternbeitraege},
+	{"/traeger/sepa-debits", settings.ModuleElternbeitraege},
+	{"/traeger/finance-exports", settings.ModuleElternbeitraege},
+	{"/traeger/finance-handovers", settings.ModuleElternbeitraege},
+	{"/traeger/export-recipient", settings.ModuleElternbeitraege},
+
 	{"/api/iot", settings.ModuleNFCAnwesenheit},
 	{"/api/iot/staff-clock", settings.ModuleZeiterfassung},
 
@@ -122,6 +189,8 @@ var moduleRouteRules = []moduleRouteRule{
 	// Staff and parent surveys (#4781); see docs/reference/modulschalter.md.
 	{"/api/surveys", moduleRouteBasis},
 	{"/api/timetable", moduleRouteBasis},
+	// Changed opening hours (#7654) belong to the closing days of the timetable page.
+	{"/api/opening-changes", moduleRouteBasis},
 	// The notices of changed school closing days (ADR 0196) belong to the
 	// closing days of the timetable page.
 	{"/api/holiday-closure-notices", moduleRouteBasis},
@@ -159,8 +228,9 @@ var moduleRouteRules = []moduleRouteRule{
 	{"/api/enrollment/legal", settings.ModuleOnlineAnmeldung},
 	{"/api/enrollment/requests", settings.ModuleOnlineAnmeldung},
 	// The contracts the Träger made from the application children, read on
-	// the enrollment detail (#4788). Not Verträge und Dokumente: that switch
-	// is not offered yet, and the Träger portal concludes contracts without it.
+	// the enrollment detail (#4788). Not Verträge und Dokumente: that module
+	// counts for the Träger, and the school that received the application
+	// reads what became of it whichever of the Träger's schools books it.
 	{"/api/care-contracts", settings.ModuleOnlineAnmeldung},
 
 	// Dienstplan.
@@ -237,6 +307,12 @@ var moduleRoutesLockedElsewhere = map[string]string{
 	"/api/enrollment/legal":                   "Anmeldung: Rechtstexte der Schule, keine Personendaten",
 	"/public/enrollment-legal-documents":      "Anmeldung: Rechtstexte der Schule, keine Personendaten",
 	"/public/enrollment-form-legal-documents": "Anmeldung: Rechtstexte der Schule, keine Personendaten",
+	// The public holiday registration carries no session: its link resolves
+	// the Träger, and holidayTraegerDirectory closes the link of a Träger
+	// none of whose schools books Ferienbetreuung (#6052). The quote of the
+	// form and the PDFs of the period (#5199) resolve the same link.
+	"/traeger/holiday-registrations": "#6052 Ferienanmeldung: der Link schließt mit dem Modul",
+	"/traeger/holiday-quotes":        "#6052 Ferienanmeldung: der Link schließt mit dem Modul",
 }
 
 // moduleRouteFor returns the most specific rule covering a request path or

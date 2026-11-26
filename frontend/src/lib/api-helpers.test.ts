@@ -1,14 +1,13 @@
+import { readBackendJson, sendBackend } from "./backend-client.server";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { handleDomainApiError } from "./api-helpers";
 import { ApiError, errorClassCode, problemTitle } from "./api-error";
 import {
   handleApiError,
-  apiGet,
-  apiPost,
   bffError,
   problemResponse,
   ApiResponseError as ServerApiResponseError,
-} from "./api-helpers.server";
+} from "./api-response-error.server";
 import { suppressConsole } from "~/test/helpers/console";
 
 const { mockNextHeaders } = vi.hoisted(() => ({
@@ -39,11 +38,11 @@ describe("ApiResponseError", () => {
     );
 
     expect(error.status).toBe(403);
-    expect(error.body<{ detail: string }>()).toEqual({
+    expect(error.body()).toEqual({
       detail: "feature_disabled",
       code: "feedback.disabled",
     });
-    expect(error.body<{ detail: string }>()).toEqual({
+    expect(error.body()).toEqual({
       detail: "feature_disabled",
       code: "feedback.disabled",
     });
@@ -195,76 +194,90 @@ describe("handleApiError", () => {
     expect(body).not.toContain("db.internal");
   });
 
-  it.each(["backend", "local"])(
-    "sanitizes nested import diagnostics through the %s error path",
-    async (source) => {
-      const result = {
-        total_rows: 3,
-        created_count: 1,
-        updated_count: 1,
-        error_count: 1,
-        errors: [
-          {
-            row_number: 4,
-            data: { first_name: "Ada" },
-            errors: [
-              {
-                field: "creation",
-                code: "creation_failed",
-                severity: "error",
-                message: "database db.internal: constraint failed",
-              },
-              {
-                field: "last_name",
-                code: "required",
-                severity: "error",
-                message: "Bitte gib den Nachnamen ein.",
-              },
-            ],
+  it("sanitizes nested import diagnostics on a registered partial import", async () => {
+    const result = {
+      started_at: "2026-01-01T09:00:00Z",
+      completed_at: "2026-01-01T09:01:00Z",
+      total_rows: 3,
+      created_count: 1,
+      updated_count: 1,
+      skipped_count: 0,
+      warning_count: 0,
+      bulk_actions: null,
+      dry_run: false,
+      error_count: 1,
+      errors: [
+        {
+          row_number: 4,
+          timestamp: "2026-01-01T09:00:30Z",
+          data: {
+            first_name: "Ada",
+            last_name: "",
+            school_class: "1a",
+            bus_permission: false,
+            privacy_accepted: true,
+            data_retention_days: 365,
           },
-        ],
-      };
-      const details = {
-        result,
-        rejection: {
-          code: "students.child_quota_exceeded",
-          details: { limit: 5 },
+          errors: [
+            {
+              field: "creation",
+              code: "creation_failed",
+              severity: "error",
+              message: "database db.internal: constraint failed",
+            },
+            {
+              field: "last_name",
+              code: "required",
+              severity: "error",
+              message: "Bitte gib den Nachnamen ein.",
+            },
+          ],
         },
-      };
-      const code = "import.import_batch_failed";
-      const response =
-        source === "backend"
-          ? handleApiError(backendError(500, { code, details }))
-          : problemResponse(500, "write failed", { code, details });
-      const body = await response.text();
-      expect(JSON.parse(body)).toMatchObject({
-        code,
-        details: {
-          ...details,
-          result: {
-            ...result,
-            errors: [
-              {
-                ...result.errors[0],
-                errors: [
-                  {
-                    ...result.errors[0]!.errors[0],
-                    message:
-                      "Die Zeile konnte nicht gespeichert werden. Bitte versuche es erneut.",
-                  },
-                  result.errors[0]!.errors[1],
-                ],
-              },
-            ],
-          },
+      ],
+    };
+    const details = {
+      result,
+      rejection: {
+        code: "students.child_quota_exceeded",
+        details: { limit: 5 },
+      },
+    };
+    const code = "import.import_batch_failed";
+    const error = backendError(500, { code, details });
+    error.contractRouteKey = "POST /api/import/students/import";
+    const response = handleApiError(error);
+    const body = await response.text();
+    expect(JSON.parse(body)).toMatchObject({
+      code,
+      details: {
+        result: {
+          ...result,
+          errors: [
+            {
+              ...result.errors[0],
+              errors: [
+                {
+                  ...result.errors[0]!.errors[0],
+                  message:
+                    "Die Zeile konnte nicht gespeichert werden. Bitte versuche es erneut.",
+                },
+                result.errors[0]!.errors[1],
+              ],
+            },
+          ],
         },
-      });
-      expect(body).not.toContain("db.internal");
-      expect(details.result.errors[0]!.errors[0]!.message).toContain(
-        "db.internal",
-      );
-    },
-  );
+      },
+    });
+    expect(body).not.toContain("db.internal");
+    expect(JSON.parse(body).details).not.toHaveProperty("rejection");
+    expect(details.result.errors[0]!.errors[0]!.message).toContain(
+      "db.internal",
+    );
+    const local = problemResponse(500, "write failed", { code, details });
+    const localBody = await local.json();
+    expect(localBody.code).toBe(code);
+    expect(localBody).not.toHaveProperty("details");
+  });
 
   it("replaces an incomplete JSON backend error with a class envelope", async () => {
     const response = handleApiError(
@@ -552,30 +565,22 @@ describe("handleApiError", () => {
     });
   });
 
-  // The companion-plan 409 of the student PUT carries its confirmable
-  // conflicts as a TOP-LEVEL `conflicts` array, not under `details`. The
-  // browser's CompanionPlanConflictError parses exactly that field to build
-  // the confirmation it re-sends — dropping it here leaves the confirmation
-  // empty and "Ergänzen und speichern" loops on the same 409 forever.
-  it("forwards the top-level conflicts array of a companion-plan 409", async () => {
+  it("forwards the contracted details of a companion-plan 409", async () => {
+    const conflicts = [{ student_id: "42", weekdays: ["mon", "tue"] }];
     const response = handleApiError(
       backendError(409, {
         status: 409,
         detail: "companion departure plan does not allow these days",
         code: "students.companion_plan_conflict",
-        conflicts: [{ student_id: 42, weekdays: ["mon", "tue"] }],
+        details: { conflicts },
       }),
     );
-    const body = (await response.json()) as {
-      code?: string;
-      conflicts?: unknown[];
-    };
 
     expect(response.status).toBe(409);
-    expect(body.code).toBe("students.companion_plan_conflict");
-    expect(body.conflicts).toEqual([
-      { student_id: 42, weekdays: ["mon", "tue"] },
-    ]);
+    expect(await response.json()).toMatchObject({
+      code: "students.companion_plan_conflict",
+      details: { conflicts },
+    });
   });
 });
 
@@ -647,7 +652,7 @@ type MockedFetch = ReturnType<typeof vi.fn<typeof fetch>>;
 
 // ===== API FUNCTION TESTS (SERVER-SIDE) =====
 
-describe("apiGet (server-side)", () => {
+describe("Backend transport", () => {
   let originalWindow: typeof globalThis.window;
   let originalFetch: typeof fetch;
   let mockFetch: MockedFetch;
@@ -701,8 +706,9 @@ describe("apiGet (server-side)", () => {
 
       let thrown: unknown;
       try {
-        if (method === "GET") await apiGet(endpoint, "token");
-        else await apiPost(endpoint, "token", requestBody);
+        await readBackendJson(
+          await sendBackend(endpoint, "token", { method, json: requestBody }),
+        );
       } catch (error) {
         thrown = error;
       }
@@ -732,7 +738,7 @@ describe("apiGet (server-side)", () => {
       json: () => Promise.resolve({ result: "ok" }),
     } as Response);
 
-    await apiGet<{ result: string }>("/api/groups", "token");
+    await sendBackend("/api/groups", "token", { method: "GET" });
 
     expect(mockFetch).toHaveBeenCalledWith(
       "http://backend.test/api/groups",
@@ -753,7 +759,8 @@ describe("apiGet (server-side)", () => {
       json: () => Promise.resolve({ result: "ok" }),
     } as Response);
 
-    await apiGet<{ result: string }>("/api/test", "token", {
+    await sendBackend("/api/test", "token", {
+      method: "GET",
       signal: controller.signal,
     });
     const sent = mockFetch.mock.calls[0]?.[1]?.signal as AbortSignal;
@@ -772,7 +779,7 @@ describe("apiGet (server-side)", () => {
       json: () => Promise.resolve({ result: "ok" }),
     } as Response);
 
-    await apiGet<{ result: string }>("/api/test", "token");
+    await sendBackend("/api/test", "token", { method: "GET" });
 
     expect(mockFetch).toHaveBeenCalledWith(
       "http://backend.test/api/test",
@@ -796,9 +803,10 @@ describe("apiGet (server-side)", () => {
       JSON.stringify({ tenant_id: 101, scope: "" }),
     ).toString("base64url");
 
-    await apiGet<{ result: string }>(
+    await sendBackend(
       "/api/students/1234567890123456?verbose=true",
       `header.${tokenPayload}.signature`,
+      { method: "GET" },
     );
 
     expect(mockRecordBackendProxyMetric).toHaveBeenCalledWith({
@@ -819,7 +827,7 @@ describe("apiGet (server-side)", () => {
       json: () => Promise.resolve({ result: "ok" }),
     } as Response);
 
-    await apiGet<{ result: string }>("/api/test", "token");
+    await sendBackend("/api/test", "token", { method: "GET" });
 
     expect(mockFetch).toHaveBeenCalledWith(
       "http://backend.test/api/test",

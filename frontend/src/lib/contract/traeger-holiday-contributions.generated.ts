@@ -119,6 +119,7 @@ export interface HolidayContributionResponse {
   sibling_debtor_number?: string;
   siblings_invoiced?: boolean;
   correction_needed?: boolean;
+  fingerprint?: string;
 }
 
 export const HolidayContributionResponseSchema: z.ZodType<HolidayContributionResponse, unknown> = object<HolidayContributionResponse>({
@@ -135,6 +136,7 @@ export const HolidayContributionResponseSchema: z.ZodType<HolidayContributionRes
   sibling_debtor_number: optional(str),
   siblings_invoiced: optional(bool),
   correction_needed: optional(bool),
+  fingerprint: optional(str),
 });
 
 /** Go: parentbilling.HolidayChildDebtorNumber */
@@ -156,11 +158,66 @@ export const HolidayChildDebtorNumberSchema: z.ZodType<HolidayChildDebtorNumber,
 export interface HolidayFamilyDebtorNumber {
   debtor_number: string;
   children?: HolidayChildDebtorNumber[];
+  version?: string;
 }
 
 export const HolidayFamilyDebtorNumberSchema: z.ZodType<HolidayFamilyDebtorNumber, unknown> = object<HolidayFamilyDebtorNumber>({
   debtor_number: str,
   children: optional(arr(HolidayChildDebtorNumberSchema)),
+  version: optional(str),
+});
+
+/** Go: parentbilling.HolidayPayer */
+export interface HolidayPayer {
+  kind: string;
+  cost_bearer_id: string | null;
+  cost_bearer_name: string;
+}
+
+export const HolidayPayerSchema: z.ZodType<HolidayPayer, unknown> = object<HolidayPayer>({
+  kind: str,
+  cost_bearer_id: nullable(int64String),
+  cost_bearer_name: str,
+});
+
+/** Go: parentbillinghttp.HolidayPayerChildEffectResponse */
+export interface HolidayPayerChildEffectResponse {
+  child_id: string;
+  position: number;
+  family_before_cents: number;
+  family_after_cents: number;
+  cost_bearer_before_cents: number;
+  cost_bearer_after_cents: number;
+}
+
+export const HolidayPayerChildEffectResponseSchema: z.ZodType<HolidayPayerChildEffectResponse, unknown> = object<HolidayPayerChildEffectResponse>({
+  child_id: int64String,
+  position: safeInt,
+  family_before_cents: safeInt,
+  family_after_cents: safeInt,
+  cost_bearer_before_cents: safeInt,
+  cost_bearer_after_cents: safeInt,
+});
+
+/** Go: parentbillinghttp.HolidayPayerPreviewResponse */
+export interface HolidayPayerPreviewResponse {
+  current: HolidayPayer;
+  chosen: HolidayPayer;
+  changed: boolean;
+  children: HolidayPayerChildEffectResponse[] | null;
+  exemption_available: boolean;
+  invoiced: boolean;
+  fingerprint: string;
+}
+
+export const HolidayPayerPreviewResponseSchema: z.ZodType<HolidayPayerPreviewResponse, unknown> = object<HolidayPayerPreviewResponse>({
+  current: HolidayPayerSchema,
+  chosen: HolidayPayerSchema,
+  changed: bool,
+  children: nullable(arr(HolidayPayerChildEffectResponseSchema)),
+  exemption_available: bool,
+  invoiced: bool,
+  fingerprint: str,
 });
 
 /** Go: parentbilling.HolidaySiblingGroup */
@@ -200,6 +257,8 @@ export interface HolidayConfirmRequest {
   debtor_number?: string;
   family_debtor_number?: string;
   child_debtor_numbers?: HolidayChildDebtorNumberInput[] | null;
+  expected_fingerprint?: string;
+  expected_child_debtor_numbers_version?: string;
 }
 
 /** Go: parentbillinghttp.HolidayConfirmationResponse */
@@ -223,6 +282,7 @@ export interface HolidaySiblingMergeRequest {
 /** Go: parentbillinghttp.HolidayChildDebtorNumbersRequest */
 export interface HolidayChildDebtorNumbersRequest {
   children?: HolidayChildDebtorNumberInput[] | null;
+  expected_version?: string;
 }
 
 /** Go: parentbilling.HolidayBookingChoice */
@@ -255,6 +315,14 @@ export const HolidayDebtorNumberSchema: z.ZodType<HolidayDebtorNumber, unknown> 
   id: int64String,
   debtor_number: str,
 });
+
+/** Go: parentbillinghttp.HolidayPayerRequest */
+export interface HolidayPayerRequest {
+  benefits_exemption?: boolean;
+  cost_bearer_id?: string;
+  reason?: string;
+  expected_fingerprint?: string;
+}
 
 /** Go: parentbillinghttp.HolidayCapacityRequest */
 export interface HolidayCapacityRequest {
@@ -305,6 +373,16 @@ export const routes = {
     portals: ["org"],
     response: success(HolidayFamilyDebtorNumberSchema),
   },
+  "GET /traeger/holiday-contributions/{periodId}/registrations/{registrationId}/payer": {
+    method: "GET",
+    pattern: "/traeger/holiday-contributions/{periodId}/registrations/{registrationId}/payer",
+    portals: ["org"],
+    query: {
+      "benefits_exemption": { kind: "bool" },
+      "cost_bearer_id": { kind: "id" },
+    },
+    response: success(HolidayPayerPreviewResponseSchema),
+  },
   "GET /traeger/holiday-contributions/{periodId}/sibling-groups": {
     method: "GET",
     pattern: "/traeger/holiday-contributions/{periodId}/sibling-groups",
@@ -351,6 +429,13 @@ export const routes = {
     portals: ["org"],
     request: requestBody<HolidayDebtorNumberRequest>(),
     response: success(HolidayDebtorNumberSchema),
+  },
+  "PUT /traeger/holiday-contributions/{periodId}/registrations/{registrationId}/payer": {
+    method: "PUT",
+    pattern: "/traeger/holiday-contributions/{periodId}/registrations/{registrationId}/payer",
+    portals: ["org"],
+    request: requestBody<HolidayPayerRequest>(),
+    response: success(HolidayContributionResponseSchema),
   },
   "PUT /traeger/holiday-contributions/{periodId}/weeks/{weekId}/capacity": {
     method: "PUT",

@@ -27,6 +27,7 @@ import (
 // it is sent.
 type HolidayResource struct {
 	contributions capability.HolidayContributions
+	payers        capability.HolidayPayerChanges
 	places        HolidayPlaceChanges
 	requireManage common.Middleware
 }
@@ -43,12 +44,13 @@ type HolidayPlaceChanges interface {
 
 // NewHolidayResource builds the resource. requireManage admits only a
 // session with the Träger right "Anmeldung verwalten", the right that
-// confirms a registration and merges siblings (#5628).
-func NewHolidayResource(contributions capability.HolidayContributions, places HolidayPlaceChanges, requireManage common.Middleware) *HolidayResource {
-	if contributions == nil || places == nil || requireManage == nil {
-		panic("parent billing http: the holiday contributions, the place changes and the right check are required")
+// confirms a registration, changes its payer (#8158) and merges siblings
+// (#5628).
+func NewHolidayResource(contributions capability.HolidayContributions, payers capability.HolidayPayerChanges, places HolidayPlaceChanges, requireManage common.Middleware) *HolidayResource {
+	if contributions == nil || payers == nil || places == nil || requireManage == nil {
+		panic("parent billing http: the holiday contributions, the payer changes, the place changes and the right check are required")
 	}
-	return &HolidayResource{contributions: contributions, places: places, requireManage: requireManage}
+	return &HolidayResource{contributions: contributions, payers: payers, places: places, requireManage: requireManage}
 }
 
 // TraegerRouter returns the routes mounted at /traeger/holiday-contributions.
@@ -66,6 +68,8 @@ func (rs *HolidayResource) TraegerRouter(protectedTraegerRoutes func(chi.Router,
 		manage.Put("/{periodId}/weeks/{weekId}/capacity", rs.setWeekCapacity)
 		manage.Put("/{periodId}/registrations/{registrationId}/debtor-number", rs.changeDebtorNumber)
 		manage.Get("/{periodId}/registrations/{registrationId}/family-debtor-number", rs.familyDebtorNumber)
+		manage.Get("/{periodId}/registrations/{registrationId}/payer", rs.payerPreview)
+		manage.Put("/{periodId}/registrations/{registrationId}/payer", rs.changePayer)
 		manage.Put("/{periodId}/registrations/{registrationId}/child-debtor-numbers", rs.setChildDebtorNumbers)
 		manage.Get("/{periodId}/sibling-groups", rs.listSiblingGroups)
 		manage.Post("/{periodId}/sibling-groups", rs.mergeSiblings)
@@ -91,13 +95,18 @@ func (rs *HolidayResource) QuoteRouter() chi.Router {
 // Träger (#5621). family_debtor_number says which number applies when it
 // differs from the number the family has (#6692): "keep" or "replace".
 // child_debtor_numbers are the numbers of the children when the Träger keeps
-// one per child (#7007). An empty body confirms without any of them.
+// one per child (#7007). expected_fingerprint is the fingerprint of the
+// preview the Büro read, expected_child_debtor_numbers_version the version of
+// the children's numbers it read when it sends child_debtor_numbers (ADR
+// 0311); a changed or missing one is refused.
 type HolidayConfirmRequest struct {
-	BenefitsExemption  bool                                       `json:"benefits_exemption"`
-	CostBearerID       ident.ID                                   `json:"cost_bearer_id"`
-	DebtorNumber       string                                     `json:"debtor_number"`
-	FamilyDebtorNumber string                                     `json:"family_debtor_number"`
-	ChildDebtorNumbers []capability.HolidayChildDebtorNumberInput `json:"child_debtor_numbers"`
+	BenefitsExemption                 bool                                       `json:"benefits_exemption"`
+	CostBearerID                      ident.ID                                   `json:"cost_bearer_id"`
+	DebtorNumber                      string                                     `json:"debtor_number"`
+	FamilyDebtorNumber                string                                     `json:"family_debtor_number"`
+	ChildDebtorNumbers                []capability.HolidayChildDebtorNumberInput `json:"child_debtor_numbers"`
+	ExpectedFingerprint               string                                     `json:"expected_fingerprint"`
+	ExpectedChildDebtorNumbersVersion string                                     `json:"expected_child_debtor_numbers_version"`
 }
 
 // Bind checks the choice for the family; the owners check the number.
@@ -146,9 +155,11 @@ func (rs *HolidayResource) familyDebtorNumber(w http.ResponseWriter, r *http.Req
 // HolidayChildDebtorNumbersRequest is the body of PUT
 // /traeger/holiday-contributions/{periodId}/registrations/{registrationId}/child-debtor-numbers
 // (#7007): the numbers of the children of a confirmed registration; an
-// empty one removes it.
+// empty one removes it. expected_version is the version of the numbers the
+// Büro read (ADR 0311); a changed or missing one is refused.
 type HolidayChildDebtorNumbersRequest struct {
-	Children []capability.HolidayChildDebtorNumberInput `json:"children"`
+	Children        []capability.HolidayChildDebtorNumberInput `json:"children"`
+	ExpectedVersion string                                     `json:"expected_version"`
 }
 
 // Bind needs the list; the owners check the children and the numbers.
@@ -172,7 +183,7 @@ func (rs *HolidayResource) setChildDebtorNumbers(w http.ResponseWriter, r *http.
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
-	numbers, err := rs.contributions.SetHolidayChildDebtorNumbers(r.Context(), reviewer, periodID, registrationID, req.Children)
+	numbers, err := rs.contributions.SetHolidayChildDebtorNumbers(r.Context(), reviewer, periodID, registrationID, req.Children, req.ExpectedVersion)
 	if err != nil {
 		tenant.MarkRollback(r.Context())
 		renderHolidayError(w, r, err)
@@ -282,7 +293,8 @@ func (rs *HolidayResource) confirm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	confirmation, err := rs.contributions.ConfirmHolidayRegistration(r.Context(), reviewer, periodID, registrationID,
-		req.BenefitsExemption, req.CostBearerID.Int64(), req.DebtorNumber, req.FamilyDebtorNumber, req.ChildDebtorNumbers)
+		req.BenefitsExemption, req.CostBearerID.Int64(), req.DebtorNumber, req.FamilyDebtorNumber, req.ChildDebtorNumbers,
+		capability.HolidayConfirmationRead{Fingerprint: req.ExpectedFingerprint, ChildNumbersVersion: req.ExpectedChildDebtorNumbersVersion})
 	if err != nil {
 		tenant.MarkRollback(r.Context())
 		renderHolidayError(w, r, err)
@@ -501,11 +513,11 @@ func renderHolidayError(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
 	case errors.As(err, &dayLimit):
 		common.RenderError(w, r, common.ErrorInvalidRequestWithDetails(err, common.CodeEnrollmentHolidayChildDayLimit,
-			map[string]any{"limit": dayLimit.Limit, "days": dayLimit.Days, "elsewhere": dayLimit.Elsewhere, "child": 1}))
+			common.HolidayChildDayLimitDetails{Limit: dayLimit.Limit, Days: dayLimit.Days, Elsewhere: dayLimit.Elsewhere, Child: 1}))
 	case errors.As(err, &noCareDay):
-		common.RenderError(w, r, common.ErrorConflictWithDetails(err, common.CodeEnrollmentHolidayWeekNoCareDay, map[string]any{
-			"week": noCareDay.Week, "week_id": noCareDay.WeekID, "date": noCareDay.Date.Format("02.01.2006"),
-			"iso_date": noCareDay.Date.String(), "kind": noCareDay.Kind, "name": noCareDay.Name,
+		common.RenderError(w, r, common.ErrorConflictWithDetails(err, common.CodeEnrollmentHolidayWeekNoCareDay, common.HolidayWeekNoCareDetails{
+			Week: noCareDay.Week, WeekID: ident.ID(noCareDay.WeekID), Date: noCareDay.Date.Format("02.01.2006"),
+			ISODate: noCareDay.Date, Kind: noCareDay.Kind, Name: noCareDay.Name,
 		}))
 	case errors.Is(err, capability.ErrInvalidHolidayPlaces):
 		common.RenderError(w, r, common.ErrorInvalidRequestWithCode(err, common.CodeEnrollmentHolidayRegistrationInvalid))

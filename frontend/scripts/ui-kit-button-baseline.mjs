@@ -16,7 +16,7 @@ export const buttonRatchetAllowlist = [
   {
     rule: "no-hand-rolled-button",
     file: "src/components/ui/segmented-control.tsx",
-    lines: [155, 201, 222],
+    lines: [157, 203, 228],
     reason: "SegmentedControl: Wertauswahl, kein Knopf",
   },
   {
@@ -76,13 +76,13 @@ export const buttonRatchetAllowlist = [
   {
     rule: "no-hand-rolled-button",
     file: "src/components/files/files-page.tsx",
-    lines: [160],
+    lines: [201],
     reason: "Ordner-Navigation (aria-current), Navigationszeile",
   },
   {
     rule: "no-hand-rolled-button",
     file: "src/components/help/help-view.tsx",
-    lines: [1060],
+    lines: [1061],
     reason: "Artikel-Navigation der Hilfe (aria-current), Navigationszeile",
   },
   {
@@ -93,23 +93,17 @@ export const buttonRatchetAllowlist = [
   },
   {
     rule: "no-button-override",
-    file: "src/app/[tenant]/(protected)/time-tracking/page.tsx",
-    lines: [839, 876, 982, 1170],
+    file: "src/app/[tenant]/(protected)/time-tracking/own-clock.tsx",
+    lines: [713, 750, 878, 1076],
     reason:
       "Pausen-Stepper −/+ und Stempelknöpfe Abwesenheit/Ausstempeln der Zeiterfassung (#5529: nicht angleichen)",
   },
   {
     rule: "no-button-override",
     file: "src/components/parent/calendar/parent-calendar-page.tsx",
-    lines: [593, 869],
+    lines: [589, 865],
     reason:
       "Termin-Zeilen und Monats-Chips im Elternkalender, optisch Listeneinträge (#5529: nicht angleichen)",
-  },
-  {
-    rule: "no-hand-rolled-button",
-    file: "src/components/active-supervisions/spontaneous-activity-start.tsx",
-    lines: [294],
-    reason: "Startkachel mit Symbol, Titel und Beschreibung: Kachel",
   },
   {
     rule: "no-hand-rolled-button",
@@ -120,7 +114,7 @@ export const buttonRatchetAllowlist = [
   {
     rule: "no-hand-rolled-button",
     file: "src/components/students/care-schedule-manager.tsx",
-    lines: [1662],
+    lines: [1697],
     reason: "Wochentagskarte, öffnet den Editor: Kachel",
   },
   {
@@ -172,7 +166,7 @@ export const buttonRatchetAllowlist = [
   {
     rule: "no-hand-rolled-button",
     file: "src/components/students/care-schedule-manager.tsx",
-    lines: [1619],
+    lines: [1654],
     reason: "Statustag-Karte, öffnet das Entfernen: Kachel",
   },
   {

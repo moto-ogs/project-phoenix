@@ -46,7 +46,7 @@ const CONSENT_LABELS: Record<string, string> = {
   agb: "AGB der Schule",
   data_processing: "Datenschutzinformation erhalten",
   email_contact: "E-Mail-Kontakt",
-  photo: "Fotos bei Schulveranstaltungen",
+  photo: "Foto-Einwilligung",
   health_data: "Einwilligung Gesundheitsangaben",
 };
 

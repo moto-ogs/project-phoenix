@@ -6,7 +6,7 @@ import { ApiError } from "~/lib/api-error";
 import type { Survey, SurveyResults } from "~/lib/surveys-api";
 import { testClockDay } from "~/test/clock";
 
-import SurveyDetailPage from "./page";
+import SurveyDetailPage from "./page-content";
 
 const state = vi.hoisted(() => ({
   canManage: true,
@@ -63,6 +63,8 @@ vi.mock("~/lib/swr", () => ({
 function survey(patch: Partial<Survey> = {}): Survey {
   return {
     id: "21",
+    version: "2026-09-01T08:00:00Z",
+    fingerprint: "fp-21",
     title: "Elternzufriedenheit",
     intro: "Ihre Meinung hilft uns.",
     audience: "parents",
@@ -137,7 +139,7 @@ describe("Umfrage, Objektseite (#4781)", () => {
     expect(screen.getByRole("tab", { name: "Auswertung" })).toBeInTheDocument();
     expect(screen.queryByText(/Frage 1:/)).not.toBeInTheDocument();
     expect(
-      screen.queryByRole("tab", { name: "Antworten je Person" }),
+      screen.queryByRole("tab", { name: "Antworten pro Person" }),
     ).not.toBeInTheDocument();
   });
 
@@ -148,7 +150,7 @@ describe("Umfrage, Objektseite (#4781)", () => {
     renderPage();
 
     expect(
-      await screen.findByRole("tab", { name: "Antworten je Person" }),
+      await screen.findByRole("tab", { name: "Antworten pro Person" }),
     ).toBeInTheDocument();
   });
 
@@ -216,6 +218,7 @@ describe("Umfrage, Objektseite (#4781)", () => {
     expect(updateSurvey).toHaveBeenLastCalledWith(
       "21",
       expect.objectContaining({ title: "ALT" }),
+      "2026-09-01T08:00:00Z",
     );
 
     fireEvent.change(screen.getByLabelText("Titel"), {
@@ -227,6 +230,7 @@ describe("Umfrage, Objektseite (#4781)", () => {
     expect(updateSurvey).toHaveBeenLastCalledWith(
       "21",
       expect.objectContaining({ title: "NEU" }),
+      "2026-09-01T08:00:00Z",
     );
   });
 });

@@ -160,7 +160,9 @@ func TestStaffEmploymentRebasesTheAnchorOfLiveAssigneesOnly(t *testing.T) {
 
 	// A template edit stamps its anchor onto the live assignees only; School
 	// Membership answers which of them are live.
-	_, err = capability.UpdateWorkTimeModel(ctx, workforce.UpdateWorkTimeModel{ID: model.ID, WorkTimeModelFields: workforce.WorkTimeModelFields{
+	read, err := capability.FindWorkTimeModel(ctx, model.ID)
+	require.NoError(t, err)
+	_, err = capability.UpdateWorkTimeModel(ctx, workforce.UpdateWorkTimeModel{ID: model.ID, ExpectedVersion: workforce.WorkTimeModelVersion(read), WorkTimeModelFields: workforce.WorkTimeModelFields{
 		Name: "Rotation A/B", RotationLength: 2, RotationAnchorDate: "2026-09-07",
 	}})
 	require.NoError(t, err)

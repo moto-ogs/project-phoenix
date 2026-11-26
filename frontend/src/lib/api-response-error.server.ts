@@ -4,20 +4,19 @@ import { captureBffException } from "~/lib/sentry-bff.server";
 import {
   ApiError,
   errorClassCode,
+  isProblemRecord,
   problemBody,
   problemTitle,
   type ProblemBody,
 } from "./api-error";
 import { ERROR_CODES } from "./error-codes.generated";
 import { requestInstance } from "./request-id";
+import { partialResults } from "./contract/partial-results.generated";
 
 const logger = createLogger({ component: "ApiHelpers" });
 const registeredErrorCodes: ReadonlySet<string> = new Set(ERROR_CODES);
-
-type JsonBody = Record<string, unknown> | unknown[] | string | number | boolean;
-
 /**
- * Typed error thrown by serverFetchWithRetry for non-OK backend responses and
+ * Typed error thrown by the backend client for non-OK responses and
  * by the route wrappers for failures they detect themselves. Carries the HTTP
  * status and the raw body so callers branch on the status or the envelope's
  * code, never on the message.
@@ -29,9 +28,11 @@ export class ApiResponseError extends Error {
   readonly contentType: string | null;
   /** Headers arrived, but the response stream did not finish. */
   readonly bodyInterrupted: boolean;
+  /** The contract that read this refusal, for a route-specific PartialError. */
+  contractRouteKey?: string;
   // Memoized parse result — `null` means "not JSON". Lazy so callers that
   // only check status never pay the JSON.parse cost.
-  private parsedBody: JsonBody | null = null;
+  private parsedBody: unknown = null;
   private parseAttempted = false;
 
   constructor(
@@ -52,17 +53,17 @@ export class ApiResponseError extends Error {
     this.bodyInterrupted = options?.bodyInterrupted ?? false;
   }
 
-  /** Returns the parsed JSON body, or `null` if the body isn't valid JSON. */
-  body<T = unknown>(): T | null {
+  /** @rawProblemEnvelope Returns the parsed JSON body, or `null` if it isn't valid JSON. */
+  body(): unknown {
     if (!this.parseAttempted) {
       this.parseAttempted = true;
       try {
-        this.parsedBody = JSON.parse(this.bodyText) as JsonBody;
+        this.parsedBody = JSON.parse(this.bodyText);
       } catch {
         this.parsedBody = null;
       }
     }
-    return (this.parsedBody ?? null) as T | null;
+    return this.parsedBody;
   }
 }
 
@@ -156,19 +157,26 @@ export function problemResponse(
   const responseHeaders = new Headers(
     isRequest(requestOrHeaders) ? headers : (requestOrHeaders ?? headers),
   );
-  responseHeaders.set("Content-Type", "application/problem+json");
   const publicDetail = status >= 500 ? problemTitle(status) : detail;
-  return NextResponse.json(
-    problemBody(
-      status,
-      publicDetail,
-      publicProblemExtensions(status, extra, request),
-    ),
-    {
-      status,
-      headers: responseHeaders,
-    },
+  return sendProblemResponse(
+    status,
+    publicDetail,
+    publicProblemExtensions(status, extra, request),
+    responseHeaders,
   );
+}
+
+function sendProblemResponse(
+  status: number,
+  detail: string,
+  extra: ProblemResponseExtra,
+  headers: Headers,
+): NextResponse<ProblemBody> {
+  headers.set("Content-Type", "application/problem+json");
+  return NextResponse.json(problemBody(status, detail, extra), {
+    status,
+    headers,
+  });
 }
 
 function publicProblemExtensions(
@@ -179,16 +187,11 @@ function publicProblemExtensions(
   const instance = extra?.instance ?? requestInstance(request);
   if (status < 500) return { ...extra, instance };
 
-  // A 5xx can contain backend diagnostics in every extension, not only in
-  // `detail`. Keep its code and only explicitly allowed, sanitized details;
-  // the instance correlates the response with server logs.
+  // Local 5xx extensions can contain diagnostics just like the detail.
   const code =
     extra?.code && registeredErrorCodes.has(extra.code) ? extra.code : null;
   return {
     ...(code ? { code } : {}),
-    ...(code && CLIENT_DETAILS_SERVER_ERROR_CODES.has(code) && extra?.details
-      ? { details: safeImportDetails(extra.details) }
-      : {}),
     ...(instance ? { instance } : {}),
   };
 }
@@ -203,8 +206,9 @@ function isRequest(value: unknown): value is Request {
 }
 
 /**
- * Answers a failed API route with the error envelope. A backend failure is
- * forwarded unchanged; a frontend failure gets an envelope of its own.
+ * Answers a failed API route with Problem Details. Valid backend problems
+ * below 500 keep their fields and may gain a request ID. Invalid bodies,
+ * backend 5xx and frontend errors get a safe problem instead.
  * @param error Error object
  * @returns Response with the error envelope and status
  */
@@ -216,7 +220,7 @@ export function handleApiError(
     captureBffException(error.cause, request);
   }
   if (error instanceof ApiResponseError) {
-    const parsed = error.body<unknown>();
+    const parsed = error.body();
     const isEnvelope = isProblemEnvelope(parsed, error.status);
     logApiRouteError(
       error.status,
@@ -232,11 +236,17 @@ export function handleApiError(
       // diagnostics. The body is logged above and never forwarded: the
       // browser gets an envelope with the status title. A validated registry
       // code remains the error identity; free-text extensions stay server-side.
-      return problemResponse(
+      return sendProblemResponse(
         error.status,
         problemTitle(error.status),
-        safeProblemExtensions(parsed, error.status),
-        request,
+        {
+          ...safeProblemExtensions(
+            parsed,
+            error.status,
+            error.contractRouteKey,
+          ),
+          instance: requestInstance(request),
+        },
         headers,
       );
     }
@@ -307,11 +317,8 @@ function isProblemEnvelope(
   value: unknown,
   status: number,
 ): value is ProblemBody {
-  if (value === null || typeof value !== "object" || Array.isArray(value)) {
-    return false;
-  }
-
-  const body = value as Record<string, unknown>;
+  if (!isProblemRecord(value)) return false;
+  const body = value;
   const code = body.code;
   return (
     body.status === status &&
@@ -330,35 +337,57 @@ function isProblemEnvelope(
  * Keeps only a validated error identity when replacing a backend 5xx body.
  * Other extensions can contain diagnostics just like `detail`, so a generic
  * proxy cannot decide that they are safe to send to the browser; the codes
- * of CLIENT_DETAILS_SERVER_ERROR_CODES keep their sanitized `details`.
+ * of a registered partial import can keep their sanitized result.
  */
 export function safeProblemExtensions(
   value: unknown,
   status: number,
+  route?: string,
 ): Omit<Partial<ProblemBody>, "status" | "detail"> {
   if (!isProblemEnvelope(value, status)) return {};
-  const details = value.details;
   if (
-    CLIENT_DETAILS_SERVER_ERROR_CODES.has(value.code) &&
-    details !== null &&
-    typeof details === "object" &&
-    !Array.isArray(details)
+    value.code === "import.import_batch_failed" &&
+    route &&
+    Object.hasOwn(partialResults, route)
   ) {
-    return { code: value.code, details: safeImportDetails(details) };
+    const parsed = partialResults[
+      route as keyof typeof partialResults
+    ].safeParse(value.details);
+    if (parsed.success) {
+      const result = parsed.data.result;
+      return {
+        code: value.code,
+        details: {
+          result: {
+            ...result,
+            errors:
+              result.errors?.map((row) => ({
+                ...row,
+                errors:
+                  row.errors?.map((error) => {
+                    const message = Object.hasOwn(
+                      importDiagnosticMessages,
+                      error.code,
+                    )
+                      ? importDiagnosticMessages[error.code]
+                      : undefined;
+                    return message
+                      ? {
+                          field: error.field,
+                          code: error.code,
+                          severity: error.severity,
+                          message,
+                        }
+                      : error;
+                  }) ?? row.errors,
+              })) ?? result.errors,
+          },
+        },
+      };
+    }
   }
   return { code: value.code };
 }
-
-/**
- * Server-error codes whose `details` the backend writes for the person who
- * acted, not as diagnostics: an import whose later batch failed names the
- * rows it already saved (#3184), and the page shows them. Row diagnostics
- * are replaced, including those restored from older checkpoints. Every other 5xx
- * keeps only its code.
- */
-const CLIENT_DETAILS_SERVER_ERROR_CODES: ReadonlySet<string> = new Set([
-  "import.import_batch_failed",
-]);
 
 const importDiagnosticMessages: Readonly<Record<string, string>> = {
   opening_preflight_failed:
@@ -378,44 +407,6 @@ const importDiagnosticMessages: Readonly<Record<string, string>> = {
   duplicate_check_failed:
     "Die Zeile konnte nicht geprüft werden. Bitte versuche es erneut.",
 };
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
-
-/** Keep the saved outcome, but never expose database diagnostics from row failures. */
-function safeImportDetails(
-  details: Record<string, unknown>,
-): Record<string, unknown> {
-  const result = details.result;
-  if (!isRecord(result) || !Array.isArray(result.errors)) return details;
-  return {
-    ...details,
-    result: {
-      ...result,
-      errors: result.errors.map((row: unknown) => {
-        if (!isRecord(row) || !Array.isArray(row.errors)) return row;
-        return {
-          ...row,
-          errors: row.errors.map((error: unknown) => {
-            if (!isRecord(error) || typeof error.code !== "string")
-              return error;
-            const message = Object.hasOwn(importDiagnosticMessages, error.code)
-              ? importDiagnosticMessages[error.code]
-              : undefined;
-            if (!message) return error;
-            return {
-              field: error.field,
-              code: error.code,
-              severity: error.severity,
-              message,
-            };
-          }),
-        };
-      }),
-    },
-  };
-}
 
 function hasNonEmptyString(
   body: Record<string, unknown>,

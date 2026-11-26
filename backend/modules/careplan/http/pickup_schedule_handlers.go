@@ -169,7 +169,7 @@ func (rs *Resource) getStudentPickupSchedules(w http.ResponseWriter, r *http.Req
 	}
 
 	response := buildPickupDataResponse(data)
-	response.DepartureExceptions, err = rs.listDepartureExceptions(r.Context(), student.ID, from, to, hasRange)
+	response.DepartureExceptions, response.PickupPersons, err = rs.listDayPickups(r.Context(), student.ID, from, to, hasRange)
 	if err != nil {
 		renderError(w, r, common.ErrorInternalServer(err))
 		return
@@ -200,43 +200,6 @@ func pickupScheduleDateRange(r *http.Request) (calendar.Date, calendar.Date, boo
 		return calendar.Date(""), calendar.Date(""), false, errors.New("pickup schedule date range must span at most 32 days")
 	}
 	return from, to, true, nil
-}
-
-// buildPickupDataResponse converts service pickup data to API response
-func buildPickupDataResponse(data *careplan.StudentPickupData) PickupDataResponse {
-	response := PickupDataResponse{
-		Schedules:          make([]PickupScheduleResponse, 0, len(data.Schedules)),
-		EffectiveSchedules: make([]DatedPickupScheduleResponse, 0, len(data.EffectiveSchedules)),
-		Exceptions:         make([]PickupExceptionResponse, 0, len(data.Exceptions)),
-		Notes:              make([]PickupNoteResponse, 0, len(data.Notes)),
-	}
-
-	for _, s := range data.Schedules {
-		response.Schedules = append(response.Schedules, mapScheduleToResponse(s))
-	}
-	for _, e := range data.Exceptions {
-		response.Exceptions = append(response.Exceptions, mapExceptionToResponse(e))
-	}
-	for _, dated := range data.EffectiveSchedules {
-		var scheduleResponse *PickupScheduleResponse
-		if dated.Schedule != nil {
-			mapped := mapScheduleToResponse(dated.Schedule)
-			scheduleResponse = &mapped
-		}
-		var offeringResponse *PickupScheduleResponse
-		if dated.OfferingSchedule != nil {
-			mapped := mapScheduleToResponse(dated.OfferingSchedule)
-			offeringResponse = &mapped
-		}
-		response.EffectiveSchedules = append(response.EffectiveSchedules, DatedPickupScheduleResponse{
-			Date: dated.Date.String(), Schedule: scheduleResponse, OfferingSchedule: offeringResponse,
-		})
-	}
-	for _, n := range data.Notes {
-		response.Notes = append(response.Notes, mapNoteToResponse(n))
-	}
-
-	return response
 }
 
 // broadcastPickupScheduleChanged tells the affected school's open STAFF tabs
@@ -351,14 +314,11 @@ func (rs *Resource) updateStudentPickupSchedules(w http.ResponseWriter, r *http.
 		rs.broadcastPickupScheduleChanged(tenantID, student.ID)
 	})
 
-	// Fetch updated data
-	data, err := rs.PickupScheduleService.GetStudentPickupData(r.Context(), student.ID)
+	response, err := rs.pickupDataResponse(r.Context(), student.ID)
 	if err != nil {
 		renderError(w, r, common.ErrorInternalServer(err))
 		return
 	}
-
-	response := buildPickupDataResponse(data)
 	response.WeeklyPlanVersion = version
 
 	common.Respond(w, r, http.StatusOK, response, "Pickup schedules updated successfully")
@@ -789,10 +749,10 @@ func (rs *Resource) resetStudentPickupToOffering(w http.ResponseWriter, r *http.
 		rs.wakeChildGuardians(tenantID, student.ID)
 		rs.broadcastPickupScheduleChanged(tenantID, student.ID)
 	})
-	data, err := rs.PickupScheduleService.GetStudentPickupData(r.Context(), student.ID)
+	response, err := rs.pickupDataResponse(r.Context(), student.ID)
 	if err != nil {
 		renderError(w, r, common.ErrorInternalServer(err))
 		return
 	}
-	common.Respond(w, r, http.StatusOK, buildPickupDataResponse(data), "Pickup schedule reset to offering")
+	common.Respond(w, r, http.StatusOK, response, "Pickup schedule reset to offering")
 }

@@ -1,8 +1,8 @@
 /**
  * API client for the timetable feature.
  *
- * All calls go through Next.js proxy routes under `/api/timetable/*` which
- * inject the JWT server-side. The client mirrors the surface of the backend:
+ * Calls use the generated route keys through the tenant catalog proxy,
+ * which supplies the session token server-side. The client mirrors the surface of the backend:
  * - getWeek(from, to)            → GET    /instances?from=&to=
  * - start(id), complete(id),     → POST   /instances/{id}/{action}
  *   cancel(id), reinstate(id)
@@ -41,6 +41,7 @@ import type {
   EndTemplateBody,
   EndTemplateResult,
   EnrichedInstance,
+  InstanceStudentSummary,
   GapsResponse,
   DeviationHistoryResponse,
   GuardianNoticeInput,
@@ -79,6 +80,7 @@ import {
   mapMoveStaff,
   mapStaffPool,
   mapInstance,
+  mapInstanceStudent,
   mapGuardianNoticeReach,
   mapInstanceStatusResult,
   mapMaterializeResult,
@@ -90,6 +92,7 @@ import {
   mapCombinedOfferingCounts,
   mapOfferingSourceOptions,
   mapTemplates,
+  mapOfferingTemplates,
   mapWeeklyInstances,
 } from "./timetable-helpers";
 import {
@@ -245,12 +248,18 @@ class TimetableService {
       "GET /api/timetable/offering-sources/combined-counts",
       {
         query: {
-          ids: offeringIds.join(","),
+          ids: offeringIds,
           calendar_period_id: calendarPeriodId || undefined,
         },
       },
     );
     return mapCombinedOfferingCounts(raw);
+  }
+
+  async getOfferingTemplates() {
+    return mapOfferingTemplates(
+      await bffJson("tenant", "GET /api/timetable/templates"),
+    );
   }
 
   async getTemplates(periodId?: string | null): Promise<TemplatesResponse> {
@@ -512,16 +521,14 @@ class TimetableService {
   async checkConflicts(
     params: ConflictCheckParams,
   ): Promise<ConflictCheckResult> {
-    const list = (ids?: string[]) =>
-      ids && ids.length > 0 ? ids.join(",") : undefined;
     const raw = await bffJson("tenant", "GET /api/timetable/conflicts", {
       query: {
         date: params.date,
         start_time: params.startTime,
         end_time: params.endTime,
         room_id: params.roomId || undefined,
-        staff_ids: list(params.staffIds),
-        student_ids: list(params.studentIds),
+        staff_ids: params.staffIds,
+        student_ids: params.studentIds,
         exclude_instance_id: params.excludeInstanceId || undefined,
         exclude_activity_group_id: params.excludeActivityGroupId || undefined,
       },
@@ -931,6 +938,19 @@ class TimetableService {
       { params: { id: instanceId } },
     );
     return mapStaffPool(raw);
+  }
+
+  async getInstanceAttendance(
+    instanceId: string,
+  ): Promise<InstanceStudentSummary[]> {
+    const data = await bffJson(
+      "tenant",
+      "GET /api/timetable/instances/{id}/attendance",
+      {
+        params: { id: instanceId },
+      },
+    );
+    return (data.students ?? []).map(mapInstanceStudent);
   }
 
   /**

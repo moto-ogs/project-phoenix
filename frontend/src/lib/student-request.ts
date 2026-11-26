@@ -3,7 +3,6 @@
 
 import type { StudentGuardianPayload } from "~/lib/guardian-helpers";
 import type { ArrivalScheduleFormEntry } from "~/lib/arrival-schedule-helpers";
-import type { PickupScheduleRequest } from "~/lib/contract/students.generated";
 import type { StudentRequest } from "./contract/students.generated";
 import type { StudentUpdate } from "./student-helpers";
 import type { ConsentPairInput } from "./student-privacy-consent";
@@ -11,10 +10,10 @@ import { prepareStudentForBackend } from "./student-wire";
 
 /** A create also creates guardians and weekly schedules atomically. */
 export type StudentCreateBody = StudentUpdate &
-  ConsentPairInput & {
+  ConsentPairInput &
+  Pick<StudentRequest, "pickup_schedules"> & {
     guardians?: StudentGuardianPayload[];
     arrival_schedules?: ArrivalScheduleFormEntry[];
-    pickup_schedules?: PickupScheduleRequest[];
   };
 
 /**

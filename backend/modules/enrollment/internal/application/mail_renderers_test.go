@@ -444,11 +444,25 @@ func TestRenderersPassTheCareFacilityTermToTheHeader(t *testing.T) {
 		legacy, err := render(renderer, &outboxRow{Kind: name, Payload: payload})
 		require.NoError(t, err, name)
 		assert.Empty(t, contentOf(t, legacy)["CareFacilityTerm"], name)
+		assert.Empty(t, contentOf(t, legacy)["CareFacilityOwn"], name)
 
 		payload[enrollment.EnrollmentPayloadCareFacilityTerm] = "GTS"
 		mail, err := render(renderer, &outboxRow{Kind: name, Payload: payload})
 		require.NoError(t, err, name)
 		assert.Equal(t, "GTS", contentOf(t, mail)["CareFacilityTerm"], name)
+		assert.Equal(t, "Deine GTS", contentOf(t, mail)["CareFacilityOwn"], name)
+
+		// A school's own name carries its article (#8136); a payload queued
+		// before the article existed keeps "Deine".
+		payload[enrollment.EnrollmentPayloadCareFacilityTerm] = "Hort"
+		older, err := render(renderer, &outboxRow{Kind: name, Payload: payload})
+		require.NoError(t, err, name)
+		assert.Equal(t, "Deine Hort", contentOf(t, older)["CareFacilityOwn"], name)
+		payload[enrollment.EnrollmentPayloadCareFacilityArticle] = "der"
+		declined, err := render(renderer, &outboxRow{Kind: name, Payload: payload})
+		require.NoError(t, err, name)
+		assert.Equal(t, "Dein Hort", contentOf(t, declined)["CareFacilityOwn"], name)
+		delete(payload, enrollment.EnrollmentPayloadCareFacilityArticle)
 	}
 }
 

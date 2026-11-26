@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+
 	"github.com/moto-ogs/project-phoenix/demoprofile"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
@@ -164,7 +166,7 @@ func (n demoNeighbourSchool) seedChild(rt *Runtime, index int, groupID, phaseID,
 	}
 	raw, err := rt.Client.Post("/api/students", map[string]any{
 		"first_name": firstName, "last_name": lastName,
-		"school_class": fmt.Sprintf("%da", grade), "group_id": groupID,
+		"school_class": fmt.Sprintf("%da", grade), "group_id": ident.ID(groupID),
 		"birthday": birthday, "pickup_status": "Wird abgeholt",
 		"arrival_schedules": arrivals, "pickup_schedules": pickups,
 		"guardians": []map[string]any{{
@@ -185,10 +187,10 @@ func (n demoNeighbourSchool) seedChild(rt *Runtime, index int, groupID, phaseID,
 		"consent_flags": map[string]bool{"data_processing": true},
 		"children": []map[string]any{{
 			"first_name": firstName, "last_name": lastName, "date_of_birth": birthday,
-			"target_grade_level": grade, "offering_ids": []int64{offeringID},
+			"target_grade_level": grade, "offering_ids": []ident.ID{ident.ID(offeringID)},
 			"custom_data": seedEnrollmentChildAnswers(firstName, lastName),
 		}},
-		"reason": "Buchung für das laufende Schuljahr", "external_consent_confirmed": true, "phase_id": phaseID,
+		"reason": "Buchung für das laufende Schuljahr", "external_consent_confirmed": true, "phase_id": ident.ID(phaseID),
 	}, func(b map[string]any) ([]byte, error) {
 		return rt.Client.Post(fmt.Sprintf("/api/enrollment/phases/%d/manual-approved-enrollments", phaseID), b)
 	})

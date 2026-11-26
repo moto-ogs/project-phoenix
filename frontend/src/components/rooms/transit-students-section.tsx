@@ -1,5 +1,6 @@
 "use client";
 
+import { ParentAttentionList } from "~/components/students/parent-attention-badge";
 import { SECTION_LABEL_CLASS } from "~/components/ui/section-label";
 import { EmptyState } from "~/components/ui/empty-state";
 import { me as meKeys } from "~/lib/swr/me";
@@ -32,6 +33,7 @@ import { fetchStudents } from "~/lib/student-api";
 import type { Student } from "~/lib/student-helpers";
 import { ApiError, wireErrorCode } from "~/lib/api-error";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { SEARCH_STUDENTS_KEY_PREFIX } from "~/lib/swr/search-students-key";
 import type { Room } from "~/lib/room-helpers";
 import type { Staff } from "~/lib/usercontext-helpers";
@@ -117,6 +119,7 @@ export function TransitStudentsSection({
   const router = useTenantRouter();
   const { data: session } = useSession();
   const attendanceWebEnabled = useAttendanceWebEnabled();
+  const today = useBerlinToday();
   // Visibility never grants move rights: only administrators may target any
   // running module; staff remain limited to modules they supervise.
   const showAllTargets = canUseAllMoveTargets(session);
@@ -167,6 +170,7 @@ export function TransitStudentsSection({
   }>(roomKeys.transitStudents(dayStatus), () =>
     fetchStudents({
       locationState: "transit",
+      view: "slim",
       ...(dayStatus ? { dayStatus } : {}),
       pageSize: 200,
     }),
@@ -204,8 +208,8 @@ export function TransitStudentsSection({
     isLoading: roomsLoading,
     mutate: refreshTargetRooms,
   } = useSWRAuth<Room[]>(
-    canTargetOpenRooms ? roomsKeys.key() : null,
-    roomsKeys.fetcher,
+    canTargetOpenRooms ? roomsKeys.key({ openOn: today }) : null,
+    () => roomsKeys.fetcher({ openOn: today }),
   );
   // Ladefehler einer der fünf Listen: eine Meldung, „Wiederholen“ lädt alle.
   const loadError = useSwrLoadError(
@@ -567,77 +571,79 @@ export function TransitStudentsSection({
                   title="Aktuell keine Kinder unterwegs."
                 />
               ) : (
-                students.map((student) => {
-                  const studentId = student.id.toString();
-                  const checked = selectedIds.has(studentId);
-                  const fullName =
-                    `${student.first_name ?? ""} ${student.second_name ?? ""}`.trim() ||
-                    "Kind";
-                  return (
-                    <ChoiceTile
-                      as="div"
-                      key={student.id}
-                      selected={checked}
-                      className="gap-2"
-                    >
-                      {attendanceWebEnabled ? (
-                        <label
-                          htmlFor={`transit-select-${studentId}`}
-                          className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 text-left"
-                        >
-                          <Checkbox
-                            id={`transit-select-${studentId}`}
-                            checked={checked}
-                            aria-label={`${fullName} auswählen`}
-                            onChange={() => toggleSelected(studentId)}
-                          />
-                          <CompactStudentCard
-                            studentId={student.id}
-                            firstName={student.first_name}
-                            lastName={student.second_name}
-                            schoolClass={student.school_class}
-                            groupName={student.group_name ?? undefined}
-                            photoUrl={student.photo_url ?? null}
-                            chrome="plain"
-                          />
-                        </label>
-                      ) : (
-                        <div className="min-w-0 flex-1">
-                          <CompactStudentCard
-                            studentId={student.id}
-                            firstName={student.first_name}
-                            lastName={student.second_name}
-                            schoolClass={student.school_class}
-                            groupName={student.group_name ?? undefined}
-                            photoUrl={student.photo_url ?? null}
-                            chrome="plain"
-                          />
-                        </div>
-                      )}
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="compact"
-                        onClick={() =>
-                          router.push(
-                            `/students/${student.id}?from=${encodeURIComponent(
-                              fromReferrer,
-                            )}`,
-                          )
-                        }
-                        aria-label={`${fullName} Profil öffnen`}
-                        tooltip="Öffnet die Akte des Kindes."
-                        className="shrink-0"
+                <ParentAttentionList>
+                  {students.map((student) => {
+                    const studentId = student.id.toString();
+                    const checked = selectedIds.has(studentId);
+                    const fullName =
+                      `${student.first_name ?? ""} ${student.second_name ?? ""}`.trim() ||
+                      "Kind";
+                    return (
+                      <ChoiceTile
+                        as="div"
+                        key={student.id}
+                        selected={checked}
+                        className="gap-2"
                       >
-                        Profil
-                        <ExternalLink
-                          className="h-3.5 w-3.5"
-                          aria-hidden="true"
-                        />
-                      </Button>
-                    </ChoiceTile>
-                  );
-                })
+                        {attendanceWebEnabled ? (
+                          <label
+                            htmlFor={`transit-select-${studentId}`}
+                            className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 text-left"
+                          >
+                            <Checkbox
+                              id={`transit-select-${studentId}`}
+                              checked={checked}
+                              aria-label={`${fullName} auswählen`}
+                              onChange={() => toggleSelected(studentId)}
+                            />
+                            <CompactStudentCard
+                              studentId={student.id}
+                              firstName={student.first_name}
+                              lastName={student.second_name}
+                              schoolClass={student.school_class}
+                              groupName={student.group_name ?? undefined}
+                              photoUrl={student.photo_url ?? null}
+                              chrome="plain"
+                            />
+                          </label>
+                        ) : (
+                          <div className="min-w-0 flex-1">
+                            <CompactStudentCard
+                              studentId={student.id}
+                              firstName={student.first_name}
+                              lastName={student.second_name}
+                              schoolClass={student.school_class}
+                              groupName={student.group_name ?? undefined}
+                              photoUrl={student.photo_url ?? null}
+                              chrome="plain"
+                            />
+                          </div>
+                        )}
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="compact"
+                          onClick={() =>
+                            router.push(
+                              `/students/${student.id}?from=${encodeURIComponent(
+                                fromReferrer,
+                              )}`,
+                            )
+                          }
+                          aria-label={`${fullName} Profil öffnen`}
+                          tooltip="Öffnet die Akte des Kindes."
+                          className="shrink-0"
+                        >
+                          Profil
+                          <ExternalLink
+                            className="h-3.5 w-3.5"
+                            aria-hidden="true"
+                          />
+                        </Button>
+                      </ChoiceTile>
+                    );
+                  })}
+                </ParentAttentionList>
               )}
             </div>
           </>

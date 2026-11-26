@@ -10,7 +10,7 @@ import {
 } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "~/contexts/ToastContext";
-import { ApiError } from "~/lib/api-error";
+import { ApiError, apiErrorFromResponse } from "~/lib/api-error";
 import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
 import { catalogText } from "~/test/error-catalog-text";
 import type { TraegerMasterData } from "~/lib/traeger-api";
@@ -57,7 +57,7 @@ vi.mock("next-auth/react", () => ({
       user: {
         id: "A",
         scope: "org",
-        orgId: 7,
+        orgId: "7",
         email: "buero@traeger.example",
         permissions: session.permissions,
       },
@@ -66,7 +66,7 @@ vi.mock("next-auth/react", () => ({
   }),
 }));
 
-import TraegerVorlagePage from "./page";
+import TraegerVorlagePage from "./page-content";
 
 const STANDARD = {
   subject: "Rechnung {{rechnungsnummer}}: {{zeitraum}}",
@@ -114,6 +114,8 @@ const MASTER_DATA: TraegerMasterData = {
   contact: { name: "Petra Lindner", phone: "", email: "" },
   withdrawal: { phone: "", email: "" },
   logo: null,
+  contactVersion: "c-1",
+  withdrawalVersion: "w-1",
   bankAccounts: [],
 };
 
@@ -527,10 +529,16 @@ describe("TraegerVorlagePage", () => {
     const body = await screen.findByLabelText(/Brieftext/);
     fireEvent.change(body, { target: { value: "Hallo {{vorname}}" } });
     templatesApi.previewDocumentTemplate.mockRejectedValue(
-      new ApiError("refused", 400, {
-        code: "traeger.document_template_unknown_placeholder",
-        details: { placeholders: "vorname" },
-      }),
+      await apiErrorFromResponse(
+        Response.json(
+          {
+            code: "traeger.document_template_unknown_placeholder",
+            details: { placeholders: "vorname" },
+          },
+          { status: 400 },
+        ),
+        "refused",
+      ),
     );
     fireEvent.click(screen.getByRole("button", { name: "Vorschau zeigen" }));
     expect(

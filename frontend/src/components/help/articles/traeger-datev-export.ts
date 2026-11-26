@@ -43,7 +43,7 @@ export function traegerDatevExportTopic(): HelpTopic {
           "Unter `Kostenstellen (KOST1)` steht jede Schule mit zwei Zeilen. Wähle bei `Monatsbeiträge und Mensa` `Neue Kostenstelle`. Wähle den Tag bei `Gilt ab` und trage die `Kostenstelle` ein.",
           "Bucht dein Steuerbüro die Ferienbetreuung einer Schule getrennt? Dann trägst du bei `Ferienbetreuung` dieser Schule eine eigene Kostenstelle ein. Ohne sie bucht eine Ferienwoche auf die Kostenstelle der Schule. Daneben steht dann `wie Monatsbeiträge`.",
           "Eine Ferienwoche bucht auf die Schule, an der sie stattfindet. Hat diese Schule keine Kostenstelle, gilt `Ersatz für die Ferienbetreuung` unter `Alle Schulen`. Daneben steht dann `Ersatz-Kostenstelle`.",
-          "Eine `Zweite Kostenstelle (KOST2)` je Angebot trägst du nur ein, wenn dein Steuerbüro sie braucht.",
+          "Eine `Zweite Kostenstelle (KOST2)` pro Angebot trägst du nur ein, wenn dein Steuerbüro sie braucht.",
         ],
       },
       {
@@ -78,7 +78,7 @@ export function traegerDatevExportTopic(): HelpTopic {
       "Die DATEV-Datei und die Sollstellung zählen in derselben Reihe von Dateinummern.",
       "Eine Rechnung über 0 € steht nicht in der DATEV-Datei. Sie bewegt kein Geld.",
       "Eine Rechnung hält Erlöskonto und Kostenstellen beim Ausstellen fest. Änderst du später ein Konto, gilt das nur für neue Rechnungen. Ein Storno bucht auf dieselben Konten wie seine Rechnung.",
-      "Hat eine Rechnung Positionen auf verschiedenen Konten, steht sie mit einer Zeile je Konto in der DATEV-Datei. Ermäßigungen verteilen sich anteilig auf diese Zeilen.",
+      "Hat eine Rechnung Positionen auf verschiedenen Konten, steht sie mit einer Zeile pro Konto in der DATEV-Datei. Ermäßigungen verteilen sich anteilig auf diese Zeilen.",
       "Eine Kostenstelle gilt ab ihrem Tag bis zur nächsten. Maßgeblich ist der erste Tag der Leistung, also der Monat oder die Ferienwoche.",
     ],
     differences: [

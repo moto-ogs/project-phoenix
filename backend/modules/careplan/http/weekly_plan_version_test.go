@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"testing"
 	"time"
 
@@ -32,6 +33,22 @@ func weeklyPlanVersion(t *testing.T, tc *testContext, studentID int64) string {
 	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &body))
 	require.NotEmpty(t, body.Data.WeeklyPlanVersion, "the pickup read must carry the weekly plan token")
 	return body.Data.WeeklyPlanVersion
+}
+
+// classArrivalVersion reads the token of a class's times the way the class
+// editor does: from the class read (ADR 0311).
+func classArrivalVersion(t *testing.T, tc *testContext, schoolClass string) string {
+	t.Helper()
+	rr := authExec(t, tc, testutil.NewRequest("GET", "/class-arrival-times/"+url.PathEscape(schoolClass), nil), testutil.AdminTestClaims(1), []string{"users:read"})
+	require.Equal(t, http.StatusOK, rr.Code, "Body: %s", rr.Body.String())
+	var body struct {
+		Data struct {
+			Version string `json:"version"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &body))
+	require.NotEmpty(t, body.Data.Version, "the class read must carry the class times token")
+	return body.Data.Version
 }
 
 // A weekly plan save carries the token of the plan it was made on. A colleague

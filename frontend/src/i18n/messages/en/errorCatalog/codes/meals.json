@@ -1,6 +1,6 @@
 {
   "child_not_enrolled": "{object} is not possible. The child is not in care on this day.",
-  "day_changed": "Someone else has changed the meal plan in the meantime. Choose “Verwerfen” to see the new version. Choose “Speichern” to replace it with your changes.",
+  "day_changed": "Someone else has changed this day of the meal plan in the meantime. You now see the current state. Check it, then save again.",
   "day_closed": "{object} is not possible. The school is closed on this day.",
   "day_past": "{object} is no longer possible. The day is already over.",
   "invalid_allergens": "The allergens could not be saved. Please select them again.",
@@ -16,7 +16,7 @@
   "not_supplied": "You no longer supply this school. Please ask the school.",
   "order_not_found": "This order does not exist. Please reload the page.",
   "supply_active": "{object} is not possible right now. A caterer still supplies the school. Please end that supply first.",
-  "participation_manage_denied": "You can view meal registrations, but cannot change them. Please contact the after-school care team.",
+  "participation_manage_denied": "You can view meal registrations, but cannot change them. Please contact the {careTerm}.",
   "billing_month_running": "{object} could not be changed. Please check its current status.",
   "billing_month_released": "{object} could not be changed. Please check its current status.",
   "billing_month_changed": "{object} could not be changed. Please check its current status.",

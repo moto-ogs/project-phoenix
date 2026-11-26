@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/modules/workforce/workforcetest"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
@@ -44,7 +45,7 @@ func TestAllowanceAccountsMatchTheSummaryOfEachType(t *testing.T) {
 		require.NoError(t, err)
 	}
 	isActive := false
-	_, err = svc.UpdateAbsenceType(ctx, workforce.UpdateAbsenceType{ID: retired.ID, IsActive: &isActive})
+	_, err = svc.UpdateAbsenceType(ctx, workforce.UpdateAbsenceType{ID: retired.ID, ExpectedVersion: workforcetest.AbsenceTypeVersion(t, ctx, svc, retired.ID), IsActive: &isActive})
 	require.NoError(t, err)
 
 	bookAllowanceDay(t, svc, staff.ID, carry.ID, "2026-11-02", january)

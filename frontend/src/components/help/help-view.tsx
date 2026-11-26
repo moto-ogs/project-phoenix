@@ -250,6 +250,7 @@ function BackToAppLink({
   return (
     <ButtonLink
       href={href}
+      nativeAnchor
       variant="surface"
       size="md"
       className={cn("gap-2 whitespace-nowrap", className)}

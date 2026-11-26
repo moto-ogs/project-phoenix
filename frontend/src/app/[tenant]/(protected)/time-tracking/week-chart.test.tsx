@@ -9,8 +9,7 @@ describe("WeekChart", () => {
   it("shows a failed load in the card instead of the chart", () => {
     const { container } = render(
       <WeekChart
-        history={[]}
-        weekOffset={0}
+        points={[]}
         error="Die Wochenübersicht ist gerade nicht erreichbar."
       />,
     );
@@ -23,7 +22,7 @@ describe("WeekChart", () => {
   });
 
   it("draws the chart when the history loaded", () => {
-    const { container } = render(<WeekChart history={[]} weekOffset={0} />);
+    const { container } = render(<WeekChart points={[]} />);
 
     expect(container.querySelector("[data-chart]")).not.toBeNull();
   });

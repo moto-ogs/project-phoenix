@@ -68,7 +68,7 @@ func fullyPopulatedStudentResponse() StudentResponse {
 		DayPlanningReason:        "care_day",
 		DayPlanningLabel:         "kommt heute",
 		PendingExcusedNote:       str("Arzttermin"),
-		PhotoURL:                 "/api/students/4711/photo",
+		PhotoVersion:             "portrait.jpg",
 		PhotoConsentGiven:        &yes,
 		PhotoConsentGivenAt:      &now,
 		PhotoConsentGivenBy:      (*ident.ID)(&id),
@@ -128,7 +128,7 @@ func TestSlimStudentResponseWireContract(t *testing.T) {
 		"location_since",
 		"pending_excused_note",
 		"photo_consent_given",
-		"photo_url",
+		"photo_version",
 		"pickup_is_exception",
 		"pickup_notes",
 		"pickup_time",
@@ -180,7 +180,7 @@ func TestSlimStudentResponseCopiesValues(t *testing.T) {
 	assert.Equal(t, full.ActualArrivalTime, got.ActualArrivalTime)
 	assert.Equal(t, full.ActualPickupTime, got.ActualPickupTime)
 	assert.Equal(t, full.CompanionStudentIDs, got.CompanionStudentIDs)
-	assert.Equal(t, full.PhotoURL, got.PhotoURL)
+	assert.Equal(t, full.PhotoVersion, got.PhotoVersion)
 	assert.Equal(t, full.PhotoConsentGiven, got.PhotoConsentGiven)
 	assert.Equal(t, full.HasFullAccess, got.HasFullAccess)
 }

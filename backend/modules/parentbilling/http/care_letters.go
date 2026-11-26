@@ -129,16 +129,24 @@ func (rs *CareBillingResource) mailCareLetters(w http.ResponseWriter, r *http.Re
 	common.Respond(w, r, http.StatusAccepted, series, "Monthly letters queued for mail")
 }
 
-// invoiceKey reads the run, the invoice and the kind of its letter.
-func invoiceKey(w http.ResponseWriter, r *http.Request) (capability.HolidayReviewer, int64, int64, string, bool) {
+func invoicePosition(w http.ResponseWriter, r *http.Request) (capability.HolidayReviewer, int64, int64, bool) {
 	reviewer, runID, ok := runKey(w, r)
 	if !ok {
-		return capability.HolidayReviewer{}, 0, 0, "", false
+		return capability.HolidayReviewer{}, 0, 0, false
 	}
 	invoiceID, err := common.ParseIDParam(r, "invoiceID")
 	if err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
-		return capability.HolidayReviewer{}, 0, 0, "", false
+		return capability.HolidayReviewer{}, 0, 0, false
+	}
+	return reviewer, runID, invoiceID, true
+}
+
+// invoiceKey also reads the kind of letter for download and mail.
+func invoiceKey(w http.ResponseWriter, r *http.Request) (capability.HolidayReviewer, int64, int64, string, bool) {
+	reviewer, runID, invoiceID, ok := invoicePosition(w, r)
+	if !ok {
+		return reviewer, runID, invoiceID, "", false
 	}
 	kind := r.URL.Query().Get("kind")
 	if kind == "" {
@@ -178,7 +186,7 @@ func (rs *CareBillingResource) mailCareLetter(w http.ResponseWriter, r *http.Req
 // cancelCareInvoice issues the Storno. Any refusal rolls the Träger
 // transaction back, so no number is used without its Storno.
 func (rs *CareBillingResource) cancelCareInvoice(w http.ResponseWriter, r *http.Request) {
-	reviewer, runID, invoiceID, _, ok := invoiceKey(w, r)
+	reviewer, runID, invoiceID, ok := invoicePosition(w, r)
 	if !ok {
 		return
 	}

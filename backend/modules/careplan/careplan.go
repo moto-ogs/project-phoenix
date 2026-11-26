@@ -105,6 +105,9 @@ type CareOffering struct {
 	// Traeger names the Träger offering this offering is a copy of (ADR
 	// 0195), nil for an offering of the school. Only the copy commands set it.
 	Traeger *TraegerCopyLink
+	// Version is CareOfferingVersion of the offering as the catalog read it
+	// (ADR 0311); only the catalog's reads set it.
+	Version string
 }
 
 // CareOfferingFields is the writable catalog state. Trigger IDs are part of

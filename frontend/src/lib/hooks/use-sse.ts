@@ -123,11 +123,12 @@ export function useSSE(
       eventSource: FetchEventSource,
       eventType: string,
       event: Event,
+      parse: (value: unknown) => SSEEvent,
     ) => {
       if (!mountedRef.current || eventSourceRef.current !== eventSource) return;
       try {
         const messageEvent = event as MessageEvent;
-        const parsed = JSON.parse(String(messageEvent.data)) as SSEEvent;
+        const parsed = parse(JSON.parse(String(messageEvent.data)));
         stableOnMessage(parsed);
       } catch (err) {
         logger.error("failed to parse sse event", {
@@ -144,17 +145,23 @@ export function useSSE(
     };
 
     let sessionRefused = false;
-    const connect = () => {
-      if (!mountedRef.current) return;
+    let disposed = false;
+    let connecting = false;
+    const connect = async () => {
+      if (disposed || connecting) return;
+      connecting = true;
 
       // Reconnection callback
       const attemptReconnect = () => {
         if (mountedRef.current) {
-          connect();
+          void connect();
         }
       };
 
       try {
+        const { SSEEventSchema, STREAM_EVENT_TYPE_VALUES } =
+          await import("~/lib/contract/stream-event.generated");
+        if (disposed) return;
         const eventSource = new FetchEventSource(endpoint);
         eventSourceRef.current = eventSource;
 
@@ -169,86 +176,17 @@ export function useSSE(
         };
 
         eventSource.onmessage = (event) =>
-          handleSSEMessage(eventSource, "message", event);
+          handleSSEMessage(eventSource, "message", event, SSEEventSchema.parse);
 
         // Handle specific event types
-        const eventTypes = [
-          "student_checkin",
-          "student_checkout",
-          "bulk_student_checkout",
-          "bulk_student_checkin",
-          "student_updated",
-          "activity_start",
-          "activity_end",
-          "activity_update",
-          "active_supervision_changed",
-          "dashboard_counts_changed",
-          "staff_time_tracking_changed",
-          "arrival_schedule_changed",
-          "pickup_schedule_changed",
-          "tenant_settings_changed",
-          "instance_started",
-          "instance_completed",
-          "instance_cancelled",
-          "instance_overdue",
-          "parent_message",
-          "parent_message_read",
-          "parent_message_unread_changed",
-          // OGS-internal Team-Chat (#2598). Named event like the two above, so
-          // it has to be registered here or its useGlobalSSE branch is dead and
-          // the team badge only refreshes on focus.
-          "staff_message",
-          // Notification feed of the account (#7148): named, so it has to be
-          // registered here or the bell only refreshes by polling.
-          "notification_feed_changed",
-          // Named SSE events MUST be registered here or the browser's EventSource
-          // never delivers them (onmessage fires only for UNNAMED events). Both of
-          // these are sent as NAMED events by the backend and consumed by their
-          // handlers (change_requests_changed → staff review queue in useGlobalSSE;
-          // parent_child_updated → the parents-portal ParentRealtimeBridge). Without
-          // this registration those branches are dead and the queues/tabs only
-          // refresh on focus or manual reload (#1845 review).
-          "change_requests_changed",
-          "parent_child_updated",
-          // Same defect, same fix: both are broadcast as NAMED events
-          // (instance_service.go / substitute.go for staffing,
-          // student_handlers.go + master_data_review/care_request/offering
-          // services for companions) and both have live handlers in
-          // useGlobalSSE, so without registration those branches never ran.
-          // Timetable caches — including the per-child Betreuungsplan, whose
-          // blocks a substitute or absence changes — only refreshed on focus or
-          // reload, and a remote "läuft mit" edit stayed invisible until
-          // remount (the #1694 bus it drives never fired).
-          "staffing_deviation_changed",
-          "student_companions_changed",
-          // Group access changes: handovers, Vertretungen, group-leader edits
-          // (#2084). Same named-event rule: unregistered means the handler in
-          // useGlobalSSE never runs and a group handed to this user stays
-          // invisible until a reload.
-          "group_access_changed",
-          // Hinweise der Leitung (#7667): a notice was created, changed or
-          // deleted. Named, so it must be registered here or „Heute anders“
-          // and the Tagesinformationen count only refresh on focus.
-          "staff_notices_changed",
-          // Kalendertermine (#7693): an appointment was written. Named, so it
-          // must be registered here or „Heute anders“ and the own calendar
-          // only refresh on focus.
-          "calendar_appointments_changed",
-          // Speiseplan (#7666): the menu of a day changed. Named, so it must
-          // be registered here or „Heute anders“ only refreshes on focus.
-          "meal_plan_changed",
-          // moto schule only (#4792): wakes an open class view after a new
-          // sick note. Named like the others, so it must be registered here
-          // or SchoolRealtimeBridge never sees it.
-          "class_day_changed",
-          // Notification abstraction (#1624): rendered directly as a toast by
-          // NotificationBridge via useGlobalSSE — not a cache trigger.
-          "notification",
-        ];
-
-        for (const eventType of eventTypes) {
+        for (const eventType of STREAM_EVENT_TYPE_VALUES) {
           eventSource.addEventListener(eventType, (event) =>
-            handleSSEMessage(eventSource, eventType, event),
+            handleSSEMessage(
+              eventSource,
+              eventType,
+              event,
+              SSEEventSchema.parse,
+            ),
           );
         }
 
@@ -324,16 +262,19 @@ export function useSSE(
           }
         };
       } catch (err) {
+        if (disposed) return;
         logger.error("failed to create eventsource", {
           endpoint,
           error: err instanceof Error ? err.message : String(err),
         });
         setError("Failed to establish SSE connection");
+      } finally {
+        connecting = false;
       }
     };
 
     // Initial connection
-    connect();
+    void connect();
 
     // Reconnect when device wakes from sleep or network restores
     const handleWakeReconnect = () => {
@@ -360,7 +301,7 @@ export function useSSE(
       setReconnectAttempts(0);
       setIsConnected(false);
 
-      connect();
+      void connect();
     };
 
     const handleVisibilityChange = () => {
@@ -388,6 +329,7 @@ export function useSSE(
 
     // Cleanup on unmount
     return () => {
+      disposed = true;
       mountedRef.current = false;
       restartIfDownRef.current = () => undefined;
 

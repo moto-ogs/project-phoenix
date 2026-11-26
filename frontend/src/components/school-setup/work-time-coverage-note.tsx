@@ -9,7 +9,7 @@ import { Skeleton } from "~/components/ui/skeleton";
 import { ApiError } from "~/lib/api-error";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { LOCATION_COLORS } from "~/lib/location-helper";
-import { notBookedModuleOf } from "~/lib/module-not-booked";
+import { isModuleNotBooked } from "~/lib/module-not-booked";
 import type { PayrollTargetCoverage } from "~/lib/payroll-api";
 import { monthYearLabel } from "~/lib/time-account-links";
 
@@ -28,7 +28,7 @@ export interface WorkTimeCoverageState {
  */
 function mayStayHidden(error: unknown): boolean {
   return (
-    notBookedModuleOf(error) !== null ||
+    isModuleNotBooked(error) ||
     (error instanceof ApiError && isAccessRefusal(error))
   );
 }

@@ -1,25 +1,29 @@
 package announcement
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
-	"strconv"
 	"time"
 
 	announcementService "github.com/moto-ogs/project-phoenix/modules/communication"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // Wire shapes of the surveys (#4781). Ids travel as strings.
 
 type surveyTargetWire struct {
-	TargetType string  `json:"target_type"`
-	RefID      *string `json:"ref_id,omitempty"`
-	RefText    *string `json:"ref_text,omitempty"`
+	TargetType string    `json:"target_type"`
+	RefID      *ident.ID `json:"ref_id,omitempty"`
+	RefText    *string   `json:"ref_text,omitempty"`
 }
 
 // surveyTargetRequest is a target as the author sends it.
-type surveyTargetRequest surveyTargetWire
+type surveyTargetRequest struct {
+	TargetType string          `json:"target_type"`
+	RefID      *ident.IDOrNone `json:"ref_id,omitempty"`
+	RefText    *string         `json:"ref_text,omitempty"`
+}
 
 type surveyQuestionRequest struct {
 	Kind     string   `json:"kind"`
@@ -37,6 +41,9 @@ type surveyRequest struct {
 	ClosesAt  *time.Time              `json:"closes_at"`
 	Targets   []surveyTargetRequest   `json:"targets"`
 	Questions []surveyQuestionRequest `json:"questions"`
+	// ExpectedVersion is the version of the draft an update was made on
+	// (ADR 0311); a new survey sends none.
+	ExpectedVersion string `json:"expected_version,omitempty"`
 }
 
 func (req surveyRequest) input() (announcementService.SurveyInput, error) {
@@ -45,14 +52,14 @@ func (req surveyRequest) input() (announcementService.SurveyInput, error) {
 	}
 	in := announcementService.SurveyInput{
 		Title: req.Title, Intro: req.Intro, Audience: req.Audience, Anonymous: req.Anonymous, SendEmail: req.SendEmail,
-		ClosesAt: *req.ClosesAt, Targets: make([]announcementService.SurveyTarget, 0, len(req.Targets)),
+		ClosesAt: *req.ClosesAt, ExpectedVersion: req.ExpectedVersion, Targets: make([]announcementService.SurveyTarget, 0, len(req.Targets)),
 		Questions: make([]announcementService.SurveyQuestionInput, 0, len(req.Questions)),
 	}
 	for _, t := range req.Targets {
 		target := announcementService.SurveyTarget{TargetType: t.TargetType, RefText: t.RefText}
-		if t.RefID != nil && *t.RefID != "" {
-			id, err := strconv.ParseInt(*t.RefID, 10, 64)
-			if err != nil || id <= 0 {
+		if t.RefID != nil && !t.RefID.IsZero() {
+			id := t.RefID.Int64()
+			if id <= 0 {
 				return announcementService.SurveyInput{}, errors.New("invalid target ref_id")
 			}
 			target.RefID = &id
@@ -66,12 +73,12 @@ func (req surveyRequest) input() (announcementService.SurveyInput, error) {
 }
 
 type surveyOptionResponse struct {
-	ID    string `json:"id"`
-	Label string `json:"label"`
+	ID    ident.ID `json:"id"`
+	Label string   `json:"label"`
 }
 
 type surveyQuestionResponse struct {
-	ID       string                 `json:"id"`
+	ID       ident.ID               `json:"id"`
 	Position int                    `json:"position"`
 	Kind     string                 `json:"kind"`
 	Prompt   string                 `json:"prompt"`
@@ -80,7 +87,7 @@ type surveyQuestionResponse struct {
 }
 
 type surveyResponse struct {
-	ID               string                   `json:"id"`
+	ID               ident.ID                 `json:"id"`
 	Title            string                   `json:"title"`
 	Intro            string                   `json:"intro"`
 	Audience         string                   `json:"audience"`
@@ -94,6 +101,10 @@ type surveyResponse struct {
 	ParticipantCount int                      `json:"participant_count"`
 	Targets          []surveyTargetWire       `json:"targets"`
 	Questions        []surveyQuestionResponse `json:"questions"`
+	// Version is the token an update and the publication send back;
+	// Fingerprint the one a delete confirms with (ADR 0311).
+	Version     string `json:"version"`
+	Fingerprint string `json:"fingerprint"`
 }
 
 func toSurveyQuestions(questions []announcementService.SurveyQuestion) []surveyQuestionResponse {
@@ -101,10 +112,10 @@ func toSurveyQuestions(questions []announcementService.SurveyQuestion) []surveyQ
 	for _, q := range questions {
 		options := make([]surveyOptionResponse, 0, len(q.Options))
 		for _, o := range q.Options {
-			options = append(options, surveyOptionResponse{ID: strconv.FormatInt(o.ID, 10), Label: o.Label})
+			options = append(options, surveyOptionResponse{ID: ident.ID(o.ID), Label: o.Label})
 		}
 		out = append(out, surveyQuestionResponse{
-			ID: strconv.FormatInt(q.ID, 10), Position: q.Position, Kind: q.Kind, Prompt: q.Prompt, Required: q.Required, Options: options,
+			ID: ident.ID(q.ID), Position: q.Position, Kind: q.Kind, Prompt: q.Prompt, Required: q.Required, Options: options,
 		})
 	}
 	return out
@@ -115,21 +126,22 @@ func toSurveyResponse(s *announcementService.Survey, now time.Time) surveyRespon
 	for _, t := range s.Targets {
 		target := surveyTargetWire{TargetType: t.TargetType, RefText: t.RefText}
 		if t.RefID != nil {
-			id := strconv.FormatInt(*t.RefID, 10)
+			id := ident.ID(*t.RefID)
 			target.RefID = &id
 		}
 		targets = append(targets, target)
 	}
 	return surveyResponse{
-		ID: strconv.FormatInt(s.ID, 10), Title: s.Title, Intro: s.Intro, Audience: s.Audience, Anonymous: s.Anonymous,
+		ID: ident.ID(s.ID), Title: s.Title, Intro: s.Intro, Audience: s.Audience, Anonymous: s.Anonymous,
 		SendEmail: s.SendEmail, Status: s.Status(now), ClosesAt: s.ClosesAt, PublishedAt: s.PublishedAt,
 		CreatedAt: s.CreatedAt, UpdatedAt: s.UpdatedAt, ParticipantCount: s.ParticipantCount,
 		Targets: targets, Questions: toSurveyQuestions(s.Questions),
+		Version: announcementService.SurveyVersion(*s), Fingerprint: announcementService.SurveyDeleteFingerprint(*s),
 	}
 }
 
 type surveyFormSurvey struct {
-	ID        string                   `json:"id"`
+	ID        ident.ID                 `json:"id"`
 	Title     string                   `json:"title"`
 	Intro     string                   `json:"intro"`
 	Anonymous bool                     `json:"anonymous"`
@@ -146,7 +158,7 @@ type surveyFormResponse struct {
 func toSurveyFormResponse(f *announcementService.SurveyForm) surveyFormResponse {
 	return surveyFormResponse{
 		Survey: surveyFormSurvey{
-			ID: strconv.FormatInt(f.Survey.ID, 10), Title: f.Survey.Title, Intro: f.Survey.Intro,
+			ID: ident.ID(f.Survey.ID), Title: f.Survey.Title, Intro: f.Survey.Intro,
 			Anonymous: f.Survey.Anonymous, ClosesAt: f.Survey.ClosesAt, Questions: toSurveyQuestions(f.Survey.Questions),
 		},
 		SchoolName: f.SchoolName, Participated: f.Participated,
@@ -154,7 +166,7 @@ func toSurveyFormResponse(f *announcementService.SurveyForm) surveyFormResponse 
 }
 
 type surveyToAnswerResponse struct {
-	ID           string    `json:"id"`
+	ID           ident.ID  `json:"id"`
 	Title        string    `json:"title"`
 	Intro        string    `json:"intro"`
 	Anonymous    bool      `json:"anonymous"`
@@ -163,10 +175,10 @@ type surveyToAnswerResponse struct {
 }
 
 type surveyAnswerRequest struct {
-	QuestionID string   `json:"question_id"`
-	OptionIDs  []string `json:"option_ids,omitempty"`
-	ScaleValue *int     `json:"scale_value,omitempty"`
-	Text       *string  `json:"text,omitempty"`
+	QuestionID ident.ID   `json:"question_id"`
+	OptionIDs  []ident.ID `json:"option_ids,omitempty"`
+	ScaleValue *int       `json:"scale_value,omitempty"`
+	Text       *string    `json:"text,omitempty"`
 }
 
 type surveyAnswersRequest struct {
@@ -177,22 +189,20 @@ type surveyAnswersRequest struct {
 // them against the questions.
 func decodeSurveyAnswers(r *http.Request) ([]announcementService.SurveyAnswerInput, error) {
 	var req surveyAnswersRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := wire.Decode(r.Body, &req); err != nil {
 		return nil, errors.New("invalid request body")
 	}
 	out := make([]announcementService.SurveyAnswerInput, 0, len(req.Answers))
 	for _, a := range req.Answers {
-		questionID, err := strconv.ParseInt(a.QuestionID, 10, 64)
-		if err != nil || questionID <= 0 {
+		if a.QuestionID <= 0 {
 			return nil, errors.New("invalid question_id")
 		}
-		answer := announcementService.SurveyAnswerInput{QuestionID: questionID, ScaleValue: a.ScaleValue, Text: a.Text}
-		for _, raw := range a.OptionIDs {
-			id, err := strconv.ParseInt(raw, 10, 64)
-			if err != nil || id <= 0 {
+		answer := announcementService.SurveyAnswerInput{QuestionID: a.QuestionID.Int64(), ScaleValue: a.ScaleValue, Text: a.Text}
+		for _, id := range a.OptionIDs {
+			if id <= 0 {
 				return nil, errors.New("invalid option id")
 			}
-			answer.OptionIDs = append(answer.OptionIDs, id)
+			answer.OptionIDs = append(answer.OptionIDs, id.Int64())
 		}
 		out = append(out, answer)
 	}
@@ -200,13 +210,13 @@ func decodeSurveyAnswers(r *http.Request) ([]announcementService.SurveyAnswerInp
 }
 
 type surveyOptionCountResponse struct {
-	OptionID string `json:"option_id"`
-	Label    string `json:"label"`
-	Count    int    `json:"count"`
+	OptionID ident.ID `json:"option_id"`
+	Label    string   `json:"label"`
+	Count    int      `json:"count"`
 }
 
 type surveyQuestionResultResponse struct {
-	QuestionID  string                      `json:"question_id"`
+	QuestionID  ident.ID                    `json:"question_id"`
 	Position    int                         `json:"position"`
 	Kind        string                      `json:"kind"`
 	Prompt      string                      `json:"prompt"`
@@ -221,13 +231,13 @@ type surveyQuestionResultResponse struct {
 }
 
 type surveyHighlightResponse struct {
-	QuestionID string  `json:"question_id"`
-	Prompt     string  `json:"prompt"`
-	Average    float64 `json:"average"`
+	QuestionID ident.ID `json:"question_id"`
+	Prompt     string   `json:"prompt"`
+	Average    float64  `json:"average"`
 }
 
 type surveyResultsResponse struct {
-	SurveyID      string                         `json:"survey_id"`
+	SurveyID      ident.ID                       `json:"survey_id"`
 	Title         string                         `json:"title"`
 	Anonymous     bool                           `json:"anonymous"`
 	Status        string                         `json:"status"`
@@ -241,7 +251,7 @@ type surveyResultsResponse struct {
 
 func toSurveyResultsResponse(r *announcementService.SurveyResults) surveyResultsResponse {
 	out := surveyResultsResponse{
-		SurveyID: strconv.FormatInt(r.SurveyID, 10), Title: r.Title, Anonymous: r.Anonymous, Status: r.Status,
+		SurveyID: ident.ID(r.SurveyID), Title: r.Title, Anonymous: r.Anonymous, Status: r.Status,
 		ResponseCount: r.ResponseCount, MinResponses: r.MinResponses, Available: r.Available,
 		Questions:    make([]surveyQuestionResultResponse, 0, len(r.Questions)),
 		Strengths:    toHighlights(r.Strengths),
@@ -250,10 +260,10 @@ func toSurveyResultsResponse(r *announcementService.SurveyResults) surveyResults
 	for _, q := range r.Questions {
 		options := make([]surveyOptionCountResponse, 0, len(q.Options))
 		for _, o := range q.Options {
-			options = append(options, surveyOptionCountResponse{OptionID: strconv.FormatInt(o.OptionID, 10), Label: o.Label, Count: o.Count})
+			options = append(options, surveyOptionCountResponse{OptionID: ident.ID(o.OptionID), Label: o.Label, Count: o.Count})
 		}
 		out.Questions = append(out.Questions, surveyQuestionResultResponse{
-			QuestionID: strconv.FormatInt(q.QuestionID, 10), Position: q.Position, Kind: q.Kind, Prompt: q.Prompt,
+			QuestionID: ident.ID(q.QuestionID), Position: q.Position, Kind: q.Kind, Prompt: q.Prompt,
 			AnswerCount: q.AnswerCount, Options: options, ScaleCounts: q.ScaleCounts, Average: q.Average,
 			Texts: q.Texts, Highest: q.Highest, Lowest: q.Lowest, Withheld: q.Withheld,
 		})
@@ -264,13 +274,13 @@ func toSurveyResultsResponse(r *announcementService.SurveyResults) surveyResults
 func toHighlights(rows []announcementService.SurveyHighlight) []surveyHighlightResponse {
 	out := make([]surveyHighlightResponse, 0, len(rows))
 	for _, h := range rows {
-		out = append(out, surveyHighlightResponse{QuestionID: strconv.FormatInt(h.QuestionID, 10), Prompt: h.Prompt, Average: h.Average})
+		out = append(out, surveyHighlightResponse{QuestionID: ident.ID(h.QuestionID), Prompt: h.Prompt, Average: h.Average})
 	}
 	return out
 }
 
 type surveyRespondentAnswerResponse struct {
-	QuestionID string   `json:"question_id"`
+	QuestionID ident.ID `json:"question_id"`
 	Options    []string `json:"options"`
 	ScaleValue *int     `json:"scale_value,omitempty"`
 	Text       *string  `json:"text,omitempty"`
@@ -287,7 +297,7 @@ func toRespondentResponses(rows []announcementService.SurveyRespondent) []survey
 		answers := make([]surveyRespondentAnswerResponse, 0, len(row.Answers))
 		for _, a := range row.Answers {
 			answers = append(answers, surveyRespondentAnswerResponse{
-				QuestionID: strconv.FormatInt(a.QuestionID, 10), Options: a.Options, ScaleValue: a.ScaleValue, Text: a.Text,
+				QuestionID: ident.ID(a.QuestionID), Options: a.Options, ScaleValue: a.ScaleValue, Text: a.Text,
 			})
 		}
 		out = append(out, surveyRespondentResponse{Name: row.Name, Answers: answers})

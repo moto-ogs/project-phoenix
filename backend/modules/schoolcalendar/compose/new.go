@@ -30,10 +30,7 @@ func PersistenceRuntimeFor(db *bun.DB) PersistenceRuntime {
 	if db == nil {
 		panic("school calendar compose: database is required")
 	}
-	return PersistenceRuntime{
-		Database: postgres.NewPersistenceDatabase(),
-		TenantID: tenant.FromContext,
-	}
+	return PersistenceRuntime{Database: postgres.NewPersistenceDatabase(), TenantID: tenant.FromContext}
 }
 
 // RecordsDependencies are the bindings of the Records: the database and the federal state of the holiday reads.
@@ -65,15 +62,12 @@ func NewRecords(dependencies RecordsDependencies) (schoolcalendar.Days, error) {
 type AdministrationDependencies struct {
 	DB      *bun.DB
 	Observe func(Observation)
-	// RecurrenceGate serializes period administration against every
-	// recurrence-derived write of the tenant (shared recurrence lock).
+	// RecurrenceGate serializes the administration against recurrence writes (shared lock).
 	RecurrenceGate func(context.Context) error
-	// CareOfferingGuard refuses a period change (replacement set) or
-	// removal (replacement nil) a linked care offering still needs, as
-	// schoolcalendar.ErrCalendarPeriodRequiredByCareOffering in the chain.
+	// CareOfferingGuard refuses a change (replacement set) or removal (nil) a linked care
+	// offering still needs, as schoolcalendar.ErrCalendarPeriodRequiredByCareOffering.
 	CareOfferingGuard func(ctx context.Context, periodID int64, replacement *schoolcalendar.CalendarPeriodFields) error
-	// Today names the current calendar day in YYYY-MM-DD. Nil means the
-	// Berlin calendar day, the school's day.
+	// Today names the current day in YYYY-MM-DD; nil is the Berlin day, the school's day.
 	Today func() string
 	// ClosingDayNotices tells the school of a changed closing day (#7144).
 	ClosingDayNotices schoolcalendar.ClosingDayNotices
@@ -81,23 +75,20 @@ type AdministrationDependencies struct {
 
 // NewAdministration adds the period administration to the Records: the whole School Calendar, which the period editor drives.
 func NewAdministration(records schoolcalendar.Days, dependencies AdministrationDependencies) (schoolcalendar.Calendar, error) {
-	if records == nil || dependencies.DB == nil || dependencies.Observe == nil ||
-		dependencies.RecurrenceGate == nil || dependencies.CareOfferingGuard == nil {
+	if records == nil || dependencies.DB == nil || dependencies.Observe == nil || dependencies.RecurrenceGate == nil || dependencies.CareOfferingGuard == nil {
 		return nil, errors.New("school calendar compose: all dependencies are required")
 	}
 	today := dependencies.Today
 	if today == nil {
 		today = application.BerlinDay(time.Now)
 	}
-	service, err := application.WithAdministration(records, application.Administration{
+	return application.WithAdministration(records, application.Administration{
 		Transaction: writeTransaction, RecurrenceGate: dependencies.RecurrenceGate,
 		CareOfferingGuard: dependencies.CareOfferingGuard, Today: today, ClosingDayNotices: dependencies.ClosingDayNotices,
 	}, dependencies.Observe)
-	return service, err
 }
 
-// writeTransaction joins the ambient tenant transaction (tenant middleware, recurrence gate, scheduler loops) and otherwise
-// opens one for the tenant in context, so the recurrence gate always holds a transaction-scoped lock.
+// writeTransaction joins the ambient tenant transaction or opens one, so the recurrence gate always holds a transaction lock.
 func writeTransaction(ctx context.Context, fn func(context.Context) error) error {
 	return postgres.WriteTransactionBinding(ctx, fn, tenant.WithinCurrentTenant)
 }
@@ -120,6 +111,11 @@ func NewSchoolVacations(federalState func(context.Context) (string, error), sour
 // NewTraegerClosingDays builds a Träger's closing days (#4702) in its Träger transaction (ADR 0105) over its schools; notices tells the parents of affected holiday bookings (#6434).
 func NewTraegerClosingDays(schools traegercalendar.Schools, notices traegercalendar.HolidayNotices) traegercalendar.ClosingDays {
 	return application.NewTraegerClosingDays(postgres.NewTraegerClosingDayStore(), schools, notices)
+}
+
+// NewOpeningChanges composes the opening changes of a school (#7654) over the ambient tenant transaction.
+func NewOpeningChanges() schoolcalendar.OpeningChanges {
+	return postgres.NewOpeningChangeStore(postgres.NewCompositionDatabase())
 }
 
 // NewHolidayClosureEvents composes the notices of ADR 0196 over the caller's school or Träger transaction; today is the root's day clock.

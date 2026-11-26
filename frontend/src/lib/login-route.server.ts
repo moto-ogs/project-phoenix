@@ -1,3 +1,4 @@
+import { invalidJsonResponse } from "~/lib/route-wrapper-utils.server";
 import "server-only";
 import type { NextRequest } from "next/server";
 import { sessionMutationOriginError } from "~/server/auth/same-origin";
@@ -5,9 +6,13 @@ import type { z } from "zod";
 import { contractWrite } from "~/lib/contract/client.server";
 import { contractError } from "~/lib/contract/route-response.server";
 import type { RequestBody } from "~/lib/contract/runtime";
-import type { TokenResponse } from "~/lib/contract/shared.generated";
+import type {
+  MFAVerifyRequest,
+  PasskeyVerifyRequest,
+  TokenResponse,
+} from "~/lib/contract/shared.generated";
 import type { TraegerLoginResponse } from "~/lib/contract/traeger-auth.generated";
-import type { SignInReply } from "~/lib/session-bff";
+import type { SessionLoginBody, SignInReply } from "~/lib/session-bff";
 import { problemResponse } from "~/lib/api-response-error.server";
 import { captureBffException } from "~/lib/sentry-bff.server";
 import { withoutSessionCookies } from "~/server/auth/session-cookie-writes";
@@ -33,10 +38,11 @@ type LoginStep =
   "login" | "mfa/verify" | "mfa/enroll/confirm" | "passkeys/login/verify";
 
 type LoginData = TraegerLoginResponse | TokenResponse;
+type LoginStepBody = SessionLoginBody | MFAVerifyRequest | PasskeyVerifyRequest;
 type LoginRoute = Parameters<typeof contractWrite>[0] & {
   method: "POST";
   routeFile: string;
-  request: RequestBody<unknown>;
+  request: RequestBody<LoginStepBody>;
   response: z.ZodType<LoginData | { data: LoginData }>;
 };
 
@@ -49,14 +55,6 @@ function isIgnoringTrustedDevice(body: unknown): boolean {
     body !== null &&
     (body as Record<string, unknown>).ignore_trusted_device === true
   );
-}
-
-function withoutIgnoreFlag(body: unknown): Record<string, unknown> {
-  const { ignore_trusted_device: _ignored, ...rest } = body as Record<
-    string,
-    unknown
-  >;
-  return rest;
 }
 
 /**
@@ -102,17 +100,21 @@ export function createPortalLoginRoute(
   return login.withSessionResponse(async (request: NextRequest) => {
     const originError = sessionMutationOriginError(request);
     if (originError) return originError;
-    let body: unknown;
+    let body: LoginStepBody;
     try {
       body = await request.json();
     } catch {
-      return problemResponse(400, "Invalid JSON", request);
+      return invalidJsonResponse(request);
     }
     // A sign-in that must prove the factor by code (a school without
     // remembered devices asked for it, #6955) leaves the device cookie
     // behind; the flag itself is the BFF's and never reaches the backend.
     const ignoreTrustedDevice = isIgnoringTrustedDevice(body);
-    if (ignoreTrustedDevice) body = withoutIgnoreFlag(body);
+    if (ignoreTrustedDevice) {
+      const { ignore_trusted_device: _ignored, ...credentials } =
+        body as SessionLoginBody;
+      body = credentials;
+    }
     try {
       const trustedDevice = ignoreTrustedDevice
         ? undefined

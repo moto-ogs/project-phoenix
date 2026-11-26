@@ -12,6 +12,7 @@ import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import { ApiError } from "~/lib/api-error";
 import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
 import { catalogText } from "~/test/error-catalog-text";
+import { CareContractWaitingChangeCard } from "~/components/traeger/care-contract-waiting-change-card";
 import { PaperSignatureModal } from "~/components/traeger/care-contract-paper-modal";
 import type { CareContractDetail } from "~/lib/traeger-care-contracts-api";
 
@@ -23,6 +24,7 @@ const { api, mockPush, mockReplace } = vi.hoisted(() => ({
     resendCareContract: vi.fn(),
     discardCareContract: vi.fn(),
     recordPaperSignature: vi.fn(),
+    handOverCareContractOnPaper: vi.fn(),
     downloadCareContractVersion: vi.fn(),
   },
   mockPush: vi.fn(),
@@ -36,6 +38,19 @@ const links = vi.hoisted(() => ({
 }));
 
 vi.unmock("swr");
+// The booked moto modules of the Träger of the session (#6052).
+const mockBookedModules = vi.hoisted(() => ({
+  current: [
+    "traeger_uebersicht",
+    "ferienbetreuung",
+    "vertraege",
+    "elternbeitraege",
+  ] as string[],
+}));
+vi.mock("~/lib/traeger-booked-modules", () => ({
+  useTraegerModuleBooked: (module: string) =>
+    mockBookedModules.current.includes(module),
+}));
 vi.mock("~/lib/traeger-care-contracts-api", () => api);
 vi.mock("~/lib/traeger-contract-child-links-api", () => links);
 const enrollments = vi.hoisted(() => ({ unbindContractEnrollment: vi.fn() }));
@@ -127,6 +142,8 @@ import {
 } from "~/test/helpers/refused-refresh";
 
 const DRAFT: CareContractDetail = {
+  changeAwaitsSignature: false,
+  versionSignatures: [],
   id: "7",
   status: "entwurf",
   schoolId: "3",
@@ -486,6 +503,181 @@ describe("TraegerVertragPage", () => {
     ).toBeInTheDocument();
   });
 
+  it("hands a draft over on paper and downloads the frozen PDF", async () => {
+    // The paper signature binds what the office printed (#8030): the draft
+    // offers the handover, not yet the paper signature.
+    mockSearch = "tab=versand";
+    api.handOverCareContractOnPaper.mockResolvedValue(undefined);
+    renderPage();
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Auf Papier übergeben" }),
+    );
+    expect(
+      screen.queryByRole("button", { name: "Papiervertrag erfassen" }),
+    ).not.toBeInTheDocument();
+    const dialog = await screen.findByRole("dialog", {
+      name: "Vertrag auf Papier übergeben?",
+    });
+    expect(
+      within(dialog).getByText(/Die Eltern bekommen keine Mail/),
+    ).toBeInTheDocument();
+    expect(api.handOverCareContractOnPaper).not.toHaveBeenCalled();
+    const previews = api.downloadCareContract.mock.calls.length;
+    api.fetchCareContract.mockResolvedValue({
+      ...DRAFT,
+      status: "versendet",
+      sentAt: "2026-09-02T08:00:00Z",
+      documentFrozen: true,
+    });
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "Übergeben und PDF laden" }),
+    );
+
+    await waitFor(() =>
+      expect(api.handOverCareContractOnPaper).toHaveBeenCalledWith("7"),
+    );
+    await waitFor(() =>
+      expect(api.downloadCareContract.mock.calls.length).toBeGreaterThan(
+        previews,
+      ),
+    );
+    expect(api.downloadCareContract).toHaveBeenLastCalledWith("7");
+    expect(
+      await screen.findByText(/Der Vertrag ist übergeben/),
+    ).toBeInTheDocument();
+    // Reloaded, the contract waits for the paper signature, without mails.
+    expect(
+      await screen.findByRole("button", { name: "Papiervertrag erfassen" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Auf Papier übergeben" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("names a refused handover and downloads nothing", async () => {
+    mockSearch = "tab=versand";
+    api.handOverCareContractOnPaper.mockRejectedValue(
+      new ApiError("failed", 409, { code: "care_contract.letterhead_missing" }),
+    );
+    renderPage();
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Auf Papier übergeben" }),
+    );
+    const previews = api.downloadCareContract.mock.calls.length;
+    fireEvent.click(
+      within(
+        await screen.findByRole("dialog", {
+          name: "Vertrag auf Papier übergeben?",
+        }),
+      ).getByRole("button", { name: "Übergeben und PDF laden" }),
+    );
+
+    expect(
+      await screen.findByText(
+        catalogText("care_contract.letterhead_missing", "der Vertrag"),
+      ),
+    ).toBeInTheDocument();
+    expect(api.downloadCareContract).toHaveBeenCalledTimes(previews);
+    expect(
+      screen.getByRole("button", { name: "Auf Papier übergeben" }),
+    ).toBeInTheDocument();
+  });
+
+  it("reports a handover whose PDF did not arrive once, with the way to it", async () => {
+    // The handover succeeded, the download failed (#8030): no success toast
+    // before the file is there, one error that says the contract is handed
+    // over and where its PDF is.
+    mockSearch = "tab=versand";
+    api.handOverCareContractOnPaper.mockResolvedValue(undefined);
+    renderPage();
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Auf Papier übergeben" }),
+    );
+    await waitFor(() => expect(api.downloadCareContract).toHaveBeenCalled());
+    const previews = api.downloadCareContract.mock.calls.length;
+    api.downloadCareContract.mockRejectedValueOnce(
+      new ApiError("Request failed (500)", 500, {}),
+    );
+    api.fetchCareContract.mockResolvedValue({
+      ...DRAFT,
+      status: "versendet",
+      sentAt: "2026-09-02T08:00:00Z",
+      documentFrozen: true,
+    });
+    fireEvent.click(
+      within(
+        await screen.findByRole("dialog", {
+          name: "Vertrag auf Papier übergeben?",
+        }),
+      ).getByRole("button", { name: "Übergeben und PDF laden" }),
+    );
+
+    expect(
+      await screen.findByText(/Der Vertrag ist trotzdem übergeben/),
+    ).toBeInTheDocument();
+    expect(api.downloadCareContract.mock.calls.length).toBeGreaterThan(
+      previews,
+    );
+    expect(
+      screen.queryByText(/Der Vertrag ist übergeben\./),
+    ).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("dialog", { name: "Vertrag auf Papier übergeben?" }),
+      ).not.toBeInTheDocument(),
+    );
+    expect(
+      await screen.findByRole("button", { name: "Papiervertrag erfassen" }),
+    ).toBeInTheDocument();
+  });
+
+  it("offers a draft's PDF as a preview, a handed-over one as the PDF", async () => {
+    // Only the frozen PDF is for signing (#8030): the draft's menu names
+    // its download a preview.
+    renderPage();
+    await screen.findByRole("button", { name: "Vertrag senden" });
+    const [menu] = screen.getAllByRole("button", { name: "Weitere Aktionen" });
+    fireEvent.click(menu!);
+    expect(
+      screen.getByRole("menuitem", { name: /Vorschau herunterladen/ }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("menuitem", { name: /PDF herunterladen/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("waits for the paper signature of a contract handed over on paper", async () => {
+    api.fetchCareContract.mockResolvedValue({
+      ...DRAFT,
+      status: "versendet",
+      sentAt: "2026-09-02T08:00:00Z",
+      documentFrozen: true,
+    });
+    renderPage();
+
+    // No mail went out yet: mailing it is a first send, not a second.
+    expect(
+      await screen.findByRole("button", { name: "Vertrag senden" }),
+    ).toBeInTheDocument();
+    showTab("Unterschrift und Versand");
+    expect(
+      screen.getByText("Die Eltern unterschreiben den Vertrag auf Papier."),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Erinnerungen per Mail gibt es dafür nicht/),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Auf Papier übergeben, nicht per Mail."),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Papiervertrag erfassen" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Auf Papier übergeben" }),
+    ).not.toBeInTheDocument();
+  });
+
   it.each([
     ["stopped", /Die Schule hat die Mails an diese Person gestoppt/],
     ["address", /bei einer deiner Schulen gesperrt/],
@@ -725,6 +917,37 @@ describe("TraegerVertragPage", () => {
     expect(
       screen.queryByRole("button", { name: /Vertrag senden/ }),
     ).not.toBeInTheDocument();
+  });
+
+  it("offers neither payment nor mandate without the module Elternbeiträge und Abrechnung (#6052)", async () => {
+    // Both cards read routes of that module; a Träger with Verträge alone
+    // keeps its contracts without them.
+    mockBookedModules.current = ["vertraege"];
+    try {
+      api.fetchCareContract.mockResolvedValue({
+        ...DRAFT,
+        status: "versendet",
+        documentFrozen: true,
+      });
+      renderPage();
+
+      expect(
+        await screen.findByText("E-Mail bei Vertragserstellung"),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByText("Empfänger und Zahlung"),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByText("SEPA-Lastschriftmandat"),
+      ).not.toBeInTheDocument();
+    } finally {
+      mockBookedModules.current = [
+        "traeger_uebersicht",
+        "ferienbetreuung",
+        "vertraege",
+        "elternbeitraege",
+      ];
+    }
   });
 
   it("offers no payment card on a contract that is over", async () => {
@@ -977,6 +1200,78 @@ describe("TraegerVertragPage", () => {
     ).toBeInTheDocument();
   });
 
+  it("shows a changed version that waits for the parents' signature (#4816)", async () => {
+    setTestClock("2026-09-09T12:00:00+02:00");
+    const first = DRAFT.version.services;
+    api.fetchCareContract.mockResolvedValue({
+      ...DRAFT,
+      status: "aktiv",
+      changeAwaitsSignature: true,
+      sentAt: "2026-07-20T08:00:00Z",
+      concluded: { method: "einfach_elektronisch", at: "2026-07-20T08:00:00Z" },
+      documentFrozen: true,
+      version: { ...DRAFT.version, effectiveFrom: "2026-08-01" },
+      mailings: [
+        {
+          recipient: "erika@example.org",
+          sentAt: "2026-09-01T08:05:00Z",
+          state: "sent",
+        },
+      ],
+      reminders: [
+        { versionNumber: 1, number: 1, sentAt: "2026-07-27T08:00:00Z" },
+        { versionNumber: 2, number: 1, sentAt: "2026-09-08T08:00:00Z" },
+      ],
+      versions: [
+        {
+          number: 1,
+          status: "wirksam",
+          source: "abschluss",
+          effectiveFrom: "2026-08-01",
+          endsOn: null,
+          validUntil: null,
+          services: first,
+          createdAt: "2026-07-20T08:00:00Z",
+        },
+        {
+          number: 2,
+          status: "beantragt",
+          source: "buchungsaenderung",
+          effectiveFrom: "2026-10-01",
+          endsOn: null,
+          validUntil: null,
+          services: first.slice(0, 2),
+          createdAt: "2026-09-01T08:00:00Z",
+        },
+      ],
+    } satisfies CareContractDetail);
+    renderPage();
+
+    expect(
+      await screen.findByText(
+        "Eine geänderte Fassung wartet auf die Unterschrift der Eltern. Bis dahin gilt Version 1. Version 2 gilt ab 01.10.2026, frühestens ab der Unterschrift.",
+      ),
+    ).toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Zur geänderten Fassung" }),
+    );
+    const heading = await screen.findByRole("heading", {
+      name: "Geänderte Fassung",
+    });
+    await waitFor(() => expect(heading).toHaveFocus());
+    const card = heading.closest("section");
+    if (!card) throw new Error("the card of the changed version is missing");
+    expect(within(card).getByText("Wartet auf Eltern")).toBeInTheDocument();
+    expect(
+      within(card).getByText(/Die neue Fassung wurde per Mail gesendet/),
+    ).toBeInTheDocument();
+    // Only the reminders of the version that waits.
+    expect(within(card).getAllByText(/Erinnerung$/)).toHaveLength(1);
+    expect(
+      within(card).getByRole("button", { name: "Papiervertrag erfassen" }),
+    ).toBeInTheDocument();
+  });
+
   it("shows the versions of an active contract and from when a change applies", async () => {
     // Die Änderung ab 01.03.2027 muss noch bevorstehen.
     setTestClock("2026-09-09T12:00:00+02:00");
@@ -1226,9 +1521,20 @@ describe("TraegerVertragPage", () => {
         name: /Vertrag senden/,
       });
       api.fetchCareContract.mockClear();
-      api.fetchCareContract
-        .mockRejectedValueOnce(down())
-        .mockResolvedValue({ ...DRAFT, status: "versendet" });
+      // Sent by mail, the contract holds its mailing; without one it was
+      // handed over on paper (#8030).
+      api.fetchCareContract.mockRejectedValueOnce(down()).mockResolvedValue({
+        ...DRAFT,
+        status: "versendet",
+        documentFrozen: true,
+        mailings: [
+          {
+            recipient: "erika@example.org",
+            sentAt: "2026-09-02T08:00:00Z",
+            state: "sent",
+          },
+        ],
+      });
 
       fireEvent.click(sendButton);
       // Sending asks first: confirm in the dialog.
@@ -1596,5 +1902,55 @@ describe("TraegerVertragPage", () => {
         screen.queryByRole("button", { name: "Mit Kinderakte verknüpfen" }),
       ).not.toBeInTheDocument();
     });
+  });
+});
+
+describe("waiting amendment delivery", () => {
+  it.each([
+    ["queued", "Die Mail mit der neuen Fassung wird noch gesendet."],
+    ["failed", "Die Mail mit der neuen Fassung ist nicht angekommen."],
+    [
+      "unknown",
+      "Ob die Mail mit der neuen Fassung angekommen ist, ist unbekannt.",
+    ],
+  ] as const)("shows %s without claiming receipt", (state, message) => {
+    const waiting = {
+      number: 2,
+      status: "beantragt",
+      source: "buchungsaenderung",
+      effectiveFrom: testClockDay(10),
+      endsOn: null,
+      validUntil: null,
+      services: DRAFT.version.services,
+      createdAt: "2026-09-01T08:00:00Z",
+    } as const;
+    render(
+      <CareContractWaitingChangeCard
+        contract={{
+          ...DRAFT,
+          status: "aktiv",
+          changeAwaitsSignature: true,
+          mailings: [
+            {
+              recipient: "erika@example.org",
+              sentAt: "2026-09-01T08:05:00Z",
+              state,
+            },
+          ],
+        }}
+        waiting={waiting}
+        onChanged={vi.fn()}
+      />,
+    );
+    expect(
+      screen.getByRole("heading", { name: "Geänderte Fassung" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(new RegExp(message))).toBeInTheDocument();
+    if (state !== "queued") {
+      expect(screen.getByText(/Lade das PDF unter/)).toBeInTheDocument();
+    }
+    expect(
+      screen.queryByText(/per Mail und in der Eltern-App\s+bekommen/),
+    ).not.toBeInTheDocument();
   });
 });

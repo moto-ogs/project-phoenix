@@ -95,7 +95,7 @@ vi.mock("next-auth/react", () => ({
     data: {
       user: {
         id: "account-1",
-        tenantId: 1,
+        tenantId: "1",
         scope: "tenant",
         permissions: mockPermissions,
       },

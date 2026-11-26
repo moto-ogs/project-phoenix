@@ -12,6 +12,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 	"github.com/moto-ogs/project-phoenix/modules/schoolmembership"
@@ -311,20 +313,36 @@ func TestInvalidEntryIDsAreRejectedBeforeAnyFlow(t *testing.T) {
 	assert.Contains(t, h.observed, "Bad Request/invalid_parameters")
 }
 
+// The owner refuses a revision of an entry changed since it was read; the
+// route answers 409 and the root renders general.changed_since_read.
+func TestUpdateOfAnOlderReadAnswersConflict(t *testing.T) {
+	t.Parallel()
+	h := newHarness(t)
+	h.permitted["users:update"] = true
+	h.entries.writeErr = fmt.Errorf("revise: %w", readstate.ErrChanged)
+
+	rec := h.do(http.MethodPut, "/12", `{"first_name":"Zoe","last_name":"Aalders","school_class":"1b","expected_version":"old"}`)
+	assert.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
+	assert.Contains(t, h.observed, "Conflict/changed")
+}
+
 func TestUpdateDeleteAndAssignDelegateToTheOwner(t *testing.T) {
 	t.Parallel()
 	h := newHarness(t)
 	h.permitted["users:update"] = true
 	h.permitted["users:delete"] = true
 
-	rec := h.do(http.MethodPut, "/9007199254740993", `{"first_name":"Zoe","last_name":"Aalders","school_class":"1b"}`)
+	rec := h.do(http.MethodPut, "/9007199254740993", `{"first_name":"Zoe","last_name":"Aalders","school_class":"1b","expected_version":"read-1"}`)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Equal(t, schoolmembership.ReviseClassListEntry{
 		ID:                   9007199254740993,
 		ClassListEntryFields: schoolmembership.ClassListEntryFields{FirstName: "Zoe", LastName: "Aalders", SchoolClass: "1b"},
 		ChangedBy:            77,
+		ExpectedVersion:      "read-1",
 	}, h.entries.revised[9007199254740993])
 	assert.Contains(t, rec.Body.String(), "Class list entry updated successfully")
+	// The answer carries the version of the stored entry (ADR 0311).
+	assert.Contains(t, rec.Body.String(), `"version":"`+schoolmembership.ClassListEntryVersion(schoolmembership.ClassListEntry{FirstName: "Zoe", LastName: "Aalders", SchoolClass: "1b"})+`"`)
 
 	rec = h.do(http.MethodDelete, "/12", "")
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())

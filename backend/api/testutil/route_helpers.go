@@ -24,6 +24,7 @@ var (
 	RespondError                  = routetest.RespondError
 	RespondInvalidRequest         = routetest.RespondInvalidRequest
 	RespondCoded                  = routetest.RespondCoded
+	RespondCodedDetails           = routetest.RespondCodedDetails
 	ErrorResponder                = routetest.ErrorResponder
 	WithJWTBearer                 = routetest.WithJWTBearer
 	SeedTestJWTConfig             = routetest.SeedTestJWTConfig

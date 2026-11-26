@@ -89,3 +89,36 @@ func TestBookedModulesFollowsTheModuleList(t *testing.T) {
 	_, err = BookedModules(func(string) (bool, error) { return false, errors.New("boom") })
 	require.Error(t, err)
 }
+
+// fakeBatchReader answers a batch read with fixed snapshots.
+type fakeBatchReader struct {
+	snapshots map[int64]*configModel.SettingsSnapshot
+	err       error
+	asked     [][]int64
+}
+
+func (r *fakeBatchReader) ResolveManyForTenants(_ context.Context, tenantIDs []int64, _ []string) (map[int64]*configModel.SettingsSnapshot, error) {
+	r.asked = append(r.asked, tenantIDs)
+	return r.snapshots, r.err
+}
+
+// A Träger without schools has booked nothing, and nothing is read for it.
+func TestModulesBookedByAnySchoolBooksNothingWithoutSchools(t *testing.T) {
+	t.Parallel()
+	reader := &fakeBatchReader{}
+	booked, err := ModulesBookedByAnySchool(context.Background(), reader, nil)
+	require.NoError(t, err)
+	assert.Empty(t, booked)
+	assert.Empty(t, reader.asked)
+}
+
+// A failed or incomplete batch read is an error, never a booking decision.
+func TestModulesBookedByAnySchoolPassesReadErrorsThrough(t *testing.T) {
+	t.Parallel()
+	readErr := errors.New("settings unavailable")
+	_, err := ModulesBookedByAnySchool(context.Background(), &fakeBatchReader{err: readErr}, []int64{requestSchool})
+	require.ErrorIs(t, err, readErr)
+
+	_, err = ModulesBookedByAnySchool(context.Background(), &fakeBatchReader{snapshots: map[int64]*configModel.SettingsSnapshot{}}, []int64{requestSchool, otherSchool})
+	require.ErrorIs(t, err, ErrSchoolSwitchesMissing)
+}

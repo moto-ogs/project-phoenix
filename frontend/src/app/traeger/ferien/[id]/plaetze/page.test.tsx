@@ -39,7 +39,7 @@ vi.mock("~/components/ui/tenant-page", async (original) => ({
 }));
 vi.mock("~/lib/traeger-url", () => ({ traegerPath: (path: string) => path }));
 
-import HolidayPlacesPage from "./page";
+import HolidayPlacesPage from "./page-content";
 
 describe("holiday places summary", () => {
   it("counts a child waiting in three weeks only once", async () => {

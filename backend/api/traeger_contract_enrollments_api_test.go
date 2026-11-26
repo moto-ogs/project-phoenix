@@ -157,7 +157,7 @@ func newContractEnrollmentFixtureWithAmendments(t *testing.T, name string) (cont
 	care := careContractFixture{reviewFixture: reviewFixture{holidayRegistrationFixture: holidayRegistrationFixture{db: db, traeger: traeger}, office: office},
 		school: school, phase: phaseID, offering: offering.ID}
 	setTraegerLetterhead(t, care.reviewFixture, traegerTestLetterhead)
-	require.Equal(t, http.StatusOK, traegerJSON(t, traeger, office.token, http.MethodPut, templatePath(school, offering.ID), careContractTemplate).Code)
+	require.Equal(t, http.StatusOK, putTemplate(t, traeger, office.token, school, offering.ID, careContractTemplate).Code)
 	rec := applyContractImport(t, care, office.token, "bestand.csv", contractImportFile(contractImportSchoolName(t, care),
 		"Mia;Beispiel;03.05.2019;{school};Offene Ganztagsschule;01.08.2027;Eva Beispiel;eva.beispiel@example.org;",
 		"Ben;Beispiel;11.11.2020;{school};Offene Ganztagsschule;01.09.2027;Eva Beispiel;eva.beispiel@example.org;",
@@ -233,14 +233,14 @@ func contractEnrollmentRoutes(t *testing.T, f contractEnrollmentFixture, unit te
 
 func (f contractEnrollmentFixture) preview(t *testing.T) contractEnrollmentBody {
 	t.Helper()
-	rec := traegerJSON(t, f.enroll, f.office.token, http.MethodPost, contractEnrollmentPreviewPath, map[string]any{"school_id": f.school})
+	rec := traegerJSON(t, f.enroll, f.office.token, http.MethodPost, contractEnrollmentPreviewPath, map[string]any{"school_id": fmt.Sprint(f.school)})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	return decodeSchoolPortalData[contractEnrollmentBody](t, rec.Body.Bytes())
 }
 
 func (f contractEnrollmentFixture) run(t *testing.T, fingerprint string) *httptest.ResponseRecorder {
 	t.Helper()
-	return traegerJSON(t, f.enroll, f.office.token, http.MethodPost, contractEnrollmentPath, map[string]any{"school_id": f.school, "fingerprint": fingerprint})
+	return traegerJSON(t, f.enroll, f.office.token, http.MethodPost, contractEnrollmentPath, map[string]any{"school_id": fmt.Sprint(f.school), "fingerprint": fingerprint})
 }
 
 // runPreviewed previews and runs what the preview shows.
@@ -303,9 +303,9 @@ func (f contractEnrollmentFixture) openCareMonth(t *testing.T) (string, int64) {
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	prices := []map[string]any{}
 	for _, weekday := range []string{"mon", "tue", "wed"} {
-		prices = append(prices, map[string]any{"care_offering_id": f.offering, "module_name": "Offene Ganztagsschule", "weekday": weekday, "monthly_cents": 3200})
+		prices = append(prices, map[string]any{"care_offering_id": fmt.Sprint(f.offering), "module_name": "Offene Ganztagsschule", "weekday": weekday, "monthly_cents": 3200})
 	}
-	rec = putCarePriceList(t, f.traeger, billing, map[string]any{"school_id": f.school, "valid_from": "2027-08-01", "prices": prices})
+	rec = putCarePriceList(t, f.traeger, billing, map[string]any{"school_id": fmt.Sprint(f.school), "valid_from": "2027-08-01", "prices": prices})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	rec = traegerJSON(t, f.traeger, billing, http.MethodPost, careRunsPath, map[string]any{"billing_month": "2027-10-01"})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
@@ -481,7 +481,9 @@ func TestContractEnrollmentEnrollsBindsAndKeepsCareContractAndBillingInStep(t *t
 	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), "care_contract.child_link_bound")
 
-	// The normal way: an approved change of the bookings makes version 2.
+	// The normal way: a change of the bookings makes version 2. The school
+	// booked it, the parents asked for nothing, so it waits for their
+	// signature (#4816).
 	late := &testpkg.CareOffering{PhaseID: f.phase, Name: "Spätbetreuung", DaysOfWeekMode: "fixed", AvailableDays: []string{"thu"},
 		AutoAddGradeLevels: []int{}, IsActive: true, CountsAsCare: true, PickupTimes: map[string]string{"thu": "17:00"}}
 	late.TenantID = f.school
@@ -491,9 +493,9 @@ func TestContractEnrollmentEnrollsBindsAndKeepsCareContractAndBillingInStep(t *t
 	require.NoError(t, err)
 	amended, err = conclusion.AmendFromBookings(ctx, f.office.organization)
 	require.NoError(t, err)
-	require.Len(t, amended.Amended, 1, "a bound imported contract follows its bookings like any other")
-	assert.Equal(t, f.mia, amended.Amended[0].ContractID)
-	assert.Equal(t, 2, amended.Amended[0].VersionNumber)
+	require.Len(t, amended.Awaiting, 1, "a bound imported contract follows its bookings like any other")
+	assert.Equal(t, f.mia, amended.Awaiting[0].ContractID)
+	assert.Equal(t, 2, amended.Awaiting[0].VersionNumber)
 	assert.Equal(t, 1, f.count(t, `SELECT COUNT(*) FROM care_contract.contract_versions WHERE contract_id = ? AND version_number = 2
 		AND source = ? AND effective_from = DATE '2027-10-01'`, f.mia, carecontract.SourceBookingChange))
 }
@@ -559,13 +561,13 @@ func TestContractEnrollmentNeedsTheRightAndASchoolOfTheTraeger(t *testing.T) {
 	t.Parallel()
 	f := newContractEnrollmentFixture(t, "Träger Anmeldung Recht")
 	billing := traegerColleague(t, f.reviewFixture, identityaccess.TraegerRoleBilling)
-	body := map[string]any{"school_id": f.school, "fingerprint": "x"}
+	body := map[string]any{"school_id": fmt.Sprint(f.school), "fingerprint": "x"}
 	assert.Equal(t, http.StatusForbidden, traegerJSON(t, f.enroll, billing, http.MethodPost, contractEnrollmentPreviewPath, body).Code)
 	assert.Equal(t, http.StatusForbidden, traegerJSON(t, f.enroll, billing, http.MethodPost, contractEnrollmentPath, body).Code)
 	assert.Equal(t, http.StatusForbidden, traegerJSON(t, f.enroll, billing, http.MethodDelete, contractEnrollmentUnbindPath(f.mia, 1), nil).Code)
 
 	other := newTraegerOffice(t, f.db, f.traeger, "Träger Anmeldung Fremd", identityaccess.TraegerRoleAdministration)
-	foreign := map[string]any{"school_id": other.schools[0], "fingerprint": "x"}
+	foreign := map[string]any{"school_id": fmt.Sprint(other.schools[0]), "fingerprint": "x"}
 	for _, path := range []string{contractEnrollmentPreviewPath, contractEnrollmentPath} {
 		rec := traegerJSON(t, f.enroll, f.office.token, http.MethodPost, path, foreign)
 		require.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
@@ -592,7 +594,7 @@ func TestContractEnrollmentNeedsTheRightAndASchoolOfTheTraeger(t *testing.T) {
 			_, err := f.db.ExecContext(context.Background(), `UPDATE platform.schools SET organization_id = ? WHERE id = ?`, other.organization, f.school)
 			require.NoError(t, err)
 		}
-		rec := traegerJSON(t, f.enroll, f.office.token, http.MethodPost, path, map[string]any{"school_id": f.school, "fingerprint": preview.Fingerprint})
+		rec := traegerJSON(t, f.enroll, f.office.token, http.MethodPost, path, map[string]any{"school_id": fmt.Sprint(f.school), "fingerprint": preview.Fingerprint})
 		require.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
 		assert.Contains(t, rec.Body.String(), "care_contract.school_outside_traeger")
 		_, err := f.db.ExecContext(context.Background(), `UPDATE platform.schools SET organization_id = ? WHERE id = ?`, f.office.organization, f.school)
@@ -631,17 +633,17 @@ func TestContractEnrollmentQueryBudgets(t *testing.T) {
 		require.Equal(t, http.StatusOK, recorder.Code, recorder.Body.String())
 		return counter.Measurement(counter.Queries()), decodeSchoolPortalData[contractEnrollmentBody](t, recorder.Body.Bytes())
 	}
-	school := map[string]any{"school_id": f.school}
+	school := map[string]any{"school_id": fmt.Sprint(f.school)}
 	onePreview, preview := measure(contractEnrollmentPreviewPath, school)
 	require.Equal(t, 1, preview.Counts.Ready)
-	oneRun, run := measure(contractEnrollmentPath, map[string]any{"school_id": f.school, "fingerprint": preview.Fingerprint})
+	oneRun, run := measure(contractEnrollmentPath, map[string]any{"school_id": fmt.Sprint(f.school), "fingerprint": preview.Fingerprint})
 	require.Equal(t, 1, run.Counts.Done)
 
 	f.link(t, [2]int64{f.ben, f.benStudent}, [2]int64{f.ida, f.idaStudent})
 	twoPreview, preview := measure(contractEnrollmentPreviewPath, school)
 	require.Equal(t, 2, preview.Counts.Ready)
 	assert.Len(t, twoPreview.Statements, len(onePreview.Statements), "the preview reads the same statements for any number of contracts")
-	twoRun, run := measure(contractEnrollmentPath, map[string]any{"school_id": f.school, "fingerprint": preview.Fingerprint})
+	twoRun, run := measure(contractEnrollmentPath, map[string]any{"school_id": fmt.Sprint(f.school), "fingerprint": preview.Fingerprint})
 	require.Equal(t, 3, run.Counts.Done)
 	assert.Equal(t, contractEnrollmentResidual, len(twoRun.Statements)-len(oneRun.Statements),
 		"one more child adds exactly Care Plan's per-child statements of an approval (ADR 0309 section 2)")

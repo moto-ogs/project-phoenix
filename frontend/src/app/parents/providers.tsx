@@ -7,6 +7,7 @@ import { PushSubscriptionSync } from "~/components/notifications/push-subscripti
 import { ModulePortalProvider } from "~/lib/module-portal-context";
 import { ParentLocaleProvider } from "~/lib/parent-locale-context";
 import { KitLocaleFromIntl } from "~/components/ui/kit-locale-intl";
+import { useTranslations } from "next-intl";
 
 /**
  * Parent-scoped providers. No ProfileProvider or SupervisionProvider —
@@ -21,9 +22,28 @@ import { KitLocaleFromIntl } from "~/components/ui/kit-locale-intl";
 export function ParentProviders({
   children,
   session,
-}: Readonly<{ children: React.ReactNode; session?: Session | null }>) {
+  sessionMark,
+}: Readonly<{
+  children: React.ReactNode;
+  session?: Session | null;
+  /** The session mark the page was rendered with (#8082). */
+  sessionMark: string;
+}>) {
+  const t = useTranslations("sessionTree");
   return (
-    <PortalProviders portal="parent" session={session}>
+    <PortalProviders
+      portal="parent"
+      session={session}
+      sessionMark={sessionMark}
+      sessionTreeLabels={{
+        checking: t("checking"),
+        leaving: t("leaving"),
+        changed: t("changed"),
+        unconfirmed: t("unconfirmed"),
+        reload: t("reload"),
+        reloadHint: t("reloadHint"),
+      }}
+    >
       <PushSubscriptionSync portal="parent" />
       <ParentPortalAnalyticsSession />
       <ParentLocaleProvider>

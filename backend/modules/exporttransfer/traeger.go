@@ -98,6 +98,9 @@ type TraegerRecipient struct {
 	// LastHandover is its newest handover: its error state until the next.
 	LastHandover *TraegerTransferEntry `json:"last_handover,omitempty"`
 	UpdatedAt    time.Time             `json:"updated_at"`
+	// Version is the read state of the values the form shows; a save sends
+	// it back and is refused once they changed (ADR 0311).
+	Version string `json:"version"`
 }
 
 // TraegerRecipientInput is what the Träger saves. A nil Password keeps the
@@ -169,6 +172,9 @@ type TraegerRecipientsPage struct {
 	// Assignments has one entry per format of TraegerFormats, in order.
 	Assignments []TraegerAssignment    `json:"assignments"`
 	Handovers   []TraegerTransferEntry `json:"handovers"`
+	// AssignmentsVersion is the read state of the assignments; a change of
+	// them sends it back (ADR 0311).
+	AssignmentsVersion string `json:"assignments_version"`
 }
 
 // TraegerRecipientPage is one recipient with its own newest handovers.
@@ -188,13 +194,19 @@ type TraegerTransfers interface {
 	// handovers; another Träger's answers ErrRecipientNotFound.
 	Recipient(ctx context.Context, organizationID, recipientID int64, journalLimit int) (TraegerRecipientPage, error)
 	CreateRecipient(ctx context.Context, organizationID, actorAccountID int64, input TraegerRecipientInput) (TraegerRecipient, error)
-	SaveRecipient(ctx context.Context, organizationID, actorAccountID, recipientID int64, input TraegerRecipientInput) (TraegerRecipient, error)
+	// SaveRecipient refuses with readstate.ErrChanged when the recipient
+	// differs from expectedVersion, the version it was read with (ADR 0311).
+	SaveRecipient(ctx context.Context, organizationID, actorAccountID, recipientID int64, input TraegerRecipientInput,
+		expectedVersion string) (TraegerRecipient, error)
 	// DeleteRecipient removes a recipient and its sealed password; its
 	// formats go back to the download. It answers the page without it.
 	DeleteRecipient(ctx context.Context, organizationID, recipientID int64) (TraegerRecipientsPage, error)
 	// AssignFormats sends each named format to its recipient, or to the
 	// download; formats it does not name keep theirs.
-	AssignFormats(ctx context.Context, organizationID, actorAccountID int64, assignments []TraegerAssignment) (TraegerRecipientsPage, error)
+	// The assignments differing from expectedVersion, the
+	// AssignmentsVersion they were read with, are readstate.ErrChanged.
+	AssignFormats(ctx context.Context, organizationID, actorAccountID int64, assignments []TraegerAssignment,
+		expectedVersion string) (TraegerRecipientsPage, error)
 	// Transfer hands one file to the recipient of its format. A format
 	// without a ready recipient answers ReasonNotConfigured without
 	// preparing a file.

@@ -17,11 +17,6 @@ func (s activeStaffProjectionSource) GetCurrentStaff(ctx context.Context) (int64
 	return s.lookup(ctx)
 }
 
-func (s activeStaffProjectionSource) HasCurrentStaff(ctx context.Context) (bool, error) {
-	_, _, found, err := s.lookup(ctx)
-	return found, err
-}
-
 func TestActiveStaffProjectionPreservesLookupResults(t *testing.T) {
 	t.Parallel()
 	lookupErr := errors.New("identity lookup failed")
@@ -41,9 +36,6 @@ func TestActiveStaffProjectionPreservesLookupResults(t *testing.T) {
 			} else {
 				assert.Nil(t, got)
 			}
-			found, gotErr := adapter.HasCurrentStaff(ctx)
-			assert.Equal(t, withRow, found)
-			assert.ErrorIs(t, gotErr, err)
 			cancel()
 		}
 	}

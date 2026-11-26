@@ -99,11 +99,7 @@ export type BulkIneligibleReason =
  */
 export type RequestReviewMetadata = Omit<
   studentsContract.Item,
-  | "request_type"
-  | "data"
-  | "occurred_at"
-  | "bulk_ineligible_reason"
-  | ParentRequestKind
+  "request_type" | "occurred_at" | "bulk_ineligible_reason" | ParentRequestKind
 > & { readonly bulk_ineligible_reason?: BulkIneligibleReason };
 
 /** Eine Anmeldungsänderung als Zeile der gemeinsamen Liste. */
@@ -131,10 +127,10 @@ export type AggregatedOpenRequest =
  * nicht überschreiben.
  */
 type HistoryDecisionMeta = Pick<
-  studentsContract.Item,
+  studentsContract.HistoryItem,
   "can_correct" | "submitted_by_name" | "submitted_by_relationship"
 > &
-  Partial<Pick<studentsContract.Item, "expected_version">>;
+  Partial<Pick<studentsContract.HistoryItem, "expected_version">>;
 
 export type AggregatedHistoryRequest =
   | (Occurred &
@@ -186,17 +182,28 @@ export interface AggregatedRequestParams {
   readonly cursor?: string;
 }
 
+const joined = (values?: readonly string[]) =>
+  values && values.length > 0 ? values.join(",") : undefined;
+
+/** Die Filter der offenen Liste. */
 function listQuery(params: AggregatedRequestParams) {
-  const join = (values?: readonly string[]) =>
-    values && values.length > 0 ? values.join(",") : undefined;
   return {
     search: params.search?.trim() || undefined,
     student_id: params.studentId || undefined,
-    types: join(params.types),
-    status: join(params.statuses),
+    types: joined(params.types),
+    cursor: params.cursor || undefined,
+  };
+}
+
+/** Die Historie filtert zusätzlich nach Entscheidung und Zeitraum. */
+function historyQuery(params: AggregatedRequestParams) {
+  const { cursor, ...filters } = listQuery(params);
+  return {
+    ...filters,
+    status: joined(params.statuses),
     from: params.from || undefined,
     to: params.to || undefined,
-    cursor: params.cursor || undefined,
+    cursor,
   };
 }
 
@@ -221,7 +228,6 @@ function projection<T>(value: T | undefined, kind: string): T {
 function openRequest(item: studentsContract.Item): AggregatedOpenRequest {
   const {
     request_type,
-    data: _data,
     master_data,
     care_schedule,
     offering,
@@ -333,19 +339,25 @@ function logLoadFailure(view: "open" | "history", error: unknown): void {
   });
 }
 
+export function mapAggregatedOpenPage(
+  page: studentsContract.Page,
+): AggregatedRequestPage<AggregatedOpenRequest> {
+  return {
+    items: (page.items ?? []).map(openRequest),
+    next_cursor: page.next_cursor,
+    review_access: knownEnum(REVIEW_ACCESS, page.review_access),
+  };
+}
+
 export async function listAggregatedOpenRequests(
   params: AggregatedRequestParams = {},
 ): Promise<AggregatedRequestPage<AggregatedOpenRequest>> {
   try {
     const page = await bffJson("tenant", "GET /api/students/change-requests", {
-      query: { view: "open", ...listQuery(params) },
+      query: listQuery(params),
       errorMessage: "change request list load failed",
     });
-    return {
-      items: (page.items ?? []).map(openRequest),
-      next_cursor: page.next_cursor,
-      review_access: knownEnum(REVIEW_ACCESS, page.review_access),
-    };
+    return mapAggregatedOpenPage(page);
   } catch (error) {
     logLoadFailure("open", error);
     throw error;
@@ -360,7 +372,7 @@ export async function listAggregatedRequestHistory(
       "tenant",
       "GET /api/students/change-requests/history",
       {
-        query: listQuery(params),
+        query: historyQuery(params),
         errorMessage: "change request list load failed",
       },
     );
@@ -599,6 +611,23 @@ export async function fetchPendingEnrollmentChangeRequestCount(): Promise<number
   }
 }
 
+export function mapEnrollmentRequestPage(
+  page: enrollmentContract.ChangeRequestReviewPage,
+): AggregatedRequestPage<EnrollmentRequestItem> {
+  return {
+    items: (page.items ?? []).map((item) => ({
+      occurred_at: item.occurred_at,
+      request_type: requiredEnum(
+        ["enrollment"] as const,
+        item.request_type,
+        "request_type",
+      ),
+      data: item.data,
+    })),
+    next_cursor: page.next_cursor,
+  };
+}
+
 /**
  * Anmeldungsänderungen, offen oder in der Historie (#2435). Gleiche Antwort-
  * form wie oben, eigener Endpunkt hinter config:manage. Der Art-Filter wirkt
@@ -617,22 +646,11 @@ export async function listEnrollmentChangeRequests(
       "tenant",
       "GET /api/enrollment/admin/change-requests/list",
       {
-        query: { view, ...listQuery(rest) },
+        query: { view, ...historyQuery(rest) },
         errorMessage: "enrollment change request list load failed",
       },
     );
-    return {
-      items: (page.items ?? []).map((item) => ({
-        occurred_at: item.occurred_at,
-        request_type: requiredEnum(
-          ["enrollment"] as const,
-          item.request_type,
-          "request_type",
-        ),
-        data: item.data,
-      })),
-      next_cursor: page.next_cursor,
-    };
+    return mapEnrollmentRequestPage(page);
   } catch (error) {
     logger.warn("enrollment_change_request_list_load_failed", {
       view,

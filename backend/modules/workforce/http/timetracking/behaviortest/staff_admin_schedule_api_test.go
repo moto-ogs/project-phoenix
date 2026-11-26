@@ -1,10 +1,13 @@
 package behaviortest
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -20,6 +23,22 @@ const (
 	dayMonday  = 0
 	dayTuesday = 1
 )
+
+// scheduleVersion reads the schedule form's version, as the Dienstplan tab
+// does before it saves (ADR 0311).
+func scheduleVersion(t *testing.T, ctx *testContext, token string, staffID int64) string {
+	t.Helper()
+	rr := testutil.ExecuteRequest(ctx.router, testutil.NewAuthenticatedRequest(t, http.MethodGet, fmt.Sprintf("/staff/%d/schedule", staffID), nil, testutil.WithJWTBearer(token)))
+	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+	var answer struct {
+		Data struct {
+			Version string `json:"version"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &answer))
+	require.NotEmpty(t, answer.Data.Version)
+	return answer.Data.Version
+}
 
 func TestUpdateSchedule_SaveAsTemplateMaterializesAssignedSnapshot(t *testing.T) {
 	t.Parallel()
@@ -49,6 +68,7 @@ func TestUpdateSchedule_SaveAsTemplateMaterializesAssignedSnapshot(t *testing.T)
 		"rotation_length":      1,
 		"rotation_anchor_date": "2026-06-01",
 		"save_as_template":     fmt.Sprintf("Saved schedule template clean %d", staff.ID),
+		"expected_version":     scheduleVersion(t, ctx, token, staff.ID),
 		"entries": []map[string]any{
 			{
 				"week_index":     0,
@@ -229,6 +249,7 @@ func TestUpdateSchedule_FirstScheduleStartsOnValidFrom(t *testing.T) {
 			"entries": []map[string]any{
 				{"week_index": 0, "day_of_week": dayMonday, "target_minutes": 480},
 			},
+			"expected_version": scheduleVersion(t, ctx, token, staff.ID),
 		}
 		req := testutil.NewAuthenticatedRequest(t, http.MethodPut, fmt.Sprintf("/staff/%d/schedule", staff.ID), body, testutil.WithJWTBearer(token))
 		return testutil.ExecuteRequest(ctx.router, req).Code
@@ -278,6 +299,7 @@ func TestUpdateSchedule_RejectsFutureValidFromForEmptyCustomSchedule(t *testing.
 
 			body := map[string]any{
 				"mode": "custom", "rotation_length": 1, "valid_from": "2999-01-04", "entries": test.entries,
+				"expected_version": scheduleVersion(t, ctx, token, staff.ID),
 			}
 			req := testutil.NewAuthenticatedRequest(t, http.MethodPut, fmt.Sprintf("/staff/%d/schedule", staff.ID), body, testutil.WithJWTBearer(token))
 			rr := testutil.ExecuteRequest(ctx.router, req)
@@ -311,7 +333,7 @@ func TestUpdateSchedule_ArchivedTemplateOnlyKeepsExistingAssignees(t *testing.T)
 	claims.Permissions = []string{"time_tracking:manage"}
 	token := testutil.MintTestJWT(t, claims)
 	assign := func(staffID int64) *http.Response {
-		body := map[string]any{"mode": "template", "model_id": model.ID}
+		body := map[string]any{"mode": "template", "model_id": fmt.Sprint(model.ID), "expected_version": scheduleVersion(t, ctx, token, staffID)}
 		req := testutil.NewAuthenticatedRequest(t, http.MethodPut, fmt.Sprintf("/staff/%d/schedule", staffID), body, testutil.WithJWTBearer(token))
 		return testutil.ExecuteRequest(ctx.router, req).Result()
 	}
@@ -339,4 +361,118 @@ func TestUpdateSchedule_ArchivedTemplateOnlyKeepsExistingAssignees(t *testing.T)
 	_, err = catalog.RestoreWorkTimeModel(testpkg.Ctx(t), model.ID)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, assign(newcomer.ID).StatusCode, "a restored template is offered again")
+}
+
+// TestUpdateSchedule_RefusesAScheduleChangedSinceItWasRead pins ADR 0311 on
+// PUT /staff/{id}/schedule: a schedule saved after the form read it refuses
+// the save with general.changed_since_read and keeps the stored rows, an
+// empty version too; the save's answer carries the next save.
+func TestUpdateSchedule_RefusesAScheduleChangedSinceItWasRead(t *testing.T) {
+	t.Parallel()
+
+	ctx := setupStaffRoute(t)
+	staff := testpkg.CreateTestStaff(t, ctx.db, "ScheduleRead", "Stale")
+	capability := newWorkforceCapability(t, ctx.db)
+	claims := testutil.DefaultTestClaims()
+	claims.Permissions = []string{"time_tracking:manage"}
+	token := testutil.MintTestJWT(t, claims)
+	put := func(minutes int, version string) *httptest.ResponseRecorder {
+		t.Helper()
+		body := map[string]any{
+			"mode": "custom", "rotation_length": 1, "expected_version": version,
+			"entries": []map[string]any{{"week_index": 0, "day_of_week": dayMonday, "target_minutes": minutes}},
+		}
+		return testutil.ExecuteRequest(ctx.router, testutil.NewAuthenticatedRequest(t, http.MethodPut, fmt.Sprintf("/staff/%d/schedule", staff.ID), body, testutil.WithJWTBearer(token)))
+	}
+
+	shown := scheduleVersion(t, ctx, token, staff.ID)
+	saved := put(300, scheduleVersion(t, ctx, token, staff.ID))
+	require.Equal(t, http.StatusOK, saved.Code, saved.Body.String())
+
+	for name, version := range map[string]string{"stale": shown, "empty": ""} {
+		refused := put(480, version)
+		require.Equal(t, http.StatusConflict, refused.Code, "%s: %s", name, refused.Body.String())
+		assert.Contains(t, refused.Body.String(), "general.changed_since_read", name)
+	}
+	rows, err := capability.CurrentStaffSchedule(testpkg.Ctx(t), staff.ID)
+	require.NoError(t, err)
+	require.Len(t, rows, 1)
+	assert.Equal(t, 300, rows[0].TargetMinutes, "the refused saves wrote nothing")
+
+	var answer struct {
+		Data struct {
+			Version string `json:"version"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(saved.Body.Bytes(), &answer))
+	assert.Equal(t, scheduleVersion(t, ctx, token, staff.ID), answer.Data.Version, "the save answers the version of what it stored")
+	again := put(360, answer.Data.Version)
+	require.Equal(t, http.StatusOK, again.Code, again.Body.String())
+}
+
+// TestUpdateSchedule_TemplateWaitsForAnEditOfTheTemplate proves a schedule
+// save in template mode waits for an uncommitted edit of the template and
+// then binds the person to the edited template's snapshot, never the old
+// one. It does not prove the lock order (template before person); that order
+// is enforced at runtime by tenant.OrderLock.
+func TestUpdateSchedule_TemplateWaitsForAnEditOfTheTemplate(t *testing.T) {
+	t.Parallel()
+
+	ctx := setupStaffRoute(t)
+	capability := newWorkforceCapability(t, ctx.db)
+	model, err := capability.CreateWorkTimeModel(testpkg.Ctx(t), workforce.CreateWorkTimeModel{WorkTimeModelFields: workforce.WorkTimeModelFields{
+		Name: "Vorlage im Umbau", RotationLength: 1, RotationAnchorDate: "2026-06-01",
+		Entries: []workforce.WorkTimeModelEntry{{WeekIndex: 0, DayOfWeek: dayMonday, TargetMinutes: 300}},
+	}})
+	require.NoError(t, err)
+	testpkg.OwnTestWorkTimeModel(t, ctx.db, model.ID)
+	staff := testpkg.CreateTestStaff(t, ctx.db, "TemplateRace", "Bound")
+	claims := testutil.DefaultTestClaims()
+	claims.Permissions = []string{"time_tracking:manage"}
+	token := testutil.MintTestJWT(t, claims)
+	body := map[string]any{"mode": "template", "model_id": fmt.Sprint(model.ID), "expected_version": scheduleVersion(t, ctx, token, staff.ID)}
+
+	// The edit: it holds the template as UpdateWorkTimeModel does and has
+	// written the new Soll, but not committed.
+	bg := context.Background()
+	edit, err := ctx.db.BeginTx(bg, nil)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = edit.Rollback() })
+	var editPID int64
+	require.NoError(t, edit.NewRaw("SELECT pg_backend_pid()").Scan(bg, &editPID))
+	_, err = edit.ExecContext(bg, "SELECT id FROM config.work_time_models WHERE id = ? FOR NO KEY UPDATE", model.ID)
+	require.NoError(t, err)
+	_, err = edit.ExecContext(bg, "UPDATE config.work_time_model_entries SET target_minutes = 420 WHERE model_id = ?", model.ID)
+	require.NoError(t, err)
+
+	saved := make(chan *httptest.ResponseRecorder, 1)
+	go func() {
+		saved <- testutil.ExecuteRequest(ctx.router, testutil.NewAuthenticatedRequest(t, http.MethodPut, fmt.Sprintf("/staff/%d/schedule", staff.ID), body, testutil.WithJWTBearer(token)))
+	}()
+	deadline := time.Now().Add(30 * time.Second)
+	for waiting := false; !waiting; {
+		select {
+		case rr := <-saved:
+			require.FailNow(t, "the schedule save did not wait for the template edit", "%d %s", rr.Code, rr.Body.String())
+		default:
+		}
+		require.True(t, time.Now().Before(deadline), "the schedule save never waited for the template edit")
+		require.NoError(t, ctx.db.NewRaw(`SELECT EXISTS (SELECT 1 FROM pg_stat_activity WHERE ?::int = ANY(pg_blocking_pids(pid)))`, editPID).Scan(bg, &waiting))
+		if !waiting {
+			time.Sleep(10 * time.Millisecond)
+		}
+	}
+	require.NoError(t, edit.Commit())
+
+	var rr *httptest.ResponseRecorder
+	select {
+	case rr = <-saved:
+	case <-time.After(30 * time.Second):
+		require.FailNow(t, "the schedule save never finished")
+	}
+	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+	rows, err := capability.CurrentStaffSchedule(testpkg.Ctx(t), staff.ID)
+	require.NoError(t, err)
+	require.Len(t, rows, 1)
+	assert.Equal(t, 420, rows[0].TargetMinutes, "the person carries the edited template's Soll")
 }

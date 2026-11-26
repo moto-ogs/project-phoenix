@@ -66,7 +66,7 @@ vi.mock("~/env.client", () => ({
   },
 }));
 
-import TraegerReportsPage from "./page";
+import TraegerReportsPage from "./page-content";
 
 function figures(overrides: Partial<ReportFigures>): ReportFigures {
   return {
@@ -179,6 +179,7 @@ const STANDARD_REPORT: KeyDateReport = {
 };
 
 const TEMPLATE: ReportTemplate = {
+  version: "v-1",
   id: "12",
   name: "Kommune Belegung",
   sections: ["demand"],
@@ -209,7 +210,7 @@ const TEMPLATE_REPORT: KeyDateReport = {
 
 function signIn(permissions: string[]) {
   mockUseSession.mockReturnValue({
-    data: { user: { id: "A", scope: "org", orgId: 7, permissions } },
+    data: { user: { id: "A", scope: "org", orgId: "7", permissions } },
     status: "authenticated",
   });
 }
@@ -269,7 +270,7 @@ describe("TraegerReportsPage", () => {
     // 73 of 85 places, the demand of 86 lacks one place.
     expect(screen.getByText("73 von 85 Plätzen")).toBeInTheDocument();
     expect(screen.getByText("1 Plätze fehlen")).toBeInTheDocument();
-    expect(screen.getByText("8,9 Kinder je Person")).toBeInTheDocument();
+    expect(screen.getByText("8,9 Kinder pro Person")).toBeInTheDocument();
 
     const demand = tableNamed("Belegung und Nachfrage");
     expect(
@@ -295,7 +296,7 @@ describe("TraegerReportsPage", () => {
     renderPage();
     await screen.findByText("Kinder am Stichtag");
 
-    const children = tableNamed("Kinder je Standort und Betreuungsform");
+    const children = tableNamed("Kinder pro Standort und Betreuungsform");
     fireEvent.click(rowOf(children, "OGS Am Bach"));
     expect(
       await within(children).findByText("Frühbetreuung"),
@@ -317,7 +318,7 @@ describe("TraegerReportsPage", () => {
     expect(screen.queryByText("Kinder am Stichtag")).toBeNull();
     expect(screen.queryByRole("heading", { name: "Personal" })).toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: "Je Sozialraum" }));
+    fireEvent.click(screen.getByRole("button", { name: "Pro Sozialraum" }));
     const demand = tableNamed("Belegung und Nachfrage");
     expect(
       within(rowOf(demand, "Nord")).getByText("1 Schule"),

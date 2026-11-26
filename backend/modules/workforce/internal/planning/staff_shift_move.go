@@ -33,6 +33,8 @@ type MoveShiftInput struct {
 	ActorAccountID *int64
 	// WorkingTime confirms the working-time warnings of the move (#4708).
 	WorkingTime workforce.WorkingTimeConfirmation
+	// Read is what the planner read; nil checks nothing.
+	Read *workforce.ShiftReadState
 }
 
 // MoveShift applies a move as one row update inside the caller's tenant
@@ -124,6 +126,10 @@ func (s *staffShiftService) reloadLockedMoveSource(ctx context.Context, input Mo
 			return existing, true, nil
 		}
 		return nil, false, fmt.Errorf("%w: source staff no longer owns shift", ErrShiftConflict)
+	}
+	// Under the staff-shift locks every writer of the row takes (ADR 0311).
+	if err := checkShiftRead(input.Read, existing); err != nil {
+		return nil, false, err
 	}
 	if existing.Cancelled {
 		// A move onto a sick day cancels the row (#6302); its exact retry

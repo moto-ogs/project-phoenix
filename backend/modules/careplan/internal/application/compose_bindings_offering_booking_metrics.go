@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -31,7 +32,7 @@ func ObserveOfferingBookings() func(careplan.OfferingBookingObservation) {
 	return func(event careplan.OfferingBookingObservation) {
 		outcome, code := "success", "none"
 		if event.Err != nil {
-			outcome, code = "error", careplan.ErrorCode(event.Err)
+			outcome, code = "error", readstate.OperationCode(careplan.ErrorCode(event.Err), event.Err)
 			var databaseError interface{ Field(byte) string }
 			if errors.As(event.Err, &databaseError) {
 				switch databaseError.Field('C') {

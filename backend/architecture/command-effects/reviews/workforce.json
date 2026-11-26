@@ -5276,7 +5276,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.MailOutcomes.MailOutcomes",
-      "reason": "Read-only delivery state: workforce reads what became of its payroll and absence mails through runtime.EmailOutcomes.EmailOutcomes in its tenant transaction (#7058). No persistent, lock or scope effect.",
+      "reason": "Copies the feedback flag from each existing transactional mail report for the requested entities. Delivery still reads only the requested mails in the caller’s tenant transaction. (#8094)",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.EmailOutcomes.EmailOutcomes",
       "target_owner": "delivery-platform"
@@ -5286,7 +5286,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.MailOutcomes.MailOutcomes",
-      "reason": "Read-only delivery state: workforce reads what became of its payroll and absence mails through tenant.TenantFromContext in its tenant transaction (#7058). No persistent, lock or scope effect.",
+      "reason": "Copies the feedback flag from each existing transactional mail report for the requested entities. The binding reads the tenant from the existing context; it does not open or change a scope. (#8094)",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
       "target_owner": "tenant-runtime"
@@ -5296,7 +5296,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.MailOutcomes.MailOutcomes",
-      "reason": "Read-only delivery state: workforce reads what became of its payroll and absence mails through tenant.TenantID.Int64 in its tenant transaction (#7058). No persistent, lock or scope effect.",
+      "reason": "Copies the feedback flag from each existing transactional mail report for the requested entities. Converting the scoped tenant ID to the delivery query argument neither writes nor changes scope. (#8094)",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantID.Int64",
       "target_owner": "tenant-runtime"
@@ -5612,6 +5612,46 @@
       "source_owner": "workforce",
       "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.observe",
       "target_owner": ""
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.ownTimeViews.ClockOverview",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.OwnTimeViews.ClockOverview",
+      "reason": "The root binds a read of the current school's Dienstplan booking in the caller's tenant transaction. It only gates the own shifts; it writes no settings and does not change tenant scope (#8078).",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveBool",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.ownTimeViews.ClockOverview",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.OwnTimeViews.ClockOverview",
+      "reason": "The root binds a read of the current school's Dienstplan booking in the caller's tenant transaction. It only gates the own shifts; it writes no settings and does not change tenant scope (#8078).",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsService.ResolveBool",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.ownTimeViews.Period",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.OwnTimeViews.Period",
+      "reason": "The root binds a read of the current school's Dienstplan booking in the caller's tenant transaction. It only gates the own shifts; it writes no settings and does not change tenant scope (#8078).",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveBool",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.ownTimeViews.Period",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.OwnTimeViews.Period",
+      "reason": "The root binds a read of the current school's Dienstplan booking in the caller's tenant transaction. It only gates the own shifts; it writes no settings and does not change tenant scope (#8078).",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsService.ResolveBool",
+      "target_owner": "settings-platform"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/workforce.WorkSessions.ExportSessions",
@@ -7762,24 +7802,24 @@
     },
     {
       "adr": "0083",
-      "approval_adr": "0098",
+      "approval_adr": "0315",
       "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.shiftTypeAdministration.CreateShiftType",
       "classification": "debt",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.ShiftTypeAdministration.CreateShiftType",
-      "reason": "Unreviewed cross-owner mutation, explicit coordination finding (not a leaf or E1-E5 grant): workforce reaches modules/timetable/activitycontract.ActivityService.SetCategoryShiftTypeLinks (timetable-activities) through modules/workforce/internal/planning.shiftTypeAdministration.CreateShiftType. Newly visible through #4836 callable resolution; protocol review is follow-up work (ADR 0098).",
+      "reason": "Unreviewed cross-owner mutation, explicit coordination finding (not a leaf or E1-E5 grant): workforce reaches modules/timetable/activitycontract.ActivityService.SetCategoryShiftTypeLinks (timetable-activities) through modules/workforce/internal/planning.shiftTypeAdministration.CreateShiftType. Newly visible through #4836 callable resolution; protocol review is follow-up work (ADR 0098). Re-reviewed with #7997: a create links categories with the link token of each one the shift-type form read from the category list, and Timetable refuses a category the create moves from another type when its link changed since, under its row locks (ADR 0311); effect and classification unchanged, approved by ADR 0315.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/timetable/activitycontract.ActivityService.SetCategoryShiftTypeLinks",
       "target_owner": "timetable-activities"
     },
     {
       "adr": "0083",
-      "approval_adr": "0098",
+      "approval_adr": "0315",
       "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.shiftTypeAdministration.UpdateShiftType",
       "classification": "debt",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.ShiftTypeAdministration.UpdateShiftType",
-      "reason": "Unreviewed cross-owner mutation, explicit coordination finding (not a leaf or E1-E5 grant): workforce reaches modules/timetable/activitycontract.ActivityService.SetCategoryShiftTypeLinks (timetable-activities) through modules/workforce/internal/planning.shiftTypeAdministration.UpdateShiftType. Newly visible through #4836 callable resolution; protocol review is follow-up work (ADR 0098).",
+      "reason": "Unreviewed cross-owner mutation, explicit coordination finding (not a leaf or E1-E5 grant): workforce reaches modules/timetable/activitycontract.ActivityService.SetCategoryShiftTypeLinks (timetable-activities) through modules/workforce/internal/planning.shiftTypeAdministration.UpdateShiftType. Newly visible through #4836 callable resolution; protocol review is follow-up work (ADR 0098). Re-reviewed with #7997: the link write now carries the link token of every category the shift-type form read and Timetable refuses a changed link under its row locks (ADR 0311); effect and classification unchanged, approved by ADR 0315.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/timetable/activitycontract.ActivityService.SetCategoryShiftTypeLinks",
       "target_owner": "timetable-activities"
@@ -10143,7 +10183,7 @@
       "classification": "leaf",
       "effect": "lock",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffShiftPlanning.ApplyCancellation",
-      "reason": "Guarded leaf lock for a cancellation with covers (#7683): modules/workforce/internal/planning.staffShiftPlanning.ApplyCancellation takes Membership ListStaff with ForMutation for the origin's and every cover's staff in ascending order inside the caller transaction before its first write, for an upcoming day only, and rejects missing memberships. The shift writes that follow re-take the same rows; no new gate or scope protocol (ADR 0067).",
+      "reason": "Guarded leaf lock for a cancellation with covers (#7683): modules/workforce/internal/planning.staffShiftPlanning.ApplyCancellation takes Membership ListStaff with ForMutation for the origin's and every cover's staff in ascending order inside the caller transaction before its first write, for an upcoming day only, and rejects missing memberships. The shift writes that follow re-take the same rows; no new gate or scope protocol (ADR 0067). Re-reviewed for #7653 after the base merge: this binding keeps its existing unit, scope, lock order and effect classification.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.LockStaffAssignments",
       "target_owner": "school-membership"
@@ -10438,7 +10478,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerPayrollSettingsReader.TraegerPayrollSettings",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/settings/compose.TraegerSettings.TraegerTexts: the payroll values of the session's Träger (Berater- and Mandantennummer of the Lohn, a Lohnart per category and kind of Arbeitsvertrag and the unit of each day category; its values of traeger_payroll.* or the empty registry defaults), read before the Träger's payroll file over all schools is computed (#4712).",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/settings/compose.TraegerSettings.TraegerTexts: the payroll values of the session's Träger (the form of the file, one for the Träger or one per employer (#8041, ADR 0320), Berater- and Mandantennummer of the Lohn, a Lohnart per category and kind of Arbeitsvertrag and the unit of each day category; its values of traeger_payroll.* or the registry defaults), read before the Träger's payroll files over all schools are computed (#4712).",
       "source_owner": "workforce",
       "target": "*github.com/moto-ogs/project-phoenix/modules/settings/compose.TraegerSettings.TraegerTexts",
       "target_owner": "settings-platform"
@@ -10586,6 +10626,26 @@
       "reason": "Read-only: the log of the Personal-Import names the colleagues of the session's Träger who imported (#4724) through Organisation \u0026 Tenancy's names of the Träger memberships, the same binding as the export protocol, in one statement in the caller's Träger transaction (platform.traeger_member_names answers only for app.current_org_id). No persistent, lock or scope effect.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.TraegerMemberNames.ListTraegerMemberNames",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.StaffEmployers.SchoolEmployers",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffEmployers.SchoolEmployers",
+      "reason": "Read-only: Organisation \u0026 Tenancy names per Einsatzort the kind and the name of the Schulträger or the Gemeinde that employs its staff in place of the Träger (#4811, ADR 0318), for the Personalakte and the payroll file per employer (#8041, ADR 0320), read in the caller's Träger transaction; no write, lock or scope change.",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.ResponsibleParties.ResponsibleParties",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.StaffEmployers.SchoolEmployers",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffEmployers.SchoolEmployers",
+      "reason": "Read-only: Organisation \u0026 Tenancy names per Einsatzort the kind and the name of the Schulträger or the Gemeinde that employs its staff in place of the Träger (#4811, ADR 0318), for the Personalakte and the payroll file per employer (#8041, ADR 0320), read in the caller's Träger transaction; no write, lock or scope change.",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.SchoolResponsibilities.ResponsibleParties",
       "target_owner": "organization-tenancy"
     },
     {
@@ -17165,7 +17225,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce/http/timetracking.ExportTransfer.Transfer",
-      "reason": "Read-only target already reviewed as query: workforce reaches *modules/documentrendering/lists.RendererService.Render (document-rendering) through api.exportTransferPort.Transfer. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "reason": "Read-only target already reviewed as query: workforce reaches *modules/documentrendering/lists.RendererService.Render (document-rendering) through api.exportTransferPort.Transfer. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Re-reviewed with #8017: the digest moved because the unused transaction wrappers around the schedule commands were removed; the binding still only renders, no persistent, lock or scope effect. Re-reviewed with #8024: the digest moved because the work session service gained the read-only TerminalOnlyStamping question; the binding still only renders, no persistent, lock or scope effect.",
       "source_owner": "workforce",
       "target": "*github.com/moto-ogs/project-phoenix/modules/documentrendering/lists.RendererService.Render",
       "target_owner": "document-rendering"
@@ -17175,7 +17235,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce/http/timetracking.ExportTransfer.Transfer",
-      "reason": "Read-only target already reviewed as query: workforce reaches modules/documentrendering/lists.RenderWorkbook (document-rendering) through api.exportTransferPort.Transfer. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
+      "reason": "Read-only target already reviewed as query: workforce reaches modules/documentrendering/lists.RenderWorkbook (document-rendering) through api.exportTransferPort.Transfer. No persistent, lock or scope effect; newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Re-reviewed with #8017: the digest moved because the unused transaction wrappers around the schedule commands were removed; the binding still only renders, no persistent, lock or scope effect. Re-reviewed with #8024: the digest moved because the work session service gained the read-only TerminalOnlyStamping question; the binding still only renders, no persistent, lock or scope effect.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/documentrendering/lists.RenderWorkbook",
       "target_owner": "document-rendering"
@@ -19173,13 +19233,24 @@
     },
     {
       "adr": "0098",
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timeTrackingEventPublisher.QueueStaffLeaveChanged",
+      "classification": "platform",
+      "effect": "notice",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.EventPublisher.QueueStaffLeaveChanged",
+      "reason": "Platform protocol participation (notice, #8081): Workforce announces an absence or quota change inside its tenant unit. Delivery's shared after-commit site (ADR 0310) sends only staff_leave_changed with empty data; rollback drops the signal. No persistence, locks, or change to the caller's transaction (ADR 0098).",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/application/realtimeevents.BoundTenantSignal.Announce",
+      "target_owner": "delivery-platform"
+    },
+    {
+      "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timeTrackingEventPublisher.QueueStaffTimeTrackingChanged",
       "classification": "platform",
-      "effect": "durable",
+      "effect": "notice",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.EventPublisher.QueueStaffTimeTrackingChanged",
-      "reason": "Platform protocol participation (durable): workforce reaches modules/delivery/compose.QueueStaffTimeTrackingChanged (delivery-platform) through roots/owners.timeTrackingEventPublisher.QueueStaffTimeTrackingChanged. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "reason": "Platform protocol participation (notice, #8081): Workforce queues staff_time_tracking_changed inside its existing tenant unit. Delivery sends the same empty event through the shared after-commit site (ADR 0310); rollback drops it. No persistence, locks, or change to the caller's transaction (ADR 0098).",
       "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.QueueStaffTimeTrackingChanged",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/application/realtimeevents.BoundTenantSignal.Announce",
       "target_owner": "delivery-platform"
     },
     {
@@ -19779,6 +19850,16 @@
       "target_owner": "settings-platform"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/settings/internal/application.PresenceSettings.TerminalOnlyStamping",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.Settings.TerminalOnlyStamping",
+      "reason": "Read-only target added for terminal-only stamping (#8024): workforce reaches modules/settings/internal/application.PresenceSettings.TerminalOnlyStamping (settings-platform) through modules/settings/internal/application.PresenceSettings.TerminalOnlyStamping. Reads the school's setting or the staff accounts' effective permissions; no persistent, lock or scope effect.",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/internal/application.PresenceSettings.TerminalOnlyStamping",
+      "target_owner": "settings-platform"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/settings/internal/application.PresenceSettings.TimeTrackingRetentionDays",
       "classification": "query",
       "effect": "query",
@@ -20207,6 +20288,36 @@
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.TimeTrackingDeletionRepository.Create",
       "target_owner": "audit-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.TimeTrackingStaffRecords.FindTimeTrackingManagerStaffIDs",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.TimeTrackingManagerStaff.FindTimeTrackingManagerStaffIDs",
+      "reason": "Read-only target added for terminal-only stamping (#8024): workforce reaches modules/staffdirectoryview.Directory.ReachableStaffIDs (staff-directory-view) through roots/owners.TimeTrackingStaffRecords.FindTimeTrackingManagerStaffIDs. Reads the school's setting or the staff accounts' effective permissions; no persistent, lock or scope effect.",
+      "source_owner": "workforce",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/staffdirectoryview.Directory.ReachableStaffIDs",
+      "target_owner": "staff-directory-view"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.TimeTrackingStaffRecords.FindTimeTrackingManagerStaffIDs",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.TimeTrackingManagerStaff.FindTimeTrackingManagerStaffIDs",
+      "reason": "Read-only target added for terminal-only stamping (#8024): workforce reaches modules/peopledirectory/ports.StaffRepository.FindTimeTrackingManagerStaffIDs (people-directory) through roots/owners.TimeTrackingStaffRecords.FindTimeTrackingManagerStaffIDs. Reads the school's setting or the staff accounts' effective permissions; no persistent, lock or scope effect.",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StaffRepository.FindTimeTrackingManagerStaffIDs",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.TimeTrackingStaffRecords.FindTimeTrackingManagerStaffIDs",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.TimeTrackingManagerStaff.FindTimeTrackingManagerStaffIDs",
+      "reason": "Read-only target added for terminal-only stamping (#8024): workforce reaches modules/staffdirectoryview.New (staff-directory-view) through roots/owners.TimeTrackingStaffRecords.FindTimeTrackingManagerStaffIDs. Reads the school's setting or the staff accounts' effective permissions; no persistent, lock or scope effect.",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/staffdirectoryview.New",
+      "target_owner": "staff-directory-view"
     },
     {
       "adr": "0083",
@@ -21657,6 +21768,16 @@
       "target_owner": "settings-platform"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.Settings.TerminalOnlyStamping",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.settingsResolver.TerminalOnlyStamping",
+      "reason": "Read-only target added for terminal-only stamping (#8024): workforce reaches modules/settings/internal/application.PresenceSettings.TerminalOnlyStamping (settings-platform) through modules/workforce/internal/application/timetracking.Settings.TerminalOnlyStamping. Reads the school's setting or the staff accounts' effective permissions; no persistent, lock or scope effect.",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/internal/application.PresenceSettings.TerminalOnlyStamping",
+      "target_owner": "settings-platform"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.Settings.TimeTrackingRetentionDays",
       "classification": "query",
       "effect": "query",
@@ -22835,7 +22956,7 @@
       "classification": "leaf",
       "effect": "lock",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.StaffShiftService.ApplyCancellation",
-      "reason": "Guarded leaf lock for a cancellation with covers (#7683): *modules/workforce/internal/planning.staffShiftService.ApplyCancellation takes Membership ListStaff with ForMutation for the origin's and every cover's staff in ascending order inside the caller transaction before its first write, for an upcoming day only, and rejects missing memberships. The shift writes that follow re-take the same rows; no new gate or scope protocol (ADR 0067).",
+      "reason": "Guarded leaf lock for a cancellation with covers (#7683): *modules/workforce/internal/planning.staffShiftService.ApplyCancellation takes Membership ListStaff with ForMutation for the origin's and every cover's staff in ascending order inside the caller transaction before its first write, for an upcoming day only, and rejects missing memberships. The shift writes that follow re-take the same rows; no new gate or scope protocol (ADR 0067). Re-reviewed for #7653 after the base merge: this binding keeps its existing unit, scope, lock order and effect classification.",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.LockStaffAssignments",
       "target_owner": "school-membership"

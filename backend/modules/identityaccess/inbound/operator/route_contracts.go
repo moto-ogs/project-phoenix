@@ -82,7 +82,12 @@ func PublicRouteContracts() []common.RouteContract {
 func SessionRouteContracts() []common.RouteContract {
 	operator := []common.PortalScope{common.PortalOperator}
 	step := func(pattern string, request, response any, plain bool) common.RouteContract {
+		browserPath := "/api/operator" + pattern
+		if pattern == "/auth/refresh" {
+			browserPath = ""
+		}
 		return common.RouteContract{
+			BrowserPath: browserPath, BrowserOwnContract: browserPath != "",
 			Method: "POST", Pattern: pattern, Portals: operator, RouteFile: common.RouteFileSession,
 			Request: request, Response: response, NoData: response == nil, Plain: plain,
 		}

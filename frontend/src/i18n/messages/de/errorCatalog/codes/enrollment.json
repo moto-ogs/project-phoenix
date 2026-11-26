@@ -148,7 +148,7 @@
   "holiday_period_not_found": "Diesen Ferienzeitraum gibt es nicht. Bitte öffne ihn aus der Liste der Ferien.",
   "holiday_week_not_found": "Diese Woche gehört nicht zu diesem Ferienzeitraum. Bitte lade die Seite neu.",
   "holiday_registration_closed": "Die Anmeldung für diese Ferien ist nicht offen. Bitte achte auf Anmeldebeginn und Anmeldeschluss.",
-  "holiday_wish_missing": "Für diese Ferien kannst du nur Kinder anmelden, für die du in der OGS-Anmeldung Ferienbetreuung gewählt hast. Bei Fragen hilft dir der Träger.",
+  "holiday_wish_missing": "Für diese Ferien kannst du nur Kinder anmelden, für die du in der Anmeldung für das Schuljahr Ferienbetreuung gewählt hast. Bei Fragen hilft dir der Träger.",
   "holiday_registration_entry_not_found": "Diese Anmeldung gibt es nicht mehr. Bitte lade die Liste neu.",
   "holiday_registration_frozen": "Die Anmeldung ist eingefroren. Wähle zuerst „Wieder öffnen“.",
   "holiday_registration_invalid": "Bitte prüfe die markierten Felder.",
@@ -161,7 +161,7 @@
   "holiday_child_day_limit": "Für ein Kind sind in diesen Ferien höchstens {limit} Tage möglich. Mit allen Anmeldungen des Kindes wären es {days} Tage, davon {elsewhere} in anderen Anmeldungen. Bitte wähle weniger Tage.",
   "holiday_child_day_limit_public": "Für ein Kind sind in diesen Ferien höchstens {limit} Tage möglich. Das gilt für alle Anmeldungen des Kindes zusammen. Bitte wähle weniger Tage oder frage das Träger-Büro.",
   "holiday_weeks_booked_together": "Ein Kind ist schon für beide Wochen angemeldet. Darum dürfen die Wochen nicht auf dieselben Tage fallen.",
-  "holiday_week_day_limit": "Ein Kind ist schon für diese Woche angemeldet. Mit den neuen Tagen hätte es mehr Tage als erlaubt. Lass die Tage so oder erhöhe „Höchstens Tage je Kind“.",
+  "holiday_week_day_limit": "Ein Kind ist schon für diese Woche angemeldet. Mit den neuen Tagen hätte es mehr Tage als erlaubt. Lass die Tage so. Oder trage unter „Höchstzahl an Tagen pro Kind“ eine höhere Zahl ein.",
   "hosted_holiday_week_not_found": "Für diese Woche gibt es keine Teilnehmerliste mehr. Sie ist nur bis zum letzten Tag der Woche da.",
   "holiday_guest_not_found": "Die Angaben zu diesem Feriengast sind nicht mehr da. Sie bleiben nur bis 7 Tage nach der Ferienwoche.",
   "holiday_guest_group_invalid": "Diese Gruppe gibt es nicht mehr. Bitte wähle eine andere Gruppe.",
@@ -182,5 +182,5 @@
   "traeger_catalog_invalid": "Bitte prüfe deine Angaben.",
   "traeger_preview_stale": "Seit der Vorschau hat sich etwas geändert. Bitte sieh dir die Vorschau noch einmal an.",
   "traeger_copy_rejected": "Die Schule kann diese Angaben so nicht übernehmen. Bitte prüfe die Angaben oder die Einstellungen der Schule.",
-  "without_care_place_school_year_only": "Ein Kind ohne OGS-Platz bekommt seinen Platz über eine Anmeldung für das Schuljahr."
+  "without_care_place_school_year_only": "Ein Kind ohne {careTerm}-Platz bekommt seinen Platz über eine Anmeldung für das Schuljahr."
 }

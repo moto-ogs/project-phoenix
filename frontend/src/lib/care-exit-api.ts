@@ -226,7 +226,7 @@ export async function fetchCareWithdrawals(
   );
 }
 
-function mapCareWithdrawalPage(
+export function mapCareWithdrawalPage(
   wire: studentsContract.careWithdrawalPageResponse,
 ): CareWithdrawalPage {
   return {
@@ -365,6 +365,14 @@ export async function fetchEndedCare(params: {
     },
     errorMessage,
   });
+  return mapEndedCarePage(data);
+}
+
+export const ENDED_CARE_PAGE_SIZE = 50;
+
+export function mapEndedCarePage(
+  data: studentsContract.endedCarePageResponse,
+): EndedCarePage {
   return {
     items: (data.items ?? []).map((wire) => ({
       studentId: wire.student_id,
@@ -393,11 +401,14 @@ export async function fetchEndedCare(params: {
  * "Ende ändern" und "Ende stornieren" — und der bekommt sie immer, sonst
  * ließe sich ein früh geplanter Austritt nicht mehr zurücknehmen.
  */
-export function hasPlannedCareExit(student: {
-  care_ends_on?: string;
-  care_ended?: boolean;
-  care_exit_recorded?: boolean;
-}): boolean {
+export function hasPlannedCareExit(
+  student: Partial<
+    Pick<
+      studentsContract.StudentResponse,
+      "care_ends_on" | "care_ended" | "care_exit_recorded"
+    >
+  >,
+): boolean {
   return Boolean(
     student.care_exit_recorded && student.care_ends_on && !student.care_ended,
   );
@@ -412,9 +423,10 @@ export function hasPlannedCareExit(student: {
  * hinterlegt.“ abgewiesen. Ein Knopf, der immer scheitert, gehört nicht auf
  * den Bildschirm (#2487).
  */
-export function canResumeCare(student: {
-  care_ended?: boolean;
-  care_exit_recorded?: boolean;
-}): boolean {
+export function canResumeCare(
+  student: Partial<
+    Pick<studentsContract.StudentResponse, "care_ended" | "care_exit_recorded">
+  >,
+): boolean {
   return Boolean(student.care_ended && student.care_exit_recorded);
 }

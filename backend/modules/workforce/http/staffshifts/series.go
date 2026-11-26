@@ -4,10 +4,9 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/go-chi/render"
-
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // SeriesRequest is the create payload for a recurring shift series (#1889).
@@ -49,6 +48,10 @@ type SeriesRequest struct {
 type SeriesSplitRequest struct {
 	SeriesRequest
 	ExpectedVersion string `json:"expected_version"`
+	// ExpectedOccurrenceVersion is the version of the opened occurrence
+	// (occurrence_shift_id). A split effective today rewrites it in place and
+	// refuses it when it changed since that read.
+	ExpectedOccurrenceVersion string `json:"expected_occurrence_version,omitempty"`
 }
 
 // SeriesResponse is the wire format for series create/split/end results.
@@ -240,7 +243,7 @@ func buildSplit(id int64, req SeriesRequest) (workforce.SplitStaffShiftSeries, e
 
 func (rs *Resource) createSeries(w http.ResponseWriter, r *http.Request) {
 	var req SeriesRequest
-	if err := render.DecodeJSON(r.Body, &req); err != nil {
+	if err := wire.DecodeAndDrain(r.Body, &req); err != nil {
 		rs.invalid(w, r, err)
 		return
 	}
@@ -272,7 +275,7 @@ func (rs *Resource) splitSeries(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req SeriesSplitRequest
-	if err := render.DecodeJSON(r.Body, &req); err != nil {
+	if err := wire.DecodeAndDrain(r.Body, &req); err != nil {
 		rs.invalid(w, r, err)
 		return
 	}
@@ -282,6 +285,7 @@ func (rs *Resource) splitSeries(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	input.ExpectedVersion = req.ExpectedVersion
+	input.ExpectedOccurrenceVersion = req.ExpectedOccurrenceVersion
 	actor, ok := rs.actor(w, r)
 	if !ok {
 		return

@@ -53,7 +53,7 @@ func seedPhotoFile(t *testing.T, tc *testContext, studentID int64) (storedURL, o
 
 // enablePhotoFeatureForTenant flips operations.student_photos_enabled
 // to true for tenant 1 and registers a reset cleanup. Without this,
-// the response payload from the update handler will lack photo_url and
+// the response payload from the update handler will lack photo_version and
 // the test cannot assert on enabled-only fields.
 func enablePhotoFeatureForTenant(t *testing.T, tc *testContext) {
 	t.Helper()
@@ -172,16 +172,18 @@ func TestUpdateStudent_PhotoConsentWithdrawalWhilePhotosAreOff(t *testing.T) {
 	assert.False(t, readConsentTimestamp(t, tc, student.ID),
 		"the withdrawal must end the consent although photos are off")
 	var trail []struct {
-		Action string `bun:"action"`
-		Source string `bun:"source"`
-		Actor  *int64 `bun:"actor_account_id"`
+		Action      string  `bun:"action"`
+		Source      string  `bun:"source"`
+		Actor       *int64  `bun:"actor_account_id"`
+		TextVersion *string `bun:"text_version"`
 	}
-	require.NoError(t, tc.db.NewRaw(`SELECT action, source, actor_account_id FROM audit.student_consent_changes
+	require.NoError(t, tc.db.NewRaw(`SELECT action, source, actor_account_id, text_version FROM audit.student_consent_changes
 		WHERE student_id = ? AND consent_key = 'photo' ORDER BY id`, student.ID).Scan(ctx, &trail))
 	require.Len(t, trail, 1, "one effective withdrawal")
 	assert.Equal(t, "withdrawn", trail[0].Action)
 	assert.Equal(t, "tenant_portal", trail[0].Source)
 	assert.NotNil(t, trail[0].Actor, "the trail names the staff account that entered it")
+	assert.Nil(t, trail[0].TextVersion, "a withdrawal confirms no wording (#8039)")
 }
 
 // TestUpdateStudent_PhotoConsentGrantWhilePhotosAreOff pins the grant gate of
@@ -247,6 +249,13 @@ func TestUpdateStudent_PhotoConsentGrant_StampsAuditFields(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotZero(t, byActor,
 		"grant transition must stamp photo_consent_given_by from JWT acting account")
+
+	// #8039: the staff member confirmed moto's photo wording; the trail
+	// names its version.
+	var versions []string
+	require.NoError(t, tc.db.NewRaw(`SELECT source || ':' || COALESCE(text_version, 'NULL') FROM audit.student_consent_changes
+		WHERE student_id = ? AND consent_key = 'photo' AND action = 'granted' ORDER BY id`, student.ID).Scan(ctx, &versions))
+	assert.Equal(t, []string{"tenant_portal:photo-1"}, versions)
 }
 
 // TestUpdateStudent_PhotoConsentNoChange_NoOp pins the omitted-field
@@ -343,13 +352,13 @@ func TestDeleteStudent_NoPhotoSucceeds(t *testing.T) {
 	assert.Equal(t, 0, count)
 }
 
-// TestUpdateStudent_PhotoEnabled_ResponseIncludesPhotoURL verifies that
+// TestUpdateStudent_PhotoEnabled_ResponseIncludesPhotoVersion verifies that
 // when operations.student_photos_enabled is true and the student has a
-// photo, the response payload includes a photo_url field. This pins
+// photo, the response payload includes a photo_version field. This pins
 // the configService.ResolveBoolOrDefault branch in updateStudent
 // (line ~1252) — without the feature flag enabled the response strips
 // photo-related fields, even on a row that has a photo_path.
-func TestUpdateStudent_PhotoEnabled_ResponseIncludesPhotoURL(t *testing.T) {
+func TestUpdateStudent_PhotoEnabled_ResponseIncludesPhotoVersion(t *testing.T) {
 	t.Parallel()
 
 	tc := setupStudentsRoute(t)
@@ -363,8 +372,8 @@ func TestUpdateStudent_PhotoEnabled_ResponseIncludesPhotoURL(t *testing.T) {
 	rr := authExec(t, tc, req, testutil.AdminTestClaims(1), []string{"admin:*"})
 
 	require.Equal(t, http.StatusOK, rr.Code, "Body: %s", rr.Body.String())
-	assert.Contains(t, rr.Body.String(), "photo_url",
-		"response with feature enabled + photo on row must include photo_url")
+	assert.Contains(t, rr.Body.String(), "photo_version",
+		"response with feature enabled + photo on row must include photo_version")
 
 	// Cleanup — remove the on-disk file so a failed assertion above
 	// doesn't leave the JPEG behind.
@@ -373,11 +382,11 @@ func TestUpdateStudent_PhotoEnabled_ResponseIncludesPhotoURL(t *testing.T) {
 	// needed here.
 }
 
-// TestUpdateStudent_PhotoDisabled_ResponseOmitsPhotoURL asserts the
+// TestUpdateStudent_PhotoDisabled_ResponseOmitsPhotoVersion asserts the
 // other side of the same flag: when the tenant has not opted in, the
 // response payload must not leak photo URL details — even if the row
 // happens to carry an old photo_path.
-func TestUpdateStudent_PhotoDisabled_ResponseOmitsPhotoURL(t *testing.T) {
+func TestUpdateStudent_PhotoDisabled_ResponseOmitsPhotoVersion(t *testing.T) {
 	t.Parallel()
 
 	tc := setupStudentsRoute(t)
@@ -391,8 +400,8 @@ func TestUpdateStudent_PhotoDisabled_ResponseOmitsPhotoURL(t *testing.T) {
 	rr := authExec(t, tc, req, testutil.AdminTestClaims(1), []string{"admin:*"})
 
 	require.Equal(t, http.StatusOK, rr.Code, "Body: %s", rr.Body.String())
-	assert.NotContains(t, rr.Body.String(), `"photo_url"`,
-		"response with feature disabled must not surface photo_url")
+	assert.NotContains(t, rr.Body.String(), `"photo_version"`,
+		"response with feature disabled must not surface photo_version")
 
 	// Cleanup runs before CleanupActivityFixtures (LIFO). The on-disk
 	// file is registered for removal by seedPhotoFile; nothing else is

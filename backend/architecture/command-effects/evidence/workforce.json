@@ -3794,7 +3794,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.WorkforceMails.MailOutcomes",
-      "binding_digest": "62bdbbd69e68e5fa2331a5e6554d83af",
+      "binding_digest": "8cf078967402d1cebae6b039ac47b2ef",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.MailOutcomes.MailOutcomes",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.EmailOutcomes.EmailOutcomes",
@@ -3802,7 +3802,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.WorkforceMails.MailOutcomes",
-      "binding_digest": "98267df5e11be362f17c48190fc9281b",
+      "binding_digest": "646713b7da3f2d5cfcb24d156b4d80f9",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.MailOutcomes.MailOutcomes",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
@@ -3810,7 +3810,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.WorkforceMails.MailOutcomes",
-      "binding_digest": "d245d08f804a70941b32798e3be8de61",
+      "binding_digest": "ac01156587aa792857c1e08ecc83b357",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.MailOutcomes.MailOutcomes",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantID.Int64",
@@ -4031,6 +4031,38 @@
       "source_owner": "workforce",
       "target": "unresolved:callable:github.com/moto-ogs/project-phoenix/modules/workforce/internal/application.observe",
       "target_owner": ""
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.ownTimeViews.ClockOverview",
+      "binding_digest": "e253335389d4dbad77f7622179bb2494",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.OwnTimeViews.ClockOverview",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveBool",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.ownTimeViews.ClockOverview",
+      "binding_digest": "acf9337ef92d198462edacc638f735f2",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.OwnTimeViews.ClockOverview",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsService.ResolveBool",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.ownTimeViews.Period",
+      "binding_digest": "e253335389d4dbad77f7622179bb2494",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.OwnTimeViews.Period",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveBool",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.ownTimeViews.Period",
+      "binding_digest": "acf9337ef92d198462edacc638f735f2",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.OwnTimeViews.Period",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.SettingsService.ResolveBool",
+      "target_owner": "settings-platform"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/workforce.WorkSessions.ExportSessions",
@@ -5570,7 +5602,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.shiftTypeAdministration.CreateShiftType",
-      "binding_digest": "bea4e354d57d61b5042905c2c40223d1",
+      "binding_digest": "3972a21f8a00f52fc9419f2f41a15e1b",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.ShiftTypeAdministration.CreateShiftType",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/timetable/activitycontract.ActivityService.SetCategoryShiftTypeLinks",
@@ -5578,7 +5610,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.shiftTypeAdministration.UpdateShiftType",
-      "binding_digest": "bea4e354d57d61b5042905c2c40223d1",
+      "binding_digest": "3972a21f8a00f52fc9419f2f41a15e1b",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.ShiftTypeAdministration.UpdateShiftType",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/timetable/activitycontract.ActivityService.SetCategoryShiftTypeLinks",
@@ -7290,7 +7322,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.staffShiftPlanning.ApplyCancellation",
-      "binding_digest": "acf566606041c844f10f2600d3ac975a",
+      "binding_digest": "b2cf6097cc1e1c2cb534dfef674525dd",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.StaffShiftPlanning.ApplyCancellation",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.LockStaffAssignments",
@@ -7506,7 +7538,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.traegerPayrollSettings.TraegerPayrollSettings",
-      "binding_digest": "8b0e8d69dd98b4945fd5105aaddea4ae",
+      "binding_digest": "0305a674df82e6e17e8440da88449ab9",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerPayrollSettingsReader.TraegerPayrollSettings",
       "source_owner": "workforce",
       "target": "*github.com/moto-ogs/project-phoenix/modules/settings/compose.TraegerSettings.TraegerTexts",
@@ -7622,6 +7654,22 @@
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffActorNames.TraegerActorNames",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.TraegerMemberNames.ListTraegerMemberNames",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.StaffEmployers.SchoolEmployers",
+      "binding_digest": "fb063b3a57bfc7ee3892339165074f6f",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffEmployers.SchoolEmployers",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.ResponsibleParties.ResponsibleParties",
+      "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.StaffEmployers.SchoolEmployers",
+      "binding_digest": "07f30bfdb03da471ee52b9c9286bc5f5",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce.TraegerStaffEmployers.SchoolEmployers",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.SchoolResponsibilities.ResponsibleParties",
       "target_owner": "organization-tenancy"
     },
     {
@@ -12322,7 +12370,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.exportTransferPort.Transfer",
-      "binding_digest": "e36635c19229ae18d227aaf2e23cc698",
+      "binding_digest": "cbc43750bdbb0844637e5f0b1ed035db",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce/http/timetracking.ExportTransfer.Transfer",
       "source_owner": "workforce",
       "target": "*github.com/moto-ogs/project-phoenix/modules/documentrendering/lists.RendererService.Render",
@@ -12330,7 +12378,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.exportTransferPort.Transfer",
-      "binding_digest": "595cfe41d6ffe6e82aac2cf9e3dc7886",
+      "binding_digest": "f3a281cc689e622234db837eaeda5731",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce/http/timetracking.ExportTransfer.Transfer",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/documentrendering/lists.RenderWorkbook",
@@ -13737,11 +13785,19 @@
       "target_owner": "audit-platform"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timeTrackingEventPublisher.QueueStaffLeaveChanged",
+      "binding_digest": "1606ce29971f1bf931b4889191d882bf",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.EventPublisher.QueueStaffLeaveChanged",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/application/realtimeevents.BoundTenantSignal.Announce",
+      "target_owner": "delivery-platform"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.timeTrackingEventPublisher.QueueStaffTimeTrackingChanged",
-      "binding_digest": "ab05ebb5920be0af943d110f6bc15b8e",
+      "binding_digest": "03a002265be832790a7839a485ad0f4d",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.EventPublisher.QueueStaffTimeTrackingChanged",
       "source_owner": "workforce",
-      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.QueueStaffTimeTrackingChanged",
+      "target": "github.com/moto-ogs/project-phoenix/modules/delivery/internal/application/realtimeevents.BoundTenantSignal.Announce",
       "target_owner": "delivery-platform"
     },
     {
@@ -14201,6 +14257,14 @@
       "target_owner": "settings-platform"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/settings/internal/application.PresenceSettings.TerminalOnlyStamping",
+      "binding_digest": "d187faa9dbb374c33b7de4c690cc19aa",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.Settings.TerminalOnlyStamping",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/internal/application.PresenceSettings.TerminalOnlyStamping",
+      "target_owner": "settings-platform"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/settings/internal/application.PresenceSettings.TimeTrackingRetentionDays",
       "binding_digest": "25bf2792ac8c3cd26dad3d0fafb6b423",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.Settings.TimeTrackingRetentionDays",
@@ -14519,6 +14583,30 @@
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.TimeTrackingDeletionRepository.Create",
       "target_owner": "audit-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.TimeTrackingStaffRecords.FindTimeTrackingManagerStaffIDs",
+      "binding_digest": "62b8fbb825ecbe441429633b1570a940",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.TimeTrackingManagerStaff.FindTimeTrackingManagerStaffIDs",
+      "source_owner": "workforce",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/staffdirectoryview.Directory.ReachableStaffIDs",
+      "target_owner": "staff-directory-view"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.TimeTrackingStaffRecords.FindTimeTrackingManagerStaffIDs",
+      "binding_digest": "709ee3e7a23cca840e0c7b64bbc38ab4",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.TimeTrackingManagerStaff.FindTimeTrackingManagerStaffIDs",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StaffRepository.FindTimeTrackingManagerStaffIDs",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.TimeTrackingStaffRecords.FindTimeTrackingManagerStaffIDs",
+      "binding_digest": "6715c26f34bc059eea1e5ead8a29b9c3",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.TimeTrackingManagerStaff.FindTimeTrackingManagerStaffIDs",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/staffdirectoryview.New",
+      "target_owner": "staff-directory-view"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.StaffMonthCloseService.CloseMonthForTraeger",
@@ -15569,6 +15657,14 @@
       "target_owner": "settings-platform"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.Settings.TerminalOnlyStamping",
+      "binding_digest": "d187faa9dbb374c33b7de4c690cc19aa",
+      "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.settingsResolver.TerminalOnlyStamping",
+      "source_owner": "workforce",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings/internal/application.PresenceSettings.TerminalOnlyStamping",
+      "target_owner": "settings-platform"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.Settings.TimeTrackingRetentionDays",
       "binding_digest": "25bf2792ac8c3cd26dad3d0fafb6b423",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/application/timetracking.settingsResolver.TimeTrackingRetentionDays",
@@ -16426,7 +16522,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.staffShiftService.ApplyCancellation",
-      "binding_digest": "acf566606041c844f10f2600d3ac975a",
+      "binding_digest": "b2cf6097cc1e1c2cb534dfef674525dd",
       "port": "github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning.StaffShiftService.ApplyCancellation",
       "source_owner": "workforce",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.LockStaffAssignments",

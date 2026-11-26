@@ -24,5 +24,40 @@
     "more": "{count, plural, one {# kayıt daha} other {# kayıt daha}}",
     "showAllTooltip": "Çocuklarınızın tüm tatil kayıtlarının listesini açar."
   },
-  "toDocumentsTooltip": "Onay ve faturayla birlikte belgelerinizi açar."
+  "toDocumentsTooltip": "Onay ve faturayla birlikte belgelerinizi açar.",
+  "consents": {
+    "title": "Onaylar",
+    "description": "Gönüllüdür. Her onayı istediğiniz zaman geri alabilir veya yeniden verebilirsiniz. Çocuğunuza tatilde bakan ekip değişikliği hemen görür.",
+    "states": {
+      "given": "Verildi",
+      "withdrawn": "Geri alındı",
+      "notGiven": "Verilmedi"
+    },
+    "dates": {
+      "given": "{date} tarihinden beri",
+      "withdrawn": "{date} tarihinde geri aldınız.",
+      "notGiven": "Başvuru sırasında vermediniz."
+    },
+    "withdraw": "Geri al",
+    "withdrawAria": "„{title}“ onayını geri al",
+    "withdrawTooltip": "Onayı geri alır. moto önce sorar.",
+    "grant": "Onay ver",
+    "grantAria": "„{title}“ onayını ver",
+    "grantTooltip": "Onayı verir. moto önce sorar.",
+    "withdrawTitle": "Onay geri alınsın mı?",
+    "withdrawNote": "Geri alma şu andan itibaren geçerlidir. Çocuğunuza tatilde bakan ekip bunu hemen görür.",
+    "withdrawConfirm": "Geri al",
+    "withdrawing": "Geri alınıyor …",
+    "grantTitle": "Onay verilsin mi?",
+    "grantNote": "Onay şu andan itibaren geçerlidir. İstediğiniz zaman yeniden geri alabilirsiniz.",
+    "grantConfirm": "Onay ver",
+    "granting": "Kaydediliyor …",
+    "withdrawSuccess": "„{title}“ onayını geri aldınız.",
+    "grantSuccess": "„{title}“ onayını verdiniz.",
+    "cancel": "İptal",
+    "close": "Kapat",
+    "errorObject": "Onay",
+    "savedButStale": "Değişikliğiniz kaydedildi. Yalnızca görünüm henüz güncel değil.",
+    "reloadObject": "tatil kayıtlarınız"
+  }
 }

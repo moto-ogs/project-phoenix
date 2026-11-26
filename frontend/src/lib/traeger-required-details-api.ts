@@ -1,3 +1,4 @@
+import type * as seedRequiredDetailsContract from "./contract/traeger-required-details.generated";
 import { bffJson } from "~/lib/bff-fetch";
 
 /**
@@ -25,6 +26,13 @@ function isRequiredDetail(value: string): value is TraegerRequiredDetail {
 export async function fetchTraegerRequiredDetails(): Promise<
   TraegerRequiredDetail[]
 > {
-  const response = await bffJson("org", "GET /traeger/required-details/");
+  return mapTraegerRequiredDetails(
+    await bffJson("org", "GET /traeger/required-details/"),
+  );
+}
+
+export function mapTraegerRequiredDetails(
+  response: seedRequiredDetailsContract.RequiredDetails,
+): TraegerRequiredDetail[] {
   return (response.missing ?? []).filter(isRequiredDetail);
 }

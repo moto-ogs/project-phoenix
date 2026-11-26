@@ -49,7 +49,7 @@ function signedIn(
   user: Partial<Session["user"]> = {},
 ): { data: Session; status: "authenticated" } {
   return {
-    data: { user: { id, tenantId: 1, ...user }, expires: "2099-01-01" },
+    data: { user: { id, tenantId: "1", ...user }, expires: "2099-01-01" },
     status: "authenticated",
   };
 }
@@ -300,7 +300,7 @@ describe("SWR cache scope (#5006)", () => {
     expect(screen.getByTestId("reader-roster")).toHaveTextContent("leer");
 
     // The provider's fresh lookup: the same account, now at another school.
-    setSession(signedIn("A", { tenantId: 2 }));
+    setSession(signedIn("A", { tenantId: "2" }));
     view.rerender(<Page fetcher={fetcher} />);
 
     expect(await screen.findByText("Daten von A")).toBeInTheDocument();
@@ -391,7 +391,7 @@ describe("SWR cache scope (#5006)", () => {
     expect(await screen.findByText("Schule 1")).toBeInTheDocument();
 
     // The cookie holds school 2: the BFF would refuse every request here.
-    setSession(signedIn("A", { tenantId: 2 }));
+    setSession(signedIn("A", { tenantId: "2" }));
     view.rerender(<Page fetcher={fetcher} />);
     expect(screen.getByTestId("reader-roster")).toHaveTextContent("leer");
     expect(fetcher).toHaveBeenCalledTimes(1);

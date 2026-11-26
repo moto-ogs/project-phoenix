@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan/parentrequests"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 var (
@@ -226,15 +227,20 @@ func (s *Service) permittedChild(adminCtx context.Context, accountID, studentID 
 	if requiredPermission != "" && !childHasPermission(child, requiredPermission) {
 		return nil, ErrGuardianPermissionDenied
 	}
+	return child.resolved(s.todayDate()), nil
+}
+
+func (child *ChildSummary) resolved(day calendar.Date) *Child {
 	return &Child{
+		summary:             child,
 		TenantID:            child.TenantID,
 		GuardianProfileID:   child.GuardianProfileID,
 		GuardianPermissions: child.GuardianPermissions,
 		StudentName:         strings.TrimSpace(child.FirstName + " " + child.LastName),
 		SchoolName:          child.SchoolName,
-		CareEnded:           child.CareEnded(s.todayDate()),
+		CareEnded:           child.CareEnded(day),
 		WithoutCarePlace:    child.WithoutCarePlace,
-	}, nil
+	}
 }
 
 func childHasPermission(child *ChildSummary, permission string) bool {
@@ -244,8 +250,10 @@ func childHasPermission(child *ChildSummary, permission string) bool {
 	return child.GuardianPermissions[permission]
 }
 
-// Child is the minimal resolved context a per-child write needs.
+// Child is the authorized relationship used for per-child operations.
 type Child struct {
+	// The family card reads the same authorized summary, without a second lookup.
+	summary             *ChildSummary
 	TenantID            int64
 	GuardianProfileID   int64
 	GuardianPermissions map[string]bool

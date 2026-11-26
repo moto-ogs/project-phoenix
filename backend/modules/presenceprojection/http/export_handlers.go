@@ -1,7 +1,6 @@
 package presenceprojectionhttp
 
 import (
-	json "encoding/json"
 	errors "errors"
 	fmt "fmt"
 	http "net/http"
@@ -11,10 +10,13 @@ import (
 	time "time"
 
 	render "github.com/go-chi/render"
+
 	common "github.com/moto-ogs/project-phoenix/api/common"
 	lists "github.com/moto-ogs/project-phoenix/modules/documentrendering/lists"
 	peopleModule "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	calendar "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
 
@@ -34,16 +36,18 @@ type studentExportRequest struct {
 }
 
 type studentExportFilters struct {
-	Search       string `json:"search"`
-	GroupID      string `json:"group_id"`
-	RoomID       string `json:"room_id"`
-	Year         string `json:"year"`
-	SchoolClass  string `json:"school_class"`
-	Status       string `json:"status"`
-	Bus          string `json:"bus"`
-	PhotoConsent string `json:"photo_consent"`
-	PickupStatus string `json:"pickup_status"`
-	DayStatus    string `json:"day_status"`
+	Search string `json:"search"`
+	// Older tabs send group_id as CSV; new clients send individual IDs.
+	GroupID      string         `json:"group_id" contract_text:"legacy comma-separated group filter"`
+	GroupIDs     []ident.ID     `json:"group_ids"`
+	RoomID       ident.IDOrNone `json:"room_id"`
+	Year         string         `json:"year"`
+	SchoolClass  string         `json:"school_class"`
+	Status       string         `json:"status"`
+	Bus          string         `json:"bus"`
+	PhotoConsent string         `json:"photo_consent"`
+	PickupStatus string         `json:"pickup_status"`
+	DayStatus    string         `json:"day_status"`
 	// Date is the optional planning day (YYYY-MM-DD) the day-planning status,
 	// status days, and planned arrival/pickup times are evaluated for (#1939).
 	// Empty means the school-local today.
@@ -65,7 +69,7 @@ type studentExportFilters struct {
 	// It narrows the result of every other filter and never widens it: an ID
 	// the caller cannot see, or that another filter drops, stays out. Empty
 	// means no selection.
-	StudentIDs []string `json:"student_ids"`
+	StudentIDs []ident.ID `json:"student_ids"`
 	// EnrollmentAnswer keeps the children with one answer to a registration
 	// question, "<key>=<value>" like the list's enrollment_answer (#6954).
 	EnrollmentAnswer string `json:"enrollment_answer"`
@@ -193,7 +197,10 @@ func (rs *Resource) prepareDatedExportResponses(r *http.Request, responses []Stu
 
 func decodeStudentExportRequest(r *http.Request) (studentExportRequest, error) {
 	var req studentExportRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := wire.Decode(r.Body, &req); err != nil {
+		if wire.InvalidIDAt(err, "/filters/student_ids") {
+			return req, fmt.Errorf("invalid student id: %w", err)
+		}
 		return req, err
 	}
 	if req.Format == "" {
@@ -213,6 +220,11 @@ func decodeStudentExportRequest(r *http.Request) (studentExportRequest, error) {
 	if _, err := parseExportStudentIDs(req.Filters.StudentIDs); err != nil {
 		return req, err
 	}
+	for _, id := range req.Filters.GroupIDs {
+		if id <= 0 {
+			return req, errors.New("invalid group id")
+		}
+	}
 	if _, err := parseEnrollmentAnswer(req.Filters.EnrollmentAnswer); err != nil {
 		return req, err
 	}
@@ -223,7 +235,7 @@ func decodeStudentExportRequest(r *http.Request) (studentExportRequest, error) {
 // list means "no selection" and yields a nil set. A malformed ID is rejected
 // rather than skipped: a silently shortened selection would print a list that
 // looks complete but misses a child the user marked.
-func parseExportStudentIDs(values []string) (map[int64]bool, error) {
+func parseExportStudentIDs(values []ident.ID) (map[int64]bool, error) {
 	studentIDs, err := parseExportStudentIDList(values)
 	if err != nil || studentIDs == nil {
 		return nil, err
@@ -238,7 +250,7 @@ func parseExportStudentIDs(values []string) (map[int64]bool, error) {
 // parseExportStudentIDList turns the wire selection into IDs suitable for the
 // directory pre-filter. It retains the request order and deduplicates IDs so
 // a repeated selection cannot make downstream queries do duplicate work.
-func parseExportStudentIDList(values []string) ([]int64, error) {
+func parseExportStudentIDList(values []ident.ID) ([]int64, error) {
 	if len(values) == 0 {
 		return nil, nil
 	}
@@ -248,8 +260,8 @@ func parseExportStudentIDList(values []string) ([]int64, error) {
 	ids := make([]int64, 0, len(values))
 	seen := make(map[int64]struct{}, len(values))
 	for _, value := range values {
-		id, err := strconv.ParseInt(strings.TrimSpace(value), 10, 64)
-		if err != nil || id <= 0 {
+		id := value.Int64()
+		if id <= 0 {
 			return nil, fmt.Errorf("invalid student id %q", value)
 		}
 		if _, duplicate := seen[id]; duplicate {
@@ -309,9 +321,14 @@ func exportSelectionCapError(count int) render.Renderer {
 		common.CodeStudentsExportSelectionTooLarge,
 	)
 	if resp, ok := rendered.(*common.ErrResponse); ok {
-		resp.Details = map[string]any{"total": count, "limit": studentExportPageSize}
+		resp.Details = ExportSelectionDetails{Total: count, Limit: studentExportPageSize}
 	}
 	return rendered
+}
+
+type ExportSelectionDetails struct {
+	Total int `json:"total"`
+	Limit int `json:"limit"`
 }
 
 // exportSelectionTooLarge reports whether a filtered export exceeds what a single
@@ -351,14 +368,14 @@ func exportRequestToListParams(req studentExportRequest, today calendar.Date) *s
 		fetchAll:   true,
 		studentIDs: studentIDs,
 	}
-	params.groupIDs = parseGroupIDList([]string{req.Filters.GroupID})
+	if req.Filters.GroupIDs != nil {
+		params.groupIDs = ident.Int64s(req.Filters.GroupIDs)
+	} else {
+		params.groupIDs = parseGroupIDList([]string{req.Filters.GroupID})
+	}
 	// decodeStudentExportRequest already rejected a malformed value.
 	params.enrollmentAnswer, _ = parseEnrollmentAnswer(req.Filters.EnrollmentAnswer)
-	if req.Filters.RoomID != "" {
-		if roomID, err := strconv.ParseInt(req.Filters.RoomID, 10, 64); err == nil {
-			params.roomID = roomID
-		}
-	}
+	params.roomID = req.Filters.RoomID.Int64()
 	return params
 }
 

@@ -47,6 +47,7 @@ func init() {
 			api.WithTimetableMaterialization(options.Materialization),
 			api.WithTimetableNonWorkingDays(options.NonWorkingDays),
 			api.WithTimetableInstances(options.Instances),
+			api.WithTimetableOfferingSources(options.OfferingSources),
 		}
 		if options.Clock != nil {
 			composed = append(composed, api.WithTimetableClock(options.Clock))

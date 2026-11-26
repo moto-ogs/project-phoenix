@@ -247,7 +247,7 @@ export default function TraegerKinderzahlImportPage() {
           ) : (
             <SectionCard
               title="Datei wählen"
-              description="Eine CSV-Datei mit einer Zeile je Kind und Überschriften in der ersten Zeile."
+              description="Eine CSV-Datei mit einer Zeile pro Kind und Überschriften in der ersten Zeile."
               action={
                 <Button
                   type="button"

@@ -46,7 +46,7 @@ vi.mock("next-auth/react", () => ({
       user: {
         id: "A",
         scope: "org",
-        orgId: 7,
+        orgId: "7",
         email: "buero@traeger.example",
         permissions: session.permissions,
       },
@@ -55,7 +55,7 @@ vi.mock("next-auth/react", () => ({
   }),
 }));
 
-import TraegerBriefkopfPage from "./page";
+import TraegerBriefkopfPage from "./page-content";
 
 function setting(key: string, label: string, value: string): ResolvedSetting {
   return {
@@ -112,8 +112,11 @@ const MASTER_DATA: TraegerMasterData = {
   contact: { name: "Petra Lindner", phone: "+49 5402 1234-0", email: "" },
   withdrawal: { phone: "", email: "" },
   logo: null,
+  contactVersion: "c-1",
+  withdrawalVersion: "w-1",
   bankAccounts: [
     {
+      version: "v-1",
       id: "7",
       label: "Elternbeiträge",
       accountHolder: "Ganztag im Quartier e.V.",
@@ -123,6 +126,7 @@ const MASTER_DATA: TraegerMasterData = {
       isDefault: true,
     },
     {
+      version: "v-1",
       id: "8",
       label: "Ferienbetreuung",
       accountHolder: "Ganztag im Quartier e.V.",

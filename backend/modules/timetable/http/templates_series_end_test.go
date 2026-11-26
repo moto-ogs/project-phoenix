@@ -26,7 +26,7 @@ func TestTemplateSeriesEndDateRoundTrip(t *testing.T) {
 
 	body := func(name string) map[string]any {
 		b := createTemplateBody(s, name)
-		b["calendar_period_id"] = period.ID
+		b["calendar_period_id"] = fmt.Sprint(period.ID)
 		b["start_date"] = "2026-10-19"
 		return b
 	}
@@ -95,7 +95,7 @@ func TestTemplateSeriesEndDateValidation(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			b := createTemplateBody(s, "Tpl-Serienende-"+name)
-			b["calendar_period_id"] = period.ID
+			b["calendar_period_id"] = fmt.Sprint(period.ID)
 			b["start_date"] = "2026-10-19"
 			b["end_date"] = endDate
 			w := doTemplateJSON(t, router, http.MethodPost, "/templates", b)

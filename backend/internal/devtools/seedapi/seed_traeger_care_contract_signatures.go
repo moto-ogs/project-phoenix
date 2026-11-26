@@ -13,10 +13,10 @@ import (
 // seedTraegerCareContractSignaturesStep signs the demo care contracts
 // (#4679, ADR 0155) the way families and the Träger-Büro do: a parent with
 // an account signs a contract sent to them in the parents portal, and the
-// Träger-Büro records one draft the parents signed on paper. The contract
-// list then shows signed, sent and draft contracts side by side. Both steps
-// are idempotent: a signed contract is no longer sent, a paper contract no
-// longer a draft.
+// Träger-Büro hands one draft over on paper and records the parents' paper
+// signature. The contract list then shows signed, sent and draft contracts
+// side by side. Both steps are idempotent: a signed contract is no longer
+// sent, a paper contract no longer a draft.
 type seedTraegerCareContractSignaturesStep struct{}
 
 func (seedTraegerCareContractSignaturesStep) Name() string {
@@ -55,7 +55,13 @@ func (seedTraegerCareContractSignaturesStep) Run(ctx context.Context, rt *Runtim
 	if err != nil {
 		return err
 	}
-	fmt.Printf("  Träger care contract signatures: %d on paper, %d in the parents portal\n", paper, signed)
+	// With a contract the parents signed, the school changes a booking
+	// itself: that version waits for the parents' signature (#4816).
+	waiting, err := seedCareContractSchoolChange(rt, auth)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("  Träger care contract signatures: %d on paper, %d in the parents portal, change by the school: %t\n", paper, signed, waiting)
 	return nil
 }
 
@@ -96,20 +102,29 @@ func seedPaperContracts(client *Client, auth AuthRef, school int64, minimum int)
 	}
 	count := min(missing, len(drafts.Data.Contracts))
 	for _, draft := range drafts.Data.Contracts[len(drafts.Data.Contracts)-count:] {
-		if err := seedPaperContractSignature(client, auth, int64(draft.ID), draft.PartyName); err != nil {
+		if err := seedPaperContractSignature(client, auth, int64(draft.ID), draft.PartyName, calendar.TodayDate()); err != nil {
 			return 0, err
 		}
 	}
 	return count, nil
 }
 
-func seedPaperContractSignature(client *Client, auth AuthRef, id int64, signer string) error {
+// seedPaperContractSignature hands contract id over on paper, as the office
+// prints it for the parents, and records its paper signature, signed on
+// signedOn (#8030). The handover freezes the PDF the signature binds; a
+// draft takes no paper signature. The server concludes the contract on its
+// own clock whatever day the paper names, and refuses a signing day after
+// its today.
+func seedPaperContractSignature(client *Client, auth AuthRef, id int64, signer string, signedOn calendar.Date) error {
 	if signer == "" {
 		signer = "Erika Muster"
 	}
+	if _, err := client.PostWithAuth(auth, fmt.Sprintf("/traeger/contracts/%d/paper-handover", id), nil); err != nil {
+		return fmt.Errorf("hand the paper contract %d over: %w", id, err)
+	}
 	path := fmt.Sprintf("/traeger/contracts/%d/paper-signature", id)
 	if _, err := client.PostFileWithAuthAndFields(auth, path, "file", "vertrag-unterschrieben.pdf", seedPaperContractPDF,
-		map[string]string{"signer_name": signer, "signed_on": calendar.TodayDate().String()}); err != nil {
+		map[string]string{"signer_name": signer, "signed_on": signedOn.String()}); err != nil {
 		return fmt.Errorf("record the paper contract %d: %w", id, err)
 	}
 	return nil
@@ -191,7 +206,7 @@ func seedSendContractsToParents(rt *Runtime, auth AuthRef) error {
 	if len(ids) == 0 {
 		return nil
 	}
-	if _, err := rt.Client.PostWithAuth(auth, "/traeger/contracts/send", map[string]any{"contract_ids": ids}); err != nil {
+	if _, err := rt.Client.PostWithAuth(auth, "/traeger/contracts/send", map[string]any{"contract_ids": ident.IDs(ids)}); err != nil {
 		return fmt.Errorf("send the contracts of the demo parents: %w", err)
 	}
 	return nil

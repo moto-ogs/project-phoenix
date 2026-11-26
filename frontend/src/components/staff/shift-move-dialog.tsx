@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import { ClosingDayChip } from "~/components/planning/closing-day-marker";
 import { FieldLabel } from "~/components/ui/field-label";
@@ -8,10 +15,18 @@ import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { CustomSelect } from "~/components/ui/custom-select";
 import { DatePicker } from "~/components/ui/date-picker";
-import { FormErrorAlert } from "~/components/ui/form-error-alert";
+import {
+  FormErrorAlert,
+  LoadErrorAlert,
+} from "~/components/ui/form-error-alert";
 import { Input } from "~/components/ui/input";
 import { ConfirmationModal, Modal } from "~/components/ui/modal";
 import { useApiFormError } from "~/contexts/ToastContext";
+import {
+  readStateWaitReason,
+  useReadDraftLoadError,
+} from "~/lib/hooks/use-swr-load-error";
+import { useActionOn } from "~/lib/swr/read-draft";
 import {
   findClosingDayReason,
   type ClosingDayRange,
@@ -60,6 +75,12 @@ interface ShiftMoveDialogProps {
   readonly onClose: () => void;
   /** Fired after a successful move so the caller revalidates plan caches. */
   readonly onDataChanged: () => void;
+  /**
+   * Reads the week's shifts again, rejecting on failure (ADR 0311). After a
+   * move refused as changed since opening, the dialog refills from the
+   * stored shift; without it saving stays locked with the load error.
+   */
+  readonly reloadShifts?: () => Promise<readonly StaffShift[]>;
 }
 
 export function ShiftMoveDialog({
@@ -71,6 +92,7 @@ export function ShiftMoveDialog({
   closingDayRanges,
   onClose,
   onDataChanged,
+  reloadShifts,
 }: ShiftMoveDialogProps) {
   // Prefilled from the source shift. The dialog mounts fresh per open (the grid
   // renders it only while a shift is selected), so plain initializers suffice.
@@ -82,6 +104,27 @@ export function ShiftMoveDialog({
     String(shift.breakMinutes),
   );
   const [shiftTypeId, setShiftTypeId] = useState(shift.shiftTypeId ?? "");
+  // The shift the form was filled from (ADR 0311): the opened one, after a
+  // refused move the stored one. The move sends its version; until a read
+  // after a refusal succeeded nothing is sent.
+  const [base, setBase] = useState(shift);
+  const reloadStored = useCallback(async () => {
+    if (!reloadShifts) throw new Error("the stored shift cannot be read again");
+    const stored = (await reloadShifts()).find((s) => s.id === shift.id);
+    if (!stored) return;
+    setBase(stored);
+    setTargetStaffId(stored.staffId);
+    setTargetDate(stored.date);
+    setStartTime(stored.startTime);
+    setEndTime(stored.endTime);
+    setBreakMinutesStr(String(stored.breakMinutes));
+    setShiftTypeId(stored.shiftTypeId ?? "");
+  }, [reloadShifts, shift.id]);
+  const moveAction = useActionOn(
+    { opening: isOpen ? shift.id : null, data: base, reload: reloadStored },
+    { token: (read: StaffShift) => read.version ?? "" },
+  );
+  const moveLoadError = useReadDraftLoadError(moveAction, "die Schicht");
 
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [isMoving, setIsMoving] = useState(false);
@@ -130,7 +173,7 @@ export function ShiftMoveDialog({
     : STAFF_SHIFT_MAX_BREAK_MINUTES;
   const breakMinutes = parseBreakMinutes(breakMinutesStr, breakMax);
   const breakValid = breakMinutes !== null;
-  const movingToOtherPerson = targetStaffId !== shift.staffId;
+  const movingToOtherPerson = targetStaffId !== base.staffId;
   const selectedShiftType = shiftTypes.find((type) => type.id === shiftTypeId);
   const inactiveTypeBlocksMove =
     movingToOtherPerson &&
@@ -169,7 +212,10 @@ export function ShiftMoveDialog({
     findClosingDayReason(closingDayRanges, targetDate);
 
   const targetMember = staff.find((member) => member.id === targetStaffId);
-  const sourceName = `${sourceMember.firstName} ${sourceMember.lastName}`;
+  // After a refused move the stored shift may belong to someone else.
+  const sourceNow =
+    staff.find((member) => member.id === base.staffId) ?? sourceMember;
+  const sourceName = `${sourceNow.firstName} ${sourceNow.lastName}`;
   const targetName = targetMember
     ? `${targetMember.firstName} ${targetMember.lastName}`
     : sourceName;
@@ -215,16 +261,38 @@ export function ShiftMoveDialog({
 
   const moveShift = async (resolvedShiftTypeId: string | null) => {
     try {
-      await staffShiftService.moveShift(shift.id, {
-        sourceStaffId: shift.staffId,
-        targetStaffId,
-        date: targetDate,
-        startTime,
-        endTime,
-        breakMinutes: breakMinutes ?? 0,
-        shiftTypeId: resolvedShiftTypeId,
-        workingTime: workingTime.current(),
-      });
+      const result = await moveAction.submit(() =>
+        staffShiftService.moveShift(base.id, {
+          sourceStaffId: base.staffId,
+          targetStaffId,
+          date: targetDate,
+          startTime,
+          endTime,
+          breakMinutes: breakMinutes ?? 0,
+          shiftTypeId: resolvedShiftTypeId,
+          workingTime: workingTime.current(),
+          // The shift the form was filled from (ADR 0311).
+          expectedVersion: base.version ?? "",
+        }),
+      );
+      if (!result.ok && result.skipped) {
+        moveInFlightRef.current = false;
+        setIsMoving(false);
+        return;
+      }
+      if (!result.ok && result.refused) {
+        // Changed since the dialog opened: the message waits for the stored
+        // shift, which refills the form; no retry resends the old one.
+        setConfirmOpen(false);
+        moveInFlightRef.current = false;
+        setIsMoving(false);
+        await formErrors.show(result.error, {
+          object: "die Schicht",
+          reload: result.reload,
+        });
+        return;
+      }
+      if (!result.ok) throw result.error;
       finishSuccess();
     } catch (err: unknown) {
       logger.error("shift_move_failed", {
@@ -277,8 +345,12 @@ export function ShiftMoveDialog({
         variant="primary"
         size="md"
         onClick={handleSubmit}
-        disabled={isMoving || !canSubmit}
-        disabledReason={isMoving ? undefined : submitBlockedReason}
+        disabled={isMoving || !canSubmit || !moveAction.canSubmit}
+        disabledReason={
+          isMoving
+            ? undefined
+            : (submitBlockedReason ?? readStateWaitReason(moveAction.status))
+        }
         tooltip="Verschiebt die Schicht, moto fragt vorher nach."
       >
         Verschieben
@@ -298,10 +370,13 @@ export function ShiftMoveDialog({
       >
         <div ref={formRef} className="space-y-4 text-sm">
           <FormErrorAlert message={formErrors.error} />
+          {moveAction.status === "loadFailed" && !formErrors.error ? (
+            <LoadErrorAlert error={moveLoadError} />
+          ) : null}
           <p className="text-gray-600">
             Verschiebt die Schicht von{" "}
             <span className="font-medium text-gray-900">{sourceName}</span> am{" "}
-            {formatLongDate(shift.date)}.
+            {formatLongDate(base.date)}.
           </p>
           <Field label="Zielperson">
             <CustomSelect
@@ -319,6 +394,7 @@ export function ShiftMoveDialog({
                 onto the first labelable descendant. */}
           <FieldGroup label="Zieltag">
             <DatePicker
+              ariaLabel="Zieltag"
               value={targetDate === "" ? null : parseISODate(targetDate)}
               onChange={(picked) =>
                 setTargetDate(picked ? toISODate(picked) : "")
@@ -400,7 +476,7 @@ export function ShiftMoveDialog({
           <ul className="space-y-1">
             <li>
               <span className="font-semibold text-gray-500">Von:</span>{" "}
-              {sourceName}, {formatLongDate(shift.date)}
+              {sourceName}, {formatLongDate(base.date)}
             </li>
             <li>
               <span className="font-semibold text-gray-500">Nach:</span>{" "}

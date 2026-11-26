@@ -315,7 +315,7 @@ describe("FileUploadInput", () => {
     expect(input).toHaveAttribute("multiple");
     expect(
       screen.getByText(
-        "Erlaubt: PDF, PNG, höchstens 1 MB je Datei. Bis zu 5 Dateien. Auf dem Handy kannst du auch ein Foto machen.",
+        "Erlaubt: PDF, PNG, höchstens 1 MB pro Datei. Bis zu 5 Dateien. Auf dem Handy kannst du auch ein Foto machen.",
       ),
     ).toBeInTheDocument();
   });

@@ -2,11 +2,12 @@ package careplanhttp_test
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
@@ -65,7 +66,8 @@ func recordingSurface(out *rendered) careplanhttp.Surface {
 		Respond: func(w http.ResponseWriter, _ *http.Request, status int, data any, message string) {
 			*out = rendered{status: status, message: message, data: data}
 			w.WriteHeader(status)
-			_ = json.NewEncoder(w).Encode(data)
+			encoded, _ := wire.Marshal(data)
+			_, _ = w.Write(encoded)
 		},
 	}
 }
@@ -99,7 +101,7 @@ func TestBookingAuthorityImpactPreviewsTodayInTheSchoolTransaction(t *testing.T)
 
 	impact := &careplan.BookingAuthorityImpact{
 		ReferenceDate:    impactTestToday,
-		BlockingChildren: []careplan.BookingAuthorityImpactChild{{StudentID: "17", FirstName: "Ada"}},
+		BlockingChildren: []careplan.BookingAuthorityImpactChild{{StudentID: 17, FirstName: "Ada"}},
 	}
 	authority := &fakeAuthority{impact: impact}
 

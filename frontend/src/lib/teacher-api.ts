@@ -4,6 +4,7 @@ import type * as linkToTenantContract from "~/lib/contract/auth-link-to-tenant.g
 import { bffJson } from "./bff-fetch";
 import { ApiError, wireErrorCode } from "~/lib/api-error";
 import type { SchoolIdentityResponse } from "./contract/shared.generated";
+import type { DirectoryPersonRequest } from "./contract/users.generated";
 import type { StaffRequest } from "./contract/staff.generated";
 import { createLogger } from "~/lib/logger";
 import { mapTeacherResponse } from "./teacher-helpers";
@@ -21,15 +22,6 @@ type PersonIdentityFields = Required<
   Pick<linkToTenantContract.LinkToTenantRequest, "first_name" | "last_name">
 > &
   Pick<linkToTenantContract.LinkToTenantRequest, "tag_id">;
-
-/**
- * What the backend provisioned alongside the account (#2222).
- *
- * The ids arrive as strings and stay strings on the way through: they are
- * PostgreSQL bigints, and a JSON number past 2^53 is already truncated by the
- * time it reaches us. They are converted exactly once, at the request boundary
- * that needs a number.
- */
 
 /**
  * Builds the POST /api/staff body, carrying person_id as a decimal string.
@@ -60,6 +52,14 @@ function buildStaffRequestBody<F extends object>(
 
 // Define Teacher interface aligned with staff API response structure
 export type { Teacher } from "./teacher-types";
+
+/**
+ * The person as a person write stored it: the record read with the written
+ * fields and the version the write answered (undefined without an answer).
+ */
+export type SavedPerson = Readonly<
+  Pick<Teacher, "first_name" | "last_name" | "tag_id" | "person_version">
+>;
 
 export interface TeacherWithCredentials extends Teacher {
   temporaryCredentials?: {
@@ -250,6 +250,14 @@ class TeacherService {
     id: string,
     teacherData: Partial<Teacher>,
     currentTeacher: Teacher,
+    options: {
+      /**
+       * The person write went through; the staff write follows and may
+       * still fail. Its answer is the person's new state (ADR 0311): a
+       * retry rests on it instead of resending the old version.
+       */
+      readonly onPersonSaved?: (person: SavedPerson) => void;
+    } = {},
   ): Promise<Teacher> {
     // The caller already loaded this record. Keep its IDs, profile state and
     // unchanged fields: the staff PUT replaces fields rather than patching them.
@@ -257,14 +265,12 @@ class TeacherService {
       throw new Error("Cannot update teacher - current record ID mismatch");
     }
 
-    // Update person record if name/tag fields changed
-    const needsPersonUpdate =
-      teacherData.first_name !== undefined ||
-      teacherData.last_name !== undefined ||
-      teacherData.tag_id !== undefined;
-
-    if (needsPersonUpdate) {
-      await this.updatePersonRecord(currentTeacher, teacherData);
+    // The person is written only when a name or the tag differs from the
+    // record read: every person write moves its version, so an unchanged
+    // name sent along would refuse the next save of the same form.
+    if (this.personFieldsChanged(currentTeacher, teacherData)) {
+      const person = await this.updatePersonRecord(currentTeacher, teacherData);
+      options.onPersonSaved?.(person);
     }
 
     // Update staff record
@@ -272,11 +278,26 @@ class TeacherService {
     return this.updateStaffRecord(id, staffData);
   }
 
+  /** Whether the update names a person field other than the record read. */
+  private personFieldsChanged(
+    currentTeacher: Teacher,
+    teacherData: Partial<Teacher>,
+  ): boolean {
+    return (
+      (teacherData.first_name !== undefined &&
+        teacherData.first_name !== currentTeacher.first_name) ||
+      (teacherData.last_name !== undefined &&
+        teacherData.last_name !== currentTeacher.last_name) ||
+      (teacherData.tag_id !== undefined &&
+        (teacherData.tag_id ?? "") !== (currentTeacher.tag_id ?? ""))
+    );
+  }
+
   /** Updates person record for teacher */
   private async updatePersonRecord(
     currentTeacher: Teacher,
     teacherData: Partial<Teacher>,
-  ): Promise<void> {
+  ): Promise<SavedPerson> {
     if (!currentTeacher.person_id) {
       throw new Error("Cannot update person fields - person_id not found");
     }
@@ -293,24 +314,34 @@ class TeacherService {
     // so the update names only the person fields (#2352).
     const personData = this.buildPersonUpdateData(teacherData);
 
-    await bffJson("tenant", "PUT /api/users/{id}", {
+    const saved = await bffJson("tenant", "PUT /api/users/{id}", {
       params: { id: personId },
-      body: personData,
+      // The person as the form read it (ADR 0311).
+      body: {
+        ...personData,
+        expected_version: currentTeacher.person_version ?? "",
+      },
       errorMessage: "Failed to update person",
     });
+    return {
+      first_name: personData.first_name ?? currentTeacher.first_name,
+      last_name: personData.last_name ?? currentTeacher.last_name,
+      tag_id:
+        personData.tag_id === undefined
+          ? currentTeacher.tag_id
+          : personData.tag_id || null,
+      person_version: saved?.version,
+    };
   }
 
   /** Builds person update payload from teacher data */
-  private buildPersonUpdateData(teacherData: Partial<Teacher>): {
-    first_name?: string;
-    last_name?: string;
-    tag_id?: string;
-  } {
-    const personData: {
-      first_name?: string;
-      last_name?: string;
-      tag_id?: string;
-    } = {};
+  private buildPersonUpdateData(
+    teacherData: Partial<Teacher>,
+  ): Pick<DirectoryPersonRequest, "first_name" | "last_name" | "tag_id"> {
+    const personData: Pick<
+      DirectoryPersonRequest,
+      "first_name" | "last_name" | "tag_id"
+    > = {};
 
     if (teacherData.first_name !== undefined) {
       personData.first_name = teacherData.first_name;
@@ -330,17 +361,11 @@ class TeacherService {
   private buildStaffUpdateData(
     currentTeacher: Teacher,
     teacherData: Partial<Teacher>,
-  ): {
-    // Decimal string, exactly as it was loaded — the update route forwards it
-    // verbatim and the backend accepts the string (#2222).
-    person_id: string | undefined;
-    is_teacher: boolean;
-    staff_notes: string;
-    specialization: string;
-    role: string;
-    qualifications: string;
-  } {
+  ): StaffRequest {
     return {
+      // The record as the form read it (ADR 0311): the unchanged fields
+      // below come from that read, so the save rests on it.
+      expected_version: currentTeacher.version ?? "",
       person_id: currentTeacher.person_id,
       // Den bestehenden Profil-Zustand erhalten, NIE hart true senden:
       // PUT /api/staff/{id} legt bei is_teacher=true eine fehlende

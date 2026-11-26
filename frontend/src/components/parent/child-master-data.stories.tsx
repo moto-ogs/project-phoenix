@@ -5,7 +5,7 @@ import { ChildMasterDataView } from "./child-master-data";
 
 /**
  * ChildMasterDataView fetches its data from `/api/parent/*` on mount
- * (getChildMasterData / getChildFeatures). Storybook has no backend or
+ * (getChildMasterData / getFamilyStart). Storybook has no backend or
  * route handlers wired up, so the fetch rejects and the component settles
  * into its own error state — this is the component's real, intentional
  * error-handling path (see `if (error || !data || !features)` in the

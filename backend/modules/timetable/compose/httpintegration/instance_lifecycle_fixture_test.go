@@ -52,6 +52,7 @@ type lifecycleSetup struct {
 	autoStart       timetable.InstanceAutoStart
 	careOffering    careplan.CareOfferingCapability
 	statusDays      studentpresence.StatusDays
+	roomClosures    timetablePorts.RoomClosures
 	repos           *api.PresenceSuiteRepositories
 	reposPeople     *api.PeopleRepositorySuiteFactory
 	reposSchedules  *api.CareScheduleSuiteRepositories
@@ -114,7 +115,7 @@ func buildLifecycle(t *testing.T, clocks ...func() time.Time) *lifecycleSetup {
 	setup := &lifecycleSetup{
 		presence:        newInstancePresence(t, db),
 		instance:        fixtures.FromInstanceLifecycle(ttLifecycle.Instances),
-		timetableData:   ttPlanning.Planning,
+		timetableData:   withEditorReads(ttPlanning.Planning),
 		active:          ttActive,
 		materialization: ttMaterialization,
 		careDay:         ttSchedules.CareDay,
@@ -136,6 +137,7 @@ func buildLifecycle(t *testing.T, clocks ...func() time.Time) *lifecycleSetup {
 		period:          period,
 		clock:           suiteClock(clocks),
 	}
+	setup.roomClosures = owners.NewTimetableRoomClosures(api.NewRoomClosuresForTest(testpkg.NewDatabase(t, db), setup.clock))
 	// These state-machine fixtures use fixed wall-clock windows. Time-policy
 	// boundaries have dedicated clock-injected tests; keep this suite focused on
 	// lifecycle persistence and bridge behavior.
@@ -193,6 +195,7 @@ func lifecycleDependencies(s *lifecycleSetup, broadcaster realtime.Broadcaster, 
 		ActiveGroupRepo:     s.repos.ActiveGroup,
 		SupervisorRepo:      s.repos.GroupSupervisor,
 		Rooms:               owners.NewTimetableRoomNames(rooms),
+		RoomClosures:        s.roomClosures,
 		ActivityGroupRepo:   s.timetable.Timetable,
 		StaffRepo:           owners.NewTimetableStaff(s.reposPeople.Staff),
 		StudentRepo:         owners.NewTimetableLifecycleStudents(owners.NewTimetableRosterStudents(s.reposPeople.Student)),
@@ -542,7 +545,7 @@ func plannerVersion(t *testing.T, ctx context.Context, data timetable.TimetableD
 	t.Helper()
 	inst, err := data.FindScheduledInstance(ctx, instanceID)
 	require.NoError(t, err)
-	rows, err := data.ListScheduledInstanceRows(ctx, []timetable.ScheduledInstance{inst})
+	rows, err := data.ListScheduledInstanceRows(ctx, []timetable.ScheduledInstance{inst}, timetable.PlannerGrid)
 	require.NoError(t, err)
 	return timetable.ScheduledInstanceVersion(inst, rows.Staff[instanceID], rows.Participants[instanceID])
 }

@@ -34,11 +34,13 @@ type holidayCriterionRequest struct {
 	Question string   `json:"question"`
 	Scope    string   `json:"scope"`
 	Active   bool     `json:"active"`
+	Points   int      `json:"points,omitempty"`
 }
 
 // HolidayCriteriaRequest is the body of PUT /traeger/holiday-periods/criteria:
-// every criterion of the Träger in the order of its priority.
+// the Träger’s ranking mode and ordered criteria.
 type HolidayCriteriaRequest struct {
+	Ranking  string                    `json:"ranking,omitempty"`
 	Criteria []holidayCriterionRequest `json:"criteria"`
 	// ExpectedVersion is the version of the criteria the Büro read; a list
 	// saved since is refused (ADR 0311).
@@ -75,7 +77,7 @@ func (rs *HolidayPeriodResource) saveCriteria(w http.ResponseWriter, r *http.Req
 	for i, criterion := range req.Criteria {
 		input[i] = capability.HolidayCriterionInput(criterion)
 	}
-	criteria, err := rs.allocation.SaveHolidayCriteria(r.Context(), reviewer, req.ExpectedVersion, input)
+	criteria, err := rs.allocation.SaveHolidayCriteria(r.Context(), reviewer, req.ExpectedVersion, req.Ranking, input)
 	var fields validation.Errors
 	if errors.As(err, &fields) {
 		tenant.MarkRollback(r.Context())
@@ -205,7 +207,7 @@ func renderHolidayAllocationError(w http.ResponseWriter, r *http.Request, err er
 		common.RenderError(w, r, common.ErrorInvalidOnField(err, common.CodeEnrollmentHolidayRegistrationInvalid,
 			fmt.Sprintf("decisions.%d.reason", reason.Index)))
 	case errors.As(err, &full):
-		common.RenderError(w, r, common.ErrorConflictWithDetails(err, common.CodeEnrollmentHolidayAllocationFull, map[string]any{"week_id": full.WeekID}))
+		common.RenderError(w, r, common.ErrorConflictWithDetails(err, common.CodeEnrollmentHolidayAllocationFull, HolidayAllocationDetails{WeekID: ident.ID(full.WeekID)}))
 	case errors.Is(err, capability.ErrHolidayAllocationOff):
 		common.RenderError(w, r, common.ErrorConflict(err))
 	case errors.Is(err, capability.ErrHolidayAllocationChanged):

@@ -25,6 +25,7 @@ const (
 	settingCareOfferingsEnabled = "enrollment.care_offerings_enabled"
 	settingGradeLevelMax        = "enrollment.grade_level_max"
 	settingCareFacilityTerm     = "enrollment.care_facility_term"
+	settingCareFacilityArticle  = "enrollment.care_facility_article"
 )
 
 // Values of enrollment.duplicate_handling.
@@ -168,6 +169,9 @@ type IntakeSettings interface {
 	// CareFacilityTerm is the school's term for its care in fixed parent
 	// texts (enrollment.care_facility_term, #6042).
 	CareFacilityTerm(ctx context.Context) (string, error)
+	// CareFacilityArticle is the article the German texts decline that
+	// term with: "der", "die" or "das" (#8136).
+	CareFacilityArticle(ctx context.Context) (string, error)
 	// LegalSettings resolves the tenant-wide legal texts and toggles. A
 	// toggle without a tenant override is off.
 	LegalSettings(ctx context.Context) (LegalSettings, error)

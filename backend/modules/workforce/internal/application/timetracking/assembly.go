@@ -54,6 +54,8 @@ type Rows struct {
 	// TraegerMonths names the staff a contract of the Träger covers in a
 	// month (#4711): the Träger closes and pays them, not the school.
 	TraegerMonths TraegerMonthStaff
+	// TemplateLocks holds the template a schedule save binds a person to.
+	TemplateLocks WorkTimeTemplateLocks
 }
 
 // Ports are the consumer-owned readers and writers the composition root
@@ -80,6 +82,9 @@ type Ports struct {
 	StaffNames      StaffDisplayNameQuery
 	// ExternalCaregivers keeps the auto-stamp off external caregivers.
 	ExternalCaregivers ExternalCaregiverStaff
+	// TimeTrackingManagers exempts the leadership from terminal-only
+	// stamping (#8024).
+	TimeTrackingManagers TimeTrackingManagerStaff
 
 	Schedules       WorkSessionSchedules
 	TimeModels      WorkSessionTimeModels
@@ -124,14 +129,15 @@ type Dependencies struct {
 // Services are the composed time-tracking services. The Workforce
 // composition serves the public contracts from them.
 type Services struct {
-	Sessions WorkSessionService
-	Months   WorkTimeMonthService
-	Absences StaffAbsenceService
-	Ledger   StaffBalanceAdjustmentService
-	Closing  StaffMonthCloseService
-	Overview StaffOverviewService
-	Export   StaffTimeExportService
-	AuditLog TimeTrackingAuditLogService
+	Sessions    WorkSessionService
+	Months      *workTimeMonthService
+	Absences    StaffAbsenceService
+	ownAbsences *staffAbsenceService
+	Ledger      StaffBalanceAdjustmentService
+	Closing     StaffMonthCloseService
+	Overview    StaffOverviewService
+	Export      StaffTimeExportService
+	AuditLog    TimeTrackingAuditLogService
 }
 
 // Clock is every service but the absence lifecycle. The absence lifecycle
@@ -186,23 +192,26 @@ func (c *Clock) Sessions() WorkSessionService {
 // shift-plan-sync workflow to apply (#4825).
 func (c *Clock) WithAbsences() *Services {
 	deps, services := c.deps, c.services
-	services.Absences = NewStaffAbsenceService(deps.Absences, deps.Sessions, deps.VacationQuotas, deps.AbsenceAudits, deps.Settings, services.Months,
+	services.ownAbsences = newStaffAbsenceService(deps.Absences, deps.Sessions, deps.VacationQuotas, deps.AbsenceAudits, deps.Settings, services.Months,
 		append(deps.absenceOptions(deps.AbsenceTypes, deps.MonthSnapshots, loggerOrDefault(deps.Logger)), WithAbsenceUnitOfWork(runTimeTrackingUnit))...)
+	services.Absences = services.ownAbsences.transactional()
 	return &services
 }
 
 // sessionsAndMonths builds the work session service and the Monatskarte
 // (#1842), which reference each other: the weekly history summaries re-price
 // Sonderarbeitszeit weeks (#3259) through the month service.
-func (deps Dependencies) sessionsAndMonths(absenceTypes AbsenceTypeReader, snapshots MonthSnapshots, logger *slog.Logger) (WorkSessionService, WorkTimeMonthService) {
-	var months WorkTimeMonthService
+func (deps Dependencies) sessionsAndMonths(absenceTypes AbsenceTypeReader, snapshots MonthSnapshots, logger *slog.Logger) (WorkSessionService, *workTimeMonthService) {
+	var months *workTimeMonthService
 	sessions := NewWorkSessionService(deps.Sessions, deps.Breaks, deps.EditAudit, deps.Absences, deps.Supervisions, deps.SessionRecords,
 		deps.Staff, deps.Schedules, deps.TimeModels, deps.Settings, logger, deps.DB, deps.RenderPDF, deps.RenderWorkbook,
 		// Planned-shift lookups for the auto-checkout job (#1798).
 		WithWorkSessionShifts(deps.Shifts),
+		WithWorkSessionTemplateLocks(deps.TemplateLocks),
 		WithWorkSessionEvents(deps.Events),
 		WithWorkSessionHolidays(deps.Holidays),
 		WithWorkSessionExternalCaregivers(deps.ExternalCaregivers),
+		WithWorkSessionTimeTrackingManagers(deps.TimeTrackingManagers),
 		WithWorkSessionAbsenceTypes(absenceTypes),
 		WithWorkSessionTargetOverrides(staffTargetOverrideWeeks{overrides: deps.TargetOverrides, months: func() WorkTimeMonthService { return months }}),
 		func(s *workSessionService) { s.nowFunc = deps.Now },
@@ -287,6 +296,8 @@ func (deps Dependencies) validate() error {
 	switch {
 	case deps.TargetOverrides == nil || deps.MonthSnapshots == nil || deps.AbsenceTypes == nil || deps.TraegerMonths == nil:
 		return errors.New("time tracking: the target overrides, month snapshots, absence types and Träger months are required")
+	case deps.TemplateLocks == nil:
+		return errors.New("time tracking: the template locks of the schedule save are required")
 	case deps.Sessions == nil || deps.Breaks == nil || deps.Adjustments == nil || deps.VacationQuotas == nil ||
 		deps.VacationOpenings == nil || deps.Absences == nil || deps.AbsenceAudits == nil:
 		return errors.New("time tracking: the work session, break, ledger, vacation and absence rows are required")
@@ -295,7 +306,8 @@ func (deps Dependencies) validate() error {
 	case deps.Supervisions == nil || deps.SessionRecords == nil:
 		return errors.New("time tracking: the supervision and session records are required")
 	case deps.Staff == nil || deps.StaffSchedules == nil || deps.MonthCloseStaff == nil ||
-		deps.OverviewStaff == nil || deps.ExportStaff == nil || deps.StaffNames == nil || deps.ExternalCaregivers == nil:
+		deps.OverviewStaff == nil || deps.ExportStaff == nil || deps.StaffNames == nil || deps.ExternalCaregivers == nil ||
+		deps.TimeTrackingManagers == nil:
 		return errors.New("time tracking: the staff readers are required")
 	case deps.Schedules == nil || deps.TimeModels == nil || deps.ScheduleTargets == nil || deps.TargetModels == nil ||
 		deps.Shifts == nil || deps.Holidays == nil:

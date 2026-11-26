@@ -30,7 +30,7 @@ const render = (ui: ReactElement) =>
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
     data: {
-      user: { id: "1", scope: "tenant", tenantId: 42 },
+      user: { id: "1", scope: "tenant", tenantId: "42" },
       expires: "2099-01-01",
     },
     status: "authenticated",
@@ -170,7 +170,7 @@ vi.mock("~/lib/care-offering-booking-stats", async (importOriginal) => {
 
 vi.mock("~/lib/timetable-api", () => ({
   timetableService: {
-    getTemplates: mocks.getTemplates,
+    getOfferingTemplates: mocks.getTemplates,
   },
 }));
 
@@ -636,6 +636,7 @@ describe("CareOfferingsEditor", () => {
           phase_id: "11",
           auto_add_trigger_offering_ids: [],
         }),
+        "v1",
       );
     });
   });
@@ -975,7 +976,7 @@ describe("CareOfferingsEditor", () => {
     const aggregate = vi.fn().mockResolvedValue([]);
     function Counts() {
       const resource = useSWRAuth(
-        enrollmentKeys.allPhasesCareOfferings([phase().id]),
+        enrollmentKeys.careOfferingCounts(),
         aggregate,
       );
       return resource.data ? <p>Alle Phasen geladen</p> : null;
@@ -1483,6 +1484,7 @@ describe("CareOfferingsEditor", () => {
           activity_group_id: "12",
           is_active: false,
         }),
+        "v1",
       ),
     );
   });
@@ -1706,6 +1708,7 @@ describe("CareOfferingsEditor", () => {
           phase_id: "11",
           activity_group_id: null,
         }),
+        "v1",
       );
     });
   });
@@ -1777,6 +1780,7 @@ describe("CareOfferingsEditor", () => {
       expect(mocks.updateCareOffering).toHaveBeenCalledWith(
         "offer-1",
         expect.objectContaining({ activity_group_id: null }),
+        "v1",
       ),
     );
   });
@@ -1852,6 +1856,7 @@ describe("CareOfferingsEditor", () => {
           phase_id: "11",
           activity_group_id: "8",
         }),
+        "v1",
       ),
     );
     expect(mocks.toast.warning).not.toHaveBeenCalled();
@@ -2002,6 +2007,7 @@ describe("CareOfferingsEditor", () => {
       expect(mocks.updateCareOffering).toHaveBeenCalledWith(
         "offer-1",
         expect.objectContaining({ activity_group_id: null }),
+        "v1",
       ),
     );
   });
@@ -2031,6 +2037,7 @@ describe("CareOfferingsEditor", () => {
       expect(mocks.updateCareOffering).toHaveBeenCalledWith(
         "offer-1",
         expect.objectContaining({ auto_add_grade_levels: [13] }),
+        "v1",
       ),
     );
   });
@@ -2071,6 +2078,7 @@ describe("CareOfferingsEditor", () => {
       expect(mocks.updateCareOffering).toHaveBeenCalledWith(
         "offer-1",
         expect.objectContaining({ auto_add_grade_levels: [2, 5, 13] }),
+        "v1",
       ),
     );
   });
@@ -2267,5 +2275,63 @@ describe("CareOfferingsEditor", () => {
       expect(mocks.listCareOfferings).toHaveBeenCalledTimes(3),
     );
     expect(mocks.deleteCareOffering).toHaveBeenCalledTimes(1);
+  });
+
+  // ADR 0311: the save carries the version the list showed; after a refusal
+  // the form waits for the stored offering, stays locked while that read
+  // fails, then shows it and saves over its version.
+  it("blocks saving until the stored offering is read after a refused save", async () => {
+    const stored = offering({ name: "Von der Kollegin", version: "colleague" });
+    mocks.listPhases.mockResolvedValue([phase()]);
+    mocks.listCareOfferings
+      .mockResolvedValueOnce([offering()])
+      .mockRejectedValueOnce(new ApiError("unavailable", 503, {}))
+      .mockResolvedValue([stored]);
+    mocks.updateCareOffering
+      .mockRejectedValueOnce(
+        new ApiError("changed", 409, { code: "general.changed_since_read" }),
+      )
+      .mockResolvedValue(stored);
+
+    render(<CareOfferingsEditor />);
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Aktionen für Regelbetreuung",
+      }),
+    );
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: "Bearbeiten" }),
+    );
+    fireEvent.change(await waitForInputByName("name"), {
+      target: { value: "Mein Name" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+
+    expect(
+      (await screen.findAllByText(/Der neue Stand konnte nicht geladen werden/))
+        .length,
+    ).toBeGreaterThan(0);
+    const save = screen.getByRole("button", { name: "Speichern" });
+    expect(save).toHaveAttribute("aria-disabled", "true");
+    fireEvent.click(save);
+    expect(mocks.updateCareOffering).toHaveBeenCalledTimes(1);
+    expect(mocks.updateCareOffering.mock.calls[0]?.[2]).toBe("v1");
+
+    fireEvent.click(
+      screen.getAllByRole("button", { name: /Wiederholen|Erneut/ })[0]!,
+    );
+    await waitFor(() =>
+      expect(inputByName("name")).toHaveValue("Von der Kollegin"),
+    );
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "Speichern" }),
+      ).not.toHaveAttribute("aria-disabled"),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() =>
+      expect(mocks.updateCareOffering).toHaveBeenCalledTimes(2),
+    );
+    expect(mocks.updateCareOffering.mock.calls[1]?.[2]).toBe("colleague");
   });
 });

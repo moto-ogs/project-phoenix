@@ -36,7 +36,7 @@ describe("reportStandaloneUsage", () => {
   });
 
   it("posts to the staff endpoint in standalone mode", async () => {
-    await reportStandaloneUsage("tenant", accountID, 1);
+    await reportStandaloneUsage("tenant", accountID, "1");
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/pwa/usage",
       expect.objectContaining({ method: "POST" }),
@@ -52,23 +52,23 @@ describe("reportStandaloneUsage", () => {
   });
 
   it("does not report school sessions to the tenant-only endpoint", async () => {
-    await reportStandaloneUsage("school", accountID, 1);
+    await reportStandaloneUsage("school", accountID, "1");
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("never posts outside standalone mode", async () => {
     isStandaloneApp.mockReturnValue(false);
-    await reportStandaloneUsage("tenant", accountID, 1);
+    await reportStandaloneUsage("tenant", accountID, "1");
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("reports once per browser session, portal, account, and tenant", async () => {
-    await reportStandaloneUsage("tenant", accountID, 1);
-    await reportStandaloneUsage("tenant", accountID, 1);
+    await reportStandaloneUsage("tenant", accountID, "1");
+    await reportStandaloneUsage("tenant", accountID, "1");
     expect(fetchMock).toHaveBeenCalledTimes(1);
 
-    await reportStandaloneUsage("tenant", "account-2", 1);
-    await reportStandaloneUsage("tenant", accountID, 2);
+    await reportStandaloneUsage("tenant", "account-2", "1");
+    await reportStandaloneUsage("tenant", accountID, "2");
     await reportStandaloneUsage("parent", accountID);
     expect(fetchMock).toHaveBeenCalledTimes(4);
   });
@@ -77,15 +77,15 @@ describe("reportStandaloneUsage", () => {
   // this tab reports once more; the backend only advances last_seen_at of
   // the same (school, account, portal) row, so no count grows.
   it("reports once more after logout and a new sign-in", async () => {
-    await reportStandaloneUsage("tenant", accountID, 1);
+    await reportStandaloneUsage("tenant", accountID, "1");
     expect(sessionStorage.getItem(MARK)).toBe("1");
 
     clearPersonalStorage();
     expect(sessionStorage.getItem(MARK)).toBeNull();
 
     bindPersonalStorage(OWNER);
-    await reportStandaloneUsage("tenant", accountID, 1);
-    await reportStandaloneUsage("tenant", accountID, 1);
+    await reportStandaloneUsage("tenant", accountID, "1");
+    await reportStandaloneUsage("tenant", accountID, "1");
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
@@ -104,7 +104,7 @@ describe("reportStandaloneUsage", () => {
         }),
       );
 
-      const report = reportStandaloneUsage("tenant", accountID, 1);
+      const report = reportStandaloneUsage("tenant", accountID, "1");
       change();
       answer({ ok: true, status: 204 });
       await report;
@@ -114,22 +114,22 @@ describe("reportStandaloneUsage", () => {
   );
 
   it("marks the session when the account stayed during the report", async () => {
-    await reportStandaloneUsage("tenant", accountID, 1);
+    await reportStandaloneUsage("tenant", accountID, "1");
 
     expect(sessionStorage.getItem(MARK)).toBe("1");
   });
 
   it("does not mark the session on a rejected report", async () => {
     fetchMock.mockResolvedValueOnce({ ok: false, status: 500 });
-    await reportStandaloneUsage("tenant", accountID, 1);
-    await reportStandaloneUsage("tenant", accountID, 1);
+    await reportStandaloneUsage("tenant", accountID, "1");
+    await reportStandaloneUsage("tenant", accountID, "1");
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it("swallows network errors", async () => {
     fetchMock.mockRejectedValueOnce(new Error("offline"));
     await expect(
-      reportStandaloneUsage("tenant", accountID, 1),
+      reportStandaloneUsage("tenant", accountID, "1"),
     ).resolves.toBeUndefined();
   });
 });

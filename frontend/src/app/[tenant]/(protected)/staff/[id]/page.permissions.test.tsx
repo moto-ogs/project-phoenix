@@ -25,7 +25,7 @@ import {
   staffService,
 } from "~/lib/staff-api";
 import { catalogText } from "~/test/error-catalog-text";
-import StaffDetailContent from "./page";
+import StaffDetailContent from "./page-content";
 
 const pending = vi.hoisted(() => ({
   fetcher: undefined as (() => Promise<unknown>) | undefined,
@@ -78,6 +78,13 @@ vi.mock("~/lib/breadcrumb-context", () => ({
 vi.mock("~/contexts/ToastContext", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/contexts/ToastContext")>()),
   useToast: () => ({ success: vi.fn(), error: vi.fn() }),
+  // Ablehnungen stehen beim Reiter (ADR 0311); hier ohne ToastProvider.
+  useApiErrorDisplay: () => ({
+    error: null,
+    show: vi.fn(),
+    clear: vi.fn(),
+    showMessage: vi.fn(),
+  }),
 }));
 
 vi.mock("~/lib/teacher-api", () => ({
@@ -946,6 +953,7 @@ describe("StaffDetailContent permissions", () => {
           first_name: "Mila",
           last_name: "Muster",
         }),
+        { onPersonSaved: expect.any(Function) },
       );
     });
     expect(mockRecordUpdate).not.toHaveBeenCalled();

@@ -39,5 +39,31 @@
     "pickupTooltip": "Opens the form to request a different pickup time.",
     "pickupWithModeTooltip": "Opens the form to request a pickup change.",
     "messageTooltip": "Opens the messages with the {careTerm} about your child."
+  },
+  "changes": {
+    "title": "Different today",
+    "allAsPlanned": "Everything is going as planned today.",
+    "partial": "Not all changes could be loaded. Please check again later.",
+    "loadObject": "today's changes",
+    "enteredByYou": "Entered by you",
+    "sick": "{name} is reported sick today.",
+    "excused": "{name} is excused today.",
+    "pickupAt": "{name} will be picked up at {time} today.",
+    "notComing": "{name} is not coming today.",
+    "goesAlone": "{name} goes home alone today.",
+    "classTrip": "Class {class} is on an outing today.",
+    "classTripBack": "Class {class} is on an outing today. Back at {time}.",
+    "classDismissal": "Lessons for class {class} end at {time} today.",
+    "closingDay": "The {careTerm} is closed today: {name}.",
+    "closingDayUntil": "The {careTerm} is closed until {date}: {name}.",
+    "openingChanged": "The {careTerm} is open from {opens} to {closes} today: {name}.",
+    "openingChangedUntil": "Until {date}, the {careTerm} is open from {opens} to {closes}: {name}.",
+    "mealCancelled": "There is no lunch for {name} today. It will not be charged.",
+    "pickupAfterClosing": "That is after closing time. Please change the pickup.",
+    "regularPickupAfterClosing": "According to the weekly plan, {name} is picked up at {time}.",
+    "activityCancelled": "{title} at {time} is cancelled today.",
+    "activityReinstated": "{title} at {time} takes place after all today.",
+    "activityRoomChanged": "{title} at {time} is in {room} today.",
+    "activityLeadChanged": "{title} at {time} is led by a substitute today."
   }
 }

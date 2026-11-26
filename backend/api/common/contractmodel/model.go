@@ -25,10 +25,13 @@ const (
 type Schema struct {
 	Kind       string  `json:"kind"`
 	Nullable   bool    `json:"nullable,omitempty"`
+	NoID       bool    `json:"no_id,omitempty"` // the named empty marker of ident.IDOrNone
 	LegacyJSON bool    `json:"legacy_json,omitempty"`
 	Elem       *Schema `json:"elem,omitempty"`
 	// Ref names the object of a KindRef or the enum of a KindEnum.
 	Ref string `json:"ref,omitempty"`
+	// GoPackage identifies the producer type of a problem-details schema.
+	GoPackage string `json:"go_package,omitempty"`
 }
 
 // Field is one member of an object. Optional means the key may be absent.
@@ -38,6 +41,7 @@ type Field struct {
 	Deprecated  bool   `json:"deprecated,omitempty"`
 	JSONReason  string `json:"json_reason,omitempty"`
 	RefinesJSON string `json:"refines_json,omitempty"`
+	TextReason  string `json:"text_reason,omitempty"`
 	Schema      Schema `json:"schema"`
 }
 
@@ -58,10 +62,11 @@ type Enum struct {
 
 // QueryParam is one query parameter of a route.
 type QueryParam struct {
-	Name     string   `json:"name"`
-	Kind     string   `json:"kind"`
-	Repeated bool     `json:"repeated,omitempty"`
-	Values   []string `json:"values,omitempty"`
+	Name       string   `json:"name"`
+	Kind       string   `json:"kind"`
+	Repeated   bool     `json:"repeated,omitempty"`
+	Values     []string `json:"values,omitempty"`
+	TextReason string   `json:"text_reason,omitempty"`
 }
 
 // Variants is a response whose shape a query parameter selects.
@@ -81,6 +86,8 @@ type Route struct {
 	Query      []QueryParam `json:"query,omitempty"`
 	Request    *Schema      `json:"request,omitempty"`
 	Response   *Schema      `json:"response,omitempty"`
+	// PartialError names a problem whose details.result reuses Response.
+	PartialError string `json:"partial_error,omitempty"`
 	// NoData says the route answers a 204 or the envelope without data.
 	NoData   bool      `json:"no_data,omitempty"`
 	Variants *Variants `json:"variants,omitempty"`
@@ -118,7 +125,10 @@ type Route struct {
 	PrivateCache bool `json:"private_cache,omitempty"`
 	// RouteFile says why the portal's own route file, not the catalog
 	// proxy, serves the route. No proxy allowlist names it.
-	RouteFile string `json:"route_file,omitempty"`
+	RouteFile          string `json:"route_file,omitempty"`
+	BrowserPath        string `json:"browser_path,omitempty"`
+	BrowserMethod      string `json:"browser_method,omitempty"`
+	BrowserOwnContract bool   `json:"browser_own_contract,omitempty"`
 	// Plain says the route answers its data as the whole body, without the
 	// envelope. Only a route file reads such an answer.
 	Plain bool `json:"plain,omitempty"`
@@ -188,7 +198,9 @@ func (r Route) Key() string { return r.Method + " " + r.Pattern }
 // Document is the whole contract. It is committed as contract.json, and the
 // comparison with the base branch reads it.
 type Document struct {
-	Routes []Route `json:"routes"`
+	ProblemDetails map[string]Schema `json:"problem_details,omitempty"`
+	StreamEvent    *Schema           `json:"stream_event,omitempty"`
+	Routes         []Route           `json:"routes"`
 	// Outside lists the catalog lines without a contract, with their reason.
 	Outside []OutsideRoute `json:"outside"`
 	Enums   []Enum         `json:"enums"`

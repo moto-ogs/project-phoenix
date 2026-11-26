@@ -12,7 +12,7 @@ export function teacherHomeworkTopic(): HelpTopic {
     title: "Hausaufgaben eintragen",
     question: "Wie trage ich Hausaufgaben für meine Klasse ein?",
     summary:
-      "Du trägst ein, was die Klasse an einem Tag tun soll. Die OGS meldet je Kind zurück.",
+      "Du trägst ein, was die Klasse an einem Tag tun soll. Die OGS meldet pro Kind zurück.",
     group: "klasse",
     audience: "teacher",
     icon: "NotePencil",
@@ -47,7 +47,7 @@ export function teacherHomeworkTopic(): HelpTopic {
     result:
       "Die OGS sieht die Hausaufgaben in der Lernzeit bei jedem Kind der Klasse.",
     notes: [
-      "Für einen Tag kannst du mehrere Einträge machen, zum Beispiel einen je Fach.",
+      "Für einen Tag kannst du mehrere Einträge machen, zum Beispiel einen pro Fach.",
       "Jede Lehrkraft der Klasse kann alle Einträge ändern oder löschen. Auch die Einträge der anderen.",
       "Führst du selbst eine Lernzeit unter `Meine Aufsichten`? Dann gibst du die Rückmeldung dort mit `Hausaufgaben`.",
       "Eltern sehen weder die Hausaufgaben noch die Rückmeldung.",

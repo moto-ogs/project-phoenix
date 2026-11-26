@@ -4,11 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar"
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar/portal"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // The Lehrkraft's side of the Elternsprechtag in moto schule (#4801). A
@@ -56,16 +60,6 @@ func (s *service) ListSchoolParentConferences(ctx context.Context) (*SchoolParen
 	return &SchoolParentConferenceList{Conferences: views, Classes: classes}, nil
 }
 
-// GetSchoolParentConference returns one of the Lehrkraft's days with the
-// names of the booked children, for the occupancy list and its print.
-func (s *service) GetSchoolParentConference(ctx context.Context, id int64) (*ParentConferenceView, error) {
-	conference, err := s.loadOwnParentConference(ctx, id, false)
-	if err != nil {
-		return nil, err
-	}
-	return s.parentConferenceView(ctx, conference)
-}
-
 // CreateSchoolParentConference offers a new day for a class the Lehrkraft
 // teaches.
 func (s *service) CreateSchoolParentConference(ctx context.Context, req ParentConferenceRequest) (*ParentConferenceView, error) {
@@ -108,8 +102,18 @@ func (s *service) UpdateSchoolParentConference(ctx context.Context, id int64, re
 	}
 	var view *ParentConferenceView
 	err = s.withinAppointmentWrite(ctx, func(txCtx context.Context) error {
-		current, err := s.loadOwnParentConference(txCtx, id, true)
+		current, err := s.loadOwnParentConference(txCtx, id)
 		if err != nil {
+			return err
+		}
+		// A booking takes the same row lock: the bookings read here are the
+		// ones the change keeps or cancels. A day booked or changed since
+		// the Lehrkraft read it is refused (ADR 0311).
+		bookings, err := store.ListParentConferenceBookings(txCtx, []int64{current.ID})
+		if err != nil {
+			return err
+		}
+		if err := readstate.Check(req.ExpectedVersion, parentConferenceVersion(current, bookings)); err != nil {
 			return err
 		}
 		fields, err := s.parentConferenceFields(txCtx, req, current.SchoolClass)
@@ -138,7 +142,7 @@ func (s *service) DeleteSchoolParentConference(ctx context.Context, id int64) er
 		return err
 	}
 	return s.withinAppointmentWrite(ctx, func(txCtx context.Context) error {
-		conference, err := s.loadOwnParentConference(txCtx, id, true)
+		conference, err := s.loadOwnParentConference(txCtx, id)
 		if err != nil {
 			return err
 		}
@@ -179,10 +183,11 @@ func (s *service) followParentConferenceChange(ctx context.Context, conference *
 	return s.cfg.ParentConferences.DeleteParentConferenceBookings(ctx, gone)
 }
 
-// loadOwnParentConference loads a day the current Lehrkraft organizes.
+// loadOwnParentConference loads and locks a day the current Lehrkraft
+// organizes.
 // Another Lehrkraft's day is not found: its existence is none of her
 // business.
-func (s *service) loadOwnParentConference(ctx context.Context, id int64, lock bool) (*schoolcalendar.ParentConference, error) {
+func (s *service) loadOwnParentConference(ctx context.Context, id int64) (*schoolcalendar.ParentConference, error) {
 	store, err := s.parentConferences()
 	if err != nil {
 		return nil, err
@@ -191,7 +196,7 @@ func (s *service) loadOwnParentConference(ctx context.Context, id int64, lock bo
 	if err != nil {
 		return nil, err
 	}
-	conference, err := store.FindParentConference(ctx, id, lock)
+	conference, err := store.FindParentConference(ctx, id)
 	if err != nil {
 		return nil, mapParentConferenceError(err)
 	}
@@ -309,10 +314,11 @@ func buildParentConferenceView(conference *schoolcalendar.ParentConference, book
 		booked[booking.SlotStartMinute] = booking
 	}
 	view := ParentConferenceView{
-		ID: formatID(conference.ID), SchoolClass: conference.SchoolClass, Date: conference.Date,
+		ID: ident.ID(conference.ID), SchoolClass: conference.SchoolClass, Date: conference.Date,
 		StartTime: formatClockMinute(conference.StartMinute), EndTime: formatClockMinute(conference.EndMinute),
 		SlotMinutes: conference.SlotMinutes, Breaks: parentConferenceBreakWindows(conference.Breaks),
 		Location: conference.Location, BookedCount: len(bookings), Slots: []portal.ParentConferenceSlot{},
+		Version: parentConferenceVersion(conference, bookings),
 	}
 	for _, start := range schoolcalendar.ParentConferenceSlots(conference.ParentConferenceFields) {
 		slot := portal.ParentConferenceSlot{
@@ -320,7 +326,7 @@ func buildParentConferenceView(conference *schoolcalendar.ParentConference, book
 		}
 		if booking, ok := booked[start]; ok {
 			slot.Booked = true
-			studentID := formatID(booking.StudentID)
+			studentID := ident.ID(booking.StudentID)
 			slot.StudentID = &studentID
 			if name, ok := names[booking.StudentID]; ok {
 				slot.StudentName = &name
@@ -329,6 +335,39 @@ func buildParentConferenceView(conference *schoolcalendar.ParentConference, book
 		view.Slots = append(view.Slots, slot)
 	}
 	return view
+}
+
+// parentConferenceState is the canonical form of a day as the Lehrkraft
+// reads it: its settings and which child holds which slot.
+type parentConferenceState struct {
+	SchoolClass string                                 `json:"school_class"`
+	Date        string                                 `json:"date"`
+	StartMinute int                                    `json:"start_minute"`
+	EndMinute   int                                    `json:"end_minute"`
+	SlotMinutes int                                    `json:"slot_minutes"`
+	Breaks      []schoolcalendar.ParentConferenceBreak `json:"breaks"`
+	Location    *string                                `json:"location"`
+	Bookings    [][2]int64                             `json:"bookings"`
+}
+
+// parentConferenceVersion is the read-state token of a day (ADR 0311): its
+// settings and its bookings, sorted by slot. A booking writes no column of
+// the day, so the token is a fingerprint, not readstate.Of.
+func parentConferenceVersion(conference *schoolcalendar.ParentConference, bookings []*schoolcalendar.ParentConferenceBooking) string {
+	state := parentConferenceState{
+		SchoolClass: conference.SchoolClass, Date: conference.Date.String(),
+		StartMinute: conference.StartMinute, EndMinute: conference.EndMinute, SlotMinutes: conference.SlotMinutes,
+		Breaks: append([]schoolcalendar.ParentConferenceBreak{}, conference.Breaks...), Location: conference.Location,
+		Bookings: make([][2]int64, 0, len(bookings)),
+	}
+	for _, booking := range bookings {
+		state.Bookings = append(state.Bookings, [2]int64{int64(booking.SlotStartMinute), booking.StudentID})
+	}
+	sort.Slice(state.Bookings, func(i, j int) bool {
+		a, b := state.Bookings[i], state.Bookings[j]
+		return a[0] < b[0] || (a[0] == b[0] && a[1] < b[1])
+	})
+	return readstate.Fingerprint(state)
 }
 
 func parentConferenceBreakWindows(breaks []schoolcalendar.ParentConferenceBreak) []portal.ParentConferenceWindow {

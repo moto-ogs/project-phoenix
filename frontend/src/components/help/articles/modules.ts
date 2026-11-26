@@ -31,6 +31,7 @@ export function modulesTopic(): HelpTopic {
       "Ohne `Online-Anmeldung` verschickt moto keine E-Mails zu Anmeldungen.",
       "Ohne `NFC-Anwesenheit` lässt sich kein Tablet mit der Geräte-PIN anmelden. Das Tablet zeigt dann einen Hinweis.",
       "Ohne `Zeiterfassung` kann dein Team am Tablet nicht stempeln. Anwesenheit mit Armband geht weiter.",
+      "`Träger-Übersicht`, `Ferienbetreuung`, `Verträge und Dokumente` und `Elternbeiträge und Abrechnung` nutzt dein Träger im Träger-Portal. In deiner OGS ändert sich dadurch kein Menüpunkt.",
     ],
     differences: [
       "Ein Menüpunkt hat ein Schloss? Dann gehört er zu einem Modul, das deine OGS nicht gebucht hat. Das Schloss siehst nur du als Leitung. Dein Team sieht den Menüpunkt nicht.",

@@ -5,6 +5,7 @@ package ports
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/carecontract"
@@ -40,15 +41,67 @@ type AmendableContract struct {
 	NextNumber int
 	Latest     carecontract.Version
 	Versions   []carecontract.Version
+	// Waiting is the changed version that waits for the parents' signature
+	// (#4816); nil when none waits.
+	Waiting *carecontract.Version
+	// Parties are the contract's parties: only a request one of them sent
+	// counts as the signature of a version.
+	Parties []PartyAccount
+	// SignedRequests are the parents' requests that already count as the
+	// signature of a version of this contract. A request signs once: when
+	// the school books its care again later, the parents sign anew.
+	SignedRequests []int64
 }
 
-// VersionStep is what a new version does to the timeline (#4681): at most
-// one of Supersede and Replace names a version; Status is the status that
-// version must still have.
+// PartyAccount is a party of a contract as a request is matched to it: by
+// its parents account when the contract knows one, else by its address, the
+// rule of the inbox (ADR 0088 section 7).
+type PartyAccount struct {
+	AccountID *int64
+	Email     string
+	Name      string
+}
+
+// Sent tells whether the account with that address is this party.
+func (p PartyAccount) Sent(accountID int64, email string) bool {
+	if p.AccountID != nil {
+		return *p.AccountID == accountID
+	}
+	return strings.TrimSpace(p.Email) != "" && strings.EqualFold(strings.TrimSpace(p.Email), strings.TrimSpace(email))
+}
+
+// SentContract is a sent contract with an application child that waits for
+// its first signature (#4816): its version follows the approved bookings
+// until the parents sign.
+type SentContract struct {
+	ID         int64
+	Key        ContractKey
+	UpdatedAt  time.Time
+	NextNumber int
+	Version    carecontract.Version
+}
+
+// VersionStep is what a new version does to the versions before it (#4681):
+// the wirksam version it follows becomes abgeloest (Supersede), the version
+// starting on its day ersetzt (Replace), or the version that waited for a
+// signature ueberholt (Overtake, #4816). At most one names a version;
+// Status is the status that version must still have.
 type VersionStep struct {
 	Supersede int64
 	Replace   int64
+	Overtake  int64
 	Status    string
+}
+
+// VersionActivation moves a signed version from beantragt into the timeline
+// (#4816): Status is wirksam or abgeloest, EffectiveFrom the day it holds
+// from and AgreedFrom the date its document names when that is earlier.
+type VersionActivation struct {
+	VersionID     int64
+	Status        string
+	EffectiveFrom calendar.Date
+	AgreedFrom    *calendar.Date
+	Step          VersionStep
 }
 
 // ErrVersionMoved reports that the version a new version should follow is
@@ -111,6 +164,9 @@ type ContractRecord struct {
 	Version    carecontract.Version
 	Parties    []carecontract.Party
 	DocumentID *int64
+	// Issuer is the body that issued the stored PDF of the version in place
+	// of the Träger (#4811); nil for the Träger and without a stored PDF.
+	Issuer *carecontract.Issuer
 	// Concluded is how and when the contract was concluded; nil before. The
 	// conclusion at acceptance sets it before the PDF is rendered, so the
 	// frozen PDF and the mail say that the contract is concluded.
@@ -128,6 +184,8 @@ type ContractRecord struct {
 type SentDocument struct {
 	ID        int64
 	VersionID int64
+	// Issuer is the body that issued this PDF, nil for the Träger.
+	Issuer *carecontract.Issuer
 }
 
 type StoredMailing struct {
@@ -178,7 +236,12 @@ type Store interface {
 	UpsertTemplates(ctx context.Context, organizationID, accountID, schoolID int64, inputs []carecontract.ModuleTemplateInput) ([]TemplateRow, error)
 	MarkWithdrawalInformed(ctx context.Context, organizationID, contractID int64, at time.Time) error
 	Templates(ctx context.Context, organizationID int64) ([]TemplateRow, error)
-	UpsertTemplate(ctx context.Context, organizationID, accountID, schoolID, offeringID int64, input carecontract.TemplateInput) (carecontract.ContractTemplate, error)
+	// UpsertTemplate replaces the offering's template; with replace false it
+	// only inserts one and answers readstate.ErrChanged when one exists.
+	UpsertTemplate(ctx context.Context, organizationID, accountID, schoolID, offeringID int64, input carecontract.TemplateInput, replace bool) (carecontract.ContractTemplate, error)
+	// LockTemplate takes the lock of one offering's template for the rest of
+	// the transaction, also while it has none, and reads it: nil without one.
+	LockTemplate(ctx context.Context, organizationID, schoolID, offeringID int64) (*carecontract.ContractTemplate, error)
 	// ContractChildren reads the child of every contract at the schools as
 	// its newest version names it, with the time the contract holds and the
 	// application child of a contract from an application.
@@ -193,7 +256,7 @@ type Store interface {
 	CountContracts(ctx context.Context, organizationID int64) (map[string]int, error)
 	Contract(ctx context.Context, organizationID, contractID int64, forUpdate bool) (ContractRecord, error)
 	Mailings(ctx context.Context, organizationID, contractID int64) ([]StoredMailing, error)
-	InsertDocument(ctx context.Context, organizationID, accountID int64, record ContractRecord, templateVersion int, file carecontract.File) (int64, error)
+	InsertDocument(ctx context.Context, organizationID, accountID int64, record ContractRecord, templateVersion int, file carecontract.File, issuer *carecontract.Issuer) (int64, error)
 	Document(ctx context.Context, organizationID, contractID int64) (carecontract.File, error)
 	// InsertMailing records a send at the owner clock's instant at; the
 	// reminders compare it with that clock (ADR 0281).
@@ -220,6 +283,19 @@ type Store interface {
 	// that goes before a planned one. ErrVersionMoved when the stepped version
 	// is no longer in its expected status.
 	InsertVersion(ctx context.Context, organizationID, contractID int64, step VersionStep, version carecontract.Version) (int64, error)
+	// SentContracts reads the sent contracts with an application child whose
+	// first signature is open (#4816).
+	SentContracts(ctx context.Context, organizationID int64) ([]SentContract, error)
+	// OvertakeVersion moves a version that waits for a signature to
+	// ueberholt; one that no longer waits is ErrVersionMoved.
+	OvertakeVersion(ctx context.Context, organizationID, contractID, versionID int64) error
+	// ActivateVersion moves a signed version into the timeline after its
+	// step; a version or a stepped one that moved is ErrVersionMoved.
+	ActivateVersion(ctx context.Context, organizationID, contractID int64, activation VersionActivation) error
+	// WaitingVersion points the record of an active contract at its version
+	// that waits for a signature, with that version's stored PDF; false when
+	// none waits.
+	WaitingVersion(ctx context.Context, organizationID int64, record *ContractRecord) (bool, error)
 	// VersionsInForce reads the effective versions holding between from and
 	// to; VersionPeriod.From and Until stay for the caller to fill.
 	VersionsInForce(ctx context.Context, organizationID int64, from, to calendar.Date, contractIDs []int64) ([]carecontract.VersionPeriod, error)

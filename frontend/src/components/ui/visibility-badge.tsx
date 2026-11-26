@@ -95,7 +95,7 @@ export function ParentVisibilityLegend({
   return (
     // Inline flow rather than flex, so a narrow container wraps the sentence
     // around the marker instead of stranding it on a line of its own.
-    <p className={cn("text-xs leading-relaxed text-gray-500", className)}>
+    <p className={cn("text-sm leading-relaxed text-gray-500", className)}>
       <VisibilityBadge hint={hint} className="mr-1.5" />
       Nicht gekennzeichnete Angaben bleiben intern.
     </p>

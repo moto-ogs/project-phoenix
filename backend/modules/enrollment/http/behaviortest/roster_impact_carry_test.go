@@ -197,7 +197,7 @@ func (f *carryFixture) change(requestID, childID int64, selection map[*offeringC
 		offerings = append(offerings, enrollmentAPI.OfferingAdjustmentSelection{OfferingID: offering.ID, SelectedDays: days})
 	}
 	stichtag := carryStichtag
-	update, err := testpkg.TenantQuery1(f.t, testpkg.Ctx(f.t), f.env.db, f.env.decision.UpdateChildOfferings, enrollmentAPI.UpdateChildOfferingsInput{
+	update, err := testpkg.TenantQuery1(f.t, testpkg.Ctx(f.t), f.env.db, correctOverRead(f.env.decision), enrollmentAPI.UpdateChildOfferingsInput{
 		RequestID: requestID, ChildID: childID, ActorAccountID: f.env.creatorID, ActorRole: "admin",
 		Reason: "Buchung geändert", EffectiveFrom: &stichtag, Offerings: offerings,
 		CompleteWithdrawalConfirmed: withdrawal,

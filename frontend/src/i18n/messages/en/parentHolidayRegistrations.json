@@ -24,5 +24,40 @@
     "more": "{count, plural, one {# more registration} other {# more registrations}}",
     "showAllTooltip": "Opens the list of all holiday registrations of your children."
   },
-  "toDocumentsTooltip": "Opens your documents with the confirmation and invoice."
+  "toDocumentsTooltip": "Opens your documents with the confirmation and invoice.",
+  "consents": {
+    "title": "Consents",
+    "description": "Voluntary. You can withdraw or give each consent again at any time. The team caring for your child in the holidays sees the change at once.",
+    "states": {
+      "given": "Given",
+      "withdrawn": "Withdrawn",
+      "notGiven": "Not given"
+    },
+    "dates": {
+      "given": "Since {date}",
+      "withdrawn": "You withdrew it on {date}.",
+      "notGiven": "You did not give it when you registered."
+    },
+    "withdraw": "Withdraw",
+    "withdrawAria": "Withdraw consent “{title}”",
+    "withdrawTooltip": "Withdraws the consent. moto asks you first.",
+    "grant": "Give consent",
+    "grantAria": "Give consent “{title}”",
+    "grantTooltip": "Gives the consent. moto asks you first.",
+    "withdrawTitle": "Withdraw consent?",
+    "withdrawNote": "The withdrawal applies from now on. The team caring for your child in the holidays sees it at once.",
+    "withdrawConfirm": "Withdraw",
+    "withdrawing": "Withdrawing …",
+    "grantTitle": "Give consent?",
+    "grantNote": "The consent applies from now on. You can withdraw it again at any time.",
+    "grantConfirm": "Give consent",
+    "granting": "Saving …",
+    "withdrawSuccess": "You withdrew the consent “{title}”.",
+    "grantSuccess": "You gave the consent “{title}”.",
+    "cancel": "Cancel",
+    "close": "Close",
+    "errorObject": "The consent",
+    "savedButStale": "Your change is saved. Only the display is not up to date yet.",
+    "reloadObject": "your holiday registrations"
+  }
 }

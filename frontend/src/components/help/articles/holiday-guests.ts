@@ -10,6 +10,9 @@ import { HELP_TOPICS } from "~/lib/help-topics";
  * Tag ihrer Woche in den Listen (#5630). Vorher sagt die leere Feriengruppe,
  * wie viele Kinder dazukommen (#6680). Kinder der eigenen OGS bleiben in
  * ihrer Gruppe und zeigen die Angaben der Anmeldung in ihrer Akte (#6678).
+ * Unter „Fotos“ steht der Stand der Foto-Einwilligung bei der Heimatschule
+ * (#4721), unter „Einwilligungen aus der Ferienanmeldung“ der Stand der
+ * freiwilligen Einwilligungen der Anmeldung, live gelesen (#8038).
  */
 export function holidayGuestsTopic(): HelpTopic {
   return {
@@ -17,13 +20,13 @@ export function holidayGuestsTopic(): HelpTopic {
     title: "Feriengäste betreuen",
     question: "Wo sehe ich Notfall und Abholung eines Feriengasts?",
     summary:
-      "In den Ferien kommen Kinder anderer Schulen in deine OGS. Sie stehen in der Feriengruppe.",
+      "In den Ferien kommen Kinder in deine OGS, die sonst nicht hierher gehen. Sie stehen in der Feriengruppe.",
     group: "gruppen",
     audience: ["caregiver", "lead"],
     icon: "SunHorizon",
     image: "/help/screens/feriengast-angaben-aus-der-anmeldung.webp",
     imageAlt:
-      "Notfall, Abholung, Gesundheit und Angaben aus der Ferienanmeldung bei einem Feriengast.",
+      "Notfall, Abholung, Gesundheit, Fotos, Raumverlauf und Stimmung, Einwilligungen und Angaben aus der Ferienanmeldung bei einem Feriengast.",
     requirements: [
       "Deine OGS richtet eine Ferienwoche für den Träger aus.",
       "Die Leitung hat unter `Ferienwochen` eine Feriengruppe gewählt.",
@@ -36,6 +39,9 @@ export function holidayGuestsTopic(): HelpTopic {
       "Lies unter `Betreuung` die Woche und die gebuchte Zeit.",
       "Unter `Notfall` stehen die Eltern und weitere Kontakte. Unter `Abholung` steht, wer das Kind außer den Eltern abholen darf.",
       "Unter `Gesundheit` stehen Allergien, Medikamente und weitere Hinweise der Eltern.",
+      "Unter `Fotos` steht, ob die Eltern eine Foto-Einwilligung gegeben haben. Steht dort `Keine Foto-Einwilligung`, mach bitte keine Fotos von dem Kind.",
+      "Steht auf der Karte `Raumverlauf und Stimmung` mit `An der Heimatschule gestoppt`? Dann speichert moto für dieses Kind keinen Raumverlauf und fragt keine Stimmung ab. Den Raum, in dem das Kind gerade ist, siehst du weiter.",
+      "Unter `Einwilligungen aus der Ferienanmeldung` steht, was die Eltern beim Träger erlaubt haben. Zum Beispiel `Fotos in der Ferienbetreuung` mit `Erteilt`, `Nicht erteilt` oder `Widerrufen`.",
       "Unter `Angaben aus der Ferienanmeldung` steht zum Beispiel, ob das Kind allein nach Hause gehen darf.",
     ],
     result: "Du weißt, wann das Kind gehen darf und wen du im Notfall anrufst.",
@@ -44,7 +50,10 @@ export function holidayGuestsTopic(): HelpTopic {
       "Die Gesundheitsangaben stehen auch in den `Gesundheitsinformationen` des Feriengasts. Du siehst sie also auch in der Gruppe und in der `Gesundheitsliste`.",
       "Vor der Ferienwoche ist die Feriengruppe leer. Dort steht dann, wie viele Kinder dazukommen und ab wann. Zum Beispiel `Feriengruppe: 3 Kinder kommen ab 04.01.2027 dazu.`",
       "Kinder deiner OGS sind keine Feriengäste. Sie bleiben in ihrer Gruppe. Notfall, Abholung und Zeiten aus der Anmeldung stehen in ihrer Kinderakte unter `Angaben aus der Ferienanmeldung`.",
-      "Mehr als Betreuung, Notfall, Abholung, Gesundheit und die freigegebenen Angaben siehst du von einem Feriengast nicht. Die übrigen Angaben bleiben beim Träger.",
+      "Die Foto-Einwilligung geben und widerrufen die Eltern bei der Schule ihres Kindes. Ein Widerruf steht sofort bei dir unter `Fotos`. Ein Foto in moto bekommt ein Feriengast nicht.",
+      "Die Einwilligungen aus der Ferienanmeldung widerrufen die Eltern in der Eltern-App oder beim Träger. Ein Widerruf steht sofort bei dir.",
+      "Sagen `Fotos` und eine Einwilligung aus der Ferienanmeldung zum selben Thema etwas anderes? Dann gilt das Nein. Mach keine Fotos und frag die Eltern.",
+      "Mehr als Betreuung, Notfall, Abholung, Gesundheit, Fotos, Einwilligungen und die freigegebenen Angaben siehst du von einem Feriengast nicht. Die übrigen Angaben bleiben beim Träger.",
       "Jeder Blick auf Notfall und Abholung steht im Zugriffsprotokoll deiner OGS.",
     ],
     differences: [
@@ -52,6 +61,8 @@ export function holidayGuestsTopic(): HelpTopic {
     ],
     troubleshootingDetails: [
       "Fehlt `Angaben aus der Ferienanmeldung`? Dann gibt der Träger keine Frage frei.",
+      "Fehlt `Einwilligungen aus der Ferienanmeldung`? Dann fragt das Formular des Trägers keine ab, oder die Ferienwoche ist vorbei.",
+      "Fehlt `Fotos`? Dann geht das Kind auf keine Schule deines Trägers, oder die Ferienwoche ist vorbei. Frage dann die Eltern.",
       "Fehlt `Gesundheit`? Dann haben die Eltern nichts angegeben oder der Weitergabe nicht zugestimmt.",
       "Ist die Feriengruppe leer? Vor dem ersten Tag der Ferienwoche ist das richtig. Die Feriengäste kommen am ersten Tag von selbst dazu.",
       "Fehlt die Feriengruppe unter `Gruppen`? Hat sie keine eigenen Kinder, steht sie dort erst ab dem ersten Tag der Woche.",

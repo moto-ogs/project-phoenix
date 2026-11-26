@@ -51,6 +51,28 @@ var weekdayNames = map[string]string{
 
 var weekdayOrder = []string{"mon", "tue", "wed", "thu", "fri", "sat", "sun"}
 
+// previewNote marks every page of a draft's preview (#8030): the preview
+// changes with the letterhead and the template, so nobody signs it. A frozen
+// PDF never carries it.
+const previewNote = "Vorschau, nicht zum Unterschreiben"
+
+// draftPreview reports a rendering of a draft: until the send or the
+// handover on paper freezes it, its PDF is a preview (#8030). An active
+// contract without a frozen PDF, such as one concluded with the application,
+// prints as it is.
+func draftPreview(record ContractRecord) bool {
+	return record.Summary.Status == carecontract.StatusDraft && record.DocumentID == nil
+}
+
+// previewLetter puts the preview note above the letter and at the foot of
+// every page, so a printed preview is never taken for the contract.
+func previewLetter(letter Letter) Letter {
+	letter.Blocks = append([]LetterBlock{{Heading: previewNote, Bold: true,
+		Text: "Dieser Entwurf kann sich noch ändern. Unterschreibt nur den Vertrag, den ihr von uns bekommt."}}, letter.Blocks...)
+	letter.Footer = append([]string{previewNote}, letter.Footer...)
+	return letter
+}
+
 // feeByRules names the fee of a contract over several modules until the
 // tariffs per weekday and module (#4684) price it.
 const feeByRules = "laut Beitragsordnung für die gebuchten Module"
@@ -67,10 +89,7 @@ func contractLetter(record ContractRecord, head carecontract.Letterhead) Letter 
 		LetterBlock{Heading: "Vertragsangaben", Text: "Das gilt für diesen Vertrag:", Facts: termFacts(version, head)},
 		LetterBlock{Heading: "Gebuchte Betreuung", Text: "An diesen Tagen ist euer Kind in der Betreuung:", Facts: ServiceFacts(version.Services)},
 	)
-	if concluded := record.Concluded; concluded != nil && concluded.Method == carecontract.MethodWithApplication {
-		blocks = append(blocks, LetterBlock{Heading: "Vertragsschluss", Text: "Dieser Vertrag ist mit der Annahme der Anmeldung am " +
-			germanDate(calendar.DateFromTime(concluded.At)) + " geschlossen. Ihr müsst ihn nicht unterschreiben."})
-	}
+	blocks = append(blocks, conclusionBlocks(record)...)
 	if version.Terms.SpecialTermination {
 		// The date and notice period first, then the cases of the terms
 		// (#6349). A sent or concluded version keeps its stored PDF.
@@ -113,6 +132,20 @@ func contractLetter(record ContractRecord, head carecontract.Letterhead) Letter 
 		Closing: filled.Closing,
 		Footer:  textLines(head.FooterText),
 	}
+}
+
+func conclusionBlocks(record ContractRecord) []LetterBlock {
+	if record.Version.Number > 1 {
+		if record.Version.Status == carecontract.VersionRequested {
+			return []LetterBlock{{Heading: "Neue Fassung", Text: "Bitte unterschreibt diese neue Fassung."}}
+		}
+		return nil
+	}
+	if concluded := record.Concluded; concluded != nil && concluded.Method == carecontract.MethodWithApplication {
+		return []LetterBlock{{Heading: "Vertragsschluss", Text: "Dieser Vertrag ist mit der Annahme der Anmeldung am " +
+			germanDate(calendar.DateFromTime(concluded.At)) + " geschlossen. Ihr müsst ihn nicht unterschreiben."}}
+	}
+	return nil
 }
 
 // letterTemplate is the Träger's template of the contract, or the standard

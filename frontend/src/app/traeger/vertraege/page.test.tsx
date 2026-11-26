@@ -13,6 +13,7 @@ import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import { ApiError } from "~/lib/api-error";
 import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
 import { catalogText } from "~/test/error-catalog-text";
+import { releaseFakeTimers } from "~/test/clock";
 import type {
   CareContractSummary,
   ContractCandidate,
@@ -39,7 +40,7 @@ vi.mock("next-auth/react", () => ({
       user: {
         id: "A",
         scope: "org",
-        orgId: 7,
+        orgId: "7",
         permissions: ["traeger_contracts:manage", "traeger_overview:read"],
       },
     },
@@ -58,13 +59,14 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
-import TraegerVertraegePage from "./page";
+import TraegerVertraegePage from "./page-content";
 import {
   expectPageReloadedAfterRefusal,
   resetPageReloads,
 } from "~/test/helpers/refused-refresh";
 
 const DRAFT: CareContractSummary = {
+  changeAwaitsSignature: false,
   id: "7",
   status: "entwurf",
   schoolId: "3",
@@ -269,6 +271,43 @@ describe("TraegerVertraegePage", () => {
     );
   });
 
+  it("cancels a pending search when resetting filters on an empty list", async () => {
+    api.fetchCareContracts.mockImplementation(
+      ({ status }: { status?: string }) =>
+        Promise.resolve({
+          contracts: status ? [] : [DRAFT, SENT],
+          counts: { entwurf: 1, versendet: 1 },
+          hasMore: false,
+        }),
+    );
+    renderPage();
+    await screen.findAllByText("Lina Muster");
+    fireEvent.click(screen.getByRole("button", { name: "Alle Status" }));
+    fireEvent.click(await screen.findByRole("option", { name: "Entwurf (1)" }));
+    const reset = await screen.findByRole("button", {
+      name: "Filter zurücksetzen",
+    });
+    const [search] = screen.getAllByPlaceholderText(
+      "Kind, Eltern oder Angebot suchen",
+    );
+
+    vi.useFakeTimers();
+    try {
+      fireEvent.change(search!, { target: { value: "Ben" } });
+      expect(search).toHaveValue("Ben");
+      fireEvent.click(reset);
+      await act(async () => vi.advanceTimersByTimeAsync(250));
+      expect(search).toHaveValue("");
+    } finally {
+      releaseFakeTimers();
+    }
+
+    await screen.findAllByText("Lina Muster");
+    expect(api.fetchCareContracts).not.toHaveBeenCalledWith(
+      expect.objectContaining({ search: "Ben" }),
+    );
+  });
+
   it("marks only imported contracts without a child record", async () => {
     api.fetchCareContracts.mockResolvedValue({
       contracts: [
@@ -435,7 +474,7 @@ describe("TraegerVertraegePage", () => {
     renderPage();
 
     const list = await screen.findByRole("list", {
-      name: "Abschluss je Schule",
+      name: "Abschluss pro Schule",
     });
     expect(list).toHaveTextContent("OGS Am LindenhofBei der Annahme");
     expect(list).toHaveTextContent("OGS NordSpäter verschicken");
@@ -474,7 +513,7 @@ describe("TraegerVertraegePage", () => {
     renderPage();
 
     const list = await screen.findByRole("list", {
-      name: "Abschluss je Schule",
+      name: "Abschluss pro Schule",
     });
     const [lindenhof, nord] = within(list).getAllByRole("listitem");
     expect(lindenhof).toHaveTextContent(

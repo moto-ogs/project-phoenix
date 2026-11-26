@@ -1,5 +1,6 @@
 // Database Entity Configuration Types
 
+import type { Pagination } from "~/lib/contract/runtime";
 import type { ReactNode } from "react";
 import type { MotoConcept } from "~/lib/moto-concepts";
 
@@ -326,12 +327,7 @@ export function configToFormSection(section: SectionConfig): FormSection {
 // Response types for pagination
 export interface PaginatedResponse<T> {
   data: T[];
-  pagination: {
-    current_page: number;
-    page_size: number;
-    total_pages: number;
-    total_records: number;
-  };
+  pagination: Pagination;
 }
 
 // Generic CRUD service interface

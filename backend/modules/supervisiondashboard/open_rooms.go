@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"slices"
 	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
@@ -13,10 +12,10 @@ import (
 
 // OpenRoom is one released room and every child currently recorded there.
 type OpenRoom struct {
-	RoomID            ident.ID `json:"room_id"`
-	Name              string   `json:"name"`
-	IsUserSupervising bool     `json:"is_user_supervising"`
-	ActiveGroupIDs    []string `json:"active_group_ids"`
+	RoomID            ident.ID   `json:"room_id"`
+	Name              string     `json:"name"`
+	IsUserSupervising bool       `json:"is_user_supervising"`
+	ActiveGroupIDs    []ident.ID `json:"active_group_ids"`
 	// HasOccupyingSession is true when any session in the room counts as
 	// occupancy (#3066). Independent stays do not occupy: Spontanes Angebot
 	// can still start in a released room that only holds those stays.
@@ -253,12 +252,12 @@ func (s *service) assembleOpenRooms(in openRoomInputs, attendance map[int64]Atte
 			students = append(students, student)
 			childrenBySession[row.ActiveGroupID]++
 		}
-		ids := make([]string, 0, len(sessions))
+		ids := make([]ident.ID, 0, len(sessions))
 		entries := make([]OpenRoomSession, 0, len(sessions))
 		supervising := false
 		occupying := false
 		for _, session := range sessions {
-			ids = append(ids, strconv.FormatInt(session.ActiveGroupID, 10))
+			ids = append(ids, ident.ID(session.ActiveGroupID))
 			if !session.IndependentStays {
 				occupying = true
 			}

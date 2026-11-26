@@ -68,6 +68,37 @@ describe("staff navigation tree", () => {
     expect(hrefs.at(-1)).toBe(STAFF_FLAT_PAGES.dateien.href);
   });
 
+  it("leads the Tagesbetrieb with today and the whole Betreuungsplan (#8134)", () => {
+    const tagesbetrieb = STAFF_NAV_GROUPS.find(
+      (group) => group.key === "tagesbetrieb",
+    );
+    const entries = (tagesbetrieb?.entries ?? []).map((entry) =>
+      entry.kind === "page" ? entry.href : entry.section,
+    );
+    expect(entries.slice(0, 2)).toEqual([
+      STAFF_FLAT_PAGES.tagesplan.href,
+      STAFF_FLAT_PAGES.carePlan.href,
+    ]);
+    // Die Planung behält ihre Werkzeuge, nicht den Plan selbst.
+    const planung = STAFF_NAV_GROUPS.find((group) => group.key === "planung");
+    expect(planung?.entries).not.toContainEqual({
+      kind: "page",
+      href: STAFF_FLAT_PAGES.carePlan.href,
+    });
+    expect(planung?.entries[0]).toEqual({ kind: "page", href: "/dienstplan" });
+  });
+
+  it("keeps the simple sidebar without the whole plan (#6956, #8134)", () => {
+    expect(STAFF_NAV_SIMPLE_ENTRIES).toContainEqual({
+      kind: "page",
+      href: STAFF_FLAT_PAGES.tagesplan.href,
+    });
+    expect(STAFF_NAV_SIMPLE_ENTRIES).not.toContainEqual({
+      kind: "page",
+      href: STAFF_FLAT_PAGES.carePlan.href,
+    });
+  });
+
   it("puts Alle Kinder directly below Meine Gruppen in the Tagesbetrieb (#4348)", () => {
     const tagesbetrieb = STAFF_NAV_GROUPS.find(
       (group) => group.key === "tagesbetrieb",
@@ -75,8 +106,7 @@ describe("staff navigation tree", () => {
     const entries = (tagesbetrieb?.entries ?? []).map((entry) =>
       entry.kind === "page" ? entry.href : entry.section,
     );
-    expect(entries.slice(0, 4)).toEqual([
-      STAFF_FLAT_PAGES.tagesplan.href,
+    expect(entries.slice(2, 5)).toEqual([
       "groups",
       STAFF_FLAT_PAGES.studentSearch.href,
       "supervisions",
@@ -137,8 +167,11 @@ describe("staff navigation tree", () => {
 
     it("counts the canonical planning paths", () => {
       expect(getStaffNavGroupForPathname("/dienstplan")).toBe("planung");
-      expect(getStaffNavGroupForPathname("/betreuungsplan")).toBe("planung");
       expect(getStaffNavGroupForPathname("/vertretung")).toBe("planung");
+      // Der Betreuungsplan klappt seit #8134 den Tagesbetrieb auf.
+      expect(getStaffNavGroupForPathname("/betreuungsplan")).toBe(
+        "tagesbetrieb",
+      );
     });
 
     it("does not let /calendar swallow /calendar-periods", () => {

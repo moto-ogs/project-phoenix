@@ -66,7 +66,7 @@ func (s *service) buildAppointmentOverview(ctx context.Context, appointment *app
 	attendees := make([]AppointmentAttendee, 0, len(listed))
 	for _, recipient := range listed {
 		attendee := AppointmentAttendee{
-			RecipientID:   formatID(recipient.ID.Int64()),
+			RecipientID:   ident.ID(recipient.ID.Int64()),
 			RecipientType: recipient.RecipientType,
 			Name:          attendeeName(recipient, staffByID, guardiansByID),
 			Status:        recipient.StatusOn(occurrenceDate),
@@ -84,7 +84,7 @@ func (s *service) buildAppointmentOverview(ctx context.Context, appointment *app
 	})
 
 	return &AppointmentOverview{
-		AppointmentID:      formatID(appointment.ID.Int64()),
+		AppointmentID:      ident.ID(appointment.ID.Int64()),
 		DeliveryMode:       appointment.DeliveryMode,
 		OverviewVisibility: appointment.OverviewVisibility,
 		OccurrenceDate:     occurrenceDate,

@@ -49,12 +49,13 @@ vi.mock("~/lib/parent-announcements-api", async (importOriginal) => ({
 import { unavailableApiError } from "~/lib/api-error";
 import { ToastProvider } from "~/contexts/ToastContext";
 import type { Announcement } from "~/lib/parent-announcements-api";
-import SchoolParentLettersPage from "./page";
+import SchoolParentLettersPage from "./page-content";
 import { SCHOOL_PARENT_LETTERS_BASE } from "~/lib/parent-announcements-api";
 import { parentAnnouncementKeys } from "~/lib/swr/portal-keys";
 
 const sentLetter = {
   id: "11",
+  version: "2026-09-08T08:00:00Z",
   title: "Wandertag",
   body: "Feste Schuhe",
   status: "published",
@@ -171,11 +172,12 @@ describe("Elternbriefe in moto schule (#4800)", () => {
         declaration_requires_signature: true,
         targets: [{ target_type: "class", ref_text: "3b" }],
       }),
-      "/api/school/parent-letters",
+      SCHOOL_PARENT_LETTERS_BASE,
     );
     expect(mockPublish).toHaveBeenCalledWith(
       "12",
-      "/api/school/parent-letters",
+      "2026-09-08T08:00:00Z",
+      SCHOOL_PARENT_LETTERS_BASE,
     );
     expect(mockToastSuccess).toHaveBeenCalledWith(
       expect.stringContaining("Klasse 3b"),

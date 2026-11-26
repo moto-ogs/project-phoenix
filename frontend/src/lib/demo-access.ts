@@ -3,7 +3,12 @@
 // log records it.
 
 import { ApiError } from "~/lib/api-error";
-import { bffJsonUncontracted } from "~/lib/bff-fetch";
+import { bffJsonUncontracted, bffPath } from "~/lib/bff-fetch";
+import type {
+  demoAccessStatus,
+  demoResetResponse,
+  demoSessionFacts,
+} from "~/lib/contract/demo-access.generated";
 import { parentsPortalUrl } from "~/lib/parent-url";
 import { requiredPortalHostname } from "~/lib/portal-paths";
 
@@ -309,10 +314,16 @@ export const DEMO_RESTART_RUNNING = "Wird vorbereitet …";
 export async function restartDemo(
   role: DemoRole | undefined,
 ): Promise<string | null> {
-  const body = await demoPost<{ entry_url?: string }>(
-    "/api/demo/access/reset",
-    { role },
-    "demo restart failed",
+  const body = await demoResult(() =>
+    bffJsonUncontracted<Pick<demoResetResponse, "entry_url">>(
+      "public",
+      "POST",
+      bffPath("tenant", "POST /demo/access/reset"),
+      {
+        body: { role },
+        errorMessage: "demo restart failed",
+      },
+    ),
   );
   if (body === null) return null;
   if (!body.entry_url?.startsWith("http")) {
@@ -357,20 +368,13 @@ export function demoHandoffPath(role: DemoRole): string {
 }
 
 /**
- * A demo route of the BFF (no Go contract: the demo routes exist only with
- * APP_ENV=demo). An unknown or expired link (404, 410) is null; any other
+ * A demo route of the BFF, whose server calls the generated Go contract.
+ * The backend mounts these routes only with APP_ENV=demo. An unknown or expired link (404, 410) is null; any other
  * failure is the ApiError.
  */
-async function demoPost<T>(
-  path: string,
-  body: unknown,
-  errorMessage: string,
-): Promise<T | null> {
+async function demoResult<T>(send: () => Promise<T>): Promise<T | null> {
   try {
-    return await bffJsonUncontracted<T>("public", "POST", path, {
-      body,
-      errorMessage,
-    });
+    return await send();
   } catch (error) {
     if (
       error instanceof ApiError &&
@@ -394,11 +398,17 @@ interface DemoAccessProgress {
 async function fetchDemoAccessProgress(
   token: string,
 ): Promise<DemoAccessProgress> {
-  const body = await demoPost<{
-    status?: string;
-    school_url?: string;
-    school_name?: string;
-  }>("/api/demo/access/status", { token }, "demo status failed");
+  const body = await demoResult(() =>
+    bffJsonUncontracted<demoAccessStatus>(
+      "public",
+      "POST",
+      bffPath("tenant", "GET /demo/access/status"),
+      {
+        body: { token },
+        errorMessage: "demo status failed",
+      },
+    ),
+  );
   if (body === null) return { status: "invalid" };
   if (body.status === "ready") {
     return {
@@ -477,16 +487,17 @@ async function postSession(body: {
   token?: string;
   role: DemoRole;
 }): Promise<DemoSession | null> {
-  const payload = await demoPost<{
-    session_created?: boolean;
-    demo?: {
-      access_id?: string;
-      role?: string;
-      src?: string;
-      fixed_role?: boolean;
-      traeger?: boolean;
-    };
-  }>("/api/demo/access/sessions", body, "demo redeem failed");
+  const payload = await demoResult(() =>
+    bffJsonUncontracted<{ session_created: boolean; demo: demoSessionFacts }>(
+      "public",
+      "POST",
+      bffPath("tenant", "POST /demo/access/sessions"),
+      {
+        body,
+        errorMessage: "demo redeem failed",
+      },
+    ),
+  );
   if (payload === null) return null;
   return {
     sessionCreated: payload.session_created === true,

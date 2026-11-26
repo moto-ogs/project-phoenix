@@ -1,0 +1,7 @@
+{
+  "scenario": "api.timetable.instance_attendance.list",
+  "max": 3,
+  "exact": true,
+  "description": "Attendance of one populated block: instance, ordered participants and their pickup cutoffs. Care-day resolution is unwired in this owner-handler fixture.",
+  "route": "GET /api/timetable/instances/{id}/attendance"
+}

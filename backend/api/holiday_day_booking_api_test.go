@@ -85,9 +85,9 @@ func newDayFixture(t *testing.T, name string) dayFixture {
 		"name": "Winterferien 2099", "registration_opens_on": "2020-01-01", "registration_closes_on": "2099-12-31",
 		"binding": true, "notes": "", "max_days_per_child": 3,
 		"weeks": []map[string]any{
-			{"starts_on": dayMonday, "ends_on": dayFriday, "host_school_id": office.schools[0], "booking_unit": "day",
+			{"starts_on": dayMonday, "ends_on": dayFriday, "host_school_id": fmt.Sprint(office.schools[0]), "booking_unit": "day",
 				"time_models": []map[string]any{{"name": "bis 13 Uhr", "starts_at": "08:00", "ends_at": "13:00", "price_cents": 1500}}},
-			{"starts_on": "2099-01-12", "ends_on": "2099-01-16", "host_school_id": office.schools[1],
+			{"starts_on": "2099-01-12", "ends_on": "2099-01-16", "host_school_id": fmt.Sprint(office.schools[1]),
 				"time_models": []map[string]any{{"name": "bis 13 Uhr", "starts_at": "08:00", "ends_at": "13:00", "price_cents": 4500}}},
 		},
 	}
@@ -116,7 +116,7 @@ func (d dayFixture) registration(email, name string, bookings ...map[string]any)
 	return map[string]any{
 		"guardian": map[string]any{"first_name": "Eva", "last_name": "Tag", "email": email, "phone": "0151 2345678"},
 		"children": []map[string]any{{
-			"first_name": name, "last_name": "Tag", "birth_date": "2017-05-04", "home_school_id": d.offer.Schools[0].ID, "bookings": bookings,
+			"first_name": name, "last_name": "Tag", "birth_date": "2017-05-04", "home_school_id": fmt.Sprint(d.offer.Schools[0].ID), "bookings": bookings,
 		}},
 		"emergency_contacts": []map[string]any{{"name": "Oma Tag", "phone": "05402 1234", "relationship": "Großmutter"}},
 		"privacy_consent":    true, "binding_confirmed": true, "custody_confirmed": true, "declaration_name": "Eva Tag",
@@ -125,11 +125,11 @@ func (d dayFixture) registration(email, name string, bookings ...map[string]any)
 }
 
 func (d dayFixture) days(days ...string) map[string]any {
-	return map[string]any{"week_id": d.offer.Weeks[0].ID, "time_model_id": d.offer.Weeks[0].TimeModels[0].ID, "days": days}
+	return map[string]any{"week_id": fmt.Sprint(d.offer.Weeks[0].ID), "time_model_id": fmt.Sprint(d.offer.Weeks[0].TimeModels[0].ID), "days": days}
 }
 
 func (d dayFixture) wholeWeek() map[string]any {
-	return map[string]any{"week_id": d.offer.Weeks[1].ID, "time_model_id": d.offer.Weeks[1].TimeModels[0].ID}
+	return map[string]any{"week_id": fmt.Sprint(d.offer.Weeks[1].ID), "time_model_id": fmt.Sprint(d.offer.Weeks[1].TimeModels[0].ID)}
 }
 
 func (d dayFixture) submit(t *testing.T, body map[string]any) receiptBody {
@@ -192,11 +192,11 @@ func TestHolidayDayBookingPlacesEachDayAndBillsItsDays(t *testing.T) {
 	assert.Equal(t, []string{dayTuesday, dayWednesday}, places.Waitlist[0].Days)
 	assert.Equal(t, []string{dayMonday, dayTuesday, dayWednesday}, d.readOffer(t).Weeks[0].FullDays)
 
-	rec := traegerJSON(t, d.traeger, d.office.token, http.MethodPost, holidayConfirmPath(int64(d.period.ID), int64(tom.ID)), nil)
+	rec := confirmReadHoliday(t, d.traeger, d.office.token, int64(d.period.ID), int64(tom.ID), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	confirmed := decodeSchoolPortalData[confirmationBody](t, rec.Body.Bytes())
 	assert.Equal(t, int64(3000), confirmed.Contribution.TotalCents, "two days at 15 €; the repeated Monday counts once")
-	rec = traegerJSON(t, d.traeger, d.office.token, http.MethodPost, holidayConfirmPath(int64(d.period.ID), int64(ida.ID)), nil)
+	rec = confirmReadHoliday(t, d.traeger, d.office.token, int64(d.period.ID), int64(ida.ID), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Equal(t, int64(0), decodeSchoolPortalData[confirmationBody](t, rec.Body.Bytes()).Contribution.TotalCents,
 		"a waiting booking is not billed")
@@ -210,7 +210,7 @@ func TestHolidayDayBookingPlacesEachDayAndBillsItsDays(t *testing.T) {
 	assert.Equal(t, []string{dayMonday + ".." + dayMonday, dayTuesday + ".." + dayTuesday}, d.hostWindows(t, d.office.schools[0]),
 		"the host school's Soll keeps to the booked days")
 
-	rec = traegerJSON(t, d.traeger, d.office.token, http.MethodPost, holidayConfirmPath(int64(d.period.ID), int64(max.ID)), nil)
+	rec = confirmReadHoliday(t, d.traeger, d.office.token, int64(d.period.ID), int64(max.ID), nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Equal(t, map[string]int{dayMonday: 1, dayTuesday: 1, dayWednesday: 1}, d.hostedDays(t),
 		"the hosted week counts the confirmed children per booked day; Ida waits and counts nowhere")
@@ -414,7 +414,7 @@ func TestHolidayDailyBillingRulesStartOnTheFirstSelectedDay(t *testing.T) {
 	assert.True(t, quoted.ExemptionAvailable)
 	assert.Equal(t, int64(0), quote(true).TotalCents)
 	receipt := d.submit(t, d.registration("rules.days@example.org", "Mia", d.days(dayFriday, dayThursday)))
-	rec := traegerJSON(t, d.traeger, d.office.token, http.MethodPost, holidayConfirmPath(int64(d.period.ID), int64(receipt.ID)),
+	rec := confirmReadHoliday(t, d.traeger, d.office.token, int64(d.period.ID), int64(receipt.ID),
 		map[string]any{"benefits_exemption": true})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	confirmed := decodeSchoolPortalData[confirmationBody](t, rec.Body.Bytes()).Contribution
@@ -451,7 +451,7 @@ func TestHolidaySubmissionValidatesAfterAConcurrentBookingUnitChange(t *testing.
 	sent := make(chan *httptest.ResponseRecorder, 1)
 	go func() {
 		sent <- publicJSON(t, d.public, http.MethodPost, registrationPath(d.period.PublicToken),
-			d.registration("unit.change@example.org", "Lea", map[string]any{"week_id": week.ID, "time_model_id": week.TimeModels[0].ID}))
+			d.registration("unit.change@example.org", "Lea", map[string]any{"week_id": fmt.Sprint(week.ID), "time_model_id": fmt.Sprint(week.TimeModels[0].ID)}))
 	}()
 	require.Eventually(t, func() bool {
 		var blocked int

@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { TEST_CLOCK_INSTANT } from "~/test/clock";
-import { ApiError } from "~/lib/api-error";
+import { apiErrorFromBody } from "~/lib/api-error";
 import { presentError } from "~/lib/error-presentation";
 import { ApiResponseError } from "~/lib/api-response-error.server";
 import { suppressConsole } from "~/test/helpers/console";
@@ -17,8 +17,34 @@ import {
   CATALOG_PUBLIC_OUTSIDE_MOUNTS,
 } from "./catalog-outside-mounts";
 import { portalRoutes } from "./portals.generated";
+import { resolveTenantCached } from "~/lib/tenant-resolve.server";
+import { tenantLookupWrites } from "./tenant-lookup-writes.server";
 
-const api = vi.fn();
+vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+
+const { api } = vi.hoisted(() => ({ api: vi.fn() }));
+vi.mock("~/lib/backend-client.server", async (original) => ({
+  ...(await original<typeof import("~/lib/backend-client.server")>()),
+  sendBackend: async (
+    endpoint: string,
+    token: string,
+    {
+      method,
+      json,
+      request,
+      idempotencyKey,
+    }: import("~/lib/backend-client.server").BackendCall,
+  ) => {
+    const answer: unknown = await api(method, endpoint, token, json, {
+      request,
+      ...(idempotencyKey !== undefined && { idempotencyKey }),
+    });
+    if (answer instanceof Response) return answer;
+    return answer === undefined
+      ? new Response(null, { status: 204 })
+      : Response.json(answer);
+  },
+}));
 let sessionReads = 0;
 
 type Handler = (...args: unknown[]) => Promise<unknown>;
@@ -55,8 +81,45 @@ const portal = {
   post: withBody,
   put: withBody,
   patch: withBody,
-  api,
 } as unknown as Parameters<typeof makeCatalogProxy>[0];
+
+it.each([...tenantLookupWrites])(
+  "forgets a cached lookup miss in the write request: %s",
+  async (key) => {
+    const [method, pattern] = key.split(" ");
+    const path = pattern!
+      .replace(/\{id\}/g, "1")
+      .split("/")
+      .filter(Boolean);
+    const lookup = "missing-after-write";
+    api.mockResolvedValueOnce(new Response(null, { status: 404 }));
+    await expect(resolveTenantCached(lookup, {})).rejects.toMatchObject({
+      status: 404,
+    });
+
+    api.mockResolvedValueOnce(new Response(null, { status: 204 }));
+    const routes = [...portalRoutes.platform, ...portalRoutes.org];
+    const registration = routes.find(
+      (route) => route.method === method && route.pattern === pattern,
+    );
+    expect(registration).toBeDefined();
+    const response = await makeCatalogProxy(
+      portal,
+      "",
+      [{ method: method!, pattern: pattern!, response: noData }],
+      method as CatalogMethod,
+      [],
+    )(new NextRequest(`http://localhost/${path.join("/")}`, { method }), {
+      params: Promise.resolve({ path }),
+    });
+    expect(response.status).toBe(204);
+
+    api.mockResolvedValueOnce(new Response(null, { status: 503 }));
+    await expect(resolveTenantCached(lookup, {})).rejects.toMatchObject({
+      status: 503,
+    });
+  },
+);
 
 const row = success(z.object({ name: z.string() }));
 const routes: CatalogRoute[] = [
@@ -70,6 +133,7 @@ const routes: CatalogRoute[] = [
   },
   { method: "POST", pattern: "/parent/rows/", response: row },
   { method: "DELETE", pattern: "/parent/rows/{id}", response: row },
+  { method: "DELETE", pattern: "/parent/rows/{id}/seen", response: noData },
   { method: "PUT", pattern: "/parent/rows/{id}/seen", response: noData },
   // A legacy route with response variants has no single decoder.
   { method: "GET", pattern: "/parent/variants/", response: { full: row } },
@@ -164,6 +228,18 @@ describe("makeCatalogProxy", () => {
     vi.clearAllMocks();
     sessionReads = 0;
     usedOptions = undefined;
+  });
+
+  it("keeps the backend's 201 on a decoded JSON creation", async () => {
+    api.mockResolvedValueOnce(
+      Response.json(
+        { status: "success", data: { name: "Ada" } },
+        { status: 201 },
+      ),
+    );
+    const response = await call("POST", ["rows"]);
+    expect(response.status).toBe(201);
+    expect(await data(response)).toEqual({ name: "Ada" });
   });
 
   it("forwards a registered read and answers its decoded data", async () => {
@@ -312,8 +388,8 @@ describe("makeCatalogProxy", () => {
 
   it("still loads an individual enrollment change request", async () => {
     const request = {
-      id: "change-1",
-      request_id: "request-1",
+      id: "11",
+      request_id: "12",
       origin: "parent",
       status: "pending",
       base_snapshot: null,
@@ -323,9 +399,7 @@ describe("makeCatalogProxy", () => {
       updated_at: TEST_CLOCK_INSTANT.toISOString(),
     };
     api.mockResolvedValueOnce({ status: "success", data: request });
-    const response = await callTenant(
-      "enrollment/admin/change-requests/change-1",
-    );
+    const response = await callTenant("enrollment/admin/change-requests/11");
     expect(await data(response)).toEqual(request);
   });
 
@@ -333,8 +407,8 @@ describe("makeCatalogProxy", () => {
     api.mockResolvedValueOnce({
       status: "success",
       data: {
-        id: "change-1",
-        request_id: "request-1",
+        id: "11",
+        request_id: "12",
         origin: "parent",
         status: "pending",
         base_snapshot: {
@@ -350,7 +424,7 @@ describe("makeCatalogProxy", () => {
         updated_at: TEST_CLOCK_INSTANT.toISOString(),
       },
     });
-    const reply = await callTenant("enrollment/admin/change-requests/change-1");
+    const reply = await callTenant("enrollment/admin/change-requests/11");
     expect(reply.status).toBe(200);
     expect(await data(reply)).toMatchObject({
       base_snapshot: {
@@ -425,24 +499,63 @@ describe("makeCatalogProxy", () => {
 
   it("answers a DELETE without a body with nothing", async () => {
     api.mockResolvedValueOnce(undefined);
-    expect(await data(await call("DELETE", ["rows", "1"]))).toBeNull();
+    const response = await call("DELETE", ["rows", "1", "seen"]);
+    expect(response.status).toBe(204);
+    expect(await response.text()).toBe("");
     expect(sessionReads).toBe(1);
     expect(api.mock.calls[0]?.[3]).toBeUndefined();
   });
 
+  it.each([
+    ["POST", ["rows"], new Response('{"status":', { status: 201 })],
+    ["DELETE", ["rows", "1"], new Response(null, { status: 204 })],
+  ] as const)(
+    "reports an unreadable %s answer after a successful write",
+    async (method, segments, upstream) => {
+      api.mockResolvedValueOnce(upstream);
+      const refusal = await call(method, [...segments]).catch(
+        (error: unknown) => error,
+      );
+      expect(refusal).toMatchObject({ status: 502 });
+      expect((refusal as ApiResponseError).body()).toMatchObject({
+        code: "general.write_answer_unreadable",
+      });
+      expect(api).toHaveBeenCalledTimes(1);
+    },
+  );
+
   it("sends the body of a DELETE that carries one", async () => {
     api.mockResolvedValueOnce(undefined);
-    await call("DELETE", ["rows", "1"], "", { reason: "lost phone" });
+    await call("DELETE", ["rows", "1", "seen"], "", { reason: "lost phone" });
     expect(api.mock.calls[0]?.[3]).toEqual({ reason: "lost phone" });
+  });
+
+  it("retains a backend 200 and its message for a NoData DELETE", async () => {
+    api.mockResolvedValueOnce(
+      Response.json({ status: "success", message: "deleted" }, { status: 200 }),
+    );
+    const response = await call("DELETE", ["rows", "1", "seen"]);
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      status: "success",
+      message: "deleted",
+      data: null,
+    });
   });
 
   it.each([
     ["a 204", undefined],
     ["the envelope without data", { status: "success", message: "done" }],
-  ])("answers a write without data for %s", async (_name, answer) => {
+  ])("answers a write without data for %s", async (name, answer) => {
     api.mockResolvedValueOnce(answer);
     const response = await call("PUT", ["rows", "1", "seen"], "", { on: true });
-    expect(await data(response)).toBeNull();
+    if (name === "a 204") {
+      expect(response.status).toBe(204);
+      expect(await response.text()).toBe("");
+    } else {
+      expect(response.status).toBe(200);
+      expect(await data(response)).toBeNull();
+    }
     expect(api.mock.calls[0]?.[3]).toEqual({ on: true });
   });
 
@@ -491,11 +604,7 @@ describe("makeCatalogProxy", () => {
     });
     expect(
       presentError(
-        new ApiError(
-          "Bad Gateway",
-          refusal.status,
-          refusal.body<{ code: string }>() ?? undefined,
-        ),
+        apiErrorFromBody("Bad Gateway", refusal.status, refusal.body()),
         "Vorschau",
       ).retryable,
     ).toBe(true);

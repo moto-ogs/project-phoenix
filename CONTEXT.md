@@ -180,6 +180,19 @@ Schule darf alles daran ändern; jede Änderung ist eine **Abweichung**, die ein
 späterer Abgleich behält. Löschen kann nur das Büro (Zurückziehen). Wechselt die
 Schule den Träger, wird die Kopie ein gewöhnliches Angebot ohne Trägerbezug.
 
+## Träger-Rolle (Schulpersonal)
+
+Eine **Träger-Rolle** ist eine Rolle, die das Träger-Büro einmal für das
+Personal aller seiner Schulen festlegt (Name, „Gilt als“, Rechte aus dem
+Katalog der Schule). Jede Schule des Trägers bekommt sie als Rolle „vom
+Träger“, auch eine Schule, die später dazukommt. Die Schule weist sie zu,
+ändert und löscht sie aber nicht; eigene Rollen legt sie weiter an
+([ADR 0317](docs/adr/0317-traeger-rollen-fuer-schulpersonal-werden-je-schule-kopiert.md)).
+
+_Vermeiden_: Rollenvorlage (belegt durch die Vorlagen beim Anlegen einer
+Schulrolle), Büro-Rolle (die Rollen der Personen im Träger-Büro sind ein
+anderes System).
+
 ## Gehzeit
 
 Die **Gehzeit** ist die geplante Uhrzeit, zu der ein Kind an einem Betreuungstag
@@ -375,9 +388,12 @@ sie nicht ausdrücklich mit anderen Sorgeberechtigten teilt.
 Die **Leseansicht** ist der Betreuungsplan, wie ihn Teammitglieder ohne
 Admin-Rechte sehen: der Wochenplan der ganzen Schule (wer macht was, wann,
 wo, mit wem), ohne jede Editier-Kontrolle und ohne Planungswerkzeuge
-(Monats-/Serienansicht, Lücken- und Konflikthinweise, Export). Sie lebt als
-Tab „Betreuungsplan" in „Mein Kalender" — der einen Kalenderfläche neben dem
-Tab „Meine Termine" — und trägt den Hinweis „Nur ansehen". Kindernamen
+(Monats-/Serienansicht, Lücken- und Konflikthinweise, Export). Sie trägt den
+Hinweis „Nur ansehen" und ist an zwei Stellen dieselbe Ansicht: als Eintrag
+„Betreuungsplan" im Tagesbetrieb der Seitenleiste, direkt unter „Heute"
+(#8134, mit `schedules:read` und `users:read`), und als Tab „Betreuungsplan"
+in „Mein Kalender" — der einen Kalenderfläche neben dem Tab „Meine Termine".
+Die Leitung öffnet über denselben Eintrag den bearbeitbaren Plan. Kindernamen
 erscheinen nur in der Teilnehmerliste eines Termin-Details.
 
 ## Familienschutz

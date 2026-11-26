@@ -135,10 +135,11 @@ func (r *CareOfferingRows) Create(ctx context.Context, row *offeringContract.Car
 	})
 }
 
-// Update saves the offering and refreshes row with the stored state.
-func (r *CareOfferingRows) Update(ctx context.Context, row *offeringContract.CareOfferingRecord) error {
+// Update saves the offering over the version its author read (ADR 0311)
+// and refreshes row with the stored state.
+func (r *CareOfferingRows) Update(ctx context.Context, row *offeringContract.CareOfferingRecord, expectedVersion string) error {
 	return r.save(row, func(catalog careplan.CareOfferingCatalog, offering careplan.CareOffering) (careplan.CareOffering, error) {
-		return catalog.UpdateOffering(ctx, offering)
+		return catalog.UpdateOffering(ctx, offering, expectedVersion)
 	})
 }
 
@@ -236,6 +237,7 @@ func careOfferingFromRow(row *offeringContract.CareOfferingRecord) (careplan.Car
 		AvailabilityRule: availabilityRule, SortOrder: row.SortOrder,
 		SelectionGroup: row.SelectionGroup, SelectionRule: row.SelectionRule, PickupTimes: row.PickupTimes,
 		Translations: row.Translations, AutoAddTriggerOfferingIDs: row.AutoAddTriggerOfferingIDs,
+		Version: row.Version,
 	}, nil
 }
 
@@ -260,6 +262,7 @@ func applyCareOfferingToRow(target *offeringContract.CareOfferingRecord, value c
 	target.SortOrder, target.SelectionGroup, target.SelectionRule = value.SortOrder, value.SelectionGroup, value.SelectionRule
 	target.PickupTimes, target.Translations = value.PickupTimes, value.Translations
 	target.AutoAddTriggerOfferingIDs = value.AutoAddTriggerOfferingIDs
+	target.Version = value.Version
 	return nil
 }
 
@@ -284,6 +287,7 @@ func publicCareOfferings(rows []*offeringContract.CareOfferingRecord) []*enrollm
 			CountsAsCare: row.CountsAsCare, AutoAddGradeLevels: row.AutoAddGradeLevels, AvailabilityRule: rule,
 			SortOrder: row.SortOrder, SelectionGroup: row.SelectionGroup, SelectionRule: row.SelectionRule,
 			PickupTimes: row.PickupTimes, Translations: row.Translations, AutoAddTriggerOfferingIDs: row.AutoAddTriggerOfferingIDs,
+			Version: row.Version,
 		})
 	}
 	return out
@@ -331,6 +335,7 @@ func CareOfferingRowOf(value *enrollmentNative.CareOffering) (*offeringContract.
 		CountsAsCare: value.CountsAsCare, CountsAsCareSet: true, AutoAddGradeLevels: value.AutoAddGradeLevels,
 		SortOrder: value.SortOrder, SelectionGroup: value.SelectionGroup, SelectionRule: value.SelectionRule,
 		PickupTimes: value.PickupTimes, Translations: value.Translations, AutoAddTriggerOfferingIDs: value.AutoAddTriggerOfferingIDs,
+		Version: value.Version,
 	}
 	if err := unmarshalOptional(value.AvailabilityRule, &row.AvailabilityRule); err != nil {
 		return nil, fmt.Errorf("decode care offering availability rule: %w", err)

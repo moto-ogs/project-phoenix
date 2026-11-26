@@ -126,7 +126,7 @@ describe("SWR Hooks", () => {
           user: {
             id: "teacher-1",
             token: "test-token",
-            tenantId: 42,
+            tenantId: "42",
             scope: "school",
           },
           expires: "2099-01-01",
@@ -228,7 +228,7 @@ describe("SWR Hooks", () => {
         createSnapshotSession({
           id: "teacher-1",
           scope: "school",
-          tenantId: 42,
+          tenantId: "42",
         }) as ReturnType<typeof useSession>,
       );
 

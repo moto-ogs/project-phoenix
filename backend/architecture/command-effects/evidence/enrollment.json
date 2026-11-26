@@ -290,7 +290,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.UpdateOffering",
-      "binding_digest": "fa8a0ee94d3f050220f22a78f91afd6b",
+      "binding_digest": "ddf7f74d12901fc15fba169314659cba",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCatalog.UpdateOffering",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.UpdateOffering",
@@ -298,7 +298,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCatalog.UpdateOffering",
-      "binding_digest": "fa8a0ee94d3f050220f22a78f91afd6b",
+      "binding_digest": "ddf7f74d12901fc15fba169314659cba",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCatalog.UpdateOffering",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.UpdateOffering",
@@ -306,7 +306,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCatalog.UpdateOffering",
-      "binding_digest": "739a64f4e359e5a5b05bdc7b1d0a2924",
+      "binding_digest": "16c91672eabb794e3ed51cdd95645081",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCatalog.UpdateOffering",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCatalog.UpdateOffering",
@@ -1986,7 +1986,15 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.holidayTraegerDirectory.HolidayTraeger",
-      "binding_digest": "f84272bfba7fd15bfede0db3b5064520",
+      "binding_digest": "7ea2706ba93b4de6292c67763a0fbd8a",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayTraegerDirectory.HolidayTraeger",
+      "source_owner": "enrollment",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/settings.TraegerModuleBooking.BookedModules",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.holidayTraegerDirectory.HolidayTraeger",
+      "binding_digest": "8a96b033009f0fe38720c60b96161bf9",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayTraegerDirectory.HolidayTraeger",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.FindOrganization",
@@ -1994,7 +2002,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.holidayTraegerDirectory.HolidayTraeger",
-      "binding_digest": "ca00cbe8929f5992cdeaf110458dfcda",
+      "binding_digest": "8ddaca178c1d30f10b90dd856156b2fd",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayTraegerDirectory.HolidayTraeger",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.ListSchoolsByOrganization",
@@ -2002,7 +2010,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.holidayTraegerDirectory.HolidayTraeger",
-      "binding_digest": "505d45c215dabe08917ccc064459b40b",
+      "binding_digest": "d641cc72008a2df554e2e04e65a09b02",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayTraegerDirectory.HolidayTraeger",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Organization.IsDeleted",
@@ -2010,7 +2018,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.holidayTraegerDirectory.HolidayTraeger",
-      "binding_digest": "b644ec927b4836b41b790de70b9b02c2",
+      "binding_digest": "ba071bb8c1eb445c3a6b5957ce16fde5",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayTraegerDirectory.HolidayTraeger",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.FindOrganization",
@@ -2018,7 +2026,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.holidayTraegerDirectory.HolidayTraeger",
-      "binding_digest": "065076878c52b885faced9b2c5f3c424",
+      "binding_digest": "d6d40db987a4c6646f2d788cafd6a491",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayTraegerDirectory.HolidayTraeger",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.ListSchoolsByOrganization",
@@ -2026,7 +2034,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/api.holidayTraegerDirectory.HolidayTraeger",
-      "binding_digest": "6f458179df720ab6043af672add9358c",
+      "binding_digest": "d6525a43491d0be88f9c0f93a297c5cd",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayTraegerDirectory.HolidayTraeger",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.School.IsDeleted",
@@ -4770,7 +4778,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.classListEntryRosterReader.ListClassListEntries",
-      "binding_digest": "b8a0d43486c7e4e2c42e9614cb62a453",
+      "binding_digest": "a75ada4314480fbf93f220a01fe21073",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.ClassListEntries.ListClassListEntries",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.ListClassListEntriesInDisplayOrder",
@@ -4778,7 +4786,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.classListEntryRosterReader.ListClassListEntries",
-      "binding_digest": "9252d6f34722233d106a643f40435245",
+      "binding_digest": "dbb3f7a9bacff31c6bbffd7952a71125",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.ClassListEntries.ListClassListEntries",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.ClassListEntries.ListClassListEntriesInDisplayOrder",
@@ -4786,7 +4794,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.classListEntryRosterReader.ListClassListEntries",
-      "binding_digest": "125976c4480b3bbb01809f14ce19561a",
+      "binding_digest": "836019ed0dd48422c93ef533bccc8afa",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.ClassListEntries.ListClassListEntries",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.ListClassListEntriesInDisplayOrder",
@@ -5154,7 +5162,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.enrollmentDeliveryAdapter.RelatedEmailOutcomes",
-      "binding_digest": "f7eb835ef556e6eca2513492d4977853",
+      "binding_digest": "06baf626579eb960260a4ff2d7b418bf",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.EnrollmentDeletionDelivery.RelatedEmailOutcomes",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.EmailOutcomes.EmailOutcomes",
@@ -5162,7 +5170,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.enrollmentDeliveryAdapter.RelatedEmailOutcomes",
-      "binding_digest": "e72ba8755c124c1a3be014ab21b1e447",
+      "binding_digest": "3b5c4e64c58723272cbad8653498be21",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.EnrollmentDeletionDelivery.RelatedEmailOutcomes",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
@@ -5170,7 +5178,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.enrollmentDeliveryAdapter.RelatedEmailOutcomes",
-      "binding_digest": "4ce62489884b0470355f34549a9737b5",
+      "binding_digest": "3ee52d9b87226706eb407d7c8da6ff2f",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.EnrollmentDeletionDelivery.RelatedEmailOutcomes",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantID.Int64",
@@ -5633,6 +5641,14 @@
       "target_owner": "settings-platform"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.enrollmentIntakeSettings.CareFacilityArticle",
+      "binding_digest": "48a7db3984cc292642a75ca691981729",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.IntakeSettings.CareFacilityArticle",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings.EnrollmentIntakeValues.CareFacilityArticle",
+      "target_owner": "settings-platform"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.enrollmentIntakeSettings.CareFacilityTerm",
       "binding_digest": "8ad07acd06a8aca55c5d8f279256302f",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.IntakeSettings.CareFacilityTerm",
@@ -5791,6 +5807,14 @@
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/timetable.RecurrenceWriteLock.LockRecurrenceWrites",
       "target_owner": "timetable-activities"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.enrollmentNotificationSettings.CareFacilityArticle",
+      "binding_digest": "fb30c365d4146c3e8a96b611405a81d7",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.NotificationSettings.CareFacilityArticle",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings.ResolveCareFacilityArticle",
+      "target_owner": "settings-platform"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.enrollmentNotificationSettings.CareFacilityTerm",
@@ -6410,7 +6434,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.enrollmentRosterStudents.ListClassRoster",
-      "binding_digest": "2a3efe118f6b6a128203881d879b7631",
+      "binding_digest": "30476e2089ed4fc3b4dc887e189c8bbd",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.RosterStudents.ListClassRoster",
       "source_owner": "enrollment",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.ClassMemberFrom",
@@ -6418,7 +6442,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.enrollmentRosterStudents.ListClassRoster",
-      "binding_digest": "3543c4f482d81a5b92624ae32ebd3b3d",
+      "binding_digest": "a2afe48a99e9b0e1d14cad46fbd820d9",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.RosterStudents.ListClassRoster",
       "source_owner": "enrollment",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.ClassTimeBeforeCare",
@@ -6426,7 +6450,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.enrollmentRosterStudents.ListClassRoster",
-      "binding_digest": "db928a1d335cb47d53823f8c6b6ce47a",
+      "binding_digest": "1d7893daf0ae0ec534344da202578a5e",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.RosterStudents.ListClassRoster",
       "source_owner": "enrollment",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.LeftSchool",
@@ -6434,7 +6458,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.enrollmentRosterStudents.ListClassRoster",
-      "binding_digest": "6515b8c935ac9de7acc3800cb09244da",
+      "binding_digest": "5530dfbb833a6cd9f88fd48a431cdc8a",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.RosterStudents.ListClassRoster",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.ListClassRoster",
@@ -6466,7 +6490,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.enrollmentStudentConsents.RecordEnrollmentConsentTransitions",
-      "binding_digest": "1c77d3322c4e4f26e58c71c5a4a5b396",
+      "binding_digest": "e220447f6bef4ad87f17d7f547071fbc",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.StudentConsents.RecordEnrollmentConsentTransitions",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.StudentConsentChangeRepository.Create",
@@ -6474,7 +6498,15 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.enrollmentStudentConsents.RecordEnrollmentConsentTransitions",
-      "binding_digest": "99f518d464cde3f0b835d2bba0ccf8ca",
+      "binding_digest": "1c163bacfc8a07957326105eeff8de74",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.StudentConsents.RecordEnrollmentConsentTransitions",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentConsentTextVersion",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.enrollmentStudentConsents.RecordEnrollmentConsentTransitions",
+      "binding_digest": "a88aa5ebb0701c982398aef408510378",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.StudentConsents.RecordEnrollmentConsentTransitions",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentConsentTransitions",

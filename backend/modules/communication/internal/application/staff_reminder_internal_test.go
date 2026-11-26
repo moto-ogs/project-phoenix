@@ -35,7 +35,7 @@ type reminderRepo struct {
 
 func (r *reminderRepo) FindByID(ctx context.Context, id int64) (*StaffParentAnnouncement, error) {
 	if r.byID != nil {
-		return r.byID[id], nil
+		return asStored(r.byID[id]), nil
 	}
 	return r.fakeAnnouncementRepo.FindByID(ctx, id)
 }
@@ -169,7 +169,7 @@ func TestPublish_RejectsReminderAlreadyInThePast(t *testing.T) {
 	repo := &reminderRepo{fakeAnnouncementRepo: fakeAnnouncementRepo{announcement: draft}}
 	h := newReminderHarness(repo)
 
-	_, err := h.svc.Publish(context.Background(), draft.ID)
+	_, err := publishAsRead(context.Background(), h.svc, draft.ID)
 	require.ErrorIs(t, err, ErrValidation)
 	assert.Equal(t, 0, repo.publishCalls, "a draft with a dead reminder must not go live")
 }
@@ -184,7 +184,7 @@ func TestUpdateReminder_RefusesOnceSent(t *testing.T) {
 	h := newReminderHarness(repo)
 
 	future := staffTestNow.Add(time.Hour)
-	_, err := h.svc.UpdateReminder(context.Background(), a.ID, ReminderInput{ReminderAt: &future})
+	_, err := updateReminderAsRead(context.Background(), h.svc, a.ID, ReminderInput{ReminderAt: &future})
 	require.ErrorIs(t, err, ErrReminderAlreadySent)
 	assert.Empty(t, repo.setReminderCalls)
 }
@@ -197,7 +197,7 @@ func TestUpdateReminder_RefusesUnpublishedAnnouncement(t *testing.T) {
 	h := newReminderHarness(repo)
 	future := staffTestNow.Add(time.Hour)
 
-	_, err := h.svc.UpdateReminder(context.Background(), draft.ID, ReminderInput{ReminderAt: &future})
+	_, err := updateReminderAsRead(context.Background(), h.svc, draft.ID, ReminderInput{ReminderAt: &future})
 	require.ErrorIs(t, err, ErrNotPublished)
 	assert.Empty(t, repo.setReminderCalls)
 }
@@ -212,7 +212,7 @@ func TestUpdateReminder_RefusesSystemAnnouncement(t *testing.T) {
 	repo := &reminderRepo{fakeAnnouncementRepo: fakeAnnouncementRepo{announcement: a}, setReminderApplied: true}
 	h := newReminderHarness(repo)
 
-	_, err := h.svc.UpdateReminder(context.Background(), a.ID, ReminderInput{})
+	_, err := updateReminderAsRead(context.Background(), h.svc, a.ID, ReminderInput{})
 	require.ErrorIs(t, err, ErrSystemAnnouncementImmutable)
 }
 
@@ -226,11 +226,11 @@ func TestUpdateReminder_ValidatesMomentAgainstExpiry(t *testing.T) {
 	h := newReminderHarness(repo)
 
 	late := expiry.Add(time.Hour)
-	_, err := h.svc.UpdateReminder(context.Background(), a.ID, ReminderInput{ReminderAt: &late})
+	_, err := updateReminderAsRead(context.Background(), h.svc, a.ID, ReminderInput{ReminderAt: &late})
 	require.ErrorIs(t, err, ErrValidation)
 
 	past := staffTestNow.Add(-time.Hour)
-	_, err = h.svc.UpdateReminder(context.Background(), a.ID, ReminderInput{ReminderAt: &past})
+	_, err = updateReminderAsRead(context.Background(), h.svc, a.ID, ReminderInput{ReminderAt: &past})
 	require.ErrorIs(t, err, ErrValidation)
 	assert.Empty(t, repo.setReminderCalls)
 }
@@ -246,7 +246,7 @@ func TestUpdateReminder_RefusesPoll(t *testing.T) {
 	h := newReminderHarness(repo)
 
 	future := staffTestNow.Add(time.Hour)
-	_, err := h.svc.UpdateReminder(context.Background(), a.ID, ReminderInput{ReminderAt: &future})
+	_, err := updateReminderAsRead(context.Background(), h.svc, a.ID, ReminderInput{ReminderAt: &future})
 	require.ErrorIs(t, err, ErrValidation)
 }
 
@@ -258,7 +258,7 @@ func TestUpdateReminder_MovesRewordsAndRemoves(t *testing.T) {
 	h := newReminderHarness(repo)
 
 	future := staffTestNow.Add(72 * time.Hour)
-	got, err := h.svc.UpdateReminder(context.Background(), a.ID, ReminderInput{ReminderAt: &future, ReminderText: strPtr("  Neuer Text  ")})
+	got, err := updateReminderAsRead(context.Background(), h.svc, a.ID, ReminderInput{ReminderAt: &future, ReminderText: strPtr("  Neuer Text  ")})
 	require.NoError(t, err)
 	require.NotNil(t, got)
 	require.Len(t, repo.setReminderCalls, 1)
@@ -267,7 +267,7 @@ func TestUpdateReminder_MovesRewordsAndRemoves(t *testing.T) {
 	assert.Equal(t, 0, repo.updateCalls, "the reminder edit must not touch the immutable content columns")
 
 	// Removing: nil moment, and any text sent along is dropped with it.
-	_, err = h.svc.UpdateReminder(context.Background(), a.ID, ReminderInput{ReminderText: strPtr("bleibt nicht")})
+	_, err = updateReminderAsRead(context.Background(), h.svc, a.ID, ReminderInput{ReminderText: strPtr("bleibt nicht")})
 	require.NoError(t, err)
 	require.Len(t, repo.setReminderCalls, 2)
 	assert.Nil(t, repo.setReminderCalls[1].at)
@@ -282,7 +282,7 @@ func TestUpdateReminder_LostRaceAgainstTheTickIsAConflict(t *testing.T) {
 	h := newReminderHarness(repo)
 
 	future := staffTestNow.Add(time.Hour)
-	_, err := h.svc.UpdateReminder(context.Background(), a.ID, ReminderInput{ReminderAt: &future})
+	_, err := updateReminderAsRead(context.Background(), h.svc, a.ID, ReminderInput{ReminderAt: &future})
 	require.ErrorIs(t, err, ErrReminderAlreadySent)
 }
 

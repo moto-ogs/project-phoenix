@@ -66,9 +66,9 @@ describe("Absprung from the Träger portal (#4654)", () => {
       json: async () => ({ access_token: access, refresh_token: REFRESH }),
     });
     vi.mocked(validateSessionToken).mockResolvedValueOnce({
-      id: 7,
+      id: "7",
       sub: "leitung@traeger.test",
-      tenant_id: 12,
+      tenant_id: "12",
       roles: ["admin"],
       permissions: ["admin:*"],
       is_admin: true,
@@ -80,7 +80,7 @@ describe("Absprung from the Träger portal (#4654)", () => {
       new Request("https://am-bach.moto-app.de"),
     );
 
-    expect(user?.tenantId).toBe(12);
+    expect(user?.tenantId).toBe("12");
     expect(user?.viaTraeger).toBe(true);
     expect(user?.token).toBe(access);
     expect(user?.refreshToken).toBe(REFRESH);
@@ -128,9 +128,9 @@ describe("Absprung from the Träger portal (#4654)", () => {
       }),
     });
     vi.mocked(validateSessionToken).mockResolvedValueOnce({
-      id: 7,
+      id: "7",
       sub: "leitung@traeger.test",
-      tenant_id: 12,
+      tenant_id: "12",
     });
 
     const user = await tenantAuthorize()(

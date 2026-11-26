@@ -1,83 +1,42 @@
-"use client";
-
-import { use } from "react";
-import { TenantPage } from "~/components/ui/tenant-page";
-import { RolloverForm } from "~/components/enrollment/rollover-form";
-import { getPhase } from "~/lib/enrollment-phase-api";
-import { useRequirePermission } from "~/lib/hooks/use-require-permission";
-import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
-import { useSWRAuth } from "~/lib/swr";
+import { TenantRouteSeed } from "../../../tenant-route-seed";
+import { readContract, seedRead } from "~/lib/server-seed.server";
+import { routes } from "~/lib/contract/enrollment.generated";
+import { hasPermission } from "~/lib/auth-utils";
+import { phaseFromContract } from "~/lib/enrollment-phase-api";
 import { tenantAdminKeys } from "~/lib/swr/tenant-admin-keys";
-import { useTenantRouter } from "~/lib/tenant-router";
-import { useRefreshPhaseExpiryWarnings } from "~/components/enrollment/phase-expiry-warnings";
+import PageContent from "./page-content";
 
-const ROLLOVER_INFO =
-  "Mit einer Anschlussphase laufen bestätigte Anmeldungen in einem neuen Zeitraum weiter. Prüfe zuerst die Vorschau. Danach trägst du Zeitraum, Modus und Frist ein.";
-
-interface PageProps {
-  readonly params: Promise<{ id: string }>;
-}
-
-export default function MobileRolloverPage({ params }: PageProps) {
-  const { id } = use(params);
-  const { isReady } = useRequirePermission("config:manage");
-  const router = useTenantRouter();
-  const refreshPhaseExpiryWarnings = useRefreshPhaseExpiryWarnings();
-  const {
-    data: phase,
-    error: phaseError,
-    mutate,
-  } = useSWRAuth(
-    isReady ? tenantAdminKeys.enrollmentPhase(id) : null,
-    () => getPhase(id),
-    { keepPreviousData: false },
-  );
-  const phaseLoad = useSwrResourceLoadError(
-    [{ data: phase, error: phaseError }],
-    "die Anmeldephase",
-    () => mutate(),
-  );
-
-  if (!isReady || (!phase && !phaseLoad.failure)) {
-    return (
-      <TenantPage
-        title="Anschlussphase erstellen"
-        info={ROLLOVER_INFO}
-        back
-        backHref="/enrollment-phases"
-        backLabel="Zurück zu den Anmeldephasen"
-        statsLoading
-        loading
-      />
-    );
-  }
-
-  // Titel, Statuszeile und Zurück-Knopf trägt das Formular selbst.
-  if (!phase) {
-    return (
-      <TenantPage
-        title="Anschlussphase erstellen"
-        info={ROLLOVER_INFO}
-        back
-        backHref="/enrollment-phases"
-        backLabel="Zurück zu den Anmeldephasen"
-        error={phaseLoad.error}
-      />
-    );
-  }
-
+export default async function MobileRolloverPage({
+  params,
+}: {
+  params: Promise<{ tenant: string; id: string }>;
+}) {
+  const { tenant, id } = await params;
   return (
-    <RolloverForm
-      variant="page"
-      info={ROLLOVER_INFO}
-      source={phase}
-      // Router navigation keeps the loaded shell; a full document load
-      // would build it again (#5001).
-      onCancel={() => router.replace("/home")}
-      onSuccess={() => {
-        refreshPhaseExpiryWarnings();
-        router.replace("/home");
+    <TenantRouteSeed
+      slug={tenant}
+      module="online_anmeldung"
+      load={({ token, session }) => {
+        if (!hasPermission(session, "config:manage")) return [];
+        return [
+          {
+            key: tenantAdminKeys.enrollmentPhase(id),
+            render: true,
+            value: seedRead(
+              "GET /api/enrollment/phases/{id}/",
+              async (signal) => {
+                const { data } = await readContract(
+                  routes["GET /api/enrollment/phases/{id}/"],
+                  { token, signal, params: { id } },
+                );
+                return phaseFromContract(data);
+              },
+            ),
+          },
+        ];
       }}
-    />
+    >
+      <PageContent params={params} />
+    </TenantRouteSeed>
   );
 }

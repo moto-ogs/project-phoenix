@@ -8,27 +8,113 @@ const READERS = new Set(["src/lib/server-api-url.ts", "src/env.js"]);
 const NAME = "API_URL";
 
 function fileKey(context) {
-  const file = String(context.physicalFilename ?? context.filename ?? "").replaceAll("\\", "/");
+  const file = String(
+    context.physicalFilename ?? context.filename ?? "",
+  ).replaceAll("\\", "/");
   const index = file.lastIndexOf("/src/");
   return index === -1 ? file : file.slice(index + 1);
 }
 
-function propertyName(node) {
-  if (!node.computed && node.property.type === "Identifier") return node.property.name;
-  if (node.property.type === "Literal") return node.property.value;
-  if (node.property.type === "TemplateLiteral" && node.property.expressions.length === 0) {
-    return node.property.quasis[0]?.value.cooked;
+function binding(source, id) {
+  for (let scope = source.getScope(id); scope; scope = scope.upper) {
+    const variable = scope.set.get(id.name);
+    if (variable) return variable.defs[0];
+  }
+}
+
+function resolveBinding(node, source, seen) {
+  const def = binding(source, node);
+  if (
+    def?.type !== "Variable" ||
+    def.node.id.type !== "Identifier" ||
+    seen.has(def.node)
+  )
+    return;
+  seen.add(def.node);
+  return def.node.init;
+}
+
+function staticString(node, source, seen = new Set()) {
+  if (node?.type === "Literal" && typeof node.value === "string")
+    return node.value;
+  if (node?.type === "Identifier")
+    return staticString(resolveBinding(node, source, seen), source, seen);
+  if (node?.type === "BinaryExpression" && node.operator === "+") {
+    const left = staticString(node.left, source, new Set(seen));
+    const right = staticString(node.right, source, new Set(seen));
+    return left != null && right != null ? left + right : null;
+  }
+  if (node?.type === "TemplateLiteral") {
+    const expressions = node.expressions.map((part) =>
+      staticString(part, source, new Set(seen)),
+    );
+    if (expressions.includes(null)) return null;
+    return node.quasis
+      .map((part, index) => part.value.cooked + (expressions[index] ?? ""))
+      .join("");
   }
   return null;
 }
 
-// process.env, globalThis.process.env, or an imported env object (~/env).
-function isEnvironment(node) {
-  if (node.type === "Identifier") return node.name === "env";
-  if (node.type !== "MemberExpression" || propertyName(node) !== "env") return false;
-  const owner = node.object;
-  if (owner.type === "Identifier") return owner.name === "process";
-  return owner.type === "MemberExpression" && propertyName(owner) === "process";
+function propertyName(key, computed, source) {
+  if (!computed && key.type === "Identifier") return key.name;
+  return staticString(key, source);
+}
+
+function isProcess(node, source, seen = new Set()) {
+  if (node?.type === "Identifier") {
+    const def = binding(source, node);
+    if (!def) return node.name === "process";
+    return isProcess(resolveBinding(node, source, seen), source, seen);
+  }
+  return (
+    node?.type === "MemberExpression" &&
+    propertyName(node.property, node.computed, source) === "process" &&
+    node.object.type === "Identifier" &&
+    node.object.name === "globalThis" &&
+    !binding(source, node.object)
+  );
+}
+
+function destructuresProcessEnv(def, localName, source) {
+  if (
+    def?.type !== "Variable" ||
+    def.node.id.type !== "ObjectPattern" ||
+    !isProcess(def.node.init, source)
+  )
+    return false;
+  return def.node.id.properties.some((property) => {
+    if (property.type !== "Property") return false;
+    const target =
+      property.value.type === "AssignmentPattern"
+        ? property.value.left
+        : property.value;
+    return (
+      target.type === "Identifier" &&
+      target.name === localName &&
+      propertyName(property.key, property.computed, source) === "env"
+    );
+  });
+}
+
+// Follow the lexical binding, including aliased imports and const assignments.
+function isEnvironment(node, source, seen = new Set()) {
+  if (node?.type === "Identifier") {
+    const def = binding(source, node);
+    if (def?.type === "ImportBinding") {
+      return (
+        def.node.imported?.name === "env" &&
+        /(?:^|\/)env(?:\.[cm]?[jt]s)?$/.test(def.parent.source.value)
+      );
+    }
+    if (destructuresProcessEnv(def, node.name, source)) return true;
+    return isEnvironment(resolveBinding(node, source, seen), source, seen);
+  }
+  return (
+    node?.type === "MemberExpression" &&
+    propertyName(node.property, node.computed, source) === "env" &&
+    isProcess(node.object, source)
+  );
 }
 
 function isWrite(node) {
@@ -42,7 +128,9 @@ function isWrite(node) {
 const onlyServerApiUrl = {
   meta: {
     type: "problem",
-    docs: { description: "Read the backend URL only in src/lib/server-api-url.ts." },
+    docs: {
+      description: "Read the backend URL only in src/lib/server-api-url.ts.",
+    },
     schema: [],
     messages: {
       read: "Call Go through sendBackend (~/lib/backend-client.server); only src/lib/server-api-url.ts reads API_URL.",
@@ -50,18 +138,30 @@ const onlyServerApiUrl = {
   },
   create(context) {
     if (READERS.has(fileKey(context))) return {};
+    const source = context.sourceCode;
     return {
       MemberExpression(node) {
-        if (propertyName(node) === NAME && isEnvironment(node.object) && !isWrite(node)) {
+        if (
+          propertyName(node.property, node.computed, source) === NAME &&
+          isEnvironment(node.object, source) &&
+          !isWrite(node)
+        ) {
           context.report({ node, messageId: "read" });
         }
       },
       VariableDeclarator(node) {
-        if (node.id.type !== "ObjectPattern" || !node.init || !isEnvironment(node.init)) return;
+        if (
+          node.id.type !== "ObjectPattern" ||
+          !isEnvironment(node.init, source)
+        )
+          return;
         for (const property of node.id.properties) {
-          const key = property.type === "Property" ? property.key : null;
-          const name = key?.type === "Identifier" ? key.name : key?.type === "Literal" ? key.value : null;
-          if (name === NAME) context.report({ node: property, messageId: "read" });
+          const name =
+            property.type === "Property"
+              ? propertyName(property.key, property.computed, source)
+              : null;
+          if (name === NAME)
+            context.report({ node: property, messageId: "read" });
         }
       },
     };

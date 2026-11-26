@@ -7,11 +7,12 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
-	"github.com/stretchr/testify/require"
 )
 
 type appointmentMailsResponse struct {
@@ -25,7 +26,7 @@ func createMailedAppointment(t *testing.T, router http.Handler, token string, gu
 	t.Helper()
 	targets := make([]map[string]any, 0, len(guardianProfileIDs))
 	for _, id := range guardianProfileIDs {
-		targets = append(targets, map[string]any{"type": "guardian_profile", "id": id})
+		targets = append(targets, map[string]any{"type": "guardian_profile", "id": testpkg.ID(id)})
 	}
 	rec := doJSON(t, router, http.MethodPost, "/calendar/appointments", token, map[string]any{
 		"title": "Elternabend", "start_date": "2026-05-04", "end_date": "2026-05-04", "start_time": "18:00", "end_time": "19:00",
@@ -77,6 +78,7 @@ func TestOrganizerSeesWhatBecameOfTheAppointmentMails(t *testing.T) {
 	for _, title := range []string{"Elternabend neu", "Elternabend später"} {
 		rec := doJSON(t, router, http.MethodPut, "/calendar/appointments/"+appointmentID, token, map[string]any{
 			"title": title, "start_date": "2026-05-04", "end_date": "2026-05-04", "start_time": "18:30", "end_time": "19:30", "send_email": true,
+			"expected_version": appointmentVersionE2E(t, router, "/calendar/appointments/"+appointmentID, token),
 		})
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	}

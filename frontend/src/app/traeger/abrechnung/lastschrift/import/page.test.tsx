@@ -13,7 +13,7 @@ import { ApiError } from "~/lib/api-error";
 import type { ImportResult } from "~/lib/traeger-sepa-import-api";
 import { useTraegerResource } from "~/components/traeger/use-traeger-resource";
 import { traegerBillingRunKeys } from "~/lib/swr/traeger-billing-run-keys";
-import TraegerSepaImportPage from "./page";
+import TraegerSepaImportPage from "./page-content";
 
 vi.unmock("swr");
 
@@ -28,7 +28,7 @@ vi.mock("~/lib/traeger-sepa-import-api", async (original) => ({
 }));
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
-    data: { user: { id: "traeger-test", scope: "org", orgId: 7 } },
+    data: { user: { id: "traeger-test", scope: "org", orgId: "7" } },
   }),
   SessionProvider: ({ children }: { children: ReactNode }) => children,
 }));

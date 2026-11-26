@@ -74,6 +74,47 @@ services:
     networks:
       - monitoring
 
+  # Cluster view next to the backend pool gauges. Each DSN names the
+  # dedicated postgres_exporter role (pg_monitor, no table access) with
+  # sslmode=require; both keys live in /root/monitoring/.env. The per-table
+  # collectors stay off: their pg_stat_user_tables query took ~400 ms every
+  # scrape, nine times the database time of all application roles.
+  postgres-exporter-prod:
+    image: quay.io/prometheuscommunity/postgres-exporter:v0.20.1
+    restart: unless-stopped
+    command:
+      - --no-collector.stat_user_tables
+      - --no-collector.statio_user_tables
+    environment:
+      DATA_SOURCE_NAME: ${PG_EXPORTER_PROD_DSN:?PG_EXPORTER_PROD_DSN is required}
+    ports:
+      - 127.0.0.1:9187:9187
+    logging:
+      driver: journald
+      options:
+        tag: monitoring-postgres-exporter-prod
+    networks:
+      - monitoring
+      - production
+
+  postgres-exporter-staging:
+    image: quay.io/prometheuscommunity/postgres-exporter:v0.20.1
+    restart: unless-stopped
+    command:
+      - --no-collector.stat_user_tables
+      - --no-collector.statio_user_tables
+    environment:
+      DATA_SOURCE_NAME: ${PG_EXPORTER_STAGING_DSN:?PG_EXPORTER_STAGING_DSN is required}
+    ports:
+      - 127.0.0.1:9188:9187
+    logging:
+      driver: journald
+      options:
+        tag: monitoring-postgres-exporter-staging
+    networks:
+      - monitoring
+      - staging
+
 networks:
   monitoring:
     name: phoenix-monitoring

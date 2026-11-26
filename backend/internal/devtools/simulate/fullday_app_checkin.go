@@ -47,8 +47,8 @@ func (appCheckInAction) Run(_ context.Context, rt *Runtime) error {
 		toRoom, toYard = childIDs[:len(childIDs)-1], childIDs[len(childIDs)-1:]
 	}
 	if _, err := rt.Client.Post("/api/active/visits/check-in-to-group", map[string]any{
-		"student_ids":            toRoom,
-		"target_active_group_id": sessionID,
+		"student_ids":            ident.IDs(toRoom),
+		"target_active_group_id": ident.ID(sessionID),
 	}); err != nil {
 		return fmt.Errorf("check children in to room %d through the app: %w", roomID, err)
 	}
@@ -56,8 +56,8 @@ func (appCheckInAction) Run(_ context.Context, rt *Runtime) error {
 	if len(toYard) > 0 {
 		yard := rt.State.Rooms["Sporthalle"]
 		if _, err := rt.Client.Post("/api/active/visits/check-in-to-room", map[string]any{
-			"student_ids":    toYard,
-			"target_room_id": yard,
+			"student_ids":    ident.IDs(toYard),
+			"target_room_id": ident.ID(yard),
 		}); err != nil {
 			return fmt.Errorf("check a child in to the released Sporthalle through the app: %w", err)
 		}

@@ -297,11 +297,6 @@
     },
     {
       "decision": "0090",
-      "id": "api/activeStaffAccess.HasCurrentStaff",
-      "reason": "Finite named forwarding debt under ADR 0090, not a new floor; removal/deepening pending."
-    },
-    {
-      "decision": "0090",
       "id": "api/activityCatalogAdapter.CreateActivity",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
@@ -551,11 +546,6 @@
       "reason": "Consumer-port adapter of the contract enrollment workflow (#7760, ADR 0309 section 4, ADR 0067): it lists the schools of the Träger at Organisation \u0026 Tenancy and keeps the identifiers of the undeleted ones; no forwarding without translation."
     },
     {
-      "decision": "0299",
-      "id": "api/dayChangesMealPlan.MealPlanChanges",
-      "reason": "Owner-edge translation (ADR 0075): turns Meal Plan's change mark of the day into the Essen entry of „Heute anders“ (#7666); no forward."
-    },
-    {
       "decision": "0090",
       "id": "api/emergencySnapshotPersonNames.ByIDs",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
@@ -654,6 +644,11 @@
       "decision": "0090",
       "id": "api/groupLiveLocations.Location",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
+    },
+    {
+      "decision": "0075",
+      "id": "api/groupLivePlanning.PlannedActivities",
+      "reason": "ADR 0075 consumer-port adapter (#6487, #8194): binds the live-group projection Planning port to the root's shared read of the day's planned offerings (plannedOfferings.byStudent) and translates its rows onto the projection's own PlannedActivity type."
     },
     {
       "decision": "0090",
@@ -837,8 +832,8 @@
     },
     {
       "decision": "0090",
-      "id": "api/operatorSettingsSchools.SchoolSlug",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
+      "id": "api/operatorSettingsSchools.SchoolSubdomain",
+      "reason": "Root consumer-port projection of a school record to its routing subdomain for tenant-lookup invalidation (#8052); preserves the one read."
     },
     {
       "decision": "0090",
@@ -909,6 +904,11 @@
       "decision": "0115",
       "id": "api/parentBillingHolidayRegistrations.HolidayRegistration",
       "reason": "ADR 0115 (#4664): Consumer-port adapter of the Elternabrechnung's holiday registrations; it reads through Enrollment's review, which checks the Träger and records the read, and translates the registration and Enrollment's refusals."
+    },
+    {
+      "decision": "0325",
+      "id": "api/parentBillingHolidayRegistrations.RecordHolidayPayer",
+      "reason": "ADR 0325 (#8158): Consumer-port adapter of the Elternabrechnung's holiday registrations; it records a payer change through Enrollment's payer trail, which locks the registration, refuses one that is not confirmed and appends the audit entry, in the caller's Träger transaction. It translates the payer into Enrollment's vocabulary without the cost bearer's ID and Enrollment's refusals into the Elternabrechnung's."
     },
     {
       "decision": "0115",
@@ -1116,6 +1116,11 @@
       "reason": "Finite named forwarding debt under ADR 0090, not a new floor; removal/deepening pending."
     },
     {
+      "decision": "0075",
+      "id": "api/studentListPlannedActivities.PlannedActivities",
+      "reason": "ADR 0075 consumer-port adapter (#8194): binds the student list's PlannedActivityReader port to the root's shared read of the day's planned offerings (plannedOfferings.byStudent) and translates its rows onto the list's own wire type, the same shape as groupLivePlanning.PlannedActivities."
+    },
+    {
       "decision": "0090",
       "id": "api/studentSchoolGroups.GetGroup",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
@@ -1189,6 +1194,11 @@
       "decision": "0090",
       "id": "api/supervisionSettings.SpontaneousActivitiesEnabled",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
+    },
+    {
+      "decision": "0075",
+      "id": "api/supervisionSettings.StudentCardActivitiesEnabled",
+      "reason": "ADR 0075 consumer-port adapter (#8194): binds the supervision dashboard Settings port to the tenant setting operations.student_card_activities_enabled, the same shape as groupLiveSettings.StudentCardActivitiesEnabled."
     },
     {
       "decision": "0090",
@@ -1369,6 +1379,11 @@
       "decision": "0251",
       "id": "api/traegerSpringerEmployments.EndSpringerAccess",
       "reason": "ADR 0251 (#7173): Finite named forwarding debt under ADR 0090: Workforce's EndSpringerAccess names the end of a lifted block's access, Identity \u0026 Access ends the window of that block."
+    },
+    {
+      "decision": "0327",
+      "id": "api/traegerStudentNames.StudentNamesByTenant",
+      "reason": "ADR 0327 (#8137): Consumer-port adapter of the Träger projection's student names port; it translates the projection's name query into People Directory's and its named student profiles into the projection's StudentName vocabulary."
     },
     {
       "decision": "0090",
@@ -1629,6 +1644,11 @@
       "decision": "0088",
       "id": "roots/owners/CareContractFamilyNumbers.StateFamilyChildren",
       "reason": "Consumer-port adapter of the Betreuungsvertrag (#6335): it stores the parents' number of a checked contract's family at the Elternabrechnung in the caller's Träger transaction and maps channel, validation and missing-family refusals into the Betreuungsvertrag's errors."
+    },
+    {
+      "decision": "0318",
+      "id": "roots/owners/CareContractIssuers.SchoolIssuers",
+      "reason": "ADR 0318 (#4811): Consumer-port adapter that asks Organisation \u0026 Tenancy for the body that concludes the contracts of each school and translates its master data into the Betreuungsvertrag's issuer: sender text of name and address, and the contact person."
     },
     {
       "decision": "0090",
@@ -2332,21 +2352,6 @@
     },
     {
       "decision": "0090",
-      "id": "roots/owners/ProvisioningIdentity.ListAllAccounts",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "roots/owners/ProvisioningIdentity.ListOrganizationAccounts",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
-      "id": "roots/owners/ProvisioningIdentity.ListSchoolAccounts",
-      "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
-    },
-    {
-      "decision": "0090",
       "id": "roots/owners/ProvisioningIdentity.ListTraegerAccounts",
       "reason": "ADR 0084 (#4649): root translation of the Identity \u0026 Access Träger accounts into the provisioning vocabulary."
     },
@@ -2499,6 +2504,11 @@
       "decision": "0090",
       "id": "roots/owners/SessionActivities.ListSessionActivities",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
+    },
+    {
+      "decision": "0318",
+      "id": "roots/owners/StaffEmployers.SchoolEmployers",
+      "reason": "ADR 0318 (#4811), ADR 0320 (#8041): Consumer-port adapter that asks Organisation \u0026 Tenancy for the body that employs the staff of each Einsatzort and translates it into the employer kind and name the Personalakte and the payroll file use."
     },
     {
       "decision": "0090",

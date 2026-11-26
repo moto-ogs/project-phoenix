@@ -27,12 +27,12 @@ vi.mock("next/navigation", () => ({
 }));
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
-    data: { user: { id: "A", scope: "org", orgId: 7 } },
+    data: { user: { id: "A", scope: "org", orgId: "7" } },
     status: "authenticated",
   }),
 }));
 
-import TraegerCatalogOfferingPage from "./page";
+import TraegerCatalogOfferingPage from "./page-content";
 
 function render(ui: React.ReactElement) {
   return rtlRender(

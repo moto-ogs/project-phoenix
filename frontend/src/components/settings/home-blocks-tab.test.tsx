@@ -27,6 +27,7 @@ const BIRTHDAYS_STAFF_KEY = "birthday.display_include_staff";
 const mockSavePolicies = vi.fn();
 const mockState = {
   confirmedPolicies: null as HomeBlockPolicies | null,
+  version: "v1",
   value: {
     overrides: {},
     policies: {} as HomeBlockPolicies,
@@ -34,15 +35,25 @@ const mockState = {
   },
 };
 
+function confirmedLayout() {
+  return {
+    ...mockState.value,
+    blocks: [],
+    policies: mockState.confirmedPolicies ?? mockState.value.policies,
+    policiesVersion: mockState.version,
+  };
+}
+
 vi.mock("~/lib/hooks/use-home-layout", () => ({
   useHomeLayout: () => ({
     state: mockState.value,
-    confirmedPolicies: mockState.confirmedPolicies ?? mockState.value.policies,
+    confirmed: confirmedLayout(),
+    reload: () => Promise.resolve(confirmedLayout()),
     isLoading: false,
     save: vi.fn(),
     reset: vi.fn(),
-    savePolicies: (policies: HomeBlockPolicies) =>
-      mockSavePolicies(policies) as Promise<void>,
+    savePolicies: (policies: HomeBlockPolicies, version: string) =>
+      mockSavePolicies(policies, version) as Promise<void>,
   }),
 }));
 
@@ -149,6 +160,7 @@ const { HomeBlocksTab } = await import("./home-blocks-tab");
 describe("HomeBlocksTab", () => {
   beforeEach(() => {
     mockState.confirmedPolicies = null;
+    mockState.version = "v1";
     mockState.value = {
       overrides: {},
       policies: {},
@@ -180,9 +192,12 @@ describe("HomeBlocksTab", () => {
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
 
     await waitFor(() =>
-      expect(mockSavePolicies).toHaveBeenCalledWith({
-        "section.birthdays": "required",
-      }),
+      expect(mockSavePolicies).toHaveBeenCalledWith(
+        {
+          "section.birthdays": "required",
+        },
+        "v1",
+      ),
     );
     expect(
       await screen.findByText("Die Startseite für alle ist gespeichert."),
@@ -209,7 +224,77 @@ describe("HomeBlocksTab", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
 
-    await waitFor(() => expect(mockSavePolicies).toHaveBeenCalledWith({}));
+    await waitFor(() =>
+      expect(mockSavePolicies).toHaveBeenCalledWith({}, "v1"),
+    );
+  });
+
+  // ADR 0311: another admin saved the prescription meanwhile. The save is
+  // refused, the tab shows the stored prescription, and the next save rests
+  // on it.
+  it("zeigt nach einer Ablehnung die gespeicherte Vorgabe", async () => {
+    mockSavePolicies.mockImplementationOnce(() => {
+      // The colleague's prescription is what the next read brings.
+      mockState.confirmedPolicies = { "section.birthdays": "required" };
+      mockState.version = "v2";
+      return Promise.reject(
+        new ApiError("changed", 409, { code: "general.changed_since_read" }),
+      );
+    });
+    renderWithToast(<HomeBlocksTab />);
+
+    const group = () =>
+      screen.getByRole("group", { name: "Vorgabe für Geburtstage" });
+    fireEvent.click(within(group()).getByRole("button", { name: "Aus" }));
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() =>
+      expect(mockSavePolicies).toHaveBeenCalledWith(
+        { "section.birthdays": "disabled" },
+        "v1",
+      ),
+    );
+    await waitFor(() =>
+      expect(
+        within(group()).getByRole("button", { name: "Immer anzeigen" }),
+      ).toHaveAttribute("aria-pressed", "true"),
+    );
+    expect(
+      screen.queryByRole("button", { name: "Wiederholen" }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(within(group()).getByRole("button", { name: "Aus" }));
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() =>
+      expect(mockSavePolicies).toHaveBeenLastCalledWith(
+        { "section.birthdays": "disabled" },
+        "v2",
+      ),
+    );
+  });
+
+  // ADR 0311 rule 2: a background re-read (another tab saved, the cache
+  // revalidated) must not reset a selection the admin already started; the
+  // save still carries the token of the state it rests on.
+  it("behält eine begonnene Vorgabe, wenn die Seite im Hintergrund neu liest", async () => {
+    const { rerender } = renderWithToast(<HomeBlocksTab />);
+    const group = () =>
+      screen.getByRole("group", { name: "Vorgabe für Geburtstage" });
+    fireEvent.click(within(group()).getByRole("button", { name: "Aus" }));
+
+    mockState.confirmedPolicies = { "section.birthdays": "required" };
+    mockState.version = "v2";
+    rerender(<HomeBlocksTab />);
+
+    expect(
+      within(group()).getByRole("button", { name: "Aus" }),
+    ).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() =>
+      expect(mockSavePolicies).toHaveBeenCalledWith(
+        { "section.birthdays": "disabled" },
+        "v1",
+      ),
+    );
   });
 
   it("meldet einen fehlgeschlagenen Speicherversuch", async () => {
@@ -230,9 +315,12 @@ describe("HomeBlocksTab", () => {
     ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
     await waitFor(() => expect(mockSavePolicies).toHaveBeenCalledTimes(2));
-    expect(mockSavePolicies).toHaveBeenLastCalledWith({
-      "section.birthdays": "disabled",
-    });
+    expect(mockSavePolicies).toHaveBeenLastCalledWith(
+      {
+        "section.birthdays": "disabled",
+      },
+      "v1",
+    );
   });
 
   it("keeps the policy draft through an optimistic update and rollback for retry", async () => {
@@ -274,9 +362,12 @@ describe("HomeBlocksTab", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: "Wiederholen" }));
     await waitFor(() => expect(mockSavePolicies).toHaveBeenCalledTimes(2));
-    expect(mockSavePolicies).toHaveBeenLastCalledWith({
-      "section.birthdays": "disabled",
-    });
+    expect(mockSavePolicies).toHaveBeenLastCalledWith(
+      {
+        "section.birthdays": "disabled",
+      },
+      "v1",
+    );
   });
 
   it("bietet Bausteine, die es im Betriebsmodus nicht gibt, nicht an", () => {

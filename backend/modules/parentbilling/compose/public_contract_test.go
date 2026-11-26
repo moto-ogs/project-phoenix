@@ -65,6 +65,10 @@ func (c confirmedRegistration) RecordHolidaySiblings(context.Context, parentbill
 	return nil
 }
 
+func (c confirmedRegistration) RecordHolidayPayer(context.Context, parentbilling.HolidayReviewer, int64, int64, parentbilling.HolidayPayerRecord) error {
+	return nil
+}
+
 // settingsDouble is the Träger's switch for the debtor number (#5621).
 type settingsDouble struct{ asksDebtorNumber bool }
 
@@ -142,7 +146,13 @@ func TestPublicParentBillingContractFreezesTheHolidayContribution(t *testing.T) 
 		if err != nil {
 			return err
 		}
-		if confirmation, err = contributions.ConfirmHolidayRegistration(txCtx, reviewer, period, registration, true, 0, "", "", nil); err != nil {
+		exempt := true
+		preview, err := contributions.HolidayContribution(txCtx, reviewer, period, registration, &exempt, 0)
+		if err != nil {
+			return err
+		}
+		if confirmation, err = contributions.ConfirmHolidayRegistration(txCtx, reviewer, period, registration, true, 0, "", "", nil,
+			parentbilling.HolidayConfirmationRead{Fingerprint: preview.Fingerprint}); err != nil {
 			return err
 		}
 		if err = rules.DeleteContributionRule(txCtx, organization, exemption.ID.Int64()); err != nil {

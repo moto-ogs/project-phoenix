@@ -81,6 +81,9 @@ type staffRecordLinkRow struct {
 	StaffID       int64     `bun:"membership_id"`
 	LinkedAt      time.Time `bun:"linked_at"`
 	ViaPool       bool      `bun:"via_pool"`
+	// EmployerBody is NULL where no number per employer is kept (#8041).
+	EmployerBody   *string `bun:"employer_body"`
+	EmployerNumber *string `bun:"employer_personnel_number"`
 }
 
 const staffRecordColumns = `id, organization_id, first_name, last_name, birthday, personnel_number,
@@ -171,13 +174,17 @@ func withStaffLinks(ctx context.Context, db bun.IDB, organizationID int64, rows 
 		return records, nil
 	}
 	var links []staffRecordLinkRow
-	if err := db.NewRaw(`SELECT staff_record_id, school_id, membership_id, linked_at, via_pool FROM workforce.staff_record_links
+	if err := db.NewRaw(`SELECT staff_record_id, school_id, membership_id, linked_at, via_pool, employer_body, employer_personnel_number
+		FROM workforce.staff_record_links
 		WHERE organization_id = ? AND staff_record_id = ANY(?) ORDER BY linked_at, id`, organizationID, pgdialect.Array(ids)).Scan(ctx, &links); err != nil {
 		return nil, fmt.Errorf("workforce postgres: read staff record links: %w", err)
 	}
 	for _, link := range links {
 		i := index[link.StaffRecordID]
-		records[i].Links = append(records[i].Links, domain.TraegerStaffLink{SchoolID: link.SchoolID, StaffID: link.StaffID, LinkedAt: link.LinkedAt, ViaPool: link.ViaPool})
+		records[i].Links = append(records[i].Links, domain.TraegerStaffLink{
+			SchoolID: link.SchoolID, StaffID: link.StaffID, LinkedAt: link.LinkedAt, ViaPool: link.ViaPool,
+			EmployerBody: domain.Deref(link.EmployerBody), EmployerNumber: link.EmployerNumber,
+		})
 	}
 	return records, nil
 }
@@ -348,6 +355,31 @@ func (s *TraegerStaffStore) ListStaffChanges(ctx context.Context, organizationID
 		})
 	}
 	return changes, nil
+}
+
+// FinancialChangeTimes returns, per bank and tax field of a record, when
+// the trail last saw the Personalverwaltung change or the import fill it,
+// on the database clock (ADR 0280), in one statement.
+func (s *TraegerStaffStore) FinancialChangeTimes(ctx context.Context, organizationID, recordID int64) (map[string]time.Time, error) {
+	db, err := traegerStaffDB(ctx, organizationID)
+	if err != nil {
+		return nil, err
+	}
+	var rows []struct {
+		Field string    `bun:"field"`
+		At    time.Time `bun:"at"`
+	}
+	if err := db.NewRaw(`SELECT field, MAX(occurred_at) AS at FROM workforce.staff_record_changes
+		WHERE organization_id = ? AND staff_record_id = ? AND kind = ANY(?) AND field = ANY(?) GROUP BY field`,
+		organizationID, recordID, pgdialect.Array([]string{domain.StaffChangeChanged, domain.StaffChangeImported}),
+		pgdialect.Array(domain.FinancialStaffFields)).Scan(ctx, &rows); err != nil {
+		return nil, fmt.Errorf("workforce postgres: read financial change times: %w", err)
+	}
+	times := make(map[string]time.Time, len(rows))
+	for _, row := range rows {
+		times[row.Field] = row.At
+	}
+	return times, nil
 }
 
 // DeleteStaffRecord removes a record with its links and trail.

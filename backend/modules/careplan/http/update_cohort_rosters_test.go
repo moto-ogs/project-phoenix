@@ -5,10 +5,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/moto-ogs/project-phoenix/api"
-	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/moto-ogs/project-phoenix/api"
+	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
 // cohortRosterFixture holds the templates and occurrences one cohort test
@@ -103,7 +104,7 @@ func TestUpdateStudent_CohortChangeFollowsTargetedTemplates(t *testing.T) {
 	assert.Empty(t, f.roster(t, handRemovedGrade3), "the Jahrgang target did not change, so a hand removal stands")
 	assert.Empty(t, f.roster(t, nextFoxes), "the child is not in the Gruppe yet")
 
-	putStudent(t, tc, child.ID, map[string]any{"group_id": group.ID})
+	putStudent(t, tc, child.ID, map[string]any{"group_id": fmt.Sprint(group.ID)})
 	assert.Equal(t, []int64{child.ID}, f.roster(t, nextFoxes), "a Gruppe change reaches the Gruppe occurrence too")
 
 	// Staff take the child off the 3b occurrence; an unchanged resubmission

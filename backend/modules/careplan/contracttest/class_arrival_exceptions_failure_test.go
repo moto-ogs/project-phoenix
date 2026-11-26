@@ -40,9 +40,9 @@ func TestClassArrivalBatchStorageFailureKeepsNoChild(t *testing.T) {
 	require.ErrorAs(t, err, &scheduleErr)
 	assert.Equal(t, "create student arrival exception", scheduleErr.Op)
 	for _, id := range []int64{first.ID, failing.ID, last.ID} {
-		row, readErr := testpkg.TenantQuery2(t, ctx, f.db, f.service.GetStudentArrivalExceptionForDate, id, f.date)
+		rows, readErr := testpkg.TenantQuery2(t, ctx, f.db, f.service.GetStudentArrivalExceptionsForDate, []int64{id}, f.date)
 		require.NoError(t, readErr)
-		assert.Nil(t, row, "child %d", id)
+		assert.Nil(t, rows[id], "child %d", id)
 	}
 }
 
@@ -74,11 +74,12 @@ func TestClassArrivalBatchReclaimFailureKeepsNoChild(t *testing.T) {
 	var scheduleErr *careplan.ScheduleError
 	require.ErrorAs(t, err, &scheduleErr)
 	assert.Equal(t, "update student arrival exception", scheduleErr.Op)
-	row, err := testpkg.TenantQuery2(t, ctx, f.db, f.service.GetStudentArrivalExceptionForDate, first.ID, f.date)
+	rows, err := testpkg.TenantQuery2(t, ctx, f.db, f.service.GetStudentArrivalExceptionsForDate, []int64{first.ID}, f.date)
 	require.NoError(t, err)
-	assert.Nil(t, row, "the earlier child's write rolls back")
-	row, err = testpkg.TenantQuery2(t, ctx, f.db, f.service.GetStudentArrivalExceptionForDate, reclaimed.ID, f.date)
+	assert.Nil(t, rows[first.ID], "the earlier child's write rolls back")
+	rows, err = testpkg.TenantQuery2(t, ctx, f.db, f.service.GetStudentArrivalExceptionsForDate, []int64{reclaimed.ID}, f.date)
 	require.NoError(t, err)
+	row := rows[reclaimed.ID]
 	require.NotNil(t, row)
 	assert.Equal(t, careplan.ExceptionSourceGuardian, row.Source, "the guardian's arrival stays")
 }

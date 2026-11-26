@@ -22,10 +22,13 @@ type StaffPersonResponse struct {
 	LastName  string    `json:"last_name"`
 	Email     string    `json:"email,omitempty"`
 	Avatar    string    `json:"avatar,omitempty"`
-	TagID     string    `json:"tag_id,omitempty"`
+	TagID     string    `json:"tag_id,omitempty" contract_text:"RFID tag code, not a database row ID"`
 	AccountID *ident.ID `json:"account_id,omitempty"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
+	// Version is the token of the person (ADR 0311): a name change through
+	// PUT /api/users/{id} sends it back as expected_version.
+	Version string `json:"version"`
 }
 
 // StaffResponse represents a staff response.
@@ -88,6 +91,19 @@ type StaffRecordResponse struct {
 	// without a Role.
 	RoleForm       string `json:"role_form,omitempty"`
 	Qualifications string `json:"qualifications,omitempty"`
+	// Version is the token of the record form (ADR 0311): the staff update
+	// sends it back as expected_version. Only a caller who may write the
+	// record (staff:manage, the notes tier) receives it: it digests the
+	// private notes.
+	Version string `json:"version,omitempty"`
+}
+
+// recordVersion is the record's token for a caller of the notes tier.
+func recordVersion(access staffFieldAccess, staff schoolmembership.Staff, teacher *schoolmembership.Teacher) string {
+	if !access.notes || access.recordVersion == nil {
+		return ""
+	}
+	return access.recordVersion(staff, teacher)
 }
 
 // StaffWithRoleResponse represents a staff member with role information.
@@ -114,6 +130,10 @@ type StaffRequest struct {
 	Specialization string `json:"specialization,omitempty"`
 	Role           string `json:"role,omitempty"`
 	Qualifications string `json:"qualifications,omitempty"`
+	// ExpectedVersion is the version of the record the form showed (ADR
+	// 0311). An update refuses another one, also an empty one; a create
+	// ignores it.
+	ExpectedVersion string `json:"expected_version,omitempty"`
 }
 
 // Bind validates the staff request.
@@ -194,11 +214,17 @@ func (req *ExternalInvitationRequest) Bind(*http.Request) error {
 type SchoolClassesResponse struct {
 	StaffID       ident.ID `json:"staff_id"`
 	SchoolClasses []string `json:"school_classes"`
+	// Version is the token of these assignments (ADR 0311); the PUT sends
+	// it back as expected_version and answers the new one.
+	Version string `json:"version"`
 }
 
 // SchoolClassesRequest is the PUT body replacing the assignments.
 type SchoolClassesRequest struct {
 	SchoolClasses []string `json:"school_classes"`
+	// ExpectedVersion is the version of the assignments the form showed
+	// (ADR 0311); another one, also an empty one, is refused.
+	ExpectedVersion string `json:"expected_version"`
 }
 
 // Bind implements render.Binder.
@@ -225,10 +251,16 @@ type staffFieldAccess struct {
 	// plannedExit lets the person who may change an exit see its state without
 	// opening the rest of the personnel file.
 	plannedExit bool
+	// recordVersion is Runtime.RecordVersion, set for the notes tier only.
+	recordVersion func(schoolmembership.Staff, *schoolmembership.Teacher) string
 }
 
 func (rs *Resource) fieldAccess(ctx context.Context) staffFieldAccess {
-	return fieldAccessFor(rs.runtime.HasPermission, rs.runtime.Permissions(ctx))
+	access := fieldAccessFor(rs.runtime.HasPermission, rs.runtime.Permissions(ctx))
+	if access.notes {
+		access.recordVersion = rs.runtime.RecordVersion
+	}
+	return access
 }
 
 // fieldAccessFor is the tier mapping on a plain permission list. The matcher
@@ -286,6 +318,7 @@ func newStaffPersonResponse(person *Person, email, avatar string) *StaffPersonRe
 		AccountID: (*ident.ID)(person.AccountID),
 		CreatedAt: person.CreatedAt,
 		UpdatedAt: person.UpdatedAt,
+		Version:   person.Version,
 	}
 }
 
@@ -347,6 +380,7 @@ func redactStaffFields(response *StaffResponse, access staffFieldAccess) {
 func buildStaffRecordResponse(access staffFieldAccess, staff schoolmembership.Staff, person *Person, teacher schoolmembership.Teacher, data enrichment) StaffRecordResponse {
 	response := StaffRecordResponse{
 		StaffResponse:  buildStaffResponse(access, staff, person, true, data),
+		Version:        recordVersion(access, staff, &teacher),
 		TeacherID:      ident.ID(teacher.ID),
 		Specialization: strings.TrimSpace(teacher.Specialization),
 		Role:           teacher.Role,
@@ -374,7 +408,7 @@ func buildResponse(access staffFieldAccess, staff schoolmembership.Staff, person
 
 // plainStaffRecord is the record of a staff member without a teacher profile.
 func plainStaffRecord(access staffFieldAccess, staff schoolmembership.Staff, person *Person, data enrichment) StaffRecordResponse {
-	return StaffRecordResponse{StaffResponse: buildStaffResponse(access, staff, person, false, data)}
+	return StaffRecordResponse{StaffResponse: buildStaffResponse(access, staff, person, false, data), Version: recordVersion(access, staff, nil)}
 }
 
 func plannedExitDate(staff schoolmembership.Staff) *calendar.Date {

@@ -1,16 +1,17 @@
 package careplanhttp
 
 import (
-	json "encoding/json"
 	errors "errors"
 	http "net/http"
-	strconv "strconv"
 	strings "strings"
 
 	render "github.com/go-chi/render"
+
 	common "github.com/moto-ogs/project-phoenix/api/common"
 	parentrequests "github.com/moto-ogs/project-phoenix/modules/careplan/parentrequests"
 	sessiontoken "github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	tenant "github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -23,7 +24,7 @@ type bulkApproveParentRequestsBody struct {
 // version the reviewer saw.
 type bulkApproveParentRequestRef struct {
 	Kind            parentrequests.Kind `json:"kind"`
-	ID              string              `json:"id"`
+	ID              ident.ID            `json:"id"`
 	ExpectedVersion string              `json:"expected_version"`
 }
 
@@ -38,14 +39,14 @@ func (rs *Resource) bulkApproveParentRequests(w http.ResponseWriter, r *http.Req
 		return
 	}
 	var body bulkApproveParentRequestsBody
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err := wire.Decode(r.Body, &body); err != nil {
 		renderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
 		return
 	}
 	refs := make([]parentrequests.Ref, 0, len(body.Requests))
 	for _, item := range body.Requests {
-		id, err := strconv.ParseInt(item.ID, 10, 64)
-		if err != nil || id <= 0 {
+		id := item.ID.Int64()
+		if id <= 0 {
 			renderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request id")))
 			return
 		}

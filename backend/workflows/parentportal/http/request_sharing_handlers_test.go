@@ -8,17 +8,18 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	parentService "github.com/moto-ogs/project-phoenix/workflows/parentportal"
 )
 
 func TestParseRecipientGuardianProfileIDsRejectsForgedValuesAndDuplicates(t *testing.T) {
 	t.Parallel()
 
-	for _, raw := range [][]string{{"0"}, {"-1"}, {"abc"}, {"7", "7"}} {
+	for _, raw := range [][]ident.ID{{0}, {-1}, {7, 7}} {
 		_, err := parseRecipientGuardianProfileIDs(raw)
 		assert.ErrorIs(t, err, parentService.ErrRequestSharingInvalid)
 	}
-	ids, err := parseRecipientGuardianProfileIDs([]string{"7", " 9 "})
+	ids, err := parseRecipientGuardianProfileIDs([]ident.ID{7, 9})
 	require.NoError(t, err)
 	assert.Equal(t, []int64{7, 9}, ids)
 }
@@ -43,6 +44,6 @@ func TestRequestSharingResponseNeverExposesAccountIDs(t *testing.T) {
 		}},
 	})
 	require.Len(t, response.Recipients, 1)
-	assert.Equal(t, "7", response.Recipients[0].GuardianProfileID)
+	assert.Equal(t, "7", response.Recipients[0].GuardianProfileID.String())
 	assert.True(t, response.Recipients[0].Selected)
 }

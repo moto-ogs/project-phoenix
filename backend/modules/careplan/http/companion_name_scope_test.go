@@ -6,10 +6,11 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/moto-ogs/project-phoenix/api/testutil"
-	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/moto-ogs/project-phoenix/api/testutil"
+	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
 // TestGetStudentCompanions_NamesVisibleAcrossGroups pins the read scope of the
@@ -48,8 +49,8 @@ func TestGetStudentCompanions_NamesVisibleAcrossGroups(t *testing.T) {
 	putStudent(t, tc, crossGroup.ID, accompaniedPlanBody(nil))
 	putStudent(t, tc, subject.ID, accompaniedPlanBody(map[string]any{
 		"companions": []map[string]any{
-			{"companion_student_id": sameGroup.ID, "weekdays": []string{"mon"}},
-			{"companion_student_id": crossGroup.ID, "weekdays": []string{"mon"}},
+			{"companion_student_id": fmt.Sprint(sameGroup.ID), "weekdays": []string{"mon"}},
+			{"companion_student_id": fmt.Sprint(crossGroup.ID), "weekdays": []string{"mon"}},
 		},
 		"companions_fingerprint": mondayLinkFingerprint(),
 	}))

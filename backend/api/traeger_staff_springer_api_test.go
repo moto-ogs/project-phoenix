@@ -69,13 +69,13 @@ func TestStaffPoolFirstBlockEmploysTheSpringer(t *testing.T) {
 	_, southLead := testpkg.CreateTestStaffWithAccountForTenant(t, db, south, "Sina", "Süd")
 	_, westLead := testpkg.CreateTestStaffWithAccountForTenant(t, db, west, "Wim", "West")
 	rec := traegerLink(t, router, office.token, map[string]any{
-		"members": []map[string]int64{{"school_id": north, "staff_id": mira.ID}},
+		"members": []map[string]string{{"school_id": fmt.Sprint(north), "staff_id": fmt.Sprint(mira.ID)}},
 	})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	record := decode[staffRecordBody](t, rec).ID
 	rec = traegerJSON(t, router, office.token, http.MethodPost, fmt.Sprintf("/traeger/staff-records/%d/contracts", record), map[string]any{
 		"kind": "part_time", "starts_on": "2026-08-01", "pool": true,
-		"sites": []map[string]any{{"school_id": north, "staff_id": mira.ID, "weekday_minutes": []int{300, 300, 300, 300, 300}}},
+		"sites": []map[string]any{{"school_id": fmt.Sprint(north), "staff_id": fmt.Sprint(mira.ID), "weekday_minutes": []int{300, 300, 300, 300, 300}}},
 	})
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 

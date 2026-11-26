@@ -1,6 +1,6 @@
 {
   "child_not_enrolled": "Nie można: {object}. Dziecko nie jest tego dnia pod opieką.",
-  "day_changed": "Ktoś inny zmienił w międzyczasie jadłospis. Wybierz „Verwerfen”, aby zobaczyć nową wersję. Wybierz „Speichern”, aby zastąpić ją swoimi zmianami.",
+  "day_changed": "Ktoś inny zmienił w międzyczasie ten dzień jadłospisu. Teraz widzisz aktualny stan. Sprawdź go i zapisz ponownie.",
   "day_closed": "Nie można: {object}. Tego dnia szkoła jest zamknięta.",
   "day_past": "Już nie można: {object}. Ten dzień już minął.",
   "invalid_allergens": "Nie udało się zapisać alergenów. Prosimy wybrać je ponownie.",
@@ -16,7 +16,7 @@
   "not_supplied": "Nie zaopatrujesz już tej szkoły. Proszę zapytać szkołę.",
   "order_not_found": "To zamówienie nie istnieje. Proszę odświeżyć stronę.",
   "supply_active": "{object} nie jest teraz możliwe. Szkołę nadal zaopatruje firma cateringowa. Najpierw zakończ to zaopatrzenie.",
-  "participation_manage_denied": "Możesz przeglądać zapisy na posiłki, ale nie możesz ich zmieniać. Skontaktuj się z zespołem opieki pozaszkolnej.",
+  "participation_manage_denied": "Możesz przeglądać zapisy na posiłki, ale nie możesz ich zmieniać. Skontaktuj się z {careTerm}.",
   "billing_month_running": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
   "billing_month_released": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
   "billing_month_changed": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",

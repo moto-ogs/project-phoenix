@@ -1,6 +1,12 @@
 package account
 
-import "context"
+import (
+	"context"
+	"errors"
+)
+
+// ErrInvalidSchoolSubdomain is the directory's input validation failure.
+var ErrInvalidSchoolSubdomain = errors.New("invalid tenant subdomain")
 
 // TenantSchool is the part of a school the tenant, invitation and passkey
 // routes read.

@@ -253,6 +253,7 @@ export const HELP_TOPIC_AUDIENCE = {
   [HELP_TOPICS.parentEnroll]: "parent",
   [HELP_TOPICS.parentEnrollStatus]: "parent",
   [HELP_TOPICS.parentHolidayRegistration]: "parent",
+  [HELP_TOPICS.parentHolidayConsents]: "parent",
   [HELP_TOPICS.parentAccountProblem]: "parent",
   [HELP_TOPICS.parentChildMissing]: "parent",
   [HELP_TOPICS.parentFeatureMissing]: "parent",
@@ -262,6 +263,7 @@ export const HELP_TOPIC_AUDIENCE = {
   [HELP_TOPICS.traegerTestSystem]: "traeger",
   [HELP_TOPICS.traegerInvitation]: "traeger",
   [HELP_TOPICS.traegerAccounts]: "traeger",
+  [HELP_TOPICS.traegerSchoolRoles]: "traeger",
   [HELP_TOPICS.traegerProfile]: "traeger",
   [HELP_TOPICS.traegerHolidayPeriod]: "traeger",
   [HELP_TOPICS.traegerCatalogPhases]: "traeger",
@@ -288,9 +290,11 @@ export const HELP_TOPIC_AUDIENCE = {
   [HELP_TOPICS.traegerBillingTerms]: "traeger",
   [HELP_TOPICS.traegerAccessLog]: "traeger",
   [HELP_TOPICS.traegerSettings]: "traeger",
+  [HELP_TOPICS.traegerModules]: "traeger",
   [HELP_TOPICS.traegerBriefkopf]: "traeger",
   [HELP_TOPICS.traegerDocumentTemplates]: "traeger",
   [HELP_TOPICS.traegerDocumentKinds]: "traeger",
+  [HELP_TOPICS.traegerResponsibilities]: "traeger",
   [HELP_TOPICS.traegerCareContracts]: "traeger",
   [HELP_TOPICS.traegerCareTimeOverruns]: "traeger",
   [HELP_TOPICS.traegerArrivalPickupTimes]: "traeger",
@@ -307,6 +311,7 @@ export const HELP_TOPIC_AUDIENCE = {
   [HELP_TOPICS.schoolTraegerDocuments]: "lead",
   [HELP_TOPICS.traegerSchoolSwitch]: "traeger",
   [HELP_TOPICS.traegerSchoolView]: "traeger",
+  [HELP_TOPICS.traegerChildren]: "traeger",
   [HELP_TOPICS.traegerDashboard]: "traeger",
   [HELP_TOPICS.traegerOccupancy]: "traeger",
   [HELP_TOPICS.traegerUtilization]: "traeger",
@@ -351,4 +356,43 @@ export function isHelpTopicAvailable(
     return false;
   }
   return helpAudienceIncludes(HELP_TOPIC_AUDIENCE[topic], role);
+}
+
+/**
+ * Seiten, die Leitung und Team beide öffnen, mit je einem eigenen Artikel.
+ * Der Betreuungsplan steht seit #8134 für alle im Tagesbetrieb: die Leitung
+ * plant dort, das Team liest. Wer den Artikel der Leitung nicht hat, bekommt
+ * den zum Ansehen statt gar kein Fragezeichen.
+ */
+const READER_HELP_TOPICS: Readonly<Partial<Record<HelpTopicId, HelpTopicId>>> =
+  {
+    [HELP_TOPICS.leadCarePlan]: HELP_TOPICS.carePlan,
+  };
+
+/**
+ * Der Artikel, den `role` für die Seite mit dem Artikel `topic` bekommt:
+ * `topic` selbst, sein Gegenstück für Lesende oder `null`, wenn es für die
+ * Rolle keinen gibt.
+ */
+export function helpTopicForRole(
+  topic: HelpTopicId,
+  role: HelpRole,
+  presenceMode: HelpPresenceMode,
+  groupMode: HelpGroupMode,
+  nfcEnabled: boolean | null,
+): HelpTopicId | null {
+  const candidates = [topic, READER_HELP_TOPICS[topic]];
+  return (
+    candidates.find(
+      (candidate): candidate is HelpTopicId =>
+        candidate !== undefined &&
+        isHelpTopicAvailable(
+          candidate,
+          role,
+          presenceMode,
+          groupMode,
+          nfcEnabled,
+        ),
+    ) ?? null
+  );
 }

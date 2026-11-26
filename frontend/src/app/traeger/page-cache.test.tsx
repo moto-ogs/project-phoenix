@@ -15,10 +15,10 @@ import { traegerKeys } from "~/lib/swr/traeger-keys";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
 import { resumeSWRSession } from "~/lib/swr/scope";
-import PeriodsPage from "./ferien/page";
-import PeriodPage from "./ferien/[id]/page";
-import NewPeriodPage from "./ferien/neu/page";
-import FormPage from "./ferien/[id]/formular/page";
+import PeriodsPage from "./ferien/page-content";
+import PeriodPage from "./ferien/[id]/page-content";
+import NewPeriodPage from "./ferien/neu/page-content";
+import FormPage from "./ferien/[id]/formular/page-content";
 
 vi.unmock("swr");
 const { api, identity, announce, discardUploads } = vi.hoisted(() => ({
@@ -99,7 +99,7 @@ vi.mock("~/components/traeger/holiday-form-editor", () => ({
   },
 }));
 
-function signIn(id = "A", orgId = 7) {
+function signIn(id = "A", orgId = "7") {
   identity.session = {
     user: { id, scope: "org", orgId },
     expires: "2099-01-01",
@@ -366,7 +366,7 @@ describe("Träger list-to-detail cache", () => {
       else
         signIn(
           change === "account" ? "B" : "A",
-          change === "organization" ? 8 : 7,
+          change === "organization" ? "8" : "7",
         );
       view.rerender(<Route detail />);
     }

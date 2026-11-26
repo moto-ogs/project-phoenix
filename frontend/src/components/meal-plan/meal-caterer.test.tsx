@@ -24,7 +24,7 @@ vi.unmock("swr");
 
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
-    data: { user: { id: "account-1", tenantId: 1, scope: "tenant" } },
+    data: { user: { id: "account-1", tenantId: "1", scope: "tenant" } },
     status: "authenticated",
   }),
 }));
@@ -157,7 +157,7 @@ describe("MealCaterer", () => {
     await waitFor(() =>
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
     );
-    // Liste fürs Handy und Tabelle stehen beide im DOM (stackedOnMobile).
+    // Liste fürs Handy und Tabelle stehen beide im DOM (gestapelt unter md).
     expect(await screen.findAllByText("Offene Einladungen")).not.toHaveLength(
       0,
     );

@@ -83,6 +83,8 @@ type careNoticeRow struct {
 	TotalCents     int64                          `bun:"total_cents,notnull"`
 	DeltaCents     int64                          `bun:"delta_cents,notnull"`
 	LegalRemedy    string                         `bun:"legal_remedy,notnull"`
+	IssuerKey      string                         `bun:"issuer_key"`
+	Issuer         *issuerRow                     `bun:"issuer,type:jsonb"`
 }
 
 // careNoticeSnapshot is what a month of a notice bills, as the monthly
@@ -267,7 +269,7 @@ func (r careNoticeRow) notice() parentbilling.CareNotice {
 		StudentID: r.StudentID, Recipient: r.Recipient, FamilyEmail: r.FamilyEmail, PaymentMethod: r.PaymentMethod, Year: r.Year, PeriodFrom: r.PeriodFrom,
 		PeriodUntil: r.PeriodUntil, Lines: r.Lines, PreviousCents: r.PreviousCents, TotalCents: r.TotalCents,
 		DeltaCents: r.DeltaCents, LegalRemedy: r.LegalRemedy, Installments: []parentbilling.CareNoticeInstallment{},
-		Months: []parentbilling.CareInvoice{}}
+		Months: []parentbilling.CareInvoice{}, Issuer: r.Issuer.issuer()}
 	if notice.Lines == nil {
 		notice.Lines = []parentbilling.CareNoticeLine{}
 	}
@@ -321,9 +323,9 @@ func applyNoticeReference(notice *parentbilling.CareNotice, id int64, number str
 	}
 }
 
-// IssueCareNotices stores the numbered notices of a release with their
-// months; the i-th notice has the sequence first+i of the counter of the
-// year. A number a holiday document, a monthly invoice, a Storno or another
+// IssueCareNotices stores the numbered notices of one issuer of a release
+// with their months; the i-th notice has the sequence first+i of the
+// counter of the issuer and year. A number a holiday document, a monthly invoice, a Storno or another
 // notice carries is ErrInvoiceNumberTaken; a notice amended in the meantime
 // or a second first notice of a contract and year is ErrBillingRunChanged.
 func (s *Store) IssueCareNotices(ctx context.Context, organizationID int64, run parentbilling.CareNoticeRun, numberYear int, first int64,
@@ -337,8 +339,11 @@ func (s *Store) IssueCareNotices(ctx context.Context, organizationID int64, run 
 	for i, notice := range notices {
 		numbers[i] = notice.Number
 	}
+	if len(notices) == 0 {
+		return nil
+	}
 	for _, other := range []string{holidayNumbersTable, careNumbersTable} {
-		if err := claimInvoiceNumbers(ctx, db, organizationID, numbers, other); err != nil {
+		if err := claimInvoiceNumbers(ctx, db, organizationID, parentbilling.IssuerKeyOf(notices[0].Issuer), numbers, other); err != nil {
 			return err
 		}
 	}
@@ -401,7 +406,7 @@ func noticeFamily(notice parentbilling.CareNotice) string {
 	if notice.FamilyEmail != "" {
 		return notice.FamilyEmail
 	}
-	return parentbilling.ContractFamilyKey(notice.Recipient.Email, notice.ContractID.Int64())
+	return notice.Recipient.FamilyOf(notice.ContractID.Int64())
 }
 
 func noticeRow(organizationID, runID int64, numberYear int, sequence int64, notice parentbilling.CareNotice) *careNoticeRow {
@@ -412,6 +417,7 @@ func noticeRow(organizationID, runID int64, numberYear int, sequence int64, noti
 		FamilyEmail: noticeFamily(notice), Recipient: notice.Recipient,
 		PaymentMethod: notice.PaymentMethod, PeriodFrom: notice.PeriodFrom, PeriodUntil: notice.PeriodUntil, Lines: notice.Lines,
 		PreviousCents: notice.PreviousCents, TotalCents: notice.TotalCents, DeltaCents: notice.DeltaCents, LegalRemedy: notice.LegalRemedy}
+	row.IssuerKey, row.Issuer = issuerColumns(notice.Issuer)
 	if notice.Amends != nil {
 		row.AmendsNoticeID = (*int64)(&notice.Amends.ID)
 	}

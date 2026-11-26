@@ -1,5 +1,6 @@
 "use client";
 
+import type { AdminRestoreResponse } from "~/lib/contract/enrollment.generated";
 import {
   APPROVAL_WITHOUT_OFFERING_COPY,
   approvalNeedsOfferingConfirm,
@@ -33,6 +34,7 @@ import {
 import { StatCard } from "~/components/ui/stat-card";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import {
+  type AdminChildOfferingsUpdate,
   type AdminRequestChild,
   type AdminRequestDetail,
   type AdminRequestSummary,
@@ -58,7 +60,10 @@ import { berlinTodayISO } from "~/lib/date-helpers";
 import { enrolledClassLabel } from "~/lib/school-class-label";
 import { AdminChildDataCorrection } from "~/components/enrollment/admin-child-data-correction";
 import { AdminEnrollmentDeletionModal } from "~/components/enrollment/admin-enrollment-deletion-modal";
-import { ChildOfferingAdjustment } from "~/components/enrollment/child-offering-adjustment";
+import {
+  ChildOfferingAdjustment,
+  withSavedOfferings,
+} from "~/components/enrollment/child-offering-adjustment";
 import {
   ChildExtraFields,
   ChildOfferings,
@@ -295,6 +300,37 @@ export function AdminEnrollmentDetail({ requestId, info }: Props) {
       void refreshAfterWrite();
     },
     [mutateDetail, refreshAfterWrite],
+  );
+
+  // A correction of a child's bookings: its answer carries their new
+  // offerings_version into the cache, then the request is read again.
+  const handleOfferingsSaved = useCallback(
+    (saved: AdminChildOfferingsUpdate) => {
+      void mutateDetail(
+        (current) =>
+          current && {
+            ...current,
+            children: current.children.map((existingChild) =>
+              existingChild.id === saved.id
+                ? withSavedOfferings(existingChild, saved)
+                : existingChild,
+            ),
+          },
+        { revalidate: false },
+      );
+      void refreshAfterWrite();
+    },
+    [mutateDetail, refreshAfterWrite],
+  );
+  // The stored child after a refused correction; a failure rejects.
+  const readChildAgain = useCallback(
+    async (childId: string) => {
+      const fresh = await mutateDetail(fetchDetail(), { revalidate: false });
+      return fresh?.children.find(
+        (existingChild) => existingChild.id === childId,
+      );
+    },
+    [mutateDetail, fetchDetail],
   );
 
   const hasPendingWeeklyPlan = data?.children.some(
@@ -781,7 +817,8 @@ export function AdminEnrollmentDetail({ requestId, info }: Props) {
                       ? () => rejectDuplicate(child)
                       : undefined
                   }
-                  onOfferingsChanged={() => void refreshAfterWrite()}
+                  onOfferingsChanged={handleOfferingsSaved}
+                  readChild={() => readChildAgain(child.id)}
                   onChildChanged={readDetailAgain}
                   onDataCorrected={handleDataCorrected}
                   onDelete={() =>
@@ -937,6 +974,7 @@ function ChildInformationCard({
   onDecide,
   onDataCorrected,
   onOfferingsChanged,
+  readChild,
   onChildChanged,
   onReasonChange,
   onRejectDuplicate,
@@ -960,7 +998,9 @@ function ChildInformationCard({
   phaseName?: string;
   onDecide: (status: DecisionStatus) => void;
   onDataCorrected: (correctedChild: AdminRequestChild) => void;
-  onOfferingsChanged: () => void;
+  onOfferingsChanged: (saved: AdminChildOfferingsUpdate) => void;
+  /** Reads the child again as stored; rejects when the read fails. */
+  readChild: () => Promise<AdminRequestChild | undefined>;
   /** Reads the request again; rejects when the read fails. */
   onChildChanged: () => Promise<void>;
   onReasonChange: (value: string) => void;
@@ -1096,6 +1136,7 @@ function ChildInformationCard({
             phaseId={phaseId}
             child={child}
             onSaved={onOfferingsChanged}
+            reload={readChild}
           />
         ) : null}
         <ChildExtraFields child={child} schemaFields={schemaFields} />
@@ -1372,10 +1413,7 @@ function getDecisionIcon(status: DecisionStatus): React.ReactNode {
   return <CalendarClock className="h-4 w-4" aria-hidden="true" />;
 }
 
-function buildRestoreInfoMessage(result: {
-  restored_children: number;
-  waitlisted_children: number;
-}): string {
+function buildRestoreInfoMessage(result: AdminRestoreResponse): string {
   const restored = result.restored_children;
   const waitlisted = result.waitlisted_children;
   if (waitlisted > 0) {

@@ -18,7 +18,7 @@ func TestHolidayInvoiceFallsBackToTheDebtorNumberOfTheFamily(t *testing.T) {
 		families: map[string]*parentbilling.FamilyBilling{
 			"eva.muster@example.org": {ID: 7, FamilyEmail: "eva.muster@example.org", RecipientKind: parentbilling.RecipientApplicant, DebtorNumber: "20 815"},
 		},
-		used: map[int64]parentbilling.FamilyBilling{}, mandates: map[string]*parentbilling.SEPAMandate{}, usedMandates: map[int64]parentbilling.SEPAMandate{}}
+		used: map[int64]parentbilling.FamilyBilling{}, mandates: map[mandateKey]*parentbilling.SEPAMandate{}, usedMandates: map[int64]parentbilling.SEPAMandate{}}
 	issuedOn := calendar.NewDate(2026, 11, 2)
 
 	for name, tc := range map[string]struct{ email, registration, want string }{

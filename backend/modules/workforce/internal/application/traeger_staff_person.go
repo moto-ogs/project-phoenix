@@ -7,6 +7,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/domain"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // UpdatePerson corrects first name, last name and birthday of the record
@@ -14,7 +15,8 @@ import (
 // trail in the same Träger transaction; unchanged values write nothing. The
 // schools keep their own person rows (ADR 0089 section 3): the correction
 // reaches the Träger's lists, exports, the proposals and the duplicate check
-// of a hire.
+// of a hire. A person changed since the form read it is refused under the
+// record lock (ADR 0311).
 func (t *TraegerStaff) UpdatePerson(ctx context.Context, actor workforce.TraegerStaffActor, recordID int64, input workforce.TraegerStaffPerson) error {
 	person, err := domain.NormalizeStaffPerson(domain.StaffPerson{
 		FirstName: input.FirstName, LastName: input.LastName, Birthday: domain.Deref(input.Birthday),
@@ -28,6 +30,9 @@ func (t *TraegerStaff) UpdatePerson(ctx context.Context, actor workforce.Traeger
 	err = t.released(ctx, actor, func(ctx context.Context) error {
 		locked, err := t.store.FindStaffRecord(ctx, actor.OrganizationID, recordID, true)
 		if err != nil {
+			return err
+		}
+		if err := readstate.Check(input.ExpectedVersion, personVersion(locked)); err != nil {
 			return err
 		}
 		corrected, changed := locked.ApplyPerson(person)

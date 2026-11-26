@@ -302,14 +302,17 @@ welche gewinnt, hängt an der internen Sortierung von Tailwind.
 Kopfkarte: Innenrand und Titelgrade aller Stufen stehen als
 `HEAD_PADDING` und `HEAD_TITLE_SIZE` in `control-geometry.ts`.
 
-| Mass                    | Desktop            | `compact`       | Telefon  |
-| ----------------------- | ------------------ | --------------- | -------- |
-| Seitenrand der Hülle    | 32 px              | 20 px           | 16 px    |
-| `SectionCard`           | 20/24 px           | 16 px           | 16 px    |
-| `StatCard`, `TileCard`  | 20 px              | 16 px           | 12/16 px |
-| Rumpf-Rhythmus          | 24 px              | 16 px           | 12 px    |
-| Reiterband              | 12 px, `text-base` | 8 px, `text-sm` | Pillen   |
-| Tabellenzelle senkrecht | 12 px              | 8 px            | 12 px    |
+| Mass                           | Desktop            | `compact`       | Telefon  |
+| ------------------------------ | ------------------ | --------------- | -------- |
+| Seitenrand der Hülle           | 32 px              | 20 px           | 16 px    |
+| `SectionCard`                  | 20/24 px           | 16 px           | 16 px    |
+| `StatCard`, `TileCard`         | 20 px              | 16 px           | 12/16 px |
+| Rumpf-Rhythmus                 | 24 px              | 16 px           | 12 px    |
+| Reiterband                     | 12 px, `text-base` | 8 px, `text-sm` | Pillen   |
+| Tabellenzelle senkrecht        | 12 px              | 8 px            | 12 px    |
+| `SectionCard`: Kopf zum Inhalt | 16 px              | 12 px           | 12 px    |
+| `InsetPanel` `md`              | 16 px              | 16 px           | 12 px    |
+| `ListRow` `compact`            | 6 px senkrecht     | 6 px            | 8 px     |
 
 Nicht in der Stufe: die Bedienhöhe. 768–1023 px ist genau der Tablet-
 Bereich, und ein 36-px-Knopf unterschreitet dort das Touch-Mass. Regel 17

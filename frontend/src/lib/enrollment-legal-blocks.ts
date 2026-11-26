@@ -1,3 +1,4 @@
+import { bffFileHref } from "./bff-fetch";
 /**
  * Legal blocks of an enrollment form template: the four standard blocks the
  * tenant's legal texts fill, the template's own consents, and the rules both
@@ -110,7 +111,7 @@ export const STANDARD_LEGAL_BLOCKS: FormLegalBlock[] = [
     kind: "consent",
     title: "Fotoeinwilligung",
     label:
-      "Mein Kind darf bei Schulveranstaltungen fotografiert werden. Diese Einwilligung ist freiwillig und jederzeit mit Wirkung für die Zukunft widerrufbar.",
+      "Mein Kind darf in der Betreuung fotografiert werden. Ein Foto von meinem Kind darf in moto gespeichert werden. Diese Einwilligung ist freiwillig und jederzeit mit Wirkung für die Zukunft widerrufbar.",
     text: "",
     required: false,
     enabled: false,
@@ -177,12 +178,26 @@ export function legalBlockDisplayMode(
 /** The public download address of a stored legal document. */
 export function publicAGBDocumentURL(storedURL: string): string {
   const globalPrefix = "/uploads/enrollment-legal-documents/";
-  if (storedURL.startsWith(globalPrefix)) {
-    return `/api/public/enrollment-legal-documents/${storedURL.slice(globalPrefix.length)}`;
+  if (
+    storedURL.startsWith(globalPrefix) &&
+    storedURL.length > globalPrefix.length
+  ) {
+    return bffFileHref(
+      "public",
+      "GET /public/enrollment-legal-documents/{filename}",
+      { params: { filename: storedURL.slice(globalPrefix.length) } },
+    );
   }
   const formPrefix = "/uploads/enrollment-form-legal-documents/";
-  if (storedURL.startsWith(formPrefix)) {
-    return `/api/public/enrollment-form-legal-documents/${storedURL.slice(formPrefix.length)}`;
+  if (
+    storedURL.startsWith(formPrefix) &&
+    storedURL.length > formPrefix.length
+  ) {
+    return bffFileHref(
+      "public",
+      "GET /public/enrollment-form-legal-documents/{filename}",
+      { params: { filename: storedURL.slice(formPrefix.length) } },
+    );
   }
   return storedURL;
 }
@@ -216,14 +231,28 @@ export function legalBlockPreviewText(block: FormLegalBlock): string {
   return block.text;
 }
 
+/**
+ * Der Standardwortlaut der Foto-Einwilligung vor #8039. Eine Vorlage speichert
+ * den Text, mit dem sie gesichert wurde. Steht dort noch dieser Wortlaut, hat
+ * die Schule nichts geändert: Eltern sehen im Formular den aktuellen
+ * Standardtext (Backend: `withCurrentStandardPhotoLabel`).
+ */
+const PREVIOUS_STANDARD_PHOTO_LABEL =
+  "Mein Kind darf bei Schulveranstaltungen fotografiert werden. Diese Einwilligung ist freiwillig und jederzeit mit Wirkung für die Zukunft widerrufbar.";
+
 export function hasStandardLegalBlockOverride(
   block: FormLegalBlock,
   standardBlock: FormLegalBlock,
 ): boolean {
+  const label =
+    block.key === "photo" &&
+    block.label.trim() === PREVIOUS_STANDARD_PHOTO_LABEL
+      ? standardBlock.label
+      : block.label;
   return (
     block.kind !== standardBlock.kind ||
     block.title !== standardBlock.title ||
-    block.label !== standardBlock.label ||
+    label !== standardBlock.label ||
     block.text !== standardBlock.text ||
     block.required !== standardBlock.required ||
     (block.guardian_agreement ?? false) !==
@@ -364,9 +393,16 @@ export function legalBlocksForTemplate(
   const savedByKey = new Map(
     savedBlocks.map((block) => [block.key, withDecidedLegalRules(block)]),
   );
-  const mergedStandardBlocks = standardBlocks.map(
-    (standard) => savedByKey.get(standard.key) ?? standard,
-  );
+  // #8039: Eine Vorlage mit dem Standardtext von vorher zeigt im Editor den
+  // Text, den Eltern im Formular sehen; das nächste Speichern schreibt ihn.
+  const mergedStandardBlocks = standardBlocks.map((standard) => {
+    const saved = savedByKey.get(standard.key);
+    if (!saved) return standard;
+    return saved.key === "photo" &&
+      saved.label.trim() === PREVIOUS_STANDARD_PHOTO_LABEL
+      ? { ...saved, label: standard.label }
+      : saved;
+  });
   const standardKeys = new Set(standardBlocks.map((block) => block.key));
   const customBlocks = savedBlocks
     .filter((block) => !isStandardLegalBlock(block, standardKeys))

@@ -58,7 +58,7 @@ func (c *Contracts) versionDocument(ctx context.Context, reviewer carecontract.R
 	}
 	if !stored {
 		record.Version = *version
-		if file, _, err = c.render(ctx, reviewer, record); err != nil {
+		if file, _, err = c.render(ctx, reviewer, record, draftPreview(record)); err != nil {
 			return carecontract.File{}, 0, err
 		}
 	}
@@ -94,7 +94,7 @@ func withSentVersion(record ContractRecord, versions []carecontract.Version) Con
 	for _, version := range versions {
 		if version.ID == ident.ID(record.SentDocument.VersionID) {
 			documentID := record.SentDocument.ID
-			record.Version, record.DocumentID = version, &documentID
+			record.Version, record.DocumentID, record.Issuer = version, &documentID, record.SentDocument.Issuer
 		}
 	}
 	return record

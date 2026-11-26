@@ -24,5 +24,40 @@
     "more": "{count, plural, one {# weitere Anmeldung} other {# weitere Anmeldungen}}",
     "showAllTooltip": "Öffnet die Liste aller Ferienanmeldungen deiner Kinder."
   },
-  "toDocumentsTooltip": "Öffnet deine Dokumente mit Bestätigung und Rechnung."
+  "toDocumentsTooltip": "Öffnet deine Dokumente mit Bestätigung und Rechnung.",
+  "consents": {
+    "title": "Einwilligungen",
+    "description": "Freiwillig. Du kannst jede Einwilligung jederzeit widerrufen oder wieder geben. Das Team, das dein Kind in den Ferien betreut, sieht den Stand sofort.",
+    "states": {
+      "given": "Erteilt",
+      "withdrawn": "Widerrufen",
+      "notGiven": "Nicht erteilt"
+    },
+    "dates": {
+      "given": "Seit {date}",
+      "withdrawn": "Du hast sie am {date} widerrufen.",
+      "notGiven": "Du hast sie bei der Anmeldung nicht gegeben."
+    },
+    "withdraw": "Widerrufen",
+    "withdrawAria": "Einwilligung „{title}“ widerrufen",
+    "withdrawTooltip": "Widerruft die Einwilligung. moto fragt vorher nach.",
+    "grant": "Einwilligung geben",
+    "grantAria": "Einwilligung „{title}“ geben",
+    "grantTooltip": "Gibt die Einwilligung. moto fragt vorher nach.",
+    "withdrawTitle": "Einwilligung widerrufen?",
+    "withdrawNote": "Der Widerruf gilt ab jetzt. Das Team, das dein Kind in den Ferien betreut, sieht ihn sofort.",
+    "withdrawConfirm": "Widerrufen",
+    "withdrawing": "Wird widerrufen …",
+    "grantTitle": "Einwilligung geben?",
+    "grantNote": "Die Einwilligung gilt ab jetzt. Du kannst sie jederzeit wieder widerrufen.",
+    "grantConfirm": "Einwilligung geben",
+    "granting": "Wird gespeichert …",
+    "withdrawSuccess": "Du hast die Einwilligung „{title}“ widerrufen.",
+    "grantSuccess": "Du hast die Einwilligung „{title}“ gegeben.",
+    "cancel": "Abbrechen",
+    "close": "Schließen",
+    "errorObject": "Die Einwilligung",
+    "savedButStale": "Deine Änderung ist gespeichert. Nur die Anzeige ist noch nicht aktuell.",
+    "reloadObject": "Deine Ferienanmeldungen"
+  }
 }

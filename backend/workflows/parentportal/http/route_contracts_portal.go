@@ -71,6 +71,7 @@ func accountRouteContracts() []common.RouteContract {
 	portals := []common.PortalScope{common.PortalParent}
 	page := []common.QueryParam{{Name: "limit", Kind: common.QueryInt}, {Name: "cursor", Kind: common.QueryString}}
 	return []common.RouteContract{
+		{Method: "GET", Pattern: "/me/family-start", Portals: portals, Query: []common.QueryParam{{Name: "student_id", Kind: common.QueryID}}, Response: FamilyStartResponse{}},
 		{Method: "GET", Pattern: "/me/children", Portals: portals, Response: []ChildResponse{}},
 		{Method: "GET", Pattern: "/me/profile", Portals: portals, Response: ParentProfileResponse{}},
 		{Method: "PUT", Pattern: "/me/profile", Portals: portals, Request: UpdateParentProfileRequest{}, Response: ParentProfileResponse{}},
@@ -82,6 +83,7 @@ func accountRouteContracts() []common.RouteContract {
 		{Method: "POST", Pattern: "/me/notifications/feed/{id}/read", Portals: portals, Response: notificationFeedCountResponse{}},
 		{Method: "GET", Pattern: "/me/holiday-registrations", Portals: portals, Response: []HolidayRegistrationOfferResponse{}},
 		{Method: "GET", Pattern: "/me/holiday-registration-entries", Portals: portals, Response: HolidayRegistrationEntriesResponse{}},
+		{Method: "PUT", Pattern: "/me/holiday-registration-entries/{registrationId}/consents/{key}", Portals: portals, Request: HolidayRegistrationConsentRequest{}, NoData: true},
 	}
 }
 
@@ -159,6 +161,7 @@ func childStatusRouteContracts() []common.RouteContract {
 	return []common.RouteContract{
 		{Method: "GET", Pattern: child + "/features", Portals: portals, Response: ChildFeaturesResponse{}},
 		{Method: "GET", Pattern: child + "/today", Portals: portals, Response: TodayStatusResponse{}},
+		{Method: "GET", Pattern: child + "/day-changes", Portals: portals, Response: ChildDayChangesResponse{}, Enums: childDayChangesEnums()},
 		{Method: "GET", Pattern: child + "/consents", Portals: portals, Response: []ChildConsentResponse{}},
 		{
 			Method: "GET", Pattern: child + "/meal-plan", Portals: portals,

@@ -9,7 +9,7 @@ import {
 import { useSession } from "next-auth/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import StaffDetailContent from "./page";
+import StaffDetailContent from "./page-content";
 import { SWRConfig } from "~/lib/swr/testing";
 import { useSWRAuth, useTenantMutateMatching } from "~/lib/swr";
 import { staffKeys } from "~/lib/swr/staff-keys";
@@ -54,6 +54,13 @@ vi.mock("~/lib/breadcrumb-context", () => ({
 
 vi.mock("~/contexts/ToastContext", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/contexts/ToastContext")>()),
+  // Ablehnungen stehen beim Reiter (ADR 0311); hier ohne ToastProvider.
+  useApiErrorDisplay: () => ({
+    error: null,
+    show: vi.fn(),
+    clear: vi.fn(),
+    showMessage: vi.fn(),
+  }),
   useToast: () => ({ success: vi.fn(), error: vi.fn() }),
 }));
 
@@ -325,6 +332,7 @@ describe("StaffDetailContent: Personal-Datensatz (#4993)", () => {
         first_name: "Mila",
         staff_notes: null,
       }),
+      { onPersonSaved: expect.any(Function) },
     );
   });
 });

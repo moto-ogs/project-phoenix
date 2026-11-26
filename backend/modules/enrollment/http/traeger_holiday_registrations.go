@@ -48,6 +48,9 @@ func (rs *HolidayPeriodResource) registrationRoutes(r chi.Router, withTx common.
 	review.Post("/{id}/registrations/{registrationId}/proofs", rs.uploadOfficeProof)
 	review.Post("/{id}/registrations/{registrationId}/freeze", rs.registrationAction(capability.HolidayAuditFreeze))
 	review.Post("/{id}/registrations/{registrationId}/reopen", rs.registrationAction(capability.HolidayAuditReopen))
+	// The office records a withdrawal the parents declared outside moto
+	// (ADR 0321).
+	review.Post("/{id}/registrations/{registrationId}/consents/{key}/withdraw", rs.withdrawConsent)
 	review.Get("/{id}/places", rs.listPlaces)
 	review.Put("/{id}/registrations/{registrationId}/children/{childId}/holiday-wish", rs.setHolidayWish)
 	r.With(rs.requireManage, rs.withSchoolNames, withTx).Put("/{id}/registrations/{registrationId}/details", rs.editRegistration)
@@ -174,6 +177,21 @@ func (rs *HolidayPeriodResource) registrationAction(action string) http.HandlerF
 	}
 }
 
+// withdrawConsent records a withdrawal of a voluntary consent the parents
+// declared to the office and answers the changed registration.
+func (rs *HolidayPeriodResource) withdrawConsent(w http.ResponseWriter, r *http.Request) {
+	reviewer, periodID, registrationID, ok := registrationKey(w, r)
+	if !ok {
+		return
+	}
+	detail, err := rs.consents.WithdrawHolidayConsent(r.Context(), reviewer, periodID, registrationID, strings.TrimSpace(chi.URLParam(r, "key")))
+	if err != nil {
+		renderHolidayReviewError(w, r, err)
+		return
+	}
+	common.Respond(w, r, http.StatusOK, detail, "Holiday consent withdrawn successfully")
+}
+
 // listPlaces lists the places and the waiting list of every week of the
 // period (#4699). A rebooking and a new capacity run in the
 // Elternabrechnung, which computes the contribution of whoever moves up.
@@ -239,7 +257,7 @@ func renderHolidayReviewError(w http.ResponseWriter, r *http.Request, err error)
 		common.RenderError(w, r, common.ErrorNotFoundWithCode(err, common.CodeEnrollmentUploadNotFound))
 	case errors.Is(err, capability.ErrHolidayProofLimit):
 		common.RenderError(w, r, common.ErrorConflictWithDetails(err, common.CodeEnrollmentHolidayProofLimit,
-			map[string]any{"max_files": capability.HolidayProofOptions.MaxFiles()}))
+			HolidayProofLimitDetails{MaxFiles: capability.HolidayProofOptions.MaxFiles()}))
 	case errors.Is(err, capability.ErrHolidayRegistrationFrozen):
 		common.RenderError(w, r, common.ErrorConflictWithCode(err, common.CodeEnrollmentHolidayRegistrationFrozen))
 	case errors.Is(err, capability.ErrHolidayRegistrationStateConflict):

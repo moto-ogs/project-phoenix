@@ -94,7 +94,7 @@ export function SchoolRealtimeBridge() {
       new CustomEvent("team-messages-activity", {
         detail: {
           threadId: event.data?.thread_id ?? null,
-          source: event.data?.source ?? null,
+          source: event.data?.sender_account_id ?? null,
         },
       }),
     );

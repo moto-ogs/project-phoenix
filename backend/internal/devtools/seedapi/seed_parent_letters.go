@@ -56,20 +56,23 @@ func seedParentLetter(rt *Runtime) error {
 	if err != nil {
 		return fmt.Errorf("parse parent letter response: %w", err)
 	}
+	version, err := readDataVersion(func(string) ([]byte, error) { return raw, nil }, "the created parent letter")
+	if err != nil {
+		return err
+	}
 	// Anhang VOR dem Veröffentlichen: danach ist die Mitteilung unveränderlich
 	// und das Backend lehnt jeden weiteren Anhang ab (#2890). Ohne diese Zeile
 	// ist der Anhangsbereich auf jeder Entwicklungsmaschine leer, und genau der
 	// Teil — was die Eltern am Ende herunterladen — lässt sich dann nirgends
-	// ansehen.
-	if _, err := rt.Client.PostFile(
-		fmt.Sprintf("/api/announcement-attachments/%d", id),
-		"file",
+	// ansehen. Die Veröffentlichung bestätigt den Entwurf mit dem Anhang.
+	version, err = attachToParentAnnouncement(rt, id, version,
 		"Laternenfest Ablauf und Lieder.pdf",
 		demoIllustratedPDF("Unser Laternenfest", lanternPicture(), seedLanternFlyerLines(festival)),
-	); err != nil {
+	)
+	if err != nil {
 		return fmt.Errorf("attach file to parent letter: %w", err)
 	}
-	if err := publishAndRead(rt, id, reader); err != nil {
+	if err := publishVersionAndRead(rt, id, version, reader); err != nil {
 		return fmt.Errorf("parent letter: %w", err)
 	}
 	fmt.Println("  3 read notices and 2 parent letters published")
@@ -95,8 +98,18 @@ func seedLetterReader(rt *Runtime) (*AuthRef, error) {
 
 // publishAndRead publishes an announcement and, with a reader, marks it read
 // by them.
-func publishAndRead(rt *Runtime, id int64, reader *AuthRef) error {
-	publishedRaw, err := rt.Client.PostWithAuth(rt.TenantAuth, fmt.Sprintf("/api/parent-announcements/%d/publish", id), nil)
+func publishAndRead(rt *Runtime, id int64, created []byte, reader *AuthRef) error {
+	version, err := readDataVersion(func(string) ([]byte, error) { return created, nil }, "the created announcement")
+	if err != nil {
+		return err
+	}
+	return publishVersionAndRead(rt, id, version, reader)
+}
+
+// publishVersionAndRead publishes the draft of the given version and marks
+// it read by reader.
+func publishVersionAndRead(rt *Runtime, id int64, version string, reader *AuthRef) error {
+	publishedRaw, err := publishParentAnnouncementVersion(rt, &rt.TenantAuth, id, version)
 	if err != nil {
 		return fmt.Errorf("publish: %w", err)
 	}
@@ -142,7 +155,7 @@ func seedEarlierNotices(rt *Runtime, reader *AuthRef) error {
 		if err != nil {
 			return fmt.Errorf("parse notice %s: %w", n.title, err)
 		}
-		if err := publishAndRead(rt, id, reader); err != nil {
+		if err := publishAndRead(rt, id, raw, reader); err != nil {
 			return fmt.Errorf("notice %s: %w", n.title, err)
 		}
 	}
@@ -208,7 +221,7 @@ func seedReminderAnnouncement(rt *Runtime) error {
 	if err != nil {
 		return fmt.Errorf("parse reminder announcement response: %w", err)
 	}
-	if _, err := rt.Client.Post(fmt.Sprintf("/api/parent-announcements/%d/publish", id), nil); err != nil {
+	if _, err := publishParentAnnouncement(rt, nil, id, raw); err != nil {
 		return fmt.Errorf("publish reminder announcement: %w", err)
 	}
 	fmt.Println("  1 parent announcement with scheduled reminder published")

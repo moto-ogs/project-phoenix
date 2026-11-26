@@ -20,6 +20,7 @@ type numberRangeStartRow struct {
 
 	ID             int64     `bun:"id,pk,autoincrement"`
 	OrganizationID int64     `bun:"organization_id"`
+	IssuerKey      string    `bun:"issuer_key"`
 	Service        string    `bun:"service"`
 	Year           int       `bun:"year"`
 	NextNumber     int64     `bun:"next_number"`
@@ -31,30 +32,29 @@ type numberRangeStartRow struct {
 // the counter of the export files (service export) is not one of them.
 var invoiceNumberServices = []string{parentbilling.ServiceHoliday, parentbilling.ServiceCare}
 
-// NumberCounters names per service and year the last issued invoice number
-// of the Träger and the number its next invoice gets.
-func (s *Store) NumberCounters(ctx context.Context, organizationID int64) (map[string]map[int]parentbilling.NumberCounter, error) {
+// NumberCounters names per issuer, service and year the last issued
+// invoice number of the Träger and the number its next invoice gets.
+func (s *Store) NumberCounters(ctx context.Context, organizationID int64) (map[parentbilling.NumberCounterKey]parentbilling.NumberCounter, error) {
 	db, err := traegerDB(ctx, organizationID)
 	if err != nil {
 		return nil, err
 	}
 	var rows []struct {
+		IssuerKey  string `bun:"issuer_key"`
 		Service    string `bun:"service"`
 		Year       int    `bun:"year"`
 		LastNumber int64  `bun:"last_number"`
 		NextNumber int64  `bun:"next_number"`
 	}
-	if err := db.NewRaw(`SELECT service, year, last_number, GREATEST(last_number, COALESCE(start_number, 1) - 1) + 1 AS next_number
+	if err := db.NewRaw(`SELECT issuer_key, service, year, last_number, GREATEST(last_number, COALESCE(start_number, 1) - 1) + 1 AS next_number
 		FROM parent_billing.number_range_counters
 		WHERE organization_id = ? AND service IN (?)`, organizationID, bun.List(invoiceNumberServices)).Scan(ctx, &rows); err != nil {
 		return nil, err
 	}
-	counters := make(map[string]map[int]parentbilling.NumberCounter, len(invoiceNumberServices))
+	counters := make(map[parentbilling.NumberCounterKey]parentbilling.NumberCounter, len(rows))
 	for _, row := range rows {
-		if counters[row.Service] == nil {
-			counters[row.Service] = map[int]parentbilling.NumberCounter{}
-		}
-		counters[row.Service][row.Year] = parentbilling.NumberCounter{LastNumber: row.LastNumber, NextNumber: row.NextNumber}
+		key := parentbilling.NumberCounterKey{IssuerKey: row.IssuerKey, Service: row.Service, Year: row.Year}
+		counters[key] = parentbilling.NumberCounter{LastNumber: row.LastNumber, NextNumber: row.NextNumber}
 	}
 	return counters, nil
 }
@@ -72,7 +72,7 @@ func (s *Store) NumberRangeStarts(ctx context.Context, organizationID int64) ([]
 	}
 	starts := make([]parentbilling.NumberRangeStart, len(rows))
 	for i, row := range rows {
-		starts[i] = parentbilling.NumberRangeStart{Service: row.Service, Year: row.Year, NextNumber: row.NextNumber,
+		starts[i] = parentbilling.NumberRangeStart{IssuerKey: row.IssuerKey, Service: row.Service, Year: row.Year, NextNumber: row.NextNumber,
 			SetAt: row.OccurredAt, AccountID: row.ActorAccountID}
 	}
 	return starts, nil
@@ -90,23 +90,23 @@ func (s *Store) SetNumberRangeStart(ctx context.Context, organizationID int64, s
 	}
 	now := s.now()
 	var last int64
-	err = db.NewRaw(`INSERT INTO parent_billing.number_range_counters AS counter (organization_id, service, year, last_number, start_number, updated_at)
-		VALUES (?, ?, ?, 0, ?, ?)
-		ON CONFLICT (organization_id, service, year)
+	err = db.NewRaw(`INSERT INTO parent_billing.number_range_counters AS counter (organization_id, issuer_key, service, year, last_number, start_number, updated_at)
+		VALUES (?, ?, ?, ?, 0, ?, ?)
+		ON CONFLICT (organization_id, issuer_key, service, year)
 		DO UPDATE SET start_number = EXCLUDED.start_number, updated_at = EXCLUDED.updated_at
 			WHERE counter.last_number < EXCLUDED.start_number
-		RETURNING last_number`, organizationID, start.Service, start.Year, start.NextNumber, now).Scan(ctx, &last)
+		RETURNING last_number`, organizationID, start.IssuerKey, start.Service, start.Year, start.NextNumber, now).Scan(ctx, &last)
 	if errors.Is(err, sql.ErrNoRows) {
 		// The refused statement held no row; the number it names is the
 		// one issued by now.
 		err = db.NewRaw(`SELECT last_number FROM parent_billing.number_range_counters
-			WHERE organization_id = ? AND service = ? AND year = ?`, organizationID, start.Service, start.Year).Scan(ctx, &last)
+			WHERE organization_id = ? AND issuer_key = ? AND service = ? AND year = ?`, organizationID, start.IssuerKey, start.Service, start.Year).Scan(ctx, &last)
 		return last, false, err
 	}
 	if err != nil {
 		return 0, false, err
 	}
-	row := &numberRangeStartRow{OrganizationID: organizationID, Service: start.Service, Year: start.Year,
+	row := &numberRangeStartRow{OrganizationID: organizationID, IssuerKey: start.IssuerKey, Service: start.Service, Year: start.Year,
 		NextNumber: start.NextNumber, ActorAccountID: start.AccountID, OccurredAt: now}
 	_, err = db.NewInsert().Model(row).Exec(ctx)
 	return last, true, err

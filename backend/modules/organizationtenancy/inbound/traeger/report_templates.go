@@ -74,6 +74,14 @@ func (req *ReportTemplateRequest) input() organizationtenancy.TraegerReportTempl
 	return input
 }
 
+// ReportTemplateReplaceRequest is the body of PUT
+// /traeger/report-templates/{id}: the template with the version it was read
+// with (ADR 0311).
+type ReportTemplateReplaceRequest struct {
+	ReportTemplateRequest
+	ExpectedVersion string `json:"expected_version"`
+}
+
 // ReportDistrictRequest assigns a school to a Sozialraum in a request; the
 // contract keeps a request type apart from the answer's (ADR 0270).
 type ReportDistrictRequest struct {
@@ -122,12 +130,12 @@ func (rs *ReportTemplateResource) replace(w http.ResponseWriter, r *http.Request
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
-	req := &ReportTemplateRequest{}
+	req := &ReportTemplateReplaceRequest{}
 	if err := render.Bind(r, req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
-	updated, err := rs.templates.ReplaceReportTemplate(r.Context(), organizationID, accountID, templateID, req.input())
+	updated, err := rs.templates.ReplaceReportTemplate(r.Context(), organizationID, accountID, templateID, req.input(), req.ExpectedVersion)
 	if err != nil {
 		renderReportTemplateError(w, r, err)
 		return

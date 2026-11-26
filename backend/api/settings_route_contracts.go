@@ -14,6 +14,8 @@ type HomeLayoutResponse struct {
 	Blocks            []configModel.HomeBlockPlacement   `json:"blocks"`
 	Policies          map[string]configModel.BlockPolicy `json:"policies"`
 	CanManagePolicies bool                               `json:"can_manage_policies"`
+	// PoliciesVersion is the read-state token of Policies (ADR 0311).
+	PoliciesVersion string `json:"policies_version"`
 }
 
 // settingsRouteContracts registers the settings routes the staff portal

@@ -1,7 +1,7 @@
 "use client";
 
 import { useParentResourceEvents } from "~/lib/hooks/use-parent-resources";
-import { useCallback } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useSSE } from "~/lib/hooks/use-sse";
 import {
   dispatchPhoenixNotification,
@@ -76,6 +76,15 @@ export function ParentRealtimeBridge() {
       );
     }
   }, []);
-  useSSE("/api/parent/sse/events", { onMessage: handleSSE });
+  const { isConnected } = useSSE("/api/parent/sse/events", {
+    onMessage: handleSSE,
+  });
+  const opened = useRef(false);
+  useEffect(() => {
+    if (!isConnected) return;
+    if (opened.current)
+      window.dispatchEvent(new CustomEvent("parent-child-status-refresh"));
+    opened.current = true;
+  }, [isConnected]);
   return null;
 }

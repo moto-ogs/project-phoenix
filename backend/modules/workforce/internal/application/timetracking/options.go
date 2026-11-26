@@ -21,10 +21,22 @@ func WithWorkSessionShifts(repo WorkSessionShifts) WorkSessionOption {
 	return func(s *workSessionService) { s.staffShiftRepo = repo }
 }
 
+// WithWorkSessionTemplateLocks supplies the template lock a schedule save in
+// template mode takes before the person's gate.
+func WithWorkSessionTemplateLocks(locks WorkTimeTemplateLocks) WorkSessionOption {
+	return func(s *workSessionService) { s.templateLocks = locks }
+}
+
 // WithWorkSessionHolidays supplies the non-working-day resolver that reduces
 // the weekly Soll in the history summaries (#1418 3a).
 func WithWorkSessionHolidays(reader HolidayDatesReader) WorkSessionOption {
 	return func(s *workSessionService) { s.holidayReader = reader }
+}
+
+// WithWorkSessionTimeTrackingManagers supplies the lookup that exempts the
+// leadership from terminal-only stamping (#8024).
+func WithWorkSessionTimeTrackingManagers(managers TimeTrackingManagerStaff) WorkSessionOption {
+	return func(s *workSessionService) { s.timeTrackingManagers = managers }
 }
 
 // WithWorkSessionExternalCaregivers supplies the external-caregiver lookup

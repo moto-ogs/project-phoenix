@@ -16,6 +16,7 @@ import {
 } from "./date-helpers";
 import { LOCATION_COLORS } from "./location-helper";
 import { knownEnum } from "./contract/known-enum";
+import { compareIds } from "./compare-ids";
 import type {
   applyDeviationsRequest,
   bulkSubstitutionRequest,
@@ -67,6 +68,7 @@ import type {
   StartInstanceResult,
   TemplatesResponse,
   TimetableTemplate,
+  OfferingTemplate,
   WeeklyInstancesResponse,
 } from "./timetable-types";
 
@@ -603,6 +605,23 @@ function mapConflictWarning(
   };
 }
 
+export function mapInstanceStudent(
+  s: timetableContract.instanceStudentSummary,
+): InstanceStudentSummary {
+  return {
+    studentId: s.student_id,
+    status: knownEnum(ATTENDANCE_STATUS_VALUES, s.status),
+    substatus: attendanceSubstatus(s.substatus),
+    note: s.note,
+    checkedInAt: s.checked_in_at,
+    // Go's own fallback for a day the plan says nothing about
+    // (backend/modules/timetable/care_days.go:19); it keeps the child expected.
+    careDayStatus:
+      knownEnum(CARE_DAY_STATUS_VALUES, s.care_day_status) ?? "unknown",
+    earlyPickupTime: s.early_pickup_time,
+  };
+}
+
 /**
  * Contract → frontend mapping. snake_case → camelCase; conflict_warnings
  * always present (defaults to []).
@@ -618,18 +637,7 @@ export function mapInstance(
     isSickAbsence: s.is_sick_absence,
     absenceReason: s.absence_reason,
   }));
-  const students: InstanceStudentSummary[] = (raw.students ?? []).map((s) => ({
-    studentId: s.student_id,
-    status: knownEnum(ATTENDANCE_STATUS_VALUES, s.status),
-    substatus: attendanceSubstatus(s.substatus),
-    note: s.note,
-    checkedInAt: s.checked_in_at,
-    // Go's own fallback for a day the plan says nothing about
-    // (backend/modules/timetable/care_days.go:19); it keeps the child expected.
-    careDayStatus:
-      knownEnum(CARE_DAY_STATUS_VALUES, s.care_day_status) ?? "unknown",
-    earlyPickupTime: s.early_pickup_time,
-  }));
+  const students = (raw.students ?? []).map(mapInstanceStudent);
   const studentIds =
     students.length > 0
       ? students.map((student) => student.studentId)
@@ -1301,6 +1309,24 @@ export function mapTemplates(
   return { templates: (raw.templates ?? []).map(mapTemplate) };
 }
 
+export function mapOfferingTemplates(
+  raw: timetableContract.listTemplatesResponse,
+): { templates: OfferingTemplate[] } {
+  return {
+    templates: (raw.templates ?? []).map((template) => ({
+      id: template.id,
+      name: template.name,
+      calendarPeriodId: template.calendar_period_id,
+      schedules: (template.schedules ?? []).map((schedule) => ({
+        weekday: schedule.weekday,
+        startTime: schedule.start_time,
+        endTime: schedule.end_time,
+        calendarPeriodId: schedule.calendar_period_id,
+      })),
+    })),
+  };
+}
+
 /**
  * Maps the offering-source editor support payload (#2137). Grade-count keys
  * arrive as JSON object strings and become numbers (0 = ohne Jahrgang).
@@ -1508,7 +1534,7 @@ export function comparePlanningInstances(
   const aOrder = a.planningTrackSortOrder ?? Number.MAX_SAFE_INTEGER;
   const bOrder = b.planningTrackSortOrder ?? Number.MAX_SAFE_INTEGER;
   if (aOrder !== bOrder) return aOrder - bOrder;
-  return a.id.localeCompare(b.id, "de", { numeric: true });
+  return compareIds(a.id, b.id);
 }
 
 /**

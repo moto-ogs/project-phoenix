@@ -9,6 +9,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/carecontract"
 	"github.com/moto-ogs/project-phoenix/modules/carecontract/internal/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 type NoticeStore = ports.NoticeStore
@@ -257,8 +258,12 @@ func (n *Notices) newNotice(ctx context.Context, record ContractRecord, state po
 	default:
 		return ports.NewNotice{}, &carecontract.ValidationError{Fields: map[string]string{"kind": "unknown"}}
 	}
-	if notice.EndsOn != nil && !d.input.ExpectedEndsOn.IsZero() && *notice.EndsOn != d.input.ExpectedEndsOn {
-		return ports.NewNotice{}, &carecontract.ValidationError{Fields: map[string]string{"expected_ends_on": "changed"}}
+	// A dated termination holds to the end its author was shown (ADR 0311):
+	// a changed or missing one is refused, so nobody declares an end unseen.
+	if notice.EndsOn != nil {
+		if err := readstate.Check(d.input.ExpectedEndsOn.String(), notice.EndsOn.String()); err != nil {
+			return ports.NewNotice{}, err
+		}
 	}
 	return notice, nil
 }
@@ -350,8 +355,12 @@ func (n *Notices) confirm(ctx context.Context, record ContractRecord, d declarat
 			return err
 		}
 	}
-	if err := n.requireOfficeLetterhead(ctx, d); err != nil {
+	if err := n.requireOfficeLetterhead(ctx, d, record); err != nil {
 		return err
+	}
+	// The body that issued the contract confirms its end (#4811).
+	if issuer, _ := issuedBy(record); issuer != nil {
+		d.traeger = firstLine(textLines(issuer.SenderText))
 	}
 	traeger := strings.TrimSpace(firstText(d.traeger, record.Version.Terms.ContractPartner))
 	template, err := n.templates.NoticeTemplate(ctx, d.organizationID, templateKind(*notice))
@@ -393,7 +402,7 @@ func (n *Notices) confirm(ctx context.Context, record ContractRecord, d declarat
 // confirmation names the Träger's organization, and a withdrawal or
 // termination by the button must not depend on the Träger's settings
 // (§ 312k BGB), nor may the withdrawal period run out meanwhile.
-func (n *Notices) requireOfficeLetterhead(ctx context.Context, d declaration) error {
+func (n *Notices) requireOfficeLetterhead(ctx context.Context, d declaration, record ContractRecord) error {
 	if d.channel != carecontract.NoticeChannelOffice {
 		return nil
 	}
@@ -401,7 +410,7 @@ func (n *Notices) requireOfficeLetterhead(ctx context.Context, d declaration) er
 	if err != nil {
 		return fmt.Errorf("care contract: letterhead: %w", err)
 	}
-	if letterheadMissing(letterhead) {
+	if letterheadMissing(issuedSender(letterhead, record)) {
 		return carecontract.ErrLetterheadMissing
 	}
 	return nil
@@ -469,9 +478,6 @@ func (n *Notices) noticeState(ctx context.Context, organizationID, contractID in
 		return state, err
 	}
 	recorded := state.InformedAt
-	if err := n.signedNotice(ctx, organizationID, contractID, &state); err != nil {
-		return state, err
-	}
 	if err := n.deliveredNotice(ctx, organizationID, contractID, &state); err != nil {
 		return state, err
 	}
@@ -508,23 +514,6 @@ func (n *Notices) deliveredNotice(ctx context.Context, organizationID, contractI
 			at := delivery.ProvidedAt
 			state.InformedAt = &at
 		}
-	}
-	return nil
-}
-
-// signedNotice joins the online signature (#4679): the parents acknowledged
-// the withdrawal notice when they signed, so the period starts then, and
-// the wish to begin care within it is stored with the signature. A paper
-// contract carries no acknowledgement; its period follows the notice proofs.
-func (n *Notices) signedNotice(ctx context.Context, organizationID, contractID int64, state *ports.NoticeState) error {
-	signature, err := n.store.Signature(ctx, organizationID, contractID, 0)
-	if err != nil || signature == nil || signature.Method == carecontract.SignaturePaper {
-		return err
-	}
-	state.EarlyStart = state.EarlyStart || signature.EarlyStartRequested
-	if at := signature.WithdrawalNoticeAt; at != nil && (state.InformedAt == nil || at.Before(*state.InformedAt)) {
-		informed := *at
-		state.InformedAt = &informed
 	}
 	return nil
 }

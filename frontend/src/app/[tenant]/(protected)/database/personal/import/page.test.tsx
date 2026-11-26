@@ -27,7 +27,7 @@ function render(ui: ReactElement) {
     { wrapper: ToastProvider },
   );
 }
-import StaffImportPage from "./page";
+import StaffImportPage from "./page-content";
 
 // Mock next-auth/react. The default session may change existing records
 // (#2906); the mode switcher only renders for that permission pair.
@@ -730,6 +730,12 @@ describe("StaffImportPage", () => {
             code: "import.import_batch_failed",
             details: {
               result: {
+                started_at: "2026-11-24T12:00:00Z",
+                completed_at: "2026-11-24T12:01:00Z",
+                skipped_count: 0,
+                warning_count: 0,
+                bulk_actions: null,
+                dry_run: false,
                 total_rows: 205,
                 created_count: 100,
                 updated_count: 0,
@@ -737,6 +743,7 @@ describe("StaffImportPage", () => {
                 errors: [
                   {
                     row_number: 152,
+                    timestamp: "2026-11-24T12:00:00Z",
                     data: {
                       first_name: "Refused",
                       last_name: "Batch",
@@ -810,6 +817,12 @@ describe("StaffImportPage", () => {
             code: "import.import_batch_failed",
             details: {
               result: {
+                started_at: "2026-11-24T12:00:00Z",
+                completed_at: "2026-11-24T12:01:00Z",
+                skipped_count: 0,
+                warning_count: 0,
+                bulk_actions: null,
+                dry_run: false,
                 total_rows: 205,
                 created_count: 100,
                 updated_count: 0,
@@ -817,6 +830,7 @@ describe("StaffImportPage", () => {
                 errors: [
                   {
                     row_number: 152,
+                    timestamp: "2026-11-24T12:00:00Z",
                     data: {
                       first_name: "Refused",
                       last_name: "Batch",

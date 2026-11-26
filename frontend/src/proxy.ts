@@ -1,7 +1,13 @@
+import { browserRoutePaths } from "~/lib/contract/browser-traits.generated";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { problemBody } from "~/lib/api-error";
 import { REQUEST_ID_HEADER } from "~/lib/request-id";
+import {
+  DEPLOYMENT_ID_HEADER,
+  deploymentId,
+  isOtherDeployment,
+} from "~/lib/deployment-skew";
 import { RESERVED_SLUGS } from "~/lib/reserved-slugs";
 import { normalizeHostname, tenantSlugFromHost } from "~/lib/tenant-host";
 import { LOCALE_SCOPE_HEADER } from "~/i18n/locales";
@@ -126,7 +132,7 @@ function isPostHogProxyPath(pathname: string): boolean {
   );
 }
 
-function proxyPostHog(request: NextRequest): NextResponse {
+function forwardAnalytics(request: NextRequest): NextResponse {
   const path =
     request.nextUrl.pathname.slice(POSTHOG_PROXY_PREFIX.length) || "/";
   const origin = /^\/(static|array)\//.test(path)
@@ -340,7 +346,7 @@ const HOST_RULES: Record<HostedPortalKey, PortalHostRules> = {
       // The invitation link through the staff proxy's public route (#2352);
       // the path's other methods are staff session routes.
       STAFF_INVITATION_LINK,
-      "/api/invitations/accept",
+      browserRoutePaths.tenant["POST /auth/invitations/{token}/accept"],
       "/api/auth/guardian-invitations/",
       // The holiday link, its summary, documents and proof upload through
       // the Träger proxy's public routes (#2352); every other /api/traeger/
@@ -363,7 +369,7 @@ const HOST_RULES: Record<HostedPortalKey, PortalHostRules> = {
     api: [
       "/api/school/",
       STAFF_INVITATION_LINK,
-      "/api/invitations/accept",
+      browserRoutePaths.tenant["POST /auth/invitations/{token}/accept"],
       // The invitation's school picker (#7369); attaches no session.
       "/api/auth/tenants",
     ],
@@ -446,6 +452,31 @@ function notFound(): NextResponse {
     NextResponse.json(
       problemBody(404, "route not found", { code: "general.route_not_found" }),
       { status: 404, headers: { "Content-Type": "application/problem+json" } },
+    ),
+  );
+}
+
+/**
+ * A BFF call from a bundle of another deployment (`deployment-skew.ts`).
+ * Same code and text as a retired route: the tab predates the release and
+ * has to reload. 412, not 404: callers read a 404 as a missing object and
+ * hide their data, and the request did not miss its route.
+ */
+function otherDeployment(): NextResponse {
+  return withSecurityHeaders(
+    NextResponse.json(
+      problemBody(412, "bundle of another deployment", {
+        code: "general.route_not_found",
+      }),
+      {
+        status: 412,
+        headers: {
+          "Content-Type": "application/problem+json",
+          // The tab tells this refusal apart and may reload by itself
+          // (deployment-reload.ts).
+          [DEPLOYMENT_ID_HEADER]: deploymentId() ?? "",
+        },
+      },
     ),
   );
 }
@@ -762,7 +793,7 @@ export function proxy(request: NextRequest): NextResponse {
   const { pathname } = request.nextUrl;
 
   if (isPostHogProxyPath(pathname)) {
-    return proxyPostHog(request);
+    return forwardAnalytics(request);
   }
 
   const response = routeRequest(request);
@@ -799,6 +830,10 @@ function routeRequest(request: NextRequest): NextResponse {
 
   if (pathname.startsWith("/_next")) {
     return NextResponse.next();
+  }
+
+  if (pathname.startsWith("/api/") && isOtherDeployment(request.headers)) {
+    return otherDeployment();
   }
 
   const hostname = originalHost(request);

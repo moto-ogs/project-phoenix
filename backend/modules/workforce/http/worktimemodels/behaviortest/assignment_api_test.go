@@ -12,6 +12,10 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/uptrace/bun"
+
 	"github.com/moto-ogs/project-phoenix/api"
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
@@ -19,9 +23,6 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	querybudgets "github.com/moto-ogs/project-phoenix/test/query-budgets"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"github.com/uptrace/bun"
 )
 
 // assignmentToday is the school day every assignment test runs on.
@@ -94,7 +95,7 @@ func (h *assignmentHarness) model(name string, fields workforce.WorkTimeModelFie
 
 func (h *assignmentHarness) assign(modelID int64, validFrom string, staffIDs ...int64) (int, assignmentResult, string) {
 	h.t.Helper()
-	status, data, code := h.request(http.MethodPost, fmt.Sprintf("/%d/assignments", modelID), map[string]any{"staff_ids": staffIDs, "valid_from": validFrom})
+	status, data, code := h.request(http.MethodPost, fmt.Sprintf("/%d/assignments", modelID), map[string]any{"staff_ids": testpkg.IDsOf[testpkg.ID](staffIDs), "valid_from": validFrom})
 	var result assignmentResult
 	if status == http.StatusOK {
 		require.NoError(h.t, json.Unmarshal(data, &result))
@@ -257,8 +258,8 @@ func TestWorkTimeModelAssignmentRefusals(t *testing.T) {
 	status, _, _ = h.assign(foreignModel.ID, "", staff.ID)
 	assert.Equal(t, http.StatusNotFound, status, "another school's template")
 	for name, body := range map[string]any{
-		"no people":     map[string]any{"staff_ids": []int64{}},
-		"malformed day": map[string]any{"staff_ids": []int64{staff.ID}, "valid_from": "14.10.2026"},
+		"no people":     map[string]any{"staff_ids": []string{}},
+		"malformed day": map[string]any{"staff_ids": []string{fmt.Sprint(staff.ID)}, "valid_from": "14.10.2026"},
 	} {
 		status, _, _ = h.request(http.MethodPost, fmt.Sprintf("/%d/assignments", offered.ID), body)
 		assert.Equal(t, http.StatusBadRequest, status, name)

@@ -93,8 +93,8 @@ export function CareContractImportMappingCard({
   const hint = (field: ContractImportField): string | undefined => {
     if (field === "debtor_number") {
       return debtorNumberScope === "child"
-        ? "Bei dir gilt eine Nummer je Kind."
-        : "Bei dir gilt eine Nummer je Zahler. Geschwister teilen sie.";
+        ? "Bei dir gilt eine Nummer pro Kind."
+        : "Bei dir gilt eine Nummer pro Zahler. Geschwister teilen sie.";
     }
     return CONTRACT_IMPORT_FIELD_HINTS[field];
   };

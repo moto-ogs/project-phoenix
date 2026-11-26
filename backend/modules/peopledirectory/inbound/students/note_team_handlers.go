@@ -2,7 +2,6 @@ package students
 
 import (
 	context "context"
-	json "encoding/json"
 	errors "errors"
 	http "net/http"
 	strconv "strconv"
@@ -11,6 +10,7 @@ import (
 	common "github.com/moto-ogs/project-phoenix/api/common"
 	peopleModule "github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // StudentNoteTeamReach names the colleagues who may read a child's notes and
@@ -56,8 +56,8 @@ type studentNoteTeamInformedResponse struct {
 }
 
 type studentNoteTeamNoticeResponse struct {
-	NoteID           string    `json:"note_id"`
-	StudentID        string    `json:"student_id"`
+	NoteID           ident.ID  `json:"note_id"`
+	StudentID        ident.ID  `json:"student_id"`
 	StudentFirstName string    `json:"student_first_name"`
 	StudentLastName  string    `json:"student_last_name"`
 	AuthorName       string    `json:"author_name,omitempty"`
@@ -132,7 +132,7 @@ func (rs *Resource) readStudentNoteTeamNotices(w http.ResponseWriter, r *http.Re
 		return
 	}
 	var body studentNoteTeamReadRequest
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+	if err := wire.Decode(r.Body, &body); err != nil {
 		renderError(w, r, common.ErrorInvalidRequest(errors.New("invalid notice revisions")))
 		return
 	}
@@ -163,7 +163,7 @@ func renderStudentNoteTeamNotices(notices []peopleModule.StudentNoteTeamNotice) 
 	out := make([]studentNoteTeamNoticeResponse, 0, len(notices))
 	for _, notice := range notices {
 		out = append(out, studentNoteTeamNoticeResponse{
-			NoteID: strconv.FormatInt(notice.NoteID, 10), StudentID: strconv.FormatInt(notice.StudentID, 10),
+			NoteID: ident.ID(notice.NoteID), StudentID: ident.ID(notice.StudentID),
 			StudentFirstName: notice.StudentFirstName, StudentLastName: notice.StudentLastName,
 			AuthorName: notice.AuthorName, InformedAt: notice.InformedAt,
 		})

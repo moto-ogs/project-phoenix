@@ -11,10 +11,12 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
+
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -33,6 +35,11 @@ func (rs *Resource) Router(protectedTenantRoutes func(chi.Router, func(chi.Route
 		r.With(common.RequiresPermission(permissions.TimeTrackingOwn), withTx).Post("/check-in", rs.checkIn)
 		r.With(common.RequiresPermission(permissions.TimeTrackingOwn), withTx).Post("/check-out", rs.checkOut)
 		r.With(common.RequiresPermission(permissions.TimeTrackingOwn), withTx).Get("/current", rs.getCurrent)
+		if rs.ownViews != nil {
+			r.With(common.RequiresPermission(permissions.TimeTrackingOwn), withTx).Get("/period", rs.getOwnPeriod)
+			r.With(common.RequiresPermission(permissions.TimeTrackingOwn), withTx).Get("/overview", rs.getOwnOverview)
+			r.With(common.RequiresPermission(permissions.TimeTrackingOwn), withTx).Get("/leave-overview", rs.getOwnLeaveOverview)
+		}
 		// The Stundenkonto anchor is a tenant-wide setting, not caller-scoped
 		// data. Admin views resolve a staff member's Monatskarte from it, so a
 		// manage-only role must be able to read it — the staff summary
@@ -198,7 +205,7 @@ func (rs *Resource) checkOut(w http.ResponseWriter, r *http.Request) {
 	// The body is optional (legacy clients POST without one); an empty body
 	// is an empty request, anything else must be valid JSON.
 	req := &CheckOutRequest{}
-	if err := render.DecodeJSON(r.Body, req); err != nil && !errors.Is(err, io.EOF) {
+	if err := wire.DecodeAndDrain(r.Body, req); err != nil && !errors.Is(err, io.EOF) {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
@@ -311,7 +318,7 @@ func (rs *Resource) updateSession(w http.ResponseWriter, r *http.Request) {
 
 	// Parse update request
 	var updates workforce.SessionUpdateRequest
-	if err := render.DecodeJSON(r.Body, &updates); err != nil {
+	if err := wire.DecodeAndDrain(r.Body, &updates); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
@@ -354,7 +361,7 @@ func (rs *Resource) startBreak(w http.ResponseWriter, r *http.Request) {
 	// Parse optional request body for planned_duration_minutes
 	var req StartBreakRequest
 	if r.ContentLength > 0 {
-		if err := render.DecodeJSON(r.Body, &req); err != nil {
+		if err := wire.DecodeAndDrain(r.Body, &req); err != nil {
 			common.RenderError(w, r, common.ErrorInvalidRequest(err))
 			return
 		}
@@ -475,7 +482,7 @@ func (rs *Resource) requestVacation(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req workforce.RequestVacationRequest
-	if err := render.DecodeJSON(r.Body, &req); err != nil {
+	if err := wire.DecodeAndDrain(r.Body, &req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
@@ -535,7 +542,7 @@ func (rs *Resource) resubmitAbsence(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req ResubmitAbsenceRequest
-	if err := render.DecodeJSON(r.Body, &req); err != nil {
+	if err := wire.DecodeAndDrain(r.Body, &req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}

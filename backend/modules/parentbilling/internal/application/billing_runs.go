@@ -60,15 +60,15 @@ type RunStore interface {
 	InsertRunCorrection(ctx context.Context, organizationID int64, run parentbilling.BillingRun, registrationID, accountID int64, correction parentbilling.BillingCorrection) error
 	InsertRunEvent(ctx context.Context, organizationID, runID, accountID int64, action string, details map[string]any) error
 	ListNumberRanges(ctx context.Context, organizationID int64) ([]parentbilling.NumberRange, error)
-	SetNumberRange(ctx context.Context, organizationID int64, service, pattern string) (parentbilling.NumberRange, error)
+	SetNumberRange(ctx context.Context, organizationID int64, issuerKey, service, pattern string) (parentbilling.NumberRange, error)
 	// The counters and start values of the number ranges (#7358).
 	numberRangeStartStore
-	// ReserveNumbers raises the counter of the service and year by count
-	// and returns the first of the reserved numbers: the number after the
-	// last issued one, or the start value of the counter when that is
+	// ReserveNumbers raises the counter of the issuer, service and year by
+	// count and returns the first of the reserved numbers: the number after
+	// the last issued one, or the start value of the counter when that is
 	// larger (#7358). It holds the counter until the transaction ends, so a
 	// parallel release waits.
-	ReserveNumbers(ctx context.Context, organizationID int64, service string, year, count int) (int64, error)
+	ReserveNumbers(ctx context.Context, organizationID int64, issuerKey, service string, year, count int) (int64, error)
 	// IssueDocuments stores the numbered invoices with their positions; the
 	// i-th invoice has the sequence first+i of the counter of year. A
 	// number another invoice carries is ErrInvoiceNumberTaken.
@@ -295,34 +295,17 @@ func (b *BillingRuns) ReleaseBillingRun(ctx context.Context, reviewer parentbill
 	if err := b.store.LockPeriodBilling(ctx, reviewer.OrganizationID, run.Service, run.HolidayPeriodID.Int64()); err != nil {
 		return parentbilling.BillingRunDetail{}, fmt.Errorf("parent billing: hold the invoices of the period: %w", err)
 	}
-	pattern, err := numberPatternOf(ctx, b.store, reviewer.OrganizationID, run.Service)
+	current, kinds, err := b.checkedPreview(ctx, reviewer, run, release)
 	if err != nil {
 		return parentbilling.BillingRunDetail{}, err
 	}
-	current, err := b.checkedPreview(ctx, reviewer, run, release)
-	if err != nil {
-		return parentbilling.BillingRunDetail{}, err
-	}
-	documentKind, err := b.releasedKind(ctx, reviewer.OrganizationID, run.Service, release)
+	documentKind, err := releasedKind(kinds, release)
 	if err != nil {
 		return parentbilling.BillingRunDetail{}, err
 	}
 	issuedOn := b.today()
-	year := numberYear(pattern, issuedOn.Year())
-	first, err := b.store.ReserveNumbers(ctx, reviewer.OrganizationID, run.Service, year, len(current.documents))
-	if err != nil {
-		return parentbilling.BillingRunDetail{}, fmt.Errorf("parent billing: reserve invoice numbers: %w", err)
-	}
 	documents := current.documents
-	for i := range documents {
-		documents[i].Number = formatInvoiceNumber(pattern, issuedOn.Year(), first+int64(i))
-		documents[i].IssuedOn = &issuedOn
-		documents[i].DocumentKind = documentKind
-	}
-	if err := b.freezeAccounts(ctx, reviewer, run, documents); err != nil {
-		return parentbilling.BillingRunDetail{}, err
-	}
-	if err := b.store.IssueDocuments(ctx, reviewer.OrganizationID, run, year, first, documents); err != nil {
+	if err := b.issue(ctx, reviewer, run, kinds, issuedOn, documents); err != nil {
 		return parentbilling.BillingRunDetail{}, err
 	}
 	released, err := b.store.MarkRunReleased(ctx, reviewer.OrganizationID, run.ID.Int64(), issuedOn, len(documents), current.total())
@@ -340,33 +323,69 @@ func (b *BillingRuns) ReleaseBillingRun(ctx context.Context, reviewer parentbill
 	return b.detail(ctx, reviewer, released)
 }
 
+// issue numbers the documents of each issuer from its own range (#8040),
+// freezes their kind and accounts and stores them.
+func (b *BillingRuns) issue(ctx context.Context, reviewer parentbilling.HolidayReviewer, run parentbilling.BillingRun, kinds issuerKinds,
+	issuedOn calendar.Date, documents []parentbilling.BillingDocument,
+) error {
+	patterns, err := releasePatterns(ctx, b.store, reviewer.OrganizationID, run.Service, documentIssuers(documents))
+	if err != nil {
+		return err
+	}
+	groups := byIssuer(documents, func(document parentbilling.BillingDocument) string { return parentbilling.IssuerKeyOf(document.Issuer) })
+	years, firsts := make([]int, len(groups)), make([]int64, len(groups))
+	for g, group := range groups {
+		key := parentbilling.IssuerKeyOf(group[0].Issuer)
+		years[g] = numberYear(patterns[key], issuedOn.Year())
+		if firsts[g], err = b.store.ReserveNumbers(ctx, reviewer.OrganizationID, key, run.Service, years[g], len(group)); err != nil {
+			return fmt.Errorf("parent billing: reserve invoice numbers: %w", err)
+		}
+		for i := range group {
+			group[i].Number = formatInvoiceNumber(patterns[key], issuedOn.Year(), firsts[g]+int64(i))
+			group[i].IssuedOn = &issuedOn
+			group[i].DocumentKind = kinds.of(key)
+		}
+	}
+	if err := b.freezeAccounts(ctx, reviewer, run, documents); err != nil {
+		return err
+	}
+	for g, group := range groups {
+		if err := b.store.IssueDocuments(ctx, reviewer.OrganizationID, run, years[g], firsts[g], group); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // checkedPreview computes the preview again under the locks of the release
 // and holds it against what the Abrechnung checked: count, sum and content
-// (#6506), before a number is reserved or an invoice written.
-func (b *BillingRuns) checkedPreview(ctx context.Context, reviewer parentbilling.HolidayReviewer, run parentbilling.BillingRun, release parentbilling.BillingRelease) (preview, error) {
-	current, _, fingerprint, err := b.fingerprintedPreview(ctx, reviewer, run)
+// (#6506), before a number is reserved or an invoice written. It answers the
+// kind each issuer of the preview issues.
+func (b *BillingRuns) checkedPreview(ctx context.Context, reviewer parentbilling.HolidayReviewer, run parentbilling.BillingRun, release parentbilling.BillingRelease) (preview, issuerKinds, error) {
+	current, kinds, fingerprint, err := b.fingerprintedPreview(ctx, reviewer, run)
 	if err != nil {
-		return preview{}, err
+		return preview{}, issuerKinds{}, err
 	}
 	if err := checkRelease(current, fingerprint, release); err != nil {
-		return preview{}, err
+		return preview{}, issuerKinds{}, err
 	}
-	return current, nil
+	return current, kinds, nil
 }
 
 // fingerprintedPreview is the preview of a calculated run with the kind of
-// document its release would freeze now and the fingerprint of both
-// (#6506): the review shows it, the release compares it.
-func (b *BillingRuns) fingerprintedPreview(ctx context.Context, reviewer parentbilling.HolidayReviewer, run parentbilling.BillingRun) (preview, parentbilling.DocumentKindState, string, error) {
+// document each issuer's release would freeze now (#8040) and the
+// fingerprint of both (#6506): the review shows it, the release compares it.
+func (b *BillingRuns) fingerprintedPreview(ctx context.Context, reviewer parentbilling.HolidayReviewer, run parentbilling.BillingRun) (preview, issuerKinds, string, error) {
 	current, err := b.preview(ctx, reviewer, run)
 	if err != nil {
-		return preview{}, parentbilling.DocumentKindState{}, "", err
+		return preview{}, issuerKinds{}, "", err
 	}
-	kind, legalRemedy, err := b.kinds.reviewed(ctx, reviewer.OrganizationID, run.Service)
+	keys := issuerKeys(current.documents, func(document parentbilling.BillingDocument) string { return parentbilling.IssuerKeyOf(document.Issuer) })
+	kinds, err := b.kinds.reviewed(ctx, reviewer.OrganizationID, run.Service, keys)
 	if err != nil {
-		return preview{}, parentbilling.DocumentKindState{}, "", err
+		return preview{}, issuerKinds{}, "", err
 	}
-	return current, kind, holidayPreviewFingerprint(run, current, kind.DocumentKind, legalRemedy), nil
+	return current, kinds, holidayPreviewFingerprint(run, current, kinds.fingerprint(), kinds.legalRemedy), nil
 }
 
 // freezeAccounts copies where each position of the run's documents books
@@ -382,14 +401,14 @@ func (b *BillingRuns) freezeAccounts(ctx context.Context, reviewer parentbilling
 	return freezeHolidayAccounts(ctx, b.store, b.settings, reviewer.OrganizationID, weeks, documents)
 }
 
-// releasedKind is the kind of document the release freezes: the kind the
-// service issues now, never a fee notice without its legal remedy, and only
-// the kind the Abrechnung saw (#4688).
-func (b *BillingRuns) releasedKind(ctx context.Context, organizationID int64, service string, release parentbilling.BillingRelease) (string, error) {
-	documentKind, err := b.kinds.issuable(ctx, organizationID, service)
-	if err != nil {
-		return "", err
+// releasedKind is the kind of document the release freezes, as the run
+// shows it: never a fee notice without its legal remedy, and only the kind
+// the Abrechnung saw (#4688).
+func releasedKind(kinds issuerKinds, release parentbilling.BillingRelease) (string, error) {
+	if kinds.missing {
+		return "", parentbilling.ErrLegalRemedyMissing
 	}
+	documentKind := kinds.state().DocumentKind
 	if release.DocumentKind != "" && release.DocumentKind != documentKind {
 		return "", parentbilling.ErrBillingRunChanged
 	}
@@ -417,23 +436,25 @@ type numberRangeReader interface {
 	ListNumberRanges(ctx context.Context, organizationID int64) ([]parentbilling.NumberRange, error)
 }
 
-// numberPatternOf is the pattern of the service the invoices, the
-// cancellations and the credits take their numbers from.
-func numberPatternOf(ctx context.Context, store numberRangeReader, organizationID int64, service string) (string, error) {
+// numberPatternOf is the pattern of the service of the issuer the
+// invoices, the cancellations and the credits take their numbers from. An
+// issuer without one is a NumberRangeMissingError (#8040).
+func numberPatternOf(ctx context.Context, store numberRangeReader, organizationID int64, issuer parentbilling.BillingIssuer, service string) (string, error) {
 	ranges, err := store.ListNumberRanges(ctx, organizationID)
 	if err != nil {
 		return "", fmt.Errorf("parent billing: read number range: %w", err)
 	}
-	if pattern, ok := patternOf(ranges, service); ok {
+	if pattern, ok := patternOf(ranges, issuer.Key, service); ok {
 		return pattern, nil
 	}
-	return "", parentbilling.ErrNumberRangeMissing
+	return "", &parentbilling.NumberRangeMissingError{Issuer: issuer, Service: service}
 }
 
-// patternOf is the pattern of the service's number range, if it is set.
-func patternOf(ranges []parentbilling.NumberRange, service string) (string, bool) {
+// patternOf is the pattern of the service's number range of the issuer, if
+// it is set.
+func patternOf(ranges []parentbilling.NumberRange, issuerKey, service string) (string, bool) {
 	for _, numberRange := range ranges {
-		if numberRange.Service == service && numberRange.Pattern != "" {
+		if numberRange.Issuer.Key == issuerKey && numberRange.Service == service && numberRange.Pattern != "" {
 			return numberRange.Pattern, true
 		}
 	}
@@ -471,14 +492,19 @@ func (b *BillingRuns) preview(ctx context.Context, reviewer parentbilling.Holida
 	if err != nil {
 		return preview{}, err
 	}
+	issuers, childIssuers, err := b.childIssuers(ctx, reviewer, run, registrations, contributions)
+	if err != nil {
+		return preview{}, err
+	}
 	result := buildPreview(previewInput{
 		run: run, registrations: registrations, contributions: contributions, issued: issued, corrections: corrections,
-		replaces: replaces, replaced: replaced, perChild: scope == parentbilling.DebtorNumberScopeChild,
+		replaces: replaces, replaced: replaced, perChild: scope == parentbilling.DebtorNumberScopeChild, issuers: childIssuers,
 	})
 	payments, err := readInvoicePayments(ctx, b.store, reviewer.OrganizationID, 0, run.ID.Int64(), scope, hasChildInvoices(result.documents))
 	if err != nil {
 		return preview{}, err
 	}
+	payments.withIssuers(issuers)
 	issuedOn := b.today()
 	for i := range result.documents {
 		payments.holidayDocument(&result.documents[i], issuedOn)
@@ -520,14 +546,11 @@ func (b *BillingRuns) detail(ctx context.Context, reviewer parentbilling.Holiday
 		}
 		detail.PreviewCents += document.TotalCents
 	}
-	pattern, err := numberPatternOf(ctx, b.store, reviewer.OrganizationID, run.Service)
-	switch {
-	case errors.Is(err, parentbilling.ErrNumberRangeMissing):
-	case err != nil:
+	pattern, missing, err := numberRangeState(ctx, b.store, reviewer.OrganizationID, run.Service, documentIssuers(detail.Documents))
+	if err != nil {
 		return parentbilling.BillingRunDetail{}, err
-	default:
-		detail.NumberPattern, detail.NumberRangeSet = pattern, true
 	}
+	detail.NumberPattern, detail.NumberRangeSet, detail.NumberRangeMissingFor = pattern, missing == nil, missing
 	return detail, nil
 }
 
@@ -652,16 +675,16 @@ func (b *BillingRuns) releasedDetail(ctx context.Context, organizationID int64, 
 // and whether it lacks the legal remedy (#4688), and the drafts without a
 // debtor number.
 func (b *BillingRuns) previewDetail(ctx context.Context, reviewer parentbilling.HolidayReviewer, detail *parentbilling.BillingRunDetail) error {
-	current, kind, fingerprint, err := b.fingerprintedPreview(ctx, reviewer, detail.BillingRun)
+	current, kinds, fingerprint, err := b.fingerprintedPreview(ctx, reviewer, detail.BillingRun)
 	if err != nil {
 		return err
 	}
 	detail.Fingerprint = fingerprint
 	detail.Documents, detail.Unbilled, detail.DueDates = current.documents, current.unbilled, current.dueDates.InPaymentOrder()
 	detail.DueDatesVersion = runDueDatesVersion(current.dueDates)
-	detail.DocumentKindState = kind
+	detail.DocumentKindState = kinds.state()
 	for i := range detail.Documents {
-		detail.Documents[i].DocumentKind = kind.DocumentKind
+		detail.Documents[i].DocumentKind = kinds.of(parentbilling.IssuerKeyOf(detail.Documents[i].Issuer))
 	}
 	detail.MissingDebtorNumbers, detail.PaymentTextMissingDebtorNumbers, err = b.missingDebtorNumbers(ctx, reviewer.OrganizationID, current.documents)
 	return err

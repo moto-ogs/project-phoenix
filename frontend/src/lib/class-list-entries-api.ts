@@ -16,6 +16,8 @@ export interface ClassListEntry {
   // IDs regulärer Kinder mit gleichem Namen in derselben Klasse — der
   // Hinweis für die bewusste Zuordnung. Nie automatisch zusammengeführt.
   matchingStudentIds: string[];
+  /** The stored entry as read (ADR 0311); an edit sends it back. */
+  version: string;
 }
 
 export interface ClassListEntryInput {
@@ -24,7 +26,7 @@ export interface ClassListEntryInput {
   schoolClass: string;
 }
 
-function mapEntry(
+export function mapClassListEntry(
   wire: classListEntriesContract.ClassListEntryResponse,
 ): ClassListEntry {
   return {
@@ -34,6 +36,7 @@ function mapEntry(
     schoolClass: wire.school_class,
     createdAt: wire.created_at,
     matchingStudentIds: wire.matching_student_ids ?? [],
+    version: wire.version,
   };
 }
 
@@ -55,13 +58,13 @@ export async function fetchClassListEntries(): Promise<ClassListEntry[]> {
   const entries = await bffJson("tenant", "GET /api/class-list-entries/", {
     errorMessage,
   });
-  return entries.map(mapEntry);
+  return entries.map(mapClassListEntry);
 }
 
 export async function createClassListEntry(
   input: ClassListEntryInput,
 ): Promise<ClassListEntry> {
-  return mapEntry(
+  return mapClassListEntry(
     await bffJson("tenant", "POST /api/class-list-entries/", {
       body: toWireInput(input),
       errorMessage,
@@ -69,14 +72,19 @@ export async function createClassListEntry(
   );
 }
 
+/**
+ * Saves an edited entry on the `version` of the entry the edit started
+ * from; the server refuses it when the entry changed since (ADR 0311).
+ */
 export async function updateClassListEntry(
   id: string,
   input: ClassListEntryInput,
+  expectedVersion: string,
 ): Promise<ClassListEntry> {
-  return mapEntry(
+  return mapClassListEntry(
     await bffJson("tenant", "PUT /api/class-list-entries/{id}", {
       params: { id },
-      body: toWireInput(input),
+      body: { ...toWireInput(input), expected_version: expectedVersion },
       errorMessage,
     }),
   );

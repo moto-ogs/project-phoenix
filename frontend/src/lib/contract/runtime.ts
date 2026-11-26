@@ -1,11 +1,11 @@
 // Handwritten helpers of the generated contract (ADR 0270). The files
 // `*.generated.ts` next to this one hold only shapes and import from here.
 import { z } from "zod";
-
-const INT64 = /^(0|-?[1-9]\d{0,18})$/;
+import { isInt64Decimal } from "../compare-ids";
 
 /** An int64 identifier sent as a JSON string. Kept verbatim, never a number. */
-export const int64String = z.string().regex(INT64);
+export const int64String = z.string().refine(isInt64Decimal);
+export const int64StringOrNone = z.union([int64String, z.literal("")]);
 
 export const safeInt = z.number().refine(Number.isSafeInteger);
 
@@ -25,12 +25,6 @@ export const instant = z.iso.datetime({ offset: true });
  */
 export type OpenEnum<T extends string> = T | (string & {});
 
-export function openEnum<T extends string>() {
-  return z.string() as unknown as z.ZodType<OpenEnum<T>, unknown>;
-}
-
-export { knownEnum } from "./known-enum";
-
 /**
  * The body a registered route binds. It carries no value: the route entry
  * names the type so that the client can check what it sends. Go checks the
@@ -49,6 +43,7 @@ const pagination = z.object({
   page_size: safeInt,
   total_pages: safeInt,
   total_records: safeInt,
+  next_cursor: z.string().optional(),
 });
 
 /** The page of a paginated list (`common.Pagination`). */
@@ -105,7 +100,7 @@ export function success<T>(
 /**
  * A route that answers no data: a 204, which the backend client reads as
  * undefined, or the envelope without a data member. The catalog proxy
- * answers it as `{ status: "success", data: null }`, a DELETE as 204.
+ * preserves the status: a 204 stays bodyless, other successes get a null-data envelope.
  */
 export const noData = z
   .union([

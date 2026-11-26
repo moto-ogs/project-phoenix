@@ -6,7 +6,7 @@ import type * as surveysContract from "~/lib/contract/surveys.generated";
 import type { Survey } from "~/lib/surveys-api";
 import { testClockDay } from "~/test/clock";
 
-import SurveysPage from "./page";
+import SurveysPage from "./page-content";
 
 // The open surveys close three weeks after the test day; beforeEach puts
 // the same day into the hoisted form.
@@ -99,6 +99,8 @@ const openSurvey: surveysContract.surveyToAnswerResponse = {
 
 const managed: Survey = {
   id: "21",
+  version: "2026-09-01T08:00:00Z",
+  fingerprint: "fp-21",
   title: "Elternzufriedenheit",
   intro: "",
   audience: "parents",

@@ -7,7 +7,7 @@ import { useSWRAuth } from "~/lib/swr";
 import { PortalAuthGuard } from "~/components/auth/portal-auth-guard";
 import { Alert } from "~/components/ui/alert";
 import { normalizeLocale } from "~/i18n/locales";
-import { notBookedModuleOf } from "~/lib/module-not-booked";
+import { isModuleNotBooked } from "~/lib/module-not-booked";
 import { portalNotBookedExplanation } from "~/lib/portal-not-booked";
 import { fetchParentProfile } from "~/lib/parent-api";
 import { ParentShellProvider } from "~/lib/shell-auth-context";
@@ -16,26 +16,7 @@ import { ParentShell } from "~/components/parent/shell/parent-shell";
 import { ParentPageSkeleton } from "~/components/parent/parent-page";
 import { ParentRealtimeBridge } from "~/components/parent/parent-realtime-bridge";
 import { ParentNotificationOnboarding } from "~/components/parent/parent-notification-onboarding";
-
-const PARENT_PUBLIC_PAGES = [
-  "/invite",
-  "/login",
-  "/reset-password",
-  "/accept-guardian-invite",
-  // Status page is gated by the random token — same trust model as
-  // the tenant version. Email links should land here directly even
-  // when the parent isn't logged in.
-  "/anmeldung/status",
-  // The public holiday registration of a Träger, gated by its link (#4661).
-  "/ferienanmeldung",
-  // Setting up the parent account from the holiday registration's mail,
-  // gated by its link (#6673).
-  "/ferienkonto",
-  // The one-time link of a care contract mail, gated by its link (#4679).
-  "/vertrag-unterschreiben",
-  // The public demo's entry page signs the visitor in itself (#3468).
-  "/demo",
-];
+import { PARENT_PUBLIC_PAGES } from "~/lib/portal-public-pages";
 
 /**
  * Client-side auth guard for parent routes. Unlike the other portals it
@@ -101,7 +82,7 @@ function ParentPortal({
             <ParentPageSkeleton rows={2} />
           ) : notBooked ||
             session.notBooked ||
-            notBookedModuleOf(profileError) ? (
+            isModuleNotBooked(profileError) ? (
             // Keine Schule des Kontos nutzt das Elternportal mehr (#4895):
             // ein Hinweis statt einer Fehlerkarte je Bereich der Seite.
             <Alert

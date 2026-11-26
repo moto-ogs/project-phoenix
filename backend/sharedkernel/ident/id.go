@@ -12,15 +12,62 @@ import (
 
 // ID is an int64 identifier that travels to a client as a JSON string. A JSON
 // number beyond 2^53 is rounded by JavaScript to the identifier of a
-// different row. It reads a decimal string or, for one release, a JSON number
-// (see UnmarshalJSON).
+// different row. At the HTTP boundary package wire reads and writes a string.
 //
 // encoding/json writes an ID as a JSON number, as it writes an int64: stored
 // JSON (audit details, outbox payloads, snapshots, fingerprints) keeps the
-// form that database functions compare with numbers (ADR 0300, addendum).
+// form that database functions compare with numbers (ADR 0300, Nachtrag vom
+// 2026-11-21).
 // Only an answer to a client writes the string: package wire. In the database
 // an ID is a plain bigint.
 type ID int64
+
+// IDOrNone preserves an HTTP field whose established absence marker is the
+// empty string. Use *ID for new fields that can be null or absent. In requests,
+// a supplied zero is distinct from absence so validation can refuse it.
+type IDOrNone struct {
+	id      ID
+	present bool
+}
+
+// Optional converts a domain ID that uses zero to mean absent.
+func Optional(id int64) IDOrNone { return IDOrNone{id: ID(id), present: id != 0} }
+
+func (id IDOrNone) IsZero() bool { return !id.present }
+
+func (id IDOrNone) Int64() int64 { return int64(id.id) }
+
+func (id IDOrNone) wireString() string {
+	if id.IsZero() {
+		return ""
+	}
+	return id.id.String()
+}
+
+func (id IDOrNone) MarshalJSON() ([]byte, error) { return json.Marshal(id.wireString()) }
+
+// UnmarshalJSON accepts the legacy empty marker or a decimal string, never
+// a JSON number. A pointer to this type can distinguish null from an empty
+// string in requests that use empty to clear a selection.
+func (id *IDOrNone) UnmarshalJSON(data []byte) error {
+	var raw *string
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	if raw == nil {
+		return nil
+	}
+	if *raw == "" {
+		*id = IDOrNone{}
+		return nil
+	}
+	var parsed ID
+	if err := parsed.UnmarshalJSON(data); err != nil {
+		return err
+	}
+	*id = IDOrNone{id: parsed, present: true}
+	return nil
+}
 
 // Int64 returns the identifier as the int64 the rest of the code works with.
 func (id ID) Int64() int64 { return int64(id) }
@@ -33,13 +80,8 @@ func (id ID) String() string { return strconv.FormatInt(int64(id), 10) }
 // is not a plain integer is rejected instead of being coerced to zero. null
 // leaves the value unchanged.
 //
-// The JSON number is the one-release compatibility for deployed clients:
-// browser tabs of the frontend before #7808 still send numbers in many
-// bodies, and a reader of strings only would break them at the deploy
-// (expand, then contract; ADR 0270). Every client of this repository sends
-// strings since #7808, and the kiosk device API keeps its own int64 fields
-// (contract:"number"). After the next release, this reader takes only a
-// decimal string.
+// Stored JSON continues to use numbers. HTTP request decoders use wire to
+// require strings without changing the format that persistence reads.
 func (id *ID) UnmarshalJSON(data []byte) error {
 	trimmed := strings.TrimSpace(string(data))
 	if trimmed == "null" {

@@ -10,8 +10,10 @@ import (
 
 // CategoryLinker syncs the optional Kategorie↔Schichtart mapping. The FK
 // lives on activities.categories, so the write belongs to the Timetable
-// owner; a nil linker leaves every mapping untouched.
-type CategoryLinker func(ctx context.Context, shiftTypeID int64, categoryIDs []int64) error
+// owner; a nil linker leaves every mapping untouched. expected carries the
+// link token per category the form read (ADR 0311); the administration
+// always passes a map, nil skips the check for internal callers.
+type CategoryLinker func(ctx context.Context, shiftTypeID int64, categoryIDs []int64, expected map[int64]string) error
 
 type shiftTypeAdministration struct {
 	types  ShiftTypeService
@@ -44,7 +46,10 @@ func (a shiftTypeAdministration) CreateShiftType(ctx context.Context, input work
 	if err != nil {
 		return workforce.ShiftType{}, mapShiftTypeError(err)
 	}
-	if err := a.syncCategoryLinks(ctx, saved.ID, input.CategoryIDs); err != nil {
+	// Linking a category moves it from the type it was linked to: the form
+	// read that link with the category list and sends its token, like an
+	// edit (ADR 0311).
+	if err := a.syncCategoryLinks(ctx, saved.ID, input.CategoryIDs, expectedCategoryLinks(input)); err != nil {
 		return workforce.ShiftType{}, err
 	}
 	return shiftTypeToCapability(saved), nil
@@ -59,7 +64,10 @@ func (a shiftTypeAdministration) CreateDefaultShiftTypes(ctx context.Context) ([
 }
 
 // UpdateShiftType preserves the stored active flag when the client omitted
-// it, so a rename cannot silently reactivate a retired type.
+// it, so a rename cannot silently reactivate a retired type. The type and
+// the links it changes are written only over what its editor read (ADR
+// 0311): the type's version, and the link token of each category whose
+// link the write changes.
 func (a shiftTypeAdministration) UpdateShiftType(ctx context.Context, input workforce.ShiftTypeInput) (workforce.ShiftType, error) {
 	shiftType := shiftTypeInputToModel(input)
 	if input.IsActive == nil {
@@ -69,11 +77,11 @@ func (a shiftTypeAdministration) UpdateShiftType(ctx context.Context, input work
 		}
 		shiftType.IsActive = existing.IsActive
 	}
-	saved, err := a.types.UpdateShiftType(ctx, shiftType)
+	saved, err := a.types.UpdateShiftType(ctx, shiftType, input.ExpectedVersion)
 	if err != nil {
 		return workforce.ShiftType{}, mapShiftTypeError(err)
 	}
-	if err := a.syncCategoryLinks(ctx, saved.ID, input.CategoryIDs); err != nil {
+	if err := a.syncCategoryLinks(ctx, saved.ID, input.CategoryIDs, expectedCategoryLinks(input)); err != nil {
 		return workforce.ShiftType{}, err
 	}
 	return shiftTypeToCapability(saved), nil
@@ -88,16 +96,25 @@ func (a shiftTypeAdministration) DeleteShiftType(ctx context.Context, id int64) 
 	return removal, mapShiftTypeError(err)
 }
 
+// expectedCategoryLinks is never nil: a nil map would skip the link check,
+// and a write naming categories always changes links its form read.
+func expectedCategoryLinks(input workforce.ShiftTypeInput) map[int64]string {
+	if input.ExpectedCategoryLinks == nil {
+		return map[int64]string{}
+	}
+	return input.ExpectedCategoryLinks
+}
+
 // syncCategoryLinks applies the optional mapping after a write. A nil set
 // (field omitted) leaves the mapping untouched; a present set, including an
 // empty one, replaces it. It runs in the same tenant transaction as the
 // shift-type write, so the caller must roll the request back when unknown
 // category ids reject it.
-func (a shiftTypeAdministration) syncCategoryLinks(ctx context.Context, shiftTypeID int64, categoryIDs []int64) error {
+func (a shiftTypeAdministration) syncCategoryLinks(ctx context.Context, shiftTypeID int64, categoryIDs []int64, expected map[int64]string) error {
 	if categoryIDs == nil || a.linker == nil {
 		return nil
 	}
-	if err := a.linker(ctx, shiftTypeID, categoryIDs); err != nil {
+	if err := a.linker(ctx, shiftTypeID, categoryIDs, expected); err != nil {
 		if errors.Is(err, timetable.ErrUnknownCategoryIDs) {
 			return &capabilityError{kind: workforce.ErrShiftTypeCategoryUnknown, cause: err}
 		}

@@ -370,6 +370,11 @@ describe("OpeningBalanceImportPage", () => {
               code: "import.import_batch_failed",
               details: {
                 result: {
+                  started_at: "2026-11-24T12:00:00Z",
+                  completed_at: "2026-11-24T12:01:00Z",
+                  skipped_count: 0,
+                  bulk_actions: null,
+                  dry_run: false,
                   total_rows: 205,
                   created_count: 100,
                   updated_count: 0,
@@ -378,7 +383,12 @@ describe("OpeningBalanceImportPage", () => {
                   errors: [
                     {
                       row_number: 152,
+                      timestamp: "2026-11-24T12:00:00Z",
                       data: {
+                        hours_balance: "",
+                        vacation_entitled: "",
+                        vacation_carryover: "",
+                        vacation_remaining: "",
                         personnel_number: "1003",
                         first_name: "Clara",
                         last_name: "Weber",

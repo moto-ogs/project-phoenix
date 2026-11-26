@@ -15,6 +15,8 @@ import (
 	"testing"
 	"time"
 
+	testpkg "github.com/moto-ogs/project-phoenix/test"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -194,7 +196,7 @@ func TestParentEnrollmentCareOfferingsIncludePickupBaselines(t *testing.T) {
 	t.Parallel()
 
 	type offeringPayload struct {
-		PhaseID       int64             `json:"phase_id"`
+		PhaseID       testpkg.ID        `json:"phase_id"`
 		HolidayCare   bool              `json:"includes_holiday_care"`
 		Name          string            `json:"name"`
 		AvailableDays []string          `json:"available_days"`
@@ -1070,6 +1072,9 @@ func fullSeedAPIMock(t *testing.T, traces ...*fullSeedAPITrace) *seedHTTPTestSer
 	t.Helper()
 	weeklyMock := &weeklyProfileAPIMock{traces: traces}
 	idCounter := int64(0)
+	// The school's own absence types the seed creates; their list answers
+	// them with a version the seed sends back on every edit (ADR 0311).
+	var absenceTypeIDs []string
 	holidayGuestGroupID := "0"
 	// The first staff members the seed creates; the Frühbetreuung's
 	// deviation needs the second.
@@ -1088,6 +1093,9 @@ func fullSeedAPIMock(t *testing.T, traces ...*fullSeedAPITrace) *seedHTTPTestSer
 	// Ids of the parent pickup changes the seeder files, served back as the
 	// open care queue so the decided demo request (#3135) finds its tokens.
 	var pickupRequestIDs []int64
+	// requestChildren keeps each request's child, as the real detail does
+	// on every read (the correction reads it again for its version).
+	requestChildren := map[string]map[string]any{}
 	// lastGuardianID is the parent-managed contact the pickup permission
 	// request of #4780 names.
 	var lastGuardianID int64
@@ -1274,6 +1282,16 @@ func fullSeedAPIMock(t *testing.T, traces ...*fullSeedAPITrace) *seedHTTPTestSer
 			_ = json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": data})
 			return
 		}
+		// The roles of the Träger for its schools (#4810): the catalog offers
+		// the starting selection the seed gives „Springerkraft“.
+		if strings.HasPrefix(r.URL.Path, "/traeger/school-roles/") {
+			data := any(map[string]any{"id": "1", "name": seedTraegerSchoolRoleName})
+			if r.Method == seedHTTPMethodGet {
+				data = map[string]any{"templates": []any{map[string]any{"base_role": "user", "permission_ids": []string{"1", "2"}}}}
+			}
+			_ = json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": data})
+			return
+		}
 		// The Einsatzplanung of the Träger (#4708): the week of this fake
 		// Träger plans nobody.
 		if r.Method == seedHTTPMethodGet && r.URL.Path == "/traeger/staff-planning/" {
@@ -1285,8 +1303,20 @@ func fullSeedAPIMock(t *testing.T, traces ...*fullSeedAPITrace) *seedHTTPTestSer
 			_ = json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": map[string]any{"available": true, "springers": []any{}}})
 			return
 		}
+		if r.Method == seedHTTPMethodPost && r.URL.Path == "/api/absence-types" {
+			idCounter++
+			absenceTypeIDs = append(absenceTypeIDs, fmt.Sprint(idCounter))
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(seedHTTPStatusCreated)
+			_ = json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": map[string]any{"id": fmt.Sprint(idCounter), "version": "v1"}})
+			return
+		}
 		if r.Method == seedHTTPMethodGet && r.URL.Path == "/api/absence-types" {
-			_ = json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": []any{}})
+			listed := make([]any, 0, len(absenceTypeIDs))
+			for _, id := range absenceTypeIDs {
+				listed = append(listed, map[string]any{"id": id, "kept_by_traeger": false, "version": "v1"})
+			}
+			_ = json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": listed})
 			return
 		}
 		// The shared document step (#4692) reads the schools with their
@@ -1408,8 +1438,8 @@ func fullSeedAPIMock(t *testing.T, traces ...*fullSeedAPITrace) *seedHTTPTestSer
 			require.NoError(t, err)
 			var body map[string]any
 			require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
-			require.Equal(t, float64(2), body["school_id"])
-			require.Equal(t, float64(1), body["role_id"])
+			require.Equal(t, "2", body["school_id"])
+			require.Equal(t, "1", body["role_id"])
 			require.Equal(t, DemoStaff[0].FirstName, body["first_name"])
 			require.Equal(t, DemoStaff[0].LastName, body["last_name"])
 			_ = json.NewEncoder(w).Encode(map[string]any{"status": "success", "data": []any{}})
@@ -1641,6 +1671,7 @@ func fullSeedAPIMock(t *testing.T, traces ...*fullSeedAPITrace) *seedHTTPTestSer
 		if strings.HasPrefix(r.URL.Path, "/api/enrollment/admin/requests/") && strings.HasSuffix(r.URL.Path, "/offerings") {
 			var body map[string]any
 			require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+			require.Equal(t, "offerings-version", body["expected_version"], "a correction sends the version it read")
 			if trace != nil && body["complete_withdrawal_confirmed"] == true {
 				if trace.withdrawalToday.IsZero() {
 					trace.withdrawalToday = todaySeedDate()
@@ -1694,14 +1725,20 @@ func fullSeedAPIMock(t *testing.T, traces ...*fullSeedAPITrace) *seedHTTPTestSer
 			return
 		}
 		if strings.HasPrefix(r.URL.Path, "/api/enrollment/admin/requests/") {
+			child, ok := requestChildren[r.URL.Path]
+			if !ok {
+				child = map[string]any{
+					"id": fmt.Sprintf("%d", idCounter+1000), "created_student_id": fmt.Sprintf("%d", idCounter+2000),
+					"offerings_version": "offerings-version",
+				}
+				requestChildren[r.URL.Path] = child
+			}
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"status": "success",
 				"data": map[string]any{
 					"id":           fmt.Sprintf("%d", idCounter),
 					"status_token": fmt.Sprintf("status-token-%d", idCounter),
-					"children": []map[string]any{
-						{"id": fmt.Sprintf("%d", idCounter+1000), "created_student_id": fmt.Sprintf("%d", idCounter+2000)},
-					},
+					"children":     []map[string]any{child},
 				},
 			})
 			return
@@ -1777,7 +1814,7 @@ func fullSeedAPIMock(t *testing.T, traces ...*fullSeedAPITrace) *seedHTTPTestSer
 				items = append(items, map[string]any{
 					"request_type":     "care_schedule",
 					"expected_version": fmt.Sprintf("v%d", id),
-					"data":             map[string]any{"id": fmt.Sprintf("%d", id), "impact_token": fmt.Sprintf("impact-%d", id)},
+					"care_schedule":    map[string]any{"id": fmt.Sprintf("%d", id), "impact_token": fmt.Sprintf("impact-%d", id)},
 				})
 			}
 			_ = json.NewEncoder(w).Encode(map[string]any{
@@ -1965,10 +2002,6 @@ func fullSeedAPIMock(t *testing.T, traces ...*fullSeedAPITrace) *seedHTTPTestSer
 		}
 		if strings.HasPrefix(r.URL.Path, "/auth/roles/") && strings.HasSuffix(r.URL.Path, "/permission-selection") {
 			_, _ = fmt.Fprint(w, `{"data":{"permissions":[],"version":"empty"}}`)
-			return
-		}
-		if strings.HasPrefix(r.URL.Path, "/auth/roles/") && strings.HasSuffix(r.URL.Path, "/permissions") {
-			w.WriteHeader(seedHTTPStatusNoContent)
 			return
 		}
 

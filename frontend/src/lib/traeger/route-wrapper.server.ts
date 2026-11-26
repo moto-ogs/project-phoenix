@@ -15,20 +15,6 @@ import { makePortalHandlers } from "../portal-handlers.server";
  */
 export const traeger = makePortalHandlers(traegerPortal);
 
-export const { proxyGet, proxyPost, proxyPut, proxyDelete, proxyUpload } =
-  traeger;
-
-/**
- * Träger exports filter by the page's query, so it travels whole. A POST
- * file request carries a letter's text and stays below 64 KiB.
- */
-export const proxyFile: typeof traeger.proxyFile = (endpoint, options) =>
-  traeger.proxyFile(endpoint, {
-    forwardQuery: true,
-    maxBodyBytes: 64 * 1024,
-    ...options,
-  });
-
 /**
  * The Träger portal's proxy: forwards `/api/traeger/…` to the backend's `/traeger/…`
  * for the routes the contract registers for this portal, and the public

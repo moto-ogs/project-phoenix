@@ -182,7 +182,7 @@ export function UtilizationChildrenSection({
       <SectionCard
         title={TITLE}
         concept={childrenConcept}
-        description={`Die ${school.name} hat im Zeitraum keine Check-ins. Deshalb gibt es keine Tage je Kind.`}
+        description={`Die ${school.name} hat im Zeitraum keine Check-ins. Deshalb gibt es keine Tage pro Kind.`}
       />
     );
   }
@@ -251,7 +251,6 @@ export function UtilizationChildrenSection({
       rows={[...children.children]}
       getRowKey={(child) => child.studentId}
       defaultSortKey="name"
-      stackedOnMobile
       pageSize={25}
       pageNoun="Kinder"
       emptyState={

@@ -9,6 +9,7 @@ import (
 
 	activityContract "github.com/moto-ogs/project-phoenix/modules/timetable/activitycontract"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 const (
@@ -34,9 +35,15 @@ type ActivityCategoryResponse struct {
 	ArchivedAt *time.Time `json:"archived_at,omitempty"`
 	// UsageCount is how many Aktivitäten/Termin-Vorlagen reference the
 	// category. Only populated by the category list endpoint; nil elsewhere.
-	UsageCount *int      `json:"usage_count,omitempty"`
-	CreatedAt  time.Time `json:"created_at"`
-	UpdatedAt  time.Time `json:"updated_at"`
+	UsageCount *int `json:"usage_count,omitempty"`
+	// Version is the token an edit of the category sends back as
+	// expected_version (ADR 0311).
+	Version string `json:"version,omitempty"`
+	// ShiftTypeLinkVersion is the token of the category's link to a shift
+	// type; a shift-type edit sends it per category it read.
+	ShiftTypeLinkVersion string    `json:"shift_type_link_version,omitempty"`
+	CreatedAt            time.Time `json:"created_at"`
+	UpdatedAt            time.Time `json:"updated_at"`
 }
 
 // ActivitySupervisorResponse represents a supervisor in activity response
@@ -50,10 +57,14 @@ type ActivitySupervisorResponse struct {
 
 // ActivityResponse represents an activity group API response
 type ActivityResponse struct {
-	ID              ident.ID                     `json:"id"`
-	Name            string                       `json:"name"`
-	MaxParticipants *int                         `json:"max_participants"`
-	IsOpen          bool                         `json:"is_open"`
+	ID              ident.ID `json:"id"`
+	Name            string   `json:"name"`
+	MaxParticipants *int     `json:"max_participants"`
+	IsOpen          bool     `json:"is_open"`
+	// IsSystem marks an activity moto provisions itself (Schulhof Freispiel,
+	// WC, Offener Raum): its name and category stay fixed and it cannot be
+	// deleted. A staff activity that only shares such a name is not one.
+	IsSystem        bool                         `json:"is_system"`
 	CategoryID      ident.ID                     `json:"category_id"`
 	PlannedRoomID   *ident.ID                    `json:"planned_room_id,omitempty"`
 	CreatedBy       *ident.ID                    `json:"created_by"`
@@ -159,7 +170,7 @@ func (o *OptionalRoomID) UnmarshalJSON(b []byte) error {
 		o.Value = nil
 		return nil
 	}
-	return json.Unmarshal(b, &o.Value)
+	return wire.Unmarshal(b, &o.Value)
 }
 
 // Bind validates the update the way ActivityRequest validates a write.

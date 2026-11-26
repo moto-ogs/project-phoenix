@@ -432,7 +432,7 @@ jobs:
     timeout-minutes: 15
     permissions:
       contents: read
-      pull-requests: read
+      actions: read
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -521,17 +521,15 @@ jobs:
 
       - name: Notify Slack
         if: always()
-        uses: ./.github/actions/notify-deploy-slack
+        uses: moto-ogs/deploy-notify@v1
         with:
-          webhook_url: ${{ secrets.SLACK_DEPLOY_WEBHOOK }}
-          job_status: ${{ job.status }}
+          slack_token: ${{ secrets.SLACK_BOT_TOKEN }}
+          channel: ${{ vars.SLACK_DEPLOY_CHANNEL }}
+          status: ${{ job.status }}
           environment: staging
-          app_name: Phoenix
+          app: Phoenix
           exit_code: ${{ steps.deploy.outputs.deploy_exit }}
-          github_token: ${{ github.token }}
-          repository: ${{ github.repository }}
-          commit_url: ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}
-          sha: ${{ github.sha }}
+          exit_codes: deploy-remote
 
   # Deploy to production with automatic rollback on failure
   # Exit codes from deploy-remote.sh: 0=success, 1=pre-deploy abort, 10=rollback ok, 11=rollback failed
@@ -549,7 +547,7 @@ jobs:
       name: production
     permissions:
       contents: read
-      pull-requests: read
+      actions: read
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -652,17 +650,15 @@ jobs:
 
       - name: Notify Slack
         if: always()
-        uses: ./.github/actions/notify-deploy-slack
+        uses: moto-ogs/deploy-notify@v1
         with:
-          webhook_url: ${{ secrets.SLACK_DEPLOY_WEBHOOK }}
-          job_status: ${{ job.status }}
+          slack_token: ${{ secrets.SLACK_BOT_TOKEN }}
+          channel: ${{ vars.SLACK_DEPLOY_CHANNEL }}
+          status: ${{ job.status }}
           environment: production
-          app_name: Phoenix
+          app: Phoenix
           exit_code: ${{ steps.deploy.outputs.deploy_exit }}
-          github_token: ${{ github.token }}
-          repository: ${{ github.repository }}
-          commit_url: ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}
-          sha: ${{ github.sha }}
+          exit_codes: deploy-remote
 
   # Deploy to demo with automatic rollback on failure
   # Exit codes from deploy-remote.sh: 0=success, 1=pre-deploy abort, 10=rollback ok, 11=rollback failed
@@ -681,7 +677,7 @@ jobs:
       name: demo
     permissions:
       contents: read
-      pull-requests: read
+      actions: read
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -812,21 +808,21 @@ jobs:
 
       - name: Notify Slack
         if: always()
-        uses: ./.github/actions/notify-deploy-slack
+        uses: moto-ogs/deploy-notify@v1
         with:
-          webhook_url: ${{ secrets.SLACK_DEPLOY_WEBHOOK }}
-          job_status: ${{ job.status }}
+          slack_token: ${{ secrets.SLACK_BOT_TOKEN }}
+          channel: ${{ vars.SLACK_DEPLOY_CHANNEL }}
+          status: ${{ job.status }}
           environment: demo
-          app_name: Phoenix
+          app: Phoenix
           exit_code: ${{ steps.deploy.outputs.deploy_exit }}
-          github_token: ${{ github.token }}
-          repository: ${{ github.repository }}
-          commit_url: ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}
-          sha: ${{ github.sha }}
+          exit_codes: deploy-remote
 
       # Last step: "Order a demo school" continues on error so cleanup, Sentry
-      # and Slack still run. "Notify Slack" above therefore still reports the
-      # deploy itself as successful; only this step marks the run as failed.
+      # and Slack still run. "Notify Slack" above therefore sees a successful
+      # deploy and stays silent (only production deploys and failures reach the
+      # channel); the failed order has its own alert, and only this step marks
+      # the run as failed.
       - name: Fail the run when the demo order failed
         if: steps.smoke.outcome == 'failure'
         run: |

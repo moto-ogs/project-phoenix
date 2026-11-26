@@ -12,6 +12,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan/carerequests"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	parentService "github.com/moto-ogs/project-phoenix/workflows/parentportal"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -78,11 +79,11 @@ func TestParsePickupPersonID(t *testing.T) {
 	id, err := parsePickupPersonID(nil)
 	require.NoError(t, err)
 	assert.Zero(t, id)
-	value := "42"
+	value := ident.Optional(42)
 	id, err = parsePickupPersonID(&value)
 	require.NoError(t, err)
 	assert.Equal(t, int64(42), id)
-	invalid := "abc"
+	invalid := ident.Optional(-1)
 	_, err = parsePickupPersonID(&invalid)
 	assert.Error(t, err)
 }
@@ -97,7 +98,7 @@ func TestPickupChangeResponseExposesCollectorIDOnlyForOwnPendingRequest(t *testi
 	response, err := toPickupChangeRequestResponse(request, 7)
 	require.NoError(t, err)
 	require.NotNil(t, response.PickupPersonGuardianProfileID)
-	assert.Equal(t, "42", *response.PickupPersonGuardianProfileID)
+	assert.Equal(t, "42", response.PickupPersonGuardianProfileID.String())
 
 	request.Status = carerequests.StatusApproved
 	response, err = toPickupChangeRequestResponse(request, 7)

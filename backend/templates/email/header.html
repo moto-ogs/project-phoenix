@@ -32,7 +32,7 @@
     {{end}}
     <div class="school-brand-copy">
         <p class="school-kicker">{{if .BrandKicker}}{{.BrandKicker}}{{else if .DefaultBrandKicker}}{{.DefaultBrandKicker}}{{else}}Online-Anmeldung{{end}}</p>
-        <p class="school-name">{{if .SchoolName}}{{.SchoolName}}{{else if .DefaultSchoolName}}{{.DefaultSchoolName}}{{else if .CareFacilityTerm}}Deine {{.CareFacilityTerm}}{{else}}Deine OGS{{end}}</p>
+        <p class="school-name">{{if .SchoolName}}{{.SchoolName}}{{else if .DefaultSchoolName}}{{.DefaultSchoolName}}{{else if .CareFacilityOwn}}{{.CareFacilityOwn}}{{else if .CareFacilityTerm}}Deine {{.CareFacilityTerm}}{{else}}Deine OGS{{end}}</p>
     </div>
 </div>
 {{end}}

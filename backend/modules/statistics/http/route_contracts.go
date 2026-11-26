@@ -16,7 +16,7 @@ func RouteContracts() []common.RouteContract {
 	filters := []common.QueryParam{
 		{Name: "from", Kind: common.QueryDate}, {Name: "to", Kind: common.QueryDate},
 		{Name: "section", Kind: common.QueryString, Repeated: true},
-		{Name: "group_id", Kind: common.QueryString, Repeated: true},
+		{Name: "group_id", Kind: common.QueryID, Repeated: true},
 		{Name: "school_class", Kind: common.QueryString, Repeated: true},
 	}
 	return []common.RouteContract{

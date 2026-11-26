@@ -141,6 +141,9 @@ const REFUSALS: Partial<Record<ErrorCode, HolidayBulkSkipReason>> = {
   "parent_billing.debtor_number_invalid": "debtor_number_missing",
   "enrollment.holiday_registration_state_conflict": "changed",
   "enrollment.holiday_registration_entry_not_found": "changed",
+  // The contribution changed between the preview the run read and the
+  // confirmation (ADR 0311).
+  "general.changed_since_read": "changed",
 };
 
 /**

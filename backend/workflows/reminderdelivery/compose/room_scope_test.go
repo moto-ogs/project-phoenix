@@ -91,7 +91,7 @@ func TestSupervisedRoomScopeAgreesWithBulkReader(t *testing.T) {
 			ids := make([]string, 0, len(result.Reminders))
 			for _, item := range result.Reminders {
 				require.NotNil(t, item.ActivityInstanceID)
-				ids = append(ids, *item.ActivityInstanceID)
+				ids = append(ids, item.ActivityInstanceID.String())
 			}
 			return ids
 		}

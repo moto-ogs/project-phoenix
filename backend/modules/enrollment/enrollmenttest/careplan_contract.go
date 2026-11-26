@@ -13,6 +13,8 @@ type (
 	DecideInput                 = enrollment.DecideInput
 	DecideOutcome               = enrollment.DecideOutcome
 	UpdateChildOfferingsInput   = enrollment.UpdateChildOfferingsInput
+	ChildOfferingsUpdate        = enrollment.ChildOfferingsUpdate
+	ChildOfferingSet            = enrollment.ChildOfferingSet
 	OfferingAdjustmentSelection = enrollment.OfferingAdjustmentSelection
 	ApprovedChildChanges        = enrollment.ApprovedChildChanges
 	ApprovedChildSync           = enrollment.ApprovedChildSync

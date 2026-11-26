@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // The caller-context outcomes consumers match on. Their texts are part of
@@ -103,17 +105,6 @@ type CallerGroup struct {
 	ViaSubstitution bool
 }
 
-// CallerNavigation is the identity projection the shared frontend context
-// reads in one request. StaffID is zero for a caller who is no staff
-// member. A section that failed to load is named in UnavailableSections.
-type CallerNavigation struct {
-	Groups               []CallerGroup
-	SupervisedSessionIDs []int64
-	StaffID              int64
-	Incomplete           bool
-	UnavailableSections  []string
-}
-
 // SSESubscription is the resolved topic set of a live-update client: the
 // staff member (0 for effective admins without a staff record), the room
 // session topics, the educational-group topics and their deduplicated union.
@@ -146,11 +137,28 @@ type CallerProfile struct {
 }
 
 // CallerProfileUpdate names the self-editable fields; nil leaves a field.
+// ExpectedVersion is the ProfileVersion of the profile the edit was made
+// from (ADR 0311); a person changed since is refused with
+// readstate.ErrChanged.
 type CallerProfileUpdate struct {
-	FirstName *string
-	LastName  *string
-	Username  *string
-	Bio       *string
+	FirstName       *string
+	LastName        *string
+	Username        *string
+	Bio             *string
+	ExpectedVersion string
+}
+
+// ProfileVersion is the read-state token of the caller's profile (ADR 0311):
+// the version of the linked person (persons.updated_at, the People
+// Directory's PersonVersion, which an admin's name change through
+// PUT /api/users/{id} sends as well), or readstate.Absent while the account
+// has no person. It does not cover the username (auth.accounts) or the bio
+// (users.profiles): the profile form edits only the names.
+func ProfileVersion(profile CallerProfile) string {
+	if profile.Person == nil {
+		return readstate.Absent
+	}
+	return readstate.Of(profile.Person.UpdatedAt)
 }
 
 // CallerIdentities resolves the caller's Account → Person → Staff → Teacher
@@ -181,7 +189,6 @@ type CallerReach interface {
 	MyActivityGroupIDs(context.Context) ([]int64, error)
 	MyActiveSessionIDs(context.Context) ([]int64, error)
 	MySupervisedSessionIDs(context.Context) ([]int64, error)
-	Navigation(context.Context) (CallerNavigation, error)
 	SSESubscription(context.Context) (SSESubscription, error)
 }
 

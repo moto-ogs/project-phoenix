@@ -2,12 +2,14 @@ package common_test
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/go-chi/render"
 	"github.com/moto-ogs/project-phoenix/api/common"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -63,12 +65,34 @@ func TestOperatorForbidden(t *testing.T) {
 func TestOperatorInternal(t *testing.T) {
 	t.Parallel()
 
-	renderer := common.OperatorInternal("Internal error")
+	renderer := common.OperatorInternal(errors.New("adapter: connection reset"), "Internal error")
 
 	status, statusText, errorText := extractOperatorErrResponse(t, renderer)
 	assert.Equal(t, http.StatusInternalServerError, status)
 	assert.Equal(t, status, statusText, "the envelope status is the HTTP status number")
 	assert.Equal(t, "Internal error", errorText)
+}
+
+// An operator renderer's internal fallback keeps its error, so RenderError
+// lifts a business rejection in it, an edit on a changed state among them
+// (ADR 0311), to its 409 and code; any other error stays a 500 with the
+// fixed text.
+func TestOperatorInternalKeepsABusinessRejection(t *testing.T) {
+	t.Parallel()
+	render := func(err error) *httptest.ResponseRecorder {
+		rec := httptest.NewRecorder()
+		common.RenderError(rec, httptest.NewRequest(http.MethodPut, "/", nil), common.OperatorInternal(err, "An error occurred"))
+		return rec
+	}
+
+	changed := render(fmt.Errorf("update announcement: %w", readstate.ErrChanged))
+	assert.Equal(t, http.StatusConflict, changed.Code, changed.Body.String())
+	assert.Contains(t, changed.Body.String(), `"code":"general.changed_since_read"`)
+
+	failed := render(errors.New("adapter: connection reset"))
+	assert.Equal(t, http.StatusInternalServerError, failed.Code)
+	assert.Contains(t, failed.Body.String(), "An error occurred")
+	assert.NotContains(t, failed.Body.String(), "connection reset", "the cause is logged, not answered")
 }
 
 func TestOperatorServiceUnavailable(t *testing.T) {

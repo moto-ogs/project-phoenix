@@ -74,3 +74,17 @@ scrape_configs:
         labels:
           env: staging
           service: worker
+
+  - job_name: postgres-prod
+    static_configs:
+      - targets: ["postgres-exporter-prod:9187"]
+        labels:
+          env: prod
+          service: postgres
+
+  - job_name: postgres-staging
+    static_configs:
+      - targets: ["postgres-exporter-staging:9187"]
+        labels:
+          env: staging
+          service: postgres

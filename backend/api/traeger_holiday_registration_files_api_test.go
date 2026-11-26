@@ -68,7 +68,7 @@ func TestHolidayRegistrationFilesKeepAnsweredInactiveAndArchivedCriteria(t *test
 	first := f.submitCriteria(t, "alte.kriterien@example.org", true, false)
 	// Keep the family criterion disabled and archive the child criterion.
 	rec := saveHolidayCriteria(t, f.traeger, f.office.token, criteriaVersion(t, f.traeger, f.office.token), map[string]any{"criteria": []map[string]any{
-		{"id": f.working, "name": "Berufstätig", "question": "Sind Sie berufstätig?", "scope": "family", "active": false},
+		{"id": fmt.Sprint(f.working), "name": "Berufstätig", "question": "Sind Sie berufstätig?", "scope": "family", "active": false},
 	}})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Empty(t, f.publicOffer(t).Criteria, "new registrations no longer see the old questions")
@@ -274,7 +274,7 @@ func TestHolidayRegistrationKeepsTheRetentionOfItsText(t *testing.T) {
 			PrivacyConsent string `json:"privacy_consent"`
 		} `json:"consent_texts"`
 	}](t, rec.Body.Bytes())
-	assert.Equal(t, 5, offer.ConsentTexts.Version)
+	assert.Equal(t, 7, offer.ConsentTexts.Version)
 	assert.Equal(t, 180, offer.ConsentTexts.RetentionDays)
 	assert.Contains(t, offer.ConsentTexts.PrivacyConsent, "Er löscht sie 180 Tage nach den Ferien.")
 	assert.Contains(t, offer.ConsentTexts.PrivacyConsent, "Gesundheitsangaben löscht er schon 92 Tage nach den Ferien.")

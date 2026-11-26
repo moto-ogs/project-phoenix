@@ -160,6 +160,8 @@ export interface BillingDocument {
   readonly referenceNumber: string;
   /** The reason of a Storno or Gutschrift. */
   readonly reason: string;
+  /** The Schulträger or the Gemeinde that issues it (#8040); empty for the Träger. */
+  readonly issuerName?: string;
   /** Storno, Gutschriften and the replacing invoice of an issued invoice. */
   readonly history: readonly BillingDocumentLink[];
   /** Gutschriften of the cancelled invoice a draft replaces (#5663). */
@@ -366,6 +368,7 @@ function documentFromBackend(
     kind: knownDocumentKind(document.kind),
     referenceNumber: document.reference_number,
     reason: document.reason,
+    issuerName: document.issuer?.name ?? "",
     history: (document.history ?? []).map(documentLinkFromBackend),
     replacedCredits: (document.replaced_credits ?? []).map(
       documentLinkFromBackend,
@@ -441,13 +444,25 @@ function detailFromBackend(
 
 /** The runs of the Träger, newest first. */
 export async function fetchBillingRuns(): Promise<BillingRun[]> {
-  const runs = await bffJson("org", "GET /traeger/billing-runs/");
+  return mapBillingRuns(await bffJson("org", "GET /traeger/billing-runs/"));
+}
+
+export function mapBillingRuns(
+  runs: traegerBillingRunsContract.BillingRun[],
+): BillingRun[] {
   return runs.map(runFromBackend);
 }
 
 /** The published holiday periods a run can bill, latest first. */
 export async function fetchBillingPeriods(): Promise<BillingPeriod[]> {
-  const periods = await bffJson("org", "GET /traeger/billing-runs/periods");
+  return mapBillingPeriods(
+    await bffJson("org", "GET /traeger/billing-runs/periods"),
+  );
+}
+
+export function mapBillingPeriods(
+  periods: traegerBillingRunsContract.HolidayBillingPeriod[],
+): BillingPeriod[] {
   return periods.map((period) => ({
     id: period.id,
     name: period.name,
@@ -869,24 +884,75 @@ function mapNumberRange(
   };
 }
 
+/** The range of the service of an issuer; "" names the Träger (#8040). */
+function rangeOf(
+  ranges: readonly traegerNumberRangesContract.NumberRange[],
+  service: NumberRangeService,
+  issuerKey: string,
+) {
+  return ranges.find(
+    (range) => range.service === service && range.issuer.key === issuerKey,
+  );
+}
+
+export function organizationNumberRange(
+  ranges: readonly traegerNumberRangesContract.NumberRange[],
+  service: NumberRangeService,
+): NumberRange {
+  return mapNumberRange(service, rangeOf(ranges, service, ""));
+}
+
 async function fetchNumberRange(
   service: NumberRangeService,
 ): Promise<NumberRange> {
   const ranges = await bffJson("org", "GET /traeger/number-ranges/");
-  return mapNumberRange(
-    service,
-    ranges.find((range) => range.service === service),
+  return organizationNumberRange(ranges, service);
+}
+
+/**
+ * The number ranges of the bodies that bill a school themselves (#8040), by
+ * their creditor identifier; a body without a stored range has none here.
+ */
+export async function fetchIssuerNumberRanges(): Promise<
+  ReadonlyMap<string, Readonly<Record<NumberRangeService, NumberRange>>>
+> {
+  return mapIssuerNumberRanges(
+    await bffJson("org", "GET /traeger/number-ranges/"),
   );
+}
+
+export function mapIssuerNumberRanges(
+  ranges: traegerNumberRangesContract.NumberRange[],
+): ReadonlyMap<string, Readonly<Record<NumberRangeService, NumberRange>>> {
+  const byIssuer = new Map<
+    string,
+    Readonly<Record<NumberRangeService, NumberRange>>
+  >();
+  for (const key of new Set(ranges.map((range) => range.issuer.key))) {
+    if (!key) continue;
+    byIssuer.set(key, {
+      holiday: mapNumberRange("holiday", rangeOf(ranges, "holiday", key)),
+      care: mapNumberRange("care", rangeOf(ranges, "care", key)),
+    });
+  }
+  return byIssuer;
+}
+
+/** An empty range of a service, for a body that has none yet. */
+export function emptyNumberRange(service: NumberRangeService): NumberRange {
+  return mapNumberRange(service, undefined);
 }
 
 async function saveNumberRange(
   service: NumberRangeService,
   pattern: string,
+  issuerKey = "",
 ): Promise<NumberRange> {
   const range = await bffJson("org", "PUT /traeger/number-ranges/{service}", {
     params: { service },
     body: {
       pattern,
+      ...(issuerKey ? { issuer_key: issuerKey } : {}),
     } satisfies traegerNumberRangesContract.NumberRangeRequest,
   });
   return mapNumberRange(range.service, range);
@@ -899,6 +965,7 @@ async function saveNumberRange(
 async function saveNumberRangeStart(
   service: NumberRangeService,
   nextNumber: number,
+  issuerKey = "",
 ): Promise<NumberRange> {
   const range = await bffJson(
     "org",
@@ -907,6 +974,7 @@ async function saveNumberRangeStart(
       params: { service },
       body: {
         next_number: nextNumber,
+        ...(issuerKey ? { issuer_key: issuerKey } : {}),
       } satisfies traegerNumberRangesContract.NumberRangeStartRequest,
     },
   );
@@ -916,17 +984,19 @@ async function saveNumberRangeStart(
 /** The number range of the holiday invoices; the pattern may be empty. */
 export const fetchHolidayNumberRange = () => fetchNumberRange("holiday");
 
-export const saveHolidayNumberRange = (pattern: string) =>
-  saveNumberRange("holiday", pattern);
+export const saveHolidayNumberRange = (pattern: string, issuerKey = "") =>
+  saveNumberRange("holiday", pattern, issuerKey);
 
-export const saveHolidayNumberRangeStart = (nextNumber: number) =>
-  saveNumberRangeStart("holiday", nextNumber);
+export const saveHolidayNumberRangeStart = (
+  nextNumber: number,
+  issuerKey = "",
+) => saveNumberRangeStart("holiday", nextNumber, issuerKey);
 
 /** The number range of the monthly invoices (#4684); the pattern may be empty. */
 export const fetchCareNumberRange = () => fetchNumberRange("care");
 
-export const saveCareNumberRange = (pattern: string) =>
-  saveNumberRange("care", pattern);
+export const saveCareNumberRange = (pattern: string, issuerKey = "") =>
+  saveNumberRange("care", pattern, issuerKey);
 
-export const saveCareNumberRangeStart = (nextNumber: number) =>
-  saveNumberRangeStart("care", nextNumber);
+export const saveCareNumberRangeStart = (nextNumber: number, issuerKey = "") =>
+  saveNumberRangeStart("care", nextNumber, issuerKey);

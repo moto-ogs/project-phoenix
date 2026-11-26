@@ -11,7 +11,7 @@ export function traegerHolidayWishTopic(): HelpTopic {
     title: "Ferienwunsch aus der OGS-Anmeldung",
     question: "Wie bekommen Kinder mit Ferienwunsch Vorrang?",
     summary:
-      "Eltern geben in der OGS-Anmeldung an, ob ihr Kind in den Ferien Betreuung braucht. Du schaltest je Ferienzeitraum ein, dass dieser Ferienwunsch zählt.",
+      "Eltern geben in der OGS-Anmeldung an, ob ihr Kind in den Ferien Betreuung braucht. Du schaltest pro Ferienzeitraum ein, dass dieser Ferienwunsch zählt.",
     group: "anmeldeverwaltung",
     audience: "traeger",
     icon: "Sun",
@@ -51,7 +51,7 @@ export function traegerHolidayWishTopic(): HelpTopic {
       },
     ],
     result:
-      "Ist eine Woche voll, warten Kinder ohne Ferienwunsch auf der Warteliste hinter den anderen. Im Reiter `Plätze` stehen sie mit `Ohne Ferienwunsch`.",
+      "Ist eine Woche voll, haben Kinder mit Ferienwunsch Vorrang. Kinder ohne Ferienwunsch stehen auf der Warteliste hinter allen anderen Kindern. Im Reiter `Plätze` stehen sie mit `Ohne Ferienwunsch`.",
     notes: [
       "Freie Plätze gehen weiter in der Reihenfolge der Anmeldung. Ein Platz, den ein Kind schon hat, bleibt.",
       "Eltern mit Elternkonto sehen den Ferienwunsch ihres Kindes vor dem Absenden. moto prüft ihn dann selbst. Bei `Nur Kinder mit Ferienwunsch können sich anmelden` geht das Absenden ohne Ferienwunsch nicht.",

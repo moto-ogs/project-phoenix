@@ -110,6 +110,7 @@ func (p staffShiftPlanning) UpdateShift(ctx context.Context, input workforce.Upd
 		// reactivate go through ApplyCancellation, which rebuilds the cover set
 		// atomically (#1841).
 		PreserveExistingCancelled: true,
+		Read:                      input.Read,
 	})
 	if err != nil {
 		return workforce.PlannedShift{}, mapPlanningError(err)
@@ -130,6 +131,7 @@ func (p staffShiftPlanning) MoveShift(ctx context.Context, input workforce.MoveS
 		ShiftID: input.ShiftID, SourceStaffID: input.SourceStaffID, TargetStaffID: input.TargetStaffID,
 		Date: date, StartTime: start, EndTime: end, BreakMinutes: input.BreakMinutes, ShiftTypeID: input.ShiftTypeID,
 		ActorStaffID: input.ActorStaffID, ActorAccountID: input.ActorAccountID, WorkingTime: input.WorkingTime,
+		Read: input.Read,
 	})
 	if err != nil {
 		return workforce.PlannedShift{}, mapPlanningError(err)
@@ -143,6 +145,7 @@ func (p staffShiftPlanning) ApplyCancellation(ctx context.Context, input workfor
 		ShiftID:                input.ShiftID, Cancelled: input.Cancelled, ChangeReason: input.ChangeReason,
 		ActorStaffID: input.ActorStaffID, TraegerAccountID: input.TraegerAccountID, ApplyOriginEdits: input.ApplyOriginEdits,
 		BreakMinutes: input.BreakMinutes, ShiftTypeID: input.ShiftTypeID, WorkingTime: input.WorkingTime,
+		Read: input.Read,
 	}
 	if input.ApplyOriginEdits {
 		start, end, err := planningWindow(input.StartTime, input.EndTime)
@@ -224,6 +227,7 @@ func (p staffShiftPlanning) SplitSeries(ctx context.Context, input workforce.Spl
 		ValidUntil: validUntil, ValidUntilSet: input.ValidUntilSet, WeekPattern: input.WeekPattern,
 		IncludeSchoolBreaks: input.IncludeSchoolBreaks, ActorStaffID: input.ActorStaffID, TraegerAccountID: input.TraegerAccountID,
 		WorkingTime: input.WorkingTime, ExpectedVersion: input.ExpectedVersion,
+		ExpectedOccurrenceVersion: input.ExpectedOccurrenceVersion,
 	})
 	if err != nil {
 		return workforce.StaffShiftSeriesResult{}, mapPlanningError(err)

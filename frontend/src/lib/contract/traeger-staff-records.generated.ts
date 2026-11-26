@@ -42,6 +42,10 @@ export interface TraegerStaffEmployment {
   staff_id: string;
   active: boolean;
   via_pool: boolean;
+  employer_name: string;
+  employer_body: string;
+  employer_personnel_number: string | null;
+  employer_number_version: string;
 }
 
 export const TraegerStaffEmploymentSchema: z.ZodType<TraegerStaffEmployment, unknown> = object<TraegerStaffEmployment>({
@@ -50,6 +54,10 @@ export const TraegerStaffEmploymentSchema: z.ZodType<TraegerStaffEmployment, unk
   staff_id: int64String,
   active: bool,
   via_pool: bool,
+  employer_name: str,
+  employer_body: str,
+  employer_personnel_number: nullable(str),
+  employer_number_version: str,
 });
 
 /** Go: workforce.TraegerStaffFinancial */
@@ -57,12 +65,14 @@ export interface TraegerStaffFinancial {
   iban: string | null;
   tax_id: string | null;
   social_security_number: string | null;
+  version: string;
 }
 
 export const TraegerStaffFinancialSchema: z.ZodType<TraegerStaffFinancial, unknown> = object<TraegerStaffFinancial>({
   iban: nullable(str),
   tax_id: nullable(str),
   social_security_number: nullable(str),
+  version: str,
 });
 
 /** Go: workforce.TraegerStaffChange */
@@ -138,6 +148,7 @@ export interface TraegerStaffContract {
   pool: boolean;
   sites: TraegerContractSiteDetail[] | null;
   holiday_weeks: TraegerContractHolidayWeek[] | null;
+  version: string;
 }
 
 export const TraegerStaffContractSchema: z.ZodType<TraegerStaffContract, unknown> = object<TraegerStaffContract>({
@@ -148,6 +159,7 @@ export const TraegerStaffContractSchema: z.ZodType<TraegerStaffContract, unknown
   pool: bool,
   sites: nullable(arr(TraegerContractSiteDetailSchema)),
   holiday_weeks: nullable(arr(TraegerContractHolidayWeekSchema)),
+  version: str,
 });
 
 /** Go: workforce.TraegerStaffRecordDetail */
@@ -159,11 +171,13 @@ export interface TraegerStaffRecordDetail {
   personnel_number: string | null;
   has_financial: boolean;
   employments: TraegerStaffEmployment[] | null;
+  person_version: string;
   financial: TraegerStaffFinancial;
   changes: TraegerStaffChange[] | null;
   proofs: TraegerStaffProof[] | null;
   contracts: TraegerStaffContract[] | null;
   unsynced_schools?: string[];
+  held_bank_schools?: string[];
 }
 
 export const TraegerStaffRecordDetailSchema: z.ZodType<TraegerStaffRecordDetail, unknown> = object<TraegerStaffRecordDetail>({
@@ -174,11 +188,13 @@ export const TraegerStaffRecordDetailSchema: z.ZodType<TraegerStaffRecordDetail,
   personnel_number: nullable(str),
   has_financial: bool,
   employments: nullable(arr(TraegerStaffEmploymentSchema)),
+  person_version: str,
   financial: TraegerStaffFinancialSchema,
   changes: nullable(arr(TraegerStaffChangeSchema)),
   proofs: nullable(arr(TraegerStaffProofSchema)),
   contracts: nullable(arr(TraegerStaffContractSchema)),
   unsynced_schools: optional(arr(str)),
+  held_bank_schools: optional(arr(str)),
 });
 
 /** Go: workforce.TraegerStaffRecordSummary */
@@ -517,6 +533,7 @@ export interface HolidayWeeksRequest {
 export interface ContractSollRequest {
   valid_from?: string | null;
   sites?: SiteSollPayload[] | null;
+  expected_version?: string;
 }
 
 /** Go: traegerstaff.TimeAccountMonthRequest */
@@ -540,6 +557,13 @@ export interface UpdateContractRequest {
   kind?: string;
   ends_on?: string | null;
   pool?: boolean;
+  expected_version?: string;
+}
+
+/** Go: traegerstaff.EmployerNumberRequest */
+export interface EmployerNumberRequest {
+  employer_personnel_number?: string | null;
+  expected_version?: string;
 }
 
 /** Go: traegerstaff.StaffFinancialRequest */
@@ -547,6 +571,7 @@ export interface StaffFinancialRequest {
   iban?: string | null;
   tax_id?: string | null;
   social_security_number?: string | null;
+  expected_version?: string;
 }
 
 /** Go: traegerstaff.PersonRequest */
@@ -554,6 +579,7 @@ export interface PersonRequest {
   first_name?: string;
   last_name?: string;
   birthday?: string | null;
+  expected_version?: string;
 }
 
 /** Go: traegerstaff.PersonnelNumberRequest */
@@ -701,6 +727,13 @@ export const routes = {
     pattern: "/traeger/staff-records/{id}/contracts/{contractId}",
     portals: ["org"],
     request: requestBody<UpdateContractRequest>(),
+    response: success(TraegerStaffRecordDetailSchema),
+  },
+  "PUT /traeger/staff-records/{id}/employer-numbers/{schoolId}": {
+    method: "PUT",
+    pattern: "/traeger/staff-records/{id}/employer-numbers/{schoolId}",
+    portals: ["org"],
+    request: requestBody<EmployerNumberRequest>(),
     response: success(TraegerStaffRecordDetailSchema),
   },
   "PUT /traeger/staff-records/{id}/financial": {

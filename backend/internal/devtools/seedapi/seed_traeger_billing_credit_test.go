@@ -52,7 +52,7 @@ func TestSeedBillingCreditCreditsTheFirstInvoiceOfTheReleasedRun(t *testing.T) {
 	assert.Equal(t, []string{"POST /traeger/auth/login", "GET /traeger/billing-runs/41", "POST /traeger/billing-runs/41/documents/7/credits",
 		"GET /traeger/billing-families"}, calls,
 		"the run is read, the first child with enough left is credited, then the families are read (#4691)")
-	assert.EqualValues(t, 4, body["child_id"])
+	assert.Equal(t, "4", body["child_id"])
 	assert.EqualValues(t, seedCreditCents, body["amount_cents"])
 	assert.Equal(t, seedCreditReason, body["reason"])
 

@@ -171,8 +171,8 @@ func TestToChildResponse_StringifiesIDs(t *testing.T) {
 		SchoolSlug:   "sonnenschule",
 	}
 	out := toChildResponse(in, now)
-	assert.Equal(t, "12345", out.StudentID, "int64 IDs are stringified per CLAUDE.md rule 4")
-	assert.Equal(t, "6789", out.TenantID)
+	assert.Equal(t, "12345", out.StudentID.String(), "int64 IDs are stringified per CLAUDE.md rule 4")
+	assert.Equal(t, "6789", out.TenantID.String())
 	assert.Equal(t, "Lara", out.FirstName)
 	assert.Equal(t, "1a", out.SchoolClass)
 	assert.Equal(t, "active", out.Status)

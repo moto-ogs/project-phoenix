@@ -63,7 +63,7 @@ describe("personal entries across tabs (#5000)", () => {
 
     tabB.storage.bindPersonalStorage("1:8");
     // Tab A has not seen the switch yet and starts a write for account 7.
-    await tabA.pwa.reportStandaloneUsage("tenant", "7", 1);
+    await tabA.pwa.reportStandaloneUsage("tenant", "7", "1");
 
     // Anker: the report itself went out.
     expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -78,7 +78,7 @@ describe("personal entries across tabs (#5000)", () => {
     tabA.storage.bindPersonalStorage("1:7");
     const answer = holdAnswer();
 
-    const report = tabA.pwa.reportStandaloneUsage("tenant", "7", 1);
+    const report = tabA.pwa.reportStandaloneUsage("tenant", "7", "1");
     tabB.storage.bindPersonalStorage("1:8");
     answer();
     await report;
@@ -103,7 +103,7 @@ describe("personal entries across tabs (#5000)", () => {
       tabA.storage.bindPersonalStorage("1:7");
       const answer = holdAnswer();
 
-      const report = tabA.pwa.reportStandaloneUsage("tenant", "7", 1);
+      const report = tabA.pwa.reportStandaloneUsage("tenant", "7", "1");
       tabB.storage.clearPersonalStorage();
       expect(tabA.storage.mayWritePersonalStorage("1:7")).toBe(false);
       tabB.storage.bindPersonalStorage(nextOwner);
@@ -121,7 +121,7 @@ describe("personal entries across tabs (#5000)", () => {
     tabA.storage.bindPersonalStorage("1:7");
     const answer = holdAnswer();
 
-    const report = tabA.pwa.reportStandaloneUsage("tenant", "7", 1);
+    const report = tabA.pwa.reportStandaloneUsage("tenant", "7", "1");
     tabB.storage.clearPersonalStorage();
     answer();
     await report;

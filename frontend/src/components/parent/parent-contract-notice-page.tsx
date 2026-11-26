@@ -13,11 +13,7 @@
 import { useCallback, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 
-import {
-  ParentPage,
-  ParentPageHeader,
-  ParentPageSkeleton,
-} from "~/components/parent/parent-page";
+import { ParentPage, ParentPageHeader } from "~/components/parent/parent-page";
 import { ParentSection } from "~/components/parent/shell/parent-section";
 import { Alert } from "~/components/ui/alert";
 import { Button, ButtonLink } from "~/components/ui/button";
@@ -32,8 +28,12 @@ import { StatusBadge } from "~/components/ui/status-badge";
 import { Textarea } from "~/components/ui/textarea";
 import { useApiFormError } from "~/contexts/ToastContext";
 import { PARENT_RESOURCE_OPTIONS } from "~/lib/hooks/use-parent-resources";
-import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
-import { useInvalidateFamily, useSWRAuth } from "~/lib/swr";
+import {
+  useReadDraftForm,
+  useSwrResourceLoadError,
+} from "~/lib/hooks/use-swr-load-error";
+import { revalidateOrThrow, useInvalidateFamily, useSWRAuth } from "~/lib/swr";
+import { useActionOn } from "~/lib/swr/read-draft";
 import { parentInboxKeys } from "~/lib/swr/parent-inbox-keys";
 import type {
   ContractNotice,
@@ -109,6 +109,12 @@ export function ParentContractNoticePage({
   const refresh = useCallback(async () => {
     await mutate();
   }, [mutate]);
+  // After a refused declaration (ADR 0311): rejects when the read fails, so
+  // the form shows the load error instead of claiming the new dates show.
+  const reloadOrThrow = useCallback(
+    () => revalidateOrThrow(resource),
+    [resource],
+  );
   const invalidateFamily = useInvalidateFamily();
   const declared = useCallback(
     (next: ContractNoticeOptions) => {
@@ -123,27 +129,33 @@ export function ParentContractNoticePage({
 
   const ended = options?.notice ?? null;
   return (
-    <ParentPage>
-      <ParentPageHeader
-        title={
-          ended
-            ? t("doneHeading")
-            : withdrawal
-              ? t("titleWithdrawal")
-              : t("title")
-        }
-        description={
-          ended
-            ? undefined
-            : withdrawal
-              ? t("descriptionWithdrawal")
-              : t("description")
-        }
-        backHref={DOCUMENTS_HREF}
-        backLabel={t("back")}
-      />
+    // Der Kopf steht schon während des Ladens; darunter lädt nur der Inhalt.
+    // Ein Seitenskelett hier zeigte einen zweiten Kopf, und dessen Platz
+    // für die Seitenhilfe nähme dem echten Kopf den Hilfe-Knopf (#6613).
+    <ParentPage
+      header={
+        <ParentPageHeader
+          title={
+            ended
+              ? t("doneHeading")
+              : withdrawal
+                ? t("titleWithdrawal")
+                : t("title")
+          }
+          description={
+            ended
+              ? undefined
+              : withdrawal
+                ? t("descriptionWithdrawal")
+                : t("description")
+          }
+          backHref={DOCUMENTS_HREF}
+          backLabel={t("back")}
+        />
+      }
+      loading={options === null && !loadError}
+    >
       {loadError ? <LoadErrorAlert error={loadError} /> : null}
-      {options === null && !loadError ? <ParentPageSkeleton rows={2} /> : null}
       {options && ended ? (
         <NoticeDone options={options} notice={ended} />
       ) : null}
@@ -161,6 +173,7 @@ export function ParentContractNoticePage({
           requireSelection={requireSelection}
           withdrawal={withdrawal}
           onRefresh={refresh}
+          onReload={reloadOrThrow}
           organizationId={organizationId}
           contractId={contractId}
           onDeclared={declared}
@@ -200,6 +213,7 @@ function NoticeForm({
   requireSelection,
   withdrawal,
   onRefresh,
+  onReload,
   organizationId,
   contractId,
   onDeclared,
@@ -209,6 +223,8 @@ function NoticeForm({
   requireSelection: boolean;
   withdrawal: boolean;
   onRefresh: () => Promise<void>;
+  /** Reads the options again after a refusal; rejects when that fails. */
+  onReload: () => Promise<unknown>;
   organizationId: string;
   contractId: string;
   onDeclared: (next: ContractNoticeOptions) => void;
@@ -229,11 +245,25 @@ function NoticeForm({
   const reasonField = useRef<HTMLTextAreaElement>(null);
   const form = useRef<HTMLFormElement>(null);
   const errors = useApiFormError(form);
+  // From a refusal until the new dates are read, nothing is sent: the
+  // shown end date would be refused again (ADR 0311, rule 4). Other dates
+  // lift that, also after a failed read.
+  const declare = useActionOn(
+    { opening: contractId, data: options, reload: onReload },
+    { token: (read) => [read.ordinaryEndsOn, read.specialEndsOn] },
+  );
+  const readForm = useReadDraftForm(declare, errors, t("declareErrorObject"));
+  const lockReason =
+    declare.status === "reloading"
+      ? t("reloadingReason")
+      : declare.status === "loadFailed"
+        ? t("reloadFailedReason")
+        : undefined;
   const date = (iso: string | null) =>
     iso ? formatDate(iso, false, locale) : "–";
 
   const submit = async () => {
-    if (sending || choice === null) return;
+    if (sending || choice === null || !declare.canSubmit) return;
     if (berlinTodayISO() !== optionsDay) {
       await onRefresh();
       return;
@@ -245,34 +275,40 @@ function NoticeForm({
       return;
     }
     setReasonError(undefined);
-    errors.clear();
+    if (!readForm.begin()) return;
     setSending(true);
-    try {
-      onDeclared(
-        await declareMyContractNotice(
-          organizationId,
-          contractId,
-          choice === "widerruf"
-            ? { kind: "widerruf" }
-            : choice === "ausserordentlich"
-              ? {
-                  kind: "kuendigung",
-                  terminationKind: choice,
-                  reason: reason.trim(),
-                }
-              : {
-                  kind: "kuendigung",
-                  terminationKind: choice,
-                  expectedEndsOn: endsOn ?? undefined,
-                },
-        ),
-      );
+    const result = await declare.submit(() =>
+      declareMyContractNotice(
+        organizationId,
+        contractId,
+        choice === "widerruf"
+          ? { kind: "widerruf" }
+          : choice === "ausserordentlich"
+            ? {
+                kind: "kuendigung",
+                terminationKind: choice,
+                reason: reason.trim(),
+              }
+            : {
+                kind: "kuendigung",
+                terminationKind: choice,
+                expectedEndsOn: endsOn ?? undefined,
+              },
+      ),
+    );
+    setSending(false);
+    if (result.ok) {
+      onDeclared(result.saved);
       window.scrollTo({ top: 0 });
-    } catch (err) {
-      void errors.show(err, { object: t("declareErrorObject") });
-    } finally {
-      setSending(false);
+      return;
     }
+    if (result.skipped) return;
+    // The end date moved since it was shown (ADR 0311): the new dates
+    // arrive with `reload`, and changed ones ask for a choice again.
+    void errors.show(result.error, {
+      object: t("declareErrorObject"),
+      reload: result.reload,
+    });
   };
 
   const endsOn =
@@ -325,6 +361,7 @@ function NoticeForm({
         <ParentSection level={2} title={t("chooseTitle")}>
           <div className="space-y-4">
             <FormErrorAlert message={errors.error} />
+            <LoadErrorAlert error={readForm.loadError} />
             {choice === null ? (
               <Alert type="warning" message={t("datesChanged")} />
             ) : null}
@@ -394,8 +431,8 @@ function NoticeForm({
                 variant="danger"
                 size="base"
                 className="w-full sm:w-auto"
-                disabled={sending || choice === null}
-                disabledReason={t("submitDisabledReason")}
+                disabled={sending || choice === null || !declare.canSubmit}
+                disabledReason={lockReason ?? t("submitDisabledReason")}
                 isLoading={sending}
                 loadingText={t("sending")}
                 tooltip={

@@ -118,6 +118,12 @@ func TestSchoolErasurePlanCoversCatalogAndDeleteTriggers(t *testing.T) {
 		// #5128: records change events in active.visit_revision_events, which
 		// the plan deletes after active.visits ("after" edge).
 		"active.visits:active.record_visit_revision",
+		// #4810: releases the schools' copies of a removed Träger role
+		// (auth.roles.traeger_role_id becomes NULL). The source is Träger data
+		// (scope organization), outside the plan of a school; the sink
+		// auth.roles is updated, not deleted, so school erasure needs no
+		// ordering edge.
+		"auth.traeger_school_roles:auth.release_traeger_school_role_copies",
 		// #6087: snapshots only care intervals into existing school guest rows.
 		// The source registration is Träger data, outside the school plan; the
 		// sink enrollment.holiday_guests is already tenant-scoped in that plan.
@@ -511,6 +517,12 @@ func TestSchoolErasureMigrationRoundTripPreservesEvidence(t *testing.T) {
 	// The letter copies (#4813) follow the notification feed at the head; they go first.
 	// The device history (#2321) follows the letter copies at the head; it goes first.
 	// The room history stops (#3844) follow the device history at the head; they go first.
+	// The opening changes (#7654) and pickup persons (#7655) follow the room
+	// history stops at the head; pickup persons go first.
+	require.NoError(t, studentPickupPersonsDown(t.Context(), db))
+	require.NoError(t, openingChangesDown(t.Context(), db))
+	require.NoError(t, mealCancellationsDown(t.Context(), db))
+	require.NoError(t, roomClosuresDown(t.Context(), db))
 	require.NoError(t, roomHistoryStopsDown(t.Context(), db))
 	require.NoError(t, deviceLifecycleEventsDown(t.Context(), db))
 	require.NoError(t, parentLetterCopiesDown(t.Context(), db))

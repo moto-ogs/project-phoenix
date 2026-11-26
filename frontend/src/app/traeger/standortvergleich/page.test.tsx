@@ -65,7 +65,7 @@ vi.mock("~/env.client", () => ({
   },
 }));
 
-import TraegerComparisonPage from "./page";
+import TraegerComparisonPage from "./page-content";
 
 const SCHOOLS = [
   {
@@ -148,7 +148,7 @@ describe("TraegerComparisonPage", () => {
         user: {
           id: "A",
           scope: "org",
-          orgId: 7,
+          orgId: "7",
           permissions: ["traeger_reports:read"],
         },
       },
@@ -190,7 +190,7 @@ describe("TraegerComparisonPage", () => {
     expect(
       within(linden).getAllByText("keine Zahl im Zeitraum", { exact: false }),
     ).toHaveLength(2);
-    expect(within(table).getByText("Schnitt je Schule")).toBeInTheDocument();
+    expect(within(table).getByText("Schnitt pro Schule")).toBeInTheDocument();
     expect(within(table).getByText("Alle zusammen")).toBeInTheDocument();
 
     expect(

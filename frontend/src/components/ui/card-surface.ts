@@ -13,6 +13,19 @@ export const CARD_FRAME = "moto-content-surface rounded-2xl border";
 // und in der kompakten Ansicht 16 px.
 export const CARD_SURFACE_PADDING = "compact:p-4 p-5 max-sm:p-4";
 
+// Die Titelstufen einer Karte (`SectionCard`). `lg` steht als hervorgehobener
+// Abschnitt mittig neben der Symbolfläche, `page` und `display` tragen den
+// Seitenkopf des Elternportals (`display` die Begrüßung auf der Startseite).
+// Der Ladekopf des Elternportals (`TenantPageHeaderSkeleton`) nimmt sie von
+// hier, ohne `SectionCard` selbst zu laden.
+export const CARD_TITLE_SIZES = {
+  sm: "text-sm",
+  md: "text-base",
+  lg: "flex min-h-9 items-center text-xl leading-tight tracking-tight sm:min-h-10",
+  page: "text-xl leading-tight tracking-tight break-words sm:text-2xl",
+  display: "text-2xl leading-tight tracking-tight break-words sm:text-[28px]",
+} as const;
+
 /** Hebt eine Karte beim Überfahren an (`globals.css`). */
 export const CARD_HOVER = "moto-hover-elevated";
 

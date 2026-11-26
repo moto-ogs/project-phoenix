@@ -1,3 +1,4 @@
+import { deriveSupervision } from "~/lib/supervision-derive";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
   expectIdleRenderBudget,
@@ -370,6 +371,7 @@ describe("Sidebar", () => {
     mockUseSearchParams.mockReturnValue(createMockSearchParams());
     mockUseSession.mockReturnValue(createMockSession(false));
     mockUseSupervision.mockReturnValue({
+      ...deriveSupervision(),
       hasGroups: true,
       isSupervising: false,
       isLoadingGroups: false,
@@ -528,6 +530,7 @@ describe("Sidebar", () => {
     // Auswahlseite, nicht als Unterpunkte und nicht in einem zweiten Bereich.
     it("lists only own groups under the single Gruppen entry", () => {
       mockUseSupervision.mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: true,
         isSupervising: false,
         isLoadingGroups: false,
@@ -654,6 +657,7 @@ describe("Sidebar", () => {
     beforeEach(() => {
       mockIsAdmin.mockReturnValue(false);
       mockUseSupervision.mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: true,
         isSupervising: false,
         isLoadingGroups: false,
@@ -827,6 +831,7 @@ describe("Sidebar", () => {
 
     it("shows student search when staff has groups", () => {
       mockUseSupervision.mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: true,
         isSupervising: false,
         isLoadingGroups: false,
@@ -844,6 +849,7 @@ describe("Sidebar", () => {
 
     it("shows student search when staff is actively supervising", () => {
       mockUseSupervision.mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: false,
         isSupervising: true,
         isLoadingGroups: false,
@@ -861,6 +867,7 @@ describe("Sidebar", () => {
 
     it("shows student search for staff without supervision (at correct position)", () => {
       mockUseSupervision.mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: false,
         isSupervising: false,
         isLoadingGroups: false,
@@ -1190,6 +1197,7 @@ describe("Sidebar", () => {
   describe("supervision loading states", () => {
     it("handles loading groups state correctly", () => {
       mockUseSupervision.mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: false,
         isSupervising: false,
         isLoadingGroups: true,
@@ -1208,6 +1216,7 @@ describe("Sidebar", () => {
 
     it("handles loading supervision state correctly", () => {
       mockUseSupervision.mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: false,
         isSupervising: false,
         isLoadingGroups: false,
@@ -1250,6 +1259,7 @@ describe("Sidebar", () => {
   describe("accordion sub-items", () => {
     it("opens the Gruppen entry by default", () => {
       mockUseSupervision.mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: true,
         isSupervising: false,
         isLoadingGroups: false,
@@ -1287,6 +1297,7 @@ describe("Sidebar", () => {
         createMockSearchParams((key: string) => (key === "group" ? "2" : null)),
       );
       mockUseSupervision.mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: true,
         isSupervising: false,
         isLoadingGroups: false,
@@ -1329,6 +1340,7 @@ describe("Sidebar", () => {
         createMockSearchParams((key: string) => (key === "group" ? "2" : null)),
       );
       mockUseSupervision.mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: true,
         isSupervising: false,
         isLoadingGroups: false,
@@ -1368,6 +1380,7 @@ describe("Sidebar", () => {
         createMockSearchParams((key: string) => (key === "group" ? "2" : null)),
       );
       mockUseSupervision.mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: true,
         isSupervising: false,
         isLoadingGroups: false,
@@ -1443,6 +1456,7 @@ describe("Sidebar", () => {
         );
         mockUsePathname.mockReturnValue("/ogs-groups");
         mockUseSupervision.mockReturnValue({
+          ...deriveSupervision(),
           hasGroups: true,
           isSupervising: false,
           isLoadingGroups: false,
@@ -1483,6 +1497,7 @@ describe("Sidebar", () => {
     it("keeps the empty text when no group is open and the person leads none", () => {
       mockUsePathname.mockReturnValue("/ogs-groups/overview");
       mockUseSupervision.mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: true,
         isSupervising: false,
         isLoadingGroups: false,
@@ -1510,6 +1525,7 @@ describe("Sidebar", () => {
     it("marks no own group on the group selection", () => {
       mockUsePathname.mockReturnValue("/ogs-groups/overview");
       mockUseSupervision.mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: true,
         isSupervising: false,
         isLoadingGroups: false,
@@ -1545,6 +1561,7 @@ describe("Sidebar", () => {
 
     it("renders group sub-items when groups are available", () => {
       mockUseSupervision.mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: true,
         isSupervising: false,
         isLoadingGroups: false,
@@ -1580,6 +1597,7 @@ describe("Sidebar", () => {
 
     it("renders supervised room sub-items", () => {
       mockUseSupervision.mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: true,
         isSupervising: true,
         isLoadingGroups: false,
@@ -1632,6 +1650,7 @@ describe("Sidebar", () => {
     it("navigates to the group selection when the groups toggle is clicked from another page", () => {
       mockUsePathname.mockReturnValue("/activities");
       mockUseSupervision.mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: true,
         isSupervising: false,
         isLoadingGroups: false,
@@ -1662,6 +1681,7 @@ describe("Sidebar", () => {
     it("opens the group selection also without own groups", () => {
       mockUsePathname.mockReturnValue("/activities");
       mockUseSupervision.mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: false,
         isSupervising: false,
         isLoadingGroups: false,
@@ -1684,6 +1704,7 @@ describe("Sidebar", () => {
     it("navigates to active-supervisions when supervisions toggle clicked from another page", () => {
       mockUsePathname.mockReturnValue("/activities");
       mockUseSupervision.mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: true,
         isSupervising: true,
         isLoadingGroups: false,
@@ -1707,6 +1728,7 @@ describe("Sidebar", () => {
     it("navigates to active-supervisions without room param when no rooms", () => {
       mockUsePathname.mockReturnValue("/activities");
       mockUseSupervision.mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: false,
         isSupervising: false,
         isLoadingGroups: false,
@@ -1826,6 +1848,7 @@ describe("Sidebar", () => {
   describe("groups label pluralization", () => {
     it("shows 'Meine Gruppen' for a single group", () => {
       mockUseSupervision.mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: true,
         isSupervising: false,
         isLoadingGroups: false,
@@ -1850,6 +1873,7 @@ describe("Sidebar", () => {
 
     it("shows 'Meine Gruppen' for multiple groups", () => {
       mockUseSupervision.mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: true,
         isSupervising: false,
         isLoadingGroups: false,
@@ -1880,6 +1904,7 @@ describe("Sidebar", () => {
 
     it("shows 'Aktuelle Aufsicht' for single room", () => {
       mockUseSupervision.mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: true,
         isSupervising: true,
         isLoadingGroups: false,
@@ -1897,6 +1922,7 @@ describe("Sidebar", () => {
 
     it("shows 'Aktuelle Aufsichten' for multiple rooms", () => {
       mockUseSupervision.mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: true,
         isSupervising: true,
         isLoadingGroups: false,
@@ -1929,6 +1955,7 @@ describe("Sidebar", () => {
         ),
       );
       mockUseSupervision.mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: true,
         isSupervising: false,
         isLoadingGroups: false,
@@ -1972,6 +1999,7 @@ describe("Sidebar", () => {
         ),
       );
       mockUseSupervision.mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: true,
         isSupervising: false,
         isLoadingGroups: false,
@@ -2006,6 +2034,7 @@ describe("Sidebar", () => {
         ),
       );
       mockUseSupervision.mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: true,
         isSupervising: true,
         isLoadingGroups: false,
@@ -2038,6 +2067,7 @@ describe("Sidebar", () => {
         ),
       );
       mockUseSupervision.mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: true,
         isSupervising: true,
         isLoadingGroups: false,
@@ -2079,6 +2109,7 @@ describe("Sidebar", () => {
         createMockSearchParams((key: string) => (key === "group" ? "2" : null)),
       );
       mockUseSupervision.mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: true,
         isSupervising: false,
         isLoadingGroups: false,
@@ -2120,6 +2151,7 @@ describe("Sidebar", () => {
         createMockSearchParams((key: string) => (key === "room" ? "20" : null)),
       );
       mockUseSupervision.mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: true,
         isSupervising: true,
         isLoadingGroups: false,
@@ -2166,6 +2198,7 @@ describe("Sidebar", () => {
         ),
       );
       mockUseSupervision.mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: true,
         isSupervising: false,
         isLoadingGroups: false,
@@ -2203,6 +2236,7 @@ describe("Sidebar", () => {
         ),
       );
       mockUseSupervision.mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: true,
         isSupervising: true,
         isLoadingGroups: false,
@@ -2249,6 +2283,7 @@ describe("Sidebar", () => {
 
     function showGroups(groups: { id: string; name: string }[]) {
       mockUseSupervision.mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: true,
         isSupervising: false,
         isLoadingGroups: false,
@@ -2342,6 +2377,7 @@ describe("Sidebar", () => {
         createMockSearchParams((key: string) => (key === "group" ? "2" : null)),
       );
       mockUseSupervision.mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: true,
         isSupervising: false,
         isLoadingGroups: false,
@@ -2382,6 +2418,7 @@ describe("Sidebar", () => {
       vi.spyOn(localStorage, "getItem").mockImplementation(mockGetItem);
       mockUsePathname.mockReturnValue("/activities");
       mockUseSupervision.mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: true,
         isSupervising: true,
         isLoadingGroups: false,
@@ -2421,6 +2458,7 @@ describe("Sidebar", () => {
       });
       mockUsePathname.mockReturnValue("/activities");
       mockUseSupervision.mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: true,
         isSupervising: true,
         isLoadingGroups: false,
@@ -2448,6 +2486,7 @@ describe("Sidebar", () => {
       vi.spyOn(localStorage, "getItem").mockReturnValue(null);
       mockUsePathname.mockReturnValue("/activities");
       mockUseSupervision.mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: true,
         isSupervising: true,
         isLoadingGroups: false,
@@ -2485,6 +2524,7 @@ describe("Sidebar", () => {
       });
       mockUsePathname.mockReturnValue("/activities");
       mockUseSupervision.mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: true,
         isSupervising: true,
         isLoadingGroups: false,
@@ -2520,6 +2560,7 @@ describe("Sidebar", () => {
       });
       mockUsePathname.mockReturnValue("/activities");
       mockUseSupervision.mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: true,
         isSupervising: false,
         isLoadingGroups: false,
@@ -2553,6 +2594,7 @@ describe("Sidebar", () => {
       });
       mockUsePathname.mockReturnValue("/activities");
       mockUseSupervision.mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: true,
         isSupervising: true,
         isLoadingGroups: false,
@@ -2586,6 +2628,7 @@ describe("Sidebar", () => {
     it("only folds the entry inside the only group", () => {
       mockUsePathname.mockReturnValue("/ogs-groups");
       mockUseSupervision.mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: true,
         isSupervising: false,
         isLoadingGroups: false,
@@ -2615,6 +2658,7 @@ describe("Sidebar", () => {
     it("only folds the entry on the group selection", () => {
       mockUsePathname.mockReturnValue("/ogs-groups/overview");
       mockUseSupervision.mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: true,
         isSupervising: false,
         isLoadingGroups: false,
@@ -2655,6 +2699,7 @@ describe("Sidebar", () => {
       vi.spyOn(localStorage, "getItem").mockImplementation(mockGetItem);
       mockUsePathname.mockReturnValue("/activities");
       mockUseSupervision.mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: true,
         isSupervising: true,
         isLoadingGroups: false,
@@ -2795,6 +2840,7 @@ describe("Sidebar", () => {
       supervisedRooms: SupervisedRoom[],
       overviewEnabled = false,
     ) => ({
+      ...deriveSupervision(),
       hasGroups: true,
       isSupervising: true,
       isLoadingGroups: false,
@@ -2821,6 +2867,31 @@ describe("Sidebar", () => {
       expect(screen.queryByText("Schulhof")).not.toBeInTheDocument();
       expect(screen.queryByText("Offene Räume")).not.toBeInTheDocument();
     });
+
+    it.each([
+      [true, "Kreativraum"],
+      [false, "Keine aktive Aufsicht"],
+    ])(
+      "explains missing room labels only when there is an active supervision (%s)",
+      (hasSession, expectedText) => {
+        mockUseSupervision.mockReturnValue({
+          ...supervision(
+            hasSession ? [{ id: "7", name: "Kreativraum", groupId: "8" }] : [],
+          ),
+          releasedRoomsLoadFailed: true,
+        });
+        mockUsePathname.mockReturnValue("/active-supervisions");
+
+        render(<Sidebar />);
+
+        expect(screen.getByText(expectedText)).toBeInTheDocument();
+        expect(
+          screen.queryAllByText(
+            "Offene Räume sind hier gerade nicht markiert.",
+          ),
+        ).toHaveLength(Number(hasSession));
+      },
+    );
 
     it("lists an own supervision in a released room under Aktuelle Aufsicht (#4349)", () => {
       mockUseSupervision.mockReturnValue(
@@ -3029,6 +3100,7 @@ describe("Sidebar", () => {
       // Give the user both groups and supervised rooms so detailed mode
       // would definitely render the accordion — then assert binary hides it.
       mockUseSupervision.mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: true,
         isSupervising: true,
         isLoadingGroups: false,
@@ -3334,7 +3406,6 @@ describe("Sidebar", () => {
 
       for (const label of [
         "Planung",
-        "Betreuungsplan",
         "Dienstplan",
         "Anmeldungen",
         "Elternzugänge",
@@ -3347,9 +3418,37 @@ describe("Sidebar", () => {
       expect(screen.getByText("Mein Kalender")).toBeInTheDocument();
     });
 
+    // #8134: der Plan steht im Tagesbetrieb direkt unter „Heute“, für das
+    // ganze Team. Planen darf weiter nur, wer schedules:manage hält; das
+    // prüft die Seite selbst (Leseansicht, #2283).
+    it("zeigt einer Betreuungsrolle den Betreuungsplan im Tagesbetrieb unter „Heute“", () => {
+      mockHasPermission.mockImplementation(
+        (_session: unknown, permission: string) =>
+          CAREGIVER_PERMISSIONS.has(permission),
+      );
+
+      render(<Sidebar />);
+
+      const today = screen.getByText("Heute").closest("a");
+      const plan = screen.getByText("Betreuungsplan").closest("a");
+      expect(plan).toHaveAttribute("href", "/test-tenant/betreuungsplan");
+      expect(
+        today!.compareDocumentPosition(plan!) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      // Vor den Gruppen, also noch im immer offenen Tagesbetrieb.
+      expect(
+        plan!.compareDocumentPosition(screen.getByText("Alle Kinder")) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      expect(screen.queryByText("Planung")).not.toBeInTheDocument();
+    });
+
     // ADR 0091: die AG-Leitung hält nur schedules:read. Einträge, deren
     // Route ein anderes Recht verlangt, wären für sie Sackgassen.
     const EXTERN_GATED_LABELS = [
+      // Der schulweite Plan nennt das Team und braucht users:read (#8134).
+      "Betreuungsplan",
       "Alle Kinder",
       "Mitarbeitende",
       "Zeiterfassung",
@@ -3713,10 +3812,32 @@ describe("Sidebar", () => {
       expect(screen.queryByText("Betreuungsplan")).not.toBeInTheDocument();
     });
 
-    // Leseansicht (#2283): Nicht-Admins erreichen den Betreuungsplan als Tab
-    // in "Mein Kalender" — die Sidebar zeigt ihnen KEINEN eigenen Eintrag,
-    // auch nicht mit schedules:read.
-    it("shows no Betreuungsplan entry for non-admins with schedules:read", () => {
+    // Leseansicht (#2283, #8134): wer den Plan lesen darf und das Team sieht
+    // (schedules:read und users:read), hat ihn als Eintrag im Tagesbetrieb,
+    // ohne die Gruppe „Planung“. Der Reiter in „Mein Kalender“ bleibt.
+    it("shows the Betreuungsplan entry to non-admins who may read the plan and the team", () => {
+      mockIsAdmin.mockReturnValue(false);
+      mockUseSession.mockReturnValue(createMockSession(false));
+      mockHasPermission.mockImplementation(
+        (_session, permission) =>
+          permission === "schedules:read" ||
+          permission === "users:read" ||
+          permission === "calendar:own",
+      );
+
+      render(<Sidebar />);
+
+      expect(screen.queryByText("Planung")).not.toBeInTheDocument();
+      expect(screen.getByText("Betreuungsplan").closest("a")).toHaveAttribute(
+        "href",
+        "/test-tenant/betreuungsplan",
+      );
+      expect(screen.getByText("Mein Kalender")).toBeInTheDocument();
+    });
+
+    // schedules:read allein (AG-Leitung, ADR 0091) reicht nicht: der Plan
+    // der ganzen Schule nennt das Team.
+    it("shows no Betreuungsplan entry with schedules:read alone", () => {
       mockIsAdmin.mockReturnValue(false);
       mockUseSession.mockReturnValue(createMockSession(false));
       mockHasPermission.mockImplementation(
@@ -3726,9 +3847,8 @@ describe("Sidebar", () => {
 
       render(<Sidebar />);
 
-      expect(screen.queryByText("Planung")).not.toBeInTheDocument();
-      expect(screen.queryByText("Betreuungsplan")).not.toBeInTheDocument();
       expect(screen.getByText("Mein Kalender")).toBeInTheDocument();
+      expect(screen.queryByText("Betreuungsplan")).not.toBeInTheDocument();
     });
 
     it("hides Betreuungsplan for non-admins without schedules:read", () => {
@@ -3784,6 +3904,7 @@ describe("Sidebar", () => {
     beforeEach(() => {
       mockIsAdmin.mockReturnValue(false);
       mockUseSupervision.mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: true,
         isSupervising: false,
         isLoadingGroups: false,
@@ -3824,6 +3945,7 @@ describe("Sidebar", () => {
     beforeEach(() => {
       mockIsAdmin.mockReturnValue(false);
       mockUseSupervision.mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: true,
         isSupervising: true,
         isLoadingGroups: false,
@@ -4016,6 +4138,7 @@ describe("Sidebar", () => {
       // Betreuungskraft mit Aufsicht: der Aufsicht-Bereich ist im Streifen
       // zu (nur "Gruppen" steht standardmäßig offen).
       mockUseSupervision.mockReturnValue({
+        ...deriveSupervision(),
         hasGroups: true,
         isSupervising: true,
         isLoadingGroups: false,

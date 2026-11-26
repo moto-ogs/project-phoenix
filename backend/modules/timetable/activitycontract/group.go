@@ -108,6 +108,7 @@ type Group struct {
 	//               none for the legacy CareOffering.ActivityGroupID bridge
 	//   none     -> none (today's default: manually curated roster)
 	TargetGroupType   string  `json:"target_group_type"`
+	HasDynamicTargets bool    `json:"-"`
 	TargetGradeLevel  *int16  `json:"target_grade_level,omitempty"`
 	TargetSchoolClass *string `json:"target_school_class,omitempty"`
 

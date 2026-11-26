@@ -23,7 +23,7 @@ func RouteContracts(portal common.PortalScope) []common.RouteContract {
 		{Method: "POST", Pattern: "/letter-preview", Portals: portals, NoCommit: "the preview renders the letter and sends nothing", Request: letterPreviewRequest{}, Response: letterPreviewResponse{}},
 		{Method: "GET", Pattern: "/{announcementId}", Portals: portals, Response: announcementResponse{}},
 		{Method: "DELETE", Pattern: "/{announcementId}", Portals: portals, Response: deletedResponse{}},
-		{Method: "POST", Pattern: "/{announcementId}/publish", Portals: portals, Response: announcementResponse{}},
+		{Method: "POST", Pattern: "/{announcementId}/publish", Portals: portals, Request: versionRequest{}, Response: announcementResponse{}},
 		{Method: "POST", Pattern: "/{announcementId}/unpublish", Portals: portals, Response: announcementResponse{}},
 		{Method: "GET", Pattern: "/{announcementId}/stats", Portals: portals, Response: statsResponse{}},
 		{Method: "GET", Pattern: "/{announcementId}/recipients", Portals: portals, Response: []recipientResponse{}},

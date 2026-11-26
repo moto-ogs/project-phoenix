@@ -9,6 +9,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/domain"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/tokenprimitives"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // JWTSigner is the signing primitive supplied by composition. Identity owns the
@@ -83,8 +84,8 @@ func (c *SessionCodec) IssueMFAEnrollmentToken(accountID, tenantID int64, scope 
 }
 
 // sign signs the JSON claims of a tokenprimitives wire value.
-func (c *SessionCodec) sign(wire any) (string, error) {
-	encoded, err := json.Marshal(wire)
+func (c *SessionCodec) sign(payload any) (string, error) {
+	encoded, err := wire.Marshal(payload)
 	if err != nil {
 		return "", err
 	}

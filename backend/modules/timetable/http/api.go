@@ -51,10 +51,10 @@ func calendarPeriodOverlapRenderer(err error) render.Renderer {
 		return common.ErrorConflictWithCode(errCalendarPeriodOverlapConflict, common.CodeTimetableCalendarPeriodOverlapConflict)
 	}
 	first := overlapErr.Overlaps[0]
-	ids := make([]int64, 0, len(overlapErr.Overlaps))
+	ids := make([]ident.ID, 0, len(overlapErr.Overlaps))
 	names := make([]string, 0, len(overlapErr.Overlaps))
 	for _, o := range overlapErr.Overlaps {
-		ids = append(ids, o.ID)
+		ids = append(ids, ident.ID(o.ID))
 		names = append(names, o.Name)
 	}
 	message := fmt.Errorf(
@@ -63,9 +63,9 @@ func calendarPeriodOverlapRenderer(err error) render.Renderer {
 		germanCalendarDate(first.StartDate),
 		germanCalendarDate(first.EndDate),
 	)
-	return common.ErrorConflictWithDetails(message, common.CodeTimetableCalendarPeriodOverlapConflict, map[string]any{
-		"overlapping_period_ids":   ids,
-		"overlapping_period_names": names,
+	return common.ErrorConflictWithDetails(message, common.CodeTimetableCalendarPeriodOverlapConflict, CalendarPeriodOverlapDetails{
+		IDs:   ids,
+		Names: names,
 	})
 }
 
@@ -625,7 +625,7 @@ func calendarPeriodShiftSeriesConflict(seriesCount int) render.Renderer {
 	return common.ErrorConflictWithDetails(
 		schoolcalendar.ErrCalendarPeriodUsedByShiftSeries,
 		common.CodeTimetableCalendarPeriodShiftSeriesConflict,
-		map[string]any{"staff_shift_series_count": seriesCount},
+		CalendarPeriodShiftSeriesDetails{Count: seriesCount},
 	)
 }
 

@@ -16,12 +16,13 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 var _ organizationtenancy.Provisioning = (*mockProvisioningService)(nil)
@@ -101,23 +102,23 @@ func (m *mockProvisioningService) ListSystemRoles(ctx context.Context) ([]organi
 	}
 	return nil, nil
 }
-func (m *mockProvisioningService) ListSchoolAccounts(ctx context.Context, schoolID int64) ([]organizationtenancy.SchoolAccount, error) {
-	if m.listSchoolAccountsFn != nil {
-		return m.listSchoolAccountsFn(ctx, schoolID)
+func (m *mockProvisioningService) ListAccountPage(ctx context.Context, scope organizationtenancy.AccountScope, _ organizationtenancy.AccountPageQuery) (organizationtenancy.AccountPage, error) {
+	page := organizationtenancy.AccountPage{Rows: []organizationtenancy.OrganizationAccount{}, Number: 1}
+	if scope.SchoolID != 0 && m.listSchoolAccountsFn != nil {
+		rows, err := m.listSchoolAccountsFn(ctx, scope.SchoolID)
+		for _, row := range rows {
+			page.Rows = append(page.Rows, organizationtenancy.OrganizationAccount{SchoolAccount: row})
+		}
+		return page, err
 	}
-	return nil, nil
-}
-func (m *mockProvisioningService) ListOrganizationAccounts(ctx context.Context, orgID int64) ([]organizationtenancy.OrganizationAccount, error) {
-	if m.listOrgAccountsFn != nil {
-		return m.listOrgAccountsFn(ctx, orgID)
+	var err error
+	if scope.OrganizationID != 0 && m.listOrgAccountsFn != nil {
+		page.Rows, err = m.listOrgAccountsFn(ctx, scope.OrganizationID)
+	} else if m.listAllAccountsFn != nil {
+		page.Rows, err = m.listAllAccountsFn(ctx)
 	}
-	return nil, nil
-}
-func (m *mockProvisioningService) ListAllAccounts(ctx context.Context) ([]organizationtenancy.OrganizationAccount, error) {
-	if m.listAllAccountsFn != nil {
-		return m.listAllAccountsFn(ctx)
-	}
-	return nil, nil
+	page.Total = len(page.Rows)
+	return page, err
 }
 func (m *mockProvisioningService) ListAllDevices(ctx context.Context) ([]organizationtenancy.OperatorDevice, error) {
 	if m.listAllDevicesFn != nil {
@@ -426,7 +427,7 @@ func TestProvisioningResource_CreateSchool(t *testing.T) {
 		},
 	}})
 
-	req := httptest.NewRequest(http.MethodPost, "/operator/schools", bytes.NewBufferString(`{"organization_id":7,"name":" Test School ","slug":" test-school ","subdomain":" test-sub ","email":" SCHOOL@EXAMPLE.COM "}`))
+	req := httptest.NewRequest(http.MethodPost, "/operator/schools", bytes.NewBufferString(`{"organization_id":"7","name":" Test School ","slug":" test-school ","subdomain":" test-sub ","email":" SCHOOL@EXAMPLE.COM "}`))
 	req.Header.Set("Content-Type", "application/json")
 	req.RemoteAddr = "198.51.100.20:4444"
 	req = withOperatorClaims(req, 42)
@@ -776,7 +777,7 @@ func TestProvisioningResource_UpdateSchool(t *testing.T) {
 		},
 	}})
 
-	req := httptest.NewRequest(http.MethodPut, "/operator/schools/10", bytes.NewBufferString(`{"organization_id":7,"name":"Updated School","slug":"updated-school","subdomain":"updated-sub","address":"Main St 1","city":"Cologne","zip":"50667","phone":"0221-1234","email":"school@example.com","active":true}`))
+	req := httptest.NewRequest(http.MethodPut, "/operator/schools/10", bytes.NewBufferString(`{"organization_id":"7","name":"Updated School","slug":"updated-school","subdomain":"updated-sub","address":"Main St 1","city":"Cologne","zip":"50667","phone":"0221-1234","email":"school@example.com","active":true}`))
 	req.Header.Set("Content-Type", "application/json")
 	req.RemoteAddr = "198.51.100.20:4444"
 	req = withOperatorClaims(req, 42)
@@ -805,7 +806,7 @@ func TestProvisioningResource_UpdateSchool_Hidden(t *testing.T) {
 		},
 	}})
 
-	req := httptest.NewRequest(http.MethodPut, "/operator/schools/10", bytes.NewBufferString(`{"organization_id":7,"name":"Hidden School","slug":"hidden","subdomain":"hidden","active":true,"hidden":true}`))
+	req := httptest.NewRequest(http.MethodPut, "/operator/schools/10", bytes.NewBufferString(`{"organization_id":"7","name":"Hidden School","slug":"hidden","subdomain":"hidden","active":true,"hidden":true}`))
 	req.Header.Set("Content-Type", "application/json")
 	req = withOperatorClaims(req, 42)
 	routeCtx := chi.NewRouteContext()
@@ -832,7 +833,7 @@ func TestProvisioningResource_CreateSchool_Hidden(t *testing.T) {
 		},
 	}})
 
-	req := httptest.NewRequest(http.MethodPost, "/operator/schools", bytes.NewBufferString(`{"organization_id":7,"name":"Demo School","slug":"demo","subdomain":"demo","hidden":true}`))
+	req := httptest.NewRequest(http.MethodPost, "/operator/schools", bytes.NewBufferString(`{"organization_id":"7","name":"Demo School","slug":"demo","subdomain":"demo","hidden":true}`))
 	req.Header.Set("Content-Type", "application/json")
 	req = withOperatorClaims(req, 42)
 	rr := httptest.NewRecorder()
@@ -865,7 +866,7 @@ func TestProvisioningResource_UpdateSchool_InvalidID(t *testing.T) {
 	t.Parallel()
 
 	resource := NewProvisioningResource(ProvisioningConfig{Service: &mockProvisioningService{}})
-	req := httptest.NewRequest(http.MethodPut, "/operator/schools/nope", bytes.NewBufferString(`{"organization_id":7,"name":"School","slug":"school","subdomain":"sub","email":"a@b.com","active":true}`))
+	req := httptest.NewRequest(http.MethodPut, "/operator/schools/nope", bytes.NewBufferString(`{"organization_id":"7","name":"School","slug":"school","subdomain":"sub","email":"a@b.com","active":true}`))
 	req.Header.Set("Content-Type", "application/json")
 	req = withOperatorClaims(req, 42)
 	routeCtx := chi.NewRouteContext()
@@ -886,7 +887,7 @@ func TestProvisioningResource_UpdateSchool_NotFound(t *testing.T) {
 		},
 	}})
 
-	req := httptest.NewRequest(http.MethodPut, "/operator/schools/10", bytes.NewBufferString(`{"organization_id":7,"name":"School","slug":"school","subdomain":"sub","email":"a@b.com","active":true}`))
+	req := httptest.NewRequest(http.MethodPut, "/operator/schools/10", bytes.NewBufferString(`{"organization_id":"7","name":"School","slug":"school","subdomain":"sub","email":"a@b.com","active":true}`))
 	req.Header.Set("Content-Type", "application/json")
 	req.RemoteAddr = "198.51.100.20:4444"
 	req = withOperatorClaims(req, 42)
@@ -908,7 +909,7 @@ func TestProvisioningResource_UpdateSchool_Conflict(t *testing.T) {
 		},
 	}})
 
-	req := httptest.NewRequest(http.MethodPut, "/operator/schools/10", bytes.NewBufferString(`{"organization_id":7,"name":"School","slug":"school","subdomain":"sub","email":"a@b.com","active":true}`))
+	req := httptest.NewRequest(http.MethodPut, "/operator/schools/10", bytes.NewBufferString(`{"organization_id":"7","name":"School","slug":"school","subdomain":"sub","email":"a@b.com","active":true}`))
 	req.Header.Set("Content-Type", "application/json")
 	req.RemoteAddr = "198.51.100.20:4444"
 	req = withOperatorClaims(req, 42)
@@ -930,7 +931,7 @@ func TestProvisioningResource_UpdateSchool_ProvisioningConflict(t *testing.T) {
 		},
 	}})
 
-	req := httptest.NewRequest(http.MethodPut, "/operator/schools/10", bytes.NewBufferString(`{"organization_id":7,"name":"School","slug":"school","subdomain":"sub","email":"a@b.com","active":true}`))
+	req := httptest.NewRequest(http.MethodPut, "/operator/schools/10", bytes.NewBufferString(`{"organization_id":"7","name":"School","slug":"school","subdomain":"sub","email":"a@b.com","active":true}`))
 	req.Header.Set("Content-Type", "application/json")
 	req.RemoteAddr = "198.51.100.20:4444"
 	req = withOperatorClaims(req, 42)
@@ -1441,7 +1442,7 @@ func TestProvisioningResource_CreateDevice(t *testing.T) {
 		},
 	}})
 
-	req := httptest.NewRequest(http.MethodPost, "/operator/devices", bytes.NewBufferString(`{"school_id":9,"device_id":"  DEV-123  ","device_type":"  terminal  ","name":"  Eingang  ","api_key":"  manual-key  "}`))
+	req := httptest.NewRequest(http.MethodPost, "/operator/devices", bytes.NewBufferString(`{"school_id":"9","device_id":"  DEV-123  ","device_type":"  terminal  ","name":"  Eingang  ","api_key":"  manual-key  "}`))
 	req.Header.Set("Content-Type", "application/json")
 	req.RemoteAddr = "203.0.113.77:9876"
 	req = withOperatorClaims(req, 42)
@@ -1461,7 +1462,7 @@ func TestProvisioningResource_CreateDevice_InvalidRequest(t *testing.T) {
 	t.Parallel()
 
 	resource := NewProvisioningResource(ProvisioningConfig{Service: &mockProvisioningService{}})
-	req := httptest.NewRequest(http.MethodPost, "/operator/devices", bytes.NewBufferString(`{"school_id":0,"device_id":"","device_type":""}`))
+	req := httptest.NewRequest(http.MethodPost, "/operator/devices", bytes.NewBufferString(`{"school_id":"0","device_id":"","device_type":""}`))
 	req.Header.Set("Content-Type", "application/json")
 	req = withOperatorClaims(req, 42)
 	rr := httptest.NewRecorder()
@@ -1480,7 +1481,7 @@ func TestProvisioningResource_CreateDevice_Conflict(t *testing.T) {
 		},
 	}})
 
-	req := httptest.NewRequest(http.MethodPost, "/operator/devices", bytes.NewBufferString(`{"school_id":9,"device_id":"DEV-123","device_type":"terminal"}`))
+	req := httptest.NewRequest(http.MethodPost, "/operator/devices", bytes.NewBufferString(`{"school_id":"9","device_id":"DEV-123","device_type":"terminal"}`))
 	req.Header.Set("Content-Type", "application/json")
 	req = withOperatorClaims(req, 42)
 	rr := httptest.NewRecorder()
@@ -1499,7 +1500,7 @@ func TestProvisioningResource_CreateDevice_ProvisioningConflict(t *testing.T) {
 		},
 	}})
 
-	req := httptest.NewRequest(http.MethodPost, "/operator/devices", bytes.NewBufferString(`{"school_id":9,"device_id":"DEV-123","device_type":"terminal"}`))
+	req := httptest.NewRequest(http.MethodPost, "/operator/devices", bytes.NewBufferString(`{"school_id":"9","device_id":"DEV-123","device_type":"terminal"}`))
 	req.Header.Set("Content-Type", "application/json")
 	req = withOperatorClaims(req, 42)
 	rr := httptest.NewRecorder()
@@ -1644,7 +1645,7 @@ func TestProvisioningResource_TransferDevice(t *testing.T) {
 		},
 	}})
 
-	req := httptest.NewRequest(http.MethodPost, "/operator/devices/17/transfer", bytes.NewBufferString(`{"target_school_id":23}`))
+	req := httptest.NewRequest(http.MethodPost, "/operator/devices/17/transfer", bytes.NewBufferString(`{"target_school_id":"23"}`))
 	req.Header.Set("Content-Type", "application/json")
 	req.RemoteAddr = "198.51.100.30:4444"
 	routeCtx := chi.NewRouteContext()
@@ -1671,7 +1672,7 @@ func TestProvisioningResource_TransferDevice_Blocked(t *testing.T) {
 		},
 	}})
 
-	req := httptest.NewRequest(http.MethodPost, "/operator/devices/17/transfer", bytes.NewBufferString(`{"target_school_id":23}`))
+	req := httptest.NewRequest(http.MethodPost, "/operator/devices/17/transfer", bytes.NewBufferString(`{"target_school_id":"23"}`))
 	req.Header.Set("Content-Type", "application/json")
 	routeCtx := chi.NewRouteContext()
 	routeCtx.URLParams.Add("id", "17")
@@ -2538,13 +2539,13 @@ func TestCaregiverCapabilityProvisioningErrorRenderer(t *testing.T) {
 			blockers: []string{"active_group_supervisions", "group_assignments"},
 		})
 
-		blocked, ok := renderer.(*common.CaregiverCapabilityBlockedResponse)
+		blocked, ok := renderer.(*common.ErrResponse)
 		require.True(t, ok)
 		assert.Equal(t, http.StatusConflict, blocked.HTTPStatusCode)
 		assert.Equal(
 			t,
 			[]string{"active_group_supervisions", "group_assignments"},
-			blocked.Blockers,
+			blocked.Details.(common.CaregiverCapabilityDetails).Blockers,
 		)
 	})
 
@@ -2612,7 +2613,6 @@ func TestCaregiverCapabilityBlockedResponse_Render(t *testing.T) {
 	t.Parallel()
 
 	resp := common.NewCaregiverCapabilityBlockedResponse(
-		http.StatusConflict,
 		"blocked",
 		nil,
 	)
@@ -2750,7 +2750,7 @@ func TestProvisioningResource_GetSchoolAccountCaregiverCapability(t *testing.T) 
 				called = true
 				assert.Equal(t, int64(12), schoolID)
 				assert.Equal(t, int64(34), accountID)
-				return json.RawMessage(`{"account_id":34,"has_user_role":true}`), nil
+				return json.RawMessage(`{"account_id":"34","has_user_role":true}`), nil
 			},
 		},
 	}
@@ -2780,7 +2780,7 @@ func TestProvisioningResource_EnableSchoolAccountCaregiverCapability(t *testing.
 				assert.Equal(t, "Ada", firstName)
 				assert.Equal(t, "Lovelace", lastName)
 				assert.Equal(t, "Springer", position)
-				return json.RawMessage(`{"account_id":34,"has_user_role":true}`), nil
+				return json.RawMessage(`{"account_id":"34","has_user_role":true}`), nil
 			},
 		},
 	}

@@ -48,7 +48,7 @@ vi.mock("next-auth/react", () => ({
         id: "1",
         permissions: careExit.permissions,
         scope: "tenant",
-        tenantId: 42,
+        tenantId: "42",
       },
       expires: "2099-01-01",
     },

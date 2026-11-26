@@ -22,6 +22,9 @@ type Store interface {
 	PreviewStaffOffboarding(context.Context, int64, string) (domain.OffboardingSnapshot, domain.OperationStats, error)
 	ListWorkTimeModels(context.Context) ([]domain.WorkTimeModel, domain.OperationStats, error)
 	FindWorkTimeModel(context.Context, int64) (domain.WorkTimeModel, bool, domain.OperationStats, error)
+	// LockWorkTimeModel takes the row lock an edit of the template writes
+	// under; found=false for an unknown template.
+	LockWorkTimeModel(ctx context.Context, id int64) (bool, domain.OperationStats, error)
 	ListWorkTimeModelsByIDs(context.Context, []int64) ([]domain.WorkTimeModel, domain.OperationStats, error)
 	CreateWorkTimeModel(context.Context, domain.WorkTimeModelFields) (domain.WorkTimeModel, domain.OperationStats, error)
 	// UpdateWorkTimeModel replaces the template metadata and every entry.
@@ -180,6 +183,9 @@ type StaffRecordStore interface {
 	EnsureStandardQualificationTypes(context.Context, []domain.QualificationType) (domain.OperationStats, error)
 	InsertQualificationType(context.Context, domain.QualificationType) (domain.QualificationType, domain.OperationStats, error)
 	UpdateQualificationType(context.Context, domain.QualificationType) (domain.QualificationType, bool, domain.OperationStats, error)
+	// LockQualificationType takes the row lock an update of the kind writes
+	// under; found=false for an unknown kind.
+	LockQualificationType(ctx context.Context, id int64) (bool, domain.OperationStats, error)
 
 	FindStaffFinancialData(ctx context.Context, staffID int64) (domain.StaffFinancialData, bool, domain.OperationStats, error)
 	CreateStaffFinancialData(context.Context, domain.StaffFinancialData) (domain.StaffFinancialData, domain.OperationStats, error)
@@ -266,6 +272,10 @@ type ShiftTypeRetirementStore interface {
 	// concurrent shift or series write naming the type waits on its FK
 	// check. A missing type reports found=false.
 	LockShiftType(context.Context, int64) (bool, domain.OperationStats, error)
+	// LockShiftTypeForEdit holds the type row FOR NO KEY UPDATE until the
+	// transaction ends: concurrent edits wait, a shift or series naming the
+	// type does not. A missing type reports found=false.
+	LockShiftTypeForEdit(context.Context, int64) (bool, domain.OperationStats, error)
 	// ArchiveShiftType stamps archived_at once; a missing type reports
 	// found=false.
 	ArchiveShiftType(context.Context, int64) (domain.ShiftType, bool, domain.OperationStats, error)
@@ -428,6 +438,9 @@ type TraegerStaffStore interface {
 	InsertStaffLinks(ctx context.Context, organizationID, recordID, accountID int64, links []domain.TraegerStaffLink) error
 	AppendStaffChanges(ctx context.Context, organizationID int64, changes []domain.TraegerStaffChange) error
 	ListStaffChanges(ctx context.Context, organizationID, recordID int64, limit int) ([]domain.TraegerStaffChange, error)
+	// FinancialChangeTimes returns, per bank and tax field, the newest trail
+	// entry that changed or imported it, on the database clock.
+	FinancialChangeTimes(ctx context.Context, organizationID, recordID int64) (map[string]time.Time, error)
 	DeleteStaffRecord(ctx context.Context, organizationID, recordID int64) error
 
 	// The Abwesenheitsarten and Kontingente of the Träger (#4710).
@@ -447,7 +460,9 @@ type TraegerStaffStore interface {
 	// HoldSchoolFinancialRow stamps the school's bank row of a linked
 	// employment that the link did not read, so later hand-overs keep it.
 	HoldSchoolFinancialRow(ctx context.Context, staffID int64) error
-	InsertSchoolFinancialRow(ctx context.Context, data domain.StaffFinancialData) error
+	// WriteSchoolFinancialRow writes the school's bank row a dissolution
+	// decided: a new row, or the decided values over the existing one.
+	WriteSchoolFinancialRow(ctx context.Context, data domain.StaffFinancialData) error
 	// InsertSchoolHireData writes the master data row of an employment a
 	// hire just created at the school (#7206): entry day, last day, address
 	// and phone. The employment has no row yet.
@@ -464,6 +479,23 @@ type TraegerStaffStore interface {
 	TraegerProofStore
 	TraegerStaffImportStore
 	TraegerStaffPoolStore
+	TraegerPayrollEmployerStore
+}
+
+// TraegerPayrollEmployerStore keeps, in the Träger transaction, the payroll
+// values of the bodies that employ staff in place of the Träger and the
+// personnel numbers per employer at the Einsatzorte (#8041, ADR 0320).
+type TraegerPayrollEmployerStore interface {
+	ListPayrollEmployers(ctx context.Context, organizationID int64) ([]domain.TraegerPayrollEmployer, error)
+	// LockPayrollEmployer locks the stored values of the body at the school
+	// until the Träger transaction ends; nil when none are stored.
+	LockPayrollEmployer(ctx context.Context, organizationID, schoolID int64, body string) (*domain.TraegerPayrollEmployer, error)
+	// SavePayrollEmployer updates the stored values or, with insert, adds
+	// them; an insert another one beat answers false.
+	SavePayrollEmployer(ctx context.Context, value domain.TraegerPayrollEmployer, accountID int64, insert bool) (domain.TraegerPayrollEmployer, bool, error)
+	// SetLinkEmployerNumber sets the personnel number with body at the
+	// Einsatzort of the record at the school; a nil number clears it.
+	SetLinkEmployerNumber(ctx context.Context, organizationID, recordID, schoolID int64, body string, number *string) error
 }
 
 // TraegerStaffPoolStore is the persistence of the Vertretungspool (#4709):
@@ -523,6 +555,9 @@ type TraegerStaffImportStore interface {
 type TraegerProofStore interface {
 	EnsureStandardProofTypes(ctx context.Context, organizationID int64, kinds []domain.TraegerProofType) error
 	ListProofTypes(ctx context.Context, organizationID int64) ([]domain.TraegerProofType, error)
+	// LockProofType locks one kind until the transaction ends and returns
+	// it as committed.
+	LockProofType(ctx context.Context, organizationID, id int64) (domain.TraegerProofType, error)
 	SaveProofType(ctx context.Context, kind domain.TraegerProofType) (domain.TraegerProofType, error)
 	ListProofs(ctx context.Context, organizationID int64, recordIDs []int64) ([]domain.TraegerProof, error)
 	SaveProof(ctx context.Context, proof domain.TraegerProof) error

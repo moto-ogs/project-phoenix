@@ -7,6 +7,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/transactionruntime"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/domain"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // The Dienstplan rows (#2689): concrete shifts, their recurrence rules, the
@@ -560,7 +561,7 @@ func (s *Service) CreateShiftTypeIfAbsent(ctx context.Context, shiftType workfor
 	return shiftTypeToPublic(result), created, mapShiftError(err)
 }
 
-func (s *Service) UpdateShiftType(ctx context.Context, shiftType workforce.ShiftType) (workforce.ShiftType, error) {
+func (s *Service) UpdateShiftType(ctx context.Context, shiftType workforce.ShiftType, expectedVersion string) (workforce.ShiftType, error) {
 	if shiftType.ID <= 0 {
 		return workforce.ShiftType{}, workforce.ErrShiftTypeNotFound
 	}
@@ -573,6 +574,9 @@ func (s *Service) UpdateShiftType(ctx context.Context, shiftType workforce.Shift
 	}
 	err = s.run(ctx, "update_shift_type", func(ctx context.Context, stats *domain.OperationStats) error {
 		return s.transaction.RunWrite(ctx, func(txCtx context.Context) error {
+			if err := s.checkShiftTypeRead(txCtx, normalized.ID, expectedVersion, stats); err != nil {
+				return err
+			}
 			var found bool
 			var writeStats domain.OperationStats
 			result, found, writeStats, err = s.store.UpdateShiftType(txCtx, normalized)
@@ -584,6 +588,23 @@ func (s *Service) UpdateShiftType(ctx context.Context, shiftType workforce.Shift
 		})
 	})
 	return shiftTypeToPublic(result), mapShiftError(err)
+}
+
+// checkShiftTypeRead locks the type an update replaces, reads it after the
+// lock and refuses the update when its editor read another version (ADR
+// 0311). A missing type keeps its own answer from the update.
+func (s *Service) checkShiftTypeRead(ctx context.Context, id int64, expected string, stats *domain.OperationStats) error {
+	locked, lockStats, err := s.store.LockShiftTypeForEdit(ctx, id)
+	stats.Add(lockStats)
+	if err != nil || !locked {
+		return err
+	}
+	current, found, readStats, err := s.store.FindShiftType(ctx, id)
+	stats.Add(readStats)
+	if err != nil || !found {
+		return err
+	}
+	return readstate.Check(expected, workforce.ShiftTypeVersion(shiftTypeToPublic(current)))
 }
 
 // DeleteShiftType removes a shift type like RemoveShiftType: a type that

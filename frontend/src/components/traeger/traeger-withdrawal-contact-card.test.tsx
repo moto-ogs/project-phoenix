@@ -5,6 +5,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
+import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
@@ -33,15 +34,49 @@ function card(
   withdrawal = { phone: "", email: "" },
   contact = CONTACT,
   canEdit = true,
+  letterheadText = LETTERHEAD,
 ) {
   return (
     <ToastProvider>
       <TraegerWithdrawalContactCard
+        version="w-1"
+        reload={vi.fn()}
         withdrawal={withdrawal}
         contact={contact}
-        letterheadText={LETTERHEAD}
+        letterheadText={letterheadText}
+        refreshLetterhead={vi.fn()}
         canEdit={canEdit}
         onSaved={() => Promise.resolve()}
+      />
+    </ToastProvider>
+  );
+}
+
+const resolved = () => Promise.resolve();
+
+/** The page: its read takes the save's answer (ADR 0311, rule 5). */
+function Page({
+  onSaved = resolved,
+}: Readonly<{ onSaved?: () => Promise<unknown> }>) {
+  const [read, setRead] = useState({
+    value: { phone: "", email: "" },
+    version: "w-1",
+  });
+  return (
+    <ToastProvider>
+      <TraegerWithdrawalContactCard
+        withdrawal={read.value}
+        version={read.version}
+        reload={vi.fn()}
+        write={(saved) => {
+          setRead(saved);
+          return Promise.resolve();
+        }}
+        contact={CONTACT}
+        letterheadText={LETTERHEAD}
+        refreshLetterhead={vi.fn()}
+        canEdit
+        onSaved={onSaved}
       />
     </ToastProvider>
   );
@@ -75,6 +110,82 @@ describe("TraegerWithdrawalContactCard", () => {
     expect(
       screen.queryByRole("button", { name: "Speichern" }),
     ).not.toBeInTheDocument();
+  });
+
+  // #8131: name and address come from the letterhead, never from the
+  // contact person; the preview says so at the values and leads there.
+  it("shows that name and address come from the letterhead and links there", () => {
+    render(card());
+
+    expect(preview().getByText("Name und Anschrift")).toBeInTheDocument();
+    expect(preview().getByText("Ganztag im Quartier e.V.")).toBeInTheDocument();
+    expect(
+      preview().getByText("Am Markt 4, 40210 Düsseldorf"),
+    ).toBeInTheDocument();
+    expect(preview().getByText("Aus dem Briefkopf")).toBeInTheDocument();
+    const link = preview().getByRole("link", {
+      name: "Im Briefkopf ändern, neuer Tab",
+    });
+    expect(link).toHaveAttribute("href", "/traeger/einstellungen/briefkopf");
+    expect(link).toHaveAttribute("target", "_blank");
+    // The contact person's name is not the addressee, and the card says so.
+    expect(preview().queryByText("Petra Lindner")).not.toBeInTheDocument();
+    expect(
+      preview().getByText(
+        /Der Name der Ansprechperson steht nicht in der Belehrung\./,
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("reads the letterhead again when the person comes back from its tab", () => {
+    const refreshLetterhead = vi.fn().mockResolvedValue(undefined);
+    render(
+      <ToastProvider>
+        <TraegerWithdrawalContactCard
+          version="w-1"
+          reload={vi.fn()}
+          withdrawal={{ phone: "", email: "" }}
+          contact={CONTACT}
+          letterheadText={LETTERHEAD}
+          refreshLetterhead={refreshLetterhead}
+          canEdit
+          onSaved={() => Promise.resolve()}
+        />
+      </ToastProvider>,
+    );
+    globalThis.dispatchEvent(new Event("focus"));
+    expect(refreshLetterhead).not.toHaveBeenCalled();
+
+    const link = preview().getByRole("link", {
+      name: "Im Briefkopf ändern, neuer Tab",
+    });
+    // The test document opens no tab.
+    link.addEventListener("click", (event) => event.preventDefault());
+    fireEvent.click(link);
+    globalThis.dispatchEvent(new Event("focus"));
+    expect(refreshLetterhead).toHaveBeenCalledTimes(1);
+    // Back before saving there: the next return reads it again.
+    globalThis.dispatchEvent(new Event("focus"));
+    expect(refreshLetterhead).toHaveBeenCalledTimes(2);
+  });
+
+  it("asks for the letterhead when it holds no name or no address", () => {
+    const { rerender } = render(card(undefined, CONTACT, true, ""));
+
+    expect(preview().getByText("Fehlt")).toBeInTheDocument();
+    expect(
+      preview().getByRole("link", {
+        name: "Im Briefkopf eintragen, neuer Tab",
+      }),
+    ).toBeInTheDocument();
+
+    rerender(card(undefined, CONTACT, true, "Ganztag im Quartier e.V."));
+    expect(preview().getByText("Anschrift fehlt")).toBeInTheDocument();
+    expect(
+      preview().getByRole("link", {
+        name: "Im Briefkopf eintragen, neuer Tab",
+      }),
+    ).toBeInTheDocument();
   });
 
   it("updates the preview as the office types its own e-mail", () => {
@@ -115,10 +226,10 @@ describe("TraegerWithdrawalContactCard", () => {
 
   it("saves and shows the values as the backend keeps them", async () => {
     mockSave.mockResolvedValue({
-      phone: "",
-      email: "widerruf@traeger.example",
+      value: { phone: "", email: "widerruf@traeger.example" },
+      version: "w-2",
     });
-    render(card());
+    render(<Page />);
     fireEvent.change(screen.getByLabelText("E-Mail für Widerrufe"), {
       target: { value: " Widerruf@Traeger.Example " },
     });
@@ -129,11 +240,14 @@ describe("TraegerWithdrawalContactCard", () => {
         "widerruf@traeger.example",
       ),
     );
-    expect(mockSave).toHaveBeenCalledWith({
-      phone: "",
-      // An e-mail field drops the spaces itself; the backend lowers the case.
-      email: "Widerruf@Traeger.Example",
-    });
+    expect(mockSave).toHaveBeenCalledWith(
+      {
+        phone: "",
+        // An e-mail field drops the spaces itself; the backend lowers the case.
+        email: "Widerruf@Traeger.Example",
+      },
+      "w-1",
+    );
     expect(
       screen.queryByRole("button", { name: "Speichern" }),
     ).not.toBeInTheDocument();
@@ -144,6 +258,9 @@ describe("TraegerWithdrawalContactCard", () => {
 
     expect(screen.getByLabelText("Telefon für Widerrufe")).toBeDisabled();
     expect(preview().getByText("Eigene Angabe")).toBeInTheDocument();
+    // Without the right the letterhead is no place to change it.
+    expect(preview().getByText("Aus dem Briefkopf")).toBeInTheDocument();
+    expect(preview().queryByRole("link")).not.toBeInTheDocument();
   });
 
   // #6652: the save holds once the write is through; a failed reload of the
@@ -151,8 +268,8 @@ describe("TraegerWithdrawalContactCard", () => {
   it("keeps the saved values when the page reload fails", async () => {
     mockSave.mockClear();
     mockSave.mockResolvedValue({
-      phone: "",
-      email: "widerruf@traeger.example",
+      value: { phone: "", email: "widerruf@traeger.example" },
+      version: "w-2",
     });
     const onSaved = vi
       .fn()
@@ -160,17 +277,7 @@ describe("TraegerWithdrawalContactCard", () => {
         new ApiError("down", 503, { code: "general.unavailable" }),
       )
       .mockResolvedValue(undefined);
-    render(
-      <ToastProvider>
-        <TraegerWithdrawalContactCard
-          withdrawal={{ phone: "", email: "" }}
-          contact={CONTACT}
-          letterheadText={LETTERHEAD}
-          canEdit
-          onSaved={onSaved}
-        />
-      </ToastProvider>,
-    );
+    render(<Page onSaved={onSaved} />);
     fireEvent.change(screen.getByLabelText("E-Mail für Widerrufe"), {
       target: { value: "widerruf@traeger.example" },
     });

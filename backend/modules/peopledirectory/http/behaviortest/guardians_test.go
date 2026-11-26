@@ -5,21 +5,25 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
+
 	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
 	usersHTTP "github.com/moto-ogs/project-phoenix/modules/peopledirectory/http"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 // fakeGuardianDirectory answers the guardian reads and records the writes
@@ -142,12 +146,12 @@ func newGuardianHarness(t *testing.T, directory *fakeGuardianDirectory) *guardia
 		},
 		ParsePagination: func(*http.Request) (int, int) { return 1, 20 },
 		Success: func(w http.ResponseWriter, r *http.Request, status int, data any, message string) {
-			payload, _ := json.Marshal(data)
+			payload, _ := wire.Marshal(data)
 			render.Status(r, status)
 			_ = render.Render(w, r, response{Status: "success", Data: payload, Message: message})
 		},
 		SuccessPaginated: func(w http.ResponseWriter, r *http.Request, status int, data any, pagination usersHTTP.Pagination, message string) {
-			payload, _ := json.Marshal(data)
+			payload, _ := wire.Marshal(data)
 			render.Status(r, status)
 			_ = render.Render(w, r, response{Status: "success", Data: payload, Message: message})
 		},
@@ -308,7 +312,7 @@ func TestBatchCreateRequiresCreatePermissionOnlyForNewProfiles(t *testing.T) {
 	assert.Empty(t, directory.added)
 
 	recorder = h.do(t, http.MethodPost, "/guardians/students/3/guardians/batch", map[string]any{
-		"guardians": []map[string]any{{"guardian_profile_id": existing, "relationship_type": "parent", "emergency_priority": 1}},
+		"guardians": []map[string]any{{"guardian_profile_id": fmt.Sprint(existing), "relationship_type": "parent", "emergency_priority": 1}},
 	})
 	require.Equal(t, http.StatusCreated, recorder.Code, recorder.Body.String())
 	require.Len(t, directory.added, 1)
@@ -317,7 +321,7 @@ func TestBatchCreateRequiresCreatePermissionOnlyForNewProfiles(t *testing.T) {
 
 	h.staff = false
 	assert.Equal(t, http.StatusForbidden, h.do(t, http.MethodPost, "/guardians/students/3/guardians/batch", map[string]any{
-		"guardians": []map[string]any{{"guardian_profile_id": existing, "relationship_type": "parent", "emergency_priority": 1}},
+		"guardians": []map[string]any{{"guardian_profile_id": fmt.Sprint(existing), "relationship_type": "parent", "emergency_priority": 1}},
 	}).Code, "an account without a staff record may not change a child's guardians")
 }
 

@@ -72,6 +72,9 @@ func newFakeLifecycle(t *testing.T, deps timetablePorts.InstanceLifecycleDepende
 	if deps.Rooms == nil {
 		deps.Rooms = fakeLockableRoom{}
 	}
+	if deps.RoomClosures == nil {
+		deps.RoomClosures = openLifecycleRooms{}
+	}
 	if deps.ActivityGroupRepo == nil {
 		deps.ActivityGroupRepo = &absorbActivityGroupRepo{}
 	}
@@ -111,6 +114,18 @@ type fakeLockableRoom struct {
 
 func (fakeLockableRoom) LockRoom(context.Context, int64) (*int, bool, error) {
 	return nil, true, nil
+}
+
+// openLifecycleRooms supplies the closure verdict for state-machine tests
+// whose in-memory room is intentionally always available.
+type openLifecycleRooms struct{}
+
+func (openLifecycleRooms) RoomClosedOn(context.Context, int64, calendar.Date) (bool, error) {
+	return false, nil
+}
+
+func (openLifecycleRooms) RoomClosureRanges(context.Context, []int64, calendar.Date, calendar.Date) ([]timetablePorts.RoomClosureRange, error) {
+	return nil, nil
 }
 
 type fakeRecovery struct {

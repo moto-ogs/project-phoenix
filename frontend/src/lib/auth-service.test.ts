@@ -16,8 +16,10 @@ const sampleBackendRole: sharedContract.RoleResponse = {
   description: "Administrator role",
   is_system: false,
   school_portal: false,
+  from_traeger: false,
   created_at: "2024-01-01T00:00:00Z",
   updated_at: "2024-01-01T00:00:00Z",
+  version: "2024-01-01T00:00:00Z",
 };
 
 const sampleBackendPermission: sharedContract.PermissionResponse = {

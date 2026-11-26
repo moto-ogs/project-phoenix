@@ -328,7 +328,7 @@ export function AbwesenheitenTab({
   const tenantMutate = useTenantMutate();
   const yearStart = `${year}-01-01`;
   const yearEnd = `${year}-12-31`;
-  const afterLoad = useCallback(() => {
+  const refreshBadges = useCallback(() => {
     void refreshPendingBadges();
     // Sidebar pending counter (#1419) listens for this event.
     dispatchAbsencesRefresh();
@@ -341,7 +341,7 @@ export function AbwesenheitenTab({
   const absencesResource = useSWRAuth(
     staffAbsenceKeys.list(staffId, yearStart, yearEnd),
     () => staffAbsenceService.getAbsences(staffId, yearStart, yearEnd),
-    { keepPreviousData: false, onSuccess: afterLoad },
+    { keepPreviousData: false },
   );
   // Die Arten braucht nur, wer Abwesenheiten eintragen kann (#1843).
   const typesResource = useSWRAuth(
@@ -428,6 +428,26 @@ export function AbwesenheitenTab({
     [quotaResource],
   );
 
+  // The read of one own claim (ADR 0311): reads the claims again and rejects
+  // on failure, and takes the stored claim a save answered.
+  const allowanceRead = useCallback(
+    (typeId: string) => ({
+      reload: async () =>
+        (await revalidateOrThrow(allowancesResource)).find(
+          (entry) => entry.type.id === typeId,
+        )?.summary,
+      write: (stored: AbsenceTypeAllowanceSummary) =>
+        allowancesResource.mutate(
+          (entries) =>
+            entries?.map((entry) =>
+              entry.type.id === typeId ? { ...entry, summary: stored } : entry,
+            ),
+          { revalidate: false },
+        ),
+    }),
+    [allowancesResource],
+  );
+
   // The reload after a write fetches anew and rejects on failure, so
   // useRefreshAfterWrite can say that the change is saved (#6652).
   const reload = useCallback(async () => {
@@ -470,8 +490,8 @@ export function AbwesenheitenTab({
             { revalidate: false },
           ),
     ]);
-    afterLoad();
-  }, [afterLoad, staff, staffId, tenantMutate, year, yearEnd, yearStart]);
+    refreshBadges();
+  }, [refreshBadges, staff, staffId, tenantMutate, year, yearEnd, yearStart]);
   // A write's reload runs after the write; its failure stands above the tab
   // as a load error, never as an error of the write or its closed dialog
   // (#6652).
@@ -566,7 +586,7 @@ export function AbwesenheitenTab({
       <SectionCard
         title="Kontingente"
         headingLevel={3}
-        description="Wie viele Tage diese Person je Art hat und noch übrig sind."
+        description="Wie viele Tage diese Person pro Art hat und noch übrig sind."
         actions={
           canManageSickReports && staff ? (
             <div className="flex flex-wrap items-center gap-2">
@@ -703,12 +723,12 @@ export function AbwesenheitenTab({
                     year={year}
                     type={entry.type}
                     summary={entry.summary}
+                    read={allowanceRead(entry.type.id)}
                     onCancel={() => setEditing(null)}
                     onSaved={() => {
                       setEditing(null);
                       return afterWrite.refresh({ silent: true });
                     }}
-                    onReload={reload}
                   />
                 ) : null
               }

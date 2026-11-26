@@ -53,6 +53,21 @@ vi.mock("next-auth/react", () => ({
   signIn: mockSignIn,
   signOut: mockSignOut,
 }));
+// A switch that went through loads the document anew (#8082).
+const mockReloadDocument = vi.hoisted(() => vi.fn());
+vi.mock("~/lib/session-tree", async (original) => ({
+  ...(await original<typeof import("~/lib/session-tree")>()),
+  reloadDocument: mockReloadDocument,
+}));
+// An expired session ends through Auth.js' signout protocol for an ended
+// session only (#8082).
+const mockSignOutEnded = vi.hoisted(() =>
+  vi.fn(async (..._args: unknown[]) => undefined),
+);
+vi.mock("~/lib/tenant-session-cookie", async (original) => ({
+  ...(await original<typeof import("~/lib/tenant-session-cookie")>()),
+  signOutSession: mockSignOutEnded,
+}));
 
 vi.mock("~/lib/tenant-context", () => ({
   useTenant: mockUseTenant,
@@ -67,10 +82,15 @@ vi.mock("~/lib/tenant-api", () => ({
 // Toast (#2517). Der Grund eines gescheiterten Wechsels läuft über den echten
 // Ladefehler-Weg.
 const showActionError = vi.hoisted(() => vi.fn());
-vi.mock("~/contexts/ToastContext", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("~/contexts/ToastContext")>()),
-  useApiErrorDisplay: () => ({ show: showActionError }),
-}));
+vi.mock("~/contexts/ToastContext", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/contexts/ToastContext")>();
+  return {
+    ...actual,
+    useApiLoadError: vi.fn(actual.useApiLoadError),
+    useApiErrorDisplay: vi.fn(() => ({ show: showActionError })),
+  };
+});
 
 vi.mock("~/lib/swr", () => ({
   mutate: mockMutate,
@@ -80,6 +100,7 @@ vi.mock("~/lib/session-cache", () => ({
   clearSessionCache: mockClearSessionCache,
 }));
 
+import { useApiErrorDisplay, useApiLoadError } from "~/contexts/ToastContext";
 import { TenantGuard } from "./tenant-guard";
 
 // ============================================================================
@@ -123,12 +144,16 @@ const tenantC = {
 describe("TenantGuard", () => {
   let originalLocation: Location;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
+    // A switch that went through left the document: a fresh one.
+    const { _resetSessionTreeForTests } = await import("~/lib/session-tree");
+    _resetSessionTreeForTests();
     mockUsePathname.mockReturnValue("/");
     mockMutate.mockResolvedValue(undefined);
     mockSignIn.mockResolvedValue({ ok: true });
     mockSignOut.mockResolvedValue(undefined);
+    mockSignOutEnded.mockReset().mockResolvedValue(undefined);
     sessionStorage.clear();
 
     // Mock window.location for redirect assertions
@@ -149,7 +174,7 @@ describe("TenantGuard", () => {
 
   it("renders children when session tenant matches URL tenant", () => {
     mockUseSession.mockReturnValue({
-      data: { user: { tenantId: 1, token: "access-token" } },
+      data: { user: { tenantId: "1", token: "access-token" } },
       status: "authenticated",
       update: vi.fn(),
     });
@@ -184,6 +209,10 @@ describe("TenantGuard", () => {
       </TenantGuard>,
     );
 
+    expect(useApiLoadError).toHaveBeenCalledWith({ preloadPresenter: false });
+    expect(useApiErrorDisplay).toHaveBeenCalledWith(undefined, {
+      preloadPresenter: false,
+    });
     // Children render during loading to avoid layout flicker;
     // individual pages handle their own loading states
     expect(screen.getByText("Protected Content")).toBeInTheDocument();
@@ -191,7 +220,7 @@ describe("TenantGuard", () => {
 
   it("shows switching state when mismatch detected", () => {
     mockUseSession.mockReturnValue({
-      data: { user: { tenantId: 1, token: "access-token" } },
+      data: { user: { tenantId: "1", token: "access-token" } },
       status: "authenticated",
       update: vi.fn(),
     });
@@ -212,10 +241,10 @@ describe("TenantGuard", () => {
     expect(screen.queryByText("Protected Content")).not.toBeInTheDocument();
   });
 
-  it("calls performTenantSwitch + update on mismatch", async () => {
+  it("switches the session to the URL's school and loads the document anew", async () => {
     const mockUpdate = vi.fn().mockResolvedValue(undefined);
     mockUseSession.mockReturnValue({
-      data: { user: { tenantId: 1, token: "access-token" } },
+      data: { user: { tenantId: "1", token: "access-token" } },
       status: "authenticated",
       update: mockUpdate,
     });
@@ -240,40 +269,11 @@ describe("TenantGuard", () => {
         mockMutate,
       );
     });
-
-    expect(mockUpdate).toHaveBeenCalled();
-  });
-
-  // #5130: while the cookie held the other school, the BFF refused this
-  // tab's requests; after the switch back, mounted views load again.
-  it("revalidates the mounted views after the switch went through", async () => {
-    const mockUpdate = vi.fn().mockResolvedValue(undefined);
-    mockUseSession.mockReturnValue({
-      data: { user: { tenantId: 1, token: "access-token" } },
-      status: "authenticated",
-      update: mockUpdate,
-    });
-    mockUseTenant.mockReturnValue({
-      tenantSlug: "school-b",
-      tenant: tenantB,
-    });
-    mockPerformTenantSwitch.mockResolvedValue({
-      access_token: "new-access",
-      refresh_token: "new-refresh",
-    });
-
-    render(
-      <TenantGuard>
-        <div>Protected Content</div>
-      </TenantGuard>,
-    );
-
-    await waitFor(() => expect(mockUpdate).toHaveBeenCalled());
-    await waitFor(() =>
-      expect(mockMutate).toHaveBeenCalledWith(expect.any(Function)),
-    );
-    const [matcher] = mockMutate.mock.calls.at(-1) ?? [];
-    expect((matcher as (key: unknown) => boolean)("any-key")).toBe(true);
+    // A new document of this school (#5130, #8082): nothing of the session
+    // before stays, also not the router's memory; the next document's views
+    // read under this school.
+    await waitFor(() => expect(mockReloadDocument).toHaveBeenCalled());
+    expect(mockUpdate).not.toHaveBeenCalled();
   });
 
   // Regression test for #1975: the auto-switch must send the subdomain,
@@ -281,7 +281,7 @@ describe("TenantGuard", () => {
   it("auto-switches with the subdomain when slug differs (#1975)", async () => {
     const mockUpdate = vi.fn().mockResolvedValue(undefined);
     mockUseSession.mockReturnValue({
-      data: { user: { tenantId: 1, token: "access-token" } },
+      data: { user: { tenantId: "1", token: "access-token" } },
       status: "authenticated",
       update: mockUpdate,
     });
@@ -307,12 +307,12 @@ describe("TenantGuard", () => {
       );
     });
 
-    expect(mockUpdate).toHaveBeenCalled();
+    await waitFor(() => expect(mockReloadDocument).toHaveBeenCalled());
   });
 
   it("stops automatic switching and offers explicit target login when MFA proof is missing", async () => {
     mockUseSession.mockReturnValue({
-      data: { user: { tenantId: 1, token: "access-token" } },
+      data: { user: { tenantId: "1", token: "access-token" } },
       status: "authenticated",
       update: vi.fn(),
     });
@@ -332,13 +332,43 @@ describe("TenantGuard", () => {
     ).toBeInTheDocument();
     expect(screen.getByRole("alert")).toHaveTextContent("School B");
     expect(mockPerformTenantSwitch).toHaveBeenCalledTimes(1);
-    expect(mockSignOut).not.toHaveBeenCalled();
+    expect(mockSignOutEnded).not.toHaveBeenCalled();
     expect(window.location.assign).not.toHaveBeenCalled();
+  });
+
+  it("loads the document when a refused switch already changed the cookie (#8082)", async () => {
+    mockUseSession.mockReturnValue({
+      data: { user: { tenantId: "1", token: "access-token" } },
+      status: "authenticated",
+      update: vi.fn(),
+    });
+    mockUseTenant.mockReturnValue({ tenantSlug: "school-b", tenant: tenantB });
+    const { discardSessionTree } = await import("~/lib/session-tree");
+    // The staff preview ended inside the switch: the tree left with the
+    // cookie, then the school refused.
+    mockPerformTenantSwitch.mockImplementation(async () => {
+      discardSessionTree();
+      throw new ApiError("second factor required", 401, {
+        code: "identity.mfa_session_required",
+      });
+    });
+    render(
+      <TenantGuard>
+        <div>Protected Content</div>
+      </TenantGuard>,
+    );
+    await waitFor(() => expect(mockReloadDocument).toHaveBeenCalledTimes(1));
+    // Anker: the guard still shows its switching state, no way out.
+    expect(screen.getByText("Schule wird gewechselt...")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Zur Schulanmeldung" }),
+    ).not.toBeInTheDocument();
+    expect(mockPerformTenantSwitch).toHaveBeenCalledTimes(1);
   });
 
   it("leads a Träger session the target school refused for its remembered device back to the Träger sign-in with code (#6955)", async () => {
     mockUseSession.mockReturnValue({
-      data: { user: { tenantId: 1, token: "access-token" } },
+      data: { user: { tenantId: "1", token: "access-token" } },
       status: "authenticated",
       update: vi.fn(),
     });
@@ -368,12 +398,12 @@ describe("TenantGuard", () => {
     expect(window.location.assign).toHaveBeenCalledWith(
       expect.stringMatching(/\/login\?mit-code=1$/),
     );
-    expect(mockSignOut).not.toHaveBeenCalled();
+    expect(mockSignOutEnded).not.toHaveBeenCalled();
   });
 
   it("signs out when switchTenant reports access denied", async () => {
     mockUseSession.mockReturnValue({
-      data: { user: { tenantId: 1, token: "access-token" } },
+      data: { user: { tenantId: "1", token: "access-token" } },
       status: "authenticated",
       update: vi.fn(),
     });
@@ -394,13 +424,16 @@ describe("TenantGuard", () => {
     );
 
     await waitFor(() => {
-      expect(mockSignOut).toHaveBeenCalledWith({ callbackUrl: "/" });
+      expect(mockSignOutEnded).toHaveBeenCalledWith(
+        "tenant",
+        expect.any(String),
+      );
     });
   });
 
   it("offers recovery when automatic sign-out after access denial fails", async () => {
     mockUseSession.mockReturnValue({
-      data: { user: { tenantId: 1, token: "access-token" } },
+      data: { user: { tenantId: "1", token: "access-token" } },
       status: "authenticated",
       update: vi.fn(),
     });
@@ -413,7 +446,7 @@ describe("TenantGuard", () => {
         code: "identity.tenant_access_denied",
       }),
     );
-    mockSignOut.mockRejectedValue(new Error("sign-out failed"));
+    mockSignOutEnded.mockRejectedValue(new Error("sign-out failed"));
 
     render(
       <TenantGuard>
@@ -424,7 +457,7 @@ describe("TenantGuard", () => {
     expect(
       await screen.findByRole("button", { name: "Erneut versuchen" }),
     ).toBeInTheDocument();
-    expect(mockSignOut).toHaveBeenCalledWith({ callbackUrl: "/" });
+    expect(mockSignOutEnded).toHaveBeenCalledWith("tenant", expect.any(String));
     // The 401 names the missing access instead of jumping to the login.
     expect(
       await screen.findByText(
@@ -460,7 +493,7 @@ describe("TenantGuard", () => {
 
       expect(screen.getByTestId("child")).toBeInTheDocument();
       await Promise.resolve();
-      expect(mockSignOut).not.toHaveBeenCalled();
+      expect(mockSignOutEnded).not.toHaveBeenCalled();
       expect(mockPerformTenantSwitch).not.toHaveBeenCalled();
     },
   );
@@ -496,7 +529,10 @@ describe("TenantGuard", () => {
 
     // Should clear caches, sign out, and redirect to tenant login
     await waitFor(() => {
-      expect(mockSignOut).toHaveBeenCalledWith({ redirect: false });
+      expect(mockSignOutEnded).toHaveBeenCalledWith(
+        "tenant",
+        expect.any(String),
+      );
     });
     expect(mockMutate).toHaveBeenCalled();
     expect(mockClearSessionCache).toHaveBeenCalled();
@@ -522,7 +558,7 @@ describe("TenantGuard", () => {
       tenantSlug: "school-a",
       tenant: tenantA,
     });
-    mockSignOut.mockRejectedValue(new Error("network down"));
+    mockSignOutEnded.mockRejectedValue(new Error("network down"));
 
     render(
       <TenantGuard>
@@ -569,7 +605,10 @@ describe("TenantGuard", () => {
 
     // signOut should still be called despite cache clear failure
     await waitFor(() => {
-      expect(mockSignOut).toHaveBeenCalledWith({ redirect: false });
+      expect(mockSignOutEnded).toHaveBeenCalledWith(
+        "tenant",
+        expect.any(String),
+      );
     });
 
     // Redirect must fire regardless
@@ -606,7 +645,7 @@ describe("TenantGuard", () => {
 
   it("does not sign out on transient switch failures", async () => {
     mockUseSession.mockReturnValue({
-      data: { user: { tenantId: 1, token: "access-token" } },
+      data: { user: { tenantId: "1", token: "access-token" } },
       status: "authenticated",
       update: vi.fn(),
     });
@@ -629,12 +668,12 @@ describe("TenantGuard", () => {
       );
     });
 
-    expect(mockSignOut).not.toHaveBeenCalled();
+    expect(mockSignOutEnded).not.toHaveBeenCalled();
   });
 
   it("retries after a remount instead of persisting a failed slug marker", async () => {
     mockUseSession.mockReturnValue({
-      data: { user: { tenantId: 1, token: "access-token" } },
+      data: { user: { tenantId: "1", token: "access-token" } },
       status: "authenticated",
       update: vi.fn(),
     });
@@ -674,12 +713,12 @@ describe("TenantGuard", () => {
       expect(mockPerformTenantSwitch).toHaveBeenCalledTimes(2);
     });
 
-    expect(mockSignOut).not.toHaveBeenCalled();
+    expect(mockSignOutEnded).not.toHaveBeenCalled();
   });
 
   it("renders children when tenant context is null", () => {
     mockUseSession.mockReturnValue({
-      data: { user: { tenantId: 1, token: "access-token" } },
+      data: { user: { tenantId: "1", token: "access-token" } },
       status: "authenticated",
       update: vi.fn(),
     });
@@ -707,7 +746,7 @@ describe("TenantGuard", () => {
     mockUseSession.mockReturnValue({
       data: {
         user: {
-          tenantId: 1,
+          tenantId: "1",
           roles: [],
         },
         error: "RefreshTokenError",
@@ -730,7 +769,10 @@ describe("TenantGuard", () => {
     expect(screen.getByText("Sitzung wird erneuert...")).toBeInTheDocument();
 
     await waitFor(() => {
-      expect(mockSignOut).toHaveBeenCalledWith({ redirect: false });
+      expect(mockSignOutEnded).toHaveBeenCalledWith(
+        "tenant",
+        expect.any(String),
+      );
     });
     expect(mockMutate).toHaveBeenCalled();
     expect(mockClearSessionCache).toHaveBeenCalled();
@@ -757,7 +799,7 @@ describe("TenantGuard", () => {
         mockUseSession.mockReturnValue({
           data:
             status === "authenticated"
-              ? { user: { tenantId: 1 }, error: "RefreshTokenError" }
+              ? { user: { tenantId: "1" }, error: "RefreshTokenError" }
               : null,
           status,
           update: vi.fn(),
@@ -778,7 +820,7 @@ describe("TenantGuard", () => {
           screen.getByText("Sitzung wird erneuert..."),
         ).toBeInTheDocument();
         expect(screen.queryByText("Protected Content")).not.toBeInTheDocument();
-        expect(mockSignOut).not.toHaveBeenCalled();
+        expect(mockSignOutEnded).not.toHaveBeenCalled();
         expect(window.location.assign).not.toHaveBeenCalled();
       } finally {
         finish();
@@ -793,7 +835,7 @@ describe("TenantGuard", () => {
     mockUseSession.mockReturnValue({
       data: {
         user: {
-          tenantId: 1,
+          tenantId: "1",
           token: "access-token",
           roles: [],
         },
@@ -817,7 +859,10 @@ describe("TenantGuard", () => {
     expect(screen.getByText("Sitzung wird erneuert...")).toBeInTheDocument();
 
     await waitFor(() => {
-      expect(mockSignOut).toHaveBeenCalledWith({ redirect: false });
+      expect(mockSignOutEnded).toHaveBeenCalledWith(
+        "tenant",
+        expect.any(String),
+      );
     });
     expect(window.location.assign).toHaveBeenCalledWith(
       "/?error=SessionExpired",
@@ -833,7 +878,7 @@ describe("TenantGuard", () => {
       mockUsePathname.mockReturnValue(pathname);
       mockUseSession.mockReturnValue({
         data: {
-          user: { tenantId: 1, roles: [] },
+          user: { tenantId: "1", roles: [] },
           error: "RefreshTokenError",
         },
         status: "authenticated",
@@ -852,7 +897,7 @@ describe("TenantGuard", () => {
 
       expect(screen.getByText("Login Form")).toBeInTheDocument();
       await new Promise((resolve) => setTimeout(resolve, 0));
-      expect(mockSignOut).not.toHaveBeenCalled();
+      expect(mockSignOutEnded).not.toHaveBeenCalled();
       expect(window.location.assign).not.toHaveBeenCalled();
     },
   );
@@ -863,7 +908,7 @@ describe("TenantGuard", () => {
   describe("when the mismatch survives the switch (#3375)", () => {
     function mismatchedSession() {
       mockUseSession.mockReturnValue({
-        data: { user: { tenantId: 1, token: "access-token" } },
+        data: { user: { tenantId: "1", token: "access-token" } },
         status: "authenticated",
         update: vi.fn().mockResolvedValue(undefined),
       });
@@ -881,7 +926,45 @@ describe("TenantGuard", () => {
       );
     }
 
-    it("repeats the switch a bounded number of times, then offers a way out", async () => {
+    it("offers a way out once its switches loaded the document three times in a row", async () => {
+      mismatchedSession();
+      mockPerformTenantSwitch.mockResolvedValue({
+        access_token: "new-access",
+        refresh_token: "new-refresh",
+      });
+      // Three documents in a row switched to School B and still found the
+      // other school (#3375): this one does not load again.
+      sessionStorage.setItem(
+        "moto.tenant-switch-reloads",
+        JSON.stringify({
+          tenantId: tenantB.tenantId,
+          count: 3,
+          at: Date.now(),
+        }),
+      );
+
+      renderGuard();
+
+      expect(
+        await screen.findByText(/Der Wechsel zu School B hat nicht geklappt/),
+      ).toBeInTheDocument();
+      expect(mockPerformTenantSwitch).not.toHaveBeenCalled();
+      expect(mockReloadDocument).not.toHaveBeenCalled();
+      expect(screen.queryByText("Protected Content")).not.toBeInTheDocument();
+      expect(mockSignOutEnded).not.toHaveBeenCalled();
+
+      // Asked again, the switch gets a new budget, also across documents.
+      fireEvent.click(screen.getByRole("button", { name: "Erneut versuchen" }));
+      await waitFor(() =>
+        expect(mockPerformTenantSwitch).toHaveBeenCalledWith(
+          "school-b",
+          mockMutate,
+        ),
+      );
+      sessionStorage.clear();
+    });
+
+    it("counts each document its switch loads", async () => {
       mismatchedSession();
       mockPerformTenantSwitch.mockResolvedValue({
         access_token: "new-access",
@@ -890,28 +973,58 @@ describe("TenantGuard", () => {
 
       renderGuard();
 
+      await waitFor(() => expect(mockReloadDocument).toHaveBeenCalledTimes(1));
+      expect(
+        JSON.parse(
+          sessionStorage.getItem("moto.tenant-switch-reloads") ?? "{}",
+        ),
+      ).toMatchObject({ tenantId: tenantB.tenantId, count: 1 });
+      sessionStorage.clear();
+    });
+
+    it("switches only when asked if the tab cannot keep the count of its reloads", async () => {
+      mismatchedSession();
+      mockPerformTenantSwitch.mockResolvedValue({
+        access_token: "new-access",
+        refresh_token: "new-refresh",
+      });
+      const setItem = vi
+        .spyOn(sessionStorage, "setItem")
+        .mockImplementation(() => {
+          throw new DOMException("full", "QuotaExceededError");
+        });
+
+      renderGuard();
+
+      // No automatic switch: it could load the document again and again.
       expect(
         await screen.findByText(/Der Wechsel zu School B hat nicht geklappt/),
       ).toBeInTheDocument();
-      expect(mockPerformTenantSwitch).toHaveBeenCalledTimes(3);
-      expect(screen.queryByText("Protected Content")).not.toBeInTheDocument();
-      expect(mockSignOut).not.toHaveBeenCalled();
+      expect(mockPerformTenantSwitch).not.toHaveBeenCalled();
+      // The person's own retry switches once.
+      fireEvent.click(screen.getByRole("button", { name: "Erneut versuchen" }));
+      await waitFor(() => expect(mockReloadDocument).toHaveBeenCalledTimes(1));
+      expect(mockPerformTenantSwitch).toHaveBeenCalledTimes(1);
+      setItem.mockRestore();
+      sessionStorage.clear();
     });
 
     it("starts a new retry budget when the URL target changes", async () => {
       mismatchedSession();
-      mockPerformTenantSwitch.mockImplementation((subdomain: string) => {
-        if (subdomain === "school-c") return new Promise(vi.fn());
-        return Promise.resolve({
-          access_token: "new-access",
-          refresh_token: "new-refresh",
-        });
-      });
+      mockPerformTenantSwitch.mockImplementation(() => new Promise(vi.fn()));
+      sessionStorage.setItem(
+        "moto.tenant-switch-reloads",
+        JSON.stringify({
+          tenantId: tenantB.tenantId,
+          count: 3,
+          at: Date.now(),
+        }),
+      );
 
       const { rerender } = renderGuard();
 
       await screen.findByText(/Der Wechsel zu School B hat nicht geklappt/);
-      expect(mockPerformTenantSwitch).toHaveBeenCalledTimes(3);
+      expect(mockPerformTenantSwitch).not.toHaveBeenCalled();
 
       mockUseTenant.mockReturnValue({
         tenantSlug: "school-c",
@@ -930,6 +1043,7 @@ describe("TenantGuard", () => {
         );
       });
       expect(screen.getByText("Schule wird gewechselt...")).toBeInTheDocument();
+      sessionStorage.clear();
     });
 
     it("shows the way out after a failed switch instead of an endless wait", async () => {
@@ -972,13 +1086,16 @@ describe("TenantGuard", () => {
         await screen.findByRole("button", { name: "Neu anmelden" }),
       );
 
-      expect(mockSignOut).toHaveBeenCalledWith({ callbackUrl: "/" });
+      expect(mockSignOutEnded).toHaveBeenCalledWith(
+        "tenant",
+        expect.any(String),
+      );
     });
 
     it("keeps the recovery actions when sign-out fails", async () => {
       mismatchedSession();
       mockPerformTenantSwitch.mockRejectedValue(new Error("network down"));
-      mockSignOut.mockRejectedValue(new Error("sign-out failed"));
+      mockSignOutEnded.mockRejectedValue(new Error("sign-out failed"));
 
       renderGuard();
 
@@ -987,7 +1104,10 @@ describe("TenantGuard", () => {
       );
 
       await waitFor(() => {
-        expect(mockSignOut).toHaveBeenCalledWith({ callbackUrl: "/" });
+        expect(mockSignOutEnded).toHaveBeenCalledWith(
+          "tenant",
+          expect.any(String),
+        );
       });
       expect(
         screen.getByRole("button", { name: "Neu anmelden" }),
@@ -1021,7 +1141,7 @@ describe("TenantGuard", () => {
   // bound to its school (#5130).
   describe("when a tenant route refuses the session", () => {
     const sessionOf = (tenantId: number) => ({
-      user: { tenantId, token: "access-token" },
+      user: { tenantId: String(tenantId), token: "access-token" },
     });
 
     /**

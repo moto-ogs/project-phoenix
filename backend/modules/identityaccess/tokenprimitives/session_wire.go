@@ -4,9 +4,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/lestrrat-go/jwx/v3/jwt"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The wire schema of the identity tokens. Every writer and reader of access,
@@ -39,6 +41,7 @@ type AccessClaims struct {
 	ActingAdminID int64
 	PreviewID     string
 	ViaTraeger    bool
+	IssuedAt      int64
 	ExpiresAt     int64
 }
 
@@ -76,24 +79,24 @@ type EnrollmentClaims struct {
 	CredentialGeneration int64
 }
 
-// AccessWire is the signed form of an access token. Roles, system flags and
-// permissions are always present; other claims only when set.
+// AccessWire is the signed form of an access token. Empty roles and
+// permissions remain arrays; absent permissions are omitted.
 type AccessWire struct {
-	ID            int64    `json:"id,omitempty"`
+	ID            ident.ID `json:"id,omitempty"`
 	Sub           string   `json:"sub,omitempty"`
 	Username      string   `json:"username,omitempty"`
 	FirstName     string   `json:"first_name,omitempty"`
 	LastName      string   `json:"last_name,omitempty"`
 	Roles         []string `json:"roles"`
 	RoleIsSystem  []bool   `json:"role_is_system"`
-	Permissions   []string `json:"permissions"`
+	Permissions   []string `json:"permissions,omitzero"`
 	IsAdmin       bool     `json:"is_admin,omitempty"`
 	Scope         string   `json:"scope,omitempty"`
-	TenantID      int64    `json:"tenant_id,omitempty"`
-	OrgID         int64    `json:"org_id,omitempty"`
+	TenantID      ident.ID `json:"tenant_id,omitempty"`
+	OrgID         ident.ID `json:"org_id,omitempty"`
 	FamilyID      string   `json:"family_id,omitempty"`
 	ReadOnly      bool     `json:"read_only,omitempty"`
-	ActingAdminID int64    `json:"acting_admin_id,omitempty"`
+	ActingAdminID ident.ID `json:"acting_admin_id,omitempty"`
 	PreviewID     string   `json:"preview_id,omitempty"`
 	ViaTraeger    bool     `json:"via_traeger,omitempty"`
 	IssuedAt      int64    `json:"iat"`
@@ -102,23 +105,23 @@ type AccessWire struct {
 
 // RefreshWire is the signed form of a refresh token.
 type RefreshWire struct {
-	ID        int64  `json:"id,omitempty"`
-	Token     string `json:"token,omitempty"`
-	TenantID  int64  `json:"tenant_id,omitempty"`
-	OrgID     int64  `json:"org_id,omitempty"`
-	Scope     string `json:"scope,omitempty"`
-	FamilyID  string `json:"family_id,omitempty"`
-	LineageID string `json:"lineage_id,omitempty"`
-	IssuedAt  int64  `json:"iat"`
-	ExpiresAt int64  `json:"exp"`
+	ID        ident.ID `json:"id,omitempty"`
+	Token     string   `json:"token,omitempty"`
+	TenantID  ident.ID `json:"tenant_id,omitempty"`
+	OrgID     ident.ID `json:"org_id,omitempty"`
+	Scope     string   `json:"scope,omitempty"`
+	FamilyID  string   `json:"family_id,omitempty"`
+	LineageID string   `json:"lineage_id,omitempty"`
+	IssuedAt  int64    `json:"iat"`
+	ExpiresAt int64    `json:"exp"`
 }
 
 // ChallengeWire is the signed form of an MFA challenge token.
 type ChallengeWire struct {
-	AccountID   int64  `json:"account_id"`
-	Scope       string `json:"scope,omitempty"`
-	TenantID    int64  `json:"tenant_id,omitempty"`
-	ChallengeID int64  `json:"challenge_id,omitempty"`
+	AccountID   ident.ID `json:"account_id"`
+	Scope       string   `json:"scope,omitempty"`
+	TenantID    ident.ID `json:"tenant_id,omitempty"`
+	ChallengeID ident.ID `json:"challenge_id,omitempty"`
 	// Generation is written even when zero: a missing claim reads as zero,
 	// which binds a token from before the claim existed to generation 0.
 	Generation int64 `json:"credential_generation"`
@@ -129,13 +132,13 @@ type ChallengeWire struct {
 
 // EnrollmentWire is the signed form of an MFA enrollment token.
 type EnrollmentWire struct {
-	AccountID            int64  `json:"account_id"`
-	Scope                string `json:"scope"`
-	TenantID             int64  `json:"tenant_id,omitempty"`
-	Generation           int64  `json:"credential_generation"`
-	MFAEnrollmentPending bool   `json:"mfa_enrollment_pending"`
-	IssuedAt             int64  `json:"iat"`
-	ExpiresAt            int64  `json:"exp"`
+	AccountID            ident.ID `json:"account_id"`
+	Scope                string   `json:"scope"`
+	TenantID             ident.ID `json:"tenant_id,omitempty"`
+	Generation           int64    `json:"credential_generation"`
+	MFAEnrollmentPending bool     `json:"mfa_enrollment_pending"`
+	IssuedAt             int64    `json:"iat"`
+	ExpiresAt            int64    `json:"exp"`
 }
 
 const (
@@ -146,9 +149,9 @@ const (
 // EncodeAccess is the wire form of an access token.
 func EncodeAccess(c AccessClaims, issuedAt, expiresAt time.Time) AccessWire {
 	return AccessWire{
-		ID: c.AccountID, Sub: c.Email, Username: c.Username, FirstName: c.FirstName, LastName: c.LastName,
+		ID: ident.ID(c.AccountID), Sub: c.Email, Username: c.Username, FirstName: c.FirstName, LastName: c.LastName,
 		Roles: c.Roles, RoleIsSystem: c.RoleIsSystem, Permissions: c.Permissions, IsAdmin: c.IsAdmin, Scope: c.Scope,
-		TenantID: c.TenantID, OrgID: c.OrgID, FamilyID: c.FamilyID, ReadOnly: c.ReadOnly, ActingAdminID: c.ActingAdminID,
+		TenantID: ident.ID(c.TenantID), OrgID: ident.ID(c.OrgID), FamilyID: c.FamilyID, ReadOnly: c.ReadOnly, ActingAdminID: ident.ID(c.ActingAdminID),
 		PreviewID: c.PreviewID, ViaTraeger: c.ViaTraeger, IssuedAt: issuedAt.Unix(), ExpiresAt: expiresAt.Unix(),
 	}
 }
@@ -161,7 +164,7 @@ func EncodeRefresh(c RefreshClaims, issuedAt, defaultExpiry time.Time) RefreshWi
 		expiry = defaultExpiry.Unix()
 	}
 	return RefreshWire{
-		ID: c.AccountID, Token: c.Token, TenantID: c.TenantID, OrgID: c.OrgID, Scope: c.Scope,
+		ID: ident.ID(c.AccountID), Token: c.Token, TenantID: ident.ID(c.TenantID), OrgID: ident.ID(c.OrgID), Scope: c.Scope,
 		FamilyID: c.FamilyID, LineageID: c.LineageID, IssuedAt: issuedAt.Unix(), ExpiresAt: expiry,
 	}
 }
@@ -169,7 +172,7 @@ func EncodeRefresh(c RefreshClaims, issuedAt, defaultExpiry time.Time) RefreshWi
 // EncodeChallenge is the wire form of an MFA challenge token.
 func EncodeChallenge(c ChallengeClaims, issuedAt time.Time, ttl time.Duration) ChallengeWire {
 	return ChallengeWire{
-		AccountID: c.AccountID, Scope: c.Scope, TenantID: c.TenantID, ChallengeID: c.ChallengeID,
+		AccountID: ident.ID(c.AccountID), Scope: c.Scope, TenantID: ident.ID(c.TenantID), ChallengeID: ident.ID(c.ChallengeID),
 		Generation: c.CredentialGeneration, MFAPending: true, IssuedAt: issuedAt.Unix(), ExpiresAt: issuedAt.Add(ttl).Unix(),
 	}
 }
@@ -181,7 +184,7 @@ func EncodeEnrollment(c EnrollmentClaims, issuedAt time.Time, ttl time.Duration)
 		return EnrollmentWire{}, fmt.Errorf("portal %q has no mfa enrollment", c.Scope)
 	}
 	return EnrollmentWire{
-		AccountID: c.AccountID, Scope: c.Scope, TenantID: c.TenantID, Generation: c.CredentialGeneration,
+		AccountID: ident.ID(c.AccountID), Scope: c.Scope, TenantID: ident.ID(c.TenantID), Generation: c.CredentialGeneration,
 		MFAEnrollmentPending: true, IssuedAt: issuedAt.Unix(), ExpiresAt: issuedAt.Add(ttl).Unix(),
 	}, nil
 }
@@ -254,6 +257,11 @@ func wireClaims(token Token) (map[string]any, error) {
 	if err := json.Unmarshal(encoded, &claims); err != nil {
 		return nil, err
 	}
+	for _, key := range []string{"tenant_id", "org_id", "acting_admin_id", "challenge_id"} {
+		if _, present := claims[key]; present && identifier(claims, key) <= 0 {
+			return nil, fmt.Errorf("claim %s is not a valid identifier", key)
+		}
+	}
 	return claims, nil
 }
 
@@ -263,7 +271,7 @@ func decodeAccess(wire map[string]any) (AccessClaims, error) {
 	if err := rejectPending(wire, "session"); err != nil {
 		return AccessClaims{}, err
 	}
-	id, err := requiredNumber(wire, "id")
+	id, err := requiredIdentifier(wire, "id")
 	if err != nil {
 		return AccessClaims{}, err
 	}
@@ -278,9 +286,9 @@ func decodeAccess(wire map[string]any) (AccessClaims, error) {
 	return AccessClaims{
 		AccountID: id, Email: email, Roles: roles, RoleIsSystem: optionalBools(wire["role_is_system"]), Permissions: optionalStrings(wire["permissions"]),
 		Username: text(wire, "username"), FirstName: text(wire, "first_name"), LastName: text(wire, "last_name"),
-		IsAdmin: flag(wire, "is_admin"), Scope: text(wire, "scope"), TenantID: number(wire, "tenant_id"), OrgID: number(wire, "org_id"),
-		FamilyID: text(wire, "family_id"), ReadOnly: flag(wire, "read_only"), ActingAdminID: number(wire, "acting_admin_id"), PreviewID: text(wire, "preview_id"),
-		ViaTraeger: flag(wire, "via_traeger"), ExpiresAt: number(wire, "exp"),
+		IsAdmin: flag(wire, "is_admin"), Scope: text(wire, "scope"), TenantID: identifier(wire, "tenant_id"), OrgID: identifier(wire, "org_id"),
+		FamilyID: text(wire, "family_id"), ReadOnly: flag(wire, "read_only"), ActingAdminID: identifier(wire, "acting_admin_id"), PreviewID: text(wire, "preview_id"),
+		ViaTraeger: flag(wire, "via_traeger"), IssuedAt: number(wire, "iat"), ExpiresAt: number(wire, "exp"),
 	}, nil
 }
 
@@ -293,7 +301,7 @@ func decodeRefresh(wire map[string]any) (RefreshClaims, error) {
 	if flag(wire, "read_only") {
 		return RefreshClaims{}, errors.New("token is a read-only preview token, not a refresh token")
 	}
-	id, err := requiredNumber(wire, "id")
+	id, err := requiredIdentifier(wire, "id")
 	if err != nil {
 		return RefreshClaims{}, err
 	}
@@ -302,7 +310,7 @@ func decodeRefresh(wire map[string]any) (RefreshClaims, error) {
 		return RefreshClaims{}, err
 	}
 	return RefreshClaims{
-		AccountID: id, Token: value, TenantID: number(wire, "tenant_id"), OrgID: number(wire, "org_id"), Scope: text(wire, "scope"),
+		AccountID: id, Token: value, TenantID: identifier(wire, "tenant_id"), OrgID: identifier(wire, "org_id"), Scope: text(wire, "scope"),
 		FamilyID: text(wire, "family_id"), LineageID: text(wire, "lineage_id"), ExpiresAt: number(wire, "exp"),
 	}, nil
 }
@@ -317,7 +325,7 @@ func decodeChallenge(wire map[string]any, now time.Time) (ChallengeClaims, error
 		return ChallengeClaims{}, err
 	}
 	return ChallengeClaims{
-		AccountID: accountID, Scope: scope, TenantID: number(wire, "tenant_id"), ChallengeID: number(wire, "challenge_id"),
+		AccountID: accountID, Scope: scope, TenantID: identifier(wire, "tenant_id"), ChallengeID: identifier(wire, "challenge_id"),
 		CredentialGeneration: number(wire, "credential_generation"),
 	}, nil
 }
@@ -332,7 +340,7 @@ func decodeEnrollment(wire map[string]any, now time.Time) (EnrollmentClaims, err
 		return EnrollmentClaims{}, err
 	}
 	return EnrollmentClaims{
-		AccountID: accountID, Scope: scope, TenantID: number(wire, "tenant_id"), ExpiresAt: number(wire, "exp"),
+		AccountID: accountID, Scope: scope, TenantID: identifier(wire, "tenant_id"), ExpiresAt: number(wire, "exp"),
 		CredentialGeneration: number(wire, "credential_generation"),
 	}, nil
 }
@@ -355,7 +363,7 @@ func decodePendingMFA(wire map[string]any, spec pendingSpec, now time.Time) (int
 	if flag(wire, holidayParentSetupFlag) {
 		return 0, "", errors.New("token is a holiday parent setup token, not a pending-MFA token")
 	}
-	accountID := number(wire, "account_id")
+	accountID := identifier(wire, "account_id")
 	if accountID == 0 {
 		return 0, "", errors.New("missing required claim: account_id")
 	}
@@ -392,16 +400,33 @@ func number(wire map[string]any, key string) int64 {
 	return int64(value)
 }
 
-func requiredNumber(wire map[string]any, key string) (int64, error) {
-	value, exists := wire[key]
-	if !exists {
+// New tokens sign IDs as text. Legacy numeric IDs are accepted only where
+// their original integer can be represented exactly.
+func identifier(wire map[string]any, key string) int64 {
+	switch value := wire[key].(type) {
+	case string:
+		id, err := strconv.ParseInt(value, 10, 64)
+		if err == nil {
+			return id
+		}
+	case float64:
+		const maxSafe = float64(1<<53 - 1)
+		if value >= -maxSafe && value <= maxSafe && value == float64(int64(value)) {
+			return int64(value)
+		}
+	}
+	return 0
+}
+
+func requiredIdentifier(wire map[string]any, key string) (int64, error) {
+	if _, exists := wire[key]; !exists {
 		return 0, fmt.Errorf("missing required claim: %s", key)
 	}
-	n, ok := value.(float64)
-	if !ok {
-		return 0, fmt.Errorf("claim %s is not a number", key)
+	id := identifier(wire, key)
+	if id == 0 {
+		return 0, fmt.Errorf("claim %s is not a valid identifier", key)
 	}
-	return int64(n), nil
+	return id, nil
 }
 
 func requiredString(wire map[string]any, key string) (string, error) {
@@ -437,7 +462,10 @@ func requiredRoles(wire map[string]any) ([]string, error) {
 }
 
 func optionalStrings(value any) []string {
-	items, _ := value.([]any)
+	items, ok := value.([]any)
+	if !ok {
+		return nil
+	}
 	result := make([]string, 0, len(items))
 	for _, item := range items {
 		if s, ok := item.(string); ok {

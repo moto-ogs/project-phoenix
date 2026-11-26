@@ -88,7 +88,7 @@ func refusalCode(t *testing.T, rec *httptest.ResponseRecorder) string {
 // 33,75 €.
 func confirmSiblingsWithTakeover(t *testing.T, f reviewFixture, bearer costBearerBody) takeoverContributionBody {
 	t.Helper()
-	rec := f.confirmWith(t, f.siblings, map[string]any{"cost_bearer_id": bearer.ID})
+	rec := f.confirmWith(t, f.siblings, map[string]any{"cost_bearer_id": fmt.Sprint(bearer.ID)})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	return decodeSchoolPortalData[struct {
 		Contribution takeoverContributionBody `json:"contribution"`
@@ -199,9 +199,9 @@ func TestCostTakeoverFreezesTheRestAfterTheSiblingDiscount(t *testing.T) {
 		status int
 		code   string
 	}{
-		{"exemption and takeover", map[string]any{"benefits_exemption": true, "cost_bearer_id": office.ID}, http.StatusConflict, "parent_billing.cost_takeover_with_exemption"},
-		{"switched-off cost bearer", map[string]any{"cost_bearer_id": switchedOff.ID}, http.StatusConflict, "parent_billing.cost_bearer_inactive"},
-		{"cost bearer of another Träger", map[string]any{"cost_bearer_id": stranger.ID}, http.StatusNotFound, "parent_billing.cost_bearer_not_found"},
+		{"exemption and takeover", map[string]any{"benefits_exemption": true, "cost_bearer_id": fmt.Sprint(office.ID)}, http.StatusConflict, "parent_billing.cost_takeover_with_exemption"},
+		{"switched-off cost bearer", map[string]any{"cost_bearer_id": fmt.Sprint(switchedOff.ID)}, http.StatusConflict, "parent_billing.cost_bearer_inactive"},
+		{"cost bearer of another Träger", map[string]any{"cost_bearer_id": fmt.Sprint(stranger.ID)}, http.StatusNotFound, "parent_billing.cost_bearer_not_found"},
 	} {
 		rec = f.confirmWith(t, f.siblings, refused.body)
 		require.Equal(t, refused.status, rec.Code, "%s: %s", refused.name, rec.Body.String())
@@ -407,7 +407,7 @@ func TestCostBearerListAndReimbursementListQueryBudgetsAreFlat(t *testing.T) {
 	querybudgets.AssertQueryBudget(t, "api.traeger.cost_bearers", one)
 
 	confirmSiblingsWithTakeover(t, f, office)
-	rec := f.confirmWith(t, f.again, map[string]any{"cost_bearer_id": office.ID})
+	rec := f.confirmWith(t, f.again, map[string]any{"cost_bearer_id": fmt.Sprint(office.ID)})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	setNumberRange(t, f, billing, "FE-{NNNN}")
 	run := billingRun(t, f, billing, int64(startBillingRun(t, f, billing, int64(f.period.ID)).ID))
@@ -455,7 +455,7 @@ func TestConfirmationAndDeletionOfACostBearerWaitForEachOther(t *testing.T) {
 	_, err = deletion.ExecContext(ctx, `SELECT id FROM parent_billing.cost_bearers WHERE id = ? FOR UPDATE`, deleted.ID)
 	require.NoError(t, err)
 	confirmation := requestInBackground(t, f, f.office.token, http.MethodPost, holidayConfirmPath(int64(f.period.ID), f.siblings),
-		map[string]any{"cost_bearer_id": deleted.ID})
+		withHolidayPreview(t, f.traeger, f.office.token, int64(f.period.ID), f.siblings, map[string]any{"cost_bearer_id": fmt.Sprint(deleted.ID)}))
 	assertWaits(t, confirmation, "the confirmation")
 	_, err = deletion.ExecContext(ctx, `DELETE FROM parent_billing.cost_bearers WHERE id = ?`, deleted.ID)
 	require.NoError(t, err)

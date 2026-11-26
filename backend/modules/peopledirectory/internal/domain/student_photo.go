@@ -28,6 +28,10 @@ type StudentPhoto struct {
 	PhotoPath           *string
 	PhotoConsentGivenAt *time.Time
 	PhotoConsentGivenBy *int64
+	// HolidayGuest marks the copy of a holiday guest at the hosting school
+	// (ADR 0120). Such a child never holds a photo (#4721): the consent
+	// belongs to its home school, and the copy lives for one week.
+	HolidayGuest bool
 }
 
 func (p StudentPhoto) IsAlumnus() bool { return p.Status == StudentStatusAlumnus }

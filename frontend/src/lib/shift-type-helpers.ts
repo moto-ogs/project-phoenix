@@ -18,6 +18,8 @@ export interface ShiftType {
   archivedAt?: string | null;
   /** Planned shifts and series carrying the type, when requested. */
   usage?: ShiftTypeUsage;
+  /** The stored state an edit sends back as `expected_version` (ADR 0311). */
+  version?: string;
 }
 
 export interface ShiftTypeUsage {
@@ -36,6 +38,7 @@ export function mapShiftType(data: ShiftTypeResponse): ShiftType {
     description: data.description ?? "",
     isActive: data.is_active,
     archivedAt: data.archived_at ?? null,
+    version: data.version,
     ...(data.usage
       ? { usage: { shifts: data.usage.shifts, series: data.usage.series } }
       : {}),

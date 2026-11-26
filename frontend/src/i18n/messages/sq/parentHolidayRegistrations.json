@@ -24,5 +24,40 @@
     "more": "{count, plural, one {edhe # regjistrim} other {edhe # regjistrime}}",
     "showAllTooltip": "Hap listën e të gjitha regjistrimeve të pushimeve të fëmijëve tuaj."
   },
-  "toDocumentsTooltip": "Hap dokumentet tuaja me konfirmimin dhe faturën."
+  "toDocumentsTooltip": "Hap dokumentet tuaja me konfirmimin dhe faturën.",
+  "consents": {
+    "title": "Pëlqimet",
+    "description": "Vullnetare. Çdo pëlqim mund ta tërhiqni ose ta jepni përsëri në çdo kohë. Ekipi që kujdeset për fëmijën gjatë pushimeve e sheh ndryshimin menjëherë.",
+    "states": {
+      "given": "I dhënë",
+      "withdrawn": "I tërhequr",
+      "notGiven": "I padhënë"
+    },
+    "dates": {
+      "given": "Që nga {date}",
+      "withdrawn": "E tërhoqët më {date}.",
+      "notGiven": "Nuk e dhatë gjatë regjistrimit."
+    },
+    "withdraw": "Tërhiq",
+    "withdrawAria": "Tërhiq pëlqimin „{title}“",
+    "withdrawTooltip": "Tërheq pëlqimin. moto pyet më parë.",
+    "grant": "Jep pëlqimin",
+    "grantAria": "Jep pëlqimin „{title}“",
+    "grantTooltip": "Jep pëlqimin. moto pyet më parë.",
+    "withdrawTitle": "Ta tërhiqni pëlqimin?",
+    "withdrawNote": "Tërheqja vlen që tani. Ekipi që kujdeset për fëmijën gjatë pushimeve e sheh menjëherë.",
+    "withdrawConfirm": "Tërhiq",
+    "withdrawing": "Po tërhiqet …",
+    "grantTitle": "Ta jepni pëlqimin?",
+    "grantNote": "Pëlqimi vlen që tani. Mund ta tërhiqni përsëri në çdo kohë.",
+    "grantConfirm": "Jep pëlqimin",
+    "granting": "Po ruhet …",
+    "withdrawSuccess": "E tërhoqët pëlqimin „{title}“.",
+    "grantSuccess": "E dhatë pëlqimin „{title}“.",
+    "cancel": "Anulo",
+    "close": "Mbyll",
+    "errorObject": "Pëlqimi",
+    "savedButStale": "Ndryshimi juaj u ruajt. Vetëm pamja nuk është ende e përditësuar.",
+    "reloadObject": "regjistrimet tuaja për pushimet"
+  }
 }

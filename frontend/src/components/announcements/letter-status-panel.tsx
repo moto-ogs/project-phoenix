@@ -16,7 +16,10 @@ import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { DataField, DataGrid } from "~/components/ui/data-field";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
-import { SectionCard } from "~/components/ui/section-card";
+import {
+  SectionCard,
+  SECTION_CARD_BODY_GAP,
+} from "~/components/ui/section-card";
 import { StatusBadge } from "~/components/ui/status-badge";
 import type { StatusBadgeTone } from "~/components/ui/status-badge";
 import { SegmentedControl } from "~/components/ui/segmented-control";
@@ -246,7 +249,7 @@ export function LetterStatusPanel({
       <SectionCard
         title="Bestätigungen"
         icon={CheckCircle2}
-        bodyClassName="compact:mt-3 mt-4 space-y-3"
+        bodyClassName={`${SECTION_CARD_BODY_GAP} space-y-3`}
       >
         <div className="flex flex-wrap items-baseline gap-x-2">
           <span className="text-3xl font-semibold text-gray-900 tabular-nums">
@@ -376,7 +379,7 @@ export function LetterStatusPanel({
             status.recipients.length > 0 ? (
               <JumpButton
                 targetId={recipientsId}
-                tooltip="Springt zur Liste der Empfänger mit dem Grund je Adresse."
+                tooltip="Springt zur Liste der Empfänger mit dem Grund pro Adresse."
               >
                 Zu den Empfängern
               </JumpButton>

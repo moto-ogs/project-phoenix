@@ -75,7 +75,7 @@ vi.mock("~/lib/session-cache", async (importOriginal) => {
 
 vi.mock("next-auth/react", () => ({
   useSession: vi.fn(() => ({
-    data: { user: { token: "test-token", id: "7", tenantId: 1 } },
+    data: { user: { token: "test-token", id: "7", tenantId: "1" } },
     status: "authenticated",
   })),
 }));
@@ -565,7 +565,7 @@ import { ApiError, unavailableApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
 import type { OgsLiveViewData } from "~/lib/ogs-group-live-api";
 import type { PresenceStudent } from "~/lib/presence-status";
-import OGSGroupPage from "./page";
+import OGSGroupPage from "./page-content";
 
 /** A cache of its own per render, so no dialog data leaks between tests. */
 function FreshSwrCache({ children }: { children: React.ReactNode }) {
@@ -628,7 +628,7 @@ beforeEach(() => {
   vi.mocked(useSession)
     .mockReset()
     .mockReturnValue({
-      data: { user: { token: "test-token", id: "7", tenantId: 1 } },
+      data: { user: { token: "test-token", id: "7", tenantId: "1" } },
       status: "authenticated",
     } as never);
   vi.mocked(useSWRAuth)
@@ -1554,7 +1554,7 @@ describe("OGSGroupPage additional scenarios", () => {
     ).toBeInTheDocument();
   });
 
-  it("shows transfer modal component", async () => {
+  it("opens the group transfer dialog on demand", async () => {
     vi.mocked(useSWRAuth).mockReturnValue({
       data: liveData({
         students: [
@@ -1575,6 +1575,8 @@ describe("OGSGroupPage additional scenarios", () => {
 
     render(<OGSGroupPage />);
 
+    expect(screen.queryByTestId("transfer-modal")).not.toBeInTheDocument();
+    fireEvent.click(await screen.findByLabelText("Gruppe übergeben"));
     await waitFor(() => {
       expect(screen.getByTestId("transfer-modal")).toBeInTheDocument();
     });
@@ -2546,8 +2548,8 @@ describe("matchesSearchFilter (exported)", () => {
 
 describe("matchesAttendanceFilter (exported)", () => {
   const rs = {
-    "1": { in_group_room: true, current_room_id: 10 },
-    "2": { in_group_room: false, current_room_id: 20 },
+    "1": { in_group_room: true, current_room_id: "10" },
+    "2": { in_group_room: false, current_room_id: "20" },
   };
 
   it("returns true for 'all'", () => {
@@ -2610,7 +2612,7 @@ describe("matchesForeignRoomFilter (exported)", () => {
     expect(
       actualMatchesForeignRoomFilter({
         in_group_room: false,
-        current_room_id: 20,
+        current_room_id: "20",
       }),
     ).toBe(true);
   });
@@ -2619,7 +2621,7 @@ describe("matchesForeignRoomFilter (exported)", () => {
     expect(
       actualMatchesForeignRoomFilter({
         in_group_room: true,
-        current_room_id: 10,
+        current_room_id: "10",
       }),
     ).toBe(false);
   });

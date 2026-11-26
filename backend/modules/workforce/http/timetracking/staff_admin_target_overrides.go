@@ -5,10 +5,11 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/render"
+
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -137,7 +138,7 @@ func (rs *StaffAdminResource) deleteTargetOverride(w http.ResponseWriter, r *htt
 
 func decodeTargetOverride(w http.ResponseWriter, r *http.Request) (workforce.StaffTargetOverrideFields, bool) {
 	var req targetOverrideRequest
-	if err := render.DecodeJSON(r.Body, &req); err != nil {
+	if err := wire.DecodeAndDrain(r.Body, &req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return workforce.StaffTargetOverrideFields{}, false
 	}
@@ -178,25 +179,12 @@ func renderTargetOverrideError(w http.ResponseWriter, r *http.Request, err error
 
 // targetOverrideDetails puts the values a coded refusal names into wire form;
 // an unset value is left out, so each code carries only its own parameters.
-func targetOverrideDetails(values workforce.TargetOverrideValues) map[string]any {
-	details := map[string]any{}
-	if values.MaxDays != 0 {
-		details["max_days"] = values.MaxDays
-	}
-	if values.MaxHours != 0 {
-		details["max_hours"] = values.MaxHours
-	}
-	if values.StartDate != "" {
-		details["start_date"] = values.StartDate
-	}
-	if values.EndDate != "" {
-		details["end_date"] = values.EndDate
-	}
-	if values.Month != "" {
-		details["month"] = values.Month
-	}
-	if len(details) == 0 {
+func targetOverrideDetails(values workforce.TargetOverrideValues) any {
+	if values == (workforce.TargetOverrideValues{}) {
 		return nil
 	}
-	return details
+	if values.Month != "" {
+		return workforce.RebookingValues{Month: values.Month}
+	}
+	return values
 }

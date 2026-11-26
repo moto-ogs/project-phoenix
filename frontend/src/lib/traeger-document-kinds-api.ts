@@ -49,7 +49,7 @@ export const BILLING_SERVICE_LABEL: Readonly<Record<BillingService, string>> = {
 
 // A service this build does not know has no card and is left out; a choice
 // it does not know is left out of the choices.
-function overviewFromBackend(
+export function overviewFromBackend(
   body: traegerBillingDocumentKindsContract.DocumentKindOverview,
 ): DocumentKindOverview {
   return {
@@ -79,15 +79,21 @@ export async function fetchDocumentKinds(): Promise<DocumentKindOverview> {
   );
 }
 
+/**
+ * Wählt die Art einer Leistung; issuerKey nennt einen Schulträger oder eine
+ * Gemeinde, die selbst abrechnet (#8040), leer den Träger.
+ */
 export async function saveDocumentKind(
   service: BillingService,
   documentKind: DocumentKind,
+  issuerKey = "",
 ): Promise<DocumentKindOverview> {
   return overviewFromBackend(
     await bffJson("org", "PUT /traeger/billing-document-kinds/{service}", {
       params: { service },
       body: {
         document_kind: documentKind,
+        ...(issuerKey ? { issuer_key: issuerKey } : {}),
       } satisfies traegerBillingDocumentKindsContract.DocumentKindRequest,
     }),
   );

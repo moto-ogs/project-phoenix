@@ -179,7 +179,7 @@ describe("TraegerDailyAttendancePage", () => {
         user: {
           id: "A",
           scope: "org",
-          orgId: 7,
+          orgId: "7",
           permissions: ["traeger_reports:read"],
         },
       },
@@ -191,7 +191,7 @@ describe("TraegerDailyAttendancePage", () => {
     mockFetch.mockResolvedValue(REPORT);
     renderPage();
 
-    await screen.findByRole("heading", { name: /^Je Tag/ });
+    await screen.findByRole("heading", { name: /^Pro Tag/ });
     const table = screen.getAllByRole("table")[0]!;
     expect(mockFetch).toHaveBeenCalledWith(LAST_WEEK);
     expect(screen.getByText("02.09.2026 bis 08.09.2026")).toBeInTheDocument();
@@ -225,7 +225,7 @@ describe("TraegerDailyAttendancePage", () => {
   it("keeps the note on a shortened range until a valid range is chosen", async () => {
     mockFetch.mockResolvedValue(REPORT);
     renderPage();
-    await screen.findByRole("heading", { name: /^Je Tag/ });
+    await screen.findByRole("heading", { name: /^Pro Tag/ });
     const choose = (from: string, to: string) =>
       act(() => {
         const props = captureRange.mock.lastCall?.[0] as {
@@ -256,18 +256,18 @@ describe("TraegerDailyAttendancePage", () => {
   it("opens one school from its row", async () => {
     mockFetch.mockResolvedValue(REPORT);
     renderPage();
-    const schools = await screen.findByRole("heading", { name: /Je Schule/ });
+    const schools = await screen.findByRole("heading", { name: /Pro Schule/ });
     expect(schools).toBeInTheDocument();
 
     fireEvent.click(screen.getByText("Hort Warnowblick").closest("tr")!);
 
     expect(
-      await screen.findByRole("heading", { name: /Je Tag: Hort Warnowblick/ }),
+      await screen.findByRole("heading", { name: /Pro Tag: Hort Warnowblick/ }),
     ).toBeInTheDocument();
     const tuesday = screen.getByText("Di, 08.09.").closest("tr")!;
     expect(within(tuesday).getByText("13")).toBeInTheDocument();
     expect(
-      screen.queryByRole("heading", { name: /Je Schule/ }),
+      screen.queryByRole("heading", { name: /Pro Schule/ }),
     ).not.toBeInTheDocument();
   });
 
@@ -284,7 +284,7 @@ describe("TraegerDailyAttendancePage", () => {
       await screen.findByText("Keine Schule in Mecklenburg-Vorpommern"),
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole("heading", { name: /^Je Tag/ }),
+      screen.queryByRole("heading", { name: /^Pro Tag/ }),
     ).not.toBeInTheDocument();
   });
 
@@ -324,7 +324,7 @@ describe("TraegerDailyAttendancePage", () => {
       filename: "tagesmeldung-mv-2026-09-02-bis-2026-09-08.csv",
     });
     renderPage();
-    await screen.findByRole("heading", { name: /^Je Tag/ });
+    await screen.findByRole("heading", { name: /^Pro Tag/ });
 
     fireEvent.click(screen.getByRole("button", { name: "Weitere Aktionen" }));
     fireEvent.click(await screen.findByRole("menuitem", { name: /CSV/ }));

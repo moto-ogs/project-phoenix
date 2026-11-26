@@ -3,7 +3,6 @@
 package gradetransitionhttp
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -12,9 +11,11 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
+
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	"github.com/moto-ogs/project-phoenix/workflows/gradetransition"
 )
@@ -74,8 +75,6 @@ func (rs *GradeTransitionResource) Router(protectedTenantRoutes func(chi.Router,
 
 		// Individual transition routes
 		r.Route("/{id}", func(r chi.Router) {
-			r.With(common.RequiresPermission(permissions.GradeTransitionsRead), withTx).
-				Get("/", rs.getByID)
 			r.With(common.RequiresPermission(permissions.GradeTransitionsRead), withTx).
 				Get("/preview", rs.preview)
 			r.With(common.RequiresPermission(permissions.GradeTransitionsRead), withTx).
@@ -436,22 +435,6 @@ func (rs *GradeTransitionResource) create(w http.ResponseWriter, r *http.Request
 	common.Respond(w, r, http.StatusCreated, toTransitionResponse(transition), "Grade transition created successfully")
 }
 
-// getByID returns a single grade transition
-func (rs *GradeTransitionResource) getByID(w http.ResponseWriter, r *http.Request) {
-	id, ok := common.ParseInt64IDWithError(w, r, "id", errMsgInvalidTransition)
-	if !ok {
-		return
-	}
-
-	transition, err := rs.workflow.FindTransition(r.Context(), id)
-	if err != nil {
-		common.RenderError(w, r, common.ErrorNotFound(errors.New(errMsgTransitionNotFound)))
-		return
-	}
-
-	common.Respond(w, r, http.StatusOK, toTransitionResponse(transition), "Grade transition retrieved successfully")
-}
-
 // update updates a grade transition
 func (rs *GradeTransitionResource) update(w http.ResponseWriter, r *http.Request) {
 	id, ok := common.ParseInt64IDWithError(w, r, "id", errMsgInvalidTransition)
@@ -568,7 +551,7 @@ func (rs *GradeTransitionResource) apply(w http.ResponseWriter, r *http.Request)
 	// rejected as such instead of being read as an empty one (#405 review).
 	var req TransitionApplyRequest
 	if r.Body != nil {
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil && !errors.Is(err, io.EOF) {
+		if err := wire.Decode(r.Body, &req); err != nil && !errors.Is(err, io.EOF) {
 			common.RenderError(w, r, common.ErrorInvalidRequest(fmt.Errorf("invalid request body: %w", err)))
 			return
 		}

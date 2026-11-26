@@ -1,6 +1,6 @@
 {
   "child_not_enrolled": "Nuk është e mundur: {object}. Fëmija nuk është në kujdes në këtë ditë.",
-  "day_changed": "Dikush tjetër e ka ndryshuar ndërkohë planin e ushqimit. Zgjidhni „Verwerfen” për të parë versionin e ri. Zgjidhni „Speichern” për ta zëvendësuar me ndryshimet tuaja.",
+  "day_changed": "Dikush tjetër e ka ndryshuar ndërkohë këtë ditë të planit të ushqimit. Tani shihni gjendjen aktuale. Kontrollojeni dhe ruajeni përsëri.",
   "day_closed": "Nuk është e mundur: {object}. Shkolla është e mbyllur në këtë ditë.",
   "day_past": "Nuk është më e mundur: {object}. Dita ka kaluar.",
   "invalid_allergens": "Alergjenët nuk u ruajtën. Ju lutemi zgjidhini përsëri.",
@@ -16,7 +16,7 @@
   "not_supplied": "Ju nuk e furnizoni më këtë shkollë. Ju lutemi pyesni shkollën.",
   "order_not_found": "Kjo porosi nuk ekziston. Ju lutemi ringarkoni faqen.",
   "supply_active": "{object} nuk është e mundur tani. Një furnizues ushqimi e furnizon ende shkollën. Përfundoni fillimisht atë furnizim.",
-  "participation_manage_denied": "Mund t’i shikoni regjistrimet për ushqim, por nuk mund t’i ndryshoni. Ju lutemi kontaktoni ekipin e kujdesit pas shkollës.",
+  "participation_manage_denied": "Mund t’i shikoni regjistrimet për ushqim, por nuk mund t’i ndryshoni. Ju lutemi kontaktoni {careTerm}-në.",
   "billing_month_running": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
   "billing_month_released": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
   "billing_month_changed": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",

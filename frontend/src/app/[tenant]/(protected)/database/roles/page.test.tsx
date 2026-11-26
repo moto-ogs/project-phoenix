@@ -11,7 +11,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useSWRAuth } from "~/lib/swr";
 import { enrollmentKeys } from "~/lib/swr/enrollment-keys";
 import { SWRConfig } from "~/lib/swr/testing";
-import RolesPage from "./page";
+import RolesPage from "./page-content";
 import { ApiError } from "~/lib/api-error";
 import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
 import { catalogText } from "~/test/error-catalog-text";
@@ -83,11 +83,17 @@ vi.mock("@/lib/database/service-factory", () => {
 
 const mockToastSuccess = vi.fn();
 const mockToastError = vi.fn();
+const mockShowMessage = vi.fn();
 vi.mock("~/contexts/ToastContext", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/contexts/ToastContext")>()),
   useToast: vi.fn(() => ({
     success: mockToastSuccess,
     error: mockToastError,
+  })),
+  useApiErrorDisplay: vi.fn(() => ({
+    show: vi.fn(),
+    clear: vi.fn(),
+    showMessage: mockShowMessage,
   })),
 }));
 
@@ -276,22 +282,29 @@ vi.mock("@/components/roles/roles-master-detail", () => ({
     onSaveRole,
     onDeleteClick,
     onPermissionsSaved,
+    onReloadRole,
     canManagePermissions,
   }: {
     roles: Array<{ id: string; name: string }>;
     selectedId: string | null;
-    selectedRole?: { name: string } | null;
+    selectedRole?: { id: string; name: string; version?: string } | null;
     onSelect: (id: string | null) => void;
-    onSaveRole: (data: { name: string }) => Promise<void>;
+    onSaveRole: (
+      data: { name: string },
+      base: { id: string; name: string; version?: string },
+    ) => Promise<unknown>;
     onDeleteClick: () => void;
     onPermissionsSaved: () => void | Promise<void>;
+    onReloadRole: () => Promise<{ name: string } | undefined>;
     canManagePermissions?: boolean;
   }) => {
     const [editing, setEditing] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [reloaded, setReloaded] = useState<string | null>(null);
     const submit = () => {
       setError(null);
-      void onSaveRole({ name: "Updated" })
+      // The form saves over the role it was opened on (ADR 0311).
+      void onSaveRole({ name: "Updated" }, selectedRole!)
         .then(() => setEditing(false))
         .catch((err: unknown) => {
           setError(err instanceof Error ? err.message : String(err));
@@ -341,6 +354,21 @@ vi.mock("@/components/roles/roles-master-detail", () => ({
             </button>
             <button
               type="button"
+              data-testid="trigger-reload-role"
+              onClick={() =>
+                void onReloadRole().then(
+                  (stored) => setReloaded(stored?.name ?? "gone"),
+                  (err: unknown) => setReloaded(`failed: ${String(err)}`),
+                )
+              }
+            >
+              Reload role
+            </button>
+            {reloaded ? (
+              <span data-testid="reloaded-role">{reloaded}</span>
+            ) : null}
+            <button
+              type="button"
               data-testid="trigger-deselect"
               onClick={() => onSelect(null)}
             >
@@ -372,6 +400,19 @@ vi.mock("@/components/roles/roles-master-detail", () => ({
   },
 }));
 
+// The master-data save answers the stored role with its new version.
+const savedRole = {
+  id: "1",
+  name: "Updated",
+  description: "Vertritt im Krankheitsfall",
+  isSystem: false,
+  baseRole: "teacher",
+  createdAt: "2026-01-01",
+  updatedAt: "2026-01-03",
+  version: "v2",
+  permissionNames: [],
+};
+
 const mockRoles = [
   {
     id: "1",
@@ -381,6 +422,7 @@ const mockRoles = [
     baseRole: "teacher",
     createdAt: "2026-01-01",
     updatedAt: "2026-01-02",
+    version: "v1",
     permissions: [],
   },
   {
@@ -748,7 +790,7 @@ describe("RolesPage", () => {
 
   it("calls update service when saving the inline edit form", async () => {
     setSelectedRole("1");
-    mockUpdate.mockResolvedValueOnce(undefined);
+    mockUpdate.mockResolvedValueOnce(savedRole);
 
     render(<RolesPage />);
 
@@ -767,13 +809,86 @@ describe("RolesPage", () => {
       expect(mockUpdate).toHaveBeenCalledWith(
         "1",
         expect.objectContaining({ name: "Updated" }),
+        expect.objectContaining({ id: "1", version: "v1" }),
       );
     });
   });
 
+  // ADR 0311 rule 5: the next edit saves over the version the save
+  // answered, also when the reload after it fails.
+  it("saves the next edit over the version the save answered", async () => {
+    setSelectedRole("1");
+    mockUpdate
+      .mockResolvedValueOnce(savedRole)
+      .mockResolvedValueOnce({ ...savedRole, version: "v3" });
+    render(<RolesPage />);
+    await screen.findByTestId("role-detail-panel");
+    const down = () =>
+      new ApiError("down", 503, { code: "general.unavailable" });
+    mockGetList.mockRejectedValue(down());
+    mockGetOne.mockRejectedValue(down());
+
+    fireEvent.click(screen.getByTestId("trigger-edit"));
+    fireEvent.click(await screen.findByTestId("submit-edit"));
+    await waitFor(() => expect(mockUpdate).toHaveBeenCalledTimes(1));
+    fireEvent.click(await screen.findByTestId("trigger-edit"));
+    fireEvent.click(await screen.findByTestId("submit-edit"));
+
+    await waitFor(() => expect(mockUpdate).toHaveBeenCalledTimes(2));
+    expect(mockUpdate).toHaveBeenLastCalledWith(
+      "1",
+      expect.anything(),
+      expect.objectContaining({ version: "v2" }),
+    );
+  });
+
+  // A role deleted after a refused edit has nothing left to save: the
+  // reload ends the selection, drops the role from the list and says so,
+  // instead of a load error that blocks saving.
+  it("ends the selection when the reloaded role is gone", async () => {
+    setSelectedRole("1");
+    render(<RolesPage />);
+    await screen.findByTestId("role-detail-panel");
+    mockGetOne.mockRejectedValueOnce(
+      new ApiError("role not found", 404, { code: "general.not_found" }),
+    );
+
+    fireEvent.click(screen.getByTestId("trigger-reload-role"));
+
+    await waitFor(() =>
+      expect(mockShowMessage).toHaveBeenCalledWith(
+        "Diese Rolle gibt es nicht mehr. Deine Änderung ist nicht gespeichert.",
+      ),
+    );
+    expect(mockReplace).toHaveBeenCalledWith("/tenant/database/roles", {
+      scroll: false,
+    });
+    await waitFor(() =>
+      expect(screen.queryByTestId("role-row-1")).not.toBeInTheDocument(),
+    );
+    expect(screen.getByTestId("role-row-2")).toBeInTheDocument();
+  });
+
+  it("keeps a failed reload of the role a load failure", async () => {
+    setSelectedRole("1");
+    render(<RolesPage />);
+    await screen.findByTestId("role-detail-panel");
+    mockGetOne.mockRejectedValueOnce(
+      new ApiError("down", 503, { code: "general.unavailable" }),
+    );
+
+    fireEvent.click(screen.getByTestId("trigger-reload-role"));
+
+    expect(await screen.findByTestId("reloaded-role")).toHaveTextContent(
+      "failed",
+    );
+    expect(mockShowMessage).not.toHaveBeenCalled();
+    expect(screen.getByTestId("role-row-1")).toBeInTheDocument();
+  });
+
   it("refreshes the roles of the invitation form after saving a role", async () => {
     setSelectedRole("1");
-    mockUpdate.mockResolvedValueOnce(undefined);
+    mockUpdate.mockResolvedValueOnce(savedRole);
     const readInvitationRoles = vi.fn(() => Promise.resolve([]));
     function InvitationRoles() {
       useSWRAuth(enrollmentKeys.roles(), readInvitationRoles);
@@ -932,7 +1047,7 @@ describe("RolesPage", () => {
 
     it("keeps an updated role when the reload fails", async () => {
       setSelectedRole("1");
-      mockUpdate.mockResolvedValueOnce(undefined);
+      mockUpdate.mockResolvedValueOnce(savedRole);
       render(<RolesPage />);
       await screen.findByTestId("role-detail-panel");
       mockGetList.mockClear();

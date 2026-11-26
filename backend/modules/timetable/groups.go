@@ -50,6 +50,7 @@ type Group struct {
 	SeriesRootID          *int64     `json:"-"`
 	CalendarPeriodID      *int64     `json:"calendar_period_id,omitempty"`
 	TargetGroupType       string     `json:"target_group_type"`
+	HasDynamicTargets     bool       `json:"-"`
 	TargetGradeLevel      *int16     `json:"target_grade_level,omitempty"`
 	TargetSchoolClass     *string    `json:"target_school_class,omitempty"`
 	SourceCareOfferingIDs []int64    `json:"source_care_offering_ids,omitempty"`

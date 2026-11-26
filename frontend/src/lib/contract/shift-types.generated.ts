@@ -44,6 +44,7 @@ export interface ShiftTypeResponse {
   color: string;
   description?: string;
   is_active: boolean;
+  version: string;
   archived_at?: string;
   usage?: ShiftTypeUsageResponse;
 }
@@ -54,6 +55,7 @@ export const ShiftTypeResponseSchema: z.ZodType<ShiftTypeResponse, unknown> = ob
   color: str,
   description: optional(str),
   is_active: bool,
+  version: str,
   archived_at: optional(str),
   usage: optional(ShiftTypeUsageResponseSchema),
 });
@@ -65,6 +67,8 @@ export interface ShiftTypeRequest {
   description?: string;
   is_active?: boolean | null;
   category_ids?: string[] | null;
+  expected_version?: string;
+  expected_category_link_versions?: Record<string, string> | null;
 }
 
 export const routes = {

@@ -23,7 +23,7 @@ function request(host: string, path = "/api/students", originalHost?: string) {
   });
 }
 
-function session(tenantId?: number): ServerSession {
+function session(tenantId?: string): ServerSession {
   return {
     expires: "2099-01-01T00:00:00.000Z",
     user: { id: "1", token: "access-token", tenantId },
@@ -43,10 +43,25 @@ afterEach(() => {
 });
 
 describe("sessionTenantMismatchResponse", () => {
+  it("distinguishes adjacent school identifiers above JavaScript's safe integer limit", async () => {
+    const school = "9007199254740993";
+    const req = request("schule-a.localhost:3000");
+    mockResolve.mockResolvedValueOnce({ tenant_id: school });
+    expect(
+      await sessionTenantMismatchResponse(req, session(school)),
+    ).toBeNull();
+
+    mockResolve.mockResolvedValueOnce({ tenant_id: school });
+    expect(
+      (await sessionTenantMismatchResponse(req, session("9007199254740992")))
+        ?.status,
+    ).toBe(409);
+  });
+
   it("lets a session of the host's school pass", async () => {
     const result = await sessionTenantMismatchResponse(
       request("schule-a.localhost:3000"),
-      session(1),
+      session("1"),
     );
 
     expect(result).toBeNull();
@@ -59,7 +74,7 @@ describe("sessionTenantMismatchResponse", () => {
   it("refuses a session of another school with its registered code", async () => {
     const result = await sessionTenantMismatchResponse(
       request("schule-a.localhost:3000"),
-      session(2),
+      session("2"),
     );
 
     expect(result?.status).toBe(409);
@@ -72,7 +87,7 @@ describe("sessionTenantMismatchResponse", () => {
   it("uses the proxy-preserved host when Next.js sees an internal host", async () => {
     const result = await sessionTenantMismatchResponse(
       request("next-internal:3000", "/api/students", "schule-a.localhost:3000"),
-      session(2),
+      session("2"),
     );
 
     expect(result?.status).toBe(409);
@@ -86,7 +101,7 @@ describe("sessionTenantMismatchResponse", () => {
   it("allows the session of the proxy-preserved host", async () => {
     const result = await sessionTenantMismatchResponse(
       request("next-internal:3000", "/api/students", "schule-a.localhost:3000"),
-      session(1),
+      session("1"),
     );
 
     expect(result).toBeNull();
@@ -96,7 +111,7 @@ describe("sessionTenantMismatchResponse", () => {
   it("checks a case-insensitive proxy-preserved school host", async () => {
     const result = await sessionTenantMismatchResponse(
       request("next-internal:3000", "/api/students", "schule-a.LOCALHOST:3000"),
-      session(2),
+      session("2"),
     );
 
     expect(result?.status).toBe(409);
@@ -114,7 +129,7 @@ describe("sessionTenantMismatchResponse", () => {
   ])("lets %s pass so the tab can switch back or sign out", async (path) => {
     const result = await sessionTenantMismatchResponse(
       request("schule-a.localhost:3000", path),
-      session(2),
+      session("2"),
     );
 
     expect(result).toBeNull();
@@ -124,7 +139,7 @@ describe("sessionTenantMismatchResponse", () => {
   it("lets a host of another portal pass", async () => {
     const result = await sessionTenantMismatchResponse(
       request("operator.localhost:3000"),
-      session(2),
+      session("2"),
     );
 
     expect(result).toBeNull();
@@ -137,7 +152,7 @@ describe("sessionTenantMismatchResponse", () => {
   it("refuses a school's session on the bare domain", async () => {
     const result = await sessionTenantMismatchResponse(
       request("localhost:3000"),
-      session(2),
+      session("2"),
     );
 
     expect(result?.status).toBe(409);
@@ -150,7 +165,7 @@ describe("sessionTenantMismatchResponse", () => {
   it("refuses a school's session on the proxy-preserved bare domain", async () => {
     const result = await sessionTenantMismatchResponse(
       request("next-internal:3000", "/api/students", "localhost:3000"),
-      session(2),
+      session("2"),
     );
 
     expect(result?.status).toBe(409);
@@ -165,7 +180,7 @@ describe("sessionTenantMismatchResponse", () => {
     async (path) => {
       const result = await sessionTenantMismatchResponse(
         request("localhost:3000", path),
-        session(2),
+        session("2"),
       );
 
       expect(result).toBeNull();
@@ -195,7 +210,7 @@ describe("sessionTenantMismatchResponse", () => {
 
       const result = await sessionTenantMismatchResponse(
         request("schule-a.localhost:3000"),
-        session(1),
+        session("1"),
       );
 
       expect(result?.status).toBe(status);
@@ -207,9 +222,21 @@ describe("sessionTenantMismatchResponse", () => {
 
     const result = await sessionTenantMismatchResponse(
       request("schule-a.localhost:3000"),
-      session(1),
+      session("1"),
     );
 
     expect(result?.status).toBe(503);
+  });
+
+  it("passes the lookup's Retry-After to the browser", async () => {
+    mockResolve.mockRejectedValueOnce(new TenantResolveStatusError(429, "7"));
+
+    const result = await sessionTenantMismatchResponse(
+      request("schule-a.localhost:3000"),
+      session("1"),
+    );
+
+    expect(result?.status).toBe(429);
+    expect(result?.headers.get("Retry-After")).toBe("7");
   });
 });

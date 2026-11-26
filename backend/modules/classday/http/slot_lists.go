@@ -16,7 +16,6 @@
 package classdayhttp
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -24,24 +23,27 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
+
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	"github.com/moto-ogs/project-phoenix/modules/classday"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
 
 type slotListRequest struct {
-	Date         string   `json:"date"`
-	Target       string   `json:"target"`
-	PickupCohort string   `json:"pickup_cohort,omitempty"`
-	Source       string   `json:"source"`
-	Format       string   `json:"format,omitempty"`
-	ListKind     string   `json:"list_kind,omitempty"`
-	InstanceIDs  []string `json:"instance_ids,omitempty"`
-	GroupIDs     []string `json:"group_ids,omitempty"`
-	Classes      []string `json:"classes,omitempty"`
-	GroupBy      string   `json:"group_by,omitempty"`
+	Date         string     `json:"date"`
+	Target       string     `json:"target"`
+	PickupCohort string     `json:"pickup_cohort,omitempty"`
+	Source       string     `json:"source"`
+	Format       string     `json:"format,omitempty"`
+	ListKind     string     `json:"list_kind,omitempty"`
+	InstanceIDs  []ident.ID `json:"instance_ids,omitempty"`
+	GroupIDs     []ident.ID `json:"group_ids,omitempty"`
+	Classes      []string   `json:"classes,omitempty"`
+	GroupBy      string     `json:"group_by,omitempty"`
 	// ExpectedSignature is the content hash of the preview the client verified
 	// (Result.signature). On export the backend refuses with 409 when its fresh
 	// build no longer matches, so a downloaded file never differs from the
@@ -116,14 +118,14 @@ func (rs *SlotListResource) parseSlotListParams(w http.ResponseWriter, r *http.R
 	}, true
 }
 
-func parseSlotListIDList(values []string, field string) ([]int64, error) {
+func parseSlotListIDList(values []ident.ID, field string) ([]int64, error) {
 	if values == nil {
 		return nil, nil
 	}
 	ids := make([]int64, 0, len(values))
 	for _, raw := range values {
-		id, err := strconv.ParseInt(raw, 10, 64)
-		if err != nil || id <= 0 {
+		id := raw.Int64()
+		if id <= 0 {
 			return nil, fmt.Errorf("%s must contain positive int64 strings", field)
 		}
 		ids = append(ids, id)
@@ -139,7 +141,7 @@ func (rs *SlotListResource) listSlotListOptions(w http.ResponseWriter, r *http.R
 	}
 
 	var req slotListOptionsRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := wire.Decode(r.Body, &req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid JSON body")))
 		return
 	}
@@ -168,7 +170,7 @@ func (rs *SlotListResource) previewSlotList(w http.ResponseWriter, r *http.Reque
 	}
 
 	var req slotListRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := wire.Decode(r.Body, &req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid JSON body")))
 		return
 	}
@@ -197,7 +199,7 @@ func (rs *SlotListResource) exportSlotList(w http.ResponseWriter, r *http.Reques
 	}
 
 	var req slotListRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := wire.Decode(r.Body, &req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid JSON body")))
 		return
 	}

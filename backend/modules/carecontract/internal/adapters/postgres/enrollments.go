@@ -23,8 +23,7 @@ import (
 // child of their newest version.
 const enrollmentContractsSQL = `SELECT c.id AS contract_id, c.school_id, c.status, c.student_id, c.request_child_id, c.ends_on,
 		n.child_first_name, n.child_last_name,
-		(SELECT f.effective_from FROM care_contract.contract_versions AS f
-			WHERE f.organization_id = c.organization_id AND f.contract_id = c.id AND f.version_number = 1) AS first_from,
+		` + firstConcludedFromSQL + ` AS first_from,
 		(SELECT MAX(m.version_number) + 1 FROM care_contract.contract_versions AS m
 			WHERE m.organization_id = c.organization_id AND m.contract_id = c.id) AS next_number
 	FROM care_contract.contracts AS c
@@ -35,16 +34,36 @@ const enrollmentContractsSQL = `SELECT c.id AS contract_id, c.school_id, c.statu
 		AND (cardinality(?::bigint[]) = 0 OR c.id = ANY(?::bigint[]))
 	ORDER BY c.id`
 
-// lockedEnrollmentContractsSQL takes the row lock of each contract read.
-const lockedEnrollmentContractsSQL = enrollmentContractsSQL + ` FOR UPDATE OF c`
+// lockEnrollmentContractsSQL takes the row lock of each contract the read
+// names, in the order of the ids, like every statement that locks several
+// contracts.
+const lockEnrollmentContractsSQL = `SELECT c.id FROM care_contract.contracts AS c
+	WHERE c.organization_id = ? AND c.school_id = ? AND c.import_origin IS NOT NULL
+		AND (cardinality(?::bigint[]) = 0 OR c.id = ANY(?::bigint[]))
+	ORDER BY c.id FOR UPDATE`
 
 // EnrollmentContracts reads the imported contracts of the school, all or
 // only ids, with their effective versions by effective date, in two
-// statements. forUpdate takes the row lock of each contract.
+// statements. forUpdate takes the row lock of each contract first, in a
+// statement of its own: the read then starts after every writer that held
+// one has committed and sees its versions. A lock in the read itself would
+// wait and still answer the next version number and the child of its older
+// snapshot.
 func (Store) EnrollmentContracts(ctx context.Context, organizationID, schoolID int64, ids []int64, forUpdate bool) ([]carecontract.EnrollmentContract, error) {
 	db, err := traegerDB(ctx, organizationID)
 	if err != nil {
 		return nil, err
+	}
+	if forUpdate {
+		var locked []int64
+		if err := db.NewRaw(lockEnrollmentContractsSQL, organizationID, schoolID, pgdialect.Array(nonNilIDs(ids)), pgdialect.Array(nonNilIDs(ids))).
+			Scan(ctx, &locked); err != nil {
+			return nil, fmt.Errorf("care contract postgres: lock the imported contracts: %w", err)
+		}
+		if len(locked) == 0 {
+			return []carecontract.EnrollmentContract{}, nil
+		}
+		ids = locked
 	}
 	var heads []struct {
 		ContractID     int64          `bun:"contract_id"`
@@ -59,9 +78,6 @@ func (Store) EnrollmentContracts(ctx context.Context, organizationID, schoolID i
 		NextNumber     int            `bun:"next_number"`
 	}
 	read := db.NewRaw(enrollmentContractsSQL, organizationID, schoolID, pgdialect.Array(nonNilIDs(ids)), pgdialect.Array(nonNilIDs(ids)))
-	if forUpdate {
-		read = db.NewRaw(lockedEnrollmentContractsSQL, organizationID, schoolID, pgdialect.Array(nonNilIDs(ids)), pgdialect.Array(nonNilIDs(ids)))
-	}
 	if err := read.Scan(ctx, &heads); err != nil {
 		return nil, fmt.Errorf("care contract postgres: read the imported contracts: %w", err)
 	}
@@ -94,18 +110,26 @@ func (Store) EnrollmentContracts(ctx context.Context, organizationID, schoolID i
 // child has a contract at the school already or is named for an earlier
 // contract of the same call: the caller sees fewer contracts than it gave.
 // It writes request_child_id only; the trigger of the table stamps
-// updated_at.
+// updated_at. The same statement records each binding it made as an event
+// of its contract.
 const bindContractApplicationsSQL = `WITH input AS (
 	SELECT * FROM jsonb_to_recordset(?::jsonb) AS i(contract_id bigint, student_id bigint, request_child_id bigint)
+), bound AS (
+	UPDATE care_contract.contracts AS c SET request_child_id = i.request_child_id
+	FROM input AS i
+	WHERE c.organization_id = ? AND c.id = i.contract_id AND c.import_origin IS NOT NULL AND c.request_child_id IS NULL
+		AND c.student_id = i.student_id
+		AND NOT EXISTS (SELECT 1 FROM care_contract.contracts AS o
+			WHERE o.organization_id = c.organization_id AND o.school_id = c.school_id AND o.request_child_id = i.request_child_id)
+		AND NOT EXISTS (SELECT 1 FROM input AS d WHERE d.request_child_id = i.request_child_id AND d.contract_id < i.contract_id)
+	RETURNING c.id, c.organization_id, c.school_id, i.student_id, i.request_child_id
+), recorded AS (
+	INSERT INTO care_contract.contract_events (organization_id, contract_id, school_id, account_id, action, details)
+	SELECT b.organization_id, b.id, b.school_id, ?, ?,
+		jsonb_build_object('request_child_id', b.request_child_id, 'student_id', b.student_id)
+	FROM bound AS b
 )
-UPDATE care_contract.contracts AS c SET request_child_id = i.request_child_id
-FROM input AS i
-WHERE c.organization_id = ? AND c.id = i.contract_id AND c.import_origin IS NOT NULL AND c.request_child_id IS NULL
-	AND c.student_id = i.student_id
-	AND NOT EXISTS (SELECT 1 FROM care_contract.contracts AS o
-		WHERE o.organization_id = c.organization_id AND o.school_id = c.school_id AND o.request_child_id = i.request_child_id)
-	AND NOT EXISTS (SELECT 1 FROM input AS d WHERE d.request_child_id = i.request_child_id AND d.contract_id < i.contract_id)
-RETURNING c.id`
+SELECT id FROM bound ORDER BY id`
 
 // contractedApplicationsSQL tells whether an application child of the input
 // has another contract at the school of its contract.
@@ -118,11 +142,12 @@ SELECT EXISTS (SELECT 1 FROM input AS i
 		AND o.request_child_id = i.request_child_id AND o.id <> c.id)`
 
 // BindContractApplications binds each imported contract without an
-// application child to the one named and answers the contracts it bound. An
+// application child to the one named, records each binding as an event by
+// accountID, and answers the contracts it bound. An
 // application child has one contract at a school (uq_contracts_application):
 // when a contract stays unbound because its application child has another
 // contract, the answer is ErrContractExists, as for a second draft.
-func (Store) BindContractApplications(ctx context.Context, organizationID int64, bindings []ports.ApplicationBinding) ([]int64, error) {
+func (Store) BindContractApplications(ctx context.Context, organizationID, accountID int64, bindings []ports.ApplicationBinding) ([]int64, error) {
 	if len(bindings) == 0 {
 		return []int64{}, nil
 	}
@@ -144,7 +169,7 @@ func (Store) BindContractApplications(ctx context.Context, organizationID int64,
 		return nil, fmt.Errorf("care contract postgres: encode the bindings: %w", err)
 	}
 	bound := []int64{}
-	if err := db.NewRaw(bindContractApplicationsSQL, string(input), organizationID).Scan(ctx, &bound); err != nil &&
+	if err := db.NewRaw(bindContractApplicationsSQL, string(input), organizationID, accountRef(accountID), ports.ActionBindApplication).Scan(ctx, &bound); err != nil &&
 		!errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("care contract postgres: bind the contracts: %w", err)
 	}

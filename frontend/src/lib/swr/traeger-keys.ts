@@ -16,6 +16,14 @@ export const traegerKeys = {
   organization: () => "traeger-organization",
   masterData: () => "traeger-master-data",
   sepaCreditor: () => "traeger-sepa-creditor",
+  // Rollen des Trägers für das Personal seiner Schulen (#4810): die Liste,
+  // der Rechtekatalog und die Vorschau vor dem Entfernen einer Rolle.
+  schoolRoles: () => "traeger-school-roles",
+  schoolRoleCatalog: () => "traeger-school-role-catalog",
+  schoolRoleRemoval: (id: string) =>
+    `traeger-school-role-removal-${encodeURIComponent(id)}`,
+  // Zuständigkeiten je Schule mit Schulträger und Gemeinde (#4811).
+  responsibilities: () => "traeger-responsibilities",
   // Verlauf des Träger-Büros (#5474): die erste Seite; ältere Seiten lädt
   // die Ansicht dazu. Jede Änderung im Büro liest die Familie neu.
   accountHistoryFamily: "traeger-account-history-",
@@ -39,9 +47,26 @@ export const traegerKeys = {
   schools: () => "traeger-schools",
   school: (id: string) => `traeger-school-${encodeURIComponent(id)}`,
   schoolsAlerts: () => "traeger-schools-alerts",
+  // „Heute anders“ pro Schule (#7672): Schließtage und abgesagte Termine.
+  schoolsDayChanges: () => "traeger-schools-day-changes",
   // Pflichtangaben für Verträge und Abrechnung auf der Startseite (#7177).
   requiredDetails: () => "traeger-required-details",
+  // Was jede Stelle, die eine Schule selbst abrechnet, noch braucht
+  // (#8040): Zählwerte und Einstellungen, keine Personendaten.
+  billingIssuers: () => "traeger-billing-issuers",
+  // Nummernkreise dieser Stellen (#8040).
+  issuerNumberRanges: () => "traeger-number-range-issuers",
   occupancy: () => "traeger-occupancy",
+  // Kinder aller Schulen mit Namen (#8137): die erste Seite je Tag, Schule
+  // und Suche; weitere Seiten lädt die Ansicht dazu. Jedes Lesen steht im
+  // Zugriffsprotokoll der gezeigten Schulen.
+  children: (
+    day: string,
+    filter: { readonly schoolId: string; readonly search: string },
+  ) =>
+    `traeger-children-${day}-${encodeURIComponent(filter.schoolId)}-${encodeURIComponent(
+      filter.search,
+    )}`,
   // Ankunft und Abholung eines Zeitraums (#4714): Durchschnitte, keine Kinder.
   arrivalPickupTimes: (from: string, to: string) =>
     `traeger-arrival-pickup-times-${from}-${to}`,
@@ -97,6 +122,12 @@ export const traegerKeys = {
     `traeger-holiday-period-contribution-${encodeURIComponent(
       id,
     )}-${encodeURIComponent(registrationId)}`,
+  // Vorschau eines Zahlerwechsels (#8158): `payer` ist "family",
+  // "exemption" oder die Kennung des Kostenträgers.
+  holidayPayerChange: (id: string, registrationId: string, payer: string) =>
+    `traeger-holiday-period-payer-change-${encodeURIComponent(
+      id,
+    )}-${encodeURIComponent(registrationId)}-${encodeURIComponent(payer)}`,
   holidayFamilyDebtorNumber: (id: string, registrationId: string) =>
     `traeger-holiday-period-family-debtor-number-${encodeURIComponent(
       id,

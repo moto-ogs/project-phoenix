@@ -4,11 +4,12 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 // The route is composed and driven end to end from the Workforce HTTP
@@ -19,7 +20,7 @@ func TestOptionalFieldsTrackPresence(t *testing.T) {
 	t.Parallel()
 
 	var omitted ShiftRequest
-	require.NoError(t, json.Unmarshal([]byte(`{"staff_id":7}`), &omitted))
+	require.NoError(t, json.Unmarshal([]byte(`{"staff_id":"7"}`), &omitted))
 	assert.False(t, omitted.ShiftTypeID.Present)
 	assert.False(t, omitted.ChangeReason.Present)
 	assert.False(t, omitted.Cancelled.Present)
@@ -35,7 +36,7 @@ func TestOptionalFieldsTrackPresence(t *testing.T) {
 	assert.Equal(t, ident.ID(9223372036854775807), *explicit.OriginShiftID.Value, "string ids keep every bigint digit")
 
 	var numeric ShiftRequest
-	require.NoError(t, json.Unmarshal([]byte(`{"shift_type_id":5,"origin_shift_id":42}`), &numeric))
+	require.NoError(t, json.Unmarshal([]byte(`{"shift_type_id":"5","origin_shift_id":"42"}`), &numeric))
 	require.NotNil(t, numeric.ShiftTypeID.Value)
 	assert.Equal(t, ident.ID(5), *numeric.ShiftTypeID.Value)
 
@@ -88,7 +89,7 @@ func TestBuildCancellationRejectsPartialOriginEdits(t *testing.T) {
 		return request
 	}
 
-	full, err := buildCancellation(5, decode(t, `{"cancelled": true, "change_reason": "krank", "start_time": "09:00", "end_time": "14:00", "break_minutes": 30, "shift_type_id": 7, "replacements": [{"staff_id": 8, "start_time": "09:00", "end_time": "11:00"}]}`))
+	full, err := buildCancellation(5, decode(t, `{"cancelled": true, "change_reason": "krank", "start_time": "09:00", "end_time": "14:00", "break_minutes": 30, "shift_type_id": "7", "replacements": [{"staff_id": "8", "start_time": "09:00", "end_time": "11:00"}]}`))
 	require.NoError(t, err)
 	assert.True(t, full.ApplyOriginEdits)
 	assert.Equal(t, "09:00:00", full.StartTime)
@@ -105,11 +106,11 @@ func TestBuildCancellationRejectsPartialOriginEdits(t *testing.T) {
 	assert.EqualError(t, err, "cancelled is required")
 
 	for name, payload := range map[string]string{
-		"missing break_minutes": `{"cancelled": true, "start_time": "09:00", "end_time": "14:00", "shift_type_id": 7}`,
+		"missing break_minutes": `{"cancelled": true, "start_time": "09:00", "end_time": "14:00", "shift_type_id": "7"}`,
 		"missing shift_type_id": `{"cancelled": true, "start_time": "09:00", "end_time": "14:00", "break_minutes": 30}`,
-		"missing end_time":      `{"cancelled": true, "start_time": "09:00", "break_minutes": 30, "shift_type_id": 7}`,
+		"missing end_time":      `{"cancelled": true, "start_time": "09:00", "break_minutes": 30, "shift_type_id": "7"}`,
 		"only break_minutes":    `{"cancelled": true, "break_minutes": 30}`,
-		"only shift_type_id":    `{"cancelled": true, "shift_type_id": 7}`,
+		"only shift_type_id":    `{"cancelled": true, "shift_type_id": "7"}`,
 	} {
 		_, err := buildCancellation(5, decode(t, payload))
 		assert.EqualError(t, err, "origin shift edits require start_time, end_time, break_minutes and shift_type_id together", name)
@@ -120,7 +121,7 @@ func TestSeriesPayloadMapping(t *testing.T) {
 	t.Parallel()
 
 	var request SeriesRequest
-	require.NoError(t, json.Unmarshal([]byte(`{"staff_id": 5, "weekdays": [1, 3], "start_time": "09:00", "end_time": "12:00", "break_minutes": 15, "calendar_period_id": 8, "valid_from": "2026-09-01", "valid_until": "2026-12-01"}`), &request))
+	require.NoError(t, json.Unmarshal([]byte(`{"staff_id": "5", "weekdays": [1, 3], "start_time": "09:00", "end_time": "12:00", "break_minutes": 15, "calendar_period_id": "8", "valid_from": "2026-09-01", "valid_until": "2026-12-01"}`), &request))
 	input, err := buildSeries(request)
 	require.NoError(t, err)
 	assert.Equal(t, []int{1, 3}, input.Weekdays)

@@ -181,7 +181,7 @@ func TestTraegerOfferingCopyKeepsTheSchoolsChanges(t *testing.T) {
 		capacity := 25
 		offering.Capacity = &capacity
 		offering.IsActive = false
-		_, err = catalog.UpdateOffering(ctx, offering)
+		_, err = catalog.UpdateOffering(ctx, offering, offering.Version)
 		return err
 	})
 
@@ -368,7 +368,7 @@ func TestTraegerOfferingBatchKeepsDeviationsAndBookedWithdrawals(t *testing.T) {
 		}
 		capacity := 25
 		row.Capacity, row.IsActive = &capacity, false
-		_, err = catalog.UpdateOffering(ctx, row)
+		_, err = catalog.UpdateOffering(ctx, row, row.Version)
 		return err
 	}))
 	for index := range inputs {
@@ -432,7 +432,7 @@ func TestTraegerOfferingBatchPrunesWithdrawnAutomaticTriggers(t *testing.T) {
 			return err
 		}
 		row.AutoAddTriggerOfferingIDs = []int64{copies[first]}
-		_, err = catalog.UpdateOffering(ctx, row)
+		_, err = catalog.UpdateOffering(ctx, row, row.Version)
 		return err
 	}))
 	require.NoError(t, fixtureEnrollmentCommand(ctx, func(ctx context.Context) error {

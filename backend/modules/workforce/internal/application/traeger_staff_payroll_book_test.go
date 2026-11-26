@@ -29,7 +29,7 @@ func TestPayrollBooksAMidMonthContractChangeOnce(t *testing.T) {
 		},
 	}
 	months := map[siteKey]schoolPayrollMonth{
-		{1, 10}: {school: "OGS Nord", month: workforce.TraegerPayrollMonth{StaffID: 10, RegularMinutes: 600, Closed: true}},
+		{1, 10}: {schoolID: 1, school: "OGS Nord", month: workforce.TraegerPayrollMonth{StaffID: 10, RegularMinutes: 600, Closed: true}},
 	}
 	settings := workforce.TraegerPayrollSettings{
 		ConsultantNumber: "29098", ClientNumber: "55003",
@@ -39,16 +39,19 @@ func TestPayrollBooksAMidMonthContractChangeOnce(t *testing.T) {
 	}
 
 	book := newPayrollBook(settings, workforce.TraegerExportMonth{Year: 2026, Month: 10, Format: workforce.TraegerPayrollFormatLodas})
+	targets := payrollTargets{settings: settings, names: scene.names}
 	owners, changes := scene.siteOwners()
 	for _, contract := range scene.contractsByName() {
-		book.add(scene.records[contract.RecordID], contract, contractMonths(contract, owners, months))
+		record := scene.records[contract.RecordID]
+		book.add(record, contract, targets.groups(record, contractMonths(contract, owners, months)))
 	}
 	book.contractChanges(scene, changes)
 	report := book.finish(scene, months)
 
-	require.Len(t, book.lines, 1)
-	assert.Equal(t, "100", book.lines[0].WageType, "the Teilzeit contract books the month")
-	assert.Equal(t, 600, *book.lines[0].HoursMinutes)
+	lines := book.byKey[payrollFileTraeger].lines
+	require.Len(t, lines, 1)
+	assert.Equal(t, "100", lines[0].WageType, "the Teilzeit contract books the month")
+	assert.Equal(t, 600, *lines[0].HoursMinutes)
 	assert.Equal(t, 1, report.Contracts)
 	require.Len(t, report.ContractChanges, 1)
 	assert.Equal(t, "Sommer", report.ContractChanges[0].LastName)

@@ -109,9 +109,9 @@ func TestContractConsentSurvivesTheParentsEdit(t *testing.T) {
 
 			formVersion := ""
 			if version != "" {
-				formVersion = `"form_schema_id":` + strconv.FormatInt(schemaID, 10) + `,`
+				formVersion = `"form_schema_id":"` + strconv.FormatInt(schemaID, 10) + `",`
 			}
-			edit := `{"phase_id":` + strconv.FormatInt(env.phaseID, 10) + `,` + formVersion +
+			edit := `{"phase_id":"` + strconv.FormatInt(env.phaseID, 10) + `",` + formVersion +
 				`"guardian_first_name":"Erika","guardian_last_name":"Muster-Berg","guardian_email":"erika.muster@example.com",` +
 				`"consent_flags":{"agb":true,"data_processing":true,"email_contact":true,"care_contract":true},` +
 				`"children":[{"id":"` + strconv.FormatInt(childID, 10) + `","first_name":"Lina","last_name":"Muster","date_of_birth":"2018-04-15","target_grade_level":1}]}`

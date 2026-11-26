@@ -3,18 +3,18 @@ package students
 import (
 	errors "errors"
 	http "net/http"
-	strconv "strconv"
 	time "time"
 
 	common "github.com/moto-ogs/project-phoenix/api/common"
 	sessiontoken "github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // changeHistoryEntry is the per-child change-history row returned to the
 // frontend (issue #1455). Values are already display-ready German strings, so
 // the UI renders a plain "Vorher → Nachher" table without field-specific logic.
 type changeHistoryEntry struct {
-	ID        string    `json:"id"`
+	ID        ident.ID  `json:"id"`
 	Field     string    `json:"field"`
 	OldValue  string    `json:"old_value"`
 	NewValue  string    `json:"new_value"`
@@ -60,7 +60,7 @@ func (rs *Resource) getStudentChangeHistory(w http.ResponseWriter, r *http.Reque
 			continue
 		}
 		entries = append(entries, changeHistoryEntry{
-			ID:        strconv.FormatInt(e.ID, 10),
+			ID:        ident.ID(e.ID),
 			Field:     e.FieldName,
 			OldValue:  derefOrEmpty(e.OldValue),
 			NewValue:  derefOrEmpty(e.NewValue),

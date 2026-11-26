@@ -19,19 +19,8 @@ export const tenant = makePortalHandlers(tenantPortal);
 
 export const {
   get: createGetHandler,
-  post: createPostHandler,
   put: createPutHandler,
-  patch: createPatchHandler,
   del: createDeleteHandler,
-  delWithBody: createDeleteWithBodyHandler,
-  jsonProxy: createTenantJsonProxy,
-  proxyFile,
-  proxyUpload,
-  proxyGet,
-  proxyPost,
-  proxyPut,
-  proxyPatch,
-  proxyDelete,
 } = tenant;
 
 /**

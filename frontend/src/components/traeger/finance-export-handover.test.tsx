@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, expect, it, vi } from "vitest";
-import TraegerFinanceExportsPage from "~/app/traeger/abrechnung/exporte/page";
+import TraegerFinanceExportsPage from "~/app/traeger/abrechnung/exporte/page-content";
 import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import { ApiError } from "~/lib/api-error";
 import type {
@@ -51,6 +51,7 @@ const RUN: ExportRun = {
 };
 
 const READY: ExportRecipient = {
+  version: "v-1",
   id: "7",
   name: "Kämmerei",
   enabled: true,
@@ -70,6 +71,7 @@ const READY: ExportRecipient = {
 /** Every format goes to the given recipient. */
 function pageOf(...recipients: ExportRecipient[]): ExportRecipientsPage {
   return {
+    assignmentsVersion: "a-1",
     recipients,
     assignments: (["sollstellung", "datev", "pain008"] as const).map(
       (format) => ({

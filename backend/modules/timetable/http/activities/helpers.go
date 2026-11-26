@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-chi/render"
 
+	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	activityContract "github.com/moto-ogs/project-phoenix/modules/timetable/activitycontract"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 
@@ -137,6 +138,24 @@ func newCategoryResponse(category *activityContract.Category) ActivityCategoryRe
 	}
 }
 
+// newEditableCategoryResponse is a category as the catalog routes answer
+// it: with the token an edit of it sends and the token of its shift-type
+// link a shift-type edit sends (ADR 0311). The category nested in an
+// activity carries neither.
+func newEditableCategoryResponse(category *activityContract.Category) ActivityCategoryResponse {
+	response := newCategoryResponse(category)
+	if category == nil {
+		return response
+	}
+	stored := timetable.Category{
+		ID: category.ID, Name: category.Name, Description: category.Description, Color: category.Color,
+		IsSystem: category.IsSystem, ShiftTypeID: category.ShiftTypeID, ArchivedAt: category.ArchivedAt,
+	}
+	response.Version = timetable.CategoryVersion(stored)
+	response.ShiftTypeLinkVersion = timetable.CategoryShiftTypeLinkVersion(stored)
+	return response
+}
+
 // newActivityResponse converts an activity group model to a response object
 func newActivityResponse(group *activityContract.Group, enrollmentCount int) ActivityResponse {
 	// Check if group is nil to prevent panic
@@ -152,6 +171,7 @@ func newActivityResponse(group *activityContract.Group, enrollmentCount int) Act
 		Name:            group.Name,
 		MaxParticipants: group.ParticipantLimit(),
 		IsOpen:          group.IsOpen,
+		IsSystem:        group.IsSystem,
 		CategoryID:      ident.ID(group.CategoryID),
 		CreatedBy:       (*ident.ID)(group.CreatedBy),
 		EnrollmentCount: enrollmentCount,

@@ -1,9 +1,11 @@
 DELETE /api/rooms/{id}
+DELETE /api/rooms/{id}/closures/{closureId}
 GET /api/rooms/
-GET /api/rooms/by-category
+GET /api/rooms/closures
 GET /api/rooms/{id}
 GET /api/rooms/{id}/history
 GET /api/rooms/{id}/removal-impact
 POST /api/rooms/
 POST /api/rooms/export
+POST /api/rooms/{id}/closures
 PUT /api/rooms/{id}

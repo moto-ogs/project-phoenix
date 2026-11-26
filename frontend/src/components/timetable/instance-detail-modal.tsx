@@ -56,6 +56,8 @@ import {
 } from "./guardian-notice-fields";
 import { OriginChip } from "~/components/ui/planning/origin-chip";
 import { StatusBadge } from "~/components/ui/status-badge";
+import { useClosedRoomsOn } from "~/lib/hooks/use-closed-rooms";
+import { roomClosureHint } from "~/lib/room-closures-api";
 import { SectionLabel } from "~/components/ui/section-label";
 import { StatusColorBadge } from "~/components/ui/status-color-badge";
 import { useTenantAwarePath } from "~/lib/tenant-path";
@@ -655,6 +657,11 @@ export function InstanceDetailModal({
   const tenantPath = useTenantAwarePath();
   const today = useBerlinToday();
   const now = useMinuteClock();
+  // Liegt der Termin in einem an seinem Tag gesperrten Raum (#7653), sagt
+  // die Zeile es; verlegen kann ihn die Leitung über „Bearbeiten“.
+  const roomClosure = useClosedRoomsOn(instance?.date).get(
+    instance?.roomId ?? "",
+  );
   const completeEnabled = canCompleteInstance(
     instance?.canComplete === true,
     instance?.completeAvailableAt ?? "",
@@ -1183,6 +1190,14 @@ export function InstanceDetailModal({
                 label="Raum"
               >
                 {instanceRoomLabel(instance)}
+                {roomClosure ? (
+                  <span className="mt-1 block">
+                    <StatusBadge
+                      label={roomClosureHint(roomClosure)}
+                      tone="orange"
+                    />
+                  </span>
+                ) : null}
               </Row>
               <Row icon={<Palette className="h-4 w-4" />} label="Planungsspur">
                 {instance.planningTrackName ?? "Keine Planungsspur"}

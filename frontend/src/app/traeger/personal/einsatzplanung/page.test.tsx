@@ -7,6 +7,7 @@ import type {
   TraegerPlanningWeek,
 } from "~/lib/traeger-planning-api";
 import { setTestClock } from "~/test/clock";
+import { catalogText } from "~/test/error-catalog-text";
 
 vi.unmock("swr");
 
@@ -54,6 +55,7 @@ const MIRA: TraegerPlanningPerson = {
       shiftTypeColor: null,
       plannedByTraeger: true,
       fromSeries: false,
+      version: "v501",
     },
     {
       id: "502",
@@ -70,6 +72,7 @@ const MIRA: TraegerPlanningPerson = {
       shiftTypeColor: null,
       plannedByTraeger: false,
       fromSeries: false,
+      version: "v502",
     },
   ],
   plannedMinutes: 510,
@@ -165,6 +168,7 @@ describe("TraegerStaffPlanningPage", () => {
         new ApiError("refused", 409, {
           code: "workforce.shift_working_time_warning",
           details: {
+            count: 1,
             reason_required: true,
             warnings: [
               {
@@ -222,6 +226,77 @@ describe("TraegerStaffPlanningPage", () => {
         "Die Schicht von Mira Sommer steht im Dienstplan von OGS Nord.",
       ),
     ).toBeInTheDocument();
+  });
+
+  // ADR 0311: ein Ändern schickt den Stand der Schicht, die der Dialog
+  // zeigt. Nach einer Ablehnung liest die Seite die Woche neu, der Dialog
+  // zeigt die gespeicherte Schicht samt Meldung und speichert mit ihrem
+  // Stand.
+  it("changes a shift over the version it shows and again over the stored one after a refusal", async () => {
+    const stored = {
+      ...MIRA.shifts[0]!,
+      startTime: "12:00",
+      version: "v501-stored",
+    };
+    api.fetchTraegerPlanningWeek.mockResolvedValueOnce(WEEK).mockResolvedValue({
+      ...WEEK,
+      people: [{ ...MIRA, shifts: [stored, MIRA.shifts[1]!] }],
+    });
+    api.changeTraegerShift
+      .mockRejectedValueOnce(
+        new ApiError("changed", 409, { code: "general.changed_since_read" }),
+      )
+      .mockResolvedValueOnce(stored);
+    renderPage();
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: /^11:30–16:30 Vom Träger OGS Nord/,
+      }),
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "Speichern" }));
+
+    expect(
+      await screen.findByText(
+        catalogText("general.changed_since_read", "die Schicht"),
+      ),
+    ).toBeInTheDocument();
+    expect(api.changeTraegerShift.mock.calls[0]?.[2]).toMatchObject({
+      expectedVersion: "v501",
+    });
+    expect(await screen.findByDisplayValue("12:00")).toBeInTheDocument();
+
+    await vi.waitFor(() => {
+      fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+      expect(api.changeTraegerShift).toHaveBeenCalledTimes(2);
+    });
+    expect(api.changeTraegerShift.mock.calls[1]?.[2]).toMatchObject({
+      startTime: "12:00",
+      expectedVersion: "v501-stored",
+    });
+  });
+
+  it("closes the dialog with a message when the refused shift is gone", async () => {
+    api.fetchTraegerPlanningWeek.mockResolvedValueOnce(WEEK).mockResolvedValue({
+      ...WEEK,
+      people: [{ ...MIRA, shifts: [MIRA.shifts[1]!] }],
+    });
+    api.changeTraegerShift.mockRejectedValueOnce(
+      new ApiError("changed", 409, { code: "general.changed_since_read" }),
+    );
+    renderPage();
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: /^11:30–16:30 Vom Träger OGS Nord/,
+      }),
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "Speichern" }));
+
+    expect(
+      await screen.findByText(/Deine Änderung ist nicht gespeichert/),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("dialog", { name: "Schicht ändern" }),
+    ).not.toBeInTheDocument();
   });
 
   it("suggests the open contract day and plans it after a check (#7381)", async () => {

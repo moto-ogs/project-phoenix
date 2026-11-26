@@ -6,10 +6,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
-	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 func TestIDAnswersAStringStoresANumberAndReadsBothForms(t *testing.T) {
@@ -47,4 +48,63 @@ func TestIDAnswersAStringStoresANumberAndReadsBothForms(t *testing.T) {
 
 	assert.Error(t, json.Unmarshal([]byte(`{"id":"7a"}`), &read))
 	assert.Error(t, json.Unmarshal([]byte(`{"id":""}`), &read))
+}
+
+func TestRequestIDsAreStringsButDeviceIDsAreNumbers(t *testing.T) {
+	t.Parallel()
+
+	var request struct {
+		ContractIDs []ident.ID `json:"contract_ids"`
+		RoomID      int64      `json:"room_id" contract:"number"`
+	}
+	require.NoError(t, wire.Decode(strings.NewReader(`{"contract_ids":["9223372036854775807"],"room_id":3}`), &request))
+	assert.Equal(t, []ident.ID{math.MaxInt64}, request.ContractIDs)
+	assert.EqualValues(t, 3, request.RoomID)
+
+	require.ErrorContains(t, wire.Decode(strings.NewReader(`{"contract_ids":[9223372036854775807]}`), &request), "identifier must be a decimal string")
+	require.NoError(t, json.Unmarshal([]byte(`{"contract_ids":[9223372036854775807]}`), &request))
+	assert.Equal(t, []ident.ID{math.MaxInt64}, request.ContractIDs)
+}
+
+func TestRequiredIDsDistinguishNullFromZero(t *testing.T) {
+	t.Parallel()
+
+	var request struct {
+		IDs        []ident.ID `json:"ids"`
+		OptionalID *ident.ID  `json:"optional_id"`
+	}
+	dec := wire.NewDecoder(strings.NewReader(`{"ids":["0"],"optional_id":null}`))
+	require.NoError(t, dec.DecodeWithRequiredIDs(&request))
+	assert.Equal(t, []ident.ID{0}, request.IDs)
+	assert.Nil(t, request.OptionalID)
+
+	dec = wire.NewDecoder(strings.NewReader(`{"ids":[null]}`))
+	err := dec.DecodeWithRequiredIDs(&request)
+	require.Error(t, err)
+	assert.True(t, wire.InvalidIDAt(err, "/ids"))
+}
+
+func TestLegacyEmptyIDDoesNotTurnAnExplicitZeroIntoAbsence(t *testing.T) {
+	t.Parallel()
+
+	type choice struct {
+		ID *ident.IDOrNone `json:"id"`
+	}
+	var omitted, cleared, zero, selected choice
+	require.NoError(t, wire.Unmarshal([]byte(`{}`), &omitted))
+	require.NoError(t, wire.Unmarshal([]byte(`{"id":""}`), &cleared))
+	require.NoError(t, wire.Unmarshal([]byte(`{"id":"0"}`), &zero))
+	require.NoError(t, wire.Unmarshal([]byte(`{"id":"9007199254740993"}`), &selected))
+	require.Error(t, wire.Unmarshal([]byte(`{"id":0}`), &choice{}))
+	require.Error(t, wire.Unmarshal([]byte(`{"id":" "}`), &choice{}))
+	require.Nil(t, omitted.ID)
+	require.NotNil(t, cleared.ID)
+	require.True(t, cleared.ID.IsZero())
+	require.NotNil(t, zero.ID)
+	require.False(t, zero.ID.IsZero())
+	require.Zero(t, zero.ID.Int64())
+	require.Equal(t, int64(9007199254740993), selected.ID.Int64())
+	raw, err := wire.Marshal(selected)
+	require.NoError(t, err)
+	require.JSONEq(t, `{"id":"9007199254740993"}`, string(raw))
 }

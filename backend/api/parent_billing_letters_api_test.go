@@ -92,7 +92,8 @@ func brandTraegerOffice(t *testing.T, portal *traegerPortalHandler, office traeg
 	token := office.token
 	require.Equal(t, http.StatusOK, uploadLogo(t, portal, token, "logo", "logo.png", pngLogo(t, 120, 40)).Code)
 	rec := traegerJSON(t, portal, token, http.MethodPut, "/traeger/master-data/contact",
-		masterDataContact{Name: "Paula Kern", Phone: "05402 1234-0", Email: "ferien@ganztag.example"})
+		masterDataContact{Name: "Paula Kern", Phone: "05402 1234-0", Email: "ferien@ganztag.example",
+			ExpectedVersion: masterDataProfileOf(t, portal, office).ContactVersion})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	rec = traegerJSON(t, portal, token, http.MethodPost, "/traeger/master-data/bank-accounts", masterDataBankAccount{
 		Label: "Elternbeiträge", AccountHolder: "Ganztag im Quartier e.V.", IBAN: traegerTestIBAN, BankName: "Beispielbank",

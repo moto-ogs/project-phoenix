@@ -27,13 +27,7 @@ import (
 type testContext struct {
 	db       *testpkg.DB
 	resource *presenceAPI.Resource
-	settings testSettingsWriter
-}
-
-type testSettingsWriter struct {
-	SetString  func(context.Context, string, string, *int64, []string) error
-	SetBool    func(context.Context, string, bool, *int64, []string) error
-	ResetValue func(context.Context, string, *int64, []string) error
+	setBool  func(context.Context, string, bool, *int64, []string) error
 }
 
 // setupActiveRoute creates test resources for active handler tests
@@ -45,19 +39,13 @@ func setupActiveRoute(t *testing.T, settingReaders ...presenceAPI.Settings) *tes
 	if len(settingReaders) > 0 {
 		settingsReader = settingReaders[0]
 	}
-	resource := presenceAPI.NewResource(svcPresence.PresenceOperations(), activePeople{source: svcPeople.AttendancePeople()}, activeStaffAccess{source: rootAPI.NewActiveTestAttendanceStaff(svcCaller)}, settingsReader, rootAPI.ProtectedTenantRoutes, slog.Default(), testPresenceQueries(t, db), requestRuntimeForTest(svcCare.WithAttendanceStaff), authorizationForTest(), tenantsettings.NewDisplaySettings(settingsReader))
+	resource := presenceAPI.NewResource(svcPresence.PresenceOperations(), activePeople{source: svcPeople.AttendancePeople()}, activeStaffAccess{source: rootAPI.NewActiveTestAttendanceStaff(svcCaller)}, settingsReader, rootAPI.ProtectedTenantRoutes, slog.Default(), testPresenceQueries(t, db), requestRuntimeForTest(svcCare.WithAttendanceStaff), tenantsettings.NewDisplaySettings(settingsReader))
 
 	return &testContext{
 		db:       db,
 		resource: resource,
-		settings: testSettingsWriter{
-			SetString: func(ctx context.Context, key, value string, actor *int64, permissions []string) error {
-				return svc.Settings.SetValue(ctx, key, value, actor, permissions)
-			},
-			SetBool: func(ctx context.Context, key string, value bool, actor *int64, permissions []string) error {
-				return svc.Settings.SetValue(ctx, key, value, actor, permissions)
-			},
-			ResetValue: svc.Settings.ResetValue,
+		setBool: func(ctx context.Context, key string, value bool, actor *int64, permissions []string) error {
+			return svc.Settings.SetValue(ctx, key, value, actor, permissions)
 		},
 	}
 }
@@ -431,39 +419,6 @@ func TestClaimGroup(t *testing.T) {
 	t.Run("forbidden without permission", func(t *testing.T) {
 		req := testutil.NewJSONRequest(t, "POST", fmt.Sprintf("/active/groups/%d/claim", activeGroup.ID), nil)
 		rr := testutil.ExecuteWithAuthPermissions(t, router, req, staffClaims, []string{})
-
-		testutil.AssertForbidden(t, rr)
-	})
-}
-
-// ============================================================================
-// ADMIN SUPERVISION OVERVIEW TESTS (GET /active/supervisors/all)
-// ============================================================================
-
-func TestGetAllActiveSupervisions(t *testing.T) {
-	t.Parallel()
-	_, router := setupProtectedRouter(t)
-
-	adminClaims := testutil.AdminTestClaims(1)
-	teacherClaims := testutil.TeacherTestClaims(42)
-
-	t.Run("forbidden for non-admin user", func(t *testing.T) {
-		req := testutil.NewJSONRequest(t, "GET", "/active/supervisors/all", nil)
-		rr := testutil.ExecuteWithAuthPermissions(t, router, req, teacherClaims, []string{permissions.GroupsRead})
-
-		testutil.AssertForbidden(t, rr)
-	})
-
-	t.Run("allowed for admin with the whole-team default", func(t *testing.T) {
-		req := testutil.NewJSONRequest(t, "GET", "/active/supervisors/all", nil)
-		rr := testutil.ExecuteWithAuthPermissions(t, router, req, adminClaims, []string{permissions.GroupsRead})
-
-		assert.Equal(t, testutil.StatusOK, rr.Code, "body: %s", rr.Body.String())
-	})
-
-	t.Run("forbidden without groups:read permission", func(t *testing.T) {
-		req := testutil.NewJSONRequest(t, "GET", "/active/supervisors/all", nil)
-		rr := testutil.ExecuteWithAuthPermissions(t, router, req, adminClaims, []string{})
 
 		testutil.AssertForbidden(t, rr)
 	})

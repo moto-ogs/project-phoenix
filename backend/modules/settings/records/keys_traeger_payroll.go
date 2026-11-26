@@ -10,6 +10,17 @@ package records
 const (
 	KeyTraegerPayrollConsultantNumber = "traeger_payroll.datev_consultant_number"
 	KeyTraegerPayrollClientNumber     = "traeger_payroll.datev_client_number"
+	// KeyTraegerPayrollFileForm chooses one file for the whole Träger or one
+	// file per employer (#8041, ADR 0320).
+	KeyTraegerPayrollFileForm = "traeger_payroll.file_form"
+)
+
+// The values of KeyTraegerPayrollFileForm: one file for the whole Träger,
+// whose lines of another employer carry its Kostenstelle, or one file per
+// employer with its own DATEV client.
+const (
+	TraegerPayrollFileFormTraeger     = "traeger"
+	TraegerPayrollFileFormArbeitgeber = "arbeitgeber"
 )
 
 // TraegerPayrollCategories are the categories of the payroll file, the

@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -14,14 +15,15 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/moto-ogs/project-phoenix/modules/schoolmembership"
 	staffHTTP "github.com/moto-ogs/project-phoenix/modules/schoolmembership/http"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 // fakeMembership answers the capability calls from small in-memory maps, so
@@ -172,10 +174,12 @@ type harness struct {
 	classes       []string
 	setClasses    []string
 	setClassActor int64
-	classErr      error
-	caregivers    []staffHTTP.StaffWithRoleResponse
-	byRoles       []staffHTTP.StaffWithRoleResponse
-	rolesAsked    []string
+	// setClassVersion is the token the PUT handed on (ADR 0311).
+	setClassVersion string
+	classErr        error
+	caregivers      []staffHTTP.StaffWithRoleResponse
+	byRoles         []staffHTTP.StaffWithRoleResponse
+	rolesAsked      []string
 
 	created      staffHTTP.CreateStaffInput
 	createResult staffHTTP.CreateStaffResult
@@ -321,11 +325,13 @@ func newHarness(t *testing.T, membership *fakeMembership) *harness {
 			}
 			return h.classes, nil
 		},
-		SetSchoolClasses: func(_ context.Context, _ int64, classes []string, actor int64) error {
+		SchoolClassesVersion: func(classes []string) string { return "v:" + strings.Join(classes, ",") },
+		SetSchoolClasses: func(_ context.Context, _ int64, classes []string, version string, actor int64) error {
 			if h.classErr != nil {
 				return h.classErr
 			}
 			h.setClasses = classes
+			h.setClassVersion = version
 			h.setClassActor = actor
 			h.classes = classes
 			return nil
@@ -343,6 +349,7 @@ func newHarness(t *testing.T, membership *fakeMembership) *harness {
 			h.updated = input
 			return h.updateResult, h.updateErr
 		},
+		RecordVersion: func(staff schoolmembership.Staff, _ *schoolmembership.Teacher) string { return "r:" + staff.StaffNotes },
 		Offboard: func(_ context.Context, staffID int64, username string) error {
 			h.offboarded, h.offboardedBy = staffID, username
 			return h.offboardErr
@@ -695,11 +702,14 @@ func TestSchoolClassesRoundTripAndValidation(t *testing.T) {
 	require.Equal(t, http.StatusOK, read.Code)
 	assert.Equal(t, "School classes retrieved successfully", decode(t, read).Message)
 	assert.Contains(t, string(decode(t, read).Data), `"school_classes":["1a","2b"]`)
+	assert.Contains(t, string(decode(t, read).Data), `"version":"v:1a,2b"`, "the read answers the token of the classes")
 
-	written := h.do(t, http.MethodPut, "/staff/2/school-classes", map[string]any{"school_classes": []string{"3c"}})
+	written := h.do(t, http.MethodPut, "/staff/2/school-classes", map[string]any{"school_classes": []string{"3c"}, "expected_version": "v:1a,2b"})
 	require.Equal(t, http.StatusOK, written.Code)
 	assert.Equal(t, "School classes updated successfully", decode(t, written).Message)
 	assert.Equal(t, []string{"3c"}, h.setClasses)
+	assert.Equal(t, "v:1a,2b", h.setClassVersion, "the PUT hands the read's token to the owner")
+	assert.Contains(t, string(decode(t, written).Data), `"version":"v:3c"`, "the PUT answers the token of the saved classes")
 	assert.EqualValues(t, 7, h.setClassActor, "the audit actor is the authenticated account")
 
 	missingField := h.do(t, http.MethodPut, "/staff/2/school-classes", map[string]any{})
@@ -760,7 +770,7 @@ func TestCreateStaffValidatesBodyAndGrantsPermissions(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, missingPerson.Code)
 	assert.Equal(t, "person ID is required", decodeError(t, missingPerson).Detail)
 
-	unknownPerson := h.do(t, http.MethodPost, "/staff", map[string]any{"person_id": ident.ID(999)})
+	unknownPerson := h.do(t, http.MethodPost, "/staff", map[string]any{"person_id": fmt.Sprint(ident.ID(999))})
 	assert.Equal(t, http.StatusNotFound, unknownPerson.Code)
 	assert.Equal(t, "person not found", decodeError(t, unknownPerson).Detail)
 
@@ -782,17 +792,17 @@ func TestCreateStaffMapsTheTeacherOutcomes(t *testing.T) {
 		Teacher: &schoolmembership.Teacher{ID: 33, StaffID: 3},
 	}
 
-	teacher := h.do(t, http.MethodPost, "/staff", map[string]any{"person_id": ident.ID(11), "is_teacher": true})
+	teacher := h.do(t, http.MethodPost, "/staff", map[string]any{"person_id": fmt.Sprint(ident.ID(11)), "is_teacher": true})
 	require.Equal(t, http.StatusCreated, teacher.Code)
 	assert.Equal(t, "Teacher created successfully", decode(t, teacher).Message)
 
 	h.createResult = staffHTTP.CreateStaffResult{Staff: schoolmembership.Staff{ID: 3, PersonID: 11}, TeacherCreationFailed: true}
-	failed := h.do(t, http.MethodPost, "/staff", map[string]any{"person_id": ident.ID(11), "is_teacher": true})
+	failed := h.do(t, http.MethodPost, "/staff", map[string]any{"person_id": fmt.Sprint(ident.ID(11)), "is_teacher": true})
 	require.Equal(t, http.StatusCreated, failed.Code)
 	assert.Equal(t, "Staff member created successfully, but failed to create teacher record", decode(t, failed).Message)
 
 	h.createErr = errors.New("staff record already in use")
-	conflict := h.do(t, http.MethodPost, "/staff", map[string]any{"person_id": ident.ID(11)})
+	conflict := h.do(t, http.MethodPost, "/staff", map[string]any{"person_id": fmt.Sprint(ident.ID(11))})
 	assert.Equal(t, http.StatusConflict, conflict.Code, "the root's write renderer decides the status")
 	assert.Equal(t, "staff record already in use", decodeError(t, conflict).Detail)
 }

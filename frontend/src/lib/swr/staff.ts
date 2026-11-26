@@ -1,4 +1,5 @@
 import { staffService } from "~/lib/staff-api";
+import { mapTeacherDirectoryRow } from "~/lib/teacher-helpers";
 import type { Teacher } from "~/lib/teacher-api";
 import type { CrudService } from "~/lib/database/types";
 import { staffKeys, type StaffFilters } from "./staff-keys";
@@ -10,6 +11,8 @@ export const staff = {
   // Keep that transport without importing a UI module into this library.
   async teachersFetcher(service: Pick<CrudService<Teacher>, "getList">) {
     const response = await service.getList();
-    return Array.isArray(response.data) ? response.data : [];
+    return Array.isArray(response.data)
+      ? response.data.map(mapTeacherDirectoryRow)
+      : [];
   },
 } as const;

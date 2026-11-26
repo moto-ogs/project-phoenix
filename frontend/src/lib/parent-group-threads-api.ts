@@ -3,7 +3,7 @@
  * every family of a group, class or AG. Parents answer only the OGS, in the
  * conversation of their child; their answers never appear here.
  *
- * Talks to the Next.js proxy routes under /api/messages/group-threads.
+ * Talks to the catalog BFF under /api/messages/group-threads.
  * Backend int64 ids arrive already stringified.
  */
 
@@ -32,7 +32,7 @@ export interface GroupTarget {
   label: string;
 }
 
-function withLists(
+export function withLists(
   detail: messagesContract.GroupThreadDetailResponse,
 ): GroupThreadDetail {
   return {
@@ -97,9 +97,7 @@ export async function fetchGroupThread(id: string): Promise<GroupThreadDetail> {
  * message id. A message without a mail has no key; an outcome this build does
  * not know is not counted.
  */
-export async function fetchGroupThreadMails(
-  id: string,
-): Promise<Readonly<Record<string, MailOutcomeCounts>>> {
+export async function fetchGroupThreadMails(id: string) {
   const data = await bffJson(
     "tenant",
     "GET /api/messages/group-threads/{groupThreadId}/mails",
@@ -108,6 +106,12 @@ export async function fetchGroupThreadMails(
       errorMessage: "Der Stand der E-Mails konnte nicht geladen werden",
     },
   );
+  return mapGroupThreadMails(data);
+}
+
+export function mapGroupThreadMails(
+  data: messagesContract.GroupThreadMailsResponse,
+) {
   const mails: Record<string, MailOutcomeCounts> = {};
   for (const [messageId, counts] of Object.entries(data.messages ?? {})) {
     const known: Partial<Record<MailOutcome, number>> = {};
@@ -117,7 +121,7 @@ export async function fetchGroupThreadMails(
     }
     mails[messageId] = known;
   }
-  return mails;
+  return { mails, awaitingFeedback: data.awaiting_feedback };
 }
 
 export async function postGroupMessage(

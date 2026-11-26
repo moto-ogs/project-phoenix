@@ -110,6 +110,14 @@ export interface HomeBlockAccess {
    * ohne Gruppe wäre eine Karte, die nur sagt, dass sie leer ist.
    */
   readonly hasOwnGroups: boolean;
+  /**
+   * Sieht die Person die Blöcke der ganzen Schule oder nur die eigenen
+   * (#2380)? Die Leitung immer, alle anderen nur an Schulen mit schulweiter
+   * Übersicht. Der Server entscheidet dasselbe beim Abruf
+   * (/timetable/operations/planned-now); hier steht es, damit eine Karte, die
+   * den Plan der Schule verspricht, nicht mit den eigenen Einsätzen dasteht.
+   */
+  readonly seesAllBlocks: boolean;
 }
 
 /** Der Betriebsmodus der Schule, ohne Session- oder Kontext-Typen. */
@@ -445,14 +453,25 @@ export const HOME_BLOCKS: readonly HomeBlockDefinition[] = [
     available: always,
   },
   {
+    // Der Betreuungsplan unter seinem Namen (#8134); bis dahin hieß der
+    // Baustein „Ablauf des Tages“. Der Schlüssel bleibt, damit gespeicherte
+    // Anordnungen und Vorgaben der Schulen weiter gelten.
     key: "section.day_flow",
     kind: "section",
-    label: "Ablauf des Tages",
+    label: "Betreuungsplan heute",
     description:
-      "Die Blöcke des Betreuungsplans, die gerade laufen oder als Nächstes anstehen.",
+      "Was im Betreuungsplan der Schule heute noch ansteht: jeder Block mit Zeit, Raum, Kindern und Team. Jede Zeile führt zum Termin.",
     concept: carePlanConcept,
     spans: SECTION_SPANS,
-    permitted: (access) => access.has(PERMISSION.schedulesRead),
+    // Bis zu drei Zeilen hoch wie „Mein Tag“: fünf Blöcke je Spalte, über
+    // die volle Breite zwei Spalten und damit ein ganzer Betreuungstag. Mit
+    // weniger Blöcken ist die Karte nur so hoch wie ihr Inhalt.
+    height: 3,
+    // Der Plan der Schule: wer nur die eigenen Einsätze sieht (#2380), hat
+    // dafür „Mein Tag“. Dieselben Zeilen unter dem Namen des Schulplans
+    // wären falsch beschriftet.
+    permitted: (access) =>
+      access.has(PERMISSION.schedulesRead) && access.seesAllBlocks,
     // Ohne Betreuungsplan gibt es keinen Ablauf, und im Anwesenheitsmodus
     // "binary" plant die Schule keine Blöcke.
     available: (ctx) => ctx.timetableEnabled && ctx.detailed,
@@ -565,9 +584,9 @@ export function homeBlockHeight(key: HomeBlockKey): number {
  *    gibt. Was fehlt, steht im Hinzufügen-Menü.
  * 3. KEINE DOPPLUNG. Zwei Bausteine, die dieselben Zeilen zeigen, gehören
  *    nicht zusammen in einen Standard. „Mein Tag" (die eigenen Einsätze) und
- *    „Ablauf des Tages" (alle Blöcke) sind so ein Paar: für eine
+ *    „Betreuungsplan heute" (alle Blöcke) sind so ein Paar: für eine
  *    Betreuungskraft ist der eigene Tag der interessante Ausschnitt, für die
- *    Leitung der ganze Ablauf. Wer beides ist, bekommt beides.
+ *    Leitung der ganze Plan. Wer beides ist, bekommt beides.
  *
  * Alle drei beginnen mit „Heute anders“: was heute anders läuft, samt der
  * Hinweise der Leitung, die früher einen eigenen Baustein hatten (#7668).
@@ -577,9 +596,10 @@ export function homeBlockHeight(key: HomeBlockKey): number {
  * schulweite „Laufende Betreuung" steht im Hinzufügen-Menü: für die Kraft in
  * der Sternengruppe ist die Bärengruppe Rauschen.
  *
- * Leitung: die Lage der Schule in vier Zahlen, was auf eine Entscheidung
- * wartet, das Personal, der Ablauf des Tages, die Nachrichten und die laufende
- * Betreuung.
+ * Leitung: der Betreuungsplan von heute gleich unter „Heute anders“ (#8134:
+ * er stand in der dritten Kartenreihe und war im Alltag zu versteckt), dann
+ * die Lage der Schule in vier Zahlen, was auf eine Entscheidung wartet, das
+ * Personal, die Nachrichten und die laufende Betreuung.
  *
  * Geburtstage stehen in JEDER Standardansicht: wer diese Woche Geburtstag hat,
  * betrifft die Betreuungskraft am Tisch genauso wie die Leitung.
@@ -606,39 +626,46 @@ export const DEFAULT_LAYOUTS: Record<
     { key: "section.birthdays", span: 4, col: 0, row: 7 },
   ],
   lead: [
-    // „Heute anders“ ganz oben und über die volle Breite (#7659).
-    { key: "section.day_changes", span: 4, col: 0, row: 0 },
+    // Der Plan von heute ganz oben und über die volle Breite (#8134): was
+    // läuft und was als Nächstes kommt, braucht die Leitung zuerst.
+    { key: "section.day_flow", span: 4, col: 0, row: 0 },
+    // „Heute anders“ direkt darunter (#7659): was vom Plan abweicht.
+    { key: "section.day_changes", span: 4, col: 0, row: 3 },
     // Eine Reihe mit vier Zahlen (#3260): wer da ist, wer noch im Unterricht
     // sitzt, wer zu Hause ist, wer krank ist. „Entschuldigt" steht im
     // Hinzufügen-Menü; eine fünfte Kachel bräche das Raster.
-    { key: "tile.students_present", span: 1, col: 0, row: 2 },
-    { key: "tile.students_at_school", span: 1, col: 1, row: 2 },
-    { key: "tile.students_home", span: 1, col: 2, row: 2 },
-    { key: "tile.students_sick", span: 1, col: 3, row: 2 },
-    { key: "section.open_requests", span: 2, col: 0, row: 3 },
-    { key: "section.staff_today", span: 2, col: 2, row: 3 },
-    { key: "section.day_flow", span: 2, col: 0, row: 5 },
-    { key: "section.messages", span: 2, col: 2, row: 5 },
-    // Steht allein in ihrer Reihe und deshalb über die volle Breite.
-    { key: "section.active_groups", span: 4, col: 0, row: 7 },
-    { key: "section.birthdays", span: 4, col: 0, row: 9 },
+    { key: "tile.students_present", span: 1, col: 0, row: 5 },
+    { key: "tile.students_at_school", span: 1, col: 1, row: 5 },
+    { key: "tile.students_home", span: 1, col: 2, row: 5 },
+    { key: "tile.students_sick", span: 1, col: 3, row: 5 },
+    { key: "section.open_requests", span: 2, col: 0, row: 6 },
+    { key: "section.staff_today", span: 2, col: 2, row: 6 },
+    // Stand bis #8134 allein in ihrer Reihe; jetzt neben den Nachrichten,
+    // die sonst allein stünden.
+    { key: "section.messages", span: 2, col: 0, row: 8 },
+    { key: "section.active_groups", span: 2, col: 2, row: 8 },
+    { key: "section.birthdays", span: 4, col: 0, row: 10 },
   ],
   // Die Vereinigung: erst der eigene Tag und die eigene Gruppe, dann die
   // Lage der Schule. Die Erinnerungen fehlen hier, weil die Jetzt-Zone und
-  // der Ablauf des Tages den Moment schon tragen; sie stehen im Menü.
+  // der Betreuungsplan von heute den Moment schon tragen; sie stehen im Menü.
   lead_care: [
     // „Heute anders“ ganz oben und über die volle Breite (#7659).
     { key: "section.day_changes", span: 4, col: 0, row: 0 },
     { key: "section.my_day", span: 4, col: 0, row: 2 },
     { key: "section.my_group", span: 2, col: 0, row: 5 },
     { key: "section.open_requests", span: 2, col: 2, row: 5 },
-    { key: "tile.students_present", span: 1, col: 0, row: 7 },
-    { key: "tile.students_at_school", span: 1, col: 1, row: 7 },
-    { key: "tile.students_home", span: 1, col: 2, row: 7 },
-    { key: "tile.students_sick", span: 1, col: 3, row: 7 },
-    { key: "section.staff_today", span: 2, col: 0, row: 8 },
-    { key: "section.day_flow", span: 2, col: 2, row: 8 },
-    { key: "section.birthdays", span: 4, col: 0, row: 10 },
+    // Der Plan der ganzen Schule über die volle Breite (#8134): neben dem
+    // Personal war er zwei Zeilen hoch und zeigte drei Blöcke.
+    { key: "section.day_flow", span: 4, col: 0, row: 7 },
+    { key: "tile.students_present", span: 1, col: 0, row: 10 },
+    { key: "tile.students_at_school", span: 1, col: 1, row: 10 },
+    { key: "tile.students_home", span: 1, col: 2, row: 10 },
+    { key: "tile.students_sick", span: 1, col: 3, row: 10 },
+    // Steht allein in ihrer Reihe; `widenIntoFreeCells` zieht sie über die
+    // volle Breite.
+    { key: "section.staff_today", span: 2, col: 0, row: 11 },
+    { key: "section.birthdays", span: 4, col: 0, row: 13 },
   ],
 };
 

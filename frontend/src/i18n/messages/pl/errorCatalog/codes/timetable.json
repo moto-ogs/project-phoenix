@@ -87,6 +87,7 @@
   "reopen_student_active": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
   "reopen_student_left": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
   "reopen_supervision_changed": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
+	"room_closed": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
   "room_occupied": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
   "school_vacation_not_found": "Nie udało się zmienić: {object}. Sprawdź aktualny stan.",
   "series_end_before_start": "Nie udało się zapisać: {object}. Sprawdź wpisane dane.",

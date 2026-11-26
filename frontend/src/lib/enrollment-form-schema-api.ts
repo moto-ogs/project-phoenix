@@ -495,12 +495,7 @@ export async function updateSchema(
   legalBlocks?: FormLegalBlock[],
   newName?: string,
 ): Promise<FormSchema> {
-  const body: {
-    name?: string;
-    fields: FormField[];
-    core_requirements?: CoreRequirements;
-    legal_blocks?: FormLegalBlock[];
-  } = { fields };
+  const body: enrollmentContract.UpdateSchemaRequest = { fields };
   if (newName !== undefined) body.name = newName;
   if (coreRequirements !== undefined) body.core_requirements = coreRequirements;
   if (legalBlocks !== undefined) body.legal_blocks = legalBlocks;
@@ -785,7 +780,7 @@ function coreRequirementsFromContract(
 }
 
 /** A form schema version; see `formFieldFromContract`. */
-function formSchemaFromContract(
+export function formSchemaFromContract(
   schema: enrollmentContract.FormSchemaResponse,
 ): FormSchema {
   const {

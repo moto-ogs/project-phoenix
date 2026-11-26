@@ -9,6 +9,11 @@ import (
 // a registered type is an ident.ID, or a count or an amount tagged
 // contract:"number" (ADR 0300).
 type Options struct {
+	// ProblemDetails maps each structured error code to its details type.
+	ProblemDetails map[string]any
+	// StreamEvent is the typed payload of an SSE application event.
+	StreamEvent any
+	StreamEnums []EnumSpec
 	// QueryVariants lists the routes whose response shape a query parameter
 	// selects, as "METHOD /pattern". It only shrinks: GET /api/students/ is
 	// the one named debt of ADR 0270 point 3, and no route joins it.
@@ -22,7 +27,8 @@ type Options struct {
 	// identifier types.
 	Readers map[reflect.Type]string
 	// Values names transparent JSON wrappers whose wire shape is their Value
-	// field in both directions. The mode is TypedValue or LegacyValue.
+	// field in both directions (TypedValue or LegacyValue), or a marshaler
+	// whose wire shape matches the struct fields (TypedFields).
 	Values map[reflect.Type]string
 	// Dates names the day types beside calendar.Date that travel as
 	// "YYYY-MM-DD" and render their zero value as null. The root names them.
@@ -42,6 +48,7 @@ const (
 	// does not fit that type, so each field using it must explain the fallback.
 	TypedValue  = "typed"
 	LegacyValue = "legacy"
+	TypedFields = "fields"
 )
 
 // Registration is one route as the root hands it over: the owner's
@@ -53,6 +60,7 @@ type Registration struct {
 	Query            []QueryParam
 	Request          any
 	Response         any
+	PartialError     string
 	Paginated        bool
 	NoData           bool
 	Variants         *VariantSpec
@@ -87,8 +95,11 @@ type Registration struct {
 
 	// RouteFile and Plain are the route file traits of
 	// common.RouteContract.
-	RouteFile string
-	Plain     bool
+	RouteFile          string
+	BrowserPath        string
+	BrowserMethod      string
+	BrowserOwnContract bool
+	Plain              bool
 	// Outside keeps the line out of the contract.
 	Outside *OutsideSpec
 }

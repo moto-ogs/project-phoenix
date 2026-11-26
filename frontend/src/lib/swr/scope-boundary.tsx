@@ -11,9 +11,10 @@ import { hasSessionAccess } from "~/lib/session-access";
 import { announceSessionChange } from "~/lib/session-cache";
 import {
   authGeneration,
+  confirmSWRSession,
+  isSWRSessionPending,
   resetSWRScope,
   suspendSWRSession,
-  resumeSWRSession,
 } from "./scope";
 
 /**
@@ -56,9 +57,7 @@ export function SWRScopeBoundary({
   // undefined while the provider has no answer yet: a lookup is no change.
   const generation = status === "loading" ? undefined : authGeneration(session);
   const accountId = hasSessionAccess(session) ? session.user.id : null;
-  // The session claim is a number, the page's school a string (#2342).
-  const claim = session?.user?.tenantId;
-  const tenantId = claim === undefined ? undefined : String(claim);
+  const tenantId = session?.user?.tenantId;
   const committed = useRef<{
     generation: string | null;
     accountId: string | null;
@@ -78,6 +77,9 @@ export function SWRScopeBoundary({
     if (generation === undefined) return;
     const previous = committed.current;
     committed.current = { generation, accountId, session };
+    // Released by the session boundary's server check (#8082).
+    if (pending.current !== null && !isSWRSessionPending())
+      pending.current = null;
     const waiting = pending.current;
     if (waiting) {
       // A render is no confirmation; a lookup confirms the expected account
@@ -94,11 +96,7 @@ export function SWRScopeBoundary({
           tenantId !== expectedTenantId);
       if (session === waiting.session || !confirmed) return;
       pending.current = null;
-      // Clear while still paused: old-key subscribers may not have committed
-      // their disabled keys yet. The null -> scoped key transition reloads
-      // the confirmed session after resuming, including immutable readers.
-      resetSWRScope({ revalidate: false });
-      resumeSWRSession();
+      confirmSWRSession();
       return;
     } else if (previous === null || previous.generation === generation) return;
     resetSWRScope({
@@ -113,6 +111,10 @@ export function SWRScopeBoundary({
       onOtherTabOwnerChange((owner) => {
         const shown = committed.current;
         if (shown === null) return;
+        // The session boundary confirmed the session on the server since
+        // (#8082): that pause is over, the shown account stays the measure.
+        if (pending.current !== null && !isSWRSessionPending())
+          pending.current = null;
         const nextAccount = personalStorageAccount(owner);
         const portalOwnerChanged =
           ["org", "school"].includes(shown.session?.user.scope ?? "") &&
@@ -133,7 +135,7 @@ export function SWRScopeBoundary({
             ? owner
             : undefined,
         };
-        suspendSWRSession();
+        suspendSWRSession(owner === null);
         resetSWRScope({ revalidate: false });
         announceSessionChange();
       }),

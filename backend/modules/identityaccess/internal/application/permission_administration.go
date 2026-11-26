@@ -79,6 +79,10 @@ func (r *RoleAdministration) lockMutableRole(ctx context.Context, roleID int64, 
 	if role.IsSystem {
 		return failed(op, identityaccess.ErrSystemRoleImmutable)
 	}
+	// The copy of a Träger role belongs to the Träger-Büro (#4810).
+	if role.TraegerRoleID != nil {
+		return failed(op, identityaccess.ErrTraegerRoleImmutable)
+	}
 	return r.requireLockedRoleHolders(ctx, roleID, holders)
 }
 

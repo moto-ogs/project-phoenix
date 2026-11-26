@@ -2,9 +2,12 @@
 import { z } from "zod";
 import {
   bool,
+  calendarDate,
   fileAnswer,
   instant,
   int64String,
+  noData,
+  nullable,
   object,
   optional,
   paginated,
@@ -69,6 +72,25 @@ export const RoomResponseSchema: z.ZodType<RoomResponse, unknown> = object<RoomR
   created_at: instant,
   updated_at: instant,
   version: str,
+});
+
+/** Go: httpadapter.RoomClosureResponse */
+export interface RoomClosureResponse {
+  id: string;
+  room_id: string;
+  start_date: string | null;
+  end_date: string | null;
+  reason: string;
+  created_at: string;
+}
+
+export const RoomClosureResponseSchema: z.ZodType<RoomClosureResponse, unknown> = object<RoomClosureResponse>({
+  id: int64String,
+  room_id: int64String,
+  start_date: nullable(calendarDate),
+  end_date: nullable(calendarDate),
+  reason: str,
+  created_at: instant,
 });
 
 /** Go: httpadapter.RoomSessionEntry */
@@ -150,6 +172,13 @@ export interface roomSnapshotExportRequest {
   include_transit?: boolean;
 }
 
+/** Go: httpadapter.RoomClosureRequest */
+export interface RoomClosureRequest {
+  start_date?: string | null;
+  end_date?: string | null;
+  reason?: string;
+}
+
 export const routes = {
   "DELETE /api/rooms/{id}": {
     method: "DELETE",
@@ -157,6 +186,12 @@ export const routes = {
     portals: ["tenant"],
     request: requestBody<RoomRemovalRequest>(),
     response: success(RoomRemovalResponseSchema),
+  },
+  "DELETE /api/rooms/{id}/closures/{closureId}": {
+    method: "DELETE",
+    pattern: "/api/rooms/{id}/closures/{closureId}",
+    portals: ["tenant"],
+    response: noData,
   },
   "GET /api/rooms/": {
     method: "GET",
@@ -167,20 +202,22 @@ export const routes = {
       "category": { kind: "string" },
       "include_system": { kind: "bool" },
       "is_open_room": { kind: "bool" },
+      "open_on": { kind: "date" },
       "page": { kind: "int" },
       "page_size": { kind: "int" },
     },
     response: paginated(z.array(RoomResponseSchema)),
   },
-  "GET /api/rooms/by-category": {
+  "GET /api/rooms/closures": {
     method: "GET",
-    pattern: "/api/rooms/by-category",
+    pattern: "/api/rooms/closures",
     portals: ["tenant"],
-    deprecated: true,
     query: {
-      "category": { kind: "string" },
+      "from": { kind: "date" },
+      "room_id": { kind: "id" },
+      "to": { kind: "date" },
     },
-    response: success(z.array(RoomResponseSchema)),
+    response: success(z.array(RoomClosureResponseSchema)),
   },
   "GET /api/rooms/{id}": {
     method: "GET",
@@ -217,6 +254,13 @@ export const routes = {
     portals: ["tenant"],
     request: requestBody<roomSnapshotExportRequest>(),
     response: fileAnswer,
+  },
+  "POST /api/rooms/{id}/closures": {
+    method: "POST",
+    pattern: "/api/rooms/{id}/closures",
+    portals: ["tenant"],
+    request: requestBody<RoomClosureRequest>(),
+    response: success(RoomClosureResponseSchema),
   },
   "PUT /api/rooms/{id}": {
     method: "PUT",

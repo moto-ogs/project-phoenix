@@ -71,7 +71,7 @@ func TestOpenRoomBlockAction_StartsAPlannedBlockInTheReleasedRoom(t *testing.T) 
 	got := calls()
 	require.Len(t, got, 5)
 	assert.Equal(t, "/api/active/visits/move-to-room", got[0].Path)
-	assert.Equal(t, []any{1.0, 3.0, 5.0}, got[0].Body["student_ids"],
+	assert.Equal(t, []any{"1", "3", "5"}, got[0].Body["student_ids"],
 		"the independent stays take the first children outside the Sporthalle")
 
 	assert.Equal(t, "/api/timetable/instances", got[1].Path)
@@ -80,9 +80,9 @@ func TestOpenRoomBlockAction_StartsAPlannedBlockInTheReleasedRoom(t *testing.T) 
 		"start_time":  "14:00",
 		"end_time":    "15:30",
 		"title":       "Turnen",
-		"room_id":     2.0,
-		"staff_ids":   []any{10.0},
-		"student_ids": []any{7.0, 9.0},
+		"room_id":     "2",
+		"staff_ids":   []any{"10"},
+		"student_ids": []any{"7", "9"},
 	}, got[1].Body, "the block takes the next children, planned on the first caregiver")
 	assert.Equal(t, "/api/timetable/instances/77/start", got[2].Path)
 	assert.Equal(t, "/api/timetable/operations/instances/77/students/7/check-in", got[3].Path)

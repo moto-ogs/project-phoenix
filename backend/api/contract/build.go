@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 var (
@@ -61,11 +62,17 @@ func Build(routes []Registration, options Options) (Document, error) {
 			b.deprecated[field] = true
 		}
 	}
+	if err := b.registerEnums(Registration{Enums: options.StreamEnums}); err != nil {
+		return Document{}, err
+	}
 	built, lines, err := b.routes(routes, options)
 	if err != nil {
 		return Document{}, err
 	}
 	doc := Document{Routes: built, Outside: lines}
+	if err := b.buildNonRouteShapes(&doc, options); err != nil {
+		return Document{}, err
+	}
 	if err := b.unused(options); err != nil {
 		return Document{}, err
 	}
@@ -80,6 +87,33 @@ func Build(routes []Registration, options Options) (Document, error) {
 	sort.Slice(doc.Routes, func(i, j int) bool { return doc.Routes[i].Key() < doc.Routes[j].Key() })
 	sort.Slice(doc.Outside, func(i, j int) bool { return doc.Outside[i].Key() < doc.Outside[j].Key() })
 	return doc, nil
+}
+
+func (b *builder) buildNonRouteShapes(doc *Document, options Options) error {
+	if options.StreamEvent != nil {
+		schema, err := b.top(options.StreamEvent, "SSE event", false)
+		if err != nil {
+			return err
+		}
+		doc.StreamEvent = &schema
+	}
+	if len(options.ProblemDetails) != 0 {
+		doc.ProblemDetails = make(map[string]Schema, len(options.ProblemDetails))
+	}
+	for _, code := range sortedKeys(options.ProblemDetails) {
+		value := options.ProblemDetails[code]
+		t := reflect.TypeOf(value)
+		if t == nil || t.Kind() != reflect.Struct || t.PkgPath() == "" {
+			return fmt.Errorf("error details %s: register a named Go struct, got %T", code, value)
+		}
+		schema, err := b.top(value, "error details "+code, false)
+		if err != nil {
+			return err
+		}
+		schema.GoPackage = t.PkgPath()
+		doc.ProblemDetails[code] = schema
+	}
+	return nil
 }
 
 // routes builds every registration once, the lines outside the contract
@@ -181,6 +215,7 @@ func (b *builder) route(rc Registration, options Options) (Route, error) {
 		File: rc.File, Multipart: rc.Multipart, TooLargeCode: rc.TooLargeCode, PublicFile: rc.PublicFile, PublicUpload: rc.PublicUpload,
 		FileCache: rc.FileCache, ConditionalGet: rc.ConditionalGet,
 		PrivateCache: rc.PrivateCache, RouteFile: rc.RouteFile, Plain: rc.Plain,
+		BrowserPath: rc.BrowserPath, BrowserMethod: rc.BrowserMethod, BrowserOwnContract: rc.BrowserOwnContract,
 	}
 	where := route.Key()
 	if rc.Method == "" || !strings.HasPrefix(rc.Pattern, "/") {
@@ -222,7 +257,10 @@ func queryParams(params []QueryParam, where string) ([]QueryParam, error) {
 		}
 		values := slices.Clone(param.Values)
 		sort.Strings(values)
-		query = append(query, QueryParam{Name: param.Name, Kind: param.Kind, Repeated: param.Repeated, Values: values})
+		if param.TextReason != "" && param.Kind != "string" {
+			return nil, fmt.Errorf("%s: %s documents a text alternative but is not a string query", where, param.Name)
+		}
+		query = append(query, QueryParam{Name: param.Name, Kind: param.Kind, Repeated: param.Repeated, Values: values, TextReason: param.TextReason})
 	}
 	sort.Slice(query, func(i, j int) bool { return query[i].Name < query[j].Name })
 	return query, nil
@@ -284,6 +322,12 @@ func withoutData(route *Route, rc Registration) (bool, error) {
 
 func (b *builder) responses(route *Route, rc Registration, options Options) error {
 	where := route.Key()
+	if rc.PartialError != "" {
+		if rc.Response == nil || rc.Variants != nil || rc.NoData || rc.File {
+			return fmt.Errorf("%s: a partial error requires one JSON response type", where)
+		}
+		route.PartialError = rc.PartialError
+	}
 	if handled, err := withoutData(route, rc); handled {
 		return err
 	}
@@ -441,10 +485,13 @@ func (b *builder) timeSchema(t reflect.Type) (Schema, bool) {
 // instants, days, identifiers and enums. It also stops at a type that writes
 // or reads itself without an entry.
 func (b *builder) named(t reflect.Type, where string, request bool) (Schema, bool, error) {
-	if t == rawJSONType {
+	switch t {
+	case rawJSONType:
 		// A raw value is any JSON the owner stores and hands on; nil is null
 		// or, with omitempty, no key.
 		return Schema{Kind: KindJSON, Nullable: true}, true, nil
+	case reflect.TypeFor[ident.IDOrNone]():
+		return Schema{Kind: KindID, NoID: true}, true, nil
 	}
 	if schema, ok := b.timeSchema(t); ok {
 		return schema, true, nil
@@ -457,6 +504,9 @@ func (b *builder) named(t reflect.Type, where string, request bool) (Schema, boo
 	}
 	if mode, ok := b.values[t]; ok {
 		b.used["value:"+t.String()] = true
+		if mode == TypedFields {
+			return Schema{}, false, nil
+		}
 		s, err := b.wrapped(t, where, request)
 		s.LegacyJSON = mode == LegacyValue
 		return s, true, err

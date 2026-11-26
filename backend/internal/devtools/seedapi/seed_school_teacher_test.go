@@ -19,20 +19,27 @@ func TestSeedSchoolTeacherUsesSchoolSessionAndAssignedOGSClass(t *testing.T) {
 	srv := newSeedHTTPTestServer(func(w seedHTTPResponseWriter, r *seedHTTPRequest) {
 		paths = append(paths, r.URL.Path)
 		var body map[string]any
-		require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+		if r.Method != "GET" {
+			require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+		}
 		bodies = append(bodies, body)
 		w.Header().Set("Content-Type", "application/json")
 		switch r.URL.Path {
 		case "/auth/register":
 			assert.Equal(t, "Bearer admin", r.Header.Get("Authorization"))
-			assert.EqualValues(t, 71, body["role_id"])
+			assert.Equal(t, "71", body["role_id"])
 			assert.Equal(t, password, body["password"])
 			assert.Equal(t, password, body["confirm_password"])
 			assert.Equal(t, "lehrkraft@demo-vollbetrieb.moto-ogs.de", body["email"])
 			_, _ = fmt.Fprint(w, `{"data":{"id":81,"school_identity":{"staff_id":"91"}}}`)
 		case "/api/staff/91/school-classes":
 			assert.Equal(t, "Bearer admin", r.Header.Get("Authorization"))
+			if r.Method == "GET" {
+				_, _ = fmt.Fprint(w, `{"data":{"school_classes":[],"version":"read-classes"}}`)
+				return
+			}
 			assert.Equal(t, []any{DemoStudents[0].Class}, body["school_classes"])
+			assert.Equal(t, "read-classes", body["expected_version"], "the seeder sends the token of the classes it read")
 			_, _ = fmt.Fprint(w, `{"status":"success"}`)
 		case "/school/auth/login":
 			assert.Empty(t, r.Header.Get("Authorization"), "school login is public, not a tenant session")
@@ -60,16 +67,16 @@ func TestSeedSchoolTeacherUsesSchoolSessionAndAssignedOGSClass(t *testing.T) {
 
 	day := DemoStudents[0].Class + "/" + todaySeedDate().String()
 	assert.Equal(t, []string{
-		"/auth/register", "/api/staff/91/school-classes", "/school/auth/login",
+		"/auth/register", "/api/staff/91/school-classes", "/api/staff/91/school-classes", "/school/auth/login",
 		"/school/class-day/arrival-exceptions/" + day,
 		"/school/class-day/day-hints/" + day,
 		"/school/class-day/day-hints/" + day + "/students/101",
 		"/school/class-day/morning-attendance/" + day,
 	}, paths)
-	assert.Equal(t, "12:00", bodies[3]["arrival_time"])
-	assert.NotEmpty(t, bodies[4]["body"])
+	assert.Equal(t, "12:00", bodies[4]["arrival_time"])
 	assert.NotEmpty(t, bodies[5]["body"])
-	assert.Equal(t, []any{map[string]any{"student_id": float64(101), "status": "present"}}, bodies[6]["marks"])
+	assert.NotEmpty(t, bodies[6]["body"])
+	assert.Equal(t, []any{map[string]any{"student_id": "101", "status": "present"}}, bodies[7]["marks"])
 	require.NotNil(t, s.schoolTeacherAccount)
 	assert.EqualValues(t, 91, s.schoolTeacherAccount.StaffID)
 	state := &SeedState{}
@@ -136,7 +143,7 @@ func TestSeedSchoolTeacherScreenshotWeekendsPreserveAccountWithoutDayWrites(t *t
 				rt := &Runtime{Client: client, FixedSeeder: fs, Bootstrap: &bootstrapSeedState{TenantSlug: "vollbetrieb"}, TenantAuth: AuthRef{Kind: AuthBearer, Token: "admin"}}
 				require.NoError(t, (seedSchoolTeacherStep{seeder: s}).runOn(rt, today))
 
-				wantPaths := []string{"/auth/register", "/api/staff/91/school-classes", "/school/auth/login"}
+				wantPaths := []string{"/auth/register", "/api/staff/91/school-classes", "/api/staff/91/school-classes", "/school/auth/login"}
 				if wantDayWrites {
 					day := DemoStudents[0].Class + "/" + date
 					wantPaths = append(wantPaths,

@@ -43,6 +43,9 @@ export interface StaffShift {
   /** The Personalverwaltung of the Träger planned the shift (#4708). */
   plannedByTraeger?: boolean;
   originShiftId: string | null;
+  /** The stored state an edit, a move or a cancellation sends back (ADR
+   *  0311). */
+  version?: string;
 }
 
 type CoverageStatus = "covered" | "uncovered" | "not_applicable";
@@ -149,6 +152,7 @@ export function mapStaffShift(data: ShiftResponse): StaffShift {
     changeReason: data.change_reason ?? null,
     originShiftId: data.origin_shift_id ?? null,
     ...(data.planned_by_traeger ? { plannedByTraeger: true } : {}),
+    ...(data.version ? { version: data.version } : {}),
   };
 }
 
@@ -246,7 +250,9 @@ export interface OwnAssignment {
   understaffedAck: boolean;
 }
 
-export function mapOwnAssignment(data: assignmentResponse): OwnAssignment {
+export function mapOwnAssignment(
+  data: Omit<assignmentResponse, "date"> & { date: string },
+): OwnAssignment {
   return {
     instanceId: data.instance_id,
     title: data.title,

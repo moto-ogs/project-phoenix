@@ -346,6 +346,11 @@ func (rs *Resource) mountRoleAndPermissionRoutes(r chi.Router) {
 		r.Route("/{id}", func(r chi.Router) {
 			r.With(common.RequiresPermission(permRolesRead)).Get("/", rs.getRoleByID)
 			r.With(common.RequiresPermission("roles:update")).Put("/", rs.updateRole)
+			// The edit that answers the stored role with its version (ADR
+			// 0311); the bodiless PUT above goes after one release.
+			r.Route("/master-data", func(r chi.Router) {
+				r.With(common.RequiresPermission("roles:update")).Put("/", rs.updateRoleMasterData)
+			})
 			r.With(common.RequiresPermission("roles:delete")).Delete("/", rs.deleteRole)
 		})
 	})

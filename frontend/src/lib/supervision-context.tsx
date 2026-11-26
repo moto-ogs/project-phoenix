@@ -1,682 +1,96 @@
 "use client";
 
-import React, {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-  useCallback,
-  useMemo,
-} from "react";
+import { createContext, useContext, useMemo, type ReactNode } from "react";
 import { useSession } from "next-auth/react";
-import { sessionIdentityKey } from "~/lib/session-access";
-import {
-  canReadSupervisionData,
-  hasEffectiveAdminScope,
-} from "~/lib/auth-utils";
 import { ApiError } from "~/lib/api-error";
-import { bffJson } from "~/lib/bff-fetch";
-import { createLogger } from "~/lib/logger";
-import { useLatest } from "~/lib/hooks/use-latest";
+import { isReadRefusal } from "~/lib/access-refusal";
+import { authGeneration } from "~/lib/swr";
 import {
-  useOperationalOverviewScope,
-  useTenantSafe,
-} from "~/lib/tenant-context";
+  useSupervisionSnapshot,
+  type RefreshSupervision,
+} from "~/lib/swr/supervision";
+import { useTenantSafe } from "~/lib/tenant-context";
 import {
   deriveSupervision,
-  sameGroups,
-  sameSupervision,
-  sortNavigationGroups,
   type DerivedSupervision,
-  type OpenRoomPayload,
-  type SupervisedGroupPayload,
-  type SupervisedRoom,
-  type SupervisionSnapshot,
 } from "~/lib/supervision-derive";
-import type * as studentsContract from "~/lib/contract/students.generated";
 
-const logger = createLogger({ component: "SupervisionContext" });
-
-/**
- * The list of an answered request, `null` when the server refused it. A
- * request that never reached the server still fails, as before the switch
- * to bffJson: the caller then clears the supervision state.
- */
-async function answeredOrNull<T>(
-  request: Promise<T[] | null>,
-): Promise<T[] | null> {
-  try {
-    return (await request) ?? [];
-  } catch (error) {
-    if (error instanceof ApiError && !error.noResponse) return null;
-    throw error;
-  }
-}
-
-const RESYNC_INTERVAL_MS = 5 * 60 * 1000;
-
-interface SupervisionState extends DerivedSupervision {
-  // Group supervision
+interface SupervisionContextType extends DerivedSupervision {
   hasGroups: boolean;
   isLoadingGroups: boolean;
-  groups: studentsContract.NavigationGroup[];
-  /**
-   * Der letzte Abruf der Gruppen ist gescheitert. Dann ist `groups` leer,
-   * ohne dass die Person keine Gruppe hätte; die Auswahlseite sagt das
-   * (#4351).
-   */
   groupsLoadFailed?: boolean;
-
-  // Room supervision (for active sessions)
-  supervisedRooms: SupervisedRoom[];
+  sessionsLoadFailed?: boolean;
+  releasedRoomsLoadFailed?: boolean;
   isLoadingSupervision: boolean;
-
-  // overviewEnabled (from DerivedSupervision): true when the caller fetched
-  // supervision rooms via the school-wide overview endpoint
-  // (/api/active/supervisors/all), i.e. the server confirmed this person may
-  // see every running module (#2380). Pages gate on this rather than on room
-  // count, so a synthetic Schulhof entry never counts as an enabled overview.
-}
-
-interface SupervisionContextType extends SupervisionState {
-  refresh: (options?: {
-    silent?: boolean;
-    force?: boolean;
-    groupsOnly?: boolean;
-  }) => Promise<void>;
-}
-
-interface RefreshWaiter {
-  readonly promise: Promise<void>;
-  readonly resolve: () => void;
-  readonly reject: (reason: unknown) => void;
+  ownSessionsError?: Error;
+  refresh: RefreshSupervision;
 }
 
 const SupervisionContext = createContext<SupervisionContextType | undefined>(
   undefined,
 );
+const EMPTY = deriveSupervision();
+const UNAVAILABLE = new ApiError("Supervision section unavailable", 503);
 
-const EMPTY_SUPERVISION_STATE: DerivedSupervision = {
-  isSupervising: false,
-  ownSupervision: false,
-  supervisedRoomId: undefined,
-  supervisedRoomName: undefined,
-  supervisedRooms: [],
-  ownSupervisedRooms: [],
-  overviewEnabled: false,
-};
-
-function initialState(initial: SupervisionSnapshot | null): SupervisionState {
-  if (!initial) {
-    return {
-      hasGroups: false,
-      isLoadingGroups: true,
-      groups: [],
-      ...EMPTY_SUPERVISION_STATE,
-      isLoadingSupervision: true,
-    };
-  }
-  const groups = sortNavigationGroups(initial.groups ?? []);
-  return {
-    hasGroups: groups.length > 0,
-    isLoadingGroups: false,
-    groups,
-    ...deriveSupervision(
-      initial.supervised,
-      initial.openRooms,
-      initial.overviewOk,
-      initial.ownSupervised,
-    ),
-    isLoadingSupervision: false,
-  };
-}
-
-/**
- * Provider that manages dynamic supervision states
- * Checks for group assignments and active room supervision
- *
- * `initial` is the server-preloaded snapshot from the tenant layout (#2973):
- * when present, the first render already carries groups and rooms and the
- * mount fetch is skipped; the 5-minute resync and SSE triggers stay in place.
- */
-export function SupervisionProvider({
-  children,
-  initial = null,
-}: Readonly<{
-  children: React.ReactNode;
-  initial?: SupervisionSnapshot | null;
-}>) {
-  const { data: session } = useSession();
-  // Whose data the provider shows (the browser session carries no token,
-  // #5005): a changed account, school or set of rights starts a new load.
-  const sessionKey = sessionIdentityKey(session);
-
-  const [state, setState] = useState<SupervisionState>(() =>
-    initialState(initial),
+export function SupervisionProvider({ children }: { children: ReactNode }) {
+  const { data: session, status } = useSession();
+  const tenant = useTenantSafe();
+  const binding = authGeneration(session);
+  const tenantIdentifier =
+    tenant?.routingMode === "subdomain"
+      ? tenant.tenant?.subdomain
+      : tenant?.tenant?.slug;
+  const enabled =
+    binding !== null &&
+    !session?.user.scope &&
+    tenant?.tenant?.tenantId !== undefined &&
+    tenant.tenant.tenantId === session?.user.tenantId &&
+    tenantIdentifier === tenant.tenantSlug;
+  const { data, error, refresh } = useSupervisionSnapshot(enabled, binding);
+  const snapshot = enabled ? data : undefined;
+  const derived = useMemo(
+    () => (snapshot ? deriveSupervision(snapshot) : EMPTY),
+    [snapshot],
   );
-  const seededRef = React.useRef(initial !== null);
+  const loading = status === "loading" || (enabled && !snapshot && !error);
+  const failed = error && !isReadRefusal(error) ? error : undefined;
+  const ownSessionsError =
+    failed ??
+    (snapshot?.sessions?.own_status === "unavailable"
+      ? UNAVAILABLE
+      : undefined);
+  const groupsLoadFailed =
+    Boolean(failed) || snapshot?.groups?.status === "unavailable";
+  const sessionsLoadFailed =
+    Boolean(failed) ||
+    snapshot?.sessions?.status === "unavailable" ||
+    snapshot?.sessions?.own_status === "unavailable" ||
+    snapshot?.sessions?.overview_status === "unavailable";
 
-  // Debounce mechanism to prevent rapid successive calls
-  const isRefreshingRef = React.useRef(false);
-  const lastRefreshRef = React.useRef<number>(0);
-  const pendingGroupsRefreshRef = React.useRef(false);
-  const pendingFullRefreshRef = React.useRef(false);
-  const pendingRefreshWaiterRef = React.useRef<RefreshWaiter | null>(null);
+  const releasedRoomsLoadFailed =
+    Boolean(failed) || snapshot?.released_rooms?.status === "unavailable";
 
-  // Store session identity and admin status in refs to avoid dependency loops.
-  // EVERY caller with `groups:read` tries the school-wide overview endpoint
-  // first — admins and caregivers alike (#2380). The server-side scope
-  // setting is the single source of truth for whether all rooms are visible;
-  // a 403 means this school keeps the caller on their own supervisions, and
-  // the staff endpoint answers instead.
-  const sessionKeyRef = useLatest(sessionKey);
-  const sessionHasEffectiveAdminScope = hasEffectiveAdminScope(session);
-
-  // The tenant's configured scope tells us whether asking for the school-wide
-  // list can succeed at all. It is a hint that saves a guaranteed 403 per
-  // refresh, never the decision: the server answers every request itself, and
-  // a 403 still falls back to the caller's own supervisions below.
-  const overviewScope = useOperationalOverviewScope();
-  const mayHaveOverview =
-    sessionHasEffectiveAdminScope || overviewScope === "all_staff";
-  const mayHaveOverviewRef = useLatest(mayHaveOverview);
-
-  // Whether the user may read group/supervision data. The Schulhof status
-  // endpoint is gated by `groups:read` on the backend, so accounts with an
-  // explicit permissions list that lacks it (e.g. the limited `guest` role)
-  // get skipped instead of flooding production with guaranteed 403s. Admins
-  // keep their role fallback; staff sessions issued before the permissions
-  // claim existed have no list at all, so keep their role-based access alive
-  // during that rollout window and let the backend remain the final authority.
-  const canReadGroups = canReadSupervisionData(session);
-  const canReadGroupsRef = useLatest(canReadGroups);
-
-  // Use a ref for the refresh function to break dependency cycles
-  const refreshRef = React.useRef<
-    | ((options?: {
-        silent?: boolean;
-        force?: boolean;
-        groupsOnly?: boolean;
-      }) => Promise<void>)
-    | null
-  >(null);
-
-  const applyGroups = useCallback(
-    (groupList: studentsContract.NavigationGroup[], loadFailed = false) => {
-      setState((prev) => {
-        // Only update if value actually changed
-        if (
-          sameGroups(prev.groups, groupList) &&
-          !prev.isLoadingGroups &&
-          (prev.groupsLoadFailed ?? false) === loadFailed
-        ) {
-          return prev;
-        }
-        return {
-          ...prev,
-          hasGroups: groupList.length > 0,
-          groups: groupList,
-          isLoadingGroups: false,
-          groupsLoadFailed: loadFailed,
-        };
-      });
-    },
-    [],
-  );
-
-  // Every request reads the school from the session cookie, never from the
-  // URL. While the session still belongs to another school (TenantGuard is
-  // switching it), an answer would be the other school's groups (#3375):
-  // nothing is fetched, and the generation discards answers that were already
-  // under way when the school changed.
-  const tenantContext = useTenantSafe();
-  // The session claim is a number, the page's school a string (#2342).
-  const sessionClaim = session?.user?.tenantId;
-  const sessionTenantId =
-    sessionClaim === undefined ? undefined : String(sessionClaim);
-  const urlTenantSlug = tenantContext?.tenantSlug;
-  const urlTenantRoutingMode = tenantContext?.routingMode;
-  const urlTenantId = tenantContext?.tenant?.tenantId;
-  // TenantProvider keeps the previous metadata until the new URL has been
-  // resolved. Path routing uses the tenant slug, while subdomain routing uses
-  // the subdomain; both identifiers can legitimately differ (#1975).
-  const resolvedUrlTenantIdentifier =
-    urlTenantRoutingMode === "subdomain"
-      ? tenantContext?.tenant?.subdomain
-      : tenantContext?.tenant?.slug;
-  const tenantMetadataMismatch =
-    tenantContext?.tenant != null &&
-    resolvedUrlTenantIdentifier !== urlTenantSlug;
-  const schoolMismatch =
-    sessionTenantId !== undefined &&
-    urlTenantId !== undefined &&
-    sessionTenantId !== urlTenantId;
-  const schoolDataPending = schoolMismatch || tenantMetadataMismatch;
-  const schoolDataPendingRef = useLatest(schoolDataPending);
-  const schoolGenerationRef = React.useRef(0);
-
-  // Check if user has any groups (as teacher or representative)
-  const checkGroups = useCallback(async () => {
-    const hasSession = sessionKeyRef.current !== null;
-    const generation = schoolGenerationRef.current;
-    const applyCurrent = (
-      groupList: studentsContract.NavigationGroup[],
-      loadFailed = false,
-    ) => {
-      if (generation === schoolGenerationRef.current) {
-        applyGroups(groupList, loadFailed);
-      }
-    };
-    if (!hasSession) {
-      setState((prev) => ({
-        ...prev,
-        hasGroups: false,
-        groups: [],
-        isLoadingGroups: false,
-      }));
-      return;
-    }
-
-    try {
-      // The navigation's groups come through the portal's catalog proxy
-      // (#7563) as the contract's list in `data`.
-      const groups = await bffJson(
-        "tenant",
-        "GET /api/students/ogs-group-navigation",
-      );
-      applyCurrent(sortNavigationGroups(groups ?? []));
-    } catch {
-      applyCurrent([], true);
-    }
-  }, [applyGroups, sessionKeyRef]);
-
-  const applySupervision = useCallback((next: DerivedSupervision) => {
-    setState((prev) => {
-      // Only update if values actually changed
-      if (sameSupervision(prev, next) && !prev.isLoadingSupervision) {
-        return prev;
-      }
-      return { ...prev, ...next, isLoadingSupervision: false };
-    });
-  }, []);
-
-  // Check if user is supervising an active room (also fetches Schulhof status)
-  const checkSupervision = useCallback(async () => {
-    const hasSession = sessionKeyRef.current !== null;
-    const generation = schoolGenerationRef.current;
-    const applyCurrent = (next: DerivedSupervision) => {
-      if (generation === schoolGenerationRef.current) applySupervision(next);
-    };
-    if (!hasSession) {
-      applySupervision(EMPTY_SUPERVISION_STATE);
-      return;
-    }
-
-    // Tracks whether the school-wide overview endpoint actually responded
-    // with data. Only set to true on a successful response.
-    let overviewOk = false;
-
-    try {
-      // Try the school-wide overview endpoint first for every caller who may
-      // read groups at all. On any refused answer (403 = this school keeps
-      // the caller on their own supervisions; 5xx = transient), fall back to
-      // the regular staff endpoint so the user at least keeps their own
-      // supervisions instead of an empty sidebar.
-      // The endpoint is gated on `groups:read`, so accounts without it skip
-      // straight to the permission-less /me endpoint.
-      const fetchOwnSupervisedGroups = () =>
-        answeredOrNull(bffJson("tenant", "GET /api/me/groups/supervised"));
-
-      const fetchSupervisedGroups = async (): Promise<{
-        supervised: SupervisedGroupPayload[] | null;
-        ownSupervised: SupervisedGroupPayload[] | null;
-      }> => {
-        if (!canReadGroupsRef.current || !mayHaveOverviewRef.current) {
-          return {
-            supervised: await fetchOwnSupervisedGroups(),
-            ownSupervised: null,
-          };
-        }
-
-        // Die Übersicht zeigt alle laufenden Räume, kann die eigene Aufsicht
-        // aber nicht kennzeichnen. Die eigene Abfrage läuft parallel und
-        // liefert ausschließlich das Signal für „Aufsicht fortsetzen“.
-        const [overview, own] = await Promise.all([
-          answeredOrNull(bffJson("tenant", "GET /api/active/supervisors/all")),
-          fetchOwnSupervisedGroups().catch(() => null),
-        ]);
-        if (overview === null) return { supervised: own, ownSupervised: null };
-        overviewOk = true;
-        return { supervised: overview, ownSupervised: own };
-      };
-
-      // Own supervisions and the permanently released rooms in parallel. The
-      // room list needs rooms:read, which every caregiver already holds for
-      // the rest of the navigation, so there is no extra permission gate.
-      // A failed room load stays null rather than becoming "no open rooms":
-      // an empty navigation must not be indistinguishable from a load error.
-      const [{ supervised, ownSupervised }, openRooms] = await Promise.all([
-        fetchSupervisedGroups(),
-        bffJson("tenant", "GET /api/rooms/", {
-          query: { is_open_room: true },
-        }).then(
-          (rooms): OpenRoomPayload[] => rooms.data ?? [],
-          () => null,
-        ),
-      ]);
-
-      applyCurrent(
-        deriveSupervision(supervised, openRooms, overviewOk, ownSupervised),
-      );
-    } catch {
-      // On error the open-room list is unreachable too, so just clear.
-      applyCurrent(EMPTY_SUPERVISION_STATE);
-    }
-  }, [applySupervision, canReadGroupsRef, mayHaveOverviewRef, sessionKeyRef]);
-
-  // Check Schulhof status and add to supervised rooms if exists
-  // Refresh all supervision states with debouncing
-  const refresh = useCallback(
-    async (options?: {
-      silent?: boolean;
-      force?: boolean;
-      groupsOnly?: boolean;
-    }) => {
-      const silent = options?.silent ?? false;
-      const force = options?.force ?? false;
-      // Skips the supervision half (own supervised rooms + Schulhof status)
-      // for triggers that provably cannot have changed it.
-      const groupsOnly = options?.groupsOnly ?? false;
-      // The session or resolved URL metadata belongs to another school: the
-      // loading state stays until the school effect below starts the load for
-      // the right one.
-      if (schoolDataPendingRef.current) return;
-      // Prevent rapid successive refreshes (min 5 seconds between refreshes).
-      // `force` bypasses the throttle for deliberate external triggers
-      // (e.g. after saving a setting that changes supervision visibility).
-      const now = Date.now();
-      if (!force && now - lastRefreshRef.current < 5000) {
-        return;
-      }
-      lastRefreshRef.current = now;
-
-      // Already refreshing, don't start another. A deliberate trigger runs
-      // once more afterwards: the load in flight may have started before the
-      // write it reports had committed (#3888).
-      if (isRefreshingRef.current) {
-        if (force && groupsOnly) {
-          pendingGroupsRefreshRef.current = true;
-        } else if (force) {
-          pendingFullRefreshRef.current = true;
-        }
-        if (!force) return;
-
-        // A lifecycle action must wait for the deliberate follow-up load,
-        // rather than only the load that started before its write (#3888).
-        if (!pendingRefreshWaiterRef.current) {
-          let resolve: () => void = () => undefined;
-          let reject: (reason: unknown) => void = () => undefined;
-          const promise = new Promise<void>((resolvePromise, rejectPromise) => {
-            resolve = resolvePromise;
-            reject = rejectPromise;
-          });
-          pendingRefreshWaiterRef.current = { promise, resolve, reject };
-        }
-        return pendingRefreshWaiterRef.current.promise;
-      }
-      isRefreshingRef.current = true;
-
-      // Only show loading states if not a silent refresh
-      if (!silent) {
-        setState((s) => ({
-          ...s,
-          isLoadingGroups: true,
-          isLoadingSupervision: groupsOnly ? s.isLoadingSupervision : true,
-        }));
-      }
-
-      // checkSupervision now handles Schulhof internally
-      const work = groupsOnly
-        ? [checkGroups()]
-        : [checkGroups(), checkSupervision()];
-      await Promise.all(work).finally(() => {
-        isRefreshingRef.current = false;
-        const waiter = pendingRefreshWaiterRef.current;
-        pendingRefreshWaiterRef.current = null;
-        if (pendingFullRefreshRef.current) {
-          pendingFullRefreshRef.current = false;
-          pendingGroupsRefreshRef.current = false;
-          const followUp = refreshRef.current?.({
-            silent: true,
-            force: true,
-          });
-          if (waiter) {
-            if (followUp) {
-              void followUp.then(waiter.resolve, waiter.reject);
-            } else {
-              waiter.resolve();
-            }
-          }
-        } else if (pendingGroupsRefreshRef.current) {
-          pendingGroupsRefreshRef.current = false;
-          const followUp = refreshRef.current?.({
-            silent: true,
-            force: true,
-            groupsOnly: true,
-          });
-          if (waiter) {
-            if (followUp) {
-              void followUp.then(waiter.resolve, waiter.reject);
-            } else {
-              waiter.resolve();
-            }
-          }
-        } else {
-          waiter?.resolve();
-        }
-      });
-    },
-    [checkGroups, checkSupervision, schoolDataPendingRef],
-  );
-
-  // Store the refresh function only after its render commits.
-  useEffect(() => {
-    refreshRef.current = refresh;
-  }, [refresh]);
-
-  const previousOverviewScopeRef = React.useRef(overviewScope);
-
-  // Saving the setting refreshes supervision before tenant metadata has
-  // necessarily revalidated. Refresh once more after the resolved scope
-  // changes so the room list cannot remain widened or restricted until SSE.
-  useEffect(() => {
-    if (previousOverviewScopeRef.current === overviewScope) return;
-    previousOverviewScopeRef.current = overviewScope;
-    void refreshRef.current?.({ silent: true, force: true });
-  }, [overviewScope]);
-
-  // The session moved to another school, the URL school changed, or the two
-  // started/stopped matching (#3375). The session effect below cannot cover
-  // this: its load is throttled away when the switch follows the first load
-  // within five seconds, and the other school's groups then stay until the
-  // five-minute resync. Declared before the session effect so that one finds
-  // the load already started.
-  const previousSchoolRef = React.useRef({
-    sessionTenantId,
-    sessionKey,
-    urlTenantSlug,
-    urlTenantRoutingMode,
-    urlTenantId,
-    tenantMetadataMismatch,
-    schoolMismatch,
-  });
-  // Effects run after paint. Do not expose a preloaded snapshot during the
-  // render that starts a school transition; TenantGuard may already render
-  // its children again when the session has caught up with the URL.
-  const schoolTransitionPending =
-    schoolDataPending ||
-    previousSchoolRef.current.sessionTenantId !== sessionTenantId ||
-    previousSchoolRef.current.urlTenantSlug !== urlTenantSlug ||
-    previousSchoolRef.current.urlTenantRoutingMode !== urlTenantRoutingMode ||
-    previousSchoolRef.current.urlTenantId !== urlTenantId;
-  useEffect(() => {
-    const previous = previousSchoolRef.current;
-    previousSchoolRef.current = {
-      sessionTenantId,
-      sessionKey,
-      urlTenantSlug,
-      urlTenantRoutingMode,
-      urlTenantId,
-      tenantMetadataMismatch,
-      schoolMismatch,
-    };
-    const sessionChanged =
-      previous.sessionTenantId !== sessionTenantId ||
-      previous.sessionKey !== sessionKey;
-    const schoolIdentityChanged =
-      previous.sessionTenantId !== sessionTenantId ||
-      previous.urlTenantSlug !== urlTenantSlug ||
-      previous.urlTenantRoutingMode !== urlTenantRoutingMode ||
-      previous.urlTenantId !== urlTenantId ||
-      previous.tenantMetadataMismatch !== tenantMetadataMismatch ||
-      previous.schoolMismatch !== schoolMismatch;
-    const urlSchoolChanged =
-      previous.urlTenantSlug !== urlTenantSlug ||
-      previous.urlTenantRoutingMode !== urlTenantRoutingMode ||
-      previous.urlTenantId !== urlTenantId;
-    if (
-      !sessionChanged &&
-      !urlSchoolChanged &&
-      previous.tenantMetadataMismatch === tenantMetadataMismatch &&
-      previous.schoolMismatch === schoolMismatch
-    ) {
-      return;
-    }
-
-    schoolGenerationRef.current += 1;
-    if (!schoolIdentityChanged) {
-      if (isRefreshingRef.current) {
-        pendingFullRefreshRef.current = true;
-      } else {
-        void refreshRef.current?.({ silent: true, force: true });
-      }
-      return;
-    }
-    setState((s) => ({
-      ...s,
-      hasGroups: false,
-      groups: [],
-      isLoadingGroups: true,
-      ...EMPTY_SUPERVISION_STATE,
-      isLoadingSupervision: true,
-    }));
-    if (schoolDataPending) return;
-    if (isRefreshingRef.current) {
-      // The running load is discarded by its generation; this one replaces it.
-      pendingFullRefreshRef.current = true;
-      return;
-    }
-    void refreshRef.current?.({ silent: true, force: true });
-  }, [
-    sessionTenantId,
-    sessionKey,
-    urlTenantSlug,
-    urlTenantRoutingMode,
-    urlTenantId,
-    tenantMetadataMismatch,
-    schoolMismatch,
-    schoolDataPending,
-  ]);
-
-  // Initial load and refresh on session changes only
-  useEffect(() => {
-    // Only refresh when session actually changes (not on every render)
-    if (sessionKey) {
-      // The server snapshot IS the initial load; count it as one so the
-      // 5-second throttle applies exactly as after a fetched load.
-      if (seededRef.current) {
-        seededRef.current = false;
-        lastRefreshRef.current = Date.now();
-        return;
-      }
-      refreshRef.current?.().catch((err: unknown) => {
-        logger.error("failed to refresh supervision context", {
-          error: String(err),
-        });
-      });
-    } else {
-      // Clear state when no session
-      seededRef.current = false;
-      setState({
-        hasGroups: false,
-        isLoadingGroups: false,
-        groups: [],
-        ...EMPTY_SUPERVISION_STATE,
-        isLoadingSupervision: false,
-      });
-    }
-  }, [sessionKey]); // Only depend on the session identity
-
-  // SSE is a trigger channel, not durable state. A low-frequency resync
-  // repairs missed events or an unavailable connection without restoring the
-  // former per-minute request load.
-  useEffect(() => {
-    if (!sessionKey) return;
-
-    const interval = setInterval(() => {
-      refreshRef.current?.({ silent: true, force: true }).catch(() => {
-        // Intentionally ignored - silent background refresh
-      });
-    }, RESYNC_INTERVAL_MS);
-    return () => clearInterval(interval);
-  }, [sessionKey]);
-
-  // SSE announces access changes and activity lifecycle changes. The provider
-  // owns these raw fetches, so it also owns the precise refresh scope.
-  useEffect(() => {
-    if (!sessionKey) return;
-
-    const handleStale = (event: Event) => {
-      const groupsOnly =
-        !(event instanceof CustomEvent) || event.detail?.groupsOnly !== false;
-      if (isRefreshingRef.current) {
-        if (groupsOnly) {
-          pendingGroupsRefreshRef.current = true;
-        } else {
-          pendingFullRefreshRef.current = true;
-        }
-        return;
-      }
-      refreshRef
-        .current?.({ silent: true, force: true, groupsOnly })
-        .catch(() => {
-          // Intentionally ignored - silent background refresh
-        });
-    };
-
-    window.addEventListener("phoenix:supervision-stale", handleStale);
-    return () => {
-      pendingGroupsRefreshRef.current = false;
-      pendingFullRefreshRef.current = false;
-      window.removeEventListener("phoenix:supervision-stale", handleStale);
-    };
-  }, [sessionKey]);
-
-  const value = useMemo<SupervisionContextType>(
+  const value = useMemo(
     () => ({
-      ...(schoolTransitionPending
-        ? {
-            ...state,
-            hasGroups: false,
-            groups: [],
-            isLoadingGroups: true,
-            ...EMPTY_SUPERVISION_STATE,
-            isLoadingSupervision: true,
-          }
-        : state),
+      ...derived,
+      hasGroups: derived.groups.length > 0,
+      isLoadingGroups: loading,
+      isLoadingSupervision: loading,
+      groupsLoadFailed,
+      sessionsLoadFailed,
+      releasedRoomsLoadFailed,
+      ownSessionsError,
       refresh,
     }),
-    [state, refresh, schoolTransitionPending],
+    [
+      derived,
+      loading,
+      groupsLoadFailed,
+      sessionsLoadFailed,
+      releasedRoomsLoadFailed,
+      ownSessionsError,
+      refresh,
+    ],
   );
 
   return (
@@ -686,36 +100,21 @@ export function SupervisionProvider({
   );
 }
 
-/**
- * Hook to access supervision context
- */
 export function useSupervision() {
   const context = useContext(SupervisionContext);
-  if (context === undefined) {
+  if (!context)
     throw new Error("useSupervision must be used within a SupervisionProvider");
-  }
   return context;
 }
 
-/**
- * Non-throwing variant for components shared between tenant and operator layouts.
- * Returns safe defaults when no SupervisionProvider is present.
- */
 const EMPTY_SUPERVISION: SupervisionContextType = {
+  ...EMPTY,
   hasGroups: false,
   isLoadingGroups: false,
-  groups: [],
-  isSupervising: false,
-  ownSupervision: false,
-  supervisedRooms: [],
-  ownSupervisedRooms: [],
   isLoadingSupervision: false,
-  overviewEnabled: false,
-  // eslint-disable-next-line no-empty-function -- safe no-op default for operator context
-  refresh: async () => {},
+  refresh: () => Promise.resolve(),
 };
 
 export function useOptionalSupervision(): SupervisionContextType {
-  const context = useContext(SupervisionContext);
-  return context ?? EMPTY_SUPERVISION;
+  return useContext(SupervisionContext) ?? EMPTY_SUPERVISION;
 }

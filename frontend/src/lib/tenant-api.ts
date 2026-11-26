@@ -5,25 +5,24 @@ import { sessionBff } from "./session-bff";
  * tenant listing/switching (post-login).
  */
 
-import { normalizeCareFacilityTerm } from "~/lib/care-facility-term-value";
-import { bffJson } from "./bff-fetch";
+import {
+  normalizeCareArticle,
+  normalizeCareFacilityTerm,
+  type CareArticle,
+} from "~/lib/care-facility-term-value";
+import { bffFileHref, bffJson } from "./bff-fetch";
 import { clearSessionCache } from "./session-cache";
 import { clearPersonalStorage } from "./personal-storage";
 import { mapAccountTenant } from "./account-tenants";
 import { parseBookedModules, type ModuleKey } from "./modules";
-
-export interface TenantSettings {
-  logoUrl?: string;
-  loginImageUrl?: string;
-  primaryColor?: string;
-  [key: string]: unknown;
-}
+import { parseTenantSettings, type TenantSettings } from "./tenant-branding";
+import type { TenantResolveResponse } from "./contract/auth-tenant.generated";
 
 /**
  * The module fields of TenantInfo from the tenant shell's booked_modules.
  * nfcEnabled is derived so NFC-only areas follow the NFC module.
  */
-export function bookedModuleFields(
+function bookedModuleFields(
   raw: unknown,
 ): Pick<TenantInfo, "bookedModules" | "nfcEnabled"> {
   const bookedModules = parseBookedModules(raw);
@@ -35,8 +34,11 @@ export function bookedModuleFields(
 
 /** Convert a stored login image URL path to the public-serving proxy URL. */
 export function loginImageSrc(storedPath: string): string {
-  const filename = storedPath.split("/").pop() ?? "";
-  return `/api/public/login-image/${filename}`;
+  const filename = storedPath.split("/").pop();
+  if (!filename) return "/images/moto_transparent.webp";
+  return bffFileHref("public", "GET /public/login-image/{filename}", {
+    params: { filename },
+  });
 }
 
 /**
@@ -206,6 +208,12 @@ export interface TenantInfo {
    * `useCareFacilityTerm`, which also covers missing metadata.
    */
   careFacilityTerm?: string;
+  /**
+   * The article the German texts decline that term with
+   * (enrollment.care_facility_article, #8136); „die“ for the presets and for
+   * schools without a choice.
+   */
+  careFacilityArticle?: CareArticle;
 }
 
 /** Identity-only tenant row returned by list/switch endpoints. Feature and
@@ -226,7 +234,7 @@ export type TenantSummary = Pick<
  * percentage records nothing: an unreadable value must never widen the
  * recording.
  */
-export function normalizeRecordingSamplePercent(raw: unknown): number {
+function normalizeRecordingSamplePercent(raw: unknown): number {
   return typeof raw === "number" &&
     Number.isInteger(raw) &&
     raw >= 0 &&
@@ -260,21 +268,19 @@ export type OperationalOverviewScope = "own" | "admins" | "all_staff";
  * client does not recognise collapses to the restrictive "own" — an older
  * backend that omits the field must never widen the UI.
  */
-export function normalizeOverviewScope(raw: unknown): OperationalOverviewScope {
+function normalizeOverviewScope(raw: unknown): OperationalOverviewScope {
   return raw === "admins" || raw === "all_staff" ? raw : "own";
 }
 
 /** Scope values of operations.attendance_edit_scope. */
-export type AttendanceEditScope = "own" | "all_staff";
+type AttendanceEditScope = "own" | "all_staff";
 
 /**
  * Normalize the backend's attendance_edit_scope string. Like the overview
  * scope, anything unknown (including an older backend without the field)
  * collapses to the restrictive "own".
  */
-export function normalizeAttendanceEditScope(
-  raw: unknown,
-): AttendanceEditScope {
+function normalizeAttendanceEditScope(raw: unknown): AttendanceEditScope {
   return raw === "all_staff" ? raw : "own";
 }
 
@@ -288,7 +294,7 @@ export type ParentRequestReasonPolicy =
  * Pflicht nie stillschweigend abschalten. Gegenstück zu
  * normalizeOverviewScope, das aus demselben Grund auf "own" fällt.
  */
-export function normalizeReasonPolicy(raw: unknown): ParentRequestReasonPolicy {
+function normalizeReasonPolicy(raw: unknown): ParentRequestReasonPolicy {
   return raw === "nobody" || raw === "guardians" || raw === "staff"
     ? raw
     : "both";
@@ -322,6 +328,13 @@ export async function resolveTenant(slug: string): Promise<TenantInfo> {
     query: { slug },
     errorMessage: "Failed to resolve tenant",
   });
+  return projectTenantResolve(data, parseTenantSettings(data.settings));
+}
+
+export function projectTenantResolve(
+  data: Omit<TenantResolveResponse, "settings">,
+  settings: TenantSettings | null,
+): TenantInfo {
   return {
     tenantId: data.tenant_id,
     slug: data.slug,
@@ -331,8 +344,7 @@ export async function resolveTenant(slug: string): Promise<TenantInfo> {
     organizationName: data.organization_name,
     traegerName: data.traeger_name,
     hidden: data.hidden === true,
-    // The contract types the school's settings map as open JSON.
-    settings: (data.settings ?? {}) as TenantSettings,
+    settings: settings ?? {},
     presenceMode: normalizePresenceMode(data.presence_mode),
     studentPhotosEnabled: data.student_photos_enabled === true,
     ...bookedModuleFields(data.booked_modules),
@@ -376,6 +388,7 @@ export async function resolveTenant(slug: string): Promise<TenantInfo> {
     childSearchOnlyNavigation: data.child_search_only_navigation === true,
     simpleStaffNavigation: data.simple_staff_navigation === true,
     careFacilityTerm: normalizeCareFacilityTerm(data.care_facility_term),
+    careFacilityArticle: normalizeCareArticle(data.care_facility_article),
   };
 }
 

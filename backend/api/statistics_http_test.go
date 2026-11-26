@@ -10,6 +10,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -836,7 +837,7 @@ func TestStatisticsReport_CourseParticipation(t *testing.T) {
 
 	for section, stem := range map[string]string{
 		"courses":         "kurse-2026-06-08-2026-06-12.xlsx",
-		"course-students": "kurse-je-kind-2026-06-08-2026-06-12.xlsx",
+		"course-students": "kurse-pro-kind-2026-06-08-2026-06-12.xlsx",
 	} {
 		req := httptest.NewRequest(http.MethodGet, "/export?format=xlsx&section="+section+"&from="+weekFrom.String()+"&to="+weekTo.String(), nil)
 		rec := authExec(t, tc, req, claims, reportPermissions)
@@ -875,9 +876,9 @@ func createCourseEnrollment(
 	}
 	_, err := db.NewInsert().
 		Model(&map[string]any{
-			"tenant_id":         testpkg.Tenant(t),
-			"student_id":        studentID,
-			"activity_group_id": groupID,
+			"tenant_id":         fmt.Sprint(testpkg.Tenant(t)),
+			"student_id":        fmt.Sprint(studentID),
+			"activity_group_id": fmt.Sprint(groupID),
 			"valid_from":        validFrom,
 			"selected_weekdays": selected,
 		}).

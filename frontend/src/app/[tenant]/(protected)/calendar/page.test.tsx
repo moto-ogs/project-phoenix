@@ -21,6 +21,7 @@ vi.mock("~/components/ui/date-picker", async () =>
 );
 
 const {
+  mockRefreshMailStatus,
   mockUseSWRAuth,
   mockCreateStaffAppointment,
   mockUpdateStaffAppointment,
@@ -35,6 +36,7 @@ const {
   mockGetStaffAppointmentMails,
 } = vi.hoisted(() => ({
   mockGetStaffAppointmentMails: vi.fn(),
+  mockRefreshMailStatus: vi.fn(),
   mockUseSWRAuth: vi.fn(),
   mockCreateStaffAppointment: vi.fn(),
   mockUpdateStaffAppointment: vi.fn(),
@@ -48,9 +50,65 @@ const {
   mockUseSession: vi.fn(),
 }));
 
-vi.mock("~/lib/swr", () => ({
-  useSWRAuth: mockUseSWRAuth,
+// The appointment detail of the edit form is a shared-cache read
+// (ADR 0311): a small cache stands in for SWR, so the form's opening read,
+// its read after a refusal and the save's answer go through one entry.
+const detailCache = vi.hoisted(() => ({
+  entries: new Map<string, unknown>(),
+  listeners: new Set<() => void>(),
 }));
+vi.mock("~/lib/swr", async () => {
+  const { useCallback, useSyncExternalStore } = await import("react");
+  const isDetailKey = (key: unknown): key is string =>
+    typeof key === "string" && key.startsWith("staff-appointment-detail-");
+  const store = (key: string, value: unknown) => {
+    detailCache.entries.set(key, value);
+    detailCache.listeners.forEach((listener) => listener());
+  };
+  const subscribe = (listener: () => void) => {
+    detailCache.listeners.add(listener);
+    return () => {
+      detailCache.listeners.delete(listener);
+    };
+  };
+  function useDetailRead(key: unknown, fetcher: () => Promise<unknown>) {
+    const detailKey = isDetailKey(key) ? key : null;
+    const data = useSyncExternalStore(subscribe, () =>
+      detailKey === null ? undefined : detailCache.entries.get(detailKey),
+    );
+    const mutate = useCallback(
+      async (next?: unknown) => {
+        if (detailKey === null) return undefined;
+        const value = next === undefined ? await fetcher() : next;
+        store(detailKey, value);
+        return value;
+      },
+      [detailKey, fetcher],
+    );
+    return { data, error: undefined, isLoading: false, mutate };
+  }
+  return {
+    useSWRAuth: (
+      key: unknown,
+      fetcher: () => Promise<unknown>,
+      ...options: unknown[]
+    ) => {
+      const detail = useDetailRead(key, fetcher);
+      return isDetailKey(key)
+        ? detail
+        : mockUseSWRAuth(key, fetcher, ...options);
+    },
+    useTenantMutate: () => mockRefreshMailStatus,
+    useSWRPreload:
+      () => async (key: string, fetcher: () => Promise<unknown>) => {
+        const value = await fetcher();
+        store(key, value);
+        return value;
+      },
+    revalidateOrThrow: (read: { mutate: () => Promise<unknown> }) =>
+      read.mutate(),
+  };
+});
 
 // Personalprofil in dieser Schule laut Nutzerkontext (#7306).
 const ownStaff = vi.hoisted(() => ({ present: true }));
@@ -110,7 +168,7 @@ import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
 
-import StaffCalendarPage from "./page";
+import StaffCalendarPage from "./page-content";
 
 function render(ui: ReactElement) {
   return rtlRender(ui, { wrapper: ToastProvider });
@@ -174,6 +232,7 @@ function mockCalendarSWR() {
 
 describe("StaffCalendarPage", () => {
   beforeEach(() => {
+    detailCache.entries.clear();
     vi.clearAllMocks();
     mockUseSearchParams.mockReturnValue(null);
     // The page derives its week from `new Date()`; pin the clock into the
@@ -511,6 +570,112 @@ describe("StaffCalendarPage", () => {
     expect(mockMutate).toHaveBeenCalledOnce();
   });
 
+  // ADR 0311: the edit sends the version it opened with; a refusal shows the
+  // stored appointment and saves on its version.
+  it("shows the stored appointment after an edit was refused as changed since it was read", async () => {
+    mockUseSWRAuth.mockImplementation((key: unknown) => {
+      const cacheKey = typeof key === "string" ? key : "";
+      if (cacheKey.startsWith("staff-calendar")) {
+        return {
+          data: {
+            from: "2026-01-19",
+            to: "2026-01-25",
+            events: [
+              {
+                id: "appointment:5:2026-01-19",
+                source: "appointment",
+                appointment_id: "5",
+                occurrence_date: "2026-01-19",
+                title: "Teamrunde",
+                start_date: "2026-01-19",
+                end_date: "2026-01-19",
+                start_time: "14:00",
+                end_time: "15:00",
+                all_day: false,
+                recurring: false,
+                can_respond: false,
+                can_edit: true,
+              },
+            ],
+          },
+          error: undefined,
+          isLoading: false,
+          mutate: mockMutate,
+        };
+      }
+      if (cacheKey.startsWith("calendar-recipient-options")) {
+        return { data: recipientOptions, isLoading: false };
+      }
+      return {
+        data: undefined,
+        error: undefined,
+        isLoading: false,
+        mutate: vi.fn(),
+      };
+    });
+    const detail = (title: string, version: string) => ({
+      appointment: {
+        title,
+        start_date: "2026-01-19",
+        end_date: "2026-01-19",
+        start_time: "14:00",
+        end_time: "15:00",
+        all_day: false,
+        overview_visibility: "organizer",
+        delivery_mode: "informational",
+        notify_guardians: false,
+      },
+      version,
+    });
+    mockGetStaffAppointmentDetail
+      .mockResolvedValueOnce(detail("Teamrunde", "v-5"))
+      .mockResolvedValue(detail("Teamrunde verlegt", "v-6"));
+    mockUpdateStaffAppointment
+      .mockRejectedValueOnce(
+        new ApiError("changed", 409, { code: "general.changed_since_read" }),
+      )
+      .mockResolvedValueOnce(detail("Teamrunde verlegt", "v-7"));
+    setTestClock(new Date(2026, 0, 21));
+    render(<StaffCalendarPage />);
+
+    fireEvent.click(screen.getAllByRole("button", { name: /Teamrunde/ })[0]!);
+    fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
+    const titleInput = await screen.findByLabelText("Titel");
+    fireEvent.change(titleInput, { target: { value: "Mein Titel" } });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Änderungen speichern" }),
+    );
+    await waitFor(() =>
+      expect(mockUpdateStaffAppointment).toHaveBeenCalledWith(
+        "5",
+        expect.objectContaining({ title: "Mein Titel" }),
+        "v-5",
+      ),
+    );
+    await waitFor(() =>
+      expect(screen.getByLabelText("Titel")).toHaveValue("Teamrunde verlegt"),
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Änderungen speichern" }),
+    );
+    await waitFor(() =>
+      expect(mockUpdateStaffAppointment).toHaveBeenLastCalledWith(
+        "5",
+        expect.objectContaining({ title: "Teamrunde verlegt" }),
+        "v-6",
+      ),
+    );
+    // The opening read, the read after the refusal and the save's answer
+    // share one cache entry: the save's answer is the stored state now.
+    await waitFor(() =>
+      expect(detailCache.entries.get("staff-appointment-detail-5")).toEqual(
+        detail("Teamrunde verlegt", "v-7"),
+      ),
+    );
+    expect(mockGetStaffAppointmentDetail).toHaveBeenCalledTimes(2);
+  });
+
   it("edits a recurring appointment using the series base date, not the clicked occurrence", async () => {
     // A recurring appointment opened from its THIRD weekly occurrence
     // (2026-01-19); the persisted series anchor is 2026-01-05.
@@ -559,6 +724,8 @@ describe("StaffCalendarPage", () => {
         title: "Wöchentliche AG",
         start_date: "2026-01-05",
         end_date: "2026-01-05",
+        start_time: "14:00",
+        end_time: "15:00",
         all_day: false,
         overview_visibility: "organizer",
         delivery_mode: "informational",
@@ -569,6 +736,7 @@ describe("StaffCalendarPage", () => {
         interval_count: 1,
         weekdays: ["monday"],
       },
+      version: "v-5",
     });
 
     // This fixture's occurrence sits in the week of 2026-01-19.
@@ -595,12 +763,19 @@ describe("StaffCalendarPage", () => {
       expect(mockUpdateStaffAppointment).toHaveBeenCalledWith(
         "5",
         expect.objectContaining({ start_date: "2026-01-05", send_email: true }),
+        "v-5",
+      ),
+    );
+    await waitFor(() =>
+      expect(mockRefreshMailStatus).toHaveBeenCalledWith(
+        "calendar-appointment-mails-5",
       ),
     );
     // Never sends the occurrence date as the new series anchor.
     expect(mockUpdateStaffAppointment).not.toHaveBeenCalledWith(
       "5",
       expect.objectContaining({ start_date: "2026-01-19" }),
+      expect.anything(),
     );
   });
 

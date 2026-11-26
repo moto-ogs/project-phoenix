@@ -103,7 +103,10 @@ func (s *workTimeMonthService) getMonthSummaryThrough(ctx context.Context, staff
 	if err != nil {
 		return nil, err
 	}
+	return summarizeCarryChain(staffID, key, start, aggregates), nil
+}
 
+func summarizeCarryChain(staffID int64, key monthKey, start carryChain, aggregates map[monthKey]*monthAggregates) *MonthSummary {
 	carry := start.carry
 	for k := start.key; k.before(key); k = k.next() {
 		carry += aggregates[k].balance()
@@ -111,7 +114,7 @@ func (s *workTimeMonthService) getMonthSummaryThrough(ctx context.Context, staff
 
 	summary := newMonthSummary(staffID, key, carry, aggregates[key])
 	applyChainSplice(summary, start.splice)
-	return summary, nil
+	return summary
 }
 
 // carryChain is where the carry chain of a requested month starts: the first

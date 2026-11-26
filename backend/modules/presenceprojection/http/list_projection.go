@@ -93,6 +93,9 @@ type SlimStudentResponse struct {
 	TeacherHints []TeacherHint `json:"teacher_hints,omitempty"`
 	// ClassHandover: today's handover of the child to the OGS (#4794).
 	ClassHandover *ClassHandover `json:"class_handover,omitempty"`
+	// PlannedActivities are the child's offerings on the listed day (#8194),
+	// between arrival and pickup on the card; full-access rows only.
+	PlannedActivities []StudentListPlannedActivity `json:"planned_activities,omitempty"`
 
 	// Planned + actual times (the arrival/pickup rows and their sort/group
 	// modes). Only populated for full-access rows and when the caller passes
@@ -116,7 +119,8 @@ type SlimStudentResponse struct {
 	// Photo + consent. photo_consent_given is carried because the page probes
 	// its PRESENCE (not its value) to decide whether the "Fotoerlaubnis" filter
 	// is offered at all — omitting it would silently remove that filter.
-	PhotoURL          string `json:"photo_url,omitempty"`
+	PhotoVersion      string `json:"photo_version,omitempty"`
+	PhotoURL          string `json:"photo_url,omitempty"` // legacy BFF alias
 	PhotoConsentGiven *bool  `json:"photo_consent_given,omitempty"`
 
 	HasFullAccess bool `json:"has_full_access"`
@@ -163,7 +167,7 @@ func slimStudentResponses(responses []StudentResponse, planningDate calendar.Dat
 			ActualArrivalTime:    r.ActualArrivalTime,
 			ActualPickupTime:     r.ActualPickupTime,
 			CompanionStudentIDs:  r.CompanionStudentIDs,
-			PhotoURL:             r.PhotoURL,
+			PhotoVersion:         r.PhotoVersion,
 			PhotoConsentGiven:    r.PhotoConsentGiven,
 			HasFullAccess:        r.HasFullAccess,
 		}

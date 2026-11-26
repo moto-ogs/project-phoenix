@@ -26,7 +26,7 @@ import (
 // directory, the adapters NewOperatorProvisioningAdapters bound and the
 // settings.
 func newOperatorProvisioning(
-	organizations organizationtenancy.Capability, identity identityaccess.Owner, accounts OperatorAccountDirectory,
+	organizations organizationtenancy.Capability, identity identityaccess.Owner,
 	adapters OperatorProvisioningAdapters, schoolSettings settingsCompose.BatchSettingsService, logger *slog.Logger, now func() time.Time,
 ) (organizationtenancy.OperatorProvisioning, error) {
 	// The zero runtime reads only the caller's transaction: the rows run in
@@ -40,11 +40,12 @@ func newOperatorProvisioning(
 	return organizationCompose.NewProvisioning(organizationCompose.ProvisioningDependencies{
 		PWAUsageWindowDays: deliveryCompose.PWAUsageWindowDays,
 		Organizations:      organizations,
+		Accounts:           NewOperatorAccountDirectory(),
 		// The observer of the owner's records command (#4720).
 		Observe: observeOrganizationTenancy,
 		Identity: ProvisioningIdentity{
 			Sessions: identity, Invitations: identity, Provisioning: identity,
-			Administration: identity, SchoolIdentity: identity, Roles: identity, Accounts: accounts,
+			Administration: identity, SchoolIdentity: identity, Roles: identity,
 			Traeger: identity,
 		},
 		Devices:    adapters.Devices,
@@ -79,7 +80,6 @@ type ProvisioningRoles interface {
 
 // ProvisioningIdentity binds provisioning to public identity capabilities.
 type ProvisioningIdentity struct {
-	Accounts       OperatorAccountDirectory
 	Sessions       identityaccess.AccountSessionMaintenance
 	Invitations    identityaccess.SchoolInvitations
 	Provisioning   identityaccess.AccountProvisioning
@@ -232,48 +232,6 @@ func (p ProvisioningIdentity) EnsureSchoolIdentity(ctx context.Context, request 
 
 func (p ProvisioningIdentity) AssignRole(ctx context.Context, tenantID, accountID, roleID int64) error {
 	return provisioningIdentityError(p.Roles.AssignRoleToAccount(provisioningTenantScope.WithTenantID(ctx, tenantID), accountID, roleID))
-}
-
-func (p ProvisioningIdentity) ListSchoolAccounts(ctx context.Context, tenantID int64) ([]organizationCompose.SchoolAccount, error) {
-	accounts, err := p.Accounts.ListAccountsByTenantID(ctx, tenantID)
-	if err != nil || accounts == nil {
-		return nil, err
-	}
-	result := make([]organizationCompose.SchoolAccount, 0, len(accounts))
-	for _, account := range accounts {
-		result = append(result, organizationCompose.SchoolAccount(account))
-	}
-	return result, nil
-}
-
-func (p ProvisioningIdentity) ListOrganizationAccounts(ctx context.Context, organizationID int64) ([]organizationCompose.OrganizationAccount, error) {
-	accounts, err := p.Accounts.ListAccountsByOrganizationID(ctx, organizationID)
-	if err != nil || accounts == nil {
-		return nil, err
-	}
-	result := make([]organizationCompose.OrganizationAccount, 0, len(accounts))
-	for _, account := range accounts {
-		result = append(result, organizationCompose.OrganizationAccount{
-			SchoolAccount: organizationCompose.SchoolAccount(account.TenantAccountInfo),
-			SchoolID:      account.SchoolID, SchoolName: account.SchoolName,
-		})
-	}
-	return result, nil
-}
-
-func (p ProvisioningIdentity) ListAllAccounts(ctx context.Context) ([]organizationCompose.OrganizationAccount, error) {
-	accounts, err := p.Accounts.ListAllAccounts(ctx)
-	if err != nil || accounts == nil {
-		return nil, err
-	}
-	result := make([]organizationCompose.OrganizationAccount, 0, len(accounts))
-	for _, account := range accounts {
-		result = append(result, organizationCompose.OrganizationAccount{
-			SchoolAccount: organizationCompose.SchoolAccount(account.TenantAccountInfo),
-			SchoolID:      account.SchoolID, SchoolName: account.SchoolName,
-		})
-	}
-	return result, nil
 }
 
 func (p ProvisioningIdentity) RevokeSchoolSessions(ctx context.Context, tenantID int64) (int, error) {

@@ -4,9 +4,8 @@ status: accepted
 
 # Der Vertrag zwischen Go und Frontend entsteht aus der Go-Registrierung
 
-> Ergänzt am 2026-11-21 durch [ADR 0300](0300-kennungen-sind-ein-typ-des-shared-kernel.md):
-> `common.ID` ist ein Alias auf `sharedkernel/ident.ID`, und Phase 2 geht
-> abweichend von Punkt 5 in einem Deploy hinaus.
+> Die geltende HTTP-Form der Kennungen steht in Punkt 4 und 5 und in
+> [ADR 0300](0300-kennungen-sind-ein-typ-des-shared-kernel.md).
 
 Entscheidung vom 2026-11-16 für
 [#2342](https://github.com/moto-ogs/project-phoenix/issues/2342), Schritt A von
@@ -58,17 +57,18 @@ scheiterte der zweite Weg an zwei Stellen:
    Eine Variante bekommt ein Unterscheidungsfeld oder einen eigenen Pfad.
    `GET /api/students/` ist die eine benannte Altlast; ihre Liste im Generator
    darf nur schrumpfen.
-4. **Kennungen angemeldeter Routen tragen einen eigenen Go-Typ** (`common.ID`),
-   der sich als JSON-String schreibt und String oder Zahl liest. `int64` ist
-   auch ein Zähler, und `,string` wirkt nicht auf Slices; weder Feldname noch
-   Tag können die Sperre tragen. Ein nacktes `int64` auf einem angemeldeten
-   Typ lehnt der Generator ab, außer das Feld steht in der Liste der
-   numerischen Alt-Kennungen. Auch diese Liste darf nur schrumpfen.
-   `common.JSONID` behält seine Wire-Form.
-5. **Eine Route, die heute Zahlen sendet, wechselt in zwei Releases.** Zuerst
-   nimmt der erzeugte Decoder String und Zahl und gibt einen String heraus.
-   Einen Release später sendet Go Strings. Eine Zahl jenseits von 2^53 lässt
-   den Decoder scheitern, statt eine gerundete Kennung herauszugeben.
+4. **Bigint-Kennungen angemeldeter Routen tragen den Go-Typ `ident.ID`.**
+   HTTP-Antworten schreiben Kennungen über `wire.Marshal` als
+   Dezimalstrings. Der Generator lehnt ein nacktes `int64` auf einem
+   angemeldeten Typ ab; ein Betrag oder Zähler nennt `contract:"number"`.
+   Text unter einem Kennungsnamen trägt `contract_text:"Begründung"`; im
+   Modell steht der Grund als `text_reason`.
+5. **HTTP-Anfragen lesen Kennungen als Dezimalstrings.** Der erzeugte
+   Request-Typ schreibt Strings, der erzeugte Antwortdecoder nimmt nur
+   Strings. Gespeichertes JSON verwendet weiterhin die Standardkodierung
+   und bleibt numerisch. Die Geräte-API bleibt außerhalb dieses Vertrags
+   (ADR 0300). Die nachträgliche Typisierung von `string` zu `id` ändert
+   keine bereits als Dezimalstring übertragenen Kennungen.
 6. **Decoder vertragen Versionsunterschiede.** Sie ignorieren unbekannte
    Felder und scheitern an fehlenden oder kaputten Pflichtfeldern. Ein
    angemeldeter Enum ist im Typ eine Vereinigung seiner bekannten Werte, der
@@ -81,6 +81,17 @@ scheiterte der zweite Weg an zwei Stellen:
    nicht.
 8. **Ein Typ mit eigenem `MarshalJSON` braucht einen Eintrag im Generator.**
    Ohne Eintrag bricht die Erzeugung ab.
+
+## Nachtrag vom 2026-11-24: Browser-Adresse und Status
+
+Eine `RouteFile`-Registrierung hält den Go-Aufruf aus den Proxy-Listen.
+`BrowserPath` nennt zusätzlich die Adresse einer Routendatei für
+`bffPath`. Ohne sie bleibt der Go-Schlüssel serverseitig.
+`BrowserOwnContract` lässt die Adresse zu, aber nicht den Go-Request oder
+die Go-Antwort in `bffJson`, etwa bei der Cookie-Anmeldung. Weicht die
+Methode ab, nennt `BrowserMethod` die Methode der Routendatei.
+Alle JSON-Proxy-Wege behalten den Erfolgsstatus des Backends. Browser und
+Server behandeln eine unlesbare Antwort nach `NoCommit` wie bei einem GET.
 
 ## Folgen
 
@@ -105,16 +116,9 @@ Zwei Schreibrouten (`POST /api/students/`, `PUT /api/students/{id}`) und eine
 Leseroute des Elternportals (`GET /parent/me/enrollable-schools`) sind
 angemeldet. Daraus folgen drei Ergänzungen:
 
-- **Punkt 8 gilt auch beim Lesen.** Ein Request-Typ mit eigenem
-  `UnmarshalJSON` braucht einen Eintrag, der sagt, was er liest: die Felder
-  wie `encoding/json` oder zusätzlich jede Kennung als Zahl oder String. Ohne
-  Eintrag bricht die Erzeugung ab.
-- **Eine Kennung im Request ist im Client ein String**, außer Go liest das
-  Feld noch nur als Zahl. Diese Felder stehen in derselben Liste der
-  numerischen Alt-Kennungen und sind im erzeugten Typ `number`. Ihr Wechsel
-  zu `common.ID` braucht zwei Releases in umgekehrter Reihenfolge zu Punkt 5:
-  zuerst liest Go beide Formen, einen Release später sendet der Client
-  Strings.
+- **Punkt 8 gilt auch beim Lesen.** Eigene JSON-Leser für HTTP-Anfragen
+  verwenden `wire.Decode` oder `wire.Unmarshal`. Die erzeugten
+  Request-Typen verwenden für Kennungen Strings.
 - **Eine Route, deren Antwort ein anderer Owner rendert**, meldet der Owner
   des Handlers an; die Wurzel nennt den Antworttyp, so wie sie auch die
   Antwortfunktion bindet.
@@ -140,8 +144,7 @@ Body als JSON. Jede dieser Routen brauchte deshalb eine eigene Datei.
    `Content-Disposition`, `Content-Length`, `X-Content-Type-Options`);
    `Range`, `ETag`, `Last-Modified` und `Accept-Ranges` gingen nie durch und
    gehen auch jetzt nicht durch. Jede Antwort einer Datei-Route ist
-   `private, no-store`, auch eine Ablehnung, wie bei
-   `withPrivateDownloadNoStore`. Ein Backend-Fehler bleibt sein
+   `private, no-store`, auch eine Ablehnung. Ein Backend-Fehler bleibt sein
    Problem-JSON. Die Sandbox-CSP eines hochgeladenen Dokuments setzt
    `src/proxy.ts` weiter nach dem Pfad (`SANDBOXED_FILE_ROUTES`), gleich ob
    eine Routendatei oder der Katalog antwortet.
@@ -359,7 +362,8 @@ diese Fälle nicht mehr.
    GET-Datei mit `FileCache`) reicht `If-None-Match` und
    `If-Modified-Since` durch und gibt ein 304 mit `ETag`, `Last-Modified`
    und dem Cache der Route zurück; auf 200 gehen beide Validatoren mit.
-   Andere Routen erhalten keinen bedingten Header.
+   Das gilt für Dateien mit und ohne Sitzung. Andere Routen erhalten
+   keinen bedingten Header.
 3. **Prüfungen des BFF liegen im Backend.** Die öffentlichen
    Upload-Ordner liefern über `common.ServePublicAsset` nur ihre Art aus:
    der Typ folgt der Endung, PDF für die Rechtstexte (inline mit Namen),
@@ -402,7 +406,9 @@ durch die Datenbank-Dienste verlor die Seite des Backends.
    `frontend/src/lib/api-envelope.ts`; Clients führen keine eigene Hülle.
 2. **Ohne Daten.** Eine `NoData`-Route antwortet `{ status: "success",
    data: null }` mit der Nachricht des Backends; ein DELETE ohne Daten
-   antwortet weiter 204, wie bisher.
+   antwortet 204. Auch ein 204 aus Go wird geprüft. Verspricht der Vertrag
+   Daten, ist die leere Antwort ein Vertragsfehler. Eine leere 200 ist
+   auch für `NoData` ein Vertragsfehler.
 3. **Kein nacktes Payload.** Gegen eine Antwort nur aus `data` spricht, dass
    rund 130 Client-Dateien `.data` lesen und alle mitziehen müssten, ohne
    dass ein Leser etwas gewinnt; für sie spräche nur ein kürzerer Body. Die
@@ -463,6 +469,8 @@ Für [#7945](https://github.com/moto-ogs/project-phoenix/issues/7945).
    Ein Datum ist ein Text im Format `YYYY-MM-DD`; TypeScript prüft den
    Texttyp, Go das Format und den Kalendertag. Der Proxy filtert weiterhin
    nur Namen und reicht jeden Wert unverändert zur Prüfung an Go weiter.
+   `contractGet` wählt wie der Katalog-Proxy bei `GET /api/students/`
+   den Decoder nach `view`; ohne Angabe gilt die Standardvariante.
 2. **Alle Felder im erzeugten JSON-Body bleiben freiwillig.** Das ist
    keine Aussage darüber, ob der Handler eine Anfrage annimmt. Go bindet
    fehlende Felder als Nullwerte; erst die Prüfung im Handler entscheidet,
@@ -472,3 +480,90 @@ Für [#7945](https://github.com/moto-ogs/project-phoenix/issues/7945).
    Prüfung nur teilweise abbilden und könnte davon abweichen. Go bleibt
    deshalb die einzige Quelle dafür, welche Felder der konkrete Aufruf
    braucht. Der Client erhält eine Ablehnung über den Fehlervertrag.
+
+## Nachtrag: Derselbe Decoder auf dem Server
+
+Für [#8003](https://github.com/moto-ogs/project-phoenix/issues/8003):
+Server-Module und Layouts lesen angemeldete JSON-Routen über `contractGet`
+und schreiben über `contractWrite`. Der erzeugte Eintrag bestimmt den Pfad
+und die Typen von `params` und `query`; es gibt keine freie Zieladresse.
+Registriert eine benannte Browserroute Query-Parameter, gibt sie den
+eingegangenen `Request` mit. Der Transport leitet alle registrierten Werte
+weiter. Dateirouten streamt der Katalog-Proxy; die JSON-Helfer nehmen keine
+Dateieinträge an.
+Die Staff-Shell lässt nicht lesbare
+optionale Startdaten aus; der Browser lädt sie auf dem normalen Weg.
+Der Schul-Lookup prüft den öffentlichen Routeneintrag und speichert
+dekodierte Treffer mit geprüften Branding-Feldern sowie 404, aber keine
+anderen Fehler. Bei 429 erhält der Browser Gos `Retry-After`. Die
+Invalidierung gilt für Treffer und 404 und läuft
+serverseitig im Schreibaufruf, nicht in einem zweiten Browser-Aufruf. Der Generator
+übernimmt die betroffenen Einstellungsschlüssel aus Go. Der Operator-Write
+liefert die Subdomain direkt, ohne zweiten Lookup. Der Wächter in
+`route-backend-paths.test.ts` prüft
+auch Server-Module, nicht nur benannte BFF-Routen.
+
+Katalog-Proxy, benannte Routen und SSE verwenden für Ablehnungen vor dem
+Stream denselben Fehlerpfad. `gencontract` erzeugt die Fehlerdecoder aus den
+je Code registrierten Go-Typen und der SSE-Ereignisform. Strukturierte
+Ablaufdaten stehen unter `details`, nicht neben der Problem-Hülle.
+Eine unlesbare Erfolgsantwort, auch abgeschnittenes JSON, ergibt 502.
+Kann die Änderung festgeschrieben sein, lautet der Fehlercode
+`general.write_answer_unreadable`; bei GET und `NoCommit` bleibt der
+Fehler wiederholbar. Ein 204 ersetzt keine zugesagten Daten.
+
+## Nachtrag vom 2026-11-24: Getypte Datei-Adressen und Sitzungsanfragen
+
+1. **Eine Datei-Adresse kommt aus dem Vertrag.** `bffFileHref` baut Links
+   aus einem registrierten GET-Dateischlüssel mit getypten Pfad- und
+   Query-Parametern. `bffFile` bleibt der Aufruf, der einen `Response`
+   liefert. `bffPath` baut andere registrierte Adressen mit einem Routenschlüssel.
+   Beim Schülerfoto liefert Go Schülerkennung und Fotoversion. Das BFF hält
+   `photo_url` nur für ältere Tabs aus derselben Dateiroute verfügbar.
+   Der Wächter prüft den Produktcode auf handgebaute Adressen, auch wenn
+   Templates oder Verkettungen Konstanten und Hilfsfunktionen nutzen.
+   Die Lint-Ausnahmen für ungetypte Aufrufe gelten pro Datei, Methode und
+   Pfad für genau einen Aufruf.
+2. **Ein Sitzungsschritt erbt den Request-Typ, nicht den Antworttyp.**
+   `sessionBff` nutzt die erzeugten Request-Typen. Die Antwort der
+   Oberfläche bleibt eine Projektion des dekodierten Backend-Ergebnisses:
+   Sitzungstokens verlassen den Server nicht. Der Wächter für
+   handgeschriebene Wire-Typen prüft auch Objektzweige von Unions.
+3. **Auch bedingt gemountete Portalrouten haben einen Vertrag.** Das
+   Routengolden ergänzt den Demo-Router ohne Laufzeitabhängigkeiten. Die
+   Demo-Route-Dateien lesen Status, Sitzung und Neustart über erzeugte
+   Decoder. Die separate Website fordert den Link direkt an
+   ([ADR 0316](0316-demo-link-anfrage-bleibt-ein-website-vertrag.md)).
+
+
+## Ergänzung: Aufsichtsfelder verlassen die Staff-Navigation (#8085)
+
+`GET /api/me/navigation` behält Personalprofil und Schulschalter. Seine vier
+Aufsichtsfelder (`educational_groups`, `supervised_groups`, `incomplete`,
+`unavailable_sections`) entfallen im selben Schnitt wie ihre Leser. Der
+Staff-Shell-Seed und der Browser lesen stattdessen
+[`GET /api/active/supervision-context`](../agents/contracts.md#staff-supervision-context-8084-8085).
+Die Auswertung des Lasttests liest keine dieser Eigenschaften; der Kiosk
+liest die Route nicht. Allgemeine Gruppen- und Aufsichtsabfragen für andere
+Leser bleiben unverändert.
+
+Die Vertragsprüfung erlaubt ausschließlich diese vier Feldentfernungen aus
+dem alten Go-Vertrag dieser Route. Der Schnitt setzt gemeinsam ausgelieferte
+Go- und Next-Versionen und danach neu geladene Staff-Tabs voraus. Ein alter
+Next-Decoder kann die kürzere Antwort nicht lesen. Die gewöhnliche
+Deprecation-Regel gilt für alle anderen Vertragsänderungen.
+
+## Ergänzung: Zwei ungenutzte Aufsichtsrouten entfallen
+
+Nach #8084 und #8085 liest die Staff-Oberfläche den Aufsichtskontext über
+`GET /api/active/supervision-context`. Die Suche in den Clients, Skripten,
+der Betriebs- und Monitoring-Konfiguration sowie in PyrePortal ergab keine
+Aufrufer mehr für `GET /api/students/ogs-group-navigation` oder
+`GET /api/active/supervisors/all`. Der k6-Kapazitätstest ruft weiterhin
+`GET /api/me/groups/supervised` auf; dieser Vertrag bleibt.
+
+Wie beim Schnitt für #8085 erlaubt die Vertragsprüfung nur die ausdrücklich
+benannten Entfernungen, hier die zwei bisherigen tenant-exklusiven
+GET-Routen mit ihren bisherigen Antworttypen. Die Deprecation-Regel gilt
+unverändert für andere Verträge. Ein älterer Client von vor der Umstellung
+muss neu geladen werden. Der Proxy leitet die beiden Pfade nicht mehr weiter.

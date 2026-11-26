@@ -120,7 +120,7 @@ func grantSharedDeveloperAdmin(rt *Runtime, manual *bootstrapSeedState) (Account
 	}
 	path := fmt.Sprintf("/operator/accounts/%d/tenants", credential.AccountID)
 	body := map[string]any{
-		"school_id": manual.SchoolID, "role_id": roleID,
+		"school_id": ident.ID(manual.SchoolID), "role_id": ident.ID(roleID),
 		"first_name": member.FirstName, "last_name": member.LastName, "position": member.Position,
 	}
 	if _, err := rt.Client.PostWithAuth(rt.OperatorAuth, path, body); err != nil {
@@ -270,7 +270,7 @@ func seedManualGroups(rt *Runtime) (map[string]SeedEntityRef, error) {
 	groups := make(map[string]SeedEntityRef, 2)
 	for index := 1; index <= 2; index++ {
 		name := fmt.Sprintf("Bezugsgruppe %d", index)
-		raw, err := rt.Client.Post("/api/groups", map[string]any{"name": name, "teacher_ids": []int64{}})
+		raw, err := rt.Client.Post("/api/groups", map[string]any{"name": name, "teacher_ids": []ident.ID{}})
 		if err != nil {
 			return nil, fmt.Errorf("create manual profile group %s: %w", name, err)
 		}
@@ -336,7 +336,7 @@ func manualStudentPayload(index int, student DemoStudent, groupID int64, contact
 	}
 	return map[string]any{
 		"first_name": student.FirstName, "last_name": student.LastName,
-		"school_class": student.Class, "group_id": groupID,
+		"school_class": student.Class, "group_id": ident.ID(groupID),
 		"birthday":      fmt.Sprintf("2018-%02d-%02d", index%12+1, index%28+1),
 		"pickup_status": "Wird abgeholt", "arrival_schedules": arrival, "pickup_schedules": pickup,
 		"guardians": []map[string]any{{
@@ -668,7 +668,7 @@ func buildManualSeedProfile(rt *Runtime, definition demoProfileDefinition, boots
 		},
 		Settings: cloneProfileSettings(definition.Settings),
 		Credentials: SeedStateCredentials{
-			Operator:    &SeedOperatorCredentials{Email: rt.OperatorEmail, Password: rt.OperatorPassword},
+			Operator:    &SeedPortalCredentials{Email: rt.OperatorEmail, Password: rt.OperatorPassword},
 			SchoolAdmin: makeBootstrapSeedState(bootstrap).SchoolAdmin,
 			DevicePIN:   rt.StaffPIN, Accounts: SeedStateAccounts{Admin: []AccountCredentials{shared}},
 		},

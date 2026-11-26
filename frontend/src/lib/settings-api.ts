@@ -1,5 +1,10 @@
+import { knownEnum } from "./contract/known-enum";
 import { ApiError } from "./api-error";
 import { bffJson } from "./bff-fetch";
+import type {
+  DevicePINStatus,
+  loginImageResponse,
+} from "./contract/settings.generated";
 import type * as wire from "./contract/shared.generated";
 import { createLogger } from "./logger";
 import { shellResourceKeys } from "./swr/shell-keys";
@@ -27,21 +32,26 @@ export interface SchemaCategory {
   items: ResolvedSetting[];
 }
 
-type AccessPolicy =
-  | "shared"
-  | "admin_only"
-  | "operator_only"
-  // Operator ändert, Schule liest (ADR 0048): die Löschfristen.
-  | "operator_managed";
-
-/**
- * Where a value may be set (ADR 0086): only at the school, at the Träger with
- * a school deviation allowed, or only at the Träger.
- */
-type SettingLevels = "schule" | "beide" | "traeger";
-
-/** Where the effective value comes from: registry default, Träger, school. */
-type SettingSource = "default" | "traeger" | "school";
+const accessPolicies = [
+  "shared",
+  "admin_only",
+  "operator_only",
+  "operator_managed",
+] as const;
+const settingLevels = ["schule", "beide", "traeger"] as const;
+const settingSources = ["default", "traeger", "school"] as const;
+const settingTypes = [
+  "boolean",
+  "number",
+  "time",
+  "date",
+  "text",
+  "textarea",
+  "color",
+  "password",
+  "select",
+  "multiselect",
+] as const;
 
 type Nullable<T> = { [K in keyof T]: T[K] | null };
 
@@ -72,21 +82,23 @@ export type ResolvedSetting = Omit<
       >
     >
   > & {
-    type:
-      | "boolean"
-      | "number"
-      | "time"
-      | "date"
-      | "text"
-      | "textarea"
-      | "color"
-      | "password"
-      | "select"
-      | "multiselect";
-    access_policy: AccessPolicy;
-    levels: SettingLevels;
-    source: SettingSource;
+    type: (typeof settingTypes)[number];
+    access_policy: (typeof accessPolicies)[number];
+    levels: (typeof settingLevels)[number];
+    source: (typeof settingSources)[number];
   };
+
+function toResolvedSetting(
+  item: wire.ResolvedSetting,
+): ResolvedSetting | undefined {
+  const type = knownEnum(settingTypes, item.type);
+  const access_policy = knownEnum(accessPolicies, item.access_policy);
+  const levels = knownEnum(settingLevels, item.levels);
+  const source = knownEnum(settingSources, item.source);
+  // Do not offer editing controls whose type or scope this release cannot interpret.
+  if (!type || !access_policy || !levels || !source) return undefined;
+  return { ...item, type, access_policy, levels, source };
+}
 
 // --- Optimistic Update Helper ---
 
@@ -225,9 +237,10 @@ export function toSettingsSchema(schema: wire.SettingsSchema): SettingsSchema {
                       {
                         key: category.key,
                         label: category.label,
-                        items: (category.items ?? []).flatMap((item) =>
-                          item ? [item as unknown as ResolvedSetting] : [],
-                        ),
+                        items: (category.items ?? []).flatMap((item) => {
+                          const mapped = item && toResolvedSetting(item);
+                          return mapped ? [mapped] : [];
+                        }),
                       },
                     ]
                   : [],
@@ -342,7 +355,14 @@ export type DevicePinSetupReason = "missing" | "too_simple";
  * never sends the PIN itself.
  */
 export async function fetchDevicePinSetupReason(): Promise<DevicePinSetupReason | null> {
-  const status = await bffJson("tenant", "GET /api/settings/device-pin-status");
+  return mapDevicePinSetupReason(
+    await bffJson("tenant", "GET /api/settings/device-pin-status"),
+  );
+}
+
+export function mapDevicePinSetupReason(
+  status: DevicePINStatus,
+): DevicePinSetupReason | null {
   if (status.setup_required !== true) return null;
   // An unknown reason from a newer backend still asks for a PIN.
   return status.reason === "too_simple" ? "too_simple" : "missing";
@@ -360,4 +380,11 @@ export async function fetchSchoolContactEmail(): Promise<string> {
     { errorMessage: "School contact address could not be loaded" },
   );
   return contact.email ?? "";
+}
+
+export function mapLoginImageSetting(data: loginImageResponse) {
+  return {
+    loginImageUrl: data.login_image_url ?? null,
+    canEdit: data.can_edit,
+  };
 }

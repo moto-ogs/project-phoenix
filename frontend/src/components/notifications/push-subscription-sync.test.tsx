@@ -50,7 +50,7 @@ describe("PushSubscriptionSync", () => {
   it("rebinds an existing subscription after authentication", async () => {
     mocks.useSession.mockReturnValue({
       status: "authenticated",
-      data: { user: { id: "account-1", tenantId: 1 } },
+      data: { user: { id: "account-1", tenantId: "1" } },
     });
 
     render(<PushSubscriptionSync portal="parent" />);
@@ -64,7 +64,7 @@ describe("PushSubscriptionSync", () => {
     expect(mocks.reportStandaloneUsage).toHaveBeenCalledWith(
       "parent",
       "account-1",
-      1,
+      "1",
     );
   });
 
@@ -82,7 +82,7 @@ describe("PushSubscriptionSync", () => {
   it("reports standalone usage when push is unsupported", async () => {
     mocks.useSession.mockReturnValue({
       status: "authenticated",
-      data: { user: { id: "account-1", tenantId: 1 } },
+      data: { user: { id: "account-1", tenantId: "1" } },
     });
     mocks.isPushSupported.mockReturnValue(false);
 
@@ -92,7 +92,7 @@ describe("PushSubscriptionSync", () => {
       expect(mocks.reportStandaloneUsage).toHaveBeenCalledWith(
         "tenant",
         "account-1",
-        1,
+        "1",
       ),
     );
     expect(mocks.syncExistingPushSubscription).not.toHaveBeenCalled();
@@ -101,7 +101,7 @@ describe("PushSubscriptionSync", () => {
   it("rebinds nothing while the server has no Web Push key", async () => {
     mocks.useSession.mockReturnValue({
       status: "authenticated",
-      data: { user: { id: "account-1", tenantId: 1 } },
+      data: { user: { id: "account-1", tenantId: "1" } },
     });
     setPushPublicKey("missing");
 
@@ -111,7 +111,7 @@ describe("PushSubscriptionSync", () => {
       expect(mocks.reportStandaloneUsage).toHaveBeenCalledWith(
         "tenant",
         "account-1",
-        1,
+        "1",
       ),
     );
     expect(mocks.syncExistingPushSubscription).not.toHaveBeenCalled();

@@ -3426,7 +3426,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.RenamePerson",
-      "binding_digest": "83c5850c57718e05bb751d25ccb17700",
+      "binding_digest": "a7a15c647f402e5f99000665305be883",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.RenamePerson",
       "source_owner": "student-presence",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose.Directory.RenamePerson",
@@ -3434,7 +3434,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.RenamePerson",
-      "binding_digest": "b5d0d6b3788b0121f620caede0fce2ee",
+      "binding_digest": "bd49f293aacf5713fa8ec89254117d09",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.RenamePerson",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.RenamePerson",
@@ -3442,7 +3442,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.RenamePerson",
-      "binding_digest": "26d4dcc04e2bb8faeb29a97df8565b9f",
+      "binding_digest": "7031a01ab2f8c5a35971532b9cfaabf8",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.RenamePerson",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.RenamePerson",
@@ -3450,7 +3450,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.RenamePerson",
-      "binding_digest": "26d4dcc04e2bb8faeb29a97df8565b9f",
+      "binding_digest": "7031a01ab2f8c5a35971532b9cfaabf8",
       "port": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.RenamePerson",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.RenamePerson",
@@ -9985,6 +9985,14 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/facilities.Closures.RoomClosedOn",
+      "binding_digest": "1714e67940bef27813a59de6bac9ec6f",
+      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.RoomClosures.RoomClosedOn",
+      "source_owner": "student-presence",
+      "target": "github.com/moto-ogs/project-phoenix/modules/facilities.Closures.RoomClosedOn",
+      "target_owner": "facilities"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListRoomSessionHistory",
       "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.RoomHistoryQuery.ListRoomSessionHistory",
@@ -13262,14 +13270,6 @@
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.StaffAccess.GetCurrentStaff",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.AttendanceRouteStaff.GetCurrentStaff",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/api.activeStaffAccess.HasCurrentStaff",
-      "binding_digest": "d0788398f6b9f115e9434e95da2b0b8d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.StaffAccess.HasCurrentStaff",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.AttendanceRouteStaff.HasCurrentStaff",
       "target_owner": "people-directory"
     },
     {
@@ -18225,6 +18225,22 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.MoodCaptureStopped",
+      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
+      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.RoomHistoryStopStore.MoodCaptureStopped",
+      "source_owner": "student-presence",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.MoodCaptureStopped",
+      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
+      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.RoomHistoryStopStore.MoodCaptureStopped",
+      "source_owner": "student-presence",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
+      "target_owner": "tenant-runtime"
+    },
+    {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application.Service.RoomUtilization",
       "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.RoomUtilizations.RoomUtilization",
@@ -19060,6 +19076,14 @@
       "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.MarkParticipantsNotScheduled",
       "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.MarkParticipantsNotScheduled",
+      "source_owner": "student-presence",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/adapters/postgres.Store.MoodCaptureStopped",
+      "binding_digest": "fe1f19a8ed0a85de235dd7f44b04d520",
+      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.Store.MoodCaptureStopped",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/tenant.CurrentTenantTransaction",
       "target_owner": "tenant-runtime"

@@ -75,11 +75,15 @@ func (careContractTestSender) WithdrawalReach(context.Context, int64) (carecontr
 
 // NewParentContractSigningForTests composes the signature in the parents'
 // inbox (#4679) over the real ledger and store, with the mails recorded.
-func NewParentContractSigningForTests(mails *CareContractTestMails) carecontract.InboxSigning {
+func NewParentContractSigningForTests(mails *CareContractTestMails, clock ...func() time.Time) carecontract.InboxSigning {
+	now := time.Now
+	if len(clock) > 0 {
+		now = clock[0]
+	}
 	return careContractCompose.NewInboxSigning(careContractCompose.SignaturePorts{
 		Ledger: NewCareContractSignatures(), Links: CareContractLinks("http://parents.localhost:3000"),
 		Sender: careContractTestSender{}, Post: mails, Runtime: CareContractRuntime{}, Holidays: CareContractTestHolidays{}, Families: NewCareContractFamilyNumbers(),
-	}, time.Now)
+	}, now)
 }
 
 // RecordCareContractSendForTests stores the signing link of a contract a

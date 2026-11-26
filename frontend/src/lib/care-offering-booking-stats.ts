@@ -29,6 +29,12 @@ export async function fetchCareOfferingBookingStats(
       errorMessage: "Belegung konnte nicht geladen werden",
     },
   );
+  return mapCareOfferingBookingStats(list);
+}
+
+export function mapCareOfferingBookingStats(
+  list: readonly enrollmentContract.CareOfferingBookingStatsResponse[],
+) {
   return Object.fromEntries(list.map((entry) => [entry.offering_id, entry]));
 }
 

@@ -86,7 +86,7 @@
     },
     {
       "build": "testhooks",
-      "evidence": "func (s *legacyGroupManagement) SetStaffSchoolClasses(ctx context.Context, id int64, classes []string, changedBy int64) error {\n\treturn legacyGroupError(s.capability.SetStaffSchoolClasses(ctx, id, classes, changedBy))\n}",
+      "evidence": "func (s *legacyGroupManagement) SetStaffSchoolClasses(ctx context.Context, id int64, classes []string, expectedVersion string, changedBy int64) error {\n\treturn legacyGroupError(s.capability.SetStaffSchoolClasses(ctx, id, classes, expectedVersion, changedBy))\n}",
       "form": "unclassified-evidence",
       "id": "modules/schoolstructure/compose/legacyGroupManagement.SetStaffSchoolClasses",
       "owner": "modules/schoolstructure"
@@ -219,7 +219,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (s *groupManagement) SetStaffSchoolClasses(ctx context.Context, id int64, classes []string, changedBy int64) error {\n\treturn PublicGroupError(s.service.SetStaffSchoolClasses(ctx, id, classes, changedBy))\n}",
+      "evidence": "func (s *groupManagement) SetStaffSchoolClasses(ctx context.Context, id int64, classes []string, expectedVersion string, changedBy int64) error {\n\treturn PublicGroupError(s.service.SetStaffSchoolClasses(ctx, id, classes, expectedVersion, changedBy))\n}",
       "form": "unclassified-evidence",
       "id": "modules/schoolstructure/internal/application/groups/groupManagement.SetStaffSchoolClasses",
       "owner": "modules/schoolstructure"

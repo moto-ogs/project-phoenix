@@ -38,7 +38,7 @@ vi.mock("next/navigation", () => ({
 
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
-    data: { user: { id: "7", tenantId: 1 }, expires: "2099-01-01" },
+    data: { user: { id: "7", tenantId: "1" }, expires: "2099-01-01" },
     status: "authenticated",
   }),
 }));
@@ -83,7 +83,7 @@ vi.mock("~/lib/parent-group-threads-api", async (importOriginal) => ({
   postGroupMessage: mockPostGroupMessage,
 }));
 
-import GroupMessagePage from "./page";
+import GroupMessagePage from "./page-content";
 
 const detail = {
   thread: {
@@ -138,7 +138,9 @@ describe("Gruppennachricht senden: Ablehnung je Code", () => {
   beforeEach(() => {
     mockFetchGroupThread.mockReset().mockResolvedValue(detail);
     // No message has an e-mail: the mail status side-load stays empty.
-    mockFetchGroupThreadMails.mockReset().mockResolvedValue({});
+    mockFetchGroupThreadMails
+      .mockReset()
+      .mockResolvedValue({ mails: {}, awaitingFeedback: false });
     mockPostGroupMessage.mockReset();
     tenantFlags.messagingEnabled = true;
   });

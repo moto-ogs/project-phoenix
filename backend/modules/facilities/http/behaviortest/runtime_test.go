@@ -23,9 +23,7 @@ import (
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
-// init seeds JWT viper defaults before any test (and before setupRoomsRoute
-// constructs a Resource via sessiontoken.MustNewTokenAuth). CI runs without a .env so
-// AUTH_JWT_SECRET is unset; without a secret jwx refuses HMAC signing.
+// CI runs without a .env; the route fixtures need an explicit signing key.
 func init() {
 	testutil.SeedTestJWTConfig()
 }
@@ -384,32 +382,6 @@ func TestDeleteRoom(t *testing.T) {
 
 	t.Run("bad_request_for_invalid_id", func(t *testing.T) {
 		req := testutil.NewRequest("DELETE", "/invalid", nil)
-
-		rr := testutil.ExecuteWithAuth(t, tc.router, req, testutil.AdminTestClaims(1))
-
-		testutil.AssertBadRequest(t, rr)
-	})
-}
-
-// =============================================================================
-// Get Rooms by Category Tests
-// =============================================================================
-
-func TestGetRoomsByCategory(t *testing.T) {
-	t.Parallel()
-
-	tc := setupRoomsRoute(t)
-
-	t.Run("success_gets_rooms_by_category", func(t *testing.T) {
-		req := testutil.NewRequest("GET", "/by-category?category=classroom", nil)
-
-		rr := testutil.ExecuteWithAuth(t, tc.router, req, testutil.AdminTestClaims(1))
-
-		assert.Equal(t, http.StatusOK, rr.Code, "Expected 200 OK. Body: %s", rr.Body.String())
-	})
-
-	t.Run("bad_request_missing_category", func(t *testing.T) {
-		req := testutil.NewRequest("GET", "/by-category", nil)
 
 		rr := testutil.ExecuteWithAuth(t, tc.router, req, testutil.AdminTestClaims(1))
 

@@ -104,7 +104,7 @@ func TestParentPortalContractInboxListsReadsAndSignsAContract(t *testing.T) {
 	var contracts []parentHTTP.BillingDocumentResponse
 	r.call(t, http.MethodGet, "/parent/me/documents/contracts", token, nil, &contracts)
 	require.Len(t, contracts, 1)
-	assert.Equal(t, fmt.Sprint(sent), contracts[0].ID)
+	assert.Equal(t, fmt.Sprint(sent), contracts[0].ID.String())
 	assert.True(t, contracts[0].CanSign)
 
 	path := fmt.Sprintf("/parent/me/documents/%d/contracts/%d", organization, sent)
@@ -146,6 +146,6 @@ func TestParentPortalSharedDocumentsListTheReleasedDocuments(t *testing.T) {
 	var documents []parentHTTP.SharedDocumentResponse
 	r.call(t, http.MethodGet, "/parent/me/documents/shared", parentReadToken(t, chain.AccountID), nil, &documents)
 	require.Len(t, documents, 1, "only the released document")
-	assert.Equal(t, fmt.Sprint(released), documents[0].ID)
-	assert.Equal(t, fmt.Sprint(organization), documents[0].OrganizationID)
+	assert.Equal(t, fmt.Sprint(released), documents[0].ID.String())
+	assert.Equal(t, fmt.Sprint(organization), documents[0].OrganizationID.String())
 }

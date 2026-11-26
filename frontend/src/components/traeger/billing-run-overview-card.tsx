@@ -129,10 +129,10 @@ function leftForChild(
  */
 function draftShapeText(documents: readonly BillingDocument[]): string {
   const perChild = documents.filter((document) => document.registrationChildId);
-  if (perChild.length === 0) return "Je Familie eine Rechnung.";
+  if (perChild.length === 0) return "Pro Familie eine Rechnung.";
   return perChild.length === documents.length
-    ? "Je Kind eine Rechnung, auch für Geschwister."
-    : "Je Kind eine Rechnung, auch für Geschwister. Eine Anmeldung mit einer Rechnung von vor der Umstellung behält ihre eine Rechnung.";
+    ? "Pro Kind eine Rechnung, auch für Geschwister."
+    : "Pro Kind eine Rechnung, auch für Geschwister. Eine Anmeldung mit einer Rechnung von vor der Umstellung behält ihre eine Rechnung.";
 }
 
 function invoicesDescription(
@@ -148,13 +148,13 @@ function invoicesDescription(
         {draftShapeText(documents)}
         <span className="md:hidden">
           {" "}
-          Die Aufschlüsselung je Kind steht im Menü der Zeile.
+          Die Aufschlüsselung pro Kind steht im Menü der Zeile.
         </span>
       </>
     );
   }
   const overview =
-    "Die Übersicht für die Kämmerei enthält jede Position, die Summe je Rechnung und die Gesamtsumme. Storno und Gutschrift stehen als eigene Zeilen mit Minusbetrag.";
+    "Die Übersicht für die Kämmerei enthält jede Position, die Summe pro Rechnung und die Gesamtsumme. Storno und Gutschrift stehen als eigene Zeilen mit Minusbetrag.";
   return canPreview
     ? `${overview} Wähle eine Zeile, um ihr Schreiben als PDF zu sehen.`
     : overview;
@@ -274,7 +274,7 @@ export function BillingRunOverviewCard({
   // Panel die neuen Beträge.
   const [shownKey, setShownKey] = useState<string | null>(null);
   // Below md the table shows its rows stacked, with the row menu in the
-  // row's head (DataTable `stackedOnMobile`).
+  // row's head (DataTable stacked phone layout).
   const isPhoneRow = useMediaQuery(BELOW_MD);
   const [breakdownShown, setBreakdownShown] = useState(false);
   // The issued document whose letter shows beside the list (#5692).
@@ -459,6 +459,11 @@ export function BillingRunOverviewCard({
                 {reference}
               </span>
             ) : null}
+            {document.issuerName ? (
+              <span className="text-sm wrap-anywhere text-gray-600">
+                Stellt {document.issuerName} aus
+              </span>
+            ) : null}
           </span>
         );
       },
@@ -586,7 +591,6 @@ export function BillingRunOverviewCard({
       }
       activeRowKey={previewed ? rowKey(previewed) : null}
       rowHasInteractiveControls
-      stackedOnMobile
       emptyState={
         <EmptyState
           title="Keine Rechnung in diesem Lauf."
@@ -631,7 +635,7 @@ export function BillingRunOverviewCard({
             className="max-md:hidden"
             tooltip={
               breakdownShown
-                ? "Blendet die Beträge je Kind in der Liste wieder aus."
+                ? "Blendet die Beträge pro Kind in der Liste wieder aus."
                 : "Zeigt in jeder Zeile die Beträge für jedes Kind."
             }
             onClick={() => setBreakdownShown((shown) => !shown)}

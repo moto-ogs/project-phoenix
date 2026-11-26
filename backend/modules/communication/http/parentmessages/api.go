@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -16,6 +15,8 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	"github.com/moto-ogs/project-phoenix/modules/communication"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // Resource is the staff messaging HTTP resource.
@@ -77,13 +78,13 @@ func (rs *Resource) Router(protectedTenantRoutes func(chi.Router, func(chi.Route
 // --- wire shapes (int64 ids stringified per the frontend convention) ---
 
 type ParentChatInboxThreadResponse struct {
-	ThreadID         string `json:"thread_id"`
-	StudentID        string `json:"student_id"`
-	StudentName      string `json:"student_name"`
-	SchoolClass      string `json:"school_class,omitempty"`
-	GroupName        string `json:"group_name,omitempty"`
-	GuardianName     string `json:"guardian_name"`
-	RelationshipType string `json:"relationship_type,omitempty"`
+	ThreadID         ident.ID `json:"thread_id"`
+	StudentID        ident.ID `json:"student_id"`
+	StudentName      string   `json:"student_name"`
+	SchoolClass      string   `json:"school_class,omitempty"`
+	GroupName        string   `json:"group_name,omitempty"`
+	GuardianName     string   `json:"guardian_name"`
+	RelationshipType string   `json:"relationship_type,omitempty"`
 	// Audience is "team" or "leadership" (#5200). A caller without the
 	// leadership permission never receives a leadership row.
 	Audience        string          `json:"audience"`
@@ -105,9 +106,9 @@ type ReadersResponse struct {
 }
 
 type GuardianReaderResponse struct {
-	AccountID        string `json:"account_id"`
-	Name             string `json:"name"`
-	RelationshipType string `json:"relationship_type,omitempty"`
+	AccountID        ident.IDOrNone `json:"account_id"`
+	Name             string         `json:"name"`
+	RelationshipType string         `json:"relationship_type,omitempty"`
 }
 
 // SchoolReadersResponse names the school side. names carries only the
@@ -121,21 +122,17 @@ type SchoolReadersResponse struct {
 
 func toReadersResponse(readers communication.ParentMessageReaders) ReadersResponse {
 	names, unnamed := communication.SplitParentMessageLeaderNames(readers.School.Names)
-	accountID := ""
-	if readers.Guardian.AccountID > 0 {
-		accountID = strconv.FormatInt(readers.Guardian.AccountID, 10)
-	}
 	return ReadersResponse{
 		Guardian: GuardianReaderResponse{
-			AccountID: accountID, Name: readers.Guardian.Name, RelationshipType: readers.Guardian.RelationshipType,
+			AccountID: ident.Optional(readers.Guardian.AccountID), Name: readers.Guardian.Name, RelationshipType: readers.Guardian.RelationshipType,
 		},
 		School: SchoolReadersResponse{Kind: readers.School.Kind, Names: names, UnnamedCount: unnamed},
 	}
 }
 
 type ParentChatMessageResponse struct {
-	ClientMessageID string          `json:"client_message_id,omitempty"`
-	ID              string          `json:"id"`
+	ClientMessageID string          `json:"client_message_id,omitempty" contract_text:"client-supplied message deduplication key"`
+	ID              ident.ID        `json:"id"`
 	SenderKind      string          `json:"sender_kind"`
 	SenderName      string          `json:"sender_name"`
 	Body            string          `json:"body"`
@@ -147,23 +144,23 @@ type ParentChatMessageResponse struct {
 	RequestStatus   string          `json:"request_status,omitempty"`
 	Payload         json.RawMessage `json:"payload,omitempty" contract_json:"The message kind selects an extensible event payload, including historical kinds"`
 	RefTable        string          `json:"ref_table,omitempty"`
-	RefID           string          `json:"ref_id,omitempty"`
+	RefID           *ident.ID       `json:"ref_id,omitempty"`
 	AppliedAt       *time.Time      `json:"applied_at,omitempty"`
-	AppliedBy       string          `json:"applied_by,omitempty"`
+	AppliedBy       *ident.ID       `json:"applied_by,omitempty"`
 	DecisionReason  string          `json:"decision_reason,omitempty"`
 	ReadByStaff     bool            `json:"read_by_staff,omitempty"`
 	ReadByGuardian  bool            `json:"read_by_guardian,omitempty"`
 	// GroupThreadID and GroupThreadTitle name the group thread a guardian's
 	// message answers (#4784).
-	GroupThreadID    string `json:"group_thread_id,omitempty"`
-	GroupThreadTitle string `json:"group_thread_title,omitempty"`
+	GroupThreadID    *ident.ID `json:"group_thread_id,omitempty"`
+	GroupThreadTitle string    `json:"group_thread_title,omitempty"`
 	// Attachments are the photos and files of the message (#6685).
 	Attachments []ParentMessageAttachmentResponse `json:"attachments,omitempty"`
 }
 
 type ParentChatThreadDetailResponse struct {
-	ThreadID         string                      `json:"thread_id"`
-	StudentID        string                      `json:"student_id"`
+	ThreadID         ident.ID                    `json:"thread_id"`
+	StudentID        ident.ID                    `json:"student_id"`
 	StudentName      string                      `json:"student_name"`
 	GuardianName     string                      `json:"guardian_name"`
 	RelationshipType string                      `json:"relationship_type,omitempty"`
@@ -175,7 +172,7 @@ type ParentChatThreadDetailResponse struct {
 // ReachableStudentsResponse lists the children with at least one guardian
 // the recipient step would offer.
 type ReachableStudentsResponse struct {
-	StudentIDs []string `json:"student_ids"`
+	StudentIDs []ident.ID `json:"student_ids"`
 }
 
 // MessageableGuardianResponse is one recipient for a new conversation. readers says
@@ -184,7 +181,7 @@ type ReachableStudentsResponse struct {
 // leadership_available tells a leadership member whether a new leadership
 // conversation may begin and is false for every other caller.
 type MessageableGuardianResponse struct {
-	AccountID           string          `json:"account_id"`
+	AccountID           ident.ID        `json:"account_id"`
 	Name                string          `json:"name"`
 	RelationshipType    string          `json:"relationship_type,omitempty"`
 	IsPrimary           bool            `json:"is_primary"`
@@ -193,34 +190,26 @@ type MessageableGuardianResponse struct {
 }
 
 type ParentChatPostMessageRequest struct {
-	ClientMessageID      string `json:"client_message_id,omitempty"`
-	Body                 string `json:"body"`
-	HandledUpToMessageID string `json:"handled_up_to_message_id,omitempty"`
+	ClientMessageID      string         `json:"client_message_id,omitempty" contract_text:"client-supplied message deduplication key"`
+	Body                 string         `json:"body"`
+	HandledUpToMessageID ident.IDOrNone `json:"handled_up_to_message_id,omitzero"`
 	// AttachmentIDs names the uploads the message carries (#6685).
-	AttachmentIDs []string `json:"attachment_ids,omitempty"`
+	AttachmentIDs []ident.ID `json:"attachment_ids,omitempty"`
 }
 
 // OpenThreadRequest takes an optional audience, "team" (default) or
 // "leadership" (#5200).
 type OpenThreadRequest struct {
-	StudentID         string `json:"student_id"`
-	GuardianAccountID string `json:"guardian_account_id"`
-	Audience          string `json:"audience,omitempty"`
+	StudentID         ident.ID `json:"student_id"`
+	GuardianAccountID ident.ID `json:"guardian_account_id"`
+	Audience          string   `json:"audience,omitempty"`
 }
 
 func toMessageResponses(messages []communication.ParentMessage, viewer ...int64) []ParentChatMessageResponse {
 	out := make([]ParentChatMessageResponse, 0, len(messages))
 	for _, m := range messages {
-		refID := ""
-		if m.RefID != nil {
-			refID = strconv.FormatInt(*m.RefID, 10)
-		}
-		appliedBy := ""
-		if m.AppliedBy != nil {
-			appliedBy = strconv.FormatInt(*m.AppliedBy, 10)
-		}
 		out = append(out, ParentChatMessageResponse{
-			ID:              strconv.FormatInt(m.ID, 10),
+			ID:              ident.ID(m.ID),
 			SenderKind:      m.SenderKind,
 			SenderName:      m.SenderName,
 			ClientMessageID: clientMessageIDForViewer(m.ClientMessageID, m.SenderAccountID, viewer), Body: m.Body,
@@ -232,13 +221,13 @@ func toMessageResponses(messages []communication.ParentMessage, viewer ...int64)
 			RequestStatus:    m.RequestStatus,
 			Payload:          m.Payload,
 			RefTable:         m.RefTable,
-			RefID:            refID,
+			RefID:            (*ident.ID)(m.RefID),
 			AppliedAt:        m.AppliedAt,
-			AppliedBy:        appliedBy,
+			AppliedBy:        (*ident.ID)(m.AppliedBy),
 			DecisionReason:   m.DecisionReason,
 			ReadByStaff:      m.ReadByStaff,
 			ReadByGuardian:   m.ReadByGuardian,
-			GroupThreadID:    optionalIDString(m.GroupThreadID),
+			GroupThreadID:    (*ident.ID)(m.GroupThreadID),
 			GroupThreadTitle: m.GroupThreadTitle,
 			Attachments:      toAttachmentResponses(m.Attachments),
 		})
@@ -246,17 +235,10 @@ func toMessageResponses(messages []communication.ParentMessage, viewer ...int64)
 	return out
 }
 
-func optionalIDString(id *int64) string {
-	if id == nil {
-		return ""
-	}
-	return strconv.FormatInt(*id, 10)
-}
-
 func toThreadDetail(d *communication.ParentMessageThread, viewer ...int64) ParentChatThreadDetailResponse {
 	return ParentChatThreadDetailResponse{
-		ThreadID:         strconv.FormatInt(d.ThreadID, 10),
-		StudentID:        strconv.FormatInt(d.StudentID, 10),
+		ThreadID:         ident.ID(d.ThreadID),
+		StudentID:        ident.ID(d.StudentID),
 		StudentName:      d.StudentName,
 		GuardianName:     d.GuardianName,
 		RelationshipType: d.RelationshipType,
@@ -282,8 +264,8 @@ func toInboxThreadResponses(rows []communication.ParentMessageInboxThread) []Par
 	out := make([]ParentChatInboxThreadResponse, 0, len(rows))
 	for _, t := range rows {
 		out = append(out, ParentChatInboxThreadResponse{
-			ThreadID:         strconv.FormatInt(t.ThreadID, 10),
-			StudentID:        strconv.FormatInt(t.StudentID, 10),
+			ThreadID:         ident.ID(t.ThreadID),
+			StudentID:        ident.ID(t.StudentID),
 			StudentName:      t.StudentName,
 			SchoolClass:      t.SchoolClass,
 			GroupName:        t.GroupName,
@@ -384,7 +366,7 @@ func (rs *Resource) getCountScope(w http.ResponseWriter, r *http.Request) {
 
 func (rs *Resource) setCountScope(w http.ResponseWriter, r *http.Request) {
 	var req CountScopeRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := wire.Decode(r.Body, &req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
 		return
 	}
@@ -410,7 +392,7 @@ func (rs *Resource) markThreadUnread(w http.ResponseWriter, r *http.Request) {
 
 // MarkHandledRequest names the last timeline row the client displayed.
 type MarkHandledRequest struct {
-	HandledUpToMessageID string `json:"handled_up_to_message_id"`
+	HandledUpToMessageID ident.ID `json:"handled_up_to_message_id"`
 }
 
 // markThreadHandled confirms the guardian activity for the whole team without a
@@ -421,12 +403,12 @@ func (rs *Resource) markThreadHandled(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req MarkHandledRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := wire.Decode(r.Body, &req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
 		return
 	}
-	handledUpToMessageID, err := strconv.ParseInt(req.HandledUpToMessageID, 10, 64)
-	if err != nil || handledUpToMessageID <= 0 {
+	handledUpToMessageID := req.HandledUpToMessageID.Int64()
+	if handledUpToMessageID <= 0 {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid handled message ID")))
 		return
 	}
@@ -443,18 +425,14 @@ func (rs *Resource) postMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req ParentChatPostMessageRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := wire.Decode(r.Body, &req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
 		return
 	}
-	var handledUpToMessageID int64
-	if req.HandledUpToMessageID != "" {
-		parsed, parseErr := strconv.ParseInt(req.HandledUpToMessageID, 10, 64)
-		if parseErr != nil || parsed <= 0 {
-			common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid handled message ID")))
-			return
-		}
-		handledUpToMessageID = parsed
+	handledUpToMessageID := req.HandledUpToMessageID.Int64()
+	if !req.HandledUpToMessageID.IsZero() && handledUpToMessageID <= 0 {
+		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid handled message ID")))
+		return
 	}
 	attachmentIDs, ok := common.ParseMessageSend(w, r, req.ClientMessageID, req.AttachmentIDs, communication.MaxMessageAttachments)
 	if !ok {
@@ -472,17 +450,17 @@ func (rs *Resource) postMessage(w http.ResponseWriter, r *http.Request) {
 
 func (rs *Resource) openThread(w http.ResponseWriter, r *http.Request) {
 	var req OpenThreadRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := wire.Decode(r.Body, &req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid request body")))
 		return
 	}
-	studentID, err := strconv.ParseInt(req.StudentID, 10, 64)
-	if err != nil || studentID <= 0 {
+	studentID := req.StudentID.Int64()
+	if studentID <= 0 {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid student ID")))
 		return
 	}
-	guardianID, err := strconv.ParseInt(req.GuardianAccountID, 10, 64)
-	if err != nil || guardianID <= 0 {
+	guardianID := req.GuardianAccountID.Int64()
+	if guardianID <= 0 {
 		common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid guardian ID")))
 		return
 	}
@@ -507,7 +485,7 @@ func (rs *Resource) listGuardians(w http.ResponseWriter, r *http.Request) {
 	out := make([]MessageableGuardianResponse, 0, len(guardians))
 	for _, g := range guardians {
 		out = append(out, MessageableGuardianResponse{
-			AccountID:           strconv.FormatInt(g.AccountID, 10),
+			AccountID:           ident.ID(g.AccountID),
 			Name:                g.Name,
 			RelationshipType:    g.RelationshipType,
 			IsPrimary:           g.IsPrimary,
@@ -524,9 +502,9 @@ func (rs *Resource) listReachableStudents(w http.ResponseWriter, r *http.Request
 		renderMessagingError(w, r, err)
 		return
 	}
-	out := ReachableStudentsResponse{StudentIDs: make([]string, 0, len(ids))}
+	out := ReachableStudentsResponse{StudentIDs: make([]ident.ID, 0, len(ids))}
 	for _, id := range ids {
-		out.StudentIDs = append(out.StudentIDs, strconv.FormatInt(id, 10))
+		out.StudentIDs = append(out.StudentIDs, ident.ID(id))
 	}
 	common.Respond(w, r, http.StatusOK, out, "Reachable students retrieved")
 }

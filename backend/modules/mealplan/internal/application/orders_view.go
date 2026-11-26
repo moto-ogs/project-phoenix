@@ -16,14 +16,40 @@ import (
 func (s *Service) orderView(ctx context.Context, from, to domain.Date) (view domain.OrderView, err error) {
 	err = s.run(ctx, "read_orders", func(txCtx context.Context) (domain.OperationStats, error) {
 		rules, rulesErr := s.requireRegistration(txCtx)
+		if errors.Is(rulesErr, ErrRegistrationDisabled) {
+			var stats domain.OperationStats
+			view, stats, err = s.calendarOrderView(txCtx, from, to)
+			return stats, err
+		}
 		if rulesErr != nil {
 			return domain.OperationStats{}, rulesErr
 		}
 		var stats domain.OperationStats
-		view, stats, err = s.provisionalOrders(txCtx, rules, from, to)
+		view, stats, err = s.provisionalOrders(txCtx, rules, from, to, true)
 		return stats, err
 	})
 	return view, err
+}
+
+// calendarOrderView keeps the order-day calendar available while meal
+// registration is disabled. There are no orders, deadlines, or children in
+// that configuration; callers only receive the closed-day state needed to
+// keep meal-plan actions within the calendar's bounds.
+func (s *Service) calendarOrderView(ctx context.Context, from, to domain.Date) (domain.OrderView, domain.OperationStats, error) {
+	days, stats, err := s.calendar.Days(ctx, from, to)
+	if err != nil {
+		return domain.OrderView{}, stats, err
+	}
+	view := domain.OrderView{Rules: domain.OrderingRules{Rhythm: domain.RhythmDaily, Detail: domain.DetailTotal}}
+	for date := from; !date.After(to); date = date.AddDays(1) {
+		if date.Weekday() == time.Saturday || date.Weekday() == time.Sunday {
+			continue
+		}
+		view.Days = append(view.Days, domain.OrderDay{
+			Date: date, Closed: days.Closed[date], MealCancelled: days.Cancelled[date], Unordered: true,
+		})
+	}
+	return view, stats, nil
 }
 
 // orderWindow is everything settling a window needs: the calendar of its
@@ -170,6 +196,11 @@ func (s *Service) currentChildren(ctx context.Context, rules domain.OrderingRule
 		if _, ordered := window.state.OrderFor(date); !ordered && !all {
 			continue
 		}
+		// A cancelled lunch is a day-level state, not a removal of every
+		// child from its fixed order.
+		if window.days.Cancelled[date] {
+			continue
+		}
 		children, childStats, err := s.childrenOn(ctx, rules, date, rules.AbsenceCutoff(date), window.days, seen)
 		stats = addStats(stats, childStats)
 		if err != nil {
@@ -183,7 +214,7 @@ func (s *Service) currentChildren(ctx context.Context, rules domain.OrderingRule
 // provisionalOrders lays out the weekdays of [from, to] without writing: the
 // due orders not stored yet and the changes since the last recording are
 // derived in memory, the changes without a number.
-func (s *Service) provisionalOrders(ctx context.Context, rules domain.OrderingRules, from, to domain.Date) (domain.OrderView, domain.OperationStats, error) {
+func (s *Service) provisionalOrders(ctx context.Context, rules domain.OrderingRules, from, to domain.Date, withNames bool) (domain.OrderView, domain.OperationStats, error) {
 	now := s.now()
 	today := domain.DateFromInstant(now)
 	seen := registrations{}
@@ -202,6 +233,9 @@ func (s *Service) provisionalOrders(ctx context.Context, rules domain.OrderingRu
 		window.state.Changes = append(window.state.Changes, change)
 	}
 	view := buildOrderView(rules, window, current, from, to, today)
+	if !withNames {
+		return view, stats, nil
+	}
 	names, nameStats, err := s.orderNames(ctx, view, current)
 	view.Names = names
 	for index := range view.Days {
@@ -217,29 +251,48 @@ func buildOrderView(rules domain.OrderingRules, window orderWindow, current map[
 		if date.Weekday() == time.Saturday || date.Weekday() == time.Sunday {
 			continue
 		}
-		day := domain.OrderDay{Date: date, Closed: window.days.Closed[date], Deadline: rules.FreezeAt(date), Children: current[date].classes}
+		day := domain.OrderDay{Date: date, Closed: window.days.Closed[date], MealCancelled: window.days.Cancelled[date], Deadline: rules.FreezeAt(date), Children: current[date].classes}
 		if order, ordered := window.state.OrderFor(date); ordered {
-			day.Order, day.Deadline, day.Children = &order, order.DeadlineAt, window.state.OrderedChildren(date)
-			day.FrozenChildren = window.state.FrozenChildren(date)
+			setOrderedDay(&day, window.state, order)
 		} else if date.Before(today) {
 			day.Unordered = true
 		} else {
 			// A weekly order freezes all remaining days at their earliest
 			// deadline, even when the view shows only part of the week.
 			start, end := domain.OrderPeriod(rules.Rhythm, date)
-			_, day.Deadline = openDays(rules, window.state, start, end, today)
+			_, day.Deadline = openDays(rules, window.state, window.days, start, end, today)
 		}
-		for _, change := range window.state.Changes {
-			if change.Date == date {
-				day.Changes = append(day.Changes, change)
-			}
-		}
+		appendVisibleChanges(&day, window.state.Changes)
 		if day.Children == nil {
 			day.Children = map[int64]string{}
 		}
 		view.Days = append(view.Days, day)
 	}
 	return view
+}
+
+// appendVisibleChanges keeps a lunch cancellation as one day-level state.
+func appendVisibleChanges(day *domain.OrderDay, changes []domain.OrderChange) {
+	if day.MealCancelled {
+		return
+	}
+	for _, change := range changes {
+		if change.Date == day.Date {
+			day.Changes = append(day.Changes, change)
+		}
+	}
+}
+
+// setOrderedDay lays out a fixed order. A cancelled lunch keeps the stored
+// order for a later restoration, but exposes neither its frozen nor current
+// quantities.
+func setOrderedDay(day *domain.OrderDay, state domain.OrderState, order domain.Order) {
+	day.Order, day.Deadline = &order, order.DeadlineAt
+	if day.MealCancelled {
+		return
+	}
+	day.Children = state.OrderedChildren(day.Date)
+	day.FrozenChildren = state.FrozenChildren(day.Date)
 }
 
 // orderNames names every child of the view: from today's registration, and

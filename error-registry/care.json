@@ -181,6 +181,12 @@
       "legacy": "care.pickup_permission_unchanged"
     },
     {
+      "code": "care.pickup_person_not_authorized",
+      "class": "input",
+      "parameters": [],
+      "legacy": "care.pickup_person_not_authorized"
+    },
+    {
       "code": "care.pickup_person_not_linked",
       "class": "input",
       "parameters": [],
@@ -467,6 +473,12 @@
       "class": "business_rejection",
       "parameters": [],
       "legacy": "request_not_found"
+    },
+    {
+      "code": "care.request_feed_not_found",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "care.request_feed_not_found"
     },
     {
       "code": "care.request_not_open",

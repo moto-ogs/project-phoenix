@@ -7,6 +7,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -263,7 +264,7 @@ func TestActiveLiveExportFilters(t *testing.T) {
 	})
 
 	t.Run("names_every_live_filter_in_use", func(t *testing.T) {
-		filters := studentExportFilters{RoomID: "7", Status: "anwesend"}
+		filters := studentExportFilters{RoomID: ident.Optional(7), Status: "anwesend"}
 		assert.Equal(t, []string{"room_id", "status"}, activeLiveExportFilters(filters))
 	})
 
@@ -311,7 +312,7 @@ func TestResolveExportPlanningDate(t *testing.T) {
 	now := time.Date(2026, time.June, 1, 10, 0, 0, 0, time.UTC)
 
 	t.Run("today_keeps_live_filters", func(t *testing.T) {
-		date, isToday, errResp := resolveExportPlanningDate(studentExportFilters{Status: "anwesend", RoomID: "7"}, now)
+		date, isToday, errResp := resolveExportPlanningDate(studentExportFilters{Status: "anwesend", RoomID: ident.Optional(7)}, now)
 		require.Nil(t, errResp)
 		assert.True(t, isToday)
 		assert.Equal(t, calendar.NewDate(2026, time.June, 1), date)
@@ -328,7 +329,7 @@ func TestResolveExportPlanningDate(t *testing.T) {
 		_, _, errResp := resolveExportPlanningDate(studentExportFilters{Date: "2026-06-02", Status: "anwesend"}, now)
 		assert.NotNil(t, errResp, "a live status filter cannot be answered for another day")
 
-		_, _, errResp = resolveExportPlanningDate(studentExportFilters{Date: "2026-06-02", RoomID: "7"}, now)
+		_, _, errResp = resolveExportPlanningDate(studentExportFilters{Date: "2026-06-02", RoomID: ident.Optional(7)}, now)
 		assert.NotNil(t, errResp, "a room filter reads today's active visits")
 	})
 

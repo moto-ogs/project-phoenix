@@ -138,14 +138,10 @@ func (b *builder) field(declaring, root reflect.Type, sf reflect.StructField, na
 		return Field{}, err
 	}
 	field := Field{Name: name, Schema: schema}
-	field.JSONReason = strings.TrimSpace(sf.Tag.Get("contract_json"))
-	if err := checkFreeJSON(schema, field.JSONReason, at); err != nil {
+	if err := checkFieldTags(&field, sf.Tag, at, request); err != nil {
 		return Field{}, err
 	}
-	field.RefinesJSON = strings.TrimSpace(sf.Tag.Get("contract_refines"))
-	if field.RefinesJSON != "" && (!request || field.JSONReason != "") {
-		return Field{}, fmt.Errorf("%s: contract_refines is for typed requests only", at)
-	}
+
 	owners := []reflect.Type{declaring}
 	if root != declaring {
 		owners = append(owners, root)
@@ -163,6 +159,30 @@ func (b *builder) field(declaring, root reflect.Type, sf reflect.StructField, na
 	}
 	b.omission(&field, sf.Type, options)
 	return field, nil
+}
+
+func checkFieldTags(field *Field, tag reflect.StructTag, at string, request bool) error {
+	field.TextReason = strings.TrimSpace(tag.Get("contract_text"))
+	leaf := field.Schema
+	for leaf.Elem != nil {
+		leaf = *leaf.Elem
+	}
+	textIdentifier := namesIdentifier(field.Name) && leaf.Kind == KindString
+	switch {
+	case textIdentifier && field.TextReason == "":
+		return fmt.Errorf("%s: use ident.ID for a bigint or explain text with contract_text", at)
+	case !textIdentifier && field.TextReason != "":
+		return fmt.Errorf("%s: contract_text explains why an identifier-shaped name holds text", at)
+	}
+	field.JSONReason = strings.TrimSpace(tag.Get("contract_json"))
+	if err := checkFreeJSON(field.Schema, field.JSONReason, at); err != nil {
+		return err
+	}
+	field.RefinesJSON = strings.TrimSpace(tag.Get("contract_refines"))
+	if field.RefinesJSON != "" && (!request || field.JSONReason != "") {
+		return fmt.Errorf("%s: contract_refines is for typed requests only", at)
+	}
+	return nil
 }
 
 // A container inherits the explanation of its untyped elements. A struct
@@ -215,7 +235,7 @@ func (b *builder) omission(field *Field, t reflect.Type, options []string) {
 	}
 	if slices.Contains(options, "omitzero") {
 		field.Optional = true
-		if t.Kind() == reflect.Pointer || b.dates[t] {
+		if nilable || b.dates[t] {
 			field.Schema.Nullable = false
 		}
 	}

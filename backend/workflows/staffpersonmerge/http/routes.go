@@ -8,7 +8,9 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
+
 	"github.com/moto-ogs/project-phoenix/api/common"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 	"github.com/moto-ogs/project-phoenix/workflows/staffpersonmerge"
 )
 
@@ -45,7 +47,7 @@ func (rs resource) execute(w http.ResponseWriter, r *http.Request) {
 	}
 	var input staffpersonmerge.Request
 	r.Body = http.MaxBytesReader(w, r.Body, 64<<10)
-	if err := render.DecodeJSON(r.Body, &input); err != nil {
+	if err := wire.DecodeAndDrain(r.Body, &input); err != nil {
 		common.RenderError(w, r, common.OperatorInvalidRequest(err))
 		return
 	}

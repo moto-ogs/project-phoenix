@@ -58,6 +58,10 @@ type PlanShiftRequest struct {
 	EndTime              string   `json:"end_time"`
 	BreakMinutes         int      `json:"break_minutes"`
 	Notes                string   `json:"notes"`
+	// ExpectedVersion is the version of the shift a change replaces, as the
+	// week showed it (ADR 0311); a change of a shift changed since is
+	// refused with general.changed_since_read. A plan ignores it.
+	ExpectedVersion string `json:"expected_version,omitempty"`
 }
 
 func (req *PlanShiftRequest) Bind(*http.Request) error {
@@ -74,7 +78,8 @@ func (req *PlanShiftRequest) toInput(recordID int64) workforce.TraegerPlanShift 
 	return workforce.TraegerPlanShift{
 		RecordID: recordID, SchoolID: req.SchoolID.Int64(), Date: calendar.Date(req.Date), StartTime: req.StartTime, EndTime: req.EndTime,
 		BreakMinutes: req.BreakMinutes, Notes: req.Notes,
-		WorkingTime: workforce.WorkingTimeConfirmation{Confirmed: req.WorkingTimeConfirmed, Reason: req.WorkingTimeReason},
+		WorkingTime:     workforce.WorkingTimeConfirmation{Confirmed: req.WorkingTimeConfirmed, Reason: req.WorkingTimeReason},
+		ExpectedVersion: req.ExpectedVersion,
 	}
 }
 
@@ -211,16 +216,12 @@ var planningErrors = common.RulesRenderer([]common.ErrorRule{
 // planCheckDetails returns the details{} of a refusal of the working-time
 // check: the warnings and whether a reason is missing, or the shift at the
 // other Einsatzort. ok is false for every other error.
-func planCheckDetails(err error) (map[string]any, bool) {
+func planCheckDetails(err error) (any, bool) {
 	if warning, ok := errors.AsType[*workforce.ShiftWorkingTimeError](err); ok {
-		return map[string]any{"warnings": warning.Warnings, "count": len(warning.Warnings), "reason_required": warning.ReasonRequired}, true
+		return warning.RefusalDetails(), true
 	}
 	if other, ok := errors.AsType[*workforce.ShiftOtherSiteError](err); ok {
-		details := map[string]any{"date": other.Date.String(), "day": other.Date.Format("02.01.2006"), "start": other.StartTime, "end": other.EndTime}
-		if other.SchoolName != "" {
-			details["school"] = other.SchoolName
-		}
-		return details, true
+		return workforce.ShiftOtherSiteRefusalDetails(other), true
 	}
 	return nil, false
 }

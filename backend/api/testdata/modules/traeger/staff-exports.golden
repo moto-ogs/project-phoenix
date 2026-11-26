@@ -1,4 +1,6 @@
 GET /traeger/staff-exports/payroll -> basis
+GET /traeger/staff-exports/payroll/employers -> basis
 GET /traeger/staff-exports/payroll/export -> basis
 GET /traeger/staff-exports/times -> basis
 GET /traeger/staff-exports/times/export -> basis
+PUT /traeger/staff-exports/payroll/employers/{schoolId} -> basis

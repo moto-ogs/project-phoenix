@@ -29,7 +29,10 @@ import { Button } from "~/components/ui/button";
 import { FieldErrorHint } from "~/components/ui/field-error-hint";
 import { FieldLabel, RequiredMark } from "~/components/ui/field-label";
 import { DataField, DataGrid } from "~/components/ui/data-field";
-import { SectionCard } from "~/components/ui/section-card";
+import {
+  SectionCard,
+  SECTION_CARD_BODY_GAP,
+} from "~/components/ui/section-card";
 import { SectionLabel } from "~/components/ui/section-label";
 import { Input } from "~/components/ui/input";
 import { useTenant } from "~/lib/tenant-context";
@@ -100,9 +103,10 @@ import {
   type SignatureValue,
 } from "~/components/ui/signature-pad";
 import {
-  useCareFacilityTerm,
   useCareTermTranslations,
+  useCareTermValues,
 } from "~/lib/care-facility-term";
+import type { CareTermValues } from "~/lib/care-facility-term-value";
 import {
   AT_MOST_ONE_PER_DAY,
   careOfferingDayConflicts,
@@ -296,14 +300,14 @@ export function EnrollmentForm({
   onFormChanged,
 }: Props) {
   const intl = useCareTermTranslations("enrollmentForm");
-  const careTerm = useCareFacilityTerm();
+  const care = useCareTermValues();
   const activeLocale = useLocale();
   // School-written texts follow the same opt-in as the form chrome: staff
   // previews stay German even when a parent locale cookie exists (#3377).
   const contentLocale = localizedCopy ? activeLocale : DEFAULT_LOCALE;
   const tr = useMemo(
-    () => makeEnrollmentFormTranslator(intl, localizedCopy, careTerm),
-    [intl, localizedCopy, careTerm],
+    () => makeEnrollmentFormTranslator(intl, localizedCopy, care),
+    [intl, localizedCopy, care],
   );
   // The staff portal loads no parent messages: the attachment buttons take
   // their German labels from the form's own translator.
@@ -1366,7 +1370,7 @@ export function EnrollmentForm({
                   key={child.clientId}
                   title={name || tr("structured.child")}
                   icon={Lock}
-                  bodyClassName="compact:mt-3 mt-4 space-y-3"
+                  bodyClassName={`${SECTION_CARD_BODY_GAP} space-y-3`}
                 >
                   <StatusBadge label={tr("locked.badge")} tone="green" />
                   <DataGrid columns={1}>
@@ -1978,7 +1982,7 @@ const GERMAN_ENROLLMENT_FORM_MESSAGES = germanEnrollmentFormMessages as Record<
 function makeEnrollmentFormTranslator(
   intl: ReturnType<typeof useCareTermTranslations>,
   localizedCopy: boolean,
-  careTerm: string,
+  care: CareTermValues,
 ): EnrollmentFormTranslator {
   if (localizedCopy) {
     return Object.assign(
@@ -1992,7 +1996,7 @@ function makeEnrollmentFormTranslator(
       if (typeof value !== "string") return key;
       // The German staff preview names the school's care like the parents'
       // form does (#6042).
-      return interpolateMessage(value, { careTerm, ...values });
+      return interpolateMessage(value, { ...care, ...values });
     },
     { raw: (key: string) => readGermanMessage(key) },
   );

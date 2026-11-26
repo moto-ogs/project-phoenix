@@ -75,6 +75,7 @@ func (p *Provisioning) ListOrganizationSummaries(ctx context.Context) ([]*organi
 				CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt, DeletedAt: row.DeletedAt, Settings: row.Settings, TestSystem: row.TestSystem,
 				SchulenCount: row.SchoolCount, KontenCount: row.AccountCount,
 				GeraeteCount: deviceTotals[row.ID], PersonenCount: personTotals[row.ID],
+				Version: organizationtenancy.OrganizationVersion(organizationtenancy.Organization{Name: row.Name, Slug: row.Slug, Active: row.Active}),
 			})
 		}
 		return result, nil
@@ -126,6 +127,11 @@ func (p *Provisioning) schoolSummaries(ctx context.Context, organizationID *int6
 			GeraeteCount: devices[row.ID], PersonenCount: persons[row.ID],
 			ChildQuotaBundles: row.ChildQuotaBundles, ChildQuotaBundleSize: row.ChildQuotaBundleSize,
 			ChildQuotaCount: childQuota[row.ID], DeviceSlots: row.DeviceSlots,
+			Version: organizationtenancy.SchoolVersion(organizationtenancy.School{
+				OrganizationID: ident.ID(row.OrganizationID), Name: row.Name, Slug: row.Slug, Subdomain: row.Subdomain,
+				Address: row.Address, City: row.City, Zip: row.Zip, Phone: row.Phone, Email: row.Email,
+				Active: row.Active, Hidden: row.Hidden, ChildQuotaBundles: row.ChildQuotaBundles, ChildQuotaBundleSize: row.ChildQuotaBundleSize,
+			}),
 		})
 	}
 	return result, nil

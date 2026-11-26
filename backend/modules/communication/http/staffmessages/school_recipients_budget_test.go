@@ -7,6 +7,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
+
 	"github.com/moto-ogs/project-phoenix/api"
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	staffmessaging "github.com/moto-ogs/project-phoenix/modules/communication/http/staffmessages"
@@ -142,7 +145,7 @@ func createSchoolRecipient(t *testing.T, db *bun.DB, index int) staffmessaging.R
 		testpkg.AssignLehrkraftSystemRole(t, db, account.ID, testpkg.Tenant(t))
 		kind = "lehrkraft"
 	}
-	return staffmessaging.RecipientResponse{AccountID: fmt.Sprint(account.ID), Name: "School " + name, RoleKind: kind}
+	return staffmessaging.RecipientResponse{AccountID: ident.ID(account.ID), Name: "School " + name, RoleKind: kind}
 }
 
 func createExcludedSchoolRecipients(t *testing.T, db *bun.DB, foreignTenant int64, index int) {
@@ -168,7 +171,7 @@ func assertSchoolRecipientResponse(t *testing.T, rec *httptest.ResponseRecorder,
 	t.Helper()
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	require.Equal(t, "application/json", rec.Header().Get("Content-Type"))
-	body, err := json.Marshal(struct {
+	body, err := wire.Marshal(struct {
 		Status  string                             `json:"status"`
 		Data    []staffmessaging.RecipientResponse `json:"data"`
 		Message string                             `json:"message"`

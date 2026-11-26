@@ -16,7 +16,7 @@ import type { MealPlanDay } from "~/lib/meal-plan-api";
 
 import { SWRConfig } from "~/lib/swr/testing";
 
-import MealPlanPage from "./page";
+import MealPlanPage from "./page-content";
 
 vi.unmock("swr");
 
@@ -28,15 +28,21 @@ function FreshSwrCache({ children }: { children: React.ReactNode }) {
   );
 }
 
-const { getMealPlanWeek, getMealOrders, setDay, rights, features } = vi.hoisted(
-  () => ({
-    features: { mealPlanEnabled: true },
-    rights: { admin: true, permissions: [] as string[] },
-    getMealPlanWeek: vi.fn(),
-    getMealOrders: vi.fn(),
-    setDay: vi.fn(),
-  }),
-);
+const {
+  getMealPlanWeek,
+  getMealOrders,
+  getMealCancellations,
+  setDay,
+  rights,
+  features,
+} = vi.hoisted(() => ({
+  features: { mealPlanEnabled: true, mealRegistrationEnabled: true },
+  rights: { admin: true, permissions: [] as string[] },
+  getMealPlanWeek: vi.fn(),
+  getMealOrders: vi.fn(),
+  getMealCancellations: vi.fn(),
+  setDay: vi.fn(),
+}));
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn() }),
@@ -78,13 +84,14 @@ vi.mock("~/lib/meal-plan-api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/lib/meal-plan-api")>()),
   getMealPlanWeek,
   getMealOrders,
+  getMealCancellations,
   setDay,
 }));
 
 vi.mock("~/lib/tenant-context", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/lib/tenant-context")>()),
   useMealPlanEnabled: () => features.mealPlanEnabled,
-  useMealRegistrationEnabled: () => true,
+  useMealRegistrationEnabled: () => features.mealRegistrationEnabled,
 }));
 vi.mock("~/components/meal-plan/meal-participant-list", () => ({
   MealParticipantList: ({
@@ -121,6 +128,11 @@ function renderPage() {
   );
 }
 
+beforeEach(() => {
+  getMealCancellations.mockResolvedValue([]);
+  features.mealRegistrationEnabled = true;
+});
+
 describe("Speiseplan: Statuszeile bei Ladefehler (#2517)", () => {
   beforeEach(() => {
     getMealPlanWeek.mockReset();
@@ -130,6 +142,7 @@ describe("Speiseplan: Statuszeile bei Ladefehler (#2517)", () => {
       detail: "total",
       days: [],
     });
+    getMealCancellations.mockResolvedValue([]);
     rights.admin = true;
     rights.permissions = [];
   });
@@ -159,6 +172,139 @@ describe("Speiseplan: Statuszeile bei Ladefehler (#2517)", () => {
     expect(
       await screen.findByText(/0 von 5 Tagen geplant/),
     ).toBeInTheDocument();
+  });
+});
+
+describe("Speiseplan: Ausfalltage bei Ladefehler (#7656)", () => {
+  beforeEach(() => {
+    getMealPlanWeek.mockReset();
+    getMealPlanWeek.mockResolvedValue([]);
+    getMealOrders.mockReset();
+    getMealOrders.mockResolvedValue({
+      rhythm: "daily",
+      detail: "total",
+      days: [],
+    });
+    getMealCancellations.mockReset();
+    getMealCancellations.mockResolvedValue([]);
+    rights.admin = true;
+    rights.permissions = [];
+    features.mealPlanEnabled = true;
+  });
+
+  it("shows the load error and keeps cancellation actions unavailable", async () => {
+    getMealCancellations.mockRejectedValue(
+      new ApiError("cancellations exploded", 503, {
+        code: "general.unavailable",
+      }),
+    );
+
+    renderPage();
+
+    expect(
+      await screen.findByText(
+        catalogText("general.unavailable", "die Ausfälle beim Essen"),
+      ),
+    ).toBeInTheDocument();
+    const actions = await screen.findByLabelText("Aktionen für Montag");
+    fireEvent.click(actions);
+    // Anker: Das geöffnete Tagesmenü zeigt, dass der Wochenplan geladen ist.
+    expect(await screen.findByText("Tag kopieren")).toBeInTheDocument();
+    expect(screen.queryByText("Essen fällt aus")).not.toBeInTheDocument();
+  });
+
+  it("does not offer a meal cancellation for a closed day", async () => {
+    getMealOrders.mockResolvedValue({
+      rhythm: "daily",
+      detail: "total",
+      days: [
+        {
+          date: "2026-10-07",
+          closed: true,
+          deadline: "2026-10-07T09:00:00+02:00",
+          status: "open",
+          confirmedAt: null,
+          total: 0,
+          classes: [],
+          children: [],
+          changes: [],
+        },
+      ],
+    });
+
+    renderPage();
+
+    const openDayActions = await screen.findByLabelText(
+      "Aktionen für Dienstag",
+    );
+    fireEvent.click(openDayActions);
+    // Anker: Der offene Tag zeigt die Aktion erst nach geladener Ausfallliste.
+    expect(await screen.findByText("Essen fällt aus")).toBeInTheDocument();
+    fireEvent.click(openDayActions);
+
+    const actions = await screen.findByLabelText("Aktionen für Mittwoch");
+    fireEvent.click(actions);
+    // Anker: Das geöffnete Tagesmenü zeigt, dass die Woche geladen ist.
+    expect(await screen.findByText("Tag kopieren")).toBeInTheDocument();
+    expect(screen.queryByText("Essen fällt aus")).not.toBeInTheDocument();
+  });
+
+  it("offers meal cancellations without meal registration after loading calendar days", async () => {
+    features.mealRegistrationEnabled = false;
+
+    renderPage();
+
+    const actions = await screen.findByLabelText("Aktionen für Mittwoch");
+    fireEvent.click(actions);
+    expect(await screen.findByText("Essen fällt aus")).toBeInTheDocument();
+    expect(getMealOrders).toHaveBeenCalledWith("2026-10-05", "2026-10-09");
+  });
+
+  it("does not offer a meal cancellation for a closed day without meal registration", async () => {
+    features.mealRegistrationEnabled = false;
+    getMealOrders.mockResolvedValue({
+      rhythm: "daily",
+      detail: "total",
+      days: [
+        {
+          date: "2026-10-07",
+          closed: true,
+          deadline: "0001-01-01T00:00:00Z",
+          status: "unordered",
+          confirmedAt: null,
+          total: 0,
+          classes: [],
+          children: [],
+          changes: [],
+        },
+      ],
+    });
+
+    renderPage();
+
+    const actions = await screen.findByLabelText("Aktionen für Mittwoch");
+    fireEvent.click(actions);
+    expect(await screen.findByText("Tag kopieren")).toBeInTheDocument();
+    expect(screen.queryByText("Essen fällt aus")).not.toBeInTheDocument();
+  });
+
+  it("keeps meal cancellations unavailable when calendar days cannot load without meal registration", async () => {
+    features.mealRegistrationEnabled = false;
+    getMealOrders.mockRejectedValue(
+      new ApiError("orders exploded", 503, { code: "general.unavailable" }),
+    );
+
+    renderPage();
+
+    expect(
+      await screen.findByText(
+        catalogText("general.unavailable", "die Bestellung"),
+      ),
+    ).toBeInTheDocument();
+    const actions = await screen.findByLabelText("Aktionen für Mittwoch");
+    fireEvent.click(actions);
+    expect(await screen.findByText("Tag kopieren")).toBeInTheDocument();
+    expect(screen.queryByText("Essen fällt aus")).not.toBeInTheDocument();
   });
 });
 
@@ -673,6 +819,48 @@ describe("Speiseplan: Woche aus dem Cache beim erneuten Öffnen", () => {
 
     expect(await screen.findByDisplayValue("Reis")).toBeInTheDocument();
     expect(screen.queryByDisplayValue("Linsen")).not.toBeInTheDocument();
+  });
+
+  // Each day is its own save: when one fails after another was stored, the
+  // stored day is not sent again on its old version, and the unsent day
+  // keeps its draft while nobody changed it (ADR 0311).
+  it("saves the rest of a week a failure stopped halfway", async () => {
+    const tuesday = day("2026-10-06", "Linsen");
+    getMealPlanWeek
+      .mockReset()
+      .mockResolvedValueOnce([stored, tuesday])
+      .mockResolvedValue([day("2026-10-05", "Nudeln"), tuesday]);
+    setDay
+      .mockReset()
+      .mockResolvedValueOnce(day("2026-10-05", "Nudeln"))
+      .mockRejectedValueOnce(
+        new ApiError("down", 503, { code: "general.unavailable" }),
+      )
+      .mockResolvedValue(day("2026-10-06", "Reis"));
+    renderPage();
+    fireEvent.change(await screen.findByDisplayValue("Fischstäbchen"), {
+      target: { value: "Nudeln" },
+    });
+    fireEvent.change(screen.getByDisplayValue("Linsen"), {
+      target: { value: "Reis" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await screen.findByText((text) =>
+      text.includes(
+        catalogText("general.unavailable", "die Woche im Speiseplan"),
+      ),
+    );
+    expect(await screen.findByText("1 Tag geändert")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("Nudeln")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("Reis")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() => expect(setDay).toHaveBeenCalledTimes(3));
+    expect(setDay).toHaveBeenLastCalledWith(
+      "2026-10-06",
+      [{ dish: "Reis", note: null, allergens: [] }],
+      tuesday.version,
+    );
   });
 
   it("shows the failed read after a conflict, not an old week to discard to", async () => {

@@ -62,8 +62,8 @@ func (seedTraegerStaffStep) Run(ctx context.Context, rt *Runtime) error {
 		return err
 	}
 	if first > 0 {
-		if _, err := rt.Client.PutWithAuth(auth, fmt.Sprintf("/traeger/staff-records/%d/financial", first), map[string]any{"iban": seedTraegerStaffIBAN}); err != nil {
-			return fmt.Errorf("keep the bank values of a Träger staff record: %w", err)
+		if err := seedTraegerStaffFinancial(rt.Client, auth, first); err != nil {
+			return err
 		}
 	}
 	imported, hired, err := seedTraegerStaffIntake(rt.Client, auth, rt.Bootstrap.SchoolID)
@@ -82,14 +82,26 @@ func (seedTraegerStaffStep) Run(ctx context.Context, rt *Runtime) error {
 	if err != nil {
 		return err
 	}
-	last := time.Now().AddDate(0, -1, 0)
-	paid, err := seedTraegerPayroll(rt.Client, auth, last.Year(), int(last.Month()))
+	employers, paid, err := seedTraegerPayrollMonth(rt.Client, auth, records)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("  Träger staff records: %d linked, %d contracts, %d imported, person hired: %t, %d planned shifts, Springer blocked: %t, month closed: %t, %d contracts in the payroll file\n",
-		linked, contracts, imported, hired, planned, blocked, closed, paid)
+	fmt.Printf("  Träger staff records: %d linked, %d contracts, %d imported, person hired: %t, %d planned shifts, Springer blocked: %t, month closed: %t, %d employers with payroll values, %d contracts in the payroll file\n",
+		linked, contracts, imported, hired, planned, blocked, closed, employers, paid)
 	return seedTraegerAbsences(ctx, rt, auth)
+}
+
+// seedTraegerPayrollMonth fills in the payroll values of the other
+// employers (#8041) and reads the check of last month's payroll file: how
+// many employers it filled in and how many contracts the file counts.
+func seedTraegerPayrollMonth(client *Client, auth AuthRef, records []int64) (int, int, error) {
+	employers, err := seedTraegerPayrollEmployers(client, auth, records)
+	if err != nil {
+		return 0, 0, err
+	}
+	last := time.Now().AddDate(0, -1, 0)
+	paid, err := seedTraegerPayroll(client, auth, last.Year(), int(last.Month()))
+	return employers, paid, err
 }
 
 // seedTraegerStaffLinkAll confirms up to seedTraegerStaffLinks proposals and
@@ -182,9 +194,9 @@ func seedTraegerStaffSuggestions(client *Client, auth AuthRef) ([]seedTraegerSta
 // seedTraegerStaffLink confirms one proposal with the first value of every
 // field the schools disagree on; it returns 0 when another run linked it.
 func seedTraegerStaffLink(client *Client, auth AuthRef, suggestion seedTraegerStaffSuggestion) (int64, error) {
-	members := make([]map[string]int64, 0, len(suggestion.Members))
+	members := make([]map[string]ident.ID, 0, len(suggestion.Members))
 	for _, member := range suggestion.Members {
-		members = append(members, map[string]int64{"school_id": int64(member.SchoolID), "staff_id": int64(member.StaffID)})
+		members = append(members, map[string]ident.ID{"school_id": member.SchoolID, "staff_id": member.StaffID})
 	}
 	body := map[string]any{"members": members}
 	if suggestion.RecordID != nil {
@@ -244,4 +256,18 @@ func seedTraegerStaffLink(client *Client, auth AuthRef, suggestion seedTraegerSt
 func seedTraegerStaffAlreadyLinked(err error) bool {
 	var refused *APIError
 	return errors.As(err, &refused) && (refused.Code == seedCodeStaffAlreadyLinked || refused.Code == seedCodeStaffNumberTaken)
+}
+
+// seedTraegerStaffFinancial keeps the bank values of a record, saved over
+// the version of the section's read as the form does (ADR 0311).
+func seedTraegerStaffFinancial(client *Client, auth AuthRef, recordID int64) error {
+	path := fmt.Sprintf("/traeger/staff-records/%d/financial", recordID)
+	version, err := readDataVersion(func(path string) ([]byte, error) { return client.GetWithAuth(auth, path) }, path)
+	if err != nil {
+		return err
+	}
+	if _, err := client.PutWithAuth(auth, path, map[string]any{"iban": seedTraegerStaffIBAN, "expected_version": version}); err != nil {
+		return fmt.Errorf("keep the bank values of a Träger staff record: %w", err)
+	}
+	return nil
 }

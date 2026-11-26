@@ -8,7 +8,7 @@ export function traegerClosingDaysTopic(): HelpTopic {
     title: "Schließtage für Schulen planen",
     question: "Wie plane ich einen Brückentag für mehrere Schulen?",
     summary:
-      "Ein Schließtag gilt für die Schulen, die du wählst. An diesem Tag ist die OGS zu. Die Feiertage kommen aus dem Bundesland der Schule.",
+      "Ein Schließtag gilt für die Schulen, die du wählst. An diesem Tag hat die OGS geschlossen. Die Feiertage kommen aus dem Bundesland der Schule.",
     group: "anmeldeverwaltung",
     audience: "traeger",
     icon: "CalendarSlash",
@@ -45,7 +45,7 @@ export function traegerClosingDaysTopic(): HelpTopic {
           "Trägt eine Schule selbst einen Schließtag in eine gebuchte Ferienwoche ein, bekommen die Eltern nicht von selbst eine E-Mail. Das gilt auch, wenn die Schule ihn ändert oder löscht. Du oder die Schule löst den Versand aus.",
         steps: [
           "Wähle in der Navigation `Schließtage`.",
-          "Oben steht dann die Karte `Eltern noch nicht informiert`. Je Schließtag stehen dort Schule, Grund, Tage, Kinder und Familien.",
+          "Oben steht dann die Karte `Eltern noch nicht informiert`. Pro Schließtag stehen dort Schule, Grund, Tage, Kinder und Familien.",
           "Wähle in der Zeile `Eltern informieren`. Ein Klick genügt.",
           "Mehrere Schließtage auf einmal: Wähle oben `Alle Eltern informieren`.",
           "Die Zeile zeigt `Wird gesendet` und dann `Gesendet`.",
@@ -66,13 +66,14 @@ export function traegerClosingDaysTopic(): HelpTopic {
         steps: [
           "Wähle in der Navigation `Schließtage`.",
           "Oben wählst du das Jahr.",
+          "Du siehst das letzte Jahr, dieses Jahr und die nächsten drei Jahre.",
           "In der `Jahresübersicht` sind Feiertage blau und Schließtage orange.",
           "Unter `Feiertage nach Bundesland` stehen die Feiertage und die Schulen dazu.",
         ],
       },
     ],
     result:
-      "Die gewählten Schulen haben an diesem Tag zu. Ferienwochen mit diesem Tag sind nicht mehr buchbar. Termine fallen aus, und Mitarbeitende haben kein Soll. Eltern mit einer Buchung in der Woche bekommen eine E-Mail mit den geschlossenen Tagen.",
+      "Die gewählten Schulen haben an diesem Tag geschlossen. Ferienwochen mit diesem Tag sind nicht mehr buchbar. Termine fallen aus, und Mitarbeitende haben kein Soll. Eltern mit einer Buchung in der Woche bekommen eine E-Mail mit den geschlossenen Tagen.",
     notes: [
       "Die Schulen sehen den Schließtag in ihrem Kalender mit `Vom Träger`. Ändern kann ihn nur das Träger-Büro.",
       "Der Elternbeitrag ändert sich durch einen Schließtag nicht, auch nicht bei tageweise gebuchten Wochen. Das steht auch in der E-Mail an die Eltern.",

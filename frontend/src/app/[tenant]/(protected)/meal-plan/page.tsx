@@ -1,1061 +1,127 @@
-"use client";
-
-import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { useSession } from "next-auth/react";
-import { Copy, ClipboardPaste, Plus, Trash2, X } from "lucide-react";
-
-import { Button } from "~/components/ui/button";
-import { StickyActionBar } from "~/components/ui/sticky-action-bar";
-import { ConfirmationModal } from "~/components/ui/modal";
-import {
-  FormErrorAlert,
-  LoadErrorAlert,
-} from "~/components/ui/form-error-alert";
-import { InsetPanel } from "~/components/ui/inset-panel";
-import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
-import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
-import { PlanningContextBar } from "~/components/ui/planning/planning-context-bar";
-import { TenantPage } from "~/components/ui/tenant-page";
-import { SectionCard } from "~/components/ui/section-card";
-import { StatusBadge } from "~/components/ui/status-badge";
-import { Textarea } from "~/components/ui/textarea";
 import { hasPermission, isAdmin } from "~/lib/auth-utils";
+import * as catererContract from "~/lib/contract/meal-caterer.generated";
+import * as mealContract from "~/lib/contract/meal-plan.generated";
+import { berlinTodayISO } from "~/lib/date-helpers";
+import { mapMealCaterer } from "~/lib/meal-caterer-api";
 import {
-  useApiErrorDisplay,
-  useApiFormError,
-  useToast,
-} from "~/contexts/ToastContext";
-import { isReadStateRefusal } from "~/lib/api-error";
-import { formatWeekLabel, parseISODate, toISODate } from "~/lib/date-helpers";
-import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
-import {
-  getMealPlanWeek,
-  mondayOf,
-  setDay,
-  workWeekDates,
-  type DishInput,
-  type MealPlanDay,
-  type MealPlanDish,
+  mapDailyMealList,
+  mapMealOrders,
+  mapMealPlanDay,
 } from "~/lib/meal-plan-api";
-import { createLogger } from "~/lib/logger";
-import { useNavigationGuard } from "~/lib/hooks/use-navigation-guard";
-import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
-import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
-import { useSWRAuth } from "~/lib/swr";
-import { tenantListKeys } from "~/lib/swr/tenant-list-keys";
-import {
-  useMealPlanEnabled,
-  useMealRegistrationEnabled,
-} from "~/lib/tenant-context";
-import { useTenantRouter } from "~/lib/tenant-router";
-import { MealParticipantList } from "~/components/meal-plan/meal-participant-list";
-import { MealCaterer } from "~/components/meal-plan/meal-caterer";
-import { MealBillingReleaseLink } from "~/components/meal-plan/meal-billing-release-link";
-import { MealOrderWeek } from "~/components/meal-plan/meal-order-week";
-import {
-  MealAllergenLegend,
-  MealAllergenMarks,
-  MealAllergenSelect,
-} from "~/components/meal-plan/meal-allergens";
-import {
-  normalizeMealAllergens,
-  usedMealAllergens,
-  type MealAllergen,
-} from "~/lib/meal-allergens";
+import { readContract, seedOf, seedRead } from "~/lib/server-seed.server";
+import type { ServerSeedEntry } from "~/lib/swr/server-seed";
+import { readTenantPageContext } from "~/lib/tenant-page-seed.server";
+import MealPlanContent from "./page-content";
+import { MealPlanSeed } from "./page-seed";
+import { mealPlanSeedKeys } from "./seed-keys";
 
-const logger = createLogger({ component: "MealPlanPage" });
-
-// Borderless fields that live inside a dish card (the card is the visual
-// boundary, so the fields stay clean — no box-in-box). field-sizing:content
-// lets them grow so long dish names wrap instead of being clipped.
-const dishFieldClass =
-  "block w-full resize-none border-0 bg-transparent p-0 text-base leading-snug font-medium text-gray-900 shadow-none ring-0 placeholder:font-normal placeholder:text-gray-500 read-only:bg-transparent read-only:text-gray-900 focus:ring-0 focus:outline-none focus-visible:ring-0 [field-sizing:content]";
-const noteFieldClass =
-  "mt-1.5 block w-full resize-none border-0 bg-transparent p-0 text-sm leading-snug text-gray-500 shadow-none ring-0 placeholder:text-gray-500 read-only:bg-transparent focus:ring-0 focus:outline-none focus-visible:ring-0 [field-sizing:content]";
-
-interface DishDraft {
-  clientId?: string;
-  dish: string;
-  note: string;
-  allergens: MealAllergen[];
-}
-
-function createDishDraft(
-  dish = "",
-  note = "",
-  allergens: readonly MealAllergen[] = [],
-): DishDraft {
-  return {
-    clientId: crypto.randomUUID(),
-    dish,
-    note,
-    allergens: [...allergens],
-  };
-}
-
-function weekdayLabel(iso: string): string {
-  return parseISODate(iso).toLocaleDateString("de-DE", { weekday: "long" });
-}
-
-function shortDate(iso: string): string {
-  return parseISODate(iso).toLocaleDateString("de-DE", {
-    day: "2-digit",
-    month: "2-digit",
-  });
-}
-
-// Normalised, comparable form of a day: blank dishes dropped, fields trimmed.
-function normalizeDay(rows: DishDraft[]): DishDraft[] {
-  return rows
-    .map((r) => ({
-      dish: r.dish.trim(),
-      note: r.note.trim(),
-      allergens: normalizeMealAllergens(r.allergens),
-    }))
-    .filter((r) => r.dish !== "");
-}
-
-// The wire form of a normalised day.
-function dishInputs(rows: DishDraft[]): DishInput[] {
-  return rows.map((d) => ({
-    dish: d.dish,
-    note: d.note === "" ? null : d.note,
-    allergens: d.allergens,
-  }));
-}
-
-function dayHasContent(rows: DishDraft[] | undefined): boolean {
-  return normalizeDay(rows ?? []).length > 0;
-}
-
-/** Ein Gericht mit Inhalt: Entfernen fragt nach, eine leere Zeile nicht. */
-function rowHasContent(row: DishDraft): boolean {
-  return (
-    row.dish.trim() !== "" || row.note.trim() !== "" || row.allergens.length > 0
-  );
-}
-
-function draftRows(dishes: readonly MealPlanDish[] | undefined): DishDraft[] {
-  return dishes?.length
-    ? dishes.map((d) => createDishDraft(d.dish, d.note ?? "", d.allergens))
-    : [createDishDraft()];
-}
-
-// Build editable drafts (always at least one empty row per day) from the
-// stored days.
-function draftsFromDays(
-  days: MealPlanDay[],
-  dates: string[],
-): Record<string, DishDraft[]> {
-  const byDate = new Map(days.map((day) => [day.date, day.dishes]));
-  const next: Record<string, DishDraft[]> = {};
-  for (const date of dates) next[date] = draftRows(byDate.get(date));
-  return next;
-}
-
-// The version of each stored day, which its save sends back (ADR 0311).
-function versionsFromDays(days: MealPlanDay[]): Record<string, string> {
-  return Object.fromEntries(days.map((day) => [day.date, day.version]));
-}
-
-export default function MealPlanPage() {
-  const toast = useToast();
-  const router = useTenantRouter();
-  // Gate the initial fetch on session readiness: the staff session gate needs the
-  // client-side token, which isn't available for a tick on a hard reload /
-  // direct navigation. Without this gate the one-shot load races auth, throws
-  // "No authentication token available", and never retries — leaving the page
-  // permanently empty. `required` redirects an absent/expired session to login
-  // instead of hanging on the loading skeleton. Navigate via the tenant router
-  // rather than next/navigation's redirect(), which isn't supported from this
-  // client hook callback (it throws NEXT_REDIRECT instead of navigating).
-  const { data: session, status } = useSession({
-    required: true,
-    onUnauthenticated() {
-      router.push("/");
-    },
-  });
-
-  // The page is reachable with meals:read, but writing a day requires
-  // meals:manage (the backend PUT/DELETE routes 403 otherwise). Readers get a
-  // view-only plan: no edit, copy, paste, clear, add/remove, "Vorwoche
-  // übernehmen", or save controls — so they never hit a guaranteed 403. The
-  // exports need meals:orders, a child's registration changed by
-  // the school meals:register (#3873). Mirror the nav's admin-OR-permission
-  // gate.
-  const canReadPlan = isAdmin(session) || hasPermission(session, "meals:read");
-  const canEdit = isAdmin(session) || hasPermission(session, "meals:manage");
-  const mealPlanEnabled = useMealPlanEnabled();
-  const mealRegistrationEnabled = useMealRegistrationEnabled();
-  // Die Bestellung der Woche braucht nur die Zahlen (#3873).
-  const canReadOrders =
-    status === "authenticated" &&
-    mealRegistrationEnabled &&
-    (isAdmin(session) || hasPermission(session, "meals:read"));
-  const canReadParticipants =
-    status === "authenticated" &&
-    mealRegistrationEnabled &&
-    (isAdmin(session) || hasPermission(session, "meals:orders"));
-  const canRegister =
-    status === "authenticated" &&
-    mealRegistrationEnabled &&
-    (isAdmin(session) || hasPermission(session, "meals:register"));
-
-  // weekOffset: number of weeks from the current week (0 = this week, can go
-  // negative for past weeks or beyond +1 for planning ahead).
-  const [weekOffset, setWeekOffset] = useState(0);
-  // An explicit read of the shown week (after a save, „Verwerfen & neu laden“).
-  const [reloading, setReloading] = useState(false);
-  // True once the first week has loaded. Subsequent week switches keep the
-  // current grid on screen (dimmed) instead of flashing the skeleton.
-  const [hasLoaded, setHasLoaded] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const saveErrors = useApiFormError();
-  const { clear: clearSaveError } = saveErrors;
-  const { show: showActionError } = useApiErrorDisplay();
-  // „Wiederholen“ läuft mit dem aktuellen Stand der Seite (Woche, Entwürfe).
-  const retrySaveRef = useRef<() => void>(() => undefined);
-  const retryCopyPrevRef = useRef<() => void>(() => undefined);
-  const [copyingPrev, setCopyingPrev] = useState(false);
-  const [drafts, setDrafts] = useState<Record<string, DishDraft[]>>({});
-  const [originals, setOriginals] = useState<Record<string, DishDraft[]>>({});
-  // The version of each day as read or as the last save answered it.
-  const [versions, setVersions] = useState<Record<string, string>>({});
-  // After a refusal until the stored week is read: nothing is sent.
-  const [storedWeekUnread, setStoredWeekUnread] = useState(false);
-  const [clipboard, setClipboard] = useState<DishDraft[] | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<{
-    date: string;
-    idx: number;
-  } | null>(null);
-  // Holds the week the user wants to switch to while unsaved changes block it.
-  const [pendingOffset, setPendingOffset] = useState<number | null>(null);
-  const [confirmReload, setConfirmReload] = useState(false);
-  const [confirmCopyPrev, setConfirmCopyPrev] = useState(false);
-
-  // Berlin-anchored: meal-plan rows are stored as school calendar DATEs the
-  // backend derives from timezone.TodayDate(). A browser in another timezone
-  // (or around the Berlin/local midnight boundary) would otherwise open and
-  // save the wrong school week. Matches the parent meal-plan page.
-  // useBerlinToday re-renders on the Berlin midnight rollover so a page left
-  // mounted overnight follows the date instead of freezing on yesterday.
-  const today = useBerlinToday();
-
-  const mondayISO = useMemo(() => {
-    const base = parseISODate(today);
-    base.setDate(base.getDate() + weekOffset * 7);
-    return mondayOf(base);
-  }, [today, weekOffset]);
-
-  const weekDates = useMemo(() => workWeekDates(mondayISO), [mondayISO]);
-  // Legende unter dem Plan: nur die Buchstaben, die diese Woche vorkommen.
-  const weekAllergens = usedMealAllergens(
-    weekDates.flatMap((date) => drafts[date] ?? []),
-  );
-
-  // The loaded week is an edit form: its answer is copied into the drafts
-  // once per week. A refresh of the same week replaces only a plan without
-  // unsaved edits; only an explicit read replaces those.
-  const weekKey =
-    status === "authenticated" && canReadPlan && mealPlanEnabled
-      ? tenantListKeys.mealPlanWeek(mondayISO)
-      : null;
-  // A revisit shows the cached week at once and reads it again in the
-  // background (no deduplication). Each save sends the version of the day
-  // this page read; the backend refuses a day someone stored differently
-  // since (general.changed_since_read), so an older cached answer never
-  // overwrites a colleague's change.
-  const week = useSWRAuth(weekKey, () => getMealPlanWeek(mondayISO), {
-    keepPreviousData: false,
-    dedupingInterval: 0,
-  });
-  const weekData = week.data;
-  // True when the week never loaded. The grid is then NOT shown: there is
-  // no read state to edit against, so we surface an error + retry instead.
-  // A failed background read keeps the shown week.
-  const { error: loadError } = useSwrResourceLoadError(
-    [week],
-    "die Woche im Speiseplan",
-    () => week.mutate(),
-  );
-  const hasLoadError = Boolean(loadError);
-  const loading =
-    weekKey === null ||
-    reloading ||
-    (weekData === undefined && (!week.error || week.isValidating));
-  const appliedWeek = useRef<{ key: string; data: MealPlanDay[] } | null>(null);
-  const applyWeek = useCallback(
-    (key: string, days: MealPlanDay[]) => {
-      appliedWeek.current = { key, data: days };
-      const built = draftsFromDays(days, weekDates);
-      setDrafts(built);
-      // Originals store only the persisted (non-empty) rows for dirty checks.
-      const orig: Record<string, DishDraft[]> = {};
-      for (const date of weekDates) orig[date] = normalizeDay(built[date]!);
-      setOriginals(orig);
-      setVersions(versionsFromDays(days));
-      setStoredWeekUnread(false);
-      setHasLoaded(true);
-    },
-    [weekDates],
-  );
-  // Rejects on failure, so after a save the caller keeps the week on screen
-  // (#6652).
-  const afterSave = useRefreshAfterWrite(
-    "die Anzeige des Speiseplans",
-    async () => {
-      if (!weekKey) return;
-      setReloading(true);
-      try {
-        const days = await week.mutate(getMealPlanWeek(mondayISO), {
-          revalidate: false,
-        });
-        if (days) applyWeek(weekKey, days);
-      } finally {
-        setReloading(false);
-      }
-    },
-  );
-
-  const changedDays = useMemo(
-    () =>
-      weekDates.filter(
-        (date) =>
-          JSON.stringify(normalizeDay(drafts[date] ?? [])) !==
-          JSON.stringify(originals[date] ?? []),
+async function loadMealPlanSeed(slug: string) {
+  const context = await readTenantPageContext(slug, "mittagessen");
+  if (!context) return null;
+  const builtAt = Date.now();
+  const { token, session, snapshot, tenant } = context;
+  const { from, to, date, plan, cancellations, orders, participants, caterer } =
+    mealPlanSeedKeys(berlinTodayISO());
+  const entries: ServerSeedEntry[] = [];
+  const admin = isAdmin(session);
+  const readsPlan = admin || hasPermission(session, "meals:read");
+  if (readsPlan && tenant.mealPlanEnabled === true) {
+    entries.push({
+      key: plan,
+      render: true,
+      value: seedRead("mealPlanWeek", async (signal) =>
+        (
+          await readContract(mealContract.routes["GET /api/meal-plan/days"], {
+            token,
+            signal,
+            query: { week_start: from },
+          })
+        ).data.map(mapMealPlanDay),
       ),
-    [weekDates, drafts, originals],
-  );
-  const isDirty = changedDays.length > 0;
-  // A row with a note or allergens but no dish yet is not a change of the
-  // plan, but a background read must not wipe it either.
-  const hasUnnamedInput = weekDates.some((date) =>
-    (drafts[date] ?? []).some(
-      (row) => row.dish.trim() === "" && rowHasContent(row),
-    ),
-  );
-
-  // Freeze all edit controls while a save, an explicit read of the week, or
-  // "Vorwoche übernehmen" is in flight. handleSave() captures the pre-click
-  // draft snapshot and the read after it replaces drafts/originals from the
-  // backend; an edit made after the request started would otherwise be
-  // silently overwritten when it resolves. canEdit gates *who* may edit;
-  // editingLocked gates *when*.
-  const editingLocked = saving || copyingPrev || loading;
-  const canEditNow = canEdit && !editingLocked;
-
-  // A layout effect: a revisit paints the cached week in its first frame,
-  // not an empty grid before it.
-  useLayoutEffect(() => {
-    const days = weekData;
-    if (!weekKey || !days || appliedWeek.current?.data === days) return;
-    const sameWeek = appliedWeek.current?.key === weekKey;
-    if (sameWeek && (isDirty || hasUnnamedInput || editingLocked)) return;
-    applyWeek(weekKey, days);
-  }, [weekKey, weekData, isDirty, hasUnnamedInput, editingLocked, applyWeek]);
-
-  // Warn before discarding unsaved changes — both on hard unloads (tab close /
-  // reload) and on in-app navigation (clicking a sidebar/header link), which
-  // does a client-side route change that beforeunload never sees.
-  const { pendingHref, confirmNavigation, cancelNavigation } =
-    useNavigationGuard(isDirty);
-
-  const updateDish = (
-    date: string,
-    idx: number,
-    field: "dish" | "note",
-    value: string,
-  ) => {
-    setDrafts((prev) => {
-      const rows = [...(prev[date] ?? [])];
-      rows[idx] = { ...rows[idx]!, [field]: value };
-      return { ...prev, [date]: rows };
     });
-  };
-
-  const updateAllergens = (date: string, idx: number, codes: string[]) => {
-    setDrafts((prev) => {
-      const rows = [...(prev[date] ?? [])];
-      rows[idx] = { ...rows[idx]!, allergens: normalizeMealAllergens(codes) };
-      return { ...prev, [date]: rows };
+    entries.push({
+      key: cancellations,
+      render: true,
+      value: seedRead(
+        "mealCancellations",
+        async (signal) =>
+          (
+            await readContract(
+              mealContract.routes["GET /api/meal-plan/cancellations"],
+              {
+                token,
+                signal,
+                query: { from, to },
+              },
+            )
+          ).data,
+      ),
     });
-  };
-
-  const addRow = (date: string) => {
-    setDrafts((prev) => ({
-      ...prev,
-      [date]: [...(prev[date] ?? []), createDishDraft()],
-    }));
-  };
-
-  const removeRow = (date: string, idx: number) => {
-    setDrafts((prev) => {
-      const rows = (prev[date] ?? []).filter((_, i) => i !== idx);
-      return { ...prev, [date]: rows.length ? rows : [createDishDraft()] };
-    });
-  };
-
-  // A dish with content goes through a confirmation; an empty row is removed
-  // straight away (nothing to lose).
-  const requestRemove = (date: string, idx: number) => {
-    const row = drafts[date]?.[idx];
-    if (row && rowHasContent(row)) {
-      setDeleteTarget({ date, idx });
-    } else {
-      removeRow(date, idx);
+  }
+  if (tenant.mealRegistrationEnabled === true) {
+    if (readsPlan) {
+      entries.push({
+        key: orders,
+        value: seedRead("mealOrdersWeek", async (signal) =>
+          mapMealOrders(
+            (
+              await readContract(
+                mealContract.routes["GET /api/meal-plan/orders"],
+                { token, signal, query: { from, to } },
+              )
+            ).data,
+          ),
+        ),
+      });
     }
-  };
-
-  const confirmRemove = () => {
-    if (deleteTarget) removeRow(deleteTarget.date, deleteTarget.idx);
-    setDeleteTarget(null);
-  };
-
-  // --- Per-day copy / paste / clear -------------------------------------
-  const copyDay = (date: string) => {
-    setClipboard(normalizeDay(drafts[date] ?? []).map((r) => ({ ...r })));
-    toast.success(`Die Gerichte vom ${weekdayLabel(date)} sind kopiert.`);
-  };
-
-  const pasteDay = (date: string) => {
-    if (!clipboard) return;
-    const rows = clipboard.length
-      ? clipboard.map((row) =>
-          createDishDraft(row.dish, row.note, row.allergens),
-        )
-      : [createDishDraft()];
-    setDrafts((prev) => ({ ...prev, [date]: rows }));
-  };
-
-  const clearDay = (date: string) => {
-    setDrafts((prev) => ({ ...prev, [date]: [createDishDraft()] }));
-  };
-
-  // --- Week navigation (guarded against unsaved changes) ----------------
-  const attemptWeekChange = (next: number) => {
-    if (next === weekOffset) return;
-    // Block week switches while a save (or prev-week copy) is in flight. The
-    // post-save reload is bound to the week that was on screen when Save was
-    // clicked; switching mid-save would let that stale reload win the
-    // latest-wins token race and write the old week's data over the new week,
-    // leaving an unloaded/blank grid that the next edit could overwrite.
-    if (saving || copyingPrev || loading) return;
-    if (isDirty) {
-      setPendingOffset(next);
-    } else {
-      setWeekOffset(next);
+    if (
+      admin ||
+      hasPermission(session, "meals:orders") ||
+      hasPermission(session, "meals:register")
+    ) {
+      entries.push({
+        key: participants,
+        value: seedRead("dailyMealParticipants", async (signal) =>
+          mapDailyMealList(
+            (
+              await readContract(
+                mealContract.routes["GET /api/meal-plan/participants"],
+                { token, signal, query: { date } },
+              )
+            ).data,
+          ),
+        ),
+      });
     }
-  };
-
-  const confirmWeekChange = () => {
-    // The discarded edits must not come back when the person returns to this
-    // week: the next read of it applies as a new week.
-    appliedWeek.current = null;
-    setDrafts({});
-    setOriginals({});
-    setVersions({});
-    if (pendingOffset !== null) setWeekOffset(pendingOffset);
-    setPendingOffset(null);
-  };
-
-  const retryAfterSave = () => {
-    if (editingLocked) return;
-    if (isDirty) setConfirmReload(true);
-    else void afterSave.refresh();
-  };
-
-  // --- Copy the previous week's plan into the current week ---------------
-  const doCopyPreviousWeek = useCallback(async () => {
-    setCopyingPrev(true);
-    try {
-      const prevMonday = (() => {
-        const base = parseISODate(mondayISO);
-        base.setDate(base.getDate() - 7);
-        return toISODate(base);
-      })();
-      const prevDates = workWeekDates(prevMonday);
-      // Only the dishes are copied: each day of this week keeps the version
-      // it was read with, so its save still checks this week's stored day.
-      const previous = draftsFromDays(
-        await getMealPlanWeek(prevMonday),
-        prevDates,
-      );
-      setDrafts((prev) => {
-        const next = { ...prev };
-        prevDates.forEach((pd, i) => {
-          next[weekDates[i]!] = previous[pd]!;
-        });
-        return next;
+    if (admin || hasPermission(session, "meals:manage")) {
+      entries.push({
+        key: caterer,
+        value: seedRead("schoolMealCaterer", async (signal) =>
+          mapMealCaterer(
+            (
+              await readContract(
+                catererContract.routes["GET /api/meal-caterer/"],
+                { token, signal },
+              )
+            ).data,
+          ),
+        ),
       });
-      toast.success(
-        "Die Gerichte der Vorwoche sind übernommen. Bitte speichere den Plan.",
-      );
-    } catch (err) {
-      logger.error("meal_plan_copy_prev_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      void showActionError(err, {
-        object: "die Vorwoche im Speiseplan",
-        retry: () => retryCopyPrevRef.current(),
-      });
-    } finally {
-      setCopyingPrev(false);
     }
-  }, [mondayISO, weekDates, toast, showActionError]);
-  useLayoutEffect(() => {
-    retryCopyPrevRef.current = () => void doCopyPreviousWeek();
-  });
+  }
+  return seedOf(snapshot, entries, builtAt);
+}
 
-  // Die Rückfrage und der Satz am Knopf hängen an derselben Bedingung.
-  const weekHasContent = weekDates.some((d) => dayHasContent(drafts[d]));
-  const requestCopyPreviousWeek = () => {
-    if (weekHasContent) {
-      setConfirmCopyPrev(true);
-    } else {
-      void doCopyPreviousWeek();
-    }
-  };
-
-  // --- Save / discard ---------------------------------------------------
-  const discard = () => {
-    clearSaveError();
-    setDrafts((prev) => {
-      const next = { ...prev };
-      for (const date of weekDates) {
-        const o = originals[date] ?? [];
-        next[date] = o.length
-          ? o.map((row) => createDishDraft(row.dish, row.note, row.allergens))
-          : [createDishDraft()];
-      }
-      return next;
-    });
-  };
-
-  // Someone stored a day differently since this page read it: take the
-  // stored week as the new read state. A day keeps its draft only while it
-  // is unsaved and stored as this page read it; every other day, the refused
-  // one included, shows the stored plan, so „Speichern“ never replaces a
-  // change the person has not seen. Rejects when the read fails: saving
-  // then waits for a read of the stored week (ADR 0311).
-  const adoptStoredWeek = async (
-    unsaved: string[],
-    readVersions: Record<string, string>,
-  ): Promise<void> => {
-    if (!weekKey) return;
-    try {
-      const days = await week.mutate(getMealPlanWeek(mondayISO), {
-        revalidate: false,
-      });
-      if (!days) return;
-      appliedWeek.current = { key: weekKey, data: days };
-      const stored = draftsFromDays(days, weekDates);
-      const orig: Record<string, DishDraft[]> = {};
-      for (const date of weekDates) orig[date] = normalizeDay(stored[date]!);
-      const storedVersions = versionsFromDays(days);
-      setOriginals(orig);
-      setVersions(storedVersions);
-      setDrafts((prev) => {
-        const next = { ...prev };
-        for (const date of weekDates) {
-          const keep =
-            unsaved.includes(date) &&
-            storedVersions[date] === readVersions[date];
-          if (!keep) next[date] = stored[date]!;
-        }
-        return next;
-      });
-      setStoredWeekUnread(false);
-    } catch (err) {
-      logger.error("meal_plan_conflict_reload_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      throw err;
-    }
-  };
-
-  const handleSave = async () => {
-    if (storedWeekUnread) return;
-    setSaving(true);
-    clearSaveError();
-    // Each setDay is its own backend transaction, so a mid-loop failure leaves
-    // the already-sent days committed. Track what actually persisted and fold
-    // it into originals on failure, so the dirty indicator and Verwerfen reflect
-    // what is really stored rather than the pre-save snapshot.
-    const persisted: Record<string, DishDraft[]> = {};
-    // The version each saved day answers: a second save of the day checks
-    // against it without reading the week again.
-    const saved: Record<string, string> = {};
-    try {
-      for (const date of weekDates) {
-        const draft = normalizeDay(drafts[date] ?? []);
-        const original = originals[date] ?? [];
-        if (JSON.stringify(draft) === JSON.stringify(original)) continue;
-        const day = await setDay(date, dishInputs(draft), versions[date] ?? "");
-        persisted[date] = draft;
-        saved[date] = day.version;
-      }
-    } catch (err) {
-      logger.error("meal_plan_save_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      // Commit the days that did persist; the still-unsaved days stay dirty.
-      if (Object.keys(persisted).length > 0) {
-        setOriginals((prev) => ({ ...prev, ...persisted }));
-        setVersions((prev) => ({ ...prev, ...saved }));
-      }
-      // Der Fehler steht über dem Wochenplan (Bauart 2 Regel 5), nicht als
-      // Toast: die noch ungespeicherten Tage bleiben sichtbar markiert.
-      // A changed day needs the person's decision, not the same request
-      // again: `reload` reads the stored week, „Speichern“ and „Verwerfen“
-      // stay next to it. A failed read is shown with a retry of the read
-      // alone, and saving waits for it (ADR 0311).
-      const unsaved = changedDays.filter((date) => !(date in persisted));
-      const readVersions = { ...versions, ...saved };
-      const changedElsewhere = isReadStateRefusal(err);
-      if (changedElsewhere) setStoredWeekUnread(true);
-      void saveErrors.show(err, {
-        object: "die Woche im Speiseplan",
-        retry: () => retrySaveRef.current(),
-        reload: changedElsewhere
-          ? () => adoptStoredWeek(unsaved, readVersions)
-          : undefined,
-      });
-      setSaving(false);
-      return;
-    }
-    // The saved days are stored even when the reload below fails.
-    setOriginals((prev) => ({ ...prev, ...persisted }));
-    setVersions((prev) => ({ ...prev, ...saved }));
-    toast.success("Der Speiseplan ist gespeichert.");
-    // Saving stays on during the reload: no edit or week switch can slip in
-    // before the stored week replaces the drafts.
-    await afterSave.refresh();
-    setSaving(false);
-  };
-  useLayoutEffect(() => {
-    retrySaveRef.current = () => void handleSave();
-  });
-
-  // Dasselbe Wochenetikett wie Dienstplan, Zeiterfassung und Betreuungsplan
-  // ("KW 41 · 05.10.–09.10.2026"), hier für die fünf Essenstage.
-  const weekLabel = formatWeekLabel(
-    parseISODate(weekDates[0]!),
-    parseISODate(weekDates[4]!),
-  );
-  const isCurrentWeek = weekOffset === 0;
-  // Kein Wochenwechsel, solange eine Woche lädt, gespeichert oder aus der
-  // Vorwoche übernommen wird (siehe attemptWeekChange).
-  const weekSwitchLocked = loading || saving || copyingPrev;
-
-  // Statuszeile unter dem Titel: wie viele der fünf Wochentage schon ein
-  // Gericht haben. Kalenderwoche und Zeitraum stehen im Bedienband direkt
-  // darunter und werden nicht wiederholt (TENANT-PAGE-SPEC Regel 3). Die
-  // Zahl kommt aus den bereits gespeicherten Tagen der geladenen Woche.
-  const plannedDays = weekDates.filter(
-    (date) => (originals[date]?.length ?? 0) > 0,
-  ).length;
-  const initialLoading = canReadPlan && loading && !hasLoaded;
-  // Die Zahl der geplanten Tage gibt es nur für eine geladene Woche: nach
-  // einem Ladefehler stünde sonst "0 von 5 Tagen geplant" da (#2517).
-  const weekLoaded = weekDates.every((date) => date in originals);
-  const statusLine = weekLoaded
-    ? `${plannedDays} von ${weekDates.length} Tagen geplant`
-    : null;
-
+export default async function MealPlanPage({
+  params,
+}: {
+  params: Promise<{ tenant: string }>;
+}) {
+  const { tenant } = await params;
+  const seed = loadMealPlanSeed(tenant).catch(() => null);
   return (
-    <TenantPage
-      title="Speiseplan"
-      info="Hier steht, was es in der gewählten Woche zu essen gibt. Oben wechselst du die Woche. Was du hier speicherst, sehen Eltern sofort."
-      actions={<MealBillingReleaseLink />}
-      stats={statusLine}
-      statsLoading={initialLoading}
-      loading={initialLoading}
-      error={loadError}
-      // Bauart 3 Regel 1: der Wochenwechsel steuert Wochenplan und
-      // Bestellung und sitzt darum im Bedienband der Kopfkarte.
-      searchSlot={
-        canReadPlan ? (
-          <PlanningContextBar
-            withoutContextRow
-            dateLabel={weekLabel}
-            onPrevious={
-              weekSwitchLocked
-                ? undefined
-                : () => attemptWeekChange(weekOffset - 1)
-            }
-            onNext={
-              weekSwitchLocked
-                ? undefined
-                : () => attemptWeekChange(weekOffset + 1)
-            }
-            previousLabel="Vorherige Woche"
-            nextLabel="Nächste Woche"
-            onToday={
-              isCurrentWeek || weekSwitchLocked
-                ? undefined
-                : () => attemptWeekChange(0)
-            }
-            todayLabel="Diese Woche"
-          />
-        ) : undefined
-      }
-      overlays={
-        <>
-          {/* Löschen läuft portalweit über dasselbe Bauteil. */}
-          <ConfirmDeleteModal
-            isOpen={deleteTarget !== null}
-            title="Gericht entfernen"
-            description={
-              deleteTarget
-                ? `„${drafts[deleteTarget.date]?.[deleteTarget.idx]?.dish.trim() || "Dieses Gericht"}“ wird aus dem Plan entfernt. Die Änderung wird mit „Speichern“ übernommen.`
-                : ""
-            }
-            gate={{ mode: "twoStep", firstStepLabel: "Entfernen" }}
-            confirmLabel="Entfernen"
-            confirmTooltip="Entfernt das Gericht, gespeichert wird erst mit „Speichern“."
-            onConfirm={confirmRemove}
-            onClose={() => setDeleteTarget(null)}
-            loading={false}
-            error=""
-          />
-
-          <ConfirmationModal
-            isOpen={pendingOffset !== null || confirmReload}
-            onClose={() => {
-              setPendingOffset(null);
-              setConfirmReload(false);
-            }}
-            onConfirm={() => {
-              if (confirmReload) {
-                setConfirmReload(false);
-                void afterSave.refresh();
-              } else confirmWeekChange();
-            }}
-            title="Ungespeicherte Änderungen"
-            confirmText={
-              confirmReload ? "Verwerfen & neu laden" : "Verwerfen & wechseln"
-            }
-            cancelText="Hierbleiben"
-            confirmVariant="danger"
-            confirmTooltip={
-              confirmReload
-                ? "Verwirft deine Änderungen sofort und holt die gespeicherte Woche."
-                : "Verwirft deine Änderungen sofort und wechselt die Woche."
-            }
-          >
-            <p className="text-sm text-gray-600">
-              {confirmReload
-                ? "Du hast Änderungen, die noch nicht gespeichert sind. Beim Neuladen gehen sie verloren."
-                : "Du hast Änderungen in dieser Woche, die noch nicht gespeichert sind. Beim Wochenwechsel gehen sie verloren."}
-            </p>
-          </ConfirmationModal>
-
-          <ConfirmationModal
-            isOpen={pendingHref !== null}
-            onClose={cancelNavigation}
-            onConfirm={confirmNavigation}
-            title="Ungespeicherte Änderungen"
-            confirmText="Verwerfen & verlassen"
-            confirmTooltip="Verwirft deine Änderungen sofort und verlässt die Seite."
-            cancelText="Hierbleiben"
-            confirmVariant="danger"
-          >
-            <p className="text-sm text-gray-600">
-              Du hast Änderungen, die noch nicht gespeichert sind. Beim
-              Verlassen der Seite gehen sie verloren.
-            </p>
-          </ConfirmationModal>
-
-          <ConfirmationModal
-            isOpen={confirmCopyPrev}
-            onClose={() => setConfirmCopyPrev(false)}
-            onConfirm={() => {
-              setConfirmCopyPrev(false);
-              void doCopyPreviousWeek();
-            }}
-            title="Vorwoche übernehmen?"
-            confirmText="Übernehmen"
-            confirmTooltip="Ersetzt diese Woche, gespeichert wird erst mit „Speichern“."
-            cancelText="Abbrechen"
-          >
-            <p className="text-sm text-gray-600">
-              Die aktuelle Woche wird mit dem Plan der Vorwoche überschrieben.
-              Die Änderung wird erst mit „Speichern“ übernommen.
-            </p>
-          </ConfirmationModal>
-        </>
-      }
-    >
-      <FormErrorAlert message={saveErrors.error} />
-      <LoadErrorAlert
-        error={
-          afterSave.error && {
-            ...afterSave.error,
-            retry: afterSave.error.retry && {
-              ...afterSave.error.retry,
-              onClick: retryAfterSave,
-            },
-          }
-        }
-        className="mb-4"
-      />
-
-      {/* Eine Karte für den Wochenplan: Titel, Erklärung und „Vorwoche
-          übernehmen“ im Kopf, die fünf Tage randlos unter einer Trennlinie.
-          overflow visible: die Allergen-Auswahl eines Gerichts darf über die
-          Unterkante der Karte hinausragen. */}
-      <SectionCard
-        className={canReadPlan ? undefined : "hidden"}
-        overflow="visible"
-        title="Wochenplan"
-        description="Pro Tag ein oder mehrere Gerichte mit Allergenen und optionalem Hinweis. Eltern sehen den Plan im Elternportal."
-        actions={
-          canEdit ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="md"
-              onClick={requestCopyPreviousWeek}
-              disabled={loading || saving || copyingPrev || hasLoadError}
-              tooltip={
-                weekHasContent
-                  ? "Ersetzt diese Woche durch die Vorwoche, moto fragt vorher nach."
-                  : "Übernimmt die Vorwoche, gespeichert wird erst mit „Speichern“."
-              }
-              disabledReason={
-                hasLoadError && !loading
-                  ? "Die Woche ist nicht geladen, versuche es zuerst erneut."
-                  : undefined
-              }
-              isLoading={copyingPrev}
-              loadingText="Übernehmen…"
-            >
-              <Copy className="mr-2 h-4 w-4" />
-              Vorwoche übernehmen
-            </Button>
-          ) : undefined
-        }
-      >
-        <div
-          className={`compact:-mx-4 compact:-mb-4 -mx-5 -mb-5 border-t border-gray-200 transition-opacity duration-200 max-sm:-mx-4 max-sm:-mb-4 ${
-            loading ? "opacity-50" : "opacity-100"
-          }`}
-        >
-          <div className="grid grid-cols-1 divide-y divide-gray-200 md:grid-cols-5 md:divide-y-0">
-            {weekDates.map((date, dayIndex) => {
-              const rows = drafts[date] ?? [];
-              const isToday = date === today;
-              const hasContent = dayHasContent(rows);
-              return (
-                <div
-                  key={date}
-                  data-meal-day-column
-                  className={`flex flex-col border-gray-200 md:border-r md:last:border-r-transparent ${isToday ? "bg-moto-green/[0.04]" : ""}`}
-                >
-                  <div
-                    className={`flex items-center justify-between gap-2 border-b px-4 py-3 ${
-                      isToday ? "border-moto-green/30" : "border-gray-200"
-                    }`}
-                  >
-                    <div>
-                      <div className="text-sm font-semibold text-gray-900">
-                        {weekdayLabel(date)}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {shortDate(date)}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      {isToday && (
-                        <StatusBadge label="Heute" tone="green" compact />
-                      )}
-                      {canEdit && (
-                        <OverflowMenu
-                          ariaLabel={`Aktionen für ${weekdayLabel(date)}`}
-                          triggerSize="sm"
-                          matchContainerSelector="[data-meal-day-column]"
-                          items={[
-                            {
-                              label: "Tag kopieren",
-                              icon: <Copy className="h-4 w-4" />,
-                              description:
-                                "Merkt sich die Gerichte, um sie an einem anderen Tag einzufügen.",
-                              onClick: () => copyDay(date),
-                              disabled: !hasContent || editingLocked,
-                            },
-                            {
-                              label: "Einfügen",
-                              icon: <ClipboardPaste className="h-4 w-4" />,
-                              description:
-                                "Ersetzt die Gerichte dieses Tags durch die kopierten.",
-                              onClick: () => pasteDay(date),
-                              disabled: clipboard === null || editingLocked,
-                            },
-                            {
-                              label: "Tag leeren",
-                              icon: <Trash2 className="h-4 w-4" />,
-                              description:
-                                "Leert den Tag sofort, gespeichert wird erst mit „Speichern“.",
-                              onClick: () => clearDay(date),
-                              destructive: true,
-                              disabled: !hasContent || editingLocked,
-                            },
-                          ]}
-                        />
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex flex-1 flex-col gap-3 p-3">
-                    {rows.map((row, idx) => (
-                      <InsetPanel
-                        key={row.clientId}
-                        tone="white"
-                        padding="md"
-                        className="group relative min-h-20 pr-10 focus-within:outline-2 focus-within:outline-gray-600 pointer-coarse:pr-12"
-                      >
-                        <Textarea
-                          rows={1}
-                          className={dishFieldClass}
-                          value={row.dish}
-                          placeholder="Gericht eintragen…"
-                          readOnly={!canEditNow}
-                          onChange={(e) =>
-                            updateDish(date, idx, "dish", e.target.value)
-                          }
-                        />
-                        <Textarea
-                          rows={1}
-                          className={noteFieldClass}
-                          value={row.note}
-                          placeholder="Hinweis (optional)"
-                          readOnly={!canEditNow}
-                          onChange={(e) =>
-                            updateDish(date, idx, "note", e.target.value)
-                          }
-                        />
-                        {canEditNow ? (
-                          <MealAllergenSelect
-                            value={row.allergens}
-                            // Donnerstag und Freitag öffnen nach links, damit
-                            // das Menü im Fenster bleibt.
-                            menuAlign={dayIndex >= 3 ? "end" : "start"}
-                            onChange={(codes) =>
-                              updateAllergens(date, idx, codes)
-                            }
-                            className="mt-2"
-                          />
-                        ) : (
-                          <MealAllergenMarks
-                            allergens={row.allergens}
-                            className="mt-2"
-                          />
-                        )}
-                        {canEdit && (rows.length > 1 || rowHasContent(row)) && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            aria-label="Gericht entfernen"
-                            onClick={() => requestRemove(date, idx)}
-                            tooltip={
-                              rowHasContent(row)
-                                ? "Entfernt das Gericht, moto fragt vorher nach."
-                                : "Entfernt die leere Zeile sofort."
-                            }
-                            disabled={editingLocked}
-                            className="absolute top-1 right-1"
-                          >
-                            <X className="h-4 w-4" aria-hidden />
-                          </Button>
-                        )}
-                      </InsetPanel>
-                    ))}
-
-                    {canEdit && (
-                      <Button
-                        type="button"
-                        variant="dashed"
-                        size="md"
-                        onClick={() => addRow(date)}
-                        tooltip="Fügt diesem Tag ein leeres Feld für ein Gericht hinzu."
-                        disabled={editingLocked}
-                        className="w-full gap-1"
-                      >
-                        <Plus className="h-4 w-4" aria-hidden />
-                        Gericht
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          {weekAllergens.length > 0 ? (
-            <MealAllergenLegend
-              allergens={weekAllergens}
-              showSource={false}
-              className="border-t border-gray-200 px-4 py-3"
-            />
-          ) : null}
-        </div>
-      </SectionCard>
-
-      {canReadOrders ? (
-        <MealOrderWeek
-          mondayISO={mondayISO}
-          canExportMonth={canReadParticipants}
-        />
-      ) : null}
-
-      {/* Der Caterer der Schule (ADR 0077): nur wer den Speiseplan
-          verwaltet, lädt ihn ein oder beendet die Belieferung. Er steht
-          neben der Bestellung, die er beliefert. */}
-      {canEdit && mealRegistrationEnabled === true ? (
-        <MealCaterer canManageSupply={isAdmin(session)} />
-      ) : null}
-
-      {/* Die Tagesliste ist die längste Fläche und steht darum zuletzt:
-          sie wächst bis zur Unterkante des Bildschirms. */}
-      {canReadParticipants || canRegister ? (
-        <MealParticipantList
-          canRegister={canRegister}
-          canExport={canReadParticipants}
-        />
-      ) : null}
-
-      {/* Save bar — only while there are unsaved changes. */}
-      {canEdit && isDirty && !loading && !hasLoadError && (
-        <StickyActionBar
-          summary={`${changedDays.length} ${changedDays.length === 1 ? "Tag geändert" : "Tage geändert"}`}
-        >
-          <Button
-            type="button"
-            variant="outline"
-            size="md"
-            onClick={discard}
-            disabled={saving}
-            tooltip="Nimmt alle ungespeicherten Änderungen dieser Woche sofort zurück."
-          >
-            Verwerfen
-          </Button>
-          <Button
-            type="button"
-            variant="primary"
-            size="md"
-            onClick={handleSave}
-            disabled={saving || storedWeekUnread}
-            disabledReason={
-              saving ? undefined : "Lade zuerst die gespeicherte Woche neu."
-            }
-            tooltip="Speichert die Woche, Eltern sehen den Plan im Elternportal."
-            isLoading={saving}
-            loadingText="Speichern…"
-          >
-            Speichern
-          </Button>
-        </StickyActionBar>
-      )}
-    </TenantPage>
+    <MealPlanSeed seed={seed}>
+      <MealPlanContent />
+    </MealPlanSeed>
   );
 }

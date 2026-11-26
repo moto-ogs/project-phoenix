@@ -63,7 +63,7 @@ export function syncTokenFromPayload(
   }
 }
 
-const listOf = <T>(value: T[] | undefined): T[] =>
+const listOf = <T>(value: T[] | null | undefined): T[] =>
   Array.isArray(value) ? value : [];
 
 export function buildAuthUser(

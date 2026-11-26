@@ -97,6 +97,12 @@
       "legacy": "care_contract.enrollment_preview_changed"
     },
     {
+      "code": "care_contract.family_refused",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "care_contract.family_refused"
+    },
+    {
       "code": "care_contract.field_invalid",
       "class": "input",
       "parameters": [],

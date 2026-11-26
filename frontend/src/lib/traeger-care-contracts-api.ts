@@ -72,6 +72,7 @@ const VERSION_STATUS_VALUES = [
   "abgeloest",
   "abgelehnt",
   "ersetzt",
+  "ueberholt",
 ] as const;
 const VERSION_SOURCE_VALUES = [
   "abschluss",
@@ -79,7 +80,7 @@ const VERSION_SOURCE_VALUES = [
   "import",
   "angebotskorrektur",
 ] as const;
-const SIGNATURE_METHOD_VALUES = ["drawn", "typed", "paper"] as const;
+const SIGNATURE_METHOD_VALUES = ["drawn", "typed", "paper", "request"] as const;
 const SIGNATURE_CHANNEL_VALUES = [
   "parent_account",
   "mail_link",
@@ -154,6 +155,13 @@ export interface OfferingTemplate {
   readonly priceCents: number | null;
   readonly active: boolean;
   readonly template: ContractTemplate | null;
+  /**
+   * The Schulträger or the Gemeinde that concludes the contracts of the
+   * school in place of the Träger (#4811); empty for the Träger.
+   */
+  readonly issuerName: string;
+  /** The read state a save sends back (ADR 0311). */
+  readonly version: string;
 }
 
 /** One contract per accepted application child at its school. */
@@ -287,6 +295,11 @@ export interface CareContractSummary {
   readonly followsBookings: boolean;
   /** The enrollment (application child) it follows; null without one. */
   readonly requestChildId: string | null;
+  /**
+   * A changed version of the active contract waits for the parents'
+   * signature (#4816); the version in force holds until then.
+   */
+  readonly changeAwaitsSignature: boolean;
 }
 
 export interface CareContractList {
@@ -314,6 +327,19 @@ export interface ContractVersion {
   readonly validUntil: string | null;
   readonly services: readonly ContractService[];
   readonly createdAt: string;
+  /**
+   * The effective date the signed document names, when the parents signed
+   * after it and the version holds from the day of the signature (#4816).
+   */
+  readonly agreedFrom?: string | null;
+}
+
+/** How the parents agreed to one version (#4816). */
+export interface ContractVersionSignature {
+  readonly versionNumber: number;
+  readonly method: (typeof SIGNATURE_METHOD_VALUES)[number] | undefined;
+  readonly signerName: string;
+  readonly signedAt: string;
 }
 
 export interface CareContractDetail extends CareContractSummary {
@@ -350,9 +376,13 @@ export interface CareContractDetail extends CareContractSummary {
   readonly signature: ContractSignature | null;
   /** The reminders of a contract that waits for its signature. */
   readonly reminders: readonly {
+    /** The version the reminder asked a signature for (#4816). */
+    readonly versionNumber: number;
     readonly number: number;
     readonly sentAt: string;
   }[];
+  /** How the parents agreed to each signed version, oldest first. */
+  readonly versionSignatures: readonly ContractVersionSignature[];
   /**
    * Term up to the contract's last day, notice period and monthly fee of the
    * version above, as the contract PDF prints them.
@@ -486,6 +516,7 @@ function offeringFromBackend(
     noticeText: row.notice_text,
     schoolId: row.school_id,
     schoolName: row.school_name,
+    issuerName: row.issuer_name,
     offeringId: row.offering_id,
     offeringName: row.offering_name,
     phaseName: row.phase_name,
@@ -498,6 +529,7 @@ function offeringFromBackend(
           updatedAt: row.template.updated_at,
         }
       : null,
+    version: row.version,
   };
 }
 
@@ -576,6 +608,7 @@ function summaryFromBackend(
     imported: row.imported,
     followsBookings: row.follows_bookings,
     requestChildId: row.request_child_id,
+    changeAwaitsSignature: row.change_awaits_signature,
   };
 }
 
@@ -632,8 +665,15 @@ function detailFromBackend(
         }
       : null,
     reminders: (row.reminders ?? []).map((reminder) => ({
+      versionNumber: reminder.version_number,
       number: reminder.number,
       sentAt: reminder.sent_at,
+    })),
+    versionSignatures: (row.version_signatures ?? []).map((signature) => ({
+      versionNumber: signature.version_number,
+      method: knownEnum(SIGNATURE_METHOD_VALUES, signature.method),
+      signerName: signature.signer_name,
+      signedAt: signature.signed_at,
     })),
     versions: (row.versions ?? []).map((version) => ({
       number: version.number,
@@ -647,6 +687,7 @@ function detailFromBackend(
       validUntil: version.valid_until,
       services: servicesFromBackend(version.services),
       createdAt: version.created_at,
+      agreedFrom: version.agreed_from ?? null,
     })),
     termText: row.term_text,
     noticeText: row.notice_text,
@@ -698,7 +739,14 @@ export async function fetchCareContracts(
 }
 
 export async function fetchConclusionModes(): Promise<SchoolConclusionMode[]> {
-  const rows = await bffJson("org", "GET /traeger/contracts/conclusion-modes");
+  return mapConclusionModes(
+    await bffJson("org", "GET /traeger/contracts/conclusion-modes"),
+  );
+}
+
+export function mapConclusionModes(
+  rows: traegerContractsContract.SchoolConclusion[],
+): SchoolConclusionMode[] {
   return rows.map((row) => ({
     schoolId: row.school_id,
     schoolName: row.school_name,
@@ -842,27 +890,54 @@ async function downloadContractFile(
 }
 
 export async function fetchContractTemplates(): Promise<OfferingTemplate[]> {
-  const rows = await bffJson("org", "GET /traeger/contract-templates/");
+  return mapContractTemplates(
+    await bffJson("org", "GET /traeger/contract-templates/"),
+  );
+}
+
+export function mapContractTemplates(
+  rows: traegerContractTemplatesContract.OfferingTemplate[],
+): OfferingTemplate[] {
   return rows.map(offeringFromBackend);
 }
 
+/**
+ * Saves the conditions of one offering over the version they were read with
+ * (ADR 0311); a changed template answers `general.changed_since_read`.
+ */
 export async function saveContractTemplate(
   schoolId: string,
   offeringId: string,
   terms: ContractTerms,
+  expectedVersion: string,
 ): Promise<OfferingTemplate> {
   return offeringFromBackend(
     await bffJson(
       "org",
       "PUT /traeger/contract-templates/{schoolId}/{offeringId}",
-      { params: { schoolId, offeringId }, body: termsToBackend(terms) },
+      {
+        params: { schoolId, offeringId },
+        body: { ...termsToBackend(terms), expected_version: expectedVersion },
+      },
     ),
   );
 }
 
 /**
+ * Hands the contract over on paper (#8030): moto freezes the PDF the office
+ * prints, and a draft counts as sent, without a mail. The office then
+ * downloads that PDF with `downloadCareContract`.
+ */
+export async function handOverCareContractOnPaper(id: string): Promise<void> {
+  await bffJson("org", "POST /traeger/contracts/{id}/paper-handover", {
+    params: { id },
+  });
+}
+
+/**
  * Records a contract the parents signed on paper (#4679): the signed PDF,
- * who signed and on which day. The contract is concluded afterwards.
+ * who signed and on which day. The contract must have been handed over or
+ * sent first (#8030); it is concluded afterwards.
  */
 export async function recordPaperSignature(
   id: string,
@@ -870,12 +945,20 @@ export async function recordPaperSignature(
     readonly file: File;
     readonly signerName: string;
     readonly signedOn: string;
+    /**
+     * The version the dialog named (#4816): the scan is refused when
+     * another version waits by now.
+     */
+    readonly versionNumber?: number;
   },
 ): Promise<void> {
   const form = new FormData();
   form.append("file", input.file);
   form.append("signer_name", input.signerName);
   form.append("signed_on", input.signedOn);
+  if (input.versionNumber !== undefined) {
+    form.append("version_number", String(input.versionNumber));
+  }
   await bffJson("org", "POST /traeger/contracts/{id}/paper-signature", {
     params: { id },
     body: form,

@@ -118,7 +118,6 @@ export function TraegerBelegRetentionSection({
           getRowKey={(row) => `${row.belegType}-${row.reason}`}
           isLoading={loading}
           rowHasInteractiveControls
-          stackedOnMobile
           emptyState={
             <EmptyState
               variant="compact"
@@ -135,7 +134,7 @@ export function TraegerBelegRetentionSection({
 
       <SectionCard
         title="Weisungen des Trägers"
-        description="Je Belegart die dokumentierte Weisung. Erst mit einer Weisung löscht moto nach Fristende."
+        description="Pro Belegart die dokumentierte Weisung. Erst mit einer Weisung löscht moto nach Fristende."
         action={
           <Button
             type="button"
@@ -155,7 +154,6 @@ export function TraegerBelegRetentionSection({
           rows={[...(data?.instructions ?? [])]}
           getRowKey={(row) => row.id}
           isLoading={loading}
-          stackedOnMobile
           emptyState={
             <EmptyState
               variant="compact"
@@ -178,7 +176,7 @@ export function TraegerBelegRetentionSection({
       />
 
       <SectionCard
-        title="Stand je Belegart"
+        title="Stand pro Belegart"
         description="Wie viele Belege eine Frist haben, noch laufen, offen oder ausgesetzt sind."
       >
         <DataTable
@@ -186,7 +184,6 @@ export function TraegerBelegRetentionSection({
           rows={[...(data?.summary ?? [])]}
           getRowKey={(row) => row.belegType}
           isLoading={loading}
-          stackedOnMobile
           emptyState={
             <EmptyState variant="compact" title="Noch keine Belege bewertet" />
           }
@@ -202,7 +199,6 @@ export function TraegerBelegRetentionSection({
           rows={[...(data?.deletions ?? [])]}
           getRowKey={(row) => `${row.belegType}-${row.deletedOn}`}
           isLoading={loading}
-          stackedOnMobile
           emptyState={
             <EmptyState variant="compact" title="Noch nichts gelöscht" />
           }
@@ -502,7 +498,6 @@ function SuspensionsCard({
           getRowKey={(row) => row.id}
           isLoading={loading}
           rowHasInteractiveControls
-          stackedOnMobile
           emptyState={<EmptyState variant="compact" title="Keine Aussetzung" />}
         />
       </SectionCard>

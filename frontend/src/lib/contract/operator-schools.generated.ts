@@ -11,6 +11,7 @@ import {
   nullable,
   object,
   optional,
+  paginated,
   requestBody,
   safeInt,
   str,
@@ -51,6 +52,7 @@ export const SchoolRequiredDetailsSchema: z.ZodType<SchoolRequiredDetails, unkno
 /** Go: organizationtenancy.SchoolAccount */
 export interface SchoolAccount {
   account_id: string;
+  invitation_id?: string;
   email: string;
   active: boolean;
   first_name: string;
@@ -66,6 +68,7 @@ export interface SchoolAccount {
 
 export const SchoolAccountSchema: z.ZodType<SchoolAccount, unknown> = object<SchoolAccount>({
   account_id: int64String,
+  invitation_id: optional(int64String),
   email: str,
   active: bool,
   first_name: str,
@@ -124,7 +127,7 @@ export interface BookingAuthorityImpactChild {
 }
 
 export const BookingAuthorityImpactChildSchema: z.ZodType<BookingAuthorityImpactChild, unknown> = object<BookingAuthorityImpactChild>({
-  student_id: str,
+  student_id: int64String,
   first_name: str,
   last_name: str,
   school_class: str,
@@ -280,6 +283,7 @@ export interface updateSchoolRequest {
   active?: boolean;
   hidden?: boolean;
   child_quota?: childQuotaRequest | null;
+  expected_version?: string;
 }
 
 /** Go: operator.deviceSlotsRequest */
@@ -312,6 +316,7 @@ export const routes = {
     pattern: "/operator/schools/{id}/settings/values/{key}",
     portals: ["platform"],
     routeFile: "the operator's route file purges the school's cached tenant lookup",
+    browserPath: "/api/operator/schools/{id}/settings/values/{key}",
     response: success(schoolSettingMutationResponseSchema),
   },
   "GET /operator/schools/": {
@@ -336,7 +341,13 @@ export const routes = {
     method: "GET",
     pattern: "/operator/schools/{id}/accounts",
     portals: ["platform"],
-    response: success(z.array(SchoolAccountSchema)),
+    query: {
+      "cursor": { kind: "string" },
+      "direction": { kind: "string" },
+      "search": { kind: "string" },
+      "sort": { kind: "string" },
+    },
+    response: paginated(z.array(SchoolAccountSchema)),
   },
   "GET /operator/schools/{id}/accounts/{accountId}/caregiver-capability/": {
     method: "GET",
@@ -446,6 +457,7 @@ export const routes = {
     pattern: "/operator/schools/{id}/settings/values/{key}",
     portals: ["platform"],
     routeFile: "the operator's route file purges the school's cached tenant lookup",
+    browserPath: "/api/operator/schools/{id}/settings/values/{key}",
     query: {
       "force": { kind: "string", values: ["true"] },
     },

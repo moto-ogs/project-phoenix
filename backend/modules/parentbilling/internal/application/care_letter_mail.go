@@ -74,7 +74,7 @@ func (l *CareLetters) MailCareLetters(ctx context.Context, reviewer parentbillin
 				return parentbilling.BillingLetterSeries{}, err
 			}
 		}
-		if _, err := l.send(ctx, reviewer, &current, letter, traeger); err != nil {
+		if _, err := l.send(ctx, reviewer, &current, letter, mailSenderOf(letter.invoice.Issuer, traeger)); err != nil {
 			return parentbilling.BillingLetterSeries{}, err
 		}
 		series.Queued++
@@ -125,7 +125,7 @@ func (l *CareLetters) MailCareLetter(ctx context.Context, reviewer parentbilling
 	if err != nil {
 		return parentbilling.CareLetterMailing{}, err
 	}
-	send, err := l.send(ctx, reviewer, &current, letter, traeger)
+	send, err := l.send(ctx, reviewer, &current, letter, mailSenderOf(letter.invoice.Issuer, traeger))
 	if err != nil {
 		return parentbilling.CareLetterMailing{}, err
 	}
@@ -306,9 +306,10 @@ func effectiveRecipients(ctx context.Context, source CareLetterRecipients, store
 	}
 	for contractID, applicant := range recipients {
 		effective := parentbilling.ResolveRecipient(parentbilling.BillingRecipient{FirstName: applicant.FirstName,
-			LastName: applicant.LastName, Email: applicant.Email}, byFamily[parentbilling.ContractFamilyKey(applicant.Email, contractID)])
+			LastName: applicant.LastName, Email: applicant.Email}, byFamily[applicant.FamilyOf(contractID)])
 		recipients[contractID] = parentbilling.CareRecipient{FirstName: effective.FirstName, LastName: effective.LastName,
-			Email: effective.Email, Kind: effective.Kind, SecondName: effective.SecondName, Address: effective.Address}
+			Email: effective.Email, Kind: effective.Kind, SecondName: effective.SecondName, Address: effective.Address,
+			FamilyContractID: applicant.FamilyContractID}
 	}
 	return recipients, nil
 }

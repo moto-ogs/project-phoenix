@@ -22,6 +22,7 @@
   "logo_not_found": "Nuk u ruajt: {object}. Kontrolloni të dhënat.",
   "logo_too_large": "Nuk u ruajt: {object}. Kontrolloni të dhënat.",
   "master_data_invalid": "Nuk u ruajt: {object}. Kontrolloni të dhënat.",
+  "school_party_creditor_account_conflict": "Ky identifikues kreditori është regjistruar tashmë për {school_name} me një llogari tjetër. Vendosni të njëjtën llogari ose kontrolloni identifikuesin.",
   "member_not_found": "Nuk u ruajt: {object}. Kontrolloni të dhënat.",
   "no_membership": "Nuk keni qasje te: {object}. Kontaktoni shkollën.",
   "report_template_invalid": "Ju lutemi kontrolloni të dhënat e shabllonit.",
@@ -29,6 +30,9 @@
   "report_template_not_found": "Ky shabllon nuk ekziston më. Ju lutemi rifreskoni faqen.",
   "school_not_found": "Nuk keni qasje te: {object}. Kontaktoni shkollën.",
   "school_requires_code": "Nuk keni qasje te: {object}. Kontaktoni shkollën.",
+  "school_role_name_taken": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
+  "school_role_name_used_at_school": "Nuk u ndryshua: {object}. Kontrolloni gjendjen aktuale.",
+  "school_role_not_found": "Nuk u ruajt: {object}. Kontrolloni të dhënat.",
   "second_factor_required": "Nuk keni qasje te: {object}. Kontaktoni shkollën.",
   "shared_document_not_found": "Ofruesi nuk e ndan më këtë dokument. Ju lutemi rifreskoni faqen."
 }

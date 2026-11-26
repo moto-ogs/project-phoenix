@@ -25,6 +25,10 @@ import (
 	nativeUploads "github.com/moto-ogs/project-phoenix/modules/delivery/objects"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/uptrace/bun"
+
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
@@ -32,9 +36,6 @@ import (
 	filestoreAPI "github.com/moto-ogs/project-phoenix/modules/filestorage/http/files"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"github.com/uptrace/bun"
 )
 
 var fakePDF = []byte("%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF\n")
@@ -135,10 +136,41 @@ func (c *apiContext) upload(folderID int64, filename string, content []byte, acc
 
 // folderPayload mirrors what the frontend sends: ids as decimal strings.
 type folderPayload struct {
-	Name       string   `json:"name"`
-	Visibility string   `json:"visibility"`
-	RoleIDs    []string `json:"role_ids,omitempty"`
-	AccountIDs []string `json:"account_ids,omitempty"`
+	Name            string   `json:"name"`
+	Visibility      string   `json:"visibility"`
+	RoleIDs         []string `json:"role_ids,omitempty"`
+	AccountIDs      []string `json:"account_ids,omitempty"`
+	ExpectedVersion string   `json:"expected_version,omitempty"`
+}
+
+// listedFolder is a folder as the admin's folder list shows it, with the
+// tokens an edit and a delete send back (ADR 0311).
+func (c *apiContext) listedFolder(id int64) (version, fingerprint string) {
+	rec := c.do(http.MethodGet, "/files/folders", nil, "", c.admin, permissions.AdminWildcard)
+	require.Equal(c.t, http.StatusOK, rec.Code, rec.Body.String())
+	var resp struct {
+		Data struct {
+			Folders []struct {
+				ID          ident.ID `json:"id"`
+				Version     string   `json:"version"`
+				Fingerprint string   `json:"fingerprint"`
+			} `json:"folders"`
+		} `json:"data"`
+	}
+	require.NoError(c.t, json.Unmarshal(rec.Body.Bytes(), &resp))
+	for _, folder := range resp.Data.Folders {
+		if folder.ID.Int64() == id {
+			return folder.Version, folder.Fingerprint
+		}
+	}
+	c.t.Fatalf("folder %d is not listed", id)
+	return "", ""
+}
+
+// deleteFolder deletes a folder as the admin who confirmed its listed files.
+func (c *apiContext) deleteFolder(id int64) *httptest.ResponseRecorder {
+	_, fingerprint := c.listedFolder(id)
+	return c.json(http.MethodDelete, fmt.Sprintf("/files/folders/%d", id), map[string]string{"expected_fingerprint": fingerprint}, c.admin, permissions.AdminWildcard)
 }
 
 // idStr renders an id the way the client carries it.
@@ -200,9 +232,9 @@ func (c *apiContext) assignRole(accountID, roleID int64) {
 	_, err := c.db.NewInsert().
 		TableExpr("auth.account_roles").
 		Model(&map[string]any{
-			"tenant_id":  testpkg.Tenant(c.t),
-			"account_id": accountID,
-			"role_id":    roleID,
+			"tenant_id":  fmt.Sprint(testpkg.Tenant(c.t)),
+			"account_id": fmt.Sprint(accountID),
+			"role_id":    fmt.Sprint(roleID),
 		}).
 		Exec(testpkg.Ctx(c.t))
 	require.NoError(c.t, err)
@@ -292,7 +324,8 @@ func TestFolderManagementRequiresPermission(t *testing.T) {
 	rec = c.json(http.MethodPost, "/files/folders", folderPayload{Name: "Fremd", Visibility: "selected", RoleIDs: []string{idStr(foreignRole.ID)}}, c.admin, permissions.AdminWildcard)
 	assert.Equal(t, http.StatusBadRequest, rec.Code, "a role of another school is refused")
 
-	rec = c.json(http.MethodPut, fmt.Sprintf("/files/folders/%d", folder), folderPayload{Name: "Umbenannt", Visibility: "admins"}, c.admin, permissions.AdminWildcard)
+	version, _ := c.listedFolder(folder)
+	rec = c.json(http.MethodPut, fmt.Sprintf("/files/folders/%d", folder), folderPayload{Name: "Umbenannt", Visibility: "admins", ExpectedVersion: version}, c.admin, permissions.AdminWildcard)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Empty(t, folderIDs(c.listFolders(c.member, permissions.UsersRead)), "renamed to admins-only")
 
@@ -530,7 +563,7 @@ func TestDeleteFolderQueuesCleanupForItsFiles(t *testing.T) {
 	rec := c.upload(folder, "Alt.pdf", fakePDF, c.admin, permissions.AdminWildcard)
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 
-	rec = c.do(http.MethodDelete, fmt.Sprintf("/files/folders/%d", folder), nil, "", c.admin, permissions.AdminWildcard)
+	rec = c.deleteFolder(folder)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
 	assert.Empty(t, folderIDs(c.listFolders(c.admin, permissions.AdminWildcard)))
@@ -604,7 +637,7 @@ func TestFileMetadataTablesEnforceRLS(t *testing.T) {
 			dropped := c.createFolder(folderPayload{Name: "Temporär", Visibility: "all_staff"})
 			rec = c.upload(dropped, "Alt.pdf", fakePDF, c.admin, permissions.AdminWildcard)
 			require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
-			rec = c.do(http.MethodDelete, fmt.Sprintf("/files/folders/%d", dropped), nil, "", c.admin, permissions.AdminWildcard)
+			rec = c.deleteFolder(dropped)
 			require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 			var cleanupID int64
 			require.NoError(t, c.db.NewSelect().TableExpr("documents.file_cleanup").Column("id").Where("owner_id = ?", dropped).Scan(testpkg.Ctx(t), &cleanupID))

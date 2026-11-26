@@ -48,11 +48,12 @@ type Service struct {
 
 // New composes the Meal Plan. notices tells the families about a changed
 // menu (#7145); nil tells nobody.
-func New(store ports.Store, directory ports.Directory, calendar ports.Calendar, settings ports.Settings, tx ports.Transaction, observe ports.Observer, now func() time.Time, notices mealplan.MenuChangeNotices) *Service {
+func New(store ports.Store, directory ports.Directory, calendar ports.Calendar, settings ports.Settings, tx ports.Transaction, observe ports.Observer, now func() time.Time, notices mealplan.MenuChangeNotices) mealplan.Services {
 	if store == nil || directory == nil || calendar == nil || settings == nil || tx == nil || observe == nil || now == nil {
 		panic("meal plan application: all dependencies are required")
 	}
-	return &Service{store: store, directory: directory, calendar: calendar, settings: settings, tx: tx, observe: observe, now: now, notices: notices}
+	service := &Service{store: store, directory: directory, calendar: calendar, settings: settings, tx: tx, observe: observe, now: now, notices: notices}
+	return mealplan.Services{Capability: service, Summaries: service}
 }
 
 func (s *Service) registrationAvailable(ctx context.Context) (available bool, err error) {
@@ -412,7 +413,7 @@ func (s *Service) dailyListIn(txCtx context.Context, rules domain.OrderingRules,
 	deadline := rules.FreezeAt(date)
 	list := domain.DailyList{Date: date, CutoffTime: deadline.In(calendarZone).Format("15:04"), Deadline: deadline, Participants: []domain.DailyParticipant{}}
 	days, loaded, stats, err := s.participantCalendar(txCtx, date, through, prepared)
-	list.Closed = days.Closed[date]
+	list.Closed, list.MealCancelled = days.Closed[date], days.Cancelled[date]
 	if err != nil || list.Closed {
 		return list, loaded, stats, err
 	}

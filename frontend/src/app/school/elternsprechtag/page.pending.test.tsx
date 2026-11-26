@@ -46,7 +46,7 @@ vi.mock("~/lib/parent-conferences", async (importOriginal) => ({
 import { ToastProvider } from "~/contexts/ToastContext";
 import { unavailableApiError } from "~/lib/api-error";
 import type { ParentConference } from "~/lib/parent-conferences";
-import SchoolParentConferencePage from "./page";
+import SchoolParentConferencePage from "./page-content";
 
 const TITLE = "Neuer Elternsprechtag";
 const FOOTER = ["Abbrechen", "Wird gespeichert…"];
@@ -63,6 +63,7 @@ const created: ParentConference = {
   slot_minutes: 15,
   breaks: [],
   location: "",
+  version: "v1",
   booked_count: 0,
   slots: [],
 };

@@ -53,8 +53,9 @@ export const traegerBillingRunKeys = {
   // its log itself.
   sepaImportLog: () => "traeger-sepa-import-log",
   // Die Lastschriftdatei eines Laufs (#4697), ohne Bankdaten der Familien.
-  sepaDebitRun: (kind: string, runId: string) =>
-    `traeger-sepa-debit-run-${encodeURIComponent(kind)}-${encodeURIComponent(runId)}`,
+  // Eine Stelle, die selbst abrechnet, hat eine eigene Datei (#8040).
+  sepaDebitRun: (kind: string, runId: string, issuerKey = "") =>
+    `traeger-sepa-debit-run-${encodeURIComponent(kind)}-${encodeURIComponent(runId)}${issuerKey ? `-${encodeURIComponent(issuerKey)}` : ""}`,
 } as const;
 
 /** While a mail of a run waits, its readers look again after this long. */

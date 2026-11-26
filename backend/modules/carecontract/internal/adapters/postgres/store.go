@@ -20,6 +20,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/carecontract/internal/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
 
@@ -130,7 +131,34 @@ func (Store) Templates(ctx context.Context, organizationID int64) ([]ports.Templ
 	return result, nil
 }
 
-func (Store) UpsertTemplate(ctx context.Context, organizationID, accountID, schoolID, offeringID int64, input carecontract.TemplateInput) (carecontract.ContractTemplate, error) {
+// LockTemplate serializes the saves of one offering's template: an advisory
+// lock covers an offering without a template, the row lock the one with.
+func (Store) LockTemplate(ctx context.Context, organizationID, schoolID, offeringID int64) (*carecontract.ContractTemplate, error) {
+	db, err := traegerDB(ctx, organizationID)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := db.NewRaw(`SELECT pg_advisory_xact_lock(hashtextextended(?, 0))`,
+		fmt.Sprintf("care_contract.template:%d:%d:%d", organizationID, schoolID, offeringID)).Exec(ctx); err != nil {
+		return nil, fmt.Errorf("care contract postgres: lock the template: %w", err)
+	}
+	var rows []templateRow
+	if err := db.NewRaw(`SELECT `+templateColumns+` FROM care_contract.contract_templates
+		WHERE organization_id = ? AND school_id = ? AND care_offering_id = ? FOR UPDATE`,
+		organizationID, schoolID, offeringID).Scan(ctx, &rows); err != nil {
+		return nil, fmt.Errorf("care contract postgres: lock the template: %w", err)
+	}
+	if len(rows) == 0 {
+		return nil, nil
+	}
+	template := rows[0].template()
+	return &template, nil
+}
+
+// UpsertTemplate replaces the offering's template, or with replace false
+// only inserts one: a template another writer inserted since the caller read
+// none (the catalog rollout takes no template lock) is then readstate.ErrChanged.
+func (Store) UpsertTemplate(ctx context.Context, organizationID, accountID, schoolID, offeringID int64, input carecontract.TemplateInput, replace bool) (carecontract.ContractTemplate, error) {
 	db, err := traegerDB(ctx, organizationID)
 	if err != nil {
 		return carecontract.ContractTemplate{}, err
@@ -148,10 +176,14 @@ func (Store) UpsertTemplate(ctx context.Context, organizationID, accountID, scho
 			statute_required = EXCLUDED.statute_required, statute_title = EXCLUDED.statute_title,
 			statute_url = EXCLUDED.statute_url, contract_partner = EXCLUDED.contract_partner,
 			updated_by_account_id = EXCLUDED.updated_by_account_id
+		WHERE ?
 		RETURNING `+templateColumns,
 		organizationID, schoolID, offeringID, input.TermKind, input.TermMonths, input.NoticeMonths, input.NoticeTo,
 		input.SpecialTermination, input.SpecialTerminationNote, input.StatuteRequired, input.StatuteTitle,
-		input.StatuteURL, input.ContractPartner, accountID).Scan(ctx, &row)
+		input.StatuteURL, input.ContractPartner, accountID, replace).Scan(ctx, &row)
+	if !replace && errors.Is(err, sql.ErrNoRows) {
+		return carecontract.ContractTemplate{}, readstate.ErrChanged
+	}
 	if err != nil {
 		return carecontract.ContractTemplate{}, fmt.Errorf("care contract postgres: save template: %w", err)
 	}
@@ -229,6 +261,9 @@ const moduleNamesSQL = `ARRAY(SELECT s.module_name FROM care_contract.contract_v
 const summarySQL = `SELECT c.id, c.status, c.school_id, c.student_id, c.created_at, c.sent_at, c.concluded_at, c.conclusion_method,
 	c.conclusion_date_unknown, c.import_origin IS NOT NULL AS taken_over, c.ends_on, c.early_start_requested, c.import_origin IS NOT NULL AS imported,
 	c.request_child_id IS NOT NULL AS follows_bookings, c.request_child_id, c.updated_at,
+	(c.status = '` + carecontract.StatusActive + `' AND EXISTS (SELECT 1 FROM care_contract.contract_versions AS w
+		WHERE w.organization_id = c.organization_id AND w.contract_id = c.id
+			AND w.status = '` + carecontract.VersionRequested + `')) AS change_awaits_signature,
 	v.school_name, v.child_first_name, v.child_last_name, ` + moduleNamesSQL + ` AS module_names, v.effective_from,
 	COALESCE(p.first_name || ' ' || p.last_name, '') AS party_name, COALESCE(p.email, '') AS party_email
 	FROM care_contract.contracts AS c
@@ -250,6 +285,7 @@ const listContractsSQL = summarySQL + ` AND (? = '' OR c.status = ?) AND (? = 0 
 const contractSQL = summarySQL + ` AND c.id = ?`
 
 type summaryRow struct {
+	ChangeAwaits   bool          `bun:"change_awaits_signature"`
 	StudentID      *int64        `bun:"student_id"`
 	ID             int64         `bun:"id"`
 	Status         string        `bun:"status"`
@@ -288,6 +324,7 @@ func (r summaryRow) summary() carecontract.ContractSummary {
 		PartyName:   strings.TrimSpace(r.PartyName), PartyEmail: r.PartyEmail, EffectiveFrom: r.EffectiveFrom,
 		CreatedAt: r.CreatedAt, SentAt: r.SentAt, Concluded: r.concluded(), EndsOn: r.EndsOn,
 		Imported: r.Imported, FollowsBookings: r.FollowsBookings, RequestChildID: (*ident.ID)(r.RequestChildID),
+		ChangeAwaitsSignature: r.ChangeAwaits,
 	}
 }
 

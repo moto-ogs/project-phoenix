@@ -1,5 +1,6 @@
 "use client";
 
+import type * as sharedContract from "~/lib/contract/shared.generated";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { PaperPlaneRightIcon } from "@phosphor-icons/react/ssr";
 import { Paperclip } from "lucide-react";
@@ -24,7 +25,6 @@ import {
   MAX_MESSAGE_ATTACHMENTS,
   MESSAGE_ATTACHMENT_ACCEPT,
   type AttachmentRefusal,
-  type MessageAttachment,
   type MessageAttachmentRoutes,
 } from "~/lib/message-attachments";
 
@@ -64,14 +64,14 @@ export interface ComposerAttachmentLabels {
 
 const GERMAN_ATTACHMENT_LABELS: ComposerAttachmentLabels = {
   attach: "Foto oder Datei anhängen",
-  attachHint: `Bis zu ${MAX_MESSAGE_ATTACHMENTS} Dateien, je höchstens ${MAX_MESSAGE_ATTACHMENT_MB} MB: Fotos, PDF, Word, Excel, PowerPoint`,
+  attachHint: `Bis zu ${MAX_MESSAGE_ATTACHMENTS} Dateien mit höchstens ${MAX_MESSAGE_ATTACHMENT_MB} MB pro Datei: Fotos, PDF, Word, Excel, PowerPoint`,
   drop: "Dateien hier ablegen",
   remove: (filename) => `Anhang entfernen: ${filename}`,
   uploading: (filename) => `${filename} wird hochgeladen`,
   open: (filename) => `Anhang öffnen: ${filename}`,
   tooMany: `Eine Nachricht kann höchstens ${MAX_MESSAGE_ATTACHMENTS} Dateien haben.`,
   tooLarge: (filename) =>
-    `„${filename}“ ist zu groß. Erlaubt sind bis zu ${MAX_MESSAGE_ATTACHMENT_MB} MB je Datei.`,
+    `„${filename}“ ist zu groß. Erlaubt sind bis zu ${MAX_MESSAGE_ATTACHMENT_MB} MB pro Datei.`,
   wrongType: (filename) =>
     `„${filename}“ kann nicht angehängt werden. Erlaubt sind Fotos, PDF, Word, Excel und PowerPoint.`,
   fileObject: "die Datei",
@@ -83,7 +83,7 @@ export interface ComposerAttachmentItem {
   /** Vorschau eines Bildes aus dem Gerät, solange es nicht gesendet ist. */
   readonly previewUrl?: string;
   /** Gesetzt, sobald der Upload angekommen ist. */
-  readonly attachment?: MessageAttachment;
+  readonly attachment?: Readonly<sharedContract.UploadResponse>;
 }
 
 interface PendingAttachment extends ComposerAttachmentItem {
@@ -134,7 +134,7 @@ export function MessageComposer({
    * Nachricht nicht angekommen: die Anhänge stehen dann wieder im Feld.
    */
   readonly onSend: (
-    attachments: readonly MessageAttachment[],
+    attachments: readonly Readonly<sharedContract.UploadResponse>[],
   ) => void | Promise<boolean | void>;
   readonly sending: boolean;
   readonly placeholder?: string;

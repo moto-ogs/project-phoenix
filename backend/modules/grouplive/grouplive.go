@@ -10,7 +10,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"strconv"
 	"strings"
 	"time"
@@ -23,12 +22,10 @@ import (
 // caller's visible group set.
 var ErrForbiddenGroup = errors.New("caller cannot view the requested group")
 
-const studentPhotoStoredURLPrefix = "/uploads/student-photos/"
-
 // Query is the single public capability of the projection.
 type Query interface {
 	LiveGroup(ctx context.Context, requestedGroupID int64) (*Projection, error)
-	ListGroups(ctx context.Context) ([]NavigationGroup, error)
+	NavigationContext(ctx context.Context) (NavigationContext, error)
 	AtSchoolCounter
 }
 
@@ -45,7 +42,6 @@ type AtSchoolCounter interface {
 // TeacherHints is optional: without it no hint of the Lehrkraft is attached.
 // Handovers is optional: without it no child carries a handover absence.
 // Collate is optional: without it the groups keep the directory order.
-// Logger defaults to slog.Default; every other field is required.
 type Dependencies struct {
 	Access          Access
 	Groups          GroupDirectory
@@ -64,7 +60,6 @@ type Dependencies struct {
 	// Collate orders two group names in German dictionary order (DIN 5007-1),
 	// the order the group selection and the response rely on.
 	Collate func(a, b string) int
-	Logger  *slog.Logger
 }
 
 type service struct{ deps Dependencies }
@@ -72,9 +67,6 @@ type service struct{ deps Dependencies }
 // New builds the projection. Missing wiring surfaces as an error on the
 // first call, never as a partial projection.
 func New(deps Dependencies) Query {
-	if deps.Logger == nil {
-		deps.Logger = slog.Default()
-	}
 	return &service{deps: deps}
 }
 
@@ -89,6 +81,14 @@ type NavigationGroup struct {
 	// selection (#4351). Only the navigation list fills it; the assignment
 	// is optional, so it is often empty.
 	Leaders []string `json:"leaders,omitempty"`
+}
+
+// NavigationContext pairs the visible navigation with the caller's own
+// filters, which also include assigned holiday groups still awaiting their week.
+type NavigationContext struct {
+	Groups       []NavigationGroup
+	OwnGroupIDs  []ident.ID
+	OwnRoomNames []string
 }
 
 type Student struct {
@@ -117,7 +117,8 @@ type Student struct {
 	ArrivalNotes       string                  `json:"arrival_notes,omitempty"`
 	ActualArrivalTime  *string                 `json:"actual_arrival_time,omitempty"`
 	ActualPickupTime   *string                 `json:"actual_pickup_time,omitempty"`
-	PhotoURL           string                  `json:"photo_url,omitempty"`
+	PhotoVersion       string                  `json:"photo_version,omitempty"`
+	PhotoURL           string                  `json:"photo_url,omitempty"` // legacy BFF alias
 	// TeacherHints are today's hints of the Lehrkraft for this child or its
 	// class (#4795), oldest first; only with planning access.
 	TeacherHints []GroupLiveTeacherHint `json:"teacher_hints,omitempty"`
@@ -187,7 +188,6 @@ type buildState struct {
 	arrivals   map[int64]Arrival
 	pickups    map[int64]Pickup
 	timetable  map[int64]bool
-	careDayEnd string
 }
 
 func (s *service) LiveGroup(ctx context.Context, requestedGroupID int64) (*Projection, error) {
@@ -202,7 +202,7 @@ func (s *service) LiveGroup(ctx context.Context, requestedGroupID int64) (*Proje
 	if err != nil {
 		return nil, fmt.Errorf("resolve caller access: %w", err)
 	}
-	groups, selected, err := s.resolveGroups(ctx, caller, requestedGroupID, false)
+	groups, selected, err := s.resolveGroups(ctx, caller, requestedGroupID)
 	if err != nil {
 		return nil, err
 	}
@@ -260,12 +260,7 @@ func (s *service) CountAtSchoolToday(ctx context.Context, studentIDs []int64) (i
 	if err != nil {
 		return 0, 0, fmt.Errorf("load timetable planning: %w", err)
 	}
-	careDayEnd, err := s.deps.Settings.CareDayEnd(ctx)
-	if err != nil {
-		return 0, 0, fmt.Errorf("resolve care day end: %w", err)
-	}
-
-	in := notHomeInputs{presence, arrivals, pickups, timetable, careDayEnd, s.deps.Calendar.Now()}
+	in := notHomeInputs{presence, arrivals, pickups, timetable, s.lazyCareDayEnd(ctx), s.deps.Calendar.Now()}
 	atSchool, inClass := 0, 0
 	for _, studentID := range studentIDs {
 		switch s.notHomeReason(in, studentID) {
@@ -274,6 +269,9 @@ func (s *service) CountAtSchoolToday(ctx context.Context, studentIDs []int64) (i
 		case notHomeInClass:
 			inClass++
 		}
+	}
+	if err := in.careDayEnd.failure(); err != nil {
+		return 0, 0, err
 	}
 	return atSchool, inClass, nil
 }
@@ -291,7 +289,7 @@ type notHomeInputs struct {
 	arrivals   map[int64]Arrival
 	pickups    map[int64]Pickup
 	timetable  map[int64]bool
-	careDayEnd string
+	careDayEnd *careDayEnd
 	now        time.Time
 }
 
@@ -299,7 +297,7 @@ type notHomeInputs struct {
 func (s *service) notHomeReason(in notHomeInputs, studentID int64) notHomeReason {
 	attendance, _ := in.presence.Attendance(studentID)
 	if attendance.InClass {
-		if s.deps.Planning.InClassUntilCareDayEnd(in.careDayEnd, in.now) {
+		if s.deps.Planning.InClassUntilCareDayEnd(in.careDayEnd.get(), in.now) {
 			return notHomeInClass
 		}
 		return notHomeNone
@@ -313,11 +311,13 @@ func (s *service) notHomeReason(in notHomeInputs, studentID int64) notHomeReason
 		inputs.Pickup = &pickup
 		pickupTime = pickup.PickupTime
 	}
+	decision := s.deps.Planning.DecideDay(inputs)
+	checkedIn := attendance.CheckInTime != nil
 	if s.deps.Planning.AtSchoolBeforeCheckIn(AtSchoolInputs{
-		Decision:   s.deps.Planning.DecideDay(inputs),
-		CheckedIn:  attendance.CheckInTime != nil,
+		Decision:   decision,
+		CheckedIn:  checkedIn,
 		PickupTime: pickupTime,
-		CareDayEnd: in.careDayEnd,
+		CareDayEnd: atSchoolCareDayEnd(in.careDayEnd, decision, checkedIn, pickupTime),
 		Now:        in.now,
 	}) {
 		return notHomeAtSchool
@@ -409,19 +409,12 @@ func projectStudents(students []RosterStudent, presence PresenceSnapshot, fullAc
 			student.Sick, student.SickSince = model.Sick, model.SickSince
 			student.Excused, student.ExcusedSince = model.Excused, model.ExcusedSince
 		}
-		if photosEnabled && fullAccess && model.PhotoPath != nil {
-			student.PhotoURL = buildPhotoURL(model.ID, *model.PhotoPath)
+		if photosEnabled && fullAccess {
+			student.PhotoVersion = model.PhotoVersion
 		}
 		result = append(result, student)
 	}
 	return result
-}
-
-func buildPhotoURL(studentID int64, storedURL string) string {
-	if storedURL == "" || !strings.HasPrefix(storedURL, studentPhotoStoredURLPrefix) {
-		return storedURL
-	}
-	return fmt.Sprintf("/api/students/%d/photo/%s", studentID, strings.TrimPrefix(storedURL, studentPhotoStoredURLPrefix))
 }
 
 func (s *service) applyStatusDays(ctx context.Context, state *buildState) error {
@@ -492,13 +485,12 @@ func (s *service) loadPlanning(ctx context.Context, state *buildState) error {
 	if err != nil {
 		return fmt.Errorf("load pending excused requests: %w", err)
 	}
-	careDayEnd, err := s.deps.Settings.CareDayEnd(ctx)
-	if err != nil {
-		return fmt.Errorf("resolve care day end: %w", err)
-	}
 	state.arrivals, state.pickups, state.timetable = arrivals, pickups, timetable
-	state.careDayEnd = careDayEnd
-	s.applyPlanning(state, pending)
+	careDayEnd := s.lazyCareDayEnd(ctx)
+	s.applyPlanning(state, pending, careDayEnd)
+	if err := careDayEnd.failure(); err != nil {
+		return err
+	}
 	if err := s.applyTeacherHints(ctx, state, ids); err != nil {
 		return err
 	}
@@ -536,8 +528,8 @@ const (
 // expected child is still in class. It needs the decision applyPlanning just
 // resolved, so it runs right after it. A child still "Im Unterricht" after the
 // care day's end reads "Abwesend" again (#5656).
-func (s *service) applyAtSchool(state *buildState, student *Student, decision DayDecision, attendance Attendance) {
-	if student.Location == inClassLocation && !s.deps.Planning.InClassUntilCareDayEnd(state.careDayEnd, s.deps.Calendar.Now()) {
+func (s *service) applyAtSchool(state *buildState, careDayEnd *careDayEnd, student *Student, decision DayDecision, attendance Attendance) {
+	if student.Location == inClassLocation && !s.deps.Planning.InClassUntilCareDayEnd(careDayEnd.get(), s.deps.Calendar.Now()) {
 		student.Location = absentLocation
 		student.LocationSince = nil
 		return
@@ -546,14 +538,14 @@ func (s *service) applyAtSchool(state *buildState, student *Student, decision Da
 		return
 	}
 	inputs := AtSchoolInputs{
-		Decision:   decision,
-		CheckedIn:  attendance.CheckInTime != nil,
-		CareDayEnd: state.careDayEnd,
-		Now:        s.deps.Calendar.Now(),
+		Decision:  decision,
+		CheckedIn: attendance.CheckInTime != nil,
+		Now:       s.deps.Calendar.Now(),
 	}
 	if pickup, ok := state.pickups[student.ID.Int64()]; ok {
 		inputs.PickupTime = pickup.PickupTime
 	}
+	inputs.CareDayEnd = atSchoolCareDayEnd(careDayEnd, decision, inputs.CheckedIn, inputs.PickupTime)
 	if s.deps.Planning.AtSchoolBeforeCheckIn(inputs) {
 		student.Location = atSchoolLocation
 		student.LocationSince = nil
@@ -584,7 +576,7 @@ func (s *service) loadPendingExcused(ctx context.Context, state *buildState) (ma
 	return s.deps.ExcusedRequests.PendingByStudentForDate(ctx, excusedrequests.Date(state.today))
 }
 
-func (s *service) applyPlanning(state *buildState, pending map[int64]*pendingExcusedRequest) {
+func (s *service) applyPlanning(state *buildState, pending map[int64]*pendingExcusedRequest, careDayEnd *careDayEnd) {
 	for i := range state.projected {
 		student := &state.projected[i]
 		// The parent's pending note runs FIRST and outside the full-access
@@ -625,7 +617,7 @@ func (s *service) applyPlanning(state *buildState, pending map[int64]*pendingExc
 		}
 		student.DayPlanningReason = decision.Reason
 		student.DayPlanningLabel = planningLabel(decision)
-		s.applyAtSchool(state, student, decision, attendance)
+		s.applyAtSchool(state, careDayEnd, student, decision, attendance)
 		applyTimes(student, inputs.Arrival, attendance, s.deps.Calendar)
 	}
 }

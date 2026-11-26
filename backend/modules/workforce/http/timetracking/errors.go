@@ -2,7 +2,6 @@ package timetracking
 
 import (
 	"errors"
-	"strconv"
 
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 
@@ -77,6 +76,10 @@ var serviceErrorRules = []common.ErrorRule{
 	{Target: workforce.ErrNoSessionForToday, Render: notFoundWithCode(common.CodeWorkforceNoSessionForToday)},
 	{Target: workforce.ErrSessionNotFound, Render: notFoundWithCode(common.CodeWorkforceSessionNotFound)},
 	{Match: isAny(workforce.ErrSessionUpdateNotOwned, workforce.ErrSessionNotOwned), Render: forbiddenWithCode(common.CodeWorkforceSessionNotOwned)},
+	// Terminal-only stamping (#8024): the school keeps stamps and changes of
+	// recorded times away from the app for this staff member.
+	{Target: workforce.ErrTerminalOnlyStamping, Render: forbiddenWithCode(common.CodeWorkforceTerminalOnlyStamping)},
+	{Target: workforce.ErrTerminalOnlyTimeEdit, Render: forbiddenWithCode(common.CodeWorkforceTerminalOnlyTimeEdit)},
 	// Only these Validate() failures describe the recorded times; a missing
 	// staff ID or creator is a server fault and stays a 500.
 	{Match: isAny(workforce.ErrSessionTimeOrder, workforce.ErrBreakMinutesNegative, workforce.ErrSessionCheckoutOrder, workforce.ErrBreakDurationNegative), Render: invalidWithCode(common.CodeWorkforceSessionTimesInvalid)},
@@ -132,9 +135,9 @@ func isPlannedStartNotReached(err error) bool {
 func renderPlannedStartNotReached(err error) render.Renderer {
 	var plannedStart *workforce.PlannedStartNotReachedError
 	errors.As(err, &plannedStart)
-	return common.ErrorConflictWithDetails(err, common.CodeIotPlannedStartNotReached, map[string]any{
-		"planned_start_time": plannedStart.PlannedStartTime,
-		"current_time":       plannedStart.CurrentTime,
+	return common.ErrorConflictWithDetails(err, common.CodeIotPlannedStartNotReached, PlannedStartDetails{
+		PlannedStartTime: plannedStart.PlannedStartTime,
+		CurrentTime:      plannedStart.CurrentTime,
 	})
 }
 
@@ -146,12 +149,24 @@ func isDeviationReasonRequired(err error) bool {
 func renderDeviationReasonRequired(err error) render.Renderer {
 	var deviation *workforce.DeviationReasonRequiredError
 	errors.As(err, &deviation)
-	return common.ErrorConflictWithDetails(err, common.CodeIotDeviationReasonRequired, map[string]any{
-		"action":            deviation.Action,
-		"planned_time":      deviation.PlannedTime,
-		"actual_time":       deviation.ActualTime,
-		"deviation_minutes": strconv.Itoa(deviation.DeviationMinutes),
+	return common.ErrorConflictWithDetails(err, common.CodeIotDeviationReasonRequired, DeviationReasonDetails{
+		Action:           deviation.Action,
+		PlannedTime:      deviation.PlannedTime,
+		ActualTime:       deviation.ActualTime,
+		DeviationMinutes: deviation.DeviationMinutes,
 	})
+}
+
+type PlannedStartDetails struct {
+	PlannedStartTime string `json:"planned_start_time"`
+	CurrentTime      string `json:"current_time"`
+}
+
+type DeviationReasonDetails struct {
+	Action           string `json:"action"`
+	PlannedTime      string `json:"planned_time"`
+	ActualTime       string `json:"actual_time"`
+	DeviationMinutes int    `json:"deviation_minutes"`
 }
 
 func isAny(targets ...error) func(error) bool {

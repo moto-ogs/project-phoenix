@@ -119,7 +119,7 @@ export function ListGroupHeader({
         {addon === undefined ? null : <span id={addonId}>{addon}</span>}
       </div>
       {meta === undefined ? null : (
-        <div className="shrink-0 text-xs text-gray-500 tabular-nums">
+        <div className="shrink-0 text-sm text-gray-500 tabular-nums">
           {meta}
         </div>
       )}
@@ -129,7 +129,7 @@ export function ListGroupHeader({
   return (
     <div className={cn("bg-gray-50", className)}>
       {row}
-      <p className="px-4 pb-2 text-xs text-gray-600">{description}</p>
+      <p className="px-4 pb-2 text-sm text-gray-600">{description}</p>
     </div>
   );
 }

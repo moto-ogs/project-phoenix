@@ -18,7 +18,7 @@ const mocks = vi.hoisted(() => ({ fetch: vi.fn() }));
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
     data: {
-      user: { id: "74", tenantId: 1, roles: ["user"], permissions: [] },
+      user: { id: "74", tenantId: "1", roles: ["user"], permissions: [] },
       expires: "2099-01-01",
     } satisfies Session,
     status: "authenticated",

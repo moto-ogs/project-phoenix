@@ -117,7 +117,6 @@ func (m ActivePeople) AttendancePeople() AttendanceRoutePeople {
 // caller rows of the active graph.
 func NewActiveTestAttendanceStaff(caller *owners.CallerRows) interface {
 	GetCurrentStaff(context.Context) (int64, int64, bool, error)
-	HasCurrentStaff(context.Context) (bool, error)
 } {
 	return peopleCompose.NewAttendanceRouteStaff(caller)
 }
@@ -155,6 +154,28 @@ type ActiveSessionEnd struct {
 func arrivalDependenciesAt(deps careplanCompose.ArrivalScheduleDependencies, clocks []func() time.Time) careplanCompose.ArrivalScheduleDependencies {
 	deps.Today = calendar.CalendarDateClock(clocks...)
 	return deps
+}
+
+// activeTestFacilities composes the room catalog and its closures on the
+// shared test clock, as the production root does.
+func activeTestFacilities(db transactionruntime.Database, clocks ...func() time.Time) (facilitiesModule.Catalog, facilitiesModule.Closures, error) {
+	rooms, err := facilitiesCompose.NewUnobserved(db.Pool())
+	if err != nil {
+		return nil, nil, err
+	}
+	return rooms, NewRoomClosuresForTest(db, clocks...), nil
+}
+
+// activeTestPresenceAndYard composes the two presence-backed test services
+// that the open-room graph shares.
+func activeTestPresenceAndYard(deps presenceservice.PresenceDependencies, settings settingsCompose.BatchSettingsService, rooms facilitiesCompose.RoomService, activities activityContract.ActivityService, db transactionruntime.Database, logger *slog.Logger) (studentpresence.Presence, facilitiesCompose.SchulhofService) {
+	presence := presenceservice.NewPresence(deps, presenceservice.WithPresenceSettings(settingsCompose.PresenceSettings(settings)))
+	openGroups := facilitiesCompose.NewOpenGroupCatalog(
+		FacilitiesGroupSupervisions(owners.NewLoggedStudentPresence(db, logger)),
+		FacilitiesRoomSessions(owners.NewLoggedStudentPresence(db, logger)),
+		FacilitiesGroupVisits(owners.NewLoggedStudentPresence(db, logger)),
+	)
+	return presence, facilitiesCompose.NewSchulhofService(rooms, FacilitiesActivityCatalog(activities), openGroups, logger)
 }
 
 func buildActiveTestModule(db transactionruntime.Database, unit tenant.UnitOfWork, clocks ...func() time.Time) (
@@ -248,7 +269,7 @@ func buildActiveTestModule(db transactionruntime.Database, unit tenant.UnitOfWor
 	if err != nil {
 		return fail(err)
 	}
-	rooms, err := facilitiesCompose.NewUnobserved(db.Pool())
+	rooms, roomClosures, err := activeTestFacilities(db, clocks...)
 	if err != nil {
 		return fail(err)
 	}
@@ -257,6 +278,7 @@ func buildActiveTestModule(db transactionruntime.Database, unit tenant.UnitOfWor
 		PrincipalReader: AttendancePrincipal,
 		StudentDisplay:  owners.StudentDisplayProjection{Students: students, Groups: displayGroups},
 		SchoolPresence:  owners.NewLoggedStudentPresence(db, logger),
+		RoomClosures:    roomClosures,
 		YardRoomColor:   facilitiesModule.YardRoomColor(rooms),
 		GroupRepo:       sessionGroups, SessionStartLock: r.SessionStartLock, SupervisorRepo: sessionSupervisors,
 		StudentStatusRepo: rCare.StudentStatusDay,
@@ -266,8 +288,7 @@ func buildActiveTestModule(db transactionruntime.Database, unit tenant.UnitOfWor
 		AttendanceSyncer:         attendanceMirror,
 		TimetableBridgeCompleter: bridge, Logger: logger, Now: clockOrNow(clocks),
 	}
-	presence := presenceservice.NewPresence(presenceDeps, presenceservice.WithPresenceSettings(settingsCompose.PresenceSettings(settings.Settings)))
-	yard := facilitiesCompose.NewSchulhofService(dataFacilities, FacilitiesActivityCatalog(dataActivityService), facilitiesCompose.NewOpenGroupCatalog(FacilitiesGroupSupervisions(owners.NewLoggedStudentPresence(db, logger)), FacilitiesRoomSessions(owners.NewLoggedStudentPresence(db, logger)), FacilitiesGroupVisits(owners.NewLoggedStudentPresence(db, logger))), logger)
+	presence, yard := activeTestPresenceAndYard(presenceDeps, settings.Settings, dataFacilities, dataActivityService, db, logger)
 	autoExcusal, err := careplanCompose.NewPickupAutoExcusal(careplanCompose.PickupExcusalDependencies{
 		DB: db.Pool(), Records: carePlan, Baselines: pickup, Blocks: owners.NewLoggedStudentPresence(db, logger), Preview: owners.NewPickupExcusalTimetable(rt.Timetable, owners.NewPartialAbsencePreview(db)), Today: calendar.CalendarDateClock(clocks...),
 	})
@@ -319,7 +340,7 @@ func buildActiveTestModule(db transactionruntime.Database, unit tenant.UnitOfWor
 		Sessions: newSupervisionSessions(presence, owners.OpenRoomSessionPresence{Presence: owners.NewLoggedStudentPresence(db, logger), Activities: timetableOwner}, caller),
 		Rooms:    OpenRoomDirectory{Rooms: rooms}, Groups: newSupervisionGroups(groups.Education, caller),
 		Yard: newSupervisionYard(yard), Schedule: newSupervisionSchedule(operations), Presence: newSupervisionPresence(presence, presence),
-		Planning: newSupervisionPlanning(pickups, arrivals), Settings: newSupervisionSettings(settings.Settings), Staff: NewTimetablePeople(dataUsers), Calendar: supervisionCalendar{}, Now: clockOrNow(clocks)})
+		Planning: newSupervisionPlanning(pickups, arrivals), Settings: newSupervisionSettings(settings.Settings), Staff: NewTimetablePeople(dataUsers), Calendar: supervisionCalendar{}, Now: clockOrNow(clocks), PlannedActivities: supervisionPlannedActivities{offerings: plannedOfferings{timetable: timetableOwner, blockTypes: NewTimetableBlockDisplayForTests(db)}}})
 	if err != nil {
 		return fail(fmt.Errorf("compose supervision dashboard projection: %w", err))
 	}
@@ -331,7 +352,7 @@ func buildActiveTestModule(db transactionruntime.Database, unit tenant.UnitOfWor
 		return fail(err)
 	}
 	scan := ActiveDeviceScan{
-		SessionLifecycle: scanBindings.NewSessionLifecycle(presence, owners.NewLoggedStudentPresence(db, logger), scanBindings.NewSupervisionQuery(owners.NewLoggedStudentPresence(db, logger)), NewDeviceScanPeople(dataUsers), dataDevices.IoT, nil, logger, DeviceScanPrincipal, time.Now),
+		SessionLifecycle: scanBindings.NewSessionLifecycle(presence, owners.NewLoggedStudentPresence(db, logger), scanBindings.NewSupervisionQuery(owners.NewLoggedStudentPresence(db, logger)), NewDeviceScanPeople(dataUsers), dataDevices.IoT, nil, NewRoomClosuresForTest(db, clocks...), logger, DeviceScanPrincipal, time.Now),
 		RoomAvailability: data.RoomAvailability, Configuration: data.Configuration, Directory: data.Directory, TagAssignments: data.TagAssignments,
 	}
 	return ActiveTestModule{PickupSchedule: pickups, ArrivalSchedule: arrivals, CareDay: careDay},

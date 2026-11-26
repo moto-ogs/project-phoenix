@@ -56,10 +56,10 @@ func TestSeedTodaysBlockChangesCancelsReinstatesAndMoves(t *testing.T) {
 		"PUT /api/timetable/instances/62",
 	}, paths)
 
-	assert.Equal(t, float64(2), moved["room_id"])
+	assert.Equal(t, "2", moved["room_id"])
 	assert.Equal(t, "14:00", moved["start_time"])
-	assert.Equal(t, []any{float64(31)}, moved["staff_ids"])
-	assert.Equal(t, []any{float64(5), float64(6)}, moved["student_ids"])
+	assert.Equal(t, []any{"31"}, moved["staff_ids"])
+	assert.Equal(t, []any{"5", "6"}, moved["student_ids"])
 
 	// In the evening every block has ended: no reinstatement.
 	paths, moved = nil, nil

@@ -8,6 +8,7 @@ import { bffFile, bffJson } from "~/lib/bff-fetch";
  */
 
 import { knownEnum } from "./contract/known-enum";
+import { DatevBookingsDetailsSchema } from "./contract/problem-details.generated";
 import { requiredDay } from "./contract/required-day";
 import type * as traegerFinanceExportsContract from "./contract/traeger-finance-exports.generated";
 import { type BillingFile, billingFile } from "./traeger-billing-api";
@@ -317,7 +318,7 @@ function mappingToBackend(
   };
 }
 
-function settingsFromBackend(
+export function settingsFromBackend(
   settings: traegerFinanceExportsContract.ExportSettings,
 ): ExportSettings {
   return {
@@ -449,9 +450,16 @@ export interface FinanceExportRunPage extends FinanceExportPage<ExportRun> {
 export async function fetchExportRuns(
   offset = 0,
 ): Promise<FinanceExportRunPage> {
-  const body = await bffJson("org", "GET /traeger/finance-exports/runs", {
-    query: { offset: offset > 0 ? offset : undefined },
-  });
+  return mapExportRuns(
+    await bffJson("org", "GET /traeger/finance-exports/runs", {
+      query: { offset: offset > 0 ? offset : undefined },
+    }),
+  );
+}
+
+export function mapExportRuns(
+  body: traegerFinanceExportsContract.ExportRunPage,
+): FinanceExportRunPage {
   return {
     // A run of a kind this build does not know has no page; it is left out.
     items: (body.runs ?? []).flatMap((run) => {
@@ -484,9 +492,16 @@ export async function fetchExportRuns(
 export async function fetchExportProtocol(
   offset = 0,
 ): Promise<FinanceExportPage<ExportProtocolEntry>> {
-  const body = await bffJson("org", "GET /traeger/finance-exports/files", {
-    query: { offset: offset > 0 ? offset : undefined },
-  });
+  return mapExportProtocol(
+    await bffJson("org", "GET /traeger/finance-exports/files", {
+      query: { offset: offset > 0 ? offset : undefined },
+    }),
+  );
+}
+
+export function mapExportProtocol(
+  body: traegerFinanceExportsContract.ExportProtocolPage,
+): FinanceExportPage<ExportProtocolEntry> {
   return {
     items: (body.files ?? []).flatMap((file) => {
       const entry = entryFromBackend(file);
@@ -571,16 +586,18 @@ export function datevRunKey(run: Pick<ExportRun, "runKind" | "runId">) {
 /** Runs one request asks for: the size of a page of the run list. */
 const DATEV_RUNS_PER_REQUEST = 50;
 
+export function datevRunQuery(runs: readonly ExportRun[]) {
+  const idsOf = (kind: "care" | "holiday") =>
+    runs.filter((run) => run.runKind === kind).map((run) => run.runId);
+  return { care: idsOf("care"), holiday: idsOf("holiday") };
+}
+
 async function fetchDatevRunPage(
   runs: readonly ExportRun[],
 ): Promise<traegerFinanceExportsContract.DatevRunOverviews> {
-  const idsOf = (kind: "care" | "holiday") =>
-    runs
-      .filter((run) => run.runKind === kind)
-      .map((run) => run.runId)
-      .join(",") || undefined;
-  const query = { care: idsOf("care"), holiday: idsOf("holiday") };
-  if (!query.care && !query.holiday) return { ready: true, runs: [] };
+  const query = datevRunQuery(runs);
+  if (!query.care.length && !query.holiday.length)
+    return { ready: true, runs: [] };
   return bffJson("org", "GET /traeger/finance-exports/datev-runs", { query });
 }
 
@@ -595,7 +612,12 @@ export async function fetchDatevRunStates(
   for (let i = 0; i < runs.length; i += DATEV_RUNS_PER_REQUEST) {
     pages.push(runs.slice(i, i + DATEV_RUNS_PER_REQUEST));
   }
-  const bodies = await Promise.all(pages.map(fetchDatevRunPage));
+  return mapDatevRunStates(await Promise.all(pages.map(fetchDatevRunPage)));
+}
+
+export function mapDatevRunStates(
+  bodies: readonly traegerFinanceExportsContract.DatevRunOverviews[],
+): DatevRunStates {
   return {
     ready: bodies.length > 0 && bodies.every((body) => body.ready),
     runs: new Map(
@@ -639,31 +661,26 @@ const DATEV_PROBLEM_REASONS = new Set<string>([
  * The invoices a refused DATEV download names in its details; an entry of
  * another shape is left out, never guessed.
  */
-export function datevBookingProblems(
-  details: Record<string, unknown> | undefined,
-): DatevBookingProblem[] {
-  const documents = details?.documents;
-  if (!Array.isArray(documents)) return [];
-  return documents.flatMap((entry: unknown) => {
-    if (typeof entry !== "object" || entry === null) return [];
-    const { document_number, field, reason } = entry as Record<string, unknown>;
-    if (
-      typeof document_number !== "string" ||
-      typeof field !== "string" ||
-      typeof reason !== "string" ||
-      !DATEV_PROBLEM_FIELDS.has(field) ||
-      !DATEV_PROBLEM_REASONS.has(reason)
-    ) {
-      return [];
-    }
-    return [
-      {
-        documentNumber: document_number,
-        field: field as DatevBookingProblem["field"],
-        reason: reason as DatevBookingProblem["reason"],
-      },
-    ];
-  });
+export function datevBookingProblems(details: unknown): DatevBookingProblem[] {
+  const parsed = DatevBookingsDetailsSchema.safeParse(details);
+  if (!parsed.success) return [];
+  return (parsed.data.documents ?? []).flatMap(
+    ({ document_number, field, reason }) => {
+      if (
+        !DATEV_PROBLEM_FIELDS.has(field) ||
+        !DATEV_PROBLEM_REASONS.has(reason)
+      ) {
+        return [];
+      }
+      return [
+        {
+          documentNumber: document_number,
+          field: field as DatevBookingProblem["field"],
+          reason: reason as DatevBookingProblem["reason"],
+        },
+      ];
+    },
+  );
 }
 
 /** The history of an invoice, oldest step first. */
@@ -736,7 +753,7 @@ export interface BookingAccounts {
 
 // Accounts and cost centers of a scope this build does not know have no row
 // to show; they are left out.
-function bookingAccountsFromBackend(
+export function bookingAccountsFromBackend(
   body: traegerFinanceExportsContract.BookingAccounts,
 ): BookingAccounts {
   return {

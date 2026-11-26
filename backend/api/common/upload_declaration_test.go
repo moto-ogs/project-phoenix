@@ -105,7 +105,7 @@ func TestParseImageAndPDF_RefuseWithUploadCodes(t *testing.T) {
 	assert.Equal(t, CodeFilesFileTooLarge, UploadRefusalCode(err))
 	resp, ok := UploadRefusalRenderer(err)
 	require.True(t, ok)
-	assert.Equal(t, int64(1), resp.(*ErrResponse).Details["max_mb"])
+	assert.Equal(t, SizeLimitDetails{MaxMB: 1}, resp.(*ErrResponse).Details)
 
 	req = declaredUploadRequest(t, "file", "AGB.pdf", "application/pdf", bytes.Repeat([]byte("%PDF"), 4096))
 	_, err = ParsePDFWithLimits(httptest.NewRecorder(), req, "file", 10<<20, 1024)

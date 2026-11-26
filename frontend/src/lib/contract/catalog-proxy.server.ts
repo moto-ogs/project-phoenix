@@ -7,7 +7,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import type { z } from "zod";
 import { bffError, handleApiError } from "~/lib/api-response-error.server";
-import { readBackendJson, sendBackend } from "~/lib/backend-client.server";
+import { sendBackend } from "~/lib/backend-client.server";
 import type { ErrorCode } from "~/lib/error-codes.generated";
 import { fileResponse } from "~/lib/file-response.server";
 import type { makePortalHandlers } from "~/lib/portal-handlers.server";
@@ -18,8 +18,25 @@ import {
   type RouteContext,
 } from "~/lib/route-wrapper-utils.server";
 import { underOutsideHead } from "./catalog-outside-mounts";
-import { commits, decodeContract } from "./client.server";
+import {
+  fileCacheValues,
+  publicAssetCache,
+  studentPhotoRoutes,
+} from "./browser-traits.generated";
+import { withLegacyPhotoAddress } from "./legacy-photo-address.server";
+import { decodeContract, readContractJson } from "./client.server";
+import { registeredRouteSearch } from "./address";
+import { commits } from "./commit";
 import { fileAnswer, multipart } from "./runtime";
+import type { BodyLimitDetails } from "./problem-details.generated";
+import {
+  purgeRequestTenantSettingsCache,
+  purgeTenantSettingsCache,
+} from "~/lib/tenant-settings-cache.server";
+import {
+  tenantLookupWrites,
+  tenantHostLookupWrites,
+} from "./tenant-lookup-writes.server";
 
 /** A generated route entry, as `portalRoutes` lists it. */
 export interface CatalogRoute {
@@ -76,7 +93,6 @@ type PortalHandlers = Pick<
   | "patch"
   | "del"
   | "delWithBody"
-  | "api"
   | "route"
   | "backendFetch"
 >;
@@ -90,7 +106,7 @@ const segmentsOf = (path: string) => path.split("/").filter(Boolean);
  * value when it keeps the file in the browser alone, else none at all. A
  * shared cache never stores a session's file.
  */
-export function privateCacheControl(value: string | null): string {
+function privateCacheControl(value: string | null): string {
   const directives = (value ?? "")
     .toLowerCase()
     .split(",")
@@ -172,24 +188,12 @@ const isPublicUpload = (route: CatalogRoute) =>
 const PRIVATE_NO_STORE = "private, no-store";
 
 /**
- * The Cache-Control values a file route may keep (contractmodel's
- * FileCacheValues). The list is closed here as well: a value an entry
- * carried that Go never reviewed leaves the file uncached.
- */
-const PUBLIC_ASSET_CACHE = "public, max-age=86400";
-const FILE_CACHE_VALUES = new Set([
-  PUBLIC_ASSET_CACHE,
-  "private, max-age=3600",
-  "private, max-age=86400, immutable",
-]);
-
-/**
  * The cache a route's file answer keeps: a reviewed value, and a public one
  * only for a file its contract opens to the portal public.
  */
 function cacheOf(route: CatalogRoute): string | null {
   const value = route.fileCache;
-  if (value === undefined || !FILE_CACHE_VALUES.has(value)) return null;
+  if (value === undefined || !fileCacheValues.has(value)) return null;
   if (value.startsWith("public") && !isPublicFile(route)) return null;
   return value;
 }
@@ -339,7 +343,7 @@ function literalFirst(a: readonly string[], b: readonly string[]) {
 }
 
 /** The routes a request reaches without a session (#2352). */
-export interface PublicCatalog {
+interface PublicCatalog {
   /** `portalRoutes.public`; the proxy serves those under its mount. */
   readonly routes: readonly CatalogRoute[];
   /** Backend prefixes beside the mount that public routes reach. */
@@ -433,13 +437,10 @@ export function makeCatalogProxy(
   function target(request: NextRequest, path: unknown) {
     const found = find(path);
     if (!found) throw notFound();
-    const query = new URLSearchParams();
-    for (const name of Object.keys(found.route.query ?? {})) {
-      for (const value of request.nextUrl.searchParams.getAll(name)) {
-        query.append(name, value);
-      }
-    }
-    const search = query.size > 0 ? `?${query.toString()}` : "";
+    const search = registeredRouteSearch(
+      found.route.query ?? {},
+      request.nextUrl.searchParams,
+    );
     const endpoint = `/${found.segments.map(encodeURIComponent).join("/")}`;
     return { route: found.route, endpoint: `${endpoint}${search}` };
   }
@@ -468,10 +469,52 @@ export function makeCatalogProxy(
     const message = (answer as { message?: unknown } | undefined)?.message;
     return {
       status: "success",
-      data: value.data,
+      data: studentPhotoRoutes.has(`${route.method} ${route.pattern}`)
+        ? withLegacyPhotoAddress(value.data)
+        : value.data,
       ...(value.pagination !== undefined && { pagination: value.pagination }),
       ...(typeof message === "string" && message !== "" && { message }),
     };
+  }
+
+  async function jsonReply(
+    route: ServedRoute,
+    request: NextRequest,
+    response: Response,
+  ): Promise<Response> {
+    // A successful write may have committed even if its body is unreadable.
+    if (response.ok) {
+      const key = `${route.method} ${route.pattern}`;
+      if (tenantLookupWrites.has(key)) purgeTenantSettingsCache();
+      if (tenantHostLookupWrites.has(key))
+        purgeRequestTenantSettingsCache(request);
+    }
+    const envelope = decoded(
+      route,
+      request,
+      await readContractJson(response, route, { request }),
+    );
+    return response.status === 204
+      ? new NextResponse(null, { status: 204 })
+      : NextResponse.json(envelope, { status: response.status });
+  }
+
+  async function jsonAnswer(
+    route: ServedRoute,
+    request: NextRequest,
+    endpoint: string,
+    token: string | null,
+    json?: unknown,
+    idempotencyKey?: string | null,
+  ) {
+    // Portal handlers own renewal; this sends once with the supplied token.
+    const response = await sendBackend(endpoint, token, {
+      method,
+      json: json ?? undefined,
+      idempotencyKey,
+      request,
+    });
+    return jsonReply(route, request, response);
   }
 
   const read = async (
@@ -480,10 +523,7 @@ export function makeCatalogProxy(
     params: Record<string, unknown>,
   ) => {
     const { route, endpoint } = target(request, params.path);
-    const answer = await portal.api(method, endpoint, token, undefined, {
-      request,
-    });
-    return NextResponse.json(decoded(route, request, answer));
+    return jsonAnswer(route, request, endpoint, token);
   };
 
   /** A DELETE forwards a JSON body, such as a reason, when it carries one. */
@@ -496,21 +536,7 @@ export function makeCatalogProxy(
     const { route, endpoint } = target(request, params.path);
     const sent =
       typeof body === "object" && body !== null && Object.keys(body).length > 0;
-    const answer = await portal.api(
-      method,
-      endpoint,
-      token,
-      sent ? body : undefined,
-      { request },
-    );
-    // A DELETE may answer 204; every other empty answer breaks the contract.
-    // A DELETE without data answers 204 as well, whatever envelope the
-    // backend wrote around nothing.
-    if (answer === undefined) return null;
-    const envelope = decoded(route, request, answer);
-    return envelope.data === null && !("pagination" in envelope)
-      ? null
-      : NextResponse.json(envelope);
+    return jsonAnswer(route, request, endpoint, token, sent ? body : undefined);
   };
 
   const write = async (
@@ -520,11 +546,14 @@ export function makeCatalogProxy(
     params: Record<string, unknown>,
   ) => {
     const { route, endpoint } = target(request, params.path);
-    const answer = await portal.api(method, endpoint, token, body, {
-      idempotencyKey: request.headers.get("Idempotency-Key"),
+    return jsonAnswer(
+      route,
       request,
-    });
-    return NextResponse.json(decoded(route, request, answer));
+      endpoint,
+      token,
+      body,
+      request.headers.get("Idempotency-Key"),
+    );
   };
 
   /**
@@ -559,7 +588,10 @@ export function makeCatalogProxy(
     const tooLarge = () =>
       bffError(413, `request body exceeds ${limit} bytes`, {
         code: route.tooLargeCode,
-        details: { max_bytes: limit, max_mb: Math.floor(limit / MIB) },
+        details: {
+          max_bytes: limit,
+          max_mb: Math.floor(limit / MIB),
+        } satisfies BodyLimitDetails,
       });
     const declared = request.headers.get("content-length");
     if (declared === null) {
@@ -576,10 +608,7 @@ export function makeCatalogProxy(
       throw error;
     }
     if (counted.exceeded()) throw tooLarge();
-    const answer = await readBackendJson<unknown>(response);
-    return NextResponse.json(decoded(route as ServedRoute, request, answer), {
-      status: response.status === 204 ? 200 : response.status,
-    });
+    return jsonReply(route as ServedRoute, request, response);
   }
 
   /**
@@ -656,8 +685,8 @@ export function makeCatalogProxy(
    * A public file (#2352): the link in the path is the only credential, so
    * the request carries no session, no bearer, no body and no idempotency
    * key; `sendBackend` adds the client IP the backend's limiter of the link
-   * keys on. The bytes stream through with their file headers, and every
-   * answer, a refusal included, is private and uncached.
+   * keys on. The bytes and validators follow the usual file policy: only
+   * a successful response or 304 can keep the route's declared cache.
    */
   async function servePublicFile(
     request: NextRequest,
@@ -669,7 +698,8 @@ export function makeCatalogProxy(
     const backend = await sendBackend(endpoint, null, {
       method,
       request,
-      ...(cacheOf(route) === PUBLIC_ASSET_CACHE && {
+      headers: conditionalHeaders(route, request),
+      ...(cacheOf(route) === publicAssetCache && {
         timeout: "publicAsset" as const,
       }),
     });
@@ -708,15 +738,14 @@ export function makeCatalogProxy(
       method === "GET"
         ? undefined
         : await parseRequestBody(request, route.maxBodyBytes ?? 0);
-    const answer = await readBackendJson<unknown>(
-      await sendBackend(endpoint, null, {
-        method,
-        json,
-        idempotencyKey: request.headers.get("Idempotency-Key"),
-        request,
-      }),
+    return jsonAnswer(
+      route,
+      request,
+      endpoint,
+      null,
+      json,
+      request.headers.get("Idempotency-Key"),
     );
-    return NextResponse.json(decoded(route, request, answer));
   }
 
   return async (request: NextRequest, context: RouteContext) => {

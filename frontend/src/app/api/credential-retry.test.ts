@@ -35,7 +35,7 @@ vi.mock("next-auth", () => ({
             id: "1",
             token: `access-${state.issued}`,
             refreshToken: "r",
-            tenantId: 7,
+            tenantId: "7",
           },
         };
         return handler(request, context);

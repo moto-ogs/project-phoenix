@@ -90,9 +90,9 @@ func (r nativeStudentRepository) ListByGroupIDsIncludingAlumni(ctx context.Conte
 	return mapRecordSlice(out0, func(value *models.Student) *directory.StudentState { return NativeStudentState(value) }), out1
 }
 
-func (r nativeStudentRepository) ListClassRoster(ctx context.Context, schoolClass string) ([]*directory.StudentState, error) {
+func (r nativeStudentRepository) ListClassRoster(ctx context.Context, classes []string) ([]*directory.StudentState, error) {
 
-	out0, out1 := r.rawStudentRepository.ListClassRoster(ctx, schoolClass)
+	out0, out1 := r.rawStudentRepository.ListClassRoster(ctx, classes)
 
 	return mapRecordSlice(out0, func(value *models.Student) *directory.StudentState { return NativeStudentState(value) }), out1
 }

@@ -67,7 +67,7 @@ var moduleFileSizeAllowlist = map[string]int{
 	"internal/devtools/seedapi/stammdaten.go": 1401,
 	// ADR 0087.
 	// ADR 0087.
-	"observability/prometheus.go": 1662,
+	"observability/prometheus.go": 1646,
 	// ADR 0087.
 	"test/fixtures.go": 3013,
 }

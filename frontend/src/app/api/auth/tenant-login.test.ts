@@ -1,3 +1,4 @@
+import { sessionClaims } from "~/test/helpers/session-claims";
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { RequestCookies } from "next/dist/server/web/spec-extension/cookies";
@@ -37,13 +38,14 @@ const { POST: enroll } = await import("./mfa/enroll/confirm/route");
 const { POST: passkey } = await import("./passkeys/login/verify/route");
 const { handlers } = (await import("~/server/auth")).tenantPortal;
 const backend = vi.fn();
-const claims = () => ({
-  id: "42",
-  sub: "local@example.test",
-  tenant_id: "7",
-  scope: "",
-  exp: Math.floor(Date.now() / 1000) + 900,
-});
+const claims = () =>
+  sessionClaims({
+    id: "42",
+    sub: "local@example.test",
+    tenant_id: "7",
+    scope: "",
+    exp: Math.floor(Date.now() / 1000) + 900,
+  });
 const access = () =>
   `e30.${Buffer.from(JSON.stringify(claims())).toString("base64url")}.synthetic`;
 const pair = () => ({
@@ -160,7 +162,7 @@ describe.each(paths)(
         }),
       );
       const metadata = await session.json();
-      expect(metadata.user).toMatchObject({ id: "42", tenantId: 7 });
+      expect(metadata.user).toMatchObject({ id: "42", tenantId: "7" });
       // This is the raw server Auth.js view, not a browser route. The session
       // routes' separate allowlist is protected by session-tokens.test.ts.
       expect(cookie).not.toContain(pair().access_token);
@@ -192,7 +194,13 @@ describe.each(paths)(
     ])(
       "preserves backend refusal %s without minting a cookie",
       async (code) => {
-        const body = JSON.stringify({ code, status: 403, detail: "refused" });
+        const body = JSON.stringify({
+          type: "about:blank",
+          title: "Forbidden",
+          code,
+          status: 403,
+          detail: "refused",
+        });
         backend.mockResolvedValueOnce(
           new Response(body, {
             status: 403,
@@ -316,8 +324,10 @@ it("does not disclose a full pair mislabelled as an enrollment challenge", async
 });
 it("keeps a replayed/expired MFA proof rejected by the backend", async () => {
   const body = {
+    type: "about:blank",
+    title: "Unauthorized",
     status: 401,
-    code: "identity.mfa_challenge_expired",
+    code: "general.permission",
     detail: "expired",
   };
   backend.mockImplementation(async () => Response.json(body, { status: 401 }));

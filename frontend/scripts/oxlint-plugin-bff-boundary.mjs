@@ -26,16 +26,21 @@ export const RAW_TRANSPORT = {
 
 // Named route files whose browser-facing response is not the Go contract.
 export const UNCONTRACTED = {
-  "lib/invitation-api.ts":
-    "POST invitations/accept: a new account accepts without a session, an existing one with the owner's; the route's contract names only the tenant portal",
-  "lib/enrollment-submission-api.ts":
-    "GET enrollment/form-bootstrap/public/[tenantSlug]/[phaseId]: the route adds the signed-in staff member's profile to the public form",
-  "lib/demo-access.ts":
-    "POST demo/access/status, sessions, reset: the demo routes exist only with APP_ENV=demo and carry the token in the body or the BFF's cookie, so they have no Go contract",
-  "lib/push-api.ts":
-    "DELETE …/push/subscriptions during logout: the family is revoked and the sign-out must stay the last cookie change, so the call goes through the portal without a session (no gate, renewal or login redirect)",
-  "lib/operator/provisioning-api.ts":
-    "POST operator/provisioning/revalidate-tenant: the route purges the cached tenant lookup and the ISR pages, no backend route",
+  // The Go contract covers only the tenant; new accounts may accept anonymously.
+  "lib/invitation-api.ts": [
+    "public POST tenant POST /auth/invitations/{token}/accept",
+  ],
+  // The named handler adds the signed-in staff profile (#5018).
+  "lib/enrollment-submission-api.ts": [
+    "public GET tenant GET /api/enrollment/form-bootstrap/public/{tenantSlug}/{phaseId}",
+  ],
+  // Demo routes project the backend result; the BFF status POST carries
+  // the demo proof in its body, not in the browser URL or a session.
+  "lib/demo-access.ts": [
+    "public POST tenant POST /demo/access/reset",
+    "public POST tenant GET /demo/access/status",
+    "public POST tenant POST /demo/access/sessions",
+  ],
 };
 
 const RETIRED_HELPERS = new Set([
@@ -49,7 +54,12 @@ const RETIRED_HELPERS = new Set([
 const GLOBAL_OBJECTS = new Set(["window", "self", "globalThis"]);
 const FRAME_WINDOWS = new Set(["top", "parent", "opener", "frames"]);
 const NAVIGATOR = "navigator";
-const RAW_GLOBALS = new Set(["fetch", "XMLHttpRequest"]);
+const RAW_GLOBALS = new Set([
+  "fetch",
+  "XMLHttpRequest",
+  "EventSource",
+  "WebSocket",
+]);
 const UNCONTRACTED_HELPER = "bffJsonUncontracted";
 
 function sourcePath(context) {
@@ -118,7 +128,7 @@ const noRawBrowserTransport = {
     // go through the AST, which decides what the names actually refer to.
     if (
       !allowed &&
-      !/\b(?:fetch|XMLHttpRequest|sendBeacon|sessionFetch|transportFetch|authFetch|fetchWithAuth|traegerRequest|operatorFetch)\b|\\/.test(
+      !/\b(?:fetch|XMLHttpRequest|EventSource|WebSocket|sendBeacon|sessionFetch|transportFetch|authFetch|fetchWithAuth|traegerRequest|operatorFetch)\b|\\/.test(
         sourceCode.text,
       )
     )
@@ -261,30 +271,73 @@ const onlyListedUncontracted = {
     messages: {
       helper:
         "Use bffJson with a contract. Only the listed callers may use bffJsonUncontracted, and they must not forward it.",
-      unused: "Remove this file's unused bffJsonUncontracted exception.",
+      unused: "Remove the unused bffJsonUncontracted exception: {{route}}.",
+      session: "Only session-bff.ts may construct a session BFF route.",
     },
   },
   create(context) {
     const file = sourcePath(context);
     if (!file || isTest(file) || file === "lib/bff-fetch.ts") return {};
     const allowed = Object.hasOwn(UNCONTRACTED, file);
-    if (!allowed && !/bff-fetch|\\/.test(context.sourceCode.text)) return {};
-    let used = false;
+    const remaining = new Set(UNCONTRACTED[file]);
     const report = (node) => context.report({ node, messageId: "helper" });
 
-    function isBffModule(node) {
+    function routeAddress(node) {
+      if (!node) return;
+      if (node.type !== "CallExpression") return staticName(node, true);
+      const callee = node.callee;
+      if (callee.type !== "Identifier") return;
+      for (
+        let scope = context.sourceCode.getScope(callee);
+        scope;
+        scope = scope.upper
+      ) {
+        const variable = scope.set.get(callee.name);
+        if (!variable) continue;
+        const specifier = variable.defs[0]?.node;
+        if (
+          specifier?.type !== "ImportSpecifier" ||
+          staticName(specifier.imported, false) !== "bffPath" ||
+          !isBffModule(specifier.parent.source)
+        )
+          return;
+        const [portal, key] = node.arguments;
+        return `${portal && staticName(portal, true)} ${key && staticName(key, true)}`;
+      }
+    }
+
+    function isModule(node, module) {
       const path = node && staticName(node, true);
       if (typeof path !== "string") return false;
       const target = path.startsWith(".")
         ? posix.join(posix.dirname(file), path)
         : path.replace(/^[@~]\//, "");
-      return (
-        posix.normalize(target).replace(/\.[jt]sx?$/, "") === "lib/bff-fetch"
-      );
+      return posix.normalize(target).replace(/\.[jt]sx?$/, "") === module;
+    }
+    const isBffModule = (node) => isModule(node, "lib/bff-fetch");
+    function restrictedSessionModule(source, node) {
+      if (
+        file === "lib/session-bff.ts" ||
+        !isModule(source, "lib/session-bff-route")
+      )
+        return false;
+      if (node.importKind === "type" || node.exportKind === "type")
+        return false;
+      if (
+        node.specifiers?.length &&
+        node.specifiers.every(
+          (specifier) =>
+            specifier.importKind === "type" || specifier.exportKind === "type",
+        )
+      )
+        return false;
+      context.report({ node, messageId: "session" });
+      return true;
     }
 
     return {
       ImportDeclaration(node) {
+        if (restrictedSessionModule(node.source, node)) return;
         if (!isBffModule(node.source)) return;
         for (const specifier of node.specifiers) {
           if (specifier.type === "ImportNamespaceSpecifier") report(specifier);
@@ -301,17 +354,23 @@ const onlyListedUncontracted = {
             specifier,
           )) {
             for (const { identifier } of variable.references) {
+              const call = identifier.parent;
               if (
-                identifier.parent.type !== "CallExpression" ||
-                identifier.parent.callee !== identifier
-              )
+                call.type !== "CallExpression" ||
+                call.callee !== identifier
+              ) {
                 report(identifier);
-              else used = true;
+                continue;
+              }
+              const [portal, method, address] = call.arguments;
+              const route = `${portal && staticName(portal, true)} ${method && staticName(method, true)} ${routeAddress(address)}`;
+              if (!remaining.delete(route)) report(identifier);
             }
           }
         }
       },
       ExportNamedDeclaration(node) {
+        if (restrictedSessionModule(node.source, node)) return;
         if (!isBffModule(node.source)) return;
         for (const specifier of node.specifiers) {
           if (staticName(specifier.local, false) === UNCONTRACTED_HELPER)
@@ -319,24 +378,29 @@ const onlyListedUncontracted = {
         }
       },
       ExportAllDeclaration(node) {
+        if (restrictedSessionModule(node.source, node)) return;
         if (isBffModule(node.source)) report(node);
       },
       ImportExpression(node) {
+        if (restrictedSessionModule(node.source, node)) return;
         if (isBffModule(node.source)) report(node);
       },
       CallExpression(node) {
         if (
           node.callee.name === "require" &&
-          isBffModule(node.arguments[0]) &&
           isGlobal(context.sourceCode, node.callee)
-        )
-          report(node);
+        ) {
+          if (restrictedSessionModule(node.arguments[0], node)) return;
+          if (isBffModule(node.arguments[0])) report(node);
+        }
       },
       TSExternalModuleReference(node) {
+        if (restrictedSessionModule(node.expression, node)) return;
         if (isBffModule(node.expression)) report(node);
       },
       "Program:exit"(node) {
-        if (allowed && !used) context.report({ node, messageId: "unused" });
+        for (const route of remaining)
+          context.report({ node, messageId: "unused", data: { route } });
       },
     };
   },
@@ -368,7 +432,9 @@ const noNumericIdentifier = {
     },
   },
   create(context) {
-    if (!isBrowser(sourcePath(context))) return {};
+    const file = sourcePath(context);
+    if (!file || isTest(file) || /\.(?:generated|d)\.[cm]?[jt]s$/.test(file))
+      return {};
     const { sourceCode } = context;
     const operands = new Map();
 
@@ -378,9 +444,56 @@ const noNumericIdentifier = {
       }
     }
 
-    function isConverter(callee) {
-      if (callee?.type === "Identifier") {
-        return COERCIONS.has(callee.name) && isGlobal(sourceCode, callee);
+    function isConverter(callee, seen = new Set()) {
+      if (!callee || seen.has(callee)) return false;
+      seen.add(callee);
+      if (
+        [
+          "TSAsExpression",
+          "TSTypeAssertion",
+          "TSNonNullExpression",
+          "ChainExpression",
+        ].includes(callee.type)
+      ) {
+        return isConverter(callee.expression, seen);
+      }
+      if (callee.type === "Identifier") {
+        if (COERCIONS.has(callee.name) && isGlobal(sourceCode, callee))
+          return true;
+        for (
+          let scope = sourceCode.getScope(callee);
+          scope;
+          scope = scope.upper
+        ) {
+          const variable = scope.set.get(callee.name);
+          if (!variable) continue;
+          const binding = variable.defs[0]?.node;
+          if (
+            binding?.type !== "VariableDeclarator" ||
+            !binding.init ||
+            variable.references.some((ref) => ref.isWrite() && !ref.init)
+          )
+            return false;
+          if (binding.id.type === "Identifier")
+            return isConverter(binding.init, seen);
+          if (
+            binding.id.type === "ObjectPattern" &&
+            isGlobal(sourceCode, binding.init)
+          ) {
+            const property = binding.id.properties.find(
+              (part) =>
+                part.type === "Property" &&
+                part.value === variable.identifiers[0],
+            );
+            const key = property && staticName(property.key, property.computed);
+            return (
+              (GLOBAL_OBJECTS.has(binding.init.name) && COERCIONS.has(key)) ||
+              (binding.init.name === "Number" && NUMBER_METHODS.has(key))
+            );
+          }
+          return false;
+        }
+        return false;
       }
       if (callee?.type !== "MemberExpression") return false;
       const { object } = callee;

@@ -29,7 +29,7 @@ func OperatorRejection(status int, code, message string) render.Renderer {
 
 // OperatorRejectionWithDetails is OperatorRejection with the structured
 // values the catalog text of the code interpolates.
-func OperatorRejectionWithDetails(status int, code, message string, details map[string]any) render.Renderer {
+func OperatorRejectionWithDetails(status int, code, message string, details any) render.Renderer {
 	return &ErrResponse{HTTPStatusCode: status, Detail: message, Code: code, Details: details}
 }
 
@@ -93,9 +93,13 @@ func OperatorForbidden(message string) render.Renderer {
 	return operatorError(http.StatusForbidden, message)
 }
 
-// OperatorInternal renders a 500.
-func OperatorInternal(message string) render.Renderer {
-	return operatorError(http.StatusInternalServerError, message)
+// OperatorInternal renders a 500 for err with a fixed text. It keeps err:
+// RenderError logs it as the cause, and lifts a business rejection in its
+// chain, such as an edit on a changed state (readstate.ErrChanged, ADR 0311),
+// to its 409 and code, so no operator renderer needs a case of its own. A
+// nil err is a 500 without a cause (a dependency that is not wired).
+func OperatorInternal(err error, message string) render.Renderer {
+	return &ErrResponse{HTTPStatusCode: http.StatusInternalServerError, Detail: message, Err: err}
 }
 
 // OperatorServiceUnavailable renders a 503. Used when a transient dependency

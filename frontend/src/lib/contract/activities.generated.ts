@@ -25,6 +25,8 @@ export interface ActivityCategoryResponse {
   is_system: boolean;
   archived_at?: string;
   usage_count?: number;
+  version?: string;
+  shift_type_link_version?: string;
   created_at: string;
   updated_at: string;
 }
@@ -38,6 +40,8 @@ export const ActivityCategoryResponseSchema: z.ZodType<ActivityCategoryResponse,
   is_system: bool,
   archived_at: optional(instant),
   usage_count: optional(safeInt),
+  version: optional(str),
+  shift_type_link_version: optional(str),
   created_at: instant,
   updated_at: instant,
 });
@@ -84,6 +88,7 @@ export interface ActivityResponse {
   name: string;
   max_participants: number | null;
   is_open: boolean;
+  is_system: boolean;
   category_id: string;
   planned_room_id?: string;
   created_by: string | null;
@@ -104,6 +109,7 @@ export const ActivityResponseSchema: z.ZodType<ActivityResponse, unknown> = obje
   name: str,
   max_participants: nullable(safeInt),
   is_open: bool,
+  is_system: bool,
   category_id: int64String,
   planned_room_id: optional(int64String),
   created_by: nullable(int64String),
@@ -154,6 +160,7 @@ export interface ActivityCategoryRequest {
   name?: string;
   description?: string;
   color?: string;
+  expected_version?: string;
 }
 
 /** Go: httpadapter.QuickActivityRequest */

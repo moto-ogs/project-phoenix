@@ -341,6 +341,13 @@ type HolidayRegistrationEventDetails struct {
 	// Wish is the office's decision on a child's holiday care wish, From the
 	// wish before, empty when unknown (#4703).
 	Wish string `json:"wish,omitempty"`
+	// Key and Given name a voluntary consent the parents withdrew (false)
+	// or gave again (true) in the parents portal (#8038, ADR 0321).
+	Key   string `json:"key,omitempty"`
+	Given *bool  `json:"given,omitempty"`
+	// Payer names who paid before and who pays after a change of the payer
+	// of a confirmed registration (#8158, ADR 0325); Reason is its reason.
+	Payer *HolidayPayerChange `json:"payer,omitempty"`
 }
 
 // HolidayRegistrationEvent is one change in the history of a registration.
@@ -362,6 +369,9 @@ type HolidayChildAnswers struct {
 // registration as the store reads them, the children in their order.
 type HolidayRegistrationAnswers struct {
 	LegalAcceptances map[string]time.Time
+	// LegalWithdrawals names when the parents withdrew a voluntary consent
+	// (#8038); a withdrawn key is not in LegalAcceptances.
+	LegalWithdrawals map[string]time.Time
 	FormVersion      int
 	CustomData       HolidayAnswers
 	Children         []HolidayChildAnswers
@@ -379,8 +389,11 @@ type HolidayRegistrationDetail struct {
 	// GuardianAddress is the postal address of the parent who registered,
 	// when the form asked for it (#5625). Only the detail and the export
 	// name it, not the list.
-	GuardianAddress  *HolidayAddress              `json:"guardian_address"`
-	LegalAcceptances map[string]time.Time         `json:"legal_acceptances"`
+	GuardianAddress  *HolidayAddress      `json:"guardian_address"`
+	LegalAcceptances map[string]time.Time `json:"legal_acceptances"`
+	// LegalWithdrawals names when the parents withdrew a voluntary consent
+	// in the parents portal (#8038, ADR 0321).
+	LegalWithdrawals map[string]time.Time         `json:"legal_withdrawals"`
 	SecondGuardian   *HolidayGuardianInput        `json:"second_guardian,omitempty"`
 	Form             *HolidayPeriodForm           `json:"form"`
 	CustomData       HolidayAnswers               `json:"custom_data" contract_json:"Answer values follow the school's versioned form schema"`

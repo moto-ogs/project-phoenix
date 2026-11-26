@@ -13,14 +13,18 @@
 // Vorschlag am Feld; weicht die eingetragene ab, fragt ein Dialog, welche
 // Nummer gilt (#6692).
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { Alert } from "~/components/ui/alert";
 import { Button, ButtonLink } from "~/components/ui/button";
-import { ChoiceTile } from "~/components/ui/choice-tile";
-import { CustomSelect } from "~/components/ui/custom-select";
 import { DataField, DataGrid } from "~/components/ui/data-field";
 import { EditActions } from "~/components/ui/edit-actions";
-import { FieldLabel } from "~/components/ui/field-label";
 import { JumpButton } from "~/components/ui/jump-button";
 import {
   FormErrorAlert,
@@ -29,7 +33,6 @@ import {
 import NavigationLink from "~/components/ui/navigation-link";
 import { ConfirmationModal } from "~/components/ui/modal";
 import { Input } from "~/components/ui/input";
-import { Radio } from "~/components/ui/radio";
 import { SectionCard } from "~/components/ui/section-card";
 import { enrollmentsConcept } from "~/lib/concepts/enrollments";
 import {
@@ -53,8 +56,11 @@ import {
   useRefreshAfterWrite,
   type RefreshAfterWrite,
 } from "~/lib/hooks/use-refresh-after-write";
+import { useReadDraftForm } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
+import { useActionOn, useDraftOn } from "~/lib/swr/read-draft";
 import { holidayRegistrationChildCardId } from "./holiday-registration-child-card";
+import { HolidayPayerChoiceField } from "./holiday-payer-choice";
 import { traegerPath } from "~/lib/traeger-url";
 import {
   cancelHolidayRegistration,
@@ -65,6 +71,8 @@ import {
   type FamilyDebtorNumberConflict,
   type HolidayChildDebtorNumber,
   type HolidayContribution,
+  type HolidayFamilyDebtorNumbers,
+  type HolidayPayerKind,
 } from "~/lib/traeger-contributions-api";
 import {
   changeHolidayRegistration,
@@ -324,115 +332,12 @@ function DebtorNumberField({
   );
 }
 
-type Payer = "family" | "exemption" | "cost_bearer";
-
 const NO_COST_BEARERS: readonly CostBearerChoice[] = [];
 
 const NO_CHILD_NUMBERS: readonly HolidayChildDebtorNumber[] = [];
 
-/**
- * Who pays the contribution a confirmation freezes (#5627): the family,
- * nobody (the exemption) or a cost bearer of the Träger. Exemption and cost
- * takeover exclude each other; each option shows only when the Träger has
- * an exemption rule or an active cost bearer.
- */
-function PayerChoice({
-  payer,
-  exemptionAvailable,
-  costBearers,
-  costBearerId,
-  onPayerChange,
-  onCostBearerChange,
-}: Readonly<{
-  payer: Payer;
-  exemptionAvailable: boolean;
-  costBearers: readonly CostBearerChoice[];
-  costBearerId: string | null;
-  onPayerChange: (payer: Payer) => void;
-  onCostBearerChange: (id: string) => void;
-}>) {
-  const options: { value: Payer; label: string; description: string }[] = [
-    {
-      value: "family",
-      label: "Die Familie bezahlt",
-      description: "Die Familie bekommt eine Rechnung über den Betrag.",
-    },
-  ];
-  if (exemptionAvailable) {
-    options.push({
-      value: "exemption",
-      label: "Von der Zahlung befreien (Leistungsbezug)",
-      description: "Dann gilt die Befreiungsregel. Niemand bezahlt den Betrag.",
-    });
-  }
-  if (costBearers.length > 0) {
-    options.push({
-      value: "cost_bearer",
-      label: "Kosten übernimmt ein Kostenträger",
-      description:
-        "Die Familie bezahlt nichts. Du forderst den Betrag beim Kostenträger an.",
-    });
-  }
-  return (
-    <fieldset className="space-y-2">
-      <legend className="mb-2 text-sm font-medium text-gray-700">
-        Wer bezahlt den Beitrag?
-      </legend>
-      <div className="flex flex-col gap-2 sm:max-w-xl">
-        {options.map((option) => {
-          const id = `holiday-registration-payer-${option.value}`;
-          return (
-            <ChoiceTile
-              key={option.value}
-              htmlFor={id}
-              selected={payer === option.value}
-              className="items-start p-3"
-            >
-              <Radio
-                id={id}
-                name="payer"
-                value={option.value}
-                checked={payer === option.value}
-                onChange={() => onPayerChange(option.value)}
-                className="mt-0.5"
-              />
-              <span className="min-w-0 flex-1">
-                <span className="block text-sm font-medium text-gray-900">
-                  {option.label}
-                </span>
-                <span className="mt-0.5 block text-sm font-normal text-gray-600">
-                  {option.description}
-                </span>
-              </span>
-            </ChoiceTile>
-          );
-        })}
-        {payer === "cost_bearer" ? (
-          <div>
-            <FieldLabel
-              id="holiday-registration-cost-bearer-label"
-              htmlFor="holiday-registration-cost-bearer"
-            >
-              Kostenträger
-            </FieldLabel>
-            <CustomSelect
-              id="holiday-registration-cost-bearer"
-              name="cost_bearer_id"
-              ariaLabelledBy="holiday-registration-cost-bearer-label"
-              value={costBearerId ?? ""}
-              options={costBearers.map((bearer) => ({
-                value: bearer.id,
-                label: bearer.name,
-              }))}
-              onChange={onCostBearerChange}
-              wrapLabels
-            />
-          </div>
-        ) : null}
-      </div>
-    </fieldset>
-  );
-}
+/** The confirmation was not ready to send (a second click): nothing to show. */
+const CONFIRM_SKIPPED = new Error("holiday confirmation was not ready");
 
 /** The props of the status, as the page passes them. */
 export interface HolidayRegistrationStatusProps {
@@ -457,6 +362,11 @@ export interface HolidayRegistrationStatusProps {
    * Several children get a field each, as each gets an invoice of its own.
    */
   readonly childDebtorNumbers?: readonly HolidayChildDebtorNumber[];
+  /**
+   * The version of those numbers (ADR 0311): a confirmation that sends them
+   * and a change of them send it back.
+   */
+  readonly childNumbersVersion?: string;
   /** The exemption the confirmation applies; the page shows its preview. */
   readonly exemption: boolean;
   readonly onExemptionChange: (exemption: boolean) => void;
@@ -474,6 +384,17 @@ export interface HolidayRegistrationStatusProps {
   readonly onReload: () => Promise<unknown>;
   /** After a change of the debtor number; the page reads it again. */
   readonly onDebtorNumberChanged: () => Promise<unknown>;
+  /**
+   * Reads the registration with its contribution and numbers after a
+   * refusal of a changed state (ADR 0311) and resolves with the numbers
+   * read (undefined: they arrive through the props); rejects when the read
+   * fails.
+   */
+  readonly onRead: () => Promise<HolidayFamilyDebtorNumbers | undefined>;
+  /** Hands the children's numbers a save answered to the page's read. */
+  readonly onFamilyNumbersSaved: (
+    stored: HolidayFamilyDebtorNumbers,
+  ) => Promise<unknown>;
   /** Das Recht „Abrechnung“ öffnet die Beitragsregeln. */
   readonly canManageBillingSettings?: boolean;
   /** Where the invoice of the period stands; null without the right. */
@@ -523,6 +444,7 @@ function useHolidayRegistrationStatus({
   debtorNumberFormat = NO_DEBTOR_NUMBER_FORMAT,
   familyDebtorNumber = "",
   childDebtorNumbers = NO_CHILD_NUMBERS,
+  childNumbersVersion = "",
   exemption,
   onExemptionChange,
   costBearers = NO_COST_BEARERS,
@@ -531,6 +453,8 @@ function useHolidayRegistrationStatus({
   onChanged,
   onReload,
   onDebtorNumberChanged,
+  onRead,
+  onFamilyNumbersSaved,
   canManageBillingSettings = false,
   billingHref = null,
   onReveal = NO_REVEAL,
@@ -564,14 +488,14 @@ function useHolidayRegistrationStatus({
   // A cancelled whole-registration invoice keeps its shape after a scope
   // switch. Its existing number must remain editable for the replacement.
   const showsRegistrationNumber = !perChild || registration.debtorNumber !== "";
-  const [typedChildNumbers, setTypedChildNumbers] = useState<{
-    readonly registrationId: string;
-    readonly values: ChildNumberValues;
-  } | null>(null);
-  const childNumbers =
-    typedChildNumbers?.registrationId === registration.id
-      ? typedChildNumbers.values
-      : storedChildNumbers(childDebtorNumbers);
+  const familyNumbers = useMemo<HolidayFamilyDebtorNumbers>(
+    () => ({
+      debtorNumber: familyDebtorNumber,
+      children: childDebtorNumbers,
+      version: childNumbersVersion,
+    }),
+    [familyDebtorNumber, childDebtorNumbers, childNumbersVersion],
+  );
   const childHasNumber = childDebtorNumbers.some((child) => child.debtorNumber);
   const [conflict, setConflict] = useState<FamilyDebtorNumberConflict | null>(
     null,
@@ -579,6 +503,30 @@ function useHolidayRegistrationStatus({
   const confirmFieldRef = useRef<HTMLInputElement>(null);
   const confirmRef = useRef<HTMLFormElement>(null);
   const confirmErrors = useApiFormError(confirmRef);
+  // One read per refusal: the confirmation's refusal reads the stored state,
+  // and the children's numbers settle on that same read (ADR 0311).
+  const lastRead = useRef<Promise<
+    HolidayFamilyDebtorNumbers | undefined
+  > | null>(null);
+  const refusalRead = useRef<Promise<
+    HolidayFamilyDebtorNumbers | undefined
+  > | null>(null);
+  const readStored = useCallback(() => {
+    const read = onRead();
+    lastRead.current = read;
+    return read;
+  }, [onRead]);
+  // The confirmation freezes the preview on screen and sends its
+  // fingerprint (ADR 0311); after a refusal nothing is sent until the
+  // stored state is read.
+  const confirmRead = useActionOn(
+    {
+      opening: registration.status === "received" ? registration.id : null,
+      data: contribution ?? undefined,
+      reload: readStored,
+    },
+    { token: (read) => read.fingerprint ?? "" },
+  );
   const errorDisplay = useApiErrorDisplay();
   // A write's reload stands above the card as a load error, never as an
   // error of the confirmation, the cancellation or the debtor number (#6652).
@@ -592,7 +540,7 @@ function useHolidayRegistrationStatus({
   );
   const exemptionAvailable = contribution?.exemptionAvailable ?? false;
   const invoiced = contribution?.invoiced ?? false;
-  let payer: Payer = "family";
+  let payer: HolidayPayerKind = "family";
   if (
     costBearerId &&
     costBearers.some((bearer) => bearer.id === costBearerId)
@@ -601,10 +549,6 @@ function useHolidayRegistrationStatus({
   } else if (exemptionAvailable && exemption) {
     payer = "exemption";
   }
-  // Enter in the debtor number submits the form, so the guards of the button
-  // hold here too: one confirmation at a time, and only of the amount shown.
-  const confirmBlocked =
-    running !== null || contribution === null || previewPending;
   const showsDebtorNumber =
     registration.status === "confirmed" &&
     (debtorNumberRequired ||
@@ -616,13 +560,64 @@ function useHolidayRegistrationStatus({
   const asksDebtorNumber =
     debtorNumberRequired ||
     (perChild ? childHasNumber : Boolean(familyDebtorNumber));
+  // The children's fields rest on the numbers read when the card opened and
+  // send their version (ADR 0311): a newer read refills them only while
+  // nothing is typed.
+  const sendsChildNumbers =
+    registration.status === "received" && perChild && asksDebtorNumber;
+  const childDraft = useDraftOn<
+    HolidayFamilyDebtorNumbers,
+    ChildNumberValues,
+    string
+  >(
+    {
+      opening: sendsChildNumbers ? registration.id : null,
+      data: familyNumbers,
+      reload: () => {
+        const shared = refusalRead.current;
+        refusalRead.current = null;
+        return shared ?? onRead();
+      },
+    },
+    {
+      token: (read) => read.version,
+      toDraft: (read) => storedChildNumbers(read.children),
+      // A refusal of the preview alone leaves the numbers as read: the
+      // typed ones stay; newer numbers replace them.
+      rebase: (draft, from, to) =>
+        from.version === to.version ? draft : storedChildNumbers(to.children),
+      // A confirmed registration closes the fields; the page reads it
+      // again after the confirmation (afterWrite).
+      answer: (_saved, base) => base,
+    },
+  );
+  const childBase = childDraft.base ?? familyNumbers;
+  const childNumbers =
+    childDraft.draft ?? storedChildNumbers(childDebtorNumbers);
+  // Enter in the debtor number submits the form, so the guards of the button
+  // hold here too: one confirmation at a time, and only of the amount shown.
+  const confirmBlocked =
+    running !== null ||
+    contribution === null ||
+    previewPending ||
+    !confirmRead.canSubmit ||
+    (sendsChildNumbers && !childDraft.canSubmit);
+  // Either read waits after a refusal: its failure shows over the form.
+  const confirmForm = useReadDraftForm(
+    sendsChildNumbers && !childDraft.canSubmit ? childDraft : confirmRead,
+    confirmErrors,
+    "die Anmeldung",
+  );
 
   const confirm = async (choice?: FamilyDebtorNumberChoice) => {
-    if (confirmBlocked) return;
-    confirmErrors.clear();
+    if (running !== null || contribution === null || previewPending) return;
+    // Nothing goes out before the stored state is read; the shown error
+    // stays then.
+    if (!confirmForm.begin() || (sendsChildNumbers && !childDraft.canSubmit))
+      return;
     const hints = perChild
       ? childNumberHints(
-          childDebtorNumbers,
+          childBase.children,
           childNumbers,
           debtorNumberRequired,
           debtorNumberFormat,
@@ -639,37 +634,57 @@ function useHolidayRegistrationStatus({
       return;
     }
     setRunning("confirm");
-    try {
-      await confirmHolidayRegistration(
+    const send = (childNumbersVersion?: string, values?: ChildNumberValues) =>
+      confirmHolidayRegistration(
         periodId,
         registration.id,
+        { fingerprint: contribution.fingerprint ?? "", childNumbersVersion },
         payer === "exemption",
         // An untouched sibling number is inherited under the backend's locks.
         perChild ? "" : (enteredDebtorNumber?.trim() ?? ""),
         payer === "cost_bearer" ? (costBearerId ?? undefined) : undefined,
         choice,
-        perChild && asksDebtorNumber
-          ? childNumberInputs(childDebtorNumbers, childNumbers)
-          : undefined,
+        values ? childNumberInputs(childBase.children, values) : undefined,
       );
-      setConflict(null);
-    } catch (err) {
+    // The numbers' draft wraps the confirmation. A refusal reads the stored
+    // state once: the confirmation's read, on which the numbers settle too.
+    const result = sendsChildNumbers
+      ? await childDraft.submit(async (version, values) => {
+          refusalRead.current = null;
+          const sent = await confirmRead.submit(() => send(version, values));
+          if (sent.ok) return sent.saved;
+          if (sent.skipped) throw CONFIRM_SKIPPED;
+          if (sent.refused) refusalRead.current = lastRead.current;
+          throw sent.error;
+        })
+      : await confirmRead.submit(() => send());
+    if (!result.ok) {
+      setRunning(null);
+      if (result.skipped || result.error === CONFIRM_SKIPPED) return;
       // A number that differs from the family's needs a choice (#6692).
-      const differs = familyDebtorNumberConflictOf(err);
+      const differs = familyDebtorNumberConflictOf(result.error);
       if (differs) {
-        // The request is over: the dialog's choices must work.
-        setRunning(null);
         setConflict(differs);
         return;
       }
       setConflict(null);
       logger.error("holiday_registration_confirm_failed", {
-        error: err instanceof Error ? err.message : String(err),
+        error:
+          result.error instanceof Error
+            ? result.error.message
+            : String(result.error),
       });
-      void confirmErrors.show(err, { object: "die Anmeldung" });
-      setRunning(null);
+      // Inzwischen geändert: `reload` zeigt den gespeicherten Stand, ohne
+      // „Wiederholen“ (ADR 0311).
+      void confirmErrors.show(
+        result.error,
+        result.refused
+          ? { object: "die Anmeldung", reload: result.reload }
+          : { object: "die Anmeldung" },
+      );
       return;
     }
+    setConflict(null);
     await afterWrite.refresh();
     setRunning(null);
   };
@@ -717,7 +732,7 @@ function useHolidayRegistrationStatus({
   const choosesPayer =
     registration.status === "received" &&
     (exemptionAvailable || costBearers.length > 0);
-  const changePayer = (next: Payer) => {
+  const changePayer = (next: HolidayPayerKind) => {
     if (next === "cost_bearer") {
       onCostBearerChange?.(costBearerId ?? costBearers[0]?.id ?? null);
       return;
@@ -754,7 +769,7 @@ function useHolidayRegistrationStatus({
       label: childHasNumber
         ? "Nummern der Kinder bearbeiten"
         : "Nummern der Kinder eintragen",
-      description: "Öffnet je Kind ein Feld für seine Debitorennummer.",
+      description: "Öffnet pro Kind ein Feld für seine Debitorennummer.",
       disabled: busy,
       onClick: () => {
         onReveal();
@@ -808,6 +823,7 @@ function useHolidayRegistrationStatus({
         isLoading={running === "confirm"}
         loadingText="Bestätigt …"
         disabled={cardShown && confirmBlocked}
+        disabledReason={cardShown ? confirmForm.waitReason : undefined}
         tooltip={
           cardShown
             ? "Bestätigt die Anmeldung und schickt den Eltern sofort die Zusage per E-Mail."
@@ -901,20 +917,21 @@ function useHolidayRegistrationStatus({
               void confirm();
             }}
           >
+            <LoadErrorAlert error={confirmForm.loadError} />
             <FormErrorAlert message={confirmErrors.error} />
             {asksDebtorNumber && perChild ? (
               <ChildDebtorNumberInputs
                 idPrefix="holiday-registration-child-debtor-number"
-                childNumbers={childDebtorNumbers}
+                childNumbers={childBase.children}
                 values={childNumbers}
                 required={debtorNumberRequired}
                 format={debtorNumberFormat}
                 fieldError={confirmErrors.fieldError}
                 onChange={(childId, value) =>
-                  setTypedChildNumbers({
-                    registrationId: registration.id,
-                    values: { ...childNumbers, [childId]: value },
-                  })
+                  childDraft.setDraft((current) => ({
+                    ...current,
+                    [childId]: value,
+                  }))
                 }
               />
             ) : null}
@@ -973,7 +990,9 @@ function useHolidayRegistrationStatus({
           <ChildDebtorNumbersField
             periodId={periodId}
             registrationId={registration.id}
-            childNumbers={childDebtorNumbers}
+            numbers={familyNumbers}
+            onRead={onRead}
+            onSaved={onFamilyNumbersSaved}
             required={debtorNumberRequired}
             format={debtorNumberFormat}
             invoiced={invoiced}
@@ -999,11 +1018,11 @@ function useHolidayRegistrationStatus({
         {showsDebtorNumber && perChild && showsRegistrationNumber ? (
           <p>
             Die Nummer der Anmeldung gilt für eine gemeinsame Rechnung.
-            Rechnungen je Kind nennen die Nummer des Kindes.
+            Rechnungen pro Kind nennen die Nummer des Kindes.
           </p>
         ) : null}
         {choosesPayer ? (
-          <PayerChoice
+          <HolidayPayerChoiceField
             payer={payer}
             exemptionAvailable={exemptionAvailable}
             costBearers={costBearers}

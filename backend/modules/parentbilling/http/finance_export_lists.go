@@ -33,7 +33,7 @@ func (rs *FinanceExportResource) exportRuns(w http.ResponseWriter, r *http.Reque
 		renderExportError(w, r, err)
 		return
 	}
-	table := newListTable("Dateien je Lauf", "exportlaeufe", false,
+	table := newListTable("Dateien pro Lauf", "exportlaeufe", false,
 		column("run", "Lauf"), column("issued", "Ausgestellt am"), common.ListColumn{ID: "invoices", Label: "Rechnungen", Numeric: true}, common.ListColumn{ID: "total", Label: "Summe (Euro)", Numeric: true},
 		column("sollstellung", "Letzte Sollstellung"), column("datev", "DATEV-Datei"), common.ListColumn{ID: "files", Label: "Dateien", Numeric: true})
 	for _, run := range runs.Runs {

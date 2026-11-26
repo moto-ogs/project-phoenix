@@ -111,6 +111,16 @@ func (s *workSessionCommands) CheckInOn(ctx context.Context, staffID int64, pinn
 	return
 }
 
+// TerminalOnlyStamping reports whether the staff member stamps only at the
+// NFC terminal (#8024).
+func (s *workSessionCommands) TerminalOnlyStamping(ctx context.Context, staffID int64) (value0 bool, err error) {
+	err = s.commands.runInWorkSessionTx(ctx, func(txCtx context.Context) error {
+		value0, err = s.commands.TerminalOnlyStamping(txCtx, staffID)
+		return err
+	})
+	return
+}
+
 // EnsureCheckedIn ensures a staff member is checked in, creating a session if needed.
 // `source` is forwarded to CheckIn so the channel is recorded faithfully.
 func (s *workSessionCommands) EnsureCheckedIn(ctx context.Context, staffID int64, source string) (value0 *WorkSession, err error) {
@@ -249,36 +259,6 @@ func (s *workSessionCommands) AutoCheckoutDueSessions(ctx context.Context, grace
 func (s *workSessionCommands) GetStaffIDsWithSupervisionToday(ctx context.Context) (value0 []int64, err error) {
 	err = s.commands.runInWorkSessionTx(ctx, func(txCtx context.Context) error {
 		value0, err = s.commands.GetStaffIDsWithSupervisionToday(txCtx)
-		return err
-	})
-	return
-}
-
-// AssignScheduleTemplate snapshots the template's entries as the staff
-// member's schedule and binds the template to the staff row.
-func (s *workSessionCommands) AssignScheduleTemplate(ctx context.Context, staff *StaffScheduleBinding, modelID int64) (err error) {
-	err = s.commands.runInWorkSessionTx(ctx, func(txCtx context.Context) error {
-		err = s.commands.AssignScheduleTemplate(txCtx, staff, modelID)
-		return err
-	})
-	return
-}
-
-// ApplyCustomScheduleRows replaces the schedule with custom rows and unbinds
-// any assigned template.
-func (s *workSessionCommands) ApplyCustomScheduleRows(ctx context.Context, staff *StaffScheduleBinding, entries []*WorkScheduleRow, anchor, validFrom calendar.Date) (err error) {
-	err = s.commands.runInWorkSessionTx(ctx, func(txCtx context.Context) error {
-		err = s.commands.ApplyCustomScheduleRows(txCtx, staff, entries, anchor, validFrom)
-		return err
-	})
-	return
-}
-
-// SaveCustomScheduleAsTemplate persists the rows as a new reusable work time
-// model and binds it to the staff member.
-func (s *workSessionCommands) SaveCustomScheduleAsTemplate(ctx context.Context, staff *StaffScheduleBinding, name string, rotation int, anchor calendar.Date, entries []*WorkTimeTemplateEntry) (err error) {
-	err = s.commands.runInWorkSessionTx(ctx, func(txCtx context.Context) error {
-		err = s.commands.SaveCustomScheduleAsTemplate(txCtx, staff, name, rotation, anchor, entries)
 		return err
 	})
 	return

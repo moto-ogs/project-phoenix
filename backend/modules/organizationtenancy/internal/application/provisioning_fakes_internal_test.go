@@ -572,9 +572,9 @@ type fakeIdentity struct {
 	registrations []domain.SchoolAccountRegistration
 	identities    []domain.SchoolIdentityRequest
 	assigned      [][3]int64
-	schoolAccts   []domain.SchoolAccount
-	orgAccts      []domain.OrganizationAccount
-	orgAcctsFor   []int64
+	accountPage   organizationtenancy.AccountPage
+	accountScopes []organizationtenancy.AccountScope
+	accountQuery  organizationtenancy.AccountPageQuery
 	revoked       []int64
 	invalidated   []int64
 	deactivated   []int64
@@ -692,26 +692,13 @@ func (f *fakeIdentity) AssignRole(ctx context.Context, tenantID, accountID, role
 	return nil
 }
 
-func (f *fakeIdentity) ListSchoolAccounts(ctx context.Context, _ int64) ([]domain.SchoolAccount, error) {
-	if err := f.call(ctx, "ListSchoolAccounts"); err != nil {
-		return nil, err
+func (f *fakeIdentity) ListAccountPage(ctx context.Context, scope organizationtenancy.AccountScope, query organizationtenancy.AccountPageQuery) (organizationtenancy.AccountPage, error) {
+	if err := f.call(ctx, "ListAccountPage"); err != nil {
+		return organizationtenancy.AccountPage{}, err
 	}
-	return f.schoolAccts, nil
-}
-
-func (f *fakeIdentity) ListOrganizationAccounts(ctx context.Context, organizationID int64) ([]domain.OrganizationAccount, error) {
-	if err := f.call(ctx, "ListOrganizationAccounts"); err != nil {
-		return nil, err
-	}
-	f.orgAcctsFor = append(f.orgAcctsFor, organizationID)
-	return f.orgAccts, nil
-}
-
-func (f *fakeIdentity) ListAllAccounts(ctx context.Context) ([]domain.OrganizationAccount, error) {
-	if err := f.call(ctx, "ListAllAccounts"); err != nil {
-		return nil, err
-	}
-	return f.orgAccts, nil
+	f.accountScopes = append(f.accountScopes, scope)
+	f.accountQuery = query
+	return f.accountPage, nil
 }
 
 func (f *fakeIdentity) RevokeSchoolSessions(ctx context.Context, tenantID int64) (int, error) {
@@ -1160,7 +1147,7 @@ func newHarness(t *testing.T) *provisioningHarness {
 		PWAUsageWindowDays:  30,
 		Organizations:       newFakeOwner(engine),
 		ErasureOrderRecords: newFakeOwner(engine), DeviceSlots: newFakeOwner(engine),
-		Transaction: h.tx, Dashboard: h.dashboard, Identity: h.identity, Devices: h.devices,
+		Transaction: h.tx, Dashboard: h.dashboard, Accounts: h.identity, Identity: h.identity, Devices: h.devices,
 		People: h.people, Presence: h.presence, Categories: h.categories, Settings: h.settings,
 		Audit: h.audit, Secrets: h.secrets, Now: func() time.Time { return fixedTime },
 		Logger: slog.New(slog.NewTextHandler(h.logs, &slog.HandlerOptions{Level: slog.LevelDebug})),
@@ -1228,4 +1215,21 @@ func int64Ptr(value int64) *int64 { return &value }
 
 func (d *fakeDashboard) AllSchoolsPWAUsage(ctx context.Context, window time.Duration) ([]organizationtenancy.DashboardPWAUsage, error) {
 	return d.PWAUsage(ctx, 0, window)
+}
+
+// updateSchool updates a school as the operator's form does: with the
+// version of the school as stored, unless the case sets its own (ADR 0311).
+func (h *provisioningHarness) updateSchool(ctx context.Context, id int64, changes organizationtenancy.SchoolChanges, operatorID int64, ip net.IP) (*organizationtenancy.School, error) {
+	if school, ok := h.engine.schools[id]; ok && changes.ExpectedVersion == "" {
+		changes.ExpectedVersion = organizationtenancy.SchoolVersion(*school)
+	}
+	return h.svc.UpdateSchool(ctx, id, changes, operatorID, ip)
+}
+
+// updateOrganization updates an organisation as the operator's form does.
+func (h *provisioningHarness) updateOrganization(ctx context.Context, id int64, changes organizationtenancy.OrganizationChanges, operatorID int64, ip net.IP) (*organizationtenancy.Organization, error) {
+	if organization, ok := h.engine.orgs[id]; ok && changes.ExpectedVersion == "" {
+		changes.ExpectedVersion = organizationtenancy.OrganizationVersion(*organization)
+	}
+	return h.svc.UpdateOrganization(ctx, id, changes, operatorID, ip)
 }

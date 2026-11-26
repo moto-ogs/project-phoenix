@@ -46,6 +46,8 @@ type RouteContract struct {
 	Request any
 	// Response is a zero value of the type rendered as the envelope's data.
 	Response any
+	// PartialError names a problem whose details.result reuses Response.
+	PartialError string
 	// Paginated says the route answers through RespondPaginated.
 	Paginated bool
 	// NoData replaces Response on a route that answers no data: a 204, or
@@ -83,7 +85,8 @@ type RouteContract struct {
 	NoCommit string
 	// File replaces Response on a route that answers a file: its bytes with
 	// Content-Type and Content-Disposition instead of the envelope. The proxy
-	// streams them through and never caches them; an error keeps the envelope.
+	// streams them through; FileCache and PrivateCache govern caching.
+	// An error keeps the problem envelope.
 	File bool
 	// Multipart replaces Request on a route that takes a multipart/form-data
 	// upload. The proxy streams the body to the backend without reading it,
@@ -107,7 +110,7 @@ type RouteContract struct {
 	// the file. The proxy sends no session, no bearer and no body, and the
 	// backend's limiter of the link keys the request by client IP. Only a
 	// File route of the portal public names it; a public file without it is
-	// refused, as is a public upload.
+	// refused. Public multipart uploads use PublicUpload instead.
 	PublicFile string
 	// PublicUpload opens a multipart upload to the portal public, route by
 	// route (#2352, ADR 0270): it says why a link or a public form may send
@@ -133,6 +136,14 @@ type RouteContract struct {
 	// cookie. The route is typed like any other, and no proxy allowlist
 	// names it, so the proxy never hands its answer to a browser.
 	RouteFile string
+	// BrowserPath is the exact same-origin address of a RouteFile route. An
+	// empty path leaves the Go entry available only to server callers.
+	BrowserPath string
+	// BrowserMethod overrides the Go method at BrowserPath; empty uses Method.
+	BrowserMethod string
+	// BrowserOwnContract marks a route file that changes the browser's
+	// request or answer. The address is typed, not the Go body or answer.
+	BrowserOwnContract bool
 	// Plain says the handler writes the data as the whole body
 	// (RenderJSON), without the envelope. Only a RouteFile route may.
 	Plain bool
@@ -216,6 +227,8 @@ type QueryParam struct {
 	Repeated bool
 	// Values closes a string parameter to these values.
 	Values []string
+	// TextReason documents a composite value that cannot be a single ID.
+	TextReason string
 }
 
 // ResponseVariants describes a response whose shape a query parameter

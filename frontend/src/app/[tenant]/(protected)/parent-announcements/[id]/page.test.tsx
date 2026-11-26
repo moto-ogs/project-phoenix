@@ -11,11 +11,11 @@ import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import type { Announcement } from "~/lib/parent-announcements-api";
 import { catalogText } from "~/test/error-catalog-text";
-import AnnouncementDetailPage from "./page";
+import AnnouncementDetailPage from "./page-content";
 
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
-    data: { user: { id: "7", tenantId: 1 } },
+    data: { user: { id: "7", tenantId: "1" } },
     status: "authenticated",
   }),
 }));
@@ -136,6 +136,7 @@ vi.mock("~/components/ui/confirm-delete-modal", () => ({
 
 const announcement: Announcement = {
   id: "7",
+  version: "2026-09-01T08:00:00Z",
   title: "Sommerfest am Freitag",
   body: "Bitte Kuchen mitbringen.",
   priority: "important",

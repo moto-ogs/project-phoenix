@@ -143,6 +143,14 @@
       "legacy": "traeger.master_data_invalid"
     },
     {
+      "code": "traeger.school_party_creditor_account_conflict",
+      "class": "business_rejection",
+      "parameters": [
+        "school_name"
+      ],
+      "legacy": "traeger.school_party_creditor_account_conflict"
+    },
+    {
       "code": "traeger.member_not_found",
       "class": "input",
       "parameters": [],
@@ -183,6 +191,26 @@
       "class": "permission",
       "parameters": [],
       "legacy": "traeger.school_requires_code"
+    },
+    {
+      "code": "traeger.school_role_name_taken",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "traeger.school_role_name_taken"
+    },
+    {
+      "code": "traeger.school_role_name_used_at_school",
+      "class": "business_rejection",
+      "parameters": [
+        "schools"
+      ],
+      "legacy": "traeger.school_role_name_used_at_school"
+    },
+    {
+      "code": "traeger.school_role_not_found",
+      "class": "input",
+      "parameters": [],
+      "legacy": "traeger.school_role_not_found"
     },
     {
       "code": "traeger.second_factor_required",

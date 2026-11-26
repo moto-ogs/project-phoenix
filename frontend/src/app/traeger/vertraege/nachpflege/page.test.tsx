@@ -13,7 +13,7 @@ import type {
   ContractCorrectionRow,
   ContractCorrectionRun,
 } from "~/lib/traeger-contract-correction-api";
-import TraegerContractCorrectionPage from "./page";
+import TraegerContractCorrectionPage from "./page-content";
 
 const api = vi.hoisted(() => ({
   previewContractCorrections: vi.fn(),
@@ -29,7 +29,7 @@ vi.unmock("swr");
 vi.mock("next-auth/react", () => ({
   SessionProvider: ({ children }: { children: ReactNode }) => children,
   useSession: () => ({
-    data: { user: { id: "A", scope: "org", orgId: 7 } },
+    data: { user: { id: "A", scope: "org", orgId: "7" } },
   }),
 }));
 vi.mock("~/lib/auth-utils", () => ({ hasPermission: () => true }));

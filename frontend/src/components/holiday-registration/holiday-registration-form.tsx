@@ -70,6 +70,41 @@ import { parentKeys } from "~/lib/swr/parent-keys";
 
 /** The code of a refusal because the Träger changed the form (#5198). */
 const FORM_CHANGED = "enrollment.holiday_registration_form_changed";
+
+/**
+ * The consent texts got a new version while the form was open (#8136): the
+ * backend refuses the old one at `consent_version`, which no field of the
+ * form shows. To the parent that is a changed form, so it takes the same
+ * path: read the offer again and agree to the texts it shows now.
+ */
+function staleConsentAsFormChanged(error: unknown): unknown {
+  const stale =
+    error instanceof ApiError &&
+    error.errors?.some(({ field }) => field === "consent_version");
+  if (!stale) return error;
+  return new ApiError(error.message, 409, {
+    code: FORM_CHANGED,
+    errors: error.errors?.filter(({ field }) => field !== "consent_version"),
+  });
+}
+
+/**
+ * The form and the consent texts an offer shows. The parent's ticks belong
+ * to these; an offer that shows others asks for them again.
+ */
+function consentBasisOf(offer: HolidayRegistrationOffer): string {
+  const { version, retentionDays } = offer.consentTexts;
+  return `${offer.form.version}/${version}/${retentionDays}`;
+}
+
+function withoutConsents(draft: RegistrationDraft): RegistrationDraft {
+  return {
+    ...draft,
+    legalAcceptances: {},
+    privacyConsent: false,
+    healthConsent: false,
+  };
+}
 /** The code of a proof whose upload no longer counts (#5238). */
 const UPLOAD_EXPIRED = "enrollment.upload_expired";
 
@@ -114,6 +149,19 @@ export function HolidayRegistrationForm({
   );
   const [step, setStep] = useState<HolidayRegistrationStep>("form");
   const [captchaToken, setCaptchaToken] = useState("");
+  // A reloaded offer with another form or other consent texts voids the
+  // ticks, also ones set while the old texts were still on screen (#8136).
+  // The summary has no boxes to tick: the parent goes back to the form.
+  const consentBasis = consentBasisOf(offer);
+  const [agreedBasis, setAgreedBasis] = useState(consentBasis);
+  if (agreedBasis !== consentBasis) {
+    setAgreedBasis(consentBasis);
+    setDraft(withoutConsents);
+    if (step === "summary") {
+      setStep("form");
+      setCaptchaToken("");
+    }
+  }
   const [submitting, setSubmitting] = useState(false);
   const [placements, setPlacements] = useState<
     readonly HolidayReceiptPlacement[]
@@ -181,7 +229,8 @@ export function HolidayRegistrationForm({
       setStatusToken(receipt?.statusToken ?? "");
       setStep("done");
       window.scrollTo({ top: 0 });
-    } catch (err) {
+    } catch (caught) {
+      const err = staleConsentAsFormChanged(caught);
       logger.error("holiday_registration_submit_failed", {
         error: err instanceof Error ? err.message : String(err),
       });
@@ -192,13 +241,10 @@ export function HolidayRegistrationForm({
       // and says when that fails (ADR 0311).
       let reload: (() => Promise<unknown>) | undefined;
       if (err instanceof ApiError && err.code === FORM_CHANGED) {
-        // The privacy text may name another retention now (#6691): the
-        // parent agrees to the text the reloaded form shows, not the old one.
-        setDraft((current) => ({
-          ...current,
-          legalAcceptances: {},
-          privacyConsent: false,
-        }));
+        // The consent texts may read differently now (#6691, #8136): the
+        // parent agrees to the texts the reloaded form shows, not the old
+        // ones.
+        setDraft(withoutConsents);
         reload = onFormChanged;
       } else if (
         err instanceof ApiError &&

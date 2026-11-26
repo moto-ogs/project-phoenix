@@ -68,7 +68,7 @@ describe("arbeitszeitmodell-tab.invalidation", () => {
         "phoenix:staff-schedule-targets-42-2026-06-01-2026-06-30",
         "phoenix:staff-schedule-targets-42-account-2026-01-01-2026-07-16",
         "phoenix:staff-month-summary-42-2026-7",
-        "phoenix:time-tracking-month-summary-2026-7",
+        "phoenix:time-tracking-period-month-2026-07-01",
         // Own-service portal keys (no staff id): a manager editing their OWN
         // model must also refresh the self-service daily table and weekly KPI,
         // which key without an id (#1842).

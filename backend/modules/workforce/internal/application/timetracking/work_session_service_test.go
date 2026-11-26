@@ -276,6 +276,9 @@ type wsMockSettingsResolver struct {
 	// credit answers PackUpMinutes and WorkTimeRounding (#6851, #6852).
 	credit    workforce.WorkSessionCreditRule
 	creditErr error
+	// terminalOnly answers TerminalOnlyStamping (#8024).
+	terminalOnly    bool
+	terminalOnlyErr error
 }
 
 // The time-tracking questions the work-session service asks.
@@ -306,6 +309,10 @@ func (m *wsMockSettingsResolver) resolveInt(ctx context.Context, key string) (in
 
 func (m *wsMockSettingsResolver) EnforcePlannedStart(ctx context.Context) (bool, error) {
 	return m.resolveBool(ctx, enforcePlannedStartQuestion)
+}
+
+func (m *wsMockSettingsResolver) TerminalOnlyStamping(context.Context) (bool, error) {
+	return m.terminalOnly, m.terminalOnlyErr
 }
 
 func (m *wsMockSettingsResolver) PlannedStartToleranceMinutes(ctx context.Context) (int, error) {
@@ -3633,15 +3640,18 @@ func TestWSUpdateScheduleAnnouncesTimeTrackingChange(t *testing.T) {
 	svc.broadcaster = broadcaster
 	svc.scheduleRepo = &wsMockStaffWorkScheduleRepository{}
 	svc.staffRepo = &wsStaffAccessMock{
-		BindFn: func(context.Context, StaffScheduleBinding) error { return nil },
+		ScheduleFn: func(context.Context, int64) (*StaffScheduleAssignment, error) { return &StaffScheduleAssignment{}, nil },
+		BindFn:     func(context.Context, StaffScheduleBinding) error { return nil },
 	}
 	ctx, commit := tenanttest.WithAfterCommitHooks(
 		tenant.WithTenantID(context.Background(), 42),
 	)
 
 	err := svc.UpdateSchedule(ctx, &StaffScheduleBinding{ID: 100}, ScheduleUpdateInput{
-		Mode:           "custom",
-		RotationLength: 1,
+		// The token of the empty schedule the mocks store (ADR 0311).
+		ExpectedVersion: storedScheduleVersion(StaffScheduleBinding{ID: 100}, nil),
+		Mode:            "custom",
+		RotationLength:  1,
 		Entries: []ScheduleEntry{{
 			WeekIndex:     0,
 			DayOfWeek:     DayMonday,
@@ -4121,42 +4131,6 @@ func TestWSUpdateSession_RejectsOverlapBeforeWritingBreaks(t *testing.T) {
 	})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "work session overlaps an existing block")
-}
-
-// The frontend picks the block to edit by id (#2402). A JSON number would be
-// parsed as a float64-backed JS number and rounded past 2^53 before the client
-// could stringify it, so the wire has to carry the id quoted.
-func TestWSSessionResponse_SerializesIDAsString(t *testing.T) {
-	t.Parallel()
-	day := NewDate(2026, 8, 17)
-	// Beyond Number.MAX_SAFE_INTEGER (9007199254740991): a numeric wire value
-	// would come back as ...992 in the browser.
-	session := wsClosedBlock(9007199254740993, day, 8, 12)
-	session.TenantID = 9007199254740994
-	session.StaffID = 9007199254740995
-	session.CreatedBy = 9007199254740996
-	updatedBy := int64(9007199254740997)
-	session.UpdatedBy = &updatedBy
-
-	raw, err := json.Marshal(&SessionResponse{WorkSession: session, NetMinutes: 240})
-	require.NoError(t, err)
-
-	assert.Contains(t, string(raw), `"id":"9007199254740993"`)
-	assert.Contains(t, string(raw), `"staff_id":"9007199254740995"`)
-
-	var wire struct {
-		ID        string `json:"id"`
-		TenantID  string `json:"tenant_id"`
-		StaffID   string `json:"staff_id"`
-		CreatedBy string `json:"created_by"`
-		UpdatedBy string `json:"updated_by"`
-	}
-	require.NoError(t, json.Unmarshal(raw, &wire))
-	assert.Equal(t, "9007199254740993", wire.ID)
-	assert.Equal(t, "9007199254740994", wire.TenantID)
-	assert.Equal(t, "9007199254740995", wire.StaffID)
-	assert.Equal(t, "9007199254740996", wire.CreatedBy)
-	assert.Equal(t, "9007199254740997", wire.UpdatedBy)
 }
 
 // A checkout that never happened must not occupy every following day. The

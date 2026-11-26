@@ -39,7 +39,7 @@ export function lunchCountText(line: {
   if (price === null || !line.bookedDays) return "";
   return line.bookedDays === 1
     ? `1 Essen zu ${formatEuro(price)}`
-    : `${line.bookedDays} Essen zu je ${formatEuro(price)}`;
+    : `${line.bookedDays} Essen für ${formatEuro(price)} pro Essen`;
 }
 
 /** The lunch of a booked week (#5631), named with its lunches and price. */

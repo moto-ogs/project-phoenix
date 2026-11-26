@@ -1,0 +1,7 @@
+{
+  "scenario": "api.active.supervision_context.own",
+  "max": 38,
+  "exact": false,
+  "description": "Full staff navigation context with own scope, 2/14 personal groups and 2/54 releases. Counts all transaction and savepoint statements, including session validation.",
+  "route": "GET /api/active/supervision-context"
+}

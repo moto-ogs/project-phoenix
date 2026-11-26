@@ -15,6 +15,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy/internal/domain"
 	"github.com/moto-ogs/project-phoenix/modules/organizationtenancy/internal/ports"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // Report templates of a Träger (#4716, ADR 0246). Like the master data, the
@@ -90,7 +91,8 @@ func (t *TraegerReportTemplates) AddReportTemplate(ctx context.Context, organiza
 }
 
 // ReplaceReportTemplate overwrites a template of the Träger.
-func (t *TraegerReportTemplates) ReplaceReportTemplate(ctx context.Context, organizationID, accountID, templateID int64, input organizationtenancy.TraegerReportTemplateInput) (organizationtenancy.TraegerReportTemplate, error) {
+func (t *TraegerReportTemplates) ReplaceReportTemplate(ctx context.Context, organizationID, accountID, templateID int64, input organizationtenancy.TraegerReportTemplateInput,
+	expectedVersion string) (organizationtenancy.TraegerReportTemplate, error) {
 	existing, input, err := t.prepare(ctx, organizationID, input, false)
 	if err != nil {
 		return organizationtenancy.TraegerReportTemplate{}, err
@@ -98,6 +100,11 @@ func (t *TraegerReportTemplates) ReplaceReportTemplate(ctx context.Context, orga
 	old := findReportTemplate(existing, templateID)
 	if old == nil {
 		return organizationtenancy.TraegerReportTemplate{}, organizationtenancy.ErrTraegerReportTemplateNotFound
+	}
+	// The template as its author read it, under the profile lock prepare
+	// took (ADR 0311): the form sends every section and district back.
+	if err := readstate.Check(expectedVersion, organizationtenancy.TraegerReportTemplateVersion(*old)); err != nil {
+		return organizationtenancy.TraegerReportTemplate{}, err
 	}
 	if reportNameTaken(existing, input.Name, templateID) {
 		return organizationtenancy.TraegerReportTemplate{}, organizationtenancy.ErrTraegerReportTemplateNameTaken

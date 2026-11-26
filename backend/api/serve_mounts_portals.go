@@ -113,10 +113,11 @@ func newOperatorIdentity(sessionAuth *sessiontoken.TokenAuth, identity operatorI
 
 // newTagScanReview composes Device Fleet's review of unregistered RFID scans;
 // it answers in the operator surface's format (#3232).
-func newTagScanReview(iot devicefleetCompose.IoTService, organizations organizationtenancy.Query) *tagScanOperatorAPI.Resource {
+func newTagScanReview(iot devicefleetCompose.IoTService, organizations organizationtenancy.Query, logger *slog.Logger) *tagScanOperatorAPI.Resource {
 	return tagScanOperatorAPI.NewResource(tagScanOperatorAPI.Config{
 		Scans:     iot.Fleet(),
 		Directory: tagScanSchoolDirectory{schools: organizations},
+		Logger:    logger.With("handler", "operator-unregistered-tag-scans"),
 		Surface: tagScanOperatorAPI.Surface{
 			InvalidRequest: apiCommon.OperatorInvalidRequest,
 			Internal:       apiCommon.OperatorInternal,
@@ -138,7 +139,7 @@ func newOperatorRouter(
 	demoPlans studentpresence.DemoCareDays,
 	now func() time.Time,
 ) (chi.Router, error) {
-	tagScanReview := newTagScanReview(iot, organizations)
+	tagScanReview := newTagScanReview(iot, organizations, logger)
 	billing, err := owners.NewOperatorBilling(logger)
 	if err != nil {
 		return nil, fmt.Errorf("compose operator billing: %w", err)
@@ -172,9 +173,10 @@ func newOperatorRouter(
 		provisioningOperatorAPI.NewBillingResource(billing, nil),
 		&operatorSchoolSettings{
 			values: settingsOperatorAPI.NewSettingsResource(settingsOperatorAPI.SettingsConfig{
-				Settings:   schoolSettings,
-				Schools:    operatorSettingsSchools{schools: organizations},
-				OperatorID: operatorIDFromSession,
+				Settings:             schoolSettings,
+				Schools:              operatorSettingsSchools{schools: organizations},
+				TenantLookupSettings: ContractTenantShellSettingKeys(),
+				OperatorID:           operatorIDFromSession,
 			}),
 			bookingAuthorityImpact: newBookingAuthorityImpact(lifecycle, calendar.CalendarDateClock(now)),
 			traegerValues:          traegerSettings,
@@ -196,7 +198,7 @@ func newParentResource(
 	logger *slog.Logger, uploads nativeUploads.UploadFiles, identity identityaccess.Owner, parent *parentportal.Portal, calendarApp calendarCompose.Application, flows owners.EnrollmentFlows,
 	guardianProfiles *peopleCompose.GuardianProfileLoader, organizations organizationtenancy.Query,
 	devices owners.DeliveryDevices, notifications owners.DeliveryNotifications, delivery deliveryRuntime.Capability,
-	healthData enrollmentOwner.HolidayHealthCipher, traegerSettings TraegerBrandingSettings, now func() time.Time,
+	healthData enrollmentOwner.HolidayHealthCipher, traegerSettings TraegerBrandingSettings, traegerModules TraegerBookedModules, now func() time.Time,
 ) *parentAPI.Resource {
 	return parentAPI.NewResource(parentAPI.ResourceConfig{
 		Now:         now,
@@ -212,7 +214,7 @@ func newParentResource(
 		),
 		GuardianProfileLoader: newParentGuardianProfiles(guardianProfiles),
 		Schools:               parentSchoolDirectory{schools: organizations},
-		HolidayLinks:          newParentHolidayRegistrationLinks(organizations, delivery, healthData, traegerSettings, logger, now),
+		HolidayLinks:          newParentHolidayRegistrationLinks(organizations, delivery, healthData, traegerSettings, traegerModules, logger, now),
 		Push:                  bindParentPushSubscriptions(devices.PushSubscriptions),
 		Preferences:           bindParentPreferences(notifications.Preferences),
 		Feed:                  bindParentNotificationFeed(notifications.GuardianFeed),

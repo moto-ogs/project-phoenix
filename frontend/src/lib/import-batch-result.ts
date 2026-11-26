@@ -1,3 +1,5 @@
+import type { Decoder, PartialResult } from "~/lib/contract/browser-runtime";
+import type { ClassListImportResult } from "~/lib/contract/import.generated";
 import type { ErrorCode } from "~/lib/error-codes.generated";
 
 const importBatchFailedCode: ErrorCode = "import.import_batch_failed";
@@ -13,17 +15,11 @@ export interface ImportBatchResult<T = ImportBatchRowError> {
   created_count: number;
   updated_count: number;
   error_count: number;
-  errors: T[];
+  errors: T[] | null;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object";
-}
-
-function importBatchErrors(value: unknown): unknown[] | undefined {
-  if (value == null) return [];
-  if (Array.isArray(value)) return value;
-  return undefined;
 }
 
 function rowHasAbortingWrite(entry: ImportBatchRowError): boolean {
@@ -35,30 +31,13 @@ function rowHasAbortingWrite(entry: ImportBatchRowError): boolean {
 /**
  * Reads the committed import outcome from an `import.import_batch_failed` envelope.
  * Returns null for any other error so callers keep their generic failure path.
- * A nil Go slice encodes as `errors: null`; that is an empty list, not a
- * malformed payload.
+ * The importing route supplies the decoder for its row and summary types.
  */
 export function readImportBatchFailure<T>(
   payload: unknown,
-): ImportBatchResult<T> | null {
-  if (!isRecord(payload) || payload.code !== importBatchFailedCode) {
-    return null;
-  }
-  if (!isRecord(payload.details) || !isRecord(payload.details.result)) {
-    return null;
-  }
-  const result = payload.details.result;
-  const errors = importBatchErrors(result.errors);
-  if (
-    typeof result.created_count !== "number" ||
-    typeof result.updated_count !== "number" ||
-    typeof result.error_count !== "number" ||
-    typeof result.total_rows !== "number" ||
-    errors === undefined
-  ) {
-    return null;
-  }
-  return { ...result, errors: errors } as unknown as ImportBatchResult<T>;
+  schema: Pick<Decoder<PartialResult<T>>, "safeParse">,
+): T | null {
+  return readImportBatchDetails(payload, schema)?.result ?? null;
 }
 
 /**
@@ -66,20 +45,27 @@ export function readImportBatchFailure<T>(
  * (#3571): `{ code, details }` in `details.rejection` of an
  * `import.import_batch_failed` envelope. Null when a batch failed for another reason.
  */
-export function readImportBatchRejection(payload: unknown): unknown {
+export function readImportBatchRejection<T>(
+  payload: unknown,
+  schema: Pick<Decoder<PartialResult<T>>, "safeParse">,
+): unknown {
+  return readImportBatchDetails(payload, schema)?.rejection ?? null;
+}
+
+function readImportBatchDetails<T>(
+  payload: unknown,
+  schema: Pick<Decoder<PartialResult<T>>, "safeParse">,
+): PartialResult<T> | null {
   if (!isRecord(payload) || payload.code !== importBatchFailedCode) {
     return null;
   }
-  if (!isRecord(payload.details) || !isRecord(payload.details.rejection)) {
-    return null;
-  }
-  return payload.details.rejection;
+  const parsed = schema.safeParse(payload.details);
+  return parsed.success ? parsed.data : null;
 }
 
-export function importBatchSavedCount(result: {
-  created_count: number;
-  updated_count: number;
-}): number {
+export function importBatchSavedCount(
+  result: Pick<ClassListImportResult, "created_count" | "updated_count">,
+): number {
   return result.created_count + result.updated_count;
 }
 
@@ -96,8 +82,9 @@ export function countAlreadyExistsRows(
 }
 
 function importBatchBlockingRow(result: ImportBatchResult): number | undefined {
-  for (let index = result.errors.length - 1; index >= 0; index -= 1) {
-    const row = result.errors[index];
+  const errors = result.errors ?? [];
+  for (let index = errors.length - 1; index >= 0; index -= 1) {
+    const row = errors[index];
     if (row && row.row_number > 0 && rowHasAbortingWrite(row)) {
       return row.row_number;
     }

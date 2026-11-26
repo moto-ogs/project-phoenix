@@ -1,2549 +1,453 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { releaseFakeTimers, setTestClock } from "~/test/clock";
-import { renderHook, act, waitFor as waitForDOM } from "@testing-library/react";
-import { render, screen } from "@testing-library/react";
-import type { ReactNode } from "react";
+import { act, renderHook, waitFor } from "@testing-library/react";
+import { useSession } from "next-auth/react";
+import type { PropsWithChildren } from "react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { bffJson } from "~/lib/bff-fetch";
+import { ApiError } from "~/lib/api-error";
+import type { NavigationContext } from "~/lib/contract/active.generated";
+import { mutate } from "~/lib/swr/testing";
+import { SWRSeedBoundary } from "~/lib/swr/config-boundaries";
+import { resetSWRScope, scopedSWRKey, tenantSWRScope } from "~/lib/swr/scope";
+import { SWRScopeBoundary } from "~/lib/swr/scope-boundary";
+import { stampSWRSeeds, writeSWRSeeds } from "~/lib/swr/seed";
+import { supervisionContextKeys } from "~/lib/swr/supervision-keys";
+import { deferred } from "~/test/helpers/form-modal-pending";
+import { releaseFakeTimers } from "~/test/clock";
 import {
   SupervisionProvider,
-  useSupervision,
   useOptionalSupervision,
+  useSupervision,
 } from "./supervision-context";
 
-import { pagedJson, plainFetch } from "~/test/mocks/plain-session-fetch";
-
-vi.mock(
-  "~/lib/session-cache",
-  () => import("~/test/mocks/plain-session-fetch"),
-);
-
-// renderHook updates result.current without a DOM mutation, so waitFor only
-// rechecks on its interval. Poll the same assertions more promptly; keep
-// Testing Library's timeout and real timers.
-const waitFor: typeof waitForDOM = (callback, options) =>
-  waitForDOM(callback, { interval: 5, ...options });
-
-// Mock next-auth
-vi.mock("next-auth/react", () => ({
-  useSession: vi.fn(),
+vi.unmock("swr");
+vi.mock("next-auth/react", () => ({ useSession: vi.fn() }));
+vi.mock("~/lib/bff-fetch", () => ({ bffJson: vi.fn() }));
+vi.mock("~/lib/tenant-context", () => ({
+  useTenantSafe: () => ({
+    tenantSlug: "schule",
+    tenant: { tenantId: "10", slug: "schule" },
+    routingMode: "path",
+  }),
+  useTenantSlugSafe: () => "schule",
 }));
 
-const { useSession } = await import("next-auth/react");
-
-const { useOperationalOverviewScope } = await import("~/lib/tenant-context");
-const mockOverviewScope = vi.mocked(useOperationalOverviewScope);
-
-/** Configure the tenant's operations.operational_overview_scope (#2380). */
-function setOverviewScope(scope: "own" | "admins" | "all_staff") {
-  mockOverviewScope.mockReturnValue(scope);
-}
-
-// Mock fetch globally with URL-based routing
-const mockFetch = vi.fn();
-global.fetch = vi.fn(plainFetch(mockFetch));
-
-// Default mock responses for the API endpoints
-const defaultMockResponses = {
-  groups: { data: [] },
-  supervised: { data: [] },
-  openRooms: pagedJson([]),
-  adminAll: { data: [] },
+const route = "GET /api/active/supervision-context";
+const snapshot: NavigationContext = {
+  groups: {
+    status: "ok",
+    navigation: [
+      {
+        id: "4",
+        name: "Fremde Gruppe",
+        via_substitution: false,
+        is_personal: false,
+      },
+      {
+        id: "3",
+        name: "Bernsteine",
+        via_substitution: true,
+        is_personal: true,
+      },
+    ],
+    own_group_ids: ["3", "33"],
+    own_room_names: ["Gruppenraum"],
+  },
+  released_rooms: { status: "ok", items: [{ id: "10", name: "Turnhalle" }] },
+  sessions: {
+    status: "ok",
+    own_status: "ok",
+    overview_status: "ok",
+    items: [
+      {
+        id: "8",
+        room_id: "10",
+        room_name: "Turnhalle",
+        activity_name: "Sport",
+        is_own: true,
+      },
+      {
+        id: "7",
+        room_id: "23",
+        room_name: "Werkraum",
+        activity_name: "Holz",
+        is_own: false,
+      },
+    ],
+  },
 };
-
-// Helper to create URL-based fetch mock
-function setupFetchMock(overrides?: {
-  groups?: object | Error;
-  supervised?: object | Error;
-  openRooms?: object | Error;
-  adminAll?: object | Error | { status: number };
-}) {
-  mockFetch.mockImplementation((url: string) => {
-    if (url.includes("/api/students/ogs-group-navigation")) {
-      const response = overrides?.groups ?? defaultMockResponses.groups;
-      if (response instanceof Error) return Promise.reject(response);
-      return Promise.resolve({
-        ok: true,
-        json: async () => response,
-      });
-    }
-    if (url.includes("/api/active/supervisors/all")) {
-      const response = overrides?.adminAll ?? defaultMockResponses.adminAll;
-      if (response instanceof Error) return Promise.reject(response);
-      if (
-        typeof response === "object" &&
-        "status" in response &&
-        response.status === 403
-      ) {
-        return Promise.resolve({ ok: false, status: 403 });
-      }
-      return Promise.resolve({
-        ok: true,
-        json: async () => response,
-      });
-    }
-    if (url.includes("/api/me/groups/supervised")) {
-      const response = overrides?.supervised ?? defaultMockResponses.supervised;
-      if (response instanceof Error) return Promise.reject(response);
-      return Promise.resolve({
-        ok: true,
-        json: async () => response,
-      });
-    }
-    if (url.includes("is_open_room=true")) {
-      const response = overrides?.openRooms ?? defaultMockResponses.openRooms;
-      if (response instanceof Error) return Promise.reject(response);
-      return Promise.resolve({
-        ok: true,
-        json: async () => response,
-      });
-    }
-    // Default fallback
-    return Promise.resolve({
-      ok: true,
-      json: async () => ({}),
-    });
-  });
+const noSessions: NavigationContext = {
+  sessions: {
+    status: "ok",
+    own_status: "ok",
+    overview_status: "forbidden",
+    items: [],
+  },
+};
+const bff = vi.mocked(bffJson<"tenant", typeof route>);
+function signIn(
+  id = "2",
+  tenantId = "10",
+  scope = "",
+  permissions = ["groups:read"],
+) {
+  vi.mocked(useSession).mockReturnValue({
+    data: { user: { id, tenantId, scope, permissions }, expires: "2099-12-31" },
+    status: "authenticated",
+    update: vi.fn(),
+  } as ReturnType<typeof useSession>);
 }
 
-// Helper to create wrapper with session
-// Default test subject is a real supervisor, who carries `groups:read` — the
-// permission the overview endpoint requires. Pass an empty array to model a
-// limited account (e.g. the `guest` role). `signedIn` only decides whether a
-// session exists: the browser session carries no token (#5005).
-function createWrapper(
-  signedIn?: string,
-  roles?: string[],
-  permissions: string[] = ["groups:read"],
-  includePermissions = true,
-) {
-  return function Wrapper({ children }: { children: ReactNode }) {
-    vi.mocked(useSession).mockReturnValue(
-      (signedIn
-        ? {
-            data: {
-              user: {
-                id: "1",
-                email: "test@example.com",
-                name: "Test User",
-                ...(includePermissions ? { permissions } : {}),
-                ...(roles ? { roles } : {}),
-              },
-              expires: "2099-12-31",
-            },
-            status: "authenticated" as const,
-            update: vi.fn(),
-          }
-        : {
-            data: null,
-            status: "unauthenticated" as const,
-            update: vi.fn(),
-          }) as ReturnType<typeof useSession>,
+function Wrapper({ children }: PropsWithChildren) {
+  return (
+    <>
+      <SWRScopeBoundary expectedTenantId="10" />
+      <SupervisionProvider>{children}</SupervisionProvider>
+    </>
+  );
+}
+
+function withSeed(data: NavigationContext) {
+  const key = scopedSWRKey(
+    tenantSWRScope("schule", "2"),
+    supervisionContextKeys.snapshot(),
+  );
+  const entries = { [key]: data };
+  stampSWRSeeds(entries);
+  writeSWRSeeds(entries);
+  return function Seeded({ children }: PropsWithChildren) {
+    return (
+      <SWRSeedBoundary seed={{ fallback: entries, cacheData: {} }}>
+        <Wrapper>{children}</Wrapper>
+      </SWRSeedBoundary>
     );
-    return <SupervisionProvider>{children}</SupervisionProvider>;
   };
 }
 
-describe("SupervisionProvider", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  it("should render children", () => {
-    vi.mocked(useSession).mockReturnValue({
-      data: null,
-      status: "unauthenticated",
-      update: vi.fn(),
-    });
-
-    render(
-      <SupervisionProvider>
-        <div data-testid="child">Test Child</div>
-      </SupervisionProvider>,
-    );
-
-    expect(screen.getByTestId("child")).toBeInTheDocument();
-    expect(screen.getByText("Test Child")).toBeInTheDocument();
-  });
-
-  it("should initialize with loading states when no session", () => {
-    const { result } = renderHook(() => useSupervision(), {
-      wrapper: createWrapper(),
-    });
-
-    expect(result.current.hasGroups).toBe(false);
-    expect(result.current.isLoadingGroups).toBe(false);
-    expect(result.current.groups).toEqual([]);
-    expect(result.current.isSupervising).toBe(false);
-    expect(result.current.isLoadingSupervision).toBe(false);
-  });
-
-  it("should fetch groups and supervision on session token", async () => {
-    setupFetchMock({
-      groups: {
-        data: [
-          { id: 1, name: "Group A" },
-          { id: 2, name: "Group B" },
-        ],
-      },
-      supervised: {
-        data: [
-          {
-            id: 1,
-            room_id: 5,
-            group_id: 1,
-            room: { id: 5, name: "Room 5" },
-          },
-        ],
-      },
-    });
-
-    const { result } = renderHook(() => useSupervision(), {
-      wrapper: createWrapper("test-token"),
-    });
-
-    // Wait for API calls
-    await waitFor(() => {
-      expect(result.current.isLoadingGroups).toBe(false);
-    });
-
-    await waitFor(() => {
-      expect(result.current.isLoadingSupervision).toBe(false);
-    });
-
-    expect(result.current.hasGroups).toBe(true);
-    expect(result.current.groups).toHaveLength(2);
-    expect(result.current.isSupervising).toBe(true);
-    expect(result.current.supervisedRoomId).toBe("5");
-    expect(result.current.supervisedRoomName).toBe("Room 5");
-  });
-
-  it("should handle API errors gracefully", async () => {
-    setupFetchMock({
-      groups: new Error("Network error"),
-      supervised: new Error("Network error"),
-      openRooms: new Error("Network error"),
-    });
-
-    const { result } = renderHook(() => useSupervision(), {
-      wrapper: createWrapper("test-token"),
-    });
-
-    await waitFor(() => {
-      expect(result.current.isLoadingGroups).toBe(false);
-    });
-
-    await waitFor(() => {
-      expect(result.current.isLoadingSupervision).toBe(false);
-    });
-
-    expect(result.current.hasGroups).toBe(false);
-    expect(result.current.groups).toEqual([]);
-    expect(result.current.isSupervising).toBe(false);
-  });
-
-  it("should refresh data when refresh is called", async () => {
-    setupFetchMock(); // Use defaults (empty)
-
-    const { result } = renderHook(() => useSupervision(), {
-      wrapper: createWrapper("test-token"),
-    });
-
-    await waitFor(() => {
-      expect(result.current.isLoadingGroups).toBe(false);
-    });
-
-    // The 5-second throttle compares Date.now() with the last refresh; on
-    // the frozen test clock only moving the clock bypasses it.
-    setTestClock(new Date(Date.now() + 5100));
-
-    // Update mock for refresh call
-    setupFetchMock({
-      groups: { data: [{ id: 10, name: "New Group" }] },
-    });
-
-    await act(async () => {
-      await result.current.refresh();
-    });
-
-    await waitFor(() => {
-      expect(result.current.groups).toHaveLength(1);
-      expect(result.current.groups[0]?.name).toBe("New Group");
-    });
-  });
-
-  it("updates a group's personal section after a handover", async () => {
-    setupFetchMock({
-      groups: {
-        data: [
-          {
-            id: "10",
-            name: "Incoming Group",
-            is_personal: false,
-            via_substitution: false,
-          },
-        ],
-      },
-    });
-
-    const { result } = renderHook(() => useSupervision(), {
-      wrapper: createWrapper("test-token"),
-    });
-
-    await waitFor(() => {
-      expect(result.current.groups[0]?.is_personal).toBe(false);
-    });
-
-    setupFetchMock({
-      groups: {
-        data: [
-          {
-            id: "10",
-            name: "Incoming Group",
-            is_personal: true,
-            via_substitution: true,
-          },
-        ],
-      },
-    });
-
-    await act(async () => {
-      await result.current.refresh({
-        force: true,
-        groupsOnly: true,
-        silent: true,
-      });
-    });
-
-    expect(result.current.groups[0]).toMatchObject({
-      is_personal: true,
-      via_substitution: true,
-    });
-  });
-
-  it.each([true, false])(
-    "preserves supervision loading during a groups-only retry (success: %s)",
-    async (ok) => {
-      setupFetchMock({ groups: new Error("Group loading failed") });
-      const { result } = renderHook(() => useSupervision(), {
-        wrapper: createWrapper("test-token"),
-      });
-      await waitFor(() => {
-        expect(result.current.groupsLoadFailed).toBe(true);
-        expect(result.current.isLoadingSupervision).toBe(false);
-      });
-
-      let resolveGroups: ((value: unknown) => void) | undefined;
-      mockFetch.mockImplementation(
-        () =>
-          new Promise((resolve) => {
-            resolveGroups = resolve;
-          }),
-      );
-      mockFetch.mockClear();
-      let retry: Promise<void> | undefined;
-      act(() => {
-        retry = result.current.refresh({ force: true, groupsOnly: true });
-      });
-
-      expect(result.current.isLoadingGroups).toBe(true);
-      expect(result.current.isLoadingSupervision).toBe(false);
-      // The staff portal sends after its session gate, a microtask later.
-      await waitFor(() => expect(mockFetch).toHaveBeenCalledTimes(1));
-      expect(mockFetch).toHaveBeenCalledWith(
-        "/api/students/ogs-group-navigation",
-        expect.any(Object),
-      );
-
-      await act(async () => {
-        resolveGroups?.({ ok, json: async () => ({ data: [] }) });
-        await retry;
-      });
-      expect(result.current.isLoadingGroups).toBe(false);
-      expect(result.current.isLoadingSupervision).toBe(false);
-      expect(result.current.groupsLoadFailed).toBe(!ok);
-    },
-  );
-
-  it.each(["Old room", undefined])(
-    "updates room names on silent refresh (previous name: %s)",
-    async (roomName) => {
-      const group = {
-        id: "10",
-        name: "Group",
-        room_id: "5",
-        room_name: roomName,
-      };
-      setupFetchMock({ groups: { data: [group] } });
-      const { result } = renderHook(() => useSupervision(), {
-        wrapper: createWrapper("test-token"),
-      });
-      await waitFor(() => {
-        expect(result.current.groups).toEqual([group]);
-        expect(result.current.isLoadingSupervision).toBe(false);
-      });
-
-      const updatedGroup = { ...group, room_name: "New room" };
-      setupFetchMock({ groups: { data: [updatedGroup] } });
-      await act(async () => {
-        await result.current.refresh({
-          force: true,
-          groupsOnly: true,
-          silent: true,
-        });
-      });
-      expect(result.current.groups).toEqual([updatedGroup]);
-    },
-  );
-
-  it("should debounce rapid refresh calls", async () => {
-    setupFetchMock(); // Use defaults
-
-    const { result } = renderHook(() => useSupervision(), {
-      wrapper: createWrapper("test-token"),
-    });
-
-    await waitFor(() => {
-      expect(result.current.isLoadingGroups).toBe(false);
-    });
-
-    const initialFetchCount = mockFetch.mock.calls.length;
-
-    // Call refresh multiple times rapidly (all should be debounced)
-    await act(async () => {
-      await result.current.refresh();
-      await result.current.refresh();
-      await result.current.refresh();
-    });
-
-    // Should not call again due to debouncing (5 second minimum)
-    expect(mockFetch.mock.calls.length).toBe(initialFetchCount);
-  });
-
-  it("does not setup the former periodic refresh when token exists", async () => {
-    // Spy on setInterval to prove the deleted poll is not reintroduced.
-    const intervalSpy = vi.spyOn(global, "setInterval");
-
-    setupFetchMock(); // Use defaults
-
-    const { unmount } = renderHook(() => useSupervision(), {
-      wrapper: createWrapper("test-token"),
-    });
-
-    // Wait for initial fetch
-    await waitFor(() => {
-      expect(mockFetch).toHaveBeenCalled();
-    });
-
-    expect(intervalSpy).not.toHaveBeenCalledWith(expect.any(Function), 60000);
-
-    unmount();
-    intervalSpy.mockRestore();
-  });
-
-  it("refetches on phoenix:supervision-stale, bypassing the 5s throttle (#2084)", async () => {
-    // A group handed to this account must show up in the sidebar without a
-    // reload. The announcement arrives right after the provider's own initial
-    // load, so it MUST beat the 5-second refresh throttle — otherwise the new
-    // group stays invisible until the next one-minute tick.
-    setupFetchMock();
-
-    const { result } = renderHook(() => useSupervision(), {
-      wrapper: createWrapper("test-token"),
-    });
-
-    await waitFor(() => {
-      expect(result.current.isLoadingGroups).toBe(false);
-    });
-
-    const initialFetchCount = mockFetch.mock.calls.length;
-
-    await act(async () => {
-      window.dispatchEvent(new CustomEvent("phoenix:supervision-stale"));
-      await Promise.resolve();
-    });
-
-    await waitFor(() => {
-      expect(mockFetch.mock.calls.length).toBeGreaterThan(initialFetchCount);
-    });
-
-    const refetched = mockFetch.mock.calls
-      .slice(initialFetchCount)
-      .map((call) => String(call[0]));
-
-    // The group list is what changed...
-    expect(
-      refetched.some((url) =>
-        url.includes("/api/students/ogs-group-navigation"),
-      ),
-    ).toBe(true);
-    // ...and nothing else. checkSupervision reads active.supervisors and the
-    // Schulhof status, neither of which a group-access write can touch, so
-    // firing them here would cost every client two guaranteed no-op requests.
-    expect(
-      refetched.some((url) => url.includes("/api/me/groups/supervised")),
-    ).toBe(false);
-    expect(refetched.some((url) => url.includes("is_open_room=true"))).toBe(
-      false,
-    );
-  });
-
-  it("queues a stale-event group refetch while another refresh is active", async () => {
-    setupFetchMock();
-    const fallbackFetch = mockFetch.getMockImplementation();
-    let resolveInitialGroups: ((value: unknown) => void) | undefined;
-    let groupRequestCount = 0;
-
-    mockFetch.mockImplementation((url: string) => {
-      if (!url.includes("/api/students/ogs-group-navigation")) {
-        return fallbackFetch?.(url);
-      }
-      groupRequestCount++;
-      if (groupRequestCount === 1) {
-        return new Promise((resolve) => {
-          resolveInitialGroups = resolve;
-        });
-      }
-      return Promise.resolve({
-        ok: true,
-        json: async () => ({ data: [{ id: 42, name: "Queued Group" }] }),
-      });
-    });
-
-    const { result } = renderHook(() => useSupervision(), {
-      wrapper: createWrapper("test-token"),
-    });
-
-    await waitFor(() => expect(groupRequestCount).toBe(1));
-
-    window.dispatchEvent(new CustomEvent("phoenix:supervision-stale"));
-
-    await act(async () => {
-      resolveInitialGroups?.({
-        ok: true,
-        json: async () => ({ data: [] }),
-      });
-    });
-
-    await waitFor(() => {
-      expect(groupRequestCount).toBe(2);
-      expect(result.current.groups).toEqual([{ id: 42, name: "Queued Group" }]);
-    });
-
-    const supervisedRequests = mockFetch.mock.calls.filter((call) =>
-      String(call[0]).includes("/api/me/groups/supervised"),
-    );
-    expect(supervisedRequests).toHaveLength(1);
-  });
-
-  it("runs a forced refresh again when it arrives during a load (#3888)", async () => {
-    setupFetchMock();
-    const fallbackFetch = mockFetch.getMockImplementation();
-    let resolveInitialSupervised: ((value: unknown) => void) | undefined;
-    let resolveFollowUpSupervised: ((value: unknown) => void) | undefined;
-    let supervisedRequestCount = 0;
-
-    mockFetch.mockImplementation((url: string) => {
-      if (!url.includes("/api/me/groups/supervised")) {
-        return fallbackFetch?.(url);
-      }
-      supervisedRequestCount++;
-      if (supervisedRequestCount === 1) {
-        return new Promise((resolve) => {
-          resolveInitialSupervised = resolve;
-        });
-      }
-      return new Promise((resolve) => {
-        resolveFollowUpSupervised = resolve;
-      });
-    });
-
-    const { result } = renderHook(() => useSupervision(), {
-      wrapper: createWrapper("test-token"),
-    });
-
-    await waitFor(() => expect(supervisedRequestCount).toBe(1));
-
-    // The own end of a block lands while the first load is still running.
-    const queuedRefresh = result.current.refresh({
-      silent: true,
-      force: true,
-    });
-    expect(supervisedRequestCount).toBe(1);
-
-    await act(async () => {
-      resolveInitialSupervised?.({
-        ok: true,
-        json: async () => ({ data: [] }),
-      });
-    });
-
-    await waitFor(() => expect(supervisedRequestCount).toBe(2));
-
-    let refreshSettled = false;
-    void queuedRefresh.then(() => {
-      refreshSettled = true;
-    });
-    await Promise.resolve();
-    expect(refreshSettled).toBe(false);
-
-    await act(async () => {
-      resolveFollowUpSupervised?.({
-        ok: true,
-        json: async () => ({ data: [] }),
-      });
-      await queuedRefresh;
-    });
-    expect(refreshSettled).toBe(true);
-  });
-
-  it("stops listening for phoenix:supervision-stale after unmount", async () => {
-    setupFetchMock();
-
-    const { result, unmount } = renderHook(() => useSupervision(), {
-      wrapper: createWrapper("test-token"),
-    });
-
-    await waitFor(() => {
-      expect(result.current.isLoadingGroups).toBe(false);
-    });
-
-    unmount();
-    const afterUnmount = mockFetch.mock.calls.length;
-
-    await act(async () => {
-      window.dispatchEvent(new CustomEvent("phoenix:supervision-stale"));
-      await Promise.resolve();
-    });
-
-    expect(mockFetch.mock.calls.length).toBe(afterUnmount);
-  });
-
-  it("should not setup periodic refresh without token", () => {
-    vi.useFakeTimers();
-
-    const { result } = renderHook(() => useSupervision(), {
-      wrapper: createWrapper(),
-    });
-
-    expect(result.current.hasGroups).toBe(false);
-    expect(mockFetch).not.toHaveBeenCalled();
-
-    act(() => {
-      vi.advanceTimersByTime(60000);
-    });
-
-    expect(mockFetch).not.toHaveBeenCalled();
-
-    releaseFakeTimers();
-  });
-
-  it("should handle supervision with room name fallback", async () => {
-    setupFetchMock({
-      supervised: {
-        data: [
-          {
-            id: 1,
-            room_id: 5,
-            group_id: 1,
-            // No room object, should fallback
-          },
-        ],
-      },
-    });
-
-    const { result } = renderHook(() => useSupervision(), {
-      wrapper: createWrapper("test-token"),
-    });
-
-    await waitFor(() => {
-      expect(result.current.isLoadingSupervision).toBe(false);
-    });
-
-    expect(result.current.isSupervising).toBe(true);
-    expect(result.current.supervisedRoomName).toBe("Room 5");
-  });
+beforeEach(() => {
+  resetSWRScope({ revalidate: false });
+  signIn();
+  bff.mockReset();
+  bff.mockResolvedValue(snapshot);
 });
+afterEach(() => resetSWRScope({ revalidate: false }));
 
-describe("useSupervision", () => {
-  it("should throw error when used outside provider", () => {
-    // Suppress console.error for this test
-    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {
-      /* noop */
+describe("staff supervision SWR binding", () => {
+  it("uses personal filters and own sessions from the complete seed without reading on mount", async () => {
+    const { result } = renderHook(useSupervision, {
+      wrapper: withSeed(snapshot),
     });
-
-    expect(() => {
-      renderHook(() => useSupervision());
-    }).toThrow("useSupervision must be used within a SupervisionProvider");
-
-    consoleError.mockRestore();
-  });
-
-  it("should return context values when inside provider", () => {
-    vi.mocked(useSession).mockReturnValue({
-      data: null,
-      status: "unauthenticated",
-      update: vi.fn(),
-    });
-
-    const { result } = renderHook(() => useSupervision(), {
-      wrapper: createWrapper(),
-    });
-
-    expect(result.current).toHaveProperty("hasGroups");
-    expect(result.current).toHaveProperty("isLoadingGroups");
-    expect(result.current).toHaveProperty("groups");
-    expect(result.current).toHaveProperty("isSupervising");
-    expect(result.current).toHaveProperty("isLoadingSupervision");
-    expect(result.current).toHaveProperty("refresh");
-  });
-});
-
-describe("SupervisionProvider school-wide overview paths", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    setOverviewScope("own");
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  it("fetches from the overview endpoint for admins in own mode", async () => {
-    setupFetchMock({
-      adminAll: {
-        status: "success",
-        data: [
-          {
-            id: 10,
-            room_id: 100,
-            group_id: 50,
-            room: { id: 100, name: "Admin Room" },
-          },
-        ],
-      },
-    });
-
-    const { result } = renderHook(() => useSupervision(), {
-      wrapper: createWrapper("test-token", ["admin"]),
-    });
-
-    await waitFor(() => {
-      expect(result.current.isLoadingSupervision).toBe(false);
-    });
-
-    expect(result.current.isSupervising).toBe(true);
-    expect(result.current.supervisedRoomName).toBe("Admin Room");
-
-    // Verify the admin endpoint was called
-    const fetchCalls = mockFetch.mock.calls.map((call) => call[0] as string);
-    expect(fetchCalls).toContain("/api/active/supervisors/all");
-  });
-
-  it("keeps an admin's own regular-room supervision while loading the overview", async () => {
-    setupFetchMock({
-      adminAll: {
-        status: "success",
-        data: [
-          {
-            id: 10,
-            room_id: 100,
-            group_id: 50,
-            room: { id: 100, name: "Fremder Raum" },
-          },
-        ],
-      },
-      supervised: {
-        data: [
-          {
-            id: 11,
-            room_id: 101,
-            group_id: 51,
-            room: { id: 101, name: "Eigener Raum" },
-          },
-        ],
-      },
-    });
-
-    const { result } = renderHook(() => useSupervision(), {
-      wrapper: createWrapper("test-token", ["admin"]),
-    });
-
-    await waitFor(() => {
-      expect(result.current.isLoadingSupervision).toBe(false);
-    });
-
-    expect(result.current.overviewEnabled).toBe(true);
+    expect(result.current.groups.map((group) => group.name)).toEqual([
+      "Bernsteine",
+      "Fremde Gruppe",
+    ]);
+    expect(result.current.ownGroupIds).toEqual(["3", "33"]);
+    expect(result.current.ownSessions.map((session) => session.id)).toEqual([
+      "8",
+    ]);
     expect(result.current.ownSupervision).toBe(true);
-    expect(mockFetch.mock.calls.map((call) => call[0])).toContain(
-      "/api/me/groups/supervised",
-    );
+    await act(async () => {});
+    expect(bff).toHaveBeenCalledTimes(0);
   });
 
-  it("should fall back to staff endpoint when admin gets 403", async () => {
-    setOverviewScope("admins");
-    setupFetchMock({
-      adminAll: { status: 403 }, // Setting disabled
-      supervised: {
-        data: [
-          {
-            id: 5,
-            room_id: 50,
-            group_id: 25,
-            room: { id: 50, name: "Staff Room" },
-          },
-        ],
+  it("fills a cold cache once, even without groups:read", async () => {
+    signIn("2", "10", "", ["schedules:read"]);
+    bff.mockResolvedValue({
+      ...snapshot,
+      groups: {
+        status: "forbidden",
+        navigation: null,
+        own_group_ids: null,
+        own_room_names: null,
+      },
+      sessions: {
+        ...snapshot.sessions!,
+        overview_status: "forbidden",
+        items: [snapshot.sessions!.items![0]!],
       },
     });
-
-    const { result } = renderHook(() => useSupervision(), {
-      wrapper: createWrapper("test-token", ["admin"]),
-    });
-
-    await waitFor(() => {
-      expect(result.current.isLoadingSupervision).toBe(false);
-    });
-
-    expect(result.current.isSupervising).toBe(true);
-    expect(result.current.supervisedRoomName).toBe("Staff Room");
-
-    // Verify both endpoints were called (overview first, then staff fallback)
-    const fetchCalls = mockFetch.mock.calls.map((call) => call[0] as string);
-    expect(fetchCalls).toContain("/api/active/supervisors/all");
-    expect(fetchCalls).toContain("/api/me/groups/supervised");
-    expect(result.current.overviewEnabled).toBe(false);
+    const { result } = renderHook(useSupervision, { wrapper: Wrapper });
+    await waitFor(() =>
+      expect(result.current.ownSessions.map((session) => session.id)).toEqual([
+        "8",
+      ]),
+    );
+    expect(result.current.groups).toEqual([]);
+    expect(bff.mock.calls).toEqual([["tenant", route, undefined]]);
   });
 
-  it.each(["admin:*", "*:*"])(
-    "fetches the overview endpoint for the %s effective admin scope",
-    async (permission) => {
-      setOverviewScope("admins");
-      setupFetchMock();
+  it("coalesces a mixed invalidation and preserves unrequested data", async () => {
+    const { result } = renderHook(useSupervision, {
+      wrapper: withSeed(snapshot),
+    });
+    bff.mockResolvedValue({
+      groups: snapshot.groups,
+      sessions: noSessions.sessions,
+    });
+    await act(async () => {
+      await Promise.all([
+        result.current.refresh(["groups"]),
+        result.current.refresh(["sessions"]),
+      ]);
+    });
+    expect(bff.mock.calls).toEqual([
+      ["tenant", route, { query: { section: ["groups", "sessions"] } }],
+    ]);
+    expect(result.current.supervisedRooms).toMatchObject([
+      { id: "10", isOpenRoom: true },
+    ]);
+    expect(result.current.ownSupervision).toBe(false);
+  });
 
-      const { result } = renderHook(() => useSupervision(), {
-        wrapper: createWrapper("test-token", ["custom"], [permission]),
+  it.each([
+    ["confirmed write", ["sessions"]],
+    ["new SSE burst", ["groups"]],
+    ["both", ["groups", "sessions"]],
+  ] as const)(
+    "awaits one trailing request for %s during a read",
+    async (_trigger, sections) => {
+      const first = deferred<NavigationContext>();
+      const followup = deferred<NavigationContext>();
+      bff
+        .mockReturnValueOnce(first.promise)
+        .mockReturnValueOnce(followup.promise);
+      const { result } = renderHook(useSupervision, {
+        wrapper: withSeed(snapshot),
       });
-
-      await waitFor(() => {
-        expect(result.current.isLoadingSupervision).toBe(false);
+      let confirmed = false;
+      let waiting = Promise.resolve();
+      act(() => {
+        void result.current.refresh(["sessions"]);
       });
-
-      expect(mockFetch.mock.calls.map((call) => call[0])).toContain(
-        "/api/active/supervisors/all",
+      await waitFor(() => expect(bff).toHaveBeenCalledTimes(1));
+      act(() => {
+        waiting = Promise.all(
+          sections.map((section) => result.current.refresh([section])),
+        ).then(() => {
+          confirmed = true;
+        });
+      });
+      await act(async () => {
+        first.resolve(noSessions);
+      });
+      expect(confirmed).toBe(false);
+      await waitFor(() => expect(bff).toHaveBeenCalledTimes(2));
+      expect(bff.mock.calls[1]).toEqual([
+        "tenant",
+        route,
+        { query: { section: sections } },
+      ]);
+      await act(async () => {
+        followup.resolve({
+          groups: snapshot.groups,
+          sessions: snapshot.sessions,
+        });
+        await waiting;
+      });
+      expect(confirmed).toBe(true);
+      expect(bff).toHaveBeenCalledTimes(2);
+      expect(result.current.ownSupervision).toBe(
+        sections.some((section) => section === "sessions"),
       );
     },
   );
 
-  // #2380: with the all_staff scope a plain caregiver gets the school-wide
-  // list — the very case the admin-only rule could not express.
-  it("fetches the overview endpoint for caregivers under the all_staff scope", async () => {
-    setOverviewScope("all_staff");
-    setupFetchMock({
-      adminAll: {
-        status: "success",
-        data: [
-          {
-            id: 11,
-            room_id: 110,
-            group_id: 55,
-            room: { id: 110, name: "Fremder Raum" },
-          },
-        ],
-      },
+  it("retries an awaited read if a shell seed makes SWR discard it", async () => {
+    const first = deferred<NavigationContext>();
+    const retry = deferred<NavigationContext>();
+    bff.mockReturnValueOnce(first.promise).mockReturnValueOnce(retry.promise);
+    const { result } = renderHook(useSupervision, {
+      wrapper: withSeed(snapshot),
     });
-
-    const { result } = renderHook(() => useSupervision(), {
-      wrapper: createWrapper("test-token", ["user"]),
+    const key = scopedSWRKey(
+      tenantSWRScope("schule", "2"),
+      supervisionContextKeys.snapshot(),
+    );
+    let running = Promise.resolve();
+    let confirmed = false;
+    act(() => {
+      running = result.current.refresh(["sessions"]).then(() => {
+        confirmed = true;
+      });
     });
-
-    await waitFor(() => {
-      expect(result.current.isLoadingSupervision).toBe(false);
+    await waitFor(() => expect(bff).toHaveBeenCalledTimes(1));
+    await act(async () => {
+      const seed = { [key]: { ...snapshot } };
+      stampSWRSeeds(seed);
+      writeSWRSeeds(seed);
     });
-
-    expect(result.current.supervisedRoomName).toBe("Fremder Raum");
-    expect(result.current.overviewEnabled).toBe(true);
-    const fetchCalls = mockFetch.mock.calls.map((call) => call[0] as string);
-    expect(fetchCalls).toContain("/api/active/supervisors/all");
+    await act(async () => {
+      first.resolve(noSessions);
+    });
+    await waitFor(() => expect(bff).toHaveBeenCalledTimes(2));
+    expect(confirmed).toBe(false);
+    await act(async () => {
+      retry.resolve(noSessions);
+      await running;
+    });
+    expect(confirmed).toBe(true);
+    expect(bff).toHaveBeenCalledTimes(2);
+    expect(bff).toHaveBeenLastCalledWith("tenant", route, {
+      query: { section: ["sessions"] },
+    });
+    expect(result.current.ownSupervision).toBe(false);
   });
 
-  // Deactivation: back on the restrictive scope, the client stops asking for
-  // the school-wide list entirely instead of collecting 403s.
-  it("never asks for the overview endpoint for staff under the own scope", async () => {
-    setOverviewScope("own");
-    setupFetchMock({
-      supervised: {
-        data: [
-          {
-            id: 12,
-            room_id: 120,
-            group_id: 60,
-            room: { id: 120, name: "Eigener Raum" },
-          },
-        ],
-      },
+  it("continues if a delayed refusal eviction discards the recovery read", async () => {
+    const refused = deferred<NavigationContext>();
+    const recovery = deferred<NavigationContext>();
+    bff
+      .mockReturnValueOnce(refused.promise)
+      .mockReturnValueOnce(recovery.promise);
+    const { result } = renderHook(useSupervision, {
+      wrapper: withSeed(snapshot),
     });
-
-    const { result } = renderHook(() => useSupervision(), {
-      wrapper: createWrapper("test-token", ["user"]),
+    const key = scopedSWRKey(
+      tenantSWRScope("schule", "2"),
+      supervisionContextKeys.snapshot(),
+    );
+    let queued = Promise.resolve();
+    act(() => {
+      void result.current.refresh(["sessions"]);
     });
-
-    await waitFor(() => {
-      expect(result.current.isLoadingSupervision).toBe(false);
+    await waitFor(() => expect(bff).toHaveBeenCalledTimes(1));
+    act(() => {
+      queued = result.current.refresh(["groups"]);
     });
+    await act(async () => {
+      refused.reject(new ApiError("Access refused", 403));
+    });
+    await waitFor(() => expect(bff).toHaveBeenCalledTimes(2));
+    // The same SWR cache mutation the refusal withdrawal performs.
+    await act(async () => {
+      await mutate(key, undefined, { revalidate: false });
+    });
+    await act(async () => {
+      recovery.resolve(noSessions);
+      await queued;
+    });
+    expect(bff).toHaveBeenCalledTimes(3);
+    expect(bff).toHaveBeenLastCalledWith("tenant", route, undefined);
+    expect(result.current.ownSupervision).toBe(true);
+  });
 
-    expect(result.current.supervisedRoomName).toBe("Eigener Raum");
+  it("joins a running full read for poll and transport recovery", async () => {
+    const full = deferred<NavigationContext>();
+    bff.mockReturnValueOnce(full.promise);
+    const { result } = renderHook(useSupervision, {
+      wrapper: withSeed(snapshot),
+    });
+    let recovery = Promise.resolve();
+    let poll = Promise.resolve();
+    act(() => {
+      poll = result.current.refresh(undefined, "reconcile");
+    });
+    await waitFor(() => expect(bff).toHaveBeenCalledTimes(1));
+    act(() => {
+      recovery = result.current.refresh(undefined, "reconcile");
+    });
+    await act(async () => {
+      full.resolve(snapshot);
+      await Promise.all([poll, recovery]);
+    });
+    expect(bff.mock.calls).toEqual([["tenant", route, undefined]]);
+  });
+
+  it("drops denied groups and foreign sessions but retains authorized own sessions and rooms", async () => {
+    const { result } = renderHook(useSupervision, {
+      wrapper: withSeed(snapshot),
+    });
+    bff.mockResolvedValueOnce({
+      groups: { ...snapshot.groups!, status: "forbidden" },
+      sessions: { ...snapshot.sessions!, overview_status: "unavailable" },
+    });
+    await act(async () => result.current.refresh(["groups", "sessions"]));
+    expect(result.current.ownGroupIds).toEqual([]);
+    expect(result.current.supervisedRooms.map((room) => room.id)).toEqual([
+      "10",
+    ]);
+    expect(result.current.ownSessions.map((session) => session.id)).toEqual([
+      "8",
+    ]);
     expect(result.current.overviewEnabled).toBe(false);
-    const fetchCalls = mockFetch.mock.calls.map((call) => call[0] as string);
-    expect(fetchCalls).not.toContain("/api/active/supervisors/all");
+    expect(result.current.sessionsLoadFailed).toBe(true);
+    bff.mockRejectedValueOnce(new Error("network failed"));
+    await act(async () => result.current.refresh(["groups"]));
+    expect(result.current.groupsLoadFailed).toBe(true);
+    expect(result.current.ownSessions.map((session) => session.id)).toEqual([
+      "8",
+    ]);
   });
 
-  it("refreshes supervision after the resolved overview scope changes", async () => {
-    setupFetchMock({
-      supervised: {
-        data: [
-          {
-            id: 12,
-            room_id: 120,
-            group_id: 60,
-            room: { id: 120, name: "Eigener Raum" },
-          },
-        ],
-      },
+  it("discards a late response and does not start a read while school or portal is inconsistent", async () => {
+    const first = deferred<NavigationContext>();
+    bff.mockReturnValueOnce(first.promise);
+    const { result, rerender } = renderHook(useSupervision, {
+      wrapper: withSeed(snapshot),
     });
-
-    const { result, rerender } = renderHook(() => useSupervision(), {
-      wrapper: createWrapper("test-token", ["user"]),
+    const retainedRefresh = result.current.refresh;
+    act(() => {
+      void retainedRefresh(["sessions"]);
     });
+    await waitFor(() => expect(bff).toHaveBeenCalledTimes(1));
 
-    await waitFor(() => {
-      expect(result.current.isLoadingSupervision).toBe(false);
-    });
-    mockFetch.mockClear();
-
-    setOverviewScope("all_staff");
+    signIn("2", "20");
     rerender();
-
-    await waitFor(() => {
-      expect(mockFetch.mock.calls.map((call) => call[0])).toContain(
-        "/api/active/supervisors/all",
-      );
-    });
-  });
-
-  it("should use staff endpoint directly for non-admin users under the admins scope", async () => {
-    setOverviewScope("admins");
-    setupFetchMock({
-      supervised: {
-        data: [
-          {
-            id: 3,
-            room_id: 30,
-            group_id: 15,
-            room: { id: 30, name: "Teacher Room" },
-          },
-        ],
-      },
-    });
-
-    const { result } = renderHook(() => useSupervision(), {
-      wrapper: createWrapper("test-token", ["user"]),
-    });
-
-    await waitFor(() => {
-      expect(result.current.isLoadingSupervision).toBe(false);
-    });
-
-    expect(result.current.isSupervising).toBe(true);
-
-    // Verify only staff endpoint was called (no admin endpoint)
-    const fetchCalls = mockFetch.mock.calls.map((call) => call[0] as string);
-    expect(fetchCalls).not.toContain("/api/active/supervisors/all");
-    expect(fetchCalls).toContain("/api/me/groups/supervised");
-  });
-});
-
-describe("SupervisionProvider released-room handling", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  it("lists a released room next to the caller's own supervision", async () => {
-    setupFetchMock({
-      supervised: {
-        data: [
-          {
-            id: 1,
-            room_id: 5,
-            group_id: 1,
-            room: { id: 5, name: "Room 5" },
-          },
-        ],
-      },
-      openRooms: pagedJson([{ id: 100, name: "Schulhof" }]),
-    });
-
-    const { result } = renderHook(() => useSupervision(), {
-      wrapper: createWrapper("test-token"),
-    });
-
-    await waitFor(() => {
-      expect(result.current.isLoadingSupervision).toBe(false);
-    });
-
-    // Both the own supervision and the shared room are reachable.
-    expect(result.current.supervisedRooms.length).toBe(2);
-    const openRoom = result.current.supervisedRooms.find((r) => r.isOpenRoom);
-    expect(openRoom).toBeDefined();
-    expect(openRoom?.name).toBe("Schulhof");
-  });
-
-  it("reaches a released room without any own supervision, and stays not-supervising", async () => {
-    setupFetchMock({
-      supervised: { data: [] },
-      openRooms: pagedJson([{ id: 100, name: "Schulhof" }]),
-    });
-
-    const { result } = renderHook(() => useSupervision(), {
-      wrapper: createWrapper("test-token"),
-    });
-
-    await waitFor(() => {
-      expect(result.current.isLoadingSupervision).toBe(false);
-    });
-
-    // The room is reachable, and reaching it is not supervising it: the
-    // previous navigation reported isSupervising for the Schulhof entry, which
-    // made every caregiver look like a supervisor of it (#3065).
-    expect(result.current.supervisedRooms).toHaveLength(1);
-    expect(result.current.supervisedRooms[0]?.isOpenRoom).toBe(true);
-    expect(result.current.isSupervising).toBe(false);
-  });
-
-  it("asks for the released rooms for every caller, and lets the server decide", async () => {
-    // The previous navigation pre-gated its Schulhof fetch on groups:read
-    // because that endpoint required it. The room list needs rooms:read, which
-    // every caregiver already holds, and the server remains the authority: the
-    // client no longer guesses who may see what.
-    setupFetchMock({
-      supervised: { data: [] },
-      openRooms: pagedJson([{ id: 100, name: "Turnhalle" }]),
-    });
-
-    const { result } = renderHook(() => useSupervision(), {
-      wrapper: createWrapper("test-token", ["guest"], []),
-    });
-
-    await waitFor(() => {
-      expect(result.current.isLoadingSupervision).toBe(false);
-    });
-
-    const fetchCalls = mockFetch.mock.calls.map((call) => call[0] as string);
-    expect(fetchCalls.some((url) => url.includes("is_open_room=true"))).toBe(
-      true,
-    );
-    expect(result.current.supervisedRooms).toHaveLength(1);
-    expect(result.current.supervisedRooms[0]?.isOpenRoom).toBe(true);
-  });
-
-  it("shows no open rooms when the room list could not be loaded", async () => {
-    // A refused or failed list must not look like "this school released
-    // nothing": the navigation stays without shared rooms, and the caller's
-    // own supervisions are unaffected.
-    setupFetchMock({
-      supervised: {
-        data: [
-          { id: 1, room_id: 5, group_id: 1, room: { id: 5, name: "Room 5" } },
-        ],
-      },
-      openRooms: new Error("Forbidden"),
-    });
-
-    const { result } = renderHook(() => useSupervision(), {
-      wrapper: createWrapper("test-token", ["guest"], []),
-    });
-
-    await waitFor(() => {
-      expect(result.current.isLoadingSupervision).toBe(false);
-    });
-
-    expect(
-      result.current.supervisedRooms.filter((r) => r.isOpenRoom),
-    ).toHaveLength(0);
-    expect(result.current.supervisedRooms).toHaveLength(1);
-    expect(result.current.isSupervising).toBe(true);
-  });
-
-  it("shows no shared rooms when the school released none", async () => {
-    setupFetchMock({
-      supervised: {
-        data: [
-          {
-            id: 1,
-            room_id: 5,
-            group_id: 1,
-            room: { id: 5, name: "Room 5" },
-          },
-        ],
-      },
-      openRooms: pagedJson([]),
-    });
-
-    const { result } = renderHook(() => useSupervision(), {
-      wrapper: createWrapper("test-token"),
-    });
-
-    await waitFor(() => {
-      expect(result.current.isLoadingSupervision).toBe(false);
-    });
-
-    const openRoom = result.current.supervisedRooms.find((r) => r.isOpenRoom);
-    expect(openRoom).toBeUndefined();
-  });
-
-  it("lists a released room once even when the caller supervises there", async () => {
-    // The own session runs in the released room. Both entries would name
-    // the same place, so the shared room is the one that stands.
-    setupFetchMock({
-      supervised: {
-        data: [
-          {
-            id: 1,
-            room_id: 100,
-            group_id: 1,
-            room: { id: 100, name: "Schulhof" },
-          },
-        ],
-      },
-      openRooms: pagedJson([{ id: 100, name: "Schulhof" }]),
-    });
-
-    const { result } = renderHook(() => useSupervision(), {
-      wrapper: createWrapper("test-token"),
-    });
-
-    await waitFor(() => {
-      expect(result.current.isLoadingSupervision).toBe(false);
-    });
-
-    const sharedRooms = result.current.supervisedRooms.filter(
-      (r) => r.name === "Schulhof",
-    );
-    expect(sharedRooms.length).toBe(1);
-    expect(sharedRooms[0]?.isOpenRoom).toBe(true);
-  });
-});
-
-describe("SupervisionProvider state optimization", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  it("should not update state when groups remain the same", async () => {
-    const initialGroups = { data: [{ id: 1, name: "Group A" }] };
-    setupFetchMock({ groups: initialGroups });
-
-    const { result, rerender } = renderHook(() => useSupervision(), {
-      wrapper: createWrapper("test-token"),
-    });
-
-    await waitFor(() => {
-      expect(result.current.isLoadingGroups).toBe(false);
-    });
-
-    const initialGroupsResult = result.current.groups;
-
-    // Re-render with same data
-    rerender();
-
-    // Groups reference should be the same (no unnecessary update)
-    expect(result.current.groups).toBe(initialGroupsResult);
-  });
-
-  it("should handle silent refresh without updating loading state", () => {
-    // Test the silent refresh logic directly
-    let isLoadingGroups = false;
-    let isLoadingSupervision = false;
-
-    const updateStateForRefresh = (silent: boolean) => {
-      if (!silent) {
-        isLoadingGroups = true;
-        isLoadingSupervision = true;
-      }
-    };
-
-    // Silent refresh should NOT update loading states
-    updateStateForRefresh(true);
-    expect(isLoadingGroups).toBe(false);
-    expect(isLoadingSupervision).toBe(false);
-
-    // Non-silent refresh SHOULD update loading states
-    updateStateForRefresh(false);
-    expect(isLoadingGroups).toBe(true);
-    expect(isLoadingSupervision).toBe(true);
-  });
-});
-
-describe("SupervisionProvider API response handling", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  it("should handle non-OK response from groups API", async () => {
-    mockFetch.mockImplementation((url: string) => {
-      if (url.includes("/api/students/ogs-group-navigation")) {
-        return Promise.resolve({
-          ok: false,
-          status: 404,
-          json: async () => ({}),
-        });
-      }
-      return Promise.resolve({
-        ok: true,
-        json: async () => ({ data: [] }),
-      });
-    });
-
-    const { result } = renderHook(() => useSupervision(), {
-      wrapper: createWrapper("test-token"),
-    });
-
-    await waitFor(() => {
-      expect(result.current.isLoadingGroups).toBe(false);
-    });
-
-    expect(result.current.hasGroups).toBe(false);
     expect(result.current.groups).toEqual([]);
-  });
-
-  it("keeps released rooms reachable when the supervised API fails", async () => {
-    mockFetch.mockImplementation((url: string) => {
-      if (url.includes("/api/me/groups/supervised")) {
-        return Promise.resolve({
-          ok: false,
-          status: 500,
-          json: async () => ({}),
-        });
-      }
-      if (url.includes("is_open_room=true")) {
-        return Promise.resolve({
-          ok: true,
-          json: async () => pagedJson([{ id: 100, name: "Schulhof" }]),
-        });
-      }
-      if (url.includes("/api/students/ogs-group-navigation")) {
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({ data: [] }),
-        });
-      }
-      return Promise.resolve({
-        ok: true,
-        json: async () => ({}),
-      });
-    });
-
-    const { result } = renderHook(() => useSupervision(), {
-      wrapper: createWrapper("test-token"),
-    });
-
-    await waitFor(() => {
-      expect(result.current.isLoadingSupervision).toBe(false);
-    });
-
-    // A failed own-supervision request does not hide the shared rooms.
-    expect(result.current.supervisedRooms).toHaveLength(1);
-    expect(result.current.supervisedRooms[0]?.isOpenRoom).toBe(true);
-  });
-
-  it("should sort groups by German locale", async () => {
-    setupFetchMock({
-      groups: {
-        data: [
-          { id: 3, name: "Zebra-Gruppe" },
-          { id: 1, name: "Äpfel-Gruppe" },
-          { id: 2, name: "Bären-Gruppe" },
-        ],
-      },
-    });
-
-    const { result } = renderHook(() => useSupervision(), {
-      wrapper: createWrapper("test-token"),
-    });
-
-    await waitFor(() => {
-      expect(result.current.isLoadingGroups).toBe(false);
-    });
-
-    // German locale sorting: Ä comes after A, before B
-    expect(result.current.groups[0]?.name).toBe("Äpfel-Gruppe");
-    expect(result.current.groups[1]?.name).toBe("Bären-Gruppe");
-    expect(result.current.groups[2]?.name).toBe("Zebra-Gruppe");
-  });
-});
-
-describe("SupervisionProvider multiple supervised rooms", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  it("should handle multiple supervised rooms sorted by name", async () => {
-    setupFetchMock({
-      supervised: {
-        data: [
-          {
-            id: 1,
-            room_id: 10,
-            group_id: 1,
-            room: { id: 10, name: "Zimmer Z" },
-          },
-          {
-            id: 2,
-            room_id: 20,
-            group_id: 2,
-            room: { id: 20, name: "Atelier A" },
-          },
-          {
-            id: 3,
-            room_id: 30,
-            group_id: 3,
-            room: { id: 30, name: "Mensa M" },
-          },
-        ],
-      },
-    });
-
-    const { result } = renderHook(() => useSupervision(), {
-      wrapper: createWrapper("test-token"),
-    });
-
-    await waitFor(() => {
-      expect(result.current.isLoadingSupervision).toBe(false);
-    });
-
-    expect(result.current.supervisedRooms).toHaveLength(3);
-    // Should be sorted alphabetically
-    expect(result.current.supervisedRooms[0]?.name).toBe("Atelier A");
-    expect(result.current.supervisedRooms[1]?.name).toBe("Mensa M");
-    expect(result.current.supervisedRooms[2]?.name).toBe("Zimmer Z");
-  });
-
-  it("should include actual_group name as groupName", async () => {
-    setupFetchMock({
-      supervised: {
-        data: [
-          {
-            id: 1,
-            room_id: 10,
-            group_id: 1,
-            room: { id: 10, name: "Kunstzimmer" },
-            actual_group: { id: 5, name: "OGS Gruppe Blau" },
-          },
-        ],
-      },
-    });
-
-    const { result } = renderHook(() => useSupervision(), {
-      wrapper: createWrapper("test-token"),
-    });
-
-    await waitFor(() => {
-      expect(result.current.isLoadingSupervision).toBe(false);
-    });
-
-    expect(result.current.supervisedRooms[0]?.groupName).toBe(
-      "OGS Gruppe Blau",
-    );
-  });
-});
-
-describe("SupervisionProvider refresh debouncing", () => {
-  it("debounces rapid refresh calls", () => {
-    // Simulate debounce logic
-    let lastRefreshTime = 0;
-    const DEBOUNCE_MS = 5000;
-
-    const shouldRefresh = (): boolean => {
-      const now = Date.now();
-      if (now - lastRefreshTime < DEBOUNCE_MS) {
-        return false;
-      }
-      lastRefreshTime = now;
-      return true;
-    };
-
-    // First call should succeed
-    expect(shouldRefresh()).toBe(true);
-
-    // Immediate second call should be debounced
-    expect(shouldRefresh()).toBe(false);
-  });
-
-  it("allows refresh after debounce period", () => {
-    let lastRefreshTime = Date.now() - 6000; // 6 seconds ago
-    const DEBOUNCE_MS = 5000;
-
-    const shouldRefresh = (): boolean => {
-      const now = Date.now();
-      if (now - lastRefreshTime < DEBOUNCE_MS) {
-        return false;
-      }
-      lastRefreshTime = now;
-      return true;
-    };
-
-    // Should allow refresh since 6 seconds passed
-    expect(shouldRefresh()).toBe(true);
-  });
-});
-
-describe("SupervisionProvider isRefreshing guard", () => {
-  it("prevents concurrent refresh calls", () => {
-    let isRefreshing = false;
-    let refreshCount = 0;
-
-    const tryRefresh = (): boolean => {
-      if (isRefreshing) return false;
-      isRefreshing = true;
-      refreshCount++;
-      return true;
-    };
-
-    // First call succeeds
-    expect(tryRefresh()).toBe(true);
-    expect(refreshCount).toBe(1);
-
-    // Second call blocked while refreshing
-    expect(tryRefresh()).toBe(false);
-    expect(refreshCount).toBe(1);
-
-    // After completing, next call succeeds
-    isRefreshing = false;
-    expect(tryRefresh()).toBe(true);
-    expect(refreshCount).toBe(2);
-  });
-});
-
-describe("SupervisionProvider silent refresh mode", () => {
-  it("does not update loading state on silent refresh", () => {
-    let isLoadingGroups = false;
-    let isLoadingSupervision = false;
-
-    const updateStateForRefresh = (silent: boolean) => {
-      if (!silent) {
-        isLoadingGroups = true;
-        isLoadingSupervision = true;
-      }
-    };
-
-    // Non-silent refresh sets loading
-    updateStateForRefresh(false);
-    expect(isLoadingGroups).toBe(true);
-    expect(isLoadingSupervision).toBe(true);
-
-    // Reset
-    isLoadingGroups = false;
-    isLoadingSupervision = false;
-
-    // Silent refresh does not set loading
-    updateStateForRefresh(true);
-    expect(isLoadingGroups).toBe(false);
-    expect(isLoadingSupervision).toBe(false);
-  });
-});
-
-describe("SupervisionProvider state change detection", () => {
-  it("skips update when groups unchanged", () => {
-    const prevState = {
-      hasGroups: true,
-      groups: [{ id: 1, name: "Group A" }],
-      isLoadingGroups: false,
-    };
-    const newGroupList = [{ id: 1, name: "Group A" }];
-    const newHasGroups = true;
-
-    const shouldUpdate = !(
-      prevState.hasGroups === newHasGroups &&
-      prevState.groups.length === newGroupList.length &&
-      prevState.groups.every(
-        (group, index) => group.id === newGroupList[index]?.id,
-      ) &&
-      !prevState.isLoadingGroups
-    );
-
-    expect(shouldUpdate).toBe(false);
-  });
-
-  it("triggers update when groups changed", () => {
-    const prevState = {
-      hasGroups: true,
-      groups: [{ id: 1, name: "Group A" }],
-      isLoadingGroups: false,
-    };
-    const newGroupList = [
-      { id: 1, name: "Group A" },
-      { id: 2, name: "Group B" },
-    ];
-    const newHasGroups = true;
-
-    const shouldUpdate = !(
-      prevState.hasGroups === newHasGroups &&
-      prevState.groups.length === newGroupList.length &&
-      prevState.groups.every(
-        (group, index) => group.id === newGroupList[index]?.id,
-      ) &&
-      !prevState.isLoadingGroups
-    );
-
-    expect(shouldUpdate).toBe(true);
-  });
-
-  it("triggers update when loading state differs", () => {
-    const prevState = {
-      hasGroups: false,
-      groups: [] as Array<{ id: number }>,
-      isLoadingGroups: true,
-    };
-    const newGroupList: Array<{ id: number }> = [];
-    const newHasGroups = false;
-
-    const shouldUpdate = !(
-      prevState.hasGroups === newHasGroups &&
-      prevState.groups.length === newGroupList.length &&
-      prevState.groups.every(
-        (group, index) => group.id === newGroupList[index]?.id,
-      ) &&
-      !prevState.isLoadingGroups
-    );
-
-    expect(shouldUpdate).toBe(true);
-  });
-});
-
-describe("SupervisionProvider supervised rooms comparison", () => {
-  it("skips update when room IDs unchanged", () => {
-    const prevRoomIds = ["room-1", "room-2"].join(",");
-    const newRoomIds = ["room-1", "room-2"].join(",");
-
-    expect(prevRoomIds === newRoomIds).toBe(true);
-  });
-
-  it("triggers update when room IDs changed", () => {
-    const prevRoomIds = ["room-1", "room-2"].join(",");
-    const newRoomIds = ["room-1", "room-3"].join(",");
-
-    expect(prevRoomIds !== newRoomIds).toBe(true);
-  });
-
-  it("detects room order changes", () => {
-    const prevRoomIds = ["room-1", "room-2"].join(",");
-    const newRoomIds = ["room-2", "room-1"].join(",");
-
-    expect(prevRoomIds !== newRoomIds).toBe(true);
-  });
-
-  it("updates a supervised room when its active group changes", async () => {
-    let activeGroupId = 101;
-    setupFetchMock({
-      supervised: {
-        get data() {
-          return [
-            {
-              id: activeGroupId,
-              room_id: 10,
-              group_id: 1,
-              room: { id: 10, name: "Raum A" },
-              actual_group: { id: 1, name: "GT 1" },
-            },
-          ];
-        },
-      },
-    });
-
-    const { result } = renderHook(() => useSupervision(), {
-      wrapper: createWrapper("test-token"),
-    });
-
-    await waitFor(() => {
-      expect(result.current.supervisedRooms[0]?.groupId).toBe("101");
-    });
-
-    activeGroupId = 202;
+    signIn("2", "10", "school");
+    rerender();
     await act(async () => {
-      await result.current.refresh({ force: true, silent: true });
+      await retainedRefresh(["groups"]);
+      first.resolve(snapshot);
     });
+    expect(result.current.ownSupervision).toBe(false);
+    expect(bff).toHaveBeenCalledTimes(1);
 
-    await waitFor(() => {
-      expect(result.current.supervisedRooms[0]?.groupId).toBe("202");
-    });
-  });
-});
-
-describe("SupervisionProvider room name fallback", () => {
-  it("uses room name when available", () => {
-    const group = {
-      room_id: 10,
-      room: { id: 10, name: "Kunstzimmer" },
-    };
-
-    const roomName =
-      group.room?.name ?? (group.room_id ? `Room ${group.room_id}` : undefined);
-
-    expect(roomName).toBe("Kunstzimmer");
+    signIn("5");
+    bff.mockResolvedValueOnce({ ...snapshot, ...noSessions });
+    rerender();
+    await waitFor(() => expect(bff).toHaveBeenCalledTimes(2));
+    expect(result.current.ownSupervision).toBe(false);
   });
 
-  it("falls back to Room ID format when name missing", () => {
-    const group = {
-      room_id: 10,
-      room: undefined as { id: number; name: string } | undefined,
-    };
-
-    const roomName =
-      group.room?.name ?? (group.room_id ? `Room ${group.room_id}` : undefined);
-
-    expect(roomName).toBe("Room 10");
-  });
-
-  it("returns undefined when no room info", () => {
-    const group = {
-      room_id: undefined as number | undefined,
-      room: undefined as { id: number; name: string } | undefined,
-    };
-
-    const roomName =
-      group.room?.name ?? (group.room_id ? `Room ${group.room_id}` : undefined);
-
-    expect(roomName).toBeUndefined();
-  });
-});
-
-describe("SupervisionProvider filters out Schulhof from regular rooms", () => {
-  it("excludes Schulhof when mapping supervised groups", () => {
-    const SCHULHOF_ROOM_NAME = "Schulhof";
-    const supervisedGroups = [
-      { room_id: 1, room: { name: "Raum A" } },
-      { room_id: 2, room: { name: SCHULHOF_ROOM_NAME } },
-      { room_id: 3, room: { name: "Raum B" } },
-    ];
-
-    const filteredRooms = supervisedGroups.filter(
-      (g) => g.room_id && g.room && g.room.name !== SCHULHOF_ROOM_NAME,
-    );
-
-    expect(filteredRooms).toHaveLength(2);
-    expect(
-      filteredRooms.find((r) => r.room.name === "Schulhof"),
-    ).toBeUndefined();
-  });
-});
-
-describe("SupervisionProvider session handling", () => {
-  it("clears state when no session token", () => {
-    const token: string | undefined = undefined;
-    let stateClearedToEmpty = false;
-
-    if (!token) {
-      stateClearedToEmpty = true;
-    }
-
-    expect(stateClearedToEmpty).toBe(true);
-  });
-
-  it("triggers refresh when session token exists", () => {
-    const token = "valid-token";
-    let refreshCalled = false;
-
-    if (token) {
-      refreshCalled = true;
-    }
-
-    expect(refreshCalled).toBe(true);
-  });
-});
-
-describe("SupervisionProvider error state change detection", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  it("should handle fetch throwing on supervised API (catch branch)", async () => {
-    mockFetch.mockImplementation((url: string) => {
-      if (url.includes("/api/students/ogs-group-navigation")) {
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({ data: [] }),
-        });
-      }
-      if (url.includes("/api/me/groups/supervised")) {
-        return Promise.reject(new Error("Network error"));
-      }
-      if (url.includes("is_open_room=true")) {
-        return Promise.reject(new Error("Network error"));
-      }
-      return Promise.resolve({ ok: true, json: async () => ({}) });
+  it("withdraws all data on a read refusal and loads a full snapshot to recover", async () => {
+    const { result } = renderHook(useSupervision, {
+      wrapper: withSeed(snapshot),
     });
-
-    const { result } = renderHook(() => useSupervision(), {
-      wrapper: createWrapper("test-token"),
-    });
-
-    await waitFor(() => {
-      expect(result.current.isLoadingSupervision).toBe(false);
-    });
-
-    // After error, should be not supervising
-    expect(result.current.isSupervising).toBe(false);
-    expect(result.current.supervisedRooms).toHaveLength(0);
-    expect(result.current.supervisedRoomId).toBeUndefined();
-    expect(result.current.supervisedRoomName).toBeUndefined();
-  });
-
-  it("should handle non-OK groups API with unchanged state (optimization guard)", async () => {
-    // First render with non-OK groups API
-    mockFetch.mockImplementation((url: string) => {
-      if (url.includes("/api/students/ogs-group-navigation")) {
-        return Promise.resolve({
-          ok: false,
-          status: 500,
-          json: async () => ({}),
-        });
-      }
-      if (url.includes("/api/me/groups/supervised")) {
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({ data: [] }),
-        });
-      }
-      if (url.includes("is_open_room=true")) {
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({ data: { data: { exists: false } } }),
-        });
-      }
-      return Promise.resolve({ ok: true, json: async () => ({}) });
-    });
-
-    const { result } = renderHook(() => useSupervision(), {
-      wrapper: createWrapper("test-token"),
-    });
-
-    await waitFor(() => {
-      expect(result.current.isLoadingGroups).toBe(false);
-    });
-
-    // Groups should be empty after non-OK response
-    expect(result.current.hasGroups).toBe(false);
-    expect(result.current.groups).toHaveLength(0);
-  });
-
-  it("should handle groups API fetch rejection (catch branch for checkGroups)", async () => {
-    mockFetch.mockImplementation((url: string) => {
-      if (url.includes("/api/students/ogs-group-navigation")) {
-        return Promise.reject(new Error("Network failure"));
-      }
-      if (url.includes("/api/me/groups/supervised")) {
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({ data: [] }),
-        });
-      }
-      if (url.includes("is_open_room=true")) {
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({ data: { data: { exists: false } } }),
-        });
-      }
-      return Promise.resolve({ ok: true, json: async () => ({}) });
-    });
-
-    const { result } = renderHook(() => useSupervision(), {
-      wrapper: createWrapper("test-token"),
-    });
-
-    await waitFor(() => {
-      expect(result.current.isLoadingGroups).toBe(false);
-    });
-
-    // After error, should have no groups
-    expect(result.current.hasGroups).toBe(false);
-    expect(result.current.groups).toHaveLength(0);
-  });
-
-  it("keeps a released room reachable on a non-OK supervised response", async () => {
-    mockFetch.mockImplementation((url: string) => {
-      if (url.includes("/api/students/ogs-group-navigation")) {
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({ data: [] }),
-        });
-      }
-      if (url.includes("/api/me/groups/supervised")) {
-        return Promise.resolve({
-          ok: false,
-          status: 500,
-          json: async () => ({}),
-        });
-      }
-      if (url.includes("is_open_room=true")) {
-        return Promise.resolve({
-          ok: true,
-          json: async () => pagedJson([{ id: 42, name: "Turnhalle" }]),
-        });
-      }
-      return Promise.resolve({ ok: true, json: async () => ({}) });
-    });
-
-    const { result } = renderHook(() => useSupervision(), {
-      wrapper: createWrapper("test-token"),
-    });
-
-    await waitFor(() => {
-      expect(result.current.isLoadingSupervision).toBe(false);
-    });
-
-    // The released room stays reachable even though the supervision response
-    // was not OK — but reaching it is not supervising it, so nothing is
-    // preselected as the caller's own room.
-    const openRoom = result.current.supervisedRooms.find((r) => r.isOpenRoom);
-    expect(openRoom).toBeDefined();
-    expect(openRoom?.name).toBe("Turnhalle");
-    expect(result.current.isSupervising).toBe(false);
-    expect(result.current.supervisedRoomId).toBeUndefined();
-  });
-});
-
-describe("SupervisionProvider uncovered condition coverage", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  it("keeps a released room id separate from a session id", async () => {
-    setupFetchMock({
-      supervised: { data: [] },
-      openRooms: pagedJson([{ id: 100, name: "Turnhalle" }]),
-    });
-
-    const { result } = renderHook(() => useSupervision(), {
-      wrapper: createWrapper("test-token"),
-    });
-
-    await waitFor(() => {
-      expect(result.current.isLoadingSupervision).toBe(false);
-    });
-
-    const openRoom = result.current.supervisedRooms.find((r) => r.isOpenRoom);
-    expect(openRoom).toBeDefined();
-    expect(openRoom?.groupId).toBe("");
-  });
-
-  it("should handle supervised group with no room_id (undefined roomName and roomId)", async () => {
-    setupFetchMock({
-      supervised: {
-        data: [
-          {
-            id: 1,
-            group_id: 1,
-            // No room_id and no room object
-          },
-        ],
-      },
-    });
-
-    const { result } = renderHook(() => useSupervision(), {
-      wrapper: createWrapper("test-token"),
-    });
-
-    await waitFor(() => {
-      expect(result.current.isLoadingSupervision).toBe(false);
-    });
-
-    // With no room_id, the supervised rooms list should be empty
-    // (filtered out because g.room_id is falsy)
-    expect(result.current.supervisedRooms).toHaveLength(0);
-    // isSupervising is still true because supervisedGroups was non-empty
-    expect(result.current.isSupervising).toBe(true);
-    // supervisedRoomId should be undefined since firstGroup has no room_id
-    expect(result.current.supervisedRoomId).toBeUndefined();
-    expect(result.current.supervisedRoomName).toBeUndefined();
-  });
-
-  it("should handle non-OK supervised response with no Schulhof (all cleared)", async () => {
-    mockFetch.mockImplementation((url: string) => {
-      if (url.includes("/api/students/ogs-group-navigation")) {
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({ data: [] }),
-        });
-      }
-      if (url.includes("/api/me/groups/supervised")) {
-        return Promise.resolve({
-          ok: false,
-          status: 500,
-          json: async () => ({}),
-        });
-      }
-      if (url.includes("is_open_room=true")) {
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({ data: { data: { exists: false } } }),
-        });
-      }
-      return Promise.resolve({ ok: true, json: async () => ({}) });
-    });
-
-    const { result } = renderHook(() => useSupervision(), {
-      wrapper: createWrapper("test-token"),
-    });
-
-    await waitFor(() => {
-      expect(result.current.isLoadingSupervision).toBe(false);
-    });
-
-    // No Schulhof, non-OK supervised response → not supervising
-    expect(result.current.isSupervising).toBe(false);
-    expect(result.current.supervisedRooms).toHaveLength(0);
-    expect(result.current.supervisedRoomId).toBeUndefined();
-    expect(result.current.supervisedRoomName).toBeUndefined();
-  });
-
-  it("treats a non-OK room list as unknown rather than as no open rooms", async () => {
-    mockFetch.mockImplementation((url: string) => {
-      if (url.includes("/api/students/ogs-group-navigation")) {
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({ data: [] }),
-        });
-      }
-      if (url.includes("/api/me/groups/supervised")) {
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({
-            data: [
-              {
-                id: 1,
-                room_id: 5,
-                group_id: 1,
-                room: { id: 5, name: "Room 5" },
-              },
-            ],
-          }),
-        });
-      }
-      if (url.includes("is_open_room=true")) {
-        // Return non-OK response
-        return Promise.resolve({
-          ok: false,
-          status: 500,
-          json: async () => ({}),
-        });
-      }
-      return Promise.resolve({
-        ok: true,
-        json: async () => ({}),
-      });
-    });
-
-    const { result } = renderHook(() => useSupervision(), {
-      wrapper: createWrapper("test-token"),
-    });
-
-    await waitFor(() => {
-      expect(result.current.isLoadingSupervision).toBe(false);
-    });
-
-    // Schulhof should not be in the rooms since its response was not OK
-    const openRoom = result.current.supervisedRooms.find((r) => r.isOpenRoom);
-    expect(openRoom).toBeUndefined();
-    // But regular supervision should still work
-    expect(result.current.isSupervising).toBe(true);
-    expect(result.current.supervisedRoomId).toBe("5");
-  });
-});
-
-describe("SupervisionProvider refresh scheduling", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  it("installs a low-frequency supervision resync interval", async () => {
-    const setIntervalSpy = vi.spyOn(global, "setInterval");
-    setupFetchMock();
-
-    renderHook(() => useSupervision(), {
-      wrapper: createWrapper("test-token"),
-    });
-
-    await waitFor(() => {
-      expect(mockFetch).toHaveBeenCalled();
-    });
-
-    expect(setIntervalSpy).toHaveBeenCalledWith(
-      expect.any(Function),
-      5 * 60 * 1000,
-    );
-  });
-});
-
-describe("useOptionalSupervision", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  it("should return safe defaults when used outside SupervisionProvider", () => {
-    const { result } = renderHook(() => useOptionalSupervision());
-
-    expect(result.current.hasGroups).toBe(false);
-    expect(result.current.isLoadingGroups).toBe(false);
-    expect(result.current.groups).toEqual([]);
-    expect(result.current.isSupervising).toBe(false);
+    expect(result.current.ownSupervision).toBe(true);
+    bff.mockRejectedValueOnce(new ApiError("Access refused", 403));
+    await act(async () => result.current.refresh(["sessions"]));
     expect(result.current.supervisedRooms).toEqual([]);
-    expect(result.current.isLoadingSupervision).toBe(false);
-    expect(result.current.refresh).toBeInstanceOf(Function);
+    bff.mockRejectedValueOnce(new ApiError("Temporarily unavailable", 503));
+    await act(async () => result.current.refresh(["groups"]));
+    expect(result.current.supervisedRooms).toEqual([]);
+    expect(bff).toHaveBeenLastCalledWith("tenant", route, undefined);
+    bff.mockResolvedValueOnce({ ...snapshot, ...noSessions });
+    await act(async () => result.current.refresh(["sessions"]));
+    expect(bff).toHaveBeenLastCalledWith("tenant", route, undefined);
+    expect(result.current.ownSupervision).toBe(false);
+    expect(result.current.groups).toHaveLength(2);
   });
 
-  it("should have a no-op refresh that resolves without error", async () => {
-    const { result } = renderHook(() => useOptionalSupervision());
-
-    // refresh should be callable and resolve without throwing
-    await expect(result.current.refresh()).resolves.toBeUndefined();
-  });
-
-  it("should return actual context when used inside SupervisionProvider", async () => {
-    setupFetchMock({
-      groups: { data: [{ id: 1, name: "Group A" }] },
-    });
-
-    const { result } = renderHook(() => useOptionalSupervision(), {
-      wrapper: createWrapper("test-token"),
-    });
-
-    await waitFor(() => {
-      expect(result.current.isLoadingGroups).toBe(false);
-    });
-
-    // Should have the real context values, not the defaults
-    expect(result.current.hasGroups).toBe(true);
-    expect(result.current.groups).toHaveLength(1);
-    expect(result.current.groups[0]?.name).toBe("Group A");
-  });
-});
-
-// #3375: after a school switch the sidebar kept the previous school's groups.
-describe("SupervisionProvider school switch (#3375)", () => {
-  function sessionFor(
-    tenantId: number | undefined,
-    permissions: string[] = ["groups:read"],
-  ) {
-    return {
-      data: {
-        user: {
-          tenantId,
-          id: "1",
-          email: "test@example.com",
-          name: "Test User",
-          permissions,
-        },
-        expires: "2099-12-31",
-      },
-      status: "authenticated" as const,
-      update: vi.fn(),
-    } as unknown as ReturnType<typeof useSession>;
-  }
-
-  async function mockUrlTenant(
-    tenantId: number | null,
-    {
-      tenantSlug = "school-b",
-      tenantSubdomain = tenantSlug,
-      resolvedTenantSlug = tenantSlug,
-      routingMode = "subdomain",
-    }: {
-      tenantSlug?: string;
-      tenantSubdomain?: string;
-      resolvedTenantSlug?: string;
-      routingMode?: "path" | "subdomain";
-    } = {},
-  ) {
-    const tenantContext = await import("~/lib/tenant-context");
-    vi.mocked(tenantContext.useTenantSafe).mockReturnValue({
-      tenantSlug,
-      routingMode,
-      tenant:
-        tenantId === null
-          ? null
-          : {
-              // The school of the page names its identifier as a string.
-              tenantId: String(tenantId),
-              slug: resolvedTenantSlug,
-              subdomain: tenantSubdomain,
-            },
-    } as unknown as ReturnType<typeof tenantContext.useTenantSafe>);
-  }
-
-  function groupsCalls() {
-    return mockFetch.mock.calls.filter(([url]) =>
-      String(url).includes("/api/students/ogs-group-navigation"),
-    ).length;
-  }
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  afterEach(async () => {
-    const tenantContext = await import("~/lib/tenant-context");
-    vi.mocked(tenantContext.useTenantSafe).mockReturnValue({
-      tenantSlug: "test-tenant",
-      tenant: null,
-    } as unknown as ReturnType<typeof tenantContext.useTenantSafe>);
-  });
-
-  it("fetches nothing while the session belongs to another school", async () => {
-    await mockUrlTenant(2);
-    setupFetchMock({ groups: { data: [{ id: 1, name: "Andere Schule" }] } });
-    vi.mocked(useSession).mockReturnValue(sessionFor(1));
-
-    const { result } = renderHook(() => useSupervision(), {
-      wrapper: ({ children }: { children: ReactNode }) => (
-        <SupervisionProvider>{children}</SupervisionProvider>
-      ),
-    });
-
-    await act(async () => {
-      await Promise.resolve();
-    });
-
-    expect(mockFetch).not.toHaveBeenCalled();
-    expect(result.current.isLoadingGroups).toBe(true);
-    expect(result.current.groups).toEqual([]);
-  });
-
-  it("reloads the groups at once when the session moves to another school", async () => {
-    await mockUrlTenant(2);
-    // The first load runs for school 2; the switch follows inside the
-    // five-second throttle window, which used to swallow the reload.
-    setupFetchMock({ groups: { data: [{ id: 1, name: "Schule 2" }] } });
-    vi.mocked(useSession).mockReturnValue(sessionFor(2));
-
-    const { result, rerender } = renderHook(() => useSupervision(), {
-      wrapper: ({ children }: { children: ReactNode }) => (
-        <SupervisionProvider>{children}</SupervisionProvider>
-      ),
-    });
-    await waitFor(() => {
-      expect(result.current.groups[0]?.name).toBe("Schule 2");
-    });
-    expect(groupsCalls()).toBe(1);
-
-    await mockUrlTenant(3);
-    setupFetchMock({ groups: { data: [{ id: 9, name: "Schule 3" }] } });
-    vi.mocked(useSession).mockReturnValue(sessionFor(3));
-    rerender();
-
-    await waitFor(() => {
-      expect(result.current.groups[0]?.name).toBe("Schule 3");
-    });
-    expect(groupsCalls()).toBe(2);
-  });
-
-  it("reloads a server snapshot when the resolved URL school changes", async () => {
-    await mockUrlTenant(null);
-    setupFetchMock({ groups: { data: [{ id: 2, name: "Schule 2" }] } });
-    vi.mocked(useSession).mockReturnValue(sessionFor(2));
-
-    const { result, rerender } = renderHook(() => useSupervision(), {
-      wrapper: ({ children }: { children: ReactNode }) => (
-        <SupervisionProvider
-          initial={{
-            groups: [
-              {
-                id: "1",
-                name: "Schule 1",
-                via_substitution: false,
-                is_personal: true,
-              },
-            ],
-            supervised: [],
-            openRooms: [],
-            overviewOk: false,
-          }}
-        >
-          {children}
-        </SupervisionProvider>
-      ),
-    });
-
-    expect(result.current.groups[0]?.name).toBe("Schule 1");
-    expect(groupsCalls()).toBe(0);
-
-    await mockUrlTenant(2);
-    rerender();
-
-    await waitFor(() => {
-      expect(result.current.groups[0]?.name).toBe("Schule 2");
-    });
-    expect(groupsCalls()).toBe(1);
-  });
-
-  it("masks a server snapshot while URL tenant metadata is still stale", async () => {
-    await mockUrlTenant(2, { tenantSlug: "school-a" });
-    setupFetchMock({ groups: { data: [{ id: 1, name: "Schule A" }] } });
-    vi.mocked(useSession).mockReturnValue(sessionFor(2));
-
-    const { result, rerender } = renderHook(() => useSupervision(), {
-      wrapper: ({ children }: { children: ReactNode }) => (
-        <SupervisionProvider
-          initial={{
-            groups: [
-              {
-                id: "1",
-                name: "Schule A",
-                via_substitution: false,
-                is_personal: true,
-              },
-            ],
-            supervised: [],
-            openRooms: [],
-            overviewOk: false,
-          }}
-        >
-          {children}
-        </SupervisionProvider>
-      ),
-    });
-
-    expect(result.current.groups[0]?.name).toBe("Schule A");
-
-    // The URL has already changed, but TenantProvider has not resolved the
-    // new school yet and still exposes the metadata for school A.
-    await mockUrlTenant(2, {
-      tenantSlug: "school-b",
-      tenantSubdomain: "school-a",
-    });
-    rerender();
-
-    expect(result.current.groups).toEqual([]);
-    expect(result.current.isLoadingGroups).toBe(true);
-    await act(async () => {
-      await Promise.resolve();
-    });
-    expect(mockFetch).not.toHaveBeenCalled();
-  });
-
-  it("loads supervision for a path tenant whose slug differs from its subdomain", async () => {
-    await mockUrlTenant(2, {
-      tenantSlug: "schule-im-pfad",
-      tenantSubdomain: "schule-unterdomain",
-      routingMode: "path",
-    });
-    setupFetchMock({
-      groups: { data: [{ id: 2, name: "Schule im Pfad" }] },
-      supervised: { data: [] },
-    });
-    vi.mocked(useSession).mockReturnValue(sessionFor(2));
-
-    const { result } = renderHook(() => useSupervision(), {
-      wrapper: ({ children }: { children: ReactNode }) => (
-        <SupervisionProvider>{children}</SupervisionProvider>
-      ),
-    });
-
-    await waitFor(() => {
-      expect(result.current.groups[0]?.name).toBe("Schule im Pfad");
-      expect(result.current.isLoadingSupervision).toBe(false);
-    });
-  });
-
-  it("does not expose a server snapshot while the session catches up", async () => {
-    await mockUrlTenant(2);
-    let releaseGroups: (() => void) | undefined;
-    mockFetch.mockImplementation((url: string) => {
-      if (url.includes("/api/students/ogs-group-navigation")) {
-        return new Promise((resolve) => {
-          releaseGroups = () =>
-            resolve({
-              ok: true,
-              json: async () => ({ data: [{ id: 2, name: "Schule 2" }] }),
-            });
-        });
-      }
-      return Promise.resolve({ ok: true, json: async () => ({ data: [] }) });
-    });
-    vi.mocked(useSession).mockReturnValue(sessionFor(1));
-
-    const observedGroups: string[][] = [];
-    function Probe() {
-      const { groups } = useSupervision();
-      observedGroups.push(groups.map((group) => group.name));
-      return <>{groups.map((group) => group.name).join(", ")}</>;
+  it("keeps the five-minute visible fallback without a stream", async () => {
+    vi.useFakeTimers();
+    const visibility = vi.spyOn(document, "visibilityState", "get");
+    try {
+      renderHook(useSupervision, { wrapper: withSeed(snapshot) });
+      visibility.mockReturnValue("hidden");
+      await act(async () => vi.advanceTimersByTimeAsync(5 * 60_000));
+      expect(bff).toHaveBeenCalledTimes(0);
+      visibility.mockReturnValue("visible");
+      await act(async () => vi.advanceTimersByTimeAsync(5 * 60_000));
+      expect(bff.mock.calls).toEqual([["tenant", route, undefined]]);
+    } finally {
+      visibility.mockRestore();
+      releaseFakeTimers();
     }
-
-    const { rerender } = render(
-      <SupervisionProvider
-        initial={{
-          groups: [
-            {
-              id: "1",
-              name: "Schule 1",
-              via_substitution: false,
-              is_personal: true,
-            },
-          ],
-          supervised: [],
-          openRooms: [],
-          overviewOk: false,
-        }}
-      >
-        <Probe />
-      </SupervisionProvider>,
-    );
-
-    expect(observedGroups.flat()).not.toContain("Schule 1");
-    expect(mockFetch).not.toHaveBeenCalled();
-
-    vi.mocked(useSession).mockReturnValue(sessionFor(2));
-    rerender(
-      <SupervisionProvider
-        initial={{
-          groups: [
-            {
-              id: "1",
-              name: "Schule 1",
-              via_substitution: false,
-              is_personal: true,
-            },
-          ],
-          supervised: [],
-          openRooms: [],
-          overviewOk: false,
-        }}
-      >
-        <Probe />
-      </SupervisionProvider>,
-    );
-
-    await waitFor(() => expect(releaseGroups).toBeDefined());
-    expect(observedGroups.flat()).not.toContain("Schule 1");
-
-    await act(async () => {
-      releaseGroups?.();
-      await Promise.resolve();
-    });
-
-    await screen.findByText("Schule 2");
   });
 
-  it("discards an in-flight response when the session loses its school", async () => {
-    await mockUrlTenant(2);
-    let releaseOld: (() => void) | undefined;
-    let oldResponseRead = false;
-    mockFetch.mockImplementation((url: string) => {
-      if (url.includes("/api/students/ogs-group-navigation") && !releaseOld) {
-        return new Promise((resolve) => {
-          releaseOld = () =>
-            resolve({
-              ok: true,
-              json: async () => {
-                oldResponseRead = true;
-                return { data: [{ id: 2, name: "Schule 2" }] };
-              },
-            });
-        });
-      }
-      return Promise.resolve({ ok: true, json: async () => ({ data: [] }) });
-    });
-    vi.mocked(useSession).mockReturnValue(sessionFor(2));
-
-    const { result, rerender } = renderHook(() => useSupervision(), {
-      wrapper: ({ children }: { children: ReactNode }) => (
-        <SupervisionProvider>{children}</SupervisionProvider>
-      ),
-    });
-    await waitFor(() => expect(releaseOld).toBeDefined());
-
-    vi.mocked(useSession).mockReturnValue(sessionFor(undefined, undefined));
-    rerender();
-
-    await act(async () => {
-      releaseOld?.();
-      await Promise.resolve();
-    });
-
-    await waitFor(() => {
-      expect(oldResponseRead).toBe(true);
-      expect(result.current.groups).toEqual([]);
-    });
-  });
-
-  // The browser session carries no token (#5005): the session's identity
-  // (account, school, rights) is the change signal.
-  it("discards an in-flight response when the session's rights change", async () => {
-    await mockUrlTenant(2);
-    let releaseOld: (() => void) | undefined;
-    let releaseNew: (() => void) | undefined;
-    let oldResponseRead = false;
-    let groupRequests = 0;
-    mockFetch.mockImplementation((url: string) => {
-      if (url.includes("/api/students/ogs-group-navigation")) {
-        groupRequests += 1;
-        if (groupRequests === 1) {
-          return new Promise((resolve) => {
-            releaseOld = () =>
-              resolve({
-                ok: true,
-                json: async () => {
-                  oldResponseRead = true;
-                  return { data: [{ id: 2, name: "Alte Sitzung" }] };
-                },
-              });
-          });
-        }
-        return new Promise((resolve) => {
-          releaseNew = () =>
-            resolve({
-              ok: true,
-              json: async () => ({
-                data: [{ id: 2, name: "Neue Sitzung" }],
-              }),
-            });
-        });
-      }
-      return Promise.resolve({ ok: true, json: async () => ({ data: [] }) });
-    });
-    vi.mocked(useSession).mockReturnValue(sessionFor(2));
-
-    const { result, rerender } = renderHook(() => useSupervision(), {
-      wrapper: ({ children }: { children: ReactNode }) => (
-        <SupervisionProvider
-          initial={{
-            groups: [
-              {
-                id: "1",
-                name: "Bestehende Gruppe",
-                via_substitution: false,
-                is_personal: true,
-              },
-            ],
-            supervised: [],
-            openRooms: [],
-            overviewOk: false,
-          }}
-        >
-          {children}
-        </SupervisionProvider>
-      ),
-    });
-
-    void result.current.refresh({ silent: true, force: true });
-    await waitFor(() => expect(releaseOld).toBeDefined());
-    expect(result.current.groups[0]?.name).toBe("Bestehende Gruppe");
-    expect(result.current.isLoadingGroups).toBe(false);
-
-    vi.mocked(useSession).mockReturnValue(
-      sessionFor(2, ["groups:read", "users:read"]),
-    );
-    rerender();
-
-    expect(result.current.groups[0]?.name).toBe("Bestehende Gruppe");
-    expect(result.current.isLoadingGroups).toBe(false);
-
-    await act(async () => {
-      releaseOld?.();
-      await Promise.resolve();
-    });
-
-    await waitFor(() => {
-      expect(oldResponseRead).toBe(true);
-      expect(result.current.groups[0]?.name).toBe("Bestehende Gruppe");
-      expect(result.current.isLoadingGroups).toBe(false);
-      expect(releaseNew).toBeDefined();
-    });
-
-    await act(async () => {
-      releaseNew?.();
-      await Promise.resolve();
-    });
-
-    await waitFor(() => {
-      expect(result.current.groups[0]?.name).toBe("Neue Sitzung");
-    });
-  });
-
-  it("discards an answer of the previous school that arrives late", async () => {
-    await mockUrlTenant(2);
-    let releaseOld: (() => void) | undefined;
-    mockFetch.mockImplementation((url: string) => {
-      if (url.includes("/api/students/ogs-group-navigation") && !releaseOld) {
-        return new Promise((resolve) => {
-          releaseOld = () =>
-            resolve({
-              ok: true,
-              json: async () => ({ data: [{ id: 1, name: "Schule 2" }] }),
-            });
-        });
-      }
-      return Promise.resolve({
-        ok: true,
-        json: async () =>
-          url.includes("/api/students/ogs-group-navigation")
-            ? { data: [{ id: 9, name: "Schule 3" }] }
-            : { data: [] },
-      });
-    });
-    vi.mocked(useSession).mockReturnValue(sessionFor(2));
-
-    const { result, rerender } = renderHook(() => useSupervision(), {
-      wrapper: ({ children }: { children: ReactNode }) => (
-        <SupervisionProvider>{children}</SupervisionProvider>
-      ),
-    });
-    await waitFor(() => expect(releaseOld).toBeDefined());
-
-    await mockUrlTenant(3);
-    vi.mocked(useSession).mockReturnValue(sessionFor(3));
-    rerender();
-
-    await act(async () => {
-      releaseOld?.();
-      await Promise.resolve();
-    });
-
-    await waitFor(() => {
-      expect(result.current.groups[0]?.name).toBe("Schule 3");
-    });
-    expect(result.current.groups.map((g) => g.name)).not.toContain("Schule 2");
+  it("does not load outside the staff provider", () => {
+    const { result } = renderHook(useOptionalSupervision);
+    expect(result.current.groups).toEqual([]);
+    expect(bff).toHaveBeenCalledTimes(0);
   });
 });

@@ -1,7 +1,7 @@
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
     data: {
-      user: { id: "account-1", tenantId: 1, scope: "tenant" },
+      user: { id: "account-1", tenantId: "1", scope: "tenant" },
       expires: "2099-01-01",
     },
     status: "authenticated",
@@ -19,6 +19,7 @@ class MockResizeObserver {
 
 vi.stubGlobal("ResizeObserver", MockResizeObserver);
 
+import { ApiError } from "~/lib/api-error";
 import { DevicesMasterDetail } from "./devices-master-detail";
 import type { GroupDefinition } from "~/components/database/grouped-list";
 import type { Device } from "@/lib/iot-helpers";
@@ -33,6 +34,7 @@ const onlineDevice: Device = {
   room_name: "Foyer",
   created_at: "2026-01-01T00:00:00Z",
   updated_at: "2026-01-02T00:00:00Z",
+  version: "v1",
 };
 
 const offlineDeviceWithKey: Device = {
@@ -59,7 +61,11 @@ function flatGroup(devices: Device[]): GroupDefinition<Device>[] {
 
 describe("DevicesMasterDetail", () => {
   const onSelect = vi.fn();
-  const onSaveDevice = vi.fn(async () => undefined);
+  const onSaveDevice = vi.fn(
+    async (data: Partial<Device>, _version: string | undefined) =>
+      ({ ...onlineDevice, ...data }) as Device,
+  );
+  const reloadDevice = vi.fn(async () => onlineDevice);
   const onDeleteClick = vi.fn();
   const onSetBlocked = vi.fn();
 
@@ -75,6 +81,7 @@ describe("DevicesMasterDetail", () => {
         selectedDevice={null}
         onSelect={onSelect}
         onSaveDevice={onSaveDevice}
+        reloadDevice={reloadDevice}
         onDeleteClick={onDeleteClick}
         onSetBlocked={onSetBlocked}
         blockPending={false}
@@ -94,6 +101,7 @@ describe("DevicesMasterDetail", () => {
         selectedDevice={onlineDevice}
         onSelect={onSelect}
         onSaveDevice={onSaveDevice}
+        reloadDevice={reloadDevice}
         onDeleteClick={onDeleteClick}
         onSetBlocked={onSetBlocked}
         blockPending={false}
@@ -117,6 +125,7 @@ describe("DevicesMasterDetail", () => {
         selectedDevice={blocked}
         onSelect={onSelect}
         onSaveDevice={onSaveDevice}
+        reloadDevice={reloadDevice}
         onDeleteClick={onDeleteClick}
         onSetBlocked={onSetBlocked}
         blockPending={false}
@@ -144,6 +153,7 @@ describe("DevicesMasterDetail", () => {
         selectedDevice={onlineDevice}
         onSelect={onSelect}
         onSaveDevice={onSaveDevice}
+        reloadDevice={reloadDevice}
         onDeleteClick={onDeleteClick}
         onSetBlocked={onSetBlocked}
         blockPending={false}
@@ -166,6 +176,66 @@ describe("DevicesMasterDetail", () => {
     expect(screen.queryByText("Bearbeiten")).not.toBeInTheDocument();
   });
 
+  // ADR 0311: the edit sends the version of the device as it opened, and a
+  // refused save shows the stored device and saves on its version.
+  it("saves on the version read when editing started and shows the stored device after a refusal", async () => {
+    const stored: Device = {
+      ...onlineDevice,
+      name: "Von der Kollegin",
+      version: "v2",
+    };
+    const save = vi
+      .fn<
+        (data: Partial<Device>, version: string | undefined) => Promise<Device>
+      >()
+      .mockRejectedValueOnce(
+        new ApiError("changed", 409, { code: "general.changed_since_read" }),
+      )
+      .mockImplementation(async (data) => ({
+        ...stored,
+        ...data,
+        version: "v3",
+      }));
+    const reload = vi.fn(async () => stored);
+    const view = (device: Device) => (
+      <DevicesMasterDetail
+        groupDefinitions={flatGroup([device])}
+        selectedId="1"
+        selectedDevice={device}
+        onSelect={onSelect}
+        onSaveDevice={save}
+        reloadDevice={reload}
+        onDeleteClick={onDeleteClick}
+        onSetBlocked={onSetBlocked}
+        blockPending={false}
+        canManage
+      />
+    );
+    const { rerender } = render(view(onlineDevice));
+    fireEvent.click(screen.getByText("Bearbeiten"));
+    const name = () =>
+      screen.getByDisplayValue<HTMLInputElement>(/Kiosk|Kollegin|Entwurf/);
+    fireEvent.change(name(), { target: { value: "Entwurf" } });
+    // A background read of a newer device keeps the typed draft.
+    rerender(view(stored));
+    expect(name()).toHaveValue("Entwurf");
+
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() =>
+      expect(save).toHaveBeenCalledWith(
+        expect.objectContaining({ name: "Entwurf" }),
+        "v1",
+      ),
+    );
+    await waitFor(() => expect(reload).toHaveBeenCalledWith("1"));
+    await waitFor(() => expect(name()).toHaveValue("Von der Kollegin"));
+
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() =>
+      expect(save).toHaveBeenLastCalledWith(expect.anything(), "v2"),
+    );
+  });
+
   it("renders the API key section only when api_key is present", () => {
     const { rerender } = render(
       <DevicesMasterDetail
@@ -174,6 +244,7 @@ describe("DevicesMasterDetail", () => {
         selectedDevice={onlineDevice}
         onSelect={onSelect}
         onSaveDevice={onSaveDevice}
+        reloadDevice={reloadDevice}
         onDeleteClick={onDeleteClick}
         onSetBlocked={onSetBlocked}
         blockPending={false}
@@ -190,6 +261,7 @@ describe("DevicesMasterDetail", () => {
         selectedDevice={offlineDeviceWithKey}
         onSelect={onSelect}
         onSaveDevice={onSaveDevice}
+        reloadDevice={reloadDevice}
         onDeleteClick={onDeleteClick}
         onSetBlocked={onSetBlocked}
         blockPending={false}
@@ -230,6 +302,7 @@ describe("DevicesMasterDetail", () => {
         selectedDevice={onlineDevice}
         onSelect={onSelect}
         onSaveDevice={onSaveDevice}
+        reloadDevice={reloadDevice}
         onDeleteClick={onDeleteClick}
         onSetBlocked={onSetBlocked}
         blockPending={false}
@@ -250,6 +323,7 @@ describe("DevicesMasterDetail", () => {
         selectedDevice={offlineDeviceWithKey}
         onSelect={onSelect}
         onSaveDevice={onSaveDevice}
+        reloadDevice={reloadDevice}
         onDeleteClick={onDeleteClick}
         onSetBlocked={onSetBlocked}
         blockPending={false}
@@ -283,6 +357,7 @@ describe("DevicesMasterDetail", () => {
         selectedDevice={offlineDeviceWithKey}
         onSelect={onSelect}
         onSaveDevice={onSaveDevice}
+        reloadDevice={reloadDevice}
         onDeleteClick={onDeleteClick}
         onSetBlocked={onSetBlocked}
         blockPending={false}
@@ -306,6 +381,7 @@ describe("DevicesMasterDetail", () => {
         selectedDevice={offlineDeviceWithKey}
         onSelect={onSelect}
         onSaveDevice={onSaveDevice}
+        reloadDevice={reloadDevice}
         onDeleteClick={onDeleteClick}
         onSetBlocked={onSetBlocked}
         blockPending={false}
@@ -325,6 +401,7 @@ describe("DevicesMasterDetail", () => {
         selectedDevice={null}
         onSelect={onSelect}
         onSaveDevice={onSaveDevice}
+        reloadDevice={reloadDevice}
         onDeleteClick={onDeleteClick}
         onSetBlocked={onSetBlocked}
         blockPending={false}
@@ -342,6 +419,7 @@ describe("DevicesMasterDetail", () => {
         selectedDevice={onlineDevice}
         onSelect={onSelect}
         onSaveDevice={onSaveDevice}
+        reloadDevice={reloadDevice}
         onDeleteClick={onDeleteClick}
         onSetBlocked={onSetBlocked}
         blockPending={false}
@@ -367,6 +445,7 @@ describe("DevicesMasterDetail", () => {
         selectedDevice={blockedDevice}
         onSelect={onSelect}
         onSaveDevice={onSaveDevice}
+        reloadDevice={reloadDevice}
         onDeleteClick={onDeleteClick}
         onSetBlocked={onSetBlocked}
         blockPending={false}

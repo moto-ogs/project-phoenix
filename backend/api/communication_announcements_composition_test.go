@@ -127,7 +127,7 @@ func TestPlatformAnnouncementsPreserveTargetingReadStateAndViewerNames(t *testin
 
 	announcement := newAnnouncement("Tenant A only", tenantID)
 	require.NoError(t, module.CreateAnnouncement(ctx, announcement, operator.ID, nil))
-	require.NoError(t, module.PublishAnnouncement(ctx, announcement.ID, operator.ID, nil))
+	require.NoError(t, module.PublishAnnouncement(ctx, announcement.ID, communication.AnnouncementEditVersion(*announcement), operator.ID, nil))
 
 	unread, err := module.GetUnreadForUser(ctx, account.ID, nil, tenantID, organizationID)
 	require.NoError(t, err)
@@ -189,7 +189,7 @@ func TestPlatformAnnouncementsPreserveTargetingReadStateAndViewerNames(t *testin
 
 	dismissedFirst := newAnnouncement("Dismissed before seen", tenantID)
 	require.NoError(t, module.CreateAnnouncement(ctx, dismissedFirst, operator.ID, nil))
-	require.NoError(t, module.PublishAnnouncement(ctx, dismissedFirst.ID, operator.ID, nil))
+	require.NoError(t, module.PublishAnnouncement(ctx, dismissedFirst.ID, communication.AnnouncementEditVersion(*dismissedFirst), operator.ID, nil))
 	// A different tab can close the same displayed announcement before this
 	// tab's initial seen request reaches the server.
 	require.NoError(t, module.MarkDismissed(ctx, viewer, dismissedFirst.ID))
@@ -213,7 +213,7 @@ func TestPlatformAnnouncementsPreserveTargetingReadStateAndViewerNames(t *testin
 
 	dismissedOnly := newAnnouncement("Dismissed without display", tenantID)
 	require.NoError(t, module.CreateAnnouncement(ctx, dismissedOnly, operator.ID, nil))
-	require.NoError(t, module.PublishAnnouncement(ctx, dismissedOnly.ID, operator.ID, nil))
+	require.NoError(t, module.PublishAnnouncement(ctx, dismissedOnly.ID, communication.AnnouncementEditVersion(*dismissedOnly), operator.ID, nil))
 	require.NoError(t, module.MarkDismissed(ctx, viewer, dismissedOnly.ID))
 	dismissedOnlyStats, err := module.GetStats(ctx, dismissedOnly.ID)
 	require.NoError(t, err)
@@ -243,7 +243,7 @@ func TestMarkSeenDoesNotReopenHistoricalAnnouncement(t *testing.T) {
 	announcement := newAnnouncement("Historical read", tenantID)
 
 	require.NoError(t, module.CreateAnnouncement(ctx, announcement, operator.ID, nil))
-	require.NoError(t, module.PublishAnnouncement(ctx, announcement.ID, operator.ID, nil))
+	require.NoError(t, module.PublishAnnouncement(ctx, announcement.ID, communication.AnnouncementEditVersion(*announcement), operator.ID, nil))
 	_, err := db.ExecContext(ctx, `INSERT INTO platform.announcement_views (user_id, announcement_id, dismissed)
 		VALUES (?, ?, TRUE)`, account.ID, announcement.ID)
 	require.NoError(t, err)
@@ -286,21 +286,21 @@ func TestAnnouncementWritesRollBackAfterAuditFailureAndRetryOnce(t *testing.T) {
 
 	announcement.Title = "Rollback update"
 	audit.fail(true)
-	require.ErrorIs(t, module.UpdateAnnouncement(ctx, announcement, operator.ID, nil), errInjectedAudit)
+	require.ErrorIs(t, module.UpdateAnnouncement(ctx, announcement, communication.AnnouncementEditVersion(*announcement), operator.ID, nil), errInjectedAudit)
 	persisted, err := module.GetAnnouncement(ctx, announcement.ID)
 	require.NoError(t, err)
 	assert.Equal(t, "Rollback create", persisted.Title)
 
 	audit.fail(false)
-	require.NoError(t, module.UpdateAnnouncement(ctx, announcement, operator.ID, nil))
+	require.NoError(t, module.UpdateAnnouncement(ctx, announcement, communication.AnnouncementEditVersion(*announcement), operator.ID, nil))
 	audit.fail(true)
-	require.ErrorIs(t, module.PublishAnnouncement(ctx, announcement.ID, operator.ID, nil), errInjectedAudit)
+	require.ErrorIs(t, module.PublishAnnouncement(ctx, announcement.ID, communication.AnnouncementEditVersion(*announcement), operator.ID, nil), errInjectedAudit)
 	persisted, err = module.GetAnnouncement(ctx, announcement.ID)
 	require.NoError(t, err)
 	assert.Nil(t, persisted.PublishedAt)
 
 	audit.fail(false)
-	require.NoError(t, module.PublishAnnouncement(ctx, announcement.ID, operator.ID, nil))
+	require.NoError(t, module.PublishAnnouncement(ctx, announcement.ID, communication.AnnouncementEditVersion(*announcement), operator.ID, nil))
 	audit.fail(true)
 	require.ErrorIs(t, module.UnpublishAnnouncement(ctx, announcement.ID, operator.ID, nil), errInjectedAudit)
 	persisted, err = module.GetAnnouncement(ctx, announcement.ID)
@@ -357,7 +357,7 @@ func TestAnnouncementViewWriteRollsBackWithOuterUnitOfWorkAndRetryIsIdempotent(t
 	_, account := testpkg.CreateTestPersonWithAccount(t, db, "Ida", "Retry")
 	announcement := newAnnouncement("Read state", testpkg.Tenant(t))
 	require.NoError(t, module.CreateAnnouncement(ctx, announcement, operator.ID, nil))
-	require.NoError(t, module.PublishAnnouncement(ctx, announcement.ID, operator.ID, nil))
+	require.NoError(t, module.PublishAnnouncement(ctx, announcement.ID, communication.AnnouncementEditVersion(*announcement), operator.ID, nil))
 	viewer := announcementViewer(account.ID, testpkg.Tenant(t), tenantOrganizationID(t, db, testpkg.Tenant(t)))
 
 	err := tenant.WithinAdmin(ctx, func(txCtx context.Context) error {

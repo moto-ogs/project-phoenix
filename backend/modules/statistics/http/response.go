@@ -1,29 +1,28 @@
 package statisticshttp
 
 import (
-	"strconv"
-
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // int64 IDs travel as strings on the wire (frontend convention).
 
 type studentResponse struct {
-	StudentID       string   `json:"student_id"`
-	FirstName       string   `json:"first_name"`
-	LastName        string   `json:"last_name"`
-	SchoolClass     string   `json:"school_class"`
-	GroupID         *string  `json:"group_id,omitempty"`
-	GroupName       string   `json:"group_name"`
-	PresentDays     int      `json:"present_days"`
-	SickDays        int      `json:"sick_days"`
-	ExcusedDays     int      `json:"excused_days"`
-	UnexplainedDays int      `json:"unexplained_days"`
-	AttendanceRate  *float64 `json:"attendance_rate"`
+	StudentID       ident.ID  `json:"student_id"`
+	FirstName       string    `json:"first_name"`
+	LastName        string    `json:"last_name"`
+	SchoolClass     string    `json:"school_class"`
+	GroupID         *ident.ID `json:"group_id,omitempty"`
+	GroupName       string    `json:"group_name"`
+	PresentDays     int       `json:"present_days"`
+	SickDays        int       `json:"sick_days"`
+	ExcusedDays     int       `json:"excused_days"`
+	UnexplainedDays int       `json:"unexplained_days"`
+	AttendanceRate  *float64  `json:"attendance_rate"`
 }
 
 type groupResponse struct {
-	GroupID         string   `json:"group_id"`
+	GroupID         ident.ID `json:"group_id"`
 	Name            string   `json:"name"`
 	StudentCount    int      `json:"student_count"`
 	PresentDays     int      `json:"present_days"`
@@ -34,7 +33,7 @@ type groupResponse struct {
 }
 
 type roomResponse struct {
-	RoomID                 string   `json:"room_id"`
+	RoomID                 ident.ID `json:"room_id"`
 	Name                   string   `json:"name"`
 	Capacity               *int     `json:"capacity,omitempty"`
 	DaysUsed               int      `json:"days_used"`
@@ -45,7 +44,7 @@ type roomResponse struct {
 }
 
 type courseResponse struct {
-	CourseID           string   `json:"course_id"`
+	CourseID           ident.ID `json:"course_id"`
 	Name               string   `json:"name"`
 	CategoryName       string   `json:"category_name"`
 	MaxParticipants    int      `json:"max_participants"`
@@ -60,12 +59,12 @@ type courseResponse struct {
 }
 
 type courseStudentResponse struct {
-	StudentID         string   `json:"student_id"`
+	StudentID         ident.ID `json:"student_id"`
 	FirstName         string   `json:"first_name"`
 	LastName          string   `json:"last_name"`
 	SchoolClass       string   `json:"school_class"`
 	GroupName         string   `json:"group_name"`
-	CourseID          string   `json:"course_id"`
+	CourseID          ident.ID `json:"course_id"`
 	CourseName        string   `json:"course_name"`
 	PresentDays       int      `json:"present_days"`
 	AbsentDays        int      `json:"absent_days"`
@@ -141,12 +140,12 @@ func toReportResponse(report *studentpresence.StatisticsReport) reportResponse {
 	}
 	for _, row := range report.CourseStudents {
 		out.CourseStudents = append(out.CourseStudents, courseStudentResponse{
-			StudentID:         strconv.FormatInt(row.StudentID, 10),
+			StudentID:         ident.ID(row.StudentID),
 			FirstName:         row.FirstName,
 			LastName:          row.LastName,
 			SchoolClass:       row.SchoolClass,
 			GroupName:         row.GroupName,
-			CourseID:          strconv.FormatInt(row.CourseID, 10),
+			CourseID:          ident.ID(row.CourseID),
 			CourseName:        row.CourseName,
 			PresentDays:       row.PresentDays,
 			AbsentDays:        row.AbsentDays,
@@ -159,7 +158,7 @@ func toReportResponse(report *studentpresence.StatisticsReport) reportResponse {
 
 func toRoomResponse(room studentpresence.StatisticsRoomRow) roomResponse {
 	return roomResponse{
-		RoomID:                 strconv.FormatInt(room.RoomID, 10),
+		RoomID:                 ident.ID(room.RoomID),
 		Name:                   room.Name,
 		Capacity:               room.Capacity,
 		DaysUsed:               room.DaysUsed,
@@ -172,7 +171,7 @@ func toRoomResponse(room studentpresence.StatisticsRoomRow) roomResponse {
 
 func toCourseResponse(course studentpresence.StatisticsCourseRow) courseResponse {
 	return courseResponse{
-		CourseID:           strconv.FormatInt(course.CourseID, 10),
+		CourseID:           ident.ID(course.CourseID),
 		Name:               course.Name,
 		CategoryName:       course.CategoryName,
 		MaxParticipants:    course.MaxParticipants,
@@ -189,7 +188,7 @@ func toCourseResponse(course studentpresence.StatisticsCourseRow) courseResponse
 
 func toGroupResponse(g studentpresence.StatisticsGroupRow) groupResponse {
 	return groupResponse{
-		GroupID:         strconv.FormatInt(g.GroupID, 10),
+		GroupID:         ident.ID(g.GroupID),
 		Name:            g.Name,
 		StudentCount:    g.StudentCount,
 		PresentDays:     g.PresentDays,
@@ -203,7 +202,7 @@ func toGroupResponse(g studentpresence.StatisticsGroupRow) groupResponse {
 func appendReportStudents(out *reportResponse, report *studentpresence.StatisticsReport) {
 	for _, st := range report.Students {
 		row := studentResponse{
-			StudentID:       strconv.FormatInt(st.StudentID, 10),
+			StudentID:       ident.ID(st.StudentID),
 			FirstName:       st.FirstName,
 			LastName:        st.LastName,
 			SchoolClass:     st.SchoolClass,
@@ -215,7 +214,7 @@ func appendReportStudents(out *reportResponse, report *studentpresence.Statistic
 			AttendanceRate:  st.AttendanceRate,
 		}
 		if st.GroupID != nil {
-			id := strconv.FormatInt(*st.GroupID, 10)
+			id := ident.ID(*st.GroupID)
 			row.GroupID = &id
 		}
 		out.Students = append(out.Students, row)

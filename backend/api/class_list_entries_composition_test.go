@@ -59,7 +59,8 @@ func TestClassListEntriesCompositionRunsTheCRUDAndAssignFlow(t *testing.T) {
 	// the quoted wire value.
 	var created struct {
 		Data struct {
-			ID ident.ID `json:"id"`
+			ID      ident.ID `json:"id"`
+			Version string   `json:"version"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &created))
@@ -82,13 +83,23 @@ func TestClassListEntriesCompositionRunsTheCRUDAndAssignFlow(t *testing.T) {
 	assert.Contains(t, rec.Body.String(), "Aalders")
 	assert.Contains(t, rec.Body.String(), `"matching_student_ids":[]`)
 
-	// Move to another class (users:update).
-	moveBody := fmt.Sprintf(`{"first_name":"Zoe","last_name":"Aalders","school_class":"%s-b"}`, className)
+	// Move to another class (users:update) on the version the create
+	// answered (ADR 0311).
+	moveBody := fmt.Sprintf(`{"first_name":"Zoe","last_name":"Aalders","school_class":"%s-b","expected_version":%q}`, className, created.Data.Version)
 	req = httptest.NewRequest(http.MethodPut, fmt.Sprintf("/%d", entryID), strings.NewReader(moveBody))
 	req.Header.Set("Content-Type", "application/json")
 	rec = testutil.ExecuteWithAuthPermissions(t, router, req, claims, []string{"users:update"})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.Contains(t, rec.Body.String(), className+"-b")
+
+	// The same version is outdated now: the move is refused and changes
+	// nothing.
+	staleBody := fmt.Sprintf(`{"first_name":"Zoe","last_name":"Aalders","school_class":"%s-c","expected_version":%q}`, className, created.Data.Version)
+	req = httptest.NewRequest(http.MethodPut, fmt.Sprintf("/%d", entryID), strings.NewReader(staleBody))
+	req.Header.Set("Content-Type", "application/json")
+	rec = testutil.ExecuteWithAuthPermissions(t, router, req, claims, []string{"users:update"})
+	require.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
+	assert.Contains(t, rec.Body.String(), `"code":"general.changed_since_read"`)
 
 	// A regular student of the same name and class shows up as the hint.
 	student := testpkg.CreateTestStudent(t, db, "Zoe", "Aalders", className+"-b")
@@ -267,7 +278,8 @@ func TestClassListEntriesCompositionRemovesAnEntry(t *testing.T) {
 	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 	var created struct {
 		Data struct {
-			ID ident.ID `json:"id"`
+			ID      ident.ID `json:"id"`
+			Version string   `json:"version"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &created))

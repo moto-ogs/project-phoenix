@@ -15,6 +15,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/modules/settings"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/textnorm"
 )
 
 // Bounds of enrollment.grade_level_max, the same range the settings registry
@@ -57,7 +58,18 @@ func (rs *Resource) resolveTenant(w http.ResponseWriter, r *http.Request) {
 	}
 
 	school, err := rs.SchoolService.GetSchoolBySubdomain(r.Context(), slug)
-	if err != nil || school == nil || school.Deleted || !school.Active {
+	if errors.Is(err, ErrInvalidSchoolSubdomain) {
+		common.RenderError(w, r, common.ErrorInvalidRequest(err))
+		return
+	}
+	if err != nil {
+		common.RenderError(w, r, common.ErrorInternalServerWrap(
+			http.StatusText(http.StatusInternalServerError),
+			fmt.Errorf("tenant resolve: %w", err),
+		))
+		return
+	}
+	if school == nil || school.Deleted || !school.Active {
 		common.RenderError(w, r, common.ErrorNotFound(errors.New("tenant not found")))
 		return
 	}
@@ -140,6 +152,7 @@ func newTenantResolveResponse(school *TenantSchool, resolved tenantShellSettings
 		ChildSearchOnlyNavigation:         resolved.childSearchOnlyNavigation,
 		SimpleStaffNavigation:             resolved.simpleStaffNavigation,
 		CareFacilityTerm:                  resolved.careFacilityTerm,
+		CareFacilityArticle:               textnorm.CareArticle(resolved.careFacilityTerm, resolved.careFacilityArticle),
 	}
 }
 
@@ -150,9 +163,9 @@ func analyticsSamplePercent(resolved tenantShellSettings) int {
 	return resolved.analyticsSamplePercent
 }
 
-// tenantShellSettingKeys lists every setting the tenant shell reads, for the
-// one batched resolve.
-func tenantShellSettingKeys() []string {
+// TenantShellSettingKeys lists every setting the tenant shell reads. The
+// contract generator also uses it for frontend cache invalidation.
+func TenantShellSettingKeys() []string {
 	return append([]string{
 		settings.KeyPresenceMode,
 		settings.KeyStudentPhotosEnabled,
@@ -183,6 +196,7 @@ func tenantShellSettingKeys() []string {
 		settings.KeyChildSearchOnlyNavigation,
 		settings.KeySimpleStaffNavigation,
 		settings.KeyEnrollmentCareFacilityTerm,
+		settings.KeyEnrollmentCareFacilityArticle,
 		// Not read from this snapshot — prefetched so the hard-fail
 		// resolveTenantGradeLevelMax call hits the request cache instead of
 		// opening a second tenant transaction (issue #2065).
@@ -194,7 +208,7 @@ func (rs *Resource) resolveTenantShellSettings(ctx context.Context, tenantID int
 	if batch, ok := rs.SettingsService.(interface {
 		ResolveManyForTenant(context.Context, int64, []string) (*settings.Snapshot, error)
 	}); ok {
-		snapshot, err := batch.ResolveManyForTenant(ctx, tenantID, tenantShellSettingKeys())
+		snapshot, err := batch.ResolveManyForTenant(ctx, tenantID, TenantShellSettingKeys())
 		if err != nil {
 			return tenantShellSettings{}, fmt.Errorf("resolve tenant shell settings: %w", err)
 		}
@@ -227,6 +241,7 @@ func resolveTenantShellValues(readBool func(string) (bool, error), readString fu
 		{settings.KeyAttendanceEditScope, &resolved.attendanceEditScope},
 		{settings.KeyParentRequestReasonPolicy, &resolved.reasonPolicy},
 		{settings.KeyEnrollmentCareFacilityTerm, &resolved.careFacilityTerm},
+		{settings.KeyEnrollmentCareFacilityArticle, &resolved.careFacilityArticle},
 	}
 	for _, field := range stringFields {
 		value, err := readString(field.key)

@@ -26,9 +26,9 @@ func TestExportRequestToListParamsPreservesRoomFilter(t *testing.T) {
 		Filters: studentExportFilters{
 			Search:      "  mila  ",
 			GroupID:     "17",
-			RoomID:      "42",
+			RoomID:      ident.Optional(42),
 			SchoolClass: "3a",
-			StudentIDs:  []string{"12", "7", "12"},
+			StudentIDs:  []ident.ID{12, 7, 12},
 		},
 	}, testExportDate)
 
@@ -99,9 +99,9 @@ func TestExportSelectionCapError(t *testing.T) {
 	require.True(t, ok)
 	assert.Equal(t, http.StatusBadRequest, resp.HTTPStatusCode)
 	assert.Equal(t, common.CodeStudentsExportSelectionTooLarge, resp.Code)
-	assert.Equal(t, map[string]any{
-		"total": studentExportPageSize + 1,
-		"limit": studentExportPageSize,
+	assert.Equal(t, ExportSelectionDetails{
+		Total: studentExportPageSize + 1,
+		Limit: studentExportPageSize,
 	}, resp.Details)
 }
 

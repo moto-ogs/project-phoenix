@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -41,7 +42,10 @@ func seedDatevFile(client *Client, auth AuthRef, school int64, month calendar.Da
 		return nil
 	}
 	if seedConflictCode(err, seedDatevBookingsInvalid) {
-		fmt.Println("  Exporte: DATEV demo download skipped: existing invoice snapshots are not DATEV-ready")
+		// The refused documents and fields name the cause in the log.
+		var refused *APIError
+		errors.As(err, &refused)
+		fmt.Printf("  Exporte: DATEV demo download skipped: existing invoice snapshots are not DATEV-ready: %s\n", refused.Body)
 		return nil
 	}
 	if err != nil {

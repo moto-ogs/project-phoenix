@@ -1,3 +1,4 @@
+import { deriveSupervision } from "~/lib/supervision-derive";
 /**
  * Tests for the Active Supervisions page with the supervision context and a
  * block-aware timetable roster stub: action buttons, released rooms and their
@@ -22,6 +23,12 @@ const navigationMockState = vi.hoisted(() => ({
 }));
 
 const defaultSupervisionState = vi.hoisted(() => ({
+  ownSupervision: false,
+  ownSupervisedRooms: [],
+  ownSessions: [],
+  ownSessionRoomNames: [],
+  ownGroupIds: [],
+  ownGroupRoomNames: [],
   supervisedRooms: [],
   isLoadingSupervision: false,
   overviewEnabled: false,
@@ -51,13 +58,13 @@ vi.mock("~/lib/auth-utils", () => ({
 // Mock next-auth/react
 vi.mock("next-auth/react", () => ({
   useSession: vi.fn(() => ({
-    data: { user: { token: "test-token", id: "7", tenantId: 1 } },
+    data: { user: { token: "test-token", id: "7", tenantId: "1" } },
     status: "authenticated",
   })),
   // The staff session gate of bffJson reads the same session.
   getSession: vi.fn(() =>
     Promise.resolve({
-      user: { token: "test-token", id: "7", tenantId: 1 },
+      user: { token: "test-token", id: "7", tenantId: "1" },
       expires: "2099-01-01",
     }),
   ),
@@ -72,6 +79,7 @@ const mockPush = vi.fn();
 const mockReplace = vi.fn();
 const mockRedirect = vi.fn();
 vi.mock("next/navigation", () => ({
+  usePathname: () => "/active-supervisions",
   useRouter: () => ({ push: mockPush, replace: mockReplace }),
   useSearchParams: () => ({
     get: (key: string) =>
@@ -256,6 +264,15 @@ vi.mock("~/components/students/student-card", () => ({
   SchoolClassIcon: () => <span data-testid="school-class-icon" />,
   GroupIcon: () => <span data-testid="group-icon" />,
   ActivityIcon: () => <span data-testid="activity-icon" />,
+  PlannedActivityRows: ({
+    activities,
+  }: {
+    activities?: readonly { title: string }[];
+  }) => (
+    <div data-testid="planned-activity-rows">
+      {(activities ?? []).map((activity) => activity.title).join(", ")}
+    </div>
+  ),
   PickupTimeRow: ({
     pickupTime,
     isException,
@@ -343,7 +360,7 @@ import { useSession } from "next-auth/react";
 import { useOptionalSupervision } from "~/lib/supervision-context";
 import { TenantPageSearchRow } from "~/components/ui/tenant-page-search-row";
 import type { TimetableRosterRow } from "~/lib/timetable-operations-types";
-import MeinRaumPage from "./page";
+import MeinRaumPage from "./page-content";
 
 import { ToastProvider } from "~/contexts/ToastContext";
 import {
@@ -483,7 +500,7 @@ beforeEach(() => {
   vi.mocked(useSession)
     .mockReset()
     .mockReturnValue({
-      data: { user: { token: "test-token", id: "7", tenantId: 1 } },
+      data: { user: { token: "test-token", id: "7", tenantId: "1" } },
       status: "authenticated",
     } as never);
   vi.mocked(useOptionalSupervision)
@@ -2004,6 +2021,7 @@ describe("RoleGuard integration", () => {
     // which is the explicit signal that the admin_supervision_overview
     // setting is enabled on the backend.
     vi.mocked(useOptionalSupervision).mockReturnValue({
+      ...deriveSupervision(),
       supervisedRooms: [{ id: "10", name: "Admin Room", groupId: "1" }],
       isLoadingSupervision: false,
       overviewEnabled: true,
@@ -2033,6 +2051,7 @@ describe("RoleGuard integration", () => {
     } as never);
 
     vi.mocked(useOptionalSupervision).mockReturnValue({
+      ...deriveSupervision(),
       supervisedRooms: [{ id: "10", name: "Raum", groupId: "1" }],
       isLoadingSupervision: false,
       overviewEnabled: true,
@@ -2062,6 +2081,7 @@ describe("RoleGuard integration", () => {
     } as never);
 
     vi.mocked(useOptionalSupervision).mockReturnValue({
+      ...deriveSupervision(),
       supervisedRooms: [
         {
           id: "schulhof",
@@ -2092,6 +2112,7 @@ describe("RoleGuard integration", () => {
     } as never);
 
     vi.mocked(useOptionalSupervision).mockReturnValue({
+      ...deriveSupervision(),
       supervisedRooms: [],
       isLoadingSupervision: true,
       overviewEnabled: false,
@@ -2122,6 +2143,7 @@ describe("Aggregate fetcher error contract", () => {
     } as never);
 
     vi.mocked(useOptionalSupervision).mockReturnValue({
+      ...deriveSupervision(),
       supervisedRooms: [{ id: "10", name: "Admin Room", groupId: "1" }],
       isLoadingSupervision: false,
       overviewEnabled: true,
@@ -2181,15 +2203,10 @@ describe("Aggregate fetcher error contract", () => {
       status: 500,
     });
 
-    // The former admin fallback fan-out endpoints must never be contacted:
-    // silently-empty partial payloads are the failure mode #2096 removed.
-    const urls = fetchMock.mock.calls.map(([u]) => String(u));
-    expect(urls.some((u) => u.includes("/api/active/supervisors/all"))).toBe(
-      false,
-    );
-    expect(urls.some((u) => u.includes("/api/active/schulhof/status"))).toBe(
-      false,
-    );
+    // No fallback fan-out: the aggregate failure must stay visible (#2096).
+    expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual([
+      expect.stringContaining("/api/active/supervision-dashboard"),
+    ]);
   });
 
   it("throws on aggregate failure for non-admins", async () => {

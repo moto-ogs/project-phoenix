@@ -17,15 +17,15 @@ import (
 )
 
 type updateTemplateRequest struct {
-	Name            string        `json:"name"`
-	Type            string        `json:"type"`
-	Weekdays        []int         `json:"weekdays"`
-	StartTime       string        `json:"start_time"`
-	EndTime         string        `json:"end_time"`
-	RoomID          ident.ID      `json:"room_id"`
-	CategoryID      ident.ID      `json:"category_id"`
-	PlanningTrackID NullableInt64 `json:"planning_track_id"`
-	MaxParticipants NullableInt   `json:"max_participants"`
+	Name            string      `json:"name"`
+	Type            string      `json:"type"`
+	Weekdays        []int       `json:"weekdays"`
+	StartTime       string      `json:"start_time"`
+	EndTime         string      `json:"end_time"`
+	RoomID          ident.ID    `json:"room_id"`
+	CategoryID      ident.ID    `json:"category_id"`
+	PlanningTrackID NullableID  `json:"planning_track_id"`
+	MaxParticipants NullableInt `json:"max_participants"`
 	// RequiredStaff is the optional manual Personalbedarf override (#1839);
 	// omitted/null clears the override (derive from the Betreuungsschlüssel).
 	RequiredStaff    *int      `json:"required_staff,omitempty"`
@@ -42,8 +42,8 @@ type updateTemplateRequest struct {
 	// template's stored value, only an explicit null (or explicit empty
 	// list) clears it. A client predating these fields must not strip a
 	// template's dynamic Angebots-Belegung by simply not knowing them.
-	SourceCareOfferingIDs NullableInt64Slice `json:"source_care_offering_ids"`
-	SourceGradeLevels     NullableIntSlice   `json:"source_grade_levels"`
+	SourceCareOfferingIDs NullableIDSlice  `json:"source_care_offering_ids"`
+	SourceGradeLevels     NullableIntSlice `json:"source_grade_levels"`
 	// SourceSchoolClasses is the Klassenfilter (#2482), same presence
 	// contract. Mutually exclusive with source_grade_levels: submitting one
 	// non-empty filter drops a carried-over other one, submitting both
@@ -376,12 +376,14 @@ func (rs *Resource) updateTemplate(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	timeframeID, ok := rs.lockedTemplateUpdateTarget(w, r, id, parsed)
+	timeframeID, ok := rs.templateUpdateTarget(w, r, id, parsed)
 	if !ok {
 		return
 	}
 	command := buildUpdateTemplateInput(id, parsed, timeframeID, gradeLevelMax, rosterValidFrom)
 	command.ActorAccountID = sessiontoken.ActorAccountIDFromCtx(ctx)
+	// The owner compares the version under its recurrence gate (ADR 0311).
+	command.ExpectedVersion = parsed.req.ExpectedVersion
 	updateErr := rs.Templates.UpdateTemplate(ctx, command)
 	if updateErr != nil {
 		// findOrCreateTimeframe runs before the recurrence service. Tenant
@@ -409,12 +411,11 @@ func (rs *Resource) respondUpdatedTemplate(w http.ResponseWriter, r *http.Reques
 	common.Respond(w, r, http.StatusOK, templates[0], "Template updated")
 }
 
-// lockedTemplateUpdateTarget validates the education group, resolves the
-// timeframe and takes the recurrence gate after it, in the order a template
-// create takes them. Under the gate the segment is read again: one that
-// changed since its editor read it, or since the unlocked read before, is
-// refused (ADR 0311). It returns ok=false after rendering the refusal.
-func (rs *Resource) lockedTemplateUpdateTarget(w http.ResponseWriter, r *http.Request, id int64, parsed *parsedUpdateTemplate) (int64, bool) {
+// templateUpdateTarget validates the education group and resolves the
+// timeframe. The update takes the recurrence gate after it, in the order a
+// template create takes them, and compares the editor's version under it
+// (ADR 0311). It returns ok=false after rendering the refusal.
+func (rs *Resource) templateUpdateTarget(w http.ResponseWriter, r *http.Request, id int64, parsed *parsedUpdateTemplate) (int64, bool) {
 	ctx := r.Context()
 	if err := rs.Templates.ValidateTemplateEducationGroup(ctx, (*int64)(parsed.req.EducationGroupID)); err != nil {
 		if !renderTemplateEducationGroupError(w, r, err) {
@@ -425,11 +426,6 @@ func (rs *Resource) lockedTemplateUpdateTarget(w http.ResponseWriter, r *http.Re
 	timeframeID, err := rs.Templates.FindOrCreateTimeframe(ctx, parsed.startTime, parsed.endTime, parsed.req.Name)
 	if err != nil {
 		common.RenderError(w, r, common.ErrorInternalServerWrap("resolve timeframe failed", err))
-		return 0, false
-	}
-	if !rs.lockTemplateForWrite(w, r) || !rs.checkTemplateReadVersion(w, r, id, parsed.req.ExpectedVersion) {
-		// The timeframe this request may have created goes with the refusal.
-		tenant.MarkRollback(ctx)
 		return 0, false
 	}
 	return timeframeID, true

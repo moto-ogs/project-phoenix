@@ -101,7 +101,7 @@ func TestParentPortalSurveyAnswersThroughTheParentMount(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		survey, err = surveys.PublishSurvey(ctx, author.ID, draft.ID)
+		survey, err = surveys.PublishSurvey(ctx, author.ID, draft.ID, communication.SurveyVersion(*draft))
 		return err
 	}))
 	require.NotNil(t, survey.AnnouncementID, "the published survey has its news item")
@@ -119,7 +119,7 @@ func TestParentPortalSurveyAnswersThroughTheParentMount(t *testing.T) {
 	question := form.Survey.Questions[0]
 	var submitted parentHTTP.SurveySubmittedResponse
 	r.call(t, http.MethodPost, path, f.token, map[string]any{"answers": []map[string]any{
-		{"question_id": question.ID, "option_ids": []string{question.Options[0].ID}},
+		{"question_id": question.ID, "option_ids": []string{question.Options[0].ID.String()}},
 	}}, &submitted)
 	assert.True(t, submitted.Submitted)
 	form = parentHTTP.SurveyFormResponse{}

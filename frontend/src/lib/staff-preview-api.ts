@@ -8,7 +8,7 @@
  * preview restores the parked admin state.
  */
 
-import { signOut } from "next-auth/react";
+import { signOutSession } from "~/lib/tenant-session-cookie";
 
 import { createLogger } from "~/lib/logger";
 import { bffJson } from "~/lib/bff-fetch";
@@ -64,7 +64,8 @@ function readPreviewTarget(result: unknown): string | null {
  */
 async function signOutAfterFailedRestore(): Promise<void> {
   try {
-    await signOut({ redirect: false });
+    // The tree's session only: another tab's sign-in stays (#8082).
+    await signOutSession("tenant");
   } catch (err) {
     logger.error("staff_preview_signout_failed", {
       error: err instanceof Error ? err.message : String(err),
@@ -112,16 +113,16 @@ async function startStaffPreview(
  * The signed preview token is the credential the whole way down. A running
  * preview's token lives only in the session cookie (#5005), so the route reads
  * it there. Failed starts are rolled back entirely server-side.
- * Through `public`, not the staff portal: its session gate would throw when
- * the admin session has already expired, and the call must never fail the end.
+ * Skip browser-side recovery: the admin session may already have expired.
  */
 export async function recordStaffPreviewEnd(
   signal?: AbortSignal,
 ): Promise<void> {
   signal?.throwIfAborted();
   try {
-    await bffJson("public", sessionBff.endPreview, {
+    await bffJson("tenant", sessionBff.endPreview, {
       body: {},
+      skipAuthRecovery: true,
       // The end of the preview waits for this call; a stalled request must
       // not keep the admin in the preview.
       signal: signal

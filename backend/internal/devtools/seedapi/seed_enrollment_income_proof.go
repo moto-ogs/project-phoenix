@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // Seed keys of the income declaration in the demo form (#4783). They match
@@ -77,7 +79,7 @@ func (seedEnrollmentIncomeProofStep) Run(_ context.Context, rt *Runtime) error {
 // declaration once per enrollment, the allergies per child.
 func seedIncomeProofSubmission(phaseID int64, offerings map[string]int64, token string) map[string]any {
 	return map[string]any{
-		"phase_id":            phaseID,
+		"phase_id":            ident.ID(phaseID),
 		"guardian_first_name": "Zahra",
 		"guardian_last_name":  "Rahimi",
 		"guardian_email":      "zahra.rahimi@example.test",
@@ -89,8 +91,8 @@ func seedIncomeProofSubmission(phaseID int64, offerings map[string]int64, token 
 		},
 		"children": []map[string]any{{
 			"first_name": "Ahmad", "last_name": "Rahimi", "date_of_birth": "2019-05-12", "target_grade_level": 1,
-			"offering_ids":  []int64{offerings["ogs-kurz"], offerings["mittagessen"]},
-			"offering_days": []map[string]any{{"offering_id": offerings["ogs-kurz"], "selected_days": []string{"tue", "thu"}}, {"offering_id": offerings["mittagessen"], "selected_days": []string{"tue", "thu"}}},
+			"offering_ids":  []ident.ID{ident.ID(offerings["ogs-kurz"]), ident.ID(offerings["mittagessen"])},
+			"offering_days": []map[string]any{{"offering_id": ident.ID(offerings["ogs-kurz"]), "selected_days": []string{"tue", "thu"}}, {"offering_id": ident.ID(offerings["mittagessen"]), "selected_days": []string{"tue", "thu"}}},
 			"custom_data":   map[string]any{"allergies": "keine"},
 		}},
 	}

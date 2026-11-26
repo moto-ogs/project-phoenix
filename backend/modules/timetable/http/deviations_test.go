@@ -24,14 +24,15 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/uptrace/bun"
+
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"github.com/uptrace/bun"
 )
 
 type devSetup struct {
@@ -145,8 +146,8 @@ func TestApplyDeviations_SwapSubstitute_OneCall(t *testing.T) {
 	testpkg.CreateTestInstanceStaff(t, s.db, inst.ID, s.staffX, testpkg.InstanceStaffOpts{IsSubstitute: true})
 
 	w := doDev(t, router, inst.ID, map[string]any{
-		"absences":      []map[string]any{{"staff_id": s.staffX}},
-		"substitutions": []map[string]any{{"absent_staff_id": s.staffA, "substitute_staff_id": s.staffY}},
+		"absences":      []map[string]any{{"staff_id": fmt.Sprint(s.staffX)}},
+		"substitutions": []map[string]any{{"absent_staff_id": fmt.Sprint(s.staffA), "substitute_staff_id": fmt.Sprint(s.staffY)}},
 	})
 	require.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())
 
@@ -191,7 +192,7 @@ func TestApplyDeviations_SubstituteAlreadyCoversOtherBlock(t *testing.T) {
 	testpkg.CreateTestInstanceStaff(t, s.db, inst2.ID, s.staffY, testpkg.InstanceStaffOpts{IsSubstitute: true})
 
 	w := doDev(t, router, inst1.ID, map[string]any{
-		"substitutions": []map[string]any{{"absent_staff_id": s.staffA, "substitute_staff_id": s.staffY}},
+		"substitutions": []map[string]any{{"absent_staff_id": fmt.Sprint(s.staffA), "substitute_staff_id": fmt.Sprint(s.staffY)}},
 	})
 	require.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())
 
@@ -247,8 +248,8 @@ func TestApplyDeviations_SecondSubstituteFillsOpenGap(t *testing.T) {
 	// Mark B absent AND assign Y: two open positions (A, B), X covers one, Y fills
 	// the remaining gap — no conflict.
 	w := doDev(t, router, inst.ID, map[string]any{
-		"absences":      []map[string]any{{"staff_id": s.staffB}},
-		"substitutions": []map[string]any{{"absent_staff_id": s.staffA, "substitute_staff_id": s.staffY}},
+		"absences":      []map[string]any{{"staff_id": fmt.Sprint(s.staffB)}},
+		"substitutions": []map[string]any{{"absent_staff_id": fmt.Sprint(s.staffA), "substitute_staff_id": fmt.Sprint(s.staffY)}},
 	})
 	require.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())
 
@@ -293,8 +294,8 @@ func TestApplyDeviations_OverstaffConflict_NoPartialWrites(t *testing.T) {
 	// Add Y as a SECOND substitute to the already-covered inst1 → substitute_conflict.
 	// B's day-wide absence is in the same payload and must not survive the abort.
 	w := doDev(t, router, inst1.ID, map[string]any{
-		"absences":      []map[string]any{{"staff_id": s.staffB}},
-		"substitutions": []map[string]any{{"absent_staff_id": s.staffA, "substitute_staff_id": s.staffY}},
+		"absences":      []map[string]any{{"staff_id": fmt.Sprint(s.staffB)}},
+		"substitutions": []map[string]any{{"absent_staff_id": fmt.Sprint(s.staffA), "substitute_staff_id": fmt.Sprint(s.staffY)}},
 	})
 	require.Equal(t, http.StatusConflict, w.Code, "body=%s", w.Body.String())
 	assert.Contains(t, w.Body.String(), "timetable.substitute_conflict")
@@ -320,7 +321,7 @@ func TestApplyDeviations_ClearsStaleAckWhenCovered(t *testing.T) {
 	testpkg.CreateTestInstanceStaff(t, s.db, inst.ID, s.staffA, testpkg.InstanceStaffOpts{IsAbsent: true})
 
 	w := doDev(t, router, inst.ID, map[string]any{
-		"substitutions": []map[string]any{{"absent_staff_id": s.staffA, "substitute_staff_id": s.staffY}},
+		"substitutions": []map[string]any{{"absent_staff_id": fmt.Sprint(s.staffA), "substitute_staff_id": fmt.Sprint(s.staffY)}},
 	})
 	require.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())
 
@@ -385,7 +386,7 @@ func TestApplyDeviations_PastBlock_Rejected(t *testing.T) {
 	inst := testpkg.CreateTestActivityInstance(t, s.db, past, s.roomID, testpkg.ActivityInstanceOpts{Title: "Past"})
 
 	w := doDev(t, router, inst.ID, map[string]any{
-		"absences": []map[string]any{{"staff_id": s.staffA}},
+		"absences": []map[string]any{{"staff_id": fmt.Sprint(s.staffA)}},
 	})
 	assert.Equal(t, http.StatusBadRequest, w.Code, "body=%s", w.Body.String())
 }
@@ -412,7 +413,7 @@ func TestApplyDeviations_ClearsStaleAckOnOtherBlocks(t *testing.T) {
 
 	// Substituting Y for A is day-wide → covers BOTH blocks in one save.
 	w := doDev(t, router, selected.ID, map[string]any{
-		"substitutions": []map[string]any{{"absent_staff_id": s.staffA, "substitute_staff_id": s.staffY}},
+		"substitutions": []map[string]any{{"absent_staff_id": fmt.Sprint(s.staffA), "substitute_staff_id": fmt.Sprint(s.staffY)}},
 	})
 	require.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())
 
@@ -442,7 +443,7 @@ func TestApplyDeviations_RestoreRemovedSubstitute(t *testing.T) {
 	rowX := testpkg.CreateTestInstanceStaff(t, s.db, inst.ID, s.staffX, testpkg.InstanceStaffOpts{IsSubstitute: true, IsAbsent: true})
 
 	w := doDev(t, router, inst.ID, map[string]any{
-		"presences": []int64{s.staffX},
+		"presences": []map[string]any{{"staff_id": fmt.Sprint(s.staffX)}},
 	})
 	require.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())
 
@@ -487,10 +488,10 @@ func TestApplyDeviations_RemoveAbsentSubstituteAndRestorePlannedAssignment(t *te
 
 	w := doDev(t, router, fullyStaffed.ID, map[string]any{
 		"presences": []map[string]any{{
-			"staff_id": s.staffX, "instance_ids": []int64{fullyStaffed.ID, plannedElsewhere.ID},
+			"staff_id": fmt.Sprint(s.staffX), "instance_ids": []string{fmt.Sprint(fullyStaffed.ID), fmt.Sprint(plannedElsewhere.ID)},
 		}},
 		"substitution_removals": []map[string]any{{
-			"staff_id": s.staffX, "instance_ids": []int64{fullyStaffed.ID},
+			"staff_id": fmt.Sprint(s.staffX), "instance_ids": []string{fmt.Sprint(fullyStaffed.ID)},
 		}},
 	})
 	require.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())
@@ -536,8 +537,8 @@ func TestApplyDeviations_RestorePlannedStaffOverActiveSubstitute_NoPartialWrites
 	otherRow := testpkg.CreateTestInstanceStaff(t, s.db, other.ID, s.staffB, testpkg.InstanceStaffOpts{})
 
 	w := doDev(t, router, covered.ID, map[string]any{
-		"presences": []map[string]any{{"staff_id": s.staffA, "instance_ids": []int64{covered.ID}}},
-		"absences":  []map[string]any{{"staff_id": s.staffB, "instance_ids": []int64{other.ID}}},
+		"presences": []map[string]any{{"staff_id": fmt.Sprint(s.staffA), "instance_ids": []string{fmt.Sprint(covered.ID)}}},
+		"absences":  []map[string]any{{"staff_id": fmt.Sprint(s.staffB), "instance_ids": []string{fmt.Sprint(other.ID)}}},
 	})
 	require.Equal(t, http.StatusConflict, w.Code, "body=%s", w.Body.String())
 	assert.Contains(t, w.Body.String(), "timetable.presence_would_overstaff")
@@ -565,8 +566,8 @@ func TestApplyDeviations_TwoDistinctSubstitutes_OneBlock(t *testing.T) {
 
 	w := doDev(t, router, inst.ID, map[string]any{
 		"substitutions": []map[string]any{
-			{"absent_staff_id": s.staffA, "substitute_staff_id": s.staffX},
-			{"absent_staff_id": s.staffB, "substitute_staff_id": s.staffY},
+			{"absent_staff_id": fmt.Sprint(s.staffA), "substitute_staff_id": fmt.Sprint(s.staffX)},
+			{"absent_staff_id": fmt.Sprint(s.staffB), "substitute_staff_id": fmt.Sprint(s.staffY)},
 		},
 	})
 	require.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())
@@ -601,8 +602,8 @@ func TestApplyDeviations_SameSubstituteForTwoAbsent_OneBlock(t *testing.T) {
 
 	w := doDev(t, router, inst.ID, map[string]any{
 		"substitutions": []map[string]any{
-			{"absent_staff_id": s.staffA, "substitute_staff_id": s.staffX},
-			{"absent_staff_id": s.staffB, "substitute_staff_id": s.staffX},
+			{"absent_staff_id": fmt.Sprint(s.staffA), "substitute_staff_id": fmt.Sprint(s.staffX)},
+			{"absent_staff_id": fmt.Sprint(s.staffB), "substitute_staff_id": fmt.Sprint(s.staffX)},
 		},
 	})
 	require.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())
@@ -656,8 +657,8 @@ func TestApplyDeviations_SameSubstituteForTwoAbsent_WarningsNotDuplicated(t *tes
 	// X covers BOTH absent A and B on the target block in one save.
 	w := doDev(t, router, inst.ID, map[string]any{
 		"substitutions": []map[string]any{
-			{"absent_staff_id": s.staffA, "substitute_staff_id": s.staffX},
-			{"absent_staff_id": s.staffB, "substitute_staff_id": s.staffX},
+			{"absent_staff_id": fmt.Sprint(s.staffA), "substitute_staff_id": fmt.Sprint(s.staffX)},
+			{"absent_staff_id": fmt.Sprint(s.staffB), "substitute_staff_id": fmt.Sprint(s.staffX)},
 		},
 	})
 	require.Equal(t, http.StatusOK, w.Code, "body=%s", w.Body.String())

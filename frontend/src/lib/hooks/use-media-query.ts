@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
+import { useCallback, useSyncExternalStore } from "react";
 
 /**
  * Verfolgt eine CSS-Media-Query im Client.
@@ -13,26 +13,73 @@ import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
  * unsichtbare Kopie. Für reine Sichtbarkeit bleiben Tailwind-Klassen der
  * einfachere und flackerfreie Weg.
  *
- * Vor dem ersten Effect ist das Ergebnis `false` — bewusst, damit Server- und
- * Client-Render übereinstimmen und React keine Hydrations-Abweichung meldet.
- * Aufrufer legen deshalb die Desktop-Variante als `false`-Fall aus.
+ * Im Server-Render und während der Hydration ist das Ergebnis `false`,
+ * bewusst, damit Server- und Client-Render übereinstimmen und React keine
+ * Hydrations-Abweichung meldet. Aufrufer legen deshalb die Desktop-Variante
+ * als `false`-Fall aus. Wird die Komponente erst im Client eingehängt (ein
+ * Menü nach dem Tippen, eine Seite nach einem Seitenwechsel), steht der echte
+ * Wert schon im ersten Render fest (#8013): Ein Telefon sieht dann nie erst
+ * die Desktop-Variante.
  */
 export function useMediaQuery(query: string): boolean {
-  const [matches, setMatches] = useState(false);
-
-  useEffect(() => {
-    const mediaQuery = window.matchMedia(query);
-    const update = () => setMatches(mediaQuery.matches);
-    update();
-    mediaQuery.addEventListener("change", update);
-    return () => mediaQuery.removeEventListener("change", update);
-  }, [query]);
-
-  return matches;
+  return useResolvedMediaQuery(query) ?? false;
 }
 
 const noSubscription = () => () => undefined;
 const unknownOnServer = () => null;
+
+interface MediaQueryStore {
+  getSnapshot(): boolean;
+  subscribe(onChange: () => void): () => void;
+}
+
+// Menus and their panels often read the same breakpoint. They can share
+// one live list and browser subscription for as long as someone reads it.
+const storesByMatchMedia = new WeakMap<
+  Window["matchMedia"],
+  Map<string, MediaQueryStore>
+>();
+
+function mediaQueryStore(query: string): MediaQueryStore | null {
+  const matchMedia = window.matchMedia;
+  if (typeof matchMedia !== "function") return null;
+  let stores = storesByMatchMedia.get(matchMedia);
+  if (!stores) {
+    stores = new Map();
+    storesByMatchMedia.set(matchMedia, stores);
+  }
+  const existing = stores.get(query);
+  if (existing) return existing;
+
+  const owner = stores;
+  const list = matchMedia.call(window, query);
+  const listeners = new Set<() => void>();
+  let matches = list.matches;
+  const notify = () => {
+    const next = list.matches;
+    if (matches === next) return;
+    matches = next;
+    for (const listener of listeners) listener();
+  };
+  const store: MediaQueryStore = {
+    getSnapshot: () => matches,
+    subscribe(onChange) {
+      if (listeners.size === 0) {
+        list.addEventListener("change", notify);
+        matches = list.matches;
+      }
+      listeners.add(onChange);
+      return () => {
+        listeners.delete(onChange);
+        if (listeners.size !== 0) return;
+        list.removeEventListener("change", notify);
+        if (owner.get(query) === store) owner.delete(query);
+      };
+    },
+  };
+  stores.set(query, store);
+  return store;
+}
 
 /**
  * Wie `useMediaQuery`, aber ohne Vorgabe vor der Hydration: `null` heißt
@@ -44,19 +91,12 @@ const unknownOnServer = () => null;
  */
 export function useResolvedMediaQuery(query: string): boolean | null {
   const subscribe = useCallback(
-    (onChange: () => void) => {
-      if (typeof window.matchMedia !== "function") return noSubscription();
-      const mediaQuery = window.matchMedia(query);
-      mediaQuery.addEventListener("change", onChange);
-      return () => mediaQuery.removeEventListener("change", onChange);
-    },
+    (onChange: () => void) =>
+      mediaQueryStore(query)?.subscribe(onChange) ?? noSubscription(),
     [query],
   );
   const getSnapshot = useCallback(
-    () =>
-      typeof window.matchMedia === "function"
-        ? window.matchMedia(query).matches
-        : null,
+    () => mediaQueryStore(query)?.getSnapshot() ?? null,
     [query],
   );
   return useSyncExternalStore(subscribe, getSnapshot, unknownOnServer);
@@ -120,3 +160,15 @@ export const AT_LEAST_MD = atLeast("md");
 export const AT_LEAST_LG = atLeast("lg");
 /** Ab Tailwinds `xl`. */
 export const AT_LEAST_XL = atLeast("xl");
+
+/*
+ * Zeigerart: Sie entscheidet Bedienmaße und Trefferflächen, die Breite
+ * Struktur und Seitenraster (ADR 0323). Gefragt wird nach dem Hauptzeiger
+ * (`pointer`), nicht nach irgendeinem (`any-pointer`): Ein Laptop mit
+ * Touchscreen bleibt fein, ein iPad grob. In CSS gelten Tailwinds `pointer-coarse:` und `pointer-fine:`.
+ */
+
+/** Finger als Hauptzeiger: Telefon, iPad. Bedienelemente mit Fingermaß. */
+export const COARSE_POINTER = "(pointer: coarse)";
+/** Maus oder Trackpad als Hauptzeiger: Bedienelemente mit Mausmaß. */
+export const FINE_POINTER = "(pointer: fine)";

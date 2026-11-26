@@ -97,7 +97,7 @@ func newTraegerStaffFixtureWith(t *testing.T, db *bun.DB, now func() time.Time, 
 	identity, err := lifecycleTestModule(testpkg.NewDatabase(t, db), unit, GuardianInvitationTestConfig{})
 	require.NoError(t, err)
 	require.NoError(t, mountTraegerStaffRoutes(router, tenantAPI, admin, workforceModule.TimeTracking.TraegerMonths, organizations, persons, membership, tenantAudit.DataAccessLog, sites,
-		workforceModule.TimeTracking.TraegerExports, settings.Traeger, identity, workforceModule.TimeTracking.Today))
+		workforceModule.TimeTracking.TraegerExports, settings.Traeger, settings.Settings, identity, workforceModule.TimeTracking.Today))
 	office := newTraegerOffice(t, db, portal, "Träger Personal", identityaccess.TraegerRolePersonnel)
 	return testpkg.SessionVerifier(router), portal, admin, unit, office, schoolRoutes
 }
@@ -254,14 +254,14 @@ func TestTraegerStaffRecordsLinkThePeopleOfAllSchools(t *testing.T) {
 		assert.Len(t, overview.Schools, 2)
 		assert.Empty(t, overview.Suggestions)
 		rec = traegerLink(t, router, office.token, map[string]any{
-			"members": []map[string]int64{{"school_id": north, "staff_id": miraNorth.ID}},
+			"members": []map[string]string{{"school_id": fmt.Sprint(north), "staff_id": fmt.Sprint(miraNorth.ID)}},
 		})
 		assertStaffRefusal(t, rec, http.StatusConflict, "workforce.traeger_staff_not_released")
 		assert.Empty(t, staffAccessEntries(t, db, office.organization, "traeger_staff_records"))
 	})
 
 	staffRelease(t, db, office.organization)
-	members := []map[string]int64{{"school_id": north, "staff_id": miraNorth.ID}, {"school_id": south, "staff_id": miraSouth.ID}}
+	members := []map[string]string{{"school_id": fmt.Sprint(north), "staff_id": fmt.Sprint(miraNorth.ID)}, {"school_id": fmt.Sprint(south), "staff_id": fmt.Sprint(miraSouth.ID)}}
 
 	t.Run("the overview proposes the same account at both schools", func(t *testing.T) {
 		rec := traegerJSON(t, router, office.token, http.MethodGet, "/traeger/staff-records/", nil)
@@ -347,6 +347,7 @@ func TestTraegerStaffRecordsLinkThePeopleOfAllSchools(t *testing.T) {
 			"members": members, "choices": map[string]string{"last_name": strconv.FormatInt(south, 10)},
 		})
 		require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+		assert.NotContains(t, rec.Body.String(), "held_bank_schools", "every school's bank row moved as the link read it")
 		record = decode[staffRecordBody](t, rec)
 		assert.Equal(t, "Sommer-Berg", record.LastName)
 		require.NotNil(t, record.PersonnelNumber)
@@ -394,7 +395,7 @@ func TestTraegerStaffRecordsLinkThePeopleOfAllSchools(t *testing.T) {
 		assert.Equal(t, "•••• 3000", *masked.IBAN, "the read shows the mask only")
 		assert.Nil(t, masked.TaxID)
 
-		rec = traegerJSON(t, router, office.token, http.MethodPut, path, map[string]any{"iban": "DE89 3704 0044 0532 0130 00"})
+		rec = traegerUpdateFinancial(t, router, office.token, record.ID, map[string]any{"iban": "DE89 3704 0044 0532 0130 00"})
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		assert.Equal(t, record.ID, decode[struct {
 			ID wireID `json:"id"`
@@ -402,6 +403,27 @@ func TestTraegerStaffRecordsLinkThePeopleOfAllSchools(t *testing.T) {
 		rec = traegerJSON(t, router, office.token, http.MethodGet, path, nil)
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		assert.Equal(t, "•••• 3000", *decode[workforce.TraegerStaffFinancial](t, rec).IBAN, "the same IBAN in another spelling changes nothing")
+	})
+
+	// ADR 0311: the section saves only over the values the form read.
+	t.Run("the bank section refuses values changed since the form read them", func(t *testing.T) {
+		path := fmt.Sprintf("/traeger/staff-records/%d/financial", record.ID)
+		stale, ok := readToken(t, traegerJSON(t, router, office.token, http.MethodGet, path, nil), "version")
+		require.True(t, ok)
+		rec := traegerUpdateFinancial(t, router, office.token, record.ID, map[string]any{"iban": "DE89370400440532013000", "tax_id": "12345678911"})
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		changes := staffSchoolValue(t, db, `SELECT COUNT(*) FROM workforce.staff_record_changes WHERE staff_record_id = ?`, record.ID)
+		for _, version := range []string{stale, ""} {
+			rec = traegerJSON(t, router, office.token, http.MethodPut, path, map[string]any{"iban": "DE89370400440532013000", "expected_version": version})
+			assertStaffRefusal(t, rec, http.StatusConflict, "general.changed_since_read")
+		}
+		assert.Equal(t, changes, staffSchoolValue(t, db, `SELECT COUNT(*) FROM workforce.staff_record_changes WHERE staff_record_id = ?`, record.ID),
+			"a refused save writes no trail entry")
+		rec = traegerJSON(t, router, office.token, http.MethodGet, path, nil)
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		assert.NotNil(t, decode[workforce.TraegerStaffFinancial](t, rec).TaxID, "the colleague's tax id stays")
+		rec = traegerUpdateFinancial(t, router, office.token, record.ID, map[string]any{"iban": "DE89370400440532013000"})
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	})
 
 	t.Run("the school reads that the Träger keeps the values and changes none of them", func(t *testing.T) {
@@ -449,7 +471,7 @@ func TestTraegerStaffRecordsLinkThePeopleOfAllSchools(t *testing.T) {
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		assert.Equal(t, 2, staffSchoolValue(t, db, `SELECT COUNT(*) FROM users.staff_employment_profiles WHERE membership_id IN (?, ?) AND personnel_number = '70005'`, miraNorth.ID, miraSouth.ID))
 		jonasRecord := traegerLink(t, router, office.token, map[string]any{
-			"members": []map[string]int64{{"school_id": south, "staff_id": jonas.ID}},
+			"members": []map[string]string{{"school_id": fmt.Sprint(south), "staff_id": fmt.Sprint(jonas.ID)}},
 		})
 		require.Equal(t, http.StatusCreated, jonasRecord.Code, jonasRecord.Body.String())
 		rec = traegerJSON(t, router, office.token, http.MethodPut, fmt.Sprintf("/traeger/staff-records/%d/personnel-number", decode[staffRecordBody](t, jonasRecord).ID), map[string]any{"personnel_number": "70005"})
@@ -485,7 +507,7 @@ func TestTraegerStaffRecordsLinkThePeopleOfAllSchools(t *testing.T) {
 		// The correction answers no record; the reader loads it again.
 		save := func(body map[string]any) staffRecordBody {
 			t.Helper()
-			rec := traegerJSON(t, router, office.token, http.MethodPut, path, body)
+			rec := traegerUpdatePerson(t, router, office.token, record.ID, body)
 			require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 			raw := decode[json.RawMessage](t, rec)
 			assert.True(t, len(raw) == 0 || string(raw) == "null", "the correction answers no record: %s", raw)
@@ -527,6 +549,26 @@ func TestTraegerStaffRecordsLinkThePeopleOfAllSchools(t *testing.T) {
 		assert.Equal(t, workforce.TraegerStaffChangeRemoved, cleared.Changes[0].Kind, "an emptied birthday is removed, not replaced")
 		assert.Equal(t, "birthday", cleared.Changes[0].Field)
 		assert.Equal(t, "1990-04-12", cleared.Changes[0].Value)
+	})
+
+	// ADR 0311: a correction saves only over the person the card read.
+	t.Run("a correction refuses a person changed since the card read it", func(t *testing.T) {
+		path := fmt.Sprintf("/traeger/staff-records/%d/person", record.ID)
+		stale, ok := readToken(t, traegerJSON(t, router, office.token, http.MethodGet, fmt.Sprintf("/traeger/staff-records/%d", record.ID), nil), "person_version")
+		require.True(t, ok)
+		rec := traegerUpdatePerson(t, router, office.token, record.ID, map[string]any{"first_name": "Myra", "last_name": "Sommer-Berg", "birthday": "1990-04-13"})
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		for _, version := range []string{stale, ""} {
+			rec = traegerJSON(t, router, office.token, http.MethodPut, path, map[string]any{
+				"first_name": "Mira", "last_name": "Sommer", "birthday": nil, "expected_version": version,
+			})
+			assertStaffRefusal(t, rec, http.StatusConflict, "general.changed_since_read")
+		}
+		assert.Equal(t, 1, staffSchoolValue(t, db, `SELECT COUNT(*) FROM workforce.staff_records
+			WHERE id = ? AND first_name = 'Myra' AND last_name = 'Sommer-Berg' AND birthday = '1990-04-13'`, record.ID),
+			"the colleague's correction stays")
+		rec = traegerUpdatePerson(t, router, office.token, record.ID, map[string]any{"first_name": "Myra", "last_name": "Sommer-Berg", "birthday": nil})
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	})
 
 	t.Run("no role without the right and no other Träger reaches the records", func(t *testing.T) {
@@ -582,7 +624,7 @@ func TestTraegerStaffOverviewQueryBudget(t *testing.T) {
 				staff := testpkg.CreateTestStaffForTenant(t, db, school, "Kraft", fmt.Sprintf("Nummer %d", i))
 				if i == 0 {
 					rec := traegerLink(t, router, office.token, map[string]any{
-						"members": []map[string]int64{{"school_id": school, "staff_id": staff.ID}},
+						"members": []map[string]string{{"school_id": fmt.Sprint(school), "staff_id": fmt.Sprint(staff.ID)}},
 					})
 					require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
 				}

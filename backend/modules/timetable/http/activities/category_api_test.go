@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
@@ -134,7 +135,8 @@ func TestUpdateCategory_Success(t *testing.T) {
 	category := testpkg.CreateTestActivityCategory(t, ctx.db, "ApiRename")
 
 	newName := fmt.Sprintf("Umbenannt-%d", time.Now().UnixNano())
-	body := map[string]string{"name": newName, "color": "#5080D8"}
+	read := listedCategoryVersion(t, ctx.router, category.ID)
+	body := map[string]string{"name": newName, "color": "#5080D8", "expected_version": read}
 
 	req := testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/activities/categories/%d", category.ID), body)
 	rr := testutil.ExecuteWithAuth(t, ctx.router, req, categoryManagerClaims())
@@ -143,6 +145,37 @@ func TestUpdateCategory_Success(t *testing.T) {
 	data := categoryDataFromResponse(t, rr.Body.Bytes())
 	assert.Equal(t, newName, data["name"])
 	assert.Equal(t, "#5080D8", data["color"])
+	assert.Equal(t, listedCategoryVersion(t, ctx.router, category.ID), data["version"], "the answer carries the version a second save sends")
+
+	// ADR 0311: a save over the version read before the rename, or without
+	// one, is refused and writes nothing.
+	for name, version := range map[string]string{"outdated": read, "missing": ""} {
+		req = testutil.NewAuthenticatedRequest(t, "PUT", fmt.Sprintf("/activities/categories/%d", category.ID), map[string]string{"name": "Überschrieben", "color": "#5080D8", "expected_version": version})
+		rr = testutil.ExecuteWithAuth(t, ctx.router, req, categoryManagerClaims())
+		require.Equal(t, http.StatusConflict, rr.Code, name)
+		assert.Contains(t, rr.Body.String(), `"code":"general.changed_since_read"`, name)
+	}
+}
+
+// listedCategoryVersion reads the category from the catalog list, as the
+// catalog page does, and returns the version its edit sends.
+func listedCategoryVersion(t *testing.T, router chi.Router, id int64) string {
+	t.Helper()
+	req := testutil.NewAuthenticatedRequest(t, "GET", "/activities/categories?include_archived=true", nil)
+	rr := testutil.ExecuteWithAuth(t, router, req, categoryManagerClaims())
+	require.Equal(t, http.StatusOK, rr.Code, "body: %s", rr.Body.String())
+	rows, ok := testutil.ParseJSONResponse(t, rr.Body.Bytes())["data"].([]any)
+	require.True(t, ok)
+	for _, row := range rows {
+		category, _ := row.(map[string]any)
+		if category["id"] == fmt.Sprint(id) {
+			version, _ := category["version"].(string)
+			require.NotEmpty(t, version)
+			return version
+		}
+	}
+	t.Fatalf("category %d is not listed", id)
+	return ""
 }
 
 func TestUpdateCategory_RejectsInvalidColor(t *testing.T) {

@@ -827,6 +827,33 @@ func TestNightlyRetentionDeletesFinishedWithdrawalCompletionsAfterAYear(t *testi
 	assert.Empty(t, suite.loggedDeletions(t, otherSchool, auditModels.DeletionTypeCareWithdrawalRetention))
 }
 
+// The name of a one-day pickup person lives no longer than its day (#7655):
+// the nightly run deletes every pickup person of a day before today, keeps
+// today's and later ones and never touches another school.
+func TestNightlyRetentionDeletesPickupPersonsOfPastDays(t *testing.T) {
+	t.Parallel()
+	suite := newRetentionSuite(t)
+	school := testpkg.Tenant(t)
+	otherSchool, _ := testpkg.CreateTestTenant(t, suite.admin)
+	child := testpkg.CreateTestStudent(t, suite.admin, "Abholung", "Kind", "2a")
+	foreign := testpkg.CreateTestStudentForTenant(t, suite.admin, otherSchool, "Abholung", "Fremd", "2a")
+	person := func(tenantID, studentID int64, daysFromToday int) int64 {
+		return suite.insertID(t, `INSERT INTO schedule.student_pickup_persons (tenant_id, student_id, exception_date, person_name)
+			VALUES (?, ?, (ROOT_NOW AT TIME ZONE 'Europe/Berlin')::date + ?, 'Tante Frieda') RETURNING id`, tenantID, studentID, daysFromToday)
+	}
+	yesterday, today, tomorrow := person(school, child.ID, -1), person(school, child.ID, 0), person(school, child.ID, 1)
+	foreignYesterday := person(otherSchool, foreign.ID, -1)
+
+	suite.run(t, school)
+
+	assert.False(t, suite.exists(t, "schedule.student_pickup_persons", yesterday), "the name of a past day is deleted")
+	assert.True(t, suite.exists(t, "schedule.student_pickup_persons", today), "today's pickup person stays for the pickup")
+	assert.True(t, suite.exists(t, "schedule.student_pickup_persons", tomorrow))
+	assert.True(t, suite.exists(t, "schedule.student_pickup_persons", foreignYesterday), "the run of one school never touches another")
+	assert.Equal(t, []int{1}, suite.loggedDeletions(t, school, auditModels.DeletionTypePickupPersonRetention))
+	assert.Empty(t, suite.loggedDeletions(t, otherSchool, auditModels.DeletionTypePickupPersonRetention))
+}
+
 func TestNightlyRetentionDeletesSubmissionRateLimitsAfterTheirWindow(t *testing.T) {
 	t.Parallel()
 	suite := newRetentionSuite(t)

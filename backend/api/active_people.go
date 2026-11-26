@@ -32,7 +32,6 @@ func (p activePeople) GetStaffByPersonID(ctx context.Context, key int64) (*prese
 type activeStaffAccess struct {
 	source interface {
 		GetCurrentStaff(context.Context) (int64, int64, bool, error)
-		HasCurrentStaff(context.Context) (bool, error)
 	}
 }
 
@@ -42,7 +41,4 @@ func (p activeStaffAccess) GetCurrentStaff(ctx context.Context) (*presenceAPI.St
 		return nil, err
 	}
 	return &presenceAPI.StaffIdentity{ID: id, TenantID: tenantID}, err
-}
-func (p activeStaffAccess) HasCurrentStaff(ctx context.Context) (bool, error) {
-	return p.source.HasCurrentStaff(ctx)
 }

@@ -71,15 +71,19 @@ export function mapParentConferenceOffer(
 
 export const SCHOOL_PARENT_CONFERENCES_ROUTE = "/school/elternsprechtag";
 
-export async function fetchSchoolParentConferences(): Promise<SchoolParentConferenceList> {
-  const data = await bffJson(
-    "school",
-    "GET /school/calendar/parent-conferences",
-  );
+export function mapSchoolParentConferences(
+  data: schoolCalendarContract.SchoolParentConferenceList,
+): SchoolParentConferenceList {
   return {
     conferences: (data.conferences ?? []).map(mapConference),
     classes: data.classes ?? [],
   };
+}
+
+export async function fetchSchoolParentConferences(): Promise<SchoolParentConferenceList> {
+  return mapSchoolParentConferences(
+    await bffJson("school", "GET /school/calendar/parent-conferences"),
+  );
 }
 
 export async function createSchoolParentConference(
@@ -92,9 +96,15 @@ export async function createSchoolParentConference(
   );
 }
 
+/**
+ * Saves a changed day on the `version` of the day the change started from;
+ * the server refuses it when the day or its bookings changed since
+ * (ADR 0311).
+ */
 export async function updateSchoolParentConference(
   id: string,
   request: ParentConferenceRequest,
+  expectedVersion: string,
 ): Promise<ParentConference> {
   return mapConference(
     await bffJson(
@@ -102,7 +112,7 @@ export async function updateSchoolParentConference(
       "PUT /school/calendar/parent-conferences/{conferenceId}",
       {
         params: { conferenceId: id },
-        body: request,
+        body: { ...request, expected_version: expectedVersion },
       },
     ),
   );

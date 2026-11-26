@@ -249,6 +249,7 @@ export const READER_OPTION_KEYS = [
   "focusThrottleInterval",
   "isPaused",
   "keepPreviousData",
+  "onDiscarded",
   "onError",
   "onSuccess",
   "refreshInterval",
@@ -261,8 +262,12 @@ export const READER_OPTION_KEYS = [
 
 export type ReaderOptions<T, E = Error> = Pick<
   SWRConfiguration<T, E>,
-  Exclude<(typeof READER_OPTION_KEYS)[number], "onSuccess" | "onError">
+  Exclude<
+    (typeof READER_OPTION_KEYS)[number],
+    "onDiscarded" | "onSuccess" | "onError"
+  >
 > & {
+  onDiscarded?: () => void;
   onSuccess?: (data: T) => void;
   onError?: (error: E) => void;
 };
@@ -309,13 +314,14 @@ function copyAllowed(
 function readerConfig<T, E>(
   options: ReaderOptions<T, E> | undefined,
 ): SWRConfiguration<T, E> {
-  const { onSuccess, onError, ...rest } = copyAllowed(
+  const { onDiscarded, onSuccess, onError, ...rest } = copyAllowed(
     options,
     allowedReaderKeys,
     "reader",
   ) as ReaderOptions<T, E>;
   return {
     ...rest,
+    ...(onDiscarded ? { onDiscarded: () => onDiscarded() } : {}),
     ...(onSuccess ? { onSuccess: (data: T) => onSuccess(data) } : {}),
     ...(onError ? { onError: (error: E) => onError(error) } : {}),
   };
@@ -330,9 +336,10 @@ function mutationOptions(options: unknown): unknown {
 const logger = createLogger({ component: "useSWRAuth" });
 
 /**
- * Safari reports `undefined is not a function` when SWR's mutate finds no
- * state for the cache it is bound to (#2459). Not reproduced locally; this
- * records whether the hook's cache was registered at that moment. The
+ * Safari 26 reported `undefined is not a function` from SWR's mutate, where
+ * it destructured its rest parameter, with the cache registered (#2459,
+ * #8031). Not reproduced locally; patches/swr@2.5.1.patch removes that
+ * destructuring. This stays as the proof: the event must not come back. The
  * error still reaches the caller.
  */
 function reportMutateTypeError<V>(cache: Cache, result: Promise<V>): void {
@@ -421,6 +428,11 @@ type ScopedSWRResponse<T, E> = SWRResponse<T, E> & {
   /** Current protected values, including between renders. Never raw cache. */
   readCurrent?(): { data: T | undefined; error: E | undefined };
 };
+
+// Unlike a normal SWR mount, mutate() deliberately skips deduplication.
+// A discarded seed or stale generation needs one recovery per cache/key,
+// not one per mounted projection of that key.
+const recoveringReads = new WeakMap<Cache, Set<string>>();
 
 function useScopedSWR<T, E>(
   key: string | null,
@@ -537,8 +549,13 @@ function useScopedSWR<T, E>(
   useEffect(() => {
     if (reload === null || reloaded.current === reload) return;
     reloaded.current = reload;
-    void revalidate();
-  }, [reload, revalidate]);
+    const active = recoveringReads.get(cache) ?? new Set<string>();
+    if (active.has(reload)) return;
+    recoveringReads.set(cache, active);
+    active.add(reload);
+    const release = () => active.delete(reload);
+    void revalidate().then(release, release);
+  }, [cache, reload, revalidate]);
 
   const mutationGeneration = fullKey === null ? 0 : dataGenerationOf(fullKey);
   const mutate = useMemo(
@@ -735,6 +752,7 @@ interface OpeningSource<T> {
 async function readThrough<T>(
   current: OpeningSource<T>,
   flight: number,
+  isCurrent: () => boolean,
 ): Promise<OpeningFlight<T>> {
   for (let tries = 0; ; tries += 1) {
     try {
@@ -742,14 +760,19 @@ async function readThrough<T>(
         lockFetcher(current.fullKey, current.fetcher)(),
         { revalidate: false },
       );
-      // Undefined: a scope or data bump dropped the run; the bump
-      // started a new opening.
+      if (!isCurrent()) {
+        return { ok: true, flight, data: undefined };
+      }
       if (data !== undefined) {
         liftRefusal(current.fullKey);
         current.onSuccess?.(data);
       }
       return { ok: true, flight, data };
     } catch (error) {
+      // A superseded opening cannot retry or change the shared refusal.
+      if (!isCurrent()) {
+        return { ok: true, flight, data: undefined };
+      }
       if (isDiscardedAnswer(error) && tries < 2) continue;
       if (!isDiscardedAnswer(error)) {
         if (isAccessRefusal(error) && current.shown !== undefined) {
@@ -798,6 +821,28 @@ export function useOpeningRead<T>(
     fullKey === null
       ? null
       : JSON.stringify([fullKey, generation, dataGenerationOf(fullKey)]);
+  const [held, setHeld] = useState<{
+    serial: number;
+    flight: number;
+    data: T;
+  }>();
+  // A new serial per opening: A → B → A must not find A's first answer.
+  const [track, setTrack] = useState({ opening, serial: 0 });
+  let serial = track.serial;
+  if (track.opening !== opening) {
+    serial = track.serial + 1;
+    setTrack({ opening, serial });
+    setHeld(undefined);
+  }
+  // The identity belongs to a visible commit, including Activity reveals
+  // that reconnect effects without changing the key or the render state.
+  const committed = useRef<{ serial: number } | null>(null);
+  useLayoutEffect(() => {
+    committed.current = { serial };
+    return () => {
+      committed.current = null;
+    };
+  }, [serial]);
   // SWR starts automatic reads on a key change even with mount
   // revalidation off. Until this opening started its own read, none runs;
   // reset before SWR's own layout effects of the new key can read.
@@ -807,7 +852,17 @@ export function useOpeningRead<T>(
   }, [opening]);
   const read = useScopedSWR<T, unknown>(
     key,
-    fetcher,
+    async () => {
+      // An external invalidation can also read through SWR's own fetcher.
+      const started = committed.current;
+      if (started === null) throw new DiscardedAnswer();
+      const data = await fetcher().catch((error: unknown) => {
+        if (committed.current !== started) throw new DiscardedAnswer();
+        throw error;
+      });
+      if (committed.current !== started) throw new DiscardedAnswer();
+      return data;
+    },
     {
       ...OPENING_READER,
       isPaused: () => !ready.current,
@@ -818,20 +873,8 @@ export function useOpeningRead<T>(
     false,
   );
 
-  // A new serial per opening: A → B → A must not find A's first answer.
-  const [track, setTrack] = useState({ opening, serial: 0 });
-  let serial = track.serial;
-  if (track.opening !== opening) {
-    serial = track.serial + 1;
-    setTrack({ opening, serial });
-  }
   const [attempt, setAttempt] = useState({ serial, count: 0 });
   const count = attempt.serial === serial ? attempt.count : 0;
-  const [held, setHeld] = useState<{
-    serial: number;
-    flight: number;
-    data: T;
-  }>();
   const [failed, setFailed] = useState<{
     serial: number;
     flight: number;
@@ -865,16 +908,34 @@ export function useOpeningRead<T>(
     };
   });
 
-  const readOnce = useCallback(async (): Promise<OpeningFlight<T>> => {
+  const readOnce = useCallback(async (): Promise<
+    OpeningFlight<T> & { readonly isCurrent: () => boolean }
+  > => {
     const current = latest.current;
+    const started = committed.current;
     const flight = ++flights.current;
     const { fullKey: readKey } = current;
-    if (readKey === null) {
-      return { ok: false, flight, error: new DiscardedAnswer() };
+    if (readKey === null || started === null) {
+      return {
+        ok: false,
+        flight,
+        error: new DiscardedAnswer(),
+        isCurrent: () => false,
+      };
     }
+    const dataGeneration = dataGenerationOf(readKey);
+    const isCurrent = () =>
+      committed.current === started &&
+      flights.current === flight &&
+      dataGenerationOf(readKey) === dataGeneration;
     setPending(flight);
     try {
-      return await readThrough({ ...current, fullKey: readKey }, flight);
+      const result = await readThrough(
+        { ...current, fullKey: readKey },
+        flight,
+        isCurrent,
+      );
+      return { ...result, isCurrent };
     } finally {
       setPending((newest) => (newest === flight ? null : newest));
     }
@@ -887,7 +948,7 @@ export function useOpeningRead<T>(
     let current = true;
     ready.current = true;
     void readOnce().then((result) => {
-      if (!current) return;
+      if (!current || !result.isCurrent()) return;
       if (!result.ok) {
         setFailed({ serial, flight: result.flight, error: result.error });
       } else if (result.data !== undefined) {
@@ -919,6 +980,7 @@ export function useOpeningRead<T>(
   const reload = useCallback(async () => {
     const forSerial = latest.current.serial;
     const result = await readOnce();
+    if (!result.isCurrent()) throw new DiscardedAnswer();
     if (!result.ok) throw result.error;
     if (result.data === undefined) throw new DiscardedAnswer();
     const data = result.data;
@@ -930,6 +992,7 @@ export function useOpeningRead<T>(
       const current = latest.current;
       if (args.length === 0) {
         return readOnce().then((result) => {
+          if (!result.isCurrent()) return undefined;
           if (!result.ok) {
             setFailed({
               serial: current.serial,
@@ -945,12 +1008,19 @@ export function useOpeningRead<T>(
           return result.data;
         });
       }
+      const started = committed.current;
       const flight = ++flights.current;
       const written = (
         current.mutate as (...values: unknown[]) => Promise<T | undefined>
       )(...args);
       if (args[0] === undefined) return written;
       return written.then((data) => {
+        if (
+          started === null ||
+          committed.current !== started ||
+          flights.current !== flight
+        )
+          return undefined;
         if (data !== undefined) {
           setHeld({ serial: current.serial, flight, data });
         }
@@ -1358,6 +1428,44 @@ export function useSWRPreload() {
   );
 }
 
+interface InvalidationBurst {
+  readonly matches: ((key: string) => boolean)[];
+  readonly done: Promise<unknown[]>;
+}
+
+const invalidationBursts = new WeakMap<Cache, Map<string, InvalidationBurst>>();
+
+function coalesceInvalidation(
+  cache: Cache,
+  channel: string,
+  matches: (key: string) => boolean,
+  run: (match: (key: string) => boolean) => Promise<unknown[]>,
+): Promise<unknown[]> {
+  const bursts =
+    invalidationBursts.get(cache) ?? new Map<string, InvalidationBurst>();
+  invalidationBursts.set(cache, bursts);
+  const pending = bursts.get(channel);
+  if (pending) {
+    pending.matches.push(matches);
+    return pending.done;
+  }
+  const batch = [matches];
+  const done = new Promise<unknown[]>((resolve, reject) => {
+    setTimeout(() => {
+      bursts.delete(channel);
+      if (isSWRSessionPending() || !SWRGlobalState.has(cache)) {
+        resolve([]);
+        return;
+      }
+      const finish = async () =>
+        run((key) => batch.some((match) => match(key)));
+      void finish().then(resolve, reject);
+    }, 350);
+  });
+  bursts.set(channel, { matches: batch, done });
+  return done;
+}
+
 /**
  * Invalidate every entry of the session's scope whose resource key `matches`,
  * wherever SWR keeps it (invalidateSWRKeys). `matches` gets the key without
@@ -1371,14 +1479,36 @@ export function useInvalidateMatching() {
   const { prefix } = useSWRScope();
   const { cache } = useSWRConfig();
   return useCallback(
-    (matches: (key: string) => boolean, options?: { clear?: boolean }) => {
+    (
+      matches: (key: string) => boolean,
+      options?: {
+        clear?: boolean;
+        expireInactive?: boolean;
+        /** Union local and SSE invalidations for this channel in one short burst. */
+        coalesce?: string;
+      },
+    ) => {
       if (prefix === null || isSWRSessionPending()) return Promise.resolve([]);
       const scope = scopedSWRKey(prefix, "");
-      return invalidateSWRKeys(
-        cache,
-        (key) => key.startsWith(scope) && matches(key.slice(scope.length)),
-        options?.clear ? "clear" : "revalidate",
-      );
+      const mode = options?.clear
+        ? "clear"
+        : options?.expireInactive
+          ? "expire-inactive"
+          : "revalidate";
+      const run = (match: (key: string) => boolean) =>
+        invalidateSWRKeys(
+          cache,
+          (key) => key.startsWith(scope) && match(key.slice(scope.length)),
+          mode,
+        );
+      return options?.coalesce
+        ? coalesceInvalidation(
+            cache,
+            `${scope}${options.coalesce}:${mode}`,
+            matches,
+            run,
+          )
+        : run(matches);
     },
     [prefix, cache],
   );

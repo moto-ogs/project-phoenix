@@ -44,13 +44,14 @@ let currentSearch = new URLSearchParams();
 
 vi.mock("next-auth/react", () => ({
   useSession: vi.fn(() => ({
-    data: { user: { id: "3", tenantId: 2 }, error: sessionState.error },
+    data: { user: { id: "3", tenantId: "2" }, error: sessionState.error },
     status: sessionState.status,
     update: mockUpdateSession,
   })),
 }));
 
 vi.mock("next/navigation", () => ({
+  usePathname: () => "/students/search",
   useRouter: () => ({ push: mockPush, replace: vi.fn() }),
   useSearchParams: () => currentSearch,
 }));
@@ -61,6 +62,10 @@ vi.mock("~/lib/tenant-router", () => ({
 
 vi.mock("~/lib/supervision-context", () => ({
   useOptionalSupervision: () => ({
+    ownGroupIds: [],
+    ownGroupRoomNames: [],
+    ownSessionRoomNames: [],
+    ownSupervisedRooms: [],
     hasGroups: false,
     isSupervising: false,
     isLoadingGroups: false,
@@ -145,17 +150,6 @@ vi.mock("~/lib/active-api", () => ({
   },
 }));
 
-vi.mock("~/lib/hooks/use-user-context", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("~/lib/hooks/use-user-context")>()),
-  useUserContext: () => ({
-    userContext: {
-      educationalGroupIds: [],
-      educationalGroupRoomNames: [],
-      supervisedRoomNames: [],
-    },
-  }),
-}));
-
 vi.mock("~/lib/student-api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/lib/student-api")>()),
   fetchStudents: (...args: unknown[]) => mockGetStudents(...args),
@@ -189,13 +183,22 @@ vi.mock("~/components/students/student-card", () => ({
   StudentInfoRow: ({ children }: { children: React.ReactNode }) => (
     <div>{children}</div>
   ),
+  PlannedActivityRows: ({
+    activities,
+  }: {
+    activities?: readonly { title: string }[];
+  }) => (
+    <div data-testid="planned-activity-rows">
+      {(activities ?? []).map((activity) => activity.title).join(", ")}
+    </div>
+  ),
   PickupTimeRow: () => <div />,
   ArrivalTimeRow: () => <div />,
 }));
 
 import { ApiError } from "~/lib/api-error";
 import { releaseFakeTimers } from "~/test/clock";
-import StudentSearchPage from "./page";
+import StudentSearchPage from "./page-content";
 
 const STORAGE_KEY = "student-search:last-filters:tenant-2:3";
 const STALL_MESSAGE =
@@ -296,8 +299,9 @@ describe("StudentSearchPage: click on the navigation entry of this page (#3374)"
 
     const [searchInput] = screen.getAllByPlaceholderText("Name suchen…");
     fireEvent.change(searchInput!, { target: { value: "Mila" } });
+    // The term narrows the loaded list in the browser: Max is no match.
     await waitFor(() => {
-      expect(studentKeys.at(-1)).toContain("Mila");
+      expect(screen.queryByTestId("student-card-7")).toBeNull();
     });
     expect(new URLSearchParams(window.location.search).get("search")).toBe(
       "Mila",
@@ -305,14 +309,52 @@ describe("StudentSearchPage: click on the navigation entry of this page (#3374)"
 
     fireEvent.click(navLink);
 
-    await waitFor(() => {
-      expect(studentKeys.at(-1)).toBe(unfilteredKey);
-    });
+    expect(await screen.findByTestId("student-card-7")).toBeTruthy();
+    expect(studentKeys.at(-1)).toBe(unfilteredKey);
     expect(
       (screen.getAllByPlaceholderText("Name suchen…")[0] as HTMLInputElement)
         .value,
     ).toBe("");
     expect(window.location.search).toBe("");
+  });
+
+  it("searches the loaded list without asking the server per term", async () => {
+    renderOnSearchPage("");
+    const unfilteredKey = studentKeys.at(-1);
+    const [searchInput] = screen.getAllByPlaceholderText("Name suchen…");
+
+    fireEvent.change(searchInput!, { target: { value: "must" } });
+    await waitFor(() => {
+      expect(new URLSearchParams(window.location.search).get("search")).toBe(
+        "must",
+      );
+    });
+    expect(screen.getByTestId("student-card-7")).toBeTruthy();
+
+    fireEvent.change(searchInput!, { target: { value: "muster frau" } });
+    await waitFor(() => {
+      expect(screen.queryByTestId("student-card-7")).toBeNull();
+    });
+    expect(new Set(studentKeys)).toEqual(new Set([unfilteredKey]));
+  });
+
+  it("asks the server for the term when the list is too long to load in full", async () => {
+    studentsResponse = {
+      data: {
+        students: [mockStudent],
+        truncatedTotal: 30000,
+      },
+      isLoading: false,
+      error: undefined,
+    };
+    renderOnSearchPage("");
+    const [searchInput] = screen.getAllByPlaceholderText("Name suchen…");
+
+    fireEvent.change(searchInput!, { target: { value: "Mila" } });
+
+    await waitFor(() => {
+      expect(studentKeys.at(-1)).toContain("-Mila-");
+    });
   });
 
   it("removes a restored name search from the URL", async () => {

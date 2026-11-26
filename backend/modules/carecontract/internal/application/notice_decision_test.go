@@ -12,6 +12,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/carecontract"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
@@ -62,10 +63,10 @@ func TestUnacceptedReasonHoldsAsOrdinaryTermination(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, &end, options.ReinterpretedEndsOn, "the office sees the end before it refuses the reason")
 
-	_, err = f.notices.RejectNoticeReason(f.ctx, f.reviewer, f.contract, calendar.NewDate(2026, 11, 30))
-	var invalid *carecontract.ValidationError
-	require.ErrorAs(t, err, &invalid, "an end other than the one shown is refused")
-	assert.Equal(t, "changed", invalid.Fields["expected_ends_on"])
+	for _, shown := range []calendar.Date{calendar.NewDate(2026, 11, 30), ""} {
+		_, err = f.notices.RejectNoticeReason(f.ctx, f.reviewer, f.contract, shown)
+		require.ErrorIs(t, err, readstate.ErrChanged, "an end other than the one shown, or none, is refused: %q", shown)
+	}
 	assert.Empty(t, f.endMails())
 
 	options, err = f.notices.RejectNoticeReason(f.ctx, f.reviewer, f.contract, end)
@@ -164,10 +165,12 @@ func TestSetEndTellsTheParentsTheLastDayOnce(t *testing.T) {
 // pinned by TestNoticeEndIsSetOnceInTheStore and TestOpenEndRefusesAnEndAlreadySet.
 func TestRefusalAgainstSetEndLetsOneWin(t *testing.T) {
 	t.Parallel()
+	// The refusal holds to the ordinary end the office was shown.
+	refusal := endDecision{decision: carecontract.EndDecisionReinterpreted, expected: calendar.NewDate(2026, 12, 31)}
 	for name, order := range map[string][2]endDecision{
-		"refusal first": {{decision: carecontract.EndDecisionReinterpreted}, {decision: carecontract.EndDecisionSet, endsOn: calendar.NewDate(2026, 11, 30)}},
-		"set end first": {{decision: carecontract.EndDecisionSet, endsOn: calendar.NewDate(2026, 11, 30)}, {decision: carecontract.EndDecisionReinterpreted}},
-		"twice refused": {{decision: carecontract.EndDecisionReinterpreted}, {decision: carecontract.EndDecisionReinterpreted}},
+		"refusal first": {refusal, {decision: carecontract.EndDecisionSet, endsOn: calendar.NewDate(2026, 11, 30)}},
+		"set end first": {{decision: carecontract.EndDecisionSet, endsOn: calendar.NewDate(2026, 11, 30)}, refusal},
+		"twice refused": {refusal, refusal},
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
@@ -276,7 +279,7 @@ func TestDecidedEndTellsNoParentWhoseRightWasRevoked(t *testing.T) {
 	require.NoError(t, err)
 	f.addressees.set("andere.bezugsperson@example.org")
 
-	options, err := f.notices.RejectNoticeReason(f.ctx, f.reviewer, f.contract, calendar.Date(""))
+	options, err := f.notices.RejectNoticeReason(f.ctx, f.reviewer, f.contract, calendar.NewDate(2026, 12, 31))
 	require.NoError(t, err)
 	require.NotNil(t, options.Notice)
 	assert.Equal(t, carecontract.EndDecisionReinterpreted, options.Notice.EndDecision, "the decision stands")
@@ -320,7 +323,7 @@ func TestEndNoticeRecordsWhyNoMailWentOut(t *testing.T) {
 					if decision == carecontract.EndDecisionSet {
 						return f.notices.SetNoticeEnd(f.ctx, f.reviewer, f.contract, calendar.NewDate(2026, 12, 31))
 					}
-					return f.notices.RejectNoticeReason(f.ctx, f.reviewer, f.contract, calendar.Date(""))
+					return f.notices.RejectNoticeReason(f.ctx, f.reviewer, f.contract, calendar.NewDate(2026, 12, 31))
 				}
 				options, err := decide()
 				require.NoError(t, err)

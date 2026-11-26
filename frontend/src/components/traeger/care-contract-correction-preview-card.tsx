@@ -284,7 +284,6 @@ export function CareContractCorrectionPreviewCard({
         columns={COLUMNS}
         rows={[...shown]}
         getRowKey={(row) => row.line}
-        stackedOnMobile
         stackedLayout="lines"
         dense
         // A list may hold every imported contract: show it in pages; the

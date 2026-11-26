@@ -1,15 +1,17 @@
 import { captureBffException } from "~/lib/sentry-bff.server";
 import { type NextRequest, NextResponse } from "next/server";
-import { sendBackend } from "~/lib/backend-client.server";
+import { z } from "zod";
+import { contractWrite } from "~/lib/contract/client.server";
+import {
+  DEMO_SESSION_ROLE_VALUES,
+  routes,
+} from "~/lib/contract/demo-access.generated";
+import { TokenResponseSchema } from "~/lib/contract/shared.generated";
+import { contractError } from "~/lib/contract/route-response.server";
 import { frontendOrigin } from "~/lib/client-headers.server";
 import { createLogger } from "~/lib/logger";
-import {
-  DEMO_TOKEN_COOKIE,
-  DEMO_TOKEN_COOKIE_OPTIONS,
-  demoBackendPath,
-} from "../forward";
-import { forwardBackendResponse } from "~/lib/backend-proxy-response.server";
-import { problemResponse } from "~/lib/api-helpers.server";
+import { DEMO_TOKEN_COOKIE, DEMO_TOKEN_COOKIE_OPTIONS } from "../forward";
+import { problemResponse } from "~/lib/api-response-error.server";
 import { withPrivateNoStore } from "~/lib/private-no-store";
 import { successResponse } from "~/lib/route-wrapper-utils.server";
 import { configuredPortalOfHost } from "~/lib/portal-paths";
@@ -35,19 +37,33 @@ const DEMO_PORTAL_AUTH = {
   traeger: traegerPortal,
 } as const;
 
-const DEMO_SESSION_ROLES = new Set([
-  "lead",
-  "caregiver",
-  "parent",
-  "traeger",
-  "all",
-]);
+const demoSessionRole = z.enum(DEMO_SESSION_ROLE_VALUES);
+const rollbackAnswer = z.intersection(
+  TokenResponseSchema.refine(
+    (pair) => !!pair.access_token && !!pair.refresh_token,
+  ),
+  z.object({ demo: z.object({ role: demoSessionRole }) }),
+);
 
 /** The portal a demo role's session belongs to (#3468, #6193). */
 function portalOfDemoRole(role: string): DemoPortal {
   if (role === "parent") return "parent";
   if (role === "traeger") return "traeger";
   return "tenant";
+}
+
+// The backend may already have minted a session when the decoder refuses
+// the banner metadata. Only a validated pair and role can drive rollback.
+async function rollbackUnreadableSession(
+  request: NextRequest,
+  payload: unknown,
+) {
+  const recovery = rollbackAnswer.safeParse(payload);
+  if (!recovery.success) return;
+  const minted = DEMO_PORTAL_AUTH[portalOfDemoRole(recovery.data.demo.role)];
+  await revokeMintedSession(
+    logoutRollback(request, minted.portal.backend.logout, recovery.data),
+  );
 }
 
 async function POSTHandler(request: NextRequest) {
@@ -78,21 +94,24 @@ async function redeem(request: NextRequest, portal: DemoPortal) {
   }
   const role = typeof body.role === "string" ? body.role : undefined;
   try {
-    const backend = await sendBackend(demoBackendPath("sessions"), null, {
-      method: "POST",
-      json: { token, role },
-      request,
-    });
-    if (!backend.ok) return forwardBackendResponse(backend, request);
-    const payload = (await backend.json().catch(() => {
-      throw new Error("Invalid demo session response");
-    })) as Record<string, unknown>;
-    const demo = payload.demo as Record<string, unknown> | undefined;
-    if (!demo || !DEMO_SESSION_ROLES.has(String(demo.role))) {
+    const reply = await contractWrite(
+      routes["POST /demo/access/sessions"],
+      { token, role },
+      {
+        request,
+        onInvalidSuccess: (payload) =>
+          rollbackUnreadableSession(request, payload),
+      },
+    );
+    if (!reply.ok) return contractError(reply, request);
+    const payload = reply.value;
+    const demo = payload.demo;
+    const mintedRole = demoSessionRole.safeParse(demo.role);
+    if (!mintedRole.success) {
       throw new Error("Invalid demo role");
     }
     // The session belongs to the portal of its role, not of this host.
-    const mintedPortal = portalOfDemoRole(String(demo.role));
+    const mintedPortal = portalOfDemoRole(mintedRole.data);
     const minted = DEMO_PORTAL_AUTH[mintedPortal];
     const matchesPortal = mintedPortal === portal;
     if (matchesPortal) {
@@ -120,9 +139,9 @@ async function redeem(request: NextRequest, portal: DemoPortal) {
           traeger: demo.traeger === true,
         },
       }),
-      { status: backend.status },
+      { status: reply.backend?.status },
     );
-    if (backend.ok && linkToken) {
+    if (linkToken) {
       response.cookies.set(
         DEMO_TOKEN_COOKIE,
         linkToken,

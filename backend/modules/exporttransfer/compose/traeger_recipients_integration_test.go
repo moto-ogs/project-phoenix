@@ -11,6 +11,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/exporttransfer"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
@@ -91,7 +92,7 @@ func TestTraegerFailureStaysWithItsRecipient(t *testing.T) {
 	kaemmerei, steuerbuero, _, _ := f.twoRecipients(t, f.org)
 	input := f.readyInput()
 	input.Name, input.HostKeyFingerprint = "Steuerbüro", f.server.FingerprintECDSA
-	_, err := f.transfers.SaveRecipient(f.ctx, f.org, 0, steuerbuero, input)
+	_, err := f.transfers.SaveRecipient(f.ctx, f.org, 0, steuerbuero, input, f.version(t, f.org, steuerbuero))
 	require.NoError(t, err)
 	var destinations []exporttransfer.Destination
 	failed, err := f.transfers.Transfer(f.ctx, formatRequest(f.org, "datev", "datev.csv", &destinations))
@@ -102,13 +103,13 @@ func TestTraegerFailureStaysWithItsRecipient(t *testing.T) {
 	require.True(t, arrived.Transferred)
 	// Saving the recipient changes no handover: its answer keeps the failure.
 	input.HostKeyFingerprint = f.server.Fingerprint
-	saved, err := f.transfers.SaveRecipient(f.ctx, f.org, 0, steuerbuero, input)
+	saved, err := f.transfers.SaveRecipient(f.ctx, f.org, 0, steuerbuero, input, f.version(t, f.org, steuerbuero))
 	require.NoError(t, err)
 	require.NotNil(t, saved.LastHandover, "the save answer keeps the newest handover")
 	assert.Equal(t, exporttransfer.TraegerFailed, saved.LastHandover.State)
 	// A rename leaves the name a handover had.
 	input.Name = "Steuerkanzlei"
-	_, err = f.transfers.SaveRecipient(f.ctx, f.org, 0, steuerbuero, input)
+	_, err = f.transfers.SaveRecipient(f.ctx, f.org, 0, steuerbuero, input, f.version(t, f.org, steuerbuero))
 	require.NoError(t, err)
 	page, err := f.transfers.Recipients(f.ctx, f.org, 10)
 	require.NoError(t, err)
@@ -168,11 +169,11 @@ func TestTraegerRecipientNamesStayApart(t *testing.T) {
 	input.Name = "Steuerbüro"
 	second := f.add(t, f.org, input)
 	input.Name = "kämmerei"
-	_, err = f.transfers.SaveRecipient(f.ctx, f.org, 0, second, input)
+	_, err = f.transfers.SaveRecipient(f.ctx, f.org, 0, second, input, f.version(t, f.org, second))
 	require.ErrorIs(t, err, exporttransfer.ErrRecipientNameTaken, "a rename never takes the name of another recipient")
 	f.add(t, f.other, f.readyInput())
 	input.Name = ""
-	_, err = f.transfers.SaveRecipient(f.ctx, f.org, 0, first, input)
+	_, err = f.transfers.SaveRecipient(f.ctx, f.org, 0, first, input, f.version(t, f.org, first))
 	var invalid *exporttransfer.RecipientError
 	require.ErrorAs(t, err, &invalid)
 	assert.Equal(t, []string{exporttransfer.RecipientFieldName}, invalid.Fields)
@@ -187,13 +188,13 @@ func TestTraegerAssignmentRefusesForeignRecipientsAndUnknownFormats(t *testing.T
 	foreign := f.add(t, f.other, f.readyInput())
 	_, err := f.transfers.AssignFormats(f.ctx, f.org, 0, []exporttransfer.TraegerAssignment{
 		{Format: "pain008"}, {Format: "datev", RecipientID: (*ident.ID)(&foreign)},
-	})
+	}, f.assignmentsVersion(t, f.org))
 	require.ErrorIs(t, err, exporttransfer.ErrRecipientNotFound)
 	for name, assignments := range map[string][]exporttransfer.TraegerAssignment{
 		"unknown format": {{Format: "cip", RecipientID: (*ident.ID)(&own)}},
 		"format twice":   {{Format: "datev", RecipientID: (*ident.ID)(&own)}, {Format: "datev"}},
 	} {
-		_, err := f.transfers.AssignFormats(f.ctx, f.org, 0, assignments)
+		_, err := f.transfers.AssignFormats(f.ctx, f.org, 0, assignments, f.assignmentsVersion(t, f.org))
 		require.ErrorIs(t, err, exporttransfer.ErrAssignmentInvalid, name)
 	}
 	page, err := f.transfers.Recipient(f.ctx, f.org, own, 10)
@@ -201,7 +202,7 @@ func TestTraegerAssignmentRefusesForeignRecipientsAndUnknownFormats(t *testing.T
 	assert.Equal(t, exporttransfer.TraegerFormats, page.Recipient.Formats, "a refused assignment changes no format, also not the valid part")
 	_, err = f.transfers.Recipient(f.ctx, f.org, foreign, 10)
 	require.ErrorIs(t, err, exporttransfer.ErrRecipientNotFound, "another Träger's recipient is not readable by its id")
-	_, err = f.transfers.SaveRecipient(f.ctx, f.org, 0, foreign, f.readyInput())
+	_, err = f.transfers.SaveRecipient(f.ctx, f.org, 0, foreign, f.readyInput(), f.version(t, f.other, foreign))
 	require.ErrorIs(t, err, exporttransfer.ErrRecipientNotFound, "nor writable")
 }
 
@@ -230,4 +231,43 @@ func TestTraegerAssignmentPolicyAndReferenceKeepTheTraeger(t *testing.T) {
 		return err
 	})
 	require.Error(t, err, "a format of one Träger never points at a recipient of another")
+}
+
+// A recipient and the format assignments are saved over the state their
+// author read (ADR 0311): a save on the version before another save, or on
+// none, is refused and writes nothing; an assignment leaves the recipient's
+// version as it was, and a removed recipient moves the assignments' one.
+func TestTraegerRecipientAndFormatsAreBoundToTheReadState(t *testing.T) {
+	t.Parallel()
+	f := newTraegerFixture(t, nil)
+	id := f.add(t, f.org, f.readyInput())
+	read := f.version(t, f.org, id)
+	formats := f.assignmentsVersion(t, f.org)
+
+	input := f.readyInput()
+	input.Password, input.Name = nil, "Kämmerei Nord"
+	saved, err := f.transfers.SaveRecipient(f.ctx, f.org, 0, id, input, read)
+	require.NoError(t, err)
+	for _, stale := range []string{read, ""} {
+		input.Name = "Kämmerei Alt"
+		_, err = f.transfers.SaveRecipient(f.ctx, f.org, 0, id, input, stale)
+		require.ErrorIs(t, err, readstate.ErrChanged, "recipient version %q", stale)
+	}
+	assigned, err := f.transfers.AssignFormats(f.ctx, f.org, 0,
+		[]exporttransfer.TraegerAssignment{{Format: "datev", RecipientID: (*ident.ID)(&id)}}, formats)
+	require.NoError(t, err)
+	for _, stale := range []string{formats, ""} {
+		_, err = f.transfers.AssignFormats(f.ctx, f.org, 0, []exporttransfer.TraegerAssignment{{Format: "datev"}}, stale)
+		require.ErrorIs(t, err, readstate.ErrChanged, "assignments version %q", stale)
+	}
+	page, err := f.transfers.Recipient(f.ctx, f.org, id, 1)
+	require.NoError(t, err)
+	assert.Equal(t, "Kämmerei Nord", page.Recipient.Name, "the refused saves wrote nothing")
+	assert.Equal(t, []string{"datev"}, page.Recipient.Formats)
+	assert.Equal(t, saved.Version, page.Recipient.Version, "the formats are no part of the recipient's version")
+	assert.Equal(t, assigned.AssignmentsVersion, f.assignmentsVersion(t, f.org), "the answer carries the read's version")
+
+	removed, err := f.transfers.DeleteRecipient(f.ctx, f.org, id)
+	require.NoError(t, err)
+	assert.NotEqual(t, assigned.AssignmentsVersion, removed.AssignmentsVersion, "its formats went back to the download")
 }

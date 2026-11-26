@@ -115,9 +115,18 @@ func TestShiftTypeUpdateAnswersTheStoredType(t *testing.T) {
 	created, err := types.CreateShiftType(testpkg.Ctx(t), workforce.ShiftTypeInput{Name: "Frühdienst", Color: "#83CD2D"})
 	require.NoError(t, err)
 
-	body := map[string]any{"name": "Spätdienst", "color": "#5080D8", "description": "ab 14 Uhr"}
-	request := testutil.NewAuthenticatedRequest(t, http.MethodPut, "/"+strconv.FormatInt(created.ID, 10), body, testutil.WithJWTBearer(managerToken(t, 0)))
+	// ADR 0311: an update without the version its editor read is refused
+	// and writes nothing.
+	path := "/" + strconv.FormatInt(created.ID, 10)
+	stale := map[string]any{"name": "Überschrieben", "color": "#5080D8"}
+	request := testutil.NewAuthenticatedRequest(t, http.MethodPut, path, stale, testutil.WithJWTBearer(managerToken(t, 0)))
 	response := testutil.ExecuteRequestForTest(t, router, request)
+	require.Equal(t, http.StatusConflict, response.Code, response.Body.String())
+	assert.Contains(t, response.Body.String(), `"code":"general.changed_since_read"`)
+
+	body := map[string]any{"name": "Spätdienst", "color": "#5080D8", "description": "ab 14 Uhr", "expected_version": workforce.ShiftTypeVersion(created)}
+	request = testutil.NewAuthenticatedRequest(t, http.MethodPut, path, body, testutil.WithJWTBearer(managerToken(t, 0)))
+	response = testutil.ExecuteRequestForTest(t, router, request)
 	require.Equal(t, http.StatusOK, response.Code, response.Body.String())
 	var envelope struct {
 		Data struct {
@@ -132,4 +141,13 @@ func TestShiftTypeUpdateAnswersTheStoredType(t *testing.T) {
 	assert.Equal(t, "Spätdienst", envelope.Data.Name)
 	assert.Equal(t, "#5080D8", envelope.Data.Color)
 	assert.True(t, envelope.Data.IsActive, "an update without is_active keeps the type active")
+
+	body["name"] = "Überschrieben"
+	request = testutil.NewAuthenticatedRequest(t, http.MethodPut, path, body, testutil.WithJWTBearer(managerToken(t, 0)))
+	response = testutil.ExecuteRequestForTest(t, router, request)
+	require.Equal(t, http.StatusConflict, response.Code, "the version read before the rename is outdated now")
+	stored, err := types.ListShiftTypes(testpkg.Ctx(t))
+	require.NoError(t, err)
+	require.Len(t, stored, 1)
+	assert.Equal(t, "Spätdienst", stored[0].Name, "a refused update writes nothing")
 }

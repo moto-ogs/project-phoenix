@@ -1,13 +1,14 @@
 package staffcalendarhttp
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+
 	"github.com/moto-ogs/project-phoenix/api/common"
 	calendarService "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/portal"
 	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // mountSchoolParentConferences mounts the Elternsprechtag of moto schule
@@ -16,7 +17,6 @@ import (
 func (rs *Resource) mountSchoolParentConferences(r chi.Router, school, withTx common.Middleware) {
 	r.With(school, withTx).Get("/parent-conferences", rs.listSchoolParentConferences)
 	r.With(school, withTx).Post("/parent-conferences", rs.createSchoolParentConference)
-	r.With(school, withTx).Get("/parent-conferences/{conferenceId}", rs.getSchoolParentConference)
 	r.With(school, withTx).Put("/parent-conferences/{conferenceId}", rs.updateSchoolParentConference)
 	r.With(school, withTx).Delete("/parent-conferences/{conferenceId}", rs.deleteSchoolParentConference)
 }
@@ -34,6 +34,13 @@ type ParentConferenceRequest struct {
 	Location    *string                 `json:"location,omitempty"`
 }
 
+// ParentConferenceUpdateRequest is the body of a change of a day: the day as
+// edited and the version of the day the Lehrkraft read (ADR 0311).
+type ParentConferenceUpdateRequest struct {
+	ParentConferenceRequest
+	ExpectedVersion string `json:"expected_version"`
+}
+
 // ParentConferenceBreak is a pause without slots.
 type ParentConferenceBreak struct {
 	StartTime string `json:"start_time"`
@@ -41,11 +48,12 @@ type ParentConferenceBreak struct {
 }
 
 func decodeParentConference(w http.ResponseWriter, r *http.Request) (calendarService.ParentConferenceRequest, bool) {
-	var req ParentConferenceRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	var body ParentConferenceUpdateRequest
+	if err := wire.Decode(r.Body, &body); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return calendarService.ParentConferenceRequest{}, false
 	}
+	req := body.ParentConferenceRequest
 	var breaks []calendarService.ParentConferenceWindow
 	if req.Breaks != nil {
 		breaks = make([]calendarService.ParentConferenceWindow, 0, len(req.Breaks))
@@ -56,6 +64,7 @@ func decodeParentConference(w http.ResponseWriter, r *http.Request) (calendarSer
 	return calendarService.ParentConferenceRequest{
 		SchoolClass: req.SchoolClass, Date: req.Date, StartTime: req.StartTime, EndTime: req.EndTime,
 		SlotMinutes: req.SlotMinutes, Breaks: breaks, Location: req.Location,
+		ExpectedVersion: body.ExpectedVersion,
 	}, true
 }
 
@@ -66,19 +75,6 @@ func (rs *Resource) listSchoolParentConferences(w http.ResponseWriter, r *http.R
 		return
 	}
 	common.Respond(w, r, http.StatusOK, list, "Parent conferences retrieved")
-}
-
-func (rs *Resource) getSchoolParentConference(w http.ResponseWriter, r *http.Request) {
-	id, ok := common.ParsePositiveInt64IDWithError(w, r, "conferenceId", "invalid parent conference ID")
-	if !ok {
-		return
-	}
-	view, err := rs.service.GetSchoolParentConference(r.Context(), id)
-	if err != nil {
-		renderCalendarError(w, r, err)
-		return
-	}
-	common.Respond(w, r, http.StatusOK, view, "Parent conference retrieved")
 }
 
 func (rs *Resource) createSchoolParentConference(w http.ResponseWriter, r *http.Request) {

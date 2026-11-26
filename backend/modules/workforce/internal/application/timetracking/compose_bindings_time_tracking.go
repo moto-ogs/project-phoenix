@@ -38,6 +38,7 @@ type TimeTracking struct {
 	BalanceAdjustments workforce.BalanceAdjustments
 	MonthClosing       workforce.MonthClosing
 	Overview           workforce.StaffOverview
+	OwnViews           func(workforce.OwnTimeViewPlanning) workforce.OwnTimeViews
 	AuditLog           workforce.TimeTrackingAuditLog
 	TimeExport         workforce.StaffTimeExport
 	VacationTakeovers  workforce.VacationTakeovers
@@ -86,25 +87,32 @@ func (s *WorkSessionSide) TimeTracking() (*TimeTracking, error) {
 		return nil, errors.New("time tracking: the clock is required")
 	}
 	services := s.Clock.WithAbsences()
+	mails := workforce.NewAbsenceMailStatus(s.Clock.deps.MailOutcomes)
 	return &TimeTracking{
 		WorkSessions:       WorkSessionCapability(services.Sessions, s.Staff),
 		TimeClock:          TimeClockCapability(services.Sessions),
 		StaffAbsences:      StaffAbsenceCapability(services.Absences),
-		WorkTimeMonths:     WorkTimeMonthCapability(services.Months),
+		WorkTimeMonths:     services.Months,
 		BalanceAdjustments: BalanceAdjustmentCapability(services.Ledger),
 		MonthClosing:       MonthClosingCapability(services.Closing),
 		Overview:           StaffOverviewCapability(services.Overview),
-		AuditLog:           TimeTrackingAuditLogCapability(services.AuditLog),
-		TimeExport:         StaffTimeExportCapability(services.Export),
-		VacationTakeovers:  VacationTakeoverCapability(services.Absences),
-		OpeningBalances:    OpeningBalanceBookingCapability(services.Ledger),
-		TraegerMonths:      TraegerMonthCapability(services.Closing, WorkTimeMonthCapability(services.Months)),
-		TraegerExports:     TraegerExportCapability(services.Overview, services.Sessions),
-		AutoCheckIn:        s.AutoCheckIn,
-		Jobs:               services.Sessions,
-		StaffDay:           StaffDay{WorkSessionService: services.Sessions, StaffAbsenceService: services.Absences},
-		AbsenceMails:       workforce.NewAbsenceMailStatus(s.Clock.deps.MailOutcomes),
-		Today:              s.Clock.deps.Today,
+		OwnViews: func(planning workforce.OwnTimeViewPlanning) workforce.OwnTimeViews {
+			return ownTimeViews{
+				months: services.Months, sessions: services.Sessions, absences: services.ownAbsences,
+				edits: s.Clock.deps.EditAudit, mails: mails, planning: planning,
+			}
+		},
+		AuditLog:          TimeTrackingAuditLogCapability(services.AuditLog),
+		TimeExport:        StaffTimeExportCapability(services.Export),
+		VacationTakeovers: VacationTakeoverCapability(services.Absences),
+		OpeningBalances:   OpeningBalanceBookingCapability(services.Ledger),
+		TraegerMonths:     TraegerMonthCapability(services.Closing, services.Months),
+		TraegerExports:    TraegerExportCapability(services.Overview, services.Sessions),
+		AutoCheckIn:       s.AutoCheckIn,
+		Jobs:              services.Sessions,
+		StaffDay:          StaffDay{WorkSessionService: services.Sessions, StaffAbsenceService: services.Absences},
+		AbsenceMails:      mails,
+		Today:             s.Clock.deps.Today,
 	}, nil
 }
 
@@ -116,10 +124,12 @@ type StaffDay struct {
 }
 
 // TimeTrackingRows binds the rows of the Workforce capability; traeger names
-// the staff the Träger closes (#4711).
-func TimeTrackingRows(capability workforce.Capability, traeger TraegerMonthStaff) Rows {
+// the staff the Träger closes (#4711), templates locks the template a
+// schedule save binds.
+func TimeTrackingRows(capability workforce.Capability, traeger TraegerMonthStaff, templates WorkTimeTemplateLocks) Rows {
 	return Rows{
 		TraegerMonths:    traeger,
+		TemplateLocks:    templates,
 		TargetOverrides:  capability,
 		MonthSnapshots:   MonthSnapshotCapability(capability),
 		AbsenceTypes:     AbsenceTypes(capability),

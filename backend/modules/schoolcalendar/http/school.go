@@ -1,15 +1,16 @@
 package staffcalendarhttp
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
+
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	calendarService "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/portal"
 	timezone "github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // SchoolRouter mounts the calendar of moto schule (#4798) under
@@ -50,9 +51,17 @@ type SchoolAppointmentRequest struct {
 	Classes []string `json:"classes,omitempty"`
 }
 
+// SchoolAppointmentUpdateRequest is the body of a change of a Schultermin:
+// the appointment as edited and the version the Lehrkraft read (ADR 0311).
+type SchoolAppointmentUpdateRequest struct {
+	SchoolAppointmentRequest
+	ExpectedVersion string `json:"expected_version"`
+}
+
 func decodeSchoolAppointment(w http.ResponseWriter, r *http.Request) (calendarService.SchoolAppointmentRequest, bool) {
-	var req SchoolAppointmentRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	var body SchoolAppointmentUpdateRequest
+	req := &body.SchoolAppointmentRequest
+	if err := wire.Decode(r.Body, &body); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return calendarService.SchoolAppointmentRequest{}, false
 	}
@@ -78,6 +87,8 @@ func decodeSchoolAppointment(w http.ResponseWriter, r *http.Request) (calendarSe
 		EventType:   req.SchoolEventType,
 		Parents:     req.Parents,
 		Classes:     req.Classes,
+		// A creation sends none; only the change reads it.
+		ExpectedVersion: body.ExpectedVersion,
 	}, true
 }
 
@@ -165,7 +176,7 @@ func (rs *Resource) respondSchoolInvitation(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	var req calendarService.InvitationAnswer
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := wire.Decode(r.Body, &req); err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}

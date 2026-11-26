@@ -1,0 +1,381 @@
+"use client";
+
+// Beendete Betreuungen (#2487): jedes Kind, dessen Betreuung regulär zu Ende
+// gegangen ist: von Hand beendet, durch ein Anmeldungsende oder später über
+// den geführten Abschluss. Jahrgangs-Abgänge stehen weiterhin ausschließlich
+// in der Abgänge-Ansicht des Jahrgangswechsels.
+//
+// Die Ansicht ist geschützt wie die endgültige Löschung: nur wer Kinder
+// löschen darf, sieht sie, und nur dort stehen Austrittsgrund und Freitext.
+//
+// Design follows the Anmeldungen/Planung surface language: calm content
+// section without a kicker, gray-50 stats, no colored dashboards.
+
+import { useAccessControlledData } from "~/lib/hooks/use-access-controlled-data";
+import { useEffect, useMemo, useState } from "react";
+import { redirect } from "next/navigation";
+import { useSession } from "next-auth/react";
+
+import { RotateCcw, Trash2 } from "lucide-react";
+import { Button } from "~/components/ui/button";
+import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
+import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
+import { EmptyState } from "~/components/ui/empty-state";
+import { ForbiddenPage } from "~/components/ui/forbidden-page";
+import { LoadErrorAlert } from "~/components/ui/form-error-alert";
+import { SectionCard } from "~/components/ui/section-card";
+import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
+import { formatCount } from "~/lib/format-utils";
+import { CareResumeModal } from "~/components/students/care-resume-modal";
+import { StudentDeletionModal } from "~/components/students/student-deletion-modal";
+import { useToast } from "~/contexts/ToastContext";
+import { hasPermission } from "~/lib/auth-utils";
+import {
+  CARE_EXIT_REASON_LABELS,
+  ENDED_CARE_PAGE_SIZE,
+  fetchEndedCare,
+  type EndedCareEntry,
+} from "~/lib/care-exit-api";
+import { formatDate } from "~/lib/date-helpers";
+import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
+import {
+  STALE_DATA_SUFFIX,
+  useRefreshAfterWrite,
+} from "~/lib/hooks/use-refresh-after-write";
+import { useSWRAuth, useTenantMutateMatching } from "~/lib/swr";
+import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
+import { useDebounce } from "~/lib/use-debounce";
+
+/** Info-Knopf am Seitentitel: wofür die Seite da ist und was man zuerst tut. */
+const ENDED_CARE_INFO =
+  "Hier stehen Kinder, deren Betreuung beendet ist. Über die drei Punkte in einer Zeile nimmst du ein Kind wieder auf oder löschst es endgültig.";
+
+const ENDED_CARE_DESCRIPTION =
+  "Kinder, die nicht mehr in der OGS sind. Die Daten dieser Kinder bleiben erhalten. Sie stehen in keiner normalen Liste mehr und in keinem Export. Abgänge aus dem Schuljahreswechsel stehen weiterhin dort.";
+
+// Suche und Seite gehören zum Schlüssel, damit jede Kombination ihren
+// eigenen Cache-Eintrag bekommt; aktualisiert wird über den Stamm.
+
+function reasonLabel(entry: EndedCareEntry): string {
+  if (!entry.reason) return "Kein Grund hinterlegt";
+  const label = CARE_EXIT_REASON_LABELS[entry.reason];
+  if (entry.reason === "other" && entry.reasonNote) {
+    return `${label}: ${entry.reasonNote}`;
+  }
+  return label;
+}
+
+export default function EndedCarePage() {
+  const { data: session, status } = useSession({
+    required: true,
+    onUnauthenticated() {
+      redirect("/");
+    },
+  });
+  const canManage = hasPermission(session, "users:delete");
+
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [resumeTarget, setResumeTarget] = useState<EndedCareEntry | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<EndedCareEntry | null>(null);
+  const { success: toastSuccess } = useToast();
+  const refreshEndedCare = useTenantMutateMatching([
+    tenantStudentKeys.endedCareFamily,
+  ]);
+
+  // Gesucht wird auf dem Server, nicht in der geladenen Seite: sonst fände die
+  // Suche nur die Kinder, die gerade zufällig sichtbar sind (#2487).
+  const debouncedSearch = useDebounce(search.trim(), 300);
+
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch]);
+
+  const {
+    data: cachedData,
+    isLoading,
+    error: swrError,
+    mutate,
+  } = useSWRAuth(
+    canManage ? tenantStudentKeys.endedCare(page, debouncedSearch) : null,
+    () =>
+      fetchEndedCare({
+        page,
+        pageSize: ENDED_CARE_PAGE_SIZE,
+        search: debouncedSearch || undefined,
+      }),
+    { keepPreviousData: true },
+  );
+  const { data, accessRefused: dataAccessRefused } = useAccessControlledData(
+    canManage ? tenantStudentKeys.endedCare(page, debouncedSearch) : null,
+    cachedData,
+    swrError,
+  );
+  const accessRefused = dataAccessRefused;
+  // Ladefehler mit Katalogtext und Wiederholen (#2517).
+  const loadError = useSwrLoadError(
+    canManage ? swrError : undefined,
+    "die Liste der beendeten Betreuungen",
+    () => mutate(),
+    data === undefined || accessRefused ? undefined : STALE_DATA_SUFFIX,
+  );
+  // Nachladen nach Wiederaufnahme oder Löschung: ein Fehler dabei steht über
+  // der Liste, auch wenn der Dialog schon zu ist (#6652).
+  const afterWrite = useRefreshAfterWrite(
+    "die Anzeige der beendeten Betreuungen",
+    refreshEndedCare,
+  );
+
+  const entries = useMemo(() => data?.items ?? [], [data]);
+  const total = data?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / ENDED_CARE_PAGE_SIZE));
+  const firstOnPage = total === 0 ? 0 : (page - 1) * ENDED_CARE_PAGE_SIZE + 1;
+  const lastOnPage = Math.min(page * ENDED_CARE_PAGE_SIZE, total);
+
+  // Eine Seite, die es nicht mehr gibt (letztes Kind der letzten Seite wieder
+  // aufgenommen oder gelöscht), fällt auf die letzte vorhandene zurück.
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
+
+  useEffect(() => {
+    if (accessRefused) {
+      setResumeTarget(null);
+      setDeleteTarget(null);
+    }
+  }, [accessRefused]);
+
+  const columns: DataTableColumn<EndedCareEntry>[] = [
+    {
+      key: "name",
+      header: "Name",
+      render: (entry) => (
+        <span className="font-medium text-gray-900">
+          {entry.lastName}, {entry.firstName}
+        </span>
+      ),
+      sortValue: (entry) =>
+        `${entry.lastName.toLowerCase()} ${entry.firstName.toLowerCase()}`,
+    },
+    {
+      key: "schoolClass",
+      header: "Klasse",
+      render: (entry) => (
+        <span className="text-gray-700">{entry.schoolClass || "–"}</span>
+      ),
+      sortValue: (entry) => entry.schoolClass.toLowerCase(),
+    },
+    {
+      key: "lastCareDay",
+      header: "Letzter Betreuungstag",
+      render: (entry) => (
+        <span className="text-gray-700">{formatDate(entry.lastCareDay)}</span>
+      ),
+      sortValue: (entry) => entry.lastCareDay,
+    },
+    {
+      key: "reason",
+      header: "Grund",
+      render: (entry) => (
+        <span className="text-gray-600">{reasonLabel(entry)}</span>
+      ),
+    },
+    {
+      key: "actions",
+      header: "",
+      align: "right",
+      // Zeilenaktionen nur im Kebab der Zeile (BAUARTEN-SPEC Bauart 1
+      // Regel 4); beide Einträge öffnen ihren bestehenden Dialog.
+      render: (entry) => (
+        <div className="flex items-center justify-end">
+          <OverflowMenu
+            ariaLabel={`Aktionen für ${entry.lastName}, ${entry.firstName}`}
+            items={[
+              ...(entry.reason
+                ? [
+                    {
+                      label: "Wieder aufnehmen",
+                      description:
+                        "Öffnet ein Fenster für den neuen Beginn der Betreuung.",
+                      icon: <RotateCcw className="h-4 w-4" aria-hidden />,
+                      onClick: () => setResumeTarget(entry),
+                    },
+                  ]
+                : []),
+              {
+                label: "Endgültig löschen",
+                description:
+                  "Entfernt das Kind mit seinen Daten. moto fragt vorher nach.",
+                icon: <Trash2 className="h-4 w-4" aria-hidden />,
+                destructive: true,
+                onClick: () => setDeleteTarget(entry),
+              },
+            ]}
+          />
+        </div>
+      ),
+    },
+  ];
+
+  // Statuszeile des Seitenkopfs aus der bereits geladenen Seite. Ohne
+  // geladene Seite steht keine "0 Kinder" neben dem Ladefehler (#2517).
+  const statusLine =
+    data === undefined || accessRefused ? null : (
+      <TenantPageStats
+        // Die Zeile zeigt höchstens drei Angaben. Kommt die Suche dazu,
+        // fällt „Seite … von …“ weg; das steht dann noch am Blätterknopf
+        // unter der Liste.
+        items={[
+          {
+            value: formatCount(total),
+            label: total === 1 ? "Kind" : "Kinder",
+          },
+          ...(total > 0
+            ? [{ label: `${firstOnPage} bis ${lastOnPage} auf dieser Seite` }]
+            : []),
+          ...(debouncedSearch
+            ? [{ label: `gefiltert nach „${debouncedSearch}“` }]
+            : []),
+          ...(totalPages > 1
+            ? [{ label: `Seite ${page} von ${totalPages}` }]
+            : []),
+        ].slice(0, 3)}
+      />
+    );
+
+  const contentEmpty = status !== "loading" && (!canManage || accessRefused);
+
+  return (
+    <TenantPage
+      title="Beendete Betreuungen"
+      info={ENDED_CARE_INFO}
+      stats={statusLine}
+      statsLoading={status === "loading" || (isLoading && data === undefined)}
+      search={
+        canManage
+          ? {
+              value: search,
+              onChange: setSearch,
+              placeholder: "Name oder Klasse suchen…",
+            }
+          : undefined
+      }
+      loading={status === "loading"}
+      error={data === undefined || accessRefused ? loadError : null}
+      back
+      backHref="/database/students"
+      backLabel="Zurück zu den Kinderdaten"
+      overlays={
+        <>
+          {resumeTarget && !accessRefused ? (
+            <CareResumeModal
+              isOpen
+              studentId={resumeTarget.studentId}
+              displayName={`${resumeTarget.firstName} ${resumeTarget.lastName}`}
+              onClose={() => setResumeTarget(null)}
+              onResumed={() => {
+                toastSuccess(
+                  `Betreuung von ${resumeTarget.firstName} ${resumeTarget.lastName} wieder aufgenommen`,
+                );
+                setResumeTarget(null);
+                return afterWrite.refresh();
+              }}
+            />
+          ) : null}
+
+          {deleteTarget && !accessRefused ? (
+            <StudentDeletionModal
+              isOpen
+              studentId={deleteTarget.studentId}
+              displayName={`${deleteTarget.firstName} ${deleteTarget.lastName}`}
+              careEnded
+              onClose={() => setDeleteTarget(null)}
+              onDeleted={() => {
+                toastSuccess(
+                  `${deleteTarget.firstName} ${deleteTarget.lastName} wurde gelöscht`,
+                );
+                setDeleteTarget(null);
+                return afterWrite.refresh();
+              }}
+            />
+          ) : null}
+        </>
+      }
+    >
+      {contentEmpty ? (
+        <ForbiddenPage
+          embedded
+          message="Diese Ansicht ist nur für Personen mit der Berechtigung „Benutzer löschen“."
+        />
+      ) : (
+        <>
+          <LoadErrorAlert error={data === undefined ? null : loadError} />
+          <LoadErrorAlert error={afterWrite.error} />
+          <SectionCard
+            title="Kinder ohne Betreuung"
+            description={ENDED_CARE_DESCRIPTION}
+          >
+            <DataTable
+              rows={entries}
+              columns={columns}
+              getRowKey={(entry) => entry.studentId}
+              isLoading={isLoading && data === undefined}
+              defaultSortKey="lastCareDay"
+              defaultSortDirection="desc"
+              emptyState={
+                <EmptyState
+                  title={
+                    debouncedSearch
+                      ? "Kein Kind gefunden"
+                      : "Noch keine beendeten Betreuungen"
+                  }
+                  description={
+                    debouncedSearch
+                      ? "Versuche einen anderen Namen oder eine andere Klasse."
+                      : "Hier stehen Kinder, deren Betreuung beendet wurde."
+                  }
+                />
+              }
+            />
+
+            {totalPages > 1 ? (
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-gray-200 pt-3">
+                <p className="text-sm text-gray-600">
+                  Seite {page} von {totalPages}
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="compact"
+                    aria-label="Vorherige Seite"
+                    tooltip="Zeigt die vorherige Seite der Liste."
+                    disabled={page <= 1}
+                    onClick={() =>
+                      setPage((current) => Math.max(1, current - 1))
+                    }
+                  >
+                    Zurück
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="compact"
+                    disabled={page >= totalPages}
+                    aria-label="Nächste Seite"
+                    tooltip="Zeigt die nächste Seite der Liste."
+                    onClick={() =>
+                      setPage((current) => Math.min(totalPages, current + 1))
+                    }
+                  >
+                    Weiter
+                  </Button>
+                </div>
+              </div>
+            ) : null}
+          </SectionCard>
+        </>
+      )}
+    </TenantPage>
+  );
+}

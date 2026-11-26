@@ -76,8 +76,16 @@ func (d authSchoolDirectory) GetSchoolByID(ctx context.Context, id int64) (*auth
 
 func (d authSchoolDirectory) GetSchoolBySubdomain(ctx context.Context, subdomain string) (*authAPI.TenantSchool, error) {
 	school, err := findSchool(ctx, d.schools.FindSchoolBySubdomain, subdomain)
+	if errors.Is(err, organizationModule.ErrInvalidSchool) {
+		return nil, authAPI.ErrInvalidSchoolSubdomain
+	}
 	if err != nil || school == nil {
 		return nil, err
+	}
+	// Inactive or deleted schools are not public lookup results. Do not
+	// let an unrelated organization read turn their absence into an error.
+	if !school.Active || school.DeletedAt != nil {
+		return nil, nil
 	}
 	views, err := d.withOrganizations(ctx, []organizationModule.School{*school})
 	if err != nil {
@@ -88,6 +96,11 @@ func (d authSchoolDirectory) GetSchoolBySubdomain(ctx context.Context, subdomain
 		return nil, err
 	}
 	return &views[0], nil
+}
+
+// ContractTenantShellSettingKeys supplies the lookup keys to gencontract.
+func ContractTenantShellSettingKeys() []string {
+	return authAPI.TenantShellSettingKeys()
 }
 
 func (d authSchoolDirectory) ListPublicSchools(ctx context.Context) ([]authAPI.TenantSchool, error) {
@@ -173,6 +186,9 @@ type parentSchoolDirectory struct {
 
 func (d parentSchoolDirectory) GetSchoolBySubdomain(ctx context.Context, subdomain string) (*parentAPI.EnrollmentSchool, error) {
 	school, err := findSchool(ctx, d.schools.FindSchoolBySubdomain, subdomain)
+	if errors.Is(err, organizationModule.ErrInvalidSchool) {
+		return nil, parentAPI.ErrInvalidSchoolSubdomain
+	}
 	if err != nil || school == nil {
 		return nil, err
 	}
@@ -261,16 +277,15 @@ func tagScanSchools(schools []organizationModule.School) []tagScanOperatorAPI.Sc
 	return result
 }
 
-// operatorSettingsSchools names the school slug the operator settings routes
-// return so the frontend can bust its tenant cache (#4072).
+// operatorSettingsSchools looks up the key for the tenant shell cache.
 type operatorSettingsSchools struct {
 	schools organizationModule.Query
 }
 
-func (d operatorSettingsSchools) SchoolSlug(ctx context.Context, schoolID int64) (string, error) {
+func (d operatorSettingsSchools) SchoolSubdomain(ctx context.Context, schoolID int64) (string, error) {
 	school, err := d.schools.FindSchool(ctx, schoolID)
 	if err != nil {
 		return "", err
 	}
-	return school.Slug, nil
+	return school.Subdomain, nil
 }

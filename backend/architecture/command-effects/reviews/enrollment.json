@@ -381,7 +381,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCatalog.UpdateOffering",
-      "reason": "Catalog command owns validation and its recurrence/linked-template guard (care_offering_catalog.go, care_offering_rollover.go). Enrollment exposes its native catalog interface via care_offering_rows.go; the may-bind surface includes unused supplied methods. Target-local gates alone do not introduce an additional caller protocol. This is not a liveness claim or approval of new ordering.",
+      "reason": "Re-reviewed with #7985: the save now carries the version its author read (ADR 0311); Care Plan locks the offering row after the recurrence gate, the order of every catalog write (ADR 0195 section 5), and refuses another version before it validates or writes. Effect, classification and caller protocol unchanged. Catalog command owns validation and its recurrence/linked-template guard (care_offering_catalog.go, care_offering_rollover.go). Enrollment exposes its native catalog interface via care_offering_rows.go; the may-bind surface includes unused supplied methods. Target-local gates alone do not introduce an additional caller protocol. This is not a liveness claim or approval of new ordering.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.UpdateOffering",
       "target_owner": "care-plan"
@@ -392,7 +392,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCatalog.UpdateOffering",
-      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/careplan.CareOfferingCapability.UpdateOffering; modules/careplan.CareOfferingCapability (supplied contract method). ",
+      "reason": "Re-reviewed with #7985: the save now carries the version its author read (ADR 0311); Care Plan locks the offering row after the recurrence gate, the order of every catalog write (ADR 0195 section 5), and refuses another version before it validates or writes. Effect, classification and caller protocol unchanged. Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/careplan.CareOfferingCapability.UpdateOffering; modules/careplan.CareOfferingCapability (supplied contract method). ",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCapability.UpdateOffering",
       "target_owner": "care-plan"
@@ -403,7 +403,7 @@
       "classification": "leaf",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCatalog.UpdateOffering",
-      "reason": "Catalog command owns validation and its recurrence/linked-template guard (care_offering_catalog.go, care_offering_rollover.go). Enrollment exposes its native catalog interface via care_offering_rows.go; the may-bind surface includes unused supplied methods. Target-local gates alone do not introduce an additional caller protocol. This is not a liveness claim or approval of new ordering.",
+      "reason": "Re-reviewed with #7985: the save now carries the version its author read (ADR 0311); Care Plan locks the offering row after the recurrence gate, the order of every catalog write (ADR 0195 section 5), and refuses another version before it validates or writes. Effect, classification and caller protocol unchanged. Catalog command owns validation and its recurrence/linked-template guard (care_offering_catalog.go, care_offering_rollover.go). Enrollment exposes its native catalog interface via care_offering_rows.go; the may-bind surface includes unused supplied methods. Target-local gates alone do not introduce an additional caller protocol. This is not a liveness claim or approval of new ordering.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/careplan.CareOfferingCatalog.UpdateOffering",
       "target_owner": "care-plan"
@@ -2663,7 +2663,17 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayTraegerDirectory.HolidayTraeger",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Capability.FindOrganization. ADR 0110: the public holiday registration resolves the Träger of its link and its undeleted schools in the administrative transaction of the link lookup. After #2342 (ADR 0300), Organization Tenancy returns school IDs as ident.ID directly, so this binding no longer converts them from int64. Read calls, filtering, ordering and transaction scope are unchanged. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/settings.TraegerModuleBooking.BookedModules. #6052: the link of a holiday registration follows the module Ferienbetreuung. The directory reads the modules at least one school of the link's Träger books: the schools of the Träger and their module switches in one batch read, in an administrative unit of its own (tenant.ContextWithoutTransaction). A Träger none of whose schools books Ferienbetreuung has no open link. No write, lock or change of the caller's scope.",
+      "source_owner": "enrollment",
+      "target": "*github.com/moto-ogs/project-phoenix/modules/settings.TraegerModuleBooking.BookedModules",
+      "target_owner": "settings-platform"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.holidayTraegerDirectory.HolidayTraeger",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayTraegerDirectory.HolidayTraeger",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Capability.FindOrganization. ADR 0110: the public holiday registration resolves the Träger of its link and its undeleted schools in the administrative transaction of the link lookup. After #2342 (ADR 0300), Organization Tenancy returns school IDs as ident.ID directly, so this binding no longer converts them from int64. Read calls, filtering, ordering and transaction scope are unchanged. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged. Since #6052 the binding first reads whether a school of the Träger books Ferienbetreuung and answers ErrHolidayRegistrationNotFound otherwise; this call, its filtering and its effect are unchanged.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.FindOrganization",
       "target_owner": "organization-tenancy"
@@ -2673,7 +2683,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayTraegerDirectory.HolidayTraeger",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Capability.ListSchoolsByOrganization. ADR 0110: the public holiday registration resolves the Träger of its link and its undeleted schools in the administrative transaction of the link lookup. After #2342 (ADR 0300), Organization Tenancy returns school IDs as ident.ID directly, so this binding no longer converts them from int64. Read calls, filtering, ordering and transaction scope are unchanged. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Capability.ListSchoolsByOrganization. ADR 0110: the public holiday registration resolves the Träger of its link and its undeleted schools in the administrative transaction of the link lookup. After #2342 (ADR 0300), Organization Tenancy returns school IDs as ident.ID directly, so this binding no longer converts them from int64. Read calls, filtering, ordering and transaction scope are unchanged. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged. Since #6052 the binding first reads whether a school of the Träger books Ferienbetreuung and answers ErrHolidayRegistrationNotFound otherwise; this call, its filtering and its effect are unchanged.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Capability.ListSchoolsByOrganization",
       "target_owner": "organization-tenancy"
@@ -2683,7 +2693,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayTraegerDirectory.HolidayTraeger",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Organization.IsDeleted. ADR 0110: the public holiday registration resolves the Träger of its link and its undeleted schools in the administrative transaction of the link lookup. After #2342 (ADR 0300), Organization Tenancy returns school IDs as ident.ID directly, so this binding no longer converts them from int64. Read calls, filtering, ordering and transaction scope are unchanged. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Organization.IsDeleted. ADR 0110: the public holiday registration resolves the Träger of its link and its undeleted schools in the administrative transaction of the link lookup. After #2342 (ADR 0300), Organization Tenancy returns school IDs as ident.ID directly, so this binding no longer converts them from int64. Read calls, filtering, ordering and transaction scope are unchanged. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged. Since #6052 the binding first reads whether a school of the Träger books Ferienbetreuung and answers ErrHolidayRegistrationNotFound otherwise; this call, its filtering and its effect are unchanged.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Organization.IsDeleted",
       "target_owner": "organization-tenancy"
@@ -2693,7 +2703,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayTraegerDirectory.HolidayTraeger",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Query.FindOrganization. ADR 0113: the parents portal prefill resolves the Träger of a holiday registration link and its undeleted schools in the administrative transaction of the link lookup, through the same directory as the public link (ADR 0110). After #2342 (ADR 0300), Organization Tenancy returns school IDs as ident.ID directly, so this binding no longer converts them from int64. Read calls, filtering, ordering and transaction scope are unchanged. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Query.FindOrganization. ADR 0113: the parents portal prefill resolves the Träger of a holiday registration link and its undeleted schools in the administrative transaction of the link lookup, through the same directory as the public link (ADR 0110). After #2342 (ADR 0300), Organization Tenancy returns school IDs as ident.ID directly, so this binding no longer converts them from int64. Read calls, filtering, ordering and transaction scope are unchanged. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged. Since #6052 the binding first reads whether a school of the Träger books Ferienbetreuung and answers ErrHolidayRegistrationNotFound otherwise; this call, its filtering and its effect are unchanged.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.FindOrganization",
       "target_owner": "organization-tenancy"
@@ -2703,7 +2713,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayTraegerDirectory.HolidayTraeger",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Query.ListSchoolsByOrganization. ADR 0113: the parents portal prefill resolves the Träger of a holiday registration link and its undeleted schools in the administrative transaction of the link lookup, through the same directory as the public link (ADR 0110). After #2342 (ADR 0300), Organization Tenancy returns school IDs as ident.ID directly, so this binding no longer converts them from int64. Read calls, filtering, ordering and transaction scope are unchanged. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.Query.ListSchoolsByOrganization. ADR 0113: the parents portal prefill resolves the Träger of a holiday registration link and its undeleted schools in the administrative transaction of the link lookup, through the same directory as the public link (ADR 0110). After #2342 (ADR 0300), Organization Tenancy returns school IDs as ident.ID directly, so this binding no longer converts them from int64. Read calls, filtering, ordering and transaction scope are unchanged. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged. Since #6052 the binding first reads whether a school of the Träger books Ferienbetreuung and answers ErrHolidayRegistrationNotFound otherwise; this call, its filtering and its effect are unchanged.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.Query.ListSchoolsByOrganization",
       "target_owner": "organization-tenancy"
@@ -2713,7 +2723,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayTraegerDirectory.HolidayTraeger",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.School.IsDeleted. ADR 0110: the public holiday registration resolves the Träger of its link and its undeleted schools in the administrative transaction of the link lookup. After #2342 (ADR 0300), Organization Tenancy returns school IDs as ident.ID directly, so this binding no longer converts them from int64. Read calls, filtering, ordering and transaction scope are unchanged. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/organizationtenancy.School.IsDeleted. ADR 0110: the public holiday registration resolves the Träger of its link and its undeleted schools in the administrative transaction of the link lookup. After #2342 (ADR 0300), Organization Tenancy returns school IDs as ident.ID directly, so this binding no longer converts them from int64. Read calls, filtering, ordering and transaction scope are unchanged. The binding converts identifiers between ident.ID and int64 since #2342 (ADR 0300); the call and its effect are unchanged. Since #6052 the binding first reads whether a school of the Träger books Ferienbetreuung and answers ErrHolidayRegistrationNotFound otherwise; this call, its filtering and its effect are unchanged.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.School.IsDeleted",
       "target_owner": "organization-tenancy"
@@ -6357,7 +6367,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.ClassListEntries.ListClassListEntries",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Capability.ListClassListEntriesInDisplayOrder; modules/schoolmembership.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Capability.ListClassListEntriesInDisplayOrder; modules/schoolmembership.Capability (supplied contract method). May-bind method surface, not a production-call/liveness claim. The binding forwards a tenant-scoped set of classes: nil is the whole school, and a non-nil empty set matches no class.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.ListClassListEntriesInDisplayOrder",
       "target_owner": "school-membership"
@@ -6367,7 +6377,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.ClassListEntries.ListClassListEntries",
-      "reason": "Read or pure value helper on the supplied interface: modules/schoolmembership.ClassListEntries.ListClassListEntriesInDisplayOrder. No mutation or locking read at this terminal; type-level binding coverage, not proof that Enrollment calls every exposed method.",
+      "reason": "Read or pure value helper on the supplied interface: modules/schoolmembership.ClassListEntries.ListClassListEntriesInDisplayOrder. No mutation or locking read at this terminal; type-level binding coverage, not proof that Enrollment calls every exposed method. The binding forwards a tenant-scoped set of classes: nil is the whole school, and a non-nil empty set matches no class.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.ClassListEntries.ListClassListEntriesInDisplayOrder",
       "target_owner": "school-membership"
@@ -6377,7 +6387,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.ClassListEntries.ListClassListEntries",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Owner.ListClassListEntriesInDisplayOrder; modules/schoolmembership.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/schoolmembership.Owner.ListClassListEntriesInDisplayOrder; modules/schoolmembership.Owner (supplied contract method). May-bind method surface, not a production-call/liveness claim. The binding forwards a tenant-scoped set of classes: nil is the whole school, and a non-nil empty set matches no class.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Owner.ListClassListEntriesInDisplayOrder",
       "target_owner": "school-membership"
@@ -6865,7 +6875,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.EnrollmentDeletionDelivery.RelatedEmailOutcomes",
-      "reason": "Read-only delivery state: enrollment reads what became of a mail or address through runtime.EmailOutcomes.EmailOutcomes in its tenant transaction (#5934). No persistent, lock or scope effect.",
+      "reason": "Copies the feedback flag when projecting the existing reports for parent mails. Delivery still reads only the requested mails in the caller’s tenant transaction. (#8094)",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.EmailOutcomes.EmailOutcomes",
       "target_owner": "delivery-platform"
@@ -6875,7 +6885,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.EnrollmentDeletionDelivery.RelatedEmailOutcomes",
-      "reason": "Read-only delivery state: enrollment reads what became of a mail or address through tenant.TenantFromContext in its tenant transaction (#5934). No persistent, lock or scope effect.",
+      "reason": "Copies the feedback flag when projecting the existing reports for parent mails. The binding reads the tenant from the existing context; it does not open or change a scope. (#8094)",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
       "target_owner": "tenant-runtime"
@@ -6885,7 +6895,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.EnrollmentDeletionDelivery.RelatedEmailOutcomes",
-      "reason": "Read-only delivery state: enrollment reads what became of a mail or address through tenant.TenantID.Int64 in its tenant transaction (#5934). No persistent, lock or scope effect.",
+      "reason": "Copies the feedback flag when projecting the existing reports for parent mails. Converting the scoped tenant ID to the delivery query argument neither writes nor changes scope. (#8094)",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantID.Int64",
       "target_owner": "tenant-runtime"
@@ -7491,6 +7501,16 @@
       "target_owner": "settings-platform"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.enrollmentIntakeSettings.CareFacilityArticle",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.IntakeSettings.CareFacilityArticle",
+      "reason": "Read-only target: enrollment reaches modules/settings.EnrollmentIntakeValues.CareFacilityArticle (settings-platform) through roots/owners.enrollmentIntakeSettings.CareFacilityArticle to decline the school's care name with its article on the token pages (#8136). No persistent, lock or scope effect.",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings.EnrollmentIntakeValues.CareFacilityArticle",
+      "target_owner": "settings-platform"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.enrollmentIntakeSettings.CareFacilityTerm",
       "classification": "query",
       "effect": "query",
@@ -7704,6 +7724,16 @@
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/timetable.RecurrenceWriteLock.LockRecurrenceWrites",
       "target_owner": "timetable-activities"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.enrollmentNotificationSettings.CareFacilityArticle",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.NotificationSettings.CareFacilityArticle",
+      "reason": "Read-only target: enrollment reaches modules/settings.ResolveCareFacilityArticle (settings-platform) through roots/owners.enrollmentNotificationSettings.CareFacilityArticle to decline the school's care name with its article in parent mails (#8136). Two setting reads; no persistent, lock or scope effect.",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings.ResolveCareFacilityArticle",
+      "target_owner": "settings-platform"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.enrollmentNotificationSettings.CareFacilityTerm",
@@ -8524,7 +8554,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.RosterStudents.ListClassRoster",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.ClassMemberFrom; modules/peopledirectory/student_state.go:121. Pure value method stating the class membership of a child without an OGS place (ADR 0282); the binding now also maps the class time a child keeps from before its care. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.ClassMemberFrom; modules/peopledirectory/student_state.go:121. Pure value method stating the class membership of a child without an OGS place (ADR 0282); the binding now also maps the class time a child keeps from before its care. May-bind method surface, not a production-call/liveness claim. The binding reads roster candidates as a tenant-scoped set: nil selects the whole school, and a non-nil empty set matches no class; the per-record projection is unchanged.",
       "source_owner": "enrollment",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.ClassMemberFrom",
       "target_owner": "people-directory"
@@ -8534,7 +8564,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.RosterStudents.ListClassRoster",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.ClassTimeBeforeCare. Pure value method stating the class time a child with an OGS place keeps from before its care (ADR 0282). May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.ClassTimeBeforeCare. Pure value method stating the class time a child with an OGS place keeps from before its care (ADR 0282). May-bind method surface, not a production-call/liveness claim. The binding reads roster candidates as a tenant-scoped set: nil selects the whole school, and a non-nil empty set matches no class; the per-record projection is unchanged.",
       "source_owner": "enrollment",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.ClassTimeBeforeCare",
       "target_owner": "people-directory"
@@ -8544,7 +8574,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.RosterStudents.ListClassRoster",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.LeftSchool. Pure value method stating the class membership of a child without an OGS place (ADR 0282); the binding now also maps the class time a child keeps from before its care. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory.StudentState.LeftSchool. Pure value method stating the class membership of a child without an OGS place (ADR 0282); the binding now also maps the class time a child keeps from before its care. May-bind method surface, not a production-call/liveness claim. The binding reads roster candidates as a tenant-scoped set: nil selects the whole school, and a non-nil empty set matches no class; the per-record projection is unchanged.",
       "source_owner": "enrollment",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentState.LeftSchool",
       "target_owner": "people-directory"
@@ -8554,7 +8584,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.RosterStudents.ListClassRoster",
-      "reason": "Read or pure value helper on the supplied interface: modules/peopledirectory/ports.StudentRepository.ListClassRoster. Also maps the mark of a child without an OGS place, the graduate status and the class time a child keeps from before its care (ADR 0282). No mutation or locking read at this terminal; type-level binding coverage, not proof that Enrollment calls every exposed method.",
+      "reason": "Read or pure value helper on the supplied interface: modules/peopledirectory/ports.StudentRepository.ListClassRoster. Also maps the mark of a child without an OGS place, the graduate status and the class time a child keeps from before its care (ADR 0282). No mutation or locking read at this terminal; type-level binding coverage, not proof that Enrollment calls every exposed method. The binding reads roster candidates as a tenant-scoped set: nil selects the whole school, and a non-nil empty set matches no class; the per-record projection is unchanged.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports.StudentRepository.ListClassRoster",
       "target_owner": "people-directory"
@@ -8600,7 +8630,7 @@
       "classification": "platform",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.StudentConsents.RecordEnrollmentConsentTransitions",
-      "reason": "Platform protocol participation (mutation): enrollment reaches modules/auditlog/records.StudentConsentChangeRepository.Create (audit-platform) through roots/owners.enrollmentStudentConsents.RecordEnrollmentConsentTransitions. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098).",
+      "reason": "Platform protocol participation (mutation): enrollment reaches modules/auditlog/records.StudentConsentChangeRepository.Create (audit-platform) through roots/owners.enrollmentStudentConsents.RecordEnrollmentConsentTransitions. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). #8039: the binding also asks People Directory's pure StudentConsentTextVersion which wording version a grant records; no further mutation.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/auditlog/records.StudentConsentChangeRepository.Create",
       "target_owner": "audit-platform"
@@ -8610,7 +8640,17 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.StudentConsents.RecordEnrollmentConsentTransitions",
-      "reason": "Read or pure value helper on the supplied interface: modules/peopledirectory.StudentConsentTransitions. No mutation or locking read at this terminal; type-level binding coverage, not proof that Enrollment calls every exposed method.",
+      "reason": "Read or pure value helper: modules/peopledirectory.StudentConsentTextVersion names the wording version a consent grant records (#8039). No mutation or locking read at this terminal; may-bind method surface, not a production-call/liveness claim.",
+      "source_owner": "enrollment",
+      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentConsentTextVersion",
+      "target_owner": "people-directory"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.enrollmentStudentConsents.RecordEnrollmentConsentTransitions",
+      "classification": "query",
+      "effect": "query",
+      "port": "github.com/moto-ogs/project-phoenix/modules/enrollment/internal/application.StudentConsents.RecordEnrollmentConsentTransitions",
+      "reason": "Read or pure value helper on the supplied interface: modules/peopledirectory.StudentConsentTransitions. No mutation or locking read at this terminal; type-level binding coverage, not proof that Enrollment calls every exposed method. #8039: the binding also asks People Directory's pure StudentConsentTextVersion which wording version a grant records; no further mutation.",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.StudentConsentTransitions",
       "target_owner": "people-directory"

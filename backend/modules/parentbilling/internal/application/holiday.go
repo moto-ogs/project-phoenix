@@ -10,6 +10,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/parentbilling"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/readstate"
 )
 
 // HolidayStore persists the rules and the frozen contributions and knows
@@ -125,6 +126,9 @@ func (h *HolidayContributions) HolidayContribution(ctx context.Context, reviewer
 	if err != nil {
 		return parentbilling.HolidayContribution{}, err
 	}
+	if !contribution.Frozen {
+		contribution.Fingerprint = holidayContributionFingerprint(contribution)
+	}
 	if grouped {
 		issued, err := h.store.IssuedRegistrations(ctx, reviewer.OrganizationID, parentbilling.ServiceHoliday, periodID)
 		if err != nil {
@@ -148,15 +152,7 @@ func (h *HolidayContributions) memberContribution(ctx context.Context, organizat
 		if member.id() != registration.ID || member.frozen == nil {
 			continue
 		}
-		billed, err := h.store.IssuedContributions(ctx, organizationID, parentbilling.ServiceHoliday, periodID)
-		if err != nil {
-			return parentbilling.HolidayContribution{}, fmt.Errorf("parent billing: read issued invoices: %w", err)
-		}
-		frozen := *member.frozen
-		issued, invoiced := billed[registration.ID]
-		frozen.Invoiced = invoiced
-		frozen.CorrectionNeeded = invoiced && !sameBilled(issued, billedBy(frozen, issued.Children))
-		return frozen, nil
+		return h.withInvoice(ctx, organizationID, periodID, registration.ID, *member.frozen)
 	}
 	exemption := registration.BenefitsDeclared && bearer == nil
 	if benefitsExemption != nil {
@@ -186,10 +182,13 @@ func (h *HolidayContributions) memberContribution(ctx context.Context, organizat
 // contribution again and the number. A missing debtor number the Träger
 // asks for, a cost bearer together with the exemption, an unknown or a
 // switched-off cost bearer refuse the confirmation before anything is
-// written (#5627). The caller rolls the transaction back when this fails
-// after the confirmation.
+// written (#5627). It freezes only the preview the office read
+// (read.Fingerprint, ADR 0311): the contribution is computed under those
+// locks and compared before it is frozen. The caller rolls the transaction
+// back when this fails after the confirmation.
 func (h *HolidayContributions) ConfirmHolidayRegistration(ctx context.Context, reviewer parentbilling.HolidayReviewer, periodID, registrationID int64,
 	benefitsExemption bool, costBearerID int64, debtorNumber, familyChoice string, childNumbers []parentbilling.HolidayChildDebtorNumberInput,
+	read parentbilling.HolidayConfirmationRead,
 ) (parentbilling.HolidayConfirmation, error) {
 	if reviewer.OrganizationID <= 0 || reviewer.AccountID <= 0 {
 		return parentbilling.HolidayConfirmation{}, errTraegerRequired
@@ -221,17 +220,17 @@ func (h *HolidayContributions) ConfirmHolidayRegistration(ctx context.Context, r
 		return parentbilling.HolidayConfirmation{}, err
 	}
 	choice := holidayMemberChoice{exemption: benefitsExemption, bearer: bearer}
-	if err := h.freezeConfirmed(ctx, reviewer, periodID, registration, others, issued, choice); err != nil {
+	if err := h.freezeConfirmed(ctx, reviewer, periodID, registration, others, issued, choice, read.Fingerprint); err != nil {
 		return parentbilling.HolidayConfirmation{}, err
 	}
-	if err := h.confirmChildNumbers(ctx, reviewer, registration, byChild, childNumbers); err != nil {
+	holders := slices.Concat([]parentbilling.HolidayRegistration{registration}, confirmedSharers(others, issued))
+	if err := h.confirmChildNumbers(ctx, reviewer, registration, holders, byChild, childNumbers, read.ChildNumbersVersion); err != nil {
 		return parentbilling.HolidayConfirmation{}, err
 	}
 	// The family keeps the number of the registration and of the group that
 	// took it (#6692); the caller rolls everything back on a conflict.
 	number := registration.DebtorNumber
-	if err := h.rememberFamilies(ctx, reviewer, slices.Concat([]parentbilling.HolidayRegistration{registration}, confirmedSharers(others, issued)),
-		&number, familyChoice, registration.ID, others); err != nil {
+	if err := h.rememberFamilies(ctx, reviewer, holders, &number, familyChoice, registration.ID, others); err != nil {
 		return parentbilling.HolidayConfirmation{}, err
 	}
 	frozen, found, err := h.store.HolidayContributions(ctx, reviewer.OrganizationID, registration.ID)
@@ -272,9 +271,12 @@ func (h *HolidayContributions) confirmingSiblings(ctx context.Context, reviewer 
 // freezeConfirmed freezes the contribution of the confirmed registration,
 // ranked across its group with the exemption or the cost bearer chosen for
 // it (#5627), and gives the other confirmed registrations of
-// the group their contribution again and the debtor number.
+// the group their contribution again and the debtor number. A contribution
+// other than the preview the office read (expectedFingerprint) is
+// readstate.ErrChanged before anything is frozen.
 func (h *HolidayContributions) freezeConfirmed(ctx context.Context, reviewer parentbilling.HolidayReviewer, periodID int64,
 	registration parentbilling.HolidayRegistration, others []siblingMember, issued map[int64]bool, choice holidayMemberChoice,
+	expectedFingerprint string,
 ) error {
 	members := slices.Concat(others, []siblingMember{{registration: registration}})
 	computed, err := h.computeSiblings(ctx, reviewer.OrganizationID, members, map[int64]holidayMemberChoice{registration.ID: choice})
@@ -282,6 +284,9 @@ func (h *HolidayContributions) freezeConfirmed(ctx context.Context, reviewer par
 		return err
 	}
 	contribution := computed[registration.ID]
+	if err := readstate.Check(expectedFingerprint, holidayContributionFingerprint(contribution)); err != nil {
+		return err
+	}
 	if choice.exemption && !contribution.BenefitsExemption {
 		return parentbilling.ErrBenefitsExemptionUnavailable
 	}
@@ -292,6 +297,26 @@ func (h *HolidayContributions) freezeConfirmed(ctx context.Context, reviewer par
 		return err
 	}
 	return h.shareDebtorNumber(ctx, reviewer, periodID, others, registration.DebtorNumber, issued)
+}
+
+// holidayContributionFingerprint is the token of a preview (ADR 0311): what a
+// confirmation freezes, every child's lines and total, the total, the
+// exemption and the cost bearer, and how the chain ranked them. The read of
+// a preview and the check of its confirmation both take it from here, over
+// the contribution computed from the registration and its group as stored.
+// Siblings, invoices and debtor numbers are not part of it: the
+// confirmation freezes none of them.
+func holidayContributionFingerprint(contribution parentbilling.HolidayContribution) string {
+	return readstate.Fingerprint(struct {
+		Children           []parentbilling.HolidayChildContribution
+		TotalCents         int64
+		ExemptionAvailable bool
+		BenefitsExemption  bool
+		CostBearerID       *ident.ID
+		CostBearerName     string
+		Chain              parentbilling.HolidayChainSettings
+	}{contribution.Children, contribution.TotalCents, contribution.ExemptionAvailable, contribution.BenefitsExemption,
+		contribution.CostBearerID, contribution.CostBearerName, contribution.Chain})
 }
 
 // compute runs the chain with the rules valid on the first booked day.

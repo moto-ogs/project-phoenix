@@ -36,7 +36,7 @@ export function ruleEffect(
   > & { readonly tariffSiblingPrice?: boolean },
 ): string {
   if (rule.kind === "cap" && rule.capCents !== null) {
-    return `höchstens ${formatEuro(rule.capCents)} je Familie`;
+    return `höchstens ${formatEuro(rule.capCents)} pro Familie`;
   }
   if (rule.tariffSiblingPrice) return "Geschwisterpreis laut Preisliste";
   if (rule.priceCents !== null) return `Preis ${formatEuro(rule.priceCents)}`;
@@ -61,7 +61,7 @@ export function reductionExplanation(reduction: CareReduction): string {
       }
       return `${reduction.childRank ?? "?"}. Kind von ${reduction.familyChildren ?? "?"} · ${ruleEffect(known)} · zuerst zählt das Kind mit dem höchsten Beitrag`;
     case "cap":
-      return `Höchstbetrag ${formatEuro(reduction.capCents ?? 0)} je Familie und Monat erreicht`;
+      return `Höchstbetrag ${formatEuro(reduction.capCents ?? 0)} pro Familie und Monat erreicht`;
     case "income_level":
       return `Einkommensstufe · ${ruleEffect(known)}`;
     case "single_parent":

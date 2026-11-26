@@ -4,7 +4,6 @@
 import type * as studentsContract from "~/lib/contract/students.generated";
 import { ParentAttentionBadge } from "~/components/students/parent-attention-badge";
 import { useParentAttentionEnabled } from "~/lib/hooks/use-parent-attention";
-import { useDataPrefetchIntent } from "~/components/ui/data-prefetch-intent";
 import type { ReactNode } from "react";
 import { tileCardSurface } from "~/components/ui/tile-card";
 import {
@@ -30,6 +29,7 @@ import {
   ONLY_IF_LESSON_CANCELLED_LABEL,
   type StudentDayTimes,
   type StudentTimeStatus,
+  isWallClockSpanRunning,
 } from "~/lib/student-time-status";
 import { GROUP_ROOM_SHADES, LOCATION_COLORS } from "~/lib/location-helper";
 import { MOTO_COLOR_PALETTE, getAccessibleTextColor } from "~/lib/kit-palette";
@@ -97,6 +97,7 @@ interface StudentCardProps {
   readonly locationBadge: ReactNode;
   /** Optional extra content between name and click hint */
   readonly extraContent?: ReactNode;
+  readonly className?: string;
   /** Optional tracking indicators (right-aligned, below location badge) */
   readonly trackingIndicators?: ReactNode;
   /**
@@ -189,6 +190,7 @@ export function StudentCard({
   onClick,
   locationBadge,
   extraContent,
+  className,
   trackingIndicators,
   checkinMode = false,
   checkinState = "unknown",
@@ -252,20 +254,13 @@ export function StudentCard({
       }
     : undefined;
   const hasTapStrip = checkinMode && !selectMode;
-  const dataIntent = useDataPrefetchIntent(
-    checkinMode || selectMode ? null : `/students/${studentId}`,
-  );
   const parentAttentionEnabled = useParentAttentionEnabled();
 
   const card = (
     <button
       key={studentId}
       type="button"
-      {...dataIntent}
-      onClick={() => {
-        dataIntent.onClick();
-        activeHandler();
-      }}
+      onClick={activeHandler}
       disabled={isCheckinPending}
       aria-busy={isCheckinPending}
       aria-pressed={selectMode ? isCheckinSelected : undefined}
@@ -275,7 +270,7 @@ export function StudentCard({
       data-checkin-selected={isSelectedCard || undefined}
       data-day-home-change={dayChangeKind}
       style={selectedRingStyle}
-      className={`${tileCardSurface({ padding: "none" })} flex cursor-pointer flex-col disabled:cursor-wait disabled:opacity-70 ${parentAttentionEnabled ? "h-full" : ""}`}
+      className={`${tileCardSurface({ padding: "none" })} flex cursor-pointer flex-col [contain-intrinsic-block-size:auto_12rem] [content-visibility:auto] disabled:cursor-wait disabled:opacity-70 print:[content-visibility:visible] ${parentAttentionEnabled ? "h-full" : ""} ${className ?? ""}`}
     >
       <div
         className={`relative ${hasTapStrip || dayChangeLabel ? "p-3 pb-0 sm:p-5 sm:pb-0" : "p-3 sm:p-5"}`}
@@ -661,13 +656,19 @@ function TimeStatusRow({
       wrap={variant === "card"}
       prominent={prominent}
     >
-      {status.textColor ? (
-        <span style={{ color: getAccessibleTextColor(status.textColor) }}>
-          {fullText}
-        </span>
-      ) : (
-        fullText
-      )}
+      {/* Als Block bleibt „Gehzeit: 16:00 Uhr“ beisammen, wenn eine Notiz
+          folgt: Sonst rutscht „Uhr“ allein in die nächste Zeile (#8194).
+          Passt der Block nicht in die Zeile, bricht er wie bisher um. */}
+      <span
+        className={variant === "card" ? "inline-block" : undefined}
+        style={
+          status.textColor
+            ? { color: getAccessibleTextColor(status.textColor) }
+            : undefined
+        }
+      >
+        {fullText}
+      </span>
       {notes && variant !== "compact" && (
         <span className="ml-1 font-normal text-gray-500">({notes})</span>
       )}
@@ -874,28 +875,73 @@ export function ArrivalTimeRow({
 }
 
 /**
- * Heutige Angebote eines Kindes auf der Kinderkarte (#6487), zwischen Ankunft
- * und Gehzeit: „14:00–15:00 Töpfer-AG“. Leise neben den fetten Zeiten, damit
- * Kommen und Gehen zuerst ins Auge fallen. Ohne Angebote rendert sie nichts.
+ * Angebote eines Kindes auf der Kinderkarte (#6487), zwischen Ankunft und
+ * Gehzeit: „14:00–15:00 Töpfer-AG“. Leise neben den fetten Zeiten, damit
+ * Kommen und Gehen zuerst ins Auge fallen. Das Angebot, das gerade läuft,
+ * steht dunkel und fett da und sagt es auch: Wer die Karte ansieht, weiß, wo
+ * das Kind jetzt sein soll (#8194). Ohne Angebote rendert sie nichts.
  */
 export function PlannedActivityRows({
   activities,
-}: Readonly<{ activities?: readonly studentsContract.PlannedActivity[] }>) {
+  today = true,
+  now,
+}: Readonly<{
+  activities?: readonly studentsContract.PlannedActivity[];
+  /**
+   * „Alle Kinder“ zeigt auch andere Tage (#1939): dann ohne „heute“ und ohne
+   * laufendes Angebot.
+   */
+  today?: boolean;
+  /** Omit inside a `StudentCardClockProvider` — see `useRowClock` (#2975). */
+  now?: Date;
+}>) {
+  const rowNow = useRowClock(now);
   if (!activities?.length) return null;
   return (
-    <ul aria-label="Angebote heute">
-      {activities.map((activity) => (
-        <li key={`${activity.start_time}-${activity.title}`}>
-          {/* Ein langer Titel bricht um statt abgeschnitten zu werden:
-              Auf schmalen Karten bliebe sonst nur „14:00–15:00 Töpf…“. */}
-          <StudentInfoRow icon={<ActivityIcon />} wrap>
-            <span className="tabular-nums">
-              {activity.start_time}–{activity.end_time}
-            </span>{" "}
-            {activity.title}
-          </StudentInfoRow>
-        </li>
-      ))}
+    <ul aria-label={today ? "Angebote heute" : "Angebote an diesem Tag"}>
+      {activities.map((activity) => {
+        const running =
+          today &&
+          isWallClockSpanRunning(
+            activity.start_time,
+            activity.end_time,
+            rowNow,
+          );
+        return (
+          <li key={`${activity.start_time}-${activity.title}`}>
+            {/* Ein langer Titel bricht um statt abgeschnitten zu werden:
+                Auf schmalen Karten bliebe sonst nur „14:00–15:00 Töpf…“. */}
+            <StudentInfoRow
+              // So breit wie die Symbole von Ankunft und Gehzeit darüber
+              // und darunter: Die drei Zeilen beginnen auf einer Linie.
+              icon={
+                <span className="flex w-4 justify-center">
+                  <ActivityIcon />
+                </span>
+              }
+              wrap
+            >
+              <span
+                data-running={running || undefined}
+                className={
+                  running ? "font-semibold text-gray-900" : "text-gray-700"
+                }
+              >
+                <span className="tabular-nums">
+                  {activity.start_time}–{activity.end_time}
+                </span>{" "}
+                {activity.title}
+              </span>
+              {running ? (
+                <>
+                  {" "}
+                  <span className="whitespace-nowrap">(läuft gerade)</span>
+                </>
+              ) : null}
+            </StudentInfoRow>
+          </li>
+        );
+      })}
     </ul>
   );
 }

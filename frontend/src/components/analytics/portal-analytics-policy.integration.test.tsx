@@ -1,4 +1,4 @@
-import { Suspense, useInsertionEffect } from "react";
+import { Fragment, Suspense, useInsertionEffect } from "react";
 import type { BeforeSendFn, PostHogConfig } from "posthog-js";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import type { AnalyticsConsentCopy } from "~/components/analytics/analytics-consent-copy";
@@ -9,6 +9,11 @@ import { SWRConfig } from "~/lib/swr/testing";
 vi.unmock("~/lib/tenant-context");
 // The parent enrollment page loads its form through real SWR.
 vi.unmock("swr");
+// jsdom renders the actual pages, without their server-only translation lookup.
+vi.mock("~/i18n/scoped-messages", () => ({ messageBoundary: () => Fragment }));
+vi.mock("~/lib/token-status-seed.server", () => ({
+  readEnrollmentStatusSeed: async () => undefined,
+}));
 
 const mocks = vi.hoisted(() => ({
   useSession: vi.fn(),
@@ -406,7 +411,7 @@ describe("embedded enrollment analytics policy", () => {
       vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
       mocks.useSession.mockReturnValue({
         status: "authenticated",
-        data: { user: { id: "7", scope, tenantId: 42 } },
+        data: { user: { id: "7", scope, tenantId: "42" } },
       });
       vi.mocked(fetch).mockResolvedValueOnce(
         Response.json({ data: { enabled: true } }),
@@ -428,7 +433,7 @@ describe("embedded enrollment analytics policy", () => {
 
       mocks.useSession.mockReturnValue({
         status: "authenticated",
-        data: { user: { id: "8", scope, tenantId: 43 } },
+        data: { user: { id: "8", scope, tenantId: "43" } },
       });
       await act(async () =>
         view.rerender(
@@ -577,7 +582,7 @@ describe("embedded enrollment analytics policy", () => {
       vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
       mocks.useSession.mockReturnValue({
         status: "authenticated",
-        data: { user: { id: "7", scope, tenantId: 42 } },
+        data: { user: { id: "7", scope, tenantId: "42" } },
       });
       vi.mocked(fetch).mockResolvedValueOnce(
         Response.json({ data: { enabled: true } }),

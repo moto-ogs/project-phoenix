@@ -17,13 +17,21 @@ type TeacherHint struct {
 	SchoolClass string `json:"school_class,omitempty"`
 }
 
+// StudentListPlannedActivity is one offering a child is planned for on the listed day
+// (#8194), such as "Töpfer-AG", with its wall-clock times (HH:MM).
+type StudentListPlannedActivity struct {
+	Title     string `json:"title"`
+	StartTime string `json:"start_time"`
+	EndTime   string `json:"end_time"`
+}
+
 // StudentResponse represents a student response
 type StudentResponse struct {
 	ID                 ident.ID             `json:"id"`
 	PersonID           ident.ID             `json:"person_id"`
 	FirstName          string               `json:"first_name"`
 	LastName           string               `json:"last_name"`
-	TagID              string               `json:"tag_id,omitempty"`
+	TagID              string               `json:"tag_id,omitempty" contract_text:"RFID tag code, not a database row ID"`
 	Birthday           string               `json:"birthday,omitempty" contract:"date"` // Date in YYYY-MM-DD format
 	SchoolClass        string               `json:"school_class"`
 	Location           string               `json:"current_location"`
@@ -129,7 +137,8 @@ type StudentResponse struct {
 	// feature is off, making "photos disabled" indistinguishable from
 	// "consent withdrawn" — the frontend ended up special-casing this in
 	// buildDraft(...) just to recover the missing signal.
-	PhotoURL            string     `json:"photo_url,omitempty"`
+	PhotoVersion        string     `json:"photo_version,omitempty"`
+	PhotoURL            string     `json:"photo_url,omitempty"` // legacy BFF alias
 	PhotoConsentGiven   *bool      `json:"photo_consent_given,omitempty"`
 	PhotoConsentGivenAt *time.Time `json:"photo_consent_given_at,omitempty"`
 	PhotoConsentGivenBy *ident.ID  `json:"photo_consent_given_by,omitempty"`

@@ -278,7 +278,7 @@ func TestStaffWeekendWriteKeepsItsErrorContract(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	response := routetest.ExecuteRequest(resourceFor(module, true).Router(), routetest.NewRequest(
+	response := routetest.ExecuteRequest(resourceFor(module.Capability, true).Router(), routetest.NewRequest(
 		"PUT", "/2026-09-05", strings.NewReader(`{"dishes":[{"dish":"Suppe"}]}`),
 	))
 	if response.Code != 400 {

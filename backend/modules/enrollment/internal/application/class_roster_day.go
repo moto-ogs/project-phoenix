@@ -24,7 +24,7 @@ type classDayCoveringPhase struct {
 // class-day view (#1772): the full class (including students without any
 // enrollment), merged across every covering phase, plus the class-list-only
 // entries. The class is loaded ONCE and shared across every covering phase's
-// roster build: the view fans out per class on the teachers' landing page.
+// roster build when a teacher opens the class.
 func (s *Reports) ClassRosterDay(ctx context.Context, schoolClass string, date calendar.Date) (*enrollment.ClassRosterDay, error) {
 	return s.rosterDay(ctx, enrollment.ClassRosterFilters{SchoolClass: strings.TrimSpace(schoolClass)}, date)
 }

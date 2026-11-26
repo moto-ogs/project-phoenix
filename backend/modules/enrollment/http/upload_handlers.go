@@ -18,6 +18,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	capability "github.com/moto-ogs/project-phoenix/modules/enrollment"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 // The files parents attach to an enrollment (#4783): the public upload of the
@@ -69,7 +70,7 @@ type UploadReceipt struct {
 
 // AdminRequestUpload is one live upload of a request in the staff detail.
 type AdminRequestUpload struct {
-	ID          string    `json:"id"`
+	ID          ident.ID  `json:"id"`
 	FieldKey    string    `json:"field_key"`
 	Filename    string    `json:"filename"`
 	SizeBytes   int64     `json:"size_bytes" contract:"number"`
@@ -255,11 +256,11 @@ func renderUploadRefusal(w http.ResponseWriter, r *http.Request, err error) {
 	errors.As(err, &mismatch)
 	if mismatch != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequestWithDetails(err, common.CodeEnrollmentUploadContentMismatch,
-			map[string]any{"filename": mismatch.filename}))
+			UploadContentDetails{Filename: mismatch.filename}))
 		return
 	}
 	common.RenderError(w, r, common.ErrorInvalidRequestWithDetails(err, common.CodeEnrollmentUploadInvalid,
-		map[string]any{"max_mb": capability.MaxFileFieldSizeMB}))
+		UploadRefusalDetails{MaxMB: capability.MaxFileFieldSizeMB}))
 }
 
 // renderUploadFailure maps the owner's refusals of an upload.
@@ -268,7 +269,7 @@ func renderUploadFailure(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
 	case errors.As(err, &rejection):
 		common.RenderError(w, r, common.ErrorInvalidRequestWithDetails(err, common.CodeEnrollmentUploadInvalid,
-			map[string]any{"max_mb": rejection.MaxMB, "allowed_types": rejection.AllowedTypes}))
+			UploadRefusalDetails{MaxMB: rejection.MaxMB, AllowedTypes: new(rejection.AllowedTypes)}))
 	case errors.Is(err, capability.ErrUploadFieldNotFound),
 		errors.Is(err, capability.ErrInvalidSubmission),
 		errors.Is(err, capability.ErrEnrollmentDisabled),
@@ -338,7 +339,7 @@ func (rs *Resource) attachAdminUploads(ctx context.Context, detail *AdminRequest
 	}
 	for _, upload := range uploads {
 		detail.Uploads = append(detail.Uploads, AdminRequestUpload{
-			ID: strconv.FormatInt(upload.ID, 10), FieldKey: upload.FieldKey, Filename: upload.Filename,
+			ID: ident.ID(upload.ID), FieldKey: upload.FieldKey, Filename: upload.Filename,
 			SizeBytes: upload.SizeBytes, ContentType: upload.ContentType, UploadedAt: upload.CreatedAt,
 		})
 	}

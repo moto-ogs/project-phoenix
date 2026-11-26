@@ -6,8 +6,10 @@ import {
   accountCareTerm,
   ParentCareTermScope,
   ParentChildCareTermScope,
+  ParentSchoolCareTermScope,
   useParentCareTerms,
 } from "./parent-care-term";
+import { useErrorCareFacilityTerm } from "./care-facility-term-context";
 import type * as parentMeContract from "~/lib/contract/parent-me.generated";
 
 const resources = vi.hoisted(() => ({
@@ -43,10 +45,19 @@ function child(
   };
 }
 
-function link(...rows: [parentMeContract.ChildResponse, string | undefined][]) {
+function link(
+  ...rows: [
+    parentMeContract.ChildResponse,
+    string | undefined,
+    article?: string,
+  ][]
+) {
   resources.children = rows.map(([row]) => row);
   resources.features = Object.fromEntries(
-    rows.map(([row, term]) => [row.student_id, { care_facility_term: term }]),
+    rows.map(([row, term, article]) => [
+      row.student_id,
+      { care_facility_term: term, care_facility_article: article },
+    ]),
   );
 }
 
@@ -96,6 +107,55 @@ describe("care term in the parents portal (#6082)", () => {
       </ParentCareTermScope>,
     );
     expect(screen.getByText("In der GTS/OGS")).toBeInTheDocument();
+  });
+
+  // #8136: each school's own article declines its name; an account with
+  // schools of different articles reads each name with its own.
+  it("declines each school's name with its own article", () => {
+    link(
+      [child("1", "Barnstorf"), "Hort", "der"],
+      [child("2", "Sonnenschule"), "Lernhaus", "das"],
+      [child("3", "Talschule"), "OGS", "die"],
+    );
+    render(
+      <ParentCareTermScope enabled>
+        <ParentChildCareTermScope studentId="1">
+          <Today />
+        </ParentChildCareTermScope>
+        <ParentChildCareTermScope studentId="2">
+          <Today />
+        </ParentChildCareTermScope>
+        <Today />
+      </ParentCareTermScope>,
+    );
+    expect(screen.getByText("Im Hort")).toBeInTheDocument();
+    expect(screen.getByText("Im Lernhaus")).toBeInTheDocument();
+    expect(
+      screen.getByText("Im Hort/im Lernhaus/in der OGS"),
+    ).toBeInTheDocument();
+  });
+
+  it("hands rows of several children each school's declined name", () => {
+    link(
+      [child("1", "Barnstorf"), "Hort", "der"],
+      [child("2", "Sonnenschule"), "GTS"],
+    );
+    let terms: ReturnType<typeof useParentCareTerms> | undefined;
+    function Probe() {
+      terms = useParentCareTerms();
+      return null;
+    }
+    render(
+      <ParentCareTermScope enabled>
+        <Probe />
+      </ParentCareTermScope>,
+    );
+    expect(terms?.valuesOf("1").careAcc).toBe("den Hort");
+    expect(terms?.valuesOf("2").careAcc).toBe("die GTS");
+    expect(terms?.valuesOfSchool("Barnstorf").careVon).toBe("vom Hort");
+    expect(terms?.valuesOf(undefined).careNom).toBe("der Hort/die GTS");
+    expect(terms?.termOf("1")).toBe("Hort");
+    expect(terms?.account).toBe("Hort/GTS");
   });
 
   it("keeps a child's subtree mounted when its term arrives late", () => {
@@ -176,5 +236,26 @@ describe("care term in the parents portal (#6082)", () => {
     expect(terms?.termOfSchool("Sonnenschule")).toBe("OGS");
     expect(terms?.termOfSchool("Unbekannt")).toBe("GTS/OGS");
     expect(terms?.termOf("2")).toBe("OGS");
+  });
+
+  it("names a letter's own school in its texts and error messages (#6258)", () => {
+    link([child("1", "Barnstorf"), "GTS"], [child("2", "Sonnenschule"), "OGS"]);
+    function ErrorTerm() {
+      return <p>Fehler: {useErrorCareFacilityTerm()}</p>;
+    }
+    render(
+      <ParentCareTermScope enabled>
+        <ParentSchoolCareTermScope schoolName="Barnstorf">
+          <Today />
+          <ErrorTerm />
+        </ParentSchoolCareTermScope>
+        <ParentSchoolCareTermScope schoolName="Unbekannt">
+          <ErrorTerm />
+        </ParentSchoolCareTermScope>
+      </ParentCareTermScope>,
+    );
+    expect(screen.getByText("In der GTS")).toBeInTheDocument();
+    expect(screen.getByText("Fehler: GTS")).toBeInTheDocument();
+    expect(screen.getByText("Fehler: GTS/OGS")).toBeInTheDocument();
   });
 });

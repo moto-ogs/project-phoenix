@@ -81,7 +81,7 @@ type SEPAMandateText struct {
 type SEPAMandateCreditor struct {
 	Name       string `json:"name"`
 	Address    string `json:"address"`
-	CreditorID string `json:"creditor_id"`
+	CreditorID string `json:"creditor_id" contract_text:"SEPA creditor identifier"`
 }
 
 // SEPAMandatePrefill proposes holder and address of the contract party.
@@ -114,7 +114,7 @@ type SEPAMandateSummary struct {
 	IBANMasked         string            `json:"iban_masked"`
 	BIC                string            `json:"bic"`
 	Source             string            `json:"source"`
-	CreditorID         string            `json:"creditor_id"`
+	CreditorID         string            `json:"creditor_id" contract_text:"SEPA creditor identifier"`
 	RevokedOn          *calendar.Date    `json:"revoked_on"`
 	Proof              *SEPAMandateProof `json:"proof"`
 }

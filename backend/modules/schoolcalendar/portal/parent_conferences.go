@@ -5,6 +5,8 @@ import (
 	"errors"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
@@ -35,7 +37,6 @@ var (
 // their occupancy and the classes she may offer one for.
 type SchoolParentConferences interface {
 	ListSchoolParentConferences(ctx context.Context) (*SchoolParentConferenceList, error)
-	GetSchoolParentConference(ctx context.Context, id int64) (*ParentConferenceView, error)
 	CreateSchoolParentConference(ctx context.Context, req ParentConferenceRequest) (*ParentConferenceView, error)
 	UpdateSchoolParentConference(ctx context.Context, id int64, req ParentConferenceRequest) (*ParentConferenceView, error)
 	DeleteSchoolParentConference(ctx context.Context, id int64) error
@@ -70,6 +71,9 @@ type ParentConferenceRequest struct {
 	SlotMinutes int                      `json:"slot_minutes"`
 	Breaks      []ParentConferenceWindow `json:"breaks"`
 	Location    *string                  `json:"location,omitempty"`
+	// ExpectedVersion is the ParentConferenceView.Version a change of the
+	// day was edited on (ADR 0311); a creation has none.
+	ExpectedVersion string `json:"-"`
 }
 
 // ParentConferenceWindow is a span of the day, "HH:MM" to "HH:MM".
@@ -88,7 +92,7 @@ type SchoolParentConferenceList struct {
 // ParentConferenceView is one day with its occupancy, as the Lehrkraft sees
 // it.
 type ParentConferenceView struct {
-	ID          string                   `json:"id"`
+	ID          ident.ID                 `json:"id"`
 	SchoolClass string                   `json:"school_class"`
 	Date        calendar.Date            `json:"date"`
 	StartTime   string                   `json:"start_time"`
@@ -98,22 +102,25 @@ type ParentConferenceView struct {
 	Location    *string                  `json:"location,omitempty"`
 	BookedCount int                      `json:"booked_count"`
 	Slots       []ParentConferenceSlot   `json:"slots"`
+	// Version is the read-state token of the day and its bookings
+	// (ADR 0311): a change sends it back as expected_version.
+	Version string `json:"version"`
 }
 
 // ParentConferenceSlot is one slot of a day. StudentName is set for a
 // booked slot in the Lehrkraft's view only.
 type ParentConferenceSlot struct {
-	StartTime   string  `json:"start_time"`
-	EndTime     string  `json:"end_time"`
-	Booked      bool    `json:"booked"`
-	StudentID   *string `json:"student_id,omitempty"`
-	StudentName *string `json:"student_name,omitempty"`
+	StartTime   string    `json:"start_time"`
+	EndTime     string    `json:"end_time"`
+	Booked      bool      `json:"booked"`
+	StudentID   *ident.ID `json:"student_id,omitempty"`
+	StudentName *string   `json:"student_name,omitempty"`
 }
 
 // ParentConferenceOffer is one day as a family sees it for one child: the
 // free slots, the child's own booking and whether it can still change.
 type ParentConferenceOffer struct {
-	ID          string                   `json:"id"`
+	ID          ident.ID                 `json:"id"`
 	SchoolClass string                   `json:"school_class"`
 	TeacherName string                   `json:"teacher_name"`
 	Date        calendar.Date            `json:"date"`

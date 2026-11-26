@@ -71,6 +71,7 @@ const CodeCarePickupChangeCutoffPassed = "care.pickup_change_cutoff_passed"
 const CodeCarePickupChangeDisabled = "care.pickup_change_disabled"
 const CodeCarePickupPermissionRequestRequired = "care.pickup_permission_request_required"
 const CodeCarePickupPermissionUnchanged = "care.pickup_permission_unchanged"
+const CodeCarePickupPersonNotAuthorized = "care.pickup_person_not_authorized"
 const CodeCarePickupPersonNotLinked = "care.pickup_person_not_linked"
 const CodeCarePickupProofNotFound = "care.pickup_proof_not_found"
 const CodeCarePickupSignatureInvalid = "care.pickup_signature_invalid"
@@ -79,6 +80,7 @@ const CodeCarePickupSignatureTooLarge = "care.pickup_signature_too_large"
 const CodeCarePollClosed = "care.poll_closed"
 const CodeCarePrimaryGuardianProtected = "care.primary_guardian_protected"
 const CodeCareRemoveDisabled = "care.remove_disabled"
+const CodeCareRequestFeedNotFound = "care.request_feed_not_found"
 const CodeCareRequestNotFound = "care.request_not_found"
 const CodeCareRequestNotOpen = "care.request_not_open"
 const CodeCareRequestSharingInvalid = "care.request_sharing_invalid"
@@ -157,6 +159,7 @@ var errorCodeClassesCare = []errorCodeClass{
 	{CodeCarePickupChangeDisabled, "permission"},
 	{CodeCarePickupPermissionRequestRequired, "business_rejection"},
 	{CodeCarePickupPermissionUnchanged, "business_rejection"},
+	{CodeCarePickupPersonNotAuthorized, "input"},
 	{CodeCarePickupPersonNotLinked, "input"},
 	{CodeCarePickupProofNotFound, "business_rejection"},
 	{CodeCarePickupSignatureInvalid, "input"},
@@ -165,6 +168,7 @@ var errorCodeClassesCare = []errorCodeClass{
 	{CodeCarePollClosed, "business_rejection"},
 	{CodeCarePrimaryGuardianProtected, "permission"},
 	{CodeCareRemoveDisabled, "permission"},
+	{CodeCareRequestFeedNotFound, "business_rejection"},
 	{CodeCareRequestNotFound, "business_rejection"},
 	{CodeCareRequestNotOpen, "business_rejection"},
 	{CodeCareRequestSharingInvalid, "input"},

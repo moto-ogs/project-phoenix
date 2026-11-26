@@ -19,7 +19,8 @@ const mocks = vi.hoisted(() => ({
   fetchCareOfferingBookingStats: vi.fn(),
 }));
 
-vi.mock("~/lib/care-offering-api", () => ({
+vi.mock("~/lib/care-offering-api", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   listCareOfferings: mocks.listCareOfferings,
 }));
 
@@ -40,7 +41,7 @@ function render(ui: ReactNode) {
   return rtlRender(
     <SessionProvider
       session={{
-        user: { id: "staff-7", scope: "tenant", tenantId: 42 },
+        user: { id: "staff-7", scope: "tenant", tenantId: "42" },
         expires: "2099-01-01",
       }}
       refetchOnWindowFocus={false}
@@ -83,7 +84,7 @@ function stats(
   };
 }
 
-// The table renders a phone list next to it (stackedOnMobile); the rows
+// The table renders a phone list next to it (stacked below md); the rows
 // are asserted in the table.
 function table() {
   return within(screen.getByTestId("data-table-table"));
@@ -121,11 +122,11 @@ describe("PhaseOfferingOccupancy (#4782)", () => {
     const { unmount } = render(<PhaseOfferingOccupancy phaseId="7" />);
 
     expect(
-      await screen.findByText("Freie Plätze je Angebot"),
+      await screen.findByText("Freie Plätze pro Angebot"),
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        /Hier siehst du Kapazität, Belegung, freie Plätze und Status je Angebot\./,
+        /Hier siehst du Kapazität, Belegung, freie Plätze und Status pro Angebot\./,
       ),
     ).toBeInTheDocument();
     expect(mocks.listCareOfferings).toHaveBeenCalledWith("7");
@@ -157,7 +158,7 @@ describe("PhaseOfferingOccupancy (#4782)", () => {
 
     // Free places of the phase next to the heading: 3 + 0.
     const heading = screen.getByRole("heading", {
-      name: "Freie Plätze je Angebot",
+      name: "Freie Plätze pro Angebot",
     });
     expect(heading.parentElement).toHaveTextContent("3 frei");
 
@@ -181,7 +182,7 @@ describe("PhaseOfferingOccupancy (#4782)", () => {
     render(<PhaseOfferingOccupancy phaseId="7" />);
 
     expect(
-      await screen.findByText("Freie Plätze je Angebot"),
+      await screen.findByText("Freie Plätze pro Angebot"),
     ).toBeInTheDocument();
     expect(table().getByText("7 von 10")).toBeInTheDocument();
     // Booking stats carry no identities; the section renders four columns.
@@ -208,7 +209,7 @@ describe("PhaseOfferingOccupancy (#4782)", () => {
     expect(screen.getByTestId("anchor")).toBeInTheDocument();
     await waitFor(() =>
       expect(
-        screen.queryByText("Freie Plätze je Angebot"),
+        screen.queryByText("Freie Plätze pro Angebot"),
       ).not.toBeInTheDocument(),
     );
     expect(container.querySelector("table")).toBeNull();

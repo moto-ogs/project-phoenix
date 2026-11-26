@@ -269,7 +269,7 @@ func schoolSelect(db bun.IDB, model any) *bun.SelectQuery {
 }
 
 func toSchoolDomain(row schoolRow) organizationtenancy.School {
-	return organizationtenancy.School{
+	school := organizationtenancy.School{
 		ID: ident.ID(row.ID), CreatedAt: row.CreatedAt, UpdatedAt: row.UpdatedAt,
 		OrganizationID: ident.ID(row.OrganizationID), Name: row.Name, Slug: row.Slug, Subdomain: row.Subdomain,
 		Active: row.Active, Hidden: row.Hidden, DeletedAt: row.DeletedAt, Settings: row.Settings,
@@ -277,6 +277,8 @@ func toSchoolDomain(row schoolRow) organizationtenancy.School {
 		ChildQuotaBundles: row.ChildQuotaBundles, ChildQuotaBundleSize: row.ChildQuotaBundleSize,
 		DeviceSlots: row.DeviceSlots,
 	}
+	school.Version = organizationtenancy.SchoolVersion(school)
+	return school
 }
 
 // SetSchoolChildQuota replaces the school's Kinderkontingent. Nil bundles

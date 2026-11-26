@@ -1,9 +1,11 @@
+import { foldForSearch } from "~/lib/search-fold";
 import { fetchStudents, type StudentFilters } from "~/lib/student-api";
+import type { Student } from "~/lib/student-helpers";
 import { createLogger } from "~/lib/logger";
 
 const logger = createLogger({ component: "StudentSearch" });
 
-/** UI selections shared by the reader and navigation intent. */
+/** UI selections shared by the reader and the server seed. */
 export interface StudentSearchFilterInput {
   search: string;
   groupIds: readonly string[];
@@ -21,7 +23,7 @@ export interface StudentSearchFilterInput {
   enrollmentAnswer?: string;
 }
 
-/** The search filters, identical for the page and its navigation intent. */
+/** The search filters, identical for the browser and server reads. */
 export function buildStudentSearchFilters(
   params: StudentSearchFilterInput,
 ): StudentFilters {
@@ -50,13 +52,14 @@ export function buildStudentSearchFilters(
 
 const MAX_STUDENT_SEARCH_PAGES = 20;
 
-/** Same bounded page walk for the destination and navigation intent. */
+/** Same bounded page walk on the server and in the browser. */
 export async function fetchStudentSearch(
   filters: StudentFilters,
   requestDate: string,
   requestIsToday: boolean,
+  fetchPage: typeof fetchStudents = fetchStudents,
 ) {
-  const result = await fetchStudents(filters);
+  const result = await fetchPage(filters);
   const students = [...result.students];
 
   // Walk the remaining pages when the selection is larger than one page.
@@ -71,7 +74,7 @@ export async function fetchStudentSearch(
   const totalPages = result.pagination?.total_pages ?? 1;
   const lastPage = Math.min(totalPages, MAX_STUDENT_SEARCH_PAGES);
   for (let page = 2; page <= lastPage; page++) {
-    const nextPage = await fetchStudents({ ...filters, page });
+    const nextPage = await fetchPage({ ...filters, page });
     students.push(...nextPage.students);
   }
   // Past the bound the list is incomplete, and everything downstream — the
@@ -102,4 +105,23 @@ export async function fetchStudentSearch(
     requestIsToday: requestIsToday,
     truncatedTotal,
   };
+}
+
+/**
+ * The name search of the child list, run in the browser on the loaded list so
+ * typing asks no server and keeps every child object (and its card) as it is.
+ * Same rule as the list endpoint's `matchesSearchFilter`
+ * (backend presenceprojection `list_helpers.go`), which the server export of
+ * the same term still applies: the folded text is part of „Vorname Nachname“
+ * or of the child's ID.
+ */
+export function studentNameSearch(
+  search: string,
+): (student: Pick<Student, "id" | "first_name" | "second_name">) => boolean {
+  const term = foldForSearch(search);
+  if (!term) return () => true;
+  return (student) =>
+    foldForSearch(
+      `${student.first_name ?? ""} ${student.second_name ?? ""}`,
+    ).includes(term) || student.id.includes(term);
 }

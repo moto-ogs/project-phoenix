@@ -55,9 +55,9 @@ func TestUpdateActivity_KeepsUnsentPartsAndRefusesStaleVersion(t *testing.T) {
 	co := testpkg.CreateTestStaff(t, ctx.db, "Co", "Lead")
 
 	create := testutil.NewAuthenticatedRequest(t, http.MethodPost, "/activities/", map[string]any{
-		"name": "Fußball AG", "max_participants": 12, "is_open": true, "category_id": category.ID,
-		"planned_room_id": room.ID, "schedules": []map[string]any{{"weekday": 2}, {"weekday": 4}},
-		"supervisor_ids": []int64{primary.ID, co.ID},
+		"name": "Fußball AG", "max_participants": 12, "is_open": true, "category_id": fmt.Sprint(category.ID),
+		"planned_room_id": fmt.Sprint(room.ID), "schedules": []map[string]any{{"weekday": 2}, {"weekday": 4}},
+		"supervisor_ids": []string{fmt.Sprint(primary.ID), fmt.Sprint(co.ID)},
 	})
 	created := testutil.ExecuteWithAuth(t, ctx.router, create, traegerActivityClaims(t, ctx))
 	require.Equal(t, http.StatusCreated, created.Code, created.Body.String())
@@ -66,7 +66,7 @@ func TestUpdateActivity_KeepsUnsentPartsAndRefusesStaleVersion(t *testing.T) {
 
 	// The database form's body, with the primary supervisor kept first.
 	saved := putActivity(t, ctx, id, map[string]any{
-		"name": "Fußball AG Nord", "max_participants": 14, "category_id": category.ID,
+		"name": "Fußball AG Nord", "max_participants": 14, "category_id": fmt.Sprint(category.ID),
 		"expected_version": read,
 	})
 	require.Equal(t, http.StatusOK, saved)
@@ -79,10 +79,10 @@ func TestUpdateActivity_KeepsUnsentPartsAndRefusesStaleVersion(t *testing.T) {
 
 	// A second editor read before the save above: refused, nothing written.
 	assert.Equal(t, http.StatusConflict, putActivity(t, ctx, id, map[string]any{
-		"name": "Überholt", "category_id": category.ID, "expected_version": read,
+		"name": "Überholt", "category_id": fmt.Sprint(category.ID), "expected_version": read,
 	}))
 	assert.Equal(t, http.StatusConflict, putActivity(t, ctx, id, map[string]any{
-		"name": "Ohne Stand", "category_id": category.ID,
+		"name": "Ohne Stand", "category_id": fmt.Sprint(category.ID),
 	}))
 	assert.Equal(t, "Fußball AG Nord", activityDetail(t, ctx, id)["name"])
 
@@ -99,7 +99,7 @@ func TestUpdateActivity_KeepsUnsentPartsAndRefusesStaleVersion(t *testing.T) {
 	removed := testutil.ExecuteWithAuth(t, ctx.router, remove, testutil.DefaultTestClaims())
 	require.Less(t, removed.Code, 300, removed.Body.String())
 	assert.Equal(t, http.StatusConflict, putActivity(t, ctx, id, map[string]any{
-		"name": "Überholt", "category_id": category.ID, "supervisor_ids": []int64{primary.ID, co.ID}, "expected_version": current,
+		"name": "Überholt", "category_id": fmt.Sprint(category.ID), "supervisor_ids": []string{fmt.Sprint(primary.ID), fmt.Sprint(co.ID)}, "expected_version": current,
 	}))
 	assert.Len(t, activityDetail(t, ctx, id)["supervisors"], 1)
 }
@@ -116,16 +116,16 @@ func TestUpdateActivity_ChangesCategoryAndSupervisorsTogether(t *testing.T) {
 	second := testpkg.CreateTestStaff(t, ctx.db, "Zweite", "Leitung")
 
 	create := testutil.NewAuthenticatedRequest(t, http.MethodPost, "/activities/", map[string]any{
-		"name": "Schach AG", "max_participants": 10, "category_id": before.ID,
-		"supervisor_ids": []int64{first.ID},
+		"name": "Schach AG", "max_participants": 10, "category_id": fmt.Sprint(before.ID),
+		"supervisor_ids": []string{fmt.Sprint(first.ID)},
 	})
 	created := testutil.ExecuteWithAuth(t, ctx.router, create, traegerActivityClaims(t, ctx))
 	require.Equal(t, http.StatusCreated, created.Code, created.Body.String())
 	id := testutil.ParseJSONResponse(t, created.Body.Bytes())["data"].(map[string]any)["id"]
 
 	req := testutil.NewAuthenticatedRequest(t, http.MethodPut, fmt.Sprintf("/activities/%v", id), map[string]any{
-		"name": "Schach AG", "max_participants": 10, "category_id": after.ID,
-		"supervisor_ids": []int64{second.ID}, "expected_version": activityVersion(t, ctx, id),
+		"name": "Schach AG", "max_participants": 10, "category_id": fmt.Sprint(after.ID),
+		"supervisor_ids": []string{fmt.Sprint(second.ID)}, "expected_version": activityVersion(t, ctx, id),
 	})
 	rr := testutil.ExecuteWithAuth(t, ctx.router, req, testutil.DefaultTestClaims())
 	require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())

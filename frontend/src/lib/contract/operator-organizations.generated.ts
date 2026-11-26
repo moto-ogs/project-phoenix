@@ -10,6 +10,7 @@ import {
   nullable,
   object,
   optional,
+  paginated,
   requestBody,
   safeInt,
   str,
@@ -59,6 +60,7 @@ export interface OrganizationSummary {
   konten_count: number;
   geraete_count: number;
   personen_count: number;
+  version: string;
 }
 
 export const OrganizationSummarySchema: z.ZodType<OrganizationSummary, unknown> = object<OrganizationSummary>({
@@ -75,6 +77,7 @@ export const OrganizationSummarySchema: z.ZodType<OrganizationSummary, unknown> 
   konten_count: safeInt,
   geraete_count: safeInt,
   personen_count: safeInt,
+  version: str,
 });
 
 /** Go: parentbilling.RetentionInstruction */
@@ -425,6 +428,7 @@ export interface updateOrganizationRequest {
   name?: string;
   slug?: string;
   active?: boolean;
+  expected_version?: string;
 }
 
 /** Go: operator.recordTraegerErasureOrderRecordsRequest */
@@ -495,7 +499,13 @@ export const routes = {
     method: "GET",
     pattern: "/operator/organizations/{id}/accounts",
     portals: ["platform"],
-    response: success(z.array(OrganizationAccountSchema)),
+    query: {
+      "cursor": { kind: "string" },
+      "direction": { kind: "string" },
+      "search": { kind: "string" },
+      "sort": { kind: "string" },
+    },
+    response: paginated(z.array(OrganizationAccountSchema)),
   },
   "GET /operator/organizations/{id}/beleg-retention": {
     method: "GET",

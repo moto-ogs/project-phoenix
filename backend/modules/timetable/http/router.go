@@ -150,6 +150,8 @@ func (rs *Resource) mountInstanceStaffingRoutes(r chi.Router, withTx common.Midd
 	// replacement for the users:read-gated tenant roster.
 	r.With(common.RequiresPermission(permissions.SchedulesRead), withTx).
 		Get("/{id}/participants", rs.getInstanceParticipants)
+	r.With(common.RequiresPermission(permissions.SchedulesRead), withTx).
+		Get("/{id}/attendance", rs.getInstanceAttendance)
 	r.With(common.RequiresPermission(permissions.SchedulesManage), withTx).
 		Post("/{id}/move-staff", rs.moveStaff)
 }

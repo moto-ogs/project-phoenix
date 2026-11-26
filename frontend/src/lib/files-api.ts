@@ -4,10 +4,11 @@
 // the caller may do via can_manage / can_upload / can_delete — the page
 // renders exactly that, no client-side authority.
 
-import { bffJson } from "./bff-fetch";
+import { bffFileHref, bffJson } from "./bff-fetch";
 import { knownEnum } from "./contract/known-enum";
 import type {
   FileResponse,
+  FolderListResponse,
   FolderRequest,
   FolderResponse,
 } from "./contract/files.generated";
@@ -28,6 +29,10 @@ export interface FileFolder {
   roleIds: string[];
   accountIds: string[];
   createdAt: string;
+  /** Der gelesene Stand, den eine Änderung zurückschickt (ADR 0311). */
+  version: string;
+  /** Die Dateien, die der Lösch-Dialog nennt; das Löschen bestätigt sie. */
+  fingerprint: string;
 }
 
 export interface FolderOverview {
@@ -101,6 +106,8 @@ function mapFolder(data: FolderResponse): FileFolder | null {
     roleIds: data.role_ids ?? [],
     accountIds: data.account_ids ?? [],
     createdAt: data.created_at,
+    version: data.version,
+    fingerprint: data.fingerprint,
   };
 }
 
@@ -132,22 +139,27 @@ function toBackendFolderInput(input: FolderInput): FolderRequest {
   };
 }
 
+export function toFolderOverview(list: FolderListResponse): FolderOverview {
+  return {
+    folders: (list.folders ?? []).flatMap((folder) => {
+      const mapped = mapFolder(folder);
+      return mapped ? [mapped] : [];
+    }),
+    canManage: list.can_manage,
+    canUpload: list.can_upload,
+    staffUploadEnabled: list.staff_upload_enabled,
+    usedBytes: list.used_bytes,
+    maxBytes: list.max_bytes,
+  };
+}
+
 class FilesService {
   async listFolders(): Promise<FolderOverview> {
-    const list = await bffJson("tenant", "GET /api/files/folders", {
-      errorMessage: "Ordner konnten nicht geladen werden.",
-    });
-    return {
-      folders: (list.folders ?? []).flatMap((folder) => {
-        const mapped = mapFolder(folder);
-        return mapped ? [mapped] : [];
+    return toFolderOverview(
+      await bffJson("tenant", "GET /api/files/folders", {
+        errorMessage: "Ordner konnten nicht geladen werden.",
       }),
-      canManage: list.can_manage,
-      canUpload: list.can_upload,
-      staffUploadEnabled: list.staff_upload_enabled,
-      usedBytes: list.used_bytes,
-      maxBytes: list.max_bytes,
-    };
+    );
   }
 
   async createFolder(input: FolderInput): Promise<FileFolder | null> {
@@ -158,25 +170,39 @@ class FilesService {
     return mapFolder(folder);
   }
 
+  /** Speichert den Ordner, wie er mit `expectedVersion` gelesen wurde. */
   async updateFolder(
     folderId: string,
     input: FolderInput,
+    expectedVersion: string,
   ): Promise<FileFolder | null> {
     const folder = await bffJson(
       "tenant",
       "PUT /api/files/folders/{folderId}",
       {
         params: { folderId },
-        body: toBackendFolderInput(input),
+        body: {
+          ...toBackendFolderInput(input),
+          expected_version: expectedVersion,
+        },
         errorMessage: "Ordner konnte nicht gespeichert werden.",
       },
     );
     return mapFolder(folder);
   }
 
-  async deleteFolder(folderId: string): Promise<void> {
+  /**
+   * Löscht den Ordner mit den Dateien, die der Dialog genannt hat
+   * (`fingerprint`); kam seitdem eine dazu oder fiel eine weg, lehnt der
+   * Server ab.
+   */
+  async deleteFolder(
+    folderId: string,
+    expectedFingerprint: string,
+  ): Promise<void> {
     await bffJson("tenant", "DELETE /api/files/folders/{folderId}", {
       params: { folderId },
+      body: { expected_fingerprint: expectedFingerprint },
       errorMessage: "Ordner konnte nicht gelöscht werden.",
     });
   }
@@ -236,12 +262,20 @@ class FilesService {
   }
 
   downloadUrl(folderId: string, fileId: string): string {
-    return `/api/files/folders/${folderId}/files/${fileId}/download`;
+    return bffFileHref(
+      "tenant",
+      "GET /api/files/folders/{folderId}/files/{fileId}/download",
+      { params: { folderId, fileId } },
+    );
   }
 
   /** Same URL, but the browser shows the file (PDF, image) instead of saving it. */
   viewUrl(folderId: string, fileId: string): string {
-    return `${this.downloadUrl(folderId, fileId)}?inline=1`;
+    return bffFileHref(
+      "tenant",
+      "GET /api/files/folders/{folderId}/files/{fileId}/download",
+      { params: { folderId, fileId }, query: { inline: "1" } },
+    );
   }
 }
 

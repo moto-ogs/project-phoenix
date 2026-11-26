@@ -232,6 +232,11 @@ type Ports struct {
 	// Daily are the reads behind the daily attendance report of
 	// Mecklenburg-Vorpommern (#4717).
 	Daily DailyAttendancePorts
+	// DayChanges are the reads behind "Heute anders" (#7672).
+	DayChanges DayChangePorts
+	// Children are the reads behind the children of the Träger by name
+	// (#8137, ADR 0327).
+	Children ChildrenPorts
 }
 
 // Overview answers the Träger-Portal reads.
@@ -319,7 +324,7 @@ type AccessLogFilter struct {
 // Data names the data that was read or changed; DataLabel says it in plain
 // German.
 type AccessLogEntry struct {
-	ID         string    `json:"id"`
+	ID         string    `json:"id" contract_text:"composite log key containing event kind and source"`
 	OccurredAt time.Time `json:"occurred_at"`
 	SchoolID   ident.ID  `json:"school_id"`
 	SchoolName string    `json:"school_name"`

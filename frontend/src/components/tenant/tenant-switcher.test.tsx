@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
+  _resetSessionTreeForTests,
+  discardSessionTree,
+} from "~/lib/session-tree";
+import {
   render as rtlRender,
   screen,
   fireEvent,
@@ -9,6 +13,8 @@ import type { ReactNode } from "react";
 import { SWRConfig } from "~/lib/swr/testing";
 import "@testing-library/jest-dom/vitest";
 import { ApiError } from "~/lib/api-error";
+import { clientEnv } from "~/env.client";
+import { sessionMarkName, setShownSessionMark } from "~/lib/session-mark";
 
 // ============================================================================
 // Mocks
@@ -55,6 +61,15 @@ vi.mock("~/contexts/ToastContext", async (importOriginal) => {
   };
 });
 
+// Ending a staff preview writes the admin's cookie: inside the switch's
+// exit, the boundary lets the tree go (#8082).
+const { mockEndPreview } = vi.hoisted(() => ({
+  mockEndPreview: vi.fn(async () => undefined),
+}));
+vi.mock("~/lib/staff-preview-api", () => ({
+  performEndStaffPreview: mockEndPreview,
+}));
+
 vi.mock("~/lib/tenant-api", () => ({
   listAvailableTenants: mockListAvailableTenants,
   performTenantSwitch: mockPerformTenantSwitch,
@@ -66,7 +81,12 @@ vi.mock("next-auth/react", () => ({
   getSession: vi.fn(async () => ({ user: { token: "test-session" } })),
   signOut: mockSignOut,
 }));
-vi.mock("~/lib/tenant-session-cookie", () => ({ signOutTenant: mockSignOut }));
+// The replacement checks read the real cookie marks.
+vi.mock("~/lib/tenant-session-cookie", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/lib/tenant-session-cookie")>()),
+  signOutTenant: mockSignOut,
+  leaveReplacedSession: vi.fn(),
+}));
 
 vi.unmock("swr");
 
@@ -168,7 +188,7 @@ const TRIGGER_LABEL = /, Einrichtung wechseln$/;
 // ============================================================================
 
 const tenantA = {
-  tenantId: 1,
+  tenantId: "1",
   slug: "school-a",
   name: "School A",
   subdomain: "school-a",
@@ -178,7 +198,7 @@ const tenantA = {
 };
 
 const tenantB = {
-  tenantId: 2,
+  tenantId: "2",
   slug: "school-b",
   name: "School B",
   subdomain: "school-b",
@@ -188,7 +208,7 @@ const tenantB = {
 };
 
 const tenantC = {
-  tenantId: 3,
+  tenantId: "3",
   slug: "school-c",
   name: "School C",
   subdomain: "school-c",
@@ -205,6 +225,8 @@ describe("BrandTenantSwitcher", () => {
   let originalLocation: Location;
 
   beforeEach(() => {
+    // A switch that went through left the document (#8082): a fresh one.
+    _resetSessionTreeForTests();
     vi.clearAllMocks();
     realErrorDisplay.enabled = false;
     mockUseSession.mockReturnValue(SIGNED_IN);
@@ -474,9 +496,116 @@ describe("BrandTenantSwitcher", () => {
     expect(mockSignOut).toHaveBeenCalledWith(
       {
         callbackUrl: "http://school-b.localhost:3000/",
+        revoked: true,
+        mark: "",
       },
       expect.any(AbortSignal),
     );
+  });
+
+  it("goes to the target's login when it asks for a second factor after the preview ended (#8082)", async () => {
+    mockListAvailableTenants.mockResolvedValue([tenantA, tenantB]);
+    mockUseSession.mockReturnValue({
+      ...SIGNED_IN,
+      data: {
+        ...SIGNED_IN.data,
+        user: { ...SIGNED_IN.data.user, isPreview: true },
+      },
+    });
+    mockPerformTenantSwitch.mockRejectedValueOnce(
+      new ApiError("second factor required", 401, {
+        code: "identity.mfa_session_required",
+      }),
+    );
+    // The boundary saw the admin's cookie of the ended preview: the tree is
+    // gone, no hint can show.
+    // The tree showed the preview; ending it wrote the admin's session.
+    const markName = sessionMarkName(
+      "tenant",
+      clientEnv.NEXT_PUBLIC_TENANT_DOMAIN,
+    );
+    document.cookie = `${markName}=preview-mark; path=/`;
+    setShownSessionMark("preview-mark");
+    mockEndPreview.mockImplementationOnce(async () => {
+      document.cookie = `${markName}=admin-mark; path=/`;
+      discardSessionTree();
+      return undefined;
+    });
+    // The relogin's revocation answers; the target's login follows.
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(null, { status: 204 }),
+    );
+    render(
+      <ToastProvider>
+        <BrandTenantSwitcher />
+      </ToastProvider>,
+    );
+    await screen.findByRole("button", { name: TRIGGER_LABEL });
+    openDropdown();
+    fireEvent.click(screen.getByText("School B"));
+
+    // The way the hint would offer, taken at once: the target's login,
+    // ending the admin's session the cookie holds, not the preview's.
+    await waitFor(() =>
+      expect(mockSignOut).toHaveBeenCalledWith(
+        expect.objectContaining({
+          callbackUrl: "http://school-b.localhost:3000/",
+          mark: "admin-mark",
+        }),
+        expect.any(AbortSignal),
+      ),
+    );
+    document.cookie = `${markName}=; max-age=0; path=/`;
+  });
+
+  it("ends the session the refused switch carried, not one another tab signed in meanwhile (#8082)", async () => {
+    mockListAvailableTenants.mockResolvedValue([tenantA, tenantB]);
+    mockUseSession.mockReturnValue({
+      ...SIGNED_IN,
+      data: {
+        ...SIGNED_IN.data,
+        user: { ...SIGNED_IN.data.user, isPreview: true },
+      },
+    });
+    const markName = sessionMarkName(
+      "tenant",
+      clientEnv.NEXT_PUBLIC_TENANT_DOMAIN,
+    );
+    document.cookie = `${markName}=preview-mark; path=/`;
+    setShownSessionMark("preview-mark");
+    mockEndPreview.mockImplementationOnce(async () => {
+      document.cookie = `${markName}=admin-mark; path=/`;
+      discardSessionTree();
+      return undefined;
+    });
+    // Another tab signs in before the refusal arrives.
+    mockPerformTenantSwitch.mockImplementationOnce(async () => {
+      document.cookie = `${markName}=replacement-mark; path=/`;
+      throw new ApiError("second factor required", 401, {
+        code: "identity.mfa_session_required",
+      });
+    });
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response(null, { status: 401 }));
+    render(
+      <ToastProvider>
+        <BrandTenantSwitcher />
+      </ToastProvider>,
+    );
+    await screen.findByRole("button", { name: TRIGGER_LABEL });
+    openDropdown();
+    fireEvent.click(screen.getByText("School B"));
+
+    // The revocation names the session the switch request carried.
+    await waitFor(() => expect(fetchSpy).toHaveBeenCalled());
+    const [, init] = fetchSpy.mock.calls[0]!;
+    expect(new Headers(init?.headers).get("X-Moto-End-Session")).toBe(
+      "tenant admin-mark",
+    );
+    // The replacement session stays: no cookie deletion.
+    expect(mockSignOut).not.toHaveBeenCalled();
+    document.cookie = `${markName}=; max-age=0; path=/`;
   });
 
   it("sends a Träger session the school refused for its remembered device back to the Träger sign-in with code (#6955)", async () => {
@@ -712,6 +841,8 @@ describe("BrandTenantSwitcher", () => {
 
 describe("BrandTenantSwitcher — server-preloaded tenants (#2973)", () => {
   beforeEach(() => {
+    // A switch that went through left the document (#8082): a fresh one.
+    _resetSessionTreeForTests();
     vi.clearAllMocks();
     mockUseSession.mockReturnValue({
       status: "authenticated",

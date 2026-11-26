@@ -313,7 +313,14 @@ export function applyContractImport(
 export async function fetchContractImportLog(): Promise<
   ContractImportLogEntry[]
 > {
-  const entries = await bffJson("org", "GET /traeger/contract-imports/");
+  return mapContractImportLog(
+    await bffJson("org", "GET /traeger/contract-imports/"),
+  );
+}
+
+export function mapContractImportLog(
+  entries: traegerContractImportsContract.ContractImportEntry[],
+): ContractImportLogEntry[] {
   return entries.map((entry) => ({
     file: entry.file,
     accountId: entry.account_id,

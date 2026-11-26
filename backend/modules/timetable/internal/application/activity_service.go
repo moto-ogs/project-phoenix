@@ -104,11 +104,11 @@ func (s *ActivityService) ListCategories(ctx context.Context) ([]*activityContra
 // follow-up). Called from the shift-types admin flow; the FK lives on the
 // category side, so the write is owned here. Runs inside the caller's tenant
 // transaction (the shift-types router wires TenantTxMiddleware).
-func (s *ActivityService) SetCategoryShiftTypeLinks(ctx context.Context, shiftTypeID int64, categoryIDs []int64) error {
+func (s *ActivityService) SetCategoryShiftTypeLinks(ctx context.Context, shiftTypeID int64, categoryIDs []int64, expected map[int64]string) error {
 	if s.timetable == nil {
 		return &activityContract.ActivityError{Op: "set category shift type links", Err: errors.New("category capability is required")}
 	}
-	if err := s.timetable.SetCategoryShiftTypeLinks(ctx, shiftTypeID, categoryIDs); err != nil {
+	if err := s.timetable.SetCategoryShiftTypeLinks(ctx, shiftTypeID, categoryIDs, expected); err != nil {
 		return categoryActivityError("set category shift type links", err)
 	}
 	return nil
@@ -258,14 +258,17 @@ func (s *ActivityService) UpdateGroup(ctx context.Context, group *activityContra
 		return nil, &activityContract.ActivityError{Op: "update group", Err: activityContract.ErrNotOwner}
 	}
 
-	// Block renaming system activities (Schulhof Freispiel, WC).
+	// Block renaming system activities (Schulhof Freispiel, WC, Offener Raum)
+	// and moving them into another category: moto provisions both.
 	// Placed after CanModifyActivity to avoid an extra FindByID call — CanModifyActivity
 	// already fetches the group internally for non-admin users.
 	existingGroup, err := s.findMutableActivityGroup(ctx, group.ID)
 	if err != nil {
 		return nil, &activityContract.ActivityError{Op: "update group", Err: err}
 	}
-	if timetable.IsSystemActivityName(existingGroup.Name) && group.Name != existingGroup.Name {
+	// The flag decides, not the name: a staff activity may share one (#8130).
+	if existingGroup.IsSystem &&
+		(group.Name != existingGroup.Name || group.CategoryID != existingGroup.CategoryID) {
 		return nil, &activityContract.ActivityError{Op: "update group", Err: activityContract.ErrSystemActivityProtected}
 	}
 	if group.CategoryID != existingGroup.CategoryID {
@@ -300,7 +303,7 @@ func (s *ActivityService) DeleteGroup(ctx context.Context, id int64, requestingS
 		}
 		return &activityContract.ActivityError{Op: "delete group", Err: err}
 	}
-	if timetable.IsSystemActivityName(existingGroup.Name) {
+	if existingGroup.IsSystem {
 		return &activityContract.ActivityError{Op: "delete group", Err: activityContract.ErrSystemActivityProtected}
 	}
 	if existingGroup.IsTemplate {

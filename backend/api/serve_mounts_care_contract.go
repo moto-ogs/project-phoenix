@@ -36,7 +36,8 @@ const careContractSigningPath = "/public/care-contract-signing"
 // mountCareContractRoutes serves the Betreuungsvertrag (ADR 0088, ADR 0153,
 // #4678) behind the right "Verträge verwalten": the contracts at
 // /traeger/contracts, the templates of the offerings at
-// /traeger/contract-templates and withdrawal and termination at
+// /traeger/contract-templates, the families of the contracts without a mail
+// address at /traeger/contract-families (#7161) and withdrawal and termination at
 // /traeger/contract-notices (#4682). signingLink is root behind the limit of
 // the signing link.
 func mountCareContractRoutes(root, signingLink chi.Router, organizations HolidayOrganizations, settings TraegerBrandingSettings,
@@ -45,6 +46,10 @@ func mountCareContractRoutes(root, signingLink chi.Router, organizations Holiday
 	resource := NewCareContractHTTP(organizations, settings, schoolSettings, delivery, outcomes, accessLog, holidays, parentsURL, today, now)
 	root.Mount("/traeger/contracts", resource.ContractRouter(ProtectedTraegerRoutes))
 	root.Mount("/traeger/contract-templates", resource.TemplateRouter(ProtectedTraegerRoutes))
+	// The families of the contracts without a mail address (#7161), for the
+	// office that imports and for the Abrechnung (ADR 0319 point 8).
+	root.Mount("/traeger/contract-families", resource.FamilyRouter(ProtectedTraegerRoutes,
+		common.RequiresAnyPermission(identityaccess.TraegerRightContractsManage, identityaccess.TraegerRightBillingManage)))
 	mountCareContractNoticeRoutes(root, organizations, settings, schoolSettings, delivery, outcomes, accessLog, addressees, holidays, parentsURL, now)
 	mountCareContractImportRoutes(root, organizations, settings, accessLog, today, now)
 	mountCareContractCorrectionRoutes(root, accessLog, today)
@@ -90,8 +95,13 @@ func NewCareContractHTTP(organizations HolidayOrganizations, settings TraegerBra
 // Träger-Büro's.
 func NewCareContractConclusion(organizations HolidayOrganizations, settings TraegerBrandingSettings,
 	schoolSettings CareContractSchoolSettings, delivery deliveryRuntime.Capability, outcomes deliveryRuntime.EmailOutcomes, accessLog owners.DataAccessAppender,
-	holidays carecontract.SchoolHolidays, parentsURL string, now func() time.Time) carecontract.Conclusion {
+	holidays carecontract.SchoolHolidays, parentsURL string, now func() time.Time, accounts owners.CareContractAccountEmails) carecontract.Conclusion {
+	if accounts == nil {
+		panic("care contract conclusion: the account addresses are required")
+	}
 	contractPorts, intakePorts := careContractPorts(organizations, settings, schoolSettings, delivery, outcomes, accessLog, holidays, parentsURL, now)
+	// Only the run that follows the bookings asks who requested a change (#4816).
+	intakePorts.Requests = careContractParentRequests{changes: carePlanCompose.NewContractOfferings(), accounts: accounts}
 	return careContractCompose.NewConclusion(contractPorts, intakePorts, now)
 }
 
@@ -103,8 +113,11 @@ func careContractPorts(organizations HolidayOrganizations, settings TraegerBrand
 	}
 	letterheads := careContractLetterheads{masterData: organizationTenancyCompose.NewTraegerMasterData(),
 		templates: organizationTenancyCompose.NewTraegerDocumentTemplates(), settings: settings}
+	// The Schulträger or the Gemeinde that concludes the contracts of a
+	// school in place of the Träger (#4811).
+	issuers := owners.CareContractIssuers{Responsible: owners.NewSchoolResponsibilities(schoolSettings)}
 	return careContractCompose.ContractPorts{
-		Letterheads: letterheads, Post: owners.CareContractPost{Delivery: delivery, Outcomes: outcomes},
+		Issuers: issuers, Letterheads: letterheads, Post: owners.CareContractPost{Delivery: delivery, Outcomes: outcomes},
 		Runtime: owners.CareContractRuntime{}, Access: careContractAccessLog{log: accessLog},
 		Ledger: owners.NewCareContractSignatures(), Links: owners.CareContractLinks(parentsURL),
 		Notices: owners.CareContractDocumentNotices{Delivery: delivery}, Holidays: holidays,
@@ -113,7 +126,7 @@ func careContractPorts(organizations HolidayOrganizations, settings TraegerBrand
 		Bookings: careContractBookings{offerings: carePlanCompose.NewContractOfferings(), bookings: carePlanCompose.NewOfferingBookings(now)},
 		Access:   careContractAccessLog{log: accessLog}, Runtime: owners.CareContractRuntime{},
 		Modes: careContractModes{settings: schoolSettings}, Mail: owners.CareContractPost{Delivery: delivery, Outcomes: outcomes},
-		Letterheads: letterheads, Families: owners.NewCareContractFamilyNumbers(),
+		Letterheads: letterheads, Issuers: issuers, Families: owners.NewCareContractFamilyNumbers(),
 	}
 }
 
@@ -122,6 +135,8 @@ func careContractPorts(organizations HolidayOrganizations, settings TraegerBrand
 // default (ADR 0086).
 type CareContractSchoolSettings interface {
 	ResolveString(ctx context.Context, key string) (string, error)
+	// The responsibilities of several schools at once (#4811).
+	owners.ResponsibilitySchoolSettings
 }
 
 // TraegerSchoolSettings are the settings of the schools the Träger routes
@@ -272,6 +287,45 @@ func (b careContractBookings) Bookings(ctx context.Context, requestChildIDs []in
 		byChild[booking.RequestChildID] = append(byChild[booking.RequestChildID], carecontract.Booking{
 			CareOfferingID: booking.CareOfferingID, Days: booking.EffectiveSelectedDays(),
 			ValidFrom: careContractDate(booking.ValidFrom), ValidUntil: careContractDate(booking.ValidUntil),
+		})
+	}
+	return byChild, nil
+}
+
+// careContractParentRequests reads the approved requests of the parents
+// from Care Plan in the school's tenant transaction (#4816): the contract
+// takes a request the parents sent themselves as the signature of the
+// version it made.
+type careContractParentRequests struct {
+	changes  careplan.ContractOfferingChanges
+	accounts owners.CareContractAccountEmails
+}
+
+func (r careContractParentRequests) ApprovedParentRequests(ctx context.Context, requestChildIDs []int64) (map[int64][]carecontract.ParentRequest, error) {
+	approved, err := r.changes.ApprovedOfferingChanges(ctx, requestChildIDs)
+	if err != nil {
+		return nil, err
+	}
+	byChild := map[int64][]carecontract.ParentRequest{}
+	if len(approved) == 0 {
+		return byChild, nil
+	}
+	submitters := make([]int64, len(approved))
+	for i, change := range approved {
+		submitters[i] = change.SubmittedBy
+	}
+	emails, err := r.accounts.ListAccountEmails(ctx, submitters)
+	if err != nil {
+		return nil, fmt.Errorf("care contract: read the accounts of the parents' requests: %w", err)
+	}
+	for _, change := range approved {
+		offerings := make([]carecontract.RequestedOffering, len(change.Selections))
+		for i, selection := range change.Selections {
+			offerings[i] = carecontract.RequestedOffering{CareOfferingID: selection.OfferingID, Days: selection.SelectedDays}
+		}
+		byChild[change.RequestChildID] = append(byChild[change.RequestChildID], carecontract.ParentRequest{
+			ID: change.ID, AccountID: change.SubmittedBy, AccountEmail: emails[change.SubmittedBy], SubmittedAt: change.SubmittedAt,
+			EffectiveFrom: calendar.Date(change.EffectiveFrom), Offerings: offerings,
 		})
 	}
 	return byChild, nil

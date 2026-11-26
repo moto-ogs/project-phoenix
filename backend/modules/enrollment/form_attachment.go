@@ -3,14 +3,24 @@ package enrollment
 import (
 	"fmt"
 	"strings"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident/wire"
 )
 
 // FormAttachment is a named PDF in an immutable form version. Replacing a
 // document creates a new URL; saved versions retain their original reference.
 type FormAttachment struct {
-	DocumentID  string `json:"document_id,omitempty"`
-	Label       string `json:"label"`
-	DocumentURL string `json:"document_url"`
+	DocumentID  ident.ID `json:"document_id,omitempty"`
+	Label       string   `json:"label"`
+	DocumentURL string   `json:"document_url"`
+}
+
+// MarshalJSON preserves the existing quoted document ID in saved form
+// versions as well as HTTP responses.
+func (attachment FormAttachment) MarshalJSON() ([]byte, error) {
+	type formAttachment FormAttachment
+	return wire.Marshal(formAttachment(attachment))
 }
 
 func ValidateFormAttachments(attachments []FormAttachment) error {

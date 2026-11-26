@@ -25,10 +25,11 @@ func ParentScopeMiddleware(next http.Handler) http.Handler {
 	return sessiontoken.PortalGate(tenant.ClaimScope{}, tokenprimitives.ParentClaims)(requireParentPortal(next))
 }
 
-// TraegerScopeMiddleware accepts Träger-Portal tokens only and binds their
-// Träger, never a school (ADR 0084).
+// TraegerScopeMiddleware accepts Träger-Portal tokens only, binds their
+// Träger, never a school (ADR 0084), and refuses a route of a module none of
+// the Träger's schools books (#6052).
 func TraegerScopeMiddleware(next http.Handler) http.Handler {
-	return sessiontoken.PortalGate(tenant.ClaimScope{}, tokenprimitives.OrgClaims)(next)
+	return sessiontoken.PortalGate(tenant.ClaimScope{}, tokenprimitives.OrgClaims)(requireTraegerModule(next))
 }
 
 // SchoolScopeMiddleware accepts school-portal tokens only, binds their
