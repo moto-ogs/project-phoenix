@@ -596,7 +596,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/carecontract.SchoolParentRequests.ApprovedParentRequests",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/careplan ApprovedOfferingChanges: reads the approved offering change requests of the application children in the school's tenant transaction (#4816, ADR 0325).",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/careplan ApprovedOfferingChanges: reads the approved offering change requests of the application children in the school's tenant transaction (#4816, ADR 0326).",
       "source_owner": "care-contract",
       "target": "github.com/moto-ogs/project-phoenix/modules/careplan.ContractOfferingChanges.ApprovedOfferingChanges",
       "target_owner": "care-plan"
@@ -606,7 +606,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/carecontract.SchoolParentRequests.ApprovedParentRequests",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/careplan ApprovedOfferingChanges: reads the approved offering change requests of the application children in the school's tenant transaction (#4816, ADR 0325).",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/careplan ApprovedOfferingChanges: reads the approved offering change requests of the application children in the school's tenant transaction (#4816, ADR 0326).",
       "source_owner": "care-contract",
       "target": "github.com/moto-ogs/project-phoenix/modules/careplan.ContractReads.ApprovedOfferingChanges",
       "target_owner": "care-plan"
@@ -616,7 +616,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/carecontract.SchoolParentRequests.ApprovedParentRequests",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/identityaccess.Owner.ListAccountEmails: reads the addresses of the parents accounts that sent the approved requests, to tell whether a party of the contract asked (#4816, ADR 0325).",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/identityaccess.Owner.ListAccountEmails: reads the addresses of the parents accounts that sent the approved requests, to tell whether a party of the contract asked (#4816, ADR 0326).",
       "source_owner": "care-contract",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.ListAccountEmails",
       "target_owner": "identity-access"

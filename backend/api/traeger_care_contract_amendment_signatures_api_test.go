@@ -21,7 +21,7 @@ import (
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
-// The parents sign a changed contract version (#4816, ADR 0325). The
+// The parents sign a changed contract version (#4816, ADR 0326). The
 // fixture's child books the Ganztag on Monday to Wednesday from 1 August
 // 2027; from 1 October 2027 it also books a late care on Thursday.
 

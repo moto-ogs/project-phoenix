@@ -9,7 +9,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
-// Who agreed to a changed version (#4816, ADR 0088 section 3, ADR 0325).
+// Who agreed to a changed version (#4816, ADR 0088 section 3, ADR 0326).
 //
 //   - The parents asked for the change themselves and the school or the
 //     Träger-Büro approved exactly that: their request, sent with the

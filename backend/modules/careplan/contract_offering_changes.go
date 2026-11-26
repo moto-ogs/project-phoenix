@@ -7,7 +7,7 @@ import (
 
 // ApprovedOfferingChange is a request of the parents to change their
 // child's booked offerings that the school or the Träger-Büro approved, as
-// the Betreuungsvertrag reads it (#4816, ADR 0325): the parents' own request
+// the Betreuungsvertrag reads it (#4816, ADR 0326): the parents' own request
 // proves their agreement to the contract version it made. SubmittedBy is the
 // parents account that sent it, SubmittedAt when it last did (the creation
 // or its last edit), EffectiveFrom the day the
