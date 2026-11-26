@@ -18,7 +18,7 @@ import { activityService } from "~/lib/activity-service";
 import type { Activity } from "~/lib/activity-helpers";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { fetchPlannerRooms } from "~/lib/planner-reference-api";
-import { useClosedRoomsOn } from "~/lib/hooks/use-closed-rooms";
+import { useClosedRoomsOnState } from "~/lib/hooks/use-closed-rooms";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { roomClosureHint } from "~/lib/room-closures-api";
 import type { Staff } from "~/lib/staff-api";
@@ -137,7 +137,9 @@ export function SpontaneousActivityStart({
   // den Grund. Er bleibt von belegten Räumen getrennt, damit eine veraltete
   // Auswahl die passende Sperrmeldung erhält.
   const today = useBerlinToday();
-  const closedRooms = useClosedRoomsOn(isOpen ? today : null);
+  const { closedRooms, isLoading: isLoadingClosures } = useClosedRoomsOnState(
+    isOpen ? today : null,
+  );
   const occupiedRoomIdSet = useMemo(
     () => new Set(occupiedRoomIds),
     [occupiedRoomIds],
@@ -166,9 +168,10 @@ export function SpontaneousActivityStart({
   const resources = [activityList, roomList, staffList];
   const isLoadingRefs =
     isOpen &&
-    resources.some(
-      (resource) => resource.data === undefined && !resource.error,
-    );
+    (isLoadingClosures ||
+      resources.some(
+        (resource) => resource.data === undefined && !resource.error,
+      ));
   const { error: loadError } = useSwrResourceLoadError(
     resources,
     "die Auswahl für die spontane Aktivität",

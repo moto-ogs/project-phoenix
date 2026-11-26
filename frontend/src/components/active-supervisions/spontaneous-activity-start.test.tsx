@@ -54,6 +54,7 @@ const mocks = vi.hoisted(() => ({
         reason: string;
       }
     >(),
+    isLoading: false,
   },
 }));
 
@@ -71,6 +72,10 @@ vi.mock("~/lib/staff-api", () => ({
 
 vi.mock("~/lib/hooks/use-closed-rooms", () => ({
   useClosedRoomsOn: () => mocks.closedRooms.value,
+  useClosedRoomsOnState: () => ({
+    closedRooms: mocks.closedRooms.value,
+    isLoading: mocks.closedRooms.isLoading,
+  }),
 }));
 
 const SpontaneousActivityStart = ProductionSpontaneousActivityStart;
@@ -149,6 +154,7 @@ describe("SpontaneousActivityStart", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.closedRooms.value = new Map();
+    mocks.closedRooms.isLoading = false;
     mocks.getActivities.mockResolvedValue([
       { id: "7", name: "Freispiel" },
       { id: "9", name: "Basteln" },
@@ -481,6 +487,59 @@ describe("SpontaneousActivityStart", () => {
     expect(
       screen.getAllByText("Dieser Raum ist heute gesperrt."),
     ).not.toHaveLength(0);
+  });
+
+  it("waits for closures before preselecting a room", async () => {
+    mocks.closedRooms.isLoading = true;
+    const onStart = vi.fn();
+    const view = render(
+      <SpontaneousActivityStart
+        currentStaffId="11"
+        defaultRoomId="3"
+        onStart={onStart}
+      />,
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /Spontane Aktivität starten/ }),
+    );
+    await screen.findByTestId("modal");
+    expect(getRoomCombobox()).toBeDisabled();
+
+    mocks.closedRooms.value = new Map([
+      [
+        "3",
+        {
+          id: "1",
+          roomId: "3",
+          startDate: "2026-11-26",
+          endDate: "2026-11-26",
+          reason: "Wasserschaden",
+        },
+      ],
+    ]);
+    mocks.closedRooms.isLoading = false;
+    view.rerender(
+      <SpontaneousActivityStart
+        currentStaffId="11"
+        defaultRoomId="3"
+        onStart={onStart}
+      />,
+    );
+
+    await waitFor(() => expect(getRoomCombobox()).toBeEnabled());
+    fireEvent.change(
+      screen.getByPlaceholderText("Aktivität suchen oder neu eingeben"),
+      { target: { value: "Tennis" } },
+    );
+    submitForm();
+
+    expect(onStart).toHaveBeenCalledWith({
+      title: "Tennis",
+      roomId: "4",
+      activityGroupId: undefined,
+      additionalStaffIds: [],
+    });
   });
 
   it("resets draft state when the modal is cancelled", async () => {

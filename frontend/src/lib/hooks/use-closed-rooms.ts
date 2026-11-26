@@ -12,6 +12,29 @@ import { roomKeys } from "~/lib/swr/rooms-keys";
 
 const NO_CLOSED_ROOMS: ReadonlyMap<string, RoomClosure> = new Map();
 
+/** The closures of `day`, including whether the first lookup is still pending. */
+export function useClosedRoomsOnState(day: string | null | undefined): {
+  readonly closedRooms: ReadonlyMap<string, RoomClosure>;
+  readonly isLoading: boolean;
+} {
+  const validDay = day && /^\d{4}-\d{2}-\d{2}$/.test(day) ? day : null;
+  const { data, error } = useSWRAuth(
+    validDay ? roomKeys.closures(validDay, validDay) : null,
+    () => fetchRoomClosures(validDay!, validDay!),
+  );
+  const closedRooms = useMemo(
+    () =>
+      validDay && Array.isArray(data)
+        ? closedRoomsOn(data, validDay)
+        : NO_CLOSED_ROOMS,
+    [data, validDay],
+  );
+  return {
+    closedRooms,
+    isLoading: validDay !== null && data === undefined && error === undefined,
+  };
+}
+
 /**
  * Die an `day` gesperrten Räume (#7653), je Raum mit seiner Sperre. Ohne Tag
  * oder solange die Sperren laden, ist kein Raum gesperrt: eine Auswahl bleibt
@@ -20,16 +43,5 @@ const NO_CLOSED_ROOMS: ReadonlyMap<string, RoomClosure> = new Map();
 export function useClosedRoomsOn(
   day: string | null | undefined,
 ): ReadonlyMap<string, RoomClosure> {
-  const validDay = day && /^\d{4}-\d{2}-\d{2}$/.test(day) ? day : null;
-  const { data } = useSWRAuth(
-    validDay ? roomKeys.closures(validDay, validDay) : null,
-    () => fetchRoomClosures(validDay!, validDay!),
-  );
-  return useMemo(
-    () =>
-      validDay && Array.isArray(data)
-        ? closedRoomsOn(data, validDay)
-        : NO_CLOSED_ROOMS,
-    [data, validDay],
-  );
+  return useClosedRoomsOnState(day).closedRooms;
 }
