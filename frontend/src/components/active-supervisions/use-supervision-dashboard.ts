@@ -491,6 +491,18 @@ export function useSupervisionDashboard(
     return byStudent;
   }, [snapshot?.teacherHints]);
 
+  // Angebote des Tages (#8194) je Kind, für die Karten der Aufsicht.
+  const plannedActivitiesByStudent = useMemo(() => {
+    const byStudent = new Map<string, studentsContract.PlannedActivity[]>();
+    for (const { studentId, ...activity } of snapshot?.plannedActivities ??
+      []) {
+      const own = byStudent.get(studentId);
+      if (own) own.push(activity);
+      else byStudent.set(studentId, [activity]);
+    }
+    return byStudent;
+  }, [snapshot?.plannedActivities]);
+
   const students = useMemo<ActiveSupervisionStudent[]>(() => {
     if (currentOpenRoom) {
       // Everyone the room currently holds, from every session running in it,
@@ -499,6 +511,7 @@ export function useSupervisionDashboard(
         roomName: currentOpenRoom.name,
         groupNameToId: groupNameToIdMap,
         teacherHints: teacherHintsByStudent,
+        plannedActivities: plannedActivitiesByStudent,
       });
     }
     if (!snapshot) return [];
@@ -511,10 +524,12 @@ export function useSupervisionDashboard(
       roomColor: resolvedRoom.roomColor,
       groupNameToId: groupNameToIdMap,
       teacherHints: teacherHintsByStudent,
+      plannedActivities: plannedActivitiesByStudent,
     });
   }, [
     snapshot,
     teacherHintsByStudent,
+    plannedActivitiesByStudent,
     currentOpenRoom,
     selectedOpenRoomId,
     groupNameToIdMap,

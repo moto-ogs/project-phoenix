@@ -646,6 +646,11 @@
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
+      "decision": "0075",
+      "id": "api/groupLivePlanning.PlannedActivities",
+      "reason": "ADR 0075 consumer-port adapter (#6487, #8194): binds the live-group projection Planning port to the root's shared read of the day's planned offerings (plannedOfferings.byStudent) and translates its rows onto the projection's own PlannedActivity type."
+    },
+    {
       "decision": "0090",
       "id": "api/groupLivePresence.TrackingIndicators",
       "reason": "Finite named forwarding debt under ADR 0090, not a new floor; removal/deepening pending."
@@ -1111,6 +1116,11 @@
       "reason": "Finite named forwarding debt under ADR 0090, not a new floor; removal/deepening pending."
     },
     {
+      "decision": "0075",
+      "id": "api/studentListPlannedActivities.PlannedActivities",
+      "reason": "ADR 0075 consumer-port adapter (#8194): binds the student list's PlannedActivityReader port to the root's shared read of the day's planned offerings (plannedOfferings.byStudent) and translates its rows onto the list's own wire type, the same shape as groupLivePlanning.PlannedActivities."
+    },
+    {
       "decision": "0090",
       "id": "api/studentSchoolGroups.GetGroup",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
@@ -1184,6 +1194,11 @@
       "decision": "0090",
       "id": "api/supervisionSettings.SpontaneousActivitiesEnabled",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
+    },
+    {
+      "decision": "0075",
+      "id": "api/supervisionSettings.StudentCardActivitiesEnabled",
+      "reason": "ADR 0075 consumer-port adapter (#8194): binds the supervision dashboard Settings port to the tenant setting operations.student_card_activities_enabled, the same shape as groupLiveSettings.StudentCardActivitiesEnabled."
     },
     {
       "decision": "0090",

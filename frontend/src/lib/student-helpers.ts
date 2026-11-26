@@ -172,8 +172,9 @@ export type Student = StudentCore &
     departure_modes?: DepartureMode[];
     // Narrowed to the statuses this build knows; an unknown one shows none.
     day_planning_status?: studentsContract.DayPlanningStatus;
-    // Heutige Angebote des Kindes (#6487); nur wenn die Schule sie auf der
-    // Kinderkarte zeigt. Kommt aus der Gruppenansicht (grouplive).
+    // Angebote des Kindes am gezeigten Tag (#6487, #8194); nur wenn die
+    // Schule sie auf der Kinderkarte zeigt. Gruppen, Alle Kinder und
+    // Aktuelle Aufsicht liefern sie gleich.
     planned_activities?: studentsContract.PlannedActivity[];
     // The detail read's privacy_consent, flattened for form handling.
     privacy_consent_accepted?: boolean;

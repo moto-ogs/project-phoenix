@@ -35,14 +35,17 @@ type ResourceConfig struct {
 	ClosingTimes     ClosingTimes
 	CompanionService careplan.StudentCompanions
 	// EnrollmentAnswers serves the registration answer filter (#6954).
-	EnrollmentAnswers       EnrollmentAnswerFilters
-	ExcusedRequestService   excusedrequests.Service
-	InstanceService         PlannedStudents
-	ListExportService       lists.Renderer
-	Logger                  *slog.Logger
-	Now                     func() time.Time
-	OfferingDayRoster       careplan.OfferingDayRoster
-	PeopleDirectory         peopleModule.Capability
+	EnrollmentAnswers     EnrollmentAnswerFilters
+	ExcusedRequestService excusedrequests.Service
+	InstanceService       PlannedStudents
+	ListExportService     lists.Renderer
+	Logger                *slog.Logger
+	Now                   func() time.Time
+	OfferingDayRoster     careplan.OfferingDayRoster
+	PeopleDirectory       peopleModule.Capability
+	// PlannedActivities reads the day's offerings for the child cards
+	// (#8194); nil attaches none.
+	PlannedActivities       PlannedActivityReader
 	PrivacyConsents         PrivacyConsentReader
 	Persons                 PersonRecords
 	PickupScheduleService   careplan.PickupScheduleService

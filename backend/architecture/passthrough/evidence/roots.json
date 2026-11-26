@@ -905,6 +905,13 @@
     },
     {
       "build": "production",
+      "evidence": "func (p groupLivePlanning) PlannedActivities(ctx context.Context, studentIDs []int64, date grouplive.Date) (map[int64][]grouplive.PlannedActivity, error) {\n\trows, err := p.offerings.byStudent(ctx, studentIDs, string(date))\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make(map[int64][]grouplive.PlannedActivity, len(rows))\n\tfor studentID, offerings := range rows {\n\t\tfor _, offering := range offerings {\n\t\t\tresult[studentID] = append(result[studentID], grouplive.PlannedActivity(offering))\n\t\t}\n\t}\n\treturn result, nil\n}",
+      "form": "unclassified-evidence",
+      "id": "api/groupLivePlanning.PlannedActivities",
+      "owner": "roots"
+    },
+    {
+      "build": "production",
       "evidence": "func (p groupLivePresence) TrackingIndicators(ctx context.Context, studentIDs []int64, labels []string) (map[int64][]bool, error) {\n\treturn p.active.GetTrackingIndicators(ctx, studentIDs, labels)\n}",
       "form": "forward-debt",
       "id": "api/groupLivePresence.TrackingIndicators",
@@ -1556,6 +1563,13 @@
     },
     {
       "build": "production",
+      "evidence": "func (b studentListPlannedActivities) PlannedActivities(ctx context.Context, studentIDs []int64, day calendar.Date) (map[int64][]projectionStudentsHTTP.StudentListPlannedActivity, error) {\n\trows, err := b.offerings.byStudent(ctx, studentIDs, day.String())\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make(map[int64][]projectionStudentsHTTP.StudentListPlannedActivity, len(rows))\n\tfor studentID, offerings := range rows {\n\t\tfor _, offering := range offerings {\n\t\t\tresult[studentID] = append(result[studentID], projectionStudentsHTTP.StudentListPlannedActivity(offering))\n\t\t}\n\t}\n\treturn result, nil\n}",
+      "form": "unclassified-evidence",
+      "id": "api/studentListPlannedActivities.PlannedActivities",
+      "owner": "roots"
+    },
+    {
+      "build": "production",
       "evidence": "func (s studentSchoolGroups) GetGroup(ctx context.Context, id int64) (*presenceprojectionOwnerHTTP.SchoolGroup, error) {\n\tgroup, err := s.GroupManagement.GetGroup(ctx, id)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tview := presenceprojectionOwnerHTTP.SchoolGroup{ID: group.ID, Name: group.Name, RoomID: group.RoomID}\n\tif group.Room != nil {\n\t\tview.RoomName = group.Room.Name\n\t}\n\treturn \u0026view, nil\n}",
       "form": "unclassified-evidence",
       "id": "api/studentSchoolGroups.GetGroup",
@@ -1647,7 +1661,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (s supervisionSettings) Prepare(ctx context.Context) (context.Context, error) {\n\treturn s.settings.Prefetch(ctx, []string{settingsplatform.KeyOperationalOverviewScope, settingsplatform.KeyGroupMode, settingsplatform.KeyStudentPhotosEnabled, settingsplatform.KeyWebSpontaneousActivities, settingsplatform.KeyWeekendFollowsFriday, settingsplatform.KeyTrackingIndicatorsEnabled, settingsplatform.KeyTrackingIndicator1, settingsplatform.KeyTrackingIndicator2, settingsplatform.KeyTrackingIndicator3})\n}",
+      "evidence": "func (s supervisionSettings) Prepare(ctx context.Context) (context.Context, error) {\n\treturn s.settings.Prefetch(ctx, []string{settingsplatform.KeyOperationalOverviewScope, settingsplatform.KeyGroupMode, settingsplatform.KeyStudentPhotosEnabled, settingsplatform.KeyStudentCardActivitiesEnabled, settingsplatform.KeyWebSpontaneousActivities, settingsplatform.KeyWeekendFollowsFriday, settingsplatform.KeyTrackingIndicatorsEnabled, settingsplatform.KeyTrackingIndicator1, settingsplatform.KeyTrackingIndicator2, settingsplatform.KeyTrackingIndicator3})\n}",
       "form": "unclassified-evidence",
       "id": "api/supervisionSettings.Prepare",
       "owner": "roots"
@@ -1657,6 +1671,13 @@
       "evidence": "func (s supervisionSettings) SpontaneousActivitiesEnabled(ctx context.Context) (bool, error) {\n\tenabled, err := s.settings.ResolveBool(ctx, settingsplatform.KeyWebSpontaneousActivities)\n\tif err != nil {\n\t\treturn false, fmt.Errorf(\"resolve spontaneous activities setting: %w\", err)\n\t}\n\treturn enabled, nil\n}",
       "form": "unclassified-evidence",
       "id": "api/supervisionSettings.SpontaneousActivitiesEnabled",
+      "owner": "roots"
+    },
+    {
+      "build": "production",
+      "evidence": "func (s supervisionSettings) StudentCardActivitiesEnabled(ctx context.Context) (bool, error) {\n\treturn s.settings.ResolveBool(ctx, settingsplatform.KeyStudentCardActivitiesEnabled)\n}",
+      "form": "unclassified-evidence",
+      "id": "api/supervisionSettings.StudentCardActivitiesEnabled",
       "owner": "roots"
     },
     {
