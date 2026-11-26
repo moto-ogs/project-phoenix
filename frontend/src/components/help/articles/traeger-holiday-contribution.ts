@@ -88,6 +88,7 @@ export function traegerHolidayContributionTopic(): HelpTopic {
       "Hat ein Kind Mittagessen gebucht, steht es als eigene Zeile `Mittagessen` im Beitrag. Die Zeile nennt die Zahl der Essen und den Preis für ein Essen. Geschwisterermäßigung, Befreiung und Kostenübernahme gelten nur für die Betreuung. Das Essen zahlt die Familie voll.",
       "Eine Regel gilt nur für Anmeldungen, die nach der Änderung bestätigt werden. Bestätigte Anmeldungen behalten ihren Beitrag.",
       "Ob eine Familie befreit ist oder ein Kostenträger bezahlt, entscheidet das Träger-Büro beim Bestätigen. Für die Befreiung wählt es dort `Von der Zahlung befreien (Leistungsbezug)`. Diese Wahl gibt es nur, wenn eine Befreiungsregel gilt. Es zählt der erste gebuchte Tag.",
+      "Kommt der Bescheid erst nach dem Bestätigen, ändert das Träger-Büro den Zahler in der Anmeldung mit `Zahler ändern`. Die Grundpreise bleiben, wie sie festgehalten sind.",
       "Befreiung heißt: Niemand bezahlt. Bei einem Kostenträger bezahlt die Familie nichts, aber der Kostenträger bezahlt den Betrag. Am Anfang ist das der Betrag nach der Geschwisterermäßigung. Du kannst auch den vollen Preis wählen.",
       "Bezahlt der Kostenträger den vollen Preis, zählt sein Kind weiter als Geschwisterkind. Die anderen Kinder behalten ihre Ermäßigung.",
       "Einen Kostenträger, der schon gewählt wurde, kannst du nur ausschalten, nicht löschen. Änderst du seinen Namen, behalten bestätigte Beiträge und Rechnungen den alten Namen.",

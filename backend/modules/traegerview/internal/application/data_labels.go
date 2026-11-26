@@ -77,6 +77,7 @@ var dataLabels = map[string]string{
 	"holiday_registration_freeze":         "Ferienanmeldung eingefroren",
 	"holiday_registration_reopen":         "Ferienanmeldung wieder geöffnet",
 	"holiday_registration_consent":        "Einwilligung einer Ferienanmeldung geändert",
+	"holiday_registration_payer":          "Zahler einer Ferienanmeldung geändert",
 }
 
 // otherData labels a resource type a later feature adds before this list

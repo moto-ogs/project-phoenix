@@ -33,11 +33,17 @@ export function HolidayRegistrationProofCard({
   periodId,
   registration,
   onUploaded,
+  changePayerHint = false,
 }: Readonly<{
   periodId: string;
   registration: HolidayRegistrationDetail;
   /** After an upload, with the registration and its proofs. */
   onUploaded?: (registration: HolidayRegistrationDetail) => void;
+  /**
+   * The registration is confirmed, the family pays and a proof is there
+   * (#8158): the card names where the payer changes.
+   */
+  changePayerHint?: boolean;
 }>) {
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -120,6 +126,12 @@ export function HolidayRegistrationProofCard({
       ) : (
         <p className="text-sm text-gray-700">{emptyText(registration)}</p>
       )}
+      {changePayerHint && proofs.length > 0 ? (
+        <p className="mt-3 text-sm text-gray-700">
+          Bisher bezahlt die Familie. Soll wegen des Nachweises jemand anderes
+          bezahlen? Wähle unten bei „Ferienbeitrag“ den Knopf „Zahler ändern“.
+        </p>
+      ) : null}
       {canUpload ? (
         <p className="mt-3 text-sm text-gray-600">
           PDF, JPEG oder PNG, höchstens 10 MB. Für die Kostenübernahme ist ein

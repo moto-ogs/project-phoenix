@@ -1269,6 +1269,13 @@
     },
     {
       "build": "production",
+      "evidence": "func (b parentBillingHolidayRegistrations) RecordHolidayPayer(ctx context.Context, reviewer parentbilling.HolidayReviewer, periodID, registrationID int64, record parentbilling.HolidayPayerRecord) error {\n\tif b.payers == nil {\n\t\treturn errors.New(\"parent billing: this binding records no payer change\")\n\t}\n\tchange := enrollmentOwner.HolidayPayerChange{Before: enrollmentOwner.HolidayPaidBy{Kind: record.Before.Kind, CostBearerName: record.Before.CostBearerName}, After: enrollmentOwner.HolidayPaidBy{Kind: record.After.Kind, CostBearerName: record.After.CostBearerName}}\n\treturn parentBillingHolidayError(b.payers.RecordHolidayPayer(ctx, enrollmentOwner.HolidayReviewer(reviewer), periodID, registrationID, change, record.Reason))\n}",
+      "form": "unclassified-evidence",
+      "id": "api/parentBillingHolidayRegistrations.RecordHolidayPayer",
+      "owner": "roots"
+    },
+    {
+      "build": "production",
       "evidence": "func (b parentBillingHolidayRegistrations) RecordHolidaySiblings(ctx context.Context, reviewer parentbilling.HolidayReviewer, periodID, registrationID int64, action string, siblingIDs []int64) error {\n\treturn parentBillingHolidayError(b.review.RecordHolidaySiblings(ctx, enrollmentOwner.HolidayReviewer(reviewer), periodID, registrationID, action, siblingIDs))\n}",
       "form": "unclassified-evidence",
       "id": "api/parentBillingHolidayRegistrations.RecordHolidaySiblings",
