@@ -496,7 +496,9 @@ export function useSupervisionDashboard(
     const byStudent = new Map<string, studentsContract.PlannedActivity[]>();
     for (const { studentId, ...activity } of snapshot?.plannedActivities ??
       []) {
-      byStudent.set(studentId, [...(byStudent.get(studentId) ?? []), activity]);
+      const own = byStudent.get(studentId);
+      if (own) own.push(activity);
+      else byStudent.set(studentId, [activity]);
     }
     return byStudent;
   }, [snapshot?.plannedActivities]);

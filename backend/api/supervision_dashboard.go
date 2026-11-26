@@ -135,10 +135,6 @@ func (s supervisionSettings) StudentPhotosEnabled(ctx context.Context) (bool, er
 	return s.settings.ResolveBool(ctx, settingsplatform.KeyStudentPhotosEnabled)
 }
 
-func (s supervisionSettings) StudentCardActivitiesEnabled(ctx context.Context) (bool, error) {
-	return s.settings.ResolveBool(ctx, settingsplatform.KeyStudentCardActivitiesEnabled)
-}
-
 func (s supervisionSettings) TrackingIndicatorLabels(ctx context.Context) ([]string, error) {
 	return settingsplatform.PrefetchedTrackingIndicatorLabels(ctx, s.settings)
 }

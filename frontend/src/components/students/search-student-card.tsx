@@ -43,8 +43,8 @@ import {
   getStudentDayTimes,
 } from "~/lib/student-time-status";
 import {
+  dayExceptionKeepsAway,
   getDayPlanningNotComingLabel,
-  hasActualAttendance,
 } from "~/lib/day-planning-helper";
 import { deriveCheckinState } from "~/lib/hooks/use-school-checkin-mode";
 import { isInClassLocation } from "~/lib/location-helper";
@@ -177,23 +177,21 @@ export function searchStudentDay(
 /**
  * Ein Kind, das an dem Tag per Ausnahme ohne Uhrzeit nicht kommt oder nicht
  * abgeholt wird, zeigt keine Angebote: Die Zeile daneben sagt „Kommt heute
- * nicht“. Wie unter „Gruppen“ (#6487) geht die tatsächliche Anwesenheit vor.
+ * nicht“. Dieselbe Regel wie unter „Gruppen“ (#6487).
  */
 function staysAwayByException(student: Student, isToday: boolean): boolean {
-  if (
-    isToday &&
-    (hasActualAttendance(student) ||
-      isInClassLocation(student.current_location))
-  ) {
-    return false;
-  }
-  const arrivalAbsent =
-    (student.arrival_is_exception ?? false) && !student.arrival_time;
-  const pickupAbsent =
-    (student.pickup_is_exception ?? false) &&
-    !student.pickup_time &&
-    !student.actual_pickup_time;
-  return arrivalAbsent || pickupAbsent;
+  return dayExceptionKeepsAway(
+    student,
+    {
+      arrivalAbsent:
+        (student.arrival_is_exception ?? false) && !student.arrival_time,
+      pickupAbsent:
+        (student.pickup_is_exception ?? false) &&
+        !student.pickup_time &&
+        !student.actual_pickup_time,
+    },
+    { ignoreCurrentAttendance: !isToday },
+  );
 }
 
 interface SearchStudentCardProps {

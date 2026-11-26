@@ -12,6 +12,7 @@ import (
 	"slices"
 
 	projectionStudentsHTTP "github.com/moto-ogs/project-phoenix/modules/presenceprojection/http"
+	settingsplatform "github.com/moto-ogs/project-phoenix/modules/settings"
 	"github.com/moto-ogs/project-phoenix/modules/supervisiondashboard"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -147,4 +148,10 @@ func (b supervisionPlannedActivities) PlannedActivities(ctx context.Context, stu
 		}
 	}
 	return result, nil
+}
+
+// StudentCardActivitiesEnabled reports whether the school shows the offerings
+// on its child cards (#6487).
+func (s supervisionSettings) StudentCardActivitiesEnabled(ctx context.Context) (bool, error) {
+	return s.settings.ResolveBool(ctx, settingsplatform.KeyStudentCardActivitiesEnabled)
 }

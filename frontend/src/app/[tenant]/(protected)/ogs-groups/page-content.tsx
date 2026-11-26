@@ -145,8 +145,8 @@ import {
   type StudentDayTimes,
 } from "~/lib/student-time-status";
 import {
+  dayExceptionKeepsAway,
   getDayPlanningNotComingLabel,
-  hasActualAttendance,
 } from "~/lib/day-planning-helper";
 
 import { createLogger } from "~/lib/logger";
@@ -1248,13 +1248,16 @@ function OGSGroupPageContent() {
                               !student.arrival_time;
                             // As in day planning, attendance (including a return
                             // to class) takes precedence over absence exceptions.
-                            const notHereToday =
-                              !hasActualAttendance(student) &&
-                              !isInClassLocation(student.current_location) &&
-                              (arrivalAbsent ||
-                                ((studentPickup?.isException ?? false) &&
+                            const notHereToday = dayExceptionKeepsAway(
+                              student,
+                              {
+                                arrivalAbsent,
+                                pickupAbsent:
+                                  (studentPickup?.isException ?? false) &&
                                   !studentPickup?.pickupTime &&
-                                  !student.actual_pickup_time));
+                                  !student.actual_pickup_time,
+                              },
+                            );
                             return (
                               <>
                                 <ArrivalTimeRow
