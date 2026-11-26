@@ -67,7 +67,11 @@ export async function loadHomeSeed(slug: string) {
   const { session, snapshot, tenant, token } = context;
   const today = berlinTodayISO();
   const timetableEnabled = tenant.timetableEnabled !== false;
-  const access = homeBlockAccess(session, false);
+  const access = homeBlockAccess(
+    session,
+    false,
+    tenant.operationalOverviewScope,
+  );
   const layout = seedRead("homeLayout", async (signal) =>
     mapHomeLayout(
       (
@@ -218,7 +222,10 @@ export async function loadHomeSeed(slug: string) {
     saved.policies,
   );
   const withOwnGroup = resolveHomeLayout(
-    { ...board, access: homeBlockAccess(session, true) },
+    {
+      ...board,
+      access: homeBlockAccess(session, true, tenant.operationalOverviewScope),
+    },
     saved.blocks,
     saved.overrides,
     saved.policies,
@@ -301,7 +308,11 @@ export async function loadHomePlanningSeed(slug: string) {
   if (
     !context ||
     context.tenant.timetableEnabled === false ||
-    !homeBlockAccess(context.session, false).has("schedules:manage") ||
+    !homeBlockAccess(
+      context.session,
+      false,
+      context.tenant.operationalOverviewScope,
+    ).has("schedules:manage") ||
     isSchoolPortalHandoffPath(getSmartRedirectPath(context.session))
   )
     return null;

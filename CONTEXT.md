@@ -388,9 +388,12 @@ sie nicht ausdrücklich mit anderen Sorgeberechtigten teilt.
 Die **Leseansicht** ist der Betreuungsplan, wie ihn Teammitglieder ohne
 Admin-Rechte sehen: der Wochenplan der ganzen Schule (wer macht was, wann,
 wo, mit wem), ohne jede Editier-Kontrolle und ohne Planungswerkzeuge
-(Monats-/Serienansicht, Lücken- und Konflikthinweise, Export). Sie lebt als
-Tab „Betreuungsplan" in „Mein Kalender" — der einen Kalenderfläche neben dem
-Tab „Meine Termine" — und trägt den Hinweis „Nur ansehen". Kindernamen
+(Monats-/Serienansicht, Lücken- und Konflikthinweise, Export). Sie trägt den
+Hinweis „Nur ansehen" und ist an zwei Stellen dieselbe Ansicht: als Eintrag
+„Betreuungsplan" im Tagesbetrieb der Seitenleiste, direkt unter „Heute"
+(#8134, mit `schedules:read` und `users:read`), und als Tab „Betreuungsplan"
+in „Mein Kalender" — der einen Kalenderfläche neben dem Tab „Meine Termine".
+Die Leitung öffnet über denselben Eintrag den bearbeitbaren Plan. Kindernamen
 erscheinen nur in der Teilnehmerliste eines Termin-Details.
 
 ## Familienschutz

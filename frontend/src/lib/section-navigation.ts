@@ -300,10 +300,15 @@ export const STAFF_FLAT_PAGES = {
   // an einem Ort, mit Reitern nach Herkunft.
   anfragen: { href: "/anfragen", label: "Anfragen" },
   // Tages-Betreuungsplan (#2383): die Standardseite der Betreuungskräfte —
-  // bewusst eine eigene Top-Level-Route, keine Unterseite des Admin-
-  // Planungsbereichs /betreuungsplan. Der Eintrag zeigt immer den laufenden
+  // bewusst eine eigene Top-Level-Route, keine Unterseite von
+  // /betreuungsplan. Der Eintrag zeigt immer den laufenden
   // Tag und heißt deshalb „Heute“ (#4348); intern bleibt es der Tagesplan.
   tagesplan: { href: "/tagesplan", label: "Heute" },
+  // Der ganze Betreuungsplan (#8134): im Tagesbetrieb direkt unter „Heute“,
+  // für alle, die ihn lesen dürfen. Wer ihn nicht bearbeiten darf, sieht
+  // dieselbe Seite als Leseansicht (#2283). Bis #8134 stand der Eintrag im
+  // Planungskatalog und nur für die Leitung in der Seitenleiste.
+  carePlan: { href: "/betreuungsplan", label: "Betreuungsplan" },
   calendar: { href: "/calendar", label: "Mein Kalender" },
   // Dateiablage (#2596): gemeinsame Dateien der OGS mit Ordner-Freigaben.
   // Bewusst „Dateien“, nicht „Dokumente“: der Dokumente-Tab bei Kind und

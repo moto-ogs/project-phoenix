@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import { homeBlockAccess } from "~/lib/home-block-access";
 import type { HomeBlockAccess } from "~/lib/home-blocks";
 import { useOptionalSupervision } from "~/lib/supervision-context";
+import { useOperationalOverviewScope } from "~/lib/tenant-context";
 
 /**
  * Die Rechte der angemeldeten Person in der Form, die der Bausteinkatalog der
@@ -29,8 +30,10 @@ export function useHomeBlockAccess(): HomeBlockAccess {
   // personengebundene Kennzeichen öffnet die Karte „Meine Gruppe“.
   const hasOwnGroups = groups.some((group) => group.is_personal === true);
 
+  const overviewScope = useOperationalOverviewScope();
+
   return useMemo(
-    () => homeBlockAccess(session, hasOwnGroups),
-    [session, hasOwnGroups],
+    () => homeBlockAccess(session, hasOwnGroups, overviewScope),
+    [session, hasOwnGroups, overviewScope],
   );
 }
