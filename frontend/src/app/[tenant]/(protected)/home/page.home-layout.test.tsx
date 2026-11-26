@@ -117,6 +117,8 @@ vi.mock("~/components/home/now-strip", () => ({
 
 vi.mock("~/lib/tenant-context", () => ({
   useNFCEnabled: vi.fn(() => true),
+  // Schulweite Übersicht (#2380): jede Person sieht die Blöcke der Schule.
+  useOperationalOverviewScope: () => "all_staff",
   // Alle Module gebucht, wie die Voreinstellung der Registry (#4892).
   useBookedModules: () => [
     "nfc_anwesenheit",

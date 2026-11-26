@@ -372,6 +372,8 @@ import type { traegerCareTimeOverrunsTopic as authored_traegerCareTimeOverrunsTo
 
 import type { traegerCatalogPhasesTopic as authored_traegerCatalogPhasesTopic } from "./articles/traeger-catalog-phases";
 
+import type { traegerChildrenTopic as authored_traegerChildrenTopic } from "./articles/traeger-children";
+
 import type { traegerClosingDaysTopic as authored_traegerClosingDaysTopic } from "./articles/traeger-closing-days";
 
 import type { traegerDailyAttendanceTopic as authored_traegerDailyAttendanceTopic } from "./articles/traeger-daily-attendance";
@@ -825,6 +827,10 @@ export const activeSupervisionTopic = function activeSupervisionTopic(
       // Einstellung „Kinder nur über ‚Alle Kinder‘ finden“ (#1321).
       "Fehlt `Aktuelle Aufsicht` in der Navigation? Öffne `Alle Kinder`. Wähle im Menü mit den drei Punkten `Zur Aufsicht`.",
     ],
+    // Einstellung „Angebote auf der Kinderkarte“ (#6487, #8194), standardmäßig aus.
+    notes: [
+      "Die Karten können auch die Angebote des Tages zeigen, zum Beispiel „14:00–15:00 Töpfer-AG“. Deine Leitung schaltet das in den Einstellungen bei `Angebote auf der Kinderkarte` ein.",
+    ],
     troubleshooting: HELP_TOPICS.attendanceProblem,
     related: [HELP_TOPICS.rooms, HELP_TOPICS.ownGroups],
   };
@@ -992,10 +998,11 @@ export const appOverviewTopic = function appOverviewTopic(): HelpTopic {
           "Ganz oben steht die `Startseite`. Darunter bündeln Gruppen, was zusammengehört.",
         ordered: false,
         steps: [
-          "`Tagesbetrieb`: alles für den laufenden Betreuungstag. Diese Gruppe ist schon aufgeklappt.",
+          // #8134: der Betreuungsplan steht hier, direkt unter `Heute`.
+          "`Tagesbetrieb`: alles für den laufenden Betreuungstag. Hier steht auch der `Betreuungsplan`, wenn deine OGS ihn nutzt. Diese Gruppe ist schon aufgeklappt.",
           "`Eltern`: was du mit den Familien austauschst.",
           "`Team`: Dein Dienstplan, dein Kalender, deine Arbeitszeit, deine Kolleginnen und Kollegen und die gemeinsamen Dateien. Wer nicht plant, findet diese Gruppe beim ersten Besuch schon aufgeklappt.",
-          "`Planung`: die Pläne deiner OGS. Wer plant, findet diese Gruppe beim ersten Besuch schon aufgeklappt.",
+          "`Planung`: was die Leitung zum Planen braucht, etwa der Dienstplan. Wer plant, findet diese Gruppe beim ersten Besuch schon aufgeklappt.",
           "`Verwaltung`: Stammdaten, Auswertungen und die Lohnabrechnung.",
           "In jeder Gruppe steht oben, was im Alltag am häufigsten gebraucht wird.",
           "Du siehst nur Gruppen, in denen etwas für dich dabei ist.",
@@ -1029,7 +1036,7 @@ export const appOverviewTopic = function appOverviewTopic(): HelpTopic {
         // Baustein „Heute anders" (#7659), components/home/day-changes-block.tsx.
         title: "Was heute anders ist",
         description:
-          "Ganz oben auf der `Startseite` steht die Karte `Heute anders`. Sie zeigt, wer heute fehlt und wer vertritt. Sie zeigt auch Dienste, Angebote und AGs, die heute anders sind oder ausfallen. Dazu kommen die Hinweise der Leitung für heute.",
+          "Weit oben auf der `Startseite` steht die Karte `Heute anders`. Sie zeigt, wer heute fehlt und wer vertritt. Sie zeigt auch Dienste, Angebote und AGs, die heute anders sind oder ausfallen. Dazu kommen die Hinweise der Leitung für heute.",
         ordered: false,
         steps: [
           "Unter `Betrifft dich` steht, was dich selbst angeht: deine Gruppen, Vertretungen, Termine und Dienste.",
@@ -1053,7 +1060,7 @@ export const appOverviewTopic = function appOverviewTopic(): HelpTopic {
           // Personal, Link in den Vertretungsplan mit schedules:manage.
           "Auch wer nur bei einem Termin fehlt oder vertritt, steht mit Uhrzeit da. Beispiel: `Sara übernimmt heute „Chor“ für Ben.`",
           "Darfst du den `Vertretungsplan` öffnen, führt dich der Eintrag zu diesem Termin.",
-          "Am Handy zeigt `Schule` nur die ersten 3 Einträge. Den Rest zeigt `Alle anzeigen`.",
+          "`Schule` zeigt die ersten 5 Einträge, am Handy die ersten 3. Den Rest zeigt `weitere anzeigen`.",
           // Termine aus dem eigenen Kalender (#7663), api/day_changes_appointments.go.
           "Unter `Betrifft dich` stehen auch deine Termine aus `Mein Kalender`. Du siehst dort, welcher Termin heute ausfällt. Du siehst auch, welcher Termin heute woanders oder zu einer anderen Zeit ist.",
           "Dienste, Termine, Angebote und AGs, die schon vorbei sind, stehen ganz unten unter `erledigt`. Wähle `erledigt`, um sie zu sehen.",
@@ -1068,6 +1075,29 @@ export const appOverviewTopic = function appOverviewTopic(): HelpTopic {
           // Krank und Urlaub des Teams stehen seit #7668 nur noch hier, nicht
           // mehr in „Personal heute“ (components/home/staff-today-block.tsx).
           "Die Leitung sieht in `Personal heute`, wie viele in Aufsicht und eingestempelt sind. Wer krank oder im Urlaub ist, steht in `Heute anders`.",
+        ],
+      },
+      {
+        // Baustein „Betreuungsplan heute" (#8134), components/home/day-flow-block.tsx.
+        // Die Karte gibt es nur mit Betreuungsplan; der Artikel kennt den
+        // Schulschalter nicht, deshalb sagt der Text die Bedingung selbst.
+        title: "Der Betreuungsplan von heute",
+        description:
+          "Nutzt deine OGS den Betreuungsplan? Dann zeigt die Karte `Betreuungsplan heute`, was in der ganzen OGS heute noch ansteht. Wer die OGS leitet, hat sie ganz oben auf der Startseite.",
+        ordered: false,
+        steps: [
+          "Die Karte beginnt bei dem, was gerade läuft oder als Nächstes kommt. Die grüne Linie `Jetzt` zeigt die Uhrzeit.",
+          "Jede Zeile zeigt Beginn und Ende, den Raum, die Kinder und das Team.",
+          "Rechts steht, was gerade zählt: `Läuft`, `Nicht gestartet` oder `Fällt aus`. Beginnt ein Block in der nächsten Stunde, steht dort die Zeit bis zum Beginn.",
+          "Tippe auf eine Zeile. Sie öffnet den Termin im `Betreuungsplan`. Hast du den Plan nicht in der Seitenleiste, öffnet sich `Heute`.",
+          "Links neben `Jetzt` steht, wie viele Blöcke heute schon vorbei sind. Tippe darauf, um den ganzen Tag zu sehen.",
+          "Passen nicht alle Blöcke auf die Karte? Darunter steht, wie viele noch kommen.",
+          "Fällt ein Block aus, steht er immer auf der Karte, auch wenn nicht alle Blöcke Platz haben. Das gilt auch für deine eigenen Blöcke.",
+          "Sind alle Blöcke vorbei, steht dort `Für heute ist nichts mehr geplant`. Die Karte nennt dann, was ausgefallen ist und was nicht gestartet wurde. `Plan öffnen` zeigt dir den ganzen Tag.",
+          "Die Karte fehlt bei dir? Wähle `Anpassen`, dann `Bausteine` und dann `Betreuungsplan heute`.",
+          // Karte nur mit Betreuungsplan, Leserecht und schulweiter Sicht
+          // (#2380); sonst zeigt „Mein Tag“ die eigenen Einsätze.
+          "Steht sie dort nicht? Dann nutzt deine OGS den Betreuungsplan nicht, oder du siehst nur deine eigenen Einsätze. Die zeigt die Karte `Mein Tag`.",
         ],
       },
       {
@@ -1288,6 +1318,15 @@ export const calendarPeriodsTopic = function calendarPeriodsTopic(): HelpTopic {
           "Wähle `Speichern`.",
         ],
       },
+      // #8173: ein gespeicherter Tag wird in der Liste geändert.
+      {
+        title: "Einen Tag mit anderen Öffnungszeiten ändern",
+        steps: [
+          "Öffne `Schuljahr und Kalender` und gehe zum Abschnitt `Geänderte Öffnungszeiten`.",
+          "Wähle beim Tag die drei Punkte und dann `Bearbeiten`.",
+          "Ändere die Felder und wähle `Speichern`.",
+        ],
+      },
       {
         title: "Eltern der Ferienbetreuung informieren",
         description:
@@ -1351,7 +1390,9 @@ export const calendarPeriodsTopic = function calendarPeriodsTopic(): HelpTopic {
       "Ein Zeitraum, den noch nichts benutzt, trägt `Nicht verwendet`.",
       "An einem Tag mit geänderter Öffnungszeit enden die Sitzungen zur neuen Schließzeit. Danach können Eltern die Abholzeit für den Tag nicht mehr ändern.",
       // #8170: Eltern sehen die geänderte Öffnungszeit in „Heute anders“.
-      "Eltern sehen die geänderte Öffnungszeit unter `Heute anders` bei ihrem Kind. Liegt eine Abholzeit nach der Schließzeit, steht das dabei. moto ändert die Abholzeit nicht.",
+      // #8178: Hinweis an Team, Eltern und Träger.
+      "Legst du einen Tag mit geänderter Öffnungszeit an, änderst oder löschst ihn, bekommen Team, Eltern und Träger-Büro einen Hinweis. Ausschalten kannst du das in den Einstellungen mit `Benachrichtigung bei geänderter Öffnungszeit`.",
+      "Eltern sehen die geänderte Öffnungszeit unter `Heute anders` bei ihrem Kind. Liegt eine Abholzeit nach der Schließzeit, steht das dabei. Das gilt für eine geänderte Abholzeit und für die Abholzeit aus dem Wochenplan. moto ändert die Abholzeit nicht.",
       // #6845: Schichtserien halten ihren Zeitraum fest.
       "Einen Zeitraum mit Schichtserien im Dienstplan kannst du nicht löschen, auch wenn die Serien beendet sind. Nimm stattdessen den Haken bei `Zeitraum im Plan verwenden` heraus.",
       "Ferienbetreuung an Schließtagen: Wähle beim Speichern der Serie `Auch an Schließtagen planen`. Trage bei `Letzter Tag` den letzten Ferientag ein. Dann endet die Serie mit den Ferien.",
@@ -1396,8 +1437,8 @@ export const carePlanTopic = function carePlanTopic(
     audience: ["caregiver", "lead"],
     icon: "Table",
     steps: [
-      "Klappe in der Seitenleiste `Team` auf und öffne `Mein Kalender`.",
-      "Wähle den Tab `Betreuungsplan`.",
+      // #8134: eigener Eintrag im Tagesbetrieb, direkt unter `Heute`.
+      "Öffne in der Seitenleiste unter `Tagesbetrieb` den `Betreuungsplan`.",
       "Wähle oben `Tag` oder `Woche`.",
       "Nutze die Pfeile oder `Heute`, um zum passenden Tag zu wechseln.",
       presenceMode === "binary"
@@ -1411,7 +1452,9 @@ export const carePlanTopic = function carePlanTopic(
     differences: [
       // Live geprueft: die Kopfzeile des Reiters traegt das Kennzeichen.
       "Steht oben rechts `Nur ansehen`? Dann darfst du den Plan lesen, aber nicht ändern.",
-      SIMPLE_NAV_DIFFERENCE,
+      // Die einfache Seitenleiste (#6956) führt den Plan nicht; der Reiter
+      // in `Mein Kalender` steht dort.
+      "Du siehst in der Seitenleiste keine Überschriften wie `Tagesbetrieb`? Dann nutzt deine OGS die einfache Seitenleiste. Öffne dort `Mein Kalender` und wähle den Tab `Betreuungsplan`. Oder wähle ganz unten `Alle Seiten anzeigen`.",
     ],
     notes: [
       // #4766: Filter Gruppe und Person, auch in der Leseansicht.
@@ -1419,11 +1462,13 @@ export const carePlanTopic = function carePlanTopic(
       // #4768: Raumfilter.
       "Nur einen Raum sehen? Wähle oben bei `Alle Räume` einen Raum.",
       "Die Adresse der Seite behält deine Auswahl. So kannst du den gefilterten Plan teilen.",
+      // Leseansicht als Reiter der einen Kalenderfläche (#2283), bleibt.
+      "Derselbe Plan steht auch in `Mein Kalender`, im Tab `Betreuungsplan`.",
       // #5028: Sa/So nur in der Woche des heutigen Wochenendes.
       "Betreut deine OGS am Wochenende? Dann gilt dort der Freitagsplan. Am Wochenende zeigt die Wochenansicht dieser Woche auch Samstag und Sonntag.",
     ],
     troubleshootingDetails: [
-      "Der Tab `Betreuungsplan` fehlt? Frag deine Leitung, ob sie deinen Zugang prüft.",
+      "Der Eintrag `Betreuungsplan` fehlt? Frag deine Leitung, ob sie deinen Zugang prüft.",
       "Steht dort `Noch kein Planungszeitraum`? Dann hat deine Leitung den Zeitraum noch nicht angelegt.",
       "Steht dort `Für diese Auswahl ist nichts geplant`? Stelle die Filter wieder auf `Alle Gruppen`, `Alle Personen` und `Alle Räume`.",
     ],
@@ -2162,6 +2207,8 @@ export const dayPlanTopic = function dayPlanTopic(
     ],
     notes: [
       "Mit den Pfeilen oben rechts siehst du einen anderen Tag.",
+      // #8134: der ganze Plan steht direkt unter `Heute`.
+      "Steht unter `Heute` auch `Betreuungsplan`? Dort siehst du die ganze Woche der OGS.",
       "Betreut deine OGS am Wochenende? Dann zeigt die Seite `Heute` auch Samstag und Sonntag. Dort gilt der Freitagsplan.",
     ],
     troubleshootingDetails: [
@@ -4381,8 +4428,8 @@ export const leadCancelBlockTopic = function leadCancelBlockTopic(): HelpTopic {
     icon: "CalendarCheck",
     requirements: ["Du darfst den Betreuungsplan bearbeiten."],
     steps: [
-      "Klappe in der Seitenleiste `Planung` auf.",
-      "Öffne `Betreuungsplan` und wähle den Termin.",
+      "Öffne in der Seitenleiste unter `Tagesbetrieb` den `Betreuungsplan`.",
+      "Wähle den Termin.",
       "Wähle `Absagen`.",
       "Lass den Haken bei `Eltern per App und E-Mail informieren` gesetzt, wenn die Familien Bescheid bekommen sollen.",
       "Prüfe `Betreff` und `Text an die Eltern`. moto schlägt beides vor.",
@@ -4418,14 +4465,15 @@ export const leadCarePlanTopic = function leadCarePlanTopic(): HelpTopic {
     audience: "lead",
     icon: "Table",
     steps: [
-      "Klappe in der Seitenleiste `Planung` auf.",
-      "Öffne `Betreuungsplan`.",
+      // #8134: der Plan steht im Tagesbetrieb, nicht mehr unter `Planung`.
+      "Öffne in der Seitenleiste unter `Tagesbetrieb` den `Betreuungsplan`.",
       "Wähle oben die Ansicht `Tag`, `Woche`, `Monat` oder `Serien`.",
       "Blättere mit den Pfeilen zur gewünschten Woche.",
       "Lege die Termine der Woche an.",
       "Prüfe zum Schluss die gemeldeten Konflikte.",
     ],
-    result: "Dein Team sieht den Plan unter `Heute` und unter `Mein Kalender`.",
+    result:
+      "Dein Team sieht den Plan unter `Heute`, unter `Betreuungsplan` und unter `Mein Kalender`.",
     notes: [
       "Ein Regeltermin wiederholt sich. Die Ansicht `Serien` zeigt alle Regeltermine.",
       // #5102: Hand-Kinderlisten folgen keiner Abmeldung; #5137: Klassen-
@@ -5991,7 +6039,7 @@ export const ownGroupsTopic = function ownGroupsTopic(
     ],
     // Einstellung „Angebote auf der Kinderkarte“ (#6487), standardmäßig aus.
     notes: [
-      "Die Karten können auch die Angebote des Tages zeigen, zum Beispiel „14:00–15:00 Töpfer-AG“. Deine Leitung schaltet das in den Einstellungen bei `Angebote auf der Kinderkarte` ein.",
+      "Die Karten können auch die Angebote des Tages zeigen, zum Beispiel „14:00–15:00 Töpfer-AG“. Deine Leitung schaltet das in den Einstellungen bei `Angebote auf der Kinderkarte` ein. Dann stehen die Angebote auch in `Alle Kinder` und `Aktuelle Aufsicht` auf der Karte.",
     ],
     troubleshooting: HELP_TOPICS.missingChildOrGroup,
     related: [
@@ -6294,7 +6342,9 @@ export const parentCareChangeTopic =
         "Eine Änderung am Wochenplan ist dauerhaft und gilt jede Woche.",
         "Geht es nur um einen Tag? Ändere stattdessen die Abholung für diesen Tag.",
         "Eine offene Anfrage lässt sich mit `Anfrage bearbeiten` noch ändern.",
-        "Gilt dein Betreuungsvertrag schon? Dann kann auch der Träger deiner OGS die Anfrage bestätigen. Nach der Bestätigung bekommt der Vertrag eine neue Version ab dem bestätigten Tag. Die alte Version gilt bis dahin weiter.",
+        "Gilt dein Betreuungsvertrag schon? Dann kann auch der Träger deiner OGS die Anfrage bestätigen. Nach der Bestätigung bekommt der Vertrag eine neue Fassung ab dem bestätigten Tag. Die alte Fassung gilt bis dahin weiter.",
+        "Deine Anfrage gilt als deine Zustimmung zur neuen Fassung. Du musst nichts unterschreiben. Die neue Fassung bekommst du per Mail und unter `Dokumente`.",
+        "Hat ein anderer Elternteil den Vertrag abgeschlossen? Oder wurde etwas anderes bestätigt, als du angefragt hast? Dann bittet moto um eine Unterschrift. Du findest das unter `Dokumente`.",
         "Betreut deine OGS am Wochenende? Dann gilt der Freitagsplan auch für Samstag und Sonntag.",
       ],
       differences: [
@@ -6471,8 +6521,8 @@ export const parentChildOverviewTopic =
         "`Heute anders` nennt zum Beispiel: Ein Angebot fällt aus, ist in einem anderen Raum oder hat eine Vertretung. Dazu kommen eine geänderte Abholzeit, ein Schließtag, geänderte Öffnungszeiten, ein Ausflug oder eine Krankmeldung.",
         // Essensausfall im Elternportal (#8160): nur bei einer Buchung des Kindes.
         "Fällt das Mittagessen aus und dein Kind ist an dem Tag angemeldet, steht das auch unter `Heute anders`. Der Tag wird nicht berechnet.",
-        // #8170: eine Abholzeit nach der geänderten Schließzeit bleibt stehen.
-        "Schließt die OGS heute früher und liegt deine Abholzeit danach, steht dort `Das ist nach der Schließung.` moto ändert die Abholzeit nicht. Wähle `Abholung ändern` und trage eine frühere Zeit ein.",
+        // #8170, #8173: eine Abholzeit nach der geänderten Schließzeit bleibt stehen.
+        "Schließt die OGS heute früher und liegt deine Abholzeit danach, steht dort `Das ist nach der Schließung.` Das gilt auch für die Abholzeit aus dem Wochenplan. moto ändert die Abholzeit nicht. Wähle `Abholung ändern` und trage eine frühere Zeit ein.",
         "Namen von Betreuungskräften stehen bei `Heute anders` nie. Du siehst nur, was dein Kind betrifft.",
         "Was du selbst eingetragen hast, ist mit `Von dir eingetragen` markiert. So siehst du, dass es angekommen ist.",
         "Die Startseite zeigt `Heute anders` für jedes Kind in seiner eigenen Karte.",
@@ -6682,6 +6732,18 @@ export const parentDocumentsTopic = function parentDocumentsTopic(): HelpTopic {
           "Soll die Betreuung schon vor dem Ende der Widerrufsfrist beginnen? Setze auch diesen Haken.",
           "Unterschreibe mit dem Finger oder tippe deinen Namen. Wähle `Unterschrift bestätigen`.",
           "Wähle `Vertrag verbindlich unterschreiben`.",
+        ],
+      },
+      {
+        title: "Eine geänderte Fassung unterschreiben",
+        description:
+          "Hat die OGS oder der Träger die Betreuung geändert? Dann steht beim Vertrag `Änderung wartet auf deine Unterschrift`. Bis du unterschreibst, gilt dein Vertrag wie bisher.",
+        steps: [
+          "Wähle beim Vertrag `Änderung ansehen und unterschreiben`. Das geht auch über den Link in der Mail, ohne Konto.",
+          "Lies die Karte `Das ändert sich`. Durchgestrichen ist die Betreuung bisher. Daneben steht die neue. `Geändert`, `Neu` und `Entfällt` zeigen die Tage, die anders sind.",
+          "Lies die neue Fassung als PDF und die Widerrufsbelehrung. Setze den Haken bei `Ich habe die Widerrufsbelehrung gelesen.`",
+          "Unterschreibe mit dem Finger oder tippe deinen Namen. Wähle `Unterschrift bestätigen`.",
+          "Wähle `Neue Fassung verbindlich unterschreiben`.",
         ],
       },
       {
@@ -7876,6 +7938,8 @@ export const parentNotificationsTopic =
         "Ändert sich das Essen an einem Tag, an dem dein Kind ein Essen gebucht hat, steht das auch unter `Hinweise`. Der Hinweis öffnet den Speiseplan dieser Woche. Aufs Handy kommt er nur, wenn du `Speiseplan geändert` einschaltest.",
         "Findet ein Termin deines Kindes in einem anderen Raum statt, steht das auch unter `Hinweise`. Für heute und morgen bekommst du dazu eine Benachrichtigung, solange du `Raumänderung heute oder morgen` nicht ausschaltest.",
         "Trägt die OGS einen Schließtag ein, ändert oder löscht ihn, steht das ebenfalls unter `Hinweise`. Das Thema `Schließtage` ist von Anfang an eingeschaltet. Eine Mitteilung aufs Handy kommt nur, wenn der Tag in den nächsten 14 Tagen liegt.",
+        // #8178: Hinweis zur geänderten Öffnungszeit.
+        "Öffnet die OGS an einem Tag zu anderen Zeiten oder schließt früher, steht das auch unter `Hinweise`. Das Thema `Geänderte Öffnungszeit` ist von Anfang an eingeschaltet. Eine Mitteilung aufs Handy kommt nur, wenn der Tag in den nächsten 14 Tagen liegt.",
         "Für spätere Tage schalte `Raumänderung an späteren Tagen` selbst ein. Sie gilt bis 14 Tage im Voraus.",
         "Ändert sich der Unterrichtsschluss in der Klasse deines Kindes, steht in moto `Stundenplan geändert`. Eine Mitteilung aufs Handy kommt dazu, wenn du `Stundenplan der Klasse` einschaltest und die Änderung in den nächsten 14 Tagen gilt.",
         "Ein Hinweis gilt erst als gelesen, wenn du ihn wählst oder `Alle als gelesen markieren` wählst.",
@@ -8831,7 +8895,7 @@ export const settingsGuideTopic = function settingsGuideTopic(): HelpTopic {
           "`Team-Chat für Mitarbeitende`: Das Team schreibt sich Nachrichten. Eltern sehen davon nichts.",
           // #7208: Ausschalten beendet auch jede Foto-Einwilligung.
           "`Kinderfotos`: Fotos bei den Kindern. Nur mit Einwilligung der Eltern. Beim Ausschalten löscht moto alle Fotos sofort. Auch alle Foto-Einwilligungen enden. Nach dem Wiedereinschalten braucht jedes Foto eine neue Einwilligung.",
-          "`Angebote auf der Kinderkarte`: Die Kinderkarten unter `Gruppen` zeigen die Angebote des Tages mit Uhrzeit.",
+          "`Angebote auf der Kinderkarte`: Die Kinderkarten zeigen die Angebote des Tages mit Uhrzeit. Das gilt für `Gruppen`, `Alle Kinder` und `Aktuelle Aufsicht`.",
           "`Automatisch ausstempeln`: moto wartet nach Dienstende die eingestellte Zeit. Dann stempelt es aus. Das gilt nur bei einem geplanten Dienst.",
           "`Betreuer stempeln nur am NFC-Tablet`: Wer keine Zeiten anderer verwalten darf, stempelt nur noch mit dem eigenen Armband am Tablet. In der App geht das für diese Personen nicht mehr. Die Leitung stempelt weiter in der App und trägt fehlende Zeiten nach, zum Beispiel für `Unterwegs`. Den Schalter gibt es nur mit NFC-Tablets.",
           "`Wegpackzeit beim Ausstempeln (Minuten)`: Diese Minuten zählt moto bei jedem Ausstempeln dazu, etwa für das Aufräumen. Nicht beim Pausenbeginn und nicht beim automatischen Ausstempeln.",
@@ -9144,6 +9208,8 @@ export const staffNotificationsTopic =
         "Wer die Änderung selbst einträgt, bekommt keinen Hinweis.",
         "Ändert sich der Unterrichtsschluss einer Klasse, steht hier `Stundenplan geändert`. Das siehst du, wenn du der Klasse zugeordnet bist oder Kinder der Klasse in deiner Gruppe sind. Der Hinweis öffnet `Heute` an dem Tag.",
         "Trägt die Leitung einen Schließtag ein, ändert oder löscht ihn, bekommen alle im Team einen Hinweis. Ein Klick darauf öffnet den `Kalender`.",
+        // #8178: Hinweis zur geänderten Öffnungszeit.
+        "Öffnet oder schließt die OGS an einem Tag zu anderen Zeiten, bekommen alle im Team einen Hinweis. Darin stehen der Tag und die Uhrzeit.",
         "Schreibt die Leitung unter `Hinweise der Leitung` etwas Neues für die Betreuung, steht es hier als `Neuer Hinweis der Leitung`. Ein Klick darauf öffnet die Seite `Hinweise der Leitung` mit diesem Text, auch wenn er erst später gilt.",
         "Auch diese Arten kommen als Hinweis: `Geänderte Abholzeit`, `Krankmeldung eines Kindes`, `Notizen für das Team` und `Umfragen der Einrichtung`.",
         "Die Leitung bekommt außerdem `Austritte aus dem Team` und `Ablaufende Nachweise im Team`. Für deine eigenen Nachweise gibt es `Eigene Nachweise`.",
@@ -9172,6 +9238,7 @@ export const staffNotificationsTopic =
         "Es kommt kein Hinweis zu einer Vertretung? Deine Schule kann `Hinweis bei Vertretung und Dienstplanänderung` ausschalten. Frage deine Leitung.",
         "Es kommt kein Hinweis zum Stundenplan einer Klasse? Deine Schule kann `Hinweis bei geändertem Stundenplan einer Klasse` ausschalten. Frage deine Leitung.",
         "Es kommt kein Hinweis zu einem Schließtag? Deine Schule kann `Benachrichtigung bei Schließtagen` ausschalten. Frage deine Leitung.",
+        "Es kommt kein Hinweis zu einer geänderten Öffnungszeit? Deine Schule kann `Benachrichtigung bei geänderter Öffnungszeit` ausschalten. Frage deine Leitung.",
         "Es kommt kein Hinweis zu neuen Hinweisen der Leitung? Deine Schule kann `Benachrichtigung bei neuem Hinweis der Leitung` ausschalten. Frage deine Leitung.",
         "Die Seite `Hinweise der Leitung` zeigt `Diesen Hinweis gibt es nicht mehr.`? Dann hat die Leitung ihn gelöscht oder abgeschaltet.",
         "Es kommt kein Hinweis zu einer Krankmeldung? Deine Schule kann `Hinweis bei Krankmeldung` ausschalten. Manche Schulen melden sie auch nur Personen, die gerade im Dienst sind. Frage deine Leitung.",
@@ -9668,6 +9735,9 @@ export const studentSearchTopic = function studentSearchTopic(
   // weil `eltern-einladen` nur fuer die Leitung sichtbar ist.
   const inviteNote =
     "Eltern vieler Kinder auf einmal einladen geht nicht in `Alle Kinder`. Das geht nur in `Datenverwaltung` unter `Kinderdaten`.";
+  // Einstellung „Angebote auf der Kinderkarte“ (#6487, #8194), standardmäßig aus.
+  const plannedActivitiesNote =
+    "Die Karten können auch die Angebote des Tages zeigen, zum Beispiel „14:00–15:00 Töpfer-AG“. Deine Leitung schaltet das in den Einstellungen bei `Angebote auf der Kinderkarte` ein.";
   // #5026: ohne Räume (Binärmodus) gibt es keine Zuweisung.
   const transitNotes =
     presenceMode === "binary"
@@ -9802,7 +9872,7 @@ export const studentSearchTopic = function studentSearchTopic(
       "Fehlt im Filter `Anmeldung`? Den Filter sehen nur Mitarbeitende, die auch die Angaben aus der Anmeldung beim Kind sehen. Er erscheint erst, wenn Eltern in der Online-Anmeldung eigene Fragen der Schule beantwortet haben.",
       ...(presenceDifference ? [presenceDifference] : []),
     ],
-    notes: [...transitNotes, inviteNote],
+    notes: [...transitNotes, inviteNote, plannedActivitiesNote],
     troubleshooting: HELP_TOPICS.missingChildOrGroup,
     related: [
       HELP_TOPICS.schoolSearch,
@@ -12413,10 +12483,24 @@ export const traegerCareContractsTopic =
         {
           title: "Wenn sich die Betreuung ändert: neue Version",
           steps: [
-            "Nach einer Freigabe durch dich oder die Schule bekommt der aktive Vertrag nach wenigen Minuten eine neue Version. Sie gilt ab dem freigegebenen Tag.",
+            "Ändert sich die gebuchte Betreuung, bekommt der Vertrag nach wenigen Minuten eine neue Version.",
+            "Haben die Eltern die Änderung selbst beantragt, und du oder die Schule gibt sie frei? Dann gilt die neue Version ab dem freigegebenen Tag. Der Antrag der Eltern gilt als Unterschrift. Die Eltern bekommen die neue Fassung per Mail und in der Eltern-App.",
             "Wähle in der Liste das Kind. Oben steht, ab wann die neue Version gilt.",
-            "Im Reiter `Versionen` siehst du jede Version mit ihren Tagen. `Geändert` markiert die Wochentage, die anders sind als vorher.",
+            "Im Reiter `Versionen` siehst du jede Version mit ihren Tagen. `Geändert` markiert die Wochentage, die anders sind als vorher. Unter den Daten steht, wie die Eltern zugestimmt haben.",
             "Mit `PDF` lädst du eine Version als PDF.",
+          ],
+        },
+        {
+          title: "Wenn die Eltern eine Änderung neu unterschreiben müssen",
+          description:
+            "Hat die Schule oder der Träger die Betreuung geändert, ohne dass die Eltern das beantragt haben? Dann müssen die Eltern die neue Version unterschreiben. Bis dahin gilt die bisherige Version, auch für die Abrechnung.",
+          steps: [
+            "In der Liste steht beim Vertrag `Änderung wartet auf Unterschrift`. Wähle das Kind.",
+            "Oben steht, welche Version bis zur Unterschrift gilt. Wähle `Zur geänderten Fassung`.",
+            "Die Karte `Geänderte Fassung` zeigt `Wartet auf Eltern` und den Versandstand. Wird die Mail noch gesendet? Dann warte, bis der Versand fertig ist. Ist sie nicht angekommen oder ihr Ergebnis unbekannt? Gib den Eltern das PDF unter `Versionen`. In der Eltern-App sehen sie die Änderung und unterschreiben.",
+            "Bis zur Unterschrift bekommen die Eltern Erinnerungen per Mail. Die Karte zeigt jede Erinnerung.",
+            "Haben die Eltern auf Papier unterschrieben? Lade das PDF der neuen Version im Reiter `Versionen` mit `PDF`. Wähle danach in der Karte `Papiervertrag erfassen`.",
+            "Nach der Unterschrift steht die Version im Reiter `Versionen` mit `Gilt ab` oder `Gilt jetzt`.",
           ],
         },
         {
@@ -12458,6 +12542,11 @@ export const traegerCareContractsTopic =
         "Den Kündigungstermin rechnet moto aus den Bedingungen im Vertrag, nicht aus den heutigen Vertragsbedingungen. Die Widerrufsfrist beginnt frühestens mit dem Erhalt der Belehrung. Ohne Nachweis gilt die längere Frist.",
         "Endet die Widerrufsfrist an einem Samstag, Sonntag oder Feiertag, endet sie erst am nächsten Werktag. moto nimmt die Feiertage aus dem Bundesland der Schule. Feiertage, die nur in einer Stadt oder Gemeinde gelten, kennt moto nicht. Hat deine Gemeinde einen eigenen Feiertag, prüfe die Frist an diesem Tag selbst.",
         "Eine neue Version gilt nie rückwirkend. Kommt eine Freigabe zu spät, gilt die Version ab dem Tag, an dem moto sie anlegt.",
+        "Unterschreiben die Eltern eine geänderte Fassung erst nach ihrem Tag, gilt sie ab dem Tag der Unterschrift. Im Reiter `Versionen` steht dann auch der Tag aus dem Vertrag.",
+        "Als Unterschrift zählt nur ein Antrag vom Elternkonto der Vertragspartei, den die Freigabe genau so gebucht hat. Hat ein anderer Elternteil gefragt, oder hat die Freigabe etwas anderes gebucht? Dann wartet die Version auf die Unterschrift.",
+        "Ändert sich die Betreuung noch einmal, bevor die Eltern unterschrieben haben? Dann bekommen sie eine neue Fassung mit neuem Link. Die frühere steht unter `Versionen` als `Überholt`. Niemand kann sie mehr unterschreiben. Das gilt auch für einen versendeten Vertrag, den noch niemand unterschrieben hat.",
+        "Nimmt die Schule die Änderung zurück, wartet nichts mehr. Die Version steht dann als `Überholt` unter `Versionen`.",
+        "Ging der Vertrag nie per Mail an die Eltern, zum Beispiel bei einer Übergabe auf Papier? Dann bekommen die Eltern auch die geänderte Fassung nicht per Mail. Die Karte `Geänderte Fassung` sagt dir das. Gib den Eltern das PDF.",
         "Beginnt an einem Tag schon eine Version, und du oder die Schule gibt für denselben Tag eine weitere Änderung frei, ersetzt moto diese Version. Die neue Version enthält beide Änderungen. Die alte steht unter `Versionen` als `Ersetzt` und gilt an keinem Tag.",
         "Ist schon eine spätere Version geplant, gilt eine frühere Änderung nur bis dahin. Die geplante Version übernimmt sie nicht von selbst.",
       ],
@@ -13247,6 +13336,52 @@ export const traegerCatalogPhasesTopic =
       ],
     };
   } satisfies typeof authored_traegerCatalogPhasesTopic;
+
+/** `/traeger/kinder` (#8137): alle Kinder der Schulen in einer Liste, ein Reiter je Schule. */
+export const traegerChildrenTopic = function traegerChildrenTopic(): HelpTopic {
+  return {
+    id: HELP_TOPICS.traegerChildren,
+    title: "Kinder aller Schulen",
+    question: "Wie finde ich ein Kind, ohne in jede Schule zu wechseln?",
+    summary:
+      "Die Liste zeigt alle Kinder deiner Schulen: mit Schule, Klasse und Gruppe. Jede Schule hat einen eigenen Reiter.",
+    group: "einstieg",
+    audience: "traeger",
+    icon: "User",
+    requirements: ["Du hast die Rolle `Verwaltung`."],
+    steps: [
+      "Wähle in der Navigation `Kinder`.",
+      "Wähle den Reiter einer Schule. `Alle` zeigt die Kinder aller Schulen zusammen.",
+      "Tippe oben in `Kind suchen` einen Teil des Namens ein.",
+      "Lies in der Zeile, an welcher Schule das Kind ist, in welcher Klasse und in welcher Gruppe.",
+      "Warte auf die Suchergebnisse. Stehen unten weitere Kinder, wähle `Weitere Kinder laden`.",
+      "Warte, bis die Suche fertig ist. Öffne dann oben rechts das Drei-Punkte-Menü. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`. Die Datei enthält die Kinder des offenen Reiters und deiner Suche.",
+    ],
+    result:
+      "Du weißt, an welcher Schule ein Kind betreut wird, ohne die Schule zu öffnen.",
+    notes: [
+      "Die Liste ist nach Nachnamen sortiert.",
+      "Die Suche findet Vornamen und Nachnamen, auch ohne Umlaute: „Oemer“ musst du nicht tippen, „omer“ findet „Ömer“.",
+      "Am Reiter jeder Schule steht die Zahl ihrer Kinder. Sie ist dieselbe Zahl wie `Kinder gesamt` in der Ansicht der Schule.",
+      "moto hält fest, wer die Liste öffnet oder herunterlädt. Das steht im Zugriffsprotokoll der Schule.",
+    ],
+    differences: [
+      "Fehlt `Kinder` in der Navigation, hast du die Rolle `Verwaltung` nicht. Die Leitung deines Träger-Büros vergibt sie unter `Mitglieder und Rollen`.",
+      "Hat dein Träger nur eine Schule, gibt es keine Reiter.",
+      "Steht bei Klasse oder Gruppe ein Strich, hat die Schule nichts eingetragen.",
+    ],
+    troubleshootingDetails: [
+      "Lässt sich eine Schule über einen gespeicherten Link nicht öffnen? Wähle `Alle Schulen anzeigen`.",
+      "Fehlt ein Kind, führt die Schule es heute nicht mit Betreuungsplatz: Es hat die Schule verlassen, wartet noch auf seinen Start oder hat keinen Platz in der Betreuung.",
+      "Du siehst hier keine Eltern, keine Verträge und keine Gesundheitsangaben. Verträge findest du unter `Verträge`.",
+    ],
+    related: [
+      HELP_TOPICS.traegerSchoolView,
+      HELP_TOPICS.traegerOccupancy,
+      HELP_TOPICS.traegerAccessLog,
+    ],
+  };
+} satisfies typeof authored_traegerChildrenTopic;
 
 /** `/traeger/schliesstage` (#4702): Schließtage des Trägers und Feiertage je Bundesland. */
 export const traegerClosingDaysTopic =
@@ -14951,6 +15086,8 @@ export const traegerNotificationFeedTopic =
         "Erst dein Klick macht einen Hinweis zu „gelesen“. Das Öffnen der Glocke allein ändert nichts.",
       notes: [
         "Trägt eine Schule einen Schließtag ein, ändert oder löscht ihn, siehst du es hier.",
+        // #8178: Hinweis zur geänderten Öffnungszeit.
+        "Ändert eine Schule die Öffnungszeit an einem Tag, siehst du es auch hier.",
         "Die Zahl an der Glocke prüft moto bei jedem Seitenwechsel und jede Minute neu.",
         "Hinweise bleiben 30 Tage nach ihrer letzten Änderung in der Glocke. Danach löscht moto sie.",
         "Im Träger-Portal gibt es keine Mitteilung aufs Handy. Die Hinweise stehen nur in der Glocke.",
@@ -14960,6 +15097,7 @@ export const traegerNotificationFeedTopic =
       ],
       troubleshootingDetails: [
         "Es kommt kein Hinweis zu einem Schließtag? Die Schule kann `Benachrichtigung bei Schließtagen` ausschalten. Frage dort nach.",
+        "Es kommt kein Hinweis zu einer geänderten Öffnungszeit? Die Schule kann `Benachrichtigung bei geänderter Öffnungszeit` ausschalten. Frage dort nach.",
         "Wer den Schließtag selbst einträgt, bekommt keinen Hinweis dazu.",
       ],
       related: [HELP_TOPICS.traegerSchoolView, HELP_TOPICS.traegerClosingDays],

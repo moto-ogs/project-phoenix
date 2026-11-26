@@ -66,6 +66,7 @@ const METHOD_LABELS: Record<
   drawn: "Gezeichnet",
   typed: "Getippter Name",
   paper: "Papier mit Unterschrift",
+  request: "Eigener Antrag der Eltern, freigegeben",
 };
 
 /** The card is shown for a contract that waits or is signed. */
@@ -133,20 +134,24 @@ export function CareContractSignatureCard({
       <SectionCard
         title="Unterschrift"
         description={
-          signature
-            ? "So haben die Eltern den Vertrag unterschrieben."
-            : contract.concluded
-              ? contract.concluded.method === "mit_anmeldung"
-                ? "Der Vertrag ist bereits mit der Annahme der Anmeldung abgeschlossen."
-                : "Der Vertrag ist bereits abgeschlossen."
-              : onPaper
-                ? "Die Eltern unterschreiben den Vertrag auf Papier."
-                : contract.status === "versendet"
-                  ? "Die Eltern unterschreiben in der Eltern-App oder über den Link in der Mail."
-                  : "Nach dem Senden können die Eltern online unterschreiben."
+          signature?.method === "request"
+            ? "Die Eltern haben die Änderung selbst beantragt. Ihr Antrag gilt als Unterschrift der aktuellen Fassung."
+            : signature
+              ? "So haben die Eltern den Vertrag unterschrieben."
+              : contract.concluded
+                ? contract.concluded.method === "mit_anmeldung"
+                  ? "Der Vertrag ist bereits mit der Annahme der Anmeldung abgeschlossen."
+                  : "Der Vertrag ist bereits abgeschlossen."
+                : onPaper
+                  ? "Die Eltern unterschreiben den Vertrag auf Papier."
+                  : contract.status === "versendet"
+                    ? "Die Eltern unterschreiben in der Eltern-App oder über den Link in der Mail."
+                    : "Nach dem Senden können die Eltern online unterschreiben."
         }
         titleBadge={
-          signature ? (
+          signature?.method === "request" ? (
+            <StatusBadge label="Durch Antrag bestätigt" tone="green" />
+          ) : signature ? (
             <StatusBadge label="Unterschrieben" tone="green" />
           ) : contract.concluded ? (
             <StatusBadge label="Abgeschlossen" tone="green" />
@@ -230,6 +235,9 @@ function SignatureDetails({
 }: Readonly<{ contractId: string; signature: ContractSignature }>) {
   const actionError = useApiErrorDisplay();
   const paper = signature.method === "paper";
+  // The parents asked for the change themselves (#4816): no drawn
+  // signature, the request is the proof.
+  const request = signature.method === "request";
 
   const downloadPaper = async () => {
     try {
@@ -247,10 +255,14 @@ function SignatureDetails({
     <div className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_14rem]">
         <DataGrid columns={1}>
-          <DataField label="Unterschrieben von">
+          <DataField label={request ? "Beantragt von" : "Unterschrieben von"}>
             {signature.signerName}
           </DataField>
-          <DataField label={paper ? "Unterschrieben am" : "Zeitpunkt"}>
+          <DataField
+            label={
+              paper ? "Unterschrieben am" : request ? "Antrag vom" : "Zeitpunkt"
+            }
+          >
             {paper
               ? formatDate(signature.signedOn)
               : `${formatBerlinDate(signature.signedAt)}, ${formatBerlinTime(signature.signedAt)} Uhr`}
@@ -309,13 +321,15 @@ function SignatureDetails({
         title={signature.intact ? "Prüfsumme stimmt" : "Prüfsumme stimmt nicht"}
         message={
           signature.intact
-            ? "Das unterschriebene PDF passt zum gespeicherten Nachweis."
+            ? request
+              ? "Das PDF der Fassung passt zum gespeicherten Nachweis."
+              : "Das unterschriebene PDF passt zum gespeicherten Nachweis."
             : "Der gespeicherte Nachweis wurde verändert. Melde das dem moto-Team."
         }
         className="[&>div]:min-w-0"
         details={
           <p className="mt-2 text-sm">
-            Unterschriebenes PDF (SHA-256):{" "}
+            {request ? "PDF der Fassung" : "Unterschriebenes PDF"} (SHA-256):{" "}
             <span className="font-mono break-all">
               {signature.documentSha256}
             </span>
@@ -356,16 +370,33 @@ function WaitingDetails({
       </p>
     );
   }
+  // A sent contract follows the bookings (#4816): the reminders count for
+  // the version that waits now.
+  const waiting = contract.versions.find(
+    (version) => version.status === "beantragt",
+  );
+  const reminders = contract.reminders.filter(
+    (reminder) => !waiting || reminder.versionNumber === waiting.number,
+  );
+  const overtaken = contract.versions.some(
+    (version) => version.status === "ueberholt",
+  );
   return (
     <div className="space-y-3">
+      {overtaken && waiting ? (
+        <Alert
+          type="info"
+          message={`Die Betreuung hat sich geändert, bevor die Eltern unterschrieben haben. Sie haben deshalb Version ${waiting.number} als neue Fassung bekommen. Die frühere Fassung kann niemand mehr unterschreiben.`}
+        />
+      ) : null}
       <p className="text-sm text-gray-600">
         Bis zur Unterschrift bekommen die Eltern Erinnerungen per Mail. Nach wie
         vielen Tagen, legst du unter „Einstellungen“ → „Allgemein“ →
         „Betreuungsverträge“ fest.
       </p>
-      {contract.reminders.length > 0 ? (
+      {reminders.length > 0 ? (
         <ol className="space-y-2">
-          {contract.reminders.map((reminder) => (
+          {reminders.map((reminder) => (
             <li
               key={reminder.number}
               className="flex items-center justify-between gap-3 text-sm"

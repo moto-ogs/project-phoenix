@@ -80,7 +80,7 @@ const UNKNOWN_STATUS_LABEL = "Status unbekannt";
  * Betriebszahlen, die die Seite stellt und hierher reicht. Deshalb nehmen sie
  * ihre Daten als Eingabe statt sie selbst zu holen: fünf Kacheln nebeneinander
  * dürfen nicht fünf Abfragen bedeuten. Die Bausteine mit eigener Quelle (Mein
- * Tag, Meine Gruppe, Tagesinformationen, Ablauf des Tages, offene Anfragen,
+ * Tag, Meine Gruppe, Tagesinformationen, Betreuungsplan heute, offene Anfragen,
  * Erinnerungen, Personal, Nachrichten) laden für sich, weil sie sonst die
  * Seite blockieren würden.
  */

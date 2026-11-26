@@ -30,10 +30,7 @@ func PersistenceRuntimeFor(db *bun.DB) PersistenceRuntime {
 	if db == nil {
 		panic("school calendar compose: database is required")
 	}
-	return PersistenceRuntime{
-		Database: postgres.NewPersistenceDatabase(),
-		TenantID: tenant.FromContext,
-	}
+	return PersistenceRuntime{Database: postgres.NewPersistenceDatabase(), TenantID: tenant.FromContext}
 }
 
 // RecordsDependencies are the bindings of the Records: the database and the federal state of the holiday reads.
@@ -78,8 +75,7 @@ type AdministrationDependencies struct {
 
 // NewAdministration adds the period administration to the Records: the whole School Calendar, which the period editor drives.
 func NewAdministration(records schoolcalendar.Days, dependencies AdministrationDependencies) (schoolcalendar.Calendar, error) {
-	if records == nil || dependencies.DB == nil || dependencies.Observe == nil ||
-		dependencies.RecurrenceGate == nil || dependencies.CareOfferingGuard == nil {
+	if records == nil || dependencies.DB == nil || dependencies.Observe == nil || dependencies.RecurrenceGate == nil || dependencies.CareOfferingGuard == nil {
 		return nil, errors.New("school calendar compose: all dependencies are required")
 	}
 	today := dependencies.Today

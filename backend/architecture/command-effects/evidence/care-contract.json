@@ -305,6 +305,14 @@
       "target_owner": "care-plan"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/api.careContractBookings.Offerings",
+      "binding_digest": "be60db7bbb20fc8fe0df8b3ae0132bd8",
+      "port": "github.com/moto-ogs/project-phoenix/modules/carecontract.SchoolBookings.Offerings",
+      "source_owner": "care-contract",
+      "target": "github.com/moto-ogs/project-phoenix/modules/careplan.ContractReads.ContractOfferings",
+      "target_owner": "care-plan"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/api.careContractCareTimes.Overruns",
       "binding_digest": "3878c58badf3eae1c2b6e0946be7edb0",
       "port": "github.com/moto-ogs/project-phoenix/modules/carecontract.SchoolCareTimes.Overruns",
@@ -447,6 +455,30 @@
       "source_owner": "care-contract",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.SchoolResponsibilities.ResponsibleParties",
       "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.careContractParentRequests.ApprovedParentRequests",
+      "binding_digest": "2bdfba30debf8a9d323cf2a20d655669",
+      "port": "github.com/moto-ogs/project-phoenix/modules/carecontract.SchoolParentRequests.ApprovedParentRequests",
+      "source_owner": "care-contract",
+      "target": "github.com/moto-ogs/project-phoenix/modules/careplan.ContractOfferingChanges.ApprovedOfferingChanges",
+      "target_owner": "care-plan"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.careContractParentRequests.ApprovedParentRequests",
+      "binding_digest": "71b7b582d70cc5a7896310329bf6a41f",
+      "port": "github.com/moto-ogs/project-phoenix/modules/carecontract.SchoolParentRequests.ApprovedParentRequests",
+      "source_owner": "care-contract",
+      "target": "github.com/moto-ogs/project-phoenix/modules/careplan.ContractReads.ApprovedOfferingChanges",
+      "target_owner": "care-plan"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/api.careContractParentRequests.ApprovedParentRequests",
+      "binding_digest": "01083834d41af31b0546585402bf4b3f",
+      "port": "github.com/moto-ogs/project-phoenix/modules/carecontract.SchoolParentRequests.ApprovedParentRequests",
+      "source_owner": "care-contract",
+      "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.ListAccountEmails",
+      "target_owner": "identity-access"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.CareContractSignatures.ContractSignatureProofs",

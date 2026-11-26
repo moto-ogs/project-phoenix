@@ -27,6 +27,7 @@ func TestRestatedSettingKeysMatchTheRegistry(t *testing.T) {
 		"notifications.instance_room_changed_enabled",
 		"notifications.class_timetable_changed_enabled",
 		"notifications.school_closing_day_enabled",
+		"notifications.opening_change_enabled",
 		"notifications.on_duty_only",
 		"reminders.pickup_upcoming_enabled",
 		"reminders.pickup_overdue_enabled",

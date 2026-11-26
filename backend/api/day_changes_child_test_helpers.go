@@ -59,7 +59,7 @@ func NewChildDayChangesTestRouter(db transactionruntime.Database, unit tenant.Un
 	}
 	dayChanges, err := NewChildDayChanges(ChildDayChangesSources{
 		CarePlan: carePlan, Students: owners.MustNewPeopleDirectory(db), ClosingDays: owners.NewSchoolClosingDayReads(), OpeningChanges: schoolCalendarCompose.NewOpeningChanges(),
-		Blocks: blocks, ClassArrivals: classDay, Meals: meals.Cancellations, Today: func() calendar.Date { return today },
+		WeeklyPickups: carePlan, Blocks: blocks, ClassArrivals: classDay, Meals: meals.Cancellations, Today: func() calendar.Date { return today }, Logger: slog.Default(),
 	})
 	if err != nil {
 		return nil, err

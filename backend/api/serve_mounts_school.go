@@ -188,7 +188,7 @@ func mountSchoolPortalRoutes(
 	school.ParentLetters, school.DayChanges = parentLetters, dayChanges
 	tenant.Mount("/staff-messages", staffMessaging.Router(ProtectedTenantRoutesWith(staffAttachments.Register)))
 	tenant.Mount("/staff-notices", staffNotices.Router(ProtectedTenantRoutes))
-	mountOpeningChangeRoutes(tenant)
+	mountOpeningChangeRoutes(tenant, notifications, now)
 	tenant.Mount("/timetable", timetableResource.Router(ProtectedTenantRoutesWith(classdayHTTP.NewSlotListResource(classDay.SlotLists).Register)))
 	mountNotificationRoutes(root, tenant, notificationRoutes, notifications.TraegerFeed, notifications.CatererFeed)
 	root.Mount("/school-staff-messages", schoolMessageAttachmentRouter(staffAttachments))
@@ -197,9 +197,26 @@ func mountSchoolPortalRoutes(
 }
 
 // mountOpeningChangeRoutes serves the changed opening hours on single days
-// (#7654), maintained beside the closing days with their rights.
-func mountOpeningChangeRoutes(tenant chi.Router) {
-	tenant.Mount("/opening-changes", calendarAPI.NewOpeningChangeResource(schoolCalendarCompose.NewOpeningChanges()).Router(ProtectedTenantRoutes))
+// (#7654), maintained beside the closing days with their rights. A write
+// reaches the staff, the families and the Träger of the school through
+// Delivery's notification feed, without the account of the request (#8178).
+func mountOpeningChangeRoutes(tenant chi.Router, notifications owners.DeliveryNotifications, now func() time.Time) {
+	today := timezone.CalendarDateClock(now)
+	changes := NewOpeningChangesWithNotices(notifications, func() string { return today().String() })
+	tenant.Mount("/opening-changes", calendarAPI.NewOpeningChangeResource(changes).Router(ProtectedTenantRoutes))
+}
+
+// NewOpeningChangesWithNotices composes the opening changes the way the
+// serving root mounts them (#8178); without Delivery's notifications they
+// tell nobody. today names the school's day (YYYY-MM-DD).
+func NewOpeningChangesWithNotices(notifications owners.DeliveryNotifications, today func() string) schoolcalendar.OpeningChanges {
+	notices := owners.NewSchoolCalendarOpeningChangeNotices(notifications, func(ctx context.Context) int64 {
+		return int64(sessiontoken.ClaimsFromCtx(ctx).ID)
+	})
+	if notices == nil {
+		return schoolCalendarCompose.NewOpeningChanges()
+	}
+	return schoolCalendarCompose.NewNoticedOpeningChanges(notices, today)
 }
 
 // schoolClassSurfaces builds the class-bound surfaces of a Lehrkraft in

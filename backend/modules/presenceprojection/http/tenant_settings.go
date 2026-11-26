@@ -31,6 +31,7 @@ const (
 	settingStudentAbsenceEditScope         = "operations.student_absence_edit_scope"
 	settingPresenceMode                    = "operations.presence_mode"
 	settingStudentPhotosEnabled            = "operations.student_photos_enabled"
+	settingStudentCardActivitiesEnabled    = "operations.student_card_activities_enabled"
 	settingClassArrivalExceptionEditors    = "operations.class_arrival_exception_editors"
 	settingFeedbackEnabled                 = "feedback.enabled"
 	studentAbsenceEditScopeAllStaff        = "all_staff"

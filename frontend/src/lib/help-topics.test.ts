@@ -1,4 +1,3 @@
-import { SIMPLE_NAV_DIFFERENCE } from "~/components/help/help-article-shared";
 import { readdirSync } from "node:fs";
 import { relative, resolve, sep } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -261,6 +260,7 @@ describe("getParentHelpTopicForPath", () => {
       "Die einfache Seitenleiste",
       "Auf dem Handy oder Tablet",
       "Was heute anders ist",
+      "Der Betreuungsplan von heute",
       "Die Startseite anpassen",
       "Hilfe öffnen",
     ]);
@@ -296,13 +296,15 @@ describe("getParentHelpTopicForPath", () => {
     });
     expect(caregiverTopics[7]?.troubleshooting).toBeUndefined();
     expect(caregiverTopics[7]?.troubleshootingDetails).toEqual([
-      "Der Tab `Betreuungsplan` fehlt? Frag deine Leitung, ob sie deinen Zugang prüft.",
+      "Der Eintrag `Betreuungsplan` fehlt? Frag deine Leitung, ob sie deinen Zugang prüft.",
       "Steht dort `Noch kein Planungszeitraum`? Dann hat deine Leitung den Zeitraum noch nicht angelegt.",
       "Steht dort `Für diese Auswahl ist nichts geplant`? Stelle die Filter wieder auf `Alle Gruppen`, `Alle Personen` und `Alle Räume`.",
     ]);
     expect(caregiverTopics[7]?.differences).toEqual([
       "Steht oben rechts `Nur ansehen`? Dann darfst du den Plan lesen, aber nicht ändern.",
-      SIMPLE_NAV_DIFFERENCE,
+      // Die einfache Seitenleiste führt den Plan nicht (#8134); der Tab in
+      // `Mein Kalender` bleibt dort der Weg.
+      "Du siehst in der Seitenleiste keine Überschriften wie `Tagesbetrieb`? Dann nutzt deine OGS die einfache Seitenleiste. Öffne dort `Mein Kalender` und wähle den Tab `Betreuungsplan`. Oder wähle ganz unten `Alle Seiten anzeigen`.",
     ]);
     // Der Tagesplan steht in der App ganz oben im Tagesbetrieb und folgt in
     // der Hilfe auf den Betreuungsplan (#2383).
@@ -760,6 +762,7 @@ describe("getParentHelpTopicForPath", () => {
       HELP_TOPICS.traegerSchoolComparison,
       HELP_TOPICS.traegerReports,
       HELP_TOPICS.traegerSchoolView,
+      HELP_TOPICS.traegerChildren,
       HELP_TOPICS.traegerSchoolSwitch,
       HELP_TOPICS.traegerTestSystem,
       HELP_TOPICS.traegerAccounts,

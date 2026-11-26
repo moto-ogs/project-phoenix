@@ -142,6 +142,7 @@ function mapSlimStudent(row: SlimRow): Student {
     pending_excused_note: row.pending_excused_note,
     teacher_hints: row.teacher_hints,
     class_handover: row.class_handover,
+    planned_activities: row.planned_activities,
     departure_modes: row.departure_modes?.flatMap(
       (mode) => knownEnum(DEPARTURE_MODE_VALUES, mode) ?? [],
     ),

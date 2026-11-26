@@ -478,9 +478,6 @@ func (n *Notices) noticeState(ctx context.Context, organizationID, contractID in
 		return state, err
 	}
 	recorded := state.InformedAt
-	if err := n.signedNotice(ctx, organizationID, contractID, &state); err != nil {
-		return state, err
-	}
 	if err := n.deliveredNotice(ctx, organizationID, contractID, &state); err != nil {
 		return state, err
 	}
@@ -517,23 +514,6 @@ func (n *Notices) deliveredNotice(ctx context.Context, organizationID, contractI
 			at := delivery.ProvidedAt
 			state.InformedAt = &at
 		}
-	}
-	return nil
-}
-
-// signedNotice joins the online signature (#4679): the parents acknowledged
-// the withdrawal notice when they signed, so the period starts then, and
-// the wish to begin care within it is stored with the signature. A paper
-// contract carries no acknowledgement; its period follows the notice proofs.
-func (n *Notices) signedNotice(ctx context.Context, organizationID, contractID int64, state *ports.NoticeState) error {
-	signature, err := n.store.Signature(ctx, organizationID, contractID, 0)
-	if err != nil || signature == nil || signature.Method == carecontract.SignaturePaper {
-		return err
-	}
-	state.EarlyStart = state.EarlyStart || signature.EarlyStartRequested
-	if at := signature.WithdrawalNoticeAt; at != nil && (state.InformedAt == nil || at.Before(*state.InformedAt)) {
-		informed := *at
-		state.InformedAt = &informed
 	}
 	return nil
 }

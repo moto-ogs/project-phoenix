@@ -15,33 +15,34 @@ import (
 // fakes implements every consumer-owned port with func fields; a nil field
 // answers with an empty value so each test only wires what it asserts.
 type fakes struct {
-	currentStaffID    func(context.Context) (*int64, error)
-	caller            func(context.Context) (Caller, error)
-	fullStudentAccess func(context.Context) (bool, error)
-	running           func(context.Context) ([]Session, error)
-	supervised        func(context.Context) ([]Session, error)
-	supervisedByStaff func(context.Context, int64) (map[int64]struct{}, error)
-	unclaimed         func(context.Context) ([]UnclaimedGroup, error)
-	yard              func(context.Context, int64) (*SchulhofStatus, error)
-	myGroups          func(context.Context) ([]EducationalGroup, error)
-	plannedNow        func(context.Context, PlannedNowQuery) ([]PlannedInstance, error)
-	activeSessions    func(context.Context, Date) ([]ActiveSession, error)
-	groupVisits       func(context.Context, int64) ([]VisitRecord, error)
-	attendanceTimes   func(context.Context, []int64) (map[int64]Attendance, error)
-	tracking          func(context.Context, []int64, []string) (map[int64][]bool, error)
-	pickups           func(context.Context, []int64, Date) (map[int64]Pickup, error)
-	arrivals          func(context.Context, []int64, Date) (map[int64]Arrival, error)
-	prepare           func(context.Context) (context.Context, error)
-	photosEnabled     func(context.Context) (bool, error)
-	trackingLabels    func(context.Context) ([]string, error)
-	spontaneous       func(context.Context) (bool, error)
-	released          func(context.Context) ([]ReleasedRoom, error)
-	inRooms           func(context.Context, []int64) ([]RunningSession, error)
-	openVisits        func(context.Context, []int64) ([]VisitRecord, error)
-	sessionBlocks     func(context.Context, SessionBlocksQuery) ([]SessionBlock, error)
-	supervisorIDs     func(context.Context, []int64) (map[int64][]int64, error)
-	staffNames        func(context.Context, []int64) (map[int64]string, error)
-	now               func() time.Time
+	currentStaffID        func(context.Context) (*int64, error)
+	caller                func(context.Context) (Caller, error)
+	fullStudentAccess     func(context.Context) (bool, error)
+	running               func(context.Context) ([]Session, error)
+	supervised            func(context.Context) ([]Session, error)
+	supervisedByStaff     func(context.Context, int64) (map[int64]struct{}, error)
+	unclaimed             func(context.Context) ([]UnclaimedGroup, error)
+	yard                  func(context.Context, int64) (*SchulhofStatus, error)
+	myGroups              func(context.Context) ([]EducationalGroup, error)
+	plannedNow            func(context.Context, PlannedNowQuery) ([]PlannedInstance, error)
+	activeSessions        func(context.Context, Date) ([]ActiveSession, error)
+	groupVisits           func(context.Context, int64) ([]VisitRecord, error)
+	attendanceTimes       func(context.Context, []int64) (map[int64]Attendance, error)
+	tracking              func(context.Context, []int64, []string) (map[int64][]bool, error)
+	pickups               func(context.Context, []int64, Date) (map[int64]Pickup, error)
+	arrivals              func(context.Context, []int64, Date) (map[int64]Arrival, error)
+	prepare               func(context.Context) (context.Context, error)
+	photosEnabled         func(context.Context) (bool, error)
+	cardActivitiesEnabled func(context.Context) (bool, error)
+	trackingLabels        func(context.Context) ([]string, error)
+	spontaneous           func(context.Context) (bool, error)
+	released              func(context.Context) ([]ReleasedRoom, error)
+	inRooms               func(context.Context, []int64) ([]RunningSession, error)
+	openVisits            func(context.Context, []int64) ([]VisitRecord, error)
+	sessionBlocks         func(context.Context, SessionBlocksQuery) ([]SessionBlock, error)
+	supervisorIDs         func(context.Context, []int64) (map[int64][]int64, error)
+	staffNames            func(context.Context, []int64) (map[int64]string, error)
+	now                   func() time.Time
 }
 
 func (f *fakes) CurrentStaffID(ctx context.Context) (*int64, error) {
@@ -196,6 +197,13 @@ func (f *fakes) Arrivals(ctx context.Context, studentIDs []int64, date Date) (ma
 		return nil, nil
 	}
 	return f.arrivals(ctx, studentIDs, date)
+}
+
+func (f *fakes) StudentCardActivitiesEnabled(ctx context.Context) (bool, error) {
+	if f.cardActivitiesEnabled == nil {
+		return false, nil
+	}
+	return f.cardActivitiesEnabled(ctx)
 }
 
 func (f *fakes) Prepare(ctx context.Context) (context.Context, error) {
@@ -913,6 +921,7 @@ func TestProjectionWireShape(t *testing.T) {
 	projection.PickupTimes = []DashboardPickupTime{{StudentID: 1, Date: "2026-08-19", WeekdayName: "Mittwoch", PickupTime: &clock, IsException: true, Notes: "Oma", DayNotes: []DashboardDayNote{{ID: 3, Content: "Klingeln"}}}}
 	projection.ArrivalTimes = []ArrivalTime{{StudentID: 1, Date: "2026-08-19", WeekdayName: "Mittwoch"}}
 	projection.TeacherHints = []SupervisionTeacherHint{{StudentID: 1, Body: "Heute Sportzeug vergessen", AuthorName: "Frau Kurz", SchoolClass: "4a"}}
+	projection.PlannedActivities = []SupervisionPlannedActivity{{StudentID: 1, Title: "Töpfer-AG", StartTime: "14:00", EndTime: "15:00"}}
 
 	got, err := wire.Marshal(projection)
 	require.NoError(t, err)
@@ -938,12 +947,13 @@ func TestProjectionWireShape(t *testing.T) {
 		`"tracking_indicators":{"labels":["Hausaufgaben"],"results":{"1":[true]}},` +
 		`"pickup_times":[{"student_id":"1","date":"2026-08-19","weekday_name":"Mittwoch","pickup_time":"08:00","is_exception":true,"notes":"Oma","day_notes":[{"id":"3","content":"Klingeln"}]}],` +
 		`"arrival_times":[{"student_id":"1","date":"2026-08-19","weekday_name":"Mittwoch","is_exception":false}],` +
-		`"teacher_hints":[{"student_id":"1","body":"Heute Sportzeug vergessen","author_name":"Frau Kurz","school_class":"4a"}]}`
+		`"teacher_hints":[{"student_id":"1","body":"Heute Sportzeug vergessen","author_name":"Frau Kurz","school_class":"4a"}],` +
+		`"planned_activities":[{"student_id":"1","title":"Töpfer-AG","start_time":"14:00","end_time":"15:00"}]}`
 	assert.JSONEq(t, want, string(got))
 	assert.Equal(t, want, string(got), "key order is part of the golden contract")
 
 	empty, err := wire.Marshal(emptyProjection())
 	require.NoError(t, err)
 	assert.Equal(t, `{"business_day":"","spontaneous_start_availability":{"available":false},"groups":[],"unclaimed_groups":[],"educational_groups":[],"schulhof_status":null,`+
-		`"open_rooms":[],"capabilities":{"web_spontaneous_activities_enabled":false},"active_sessions":[],"planned_now":[],"visits":[],"tracking_indicators":{"labels":[],"results":{}},"pickup_times":[],"arrival_times":[],"teacher_hints":[]}`, string(empty))
+		`"open_rooms":[],"capabilities":{"web_spontaneous_activities_enabled":false},"active_sessions":[],"planned_now":[],"visits":[],"tracking_indicators":{"labels":[],"results":{}},"pickup_times":[],"arrival_times":[],"teacher_hints":[],"planned_activities":[]}`, string(empty))
 }

@@ -109,7 +109,8 @@ func (s *Service) resolveChildFeatureSettings(ctx context.Context, tenantID int6
 	if out.pickupChange, out.pickupCutoff, err = resolvePickupChangeSettings(r, now); err != nil {
 		return out, err
 	}
-	// Hint only: operations.session_end_time (#5710); the day's changed closing time is #8170, the write path guards it.
+	// operations.session_end_time (#5710); featuresForSchool replaces it with
+	// today's changed closing time (#8173), as the write path does.
 	if out.careDayEnd, err = r.resolveString(KeySessionEndTime); err != nil {
 		return out, fmt.Errorf("parent: resolve care day end: %w", err)
 	}
@@ -120,9 +121,6 @@ func (s *Service) resolveChildFeatureSettings(ctx context.Context, tenantID int6
 	}
 	out.pickupChangeMode = out.pickupChangeMode && out.pickupChange
 	if err := r.resolveRelatedAccountAndMasterDataSettings(&out); err != nil {
-		return out, err
-	}
-	if err := s.resolveMealSettings(ctx, tenantID, &out); err != nil {
 		return out, err
 	}
 	if err := r.resolvePortalSettings(&out); err != nil {
@@ -190,12 +188,6 @@ func (r childSettingResolver) resolveRelatedAccountAndMasterDataSettings(out *ch
 		return fmt.Errorf("parent: resolve master-data request setting: %w", err)
 	}
 	return nil
-}
-
-func (s *Service) resolveMealSettings(ctx context.Context, tenantID int64, out *childFeatureSettings) error {
-	var err error
-	out.mealPlan, out.mealRegistration, err = s.mealAvailabilityForTenant(ctx, tenantID)
-	return err
 }
 
 func (r childSettingResolver) resolvePortalSettings(out *childFeatureSettings) error {

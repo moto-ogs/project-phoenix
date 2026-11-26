@@ -91,7 +91,6 @@ import {
   downloadTraegerList,
   listExportQuery,
 } from "~/lib/traeger-list-export";
-import { useDebounce } from "~/lib/use-debounce";
 import { traegerPath } from "~/lib/traeger-url";
 import { labelOf } from "~/lib/label-of";
 
@@ -255,6 +254,14 @@ const COLUMNS: DataTableColumn<CareContractSummary>[] = [
           <span className="text-moto-orange-strong text-sm font-medium">
             Ende festlegen
           </span>
+        ) : contract.changeAwaitsSignature ? (
+          // A changed version waits for the parents (#4816): a task of the
+          // contract, shown where the office scans the list.
+          <StatusBadge
+            label="Änderung wartet auf Unterschrift"
+            tone="warning"
+            size="xs"
+          />
         ) : contract.status === "widerrufen" ? null : contract.concluded ? (
           // An unknown day of a taken-over contract (#7767) is no date.
           knownConclusionAt(contract.concluded) ? (
@@ -288,13 +295,16 @@ export default function TraegerVertraegePage() {
   const [status, setStatus] = useState<StatusChoice>("all");
   const [schoolId, setSchoolId] = useState("");
   const [search, setSearch] = useState("");
+  const [searchReset, setSearchReset] = useState(0);
   // Null until the person opens or closes the card: then the device decides.
   const [rulesOpen, setRulesOpen] = useState<boolean | null>(null);
-  const debouncedSearch = useDebounce(search.trim(), 250);
+  // The search field keeps the typed text as its own draft and reports it
+  // after a pause: a typed letter redraws the field, not the list.
+  const term = search.trim();
   const filter = {
     status: status === "all" ? undefined : status,
     schoolId,
-    search: debouncedSearch,
+    search: term,
   };
   const listKey = traegerContractKeys.list(filter);
   const listGuard = useRefusalGuard(listKey);
@@ -575,7 +585,7 @@ export default function TraegerVertraegePage() {
           query: listExportQuery(format, {
             status: status === "all" ? undefined : status,
             school_id: schoolId,
-            search: debouncedSearch,
+            search: term,
           }),
         }),
       ),
@@ -620,6 +630,8 @@ export default function TraegerVertraegePage() {
         value: search,
         onChange: setSearch,
         placeholder: "Kind, Eltern oder Angebot suchen",
+        debounceMs: 250,
+        resetKey: searchReset,
       }}
       filters={filters}
       activeFilters={activeFilters}
@@ -855,6 +867,7 @@ export default function TraegerVertraegePage() {
                     tooltip="Leert Suche und Filter und zeigt wieder alle Verträge."
                     onClick={() => {
                       setSearch("");
+                      setSearchReset((current) => current + 1);
                       setStatus("all");
                       setSchoolId("");
                     }}

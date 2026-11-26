@@ -60,7 +60,8 @@ func (s *Signatures) HandOverOnPaper(ctx context.Context, reviewer carecontract.
 }
 
 // RecordPaperSignature stores the signed paper PDF of a sent contract and
-// concludes it, in the caller's Träger transaction. The parents signed the
+// concludes it, or of the changed version of an active contract, which then
+// takes effect (#4816), in the caller's Träger transaction. The parents signed the
 // PDF frozen when the contract was handed over on paper or sent by mail
 // (#8030): a draft, or a current version without its frozen PDF, is not
 // signable, and the upload never renders the contract again.
@@ -75,7 +76,18 @@ func (s *Signatures) RecordPaperSignature(ctx context.Context, reviewer carecont
 	if err != nil {
 		return err
 	}
-	if record.Summary.Status != carecontract.StatusSent || record.DocumentID == nil {
+	// The scan signs the version that waits: a sent contract's, or the
+	// changed version of an active one (#4816).
+	waits, err := waitingRecord(ctx, s.store, reviewer.OrganizationID, &record)
+	if err != nil {
+		return err
+	}
+	// The office names the version of the scan: a changed version may have
+	// overtaken it since the page was read.
+	// A changed version always needs it; a first contract has one version
+	// and takes a scan without it, as before.
+	named := input.VersionNumber != 0 || record.Version.Number <= 1
+	if !waits || record.DocumentID == nil || !named || (input.VersionNumber != 0 && input.VersionNumber != record.Version.Number) {
 		return carecontract.ErrContractNotSignable
 	}
 	document, err := s.store.CurrentDocument(ctx, reviewer.OrganizationID, contractID, record.Version.ID.Int64())
@@ -96,13 +108,13 @@ func (s *Signatures) RecordPaperSignature(ctx context.Context, reviewer carecont
 	}); err != nil {
 		return err
 	}
-	status, err := concludeSigned(ctx, s.store, reviewer.OrganizationID, reviewer.AccountID, record, carecontract.SignaturePaper, now)
+	status, _, err := s.takeEffect(ctx, reviewer.OrganizationID, reviewer.AccountID, record, carecontract.SignaturePaper, now)
 	if err != nil {
 		return err
 	}
 	return trailContract(ctx, s.store, reviewer.OrganizationID, reviewer.AccountID, record, ports.ActionSign, map[string]any{
 		"via": carecontract.ChannelOffice, "method": carecontract.SignaturePaper, "document_sha256": document.SHA256,
-		"version_sha256": checksum, "signed_on": input.SignedOn.String(), "status": status,
+		"version_sha256": checksum, "signed_on": input.SignedOn.String(), "status": status, "version_number": record.Version.Number,
 	})
 }
 

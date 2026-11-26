@@ -25,10 +25,10 @@ func moveActivityCategory(t *testing.T, ctx *testContext, activityID, categoryID
 	return recorder.Result()
 }
 
-// A system activity keeps the category moto gave it, as it keeps its name,
-// and cannot be deleted; its other master data stays editable. The flag
-// decides, not the name (#8130).
-func TestUpdateSystemActivity_KeepsItsCategory(t *testing.T) {
+// A system activity keeps the name and category moto gave it and cannot be
+// deleted; its other master data stays editable. The flag decides, not the
+// name (#8130).
+func TestUpdateSystemActivity_KeepsItsNameAndCategory(t *testing.T) {
 	t.Parallel()
 	ctx := setupActivitiesRoute(t)
 
@@ -36,6 +36,14 @@ func TestUpdateSystemActivity_KeepsItsCategory(t *testing.T) {
 	markGroupAsSystem(t, ctx.db, activity.ID)
 	other := testpkg.CreateTestActivityCategory(t, ctx.db, fmt.Sprintf("Sport-%d", time.Now().UnixNano()))
 	assert.Equal(t, true, activityDetail(t, ctx, activity.ID)["is_system"])
+
+	renamed := testutil.ExecuteWithAuth(t, ctx.router, testutil.NewAuthenticatedRequest(t, http.MethodPut, fmt.Sprintf("/activities/%d", activity.ID), map[string]any{
+		"name": "Umbenannt", "max_participants": 4,
+		"category_id":      fmt.Sprint(activity.CategoryID),
+		"expected_version": activityVersion(t, ctx, activity.ID),
+	}), testutil.DefaultTestClaims())
+	assert.Equal(t, http.StatusForbidden, renamed.Code, renamed.Body.String())
+	assert.Equal(t, "timetable.activity_system_protected", testutil.ParseJSONResponse(t, renamed.Body.Bytes())["code"])
 
 	moved := testutil.ExecuteWithAuth(t, ctx.router, testutil.NewAuthenticatedRequest(t, http.MethodPut, fmt.Sprintf("/activities/%d", activity.ID), map[string]any{
 		"name": "WC", "max_participants": 4,
@@ -60,7 +68,7 @@ func TestUpdateSystemActivity_KeepsItsCategory(t *testing.T) {
 }
 
 // A team's own activity that only shares a system name is an ordinary one.
-func TestUpdateActivityWithSystemName_MovesCategory(t *testing.T) {
+func TestUpdateActivityWithSystemName_MovesCategoryRenamesAndDeletes(t *testing.T) {
 	t.Parallel()
 	ctx := setupActivitiesRoute(t)
 
@@ -71,4 +79,14 @@ func TestUpdateActivityWithSystemName_MovesCategory(t *testing.T) {
 	moved := moveActivityCategory(t, ctx, activity.ID, other.ID)
 	defer func() { _ = moved.Body.Close() }()
 	assert.Equal(t, http.StatusOK, moved.StatusCode)
+
+	renamed := testutil.ExecuteWithAuth(t, ctx.router, testutil.NewAuthenticatedRequest(t, http.MethodPut, fmt.Sprintf("/activities/%d", activity.ID), map[string]any{
+		"name": "Eigene Pausen-AG", "max_participants": 4,
+		"category_id":      fmt.Sprint(other.ID),
+		"expected_version": activityVersion(t, ctx, activity.ID),
+	}), testutil.DefaultTestClaims())
+	testutil.AssertSuccessResponse(t, renamed, http.StatusOK)
+
+	deleted := testutil.ExecuteWithAuth(t, ctx.router, testutil.NewAuthenticatedRequest(t, http.MethodDelete, fmt.Sprintf("/activities/%d", activity.ID), nil), testutil.DefaultTestClaims())
+	require.Equal(t, http.StatusOK, deleted.Code, deleted.Body.String())
 }
