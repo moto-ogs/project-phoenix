@@ -88,10 +88,14 @@ export function DayNoticeRow({
     await afterAcknowledge.refresh();
     setPending(false);
     // Der Knopf ist weg; der Fokus geht auf den Hinweis an seinem neuen Platz.
+    // Steht er dort hinter „N weitere anzeigen“, geht der Fokus auf diesen
+    // Knopf statt ins Leere.
     requestAnimationFrame(() => {
-      document
-        .querySelector<HTMLElement>(`[data-day-notice="${notice.id}"] a`)
-        ?.focus();
+      (
+        document.querySelector<HTMLElement>(
+          `[data-day-notice="${notice.id}"] a`,
+        ) ?? document.querySelector<HTMLElement>("[data-day-changes-more]")
+      )?.focus();
     });
   };
   useLayoutEffect(() => {
@@ -136,7 +140,7 @@ export function DayNoticeRow({
             <span className="flex flex-wrap items-center gap-2">
               <Link
                 href={href}
-                className="text-sm font-medium text-gray-900 hover:underline"
+                className="text-sm font-medium text-gray-900 underline underline-offset-2"
               >
                 {notice.title}
               </Link>

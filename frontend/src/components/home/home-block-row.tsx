@@ -184,12 +184,13 @@ export function BlockRowBody({
       </span>
       <span className="min-w-0 flex-1">
         <span
-          // Am Telefon bricht der Name um: abgeschnitten stünde vom Zusatz
-          // dahinter nur „Dein Bl…“ da.
-          className={`block text-sm sm:truncate ${over ? "text-gray-500" : "text-gray-900"} ${running ? "font-semibold" : "font-medium"}`}
+          // Der Zusatz steht neben dem Namen, nicht in ihm: gekürzt wird nur
+          // der Name, sonst bliebe vom Zusatz „Dein Bl…“. Am Telefon bricht
+          // die Zeile um.
+          className={`flex items-baseline text-sm max-sm:flex-wrap ${over ? "text-gray-500" : "text-gray-900"} ${running ? "font-semibold" : "font-medium"}`}
         >
-          {block.title}
-          {titleAddon}
+          <span className="min-w-0 sm:truncate">{block.title}</span>
+          {titleAddon ? <span className="shrink-0">{titleAddon}</span> : null}
         </span>
         {/* Am Handy bricht die Zeile um: dort wächst die Karte mit ihrem
             Inhalt, und abgeschnitten bliebe neben der Marke oft nur der

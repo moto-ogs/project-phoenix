@@ -329,18 +329,31 @@ function DayChangesSection({
       ) : null}
       <div className="mt-2 empty:hidden">
         {hidden > 0 ? (
-          // Der Knopf bleibt nach dem Aufklappen stehen und trägt den Fokus:
-          // wer alles gesehen hat, klappt an derselben Stelle wieder zu.
+          // Der Knopf bleibt nach dem Aufklappen stehen: wer alles gesehen
+          // hat, klappt an derselben Stelle wieder zu.
           <FoldButton
             expanded={expanded}
             controls={listId}
+            marker
             tooltip={
               expanded
                 ? "Zeigt wieder nur die ersten Änderungen der Schule."
                 : "Zeigt alle Änderungen der Schule von heute."
             }
             onToggle={() => {
-              if (!expanded) trackEvent("day_changes_show_all");
+              if (!expanded) {
+                trackEvent("day_changes_show_all");
+                // Der Fokus geht auf den ersten neuen Eintrag: die neuen
+                // Zeilen stehen vor dem Knopf, mit Tab käme man nicht hin.
+                requestAnimationFrame(() => {
+                  document
+                    .getElementById(listId)
+                    ?.querySelector<HTMLElement>(
+                      `:scope > li:nth-child(${limit + 1}) :is(a, button)`,
+                    )
+                    ?.focus();
+                });
+              }
               setExpanded(!expanded);
             }}
           >
@@ -375,12 +388,15 @@ function FoldButton({
   controls,
   tooltip,
   onToggle,
+  marker = false,
   children,
 }: {
   readonly expanded: boolean;
   readonly controls: string;
   readonly tooltip: string;
   readonly onToggle: () => void;
+  /** Kennzeichnet „N weitere anzeigen“ als Ziel für den Fokus eines Hinweises. */
+  readonly marker?: boolean;
   readonly children: ReactNode;
 }) {
   return (
@@ -392,6 +408,7 @@ function FoldButton({
         className="-ml-2"
         aria-expanded={expanded}
         aria-controls={controls}
+        data-day-changes-more={marker ? "" : undefined}
         tooltip={tooltip}
         onClick={onToggle}
       >
