@@ -2,7 +2,6 @@
 
 import { useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { contrastOfAccount, readAccountContrast } from "~/lib/contrast-account";
 import {
   accountContrastMutationGeneration,
   applyContrastPreference,
@@ -28,8 +27,14 @@ export function ContrastAccountSync({
     if (!accountId || isPreview || hasPendingAccountContrastMutation()) return;
     let cancelled = false;
     const generation = accountContrastMutationGeneration();
-    readAccountContrast(portal)
-      .then((moreContrast) => {
+    // Erst nach der Anmeldung geladen: die Anmeldeseiten jedes Portals tragen
+    // den Konto-Abruf nicht mit (Bundle-Obergrenzen der Login-Routen).
+    import("~/lib/contrast-account")
+      .then(async ({ contrastOfAccount, readAccountContrast }) => ({
+        contrastOfAccount,
+        moreContrast: await readAccountContrast(portal),
+      }))
+      .then(({ contrastOfAccount, moreContrast }) => {
         if (
           cancelled ||
           generation !== accountContrastMutationGeneration() ||

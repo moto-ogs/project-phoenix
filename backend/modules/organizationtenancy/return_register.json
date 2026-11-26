@@ -6885,6 +6885,12 @@
           "type": "text",
           "udt": "text",
           "nullable": true
+        },
+        {
+          "name": "more_contrast",
+          "type": "boolean",
+          "udt": "bool",
+          "nullable": true
         }
       ],
       "relationships": null,
