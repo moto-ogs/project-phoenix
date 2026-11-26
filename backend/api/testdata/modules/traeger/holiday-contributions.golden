@@ -2,6 +2,7 @@ DELETE /traeger/holiday-contributions/{periodId}/sibling-groups/registrations/{r
 GET /traeger/holiday-contributions/confirmation-settings -> ferienbetreuung
 GET /traeger/holiday-contributions/{periodId}/registrations/{registrationId} -> ferienbetreuung
 GET /traeger/holiday-contributions/{periodId}/registrations/{registrationId}/family-debtor-number -> ferienbetreuung
+GET /traeger/holiday-contributions/{periodId}/registrations/{registrationId}/payer -> ferienbetreuung
 GET /traeger/holiday-contributions/{periodId}/sibling-groups -> ferienbetreuung
 POST /traeger/holiday-contributions/{periodId}/registrations/{registrationId}/cancel -> ferienbetreuung
 POST /traeger/holiday-contributions/{periodId}/registrations/{registrationId}/confirm -> ferienbetreuung
@@ -9,4 +10,5 @@ POST /traeger/holiday-contributions/{periodId}/sibling-groups -> ferienbetreuung
 PUT /traeger/holiday-contributions/{periodId}/registrations/{registrationId}/child-debtor-numbers -> ferienbetreuung
 PUT /traeger/holiday-contributions/{periodId}/registrations/{registrationId}/children/{childId}/bookings -> ferienbetreuung
 PUT /traeger/holiday-contributions/{periodId}/registrations/{registrationId}/debtor-number -> ferienbetreuung
+PUT /traeger/holiday-contributions/{periodId}/registrations/{registrationId}/payer -> ferienbetreuung
 PUT /traeger/holiday-contributions/{periodId}/weeks/{weekId}/capacity -> ferienbetreuung

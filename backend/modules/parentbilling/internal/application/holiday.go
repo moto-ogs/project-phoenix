@@ -152,15 +152,7 @@ func (h *HolidayContributions) memberContribution(ctx context.Context, organizat
 		if member.id() != registration.ID || member.frozen == nil {
 			continue
 		}
-		billed, err := h.store.IssuedContributions(ctx, organizationID, parentbilling.ServiceHoliday, periodID)
-		if err != nil {
-			return parentbilling.HolidayContribution{}, fmt.Errorf("parent billing: read issued invoices: %w", err)
-		}
-		frozen := *member.frozen
-		issued, invoiced := billed[registration.ID]
-		frozen.Invoiced = invoiced
-		frozen.CorrectionNeeded = invoiced && !sameBilled(issued, billedBy(frozen, issued.Children))
-		return frozen, nil
+		return h.withInvoice(ctx, organizationID, periodID, registration.ID, *member.frozen)
 	}
 	exemption := registration.BenefitsDeclared && bearer == nil
 	if benefitsExemption != nil {

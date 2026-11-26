@@ -906,6 +906,11 @@
       "reason": "ADR 0115 (#4664): Consumer-port adapter of the Elternabrechnung's holiday registrations; it reads through Enrollment's review, which checks the Träger and records the read, and translates the registration and Enrollment's refusals."
     },
     {
+      "decision": "0325",
+      "id": "api/parentBillingHolidayRegistrations.RecordHolidayPayer",
+      "reason": "ADR 0325 (#8158): Consumer-port adapter of the Elternabrechnung's holiday registrations; it records a payer change through Enrollment's payer trail, which locks the registration, refuses one that is not confirmed and appends the audit entry, in the caller's Träger transaction. It translates the payer into Enrollment's vocabulary without the cost bearer's ID and Enrollment's refusals into the Elternabrechnung's."
+    },
+    {
       "decision": "0115",
       "id": "api/parentBillingHolidayRegistrations.RecordHolidaySiblings",
       "reason": "ADR 0115 addendum (#5628): Consumer-port adapter of the Elternabrechnung's holiday registrations; it records a sibling merge or split through Enrollment's review, which locks the registration and appends the audit entry, in the caller's Träger transaction and translates Enrollment's refusals."

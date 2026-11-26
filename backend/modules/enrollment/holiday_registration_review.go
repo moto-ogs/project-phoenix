@@ -345,6 +345,9 @@ type HolidayRegistrationEventDetails struct {
 	// or gave again (true) in the parents portal (#8038, ADR 0321).
 	Key   string `json:"key,omitempty"`
 	Given *bool  `json:"given,omitempty"`
+	// Payer names who paid before and who pays after a change of the payer
+	// of a confirmed registration (#8158, ADR 0325); Reason is its reason.
+	Payer *HolidayPayerChange `json:"payer,omitempty"`
 }
 
 // HolidayRegistrationEvent is one change in the history of a registration.

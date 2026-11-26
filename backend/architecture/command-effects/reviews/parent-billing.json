@@ -1045,6 +1045,17 @@
     },
     {
       "adr": "0067",
+      "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingHolidayRegistrations.RecordHolidayPayer",
+      "classification": "leaf",
+      "effect": "mutation",
+      "port": "github.com/moto-ogs/project-phoenix/modules/parentbilling.HolidayRegistrations.RecordHolidayPayer",
+      "reason": "Guarded target record/byte command; preserve ambient scope, target validation and existing failure propagation. Target-local locks/savepoints alone do not establish a new source coordinator. Target modules/enrollment.HolidayPayerTrail.RecordHolidayPayer: Enrollment checks the reason and the payer kinds, locks the period and the registration, refuses a registration that is not confirmed and appends the payer before and after with the reason to the registration's audit trail in the caller's Träger transaction (#8158, ADR 0325); the Elternabrechnung writes the new contribution version under its period billing lock in the same unit and the route rolls back on any refusal. The binding copies the kind and the name of each payer and keeps the cost bearer's ID with the Elternabrechnung.",
+      "source_owner": "parent-billing",
+      "target": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayPayerTrail.RecordHolidayPayer",
+      "target_owner": "enrollment"
+    },
+    {
+      "adr": "0067",
       "binding": "github.com/moto-ogs/project-phoenix/api.parentBillingHolidayRegistrations.RecordHolidaySiblings",
       "classification": "leaf",
       "effect": "mutation",

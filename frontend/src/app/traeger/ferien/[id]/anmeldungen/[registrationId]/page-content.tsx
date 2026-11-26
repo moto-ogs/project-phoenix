@@ -78,6 +78,7 @@ import { LegalMarkdown } from "~/components/enrollment/legal-markdown";
 import { Button } from "~/components/ui/button";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { exportMenuItems } from "~/components/ui/export-menu";
+import type { OverflowMenuEntry } from "~/components/ui/page-header/OverflowMenu";
 import { ConfirmationModal } from "~/components/ui/modal";
 import { HolidayConsentWithdrawButton } from "~/components/traeger/holiday-consent-withdraw-button";
 import NavigationLink from "~/components/ui/navigation-link";
@@ -111,6 +112,7 @@ import {
   fetchHolidayConfirmationSettings,
   fetchHolidayRegistration,
   fetchHolidayRegistrationHealth,
+  type CostBearerChoice,
   type HolidayRegistrationContact,
   type HolidayRegistrationDetail,
   TRAEGER_HEALTH_RIGHT,
@@ -136,6 +138,8 @@ const PDF_LABELS: AttachmentLabels = {
     "Das PDF konnte nicht geöffnet werden. Bitte erlaube neue Fenster.",
   errorObject: "die PDF-Datei",
 };
+
+const NO_COST_BEARERS: readonly CostBearerChoice[] = [];
 
 const NO_FAMILY_DEBTOR_NUMBERS: HolidayFamilyDebtorNumbers = {
   debtorNumber: "",
@@ -181,6 +185,12 @@ const ContactsEditor = dynamic(() =>
 );
 const FamilyAnswersEditor = dynamic(() =>
   editors().then((module) => module.FamilyAnswersEditor),
+);
+// „Zahler ändern“ (#8158) lädt ebenfalls erst mit dem ersten Öffnen.
+const HolidayPayerEditor = dynamic(() =>
+  import("~/components/traeger/holiday-payer-editor").then(
+    (module) => module.HolidayPayerEditor,
+  ),
 );
 
 function consentText(at: string | null): string {
@@ -349,7 +359,8 @@ function HolidayRegistrationContent() {
   const [previewPending, setPreviewPending] = useState(false);
   const latestContribution = useRef(0);
   // The open draft of the registration: an edit state "guardians",
-  // "contacts", "answers" or "child:<id>", or the rebooking "rebook:<id>".
+  // "contacts", "answers", "child:<id>" or "payer" (#8158), or the rebooking
+  // "rebook:<id>".
   // One at a time: each draft opens on the answer of the save before it,
   // so a second save is never refused for the first one (ADR 0311).
   const [editing, setEditing] = useState<string | null>(null);
@@ -575,6 +586,10 @@ function HolidayRegistrationContent() {
   );
 
   const cancelled = registration?.status === "cancelled";
+  // The payer of a confirmed registration changes after the confirmation
+  // (#8158); a received one chooses it in the status card.
+  const canChangePayer =
+    registration?.status === "confirmed" && Boolean(contribution?.frozen);
   const editAction = (section: string, label: string) =>
     cancelled || editing ? undefined : (
       <Button
@@ -874,13 +889,36 @@ function HolidayRegistrationContent() {
           onUploaded={(next) =>
             void mutateRegistration(next, { revalidate: false })
           }
+          changePayerHint={
+            canChangePayer &&
+            editing !== "payer" &&
+            contribution !== null &&
+            !contribution.benefitsExemption &&
+            !contribution.costBearerId
+          }
         />
-        {contribution &&
-        (registration.status !== "cancelled" || contribution.frozen) ? (
+        {editing === "payer" && canChangePayer && contribution ? (
+          <HolidayPayerEditor
+            periodId={periodId}
+            registration={registration}
+            contribution={contribution}
+            costBearers={confirmation?.costBearers ?? NO_COST_BEARERS}
+            billingHref={billingHref}
+            onSaved={async () => {
+              await afterWrite.refresh();
+              setEditing(null);
+            }}
+            onCancel={() => setEditing(null)}
+          />
+        ) : contribution &&
+          (registration.status !== "cancelled" || contribution.frozen) ? (
           <HolidayContributionCard
             contribution={contribution}
             registration={registration}
             canManageBillingSettings={canManageBillingSettings}
+            onChangePayer={
+              canChangePayer && !editing ? () => setEditing("payer") : undefined
+            }
           />
         ) : null}
       </>
@@ -888,8 +926,25 @@ function HolidayRegistrationContent() {
   };
   // Keep the active form mounted when its tab is not selected. Its draft is
   // local state, so removing the tab would silently reset unsaved changes.
-  const editingTab =
-    editing === "guardians" ? "eltern" : editing ? "kind" : null;
+  let editingTab: RegistrationTab | null = null;
+  if (editing === "guardians") editingTab = "eltern";
+  else if (editing === "payer") editingTab = "nachweise";
+  else if (editing) editingTab = "kind";
+  // „Zahler ändern“ aus dem Menü des Kopfes: der Reiter mit dem Beitrag.
+  const payerItems: OverflowMenuEntry[] =
+    canChangePayer && !editing && !metadataRefused
+      ? [
+          {
+            label: "Zahler ändern",
+            description:
+              "Öffnet im Reiter „Nachweise und Beitrag“ die Auswahl, wer bezahlt.",
+            onClick: () => {
+              changeTab("nachweise");
+              setEditing("payer");
+            },
+          },
+        ]
+      : [];
 
   return (
     <HolidayRegistrationStatusScope
@@ -958,6 +1013,7 @@ function HolidayRegistrationContent() {
               ? undefined
               : [
                   ...status.menuItems,
+                  ...payerItems,
                   ...exportMenuItems({
                     options: pdf.options,
                     busyKey: pdf.busyKey,
@@ -1094,7 +1150,12 @@ function HolidayRegistrationContent() {
               {tabContent.eltern}
             </div>
           ) : null}
-          {metadataReady && tab === "nachweise" ? tabContent.nachweise : null}
+          {metadataReady &&
+          (tab === "nachweise" || editingTab === "nachweise") ? (
+            <div key="nachweise" hidden={tab !== "nachweise"}>
+              {tabContent.nachweise}
+            </div>
+          ) : null}
         </TenantPage>
       )}
     </HolidayRegistrationStatusScope>

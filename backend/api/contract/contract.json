@@ -12719,6 +12719,27 @@
     },
     {
       "method": "GET",
+      "pattern": "/traeger/holiday-contributions/{periodId}/registrations/{registrationId}/payer",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "benefits_exemption",
+          "kind": "bool"
+        },
+        {
+          "name": "cost_bearer_id",
+          "kind": "id"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "HolidayPayerPreviewResponse"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/traeger/holiday-contributions/{periodId}/sibling-groups",
       "portals": [
         "org"
@@ -24796,6 +24817,21 @@
       "response": {
         "kind": "ref",
         "ref": "HolidayDebtorNumber"
+      }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/traeger/holiday-contributions/{periodId}/registrations/{registrationId}/payer",
+      "portals": [
+        "org"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "HolidayPayerRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "HolidayContributionResponse"
       }
     },
     {
@@ -66269,6 +66305,25 @@
       ]
     },
     {
+      "name": "HolidayPaidBy",
+      "go_type": "enrollment.HolidayPaidBy",
+      "fields": [
+        {
+          "name": "kind",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "cost_bearer_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "HolidayParentSetupResponse",
       "go_type": "account.HolidayParentSetupResponse",
       "fields": [
@@ -66345,6 +66400,183 @@
               "kind": "ref",
               "ref": "holidayParticipantResponse"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "HolidayPayer",
+      "go_type": "parentbilling.HolidayPayer",
+      "fields": [
+        {
+          "name": "kind",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "cost_bearer_id",
+          "schema": {
+            "kind": "id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "cost_bearer_name",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "HolidayPayerChange",
+      "go_type": "enrollment.HolidayPayerChange",
+      "fields": [
+        {
+          "name": "before",
+          "schema": {
+            "kind": "ref",
+            "ref": "HolidayPaidBy"
+          }
+        },
+        {
+          "name": "after",
+          "schema": {
+            "kind": "ref",
+            "ref": "HolidayPaidBy"
+          }
+        }
+      ]
+    },
+    {
+      "name": "HolidayPayerChildEffectResponse",
+      "go_type": "parentbillinghttp.HolidayPayerChildEffectResponse",
+      "fields": [
+        {
+          "name": "child_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "position",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "family_before_cents",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "family_after_cents",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "cost_bearer_before_cents",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "cost_bearer_after_cents",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "HolidayPayerPreviewResponse",
+      "go_type": "parentbillinghttp.HolidayPayerPreviewResponse",
+      "fields": [
+        {
+          "name": "current",
+          "schema": {
+            "kind": "ref",
+            "ref": "HolidayPayer"
+          }
+        },
+        {
+          "name": "chosen",
+          "schema": {
+            "kind": "ref",
+            "ref": "HolidayPayer"
+          }
+        },
+        {
+          "name": "changed",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "children",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "HolidayPayerChildEffectResponse"
+            }
+          }
+        },
+        {
+          "name": "exemption_available",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "invoiced",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "fingerprint",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "HolidayPayerRequest",
+      "go_type": "parentbillinghttp.HolidayPayerRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "benefits_exemption",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "cost_bearer_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "expected_fingerprint",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -68049,6 +68281,14 @@
           "optional": true,
           "schema": {
             "kind": "bool"
+          }
+        },
+        {
+          "name": "payer",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "HolidayPayerChange"
           }
         }
       ]

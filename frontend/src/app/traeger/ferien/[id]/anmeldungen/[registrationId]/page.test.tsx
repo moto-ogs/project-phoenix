@@ -133,6 +133,27 @@ vi.mock("~/lib/traeger-contributions-api", () => ({
       : mockContribution(...args),
 }));
 
+// „Zahler ändern“ (#8158) has its own tests; the page opens and closes it.
+vi.mock("~/components/traeger/holiday-payer-editor", () => ({
+  HolidayPayerEditor: ({
+    onSaved,
+    onCancel,
+  }: {
+    onSaved: () => Promise<unknown>;
+    onCancel: () => void;
+  }) => (
+    <div>
+      <p>Zahler-Editor</p>
+      <button type="button" onClick={() => void onSaved()}>
+        Zahler speichern
+      </button>
+      <button type="button" onClick={onCancel}>
+        Zahler abbrechen
+      </button>
+    </div>
+  ),
+}));
+
 const { mockSplit } = vi.hoisted(() => ({ mockSplit: vi.fn() }));
 vi.mock("~/lib/traeger-sibling-groups-api", () => ({
   splitHolidaySibling: (periodId: string, registrationId: string) =>
@@ -544,7 +565,7 @@ describe("TraegerHolidayRegistrationPage", () => {
       expect(await screen.findByText("Rechnung prüfen")).toBeInTheDocument();
       expect(
         screen.getByText(
-          "Der Beitrag hat sich geändert, zum Beispiel durch ein Storno bei den Geschwistern. Die Rechnung zeigt noch den alten Betrag. Storniere die Rechnung. Der nächste Abrechnungslauf stellt dann den neuen Betrag aus.",
+          "Der Beitrag hat sich geändert, zum Beispiel durch einen neuen Zahler oder ein Storno bei den Geschwistern. Die Rechnung zeigt noch den alten Betrag. Storniere die Rechnung. Der nächste Abrechnungslauf stellt dann den neuen Betrag aus.",
         ),
       ).toBeInTheDocument();
     });
@@ -812,6 +833,78 @@ describe("TraegerHolidayRegistrationPage", () => {
       );
       await waitFor(() => expect(field).toHaveFocus());
       expect(mockConfirm).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("payer of a confirmed registration (#8158)", () => {
+    function renderConfirmed(proofs = HOLIDAY_REGISTRATION.benefitsProofs) {
+      mockRegistration.mockResolvedValue({
+        ...HOLIDAY_REGISTRATION,
+        status: "confirmed",
+        benefitsProofs: proofs,
+      });
+      mockContribution.mockResolvedValue({
+        ...HOLIDAY_CONTRIBUTION,
+        frozen: true,
+        confirmedAt: "2026-09-08T10:00:00Z",
+      });
+      render(
+        <ToastProvider>
+          <TraegerHolidayRegistrationPage />
+        </ToastProvider>,
+      );
+    }
+
+    it("opens „Zahler ändern“ from the head menu on the tab of the contribution", async () => {
+      renderConfirmed();
+
+      await screen.findByRole("heading", { name: "Status" });
+      await openHeadMenu();
+      fireEvent.click(screen.getByRole("menuitem", { name: /^Zahler ändern/ }));
+
+      expect(await screen.findByText("Zahler-Editor")).toBeInTheDocument();
+      expect(mockReplace).toHaveBeenCalledWith("?tab=nachweise", {
+        scroll: false,
+      });
+      // The contribution card gives way to its edit state.
+      expect(
+        screen.queryByRole("heading", { name: "Ferienbeitrag" }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("reads the registration again after the save and shows the contribution", async () => {
+      onTab("nachweise");
+      renderConfirmed();
+
+      fireEvent.click(
+        await screen.findByRole("button", { name: "Zahler ändern" }),
+      );
+      await screen.findByText("Zahler-Editor");
+      const reads = mockRegistration.mock.calls.length;
+      fireEvent.click(screen.getByRole("button", { name: "Zahler speichern" }));
+
+      expect(
+        await screen.findByRole("heading", { name: "Ferienbeitrag" }),
+      ).toBeInTheDocument();
+      expect(mockRegistration.mock.calls.length).toBeGreaterThan(reads);
+      expect(screen.getByText("Wer bezahlt")).toBeInTheDocument();
+    });
+
+    it("offers no change of the payer before the confirmation", async () => {
+      onTab("nachweise");
+      render(
+        <ToastProvider>
+          <TraegerHolidayRegistrationPage />
+        </ToastProvider>,
+      );
+
+      // Anker: Die Vorschau des Beitrags ist da.
+      expect(
+        await screen.findByRole("heading", { name: "Ferienbeitrag" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Zahler ändern" }),
+      ).not.toBeInTheDocument();
     });
   });
 

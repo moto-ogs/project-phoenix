@@ -411,40 +411,6 @@ func seedHolidayRegistrationEdit(rt *Runtime, auth AuthRef, periodID, registrati
 	return nil
 }
 
-// seedCostBearerKey keeps the ID of the seeded cost bearer for the list of
-// the billing run (#5627).
-const seedCostBearerKey = "traeger.cost_bearer_id"
-
-// seedHolidayCostTakeover lets the Abrechnung keep an invented youth office
-// as cost bearer and the Träger-Büro confirm the second parent's
-// registration, which states benefits with a proof, with the cost takeover
-// by that office (#5627): the family pays 0 €, the office pays the rest.
-func seedHolidayCostTakeover(rt *Runtime, auth AuthRef, periodID, registrationID int64) error {
-	raw, err := rt.Client.PostWithAuth(auth, "/traeger/cost-bearers/", map[string]any{
-		"name": "Fachdienst Jugend des Landkreises Musterstadt", "address": "Am Kreishaus 1\n12345 Musterstadt",
-		"file_reference": "FJ 51-2027", "active": true,
-	})
-	if err != nil {
-		return fmt.Errorf("keep the cost bearer: %w", err)
-	}
-	costBearerID, err := decodeSeedEntityID(raw)
-	if err != nil {
-		return fmt.Errorf("read the cost bearer: %w", err)
-	}
-	rt.Values[seedCostBearerKey] = costBearerID
-	if err := postReadHolidayConfirmation(rt, auth, periodID, registrationID, map[string]any{
-		"benefits_exemption": false, "cost_bearer_id": ident.ID(costBearerID), "debtor_number": seedCostTakeoverDebtorNumber,
-	}); err != nil {
-		return fmt.Errorf("confirm the holiday registration with the cost takeover: %w", err)
-	}
-	fmt.Println("  Träger-Büro: second registration confirmed, the cost bearer pays its contribution")
-	return nil
-}
-
-// seedCostTakeoverDebtorNumber is the invented debtor number of the family
-// whose contribution the cost bearer pays.
-const seedCostTakeoverDebtorNumber = "10472"
-
 // seedDebtorNumberSettingKey is the Träger switch that asks for the debtor
 // number of the family at the confirmation (#5621); the demo Träger works
 // like Bissendorf and switches it on.
