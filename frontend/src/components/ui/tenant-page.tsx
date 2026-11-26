@@ -121,6 +121,14 @@ export interface TenantPageProps extends TenantPageSearchRowProps {
    */
   readonly appCompactStats?: ReactNode;
   /**
+   * App (#8070, Runde 17): Symbol-Aktionen im schmalen Kopf beim Rollen,
+   * etwa die Lupe. `true` behält die Symbol-Aktionen aus `actions` (wie oben
+   * höchstens zwei), ein Element ersetzt sie dort (etwa eine Lupe, die nach
+   * oben zum Suchfeld der Leiste springt). Ohne Angabe bleibt der schmale
+   * Kopf wie bisher: Titel, Kurzstatus, „…“.
+   */
+  readonly appCompactActions?: true | ReactNode;
+  /**
    * Erklärung der Seite, die man zum Kennenlernen braucht, aber nicht jeden
    * Tag liest. Sie liegt hinter einem Info-Knopf neben dem Titel und kostet
    * im Alltag keine Zeile (#4385). Per Tipp, Klick und Tastatur erreichbar,
@@ -653,6 +661,7 @@ function TenantPageView({
   statsLoading = false,
   appStatsInline = false,
   appCompactStats,
+  appCompactActions,
   info,
   actions,
   leading,
@@ -914,6 +923,7 @@ function TenantPageView({
             statusLine={statusLine}
             statsInline={appStatsInline}
             compactStats={appCompactStats}
+            compactActions={appCompactActions}
             printHideHeader={printHideHeader}
             tabs={tabs ? <AppTenantTabs {...tabs} /> : undefined}
             toolbar={

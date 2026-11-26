@@ -78,6 +78,11 @@ export interface AppHeadProps {
   readonly statsInline?: boolean;
   /** Kurzstatus im schmalen Kopf beim Rollen (`appCompactStats`). */
   readonly compactStats?: ReactNode;
+  /**
+   * Symbol-Aktionen im schmalen Kopf (`appCompactActions`): `true` behält
+   * die Symbol-Aktionen aus `actions`, ein Element steht an ihrer Stelle.
+   */
+  readonly compactActions?: true | ReactNode;
   /** Reiter als Chips. */
   readonly tabs?: ReactNode;
   /** Suche, Filter oder ein Bedienband (`searchSlot`). */
@@ -108,6 +113,7 @@ export function AppTenantHead({
   statusLine,
   statsInline = false,
   compactStats,
+  compactActions,
   tabs,
   toolbar,
   printHideHeader = false,
@@ -314,6 +320,24 @@ export function AppTenantHead({
               {compactHeadStats}
             </div>
           </AppHeadStatsContext.Provider>
+        ) : null}
+        {/* Symbol-Aktionen wie die Lupe bleiben auf Wunsch der Seite auch
+            beim Rollen erreichbar. `mr-2` ergänzt `gap-1` auf die 12 px, die
+            zwei 44-px-Trefferflächen nebeneinander brauchen. */}
+        {compactActions != null && compactActions !== false ? (
+          <div
+            data-app-head-compact-actions=""
+            className={cn(
+              "flex shrink-0 items-center gap-3 empty:hidden",
+              hasMenu && "mr-2",
+            )}
+          >
+            {compactActions === true ? (
+              <div className={ICON_ACTIONS_ONLY}>{actions}</div>
+            ) : (
+              compactActions
+            )}
+          </div>
         ) : null}
         {menuButton}
       </div>
