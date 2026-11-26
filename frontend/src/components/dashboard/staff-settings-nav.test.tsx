@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { SettingsSections } from "~/components/settings/settings-nav-items";
 import { settingsConcept } from "~/lib/concepts/settings";
@@ -51,6 +51,28 @@ function sectionList(count: number): SettingsSections {
     })),
     highlightTabId: null,
     highlightNeedsNfc: false,
+  };
+}
+
+function withTraegerAreas(): SettingsSections {
+  const own = sectionList(5);
+  return {
+    ...own,
+    tabs: [
+      ...own.tabs,
+      {
+        id: "settings-zustaendigkeiten",
+        label: "Zuständigkeiten",
+        icon: settingsConcept,
+        traeger: true,
+      },
+      {
+        id: "settings-branding",
+        label: "Briefkopf",
+        icon: settingsConcept,
+        traeger: true,
+      },
+    ],
   };
 }
 
@@ -124,6 +146,49 @@ describe("staff settings navigation", () => {
     expect(
       screen.getByRole("link", { name: "Zurück zur App" }),
     ).toHaveAttribute("href", "/schule-b/rooms");
+  });
+
+  // #8153: die Vorgaben des Trägers stehen unter einer eigenen Überschrift.
+  it("heads the areas of the Träger with their own heading", () => {
+    sections.value = withTraegerAreas();
+    render(
+      <StaffSettingsSidebarNav collapsed={false} labelsMounted labelsVisible />,
+    );
+
+    const heading = screen.getByText("Vorgaben des Trägers");
+    const own = screen.getByRole("link", { name: "Bereich 1" });
+    const traeger = screen.getByRole("link", { name: "Briefkopf" });
+    expect(
+      own.compareDocumentPosition(heading) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      heading.compareDocumentPosition(traeger) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(screen.getAllByText("Vorgaben des Trägers")).toHaveLength(1);
+  });
+
+  it("shows no Träger heading for a school without such areas", () => {
+    render(
+      <StaffSettingsSidebarNav collapsed={false} labelsMounted labelsVisible />,
+    );
+
+    expect(screen.getByRole("link", { name: "Bereich 0" })).toBeInTheDocument();
+    expect(screen.queryByText("Vorgaben des Trägers")).toBeNull();
+  });
+
+  it("heads the areas of the Träger behind Mehr on the phone", async () => {
+    sections.value = withTraegerAreas();
+    render(<MobileBottomNav />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Mehr" }));
+
+    const sheetLink = await screen.findByRole("link", { name: "Briefkopf" });
+    const heading = screen.getByText("Vorgaben des Trägers");
+    expect(
+      heading.compareDocumentPosition(sheetLink) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
   it("follows on the phone, with the rest behind Mehr", () => {

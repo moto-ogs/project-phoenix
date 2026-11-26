@@ -10,6 +10,7 @@ import {
   settingsSectionHref,
   settingsSectionsFor,
 } from "./settings-nav-items";
+import { settingsTabIsPlaced } from "./settings-sections";
 
 const tabs = [
   { id: "settings-operations", label: "Betrieb", icon: settingsConcept },
@@ -113,8 +114,12 @@ describe("settingsSectionsFor", () => {
     { tabs: keys.map(tabWithOneSetting) },
     { schemaFailed: false, nfcEnabled: true, canManageHomeBlocks: true },
   );
-  const schemaSections = sections.filter((section) =>
-    keys.includes(section.id.replace(/^settings-/, "")),
+  // „Startseite für alle“ ist handgeschrieben (#2875), auch wenn ihre
+  // Schalter im Schema unter `startseite` stehen.
+  const schemaSections = sections.filter(
+    (section) =>
+      section.id !== "settings-startseite" &&
+      keys.includes(section.id.replace(/^settings-/, "")),
   );
 
   it("reads the areas of the backend registry", () => {
@@ -150,6 +155,49 @@ describe("settingsSectionsFor", () => {
         .filter((section) => section.icon === settingsConcept)
         .map((section) => section.label),
     ).toEqual(["Betrieb"]);
+  });
+
+  // #8153: ein Bereich ohne festen Platz fiel ans Ende, und „Sicherheit“
+  // stand zwischen den Bereichen des Trägers.
+  it("places every area of the sidebar in a group", () => {
+    const unplaced = schemaSections
+      .map((section) => section.id.replace(/^settings-/, ""))
+      .filter((key) => !settingsTabIsPlaced(key));
+    expect(unplaced).toEqual([]);
+  });
+
+  it("lists the areas of the Träger last, after Personalisierung", () => {
+    const labels = sections.map((section) => section.label);
+    const traeger = sections
+      .filter((section) => section.traeger)
+      .map((section) => section.label);
+    expect(traeger).toEqual(
+      expect.arrayContaining([
+        "Zuständigkeiten",
+        "Betreuungsverträge",
+        "Monatsbeitrag",
+        "Einsatzplanung",
+        "Lohnexport",
+        "Dashboard",
+        "Briefkopf",
+      ]),
+    );
+    expect(traeger).not.toContain("Sicherheit");
+    expect(labels.slice(-traeger.length)).toEqual(traeger);
+    expect(labels.slice(-traeger.length - 2, -traeger.length)).toEqual([
+      "Startseite für alle",
+      "Personalisierung",
+    ]);
+  });
+
+  it("keeps the order of the schema inside each group", () => {
+    const schemaOrder = keys.map((key) => `settings-${key}`);
+    for (const traeger of [false, true]) {
+      const group = schemaSections
+        .filter((section) => (section.traeger === true) === traeger)
+        .map((section) => section.id);
+      expect(group).toEqual(schemaOrder.filter((id) => group.includes(id)));
+    }
   });
 
   it("shows „Lohnexport“ with a capital letter", () => {

@@ -190,17 +190,36 @@ type SelectOption struct {
 	Value any    `json:"value" contract_json:"Option values have the kind of the setting declaring them"`
 }
 
-// TabOrder defines the display ordering of setting tabs.
+// TabOrder is the fixed display order of the setting areas on every surface
+// that shows the schema (school settings, Träger portal, operator). Every
+// area a definition declares has a place here; TestEveryTabHasAFixedPlace
+// fails for one without (#8153). The school's own areas come first, the
+// areas of the Träger follow as one block.
 var TabOrder = []string{
+	// Alltag der Schule
 	"operations",
 	"meals",
 	"reminders",
 	"devices",
 	"enrollment",
+	// Regeln und Schutz
 	"gdpr",
+	"security",
+	// Technik
 	"system",
-	"general",
 	"modules",
+	"startseite",
+	// Vorgaben des Trägers
+	"zustaendigkeiten",
+	"vertraege",
+	"ferien",
+	"monatsbeitrag",
+	"abrechnung",
+	"datev",
+	"einsatzplanung",
+	"lohnexport",
+	"dashboard",
+	"branding",
 }
 
 // Validate checks that a Definition has all required fields and consistent configuration.

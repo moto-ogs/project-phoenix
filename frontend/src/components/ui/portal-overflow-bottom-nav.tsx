@@ -11,6 +11,7 @@ import {
   PortalNavSheetLink,
 } from "~/components/ui/portal-bottom-nav";
 import { PortalMoreBottomNav } from "~/components/ui/portal-more-bottom-nav";
+import { SectionLabel } from "~/components/ui/section-label";
 import type { MotoConcept } from "~/lib/moto-concepts";
 
 const PADDING = "px-4";
@@ -42,6 +43,12 @@ export interface PortalOverflowNavItem {
   readonly newTab?: boolean;
   /** Eine Linie trennt den Eintrag im „Mehr"-Blatt von den Arbeitsbereichen. */
   readonly separated?: boolean;
+  /**
+   * Eine Zwischenüberschrift über dem Eintrag im „Mehr"-Blatt, die eine
+   * Gruppe von Zielen benennt, etwa die Vorgaben des Trägers in den
+   * Einstellungen (#8153). In der Leiste selbst steht sie nicht.
+   */
+  readonly heading?: string;
   /**
    * Ein Zeichen hinter dem Namen im „Mehr"-Blatt, etwa das Schloss eines
    * nicht gebuchten Moduls (#6052). Ein Eintrag mit Zeichen steht nie in
@@ -196,9 +203,16 @@ export function PortalOverflowBottomNav({
               className={
                 item.separated
                   ? "mt-5 border-t border-gray-200 pt-5"
-                  : undefined
+                  : item.heading
+                    ? "pt-4"
+                    : undefined
               }
             >
+              {item.heading ? (
+                <SectionLabel className="mb-2 px-4">
+                  {item.heading}
+                </SectionLabel>
+              ) : null}
               <PortalNavSheetLink
                 {...linkProps(item)}
                 badge={item.mark}

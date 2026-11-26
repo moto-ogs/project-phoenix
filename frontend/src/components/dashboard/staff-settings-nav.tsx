@@ -6,6 +6,7 @@ import {
   settingsSectionHref,
   useSettingsSections,
 } from "~/components/settings/settings-nav-items";
+import { TRAEGER_SECTIONS_HEADING } from "~/components/settings/settings-sections";
 import { MotoNavIcon } from "~/components/ui/moto-nav-icon";
 import {
   PortalOverflowBottomNav,
@@ -100,12 +101,17 @@ function useStaffSettingsNav() {
       concept: backConcept,
       active: false,
     },
-    items: (sections?.tabs ?? []).map((section) => ({
+    items: (sections?.tabs ?? []).map((section, index, tabs) => ({
       key: section.id,
       href: tenantPath(settingsSectionHref(section.id)),
       label: section.label,
       concept: section.icon,
       active: section.id === activeId,
+      traeger: section.traeger === true,
+      // Die erste Vorgabe des Trägers trägt im „Mehr“-Blatt die Überschrift.
+      ...(section.traeger && !tabs[index - 1]?.traeger
+        ? { heading: TRAEGER_SECTIONS_HEADING }
+        : {}),
     })),
   };
 }
@@ -125,6 +131,8 @@ export function StaffSettingsSidebarNav({
   readonly labelsVisible: boolean;
 }) {
   const { loading, back, items } = useStaffSettingsNav();
+  const ownItems = items.filter((item) => !item.traeger);
+  const traegerItems = items.filter((item) => item.traeger);
   const renderRow = (row: PortalOverflowNavItem) => (
     <SidebarRowLink
       key={row.key}
@@ -170,8 +178,21 @@ export function StaffSettingsSidebarNav({
                 )}
               </div>
             ))
-          : items.map(renderRow)}
+          : ownItems.map(renderRow)}
       </div>
+      {traegerItems.length > 0 ? (
+        <>
+          <div className="mt-5">
+            <SidebarSectionHeading
+              collapsed={collapsed}
+              labelsVisible={labelsVisible}
+            >
+              {TRAEGER_SECTIONS_HEADING}
+            </SidebarSectionHeading>
+          </div>
+          <div className={SIDEBAR_NAV_GAP}>{traegerItems.map(renderRow)}</div>
+        </>
+      ) : null}
     </nav>
   );
 }

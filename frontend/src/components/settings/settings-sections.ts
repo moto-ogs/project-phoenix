@@ -52,30 +52,45 @@ const NFC_ONLY_TABS = new Set(["devices"]);
  * eigenes Symbol, auf dem Telefon ist es sogar der einzige Hinweis. Das
  * Zahnrad gehört „Betrieb“ allein (#8132). Ein Bereich des Trägers trägt das
  * Symbol, unter dem ihn das Träger-Portal führt; nur „Dashboard“ weicht ab,
- * weil das Haus hier schon die Startseite meint. Wer in der Registry einen
- * Bereich anlegt, trägt ihn hier und in `TAB_LABELS` ein, sonst schlägt
- * `settings-nav-items.test.ts` fehl.
+ * weil das Haus hier schon die Startseite meint.
+ *
+ * `traeger` stellt den Bereich unter „Vorgaben des Trägers“ (#8153): die
+ * Schule sieht dort Werte ihres Trägers, die sie meist nur lesen kann. Die
+ * Reihenfolge innerhalb einer Gruppe kommt aus dem Schema (`TabOrder` im
+ * Backend). Wer in der Registry einen Bereich anlegt, trägt ihn hier und in
+ * `TAB_LABELS` ein, sonst schlägt `settings-nav-items.test.ts` fehl.
  */
-const TAB_CONCEPTS: Record<string, MotoConcept> = {
-  operations: settingsConcept,
-  meals: mealPlanConcept,
-  reminders: notificationsConcept,
-  gdpr: privacyConcept,
-  devices: devicesConcept,
-  enrollment: enrollmentsConcept,
-  system: calendarConcept,
-  security: permissionsConcept,
-  modules: listsConcept,
-  branding: documentsConcept,
+const TAB_PLACES: Record<
+  string,
+  { readonly icon: MotoConcept; readonly traeger?: true }
+> = {
+  operations: { icon: settingsConcept },
+  meals: { icon: mealPlanConcept },
+  reminders: { icon: notificationsConcept },
+  gdpr: { icon: privacyConcept },
+  devices: { icon: devicesConcept },
+  enrollment: { icon: enrollmentsConcept },
+  system: { icon: calendarConcept },
+  security: { icon: permissionsConcept },
+  modules: { icon: listsConcept },
   // Wer Verträge schließt, abrechnet und Personal anstellt (#4811).
-  zustaendigkeiten: organizationsConcept,
+  zustaendigkeiten: { icon: organizationsConcept, traeger: true },
+  vertraege: { icon: careContractsConcept, traeger: true },
+  monatsbeitrag: { icon: contributionsConcept, traeger: true },
+  einsatzplanung: { icon: staffPlanConcept, traeger: true },
+  lohnexport: { icon: payrollConcept, traeger: true },
   // Der Bereich legt fest, ab wann eine Kennzahl auffällt: daher das Diagramm.
-  dashboard: reportsConcept,
-  einsatzplanung: staffPlanConcept,
-  lohnexport: payrollConcept,
-  monatsbeitrag: contributionsConcept,
-  vertraege: careContractsConcept,
+  dashboard: { icon: reportsConcept, traeger: true },
+  branding: { icon: documentsConcept, traeger: true },
 };
+
+/** Die Überschrift über den Bereichen des Trägers (#8153). */
+export const TRAEGER_SECTIONS_HEADING = "Vorgaben des Trägers";
+
+/** Ob ein Bereich des Schemas einen festen Platz in der Seitenleiste hat. */
+export function settingsTabIsPlaced(key: string): boolean {
+  return key in TAB_PLACES;
+}
 
 // A tab whose settings are all hidden (DependsOn, access) would open onto the
 // search box and nothing else (#3925). It is left out like the NFC tabs.
@@ -115,6 +130,8 @@ export interface SettingsSection {
   readonly id: string;
   readonly label: string;
   readonly icon: MotoConcept;
+  /** Steht unter „Vorgaben des Trägers“, nach den Bereichen der Schule. */
+  readonly traeger?: boolean;
 }
 
 export interface SettingsSections {
@@ -182,7 +199,7 @@ const PERSONALIZATION_TAB: SettingsSection = {
 
 /** Das Symbol eines Bereichs aus dem Schema. */
 export function settingsTabConcept(key: string): MotoConcept {
-  return TAB_CONCEPTS[key] ?? settingsConcept;
+  return TAB_PLACES[key]?.icon ?? settingsConcept;
 }
 
 /**
@@ -213,11 +230,15 @@ export function settingsSectionsFor(
         id: `settings-${tab.key}`,
         label: displayTabLabel(tab),
         icon: settingsTabConcept(tab.key),
+        ...(TAB_PLACES[tab.key]?.traeger ? { traeger: true } : {}),
       }));
+  // Die eigenen Bereiche der Schule zuerst, die Vorgaben des Trägers als
+  // eigene Gruppe am Ende (#8153).
   return [
-    ...schemaTabs,
+    ...schemaTabs.filter((tab) => !tab.traeger),
     ...(canManageHomeBlocks ? [HOME_BLOCKS_TAB] : []),
     PERSONALIZATION_TAB,
+    ...schemaTabs.filter((tab) => tab.traeger),
   ];
 }
 
