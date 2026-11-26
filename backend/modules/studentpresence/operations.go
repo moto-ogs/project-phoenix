@@ -55,6 +55,7 @@ var (
 	ErrInvalidData          = errors.New("invalid data provided")
 	ErrDatabaseOperation    = errors.New("database operation failed")
 	ErrRoomConflict         = errors.New("room is already occupied by another active group")
+	ErrRoomClosed           = errors.New("room is closed today")
 	ErrRoomCapacityExceeded = errors.New("room capacity exceeded")
 	// ErrActivityParticipantLimitExceeded classifies
 	// ActivityParticipantLimitError with errors.Is (#3632).

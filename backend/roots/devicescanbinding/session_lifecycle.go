@@ -111,6 +111,9 @@ func (s lifecycleStore) Start(ctx context.Context, deviceID int64, command devic
 	} else {
 		group, err = s.active.StartActivitySessionWithSupervisors(ctx, command.ActivityID, deviceID, command.SupervisorIDs, command.RoomID)
 	}
+	if errors.Is(err, studentpresence.ErrRoomClosed) {
+		return ports.LifecycleSession{}, devicescan.InvalidRequestWithCode("the room is closed today", devicescan.CodeRoomClosed)
+	}
 	if errors.Is(err, studentpresence.ErrSessionConflict) || errors.Is(err, studentpresence.ErrDeviceAlreadyActive) {
 		return ports.LifecycleSession{}, &ports.SessionStartConflict{Cause: classifyPresence(err)}
 	}

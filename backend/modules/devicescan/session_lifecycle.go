@@ -3,6 +3,8 @@ package devicescan
 import (
 	"context"
 	"time"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // SessionLifecycle serves the kiosk's manual session controls. It preserves
@@ -13,6 +15,16 @@ type SessionLifecycle interface {
 	SessionToEnd(context.Context) (SessionToEnd, error)
 	ReplaceSessionSupervisors(context.Context, int64, []int64) (UpdateSupervisorsResponse, error)
 	TouchSession(context.Context) (int64, error)
+}
+
+// CodeRoomClosed refuses a session in a room the school closed for today
+// (#7653). PyrePortal maps it to its own text.
+const CodeRoomClosed = "iot.room_closed"
+
+// RoomClosures answers whether the school closed a room on a day (#7653).
+// Device Scan owns the port; the root binds it to Facilities' closures.
+type RoomClosures interface {
+	RoomClosedOn(ctx context.Context, roomID int64, day calendar.Date) (bool, error)
 }
 
 // StartSessionCommand carries the validated kiosk request.

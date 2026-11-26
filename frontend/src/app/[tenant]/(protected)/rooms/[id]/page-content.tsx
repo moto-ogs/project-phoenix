@@ -24,6 +24,7 @@ import {
   RoomDetailSkeleton,
   useRoomDetail,
 } from "~/components/rooms/room-detail-content";
+import { RoomClosuresSection } from "~/components/rooms/room-closures-section";
 import { RoomStammdatenTab } from "~/components/rooms/room-stammdaten-tab";
 import {
   parseRoomPlanView,
@@ -187,6 +188,10 @@ function RoomDetailPageContent() {
   const isArchived = Boolean(room?.archivedAt);
   const canUpdate = hasPermission(session, "rooms:update") && !isArchived;
   const canDelete = hasPermission(session, "rooms:delete") && !isArchived;
+  // Sperren können dieselben Personen lesen wie Räume. Schreiben bleibt
+  // weiterhin an rooms:update gebunden.
+  const canReadClosures = hasPermission(session, "rooms:read");
+  const canAccessStammdaten = canReadClosures || canUpdate;
   // Plan des Raums (#4768): dasselbe Recht wie die Leseansicht des
   // Betreuungsplans; der Druck braucht dazu die Namen (wie dort).
   const canReadPlan = hasPermission(session, "schedules:read");
@@ -206,11 +211,13 @@ function RoomDetailPageContent() {
   const tabItems: TenantPageTab[] = [
     ...(hasOccupancy ? [{ value: "uebersicht", label: "Übersicht" }] : []),
     ...(canReadPlan ? [{ value: "plan", label: "Plan" }] : []),
-    ...(canUpdate ? [{ value: "stammdaten", label: "Stammdaten" }] : []),
+    ...(canAccessStammdaten
+      ? [{ value: "stammdaten", label: "Stammdaten" }]
+      : []),
   ];
   const requestedTab = searchParams.get("tab");
   const defaultTab: RoomTab =
-    requestedTab === "stammdaten" && canUpdate
+    requestedTab === "stammdaten" && canAccessStammdaten
       ? "stammdaten"
       : requestedTab === "plan" && canReadPlan
         ? "plan"
@@ -603,6 +610,16 @@ function RoomDetailPageContent() {
           roomId={room.id}
           view={planView}
           anchorISO={planAnchorISO}
+        />
+      ) : null}
+      {activeTab === "stammdaten" && canReadClosures ? (
+        <RoomClosuresSection
+          roomId={room.id}
+          canUpdate={canUpdate}
+          canReadPlan={canReadPlan}
+          planHref={(day) =>
+            tenantPath(`/rooms/${room.id}?tab=plan&d=${day}&view=tag`)
+          }
         />
       ) : null}
       {activeTab === "stammdaten" && canUpdate ? (

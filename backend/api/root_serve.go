@@ -261,10 +261,8 @@ func composeServeRoot(
 		},
 		func() error {
 			presence = owners.BuildPresenceOwner(db, env.Logger, env.Now, devices, persons, rooms, membership, carePlan, timetableOwner, timetableRepos, people, structure)
-			facilitiesRooms = buildFacilitiesRooms(presence.Presence, rooms, timetableOwner, membership, persons)
-			substitutions = owners.NewGroupSubstitutionRepository(structure.Groups, membership, workTime, env.Today)
-			supervisions = owners.NewGroupSupervisionRecords(presence.SessionRecords, groups)
-			return nil
+			facilitiesRooms, substitutions, supervisions, err = buildFacilitiesPresence(db, env, presence, rooms, timetableOwner, membership, persons, groups, structure, workTime)
+			return err
 		},
 		func() (err error) {
 			timetableRows, err = owners.BuildTimetableOwner(db, env.Logger, env.Now, timetableOwner, timetableRepos, calendar, bookings, structure.Groups, hub, persons, people.Students)
@@ -344,7 +342,7 @@ func composeServeRoot(
 		},
 		func() (err error) {
 			active, err = owners.BuildActivePresence(db, unit, env, hub, settings.Service, presence, presencePeople, carePlanRows, people,
-				services.Users, rooms, devices, timetableRows, days, side.AutoCheckIn, emitter, tracker, AttendancePrincipal)
+				services.Users, rooms, facilitiesRooms.Closures, devices, timetableRows, days, side.AutoCheckIn, emitter, tracker, AttendancePrincipal)
 			return
 		},
 		func() (err error) {
@@ -361,12 +359,12 @@ func composeServeRoot(
 			return
 		},
 		func() (err error) {
-			materialization, err = owners.BuildTimetableMaterialization(db, env, hub, timetableRows, people, calendar, workTime)
+			materialization, err = owners.BuildTimetableMaterialization(db, env, hub, timetableRows, people, calendar, workTime, owners.NewTimetableRoomClosures(facilitiesRooms.Closures))
 			return
 		},
 		func() (err error) {
 			lifecycle, err = owners.BuildTimetableLifecycle(db, env, hub, timetableRows, days, people, careRows, presence, supervisions,
-				owners.WorkforceShiftRows(workTime), schedules, carePlan, active, materialization, announcements, settings.Service, owners.NewTimetableSickReports(workTime), owners.NewTimetableStaffNotices(notifications, membership, timetableOwner, workTime).WithGuardianContacts(persons))
+				owners.WorkforceShiftRows(workTime), schedules, carePlan, active, materialization, announcements, settings.Service, owners.NewTimetableSickReports(workTime), owners.NewTimetableStaffNotices(notifications, membership, timetableOwner, workTime).WithGuardianContacts(persons), owners.NewTimetableRoomClosures(facilitiesRooms.Closures))
 			return
 		},
 		func() (err error) {

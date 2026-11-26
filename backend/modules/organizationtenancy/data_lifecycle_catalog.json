@@ -285,6 +285,7 @@
     {"name": "enrollment.request_uploads", "scope": "tenant", "export": "include", "excludeSecretColumns": {"token_hash": "Fingerprint of the bearer token that claims an unclaimed upload."}, "allowedSensitiveColumns": {"field_key": "Key of the form field the file answers, not a credential."}},
     {"name": "enrollment.requests", "scope": "tenant", "export": "include", "excludeSecretColumns": {"status_token": "Bearer capability for enrollment status.", "status_token_expires": "Metadata of the excluded status credential."}, "personKeys": {"guardian_account_id": "auth.accounts.id"}},
     {"name": "enrollment.submission_rate_limits", "scope": "tenant", "export": "include", "excludeSecretColumns": {"key_type": "Authentication or operational secret/credential material; not customer export content.", "key_value": "Authentication or operational secret/credential material; not customer export content."}},
+    {"name": "facilities.room_closures", "scope": "tenant", "export": "include"},
     {"name": "facilities.rooms", "scope": "tenant", "export": "include"},
     {"name": "feedback.entries", "scope": "tenant", "export": "include", "personKeys": {"student_id": "users.student_profiles.id"}},
     {"name": "iot.devices", "scope": "tenant", "export": "include", "excludeSecretColumns": {"api_key_hash": "Authentication or operational secret/credential material; not customer export content.", "masked_api_key": "Authentication or operational secret/credential material; not customer export content."}, "personKeys": {"registered_by_id": "users.persons.id"}},

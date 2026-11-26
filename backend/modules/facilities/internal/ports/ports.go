@@ -23,6 +23,14 @@ type Store interface {
 	LockByIDs(context.Context, []int64) ([]facilities.Room, domain.OperationStats, error)
 }
 
+// ClosureStore persists the room closures of the caller's school (#7653).
+type ClosureStore interface {
+	InsertClosure(context.Context, facilities.CloseRoom) (facilities.RoomClosure, domain.OperationStats, error)
+	DeleteClosure(ctx context.Context, roomID, closureID int64) (bool, domain.OperationStats, error)
+	ListClosures(context.Context, facilities.RoomClosureFilter) ([]facilities.RoomClosure, domain.OperationStats, error)
+	ListClosuresWithRoomLocks(context.Context, facilities.RoomClosureFilter) ([]facilities.RoomClosure, domain.OperationStats, error)
+}
+
 type Transaction interface {
 	RunWrite(context.Context, func(context.Context) error) error
 	AcquireLock(context.Context, string) error

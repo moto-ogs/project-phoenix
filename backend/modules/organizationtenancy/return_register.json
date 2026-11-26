@@ -2,7 +2,7 @@
   "registerVersion": 1,
   "formatVersion": 1,
   "catalogVersion": 1,
-  "catalogSHA256": "52ecdf90dd79c1524a48dcca9ac4c786abd395a45e6c228709d69f924f457e8a",
+  "catalogSHA256": "6efe4f26fad01ac748509628dabf87da4acec783883fabcc26016d57f008c71c",
   "about": "Dieses Register beschreibt das Rückgabepaket von moto: welche Tabellen und Felder es enthält, welche Typen sie haben, ob sie leer sein dürfen und wie die Tabellen verbunden sind. Es enthält keine Kundendaten. Jedes Paket enthält dieselbe Beschreibung für seine Tabellen als model.json. formatVersion und catalogSHA256 stehen auch in der manifest.json des Pakets.",
   "standards": [
     {
@@ -25647,6 +25647,73 @@
         "key_type": "Authentication or operational secret/credential material; not customer export content.",
         "key_value": "Authentication or operational secret/credential material; not customer export content."
       }
+    },
+    {
+      "name": "facilities.room_closures",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "tenant_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "room_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "start_date",
+          "type": "date",
+          "udt": "date",
+          "nullable": false
+        },
+        {
+          "name": "end_date",
+          "type": "date",
+          "udt": "date",
+          "nullable": false
+        },
+        {
+          "name": "reason",
+          "type": "character varying",
+          "udt": "varchar",
+          "nullable": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": false
+        }
+      ],
+      "relationships": [
+        {
+          "column": "room_id",
+          "targetTable": "facilities.rooms",
+          "targetColumn": "id"
+        },
+        {
+          "column": "tenant_id",
+          "targetTable": "facilities.rooms",
+          "targetColumn": "tenant_id"
+        },
+        {
+          "column": "tenant_id",
+          "targetTable": "platform.schools",
+          "targetColumn": "id"
+        }
+      ],
+      "packages": [
+        "school"
+      ]
     },
     {
       "name": "facilities.rooms",

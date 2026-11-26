@@ -14,11 +14,11 @@ type SessionLifecycle = devicescan.SessionLifecycle
 
 // NewSessionLifecycle binds manual kiosk controls to the retained presence
 // and people services on the root's clock, without a legacy service graph.
-func NewSessionLifecycle(store application.LifecycleStore, people application.LifecyclePeople, heartbeat application.SessionHeartbeat, mirror application.SessionMirror, logger *slog.Logger, principal devicescan.DevicePrincipal, now func() time.Time) SessionLifecycle {
+func NewSessionLifecycle(store application.LifecycleStore, people application.LifecyclePeople, heartbeat application.SessionHeartbeat, mirror application.SessionMirror, closures devicescan.RoomClosures, logger *slog.Logger, principal devicescan.DevicePrincipal, now func() time.Time) SessionLifecycle {
 	if principal == nil || now == nil {
 		panic("device scan composition: principal and the clock are required")
 	}
-	return application.NewSessionLifecycle(store, people, principal, heartbeat, mirror, clock{now: now}, logger)
+	return application.NewSessionLifecycle(store, people, principal, heartbeat, mirror, closures, clock{now: now}, logger)
 }
 func NewLifecyclePeople(people PersonDirectory) application.LifecyclePeople {
 	return lifecyclePeople{people: people}

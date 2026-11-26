@@ -331,6 +331,7 @@ func mountSchoolRoutes(
 	mountWeekProtocolRoutes(tenant, timetableOwner, logger, caller, holidayAccessLog, persons, appEnv, weekProtocolSeed, now)
 	tenant.Mount("/rooms", roomsHTTPAdapter.NewResource(facilities, roomsHTTPAdapter.Dependencies{
 		Facilities:          rooms.RoomService,
+		Closures:            rooms.Closures,
 		RoomHistorySettings: NewRoomHistorySettings(settings, logger.With("handler", "rooms"), settingsFacts.PrefetchSettings),
 		UserContext:         caller, Active: active,
 		Users: peopleCompose.NewRoomSnapshotPeople(users), Education: education,

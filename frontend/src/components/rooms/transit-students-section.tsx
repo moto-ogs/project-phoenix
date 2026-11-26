@@ -33,6 +33,7 @@ import { fetchStudents } from "~/lib/student-api";
 import type { Student } from "~/lib/student-helpers";
 import { ApiError, wireErrorCode } from "~/lib/api-error";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { SEARCH_STUDENTS_KEY_PREFIX } from "~/lib/swr/search-students-key";
 import type { Room } from "~/lib/room-helpers";
 import type { Staff } from "~/lib/usercontext-helpers";
@@ -118,6 +119,7 @@ export function TransitStudentsSection({
   const router = useTenantRouter();
   const { data: session } = useSession();
   const attendanceWebEnabled = useAttendanceWebEnabled();
+  const today = useBerlinToday();
   // Visibility never grants move rights: only administrators may target any
   // running module; staff remain limited to modules they supervise.
   const showAllTargets = canUseAllMoveTargets(session);
@@ -206,8 +208,8 @@ export function TransitStudentsSection({
     isLoading: roomsLoading,
     mutate: refreshTargetRooms,
   } = useSWRAuth<Room[]>(
-    canTargetOpenRooms ? roomsKeys.key() : null,
-    roomsKeys.fetcher,
+    canTargetOpenRooms ? roomsKeys.key({ openOn: today }) : null,
+    () => roomsKeys.fetcher({ openOn: today }),
   );
   // Ladefehler einer der fünf Listen: eine Meldung, „Wiederholen“ lädt alle.
   const loadError = useSwrLoadError(

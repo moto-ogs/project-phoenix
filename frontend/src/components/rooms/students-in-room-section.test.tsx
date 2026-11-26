@@ -25,6 +25,10 @@ vi.mock("~/lib/supervision-context", () => ({
   useOptionalSupervision: vi.fn(),
 }));
 
+vi.mock("~/lib/hooks/use-berlin-today", () => ({
+  useBerlinToday: () => "2026-12-01",
+}));
+
 // ----------------------------------------------------------------------------
 // Mocks
 // ----------------------------------------------------------------------------
@@ -391,7 +395,7 @@ beforeEach(() => {
         isLoading: false,
       };
     }
-    if (key === "rooms-list-{}") {
+    if (key === 'rooms-list-{"openOn":"2026-12-01"}') {
       return {
         data: roomsState.data,
         error: roomsState.error ?? null,

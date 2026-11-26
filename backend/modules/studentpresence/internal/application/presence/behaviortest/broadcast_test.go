@@ -11,6 +11,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	active "github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/application/presence"
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/tenant"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 
@@ -21,6 +22,14 @@ import (
 
 type recordingGuardianWaker struct {
 	studentIDs []int64
+}
+
+// openRoomClosures keeps behavior tests that are unrelated to closures focused
+// on their own scenario. Production binds this consumer port to Facilities.
+type openRoomClosures struct{}
+
+func (openRoomClosures) RoomClosedOn(context.Context, int64, calendar.Date) (bool, error) {
+	return false, nil
 }
 
 func (w *recordingGuardianWaker) BroadcastChildUpdateToGuardians(_ int64, studentID int64) {
@@ -64,6 +73,7 @@ func newServiceWithPresenceSync(t *testing.T, db *testpkg.DB, presence active.St
 		StudentRepo:        owners.PresenceStudents(testpkg.MustDatabase(db), repos.Student),
 		StaffRepo:          owners.NewAttendanceStaffDirectory(repos.Staff),
 		RoomRepo:           api.NewAttendanceRooms(api.NewRoomRepository(rooms)),
+		RoomClosures:       openRoomClosures{},
 		ActivityGroupRepo:  owners.NewSessionActivities(timetableRepos.GroupReads()),
 		ActivityCatRepo:    api.NewAttendanceActivityCategories(timetableRepos.ActivityCategory),
 		EducationGroupRepo: owners.NewAttendanceEducationGroups(reposStructure.Group, repos.Student),
