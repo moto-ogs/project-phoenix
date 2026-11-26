@@ -15,6 +15,16 @@ import { catalogText } from "~/test/error-catalog-text";
 
 const toastSuccess = vi.fn();
 const toastError = vi.fn();
+const { pickupPersonGuardians } = vi.hoisted(() => ({
+  pickupPersonGuardians: {
+    data: [] as unknown[],
+    error: undefined as unknown,
+  },
+}));
+
+vi.mock("~/lib/swr", () => ({
+  useSWRAuth: () => pickupPersonGuardians,
+}));
 
 vi.mock("~/contexts/ToastContext", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/contexts/ToastContext")>()),
@@ -252,6 +262,8 @@ function rowButton(field: HTMLElement): HTMLButtonElement {
 describe("CarePlanEditorModal", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    pickupPersonGuardians.data = [];
+    pickupPersonGuardians.error = undefined;
   });
 
   it("names itself an exception when opened from a day", () => {
@@ -393,6 +405,24 @@ describe("CarePlanEditorModal", () => {
     expect(
       await screen.findByText(
         "Bitte ändere zuerst eine Zeit oder die Abholart.",
+      ),
+    ).toBeInTheDocument();
+    expect(onSubmitException).not.toHaveBeenCalled();
+  });
+
+  it("does not save a pickup person while the guardians cannot be loaded", async () => {
+    pickupPersonGuardians.error = new Error("request failed");
+    const { onSubmitException } = renderEditor({ studentId: "42" });
+
+    fireEvent.click(screen.getByRole("button", { name: "Andere Person" }));
+    fireEvent.change(screen.getByLabelText("Vor- und Nachname"), {
+      target: { value: "Tom Nachbar" },
+    });
+    save();
+
+    expect(
+      await screen.findByText(
+        "Die Liste der Abholpersonen konnte nicht geladen werden. Bitte versuche es noch einmal.",
       ),
     ).toBeInTheDocument();
     expect(onSubmitException).not.toHaveBeenCalled();

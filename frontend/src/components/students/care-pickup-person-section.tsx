@@ -8,11 +8,8 @@ import { Button } from "~/components/ui/button";
 import { IconTile } from "~/components/ui/icon-tile";
 import { InsetPanel } from "~/components/ui/inset-panel";
 import { Input } from "~/components/ui/input";
-import { fetchStudentGuardians } from "~/lib/guardian-api";
 import type { GuardianWithRelationship } from "~/lib/guardian-helpers";
 import type { DayData as PickupDayData } from "~/lib/pickup-schedule-helpers";
-import { useSWRAuth } from "~/lib/swr";
-import { tenantContactKeys } from "~/lib/swr/tenant-contact-keys";
 
 /** Höchstlänge des Namens, wie im Backend. */
 const NAME_MAX_LENGTH = 120;
@@ -75,22 +72,17 @@ function pickupContacts(
 }
 
 export function CarePickupPersonSection({
-  studentId,
   pickupDay,
   draft,
   onDraftChange,
+  guardians,
 }: {
-  readonly studentId: string;
   readonly pickupDay: PickupDayData;
   readonly draft: PickupPersonDraft;
   readonly onDraftChange: (draft: PickupPersonDraft) => void;
+  readonly guardians: readonly GuardianWithRelationship[];
 }) {
-  // Dieselbe Liste wie bei den Erziehungsberechtigten des Kindes.
-  const guardians = useSWRAuth(
-    tenantContactKeys.studentGuardians(studentId),
-    () => fetchStudentGuardians(studentId),
-  );
-  const contacts = pickupContacts(guardians.data ?? [], pickupDay.weekday);
+  const contacts = pickupContacts(guardians, pickupDay.weekday);
   const stored = pickupDay.pickupPerson;
   const options: Array<readonly [string, string]> = [
     ["regular", "Wie immer"],

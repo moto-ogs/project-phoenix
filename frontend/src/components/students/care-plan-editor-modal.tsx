@@ -20,6 +20,7 @@ import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { isReadStateRefusal } from "~/lib/api-error";
+import { fetchStudentGuardians } from "~/lib/guardian-api";
 import {
   type ArrivalDayData,
   formatShortDate,
@@ -39,6 +40,8 @@ import { parentsConcept } from "~/lib/concepts/parents";
 import { pickupConcept } from "~/lib/concepts/pickup";
 import { IconTile } from "~/components/ui/icon-tile";
 import { InsetPanel } from "~/components/ui/inset-panel";
+import { useSWRAuth } from "~/lib/swr";
+import { tenantContactKeys } from "~/lib/swr/tenant-contact-keys";
 import {
   CarePickupPersonSection,
   pickupPersonChanged,
@@ -186,6 +189,13 @@ export function CarePlanEditorModal({
   const [pickupPersonDraft, setPickupPersonDraft] = useState(
     pickupPersonInitialState(null),
   );
+  // Dieselbe Liste wie bei den Erziehungsberechtigten des Kindes. Der Dialog
+  // braucht ihren Zustand auch beim Speichern, damit ein Ladefehler nicht wie
+  // eine absichtlich leere Liste behandelt wird.
+  const pickupPersonGuardians = useSWRAuth(
+    isOpen && studentId ? tenantContactKeys.studentGuardians(studentId) : null,
+    () => (studentId ? fetchStudentGuardians(studentId) : Promise.resolve([])),
+  );
   // Welche wartende Aktion das Panel sperrt; nur für die Ladetexte.
   const [runningAction, setRunningAction] = useState<
     "save" | "resetPickup" | "deleteNote" | null
@@ -294,6 +304,22 @@ export function CarePlanEditorModal({
     }
     if (pickupPersonIsChanged && !pickupPersonSubmit) {
       errors.invalid("Bitte gib den Namen der Person ein, die abholt.");
+      return;
+    }
+    if (pickupPersonIsChanged && studentId && pickupPersonGuardians.error) {
+      errors.invalid(
+        "Die Liste der Abholpersonen konnte nicht geladen werden. Bitte versuche es noch einmal.",
+      );
+      return;
+    }
+    if (
+      pickupPersonIsChanged &&
+      studentId &&
+      pickupPersonGuardians.data === undefined
+    ) {
+      errors.invalid(
+        "Die Abholpersonen werden noch geladen. Bitte warte kurz.",
+      );
       return;
     }
     if (
@@ -552,10 +578,10 @@ export function CarePlanEditorModal({
               />
               {studentId ? (
                 <CarePickupPersonSection
-                  studentId={studentId}
                   pickupDay={pickupDay}
                   draft={pickupPersonDraft}
                   onDraftChange={setPickupPersonDraft}
+                  guardians={pickupPersonGuardians.data ?? []}
                 />
               ) : null}
               {pickupPulledForward(pickupMode, pickupTime, pickupDay) ? (
