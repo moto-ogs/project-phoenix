@@ -1590,7 +1590,7 @@ export const ERROR_CATALOG = {
       "timetable.activity_not_owner":
         "Du kannst nur Aktivitäten ändern, die du angelegt hast oder betreust.",
       "timetable.activity_system_protected":
-        "Diese Aktivität gehört fest zu moto. Name und Kategorie bleiben, wie sie sind, und sie lässt sich nicht löschen.",
+        "Diese Aktivität gehört fest zu moto. Du kannst ihren Namen und ihre Kategorie nicht ändern und sie nicht löschen.",
       "timetable.activity_template_protected":
         "Diese Aktivität ist ein Regeltermin. Bitte ändere sie im Betreuungsplan.",
       "timetable.ambiguous_template_instance_delete":

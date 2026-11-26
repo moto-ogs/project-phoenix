@@ -28,6 +28,7 @@ describe("buildActivityFormSections", () => {
     const sections = buildActivityFormSections({
       ...baseActivity,
       name: "Schulhof Freispiel",
+      is_system: true,
     });
     const nameField = sections
       .flatMap((section) => section.fields)
@@ -43,6 +44,7 @@ describe("buildActivityFormSections", () => {
     const sections = buildActivityFormSections({
       ...baseActivity,
       name: "WC",
+      is_system: true,
       ag_category_id: "7",
       category_name: "WC",
     });
