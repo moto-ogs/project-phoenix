@@ -31,7 +31,6 @@ type HolidayAllocationStore interface {
 	// LockHolidayCriteriaCatalog keeps ranking and decision snapshots on the
 	// same catalog until the transaction ends, including an empty catalog.
 	LockHolidayCriteriaCatalog(ctx context.Context, organizationID int64) error
-	ShareHolidayCriteriaCatalog(ctx context.Context, organizationID int64) error
 	ReadHolidayWeekPlacementCounts(ctx context.Context, organizationID, periodID int64) ([]enrollment.HolidayWeekPlaces, error)
 	ReadHolidayCriteria(ctx context.Context, organizationID int64) ([]enrollment.HolidayCriterion, error)
 	ReadHolidayCriteriaCatalog(ctx context.Context, organizationID int64) (enrollment.HolidayCriteriaCatalog, error)
@@ -200,9 +199,6 @@ func (a *HolidayAllocation) HolidayAllocationBoard(ctx context.Context, reviewer
 	if err != nil {
 		return enrollment.HolidayAllocationBoard{}, err
 	}
-	if err := a.review.store.ShareHolidayCriteriaCatalog(ctx, reviewer.OrganizationID); err != nil {
-		return enrollment.HolidayAllocationBoard{}, err
-	}
 	board, err := a.board(ctx, reviewer.OrganizationID, period)
 	if err != nil {
 		return enrollment.HolidayAllocationBoard{}, err
@@ -234,7 +230,9 @@ func (a *HolidayAllocation) criteriaPeriod(ctx context.Context, reviewer enrollm
 	return period, nil
 }
 
-// board reads the allocation list under the catalog lock: five statements
+// board reads the allocation list. A read takes no catalog lock: it would
+// wait behind a decision that holds the period, which the read's audit
+// entry needs (a decision reads it under its own lock). Five statements
 // for any number of weeks and bookings.
 func (a *HolidayAllocation) board(ctx context.Context, organizationID int64, period enrollment.HolidayPeriod) (enrollment.HolidayAllocationBoard, error) {
 	store := a.review.store

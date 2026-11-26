@@ -54,15 +54,55 @@ export function criterionLabel(
     : criterion.name;
 }
 
-/** The sentence that explains the order of the list, per way of counting. */
-export const RANKING_EXPLANATION: Record<HolidayCriteriaRanking, string> = {
+const RANKING_EXPLANATION: Record<HolidayCriteriaRanking, string> = {
   priority:
-    "Zuerst zählt das Kriterium mit der höchsten Priorität, dann das nächste. Bei Gleichstand zählt der Eingang. Du entscheidest.",
+    "Zuerst zählt das Kriterium mit der höchsten Priorität, dann das nächste.",
   equal:
-    "Jedes Kriterium zählt gleich viel. Wer mehr Kriterien erfüllt, steht weiter oben. Bei Gleichstand zählt der Eingang. Du entscheidest.",
+    "Jedes Kriterium zählt gleich viel. Wer mehr Kriterien erfüllt, steht weiter oben.",
   points:
-    "Jedes Kriterium bringt Punkte. Wer mehr Punkte hat, steht weiter oben. Bei Gleichstand zählt der Eingang. Du entscheidest.",
+    "Jedes Kriterium bringt Punkte. Wer mehr Punkte hat, steht weiter oben.",
 };
+
+/** A period that takes the holiday care wish into account (#4703) lists it. */
+function hasWishRule(criteria: readonly HolidayAllocationCriterion[]): boolean {
+  return criteria.some(
+    (criterion) => criterion.id === HOLIDAY_WISH_CRITERION_ID,
+  );
+}
+
+/**
+ * The sentences that explain the order of the list. By priority the holiday
+ * care wish is criterion 1 of the list. Where a total decides, the wish is
+ * no part of it: a child whose wish is „Nein“ stands behind the others
+ * whatever it reaches, and the explanation says so.
+ */
+export function rankingExplanation(
+  ranking: HolidayCriteriaRanking,
+  criteria: readonly HolidayAllocationCriterion[],
+): string {
+  const wish =
+    ranking !== "priority" && hasWishRule(criteria)
+      ? " Kinder ohne Ferienwunsch in der OGS-Anmeldung stehen dahinter."
+      : "";
+  return `${RANKING_EXPLANATION[ranking]}${wish} Bei Gleichstand zählt der Eingang. Du entscheidest.`;
+}
+
+/**
+ * The entry waits behind the others for its holiday care wish „Nein“. Only
+ * where a total decides: by priority the wish is criterion 1 like any other.
+ */
+export function waitsBehindForWish(
+  entry: HolidayAllocationEntry,
+  ranking: HolidayCriteriaRanking,
+): boolean {
+  return (
+    ranking !== "priority" &&
+    entry.criteria.some(
+      (value) =>
+        value.criterionId === HOLIDAY_WISH_CRITERION_ID && value.value === "no",
+    )
+  );
+}
 
 /**
  * What an entry reaches, as the line above its criteria: „2 von 3 Kriterien

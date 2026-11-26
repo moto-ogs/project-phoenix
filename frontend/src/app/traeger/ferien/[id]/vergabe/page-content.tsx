@@ -19,12 +19,12 @@ import {
 } from "~/components/traeger/holiday-allocation-decision-modal";
 import { HolidayAllocationHistory } from "~/components/traeger/holiday-allocation-history";
 import {
-  RANKING_EXPLANATION,
   criterionLabel,
   openWeeks,
   proposalDecisions,
   proposalSummary,
   proposalSummaryText,
+  rankingExplanation,
 } from "~/components/traeger/holiday-allocation-model";
 import { HolidayAllocationWeekCard } from "~/components/traeger/holiday-allocation-week";
 import {
@@ -330,7 +330,7 @@ export default function TraegerHolidayAllocationPage() {
         <>
           <SectionCard
             title="So sortiert moto vor"
-            description={RANKING_EXPLANATION[board.ranking]}
+            description={rankingExplanation(board.ranking, board.criteria)}
             action={
               <ButtonLink
                 href={traegerPath("/traeger/ferien/kriterien")}

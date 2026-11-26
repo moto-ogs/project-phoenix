@@ -16,7 +16,9 @@ import {
   proposalDecisions,
   proposalSummary,
   proposalSummaryText,
+  rankingExplanation,
   scoreText,
+  waitsBehindForWish,
 } from "./holiday-allocation-model";
 
 describe("holiday allocation model (#4700)", () => {
@@ -198,5 +200,29 @@ describe("holiday allocation model (#4700)", () => {
         criteriaMet: [],
       }),
     ).toBe("–");
+  });
+
+  // The holiday care wish (#4703) is no part of a total: a „Nein“ waits
+  // behind whatever the child reaches, and the list has to say so.
+  it("says that a wish „Nein“ waits behind where a total decides", () => {
+    const board = allocationBoard();
+    const wish = { ...board.criteria[0]!, id: "0", name: "Ferienwunsch" };
+    expect(rankingExplanation("points", board.criteria)).toBe(
+      "Jedes Kriterium bringt Punkte. Wer mehr Punkte hat, steht weiter oben. Bei Gleichstand zählt der Eingang. Du entscheidest.",
+    );
+    expect(rankingExplanation("points", [wish, ...board.criteria])).toBe(
+      "Jedes Kriterium bringt Punkte. Wer mehr Punkte hat, steht weiter oben. Kinder ohne Ferienwunsch in der OGS-Anmeldung stehen dahinter. Bei Gleichstand zählt der Eingang. Du entscheidest.",
+    );
+    // By priority the wish is criterion 1 of the list, as before.
+    expect(rankingExplanation("priority", [wish, ...board.criteria])).toBe(
+      "Zuerst zählt das Kriterium mit der höchsten Priorität, dann das nächste. Bei Gleichstand zählt der Eingang. Du entscheidest.",
+    );
+
+    const no = allocationEntry({
+      criteria: [{ criterionId: "0", value: "no", source: "parent" }],
+    });
+    expect(waitsBehindForWish(no, "equal")).toBe(true);
+    expect(waitsBehindForWish(no, "priority")).toBe(false);
+    expect(waitsBehindForWish(allocationEntry(), "equal")).toBe(false);
   });
 });

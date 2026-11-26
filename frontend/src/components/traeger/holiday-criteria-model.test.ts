@@ -161,8 +161,14 @@ describe("holiday criteria model (#4700)", () => {
     expect(validateCriteria(drafts, "points")).toEqual({
       "criteria.1.points": "Bitte gib 1 bis 100 Punkte ein.",
     });
-    // Hidden points that are no number go out as 1, never as an error.
-    expect(inputsFromDrafts(drafts)[1]?.points).toBe(1);
+    // Hidden points that are no number go out as 0: the stored points stay,
+    // so a later switch back to points finds them unchanged.
+    expect(inputsFromDrafts(drafts)[1]?.points).toBe(0);
+  });
+
+  it("builds the same draft from the same read, so a change taken back leaves none", () => {
+    const read = { criteria: STORED, ranking: "equal" as const, version: "v" };
+    expect(draftFromRead(read)).toEqual(draftFromRead(read));
   });
 
   it("notices changed points and adds up what a child can reach", () => {

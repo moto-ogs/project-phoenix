@@ -94,10 +94,8 @@ const (
    updated_at = EXCLUDED.updated_at, updated_by_account_id = EXCLUDED.updated_by_account_id`
 	// The catalog lock serializes replacements even before its first row
 	// exists. Row locks also coordinate with concurrent first answers.
-	holidayCriteriaCatalogLockKey    = `hashtextextended('enrollment.holiday_allocation_criteria:' || ?::text, 0)`
-	lockHolidayCriteriaCatalogQuery  = `SELECT pg_advisory_xact_lock(` + holidayCriteriaCatalogLockKey + `)`
-	shareHolidayCriteriaCatalogQuery = `SELECT pg_advisory_xact_lock_shared(` + holidayCriteriaCatalogLockKey + `)`
-	lockHolidayCriteriaQuery         = `SELECT id FROM enrollment.holiday_allocation_criteria
+	lockHolidayCriteriaCatalogQuery = `SELECT pg_advisory_xact_lock(hashtextextended('enrollment.holiday_allocation_criteria:' || ?::text, 0))`
+	lockHolidayCriteriaQuery        = `SELECT id FROM enrollment.holiday_allocation_criteria
 		WHERE organization_id = ? AND archived_at IS NULL ORDER BY id FOR UPDATE`
 	insertHolidayCriterionAnswersQuery = `INSERT INTO enrollment.holiday_registration_criteria
 			(organization_id, holiday_period_id, holiday_registration_id, holiday_registration_child_id, criterion_id, stated)
@@ -194,19 +192,6 @@ func (s *HolidayRegistrationStore) LockHolidayCriteriaCatalog(ctx context.Contex
 		return err
 	}
 	if _, err := db.NewRaw(lockHolidayCriteriaCatalogQuery, organizationID).Exec(ctx); err != nil {
-		return fmt.Errorf("enrollment postgres: lock holiday criteria catalog: %w", err)
-	}
-	return nil
-}
-
-// ShareHolidayCriteriaCatalog prevents a concurrent catalog write from
-// changing the sort between reading the weights and the pending bookings.
-func (s *HolidayRegistrationStore) ShareHolidayCriteriaCatalog(ctx context.Context, organizationID int64) error {
-	db, err := traegerDB(ctx, organizationID)
-	if err != nil {
-		return err
-	}
-	if _, err := db.NewRaw(shareHolidayCriteriaCatalogQuery, organizationID).Exec(ctx); err != nil {
 		return fmt.Errorf("enrollment postgres: lock holiday criteria catalog: %w", err)
 	}
 	return nil

@@ -13,7 +13,7 @@ func init() {
 	MigrationRegistry.Register(&Migration{
 		Version:     holidayCriteriaRankingVersion,
 		Description: "Ferien: Kriterien nach Reihenfolge, Anzahl oder Punkten werten (#8135)",
-		DependsOn:   []string{studentPickupPersonsVersion, holidayCriteriaAllocationVersion},
+		DependsOn:   []string{holidayCriteriaAllocationVersion}, // the criteria and decisions it extends
 	})
 	Migrations.MustRegister(holidayCriteriaRankingUp, holidayCriteriaRankingDown)
 }

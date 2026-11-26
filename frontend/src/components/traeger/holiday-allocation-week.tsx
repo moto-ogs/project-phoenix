@@ -37,6 +37,7 @@ import {
   criterionLabel,
   freePlacesText,
   scoreText,
+  waitsBehindForWish,
 } from "./holiday-allocation-model";
 import { HOLIDAY_PENDING_TONE } from "./holiday-placement";
 import { formatHolidayWeek } from "./holiday-registration-format";
@@ -60,13 +61,20 @@ function AllocationCriteriaChips({
 }>) {
   const chips = allocationChips(entry, criteria);
   const score = scoreText(ranking, entry.score, maxScore);
-  if (!score && chips.length === 0) {
+  const behind = waitsBehindForWish(entry, ranking);
+  if (!score && !behind && chips.length === 0) {
     return <p className="text-xs text-gray-500">Kein Kriterium erfüllt</p>;
   }
   return (
     <div className="space-y-1.5">
       {score ? (
         <p className="text-sm font-medium text-gray-900">{score}</p>
+      ) : null}
+      {behind ? (
+        <p className="text-sm text-gray-600">
+          Kein Ferienwunsch in der OGS-Anmeldung. Steht darum hinter den
+          anderen.
+        </p>
       ) : null}
       {chips.length > 0 ? (
         <AllocationChipList chips={chips} ranking={ranking} />

@@ -130,7 +130,9 @@ export function draftsFromCriteria(
   return [...criteria]
     .sort((a, b) => a.position - b.position)
     .map((criterion) => ({
-      key: nextKey(),
+      // Stable for a stored criterion, so the draft of an unchanged read is
+      // the same each time and a change taken back leaves no touched draft.
+      key: `stored-${criterion.id}`,
       id: criterion.id,
       name: criterion.name,
       question: criterion.question,
@@ -233,7 +235,8 @@ export function validateCriteria(
 
 /**
  * The request body in the order of the list. Points that are no number can
- * only be left behind a ranking that hides them; they go out as 1.
+ * only be left behind a ranking that hides them; they go out as 0, which
+ * keeps the stored points of a criterion and gives a new one 1.
  */
 export function inputsFromDrafts(
   drafts: readonly CriterionDraft[],
@@ -244,7 +247,7 @@ export function inputsFromDrafts(
     question: draft.question.trim(),
     scope: draft.scope,
     active: draft.active,
-    points: parsePoints(draft.points) ?? 1,
+    points: parsePoints(draft.points) ?? 0,
   }));
 }
 
