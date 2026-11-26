@@ -7443,13 +7443,6 @@
     },
     {
       "build": "production",
-      "evidence": "func (a requestDecisionAdapter) LockStudentAndExceptionDay(ctx context.Context, studentID int64, date string) error {\n\treturn a.s.DayLocker.LockStudentAndExceptionDay(ctx, studentID, date)\n}",
-      "form": "forward-debt",
-      "id": "roots/owners/requestDecisionAdapter.LockStudentAndExceptionDay",
-      "owner": "roots"
-    },
-    {
-      "build": "production",
       "evidence": "func (a requestDecisionAdapter) Snapshot(ctx context.Context, request *carerequests.Request) *carerequests.DecisionSnapshot {\n\treturn a.s.Requests.diffs.Snapshot(ctx, request)\n}",
       "form": "forward-debt",
       "id": "roots/owners/requestDecisionAdapter.Snapshot",
