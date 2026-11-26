@@ -39,11 +39,12 @@ func TestRoomClosuresGoWithTheSchoolAndRollBack(t *testing.T) {
 	require.Equal(t, "db_done", result.Status, "preflight, deletion and residual checks pass: %v", result.ErrorCode)
 	assert.EqualValues(t, 1, result.RowCounts["facilities.room_closures"], "the one closure of the school")
 
-	// Pickup persons (#7655) and opening changes (#7654) follow the room
-	// closures at the head, so roll them back first just as the migration
-	// runner does.
+	// Pickup persons (#7655), opening changes (#7654), and days without lunch
+	// (#7656) follow the room closures at the head, so roll them back first
+	// just as the migration runner does.
 	require.NoError(t, studentPickupPersonsDown(ctx, db))
 	require.NoError(t, openingChangesDown(ctx, db))
+	require.NoError(t, mealCancellationsDown(ctx, db))
 	require.NoError(t, roomClosuresDown(ctx, db))
 	var exists bool
 	require.NoError(t, db.NewRaw(`SELECT to_regclass('facilities.room_closures') IS NOT NULL`).Scan(ctx, &exists))
@@ -54,6 +55,8 @@ func TestRoomClosuresGoWithTheSchoolAndRollBack(t *testing.T) {
 	require.Equal(t, "db_done", eraseSchoolAsCLI(t, db, other, beginErasure(t, db, other)).Status, "the erasure works after the rollback")
 
 	require.NoError(t, roomClosuresUp(ctx, db), "the migration applies again")
+	require.NoError(t, mealCancellationsUp(ctx, db), "the later migration applies again")
 	require.NoError(t, openingChangesUp(ctx, db), "the later migration applies again")
+	require.NoError(t, studentPickupPersonsUp(ctx, db), "the later migration applies again")
 	require.NoError(t, applyRepeatableDefinitions(ctx, db))
 }
