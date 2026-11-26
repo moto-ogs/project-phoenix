@@ -830,17 +830,14 @@ function NowCard({
         {now.presentCount === 1 ? "Kind da" : "Kinder da"}
       </span>
     ) : null;
-  const extra = (
-    <>
-      {present}
-      {stampText ? (
-        <StatusBadge
-          tone={stamp.state.kind === "in" ? "green" : "gray"}
-          label={stampText}
-        />
-      ) : null}
-    </>
-  );
+  // Die Kinder da stehen rechts in der Titelzeile, der Stempelzustand am
+  // Ende der Angabenzeile.
+  const extra = stampText ? (
+    <StatusBadge
+      tone={stamp.state.kind === "in" ? "green" : "gray"}
+      label={stampText}
+    />
+  ) : undefined;
   // Läuft ein eigener Block, der in den Einsätzen fehlt (spontan gestartet),
   // nennt die Karte ihn statt „alles erledigt“ oder „Als Nächstes“.
   const runningOverride =
@@ -908,6 +905,7 @@ function NowCard({
             next={now.state.kind === "own_next" ? now.state.block : null}
             lead={time}
             extra={extra}
+            aside={present}
           />
         ) : (
           <NowText
@@ -918,6 +916,7 @@ function NowCard({
             withoutDate
             lead={time}
             extra={extra}
+            aside={present}
           />
         )}
         {footer ? (
