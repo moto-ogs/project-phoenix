@@ -491,7 +491,7 @@ describe("HolidayRegistrationForm", () => {
         binding_confirmed: true,
         custody_confirmed: true,
         declaration_name: "Eva Maria Muster",
-        consent_version: 6,
+        consent_version: 7,
         retention_days: 365,
       }),
     );
@@ -1672,7 +1672,7 @@ describe("HolidayRegistrationForm questions of the Träger (#5198)", () => {
     ).toBeInTheDocument();
     fireEvent.click(
       screen.getByLabelText(
-        /^Ich bin einverstanden: Der Träger und die OGS sehen die Gesundheitsangaben meiner Kinder\./,
+        /^Ich bin einverstanden: Der Träger und das Betreuungsteam sehen die Gesundheitsangaben meiner Kinder\./,
       ),
     );
     fireEvent.click(
@@ -1696,7 +1696,7 @@ describe("HolidayRegistrationForm questions of the Träger (#5198)", () => {
       "link-key",
       expect.objectContaining({
         form_version: 3,
-        consent_version: 6,
+        consent_version: 7,
         retention_days: 365,
         custom_data: { newsletter: "Aus der Zeitung" },
         health_consent: true,
@@ -1774,6 +1774,80 @@ describe("HolidayRegistrationForm questions of the Träger (#5198)", () => {
     expect(
       screen.getByLabelText(/Ich bin einverstanden, dass der Träger/),
     ).not.toBeChecked();
+  });
+  // #8136: the consent texts got a new version while the form was open. The
+  // form reads the offer again and the parent agrees to the new texts.
+  it("loads the offer again and asks for both consents when the consent texts are stale", async () => {
+    mockSubmit.mockRejectedValue(
+      new ApiError("validation failed", 400, {
+        code: "enrollment.holiday_registration_invalid",
+        errors: [{ field: "consent_version", reason: "not current" }],
+      }),
+    );
+    const reload = vi.fn().mockResolvedValue(undefined);
+    renderForm(null, offerWithQuestions, reload);
+    fillRegistration();
+    fireEvent.click(screen.getByRole("radio", { name: "Nein" }));
+    type(
+      screen.getByRole("textbox", {
+        name: /Wie haben Sie von den Ferien erfahren/,
+      }),
+      "Schule",
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Weiter zur Zusammenfassung" }),
+    );
+    await screen.findByText("Bitte prüfe deine Angaben");
+    fireEvent.click(screen.getByRole("button", { name: "Solve captcha" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Verbindlich anmelden" }),
+    );
+
+    await waitFor(() => expect(reload).toHaveBeenCalledTimes(1));
+    expect(
+      await screen.findByText(
+        "Der Träger hat das Formular gerade geändert. Bitte prüfe deine Angaben und sende die Anmeldung noch einmal.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByLabelText(/Ich bin einverstanden, dass der Träger/),
+    ).not.toBeChecked();
+  });
+  // #8136: ticks set while the old texts were still on screen do not count
+  // for the texts a reloaded offer shows.
+  it("asks for the consents again when the offer shows other consent texts", () => {
+    const form = (shown: HolidayRegistrationOffer) => (
+      <NextIntlClientProvider locale="de" messages={deMessages}>
+        <ToastProvider>
+          <HolidayRegistrationForm
+            token="link-key"
+            offer={shown}
+            family={null}
+          />
+        </ToastProvider>
+      </NextIntlClientProvider>
+    );
+    const { rerender } = render(form(offer));
+    fillRegistration();
+    const privacy = () =>
+      screen.getByLabelText(/Ich bin einverstanden, dass der Träger/);
+    expect(privacy()).toBeChecked();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Weiter zur Zusammenfassung" }),
+    );
+    expect(screen.getByText("Bitte prüfe deine Angaben")).toBeInTheDocument();
+
+    rerender(
+      form({
+        ...offer,
+        consentTexts: {
+          ...offer.consentTexts,
+          version: offer.consentTexts.version + 1,
+        },
+      }),
+    );
+    // Back on the form, where the boxes are.
+    expect(privacy()).not.toBeChecked();
   });
   // ADR 0311 rule 6: a failed read of the changed form says so instead of
   // claiming the parent sees the new form.
@@ -2255,7 +2329,7 @@ describe("required health fields (#6686)", () => {
     type(detail, " Asthmaspray bei Bedarf ");
     fireEvent.click(
       screen.getByLabelText(
-        /^Ich bin einverstanden: Der Träger und die OGS sehen die Gesundheitsangaben meiner Kinder\./,
+        /^Ich bin einverstanden: Der Träger und das Betreuungsteam sehen die Gesundheitsangaben meiner Kinder\./,
       ),
     );
     fireEvent.click(

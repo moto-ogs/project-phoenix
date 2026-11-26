@@ -65,7 +65,10 @@ function EnrollmentEditPageContent({ params, adjustOnly = false }: Props) {
     bootstrap: EnrollmentEditBootstrap;
   } | null>(null);
   const bootstrap = loaded?.token === token ? loaded.bootstrap : null;
-  useProvideCareFacilityTerm(bootstrap?.care_facility_term);
+  useProvideCareFacilityTerm(
+    bootstrap?.care_facility_term,
+    bootstrap?.care_facility_article,
+  );
   const [changeReason, setChangeReason] = useState("");
   const [loading, setLoading] = useState(true);
   const toast = useToast();

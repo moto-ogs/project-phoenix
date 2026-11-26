@@ -316,6 +316,7 @@ func (s *Rollovers) renewalMailPayload(ctx context.Context, newPhase *enrollment
 		enrollmentNative.EnrollmentPayloadLogoURL:              brand.LogoURL,
 		enrollmentNative.EnrollmentPayloadMotoLogoURL:          brand.MotoLogoURL,
 		enrollmentNative.EnrollmentPayloadCareFacilityTerm:     brand.CareFacilityTerm,
+		enrollmentNative.EnrollmentPayloadCareFacilityArticle:  brand.CareFacilityArticle,
 		enrollmentNative.EnrollmentPayloadChildNames:           childNames,
 		enrollmentNative.EnrollmentPayloadRecipientEmail:       req.GuardianEmail,
 		enrollmentNative.EnrollmentPayloadRolloverDeadline:     deadlineStr,

@@ -2,7 +2,7 @@
   "registerVersion": 1,
   "formatVersion": 1,
   "catalogVersion": 1,
-  "catalogSHA256": "8b646eefc5d0456e720a9b57c5db40d62b80ea4740b234c317272142335582e7",
+  "catalogSHA256": "52ecdf90dd79c1524a48dcca9ac4c786abd395a45e6c228709d69f924f457e8a",
   "about": "Dieses Register beschreibt das Rückgabepaket von moto: welche Tabellen und Felder es enthält, welche Typen sie haben, ob sie leer sein dürfen und wie die Tabellen verbunden sind. Es enthält keine Kundendaten. Jedes Paket enthält dieselbe Beschreibung für seine Tabellen als model.json. formatVersion und catalogSHA256 stehen auch in der manifest.json des Pakets.",
   "standards": [
     {
@@ -13179,6 +13179,57 @@
           "type": "bigint",
           "udt": "int8",
           "nullable": true
+        },
+        {
+          "name": "points",
+          "type": "smallint",
+          "udt": "int2",
+          "nullable": false
+        }
+      ],
+      "relationships": [
+        {
+          "column": "organization_id",
+          "targetTable": "platform.organizations",
+          "targetColumn": "id"
+        },
+        {
+          "column": "updated_by_account_id",
+          "targetTable": "auth.accounts",
+          "targetColumn": "id"
+        }
+      ],
+      "packages": [
+        "school",
+        "organization"
+      ]
+    },
+    {
+      "name": "enrollment.holiday_allocation_rules",
+      "columns": [
+        {
+          "name": "organization_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "criteria_ranking",
+          "type": "text",
+          "udt": "text",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": false
+        },
+        {
+          "name": "updated_by_account_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": true
         }
       ],
       "relationships": [
@@ -13290,6 +13341,24 @@
           "type": "timestamp with time zone",
           "udt": "timestamptz",
           "nullable": false
+        },
+        {
+          "name": "criteria_ranking",
+          "type": "text",
+          "udt": "text",
+          "nullable": false
+        },
+        {
+          "name": "score",
+          "type": "integer",
+          "udt": "int4",
+          "nullable": true
+        },
+        {
+          "name": "max_score",
+          "type": "integer",
+          "udt": "int4",
+          "nullable": true
         }
       ],
       "relationships": [
@@ -16559,6 +16628,12 @@
           "type": "character varying",
           "udt": "varchar",
           "nullable": false
+        },
+        {
+          "name": "agreed_from",
+          "type": "date",
+          "udt": "date",
+          "nullable": true
         }
       ],
       "relationships": [
@@ -17209,6 +17284,12 @@
           "type": "timestamp with time zone",
           "udt": "timestamptz",
           "nullable": false
+        },
+        {
+          "name": "change_request_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": true
         }
       ],
       "relationships": [
@@ -17410,6 +17491,12 @@
           "type": "timestamp with time zone",
           "udt": "timestamptz",
           "nullable": false
+        },
+        {
+          "name": "contract_version_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
         }
       ],
       "relationships": [
@@ -17417,6 +17504,16 @@
           "column": "contract_id",
           "targetTable": "care_contract.contracts",
           "targetColumn": "id"
+        },
+        {
+          "column": "contract_version_id",
+          "targetTable": "care_contract.contract_versions",
+          "targetColumn": "id"
+        },
+        {
+          "column": "organization_id",
+          "targetTable": "care_contract.contract_versions",
+          "targetColumn": "organization_id"
         },
         {
           "column": "organization_id",
@@ -24239,6 +24336,12 @@
           "type": "timestamp with time zone",
           "udt": "timestamptz",
           "nullable": true
+        },
+        {
+          "name": "submitted_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": false
         }
       ],
       "relationships": [

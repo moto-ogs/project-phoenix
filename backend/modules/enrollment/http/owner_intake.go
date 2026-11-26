@@ -101,6 +101,7 @@ type EditDraft struct {
 	CareOfferingsEnabled bool
 	GradeLevelMax        int
 	CareFacilityTerm     string
+	CareFacilityArticle  string
 }
 
 // RequestService is the intake these routes and the parents portal call.
@@ -222,7 +223,7 @@ func editDraftValue(draft *capability.EditDraft) (*EditDraft, error) {
 		Phase: draft.Phase, School: draft.School, Schema: draft.Schema, OpenOfferings: offerings,
 		LegalTexts: draft.LegalTexts, EditMode: draft.EditMode, CollectSchoolClass: draft.CollectSchoolClass,
 		CollectGradeLevel: draft.CollectGradeLevel, CareOfferingsEnabled: draft.CareOfferingsEnabled, GradeLevelMax: draft.GradeLevelMax,
-		CareFacilityTerm: draft.CareFacilityTerm,
+		CareFacilityTerm: draft.CareFacilityTerm, CareFacilityArticle: draft.CareFacilityArticle,
 	}, nil
 }
 

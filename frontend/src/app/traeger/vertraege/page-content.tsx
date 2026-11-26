@@ -255,6 +255,14 @@ const COLUMNS: DataTableColumn<CareContractSummary>[] = [
           <span className="text-moto-orange-strong text-sm font-medium">
             Ende festlegen
           </span>
+        ) : contract.changeAwaitsSignature ? (
+          // A changed version waits for the parents (#4816): a task of the
+          // contract, shown where the office scans the list.
+          <StatusBadge
+            label="Änderung wartet auf Unterschrift"
+            tone="warning"
+            size="xs"
+          />
         ) : contract.status === "widerrufen" ? null : contract.concluded ? (
           // An unknown day of a taken-over contract (#7767) is no date.
           knownConclusionAt(contract.concluded) ? (

@@ -50,6 +50,16 @@ export const WideContent: Story = {
   },
 };
 
+export const HorizontalReadOnlyContent: Story = {
+  args: {
+    children: (
+      <p className="whitespace-nowrap">
+        {"Dieser Inhalt lässt sich seitlich lesen. ".repeat(20)}
+      </p>
+    ),
+  },
+};
+
 // Eine Story je Größe, die Aufrufer setzen.
 export const SizeMd: Story = {
   args: {

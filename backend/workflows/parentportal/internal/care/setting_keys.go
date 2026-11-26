@@ -6,6 +6,7 @@ import "github.com/moto-ogs/project-phoenix/modules/careplan/parentrequests"
 // The root binds the port to the tenant registry; no defaults are supplied here.
 const (
 	KeyEnrollmentBookingsAuthoritative  = "enrollment.bookings_authoritative"
+	KeyEnrollmentCareFacilityArticle    = "enrollment.care_facility_article"
 	KeyEnrollmentCareFacilityTerm       = "enrollment.care_facility_term"
 	KeyEnrollmentCareOfferingsEnabled   = "enrollment.care_offerings_enabled"
 	KeyEnrollmentOfferingChangesEnabled = "enrollment.offering_changes_enabled"

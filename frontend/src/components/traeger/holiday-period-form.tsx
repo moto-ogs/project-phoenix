@@ -44,7 +44,10 @@ import {
 import { HolidayAcceptanceMailField } from "./holiday-acceptance-mail-field";
 import { HolidayAllocationModeField } from "./holiday-allocation-mode-field";
 import { HolidayWeekEditor } from "./holiday-week-editor";
-import type { HolidayCriterion } from "~/lib/traeger-holiday-allocation-api";
+import type {
+  HolidayCriteriaRanking,
+  HolidayCriterion,
+} from "~/lib/traeger-holiday-allocation-api";
 import { weekNoCareDays } from "./use-week-no-care-days";
 import type { TraegerCalendar } from "~/lib/traeger-closing-days";
 
@@ -92,6 +95,7 @@ export function HolidayPeriodForm({
   onDirtyChange,
   calendar,
   criteria,
+  criteriaRanking,
   reload,
 }: Readonly<{
   /** The stored period; without it the form creates a new one. */
@@ -105,6 +109,8 @@ export function HolidayPeriodForm({
   calendar?: TraegerCalendar;
   /** The Träger's criteria for the hint at the allocation (#4700). */
   criteria?: readonly HolidayCriterion[];
+  /** How those criteria count (#8135). */
+  criteriaRanking?: HolidayCriteriaRanking;
   /**
    * Reads the stored period again and rejects when that fails: after a
    * refused save the form shows it (ADR 0311).
@@ -425,6 +431,7 @@ export function HolidayPeriodForm({
               value={draft.allocationMode}
               locked={period?.allocationModeLocked ?? false}
               criteria={criteria}
+              ranking={criteriaRanking}
               onChange={(allocationMode) =>
                 setDraft({ ...draft, allocationMode })
               }

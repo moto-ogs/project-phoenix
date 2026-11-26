@@ -117,7 +117,8 @@ func (d parentContractDocuments) ListContractDocuments(ctx context.Context, orga
 			Number: "Nr. " + strconv.FormatInt(contract.ID, 10), PeriodName: contract.ModulesText + " · " + contract.SchoolName,
 			ServiceFrom: contract.EffectiveOn, ChildNames: contract.ChildNames, SentAt: contract.SentAt,
 			ContractStatus: contract.Status, SignedAt: contract.SignedAt, CanSign: contract.CanSign, Replaced: contract.Replaced,
-			EndsOn: contract.EndsOn, CanEndContract: contract.CanEnd, CanWithdrawContract: contract.CanWithdraw,
+			ChangeAwaitsSignature: contract.ChangeAwaitsSignature,
+			EndsOn:                contract.EndsOn, CanEndContract: contract.CanEnd, CanWithdrawContract: contract.CanWithdraw,
 		}
 	}
 	return documents, nil

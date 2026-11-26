@@ -27,6 +27,7 @@ type editDraft struct {
 	capabilities  enrollmentNative.FormCapabilities
 	gradeLevelMax int
 	careTerm      string
+	careArticle   string
 }
 
 // EditDraft loads the persisted request that reopens the public form. It is
@@ -96,6 +97,9 @@ func (s *Intake) loadDraftForm(ctx context.Context, draft *editDraft) error {
 	}
 	if draft.careTerm, err = s.deps.Settings.CareFacilityTerm(ctx); err != nil {
 		return fmt.Errorf("edit draft: resolve care facility term: %w", err)
+	}
+	if draft.careArticle, err = s.deps.Settings.CareFacilityArticle(ctx); err != nil {
+		return fmt.Errorf("edit draft: resolve care facility article: %w", err)
 	}
 	if err := s.loadDraftPhase(ctx, draft); err != nil {
 		return err
@@ -214,6 +218,6 @@ func (d *editDraft) public() (*enrollmentNative.EditDraft, error) {
 		LegalTexts: d.legalTexts, EditMode: d.editMode,
 		CollectSchoolClass: d.capabilities.CollectSchoolClass, CollectGradeLevel: d.capabilities.CollectGradeLevel,
 		CareOfferingsEnabled: d.capabilities.CareOfferingsEnabled, GradeLevelMax: d.gradeLevelMax,
-		CareFacilityTerm: d.careTerm,
+		CareFacilityTerm: d.careTerm, CareFacilityArticle: d.careArticle,
 	}, nil
 }

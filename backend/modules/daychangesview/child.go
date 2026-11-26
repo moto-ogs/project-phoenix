@@ -42,7 +42,9 @@ type ChildDependencies struct {
 	Classes ChildChangeSource
 	// Closing is the closing days of the child's school.
 	Closing ChildChangeSource
-	Logger  *slog.Logger
+	// Meals is Essen: lunch cancelled on a day the child is booked (#8160).
+	Meals  ChildChangeSource
+	Logger *slog.Logger
 }
 
 // ChildQuery reads the day of one child.
@@ -57,7 +59,7 @@ type childView struct {
 
 // NewChild builds the child's day of the projection.
 func NewChild(deps ChildDependencies) (ChildQuery, error) {
-	if deps.Today == nil || deps.Isolation == nil || deps.Children == nil || deps.Activities == nil || deps.Classes == nil || deps.Closing == nil {
+	if deps.Today == nil || deps.Isolation == nil || deps.Children == nil || deps.Activities == nil || deps.Classes == nil || deps.Closing == nil || deps.Meals == nil {
 		return nil, ErrDependencies
 	}
 	logger := deps.Logger
@@ -82,6 +84,7 @@ func (v *childView) ChildDay(ctx context.Context, child ChildFilter) (Overview, 
 			{source: SourceClosingDays, read: bind(v.deps.Closing)},
 			{source: SourceActivities, read: bind(v.deps.Activities)},
 			{source: SourceClasses, read: bind(v.deps.Classes)},
+			{source: SourceMealPlan, read: bind(v.deps.Meals)},
 		},
 	}
 	return read.Today(ctx)

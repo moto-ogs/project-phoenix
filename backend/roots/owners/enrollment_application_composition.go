@@ -17,6 +17,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/schoolmembership"
 	"github.com/moto-ogs/project-phoenix/modules/securityruntime"
+	settingsValues "github.com/moto-ogs/project-phoenix/modules/settings"
 	configModels "github.com/moto-ogs/project-phoenix/modules/settings/records"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/workflows/parentportal"
@@ -80,6 +81,10 @@ func (s enrollmentNotificationSettings) NotifyPerDecision(ctx context.Context) (
 
 func (s enrollmentNotificationSettings) CareFacilityTerm(ctx context.Context) (string, error) {
 	return s.settings.ResolveString(ctx, configModels.KeyEnrollmentCareFacilityTerm)
+}
+
+func (s enrollmentNotificationSettings) CareFacilityArticle(ctx context.Context) (string, error) {
+	return settingsValues.ResolveCareFacilityArticle(ctx, s.settings)
 }
 
 // EnrollmentCaptchaSettings resolves whether the school in context requires

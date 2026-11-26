@@ -19,11 +19,12 @@ import {
 } from "~/components/traeger/holiday-allocation-decision-modal";
 import { HolidayAllocationHistory } from "~/components/traeger/holiday-allocation-history";
 import {
-  criterionRankLabel,
+  criterionLabel,
   openWeeks,
   proposalDecisions,
   proposalSummary,
   proposalSummaryText,
+  rankingExplanation,
 } from "~/components/traeger/holiday-allocation-model";
 import { HolidayAllocationWeekCard } from "~/components/traeger/holiday-allocation-week";
 import {
@@ -329,7 +330,7 @@ export default function TraegerHolidayAllocationPage() {
         <>
           <SectionCard
             title="So sortiert moto vor"
-            description="Zuerst zählt das Kriterium mit der höchsten Priorität, dann das nächste. Bei Gleichstand zählt der Eingang. Du entscheidest."
+            description={rankingExplanation(board.ranking, board.criteria)}
             action={
               <ButtonLink
                 href={traegerPath("/traeger/ferien/kriterien")}
@@ -351,7 +352,11 @@ export default function TraegerHolidayAllocationPage() {
             ) : (
               <ol
                 className="flex flex-wrap gap-2"
-                aria-label="Kriterien nach Priorität"
+                aria-label={
+                  board.ranking === "priority"
+                    ? "Kriterien nach Priorität"
+                    : "Kriterien"
+                }
               >
                 {board.criteria.map((criterion) => (
                   <li key={criterion.id} className="max-w-full min-w-0">
@@ -359,10 +364,7 @@ export default function TraegerHolidayAllocationPage() {
                       wrap
                       className="wrap-anywhere"
                       tone="gray"
-                      label={criterionRankLabel(
-                        criterion.position,
-                        criterion.name,
-                      )}
+                      label={criterionLabel(criterion, board.ranking)}
                     />
                   </li>
                 ))}
@@ -391,6 +393,8 @@ export default function TraegerHolidayAllocationPage() {
                   week={week}
                   hostSchoolName={names.get(week.hostSchoolId) ?? "Schule"}
                   criteria={board.criteria}
+                  ranking={board.ranking}
+                  maxScore={board.maxScore}
                   busy={busy}
                   onDecide={(entry, placement) =>
                     setTarget({ week, entry, placement })

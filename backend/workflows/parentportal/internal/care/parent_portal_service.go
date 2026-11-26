@@ -159,6 +159,9 @@ type ChildFeatureFlags struct {
 	// the portal names each child's care with its own school's term, also for
 	// a child whose care has ended.
 	CareFacilityTerm string
+	// CareFacilityArticle is the article the German texts decline that
+	// term with: "der", "die" or "das" (#8136).
+	CareFacilityArticle string
 }
 
 // CareException is the parent-facing projection of a single day's pickup and/or

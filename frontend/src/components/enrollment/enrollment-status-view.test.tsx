@@ -103,6 +103,7 @@ function status(overrides: Partial<StatusResponse> = {}): StatusResponse {
     ],
     signature_required: false,
     care_facility_term: "",
+    care_facility_article: "die",
     ...overrides,
   };
 }

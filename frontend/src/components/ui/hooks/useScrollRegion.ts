@@ -48,7 +48,9 @@ export function useScrollRegion(
     // extra tab stop then.
     const measure = () =>
       setScrolls(
-        element.scrollHeight > element.clientHeight + 1 && !hasTabStop(element),
+        (element.scrollHeight > element.clientHeight + 1 ||
+          element.scrollWidth > element.clientWidth + 1) &&
+          !hasTabStop(element),
       );
     const resize = new ResizeObserver(measure);
     resize.observe(element);

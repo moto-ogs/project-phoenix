@@ -25879,6 +25879,7 @@
         "class_dismissal_changed",
         "class_trip",
         "closing_day",
+        "meal_cancelled",
         "opening_changed"
       ]
     },
@@ -25888,7 +25889,8 @@
         "activities",
         "children",
         "classes",
-        "closing_days"
+        "closing_days",
+        "meal_plan"
       ]
     },
     {
@@ -28142,6 +28144,12 @@
         },
         {
           "name": "is_open",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "is_system",
           "schema": {
             "kind": "bool"
           }
@@ -34414,6 +34422,12 @@
         },
         {
           "name": "replaced",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "change_awaits_signature",
           "schema": {
             "kind": "bool"
           }
@@ -45739,6 +45753,12 @@
           "schema": {
             "kind": "string"
           }
+        },
+        {
+          "name": "care_facility_article",
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -48625,6 +48645,12 @@
           }
         },
         {
+          "name": "change_awaits_signature",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
           "name": "version",
           "schema": {
             "kind": "ref",
@@ -48675,6 +48701,17 @@
             "elem": {
               "kind": "ref",
               "ref": "Reminder"
+            }
+          }
+        },
+        {
+          "name": "version_signatures",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "VersionSignature"
             }
           }
         },
@@ -49724,6 +49761,13 @@
           "schema": {
             "kind": "bool"
           }
+        },
+        {
+          "name": "document_sha256",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -49982,6 +50026,12 @@
           "schema": {
             "kind": "id",
             "nullable": true
+          }
+        },
+        {
+          "name": "change_awaits_signature",
+          "schema": {
+            "kind": "bool"
           }
         }
       ]
@@ -55382,6 +55432,12 @@
         },
         {
           "name": "care_facility_term",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "care_facility_article",
           "schema": {
             "kind": "string"
           }
@@ -63485,6 +63541,18 @@
           }
         },
         {
+          "name": "ranking",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "max_score",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
           "name": "criteria",
           "schema": {
             "kind": "array",
@@ -63531,6 +63599,12 @@
         },
         {
           "name": "rank",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "score",
           "schema": {
             "kind": "int"
           }
@@ -63671,6 +63745,26 @@
           "name": "rank",
           "schema": {
             "kind": "int"
+          }
+        },
+        {
+          "name": "ranking",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "score",
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "max_score",
+          "schema": {
+            "kind": "int",
+            "nullable": true
           }
         },
         {
@@ -64963,6 +65057,12 @@
       "go_type": "enrollment.HolidayCriteriaCatalog",
       "fields": [
         {
+          "name": "ranking",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
           "name": "criteria",
           "schema": {
             "kind": "array",
@@ -65016,6 +65116,13 @@
       "go_type": "enrollmenthttp.HolidayCriteriaRequest",
       "request": true,
       "fields": [
+        {
+          "name": "ranking",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
         {
           "name": "criteria",
           "optional": true,
@@ -65073,6 +65180,12 @@
         },
         {
           "name": "position",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "points",
           "schema": {
             "kind": "int"
           }
@@ -65207,6 +65320,12 @@
         },
         {
           "name": "position",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "points",
           "schema": {
             "kind": "int"
           }
@@ -90043,6 +90162,12 @@
       "go_type": "carecontract.Reminder",
       "fields": [
         {
+          "name": "version_number",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
           "name": "number",
           "schema": {
             "kind": "int"
@@ -101745,6 +101870,13 @@
           "schema": {
             "kind": "bool"
           }
+        },
+        {
+          "name": "document_sha256",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -102009,6 +102141,26 @@
             "kind": "ref",
             "nullable": true,
             "ref": "SigningSignature"
+          }
+        },
+        {
+          "name": "previous",
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "SigningContract"
+          }
+        },
+        {
+          "name": "awaits_signature",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "amendment",
+          "schema": {
+            "kind": "bool"
           }
         }
       ]
@@ -106623,6 +106775,12 @@
           }
         },
         {
+          "name": "care_facility_article",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
           "name": "renewal_terms",
           "optional": true,
           "schema": {
@@ -111206,6 +111364,12 @@
         },
         {
           "name": "care_facility_term",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "care_facility_article",
           "schema": {
             "kind": "string"
           }
@@ -118868,6 +119032,49 @@
           "schema": {
             "kind": "date",
             "nullable": true
+          }
+        },
+        {
+          "name": "agreed_from",
+          "optional": true,
+          "schema": {
+            "kind": "date"
+          }
+        }
+      ]
+    },
+    {
+      "name": "VersionSignature",
+      "go_type": "carecontract.VersionSignature",
+      "fields": [
+        {
+          "name": "version_number",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "method",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "channel",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "signer_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "signed_at",
+          "schema": {
+            "kind": "instant"
           }
         }
       ]
@@ -128171,6 +128378,13 @@
           "optional": true,
           "schema": {
             "kind": "bool"
+          }
+        },
+        {
+          "name": "points",
+          "optional": true,
+          "schema": {
+            "kind": "int"
           }
         }
       ]

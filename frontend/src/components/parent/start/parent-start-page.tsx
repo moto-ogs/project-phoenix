@@ -46,6 +46,7 @@ import { useSWRAuth, useInvalidateMatching } from "~/lib/swr";
 import { PARENT_START_CALENDAR_DAYS } from "~/lib/parent-page-seed-keys";
 import { parentKeys } from "~/lib/swr/parent-keys";
 import { useCareTermTranslations } from "~/lib/care-facility-term";
+import type { CareTermValues } from "~/lib/care-facility-term-value";
 import {
   ParentChildCareTermScope,
   useParentCareTerms,
@@ -382,7 +383,7 @@ const EMPTY_SOURCES: TodoSources = {
  */
 function StartTodoSection() {
   const t = useCareTermTranslations("parentStart");
-  const { termOf } = useParentCareTerms();
+  const { valuesOf } = useParentCareTerms();
   const locale = useLocale();
   const invalidate = useInvalidateMatching();
   const load = useCallback(
@@ -448,8 +449,8 @@ function StartTodoSection() {
   );
 
   const items = useMemo(
-    () => buildTodoItems(sources, locale, t, setOpenAnnouncementId, termOf),
-    [sources, locale, t, termOf],
+    () => buildTodoItems(sources, locale, t, setOpenAnnouncementId, valuesOf),
+    [sources, locale, t, valuesOf],
   );
 
   const openAnnouncement =
@@ -510,7 +511,7 @@ function buildTodoItems(
   locale: string,
   t: StartTranslator,
   openAnnouncement: (id: string) => void,
-  termOf: (studentId: string) => string,
+  valuesOf: (studentId: string) => CareTermValues,
 ): TodoItem[] {
   const openAnnouncements = sources.announcements.filter(
     (item) =>
@@ -551,7 +552,7 @@ function buildTodoItems(
     ),
     ...appointments.map((event) => todoFromAppointment(event, locale, t)),
     ...threads.map((thread) =>
-      todoFromThread(thread, locale, t, termOf(thread.student_id)),
+      todoFromThread(thread, locale, t, valuesOf(thread.student_id)),
     ),
     ...notices.map((item) =>
       todoFromAnnouncement(item, locale, t, false, openAnnouncement),
@@ -624,7 +625,7 @@ function todoFromThread(
   thread: ThreadSummary,
   locale: string,
   t: StartTranslator,
-  careTerm: string,
+  care: CareTermValues,
 ): TodoItem {
   return {
     key: `thread-${thread.thread_id}`,
@@ -634,8 +635,8 @@ function todoFromThread(
         ? t("todo.messageTitleOne")
         : t("todo.messageTitleMany", { count: thread.unread }),
     context: t("todo.messageContext", {
+      ...care,
       name: thread.student_name,
-      careTerm,
     }),
     meta: formatTodoTimestamp(thread.last_message_at, locale, t("todo.today")),
     unread: true,

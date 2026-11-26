@@ -76,11 +76,11 @@ func seedHolidayCriteria(rt *Runtime, auth AuthRef) ([]int64, error) {
 	if err != nil {
 		return nil, err
 	}
-	raw, err := rt.Client.PutWithAuth(auth, "/traeger/holiday-periods/criteria", map[string]any{"expected_version": version, "criteria": []map[string]any{
-		{"name": "Beide Eltern berufstätig", "question": "Sind beide Eltern berufstätig?", "scope": "family", "active": true},
-		{"name": "Alleinerziehend und berufstätig", "question": "Sind Sie alleinerziehend und berufstätig?", "scope": "family", "active": true},
-		{"name": "Geschwisterkind in der OGS", "question": "Geht ein Geschwisterkind schon in die OGS?", "scope": "child", "active": true},
-		{"name": "Besonderer Härtefall", "question": "Gibt es einen besonderen Grund, warum Ihr Kind einen Platz braucht?", "scope": "family", "active": false},
+	raw, err := rt.Client.PutWithAuth(auth, "/traeger/holiday-periods/criteria", map[string]any{"expected_version": version, "ranking": "priority", "criteria": []map[string]any{
+		{"name": "Beide Eltern berufstätig", "question": "Sind beide Eltern berufstätig?", "scope": "family", "active": true, "points": 3},
+		{"name": "Alleinerziehend und berufstätig", "question": "Sind Sie alleinerziehend und berufstätig?", "scope": "family", "active": true, "points": 2},
+		{"name": "Geschwisterkind in der OGS", "question": "Geht ein Geschwisterkind schon in die OGS?", "scope": "child", "active": true, "points": 1},
+		{"name": "Besonderer Härtefall", "question": "Gibt es einen besonderen Grund, warum Ihr Kind einen Platz braucht?", "scope": "family", "active": false, "points": 2},
 	}})
 	if err != nil {
 		return nil, fmt.Errorf("name the holiday criteria: %w", err)

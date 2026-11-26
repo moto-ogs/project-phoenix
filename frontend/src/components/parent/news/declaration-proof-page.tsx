@@ -151,10 +151,10 @@ function ProofDocument({
   studentId: string;
 }>) {
   // Der Nachweis gehört zu einer Schule; der Hinweis nennt ihre Betreuung.
-  const { termOfSchool } = useParentCareTerms();
+  const { valuesOfSchool } = useParentCareTerms();
   const t = useCareTermTranslations(
     "parentDeclarationProof",
-    termOfSchool(proof.school_name),
+    valuesOfSchool(proof.school_name),
   );
   const td = useTranslations("parentDeclaration");
   const tRoles = useCareTermTranslations("parentChildDetail.guardians.roles");

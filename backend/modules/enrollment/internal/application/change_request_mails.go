@@ -100,16 +100,17 @@ func (s *ChangeRequests) emailPayload(ctx context.Context, req *enrollment.Reque
 		return nil, err
 	}
 	return map[string]any{
-		enrollment.EnrollmentPayloadGuardianFirstName: req.GuardianFirstName,
-		enrollment.EnrollmentPayloadGuardianLastName:  req.GuardianLastName,
-		enrollment.EnrollmentPayloadGuardianEmail:     req.GuardianEmail,
-		enrollment.EnrollmentPayloadSchoolName:        brand.SchoolName,
-		enrollment.EnrollmentPayloadStatusURL:         enrollment.StatusURL(s.deps.ParentsURL, req.StatusToken),
-		enrollment.EnrollmentPayloadLogoURL:           brand.LogoURL,
-		enrollment.EnrollmentPayloadMotoLogoURL:       brand.MotoLogoURL,
-		enrollment.EnrollmentPayloadCareFacilityTerm:  brand.CareFacilityTerm,
-		enrollment.EnrollmentPayloadRecipientEmail:    recipient,
-		"change_request_id":                           strconv.FormatInt(changeRequestID, 10),
+		enrollment.EnrollmentPayloadGuardianFirstName:   req.GuardianFirstName,
+		enrollment.EnrollmentPayloadGuardianLastName:    req.GuardianLastName,
+		enrollment.EnrollmentPayloadGuardianEmail:       req.GuardianEmail,
+		enrollment.EnrollmentPayloadSchoolName:          brand.SchoolName,
+		enrollment.EnrollmentPayloadStatusURL:           enrollment.StatusURL(s.deps.ParentsURL, req.StatusToken),
+		enrollment.EnrollmentPayloadLogoURL:             brand.LogoURL,
+		enrollment.EnrollmentPayloadMotoLogoURL:         brand.MotoLogoURL,
+		enrollment.EnrollmentPayloadCareFacilityTerm:    brand.CareFacilityTerm,
+		enrollment.EnrollmentPayloadCareFacilityArticle: brand.CareFacilityArticle,
+		enrollment.EnrollmentPayloadRecipientEmail:      recipient,
+		"change_request_id":                             strconv.FormatInt(changeRequestID, 10),
 	}, nil
 }
 

@@ -88,6 +88,7 @@ export interface ActivityResponse {
   name: string;
   max_participants: number | null;
   is_open: boolean;
+  is_system: boolean;
   category_id: string;
   planned_room_id?: string;
   created_by: string | null;
@@ -108,6 +109,7 @@ export const ActivityResponseSchema: z.ZodType<ActivityResponse, unknown> = obje
   name: str,
   max_participants: nullable(safeInt),
   is_open: bool,
+  is_system: bool,
   category_id: int64String,
   planned_room_id: optional(int64String),
   created_by: nullable(int64String),

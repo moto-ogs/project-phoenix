@@ -34,11 +34,13 @@ type holidayCriterionRequest struct {
 	Question string   `json:"question"`
 	Scope    string   `json:"scope"`
 	Active   bool     `json:"active"`
+	Points   int      `json:"points,omitempty"`
 }
 
 // HolidayCriteriaRequest is the body of PUT /traeger/holiday-periods/criteria:
-// every criterion of the Träger in the order of its priority.
+// the Träger’s ranking mode and ordered criteria.
 type HolidayCriteriaRequest struct {
+	Ranking  string                    `json:"ranking,omitempty"`
 	Criteria []holidayCriterionRequest `json:"criteria"`
 	// ExpectedVersion is the version of the criteria the Büro read; a list
 	// saved since is refused (ADR 0311).
@@ -75,7 +77,7 @@ func (rs *HolidayPeriodResource) saveCriteria(w http.ResponseWriter, r *http.Req
 	for i, criterion := range req.Criteria {
 		input[i] = capability.HolidayCriterionInput(criterion)
 	}
-	criteria, err := rs.allocation.SaveHolidayCriteria(r.Context(), reviewer, req.ExpectedVersion, input)
+	criteria, err := rs.allocation.SaveHolidayCriteria(r.Context(), reviewer, req.ExpectedVersion, req.Ranking, input)
 	var fields validation.Errors
 	if errors.As(err, &fields) {
 		tenant.MarkRollback(r.Context())

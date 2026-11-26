@@ -122,6 +122,7 @@ function features(
     absence_request_edit_enabled: false,
     reason_required: false,
     care_facility_term: "",
+    care_facility_article: "die",
     sick_note_enabled: true,
     sick_requires_approval: false,
     notes_enabled: true,

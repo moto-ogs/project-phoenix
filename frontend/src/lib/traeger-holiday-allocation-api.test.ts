@@ -16,8 +16,16 @@ function jsonResponse(status: number, body: unknown): Response {
 // The decoded answer of the catalog proxy: identifiers arrive as strings.
 const BACKEND_BOARD = {
   allocation_mode: "criteria",
+  ranking: "points",
+  max_score: 3,
   criteria: [
-    { id: "1", name: "Beide Eltern berufstätig", scope: "family", position: 1 },
+    {
+      id: "1",
+      name: "Beide Eltern berufstätig",
+      scope: "family",
+      position: 1,
+      points: 3,
+    },
   ],
   weeks: [
     {
@@ -41,6 +49,7 @@ const BACKEND_BOARD = {
           time_model_name: "bis 13 Uhr",
           days: null,
           criteria: [{ criterion_id: "1", value: "unknown", source: "parent" }],
+          score: 0,
           proposal: "placed",
         },
       ],
@@ -63,6 +72,9 @@ const BACKEND_BOARD = {
       reason: "Härtefall",
       decided_at: "2026-09-02T08:00:00Z",
       decided_by_account_id: "4",
+      ranking: "points",
+      score: 3,
+      max_score: 5,
     },
   ],
 };
@@ -93,14 +105,22 @@ describe("traeger holiday allocation api (#4700)", () => {
       timeModelName: "bis 13 Uhr",
       days: [],
       criteria: [{ criterionId: "1", value: "unknown", source: "parent" }],
+      score: 0,
       proposal: "placed",
     });
+    // How the criteria count, for the explanation of the order (#8135).
+    expect(board.ranking).toBe("points");
+    expect(board.maxScore).toBe(3);
+    expect(board.criteria[0]?.points).toBe(3);
     expect(board.decisions[0]).toMatchObject({
       id: "3",
       placement: "placed",
       proposal: "waitlisted",
       criteriaMet: [],
       reason: "Härtefall",
+      ranking: "points",
+      score: 3,
+      maxScore: 5,
     });
   });
 
@@ -129,7 +149,9 @@ describe("traeger holiday allocation api (#4700)", () => {
     });
 
     fetchMock.mockResolvedValue(
-      jsonResponse(200, { data: { criteria: [], version: "saved" } }),
+      jsonResponse(200, {
+        data: { criteria: [], ranking: "equal", version: "saved" },
+      }),
     );
     await saveHolidayCriteria(
       [
@@ -139,6 +161,7 @@ describe("traeger holiday allocation api (#4700)", () => {
           question: "Trifft das zu?",
           scope: "child",
           active: true,
+          points: 1,
         },
         {
           id: "4",
@@ -146,14 +169,17 @@ describe("traeger holiday allocation api (#4700)", () => {
           question: "Und das?",
           scope: "family",
           active: false,
+          points: 5,
         },
       ],
+      "equal",
       "criteria-read",
     );
     const [, saveInit] = fetchMock.mock.calls[1]!;
     expect(saveInit?.method).toBe("PUT");
     expect(JSON.parse(String(saveInit?.body))).toEqual({
       expected_version: "criteria-read",
+      ranking: "equal",
       criteria: [
         {
           id: "0",
@@ -161,6 +187,7 @@ describe("traeger holiday allocation api (#4700)", () => {
           question: "Trifft das zu?",
           scope: "child",
           active: true,
+          points: 1,
         },
         {
           id: "4",
@@ -168,6 +195,7 @@ describe("traeger holiday allocation api (#4700)", () => {
           question: "Und das?",
           scope: "family",
           active: false,
+          points: 5,
         },
       ],
     });
@@ -186,10 +214,12 @@ describe("traeger holiday allocation api (#4700)", () => {
               scope: "school",
               active: true,
               position: 1,
+              points: 1,
               answered: false,
             },
           ],
           periods: [],
+          ranking: "priority",
         },
       }),
     );
@@ -198,6 +228,49 @@ describe("traeger holiday allocation api (#4700)", () => {
     await expect(fetchHolidayCriteria()).rejects.toThrow(
       "holiday_criterion.scope",
     );
+  });
+
+  it("fails a read whose way of counting this build does not know", async () => {
+    // The editor saves the ranking back and the list explains its order
+    // with it: a guessed one would do either wrongly.
+    fetchMock.mockResolvedValue(
+      jsonResponse(200, {
+        data: { criteria: [], periods: [], ranking: "lottery", version: "v" },
+      }),
+    );
+    await expect(fetchHolidayCriteria()).rejects.toThrow(
+      "holiday_criteria.ranking",
+    );
+    fetchMock.mockResolvedValue(
+      jsonResponse(200, { data: { ...BACKEND_BOARD, ranking: "lottery" } }),
+    );
+    await expect(fetchHolidayAllocation("5")).rejects.toThrow(
+      "holiday_allocation.ranking",
+    );
+  });
+
+  it("shows a decision from before the ways of counting without a score", async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse(200, {
+        data: {
+          ...BACKEND_BOARD,
+          decisions: [
+            {
+              ...BACKEND_BOARD.decisions[0],
+              ranking: "priority",
+              score: null,
+              max_score: null,
+            },
+          ],
+        },
+      }),
+    );
+    const board = await fetchHolidayAllocation("5");
+    expect(board.decisions[0]).toMatchObject({
+      ranking: "priority",
+      score: null,
+      maxScore: null,
+    });
   });
 
   it("leaves out an open booking with a proposal this build does not know", async () => {

@@ -58,6 +58,7 @@
     "closingDayUntil": "{careTerm} jest zamknięta do {date}: {name}.",
     "openingChanged": "{careTerm} jest dziś otwarta od {opens} do {closes}: {name}.",
     "openingChangedUntil": "Do {date} {careTerm} jest otwarta od {opens} do {closes}: {name}.",
+    "mealCancelled": "Dziś nie ma obiadu dla {name}. Nie zostanie on naliczony.",
     "pickupAfterClosing": "To jest po zamknięciu. Zmień odbiór.",
     "activityCancelled": "{title} o {time} jest dziś odwołane.",
     "activityReinstated": "{title} o {time} jednak się dziś odbywa.",

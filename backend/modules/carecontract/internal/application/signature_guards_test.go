@@ -282,3 +282,63 @@ func TestPaperHandoverTrailsOnlyTheHandover(t *testing.T) {
 	mailed.handOver(t)
 	assert.Equal(t, 1, sends(mailed), "a mailed contract handed over again is no second send")
 }
+
+// TestWithdrawalPeriodKeepsTheFirstAcknowledgementAfterAChange pins the
+// withdrawal evidence of the contract across its versions (#4816): the
+// parents acknowledged the notice when they signed the first version
+// online, and a changed version signed on paper later hides nothing of it.
+// It goes red when the period follows the newest signature alone.
+func TestWithdrawalPeriodKeepsTheFirstAcknowledgementAfterAChange(t *testing.T) {
+	t.Parallel()
+	f := newRaceFixture(t, "Träger Belehrung nach Änderung")
+	store := postgres.NewStore(calendar.TodayDate)
+	f.handOver(t)
+	require.NoError(t, testpkg.WithinTraeger(f.ctx, f.org, func(txCtx context.Context) error {
+		return f.signatures().RecordPaperSignature(txCtx, f.reviewer, f.contract, paperOf("Erika Muster"))
+	}))
+	// The first version was signed online: the test rewrites its signature
+	// as owner of the tables, with the ledger row the proof constraint asks for.
+	acknowledged := time.Date(2026, 11, 2, 9, 30, 0, 0, time.UTC)
+	hash := fmt.Sprintf("%064x", 1)
+	_, err := f.db.ExecContext(context.Background(), `WITH ledger AS (
+			INSERT INTO audit.traeger_signatures (organization_id, purpose, care_contract_version_id, signer_name, method,
+				typed_name, image_png, image_sha256, document_sha256, record_hash, signed_at)
+			SELECT s.organization_id, 'care_contract', s.contract_version_id, s.signer_name, 'typed', s.signer_name,
+				'\x89'::bytea, ?, ?, ?, ? FROM care_contract.contract_signatures AS s WHERE s.contract_id = ?
+			RETURNING id)
+		UPDATE care_contract.contract_signatures AS s SET method = 'typed', channel = 'parent_account',
+			audit_signature_id = ledger.id, paper_pdf = NULL, paper_pdf_sha256 = NULL, paper_filename = NULL,
+			withdrawal_notice_at = ?, early_start_requested = true
+		FROM ledger WHERE s.contract_id = ?`, hash, hash, hash, acknowledged, f.contract, acknowledged, f.contract)
+	require.NoError(t, err)
+	require.NoError(t, testpkg.WithinTraeger(f.ctx, f.org, func(txCtx context.Context) error {
+		record, err := store.Contract(txCtx, f.org, f.contract, true)
+		if err != nil {
+			return err
+		}
+		next := record.Version
+		next.Number, next.Status, next.Source = 2, carecontract.VersionEffective, carecontract.SourceBookingChange
+		next.EffectiveFrom = calendar.NewDate(2099, 9, 1)
+		id, err := store.InsertVersion(txCtx, f.org, f.contract,
+			VersionStep{Supersede: record.Version.ID.Int64(), Status: carecontract.VersionEffective}, next)
+		if err != nil {
+			return err
+		}
+		paper := paperOf("Erika Muster")
+		return store.InsertSignature(txCtx, f.org, NewSignature{
+			ContractID: f.contract, VersionID: id, Method: carecontract.SignaturePaper, Channel: "office",
+			SignerName: paper.SignerName, VersionSHA256: hash, DocumentSHA256: hash, PaperFilename: paper.Filename,
+			PaperPDF: paper.PDF, PaperSHA256: hash, SignedOn: paper.SignedOn.AddDays(30), SignedAt: acknowledged.AddDate(0, 0, 30),
+		})
+	}))
+	notices := NewNotices(store, store, NoticePorts{Holidays: schoolHolidays{}, Templates: noticeTemplates{}, Post: &noticePost{}, Sender: noticeSender{}},
+		f.contracts.clock, f.contracts)
+	require.NoError(t, testpkg.WithinTraeger(f.ctx, f.org, func(txCtx context.Context) error {
+		state, err := notices.noticeState(txCtx, f.org, f.contract)
+		require.NoError(t, err)
+		require.NotNil(t, state.InformedAt, "the paper signature of the change hides no earlier acknowledgement")
+		assert.WithinDuration(t, acknowledged, *state.InformedAt, time.Second)
+		assert.True(t, state.EarlyStart, "the wish to begin early stays with the contract")
+		return nil
+	}))
+}

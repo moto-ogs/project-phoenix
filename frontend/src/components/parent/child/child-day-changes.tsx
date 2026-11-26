@@ -82,6 +82,10 @@ function childDayChangeText(
           })
         : t("changes.openingChanged", hours);
     }
+    case "meal_cancelled":
+      // Nur bei einer Buchung des Kindes an dem Tag (#8160). Der Grund der
+      // Schule bleibt beim Team.
+      return t("changes.mealCancelled", { name: firstName });
     case "activity_cancelled":
       return t("changes.activityCancelled", { title, time });
     case "activity_reinstated":

@@ -171,6 +171,7 @@ func newActivityResponse(group *activityContract.Group, enrollmentCount int) Act
 		Name:            group.Name,
 		MaxParticipants: group.ParticipantLimit(),
 		IsOpen:          group.IsOpen,
+		IsSystem:        group.IsSystem,
 		CategoryID:      ident.ID(group.CategoryID),
 		CreatedBy:       (*ident.ID)(group.CreatedBy),
 		EnrollmentCount: enrollmentCount,
