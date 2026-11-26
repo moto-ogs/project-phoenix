@@ -3457,6 +3457,7 @@ function TimeTrackingContent() {
     "time_tracking:manage",
   );
   const openMonthRefreshMs = useLiveRefreshInterval(OPEN_MONTH_REFRESH_MS);
+  const tenantRouter = useTenantRouter();
 
   const toast = useToast();
   const todayISO = useBerlinToday();
@@ -4438,8 +4439,9 @@ function TimeTrackingContent() {
                       label: "Mein Dienstplan",
                       description:
                         "Öffnet deine geplanten Schichten der Woche.",
-                      href: tenantPath("/mein-dienstplan"),
-                      onClick: () => undefined,
+                      // Ein Knopf wie der Eintrag darüber (gleicher
+                      // Einzug im Blatt), kein Link-Eintrag.
+                      onClick: () => tenantRouter.push("/mein-dienstplan"),
                     },
                   ]
                 : []),
