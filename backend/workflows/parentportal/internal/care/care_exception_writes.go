@@ -213,9 +213,10 @@ func (s *Service) guardCareExceptionDay(ctx context.Context, tenantID int64, cha
 
 // guardTodayPickupOpen refuses a guardian change to today's pickup once the
 // child has left for the day, or once the school's care day has ended
-// (operations.session_end_time, #5710): a child still in class then goes home
-// straight from school, so a new pickup time would describe nothing. The
-// end of the care day is the same rule that ends "Im Unterricht"
+// (the changed opening-day closing time or operations.session_end_time, #5710):
+// a child still in class then goes home straight from school, so a new pickup
+// time would describe nothing. The end of the care day is the same rule that
+// ends "Im Unterricht"
 // (carerequests.CareDayEnded). It is read in the caller's tenant transaction
 // after the day's locks, like the cutoff. Later days stay open.
 func (s *Service) guardTodayPickupOpen(ctx context.Context, tenantID, studentID int64, date, today calendar.Date) error {
