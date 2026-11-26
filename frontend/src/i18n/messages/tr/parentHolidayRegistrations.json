@@ -27,7 +27,7 @@
   "toDocumentsTooltip": "Onay ve faturayla birlikte belgelerinizi açar.",
   "consents": {
     "title": "Onaylar",
-    "description": "Gönüllüdür. Her onayı istediğiniz zaman geri alabilir veya yeniden verebilirsiniz. Çocuğunuza tatilde bakan OGS değişikliği hemen görür.",
+    "description": "Gönüllüdür. Her onayı istediğiniz zaman geri alabilir veya yeniden verebilirsiniz. Çocuğunuza tatilde bakan ekip değişikliği hemen görür.",
     "states": {
       "given": "Verildi",
       "withdrawn": "Geri alındı",
@@ -45,7 +45,7 @@
     "grantAria": "„{title}“ onayını ver",
     "grantTooltip": "Onayı verir. moto önce sorar.",
     "withdrawTitle": "Onay geri alınsın mı?",
-    "withdrawNote": "Geri alma şu andan itibaren geçerlidir. Çocuğunuza tatilde bakan OGS bunu hemen görür.",
+    "withdrawNote": "Geri alma şu andan itibaren geçerlidir. Çocuğunuza tatilde bakan ekip bunu hemen görür.",
     "withdrawConfirm": "Geri al",
     "withdrawing": "Geri alınıyor …",
     "grantTitle": "Onay verilsin mi?",

@@ -27,7 +27,7 @@
   "toDocumentsTooltip": "Otwiera Państwa dokumenty z potwierdzeniem i rachunkiem.",
   "consents": {
     "title": "Zgody",
-    "description": "Dobrowolne. Każdą zgodę mogą Państwo w każdej chwili wycofać lub udzielić jej ponownie. Świetlica (OGS), która opiekuje się dzieckiem w ferie, od razu widzi zmianę.",
+    "description": "Dobrowolne. Każdą zgodę mogą Państwo w każdej chwili wycofać lub udzielić jej ponownie. Zespół, który opiekuje się dzieckiem w ferie, od razu widzi zmianę.",
     "states": {
       "given": "Udzielona",
       "withdrawn": "Wycofana",
@@ -45,7 +45,7 @@
     "grantAria": "Udziel zgody „{title}”",
     "grantTooltip": "Udziela zgody. moto najpierw zapyta.",
     "withdrawTitle": "Wycofać zgodę?",
-    "withdrawNote": "Wycofanie obowiązuje od teraz. Świetlica (OGS), która opiekuje się dzieckiem w ferie, od razu je widzi.",
+    "withdrawNote": "Wycofanie obowiązuje od teraz. Zespół, który opiekuje się dzieckiem w ferie, od razu je widzi.",
     "withdrawConfirm": "Wycofaj",
     "withdrawing": "Wycofywanie …",
     "grantTitle": "Udzielić zgody?",

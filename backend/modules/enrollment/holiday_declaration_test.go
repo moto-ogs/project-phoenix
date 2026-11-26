@@ -38,9 +38,7 @@ func TestConsentTextsNameTheKeptDebtorNumberFromVersionFive(t *testing.T) {
 // agrees to. Versions 3 to 5 keep the sentence the parents agreed to.
 func TestConsentTextsGiveTheNameSentenceInDuFromVersionSix(t *testing.T) {
 	t.Parallel()
-	assert.Equal(t, 6, enrollment.HolidayConsentVersionCurrent, "the changed name sentence is a new version")
-
-	current, ok := enrollment.HolidayConsentTextsOf(enrollment.HolidayConsentVersionCurrent, 365)
+	current, ok := enrollment.HolidayConsentTextsOf(enrollment.HolidayConsentVersionInformalDeclaration, 365)
 	require.True(t, ok)
 	assert.Equal(t, 6, current.Version)
 	assert.Equal(t, "Mit deinem Namen gibst du die Erklärungen oben ab.", current.DeclarationName)
@@ -56,6 +54,35 @@ func TestConsentTextsGiveTheNameSentenceInDuFromVersionSix(t *testing.T) {
 		assert.Equal(t, "Mit Ihrem Namen geben Sie die Erklärungen oben ab.", texts.DeclarationName,
 			"version %d keeps its wording", version)
 	}
-	_, ok = enrollment.HolidayConsentTextsOf(7, 365)
+}
+
+// The privacy and health texts name the team that cares for the child from
+// version 7 on (#8136): a school may call its care "der Hort", so "die OGS"
+// is wrong for it. A new wording, so a new version that every new
+// registration agrees to. Versions 2 to 6 keep the words the parents agreed
+// to.
+func TestConsentTextsNameTheCareTeamFromVersionSeven(t *testing.T) {
+	t.Parallel()
+	assert.Equal(t, 7, enrollment.HolidayConsentVersionCurrent, "the changed recipient wording is a new version")
+
+	current, ok := enrollment.HolidayConsentTextsOf(enrollment.HolidayConsentVersionCurrent, 365)
+	require.True(t, ok)
+	assert.Equal(t, 7, current.Version)
+	assert.NotContains(t, current.PrivacyConsent+current.HealthConsent, "OGS")
+	assert.Contains(t, current.PrivacyConsent, "Das Team, das mein Kind in einer Ferienwoche betreut, sieht Name und Telefon")
+	assert.Contains(t, current.PrivacyConsent, "Er löscht sie 365 Tage nach den Ferien. Gesundheitsangaben löscht er schon 92 Tage nach den Ferien.")
+	assert.Contains(t, current.PrivacyConsent, "Kundennummer der Gemeinde (Debitorennummer)")
+	assert.Equal(t, "Ich bin einverstanden: Der Träger und das Betreuungsteam sehen die Gesundheitsangaben meiner Kinder. "+
+		"Es geht um das Team, das ein Kind in einer Ferienwoche betreut. "+
+		"Es sieht die Angaben ab der Bestätigung bis zum letzten Tag der Woche.", current.HealthConsent)
+
+	previous, ok := enrollment.HolidayConsentTextsOf(enrollment.HolidayConsentVersionInformalDeclaration, 365)
+	require.True(t, ok)
+	assert.Contains(t, previous.PrivacyConsent, "Die OGS, die mein Kind in einer Ferienwoche betreut,", "version 6 keeps its wording")
+	assert.Contains(t, previous.HealthConsent, "Der Träger und die OGS sehen", "version 6 keeps its wording")
+	previous.Version, previous.PrivacyConsent, previous.HealthConsent = current.Version, current.PrivacyConsent, current.HealthConsent
+	assert.Equal(t, previous, current, "version 7 changes only the privacy and the health text")
+
+	_, ok = enrollment.HolidayConsentTextsOf(8, 365)
 	assert.False(t, ok, "no texts for a version that does not exist yet")
 }

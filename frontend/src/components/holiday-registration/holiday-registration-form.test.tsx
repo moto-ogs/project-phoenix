@@ -491,7 +491,7 @@ describe("HolidayRegistrationForm", () => {
         binding_confirmed: true,
         custody_confirmed: true,
         declaration_name: "Eva Maria Muster",
-        consent_version: 6,
+        consent_version: 7,
         retention_days: 365,
       }),
     );
@@ -1672,7 +1672,7 @@ describe("HolidayRegistrationForm questions of the Träger (#5198)", () => {
     ).toBeInTheDocument();
     fireEvent.click(
       screen.getByLabelText(
-        /^Ich bin einverstanden: Der Träger und die OGS sehen die Gesundheitsangaben meiner Kinder\./,
+        /^Ich bin einverstanden: Der Träger und das Betreuungsteam sehen die Gesundheitsangaben meiner Kinder\./,
       ),
     );
     fireEvent.click(
@@ -1696,7 +1696,7 @@ describe("HolidayRegistrationForm questions of the Träger (#5198)", () => {
       "link-key",
       expect.objectContaining({
         form_version: 3,
-        consent_version: 6,
+        consent_version: 7,
         retention_days: 365,
         custom_data: { newsletter: "Aus der Zeitung" },
         health_consent: true,
@@ -2255,7 +2255,7 @@ describe("required health fields (#6686)", () => {
     type(detail, " Asthmaspray bei Bedarf ");
     fireEvent.click(
       screen.getByLabelText(
-        /^Ich bin einverstanden: Der Träger und die OGS sehen die Gesundheitsangaben meiner Kinder\./,
+        /^Ich bin einverstanden: Der Träger und das Betreuungsteam sehen die Gesundheitsangaben meiner Kinder\./,
       ),
     );
     fireEvent.click(
