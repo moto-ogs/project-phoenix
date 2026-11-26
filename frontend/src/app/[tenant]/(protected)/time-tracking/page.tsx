@@ -2607,7 +2607,7 @@ function EditSessionModal({
     ? undefined
     : !startTime || hasInvalidTimeRange || hasUnresolvableTime
       ? "Prüfe zuerst die markierten Uhrzeiten."
-      : "Wähle oder schreibe zuerst einen Grund.";
+      : "Gib zuerst einen Grund an.";
 
   const handleBreakDurationChange = (breakId: string, minutes: number) => {
     setBreakDurations((prev) => {
@@ -4290,7 +4290,8 @@ function TimeTrackingContent() {
   // Höhe (Runde 11), und die Wahl steht bei dem, was sie umschaltet.
   const appViewToolbar = (
     <div
-      className="flex items-center gap-2 px-3 pt-2 pb-1"
+      // 16 px Einzug wie die Zeilen darunter (Runde 13).
+      className="flex items-center gap-2 px-4 pt-2 pb-1"
       data-app-tt-toolbar=""
     >
       <SegmentedControl
@@ -4302,9 +4303,11 @@ function TimeTrackingContent() {
         fullWidth
       />
       {ownStaffId && dienstplanBooked ? (
+        // Ohne Rahmen und Schatten (Runde 13): ein Kasten neben dem
+        // Umschalter las sich wie eine Karte in der Karte.
         <ButtonLink
           href={tenantPath("/mein-dienstplan")}
-          variant="outline"
+          variant="ghost"
           size="md"
           tooltip="Öffnet deine geplanten Schichten der Woche."
         >
@@ -4334,17 +4337,16 @@ function TimeTrackingContent() {
           <TenantPageStats
             items={[
               {
-                // Schmale Leerzeichen um „/“: so passt „Saldo gesamt“ auch am
-                // SE (375 px) daneben.
-                value: `${formatDuration(ownMetrics.week!.ist)}\u2009/\u2009${formatDuration(ownMetrics.week!.soll)}`,
+                value: `${formatDuration(ownMetrics.week!.ist)} / ${formatDuration(ownMetrics.week!.soll)}`,
                 label: "Woche",
               },
               {
-                // „Gesamtsaldo“: Es ist der Stand über alle Wochen, nicht der
-                // Saldo der Woche in der Liste (Runde 11). Auf jedem Gerät
-                // dieselbe Beschriftung (Runde 13).
+                // „Saldo“ wie am Desktop und auf jedem Telefon gleich (Runde
+                // 13); „Saldo gesamt“ passte am SE nicht neben die Woche.
+                // Den Wochensaldo nennt die Liste „Saldo diese Woche bis
+                // gestern“.
                 value: formatSignedDuration(ownMetrics.accountBalanceMinutes!),
-                label: "Gesamtsaldo",
+                label: "Saldo",
               },
             ]}
           />
