@@ -41,6 +41,7 @@ var (
 	ErrSessionConflict                  = studentpresence.ErrSessionConflict
 	ErrInvalidActivitySession           = studentpresence.ErrInvalidActivitySession
 	ErrRoomConflict                     = studentpresence.ErrRoomConflict
+	ErrRoomClosed                       = studentpresence.ErrRoomClosed
 	ErrRoomCapacityExceeded             = studentpresence.ErrRoomCapacityExceeded
 	ErrActivityParticipantLimitExceeded = studentpresence.ErrActivityParticipantLimitExceeded
 	// ErrNoRoomAvailable: no room was selected and the activity has no planned

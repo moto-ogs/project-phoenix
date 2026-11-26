@@ -306,7 +306,7 @@ export const FEATURES = Object.freeze([
   {
     name: 'Aufsichten und Räume',
     pages: { ogs: ['/active-supervisions', '/rooms/**', '/activities'], school: ['/aufsichten'] },
-    events: ['supervision_started', 'supervision_completed', 'supervision_attendance_recorded'],
+    events: ['supervision_started', 'supervision_completed', 'supervision_attendance_recorded', 'room_closed', 'room_reopened'],
   },
   {
     name: 'Abwesenheiten',

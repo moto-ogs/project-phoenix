@@ -16,7 +16,7 @@ func init() {
 		Description: "Speiseplan: Ausfall des Mittagessens an einzelnen Tagen (#7656)",
 		DependsOn: []string{
 			mealPlanMenuChangedAtVersion, // the last change of the meal plan's tables
-			roomHistoryStopsVersion,      // the erasure fingerprint this one follows
+			roomClosuresVersion,          // the earlier erasure extension at the head
 		},
 	})
 	Migrations.MustRegister(mealCancellationsUp, mealCancellationsDown)
@@ -64,7 +64,7 @@ func mealCancellationsUp(ctx context.Context, db *bun.DB) error {
 // mealCancellationsFingerprint is the incoming-FK fingerprint of the school
 // erasure plan with the meal cancellations; the repeatable preflight checks
 // it.
-const mealCancellationsFingerprint = "b86f0d7ed5f163a2fd7cfef4e3a5c0e162f83958d7ae602e98af310d64351f89"
+const mealCancellationsFingerprint = "1f3244143251459a1f23877478b1ec4033ee9138195c06b37a0af87a45267ab5"
 
 // mealCancellationsErasureLines are the lines the repeatable school erasure
 // carries for the meal cancellations, per function. The down takes them out
@@ -111,7 +111,7 @@ func mealCancellationsErasureWithout(ctx context.Context, tx bun.Tx) ([]string, 
 			continue
 		}
 		definition = strings.Replace(definition, line, "", 1)
-		definition = strings.Replace(definition, "'"+mealCancellationsFingerprint+"'", "'"+roomHistoryStopsFingerprint+"'", 1)
+		definition = strings.Replace(definition, "'"+mealCancellationsFingerprint+"'", "'"+roomClosuresFingerprint+"'", 1)
 		restored = append(restored, definition)
 	}
 	return restored, nil

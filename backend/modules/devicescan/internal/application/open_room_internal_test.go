@@ -162,6 +162,7 @@ func TestBookOpenRoom_ClassifiesMoverFailuresAndRollsBack(t *testing.T) {
 	}{
 		{"unknown room", fmt.Errorf("%w: room not found", devicescan.ErrOpenRoomNotFound), devicescan.FailureNotFound, devicescan.MessageOpenRoomNotFound, devicescan.CodeOpenRoomNotFound},
 		{"room not released", devicescan.ErrOpenRoomNotReleased, devicescan.FailureConflict, devicescan.MessageOpenRoomNotReleased, devicescan.CodeOpenRoomNotReleased},
+		{"room closed", devicescan.ErrOpenRoomClosed, devicescan.FailureInvalidRequest, "the room is closed today", devicescan.CodeRoomClosed},
 		{"child not checked in", devicescan.ErrOpenRoomStudentNotPresent, devicescan.FailureConflict, devicescan.MessageStudentNotPresent, devicescan.CodeStudentNotPresent},
 		{"anything else", errBoom, devicescan.FailureInternal, devicescan.MessageCreateVisitFailed, ""},
 	}

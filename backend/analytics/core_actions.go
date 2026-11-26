@@ -215,6 +215,8 @@ var coreActions = map[RouteKey]CoreAction{
 	{http.MethodPost, "/api/rooms/export"}:                                                   export("rooms"),
 	{http.MethodDelete, "/api/rooms/{id}"}:                                                   notCaptured,
 	{http.MethodPut, "/api/rooms/{id}"}:                                                      notCaptured,
+	{http.MethodPost, "/api/rooms/{id}/closures"}:                                            event("room_closed"),
+	{http.MethodDelete, "/api/rooms/{id}/closures/{closureId}"}:                              event("room_reopened"),
 	{http.MethodPost, "/api/search/"}:                                                        notCaptured,
 	{http.MethodPost, "/api/school-setup/complete"}:                                          event("onboarding_setup_checklist_completed"),
 	{http.MethodPut, "/api/school-setup/dismissal"}:                                          flaggedEvent("onboarding_setup_checklist_dismissed", "dismissed"),

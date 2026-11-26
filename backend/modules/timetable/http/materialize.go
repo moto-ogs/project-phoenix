@@ -46,6 +46,7 @@ type materializeResponse struct {
 	SkippedNotStarted           int                  `json:"skipped_not_started"`
 	SkippedHolidays             int                  `json:"skipped_holidays"`
 	SkippedClosingDays          int                  `json:"skipped_closing_days"`
+	SkippedClosedRooms          int                  `json:"skipped_closed_rooms"`
 	CandidatesRaced             int                  `json:"candidates_raced"`
 	InstanceStudentsCreated     int                  `json:"instance_students_created"`
 	InstanceStaffCreated        int                  `json:"instance_staff_created"`
@@ -122,6 +123,7 @@ func newMaterializeResponse(result *timetableModule.MaterializationResult) mater
 		SkippedNotStarted:           result.CandidatesSkippedNotStarted,
 		SkippedHolidays:             result.CandidatesSkippedHoliday,
 		SkippedClosingDays:          result.CandidatesSkippedClosingDay,
+		SkippedClosedRooms:          result.CandidatesSkippedClosedRoom,
 		CandidatesRaced:             result.CandidatesRaced,
 		InstanceStudentsCreated:     result.InstanceStudentsCreated,
 		InstanceStaffCreated:        result.InstanceStaffCreated,

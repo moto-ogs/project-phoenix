@@ -27,6 +27,7 @@
   "rfid_tag_not_student_or_staff": "{object} konnte nicht übernommen werden. Bitte prüfe deine Angaben.",
   "rfid_tag_unassigned": "{object} konnte nicht übernommen werden. Bitte prüfe deine Angaben.",
   "room_capacity_exceeded": "Im Raum {room_name} ist kein Platz mehr. Bitte wähle einen anderen Raum.",
+  "room_closed": "Dieser Raum ist heute gesperrt. Bitte wähle einen anderen Raum.",
   "room_not_found": "{object} konnte nicht geändert werden. Bitte prüfe den aktuellen Stand.",
   "schulhof_not_configured": "{object} konnte nicht bearbeitet werden. Bitte versuche es später erneut.",
   "staff_not_found": "{object} konnte nicht übernommen werden. Bitte prüfe deine Angaben.",

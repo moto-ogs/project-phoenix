@@ -78,6 +78,11 @@ func BuildServeRooms(db transactionruntime.Database) (facilitiesModule.Catalog, 
 	return facilitiesCompose.NewRooms(facilitiesCompose.Dependencies{DB: db.Pool(), Observe: ObserveFacilities})
 }
 
+// BuildRoomClosures composes the room closures (#7653) on the root's clock.
+func BuildRoomClosures(db transactionruntime.Database, now func() time.Time) (facilitiesModule.Closures, error) {
+	return facilitiesCompose.NewClosures(facilitiesCompose.Dependencies{DB: db.Pool(), Observe: ObserveFacilities, Now: now})
+}
+
 // BuildFacilitiesModule composes Facilities with its room deletion: the
 // deletion asks Student Presence for open sessions and Care Plan's
 // care-offering catalog for the rooms its offerings need (#4010), and

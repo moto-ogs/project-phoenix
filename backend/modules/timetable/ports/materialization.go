@@ -49,6 +49,7 @@ type MaterializationDependencies struct {
 	CareBounds     CareBoundReader
 	SickReports    SickReportReader
 	NonWorkingDays timetable.NonWorkingDayCalendar
+	RoomClosures   RoomClosures
 	RecurrenceLock timetable.RecurrenceWriteLock
 	Staffing       StaffingAnnouncer
 	Transactions   TenantTransactions

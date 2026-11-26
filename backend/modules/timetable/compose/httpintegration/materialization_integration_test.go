@@ -16,6 +16,7 @@ import (
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
+	"github.com/moto-ogs/project-phoenix/modules/facilities"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/modules/timetable/compose"
@@ -246,6 +247,27 @@ func TestMaterializeForTenant_EndToEnd(t *testing.T) {
 	require.NoError(t, err)
 	assert.Zero(t, r3.InstancesCreated)
 	assert.Equal(t, 1, r3.CandidatesSkippedExisting)
+}
+
+func TestMaterializeForTenant_SkipsClosedRooms(t *testing.T) {
+	t.Parallel()
+
+	materializeDate := calendar.NewDate(2026, time.April, 20)
+	s := makeScenario(t, activityContract.WeekdayMonday, materializeDate)
+	defer s.runCleanup(t)
+	closures := api.NewRoomClosuresForTest(testpkg.NewDatabase(t, s.db), func() time.Time {
+		return time.Date(2026, time.April, 1, 12, 0, 0, 0, time.UTC)
+	})
+	_, err := closures.CloseRoom(s.ctx, facilities.CloseRoom{
+		RoomID: s.roomID, StartDate: materializeDate, EndDate: materializeDate, Reason: "Wasserschaden",
+	})
+	require.NoError(t, err)
+
+	result, err := s.svc.MaterializeForTenant(s.ctx, materializeDate, materializeDate, timetable.MaterializationSourceManual)
+	require.NoError(t, err)
+	assert.Zero(t, result.InstancesCreated)
+	assert.Equal(t, 1, result.CandidatesSkippedClosedRoom)
+	assert.Empty(t, listInstancesForDate(t, s.db, s.template.ID, materializeDate))
 }
 
 // TestMaterializeForTenant_ExcludesGraduatedStudents covers the #405 fix:
@@ -707,6 +729,7 @@ func newTestMaterialization(t *testing.T, db *bun.DB, repos *api.CareScheduleSui
 		StudentRepo:    timetableRepos.InstanceStudent,
 		ExceptionRepo:  timetableRepos.ActivityException,
 		TimeframeRepo:  timetableRepos.Timeframe,
+		RoomClosures:   owners.NewTimetableRoomClosures(api.NewRoomClosuresForTest(testpkg.NewDatabase(t, db))),
 		RecurrenceLock: owners.MustNewTimetableRecurrenceLock(testpkg.NewDatabase(t, db)),
 		Transactions:   compose.NewTenantTransactions(db),
 		Logger:         slog.Default(),

@@ -287,6 +287,12 @@ func TestCreateInstance_TemplateBoundAndErrorBranches(t *testing.T) {
 	refW := doCreate(t, router, body)
 	assert.Equal(t, http.StatusBadRequest, refW.Code)
 
+	s.mock.createErr = fmt.Errorf("wrapped: %w", timetable.ErrRoomClosed)
+	closedRoom := doCreate(t, router, body)
+	assert.Equal(t, http.StatusConflict, closedRoom.Code)
+	assert.Contains(t, closedRoom.Body.String(), "timetable.room_closed")
+	assert.Contains(t, closedRoom.Body.String(), `"field":"room_id"`)
+
 	s.mock.createErr = fmt.Errorf("wrapped: %w", timetable.ErrInstanceOutsideActiveCalendarPeriod)
 	periodW := doCreate(t, router, body)
 	assert.Equal(t, http.StatusBadRequest, periodW.Code)

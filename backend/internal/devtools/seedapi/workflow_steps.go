@@ -425,7 +425,7 @@ func fullDemoSetupSteps(seeder *Seeder) []Step {
 		seedPrivacyConsentsStep{},
 		seedAccidentReportsStep{},
 		seedFamilyProtectionStep{},
-		seedRoomHistoryStopStep{},
+		seedRoomHistoryStopStep{}, seedRoomClosureStep{},
 		markStudentsSickStep{},
 		seedAnnouncementsStep{},
 		seedStaffMessagingStep{},
