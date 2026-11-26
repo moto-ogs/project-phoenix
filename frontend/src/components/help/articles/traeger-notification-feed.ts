@@ -26,6 +26,8 @@ export function traegerNotificationFeedTopic(): HelpTopic {
       "Erst dein Klick macht einen Hinweis zu „gelesen“. Das Öffnen der Glocke allein ändert nichts.",
     notes: [
       "Trägt eine Schule einen Schließtag ein, ändert oder löscht ihn, siehst du es hier.",
+      // #8178: Hinweis zur geänderten Öffnungszeit.
+      "Ändert eine Schule die Öffnungszeit an einem Tag, siehst du es auch hier.",
       "Die Zahl an der Glocke prüft moto bei jedem Seitenwechsel und jede Minute neu.",
       "Hinweise bleiben 30 Tage nach ihrer letzten Änderung in der Glocke. Danach löscht moto sie.",
       "Im Träger-Portal gibt es keine Mitteilung aufs Handy. Die Hinweise stehen nur in der Glocke.",
@@ -35,6 +37,7 @@ export function traegerNotificationFeedTopic(): HelpTopic {
     ],
     troubleshootingDetails: [
       "Es kommt kein Hinweis zu einem Schließtag? Die Schule kann `Benachrichtigung bei Schließtagen` ausschalten. Frage dort nach.",
+      "Es kommt kein Hinweis zu einer geänderten Öffnungszeit? Die Schule kann `Benachrichtigung bei geänderter Öffnungszeit` ausschalten. Frage dort nach.",
       "Wer den Schließtag selbst einträgt, bekommt keinen Hinweis dazu.",
     ],
     related: [HELP_TOPICS.traegerSchoolView, HELP_TOPICS.traegerClosingDays],

@@ -7,6 +7,7 @@ import {
   getStudentDayTimes,
   getStudentTimeStatus,
   getTimeStatusSortRank,
+  isWallClockSpanRunning,
 } from "./student-time-status";
 import { LOCATION_COLORS } from "./location-helper";
 
@@ -838,4 +839,27 @@ describe("checked-in child despite a status (#6407)", () => {
       expect(status.textColor).toBeUndefined();
     },
   );
+});
+
+describe("isWallClockSpanRunning", () => {
+  // 14:30 in Berlin, im Winter (UTC+1) und im Sommer (UTC+2).
+  const winter = new Date("2025-01-15T14:30:00+01:00");
+  const summer = new Date("2026-07-15T12:30:00Z");
+
+  it("holds from the start up to, but not at, the end", () => {
+    expect(isWallClockSpanRunning("14:00", "15:00", winter)).toBe(true);
+    expect(isWallClockSpanRunning("14:30", "15:00", winter)).toBe(true);
+    expect(isWallClockSpanRunning("13:00", "14:30", winter)).toBe(false);
+    expect(isWallClockSpanRunning("15:15", "16:00", winter)).toBe(false);
+  });
+
+  it("reads the clock in Berlin time, whatever the offset", () => {
+    expect(isWallClockSpanRunning("14:00", "15:00", summer)).toBe(true);
+    expect(isWallClockSpanRunning("12:00", "13:00", summer)).toBe(false);
+  });
+
+  it("is false for a time it cannot read", () => {
+    expect(isWallClockSpanRunning("", "15:00", winter)).toBe(false);
+    expect(isWallClockSpanRunning("14:00", "später", winter)).toBe(false);
+  });
 });

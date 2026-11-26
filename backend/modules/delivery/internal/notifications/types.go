@@ -403,6 +403,7 @@ func init() {
 	registerStaffNoticeTypes()
 	registerRoomChangeTypes()
 	registerSchoolClosingDayTypes()
+	registerOpeningChangeTypes()
 	registerCatererTypes()
 }
 

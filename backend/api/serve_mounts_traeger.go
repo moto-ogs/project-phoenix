@@ -129,7 +129,7 @@ func NewTraegerPortalHTTP(identity TraegerPortalIdentity, organizations organiza
 		Enrollments: enrollmentCompose.NewOpenEnrollments(), Alerts: traegerAlertSettings{settings: settings},
 		Occupancy: traegerOccupancyPorts(), Known: traegerKnownChildrenPorts(), Utilization: traegerUtilizationPorts(statistics, now),
 		Times: traegerArrivalPickupCounts{times: presence}, Daily: traegerDailyAttendancePorts(presence, sick, calendarSchools),
-		Reports: traegerReportPorts(reportTemplateReads), DayChanges: dayChanges,
+		Reports: traegerReportPorts(reportTemplateReads), DayChanges: dayChanges, Children: traegerChildrenPorts(),
 	})
 	if err != nil {
 		return nil, err

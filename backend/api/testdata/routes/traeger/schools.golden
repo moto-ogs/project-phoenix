@@ -3,6 +3,8 @@ GET /traeger/schools/alerts
 GET /traeger/schools/alerts/export
 GET /traeger/schools/arrival-pickup-times
 GET /traeger/schools/arrival-pickup-times/export
+GET /traeger/schools/children
+GET /traeger/schools/children/export
 GET /traeger/schools/comparison
 GET /traeger/schools/comparison/export
 GET /traeger/schools/daily-attendance

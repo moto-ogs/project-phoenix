@@ -122,6 +122,7 @@ func (s supervisionSettings) Prepare(ctx context.Context) (context.Context, erro
 		settingsplatform.KeyOperationalOverviewScope,
 		settingsplatform.KeyGroupMode,
 		settingsplatform.KeyStudentPhotosEnabled,
+		settingsplatform.KeyStudentCardActivitiesEnabled,
 		settingsplatform.KeyWebSpontaneousActivities, settingsplatform.KeyWeekendFollowsFriday,
 		settingsplatform.KeyTrackingIndicatorsEnabled,
 		settingsplatform.KeyTrackingIndicator1,

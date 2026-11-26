@@ -139,7 +139,7 @@ func TestGuardianPreferencesAcrossSchools(t *testing.T) {
 			ColumnExpr("count(*)").
 			Where("account_id = ?", chain.AccountID).
 			Scan(ctx, &count))
-		assert.Equal(t, 6, count, "the opt-out of the announcement and default-on types is recorded once per active school, not deleted")
+		assert.Equal(t, 8, count, "the opt-out of the announcement and default-on types is recorded once per active school, not deleted")
 
 		tenantCtx := testpkg.TenantContext(chain.TenantID)
 		optedIn, err := testpkg.TenantQuery2(t, tenantCtx, db, svc.FilterOptedIn, notifications.TypeParentAnnouncement, []int64{chain.AccountID})

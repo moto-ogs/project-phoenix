@@ -97,13 +97,15 @@ type SchoolComparison struct {
 
 // Reports are the reports of the Träger-Portal beside Overview, which holds
 // the twelve methods a public facade may carry: the heatmap (#4714), the
-// comparison of schools (#4715, ADR 0245) and the daily attendance report
-// of Mecklenburg-Vorpommern (#4717, ADR 0247).
+// comparison of schools (#4715, ADR 0245), the daily attendance report
+// of Mecklenburg-Vorpommern (#4717, ADR 0247) and the children of the
+// Träger by name (#8137, ADR 0327).
 type Reports interface {
 	ArrivalPickupReport
 	SchoolComparisons
 	DailyAttendanceReport
 	DayChangesReport
+	ChildDirectory
 }
 
 // SchoolComparisons answers the comparison of the schools of a Träger.

@@ -24,6 +24,7 @@ export function buildSupervisionDashboardWire(
     pickup_times: [],
     arrival_times: [],
     teacher_hints: [],
+    planned_activities: [],
     ...overrides,
   };
 }

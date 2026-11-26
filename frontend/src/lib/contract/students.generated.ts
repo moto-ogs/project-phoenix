@@ -282,6 +282,19 @@ export const NameStudentResponseSchema: z.ZodType<NameStudentResponse, unknown> 
   last_name: str,
 });
 
+/** Go: presenceprojectionhttp.StudentListPlannedActivity */
+export interface StudentListPlannedActivity {
+  title: string;
+  start_time: string;
+  end_time: string;
+}
+
+export const StudentListPlannedActivitySchema: z.ZodType<StudentListPlannedActivity, unknown> = object<StudentListPlannedActivity>({
+  title: str,
+  start_time: str,
+  end_time: str,
+});
+
 /** Go: presenceprojectionhttp.SlimStudentResponse */
 export interface SlimStudentResponse {
   id: string;
@@ -305,6 +318,7 @@ export interface SlimStudentResponse {
   pending_excused_note?: string;
   teacher_hints?: TeacherHint[];
   class_handover?: ClassHandover;
+  planned_activities?: StudentListPlannedActivity[];
   departure_modes?: OpenEnum<DepartureMode>[];
   departure_label?: string;
   departure_is_exception?: boolean;
@@ -345,6 +359,7 @@ export const SlimStudentResponseSchema: z.ZodType<SlimStudentResponse, unknown> 
   pending_excused_note: optional(str),
   teacher_hints: optional(arr(TeacherHintSchema)),
   class_handover: optional(ClassHandoverSchema),
+  planned_activities: optional(arr(StudentListPlannedActivitySchema)),
   departure_modes: optional(arr(str)),
   departure_label: optional(str),
   departure_is_exception: optional(bool),

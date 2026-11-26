@@ -189,4 +189,16 @@ var notifications_init_benachrichtigungen_1Definitions = []config.Definition{
 		Category:        "benachrichtigungen",
 		SortOrder:       11,
 	},
+	{
+		Key:             config.KeyNotificationsOpeningChangeEnabled,
+		Label:           "Benachrichtigung bei geänderter Öffnungszeit",
+		Description:     "Ändert sich die Öffnungszeit an einem Tag, bekommen Team, Eltern und Träger-Büro einen Hinweis in moto. Liegt der Tag in den nächsten 14 Tagen, kommt für Team und Eltern auch eine Mitteilung aufs Handy. Jede Person kann sie selbst ausschalten.",
+		Type:            config.FieldBoolean,
+		Default:         true,
+		ReadPermission:  "config:read",
+		WritePermission: "config:update",
+		Tab:             "operations",
+		Category:        "benachrichtigungen",
+		SortOrder:       12,
+	},
 }

@@ -166,7 +166,7 @@ func TestParentNotificationPreferencesHTTPQueryBudget(t *testing.T) {
 		for _, row := range expected {
 			// The room change for today or tomorrow is on without a stored
 			// decision (#7141).
-			row["enabled"] = row["key"] == "parent_room_changed" || row["key"] == "parent_school_closing_day_changed" || (n >= 3 && row["key"] == "parent_announcement") || (n == 8 && row["key"] == "parent_appointment")
+			row["enabled"] = row["key"] == "parent_room_changed" || row["key"] == "parent_school_closing_day_changed" || row["key"] == "parent_opening_change_changed" || (n >= 3 && row["key"] == "parent_announcement") || (n == 8 && row["key"] == "parent_appointment")
 		}
 		count, countErr := db.NewSelect().TableExpr("users.notification_preferences").Where("account_id = ?", chain.AccountID).Where("tenant_id IN (?, ?)", chain.TenantID, second.TenantID).Count(context.Background())
 		require.NoError(t, countErr)
@@ -296,6 +296,7 @@ func notificationBudgetCatalogue(t *testing.T, portal string) []map[string]any {
 	}
 	if portal == "parent" {
 		rows = insertBudgetRow(rows, "parent_room_changed", parentSchoolClosingDayBudgetRow())
+		rows = insertBudgetRow(rows, "parent_school_closing_day_changed", parentOpeningChangeBudgetRow())
 	}
 	return rows
 }
@@ -315,6 +316,10 @@ func schoolClosingDayBudgetRow() map[string]any {
 
 func parentSchoolClosingDayBudgetRow() map[string]any {
 	return map[string]any{"key": "parent_school_closing_day_changed", "label": "Schließtage", "description": "Wenn die Schule einen Schließtag einträgt, ändert oder löscht. Der Hinweis in moto kommt immer, die Mitteilung aufs Handy nur bei Schließtagen in den nächsten 14 Tagen.", "group": "termine", "enabled": true, "available": true}
+}
+
+func parentOpeningChangeBudgetRow() map[string]any {
+	return map[string]any{"key": "parent_opening_change_changed", "label": "Geänderte Öffnungszeit", "description": "Wenn die Schule an einem Tag zu anderen Zeiten öffnet oder schließt. Der Hinweis in moto kommt immer, die Mitteilung aufs Handy nur bei Tagen in den nächsten 14 Tagen.", "group": "termine", "enabled": true, "available": true}
 }
 
 var notificationBudgetCatalogues = map[string]string{

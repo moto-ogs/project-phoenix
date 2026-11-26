@@ -127,8 +127,8 @@ type groupLiveSources struct {
 	DayPickups        groupLiveDayPickups
 	Arrivals          groupLiveArrivals
 	PlannedStudentIDs func(context.Context, []int64, calendar.Date) ([]int64, error)
-	Timetable         groupLiveTimetable
-	BlockTypes        groupLiveBlockTypes
+	Timetable         plannedOfferingTimetable
+	BlockTypes        plannedOfferingBlockTypes
 	CareDays          groupLiveCareDays
 	CareParticipation groupLiveCareParticipation
 	ExcusedRequests   grouplive.PendingExcusedReader
@@ -163,7 +163,7 @@ func newGroupLive(sources groupLiveSources, hints peopledirectory.SchoolDayHintQ
 		Presence: groupLivePresence{presence: sources.Presence, active: sources.Active, statusDays: sources.StatusDays},
 		Planning: groupLivePlanning{
 			arrivals: sources.Arrivals, pickups: sources.Pickups, dayPickups: sources.DayPickups, planned: sources.PlannedStudentIDs,
-			careDays: sources.CareDays, timetable: sources.Timetable, blockTypes: sources.BlockTypes,
+			careDays: sources.CareDays, offerings: plannedOfferings{timetable: sources.Timetable, blockTypes: sources.BlockTypes},
 		},
 		Transfers:       groupLiveTransfers{substitutions: sources.Substitutions},
 		Settings:        groupLiveSettings{settings: sources.Settings, closingTimes: schoolCalendarCompose.NewOpeningChanges().ClosingTimeOn, now: sources.Now},
@@ -505,9 +505,8 @@ type groupLivePlanning struct {
 	dayPickups groupLiveDayPickups
 	planned    func(context.Context, []int64, calendar.Date) ([]int64, error)
 	careDays   groupLiveCareDays
-	timetable  groupLiveTimetable
-	// blockTypes tells offerings from care and duty blocks (#6487).
-	blockTypes groupLiveBlockTypes
+	// offerings are the day's planned offerings of the children (#6487).
+	offerings plannedOfferings
 }
 
 func (p groupLivePlanning) Arrivals(ctx context.Context, studentIDs []int64, date grouplive.Date) (map[int64]grouplive.Arrival, error) {
