@@ -228,6 +228,7 @@ AS $function$ SELECT $manifest$[
   {"name": "schedule.student_departure_exceptions","predicate": "r.tenant_id = $1"},
   {"name": "schedule.student_pickup_exceptions","predicate": "r.tenant_id = $1"},
   {"name": "schedule.student_pickup_notes","predicate": "r.tenant_id = $1"},
+  {"name": "schedule.student_pickup_persons","predicate": "r.tenant_id = $1"},
   {"name": "schedule.student_pickup_schedules","predicate": "r.tenant_id = $1"},
   {"name": "schedule.timeframes","predicate": "r.tenant_id = $1"},
   {"name": "schedule.timetable_conflict_acks","predicate": "r.tenant_id = $1"},

@@ -233,7 +233,7 @@ func buildGroupLive(
 	live, err := newGroupLive(groupLiveSources{
 		Presence: presence.Presence, People: GroupRosterPeople(users), Education: structure.Education,
 		Substitutions: structure.Substitution, UserContext: GroupLiveCaller{caller}, Active: active,
-		Settings: settings, Pickups: schedules.Pickups, Arrivals: schedules.Arrivals,
+		Settings: settings, Pickups: schedules.Pickups, DayPickups: schedules.PickupPersons, Arrivals: schedules.Arrivals,
 		PlannedStudentIDs: lifecycle.Instances.GetPlannedStudentIDsByDate, Timetable: timetableOwner, BlockTypes: lifecycle.BlockMetadata,
 		CareDays:          schedules.CareDay,
 		CareParticipation: schedules.Lifecycle, ExcusedRequests: requests.Excused, StatusDays: presence.StatusDays,

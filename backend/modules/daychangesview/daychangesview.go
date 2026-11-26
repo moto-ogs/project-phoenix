@@ -101,6 +101,9 @@ const (
 	KindChildGoesAlone Kind = "child_goes_alone"
 	// KindChildPickupNote: a pickup note for today ("Oma holt ab").
 	KindChildPickupNote Kind = "child_pickup_note"
+	// KindChildPickupPerson: someone else collects a child today (#7655);
+	// Child.PickupPerson names the person.
+	KindChildPickupPerson Kind = "child_pickup_person"
 	// KindChildSummary: the children of one group or class outside the
 	// caller's groups, with the numbers and the rows to unfold.
 	KindChildSummary Kind = "child_summary"
@@ -228,6 +231,15 @@ type Child struct {
 	Status     *ChildStatus `json:"status"`
 	PickupTime *string      `json:"pickup_time"`
 	Note       *string      `json:"note"`
+	// PickupPerson is who collects the child today (#7655).
+	PickupPerson *ChildPickupPerson `json:"pickup_person"`
+}
+
+// ChildPickupPerson is who collects a child on the day. OneTime marks a
+// person without a standing pickup permission: the staff check the ID card.
+type ChildPickupPerson struct {
+	Name    string `json:"name"`
+	OneTime bool   `json:"one_time"`
 }
 
 // ChildItem is one row of a child summary.
@@ -244,6 +256,7 @@ type ChildCounts struct {
 	PickupChanged int `json:"pickup_changed"`
 	GoesAlone     int `json:"goes_alone"`
 	PickupNote    int `json:"pickup_note"`
+	PickupPerson  int `json:"pickup_person"`
 }
 
 // ChildSummary sums up the children of one group (Entry.Group) or, for

@@ -436,6 +436,8 @@ AS $function$
     UNION ALL
     SELECT 1 FROM schedule.student_pickup_notes AS r WHERE r.tenant_id = p_school_id
     UNION ALL
+    SELECT 1 FROM schedule.student_pickup_persons AS r WHERE r.tenant_id = p_school_id
+    UNION ALL
     SELECT 1 FROM schedule.student_pickup_schedules AS r WHERE r.tenant_id = p_school_id
     UNION ALL
     SELECT 1 FROM schedule.timeframes AS r WHERE r.tenant_id = p_school_id

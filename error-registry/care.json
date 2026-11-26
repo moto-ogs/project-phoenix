@@ -181,6 +181,12 @@
       "legacy": "care.pickup_permission_unchanged"
     },
     {
+      "code": "care.pickup_person_not_authorized",
+      "class": "input",
+      "parameters": [],
+      "legacy": "care.pickup_person_not_authorized"
+    },
+    {
       "code": "care.pickup_person_not_linked",
       "class": "input",
       "parameters": [],

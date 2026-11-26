@@ -1198,6 +1198,14 @@
     },
     {
       "method": "DELETE",
+      "pattern": "/api/students/{id}/pickup-persons/{date}",
+      "portals": [
+        "tenant"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
       "pattern": "/api/students/{id}/purge",
       "portals": [
         "tenant"
@@ -23308,6 +23316,21 @@
     },
     {
       "method": "PUT",
+      "pattern": "/api/students/{id}/pickup-persons/{date}",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "PickupPersonRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "PickupPersonResponse"
+      }
+    },
+    {
+      "method": "PUT",
       "pattern": "/api/students/{id}/pickup-schedules",
       "portals": [
         "tenant"
@@ -25940,6 +25963,7 @@
         "child_goes_alone",
         "child_pickup_changed",
         "child_pickup_note",
+        "child_pickup_person",
         "child_summary",
         "class_dismissal_changed",
         "class_trip",
@@ -45009,6 +45033,14 @@
             "kind": "string",
             "nullable": true
           }
+        },
+        {
+          "name": "pickup_person",
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "ChildPickupPerson"
+          }
         }
       ]
     },
@@ -45152,6 +45184,12 @@
         },
         {
           "name": "pickup_note",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "pickup_person",
           "schema": {
             "kind": "int"
           }
@@ -45966,6 +46004,24 @@
           "name": "version",
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ChildPickupPerson",
+      "go_type": "daychangesview.ChildPickupPerson",
+      "fields": [
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "one_time",
+          "schema": {
+            "kind": "bool"
           }
         }
       ]
@@ -85548,6 +85604,17 @@
           }
         },
         {
+          "name": "pickup_persons",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "PickupPersonResponse"
+            }
+          }
+        },
+        {
           "name": "weekly_plan_version",
           "optional": true,
           "schema": {
@@ -85794,6 +85861,96 @@
       ]
     },
     {
+      "name": "PickupPerson",
+      "go_type": "grouplive.PickupPerson",
+      "fields": [
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "one_time",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "PickupPersonRequest",
+      "go_type": "careplanhttp.PickupPersonRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "guardian_profile_id",
+          "optional": true,
+          "schema": {
+            "kind": "id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "name",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "PickupPersonResponse",
+      "go_type": "careplanhttp.PickupPersonResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "exception_date",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "guardian_profile_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "one_time",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "PickupResetDetails",
       "go_type": "careplanhttp.PickupResetDetails",
       "fields": [
@@ -86025,6 +86182,14 @@
           "optional": true,
           "schema": {
             "kind": "string"
+          }
+        },
+        {
+          "name": "day_pickup_person",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "PickupPerson"
           }
         }
       ]

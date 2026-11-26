@@ -15,4 +15,8 @@ type CleanupRetention interface {
 	// history then shows the last year. It reports the completions it
 	// deleted and the window in days.
 	DeleteFinishedWithdrawalCompletions(ctx context.Context) (deleted, retentionDays int, err error)
+	// DeletePastPickupPersons deletes the pickup person of every day before
+	// today (#7655): the name is kept no longer than the day it is for. It
+	// reports the values it deleted and the window in days (0).
+	DeletePastPickupPersons(ctx context.Context) (deleted, retentionDays int, err error)
 }

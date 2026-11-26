@@ -84,6 +84,7 @@ import {
   SchoolClassIcon,
 } from "~/components/students/student-card";
 import { StickyNote } from "lucide-react";
+import { PickupPersonRow } from "~/components/students/pickup-person-row";
 import { StudentCardGridSkeleton } from "~/components/students/student-card-skeleton";
 import { SchoolCheckinFab } from "~/components/students/school-checkin-fab";
 import { SchoolCheckinModeMobile } from "~/components/students/school-checkin-mode-mobile";
@@ -1291,6 +1292,9 @@ function OGSGroupPageContent() {
                                   now={now}
                                   day={day}
                                   prominent
+                                />
+                                <PickupPersonRow
+                                  person={studentPickup?.dayPickupPerson}
                                 />
                               </>
                             );

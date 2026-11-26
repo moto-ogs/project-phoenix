@@ -124,6 +124,13 @@ const CHILD_TEXTS: Readonly<Record<string, (child: DayChangeChild) => string>> =
       `${childName(child)} geht heute allein nach Hause.`,
     child_pickup_note: (child) =>
       `Hinweis zum Abholen von ${childName(child)}: ${child.note ?? ""}`,
+    // Wer heute abholt (#7655); bei einer einmaligen Person den Ausweis prüfen.
+    child_pickup_person: (child) =>
+      child.pickupPerson
+        ? `${child.pickupPerson.name} holt ${childName(child)} heute ab.${
+            child.pickupPerson.oneTime ? " Bitte den Ausweis prüfen." : ""
+          }`
+        : `${childName(child)} wird heute von einer anderen Person abgeholt.`,
   };
 
 export function childChangeText(
@@ -150,6 +157,7 @@ export function childSummaryTitle(change: DayChange): string {
 export function childSummaryCounts(summary: DayChangeChildSummary): string {
   const { sick, excused, pickupChanged, goesAlone, pickupNote } =
     summary.counts;
+  const pickupPerson = summary.counts.pickupPerson ?? 0;
   const parts: string[] = [];
   if (sick > 0) parts.push(`${sick} krank`);
   if (excused > 0) parts.push(`${excused} entschuldigt`);
@@ -163,6 +171,9 @@ export function childSummaryCounts(summary: DayChangeChildSummary): string {
     parts.push(
       `${pickupNote} ${pickupNote === 1 ? "Hinweis" : "Hinweise"} zum Abholen`,
     );
+  }
+  if (pickupPerson > 0) {
+    parts.push(`${pickupPerson} mit anderer Abholperson`);
   }
   return parts.join(", ");
 }
@@ -326,6 +337,7 @@ const DAY_CHANGE_TEXTS: Readonly<
   child_pickup_changed: childText,
   child_goes_alone: childText,
   child_pickup_note: childText,
+  child_pickup_person: childText,
   child_summary: childSummaryText,
   // Der Hinweis der Leitung: sein Titel ist der Satz (#7667).
   staff_notice: (change) => change.notice?.title ?? "",

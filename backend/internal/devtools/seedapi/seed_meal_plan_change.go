@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"time"
+
+	apiCommon "github.com/moto-ogs/project-phoenix/api/common"
 )
 
 // seedMealPlanChangeStep changes the menu of Tuesday next week after the
@@ -43,7 +45,7 @@ func (seedMealPlanChangeStep) Run(_ context.Context, rt *Runtime) error {
 func seedMealCancellation(rt *Runtime, day seedDate) error {
 	_, err := rt.Client.Put("/api/meal-plan/days/"+day.String()+"/cancellation", map[string]any{"reason": "Der Caterer liefert an diesem Tag nicht."})
 	var refused *APIError
-	if errors.As(err, &refused) && refused.Code == "meals.day_closed" {
+	if errors.As(err, &refused) && refused.Code == apiCommon.CodeMealsDayClosed {
 		fmt.Printf("  %s is a closing day; no lunch to cancel\n", day)
 		return nil
 	}
