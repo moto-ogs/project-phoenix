@@ -422,6 +422,7 @@ export function AppRangeBar({
   nextLabel,
   onToday,
   todayLabel,
+  leading,
 }: Readonly<{
   label: string;
   onPrevious: () => void;
@@ -430,7 +431,64 @@ export function AppRangeBar({
   nextLabel: string;
   onToday?: () => void;
   todayLabel: string;
+  /**
+   * Runde 15: Woche/Monat steht links in derselben Zeile; am kleinen Telefon
+   * kostete die eigene Zeile die Tage im ersten Bild. Der Sprung zurück
+   * („Diese Woche“) rückt dann in eine zweite Zeile, nur solange er gilt.
+   */
+  leading?: ReactNode;
 }>) {
+  const todayChip = onToday ? (
+    <Button
+      type="button"
+      variant="chip"
+      size="md"
+      onClick={onToday}
+      tooltip={`Springt zurück zu ${todayLabel === "Dieser Monat" ? "diesem Monat" : "dieser Woche"}.`}
+    >
+      {todayLabel}
+    </Button>
+  ) : null;
+  if (leading) {
+    return (
+      <div data-app-range-bar="">
+        <div className="flex min-h-11 items-center gap-1 pr-2 pl-4">
+          <div className="shrink-0">{leading}</div>
+          <div className="flex min-w-0 flex-1 items-center justify-end gap-0.5">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label={previousLabel}
+              tooltip={`Zeigt ${previousLabel === "Vorheriger Monat" ? "den vorherigen Monat" : "die vorherige Woche"}.`}
+              onClick={onPrevious}
+            >
+              <ChevronLeft className="size-5" aria-hidden="true" />
+            </Button>
+            <p
+              className="min-w-0 truncate text-center text-sm font-medium whitespace-nowrap text-gray-900 tabular-nums"
+              aria-live="polite"
+            >
+              {label}
+            </p>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label={nextLabel}
+              tooltip={`Zeigt ${nextLabel === "Nächster Monat" ? "den nächsten Monat" : "die nächste Woche"}.`}
+              onClick={onNext}
+            >
+              <ChevronRight className="size-5" aria-hidden="true" />
+            </Button>
+          </div>
+        </div>
+        {todayChip ? (
+          <div className="flex justify-end px-4 pb-1">{todayChip}</div>
+        ) : null}
+      </div>
+    );
+  }
   return (
     <div
       // px-2: die 44-px-Trefferfläche der Pfeile ragt über den Knopf hinaus;
@@ -455,17 +513,7 @@ export function AppRangeBar({
       >
         {label}
       </p>
-      {onToday ? (
-        <Button
-          type="button"
-          variant="chip"
-          size="md"
-          onClick={onToday}
-          tooltip={`Springt zurück zu ${todayLabel === "Dieser Monat" ? "diesem Monat" : "dieser Woche"}.`}
-        >
-          {todayLabel}
-        </Button>
-      ) : null}
+      {todayChip}
       <Button
         type="button"
         variant="ghost"
@@ -622,7 +670,12 @@ export function AppDayList({
       // und Wochenwahl, und das Einrasten zöge die Seite schon beim Laden
       // an ihnen vorbei.
       // (Regel unlayered in globals.css, darum mit !).
-      className="app-time-days [&_*]:[scroll-snap-align:none]!"
+      // Runde 15: Am kleinen Telefon (SE) 52 statt 59 px je Tag, wie die
+      // Aufsicht; die Trefferfläche bleibt über 44 px.
+      className={cn(
+        "app-time-days [&_*]:[scroll-snap-align:none]!",
+        SHORT_PHONE_ROWS,
+      )}
     >
       {header ? (
         <div className="border-b border-gray-100 py-1">{header}</div>
@@ -649,30 +702,32 @@ export function AppDayList({
         const single = weeks.length === 1 && header !== undefined;
         // Die laufende Woche bis gestern; der Kopf nennt den Saldo aller Wochen,
         // so widersprechen sich die zwei Zahlen nicht (Runde 11).
-        const saldoLabel =
-          single && partial
-            ? "Saldo diese Woche bis gestern"
-            : partial
-              ? "Wochensaldo bis gestern"
-              : "Wochensaldo";
+        const saldoLabel = partial ? "Wochensaldo bis gestern" : "Wochensaldo";
         if (single) {
+          // Runde 15: Die Zeile über den Tagen nennt nur „KW 48“; die Daten
+          // der Woche stehen hier, und der Saldo daneben gilt sichtbar für
+          // diese Woche (der Kopf nennt den Saldo seit Jahresbeginn).
           return (
             <CollectionGroup
               key={week}
               title={
-                counted.length === 0
-                  ? `${formatDuration(ist)} gearbeitet`
-                  : saldoLabel
+                <span className="tabular-nums">
+                  {formatDayMonth(from)}–{formatDayMonth(to)}
+                </span>
               }
               meta={
-                counted.length === 0 ? null : (
-                  <span
-                    className={cn(
-                      "font-semibold tabular-nums",
-                      balanceClass(balance),
-                    )}
-                  >
-                    {formatSignedDuration(balance)}
+                counted.length === 0 ? (
+                  <span className="tabular-nums">
+                    {formatDuration(ist)} gearbeitet
+                  </span>
+                ) : (
+                  <span className="tabular-nums">
+                    {partial ? "Saldo bis gestern" : "Saldo"}{" "}
+                    <span
+                      className={cn("font-semibold", balanceClass(balance))}
+                    >
+                      {formatSignedDuration(balance)}
+                    </span>
                   </span>
                 )
               }
@@ -708,7 +763,15 @@ export function AppDayList({
   );
 }
 
+const SHORT_PHONE_ROWS =
+  "[@media(max-height:760px)]:[&_[data-collection-row]]:min-h-[52px] [@media(max-height:760px)]:[&_[data-collection-row]]:py-1.5 [@media(max-height:760px)]:[&_[data-collection-row]>.flex-1>span]:mt-0 [@media(max-height:760px)]:[&_[data-collection-row]>.flex-1>span]:leading-[18px]";
+
 /** Heute ist abgeschlossen: gestempelt und kein Block läuft mehr. */
+/** „23.11.“ */
+function formatDayMonth(d: Date): string {
+  return `${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}.`;
+}
+
 function dayClosed(d: DayEntry): boolean {
   return (
     d.sessions.length > 0 && d.sessions.every((s) => s.checkOutTime !== null)
@@ -801,8 +864,11 @@ function dayRows(
       subtitle = "Kein Dienst";
     } else if (isFuture || isToday) {
       // Heute wie die kommenden Tage: der Zustand steht schon in der
-      // Stempeluhr („Nicht eingestempelt“), die Zeile nennt nur den Plan.
+      // Stempeluhr („Nicht eingestempelt“), die Zeile nennt nur den Plan
+      // und seine Pause (Runde 15: die Stempeluhr nennt sie nicht mehr).
       title = plannedText ?? "Nichts geplant";
+      const pause = d.shifts.reduce((sum, s) => sum + s.breakMinutes, 0);
+      subtitle = pause > 0 ? `Pause ${pause} min` : undefined;
     } else {
       title = "Nicht erfasst";
       subtitle = plannedText ?? undefined;
@@ -1028,7 +1094,7 @@ export function AppDayFactsPanel({ facts }: { readonly facts: AppDayFacts }) {
       <DataField label="Ist">
         {p && p.actualMinutes > 0 ? formatDuration(p.actualMinutes) : "–"}
       </DataField>
-      <DataField label="Angerechnet">
+      <DataField label="Gutschrift">
         {credit > 0 ? formatDuration(credit) : "–"}
       </DataField>
       <DataField label="Saldo">

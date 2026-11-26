@@ -187,6 +187,9 @@ function chatTimeText(iso: string | null | undefined): string {
   return parts.time ? `${parts.date}, ${parts.time}` : parts.date;
 }
 
+const SHORT_PHONE_ROWS =
+  "[@media(max-height:760px)]:[&_[data-collection-row]]:min-h-[52px] [@media(max-height:760px)]:[&_[data-collection-row]]:py-1.5 [@media(max-height:760px)]:[&_[data-collection-row]>.flex-1>span]:mt-0 [@media(max-height:760px)]:[&_[data-collection-row]>.flex-1>span]:leading-[18px]";
+
 type RowProps = (
   id: string,
   href: string,
@@ -213,7 +216,12 @@ function InboxList({
   // Am iPad hoch passt „Elternteil von Johanna Mores“ ganz in die Zeile.
   const wide = layout === "tablet" && !isSplit;
   return (
-    <Collection label="Unterhaltungen">
+    <Collection
+      label="Unterhaltungen"
+      // Runde 15: Am kleinen Telefon (SE) 52 px je Unterhaltung wie in der
+      // Aufsicht; die Trefferfläche bleibt über 44 px.
+      className={layout === "phone" ? SHORT_PHONE_ROWS : undefined}
+    >
       {header ? (
         <div className="border-b border-gray-100 px-4 py-2">{header}</div>
       ) : null}
@@ -231,6 +239,11 @@ function InboxList({
             : "Noch keine Nachricht";
           const unread = thread.unread_count > 0;
           const relation = `${relationshipLabel(thread.relationship_type)} von ${thread.student_name}`;
+          // Telefon (Runde 15): „Elternteil“ ist der Normalfall und stand in
+          // jeder Zeile; sichtbar bleibt nur eine andere Rolle (Großelternteil,
+          // Vormund …). Der Vorlesetext nennt sie immer.
+          const role = relationshipLabel(thread.relationship_type);
+          const showRole = wide || role !== "Elternteil";
           return (
             <CollectionRow
               key={thread.thread_id}
@@ -239,9 +252,11 @@ function InboxList({
               // axe label-content-name-mismatch): Person · Rolle, Abzeichen,
               // Zeit; dann das Kind und die Zahl der ungelesenen.
               aria-label={[
-                `${thread.guardian_name} · ${
-                  wide ? relation : relationshipLabel(thread.relationship_type)
-                }`,
+                // Ohne sichtbare Rolle beginnt er nur mit dem Namen; die
+                // Rolle folgt mit dem Kind („Elternteil von …“).
+                showRole
+                  ? `${thread.guardian_name} · ${wide ? relation : role}`
+                  : thread.guardian_name,
                 thread.audience === "leadership"
                   ? ` ${LEADERSHIP_AUDIENCE_LABEL}`
                   : "",
@@ -286,12 +301,12 @@ function InboxList({
                     >
                       {thread.guardian_name}
                     </span>
-                    <span className="font-normal whitespace-pre text-gray-500">
-                      {" · "}
-                      {wide
-                        ? relation
-                        : relationshipLabel(thread.relationship_type)}
-                    </span>
+                    {showRole ? (
+                      <span className="font-normal whitespace-pre text-gray-500">
+                        {" · "}
+                        {wide ? relation : role}
+                      </span>
+                    ) : null}
                     {wide && thread.audience === "leadership" ? (
                       <span className="ml-1.5 inline-flex align-[1px]">
                         <StatusBadge
