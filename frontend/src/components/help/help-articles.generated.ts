@@ -1070,6 +1070,9 @@ export const appOverviewTopic = function appOverviewTopic(): HelpTopic {
           "Steht dort `Der Speiseplan für heute wurde geändert.`, gibt es heute etwas anderes zu essen. Was es gibt, steht auf der Seite `Speiseplan`.",
           "Tippe auf einen Eintrag, um die passende Seite zu öffnen.",
           "Steht dort `Heute läuft alles wie geplant.`, gibt es heute nichts Besonderes.",
+          // Vorschau auf morgen (#7657), components/home/day-switch.tsx.
+          "Oben in der Karte wählst du `Heute` oder `Morgen`. Mit `Morgen` siehst du schon heute, was morgen anders ist. Du siehst dort dasselbe wie für heute, nur für morgen.",
+          "Ist morgen Wochenende oder ein Schließtag, zeigt `Morgen` trotzdem diesen Tag. Am Schließtag steht dann, dass die OGS geschlossen ist.",
           "Die Karte zeigt nie, warum jemand fehlt.",
           "Ändert sich etwas, zeigt die Karte es ohne Neuladen.",
           // Krank und Urlaub des Teams stehen seit #7668 nur noch hier, nicht
@@ -10464,6 +10467,8 @@ export const teacherClassDayTopic = function teacherClassDayTopic(): HelpTopic {
       "Ist eine deiner Klassen heute auf Ausflug? Dann steht dort, wie viele Kinder unterwegs sind und wann sie zurückkommen. Ein Tipp darauf öffnet die Klasse.",
       "Fällt einer deiner Termine heute aus oder ist er an einem anderen Ort? Auch das steht unter `Heute anders`. Ein Tipp darauf öffnet den `Kalender`.",
       "Wähle unter `Heute anders` eine Klasse mit Kindern. Dann springst du in der Liste zum ersten Kind, das heute anders ist.",
+      // Vorschau auf morgen (#7657).
+      "Wähle oben in `Heute anders` die Schaltfläche `Morgen`. Dann siehst du schon heute, was morgen für deine Klassen und die Schule anders ist.",
       "Namen von Kolleginnen und Kollegen und Gründe stehen bei `Heute anders` nicht. Du siehst nur deine Klassen, deine Aufsichten, deine Termine und die ganze Schule.",
       "Hinweise der Leitung liest und bestätigst du unter `Hinweise der Leitung`.",
       "Steht bei einer Klasse `4 Kinder anders als sonst`, weicht dort heute etwas vom üblichen Plan ab.",
