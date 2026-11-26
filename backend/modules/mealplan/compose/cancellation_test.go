@@ -34,7 +34,7 @@ func TestMealCancellationClosesTheDayUntilItIsRemoved(t *testing.T) {
 	require.NoError(t, err)
 	services, err := New(Dependencies{
 		DB: db, Settings: enabledTestSettings(nil), Observe: func(Observation) {},
-		Now:          func() time.Time { return time.Date(2026, 9, 7, 8, 0, 0, 0, testBerlin) },
+		Now:          func() time.Time { return time.Date(2026, 9, 9, 10, 0, 0, 0, testBerlin) },
 		Participants: testParticipantFinder, ParticipantDays: testParticipantDaysFinder,
 		StudentNames: testStudentNames, LockStudent: testStudentLock,
 		Calendar: fixedCalendar([]string{closingDay}, nil), CancelledDays: NewMenuChanges().CancelledDays,
@@ -70,6 +70,7 @@ func TestMealCancellationClosesTheDayUntilItIsRemoved(t *testing.T) {
 	// Monday 7 to Wednesday 30 September, without the closing day Friday 11.
 	const bookedDays = 17
 	require.Equal(t, bookedDays, mealDays(), "every booked school day counts before the cancellation")
+	require.NoError(t, plan.SettleOrders(ctx), "the cancellation must also hide an already fixed order")
 
 	require.NoError(t, cancellations.CancelMeal(ctx, mealplan.MealCancellation{Date: wednesday, Reason: "  Der Caterer liefert nicht  "}))
 
@@ -91,7 +92,17 @@ func TestMealCancellationClosesTheDayUntilItIsRemoved(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, orders.Days, 1)
 		assert.True(t, orders.Days[0].MealCancelled)
+		assert.NotZero(t, orders.Days[0].OrderID, "the order was fixed before the cancellation")
 		assert.Zero(t, orders.Days[0].Total)
+		assert.Empty(t, orders.Days[0].Classes)
+		assert.Empty(t, orders.Days[0].Children)
+		export, err := orders.MonthExport("2026-09-01")
+		require.NoError(t, err)
+		assert.Empty(t, export.Lines, "the monthly order export must not count the cancelled meal")
+		summary, err := services.Summaries.CatererOrderSummary(ctx, time.Date(2026, 9, 7, 0, 0, 0, 0, testBerlin), wednesday, wednesday)
+		require.NoError(t, err)
+		require.Len(t, summary.Days, 1)
+		assert.Zero(t, summary.Days[0].Total, "the caterer summary must not retain the fixed quantity")
 		listed, err := cancellations.MealCancellations(ctx, mealplan.Date(monday.String()), mealplan.Date(monday.AddDays(4).String()))
 		require.NoError(t, err)
 		assert.Equal(t, []mealplan.MealCancellation{{Date: wednesday, Reason: "Der Caterer liefert nicht"}}, listed)
@@ -126,5 +137,8 @@ func TestMealCancellationClosesTheDayUntilItIsRemoved(t *testing.T) {
 		assert.False(t, list.Closed)
 		assert.Equal(t, []int64{student.ID}, dailyParticipantIDs(list))
 		assert.Equal(t, bookedDays, mealDays())
+		orders, err := plan.Orders(ctx, wednesday, wednesday)
+		require.NoError(t, err)
+		assert.Equal(t, 1, orders.Days[0].Total, "the original fixed order is visible again")
 	})
 }

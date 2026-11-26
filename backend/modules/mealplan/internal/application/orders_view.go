@@ -222,8 +222,7 @@ func buildOrderView(rules domain.OrderingRules, window orderWindow, current map[
 		}
 		day := domain.OrderDay{Date: date, Closed: window.days.Closed[date], MealCancelled: window.days.Cancelled[date], Deadline: rules.FreezeAt(date), Children: current[date].classes}
 		if order, ordered := window.state.OrderFor(date); ordered {
-			day.Order, day.Deadline, day.Children = &order, order.DeadlineAt, window.state.OrderedChildren(date)
-			day.FrozenChildren = window.state.FrozenChildren(date)
+			setOrderedDay(&day, window.state, order)
 		} else if date.Before(today) {
 			day.Unordered = true
 		} else {
@@ -243,6 +242,18 @@ func buildOrderView(rules domain.OrderingRules, window orderWindow, current map[
 		view.Days = append(view.Days, day)
 	}
 	return view
+}
+
+// setOrderedDay lays out a fixed order. A cancelled lunch keeps the stored
+// order for a later restoration, but exposes neither its frozen nor current
+// quantities.
+func setOrderedDay(day *domain.OrderDay, state domain.OrderState, order domain.Order) {
+	day.Order, day.Deadline = &order, order.DeadlineAt
+	if day.MealCancelled {
+		return
+	}
+	day.Children = state.OrderedChildren(day.Date)
+	day.FrozenChildren = state.FrozenChildren(day.Date)
 }
 
 // orderNames names every child of the view: from today's registration, and
