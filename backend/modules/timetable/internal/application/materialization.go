@@ -223,7 +223,8 @@ func (s *materializationService) materializeForTenantLocked(
 	if err != nil {
 		return result, err
 	}
-	people, err := s.loadTemplatesPeople(ctx, scheduledTemplateIDs(templates, schedules), "materialize template")
+	templateIDs := scheduledTemplateIDs(templates, schedules)
+	people, err := s.loadTemplatesPeople(ctx, templateIDs, scheduledTargetTemplateIDs(templates, schedules), "materialize template")
 	if err != nil {
 		return result, err
 	}
@@ -260,6 +261,16 @@ func scheduledTemplateIDs(templates []*activityContract.Group, schedules map[int
 	ids := make([]int64, 0, len(templates))
 	for _, tmpl := range templates {
 		if len(schedules[tmpl.ID]) > 0 {
+			ids = append(ids, tmpl.ID)
+		}
+	}
+	return ids
+}
+
+func scheduledTargetTemplateIDs(templates []*activityContract.Group, schedules map[int64][]*activityContract.Schedule) []int64 {
+	ids := make([]int64, 0, len(templates))
+	for _, tmpl := range templates {
+		if len(schedules[tmpl.ID]) > 0 && tmpl.HasDynamicTargets {
 			ids = append(ids, tmpl.ID)
 		}
 	}

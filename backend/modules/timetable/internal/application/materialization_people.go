@@ -15,7 +15,7 @@ import (
 // all templates. The recurrence gate is already held and materialization
 // writes none of these rows, so every template sees the rows its own reads
 // would see after the gate. op prefixes the error operations of the caller.
-func (s *materializationService) loadTemplatesPeople(ctx context.Context, templateIDs []int64, op string) (map[int64]templateRoster, error) {
+func (s *materializationService) loadTemplatesPeople(ctx context.Context, templateIDs, targetTemplateIDs []int64, op string) (map[int64]templateRoster, error) {
 	rosters := make(map[int64]templateRoster, len(templateIDs))
 	if len(templateIDs) == 0 {
 		return rosters, nil
@@ -24,9 +24,13 @@ func (s *materializationService) loadTemplatesPeople(ctx context.Context, templa
 	if err != nil {
 		return nil, &ports.ScheduleError{Op: op + ": load enrollments", Err: err}
 	}
-	targets, err := s.groupRepo.ListTargetStudentIDs(ctx, templateIDs)
-	if err != nil {
-		return nil, &ports.ScheduleError{Op: op + ": load target students", Err: err}
+	targets := make(map[int64][]int64, len(targetTemplateIDs))
+	if len(targetTemplateIDs) > 0 {
+		var err error
+		targets, err = s.groupRepo.ListTargetStudentIDs(ctx, targetTemplateIDs)
+		if err != nil {
+			return nil, &ports.ScheduleError{Op: op + ": load target students", Err: err}
+		}
 	}
 	supervisors, err := namedPlannedSupervisors(ctx, s.supervisorRepo, s.directories, templateIDs, "find by group ID")
 	if err != nil {
