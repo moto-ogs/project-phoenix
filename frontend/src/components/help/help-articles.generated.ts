@@ -5226,7 +5226,7 @@ export const mealPlanTopic = function mealPlanTopic(): HelpTopic {
       },
     ],
     result:
-      "Der Plan erscheint sofort im Elternportal. Fällt das Essen aus, steht beim Tag `Essen fällt aus` mit dem Grund.",
+      "Der Plan erscheint sofort im Elternportal. Fällt das Essen aus, steht hier im `Speiseplan` beim Tag `Essen fällt aus` mit dem Grund.",
     notes: [
       "Pro Tag sind mehrere Gerichte möglich.",
       "Änderst du einen Tag, der schon Gerichte hatte, bekommen die Eltern einen Hinweis in moto. Das gilt nur für Kinder, die an dem Tag ein Essen gebucht haben. Mehrere Änderungen einer Woche in 10 Minuten werden ein Hinweis.",
@@ -5242,7 +5242,7 @@ export const mealPlanTopic = function mealPlanTopic(): HelpTopic {
       "Öffne `Tagesliste herunterladen` oder `Wochenliste herunterladen`. Wähle `PDF` oder `Excel`.",
       "Bis wann Eltern ändern können, legst du unter `Einstellungen` im Bereich `Mittagessen` fest.",
       "An Feiertagen und Schließtagen gibt es kein Essen. Die Wochenliste zeigt dort `kein Essen`.",
-      "Fällt das Essen aus, gelten die Buchungen des Tages nicht. Die Liste für die Küche ist leer, und der Tag wird im Monat nicht abgerechnet. Am Tag selbst sieht das Team den Ausfall mit dem Grund unter `Heute anders`.",
+      "Fällt das Essen aus, gelten die Buchungen des Tages nicht. Die Liste für die Küche ist leer, und der Tag wird im Monat nicht abgerechnet. Am Tag selbst sieht das Team den Ausfall mit dem Grund unter `Heute anders`. Eltern sehen ihn dort im Elternportal bei jedem Kind, das an dem Tag angemeldet ist, ohne den Grund.",
       "Findet das Essen doch statt, wähle im Menü des Tages `Essen findet statt`. Dann gelten die Buchungen wieder. Den Grund änderst du mit `Grund ändern`.",
       "Hast du den Monat schon freigegeben, ändert ein späterer Ausfall die Freigabe nicht. Gib den Monat dann neu frei.",
     ],
@@ -6469,6 +6469,8 @@ export const parentChildOverviewTopic =
         "`Kontakte`: Abholberechtigte, Kontakte und verbundene Konten.",
         "Unter `Heute` stehen die Knöpfe zum Abmelden, zur Abholzeit und für eine Nachricht.",
         "`Heute anders` nennt zum Beispiel: Ein Angebot fällt aus, ist in einem anderen Raum oder hat eine Vertretung. Dazu kommen eine geänderte Abholzeit, ein Schließtag, geänderte Öffnungszeiten, ein Ausflug oder eine Krankmeldung.",
+        // Essensausfall im Elternportal (#8160): nur bei einer Buchung des Kindes.
+        "Fällt das Mittagessen aus und dein Kind ist an dem Tag angemeldet, steht das auch unter `Heute anders`. Der Tag wird nicht berechnet.",
         // #8170: eine Abholzeit nach der geänderten Schließzeit bleibt stehen.
         "Schließt die OGS heute früher und liegt deine Abholzeit danach, steht dort `Das ist nach der Schließung.` moto ändert die Abholzeit nicht. Wähle `Abholung ändern` und trage eine frühere Zeit ein.",
         "Namen von Betreuungskräften stehen bei `Heute anders` nie. Du siehst nur, was dein Kind betrifft.",

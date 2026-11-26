@@ -58,6 +58,7 @@
     "closingDayUntil": "{careNomCap} ist bis {date} geschlossen: {name}.",
     "openingChanged": "{careNomCap} ist heute von {opens} bis {closes} Uhr geöffnet: {name}.",
     "openingChangedUntil": "{careNomCap} ist bis {date} von {opens} bis {closes} Uhr geöffnet: {name}.",
+    "mealCancelled": "Heute gibt es kein Mittagessen für {name}. Es wird nicht berechnet.",
     "pickupAfterClosing": "Das ist nach der Schließung. Bitte ändere die Abholung.",
     "activityCancelled": "{title} um {time} Uhr fällt heute aus.",
     "activityReinstated": "{title} um {time} Uhr findet heute doch statt.",

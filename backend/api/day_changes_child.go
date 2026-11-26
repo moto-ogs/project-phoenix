@@ -16,6 +16,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/daychangesview"
+	"github.com/moto-ogs/project-phoenix/modules/mealplan"
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar"
 	schoolCalendarCompose "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/compose"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
@@ -41,13 +42,22 @@ type ChildDayChangesSources struct {
 	OpeningChanges dayChangesOpeningChangeReads
 	Blocks         dayChangesChildBlocks
 	ClassArrivals  dayChangesClassArrivals
-	Today          func() calendar.Date
+	// Meals is Meal Plan's read of a cancelled lunch the child is booked
+	// for (#8160).
+	Meals dayChangesChildMeals
+	Today func() calendar.Date
+}
+
+// dayChangesChildMeals is Meal Plan's read of a cancelled lunch of one
+// booked child, in the request's tenant transaction.
+type dayChangesChildMeals interface {
+	ChildMealCancelledOn(ctx context.Context, studentID int64, date mealplan.Date) (bool, error)
 }
 
 // NewChildDayChanges binds the child's sources to the projection and the
 // projection to the parents portal's port.
 func NewChildDayChanges(sources ChildDayChangesSources) (parentService.ChildDayChanges, error) {
-	if sources.CarePlan == nil || sources.Students == nil || sources.ClosingDays == nil || sources.OpeningChanges == nil || sources.Blocks == nil || sources.ClassArrivals == nil {
+	if sources.CarePlan == nil || sources.Students == nil || sources.ClosingDays == nil || sources.OpeningChanges == nil || sources.Blocks == nil || sources.ClassArrivals == nil || sources.Meals == nil {
 		return nil, fmt.Errorf("%w: child day sources", daychangesview.ErrDependencies)
 	}
 	query, err := daychangesview.NewChild(daychangesview.ChildDependencies{
@@ -56,6 +66,7 @@ func NewChildDayChanges(sources ChildDayChangesSources) (parentService.ChildDayC
 		Closing:    childDayClosingDays{reads: sources.ClosingDays, openings: sources.OpeningChanges},
 		Activities: childDayActivities(sources.Blocks),
 		Classes:    childDayClasses{sources: sources},
+		Meals:      childDayMeals(sources.Meals),
 	})
 	if err != nil {
 		return nil, err
@@ -294,6 +305,23 @@ func (s childDayClasses) ChildDayChanges(ctx context.Context, day calendar.Date,
 	return entries, nil
 }
 
+// childDayMeals is Essen of the child (#8160): the school cancelled lunch
+// on a day the child is booked for. A child without a booking gets no
+// entry. The school's reason stays with the team: the form that takes it
+// tells the school that the team sees it.
+func childDayMeals(meals dayChangesChildMeals) childDaySourceFunc {
+	return func(ctx context.Context, day calendar.Date, child daychangesview.ChildFilter) ([]daychangesview.SourceEntry, error) {
+		cancelled, err := meals.ChildMealCancelledOn(ctx, child.StudentID.Int64(), mealplan.Date(day.String()))
+		if err != nil {
+			return nil, fmt.Errorf("read child meal cancellation: %w", err)
+		}
+		if !cancelled {
+			return nil, nil
+		}
+		return []daychangesview.SourceEntry{{Kind: daychangesview.KindMealCancelled, Involved: true}}, nil
+	}
+}
+
 // childDayChangesPort serves the parents portal's port from the projection.
 type childDayChangesPort struct{ query daychangesview.ChildQuery }
 
@@ -356,15 +384,15 @@ func toParentDayChange(entry daychangesview.Entry) parentService.ChildDayChange 
 // root builds anyway: Care Plan, People Directory, School Calendar, the class
 // arrivals and the operational day of Timetable. A failure is a wiring error
 // of the root, so the serve root stops at it.
-func mustBuildChildDayChanges(carePlan dayChangesCarePlan, students dayChangesStudents, closing dayChangesClosingDayReads, classArrivals timetable.ClassArrivalQuery, lifecycle owners.TimetableLifecycle, today func() calendar.Date) parentService.ChildDayChanges {
-	port, err := buildChildDayChanges(carePlan, students, closing, classArrivals, lifecycle, today)
+func mustBuildChildDayChanges(carePlan dayChangesCarePlan, students dayChangesStudents, closing dayChangesClosingDayReads, classArrivals timetable.ClassArrivalQuery, lifecycle owners.TimetableLifecycle, meals dayChangesChildMeals, today func() calendar.Date) parentService.ChildDayChanges {
+	port, err := buildChildDayChanges(carePlan, students, closing, classArrivals, lifecycle, meals, today)
 	if err != nil {
 		panic(fmt.Sprintf("compose the child's day changes: %v", err))
 	}
 	return port
 }
 
-func buildChildDayChanges(carePlan dayChangesCarePlan, students dayChangesStudents, closing dayChangesClosingDayReads, classArrivals timetable.ClassArrivalQuery, lifecycle owners.TimetableLifecycle, today func() calendar.Date) (parentService.ChildDayChanges, error) {
+func buildChildDayChanges(carePlan dayChangesCarePlan, students dayChangesStudents, closing dayChangesClosingDayReads, classArrivals timetable.ClassArrivalQuery, lifecycle owners.TimetableLifecycle, meals dayChangesChildMeals, today func() calendar.Date) (parentService.ChildDayChanges, error) {
 	classDay, err := timetable.ClassArrivalDayOf(classArrivals)
 	if err != nil {
 		return nil, err
@@ -376,6 +404,6 @@ func buildChildDayChanges(carePlan dayChangesCarePlan, students dayChangesStuden
 	return NewChildDayChanges(ChildDayChangesSources{
 		CarePlan: carePlan, Students: students, ClosingDays: closing,
 		OpeningChanges: schoolCalendarCompose.NewOpeningChanges(),
-		Blocks:         blocks, ClassArrivals: classDay, Today: today,
+		Blocks:         blocks, ClassArrivals: classDay, Meals: meals, Today: today,
 	})
 }

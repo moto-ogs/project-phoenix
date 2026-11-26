@@ -30,6 +30,12 @@ type MealCancellations interface {
 	// RestoreMeal lets lunch take place again from today on: the bookings
 	// of the day apply again. A day without a cancellation stays as it is.
 	RestoreMeal(ctx context.Context, date Date) error
+	// ChildMealCancelledOn reports whether lunch is cancelled on date for a
+	// child booked on it (#8160): by the regular days or a day change, as
+	// the booking stands without the cancellation and before absences.
+	// Without meal registration no child is booked. It reads in the
+	// caller's transaction.
+	ChildMealCancelledOn(ctx context.Context, studentID int64, date Date) (bool, error)
 }
 
 // ErrInvalidMealCancellation refuses a reason that is empty or too long.
