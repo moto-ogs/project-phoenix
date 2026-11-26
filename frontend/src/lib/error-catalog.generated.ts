@@ -1351,6 +1351,8 @@ export const ERROR_CATALOG = {
         "Dieser Raum ist nicht mehr freigegeben. Bitte wähle einen anderen Raum.",
       "rooms.required_by_care_offering":
         "Ein Betreuungsangebot braucht diesen Raum noch. Wähle dort zuerst einen anderen Raum.",
+      "rooms.room_closed":
+        "Dieser Raum ist heute gesperrt. Bitte wähle einen anderen Raum.",
       "rooms.session_running":
         "In diesem Raum läuft gerade eine Aktivität. Beende sie zuerst.",
       "rooms.still_planned":

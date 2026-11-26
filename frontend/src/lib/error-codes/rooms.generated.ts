@@ -6,6 +6,7 @@ export const codes = [
   "rooms.not_found",
   "rooms.not_released",
   "rooms.required_by_care_offering",
+  "rooms.room_closed",
   "rooms.session_running",
   "rooms.still_planned",
 ] as const;
@@ -17,6 +18,7 @@ export const classes = {
   "rooms.not_found": "business_rejection",
   "rooms.not_released": "business_rejection",
   "rooms.required_by_care_offering": "business_rejection",
+  "rooms.room_closed": "business_rejection",
   "rooms.session_running": "business_rejection",
   "rooms.still_planned": "business_rejection",
 } as const;
@@ -28,6 +30,7 @@ export const parameters = {
   "rooms.not_found": [],
   "rooms.not_released": [],
   "rooms.required_by_care_offering": [],
+  "rooms.room_closed": [],
   "rooms.session_running": [],
   "rooms.still_planned": [],
 } as const;

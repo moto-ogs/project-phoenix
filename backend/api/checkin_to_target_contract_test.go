@@ -79,6 +79,22 @@ func checkCheckInToTarget(t *testing.T, graph *goldenRuntime) {
 	assert.Equal(t, 1, openAttendance(child))
 	assert.Equal(t, []int64{supervised.ID}, openVisitSessions(t, db, child), "the child is in the room, not in transit")
 
+	closed := testpkg.CreateTestOpenRoom(t, db, "Anmelden Gesperrter Raum")
+	closeRoomToday(t, db, testpkg.Tenant(t), closed.ID)
+	closedCheckInChild := testpkg.CreateTestStudent(t, db, "Nora", "Gesperrt", "2a").ID
+	code, body = post("/api/active/visits/check-in-to-room",
+		fmt.Sprintf(`{"student_ids":["%d"],"target_room_id":"%d"}`, closedCheckInChild, closed.ID), staff)
+	require.Equal(t, http.StatusConflict, code, body)
+	assert.Contains(t, body, `"code":"rooms.room_closed"`)
+	assert.Zero(t, openAttendance(closedCheckInChild), "a closed room does not check a child in")
+
+	admin := testpkg.MintLiveSessionJWT(t, db, testutil.AdminTestClaimsForTenant(int(account.ID), testpkg.Tenant(t)))
+	code, body = post("/api/active/visits/move-to-room",
+		fmt.Sprintf(`{"student_ids":["%d"],"target_room_id":"%d"}`, child, closed.ID), admin)
+	require.Equal(t, http.StatusConflict, code, body)
+	assert.Contains(t, body, `"code":"rooms.room_closed"`)
+	assert.Equal(t, []int64{supervised.ID}, openVisitSessions(t, db, child), "a closed room does not move a child")
+
 	yardChild := testpkg.CreateTestStudent(t, db, "Jonas", "Anmelden", "2a").ID
 	code, body = post("/api/active/visits/check-in-to-room",
 		fmt.Sprintf(`{"student_ids":["%d"],"target_room_id":"%d"}`, yardChild, gym.ID), staff)
@@ -98,7 +114,6 @@ func checkCheckInToTarget(t *testing.T, graph *goldenRuntime) {
 
 	// The placed child moves on into the released room, ending its stay in
 	// the supervised room. An admin needs no source supervision.
-	admin := testpkg.MintLiveSessionJWT(t, db, testutil.AdminTestClaimsForTenant(int(account.ID), testpkg.Tenant(t)))
 	code, body = post("/api/active/visits/move-to-room",
 		fmt.Sprintf(`{"student_ids":["%d"],"target_room_id":"%d"}`, child, gym.ID), admin)
 	require.Equal(t, http.StatusOK, code, body)

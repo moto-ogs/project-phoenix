@@ -37,6 +37,12 @@
       "legacy": "rooms.required_by_care_offering"
     },
     {
+      "code": "rooms.room_closed",
+      "class": "business_rejection",
+      "parameters": [],
+      "legacy": "rooms.room_closed"
+    },
+    {
       "code": "rooms.session_running",
       "class": "business_rejection",
       "parameters": [],

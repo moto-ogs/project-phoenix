@@ -150,7 +150,7 @@ func (rs *Resource) openRoomMoveErrorRenderer(err error) render.Renderer {
 	case errors.Is(err, openroommove.ErrRoomNotReleased):
 		return common.ErrorConflictWithCode(err, common.CodeRoomsNotReleased)
 	case errors.Is(err, openroommove.ErrRoomClosed):
-		return common.ErrorConflict(err)
+		return common.ErrorConflictWithCode(err, common.CodeRoomsRoomClosed)
 	}
 	return rs.RenderPresenceError(err)
 }
