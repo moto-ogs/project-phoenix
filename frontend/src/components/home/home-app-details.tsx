@@ -13,6 +13,7 @@ import {
   sourceFailureText,
 } from "~/components/home/day-changes-text";
 import { useNoticeAcknowledge } from "~/components/home/day-notice-row";
+import { LinkRowMeta } from "~/components/home/home-card-rows";
 import { AwayBadge } from "~/components/home/my-group-block";
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
@@ -190,7 +191,7 @@ export function DayChangesPreview({
           {restLabel ? (
             <CollectionRow
               title="Alle anzeigen"
-              meta={restLabel}
+              meta={<LinkRowMeta>{restLabel}</LinkRowMeta>}
               onClick={onShowAll}
             />
           ) : null}
