@@ -133,13 +133,18 @@ export function SpontaneousActivityStart({
   const formRef = useRef<HTMLFormElement>(null);
   const formErrors = useApiFormError(formRef);
   const { clear: clearFormErrors } = formErrors;
-  // Ein heute gesperrter Raum (#7653) ist nicht wählbar, wie ein belegter;
-  // die Auswahl nennt den Grund.
+  // Ein heute gesperrter Raum (#7653) ist nicht wählbar; die Auswahl nennt
+  // den Grund. Er bleibt von belegten Räumen getrennt, damit eine veraltete
+  // Auswahl die passende Sperrmeldung erhält.
   const today = useBerlinToday();
   const closedRooms = useClosedRoomsOn(isOpen ? today : null);
   const occupiedRoomIdSet = useMemo(
-    () => new Set([...occupiedRoomIds, ...closedRooms.keys()]),
-    [occupiedRoomIds, closedRooms],
+    () => new Set(occupiedRoomIds),
+    [occupiedRoomIds],
+  );
+  const unavailableRoomIdSet = useMemo(
+    () => new Set([...occupiedRoomIdSet, ...closedRooms.keys()]),
+    [occupiedRoomIdSet, closedRooms],
   );
 
   // Auswahllisten (Aktivitäten, Räume, Personal): jede Liste füllt, was sie
@@ -205,7 +210,7 @@ export function SpontaneousActivityStart({
   if (isOpen && roomList.data && !isLoadingRefs && preselectedFor !== rooms) {
     setPreselectedFor(rooms);
     setRoomId((prev) =>
-      preselectRoom(rooms, prev, defaultRoomId, occupiedRoomIdSet),
+      preselectRoom(rooms, prev, defaultRoomId, unavailableRoomIdSet),
     );
   }
 
@@ -218,9 +223,12 @@ export function SpontaneousActivityStart({
   const isSelectedRoomOccupied =
     selectedRoom !== undefined &&
     isRoomOccupied(selectedRoom, occupiedRoomIdSet);
+  const isSelectedRoomClosed =
+    selectedRoom !== undefined && closedRooms.has(selectedRoom.id);
   const canSubmit =
     title.length > 0 &&
     roomId.length > 0 &&
+    !isSelectedRoomClosed &&
     !isSelectedRoomOccupied &&
     !isStarting;
   const suggestedActivities = activities.slice(0, 5);
@@ -240,7 +248,8 @@ export function SpontaneousActivityStart({
         return {
           value: room.id,
           label: `${room.building ? `${room.building} - ` : ""}${room.name}${state}`,
-          disabled: isRoomOccupied(room, occupiedRoomIdSet),
+          disabled:
+            closure !== undefined || isRoomOccupied(room, occupiedRoomIdSet),
         };
       }),
     [rooms, occupiedRoomIdSet, closedRooms],
@@ -277,6 +286,10 @@ export function SpontaneousActivityStart({
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (isSelectedRoomClosed) {
+      formErrors.invalid("Dieser Raum ist heute gesperrt.");
+      return;
+    }
     if (isSelectedRoomOccupied) {
       formErrors.invalid(
         "Der Raum ist schon belegt. Bitte wähle einen anderen Raum.",
@@ -304,11 +317,14 @@ export function SpontaneousActivityStart({
   return (
     <>
       <SectionCard className="mb-4">
-        <button
+        <Button
           type="button"
           disabled={disabled || isStarting}
           onClick={() => setIsOpen(true)}
-          className="border-moto-green/40 bg-moto-green/10 hover:border-moto-green hover:bg-moto-green/15 flex min-h-14 w-full items-center gap-3 rounded-lg border px-3 py-2 text-left transition disabled:cursor-not-allowed disabled:opacity-50"
+          variant="surface_success"
+          size="card"
+          className="w-full justify-start gap-3 text-left"
+          tooltip="Öffnet die Auswahl für eine spontane Aktivität."
         >
           <IconTile
             shape="round"
@@ -324,7 +340,7 @@ export function SpontaneousActivityStart({
                 "Aktivität wählen, Raum belegen, Kinder danach hinzufügen"}
             </span>
           </span>
-        </button>
+        </Button>
       </SectionCard>
 
       {/* oxlint-disable-next-line ui-kit/form-modal-pending -- übergibt die Auswahl synchron an onStart und schließt; gespeichert wird danach außerhalb des Dialogs. */}
@@ -359,6 +375,7 @@ export function SpontaneousActivityStart({
                   : startBlockedReason({
                       title,
                       roomId,
+                      isSelectedRoomClosed,
                       isSelectedRoomOccupied,
                     })
               }
@@ -493,11 +510,13 @@ export function SpontaneousActivityStart({
 function startBlockedReason(input: {
   title: string;
   roomId: string;
+  isSelectedRoomClosed: boolean;
   isSelectedRoomOccupied: boolean;
 }): string | undefined {
   if (input.title.length === 0)
     return "Wähle oder schreibe zuerst eine Aktivität.";
   if (input.roomId.length === 0) return "Wähle zuerst einen Raum aus.";
+  if (input.isSelectedRoomClosed) return "Dieser Raum ist heute gesperrt.";
   if (input.isSelectedRoomOccupied)
     return "Wähle einen freien Raum, dieser ist belegt.";
   return undefined;

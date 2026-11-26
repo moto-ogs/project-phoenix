@@ -85,6 +85,10 @@ func (s *sessionLifecycle) StartSession(ctx context.Context, command devicescan.
 				return devicescan.SessionStartResponse{Status: "conflict", Message: info.ConflictMessage, ConflictInfo: &info}, nil
 			}
 		}
+		var failure *devicescan.Failure
+		if errors.As(err, &failure) {
+			return devicescan.SessionStartResponse{}, failure
+		}
 		return devicescan.SessionStartResponse{}, classifyPresenceFailure(err)
 	}
 	// The start resolved the session's room, the chosen or the planned one.

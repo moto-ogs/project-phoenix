@@ -123,6 +123,9 @@ func (s *service) executeSessionStart(ctx context.Context, activityID, deviceID 
 		if err != nil {
 			return err
 		}
+		if err := s.refuseClosedRoom(txCtx, finalRoomID, operation); err != nil {
+			return err
+		}
 		if err := s.SchoolPresence.PrepareVisitWrites(txCtx, studentpresence.VisitWriteScope{DeviceID: deviceID, RoomID: finalRoomID}); err != nil {
 			return &ActiveError{Op: operation, Err: err}
 		}
@@ -132,6 +135,23 @@ func (s *service) executeSessionStart(ctx context.Context, activityID, deviceID 
 		return s.startInRoom(txCtx, activityID, deviceID, finalRoomID, operation, createSession)
 	})
 	return markRollbackOnFailure(ctx, err)
+}
+
+// refuseClosedRoom locks the Facilities room inside the session transaction.
+// CloseRoom takes the same lock, so a closure and a new room session cannot
+// both commit for the same day.
+func (s *service) refuseClosedRoom(ctx context.Context, roomID int64, operation string) error {
+	if s.RoomClosures == nil {
+		return &ActiveError{Op: operation, Err: ErrDatabaseOperation}
+	}
+	closed, err := s.RoomClosures.RoomClosedOn(ctx, roomID, s.todayDate())
+	if err != nil {
+		return &ActiveError{Op: operation, Err: ErrDatabaseOperation}
+	}
+	if closed {
+		return &ActiveError{Op: operation, Err: ErrRoomClosed}
+	}
+	return nil
 }
 
 // errJoinedSessionChanged reports that the room stay a start joins ended,

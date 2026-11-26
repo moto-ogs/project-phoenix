@@ -272,7 +272,7 @@ func composeTestRootWith(db transactionruntime.Database, logger *slog.Logger, cf
 		},
 		func() (err error) {
 			active, err = owners.BuildActivePresence(db, unit, env, hub, settings.Service, presence, presencePeople, carePlanRows, people,
-				services.Users, rooms, devices, timetableRows, days, side.AutoCheckIn, emitter, nil, AttendancePrincipal)
+				services.Users, rooms, facilitiesRooms.Closures, devices, timetableRows, days, side.AutoCheckIn, emitter, nil, AttendancePrincipal)
 			return
 		},
 		func() (err error) {

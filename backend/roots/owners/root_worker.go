@@ -299,6 +299,7 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 		facilities       facilitiesModule.Capability
 		outbox           *deliveryModule.Worker
 		staffGroups      schoolstructure.StaffGroupQuery
+		roomClosures     facilitiesModule.Closures
 	)
 	err = RunRootSteps(
 		func() (err error) { tokens, err = tokensFor(); return },
@@ -359,11 +360,12 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 			devices, err = NewDeviceFleet(db, env.Now)
 			return StepError("compose device fleet", err)
 		},
-		func() error {
+		func() (err error) {
 			presence = BuildPresenceOwner(db, env.Logger, env.Now, devices, persons, rooms, membership, carePlan, timetableOwner, timetableRepos, people, structure)
 			substitutions = NewGroupSubstitutionRepository(structure.Groups, membership, workTime, env.Today)
 			supervisions = NewGroupSupervisionRecords(presence.SessionRecords, groups)
-			return nil
+			roomClosures, err = BuildRoomClosures(db, env.Now)
+			return StepError("compose room closures", err)
 		},
 		func() (err error) {
 			timetableRows, err = BuildTimetableOwner(db, env.Logger, env.Now, timetableOwner, timetableRepos, calendar, bookings, structure.Groups, hub, persons, people.Students)
@@ -439,7 +441,7 @@ func ComposeWorker(db transactionruntime.Database, env RootEnvironment, hub *rea
 		},
 		func() (err error) {
 			active, err = BuildActivePresence(db, unit, env, hub, settings.Service, presence, presencePeople, carePlanRows, people,
-				services.Users, rooms, devices, timetableRows, days, side.AutoCheckIn, emitter, tracker, principal)
+				services.Users, rooms, roomClosures, devices, timetableRows, days, side.AutoCheckIn, emitter, tracker, principal)
 			return
 		},
 		func() (err error) {

@@ -257,6 +257,7 @@ func buildActiveTestModule(db transactionruntime.Database, unit tenant.UnitOfWor
 		PrincipalReader: AttendancePrincipal,
 		StudentDisplay:  owners.StudentDisplayProjection{Students: students, Groups: displayGroups},
 		SchoolPresence:  owners.NewLoggedStudentPresence(db, logger),
+		RoomClosures:    NewRoomClosuresForTest(db, clocks...),
 		YardRoomColor:   facilitiesModule.YardRoomColor(rooms),
 		GroupRepo:       sessionGroups, SessionStartLock: r.SessionStartLock, SupervisorRepo: sessionSupervisors,
 		StudentStatusRepo: rCare.StudentStatusDay,

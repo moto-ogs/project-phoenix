@@ -343,7 +343,7 @@ func composeServeRoot(
 		},
 		func() (err error) {
 			active, err = owners.BuildActivePresence(db, unit, env, hub, settings.Service, presence, presencePeople, carePlanRows, people,
-				services.Users, rooms, devices, timetableRows, days, side.AutoCheckIn, emitter, tracker, AttendancePrincipal)
+				services.Users, rooms, facilitiesRooms.Closures, devices, timetableRows, days, side.AutoCheckIn, emitter, tracker, AttendancePrincipal)
 			return
 		},
 		func() (err error) {

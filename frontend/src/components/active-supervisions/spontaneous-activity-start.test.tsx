@@ -43,6 +43,18 @@ function render(
 const mocks = vi.hoisted(() => ({
   getActivities: vi.fn(),
   getAllStaff: vi.fn(),
+  closedRooms: {
+    value: new Map<
+      string,
+      {
+        id: string;
+        roomId: string;
+        startDate: string;
+        endDate: string;
+        reason: string;
+      }
+    >(),
+  },
 }));
 
 vi.mock("~/lib/activity-service", () => ({
@@ -55,6 +67,10 @@ vi.mock("~/lib/staff-api", () => ({
   staffService: {
     getAllStaff: mocks.getAllStaff,
   },
+}));
+
+vi.mock("~/lib/hooks/use-closed-rooms", () => ({
+  useClosedRoomsOn: () => mocks.closedRooms.value,
 }));
 
 const SpontaneousActivityStart = ProductionSpontaneousActivityStart;
@@ -132,6 +148,7 @@ function submitForm(): void {
 describe("SpontaneousActivityStart", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.closedRooms.value = new Map();
     mocks.getActivities.mockResolvedValue([
       { id: "7", name: "Freispiel" },
       { id: "9", name: "Basteln" },
@@ -418,6 +435,52 @@ describe("SpontaneousActivityStart", () => {
       screen.getByRole("option", { name: "Haus A - Atelier" }),
     ).toBeEnabled();
     expect(onStart).not.toHaveBeenCalled();
+  });
+
+  it("explains a closure when a selected room is closed after loading", async () => {
+    const onStart = vi.fn();
+    const view = render(
+      <SpontaneousActivityStart
+        currentStaffId="11"
+        defaultRoomId="3"
+        onStart={onStart}
+      />,
+    );
+
+    await openModalAndWaitForRefs();
+    mocks.closedRooms.value = new Map([
+      [
+        "3",
+        {
+          id: "1",
+          roomId: "3",
+          startDate: "2026-11-26",
+          endDate: "2026-11-26",
+          reason: "Wasserschaden",
+        },
+      ],
+    ]);
+    view.rerender(
+      <SpontaneousActivityStart
+        currentStaffId="11"
+        defaultRoomId="3"
+        onStart={onStart}
+      />,
+    );
+
+    expect(
+      screen.getByText("Dieser Raum ist heute gesperrt."),
+    ).toBeInTheDocument();
+    fireEvent.change(
+      screen.getByPlaceholderText("Aktivität suchen oder neu eingeben"),
+      { target: { value: "Tennis" } },
+    );
+    submitForm();
+
+    expect(onStart).not.toHaveBeenCalled();
+    expect(
+      screen.getAllByText("Dieser Raum ist heute gesperrt."),
+    ).not.toHaveLength(0);
   });
 
   it("resets draft state when the modal is cancelled", async () => {
