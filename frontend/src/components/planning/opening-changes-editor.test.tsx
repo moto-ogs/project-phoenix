@@ -63,6 +63,7 @@ function makeChange(overrides: Partial<OpeningChange> = {}): OpeningChange {
     closesAt: "12:00",
     reason: "Zeugnisausgabe",
     version: "v1",
+    fromTraeger: false,
     ...overrides,
   };
 }
@@ -87,6 +88,31 @@ describe("OpeningChangesEditor", () => {
     );
     expect(screen.getByRole("menuitem", { name: "Bearbeiten" })).toBeVisible();
     expect(screen.getByRole("menuitem", { name: "Löschen" })).toBeVisible();
+  });
+
+  it("zeigt einen Tag des Trägers mit „Vom Träger“ und ohne Aktionen (#8202)", async () => {
+    mockList.mockResolvedValue([
+      makeChange(),
+      makeChange({ reason: "Personalversammlung", fromTraeger: true }),
+    ]);
+
+    render(<OpeningChangesEditor />);
+
+    expect(
+      (await screen.findAllByText("Personalversammlung"))[0],
+    ).toBeInTheDocument();
+    expect(screen.getAllByText("Vom Träger")[0]).toBeInTheDocument();
+    expect(
+      screen.getByText(/Ändern kann sie nur das Träger-Büro/),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Aktionen für Zeugnisausgabe" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", {
+        name: "Aktionen für Personalversammlung",
+      }),
+    ).not.toBeInTheDocument();
   });
 
   it("ändert einen Tag an Ort und Stelle und sendet die gelesene Version (#8173)", async () => {

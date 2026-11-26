@@ -12,8 +12,7 @@ func NewFeedHistory(db *bun.DB) schoolcalendar.FeedHistory {
 	return postgres.NewNativeFeedHistory(postgres.New(postgres.NewFeedHistoryDatabase(runtime.Database, runtime.TenantID), nil, nil))
 }
 
-// NewParentConferences binds the Elternsprechtag days and bookings (#4801,
-// ADR 0142) to the same runtime.
+// NewParentConferences binds the Elternsprechtag days and bookings (#4801, ADR 0142) to the same runtime.
 func NewParentConferences(db *bun.DB) schoolcalendar.ParentConferences {
 	runtime := PersistenceRuntimeFor(db)
 	return postgres.ParentConferences{Store: postgres.New(postgres.NewFeedHistoryDatabase(runtime.Database, runtime.TenantID), nil, nil)}

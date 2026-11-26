@@ -63,6 +63,10 @@ var traegerCoreActions = map[RouteKey]CoreAction{
 	{http.MethodPost, "/traeger/closing-days/"}:       notCaptured,
 	{http.MethodPut, "/traeger/closing-days/{id}"}:    notCaptured,
 	{http.MethodDelete, "/traeger/closing-days/{id}"}: notCaptured,
+	// The opening changes of a Träger (#8202) belong to the Träger as well.
+	{http.MethodPost, "/traeger/opening-changes/"}:       notCaptured,
+	{http.MethodPut, "/traeger/opening-changes/{id}"}:    notCaptured,
+	{http.MethodDelete, "/traeger/opening-changes/{id}"}: notCaptured,
 	// The preview and the notices of closing days in booked holiday weeks
 	// (#6434) belong to the Träger as well.
 	{http.MethodPost, "/traeger/holiday-closures/preview"}:        notCaptured,

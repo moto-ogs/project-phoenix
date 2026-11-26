@@ -20,6 +20,7 @@ import { EmptyState } from "~/components/ui/empty-state";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import { SectionCard } from "~/components/ui/section-card";
+import { StatusBadge } from "~/components/ui/status-badge";
 import { useApiFormError, useToast } from "~/contexts/ToastContext";
 import { parseISODate, toISODate } from "~/lib/date-helpers";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
@@ -64,7 +65,11 @@ export function OpeningChangesEditor() {
   const [modalOpen, setModalOpen] = useState(false);
   const [deleting, setDeleting] = useState<OpeningChange | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const editing = changes.find((change) => change.id === editingId);
+  // The school changes only its own days; an ID of the Träger may match one.
+  const editing = changes.find(
+    (change) => !change.fromTraeger && change.id === editingId,
+  );
+  const hasTraegerDays = changes.some((change) => change.fromTraeger);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const deleteErrors = useApiFormError();
   const latestDeleteRef = useRef<() => void>(() => undefined);
@@ -132,9 +137,14 @@ export function OpeningChangesEditor() {
         sortValue: (change) => change.reason,
         render: (change) => (
           <div className="min-w-0">
-            <p className="font-medium wrap-anywhere text-gray-900">
-              {change.reason}
-            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="font-medium wrap-anywhere text-gray-900">
+                {change.reason}
+              </p>
+              {change.fromTraeger ? (
+                <StatusBadge label="Vom Träger" tone="blue" />
+              ) : null}
+            </div>
             {/* Unter sm stehen Tag und Uhrzeit hier statt in eigenen Spalten. */}
             <p className="mt-0.5 text-xs leading-5 break-words text-gray-500 sm:hidden">
               {formatOpeningChangeDays(change)} ·{" "}
@@ -149,28 +159,30 @@ export function OpeningChangesEditor() {
         align: "right",
         className: "w-px",
         headerClassName: "w-px",
-        render: (change) => (
-          <div className="flex justify-end">
-            <OverflowMenu
-              ariaLabel={`Aktionen für ${change.reason}`}
-              items={[
-                {
-                  label: "Bearbeiten",
-                  icon: <Pencil className="h-4 w-4" aria-hidden />,
-                  description: "Öffnet die Felder dieses Tags zum Ändern",
-                  onClick: () => setEditingId(change.id),
-                },
-                {
-                  label: "Löschen",
-                  icon: <Trash2 className="h-4 w-4" aria-hidden />,
-                  destructive: true,
-                  description: "moto fragt vorher nach und löscht dann den Tag",
-                  onClick: () => setDeleting(change),
-                },
-              ]}
-            />
-          </div>
-        ),
+        render: (change) =>
+          change.fromTraeger ? null : (
+            <div className="flex justify-end">
+              <OverflowMenu
+                ariaLabel={`Aktionen für ${change.reason}`}
+                items={[
+                  {
+                    label: "Bearbeiten",
+                    icon: <Pencil className="h-4 w-4" aria-hidden />,
+                    description: "Öffnet die Felder dieses Tags zum Ändern",
+                    onClick: () => setEditingId(change.id),
+                  },
+                  {
+                    label: "Löschen",
+                    icon: <Trash2 className="h-4 w-4" aria-hidden />,
+                    destructive: true,
+                    description:
+                      "moto fragt vorher nach und löscht dann den Tag",
+                    onClick: () => setDeleting(change),
+                  },
+                ]}
+              />
+            </div>
+          ),
       },
     ],
     [],
@@ -188,7 +200,9 @@ export function OpeningChangesEditor() {
       <DataTable
         columns={columns}
         rows={changes}
-        getRowKey={(change) => change.id}
+        getRowKey={(change) =>
+          `${change.fromTraeger ? "traeger" : "school"}-${change.id}`
+        }
         defaultSortKey="days"
         defaultSortDirection="asc"
         isLoading={loading}
@@ -204,7 +218,9 @@ export function OpeningChangesEditor() {
     (stored: OpeningChange) =>
       mutate(
         (current) =>
-          current?.map((change) => (change.id === stored.id ? stored : change)),
+          current?.map((change) =>
+            !change.fromTraeger && change.id === stored.id ? stored : change,
+          ),
         { revalidate: true },
       ),
     [mutate],
@@ -227,7 +243,11 @@ export function OpeningChangesEditor() {
     <>
       <SectionCard
         title="Geänderte Öffnungszeiten"
-        description="Tage, an denen die OGS zu anderen Zeiten öffnet oder schließt, z. B. ein kürzerer Tag vor den Ferien. Die üblichen Zeiten stehen in den Einstellungen unter „Öffnungszeiten“."
+        description={
+          hasTraegerDays
+            ? "Tage, an denen die OGS zu anderen Zeiten öffnet oder schließt, z. B. ein kürzerer Tag vor den Ferien. Die üblichen Zeiten stehen in den Einstellungen unter „Öffnungszeiten“. Tage mit „Vom Träger“ plant dein Träger. Ändern kann sie nur das Träger-Büro."
+            : "Tage, an denen die OGS zu anderen Zeiten öffnet oder schließt, z. B. ein kürzerer Tag vor den Ferien. Die üblichen Zeiten stehen in den Einstellungen unter „Öffnungszeiten“."
+        }
         actions={
           <Button
             type="button"

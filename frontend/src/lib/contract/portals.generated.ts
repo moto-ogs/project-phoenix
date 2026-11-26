@@ -163,6 +163,7 @@ import { routes as traegerInvitations } from "./traeger-invitations.generated";
 import { routes as traegerMasterData } from "./traeger-master-data.generated";
 import { routes as traegerNotifications } from "./traeger-notifications.generated";
 import { routes as traegerNumberRanges } from "./traeger-number-ranges.generated";
+import { routes as traegerOpeningChanges } from "./traeger-opening-changes.generated";
 import { routes as traegerOrganization } from "./traeger-organization.generated";
 import { routes as traegerProfile } from "./traeger-profile.generated";
 import { routes as traegerReportTemplates } from "./traeger-report-templates.generated";
@@ -507,6 +508,10 @@ export const portalRoutes = {
     traegerNumberRanges["GET /traeger/number-ranges/"],
     traegerNumberRanges["PUT /traeger/number-ranges/{service}"],
     traegerNumberRanges["PUT /traeger/number-ranges/{service}/start"],
+    traegerOpeningChanges["DELETE /traeger/opening-changes/{id}"],
+    traegerOpeningChanges["GET /traeger/opening-changes/"],
+    traegerOpeningChanges["POST /traeger/opening-changes/"],
+    traegerOpeningChanges["PUT /traeger/opening-changes/{id}"],
     traegerOrganization["GET /traeger/organization/"],
     traegerProfile["GET /traeger/profile/"],
     traegerProfile["PUT /traeger/profile/name"],

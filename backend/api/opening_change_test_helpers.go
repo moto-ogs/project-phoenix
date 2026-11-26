@@ -5,8 +5,11 @@ package api
 import (
 	"context"
 
+	"github.com/go-chi/chi/v5"
+
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar"
 	schoolCalendarCompose "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/compose"
+	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar/traegercalendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
@@ -24,4 +27,10 @@ func CreateOpeningChangeFixture(ctx context.Context, day calendar.Date, closesAt
 // bind as the closing time of a changed opening day (#8157).
 func OpeningChangeClosingTimes() func(context.Context, calendar.Date) (string, bool, error) {
 	return schoolCalendarCompose.NewOpeningChanges().ClosingTimeOn
+}
+
+// TraegerOpeningChangeRouter is the router the serving root mounts at
+// /traeger/opening-changes (#8202), over the Träger's schools.
+func TraegerOpeningChangeRouter(schools traegercalendar.Schools) chi.Router {
+	return newTraegerOpeningChangeRouter(schools)
 }

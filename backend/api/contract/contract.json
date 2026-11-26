@@ -2079,6 +2079,17 @@
     },
     {
       "method": "DELETE",
+      "pattern": "/traeger/opening-changes/{id}",
+      "portals": [
+        "org"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "CalendarStatusResponse"
+      }
+    },
+    {
+      "method": "DELETE",
       "pattern": "/traeger/report-templates/{id}",
       "portals": [
         "org"
@@ -13273,6 +13284,30 @@
     },
     {
       "method": "GET",
+      "pattern": "/traeger/opening-changes/",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "from",
+          "kind": "date"
+        },
+        {
+          "name": "to",
+          "kind": "date"
+        }
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "OpeningChange"
+        }
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/traeger/organization/",
       "portals": [
         "org"
@@ -21773,6 +21808,21 @@
     },
     {
       "method": "POST",
+      "pattern": "/traeger/opening-changes/",
+      "portals": [
+        "org"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "TraegerOpeningChangeRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "OpeningChange"
+      }
+    },
+    {
+      "method": "POST",
       "pattern": "/traeger/report-templates/",
       "portals": [
         "org"
@@ -25088,6 +25138,21 @@
       "response": {
         "kind": "ref",
         "ref": "NumberRange"
+      }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/traeger/opening-changes/{id}",
+      "portals": [
+        "org"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "TraegerOpeningChangeRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "OpeningChange"
       }
     },
     {
@@ -77647,6 +77712,66 @@
       ]
     },
     {
+      "name": "OpeningChange",
+      "go_type": "traegercalendar.OpeningChange",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "start_date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "end_date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "opens_at",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "closes_at",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "reason",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_ids",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "id"
+            }
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "OpeningChangeRequest",
       "go_type": "staffcalendarhttp.OpeningChangeRequest",
       "request": true,
@@ -77743,6 +77868,12 @@
           "name": "version",
           "schema": {
             "kind": "string"
+          }
+        },
+        {
+          "name": "traeger",
+          "schema": {
+            "kind": "bool"
           }
         }
       ]
@@ -114214,6 +114345,68 @@
           "optional": true,
           "schema": {
             "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "TraegerOpeningChangeRequest",
+      "go_type": "staffcalendarhttp.TraegerOpeningChangeRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "start_date",
+          "optional": true,
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "end_date",
+          "optional": true,
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "opens_at",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "closes_at",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "id"
+            }
+          }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]

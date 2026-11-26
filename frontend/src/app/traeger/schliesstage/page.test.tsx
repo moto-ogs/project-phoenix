@@ -38,10 +38,17 @@ const { api, session } = vi.hoisted(() => ({
   },
   session: { permissions: ["traeger_overview:read"] as string[] },
 }));
+const openingApi = vi.hoisted(() => ({
+  fetchTraegerOpeningChanges: vi.fn(),
+}));
 
 vi.mock("~/lib/traeger-closing-days", async (importOriginal) => ({
   ...(await importOriginal<object>()),
   ...api,
+}));
+vi.mock("~/lib/traeger-opening-changes", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  ...openingApi,
 }));
 vi.mock("next-auth/react", () => ({
   useSession: () => ({
@@ -175,6 +182,7 @@ describe("TraegerClosingDaysPage (#4702)", () => {
   afterEach(() => setViewportWidth(DESKTOP_WIDTH));
   beforeEach(() => {
     api.fetchTraegerCalendar.mockReset().mockResolvedValue(calendar);
+    openingApi.fetchTraegerOpeningChanges.mockReset().mockResolvedValue([]);
     api.previewTraegerClosingDayHolidayBookings
       .mockReset()
       .mockResolvedValue(noImpact);

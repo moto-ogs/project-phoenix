@@ -48,14 +48,29 @@ type openingChangeRow struct {
 	ClosesAt  string        `bun:"closes_at"`
 	Reason    string        `bun:"reason"`
 	UpdatedAt time.Time     `bun:"updated_at"`
+	Traeger   bool          `bun:"traeger"`
 }
 
 const (
-	openingChangeColumns    = `id, start_date, end_date, opens_at::text AS opens_at, closes_at::text AS closes_at, reason, updated_at`
-	listOpeningChangesQuery = `SELECT ` + openingChangeColumns + ` FROM schedule.opening_changes
-		WHERE tenant_id = ? AND start_date <= ? AND end_date >= ? ORDER BY start_date, id`
-	closingTimeOnQuery = `SELECT min(closes_at)::text FROM schedule.opening_changes
-		WHERE tenant_id = ? AND start_date <= ? AND end_date >= ?`
+	openingChangeColumns = `id, start_date, end_date, opens_at::text AS opens_at, closes_at::text AS closes_at, reason, updated_at`
+	// traegerOpeningChangesOfSchool are the opening changes a Träger planned
+	// for school ?0 touching [?2, ?1] (#8202). The filter names the school;
+	// the row security of schedule.traeger_opening_changes admits a row only
+	// while the school belongs to the row's Träger (ADR 0194), and every
+	// school transaction runs under the request role.
+	traegerOpeningChangesOfSchool = `FROM schedule.traeger_opening_changes
+		WHERE ?0 = ANY (school_ids) AND start_date <= ?1 AND end_date >= ?2`
+	// listOpeningChangesQuery lists the school's own changes and those of its
+	// Träger; traeger marks the latter, which the school cannot change.
+	listOpeningChangesQuery = `SELECT ` + openingChangeColumns + `, false AS traeger FROM schedule.opening_changes
+		WHERE tenant_id = ?0 AND start_date <= ?1 AND end_date >= ?2
+		UNION ALL
+		SELECT ` + openingChangeColumns + `, true ` + traegerOpeningChangesOfSchool + `
+		ORDER BY start_date, traeger, id`
+	closingTimeOnQuery = `SELECT min(closes_at)::text FROM (
+		SELECT closes_at FROM schedule.opening_changes WHERE tenant_id = ?0 AND start_date <= ?1 AND end_date >= ?2
+		UNION ALL
+		SELECT closes_at ` + traegerOpeningChangesOfSchool + `) AS change`
 	insertOpeningChangeQuery = `INSERT INTO schedule.opening_changes (tenant_id, start_date, end_date, opens_at, closes_at, reason)
 		VALUES (?, ?, ?, ?::time, ?::time, ?) RETURNING ` + openingChangeColumns
 	lockOpeningChangeQuery = `SELECT ` + openingChangeColumns + ` FROM schedule.opening_changes
@@ -66,7 +81,8 @@ const (
 	deleteOpeningChangeQuery = `DELETE FROM schedule.opening_changes WHERE tenant_id = ? AND id = ?`
 )
 
-// ListOpeningChanges lists the changes touching [from, to].
+// ListOpeningChanges lists the changes touching [from, to]: the school's
+// own and those its current Träger planned for it (#8202).
 func (s *OpeningChangeStore) ListOpeningChanges(ctx context.Context, from, to calendar.Date) ([]schoolcalendar.OpeningChange, error) {
 	if problem := domain.OpeningChangeRange(from, to, domain.OpeningChangeWindowMaxDays, "to"); problem != nil {
 		return nil, invalidOpeningChange(problem)
@@ -86,9 +102,10 @@ func (s *OpeningChangeStore) ListOpeningChanges(ctx context.Context, from, to ca
 	return result, nil
 }
 
-// ClosingTimeOn answers the earliest closing time of the changes on day.
-// Overlapping changes are allowed; the earliest wins, so no session runs
-// past a closing the school entered.
+// ClosingTimeOn answers the earliest closing time of the changes on day,
+// the school's own and its current Träger's (#8202). Overlapping changes
+// are allowed; the earliest wins, so no session runs past a closing the
+// school or its Träger entered.
 func (s *OpeningChangeStore) ClosingTimeOn(ctx context.Context, day calendar.Date) (string, bool, error) {
 	if day == "" {
 		return "", false, invalidOpeningChange(&domain.OpeningChangeProblem{Field: "date", Reason: "date is required"})
@@ -208,7 +225,7 @@ func openingChangeToDomain(row openingChangeRow) schoolcalendar.OpeningChange {
 	return schoolcalendar.OpeningChange{
 		ID: row.ID, StartDate: row.StartDate, EndDate: row.EndDate,
 		OpensAt: wallClock(row.OpensAt), ClosesAt: wallClock(row.ClosesAt),
-		Reason: row.Reason, UpdatedAt: row.UpdatedAt,
+		Reason: row.Reason, UpdatedAt: row.UpdatedAt, Traeger: row.Traeger,
 	}
 }
 
