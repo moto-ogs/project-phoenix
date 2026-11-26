@@ -91,7 +91,6 @@ import {
   downloadTraegerList,
   listExportQuery,
 } from "~/lib/traeger-list-export";
-import { useDebounce } from "~/lib/use-debounce";
 import { traegerPath } from "~/lib/traeger-url";
 import { labelOf } from "~/lib/label-of";
 
@@ -290,11 +289,13 @@ export default function TraegerVertraegePage() {
   const [search, setSearch] = useState("");
   // Null until the person opens or closes the card: then the device decides.
   const [rulesOpen, setRulesOpen] = useState<boolean | null>(null);
-  const debouncedSearch = useDebounce(search.trim(), 250);
+  // The search field keeps the typed text as its own draft and reports it
+  // after a pause: a typed letter redraws the field, not the list.
+  const term = search.trim();
   const filter = {
     status: status === "all" ? undefined : status,
     schoolId,
-    search: debouncedSearch,
+    search: term,
   };
   const listKey = traegerContractKeys.list(filter);
   const listGuard = useRefusalGuard(listKey);
@@ -575,7 +576,7 @@ export default function TraegerVertraegePage() {
           query: listExportQuery(format, {
             status: status === "all" ? undefined : status,
             school_id: schoolId,
-            search: debouncedSearch,
+            search: term,
           }),
         }),
       ),
@@ -620,6 +621,7 @@ export default function TraegerVertraegePage() {
         value: search,
         onChange: setSearch,
         placeholder: "Kind, Eltern oder Angebot suchen",
+        debounceMs: 250,
       }}
       filters={filters}
       activeFilters={activeFilters}

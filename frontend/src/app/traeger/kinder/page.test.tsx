@@ -16,13 +16,15 @@ import { catalogText } from "~/test/error-catalog-text";
 import { deferred } from "~/test/helpers/form-modal-pending";
 import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 
-const { api, navigation } = vi.hoisted(() => ({
+const { api, navigation, rowDraws } = vi.hoisted(() => ({
   api: {
     fetchTraegerChildren: vi.fn(),
     downloadTraegerChildren: vi.fn(),
     fetchTraegerSchools: vi.fn(),
   },
   navigation: { replace: vi.fn(), query: "" },
+  // Counts how often a row of the list is drawn: each draw names its class.
+  rowDraws: vi.fn(),
 }));
 
 vi.unmock("swr");
@@ -33,6 +35,16 @@ vi.mock("~/lib/traeger-children-api", () => ({
 vi.mock("~/lib/traeger-api", () => ({
   fetchTraegerSchools: api.fetchTraegerSchools,
 }));
+vi.mock("~/lib/school-class-label", async (original) => {
+  const actual = await original<typeof import("~/lib/school-class-label")>();
+  return {
+    ...actual,
+    schoolClassName: (schoolClass: string) => {
+      rowDraws(schoolClass);
+      return actual.schoolClassName(schoolClass);
+    },
+  };
+});
 vi.mock("next-auth/react", () => ({
   SessionProvider: ({ children }: { children: ReactNode }) => children,
   useSession: () => ({
@@ -112,6 +124,7 @@ describe("TraegerChildrenPage", () => {
   beforeEach(() => {
     for (const fn of Object.values(api)) fn.mockReset();
     navigation.replace.mockReset();
+    rowDraws.mockClear();
     navigation.query = "";
     api.fetchTraegerSchools.mockResolvedValue([BACH, LINDE]);
     api.fetchTraegerChildren.mockImplementation(
@@ -234,6 +247,34 @@ describe("TraegerChildrenPage", () => {
       0,
     );
     expect(screen.getAllByPlaceholderText("Kind suchen")[0]).toHaveValue("");
+  });
+
+  it("redraws only the search field while a name is typed", async () => {
+    renderPage();
+    await screen.findAllByText("Zander, Mia");
+    const field = screen.getAllByPlaceholderText("Kind suchen")[0]!;
+    const drawn = rowDraws.mock.calls.length;
+
+    fireEvent.change(field, { target: { value: "z" } });
+    fireEvent.change(field, { target: { value: "za" } });
+
+    // Anchor: the field shows what was typed.
+    expect(field).toHaveValue("za");
+    // A letter must not cost a redraw of every row: on a slow device that
+    // is what delays the next letter (#8197 for the children search).
+    expect(rowDraws.mock.calls.length).toBe(drawn);
+
+    // Only the finished term is read, and so logged, once.
+    await waitFor(() =>
+      expect(api.fetchTraegerChildren).toHaveBeenLastCalledWith({
+        schoolId: "",
+        search: "za",
+      }),
+    );
+    expect(api.fetchTraegerChildren).not.toHaveBeenCalledWith({
+      schoolId: "",
+      search: "z",
+    });
   });
 
   it("loads the next children below the list", async () => {

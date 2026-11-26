@@ -36,7 +36,6 @@ import {
   type TraegerChildrenPage,
   type TraegerSchoolChildCount,
 } from "~/lib/traeger-children-api";
-import { useDebounce } from "~/lib/use-debounce";
 
 const logger = createLogger({ component: "TraegerChildrenPage" });
 
@@ -46,6 +45,8 @@ const ALL_SCHOOLS = "alle";
 /** Die Schule in der Adresse, damit ein Lesezeichen ihren Reiter öffnet. */
 const SCHOOL_PARAM = "schule";
 const LIST_OBJECT = "die Liste der Kinder";
+/** So lange wartet das Suchfeld nach dem letzten Buchstaben, bevor es sucht. */
+const SEARCH_PAUSE_MS = 250;
 
 function Plain({ value }: Readonly<{ value: string }>) {
   return <span className="text-sm text-gray-700">{value || "–"}</span>;
@@ -139,8 +140,11 @@ function ChildrenContent() {
   const [tab, setTab] = useState(
     () => searchParams?.get(SCHOOL_PARAM) ?? ALL_SCHOOLS,
   );
+  // The search field keeps the typed text as its own draft and reports it
+  // after a pause (`SEARCH_PAUSE_MS`): a typed letter redraws the field, not
+  // the list, and only a finished term is read and logged.
   const [search, setSearch] = useState("");
-  const debouncedSearch = useDebounce(search.trim(), 250);
+  const term = search.trim();
   const schoolList = useTraegerSchools();
   const { show: showActionError } = useApiErrorDisplay();
 
@@ -151,10 +155,7 @@ function ChildrenContent() {
     (!knownSchools || knownSchools.some((school) => school.id === tab))
       ? tab
       : "";
-  const filter = useMemo(
-    () => ({ schoolId, search: debouncedSearch }),
-    [schoolId, debouncedSearch],
-  );
+  const filter = useMemo(() => ({ schoolId, search: term }), [schoolId, term]);
   // Every page read stands in the access log of the schools it shows. So a
   // reiter or a search shows nothing until its own read answered, also when
   // the person comes back to one the tab has read before (ADR 0311).
@@ -250,7 +251,7 @@ function ChildrenContent() {
   // the same name on every row.
   const showSchool = schoolId === "" && schools.length > 1;
   const columns = useMemo(() => childColumns(showSchool), [showSchool]);
-  const searching = debouncedSearch !== "";
+  const searching = term !== "";
   const loading = !page && !first.error;
   const noMatch = emptySearchText(search, []);
   // A search without a hit offers the way back. A list nobody can fill
@@ -305,6 +306,7 @@ function ChildrenContent() {
         value: search,
         onChange: setSearch,
         placeholder: "Kind suchen",
+        debounceMs: SEARCH_PAUSE_MS,
       }}
       overflowMenu={exportItems}
       tabs={
