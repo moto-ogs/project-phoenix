@@ -27,7 +27,7 @@
   "toDocumentsTooltip": "Hap dokumentet tuaja me konfirmimin dhe faturën.",
   "consents": {
     "title": "Pëlqimet",
-    "description": "Vullnetare. Çdo pëlqim mund ta tërhiqni ose ta jepni përsëri në çdo kohë. Shkolla pasdite (OGS) që kujdeset për fëmijën gjatë pushimeve e sheh ndryshimin menjëherë.",
+    "description": "Vullnetare. Çdo pëlqim mund ta tërhiqni ose ta jepni përsëri në çdo kohë. Ekipi që kujdeset për fëmijën gjatë pushimeve e sheh ndryshimin menjëherë.",
     "states": {
       "given": "I dhënë",
       "withdrawn": "I tërhequr",
@@ -45,7 +45,7 @@
     "grantAria": "Jep pëlqimin „{title}“",
     "grantTooltip": "Jep pëlqimin. moto pyet më parë.",
     "withdrawTitle": "Ta tërhiqni pëlqimin?",
-    "withdrawNote": "Tërheqja vlen që tani. Shkolla pasdite (OGS) që kujdeset për fëmijën gjatë pushimeve e sheh menjëherë.",
+    "withdrawNote": "Tërheqja vlen që tani. Ekipi që kujdeset për fëmijën gjatë pushimeve e sheh menjëherë.",
     "withdrawConfirm": "Tërhiq",
     "withdrawing": "Po tërhiqet …",
     "grantTitle": "Ta jepni pëlqimin?",

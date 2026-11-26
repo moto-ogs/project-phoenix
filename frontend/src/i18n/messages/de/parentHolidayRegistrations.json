@@ -27,7 +27,7 @@
   "toDocumentsTooltip": "Öffnet deine Dokumente mit Bestätigung und Rechnung.",
   "consents": {
     "title": "Einwilligungen",
-    "description": "Freiwillig. Du kannst jede Einwilligung jederzeit widerrufen oder wieder geben. Die OGS, die dein Kind in den Ferien betreut, sieht den Stand sofort.",
+    "description": "Freiwillig. Du kannst jede Einwilligung jederzeit widerrufen oder wieder geben. Das Team, das dein Kind in den Ferien betreut, sieht den Stand sofort.",
     "states": {
       "given": "Erteilt",
       "withdrawn": "Widerrufen",
@@ -45,7 +45,7 @@
     "grantAria": "Einwilligung „{title}“ geben",
     "grantTooltip": "Gibt die Einwilligung. moto fragt vorher nach.",
     "withdrawTitle": "Einwilligung widerrufen?",
-    "withdrawNote": "Der Widerruf gilt ab jetzt. Die OGS, die dein Kind in den Ferien betreut, sieht ihn sofort.",
+    "withdrawNote": "Der Widerruf gilt ab jetzt. Das Team, das dein Kind in den Ferien betreut, sieht ihn sofort.",
     "withdrawConfirm": "Widerrufen",
     "withdrawing": "Wird widerrufen …",
     "grantTitle": "Einwilligung geben?",
