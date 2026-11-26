@@ -19,6 +19,7 @@ import (
 var (
 	errTestRoomNotFound    = errors.New("room not found")
 	errTestRoomNotReleased = errors.New("room is not released as an open room")
+	errTestRoomClosed      = errors.New("room is closed today")
 )
 
 // The mover is a pure translation, so the fake ids below name no rows.
@@ -36,7 +37,7 @@ func openRoomMoverWith(report devicescanCompose.OpenRoomMoveReport, err error) (
 	mover := scanBindings.NewOpenRoomMover(func(_ context.Context, studentID, roomID int64) (devicescanCompose.OpenRoomMoveReport, error) {
 		moves = append(moves, recordedOpenRoomMove{studentID: studentID, roomID: roomID})
 		return report, err
-	}, devicescanCompose.OpenRoomRefusals{RoomNotFound: errTestRoomNotFound, RoomNotReleased: errTestRoomNotReleased})
+	}, devicescanCompose.OpenRoomRefusals{RoomNotFound: errTestRoomNotFound, RoomNotReleased: errTestRoomNotReleased, RoomClosed: errTestRoomClosed})
 	return mover, &moves
 }
 
@@ -101,6 +102,7 @@ func TestOpenRoomMover_TranslatesRefusals(t *testing.T) {
 	}{
 		{"unknown room", errTestRoomNotFound, devicescan.ErrOpenRoomNotFound},
 		{"room not released", fmt.Errorf("move: %w", errTestRoomNotReleased), devicescan.ErrOpenRoomNotReleased},
+		{"room closed", errTestRoomClosed, devicescan.ErrOpenRoomClosed},
 		{"child not present", studentpresence.ErrStudentsNotPresent, devicescan.ErrOpenRoomStudentNotPresent},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -135,7 +137,7 @@ func TestNewOpenRoomMover_RequiresTheMoveAndItsRefusals(t *testing.T) {
 		return devicescanCompose.OpenRoomMoveReport{}, nil
 	}
 	assert.Panics(t, func() {
-		scanBindings.NewOpenRoomMover(nil, devicescanCompose.OpenRoomRefusals{RoomNotFound: errTestRoomNotFound, RoomNotReleased: errTestRoomNotReleased})
+		scanBindings.NewOpenRoomMover(nil, devicescanCompose.OpenRoomRefusals{RoomNotFound: errTestRoomNotFound, RoomNotReleased: errTestRoomNotReleased, RoomClosed: errTestRoomClosed})
 	})
 	assert.Panics(t, func() {
 		scanBindings.NewOpenRoomMover(move, devicescanCompose.OpenRoomRefusals{RoomNotFound: errTestRoomNotFound})

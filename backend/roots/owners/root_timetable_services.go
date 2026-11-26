@@ -3,11 +3,13 @@ package owners
 import (
 	"context"
 	"fmt"
+	"time"
 
 	realtime "github.com/moto-ogs/project-phoenix/realtime"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/communication"
+	peopleCompose "github.com/moto-ogs/project-phoenix/modules/peopledirectory/compose"
 	peoplePorts "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports"
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar"
 	"github.com/moto-ogs/project-phoenix/modules/schoolmembership"
@@ -18,6 +20,7 @@ import (
 	timetablePorts "github.com/moto-ogs/project-phoenix/modules/timetable/ports"
 	transactionruntime "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	workforceCompose "github.com/moto-ogs/project-phoenix/modules/workforce/compose"
 )
 
 // TimetableLifecycle are the Timetable owner's recurrence engine (WP-B8),
@@ -51,16 +54,52 @@ type TimetableLifecycle struct {
 // Holidays and closing days carry no series occurrences unless the series
 // opts into closing days (#3594); the School Calendar answers. Workforce's
 // open sick reports mark newly planned supervisors absent (#6292).
-func BuildTimetableMaterialization(db transactionruntime.Database, env RootEnvironment, hub *realtime.Hub, owner TimetableOwner, people PeopleRows, calendar schoolcalendar.Days, absences SickReportAbsences) (timetable.MaterializationCapability, error) {
+func BuildTimetableMaterialization(db transactionruntime.Database, env RootEnvironment, hub *realtime.Hub, owner TimetableOwner, people PeopleRows, calendar schoolcalendar.Days, absences SickReportAbsences, roomClosures timetablePorts.RoomClosures) (timetable.MaterializationCapability, error) {
 	deps := TimetableMaterializationDependencies(owner.TemplateRows, people.Students, calendar,
 		owner.RecurrenceLock, hub, env.Logger.With("service", "materialization"))
 	deps.Transactions = arrivalTimetable.NewTenantTransactions(db.Pool())
 	deps.SickReports = NewTimetableSickReports(absences)
+	deps.RoomClosures = roomClosures
 	materialization, err := arrivalTimetable.NewMaterialization(deps)
 	if err != nil {
 		return nil, fmt.Errorf("compose timetable materialization: %w", err)
 	}
 	return materialization, nil
+}
+
+// BuildTimetableRoomClosures binds Timetable's closure port once for roots
+// that need both the materializer and instance lifecycle.
+func BuildTimetableRoomClosures(db transactionruntime.Database, now func() time.Time) (timetablePorts.RoomClosures, error) {
+	closures, err := BuildRoomClosures(db, now)
+	if err != nil {
+		return nil, err
+	}
+	return NewTimetableRoomClosures(closures), nil
+}
+
+// BuildWorkerTimetableServices composes the two Timetable services a worker
+// needs over one Facilities closure port. Keeping that cross-owner binding in
+// one step prevents the worker root from duplicating it.
+func BuildWorkerTimetableServices(
+	db transactionruntime.Database, env RootEnvironment, hub *realtime.Hub,
+	owner TimetableOwner, days TimetableDays, people PeopleRows, persons *peopleCompose.Directory, careRows TimetableCareRows, calendar schoolcalendar.Days,
+	presence PresenceOwner, supervisions studentpresence.SupervisionRecords, workTime workforceCompose.WorkTime,
+	schedules CarePlanSchedules, carePlan careplan.Capability, active studentpresence.Presence,
+	notices communication.CareCancellationPublisher, settings settingsCompose.BatchSettingsService,
+	notifications DeliveryNotifications, membership schoolmembership.Owner, timetableOwner timetable.Owner,
+) (timetable.MaterializationCapability, TimetableLifecycle, error) {
+	closures, err := BuildTimetableRoomClosures(db, env.Now)
+	if err != nil {
+		return nil, TimetableLifecycle{}, err
+	}
+	materialization, err := BuildTimetableMaterialization(db, env, hub, owner, people, calendar, workTime, closures)
+	if err != nil {
+		return nil, TimetableLifecycle{}, err
+	}
+	lifecycle, err := BuildTimetableLifecycle(db, env, hub, owner, days, people, careRows, presence, supervisions,
+		WorkforceShiftRows(workTime), schedules, carePlan, active, materialization, notices, settings,
+		NewTimetableSickReports(workTime), NewTimetableStaffNotices(notifications, membership, timetableOwner, workTime).WithGuardianContacts(persons), closures)
+	return materialization, lifecycle, err
 }
 
 // BuildTimetableLifecycle binds the conflict detection, the instance
@@ -71,7 +110,7 @@ func BuildTimetableLifecycle(
 	people PeopleRows, careRows TimetableCareRows, presence PresenceOwner, supervisions studentpresence.SupervisionRecords,
 	shifts timetablePorts.ConflictShifts, schedules CarePlanSchedules, carePlan careplan.Capability, active studentpresence.Presence,
 	materialization timetable.MaterializationCapability, notices communication.CareCancellationPublisher, settings settingsCompose.BatchSettingsService,
-	sickReports timetablePorts.SickReportReader, staffNotices TimetableStaffNotices,
+	sickReports timetablePorts.SickReportReader, staffNotices TimetableStaffNotices, roomClosures timetablePorts.RoomClosures,
 ) (TimetableLifecycle, error) {
 	repos := owner.Repositories
 	rows := days.Rows
@@ -95,6 +134,7 @@ func BuildTimetableLifecycle(
 		CalendarPeriodRepo: owner.TemplateRows.CalendarPeriods, Database: arrivalTimetable.NewTenantDatabase(db.Pool()),
 		StaffRepo: NewTimetableStaff(people.Staff), ActiveGroupRepo: presence.SessionRecords, SupervisorRepo: supervisions,
 		Presence: presence.Presence, ActiveService: active, CareDayLocks: carePlan,
+		RoomClosures:    roomClosures,
 		Materialization: materialization, SickReports: sickReports, RecurrenceLock: owner.RecurrenceLock,
 		StartConflicts: conflicts, SubstituteConflicts: substituteConflicts, StaffNotices: staffNotices.Cancellations, RoomNotices: staffNotices.RoomChanges,
 		Logger: env.Logger.With("service", "instance-lifecycle"), Now: env.Now,

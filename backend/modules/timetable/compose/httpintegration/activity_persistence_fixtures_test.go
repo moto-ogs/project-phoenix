@@ -32,6 +32,7 @@ type Group struct {
 	SeriesRootID          *int64                                `bun:"series_root_id" json:"-"`
 	CalendarPeriodID      *int64                                `bun:"calendar_period_id" json:"calendar_period_id,omitempty"`
 	TargetGroupType       string                                `bun:"target_group_type,notnull,default:'none'" json:"target_group_type"`
+	HasDynamicTargets     bool                                  `bun:"-" json:"-"`
 	TargetGradeLevel      *int16                                `bun:"target_grade_level" json:"target_grade_level,omitempty"`
 	TargetSchoolClass     *string                               `bun:"target_school_class" json:"target_school_class,omitempty"`
 	SourceCareOfferingIDs []int64                               `bun:"source_care_offering_ids,type:jsonb,nullzero" json:"source_care_offering_ids,omitempty"`

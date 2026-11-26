@@ -63,7 +63,7 @@ func (s *InstanceLifecycleService) createInTenantTransaction(
 	templateType, err := s.validateInstanceReferences(ctx, req.Date, instanceReferences{
 		roomID: req.RoomID, activityGroupID: req.ActivityGroupID, staffIDs: req.StaffIDs,
 		studentIDs: req.StudentIDs, createdByStaffID: req.CreatedByStaffID,
-	})
+	}, false)
 	if err != nil {
 		return nil, &ports.ScheduleError{Op: "create instance: validate references", Err: err}
 	}

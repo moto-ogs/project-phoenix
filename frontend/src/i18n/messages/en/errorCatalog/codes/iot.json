@@ -27,6 +27,7 @@
   "rfid_tag_not_student_or_staff": "{object} could not be saved. Please check your entries.",
   "rfid_tag_unassigned": "{object} could not be saved. Please check your entries.",
   "room_capacity_exceeded": "{object} could not be changed. Please check its current status.",
+  "room_closed": "{object} could not be changed. Please check its current status.",
   "room_not_found": "{object} could not be changed. Please check its current status.",
   "schulhof_not_configured": "{object} could not be processed. Please try again later.",
   "staff_not_found": "{object} could not be saved. Please check your entries.",

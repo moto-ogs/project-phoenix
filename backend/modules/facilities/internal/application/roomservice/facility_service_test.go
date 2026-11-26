@@ -8,6 +8,8 @@ import (
 
 	facilitiesModule "github.com/moto-ogs/project-phoenix/modules/facilities"
 	"github.com/stretchr/testify/require"
+
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 type ownerStub struct {
@@ -220,6 +222,7 @@ func TestSchulhofStatusPrefersCallersSupervisedGroup(t *testing.T) {
 // The retired read conveniences have no runtime consumers. This test-only
 // adapter keeps their existing assertions over the native Catalog boundary.
 func newRetainedServiceWithConfig(config ServiceConfig) *service {
+	config.Today = fixedServiceToday
 	return NewServiceWithConfig(config).(*service)
 }
 
@@ -254,3 +257,6 @@ func roomPointers(rooms []facilitiesModule.Room) []*facilitiesModule.Room {
 	}
 	return result
 }
+
+// fixedServiceToday is the school day these tests run on.
+func fixedServiceToday() calendar.Date { return calendar.NewDate(2026, time.November, 25) }

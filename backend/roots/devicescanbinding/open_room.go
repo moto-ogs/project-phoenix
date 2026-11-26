@@ -15,8 +15,8 @@ import (
 // move. It translates the workflow's and Student Presence's refusals into
 // the device-scan sentinels the kiosk route classifies.
 func NewOpenRoomMover(move scanCompose.OpenRoomMoveFunc, refusals scanCompose.OpenRoomRefusals) devicescan.OpenRoomMover {
-	if move == nil || refusals.RoomNotFound == nil || refusals.RoomNotReleased == nil {
-		panic("device scan open room mover: the move and both refusals are required")
+	if move == nil || refusals.RoomNotFound == nil || refusals.RoomNotReleased == nil || refusals.RoomClosed == nil {
+		panic("device scan open room mover: the move and all refusals are required")
 	}
 	return openRoomMover{move: move, refusals: refusals}
 }
@@ -60,6 +60,8 @@ func (m openRoomMover) translate(err error) error {
 		return fmt.Errorf("%w: %w", devicescan.ErrOpenRoomNotFound, err)
 	case errors.Is(err, m.refusals.RoomNotReleased):
 		return fmt.Errorf("%w: %w", devicescan.ErrOpenRoomNotReleased, err)
+	case errors.Is(err, m.refusals.RoomClosed):
+		return fmt.Errorf("%w: %w", devicescan.ErrOpenRoomClosed, err)
 	case errors.Is(err, studentpresence.ErrStudentsNotPresent):
 		return fmt.Errorf("%w: %w", devicescan.ErrOpenRoomStudentNotPresent, err)
 	}

@@ -66,6 +66,7 @@ func BuildActivePresence(
 	db transactionruntime.Database, unit rootUnitOfWork, env RootEnvironment, hub *realtime.Hub,
 	settings settingsCompose.BatchSettingsService, presence PresenceOwner, presencePeople PresencePeopleReads,
 	carePlanRows CarePlanRows, people PeopleRows, users peoplePorts.PersonDirectory, rooms facilitiesModule.Catalog,
+	roomClosures studentpresence.RoomClosures,
 	devices devicefleet.Capability, owner TimetableOwner, days TimetableDays, autoCheckIn workforceCompose.AutoCheckIn,
 	emitter eventContract.Emitter, tracker ProductEventTracker, principal func(context.Context) studentpresence.RequestPrincipal,
 ) (studentpresence.Presence, error) {
@@ -84,7 +85,7 @@ func BuildActivePresence(
 		StudentDisplay: presencePeople.StudentDisplay, GroupRepo: sessionGroups, SessionStartLock: presence.Presence,
 		SupervisorRepo: sessionSupervisors, StudentStatusRepo: carePlanRows.StatusDays,
 		StudentRepo: presencePeople.PresenceStudents, StaffRepo: presence.AttendanceStaff,
-		RoomRepo:      facilitiesCompose.NewAttendanceRooms(facilitiesCompose.NewRoomRecords(rooms)),
+		RoomRepo: facilitiesCompose.NewAttendanceRooms(facilitiesCompose.NewRoomRecords(rooms)), RoomClosures: roomClosures,
 		YardRoomColor: facilitiesModule.YardRoomColor(rooms), ActivityGroupRepo: presence.AttendanceActivities,
 		ActivityCatRepo:    arrivalTimetable.NewCategoryCount(repos.ActivityCategory),
 		EducationGroupRepo: presence.AttendanceEducationGroups,

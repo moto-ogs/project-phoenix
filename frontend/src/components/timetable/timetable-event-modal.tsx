@@ -51,6 +51,7 @@ import {
   useEventForm,
 } from "./event-form/use-event-form";
 import type { TimetableEventModalResult } from "./event-form/use-event-form";
+import { useClosedRoomsOn } from "~/lib/hooks/use-closed-rooms";
 import type {
   EditedChange,
   EnrichedInstance,
@@ -338,6 +339,8 @@ export function TimetableEventModal({
     canCheckShiftCoverage,
     closingDayRanges,
   });
+  // Die am Datum gesperrten Räume (#7653) für die Raumauswahl.
+  const closedRooms = useClosedRoomsOn(isOpen ? form.date : null);
 
   // Converting a one-off into a Regeltermin is a repeat decision — that entry
   // opens on step 2. Every other entry (quick create, "+ Neu → Regeltermin",
@@ -682,6 +685,7 @@ export function TimetableEventModal({
                 update={update}
                 fieldErrors={fieldErrors}
                 rooms={rooms}
+                closedRooms={closedRooms}
                 categories={categories}
                 planningTracks={planningTracks}
                 loadingRefs={

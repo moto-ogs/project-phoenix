@@ -522,6 +522,7 @@ func TestSchoolErasureMigrationRoundTripPreservesEvidence(t *testing.T) {
 	require.NoError(t, studentPickupPersonsDown(t.Context(), db))
 	require.NoError(t, openingChangesDown(t.Context(), db))
 	require.NoError(t, mealCancellationsDown(t.Context(), db))
+	require.NoError(t, roomClosuresDown(t.Context(), db))
 	require.NoError(t, roomHistoryStopsDown(t.Context(), db))
 	require.NoError(t, deviceLifecycleEventsDown(t.Context(), db))
 	require.NoError(t, parentLetterCopiesDown(t.Context(), db))

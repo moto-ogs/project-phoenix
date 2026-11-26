@@ -27,6 +27,10 @@ export const roomKeys = {
   /** The room's plan blocks in the shown span (#4768). */
   plan: (roomId: string, from: string, to: string) =>
     `room-plan-${roomId}-${from}-${to}`,
+  /** Room closures (#7653) overlapping `from`–`to`, optionally of one room. */
+  closuresFamily: "room-closures-",
+  closures: (from: string, to: string, roomId?: string) =>
+    `room-closures-${from}-${to}${roomId ? `-${roomId}` : ""}`,
   /** Children on the way, optionally for one day status. */
   transitStudents: (dayStatus?: string) =>
     dayStatus ? `transit-students-${dayStatus}` : "transit-students",

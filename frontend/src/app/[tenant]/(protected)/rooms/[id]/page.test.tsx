@@ -138,6 +138,14 @@ vi.mock("~/components/rooms/room-detail-content", () => ({
   RoomDetailSkeleton: () => <div data-testid="room-detail-skeleton" />,
 }));
 
+// Die Sperren (#7653) haben ihren eigenen Test; hier zählt der Zugriff auf den
+// Reiter und die Weitergabe des Schreibrechts.
+vi.mock("~/components/rooms/room-closures-section", () => ({
+  RoomClosuresSection: ({ canUpdate }: { canUpdate: boolean }) => (
+    <div data-testid="room-closures" data-can-update={String(canUpdate)} />
+  ),
+}));
+
 vi.mock("~/components/rooms/room-stammdaten-tab", () => ({
   RoomStammdatenTab: ({
     onSave,
@@ -313,9 +321,14 @@ describe("RoomDetailPage", () => {
       "max-sm:[&>*:not([data-icon-only]):not([data-status-pill])]:basis-full",
     );
     expect(screen.getByTestId("room-overview")).toBeInTheDocument();
-    // Ohne rooms:update gibt es keinen Stammdaten-Reiter und keine
-    // Reiterleiste; ohne rooms:delete kein Kebab.
-    expect(screen.queryByRole("tab")).not.toBeInTheDocument();
+    // Mit rooms:read zeigt der Stammdaten-Reiter die Sperren, aber keine
+    // Schreibaktionen; ohne rooms:delete kein Kebab.
+    expect(screen.getByRole("tab", { name: "Stammdaten" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: "Stammdaten" }));
+    expect(screen.getByTestId("room-closures")).toHaveAttribute(
+      "data-can-update",
+      "false",
+    );
     expect(
       screen.queryByRole("button", { name: "Weitere Aktionen" }),
     ).not.toBeInTheDocument();
@@ -421,6 +434,7 @@ describe("RoomDetailPage", () => {
     render(<RoomDetailPage />);
 
     fireEvent.click(screen.getByRole("tab", { name: "Stammdaten" }));
+    expect(screen.queryByTestId("room-closures")).not.toBeInTheDocument();
     expect(window.location.pathname + window.location.search).toBe(
       "/rooms/7?tab=stammdaten",
     );
@@ -823,6 +837,7 @@ describe("RoomDetailPage", () => {
 
     expect(screen.getByTestId("room-overview")).toBeInTheDocument();
     expect(await screen.findByTestId("room-plan")).toBeInTheDocument();
-    expect(screen.queryByRole("tab")).not.toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Plan" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Stammdaten" })).toBeInTheDocument();
   });
 });

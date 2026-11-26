@@ -2,7 +2,7 @@
   "registerVersion": 1,
   "formatVersion": 1,
   "catalogVersion": 1,
-  "catalogSHA256": "53e8737bc08a427cdaaf3ec18bcdae94e0e6a8170be1a6398177d3d7d8531400",
+  "catalogSHA256": "015c6e1d56d8bb7e9a17f97384cf76b7498e50c7a583238ef4fad620ef8ec5a9",
   "about": "Dieses Register beschreibt das Rückgabepaket von moto: welche Tabellen und Felder es enthält, welche Typen sie haben, ob sie leer sein dürfen und wie die Tabellen verbunden sind. Es enthält keine Kundendaten. Jedes Paket enthält dieselbe Beschreibung für seine Tabellen als model.json. formatVersion und catalogSHA256 stehen auch in der manifest.json des Pakets.",
   "standards": [
     {
@@ -13,7 +13,7 @@
     {
       "name": "JSON Lines",
       "reference": "https://jsonlines.org",
-      "use": "Eine Datei \u003cSchema\u003e.\u003cTabelle\u003e.jsonl pro Tabelle, ein JSON-Objekt pro Zeile"
+      "use": "Eine Datei <Schema>.<Tabelle>.jsonl pro Tabelle, ein JSON-Objekt pro Zeile"
     },
     {
       "name": "UTF-8",
@@ -85,7 +85,7 @@
       "description": "Felder, Typen, Nullbarkeit und Beziehungen der Tabellen dieses Pakets, wie in diesem Register."
     },
     {
-      "path": "\u003cSchema\u003e.\u003cTabelle\u003e.jsonl",
+      "path": "<Schema>.<Tabelle>.jsonl",
       "packages": [
         "school",
         "organization"
@@ -93,7 +93,7 @@
       "description": "Die Zeilen einer Tabelle. Ein JSON-Objekt pro Zeile, die Schlüssel sind die Felder aus model.json."
     },
     {
-      "path": "objects/\u003cNummer\u003e",
+      "path": "objects/<Nummer>",
       "packages": [
         "school",
         "organization"
@@ -25725,6 +25725,73 @@
       }
     },
     {
+      "name": "facilities.room_closures",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "tenant_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "room_id",
+          "type": "bigint",
+          "udt": "int8",
+          "nullable": false
+        },
+        {
+          "name": "start_date",
+          "type": "date",
+          "udt": "date",
+          "nullable": false
+        },
+        {
+          "name": "end_date",
+          "type": "date",
+          "udt": "date",
+          "nullable": false
+        },
+        {
+          "name": "reason",
+          "type": "character varying",
+          "udt": "varchar",
+          "nullable": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "udt": "timestamptz",
+          "nullable": false
+        }
+      ],
+      "relationships": [
+        {
+          "column": "room_id",
+          "targetTable": "facilities.rooms",
+          "targetColumn": "id"
+        },
+        {
+          "column": "tenant_id",
+          "targetTable": "facilities.rooms",
+          "targetColumn": "tenant_id"
+        },
+        {
+          "column": "tenant_id",
+          "targetTable": "platform.schools",
+          "targetColumn": "id"
+        }
+      ],
+      "packages": [
+        "school"
+      ]
+    },
+    {
       "name": "facilities.rooms",
       "columns": [
         {
@@ -40554,7 +40621,7 @@
     {
       "kind": "avatars",
       "export": "include",
-      "reason": "Shared account avatars under avatars/global and legacy avatars/\u003ctenantId\u003e. Authenticated serving only, new files 0600 and destination directory 0700; legacy permissions require docs/operations/private-fotodateien-3840.md. References in auth.accounts.avatar and users.profiles.avatar, plus durable deletion intents in auth.account_avatar_file_cleanup. Include only authorized account references; remove only when no remaining school needs the account/file. Reconcile both layouts and pending intents before treating a file as orphaned."
+      "reason": "Shared account avatars under avatars/global and legacy avatars/<tenantId>. Authenticated serving only, new files 0600 and destination directory 0700; legacy permissions require docs/operations/private-fotodateien-3840.md. References in auth.accounts.avatar and users.profiles.avatar, plus durable deletion intents in auth.account_avatar_file_cleanup. Include only authorized account references; remove only when no remaining school needs the account/file. Reconcile both layouts and pending intents before treating a file as orphaned."
     }
   ]
 }

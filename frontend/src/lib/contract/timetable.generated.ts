@@ -1999,6 +1999,7 @@ export interface materializeResponse {
   skipped_not_started: number;
   skipped_holidays: number;
   skipped_closing_days: number;
+  skipped_closed_rooms: number;
   candidates_raced: number;
   instance_students_created: number;
   instance_staff_created: number;
@@ -2019,6 +2020,7 @@ export const materializeResponseSchema: z.ZodType<materializeResponse, unknown> 
   skipped_not_started: safeInt,
   skipped_holidays: safeInt,
   skipped_closing_days: safeInt,
+  skipped_closed_rooms: safeInt,
   candidates_raced: safeInt,
   instance_students_created: safeInt,
   instance_staff_created: safeInt,

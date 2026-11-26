@@ -519,6 +519,42 @@ func TestIsoWeekday(t *testing.T) {
 	assert.Equal(t, 7, isoWeekday(mon.AddDays(6)))
 }
 
+func TestNamedPlannedSupervisorsSkipsDirectoriesWhenNoneExist(t *testing.T) {
+	t.Parallel()
+
+	directoryCalls := 0
+	rows, err := namedPlannedSupervisors(context.Background(), materializationFakeSupervisorRepo{}, ports.RepositoryDirectories{
+		StaffPersons: func(context.Context, []int64, bool) (map[int64]int64, error) {
+			directoryCalls++
+			return nil, errors.New("staff directory must not be called")
+		},
+		PersonNames: func(context.Context, []int64) (map[int64]ports.PersonName, error) {
+			directoryCalls++
+			return nil, errors.New("person directory must not be called")
+		},
+	}, []int64{100}, "find by group ID")
+
+	require.NoError(t, err)
+	assert.Empty(t, rows)
+	assert.Zero(t, directoryCalls)
+}
+
+func TestScheduledTargetTemplateIDs(t *testing.T) {
+	t.Parallel()
+
+	plain := &activityContract.Group{ID: 100}
+	targeted := &activityContract.Group{ID: 200, HasDynamicTargets: true}
+	unscheduled := &activityContract.Group{ID: 300, HasDynamicTargets: true}
+	schedules := map[int64][]*activityContract.Schedule{
+		plain.ID:    {{}},
+		targeted.ID: {{}},
+	}
+
+	assert.Equal(t, []int64{targeted.ID}, scheduledTargetTemplateIDs(
+		[]*activityContract.Group{plain, targeted, unscheduled}, schedules,
+	))
+}
+
 type materializationFakeGroupRepo struct {
 	timetable.ActivityGroupQuery
 	templates []*activityContract.Group
@@ -1222,6 +1258,7 @@ func newMaterializationForTest(
 		StudentRepo:    legacyParticipantRows(studentRepo),
 		ExceptionRepo:  exceptionRepo,
 		TimeframeRepo:  timeframeRepo,
+		RoomClosures:   openRoomClosures{},
 		Transactions:   transactions,
 		Staffing:       staffing,
 		Logger:         logger,
@@ -1230,4 +1267,14 @@ func newMaterializationForTest(
 		panic(err)
 	}
 	return svc
+}
+
+type openRoomClosures struct{}
+
+func (openRoomClosures) RoomClosedOn(context.Context, int64, calendar.Date) (bool, error) {
+	return false, nil
+}
+
+func (openRoomClosures) RoomClosureRanges(context.Context, []int64, calendar.Date, calendar.Date) ([]ports.RoomClosureRange, error) {
+	return nil, nil
 }
