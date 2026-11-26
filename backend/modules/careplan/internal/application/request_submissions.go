@@ -103,12 +103,17 @@ func pickupRequestPayload(ctx context.Context, pickup ports.RequestSubmissionPic
 			payload["previous_departure_modes"] = previous
 		}
 	}
-	if input.PickupPerson != nil && input.DepartureMode == "" {
-		if err := ensurePickupPersonDepartureAllowed(ctx, pickup, input.StudentID, input.Date); err != nil {
-			return nil, err
-		}
+	if err := validatePickupPersonDeparture(ctx, pickup, input); err != nil {
+		return nil, err
 	}
 	return json.Marshal(payload)
+}
+
+func validatePickupPersonDeparture(ctx context.Context, pickup ports.RequestSubmissionPickup, input carerequests.PickupChangeCreateInput) error {
+	if input.PickupPerson == nil || input.DepartureMode != "" {
+		return nil
+	}
+	return ensurePickupPersonDepartureAllowed(ctx, pickup, input.StudentID, input.Date)
 }
 
 // ensurePickupPersonDepartureAllowed refuses a collector when the effective

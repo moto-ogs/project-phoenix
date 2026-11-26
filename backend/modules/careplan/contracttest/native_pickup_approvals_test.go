@@ -148,7 +148,7 @@ func approvalService(t *testing.T, fixture *pickupApprovalFixture) carerequests.
 	t.Helper()
 	service, err := compose.NewPickupApprovals(compose.PickupApprovalDependencies{
 		Fingerprint: securityruntime.Fingerprint,
-		People:      fixture, Presence: fixture, Exceptions: fixture, Excusal: fixture, Locker: fixture, Persons: fixture,
+		People:      fixture, Departure: fixture, Presence: fixture, Exceptions: fixture, Excusal: fixture, Locker: fixture, Persons: fixture,
 		Today: func() calendar.Date { return "2026-09-21" },
 	})
 	require.NoError(t, err)
@@ -175,7 +175,7 @@ func TestNativePickupApprovalRequiresImpactFingerprint(t *testing.T) {
 	t.Parallel()
 	fixture := &pickupApprovalFixture{}
 	service, err := compose.NewPickupApprovals(compose.PickupApprovalDependencies{
-		People: fixture, Presence: fixture, Exceptions: fixture, Excusal: fixture, Locker: fixture, Persons: fixture,
+		People: fixture, Departure: fixture, Presence: fixture, Exceptions: fixture, Excusal: fixture, Locker: fixture, Persons: fixture,
 		Today: func() calendar.Date { return "2026-09-21" },
 	})
 	require.ErrorContains(t, err, "impact fingerprint")

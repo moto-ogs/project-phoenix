@@ -11,9 +11,6 @@ import (
 
 type PickupApprovalDirectory interface {
 	EnrolledUntil(context.Context, int64) (*calendar.Date, error)
-	// WeeklyDepartureModes is the effective weekly Abholart plan, keyed
-	// "mon" to "fri", when no day-specific value overrides it.
-	WeeklyDepartureModes(context.Context, int64) (map[string][]string, error)
 	// ValidatePickupPerson locks and rechecks a one-day collector before the
 	// approval writes the day's pickup person.
 	ValidatePickupPerson(context.Context, int64, int64) error

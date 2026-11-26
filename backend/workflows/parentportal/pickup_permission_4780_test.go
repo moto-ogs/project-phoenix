@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"image"
 	"image/color"
@@ -190,6 +191,40 @@ func signedDayAlone(t *testing.T, f pickupPermissionFixture, chain testpkg.Paren
 	})
 }
 
+// setWeeklyDepartureMode makes the effective weekly plan explicit for a
+// scenario. A person may only be named when the child is collected that day.
+func setWeeklyDepartureMode(t *testing.T, f pickupPermissionFixture, chain testpkg.ParentChain, day calendar.Date, mode string) {
+	t.Helper()
+	weekday, err := calendar.PlanWeekday(t.Context(), day)
+	require.NoError(t, err)
+	keys := [...]string{"", "mon", "tue", "wed", "thu", "fri"}
+	require.GreaterOrEqual(t, weekday, 1)
+	require.LessOrEqual(t, weekday, 5)
+	key := keys[weekday]
+	allowed, err := json.Marshal(map[string][]string{key: {mode}})
+	require.NoError(t, err)
+	days, err := json.Marshal(map[string]string{key: mode})
+	require.NoError(t, err)
+	busDays, err := json.Marshal(map[string]bool{key: mode == careplan.DepartureModeBus})
+	require.NoError(t, err)
+	pickupDays, err := json.Marshal(map[string]bool{key: mode == careplan.DepartureModePickup})
+	require.NoError(t, err)
+	ctx := tenant.WithTenantID(testpkg.WithPackageTenantRuntime(context.Background()), chain.TenantID)
+	_, err = f.db.NewUpdate().TableExpr("users.student_care_profiles").
+		Set("allowed_departure_modes = ?::jsonb", string(allowed)).
+		Set("departure_days = ?::jsonb", string(days)).
+		Set("bus_days = ?::jsonb", string(busDays)).
+		Set("pickup_days = ?::jsonb", string(pickupDays)).
+		Where("membership_id = (SELECT id FROM users.student_school_memberships WHERE student_profile_id = ? AND deleted_at IS NULL)", chain.StudentID).
+		Exec(ctx)
+	require.NoError(t, err)
+}
+
+func setWeeklyPickup(t *testing.T, f pickupPermissionFixture, chain testpkg.ParentChain, day calendar.Date) {
+	t.Helper()
+	setWeeklyDepartureMode(t, f, chain, day, careplan.DepartureModePickup)
+}
+
 func staffDecisionContext(t *testing.T, db *bun.DB, tenantID int64) (context.Context, int64) {
 	t.Helper()
 	_, staffAccount := testpkg.CreateTestStaffWithAccount(t, db, "Rita", "Review")
@@ -346,6 +381,7 @@ func TestPickupChangeEditPreservesAnOmittedSignedCollector(t *testing.T) {
 
 	f := buildPickupPermissionService(t)
 	chain := testpkg.CreateTestParentGuardianChain(t, f.db)
+	setWeeklyPickup(t, f, chain, pickupPermissionDay)
 	contactID := linkContactOnlyGuardian(t, f.db, chain.StudentID, "oma-4780-edit-compatibility")
 	ctx := testpkg.WithPackageTenantRuntime(context.Background())
 	created, err := f.svc.SubmitPickupChange(ctx, chain.AccountID, chain.StudentID, parentService.PickupChangeSubmission{
@@ -671,6 +707,7 @@ func TestDayPickupPerson_SignedConfirmedAndOnlyThatDay(t *testing.T) {
 
 	f := buildPickupPermissionService(t)
 	chain := testpkg.CreateTestParentGuardianChain(t, f.db)
+	setWeeklyPickup(t, f, chain, pickupPermissionDay)
 	contactID := linkContactOnlyGuardian(t, f.db, chain.StudentID, "oma-4780-day")
 	ctx := testpkg.WithPackageTenantRuntime(context.Background())
 
@@ -746,6 +783,7 @@ func TestDayPickupApprovalRefusesAContactNowManagedByTheSchool(t *testing.T) {
 
 	f := buildPickupPermissionService(t)
 	chain := testpkg.CreateTestParentGuardianChain(t, f.db)
+	setWeeklyPickup(t, f, chain, pickupPermissionDay)
 	contactID := linkContactOnlyGuardian(t, f.db, chain.StudentID, "schule-4780-tag")
 	ctx := testpkg.WithPackageTenantRuntime(context.Background())
 	created, err := f.svc.SubmitPickupChange(ctx, chain.AccountID, chain.StudentID, parentService.PickupChangeSubmission{

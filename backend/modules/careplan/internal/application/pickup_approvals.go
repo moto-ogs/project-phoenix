@@ -13,6 +13,7 @@ import (
 
 type PickupApprovals struct {
 	People      ports.PickupApprovalDirectory
+	Departure   ports.RequestSubmissionPickup
 	Presence    ports.PickupApprovalPresence
 	Exceptions  ports.PickupApprovalExceptions
 	Excusal     ports.PickupApprovalExcusal
@@ -96,7 +97,7 @@ func (s *PickupApprovals) ensurePickupPersonDepartureAllowed(ctx context.Context
 	if weekday < 1 || weekday > 5 {
 		return carerequests.ErrPickupChangeConflict
 	}
-	weekly, err := s.People.WeeklyDepartureModes(ctx, studentID)
+	weekly, err := s.Departure.WeeklyDepartureModes(ctx, studentID)
 	if err != nil {
 		return fmt.Errorf("schedule: resolve weekly departure modes for pickup person request: %w", err)
 	}

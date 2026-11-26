@@ -47,6 +47,7 @@ func TestDayPickupPerson_OneTimePersonByName(t *testing.T) {
 
 	f := buildPickupPermissionService(t)
 	chain := testpkg.CreateTestParentGuardianChain(t, f.db)
+	setWeeklyPickup(t, f, chain, pickupPermissionDay)
 	contactID := linkContactOnlyGuardian(t, f.db, chain.StudentID, "oma-8162-name")
 	ctx := testpkg.WithPackageTenantRuntime(context.Background())
 	submit := func(submission parentService.PickupChangeSubmission) (*carerequests.Request, error) {
@@ -141,6 +142,7 @@ func TestDayPickupPerson_RefusedAfterTheCutoff(t *testing.T) {
 		},
 	})
 	chain := testpkg.CreateTestParentGuardianChain(t, f.db)
+	setWeeklyPickup(t, f, chain, pickupPermissionDay)
 	ctx := testpkg.WithPackageTenantRuntime(context.Background())
 	submit := func(day calendar.Date) error {
 		_, err := f.svc.SubmitPickupChange(ctx, chain.AccountID, chain.StudentID, parentService.PickupChangeSubmission{
@@ -183,6 +185,26 @@ func TestDayPickupPerson_RefusesIncompatibleDayDeparture(t *testing.T) {
 			require.NoError(t, err)
 
 			_, err = f.svc.SubmitPickupChange(ctx, chain.AccountID, chain.StudentID, parentService.PickupChangeSubmission{
+				Date: pickupPermissionDay, PickupPersonName: "Tante Frieda", Reason: "Tante holt ab",
+				Signature: signedOneTimePerson(t, f, chain, pickupPermissionDay, "Tante Frieda"),
+			})
+
+			require.ErrorIs(t, err, parentService.ErrCareExceptionConflict)
+		})
+	}
+}
+
+func TestDayPickupPerson_RefusesIncompatibleWeeklyDeparture(t *testing.T) {
+	t.Parallel()
+
+	for _, mode := range []string{careplan.DepartureModeAlone, careplan.DepartureModeBus} {
+		t.Run(mode, func(t *testing.T) {
+			f := buildPickupPermissionService(t)
+			chain := testpkg.CreateTestParentGuardianChain(t, f.db)
+			setWeeklyDepartureMode(t, f, chain, pickupPermissionDay, mode)
+			ctx := testpkg.WithPackageTenantRuntime(context.Background())
+
+			_, err := f.svc.SubmitPickupChange(ctx, chain.AccountID, chain.StudentID, parentService.PickupChangeSubmission{
 				Date: pickupPermissionDay, PickupPersonName: "Tante Frieda", Reason: "Tante holt ab",
 				Signature: signedOneTimePerson(t, f, chain, pickupPermissionDay, "Tante Frieda"),
 			})

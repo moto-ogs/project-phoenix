@@ -59,7 +59,7 @@ func TestNativeConflictStaffPickupWritesOnlyRequestedDay(t *testing.T) {
 	probe := &pickupApprovalFixture{staffID: staff.ID}
 	approvals, err := compose.NewPickupApprovals(compose.PickupApprovalDependencies{
 		Fingerprint: securityruntime.Fingerprint,
-		People:      probe, Presence: probe, Exceptions: exceptions, Excusal: probe, Locker: owner, Persons: records, Today: today,
+		People:      probe, Departure: probe, Presence: probe, Exceptions: exceptions, Excusal: probe, Locker: owner, Persons: records, Today: today,
 	})
 	require.NoError(t, err)
 	plans := &conflictPlanBoundary{pickupApprovalFixture: probe, PickupApprovals: approvals, owner: owner}

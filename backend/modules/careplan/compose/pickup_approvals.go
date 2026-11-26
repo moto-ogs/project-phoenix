@@ -11,6 +11,7 @@ import (
 
 type PickupApprovalDependencies struct {
 	People      ports.PickupApprovalDirectory
+	Departure   ports.RequestSubmissionPickup
 	Presence    ports.PickupApprovalPresence
 	Exceptions  ports.PickupApprovalExceptions
 	Excusal     ports.PickupApprovalExcusal
@@ -21,11 +22,11 @@ type PickupApprovalDependencies struct {
 }
 
 func NewPickupApprovals(deps PickupApprovalDependencies) (carerequests.PickupApprovals, error) {
-	if deps.People == nil || deps.Presence == nil || deps.Exceptions == nil || deps.Excusal == nil || deps.Locker == nil || deps.Persons == nil || deps.Today == nil || deps.Fingerprint == nil {
-		return nil, errors.New("pickup approvals: people, presence, exceptions, excusal, care-day locker, pickup persons, clock, and impact fingerprint are required")
+	if deps.People == nil || deps.Departure == nil || deps.Presence == nil || deps.Exceptions == nil || deps.Excusal == nil || deps.Locker == nil || deps.Persons == nil || deps.Today == nil || deps.Fingerprint == nil {
+		return nil, errors.New("pickup approvals: people, departure plan, presence, exceptions, excusal, care-day locker, pickup persons, clock, and impact fingerprint are required")
 	}
 	return &application.PickupApprovals{
-		People: deps.People, Presence: deps.Presence, Exceptions: deps.Exceptions,
+		People: deps.People, Departure: deps.Departure, Presence: deps.Presence, Exceptions: deps.Exceptions,
 		Excusal: deps.Excusal, Locker: deps.Locker, Persons: deps.Persons, Today: deps.Today, Fingerprint: deps.Fingerprint,
 	}, nil
 }
