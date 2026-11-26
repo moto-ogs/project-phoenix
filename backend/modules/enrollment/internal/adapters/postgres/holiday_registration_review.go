@@ -281,7 +281,7 @@ const (
 		FROM enrollment.holiday_registration_audit
 		WHERE organization_id = ? AND holiday_registration_id = ?
 			AND action IN ('confirm', 'cancel', 'rebook', 'freeze', 'reopen', 'debtor_number', 'edit', 'proof_upload', 'sibling_merge', 'sibling_split', 'sibling_cancel', 'promote', 'wish',
-				'allocate', 'criteria_check', 'consent')
+				'allocate', 'criteria_check', 'consent', 'payer')
 		ORDER BY occurred_at, id`
 )
 

@@ -413,6 +413,9 @@ type HolidayRegistrations interface {
 	// HolidaySiblingsSplit or HolidaySiblingsCancelled, with the other
 	// registrations it names.
 	RecordHolidaySiblings(ctx context.Context, reviewer HolidayReviewer, periodID, registrationID int64, action string, siblingIDs []int64) error
+	// HolidayPayerTrail records a payer change of a confirmed registration
+	// (#8158).
+	HolidayPayerTrail
 }
 
 // HolidayBillingSettings is the Träger level of the settings system as the

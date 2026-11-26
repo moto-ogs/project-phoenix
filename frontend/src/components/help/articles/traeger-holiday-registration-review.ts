@@ -51,6 +51,21 @@ export function traegerHolidayRegistrationReviewTopic(): HelpTopic {
         ],
       },
       {
+        title: "Zahler nach dem Bestätigen ändern",
+        description:
+          "Bringt die Familie den Bescheid erst nach dem Bestätigen? Dann änderst du, wer bezahlt. Du musst nichts stornieren und die Kinder nicht neu anmelden.",
+        steps: [
+          "Öffne die bestätigte Anmeldung und wähle den Reiter `Nachweise und Beitrag`.",
+          "Lade den Bescheid unter `Nachweis für den Leistungsbezug` mit `Nachweis hochladen` hoch, wenn du ihn hast.",
+          "Wähle unter `Ferienbeitrag` den Knopf `Zahler ändern`. Du findest ihn auch oben rechts im Menü mit den drei Punkten.",
+          "Wähle unter `Wer bezahlt den Beitrag?`: `Die Familie bezahlt`, `Von der Zahlung befreien (Leistungsbezug)` oder `Kosten übernimmt ein Kostenträger`. Beim Kostenträger wählst du darunter, welcher bezahlt.",
+          "Prüfe unter `Das ändert sich beim Speichern` für jedes Kind, was die Familie und was der Kostenträger danach bezahlt.",
+          "Schreibe in `Begründung`, warum du den Zahler änderst. Zum Beispiel: Bescheid nachgereicht.",
+          "Wähle `Änderung speichern`. Eltern bekommen dazu keine Nachricht von moto.",
+          "Im Reiter `Übersicht` steht die Änderung unter `Verlauf` als `Zahler geändert`, mit dem Zahler vorher, dem Zahler jetzt und deiner Begründung.",
+        ],
+      },
+      {
         title: "Mehrere auf einmal bestätigen",
         description:
           "moto bestätigt nur Anmeldungen, die keine Angabe mehr brauchen. Die Familie bezahlt dann den Beitrag. Bei offenen Anmeldungen prüfst du zuerst den Grund.",
@@ -174,6 +189,8 @@ export function traegerHolidayRegistrationReviewTopic(): HelpTopic {
       "Zusammenführen und Trennen rechnen auch einen schon bestätigten Beitrag neu. Der alte Beitrag bleibt gespeichert. Ein offener Abrechnungslauf zeigt den neuen Betrag.",
       "Stornierst du eine Anmeldung der Geschwister, gehört sie nicht mehr dazu. moto rechnet den Beitrag der anderen Geschwister sofort neu. Du musst nichts trennen.",
       "Gibt es für ein Geschwister-Kind schon eine Rechnung, bleibt die Rechnung, wie sie ist. moto rechnet den Beitrag trotzdem neu. Unter `Ferienbeitrag` steht dann `Rechnung prüfen`. Storniere die Rechnung. Der nächste Abrechnungslauf stellt dann den neuen Betrag aus.",
+      "Änderst du den Zahler und es gibt schon eine Rechnung, steht beim Ändern `Die Rechnung ist schon ausgestellt`. Die Rechnung bleibt, wie sie ist. Speichere und storniere die Rechnung danach in der Abrechnung. Der nächste Abrechnungslauf stellt dann den neuen Betrag aus. Ein Abrechnungslauf, der noch nicht freigegeben ist, rechnet sofort mit dem neuen Zahler.",
+      "Befreiung und Kostenübernahme gelten nur für die Betreuung. Das Mittagessen bezahlt die Familie weiter selbst.",
       "Jede Anmeldung bekommt weiter ihre eigene Rechnung und ihr eigenes Schreiben. Ein Schreiben nennt nie die Kinder oder Eltern der anderen Anmeldung.",
       "Alle bestätigten Anmeldungen der Geschwister bekommen dieselbe Debitorennummer. Beim Bestätigen steht die Nummer der Geschwister schon im Feld.",
       "Eine Familie ist die E-Mail-Adresse der Eltern, die anmelden. Groß- und Kleinschreibung zählt nicht. Die gemerkte Nummer bleibt, auch wenn die Anmeldung gelöscht ist. Du siehst und änderst sie unter `Abrechnung` im Reiter `Familien`. Ein anderer Träger und die Schulen sehen sie nicht.",
@@ -186,6 +203,7 @@ export function traegerHolidayRegistrationReviewTopic(): HelpTopic {
       "Beim Kind steht `An der Schule bekannt`? Die Schule aus der Anmeldung führt ein Kind mit gleichem Namen und Geburtsdatum. Du musst nichts tun.",
       "Auf dem Handy fehlt der Haken für alle Anmeldungen? Setze die Haken dort einzeln.",
       "Ein Kind ist als `Mögliche Doppelanmeldung` markiert? Ein Kind mit gleichem Namen und Geburtsdatum steht auch in einer anderen Anmeldung. Öffne beide und storniere die doppelte.",
+      "`Zahler ändern` fehlt? Die Anmeldung ist noch nicht bestätigt oder storniert. Vor dem Bestätigen wählst du den Zahler im Reiter `Übersicht`.",
       "Beim Bestätigen fehlt `Kosten übernimmt ein Kostenträger`? Dein Träger hat noch keinen aktiven Kostenträger. Die Abrechnung legt ihn in den Einstellungen unter `Abrechnungsvorgaben` an.",
       "Beim Bestätigen gibt es kein Feld `Debitorennummer`? Dein Träger fragt sie nicht ab. Das legst du in den Einstellungen unter `Allgemein` im Bereich `Ferienbetreuung` fest.",
     ],

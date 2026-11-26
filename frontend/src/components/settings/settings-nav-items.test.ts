@@ -76,7 +76,10 @@ function backendTabKeys(): string[] {
   return [...keys].sort((a, b) => a.localeCompare(b));
 }
 
-function tabWithOneSetting(key: string): SchemaTab {
+function tabWithOneSetting(
+  key: string,
+  levels: "schule" | "beide" | "traeger" = "schule",
+): SchemaTab {
   return {
     key,
     label: key,
@@ -97,7 +100,7 @@ function tabWithOneSetting(key: string): SchemaTab {
             visible: true,
             sort_order: 1,
             access_policy: "shared",
-            levels: "schule",
+            levels,
             source: "default",
           },
         ],
@@ -109,12 +112,31 @@ function tabWithOneSetting(key: string): SchemaTab {
 // #8132: fünf Bereiche trugen dasselbe Zahnrad, einer hieß „lohnexport“.
 describe("settingsSectionsFor", () => {
   const keys = backendTabKeys();
+  // Die Bereiche, deren Einstellungen alle auf der Ebene des Trägers liegen
+  // (`TestTabOrderPutsTheTraegerAreasLast` im Backend).
+  const traegerKeys = new Set([
+    "zustaendigkeiten",
+    "vertraege",
+    "monatsbeitrag",
+    "einsatzplanung",
+    "lohnexport",
+    "dashboard",
+    "branding",
+  ]);
   const sections = settingsSectionsFor(
-    { tabs: keys.map(tabWithOneSetting) },
+    {
+      tabs: keys.map((key) =>
+        tabWithOneSetting(key, traegerKeys.has(key) ? "traeger" : "schule"),
+      ),
+    },
     { schemaFailed: false, nfcEnabled: true, canManageHomeBlocks: true },
   );
-  const schemaSections = sections.filter((section) =>
-    keys.includes(section.id.replace(/^settings-/, "")),
+  // „Startseite für alle“ ist handgeschrieben (#2875), auch wenn ihre
+  // Schalter im Schema unter `startseite` stehen.
+  const schemaSections = sections.filter(
+    (section) =>
+      section.id !== "settings-startseite" &&
+      keys.includes(section.id.replace(/^settings-/, "")),
   );
 
   it("reads the areas of the backend registry", () => {
@@ -150,6 +172,60 @@ describe("settingsSectionsFor", () => {
         .filter((section) => section.icon === settingsConcept)
         .map((section) => section.label),
     ).toEqual(["Betrieb"]);
+  });
+
+  it("lists the areas of the Träger last, after Personalisierung", () => {
+    const labels = sections.map((section) => section.label);
+    const traeger = sections
+      .filter((section) => section.traeger)
+      .map((section) => section.label);
+    expect(traeger).toEqual(
+      expect.arrayContaining([
+        "Zuständigkeiten",
+        "Betreuungsverträge",
+        "Monatsbeitrag",
+        "Einsatzplanung",
+        "Lohnexport",
+        "Dashboard",
+        "Briefkopf",
+      ]),
+    );
+    expect(traeger).not.toContain("Sicherheit");
+    expect(labels.slice(-traeger.length)).toEqual(traeger);
+    expect(labels.slice(-traeger.length - 2, -traeger.length)).toEqual([
+      "Startseite für alle",
+      "Personalisierung",
+    ]);
+  });
+
+  it("keeps the order of the schema inside each group", () => {
+    const schemaOrder = keys.map((key) => `settings-${key}`);
+    for (const traeger of [false, true]) {
+      const group = schemaSections
+        .filter((section) => (section.traeger === true) === traeger)
+        .map((section) => section.id);
+      expect(group).toEqual(schemaOrder.filter((id) => group.includes(id)));
+    }
+  });
+
+  it("counts an area as the Träger's only without a school setting", () => {
+    const mixed = tabWithOneSetting("gdpr", "beide");
+    mixed.categories[0]!.items.push({
+      ...mixed.categories[0]!.items[0]!,
+      key: "gdpr.schule",
+      levels: "schule",
+    });
+    const grouped = settingsSectionsFor(
+      { tabs: [mixed, tabWithOneSetting("zustaendigkeiten", "beide")] },
+      { schemaFailed: false, nfcEnabled: true, canManageHomeBlocks: false },
+    );
+    expect(
+      grouped.map((section) => [section.label, section.traeger === true]),
+    ).toEqual([
+      ["Datenschutz", false],
+      ["Personalisierung", false],
+      ["Zuständigkeiten", true],
+    ]);
   });
 
   it("shows „Lohnexport“ with a capital letter", () => {

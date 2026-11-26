@@ -442,14 +442,21 @@ func (f *AccountMFAFlows) IssueTrustedDevice(ctx context.Context, accountID, ten
 // cookie was issued rejects it immediately rather than waiting for expiry.
 func (f *AccountMFAFlows) VerifyTrustedDevice(ctx context.Context, accountID, tenantID int64, signedCookie string) (bool, error) {
 	if !f.IsTrustedDeviceEnabled(ctx, tenantID) {
+		logTrustedDeviceRefused(ctx, f.logger, accountID, tenantID, deviceRefusalDisabled, nil)
 		return false, nil
 	}
 	rawToken, ok := domain.VerifyTrustedDeviceToken(signedCookie, f.secret)
 	if !ok {
+		logTrustedDeviceRefused(ctx, f.logger, accountID, tenantID, deviceRefusalInvalidSignature, nil)
 		return false, nil
 	}
 	device, found, err := f.records.FindActiveTrustedDevice(ctx, accountID, deviceBinding(ctx, tenantID), domain.HashTrustedDeviceToken(rawToken))
-	if err != nil || !found {
+	if err != nil {
+		logTrustedDeviceRefused(ctx, f.logger, accountID, tenantID, deviceRefusalLookupFailed, err)
+		return false, nil
+	}
+	if !found {
+		logTrustedDeviceRefused(ctx, f.logger, accountID, tenantID, deviceRefusalNoActiveDevice, nil)
 		return false, nil
 	}
 	_ = f.records.TouchTrustedDevice(ctx, device.ID, f.now())

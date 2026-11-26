@@ -2,7 +2,8 @@
 
 // Verlauf einer Ferienanmeldung (#4663): jede Änderung des Träger-Büros mit
 // Zeitpunkt, beim Umbuchen die Wochen vorher und nachher, bei der
-// Debitorennummer die Nummer vorher und nachher (#5621), beim Ändern der
+// Debitorennummer die Nummer vorher und nachher (#5621), beim Zahler den
+// Zahler vorher und nachher mit der Begründung (#8158), beim Ändern der
 // Angaben die geänderten Felder ohne ihre Werte (#5629), bei Geschwistern
 // die anderen Anmeldungen (#5628), auch wenn eine Stornierung die Gruppe
 // löst (#5662). Nur zum Lesen.
@@ -18,6 +19,7 @@ import type {
 } from "~/lib/traeger-holiday-registrations-api";
 import { editedFieldsText } from "./holiday-registration-edit-fields";
 import { formatHolidayWeek } from "./holiday-registration-format";
+import { holidayPayerText } from "./holiday-payer-choice";
 
 const ACTION_LABELS: Readonly<
   Record<HolidayRegistrationEvent["action"], string>
@@ -38,6 +40,7 @@ const ACTION_LABELS: Readonly<
   criteria_check: "Angaben für die Vergabe geprüft",
   wish: "Ferienwunsch festgelegt",
   consent: "Einwilligung geändert",
+  payer: "Zahler geändert",
 };
 
 const CHECK_LABELS = { yes: "trifft zu", no: "trifft nicht zu" } as const;
@@ -157,6 +160,10 @@ function eventDetail(
       (entry) => entry.key === key,
     );
     return `${block?.title ?? "Einwilligung"}: ${given ? "gegeben" : "widerrufen"}`;
+  }
+  if (event.action === "payer" && event.payer) {
+    const reason = event.reason ? ` Begründung: ${event.reason}` : "";
+    return `Bisher: ${holidayPayerText(event.payer.before)}. Jetzt: ${holidayPayerText(event.payer.after)}.${reason}`;
   }
   if (event.debtorNumber) return debtorNumberText(event.debtorNumber);
   if (event.siblings.length > 0) {

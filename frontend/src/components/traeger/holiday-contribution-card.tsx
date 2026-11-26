@@ -2,18 +2,23 @@
 
 // Ferienbeitrag einer Anmeldung (#4664): je Kind die Positionen der
 // Regelkette, vor der Bestätigung als Vorschau, danach festgehalten. Die
-// Karte zeigt nur; bestätigt wird in der Karte „Status“. Hat eine schon
+// Karte zeigt nur; bestätigt wird in der Karte „Status“. Bei einer
+// bestätigten Anmeldung nennt sie, wer bezahlt, und führt mit „Zahler
+// ändern“ in den Bearbeiten-Zustand (#8158). Hat eine schon
 // ausgestellte Rechnung einen anderen Betrag als der Beitrag, etwa nach dem
 // Storno eines Geschwisters, sagt sie, wie das Büro das korrigiert (#5662).
 
 import { ContributionBreakdown } from "~/components/holiday-contribution/contribution-breakdown";
 import { Alert } from "~/components/ui/alert";
+import { Button } from "~/components/ui/button";
+import { DataField, DataGrid } from "~/components/ui/data-field";
 import { SectionCard } from "~/components/ui/section-card";
 import { formatBerlinDate } from "~/lib/date-helpers";
 import type { HolidayContribution } from "~/lib/traeger-contributions-api";
 import type { HolidayRegistrationDetail } from "~/lib/traeger-holiday-registrations-api";
 import { contributionLineLabel, formatEuro } from "./contribution-format";
 import { ContributionRulesLink } from "./contribution-rules-link";
+import { holidayPayerOf, holidayPayerText } from "./holiday-payer-choice";
 import { contributionsConcept } from "~/lib/concepts/contributions";
 
 function description(
@@ -33,11 +38,17 @@ export function HolidayContributionCard({
   contribution,
   registration,
   canManageBillingSettings = false,
+  onChangePayer,
 }: Readonly<{
   contribution: HolidayContribution;
   registration: HolidayRegistrationDetail;
   /** Das Recht „Abrechnung“ öffnet die Beitragsregeln. */
   canManageBillingSettings?: boolean;
+  /**
+   * Opens „Zahler ändern“ (#8158); only for a confirmed registration, and
+   * absent while another part of the registration is being edited.
+   */
+  onChangePayer?: () => void;
 }>) {
   const childName = (childId: string, position: number) => {
     const child =
@@ -50,14 +61,36 @@ export function HolidayContributionCard({
       concept={contributionsConcept}
       title="Ferienbeitrag"
       description={description(contribution, registration)}
+      action={
+        onChangePayer ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="md"
+            tooltip="Öffnet die Auswahl, wer bezahlt. Vor dem Speichern siehst du die neuen Beträge."
+            onClick={onChangePayer}
+          >
+            Zahler ändern
+          </Button>
+        ) : undefined
+      }
     >
       {contribution.correctionNeeded ? (
         <Alert
           type="warning"
           className="mb-4"
           title="Rechnung prüfen"
-          message="Der Beitrag hat sich geändert, zum Beispiel durch ein Storno bei den Geschwistern. Die Rechnung zeigt noch den alten Betrag. Storniere die Rechnung. Der nächste Abrechnungslauf stellt dann den neuen Betrag aus."
+          message="Der Beitrag hat sich geändert, zum Beispiel durch einen neuen Zahler oder ein Storno bei den Geschwistern. Die Rechnung zeigt noch den alten Betrag. Storniere die Rechnung. Der nächste Abrechnungslauf stellt dann den neuen Betrag aus."
         />
+      ) : null}
+      {contribution.frozen ? (
+        <div className="mb-4">
+          <DataGrid columns={1}>
+            <DataField label="Wer bezahlt">
+              {holidayPayerText(holidayPayerOf(contribution))}
+            </DataField>
+          </DataGrid>
+        </div>
       ) : null}
       <ContributionBreakdown
         items={contribution.children.map((child) => ({

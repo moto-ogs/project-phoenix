@@ -92,7 +92,11 @@ func (s *AccountAuthentication) mfaEnrollmentResult(account domain.LoginAccount,
 }
 
 func (s *AccountAuthentication) trustedDeviceVerified(ctx context.Context, accountID, tenantID int64, cookie string) bool {
-	if cookie == "" || !s.mfa.Configured() {
+	if !s.mfa.Configured() {
+		return false
+	}
+	if cookie == "" {
+		logTrustedDeviceRefused(ctx, s.logger, accountID, tenantID, deviceRefusalNoCookie, nil)
 		return false
 	}
 	ok, _ := s.mfa.VerifyTrustedDevice(ctx, accountID, tenantID, cookie)

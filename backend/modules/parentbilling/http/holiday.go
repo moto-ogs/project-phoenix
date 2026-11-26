@@ -27,6 +27,7 @@ import (
 // it is sent.
 type HolidayResource struct {
 	contributions capability.HolidayContributions
+	payers        capability.HolidayPayerChanges
 	places        HolidayPlaceChanges
 	requireManage common.Middleware
 }
@@ -43,12 +44,13 @@ type HolidayPlaceChanges interface {
 
 // NewHolidayResource builds the resource. requireManage admits only a
 // session with the Träger right "Anmeldung verwalten", the right that
-// confirms a registration and merges siblings (#5628).
-func NewHolidayResource(contributions capability.HolidayContributions, places HolidayPlaceChanges, requireManage common.Middleware) *HolidayResource {
-	if contributions == nil || places == nil || requireManage == nil {
-		panic("parent billing http: the holiday contributions, the place changes and the right check are required")
+// confirms a registration, changes its payer (#8158) and merges siblings
+// (#5628).
+func NewHolidayResource(contributions capability.HolidayContributions, payers capability.HolidayPayerChanges, places HolidayPlaceChanges, requireManage common.Middleware) *HolidayResource {
+	if contributions == nil || payers == nil || places == nil || requireManage == nil {
+		panic("parent billing http: the holiday contributions, the payer changes, the place changes and the right check are required")
 	}
-	return &HolidayResource{contributions: contributions, places: places, requireManage: requireManage}
+	return &HolidayResource{contributions: contributions, payers: payers, places: places, requireManage: requireManage}
 }
 
 // TraegerRouter returns the routes mounted at /traeger/holiday-contributions.
@@ -66,6 +68,8 @@ func (rs *HolidayResource) TraegerRouter(protectedTraegerRoutes func(chi.Router,
 		manage.Put("/{periodId}/weeks/{weekId}/capacity", rs.setWeekCapacity)
 		manage.Put("/{periodId}/registrations/{registrationId}/debtor-number", rs.changeDebtorNumber)
 		manage.Get("/{periodId}/registrations/{registrationId}/family-debtor-number", rs.familyDebtorNumber)
+		manage.Get("/{periodId}/registrations/{registrationId}/payer", rs.payerPreview)
+		manage.Put("/{periodId}/registrations/{registrationId}/payer", rs.changePayer)
 		manage.Put("/{periodId}/registrations/{registrationId}/child-debtor-numbers", rs.setChildDebtorNumbers)
 		manage.Get("/{periodId}/sibling-groups", rs.listSiblingGroups)
 		manage.Post("/{periodId}/sibling-groups", rs.mergeSiblings)

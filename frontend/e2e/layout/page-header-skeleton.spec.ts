@@ -6,7 +6,10 @@ import {
   type ReactNode,
 } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import type { ParentPageSkeleton } from "../../src/components/parent/parent-page";
+import type {
+  ParentPageHeader,
+  ParentPageSkeleton,
+} from "../../src/components/parent/parent-page";
 import type { TenantPageHeaderSkeleton } from "../../src/components/ui/page-skeletons";
 import type { TenantPage } from "../../src/components/ui/tenant-page";
 import { compileGlobalsCss, loadSourceModules, render } from "./harness";
@@ -25,6 +28,7 @@ let compiledCss = "";
 let LoadedHead: ComponentType<HeadProps>;
 let SkeletonHead: ComponentType<SkeletonProps>;
 let ParentSkeleton: ComponentType<ComponentProps<typeof ParentPageSkeleton>>;
+let ParentHead: ComponentType<ComponentProps<typeof ParentPageHeader>>;
 let IntlProvider: ComponentType<{
   locale: string;
   timeZone: string;
@@ -49,6 +53,7 @@ test.beforeAll(async () => {
       "/src/components/parent/parent-page.tsx",
     );
     ParentSkeleton = parentPage.ParentPageSkeleton as typeof ParentSkeleton;
+    ParentHead = parentPage.ParentPageHeader as typeof ParentHead;
     // Über denselben Modulgraphen wie `parent-page.tsx`, sonst fände
     // `useTranslations` den Kontext des Providers nicht.
     const intl = await importSource("next-intl");
@@ -169,13 +174,11 @@ test("the skeleton head keeps the portaled mobile help control in place", async 
 });
 
 // Das Elternportal lädt mit seinem eigenen Kopf (`ParentPageHeader`), nicht mit
-// dem von `TenantPage`. Sein Ladezustand behält bis #6613 die Maße von vor
-// #6568: 20 px Rand auf jedem Bildschirm, ein 28-px-Titelbalken und 8 px
-// darunter ein 16-px-Statusbalken.
-test("the parents portal keeps its loading head until #6613", async ({
-  page,
-}) => {
-  const markup = renderToStaticMarkup(
+// dem von `TenantPage`. Sein Ladekopf hat dieselbe Höhe und setzt den
+// Titelbalken an die Stelle des Titels (#6613), mit und ohne die Seitenhilfe,
+// die die Portalhülle unter `lg` in den Kopf setzt.
+function withParentIntl(element: ReturnType<typeof createElement>): string {
+  return renderToStaticMarkup(
     createElement(
       IntlProvider,
       {
@@ -183,38 +186,61 @@ test("the parents portal keeps its loading head until #6613", async ({
         timeZone: "Europe/Berlin",
         messages: { parentNav: { sectionLoading: "Inhalt wird geladen" } },
       },
-      createElement(ParentSkeleton, { rows: 1 }),
+      element,
     ),
   );
-  for (const viewport of VIEWPORTS) {
-    await page.setViewportSize(viewport);
-    await render(
-      page,
-      compiledCss,
-      `<div style="padding:16px">${markup}</div>`,
+}
+
+async function titleBox(page: Page, selector: string) {
+  const header = await page.locator("header").first().boundingBox();
+  const title = await page.locator(`header ${selector}`).first().boundingBox();
+  if (!header || !title) throw new Error("head or title is not rendered");
+  return {
+    height: header.height,
+    titleTop: title.y - header.y,
+    titleLeft: title.x - header.x,
+  };
+}
+
+// Die Startseite lädt mit `ParentPageSkeleton prominent`, ihr Kopf ist die
+// Begrüßung (`ParentPageHeader prominent`): größerer Titel, 20 px Rand auf
+// jeder Breite.
+const PARENT_CASES = [
+  { name: "page", skeleton: { rows: 1 }, head: { title: "Kinder" } },
+  {
+    name: "start page",
+    skeleton: { rows: 1, prominent: true },
+    head: { title: "Guten Tag, Sabine", prominent: true },
+  },
+] as const;
+
+test("the parents portal loading head matches ParentPageHeader", async ({
+  page,
+}) => {
+  for (const testCase of PARENT_CASES) {
+    const skeletonMarkup = withParentIntl(
+      createElement(ParentSkeleton, testCase.skeleton),
     );
-    const head = page.locator("header").first();
-    const geometry = await head.evaluate((header) => {
-      const outer = header.getBoundingClientRect();
-      return {
-        height: outer.height,
-        bars: Array.from(header.querySelectorAll(".animate-pulse"), (bar) => {
-          const box = bar.getBoundingClientRect();
-          return {
-            top: box.top - outer.top,
-            left: box.left - outer.left,
-            width: box.width,
-            height: box.height,
-          };
-        }),
-      };
-    });
-    expect.soft(geometry, viewport.name).toEqual({
-      height: 94,
-      bars: [
-        { top: 21, left: 21, width: 208, height: 28 },
-        { top: 57, left: 21, width: 256, height: 16 },
-      ],
-    });
+    const loadedMarkup = withParentIntl(
+      createElement(ParentHead, testCase.head),
+    );
+    for (const viewport of VIEWPORTS) {
+      await page.setViewportSize(viewport);
+      for (const mobileHelp of viewport.width < 1024
+        ? [false, true]
+        : [false]) {
+        const name = `${testCase.name}, ${viewport.name}${mobileHelp ? ", mobile help" : ""}`;
+        await headHeight(page, skeletonMarkup, { mobileHelp });
+        // Kein Statusbalken: Der Elternkopf hat keine Statuszeile.
+        await expect
+          .soft(page.locator("header .animate-pulse"), name)
+          .toHaveCount(1);
+        // Die Zeile um den Titelbalken steht an der Stelle der Überschrift.
+        const skeleton = await titleBox(page, ".animate-pulse >> xpath=..");
+        await headHeight(page, loadedMarkup, { mobileHelp });
+        const loaded = await titleBox(page, "h1");
+        expect.soft(skeleton, name).toEqual(loaded);
+      }
+    }
   }
 });
