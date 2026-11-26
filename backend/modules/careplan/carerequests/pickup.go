@@ -139,13 +139,11 @@ func pickupTerms(payload map[string]any) (PickupChange, bool) {
 		}
 		change.DepartureMode = mode
 	}
-	if personRaw, present := payload["pickup_person"]; present && personRaw != nil {
-		person, ok := storedPickupPerson(personRaw)
-		if !ok {
-			return PickupChange{}, false
-		}
-		change.PickupPerson = &person
+	person, ok := pickupPersonFromPayload(payload)
+	if !ok {
+		return PickupChange{}, false
 	}
+	change.PickupPerson = person
 	if change.PickupPerson != nil && !PickupPersonAllowed(change.DepartureMode) {
 		return PickupChange{}, false
 	}
@@ -153,6 +151,18 @@ func pickupTerms(payload map[string]any) (PickupChange, bool) {
 		return PickupChange{}, false
 	}
 	return change, true
+}
+
+func pickupPersonFromPayload(payload map[string]any) (*PickupPerson, bool) {
+	personRaw, present := payload["pickup_person"]
+	if !present || personRaw == nil {
+		return nil, true
+	}
+	person, ok := storedPickupPerson(personRaw)
+	if !ok {
+		return nil, false
+	}
+	return &person, true
 }
 
 func storedPickupPerson(raw any) (PickupPerson, bool) {
