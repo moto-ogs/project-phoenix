@@ -58,7 +58,7 @@
     "closingDayUntil": "{careTerm} закрыта до {date}: {name}.",
     "openingChanged": "{careTerm} сегодня открыта с {opens} до {closes}: {name}.",
     "openingChangedUntil": "До {date} {careTerm} открыта с {opens} до {closes}: {name}.",
-    "pickupAfterClosing": "Это после закрытия.",
+    "pickupAfterClosing": "Это после закрытия. Измени, пожалуйста, время, когда заберёшь ребёнка.",
     "activityCancelled": "{title} в {time} сегодня отменяется.",
     "activityReinstated": "{title} в {time} сегодня всё-таки состоится.",
     "activityRoomChanged": "{title} в {time} сегодня проходит в {room}.",

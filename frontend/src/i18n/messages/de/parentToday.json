@@ -58,7 +58,7 @@
     "closingDayUntil": "Die {careTerm} ist bis {date} geschlossen: {name}.",
     "openingChanged": "Die {careTerm} ist heute von {opens} bis {closes} Uhr geöffnet: {name}.",
     "openingChangedUntil": "Die {careTerm} ist bis {date} von {opens} bis {closes} Uhr geöffnet: {name}.",
-    "pickupAfterClosing": "Das ist nach der Schließung.",
+    "pickupAfterClosing": "Das ist nach der Schließung. Bitte ändere die Abholung.",
     "activityCancelled": "{title} um {time} Uhr fällt heute aus.",
     "activityReinstated": "{title} um {time} Uhr findet heute doch statt.",
     "activityRoomChanged": "{title} um {time} Uhr findet heute in {room} statt.",

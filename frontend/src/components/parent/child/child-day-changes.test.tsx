@@ -97,7 +97,7 @@ describe("ChildDayChangesList in der Tageskarte", () => {
       .map((item) => item.textContent);
     expect(items).toEqual([
       `Die OGS ist bis ${formatDate(until)} von 08:00 bis 13:00 Uhr geöffnet: Zeugnistage.`,
-      "Felix wird heute um 14:30 Uhr abgeholt. Das ist nach der Schließung.",
+      "Felix wird heute um 14:30 Uhr abgeholt. Das ist nach der Schließung. Bitte ändere die Abholung.",
       "Felix wird heute um 12:00 Uhr abgeholt.",
     ]);
   });
