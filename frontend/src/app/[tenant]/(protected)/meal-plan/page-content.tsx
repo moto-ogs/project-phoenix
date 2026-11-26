@@ -332,8 +332,11 @@ export default function MealPlanPage() {
   }, [today, weekOffset]);
 
   const weekDates = useMemo(() => workWeekDates(mondayISO), [mondayISO]);
-  const [orderDays, setOrderDays] = useState<MealOrderDay[] | null>(null);
-  useLayoutEffect(() => setOrderDays(null), [mondayISO]);
+  const [orderDays, setOrderDays] = useState<MealOrderDay[] | null>([]);
+  useLayoutEffect(
+    () => setOrderDays(mealRegistrationEnabled ? null : []),
+    [mondayISO, mealRegistrationEnabled],
+  );
   // Die Tage ohne Mittagessen (#7656); nur wer verwaltet, trägt sie ein.
   const cancellationResource = useMealCancellations(
     mondayISO,

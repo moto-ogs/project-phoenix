@@ -249,16 +249,14 @@ describe("Speiseplan: Ausfalltage bei Ladefehler (#7656)", () => {
     expect(screen.queryByText("Essen fällt aus")).not.toBeInTheDocument();
   });
 
-  it("keeps cancellation actions unavailable without meal registration", async () => {
+  it("offers meal cancellations without meal registration", async () => {
     features.mealRegistrationEnabled = false;
 
     renderPage();
 
     const actions = await screen.findByLabelText("Aktionen für Mittwoch");
     fireEvent.click(actions);
-    // Anker: Das geöffnete Tagesmenü zeigt, dass der Wochenplan geladen ist.
-    expect(await screen.findByText("Tag kopieren")).toBeInTheDocument();
-    expect(screen.queryByText("Essen fällt aus")).not.toBeInTheDocument();
+    expect(await screen.findByText("Essen fällt aus")).toBeInTheDocument();
     expect(getMealOrders).not.toHaveBeenCalled();
   });
 });
