@@ -104,16 +104,19 @@ func (c *Closures) ListRoomClosures(ctx context.Context, filter facilities.RoomC
 }
 
 // RoomClosedOn reports whether the school closed the room on the day: the
-// kiosk's session start refuses such a room (#7653).
+// kiosk's session start refuses such a room (#7653). Session starts do not
+// create a planned appointment, so they need the current verdict but not the
+// exclusive room lock that timetable writes take below.
 func (c *Closures) RoomClosedOn(ctx context.Context, roomID int64, day calendar.Date) (closed bool, err error) {
-	closures, err := c.RoomClosureRanges(ctx, []int64{roomID}, day, day)
+	closures, err := c.ListRoomClosures(ctx, facilities.RoomClosureFilter{RoomID: &roomID, From: day, Until: day})
 	return len(closures) > 0, err
 }
 
-// RoomClosureRanges locks the named rooms before reading their closures. A
-// timetable write that wins the lock is therefore an existing appointment
-// when a concurrent closure is committed; one that waits sees the closure and
-// is refused. The list stays set-based for materialization.
+// RoomClosureRanges locks the named rooms before reading their closures in
+// one statement. The exclusive lock serializes appointment writes with a
+// concurrent CloseRoom, which holds KEY SHARE while it inserts the closure:
+// the writer that waits then sees the closure and is refused. The list stays
+// set-based for materialization.
 func (c *Closures) RoomClosureRanges(ctx context.Context, roomIDs []int64, from, until calendar.Date) (result []facilities.RoomClosure, err error) {
 	if err := c.service.requireTenant(ctx, "room_closed_on"); err != nil {
 		return nil, err
@@ -126,12 +129,7 @@ func (c *Closures) RoomClosureRanges(ctx context.Context, roomIDs []int64, from,
 		return []facilities.RoomClosure{}, nil
 	}
 	err = c.service.runWrite(ctx, "room_closure_ranges", func(txCtx context.Context, stats *domain.OperationStats) error {
-		_, queryStats, err := c.service.store.LockByIDs(txCtx, ids)
-		stats.Add(queryStats)
-		if err != nil {
-			return err
-		}
-		closures, queryStats, err := c.store.ListClosures(txCtx, facilities.RoomClosureFilter{RoomIDs: ids, From: from, Until: until})
+		closures, queryStats, err := c.store.ListClosuresWithRoomLocks(txCtx, facilities.RoomClosureFilter{RoomIDs: ids, From: from, Until: until})
 		stats.Add(queryStats)
 		result = closures
 		return err

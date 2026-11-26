@@ -286,7 +286,7 @@ func TestInstance_CreateRejectsDateOutsideActiveCalendarPeriod(t *testing.T) {
 func TestInstance_ClosedRoomRejectsNewAndMovedAppointments(t *testing.T) {
 	t.Parallel()
 
-	s := buildLifecycle(t)
+	s := buildLifecycle(t, lifecycleClock)
 	openDate := calendar.DateFromTime(s.clock()).AddDays(1)
 	closedDate := openDate.AddDays(1)
 	existing := seedInstanceOn(t, s, openDate, false, false)

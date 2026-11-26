@@ -28,6 +28,7 @@ type ClosureStore interface {
 	InsertClosure(context.Context, facilities.CloseRoom) (facilities.RoomClosure, domain.OperationStats, error)
 	DeleteClosure(ctx context.Context, roomID, closureID int64) (bool, domain.OperationStats, error)
 	ListClosures(context.Context, facilities.RoomClosureFilter) ([]facilities.RoomClosure, domain.OperationStats, error)
+	ListClosuresWithRoomLocks(context.Context, facilities.RoomClosureFilter) ([]facilities.RoomClosure, domain.OperationStats, error)
 }
 
 type Transaction interface {

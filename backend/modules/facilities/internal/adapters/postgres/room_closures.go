@@ -80,6 +80,27 @@ func (s *Store) ListClosures(ctx context.Context, filter facilities.RoomClosureF
 	if err != nil {
 		return nil, domain.OperationStats{}, err
 	}
+	return s.listClosures(ctx, db, tenantID, filter, "")
+}
+
+// ListClosuresWithRoomLocks locks every selected room FOR UPDATE while
+// reading its closures. It is deliberately one statement: materialization
+// needs a batch verdict without spending one query to lock and another to
+// inspect. CloseRoom's KEY SHARE conflicts with this lock, so neither write
+// can pass the other with a stale closure verdict.
+func (s *Store) ListClosuresWithRoomLocks(ctx context.Context, filter facilities.RoomClosureFilter) ([]facilities.RoomClosure, domain.OperationStats, error) {
+	db, tenantID, err := s.database(ctx)
+	if err != nil {
+		return nil, domain.OperationStats{}, err
+	}
+	if len(filter.RoomIDs) == 0 {
+		return []facilities.RoomClosure{}, domain.OperationStats{}, nil
+	}
+	lock := `"closure".room_id IN (SELECT "room".id FROM facilities.rooms AS "room" WHERE "room".tenant_id = ? AND "room".id IN (?) FOR UPDATE)`
+	return s.listClosures(ctx, db, tenantID, filter, lock, tenantID, bun.In(filter.RoomIDs))
+}
+
+func (s *Store) listClosures(ctx context.Context, db bun.IDB, tenantID int64, filter facilities.RoomClosureFilter, extra string, args ...any) ([]facilities.RoomClosure, domain.OperationStats, error) {
 	rows := []roomClosureRow{}
 	stats := domain.OperationStats{Queries: 1}
 	query := db.NewSelect().Model(&rows).
@@ -93,6 +114,9 @@ func (s *Store) ListClosures(ctx context.Context, filter facilities.RoomClosureF
 	}
 	if len(filter.RoomIDs) > 0 {
 		query = query.Where(`"closure".room_id IN (?)`, bun.In(filter.RoomIDs))
+	}
+	if extra != "" {
+		query = query.Where(extra, args...)
 	}
 	if err := query.Scan(ctx); err != nil {
 		return nil, stats, fmt.Errorf("facilities postgres: list room closures: %w", err)

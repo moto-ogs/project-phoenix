@@ -107,15 +107,7 @@ func NewTimetableHTTPTestModule(db transactionruntime.Database, options Timetabl
 	}
 	materialization := options.Materialization
 	if materialization == nil {
-		roomClosures := owners.NewTimetableRoomClosures(NewRoomClosuresForTest(db, clocks...))
-		materialization, err = timetableCompose.NewMaterialization(timetablePorts.MaterializationDependencies{
-			GroupRepo: r.Timetable, ScheduleRepo: r.ActivitySchedule,
-			EnrollmentRepo: r.StudentEnrollment, SupervisorRepo: r.ActivitySupervisor, Directories: r.Directories,
-			PeriodRepo: r.CalendarPeriod, InstanceRepo: r.ActivityInstance, StaffRepo: r.InstanceStaff,
-			StudentRepo: r.InstanceStudent, ExceptionRepo: r.ActivityException, NonWorkingDays: options.NonWorkingDays,
-			TimeframeRepo: r.Timeframe, CareBounds: members.Student, RecurrenceLock: lock, Transactions: timetableCompose.NewTenantTransactions(db.Pool()),
-			RoomClosures: roomClosures,
-		})
+		materialization, err = newTimetableHTTPTestMaterialization(db, r, members, lock, options, clocks)
 		if err != nil {
 			return TimetableHTTPTestModule{}, err
 		}
@@ -165,6 +157,17 @@ func NewTimetableHTTPTestModule(db transactionruntime.Database, options Timetabl
 		AttendanceCorrections: corrections,
 		RecurrenceLock:        lock, Materialization: materialization,
 	}, nil
+}
+
+func newTimetableHTTPTestMaterialization(db transactionruntime.Database, rows TimetableHTTPTestRows, members owners.MembershipTestRepositories, lock timetable.RecurrenceWriteLock, options TimetableHTTPTestOptions, clocks []func() time.Time) (timetable.MaterializationCapability, error) {
+	return timetableCompose.NewMaterialization(timetablePorts.MaterializationDependencies{
+		GroupRepo: rows.Timetable, ScheduleRepo: rows.ActivitySchedule,
+		EnrollmentRepo: rows.StudentEnrollment, SupervisorRepo: rows.ActivitySupervisor, Directories: rows.Directories,
+		PeriodRepo: rows.CalendarPeriod, InstanceRepo: rows.ActivityInstance, StaffRepo: rows.InstanceStaff,
+		StudentRepo: rows.InstanceStudent, ExceptionRepo: rows.ActivityException, NonWorkingDays: options.NonWorkingDays,
+		TimeframeRepo: rows.Timeframe, CareBounds: members.Student, RecurrenceLock: lock, Transactions: timetableCompose.NewTenantTransactions(db.Pool()),
+		RoomClosures: owners.NewTimetableRoomClosures(NewRoomClosuresForTest(db, clocks...)),
+	})
 }
 
 // newTimetableHTTPTestReads composes the conflict detection and the planner

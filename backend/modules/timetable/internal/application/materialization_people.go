@@ -2,7 +2,9 @@ package application
 
 import (
 	"context"
+	"errors"
 
+	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	activityContract "github.com/moto-ogs/project-phoenix/modules/timetable/activitycontract"
 	"github.com/moto-ogs/project-phoenix/modules/timetable/ports"
 )
@@ -18,7 +20,7 @@ func (s *materializationService) loadTemplatesPeople(ctx context.Context, templa
 	if len(templateIDs) == 0 {
 		return rosters, nil
 	}
-	enrollments, err := groupsStudentEnrollments(ctx, s.enrollmentRepo, s.directories, templateIDs)
+	enrollments, err := materializationStudentEnrollments(ctx, s.enrollmentRepo, s.directories, templateIDs)
 	if err != nil {
 		return nil, &ports.ScheduleError{Op: op + ": load enrollments", Err: err}
 	}
@@ -57,4 +59,34 @@ func (s *materializationService) loadTemplatesPeople(ctx context.Context, templa
 		rosters[supervisor.GroupID] = roster
 	}
 	return rosters, nil
+}
+
+// materializationStudentEnrollments reads the enrollment fields the recurrence
+// engine needs. Unlike the planning UI, materialization never renders names,
+// so it reads the alumni verdict without the otherwise unused name lookup.
+func materializationStudentEnrollments(
+	ctx context.Context,
+	enrollments timetable.StudentEnrollmentQuery,
+	directories ports.RepositoryDirectories,
+	templateIDs []int64,
+) ([]*activityContract.StudentEnrollment, error) {
+	rows, err := listLegacyStudentEnrollments(ctx, enrollments, timetable.StudentEnrollmentFilter{ActivityGroupIDs: templateIDs, OrderByValidFrom: true}, "find by group ID")
+	if err != nil || len(rows) == 0 {
+		return rows, err
+	}
+	if directories.StudentAlumni == nil {
+		return nil, errors.New("materialize template: student alumni directory is required")
+	}
+	ids := make([]int64, 0, len(rows))
+	for _, row := range rows {
+		ids = append(ids, row.StudentID)
+	}
+	alumni, err := directories.StudentAlumni(ctx, ids)
+	if err != nil {
+		return nil, err
+	}
+	for _, row := range rows {
+		row.StudentAlumnus = alumni[row.StudentID]
+	}
+	return rows, nil
 }

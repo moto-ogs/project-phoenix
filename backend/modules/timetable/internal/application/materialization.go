@@ -191,26 +191,6 @@ func (s *materializationService) materializeForTenantInTransaction(
 	return result, err
 }
 
-// materializationWorld is everything a run loads once up front. The window is
-// bounded (≤ 56 days), a tenant has O(dozens) of templates, O(hundreds) of
-// enrollments — a single fetch per collection avoids the N+1 trap in the
-// candidate loop.
-type materializationWorld struct {
-	from, to      calendar.Date
-	periods       []*schedule.CalendarPeriod
-	days          timetable.NonWorkingDays
-	existingIdx   map[existingKey]struct{}
-	exceptionIdx  map[exceptionKey]*schedule.ActivityException
-	timeframeByID map[int64]*schedule.Timeframe
-	closedRooms   map[int64][]ports.RoomClosureRange
-	// sickDays names the absence behind every full absence day of a staff
-	// member in the window (#6292, #6847).
-	sickDays map[staffDay]absenceStamp
-	// weekendFollowsFriday materializes Saturday and Sunday from Friday's
-	// schedules (#3921).
-	weekendFollowsFriday bool
-}
-
 func (s *materializationService) materializeForTenantLocked(
 	ctx context.Context,
 	tenantID int64,
@@ -245,6 +225,9 @@ func (s *materializationService) materializeForTenantLocked(
 	}
 	people, err := s.loadTemplatesPeople(ctx, scheduledTemplateIDs(templates, schedules), "materialize template")
 	if err != nil {
+		return result, err
+	}
+	if err := loadMaterializationSickDays(ctx, s.sickReports, from, to, people, world); err != nil {
 		return result, err
 	}
 	if err := s.lockMaterializationStaff(ctx, templates, schedules, people, world); err != nil {
@@ -338,56 +321,6 @@ func (s *materializationService) loadMaterializationPreconditions(
 		return nil, nil, true, nil
 	}
 	return periods, templates, false, nil
-}
-
-// loadMaterializationWorld pre-fetches the window's existing instances (an
-// (activity_group_id, date, start_time) set for O(1) lookup) on top of the
-// per-date rule inputs of loadOccurrenceRules.
-func (s *materializationService) loadMaterializationWorld(
-	ctx context.Context,
-	from, to calendar.Date,
-	periods []*schedule.CalendarPeriod,
-	templates []*activityContract.Group,
-) (*materializationWorld, error) {
-	world, err := s.loadOccurrenceRules(ctx, from, to, periods)
-	if err != nil {
-		return nil, err
-	}
-	existing, err := instancesBetween(ctx, s.instanceRepo.Reads, calendar.Date(from), calendar.Date(to))
-	if err != nil {
-		return nil, &ports.ScheduleError{Op: "materialize for tenant: load existing instances", Err: err}
-	}
-	world.existingIdx = buildExistingIndex(existing)
-	roomIDs := make([]int64, 0, len(templates))
-	for _, template := range templates {
-		if template.PlannedRoomID != nil && *template.PlannedRoomID > 0 {
-			roomIDs = append(roomIDs, *template.PlannedRoomID)
-		}
-	}
-	for _, exception := range world.exceptionIdx {
-		if exception.RoomID != nil && *exception.RoomID > 0 {
-			roomIDs = append(roomIDs, *exception.RoomID)
-		}
-	}
-	closures, err := s.roomClosures.RoomClosureRanges(ctx, roomIDs, from, to)
-	if err != nil {
-		return nil, &ports.ScheduleError{Op: "materialize for tenant: load room closures", Err: err}
-	}
-	world.closedRooms = roomClosureRangesByRoom(closures)
-	// Past days included: the run stamps every block it creates (I-1).
-	world.sickDays, err = sickDaysIn(ctx, s.sickReports, daysBetween(from, to)...)
-	if err != nil {
-		return nil, err
-	}
-	return world, nil
-}
-
-func roomClosureRangesByRoom(closures []ports.RoomClosureRange) map[int64][]ports.RoomClosureRange {
-	byRoom := make(map[int64][]ports.RoomClosureRange)
-	for _, closure := range closures {
-		byRoom[closure.RoomID] = append(byRoom[closure.RoomID], closure)
-	}
-	return byRoom
 }
 
 // loadOccurrenceRules loads what candidateSlot decides a date by: the
@@ -634,10 +567,6 @@ func (s *materializationService) materializeCandidate(
 		countSkippedCandidate(result, skip)
 		return nil
 	}
-	if roomClosedOn(world.closedRooms[effective.RoomID], date) {
-		result.CandidatesSkippedClosedRoom++
-		return nil
-	}
 	key := existingKey{
 		ActivityGroupID: tmpl.ID,
 		Date:            date,
@@ -645,6 +574,10 @@ func (s *materializationService) materializeCandidate(
 	}
 	if _, exists := world.existingIdx[key]; exists {
 		result.CandidatesSkippedExisting++
+		return nil
+	}
+	if roomClosedOn(world.closedRooms[effective.RoomID], date) {
+		result.CandidatesSkippedClosedRoom++
 		return nil
 	}
 
