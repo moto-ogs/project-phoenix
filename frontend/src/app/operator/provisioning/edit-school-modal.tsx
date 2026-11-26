@@ -6,7 +6,10 @@ import { Modal } from "~/components/ui/modal";
 import { FormErrorAlert } from "~/components/ui/form-error-alert";
 import { useApiFormError } from "~/contexts/ToastContext";
 import { operatorProvisioningService } from "~/lib/operator/provisioning-api";
-import { isValidSlug } from "~/lib/operator/provisioning-helpers";
+import {
+  isValidSlug,
+  SCHOOL_EMAIL_REQUIRED,
+} from "~/lib/operator/provisioning-helpers";
 import type {
   Organization,
   School,
@@ -145,6 +148,13 @@ export function EditSchoolModal({
       }
       if (!schoolName.trim() || !schoolSlug.trim() || !schoolSubdomain.trim())
         return;
+      // The address cannot be cleared: every school needs one (#7434).
+      if (!schoolEmail.trim()) {
+        invalid("Bitte prüfe die markierten Felder.", {
+          email: SCHOOL_EMAIL_REQUIRED,
+        });
+        return;
+      }
       if (!isValidSlug(schoolSlug)) {
         const hint =
           "Slug darf nur Kleinbuchstaben, Zahlen und Bindestriche enthalten.";
@@ -242,6 +252,7 @@ export function EditSchoolModal({
               schoolSaving ||
               !edit.canSubmit ||
               !schoolOrgId ||
+              !schoolEmail.trim() ||
               !schoolName.trim() ||
               !schoolSlug.trim() ||
               !schoolSubdomain.trim()
@@ -396,6 +407,7 @@ export function EditSchoolModal({
                   value={schoolEmail}
                   onChange={(e) => setSchoolEmail(e.target.value)}
                   maxLength={255}
+                  required
                   label="E-Mail"
                   error={formErrors.fieldError("email")}
                   controlSize="compact"

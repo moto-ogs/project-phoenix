@@ -131,9 +131,9 @@ func createSchool(t *testing.T, db *bun.DB, organizationID int64, name, slug str
 	t.Helper()
 	id := testpkg.UniqueTestTenantID(t)
 	_, err := db.ExecContext(context.Background(),
-		`INSERT INTO platform.schools (id, organization_id, name, slug, subdomain, active)
-		 VALUES (?, ?, ?, ?, ?, TRUE)`,
-		id, organizationID, name, slug, slug)
+		`INSERT INTO platform.schools (id, organization_id, name, slug, subdomain, active, email)
+		 VALUES (?, ?, ?, ?, ?, TRUE, ?)`,
+		id, organizationID, name, slug, slug, testpkg.TestSchoolEmail(slug))
 	require.NoError(t, err)
 	return id
 }

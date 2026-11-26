@@ -31,11 +31,12 @@ var templateBootstrapStatements = []string{
 		VALUES (1, 'Test Org 1', 'test-org-1', true)
 		ON CONFLICT (id) DO UPDATE
 		SET name = EXCLUDED.name, slug = EXCLUDED.slug, active = EXCLUDED.active`,
-	`INSERT INTO platform.schools (id, organization_id, name, slug, subdomain, active)
-		VALUES (1, 1, 'Test School 1', 'test-school-1', 't1', true)
+	`INSERT INTO platform.schools (id, organization_id, name, slug, subdomain, active, email)
+		VALUES (1, 1, 'Test School 1', 'test-school-1', 't1', true, 'kontakt@t1.example.test')
 		ON CONFLICT (id) DO UPDATE
 		SET organization_id = EXCLUDED.organization_id, name = EXCLUDED.name,
-			slug = EXCLUDED.slug, subdomain = EXCLUDED.subdomain, active = EXCLUDED.active`,
+			slug = EXCLUDED.slug, subdomain = EXCLUDED.subdomain, active = EXCLUDED.active,
+			email = EXCLUDED.email`,
 	// Every school has a federal state; the setting has no default (#7174).
 	`INSERT INTO config.setting_values (tenant_id, setting_key, value)
 		VALUES (1, 'operations.federal_state', '"DE-NW"')

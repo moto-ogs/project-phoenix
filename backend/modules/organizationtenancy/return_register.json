@@ -28050,7 +28050,7 @@
           "name": "email",
           "type": "character varying",
           "udt": "varchar",
-          "nullable": true
+          "nullable": false
         },
         {
           "name": "created_at",

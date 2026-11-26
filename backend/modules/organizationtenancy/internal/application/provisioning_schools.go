@@ -225,7 +225,7 @@ func (p *Provisioning) lockedSchoolAsRead(ctx context.Context, id int64, expecte
 
 // schoolContactEmailChange checks a changed contact address. Only a change
 // is checked: a stored address that predates the format rule must not block
-// the other edits. The address is optional and may be cleared.
+// the other edits. The address is required and cannot be cleared (#7434).
 func schoolContactEmailChange(existing organizationtenancy.School, changes organizationtenancy.SchoolChanges) error {
 	if changes.Email == existing.Email {
 		return nil

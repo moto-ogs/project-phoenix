@@ -27,8 +27,8 @@ func TestStaffOnboardingsBackfillHidesTheChecklistForActiveAccountsOnly(t *testi
 		VALUES (?, ?, true, NOW(), NOW()) RETURNING id`, "Onboarding Org "+suffix, "onboarding-org-"+suffix).Exec(ctx, &orgID)
 	require.NoError(t, err)
 	slug := "onboarding-" + suffix
-	_, err = db.NewRaw(`INSERT INTO platform.schools (name, slug, subdomain, organization_id, active, created_at, updated_at)
-		VALUES (?, ?, ?, ?, true, NOW(), NOW()) RETURNING id`, "Onboarding School "+suffix, slug, slug, orgID).Exec(ctx, &schoolID)
+	_, err = db.NewRaw(`INSERT INTO platform.schools (name, slug, subdomain, organization_id, active, email, created_at, updated_at)
+		VALUES (?, ?, ?, ?, true, ?, NOW(), NOW()) RETURNING id`, "Onboarding School "+suffix, slug, slug, orgID, testpkg.TestSchoolEmail(slug)).Exec(ctx, &schoolID)
 	require.NoError(t, err)
 
 	member := func(label, status string) int64 {

@@ -1175,7 +1175,7 @@ func (h *provisioningHarness) addOrg(id int64, name, slug string, deleted bool) 
 func (h *provisioningHarness) addSchool(id, organizationID int64, name, slug string) *organizationtenancy.School {
 	school := &organizationtenancy.School{
 		ID: ident.ID(id), CreatedAt: fixedTime, UpdatedAt: fixedTime, OrganizationID: ident.ID(organizationID),
-		Name: name, Slug: slug, Subdomain: slug, Active: true,
+		Name: name, Slug: slug, Subdomain: slug, Active: true, Email: "info@" + slug + ".test",
 	}
 	h.engine.schools[id] = school
 	return school

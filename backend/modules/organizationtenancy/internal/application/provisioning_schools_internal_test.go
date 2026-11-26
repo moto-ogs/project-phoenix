@@ -165,18 +165,24 @@ func TestProvisioningCreateSchool(t *testing.T) {
 		assert.Zero(t, h.tx.adminRuns)
 	})
 
-	t.Run("creates a school without contact email", func(t *testing.T) {
-		t.Parallel()
-		h := newHarness(t)
-		h.addOrg(1, "Talent", "talent", false)
-		input := validCreateSchool(1)
-		input.Email = ""
+	// Every school has a contact address (#7434); a blank one is none.
+	for name, email := range map[string]string{"missing": "", "blank": "   "} {
+		t.Run("rejects a school with a "+name+" contact email", func(t *testing.T) {
+			t.Parallel()
+			h := newHarness(t)
+			h.addOrg(1, "Talent", "talent", false)
+			input := validCreateSchool(1)
+			input.Email = email
 
-		created, err := h.svc.CreateSchool(context.Background(), input, testOperatorID, operatorIP)
+			created, err := h.svc.CreateSchool(context.Background(), input, testOperatorID, operatorIP)
 
-		require.NoError(t, err, "the contact address is optional")
-		assert.Empty(t, created.Email)
-	})
+			assert.Nil(t, created)
+			var invalid *organizationtenancy.InvalidProvisioningDataError
+			require.ErrorAs(t, err, &invalid)
+			require.ErrorIs(t, err, organizationtenancy.ErrInvalidSchool)
+			assert.Zero(t, h.tx.adminRuns)
+		})
+	}
 
 	t.Run("does not change the caller's input", func(t *testing.T) {
 		t.Parallel()
@@ -409,6 +415,7 @@ func TestProvisioningListSchools(t *testing.T) {
 func schoolChanges(organizationID int64) organizationtenancy.SchoolChanges {
 	return organizationtenancy.SchoolChanges{
 		OrganizationID: organizationID, Name: "Burbach", Slug: "burbach", Subdomain: "burbach", Active: true,
+		Email: "info@burbach.test",
 	}
 }
 
@@ -448,35 +455,42 @@ func TestProvisioningUpdateSchool(t *testing.T) {
 		}, auditChanges(t, entry))
 	})
 
-	t.Run("a school without contact email keeps its other edits", func(t *testing.T) {
+	t.Run("a stored address older than the format rule keeps its other edits", func(t *testing.T) {
 		t.Parallel()
 		h := newHarness(t)
 		h.addOrg(1, "Talent", "talent", false)
-		h.addSchool(10, 1, "Burbach", "burbach")
+		h.addSchool(10, 1, "Burbach", "burbach").Email = "Schule <info@burbach.test>"
 		changes := schoolChanges(1)
 		changes.Name = "Burbach Nord"
+		changes.Email = "Schule <info@burbach.test>"
 
 		updated, err := h.updateSchool(context.Background(), 10, changes, testOperatorID, operatorIP)
 
-		require.NoError(t, err, "the contact address is optional")
+		require.NoError(t, err, "only a changed address is checked")
 		assert.Equal(t, "Burbach Nord", updated.Name)
 		require.Len(t, h.engine.updates, 1)
-		assert.Empty(t, h.engine.updates[0].Email)
+		assert.Equal(t, "Schule <info@burbach.test>", h.engine.updates[0].Email)
 	})
 
-	t.Run("clears the contact email", func(t *testing.T) {
-		t.Parallel()
-		h := newHarness(t)
-		h.addOrg(1, "Talent", "talent", false)
-		h.addSchool(10, 1, "Burbach", "burbach").Email = "info@burbach.test"
+	// The contact address cannot be cleared (#7434).
+	for name, email := range map[string]string{"clearing": "", "blanking": "   "} {
+		t.Run("rejects "+name+" the contact email", func(t *testing.T) {
+			t.Parallel()
+			h := newHarness(t)
+			h.addOrg(1, "Talent", "talent", false)
+			h.addSchool(10, 1, "Burbach", "burbach")
+			changes := schoolChanges(1)
+			changes.Email = email
 
-		updated, err := h.updateSchool(context.Background(), 10, schoolChanges(1), testOperatorID, operatorIP)
+			updated, err := h.updateSchool(context.Background(), 10, changes, testOperatorID, operatorIP)
 
-		require.NoError(t, err, "the contact address is optional")
-		assert.Empty(t, updated.Email)
-		require.Len(t, h.engine.updates, 1)
-		assert.Empty(t, h.engine.updates[0].Email)
-	})
+			assert.Nil(t, updated)
+			var invalid *organizationtenancy.InvalidProvisioningDataError
+			require.ErrorAs(t, err, &invalid)
+			require.ErrorIs(t, err, organizationtenancy.ErrInvalidSchool)
+			assert.Empty(t, h.engine.updates)
+		})
+	}
 
 	t.Run("moves the school to another organisation", func(t *testing.T) {
 		t.Parallel()

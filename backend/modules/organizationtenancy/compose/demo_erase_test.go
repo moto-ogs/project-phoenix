@@ -448,8 +448,8 @@ func everyTrace(count int) map[string]int {
 func schoolOfOrganization(t *testing.T, db *bun.DB, siblingID int64, deleted bool) int64 {
 	t.Helper()
 	var id int64
-	require.NoError(t, db.NewRaw(`INSERT INTO platform.schools (organization_id, name, slug, subdomain, deleted_at)
-		SELECT organization_id, 'Neben ' || id, 'neben-' || id || '-' || nextval('platform.schools_id_seq'), 'n' || currval('platform.schools_id_seq'),
+	require.NoError(t, db.NewRaw(`INSERT INTO platform.schools (organization_id, name, slug, subdomain, email, deleted_at)
+		SELECT organization_id, 'Neben ' || id, 'neben-' || id || '-' || nextval('platform.schools_id_seq'), 'n' || currval('platform.schools_id_seq'), email,
 			CASE WHEN ? THEN NOW() END
 		FROM platform.schools WHERE id = ? RETURNING id`, deleted, siblingID).Scan(t.Context(), &id))
 	return id

@@ -365,6 +365,7 @@ async function seedSchool(stack, { bff, mail }) {
   const organization = await create("/api/operator/organizations", { name: "Failover Probe", slug: "failover-probe" });
   const school = await create("/api/operator/schools", {
     organization_id: organization.id, name: "Failover School Original", slug, subdomain: slug, federal_state: "DE-NW",
+    email: "probe-school@example.test",
   });
   const roles = dataOf(expectStatus(await http(bff, "/api/operator/roles", { host: operatorHost, headers }), 200, "operator roles"));
   const admin = roles.find((role) => role.name === "admin");

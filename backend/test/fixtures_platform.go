@@ -161,9 +161,9 @@ func CreateTestSchoolInOrganization(tb testing.TB, db *bun.DB, organizationID in
 	schoolID := uniqueJWTSafeTenantID()
 	token := fmt.Sprintf("%d-%d", schoolID, uniqueFixtureSuffix())
 	_, err := db.ExecContext(context.Background(), `
-		INSERT INTO platform.schools (id, organization_id, name, slug, subdomain, active)
-		VALUES (?, ?, ?, ?, ?, true)`,
-		schoolID, organizationID, name, "test-school-"+token, fmt.Sprintf("t%d", schoolID))
+		INSERT INTO platform.schools (id, organization_id, name, slug, subdomain, active, email)
+		VALUES (?, ?, ?, ?, ?, true, ?)`,
+		schoolID, organizationID, name, "test-school-"+token, fmt.Sprintf("t%d", schoolID), TestSchoolEmail(fmt.Sprintf("t%d", schoolID)))
 	require.NoError(tb, err, "Failed to create test school in organization")
 	require.NoError(tb, setTestSchoolFederalState(context.Background(), db, schoolID))
 	return schoolID
@@ -376,4 +376,10 @@ func CreateTestHolidayRegistration(tb testing.TB, db *bun.DB, organizationID, ho
 		require.NoError(tb, err)
 	}
 	return fixture
+}
+
+// TestSchoolEmail is the contact address of a fixture school. Every school
+// has one; the column is NOT NULL and not blank (#7434).
+func TestSchoolEmail(subdomain string) string {
+	return "kontakt@" + subdomain + ".example.test"
 }

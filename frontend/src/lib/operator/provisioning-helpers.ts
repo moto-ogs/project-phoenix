@@ -835,3 +835,7 @@ export function mapOperatorCaterer(
     mfaEnabled: data.mfa_enabled,
   };
 }
+
+/** Shown at the contact address of a school when it is empty (#7434). */
+export const SCHOOL_EMAIL_REQUIRED =
+  "Bitte gib die E-Mail-Adresse der Schule ein.";
