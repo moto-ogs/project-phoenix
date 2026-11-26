@@ -19,10 +19,9 @@ type RequestCorrectionRecords interface {
 	// FindPickupNote locks the note and returns nil when it is gone.
 	FindPickupNote(context.Context, int64) (*careplan.PickupNote, error)
 	DeletePickupNote(context.Context, int64) error
-	// ListDayPickups and DeleteApprovedPickupPerson take back the day's
+	// DeleteApprovedPickupPerson and SaveApprovedPickupPerson take back the day's
 	// pickup person an approval wrote (#8162).
-	ListDayPickups(ctx context.Context, from, to calendar.Date, studentIDs []int64) ([]careplan.DayPickup, error)
-	DeleteApprovedPickupPerson(ctx context.Context, studentID int64, date calendar.Date, id int64) (bool, error)
+	DeleteApprovedPickupPerson(ctx context.Context, studentID int64, date calendar.Date, id int64, expectedVersion string) (bool, error)
 	SaveApprovedPickupPerson(context.Context, careplan.PickupPerson) (careplan.PickupPerson, error)
 }
 
@@ -43,7 +42,6 @@ type RequestCorrectionPeople interface {
 }
 
 type RequestCorrectionPlans interface {
-	LockStudentAndExceptionDay(context.Context, int64, string) error
 	ApplyPickup(context.Context, *carerequests.Request, *string, bool) (carerequests.PickupApplied, error)
 	ApplyPickupPermission(context.Context, *carerequests.Request) error
 	RevertPickupPermission(context.Context, *carerequests.Request) error

@@ -80,10 +80,10 @@ func BuildCarePlanRequests(
 		NewParentStudentGuardianReads(people.StudentGuardians),
 		NewParentGuardianPolicy(), pickupPermissions,
 	)
-	records, err := carePlanRequestRecordsOf(carePlan)
-	if err != nil {
+	if _, err := carePlanRequestRecordsOf(carePlan); err != nil {
 		return CarePlanRequests{}, err
 	}
+	records := CarePlanRequestRecords(carePlan)
 	requests := CarePlanRequests{PickupChangeTeam: newPickupChangeTeam(pickupReach, env)}
 	requests.CareRequests = NewCareScheduleRequestServiceWithPickupChangesAndPolicy(requests.PickupChangeTeam,
 		records, persons, schedules.Arrivals, schedules.Pickups, NewLoggedStudentPresence(db, env.Logger, env.Now),

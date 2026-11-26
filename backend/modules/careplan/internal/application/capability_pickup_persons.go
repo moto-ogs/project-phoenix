@@ -57,9 +57,8 @@ func (s *Service) SetPickupPerson(ctx context.Context, person careplan.PickupPer
 }
 
 // SaveApprovedPickupPerson writes the pickup person a family named in its
-// one-day request, as the OGS approval decided it (#8162). The approval holds
-// the care-day lock and rechecked a named contact itself: the signed request
-// grants the contact the one day, so no standing permission is needed.
+// one-day request, as the OGS approval decided it (#8162). The signed request
+// grants a named contact the one day, so no standing permission is needed.
 func (s *Service) SaveApprovedPickupPerson(ctx context.Context, person careplan.PickupPerson) (careplan.PickupPerson, error) {
 	person.Name = strings.Join(strings.Fields(person.Name), " ")
 	if person.StudentID <= 0 || person.ExceptionDate == "" || person.Name == "" ||
@@ -69,6 +68,9 @@ func (s *Service) SaveApprovedPickupPerson(ctx context.Context, person careplan.
 	}
 	var saved careplan.PickupPerson
 	err := s.run(ctx, "save_approved_pickup_person", func(txCtx context.Context, stats *domain.OperationStats) error {
+		if err := s.LockStudentAndExceptionDay(txCtx, person.StudentID, person.ExceptionDate.String()); err != nil {
+			return err
+		}
 		var err error
 		saved, *stats, err = s.pickupPersons.SavePickupPerson(txCtx, person)
 		return err
@@ -77,10 +79,9 @@ func (s *Service) SaveApprovedPickupPerson(ctx context.Context, person careplan.
 }
 
 // DeleteApprovedPickupPerson deletes the one row a corrected approval wrote
-// (#8162) under the care-day lock. The correction checked that the row is
-// still as the approval left it; a past day is no refusal here, its value is
-// gone or about to be.
-func (s *Service) DeleteApprovedPickupPerson(ctx context.Context, studentID int64, date calendar.Date, id int64) (bool, error) {
+// (#8162) under the care-day lock and only while it is still as the approval
+// left it. A past day is no refusal here, its value is gone or about to be.
+func (s *Service) DeleteApprovedPickupPerson(ctx context.Context, studentID int64, date calendar.Date, id int64, expectedVersion string) (bool, error) {
 	if studentID <= 0 || date.IsZero() || id <= 0 {
 		return false, careplan.ErrPickupPersonInvalid
 	}
@@ -89,9 +90,22 @@ func (s *Service) DeleteApprovedPickupPerson(ctx context.Context, studentID int6
 		if err := s.LockStudentAndExceptionDay(txCtx, studentID, date.String()); err != nil {
 			return err
 		}
-		var err error
-		deleted, *stats, err = s.pickupPersons.DeletePickupPersonByID(txCtx, studentID, id)
-		return err
+		rows, readStats, err := s.pickupPersons.ListDayPickups(txCtx, date, date, []int64{studentID})
+		stats.Add(readStats)
+		if err != nil {
+			return err
+		}
+		for _, row := range rows {
+			if row.StudentID != studentID || row.Person == nil || row.Person.ID != id {
+				continue
+			}
+			if pickupPersonVersion(*row.Person) != expectedVersion {
+				return careplan.ErrPickupPersonChanged
+			}
+			deleted, *stats, err = s.pickupPersons.DeletePickupPersonByID(txCtx, studentID, id)
+			return err
+		}
+		return nil
 	})
 	return deleted, err
 }

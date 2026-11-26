@@ -2,6 +2,7 @@ package application
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -140,26 +141,19 @@ func (s *RequestCorrections) revertPickupPerson(ctx context.Context, request *ca
 	if terms == nil {
 		return nil
 	}
-	if err := s.Plans.LockStudentAndExceptionDay(ctx, request.StudentID, terms.Date.String()); err != nil {
-		return err
-	}
-	row, err := dayPickupPerson(ctx, s.Records, request.StudentID, terms.Date)
-	if err != nil {
-		return err
-	}
-	if row == nil || row.ID != applied.PickupPersonID {
-		return nil
-	}
-	if pickupPersonVersion(*row) != applied.PickupPersonVersion {
+	deleted, err := s.Records.DeleteApprovedPickupPerson(ctx, request.StudentID, terms.Date, applied.PickupPersonID, applied.PickupPersonVersion)
+	if errors.Is(err, careplan.ErrPickupPersonChanged) {
 		return fmt.Errorf("%w: die Abholperson am %s wurde nach der Entscheidung geändert", careplan.ErrParentRequestCorrectionUnsupported, terms.Date.Format("02.01.2006"))
+	}
+	if err != nil || !deleted {
+		return err
 	}
 	if applied.PreviousPickupPerson != nil {
 		previous := careplan.PickupPerson{StudentID: request.StudentID, ExceptionDate: careplan.Date(terms.Date), Name: applied.PreviousPickupPerson.Name, GuardianProfileID: applied.PreviousPickupPerson.GuardianProfileID, CreatedBy: applied.PreviousPickupPerson.CreatedBy, RequestedByGuardian: applied.PreviousPickupPerson.RequestedByGuardian}
 		_, err = s.Records.SaveApprovedPickupPerson(ctx, previous)
 		return err
 	}
-	_, err = s.Records.DeleteApprovedPickupPerson(ctx, request.StudentID, terms.Date, row.ID)
-	return err
+	return nil
 }
 
 // revertPickupNote deletes the day's collector note the approval wrote

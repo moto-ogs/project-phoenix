@@ -136,7 +136,7 @@ func (s *PickupChangeTeamStore) ListUnreadPickupChangeNotices(ctx context.Contex
 		return nil, domain.OperationStats{}, err
 	}
 	rows := make([]pickupChangeNoticeReadRow, 0)
-	query := withTenant(db.NewSelect().TableExpr(tableExprPickupChangeTeamNotices), "pickup_notice", tenantID).
+	query := withTenant(db.NewSelect().TableExpr(`schedule.pickup_change_team_notices AS "pickup_notice"`), "pickup_notice", tenantID).
 		ColumnExpr(`"pickup_notice".request_id, "request".student_id, "student".first_name, "request".status, "request".payload, "pickup_notice".informed_at`).
 		Join(`JOIN schedule.care_schedule_change_requests AS "request" ON "request".tenant_id = "pickup_notice".tenant_id AND "request".id = "pickup_notice".request_id`).
 		Join(`LEFT JOIN schedule.student_pickup_exceptions AS "exception" ON "exception".tenant_id = "request".tenant_id AND "exception".student_id = "request".student_id AND "exception".exception_date = "pickup_notice".pickup_date`).
