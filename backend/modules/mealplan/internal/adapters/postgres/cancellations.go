@@ -97,24 +97,21 @@ func (c *Cancellations) DeleteCancellation(ctx context.Context, date domain.Date
 	return stats, nil
 }
 
-// NewCancelledDays reads the days without lunch of a window as a
-// YYYY-MM-DD set, for the school calendar the root binds (#7656).
-func NewCancelledDays(database Database) func(ctx context.Context, from, to string) (map[string]bool, error) {
-	store := NewCancellations(database)
-	return func(ctx context.Context, from, to string) (map[string]bool, error) {
-		start, startErr := calendar.ParseDate(from)
-		end, endErr := calendar.ParseDate(to)
-		if startErr != nil || endErr != nil {
-			return nil, fmt.Errorf("meal plan postgres: cancelled days %q to %q: invalid window", from, to)
-		}
-		found, _, err := store.FindCancellations(ctx, start, end)
-		if err != nil {
-			return nil, err
-		}
-		days := make(map[string]bool, len(found))
-		for _, cancellation := range found {
-			days[cancellation.Date.String()] = true
-		}
-		return days, nil
+// CancelledDays reads the days without lunch of a window as a YYYY-MM-DD
+// set, for the school calendar the root binds (#7656).
+func (m *MenuChanges) CancelledDays(ctx context.Context, from, to string) (map[string]bool, error) {
+	start, startErr := calendar.ParseDate(from)
+	end, endErr := calendar.ParseDate(to)
+	if startErr != nil || endErr != nil {
+		return nil, fmt.Errorf("meal plan postgres: cancelled days %q to %q: invalid window", from, to)
 	}
+	found, _, err := NewCancellations(m.database).FindCancellations(ctx, start, end)
+	if err != nil {
+		return nil, err
+	}
+	days := make(map[string]bool, len(found))
+	for _, cancellation := range found {
+		days[cancellation.Date.String()] = true
+	}
+	return days, nil
 }

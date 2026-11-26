@@ -226,7 +226,7 @@ func BuildServeMealPlan(db transactionruntime.Database, settings *mealplanCompos
 		StudentNames:    mealPlanStudentNames(names),
 		LockStudent:     lockStudent,
 		Calendar:        mealPlanCalendar(calendarRecords),
-		CancelledDays:   mealplanCompose.NewCancelledDays(),
+		CancelledDays:   mealplanCompose.NewMenuChanges().CancelledDays,
 		Notices:         notices,
 	})
 }

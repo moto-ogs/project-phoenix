@@ -37,7 +37,7 @@ func TestMealCancellationClosesTheDayUntilItIsRemoved(t *testing.T) {
 		Now:          func() time.Time { return time.Date(2026, 9, 7, 8, 0, 0, 0, testBerlin) },
 		Participants: testParticipantFinder, ParticipantDays: testParticipantDaysFinder,
 		StudentNames: testStudentNames, LockStudent: testStudentLock,
-		Calendar: fixedCalendar([]string{closingDay}, nil), CancelledDays: NewCancelledDays(),
+		Calendar: fixedCalendar([]string{closingDay}, nil), CancelledDays: NewMenuChanges().CancelledDays,
 	})
 	require.NoError(t, err)
 	plan, cancellations := services.Capability, services.Cancellations

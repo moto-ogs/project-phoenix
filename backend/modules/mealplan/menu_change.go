@@ -39,4 +39,7 @@ type MenuDay struct {
 // caller's transaction, in one statement.
 type MenuChanges interface {
 	MenuDayOn(ctx context.Context, date Date) (MenuDay, error)
+	// CancelledDays reads the days without lunch of [from, to] (#7656), the
+	// CancelledDaysFinder the root binds beside the school calendar.
+	CancelledDays(ctx context.Context, from, to string) (map[string]bool, error)
 }

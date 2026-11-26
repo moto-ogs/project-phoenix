@@ -43,7 +43,7 @@ func BuildMealPlanServicesAtForTests(db transactionruntime.Database, settings se
 		StudentNames:    mealPlanStudentNames(names),
 		LockStudent:     lockStudent,
 		Calendar:        mealPlanCalendar(calendarRecords),
-		CancelledDays:   mealplanCompose.NewCancelledDays(),
+		CancelledDays:   mealplanCompose.NewMenuChanges().CancelledDays,
 		Notices:         notices,
 	})
 }
