@@ -841,11 +841,10 @@ describe("TraegerChildrenPage", () => {
     ).toHaveTextContent(/5\s*Kinder/);
   });
 
-  it("updates roster counts from an empty continuation without showing zero search hits", async () => {
+  it("updates roster counts from an empty continuation without restarting an unfiltered list", async () => {
     api.fetchTraegerChildren
-      .mockResolvedValueOnce(pageOf([AKSOY, BERG, ZANDER]))
       .mockResolvedValueOnce(
-        pageOf([BERG], { total: 3, matched: 2, nextCursor: "second" }),
+        pageOf([AKSOY, BERG], { total: 3, matched: 3, nextCursor: "second" }),
       )
       .mockResolvedValueOnce(
         pageOf([], {
@@ -858,12 +857,9 @@ describe("TraegerChildrenPage", () => {
       );
     renderPage();
     await screen.findAllByText("Berg, Anna");
-    fireEvent.change(screen.getAllByPlaceholderText("Kind suchen")[0]!, {
-      target: { value: "er" },
-    });
     fireEvent.click(
       await screen.findByRole("button", {
-        name: "Weitere Kinder laden (1 von 2)",
+        name: "Weitere Kinder laden (2 von 3)",
       }),
     );
 
@@ -871,47 +867,51 @@ describe("TraegerChildrenPage", () => {
     expect(
       screen.getByText("Kinder", { selector: "span" }).parentElement,
     ).toHaveTextContent(/2\s*Kinder/);
-    expect(screen.getByText("gefunden").parentElement).toHaveTextContent(
-      /2\s*gefunden/,
-    );
+    expect(api.fetchTraegerChildren).toHaveBeenCalledTimes(2);
     expect(screen.getAllByText("Berg, Anna")[0]).toBeVisible();
     expect(
       screen.queryByRole("button", { name: /Weitere Kinder laden/ }),
     ).not.toBeInTheDocument();
   });
 
-  it("reads the first page again when an empty continuation makes the search count impossible", async () => {
-    api.fetchTraegerChildren
-      .mockResolvedValueOnce(pageOf([BERG, ZANDER]))
-      .mockResolvedValueOnce(
-        pageOf([BERG], { total: 2, matched: 2, nextCursor: "second" }),
-      )
-      .mockResolvedValueOnce(pageOf([], { total: 1 }))
-      .mockResolvedValueOnce(pageOf([BERG], { total: 1, matched: 1 }));
-    renderPage();
-    await screen.findAllByText("Zander, Mia");
-    fireEvent.change(screen.getAllByPlaceholderText("Kind suchen")[0]!, {
-      target: { value: "er" },
-    });
-    fireEvent.click(
-      await screen.findByRole("button", {
-        name: "Weitere Kinder laden (1 von 2)",
-      }),
-    );
+  it.each([
+    { change: "a child leaves the roster", total: 1 },
+    { change: "a renamed child stops matching", total: 2 },
+  ])(
+    "refreshes the search after an empty continuation when $change",
+    async ({ total }) => {
+      api.fetchTraegerChildren
+        .mockResolvedValueOnce(pageOf([BERG, ZANDER]))
+        .mockResolvedValueOnce(
+          pageOf([BERG], { total: 2, matched: 2, nextCursor: "second" }),
+        )
+        .mockResolvedValueOnce(pageOf([], { total }))
+        .mockResolvedValueOnce(pageOf([BERG], { total, matched: 1 }));
+      renderPage();
+      await screen.findAllByText("Zander, Mia");
+      fireEvent.change(screen.getAllByPlaceholderText("Kind suchen")[0]!, {
+        target: { value: "er" },
+      });
+      fireEvent.click(
+        await screen.findByRole("button", {
+          name: "Weitere Kinder laden (1 von 2)",
+        }),
+      );
 
-    await waitFor(() =>
-      expect(api.fetchTraegerChildren).toHaveBeenCalledTimes(4),
-    );
-    expect(api.fetchTraegerChildren).toHaveBeenLastCalledWith({
-      schoolId: "",
-      search: "er",
-    });
-    await waitFor(() =>
-      expect(screen.getByText("gefunden").parentElement).toHaveTextContent(
-        /1\s*gefunden/,
-      ),
-    );
-  });
+      await waitFor(() =>
+        expect(api.fetchTraegerChildren).toHaveBeenCalledTimes(4),
+      );
+      expect(api.fetchTraegerChildren).toHaveBeenLastCalledWith({
+        schoolId: "",
+        search: "er",
+      });
+      await waitFor(() =>
+        expect(screen.getByText("gefunden").parentElement).toHaveTextContent(
+          /1\s*gefunden/,
+        ),
+      );
+    },
+  );
 
   it("drops names and starts over when the continuation has fewer schools, even without rows", async () => {
     const fresh = deferred<TraegerChildrenPage>();

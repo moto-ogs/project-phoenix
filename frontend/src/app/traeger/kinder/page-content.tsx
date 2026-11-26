@@ -331,8 +331,8 @@ function ChildrenContent({
         clearList();
         return;
       }
-      if (filter.search && next.children.length === 0 && matched > next.total) {
-        // An empty continuation cannot confirm how many children still match.
+      if (filter.search && next.children.length === 0) {
+        // An empty continuation has no match count, even if the roster size stayed the same.
         clearList();
         return;
       }
@@ -348,8 +348,7 @@ function ChildrenContent({
         nextCursor: next.nextCursor,
         counts: {
           total: next.total,
-          // An empty continuation does not carry a search count.
-          matched: next.children.length ? next.matched : matched,
+          matched: next.matched,
           schools: next.schools,
         },
       });
@@ -385,7 +384,6 @@ function ChildrenContent({
     beginPageRead,
     listKey,
     filter,
-    matched,
     clearList,
     withdrawRefusedList,
     showActionError,
