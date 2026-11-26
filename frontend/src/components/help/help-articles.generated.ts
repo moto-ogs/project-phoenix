@@ -1030,7 +1030,7 @@ export const appOverviewTopic = function appOverviewTopic(): HelpTopic {
         // Baustein „Heute anders" (#7659), components/home/day-changes-block.tsx.
         title: "Was heute anders ist",
         description:
-          "Ganz oben auf der `Startseite` steht die Karte `Heute anders`. Sie zeigt, wer heute fehlt und wer vertritt. Sie zeigt auch Dienste, Angebote und AGs, die heute anders sind oder ausfallen. Dazu kommen die Hinweise der Leitung für heute.",
+          "Weit oben auf der `Startseite` steht die Karte `Heute anders`. Sie zeigt, wer heute fehlt und wer vertritt. Sie zeigt auch Dienste, Angebote und AGs, die heute anders sind oder ausfallen. Dazu kommen die Hinweise der Leitung für heute.",
         ordered: false,
         steps: [
           "Unter `Betrifft dich` steht, was dich selbst angeht: deine Gruppen, Vertretungen, Termine und Dienste.",
@@ -1054,7 +1054,7 @@ export const appOverviewTopic = function appOverviewTopic(): HelpTopic {
           // Personal, Link in den Vertretungsplan mit schedules:manage.
           "Auch wer nur bei einem Termin fehlt oder vertritt, steht mit Uhrzeit da. Beispiel: `Sara übernimmt heute „Chor“ für Ben.`",
           "Darfst du den `Vertretungsplan` öffnen, führt dich der Eintrag zu diesem Termin.",
-          "Am Handy zeigt `Schule` nur die ersten 3 Einträge. Den Rest zeigt `Alle anzeigen`.",
+          "`Schule` zeigt die ersten 5 Einträge, am Handy die ersten 3. Den Rest zeigt `weitere anzeigen`.",
           // Termine aus dem eigenen Kalender (#7663), api/day_changes_appointments.go.
           "Unter `Betrifft dich` stehen auch deine Termine aus `Mein Kalender`. Du siehst dort, welcher Termin heute ausfällt. Du siehst auch, welcher Termin heute woanders oder zu einer anderen Zeit ist.",
           "Dienste, Termine, Angebote und AGs, die schon vorbei sind, stehen ganz unten unter `erledigt`. Wähle `erledigt`, um sie zu sehen.",
@@ -1077,7 +1077,7 @@ export const appOverviewTopic = function appOverviewTopic(): HelpTopic {
         // Schulschalter nicht, deshalb sagt der Text die Bedingung selbst.
         title: "Der Betreuungsplan von heute",
         description:
-          "Nutzt deine OGS den Betreuungsplan? Dann zeigt die Karte `Betreuungsplan heute`, was in der ganzen OGS heute noch ansteht. Wer die OGS leitet, hat sie schon auf der Startseite.",
+          "Nutzt deine OGS den Betreuungsplan? Dann zeigt die Karte `Betreuungsplan heute`, was in der ganzen OGS heute noch ansteht. Wer die OGS leitet, hat sie ganz oben auf der Startseite.",
         ordered: false,
         steps: [
           "Die Karte beginnt bei dem, was gerade läuft oder als Nächstes kommt. Die grüne Linie `Jetzt` zeigt die Uhrzeit.",
@@ -1086,6 +1086,7 @@ export const appOverviewTopic = function appOverviewTopic(): HelpTopic {
           "Tippe auf eine Zeile. Sie öffnet den Termin im `Betreuungsplan`. Hast du den Plan nicht in der Seitenleiste, öffnet sich `Heute`.",
           "Links neben `Jetzt` steht, wie viele Blöcke heute schon vorbei sind. Tippe darauf, um den ganzen Tag zu sehen.",
           "Passen nicht alle Blöcke auf die Karte? Darunter steht, wie viele noch kommen.",
+          "Sind alle Blöcke vorbei, steht dort `Für heute ist nichts mehr geplant`. `Plan öffnen` zeigt dir den ganzen Tag.",
           "Die Karte fehlt bei dir? Wähle `Anpassen`, dann `Bausteine` und dann `Betreuungsplan heute`.",
           // Karte nur mit Betreuungsplan, Leserecht und schulweiter Sicht
           // (#2380); sonst zeigt „Mein Tag“ die eigenen Einsätze.
