@@ -7913,7 +7913,7 @@ export const parentPickupChangeTopic =
       ],
       notes: [
         "Der Grund ist Pflicht und darf höchstens 255 Zeichen lang sein.",
-        "Bei `Wer holt ab?` stehen deine Kontakte und `Andere Person`. Eine andere Person zeigt bei der Abholung ihren Ausweis. Ihr Name wird nach dem Tag gelöscht.",
+        "Bei `Wer holt ab?` stehen deine Kontakte und `Andere Person`. Eine andere Person zeigt bei der Abholung ihren Ausweis. Nach dem Tag löscht moto sie beim Kind. In deiner Anfrage und im Nachweis bleibt der Name stehen.",
         "Nach dem Senden findest du bei der Anfrage `Nachweis (PDF)`. Darin stehen deine Erklärung und deine Unterschrift.",
         "Soll sich die Zeit dauerhaft ändern? Dann frage eine Änderung der Betreuung an.",
       ],

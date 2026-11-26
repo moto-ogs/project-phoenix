@@ -196,15 +196,16 @@ func (s *Store) DeletePickupPerson(ctx context.Context, studentID int64, date ca
 	return affected > 0, stats, err
 }
 
-// DeletePickupPersonByID removes one pickup person row and reports whether
-// it was there.
-func (s *Store) DeletePickupPersonByID(ctx context.Context, id int64) (bool, domain.OperationStats, error) {
+// DeletePickupPersonByID removes one pickup person row of the child and
+// reports whether it was there.
+func (s *Store) DeletePickupPersonByID(ctx context.Context, studentID, id int64) (bool, domain.OperationStats, error) {
 	db, tid, err := s.databaseForWrite(ctx, "delete pickup person by id")
 	if err != nil {
 		return false, domain.OperationStats{}, err
 	}
 	stats, affected, err := execute(ctx, db.NewDelete().TableExpr(`schedule.student_pickup_persons AS "student_pickup_person"`).
 		Where(`"student_pickup_person".tenant_id = ?`, tid).
+		Where(`"student_pickup_person".student_id = ?`, studentID).
 		Where(`"student_pickup_person".id = ?`, id), "delete pickup person by id")
 	return affected > 0, stats, err
 }

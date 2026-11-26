@@ -90,7 +90,7 @@ func (s *Service) DeleteApprovedPickupPerson(ctx context.Context, studentID int6
 			return err
 		}
 		var err error
-		deleted, *stats, err = s.pickupPersons.DeletePickupPersonByID(txCtx, id)
+		deleted, *stats, err = s.pickupPersons.DeletePickupPersonByID(txCtx, studentID, id)
 		return err
 	})
 	return deleted, err
