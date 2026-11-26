@@ -33,8 +33,8 @@ export function parentChildOverviewTopic(): HelpTopic {
       "`Heute anders` nennt zum Beispiel: Ein Angebot fällt aus, ist in einem anderen Raum oder hat eine Vertretung. Dazu kommen eine geänderte Abholzeit, ein Schließtag, geänderte Öffnungszeiten, ein Ausflug oder eine Krankmeldung.",
       // Essensausfall im Elternportal (#8160): nur bei einer Buchung des Kindes.
       "Fällt das Mittagessen aus und dein Kind ist an dem Tag angemeldet, steht das auch unter `Heute anders`. Der Tag wird nicht berechnet.",
-      // #8170: eine Abholzeit nach der geänderten Schließzeit bleibt stehen.
-      "Schließt die OGS heute früher und liegt deine Abholzeit danach, steht dort `Das ist nach der Schließung.` moto ändert die Abholzeit nicht. Wähle `Abholung ändern` und trage eine frühere Zeit ein.",
+      // #8170, #8173: eine Abholzeit nach der geänderten Schließzeit bleibt stehen.
+      "Schließt die OGS heute früher und liegt deine Abholzeit danach, steht dort `Das ist nach der Schließung.` Das gilt auch für die Abholzeit aus dem Wochenplan. moto ändert die Abholzeit nicht. Wähle `Abholung ändern` und trage eine frühere Zeit ein.",
       "Namen von Betreuungskräften stehen bei `Heute anders` nie. Du siehst nur, was dein Kind betrifft.",
       "Was du selbst eingetragen hast, ist mit `Von dir eingetragen` markiert. So siehst du, dass es angekommen ist.",
       "Die Startseite zeigt `Heute anders` für jedes Kind in seiner eigenen Karte.",

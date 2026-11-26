@@ -65,6 +65,15 @@ export function calendarPeriodsTopic(): HelpTopic {
           "Wähle `Speichern`.",
         ],
       },
+      // #8173: ein gespeicherter Tag wird in der Liste geändert.
+      {
+        title: "Einen Tag mit anderen Öffnungszeiten ändern",
+        steps: [
+          "Öffne `Schuljahr und Kalender` und gehe zum Abschnitt `Geänderte Öffnungszeiten`.",
+          "Wähle beim Tag die drei Punkte und dann `Bearbeiten`.",
+          "Ändere die Felder und wähle `Speichern`.",
+        ],
+      },
       {
         title: "Eltern der Ferienbetreuung informieren",
         description:
@@ -128,7 +137,7 @@ export function calendarPeriodsTopic(): HelpTopic {
       "Ein Zeitraum, den noch nichts benutzt, trägt `Nicht verwendet`.",
       "An einem Tag mit geänderter Öffnungszeit enden die Sitzungen zur neuen Schließzeit. Danach können Eltern die Abholzeit für den Tag nicht mehr ändern.",
       // #8170: Eltern sehen die geänderte Öffnungszeit in „Heute anders“.
-      "Eltern sehen die geänderte Öffnungszeit unter `Heute anders` bei ihrem Kind. Liegt eine Abholzeit nach der Schließzeit, steht das dabei. moto ändert die Abholzeit nicht.",
+      "Eltern sehen die geänderte Öffnungszeit unter `Heute anders` bei ihrem Kind. Liegt eine Abholzeit nach der Schließzeit, steht das dabei. Das gilt für eine geänderte Abholzeit und für die Abholzeit aus dem Wochenplan. moto ändert die Abholzeit nicht.",
       // #6845: Schichtserien halten ihren Zeitraum fest.
       "Einen Zeitraum mit Schichtserien im Dienstplan kannst du nicht löschen, auch wenn die Serien beendet sind. Nimm stattdessen den Haken bei `Zeitraum im Plan verwenden` heraus.",
       "Ferienbetreuung an Schließtagen: Wähle beim Speichern der Serie `Auch an Schließtagen planen`. Trage bei `Letzter Tag` den letzten Ferientag ein. Dann endet die Serie mit den Ferien.",

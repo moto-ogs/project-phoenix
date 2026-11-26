@@ -1,6 +1,6 @@
 /**
  * Kinderzahl und Uhrzeit eines Blocks, wie Tagesplan, „Mein Tag“ und
- * „Ablauf des Tages“ sie in einer Zeile zeigen (#3921).
+ * „Betreuungsplan heute“ sie in einer Zeile zeigen (#3921).
  *
  * „X von Y da“ heißt: X Kinder sind gerade da, Y Kinder gehören heute zu
  * diesem Block. Wer nicht mehr im Raum ist, steht getrennt daneben: gegangen,

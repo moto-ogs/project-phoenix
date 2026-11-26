@@ -1,7 +1,6 @@
 import { matchesPathPrefix } from "~/lib/section-navigation";
 
 export type PlanningPageHref =
-  | "/betreuungsplan"
   | "/dienstplan"
   | "/vertretung"
   | "/lists"
@@ -29,6 +28,10 @@ export interface PlanningSubPage {
 /**
  * Single source of truth for canonical planning navigation.
  *
+ * Der Betreuungsplan selbst steht nicht mehr hier (#8134): er ist eine Seite
+ * des Tagesbetriebs (`STAFF_FLAT_PAGES.carePlan`), die jede Person mit
+ * Leserecht öffnet. Hier bleiben die Werkzeuge, mit denen die Leitung plant.
+ *
  * Jede Planungsseite steht auch in der flachen mobilen Navigation. Tageslisten
  * und Kalenderzeiträume waren dort ausgenommen, mit der Begründung, sie seien
  * "über den Betreuungsplan-Eintrag erreichbar" — das traf nicht zu: es gibt
@@ -39,18 +42,6 @@ export interface PlanningSubPage {
  * mobil in die Navigation.
  */
 export const PLANNING_SUB_PAGES: readonly PlanningSubPage[] = [
-  {
-    href: "/betreuungsplan",
-    label: "Betreuungsplan",
-    showInMobileNav: true,
-    requiresTimetable: true,
-    // Der Planungsbereich gehört der Leitung: wer den Plan bearbeiten darf
-    // (schedules:manage, das Recht der Schreibrouten), sieht den Eintrag, ob
-    // Admin oder eine eigene Leitungsrolle der Schule (#3469). Alle anderen
-    // erreichen die Leseansicht (#2283) als Tab "Betreuungsplan" in "Mein
-    // Kalender" (eine Kalenderfläche), nicht über die Planungsgruppe.
-    nonAdminPermission: "schedules:manage",
-  },
   {
     href: "/dienstplan",
     label: "Dienstplan",

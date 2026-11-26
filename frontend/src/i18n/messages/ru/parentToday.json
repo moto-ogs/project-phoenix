@@ -60,6 +60,7 @@
     "openingChangedUntil": "До {date} {careTerm} открыта с {opens} до {closes}: {name}.",
     "mealCancelled": "Сегодня обеда для {name} не будет. Оплата за него не взимается.",
     "pickupAfterClosing": "Это после закрытия. Измени, пожалуйста, время, когда заберёшь ребёнка.",
+    "regularPickupAfterClosing": "По недельному плану {name} забирают в {time}.",
     "activityCancelled": "{title} в {time} сегодня отменяется.",
     "activityReinstated": "{title} в {time} сегодня всё-таки состоится.",
     "activityRoomChanged": "{title} в {time} сегодня проходит в {room}.",

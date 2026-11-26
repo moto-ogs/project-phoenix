@@ -11,6 +11,7 @@
  */
 
 import { useMemo, useState } from "react";
+import { ChevronDown } from "lucide-react";
 
 import { AnchoredPopover } from "~/components/ui/anchored-popover";
 import { Button } from "~/components/ui/button";
@@ -105,6 +106,12 @@ export function GapJumpList({
         >
           <StatusDot className="bg-moto-orange" decorative />
           {label}
+          {/* Der Pfeil sagt, dass sich hier eine Liste öffnet: ohne ihn las
+              sich die Zahl neben dem Schuljahr wie eine reine Anzeige. */}
+          <ChevronDown
+            className={`h-3.5 w-3.5 text-gray-500 transition-transform ${open ? "rotate-180" : ""}`}
+            aria-hidden
+          />
         </Button>
       )}
     >

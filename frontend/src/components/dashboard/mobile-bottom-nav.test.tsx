@@ -1046,7 +1046,6 @@ describe("MobileBottomNav", () => {
       fireEvent.click(screen.getByRole("button", { name: "Mehr" }));
 
       for (const label of [
-        "Betreuungsplan",
         "Dienstplan",
         "Anmeldungen",
         "Elternzugänge",
@@ -1055,6 +1054,25 @@ describe("MobileBottomNav", () => {
       ]) {
         expect(screen.queryByText(label)).not.toBeInTheDocument();
       }
+      // #8134: der Plan steht im Tagesbetrieb und damit für das ganze Team
+      // im Mehr-Menü; geplant wird weiter nur mit schedules:manage.
+      expect(
+        screen.getByRole("link", { name: "Betreuungsplan" }),
+      ).toHaveAttribute("href", "/test-tenant/betreuungsplan");
+    });
+
+    it("hält den schulweiten Betreuungsplan von der AG-Leitung fern (#8134)", () => {
+      mockHasPermission.mockImplementation(
+        (_session: unknown, permission: string) =>
+          permission === "schedules:read",
+      );
+
+      render(<MobileBottomNav />);
+      fireEvent.click(screen.getByRole("button", { name: "Mehr" }));
+
+      // Anker: das Menü ist offen und zeigt die Seiten für alle.
+      expect(screen.getByRole("link", { name: "Dateien" })).toBeInTheDocument();
+      expect(screen.queryByText("Betreuungsplan")).not.toBeInTheDocument();
     });
   });
 

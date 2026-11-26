@@ -47,17 +47,6 @@ export function HomeCardLink({
 }
 
 /**
- * Erklärung am Weiterlink „Zum Betreuungsplan“ / „Heute öffnen“ (#6777):
- * `useDayPlanHref` führt reine Adminkonten in den Betreuungsplan, alle
- * anderen in ihren Tagesplan.
- */
-export function dayPlanLinkTooltip(dayPlanHref: string): string {
-  return dayPlanHref.endsWith("/betreuungsplan")
-    ? "Öffnet den Betreuungsplan der Schule."
-    : "Öffnet deinen Tagesplan für heute.";
-}
-
-/**
  * Die aktuelle Berliner Uhrzeit als „HH:MM", halbminütlich nachgezogen.
  *
  * Im Server-HTML und bei der Hydrierung bleibt die Uhr leer, damit ein
@@ -100,6 +89,15 @@ export function upcomingFirst<T>(
   if (firstRelevant === 0) return { items, allPast: false };
   return { items: items.slice(firstRelevant), allPast: false };
 }
+
+/**
+ * Zwei Spalten für eine lange Liste in einer breiten Karte (`@3xl`, 48rem):
+ * man liest sie wie eine Zeitung, erst links nach unten, dann rechts; die
+ * feine Linie dazwischen sagt das. Die Karte braucht `@container`, die
+ * Zeilen `break-inside-avoid`.
+ */
+export const HOME_TWO_COLUMNS =
+  "@3xl:columns-2 @3xl:gap-x-6 @3xl:[column-rule:1px_solid_var(--color-gray-200)]";
 
 /** So viele Zeilen zeigt eine Karte auf dem Handy, bevor sie den Rest zählt. */
 const PHONE_MAX_ROWS = 6;

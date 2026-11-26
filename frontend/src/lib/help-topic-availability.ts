@@ -356,3 +356,42 @@ export function isHelpTopicAvailable(
   }
   return helpAudienceIncludes(HELP_TOPIC_AUDIENCE[topic], role);
 }
+
+/**
+ * Seiten, die Leitung und Team beide öffnen, mit je einem eigenen Artikel.
+ * Der Betreuungsplan steht seit #8134 für alle im Tagesbetrieb: die Leitung
+ * plant dort, das Team liest. Wer den Artikel der Leitung nicht hat, bekommt
+ * den zum Ansehen statt gar kein Fragezeichen.
+ */
+const READER_HELP_TOPICS: Readonly<Partial<Record<HelpTopicId, HelpTopicId>>> =
+  {
+    [HELP_TOPICS.leadCarePlan]: HELP_TOPICS.carePlan,
+  };
+
+/**
+ * Der Artikel, den `role` für die Seite mit dem Artikel `topic` bekommt:
+ * `topic` selbst, sein Gegenstück für Lesende oder `null`, wenn es für die
+ * Rolle keinen gibt.
+ */
+export function helpTopicForRole(
+  topic: HelpTopicId,
+  role: HelpRole,
+  presenceMode: HelpPresenceMode,
+  groupMode: HelpGroupMode,
+  nfcEnabled: boolean | null,
+): HelpTopicId | null {
+  const candidates = [topic, READER_HELP_TOPICS[topic]];
+  return (
+    candidates.find(
+      (candidate): candidate is HelpTopicId =>
+        candidate !== undefined &&
+        isHelpTopicAvailable(
+          candidate,
+          role,
+          presenceMode,
+          groupMode,
+          nfcEnabled,
+        ),
+    ) ?? null
+  );
+}

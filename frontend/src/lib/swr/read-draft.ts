@@ -107,6 +107,8 @@ export type ReadDraftResult<A> =
       readonly error: unknown;
       /** The state changed since it was read (rule 3). */
       readonly refused: boolean;
+      /** The write reached the backend; only its local read update failed. */
+      readonly persisted?: true;
       /**
        * Nothing was sent: the surface was not ready (a second click before
        * the render). Nothing to show.
@@ -437,7 +439,20 @@ export function useDraftOn<T, D = T, K = unknown, A = unknown>(
       }
       const stored = given.answer?.(saved, base);
       if (stored !== undefined) {
-        await latest.current.source.write?.(stored);
+        try {
+          await latest.current.source.write?.(stored);
+        } catch (error) {
+          // The write itself succeeded. Keep its draft until a fresh read
+          // confirms the stored state, rather than leaving the editor saving.
+          update(forKey, (prev) => ({
+            ...prev,
+            phase: "loadFailed",
+            loadError: error,
+            saved: draft,
+            touched: !latest.current.same(prev.draft, draft),
+          }));
+          return { ok: false, error, refused: false, persisted: true };
+        }
         settle(forKey, stored);
       } else {
         update(forKey, (prev) => ({

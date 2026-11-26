@@ -39,6 +39,7 @@ import { unknownConcept } from "~/lib/concepts/unknown";
 import { calendarConcept } from "~/lib/concepts/calendar";
 import { dayChangesConcept } from "~/lib/concepts/dayChanges";
 import { carePlanConcept } from "~/lib/concepts/carePlan";
+import { dayPlanConcept } from "~/lib/concepts/dayPlan";
 import { careTimesConcept } from "~/lib/concepts/careTimes";
 import { staffPlanConcept } from "~/lib/concepts/staffPlan";
 import { substitutionConcept } from "~/lib/concepts/substitution";
@@ -135,6 +136,7 @@ const registry = {
   calendar: calendarConcept,
   dayChanges: dayChangesConcept,
   carePlan: carePlanConcept,
+  dayPlan: dayPlanConcept,
   careTimes: careTimesConcept,
   staffPlan: staffPlanConcept,
   substitution: substitutionConcept,
