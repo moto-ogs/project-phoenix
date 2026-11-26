@@ -2,7 +2,10 @@
 
 import { useCallback } from "react";
 
-import { dayChangeLinkHref } from "~/components/home/day-changes-text";
+import {
+  dayChangeLinkHref,
+  type DayChangesDay,
+} from "~/components/home/day-changes-text";
 import { trackEvent } from "~/lib/analytics";
 import type { DayChangeLink } from "~/lib/day-changes";
 import { useDayPlanLink } from "~/lib/hooks/use-day-plan-href";
@@ -15,11 +18,15 @@ import { useTenantAwarePath } from "~/lib/tenant-path";
  */
 export function useDayChangeHref(): (
   link: DayChangeLink | null,
+  day?: DayChangesDay,
 ) => string | null {
   const tenantPath = useTenantAwarePath();
   const { href: dayPlanHref } = useDayPlanLink();
   return useCallback(
-    (link) => {
+    (link, day = "today") => {
+      // Die Kindakte kennt keinen angezeigten Kalendertag. Ein Link aus der
+      // Vorschau würde dort deshalb fälschlich den heutigen Status zeigen.
+      if (day === "tomorrow" && link?.target === "student") return null;
       const path = dayChangeLinkHref(link);
       if (path === null) return null;
       return link?.target === "day_plan" ? dayPlanHref : tenantPath(path);

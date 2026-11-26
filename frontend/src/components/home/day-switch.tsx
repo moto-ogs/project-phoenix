@@ -18,13 +18,9 @@ export function nextDayISO(iso: string): string {
  */
 export function isOverviewOfDay(
   overview: { readonly date: string } | undefined,
-  day: DayChangesDay,
-  tomorrow: string,
+  selectedDate: string,
 ): boolean {
-  if (!overview) return false;
-  return day === "tomorrow"
-    ? overview.date === tomorrow
-    : overview.date !== tomorrow;
+  return overview?.date === selectedDate;
 }
 
 /**

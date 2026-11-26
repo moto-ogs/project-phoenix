@@ -85,7 +85,8 @@ export function DayChangesBlock() {
   // Die Vorschau auf morgen (#7657): derselbe Baustein für den nächsten
   // Kalendertag, auch am Wochenende oder an einem Schließtag.
   const [day, setDay] = useState<DayChangesDay>("today");
-  const tomorrow = nextDayISO(useBerlinToday());
+  const today = useBerlinToday();
+  const tomorrow = nextDayISO(today);
   const date = day === "tomorrow" ? tomorrow : undefined;
   const {
     data: anyDay,
@@ -99,7 +100,8 @@ export function DayChangesBlock() {
     // SSE-Ereignissen und dem Abgleich nach erneuter Verbindung.
     { revalidateOnFocus: true },
   );
-  const data = isOverviewOfDay(anyDay, day, tomorrow) ? anyDay : undefined;
+  const shown = day === "tomorrow" ? tomorrow : today;
+  const data = isOverviewOfDay(anyDay, shown) ? anyDay : undefined;
   const loadError = useSwrLoadError(error, "die Übersicht „Heute anders“", () =>
     mutate(),
   );
@@ -139,7 +141,11 @@ export function DayChangesBlock() {
 
 function DayChangesSkeleton() {
   return (
-    <div className="space-y-2" aria-hidden="true">
+    <div
+      data-testid="day-changes-skeleton"
+      className="space-y-2"
+      aria-hidden="true"
+    >
       <Skeleton className="h-4 w-2/5" />
       <Skeleton className="h-3 w-4/5" />
       <Skeleton className="h-3 w-3/5" />
@@ -617,7 +623,7 @@ function ChildSummaryRow({
           {summary.items.map((item) => {
             const text = childChangeText(item.kind, item.child, day);
             if (!text) return null;
-            const href = hrefOf(item.link);
+            const href = hrefOf(item.link, day);
             const body = (
               <span className="block min-w-0 flex-1 text-sm text-gray-900">
                 {text}
@@ -658,7 +664,7 @@ function DayChangeLinkRow({
   const hrefOf = useDayChangeHref();
   const text = dayChangeText(entry, day) ?? "";
   const span = dayChangeSpan(entry);
-  const href = hrefOf(entry.link);
+  const href = hrefOf(entry.link, day);
   // Zeitraum und Ort stehen bei jeder Zeile an derselben Stelle: hinter dem
   // Satz, kleiner und grau. Eine lange Änderung, die vor heute begann
   // („… · seit 3.11.“), ist ganz grau, damit sie die neuen nicht verdrängt.

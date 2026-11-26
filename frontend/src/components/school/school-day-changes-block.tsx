@@ -162,7 +162,7 @@ export function SchoolDayChangesBlock({
   if (!isToday) return null;
 
   // Bis die Übersicht des gewählten Tags da ist, lädt der Block.
-  const overview = isOverviewOfDay(changes.data, day, tomorrow)
+  const overview = isOverviewOfDay(changes.data, shown)
     ? changes.data
     : undefined;
   // Der Bericht des anderen Tags bleibt beim Wechsel kurz stehen.

@@ -1264,6 +1264,7 @@ describe("Termine aus dem eigenen Kalender (#7663)", () => {
 });
 
 describe("DayChangesBlock: Vorschau auf morgen (#7657)", () => {
+  let today = "";
   let tomorrow = "";
 
   /** Antwortet je Schlüssel mit der Übersicht dieses Tags. */
@@ -1271,7 +1272,7 @@ describe("DayChangesBlock: Vorschau auf morgen (#7657)", () => {
     useSWRAuth.mockImplementation((key: string) => ({
       data: overviewOf({
         ...overview,
-        date: key.endsWith(`:${tomorrow}`) ? tomorrow : "2026-01-01",
+        date: key.endsWith(`:${tomorrow}`) ? tomorrow : today,
       }),
       error: undefined,
       isLoading: false,
@@ -1284,7 +1285,8 @@ describe("DayChangesBlock: Vorschau auf morgen (#7657)", () => {
     phone.value = false;
     const { berlinTodayISO } = await import("~/lib/date-helpers");
     const { nextDayISO } = await import("~/components/home/day-switch");
-    tomorrow = nextDayISO(berlinTodayISO());
+    today = berlinTodayISO();
+    tomorrow = nextDayISO(today);
   });
 
   it("liest morgen über den Umschalter mit eigenem Schlüssel und Sätzen für morgen", () => {
@@ -1333,12 +1335,88 @@ describe("DayChangesBlock: Vorschau auf morgen (#7657)", () => {
 
   it("zeigt beim Wechsel die Übersicht von heute nicht mit Sätzen für morgen", () => {
     // SWR hält die Daten des vorigen Schlüssels, bis die neuen da sind.
-    serve({ date: "2026-01-01", entries: [absent("Ben Kollege", "you")] });
+    serve({ date: today, entries: [absent("Ben Kollege", "you")] });
     render(<DayChangesBlock />);
     expect(screen.getByText("Ben Kollege ist heute nicht da.")).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Morgen" }));
     expect(screen.queryByText(/Ben Kollege/)).toBeNull();
     expect(screen.queryByText(/läuft alles wie geplant/)).toBeNull();
+  });
+
+  it("zeigt nach Mitternacht keine zwischengespeicherte Übersicht von gestern", () => {
+    serve({ date: "2026-01-01", entries: [absent("Ben Kollege", "you")] });
+    render(<DayChangesBlock />);
+
+    // Anker: Die abgelehnte Cache-Antwort lässt die Karte sichtbar laden.
+    expect(screen.getByTestId("day-changes-skeleton")).toBeVisible();
+    expect(screen.queryByText(/Ben Kollege/)).toBeNull();
+    expect(screen.queryByText(/läuft alles wie geplant/)).toBeNull();
+  });
+
+  it("verlinkt Kinder morgen nicht in die undatierte Kindakte", () => {
+    servePerDay({
+      entries: [
+        change({
+          kind: "child_absent",
+          section: "you",
+          child: {
+            studentId: "11",
+            name: "Mia Kind",
+            status: "sick",
+            pickupTime: null,
+            note: null,
+          },
+          link: { target: "student", staffId: null, studentId: "11" },
+        }),
+        change({
+          kind: "child_summary",
+          childSummary: {
+            schoolClass: "4c",
+            counts: {
+              sick: 1,
+              excused: 0,
+              pickupChanged: 0,
+              goesAlone: 0,
+              pickupNote: 0,
+            },
+            items: [
+              {
+                kind: "child_absent",
+                child: {
+                  studentId: "12",
+                  name: "Leo Kind",
+                  status: "sick",
+                  pickupTime: null,
+                  note: null,
+                },
+                link: { target: "student", staffId: null, studentId: "12" },
+              },
+            ],
+          },
+        }),
+      ],
+    });
+    render(<DayChangesBlock />);
+    fireEvent.click(screen.getByRole("button", { name: "Morgen" }));
+
+    const school = within(screen.getByRole("region", { name: "Schule" }));
+    fireEvent.click(school.getByRole("button", { name: /Klasse 4c/ }));
+    expect(
+      screen.getByText("Mia Kind ist morgen krank gemeldet."),
+    ).toBeVisible();
+    expect(
+      screen.getByText("Leo Kind ist morgen krank gemeldet."),
+    ).toBeVisible();
+    expect(
+      screen.queryByRole("link", {
+        name: "Mia Kind ist morgen krank gemeldet.",
+      }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole("link", {
+        name: "Leo Kind ist morgen krank gemeldet.",
+      }),
+    ).toBeNull();
   });
 
   it("sagt ohne Einträge, dass morgen alles wie geplant läuft", () => {
