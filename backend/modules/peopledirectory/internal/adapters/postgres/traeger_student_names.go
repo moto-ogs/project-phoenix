@@ -24,24 +24,24 @@ type studentNames struct {
 // studentNameSearch is the search text as a substring pattern.
 const studentNameSearch = `'%' || ` + collation.UnaccentLikePatternSQL + ` || '%' ESCAPE '\'`
 
-// studentNamesSQL takes the school set, the student profiles, the search
-// text four times, the limit (NULL for none) and the offset. A name matches
-// as "first last", as "last first" and as the list shows it, "last, first".
-// The name columns carry the German collation, so the order needs none of
-// its own.
-// The statement holds what a person typed, so the query log redacts its
-// literals.
-const studentNamesSQL = collation.RedactLiteralsInLog + `SELECT profile.tenant_id, profile.id, person.first_name, person.last_name, count(*) OVER () AS matched
-FROM users.student_profiles AS profile
-JOIN users.persons AS person
-  ON person.tenant_id = profile.tenant_id AND person.id = profile.person_id AND person.deleted_at IS NULL
-WHERE profile.tenant_id = ANY(?) AND profile.id = ANY(?)
-  AND (? = ''
-    OR public.f_unaccent(person.first_name || ' ' || person.last_name) ILIKE ` + studentNameSearch + `
-    OR public.f_unaccent(person.last_name || ' ' || person.first_name) ILIKE ` + studentNameSearch + `
-    OR public.f_unaccent(person.last_name || ', ' || person.first_name) ILIKE ` + studentNameSearch + `)
-ORDER BY person.last_name, person.first_name, profile.id
-LIMIT ? OFFSET ?`
+// Count the whole search before applying the continuation boundary. The
+// tuple comparison uses the same German name collation as ORDER BY.
+// The statement holds names and search text, so redact its literals in logs.
+const studentNamesSQL = collation.RedactLiteralsInLog + `SELECT tenant_id, id, first_name, last_name, matched
+FROM (
+  SELECT profile.tenant_id, profile.id, person.first_name, person.last_name, count(*) OVER () AS matched
+  FROM users.student_profiles AS profile
+  JOIN users.persons AS person
+    ON person.tenant_id = profile.tenant_id AND person.id = profile.person_id AND person.deleted_at IS NULL
+  WHERE profile.tenant_id = ANY(?) AND profile.id = ANY(?)
+    AND (? = ''
+      OR public.f_unaccent(person.first_name || ' ' || person.last_name) ILIKE ` + studentNameSearch + `
+      OR public.f_unaccent(person.last_name || ' ' || person.first_name) ILIKE ` + studentNameSearch + `
+      OR public.f_unaccent(person.last_name || ', ' || person.first_name) ILIKE ` + studentNameSearch + `)
+) AS matching
+WHERE (? = 0 OR (last_name, first_name, id) > (?, ?, ?))
+ORDER BY last_name, first_name, id
+LIMIT ?`
 
 // StudentNamesByTenant lists one page of the names of the given student
 // profiles of the schools, with the number of all matches, in one statement.
@@ -68,7 +68,8 @@ func (s studentNames) StudentNamesByTenant(ctx context.Context, schools []int64,
 		LastName  string `bun:"last_name"`
 		Matched   int    `bun:"matched"`
 	}
-	if err := db.NewRaw(studentNamesSQL, pgdialect.Array(schools), pgdialect.Array(query.StudentProfileIDs), query.Search, query.Search, query.Search, query.Search, limit, query.Offset).
+	if err := db.NewRaw(studentNamesSQL, pgdialect.Array(schools), pgdialect.Array(query.StudentProfileIDs), query.Search, query.Search, query.Search, query.Search,
+		query.After.StudentProfileID, query.After.LastName, query.After.FirstName, query.After.StudentProfileID, limit).
 		Scan(ctx, &rows); err != nil {
 		return nil, 0, fmt.Errorf("people directory postgres: student names: %w", err)
 	}

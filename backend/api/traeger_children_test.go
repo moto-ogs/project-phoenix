@@ -74,7 +74,7 @@ func TestTraegerChildrenListTheChildrenOfEverySchoolByName(t *testing.T) {
 	assert.Equal(t, []string{"Aksoy, Ömer", "Berg, Anna", "Zander, Mia"}, childNames(all.Children), "every counted child of the Träger, by last name")
 	assert.Equal(t, 3, all.Total)
 	assert.Equal(t, 3, all.Matched)
-	assert.False(t, all.HasMore)
+	assert.Empty(t, all.NextCursor)
 	require.Len(t, all.Schools, 2)
 	assert.Equal(t, "OGS Am Bach", all.Schools[0].Name)
 	assert.Equal(t, 2, all.Schools[0].Children)
@@ -104,7 +104,7 @@ func TestTraegerChildrenListTheChildrenOfEverySchoolByName(t *testing.T) {
 	outside := traegerOccupancyRequest(t, router, fmt.Sprintf("/traeger/schools/children?school_id=%d", foreign), token, nil)
 	assert.Equal(t, http.StatusNotFound, outside.Code, outside.Body.String())
 	assert.Contains(t, outside.Body.String(), "traeger.school_not_found")
-	for _, bad := range []string{"school_id=abc", "school_id=0", "offset=-1", "offset=x", "search=" + strings.Repeat("a", traegerview.ChildrenSearchMaxLength+1)} {
+	for _, bad := range []string{"school_id=abc", "school_id=0", "cursor=%25", "cursor=e30", "search=" + strings.Repeat("a", traegerview.ChildrenSearchMaxLength+1)} {
 		rec := traegerOccupancyRequest(t, router, "/traeger/schools/children?"+bad, token, nil)
 		assert.Equal(t, http.StatusBadRequest, rec.Code, "%s: %s", bad, rec.Body.String())
 	}
@@ -164,13 +164,16 @@ func TestTraegerChildrenComeInPages(t *testing.T) {
 
 	first := traegerChildren(t, router, token, "")
 	require.Len(t, first.Children, traegerview.ChildrenPageSize)
-	assert.True(t, first.HasMore)
+	require.NotEmpty(t, first.NextCursor)
 	assert.Equal(t, traegerview.ChildrenPageSize+2, first.Matched, "the matches count beyond the page")
 	assert.Equal(t, "Nummer 000", first.Children[0].LastName)
 
-	rest := traegerChildren(t, router, token, fmt.Sprintf("?offset=%d", traegerview.ChildrenPageSize))
+	// A new child before this boundary would shift an offset and repeat the last row.
+	testpkg.CreateTestStudentForTenant(t, db, school, "Kind", "Abele", "1a")
+	rest := traegerChildren(t, router, token, "?cursor="+url.QueryEscape(first.NextCursor))
 	assert.Equal(t, []string{"Nummer 050, Kind", "Nummer 051, Kind"}, childNames(rest.Children))
-	assert.False(t, rest.HasMore)
+	assert.Equal(t, traegerview.ChildrenPageSize+3, rest.Matched, "continuation retains the full match count")
+	assert.Empty(t, rest.NextCursor)
 }
 
 func TestTraegerChildrenQueryBudgetIsFlat(t *testing.T) {

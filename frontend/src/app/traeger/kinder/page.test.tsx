@@ -5,9 +5,10 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
-import type { ReactNode } from "react";
+import { Activity, useSyncExternalStore, type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "~/lib/api-error";
+import { bumpScopeGeneration } from "~/lib/swr/generation";
 import type {
   TraegerChild,
   TraegerChildrenPage,
@@ -59,10 +60,23 @@ vi.mock("next-auth/react", () => ({
     status: "authenticated",
   }),
 }));
+function changeQuery(query: string) {
+  navigation.query = query;
+  window.dispatchEvent(new Event("test-navigation"));
+}
+
+function subscribeToQuery(listener: () => void) {
+  window.addEventListener("test-navigation", listener);
+  return () => window.removeEventListener("test-navigation", listener);
+}
+
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: navigation.replace }),
   usePathname: () => "/kinder",
-  useSearchParams: () => new URLSearchParams(navigation.query),
+  useSearchParams: () =>
+    new URLSearchParams(
+      useSyncExternalStore(subscribeToQuery, () => navigation.query),
+    ),
 }));
 
 import ChildrenPage from "./page-content";
@@ -104,13 +118,19 @@ const pageOf = (
   total: children.length,
   matched: children.length,
   children,
-  hasMore: false,
+  nextCursor: "",
   ...rest,
 });
 
 /** The reiter of a school; its name ends with the number of its children. */
 const schoolTab = (school: typeof BACH) =>
   screen.getByRole("tab", { name: new RegExp(`^${school.name}`) });
+
+function downloadOption() {
+  const [menu] = screen.getAllByRole("button", { name: "Weitere Aktionen" });
+  fireEvent.click(menu!);
+  return screen.getByRole("menuitem", { name: /CSV/ });
+}
 
 function renderPage() {
   render(
@@ -123,10 +143,16 @@ function renderPage() {
 describe("TraegerChildrenPage", () => {
   beforeEach(() => {
     for (const fn of Object.values(api)) fn.mockReset();
-    navigation.replace.mockReset();
+    navigation.replace.mockReset().mockImplementation((url: string) => {
+      changeQuery(url.slice(1));
+    });
     rowDraws.mockClear();
     navigation.query = "";
     api.fetchTraegerSchools.mockResolvedValue([BACH, LINDE]);
+    api.downloadTraegerChildren.mockResolvedValue({
+      blob: new Blob(),
+      filename: "kinder.csv",
+    });
     api.fetchTraegerChildren.mockImplementation(
       ({ schoolId }: { schoolId: string }) =>
         Promise.resolve(
@@ -205,6 +231,120 @@ describe("TraegerChildrenPage", () => {
     });
   });
 
+  it("validates new school tabs with the same schools the audited read returned", async () => {
+    api.fetchTraegerSchools.mockResolvedValue([BACH]);
+    renderPage();
+    await screen.findAllByText("Zander, Mia");
+
+    fireEvent.click(schoolTab(LINDE));
+    await waitFor(() =>
+      expect(screen.queryByText("Zander, Mia")).not.toBeInTheDocument(),
+    );
+    await screen.findAllByText("Berg, Anna");
+    fireEvent.click(downloadOption());
+    expect(api.downloadTraegerChildren).toHaveBeenCalledWith("csv", {
+      schoolId: LINDE.id,
+      search: "",
+    });
+  });
+
+  it("switches to all schools when navigation removes the school parameter", async () => {
+    navigation.query = "schule=4";
+    renderPage();
+    await screen.findAllByText("Berg, Anna");
+    expect(schoolTab(LINDE)).toHaveAttribute("aria-selected", "true");
+
+    act(() => changeQuery(""));
+
+    await screen.findAllByText("Zander, Mia");
+    expect(screen.getByRole("tab", { name: "Alle" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+  });
+
+  it("waits for a fresh audited read when React restores the page", async () => {
+    const view = (mode: "visible" | "hidden") => (
+      <TraegerResourceTestProvider>
+        <Activity mode={mode}>
+          <ChildrenPage />
+        </Activity>
+      </TraegerResourceTestProvider>
+    );
+    const { rerender } = render(view("visible"));
+    await screen.findAllByText("Zander, Mia");
+    const opening = deferred<TraegerChildrenPage>();
+    api.fetchTraegerChildren.mockReturnValue(opening.promise);
+
+    rerender(view("hidden"));
+    rerender(view("visible"));
+
+    await waitFor(() =>
+      expect(api.fetchTraegerChildren).toHaveBeenCalledTimes(2),
+    );
+    expect(screen.queryByText("Zander, Mia")).not.toBeInTheDocument();
+    await act(async () => {
+      opening.reject(new ApiError("refused", 403));
+      await opening.promise.catch(() => undefined);
+    });
+    expect(
+      await screen.findByText(
+        catalogText("general.permission", "die Liste der Kinder"),
+      ),
+    ).toBeVisible();
+  });
+
+  it("withdraws a school's shown names when its download is refused", async () => {
+    navigation.query = "schule=4";
+    api.downloadTraegerChildren.mockRejectedValue(
+      new ApiError("not found", 404),
+    );
+    renderPage();
+    await screen.findAllByText("Berg, Anna");
+
+    fireEvent.click(downloadOption());
+
+    await waitFor(() =>
+      expect(screen.queryByText("Berg, Anna")).not.toBeInTheDocument(),
+    );
+    expect(downloadOption()).toBeDisabled();
+  });
+
+  it("keeps another school's results if the previous school's export is refused late", async () => {
+    navigation.query = "schule=4";
+    const download = deferred<unknown>();
+    api.downloadTraegerChildren.mockReturnValue(download.promise);
+    renderPage();
+    await screen.findAllByText("Berg, Anna");
+    fireEvent.click(downloadOption());
+
+    fireEvent.click(screen.getByRole("tab", { name: "Alle" }));
+    await screen.findAllByText("Zander, Mia");
+    await act(async () => {
+      download.reject(new ApiError("not found", 404));
+      await download.promise.catch(() => undefined);
+    });
+
+    expect(screen.getAllByText("Zander, Mia")[0]).toBeVisible();
+    expect(downloadOption()).toBeEnabled();
+  });
+
+  it("keeps the current list when its download fails transiently", async () => {
+    api.downloadTraegerChildren.mockRejectedValue(
+      new ApiError("unavailable", 500),
+    );
+    renderPage();
+    await screen.findAllByText("Zander, Mia");
+
+    fireEvent.click(downloadOption());
+    await screen.findByText(
+      catalogText("general.server", "die Liste der Kinder"),
+    );
+
+    expect(screen.getAllByText("Zander, Mia")[0]).toBeVisible();
+    expect(downloadOption()).toBeEnabled();
+  });
+
   it("shows neither reiters nor the school column for a single school", async () => {
     api.fetchTraegerSchools.mockResolvedValue([BACH]);
     api.fetchTraegerChildren.mockResolvedValue(
@@ -279,7 +419,7 @@ describe("TraegerChildrenPage", () => {
 
   it("loads the next children below the list", async () => {
     api.fetchTraegerChildren.mockResolvedValueOnce(
-      pageOf([AKSOY, BERG], { total: 3, matched: 3, hasMore: true }),
+      pageOf([AKSOY, BERG], { total: 3, matched: 3, nextCursor: "next-page" }),
     );
     renderPage();
     await screen.findAllByText("Berg, Anna");
@@ -297,7 +437,7 @@ describe("TraegerChildrenPage", () => {
     expect(screen.getAllByText("Aksoy, Ömer").length).toBeGreaterThan(0);
     expect(api.fetchTraegerChildren).toHaveBeenLastCalledWith(
       { schoolId: "", search: "" },
-      2,
+      "next-page",
     );
     expect(
       screen.queryByRole("button", { name: /Weitere Kinder laden/ }),
@@ -330,7 +470,7 @@ describe("TraegerChildrenPage", () => {
 
   it("takes the shown names away when loading the next children is refused", async () => {
     api.fetchTraegerChildren.mockResolvedValueOnce(
-      pageOf([AKSOY, BERG], { total: 3, matched: 3, hasMore: true }),
+      pageOf([AKSOY, BERG], { total: 3, matched: 3, nextCursor: "next-page" }),
     );
     renderPage();
     await screen.findAllByText("Berg, Anna");
@@ -355,11 +495,15 @@ describe("TraegerChildrenPage", () => {
     const lateRefusal = deferred<TraegerChildrenPage>();
     const school = deferred<TraegerChildrenPage>();
     api.fetchTraegerChildren.mockImplementation(
-      ({ schoolId }: { schoolId: string }, offset?: number) => {
-        if (offset) return lateRefusal.promise;
+      ({ schoolId }: { schoolId: string }, cursor?: string) => {
+        if (cursor) return lateRefusal.promise;
         if (schoolId === LINDE.id) return school.promise;
         return Promise.resolve(
-          pageOf([AKSOY, ZANDER], { total: 3, matched: 3, hasMore: true }),
+          pageOf([AKSOY, ZANDER], {
+            total: 3,
+            matched: 3,
+            nextCursor: "next-page",
+          }),
         );
       },
     );
@@ -396,6 +540,34 @@ describe("TraegerChildrenPage", () => {
       ),
     ).not.toBeInTheDocument();
   });
+
+  it.each([403, 500])(
+    "ignores a load-more error (%i) from a previous session generation",
+    async (status) => {
+      const late = deferred<TraegerChildrenPage>();
+      api.fetchTraegerChildren
+        .mockResolvedValueOnce(
+          pageOf([AKSOY, BERG], { matched: 3, nextCursor: "next-page" }),
+        )
+        .mockReturnValueOnce(late.promise);
+      renderPage();
+      fireEvent.click(
+        await screen.findByRole("button", {
+          name: "Weitere Kinder laden (2 von 3)",
+        }),
+      );
+
+      act(() => bumpScopeGeneration());
+      await screen.findAllByText("Zander, Mia");
+      await act(async () => {
+        late.reject(new ApiError("late failure", status));
+        await late.promise.catch(() => undefined);
+      });
+
+      expect(screen.getAllByText("Zander, Mia")[0]).toBeVisible();
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    },
+  );
 
   it("names the missing right instead of a list", async () => {
     api.fetchTraegerChildren.mockRejectedValue(new ApiError("refused", 403));

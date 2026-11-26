@@ -13,6 +13,7 @@ import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import { ApiError } from "~/lib/api-error";
 import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
 import { catalogText } from "~/test/error-catalog-text";
+import { releaseFakeTimers } from "~/test/clock";
 import type {
   CareContractSummary,
   ContractCandidate,
@@ -266,6 +267,43 @@ describe("TraegerVertraegePage", () => {
         search: "Mia",
         offset: 0,
       }),
+    );
+  });
+
+  it("cancels a pending search when resetting filters on an empty list", async () => {
+    api.fetchCareContracts.mockImplementation(
+      ({ status }: { status?: string }) =>
+        Promise.resolve({
+          contracts: status ? [] : [DRAFT, SENT],
+          counts: { entwurf: 1, versendet: 1 },
+          hasMore: false,
+        }),
+    );
+    renderPage();
+    await screen.findAllByText("Lina Muster");
+    fireEvent.click(screen.getByRole("button", { name: "Alle Status" }));
+    fireEvent.click(await screen.findByRole("option", { name: "Entwurf (1)" }));
+    const reset = await screen.findByRole("button", {
+      name: "Filter zurücksetzen",
+    });
+    const [search] = screen.getAllByPlaceholderText(
+      "Kind, Eltern oder Angebot suchen",
+    );
+
+    vi.useFakeTimers();
+    try {
+      fireEvent.change(search!, { target: { value: "Ben" } });
+      expect(search).toHaveValue("Ben");
+      fireEvent.click(reset);
+      await act(async () => vi.advanceTimersByTimeAsync(250));
+      expect(search).toHaveValue("");
+    } finally {
+      releaseFakeTimers();
+    }
+
+    await screen.findAllByText("Lina Muster");
+    expect(api.fetchCareContracts).not.toHaveBeenCalledWith(
+      expect.objectContaining({ search: "Ben" }),
     );
   });
 

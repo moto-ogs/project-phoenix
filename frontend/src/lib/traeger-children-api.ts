@@ -42,7 +42,7 @@ export interface TraegerChildrenPage {
   /** Those of them the search matches. */
   readonly matched: number;
   readonly children: readonly TraegerChild[];
-  readonly hasMore: boolean;
+  readonly nextCursor: string;
 }
 
 /** `schoolId` "" means every school, `search` "" every child. */
@@ -65,16 +65,16 @@ function childFromBackend(
   };
 }
 
-/** One page of the children, after `offset` children of the same filter. */
+/** One page of the children, continuing after the previous page’s last child. */
 export async function fetchTraegerChildren(
   filter: TraegerChildrenFilter,
-  offset = 0,
+  cursor?: string,
 ): Promise<TraegerChildrenPage> {
   const body = await bffJson("org", "GET /traeger/schools/children", {
     query: {
       school_id: filter.schoolId || undefined,
       search: filter.search || undefined,
-      offset: offset || undefined,
+      cursor,
     },
   });
   return {
@@ -86,7 +86,7 @@ export async function fetchTraegerChildren(
     total: body.total,
     matched: body.matched,
     children: (body.children ?? []).map(childFromBackend),
-    hasMore: body.has_more,
+    nextCursor: body.next_cursor,
   };
 }
 

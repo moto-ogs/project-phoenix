@@ -13518,8 +13518,8 @@
       ],
       "query": [
         {
-          "name": "offset",
-          "kind": "int"
+          "name": "cursor",
+          "kind": "string"
         },
         {
           "name": "school_id",
@@ -112575,9 +112575,9 @@
           }
         },
         {
-          "name": "has_more",
+          "name": "next_cursor",
           "schema": {
-            "kind": "bool"
+            "kind": "string"
           }
         }
       ]

@@ -67,7 +67,9 @@ Structure. Ein Träger hat 2 bis über 100 Schulen mit je 50 bis 400 Kindern.
    `api.traeger.schools_children` liegt bei 7 Statements, flach in der Zahl
    der Schulen und Kinder.
 5. **Seiten und Suche.** Eine Seite hat 50 Kinder, geordnet nach Nachname,
-   Vorname und ID in der deutschen Sortierung der Namensspalten. Die Suche
+   Vorname und ID in der deutschen Sortierung der Namensspalten. Die nächste
+   Seite setzt hinter diesen drei Werten der letzten Zeile an. Ein Kind,
+   das davor hinzukommt oder wegfällt, verschiebt die Grenze nicht. Die Suche
    trifft einen Teil von „Vorname Nachname“, „Nachname Vorname“ oder
    „Nachname, Vorname“, wie die Liste den Namen zeigt, ohne Groß- und
    Kleinschreibung und Akzente. Der Suchtext steht nicht im
@@ -80,10 +82,11 @@ Structure. Ein Träger hat 2 bis über 100 Schulen mit je 50 bis 400 Kindern.
    „Träger-Portal“ und der Zahl der Zeilen (`traeger_children`,
    `traeger_children_export`). Die Zahlen je Schule an den Reitern sind
    zusammengefasst und stehen nicht im Protokoll. Die Seite zeigt deshalb
-   nach jedem Wechsel von Reiter oder Suche erst die Antwort ihres eigenen
-   Abrufs, nie Namen aus dem Speicher des Browsers (ADR 0311, Regel für
-   protokollierte Lesezugriffe). Verweigert das Nachladen den Zugriff,
-   verschwinden auch die schon gezeigten Namen.
+   beim Öffnen, Wiederanzeigen und nach jedem Wechsel von Reiter oder Suche
+   erst die Antwort ihres eigenen Abrufs, nie Namen aus dem Speicher des
+   Browsers (ADR 0311, Regel für protokollierte Lesezugriffe). Verweigert das
+   Nachladen oder der Download den Zugriff, verschwinden die Namen der
+   Liste, aus der die Anfrage kam, sofern sie noch offen ist.
 7. **Modul.** Die Liste gehört wie die Schulliste zu moto Basis.
 8. **Wurzel und Register.** `api/traeger_children_ports.go` übersetzt die
    Namensabfrage und ihre Antwort zwischen Projektion und People Directory;

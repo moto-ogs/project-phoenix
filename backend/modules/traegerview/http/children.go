@@ -13,7 +13,7 @@ import (
 // children answers GET /traeger/schools/children: one page of the children
 // the schools of the Träger of the session count today, by name (#8137, ADR
 // 0327), of one school (school_id=) or all, narrowed by a part of the name
-// (search=), after offset= children. The projection writes the read to the
+// (search=), continuing at cursor=. The projection writes the read to the
 // access log of each school with a row on the page. A school of another
 // Träger and an unknown ID both answer 404 traeger.school_not_found.
 func (rs *Resource) children(w http.ResponseWriter, r *http.Request) {
@@ -22,13 +22,11 @@ func (rs *Resource) children(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	filter, err := childrenFilter(r)
-	if err == nil {
-		filter.Offset, err = childrenOffset(r)
-	}
 	if err != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return
 	}
+	filter.Cursor = r.URL.Query().Get("cursor")
 	children, err := rs.reports.Children(r.Context(), viewer, filter)
 	if err != nil {
 		renderChildrenError(w, r, err)
@@ -75,19 +73,6 @@ func childrenFilter(r *http.Request) (traegerview.ChildrenFilter, error) {
 		filter.SchoolID = school
 	}
 	return filter, nil
-}
-
-// childrenOffset reads the optional offset of a page; the export has none.
-func childrenOffset(r *http.Request) (int, error) {
-	raw := r.URL.Query().Get("offset")
-	if raw == "" {
-		return 0, nil
-	}
-	offset, err := strconv.Atoi(raw)
-	if err != nil || offset < 0 {
-		return 0, fmt.Errorf("%w: offset must not be negative", traegerview.ErrInvalidChildrenFilter)
-	}
-	return offset, nil
 }
 
 func renderChildrenError(w http.ResponseWriter, r *http.Request, err error) {

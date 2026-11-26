@@ -39,17 +39,17 @@ const (
 	ResourceTypeTraegerChildrenExport = "traeger_children_export"
 )
 
-// ErrInvalidChildrenFilter reports a negative school or offset or a search
+// ErrInvalidChildrenFilter reports a negative school, an invalid cursor or search
 // text over ChildrenSearchMaxLength.
 var ErrInvalidChildrenFilter = errors.New("traeger view: invalid filter for the children")
 
 // ChildrenFilter selects children: of one school of the Träger (SchoolID, 0
-// for all of them) and by a part of the name (Search, empty for all). Offset
-// is the number of children before the page; the export ignores it.
+// for all of them) and by a part of the name (Search, empty for all). Cursor
+// continues after the last child on the previous page; the export ignores it.
 type ChildrenFilter struct {
 	SchoolID int64
 	Search   string
-	Offset   int
+	Cursor   string
 }
 
 // TraegerChild is one child of a school of the Träger. SchoolClass and GroupName
@@ -77,11 +77,11 @@ type SchoolChildCount struct {
 // of all schools; Matched counts those of them the search matches and is 0
 // on a page behind the last child.
 type TraegerChildren struct {
-	Schools  []SchoolChildCount `json:"schools"`
-	Total    int                `json:"total"`
-	Matched  int                `json:"matched"`
-	Children []TraegerChild     `json:"children"`
-	HasMore  bool               `json:"has_more"`
+	Schools    []SchoolChildCount `json:"schools"`
+	Total      int                `json:"total"`
+	Matched    int                `json:"matched"`
+	Children   []TraegerChild     `json:"children"`
+	NextCursor string             `json:"next_cursor"`
 }
 
 // ChildrenExport is the file of the list: every child of the filter, and the
@@ -103,16 +103,17 @@ type StudentName struct {
 
 // StudentNameQuery selects names among the given student profiles: those a
 // part of whose name matches Search (empty for all), ordered by last name,
-// first name and ID, Limit of them (0 for all) after Offset.
+// first name and ID, Limit of them (0 for all) after After. A zero ID starts
+// at the beginning.
 type StudentNameQuery struct {
 	Students []int64
 	Search   string
 	Limit    int
-	Offset   int
+	After    StudentName
 }
 
 // StudentNames names student profiles of the schools, at People Directory.
-// matched counts every profile the query matches, whatever Limit and Offset,
+// matched counts every profile the query matches, whatever Limit and After,
 // and is 0 when the page holds no name. It joins the projection's
 // administrative transaction and reads only the given schools.
 type StudentNames interface {

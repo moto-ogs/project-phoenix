@@ -287,6 +287,7 @@ export default function TraegerVertraegePage() {
   const [status, setStatus] = useState<StatusChoice>("all");
   const [schoolId, setSchoolId] = useState("");
   const [search, setSearch] = useState("");
+  const [searchReset, setSearchReset] = useState(0);
   // Null until the person opens or closes the card: then the device decides.
   const [rulesOpen, setRulesOpen] = useState<boolean | null>(null);
   // The search field keeps the typed text as its own draft and reports it
@@ -622,6 +623,7 @@ export default function TraegerVertraegePage() {
         onChange: setSearch,
         placeholder: "Kind, Eltern oder Angebot suchen",
         debounceMs: 250,
+        resetKey: searchReset,
       }}
       filters={filters}
       activeFilters={activeFilters}
@@ -857,6 +859,7 @@ export default function TraegerVertraegePage() {
                     tooltip="Leert Suche und Filter und zeigt wieder alle Verträge."
                     onClick={() => {
                       setSearch("");
+                      setSearchReset((current) => current + 1);
                       setStatus("all");
                       setSchoolId("");
                     }}

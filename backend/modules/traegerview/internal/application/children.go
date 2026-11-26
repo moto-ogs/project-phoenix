@@ -2,7 +2,10 @@ package application
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"math"
 	"slices"
 	"strings"
 
@@ -27,6 +30,10 @@ func (o *Overview) Children(ctx context.Context, viewer traegerview.Viewer, filt
 	if err != nil {
 		return traegerview.TraegerChildren{}, err
 	}
+	cursor, err := decodeChildrenCursor(filter.Cursor)
+	if err != nil {
+		return traegerview.TraegerChildren{}, err
+	}
 	result := traegerview.TraegerChildren{Schools: []traegerview.SchoolChildCount{}, Children: []traegerview.TraegerChild{}}
 	err = o.read(ctx, viewer.OrganizationID, func(adminCtx context.Context, ids []int64) error {
 		listed, err := o.listedChildren(adminCtx, ids, filter)
@@ -35,13 +42,19 @@ func (o *Overview) Children(ctx context.Context, viewer traegerview.Viewer, filt
 		}
 		result.Schools, result.Total = listed.schoolCounts(), len(listed.students)
 		names, matched, err := o.children.Names.StudentNamesByTenant(adminCtx, listed.scope, traegerview.StudentNameQuery{
-			Students: listed.students, Search: filter.Search, Limit: traegerview.ChildrenPageSize + 1, Offset: filter.Offset,
+			Students: listed.students, Search: filter.Search, Limit: traegerview.ChildrenPageSize + 1,
+			After: traegerview.StudentName{StudentProfileID: cursor.ID, FirstName: cursor.FirstName, LastName: cursor.LastName},
 		})
 		if err != nil {
 			return err
 		}
 		if len(names) > traegerview.ChildrenPageSize {
-			names, result.HasMore = names[:traegerview.ChildrenPageSize], true
+			names = names[:traegerview.ChildrenPageSize]
+			next, err := encodeChildrenCursor(names[len(names)-1], cursor.Page+1)
+			if err != nil {
+				return err
+			}
+			result.NextCursor = next
 		}
 		result.Matched = matched
 		result.Children, err = o.placedChildren(adminCtx, listed, names)
@@ -50,8 +63,7 @@ func (o *Overview) Children(ctx context.Context, viewer traegerview.Viewer, filt
 	if err != nil {
 		return traegerview.TraegerChildren{}, err
 	}
-	page := filter.Offset/traegerview.ChildrenPageSize + 1
-	if err := o.record(ctx, viewer, traegerview.ResourceTypeTraegerChildren, o.today(), childSchools(result.Children), "list", page); err != nil {
+	if err := o.record(ctx, viewer, traegerview.ResourceTypeTraegerChildren, o.today(), childSchools(result.Children), "list", cursor.Page); err != nil {
 		return traegerview.TraegerChildren{}, err
 	}
 	return result, nil
@@ -89,6 +101,41 @@ func (o *Overview) ChildrenExport(ctx context.Context, viewer traegerview.Viewer
 	return result, nil
 }
 
+// childrenCursor holds a sort boundary even if its child leaves the roster.
+type childrenCursor struct {
+	LastName  string `json:"last"`
+	FirstName string `json:"first"`
+	ID        int64  `json:"id"`
+	Page      int    `json:"page"`
+}
+
+func encodeChildrenCursor(last traegerview.StudentName, page int) (string, error) {
+	raw, err := json.Marshal(childrenCursor{
+		LastName: last.LastName, FirstName: last.FirstName, ID: last.StudentProfileID, Page: page,
+	})
+	if err != nil {
+		return "", fmt.Errorf("traeger view: encode children cursor: %w", err)
+	}
+	return base64.RawURLEncoding.EncodeToString(raw), nil
+}
+
+func decodeChildrenCursor(token string) (childrenCursor, error) {
+	if token == "" {
+		return childrenCursor{Page: 1}, nil
+	}
+	invalid := fmt.Errorf("%w: invalid cursor", traegerview.ErrInvalidChildrenFilter)
+	raw, err := base64.RawURLEncoding.DecodeString(token)
+	if err != nil {
+		return childrenCursor{}, invalid
+	}
+	var cursor childrenCursor
+	if json.Unmarshal(raw, &cursor) != nil || cursor.ID <= 0 || cursor.Page < 2 || cursor.Page == math.MaxInt ||
+		strings.ContainsRune(cursor.LastName, 0) || strings.ContainsRune(cursor.FirstName, 0) {
+		return childrenCursor{}, invalid
+	}
+	return cursor, nil
+}
+
 // validChildrenFilter trims the search and refuses a filter outside its
 // bounds.
 func validChildrenFilter(viewer traegerview.Viewer, filter traegerview.ChildrenFilter) (traegerview.ChildrenFilter, error) {
@@ -99,8 +146,6 @@ func validChildrenFilter(viewer traegerview.Viewer, filter traegerview.ChildrenF
 	switch {
 	case filter.SchoolID < 0:
 		return filter, fmt.Errorf("%w: negative school", traegerview.ErrInvalidChildrenFilter)
-	case filter.Offset < 0:
-		return filter, fmt.Errorf("%w: negative offset", traegerview.ErrInvalidChildrenFilter)
 	case len([]rune(filter.Search)) > traegerview.ChildrenSearchMaxLength:
 		return filter, fmt.Errorf("%w: the search exceeds %d characters", traegerview.ErrInvalidChildrenFilter, traegerview.ChildrenSearchMaxLength)
 	}

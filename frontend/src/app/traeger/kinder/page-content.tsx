@@ -8,7 +8,7 @@
 // der gezeigten Schulen.
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { emptySearchText } from "~/components/traeger/empty-search";
 import {
   traegerExportScope,
@@ -24,9 +24,9 @@ import { ListSkeleton } from "~/components/ui/page-skeletons";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
 import { useApiErrorDisplay } from "~/contexts/ToastContext";
 import { childrenConcept } from "~/lib/concepts/children";
-import { useLatest } from "~/lib/hooks/use-latest";
 import { createLogger } from "~/lib/logger";
 import { schoolClassLabel, schoolClassName } from "~/lib/school-class-label";
+import { IsolatedSWRCache } from "~/lib/swr";
 import { useSWRRequestGuard } from "~/lib/swr/hooks";
 import { traegerKeys } from "~/lib/swr/traeger-keys";
 import {
@@ -129,32 +129,50 @@ export default function TraegerChildrenPage() {
   // `useSearchParams` braucht eine Suspense-Grenze.
   return (
     <Suspense fallback={<TenantPage title={TITLE} loading />}>
-      <ChildrenContent />
+      <ChildrenOpening />
     </Suspense>
   );
 }
 
-function ChildrenContent() {
+function ChildrenOpening() {
+  const [search, setSearch] = useState("");
+  const { schools } = useTraegerSchools();
+  return (
+    <IsolatedSWRCache>
+      <ChildrenContent
+        knownSchools={schools}
+        search={search}
+        onSearchChange={setSearch}
+      />
+    </IsolatedSWRCache>
+  );
+}
+
+function ChildrenContent({
+  knownSchools,
+  search,
+  onSearchChange,
+}: Readonly<{
+  knownSchools: ReturnType<typeof useTraegerSchools>["schools"];
+  search: string;
+  onSearchChange: (search: string) => void;
+}>) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [tab, setTab] = useState(
-    () => searchParams?.get(SCHOOL_PARAM) ?? ALL_SCHOOLS,
-  );
-  // The search field keeps the typed text as its own draft and reports it
-  // after a pause (`SEARCH_PAUSE_MS`): a typed letter redraws the field, not
-  // the list, and only a finished term is read and logged.
-  const [search, setSearch] = useState("");
+  const tab = searchParams?.get(SCHOOL_PARAM) ?? ALL_SCHOOLS;
   const term = search.trim();
-  const schoolList = useTraegerSchools();
   const { show: showActionError } = useApiErrorDisplay();
 
-  // A school the Träger no longer has, or a mistyped address, opens „Alle“.
-  const knownSchools = schoolList.schools;
+  // Keep the last audited response's school metadata while a new list loads.
+  // Shared metadata is only the initial fallback, for tabs and validation alike.
+  const [counted, setCounted] = useState<
+    readonly TraegerSchoolChildCount[] | null
+  >(null);
+  const schools: readonly (Pick<TraegerSchoolChildCount, "id" | "name"> &
+    Partial<TraegerSchoolChildCount>)[] = counted ?? knownSchools ?? [];
+  const school = schools.find((entry) => entry.id === tab);
   const schoolId =
-    tab !== ALL_SCHOOLS &&
-    (!knownSchools || knownSchools.some((school) => school.id === tab))
-      ? tab
-      : "";
+    tab !== ALL_SCHOOLS && (school || (!counted && !knownSchools)) ? tab : "";
   const filter = useMemo(() => ({ schoolId, search: term }), [schoolId, term]);
   // Every page read stands in the access log of the schools it shows. So a
   // reiter or a search shows nothing until its own read answered, also when
@@ -166,48 +184,60 @@ function ChildrenContent() {
     LIST_OBJECT,
   );
   const beginPageRead = useSWRRequestGuard();
-  const openListKey = useLatest(listKey);
 
   // Later pages belong to the first page they continue; another reiter,
   // another search or a reload starts a new list and drops them.
   const [later, setLater] = useState<{
     readonly after: TraegerChildrenPage;
     readonly children: readonly TraegerChild[];
-    readonly hasMore: boolean;
+    readonly nextCursor: string;
   } | null>(null);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const page = first.data ?? null;
+  const [loadingPage, setLoadingPage] = useState<TraegerChildrenPage | null>(
+    null,
+  );
+  const page = first.data;
+  if (page && page.schools !== counted) setCounted(page.schools);
+
+  const shownPage = useRef<TraegerChildrenPage | null>(null);
+  useLayoutEffect(() => {
+    shownPage.current = page;
+    return () => {
+      shownPage.current = null;
+    };
+  }, [page]);
   const continued = later && later.after === page ? later : null;
   const children = useMemo(
     () => (page ? [...page.children, ...(continued?.children ?? [])] : []),
     [page, continued],
   );
-  const hasMore = continued ? continued.hasMore : (page?.hasMore ?? false);
+  const nextCursor = continued?.nextCursor ?? page?.nextCursor;
+  const loadingMore = page !== null && loadingPage === page;
+
+  function withdrawRefusedList(error: unknown) {
+    if (!page || shownPage.current !== page || !isRefusal(error)) return;
+    first.readCallbacks.onError(error);
+    void first.mutate(undefined, { revalidate: false });
+    setLater(null);
+  }
 
   const loadMore = async () => {
-    if (!page) return;
-    const complete = beginPageRead(listKey);
-    setLoadingMore(true);
+    if (!page || !nextCursor || loadingMore) return;
+    let complete: ReturnType<typeof beginPageRead> | undefined;
+    setLoadingPage(page);
     try {
-      const next = await fetchTraegerChildren(filter, children.length);
+      complete = beginPageRead(listKey);
+      const next = await fetchTraegerChildren(filter, nextCursor);
+      if (!complete.isCurrent() || shownPage.current !== page) return;
       setLater({
         after: page,
         children: [...(continued?.children ?? []), ...next.children],
-        hasMore: next.hasMore,
+        nextCursor: next.nextCursor,
       });
     } catch (err) {
-      // The next children have the access boundary of the first: a refusal
-      // takes the names already shown away. It is recorded for the list
-      // that asked. Only while that list is still open does it also clear
-      // what the page holds: `first.mutate` writes to the open list, which
-      // is another one after a change of reiter or search.
+      // A superseded request must not change the new list or report an error.
+      if (!complete?.isCurrent() || shownPage.current !== page) return;
       if (isRefusal(err)) {
-        complete(() => {
-          first.readCallbacks.onError(err);
-          if (openListKey.current !== listKey) return;
-          void first.mutate(undefined, { revalidate: false });
-          setLater(null);
-        });
+        withdrawRefusedList(err);
       } else {
         logger.error("traeger_children_load_more_failed", {
           error: err instanceof Error ? err.message : String(err),
@@ -215,23 +245,11 @@ function ChildrenContent() {
         await showActionError(err, { object: "die nächsten Kinder" });
       }
     } finally {
-      setLoadingMore(false);
+      setLoadingPage((current) => (current === page ? null : current));
     }
   };
 
-  // The reiters come from the schools the page was opened with, so they
-  // stand while a list loads. Each answer brings the schools with the number
-  // of their children; the last one stays at the reiters while the next
-  // list loads, so the numbers do not flicker on every change.
-  const [counted, setCounted] = useState<
-    readonly TraegerSchoolChildCount[] | null
-  >(null);
-  if (page && page.schools !== counted) setCounted(page.schools);
-  const schools: readonly (Pick<TraegerSchoolChildCount, "id" | "name"> &
-    Partial<TraegerSchoolChildCount>)[] = counted ?? knownSchools ?? [];
-  const school = schools.find((entry) => entry.id === schoolId);
   const changeTab = (next: string) => {
-    setTab(next);
     const params = new URLSearchParams(searchParams?.toString());
     if (next === ALL_SCHOOLS) params.delete(SCHOOL_PARAM);
     else params.set(SCHOOL_PARAM, next);
@@ -245,6 +263,7 @@ function ChildrenContent() {
     fallbackName: "kinder",
     errorObject: LIST_OBJECT,
     unavailable: !page,
+    onError: withdrawRefusedList,
   });
 
   // One school per reiter, or one school at all: its column would repeat
@@ -275,7 +294,7 @@ function ChildrenContent() {
                 variant="outline"
                 size="md"
                 tooltip="Leert die Suche und zeigt wieder alle Kinder."
-                onClick={() => setSearch("")}
+                onClick={() => onSearchChange("")}
               >
                 {noMatch.actionLabel}
               </Button>
@@ -304,7 +323,8 @@ function ChildrenContent() {
       statsLoading={loading}
       search={{
         value: search,
-        onChange: setSearch,
+        // Keep uncommitted keystrokes in the field so rows don't redraw.
+        onChange: onSearchChange,
         placeholder: "Kind suchen",
         debounceMs: SEARCH_PAUSE_MS,
       }}
@@ -342,7 +362,7 @@ function ChildrenContent() {
           stackedLayout="row"
           stackedDetailKey="class"
           moreAction={
-            hasMore
+            nextCursor
               ? {
                   label: `Weitere Kinder laden (${children.length} von ${page.matched})`,
                   onClick: () => void loadMore(),

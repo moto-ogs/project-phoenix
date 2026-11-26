@@ -27,7 +27,7 @@ type traegerStudentNames struct {
 
 func (n traegerStudentNames) StudentNamesByTenant(ctx context.Context, schools []int64, query traegerview.StudentNameQuery) ([]traegerview.StudentName, int, error) {
 	names, matched, err := n.names.StudentNamesByTenant(ctx, schools, peopledirectory.SchoolStudentNameQuery{
-		StudentProfileIDs: query.Students, Search: query.Search, Limit: query.Limit, Offset: query.Offset,
+		StudentProfileIDs: query.Students, Search: query.Search, Limit: query.Limit, After: peopledirectory.SchoolStudentName(query.After),
 	})
 	if err != nil {
 		return nil, 0, err

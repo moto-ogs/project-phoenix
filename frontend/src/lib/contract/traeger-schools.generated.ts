@@ -226,7 +226,7 @@ export interface TraegerChildren {
   total: number;
   matched: number;
   children: TraegerChild[] | null;
-  has_more: boolean;
+  next_cursor: string;
 }
 
 export const TraegerChildrenSchema: z.ZodType<TraegerChildren, unknown> = object<TraegerChildren>({
@@ -234,7 +234,7 @@ export const TraegerChildrenSchema: z.ZodType<TraegerChildren, unknown> = object
   total: safeInt,
   matched: safeInt,
   children: nullable(arr(TraegerChildSchema)),
-  has_more: bool,
+  next_cursor: str,
 });
 
 /** Go: traegerview.ComparedSchool */
@@ -701,7 +701,7 @@ export const routes = {
     pattern: "/traeger/schools/children",
     portals: ["org"],
     query: {
-      "offset": { kind: "int" },
+      "cursor": { kind: "string" },
       "school_id": { kind: "id" },
       "search": { kind: "string" },
     },
