@@ -115,12 +115,13 @@ func seedCareContractSchoolChange(rt *Runtime, auth AuthRef) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	for _, request := range rt.Enrollment.Requests {
-		for _, childID := range request.ChildIDs {
-			if !slices.Contains(children, childID) {
-				continue
-			}
-			changed, err := seedSchoolTakesOneDay(rt, request.RequestID, childID)
+	for _, child := range children {
+		requests, err := seedStudentRequests(rt, child.studentID)
+		if err != nil {
+			return false, err
+		}
+		for _, requestID := range requests {
+			changed, err := seedSchoolTakesOneDay(rt, requestID, child.requestChildID)
 			if err != nil || changed {
 				return changed, err
 			}
@@ -129,9 +130,17 @@ func seedCareContractSchoolChange(rt *Runtime, auth AuthRef) (bool, error) {
 	return false, nil
 }
 
-// seedContractChildrenWithoutChange lists the application children of the
-// active contracts; none once a change of one of them waits already.
-func seedContractChildrenWithoutChange(rt *Runtime, auth AuthRef) ([]int64, error) {
+// seedContractChild is the application child of an active contract with its
+// child record.
+type seedContractChild struct {
+	requestChildID int64
+	studentID      int64
+}
+
+// seedContractChildrenWithoutChange lists the children of the active
+// contracts that follow an enrollment; none once a change of one of them
+// waits already.
+func seedContractChildrenWithoutChange(rt *Runtime, auth AuthRef) ([]seedContractChild, error) {
 	raw, err := rt.Client.GetWithAuth(auth, "/traeger/contracts/?status=aktiv")
 	if err != nil {
 		return nil, fmt.Errorf("list the active care contracts: %w", err)
@@ -140,6 +149,7 @@ func seedContractChildrenWithoutChange(rt *Runtime, auth AuthRef) ([]int64, erro
 		Data struct {
 			Contracts []struct {
 				RequestChildID        *ident.ID `json:"request_child_id"`
+				StudentID             *ident.ID `json:"student_id"`
 				ChangeAwaitsSignature bool      `json:"change_awaits_signature"`
 			} `json:"contracts"`
 		} `json:"data"`
@@ -147,16 +157,38 @@ func seedContractChildrenWithoutChange(rt *Runtime, auth AuthRef) ([]int64, erro
 	if err := parseJSON(raw, &list); err != nil {
 		return nil, err
 	}
-	children := []int64{}
+	children := []seedContractChild{}
 	for _, contract := range list.Data.Contracts {
 		if contract.ChangeAwaitsSignature {
 			return nil, nil
 		}
-		if contract.RequestChildID != nil {
-			children = append(children, int64(*contract.RequestChildID))
+		if contract.RequestChildID != nil && contract.StudentID != nil {
+			children = append(children, seedContractChild{requestChildID: int64(*contract.RequestChildID), studentID: int64(*contract.StudentID)})
 		}
 	}
 	return children, nil
+}
+
+// seedStudentRequests lists the enrollment requests of a child record, as
+// the school's child page does.
+func seedStudentRequests(rt *Runtime, studentID int64) ([]int64, error) {
+	raw, err := rt.Client.GetWithAuth(rt.TenantAuth, fmt.Sprintf("/api/enrollment/admin/students/%d/requests", studentID))
+	if err != nil {
+		return nil, fmt.Errorf("list the enrollment requests of child %d: %w", studentID, err)
+	}
+	var list struct {
+		Data []struct {
+			ID ident.ID `json:"id"`
+		} `json:"data"`
+	}
+	if err := parseJSON(raw, &list); err != nil {
+		return nil, err
+	}
+	ids := make([]int64, len(list.Data))
+	for i, request := range list.Data {
+		ids[i] = int64(request.ID)
+	}
+	return ids, nil
 }
 
 // seedBookedOffering is one booked offering of an application child.
