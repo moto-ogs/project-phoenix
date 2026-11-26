@@ -74,7 +74,7 @@ export function upcomingPickupChanges(
   for (const notice of fresh) {
     if (
       notice.withdrawn &&
-      notice.pickupPerson === "" &&
+      (notice.pickupTime !== "" || notice.pickupPerson === "") &&
       notice.date >= today &&
       !changedDays.has(notice.date)
     ) {

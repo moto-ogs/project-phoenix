@@ -146,6 +146,9 @@ func pickupTerms(payload map[string]any) (PickupChange, bool) {
 		}
 		change.PickupPerson = &person
 	}
+	if change.PickupPerson != nil && !PickupPersonAllowed(change.DepartureMode) {
+		return PickupChange{}, false
+	}
 	if change.PickupTime == nil && change.DepartureMode == "" && change.PickupPerson == nil {
 		return PickupChange{}, false
 	}

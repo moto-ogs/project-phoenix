@@ -215,6 +215,23 @@ describe("PickupChangeAlert", () => {
       screen.queryByText("wieder normale Abholzeit"),
     ).not.toBeInTheDocument();
   });
+
+  it("names both legs of a withdrawn pickup change", () => {
+    render(
+      <PickupChangeAlert
+        exceptions={[]}
+        today={TODAY}
+        fresh={[notice({ pickupPerson: "Tante Frieda", withdrawn: true })]}
+      />,
+    );
+
+    expect(
+      screen.getByText("Morgen: wieder normale Abholzeit"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Morgen: Abholperson zurückgenommen"),
+    ).toBeInTheDocument();
+  });
 });
 
 function notice(over: Partial<PickupChangeNotice> = {}): PickupChangeNotice {

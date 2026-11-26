@@ -461,6 +461,55 @@ describe("PickupTimeModal — failed preload guard", () => {
     ).not.toBeInTheDocument();
   });
 
+  it.each([
+    ["alone", "Geht allein"],
+    ["bus", "Bus"],
+  ] as const)(
+    "does not offer a pickup person when the OGS set %s",
+    (departureMode, label) => {
+      renderModal({
+        departureModeEnabled: true,
+        careExceptions: [
+          {
+            date: todayISO(),
+            departure_mode: departureMode,
+            source: "staff",
+            pickup_source: "",
+            updated_at: "2026-09-08T09:00:00Z",
+          },
+        ],
+      });
+
+      expect(
+        screen.getByText(
+          `Die OGS hat die Abholart für diesen Tag schon festgelegt: ${label}.`,
+        ),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole("combobox", { name: "Wer holt ab?" }),
+      ).not.toBeInTheDocument();
+    },
+  );
+
+  it("keeps the pickup-person choice when the OGS set pickup", () => {
+    renderModal({
+      departureModeEnabled: true,
+      careExceptions: [
+        {
+          date: todayISO(),
+          departure_mode: "pickup",
+          source: "staff",
+          pickup_source: "",
+          updated_at: "2026-09-08T09:00:00Z",
+        },
+      ],
+    });
+
+    expect(
+      screen.getByRole("combobox", { name: "Wer holt ab?" }),
+    ).toBeInTheDocument();
+  });
+
   it("names a pending Abholart in the request status", () => {
     render(
       <PickupTimeModal

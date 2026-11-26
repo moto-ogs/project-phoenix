@@ -1366,10 +1366,12 @@ export function PickupTimeModal({
   const modeLabel = (mode: string) => tModes(`departureModes.${mode}`);
   // Eine Abholperson passt nur, wenn das Kind abgeholt wird (#4780).
   // Eine andere Person mit Namen geht auch ohne Kontakte (#8162).
-  const personField = departureMode === "" || departureMode === "pickup";
-  const pickupPerson = contacts.find(
-    (contact) => contact.guardian_profile_id === pickupPersonId,
-  );
+  const effectiveDepartureMode = staffMode ?? departureMode;
+  const personField =
+    effectiveDepartureMode === "" || effectiveDepartureMode === "pickup";
+  const pickupPerson = personField
+    ? contacts.find((contact) => contact.guardian_profile_id === pickupPersonId)
+    : undefined;
   const otherPerson = personField && pickupPersonId === OTHER_PICKUP_PERSON;
   const otherPersonName = otherPerson
     ? normalizedPersonName(pickupPersonName)

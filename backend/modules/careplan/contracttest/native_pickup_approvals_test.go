@@ -191,6 +191,8 @@ func TestNativePickupApprovalRejectsMalformedStoredPayloadBeforeEffects(t *testi
 		`{"date":"2026-09-21","pickup_person":{"name":"Tante Frieda","guardian_profile_id":"12"},"reason":"Termin"}`,
 		`{"date":"2026-09-21","pickup_person":{"name":"Tante Frieda","guardian_profile_id":0},"reason":"Termin"}`,
 		`{"date":"2026-09-21","pickup_person":{"name":"Tante Frieda","guardian_profile_id":1.5},"reason":"Termin"}`,
+		`{"date":"2026-09-21","departure_mode":"alone","pickup_person":{"name":"Tante Frieda"},"reason":"Termin"}`,
+		`{"date":"2026-09-21","departure_mode":"bus","pickup_person":{"name":"Tante Frieda"},"reason":"Termin"}`,
 	} {
 		t.Run(raw, func(t *testing.T) {
 			t.Parallel()
