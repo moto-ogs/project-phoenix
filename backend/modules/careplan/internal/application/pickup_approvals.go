@@ -17,6 +17,7 @@ type PickupApprovals struct {
 	Exceptions  ports.PickupApprovalExceptions
 	Excusal     ports.PickupApprovalExcusal
 	Locker      ports.PickupApprovalLocker
+	Persons     ports.PickupApprovalPersons
 	Today       func() calendar.Date
 	Fingerprint func([]byte) string
 }
@@ -152,18 +153,18 @@ func (s *PickupApprovals) applyPickupPerson(ctx context.Context, input carereque
 		contact := change.PickupPerson.GuardianProfileID
 		person.GuardianProfileID = &contact
 	}
-	existing, err := s.Exceptions.FindPickupPersonForDate(ctx, input.StudentID, change.Date)
+	existing, err := dayPickupPerson(ctx, s.Persons, input.StudentID, change.Date)
 	if err != nil {
 		return 0, "", fmt.Errorf("schedule: load pickup person for request: %w", err)
 	}
 	if existing != nil && existing.RequestedByGuardian == nil {
 		return 0, "", carerequests.ErrPickupChangeConflict
 	}
-	saved, err := s.Exceptions.SavePickupPerson(ctx, person)
+	saved, err := s.Persons.SaveApprovedPickupPerson(ctx, person)
 	if err != nil {
 		return 0, "", fmt.Errorf("schedule: save approved pickup person: %w", err)
 	}
-	stored, err := s.Exceptions.FindPickupPersonForDate(ctx, input.StudentID, change.Date)
+	stored, err := dayPickupPerson(ctx, s.Persons, input.StudentID, change.Date)
 	if err == nil && stored == nil {
 		err = careplan.ErrStudentScheduleNotFound
 	}

@@ -242,14 +242,6 @@ func (a pickupApprovalExceptions) SaveDeparture(ctx context.Context, value carep
 	return row.ID, err
 }
 
-func (a pickupApprovalExceptions) FindPickupPersonForDate(ctx context.Context, id int64, date calendar.Date) (*careplan.PickupPerson, error) {
-	return dayPickupPerson(ctx, a.records, id, date)
-}
-
-func (a pickupApprovalExceptions) SavePickupPerson(ctx context.Context, value careplan.PickupPerson) (careplan.PickupPerson, error) {
-	return a.records.SaveApprovedPickupPerson(ctx, value)
-}
-
 // dayPickupPerson reads the pickup person of one child and day, nil for
 // none.
 func dayPickupPerson(ctx context.Context, records interface {

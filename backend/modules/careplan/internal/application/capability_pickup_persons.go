@@ -77,14 +77,18 @@ func (s *Service) SaveApprovedPickupPerson(ctx context.Context, person careplan.
 }
 
 // DeleteApprovedPickupPerson deletes the one row a corrected approval wrote
-// (#8162). The correction holds the care-day lock and checked that the row
-// is still as the approval left it.
-func (s *Service) DeleteApprovedPickupPerson(ctx context.Context, id int64) (bool, error) {
-	if id <= 0 {
+// (#8162) under the care-day lock. The correction checked that the row is
+// still as the approval left it; a past day is no refusal here, its value is
+// gone or about to be.
+func (s *Service) DeleteApprovedPickupPerson(ctx context.Context, studentID int64, date calendar.Date, id int64) (bool, error) {
+	if studentID <= 0 || date.IsZero() || id <= 0 {
 		return false, careplan.ErrPickupPersonInvalid
 	}
 	deleted := false
 	err := s.run(ctx, "delete_approved_pickup_person", func(txCtx context.Context, stats *domain.OperationStats) error {
+		if err := s.LockStudentAndExceptionDay(txCtx, studentID, date.String()); err != nil {
+			return err
+		}
 		var err error
 		deleted, *stats, err = s.pickupPersons.DeletePickupPersonByID(txCtx, id)
 		return err

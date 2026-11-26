@@ -33,10 +33,13 @@ type PickupApprovalExceptions interface {
 	// under the same care-day lock as the pickup exception.
 	FindDepartureForDate(context.Context, int64, calendar.Date) (*careplan.DepartureException, error)
 	SaveDeparture(context.Context, careplan.DepartureException) (int64, error)
-	// FindPickupPersonForDate and SavePickupPerson write the day's pickup
-	// person a family named (#8162) under the same care-day lock.
-	FindPickupPersonForDate(context.Context, int64, calendar.Date) (*careplan.PickupPerson, error)
-	SavePickupPerson(context.Context, careplan.PickupPerson) (careplan.PickupPerson, error)
+}
+
+// PickupApprovalPersons reads and writes the day's pickup person a family
+// named (#8162) under the approval's care-day lock.
+type PickupApprovalPersons interface {
+	ListDayPickups(ctx context.Context, from, to calendar.Date, studentIDs []int64) ([]careplan.DayPickup, error)
+	SaveApprovedPickupPerson(context.Context, careplan.PickupPerson) (careplan.PickupPerson, error)
 }
 
 type PickupApprovalExcusal interface {

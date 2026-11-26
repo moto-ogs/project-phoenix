@@ -53,12 +53,13 @@ func TestNativeConflictStaffPickupWritesOnlyRequestedDay(t *testing.T) {
 		Records: owner, People: decisionPort, Guardians: decisionPort, Plans: decisionPort, Effects: decisionPort, Today: today,
 	})
 	require.NoError(t, err)
-	exceptions, err := compose.NewPickupApprovalExceptions(owners.CarePlanRequestRecords(owner))
+	records := owners.CarePlanRequestRecords(owner)
+	exceptions, err := compose.NewPickupApprovalExceptions(records)
 	require.NoError(t, err)
 	probe := &pickupApprovalFixture{staffID: staff.ID}
 	approvals, err := compose.NewPickupApprovals(compose.PickupApprovalDependencies{
 		Fingerprint: securityruntime.Fingerprint,
-		People:      probe, Presence: probe, Exceptions: exceptions, Excusal: probe, Locker: owner, Today: today,
+		People:      probe, Presence: probe, Exceptions: exceptions, Excusal: probe, Locker: owner, Persons: records, Today: today,
 	})
 	require.NoError(t, err)
 	plans := &conflictPlanBoundary{pickupApprovalFixture: probe, PickupApprovals: approvals, owner: owner}

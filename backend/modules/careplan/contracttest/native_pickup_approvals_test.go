@@ -102,11 +102,14 @@ func (f *pickupApprovalFixture) SaveDeparture(_ context.Context, row careplan.De
 	return f.departureID, f.step("save-departure")
 }
 
-func (f *pickupApprovalFixture) FindPickupPersonForDate(context.Context, int64, calendar.Date) (*careplan.PickupPerson, error) {
-	return f.existingPerson, f.step("pickup-person")
+func (f *pickupApprovalFixture) ListDayPickups(_ context.Context, day, _ calendar.Date, ids []int64) ([]careplan.DayPickup, error) {
+	if f.existingPerson == nil {
+		return nil, f.step("pickup-person")
+	}
+	return []careplan.DayPickup{{StudentID: ids[0], Date: careplan.Date(day), Person: f.existingPerson}}, f.step("pickup-person")
 }
 
-func (f *pickupApprovalFixture) SavePickupPerson(_ context.Context, row careplan.PickupPerson) (careplan.PickupPerson, error) {
+func (f *pickupApprovalFixture) SaveApprovedPickupPerson(_ context.Context, row careplan.PickupPerson) (careplan.PickupPerson, error) {
 	row.ID = 1
 	f.existingPerson = &row
 	return row, f.step("save-pickup-person")
@@ -130,7 +133,7 @@ func approvalService(t *testing.T, fixture *pickupApprovalFixture) carerequests.
 	t.Helper()
 	service, err := compose.NewPickupApprovals(compose.PickupApprovalDependencies{
 		Fingerprint: securityruntime.Fingerprint,
-		People:      fixture, Presence: fixture, Exceptions: fixture, Excusal: fixture, Locker: fixture,
+		People:      fixture, Presence: fixture, Exceptions: fixture, Excusal: fixture, Locker: fixture, Persons: fixture,
 		Today: func() calendar.Date { return "2026-09-21" },
 	})
 	require.NoError(t, err)
@@ -157,7 +160,7 @@ func TestNativePickupApprovalRequiresImpactFingerprint(t *testing.T) {
 	t.Parallel()
 	fixture := &pickupApprovalFixture{}
 	service, err := compose.NewPickupApprovals(compose.PickupApprovalDependencies{
-		People: fixture, Presence: fixture, Exceptions: fixture, Excusal: fixture, Locker: fixture,
+		People: fixture, Presence: fixture, Exceptions: fixture, Excusal: fixture, Locker: fixture, Persons: fixture,
 		Today: func() calendar.Date { return "2026-09-21" },
 	})
 	require.ErrorContains(t, err, "impact fingerprint")

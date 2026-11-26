@@ -17393,14 +17393,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.RequestRecords.CreatePickupNote",
-      "binding_digest": "116f64c508cc92711ef3d1138f480102",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/ports.PickupApprovalRecords.CreatePickupNote",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTenant",
-      "target_owner": "tenant-runtime"
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.RequestRecords.SaveDepartureException",
       "binding_digest": "116f64c508cc92711ef3d1138f480102",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/ports.PickupApprovalRecords.SaveDepartureException",

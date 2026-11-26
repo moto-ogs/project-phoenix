@@ -150,7 +150,7 @@ func (s *RequestCorrections) revertPickupPerson(ctx context.Context, request *ca
 	if pickupPersonVersion(*row) != applied.PickupPersonVersion {
 		return fmt.Errorf("%w: die Abholperson am %s wurde nach der Entscheidung geändert", careplan.ErrParentRequestCorrectionUnsupported, terms.Date.Format("02.01.2006"))
 	}
-	_, err = s.Records.DeleteApprovedPickupPerson(ctx, row.ID)
+	_, err = s.Records.DeleteApprovedPickupPerson(ctx, request.StudentID, terms.Date, row.ID)
 	return err
 }
 

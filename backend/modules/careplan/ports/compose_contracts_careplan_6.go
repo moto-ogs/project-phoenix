@@ -25,7 +25,7 @@ type RequestCorrectionRecords interface {
 	// ListDayPickups and DeleteApprovedPickupPerson take back the day's
 	// pickup person an approval wrote (#8162).
 	ListDayPickups(ctx context.Context, from, to calendar.Date, studentIDs []int64) ([]careplan.DayPickup, error)
-	DeleteApprovedPickupPerson(ctx context.Context, id int64) (bool, error)
+	DeleteApprovedPickupPerson(ctx context.Context, studentID int64, date calendar.Date, id int64) (bool, error)
 }
 
 type RequestDecisionRecords interface {

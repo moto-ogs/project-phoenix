@@ -81,9 +81,10 @@ type DayPickup struct {
 // decisions call it.
 type ApprovedPickupPersons interface {
 	SaveApprovedPickupPerson(ctx context.Context, person PickupPerson) (PickupPerson, error)
-	// DeleteApprovedPickupPerson takes back the row an approval wrote when
-	// its decision is corrected; false when the row is gone.
-	DeleteApprovedPickupPerson(ctx context.Context, id int64) (bool, error)
+	// DeleteApprovedPickupPerson takes back the row id of the child's day an
+	// approval wrote, under the care-day lock, when its decision is
+	// corrected; false when the row is gone.
+	DeleteApprovedPickupPerson(ctx context.Context, studentID int64, date calendar.Date, id int64) (bool, error)
 }
 
 // PickupPersons is the owner's capability for the pickup person of a day.

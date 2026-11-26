@@ -19,7 +19,7 @@ func (s *CareScheduleRequestService) pickupApprovals() (carerequests.PickupAppro
 		return nil, err
 	}
 	service, err := compose.NewPickupApprovals(compose.PickupApprovalDependencies{
-		People: adapter, Presence: adapter, Exceptions: exceptions, Excusal: adapter, Locker: s.DayLocker, Today: s.todayDate, Fingerprint: securityruntime.Fingerprint,
+		People: adapter, Presence: adapter, Exceptions: exceptions, Excusal: adapter, Locker: s.DayLocker, Persons: s.RequestRecords, Today: s.todayDate, Fingerprint: securityruntime.Fingerprint,
 	})
 	if err != nil {
 		return nil, err
