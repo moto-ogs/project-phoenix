@@ -434,6 +434,7 @@ describe("RoomDetailPage", () => {
     render(<RoomDetailPage />);
 
     fireEvent.click(screen.getByRole("tab", { name: "Stammdaten" }));
+    expect(screen.queryByTestId("room-closures")).not.toBeInTheDocument();
     expect(window.location.pathname + window.location.search).toBe(
       "/rooms/7?tab=stammdaten",
     );

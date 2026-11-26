@@ -72,7 +72,7 @@ func mountPresenceRoutes(
 	timeTracking *workforceCompose.TimeTracking, rooms FacilitiesRooms, feedback feedbackModule.Capability,
 	organizations organizationtenancy.Query, invitations identityaccess.SchoolInvitations, now func() time.Time,
 ) error {
-	openRoomMove, err := newOpenRoomMove(facilities, timetableOwner, active, logger)
+	openRoomMove, err := newOpenRoomMove(facilities, rooms.Closures, timetableOwner, active, calendar.CalendarDateClock(now), logger)
 	if err != nil {
 		return err
 	}

@@ -17,6 +17,7 @@ import (
 // Dependencies are the owner capabilities and runtime the command coordinates.
 type Dependencies struct {
 	Rooms        ports.Rooms
+	RoomClosures ports.RoomClosures
 	Activities   ports.Activities
 	RoomSessions ports.RoomSessions
 	Moves        ports.Moves
@@ -31,9 +32,9 @@ type command struct {
 // NewCommand builds the open-room move command. Every dependency is required;
 // a missing one is a composition error, not a runtime fallback.
 func NewCommand(deps Dependencies) openroommove.Command {
-	if deps.Rooms == nil || deps.Activities == nil || deps.RoomSessions == nil || deps.Moves == nil ||
+	if deps.Rooms == nil || deps.RoomClosures == nil || deps.Activities == nil || deps.RoomSessions == nil || deps.Moves == nil ||
 		deps.Observe == nil || deps.Runtime.TenantID == nil || deps.Runtime.WithinTenant == nil ||
-		deps.Runtime.AcquireLock == nil {
+		deps.Runtime.AcquireLock == nil || deps.Runtime.Today == nil {
 		panic("open room move: all dependencies are required")
 	}
 	return &command{deps: deps}
@@ -44,12 +45,12 @@ func NewCommand(deps Dependencies) openroommove.Command {
 //  1. load the room (Facilities) without locking it and require its release,
 //     so an unreleased room is rejected before any session or visit is touched;
 //  2. prepare the children, attendance and visits, before any activity/session FK;
-//  3. resolve the room's system activity (Timetable & Activities),
-//     provisioning it on first use under a tenant-wide lock;
+//  3. lock the room through Facilities' closure check, then resolve its system
+//     activity (Timetable & Activities), provisioning it under a tenant-wide lock;
 //  4. find or create the room's session for that activity (Student Presence);
 //  5. move the children into it (Student Presence), which locks the children
 //     and the involved sessions, then the room capacity row, matching check-in;
-//  6. lock the room row and re-check the release so a concurrent un-release
+//  6. re-check the release so a concurrent un-release
 //     still rejects the move, without taking that lock before the sessions.
 //
 // A failure anywhere returns an error and the transaction owner rolls back.
@@ -118,6 +119,20 @@ func (c *command) readRoom(id int64, room facilities.Room, err error, op string)
 		return facilities.Room{}, fmt.Errorf("open room move: %s room %d: %w", op, id, err)
 	}
 	return room, nil
+}
+
+// refuseClosedRoom locks the Facilities room inside the workflow's tenant
+// unit. CloseRoom takes the matching lock, so the move and a same-day closure
+// cannot both commit.
+func (c *command) refuseClosedRoom(ctx context.Context, roomID int64) error {
+	closed, err := c.deps.RoomClosures.RoomClosedOn(ctx, roomID, c.deps.Runtime.Today())
+	if err != nil {
+		return fmt.Errorf("open room move: check room closure: %w", err)
+	}
+	if closed {
+		return openroommove.ErrRoomClosed
+	}
+	return nil
 }
 
 // activitySpec describes the system activity a room session runs under.
@@ -265,6 +280,9 @@ func (c *command) moveInTx(txCtx context.Context, move openroommove.Move, place 
 	}
 
 	if err := c.deps.Moves.PrepareOpenRoomMove(txCtx, studentIDs, room.ID); err != nil {
+		return err
+	}
+	if err := c.refuseClosedRoom(txCtx, room.ID); err != nil {
 		return err
 	}
 	activityID, err := c.roomActivity(txCtx, room)

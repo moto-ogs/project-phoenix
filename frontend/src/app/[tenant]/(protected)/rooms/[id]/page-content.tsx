@@ -190,7 +190,8 @@ function RoomDetailPageContent() {
   const canDelete = hasPermission(session, "rooms:delete") && !isArchived;
   // Sperren können dieselben Personen lesen wie Räume. Schreiben bleibt
   // weiterhin an rooms:update gebunden.
-  const canReadClosures = hasPermission(session, "rooms:read") || canUpdate;
+  const canReadClosures = hasPermission(session, "rooms:read");
+  const canAccessStammdaten = canReadClosures || canUpdate;
   // Plan des Raums (#4768): dasselbe Recht wie die Leseansicht des
   // Betreuungsplans; der Druck braucht dazu die Namen (wie dort).
   const canReadPlan = hasPermission(session, "schedules:read");
@@ -210,11 +211,13 @@ function RoomDetailPageContent() {
   const tabItems: TenantPageTab[] = [
     ...(hasOccupancy ? [{ value: "uebersicht", label: "Übersicht" }] : []),
     ...(canReadPlan ? [{ value: "plan", label: "Plan" }] : []),
-    ...(canReadClosures ? [{ value: "stammdaten", label: "Stammdaten" }] : []),
+    ...(canAccessStammdaten
+      ? [{ value: "stammdaten", label: "Stammdaten" }]
+      : []),
   ];
   const requestedTab = searchParams.get("tab");
   const defaultTab: RoomTab =
-    requestedTab === "stammdaten" && canReadClosures
+    requestedTab === "stammdaten" && canAccessStammdaten
       ? "stammdaten"
       : requestedTab === "plan" && canReadPlan
         ? "plan"
