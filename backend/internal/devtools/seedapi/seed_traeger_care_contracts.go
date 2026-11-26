@@ -81,13 +81,7 @@ func (seedTraegerCareContractsStep) Run(_ context.Context, rt *Runtime) error {
 	if err != nil {
 		return err
 	}
-	// The school changes a booking itself: that version waits for the
-	// parents' signature (#4816).
-	waiting, err := seedCareContractSchoolChange(rt, auth)
-	if err != nil {
-		return err
-	}
-	fmt.Printf("  Träger care contracts: %d templates, %d drafts created, %d sent, %d terminated, change asked: %t, change by the school: %t\n", templates, created, sent, terminated, changed, waiting)
+	fmt.Printf("  Träger care contracts: %d templates, %d drafts created, %d sent, %d terminated, change asked: %t\n", templates, created, sent, terminated, changed)
 	return nil
 }
 

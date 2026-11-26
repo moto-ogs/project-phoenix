@@ -55,7 +55,13 @@ func (seedTraegerCareContractSignaturesStep) Run(ctx context.Context, rt *Runtim
 	if err != nil {
 		return err
 	}
-	fmt.Printf("  Träger care contract signatures: %d on paper, %d in the parents portal\n", paper, signed)
+	// With a contract the parents signed, the school changes a booking
+	// itself: that version waits for the parents' signature (#4816).
+	waiting, err := seedCareContractSchoolChange(rt, auth)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("  Träger care contract signatures: %d on paper, %d in the parents portal, change by the school: %t\n", paper, signed, waiting)
 	return nil
 }
 
