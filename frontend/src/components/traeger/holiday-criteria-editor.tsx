@@ -233,7 +233,9 @@ function CriterionRow({
           shape="round"
           tone={draft.active ? "inverse" : "neutral"}
         />
-        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+        {/* min-w-48: on a phone the name keeps its width and the actions
+            move to their own line instead of squeezing it to a few letters. */}
+        <div className="flex min-w-48 flex-1 flex-wrap items-center gap-2">
           <SectionLabel as="h3" className="wrap-anywhere">
             {weight.spoken ? (
               <span className="sr-only">{weight.spoken}</span>
@@ -248,7 +250,7 @@ function CriterionRow({
             label={draft.active ? weight.badge : "Ausgeschaltet"}
           />
         </div>
-        <div className="flex items-center gap-1">
+        <div className="ml-auto flex items-center gap-1">
           <Button
             type="button"
             variant="ghost"

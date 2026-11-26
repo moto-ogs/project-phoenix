@@ -42,7 +42,7 @@ export function ChildSwitcher({
   items: readonly ChildSwitcherItem[];
 }>) {
   const t = useCareTermTranslations("parentToday");
-  const { termOf } = useParentCareTerms();
+  const { valuesOf } = useParentCareTerms();
   if (items.length < 2) return null;
 
   return (
@@ -99,8 +99,8 @@ export function ChildSwitcher({
                     {item.today.at_ogs === null
                       ? t("state.unknown")
                       : item.today.at_ogs
-                        ? t("atOgs", { careTerm: termOf(item.studentId) })
-                        : t("notAtOgs", { careTerm: termOf(item.studentId) })}
+                        ? t("atOgs", valuesOf(item.studentId))
+                        : t("notAtOgs", valuesOf(item.studentId))}
                   </span>
                 </span>
               </span>

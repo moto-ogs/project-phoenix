@@ -200,6 +200,7 @@ const DEFAULT_FEATURES: parentMeContract.ChildFeaturesResponse = {
   emergency_contact_manage_allowed: false,
   reason_required: false,
   care_facility_term: "",
+  care_facility_article: "die",
 };
 
 // The child's effective pickup situation for TODAY, resolved from the weekly

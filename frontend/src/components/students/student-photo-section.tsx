@@ -14,7 +14,7 @@ import { createLogger } from "~/lib/logger";
 import type { Student } from "~/lib/student-helpers";
 import { ChoiceTile } from "~/components/ui/choice-tile";
 import { InsetPanel } from "~/components/ui/inset-panel";
-import { useCareFacilityTerm } from "~/lib/care-facility-term";
+import { useCareTermValues } from "~/lib/care-facility-term";
 
 const logger = createLogger({ component: "StudentPhotoSection" });
 
@@ -94,7 +94,7 @@ export function StudentPhotoSection({
   }, [student.first_name, student.second_name, student.name]);
 
   const consentTimestamp = formatGermanDateTime(student.photo_consent_given_at);
-  const careTerm = useCareFacilityTerm();
+  const { careNom } = useCareTermValues();
 
   // Display priority: pending blob > marked-for-removal > server URL.
   const displayUrl = (() => {
@@ -222,8 +222,8 @@ export function StudentPhotoSection({
               bestätigt das Team genau diesen Text; der Verlauf hält seine
               Fassung fest. */}
           <span className="mt-0.5 block text-xs text-gray-600">
-            Mit dem Haken bestätigst du: Die Eltern erlauben, dass die{" "}
-            {careTerm} das Kind fotografiert und ein Foto in moto speichert.
+            Mit dem Haken bestätigst du: Die Eltern erlauben, dass {careNom} das
+            Kind fotografiert und ein Foto in moto speichert.
           </span>
           {consentGiven && consentTimestamp ? (
             <span className="mt-0.5 block text-xs text-gray-500">

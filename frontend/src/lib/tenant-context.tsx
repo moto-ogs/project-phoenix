@@ -20,6 +20,7 @@ import { subscribeSettingsChanged } from "~/lib/settings-broadcast";
 import type { ModuleKey } from "~/lib/modules";
 import { createLogger } from "~/lib/logger";
 import { TenantCareFacilityTermContext } from "~/lib/care-facility-term-context";
+import { careTermValuesOf } from "~/lib/care-facility-term-value";
 
 interface TenantContextValue {
   /** The tenant slug from the URL path segment */
@@ -176,9 +177,19 @@ export function TenantProvider({
     [tenantSlug, tenant, routingMode],
   );
 
+  const careTerm = tenant?.careFacilityTerm;
+  const careArticle = tenant?.careFacilityArticle;
+  const care = useMemo(
+    () =>
+      careTerm === undefined
+        ? undefined
+        : careTermValuesOf(careTerm, careArticle),
+    [careTerm, careArticle],
+  );
+
   return (
     <TenantContext.Provider value={value}>
-      <TenantCareFacilityTermContext.Provider value={tenant?.careFacilityTerm}>
+      <TenantCareFacilityTermContext.Provider value={care}>
         {children}
       </TenantCareFacilityTermContext.Provider>
     </TenantContext.Provider>

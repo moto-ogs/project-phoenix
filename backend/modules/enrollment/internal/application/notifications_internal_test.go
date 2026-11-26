@@ -13,10 +13,12 @@ import (
 )
 
 type notificationSettingsStub struct {
-	mode    string
-	err     error
-	term    string
-	termErr error
+	mode       string
+	err        error
+	term       string
+	termErr    error
+	article    string
+	articleErr error
 }
 
 func (s notificationSettingsStub) NotifyPerDecision(context.Context) (string, error) {
@@ -25,6 +27,10 @@ func (s notificationSettingsStub) NotifyPerDecision(context.Context) (string, er
 
 func (s notificationSettingsStub) CareFacilityTerm(context.Context) (string, error) {
 	return s.term, s.termErr
+}
+
+func (s notificationSettingsStub) CareFacilityArticle(context.Context) (string, error) {
+	return s.article, s.articleErr
 }
 
 type modePinStub struct {
@@ -233,7 +239,7 @@ func TestNotifyDecisionsRequiresItsCollaborators(t *testing.T) {
 func TestSchoolBrand(t *testing.T) {
 	t.Parallel()
 	school := &enrollment.School{Name: "OGS Sonnenschule", Settings: `{"loginImageUrl":"https://cdn.example.test/logo.png"}`}
-	gts := notificationSettingsStub{term: "GTS"}
+	gts := notificationSettingsStub{term: "GTS", article: "die"}
 
 	brand, err := newNotificationsForTest(NotificationDependencies{Schools: schoolDirectoryStub{school: school}, Settings: gts}).SchoolBrand(context.Background(), 3, "https://parents.example.test")
 	require.NoError(t, err)
@@ -241,6 +247,7 @@ func TestSchoolBrand(t *testing.T) {
 	assert.Equal(t, "https://cdn.example.test/logo.png", brand.LogoURL)
 	assert.Equal(t, "https://parents.example.test/images/moto-logo-mit-schriftzug.png", brand.MotoLogoURL)
 	assert.Equal(t, "GTS", brand.CareFacilityTerm, "the school's own term reaches the mail header (#6042)")
+	assert.Equal(t, "die", brand.CareFacilityArticle, "and so does its article (#8136)")
 
 	for label, deps := range map[string]NotificationDependencies{
 		"no directory":   {Settings: gts},
@@ -269,6 +276,8 @@ func TestSchoolBrandPropagatesTheTermReadFailure(t *testing.T) {
 
 	_, err := newNotificationsForTest(NotificationDependencies{Schools: schoolDirectoryStub{school: school}, Settings: notificationSettingsStub{termErr: errors.New("db down")}}).SchoolBrand(context.Background(), 3, "")
 	require.ErrorContains(t, err, "db down")
+	_, err = newNotificationsForTest(NotificationDependencies{Schools: schoolDirectoryStub{school: school}, Settings: notificationSettingsStub{term: "Hort", articleErr: errors.New("db down")}}).SchoolBrand(context.Background(), 3, "")
+	require.ErrorContains(t, err, "care facility article", "an unreadable article fails the mail too (#8136)")
 
 	require.PanicsWithValue(t, "enrollment notifications: settings are required", func() {
 		NewNotifications(NotificationDependencies{

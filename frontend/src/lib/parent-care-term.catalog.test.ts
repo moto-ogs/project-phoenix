@@ -6,6 +6,10 @@ import ru from "~/i18n/messages/ru.generated";
 import sq from "~/i18n/messages/sq.generated";
 import tr from "~/i18n/messages/tr.generated";
 import uk from "~/i18n/messages/uk.generated";
+import {
+  CARE_TERM_PLACEHOLDERS,
+  careTermValuesOf,
+} from "~/lib/care-facility-term-value";
 
 // The parents portal names the school's care through `{careTerm}` in every
 // language (#6082), like the enrollment flow (#6042): no fixed „OGS“ is left,
@@ -38,6 +42,13 @@ const NAMESPACES = [
   "mealOrders",
 ] as const;
 
+// German declines the term with its article (#8136): „{careNomCap} prüft“
+// reads „Die GTS prüft“. Every other language keeps the bare `{careTerm}`.
+const CARE_PLACEHOLDER = new RegExp(
+  `\\{(${CARE_TERM_PLACEHOLDERS.join("|")})\\}`,
+);
+const GTS = careTermValuesOf("GTS");
+
 function leaves(node: unknown, prefix = ""): [string, string][] {
   if (typeof node === "string") return [[prefix, node]];
   if (!node || typeof node !== "object") return [];
@@ -49,7 +60,7 @@ function leaves(node: unknown, prefix = ""): [string, string][] {
 describe("care facility term in the parents portal catalogs", () => {
   const germanKeys = NAMESPACES.flatMap((namespace) =>
     leaves(de[namespace], namespace)
-      .filter(([, text]) => text.includes("{careTerm}"))
+      .filter(([, text]) => CARE_PLACEHOLDER.test(text))
       .map(([key]) => key),
   );
 
@@ -90,19 +101,25 @@ describe("care facility term in the parents portal catalogs", () => {
       for (const namespace of NAMESPACES) {
         for (const [key, text] of leaves(messages[namespace], namespace)) {
           expect(text, key).not.toMatch(/\bOGS\b/);
-          if (!text.includes("{careTerm}")) continue;
-          const values: Record<string, unknown> = { careTerm: "GTS" };
+          if (!CARE_PLACEHOLDER.test(text)) continue;
+          const values: Record<string, unknown> = {};
           for (const [, name] of text.matchAll(/\{(\w+)/g)) {
-            if (name && name !== "careTerm") values[name] = 1;
+            if (name) values[name] = 1;
           }
+          Object.assign(values, GTS);
           const formatted = translate(key, values);
           expect(formatted, key).toContain("GTS");
-          expect(formatted, key).not.toContain("{careTerm}");
+          expect(formatted, key).not.toMatch(/\{care[A-Z]/);
         }
       }
       for (const key of germanKeys) {
         const text = leaves(messages, "").find(([k]) => k === key)?.[1];
-        expect(text, `${locale} ${key}`).toContain("{careTerm}");
+        // Only German has the declined forms; the name stays in every text.
+        if (locale === "de") {
+          expect(text, `${locale} ${key}`).toMatch(CARE_PLACEHOLDER);
+        } else {
+          expect(text, `${locale} ${key}`).toContain("{careTerm}");
+        }
       }
     },
   );

@@ -151,6 +151,32 @@ describe("filterCategoryItems", () => {
     expect(items.map((item) => item.key)).toEqual(["parent.sick_note"]);
   });
 
+  // The article of an own care name is edited next to that name (#8136),
+  // so it is no row of its own; a search for it finds the name.
+  it("lists the care name without a row for its article", () => {
+    const category = {
+      key: "allgemein",
+      label: "allgemein",
+      items: [
+        setting({
+          key: "enrollment.care_facility_term",
+          label: "Name der Betreuung in Texten für Eltern",
+        }),
+        setting({
+          key: "enrollment.care_facility_article",
+          label: "Artikel zum eigenen Namen der Betreuung",
+        }),
+      ],
+    };
+    expect(filterCategoryItems(category, "").map((item) => item.key)).toEqual([
+      "enrollment.care_facility_term",
+    ]);
+    expect(
+      filterCategoryItems(category, "artikel").map((item) => item.key),
+    ).toEqual(["enrollment.care_facility_term"]);
+    expect(filterCategoryItems(category, "xyz")).toEqual([]);
+  });
+
   it("matches label and description", () => {
     expect(
       filterCategoryItems(tabs[1]!.categories[0]!, "besuchsdaten").map(

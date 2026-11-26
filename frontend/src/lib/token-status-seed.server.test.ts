@@ -31,6 +31,7 @@ const enrollment = {
   children: [],
   signature_required: true,
   care_facility_term: "OGS",
+  care_facility_article: "die",
   signature: {
     method: "drawn",
     signer_name: "Mara Muster",

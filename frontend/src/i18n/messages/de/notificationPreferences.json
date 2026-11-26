@@ -18,8 +18,8 @@
       "description": "Wenn die Schule eine neue Mitteilung im Elternportal veröffentlicht."
     },
     "parent_message": {
-      "label": "Neue Nachricht der {careTerm}",
-      "description": "Wenn die {careTerm} dir zu einem Kind schreibt."
+      "label": "Neue Nachricht {careGen}",
+      "description": "Wenn {careNom} dir zu einem Kind schreibt."
     },
     "parent_appointment": {
       "label": "Neuer oder geänderter Termin",
@@ -31,7 +31,7 @@
     },
     "parent_request_decided": {
       "label": "Entscheidung über deine Anfrage",
-      "description": "Wenn die {careTerm} über eine deiner Anfragen entschieden hat."
+      "description": "Wenn {careNom} über eine deiner Anfragen entschieden hat."
     },
     "meal_plan_changed": {
       "label": "Speiseplan geändert",
@@ -39,7 +39,7 @@
     },
     "parent_care_cancelled": {
       "label": "Betreuung fällt aus",
-      "description": "Wenn die {careTerm} einen Betreuungstermin deines Kindes absagt."
+      "description": "Wenn {careNom} einen Betreuungstermin deines Kindes absagt."
     },
     "parent_class_timetable_changed": {
       "label": "Stundenplan der Klasse",
@@ -47,7 +47,7 @@
     },
     "parent_school_closing_day_changed": {
       "label": "Schließtage",
-      "description": "Wenn die {careTerm} einen Schließtag einträgt, ändert oder löscht. Der Hinweis in moto kommt immer, die Mitteilung aufs Handy nur bei Schließtagen in den nächsten 14 Tagen."
+      "description": "Wenn {careNom} einen Schließtag einträgt, ändert oder löscht. Der Hinweis in moto kommt immer, die Mitteilung aufs Handy nur bei Schließtagen in den nächsten 14 Tagen."
     },
     "parent_billing_document": {
       "label": "Neues Dokument vom Träger",

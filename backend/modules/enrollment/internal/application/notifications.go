@@ -81,6 +81,9 @@ func (n *Notifications) SchoolBrand(ctx context.Context, tenantID int64, baseURL
 		return enrollment.MailBrand{}, fmt.Errorf("mail brand: resolve care facility term: %w", err)
 	}
 	brand.CareFacilityTerm = term
+	if brand.CareFacilityArticle, err = n.deps.Settings.CareFacilityArticle(ctx); err != nil {
+		return enrollment.MailBrand{}, fmt.Errorf("mail brand: resolve care facility article: %w", err)
+	}
 	if n.deps.Schools == nil {
 		return brand, nil
 	}
@@ -279,16 +282,17 @@ func (n *Notifications) decisionMailPayload(ctx context.Context, notice enrollme
 		phaseName = notice.Phase.Name
 	}
 	return map[string]any{
-		enrollment.EnrollmentPayloadGuardianFirstName: request.GuardianFirstName,
-		enrollment.EnrollmentPayloadGuardianLastName:  request.GuardianLastName,
-		enrollment.EnrollmentPayloadGuardianEmail:     request.GuardianEmail,
-		enrollment.EnrollmentPayloadRecipientEmail:    request.GuardianEmail,
-		enrollment.EnrollmentPayloadSchoolName:        brand.SchoolName,
-		enrollment.EnrollmentPayloadStatusURL:         enrollment.StatusURL(notice.ParentsURL, request.StatusToken),
-		enrollment.EnrollmentPayloadLogoURL:           brand.LogoURL,
-		enrollment.EnrollmentPayloadMotoLogoURL:       brand.MotoLogoURL,
-		enrollment.EnrollmentPayloadCareFacilityTerm:  brand.CareFacilityTerm,
-		enrollment.EnrollmentPayloadPhaseName:         phaseName,
+		enrollment.EnrollmentPayloadGuardianFirstName:   request.GuardianFirstName,
+		enrollment.EnrollmentPayloadGuardianLastName:    request.GuardianLastName,
+		enrollment.EnrollmentPayloadGuardianEmail:       request.GuardianEmail,
+		enrollment.EnrollmentPayloadRecipientEmail:      request.GuardianEmail,
+		enrollment.EnrollmentPayloadSchoolName:          brand.SchoolName,
+		enrollment.EnrollmentPayloadStatusURL:           enrollment.StatusURL(notice.ParentsURL, request.StatusToken),
+		enrollment.EnrollmentPayloadLogoURL:             brand.LogoURL,
+		enrollment.EnrollmentPayloadMotoLogoURL:         brand.MotoLogoURL,
+		enrollment.EnrollmentPayloadCareFacilityTerm:    brand.CareFacilityTerm,
+		enrollment.EnrollmentPayloadCareFacilityArticle: brand.CareFacilityArticle,
+		enrollment.EnrollmentPayloadPhaseName:           phaseName,
 	}, nil
 }
 

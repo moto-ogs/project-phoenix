@@ -6,6 +6,7 @@ export const tenantShellSettingKeys = [
   "attendance.web_enabled",
   "calendar.caldav_enabled",
   "display.enabled",
+  "enrollment.care_facility_article",
   "enrollment.care_facility_term",
   "enrollment.care_offerings_enabled",
   "enrollment.grade_level_max",

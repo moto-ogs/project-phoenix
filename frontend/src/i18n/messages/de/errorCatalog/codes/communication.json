@@ -20,7 +20,7 @@
   "class_letter_class_not_reachable": "Diese Klasse ist dir nicht zugeordnet. Bitte wähle eine eigene Klasse.",
   "class_letter_read_only": "Diesen Elternbrief hat eine Lehrkraft geschrieben. Nur sie kann ihn ändern, senden oder löschen.",
   "leadership_messages_unavailable": "Nachrichten nur an die Leitung sind hier zurzeit nicht möglich. Bitte schreibe an das ganze {careTerm}-Team.",
-  "staff_group_create_forbidden": "Lehrkräfte können keinen Gruppenchat anlegen. Frag die {careTerm} danach.",
+  "staff_group_create_forbidden": "Lehrkräfte können keinen Gruppenchat anlegen. Frag {careAcc} danach.",
   "staff_group_manage_forbidden": "Nur wer den Gruppenchat angelegt hat und die {careTerm}-Leitung können ihn ändern.",
   "staff_group_name_invalid": "Bitte gib dem Gruppenchat einen Namen mit höchstens {max_characters} Zeichen.",
   "staff_group_members_required": "Bitte wähle mindestens eine Person aus, die noch nicht in der Gruppe ist.",
