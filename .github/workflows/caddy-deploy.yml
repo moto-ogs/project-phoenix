@@ -158,3 +158,5 @@ jobs:
           app: Caddy
           exit_code: ${{ steps.deploy.outputs.deploy_exit }}
           exit_codes: deploy-remote
+          # The commits since the last Caddy deploy are application changes.
+          release_notes: 'false'
