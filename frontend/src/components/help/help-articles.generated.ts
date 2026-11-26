@@ -8977,6 +8977,7 @@ export const settingsTopic = function settingsTopic(): HelpTopic {
       "Ohne Bundesland fehlen die Feiertage. Dann zeigt moto einen Hinweis mit dem Knopf `Bundesland eintragen`.",
       "Wer Blöcke starten oder beenden darf, legst du unter `Betrieb` fest: bei `Wer darf Blöcke starten?` und `Wer darf Blöcke beenden?`.",
       "`Das ganze Team` geht dort nur, wenn das Team alle Gruppen und Blöcke sieht.",
+      "Die Bereiche deines Trägers stehen am Ende unter `Vom Träger`. Am Handy findest du sie hinter `Mehr`.",
       "Manche Werte legt dein Träger für alle Schulen fest. Dort steht `Vom Träger festgelegt`.",
       "Du kannst davon abweichen. `Zurücksetzen` übernimmt wieder den Wert des Trägers.",
     ],

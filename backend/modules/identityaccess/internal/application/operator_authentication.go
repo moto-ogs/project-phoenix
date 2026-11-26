@@ -118,6 +118,8 @@ func (s *OperatorAuthentication) loginWithMFAGate(ctx context.Context, email, pa
 	if trustedDeviceCookie != "" {
 		ok, _ := s.mfa.VerifyOperatorTrustedDevice(ctx, operator.ID, trustedDeviceCookie)
 		trusted = ok
+	} else {
+		logOperatorTrustedDeviceRefused(s.logger, operator.ID, deviceRefusalNoCookie, nil)
 	}
 	if !trusted {
 		challenge, err := s.mfa.StartOperatorMFAChallenge(ctx, operator.ID, net.ParseIP(strings.TrimSpace(ipAddress)), &operator.CredentialGeneration)
