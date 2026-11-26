@@ -77,6 +77,28 @@ const TAB_CONCEPTS: Record<string, MotoConcept> = {
   vertraege: careContractsConcept,
 };
 
+/**
+ * Die Überschrift über den Bereichen des Trägers (#8153). Nicht „Vorgaben“:
+ * der Kopf jedes Bereichs zählt „abweichend von der Vorgabe“ und meint den
+ * Standardwert von moto. „Vom Träger“ passt zur Marke „Vom Träger festgelegt“
+ * an den einzelnen Werten.
+ */
+export const TRAEGER_SECTIONS_HEADING = "Vom Träger";
+
+/**
+ * Ein Bereich des Trägers: keine seiner Einstellungen liegt auf der Ebene der
+ * Schule. Die Schule sieht dort Werte ihres Trägers (#8153). Das Backend
+ * stellt genau diese Bereiche in `TabOrder` ans Ende
+ * (`TestTabOrderPutsTheTraegerAreasLast`).
+ */
+function isTraegerTab(tab: SchemaTab): boolean {
+  const items = tab.categories.flatMap((category) => category.items);
+  return (
+    items.length > 0 &&
+    items.every((item) => item.levels === "traeger" || item.levels === "beide")
+  );
+}
+
 // A tab whose settings are all hidden (DependsOn, access) would open onto the
 // search box and nothing else (#3925). It is left out like the NFC tabs.
 function hasVisibleSetting(tab: SchemaTab): boolean {
@@ -115,6 +137,8 @@ export interface SettingsSection {
   readonly id: string;
   readonly label: string;
   readonly icon: MotoConcept;
+  /** Steht unter „Vom Träger“, nach den Bereichen der Schule. */
+  readonly traeger?: boolean;
 }
 
 export interface SettingsSections {
@@ -213,11 +237,15 @@ export function settingsSectionsFor(
         id: `settings-${tab.key}`,
         label: displayTabLabel(tab),
         icon: settingsTabConcept(tab.key),
+        ...(isTraegerTab(tab) ? { traeger: true } : {}),
       }));
+  // Die eigenen Bereiche der Schule zuerst, die Bereiche des Trägers als
+  // eigene Gruppe am Ende (#8153).
   return [
-    ...schemaTabs,
+    ...schemaTabs.filter((tab) => !tab.traeger),
     ...(canManageHomeBlocks ? [HOME_BLOCKS_TAB] : []),
     PERSONALIZATION_TAB,
+    ...schemaTabs.filter((tab) => tab.traeger),
   ];
 }
 

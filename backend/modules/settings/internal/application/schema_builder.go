@@ -270,7 +270,9 @@ func minCategorySortOrder(items []*config.ResolvedSetting) int {
 	return min
 }
 
-// orderTabs returns tab keys ordered by TabOrder, with unknown tabs appended alphabetically.
+// orderTabs returns tab keys ordered by TabOrder. Every tab of the default
+// registry has a place there (TestEveryTabHasAFixedPlace); the alphabetical
+// tail only serves registries tests build with tabs of their own.
 func orderTabs(tabSet map[string]bool) []string {
 	var ordered []string
 	seen := make(map[string]bool)
