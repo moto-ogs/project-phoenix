@@ -102,6 +102,27 @@ describe("ChildDayChangesList in der Tageskarte", () => {
     ]);
   });
 
+  it("nennt eine Abholzeit aus dem Wochenplan nach der Schließzeit (#8173)", () => {
+    renderCard(
+      day([
+        entry({
+          kind: "opening_changed",
+          opening_name: "Zeugnistag",
+          opens_at: "08:00",
+          closes_at: "12:00",
+          pickup_time: "15:30",
+          pickup_after_closing: true,
+        }),
+      ]),
+    );
+    const items = within(screen.getByTestId("child-day-changes"))
+      .getAllByRole("listitem")
+      .map((item) => item.textContent);
+    expect(items).toEqual([
+      "Die OGS ist heute von 08:00 bis 12:00 Uhr geöffnet: Zeugnistag. Im Wochenplan steht: Felix wird um 15:30 Uhr abgeholt. Das ist nach der Schließung. Bitte ändere die Abholung.",
+    ]);
+  });
+
   it("nennt jede Änderung in einfacher Sprache und markiert die eigenen", () => {
     const until = testClockDay(2);
     renderCard(

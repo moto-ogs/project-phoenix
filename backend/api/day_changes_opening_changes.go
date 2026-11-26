@@ -7,7 +7,10 @@ package api
 
 import (
 	"context"
+	"fmt"
+	"time"
 
+	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/daychangesview"
 	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
@@ -39,4 +42,43 @@ func openingChangeEntries(changes []schoolcalendar.OpeningChange, day calendar.D
 		})
 	}
 	return entries
+}
+
+// dayChangesWeeklyPickups is Care Plan's read of the stored weekly pickups
+// (#8173).
+type dayChangesWeeklyPickups interface {
+	ListPickupSchedules(context.Context, careplan.StudentScheduleFilter) ([]careplan.PickupSchedule, error)
+}
+
+// markRegularPickupAfterClosing marks the opening changes of the child's day
+// that close before the child's weekly pickup (#8173). It reads Care Plan
+// only on a weekday with an opening change, in one statement: the stored
+// weekly rows of the child for the weekday. Rows Care Plan derives from a
+// booked care offering stay out; the latest stored time counts.
+func markRegularPickupAfterClosing(ctx context.Context, pickups dayChangesWeeklyPickups, studentID int64, day calendar.Date, entries []daychangesview.SourceEntry) error {
+	weekday := day.Weekday()
+	if len(entries) == 0 || weekday == time.Saturday || weekday == time.Sunday {
+		return nil
+	}
+	rows, err := pickups.ListPickupSchedules(ctx, careplan.StudentScheduleFilter{StudentIDs: []int64{studentID}, Weekday: int(weekday)})
+	if err != nil {
+		return fmt.Errorf("list weekly pickups: %w", err)
+	}
+	regular := ""
+	for _, row := range rows {
+		if row.StudentID != studentID || row.Weekday != int(weekday) || row.Source == careplan.ScheduleSourceCareOffering {
+			continue
+		}
+		// The TIME column holds the wall clock itself; no zone applies.
+		if at := row.PickupTime.Format("15:04"); at > regular {
+			regular = at
+		}
+	}
+	for i := range entries {
+		if opening := entries[i].Opening; opening != nil && regular != "" && regular > opening.ClosesAt {
+			at := regular
+			opening.RegularPickupAfterClosing = &at
+		}
+	}
+	return nil
 }

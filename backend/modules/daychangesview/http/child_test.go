@@ -300,6 +300,9 @@ func TestChildDayChangesQueryBudget(t *testing.T) {
 	testpkg.CreateTestStudentStatusDay(t, db, chain.StudentID, day, "sick")
 	testpkg.CreateTestPickupException(t, db, chain.StudentID, day, staff.ID, "14:00", "")
 	testpkg.CreateTestClosingDay(t, db, day, day, "Budget-Schließtag")
+	// An opening change reads the child's weekly pickups as well (#8173).
+	insertOpeningChange(t, db, tenantID, day, day, "08:00", "13:00", "Budget-Öffnung")
+	testpkg.CreateTestPickupSchedule(t, db, chain.StudentID, int(day.Weekday()), staff.ID, "16:00")
 	room := testpkg.CreateTestRoomNamed(t, db, "Budget-Raum").ID
 	module, _ := api.NewActiveTestTimetable(testpkg.NewDatabase(t, db), testpkg.TenantRuntime(t, db),
 		func() time.Time { return day.BerlinMidnight().Add(9 * time.Hour) })
@@ -339,7 +342,7 @@ func TestChildDayChangesQueryBudget(t *testing.T) {
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		var envelope struct{ Data childDayWire }
 		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &envelope))
-		require.Len(t, envelope.Data.Entries, 3+n, "sick, pickup, closing day and one entry per block")
+		require.Len(t, envelope.Data.Entries, 4+n, "sick, pickup, closing day, opening change and one entry per block")
 		statements[n] = counter.Total()
 		t.Logf("MEASURE parent.children.day_changes N%d=%d", n, counter.Total())
 		querybudgets.AssertQueryBudget(t, "parent.children.day_changes.http_positive_growth", counter.Measurement(counter.Queries()))

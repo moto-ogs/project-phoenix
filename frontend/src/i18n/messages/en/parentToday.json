@@ -59,6 +59,7 @@
     "openingChanged": "The {careTerm} is open from {opens} to {closes} today: {name}.",
     "openingChangedUntil": "Until {date}, the {careTerm} is open from {opens} to {closes}: {name}.",
     "pickupAfterClosing": "That is after closing time. Please change the pickup.",
+    "regularPickupAfterClosing": "According to the weekly plan, {name} is picked up at {time}.",
     "activityCancelled": "{title} at {time} is cancelled today.",
     "activityReinstated": "{title} at {time} takes place after all today.",
     "activityRoomChanged": "{title} at {time} is in {room} today.",
