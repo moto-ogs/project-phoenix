@@ -5,6 +5,10 @@
 // unter „Dokumente“: erst der Vertrag mit der gebuchten Betreuung und dem
 // PDF, dann die Widerrufsbelehrung, dann die Unterschrift. Ein
 // unterschriebener Vertrag zeigt nur noch die Bestätigung.
+//
+// Wartet eine geänderte Fassung auf die Unterschrift (#4816), zeigt die
+// Ansicht statt der gebuchten Betreuung, was sich je Wochentag ändert, und
+// sagt, dass der Vertrag bis zur Unterschrift wie bisher gilt.
 
 import { CheckCircle2, FileText, ShieldCheck } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
@@ -21,6 +25,7 @@ import {
 } from "~/components/ui/form-error-alert";
 import { PdfPreview, useObjectUrl } from "~/components/ui/pdf-preview";
 import { SectionCard } from "~/components/ui/section-card";
+import { ContractChangeOverview } from "./care-contract-change-overview";
 import { ParentFamilyChildrenCard } from "./parent-family-children-card";
 import { SignaturePad } from "~/components/ui/signature-pad";
 import { useStepFocus } from "~/components/ui/use-step-focus";
@@ -77,12 +82,13 @@ export function ContractSigningView({
   const [source] = useState(initialSource);
   const [view, setView] = useState<SigningView | null>(null);
   const [gone, setGone] = useState(false);
+  // The signed view no longer names the version before; the confirmation
+  // still says that a changed version was signed.
+  const [signedChange, setSignedChange] = useState(false);
   const invalidateFamily = useInvalidateFamily();
   const loadError = useApiLoadError();
   const { show: showLoadError, clear: clearLoadError } = loadError;
-  const signed = view
-    ? Boolean(view.signature) || view.status !== "versendet"
-    : null;
+  const signed = view ? !view.awaitsSignature : null;
   // Signing replaces the form with the confirmation (#7111): its heading
   // takes the focus from the send button that is gone. Loading is no step.
   const stepRef = useStepFocus<HTMLDivElement>(
@@ -132,7 +138,7 @@ export function ContractSigningView({
     // changeable in the parents portal.
     return (
       <div ref={stepRef} className="space-y-5">
-        <SignedConfirmation view={view} />
+        <SignedConfirmation view={view} change={signedChange} />
         {source.kind === "inbox" ? (
           <ParentFamilyChildrenCard source={source} />
         ) : null}
@@ -143,13 +149,21 @@ export function ContractSigningView({
     <div ref={stepRef} className="space-y-5">
       <ContractFacts view={view} />
       <ParentFamilyChildrenCard source={source} />
-      <BookedCare view={view} />
+      {view.previous ? (
+        <ContractChangeOverview
+          previous={view.previous}
+          services={view.services}
+        />
+      ) : (
+        <BookedCare view={view} />
+      )}
       <ContractDocument source={source} view={view} />
       <WithdrawalNotice view={view} />
       <SignForm
         source={source}
         view={view}
         onSigned={(next) => {
+          setSignedChange(view.previous !== null);
           setView(next);
           // Signed in the parents portal: the documents inbox shows it.
           if (source.kind === "inbox")
@@ -163,19 +177,29 @@ export function ContractSigningView({
 function ContractFacts({ view }: Readonly<{ view: SigningView }>) {
   const t = useTranslations("careContractSigning");
   const locale = useLocale();
-  const fee =
-    view.priceCents === null
+  const euro = (cents: number | null) =>
+    cents === null
       ? t("feeByRules")
       : new Intl.NumberFormat(locale, {
           style: "currency",
           currency: "EUR",
-        }).format(view.priceCents / 100);
+        }).format(cents / 100);
+  const end = (day: string | null) =>
+    day ? formatDate(day, false, locale) : t("openEnded");
+  const previous = view.previous;
+  const from = formatDate(view.effectiveFrom, false, locale);
+  // A changed version of a contract in force, or of one not signed yet.
+  const intro = previous
+    ? view.status === "aktiv"
+      ? t("changeIntro", { date: from })
+      : t("changeIntroUnsigned")
+    : t("intro");
   return (
     <SectionCard
       concept={careContractsConcept}
       kicker={t("kicker", { traeger: view.traegerName })}
-      title={t("title", { child: view.childName })}
-      description={t("intro")}
+      title={t(previous ? "changeTitle" : "title", { child: view.childName })}
+      description={intro}
     >
       <DataGrid>
         <DataField label={t("child")}>{view.childName}</DataField>
@@ -187,18 +211,48 @@ function ContractFacts({ view }: Readonly<{ view: SigningView }>) {
             </span>
           ) : null}
         </DataField>
-        <DataField label={t("startsOn")}>
-          {formatDate(view.effectiveFrom, false, locale)}
+        <DataField label={t(previous ? "validFrom" : "startsOn")}>
+          {from}
         </DataField>
         <DataField label={t("endsOn")}>
-          {view.endsOn
-            ? formatDate(view.endsOn, false, locale)
-            : t("openEnded")}
+          <ChangedValue
+            before={previous ? end(previous.endsOn) : null}
+            after={end(view.endsOn)}
+          />
         </DataField>
-        <DataField label={t("fee")}>{fee}</DataField>
+        <DataField label={t("fee")}>
+          <ChangedValue
+            before={previous ? euro(previous.priceCents) : null}
+            after={euro(view.priceCents)}
+          />
+        </DataField>
         <DataField label={t("party")}>{view.partyName || "–"}</DataField>
       </DataGrid>
     </SectionCard>
+  );
+}
+
+/**
+ * A value of the new version; when the version before had another one, that
+ * one stands struck through in front of it.
+ */
+function ChangedValue({
+  before,
+  after,
+}: Readonly<{ before: string | null; after: string }>) {
+  const t = useTranslations("careContractSigning");
+  if (before === null || before === after) return <>{after}</>;
+  return (
+    <span className="inline-flex flex-wrap items-baseline gap-x-2">
+      <span className="font-normal text-gray-500 line-through decoration-gray-400">
+        <span className="sr-only">{t("before")}: </span>
+        {before}
+      </span>
+      <span>
+        <span className="sr-only">{t("after")}: </span>
+        {after}
+      </span>
+    </span>
   );
 }
 
@@ -281,8 +335,8 @@ function ContractDocument({
   return (
     <SectionCard
       icon={FileText}
-      title={t("pdfTitle")}
-      description={t("pdfDescription")}
+      title={t(view.previous ? "pdfTitleChange" : "pdfTitle")}
+      description={t(view.previous ? "pdfDescriptionChange" : "pdfDescription")}
       action={
         <a
           href={url ?? documentUrl}
@@ -309,7 +363,11 @@ function WithdrawalNotice({ view }: Readonly<{ view: SigningView }>) {
     <SectionCard
       icon={ShieldCheck}
       title={t("withdrawalTitle")}
-      description={t("withdrawalDescription")}
+      description={t(
+        view.previous && view.status === "aktiv"
+          ? "withdrawalDescriptionChange"
+          : "withdrawalDescription",
+      )}
     >
       <div className="space-y-3 text-sm leading-relaxed text-gray-700">
         {view.withdrawalNotice.map((paragraph) => (
@@ -338,6 +396,11 @@ function SignForm({
   const [signature, setSignature] = useState<SignatureValue | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [saving, setSaving] = useState(false);
+  const locale = useLocale();
+  // A changed version of a contract in force takes effect with the
+  // signature; any other signature concludes the contract.
+  const change = view.previous !== null;
+  const inForce = change && view.status === "aktiv";
 
   const submit = async () => {
     setSubmitted(true);
@@ -373,8 +436,14 @@ function SignForm({
   return (
     <SectionCard
       concept={careContractsConcept}
-      title={t("signTitle")}
-      description={t("signDescription")}
+      title={t(change ? "signTitleChange" : "signTitle")}
+      description={
+        inForce
+          ? t("signDescriptionChange", {
+              date: formatDate(view.effectiveFrom, false, locale),
+            })
+          : t("signDescription")
+      }
     >
       <form
         ref={formRef}
@@ -416,10 +485,10 @@ function SignForm({
             variant="success"
             size="lg"
             disabled={saving}
-            tooltip={t("submitTooltip")}
+            tooltip={t(inForce ? "submitChangeTooltip" : "submitTooltip")}
             className="w-full sm:w-auto"
           >
-            {saving ? t("submitting") : t("submit")}
+            {saving ? t("submitting") : t(change ? "submitChange" : "submit")}
           </Button>
         </div>
       </form>
@@ -427,25 +496,42 @@ function SignForm({
   );
 }
 
-function SignedConfirmation({ view }: Readonly<{ view: SigningView }>) {
+function SignedConfirmation({
+  view,
+  change,
+}: Readonly<{ view: SigningView; change: boolean }>) {
   const t = useTranslations("careContractSigning");
   const locale = useLocale();
   const signature = view.signature;
+  // The parents' own request counts as their agreement (#4816): nothing was
+  // signed, so the page says why the version holds.
+  const byRequest = signature?.method === "request";
+  const title = !signature
+    ? t("alreadyInForce")
+    : byRequest
+      ? t("requestTitle")
+      : t(change ? "signedTitleChange" : "signedTitle");
   return (
     <SectionCard
       icon={CheckCircle2}
       kicker={t("kicker", { traeger: view.traegerName })}
-      title={signature ? t("signedTitle") : t("alreadyInForce")}
+      title={title}
     >
       <div className="space-y-4">
         {signature ? (
           <Alert
             type="success"
-            message={`${t("signedBy", {
-              name: signature.signerName,
-              date: formatBerlinDate(signature.signedAt, locale),
-              time: formatBerlinTime(signature.signedAt, locale),
-            })} ${t("signedMail")}`}
+            message={
+              byRequest
+                ? t("signedByRequest", {
+                    date: formatBerlinDate(signature.signedAt, locale),
+                  })
+                : `${t("signedBy", {
+                    name: signature.signerName,
+                    date: formatBerlinDate(signature.signedAt, locale),
+                    time: formatBerlinTime(signature.signedAt, locale),
+                  })} ${t("signedMail")}`
+            }
           />
         ) : null}
         <DataGrid>

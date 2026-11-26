@@ -72,6 +72,7 @@ const VERSION_STATUS_VALUES = [
   "abgeloest",
   "abgelehnt",
   "ersetzt",
+  "ueberholt",
 ] as const;
 const VERSION_SOURCE_VALUES = [
   "abschluss",
@@ -79,7 +80,7 @@ const VERSION_SOURCE_VALUES = [
   "import",
   "angebotskorrektur",
 ] as const;
-const SIGNATURE_METHOD_VALUES = ["drawn", "typed", "paper"] as const;
+const SIGNATURE_METHOD_VALUES = ["drawn", "typed", "paper", "request"] as const;
 const SIGNATURE_CHANNEL_VALUES = [
   "parent_account",
   "mail_link",
@@ -294,6 +295,11 @@ export interface CareContractSummary {
   readonly followsBookings: boolean;
   /** The enrollment (application child) it follows; null without one. */
   readonly requestChildId: string | null;
+  /**
+   * A changed version of the active contract waits for the parents'
+   * signature (#4816); the version in force holds until then.
+   */
+  readonly changeAwaitsSignature: boolean;
 }
 
 export interface CareContractList {
@@ -321,6 +327,19 @@ export interface ContractVersion {
   readonly validUntil: string | null;
   readonly services: readonly ContractService[];
   readonly createdAt: string;
+  /**
+   * The effective date the signed document names, when the parents signed
+   * after it and the version holds from the day of the signature (#4816).
+   */
+  readonly agreedFrom?: string | null;
+}
+
+/** How the parents agreed to one version (#4816). */
+export interface ContractVersionSignature {
+  readonly versionNumber: number;
+  readonly method: (typeof SIGNATURE_METHOD_VALUES)[number] | undefined;
+  readonly signerName: string;
+  readonly signedAt: string;
 }
 
 export interface CareContractDetail extends CareContractSummary {
@@ -357,9 +376,13 @@ export interface CareContractDetail extends CareContractSummary {
   readonly signature: ContractSignature | null;
   /** The reminders of a contract that waits for its signature. */
   readonly reminders: readonly {
+    /** The version the reminder asked a signature for (#4816). */
+    readonly versionNumber: number;
     readonly number: number;
     readonly sentAt: string;
   }[];
+  /** How the parents agreed to each signed version, oldest first. */
+  readonly versionSignatures: readonly ContractVersionSignature[];
   /**
    * Term up to the contract's last day, notice period and monthly fee of the
    * version above, as the contract PDF prints them.
@@ -585,6 +608,7 @@ function summaryFromBackend(
     imported: row.imported,
     followsBookings: row.follows_bookings,
     requestChildId: row.request_child_id,
+    changeAwaitsSignature: row.change_awaits_signature,
   };
 }
 
@@ -641,8 +665,15 @@ function detailFromBackend(
         }
       : null,
     reminders: (row.reminders ?? []).map((reminder) => ({
+      versionNumber: reminder.version_number,
       number: reminder.number,
       sentAt: reminder.sent_at,
+    })),
+    versionSignatures: (row.version_signatures ?? []).map((signature) => ({
+      versionNumber: signature.version_number,
+      method: knownEnum(SIGNATURE_METHOD_VALUES, signature.method),
+      signerName: signature.signer_name,
+      signedAt: signature.signed_at,
     })),
     versions: (row.versions ?? []).map((version) => ({
       number: version.number,
@@ -656,6 +687,7 @@ function detailFromBackend(
       validUntil: version.valid_until,
       services: servicesFromBackend(version.services),
       createdAt: version.created_at,
+      agreedFrom: version.agreed_from ?? null,
     })),
     termText: row.term_text,
     noticeText: row.notice_text,

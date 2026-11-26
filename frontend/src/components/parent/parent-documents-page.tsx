@@ -185,6 +185,7 @@ function InboxDocumentCard({
   downloadTooltip,
   onDownload,
   signHref,
+  signChange = false,
   children,
 }: Readonly<{
   concept: MotoConcept;
@@ -195,6 +196,8 @@ function InboxDocumentCard({
   onDownload: () => Promise<void>;
   /** A care contract waiting for the signature links here (#4679). */
   signHref?: string;
+  /** The link signs a changed version of a contract in force (#4816). */
+  signChange?: boolean;
   children: ReactNode;
 }>) {
   const t = useTranslations("parentDocuments");
@@ -235,9 +238,9 @@ function InboxDocumentCard({
               href={signHref}
               variant="success"
               size="md"
-              tooltip={t("signNowTooltip")}
+              tooltip={t(signChange ? "signChangeTooltip" : "signNowTooltip")}
             >
-              {t("signNow")}
+              {t(signChange ? "signChange" : "signNow")}
             </ButtonLink>
           ) : null}
         </div>
@@ -254,9 +257,13 @@ function ParentDocumentCard({
   const t = useTranslations("parentDocuments");
   const locale = useLocale();
   const contract = document.kind === "care_contract";
+  // A changed version of a contract in force waits for the signature too
+  // (#4816); the contract itself stays valid until then.
+  const changeAwaits = contract && document.change_awaits_signature;
   const awaitingSignature =
     contract && document.contract_status === "versendet";
-  const canSign = awaitingSignature && document.can_sign === true;
+  const canSign =
+    (awaitingSignature || changeAwaits) && document.can_sign === true;
   const amount = new Intl.NumberFormat(locale, {
     style: "currency",
     currency: "EUR",
@@ -272,6 +279,7 @@ function ParentDocumentCard({
       downloadLabel={t("download")}
       downloadTooltip={t("downloadTooltip")}
       onDownload={() => downloadMyDocument(document)}
+      signChange={changeAwaits}
       signHref={
         canSign
           ? parentPath(
@@ -291,10 +299,22 @@ function ParentDocumentCard({
           />
         </div>
       ) : null}
+      {changeAwaits ? (
+        <div className="mb-4">
+          <Alert
+            type="warning"
+            message={t("changeNote", {
+              date: formatDate(document.service_from, false, locale),
+            })}
+          />
+        </div>
+      ) : null}
       <DataGrid>
         {contract && document.contract_status ? (
           <DataField label={t("status")}>
-            {awaitingSignature ? (
+            {changeAwaits ? (
+              <StatusBadge label={t("changeAwaitsSignature")} tone="warning" />
+            ) : awaitingSignature ? (
               <StatusBadge label={t("awaitingSignature")} tone="warning" />
             ) : document.signed_at ? (
               <StatusBadge

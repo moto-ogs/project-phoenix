@@ -5,6 +5,7 @@ package ports
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/carecontract"
@@ -43,15 +44,26 @@ type AmendableContract struct {
 	// Waiting is the changed version that waits for the parents' signature
 	// (#4816); nil when none waits.
 	Waiting *carecontract.Version
-	// Parties are the contract's parties with a parents account: only a
-	// request one of them sent counts as the signature of a version.
+	// Parties are the contract's parties: only a request one of them sent
+	// counts as the signature of a version.
 	Parties []PartyAccount
 }
 
-// PartyAccount is a party of a contract with its parents account.
+// PartyAccount is a party of a contract as a request is matched to it: by
+// its parents account when the contract knows one, else by its address, the
+// rule of the inbox (ADR 0088 section 7).
 type PartyAccount struct {
-	AccountID int64
+	AccountID *int64
+	Email     string
 	Name      string
+}
+
+// Sent tells whether the account with that address is this party.
+func (p PartyAccount) Sent(accountID int64, email string) bool {
+	if p.AccountID != nil {
+		return *p.AccountID == accountID
+	}
+	return strings.TrimSpace(p.Email) != "" && strings.EqualFold(strings.TrimSpace(p.Email), strings.TrimSpace(email))
 }
 
 // SentContract is a sent contract with an application child that waits for

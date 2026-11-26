@@ -430,7 +430,8 @@ func (s *Signatures) signedView(ctx context.Context, organizationID int64, recor
 		return carecontract.SigningView{}, err
 	}
 	signature.WithdrawalEndsOn = &ends
-	view.Signature = &signature
+	// Signed: nothing waits and nothing is left to compare.
+	view.Signature, view.AwaitsSignature, view.Previous = &signature, false, nil
 	return view, nil
 }
 

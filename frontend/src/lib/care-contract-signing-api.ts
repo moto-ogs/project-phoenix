@@ -30,7 +30,7 @@ const WEEKDAY_VALUES = [
   "sat",
   "sun",
 ] as const satisfies readonly Weekday[];
-const SIGNATURE_METHOD_VALUES = ["drawn", "typed", "paper"] as const;
+const SIGNATURE_METHOD_VALUES = ["drawn", "typed", "paper", "request"] as const;
 
 type SignatureMethod = (typeof SIGNATURE_METHOD_VALUES)[number];
 
@@ -50,6 +50,14 @@ interface SigningSignature {
   readonly withdrawalEndsOn: string | null;
 }
 
+/** The care, dates and fee of one contract version as the page compares them. */
+export interface SigningVersionFacts {
+  readonly effectiveFrom: string;
+  readonly endsOn: string | null;
+  readonly priceCents: number | null;
+  readonly services: readonly SigningService[];
+}
+
 export interface SigningView {
   /** undefined: a state this build does not know; the page offers no signing. */
   readonly status: CareContractStatus | undefined;
@@ -65,6 +73,32 @@ export interface SigningView {
   readonly documentSha256: string;
   readonly withdrawalNotice: readonly string[];
   readonly signature: SigningSignature | null;
+  /** The version waits for the parents' signature. */
+  readonly awaitsSignature: boolean;
+  /**
+   * The version the parents have so far, when the one to sign is a changed
+   * version (#4816); null for a first contract.
+   */
+  readonly previous: SigningVersionFacts | null;
+}
+
+// A service on a weekday this build does not know has no row to show.
+function mapServices(
+  services: sharedContract.SigningContract["services"],
+): SigningService[] {
+  return (services ?? []).flatMap((service) => {
+    const weekday = knownEnum(WEEKDAY_VALUES, service.weekday);
+    return weekday === undefined
+      ? []
+      : [
+          {
+            weekday,
+            moduleName: service.module_name,
+            endsAt: service.ends_at,
+            lastDay: service.last_day,
+          },
+        ];
+  });
 }
 
 function mapSigningView(raw: sharedContract.SigningView): SigningView {
@@ -82,20 +116,19 @@ function mapSigningView(raw: sharedContract.SigningView): SigningView {
     ),
     endsOn: version.ends_on,
     priceCents: version.price_cents,
-    // A service on a weekday this build does not know has no row to show.
-    services: (version.services ?? []).flatMap((service) => {
-      const weekday = knownEnum(WEEKDAY_VALUES, service.weekday);
-      return weekday === undefined
-        ? []
-        : [
-            {
-              weekday,
-              moduleName: service.module_name,
-              endsAt: service.ends_at,
-              lastDay: service.last_day,
-            },
-          ];
-    }),
+    services: mapServices(version.services),
+    awaitsSignature: raw.awaits_signature,
+    previous: raw.previous
+      ? {
+          effectiveFrom: requiredDay(
+            raw.previous.effective_from,
+            "SigningContract.previous.effective_from",
+          ),
+          endsOn: raw.previous.ends_on,
+          priceCents: raw.previous.price_cents,
+          services: mapServices(raw.previous.services),
+        }
+      : null,
     documentSha256: raw.document_sha256,
     withdrawalNotice: raw.withdrawal_notice ?? [],
     signature: raw.signature

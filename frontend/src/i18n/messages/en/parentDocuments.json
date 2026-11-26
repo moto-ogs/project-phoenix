@@ -53,5 +53,9 @@
   "cancelContractTooltip": "Opens the termination; nothing is sent until the next page.",
   "withdrawContractTooltip": "Opens the withdrawal; nothing is sent until the next page.",
   "showConfirmationTooltip": "Shows the termination with the end date and confirmation.",
-  "showWithdrawalTooltip": "Shows the withdrawal with its confirmation."
+  "showWithdrawalTooltip": "Shows the withdrawal with its confirmation.",
+  "changeAwaitsSignature": "Change waits for your signature",
+  "changeNote": "The care changes from {date}. Please sign the new version. Until then your contract stays as it is.",
+  "signChange": "View the change and sign",
+  "signChangeTooltip": "Opens the new version. You see what changes and can sign."
 }

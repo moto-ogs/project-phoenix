@@ -35,8 +35,11 @@ type Booking struct {
 // the modules with their weekdays the parents asked for from that day. A
 // module the request does not name is one the parents no longer want.
 type ParentRequest struct {
-	ID            int64
-	AccountID     int64
+	ID        int64
+	AccountID int64
+	// AccountEmail is the address of that account: a party of the contract
+	// is known by its account or, like in the inbox, by its address.
+	AccountEmail  string
 	SubmittedAt   time.Time
 	EffectiveFrom calendar.Date
 	Offerings     []RequestedOffering

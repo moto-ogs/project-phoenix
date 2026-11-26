@@ -9,12 +9,14 @@ import (
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
-// Who agreed to a changed version (#4816, ADR 0088 section 3, ADR 0322).
+// Who agreed to a changed version (#4816, ADR 0088 section 3, ADR 0325).
 //
 //   - The parents asked for the change themselves and the school or the
 //     Träger-Büro approved exactly that: their request, sent with the
 //     account of a party of the contract, counts as the signature. The
-//     version holds from its effective date at once.
+//     version holds from its effective date at once. A party is known by
+//     its parents account or, where the contract knows none, by the address
+//     of the account, as in the inbox.
 //   - Any other change (the school or the Träger changed the bookings, the
 //     approval booked something else than the parents asked for, or another
 //     guardian than a party of the contract asked) makes a version that
@@ -67,7 +69,7 @@ func requestOn(read schoolRead, application carecontract.Application, parties []
 		if request.EffectiveFrom != day {
 			continue
 		}
-		index := slices.IndexFunc(parties, func(party ports.PartyAccount) bool { return party.AccountID == request.AccountID })
+		index := slices.IndexFunc(parties, func(party ports.PartyAccount) bool { return party.Sent(request.AccountID, request.AccountEmail) })
 		if index >= 0 && bookingsCarry(read, application.Bookings, request, day) {
 			return &signedRequest{request: request, party: parties[index]}
 		}
@@ -159,7 +161,7 @@ func (c *Conclusions) recordRequest(ctx context.Context, organizationID int64, r
 	if err != nil {
 		return err
 	}
-	request, account := consent.request, consent.party.AccountID
+	request, account := consent.request, consent.request.AccountID
 	if err := c.contracts.store.InsertSignature(ctx, organizationID, NewSignature{
 		ContractID: contractID, VersionID: versionID, DocumentID: &document.ID, Method: carecontract.SignatureRequest,
 		Channel: carecontract.ChannelParentAccount, SignerName: consent.party.Name, SignerAccountID: &account,

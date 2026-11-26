@@ -61,7 +61,7 @@ func careContractConclusionOf(t *testing.T, f careContractFixture) (carecontract
 	require.NoError(t, err)
 	schoolSettings, err := owners.NewSettingsTestModule(database, unit)
 	require.NoError(t, err)
-	conclusion := NewCareContractConclusion(organizations, settings, schoolSettings.Settings, delivery.Module, providerBlockOutcomes{delivery.EmailOutcomes}, audit.DataAccessLog, owners.CareContractTestHolidays{}, "http://parents.localhost:3000", careContractConclusionClock)
+	conclusion := NewCareContractConclusion(organizations, settings, schoolSettings.Settings, delivery.Module, providerBlockOutcomes{delivery.EmailOutcomes}, audit.DataAccessLog, owners.CareContractTestHolidays{}, "http://parents.localhost:3000", careContractConclusionClock, f.accounts)
 	return conclusion, tenant.WithUnitOfWork(context.Background(), unit)
 }
 

@@ -127,22 +127,23 @@ var (
 	effectiveStatuses = []string{carecontract.VersionEffective, carecontract.VersionSuperseded}
 )
 
-// partyAccounts reads the parents accounts of the contracts' parties in one
-// statement (#4816).
+// partyAccounts reads the contracts' parties with their parents account and
+// address in one statement (#4816).
 func partyAccounts(ctx context.Context, db bun.IDB, organizationID int64, ids []int64) (map[int64][]ports.PartyAccount, error) {
 	var rows []struct {
 		ContractID int64  `bun:"contract_id"`
-		AccountID  int64  `bun:"account_id"`
+		AccountID  *int64 `bun:"account_id"`
+		Email      string `bun:"email"`
 		Name       string `bun:"name"`
 	}
-	if err := db.NewRaw(`SELECT contract_id, account_id, btrim(first_name || ' ' || last_name) AS name FROM care_contract.contract_parties
-		WHERE organization_id = ? AND contract_id = ANY(?) AND account_id IS NOT NULL ORDER BY contract_id, id`,
+	if err := db.NewRaw(`SELECT contract_id, account_id, email, btrim(first_name || ' ' || last_name) AS name FROM care_contract.contract_parties
+		WHERE organization_id = ? AND contract_id = ANY(?) ORDER BY contract_id, id`,
 		organizationID, pgdialect.Array(ids)).Scan(ctx, &rows); err != nil {
 		return nil, fmt.Errorf("care contract postgres: read party accounts: %w", err)
 	}
 	accounts := make(map[int64][]ports.PartyAccount, len(ids))
 	for _, row := range rows {
-		accounts[row.ContractID] = append(accounts[row.ContractID], ports.PartyAccount{AccountID: row.AccountID, Name: row.Name})
+		accounts[row.ContractID] = append(accounts[row.ContractID], ports.PartyAccount{AccountID: row.AccountID, Email: row.Email, Name: row.Name})
 	}
 	return accounts, nil
 }

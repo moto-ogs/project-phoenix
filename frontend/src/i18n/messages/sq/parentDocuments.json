@@ -53,5 +53,9 @@
   "cancelContractTooltip": "Hap ndërprerjen; dërgohet vetëm në faqen tjetër.",
   "withdrawContractTooltip": "Hap tërheqjen; dërgohet vetëm në faqen tjetër.",
   "showConfirmationTooltip": "Tregon ndërprerjen me datën e mbarimit dhe konfirmimin.",
-  "showWithdrawalTooltip": "Tregon tërheqjen me konfirmimin e saj."
+  "showWithdrawalTooltip": "Tregon tërheqjen me konfirmimin e saj.",
+  "changeAwaitsSignature": "Ndryshimi pret nënshkrimin tënd",
+  "changeNote": "Kujdesi ndryshon nga {date}. Të lutem nënshkruaj versionin e ri. Deri atëherë kontrata vlen si deri tani.",
+  "signChange": "Shiko ndryshimin dhe nënshkruaj",
+  "signChangeTooltip": "Hap versionin e ri. Sheh çfarë ndryshon dhe mund të nënshkruash."
 }

@@ -19,7 +19,7 @@ import (
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 )
 
-// The parents sign a changed contract version (#4816, ADR 0322). The
+// The parents sign a changed contract version (#4816, ADR 0325). The
 // fixture's child books the Ganztag on Monday to Wednesday from 1 August
 // 2027; from 1 October 2027 it also books a late care on Thursday.
 
@@ -221,7 +221,10 @@ func TestCareContractChangeTheParentsAskedForCountsAsTheirSignature(t *testing.T
 	f := newCareContractFixture(t, "Träger Vertrag Änderung Antrag")
 	contract := signedCareContract(t, f)
 	late := bookLateCare(t, f)
-	account := partyAccount(t, f, contract, "antrag-partei")
+	// The contract knows no account of its party, as after an enrollment
+	// without a login: the party is the account with the party's address.
+	account := testpkg.CreateTestAccount(t, f.db, "antrag-partei@example.com").ID
+	f.accounts[account] = "Erika.Muster@example.org"
 	request := approveParentRequest(t, f, account, late)
 
 	run := amendCareContracts(t, f)
@@ -260,6 +263,11 @@ func TestCareContractRequestOfAnotherGuardianIsNoSignature(t *testing.T) {
 		"another guardian": func(t *testing.T, f careContractFixture, contract, late int64) {
 			partyAccount(t, f, contract, "andere-partei")
 			approveParentRequest(t, f, testpkg.CreateTestAccount(t, f.db, "anderer-elternteil@example.com").ID, late)
+		},
+		"another address": func(t *testing.T, f careContractFixture, _, late int64) {
+			other := testpkg.CreateTestAccount(t, f.db, "andere-adresse@example.com").ID
+			f.accounts[other] = "andere-adresse@example.com"
+			approveParentRequest(t, f, other, late)
 		},
 		"other care than asked": func(t *testing.T, f careContractFixture, contract, late int64) {
 			request := approveParentRequest(t, f, partyAccount(t, f, contract, "andere-betreuung"), late)

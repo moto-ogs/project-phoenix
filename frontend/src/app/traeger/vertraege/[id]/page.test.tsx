@@ -141,6 +141,8 @@ import {
 } from "~/test/helpers/refused-refresh";
 
 const DRAFT: CareContractDetail = {
+  changeAwaitsSignature: false,
+  versionSignatures: [],
   id: "7",
   status: "entwurf",
   schoolId: "3",
