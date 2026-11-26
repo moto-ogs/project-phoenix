@@ -69,3 +69,9 @@ func NewClosures(dependencies Dependencies) (facilities.Closures, error) {
 	rooms := application.NewRooms(store, transaction{}, ports.Observer(dependencies.Observe))
 	return application.NewClosures(rooms, store, calendar.CalendarDateClock(dependencies.Now)), nil
 }
+
+// NewTraegerRooms composes the rooms of the Träger's utilization over time
+// (#4713, ADR 0241) on the caller's administrative transaction.
+func NewTraegerRooms() facilities.TraegerRooms {
+	return postgres.NewTraegerRooms(tenant.TransactionFromContext, tenant.IsAdminTx)
+}

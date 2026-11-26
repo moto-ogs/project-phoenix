@@ -13,7 +13,7 @@ import (
 )
 
 type roomClosureRow struct {
-	bun.BaseModel `bun:"table:room_closures,alias:closure"`
+	bun.BaseModel `bun:"table:facilities.room_closures,alias:closure"`
 	ID            int64         `bun:"id,pk,autoincrement"`
 	TenantID      int64         `bun:"tenant_id,notnull"`
 	RoomID        int64         `bun:"room_id,notnull"`

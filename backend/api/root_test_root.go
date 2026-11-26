@@ -194,14 +194,9 @@ func composeTestRootWith(db transactionruntime.Database, logger *slog.Logger, cf
 		},
 		func() error {
 			presence = owners.BuildPresenceOwner(db, env.Logger, env.Now, devices, persons, rooms, membership, carePlan, timetableOwner, timetableRepos, people, structure)
-			closures, err := owners.BuildRoomClosures(db, env.Now)
-			if err != nil {
-				return owners.StepError("compose room closures", err)
-			}
-			facilitiesRooms = buildFacilitiesRooms(presence.Presence, rooms, closures, env.Today, timetableOwner, membership, persons)
 			substitutions = owners.NewGroupSubstitutionRepository(structure.Groups, membership, workTime, env.Today)
 			supervisions = owners.NewGroupSupervisionRecords(presence.SessionRecords, groups)
-			return nil
+			return buildFacilitiesRooms(&facilitiesRooms, db, env, presence.Presence, rooms, timetableOwner, membership, persons)
 		},
 		func() (err error) {
 			timetableRows, err = owners.BuildTimetableOwner(db, env.Logger, env.Now, timetableOwner, timetableRepos, calendar, bookings, structure.Groups, hub, persons, people.Students)

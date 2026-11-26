@@ -218,7 +218,7 @@ var moduleComposeBudgets = map[string]int{
 	// ADR 0218: the Träger scope and the recipient rekey (+33).
 	"modules/exporttransfer/compose": 180,
 	// ADR 0241: the rooms of the utilization (+13).
-	"modules/facilities/compose":                   197,
+	"modules/facilities/compose":                   195,
 	"modules/facilities/compose/repositoryadapter": 11,
 	// Raised by ADR 0298: the demo seed's feedback history writer and the
 	// aliases of its input (+15).

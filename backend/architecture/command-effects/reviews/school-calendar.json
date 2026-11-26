@@ -4413,7 +4413,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/portal/internal/ports.Rooms.FindByIDs",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/facilities/compose.FindRoomNames; modules/facilities/compose/room_rows.go:10. May-bind method surface, not a production-call/liveness claim.",
+      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/facilities/compose.FindRoomNames; modules/facilities/compose/room_names.go:14. May-bind method surface, not a production-call/liveness claim.",
       "source_owner": "school-calendar",
       "target": "github.com/moto-ogs/project-phoenix/modules/facilities/compose.FindRoomNames",
       "target_owner": "facilities"

@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
+	apiCommon "github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/facilities"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
@@ -111,7 +111,7 @@ func (rs *Resource) reopenRoom(w http.ResponseWriter, r *http.Request) {
 		rs.runtime.Failure(w, r, FailureInvalid, errors.New("invalid room ID"), "invalid_request")
 		return
 	}
-	closureID, err := strconv.ParseInt(chi.URLParam(r, "closureId"), 10, 64)
+	closureID, err := apiCommon.ParseIDParam(r, "closureId")
 	if err != nil || closureID <= 0 {
 		rs.runtime.Failure(w, r, FailureInvalid, errors.New("invalid closure ID"), "invalid_request")
 		return

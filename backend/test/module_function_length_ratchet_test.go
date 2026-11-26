@@ -84,8 +84,8 @@ var moduleFuncLenAllowlist = map[string]int{
 	"api/reminders_test_helpers.go:NewRemindersTestModule":        64,
 	// ADR 0234: the school search mount takes the note search and the
 	// activity read; gofmt splits its root step (+2).
-	"api/root_serve.go:composeServeRoot":                                 510,
-	"api/root_test_root.go:composeTestRootWith":                          282,
+	"api/root_serve.go:composeServeRoot":                                 509,
+	"api/root_test_root.go:composeTestRootWith":                          281,
 	"api/serve_mounts_students.go:mountStudentRoutes":                    117,
 	"api/serve_mounts_students.go:requestReviewDependencies":             100,
 	"api/student_owner_http_test_helpers.go:NewStudentHTTPTestResources": 164,
