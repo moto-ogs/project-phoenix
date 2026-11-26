@@ -752,7 +752,7 @@ function DienstplanContent() {
         <Alert
           type="info"
           className="mb-3"
-          message="Du kannst den Dienstplan nur ansehen. Zum Planen brauchst du in dieser Schule ein eigenes Personalprofil. Die Leitung kann es anlegen."
+          message="Du kannst den Dienstplan nur ansehen. Zum Planen brauchst du in dieser Schule ein eigenes Personalprofil. Melde dich dafür beim moto-Team."
         />
       )}
       {/* Abwesenheiten von vor #6847, deren Tage noch im Plan stehen

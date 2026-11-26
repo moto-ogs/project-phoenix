@@ -40,7 +40,7 @@ export const ERROR_CATALOG = {
       "calendar.federal_state_missing":
         "Für die Schule ist noch kein Bundesland eingetragen. Deshalb fehlen die Feiertage. Die Leitung trägt es in den Einstellungen ein.",
       "calendar.no_staff_profile":
-        "Dafür brauchst du in dieser Schule ein eigenes Personalprofil. Bitte frage die Leitung.",
+        "Dafür brauchst du in dieser Schule ein eigenes Personalprofil. Arbeitest du hier mit, melde dich beim moto-Team.",
       "calendar.occurrence_unavailable":
         "Diesen Termin gibt es nicht mehr, er wurde vielleicht abgesagt. Bitte lade den Kalender neu.",
       "calendar.opening_change_invalid":
@@ -1711,7 +1711,7 @@ export const ERROR_CATALOG = {
       "timetable.move_same_instance":
         "Bitte wähle einen anderen Termin als Ziel.",
       "timetable.no_staff_profile":
-        "Für diese Aktion brauchst du ein eigenes Personalprofil. Bitte frage die Leitung.",
+        "Für diese Aktion brauchst du ein eigenes Personalprofil. Arbeitest du hier mit, melde dich beim moto-Team.",
       "timetable.offering_gap_period_inactive":
         "Dieser Planungszeitraum ist nicht mehr aktiv. Bitte lade die Seite neu.",
       "timetable.offering_source_inactive":
@@ -2006,7 +2006,7 @@ export const ERROR_CATALOG = {
         "Gerade läuft keine Arbeitszeit. Bitte lade die Seite neu.",
       "workforce.no_session_for_today": "Kein Eintrag für heute vorhanden.",
       "workforce.no_staff_profile":
-        "Dafür brauchst du in dieser Schule ein eigenes Personalprofil. Bitte frage die Leitung.",
+        "Dafür brauchst du in dieser Schule ein eigenes Personalprofil. Arbeitest du hier mit, melde dich beim moto-Team.",
       "workforce.opening_balance_already_exists":
         "Für diese Person gibt es schon einen Eröffnungssaldo. Bitte lösche zuerst den alten.",
       "workforce.payroll_config_incomplete":
