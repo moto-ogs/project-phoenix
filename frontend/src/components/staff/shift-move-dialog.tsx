@@ -394,6 +394,7 @@ export function ShiftMoveDialog({
                 onto the first labelable descendant. */}
           <FieldGroup label="Zieltag">
             <DatePicker
+              ariaLabel="Zieltag"
               value={targetDate === "" ? null : parseISODate(targetDate)}
               onChange={(picked) =>
                 setTargetDate(picked ? toISODate(picked) : "")

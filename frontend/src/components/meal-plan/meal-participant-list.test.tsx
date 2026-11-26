@@ -214,8 +214,9 @@ describe("MealParticipantList", () => {
       async function selectOther(back: boolean) {
         if (selection === "date") {
           fireEvent.click(
+            // The trigger is named by its label and its date (#6800).
             screen.getByRole("button", {
-              name: back ? "14.09.2026" : "07.09.2026",
+              name: `Gilt ab: ${back ? "14.09.2026" : "07.09.2026"}`,
             }),
           );
           fireEvent.click(
@@ -991,7 +992,7 @@ describe("MealParticipantList", () => {
         }),
       );
       fireEvent.click(
-        within(dialog).getByRole("button", { name: "07.09.2026" }),
+        within(dialog).getByRole("button", { name: "Gilt ab: 07.09.2026" }),
       );
       fireEvent.click(
         await screen.findByRole("button", {
