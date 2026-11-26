@@ -156,12 +156,9 @@ type schoolFeatureFacts struct {
 	open             map[int64]bool
 }
 
-// openRequestsError marks a failed open-request lookup inside the facts
+// errOpenRequests marks a failed open-request lookup inside the facts
 // transaction: it costs the badge only, never the features.
-type openRequestsError struct{ err error }
-
-func (e *openRequestsError) Error() string { return e.err.Error() }
-func (e *openRequestsError) Unwrap() error { return e.err }
+var errOpenRequests = errors.New("parent: open change-request check failed")
 
 // schoolFeatureFacts reads the facts in one tenant transaction. A failed
 // meal or closing-time read fails the features; a failed open-request lookup
@@ -183,16 +180,15 @@ func (s *Service) schoolFeatureFacts(ctx context.Context, tenantID, accountID in
 			}
 		}
 		if err := s.markOpenChangeRequests(txCtx, accountID, studentIDs, facts.open); err != nil {
-			return &openRequestsError{err: err}
+			return fmt.Errorf("%w: %w", errOpenRequests, err)
 		}
 		return nil
 	})
-	var openErr *openRequestsError
-	if errors.As(err, &openErr) {
+	if errors.Is(err, errOpenRequests) {
 		s.Logger.Warn("parent: open change-request check failed",
 			slog.Int64("school_id", tenantID),
 			slog.Any("student_ids", studentIDs),
-			slog.String("error", openErr.Error()),
+			slog.String("error", err.Error()),
 		)
 		facts.open = map[int64]bool{}
 		return facts, nil
