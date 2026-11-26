@@ -62,6 +62,7 @@ import {
   type DayChangesOverview,
 } from "~/lib/day-changes";
 import { useDeviceContext } from "~/lib/device-context";
+import { useMediaQuery } from "~/lib/hooks/use-media-query";
 import type {
   HomeBlockAccess,
   HomeBlockContext,
@@ -185,6 +186,7 @@ export function HomeApp({
   const tenantPath = useTenantAwarePath();
   const dayPlanHref = useDayPlanHref();
   const clock = useBerlinClock();
+  const shortScreen = useMediaQuery("(max-height: 700px)");
 
   const dayChanges = useSWRAuth<DayChangesOverview>(
     has("section.day_changes") ? homeKeys.dayChanges(accountId) : null,
@@ -232,12 +234,22 @@ export function HomeApp({
       id: `hinweis-${entry.notice.id}`,
       // Ohne eigenes Symbol: die Zeile steht bündig mit den übrigen
       // Einträgen von „Heute anders“, deren Kopf das Symbol trägt.
+      // Wie am Desktop unter „Betrifft dich“; rechts steht, dass eine
+      // Bestätigung offen ist. Die Zeile öffnet den Text mit dem Knopf
+      // „Zur Kenntnis nehmen“: bestätigt wird erst nach dem Lesen.
       row: {
         title: entry.notice.title,
-        subtitle: "Zur Kenntnis nehmen",
-        meta: entry.notice.important ? (
-          <StatusBadge label="Wichtig" tone="warning" size="xs" />
-        ) : undefined,
+        subtitle: entry.notice.important ? (
+          <span className="inline-flex flex-wrap items-center gap-x-1.5">
+            <StatusBadge label="Wichtig" tone="warning" size="xs" />
+            Betrifft dich
+          </span>
+        ) : (
+          "Betrifft dich"
+        ),
+        // Der Titel bricht um statt „Neuer Notfallplan …“ am SE.
+        wrap: true,
+        meta: <StatusBadge label="Bitte bestätigen" tone="blue" size="xs" />,
       },
       detail: <NoticeDetail notice={entry.notice} onChanged={retry} />,
       sheet: { kind: "notice", notice: entry.notice },
@@ -375,14 +387,30 @@ export function HomeApp({
     });
   }
 
+  // Am Telefon wandert „Zur Aufsicht“ in die Leiste, solange der eigene
+  // Block läuft: das ist dann die häufigste Aktion der Seite.
+  const supervisionHref =
+    layout === "phone" && nowShowsSupervision
+      ? tenantPath("/active-supervisions")
+      : null;
   const nowCard = (
     <NowCard
       now={now}
       stamp={stamp}
       running={layout === "phone" ? running : undefined}
+      // Am Telefon trägt die Pill „Alle Kinder“ (Lupe) und die Leiste „Zur
+      // Aufsicht“: die Karte wiederholt sie nicht und bleibt zwei Zeilen
+      // hoch, damit am SE „Heute anders“ im ersten Bild steht.
+      withoutHrefs={
+        layout === "phone"
+          ? [tenantPath("/students/search"), supervisionHref ?? ""]
+          : []
+      }
     />
   );
-  const actionBar = <HomeActionBar stamp={stamp} />;
+  const actionBar = (
+    <HomeActionBar stamp={stamp} supervisionHref={supervisionHref} />
+  );
   const extra =
     rest.length > 0 ? (
       <div className="space-y-4">
@@ -401,6 +429,9 @@ export function HomeApp({
     loadError,
     showTodo: has("section.day_changes") || has("section.open_requests"),
     onChanged: retry,
+    // Am kleinen Telefon (SE) zwei Änderungen statt drei: „Mein Tag“ rückt
+    // näher an das erste Bild; alle stehen hinter „Alle anzeigen“.
+    previewLimit: layout === "phone" && shortScreen ? 2 : undefined,
   };
 
   if (isSplit) {
@@ -518,6 +549,8 @@ interface ListProps {
   readonly showTodo: boolean;
   /** Lädt „Heute anders“ neu, etwa nach einer Kenntnisnahme. */
   readonly onChanged: () => Promise<unknown>;
+  /** So viele Änderungen zeigt die Vorschau von „Heute anders“. */
+  readonly previewLimit?: number;
 }
 
 /**
@@ -533,6 +566,7 @@ function HomeLists({
   loadError,
   showTodo,
   onChanged,
+  previewLimit,
   selection,
   withoutRequests = false,
 }: ListProps & {
@@ -609,6 +643,7 @@ function HomeLists({
         <DayChangesPreview
           overview={dayChanges.overview}
           include={isDayChange}
+          limit={previewLimit}
           lead={notices.length > 0 ? notices.map(row) : undefined}
           onShowAll={() => setSheetId(dayChanges.entry.id)}
         />
@@ -743,6 +778,8 @@ function stampLabel(state: HomeStampState): string | null {
   }
 }
 
+const NO_HREFS: readonly string[] = [];
+
 /**
  * Die Jetzt-Karte wie am Desktop (#2180): die Uhr groß links als Anker, daneben
  * was gerade läuft oder als Nächstes kommt, darunter wie viele Kinder da
@@ -754,11 +791,14 @@ function NowCard({
   now,
   stamp,
   running,
+  withoutHrefs = NO_HREFS,
 }: {
   readonly now: ReturnType<typeof useHomeNow>;
   readonly stamp: ReturnType<typeof useHomeStamp>;
   /** Der eigene Block, der laut Tagesplan gerade läuft (nur Telefon). */
   readonly running?: PlannedTimetableInstance;
+  /** Wege, die Leiste oder Pill schon tragen (nur Telefon). */
+  readonly withoutHrefs?: readonly string[];
 }) {
   const tenantPath = useTenantAwarePath();
   const stamped = stamp.state.kind === "in" || stamp.state.kind === "done";
@@ -766,7 +806,10 @@ function NowCard({
   const checkOut = stamp.state.kind === "in";
   // Wie am Desktop: die Wege des Moments („Zur Aufsicht“ bzw. „Aufsicht
   // starten“, „Alle Kinder“) stehen in der Karte, Ausstempeln daneben.
-  const footer = !now.loading && (now.actions.length > 0 || checkOut);
+  const actions = now.actions.filter(
+    (action) => action.kind !== "link" || !withoutHrefs.includes(action.href),
+  );
+  const footer = !now.loading && (actions.length > 0 || checkOut);
   // Zwei Zeilen: Uhrzeit klein vor dem Blocktitel, darunter Zustand, Raum,
   // Ende und die Kinder da. Keine eigene Zeile je Angabe.
   const time = (
@@ -803,7 +846,7 @@ function NowCard({
   const runningOverride =
     running && now.state.kind !== "own_running" ? running : null;
   const buttons = [
-    ...now.actions.map((action, index) =>
+    ...actions.map((action, index) =>
       action.kind === "start" ? (
         <Button
           key={`start-${action.block.id}`}
@@ -895,33 +938,50 @@ function NowCard({
 }
 
 /**
- * Die Leiste über der Pill trägt nur, was man auf der Startseite am
- * häufigsten tut und sonst nirgends in einem Tipp erreicht: Einstempeln,
- * solange man heute noch nicht eingestempelt ist. Die Aufsicht hat ihren
- * Reiter in der Pill; Ausstempeln steht in der Jetzt-Karte.
+ * Die Leiste über der Pill trägt, was man auf der Startseite gerade am
+ * häufigsten braucht. Läuft der eigene Block: „Zur Aufsicht“, daneben
+ * Einstempeln, falls man es noch nicht ist. Sonst nur Einstempeln, solange
+ * man heute noch nicht eingestempelt ist. Ausstempeln steht in der
+ * Jetzt-Karte.
  */
 function HomeActionBar({
   stamp,
+  supervisionHref,
 }: {
   readonly stamp: ReturnType<typeof useHomeStamp>;
+  readonly supervisionHref: string | null;
 }) {
-  if (stamp.state.kind !== "out") return null;
+  const checkIn = stamp.state.kind === "out";
+  if (!checkIn && !supervisionHref) return null;
   /* VORSCHLAG zu Produktentscheid 4 (Epic #8070): Stempeln als neuer
      Einstieg auf der Startseite; Logik in `useHomeStamp`. */
+  const checkInButton = checkIn ? (
+    <Button
+      type="button"
+      // Stempel-Knöpfe sind überall grün (Kit-Ausnahme der Zeiterfassung).
+      variant="success"
+      size="md"
+      className="whitespace-nowrap"
+      disabled={stamp.disabled}
+      onClick={stamp.checkIn}
+      tooltip="Stempelt dich vor Ort ein. Homeoffice wählst du in der Zeiterfassung."
+    >
+      Einstempeln
+    </Button>
+  ) : null;
+  if (!supervisionHref) return <ActionBar>{checkInButton}</ActionBar>;
   return (
-    <ActionBar>
-      <Button
-        type="button"
-        // Stempel-Knöpfe sind überall grün (Kit-Ausnahme der Zeiterfassung).
-        variant="success"
+    <ActionBar secondary={checkInButton ?? undefined}>
+      <ButtonLink
+        href={supervisionHref}
+        variant="primary"
         size="md"
-        className="whitespace-nowrap"
-        disabled={stamp.disabled}
-        onClick={stamp.checkIn}
-        tooltip="Stempelt dich vor Ort ein. Homeoffice wählst du in der Zeiterfassung."
+        className="flex-1 gap-2 whitespace-nowrap"
+        tooltip="Öffnet deine laufende Aufsicht."
       >
-        Einstempeln
-      </Button>
+        Zur Aufsicht
+        <ArrowRight className="size-4" aria-hidden="true" />
+      </ButtonLink>
     </ActionBar>
   );
 }
