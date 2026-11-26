@@ -81,9 +81,29 @@ function staleConsentAsFormChanged(error: unknown): unknown {
   const stale =
     error instanceof ApiError &&
     error.errors?.some(({ field }) => field === "consent_version");
-  return stale
-    ? new ApiError(error.message, 409, { code: FORM_CHANGED })
-    : error;
+  if (!stale) return error;
+  return new ApiError(error.message, 409, {
+    code: FORM_CHANGED,
+    errors: error.errors?.filter(({ field }) => field !== "consent_version"),
+  });
+}
+
+/**
+ * The form and the consent texts an offer shows. The parent's ticks belong
+ * to these; an offer that shows others asks for them again.
+ */
+function consentBasisOf(offer: HolidayRegistrationOffer): string {
+  const { version, retentionDays } = offer.consentTexts;
+  return `${offer.form.version}/${version}/${retentionDays}`;
+}
+
+function withoutConsents(draft: RegistrationDraft): RegistrationDraft {
+  return {
+    ...draft,
+    legalAcceptances: {},
+    privacyConsent: false,
+    healthConsent: false,
+  };
 }
 /** The code of a proof whose upload no longer counts (#5238). */
 const UPLOAD_EXPIRED = "enrollment.upload_expired";
@@ -127,6 +147,14 @@ export function HolidayRegistrationForm({
   const [draft, setDraft] = useState<RegistrationDraft>(() =>
     registrationFromFamily(family),
   );
+  // A reloaded offer with another form or other consent texts voids the
+  // ticks, also ones set while the old texts were still on screen (#8136).
+  const consentBasis = consentBasisOf(offer);
+  const [agreedBasis, setAgreedBasis] = useState(consentBasis);
+  if (agreedBasis !== consentBasis) {
+    setAgreedBasis(consentBasis);
+    setDraft(withoutConsents);
+  }
   const [step, setStep] = useState<HolidayRegistrationStep>("form");
   const [captchaToken, setCaptchaToken] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -211,12 +239,7 @@ export function HolidayRegistrationForm({
         // The consent texts may read differently now (#6691, #8136): the
         // parent agrees to the texts the reloaded form shows, not the old
         // ones.
-        setDraft((current) => ({
-          ...current,
-          legalAcceptances: {},
-          privacyConsent: false,
-          healthConsent: false,
-        }));
+        setDraft(withoutConsents);
         reload = onFormChanged;
       } else if (
         err instanceof ApiError &&

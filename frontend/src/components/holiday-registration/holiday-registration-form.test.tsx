@@ -1813,6 +1813,37 @@ describe("HolidayRegistrationForm questions of the Träger (#5198)", () => {
       screen.getByLabelText(/Ich bin einverstanden, dass der Träger/),
     ).not.toBeChecked();
   });
+  // #8136: ticks set while the old texts were still on screen do not count
+  // for the texts a reloaded offer shows.
+  it("asks for the consents again when the offer shows other consent texts", () => {
+    const form = (shown: HolidayRegistrationOffer) => (
+      <NextIntlClientProvider locale="de" messages={deMessages}>
+        <ToastProvider>
+          <HolidayRegistrationForm
+            token="link-key"
+            offer={shown}
+            family={null}
+          />
+        </ToastProvider>
+      </NextIntlClientProvider>
+    );
+    const { rerender } = render(form(offer));
+    fillRegistration();
+    const privacy = () =>
+      screen.getByLabelText(/Ich bin einverstanden, dass der Träger/);
+    expect(privacy()).toBeChecked();
+
+    rerender(
+      form({
+        ...offer,
+        consentTexts: {
+          ...offer.consentTexts,
+          version: offer.consentTexts.version + 1,
+        },
+      }),
+    );
+    expect(privacy()).not.toBeChecked();
+  });
   // ADR 0311 rule 6: a failed read of the changed form says so instead of
   // claiming the parent sees the new form.
   it("names a failed read of the changed form", async () => {
