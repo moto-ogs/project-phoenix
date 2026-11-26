@@ -204,7 +204,6 @@ describe("first tenant page reads", () => {
     ).resolves.toEqual({
       requestDate: date,
       requestIsToday: false,
-      requestSearch: "",
       students: [],
       truncatedTotal: null,
     });

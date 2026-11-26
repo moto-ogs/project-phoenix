@@ -333,7 +333,6 @@ describe("StudentSearchPage: click on the navigation entry of this page (#3374)"
     studentsResponse = {
       data: {
         students: [mockStudent],
-        requestSearch: "",
         truncatedTotal: 30000,
       },
       isLoading: false,

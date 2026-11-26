@@ -1034,7 +1034,8 @@ function SearchPageContent() {
   // as a transition: a key typed while the list renders is shown first.
   const [searchTerm, setSearchTerm] = useState(initial.search);
   // Only a list too long to load in full sends the term to the server.
-  const [listIsPartial, setListIsPartial] = useState(false);
+  // Key of the list (read without a name) that the page cap cut short.
+  const [partialListKey, setPartialListKey] = useState<string | null>(null);
   const [searchResetKey, setSearchResetKey] = useState(0);
   const [selectedGroupIds, setSelectedGroupIds] = useState(initial.groupIds);
   const [selectedSchoolClasses, setSelectedSchoolClasses] = useState(
@@ -1561,10 +1562,9 @@ function SearchPageContent() {
   // check-in event names a group this view does not show. It has to sit BEFORE
   // the free-text term: the term may contain dashes ("Anna-Lena"), so no
   // segment after it can be located positionally. See lib/swr/search-students-key.
-  const serverSearchTerm = listIsPartial ? searchTerm : "";
-  const studentSearchParams = {
+  const wholeListParams = {
     groupIds: queryGroupIds,
-    search: serverSearchTerm,
+    search: "",
     schoolClasses: querySchoolClasses,
     roomId: effectiveRoomId,
     dayStatus: dayStatusFilter,
@@ -1578,6 +1578,10 @@ function SearchPageContent() {
     pickupStatus: pickupStatusFilter,
     enrollmentAnswer: serverEnrollmentAnswer,
   } satisfies StudentSearchFilterInput & { photoState: string };
+  const wholeListKey = studentKeys.search(wholeListParams);
+  const listIsPartial = partialListKey === wholeListKey;
+  const serverSearchTerm = listIsPartial ? searchTerm : "";
+  const studentSearchParams = { ...wholeListParams, search: serverSearchTerm };
   const studentsCacheKey = studentKeys.search(studentSearchParams);
 
   // Any change to the result query — the server-side cache key or one of the
@@ -1611,8 +1615,6 @@ function SearchPageContent() {
     students: Student[];
     requestDate: string;
     requestIsToday: boolean;
-    /** The term this answer was filtered by on the server; "" for the whole list. */
-    requestSearch?: string;
     /**
      * Number of matching children the backend counted when the page walk could
      * not load them all, otherwise null. Never silently dropped: the list, the
@@ -1633,13 +1635,13 @@ function SearchPageContent() {
     },
   );
 
-  // Whether the whole list fits is known from an answer read without a term.
-  const wholeListIsPartial =
-    studentsData?.requestSearch === ""
-      ? (studentsData.truncatedTotal ?? null) !== null
-      : listIsPartial;
-  if (wholeListIsPartial !== listIsPartial) {
-    setListIsPartial(wholeListIsPartial);
+  // Whether these filters' list fits is known from its answer read without a
+  // term; kept data of other filters says nothing about it.
+  if (!isSearching && studentsData && serverSearchTerm === "") {
+    const answerIsPartial = (studentsData.truncatedTotal ?? null) !== null;
+    if (answerIsPartial !== listIsPartial) {
+      setPartialListKey(answerIsPartial ? wholeListKey : null);
+    }
   }
 
   // Keep room state and room_id/room_name query params in sync without a
@@ -1892,22 +1894,21 @@ function SearchPageContent() {
   // The children of the list's server filters and the registration answer:
   // what every count, card and bulk action below works on, as when the server
   // applied the answer.
-  const students = useMemo(() => {
+  const nameMatchedStudents = useMemo(() => {
     const browserTerm = serverSearchTerm ? "" : searchTerm;
-    if (!browserTerm && !activeEnrollmentAnswerChildren) return loadedStudents;
-    const matchesName = studentNameSearch(browserTerm);
-    return loadedStudents.filter(
-      (student) =>
-        matchesName(student) &&
-        (!activeEnrollmentAnswerChildren ||
-          activeEnrollmentAnswerChildren.has(student.id)),
-    );
-  }, [
-    loadedStudents,
-    activeEnrollmentAnswerChildren,
-    searchTerm,
-    serverSearchTerm,
-  ]);
+    return browserTerm
+      ? loadedStudents.filter(studentNameSearch(browserTerm))
+      : loadedStudents;
+  }, [loadedStudents, searchTerm, serverSearchTerm]);
+  const students = useMemo(
+    () =>
+      activeEnrollmentAnswerChildren
+        ? nameMatchedStudents.filter((student) =>
+            activeEnrollmentAnswerChildren.has(student.id),
+          )
+        : nameMatchedStudents,
+    [nameMatchedStudents, activeEnrollmentAnswerChildren],
+  );
 
   // The pickup times of the loaded children. A chosen time no child has (from
   // a link, or while the list loads) stays selectable so it can be lifted, but
@@ -2214,7 +2215,7 @@ function SearchPageContent() {
     const shown =
       rowsLoaded && serverEnrollmentAnswer === ""
         ? new Set(
-            loadedStudents
+            nameMatchedStudents
               .filter(matchesClientFilters)
               .map((student) => student.id),
           )
@@ -2247,7 +2248,7 @@ function SearchPageContent() {
     effectiveEnrollmentAnswer,
     rowsLoaded,
     serverEnrollmentAnswer,
-    loadedStudents,
+    nameMatchedStudents,
     matchesClientFilters,
   ]);
 

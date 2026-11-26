@@ -103,7 +103,6 @@ export async function fetchStudentSearch(
     students,
     requestDate: requestDate,
     requestIsToday: requestIsToday,
-    requestSearch: filters.search ?? "",
     truncatedTotal,
   };
 }

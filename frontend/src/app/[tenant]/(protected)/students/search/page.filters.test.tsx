@@ -917,6 +917,16 @@ describe("StudentSearchPage — registration answer counts (#7645)", () => {
     expect(screen.queryByTestId("student-card-8")).not.toBeInTheDocument();
   });
 
+  it("counts an answer among the children a name search leaves", async () => {
+    currentSearch = new URLSearchParams({ search: "Mia" });
+
+    render(<StudentSearchPage />, { wrapper: FreshSwrCache });
+
+    expect(
+      await screen.findByRole("button", { name: /: Ja \(1\)$/ }),
+    ).toBeInTheDocument();
+  });
+
   it("shows as many children as the chosen answer counted, without a new list request", async () => {
     mockFetchAnswerFilters.mockResolvedValue([
       {
