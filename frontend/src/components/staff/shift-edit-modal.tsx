@@ -1377,6 +1377,7 @@ export function ShiftEditModal({
                       around the DatePicker re-dispatches clicks. */}
                       <FieldGroup label="Gültig bis (optional)">
                         <DatePicker
+                          ariaLabel="Gültig bis (optional)"
                           value={
                             seriesValidUntil === ""
                               ? null
@@ -1613,6 +1614,7 @@ export function ShiftEditModal({
                           child (see FieldGroup comment below). */}
                           <FieldGroup label="Gültig bis (optional)">
                             <DatePicker
+                              ariaLabel="Gültig bis (optional)"
                               value={
                                 validUntil === ""
                                   ? null

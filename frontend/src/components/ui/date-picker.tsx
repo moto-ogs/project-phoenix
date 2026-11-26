@@ -774,7 +774,9 @@ export function ISODatePicker({
   // Hint and error belong to the field hull here rather than to DatePicker,
   // so the hint reads before the error as in the kit `Input`. Without a
   // caller's id the hull's generated id names the trigger, so label, hint
-  // and error stay linked either way (#6800).
+  // and error stay linked either way (#6800). The label also names the
+  // trigger through `ariaLabel`, so the trigger keeps its date in its name
+  // ("Gilt ab: 07.09.2026") instead of the label replacing it.
   const ids = useFieldIds({
     id: rest.id,
     hint,
@@ -785,6 +787,7 @@ export function ISODatePicker({
     <DatePicker
       {...rest}
       id={ids.id}
+      ariaLabel={rest.ariaLabel ?? label}
       invalid={rest.invalid ?? Boolean(error)}
       ariaDescribedBy={ids.describedBy}
       value={toDateOrNull(value)}

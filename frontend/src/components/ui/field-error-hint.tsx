@@ -1,8 +1,9 @@
 /**
  * The hint under a field that failed a check, for a control that has no
  * `error` prop of its own (a group of checkboxes, a row of time inputs, a
- * custom picker). The kit fields render it through `FieldShell`. Point the control's `aria-describedby` at `id` and set its
- * `aria-invalid` while `message` is set.
+ * custom picker). The kit fields render it through `FieldShell`. Point the
+ * control's `aria-describedby` at `id` and set its `aria-invalid` while
+ * `message` is set.
  */
 export function FieldErrorHint({
   id,
