@@ -1,6 +1,12 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 
 import { berlinTodayISO } from "~/lib/date-helpers";
 
@@ -20,14 +26,21 @@ export const RenderedBerlinDay = createContext<string | undefined>(undefined);
  * per minute and re-renders only on the actual rollover.
  */
 export function useBerlinToday(): string {
+  return useBerlinTodayWithRefresh()[0];
+}
+
+/** Also checks the day on demand, before continuing a dated read. */
+export function useBerlinTodayWithRefresh() {
   const [today, setToday] = useState(berlinTodayISO);
-  useEffect(() => {
-    const id = setInterval(() => {
-      const now = berlinTodayISO();
-      setToday((prev) => (prev === now ? prev : now));
-    }, 60_000);
-    return () => clearInterval(id);
+  const refresh = useCallback(() => {
+    const now = berlinTodayISO();
+    setToday(now);
+    return now;
   }, []);
+  useEffect(() => {
+    const id = setInterval(refresh, 60_000);
+    return () => clearInterval(id);
+  }, [refresh]);
   const renderedDay = useContext(RenderedBerlinDay);
-  return renderedDay ?? today;
+  return [renderedDay ?? today, refresh] as const;
 }

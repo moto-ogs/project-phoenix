@@ -45,6 +45,7 @@ const LIST_EXPORTS: Readonly<Record<string, string>> = {
   "/anmeldephasen": "page",
   "/auslastung": "page",
   "/belegung": "page",
+  "/kinder": "page",
   "/berichte": "page",
   "/dokumente": "page",
   "/einstellungen/briefkopf/vorlagen": "page",

@@ -294,7 +294,9 @@ var moduleComposeBudgets = map[string]int{
 	// ADR 0278: the time import of the guardian profile clock (+1).
 	// ADR 0307 (#7760): the read of child records by
 	// identifier the link of imported contracts binds (+13).
-	"modules/peopledirectory/compose":    1015,
+	// ADR 0327 (#8137): the names behind the Träger-Büro's list of the
+	// children of its schools (+13).
+	"modules/peopledirectory/compose":    1028,
 	"modules/presenceprojection/compose": 7,
 	"modules/requestreview/compose":      12,
 	"modules/schedulerruntime/compose":   45,

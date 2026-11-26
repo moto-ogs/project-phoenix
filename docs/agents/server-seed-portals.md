@@ -135,6 +135,7 @@ An audited GET stays on its prescribed browser/opening path even if its hook cur
 | `/ferien/kriterien` | Criteria and order. | Reordering and edits use versions/actions. |
 | `/ferien/neu` | Schools. | Blank period creation form. |
 | `/invite` | None. | The token opens the acceptance form; validation determines whether that form asks for an existing or new password. |
+| `/kinder` | Schools. | The children by name are person data: every page logs access at each school it shows, so the browser reads them on opening; school reiter, search, paging and exports are actions. |
 | `/konto` | Own profile, shared with the shell, then remembered devices. | Name and password updates are actions. |
 | `/login` | None. | Public login, MFA, choose organization and destination discovery for the successful session. |
 | `/nachweise` | School proof kind metadata. | Disclosed personnel proofs are audited; file and edit reads stay on action. |
