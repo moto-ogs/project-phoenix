@@ -87,6 +87,14 @@ export interface AppClockPanelProps {
   readonly breakStepper: ReactNode;
   readonly breakSheetOpen: boolean;
   readonly onBreakSheetOpenChange: (open: boolean) => void;
+  /**
+   * Telefon (Runde 17): Die Stempeluhr steht als Zeile in der Kopfkarte
+   * statt als zweite Karte darunter. `null`, solange der Platz im Kopf noch
+   * nicht gerendert ist.
+   */
+  readonly headSlot?: HTMLElement | null;
+  /** Schulzeit jetzt („HH:MM“, Berlin): ob der Dienst schon begonnen hat. */
+  readonly nowClock?: string;
 }
 
 function formatClock(totalSecs: number): string {
@@ -135,15 +143,27 @@ export function AppClockPanel(props: AppClockPanelProps) {
     breakElapsedSecs,
     disabled,
     busy,
+    headSlot,
+    nowClock,
   } = props;
   const [statusSheetOpen, setStatusSheetOpen] = useState(false);
   // Nach dem Ausstempeln meldet der Server keinen laufenden Block mehr; die
   // Minuten von heute zeigen, dass schon gestempelt wurde.
-  const badge = clockBadge(
+  const baseBadge = clockBadge(
     state === "idle" && todayMinutes > 0 ? "done" : state,
     sessionStatus,
     saving,
   );
+  // Runde 17: Hat der Dienst schon begonnen, ist „Nicht eingestempelt“ der
+  // wichtigste Zustand der Seite und steht orange statt grau.
+  const shiftStarted =
+    nowClock !== undefined &&
+    plannedShifts[0] !== undefined &&
+    plannedShifts[0].startTime <= nowClock;
+  const badge =
+    baseBadge.label === "Nicht eingestempelt" && shiftStarted
+      ? { ...baseBadge, tone: "orange" as const }
+      : baseBadge;
   const planned = plannedLine(plannedShifts);
 
   let headline: string;
@@ -198,73 +218,130 @@ export function AppClockPanel(props: AppClockPanelProps) {
   const idleBeforeWork = state === "idle" && todayMinutes === 0 && !saving;
   const showToday = !idleBeforeWork;
 
-  return (
-    <>
-      {/* Wiedererkennbar (#8070): dieselbe Karte „Stempeluhr“ mit Zustand
-          rechts wie heute, aber kompakt – Dienst bzw. laufende Zeit in einer
-          Zeile, damit am kleinen Telefon die Tage darunter Platz haben. */}
-      <SectionCard
-        title="Stempeluhr"
-        // Neben dem Titel statt rechts: rechts bräche der Zustand am kleinen
-        // Telefon in eine eigene Zeile um.
-        titleBadge={
-          <span role="status">
+  const todayText =
+    state === "working" && todayMinutes < 1
+      ? "<1min"
+      : formatDuration(todayMinutes);
+  // Telefon (Runde 17): eine Zeile im Kopf. Der Zustand vorn als Chip, dann
+  // der Dienst bzw. die laufende Zeit. Die geplante Pause und die
+  // Schichtart stehen in der Zeile von heute in der Woche darunter.
+  const headLine =
+    headSlot === undefined ? null : (
+      <div
+        data-setup-tour="time-clock"
+        data-app-clock=""
+        className="pb-1 text-sm leading-6 text-gray-600"
+      >
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+          <span role="status" className="inline-flex shrink-0">
             <StatusBadge label={badge.label} tone={badge.tone} />
           </span>
-        }
-      >
-        <div
-          data-setup-tour="time-clock"
-          data-app-clock=""
-          className="mt-2 text-sm leading-6"
-        >
-          {idleBeforeWork && plannedInfo ? (
-            plannedInfo
-          ) : (
-            <div className="flex items-baseline justify-between gap-3">
-              <p className="min-w-0 truncate tabular-nums">
-                <span
-                  className={cn(
-                    "font-semibold",
-                    state === "break"
-                      ? "text-moto-orange-strong"
-                      : "text-gray-900",
-                  )}
-                >
-                  {headline}
-                </span>
-                {detail ? (
-                  <span className="text-gray-500"> · {detail}</span>
-                ) : null}
-              </p>
-              {showToday ? (
-                <p className="shrink-0 text-gray-500 tabular-nums">
-                  <span className="font-semibold text-gray-900">
-                    {/* Gleich nach dem Einstempeln: nicht „0min“, die Zeit
-                        läuft schon (sie zählt alle 15 s weiter). */}
-                    {state === "working" && todayMinutes < 1
-                      ? "<1min"
-                      : formatDuration(todayMinutes)}
-                  </span>{" "}
-                  heute
-                </p>
-              ) : null}
-            </div>
-          )}
+          <span className="tabular-nums">
+            <span
+              className={cn(
+                "font-semibold",
+                state === "break" ? "text-moto-orange-strong" : "text-gray-900",
+              )}
+            >
+              {headline}
+            </span>
+            {detail && !idleBeforeWork ? (
+              <span className="text-gray-500"> · {detail}</span>
+            ) : null}
+          </span>
+          {showToday ? (
+            <span className="whitespace-nowrap tabular-nums">
+              <span className="font-semibold text-gray-900">{todayText}</span>{" "}
+              heute
+            </span>
+          ) : null}
         </div>
         {laborHints.length > 0 ? (
-          <ul className="mt-2 space-y-0.5">
+          <ul className="space-y-0.5">
             {laborHints.map((hint) => (
-              <li
-                key={hint.key}
-                className="text-moto-amber-strong text-sm font-medium"
-              >
+              <li key={hint.key} className="text-moto-amber-strong font-medium">
                 {hint.text}
               </li>
             ))}
           </ul>
         ) : null}
-      </SectionCard>
+      </div>
+    );
+
+  return (
+    <>
+      {/* Wiedererkennbar (#8070): dieselbe Karte „Stempeluhr“ mit Zustand
+          rechts wie heute, aber kompakt – Dienst bzw. laufende Zeit in einer
+          Zeile, damit am kleinen Telefon die Tage darunter Platz haben.
+          Telefon (Runde 17): als Zeile in der Kopfkarte. */}
+      {headSlot !== undefined ? (
+        headSlot && headLine ? (
+          createPortal(headLine, headSlot)
+        ) : null
+      ) : (
+        <SectionCard
+          title="Stempeluhr"
+          // Neben dem Titel statt rechts: rechts bräche der Zustand am kleinen
+          // Telefon in eine eigene Zeile um.
+          titleBadge={
+            <span role="status">
+              <StatusBadge label={badge.label} tone={badge.tone} />
+            </span>
+          }
+        >
+          <div
+            data-setup-tour="time-clock"
+            data-app-clock=""
+            className="mt-2 text-sm leading-6"
+          >
+            {idleBeforeWork && plannedInfo ? (
+              plannedInfo
+            ) : (
+              <div className="flex items-baseline justify-between gap-3">
+                <p className="min-w-0 truncate tabular-nums">
+                  <span
+                    className={cn(
+                      "font-semibold",
+                      state === "break"
+                        ? "text-moto-orange-strong"
+                        : "text-gray-900",
+                    )}
+                  >
+                    {headline}
+                  </span>
+                  {detail ? (
+                    <span className="text-gray-500"> · {detail}</span>
+                  ) : null}
+                </p>
+                {showToday ? (
+                  <p className="shrink-0 text-gray-500 tabular-nums">
+                    <span className="font-semibold text-gray-900">
+                      {/* Gleich nach dem Einstempeln: nicht „0min“, die Zeit
+                        läuft schon (sie zählt alle 15 s weiter). */}
+                      {state === "working" && todayMinutes < 1
+                        ? "<1min"
+                        : formatDuration(todayMinutes)}
+                    </span>{" "}
+                    heute
+                  </p>
+                ) : null}
+              </div>
+            )}
+          </div>
+          {laborHints.length > 0 ? (
+            <ul className="mt-2 space-y-0.5">
+              {laborHints.map((hint) => (
+                <li
+                  key={hint.key}
+                  className="text-moto-amber-strong text-sm font-medium"
+                >
+                  {hint.text}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </SectionCard>
+      )}
 
       {portalBars(
         <>
@@ -557,6 +634,8 @@ interface DayEntry {
   readonly sessions: readonly WorkSessionHistory[];
   readonly absence: StaffAbsence | undefined;
   readonly shifts: readonly StaffShift[];
+  /** Entfallene Schichten (stehen am Telefon in der Zeile des Tages). */
+  readonly cancelled: readonly StaffShift[];
   readonly special: string | undefined;
   readonly projection: DayProjection | undefined;
 }
@@ -625,11 +704,12 @@ export function AppDayList({
       list.sort((a, b) => a.checkInTime.localeCompare(b.checkInTime));
     }
     const shiftsByDate = new Map<string, StaffShift[]>();
+    const cancelledByDate = new Map<string, StaffShift[]>();
     for (const s of shifts) {
-      if (s.cancelled) continue;
-      const list = shiftsByDate.get(s.date) ?? [];
+      const target = s.cancelled ? cancelledByDate : shiftsByDate;
+      const list = target.get(s.date) ?? [];
       list.push(s);
-      shiftsByDate.set(s.date, list);
+      target.set(s.date, list);
     }
     const result: { week: number; days: DayEntry[] }[] = [];
     const toKey = toISODate(to);
@@ -644,6 +724,7 @@ export function AppDayList({
         sessions: byDate.get(key) ?? [],
         absence: absences.find((a) => a.dateStart <= key && a.dateEnd >= key),
         shifts: shiftsByDate.get(key) ?? [],
+        cancelled: cancelledByDate.get(key) ?? [],
         special: holidays?.get(key) ?? closingDays?.get(key),
         projection: projection?.get(key),
       };
@@ -722,7 +803,9 @@ export function AppDayList({
                   </span>
                 ) : (
                   <span className="tabular-nums">
-                    {partial ? "Saldo bis gestern" : "Saldo"}{" "}
+                    {/* Runde 17: „Woche“ sagt, dass hier nicht das
+                        Stundenkonto des Kopfs steht. */}
+                    {partial ? "Woche bis gestern" : "Woche"}{" "}
                     <span
                       className={cn("font-semibold", balanceClass(balance))}
                     >
@@ -868,7 +951,21 @@ function dayRows(
       // und seine Pause (Runde 15: die Stempeluhr nennt sie nicht mehr).
       title = plannedText ?? "Nichts geplant";
       const pause = d.shifts.reduce((sum, s) => sum + s.breakMinutes, 0);
-      subtitle = pause > 0 ? `Pause ${pause} min` : undefined;
+      // Runde 17: Die Stempeluhr steht im Kopf und nennt nur Zustand und
+      // Zeit; Schichtart, Vertretung und entfallene Schichten stehen hier.
+      // Die Pause vorn: am SE kürzt die Zeile die Schichtart, nicht sie.
+      const types = [
+        ...new Set(
+          d.shifts.flatMap((s) => (s.shiftTypeName ? [s.shiftTypeName] : [])),
+        ),
+      ];
+      const parts = [
+        pause > 0 ? `Pause ${pause} min` : null,
+        d.shifts.some((s) => s.originShiftId) ? "Vertretung" : null,
+        ...types,
+        ...d.cancelled.map((s) => `${s.startTime}–${s.endTime} entfällt`),
+      ].filter((part): part is string => part !== null);
+      subtitle = parts.length > 0 ? parts.join(" · ") : undefined;
     } else {
       title = "Nicht erfasst";
       subtitle = plannedText ?? undefined;
