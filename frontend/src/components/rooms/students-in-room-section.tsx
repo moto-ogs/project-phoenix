@@ -17,6 +17,7 @@
 import { ParentAttentionList } from "~/components/students/parent-attention-badge";
 import { useHasDeepScrollPosition } from "~/components/ui/navigation-scroll-position";
 import { useInitialPaintViewport } from "~/lib/hooks/use-after-initial-paint";
+import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { Alert } from "~/components/ui/alert";
 import { EmptyState } from "~/components/ui/empty-state";
 import { me as meKeys } from "~/lib/swr/me";
@@ -107,6 +108,7 @@ export function StudentsInRoomSection({
   const router = useTenantRouter();
   const { data: session } = useSession();
   const attendanceWebEnabled = useAttendanceWebEnabled();
+  const today = useBerlinToday();
   // Visibility never grants move rights: only administrators may target any
   // running module; staff remain limited to modules they supervise.
   const showAllTargets = canUseAllMoveTargets(session);
@@ -201,7 +203,7 @@ export function StudentsInRoomSection({
     data: loadedRooms,
     error: roomsError,
     mutate: refreshMoveRooms,
-  } = useSWRAuth<Room[]>(roomsKeys.key(), roomsKeys.fetcher);
+  } = useSWRAuth<Room[]>(roomsKeys.key({ openOn: today }), roomsKeys.fetcher);
   const rooms = loadedRooms ?? NO_ROOMS;
   // Ohne laufende Angebote, Aufsichten und Räume gäbe es scheinbar kein Ziel
   // (#2353): der Fehler steht über der Liste, Verschieben und Anmelden

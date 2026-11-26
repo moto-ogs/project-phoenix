@@ -202,6 +202,7 @@ export const routes = {
       "category": { kind: "string" },
       "include_system": { kind: "bool" },
       "is_open_room": { kind: "bool" },
+      "open_on": { kind: "date" },
       "page": { kind: "int" },
       "page_size": { kind: "int" },
     },

@@ -15,6 +15,7 @@ import (
 	"github.com/go-chi/render"
 	validation "github.com/go-ozzo/ozzo-validation"
 	"github.com/moto-ogs/project-phoenix/modules/facilities"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
@@ -203,6 +204,14 @@ func (rs *Resource) listRooms(w http.ResponseWriter, r *http.Request) {
 	}
 	if value := r.URL.Query().Get("category"); value != "" {
 		filter.Category = &value
+	}
+	if value := r.URL.Query().Get("open_on"); value != "" {
+		date, err := calendar.ParseDate(value)
+		if err != nil {
+			rs.runtime.Failure(w, r, FailureInvalid, errors.New("open_on must be a date (YYYY-MM-DD)"), "invalid_request")
+			return
+		}
+		filter.OpenOn = &date
 	}
 	// is_open_room selects by the permanent release (#3065). Absent means "no
 	// opinion" — the navigation asks for released rooms, every other caller

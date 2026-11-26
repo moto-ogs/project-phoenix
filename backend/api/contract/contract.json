@@ -4782,6 +4782,10 @@
           "kind": "bool"
         },
         {
+          "name": "open_on",
+          "kind": "date"
+        },
+        {
           "name": "page",
           "kind": "int"
         },

@@ -139,6 +139,7 @@ describe("api.ts list clients", () => {
         building: "Building A",
         category: "classroom",
         includeSystem: false,
+        openOn: "2026-12-01",
         page: 1,
         pageSize: 1000,
       });
@@ -147,6 +148,7 @@ describe("api.ts list clients", () => {
       expect(url).toContain("building=Building+A");
       expect(url).toContain("category=classroom");
       expect(url).toContain("include_system=false");
+      expect(url).toContain("open_on=2026-12-01");
       expect(url).toContain("page=1");
       expect(url).toContain("page_size=1000");
     });

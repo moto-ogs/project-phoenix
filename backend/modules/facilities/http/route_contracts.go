@@ -10,6 +10,7 @@ func RouteContracts() []apiCommon.RouteContract {
 	list := []apiCommon.QueryParam{
 		{Name: "building", Kind: apiCommon.QueryString},
 		{Name: "category", Kind: apiCommon.QueryString},
+		{Name: "open_on", Kind: apiCommon.QueryDate},
 		{Name: "is_open_room", Kind: apiCommon.QueryBool},
 		{Name: "include_system", Kind: apiCommon.QueryBool},
 		{Name: "page", Kind: apiCommon.QueryInt},

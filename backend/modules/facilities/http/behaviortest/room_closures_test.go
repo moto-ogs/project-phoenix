@@ -165,6 +165,43 @@ func TestRoomClosures_PermissionTenantAndLifecycle(t *testing.T) {
 	})
 }
 
+// TestRoomList_OpenOnExcludesClosedRooms makes the target-list boundary use
+// the same closure check as the command that eventually receives its choice.
+func TestRoomList_OpenOnExcludesClosedRooms(t *testing.T) {
+	t.Parallel()
+	tc := setupRoomClosuresRoute(t)
+	tenantID := newRoomFilterTestTenant(t, tc.db)
+	closed := testpkg.CreateTestRoomForTenant(t, tc.db, tenantID, "Geschlossener Raum")
+	open := testpkg.CreateTestRoomForTenant(t, tc.db, tenantID, "Freier Raum")
+	keeper := roomClosureCall{
+		router:      tc.router,
+		claims:      testutil.AdminTestClaimsForTenant(1, tenantID),
+		permissions: []string{"rooms:read", "rooms:update"},
+	}
+
+	rr := keeper.do(t, http.MethodPost, fmt.Sprintf("/%d/closures", closed.ID), closureBody("2026-11-30", "2026-12-02", "Wasserschaden"))
+	require.Equal(t, http.StatusCreated, rr.Code, rr.Body.String())
+
+	t.Run("excludes a room closed on the requested day", func(t *testing.T) {
+		rr := keeper.do(t, http.MethodGet, "/?open_on=2026-12-01", nil)
+		require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+		ids := roomResponseIDs(t, rr.Body.Bytes())
+		assert.False(t, ids[closed.ID])
+		assert.True(t, ids[open.ID])
+	})
+
+	t.Run("keeps the room outside its closure", func(t *testing.T) {
+		rr := keeper.do(t, http.MethodGet, "/?open_on=2026-12-03", nil)
+		require.Equal(t, http.StatusOK, rr.Code, rr.Body.String())
+		assert.True(t, roomResponseIDs(t, rr.Body.Bytes())[closed.ID])
+	})
+
+	t.Run("rejects an invalid calendar day", func(t *testing.T) {
+		rr := keeper.do(t, http.MethodGet, "/?open_on=01.12.2026", nil)
+		assert.Equal(t, http.StatusBadRequest, rr.Code, rr.Body.String())
+	})
+}
+
 // TestRoomClosuresListQueryBudget reads the closures of the pickers' day in
 // one statement, whatever the number of closed rooms.
 func TestRoomClosuresListQueryBudget(t *testing.T) {
