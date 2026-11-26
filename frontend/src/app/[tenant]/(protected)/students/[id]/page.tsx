@@ -1,5 +1,6 @@
 "use client";
 
+import { cn } from "~/lib/utils";
 import type * as studentsContract from "~/lib/contract/students.generated";
 import {
   Suspense,
@@ -84,7 +85,10 @@ import { ParentMessagesCard } from "~/components/students/parent-messages-card";
 import { StudentEnrollmentsTab } from "~/components/students/student-enrollments-tab";
 import { StudentDokumenteTab } from "~/components/students/dokumente-tab";
 import { StudentNotizenTab } from "~/components/students/student-notizen-tab";
-import { StudentPermanentNotesCard } from "~/components/students/student-permanent-notes-card";
+import {
+  PERMANENT_NOTES_DESCRIPTION,
+  StudentPermanentNotesCard,
+} from "~/components/students/student-permanent-notes-card";
 import {
   AggregatedRequestList,
   type AggregatedRequestFilters,
@@ -1676,7 +1680,15 @@ function StudentDetailPageContent() {
       backLabel={backLabel}
       leading={<StudentHeaderAvatar student={student} />}
       title={studentHeaderTitle(student)}
-      info={isHolidayGuest ? undefined : STUDENT_DETAIL_INFO}
+      info={
+        isHolidayGuest
+          ? undefined
+          : appHead
+            ? // Am Telefon steht hier auch der Erklärsatz der Karte
+              // „Dauerhafte Hinweise“ (Runde 19).
+              `${STUDENT_DETAIL_INFO} Dauerhafte Hinweise: ${PERMANENT_NOTES_DESCRIPTION}`
+            : STUDENT_DETAIL_INFO
+      }
       overflowMenu={appHead ? appMenuEntries : undefined}
       actions={
         canManageRecord ? (
@@ -1688,6 +1700,11 @@ function StudentDetailPageContent() {
           />
         ) : undefined
       }
+      // Beim Rollen bleibt wie auf jeder Seite nur die schmale Titelzeile;
+      // die Reiter rollen mit der Kopfkarte weg. Klebten sie darunter,
+      // lag die Kante einer Karte darunter wie ein Rest des Kopfes
+      // (Runde 19).
+      appShrinkToTitle
       appCompactStats={
         appHead ? (
           <AppStudentCompactStatus
@@ -2254,9 +2271,28 @@ function AppStudentLateBadge({
 }: Readonly<{
   late: ReturnType<typeof getStudentTimeStatus>;
   pickup: boolean;
-  /** Kurz („16:00 überfällig“), für den schmalen Kopf neben dem Namen. */
+  /**
+   * Zweizeilig klein („Abholung 16:00“ über „überfällig“), für den schmalen
+   * Kopf neben dem Namen: Er sagt, was überfällig ist, und lässt dem Namen
+   * auch am iPhone SE seinen Platz (Runde 19).
+   */
   short?: boolean;
 }>) {
+  if (short) {
+    return (
+      <span
+        className={cn(
+          "flex flex-col items-end text-xs leading-4 font-medium",
+          late.state === "very-overdue"
+            ? "text-moto-red-strong"
+            : "text-moto-orange-strong",
+        )}
+      >
+        <span>{`${pickup ? "Abholung" : "Ankunft"} ${late.displayTime ?? ""}`}</span>
+        <span>überfällig</span>
+      </span>
+    );
+  }
   return (
     <StatusBadge
       tone={late.state === "very-overdue" ? "red" : "orange"}
@@ -2413,51 +2449,77 @@ function AppStudentHeadStatus({
   // dasselbe zeigt wie am iPhone 15. Was nicht mehr passt, fällt als ganze
   // Angabe weg (die Zeile bricht in eine verborgene Folgezeile um) und
   // steht im Blatt „Heute“, das „Details“ am Zeilenende öffnet.
+  // Mit roter Zeit ist die erste Zeile voll (Ort und „Abholung überfällig
+  // 16:00“). Die heutige Ankunft steht dann in einer zweiten Zeile, statt
+  // nur hinter „Details“ (Runde 19); ohne rote Zeit passt sie in die erste.
+  const twoLines = Boolean(late) && facts.length > 0;
+  const factNodes = facts.map((fact, index) => (
+    <span
+      key={fact.text}
+      // Die erste Angabe ist die wichtigste: passt sie allein nicht,
+      // endet sie mit „…“ statt zu verschwinden. Ein Komma hängt
+      // ohne Lücke an der Angabe davor.
+      className={
+        index === 0
+          ? "max-w-full min-w-0 truncate"
+          : fact.sep === ","
+            ? "-ml-1.5"
+            : undefined
+      }
+    >
+      {fact.sep}
+      {fact.text}
+    </span>
+  ));
+  const factsLine = (extra?: ReactNode) => (
+    <span
+      data-testid="app-head-facts"
+      className="flex h-6 min-w-0 flex-1 flex-wrap items-center gap-x-1.5 overflow-hidden text-sm leading-6 text-gray-600 [&>*]:whitespace-nowrap"
+    >
+      {extra}
+      {factNodes}
+    </span>
+  );
+  const chips = (
+    <>
+      <span className="shrink-0">{location}</span>
+      {late ? (
+        <span className="shrink-0">
+          <AppStudentLateBadge late={late} pickup={late === pickupLate} />
+        </span>
+      ) : null}
+      {items.length > 0 ? (
+        <span className="contents [&>*]:contents">
+          <TenantPageStats items={items} />
+        </span>
+      ) : null}
+    </>
+  );
   return (
     <>
       <button
         type="button"
         onClick={() => setDetailsOpen(true)}
         aria-haspopup="dialog"
-        // Sichtbar 24 px hoch, dicht unter dem Namen; die Trefferfläche
-        // reicht bis an die Reiter, ohne Titelzeile oder Reiter zu überdecken.
+        // Sichtbar 24 px (zweizeilig 48 px) hoch, dicht unter dem Namen; die
+        // Trefferfläche reicht bis an die Reiter, ohne Titelzeile oder
+        // Reiter zu überdecken.
         data-app-head-status-tight=""
-        className="relative -mb-1 flex h-6 max-w-full min-w-full cursor-pointer items-center gap-2 text-left before:absolute before:inset-x-0 before:top-0 before:-bottom-1.5 before:content-['']"
+        className={cn(
+          "relative -mb-1 flex max-w-full min-w-full cursor-pointer gap-2 text-left before:absolute before:inset-x-0 before:top-0 before:-bottom-1.5 before:content-['']",
+          twoLines ? "h-12 items-start" : "h-6 items-center",
+        )}
       >
-        <span
-          data-testid="app-head-facts"
-          className="flex h-6 min-w-0 flex-1 flex-wrap items-center gap-x-1.5 overflow-hidden text-sm leading-6 text-gray-600 [&>*]:whitespace-nowrap"
-        >
-          <span className="shrink-0">{location}</span>
-          {late ? (
-            <span className="shrink-0">
-              <AppStudentLateBadge late={late} pickup={late === pickupLate} />
+        {twoLines ? (
+          <span className="flex min-w-0 flex-1 flex-col">
+            <span className="flex h-6 min-w-0 items-center gap-x-1.5 overflow-hidden text-sm leading-6 text-gray-600 [&>*]:whitespace-nowrap">
+              {chips}
             </span>
-          ) : null}
-          {items.length > 0 ? (
-            <span className="contents [&>*]:contents">
-              <TenantPageStats items={items} />
-            </span>
-          ) : null}
-          {facts.map((fact, index) => (
-            <span
-              key={fact.text}
-              // Die erste Angabe ist die wichtigste: passt sie allein nicht,
-              // endet sie mit „…“ statt zu verschwinden. Ein Komma hängt
-              // ohne Lücke an der Angabe davor.
-              className={
-                index === 0
-                  ? "max-w-full min-w-0 truncate"
-                  : fact.sep === ","
-                    ? "-ml-1.5"
-                    : undefined
-              }
-            >
-              {fact.sep}
-              {fact.text}
-            </span>
-          ))}
-        </span>
+            {factsLine()}
+          </span>
+        ) : (
+          factsLine(chips)
+        )}
         <span className="flex shrink-0 items-center text-sm leading-6 text-gray-500">
           Details
           <ChevronRight className="size-4" aria-hidden="true" />

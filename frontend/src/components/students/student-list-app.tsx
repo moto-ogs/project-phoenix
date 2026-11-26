@@ -49,7 +49,6 @@ import { dayHomeChange } from "~/components/students/student-table";
 import { NotificationBadge } from "~/components/ui/notification-badge";
 import { COUNTER_TONE } from "~/lib/counter-tones";
 import { useStudentParentAttention } from "~/lib/hooks/use-parent-attention";
-import { cn } from "~/lib/utils";
 import { MOTO_COLOR_PALETTE } from "~/lib/kit-palette";
 import type { TrackingIndicatorsResponse } from "~/lib/active-helpers";
 import { useRowClock } from "~/components/students/student-card-clock";
@@ -108,10 +107,10 @@ function RowLine({
   klass: string | undefined;
   homeway: string | null;
 }>) {
-  // Die Klasse bleibt ganz; Gruppe und Heimweg kürzen sich mit „…“, statt
-  // am kleinen Telefon still wegzufallen. Neben einem Hinweis vorn steht der
-  // Heimweg auf keinem Telefon (er steht im Kind-Blatt), damit iPhone SE und
-  // iPhone 15 dieselben Angaben zeigen.
+  // Jede Angabe ganz oder gar nicht, nie als Wortstumpf („Mondgr…“, Runde
+  // 19). Neben einer roten Zeit stehen auf keinem Telefon Gruppe und Heimweg
+  // (beide im Kind-Blatt), damit iPhone SE und iPhone 15 dieselben Angaben
+  // zeigen; neben einem anderen Hinweis entfällt nur der Heimweg.
   let parts: { text: string; kind: "class" | "group" | "homeway" }[] = [
     klass ? { text: klass, kind: "class" as const } : null,
     student.group_name
@@ -136,6 +135,7 @@ function RowLine({
   if (student.has_full_access !== false) {
     const overdue = isToday ? overdueTime(student, now) : null;
     if (overdue) {
+      parts = parts.filter((part) => part.kind === "class");
       lead = (
         <span
           className="flex shrink-0 items-center gap-1 font-medium"
@@ -208,16 +208,9 @@ function RowLine({
       {parts.map((part, index) => (
         <span
           key={part.kind}
-          // Gruppe und Heimweg kürzen sich mit „…“ („· Regenbogengr…“). Die
-          // Gruppe bekommt den Platz zuerst: Erst wenn sie ganz steht, wächst
-          // der Heimweg in den Rest.
-          className={cn(
-            part.kind === "class"
-              ? "shrink-0 whitespace-nowrap"
-              : "max-w-max min-w-0 shrink truncate",
-            part.kind === "group" && "grow-[1000] basis-12",
-            part.kind === "homeway" && "grow basis-16",
-          )}
+          // Ganz oder in der verborgenen Folgezeile: Was nicht mehr passt,
+          // steht im Kind-Blatt.
+          className="shrink-0 whitespace-nowrap"
         >
           {leading || index > 0 ? "· " : ""}
           {part.text}

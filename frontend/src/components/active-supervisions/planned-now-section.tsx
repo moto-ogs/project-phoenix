@@ -172,6 +172,19 @@ export function PlannedNowSection({
     [now, plannedNow],
   );
 
+  if (sortedPlanned.length === 0 && app) {
+    // Telefon (Runde 19): Ohne Termin ist die Karte eine Textzeile unter
+    // dem Titel; Chip und leerer Zustand belegten viel Fläche ohne Angabe.
+    return (
+      <div data-setup-tour="supervision-next">
+        <SectionCard
+          title="Als Nächstes"
+          description="Keine geplante Betreuung in Sicht."
+        />
+      </div>
+    );
+  }
+
   if (sortedPlanned.length === 0) {
     return (
       <div

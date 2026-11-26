@@ -1,6 +1,6 @@
 "use client";
 
-import { MoreHorizontal } from "lucide-react";
+import { MoreHorizontal, Search } from "lucide-react";
 import {
   createContext,
   useContext,
@@ -85,6 +85,13 @@ export interface AppHeadProps {
   readonly compactActions?: true | ReactNode;
   /** Suche und Reiter rollen mit weg (`appToolbarScrollsAway`). */
   readonly toolbarScrollsAway?: boolean;
+  /**
+   * Reiter, Suche und Filter rollen mit der Kopfkarte weg, statt zu kleben
+   * (`appShrinkToTitle`): Beim Rollen bleibt nur die schmale Kopfkarte.
+   * Trägt die Leiste eine Suche, zeigt sie eine Lupe, die zurück nach oben
+   * ins Suchfeld springt.
+   */
+  readonly shrinkToTitle?: boolean;
   /** Reiter als Chips. */
   readonly tabs?: ReactNode;
   /** Suche, Filter oder ein Bedienband (`searchSlot`). */
@@ -117,6 +124,7 @@ export function AppTenantHead({
   compactStats,
   compactActions,
   toolbarScrollsAway = false,
+  shrinkToTitle = false,
   tabs,
   toolbar,
   printHideHeader = false,
@@ -138,9 +146,11 @@ export function AppTenantHead({
   // „…“ nur, wenn das Blatt etwas zeigt: Aktionen, Menüeinträge oder Info.
   const hasMenu = hasMenuEntries || info != null || actions != null;
   const hasToolbar = tabs != null || toolbar != null;
-  // Klebt die Leiste, hängt sie unter der schmalen Kopfkarte; rollt sie
-  // mit weg, ist die schmale Kopfkarte allein eine ganze Karte.
-  const toolbarSticks = hasToolbar && !toolbarScrollsAway;
+  // Klebt die Leiste, hängt sie unter der schmalen Kopfkarte. Rollt sie mit
+  // weg (`toolbarScrollsAway` oder `shrinkToTitle`), ist die schmale
+  // Kopfkarte allein eine ganze Karte; in der Detailspalte klebt sie immer.
+  const toolbarSticks =
+    hasToolbar && (!(toolbarScrollsAway || shrinkToTitle) || inSplitDetail);
   useStickyOffset(toolbarRef, scrolledAway, toolbarSticks);
   // Die Leiste hängt beim Scrollen ohne Fuge an der schmalen Kopfkarte:
   // eine Karte wie oben auf der Seite, kein Spalt, durch den Inhalt blitzt.
@@ -267,8 +277,7 @@ export function AppTenantHead({
           ref={toolbarRef}
           data-app-page-toolbar=""
           className={cn(
-            toolbarSticks ? `sticky ${Z_LAYER.nav}` : "relative",
-            "mt-1.5 -mb-1 space-y-1.5 px-1.5 py-1",
+            `${toolbarSticks ? "sticky" : "relative"} ${Z_LAYER.nav} mt-1.5 -mb-1 space-y-1.5 px-1.5 py-1`,
             FLOATING_CARD,
             // Telefon: unten an der Kopfkarte, solange sie steht; klebt die
             // Leiste allein, ist sie wieder eine ganze Karte.
@@ -331,6 +340,29 @@ export function AppTenantHead({
         {/* Symbol-Aktionen wie die Lupe bleiben auf Wunsch der Seite auch
             beim Rollen erreichbar. `mr-2` ergänzt `gap-1` auf die 12 px, die
             zwei 44-px-Trefferflächen nebeneinander brauchen. */}
+        {shrinkToTitle && toolbar != null ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            aria-label="Suchen"
+            // `mr-2` ergänzt `gap-1` auf die 12 px zwischen zwei 44-px-
+            // Trefferflächen.
+            className={cn(hasMenu && "mr-2")}
+            tooltip="Springt nach oben ins Suchfeld."
+            onClick={() => {
+              const reduce = window.matchMedia(
+                "(prefers-reduced-motion: reduce)",
+              ).matches;
+              window.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" });
+              toolbarRef.current
+                ?.querySelector<HTMLInputElement>("input")
+                ?.focus({ preventScroll: true });
+            }}
+          >
+            <Search className="size-5" aria-hidden="true" />
+          </Button>
+        ) : null}
         {compactActions != null && compactActions !== false ? (
           <div
             data-app-head-compact-actions=""

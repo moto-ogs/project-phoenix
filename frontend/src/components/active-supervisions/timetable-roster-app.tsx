@@ -154,7 +154,9 @@ type SectionKey = "missing" | "present" | "gone";
 const SECTION_TITLES: Record<SectionKey, string> = {
   missing: "Fehlt noch",
   present: "Da",
-  gone: "Gegangen oder abgemeldet",
+  // Ein Wort für alle Kinder außerhalb des Raums, wie am Computer
+  // („Nicht mehr im Raum“): gegangen, krank oder heute nicht eingeplant.
+  gone: "Nicht im Raum",
 };
 
 function childName(row: TimetableRosterRow): string {
@@ -626,8 +628,8 @@ export function TimetableRosterApp({
     } else if (key === "present") {
       pickupPart();
     } else {
-      // Unter „Gegangen oder abgemeldet“ steht zuerst der Grund (nicht im
-      // Raum, krank …), dann die Gehzeit, zuletzt ein Hinweis.
+      // Unter „Nicht im Raum“ steht zuerst ein Grund (krank, heute nicht
+      // eingeplant), dann die Gehzeit, zuletzt ein Hinweis.
       if (row.status === "absent") {
         text(
           row.substatus
@@ -635,9 +637,8 @@ export function TimetableRosterApp({
             : "Abwesend",
         );
       } else if (!row.currentlyPresent && row.status === "present") {
-        // Am Computer „Nicht mehr im Raum“: Das Kind hat den Raum verlassen,
-        // ist aber nicht unbedingt nach Hause gegangen.
-        text("nicht im Raum");
+        // Das Kind hat den Raum verlassen: Das sagt schon der Abschnitt
+        // „Nicht im Raum“; die Zeile nennt nur die Gehzeit.
       } else {
         text("heute nicht eingeplant");
       }
@@ -691,16 +692,15 @@ export function TimetableRosterApp({
     // „Raum verlassen“ steht nicht in jeder Zeile: zwölfmal derselbe Knopf
     // machte die Liste zum Formular und schob Hinweise in eine dritte
     // Zeile. Ein Tipp auf das Kind öffnet das Blatt, dort ist es die erste
-    // Aktion. „Ist da“ und „Wieder da“ bleiben in der Zeile: Sie betreffen
-    // nur die Kinder, die noch fehlen oder gegangen sind.
-    if (action !== "check-in") return undefined;
+    // Aktion. „Ist da“ bleibt in der Zeile: Es betrifft die Kinder, die
+    // noch fehlen. „Wieder da“ ist selten und steht wie „Raum verlassen“ als
+    // erste Aktion im Blatt, statt als kleine zweite Trefferfläche in der
+    // Zeile (Runde 19).
+    if (action !== "check-in" || row.status !== "expected") return undefined;
     const isBusy = busy === `${row.studentId}:${action}`;
     // Ausgeschrieben statt als Symbol: Ein Pfeil allein las sich als
-    // „Abmelden“, ein Haken gar nicht. Ein gegangenes Kind ist „Wieder da“.
-    const label =
-      row.status === "expected"
-        ? CHECK_IN_WORDING.expected
-        : CHECK_IN_WORDING.returned;
+    // „Abmelden“, ein Haken gar nicht.
+    const label = CHECK_IN_WORDING.expected;
     return (
       <Button
         type="button"
@@ -1144,8 +1144,10 @@ function SupervisionChildSheet({
       quickActions={false}
       status={
         // „Da bis 15:30“ grün neben „Geht 15:30, überfällig“ rot widersprach
-        // sich: Ist die Gehzeit vorbei, sagt das Abzeichen es.
-        loaded ? (pickupOverdue ? PICKUP_OVERDUE_STATUS : undefined) : NO_STATUS
+        // sich. Ist die Gehzeit vorbei, sagt es die rote Zeile „Gehen heute“
+        // allein: ein zweites Abzeichen („Gehzeit überfällig“) nannte
+        // denselben Hinweis mit anderen Worten (Runde 19).
+        loaded ? (pickupOverdue ? NO_STATUS : undefined) : NO_STATUS
       }
       contextActions={lines}
       // Die Aktionen stehen gebündelt in der Fußleiste über der Akte.
@@ -1159,13 +1161,6 @@ function SupervisionChildSheet({
  * kennt nur den Stand in diesem Block.
  */
 const NO_STATUS: ChildDayStatus | null = null;
-
-const PICKUP_OVERDUE_STATUS: ChildDayStatus = {
-  // Wie die Zeile („geht 15:30“) und die Angabe im Blatt („Geht 15:30,
-  // überfällig“): dieselbe Gehzeit, nicht ein zweites Wort „Abholung“.
-  value: "Gehzeit überfällig",
-  tone: "absent",
-};
 
 /** Dasselbe Kind rechts neben der Liste (iPad quer). */
 function SupervisionChildDetail({
