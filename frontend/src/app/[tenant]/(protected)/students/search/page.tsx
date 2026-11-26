@@ -3612,7 +3612,20 @@ function SearchPageContent() {
         activeFilters={activeFilters}
         // Sechs Filter sprengen die Zeile bis hinauf zu Tablet-Breiten; die
         // Filterschaltfläche sammelt sie hinter einer Fläche mit Abschnitten.
-        filterPanel={{ sections: filterSections }}
+        // Handy (#8070): „Anwesenheit“ (Tag, Status) ist der häufigste
+        // Filter und steht im Blatt zuerst, auch am iPhone SE ohne Rollen.
+        filterPanel={{
+          sections: appView
+            ? [
+                ...filterSections.filter(
+                  (section) => section.title === "Anwesenheit",
+                ),
+                ...filterSections.filter(
+                  (section) => section.title !== "Anwesenheit",
+                ),
+              ]
+            : filterSections,
+        }}
         onClearAllFilters={clearAllFilters}
         // Ein Ladefehler ist der Fehlerzustand des Gerüsts. Fehlende Rechte
         // stehen als eingebetteter Standardzustand im Inhalt.

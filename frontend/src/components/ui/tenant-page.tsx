@@ -115,6 +115,12 @@ export interface TenantPageProps extends TenantPageSearchRowProps {
    */
   readonly appStatsInline?: boolean;
   /**
+   * App (#8070): Kurzstatus, der beim Rollen im schmalen Kopf neben dem
+   * Titel stehen bleibt (etwa Ort und rote Zeit eines Kindes). Ohne ihn
+   * bleiben dort nur Kennzahlen aus `appStatsInline`.
+   */
+  readonly appCompactStats?: ReactNode;
+  /**
    * Erklärung der Seite, die man zum Kennenlernen braucht, aber nicht jeden
    * Tag liest. Sie liegt hinter einem Info-Knopf neben dem Titel und kostet
    * im Alltag keine Zeile (#4385). Per Tipp, Klick und Tastatur erreichbar,
@@ -646,6 +652,7 @@ function TenantPageView({
   stats,
   statsLoading = false,
   appStatsInline = false,
+  appCompactStats,
   info,
   actions,
   leading,
@@ -906,6 +913,7 @@ function TenantPageView({
             overflowMenu={overflowMenu}
             statusLine={statusLine}
             statsInline={appStatsInline}
+            compactStats={appCompactStats}
             printHideHeader={printHideHeader}
             tabs={tabs ? <AppTenantTabs {...tabs} /> : undefined}
             toolbar={
