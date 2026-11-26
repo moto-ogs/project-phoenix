@@ -2194,15 +2194,10 @@ describe("Aggregate fetcher error contract", () => {
       status: 500,
     });
 
-    // The former admin fallback fan-out endpoints must never be contacted:
-    // silently-empty partial payloads are the failure mode #2096 removed.
-    const urls = fetchMock.mock.calls.map(([u]) => String(u));
-    expect(urls.some((u) => u.includes("/api/active/supervisors/all"))).toBe(
-      false,
-    );
-    expect(urls.some((u) => u.includes("/api/active/schulhof/status"))).toBe(
-      false,
-    );
+    // No fallback fan-out: the aggregate failure must stay visible (#2096).
+    expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual([
+      expect.stringContaining("/api/active/supervision-dashboard"),
+    ]);
   });
 
   it("throws on aggregate failure for non-admins", async () => {

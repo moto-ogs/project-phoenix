@@ -59,6 +59,30 @@ test("the #8085 cutover only retires the old staff navigation fields", () => {
   assert.equal(breakingChanges(before, model(fields, route)).length, 4);
 });
 
+test("the supervision cleanup only retires the two former tenant reads", () => {
+  for (const [pattern, goType] of [
+    ["/api/active/supervisors/all", "presence.ActiveGroupResponse"],
+    ["/api/students/ogs-group-navigation", "grouplive.NavigationGroup"],
+  ]) {
+    const before = model(base.types[0].fields, { pattern });
+    before.types[0].go_type = goType;
+    const after = { ...before, routes: [] };
+    assert.deepEqual(breakingChanges(before, after), []);
+
+    const breaking = [`GET ${pattern}: route removed without a release as deprecated`];
+    before.routes[0].portals = ["tenant", "school"];
+    assert.deepEqual(breakingChanges(before, after), breaking);
+    before.routes[0].portals = ["tenant"];
+    before.types[0].go_type = "future.Replacement";
+    assert.deepEqual(breakingChanges(before, after), breaking);
+  }
+
+  const supervised = model(base.types[0].fields, { pattern: "/api/me/groups/supervised" });
+  assert.deepEqual(breakingChanges(supervised, { ...supervised, routes: [] }), [
+    "GET /api/me/groups/supervised: route removed without a release as deprecated",
+  ]);
+});
+
 test("a decimal string identifier may become an id on either side", () => {
   const body = (kind) => {
     const route = model([field("id", kind)], { method: "POST", request: { kind: "ref", ref: "Row" }, response: undefined, no_data: true });

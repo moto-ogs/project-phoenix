@@ -30,13 +30,6 @@ vi.mock("~/lib/student-api", () => ({
   fetchStudent: vi.fn(() => Promise.resolve({ id: "1", first_name: "Max" })),
 }));
 
-vi.mock("~/lib/usercontext-api", () => ({
-  userContextService: {
-    getMyEducationalGroups: vi.fn(() => Promise.resolve([])),
-    getMySupervisedGroups: vi.fn(() => Promise.resolve([])),
-  },
-}));
-
 // Import after mocking
 import { useStudentData } from "../use-student-data";
 import { useSWRAuth } from "~/lib/swr";

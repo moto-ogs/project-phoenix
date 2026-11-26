@@ -1169,12 +1169,6 @@ export const routes = {
     },
     response: success(DashboardProjectionSchema),
   },
-  "GET /api/active/supervisors/all": {
-    method: "GET",
-    pattern: "/api/active/supervisors/all",
-    portals: ["tenant"],
-    response: success(z.array(ActiveGroupResponseSchema)),
-  },
   "GET /api/active/supervisors/staff/{staffId}/active": {
     method: "GET",
     pattern: "/api/active/supervisors/staff/{staffId}/active",

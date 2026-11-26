@@ -13,7 +13,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"slices"
 	"strings"
 	"time"
@@ -129,7 +128,6 @@ type groupLiveSources struct {
 	Handovers         grouplive.HandoverReader
 	StatusDays        groupLiveStatusDays
 	HolidayGroups     groupLiveHolidayGroups
-	Logger            *slog.Logger
 	Now               func() time.Time
 }
 
@@ -167,7 +165,6 @@ func newGroupLive(sources groupLiveSources, hints peopledirectory.SchoolDayHintQ
 		TeacherHints:    groupLiveTeacherHints(hints),
 		Handovers:       sources.Handovers,
 		HolidayGroups:   groupLiveHolidayGroupWeeks{groups: sources.HolidayGroups},
-		Logger:          sources.Logger,
 	}), nil
 }
 

@@ -552,3 +552,18 @@ dem alten Go-Vertrag dieser Route. Der Schnitt setzt gemeinsam ausgelieferte
 Go- und Next-Versionen und danach neu geladene Staff-Tabs voraus. Ein alter
 Next-Decoder kann die kürzere Antwort nicht lesen. Die gewöhnliche
 Deprecation-Regel gilt für alle anderen Vertragsänderungen.
+
+## Ergänzung: Zwei ungenutzte Aufsichtsrouten entfallen
+
+Nach #8084 und #8085 liest die Staff-Oberfläche den Aufsichtskontext über
+`GET /api/active/supervision-context`. Die Suche in den Clients, Skripten,
+der Betriebs- und Monitoring-Konfiguration sowie in PyrePortal ergab keine
+Aufrufer mehr für `GET /api/students/ogs-group-navigation` oder
+`GET /api/active/supervisors/all`. Der k6-Kapazitätstest ruft weiterhin
+`GET /api/me/groups/supervised` auf; dieser Vertrag bleibt.
+
+Wie beim Schnitt für #8085 erlaubt die Vertragsprüfung nur die ausdrücklich
+benannten Entfernungen, hier die zwei bisherigen tenant-exklusiven
+GET-Routen mit ihren bisherigen Antworttypen. Die Deprecation-Regel gilt
+unverändert für andere Verträge. Ein älterer Client von vor der Umstellung
+muss neu geladen werden. Der Proxy leitet die beiden Pfade nicht mehr weiter.

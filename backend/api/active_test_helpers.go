@@ -117,7 +117,6 @@ func (m ActivePeople) AttendancePeople() AttendanceRoutePeople {
 // caller rows of the active graph.
 func NewActiveTestAttendanceStaff(caller *owners.CallerRows) interface {
 	GetCurrentStaff(context.Context) (int64, int64, bool, error)
-	HasCurrentStaff(context.Context) (bool, error)
 } {
 	return peopleCompose.NewAttendanceRouteStaff(caller)
 }
