@@ -12,7 +12,7 @@
 // Daten, Tageswechsel, Start und Öffnen kommen aus `TagesplanView`; dieser
 // Baustein lädt nichts selbst.
 
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import {
   type CSSProperties,
   Fragment,
@@ -283,6 +283,26 @@ function blockState(
   };
 }
 
+/**
+ * Wie viele Gruppen am Anfang des Tages ganz vorbei sind (kein Block läuft,
+ * startet noch oder kommt noch). Sie klappen am Telefon zu einer Zeile ein.
+ */
+function countPastGroups(
+  groups: readonly TagesplanGroup[],
+  entries: ReadonlyMap<string, { state: BlockState }>,
+): number {
+  let count = 0;
+  for (const group of groups) {
+    const over = group.cells.every((cell) => {
+      const state = entries.get(cell.instance.id)?.state;
+      return state != null && state.over && !state.running && !state.startable;
+    });
+    if (!over) break;
+    count += 1;
+  }
+  return count;
+}
+
 // ---------------------------------------------------------------------------
 // Liste
 
@@ -531,7 +551,10 @@ export function TagesplanApp(props: TagesplanAppProps) {
     else setSheetId(id);
   };
 
-  const renderRow = (cell: { instance: PlannedTimetableInstance }) => {
+  const renderRow = (
+    cell: { instance: PlannedTimetableInstance },
+    inPast = false,
+  ) => {
     const entry = entries.get(cell.instance.id);
     if (!entry) return null;
     return (
@@ -541,6 +564,7 @@ export function TagesplanApp(props: TagesplanAppProps) {
         next={entry.instance.startTime === nextStart && !entry.state.over}
         mine={showMine && entry.instance.isAssigned}
         selected={splitId === entry.instance.id}
+        inPast={inPast}
         onOpen={() => openEntry(entry.instance.id)}
       />
     );
@@ -570,6 +594,47 @@ export function TagesplanApp(props: TagesplanAppProps) {
       ? splitAt(groups[nowIndex - 1]!) > 0
       : false;
 
+  // Telefon, heute: Was schon vorbei ist, steht eingeklappt als eine Zeile
+  // „8 Blöcke vorbei“ oben. So öffnet die Seite ohne Scrollen mit dem Kopf
+  // samt Tagesleiste, und der laufende Block steht im ersten Bild.
+  const pastGroups = isToday && !isSplit ? countPastGroups(groups, entries) : 0;
+  const pastBlocks = groups
+    .slice(0, pastGroups)
+    .reduce((sum, group) => sum + group.cells.length, 0);
+  const collapsible = pastBlocks >= 2;
+  const [pastOpen, setPastOpen] = useState(false);
+  const hidePast = collapsible && !pastOpen;
+  const pastToggle = collapsible ? (
+    <div>
+      <CollectionList>
+        <CollectionRow
+          title={`${pastBlocks} Blöcke vorbei`}
+          subtitle={`${groups[0]!.startTime}–${groups
+            .slice(0, pastGroups)
+            .reduce(
+              (latest, group) =>
+                group.endTime > latest ? group.endTime : latest,
+              groups[0]!.endTime,
+            )}`}
+          aria-label={`${pastBlocks} Blöcke vorbei, ${pastOpen ? "ausblenden" : "anzeigen"}`}
+          meta={
+            <span className="inline-flex items-center gap-1.5">
+              {pastOpen ? "Ausblenden" : "Anzeigen"}
+              <ChevronDown
+                className={cn(
+                  "h-4 w-4 shrink-0 text-gray-500 transition-transform",
+                  pastOpen && "rotate-180",
+                )}
+                aria-hidden="true"
+              />
+            </span>
+          }
+          onClick={() => setPastOpen((open) => !open)}
+        />
+      </CollectionList>
+    </div>
+  ) : null;
+
   const list = (
     <Collection
       label="Blöcke des Tages"
@@ -577,46 +642,54 @@ export function TagesplanApp(props: TagesplanAppProps) {
       // darunter umbrechen.
       className="[&_[data-collection-row]>span:first-child]:self-start"
     >
-      {groups.map((group, index) => (
-        <Fragment key={group.key}>
-          {index === nowIndex && !lineInGroup ? nowLine : null}
-          {group.cells.length === 1 ? (
-            <div className="border-gray-100 [&:not(:first-child)]:border-t">
-              <CollectionList>{renderRow(group.cells[0]!)}</CollectionList>
-            </div>
-          ) : (
-            <div
-              data-tagesplan-parallel=""
-              className="relative border-gray-200 before:absolute before:top-10 before:bottom-3 before:left-1.5 before:w-1 before:rounded-full before:bg-gray-300 before:content-[''] [&_[data-collection-group]>div:first-child]:bg-gray-100 [&:not(:first-child)]:border-t [&:not(:last-child)]:border-b"
-            >
-              <CollectionGroup
-                title={
-                  <span className="tabular-nums">
-                    Gleichzeitig ·{" "}
-                    {group.openEnd && group.endTime <= group.startTime
-                      ? `ab ${group.startTime}`
-                      : `${group.startTime}–${group.endTime}`}
-                  </span>
-                }
-                meta={`${group.cells.length} Blöcke`}
+      {pastToggle}
+      {groups.map((group, index) =>
+        hidePast && index < pastGroups ? null : (
+          <Fragment key={group.key}>
+            {index === nowIndex && !lineInGroup ? nowLine : null}
+            {group.cells.length === 1 ? (
+              <div className="border-gray-100 [&:not(:first-child)]:border-t">
+                <CollectionList>
+                  {renderRow(
+                    group.cells[0]!,
+                    collapsible && index < pastGroups,
+                  )}
+                </CollectionList>
+              </div>
+            ) : (
+              <div
+                data-tagesplan-parallel=""
+                className="relative border-gray-200 before:absolute before:top-10 before:bottom-3 before:left-1.5 before:w-1 before:rounded-full before:bg-gray-300 before:content-[''] [&_[data-collection-group]>div:first-child]:bg-gray-100 [&:not(:first-child)]:border-t [&:not(:last-child)]:border-b"
               >
-                {group.cells.map((cell, cellIndex) =>
-                  index === nowIndex - 1 &&
-                  lineInGroup &&
-                  cellIndex === splitAt(group) ? (
-                    <Fragment key={`jetzt-${cell.instance.id}`}>
-                      <li className="list-none">{nowLine}</li>
-                      {renderRow(cell)}
-                    </Fragment>
-                  ) : (
-                    renderRow(cell)
-                  ),
-                )}
-              </CollectionGroup>
-            </div>
-          )}
-        </Fragment>
-      ))}
+                <CollectionGroup
+                  title={
+                    <span className="tabular-nums">
+                      Gleichzeitig ·{" "}
+                      {group.openEnd && group.endTime <= group.startTime
+                        ? `ab ${group.startTime}`
+                        : `${group.startTime}–${group.endTime}`}
+                    </span>
+                  }
+                  meta={`${group.cells.length} Blöcke`}
+                >
+                  {group.cells.map((cell, cellIndex) =>
+                    index === nowIndex - 1 &&
+                    lineInGroup &&
+                    cellIndex === splitAt(group) ? (
+                      <Fragment key={`jetzt-${cell.instance.id}`}>
+                        <li className="list-none">{nowLine}</li>
+                        {renderRow(cell)}
+                      </Fragment>
+                    ) : (
+                      renderRow(cell, collapsible && index < pastGroups)
+                    ),
+                  )}
+                </CollectionGroup>
+              </div>
+            )}
+          </Fragment>
+        ),
+      )}
       {nowIndex === groups.length && !lineInGroup ? nowLine : null}
     </Collection>
   );
@@ -883,7 +956,8 @@ function NowLine({ nowHHMM }: Readonly<{ nowHHMM: string }>) {
 const MINE_COLOR = MOTO_COLOR_PALETTE.indigo.base;
 
 /**
- * Kennzeichnungen in Worten statt Farbcode: Zustand („Läuft jetzt“,
+ * Kennzeichnungen in Worten statt Farbcode: Zustand („Läuft“ wie auf der
+ * Startseite,
  * „Fällt aus“, „Als Nächstes“) und „Mit dir“ für die eigenen Blöcke.
  */
 function blockChips(state: BlockState, next: boolean, mine: boolean) {
@@ -892,7 +966,7 @@ function blockChips(state: BlockState, next: boolean, mine: boolean) {
     chips.push(
       <StatusColorBadge
         key="state"
-        label="Läuft jetzt"
+        label="Läuft"
         color={LOCATION_COLORS.GROUP_ROOM}
         compact
       />,
@@ -958,7 +1032,7 @@ function startChipLabel(state: BlockState): string {
 function chipLabels(state: BlockState, next: boolean, mine: boolean) {
   return [
     state.running
-      ? "Läuft jetzt"
+      ? "Läuft"
       : state.cancelled
         ? "Fällt aus"
         : state.startable
@@ -1004,12 +1078,15 @@ function BlockRow({
   next,
   mine,
   selected,
+  inPast = false,
   onOpen,
 }: Readonly<{
   entry: Entry;
   next: boolean;
   mine: boolean;
   selected: boolean;
+  /** Steht unter „N Blöcke vorbei“: das Wort „Vorbei“ entfällt. */
+  inPast?: boolean;
   onOpen: () => void;
 }>) {
   const { instance, state } = entry;
@@ -1042,7 +1119,7 @@ function BlockRow({
   // Blatt. Die Angabenzeile bleibt einzeilig.
   if (state.over && !state.cancelled && instance.status === "completed") {
     push("state", state.label);
-  } else if (pastLabel(state)) {
+  } else if (pastLabel(state) && !inPast) {
     // Vorbei wie auf der Startseite („Mittagessen Vorbei“), als erstes
     // Wort der Angabenzeile: ein Abzeichen brach die Zeile am SE um.
     // „nicht gestartet“ steht im Blatt.
@@ -1051,8 +1128,9 @@ function BlockRow({
 
   if (state.cancelled) push("reason", instance.cancelReason, true);
   if (state.isDuty) push("duty", "Dienst");
-  // Reicht die Zeile nicht (SE), kürzt zuerst der Raum, dann das Personal
-  // mit „…“; keine Angabe entfällt still.
+  // Reicht die Zeile nicht (SE), bricht sie zwischen den Teilen um: kein
+  // Wort-Stumpf wie „OGS-R…“ und keine Angabe entfällt still. Nur die
+  // Liste neben dem Detail (iPad quer) bleibt einzeilig gekürzt.
   push("room", state.room, false, wide ? undefined : "room");
   push("count", count, false, wide ? undefined : "count");
   // Am Telefon Personal kurz („Julia K. +1“, Vertretung benannt): wer
@@ -1156,7 +1234,7 @@ function BlockRow({
         </span>
       }
       subtitle={
-        parts.length > 0 && !wide ? (
+        parts.length > 0 && isSplit ? (
           <BlockRowParts parts={parts} />
         ) : parts.length > 0 ? (
           <span className="block">
