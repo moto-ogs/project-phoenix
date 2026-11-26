@@ -220,6 +220,11 @@ export function AppTenantHead({
               className={cn(
                 "-mx-2 [scrollbar-width:none] overflow-x-auto pr-2 pb-1.5 text-sm text-gray-600 focus-visible:ring-2 focus-visible:ring-gray-600 focus-visible:outline-none",
                 "pl-4",
+                // Eine Statuszeile, die mit Reitern darunter in 20 % der
+                // Höhe passen muss (Kindakte), rückt dicht unter den Titel.
+                // Die Zeile scrollt seitlich und schneidet damit oben ab:
+                // Ein negativer Rand am Inhalt allein würde ihn kappen.
+                "has-[[data-app-head-status-tight]]:-mt-2",
               )}
             >
               {statusLine}
