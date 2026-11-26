@@ -58,6 +58,9 @@ const STAFF_FLOW_HREFS: readonly string[] = [
   "/calendar",
   "/time-tracking",
   "/absences",
+  // Runde 11: Der Notfall stand ganz unten unter „Weiteres“; im Ernstfall
+  // muss er ohne Suchen erreichbar sein.
+  "/emergency",
 ];
 
 type MenuItem = StaffBottomNavModel["displayAdditionalItems"][number];
@@ -69,7 +72,6 @@ type MenuItem = StaffBottomNavModel["displayAdditionalItems"][number];
  */
 interface RowCounter {
   readonly count: number;
-  readonly tone: "staff" | "parents";
   readonly one: string;
   readonly noun: string;
 }
@@ -85,25 +87,21 @@ function useRowCounters(): Readonly<Record<string, RowCounter>> {
   return {
     "/anfragen": {
       count: absences + changeRequests + enrollmentRequests + withdrawals,
-      tone: "staff",
       one: "offene Anfrage",
       noun: "offene Anfragen",
     },
     "/messages": {
       count: messages,
-      tone: "parents",
       one: "ungelesene Nachricht",
       noun: "ungelesene Nachrichten",
     },
     "/team-chat": {
       count: teamChat,
-      tone: "staff",
       one: "ungelesene Nachricht im Team-Chat",
       noun: "ungelesene Nachrichten im Team-Chat",
     },
     "/tagesinformationen": {
       count: notices,
-      tone: "staff",
       one: "offener Hinweis der Leitung",
       noun: "offene Hinweise der Leitung",
     },
@@ -139,13 +137,16 @@ function MenuRows({
             ) : item.href === ENROLLMENT_SECTION.href ? (
               <UnreadBadge
                 count={model.enrollmentsUnreadCount}
-                tone="staff"
+                tone="parents"
                 noun="ungelesene Anmeldungen"
               />
             ) : counter && counter.count > 0 ? (
+              // Eine Farbe für „ungelesen/offen“ (Runde 11): Braun neben Blau
+              // las sich wie zwei Bedeutungen; Rot bleibt den
+              // Benachrichtigungen (wie am Reiter „Mehr“).
               <UnreadBadge
                 count={counter.count}
-                tone={counter.tone}
+                tone="parents"
                 noun={counter.count === 1 ? counter.one : counter.noun}
               />
             ) : undefined
@@ -311,6 +312,8 @@ function MorePageContent() {
               chevron={false}
               icon={<RotateCw className={ROW_ICON} aria-hidden="true" />}
               title="Daten aktualisieren"
+              // Eine Aktion, kein Ziel (Runde 11): der Satz sagt, was sie tut.
+              subtitle="Lädt alle Angaben neu"
               meta={
                 refresh === "busy" ? (
                   <span role="status" className="inline-flex items-center">
