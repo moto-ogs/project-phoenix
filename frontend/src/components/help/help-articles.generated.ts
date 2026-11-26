@@ -1388,6 +1388,8 @@ export const calendarPeriodsTopic = function calendarPeriodsTopic(): HelpTopic {
       "Ein Zeitraum, den noch nichts benutzt, trägt `Nicht verwendet`.",
       "An einem Tag mit geänderter Öffnungszeit enden die Sitzungen zur neuen Schließzeit. Danach können Eltern die Abholzeit für den Tag nicht mehr ändern.",
       // #8170: Eltern sehen die geänderte Öffnungszeit in „Heute anders“.
+      // #8178: Hinweis an Team, Eltern und Träger.
+      "Legst du einen Tag mit geänderter Öffnungszeit an, änderst oder löschst ihn, bekommen Team, Eltern und Träger-Büro einen Hinweis. Ausschalten kannst du das in den Einstellungen mit `Benachrichtigung bei geänderter Öffnungszeit`.",
       "Eltern sehen die geänderte Öffnungszeit unter `Heute anders` bei ihrem Kind. Liegt eine Abholzeit nach der Schließzeit, steht das dabei. Das gilt für eine geänderte Abholzeit und für die Abholzeit aus dem Wochenplan. moto ändert die Abholzeit nicht.",
       // #6845: Schichtserien halten ihren Zeitraum fest.
       "Einen Zeitraum mit Schichtserien im Dienstplan kannst du nicht löschen, auch wenn die Serien beendet sind. Nimm stattdessen den Haken bei `Zeitraum im Plan verwenden` heraus.",
@@ -7934,6 +7936,8 @@ export const parentNotificationsTopic =
         "Ändert sich das Essen an einem Tag, an dem dein Kind ein Essen gebucht hat, steht das auch unter `Hinweise`. Der Hinweis öffnet den Speiseplan dieser Woche. Aufs Handy kommt er nur, wenn du `Speiseplan geändert` einschaltest.",
         "Findet ein Termin deines Kindes in einem anderen Raum statt, steht das auch unter `Hinweise`. Für heute und morgen bekommst du dazu eine Benachrichtigung, solange du `Raumänderung heute oder morgen` nicht ausschaltest.",
         "Trägt die OGS einen Schließtag ein, ändert oder löscht ihn, steht das ebenfalls unter `Hinweise`. Das Thema `Schließtage` ist von Anfang an eingeschaltet. Eine Mitteilung aufs Handy kommt nur, wenn der Tag in den nächsten 14 Tagen liegt.",
+        // #8178: Hinweis zur geänderten Öffnungszeit.
+        "Öffnet die OGS an einem Tag zu anderen Zeiten oder schließt früher, steht das auch unter `Hinweise`. Das Thema `Geänderte Öffnungszeit` ist von Anfang an eingeschaltet. Eine Mitteilung aufs Handy kommt nur, wenn der Tag in den nächsten 14 Tagen liegt.",
         "Für spätere Tage schalte `Raumänderung an späteren Tagen` selbst ein. Sie gilt bis 14 Tage im Voraus.",
         "Ändert sich der Unterrichtsschluss in der Klasse deines Kindes, steht in moto `Stundenplan geändert`. Eine Mitteilung aufs Handy kommt dazu, wenn du `Stundenplan der Klasse` einschaltest und die Änderung in den nächsten 14 Tagen gilt.",
         "Ein Hinweis gilt erst als gelesen, wenn du ihn wählst oder `Alle als gelesen markieren` wählst.",
@@ -9202,6 +9206,8 @@ export const staffNotificationsTopic =
         "Wer die Änderung selbst einträgt, bekommt keinen Hinweis.",
         "Ändert sich der Unterrichtsschluss einer Klasse, steht hier `Stundenplan geändert`. Das siehst du, wenn du der Klasse zugeordnet bist oder Kinder der Klasse in deiner Gruppe sind. Der Hinweis öffnet `Heute` an dem Tag.",
         "Trägt die Leitung einen Schließtag ein, ändert oder löscht ihn, bekommen alle im Team einen Hinweis. Ein Klick darauf öffnet den `Kalender`.",
+        // #8178: Hinweis zur geänderten Öffnungszeit.
+        "Öffnet oder schließt die OGS an einem Tag zu anderen Zeiten, bekommen alle im Team einen Hinweis. Darin stehen der Tag und die Uhrzeit.",
         "Schreibt die Leitung unter `Hinweise der Leitung` etwas Neues für die Betreuung, steht es hier als `Neuer Hinweis der Leitung`. Ein Klick darauf öffnet die Seite `Hinweise der Leitung` mit diesem Text, auch wenn er erst später gilt.",
         "Auch diese Arten kommen als Hinweis: `Geänderte Abholzeit`, `Krankmeldung eines Kindes`, `Notizen für das Team` und `Umfragen der Einrichtung`.",
         "Die Leitung bekommt außerdem `Austritte aus dem Team` und `Ablaufende Nachweise im Team`. Für deine eigenen Nachweise gibt es `Eigene Nachweise`.",
@@ -9230,6 +9236,7 @@ export const staffNotificationsTopic =
         "Es kommt kein Hinweis zu einer Vertretung? Deine Schule kann `Hinweis bei Vertretung und Dienstplanänderung` ausschalten. Frage deine Leitung.",
         "Es kommt kein Hinweis zum Stundenplan einer Klasse? Deine Schule kann `Hinweis bei geändertem Stundenplan einer Klasse` ausschalten. Frage deine Leitung.",
         "Es kommt kein Hinweis zu einem Schließtag? Deine Schule kann `Benachrichtigung bei Schließtagen` ausschalten. Frage deine Leitung.",
+        "Es kommt kein Hinweis zu einer geänderten Öffnungszeit? Deine Schule kann `Benachrichtigung bei geänderter Öffnungszeit` ausschalten. Frage deine Leitung.",
         "Es kommt kein Hinweis zu neuen Hinweisen der Leitung? Deine Schule kann `Benachrichtigung bei neuem Hinweis der Leitung` ausschalten. Frage deine Leitung.",
         "Die Seite `Hinweise der Leitung` zeigt `Diesen Hinweis gibt es nicht mehr.`? Dann hat die Leitung ihn gelöscht oder abgeschaltet.",
         "Es kommt kein Hinweis zu einer Krankmeldung? Deine Schule kann `Hinweis bei Krankmeldung` ausschalten. Manche Schulen melden sie auch nur Personen, die gerade im Dienst sind. Frage deine Leitung.",
@@ -15031,6 +15038,8 @@ export const traegerNotificationFeedTopic =
         "Erst dein Klick macht einen Hinweis zu „gelesen“. Das Öffnen der Glocke allein ändert nichts.",
       notes: [
         "Trägt eine Schule einen Schließtag ein, ändert oder löscht ihn, siehst du es hier.",
+        // #8178: Hinweis zur geänderten Öffnungszeit.
+        "Ändert eine Schule die Öffnungszeit an einem Tag, siehst du es auch hier.",
         "Die Zahl an der Glocke prüft moto bei jedem Seitenwechsel und jede Minute neu.",
         "Hinweise bleiben 30 Tage nach ihrer letzten Änderung in der Glocke. Danach löscht moto sie.",
         "Im Träger-Portal gibt es keine Mitteilung aufs Handy. Die Hinweise stehen nur in der Glocke.",
@@ -15040,6 +15049,7 @@ export const traegerNotificationFeedTopic =
       ],
       troubleshootingDetails: [
         "Es kommt kein Hinweis zu einem Schließtag? Die Schule kann `Benachrichtigung bei Schließtagen` ausschalten. Frage dort nach.",
+        "Es kommt kein Hinweis zu einer geänderten Öffnungszeit? Die Schule kann `Benachrichtigung bei geänderter Öffnungszeit` ausschalten. Frage dort nach.",
         "Wer den Schließtag selbst einträgt, bekommt keinen Hinweis dazu.",
       ],
       related: [HELP_TOPICS.traegerSchoolView, HELP_TOPICS.traegerClosingDays],
