@@ -785,9 +785,13 @@ export function AppDayList({
         // so widersprechen sich die zwei Zahlen nicht (Runde 11).
         const saldoLabel = partial ? "Wochensaldo bis gestern" : "Wochensaldo";
         if (single) {
-          // Runde 15: Die Zeile über den Tagen nennt nur „KW 48“; die Daten
-          // der Woche stehen hier, und der Saldo daneben gilt sichtbar für
-          // diese Woche (der Kopf nennt den Saldo seit Jahresbeginn).
+          // Runde 19: Über den Tagen stehen die Stunden der Woche wie in der
+          // Kachel „Diese Woche“ des Desktops (Ist von Soll). Der Kopf nennt
+          // den einzigen Saldo; den Saldo je Tag zeigt jede Zeile.
+          const soll = days.reduce(
+            (sum, d) => sum + (d.projection?.targetMinutes ?? 0),
+            0,
+          );
           return (
             <CollectionGroup
               key={week}
@@ -797,22 +801,12 @@ export function AppDayList({
                 </span>
               }
               meta={
-                counted.length === 0 ? (
-                  <span className="tabular-nums">
-                    {formatDuration(ist)} gearbeitet
+                <span className="tabular-nums">
+                  <span className="font-semibold text-gray-900">
+                    {formatDuration(ist)}
                   </span>
-                ) : (
-                  <span className="tabular-nums">
-                    {/* Runde 17: „Woche“ sagt, dass hier nicht das
-                        Stundenkonto des Kopfs steht. */}
-                    {partial ? "Woche bis gestern" : "Woche"}{" "}
-                    <span
-                      className={cn("font-semibold", balanceClass(balance))}
-                    >
-                      {formatSignedDuration(balance)}
-                    </span>
-                  </span>
-                )
+                  {soll > 0 ? ` von ${formatDuration(soll)}` : " gearbeitet"}
+                </span>
               }
             >
               {days.flatMap((d) => dayRows(d, todayKey, onEdit))}
@@ -977,6 +971,9 @@ function dayRows(
         leading={leading}
         title={title}
         subtitle={subtitle}
+        // Runde 19: Die Schichtart eines geplanten Tags bricht um, statt
+        // am SE zu „Betreuung / …“ gekürzt zu werden.
+        wrap={isFuture || isToday}
         meta={
           isFuture || (isToday && !d.absence && !d.special)
             ? d.projection && d.projection.targetMinutes > 0
@@ -1039,12 +1036,16 @@ function dayRows(
  * der Kopfkarte.
  */
 export function AppAccountCard({
+  weekIst,
+  weekSoll,
   monthIst,
   monthSoll,
   accountBalanceMinutes,
   accountStart,
   origin,
 }: Readonly<{
+  weekIst: number | null;
+  weekSoll: number | null;
   monthIst: number | null;
   monthSoll: number | null;
   accountBalanceMinutes: number | null;
@@ -1061,6 +1062,17 @@ export function AppAccountCard({
   return (
     <SectionCard title="Stundenkonto" bodyClassName="mt-1">
       <div className="divide-y divide-gray-100 text-sm tabular-nums">
+        {/* Runde 19: „Diese Woche“ wie die erste Kachel des Desktops; der
+            Kopf nennt am Telefon nur noch den Saldo. */}
+        <div className="flex items-baseline justify-between gap-3 py-2.5">
+          <span className="text-gray-600">Diese Woche</span>
+          <span className="text-right text-gray-500">
+            <span className="font-semibold text-gray-900">
+              {weekIst === null ? "–" : formatDuration(weekIst)}
+            </span>
+            {weekSoll === null ? null : ` von ${formatDuration(weekSoll)}`}
+          </span>
+        </div>
         <div className="flex items-baseline justify-between gap-3 py-2.5">
           <span className="text-gray-600">Dieser Monat</span>
           <span className="text-right text-gray-500">

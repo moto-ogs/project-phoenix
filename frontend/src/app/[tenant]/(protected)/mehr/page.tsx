@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useState, type ReactNode } from "react";
-import { Bell, RotateCw } from "lucide-react";
+import { Bell, RotateCw, Search } from "lucide-react";
 import { useInvalidateMatching } from "~/lib/swr";
 import { LogoutModal } from "~/components/auth/logout-modal";
 import {
@@ -20,10 +20,10 @@ import {
 import { UnreadBadge } from "~/components/messaging/unread-badge";
 import { SchoolSearchSlot } from "~/components/search/school-search-slot";
 import { SpinnerIcon } from "~/components/ui/icons";
-import { IconTile } from "~/components/ui/icon-tile";
 import { ListRowLink } from "~/components/ui/list-row-link";
 import { ModuleLockMark } from "~/components/ui/module-lock-mark";
 import { NotificationBadge } from "~/components/ui/notification-badge";
+import { Button } from "~/components/ui/button";
 import { Collection, CollectionGroup } from "~/components/ui/collection";
 import { TenantPage } from "~/components/ui/tenant-page";
 import { useDeviceContext } from "~/lib/device-context";
@@ -129,7 +129,7 @@ const ROW_HEIGHT =
  */
 const COUNT_TONE = "blue" as const;
 
-/** Der Notfall fällt auf (Runde 17): rotes Symbol auf hellrotem Grund. */
+/** Der Notfall fällt auf (Runde 17, 19): rotes Symbol und rotes Wort. */
 const EMERGENCY_HREF = "/emergency";
 
 function MenuRows({
@@ -150,27 +150,21 @@ function MenuRows({
           href={model.resolveItemHref(item)}
           className={ROW_HEIGHT}
           icon={
-            emergency ? (
-              <IconTile
-                size="xs"
-                shape="round"
-                tone="red"
-                className="-m-1.5"
-                icon={
-                  <MobileNavIcon
-                    item={item}
-                    active={false}
-                    className="h-5 w-5 shrink-0"
-                  />
-                }
-              />
-            ) : (
-              <MobileNavIcon item={item} active={false} className={ROW_ICON} />
-            )
+            // Runde 19: Der Notfall steht in derselben Symbolspalte wie
+            // jede Zeile; er fällt durch Rot in Symbol und Wort auf.
+            <MobileNavIcon
+              item={item}
+              active={false}
+              className={
+                emergency ? "text-moto-red-strong h-5 w-5 shrink-0" : ROW_ICON
+              }
+            />
           }
           title={
             emergency ? (
-              <span className="font-semibold text-gray-900">{item.label}</span>
+              <span className="text-moto-red-strong font-semibold">
+                {item.label}
+              </span>
             ) : (
               item.label
             )
@@ -268,6 +262,16 @@ function MorePageContent() {
   // technische Adresse (#3891).
   const { user } = useShellAuth();
   const userEmail = isDemoBuild() ? "" : (user?.email ?? "");
+
+  // Die Lupe im schmalen Kopf tippt das Suchfeld der Kopfkarte an: eine
+  // Suche, ein Weg hinein.
+  const openSearch = () => {
+    document
+      .querySelector<HTMLInputElement>(
+        '[data-app-page-toolbar] input[aria-haspopup="dialog"]',
+      )
+      ?.click();
+  };
 
   // Desktop: keine eigene Seite, die Seitenleiste trägt alle Ziele.
   useEffect(() => {
@@ -474,6 +478,25 @@ function MorePageContent() {
       // Wiedererkennbar: „Überall suchen“ stand im heutigen Blatt „Mehr“
       // ganz oben; am Telefon trägt sonst keine Kopfkarte die Suche.
       searchSlot={<SchoolSearchSlot placement="moreSheet" />}
+      // Runde 19: Wie auf den anderen Seiten schrumpft der Kopf beim Rollen
+      // auf die schmale Titelzeile; das Suchfeld rollt mit weg, die Lupe
+      // im schmalen Kopf öffnet dieselbe Suche.
+      appToolbarScrollsAway
+      appCompactActions={
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          aria-label="Überall suchen"
+          // Der schmale Kopf ist für Vorleseprogramme ausgeblendet; dort
+          // wirkt das Suchfeld oben.
+          tabIndex={-1}
+          tooltip="Öffnet die Suche über alle Bereiche."
+          onClick={openSearch}
+        >
+          <Search className="size-5" aria-hidden="true" />
+        </Button>
+      }
       overlays={
         <LogoutModal isOpen={logoutOpen} onClose={() => setLogoutOpen(false)} />
       }

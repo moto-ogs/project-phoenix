@@ -9,6 +9,7 @@ import {
   FunnelSimpleIcon,
   MagnifyingGlassIcon,
   NotePencilIcon,
+  XIcon,
 } from "@phosphor-icons/react";
 import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { TenantPage, TenantPageStats } from "~/components/ui/tenant-page";
@@ -309,8 +310,9 @@ function MessagesInboxContent() {
       }
       onClick={toggleAppSearch}
     >
+      {/* Runde 19: × statt Haken; ein Haken liest sich als „bestätigen“. */}
       {appSearchShown ? (
-        <CheckIcon size={20} aria-hidden="true" />
+        <XIcon size={20} aria-hidden="true" />
       ) : (
         <MagnifyingGlassIcon size={20} aria-hidden="true" />
       )}
@@ -324,7 +326,9 @@ function MessagesInboxContent() {
     <TenantPage
       info={MESSAGES_INFO}
       title="Nachrichten"
-      tabs={messagesTabs("conversations")}
+      // Runde 19: Im Suchmodus am Telefon ohne Reiter: Die Suche gilt nur
+      // den Unterhaltungen, und der Kopf bleibt zweizeilig.
+      tabs={isApp && appSearchShown ? undefined : messagesTabs("conversations")}
       // Runde 17: Am Telefon steht die Kopfkarte zweizeilig (Titel, Reiter);
       // die Kennzahlen stehen am Ende der Liste, die ungelesenen
       // Unterhaltungen sind fett und tragen ihre Zahl.

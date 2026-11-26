@@ -32,6 +32,35 @@ import { InsetPanel } from "~/components/ui/inset-panel";
 
 // Exported for the cross-staff audit log (#1417) — one source of truth for
 // field labels and value formatting, per the note above.
+function isCreated(edit: WorkSessionEdit): boolean {
+  return edit.oldValue === null || edit.oldValue === "";
+}
+
+/** „23.11.2026, 07:52–16:35, Pause 38 min, In der OGS“ */
+function createdSummary(edits: readonly WorkSessionEdit[]): string {
+  const value = (field: string) => {
+    const edit = edits.find((e) => e.fieldName === field);
+    return edit ? formatEditValue(field, edit.newValue) : null;
+  };
+  const start = value("check_in_time");
+  const end = value("check_out_time");
+  const shown = new Set(["date", "check_in_time", "check_out_time"]);
+  const parts = [
+    value("date"),
+    start && end ? `${start}–${end}` : (start ?? end),
+    ...edits
+      .filter((e) => !shown.has(e.fieldName))
+      .map((e) => {
+        const text = formatEditValue(e.fieldName, e.newValue);
+        return e.fieldName === "break_minutes" ||
+          e.fieldName === "break_duration"
+          ? `Pause ${text}`
+          : text;
+      }),
+  ];
+  return parts.filter((part): part is string => Boolean(part)).join(", ");
+}
+
 export const FIELD_LABELS: Record<string, string> = {
   check_in_time: "Start",
   check_out_time: "Ende",
@@ -232,28 +261,41 @@ export function EditHistoryAccordion({
               <span>{dateStr}</span>
               <span className="font-medium">{editorLabel}</span>
             </div>
-            <div className="space-y-1">
-              {fieldEdits.map((edit) => (
-                <div key={edit.id} className="flex items-center gap-2 text-xs">
-                  <span className="w-12 shrink-0 text-gray-500">
-                    {FIELD_LABELS[edit.fieldName] ?? edit.fieldName}
-                  </span>
-                  {/* Ohne alten Wert wurde das Feld neu angelegt: kein rot
-                      durchgestrichener Strich, der wie ein Fehler aussieht. */}
-                  {edit.oldValue === null || edit.oldValue === "" ? (
-                    <span className="text-gray-500">neu</span>
-                  ) : (
-                    <span className="text-moto-red line-through">
-                      {formatEditValue(edit.fieldName, edit.oldValue)}
+            {/* Runde 19: Ein neu angelegter Eintrag liest sich als ein
+                Satz („Angelegt: 23.11.2026, 07:52–16:35, …“) statt als
+                Liste von „neu → …“. */}
+            {fieldEdits.length > 0 && fieldEdits.every(isCreated) ? (
+              <p className="text-xs text-gray-700">
+                <span className="text-gray-500">Angelegt: </span>
+                {createdSummary(fieldEdits)}
+              </p>
+            ) : (
+              <div className="space-y-1">
+                {fieldEdits.map((edit) => (
+                  <div
+                    key={edit.id}
+                    className="flex items-center gap-2 text-xs"
+                  >
+                    <span className="w-12 shrink-0 text-gray-500">
+                      {FIELD_LABELS[edit.fieldName] ?? edit.fieldName}
                     </span>
-                  )}
-                  <span className="text-gray-500">→</span>
-                  <span className="text-moto-green-strong font-medium">
-                    {formatEditValue(edit.fieldName, edit.newValue)}
-                  </span>
-                </div>
-              ))}
-            </div>
+                    {/* Ohne alten Wert wurde das Feld neu angelegt: kein rot
+                      durchgestrichener Strich, der wie ein Fehler aussieht. */}
+                    {edit.oldValue === null || edit.oldValue === "" ? (
+                      <span className="text-gray-500">neu</span>
+                    ) : (
+                      <span className="text-moto-red line-through">
+                        {formatEditValue(edit.fieldName, edit.oldValue)}
+                      </span>
+                    )}
+                    <span className="text-gray-500">→</span>
+                    <span className="text-moto-green-strong font-medium">
+                      {formatEditValue(edit.fieldName, edit.newValue)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
             {notes && (
               <p className="mt-1.5 text-xs text-gray-500 italic">
                 &ldquo;{notes}&rdquo;

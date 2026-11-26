@@ -684,12 +684,23 @@ export function MessageThreadContent({
   const chat = (
     <div
       ref={containerRef}
-      className="flex min-h-[20rem] w-full flex-col overflow-hidden"
+      // App (Runde 19): Die Karte wächst mit dem Verlauf von unten nach
+      // oben, statt bei wenigen Nachrichten eine halbe leere Karte über
+      // ihnen zu zeigen. Darüber bleibt der gepunktete Seitengrund.
+      className={
+        isApp && !embedded
+          ? "flex min-h-[20rem] w-full flex-col justify-end overflow-hidden"
+          : "flex min-h-[20rem] w-full flex-col overflow-hidden"
+      }
     >
       {/* `moto-scroll-surface`: die Höhe setzt `useChatViewportLock`, nicht
             die Wachs-Regel des Seitenrumpfs; nur die Liste scrollt (#3328). */}
       <SectionCard
-        className="moto-scroll-surface flex min-h-0 flex-1 flex-col"
+        className={
+          isApp && !embedded
+            ? "moto-scroll-surface flex min-h-0 flex-col"
+            : "moto-scroll-surface flex min-h-0 flex-1 flex-col"
+        }
         bodyClassName="flex min-h-0 flex-1 flex-col"
         title={embedded ? (thread?.guardian_name ?? "Unterhaltung") : undefined}
         action={embedded && thread ? markUnreadMenu : undefined}
