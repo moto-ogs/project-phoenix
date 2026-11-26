@@ -439,6 +439,7 @@ var tableRetentions = map[string]tableRetention{
 	"schedule.group_week_protocols":                         own("nightly retention step week_protocol_retention (roots/owners/worker_retention.go), Timetable DeleteExpiredWeekProtocols (school window gdpr.attendance_retention_days after the week's Sunday, #4769)"),
 	"schedule.instance_staff":                               parent("schedule.activity_instances"),
 	"schedule.instance_students":                            parent("schedule.activity_instances"),
+	"schedule.meal_cancellations":                           notPersonal("days without lunch with the school's reason; names nobody"),
 	"schedule.meal_order_change_counters":                   notPersonal("last number of a school's meal order changes"),
 	"schedule.meal_order_changes":                           notPersonal("late change of a meal order with its class, kept for the bill; the child is cleared with the child (ON DELETE SET NULL), the change stays until the school is deleted"),
 	"schedule.meal_order_days":                              notPersonal("days of a meal order, no child data"),

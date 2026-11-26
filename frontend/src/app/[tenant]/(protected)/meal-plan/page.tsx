@@ -20,7 +20,7 @@ async function loadMealPlanSeed(slug: string) {
   if (!context) return null;
   const builtAt = Date.now();
   const { token, session, snapshot, tenant } = context;
-  const { from, to, date, plan, orders, participants, caterer } =
+  const { from, to, date, plan, cancellations, orders, participants, caterer } =
     mealPlanSeedKeys(berlinTodayISO());
   const entries: ServerSeedEntry[] = [];
   const admin = isAdmin(session);
@@ -37,6 +37,24 @@ async function loadMealPlanSeed(slug: string) {
             query: { week_start: from },
           })
         ).data.map(mapMealPlanDay),
+      ),
+    });
+    entries.push({
+      key: cancellations,
+      render: true,
+      value: seedRead(
+        "mealCancellations",
+        async (signal) =>
+          (
+            await readContract(
+              mealContract.routes["GET /api/meal-plan/cancellations"],
+              {
+                token,
+                signal,
+                query: { from, to },
+              },
+            )
+          ).data,
       ),
     });
   }

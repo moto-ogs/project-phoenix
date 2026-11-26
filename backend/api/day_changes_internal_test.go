@@ -60,8 +60,8 @@ func (directDayChangesIsolation) IsFatal(error) bool { return false }
 // unchangedDayChangesMenu is a meal plan without a changed menu today.
 type unchangedDayChangesMenu struct{}
 
-func (unchangedDayChangesMenu) MenuChangedOn(context.Context, mealplan.Date) (bool, error) {
-	return false, nil
+func (unchangedDayChangesMenu) MenuDayOn(context.Context, mealplan.Date) (mealplan.MenuDay, error) {
+	return mealplan.MenuDay{}, nil
 }
 
 func TestDayChangesInvisibleAccountSkipsUnavailableWorkforce(t *testing.T) {

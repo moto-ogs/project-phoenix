@@ -628,6 +628,10 @@ func mealPlanRouteContracts() []common.RouteContract {
 		{Method: "PUT", Pattern: "/meal-plan/participation/{studentId}/days/{date}", Portals: portals, Request: types.ChildDay, NoData: true},
 		{Method: "DELETE", Pattern: "/meal-plan/participation/{studentId}/days/{date}", Portals: portals, NoData: true},
 		{Method: "PUT", Pattern: "/meal-plan/participation/{studentId}/schedule", Portals: portals, Request: types.ChildSchedule, Response: types.ScheduleChanged},
+		// The days without lunch (#7656).
+		{Method: "GET", Pattern: "/meal-plan/cancellations", Portals: portals, Query: window, Response: types.Cancellations},
+		{Method: "PUT", Pattern: "/meal-plan/days/{date}/cancellation", Portals: portals, Request: types.CancelMeal, Response: types.Cancellation},
+		{Method: "DELETE", Pattern: "/meal-plan/days/{date}/cancellation", Portals: portals, NoData: true},
 		{Method: "GET", Pattern: "/meal-billing-months/", Portals: portals, Response: types.BillingMonths},
 		{Method: "GET", Pattern: "/meal-billing-months/{month}", Portals: portals, Response: types.BillingMonth},
 		{Method: "POST", Pattern: "/meal-billing-months/{month}/release", Portals: portals, Request: types.BillingMonthRelease, Response: types.BillingMonth},

@@ -413,7 +413,7 @@ func (s *Service) dailyListIn(txCtx context.Context, rules domain.OrderingRules,
 	deadline := rules.FreezeAt(date)
 	list := domain.DailyList{Date: date, CutoffTime: deadline.In(calendarZone).Format("15:04"), Deadline: deadline, Participants: []domain.DailyParticipant{}}
 	days, loaded, stats, err := s.participantCalendar(txCtx, date, through, prepared)
-	list.Closed = days.Closed[date]
+	list.Closed, list.MealCancelled = days.Closed[date], days.Cancelled[date]
 	if err != nil || list.Closed {
 		return list, loaded, stats, err
 	}

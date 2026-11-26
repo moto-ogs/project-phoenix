@@ -174,8 +174,11 @@ type DailyList struct {
 	CutoffTime string
 	Deadline   time.Time
 	// Closed is a closing day or public holiday: nobody eats.
-	Closed       bool
-	Participants []DailyParticipant
+	Closed bool
+	// MealCancelled: the day is closed because the school cancelled lunch
+	// while it is open (#7656).
+	MealCancelled bool
+	Participants  []DailyParticipant
 	// Others are the enrolled children who do not eat that day.
 	Others []DailyParticipant
 }
@@ -285,6 +288,8 @@ type Registration interface {
 type Services struct {
 	Capability Capability
 	Summaries  CatererSummaries
+	// Cancellations is the school's entry of the days without lunch (#7656).
+	Cancellations MealCancellations
 }
 
 // CatererSummaries is the compact, read-only projection beside the Meal Plan facade.
@@ -372,16 +377,18 @@ type ClassCount struct {
 // An open day shows the registration as it stands in all three fields.
 // OrderID is 0 for a due order the worker has not stored yet.
 type OrderDay struct {
-	Date        Date
-	Closed      bool
-	Deadline    time.Time
-	Status      OrderStatus
-	OrderID     int64
-	ConfirmedAt *time.Time
-	Total       int
-	Classes     []ClassCount
-	Children    []OrderChild
-	Changes     []OrderChange
+	Date   Date
+	Closed bool
+	// MealCancelled: closed because the school cancelled lunch (#7656).
+	MealCancelled bool
+	Deadline      time.Time
+	Status        OrderStatus
+	OrderID       int64
+	ConfirmedAt   *time.Time
+	Total         int
+	Classes       []ClassCount
+	Children      []OrderChild
+	Changes       []OrderChange
 }
 
 // OrderSummary carries the current detail grants so a client cannot reopen

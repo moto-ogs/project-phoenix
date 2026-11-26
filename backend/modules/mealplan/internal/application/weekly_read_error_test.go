@@ -38,13 +38,13 @@ func TestWeeklyListStopsBeforeLaterCalendarFailure(t *testing.T) {
 		t.Fatal("names are not reached")
 		return nil, nil
 	}, unavailableParticipantDays, nil)
-	calendar := NewSchoolCalendar(func(_ context.Context, from, to string) (map[string]bool, []mealplan.HolidayPeriod, error) {
+	calendar := newMealCalendar(func(_ context.Context, from, to string) (map[string]bool, []mealplan.HolidayPeriod, error) {
 		calendarReads = append(calendarReads, [2]string{from, to})
 		if to > monday.String() {
 			return nil, nil, calendarErr
 		}
 		return map[string]bool{}, nil, nil
-	})
+	}, nil)
 	service := New(seamStore{}, directory, calendar, weeklyReadSettings{}, seamTransaction{}, func(ports.Observation) {}, func() time.Time { return monday.BerlinMidnight() }, nil)
 	_, err := service.Capability.WeeklyList(context.Background(), mealplan.Date(monday.String()))
 	require.ErrorIs(t, err, rosterErr)
@@ -75,12 +75,12 @@ func TestWeeklyListRangeFailureKeepsEarlierRosterFailure(t *testing.T) {
 		t.Fatal("names are not reached")
 		return nil, nil
 	}, unavailableParticipantDays, nil)
-	calendar := NewSchoolCalendar(func(_ context.Context, from, to string) (map[string]bool, []mealplan.HolidayPeriod, error) {
+	calendar := newMealCalendar(func(_ context.Context, from, to string) (map[string]bool, []mealplan.HolidayPeriod, error) {
 		if from != to {
 			return nil, nil, calendarErr
 		}
 		return map[string]bool{}, nil, nil
-	})
+	}, nil)
 	service := New(weeklyReadStore{}, directory, calendar, weeklyReadSettings{}, seamTransaction{}, func(ports.Observation) {}, func() time.Time { return monday.BerlinMidnight() }, nil)
 	_, err := service.Capability.WeeklyList(context.Background(), mealplan.Date(monday.String()))
 

@@ -554,7 +554,7 @@ func composeServeRoot(
 			mountSchoolRoutes(tenant, db, logger, appUploads, facilities, facilitiesRooms, settings.Service, caller, active, services.Users,
 				structureViews.Education, renderer, activities, timetableOwner, iot, settingsWrites, organizations, people.Students, carePlan, audit.Persistence.DataAccessLog,
 				membership, classListEntries, databaseStats, dataImports, persons, gradeTransition, enrollmentResource, env.Config.AppEnv, weekProtocolSeed, env.HealthData, owners.NewHolidayHostCalendar(settings.Service, calendar), env.Now)
-			mountPeopleRoutes(tenant, db, logger, appUploads, reports, renderer, persons, services.Guardian, identity, caller, feedback, mealPlan.Capability,
+			mountPeopleRoutes(tenant, db, logger, appUploads, reports, renderer, persons, services.Guardian, identity, caller, feedback, mealPlan,
 				birthdays, emergency, settings.Service, GuardianEmailDelivery{Outcomes: delivery.Runtime.EmailOutcomes, Suppressions: delivery.Runtime.EmailReconciliation}, audit.Persistence.DataAccessLog, hub, env.Now)
 			mountCalendarRoutes(router, tenant, logger, calendarApp)
 			return errors.Join(mountMealBillingMonths(tenant, mealPlan.Capability, calendar, presence.Presence, settings.Service), mountCommunicationRoutes(tenant, logger, appUploads, chat, announcements, reminders, deliveryDevices, communication),
