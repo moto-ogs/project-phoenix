@@ -203,7 +203,9 @@ export function StudentsInRoomSection({
     data: loadedRooms,
     error: roomsError,
     mutate: refreshMoveRooms,
-  } = useSWRAuth<Room[]>(roomsKeys.key({ openOn: today }), roomsKeys.fetcher);
+  } = useSWRAuth<Room[]>(roomsKeys.key({ openOn: today }), () =>
+    roomsKeys.fetcher({ openOn: today }),
+  );
   const rooms = loadedRooms ?? NO_ROOMS;
   // Ohne laufende Angebote, Aufsichten und Räume gäbe es scheinbar kein Ziel
   // (#2353): der Fehler steht über der Liste, Verschieben und Anmelden

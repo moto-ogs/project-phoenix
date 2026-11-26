@@ -209,7 +209,7 @@ export function TransitStudentsSection({
     mutate: refreshTargetRooms,
   } = useSWRAuth<Room[]>(
     canTargetOpenRooms ? roomsKeys.key({ openOn: today }) : null,
-    roomsKeys.fetcher,
+    () => roomsKeys.fetcher({ openOn: today }),
   );
   // Ladefehler einer der fünf Listen: eine Meldung, „Wiederholen“ lädt alle.
   const loadError = useSwrLoadError(

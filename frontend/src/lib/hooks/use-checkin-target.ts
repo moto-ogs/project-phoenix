@@ -169,7 +169,7 @@ export function useCheckinTarget(enabled: boolean): CheckinTargetState {
   );
   const roomList = useSWRAuth<Room[]>(
     available ? roomsKeys.key({ openOn: today }) : null,
-    roomsKeys.fetcher,
+    () => roomsKeys.fetcher({ openOn: today }),
   );
   const staff = useSWRAuth<Staff>(
     available && !showAllTargets ? meKeys.key() : null,
