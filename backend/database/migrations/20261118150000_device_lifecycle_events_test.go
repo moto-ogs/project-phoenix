@@ -35,6 +35,7 @@ func TestDeviceLifecycleEventsGoWithTheSchoolAndRollBack(t *testing.T) {
 	// history stops at the head; pickup persons go first.
 	require.NoError(t, studentPickupPersonsDown(ctx, db))
 	require.NoError(t, openingChangesDown(ctx, db))
+	require.NoError(t, mealCancellationsDown(ctx, db))
 	require.NoError(t, roomHistoryStopsDown(ctx, db))
 
 	require.NoError(t, deviceLifecycleEventsDown(ctx, db))

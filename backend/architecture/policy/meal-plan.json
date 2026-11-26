@@ -64,6 +64,10 @@
       "write_owner": "meal-plan"
     },
     {
+      "name": "schedule.meal_cancellations",
+      "write_owner": "meal-plan"
+    },
+    {
       "name": "schedule.meal_order_change_counters",
       "write_owner": "meal-plan"
     },

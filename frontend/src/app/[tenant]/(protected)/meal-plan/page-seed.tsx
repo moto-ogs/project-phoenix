@@ -5,6 +5,12 @@ import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { SWRServerSeed, type ServerSeedInput } from "~/lib/swr/server-seed";
 import { mealPlanSeedKeys } from "./seed-keys";
 
+export function mealPlanSeedClaims(today: string) {
+  const { plan, cancellations, orders, participants, caterer } =
+    mealPlanSeedKeys(today);
+  return [plan, cancellations, orders, participants, caterer];
+}
+
 export function MealPlanSeed({
   seed,
   children,
@@ -12,14 +18,9 @@ export function MealPlanSeed({
   seed: ServerSeedInput;
   children: ReactNode;
 }) {
-  const { plan, orders, participants, caterer } =
-    mealPlanSeedKeys(useBerlinToday());
+  const claims = mealPlanSeedClaims(useBerlinToday());
   return (
-    <SWRServerSeed
-      seed={seed}
-      claims={[plan, orders, participants, caterer]}
-      render
-    >
+    <SWRServerSeed seed={seed} claims={claims} render>
       {children}
     </SWRServerSeed>
   );

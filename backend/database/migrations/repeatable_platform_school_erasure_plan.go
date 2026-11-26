@@ -213,6 +213,7 @@ AS $function$ SELECT $manifest$[
   {"name": "schedule.meal_participation_overrides","predicate": "r.tenant_id = $1"},
   {"name": "schedule.meal_participation_schedules","predicate": "r.tenant_id = $1"},
   {"name": "schedule.meal_plan_entries","predicate": "r.tenant_id = $1"},
+  {"name": "schedule.meal_cancellations","predicate": "r.tenant_id = $1"},
   {"name": "schedule.meal_sickness_status_history","predicate": "r.tenant_id = $1","after": ["active.student_status_days"]},
   {"name": "schedule.pickup_extension_tasks","predicate": "r.tenant_id = $1"},
   {"name": "schedule.planning_tracks","predicate": "r.tenant_id = $1"},

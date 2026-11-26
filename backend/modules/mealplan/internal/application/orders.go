@@ -105,7 +105,7 @@ func (s *Service) dueOrders(ctx context.Context, rules domain.OrderingRules, sta
 	today := domain.DateFromInstant(now)
 	for start := from; !start.After(to); {
 		periodStart, periodEnd := domain.OrderPeriod(rules.Rhythm, start)
-		open, deadline := openDays(rules, state, periodStart, periodEnd, today)
+		open, deadline := openDays(rules, state, days, periodStart, periodEnd, today)
 		if len(open) > 0 && !now.Before(deadline) {
 			order, orderStats, err := s.dueOrder(ctx, rules, open, deadline, days, seen)
 			stats = addStats(stats, orderStats)
@@ -147,7 +147,7 @@ func dueRegistrations(rules domain.OrderingRules, state domain.OrderState, days 
 	today := domain.DateFromInstant(now)
 	for start := from; !start.After(to); {
 		periodStart, periodEnd := domain.OrderPeriod(rules.Rhythm, start)
-		open, deadline := openDays(rules, state, periodStart, periodEnd, today)
+		open, deadline := openDays(rules, state, days, periodStart, periodEnd, today)
 		if len(open) > 0 && !now.Before(deadline) {
 			for _, date := range open {
 				if !days.Closed[date] {
@@ -170,12 +170,13 @@ func nextPeriod(rhythm domain.Rhythm, periodStart, periodEnd domain.Date) domain
 }
 
 // openDays lists the weekdays of a period from today on that no order holds
-// yet, and the earliest deadline among them.
-func openDays(rules domain.OrderingRules, state domain.OrderState, from, to, today domain.Date) ([]domain.Date, time.Time) {
+// yet, and the earliest deadline among them. A cancelled lunch does not create
+// an empty order; if it resumes, its registration can then be fixed normally.
+func openDays(rules domain.OrderingRules, state domain.OrderState, days domain.CalendarDays, from, to, today domain.Date) ([]domain.Date, time.Time) {
 	var open []domain.Date
 	var deadline time.Time
 	for date := from; !date.After(to); date = date.AddDays(1) {
-		if date.Before(today) || date.Weekday() == time.Saturday || date.Weekday() == time.Sunday {
+		if date.Before(today) || days.Cancelled[date] || date.Weekday() == time.Saturday || date.Weekday() == time.Sunday {
 			continue
 		}
 		if _, ordered := state.OrderFor(date); ordered {

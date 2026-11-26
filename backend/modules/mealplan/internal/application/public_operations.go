@@ -208,7 +208,7 @@ func (s *Service) DailyList(ctx context.Context, date mealplan.Date) (mealplan.D
 }
 
 func publicDailyList(list domain.DailyList) mealplan.DailyList {
-	result := mealplan.DailyList{Date: mealplan.Date(list.Date.String()), CutoffTime: list.CutoffTime, Deadline: list.Deadline, Closed: list.Closed, Participants: make([]mealplan.DailyParticipant, 0, len(list.Participants))}
+	result := mealplan.DailyList{Date: mealplan.Date(list.Date.String()), CutoffTime: list.CutoffTime, Deadline: list.Deadline, Closed: list.Closed, MealCancelled: list.MealCancelled, Participants: make([]mealplan.DailyParticipant, 0, len(list.Participants))}
 	for _, participant := range list.Participants {
 		result.Participants = append(result.Participants, mealplan.DailyParticipant(participant))
 	}
@@ -345,7 +345,7 @@ func orderCounts(day domain.OrderDay) map[int64]string {
 }
 
 func orderDayHeader(day domain.OrderDay) mealplan.OrderDay {
-	result := mealplan.OrderDay{Date: mealplan.Date(day.Date.String()), Closed: day.Closed, Deadline: day.Deadline, Status: mealplan.OrderOpen, Total: len(orderCounts(day))}
+	result := mealplan.OrderDay{Date: mealplan.Date(day.Date.String()), Closed: day.Closed, MealCancelled: day.MealCancelled, Deadline: day.Deadline, Status: mealplan.OrderOpen, Total: len(orderCounts(day))}
 	if day.Unordered {
 		result.Status = mealplan.OrderUnordered
 	}

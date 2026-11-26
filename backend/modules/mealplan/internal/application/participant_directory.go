@@ -84,18 +84,36 @@ func (d participantDirectory) FindCandidatesOnDates(ctx context.Context, dates [
 	return result, stats, nil
 }
 
-func NewSchoolCalendar(find mealplan.CalendarFinder) schoolCalendar {
-	return schoolCalendar{find: find}
+// newMealCalendar is the school calendar that also closes the days the
+// school cancelled lunch on (#7656), so bookings, kitchen lists, orders and
+// the month treat them like closed days, and marks them as cancelled. Both
+// reads come from the root, like the rest of the calendar.
+func newMealCalendar(find mealplan.CalendarFinder, cancelled mealplan.CancelledDaysFinder) schoolCalendar {
+	return schoolCalendar{find: find, cancelled: cancelled}
 }
 
-type schoolCalendar struct{ find mealplan.CalendarFinder }
+type schoolCalendar struct {
+	find      mealplan.CalendarFinder
+	cancelled mealplan.CancelledDaysFinder
+}
 
+// Days reads the school calendar (two statements: the federal state, the
+// closing days with the holiday periods) and the days without lunch (one).
 func (c schoolCalendar) Days(ctx context.Context, from, to domain.Date) (domain.CalendarDays, domain.OperationStats, error) {
 	started := time.Now()
 	closed, periods, err := c.find(ctx, from.String(), to.String())
-	stats := domain.OperationStats{Queries: 3, StatementDuration: time.Since(started)}
+	stats := domain.OperationStats{Queries: 2, StatementDuration: time.Since(started)}
 	if err != nil {
 		return domain.CalendarDays{}, stats, err
+	}
+	var cancelled map[string]bool
+	if c.cancelled != nil {
+		cancelled, err = c.cancelled(ctx, from.String(), to.String())
+		stats.Queries++
+		stats.StatementDuration = time.Since(started)
+		if err != nil {
+			return domain.CalendarDays{}, stats, err
+		}
 	}
 	holidays := make([]domain.HolidayPeriod, 0, len(periods))
 	for _, period := range periods {
@@ -106,5 +124,17 @@ func (c schoolCalendar) Days(ctx context.Context, from, to domain.Date) (domain.
 		}
 		holidays = append(holidays, domain.HolidayPeriod{Start: start, End: end})
 	}
-	return domain.NewCalendarDays(closed, holidays, from, to), stats, nil
+	days := domain.NewCalendarDays(closed, holidays, from, to)
+	days.Cancelled = make(map[domain.Date]bool, len(cancelled))
+	for value := range cancelled {
+		date, err := calendar.ParseDate(value)
+		if err != nil {
+			return domain.CalendarDays{}, stats, err
+		}
+		if !days.Closed[date] {
+			days.Cancelled[date] = true
+		}
+		days.Closed[date] = true
+	}
+	return days, stats, nil
 }

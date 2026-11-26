@@ -24,10 +24,22 @@ type MenuChangeNotices interface {
 	NotifyMenuChanged(ctx context.Context, change MenuChange) error
 }
 
-// MenuChanges reads whether the menu of a day changed after it was published
-// (#7666): the same change the families hear about. It names no dish; the
-// menu itself stays on the meal plan page behind its permission. It reads in
-// the caller's transaction.
+// MenuDay is what is different about lunch on a day: Changed when the menu
+// changed after it was published (#7666), Cancelled when the school
+// cancelled lunch (#7656), with its Reason. It names no dish.
+type MenuDay struct {
+	Changed   bool
+	Cancelled bool
+	Reason    string
+}
+
+// MenuChanges reads what is different about lunch on a day (#7666, #7656):
+// the same change the families hear about. It names no dish; the menu
+// itself stays on the meal plan page behind its permission. It reads in the
+// caller's transaction, in one statement.
 type MenuChanges interface {
-	MenuChangedOn(ctx context.Context, date Date) (bool, error)
+	MenuDayOn(ctx context.Context, date Date) (MenuDay, error)
+	// CancelledDays reads the days without lunch of [from, to] (#7656), the
+	// CancelledDaysFinder the root binds beside the school calendar.
+	CancelledDays(ctx context.Context, from, to string) (map[string]bool, error)
 }

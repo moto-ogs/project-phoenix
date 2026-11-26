@@ -177,14 +177,14 @@ func (l applicationContractAccessLog) RecordApplicationContractAccess(ctx contex
 func mountPeopleRoutes(
 	tenant chi.Router, db transactionruntime.Database, logger *slog.Logger, uploads nativeUploads.UploadFiles, reports owners.PresenceReports, renderer *lists.RendererService,
 	persons *peopleCompose.Directory, guardians peoplePorts.GuardianService, identity identityaccess.Owner, caller *owners.CallerRows,
-	feedback feedbackModule.Capability, mealPlan mealplanModule.Capability, birthdays birthdaysAPI.Service,
+	feedback feedbackModule.Capability, mealPlan mealplanModule.Services, birthdays birthdaysAPI.Service,
 	emergency emergencysnapshot.Query, settings settingsCompose.SettingsService, guardianEmail GuardianEmailDelivery, guardianEmailLog guardianEmailAudit,
 	mealPlanChanges realtime.Broadcaster, now func() time.Time,
 ) {
 	tenant.Mount("/statistics", statisticsAPI.NewResource(reports.Statistics, statisticsHTTPRuntime(renderer, now), logger.With("handler", "statistics")).Router(ProtectedTenantRoutes))
 	tenant.Mount("/guardians", NewGuardiansResource(persons, NewGuardianDirectoryRuntime(guardians, renderer, identity, caller.HasCurrentStaff, peopleCompose.NewLegacyRepositoryRuntime(db.Pool()), guardianEmail, guardianEmailLog, logger), viper.GetString("app_env"), logger.With("handler", "guardians")).Router())
 	tenant.Mount("/feedback", newFeedbackResource(feedback).Router())
-	tenant.Mount("/meal-plan", newMealPlanResource(mealPlan, newMealPlanExportRenderer(), mealPlanChangeSignal(mealPlanChanges, logger.With("handler", "meal-plan"))).Router())
+	tenant.Mount("/meal-plan", newMealPlanResourceWith(mealPlan.Capability, mealPlan.Cancellations, newMealPlanExportRenderer(), mealPlanChangeSignal(mealPlanChanges, logger.With("handler", "meal-plan"))).Router())
 	tenant.Mount("/users", NewUsersResource(persons, identity.ListAccountEmails, func(ctx context.Context, tagID string) (bool, error) {
 		_, _, found, err := identity.LookupRFIDCard(ctx, tagID)
 		return found, err

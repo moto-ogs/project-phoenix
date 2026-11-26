@@ -97,7 +97,7 @@ func TestMealPlanSchoolRoutesHandTheirRequestsOn(t *testing.T) {
 	plan, months := &recordedMealPlan{}, &recordedBillingMonths{}
 	router := chi.NewRouter()
 	router.Use(testpkg.TenantRuntimeMiddleware(t, db))
-	router.Mount("/api/meal-plan", newMealPlanResource(plan, NewSimpleListRenderer(), nil).Router())
+	router.Mount("/api/meal-plan", newMealPlanResourceWith(plan, nil, NewSimpleListRenderer(), nil).Router())
 	router.Mount("/api/meal-billing-months", newMealBillingMonthResource(months).Router())
 	_, account := testpkg.CreateTestStaffWithAccount(t, db, "Mensa", "Leitung")
 	claims := testutil.TenantUserTestClaims(int(account.ID), testpkg.Tenant(t), "admin:*")
