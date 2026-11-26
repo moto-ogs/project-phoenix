@@ -25,7 +25,11 @@ import type {
   ActiveFilter,
   OverflowMenuItem,
 } from "~/components/ui/page-header/types";
-import { formatFloor, getRoomCategoryColor } from "~/lib/room-helpers";
+import {
+  formatFloor,
+  getRoomCategoryColor,
+  isToiletRoom,
+} from "~/lib/room-helpers";
 import { useSWRAuth } from "~/lib/swr";
 import { dashboardKeys } from "~/lib/swr/shell-keys";
 import { useApiErrorDisplay } from "~/contexts/ToastContext";
@@ -75,17 +79,19 @@ interface Room {
 const COLLECTION_PATH = "/rooms";
 const TRANSIT_PATH = "/rooms/unterwegs";
 const ROOMS_INFO =
-  "Hier siehst du, welche Räume frei oder belegt sind. „Frei“ heißt: Gerade ist niemand im Raum. Wähle einen Raum, um zu sehen, welche Kinder dort sind.";
+  "Hier siehst du, welche Räume frei oder belegt sind. „Frei“ heißt: Gerade ist kein Kind im Raum. Wähle einen Raum, um zu sehen, welche Kinder dort sind.";
 
 // Die beiden Raumgruppen sagen, was sie trennt (#8130): „Offen“ ist die
 // dauerhafte Freigabe durch die Schule, „Frei“ und „Belegt“ die Lage gerade.
-// Beide Sätze sind gleich gebaut, damit der Unterschied auf einen Blick steht.
+// Der zweite Satz beschreibt, statt zu verbieten: Das WC steht in dieser
+// Gruppe, Kinder dürfen jederzeit hin, und sein Besuch läuft als Aktivität
+// „WC“.
 const OPEN_ROOMS_TITLE = "Offene Räume";
 const OPEN_ROOMS_DESCRIPTION =
   "Kinder dürfen jederzeit hierher, auch wenn keine Aktivität läuft.";
 const ACTIVITY_ROOMS_TITLE = "Räume für Aktivitäten";
 const ACTIVITY_ROOMS_DESCRIPTION =
-  "Kinder dürfen nur hierher, solange eine Aktivität läuft.";
+  "Hier sind Kinder nur, solange eine Aktivität läuft.";
 
 function RoomTile({
   room,
@@ -152,10 +158,11 @@ function RoomTile({
             {!room.isOccupied && (
               <>
                 {/* Ein freier offener Raum ist leer, nicht „buchbar“: sonst
-                    lesen sich „Offen“ und „Frei“ wie dasselbe (#8130). */}
+                    lesen sich „Offen“ und „Frei“ wie dasselbe (#8130). Das
+                    WC bucht niemand für eine Aktivität. */}
                 <div className="text-sm text-gray-600">
-                  {room.isOpenRoom
-                    ? "Gerade ist niemand hier"
+                  {room.isOpenRoom || isToiletRoom(room)
+                    ? "Gerade ist kein Kind hier"
                     : "Für Aktivitäten buchbar"}
                 </div>
                 {room.capacity !== undefined && room.capacity > 0 && (

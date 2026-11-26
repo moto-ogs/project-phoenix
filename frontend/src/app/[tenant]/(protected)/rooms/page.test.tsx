@@ -218,7 +218,7 @@ describe("RoomsPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Erklärung zu Räume" }));
     expect(
       screen.getByText(
-        "Hier siehst du, welche Räume frei oder belegt sind. „Frei“ heißt: Gerade ist niemand im Raum. Wähle einen Raum, um zu sehen, welche Kinder dort sind.",
+        "Hier siehst du, welche Räume frei oder belegt sind. „Frei“ heißt: Gerade ist kein Kind im Raum. Wähle einen Raum, um zu sehen, welche Kinder dort sind.",
       ),
     ).toBeInTheDocument();
   });
@@ -696,7 +696,7 @@ describe("RoomsPage", () => {
     ).toBeInTheDocument();
     expect(
       within(activityGroup).getByText(
-        "Kinder dürfen nur hierher, solange eine Aktivität läuft.",
+        "Hier sind Kinder nur, solange eine Aktivität läuft.",
       ),
     ).toBeInTheDocument();
 
@@ -706,7 +706,7 @@ describe("RoomsPage", () => {
     });
     expect(within(openTile).getByText("Frei")).toBeInTheDocument();
     expect(
-      within(openTile).getByText("Gerade ist niemand hier"),
+      within(openTile).getByText("Gerade ist kein Kind hier"),
     ).toBeInTheDocument();
     expect(
       within(openTile).queryByText("Für Aktivitäten buchbar"),
@@ -717,6 +717,25 @@ describe("RoomsPage", () => {
     expect(
       within(activityTile).getByText("Für Aktivitäten buchbar"),
     ).toBeInTheDocument();
+  });
+
+  // Das WC ist nie ein offener Raum, aber auch nicht für Aktivitäten buchbar.
+  it("does not offer a free toilet room for activities", () => {
+    vi.mocked(useSWRAuth).mockReturnValue({
+      data: [{ id: "9", name: "WC", isOccupied: false }],
+      isLoading: false,
+      error: null,
+    } as never);
+
+    render(<RoomsPage />);
+
+    const tile = screen.getByRole("link", { name: "WC" });
+    expect(
+      within(tile).getByText("Gerade ist kein Kind hier"),
+    ).toBeInTheDocument();
+    expect(
+      within(tile).queryByText("Für Aktivitäten buchbar"),
+    ).not.toBeInTheDocument();
   });
 
   it("collapses and expands each room group on its own", () => {
