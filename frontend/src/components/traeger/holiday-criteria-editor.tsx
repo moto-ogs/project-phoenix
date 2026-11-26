@@ -174,9 +174,13 @@ function criterionWeight(
   if (ranking === "points") {
     const points = parsePoints(draft.points);
     return {
+      // With a plus, so the points never read as a rank in the list.
       tile: (
-        <span className="text-sm font-semibold tabular-nums">
-          {points ?? "?"}
+        <span
+          className={`font-semibold tabular-nums ${points !== null && points > 9 ? "text-xs" : "text-sm"}`}
+          aria-hidden="true"
+        >
+          {points === null ? "?" : `+${points}`}
         </span>
       ),
       badge: points === null ? "Punkte fehlen" : pointsLabel(points),
