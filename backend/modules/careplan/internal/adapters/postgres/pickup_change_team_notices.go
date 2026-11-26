@@ -136,7 +136,7 @@ func (s *PickupChangeTeamStore) ListUnreadPickupChangeNotices(ctx context.Contex
 		return nil, domain.OperationStats{}, err
 	}
 	rows := make([]pickupChangeNoticeReadRow, 0)
-	query := withTenant(db.NewSelect().TableExpr(`schedule.pickup_change_team_notices AS "pickup_notice"`), "pickup_notice", tenantID).
+	query := db.NewSelect().TableExpr(`schedule.pickup_change_team_notices AS "pickup_notice"`).
 		ColumnExpr(`"pickup_notice".request_id, "request".student_id, "student".first_name, "request".status, "request".payload, "pickup_notice".informed_at`).
 		Join(`JOIN schedule.care_schedule_change_requests AS "request" ON "request".tenant_id = "pickup_notice".tenant_id AND "request".id = "pickup_notice".request_id`).
 		Join(`LEFT JOIN schedule.student_pickup_exceptions AS "exception" ON "exception".tenant_id = "request".tenant_id AND "exception".student_id = "request".student_id AND "exception".exception_date = "pickup_notice".pickup_date`).
@@ -154,13 +154,14 @@ func (s *PickupChangeTeamStore) ListUnreadPickupChangeNotices(ctx context.Contex
 			) OR ("request".status = ? AND (
 				(NULLIF("request".payload->>'pickup_time', '') IS NOT NULL AND "exception".id IS NULL)
 				OR (jsonb_exists("request".payload, 'pickup_person') AND (
-					"person".requested_by_guardian IS DISTINCT FROM "request".submitted_by
-					OR "person".person_name IS DISTINCT FROM "request".payload->'pickup_person'->>'name'
-					OR "person".guardian_profile_id::text IS DISTINCT FROM NULLIF("request".payload->'pickup_person'->>'guardian_profile_id', '')
+					COALESCE("person".requested_by_guardian <> "request".submitted_by, ("person".requested_by_guardian IS NULL) <> ("request".submitted_by IS NULL))
+					OR COALESCE("person".person_name <> "request".payload->'pickup_person'->>'name', ("person".person_name IS NULL) <> ("request".payload->'pickup_person'->>'name' IS NULL))
+					OR COALESCE("person".guardian_profile_id::text <> NULLIF("request".payload->'pickup_person'->>'guardian_profile_id', ''), ("person".guardian_profile_id::text IS NULL) <> (NULLIF("request".payload->'pickup_person'->>'guardian_profile_id', '') IS NULL))
 				))
 			)))`, requestApproved, requestRejected).
 		OrderExpr(`"pickup_notice".informed_at DESC, "pickup_notice".request_id DESC`).
 		Limit(int64(limit))
+	query = withTenant(query, "pickup_notice", tenantID)
 	stats := domain.OperationStats{Queries: 1}
 	started := time.Now()
 	err = query.Scan(ctx, &rows)
