@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	schoolCalendarCompose "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/compose"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	transactionruntime "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose"
 	"github.com/moto-ogs/project-phoenix/roots/owners"
@@ -47,7 +48,7 @@ func NewChildDayChangesTestRouter(db transactionruntime.Database, unit tenant.Un
 		return nil, err
 	}
 	dayChanges, err := NewChildDayChanges(ChildDayChangesSources{
-		CarePlan: carePlan, Students: owners.MustNewPeopleDirectory(db), ClosingDays: owners.NewSchoolClosingDayReads(),
+		CarePlan: carePlan, Students: owners.MustNewPeopleDirectory(db), ClosingDays: owners.NewSchoolClosingDayReads(), OpeningChanges: schoolCalendarCompose.NewOpeningChanges(),
 		Blocks: blocks, ClassArrivals: classDay, Today: func() calendar.Date { return today },
 	})
 	if err != nil {
