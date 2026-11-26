@@ -22,7 +22,7 @@ export function teacherClassDayTopic(): HelpTopic {
     notes: [
       "Ganz oben steht `Heute anders`. Dort siehst du, was heute für deine Klassen und die Schule anders ist. Zum Beispiel ein früherer Unterrichtsschluss oder ein Schließtag.",
       "Übernimmst du heute eine Aufsicht, oder übernimmt jemand deine? Auch das steht unter `Heute anders`. Ein Tipp darauf öffnet `Meine Aufsichten`.",
-      "Ist eine deiner Klassen heute auf Ausflug? Dann steht dort, wie viele Kinder mitfahren und wann sie zurückkommen. Ein Tipp darauf öffnet die Klasse.",
+      "Ist eine deiner Klassen heute auf Ausflug? Dann steht dort, wie viele Kinder unterwegs sind und wann sie zurückkommen. Ein Tipp darauf öffnet die Klasse.",
       "Fällt einer deiner Termine heute aus oder ist er an einem anderen Ort? Auch das steht unter `Heute anders`. Ein Tipp darauf öffnet den `Kalender`.",
       "Wähle unter `Heute anders` eine Klasse mit Kindern. Dann springst du in der Liste zum ersten Kind, das heute anders ist.",
       "Namen von Kolleginnen und Kollegen und Gründe stehen bei `Heute anders` nicht. Du siehst nur deine Klassen, deine Aufsichten, deine Termine und die ganze Schule.",

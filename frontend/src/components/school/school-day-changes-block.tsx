@@ -68,7 +68,7 @@ function classTripChanges(
   report: schoolClassDayContract.AssignedClassesReport | undefined,
 ): DayChange[] {
   if (!report?.school_day) return [];
-  return report.classes.flatMap((klass) =>
+  return (report.classes ?? []).flatMap((klass) =>
     (klass.trips ?? []).map((trip): DayChange => ({
       kind: "class_trip",
       section: "you",
