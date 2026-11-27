@@ -690,7 +690,7 @@ func (b parentBillingBillingRegistrations) HolidayBillingPeriod(ctx context.Cont
 func parentBillingPeriod(period enrollmentOwner.HolidayPeriod) parentbilling.HolidayBillingPeriod {
 	billing := parentbilling.HolidayBillingPeriod{
 		ID: period.ID, Name: period.Name, Published: period.Status == enrollmentOwner.HolidayPeriodPublished,
-		IncludedInFee: period.IncludedInFee,
+		IncludedInFee: period.IncludedInFee, ExtraDay: period.Kind == enrollmentOwner.HolidayPeriodKindExtraDay,
 	}
 	for _, week := range period.Weeks {
 		if billing.StartsOn.IsZero() || week.StartsOn.Before(billing.StartsOn) {

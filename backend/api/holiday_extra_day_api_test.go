@@ -244,6 +244,9 @@ func TestExtraCareDayAtADayPriceIsBillable(t *testing.T) {
 	created := decodeSchoolPortalData[extraDayPeriodBody](t, rec.Body.Bytes())
 	assert.False(t, created.IncludedInFee)
 	assert.Equal(t, 1800, created.Weeks[0].TimeModels[0].PriceCents)
+	// A draft may still change its fee mode: it takes no billing run.
+	rec = traegerJSON(t, f.traeger, extraDayBilling(t, f, office), http.MethodPost, "/traeger/billing-runs/", map[string]any{"holiday_period_id": fmt.Sprint(created.ID)})
+	assert.Equal(t, http.StatusConflict, rec.Code, rec.Body.String())
 	rec = traegerJSON(t, f.traeger, office.token, http.MethodPost, holidayPeriodPath(int64(created.ID))+"/publish", nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 

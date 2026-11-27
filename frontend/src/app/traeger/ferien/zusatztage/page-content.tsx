@@ -49,13 +49,20 @@ const COLUMNS: DataTableColumn<HolidayPeriod>[] = [
     stacked: "title",
   },
   {
-    // On a phone the line under the name: the day, its care time and the
-    // schools; the deadline and the fee stay on the day's own page.
+    // On a phone the line under the name: the day and the schools; care
+    // time, deadline and fee stay on the day's own page.
     key: "day",
     header: "Tag",
-    render: (day) => <span className="tabular-nums">{extraDayDate(day)}</span>,
+    render: (day) => (
+      <span className="tabular-nums">
+        {extraDayDate(day)}
+        <span className="block text-xs text-gray-600">
+          {extraDayCareTime(day)}
+        </span>
+      </span>
+    ),
     stackedRender: (day) =>
-      `${extraDayDate(day)} · ${extraDayCareTime(day)} · ${extraDaySchoolCount(day)}`,
+      `${extraDayDate(day)} · ${extraDaySchoolCount(day)}`,
     stackedLabel: false,
     sortValue: (day) => day.weeks[0]?.startsOn ?? null,
   },

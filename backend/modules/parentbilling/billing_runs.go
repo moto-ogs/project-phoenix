@@ -420,6 +420,9 @@ type HolidayBillingPeriod struct {
 	// IncludedInFee marks an extra care day the monthly contribution covers
 	// (#4817): it has nothing to bill and takes no billing run.
 	IncludedInFee bool `json:"-"`
+	// ExtraDay marks a single extra care day (#4817); its fee mode is fixed
+	// only once it is published.
+	ExtraDay bool `json:"-"`
 }
 
 // HolidayBillingChild is a child of a confirmed registration by its name.

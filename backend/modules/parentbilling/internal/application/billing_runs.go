@@ -203,7 +203,10 @@ func (b *BillingRuns) StartHolidayBillingRun(ctx context.Context, reviewer paren
 	if err != nil {
 		return parentbilling.BillingRun{}, err
 	}
-	if period.IncludedInFee || period.StartsOn.IsZero() || period.EndsOn.IsZero() {
+	// An extra day is billed under the fee mode parents registered for,
+	// which is fixed once it is published (#4817): a draft takes no run,
+	// and an included day has nothing to bill.
+	if period.IncludedInFee || (period.ExtraDay && !period.Published) || period.StartsOn.IsZero() || period.EndsOn.IsZero() {
 		return parentbilling.BillingRun{}, parentbilling.ErrBillingRunEmpty
 	}
 	run, err := b.store.InsertBillingRun(ctx, reviewer.OrganizationID, parentbilling.BillingRun{

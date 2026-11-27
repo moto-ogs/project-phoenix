@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	validation "github.com/go-ozzo/ozzo-validation"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -50,10 +51,28 @@ func TestHolidayChildNumbersReadTheFormatAndStoredNumbersOnce(t *testing.T) {
 		}
 		stored, err := h.store.ChildDebtorNumbers(context.Background(), 7)
 		require.NoError(t, err)
-		entered, err := h.enteredChildNumbers(context.Background(), 7, registration, stored, inputs)
+		entered, err := h.enteredChildNumbers(context.Background(), 7, registration, stored, inputs, false)
 		require.NoError(t, err)
 		assert.Len(t, entered, count)
 		assert.Equal(t, 1, reads.formats, "one format read regardless of the number of children")
 		assert.Equal(t, 1, reads.numbers, "validation reuses one stored-number snapshot")
 	}
+}
+
+// A confirmation of an included extra care day may leave a child without a
+// number (#4817); a number another invoice may rely on is still not cleared,
+// and the shared editor keeps requiring every number.
+func TestRequireChildNumbersLetsOnlyAMissingNumberStayMissing(t *testing.T) {
+	t.Parallel()
+	stored := map[int64]string{71: "", 72: "60102"}
+	cleared := map[int64]string{72: ""}
+
+	strict := validation.Errors{}
+	requireChildNumbers(stored, cleared, strict, false)
+	assert.Len(t, strict, 2, "the editor requires the missing number and refuses the cleared one")
+
+	confirming := validation.Errors{}
+	requireChildNumbers(stored, cleared, confirming, true)
+	require.Len(t, confirming, 1, "the missing number may stay missing")
+	assert.Contains(t, confirming, childDebtorNumberField(72), "an existing number is not cleared")
 }
