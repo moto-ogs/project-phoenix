@@ -46,6 +46,10 @@ on:
       full-frontend-suite:
         type: boolean
         required: true
+      full-frontend-dom:
+        description: Shard the full DOM suite without forcing unrelated Node tests.
+        type: boolean
+        default: false
 
 defaults:
   run:
@@ -562,7 +566,7 @@ jobs:
       matrix:
         # Changed-only PRs keep one DOM job. Full suites split its files with
         # Vitest's built-in sharding.
-        project: ${{ fromJSON(inputs.frontend-guards-only && '["guards"]' || (!inputs.changed-scope || inputs.full-frontend-suite || inputs.base_ref == '') && '["node","dom-1","dom-2"]' || '["node","dom"]') }}
+        project: ${{ fromJSON(inputs.frontend-guards-only && '["guards"]' || (!inputs.changed-scope || inputs.full-frontend-suite || inputs.full-frontend-dom || inputs.base_ref == '') && '["node","dom-1","dom-2"]' || '["node","dom"]') }}
     # Both full DOM shards had over two minutes of median headroom on green
     # PRs (Nov 25–26). Standard GitHub runners are free only while public.
     runs-on: >-
@@ -631,7 +635,7 @@ jobs:
         env:
           PROJECT: ${{ matrix.project }}
           CHANGED_SCOPE: ${{ inputs.changed-scope }}
-          FULL_SUITE: ${{ inputs.full-frontend-suite }}
+          FULL_SUITE: ${{ inputs.full-frontend-suite || startsWith(matrix.project, 'dom-') }}
           BASE_REF: ${{ inputs.base_ref }}
         run: |
           test_args=(--project app-dom --project school-date-dom)
@@ -642,7 +646,8 @@ jobs:
             test_args=()
           fi
           case "$PROJECT" in
-            dom-1|dom-2) test_args+=(--shard "${PROJECT#dom-}/2") ;;
+            # Dedicated DOM shards do not share the runner with Node subprocess tests.
+            dom-1|dom-2) test_args+=(--shard "${PROJECT#dom-}/2" --maxWorkers=4) ;;
           esac
           if [ "$CHANGED_SCOPE" = true ] && [ "$FULL_SUITE" = false ] && [ -n "$BASE_REF" ]; then
             node ../scripts/test-frontend-changed.mjs "origin/$BASE_REF" --disableConsoleIntercept "${test_args[@]}"

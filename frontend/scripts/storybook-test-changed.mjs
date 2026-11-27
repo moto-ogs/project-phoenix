@@ -34,6 +34,29 @@ const GLOBAL_INPUTS = [
 const frontend = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 let previewInputs;
 
+export function runtimeImports(source, file) {
+  const parsed = ts.createSourceFile(file, source, ts.ScriptTarget.Latest);
+  if (parsed.parseDiagnostics.length)
+    throw new Error(`Quelldatei nicht lesbar: ${file}`);
+  // Exclude only declarations erased in their entirety. With
+  // verbatimModuleSyntax, `import { type T } from "./x"` still loads x.
+  const typeOnly = new Set(
+    parsed.statements
+      .filter(
+        (node) =>
+          (ts.isImportDeclaration(node) && node.importClause?.isTypeOnly) ||
+          (ts.isExportDeclaration(node) &&
+            node.isTypeOnly &&
+            node.moduleSpecifier),
+      )
+      .map((node) => node.moduleSpecifier.getStart(parsed)),
+  );
+  return ts
+    .preProcessFile(source, true, true)
+    .importedFiles.filter((entry) => !typeOnly.has(entry.pos))
+    .map((entry) => entry.fileName);
+}
+
 // Nicht nur die Provider selbst, sondern auch ihre lokalen Importe wirken
 // auf jede Story. TypeScripts Resolver berücksichtigt die tsconfig-Aliase.
 function globalPreviewInputs() {
@@ -61,9 +84,7 @@ function globalPreviewInputs() {
       ? [
           ...source.matchAll(/(?:@import\s+["']|url\(\s*["']?)([^"'\s)]+)/g),
         ].map((match) => match[1])
-      : ts
-          .preProcessFile(source, true, true)
-          .importedFiles.map((imported) => imported.fileName);
+      : runtimeImports(source, file);
     for (const fileName of imports) {
       if (!/^(\.|~\/|@\/|~storybook\/)/.test(fileName)) continue;
       // CSS und Schriftdateien löst TypeScript nicht als Module auf.

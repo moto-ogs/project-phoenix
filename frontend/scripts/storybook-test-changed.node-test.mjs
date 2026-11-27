@@ -6,7 +6,11 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { parse } from "yaml";
 
-import { needsFullRun, shardArgs } from "./storybook-test-changed.mjs";
+import {
+  needsFullRun,
+  runtimeImports,
+  shardArgs,
+} from "./storybook-test-changed.mjs";
 
 test("a global input of every story starts the full run", () => {
   for (const path of [
@@ -43,6 +47,20 @@ test("component, story and copy changes keep the selection", () => {
   );
 });
 
+test("type-only preview dependencies do not force every story to render", () => {
+  const imports = runtimeImports(
+    `import type * as Contract from "./generated";
+     export type { Row } from "./model";
+     import type { UI } from "./mixed";
+     export { Button } from "./mixed";
+     import { type Theme } from "./theme";
+     import "./styles.css";
+     const page = import("./page");`,
+    "provider.tsx",
+  );
+  assert.deepEqual(imports, ["./mixed", "./theme", "./styles.css", "./page"]);
+});
+
 test("a shard passes through to Vitest, an invalid one stops the run", () => {
   assert.deepEqual(shardArgs(undefined), []);
   assert.deepEqual(shardArgs(""), []);
@@ -60,10 +78,16 @@ test("the CI shards cover every story file exactly once", () => {
   ).jobs["storybook-tests"];
   const shards = job.strategy.matrix.shard;
   const step = job.steps.find((s) => s.name === "Storybook tests (a11y)");
-  assert.equal(step.env.STORYBOOK_SHARD, `\${{ matrix.shard }}/${shards.length}`);
+  assert.equal(
+    step.env.STORYBOOK_SHARD,
+    `\${{ matrix.shard }}/${shards.length}`,
+  );
   assert.deepEqual(
     shards,
     shards.map((_, i) => i + 1),
   );
-  assert.equal(job.name, `Storybook tests (\${{ matrix.shard }}/${shards.length})`);
+  assert.equal(
+    job.name,
+    `Storybook tests (\${{ matrix.shard }}/${shards.length})`,
+  );
 });
