@@ -29,20 +29,24 @@ type ChildDaySourceStatus struct {
 
 // ChildDayChangeEntry is one change of the child's day.
 type ChildDayChangeEntry struct {
-	Kind             string         `json:"kind"`
-	AllDay           bool           `json:"all_day"`
-	Since            *calendar.Date `json:"since"`
-	Until            *calendar.Date `json:"until"`
-	StartsAt         *time.Time     `json:"starts_at"`
-	EndsAt           *time.Time     `json:"ends_at"`
-	EnteredByYou     bool           `json:"entered_by_you"`
-	ChildStatus      *string        `json:"child_status"`
-	PickupTime       *string        `json:"pickup_time"`
-	ActivityTitle    *string        `json:"activity_title"`
-	RoomName         *string        `json:"room_name"`
-	PreviousRoomName *string        `json:"previous_room_name"`
-	ClosingName      *string        `json:"closing_name"`
-	ClosingTraeger   bool           `json:"closing_traeger"`
+	Kind         string         `json:"kind"`
+	AllDay       bool           `json:"all_day"`
+	Since        *calendar.Date `json:"since"`
+	Until        *calendar.Date `json:"until"`
+	StartsAt     *time.Time     `json:"starts_at"`
+	EndsAt       *time.Time     `json:"ends_at"`
+	EnteredByYou bool           `json:"entered_by_you"`
+	ChildStatus  *string        `json:"child_status"`
+	PickupTime   *string        `json:"pickup_time"`
+	// PickupPersonName is who collects the child (#8162);
+	// PickupPersonOneTime asks the person to bring an ID card.
+	PickupPersonName    *string `json:"pickup_person_name"`
+	PickupPersonOneTime bool    `json:"pickup_person_one_time"`
+	ActivityTitle       *string `json:"activity_title"`
+	RoomName            *string `json:"room_name"`
+	PreviousRoomName    *string `json:"previous_room_name"`
+	ClosingName         *string `json:"closing_name"`
+	ClosingTraeger      bool    `json:"closing_traeger"`
 	// OpeningName, OpensAt and ClosesAt describe an opening change (#8170);
 	// PickupAfterClosing marks a changed pickup after its closing time.
 	OpeningName        *string `json:"opening_name"`
@@ -55,7 +59,7 @@ type ChildDayChangeEntry struct {
 
 // ChildDayChangeKinds are the kinds of the child's day.
 var ChildDayChangeKinds = []string{
-	"child_absent", "child_pickup_changed", "child_goes_alone", "class_trip",
+	"child_absent", "child_pickup_changed", "child_goes_alone", "child_pickup_person", "class_trip",
 	"closing_day", "opening_changed",
 	"activity_cancelled", "activity_reinstated", "activity_room_changed", "activity_lead_changed",
 	"class_dismissal_changed", "meal_cancelled",
@@ -111,6 +115,7 @@ func toChildDayChangesResponse(day parentService.ChildDay) ChildDayChangesRespon
 			Kind: entry.Kind, AllDay: entry.AllDay, Since: entry.Since, Until: entry.Until,
 			StartsAt: entry.StartsAt, EndsAt: entry.EndsAt, EnteredByYou: entry.EnteredByYou,
 			ChildStatus: entry.ChildStatus, PickupTime: entry.PickupTime,
+			PickupPersonName: entry.PickupPersonName, PickupPersonOneTime: entry.PickupPersonOneTime,
 			ActivityTitle: entry.ActivityTitle, RoomName: entry.RoomName, PreviousRoomName: entry.PreviousRoomName,
 			ClosingName: entry.ClosingName, ClosingTraeger: entry.ClosingTraeger,
 			OpeningName: entry.OpeningName, OpensAt: entry.OpensAt, ClosesAt: entry.ClosesAt, PickupAfterClosing: entry.PickupAfterClosing,

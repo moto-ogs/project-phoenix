@@ -60,8 +60,7 @@ func ValidatePickupChange(input PickupChangeCreateInput, today calendar.Date) (s
 	if input.StudentID <= 0 || input.GuardianAccountID <= 0 || input.Date.IsZero() ||
 		(input.PickupTime.IsZero() && input.DepartureMode == "" && input.PickupPerson == nil) ||
 		(input.DepartureMode != "" && !RequestableDepartureMode(input.DepartureMode)) ||
-		(input.PickupPerson != nil && (input.PickupPerson.GuardianProfileID <= 0 ||
-			strings.TrimSpace(input.PickupPerson.Name) == "" || !PickupPersonAllowed(input.DepartureMode))) ||
+		(input.PickupPerson != nil && !input.PickupPerson.valid(input.DepartureMode)) ||
 		(reason == "" && input.ReasonRequired) || utf8.RuneCountInString(reason) > 255 {
 		return "", ErrInvalidPayload
 	}

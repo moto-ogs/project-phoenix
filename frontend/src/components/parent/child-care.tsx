@@ -53,6 +53,8 @@ import { useChildFeatures } from "~/components/parent/child-requests-context";
 import { CustomSelect } from "~/components/ui/custom-select";
 import { FormErrorAlert } from "~/components/ui/form-error-alert";
 import { Textarea } from "~/components/ui/textarea";
+import { Input } from "~/components/ui/input";
+import { useDebounce } from "~/lib/use-debounce";
 import { useApiFormError } from "~/contexts/ToastContext";
 import { createLogger } from "~/lib/logger";
 import {
@@ -1074,6 +1076,7 @@ export type PickupChangeSubmitParams = Parameters<
 >[1];
 
 const DAY_SIGNATURE_FIELD = "pickup-day-signature";
+const OTHER_PERSON_NAME_FIELD = "pickup-other-person-name";
 
 /**
  * Die Kontaktpersonen des Kindes, die an einem Tag abholen können (#4780):
@@ -1101,9 +1104,24 @@ interface PickupDraft {
   /** Leer heißt: die Abholart des Tages bleibt, wie sie ist (#3945). */
   readonly departureMode: DayDepartureMode | "";
   readonly reason: string;
-  /** Eine Kontaktperson, die das Kind an diesem Tag abholt (#4780). */
+  /**
+   * Eine Kontaktperson, die das Kind an diesem Tag abholt (#4780), oder
+   * {@link OTHER_PICKUP_PERSON} für eine andere Person mit Namen (#8162).
+   */
   readonly pickupPersonId: string;
+  /** Der Name der anderen Person, wenn sie keine Kontaktperson ist. */
+  readonly pickupPersonName: string;
   readonly signature: SignatureValue | null;
+}
+
+/** Auswahlwert für eine Person, die keine Kontaktperson ist (#8162). */
+const OTHER_PICKUP_PERSON = "other";
+/** So lang darf der Name einer anderen Person sein (wie im Backend). */
+const PICKUP_PERSON_NAME_MAX = 120;
+
+/** Der Name ohne doppelte Leerzeichen, wie das Backend ihn speichert. */
+function normalizedPersonName(name: string): string {
+  return name.trim().split(/\s+/).filter(Boolean).join(" ");
 }
 
 const EMPTY_PICKUP_DRAFT: PickupDraft = {
@@ -1111,6 +1129,7 @@ const EMPTY_PICKUP_DRAFT: PickupDraft = {
   departureMode: "",
   reason: "",
   pickupPersonId: "",
+  pickupPersonName: "",
   signature: null,
 };
 
@@ -1127,8 +1146,24 @@ function requestPickupDraft(
         request.departure_mode ?? undefined,
       ) ?? "",
     reason: request.reason ?? existing?.reason ?? "",
-    pickupPersonId: request.pickup_person_guardian_profile_id ?? "",
+    ...requestPickupPerson(request),
     signature: null,
+  };
+}
+
+/** Die Abholperson einer offenen Anfrage für den Dialog. */
+function requestPickupPerson(
+  request: parentMeContract.PickupChangeRequestResponse | undefined,
+): Pick<PickupDraft, "pickupPersonId" | "pickupPersonName"> {
+  if (request?.pickup_person_one_time && request.pickup_person) {
+    return {
+      pickupPersonId: OTHER_PICKUP_PERSON,
+      pickupPersonName: request.pickup_person,
+    };
+  }
+  return {
+    pickupPersonId: request?.pickup_person_guardian_profile_id ?? "",
+    pickupPersonName: "",
   };
 }
 
@@ -1311,8 +1346,14 @@ export function PickupTimeModal({
     setInvalidField(null);
   }, [clearForm, edit.status, editToken]);
   const fields = editing && edit.draft ? edit.draft : created;
-  const { pickupTime, departureMode, pickupPersonId, signature, reason } =
-    fields;
+  const {
+    pickupTime,
+    departureMode,
+    pickupPersonId,
+    pickupPersonName,
+    signature,
+    reason,
+  } = fields;
   const setFields = (patch: Partial<PickupDraft>) => {
     if (editing) setEditDraft((current) => ({ ...current, ...patch }));
     else setCreated((current) => ({ ...current, ...patch }));
@@ -1324,28 +1365,39 @@ export function PickupTimeModal({
   const modeField = departureModeEnabled && !staffMode;
   const modeLabel = (mode: string) => tModes(`departureModes.${mode}`);
   // Eine Abholperson passt nur, wenn das Kind abgeholt wird (#4780).
+  // Eine andere Person mit Namen geht auch ohne Kontakte (#8162).
+  const effectiveDepartureMode = staffMode ?? departureMode;
   const personField =
-    contacts.length > 0 && (departureMode === "" || departureMode === "pickup");
-  const pickupPerson = contacts.find(
-    (contact) => contact.guardian_profile_id === pickupPersonId,
-  );
+    effectiveDepartureMode === "" || effectiveDepartureMode === "pickup";
+  const pickupPerson = personField
+    ? contacts.find((contact) => contact.guardian_profile_id === pickupPersonId)
+    : undefined;
+  const otherPerson = personField && pickupPersonId === OTHER_PICKUP_PERSON;
+  const otherPersonName = otherPerson
+    ? normalizedPersonName(pickupPersonName)
+    : "";
+  // Der Wortlaut lädt erst, wenn der Name eine Weile steht.
+  const statementPersonName = useDebounce(otherPersonName, 400);
+  const personNamed = Boolean(pickupPerson) || otherPersonName !== "";
   const needsDaySignature =
-    Boolean(pickupPerson) || (modeField && departureMode === "alone");
+    personNamed || (modeField && departureMode === "alone");
+  const statementPerson = pickupPerson
+    ? `${pickupPerson.first_name} ${pickupPerson.last_name}`.trim()
+    : statementPersonName;
   const daySignatureStatement = usePickupSignatureStatement(
     studentId,
-    pickupPerson
-      ? {
-          kind: "day_pickup",
-          personName:
-            `${pickupPerson.first_name} ${pickupPerson.last_name}`.trim(),
-          date,
-          departureMode,
-        }
+    statementPerson !== ""
+      ? { kind: "day_pickup", personName: statementPerson, date, departureMode }
       : modeField && departureMode === "alone"
         ? { kind: "day_pickup", date, departureMode }
         : null,
   );
-  const dayStatement = daySignatureStatement.statement;
+  // Ein Wortlaut zu einem älteren Namen gilt nicht: die Unterschrift muss
+  // den Namen tragen, der gesendet wird.
+  const dayStatement =
+    !otherPerson || statementPersonName === otherPersonName
+      ? daySignatureStatement.statement
+      : null;
   const alreadyHome = date === today && childToday?.state === "left";
   // Nach der Frist ist heute für Eltern ganz zu: nicht anfragen, nicht
   // bearbeiten, nicht zurücknehmen. Spätere Tage bleiben offen (#3163).
@@ -1456,7 +1508,10 @@ export function PickupTimeModal({
       request?.departure_mode ?? undefined,
     ) ?? "";
   const prefillReason = request?.reason ?? existing?.reason ?? "";
-  const prefillPerson = request?.pickup_person_guardian_profile_id ?? "";
+  const {
+    pickupPersonId: prefillPersonId,
+    pickupPersonName: prefillPersonName,
+  } = requestPickupPerson(request);
   const prefillVersion = request?.version ?? "";
   useEffect(() => {
     if (editing) return;
@@ -1464,7 +1519,8 @@ export function PickupTimeModal({
       pickupTime: prefillTime,
       departureMode: prefillMode,
       reason: prefillReason,
-      pickupPersonId: prefillPerson,
+      pickupPersonId: prefillPersonId,
+      pickupPersonName: prefillPersonName,
       signature: null,
     });
     clearForm();
@@ -1476,7 +1532,8 @@ export function PickupTimeModal({
     prefillTime,
     prefillMode,
     prefillReason,
-    prefillPerson,
+    prefillPersonId,
+    prefillPersonName,
     prefillVersion,
   ]);
 
@@ -1489,6 +1546,14 @@ export function PickupTimeModal({
 
   // Fehlt die Unterschrift für eine Abholperson oder den Heimweg allein,
   // bleibt der Dialog offen und nennt das Feld (#4780).
+  // „Andere Person“ ohne Namen bleibt offen und nennt das Feld (#8162).
+  const otherPersonNameMissing = (): boolean => {
+    if (!otherPerson || otherPersonName !== "") return false;
+    form.invalid(tPermission("pickupPerson.otherNameMissing"), {
+      [OTHER_PERSON_NAME_FIELD]: tPermission("pickupPerson.otherNameMissing"),
+    });
+    return true;
+  };
   const signatureMissing = (): boolean => {
     if (!needsDaySignature || (dayStatement && signature)) return false;
     form.invalid(tPermission("signature.missing"), {
@@ -1502,6 +1567,7 @@ export function PickupTimeModal({
     ...(pickupPerson
       ? { pickupPersonGuardianProfileId: pickupPerson.guardian_profile_id }
       : {}),
+    ...(otherPersonName !== "" ? { pickupPersonName: otherPersonName } : {}),
     ...(signature && dayStatement
       ? { signature, signatureStatement: dayStatement }
       : {}),
@@ -1515,7 +1581,8 @@ export function PickupTimeModal({
       form.invalid(t("pickup.loadError"));
       return;
     }
-    if (!pickupTime && !(modeField && departureMode) && !pickupPerson) {
+    if (otherPersonNameMissing()) return;
+    if (!pickupTime && !(modeField && departureMode) && !personNamed) {
       form.invalid(t(modeField ? "pickup.noTimeOrMode" : "pickup.noTime"));
       setInvalidField("pickupTime");
       pickupTimeRef.current?.focus();
@@ -1558,12 +1625,14 @@ export function PickupTimeModal({
     // list confirmed it. Omitting its ID would silently clear the collector.
     if (
       request.pickup_person_guardian_profile_id !== undefined &&
-      !pickupPerson
+      !pickupPerson &&
+      !otherPerson
     ) {
       form.invalid(t("pickup.loadError"));
       return;
     }
-    if (!pickupTime && !(modeField && departureMode) && !pickupPerson) {
+    if (otherPersonNameMissing()) return;
+    if (!pickupTime && !(modeField && departureMode) && !personNamed) {
       form.invalid(t(modeField ? "pickup.noTimeOrMode" : "pickup.noTime"));
       setInvalidField("pickupTime");
       pickupTimeRef.current?.focus();
@@ -1935,6 +2004,10 @@ export function PickupTimeModal({
                     value: contact.guardian_profile_id,
                     label: `${contact.first_name} ${contact.last_name}`.trim(),
                   })),
+                  {
+                    value: OTHER_PICKUP_PERSON,
+                    label: tPermission("pickupPerson.other"),
+                  },
                 ]}
                 onChange={(next) => {
                   setFields({ pickupPersonId: next, signature: null });
@@ -1942,6 +2015,24 @@ export function PickupTimeModal({
                     setInvalidField(null);
                     form.clear();
                   }
+                }}
+              />
+            )}
+            {otherPerson && (
+              <Input
+                id={OTHER_PERSON_NAME_FIELD}
+                label={tPermission("pickupPerson.otherNameLabel")}
+                hint={tPermission("pickupPerson.otherNameHint")}
+                value={pickupPersonName}
+                maxLength={PICKUP_PERSON_NAME_MAX}
+                autoComplete="off"
+                required
+                error={form.fieldError(OTHER_PERSON_NAME_FIELD)}
+                onChange={(e) => {
+                  setFields({
+                    pickupPersonName: e.target.value,
+                    signature: null,
+                  });
                 }}
               />
             )}
@@ -1957,7 +2048,7 @@ export function PickupTimeModal({
               }}
               label={t("pickup.pickupLabel")}
               hint={
-                modeField || pickupPerson
+                modeField || personNamed
                   ? `${t("pickup.pickupOptionalHint")} ${t("timeFormatHint")}`
                   : t("timeFormatHint")
               }
@@ -1969,7 +2060,7 @@ export function PickupTimeModal({
               }}
               placeholder={t("timeExample")}
               // Mit einer Abholperson darf die Uhrzeit gleich bleiben (#4780).
-              required={!modeField && !pickupPerson}
+              required={!modeField && !personNamed}
               invalid={invalidField === "pickupTime"}
               describedBy={invalidField === "pickupTime" ? errorId : undefined}
             />

@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -102,16 +103,48 @@ func pickupRequestPayload(ctx context.Context, pickup ports.RequestSubmissionPic
 			payload["previous_departure_modes"] = previous
 		}
 	}
+	if err := validatePickupPersonDeparture(ctx, pickup, input); err != nil {
+		return nil, err
+	}
 	return json.Marshal(payload)
+}
+
+func validatePickupPersonDeparture(ctx context.Context, pickup ports.RequestSubmissionPickup, input carerequests.PickupChangeCreateInput) error {
+	if input.PickupPerson == nil || input.DepartureMode != "" {
+		return nil
+	}
+	return ensurePickupPersonDepartureAllowed(ctx, pickup, input.StudentID, input.Date)
+}
+
+// ensurePickupPersonDepartureAllowed refuses a collector when the effective
+// day mode still sends the child home alone or by bus. The approval repeats
+// this check because the weekly plan can change while the request waits.
+func ensurePickupPersonDepartureAllowed(ctx context.Context, pickup ports.RequestSubmissionPickup, studentID int64, date calendar.Date) error {
+	if pickup == nil {
+		return errors.New("schedule: pickup plan is not configured")
+	}
+	modes, err := previousDepartureModes(ctx, pickup, studentID, date)
+	if err != nil {
+		return fmt.Errorf("schedule: resolve current departure modes for pickup person: %w", err)
+	}
+	for _, mode := range modes {
+		if !carerequests.PickupPersonAllowed(mode) {
+			return carerequests.ErrPickupChangeConflict
+		}
+	}
+	return nil
 }
 
 // addPickupPersonAndSignature stores the day's collector and the signed
 // wording (#4780).
 func addPickupPersonAndSignature(payload map[string]any, input carerequests.PickupChangeCreateInput) {
 	if input.PickupPerson != nil {
-		payload["pickup_person"] = map[string]any{
-			"guardian_profile_id": input.PickupPerson.GuardianProfileID, "name": strings.TrimSpace(input.PickupPerson.Name),
+		person := map[string]any{"name": strings.Join(strings.Fields(input.PickupPerson.Name), " ")}
+		// A one-time person (#8162) has no contact to name.
+		if !input.PickupPerson.OneTime() {
+			person["guardian_profile_id"] = input.PickupPerson.GuardianProfileID
 		}
+		payload["pickup_person"] = person
 	}
 	if input.Signature != nil {
 		payload["signature"] = map[string]any{"id": input.Signature.SignatureID, "statement": input.Signature.Statement}

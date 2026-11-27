@@ -301,7 +301,7 @@ func newStudentTestModule(db transactionruntime.Database, unit tenant.UnitOfWork
 	requestReviewPolicy := owners.NewParentRequestReviewPolicy(userContextService.Caller().ParentRequestReviews)
 	parentRequestEvents := studentPeople.ParentRequestEvent
 	careRequestService := owners.NewCareScheduleRequestServiceWithPickupChangesAndPolicy(nil,
-		students.CarePlan,
+		owners.CarePlanRequestRecords(students.CarePlan),
 		persons,
 		arrivalScheduleService,
 		pickupScheduleService,

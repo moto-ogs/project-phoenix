@@ -50,6 +50,15 @@ function childDayChangeText(
         : t("changes.pickupAt", { name: firstName, time: entry.pickup_time });
     case "child_goes_alone":
       return t("changes.goesAlone", { name: firstName });
+    case "child_pickup_person": {
+      // Wer das Kind heute abholt (#8162); eine andere Person zeigt den
+      // Ausweis, weil die OGS sie nicht kennt.
+      const person = entry.pickup_person_name ?? "";
+      if (person === "") return null;
+      return entry.pickup_person_one_time
+        ? t("changes.pickupPersonOneTime", { person, name: firstName })
+        : t("changes.pickupPerson", { person, name: firstName });
+    }
     case "class_trip":
       return entry.class_time
         ? t("changes.classTripBack", {

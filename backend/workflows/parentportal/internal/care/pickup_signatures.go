@@ -155,7 +155,7 @@ func (s *Service) PickupSignatureStatement(ctx context.Context, accountID, stude
 		if input.Date.IsZero() {
 			return "", ErrPickupSignatureInvalid
 		}
-		statement := DayPickupStatement(child.StudentName, input.Date, input.DepartureMode, strings.TrimSpace(input.PersonName))
+		statement := DayPickupStatement(child.StudentName, input.Date, input.DepartureMode, strings.Join(strings.Fields(input.PersonName), " "))
 		if statement == "" {
 			return "", ErrPickupSignatureInvalid
 		}

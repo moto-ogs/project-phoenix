@@ -61,12 +61,27 @@ type SignedStatement struct {
 	Statement   string
 }
 
-// PickupPerson is the contact person who collects the child on one day.
-// Name is the name at the time of the request, so the history stays readable
-// after the contact changes or is removed.
+// PickupPerson is the person who collects the child on one day. Name is the
+// name at the time of the request, so the history stays readable after the
+// contact changes or is removed. GuardianProfileID names a contact of the
+// child; zero is a one-time person known only by the name (#8162), whose ID
+// card the staff check at the pickup.
 type PickupPerson struct {
 	GuardianProfileID int64
 	Name              string
+}
+
+// PickupPersonNameMaxLength is the longest name of a one-time person; the
+// day value keeps no more (careplan.PickupPersonNameMaxLength).
+const PickupPersonNameMaxLength = 120
+
+// OneTime reports a person who is no contact of the child.
+func (p PickupPerson) OneTime() bool { return p.GuardianProfileID == 0 }
+
+func (p PickupPerson) valid(departureMode string) bool {
+	name := strings.TrimSpace(p.Name)
+	return p.GuardianProfileID >= 0 && name != "" && utf8.RuneCountInString(name) <= PickupPersonNameMaxLength &&
+		PickupPersonAllowed(departureMode)
 }
 
 // PickupPermissionCreateInput is one pickup permission a guardian asks for.

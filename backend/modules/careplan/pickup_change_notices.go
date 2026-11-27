@@ -21,6 +21,9 @@ type PickupChangeNotice struct {
 	StudentID  int64
 	Date       calendar.Date
 	PickupTime string // "15:04"
+	// PickupPerson is the name of the person the family named to collect
+	// the child that day (#8162); "" when the request names none.
+	PickupPerson string
 	// Withdrawn reports that the approved time no longer applies.
 	Withdrawn bool
 	// ReviewerAccountID decided it and needs no notice.
@@ -72,6 +75,9 @@ type PickupChangeTeamNotice struct {
 	Date             calendar.Date
 	// PickupTime is the approved time ("15:04"); empty when Withdrawn.
 	PickupTime string
+	// PickupPerson is who collects the child that day (#8162); empty when
+	// Withdrawn or when the request names nobody.
+	PickupPerson string
 	// Withdrawn reports that a corrected decision took the time back.
 	Withdrawn  bool
 	InformedAt time.Time

@@ -54,12 +54,25 @@ function noteSubtitle(notice: StudentNoteTeamNotice): string {
     : `Notiz, ${when}`;
 }
 
-/** „Morgen: neue Abholzeit 15:00 Uhr“ or „Fr, 20.11.2026: wieder normale Abholzeit“. */
+/**
+ * „Morgen: neue Abholzeit 15:00 Uhr“, „Morgen: Tante Frieda holt ab“ (#8162)
+ * „Morgen: Tante Frieda holt ab“, „Fr, 20.11.2026: Abholperson
+ * zurückgenommen“ or „Fr, 20.11.2026: wieder normale Abholzeit“.
+ */
 function pickupSubtitle(notice: PickupChangeNotice, today: string): string {
   const day = pickupDayLabel(notice.date, today);
-  return notice.withdrawn
-    ? `${day}: wieder normale Abholzeit`
-    : `${day}: neue Abholzeit ${notice.pickupTime} Uhr`;
+  if (notice.withdrawn && notice.pickupPerson && notice.pickupTime) {
+    return `${day}: Abholzeit und Abholperson zurückgenommen`;
+  }
+  if (notice.withdrawn && notice.pickupPerson) {
+    return `${day}: Abholperson zurückgenommen`;
+  }
+  if (notice.withdrawn) return `${day}: wieder normale Abholzeit`;
+  const parts = [
+    notice.pickupTime ? `neue Abholzeit ${notice.pickupTime} Uhr` : "",
+    notice.pickupPerson ? `${notice.pickupPerson} holt ab` : "",
+  ].filter(Boolean);
+  return `${day}: ${parts.join(", ")}`;
 }
 
 function itemKey(item: StaffNewsItem): string {

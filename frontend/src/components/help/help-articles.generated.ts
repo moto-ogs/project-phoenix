@@ -6520,7 +6520,7 @@ export const parentChildOverviewTopic =
         "`Angaben`: persönliche Angaben, Klasse und Gesundheit.",
         "`Kontakte`: Abholberechtigte, Kontakte und verbundene Konten.",
         "Unter `Heute` stehen die Knöpfe zum Abmelden, zur Abholzeit und für eine Nachricht.",
-        "`Heute anders` nennt zum Beispiel: Ein Angebot fällt aus, ist in einem anderen Raum oder hat eine Vertretung. Dazu kommen eine geänderte Abholzeit, ein Schließtag, geänderte Öffnungszeiten, ein Ausflug oder eine Krankmeldung.",
+        "`Heute anders` nennt zum Beispiel: Ein Angebot fällt aus, ist in einem anderen Raum oder hat eine Vertretung. Dazu kommen eine geänderte Abholzeit, wer dein Kind abholt, ein Schließtag, geänderte Öffnungszeiten, ein Ausflug oder eine Krankmeldung.",
         // Essensausfall im Elternportal (#8160): nur bei einer Buchung des Kindes.
         "Fällt das Mittagessen aus und dein Kind ist an dem Tag angemeldet, steht das auch unter `Heute anders`. Der Tag wird nicht berechnet.",
         // #8170, #8173: eine Abholzeit nach der geänderten Schließzeit bleibt stehen.
@@ -7995,12 +7995,14 @@ export const parentPickupChangeTopic =
         "Wähle bei `Tag` den betroffenen Tag.",
         "Trage bei `Abholzeit` die neue Zeit ein, zum Beispiel 15:30.",
         "Holt jemand anderes ab? Wähle bei `Wer holt ab?` die Person.",
+        // #8162: eine Person, die keine Kontaktperson ist.
+        "Ist die Person nicht bei deinen Kontakten? Wähle `Andere Person` und schreib bei `Name der Person` den Namen auf.",
         "Trage bei `Grund für die Änderung` kurz ein, warum.",
         "Hast du eine Person gewählt, unterschreibe die Erlaubnis im Feld. Tippe auf `Unterschrift bestätigen`.",
         "Tippe auf `Anfrage senden`.",
       ],
       result:
-        "Die Änderung gilt erst, nachdem die OGS sie bestätigt hat. Danach bekommt das Team deines Kindes einen Hinweis. Der reguläre Wochenplan bleibt unverändert. Eine gewählte Person darf nur an diesem Tag abholen.",
+        "Die Änderung gilt erst, nachdem die OGS sie bestätigt hat. Danach bekommt das Team deines Kindes einen Hinweis. Der reguläre Wochenplan bleibt unverändert. Eine gewählte Person darf nur an diesem Tag abholen. An dem Tag steht sie bei `Heute anders` mit `Von dir eingetragen`.",
       differences: [
         "Steht dort `Abholung für ... ändern`? Dann kannst du auch die Abholart ändern. Wähle bei `Abholart an diesem Tag` zum Beispiel `Wird abgeholt`. Lasse `Abholzeit` leer, wenn die Uhrzeit gleich bleibt.",
         "Hat die OGS die Abholart für den Tag schon festgelegt? Dann steht sie im Fenster. Für eine Änderung schreibe der OGS.",
@@ -8008,13 +8010,14 @@ export const parentPickupChangeTopic =
       ],
       notes: [
         "Der Grund ist Pflicht und darf höchstens 255 Zeichen lang sein.",
-        "Bei `Wer holt ab?` stehen nur Personen, die du bei den Kontakten eingetragen hast. Eine neue Person trägst du vorher dort ein.",
+        "Bei `Wer holt ab?` stehen deine Kontakte und `Andere Person`. Eine andere Person zeigt bei der Abholung ihren Ausweis. Nach dem Tag löscht moto sie beim Kind. In deiner Anfrage und im Nachweis bleibt der Name stehen.",
         "Nach dem Senden findest du bei der Anfrage `Nachweis (PDF)`. Darin stehen deine Erklärung und deine Unterschrift.",
         "Soll sich die Zeit dauerhaft ändern? Dann frage eine Änderung der Betreuung an.",
       ],
       troubleshootingDetails: [
         "moto sagt, das Ändern der Abholzeit sei für diese OGS nicht aktiviert? Dann schreibe der OGS eine Nachricht.",
-        "`Wer holt ab?` fehlt? Dann hast du noch keine weitere Person bei den Kontakten eingetragen.",
+        "`Wer holt ab?` fehlt? Dann hast du bei `Abholart an diesem Tag` zum Beispiel `Geht allein` gewählt. Wer allein geht, wird nicht abgeholt.",
+        "moto sagt, die Frist für heute ist vorbei? Dann änderst du die Abholung für heute nicht mehr. Schreib der OGS eine Nachricht. Spätere Tage kannst du weiter ändern.",
         "moto sagt, die Betreuung ist für heute schon zu Ende? Dann änderst du die Abholzeit für heute nicht mehr, auch wenn dein Kind noch im Unterricht ist. Andere Tage kannst du weiter ändern.",
       ],
       related: [
@@ -8113,7 +8116,9 @@ export const parentRequestsTopic = function parentRequestsTopic(
       // #3945: Tagesanfrage mit Abholart.
       "Eine Anfrage für einen einzelnen Tag kann die Abholzeit, die Abholart oder beides ändern. Die neue Abholart gilt nur an diesem Tag.",
       // #4780: Abholperson fuer einen Tag und Abholberechtigung je Wochentag.
-      "Eine Anfrage für einen Tag kann auch eine Abholperson nennen. Nach dem Freigeben steht beim Kind für diesen Tag `Abholung durch ... (Erlaubnis der Eltern)`.",
+      // #8162: die Freigabe setzt die Abholperson des Tages.
+      "Eine Anfrage für einen Tag kann auch eine Abholperson nennen: eine Kontaktperson oder eine andere Person mit Namen. Nach dem Freigeben steht in der Kinderkarte `Holt heute ab: ...`. Bei einer anderen Person steht `(Ausweis prüfen)` dabei.",
+      "Hat die OGS für den Tag schon selbst eine Abholperson eingetragen? Dann lässt sich die Anfrage nicht freigeben. Ändere die Abholperson direkt beim Kind.",
       "Eine `Abholberechtigung` trägt eine Kontaktperson als abholberechtigt ein, an allen Tagen oder nur an bestimmten Tagen. Sie gilt erst nach dem Freigeben.",
       "Haben die Eltern unterschrieben, öffnest du mit `Nachweis (PDF)` die Erklärung und die Unterschrift.",
       // #5698: Elternmeldung für einen Tag mit Teilentschuldigung.
@@ -8122,7 +8127,7 @@ export const parentRequestsTopic = function parentRequestsTopic(
       "Ist der Tag heute, zeigt die Kinderkarte nach dem Freigeben unten einen orangen Hinweis.",
       // #6855: freigegebene Abholzeit für einen Tag informiert das Team
       // (Typ student_pickup_changed) und markiert die Kinderakte.
-      "Gibst du eine neue Abholzeit für einen Tag frei, bekommt das Team des Kindes einen Hinweis. Er steht oben in der Kopfzeile unter `Neu für dich` mit rotem Zähler. Ist es eingeschaltet, kommt er auch aufs Handy. Ein Tippen darauf öffnet das Kind.",
+      "Gibst du eine neue Abholzeit oder eine Abholperson für einen Tag frei, bekommt das Team des Kindes einen Hinweis. Er steht oben in der Kopfzeile unter `Neu für dich` mit rotem Zähler. Ist es eingeschaltet, kommt er auch aufs Handy. Ein Tippen darauf öffnet das Kind.",
       "Nimmst du die Freigabe mit `Entscheidung korrigieren` zurück, bekommt das Team wieder einen Hinweis: `wieder normale Abholzeit`.",
       // #7707: Banner nur für ungesehene Änderungen, der Stand in den Betreuungszeiten.
       "Wer die Änderung noch nicht kennt, sieht oben in der Kinderakte `Abholzeit an einzelnen Tagen geändert`. Dort stehen Tag, Uhrzeit und `Neu`. Das X schließt den Hinweis. Er kommt erst bei einer neuen Änderung wieder.",
