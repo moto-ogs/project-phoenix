@@ -9,6 +9,11 @@ import { ConfirmDeleteModal } from "~/components/ui/confirm-delete-modal";
 import { CustomSelect } from "~/components/ui/custom-select";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { Dropzone } from "~/components/ui/dropzone";
+import {
+  PhoneTableSort,
+  type PhoneSortOption,
+  usePhoneTableSort,
+} from "~/components/students/phone-table-sort";
 import { EmptyState } from "~/components/ui/empty-state";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import NavigationLink from "~/components/ui/navigation-link";
@@ -98,6 +103,35 @@ function documentIcon(contentType: string) {
   );
 }
 
+/** Die Sortierungen der Spaltenköpfe am Computer, am Telefon als Auswahl. */
+const PHONE_SORTS: readonly PhoneSortOption[] = [
+  {
+    value: "neu",
+    label: "Neueste zuerst",
+    sortKey: "uploaded",
+    direction: "desc",
+  },
+  {
+    value: "alt",
+    label: "Älteste zuerst",
+    sortKey: "uploaded",
+    direction: "asc",
+  },
+  { value: "name", label: "Name A–Z", sortKey: "filename", direction: "asc" },
+  {
+    value: "kategorie",
+    label: "Kategorie A–Z",
+    sortKey: "category",
+    direction: "asc",
+  },
+  {
+    value: "groesse",
+    label: "Größte zuerst",
+    sortKey: "size",
+    direction: "desc",
+  },
+];
+
 export function StudentDokumenteTab({
   studentId,
   canRecordAccidents = false,
@@ -120,6 +154,7 @@ export function StudentDokumenteTab({
   );
 
   const [filter, setFilter] = useState<string>("alle");
+  const phoneSort = usePhoneTableSort(PHONE_SORTS);
   const [uploadCategory, setUploadCategory] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<StudentDocument | null>(
@@ -442,13 +477,24 @@ export function StudentDokumenteTab({
           </div>
         )}
 
+        {phoneSort.app && filtered.length > 1 ? (
+          <PhoneTableSort
+            id="kind-dokument-sortierung"
+            options={PHONE_SORTS}
+            value={phoneSort.value}
+            onChange={phoneSort.setValue}
+          />
+        ) : null}
         <DataTable
+          // Am Telefon fehlen die Spaltenköpfe; die Auswahl darüber setzt
+          // dieselbe Sortierung (neu aufgebaut je Wahl).
+          key={phoneSort.selected?.value}
           columns={columns}
           rows={filtered}
           getRowKey={(doc) => doc.id}
           isLoading={isLoading}
-          defaultSortKey="uploaded"
-          defaultSortDirection="desc"
+          defaultSortKey={phoneSort.selected?.sortKey ?? "uploaded"}
+          defaultSortDirection={phoneSort.selected?.direction ?? "desc"}
           paginationResetKey={filter}
           emptyState={
             <EmptyState
