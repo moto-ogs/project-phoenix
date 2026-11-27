@@ -66,19 +66,20 @@ type SampleChildren interface {
 	FillTestTraeger(ctx context.Context, organizationID, operatorID int64, clientIP net.IP) (SampleChildrenResult, error)
 }
 
-// The sample children of a test school: invented combinations of common
-// first and last names with invented birthdays. They carry no guardian, no
-// address, no health note and no contact data.
+// The sample children of a test school: invented combinations of first and
+// last names as they occur in a school class today, like the names of the
+// demo school, with invented birthdays. They carry no guardian, no address,
+// no health note and no contact data.
 
 var sampleFirstNames = []string{
-	"Anna", "Ben", "Clara", "David", "Ella", "Finn", "Greta", "Henri",
-	"Ida", "Jonas", "Klara", "Leon", "Mia", "Noah", "Oskar", "Paula",
-	"Quentin", "Romy", "Samuel", "Tilda", "Uwe", "Vera", "Willi", "Zoe",
+	"Anna", "Ben", "Clara", "David", "Aylin", "Finn", "Greta", "Mateo",
+	"Ida", "Jonas", "Mariam", "Leon", "Mia", "Noah", "Omar", "Paula",
+	"Can", "Romy", "Samuel", "Tilda", "Malik", "Amara", "Elias", "Zoe",
 }
 
 var sampleLastNames = []string{
-	"Ahorn", "Birkenfeld", "Dachs", "Eichler", "Fuchsberg", "Gänseblum",
-	"Haselnuss", "Igelhof", "Kastanie", "Lerchenfeld", "Mohnblum", "Nussbaum",
+	"Yilmaz", "Schneider", "Nguyen", "Meyer", "Kumar", "Petrow",
+	"Okafor", "Krüger", "Amini", "Nowak", "Oliveira", "Haddad",
 }
 
 // sampleClasses are the school classes of every test school; each gets
