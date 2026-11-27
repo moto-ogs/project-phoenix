@@ -442,7 +442,7 @@ function NumberGaps({
   const nextStep =
     checkedCount === null
       ? GAP_NEXT_STEP
-      : `Geprüft sind alle ${checkedCount} Dokumente, nicht nur die gefundenen. ${GAP_NEXT_STEP}`;
+      : `Geprüft sind alle ${checkedCount} Dokumente, nicht nur die der Liste unten. ${GAP_NEXT_STEP}`;
   const [only] = gaps;
   if (gaps.length === 1 && only) {
     return (
@@ -912,7 +912,7 @@ export default function TraegerInvoiceJournalPage() {
   return (
     <TenantPage
       title={billingAreaTitle("rechnungsausgangsbuch")}
-      info="Das Rechnungsausgangsbuch zeigt jedes ausgestellte Dokument aus allen Läufen: Rechnungen, Bescheide, Bestätigungen, Stornos und Gutschriften. Das neueste steht oben. Entwürfe haben noch keine Nummer und stehen nur im Lauf. Elternbeiträge stellt moto ohne Steuer aus."
+      info="Das Rechnungsausgangsbuch zeigt jedes ausgestellte Dokument aus allen Läufen: Rechnungen, Gebührenbescheide, Bestätigungen, Stornos und Gutschriften. Das neueste steht oben. Entwürfe haben noch keine Nummer und stehen nur im Lauf. Elternbeiträge stellt moto ohne Steuer aus."
       tabs={billingTabs("rechnungsausgangsbuch")}
       overflowMenu={exportItems}
       search={{
