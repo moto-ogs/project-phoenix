@@ -147,7 +147,9 @@ export function StudentAppQuickActionRow({
           onClick={action.run}
           disabled={action.loading}
           padding="none"
-          className="flex min-w-0 flex-1 flex-col items-center gap-1 px-1 py-2 active:scale-[0.97]"
+          // Symbol und Wort stehen in der Mitte der Kachel, auch wenn eine
+          // Nachbarkachel zweizeilig und die Zeile dadurch höher ist.
+          className="flex min-w-0 flex-1 flex-col items-center justify-center gap-1 px-1 py-2 active:scale-[0.97]"
         >
           <span className="flex size-6 items-center justify-center" aria-hidden>
             {action.loading ? <SpinnerIcon className="size-5" /> : action.icon}
