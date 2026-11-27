@@ -90,12 +90,14 @@ export interface ContractList {
   contracts: ContractSummary[] | null;
   counts: Record<string, number> | null;
   has_more: boolean;
+  revision: string;
 }
 
 export const ContractListSchema: z.ZodType<ContractList, unknown> = object<ContractList>({
   contracts: nullable(arr(ContractSummarySchema)),
   counts: nullable(rec(safeInt)),
   has_more: bool,
+  revision: str,
 });
 
 /** Go: carecontract.Service */
@@ -501,8 +503,11 @@ export const routes = {
     query: {
       "limit": { kind: "int" },
       "offset": { kind: "int" },
+      "order": { kind: "string", values: ["asc", "desc"] },
+      "revision": { kind: "string" },
       "school_id": { kind: "id" },
       "search": { kind: "string" },
+      "sort": { kind: "string", values: ["child", "school", "start", "status"] },
       "status": { kind: "string" },
     },
     response: success(ContractListSchema),
@@ -528,8 +533,10 @@ export const routes = {
     portals: ["org"],
     query: {
       "format": { kind: "string", values: ["csv", "pdf", "xlsx"] },
+      "order": { kind: "string", values: ["asc", "desc"] },
       "school_id": { kind: "id" },
       "search": { kind: "string" },
+      "sort": { kind: "string", values: ["child", "school", "start", "status"] },
       "status": { kind: "string" },
     },
     response: fileAnswer,

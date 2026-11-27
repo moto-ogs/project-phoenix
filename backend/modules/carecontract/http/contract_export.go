@@ -19,7 +19,8 @@ var contractStatusLabels = map[string]string{
 
 // exportContracts answers GET /traeger/contracts/export: every contract of
 // the list's filter (status, school_id, search) as PDF, Excel or CSV
-// (format=, CSV without one), newest first (#4718). The read is written to
+// (format=, CSV without one), in the order of the list (sort=, order=),
+// newest first without one (#4718). The read is written to
 // the access log of each school.
 func (rs *Resource) exportContracts(w http.ResponseWriter, r *http.Request) {
 	reviewer, ok := reviewerOf(w, r)
@@ -37,7 +38,14 @@ func (rs *Resource) exportContracts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	query := r.URL.Query()
-	filter := carecontract.ContractFilter{Status: query.Get("status"), SchoolID: schoolID, Search: strings.TrimSpace(query.Get("search")), Export: true}
+	descending, err := contractOrderOf(query.Get("order"))
+	if err != nil {
+		common.RenderError(w, r, common.ErrorInvalidRequest(err))
+		return
+	}
+	// The file follows the order of the list it was asked from (#8138).
+	filter := carecontract.ContractFilter{Status: query.Get("status"), SchoolID: schoolID, Search: strings.TrimSpace(query.Get("search")),
+		Sort: query.Get("sort"), Descending: descending, Export: true}
 	list, err := rs.contracts.ListContracts(r.Context(), reviewer, filter)
 	if err != nil {
 		renderError(w, r, err)

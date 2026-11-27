@@ -78,7 +78,7 @@ func (c *Contracts) ListContracts(ctx context.Context, reviewer carecontract.Rev
 	maxLimit, view := 100, "list"
 	if filter.Export {
 		// The export (#4718) holds the whole filter or nothing.
-		filter.Offset, filter.Limit = 0, carecontract.ContractExportLimit
+		filter.Offset, filter.Limit, filter.Revision = 0, carecontract.ContractExportLimit, ""
 		maxLimit, view = carecontract.ContractExportLimit, "export"
 	}
 	var list carecontract.ContractList
@@ -172,8 +172,8 @@ func (c *Contracts) listContracts(ctx context.Context, reviewer carecontract.Rev
 	if err := checkReviewer(reviewer); err != nil {
 		return carecontract.ContractList{}, err
 	}
-	if filter.Status != "" && !knownStatus(filter.Status) {
-		return carecontract.ContractList{}, carecontract.InvalidSelection("status", "unknown")
+	if err := knownSelection(filter); err != nil {
+		return carecontract.ContractList{}, err
 	}
 	if filter.Offset < 0 || filter.Limit < 0 || filter.Limit > maxLimit {
 		return carecontract.ContractList{}, carecontract.InvalidSelection("contracts", "invalid_pagination")
@@ -182,7 +182,7 @@ func (c *Contracts) listContracts(ctx context.Context, reviewer carecontract.Rev
 		filter.Limit = 50
 	}
 	filter.Search = strings.TrimSpace(filter.Search)
-	contracts, err := c.store.ListContracts(ctx, reviewer.OrganizationID, filter)
+	contracts, revision, err := c.store.ListContracts(ctx, reviewer.OrganizationID, filter)
 	if err != nil {
 		return carecontract.ContractList{}, fmt.Errorf("care contract: list: %w", err)
 	}
@@ -204,7 +204,7 @@ func (c *Contracts) listContracts(ctx context.Context, reviewer carecontract.Rev
 			return carecontract.ContractList{}, err
 		}
 	}
-	return carecontract.ContractList{Contracts: contracts, Counts: counts, HasMore: hasMore}, nil
+	return carecontract.ContractList{Contracts: contracts, Counts: counts, HasMore: hasMore, Revision: revision}, nil
 }
 
 func (c *Contracts) contract(ctx context.Context, reviewer carecontract.Reviewer, contractID int64) (carecontract.ContractDetail, error) {
@@ -742,11 +742,20 @@ func checkReviewer(reviewer carecontract.Reviewer) error {
 	return nil
 }
 
+// knownSelection refuses a status or a column of the order the list does
+// not know.
+func knownSelection(filter carecontract.ContractFilter) error {
+	if filter.Status != "" && !knownStatus(filter.Status) {
+		return carecontract.InvalidSelection("status", "unknown")
+	}
+	if filter.Sort != "" && !slices.Contains(carecontract.ContractSorts, filter.Sort) {
+		return carecontract.InvalidSelection("sort", "unknown")
+	}
+	return nil
+}
+
 func knownStatus(status string) bool {
-	return slices.Contains([]string{
-		carecontract.StatusDraft, carecontract.StatusSent,
-		carecontract.StatusActive, carecontract.StatusTerminated, carecontract.StatusWithdrawn, carecontract.StatusEnded,
-	}, status)
+	return slices.Contains(carecontract.Statuses, status)
 }
 
 // uniqueIDs keeps every positive ID once, in ascending order. A send locks

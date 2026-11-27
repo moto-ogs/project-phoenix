@@ -256,31 +256,82 @@ const moduleNamesSQL = `ARRAY(SELECT s.module_name FROM care_contract.contract_v
 		GROUP BY s.module_name
 		ORDER BY MIN(array_position(ARRAY['mon','tue','wed','thu','fri','sat','sun']::text[], s.weekday::text)), s.module_name)`
 
-// summarySQL reads a contract with its current version (currentVersionOrderSQL) and its first
-// party; the filter follows. Bind order: today twice, then organization_id.
-const summarySQL = `SELECT c.id, c.status, c.school_id, c.student_id, c.created_at, c.sent_at, c.concluded_at, c.conclusion_method,
+const summaryColumnsSQL = `SELECT c.id, c.status, c.school_id, c.student_id, c.created_at, c.sent_at, c.concluded_at, c.conclusion_method,
 	c.conclusion_date_unknown, c.import_origin IS NOT NULL AS taken_over, c.ends_on, c.early_start_requested, c.import_origin IS NOT NULL AS imported,
 	c.request_child_id IS NOT NULL AS follows_bookings, c.request_child_id, c.updated_at,
 	(c.status = '` + carecontract.StatusActive + `' AND EXISTS (SELECT 1 FROM care_contract.contract_versions AS w
 		WHERE w.organization_id = c.organization_id AND w.contract_id = c.id
 			AND w.status = '` + carecontract.VersionRequested + `')) AS change_awaits_signature,
 	v.school_name, v.child_first_name, v.child_last_name, ` + moduleNamesSQL + ` AS module_names, v.effective_from,
-	COALESCE(p.first_name || ' ' || p.last_name, '') AS party_name, COALESCE(p.email, '') AS party_email
+	COALESCE(p.first_name || ' ' || p.last_name, '') AS party_name, COALESCE(p.email, '') AS party_email`
+
+const summaryPartySQL = `
+	LEFT JOIN LATERAL (SELECT * FROM care_contract.contract_parties AS cp
+		WHERE cp.organization_id = c.organization_id AND cp.contract_id = c.id
+		ORDER BY cp.id LIMIT 1) AS p ON true`
+
+const summaryJoinsSQL = `
 	FROM care_contract.contracts AS c
 	JOIN LATERAL (SELECT * FROM care_contract.contract_versions AS v
 		WHERE v.organization_id = c.organization_id AND v.contract_id = c.id
-		ORDER BY ` + currentVersionOrderSQL + ` LIMIT 1) AS v ON true
-	LEFT JOIN LATERAL (SELECT * FROM care_contract.contract_parties AS cp
-		WHERE cp.organization_id = c.organization_id AND cp.contract_id = c.id
-		ORDER BY cp.id LIMIT 1) AS p ON true
-	WHERE c.organization_id = ?`
+		ORDER BY ` + currentVersionOrderSQL + ` LIMIT 1) AS v ON true` + summaryPartySQL
 
-// listContractsSQL is the list with its optional filters: status, school
-// and a search over the names and the address.
-const listContractsSQL = summarySQL + ` AND (? = '' OR c.status = ?) AND (? = 0 OR c.school_id = ?)
-	AND (? = '' OR (v.child_first_name || ' ' || v.child_last_name || ' ' || COALESCE(p.first_name || ' ' || p.last_name, '')
-		|| ' ' || COALESCE(p.email, '') || ' ' || array_to_string(` + moduleNamesSQL + `, ' ')) ILIKE ?)
-	ORDER BY c.created_at DESC, c.id DESC LIMIT ? OFFSET ?`
+// summarySQL reads a contract with its current version and first party.
+// Bind order: today twice, then organization_id.
+const summarySQL = summaryColumnsSQL + summaryJoinsSQL + ` WHERE c.organization_id = ?`
+
+// The two unnumbered arguments bind the existing version order to today.
+const contractMatchesSQL = `matching AS MATERIALIZED (
+	SELECT c.id, c.status, c.created_at, v.id AS version_id,
+		v.effective_from, v.child_last_name, v.child_first_name, v.school_name` + summaryJoinsSQL + `
+	WHERE c.organization_id = ?2 AND (?3 = '' OR c.status = ?3) AND (?4 = 0 OR c.school_id = ?4)
+	AND (?5 = '' OR (v.child_first_name || ' ' || v.child_last_name || ' ' || COALESCE(p.first_name || ' ' || p.last_name, '')
+		|| ' ' || COALESCE(p.email, '') || ' ' || array_to_string(` + moduleNamesSQL + `, ' ')) ILIKE ?5)
+)`
+
+// Order the states in the order of their life. The start is counted in
+// days since a fixed day, so one term orders it in both directions.
+const contractOrderSQL = `CASE ?6 WHEN '` + carecontract.ContractSortStart + `' THEN effective_from - DATE '2000-01-01'
+			WHEN '` + carecontract.ContractSortStatus + `' THEN array_position(ARRAY['` + carecontract.StatusDraft + `','` + carecontract.StatusSent + `','` +
+	carecontract.StatusActive + `','` + carecontract.StatusTerminated + `','` + carecontract.StatusWithdrawn + `','` + carecontract.StatusEnded + `']::text[], status::text)
+			END * (CASE WHEN ?7 THEN -1 ELSE 1 END),
+		CASE WHEN ?6 = '` + carecontract.ContractSortChild + `' AND NOT ?7 THEN child_last_name END COLLATE public.german_name ASC,
+		CASE WHEN ?6 = '` + carecontract.ContractSortChild + `' AND ?7 THEN child_last_name END COLLATE public.german_name DESC,
+		CASE WHEN ?6 = '` + carecontract.ContractSortChild + `' AND NOT ?7 THEN child_first_name END COLLATE public.german_name ASC,
+		CASE WHEN ?6 = '` + carecontract.ContractSortChild + `' AND ?7 THEN child_first_name END COLLATE public.german_name DESC,
+		CASE WHEN ?6 = '` + carecontract.ContractSortSchool + `' AND NOT ?7 THEN school_name END COLLATE public.german_name ASC,
+		CASE WHEN ?6 = '` + carecontract.ContractSortSchool + `' AND ?7 THEN school_name END COLLATE public.german_name DESC,
+		created_at DESC, id DESC`
+
+// Compare the IDs and positions the caller already has, not changes after
+// them or changes to row data that leave the offset valid. Rank through the
+// requested page plus one lookahead row, and join full summaries only for
+// the page we actually serve. All reads use the same statement snapshot.
+const listContractsSQL = `SELECT result.* FROM (WITH ` + contractMatchesSQL + `, positioned AS MATERIALIZED (
+	SELECT id, version_id, row_number() OVER (ORDER BY ` + contractOrderSQL + `) AS place
+	FROM (
+		SELECT * FROM matching ORDER BY ` + contractOrderSQL + `
+		LIMIT LEAST(?9::bigint, 9223372036854775807 - ?8) + ?8
+	) AS selected
+), continuation AS (
+	SELECT CASE WHEN ?10 = '' OR (?10 LIKE 'v1:%' AND split_part(?10, ':', 3) =
+		COALESCE((SELECT SUM(hashtextextended(ROW(id, place)::text, 0)) FROM positioned WHERE place <= ?9), 0)::text
+		) THEN ?9::bigint ELSE 0 END AS start_at
+), revision AS (
+	SELECT CASE WHEN ?11 THEN '' ELSE concat('v1:', start_at, ':',
+		COALESCE((SELECT SUM(hashtextextended(ROW(id, place)::text, 0)) FROM positioned WHERE place - start_at < ?8), 0))
+		END AS value FROM continuation
+), page AS (
+	SELECT id, version_id, place FROM positioned CROSS JOIN continuation
+	WHERE place > start_at AND place - start_at <= ?8
+), summaries AS (
+	` + summaryColumnsSQL + `, page.place
+	FROM page
+	JOIN care_contract.contracts AS c ON c.organization_id = ?2 AND c.id = page.id
+	JOIN care_contract.contract_versions AS v ON v.organization_id = c.organization_id AND v.id = page.version_id` + summaryPartySQL + `
+)
+SELECT summaries.*, revision.value AS revision FROM revision LEFT JOIN summaries ON true
+) AS result ORDER BY result.place`
 
 const contractSQL = summarySQL + ` AND c.id = ?`
 
@@ -344,30 +395,38 @@ func accountRef(accountID int64) *int64 {
 	return &accountID
 }
 
-// ListContracts lists the contracts of the filter, newest first.
-func (s Store) ListContracts(ctx context.Context, organizationID int64, filter carecontract.ContractFilter) ([]carecontract.ContractSummary, error) {
+// ListContracts lists the contracts of the filter in its order, newest
+// first without one.
+func (s Store) ListContracts(ctx context.Context, organizationID int64, filter carecontract.ContractFilter) ([]carecontract.ContractSummary, string, error) {
 	db, err := traegerDB(ctx, organizationID)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	today, err := s.day()
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	search := ""
 	if filter.Search != "" {
 		search = "%" + likeEscape(filter.Search) + "%"
 	}
-	var rows []summaryRow
-	if err := db.NewRaw(listContractsSQL, today, today, organizationID, filter.Status, filter.Status, filter.SchoolID, filter.SchoolID,
-		search, search, filter.Limit+1, filter.Offset).Scan(ctx, &rows); err != nil {
-		return nil, fmt.Errorf("care contract postgres: list contracts: %w", err)
+	var rows []struct {
+		summaryRow
+		Revision string `bun:"revision"`
+		Place    int64  `bun:"place"`
 	}
-	result := make([]carecontract.ContractSummary, len(rows))
-	for i, row := range rows {
-		result[i] = row.summary()
+	if err := db.NewRaw(listContractsSQL, today, today, organizationID, filter.Status, filter.SchoolID, search,
+		filter.Sort, filter.Descending, filter.Limit+1, filter.Offset, filter.Revision, filter.Export).Scan(ctx, &rows); err != nil {
+		return nil, "", fmt.Errorf("care contract postgres: list contracts: %w", err)
 	}
-	return result, nil
+	result := make([]carecontract.ContractSummary, 0, len(rows))
+	for _, row := range rows {
+		// The left join returns the revision even for an empty page.
+		if row.Place != 0 {
+			result = append(result, row.summary())
+		}
+	}
+	return result, rows[0].Revision, nil
 }
 
 func nonNil(values []string) []string {
