@@ -56,12 +56,15 @@ type CloseRoom struct {
 }
 
 // RoomClosureFilter selects the closures that overlap From through Until,
-// both included; RoomID narrows them to one room.
+// both included; RoomID narrows them to one room. ExcludeArchivedRooms omits
+// records retained only for history; historical closure reads retain them by
+// default.
 type RoomClosureFilter struct {
-	RoomID  *int64
-	RoomIDs []int64
-	From    calendar.Date
-	Until   calendar.Date
+	RoomID               *int64
+	RoomIDs              []int64
+	From                 calendar.Date
+	Until                calendar.Date
+	ExcludeArchivedRooms bool
 }
 
 // Closures owns the room closures of the caller's school. ReopenRoom lifts a

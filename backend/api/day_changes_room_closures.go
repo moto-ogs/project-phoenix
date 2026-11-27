@@ -39,7 +39,11 @@ func (s dayChangesRoomClosures) RoomClosures(ctx context.Context, day calendar.D
 		// The account reads no rooms: no entries, not a failure.
 		return nil, nil
 	}
-	closures, err := s.reads.ListRoomClosures(ctx, facilities.RoomClosureFilter{From: day, Until: day})
+	closures, err := s.reads.ListRoomClosures(ctx, facilities.RoomClosureFilter{
+		From:                 day,
+		Until:                day,
+		ExcludeArchivedRooms: true,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("list room closures: %w", err)
 	}

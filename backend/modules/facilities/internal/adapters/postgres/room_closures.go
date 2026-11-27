@@ -129,11 +129,13 @@ func (s *Store) listClosures(ctx context.Context, db bun.IDB, tenantID int64, fi
 		ColumnExpr(`"closure".*`).
 		ColumnExpr(`"room".name AS room_name`).
 		Join(`JOIN facilities.rooms AS "room" ON "room".id = "closure".room_id AND "room".tenant_id = "closure".tenant_id`).
-		Where(`"room".archived_at IS NULL`).
 		Where(`"closure".tenant_id = ?`, tenantID).
 		Where(`"closure".end_date >= ?`, filter.From).
 		Where(`"closure".start_date <= ?`, filter.Until).
 		OrderExpr(`"closure".room_id ASC, "closure".start_date ASC, "closure".id ASC`)
+	if filter.ExcludeArchivedRooms {
+		query = query.Where(`"room".archived_at IS NULL`)
+	}
 	if filter.RoomID != nil {
 		query = query.Where(`"closure".room_id = ?`, *filter.RoomID)
 	}
