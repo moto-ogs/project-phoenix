@@ -442,7 +442,6 @@ export function markRequestDone(
   kind: ParentRequestKind,
   requestID: string,
   expectedVersion: string,
-  reason?: string,
 ): Promise<unknown> {
   return write(() =>
     bffJson(
@@ -450,12 +449,7 @@ export function markRequestDone(
       "POST /api/students/change-requests/{kind}/{requestId}/mark-done",
       {
         params: { kind, requestId: requestID },
-        body: {
-          expected_version: expectedVersion,
-          // Der Grund ist freiwillig; ein leerer würde nur eine leere Zeile
-          // in der Historie erzeugen.
-          ...(reason?.trim() ? { reason: reason.trim() } : {}),
-        },
+        body: { expected_version: expectedVersion },
         errorMessage: "change request mark done failed",
       },
     ),

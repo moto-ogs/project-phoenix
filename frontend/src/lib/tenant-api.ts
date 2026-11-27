@@ -403,13 +403,11 @@ export interface TenantListResult {
  * This is a public (no-auth) call used on the root tenant selector page.
  * The backend omits internal IDs from this public endpoint.
  *
- * Retries up to {@link maxAttempts} times with exponential backoff to
+ * Makes up to three attempts with exponential backoff to
  * handle transient failures (e.g. after registration redirect).
  */
-export async function listAllTenants(
-  maxAttempts = 3,
-): Promise<TenantListResult> {
-  let lastError: unknown;
+export async function listAllTenants(): Promise<TenantListResult> {
+  const maxAttempts = 3;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
@@ -428,17 +426,13 @@ export async function listAllTenants(
         })),
         status: "ok",
       };
-    } catch (error) {
-      lastError = error;
+    } catch {
       if (attempt < maxAttempts) {
         await delay(1000 * 2 ** (attempt - 1));
-        continue;
       }
     }
   }
 
-  // All attempts exhausted
-  void lastError; // acknowledged but not rethrown — callers check status
   return { tenants: [], status: "error" };
 }
 

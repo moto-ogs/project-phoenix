@@ -241,6 +241,7 @@ type StaffRecords interface {
 // AuditCommand is the append-only Audit platform entry point the import
 // records its GDPR import log and class-list trail through.
 type AuditCommand interface {
+	AuditBatchCommand
 	Append(context.Context, any) error
 }
 

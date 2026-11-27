@@ -35,7 +35,6 @@ vi.mock("~/lib/hooks/use-pickup-extensions", () => ({
       tasks: enabled ? state.tasks : [],
       error: enabled ? state.error : undefined,
       refresh: state.refresh,
-      isLoading: false,
     };
   },
 }));

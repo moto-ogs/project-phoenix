@@ -580,11 +580,11 @@ func (s *Service) offeringShareIdentity(ctx context.Context, requestID int64) (i
 }
 
 func (s *Service) excusedShareIdentity(ctx context.Context, requestID int64) (int64, int64, string, error) {
-	row, err := s.ExcusedRequestRepo.FindByID(ctx, requestID)
-	if err != nil || row == nil {
+	submittedBy, studentID, err := s.ExcusedRequestRepo.FindIdentity(ctx, requestID)
+	if err != nil {
 		return 0, 0, "", requestLookupError(err)
 	}
-	return row.SubmittedBy, row.StudentID, RequestShareExcused, nil
+	return submittedBy, studentID, RequestShareExcused, nil
 }
 
 // requestLookupError answers a missing request with the sharing not-found.

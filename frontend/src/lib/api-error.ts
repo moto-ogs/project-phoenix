@@ -362,29 +362,3 @@ export async function apiErrorFromResponse(
   if (retryAfter !== null) error.retryAfterSeconds = retryAfter;
   return error;
 }
-
-/** Add wire fields without replacing the domain error's message or type. */
-export function enrichApiError<T extends ApiError>(
-  error: T,
-  body: unknown,
-  status = error.status,
-): T {
-  if (status === undefined) return error;
-  const parsed = apiErrorFromBody(error.message, status, body);
-  error.status = status;
-  const wireCode =
-    body && typeof body === "object" && "code" in body
-      ? (body as { code?: unknown }).code
-      : undefined;
-  if (typeof wireCode === "string" && wireCode) {
-    error.code = wireErrorCode(wireCode);
-  } else if (!error.code) {
-    error.code = parsed.code;
-  }
-  error.details = parsed.details ?? error.details;
-  error.detail = parsed.detail ?? error.detail;
-  error.errors = parsed.errors ?? error.errors;
-  error.instance = parsed.instance ?? error.instance;
-  error.requestId = parsed.requestId ?? error.requestId;
-  return error;
-}

@@ -50,7 +50,6 @@ describe("useAnnouncements", () => {
     const { result } = renderHook(() => useAnnouncements());
 
     expect(result.current.announcements).toEqual([]);
-    expect(result.current.unreadCount).toBe(0);
     expect(result.current.isLoading).toBe(true);
   });
 
@@ -77,7 +76,6 @@ describe("useAnnouncements", () => {
     const { result } = renderHook(() => useAnnouncements());
 
     expect(result.current.announcements).toEqual(mockData);
-    expect(result.current.unreadCount).toBe(1);
     expect(result.current.isLoading).toBe(false);
   });
 
@@ -197,7 +195,6 @@ describe("useAnnouncements", () => {
     const { result } = renderHook(() => useAnnouncements());
 
     expect(result.current.announcements).toHaveLength(2);
-    expect(result.current.unreadCount).toBe(2);
   });
 
   it("does not mutate on first render with same pathname", () => {

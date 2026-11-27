@@ -446,11 +446,7 @@ export function StudentCreateModal({
   };
 
   const validateForm = (): boolean => {
-    const fieldErrors = validateStudentForm(studentDraft(), {
-      firstName: true,
-      lastName: true,
-      schoolClass: true,
-    });
+    const fieldErrors = validateStudentForm(studentDraft());
     if (Object.keys(fieldErrors).length === 0) return true;
     errors.invalid("Bitte prüfe die markierten Felder.", fieldErrors);
     return false;

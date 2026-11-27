@@ -2,11 +2,15 @@
 
 package compose
 
-import "github.com/moto-ogs/project-phoenix/modules/workforce"
+import (
+	"github.com/moto-ogs/project-phoenix/modules/workforce"
+	"github.com/moto-ogs/project-phoenix/modules/workforce/internal/planning"
+)
+
+type StaffScheduleOverviewDependencies = planning.StaffScheduleOverviewDependencies
 
 // NewStaffScheduleOverview builds suites' week-grid reader; production uses NewShiftPlanning.
 // Its public values use string dates and ClockLayout wall clocks, not row models.
 func NewStaffScheduleOverview(deps StaffScheduleOverviewDependencies) workforce.StaffScheduleOverviewQuery {
-	query, _ := newStaffScheduleOverview(deps)
-	return query
+	return planning.NewStaffScheduleOverviewQuery(planning.NewStaffScheduleOverviewService(deps))
 }

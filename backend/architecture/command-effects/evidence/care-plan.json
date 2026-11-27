@@ -8889,14 +8889,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "*github.com/moto-ogs/project-phoenix/roots/owners.CareScheduleRequestService.CreatePickupChangeRequest",
-      "binding_digest": "eec4a97ddc444c36d59580dc4fe0229b",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/carerequests.Service.CreatePickupChangeRequest",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTenant",
-      "target_owner": "tenant-runtime"
-    },
-    {
       "binding": "*github.com/moto-ogs/project-phoenix/roots/owners.CareScheduleRequestService.CreatePickupPermission",
       "binding_digest": "77add71d04c5db7d3c556faebcab04d4",
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/carerequests.Service.CreatePickupPermission",
@@ -9415,22 +9407,6 @@
       "source_owner": "care-plan",
       "target": "unresolved:function:github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.ExcusedRequests.scope",
       "target_owner": ""
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.ExcusedRequests.CreateRequest",
-      "binding_digest": "dcd12a407d7f701d5b78d459d304d5a1",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/excusedrequests.Service.CreateRequest",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.ExcusedRequests.CreateRequestForStatus",
-      "binding_digest": "dcd12a407d7f701d5b78d459d304d5a1",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/excusedrequests.Service.CreateRequestForStatus",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
-      "target_owner": "tenant-runtime"
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/careplan/internal/application.ExcusedRequests.Decide",
@@ -10198,54 +10174,6 @@
       "port": "github.com/moto-ogs/project-phoenix/modules/careplan/http.StudentPhotoLifecycle.ApplyStudentPhotoConsent",
       "source_owner": "care-plan",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ApplyStudentPhotoConsent",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ClearStudentPhoto",
-      "binding_digest": "ffa27f0e05da0457ddbf44bb862cf92f",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/http.StudentPhotoLifecycle.ClearStudentPhoto",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ClearStudentPhoto",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.ClearStudentPhoto",
-      "binding_digest": "fd988be6d5550dfadadf81ec1b2269bc",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/http.StudentPhotoLifecycle.ClearStudentPhoto",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.ClearStudentPhoto",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.CommitStudentPhoto",
-      "binding_digest": "4502face0a636ea3032c914cbdbd94f7",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/http.StudentPhotoLifecycle.CommitStudentPhoto",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.CommitStudentPhoto",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.CommitStudentPhoto",
-      "binding_digest": "c909b98ea2a7b4cfe53b2cd47fd4ec98",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/http.StudentPhotoLifecycle.CommitStudentPhoto",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.CommitStudentPhoto",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.FindStudentPhoto",
-      "binding_digest": "f96ebc02b82bac71c4a7362235150607",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/http.StudentPhotoLifecycle.FindStudentPhoto",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.FindStudentPhoto",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Capability.FindStudentPhoto",
-      "binding_digest": "96a8578b4ca7f542d26aa1ebc611f5c8",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/http.StudentPhotoLifecycle.FindStudentPhoto",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory.Owner.FindStudentPhoto",
       "target_owner": "people-directory"
     },
     {

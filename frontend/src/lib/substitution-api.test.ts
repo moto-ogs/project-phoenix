@@ -150,28 +150,67 @@ describe("substitutionService", () => {
   it.each([
     {
       substituteStaffId: "9007199254740995",
-      expectedTarget: { substitute_staff_id: "9007199254740995" },
+      reason: "Krankheit",
+      expectedTarget: {
+        substitute_staff_id: "9007199254740995",
+        reason: "Krankheit",
+      },
     },
-    { substituteStaffId: undefined, expectedTarget: {} },
+    { substituteStaffId: undefined, reason: undefined, expectedTarget: {} },
   ])(
     "preserves day-wide string IDs with target $substituteStaffId",
-    async ({ substituteStaffId, expectedTarget }) => {
+    async ({ substituteStaffId, reason, expectedTarget }) => {
       fetchMock.mockResolvedValue({
         ok: true,
         json: async () => ({
           data: {
             type: "schedule_substitution",
-            schedule_substitution: { days: [], total_affected: 0 },
+            schedule_substitution: {
+              days: [
+                {
+                  date: "2026-08-31",
+                  affected_instances: [
+                    {
+                      instance_id: "43",
+                      title: "Mensa",
+                      start_time: "12:00",
+                      action: "substituted",
+                    },
+                  ],
+                  warnings: [{}],
+                },
+              ],
+              total_affected: 1,
+            },
           },
         }),
       });
 
-      await substitutionService.applyBulkSubstitution({
+      const result = await substitutionService.applyBulkSubstitution({
         absentStaffId: "9007199254740993",
         substituteStaffId,
+        reason,
         dates: ["2026-08-31", "2026-09-01"],
       });
 
+      expect(result).toEqual({
+        days: [
+          {
+            date: "2026-08-31",
+            affectedInstances: [
+              {
+                instanceId: "43",
+                title: "Mensa",
+                startTime: "12:00",
+                action: "substituted",
+              },
+            ],
+            warningCount: 1,
+          },
+        ],
+        totalAffected: 1,
+        warningCount: 1,
+      });
       expect(JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string)).toEqual({
         type: "schedule_substitution",
         schedule_substitution: {
@@ -184,6 +223,19 @@ describe("substitutionService", () => {
       });
     },
   );
+
+  it("surfaces the reason for rejecting a whole-day substitution", async () => {
+    const detail =
+      "18.08.2026: die Ersatzperson ist am 18.08.2026 selbst abwesend";
+    fetchMock.mockResolvedValue(Response.json({ detail }, { status: 400 }));
+    await expect(
+      substitutionService.applyBulkSubstitution({
+        absentStaffId: "11",
+        substituteStaffId: "12",
+        dates: ["2026-08-18"],
+      }),
+    ).rejects.toMatchObject({ status: 400, detail });
+  });
 
   it("loads the central overview through one module request", async () => {
     fetchMock.mockResolvedValue({

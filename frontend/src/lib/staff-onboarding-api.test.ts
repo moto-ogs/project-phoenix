@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   fetchStaffOnboarding,
   mapStaffOnboardingState,
-  setStaffOnboardingDismissed,
+  dismissStaffOnboarding,
 } from "./staff-onboarding-api";
 
 vi.mock("./session-cache", () => import("~/test/mocks/plain-session-fetch"));
@@ -33,7 +33,7 @@ describe("fetchStaffOnboarding", () => {
   });
 });
 
-describe("setStaffOnboardingDismissed", () => {
+describe("dismissStaffOnboarding", () => {
   const hidden = () =>
     new Response(
       JSON.stringify({
@@ -47,8 +47,8 @@ describe("setStaffOnboardingDismissed", () => {
     fetchMock.mockImplementation(() => Promise.resolve(hidden()));
     fetchMock.mockClear();
 
-    await setStaffOnboardingDismissed(true, { completed: true });
-    await setStaffOnboardingDismissed(true);
+    await dismissStaffOnboarding({ completed: true });
+    await dismissStaffOnboarding();
 
     expect(fetchMock.mock.calls.map(([path]) => path)).toEqual([
       "/api/staff-onboarding/dismissal?outcome=completed",

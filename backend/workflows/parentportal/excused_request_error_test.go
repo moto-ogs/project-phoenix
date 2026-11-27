@@ -33,13 +33,6 @@ type stubExcused struct {
 	listErr   error
 }
 
-func (s stubExcused) CreateRequest(_ context.Context, _, _ int64, _ []careplan.Date, _ string) (*careplan.ExcusedAbsenceRequest, error) {
-	return nil, s.createErr
-}
-
-// Submit is the reason-policy-aware create entry point the parent service now
-// uses (#2267). It returns the same injected error as CreateRequest so the
-// error-mapping cases below are unchanged.
 func (s stubExcused) Submit(_ context.Context, _ careplan.ExcusedRequestCreateInput) (*careplan.ExcusedAbsenceRequest, error) {
 	return nil, s.createErr
 }

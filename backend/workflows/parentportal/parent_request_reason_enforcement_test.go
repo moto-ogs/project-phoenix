@@ -76,7 +76,7 @@ func buildReasonPolicyServices(t *testing.T, policy string) (*parentService.Port
 		CareExceptions:      owners.NewParentCareExceptions(repos.CarePlan()),
 		Settings:            reasonPolicySettings{policy: policy},
 		ExcusedRequests:     owners.NewParentExcusedAbsenceRequests(excused),
-		ExcusedRequestRepo:  repos.ExcusedAbsenceRequest,
+		ExcusedRequestRepo:  owners.NewParentExcusedRequestReads(repos.CarePlan()),
 		Logger:              slog.Default(),
 		Now:                 careFixtureNow,
 

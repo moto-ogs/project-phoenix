@@ -56,14 +56,8 @@ type planOverride struct {
 	reason   string
 }
 
-// WithStaffShiftPlanGuard binds the working-time check of the
-// Einsatzplanung (#4708). Without it (unit tests) no write is checked.
-func WithStaffShiftPlanGuard(reads TraegerSiteReads, settings PlanRuleSettings, holidays HolidayDatesReader, audit WorkingTimeOverrideAudit) StaffShiftOption {
-	return func(s *staffShiftService) {
-		if reads != nil {
-			s.guard = &planGuard{reads: reads, settings: settings, holidays: holidays, audit: audit}
-		}
-	}
+func NewPlanGuard(reads TraegerSiteReads, settings PlanRuleSettings, holidays HolidayDatesReader, audit WorkingTimeOverrideAudit) *planGuard {
+	return &planGuard{reads: reads, settings: settings, holidays: holidays, audit: audit}
 }
 
 // ensurePlanningOn refuses a new shift while the Träger plans outside moto.

@@ -561,7 +561,8 @@ func TestShiftService_ApplyCancellation_CancelsAndCreatesReplacements(t *testing
 func TestShiftService_ApplyCancellation_AppliesOriginEdits(t *testing.T) {
 	t.Parallel()
 
-	svc, repo, _ := shiftServiceFixture()
+	newType := int64(42)
+	svc, repo, _ := shiftServiceWithTypes(map[int64]*workforce.ShiftTypeRecord{newType: {IsActive: true}})
 
 	origin := validShift(7) // stored 08:00–16:00
 	origin.ID = 5
@@ -575,7 +576,6 @@ func TestShiftService_ApplyCancellation_AppliesOriginEdits(t *testing.T) {
 		return nil
 	}
 
-	newType := int64(42)
 	_, err := svc.ApplyCancellation(context.Background(), CancelShiftInput{
 		ShiftID:          5,
 		Cancelled:        true,
@@ -1004,10 +1004,10 @@ func TestShiftService_ApplyCancellation_LocksDroppedCoverStaff(t *testing.T) {
 	repo.createFunc = func(_ context.Context, _ *workforce.ShiftRecord) error { return nil }
 
 	var locked []int64
-	svc := NewStaffShiftService(repo, &shiftMockStaffRepo{}, nil, func(_ context.Context, id int64) error {
+	svc := NewStaffShiftService(repo, &shiftMockStaffRepo{}, &stubShiftTypeService{}, func(_ context.Context, id int64) error {
 		locked = append(locked, id)
 		return nil
-	}, nil, pinnedShiftToday())
+	}, nil, discardShiftMoveEvent, pinnedShiftToday())
 
 	_, err := svc.ApplyCancellation(context.Background(), CancelShiftInput{
 		ShiftID:      5,

@@ -108,20 +108,6 @@ var _ careplan.ExcusedAbsenceRequests = (*ExcusedRequests)(nil)
 
 // --- create and edit
 
-func (w *ExcusedRequests) CreateRequest(ctx context.Context, studentID, guardianAccountID int64, dates []careplan.Date, note string) (*careplan.ExcusedAbsenceRequest, error) {
-	return w.CreateRequestForStatus(ctx, studentID, guardianAccountID, dates, note, careplan.StudentStatusDayExcused)
-}
-
-// CreateRequestForStatus keeps the mandatory-note behaviour every existing
-// caller relies on. A caller that has resolved the reason policy uses Create
-// instead and says whether the note is required.
-func (w *ExcusedRequests) CreateRequestForStatus(ctx context.Context, studentID, guardianAccountID int64, dates []careplan.Date, note, absenceStatus string) (*careplan.ExcusedAbsenceRequest, error) {
-	return w.Submit(ctx, careplan.ExcusedRequestCreateInput{
-		StudentID: studentID, GuardianAccountID: guardianAccountID, Dates: dates, Note: note,
-		AbsenceStatus: absenceStatus, NoteRequired: true,
-	})
-}
-
 func (w *ExcusedRequests) Submit(ctx context.Context, input careplan.ExcusedRequestCreateInput) (result *careplan.ExcusedAbsenceRequest, err error) {
 	started := time.Now()
 	defer func() { w.done("excused_request_create", time.Since(started), err) }()

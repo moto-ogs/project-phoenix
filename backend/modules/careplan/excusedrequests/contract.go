@@ -324,12 +324,6 @@ type Service interface {
 // GuardianRequests is the guardian side of the workflow: filing, editing and
 // reading the requests of one child.
 type GuardianRequests interface {
-	// CreateRequest stores a guardian's pending excused request with a
-	// mandatory note.
-	CreateRequest(ctx context.Context, studentID, guardianAccountID int64, dates []Date, note string) (*Request, error)
-	// CreateRequestForStatus stores either a sick or excused parent absence in
-	// the same approval queue with a mandatory note.
-	CreateRequestForStatus(ctx context.Context, studentID, guardianAccountID int64, dates []Date, note, absenceStatus string) (*Request, error)
 	// Submit is the create path that carries the school's reason policy.
 	Submit(ctx context.Context, input SubmitInput) (*Request, error)
 	// EditRequest lets the submitting guardian correct their own still-pending

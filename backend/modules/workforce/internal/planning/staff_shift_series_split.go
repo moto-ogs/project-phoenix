@@ -16,7 +16,7 @@ func (s *staffShiftSeriesService) SplitSeries(ctx context.Context, input SplitSe
 		return nil, err
 	}
 
-	today := s.todayDate()
+	today := s.today()
 	updateToday := input.EffectiveDate == today
 	effective, validUntil, err := splitSeriesBounds(old, input, today)
 	if err != nil {
@@ -31,7 +31,7 @@ func (s *staffShiftSeriesService) SplitSeries(ctx context.Context, input SplitSe
 	if err != nil {
 		return nil, err
 	}
-	if err := s.lockShiftWrites(ctx, old.StaffID); err != nil {
+	if err := s.lockStaffShifts(ctx, old.StaffID); err != nil {
 		return nil, err
 	}
 	if err := s.checkSeriesVersion(ctx, old.ID, input.ExpectedVersion); err != nil {

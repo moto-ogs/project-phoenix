@@ -25,8 +25,7 @@ func TestClassListImportConvertsEachCommittedBatch(t *testing.T) {
 				if failConversion {
 					return errors.New("conversion refused")
 				}
-				_, err := module.ClassListConversion.ConvertClassListEntries(ctx, &actor)
-				return err
+				return module.ClassListConversion.ConvertClassListEntries(ctx, actor)
 			}}
 			var err error
 			module, _, _, err = api.NewImportTestModuleWithOwners(testpkg.NewDatabase(t, db), testpkg.TenantRuntime(t, db), options)

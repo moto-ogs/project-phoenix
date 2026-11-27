@@ -89,7 +89,7 @@ vi.mock("./use-staff-onboarding", () => ({
 
 const api = vi.hoisted(() => ({
   setStaffOnboardingStepState: vi.fn(),
-  setStaffOnboardingDismissed: vi.fn(),
+  dismissStaffOnboarding: vi.fn(),
 }));
 // Die Fläche meldet sich bei der Nutzungsanalyse (#7553); ob ohne
 // Einwilligung nichts hinausgeht, prüft trackOnboardingSurface selbst
@@ -738,7 +738,7 @@ describe("StaffOnboardingWizard", () => {
       doneSteps: ["groups", "students", "attendance", "calendar", "work_time"],
       skippedSteps: ["supervision"],
     };
-    api.setStaffOnboardingDismissed.mockResolvedValue({
+    api.dismissStaffOnboarding.mockResolvedValue({
       ...onboarding,
       dismissed: true,
     });
@@ -759,14 +759,14 @@ describe("StaffOnboardingWizard", () => {
     fireEvent.click(finish);
     // Abschließen sagt der Nutzungsanalyse, dass die Liste fertig ist.
     await waitFor(() =>
-      expect(api.setStaffOnboardingDismissed).toHaveBeenCalledWith(true, {
+      expect(api.dismissStaffOnboarding).toHaveBeenCalledWith({
         completed: true,
       }),
     );
   });
 
   it("hides the checklist for good only after a confirmation", async () => {
-    api.setStaffOnboardingDismissed.mockResolvedValue({
+    api.dismissStaffOnboarding.mockResolvedValue({
       ...newPerson(),
       dismissed: true,
     });
@@ -775,11 +775,11 @@ describe("StaffOnboardingWizard", () => {
     fireEvent.click(
       screen.getByRole("button", { name: "Nicht mehr anzeigen" }),
     );
-    expect(api.setStaffOnboardingDismissed).not.toHaveBeenCalled();
+    expect(api.dismissStaffOnboarding).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "Ausblenden" }));
 
     await waitFor(() =>
-      expect(api.setStaffOnboardingDismissed).toHaveBeenCalledWith(true),
+      expect(api.dismissStaffOnboarding).toHaveBeenCalledWith(),
     );
   });
 
@@ -836,7 +836,7 @@ describe("StaffOnboardingWizard", () => {
   });
 
   it("leaves hiding the checklist for good to the server", async () => {
-    api.setStaffOnboardingDismissed.mockResolvedValue({
+    api.dismissStaffOnboarding.mockResolvedValue({
       ...newPerson(),
       dismissed: true,
     });
@@ -848,7 +848,7 @@ describe("StaffOnboardingWizard", () => {
     fireEvent.click(screen.getByRole("button", { name: "Ausblenden" }));
 
     await waitFor(() =>
-      expect(api.setStaffOnboardingDismissed).toHaveBeenCalledWith(true),
+      expect(api.dismissStaffOnboarding).toHaveBeenCalledWith(),
     );
     expect(analytics.trackOnboardingSurface.mock.calls).toEqual([
       ["shown", "staff_first_steps"],

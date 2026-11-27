@@ -44,14 +44,11 @@ function dayLogGroup(group: studentsContract.dayLogGroup): DayLogGroup {
   };
 }
 
-export async function fetchDayLog(
-  dateISO: string,
-  groupId?: string,
-): Promise<DayLogResponse> {
+export async function fetchDayLog(dateISO: string): Promise<DayLogResponse> {
   // Ausgeschaltet oder ohne sichtbare Gruppe erkennt die Seite am Code
   // (students.day_log_disabled, students.day_log_no_groups), nie am Text.
   const log = await bffJson("tenant", "GET /api/students/day-log", {
-    query: { date: dateISO, group_id: groupId },
+    query: { date: dateISO },
     errorMessage: "day log request failed",
   });
   return { ...log, groups: (log.groups ?? []).map(dayLogGroup) };

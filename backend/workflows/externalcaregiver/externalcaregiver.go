@@ -19,7 +19,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
@@ -128,10 +127,8 @@ type InviteInput struct {
 // Result names the external caregiver and the invitation. Invited is false
 // for a placeholder (access none); the invitation fields are then empty.
 type Result struct {
-	StaffID             int64
-	PersonID            int64
-	Invited             bool
-	InvitationExpiresAt time.Time
+	StaffID int64
+	Invited bool
 	// InvitationToken redeems the invitation. Only the local seeder may see
 	// it (the HTTP adapter decides); it is never logged.
 	InvitationToken string
@@ -265,7 +262,7 @@ func (w *Workflow) createRecords(ctx context.Context, in RecordInput, email stri
 		}
 	}
 	if roleID == 0 {
-		return Result{StaffID: staff.ID, PersonID: person.ID}, nil
+		return Result{StaffID: staff.ID}, nil
 	}
 	return w.invite(ctx, staff.ID, person, email, roleID, in.Actor)
 }
@@ -392,7 +389,7 @@ func (w *Workflow) invite(ctx context.Context, staffID int64, person peopledirec
 	if err != nil {
 		return Result{}, err
 	}
-	return Result{StaffID: staffID, PersonID: personID, Invited: true, InvitationExpiresAt: stored.ExpiresAt, InvitationToken: stored.Token}, nil
+	return Result{StaffID: staffID, Invited: true, InvitationToken: stored.Token}, nil
 }
 
 // systemRole resolves the platform system role the access level invites

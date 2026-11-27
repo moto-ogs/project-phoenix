@@ -31,8 +31,10 @@ func TestParentAbsenceReviewScopeKeepsReadsAndDecisionsConsistent(t *testing.T) 
 	const note = "Vertraulicher Termin"
 	var requestID int64
 	require.NoError(t, testpkg.WithTenantTx(t, context.Background(), tc.db, testpkg.Tenant(t), func(ctx context.Context, _ bun.Tx) error {
-		request, err := tc.module.ExcusedRequests.CreateRequest(ctx, chain.StudentID, chain.AccountID,
-			[]excusedrequests.Date{excusedrequests.Date(studentsTestToday)}, note)
+		request, err := tc.module.ExcusedRequests.Submit(ctx, excusedrequests.SubmitInput{
+			StudentID: chain.StudentID, GuardianAccountID: chain.AccountID,
+			Dates: []excusedrequests.Date{excusedrequests.Date(studentsTestToday)}, Note: note, AbsenceStatus: excusedrequests.StudentStatusDayExcused, NoteRequired: true,
+		})
 		if err == nil {
 			requestID = request.ID
 		}
@@ -137,8 +139,10 @@ func TestParentAbsenceReviewScopeKeepsReadsAndDecisionsConsistent(t *testing.T) 
 		settings.StudentAbsenceEditScopeAdmins, nil, nil))
 	date := studentsTestToday.AddDays(1)
 	require.NoError(t, testpkg.WithTenantTx(t, context.Background(), tc.db, testpkg.Tenant(t), func(ctx context.Context, _ bun.Tx) error {
-		request, err := tc.module.ExcusedRequests.CreateRequest(ctx, chain.StudentID, chain.AccountID,
-			[]excusedrequests.Date{excusedrequests.Date(date)}, note)
+		request, err := tc.module.ExcusedRequests.Submit(ctx, excusedrequests.SubmitInput{
+			StudentID: chain.StudentID, GuardianAccountID: chain.AccountID,
+			Dates: []excusedrequests.Date{excusedrequests.Date(date)}, Note: note, AbsenceStatus: excusedrequests.StudentStatusDayExcused, NoteRequired: true,
+		})
 		if err == nil {
 			requestID = request.ID
 		}

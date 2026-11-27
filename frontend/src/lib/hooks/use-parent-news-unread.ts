@@ -12,14 +12,11 @@ import { useUnreadCount } from "./use-unread-count";
  * marks it read, so the badge drops without a full reload).
  */
 export function useParentNewsUnread(enabled: boolean) {
-  const { unreadCount, refresh } = useUnreadCount(
-    parentKeys.newsUnreadCount(),
-    {
-      enabled,
-      fetcher: fetchAnnouncementsUnreadCount,
-      eventNames: ["parent-news-unread-refresh"],
-      eventDebounceMs: 500,
-    },
-  );
-  return { unreadCount, refresh };
+  const { unreadCount } = useUnreadCount(parentKeys.newsUnreadCount(), {
+    enabled,
+    fetcher: fetchAnnouncementsUnreadCount,
+    eventNames: ["parent-news-unread-refresh"],
+    eventDebounceMs: 500,
+  });
+  return { unreadCount };
 }

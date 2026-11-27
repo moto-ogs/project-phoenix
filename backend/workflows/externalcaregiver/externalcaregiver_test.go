@@ -5,7 +5,6 @@ import (
 	"errors"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/peopledirectory"
@@ -31,7 +30,6 @@ type fakeOwners struct {
 	revoked    []int64
 	record     schoolmembership.ExternalCaregiverRecordFields
 	genders    []externalcaregiver.StaffGender
-	expires    time.Time
 }
 
 var errStep = errors.New("step failed")
@@ -99,7 +97,7 @@ func (f *fakeOwners) ListRoles(_ context.Context, filter identityaccess.RoleFilt
 
 func (f *fakeOwners) CreateSchoolInvitation(_ context.Context, request identityaccess.SchoolInvitationRequest) (identityaccess.SchoolInvitation, error) {
 	f.invited = append(f.invited, request)
-	return identityaccess.SchoolInvitation{ExpiresAt: f.expires, Token: "token"}, f.step("invite")
+	return identityaccess.SchoolInvitation{Token: "token"}, f.step("invite")
 }
 
 func (f *fakeOwners) RevokeSchoolInvitation(_ context.Context, invitationID, _ int64) error {
@@ -200,8 +198,7 @@ func TestRecordWritesTheGenderIntoTheStammdaten(t *testing.T) {
 
 func TestRecordWritesInOrderInsideOneSavepoint(t *testing.T) {
 	t.Parallel()
-	expires := time.Date(2026, 10, 24, 12, 0, 0, 0, time.UTC)
-	owners := &fakeOwners{roleID: 31, expires: expires}
+	owners := &fakeOwners{roleID: 31}
 	workflow, savepoint := newWorkflow(t, owners)
 
 	result, err := workflow.Record(context.Background(), createInput())
@@ -210,7 +207,7 @@ func TestRecordWritesInOrderInsideOneSavepoint(t *testing.T) {
 	assert.Equal(t, []string{"system_role", "pending_invitations", "create_person", "create_staff", "find_teacher", "create_teacher", "create_external_caregiver_record", "invite"}, owners.calls)
 	assert.Equal(t, identityaccess.AGLeitungRoleName, owners.roleName, "supervise invites into the system role ag-leitung")
 	assert.Equal(t, 1, savepoint.opened)
-	assert.Equal(t, externalcaregiver.Result{StaffID: 601, PersonID: 501, Invited: true, InvitationExpiresAt: expires, InvitationToken: "token"}, result)
+	assert.Equal(t, externalcaregiver.Result{StaffID: 601, Invited: true, InvitationToken: "token"}, result)
 	assert.Equal(t, schoolmembership.ExternalCaregiverRecordFields{StaffID: 601, Organization: "Musikschule", ActivityExpertise: externalcaregiver.Expertise}, owners.record)
 	require.Len(t, owners.invited, 1)
 	assert.Equal(t, identityaccess.SchoolInvitationRequest{
@@ -252,7 +249,7 @@ func TestRecordNoneIsAPlaceholderWithoutInvitation(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, []string{"create_person", "create_staff", "find_teacher", "create_teacher", "create_external_caregiver_record"}, owners.calls)
 			assert.Equal(t, 1, savepoint.opened)
-			assert.Equal(t, externalcaregiver.Result{StaffID: 601, PersonID: 501}, result)
+			assert.Equal(t, externalcaregiver.Result{StaffID: 601}, result)
 			assert.Empty(t, owners.invited)
 		})
 	}
@@ -357,7 +354,6 @@ func TestInviteRevokesThePersonsOpenInvitationsBeforeInviting(t *testing.T) {
 		FirstName: stringPtr("Selin"), LastName: stringPtr("Aydın"), CreatedBy: 7,
 	}, owners.invited[0])
 	assert.Equal(t, int64(601), result.StaffID)
-	assert.Equal(t, int64(501), result.PersonID)
 }
 
 func TestInviteKeepsAnExistingCaregiverProfile(t *testing.T) {

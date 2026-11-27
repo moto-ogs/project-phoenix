@@ -47,16 +47,14 @@ function BreadcrumbSeparator() {
 interface BreadcrumbLinkProps {
   readonly href: string;
   readonly children: React.ReactNode;
-  readonly onClick?: () => void;
 }
 
-function BreadcrumbLink({ href, children, onClick }: BreadcrumbLinkProps) {
+function BreadcrumbLink({ href, children }: BreadcrumbLinkProps) {
   const tenantPath = useTenantAwarePath();
 
   return (
     <NavigationLink
       href={tenantPath(href)}
-      onClick={onClick}
       className="font-medium text-gray-500 transition-colors hover:text-gray-900"
     >
       {children}

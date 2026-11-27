@@ -1338,7 +1338,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.holidayAcceptanceAccounts.HolidayParentSetupURL",
-      "binding_digest": "cb9e92e4188fc4f8d49f854e17d4922d",
+      "binding_digest": "87f92b42409029178d29e49dbec9fa79",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayAcceptanceAccounts.HolidayParentSetupURL",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.HolidayParentSetups.IssueHolidayParentSetupToken",
@@ -1754,7 +1754,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.holidayParentAccountLinks.HolidayParentAccountLink",
-      "binding_digest": "9e7c99a7127e636709092e5547874b22",
+      "binding_digest": "39941dd667ea63aa4f0699aac35c8bbc",
       "port": "github.com/moto-ogs/project-phoenix/modules/enrollment.HolidayParentAccountLinks.HolidayParentAccountLink",
       "source_owner": "enrollment",
       "target": "github.com/moto-ogs/project-phoenix/modules/identityaccess.HolidayParentSetups.IssueHolidayParentSetupToken",

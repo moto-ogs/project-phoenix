@@ -69,9 +69,8 @@ func (e *seriesTestEnv) breakSeriesService() planning.StaffShiftSeriesService {
 	})
 	return planning.NewStaffShiftSeriesService(
 		e.seriesRows.Capability, e.exceptionRows.Capability, e.shiftRows.Capability, api.NewPlanStaffDirectory(e.reposPeople.Staff), planning.SchoolCalendarPeriods(calendar),
-		nil, workforceCompose.NewStaffShiftLock(e.db), slog.Default(), e.shifts,
-		planning.WithStaffShiftSeriesToday(today),
-		planning.WithStaffShiftSeriesNonWorkingDays(planning.SchoolCalendarNonWorkingDays(unificationDayCalendar{SeriesCalendarReads: calendar})),
+		e.shiftTypes, workforceCompose.NewStaffShiftLock(e.db), slog.Default(), e.shifts,
+		planning.SeriesSchedule{Absences: e.shiftRows.Capability, Today: today, NonWorkingDays: planning.SchoolCalendarNonWorkingDays(unificationDayCalendar{SeriesCalendarReads: calendar})},
 	)
 }
 

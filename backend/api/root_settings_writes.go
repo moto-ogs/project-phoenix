@@ -107,8 +107,7 @@ func classListConversionSideEffects(settings interface {
 			if actor <= 0 {
 				return nil, errors.New("class list conversion: the switch has no acting account")
 			}
-			_, err = classList.ConvertClassListEntries(ctx, &actor)
-			return nil, err
+			return nil, classList.ConvertClassListEntries(ctx, actor)
 		}
 	}
 	return [2]settingsCompose.SettingSideEffect{

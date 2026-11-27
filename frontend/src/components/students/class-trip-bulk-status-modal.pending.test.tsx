@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "~/lib/api-error";
 import type { Student } from "~/lib/student-helpers";
-import { bulkCreateStudentStatusDays } from "~/lib/student-status-days-api";
+import { createClassTripStatusDays } from "~/lib/student-status-days-api";
 import {
   deferred,
   expectDialogUnlocked,
@@ -21,7 +21,7 @@ vi.mock("~/contexts/ToastContext", async (importOriginal) => ({
 }));
 vi.mock("~/lib/student-status-days-api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/lib/student-status-days-api")>()),
-  bulkCreateStudentStatusDays: vi.fn(),
+  createClassTripStatusDays: vi.fn(),
 }));
 
 import { ClassTripBulkStatusModal } from "./class-trip-bulk-status-modal";
@@ -40,7 +40,7 @@ const students = [
 
 function renderAndSave() {
   const save = deferred<{ student_count: number; date_count: number }>();
-  vi.mocked(bulkCreateStudentStatusDays).mockReturnValue(save.promise);
+  vi.mocked(createClassTripStatusDays).mockReturnValue(save.promise);
   const onClose = vi.fn();
   const onSuccess = vi.fn();
   const view = render(
@@ -78,7 +78,7 @@ describe("ClassTripBulkStatusModal pending lock (#6533)", () => {
 
   it("refreshes the data but closes nothing when the answer arrives after unmount", async () => {
     const { save, onClose, onSuccess, unmount } = renderAndSave();
-    expect(bulkCreateStudentStatusDays).toHaveBeenCalledOnce();
+    expect(createClassTripStatusDays).toHaveBeenCalledOnce();
 
     unmount();
     await act(async () => {

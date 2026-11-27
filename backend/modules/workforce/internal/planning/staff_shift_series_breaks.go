@@ -28,13 +28,6 @@ type SeriesNonWorkingDayReader interface {
 	SeriesNonWorkingDays(ctx context.Context, from, to calendar.Date, seriesPeriodID int64) (SeriesNonWorkingDays, error)
 }
 
-// WithStaffShiftSeriesNonWorkingDays binds the reader the materializer skips
-// holidays, Ferien and closing days by. Without it (unit tests, narrow
-// compositions) a series skips none, as the timetable materializer does.
-func WithStaffShiftSeriesNonWorkingDays(reader SeriesNonWorkingDayReader) StaffShiftSeriesOption {
-	return func(s *staffShiftSeriesService) { s.nonWorkingDays = reader }
-}
-
 func (s *staffShiftSeriesService) loadNonWorkingDays(ctx context.Context, series *StaffShiftSeries, from, to calendar.Date) (SeriesNonWorkingDays, error) {
 	if s.nonWorkingDays == nil {
 		return SeriesNonWorkingDays{}, nil
@@ -55,6 +48,9 @@ type SeriesCalendarReads interface {
 // SchoolCalendarNonWorkingDays binds the series' non-working days to the
 // School Calendar.
 func SchoolCalendarNonWorkingDays(calendar SeriesCalendarReads) SeriesNonWorkingDayReader {
+	if calendar == nil {
+		return nil
+	}
 	return schoolCalendarNonWorkingDays{calendar: calendar}
 }
 

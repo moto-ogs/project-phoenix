@@ -83,7 +83,7 @@ func BuildParentPortal(
 		MealPlan: mealPlan, DayChanges: dayChanges, ClosingTimes: schoolCalendarCompose.NewOpeningChanges().ClosingTimeOn, StudentRepo: NewParentStudentReads(people.Students), CarePlan: NewParentCarePlanCommands(carePlan, schedules.AutoExcusal), DataRequests: NewParentDataRequestCommands(carePlan), People: persons,
 		Settings: BindParentSettings(settings), StudentUpdates: BindParentStudentUpdates(hub),
 		PersonRepo: NewParentPersonReads(people.Persons), ChangeRequestRepo: NewParentDataRequestReads(carePlan),
-		CareRequestRepo: NewParentCareRequestReads(carePlan), ExcusedRequestRepo: NewParentExcusedRequestReads(carePlanRows.ExcusedRequestRows),
+		CareRequestRepo: NewParentCareRequestReads(carePlan), ExcusedRequestRepo: NewParentExcusedRequestReads(carePlan),
 		OfferingChangeRequestRepo: NewParentOfferingChangeReads(enrollmentCompose.NewOfferingChangeRecords(carePlan)),
 		FamilyProtectionEvents:    BindParentFamilyProtectionReads(peopleCompose.NewFamilyProtectionEventRepository(db.Pool(), env.Now)),
 		ParentRequestShares:       BindParentRequestShareRecords(peopleCompose.NewParentRequestShareEventRepository(db.Pool(), env.Now)),

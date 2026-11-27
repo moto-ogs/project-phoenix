@@ -32,10 +32,10 @@ func TestAbsenceWriter_PendingNoteReachesReviewer(t *testing.T) {
 
 	const note = "Kommt später, Termin beim Kinderarzt"
 	require.NoError(t, testpkg.WithTenantTx(t, context.Background(), tc.db, testpkg.Tenant(t), func(txCtx context.Context, _ bun.Tx) error {
-		_, err := tc.module.ExcusedRequests.CreateRequest(
-			txCtx, student.ID, submitterAccount.ID,
-			[]excusedrequests.Date{excusedrequests.Date(calendar.TodayDate())}, note,
-		)
+		_, err := tc.module.ExcusedRequests.Submit(txCtx, excusedrequests.SubmitInput{
+			StudentID: student.ID, GuardianAccountID: submitterAccount.ID,
+			Dates: []excusedrequests.Date{excusedrequests.Date(calendar.TodayDate())}, Note: note, AbsenceStatus: excusedrequests.StudentStatusDayExcused, NoteRequired: true,
+		})
 		return err
 	}))
 

@@ -2,6 +2,12 @@ import { describe, it, expect } from "vitest";
 import { validateStudentForm } from "./student-form-validation";
 import type { Student } from "~/lib/student-helpers";
 
+const requiredFields = {
+  first_name: "Max",
+  second_name: "Mustermann",
+  school_class: "5a",
+};
+
 describe("validateStudentForm retention days", () => {
   const RETENTION_HINT = "Bitte gib eine Zahl von 1 bis 31 ein.";
 
@@ -9,19 +15,22 @@ describe("validateStudentForm retention days", () => {
     expect(
       // The number field hands null for an emptied input.
       validateStudentForm({
+        ...requiredFields,
         data_retention_days: days,
       } as unknown as Partial<Student>),
     ).toMatchObject({ data_retention_days: RETENTION_HINT });
   });
 
   it.each([1, 15, 31])("accepts %i", (days) => {
-    expect(validateStudentForm({ data_retention_days: days })).toEqual({});
+    expect(
+      validateStudentForm({ ...requiredFields, data_retention_days: days }),
+    ).toEqual({});
   });
 
   // A form that leaves the consent pair out writes none (the school default
   // applies), so there is nothing to check.
   it("checks nothing when the form carries no retention", () => {
-    expect(validateStudentForm({})).toEqual({});
+    expect(validateStudentForm(requiredFields)).toEqual({});
   });
 });
 
@@ -34,17 +43,14 @@ describe("validateStudentForm", () => {
       data_retention_days: 30,
     };
 
-    const errors = validateStudentForm(formData, {
-      firstName: true,
-      lastName: true,
-      schoolClass: true,
-    });
+    const errors = validateStudentForm(formData);
 
     expect(errors).toEqual({});
   });
 
   it("requires a companion note when an accompanied day is selected", () => {
     const errors = validateStudentForm({
+      ...requiredFields,
       data_retention_days: 30,
       allowed_departure_modes: { mon: ["accompanied"] },
       departure_companion_note: "   ",
@@ -57,6 +63,7 @@ describe("validateStudentForm", () => {
 
   it("accepts a filled companion note for an accompanied day", () => {
     const errors = validateStudentForm({
+      ...requiredFields,
       data_retention_days: 30,
       allowed_departure_modes: { mon: ["accompanied"] },
       departure_companion_note: "Geschwisterkind Lena",
@@ -65,51 +72,9 @@ describe("validateStudentForm", () => {
     expect(errors.departure_companion_note).toBeUndefined();
   });
 
-  it("accepts links covering every accompanied day without a note", () => {
-    const errors = validateStudentForm(
-      {
-        data_retention_days: 30,
-        allowed_departure_modes: { mon: ["accompanied"], tue: ["accompanied"] },
-      },
-      {},
-      { companionLinkDays: ["mon", "tue"] },
-    );
-
-    expect(errors.departure_companion_note).toBeUndefined();
-  });
-
-  it("requires a note for an accompanied day no link covers", () => {
-    // A Monday link answers nothing for an accompanied Tuesday — the cover is
-    // per weekday, mirroring the backend's Student.Validate.
-    const errors = validateStudentForm(
-      {
-        data_retention_days: 30,
-        allowed_departure_modes: { mon: ["accompanied"], tue: ["accompanied"] },
-      },
-      {},
-      { companionLinkDays: ["mon"] },
-    );
-
-    expect(errors.departure_companion_note).toBe(
-      "Bitte gib an, mit wem das Kind nach Hause geht.",
-    );
-  });
-
-  it("skips the companion check while the stored links are unknown", () => {
-    const errors = validateStudentForm(
-      {
-        data_retention_days: 30,
-        allowed_departure_modes: { mon: ["accompanied"] },
-      },
-      {},
-      { companionLinkDays: "unknown" },
-    );
-
-    expect(errors.departure_companion_note).toBeUndefined();
-  });
-
   it("does not require a companion note without an accompanied day", () => {
     const errors = validateStudentForm({
+      ...requiredFields,
       data_retention_days: 30,
       allowed_departure_modes: { mon: ["bus"] },
     });
@@ -125,7 +90,7 @@ describe("validateStudentForm", () => {
       data_retention_days: 30,
     };
 
-    const errors = validateStudentForm(formData, { firstName: true });
+    const errors = validateStudentForm(formData);
 
     expect(errors.first_name).toBe("Bitte gib den Vornamen ein.");
   });
@@ -138,7 +103,7 @@ describe("validateStudentForm", () => {
       data_retention_days: 30,
     };
 
-    const errors = validateStudentForm(formData, { lastName: true });
+    const errors = validateStudentForm(formData);
 
     expect(errors.last_name).toBe("Bitte gib den Nachnamen ein.");
   });
@@ -151,7 +116,7 @@ describe("validateStudentForm", () => {
       data_retention_days: 30,
     };
 
-    const errors = validateStudentForm(formData, { schoolClass: true });
+    const errors = validateStudentForm(formData);
 
     expect(errors.school_class).toBe("Bitte gib die Klasse ein.");
   });
@@ -164,11 +129,7 @@ describe("validateStudentForm", () => {
       data_retention_days: 30,
     };
 
-    const errors = validateStudentForm(formData, {
-      firstName: true,
-      lastName: true,
-      schoolClass: true,
-    });
+    const errors = validateStudentForm(formData);
 
     expect(errors.first_name).toBe("Bitte gib den Vornamen ein.");
     expect(errors.last_name).toBe("Bitte gib den Nachnamen ein.");
@@ -183,7 +144,7 @@ describe("validateStudentForm", () => {
       data_retention_days: 35,
     };
 
-    const errors = validateStudentForm(formData, {});
+    const errors = validateStudentForm(formData);
 
     expect(errors.data_retention_days).toBe(
       "Bitte gib eine Zahl von 1 bis 31 ein.",
@@ -198,11 +159,7 @@ describe("validateStudentForm", () => {
       data_retention_days: 0,
     };
 
-    const errors = validateStudentForm(formData, {
-      firstName: true,
-      lastName: true,
-      schoolClass: true,
-    });
+    const errors = validateStudentForm(formData);
 
     expect(errors.first_name).toBe("Bitte gib den Vornamen ein.");
     expect(errors.last_name).toBe("Bitte gib den Nachnamen ein.");
@@ -210,20 +167,5 @@ describe("validateStudentForm", () => {
     expect(errors.data_retention_days).toBe(
       "Bitte gib eine Zahl von 1 bis 31 ein.",
     );
-  });
-
-  it("does not validate optional fields", () => {
-    const formData: Partial<Student> = {
-      first_name: "",
-      second_name: "",
-      school_class: "",
-      data_retention_days: 30,
-    };
-
-    const errors = validateStudentForm(formData, {});
-
-    expect(errors.first_name).toBeUndefined();
-    expect(errors.last_name).toBeUndefined();
-    expect(errors.school_class).toBeUndefined();
   });
 });

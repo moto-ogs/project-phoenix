@@ -359,18 +359,13 @@ class OperatorProvisioningService {
     });
   }
 
-  async setDeviceAPIKey(
-    deviceId: string,
-    apiKey?: string,
-  ): Promise<OperatorDevice> {
+  async setDeviceAPIKey(deviceId: string): Promise<OperatorDevice> {
     const result = await bffJson(
       "platform",
       "POST /operator/devices/{id}/set-api-key",
       {
         params: { id: deviceId },
-        body: (apiKey
-          ? { api_key: apiKey }
-          : {}) satisfies operatorDevicesContract.setDeviceAPIKeyRequest,
+        body: {},
       },
     );
     return mapOperatorDevice(result, true);

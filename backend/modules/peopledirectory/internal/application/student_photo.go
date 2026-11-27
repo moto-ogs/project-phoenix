@@ -233,7 +233,7 @@ func (s *StudentPhotoService) ApplyPhotoConsent(
 		return current, nil
 	}
 	updated, transition := domain.ApplyPhotoConsent(
-		requestedConsent, current, s.now(), s.runtime.ActingAccountID(ctx))
+		*requestedConsent, current, s.now(), s.runtime.ActingAccountID(ctx))
 	if transition.GrantedNow {
 		// The caller holds the photo lock (student update), so the check
 		// reads the committed setting, not the request's memo.

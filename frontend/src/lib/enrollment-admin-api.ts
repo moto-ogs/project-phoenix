@@ -29,11 +29,7 @@ import {
   type EnrollmentFormLabels,
 } from "~/lib/enrollment-change-request-diff";
 import { logEnrollmentFailure } from "~/lib/enrollment-api-error";
-import {
-  CHILD_STATUSES,
-  type ChangeRequestStatus,
-  type ChildStatus,
-} from "~/lib/enrollment-status";
+import { CHILD_STATUSES, type ChildStatus } from "~/lib/enrollment-status";
 import type { EnrollmentExportFormat } from "~/lib/enrollment-report-api";
 
 const logger = createLogger({ component: "EnrollmentAdminAPI" });
@@ -744,24 +740,13 @@ export async function listAdminChildOfferingAdjustments(
   }));
 }
 
-export interface ListAdminEnrollmentChangeRequestsFilters {
-  requestId?: string;
-  status?: ChangeRequestStatus;
-}
-
-export async function listAdminEnrollmentChangeRequests(
-  filters: ListAdminEnrollmentChangeRequestsFilters = {},
-): Promise<AdminEnrollmentChangeRequest[]> {
+export async function listAdminEnrollmentChangeRequests(): Promise<
+  AdminEnrollmentChangeRequest[]
+> {
   const requests = await bffJson(
     "tenant",
     "GET /api/enrollment/admin/change-requests/",
-    {
-      query: {
-        request_id: filters.requestId || undefined,
-        status: filters.status,
-      },
-      errorMessage: "Änderungsanfragen konnten nicht geladen werden",
-    },
+    { errorMessage: "Änderungsanfragen konnten nicht geladen werden" },
   );
   return requests.map(adminChangeRequestFromContract);
 }

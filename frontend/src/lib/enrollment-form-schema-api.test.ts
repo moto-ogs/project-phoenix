@@ -322,28 +322,16 @@ describe("fetchEnrollmentPreviewBootstrap", () => {
 // --- fetchPublicLegalTexts -------------------------------------------
 
 describe("fetchPublicLegalTexts", () => {
-  it("URL-encodes tenant slug and phase id when provided", async () => {
+  it("URL-encodes the tenant slug when loading school legal texts", async () => {
     let seenURL = "";
     mockFetch(async (input) => {
       seenURL = typeof input === "string" ? input : input.toString();
       return jsonResponse({ data: { blocks: [] } });
     });
 
-    await fetchPublicLegalTexts("test tenant", "phase/5");
+    await fetchPublicLegalTexts("test tenant");
 
-    expect(seenURL).toBe("/api/enrollment/legal/test%20tenant/phase%2F5");
-  });
-
-  it("keeps the tenant-only fallback URL when no phase id is provided", async () => {
-    let seenURL = "";
-    mockFetch(async (input) => {
-      seenURL = typeof input === "string" ? input : input.toString();
-      return jsonResponse({ data: { blocks: [] } });
-    });
-
-    await fetchPublicLegalTexts("demo");
-
-    expect(seenURL).toBe("/api/enrollment/legal/demo");
+    expect(seenURL).toBe("/api/enrollment/legal/test%20tenant");
   });
 });
 

@@ -63,6 +63,13 @@ type careFixture struct {
 	autoExcusal   careplan.PickupAutoExcusal
 }
 
+func (f *careFixture) createPickupChange(ctx context.Context, studentID, guardianAccountID int64, date calendar.Date, pickupTime time.Time, reason string) (*carerequests.Request, error) {
+	return f.svc.CreatePickupChange(ctx, carerequests.PickupChangeCreateInput{
+		StudentID: studentID, GuardianAccountID: guardianAccountID,
+		Date: date, PickupTime: pickupTime, Reason: reason, ReasonRequired: true,
+	})
+}
+
 func newCareScheduleRequestService(
 	requestRepo careplan.Capability,
 	people owners.RequestPeople,

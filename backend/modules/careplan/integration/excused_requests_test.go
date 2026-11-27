@@ -78,7 +78,10 @@ func (f *excusedFixture) createPendingStatus(t *testing.T, dates []careplan.Date
 	var req *careplan.ExcusedAbsenceRequest
 	require.NoError(t, f.inTenant(t, func(ctx context.Context) error {
 		var err error
-		req, err = f.requests.CreateRequestForStatus(ctx, f.chain.StudentID, f.chain.AccountID, dates, note, status)
+		req, err = f.requests.Submit(ctx, careplan.ExcusedRequestCreateInput{
+			StudentID: f.chain.StudentID, GuardianAccountID: f.chain.AccountID,
+			Dates: dates, Note: note, AbsenceStatus: status, NoteRequired: true,
+		})
 		return err
 	}))
 	require.NotNil(t, req)
@@ -155,7 +158,10 @@ func TestExcusedRequestCreateDistinguishesSickAndExcusedRetries(t *testing.T) {
 	assert.Equal(t, sick.ID, retried.ID, "an identical sick request must be idempotent")
 
 	err := f.inTenant(t, func(ctx context.Context) error {
-		_, err := f.requests.CreateRequestForStatus(ctx, f.chain.StudentID, f.chain.AccountID, []careplan.Date{excusedTomorrow}, "Arzttermin", careplan.StudentStatusDayExcused)
+		_, err := f.requests.Submit(ctx, careplan.ExcusedRequestCreateInput{
+			StudentID: f.chain.StudentID, GuardianAccountID: f.chain.AccountID,
+			Dates: []careplan.Date{excusedTomorrow}, Note: "Arzttermin", AbsenceStatus: careplan.StudentStatusDayExcused, NoteRequired: true,
+		})
 		return err
 	})
 	assert.ErrorIs(t, err, careplan.ErrExcusedRequestOverlap, "the same day cannot have pending sick and excused requests")
@@ -169,7 +175,10 @@ func TestExcusedRequestCreateIdempotentOverlapDisjoint(t *testing.T) {
 	assert.Equal(t, first.ID, second.ID, "an identical resubmit in another order must be idempotent")
 
 	err := f.inTenant(t, func(ctx context.Context) error {
-		_, err := f.requests.CreateRequest(ctx, f.chain.StudentID, f.chain.AccountID, []careplan.Date{excusedIn3Days, excusedIn6Days}, "ueberschneidung")
+		_, err := f.requests.Submit(ctx, careplan.ExcusedRequestCreateInput{
+			StudentID: f.chain.StudentID, GuardianAccountID: f.chain.AccountID,
+			Dates: []careplan.Date{excusedIn3Days, excusedIn6Days}, Note: "ueberschneidung", AbsenceStatus: careplan.StudentStatusDayExcused, NoteRequired: true,
+		})
 		return err
 	})
 	assert.ErrorIs(t, err, careplan.ErrExcusedRequestOverlap)
@@ -385,7 +394,10 @@ func TestExcusedRequestPartialAbsenceConflicts(t *testing.T) {
 	// Since #5698 a family may ask for a day the school holds with a partial
 	// absence: the school decides it. Only the approval needs a confirmation.
 	err = f.inTenant(t, func(ctx context.Context) error {
-		_, err := f.requests.CreateRequest(ctx, f.chain.StudentID, f.chain.AccountID, []careplan.Date{excusedIn4Days}, "Arzttermin")
+		_, err := f.requests.Submit(ctx, careplan.ExcusedRequestCreateInput{
+			StudentID: f.chain.StudentID, GuardianAccountID: f.chain.AccountID,
+			Dates: []careplan.Date{excusedIn4Days}, Note: "Arzttermin", AbsenceStatus: careplan.StudentStatusDayExcused, NoteRequired: true,
+		})
 		return err
 	})
 	assert.NoError(t, err, "a partial absence no longer blocks the request")
@@ -544,7 +556,10 @@ func TestExcusedRequestTwoTenantIsolation(t *testing.T) {
 	var second *careplan.ExcusedAbsenceRequest
 	require.NoError(t, testpkg.WithTenantTx(t, context.Background(), f.db, secondTenantID, func(ctx context.Context, _ bun.Tx) error {
 		var err error
-		second, err = f.requests.CreateRequest(ctx, secondStudent.ID, secondAccount.ID, []careplan.Date{excusedIn3Days}, "Tenant B")
+		second, err = f.requests.Submit(ctx, careplan.ExcusedRequestCreateInput{
+			StudentID: secondStudent.ID, GuardianAccountID: secondAccount.ID,
+			Dates: []careplan.Date{excusedIn3Days}, Note: "Tenant B", AbsenceStatus: careplan.StudentStatusDayExcused, NoteRequired: true,
+		})
 		return err
 	}))
 
@@ -634,7 +649,10 @@ func TestExcusedRequestCreateAndEditRollBackAndRetry(t *testing.T) {
 
 	failing := newExcusedRequests(t, f.reposPeople, &failingCarePlan{Capability: f.repos.CarePlan(), failAfterCreate: true})
 	err := f.inTenant(t, func(ctx context.Context) error {
-		_, err := failing.CreateRequest(ctx, f.chain.StudentID, f.chain.AccountID, []careplan.Date{excusedTomorrow}, "Arzttermin")
+		_, err := failing.Submit(ctx, careplan.ExcusedRequestCreateInput{
+			StudentID: f.chain.StudentID, GuardianAccountID: f.chain.AccountID,
+			Dates: []careplan.Date{excusedTomorrow}, Note: "Arzttermin", AbsenceStatus: careplan.StudentStatusDayExcused, NoteRequired: true,
+		})
 		return err
 	})
 	require.ErrorIs(t, err, errInjected)

@@ -727,9 +727,7 @@ export function PersonalCalendar({
                     day={day}
                     events={eventsForDay(events, day)}
                     actions={actions}
-                    compact
                     muted={!inMonth}
-                    className="min-h-44 border-r border-b border-gray-200 last:border-r-0"
                   />
                 );
               })}
@@ -846,38 +844,32 @@ function CalendarDayColumn({
   day,
   events,
   actions,
-  compact = false,
-  muted = false,
-  className = "",
+  muted,
 }: Readonly<{
   day: Date;
   events: readonly CalendarEvent[];
   actions: CalendarEventActions;
-  compact?: boolean;
-  muted?: boolean;
-  className?: string;
+  muted: boolean;
 }>) {
   return (
-    <section className={className}>
+    <section className="min-h-44 border-r border-b border-gray-200 last:border-r-0">
       <div
         className={`border-b border-gray-200 px-3 py-2 ${
           muted ? "bg-gray-50/60 text-gray-500" : "bg-gray-50"
         }`}
       >
         <div className="text-sm font-semibold text-gray-900">
-          {compact
-            ? day.toLocaleDateString("de-DE", {
-                timeZone: "Europe/Berlin",
-                weekday: "short",
-                day: "2-digit",
-              })
-            : formatDayHeader(day)}
+          {day.toLocaleDateString("de-DE", {
+            timeZone: "Europe/Berlin",
+            weekday: "short",
+            day: "2-digit",
+          })}
         </div>
         <div className="text-xs text-gray-500">
           {events.length === 1 ? "1 Eintrag" : `${events.length} Einträge`}
         </div>
       </div>
-      <div className={`space-y-1 ${compact ? "p-1.5" : "p-2"}`}>
+      <div className="space-y-1 p-1.5">
         {events.map((event) => (
           <EventPill
             key={`${event.id}-${toISODate(day)}`}

@@ -16,6 +16,11 @@
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."
     },
     {
+      "decision": "0067",
+      "id": "modules/dataimport/ports/observedAuditCommand.AppendAll",
+      "reason": "Observes the duration and error of the class-list audit batch and propagates the result of the required batch command."
+    },
+    {
       "decision": "0177",
       "id": "modules/dataimport/ports/observedClassListEntryBatches.CreateClassListEntries",
       "reason": "Exact evidence; ADR 0075 eligibility unchanged; semantic form review pending."

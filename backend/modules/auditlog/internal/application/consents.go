@@ -9,6 +9,7 @@ import (
 )
 
 type consentEventAppender interface {
+	AppendAll(context.Context, []any) error
 	Append(context.Context, any) error
 }
 
@@ -38,13 +39,8 @@ func (r *ConsentRecorder) RecordTransitions(ctx context.Context, before, after *
 
 var _ consents.ConsentTransitionBatches = (*ConsentRecorder)(nil)
 
-type consentEventBatchAppender interface {
-	AppendAll(context.Context, []any) error
-}
-
 // RecordTransitionsAll is RecordTransitions for many students: the events of
-// every transition, in input order, go to the Audit command in one AppendAll
-// where it can, one by one otherwise.
+// every transition, in input order, go to the Audit command in one AppendAll.
 func (r *ConsentRecorder) RecordTransitionsAll(ctx context.Context, transitions []consents.ConsentTransition) error {
 	var events []any
 	for _, transition := range transitions {
@@ -59,17 +55,8 @@ func (r *ConsentRecorder) RecordTransitionsAll(ctx context.Context, transitions 
 	if len(events) == 0 {
 		return nil
 	}
-	if batch, ok := r.command.(consentEventBatchAppender); ok {
-		if err := batch.AppendAll(ctx, events); err != nil {
-			return fmt.Errorf("student consent recorder: record transitions: %w", err)
-		}
-		return nil
-	}
-	for _, event := range events {
-		change := event.(*consents.ConsentChange)
-		if err := r.command.Append(ctx, change); err != nil {
-			return fmt.Errorf("student consent recorder: record %s transition: %w", change.ConsentKey, err)
-		}
+	if err := r.command.AppendAll(ctx, events); err != nil {
+		return fmt.Errorf("student consent recorder: record transitions: %w", err)
 	}
 	return nil
 }

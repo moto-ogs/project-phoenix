@@ -136,18 +136,3 @@ func (s *StaffShiftSeries) ContainsWeekday(weekday int) bool {
 	}
 	return false
 }
-
-// StaffShiftSeriesException records one deliberately removed occurrence of a
-// series, so re-plans and splits never regenerate it.
-type StaffShiftSeriesException struct {
-	ID        int64         `json:"id"`
-	CreatedAt time.Time     `json:"created_at"`
-	UpdatedAt time.Time     `json:"updated_at"`
-	TenantID  int64         `json:"tenant_id"`
-	SeriesID  int64         `json:"series_id"`
-	Date      calendar.Date `json:"date"`
-	CreatedBy int64         `json:"created_by"`
-	// PlannedByTraeger stands for the author of an occurrence of a series
-	// the Träger-Büro planned (#7818); CreatedBy is then 0.
-	PlannedByTraeger bool `json:"planned_by_traeger"`
-}

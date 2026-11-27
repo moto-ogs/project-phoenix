@@ -4,8 +4,8 @@ import { tmpdir } from "node:os";
 import { spawnSync } from "node:child_process";
 import { join } from "node:path";
 import assert from "node:assert/strict";
-import { readRegistry } from "./error-registry.mjs";
-import { generate, validateRegistry, writeGenerated } from "./generate-error-codes.mjs";
+import { readRegistry, validateRegistry } from "./error-registry.mjs";
+import { generate, writeGenerated } from "./generate-error-codes.mjs";
 
 const registry = readRegistry();
 
@@ -55,7 +55,7 @@ test("a longer symbol does not reformat earlier declarations in its domain", () 
 });
 
 test("every registered code generates one Go constant and one TypeScript union member", () => {
-  const entries = validateRegistry(registry);
+  const entries = registry.codes;
   const generated = generate(registry);
   assert.equal((Object.values(generated.goFiles).join("\n").match(/ = "/g) ?? []).length, entries.length);
   assert.equal((Object.values(generated.goFiles).join("\n").match(/^\t\{Code\w+, "/gm) ?? []).length, entries.length);
@@ -68,7 +68,7 @@ test("every registered code generates one Go constant and one TypeScript union m
 });
 
 test("Go error code shards preserve every registered class mapping", () => {
-  const entries = validateRegistry(registry);
+  const entries = registry.codes;
   const generated = generate(registry);
   assert.match(generated.goFiles["error_codes.generated.go"], /var errorClassByCode = make\(map\[string\]string\)/);
   const source = Object.values(generated.goFiles).join("\n");
