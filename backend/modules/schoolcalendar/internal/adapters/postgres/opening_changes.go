@@ -78,13 +78,9 @@ const (
 	updateOpeningChangeQuery = `UPDATE schedule.opening_changes
 		SET start_date = ?, end_date = ?, opens_at = ?::time, closes_at = ?::time, reason = ?
 		WHERE tenant_id = ? AND id = ? RETURNING ` + openingChangeColumns
-	deleteOpeningChangeQuery = `DELETE FROM schedule.opening_changes WHERE tenant_id = ? AND id = ?`
-	// lockTraegerOpeningChangeIDCollision locks a visible Träger change with
-	// the same independent table ID. A school must not use that ID to write an
-	// own change; FOR SHARE keeps a concurrent Träger edit or deletion behind
-	// the school write until the tenant transaction ends.
-	lockTraegerOpeningChangeIDCollision = `SELECT id FROM schedule.traeger_opening_changes
-		WHERE id = ? AND ? = ANY (school_ids) FOR SHARE`
+	deleteOpeningChangeQuery        = `DELETE FROM schedule.opening_changes WHERE tenant_id = ? AND id = ?`
+	traegerOpeningChangeIDCollision = `SELECT id FROM schedule.traeger_opening_changes
+		WHERE id = ? AND ? = ANY (school_ids)`
 )
 
 // ListOpeningChanges lists the changes touching [from, to]: the school's
@@ -214,14 +210,15 @@ func (s *OpeningChangeStore) DeleteOpeningChange(ctx context.Context, id int64) 
 
 // rejectTraegerOpeningChangeIDCollision preserves the school route's 404 for
 // a Träger-owned change when its independent ID happens to match a school row.
+// The school RLS policy intentionally grants only SELECT on the Träger table.
 func rejectTraegerOpeningChangeIDCollision(ctx context.Context, db bun.IDB, schoolID, id int64) error {
 	var traegerID int64
-	err := db.NewRaw(lockTraegerOpeningChangeIDCollision, id, schoolID).Scan(ctx, &traegerID)
+	err := db.NewRaw(traegerOpeningChangeIDCollision, id, schoolID).Scan(ctx, &traegerID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil
 	}
 	if err != nil {
-		return fmt.Errorf("school calendar postgres: lock Träger opening change ID collision: %w", err)
+		return fmt.Errorf("school calendar postgres: read Träger opening change ID collision: %w", err)
 	}
 	return schoolcalendar.ErrOpeningChangeNotFound
 }
