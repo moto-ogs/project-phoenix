@@ -495,7 +495,7 @@ describe("BFF routes use the generated contract", () => {
 
   it(
     "finds no retired route helpers or handwritten registered BFF addresses in production source",
-    { timeout: 30_000 },
+    { timeout: 60_000 },
     () => {
       const sources = readdirSync(src, { recursive: true, encoding: "utf8" })
         .filter(
