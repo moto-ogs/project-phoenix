@@ -603,6 +603,21 @@ function MeinRaumPageContent() {
   // In der App: läuft schon eine Aufsicht, steht der spontane Start am
   // Listenende; sonst ist er die Hauptaktion in der Leiste über der Pill.
   const appHasRunningRoster = appMode && currentTimetableRoster !== null;
+  // Schmaler Kopf: genau ein Kurzstatus wie auf jeder Seite (Runde 21). Läuft
+  // ein Block, sagt „Läuft seit 00:10“ am meisten; Raum und Zahl stehen im
+  // Kopf darüber.
+  const appCompactStatus =
+    appHasRunningRoster && currentTimetableRoster ? (
+      <span className="tabular-nums">
+        <StatusBadge
+          label={appRunStateLabel(currentTimetableRoster.instance)}
+          tone={rosterRunState(currentTimetableRoster.instance.status).tone}
+          compact
+        />
+      </span>
+    ) : (
+      appCompactCount
+    );
   // Ohne laufende Aufsicht und ohne offenen Raum gibt es in der App keine
   // Liste: keine Suche, kein „Keine Kinder in diesem Raum“.
   const appHasList =
@@ -1363,9 +1378,9 @@ function MeinRaumPageContent() {
       title={supervisionName ?? "Aktuelle Aufsicht"}
       info={ACTIVE_SUPERVISIONS_INFO}
       stats={appMode ? appStats : supervisionSummary}
-      // Beim Rollen bleibt im schmalen Kopf die Zahl der Kinder stehen, wie
-      // auf den anderen Seiten der Kurzstatus.
-      appCompactStats={appMode ? appCompactCount : undefined}
+      // Beim Rollen bleibt im schmalen Kopf ein Kurzstatus (Runde 21): seit
+      // wann der Block läuft; ohne laufenden Block die Zahl der Kinder.
+      appCompactStats={appMode ? appCompactStatus : undefined}
       // Die Lupe bleibt auch im schmalen Kopf: In der langen Liste ist die
       // Suche sonst erst nach dem Zurückrollen erreichbar (Runde 19).
       appCompactActions={

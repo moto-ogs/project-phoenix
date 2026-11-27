@@ -9,6 +9,7 @@ import { Avatar } from "~/components/ui/avatar";
 import { Button, ButtonLink } from "~/components/ui/button";
 import type { ChildDayStatus } from "~/components/students/child-day-status";
 import { ChildSheet, ChildSummary } from "~/components/students/child-sheet";
+import { RowParentAttention } from "~/components/students/student-list-app";
 import {
   Collection,
   CollectionGroup,
@@ -591,7 +592,13 @@ export function TimetableRosterApp({
       roster.pickupTimesRedacted,
     );
     const pickupPart = () => {
-      if (!pickup || pickup === "–") return;
+      if (!pickup) return;
+      // Ohne Gehzeit sagt die Zeile das ausdrücklich, statt einzeilig und
+      // niedriger als die anderen zu bleiben (Runde 21).
+      if (pickup === "–") {
+        parts.push({ key: "pickup", node: "keine Gehzeit" });
+        return;
+      }
       const overdue = overduePickupColor(row, now, roster.instance.date);
       parts.push({
         key: "pickup",
@@ -671,14 +678,25 @@ export function TimetableRosterApp({
   // Die Klasse neben dem Namen: Sie ist kurz, und die zweite Zeile behält
   // Platz für Gehzeit und Hinweise. Ein langer Name kürzt sich, die Klasse
   // bleibt.
+  // Neue Nachrichten und Anfragen der Eltern als blaue Zahl am Namen, wie in
+  // der Kindersuche: gleiches Kind, gleicher Marker (Runde 21).
   const titleFor = (row: TimetableRosterRow): ReactNode => {
     const klass = schoolClassName(row.schoolClass ?? "");
-    if (!klass) return childName(row);
     return (
-      <span className="flex min-w-0 items-baseline gap-1">
-        <span className="truncate">{childName(row)}</span>{" "}
-        <span className="shrink-0 text-xs font-normal text-gray-500">
-          {klass}
+      <span className="flex min-w-0 items-center gap-1">
+        <span className="flex min-w-0 items-baseline gap-1">
+          <span className="truncate">{childName(row)}</span>
+          {klass ? (
+            <>
+              {" "}
+              <span className="shrink-0 text-xs font-normal text-gray-500">
+                {klass}
+              </span>
+            </>
+          ) : null}
+        </span>
+        <span className="flex shrink-0 pl-1 empty:hidden">
+          <RowParentAttention studentId={row.studentId} />
         </span>
       </span>
     );
