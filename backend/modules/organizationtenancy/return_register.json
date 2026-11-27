@@ -13,7 +13,7 @@
     {
       "name": "JSON Lines",
       "reference": "https://jsonlines.org",
-      "use": "Eine Datei <Schema>.<Tabelle>.jsonl pro Tabelle, ein JSON-Objekt pro Zeile"
+      "use": "Eine Datei \u003cSchema\u003e.\u003cTabelle\u003e.jsonl pro Tabelle, ein JSON-Objekt pro Zeile"
     },
     {
       "name": "UTF-8",
@@ -85,7 +85,7 @@
       "description": "Felder, Typen, Nullbarkeit und Beziehungen der Tabellen dieses Pakets, wie in diesem Register."
     },
     {
-      "path": "<Schema>.<Tabelle>.jsonl",
+      "path": "\u003cSchema\u003e.\u003cTabelle\u003e.jsonl",
       "packages": [
         "school",
         "organization"
@@ -93,7 +93,7 @@
       "description": "Die Zeilen einer Tabelle. Ein JSON-Objekt pro Zeile, die Schlüssel sind die Felder aus model.json."
     },
     {
-      "path": "objects/<Nummer>",
+      "path": "objects/\u003cNummer\u003e",
       "packages": [
         "school",
         "organization"
@@ -40638,7 +40638,7 @@
     {
       "kind": "avatars",
       "export": "include",
-      "reason": "Shared account avatars under avatars/global and legacy avatars/<tenantId>. Authenticated serving only, new files 0600 and destination directory 0700; legacy permissions require docs/operations/private-fotodateien-3840.md. References in auth.accounts.avatar and users.profiles.avatar, plus durable deletion intents in auth.account_avatar_file_cleanup. Include only authorized account references; remove only when no remaining school needs the account/file. Reconcile both layouts and pending intents before treating a file as orphaned."
+      "reason": "Shared account avatars under avatars/global and legacy avatars/\u003ctenantId\u003e. Authenticated serving only, new files 0600 and destination directory 0700; legacy permissions require docs/operations/private-fotodateien-3840.md. References in auth.accounts.avatar and users.profiles.avatar, plus durable deletion intents in auth.account_avatar_file_cleanup. Include only authorized account references; remove only when no remaining school needs the account/file. Reconcile both layouts and pending intents before treating a file as orphaned."
     }
   ]
 }

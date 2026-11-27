@@ -16,7 +16,6 @@ import (
 	"github.com/uptrace/bun"
 
 	rootAPI "github.com/moto-ogs/project-phoenix/api"
-	"github.com/moto-ogs/project-phoenix/api/common"
 	apiTest "github.com/moto-ogs/project-phoenix/api/testutil"
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
@@ -85,8 +84,23 @@ func newTraegerOpeningFixtureWithStaffing(t *testing.T, db *bun.DB, staffing cal
 
 func traegerOpeningChangeRoutes(db *bun.DB, staffing calendarAPI.StaffingChangeQueue) chi.Router {
 	resource := calendarAPI.NewTraegerOpeningChangeResource(schoolCalendarCompose.NewTraegerOpeningChanges(traegerDirectorySchools{db: db}),
-		common.RequiresPermission(identityaccess.TraegerRightOverviewRead), common.RequiresPermission(identityaccess.TraegerRightSettingsManage), staffing)
+		requireTraegerRight(identityaccess.TraegerRightOverviewRead), requireTraegerRight(identityaccess.TraegerRightSettingsManage), staffing)
 	return resource.TraegerRouter(rootAPI.ProtectedTraegerRoutes)
+}
+
+// requireTraegerRight mirrors the production route's right gate without
+// coupling this owner test to the tenant-runtime HTTP package.
+func requireTraegerRight(right string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			principal, err := permissions.PrincipalFromContext(r.Context())
+			if err != nil || !principal.HasPermission(right) {
+				http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
 }
 
 func (f traegerOpeningFixture) send(t *testing.T, claims testpkg.Claims, method, path string, body any) *httptest.ResponseRecorder {
@@ -277,31 +291,40 @@ func TestSchoolCannotWriteOpeningChangeThroughCollidingTraegerID(t *testing.T) {
 	t.Parallel()
 	f := newTraegerOpeningFixture(t, testpkg.SetupTestDB(t))
 
-	rec := f.send(t, f.school(f.named, permissions.SchedulesCreate), http.MethodPost, "/api/opening-changes/", schoolShortDay("Schule"))
-	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
-	schoolChange := decodeOpeningChangeData[openingChangeBody](t, rec)
-	_, err := f.db.ExecContext(testpkg.Ctx(t), `INSERT INTO schedule.traeger_opening_changes
-		(id, organization_id, start_date, end_date, opens_at, closes_at, reason, school_ids)
-		VALUES (?, ?, '2031-02-07', '2031-02-07', '07:30', '12:00', 'Träger', ?::bigint[])`,
-		schoolChange.ID, f.traeger, fmt.Sprintf("{%d}", f.named))
+	// Use the uniquely allocated school ID for both independent tables. Their
+	// BIGSERIAL sequences are shared by parallel tests, but this value cannot
+	// collide with another fixture's opening-change ID.
+	collisionID := f.named
+	_, err := f.db.ExecContext(testpkg.Ctx(t), `INSERT INTO schedule.opening_changes
+		(id, tenant_id, start_date, end_date, opens_at, closes_at, reason)
+		VALUES (?, ?, '2031-02-07', '2031-02-07', '07:30', '12:00', 'Schule')`, collisionID, f.named)
 	require.NoError(t, err)
 
-	update := schoolShortDay("Unbefugt")
-	update["expected_version"] = schoolChange.Version
-	rec = f.send(t, f.school(f.named, permissions.SchedulesUpdate), http.MethodPut, "/api/opening-changes/"+schoolChange.ID, update)
-	assert.Equal(t, http.StatusNotFound, rec.Code, "the school cannot update the Träger change through its colliding ID: %s", rec.Body.String())
-	rec = f.send(t, f.school(f.named, permissions.SchedulesDelete), http.MethodDelete, "/api/opening-changes/"+schoolChange.ID, nil)
-	assert.Equal(t, http.StatusNotFound, rec.Code, "the school cannot delete the Träger change through its colliding ID: %s", rec.Body.String())
+	_, err = f.db.ExecContext(testpkg.Ctx(t), `INSERT INTO schedule.traeger_opening_changes
+		(id, organization_id, start_date, end_date, opens_at, closes_at, reason, school_ids)
+		VALUES (?, ?, '2031-02-07', '2031-02-07', '07:30', '12:00', 'Träger', ?::bigint[])`,
+		collisionID, f.traeger, fmt.Sprintf("{%d}", f.named))
+	require.NoError(t, err)
 
 	changes := f.schoolList(t, f.named)
 	require.Len(t, changes, 2)
+	var schoolChange traegerOpeningChangeBody
 	for _, change := range changes {
 		if change.Traeger {
 			assert.Equal(t, "Träger", change.Reason)
 			continue
 		}
 		assert.Equal(t, "Schule", change.Reason)
+		schoolChange = change
 	}
+	require.Equal(t, fmt.Sprint(collisionID), schoolChange.ID)
+
+	update := schoolShortDay("Unbefugt")
+	update["expected_version"] = schoolChange.Version
+	rec := f.send(t, f.school(f.named, permissions.SchedulesUpdate), http.MethodPut, "/api/opening-changes/"+schoolChange.ID, update)
+	assert.Equal(t, http.StatusNotFound, rec.Code, "the school cannot update the Träger change through its colliding ID: %s", rec.Body.String())
+	rec = f.send(t, f.school(f.named, permissions.SchedulesDelete), http.MethodDelete, "/api/opening-changes/"+schoolChange.ID, nil)
+	assert.Equal(t, http.StatusNotFound, rec.Code, "the school cannot delete the Träger change through its colliding ID: %s", rec.Body.String())
 }
 
 // The Träger's list reads its changes in one statement, however many there
