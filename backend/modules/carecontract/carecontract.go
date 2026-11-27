@@ -316,7 +316,7 @@ type ContractFilter struct {
 	// round; without a column the newest contract comes first (#8138).
 	Sort       string
 	Descending bool
-	// Revision is the first page's list revision. A stale one restarts paging.
+	// Revision is the last page's cursor for Offset. A stale prefix restarts paging.
 	Revision string
 	// Export reads every contract of the filter for a file (#4718): at most
 	// ContractExportLimit, Offset and Limit ignored, recorded as an export.

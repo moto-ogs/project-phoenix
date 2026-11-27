@@ -100,6 +100,7 @@ export function useFreshTraegerResource<T>(
  * First pages, later pages and downloads share one permission across filters.
  * The family itself is not a data key: ordinary list refreshes only invalidate
  * the concrete keys, while a refusal also ends requests under the family key.
+ * Downloads withdraw the data but never report a refused list refresh.
  */
 export function useTraegerListRequest(
   family: string,
@@ -114,8 +115,15 @@ export function useTraegerListRequest(
 
   async function run<T>(
     fetch: () => Promise<T>,
-    dataKey = key,
-    onRefusal?: (error: unknown) => void,
+    {
+      dataKey = key,
+      onRefusal,
+      listRead = false,
+    }: {
+      dataKey?: string | null;
+      onRefusal?: (error: unknown) => void;
+      listRead?: boolean;
+    },
   ) {
     const complete = begin(key);
     const completeData = dataKey === key ? complete : begin(dataKey);
@@ -132,7 +140,9 @@ export function useTraegerListRequest(
       complete(() => {
         onRefusal?.(error);
         if (scoped === null || refusalFor(scoped) !== undefined) return;
-        if (isAccessRefusal(error) && hasShownRows()) noteShownDataRefusal();
+        if (listRead && isAccessRefusal(error) && hasShownRows()) {
+          noteShownDataRefusal();
+        }
         markRefused(scoped, error);
         void invalidate((cached) => cached.startsWith(family), { clear: true });
       });
@@ -144,7 +154,7 @@ export function useTraegerListRequest(
 
   async function request<T>(fetch: () => Promise<T>, dataKey?: string) {
     try {
-      return await run(fetch, dataKey);
+      return await run(fetch, { dataKey, listRead: dataKey !== undefined });
     } catch (error) {
       if (!isDiscardedAnswer(error)) throw error;
     }
@@ -154,7 +164,7 @@ export function useTraegerListRequest(
     read: async <T>(
       fetch: () => Promise<T>,
       onRefusal?: (error: unknown) => void,
-    ) => (await run(fetch, key, onRefusal)).result,
+    ) => (await run(fetch, { onRefusal, listRead: true })).result,
     request,
   };
 }

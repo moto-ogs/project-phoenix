@@ -91,7 +91,6 @@ import {
   fetchContractCandidates,
   sendCareContracts,
 } from "~/lib/traeger-care-contracts-api";
-import type { TraegerSchool } from "~/lib/traeger-api";
 import {
   downloadTraegerList,
   listExportQuery,
@@ -148,7 +147,6 @@ function withConclusionIssue(
 interface PageData {
   readonly list: CareContractList;
   readonly candidates: readonly ContractCandidate[];
-  readonly schools: readonly TraegerSchool[];
   readonly modes: readonly SchoolConclusionMode[];
 }
 
@@ -353,6 +351,22 @@ const COLUMNS: DataTableColumn<CareContractSummary>[] = [
   },
 ];
 
+const COLUMNS_SORTED_BY_SCHOOL = COLUMNS.map((column) =>
+  column.key === "school"
+    ? {
+        ...column,
+        stackedRender: (contract: CareContractSummary) => (
+          <>
+            <span className="block break-words text-gray-600">
+              {contract.schoolName}
+            </span>
+            {column.stackedRender?.(contract)}
+          </>
+        ),
+      }
+    : column,
+);
+
 export default function TraegerVertraegePage() {
   const router = useRouter();
   const { data: session } = useSession();
@@ -456,7 +470,6 @@ export default function TraegerVertraegePage() {
     return {
       list,
       candidates: withConclusionIssue(candidateRead.data, modeRead.data),
-      schools: schoolList.schools,
       modes: modeRead.data,
     };
   }, [
@@ -481,19 +494,26 @@ export default function TraegerVertraegePage() {
     setMoreErrorFor(null);
     moreLoad.clear();
     try {
+      const { revision, contracts: loaded } = data.list;
       const answer = await listAccess.request(
         () =>
           fetchCareContracts({
             ...filter,
-            offset: data.list.contracts.length,
-            revision: after.revision,
+            offset: loaded.length,
+            revision,
           }),
         listKey,
       );
       if (!answer?.isCurrent() || !isCurrent()) return;
       const page = answer.result;
-      if (page.revision !== after.revision) {
-        // The server answered page one because the sorted result changed.
+      // A cursor names the offset served, with 0 meaning the loaded prefix
+      // changed. Older servers instead return the same revision until reset.
+      const offset = /^v1:(\d+):/.exec(page.revision)?.[1];
+      const restarted =
+        offset === undefined
+          ? page.revision !== revision
+          : offset !== String(loaded.length);
+      if (restarted) {
         await firstPage.mutate(page, { revalidate: false });
         setMore(null);
         return;
@@ -582,7 +602,7 @@ export default function TraegerVertraegePage() {
 
   const contracts = useMemo(() => [...(data?.list.contracts ?? [])], [data]);
   const hasShownRows = useLatest(contracts.length > 0);
-  const schools = (data?.schools ?? []).map((school) => ({
+  const schools = (schoolList.schools ?? []).map((school) => ({
     value: school.id,
     label: school.name,
   }));
@@ -686,12 +706,14 @@ export default function TraegerVertraegePage() {
       onChange: (value) => setStatus(value as StatusChoice),
       options: [
         { value: "all", label: "Alle Status" },
-        ...CONTRACT_STATUS_ORDER.filter(
-          (key) => (data?.list.counts[key] ?? 0) > 0 || key === status,
-        ).map((key) => ({
-          value: key,
-          label: `${CONTRACT_STATUS_LABELS[key]} (${data?.list.counts[key] ?? 0})`,
-        })),
+        ...CONTRACT_STATUS_ORDER.map((key) => {
+          const count = data?.list.counts[key];
+          const label = CONTRACT_STATUS_LABELS[key];
+          return {
+            value: key,
+            label: count === undefined ? label : `${label} (${count})`,
+          };
+        }),
       ],
     },
     ...(schools.length > 1
@@ -880,7 +902,7 @@ export default function TraegerVertraegePage() {
     >
       <LoadErrorAlert
         error={
-          (data ? refreshError : null) ??
+          (data ? (refreshError ?? firstPage.error) : null) ??
           (moreErrorFor === firstPage.data ? moreLoad.error : null)
         }
       />
@@ -976,7 +998,7 @@ export default function TraegerVertraegePage() {
       ) : null}
       {showList ? (
         <DataTable
-          columns={COLUMNS}
+          columns={sort.key === "school" ? COLUMNS_SORTED_BY_SCHOOL : COLUMNS}
           rows={contracts}
           isLoading={loading}
           loadingRowCount={6}

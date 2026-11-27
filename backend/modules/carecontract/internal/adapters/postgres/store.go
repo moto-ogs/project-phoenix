@@ -280,10 +280,6 @@ const summaryJoinsSQL = `
 // Bind order: today twice, then organization_id.
 const summarySQL = summaryColumnsSQL + summaryJoinsSQL + ` WHERE c.organization_id = ?`
 
-// The revision covers membership and order, including the current version
-// selected for this day, not writes such as recording a PDF download.
-// The aggregate and page use one statement snapshot. Full summaries are read only for
-// the page (including the extra row used to tell if more are available).
 // The two unnumbered arguments bind the existing version order to today.
 const contractMatchesSQL = `matching AS MATERIALIZED (
 	SELECT c.id, c.status, c.created_at, v.id AS version_id,
@@ -291,10 +287,6 @@ const contractMatchesSQL = `matching AS MATERIALIZED (
 	WHERE c.organization_id = ?2 AND (?3 = '' OR c.status = ?3) AND (?4 = 0 OR c.school_id = ?4)
 	AND (?5 = '' OR (v.child_first_name || ' ' || v.child_last_name || ' ' || COALESCE(p.first_name || ' ' || p.last_name, '')
 		|| ' ' || COALESCE(p.email, '') || ' ' || array_to_string(` + moduleNamesSQL + `, ' ')) ILIKE ?5)
-), revision AS (
-	SELECT CASE WHEN ?11 THEN '' ELSE COALESCE(SUM(hashtextextended(ROW(
-		id, status, created_at, version_id, effective_from, child_last_name, child_first_name, school_name)::text, 0)), 0)::text END AS value
-	FROM matching
 )`
 
 // Order the states in the order of their life. The start is counted in
@@ -311,12 +303,27 @@ const contractOrderSQL = `CASE ?6 WHEN '` + carecontract.ContractSortStart + `' 
 		CASE WHEN ?6 = '` + carecontract.ContractSortSchool + `' AND ?7 THEN school_name END COLLATE public.german_name DESC,
 		created_at DESC, id DESC`
 
-const listContractsSQL = `SELECT result.* FROM (WITH ` + contractMatchesSQL + `, page AS MATERIALIZED (
+// Compare the IDs and positions the caller already has, not changes after
+// them or changes to row data that leave the offset valid. Rank through the
+// requested page plus one lookahead row, and join full summaries only for
+// the page we actually serve. All reads use the same statement snapshot.
+const listContractsSQL = `SELECT result.* FROM (WITH ` + contractMatchesSQL + `, positioned AS MATERIALIZED (
 	SELECT id, version_id, row_number() OVER (ORDER BY ` + contractOrderSQL + `) AS place
 	FROM (
 		SELECT * FROM matching ORDER BY ` + contractOrderSQL + `
-		LIMIT ?8 OFFSET (SELECT CASE WHEN ?10 <> '' AND ?10 <> value THEN 0 ELSE ?9::bigint END FROM revision)
+		LIMIT LEAST(?9::bigint, 9223372036854775807 - ?8) + ?8
 	) AS selected
+), continuation AS (
+	SELECT CASE WHEN ?10 = '' OR (?10 LIKE 'v1:%' AND split_part(?10, ':', 3) =
+		COALESCE((SELECT SUM(hashtextextended(ROW(id, place)::text, 0)) FROM positioned WHERE place <= ?9), 0)::text
+		) THEN ?9::bigint ELSE 0 END AS start_at
+), revision AS (
+	SELECT CASE WHEN ?11 THEN '' ELSE concat('v1:', start_at, ':',
+		COALESCE((SELECT SUM(hashtextextended(ROW(id, place)::text, 0)) FROM positioned WHERE place - start_at < ?8), 0))
+		END AS value FROM continuation
+), page AS (
+	SELECT id, version_id, place FROM positioned CROSS JOIN continuation
+	WHERE place > start_at AND place - start_at <= ?8
 ), summaries AS (
 	` + summaryColumnsSQL + `, page.place
 	FROM page

@@ -1,4 +1,4 @@
-import { startTransition, Suspense, useState } from "react";
+import { Activity, startTransition, Suspense, useState } from "react";
 import {
   act,
   fireEvent,
@@ -62,6 +62,54 @@ function answering(...answers: string[]) {
 }
 
 describe("useOpeningRead (showCached: false)", () => {
+  it.each([false, true])(
+    "hides the previous answer on Activity reveal (refused=%s)",
+    async (refused) => {
+      const reopened = deferred<string>();
+      const fetcher = vi
+        .fn<() => Promise<string>>()
+        .mockResolvedValueOnce("previous contract")
+        .mockReturnValueOnce(reopened.promise);
+      function Reader() {
+        const read = useAudited("fresh-activity", fetcher);
+        return (
+          <p>
+            {read.error ? "Access refused" : (read.data ?? "Checking access")}
+          </p>
+        );
+      }
+      const { rerender } = render(
+        <Activity mode="visible">
+          <Reader />
+        </Activity>,
+      );
+      expect(await screen.findByText("previous contract")).toBeVisible();
+      rerender(
+        <Activity mode="hidden">
+          <Reader />
+        </Activity>,
+      );
+      rerender(
+        <Activity mode="visible">
+          <Reader />
+        </Activity>,
+      );
+      expect(fetcher).toHaveBeenCalledTimes(2);
+      // The visible opening waits for its own authorization.
+      expect(screen.getByText("Checking access")).toBeVisible();
+      expect(screen.queryByText("previous contract")).not.toBeInTheDocument();
+      await act(async () => {
+        if (refused) reopened.reject(new ApiError("refused", 403));
+        else reopened.resolve("current contract");
+      });
+      expect(
+        await screen.findByText(
+          refused ? "Access refused" : "current contract",
+        ),
+      ).toBeVisible();
+    },
+  );
+
   it("keeps the committed reader usable when another opening suspends", async () => {
     const blocked = deferred<void>();
     const fetcher = vi.fn(async () => "confirmed");

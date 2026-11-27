@@ -828,6 +828,11 @@ export function useOpeningRead<T>(
     flight: number;
     data: T;
   }>();
+  const [failed, setFailed] = useState<{
+    serial: number;
+    flight: number;
+    error: unknown;
+  }>();
   // A new serial per opening: A → B → A must not find A's first answer.
   const [track, setTrack] = useState({ opening, serial: 0 });
   let serial = track.serial;
@@ -840,11 +845,22 @@ export function useOpeningRead<T>(
   // that reconnect effects without changing the key or the render state.
   const committed = useRef<{ serial: number } | null>(null);
   useLayoutEffect(() => {
+    const discardAuditedAnswer = () => {
+      if (!options.showCached) {
+        setHeld(undefined);
+        setFailed(undefined);
+      }
+    };
+    // Drop any state update deferred while Activity was hidden before paint.
+    discardAuditedAnswer();
     committed.current = { serial };
     return () => {
       committed.current = null;
+      // Activity preserves state when it hides a view. An audited read must
+      // not reuse that opening's answer when its effects reconnect.
+      discardAuditedAnswer();
     };
-  }, [serial]);
+  }, [serial, options.showCached]);
   // SWR starts automatic reads on a key change even with mount
   // revalidation off. Until this opening started its own read, none runs;
   // reset before SWR's own layout effects of the new key can read.
@@ -877,11 +893,6 @@ export function useOpeningRead<T>(
 
   const [attempt, setAttempt] = useState({ serial, count: 0 });
   const count = attempt.serial === serial ? attempt.count : 0;
-  const [failed, setFailed] = useState<{
-    serial: number;
-    flight: number;
-    error: unknown;
-  }>();
 
   const flights = useRef(0);
   // The newest read of this hook while it runs; an older one it overtook

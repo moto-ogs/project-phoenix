@@ -8,7 +8,7 @@ import {
 } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { deferred } from "~/test/helpers/form-modal-pending";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import { ApiError } from "~/lib/api-error";
 import {
@@ -18,6 +18,11 @@ import {
 import { reloadDocument } from "~/lib/reload-document";
 import { catalogText } from "~/test/error-catalog-text";
 import { releaseFakeTimers } from "~/test/clock";
+import {
+  DESKTOP_WIDTH,
+  PHONE_WIDTH,
+  setViewportWidth,
+} from "~/test/helpers/viewport";
 import type {
   CareContractList,
   CareContractSummary,
@@ -268,8 +273,10 @@ describe("TraegerVertraegePage", () => {
 
   it("withdraws the newly sorted list when a download from the previous sort is refused", async () => {
     const file = deferred<Response>();
+    const other = deferred<void>();
     bffFile.mockReturnValueOnce(file.promise);
-    renderPage();
+    resetPageReloads();
+    renderPage(<OtherRefresh reload={() => other.promise} />);
     await screen.findAllByText("Lina Muster");
     downloadCsv();
     api.fetchCareContracts.mockResolvedValueOnce({
@@ -279,6 +286,7 @@ describe("TraegerVertraegePage", () => {
     });
     sortByChild();
     expect((await screen.findAllByText("Ben Muster"))[0]).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Andere Liste laden" }));
 
     api.fetchCareContracts.mockImplementation(
       () => new Promise(() => undefined),
@@ -291,6 +299,8 @@ describe("TraegerVertraegePage", () => {
       ),
     ).toBeVisible();
     expect(screen.queryByText("Ben Muster")).not.toBeInTheDocument();
+    await act(async () => other.resolve());
+    expect(reloadDocument).not.toHaveBeenCalled();
   });
 
   it("discards a download from the previous sort when the new list is refused", async () => {
@@ -352,6 +362,45 @@ describe("TraegerVertraegePage", () => {
       },
     );
     await waitFor(() => expect(downloadBlob).toHaveBeenCalledOnce());
+  });
+
+  it("shows the school and an open end in the stacked row when sorting by school", async () => {
+    setViewportWidth(PHONE_WIDTH);
+    onTestFinished(() => setViewportWidth(DESKTOP_WIDTH));
+    api.fetchCareContracts.mockResolvedValue({
+      contracts: [{ ...DRAFT, status: "gekuendigt", endsOn: null }],
+      counts: { gekuendigt: 1 },
+      hasMore: false,
+    });
+    renderPage();
+    await screen.findAllByText("Lina Muster");
+    fireEvent.click(screen.getByRole("combobox", { name: "Sortieren nach" }));
+    fireEvent.click(
+      screen.getByRole("option", { name: "Betreuungsort: A bis Z" }),
+    );
+    const stacked = within(screen.getByTestId("data-table-stacked"));
+    expect(await stacked.findByText("OGS Am Lindenhof")).toBeVisible();
+    expect(stacked.getByText("Ende festlegen")).toBeVisible();
+  });
+
+  it("keeps school and status filters available while the new sort is loading or offline", async () => {
+    api.fetchTraegerSchools.mockResolvedValue([
+      { id: "3", name: "OGS Am Lindenhof" },
+      { id: "4", name: "OGS Am Park" },
+    ]);
+    const sorted = deferred<CareContractList>();
+    renderPage();
+    await screen.findAllByText("Lina Muster");
+    api.fetchCareContracts.mockReturnValueOnce(sorted.promise);
+    sortByChild();
+    expect(screen.getByRole("button", { name: "Alle Schulen" })).toBeVisible();
+    await act(async () => sorted.reject(new ApiError("down", 503)));
+    expect(
+      await screen.findByRole("button", { name: "Wiederholen" }),
+    ).toBeVisible();
+    expect(screen.getByRole("button", { name: "Alle Schulen" })).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Alle Status" }));
+    expect(screen.getByRole("option", { name: "Versendet" })).toBeVisible();
   });
 
   it("keeps the focused sort control when a sorted read fails without showing the old rows", async () => {
@@ -463,7 +512,7 @@ describe("TraegerVertraegePage", () => {
       contracts: [DRAFT],
       counts: { entwurf: 1, versendet: 1 },
       hasMore: true,
-      revision: "1",
+      revision: "v1:0:11",
     };
     api.fetchCareContracts.mockResolvedValue(initial);
     renderPage();
@@ -477,7 +526,7 @@ describe("TraegerVertraegePage", () => {
     api.fetchCareContracts.mockResolvedValueOnce({
       ...initial,
       contracts: [SENT],
-      revision: "2",
+      revision: "v1:0:22",
     });
     fireEvent.click(more);
     expect((await screen.findAllByText("Ben Muster"))[0]).toBeInTheDocument();
@@ -487,7 +536,7 @@ describe("TraegerVertraegePage", () => {
         sort: "status",
         order: "asc",
         offset: 1,
-        revision: "1",
+        revision: "v1:0:11",
       }),
     );
   });
@@ -498,11 +547,19 @@ describe("TraegerVertraegePage", () => {
         contracts: [SENT],
         counts: { entwurf: 1100, versendet: 1 },
         hasMore: true,
+        revision: "v1:0:11",
       })
       .mockResolvedValueOnce({
         contracts: [DRAFT],
         counts: { entwurf: 1100, versendet: 1 },
+        hasMore: true,
+        revision: "v1:1:22",
+      })
+      .mockResolvedValueOnce({
+        contracts: [{ ...DRAFT, id: "9", childFirstName: "Mia" }],
+        counts: { entwurf: 1100, versendet: 1 },
         hasMore: false,
+        revision: "v1:2:33",
       });
     renderPage();
     fireEvent.click(
@@ -517,6 +574,21 @@ describe("TraegerVertraegePage", () => {
       schoolId: "",
       search: "",
       offset: 1,
+      revision: "v1:0:11",
+    });
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Weitere Verträge laden (2 von 1101)",
+      }),
+    );
+    expect((await screen.findAllByText("Mia Muster"))[0]).toBeVisible();
+    expect(screen.getAllByText("Ben Muster")[0]).toBeVisible();
+    expect(api.fetchCareContracts).toHaveBeenLastCalledWith({
+      status: undefined,
+      schoolId: "",
+      search: "",
+      offset: 2,
+      revision: "v1:1:22",
     });
     fireEvent.change(
       screen.getAllByPlaceholderText("Kind, Eltern oder Angebot suchen")[0]!,
@@ -985,6 +1057,36 @@ describe("TraegerVertraegePage", () => {
   // #6652: after a confirmed send a failed reload is a load error above the
   // list, not a failed send or a page error that replaces the contracts.
   describe("reload after a write (#6652)", () => {
+    it("retries a failed list reload after a send error without resending", async () => {
+      api.sendCareContracts.mockRejectedValueOnce(
+        new ApiError("send unavailable", 503),
+      );
+      renderPage();
+      await screen.findAllByText("Lina Muster");
+      api.fetchCareContracts
+        .mockRejectedValueOnce(new ApiError("read unavailable", 503))
+        .mockResolvedValueOnce({
+          contracts: [SENT],
+          counts: { versendet: 1 },
+          hasMore: false,
+        });
+      fireEvent.click(
+        screen.getAllByLabelText("Vertrag von Lina Muster auswählen")[0]!,
+      );
+      fireEvent.click(screen.getByRole("button", { name: "1 Entwurf senden" }));
+      const retry = await screen.findByRole("button", { name: "Wiederholen" });
+      expect(
+        screen.getByText(
+          catalogText("general.unavailable", "die Liste der Verträge"),
+        ),
+      ).toBeVisible();
+      expect(screen.getAllByText("Lina Muster")[0]).toBeVisible();
+      fireEvent.click(retry);
+      await waitFor(() => expect(retry).not.toBeInTheDocument());
+      expect(api.sendCareContracts).toHaveBeenCalledOnce();
+      expect(api.fetchCareContracts).toHaveBeenCalledTimes(3);
+    });
+
     it("reports a refused refresh directly even before the new sort shows contracts", async () => {
       const send = deferred<{ sent: string[]; skipped: [] }>();
       const sorted = deferred<CareContractList>();

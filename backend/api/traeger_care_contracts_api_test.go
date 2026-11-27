@@ -589,8 +589,9 @@ func TestCareContractListPaginatesAndFiltersAllContracts(t *testing.T) {
 	continued := read("sort=status&limit=1&offset=1&revision=" + restarted.Revision)
 	require.Len(t, continued.Contracts, 1)
 	assert.Equal(t, before.Contracts[0].ID, continued.Contracts[0].ID)
-	assert.Equal(t, restarted.Revision, continued.Revision)
+	assert.NotEqual(t, restarted.Revision, continued.Revision, "each page returns the cursor for its own continuation")
 	assert.False(t, continued.HasMore)
+	assert.Empty(t, read("sort=status&limit=1&offset=2&revision="+continued.Revision).Contracts)
 
 	// A parent's PDF download records when they received the withdrawal notice.
 	// This touches updated_at, not the membership or order of the list.
@@ -599,7 +600,19 @@ func TestCareContractListPaginatesAndFiltersAllContracts(t *testing.T) {
 	afterPDF := read("sort=status&limit=1&offset=1&revision=" + restarted.Revision)
 	require.Len(t, afterPDF.Contracts, 1)
 	assert.Equal(t, continued.Contracts[0].ID, afterPDF.Contracts[0].ID)
-	assert.Equal(t, restarted.Revision, afterPDF.Revision)
+	assert.Equal(t, continued.Revision, afterPDF.Revision)
+
+	// Sending a draft below the visible page does not move it in the
+	// default order. The next page should show it as sent, not repeat page one.
+	defaultPage := read("limit=1")
+	olderID := next.Contracts[0].ID
+	sent = traegerJSON(t, f.traeger, token, http.MethodPost, "/traeger/contracts/send",
+		map[string]any{"contract_ids": []string{fmt.Sprint(olderID)}})
+	require.Equal(t, http.StatusAccepted, sent.Code, sent.Body.String())
+	afterSend := read("limit=1&offset=1&revision=" + defaultPage.Revision)
+	require.Len(t, afterSend.Contracts, 1)
+	assert.Equal(t, olderID, afterSend.Contracts[0].ID)
+	assert.Equal(t, carecontract.StatusSent, afterSend.Contracts[0].Status)
 }
 
 func TestCareContractFailedDeliveryCanUseACorrectedAddressWithItsFrozenPDF(t *testing.T) {
