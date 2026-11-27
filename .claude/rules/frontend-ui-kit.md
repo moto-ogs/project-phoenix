@@ -329,7 +329,7 @@ Standard 4px scale — Tailwind `p-*` / `gap-*` / `m-*` map 1:1: `1`=4 · `2`=8 
 
 ## UI skills: this rule outranks all of them
 
-The UI skills live in `frontend/.claude/skills/` and load only when an agent works in `frontend/`. **This rule and the kit win; a skill's generic advice is the fallback where this rule is silent.** Run one review, not four. `better-interface` is the entry point for a full pass over the six `better-*` skills.
+The UI skills live in `frontend/.claude/skills/`; its README names the ones also linked at the root. **This rule and the kit win; a skill's generic advice is the fallback where this rule is silent.** Run one review, not four. `better-interface` is the entry point for a full pass over the six `better-*` skills.
 
 The three places where following the vendored skill literally produces wrong output here (two of them fail `pnpm run check`):
 
