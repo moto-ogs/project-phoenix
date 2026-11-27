@@ -50,3 +50,11 @@ Vorlage anpasst, mischt ein solches Schreiben beide Formen.
 Neue und geänderte deutsche Texte stehen in der Du-Form. Die Regel steht in
 `.agents/skills/moto-einfache-sprache/SKILL.md`; die Verständlichkeits- und
 Hilfe-Regeln verweisen darauf.
+
+## Nachtrag 2026-11-27: Bestätigungsmail der Ferienanmeldung in der Sie-Form
+
+Nach Rückmeldung eines Kunden spricht die Bestätigungsmail einer
+Ferienanmeldung (`holiday-registration-accepted.html`) die Eltern mit „Sie“
+an, Entscheidung vom 27.11.2026. Sie geht einer geplanten Überarbeitung
+voraus: Kommunikation, die moto nach außen verschickt, nutzt „Sie“, die
+Portale bleiben beim „du“. Bis dahin gilt Punkt 1 für alle übrigen Texte.
