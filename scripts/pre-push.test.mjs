@@ -144,6 +144,7 @@ test('budget JSON and every skill directory select the context gate', async t =>
       assert.equal(result.status, 0, result.stdout + result.stderr);
       assert.match(result.stdout, /\[context\]/);
       assert.match(result.stdout, /\[context-tests\]/);
+      assert.match(result.stdout, /backend=false frontend=false/);
     });
   }
 });

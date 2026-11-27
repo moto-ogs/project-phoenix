@@ -70,6 +70,11 @@ if (movedOnly) {
   process.exit(0);
 }
 
+function frontendGuidance(file) {
+  return file.startsWith("frontend/") &&
+    (file.endsWith(".md") || /^frontend\/\.(?:agents|claude)\//.test(file));
+}
+
 function selectionMode(files) {
   let changed;
   if (files !== undefined) {
@@ -78,18 +83,18 @@ function selectionMode(files) {
   } else changed = changedPaths();
   // Tests in these source areas use Vitest's changed graph too. Declaration
   // files have no runtime emission; source-scanning guards still run with them.
-  // Markdown skips lint/build, but tests may read it. Keep its guard-only
+  // Guidance skips lint/build, but tests may read it. Keep its guard-only
   // route aligned with the workflow filters; never silently skip consumers.
   // Every other path/type outside this allowlist defaults to the full suite.
   const sourceModule = /^frontend\/src\/(?:app|components|contexts|hooks|i18n|lib|server)\/.+\.(?:[cm]?[jt]s|[jt]sx)$/;
-  const frontend = [...changed].filter(file => file.startsWith("frontend/") && !file.endsWith(".md"));
+  const frontend = [...changed].filter(file => file.startsWith("frontend/") && !frontendGuidance(file));
   // Its behavior suite is an unconditional external guard, including on deletion.
   if (frontend.some(file => !sourceModule.test(file) &&
     file !== "frontend/scripts/product-screenshots/quality.ts") ||
     ["scripts/test-frontend-changed.mjs", "scripts/test-frontend-changed.test.mjs",
       ".github/workflows/main.yml", ".github/workflows/test.yml"].some(file => changed.has(file))) return "full";
   if (frontend.length) return "incremental";
-  if ([...changed].some(file => file.startsWith("frontend/") && file.endsWith(".md") ||
+  if ([...changed].some(file => frontendGuidance(file) ||
     file.startsWith("backend/") && !file.endsWith(".md") ||
     file === "scripts/dev-native.sh" || file === ".github/workflows/e2e.yml" ||
     file === ".github/workflows/lint.yml")) return "guards";
@@ -206,8 +211,9 @@ if (base === "--check-guards") {
         const imported = localFile(file, specifier);
         if (imported) {
           const path = relative(cwd, imported);
-          // Backend/catalog imports are outside Vitest's frontend graph.
-          if (isAbsolute(path) || path === ".." || path.startsWith(".." + sep)) io = true;
+          // External inputs and guidance get only guards, not graph selection.
+          if (isAbsolute(path) || path === ".." || path.startsWith(".." + sep) ||
+            frontendGuidance("frontend/" + path.split(sep).join("/"))) io = true;
           else dependencies.push(imported);
         } else io = true; // Unresolved local imports must never opt a test out.
       }

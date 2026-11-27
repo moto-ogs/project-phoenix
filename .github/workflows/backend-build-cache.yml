@@ -18,6 +18,10 @@ on:
       - development
     paths:
       - 'backend/**'
+      - '!backend/.agents/**'
+      - '!backend/.claude/**'
+      - '!backend/AGENTS.md'
+      - '!backend/CLAUDE.md'
       - 'scripts/backend-architecture/**'
       - 'scripts/backend-test-matrix.sh'
       - 'scripts/go-cache-sweep.sh'

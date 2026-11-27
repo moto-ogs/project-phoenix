@@ -116,6 +116,11 @@ test("CI starts frontend guards for backend-only inputs and the native launcher"
   assert.ok(filter, "frontend input job filter exists");
   assert.match(filter, /- 'backend\/\*\*'/);
   assert.match(filter, /- 'frontend\/\*\*\/\*\.md'/);
+  const product = workflow.match(/            frontend:\n([\s\S]*?)(?=            [\w-]+:)/)?.[1];
+  for (const directory of [".agents", ".claude"]) {
+    assert.ok(filter.includes(`- 'frontend/${directory}/**'`));
+    assert.ok(product?.includes(`- '!frontend/${directory}/**'`));
+  }
   assert.match(filter, /- 'scripts\/dev-native\.sh'/);
   assert.match(filter, /- '\.github\/workflows\/e2e\.yml'/);
   assert.match(workflow, /run-frontend:.*steps\.filter\.outputs\.frontend-fs-inputs == 'true'/);
@@ -319,6 +324,9 @@ test("CI JSON classification uses the same fail-closed decision, including both 
   const f = fixture(t);
   for (const [paths, mode] of [
     [[], "none"], [["frontend/README.md"], "guards"],
+    [["frontend/.agents/skills/ui-skills", "frontend/.claude/skills/example/agents/openai.yaml"], "guards"],
+    [["frontend/.agents/skills/ui-skills", "frontend/src/lib/changed.ts"], "incremental"],
+    [["frontend/.claude/skills/example", "frontend/vitest.config.ts"], "full"],
     [["frontend/public/sw.js"], "full"],
     [["frontend/unknown.input", "frontend/src/lib/moved.ts"], "full"],
     [["backend/catalog.json"], "guards"],
@@ -338,6 +346,15 @@ test("CI JSON classification uses the same fail-closed decision, including both 
     assert.equal(result.status, 1);
     assert.equal(result.stdout, "", "invalid inputs must not produce a successful selection");
   }
+});
+
+test("a test importing an agent input must run in the guards job", t => {
+  const f = fixture(t);
+  f.write("frontend/.agents/skills/example/input.json", "{}");
+  f.write("frontend/src/probe.test.ts", 'import input from "../.agents/skills/example/input.json";');
+  const result = f.run("--check-guards");
+  assert.equal(result.status, 1, result.stderr);
+  assert.match(result.stderr, /probe\.test\.ts/);
 });
 
 for (const transitive of [false, true]) {

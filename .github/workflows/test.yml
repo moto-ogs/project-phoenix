@@ -181,15 +181,6 @@ jobs:
           cache: true
           cache-dependency-path: backend/go.sum
 
-      # The SEPA direct debit file is checked against the official ISO
-      # schema with xmllint (#4697); the runner image does not carry it.
-      # Refresh the package lists only when the cached ones miss it.
-      - name: Install xmllint for the XML schema tests
-        run: |
-          command -v xmllint >/dev/null && exit 0
-          sudo apt-get install -y -qq --no-install-recommends libxml2-utils \
-            || { sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends libxml2-utils; }
-
       # setup-go's go.sum-only key is immutable. It restores dependencies but
       # never saves later source builds on an exact hit. Keep a source-keyed
       # build layer per shard, with the last source build as a warm fallback.
@@ -382,6 +373,14 @@ jobs:
           fi
           echo "Running ${#packages[@]} selected Go packages"
 
+          # Only the SEPA tests validate documents against an XSD (#4697).
+          # Full runs and race shards use the same concrete package list.
+          if grep -Fxq 'github.com/moto-ogs/project-phoenix/modules/parentbilling/internal/application' <<< "$TEST_PACKAGES" &&
+             ! command -v xmllint >/dev/null; then
+            sudo apt-get install -y -qq --no-install-recommends libxml2-utils \
+              || { sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends libxml2-utils; }
+          fi
+
           # Every registered route a test answers through a router, for
           # "Check every registered route is answered" below (#7563). It
           # holds them only when this run tested ./api, which links every
@@ -562,9 +561,14 @@ jobs:
       fail-fast: false
       matrix:
         # Changed-only PRs keep one DOM job. Full suites split its files with
-        # Vitest's built-in sharding, retaining four workers per DOM runner.
+        # Vitest's built-in sharding.
         project: ${{ fromJSON(inputs.frontend-guards-only && '["guards"]' || (!inputs.changed-scope || inputs.full-frontend-suite || inputs.base_ref == '') && '["node","dom-1","dom-2"]' || '["node","dom"]') }}
-    runs-on: ${{ (matrix.project == 'node' || matrix.project == 'guards') && 'blacksmith-4vcpu-ubuntu-2404' || 'blacksmith-8vcpu-ubuntu-2404' }}
+    # Both full DOM shards had over two minutes of median headroom on green
+    # PRs (Nov 25–26). Standard GitHub runners are free only while public.
+    runs-on: >-
+      ${{ startsWith(matrix.project, 'dom-') && github.event.repository.visibility == 'public' && 'ubuntu-24.04'
+          || (matrix.project == 'node' || matrix.project == 'guards') && 'blacksmith-4vcpu-ubuntu-2404'
+          || 'blacksmith-8vcpu-ubuntu-2404' }}
     timeout-minutes: 15
     permissions:
       contents: read

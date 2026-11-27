@@ -643,8 +643,7 @@ for manifest in go.mod go.sum; do
   grep -qx 'full=true' "$fixture/scope-size"
   rm "$fixture/scope-size"
 done
-# The runner is sized before the import graph is known: only test files in at
-# most 15 directories prove a selection of at most 16 packages (with ./test).
+# Only package-local test inputs have a bounded selection without an import graph.
 assert_small_runner() {
   expected=$1
   files=$2
@@ -658,7 +657,14 @@ assert_small_runner true '["backend/api/a_test.go","backend/api/b_test.go"]'
 assert_small_runner true "$(jq -cn '[range(0; 15) | "backend/package\(.)/source_test.go"]')"
 assert_small_runner false "$(jq -cn '[range(0; 16) | "backend/package\(.)/source_test.go"]')"
 assert_small_runner false '["backend/api/a_test.go","backend/api/a.go"]'
-assert_small_runner false '["backend/api/a_test.go","backend/api/testdata/a.json"]'
+assert_small_runner true '["backend/templates/email/holiday-registration-accepted.html","backend/templates/email/holiday_registration_accepted_test.go"]'
+assert_small_runner true "$(jq -cn '[range(0; 15) | "backend/package\(.)/a_test.go", "backend/package\(.)/testdata/sub/input.go"]')"
+assert_small_runner false "$(jq -cn '[range(0; 16) | "backend/package\(.)/testdata/sub/input.json"]')"
+assert_small_runner false '["backend/testdata/shared-cases.json"]'
+assert_small_runner false '["backend/testdata/shared_test.go"]'
+assert_small_runner false '["backend/test/query-budgets/report_test.go"]'
+assert_small_runner false '["backend/architecture/command-effects/fixture_test.go"]'
+assert_small_runner false '["backend/templates/email/new-input.bin"]'
 assert_small_runner false '["backend/go.sum"]'
 grep -qF "backend-small-runner: \${{ needs.detect-changes.outputs.small-backend-suite == 'true' && needs.detect-changes.outputs.full-backend-suite != 'true' }}" "$repo_root/.github/workflows/main.yml" ||
   { echo 'a full backend suite must not run on the small runner' >&2; exit 1; }

@@ -212,6 +212,8 @@ jobs:
             frontend:
               - 'frontend/**'
               - '!frontend/**/*.md'
+              - '!frontend/.agents/**'
+              - '!frontend/.claude/**'
             # Catalogs read by frontend validators and the identifier lint rule.
             frontend-catalog-inputs:
               - 'backend/api/contract/contract.json'
@@ -219,8 +221,10 @@ jobs:
               - 'scripts/error-registry.mjs'
               - 'backend/modules/delivery/internal/adapters/localization/locales.json'
             frontend-fs-inputs:
-              # External/Markdown inputs need one guard job, not both projects.
+              # Agent guidance and other filesystem inputs need guards, not a product build.
               - 'frontend/**/*.md'
+              - 'frontend/.agents/**'
+              - 'frontend/.claude/**'
               - 'backend/**'
               - '!backend/**/*.md'
               - 'scripts/dev-native.sh'
@@ -478,13 +482,19 @@ jobs:
           full=$(jq 'any(.[]; . == "backend/go.mod" or . == "backend/go.sum") or
             (map(select(endswith(".go")) | split("/")[:-1] | join("/")) | unique | length >= 64)' <<< "$CHANGED_FILES")
           echo "full=$full" >> "$GITHUB_OUTPUT"
-          # The backend test job selects its packages itself and needs its
-          # runner before that. A changed test file selects only its own
-          # package, so test files in at most 15 directories plus ./test stay
-          # within the 16 packages four vCPUs are sized for. Every other
-          # change may reach any number of importers and gets sixteen.
-          small=$(jq 'length > 0 and all(.[]; endswith("_test.go")) and
-            (map(split("/")[:-1] | join("/")) | unique | length <= 15)' <<< "$CHANGED_FILES")
+          # Size only inputs whose package is known without the import graph.
+          # backend-affected-packages.sh adds ./test and treats the shared
+          # fixture, architecture register and query-budget trees specially.
+          small=$(jq '
+            def local_test_package:
+              if (startswith("backend/") | not) or
+                 test("^backend/(testdata|architecture/(policy|command-effects|passthrough)|test/query-budgets)/") then null
+              elif contains("/testdata/") then split("/testdata/")[0]
+              elif endswith("_test.go") or test("^backend/templates/email/[^/]+\\.html$") then
+                split("/")[:-1] | join("/")
+              else null end;
+            map(local_test_package) | length > 0 and all(.[]; . != null) and (unique | length <= 15)
+          ' <<< "$CHANGED_FILES")
           echo "small=$small" >> "$GITHUB_OUTPUT"
 
   ci-scripts:

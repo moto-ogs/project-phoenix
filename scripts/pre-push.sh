@@ -77,10 +77,7 @@ else
 fi
 while IFS= read -r -d '' file; do
   case "$file" in
-    backend/.agents/*|backend/.claude/*|frontend/.agents/*|frontend/.claude/*) context=true ;;
-  esac
-  case "$file" in
-    *.md) context=true ;;
+    *.md|backend/.agents/*|backend/.claude/*|frontend/.agents/*|frontend/.claude/*) context=true ;;
     backend/api/contract/contract.json) backend=true; frontend=true ;;
     backend/*|scripts/backend-*|scripts/check-backend-quality.sh|scripts/check-deadcode*) backend=true ;;
     frontend/*|scripts/check-frontend-quality.sh) frontend=true ;;
