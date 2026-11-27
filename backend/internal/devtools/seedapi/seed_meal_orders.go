@@ -204,7 +204,9 @@ func pickAcrossClasses(children []mealChild, count int) []mealChild {
 }
 
 // fixMealOrderDay makes the day due, records the late changes (the first
-// one fixes the order) and restores the deadline, also after a failure.
+// one fixes the order) and restores the deadline, also after a failure. A
+// small profile can lack both a cancellable participant and a late addition;
+// then writing the kept child's unchanged participation fixes the due order.
 // The kept child is never cancelled: the parents portal shows the first
 // parent's child with lunch.
 func fixMealOrderDay(rt *Runtime, day seedDate, leadDays int, list mealDay, kept int64) (err error) {
@@ -216,6 +218,7 @@ func fixMealOrderDay(rt *Runtime, day seedDate, leadDays int, list mealDay, kept
 			err = restoreErr
 		}
 	}()
+	changed := false
 	cancelled := 0
 	for _, child := range list.participants {
 		if cancelled < mealOrderLateCancels && child.id != kept {
@@ -223,10 +226,17 @@ func fixMealOrderDay(rt *Runtime, day seedDate, leadDays int, list mealDay, kept
 				return err
 			}
 			cancelled++
+			changed = true
 		}
 	}
 	for _, child := range pickAcrossClasses(list.others, mealOrderLateAdds) {
 		if err := setMealDay(rt, child.id, day, true); err != nil {
+			return err
+		}
+		changed = true
+	}
+	if !changed {
+		if err := setMealDay(rt, kept, day, true); err != nil {
 			return err
 		}
 	}

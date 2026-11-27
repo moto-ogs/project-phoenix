@@ -203,6 +203,32 @@ func TestSeedMealOrdersRestoresTheDeadlineAfterAFailure(t *testing.T) {
 	assert.Contains(t, server.events, "lead 2")
 }
 
+// A small profile can have only the first parent's child on the order day.
+// It still writes once after making the day due, so that write stores the
+// order synchronously before the caterer accepts its invitation.
+func TestSeedMealOrdersFixesADayWithoutLateChanges(t *testing.T) {
+	t.Parallel()
+	server := &mealOrderServer{t: t, date: "2026-09-08"}
+	srv := newSeedHTTPTestServer(func(w seedHTTPResponseWriter, r *seedHTTPRequest) {
+		if r.URL.Path == "/api/meal-plan/participants" {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = fmt.Fprint(w, mealOrderListJSON(1, 0))
+			return
+		}
+		server.handle(w, r)
+	})
+	defer srv.Close()
+	today, err := parseSeedDate("2026-09-07")
+	require.NoError(t, err)
+
+	require.NoError(t, seedMealOrders(context.Background(), mealOrderRuntime(srv.URL), nil, today))
+	assert.Equal(t, []string{
+		"lead 2",
+		"day 1/days/2026-09-08 true",
+		"lead 0",
+	}, server.events)
+}
+
 // The school invites its caterer once meal registration is on, and only
 // with a mailbox to accept the invitation from: in the demo sidecar the
 // mail would go to an address nobody reads (ADR 0077).
