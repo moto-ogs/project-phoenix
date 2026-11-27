@@ -253,6 +253,7 @@ export const HELP_TOPICS = {
   traegerBillingRun: "ferien-abrechnen",
   traegerCareMonths: "monatsbeitraege-abrechnen",
   traegerCareNotices: "jahresbescheide-ausstellen",
+  traegerInvoiceJournal: "rechnungsausgangsbuch-lesen",
   traegerCareReductions: "ermaessigungen-im-monatsbeitrag",
   traegerCareMeals: "mensa-abrechnen",
   traegerCareCostShares: "kostentraeger-im-monatsbeitrag",

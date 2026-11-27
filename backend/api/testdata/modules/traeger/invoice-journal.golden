@@ -1,0 +1,2 @@
+GET /traeger/invoice-journal/ -> elternbeitraege
+GET /traeger/invoice-journal/export -> elternbeitraege

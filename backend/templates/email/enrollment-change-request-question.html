@@ -1,7 +1,5 @@
 {{define "enrollment-change-request-question.html"}}
-{{template "header" .}}
-
-<div class="email-body">
+{{template "header"}}
     {{template "school-brand" .}}
     <h1>Rückfrage zu Ihrer Änderungsanfrage</h1>
 
@@ -9,14 +7,11 @@
 
     <p>die Schule hat eine Rückfrage zu Ihrer Änderungsanfrage gestellt. Bitte öffnen Sie den Status-Link und antworten Sie dort.</p>
 
-    <div class="button-wrapper" style="text-align: center;">
+    <div class="button-wrapper">
         <a class="button" href="{{.StatusURL}}">Status und Rückfrage öffnen</a>
     </div>
 
-    <div class="link-box">
-        <a href="{{.StatusURL}}">{{.StatusURL}}</a>
-    </div>
-</div>
+    {{template "link-box" .StatusURL}}
 
 {{template "footer" .}}
 {{end}}

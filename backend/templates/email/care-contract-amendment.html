@@ -1,7 +1,6 @@
 {{define "care-contract-amendment.html"}}
-{{template "header" .}}
-
-<div class="email-body">
+{{template "header"}}
+    {{template "sender-brand" .}}
     <h1>Ihr Betreuungsvertrag ändert sich</h1>
 
     <p>Guten Tag{{if .GuardianName}} {{.GuardianName}}{{end}},</p>
@@ -14,16 +13,17 @@
         <p style="margin: 8px 0 0 0; font-size: 14px;">Die neue Fassung gilt{{if .EffectiveFrom}} ab dem {{.EffectiveFrom}}, aber{{end}} erst, wenn Sie unterschrieben haben. Bis dahin bleibt alles wie bisher.</p>
     </div>
 
-    <div class="button-wrapper" style="text-align: center;">
+    <div class="button-wrapper">
         <a class="button" href="{{.SigningURL}}">Änderung ansehen und unterschreiben</a>
     </div>
 
-    <p class="security-note">Der Link gilt einmal{{if .LinkExpiresOn}} und bis zum {{.LinkExpiresOn}}{{end}}. Geben Sie ihn nicht weiter. Sie können auch auf Papier unterschreiben: Drucken Sie die neue Fassung aus und geben Sie sie beim Träger ab.</p>
+    <div class="highlight-box">
+        <p>Der Link gilt einmal{{if .LinkExpiresOn}} und bis zum {{.LinkExpiresOn}}{{end}}. Geben Sie ihn nicht weiter. Sie können auch auf Papier unterschreiben: Drucken Sie die neue Fassung aus und geben Sie sie beim Träger ab.</p>
+    </div>
 
     <p>Haben Sie die moto Eltern-App? Dann finden Sie die neue Fassung auch dort unter „Dokumente“ und können sie dort unterschreiben.</p>
 
     <p class="security-note">Stimmt etwas nicht? Dann unterschreiben Sie nicht und melden Sie sich beim Träger{{if .SchoolName}} ({{.SchoolName}}){{end}}. Die Kontaktdaten stehen im Vertrag. Bitte antworten Sie nicht auf diese E-Mail.</p>
-</div>
 
 {{template "footer" .}}
 {{end}}

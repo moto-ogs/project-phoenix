@@ -1,7 +1,6 @@
 {{define "holiday-registration-received.html"}}
-{{template "header" .}}
-
-<div class="email-body">
+{{template "header"}}
+    {{template "sender-brand" .}}
     <h1>Ferienanmeldung eingegangen</h1>
 
     <p>Guten Tag {{.GuardianName}},</p>
@@ -61,14 +60,12 @@
     {{if .StatusURL}}
     <p style="margin-top: 24px;">Den Stand Ihrer Anmeldung sehen Sie jederzeit hier:</p>
 
-    <div class="button-wrapper" style="text-align: center;">
+    <div class="button-wrapper">
         <a class="button" href="{{.StatusURL}}">Stand ansehen</a>
     </div>
 
     <p style="margin-top: 24px; font-size: 14px; color: #6b7280;">Falls der Button nicht geht, kopieren Sie diesen Link:</p>
-    <div class="link-box">
-        <a href="{{.StatusURL}}">{{.StatusURL}}</a>
-    </div>
+    {{template "link-box" .StatusURL}}
     <p style="font-size: 14px; color: #6b7280;">Geben Sie den Link nicht weiter. Wer ihn hat, sieht den Stand Ihrer Anmeldung.</p>
     {{end}}
 
@@ -86,7 +83,6 @@
     {{end}}
 
     <p class="security-note">Bitte antworten Sie nicht auf diese E-Mail. Bei Fragen wenden Sie sich an den Träger ({{.SchoolName}}).</p>
-</div>
 
 {{template "footer" .}}
 {{end}}

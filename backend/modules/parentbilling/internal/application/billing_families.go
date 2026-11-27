@@ -33,6 +33,8 @@ type FamilyStore interface {
 	InsertFamilyBillingEvents(ctx context.Context, organizationID, accountID int64, action string, families []parentbilling.FamilyBilling) error
 	// ChildNumberStore keeps the numbers of the children (#7007).
 	ChildNumberStore
+	// JournalStore reads every issued document in one list (#4819).
+	JournalStore
 }
 
 // BillingFamilies serves parentbilling.BillingFamilies (#4691).

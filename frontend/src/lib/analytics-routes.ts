@@ -248,6 +248,7 @@ export const TRACKED_TRAEGER_ROUTE_TEMPLATES = [
   "/abrechnung/jahresbescheide/:id/bescheid/:contractId",
   "/abrechnung/jahresbescheide/:id/lastschrift",
   "/abrechnung/jahresbescheide/:id/versand",
+  "/abrechnung/rechnungsausgangsbuch",
   "/abrechnung/nachweise",
   "/abrechnung/preise",
   "/ankunft-abholung",

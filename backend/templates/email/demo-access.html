@@ -1,13 +1,11 @@
 {{define "demo-access.html"}}
-{{template "header" .}}
-
-<div class="email-body">
+{{template "header"}}
     {{template "moto-brand" .}}
     <h1>Ihre moto-Demo</h1>
     <p>Guten Tag,</p>
     <p>mit diesem Link kommen Sie jederzeit zurück in Ihre Demo.</p>
 
-    <div class="button-wrapper" style="text-align: center;">
+    <div class="button-wrapper">
         <a class="button" href="{{.EntryURL}}">Demo öffnen</a><br />
     </div>
 
@@ -21,7 +19,6 @@
     </div>
 
     <p>Fragen? Antworten Sie einfach auf diese Mail.</p>
-</div>
 
 {{template "footer" .}}
 {{end}}

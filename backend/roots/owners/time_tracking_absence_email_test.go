@@ -1,10 +1,11 @@
 package owners
 
 import (
-	"context"
+	"encoding/json"
 	"errors"
 	"testing"
 
+	deliveryCompose "github.com/moto-ogs/project-phoenix/modules/delivery/compose"
 	workforceCompose "github.com/moto-ogs/project-phoenix/modules/workforce/compose"
 	testpkg "github.com/moto-ogs/project-phoenix/test"
 	"github.com/stretchr/testify/require"
@@ -13,10 +14,14 @@ import (
 func TestAbsenceEmailDeliveryPreservesMetadataAndContent(t *testing.T) {
 	t.Parallel()
 	resolver := &testpkg.ReplyToResolverStub{Name: "School", Address: "school@example.test"}
-	dispatcher := AbsenceEmailDispatcher{Identity: resolver}
+	capture := &intentCapture{}
+	dispatcher := AbsenceEmailDispatcher{
+		Durable:  OutboxEnqueuer{Runtime: &deliveryCompose.Runtime{Module: capture}},
+		Identity: resolver,
+	}
 	dispatcher.From.Name, dispatcher.From.Address = "moto", "no-reply@example.test"
 	message := workforceCompose.AbsenceEmailMessage{
-		Type: "absence_request_received", ReferenceID: 42, TenantID: 7, Recipient: "recipient@example.test",
+		Type: "absence_request_received", ReferenceID: 42, TenantID: 7,
 		Template: "absence-request-received.html", Subject: "Request",
 	}
 	message.To.Name, message.To.Address = "Recipient", "recipient@example.test"
@@ -25,11 +30,20 @@ func TestAbsenceEmailDeliveryPreservesMetadataAndContent(t *testing.T) {
 	message.Content.DateRange, message.Content.Note = "01.01.2026", "Note"
 	message.Content.PreviousQuestion = "Question"
 	message.Content.LinkURL, message.Content.LogoURL = "https://school.example.test/staff", "https://example.test/logo.png"
-	request := dispatcher.request(context.Background(), message)
+	enqueue := func() transactionalMailPayload {
+		require.NoError(t, dispatcher.Enqueue(t.Context(), message))
+		require.Equal(t, message.TenantID, capture.intent.TenantID)
+		require.Equal(t, message.Type, capture.intent.Related.Type)
+		require.Equal(t, message.ReferenceID, capture.intent.Related.ID)
+		require.Equal(t, message.To.Address, capture.intent.Recipient.Address)
+		var payload transactionalMailPayload
+		require.NoError(t, json.Unmarshal(capture.intent.Payload, &payload))
+		return payload
+	}
+	request := enqueue()
 	require.Equal(t, message.TenantID, resolver.TenantID)
-	require.Equal(t, message.Type, request.Metadata.Type)
-	require.Equal(t, message.ReferenceID, request.Metadata.ReferenceID)
-	require.Equal(t, message.Recipient, request.Metadata.Recipient)
+	require.Equal(t, message.Type, request.Type)
+	require.Equal(t, message.ReferenceID, request.ReferenceID)
 	require.Equal(t, dispatcher.From, request.Message.From)
 	require.Equal(t, message.To.Name, request.Message.To.Name)
 	require.Equal(t, message.To.Address, request.Message.To.Address)
@@ -45,7 +59,7 @@ func TestAbsenceEmailDeliveryPreservesMetadataAndContent(t *testing.T) {
 	resolver.Err = errors.New("reply address unavailable")
 	message.Template = "absence-request-approved.html"
 	message.Content.DecisionNote = "Approved"
-	request = dispatcher.request(context.Background(), message)
+	request = enqueue()
 	require.Empty(t, request.Message.ReplyTo.Address)
 	content := request.Message.Content.(map[string]any)
 	require.Equal(t, "Approved", content["DecisionNote"])
@@ -55,7 +69,7 @@ func TestAbsenceEmailDeliveryPreservesMetadataAndContent(t *testing.T) {
 	resolver.Err = nil
 	resolver.TenantID = 0
 	message.TenantID = 0
-	request = dispatcher.request(context.Background(), message)
+	request = enqueue()
 	require.Zero(t, resolver.TenantID, "tenantless sends must not resolve a reply address")
 	require.Empty(t, request.Message.ReplyTo.Address)
 }

@@ -1,7 +1,6 @@
 {{define "care-contract-signed.html"}}
-{{template "header" .}}
-
-<div class="email-body">
+{{template "header"}}
+    {{template "sender-brand" .}}
     <h1>Ihr Betreuungsvertrag ist unterschrieben</h1>
 
     <p>Guten Tag{{if .GuardianName}} {{.GuardianName}}{{end}},</p>
@@ -23,8 +22,7 @@
 
     <p>Haben Sie die moto Eltern-App? Dann finden Sie den Vertrag auch dort unter „Dokumente“.</p>
 
-    <p class="security-note">Bitte antworten Sie nicht auf diese E-Mail. Bei Fragen wenden Sie sich an den Träger{{if .SchoolName}} ({{.SchoolName}}){{end}}.</p>
-</div>
+    <p class="security-note">{{template "traeger-contact" .SchoolName}}</p>
 
 {{template "footer" .}}
 {{end}}

@@ -15,24 +15,55 @@
 
 <div class="email-container">
 
+<div class="email-body"{{if ne . nil}} lang="{{.}}"{{end}}>
+
 {{end}}
 
+{{/* moto is the sender: the moto logo, or the word when the mail has no logo URL. */}}
 {{define "moto-brand"}}
 <div class="brand">
-    <img src="{{.LogoURL}}" alt="moto" style="max-width: 180px; height: auto; display: block; margin: 0 auto;" />
+    {{if .LogoURL}}
+    <img src="{{.LogoURL}}" alt="moto" width="180" style="max-width: 180px; height: auto; display: block; margin: 0 auto;" />
+    {{else}}
+    <p class="moto-wordmark">moto</p>
+    {{end}}
 </div>
+{{end}}
+
+{{/* Secondary branding in school and Träger mails; the named sender stays first. */}}
+{{define "moto-mark"}}<td class="sender-brand-mark">moto</td>{{end}}
+
+{{/* A Träger or a school without a logo is the sender: its name as text, no
+     badge and no kicker, with the moto mark beside it. Without a name the
+     mail falls back to the moto header. */}}
+{{define "sender-brand"}}
+{{if .SchoolName}}
+<table class="sender-brand" role="presentation" cellpadding="0" cellspacing="0" border="0">
+    <tr>
+        <td class="sender-brand-copy"><p class="school-name">{{.SchoolName}}</p></td>
+        {{template "moto-mark"}}
+    </tr>
+</table>
+{{else}}
+{{template "moto-brand" .}}
+{{end}}
 {{end}}
 
 {{define "school-brand"}}
-<div class="school-brand">
-    {{if .LogoURL}}
-    <img class="school-logo" src="{{.LogoURL}}" alt="{{if .SchoolName}}{{.SchoolName}}{{else if .SchoolLogoAlt}}{{.SchoolLogoAlt}}{{else}}Logo der Schule{{end}}" />
-    {{else}}
-    <div class="school-logo-fallback">{{if .CareFacilityBadge}}{{.CareFacilityBadge}}{{else}}OGS{{end}}</div>
-    {{end}}
-    <div class="school-brand-copy">
-        <p class="school-kicker">{{if .BrandKicker}}{{.BrandKicker}}{{else if .DefaultBrandKicker}}{{.DefaultBrandKicker}}{{else}}Online-Anmeldung{{end}}</p>
-        <p class="school-name">{{if .SchoolName}}{{.SchoolName}}{{else if .DefaultSchoolName}}{{.DefaultSchoolName}}{{else if .CareFacilityOwn}}{{.CareFacilityOwn}}{{else if .CareFacilityTerm}}Ihre {{.CareFacilityTerm}}{{else}}Ihre OGS{{end}}</p>
-    </div>
-</div>
+<table class="school-brand" role="presentation" cellpadding="0" cellspacing="0" border="0">
+    <tr>
+        <td class="school-brand-mark">
+            {{if .LogoURL}}
+            <img class="school-logo" src="{{.LogoURL}}" alt="{{if .SchoolName}}{{.SchoolName}}{{else if .SchoolLogoAlt}}{{.SchoolLogoAlt}}{{else}}Logo der Schule{{end}}" />
+            {{else}}
+            <div class="school-logo-fallback">{{if .CareFacilityBadge}}{{.CareFacilityBadge}}{{else}}OGS{{end}}</div>
+            {{end}}
+        </td>
+        <td class="school-brand-copy">
+            <p class="school-kicker">{{if .BrandKicker}}{{.BrandKicker}}{{else if .DefaultBrandKicker}}{{.DefaultBrandKicker}}{{else}}Online-Anmeldung{{end}}</p>
+            <p class="school-name">{{if .SchoolName}}{{.SchoolName}}{{else if .DefaultSchoolName}}{{.DefaultSchoolName}}{{else if .CareFacilityOwn}}{{.CareFacilityOwn}}{{else if .CareFacilityTerm}}Ihre {{.CareFacilityTerm}}{{else}}Ihre OGS{{end}}</p>
+        </td>
+        {{template "moto-mark"}}
+    </tr>
+</table>
 {{end}}

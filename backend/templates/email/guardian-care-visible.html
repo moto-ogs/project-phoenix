@@ -1,25 +1,20 @@
 {{define "guardian-care-visible.html"}}
-{{template "header" .}}
-
-<div class="email-body" lang="{{.Lang}}">
+{{template "header" (or .Lang "")}}
     {{template "moto-brand" .}}
     <h1>{{.Title}}</h1>
     <p>{{.Greeting}}</p>
     <p>{{.Intro}}</p>
     <p>{{.Where}}</p>
 
-    <div class="button-wrapper" style="text-align: center;">
+    <div class="button-wrapper">
         <a class="button" href="{{.PortalURL}}">{{.Button}}</a>
     </div>
 
     <p style="margin-top: 24px; font-size: 14px; color: #6b7280;">{{.LinkHint}}</p>
-    <div class="link-box">
-        <a href="{{.PortalURL}}">{{.PortalURL}}</a>
-    </div>
+    {{template "link-box" .PortalURL}}
 
     <p style="margin-top: 24px;">{{.Nothing}}</p>
     <p>{{.Ask}}</p>
-</div>
 
 {{template "footer" .}}
 {{end}}

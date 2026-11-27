@@ -28,6 +28,10 @@ export const traegerBillingKeys = {
   familyContracts: () => "traeger-billing-family-contracts",
   family: (id: string) =>
     `traeger-billing-family-detail-${encodeURIComponent(id)}`,
+  // Rechnungsausgangsbuch (#4819): die erste Seite eines Filters. Jedes
+  // Lesen steht im Protokoll der gezeigten Läufe.
+  invoiceJournal: (filter: string) =>
+    `traeger-billing-invoice-journal-${encodeURIComponent(filter)}`,
   // Finanz-Exporte (#4693, #4694, #4821).
   exportSettings: () => "traeger-billing-export-settings",
   exportRuns: () => "traeger-billing-export-runs",

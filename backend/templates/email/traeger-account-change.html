@@ -1,7 +1,5 @@
 {{define "traeger-account-change.html"}}
-{{template "header" .}}
-
-<div class="email-body">
+{{template "header"}}
     {{template "moto-brand" .}}
     {{if .Removed}}
     <h1>Sie sind nicht mehr im Träger-Büro</h1>
@@ -43,7 +41,6 @@
     {{end}}
 
     <p class="security-note">Sie haben das nicht erwartet? Dann sagen Sie es der Leitung Ihres Träger-Büros. Oder schreiben Sie sofort an <a href="mailto:{{.ContactAddress}}">{{.ContactAddress}}</a>.</p>
-</div>
 
 {{template "footer" .}}
 {{end}}

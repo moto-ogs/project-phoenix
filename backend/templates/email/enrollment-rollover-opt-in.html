@@ -1,7 +1,5 @@
 {{define "enrollment-rollover-opt-in.html"}}
-{{template "header" .}}
-
-<div class="email-body">
+{{template "header"}}
     {{template "school-brand" .}}
     <h1>Bitte bestätigen Sie die Anmeldung</h1>
 
@@ -37,14 +35,11 @@
     </div>
     {{end}}
 
-    <div class="button-wrapper" style="text-align: center;">
+    <div class="button-wrapper">
         <a class="button" href="{{.StatusURL}}">Anmeldung bestätigen</a>
     </div>
 
-    <p style="margin-top: 24px; font-size: 14px; color: #6b7280;">Falls der Button nicht funktioniert, kopieren Sie bitte diesen Link:</p>
-    <div class="link-box">
-        <a href="{{.StatusURL}}">{{.StatusURL}}</a>
-    </div>
+    {{template "copy-link-hint" .StatusURL}}
 
     <div class="highlight-box" style="margin-top: 24px;">
         <p style="margin: 0; font-size: 14px;"><strong>Was passiert nach der Bestätigung?</strong></p>
@@ -52,7 +47,6 @@
     </div>
 
     <p class="security-note">Bewahren Sie diese E-Mail auf. Der Link bleibt bis zur Frist gültig.</p>
-</div>
 
 {{template "footer" .}}
 {{end}}

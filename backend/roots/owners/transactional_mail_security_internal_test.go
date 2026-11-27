@@ -2,9 +2,11 @@ package owners
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"testing"
+	"time"
 
 	deliveryCompose "github.com/moto-ogs/project-phoenix/modules/delivery/compose"
 	deliveryContract "github.com/moto-ogs/project-phoenix/modules/delivery/contract"
@@ -17,6 +19,34 @@ import (
 type intentCapture struct {
 	delivery.Capability
 	intent deliveryContract.EmailIntent
+}
+
+func TestTransactionalMailPersistsRetryPolicy(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name     string
+		input    DurableMail
+		attempts int
+		backoff  []time.Duration
+	}{
+		{name: "defaults", attempts: 3, backoff: []time.Duration{time.Second, 5 * time.Second, 15 * time.Second}},
+		{name: "custom", input: DurableMail{MaxAttempts: 5, Backoff: []time.Duration{time.Minute}}, attempts: 5, backoff: []time.Duration{time.Minute}},
+		{name: "explicitly empty", input: DurableMail{Backoff: []time.Duration{}}, attempts: 3},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			capture := &intentCapture{}
+			outbox := OutboxEnqueuer{Runtime: &deliveryCompose.Runtime{Module: capture}}
+			_, err := outbox.EnqueueMailIntent(t.Context(), tc.input)
+			require.NoError(t, err)
+			var policy struct {
+				Attempts int             `json:"delivery_max_attempts"`
+				Backoff  []time.Duration `json:"delivery_backoff"`
+			}
+			require.NoError(t, json.Unmarshal(capture.intent.Payload, &policy))
+			require.Equal(t, tc.attempts, policy.Attempts)
+			require.Equal(t, tc.backoff, policy.Backoff)
+		})
+	}
 }
 
 func (c *intentCapture) EnqueueEmail(_ context.Context, intent deliveryContract.EmailIntent) (deliveryContract.Enqueued, error) {

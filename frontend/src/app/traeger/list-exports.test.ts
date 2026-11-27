@@ -41,6 +41,7 @@ const LIST_EXPORTS: Readonly<Record<string, string>> = {
   "/abrechnung/monatsbeitraege": "page",
   "/abrechnung/monatsbeitraege/[id]": "page",
   "/abrechnung/nachweise": "page",
+  "/abrechnung/rechnungsausgangsbuch": "page",
   "/ankunft-abholung": "page",
   "/anmeldephasen": "page",
   "/auslastung": "page",

@@ -182,6 +182,7 @@ export const GERMAN_PAGE_TITLES: Readonly<
     "/abrechnung/jahresbescheide/:id/lastschrift":
       "Lastschrift des Jahreslaufs",
     "/abrechnung/jahresbescheide/:id/versand": "Versand der Jahresbescheide",
+    "/abrechnung/rechnungsausgangsbuch": "Rechnungsausgangsbuch",
     "/abrechnung/kinderzahl": "Kinderzahl",
     "/abrechnung/kinderzahl/import": "Kinderzahl nachtragen",
     "/abrechnung/kostentraeger": "Kostenübernahmen",

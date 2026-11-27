@@ -23,13 +23,6 @@ type AbsenceEmailDispatcher struct {
 }
 
 func (d AbsenceEmailDispatcher) Enqueue(ctx context.Context, value workforceCompose.AbsenceEmailMessage) error {
-	return enqueueDurableMail(ctx, d.Durable, DurableMail{
-		TenantID: value.TenantID, Message: d.request(ctx, value).Message, Type: value.Type, ReferenceID: value.ReferenceID,
-		Backoff: []time.Duration{time.Minute, 5 * time.Minute, 15 * time.Minute},
-	})
-}
-
-func (d AbsenceEmailDispatcher) request(ctx context.Context, value workforceCompose.AbsenceEmailMessage) email.DeliveryRequest {
 	message := email.Message{
 		From: d.From, To: email.NewEmail(value.To.Name, value.To.Address),
 		Subject: value.Subject, Template: value.Template, Content: value.TemplateData(),
@@ -38,10 +31,10 @@ func (d AbsenceEmailDispatcher) request(ctx context.Context, value workforceComp
 		identity := email.ResolveReplyToIdentity(ctx, d.Identity, value.TenantID, d.Logger)
 		message.ReplyTo = email.NewEmail(identity.Name, identity.Address)
 	}
-	return email.DeliveryRequest{
-		Message:  message,
-		Metadata: email.DeliveryMetadata{Type: value.Type, ReferenceID: value.ReferenceID, Recipient: value.Recipient},
-	}
+	return enqueueDurableMail(ctx, d.Durable, DurableMail{
+		TenantID: value.TenantID, Message: message, Type: value.Type, ReferenceID: value.ReferenceID,
+		Backoff: []time.Duration{time.Minute, 5 * time.Minute, 15 * time.Minute},
+	})
 }
 
 type absenceEmailSchoolDirectory struct {

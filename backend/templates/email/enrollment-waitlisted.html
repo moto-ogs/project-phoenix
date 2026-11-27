@@ -1,7 +1,5 @@
 {{define "enrollment-waitlisted.html"}}
-{{template "header" .}}
-
-<div class="email-body">
+{{template "header"}}
     {{template "school-brand" .}}
     <h1>Anmeldung auf Warteliste</h1>
 
@@ -26,17 +24,13 @@
 
     <p style="margin-top: 16px;">Wir benachrichtigen Sie, sobald sich der Status ändert. Den aktuellen Stand können Sie jederzeit hier einsehen:</p>
 
-    <div class="button-wrapper" style="text-align: center;">
+    <div class="button-wrapper">
         <a class="button" href="{{.StatusURL}}">Anmeldungsstatus ansehen</a>
     </div>
 
-    <p style="margin-top: 24px; font-size: 14px; color: #6b7280;">Falls der Button nicht funktioniert, kopieren Sie bitte diesen Link:</p>
-    <div class="link-box">
-        <a href="{{.StatusURL}}">{{.StatusURL}}</a>
-    </div>
+    {{template "copy-link-hint" .StatusURL}}
 
     <p class="security-note">Bei Rückfragen können Sie sich jederzeit direkt an die Schule wenden.</p>
-</div>
 
 {{template "footer" .}}
 {{end}}
