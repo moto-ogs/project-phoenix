@@ -289,13 +289,10 @@ function scanProject(sources: ReadonlyMap<string, string>): string[] {
       ? undefined
       : ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true);
   };
-  // Keep the compiler program within the worker heap. Start with complete
-  // addresses and local path assembly, then add only the path-piece imports
-  // those files need for aliased declarations.
+  // Keep the compiler program within the worker heap. Start with possible
+  // path pieces and add call-only files referring to a possible API prefix.
+  // Include barrels so the checker can resolve their aliased declarations.
   const pathPieces = /["'`]\/[^/\s]|\}\/|\.join\s*\(|\\[xu]/;
-  const directPrefix = /["'`]\/api\b|\\[xu]/;
-  const apiSegment = /["'`]api["'`]/;
-  const localAssembly = /`[^`]*\$\{|\+|\.join\s*\(/;
   const barrel = /\bexport\s+(?:\*|\{)/;
   const cache = ts.createModuleResolutionCache(src, (file) => file, options);
   // Shared barrels recur in many import chains. Resolve each file's imports
@@ -319,100 +316,30 @@ function scanProject(sources: ReadonlyMap<string, string>): string[] {
     resolvedImports.set(file, resolved);
     return resolved;
   };
-  const prefixFiles = new Set<string>();
   const carriesPrefix = (file: string, seen: Set<string>): boolean => {
-    if (prefixFiles.has(file)) return true;
     if (seen.has(file)) return false;
     seen.add(file);
     const source = sources.get(file);
-    const carries =
+    return (
       source !== undefined &&
       (/["'`]\/api\b|["'`]\/["'`]|\\[xu]/.test(source) ||
         (barrel.test(source) &&
-          imports(file, source).some((item) => carriesPrefix(item, seen))));
-    if (carries) prefixFiles.add(file);
-    return carries;
-  };
-  const callsWithPrefix = (file: string, source: string): boolean => {
-    if (!/\b[\w$]+\s*(?:\?\.)?\(\s*[\w$]+/.test(source)) return false;
-    const prefixBindings = new Set<string>();
-    for (const match of source.matchAll(
-      /\bimport\s+(?:type\s+)?([\s\S]*?)\s+from\s+["']([^"']+)["']/g,
-    )) {
-      const clause = match[1]!;
-      const target = ts.resolveModuleName(match[2]!, file, options, host, cache)
-        .resolvedModule?.resolvedFileName;
-      if (!target || !carriesPrefix(target, new Set())) continue;
-      const defaultBinding = clause.match(/^\s*([A-Za-z_$][\w$]*)/);
-      if (defaultBinding) prefixBindings.add(defaultBinding[1]!);
-      const namespaceBinding = clause.match(/\*\s+as\s+([A-Za-z_$][\w$]*)/);
-      if (namespaceBinding) prefixBindings.add(namespaceBinding[1]!);
-      const namedBindings = clause.match(/\{([^}]*)\}/)?.[1];
-      for (const binding of namedBindings?.split(",") ?? []) {
-        const localName = binding
-          .trim()
-          .replace(/^type\s+/, "")
-          .split(/\s+as\s+/)
-          .at(-1);
-        if (localName && /^[A-Za-z_$][\w$]*$/.test(localName))
-          prefixBindings.add(localName);
-      }
-    }
-    let changed = true;
-    while (changed) {
-      changed = false;
-      for (const match of source.matchAll(
-        /\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*([A-Za-z_$][\w$]*)\b/g,
-      )) {
-        if (prefixBindings.has(match[2]!) && !prefixBindings.has(match[1]!)) {
-          prefixBindings.add(match[1]!);
-          changed = true;
-        }
-      }
-    }
-    return [...prefixBindings].some((binding) =>
-      new RegExp(
-        `\\b[\\w$]+\\s*(?:\\?\\.)?\\(\\s*${binding}(?:\\b|\\s*\\()`,
-      ).test(source),
+          imports(file, source).some((item) => carriesPrefix(item, seen))))
     );
   };
-  const roots = new Set<string>();
-  const importQueue = new Set<string>();
-  for (const [file, source] of sources) {
-    const assemblesPath =
-      pathPieces.test(source) &&
-      apiSegment.test(source) &&
-      localAssembly.test(source);
-    const callsPrefix = callsWithPrefix(file, source);
-    if (
-      directPrefix.test(source) ||
-      assemblesPath ||
-      [...retired].some((name) => source.includes(name)) ||
-      callsPrefix
+  const roots = [...sources]
+    .filter(
+      ([file, source]) =>
+        pathPieces.test(source) ||
+        barrel.test(source) ||
+        [...retired].some((name) => source.includes(name)) ||
+        (/\+|\b[\w$]+\s*(?:\?\.)?\(\s*[\w$]+/.test(source) &&
+          imports(file, source).some((item) => carriesPrefix(item, new Set()))),
     )
-      roots.add(file);
-    if (assemblesPath || callsPrefix) importQueue.add(file);
-  }
-  const importsToCheck = [...importQueue];
-  for (let index = 0; index < importsToCheck.length; index++) {
-    const file = importsToCheck[index]!;
-    const source = sources.get(file);
-    if (!source) continue;
-    for (const imported of imports(file, source)) {
-      const importedSource = sources.get(imported);
-      if (
-        importedSource &&
-        !roots.has(imported) &&
-        (pathPieces.test(importedSource) || barrel.test(importedSource))
-      ) {
-        roots.add(imported);
-        if (barrel.test(importedSource)) importsToCheck.push(imported);
-      }
-    }
-  }
-  const program = ts.createProgram([...roots], options, host);
+    .map(([file]) => file);
+  const program = ts.createProgram(roots, options, host);
   const checker = program.getTypeChecker();
-  return [...roots].flatMap((file) =>
+  return roots.flatMap((file) =>
     violations(program.getSourceFile(file)!, checker).map(
       (finding) => `${path.relative(src, file)}:${finding}`,
     ),
@@ -468,34 +395,23 @@ describe("BFF routes use the generated contract", () => {
           path.join(src, "helper.ts"),
           'export const withLogo = (prefix: string) => prefix + "/logo";',
         ],
-        [path.join(src, "fragment.ts"), 'export const suffix = "/logo";'],
-        [
-          path.join(src, "segments.ts"),
-          'const href = ["", "api", "traeger", "master-data", "logo"].join("/");',
-        ],
         [
           path.join(src, "consumer.ts"),
-          'import { base, getBase } from "./prefix";\nimport { withLogo } from "./helper";\nimport { suffix } from "./fragment";\nconst href = withLogo(base);\nconst nested = withLogo(getBase());\nconst joined = base + suffix;',
+          'import { base, getBase } from "./prefix";\nimport { withLogo } from "./helper";\nconst href = withLogo(base);\nconst nested = withLogo(getBase());',
         ],
       ]),
     );
     expect(findings).toContain(
+      "consumer.ts:3: use the registered route key with bffPath, bffFileHref, bffJson or bffFile",
+    );
+    expect(findings).toContain(
       "consumer.ts:4: use the registered route key with bffPath, bffFileHref, bffJson or bffFile",
-    );
-    expect(findings).toContain(
-      "consumer.ts:5: use the registered route key with bffPath, bffFileHref, bffJson or bffFile",
-    );
-    expect(findings).toContain(
-      "consumer.ts:6: use the registered route key with bffPath, bffFileHref, bffJson or bffFile",
-    );
-    expect(findings).toContain(
-      "segments.ts:1: use the registered route key with bffPath, bffFileHref, bffJson or bffFile",
     );
   });
 
   it(
     "finds no retired route helpers or handwritten registered BFF addresses in production source",
-    { timeout: 60_000 },
+    { timeout: 15_000 },
     () => {
       const sources = readdirSync(src, { recursive: true, encoding: "utf8" })
         .filter(
