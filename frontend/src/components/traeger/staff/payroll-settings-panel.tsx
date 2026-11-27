@@ -88,7 +88,7 @@ const FORM_OPTIONS: readonly {
   },
   {
     value: "arbeitgeber",
-    title: "Eine Datei je Arbeitgeber",
+    title: "Eine Datei pro Arbeitgeber",
     text: "Jede Gemeinde und jeder Schulträger bekommt eine eigene Datei. Jede Datei hat eigene Berater- und Mandantennummer.",
   },
 ];
@@ -472,7 +472,7 @@ export function PayrollSettingsPanel({
 
       <SectionCard
         concept={settingsConcept}
-        title="Lohnarten je Art des Vertrags"
+        title="Lohnarten pro Art des Vertrags"
         description="Trage die Nummer aus deinem DATEV ein. Sie gelten für alle Arbeitgeber. Ein leeres Feld fehlt in der Lohndatei."
         bodyClassName="mt-4 space-y-4"
       >

@@ -14,6 +14,7 @@ import {
   useMediaQuery,
   useResolvedMediaQuery,
 } from "~/lib/hooks/use-media-query";
+import { MountOnFirstOpen } from "./mount-on-first-open";
 import { ResponsivePanelSheet } from "./responsive-panel-sheet";
 
 /**
@@ -75,16 +76,28 @@ interface ResponsivePanelProps {
  * Escape und Tippen daneben schließen nur das Blatt, nicht das Fenster
  * darunter; dessen Fokusfalle ruht, solange das Blatt offen ist.
  */
-export function ResponsivePanel({
+export function ResponsivePanel({ trigger, ...panel }: ResponsivePanelProps) {
+  return (
+    <>
+      {trigger}
+      {/* A grid can have dozens of triggers. Closed ones don't need another
+          media-query subscriber or panel lifecycle until the first opening. */}
+      <MountOnFirstOpen open={panel.open}>
+        <ResponsivePanelContent {...panel} />
+      </MountOnFirstOpen>
+    </>
+  );
+}
+
+function ResponsivePanelContent({
   open,
   onOpenChange,
   label,
   sheetId,
-  trigger,
   returnFocusRef,
   initialFocus,
   children,
-}: ResponsivePanelProps) {
+}: Omit<ResponsivePanelProps, "trigger">) {
   // `null`, solange die Breite unbekannt ist (Server, Hydration).
   // In der ganzen App ein Blatt (#8070): am Telefon von unten, am iPad als
   // Karte. Der Desktop behält das Popover.
@@ -112,10 +125,9 @@ export function ResponsivePanel({
     if (rotated && open) onOpenChange(false);
   }, [sheetState, open, onOpenChange]);
 
-  return (
-    <>
-      {trigger}
-      {asSheet ? (
+  if (asSheet) {
+    return (
+      <MountOnFirstOpen open={sheetOpen}>
         <ResponsivePanelSheet
           id={dialogId}
           open={sheetOpen}
@@ -126,9 +138,8 @@ export function ResponsivePanel({
         >
           {children(true)}
         </ResponsivePanelSheet>
-      ) : open ? (
-        children(false)
-      ) : null}
-    </>
-  );
+      </MountOnFirstOpen>
+    );
+  }
+  return open ? children(false) : null;
 }

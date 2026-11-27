@@ -168,7 +168,7 @@ func populateStudentAddressFields(response *StudentResponse, student *peopleModu
 // serve route keys cleanup off this prefix); the frontend can't fetch
 // `/uploads/...` directly because Next.js doesn't serve that path. The
 // JSON-facing URL is rewritten to the authenticated proxy URL by
-// `common.BuildStudentPhotoServeURL` — same helper the active-group visit
+// `common.StudentPhotoVersion` — same helper the active-group visit
 // response uses, so the two endpoints can never drift.
 // populatePhotoFields fills the response with photo URL + consent metadata.
 //
@@ -197,7 +197,7 @@ func populatePhotoFields(response *StudentResponse, student *peopleModule.Studen
 	// hasPhotoAccess matches the access gate inside serveStudentPhoto so
 	// the URL we hand out is one the same session is allowed to render.
 	if hasPhotoAccess && student.PhotoPath != nil {
-		response.PhotoURL = common.BuildStudentPhotoServeURL(student.ID, *student.PhotoPath)
+		response.PhotoVersion = common.StudentPhotoVersion(*student.PhotoPath)
 	}
 	// Surface the explicit boolean state to the frontend so the consent
 	// checkbox can render correctly: true when consent has been recorded,

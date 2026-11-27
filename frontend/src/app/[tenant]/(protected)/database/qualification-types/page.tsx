@@ -33,7 +33,7 @@ import { TenantPageStats } from "~/components/ui/tenant-page";
 
 /** Info-Knopf am Titel: wofür die Seite da ist und was man zuerst tut. */
 const QUALIFICATION_TYPES_INFO =
-  "Hier legst du fest, welche Nachweise dein Team braucht, zum Beispiel Erste Hilfe am Kind. Je Art stellst du ein, wie lange sie gültig ist und wann moto erinnert. Eine Art mit Pflicht braucht jede Person.";
+  "Hier legst du fest, welche Nachweise dein Team braucht, zum Beispiel Erste Hilfe am Kind. Pro Art stellst du ein, wie lange sie gültig ist und wann moto erinnert. Eine Art mit Pflicht braucht jede Person.";
 
 const CACHE_KEY = staffQualificationKeys.types();
 

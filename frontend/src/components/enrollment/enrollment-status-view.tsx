@@ -32,7 +32,7 @@ import {
   withdrawStatus,
   type EnrollmentChangeRequest,
   type StatusChild,
-  type StatusResponse,
+  type EnrollmentStatusDisplay,
 } from "~/lib/enrollment-submission-api";
 import { createLogger } from "~/lib/logger";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
@@ -56,15 +56,21 @@ import { ParentFamilyChildrenCard } from "~/components/parent/parent-family-chil
 import { SectionCard } from "~/components/ui/section-card";
 import { StatCard } from "~/components/ui/stat-card";
 import { BackLink } from "~/components/ui/back-link";
-import { EnrollmentChangeRequestDiff } from "~/components/enrollment/enrollment-change-request-diff";
-import type {
-  EnrollmentChangeRequestDiffCopy,
-  EnrollmentFormLabels,
-} from "~/lib/enrollment-change-request-diff";
 import {
-  localizeFormFields,
-  translatedText,
-} from "~/lib/enrollment-translations";
+  EnrollmentChangeRequestDiff,
+  EnrollmentChangeRequestDiffGroups,
+} from "~/components/enrollment/enrollment-change-request-diff";
+import {
+  localizeEnrollmentFormLabels,
+  type EnrollmentFormLabels,
+} from "~/lib/enrollment-change-request-diff";
+import { enrollmentStatusDiffCopy } from "~/lib/enrollment-status-diff-copy";
+import {
+  useTokenStatusSeed,
+  type EnrollmentStatusChangeRequest,
+  type EnrollmentStatusSeedData,
+  type TokenStatusSeed,
+} from "~/lib/token-status-seed";
 import { StatusBadge } from "~/components/ui/status-badge";
 import type { RenewalMode } from "~/components/enrollment/enrollment-renewal-banners";
 import { ApiError } from "~/lib/api-error";
@@ -95,6 +101,7 @@ const RenewalBanners = dynamic(
 
 interface Props {
   readonly token: string;
+  readonly initial?: TokenStatusSeed<EnrollmentStatusSeedData>;
   readonly justSubmitted?: boolean;
   readonly duplicateWarning?: boolean;
   /**
@@ -110,33 +117,54 @@ interface Props {
  * texts take the care-facility term the status names.
  */
 export function EnrollmentStatusView(props: Props) {
+  const seed = useTokenStatusSeed(props.initial);
   return (
-    <CareFacilityTermScope>
-      <EnrollmentStatusViewContent {...props} />
+    <CareFacilityTermScope
+      key={seed === undefined ? "live" : "seeded"}
+      term={seed?.status.care_facility_term}
+      article={seed?.status.care_facility_article}
+    >
+      <EnrollmentStatusViewContent {...props} seed={seed} />
     </CareFacilityTermScope>
   );
 }
 
 function EnrollmentStatusViewContent({
   token,
+  seed,
   justSubmitted = false,
   duplicateWarning = false,
   parentAppHref,
-}: Props) {
+}: Props & { readonly seed?: EnrollmentStatusSeedData }) {
   const t = useCareTermTranslations("enrollmentStatus");
+  const locale = useLocale();
   // Loading depends on these texts, not on the asynchronously loaded care term.
   const loadErrorObject = t("errorObject");
   const requestsLoadErrorObject = t("errorObjectChangeRequests");
   const toast = useToast();
-  const [status, setStatus] = useState<StatusResponse | null>(null);
-  useProvideCareFacilityTerm(status?.care_facility_term);
+  const [status, setStatus] = useState<EnrollmentStatusDisplay | null>(
+    seed?.status ?? null,
+  );
+  useProvideCareFacilityTerm(
+    status?.care_facility_term,
+    status?.care_facility_article,
+  );
   const [changeRequests, setChangeRequests] = useState<
-    EnrollmentChangeRequest[]
-  >([]);
-  const [loading, setLoading] = useState(true);
+    readonly StatusChangeRequest[]
+  >(seed?.changes ?? []);
+  const seededLocale = seed?.changesLocale;
+  const staleChanges =
+    seededLocale !== undefined &&
+    seededLocale !== locale &&
+    changeRequests === seed?.changes;
+  const [loading, setLoading] = useState(seed === undefined);
+  const [requestsPending, setRequestsPending] = useState(
+    seed !== undefined && seed.changes === undefined,
+  );
   const [requestsReloadFailed, setRequestsReloadFailed] = useState(false);
   const [notFound, setNotFound] = useState(false);
   const latestRequest = useRef(0);
+  const postWriteRequest = useRef<number | null>(null);
   // One display path for every failure (#2515): loads stay where the data
   // is missing, the two forms report in their own alert, the buttons
   // without a form (confirm, withdraw) in a toast.
@@ -168,9 +196,13 @@ function EnrollmentStatusViewContent({
   >(null);
   const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
 
-  const [editFirstName, setEditFirstName] = useState("");
-  const [editLastName, setEditLastName] = useState("");
-  const [editPhone, setEditPhone] = useState("");
+  const [editFirstName, setEditFirstName] = useState(
+    seed?.status.guardian_first_name ?? "",
+  );
+  const [editLastName, setEditLastName] = useState(
+    seed?.status.guardian_last_name ?? "",
+  );
+  const [editPhone, setEditPhone] = useState(seed?.status.guardian_phone ?? "");
   const editingRef = useRef(editing);
   useLayoutEffect(() => {
     editingRef.current = editing;
@@ -179,7 +211,10 @@ function EnrollmentStatusViewContent({
   // Puts a loaded status on the page; the first load and the reload after a
   // write share it.
   const applyStatus = useCallback(
-    (result: StatusResponse, requestChanges: EnrollmentChangeRequest[]) => {
+    (
+      result: EnrollmentStatusDisplay,
+      requestChanges: readonly StatusChangeRequest[],
+    ) => {
       setStatus(result);
       setChangeRequests(requestChanges);
       // A parent may have reopened the editor while the reload was pending.
@@ -192,59 +227,71 @@ function EnrollmentStatusViewContent({
     [],
   );
 
-  const load = useCallback(async () => {
-    const request = ++latestRequest.current;
-    setLoading(true);
-    clearLoadError();
-    clearRequestsLoadError();
-    setRequestsReloadFailed(false);
-    setNotFound(false);
-    try {
-      const [result, requestChanges] = await Promise.all([
-        fetchStatus(token),
-        // A failed list must not read as "no change requests yet": the
-        // panel shows the load error instead of its empty text.
-        listEnrollmentChangeRequests(token).catch((err: unknown) => {
-          if (request !== latestRequest.current) return null;
-          logger.warn("change_requests_load_failed", {
-            error: err instanceof Error ? err.message : String(err),
-          });
-          void showRequestsLoadError(err, {
-            object: requestsLoadErrorObject,
-            retry: () => void loadRef.current(),
-          });
-          return null;
-        }),
-      ]);
-      if (request !== latestRequest.current) return;
-      if (!result) {
-        setNotFound(true);
-        setChangeRequests([]);
-        return;
+  const load = useCallback(
+    async (seed?: EnrollmentStatusSeedData) => {
+      // Reloading after a write already includes the locale-independent list.
+      if (postWriteRequest.current !== null) return;
+      const request = ++latestRequest.current;
+      setLoading(seed === undefined);
+      setRequestsPending(seed !== undefined);
+      clearLoadError();
+      clearRequestsLoadError();
+      setRequestsReloadFailed(false);
+      setNotFound(false);
+      try {
+        const [result, requestChanges] = await Promise.all([
+          seed?.status ?? fetchStatus(token),
+          // A failed list must not read as "no change requests yet": the
+          // panel shows the load error instead of its empty text.
+          listEnrollmentChangeRequests(token).catch((err: unknown) => {
+            if (request !== latestRequest.current) return null;
+            logger.warn("change_requests_load_failed", {
+              error: err instanceof Error ? err.message : String(err),
+            });
+            void showRequestsLoadError(err, {
+              object: requestsLoadErrorObject,
+              retry: () => void loadRef.current(),
+            });
+            return null;
+          }),
+        ]);
+        if (request !== latestRequest.current) return;
+        if (!result) {
+          setNotFound(true);
+          setChangeRequests([]);
+          return;
+        }
+        // A language change only refreshes the diff. Keep any status and
+        // contact edits made since the original server render.
+        if (seed) setChangeRequests(requestChanges ?? []);
+        else applyStatus(result, requestChanges ?? []);
+      } catch (err) {
+        if (request !== latestRequest.current) return;
+        logger.error("status_load_failed", {
+          error: err instanceof Error ? err.message : String(err),
+        });
+        void showLoadError(err, {
+          object: loadErrorObject,
+          retry: () => void loadRef.current(),
+        });
+      } finally {
+        if (request === latestRequest.current) {
+          setLoading(false);
+          setRequestsPending(false);
+        }
       }
-      applyStatus(result, requestChanges ?? []);
-    } catch (err) {
-      if (request !== latestRequest.current) return;
-      logger.error("status_load_failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      void showLoadError(err, {
-        object: loadErrorObject,
-        retry: () => void loadRef.current(),
-      });
-    } finally {
-      if (request === latestRequest.current) setLoading(false);
-    }
-  }, [
-    token,
-    applyStatus,
-    loadErrorObject,
-    requestsLoadErrorObject,
-    clearLoadError,
-    clearRequestsLoadError,
-    showLoadError,
-    showRequestsLoadError,
-  ]);
+    },
+    [
+      token,
+      applyStatus,
+      loadErrorObject,
+      requestsLoadErrorObject,
+      clearLoadError,
+      clearRequestsLoadError,
+      showLoadError,
+      showRequestsLoadError,
+    ],
+  );
   // Retries call the latest load, not the one of the failed attempt.
   const loadRef = useRef(load);
   useLayoutEffect(() => {
@@ -254,17 +301,18 @@ function EnrollmentStatusViewContent({
   const invalidateRequest = useCallback(() => {
     latestRequest.current++;
   }, []);
+  useEffect(() => invalidateRequest, [invalidateRequest]);
   // oxlint-disable-next-line swr/no-effect-load -- status-link token page, open without a session; the shared cache reads only with a session, by design
   useEffect(() => {
-    void load();
-    return invalidateRequest;
-  }, [load, invalidateRequest]);
+    if (!seed?.changes || staleChanges) void load(seed);
+  }, [load, seed, staleChanges]);
 
   // The reload after a confirmed write (#6652) only reads and sets: the shown
   // status stays while it runs, and a failure rejects, so the hook reports it
   // as a load error that says the change is saved.
   const readStatus = useCallback(async () => {
     const request = ++latestRequest.current;
+    postWriteRequest.current = request;
     try {
       const [statusResult, requestChanges] = await Promise.allSettled([
         fetchStatus(token),
@@ -272,6 +320,7 @@ function EnrollmentStatusViewContent({
       ]);
       if (request !== latestRequest.current) return;
       setLoading(false);
+      setRequestsPending(false);
       setRequestsReloadFailed(false);
       if (statusResult.status === "rejected") throw statusResult.reason;
       const result = statusResult.value;
@@ -293,6 +342,8 @@ function EnrollmentStatusViewContent({
     } catch (error) {
       if (request !== latestRequest.current) return;
       throw error;
+    } finally {
+      if (postWriteRequest.current === request) postWriteRequest.current = null;
     }
   }, [token, applyStatus, clearLoadError, clearRequestsLoadError]);
   const afterWrite = useRefreshAfterWrite(t("reloadObject"), readStatus, {
@@ -480,7 +531,8 @@ function EnrollmentStatusViewContent({
   return (
     <>
       <EnrollmentStatusContent
-        changeRequests={changeRequests}
+        changeRequests={staleChanges ? [] : changeRequests}
+        requestsPending={requestsPending || staleChanges}
         confirmingRenewal={confirmingRenewal}
         duplicateWarning={duplicateWarning}
         editFirstName={editFirstName}
@@ -559,8 +611,12 @@ interface StatusErrors {
   readonly replyId: string | null;
 }
 
+type StatusChangeRequest =
+  EnrollmentChangeRequest | EnrollmentStatusChangeRequest;
+
 interface EnrollmentStatusContentProps {
-  readonly changeRequests: EnrollmentChangeRequest[];
+  readonly changeRequests: readonly StatusChangeRequest[];
+  readonly requestsPending: boolean;
   readonly confirmingRenewal: boolean;
   readonly duplicateWarning: boolean;
   readonly editFirstName: string;
@@ -573,7 +629,7 @@ interface EnrollmentStatusContentProps {
   readonly replyDrafts: Record<string, string>;
   readonly replyingChangeRequest: string | null;
   readonly savingEdit: boolean;
-  readonly status: StatusResponse;
+  readonly status: EnrollmentStatusDisplay;
   readonly token: string;
   readonly withdrawingChild: string | null;
   readonly onChangeRequestReply: (changeRequestId: string) => Promise<void>;
@@ -594,6 +650,7 @@ interface EnrollmentStatusContentProps {
 
 function EnrollmentStatusContent({
   changeRequests,
+  requestsPending,
   confirmingRenewal,
   duplicateWarning,
   editFirstName,
@@ -641,7 +698,9 @@ function EnrollmentStatusContent({
     isOpenChangeRequestStatus(request.status),
   );
   const canRequestChange =
-    status.edit_mode === "change_request" && !hasOpenChangeRequest;
+    status.edit_mode === "change_request" &&
+    !requestsPending &&
+    !hasOpenChangeRequest;
   // Every child taken over into care: the status link stays readable and
   // points at the parents app instead of a change form (ADR 0003).
   const allLocked =
@@ -941,7 +1000,7 @@ function EnrollmentStatusHero({
 function EnrollmentStatusSummary({
   status,
   submittedDate,
-}: Readonly<{ status: StatusResponse; submittedDate: string }>) {
+}: Readonly<{ status: EnrollmentStatusDisplay; submittedDate: string }>) {
   const t = useCareTermTranslations("enrollmentStatus");
   return (
     <section className="grid gap-3 sm:grid-cols-3">
@@ -980,7 +1039,7 @@ function EnrollmentStatusSummary({
 type ParentAppAccess = "account" | "invitation" | "contact_ogs" | "unknown";
 
 function parentAppAccess(
-  parentPortalAccess: StatusResponse["parent_portal_access"],
+  parentPortalAccess: EnrollmentStatusDisplay["parent_portal_access"],
   hasParentAccount: boolean | undefined,
 ): ParentAppAccess {
   if (parentPortalAccess !== undefined) {
@@ -1176,7 +1235,7 @@ interface GuardianSectionProps {
   readonly editPhone: string;
   readonly editing: boolean;
   readonly savingEdit: boolean;
-  readonly status: StatusResponse;
+  readonly status: EnrollmentStatusDisplay;
   readonly editError: FormError | null;
   readonly editFieldError: (name: string) => string | undefined;
   readonly onEdit: (event: React.FormEvent) => Promise<void>;
@@ -1318,7 +1377,9 @@ function GuardianSection({
   );
 }
 
-function GuardianDetails({ status }: Readonly<{ status: StatusResponse }>) {
+function GuardianDetails({
+  status,
+}: Readonly<{ status: EnrollmentStatusDisplay }>) {
   const t = useCareTermTranslations("enrollmentStatus");
   return (
     <DataGrid>
@@ -1431,7 +1492,7 @@ function ChangeRequestsPanel({
   readonly token: string;
   readonly canCreate: boolean;
   readonly editHref: string;
-  readonly requests: EnrollmentChangeRequest[];
+  readonly requests: readonly StatusChangeRequest[];
   readonly loadError: FormError | null;
   readonly replyError: FormError | null;
   readonly replyErrorId: string | null;
@@ -1442,73 +1503,17 @@ function ChangeRequestsPanel({
 }) {
   const t = useCareTermTranslations("enrollmentStatus");
   const locale = useLocale();
-  const formLabels = useLocalizedFormLabels(token, requests.length > 0, locale);
-  const diffCopy = useMemo<EnrollmentChangeRequestDiffCopy>(
-    () => ({
-      snapshotLabels: {
-        additional_guardians: t("diff.snapshot.additional_guardians"),
-        children: t("diff.snapshot.children"),
-        consent_flags: t("diff.snapshot.consent_flags"),
-        custom_data: t("diff.snapshot.custom_data"),
-        guardian_email: t("diff.snapshot.guardian_email"),
-        guardian_first_name: t("diff.snapshot.guardian_first_name"),
-        guardian_last_name: t("diff.snapshot.guardian_last_name"),
-        guardian_phone: t("diff.snapshot.guardian_phone"),
-        phase_id: t("diff.snapshot.phase_id"),
-      },
-      consentLabels: {
-        agb: t("diff.consent.agb"),
-        data_processing: t("diff.consent.data_processing"),
-        email_contact: t("diff.consent.email_contact"),
-        photo: t("diff.consent.photo"),
-      },
-      childSnapshotLabels: {
-        custom_data: t("diff.child.custom_data"),
-        date_of_birth: t("diff.child.date_of_birth"),
-        first_name: t("diff.child.first_name"),
-        holiday_care_wish: t("diff.child.holiday_care_wish"),
-        last_name: t("diff.child.last_name"),
-        offering_days: t("diff.child.offering_days"),
-        offering_ids: t("diff.child.offering_ids"),
-        target_grade_level: t("diff.child.target_grade_level"),
-        target_school_class: t("diff.child.target_school_class"),
-      },
-      guardianSnapshotLabels: {
-        email: t("diff.guardian.email"),
-        first_name: t("diff.guardian.first_name"),
-        last_name: t("diff.guardian.last_name"),
-        phone: t("diff.guardian.phone"),
-      },
-      recordValueLabels: {
-        automatic_selected_days: t("diff.record.automatic_selected_days"),
-        available_days: t("diff.record.available_days"),
-        days_of_week_mode: t("diff.record.days_of_week_mode"),
-        email: t("diff.record.email"),
-        first_name: t("diff.record.first_name"),
-        last_name: t("diff.record.last_name"),
-        manual_selected_days: t("diff.record.manual_selected_days"),
-        offering_id: t("diff.record.offering_id"),
-        offering_ids: t("diff.record.offering_ids"),
-        phone: t("diff.record.phone"),
-        selected_days: t("diff.record.selected_days"),
-      },
-      weekdayLabels: {
-        mon: t("diff.weekday.mon"),
-        tue: t("diff.weekday.tue"),
-        wed: t("diff.weekday.wed"),
-        thu: t("diff.weekday.thu"),
-        fri: t("diff.weekday.fri"),
-        sat: t("diff.weekday.sat"),
-        sun: t("diff.weekday.sun"),
-      },
-      childEntryLabel: t("diff.childEntry"),
-      additionalGuardianEntryLabel: t("diff.additionalGuardianEntry"),
-      emptyLabel: t("notProvided"),
-      yesLabel: t("diff.yes"),
-      noLabel: t("diff.no"),
-    }),
-    [t],
+  const formLabels = useLocalizedFormLabels(
+    token,
+    requests.some((request) => !("groups" in request)),
+    locale,
   );
+  const diffCopy = useMemo(() => enrollmentStatusDiffCopy(t), [t]);
+  const diffLabels = {
+    beforeLabel: t("changeRequestBefore"),
+    afterLabel: t("changeRequestRequested"),
+    emptyMessage: t("changeRequestDiffEmpty"),
+  };
 
   return (
     <section className="moto-content-surface space-y-4 rounded-xl border p-5 sm:p-6">
@@ -1550,7 +1555,8 @@ function ChangeRequestsPanel({
         <ul className="space-y-3">
           {requests.map((request) => {
             const messages = (request.messages ?? []).filter(
-              (message) => !message.internal_only,
+              (message) =>
+                !("internal_only" in message && message.internal_only),
             );
             return (
               <li
@@ -1597,16 +1603,21 @@ function ChangeRequestsPanel({
                   <p className="mb-3 text-sm font-semibold text-gray-900">
                     {t("changeRequestDiffTitle")}
                   </p>
-                  <EnrollmentChangeRequestDiff
-                    baseSnapshot={request.base_snapshot}
-                    proposedSnapshot={request.proposed_snapshot}
-                    diff={request.diff}
-                    beforeLabel={t("changeRequestBefore")}
-                    afterLabel={t("changeRequestRequested")}
-                    emptyMessage={t("changeRequestDiffEmpty")}
-                    copy={diffCopy}
-                    formLabels={formLabels}
-                  />
+                  {"groups" in request ? (
+                    <EnrollmentChangeRequestDiffGroups
+                      groups={request.groups}
+                      {...diffLabels}
+                    />
+                  ) : (
+                    <EnrollmentChangeRequestDiff
+                      baseSnapshot={request.base_snapshot}
+                      proposedSnapshot={request.proposed_snapshot}
+                      diff={request.diff}
+                      copy={diffCopy}
+                      formLabels={formLabels}
+                      {...diffLabels}
+                    />
+                  )}
                 </div>
 
                 {request.admin_decision_note ? (
@@ -1695,16 +1706,7 @@ function useLocalizedFormLabels(
     };
   }, [token, enabled]);
   return useMemo(
-    () =>
-      labels
-        ? {
-            fields: localizeFormFields(labels.fields, locale),
-            legal_blocks: labels.legal_blocks.map((block) => ({
-              ...block,
-              title: translatedText(block, "title", block.title, locale),
-            })),
-          }
-        : null,
+    () => (labels ? localizeEnrollmentFormLabels(labels, locale) : null),
     [labels, locale],
   );
 }

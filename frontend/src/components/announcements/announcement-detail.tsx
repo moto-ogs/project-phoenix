@@ -41,6 +41,7 @@ import { createLogger } from "~/lib/logger";
 import {
   fetchAnnouncementRecipients,
   fetchAnnouncementStats,
+  showAnnouncementReadStats,
   fetchPollChildren,
   fetchPollResults,
   isDeclaration,
@@ -506,8 +507,8 @@ function PollResultsPanel({
 
 interface AnnouncementDetailProps {
   readonly announcement: Announcement;
-  readonly groups: Group[];
-  readonly activities: Activity[];
+  readonly groups: readonly Pick<Group, "id" | "name">[];
+  readonly activities: readonly Pick<Activity, "id" | "name">[];
   /** Called with the number of guardians reached by a poll reminder. */
   readonly onReminded: (count: number) => void;
   /** The routes of the portal that shows the announcement; default the OGS's. */
@@ -534,12 +535,7 @@ export function AnnouncementDetail({
 
   // A published poll renders its Auswertung instead of the read/ack statistics
   // (see below), so it must not pay for the two requests behind them either.
-  const showReadStats = !(
-    (isPoll(announcement) ||
-      isLetter(announcement) ||
-      isDeclaration(announcement)) &&
-    announcement.status !== "draft"
-  );
+  const showReadStats = showAnnouncementReadStats(announcement);
 
   const statsResource = useSWRAuth(
     showReadStats

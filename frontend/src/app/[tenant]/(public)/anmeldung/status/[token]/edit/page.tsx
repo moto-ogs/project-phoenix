@@ -1,3 +1,4 @@
+import { EnrollmentEditMessages } from "~/i18n/shared-page-messages";
 import { EnrollmentEditPage } from "~/components/enrollment/enrollment-edit-page";
 
 interface PageProps {
@@ -5,5 +6,9 @@ interface PageProps {
 }
 
 export default function PublicEnrollmentEditRoute({ params }: PageProps) {
-  return <EnrollmentEditPage params={params} />;
+  return (
+    <EnrollmentEditMessages>
+      <EnrollmentEditPage params={params} />
+    </EnrollmentEditMessages>
+  );
 }

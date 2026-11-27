@@ -1,5 +1,7 @@
 {
   "occurrence_unavailable": "Diesen Termin gibt es nicht mehr, er wurde vielleicht abgesagt. Bitte lade den Kalender neu.",
   "federal_state_missing": "Für die Schule ist noch kein Bundesland eingetragen. Deshalb fehlen die Feiertage. Die Leitung trägt es in den Einstellungen ein.",
-  "no_staff_profile": "Dafür brauchst du in dieser Schule ein eigenes Personalprofil. Bitte frage die Leitung."
+  "no_staff_profile": "Dafür brauchst du in dieser Schule ein eigenes Personalprofil. Arbeitest du hier mit, melde dich beim moto-Team.",
+  "opening_change_invalid": "Bitte prüfe die markierten Angaben zur geänderten Öffnungszeit.",
+  "opening_change_not_found": "Diese geänderte Öffnungszeit gibt es nicht mehr. Bitte lade die Seite neu."
 }

@@ -1,0 +1,85 @@
+"use client";
+
+// Eine Berichtsvorlage des Trägers ändern (#4716).
+
+import { useParams, useRouter } from "next/navigation";
+import {
+  ReportTemplateForm,
+  templateInputOf,
+} from "~/components/traeger/report-template-form";
+import { useReportTemplates } from "~/components/traeger/use-report-templates";
+import { useTraegerSchools } from "~/components/traeger/use-traeger-schools";
+import { TenantPage } from "~/components/ui/tenant-page";
+import { useInvalidateFamily } from "~/lib/swr";
+import { traegerReportKeys } from "~/lib/swr/traeger-report-keys";
+import { updateReportTemplate } from "~/lib/traeger-reports-api";
+import { traegerPath } from "~/lib/traeger-url";
+
+export default function EditReportTemplatePage() {
+  const router = useRouter();
+  const { id } = useParams<{ id: string }>();
+  const { schools, error: schoolsError } = useTraegerSchools();
+  const {
+    templates,
+    error: templatesError,
+    mutate,
+    reload,
+  } = useReportTemplates();
+  const invalidateFamily = useInvalidateFamily();
+  const listHref = traegerPath("/traeger/berichte");
+  const template = templates?.find((entry) => entry.id === id) ?? null;
+  const error = schoolsError ?? templatesError;
+  const ready = schools !== null && templates !== null;
+
+  return (
+    <TenantPage
+      title={template?.name ?? "Vorlage"}
+      info="Änderungen gelten für jeden Bericht, den du danach mit dieser Vorlage erstellst."
+      back
+      backHref={listHref}
+      backLabel="Zurück zu den Berichten"
+      error={error}
+      loading={!error && !ready}
+      empty={
+        ready && !template
+          ? {
+              title: "Vorlage nicht gefunden",
+              description:
+                "Vielleicht hat jemand sie gelöscht. Unter „Berichte“ stehen alle Vorlagen deines Trägers.",
+            }
+          : null
+      }
+    >
+      {ready && template ? (
+        <ReportTemplateForm
+          key={template.id}
+          initial={templateInputOf(template)}
+          stored={{
+            template,
+            reload: async () =>
+              (await reload()).find((entry) => entry.id === template.id),
+          }}
+          schools={schools}
+          takenNames={templates
+            .filter((entry) => entry.id !== template.id)
+            .map((entry) => entry.name)}
+          saveLabel="Speichern"
+          onSave={(input, version) =>
+            updateReportTemplate(template.id, input, version)
+          }
+          onCancel={() => router.push(listHref)}
+          onSaved={(saved) => {
+            void mutate();
+            // A report already read with this template shows its old sections.
+            void invalidateFamily(traegerReportKeys.keyDateReportFamily);
+            router.push(
+              traegerPath(
+                `/traeger/berichte?vorlage=${encodeURIComponent(saved.id)}`,
+              ),
+            );
+          }}
+        />
+      ) : null}
+    </TenantPage>
+  );
+}

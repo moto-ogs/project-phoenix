@@ -78,6 +78,11 @@ func BuildServeRooms(db transactionruntime.Database) (facilitiesModule.Catalog, 
 	return facilitiesCompose.NewRooms(facilitiesCompose.Dependencies{DB: db.Pool(), Observe: ObserveFacilities})
 }
 
+// BuildRoomClosures composes the room closures (#7653) on the root's clock.
+func BuildRoomClosures(db transactionruntime.Database, now func() time.Time) (facilitiesModule.Closures, error) {
+	return facilitiesCompose.NewClosures(facilitiesCompose.Dependencies{DB: db.Pool(), Observe: ObserveFacilities, Now: now})
+}
+
 // BuildFacilitiesModule composes Facilities with its room deletion: the
 // deletion asks Student Presence for open sessions and Care Plan's
 // care-offering catalog for the rooms its offerings need (#4010), and
@@ -206,13 +211,13 @@ func ObservePeopleDirectory(observation peopleCompose.Observation) {
 // BuildServeMealPlan composes the Meal Plan over its settings and the
 // participants of the day. notices tells the families about a changed menu
 // (#7145); nil tells nobody.
-func BuildServeMealPlan(db transactionruntime.Database, settings *mealplanCompose.Settings, students StudentRootReads, names peopledirectory.Capability, calendarRecords schoolcalendar.Days, notices mealplanModule.MenuChangeNotices) (mealplanModule.Capability, error) {
+func BuildServeMealPlan(db transactionruntime.Database, settings *mealplanCompose.Settings, students StudentRootReads, names peopledirectory.Capability, calendarRecords schoolcalendar.Days, notices mealplanModule.MenuChangeNotices) (mealplanModule.Services, error) {
 	if calendarRecords == nil {
-		return nil, errors.New("meal plan: the school calendar is required")
+		return mealplanModule.Services{}, errors.New("meal plan: the school calendar is required")
 	}
 	lockStudent, err := mealPlanStudentLock(names)
 	if err != nil {
-		return nil, err
+		return mealplanModule.Services{}, err
 	}
 	return mealplanCompose.New(mealplanCompose.Dependencies{
 		DB:       db.Pool(),
@@ -226,6 +231,7 @@ func BuildServeMealPlan(db transactionruntime.Database, settings *mealplanCompos
 		StudentNames:    mealPlanStudentNames(names),
 		LockStudent:     lockStudent,
 		Calendar:        mealPlanCalendar(calendarRecords),
+		CancelledDays:   mealplanCompose.NewMenuChanges().CancelledDays,
 		Notices:         notices,
 	})
 }
@@ -276,20 +282,32 @@ func mealPlanStudentNames(names studentNames) mealplanModule.StudentNameFinder {
 
 // mealPlanCalendar binds the School Calendar for the Meal Plan: closing days
 // and public holidays close a day, school holiday periods suspend the weekly
-// registration pattern (#3873). The Meal Plan turns the periods into days.
+// registration pattern (#3873). It reads in two statements: the public
+// holidays of the school's federal state, and the closing days with the
+// holiday periods together (#5994), so the Meal Plan's own read of the days
+// without lunch (#7656) adds none to a request. The holiday periods arrive
+// as days.
 func mealPlanCalendar(records schoolcalendar.Days) mealplanModule.CalendarFinder {
 	return func(ctx context.Context, from, to string) (map[string]bool, []mealplanModule.HolidayPeriod, error) {
-		closed, err := records.NonWorkingDayDates(ctx, from, to)
+		closed, err := records.TenantHolidayDates(ctx, from, to)
 		if err != nil {
 			return nil, nil, err
 		}
-		periods, err := records.ListCalendarPeriods(ctx, schoolcalendar.HolidaysOverlapping(from, to))
+		start, startErr := timezone.ParseDate(from)
+		end, endErr := timezone.ParseDate(to)
+		if startErr != nil || endErr != nil {
+			return nil, nil, fmt.Errorf("meal plan calendar: window %q to %q: %w", from, to, errors.Join(startErr, endErr))
+		}
+		closing, holidayDays, err := records.CareCalendarDays(ctx, start, end)
 		if err != nil {
 			return nil, nil, err
 		}
-		holidays := make([]mealplanModule.HolidayPeriod, 0, len(periods))
-		for _, period := range periods {
-			holidays = append(holidays, mealplanModule.HolidayPeriod{Start: period.StartDate, End: period.EndDate})
+		for day := range closing {
+			closed[day.String()] = true
+		}
+		holidays := make([]mealplanModule.HolidayPeriod, 0, len(holidayDays))
+		for day := range holidayDays {
+			holidays = append(holidays, mealplanModule.HolidayPeriod{Start: day.String(), End: day.String()})
 		}
 		return closed, holidays, nil
 	}

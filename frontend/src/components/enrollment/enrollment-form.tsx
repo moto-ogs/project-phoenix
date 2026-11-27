@@ -103,9 +103,10 @@ import {
   type SignatureValue,
 } from "~/components/ui/signature-pad";
 import {
-  useCareFacilityTerm,
   useCareTermTranslations,
+  useCareTermValues,
 } from "~/lib/care-facility-term";
+import type { CareTermValues } from "~/lib/care-facility-term-value";
 import {
   AT_MOST_ONE_PER_DAY,
   careOfferingDayConflicts,
@@ -299,14 +300,14 @@ export function EnrollmentForm({
   onFormChanged,
 }: Props) {
   const intl = useCareTermTranslations("enrollmentForm");
-  const careTerm = useCareFacilityTerm();
+  const care = useCareTermValues();
   const activeLocale = useLocale();
   // School-written texts follow the same opt-in as the form chrome: staff
   // previews stay German even when a parent locale cookie exists (#3377).
   const contentLocale = localizedCopy ? activeLocale : DEFAULT_LOCALE;
   const tr = useMemo(
-    () => makeEnrollmentFormTranslator(intl, localizedCopy, careTerm),
-    [intl, localizedCopy, careTerm],
+    () => makeEnrollmentFormTranslator(intl, localizedCopy, care),
+    [intl, localizedCopy, care],
   );
   // The staff portal loads no parent messages: the attachment buttons take
   // their German labels from the form's own translator.
@@ -1981,7 +1982,7 @@ const GERMAN_ENROLLMENT_FORM_MESSAGES = germanEnrollmentFormMessages as Record<
 function makeEnrollmentFormTranslator(
   intl: ReturnType<typeof useCareTermTranslations>,
   localizedCopy: boolean,
-  careTerm: string,
+  care: CareTermValues,
 ): EnrollmentFormTranslator {
   if (localizedCopy) {
     return Object.assign(
@@ -1995,7 +1996,7 @@ function makeEnrollmentFormTranslator(
       if (typeof value !== "string") return key;
       // The German staff preview names the school's care like the parents'
       // form does (#6042).
-      return interpolateMessage(value, { careTerm, ...values });
+      return interpolateMessage(value, { ...care, ...values });
     },
     { raw: (key: string) => readGermanMessage(key) },
   );

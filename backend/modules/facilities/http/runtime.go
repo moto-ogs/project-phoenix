@@ -27,6 +27,8 @@ type RoomReads interface {
 
 type Dependencies struct {
 	Facilities RoomReads
+	// Closures keeps the room closures (#7653).
+	Closures facilitiesModule.Closures
 	// RoomHistorySettings resolves whether the room history is shown and how
 	// many days it spans; the root binds it to the Settings Platform.
 	RoomHistorySettings func(context.Context) (context.Context, bool, int, error)
@@ -47,12 +49,12 @@ func NewResource(
 	protectedTenantRoutes func(chi.Router, func(chi.Router, Middleware)),
 	constraintViolation func(error) bool,
 ) *Resource {
-	if dependencies.Facilities == nil || dependencies.RoomHistorySettings == nil || dependencies.UserContext == nil ||
+	if dependencies.Facilities == nil || dependencies.Closures == nil || dependencies.RoomHistorySettings == nil || dependencies.UserContext == nil ||
 		dependencies.Active == nil || dependencies.Users == nil || dependencies.Education == nil ||
 		dependencies.ListExport == nil || dependencies.Now == nil || logger == nil || protectedTenantRoutes == nil || constraintViolation == nil {
 		panic("rooms HTTP composition: all dependencies are required")
 	}
-	return newRoomResource(rooms, Runtime{
+	return newRoomResource(rooms, dependencies.Closures, Runtime{
 		Protected:        protectedTenantRoutes,
 		Permission:       apiCommon.RequiresPermission,
 		ParseID:          apiCommon.ParseID,
@@ -94,8 +96,12 @@ func renderFailure(w http.ResponseWriter, r *http.Request, kind FailureKind, err
 		}
 		apiCommon.RenderError(w, r, apiCommon.ErrorForbidden(err))
 	case FailureNotFound:
-		// Only ErrRoomNotFound maps here: a deleted or unknown room names
-		// itself instead of falling back to the input class text.
+		// A deleted or unknown room or closure names itself instead of
+		// falling back to the input class text.
+		if errors.Is(err, facilitiesModule.ErrRoomClosureNotFound) {
+			apiCommon.RenderError(w, r, apiCommon.ErrorNotFoundWithCode(err, apiCommon.CodeRoomsClosureNotFound))
+			return
+		}
 		apiCommon.RenderError(w, r, apiCommon.ErrorNotFoundWithCode(err, apiCommon.CodeRoomsNotFound))
 	case FailureConflict:
 		renderConflict(w, r, err, code)
@@ -111,9 +117,9 @@ func renderConflict(w http.ResponseWriter, r *http.Request, err error, code stri
 	switch {
 	case errors.As(err, &stillPlanned):
 		refs := stillPlanned.References
-		apiCommon.RenderError(w, r, apiCommon.ErrorConflictWithDetails(err, apiCommon.CodeRoomsStillPlanned, map[string]any{
-			"activity_groups": refs.ActivityGroups, "upcoming_blocks": refs.UpcomingBlocks,
-			"education_groups": refs.EducationGroups, "devices": refs.Devices,
+		apiCommon.RenderError(w, r, apiCommon.ErrorConflictWithDetails(err, apiCommon.CodeRoomsStillPlanned, RoomStillPlannedDetails{
+			ActivityGroups: refs.ActivityGroups, UpcomingBlocks: refs.UpcomingBlocks,
+			EducationGroups: refs.EducationGroups, Devices: refs.Devices,
 		}))
 	case code == "color_already_in_use":
 		apiCommon.RenderError(w, r, apiCommon.ErrorConflictWithCode(err, apiCommon.CodeRoomsColorAlreadyInUse))

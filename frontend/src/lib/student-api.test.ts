@@ -735,7 +735,10 @@ describe("updateStudent", () => {
     expect(conflict).toBeInstanceOf(CompanionPlanConflictError);
     expect(conflict).toMatchObject({
       status: 409,
-      details: { other: 1, privacy_consent_saved: true },
+      details: {
+        other: 1,
+        conflicts: [{ student_id: "7", weekdays: ["mon"] }],
+      },
     });
     expect(isPrivacyConsentSaved(conflict)).toBe(true);
     expect(isCompanionsChanged(stale)).toBe(true);
@@ -817,7 +820,9 @@ describe("guarded student deletion", () => {
 
 describe("student photo", () => {
   it("posts the photo as multipart form data and answers its URL", async () => {
-    fetchMock.mockResolvedValueOnce(ok({ photo_url: "/uploads/p.jpg" }));
+    fetchMock.mockResolvedValueOnce(
+      ok({ student_id: "7", photo_version: "p.jpg" }),
+    );
 
     const result = await uploadStudentPhoto(
       "7",
@@ -825,7 +830,7 @@ describe("student photo", () => {
       { consentAcknowledged: true },
     );
 
-    expect(result).toEqual({ photoUrl: "/uploads/p.jpg" });
+    expect(result).toEqual({ photoUrl: "/api/students/7/photo/p.jpg" });
     expect(calledUrl()).toBe("/api/students/7/photo");
     const body = calledInit().body as FormData;
     expect(body).toBeInstanceOf(FormData);
@@ -834,7 +839,9 @@ describe("student photo", () => {
   });
 
   it("keeps the file name of a File and sends no consent unasked", async () => {
-    fetchMock.mockResolvedValueOnce(ok({ photo_url: "/uploads/p.jpg" }));
+    fetchMock.mockResolvedValueOnce(
+      ok({ student_id: "7", photo_version: "p.jpg" }),
+    );
 
     await uploadStudentPhoto(
       "7",

@@ -39,8 +39,7 @@ export interface AccountBalance {
  * and may lie years back. The carry chain behind `closingBalanceMinutes` walks
  * those months server-side instead.
  *
- * Pass a `staffId` for the admin (`time_tracking:manage`) endpoint; omit it to
- * read the caller's own account. The keys deliberately match the Monatskarte's
+ * The admin (`time_tracking:manage`) keys deliberately match the Monatskarte's
  * current-month keys so SWR dedupes both widgets into one request.
  *
  * The month is the BERLIN month, not the browser's: the backend derives its
@@ -59,7 +58,7 @@ export interface AccountBalance {
  * config read is surfaced rather than swallowed, mirroring the backend's
  * `chainAnchor`.
  */
-export function useAccountBalance(staffId?: string): AccountBalance {
+export function useAccountBalance(staffId: string): AccountBalance {
   const today = useBerlinToday();
   const year = Number(today.slice(0, 4));
   const month = Number(today.slice(5, 7));
@@ -89,17 +88,10 @@ export function useAccountBalance(staffId?: string): AccountBalance {
   const refreshInterval = useLiveRefreshInterval(OPEN_MONTH_REFRESH_MS);
 
   const { data, isLoading, error, mutate } = useSWRAuth<MonthSummary>(
-    !canResolveAccount
-      ? null
-      : staffId
-        ? staffMonthSummaryKeys.month(staffId, year, month)
-        : timeTrackingKeys.monthSummary(year, month),
-    () =>
-      staffId
-        ? staffMonthSummaryService.getMonthSummary(staffId, year, month)
-        : timeTrackingService.getMonthSummary(year, month),
-    // The current month is always open: a running session grows Ist
-    // server-side, so the Saldo has to keep up.
+    canResolveAccount
+      ? staffMonthSummaryKeys.month(staffId, year, month)
+      : null,
+    () => staffMonthSummaryService.getMonthSummary(staffId, year, month),
     { refreshInterval },
   );
 

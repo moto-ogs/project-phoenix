@@ -131,7 +131,10 @@ export function isEffectiveAbsenceStatus(status: string): boolean {
 }
 
 export function isHalfAbsenceBoundary(
-  absence: StaffAbsenceRow,
+  absence: Pick<
+    StaffAbsenceRow,
+    "half_day" | "start_half_day" | "end_half_day"
+  >,
   key: string,
   startKey: string,
   endKey: string,
@@ -284,7 +287,10 @@ export function resolveAccountStartDate(
 // both portals instead of a second camelCase copy.
 
 export function adaptHistorySessionForMetrics(
-  session: WorkSessionHistory,
+  session: Omit<
+    WorkSessionHistory,
+    "staffId" | "createdBy" | "updatedBy" | "createdAt" | "updatedAt"
+  >,
 ): StaffHistorySession {
   return {
     id: session.id || undefined,
@@ -308,7 +314,18 @@ export function adaptHistorySessionForMetrics(
   };
 }
 
-export function adaptAbsenceForMetrics(absence: StaffAbsence): StaffAbsenceRow {
+export function adaptAbsenceForMetrics(
+  absence: Omit<
+    StaffAbsence,
+    | "approvedBy"
+    | "approvedAt"
+    | "createdBy"
+    | "createdAt"
+    | "updatedAt"
+    | "substituteStaffId"
+  > &
+    Partial<Pick<StaffAbsence, "approvedBy" | "approvedAt">>,
+): StaffAbsenceRow {
   return {
     id: String(absence.id),
     staff_id: String(absence.staffId),

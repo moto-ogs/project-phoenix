@@ -9,6 +9,7 @@ import (
 	facilitiesModule "github.com/moto-ogs/project-phoenix/modules/facilities"
 	"github.com/moto-ogs/project-phoenix/modules/studentpresence"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 
 	"github.com/moto-ogs/project-phoenix/workflows/openroommove"
 	openRoomMoveCompose "github.com/moto-ogs/project-phoenix/workflows/openroommove/compose"
@@ -19,7 +20,7 @@ import (
 // Activities for the room's system activity, and the retained Student
 // Presence service for the room session and the move until that owner exposes
 // them publicly.
-func newOpenRoomMove(rooms facilitiesModule.Capability, activities timetable.Capability, presence movebinding.Presence, logger *slog.Logger) (openroommove.Command, error) {
+func newOpenRoomMove(rooms facilitiesModule.Capability, closures facilitiesModule.Closures, activities timetable.Capability, presence movebinding.Presence, today func() calendar.Date, logger *slog.Logger) (openroommove.Command, error) {
 	// The presence value is Student Presence's composed facade, which also
 	// serves the check-in into a room session (#6953) as its own capability.
 	checkIns, ok := presence.(studentpresence.SessionCheckIns)
@@ -29,9 +30,11 @@ func newOpenRoomMove(rooms facilitiesModule.Capability, activities timetable.Cap
 	log := logger.With("workflow", "open-room-move")
 	return openRoomMoveCompose.New(openRoomMoveCompose.Dependencies{
 		Rooms:        rooms,
+		RoomClosures: closures,
 		Activities:   activities,
 		RoomSessions: movebinding.NewRoomSessions(presence),
 		Moves:        movebinding.NewMoves(presence, checkIns),
+		Today:        today,
 		Observe: func(o openRoomMoveCompose.Observation) {
 			log.Debug("open room move operation",
 				"operation", o.Operation,

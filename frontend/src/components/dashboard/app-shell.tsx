@@ -6,6 +6,10 @@ import { DemoBanner, useDemoBannerShown } from "~/components/demo/demo-banner";
 import { useDemoEveningActive } from "~/components/demo/demo-evening-notice";
 import { StaffPreviewBanner } from "~/components/staff-preview/staff-preview-banner";
 import { useShellAuthSafe } from "~/lib/shell-auth-context";
+import {
+  AT_LEAST_LG,
+  useResolvedMediaQuery,
+} from "~/lib/hooks/use-media-query";
 import { Header } from "./header";
 import { RemindersBell } from "./header/reminders-bell";
 import { Sidebar } from "./sidebar";
@@ -19,8 +23,9 @@ interface AppShellProps {
 
 /**
  * Persistent application shell rendered once in the (protected) layout.
- * Header, Sidebar, and MobileBottomNav stay mounted across navigations,
- * only the children (page content) swap.
+ * The visible navigation stays mounted across navigations. Both variants
+ * are rendered for document hydration; after that only the active one
+ * subscribes to route changes and unread counts.
  *
  * The frame itself lives in the shared `PortalShell`; this file only names
  * the staff portal's own navigation.
@@ -46,12 +51,17 @@ export function AppShell({ children }: AppShellProps) {
   const stripActive = previewActive || demoBannerShown;
   // Abends liegt unter dem Demo-Streifen eine Hinweiszeile (h-8, #3921).
   const eveningRow = useDemoEveningActive() && demoBannerShown;
+  const desktop = useResolvedMediaQuery(AT_LEAST_LG);
 
   return (
     <div className={eveningRow ? "pt-20" : stripActive ? "pt-12" : undefined}>
       <MobilePageHelpPortal>
         <PortalShell
-          header={<Header notificationBell={<RemindersBell />} />}
+          header={
+            desktop !== false ? (
+              <Header notificationBell={<RemindersBell />} />
+            ) : null
+          }
           headerClassName={
             eveningRow
               ? "sticky top-20 z-40 hidden lg:block split:hidden"
@@ -81,9 +91,11 @@ export function AppShell({ children }: AppShellProps) {
           // Bildschirmrand -- die wachsende letzte Fläche endete dann unter der
           // Kante statt an ihr. Die Zeile bestimmt die Höhe, nicht die Leiste.
           sidebar={
-            <Sidebar className="split:hidden hidden min-h-0! lg:block" />
+            desktop !== false ? (
+              <Sidebar className="split:hidden hidden min-h-0! lg:block" />
+            ) : null
           }
-          bottomNav={<MobileBottomNav />}
+          bottomNav={desktop !== true ? <MobileBottomNav /> : null}
         >
           <Suspense fallback={null}>
             <StaffSettingsReturnPathMemory />

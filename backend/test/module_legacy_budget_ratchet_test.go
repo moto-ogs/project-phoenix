@@ -185,7 +185,7 @@ var moduleComposeBudgets = map[string]int{
 	"modules/dataimport/compose/imports": 31,
 	// ADR 0145: +40 LOC for transport lifecycle, -8 LOC for the retired local wrapper.
 	// ADR 0267: +8, the clock fields.
-	"modules/delivery/compose":         399,
+	"modules/delivery/compose":         394,
 	"modules/delivery/objects/compose": 12, // ADR 0293
 	// ADR 0268: the clock of the administration and the IoT service (+6).
 	"modules/devicefleet/compose":                   209,
@@ -218,7 +218,7 @@ var moduleComposeBudgets = map[string]int{
 	// ADR 0218: the Träger scope and the recipient rekey (+33).
 	"modules/exporttransfer/compose": 180,
 	// ADR 0241: the rooms of the utilization (+13).
-	"modules/facilities/compose":                   197,
+	"modules/facilities/compose":                   195,
 	"modules/facilities/compose/repositoryadapter": 11,
 	// Raised by ADR 0298: the demo seed's feedback history writer and the
 	// aliases of its input (+15).
@@ -246,7 +246,7 @@ var moduleComposeBudgets = map[string]int{
 	// ADR 0246: the report templates and their projection read (+5).
 	// ADR 0268: the clock fields and their imports (+10).
 	// ADR 0318: the constructor of the responsibilities at the schools (+5).
-	"modules/organizationtenancy/compose": 385,
+	"modules/organizationtenancy/compose": 384,
 	// Added by ADR 0115: the Elternabrechnung's construction only.
 	// Raised by ADR 0119: the billing run constructor (+7).
 	// Raised by ADR 0121: the confirmation letter constructor (+8).
@@ -294,7 +294,9 @@ var moduleComposeBudgets = map[string]int{
 	// ADR 0278: the time import of the guardian profile clock (+1).
 	// ADR 0307 (#7760): the read of child records by
 	// identifier the link of imported contracts binds (+13).
-	"modules/peopledirectory/compose":    1015,
+	// ADR 0327 (#8137): the names behind the Träger-Büro's list of the
+	// children of its schools (+13).
+	"modules/peopledirectory/compose":    1028,
 	"modules/presenceprojection/compose": 7,
 	"modules/requestreview/compose":      12,
 	"modules/schedulerruntime/compose":   45,
@@ -362,7 +364,7 @@ var moduleComposeBudgets = map[string]int{
 	// ADR 0253: the Springer exits after the last block (+6).
 	// ADR 0289: the seal constructor of the sick note and payslip files (+6).
 	"modules/workforce/compose":       942,
-	"workflows/catererportal/compose": 37, // added by ADR 0077
+	"workflows/catererportal/compose": 31, // added by ADR 0077
 	// Raised by ADR 0224: the class follow-up port (+2).
 	"workflows/gradetransition/compose": 51,
 	// Added by ADR 0209: the holiday allocation workflow and its joining

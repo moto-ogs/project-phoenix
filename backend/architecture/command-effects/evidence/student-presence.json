@@ -9985,6 +9985,14 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/facilities.Closures.RoomClosedOn",
+      "binding_digest": "1714e67940bef27813a59de6bac9ec6f",
+      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.RoomClosures.RoomClosedOn",
+      "source_owner": "student-presence",
+      "target": "github.com/moto-ogs/project-phoenix/modules/facilities.Closures.RoomClosedOn",
+      "target_owner": "facilities"
+    },
+    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListRoomSessionHistory",
       "binding_digest": "d9f49ef65cd2eac404225862eb222dad",
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.RoomHistoryQuery.ListRoomSessionHistory",
@@ -13262,14 +13270,6 @@
       "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.StaffAccess.GetCurrentStaff",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.AttendanceRouteStaff.GetCurrentStaff",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/api.activeStaffAccess.HasCurrentStaff",
-      "binding_digest": "d0788398f6b9f115e9434e95da2b0b8d",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.StaffAccess.HasCurrentStaff",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.AttendanceRouteStaff.HasCurrentStaff",
       "target_owner": "people-directory"
     },
     {

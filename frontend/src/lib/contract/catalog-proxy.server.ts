@@ -18,10 +18,17 @@ import {
   type RouteContext,
 } from "~/lib/route-wrapper-utils.server";
 import { underOutsideHead } from "./catalog-outside-mounts";
-import { fileCacheValues, publicAssetCache } from "./browser-traits.generated";
+import {
+  fileCacheValues,
+  publicAssetCache,
+  studentPhotoRoutes,
+} from "./browser-traits.generated";
+import { withLegacyPhotoAddress } from "./legacy-photo-address.server";
 import { decodeContract, readContractJson } from "./client.server";
+import { registeredRouteSearch } from "./address";
 import { commits } from "./commit";
 import { fileAnswer, multipart } from "./runtime";
+import type { BodyLimitDetails } from "./problem-details.generated";
 import {
   purgeRequestTenantSettingsCache,
   purgeTenantSettingsCache,
@@ -430,13 +437,10 @@ export function makeCatalogProxy(
   function target(request: NextRequest, path: unknown) {
     const found = find(path);
     if (!found) throw notFound();
-    const query = new URLSearchParams();
-    for (const name of Object.keys(found.route.query ?? {})) {
-      for (const value of request.nextUrl.searchParams.getAll(name)) {
-        query.append(name, value);
-      }
-    }
-    const search = query.size > 0 ? `?${query.toString()}` : "";
+    const search = registeredRouteSearch(
+      found.route.query ?? {},
+      request.nextUrl.searchParams,
+    );
     const endpoint = `/${found.segments.map(encodeURIComponent).join("/")}`;
     return { route: found.route, endpoint: `${endpoint}${search}` };
   }
@@ -465,7 +469,9 @@ export function makeCatalogProxy(
     const message = (answer as { message?: unknown } | undefined)?.message;
     return {
       status: "success",
-      data: value.data,
+      data: studentPhotoRoutes.has(`${route.method} ${route.pattern}`)
+        ? withLegacyPhotoAddress(value.data)
+        : value.data,
       ...(value.pagination !== undefined && { pagination: value.pagination }),
       ...(typeof message === "string" && message !== "" && { message }),
     };
@@ -582,7 +588,10 @@ export function makeCatalogProxy(
     const tooLarge = () =>
       bffError(413, `request body exceeds ${limit} bytes`, {
         code: route.tooLargeCode,
-        details: { max_bytes: limit, max_mb: Math.floor(limit / MIB) },
+        details: {
+          max_bytes: limit,
+          max_mb: Math.floor(limit / MIB),
+        } satisfies BodyLimitDetails,
       });
     const declared = request.headers.get("content-length");
     if (declared === null) {

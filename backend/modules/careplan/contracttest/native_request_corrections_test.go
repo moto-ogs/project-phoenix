@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/moto-ogs/project-phoenix/roots/owners"
+
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/careplantest"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/carerequests"
@@ -22,6 +24,10 @@ type correctionBoundary struct {
 	allowed bool
 	history []compose.RequestCorrectionEvent
 	payload map[string]any
+}
+
+func (*correctionBoundary) LockStudentAndExceptionDay(context.Context, int64, string) error {
+	return nil
 }
 
 func (b *correctionBoundary) ReleaseBeforeDelete(context.Context, *careplan.PickupException) error {
@@ -80,7 +86,7 @@ func TestNativeCorrectionReauthorizesAndRollsBackExactExceptionDeletion(t *testi
 	request, err = owner.FindCareScheduleRequest(ctx, request.ID, false)
 	require.NoError(t, err)
 	b := &correctionBoundary{decisionBoundary: decisionBoundary{student: compose.ReviewStudent{ID: student.ID}}}
-	deps := compose.RequestCorrectionDependencies{Records: owner, People: b, Plans: b, Effects: b}
+	deps := compose.RequestCorrectionDependencies{Records: owners.CarePlanRequestRecords(owner), People: b, Plans: b, Effects: b}
 	service, err := compose.NewRequestCorrections(deps)
 	require.ErrorContains(t, err, "excusal")
 	require.Nil(t, service)

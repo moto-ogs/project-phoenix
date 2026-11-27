@@ -18,7 +18,7 @@ func TestTenantSignalsAreBoundToOneEvent(t *testing.T) {
 	if kind, ok := CalendarAppointmentsChanged.event(); !ok || kind != EventCalendarAppointmentsChanged {
 		t.Fatalf("calendar signal is bound to %q (%v)", kind, ok)
 	}
-	if kind, ok := TenantSignal(0).event(); ok {
+	if kind, ok := TenantSignal(EventActivityStart).event(); ok {
 		t.Fatalf("an unknown signal is bound to %q", kind)
 	}
 }

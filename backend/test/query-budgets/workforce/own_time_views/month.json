@@ -1,0 +1,7 @@
+{
+  "scenario": "workforce.own_time_views.month",
+  "max": 27,
+  "exact": false,
+  "description": "Production tenant GET for a month and its carry chain, measured at the same two sizes as the week. Includes the booking and tenant transaction.",
+  "route": "GET /api/time-tracking/period"
+}

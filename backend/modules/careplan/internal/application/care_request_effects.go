@@ -141,19 +141,19 @@ func (e *CareRequestEffects) RegisterDecision(ctx context.Context, req *carerequ
 
 // notifyPickupChange tells the child's team the pickup time an approved
 // one-day request made current, or that a corrected decision took it back.
-// A request that only changes the Abholart or the collector names no new
-// time and stays silent.
+// A request that names the person who collects the child tells the team as
+// well (#8162); one that only changes the Abholart stays silent.
 func (e *CareRequestEffects) notifyPickupChange(ctx context.Context, req *carerequests.Request, reviewerAccountID int64, withdrawn bool) error {
 	if e.deps.PickupChanges == nil || req.RequestKind != "pickup_change" {
 		return nil
 	}
 	terms := carerequests.StoredPickupTerms(req.Payload)
-	if terms == nil || terms.PickupTime == "" {
+	if terms == nil || terms.PickupTime == "" && terms.PickupPersonName == "" {
 		return nil
 	}
 	return e.deps.PickupChanges.NotifyPickupChangeApproved(ctx, ports.PickupChangeNotice{
 		TenantID: e.tenantOf(ctx, req.TenantID), StudentID: req.StudentID, Date: terms.Date,
-		PickupTime: terms.PickupTime, Withdrawn: withdrawn, ReviewerAccountID: reviewerAccountID, RequestID: req.ID,
+		PickupTime: terms.PickupTime, PickupPerson: terms.PickupPersonName, Withdrawn: withdrawn, ReviewerAccountID: reviewerAccountID, RequestID: req.ID,
 	})
 }
 

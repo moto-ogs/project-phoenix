@@ -499,7 +499,7 @@ func TestErrorUpload_CarriesTheRefusalCode(t *testing.T) {
 	sizeResp, ok := ErrorUpload(err, 4).(*ErrResponse)
 	require.True(t, ok)
 	assert.Equal(t, CodeFilesFileTooLarge, sizeResp.Code)
-	assert.Equal(t, int64(1), sizeResp.Details["max_mb"])
+	assert.Equal(t, SizeLimitDetails{MaxMB: 1}, sizeResp.Details)
 	assert.Contains(t, sizeResp.Detail, "bis zu 1 MB")
 
 	req = createMultipartRequest(t, "other", "a.pdf", []byte("%PDF-1.4"))

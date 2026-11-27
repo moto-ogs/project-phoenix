@@ -38,6 +38,8 @@ type (
 	ChildConsent                     = care.ChildConsent
 	RoomHistoryStopRequest           = care.RoomHistoryStopRequest
 	ChildRoomHistoryStop             = care.ChildRoomHistoryStop
+	FamilyStart                      = care.FamilyStart
+	FamilyStartCard                  = care.FamilyStartCard
 	ChildFeatureFlags                = care.ChildFeatureFlags
 	ChildGuardian                    = care.ChildGuardian
 	ChildMasterData                  = care.ChildMasterData
@@ -130,6 +132,10 @@ type (
 	RequestSharingState              = messaging.RequestSharingState
 	StudentPhotoUnlinker             = care.StudentPhotoUnlinker
 	TodayStatus                      = care.TodayStatus
+	ChildDayChanges                  = care.ChildDayChanges
+	ChildDay                         = care.ChildDay
+	ChildDaySource                   = care.ChildDaySource
+	ChildDayChange                   = care.ChildDayChange
 )
 
 const (
@@ -152,6 +158,7 @@ const (
 
 var (
 	ErrContractSignatureInvalid           = care.ErrContractSignatureInvalid
+	ErrDayChangesDayOutOfRange            = care.ErrDayChangesDayOutOfRange
 	ErrHolidayRegistrationConsentNotFound = care.ErrHolidayRegistrationConsentNotFound
 	ErrContractNotSignable                = care.ErrContractNotSignable
 	ErrContractWithdrawalNoticeRequired   = care.ErrContractWithdrawalNoticeRequired

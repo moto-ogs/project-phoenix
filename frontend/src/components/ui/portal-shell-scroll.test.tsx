@@ -501,7 +501,9 @@ describe("PortalShell: Scrollposition beim Seitenwechsel", () => {
   it("rendert im Leerlauf nicht von selbst neu", async () => {
     vi.useFakeTimers();
     try {
-      await expectIdleRenderBudget(<NavigationScrollPosition />);
+      await expectIdleRenderBudget(
+        <NavigationScrollPosition scrollPositions={new Map()} />,
+      );
     } finally {
       releaseFakeTimers();
     }

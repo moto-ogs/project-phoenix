@@ -3,6 +3,7 @@
 package daychangesviewhttp
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/daychangesview"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // Resource serves the overview route.
@@ -24,15 +26,16 @@ func NewResource(view daychangesview.Query) *Resource {
 }
 
 // RouteContracts registers the overview (ADR 0270) relative to
-// /api/day-changes. It has no date parameter: the backend reads today of the
-// school.
+// /api/day-changes. Without date the backend reads today of the school; date
+// may name tomorrow for the preview (#7657), any other day is refused.
 func RouteContracts() []common.RouteContract {
 	return []common.RouteContract{{
 		Method: "GET", Pattern: "/today", Portals: []common.PortalScope{common.PortalTenant},
+		Query:    []common.QueryParam{{Name: "date", Kind: common.QueryDate}},
 		Response: daychangesview.Overview{},
 		Enums: []common.EnumContract{
 			{Type: daychangesview.Section(""), Values: []string{string(daychangesview.SectionYou), string(daychangesview.SectionSchool)}},
-			{Type: daychangesview.Source(""), Values: []string{string(daychangesview.SourceStaff), string(daychangesview.SourceChildren), string(daychangesview.SourceNotices), string(daychangesview.SourceClosingDays), string(daychangesview.SourceActivities), string(daychangesview.SourceClasses), string(daychangesview.SourceAppointments), string(daychangesview.SourceMealPlan)}},
+			{Type: daychangesview.Source(""), Values: []string{string(daychangesview.SourceStaff), string(daychangesview.SourceChildren), string(daychangesview.SourceNotices), string(daychangesview.SourceClosingDays), string(daychangesview.SourceActivities), string(daychangesview.SourceClasses), string(daychangesview.SourceAppointments), string(daychangesview.SourceMealPlan), string(daychangesview.SourceSupervisions), string(daychangesview.SourceRoomClosures)}},
 			{Type: daychangesview.SourceState(""), Values: []string{string(daychangesview.SourceLoaded), string(daychangesview.SourceFailed)}},
 			{Type: daychangesview.Kind(""), Values: []string{
 				string(daychangesview.KindStaffAbsent), string(daychangesview.KindStaffAbsentCount),
@@ -40,6 +43,7 @@ func RouteContracts() []common.RouteContract {
 				string(daychangesview.KindShiftChanged), string(daychangesview.KindShiftCancelled), string(daychangesview.KindShiftReplacement),
 				string(daychangesview.KindChildAbsent), string(daychangesview.KindChildPickupChanged),
 				string(daychangesview.KindChildGoesAlone), string(daychangesview.KindChildPickupNote),
+				string(daychangesview.KindChildPickupPerson),
 				string(daychangesview.KindChildSummary),
 				string(daychangesview.KindStaffNotice),
 				string(daychangesview.KindClosingDay),
@@ -49,7 +53,8 @@ func RouteContracts() []common.RouteContract {
 				string(daychangesview.KindBlockChangeCount),
 				string(daychangesview.KindClassTrip), string(daychangesview.KindClassDismissalChanged),
 				string(daychangesview.KindAppointmentCancelled), string(daychangesview.KindAppointmentChanged),
-				string(daychangesview.KindMealPlanChanged),
+				string(daychangesview.KindMealPlanChanged), string(daychangesview.KindMealCancelled),
+				string(daychangesview.KindRoomClosed),
 			}},
 			{Type: daychangesview.ChildStatus(""), Values: []string{string(daychangesview.ChildSick), string(daychangesview.ChildExcused)}},
 			{Type: daychangesview.PersonRole(""), Values: []string{
@@ -62,6 +67,8 @@ func RouteContracts() []common.RouteContract {
 				string(daychangesview.LinkOwnShiftPlan), string(daychangesview.LinkShiftPlan), string(daychangesview.LinkStudent),
 				string(daychangesview.LinkStaffNotices), string(daychangesview.LinkCalendarPeriods), string(daychangesview.LinkDayPlan),
 				string(daychangesview.LinkSubstitutionPlan), string(daychangesview.LinkCalendar), string(daychangesview.LinkMealPlan),
+				string(daychangesview.LinkSchoolClass), string(daychangesview.LinkSchoolCalendar),
+				string(daychangesview.LinkSchoolSupervisions), string(daychangesview.LinkRoom),
 			}},
 			{Type: daychangesview.NoticePriority(""), Values: []string{
 				string(daychangesview.NoticeInfo), string(daychangesview.NoticeImportant),
@@ -83,10 +90,30 @@ func (rs *Resource) Router(protected func(chi.Router, func(chi.Router, common.Mi
 }
 
 func (rs *Resource) today(w http.ResponseWriter, r *http.Request) {
-	overview, err := rs.view.Today(r.Context())
-	if err != nil {
+	overview, err := rs.read(r)
+	switch {
+	case errors.Is(err, errDateFormat), errors.Is(err, daychangesview.ErrDayOutOfRange):
+		common.RenderError(w, r, common.ErrorInvalidRequest(err))
+	case err != nil:
 		common.RenderError(w, r, common.ErrorInternalServerWrap("failed to read the day changes", err))
-		return
+	default:
+		common.Respond(w, r, http.StatusOK, overview, "Day changes retrieved successfully")
 	}
-	common.Respond(w, r, http.StatusOK, overview, "Day changes retrieved successfully")
+}
+
+// errDateFormat reports a date that is not YYYY-MM-DD.
+var errDateFormat = errors.New("date query parameter must be YYYY-MM-DD")
+
+// read reads today without date, else the named day (#7657); the projection
+// refuses a day other than today and tomorrow.
+func (rs *Resource) read(r *http.Request) (daychangesview.Overview, error) {
+	raw := r.URL.Query().Get("date")
+	if raw == "" {
+		return rs.view.Today(r.Context())
+	}
+	day, err := calendar.ParseDate(raw)
+	if err != nil {
+		return daychangesview.Overview{}, errDateFormat
+	}
+	return rs.view.On(r.Context(), day)
 }

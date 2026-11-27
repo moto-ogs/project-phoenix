@@ -11,6 +11,25 @@ import { useLayoutEffect, useState, type RefObject } from "react";
 export const FOCUSABLE_SELECTOR =
   'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"]), [contenteditable="true"]';
 
+function hasTabStop(element: HTMLElement): boolean {
+  return Array.from(
+    element.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
+  ).some((control) => {
+    if (
+      (control.hasAttribute("tabindex") && control.tabIndex < 0) ||
+      control.matches(":disabled") ||
+      control.closest("[hidden], [inert]")
+    )
+      return false;
+
+    return (
+      control.checkVisibility?.({ visibilityProperty: true }) ??
+      (control.getClientRects().length > 0 &&
+        getComputedStyle(control).visibility === "visible")
+    );
+  });
+}
+
 export function useScrollRegion(
   ref: RefObject<HTMLElement | null>,
   active = true,
@@ -29,14 +48,36 @@ export function useScrollRegion(
     // extra tab stop then.
     const measure = () =>
       setScrolls(
-        element.scrollHeight > element.clientHeight + 1 &&
-          element.querySelector(FOCUSABLE_SELECTOR) === null,
+        (element.scrollHeight > element.clientHeight + 1 ||
+          element.scrollWidth > element.clientWidth + 1) &&
+          !hasTabStop(element),
       );
-    const observer = new ResizeObserver(measure);
-    observer.observe(element);
-    if (element.firstElementChild) observer.observe(element.firstElementChild);
+    const resize = new ResizeObserver(measure);
+    resize.observe(element);
+    if (element.firstElementChild) resize.observe(element.firstElementChild);
+
+    // Forms can lose their last tab stop without changing their dimensions.
+    const mutations = new MutationObserver(measure);
+    mutations.observe(element, {
+      subtree: true,
+      childList: true,
+      attributeFilter: [
+        "class",
+        "style",
+        "hidden",
+        "inert",
+        "disabled",
+        "tabindex",
+        "href",
+        "type",
+        "contenteditable",
+      ],
+    });
     measure();
-    return () => observer.disconnect();
+    return () => {
+      resize.disconnect();
+      mutations.disconnect();
+    };
   }, [ref, active]);
   return scrolls;
 }

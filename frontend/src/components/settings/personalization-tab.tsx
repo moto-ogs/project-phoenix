@@ -7,6 +7,7 @@ import { MotoBrand } from "~/components/auth/moto-brand";
 import { useTenant } from "~/lib/tenant-context";
 import { useApiErrorDisplay, useToast } from "~/contexts/ToastContext";
 import { bffJson } from "~/lib/bff-fetch";
+import { mapLoginImageSetting } from "~/lib/settings-api";
 import { loginImageSrc } from "~/lib/tenant-api";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
@@ -21,19 +22,14 @@ import { InsetPanel } from "~/components/ui/inset-panel";
 
 const logger = createLogger({ component: "PersonalizationTab" });
 
-interface LoginImageSetting {
-  readonly loginImageUrl: string | null;
-  readonly canEdit: boolean;
-}
+type LoginImageSetting = ReturnType<typeof mapLoginImageSetting>;
 
-async function fetchLoginImage(): Promise<LoginImageSetting> {
-  const data = await bffJson("tenant", "GET /api/settings/login-image", {
-    errorMessage: "Login image fetch failed",
-  });
-  return {
-    loginImageUrl: data.login_image_url ?? null,
-    canEdit: data.can_edit,
-  };
+async function fetchLoginImage() {
+  return mapLoginImageSetting(
+    await bffJson("tenant", "GET /api/settings/login-image", {
+      errorMessage: "Login image fetch failed",
+    }),
+  );
 }
 
 export function PersonalizationTab() {

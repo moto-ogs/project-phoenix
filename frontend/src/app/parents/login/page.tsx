@@ -151,7 +151,7 @@ function ParentLoginForm() {
   const [email, setEmail] = useState("");
   const [refusal, setRefusal] = useState<ParentRefusal | null>(null);
   // A stale session that could not be ended keeps the form locked.
-  const cleanupErrors = useApiFormError();
+  const cleanupErrors = useApiFormError(undefined, { preloadPresenter: false });
   const { show: showCleanupError } = cleanupErrors;
   const locale = normalizeLocale(useLocale());
   const searchParams = useSearchParams();
@@ -193,6 +193,7 @@ function ParentLoginForm() {
     const cleanup = signOutStaleSession({
       status,
       session,
+      portal: "parent",
       started: cleanupStartedRef,
       logger,
       // The stale session keeps the form locked: say so, and let
@@ -200,7 +201,10 @@ function ParentLoginForm() {
       onFailure: (cause) => {
         void showCleanupError(unavailableApiError(cause), {
           object: t("errorObject"),
-          retry: () => setCleanupAttempt((current) => current + 1),
+          retry: () => {
+            cleanupStartedRef.current = false;
+            setCleanupAttempt((current) => current + 1);
+          },
         });
       },
     });

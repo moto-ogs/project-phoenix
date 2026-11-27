@@ -847,6 +847,65 @@ describe("Tagesablauf auf der Kinderkarte (#6487)", () => {
     expect(items).toEqual(["14:00–15:00 Töpfer-AG", "15:15–16:00 Handball"]);
   });
 
+  it("marks the offering that runs right now, and only that one (#8194)", () => {
+    render(
+      <PlannedActivityRows
+        activities={[
+          { title: "Chor", start_time: "13:00", end_time: "14:00" },
+          { title: "Töpfer-AG", start_time: "14:00", end_time: "15:00" },
+          { title: "Handball", start_time: "15:15", end_time: "16:00" },
+        ]}
+        // 14:30 in Berlin, im Winter.
+        now={new Date("2025-01-15T14:30:00+01:00")}
+      />,
+    );
+
+    const items = screen.getAllByRole("listitem");
+    expect(items.map((item) => item.textContent)).toEqual([
+      "13:00–14:00 Chor",
+      "14:00–15:00 Töpfer-AG (läuft gerade)",
+      "15:15–16:00 Handball",
+    ]);
+    const running = items[1]?.querySelector("[data-running]");
+    expect(running).toHaveTextContent("14:00–15:00 Töpfer-AG");
+    expect(running).toHaveClass("font-semibold", "text-gray-900");
+    expect(items[0]?.querySelector("[data-running]")).toBeNull();
+    expect(items[2]?.querySelector("[data-running]")).toBeNull();
+  });
+
+  it("ends the mark with the offering: at 15:00 a block until 15:00 is over", () => {
+    render(
+      <PlannedActivityRows
+        activities={[
+          { title: "Töpfer-AG", start_time: "14:00", end_time: "15:00" },
+          { title: "Schach", start_time: "15:00", end_time: "15:45" },
+        ]}
+        now={new Date("2025-01-15T15:00:00+01:00")}
+      />,
+    );
+
+    expect(
+      screen.getAllByRole("listitem").map((item) => item.textContent),
+    ).toEqual(["14:00–15:00 Töpfer-AG", "15:00–15:45 Schach (läuft gerade)"]);
+  });
+
+  it("names another day without „heute“ and marks nothing there", () => {
+    render(
+      <PlannedActivityRows
+        today={false}
+        activities={[
+          { title: "Töpfer-AG", start_time: "14:00", end_time: "15:00" },
+        ]}
+        now={new Date("2025-01-15T14:30:00+01:00")}
+      />,
+    );
+
+    const list = screen.getByRole("list", { name: "Angebote an diesem Tag" });
+    expect(list).toHaveTextContent("14:00–15:00 Töpfer-AG");
+    expect(list).not.toHaveTextContent("läuft gerade");
+    expect(list.querySelector("[data-running]")).toBeNull();
+  });
+
   it("renders nothing without offerings", () => {
     const { container } = render(
       <div data-testid="anchor">

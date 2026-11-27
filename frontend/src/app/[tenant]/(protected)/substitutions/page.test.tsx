@@ -114,7 +114,7 @@ import { useSession } from "next-auth/react";
 import { ApiError } from "~/lib/api-error";
 import { useSWRAuth } from "~/lib/swr";
 import { catalogText } from "~/test/error-catalog-text";
-import SubstitutionPage from "./page";
+import SubstitutionPage from "./page-content";
 
 function adminSession() {
   return {

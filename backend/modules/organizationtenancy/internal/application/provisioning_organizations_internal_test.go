@@ -18,7 +18,7 @@ func TestNewProvisioningRequiresEveryDependency(t *testing.T) {
 	complete := ProvisioningDependencies{
 		PWAUsageWindowDays: 30,
 		Organizations:      newFakeOwner(h.engine), ErasureOrderRecords: newFakeOwner(h.engine), DeviceSlots: newFakeOwner(h.engine), Transaction: h.tx, Dashboard: h.dashboard,
-		Identity: h.identity, Devices: h.devices, People: h.people, Presence: h.presence,
+		Accounts: h.identity, Identity: h.identity, Devices: h.devices, People: h.people, Presence: h.presence,
 		Categories: h.categories, Settings: h.settings, Audit: h.audit, Secrets: h.secrets,
 		Now: func() time.Time { return fixedTime },
 	}
@@ -34,6 +34,7 @@ func TestNewProvisioningRequiresEveryDependency(t *testing.T) {
 		"erasure order records": func(d *ProvisioningDependencies) { d.ErasureOrderRecords = nil },
 		"transaction":           func(d *ProvisioningDependencies) { d.Transaction = nil },
 		"dashboard":             func(d *ProvisioningDependencies) { d.Dashboard = nil },
+		"accounts":              func(d *ProvisioningDependencies) { d.Accounts = nil },
 		"identity":              func(d *ProvisioningDependencies) { d.Identity = nil },
 		"devices":               func(d *ProvisioningDependencies) { d.Devices = nil },
 		"people":                func(d *ProvisioningDependencies) { d.People = nil },

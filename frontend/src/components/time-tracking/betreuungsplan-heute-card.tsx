@@ -1,14 +1,14 @@
 "use client";
 
 import { ListRow } from "~/components/ui/list-row";
-import { useEffect } from "react";
+import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 
 import {
   CollectionGrid,
   CollectionGridTile,
 } from "~/components/ui/collection-grid";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
-import { useApiLoadError } from "~/contexts/ToastContext";
+import type { FormErrorInput } from "~/components/ui/form-error";
 import { EmptyState } from "~/components/ui/empty-state";
 import {
   SectionCard,
@@ -50,14 +50,7 @@ const CARD_LAYOUT = {
   bodyClassName: `${SECTION_CARD_BODY_GAP} flex min-h-0 flex-1 flex-col space-y-3`,
 } as const;
 
-export function BetreuungsplanHeuteCard({
-  title = "Heute geplant",
-  showEmpty = false,
-  href,
-  maxRows,
-  dense = false,
-  app = false,
-}: {
+interface DayCardProps {
   /** Überschrift der Karte. Auf der Startseite heißt derselbe Baustein „Mein Tag". */
   readonly title?: string;
   /**
@@ -93,11 +86,44 @@ export function BetreuungsplanHeuteCard({
    * Karte statt als Raster aus Feldern (keine Karte in der Karte).
    */
   readonly app?: boolean;
-} = {}) {
-  // Berlin, not browser-local: the backend defines "today" in Europe/Berlin,
-  // and a browser in another timezone around midnight would otherwise fetch
-  // yesterday's/tomorrow's assignments and label them "Heute geplant".
+}
+
+export function BetreuungsplanHeuteCard(props: DayCardProps) {
   const today = useBerlinToday();
+  const { data, error, mutate } = useSWRAuth<OwnAssignment[]>(
+    timeTrackingKeys.ownAssignmentsToday(today),
+    () => ownShiftService.getOwnAssignments(today, today),
+    { revalidateOnFocus: false, errorRetryCount: 1 },
+  );
+  const loadError = useSwrLoadError(error, "die Liste deiner Einsätze", mutate);
+  return (
+    <TodayAssignmentsCard
+      {...props}
+      today={today}
+      assignments={data}
+      failed={error !== undefined}
+      error={loadError}
+    />
+  );
+}
+
+export function TodayAssignmentsCard({
+  title = "Heute geplant",
+  showEmpty = false,
+  href,
+  maxRows,
+  dense = false,
+  app = false,
+  today,
+  assignments,
+  failed,
+  error,
+}: DayCardProps & {
+  readonly today: string;
+  readonly assignments?: readonly OwnAssignment[];
+  readonly failed: boolean;
+  readonly error: FormErrorInput | null;
+}) {
   // Auf einem Handy hat auch die Startseite keine feste Kartenhöhe (eine
   // Spalte, jede Karte so hoch wie ihr Inhalt). Die kompakte einzeilige Form
   // würde dort nur den Raum abschneiden — also gilt sie erst ab der
@@ -109,37 +135,10 @@ export function BetreuungsplanHeuteCard({
   const compact = dense && !isPhone;
   const onHome = maxRows !== undefined;
   const rowLimit = isPhone ? undefined : maxRows;
-  const {
-    data: assignments,
-    error,
-    mutate,
-  } = useSWRAuth<OwnAssignment[]>(
-    timeTrackingKeys.ownAssignmentsToday(today),
-    () => ownShiftService.getOwnAssignments(today, today),
-    { revalidateOnFocus: false, errorRetryCount: 1 },
-  );
-
-  // A fetch failure must stay distinguishable from "keine Einsätze geplant":
-  // with only one retry and focus revalidation off, silently rendering the
-  // empty-state (null) would hide the employee's schedule until a reload.
-  const load = useApiLoadError();
-  const showLoadError = load.show;
-  const clearLoadError = load.clear;
-  useEffect(() => {
-    if (error) {
-      void showLoadError(error, {
-        object: "die Liste deiner Einsätze",
-        retry: () => void mutate(),
-      });
-    } else {
-      clearLoadError();
-    }
-  }, [error, mutate, showLoadError, clearLoadError]);
-
-  if (error) {
+  if (failed) {
     return (
       <SectionCard title={title} concept={carePlanConcept} {...CARD_LAYOUT}>
-        <LoadErrorAlert error={load.error} />
+        <LoadErrorAlert error={error} />
       </SectionCard>
     );
   }

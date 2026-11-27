@@ -256,11 +256,11 @@ func renderUploadRefusal(w http.ResponseWriter, r *http.Request, err error) {
 	errors.As(err, &mismatch)
 	if mismatch != nil {
 		common.RenderError(w, r, common.ErrorInvalidRequestWithDetails(err, common.CodeEnrollmentUploadContentMismatch,
-			map[string]any{"filename": mismatch.filename}))
+			UploadContentDetails{Filename: mismatch.filename}))
 		return
 	}
 	common.RenderError(w, r, common.ErrorInvalidRequestWithDetails(err, common.CodeEnrollmentUploadInvalid,
-		map[string]any{"max_mb": capability.MaxFileFieldSizeMB}))
+		UploadRefusalDetails{MaxMB: capability.MaxFileFieldSizeMB}))
 }
 
 // renderUploadFailure maps the owner's refusals of an upload.
@@ -269,7 +269,7 @@ func renderUploadFailure(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
 	case errors.As(err, &rejection):
 		common.RenderError(w, r, common.ErrorInvalidRequestWithDetails(err, common.CodeEnrollmentUploadInvalid,
-			map[string]any{"max_mb": rejection.MaxMB, "allowed_types": rejection.AllowedTypes}))
+			UploadRefusalDetails{MaxMB: rejection.MaxMB, AllowedTypes: new(rejection.AllowedTypes)}))
 	case errors.Is(err, capability.ErrUploadFieldNotFound),
 		errors.Is(err, capability.ErrInvalidSubmission),
 		errors.Is(err, capability.ErrEnrollmentDisabled),

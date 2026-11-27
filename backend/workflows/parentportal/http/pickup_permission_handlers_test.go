@@ -12,6 +12,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan/carerequests"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 	parentService "github.com/moto-ogs/project-phoenix/workflows/parentportal"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -78,11 +79,11 @@ func TestParsePickupPersonID(t *testing.T) {
 	id, err := parsePickupPersonID(nil)
 	require.NoError(t, err)
 	assert.Zero(t, id)
-	value := "42"
+	value := ident.Optional(42)
 	id, err = parsePickupPersonID(&value)
 	require.NoError(t, err)
 	assert.Equal(t, int64(42), id)
-	invalid := "abc"
+	invalid := ident.Optional(-1)
 	_, err = parsePickupPersonID(&invalid)
 	assert.Error(t, err)
 }

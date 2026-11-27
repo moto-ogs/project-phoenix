@@ -8,6 +8,7 @@ import {
   num,
   object,
   optional,
+  partialResult,
   rec,
   safeInt,
   str,
@@ -25,11 +26,11 @@ export interface BulkAction {
   new_value: string;
 }
 
-export const BulkActionSchema: Decoder<BulkAction> = object<BulkAction>({
+export const BulkActionSchema: Decoder<BulkAction> = /*#__PURE__*/ object<BulkAction>({
   title: str,
   description: str,
   action: str,
-  affected_rows: nullable(arr(safeInt)),
+  affected_rows: /*#__PURE__*/ nullable(/*#__PURE__*/ arr(safeInt)),
   field: str,
   old_value: str,
   new_value: str,
@@ -42,7 +43,7 @@ export interface ClassListEntryImportRow {
   school_class: string;
 }
 
-export const ClassListEntryImportRowSchema: Decoder<ClassListEntryImportRow> = object<ClassListEntryImportRow>({
+export const ClassListEntryImportRowSchema: Decoder<ClassListEntryImportRow> = /*#__PURE__*/ object<ClassListEntryImportRow>({
   first_name: str,
   last_name: str,
   school_class: str,
@@ -55,7 +56,7 @@ export interface AutoFix {
   description: string;
 }
 
-export const AutoFixSchema: Decoder<AutoFix> = object<AutoFix>({
+export const AutoFixSchema: Decoder<AutoFix> = /*#__PURE__*/ object<AutoFix>({
   action: str,
   replacement: str,
   description: str,
@@ -72,14 +73,14 @@ export interface ValidationError {
   actual_value?: string;
 }
 
-export const ValidationErrorSchema: Decoder<ValidationError> = object<ValidationError>({
+export const ValidationErrorSchema: Decoder<ValidationError> = /*#__PURE__*/ object<ValidationError>({
   field: str,
   message: str,
   code: str,
   severity: str,
-  suggestions: optional(arr(str)),
-  auto_fix: optional(AutoFixSchema),
-  actual_value: optional(str),
+  suggestions: /*#__PURE__*/ optional(/*#__PURE__*/ arr(str)),
+  auto_fix: /*#__PURE__*/ optional(AutoFixSchema),
+  actual_value: /*#__PURE__*/ optional(str),
 });
 
 /** Go: dataimport.ClassListImportError */
@@ -90,10 +91,10 @@ export interface ClassListImportError {
   timestamp: string;
 }
 
-export const ClassListImportErrorSchema: Decoder<ClassListImportError> = object<ClassListImportError>({
+export const ClassListImportErrorSchema: Decoder<ClassListImportError> = /*#__PURE__*/ object<ClassListImportError>({
   row_number: safeInt,
   data: ClassListEntryImportRowSchema,
-  errors: nullable(arr(ValidationErrorSchema)),
+  errors: /*#__PURE__*/ nullable(/*#__PURE__*/ arr(ValidationErrorSchema)),
   timestamp: instant,
 });
 
@@ -112,7 +113,7 @@ export interface ClassListImportResult {
   errors: ClassListImportError[] | null;
 }
 
-export const ClassListImportResultSchema: Decoder<ClassListImportResult> = object<ClassListImportResult>({
+export const ClassListImportResultSchema: Decoder<ClassListImportResult> = /*#__PURE__*/ object<ClassListImportResult>({
   started_at: instant,
   completed_at: instant,
   total_rows: safeInt,
@@ -121,9 +122,9 @@ export const ClassListImportResultSchema: Decoder<ClassListImportResult> = objec
   skipped_count: safeInt,
   error_count: safeInt,
   warning_count: safeInt,
-  bulk_actions: nullable(arr(BulkActionSchema)),
+  bulk_actions: /*#__PURE__*/ nullable(/*#__PURE__*/ arr(BulkActionSchema)),
   dry_run: bool,
-  errors: nullable(arr(ClassListImportErrorSchema)),
+  errors: /*#__PURE__*/ nullable(/*#__PURE__*/ arr(ClassListImportErrorSchema)),
 });
 
 /** Go: dataimport.OpeningBalanceImportRow */
@@ -142,7 +143,7 @@ export interface OpeningBalanceImportRow {
   vacation_remaining_days?: number;
 }
 
-export const OpeningBalanceImportRowSchema: Decoder<OpeningBalanceImportRow> = object<OpeningBalanceImportRow>({
+export const OpeningBalanceImportRowSchema: Decoder<OpeningBalanceImportRow> = /*#__PURE__*/ object<OpeningBalanceImportRow>({
   personnel_number: str,
   first_name: str,
   last_name: str,
@@ -150,11 +151,11 @@ export const OpeningBalanceImportRowSchema: Decoder<OpeningBalanceImportRow> = o
   vacation_entitled: str,
   vacation_carryover: str,
   vacation_remaining: str,
-  staff_id: optional(int64String),
-  hours_balance_minutes: optional(safeInt),
-  vacation_entitled_days: optional(num),
-  vacation_carryover_days: optional(num),
-  vacation_remaining_days: optional(num),
+  staff_id: /*#__PURE__*/ optional(int64String),
+  hours_balance_minutes: /*#__PURE__*/ optional(safeInt),
+  vacation_entitled_days: /*#__PURE__*/ optional(num),
+  vacation_carryover_days: /*#__PURE__*/ optional(num),
+  vacation_remaining_days: /*#__PURE__*/ optional(num),
 });
 
 /** Go: dataimport.OpeningBalanceImportError */
@@ -165,10 +166,10 @@ export interface OpeningBalanceImportError {
   timestamp: string;
 }
 
-export const OpeningBalanceImportErrorSchema: Decoder<OpeningBalanceImportError> = object<OpeningBalanceImportError>({
+export const OpeningBalanceImportErrorSchema: Decoder<OpeningBalanceImportError> = /*#__PURE__*/ object<OpeningBalanceImportError>({
   row_number: safeInt,
   data: OpeningBalanceImportRowSchema,
-  errors: nullable(arr(ValidationErrorSchema)),
+  errors: /*#__PURE__*/ nullable(/*#__PURE__*/ arr(ValidationErrorSchema)),
   timestamp: instant,
 });
 
@@ -187,7 +188,7 @@ export interface OpeningBalanceImportResult {
   errors: OpeningBalanceImportError[] | null;
 }
 
-export const OpeningBalanceImportResultSchema: Decoder<OpeningBalanceImportResult> = object<OpeningBalanceImportResult>({
+export const OpeningBalanceImportResultSchema: Decoder<OpeningBalanceImportResult> = /*#__PURE__*/ object<OpeningBalanceImportResult>({
   started_at: instant,
   completed_at: instant,
   total_rows: safeInt,
@@ -196,9 +197,9 @@ export const OpeningBalanceImportResultSchema: Decoder<OpeningBalanceImportResul
   skipped_count: safeInt,
   error_count: safeInt,
   warning_count: safeInt,
-  bulk_actions: nullable(arr(BulkActionSchema)),
+  bulk_actions: /*#__PURE__*/ nullable(/*#__PURE__*/ arr(BulkActionSchema)),
   dry_run: bool,
-  errors: nullable(arr(OpeningBalanceImportErrorSchema)),
+  errors: /*#__PURE__*/ nullable(/*#__PURE__*/ arr(OpeningBalanceImportErrorSchema)),
 });
 
 /** Go: dataimport.PhoneImportData */
@@ -209,7 +210,7 @@ export interface PhoneImportData {
   is_primary: boolean;
 }
 
-export const PhoneImportDataSchema: Decoder<PhoneImportData> = object<PhoneImportData>({
+export const PhoneImportDataSchema: Decoder<PhoneImportData> = /*#__PURE__*/ object<PhoneImportData>({
   phone_number: str,
   phone_type: str,
   label: str,
@@ -238,25 +239,25 @@ export interface GuardianImportData {
   language_preference?: string;
 }
 
-export const GuardianImportDataSchema: Decoder<GuardianImportData> = object<GuardianImportData>({
-  first_name: optional(str),
-  last_name: optional(str),
-  email: optional(str),
-  phone: optional(str),
-  mobile_phone: optional(str),
-  relationship_type: optional(str),
+export const GuardianImportDataSchema: Decoder<GuardianImportData> = /*#__PURE__*/ object<GuardianImportData>({
+  first_name: /*#__PURE__*/ optional(str),
+  last_name: /*#__PURE__*/ optional(str),
+  email: /*#__PURE__*/ optional(str),
+  phone: /*#__PURE__*/ optional(str),
+  mobile_phone: /*#__PURE__*/ optional(str),
+  relationship_type: /*#__PURE__*/ optional(str),
   is_primary: bool,
   is_emergency_contact: bool,
   can_pickup: bool,
-  guardian_role: optional(str),
-  pickup_notes: optional(str),
-  emergency_priority: optional(safeInt),
-  phone_numbers: optional(arr(PhoneImportDataSchema)),
-  address_street: optional(str),
-  address_city: optional(str),
-  address_postal_code: optional(str),
-  notes: optional(str),
-  language_preference: optional(str),
+  guardian_role: /*#__PURE__*/ optional(str),
+  pickup_notes: /*#__PURE__*/ optional(str),
+  emergency_priority: /*#__PURE__*/ optional(safeInt),
+  phone_numbers: /*#__PURE__*/ optional(/*#__PURE__*/ arr(PhoneImportDataSchema)),
+  address_street: /*#__PURE__*/ optional(str),
+  address_city: /*#__PURE__*/ optional(str),
+  address_postal_code: /*#__PURE__*/ optional(str),
+  notes: /*#__PURE__*/ optional(str),
+  language_preference: /*#__PURE__*/ optional(str),
 });
 
 /** Go: dataimport.PickupScheduleImportData */
@@ -266,10 +267,10 @@ export interface PickupScheduleImportData {
   notes?: string;
 }
 
-export const PickupScheduleImportDataSchema: Decoder<PickupScheduleImportData> = object<PickupScheduleImportData>({
+export const PickupScheduleImportDataSchema: Decoder<PickupScheduleImportData> = /*#__PURE__*/ object<PickupScheduleImportData>({
   weekday: safeInt,
   pickup_time: str,
-  notes: optional(str),
+  notes: /*#__PURE__*/ optional(str),
 });
 
 /** Go: dataimport.ArrivalScheduleImportData */
@@ -279,10 +280,10 @@ export interface ArrivalScheduleImportData {
   notes?: string;
 }
 
-export const ArrivalScheduleImportDataSchema: Decoder<ArrivalScheduleImportData> = object<ArrivalScheduleImportData>({
+export const ArrivalScheduleImportDataSchema: Decoder<ArrivalScheduleImportData> = /*#__PURE__*/ object<ArrivalScheduleImportData>({
   weekday: safeInt,
   expected_arrival: str,
-  notes: optional(str),
+  notes: /*#__PURE__*/ optional(str),
 });
 
 /** Go: dataimport.StudentImportRow */
@@ -317,33 +318,33 @@ export interface StudentImportRow {
   data_retention_days: number;
 }
 
-export const StudentImportRowSchema: Decoder<StudentImportRow> = object<StudentImportRow>({
+export const StudentImportRowSchema: Decoder<StudentImportRow> = /*#__PURE__*/ object<StudentImportRow>({
   first_name: str,
   last_name: str,
-  birthday: optional(str),
-  tag_id: optional(str),
+  birthday: /*#__PURE__*/ optional(str),
+  tag_id: /*#__PURE__*/ optional(str),
   school_class: str,
-  group_name: optional(str),
-  extra_info: optional(str),
-  supervisor_notes: optional(str),
-  health_info: optional(str),
-  pickup_status: optional(str),
-  address_street: optional(str),
-  address_city: optional(str),
-  address_postal_code: optional(str),
+  group_name: /*#__PURE__*/ optional(str),
+  extra_info: /*#__PURE__*/ optional(str),
+  supervisor_notes: /*#__PURE__*/ optional(str),
+  health_info: /*#__PURE__*/ optional(str),
+  pickup_status: /*#__PURE__*/ optional(str),
+  address_street: /*#__PURE__*/ optional(str),
+  address_city: /*#__PURE__*/ optional(str),
+  address_postal_code: /*#__PURE__*/ optional(str),
   bus_permission: bool,
-  bus_days: optional(rec(bool)),
-  departure_days: optional(rec(str)),
-  departure_companion_note: optional(str),
-  enrolled_from: optional(str),
-  enrolled_until: optional(str),
-  agb_accepted_at: optional(str),
-  data_processing_accepted_at: optional(str),
-  email_contact_accepted_at: optional(str),
-  photo_consent_given_at: optional(str),
-  guardians: optional(arr(GuardianImportDataSchema)),
-  pickup_schedules: optional(arr(PickupScheduleImportDataSchema)),
-  arrival_schedules: optional(arr(ArrivalScheduleImportDataSchema)),
+  bus_days: /*#__PURE__*/ optional(/*#__PURE__*/ rec(bool)),
+  departure_days: /*#__PURE__*/ optional(/*#__PURE__*/ rec(str)),
+  departure_companion_note: /*#__PURE__*/ optional(str),
+  enrolled_from: /*#__PURE__*/ optional(str),
+  enrolled_until: /*#__PURE__*/ optional(str),
+  agb_accepted_at: /*#__PURE__*/ optional(str),
+  data_processing_accepted_at: /*#__PURE__*/ optional(str),
+  email_contact_accepted_at: /*#__PURE__*/ optional(str),
+  photo_consent_given_at: /*#__PURE__*/ optional(str),
+  guardians: /*#__PURE__*/ optional(/*#__PURE__*/ arr(GuardianImportDataSchema)),
+  pickup_schedules: /*#__PURE__*/ optional(/*#__PURE__*/ arr(PickupScheduleImportDataSchema)),
+  arrival_schedules: /*#__PURE__*/ optional(/*#__PURE__*/ arr(ArrivalScheduleImportDataSchema)),
   privacy_accepted: bool,
   data_retention_days: safeInt,
 });
@@ -356,10 +357,10 @@ export interface StudentImportError {
   timestamp: string;
 }
 
-export const StudentImportErrorSchema: Decoder<StudentImportError> = object<StudentImportError>({
+export const StudentImportErrorSchema: Decoder<StudentImportError> = /*#__PURE__*/ object<StudentImportError>({
   row_number: safeInt,
   data: StudentImportRowSchema,
-  errors: nullable(arr(ValidationErrorSchema)),
+  errors: /*#__PURE__*/ nullable(/*#__PURE__*/ arr(ValidationErrorSchema)),
   timestamp: instant,
 });
 
@@ -378,7 +379,7 @@ export interface StudentImportResult {
   errors: StudentImportError[] | null;
 }
 
-export const StudentImportResultSchema: Decoder<StudentImportResult> = object<StudentImportResult>({
+export const StudentImportResultSchema: Decoder<StudentImportResult> = /*#__PURE__*/ object<StudentImportResult>({
   started_at: instant,
   completed_at: instant,
   total_rows: safeInt,
@@ -387,9 +388,9 @@ export const StudentImportResultSchema: Decoder<StudentImportResult> = object<St
   skipped_count: safeInt,
   error_count: safeInt,
   warning_count: safeInt,
-  bulk_actions: nullable(arr(BulkActionSchema)),
+  bulk_actions: /*#__PURE__*/ nullable(/*#__PURE__*/ arr(BulkActionSchema)),
   dry_run: bool,
-  errors: nullable(arr(StudentImportErrorSchema)),
+  errors: /*#__PURE__*/ nullable(/*#__PURE__*/ arr(StudentImportErrorSchema)),
 });
 
 /** Go: dataimport.SchoolStaffImportRow */
@@ -418,29 +419,29 @@ export interface SchoolStaffImportRow {
   qualifications?: string;
 }
 
-export const SchoolStaffImportRowSchema: Decoder<SchoolStaffImportRow> = object<SchoolStaffImportRow>({
+export const SchoolStaffImportRowSchema: Decoder<SchoolStaffImportRow> = /*#__PURE__*/ object<SchoolStaffImportRow>({
   first_name: str,
   last_name: str,
-  email: optional(str),
+  email: /*#__PURE__*/ optional(str),
   role_name: str,
-  position: optional(str),
-  birthday: optional(str),
-  gender: optional(str),
-  staff_notes: optional(str),
-  personnel_number: optional(str),
-  employment_type: optional(str),
-  entry_date: optional(str),
-  contract_end_date: optional(str),
-  probation_end_date: optional(str),
-  weekly_hours: optional(str),
-  address_street: optional(str),
-  address_postal_code: optional(str),
-  address_city: optional(str),
-  phone: optional(str),
-  contact_email: optional(str),
-  emergency_contact_name: optional(str),
-  emergency_contact_phone: optional(str),
-  qualifications: optional(str),
+  position: /*#__PURE__*/ optional(str),
+  birthday: /*#__PURE__*/ optional(str),
+  gender: /*#__PURE__*/ optional(str),
+  staff_notes: /*#__PURE__*/ optional(str),
+  personnel_number: /*#__PURE__*/ optional(str),
+  employment_type: /*#__PURE__*/ optional(str),
+  entry_date: /*#__PURE__*/ optional(str),
+  contract_end_date: /*#__PURE__*/ optional(str),
+  probation_end_date: /*#__PURE__*/ optional(str),
+  weekly_hours: /*#__PURE__*/ optional(str),
+  address_street: /*#__PURE__*/ optional(str),
+  address_postal_code: /*#__PURE__*/ optional(str),
+  address_city: /*#__PURE__*/ optional(str),
+  phone: /*#__PURE__*/ optional(str),
+  contact_email: /*#__PURE__*/ optional(str),
+  emergency_contact_name: /*#__PURE__*/ optional(str),
+  emergency_contact_phone: /*#__PURE__*/ optional(str),
+  qualifications: /*#__PURE__*/ optional(str),
 });
 
 /** Go: dataimport.StaffImportError */
@@ -451,10 +452,10 @@ export interface StaffImportError {
   timestamp: string;
 }
 
-export const StaffImportErrorSchema: Decoder<StaffImportError> = object<StaffImportError>({
+export const StaffImportErrorSchema: Decoder<StaffImportError> = /*#__PURE__*/ object<StaffImportError>({
   row_number: safeInt,
   data: SchoolStaffImportRowSchema,
-  errors: nullable(arr(ValidationErrorSchema)),
+  errors: /*#__PURE__*/ nullable(/*#__PURE__*/ arr(ValidationErrorSchema)),
   timestamp: instant,
 });
 
@@ -473,7 +474,7 @@ export interface StaffImportResult {
   errors: StaffImportError[] | null;
 }
 
-export const StaffImportResultSchema: Decoder<StaffImportResult> = object<StaffImportResult>({
+export const StaffImportResultSchema: Decoder<StaffImportResult> = /*#__PURE__*/ object<StaffImportResult>({
   started_at: instant,
   completed_at: instant,
   total_rows: safeInt,
@@ -482,14 +483,14 @@ export const StaffImportResultSchema: Decoder<StaffImportResult> = object<StaffI
   skipped_count: safeInt,
   error_count: safeInt,
   warning_count: safeInt,
-  bulk_actions: nullable(arr(BulkActionSchema)),
+  bulk_actions: /*#__PURE__*/ nullable(/*#__PURE__*/ arr(BulkActionSchema)),
   dry_run: bool,
-  errors: nullable(arr(StaffImportErrorSchema)),
+  errors: /*#__PURE__*/ nullable(/*#__PURE__*/ arr(StaffImportErrorSchema)),
 });
 
 export const partialResults = {
-  "POST /api/import/class-list-entries/import": ClassListImportResultSchema,
-  "POST /api/import/opening-balances/import": OpeningBalanceImportResultSchema,
-  "POST /api/import/students/import": StudentImportResultSchema,
-  "POST /api/import/teachers/import": StaffImportResultSchema,
+  "POST /api/import/class-list-entries/import": partialResult<ClassListImportResult>(ClassListImportResultSchema),
+  "POST /api/import/opening-balances/import": partialResult<OpeningBalanceImportResult>(OpeningBalanceImportResultSchema),
+  "POST /api/import/students/import": partialResult<StudentImportResult>(StudentImportResultSchema),
+  "POST /api/import/teachers/import": partialResult<StaffImportResult>(StaffImportResultSchema),
 } as const;

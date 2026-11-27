@@ -68,8 +68,12 @@ type SubmitCareExceptionRequest struct {
 	// PickupPersonGuardianProfileID names a contact person who collects the
 	// child that day; Signature is needed for a collector or walking home
 	// alone (#4780).
-	PickupPersonGuardianProfileID *string                      `json:"pickup_person_guardian_profile_id" contract_text:"empty string explicitly clears the collector; null leaves it unspecified"`
-	Signature                     *declarationSignatureRequest `json:"signature,omitempty"`
+	PickupPersonGuardianProfileID *ident.IDOrNone `json:"pickup_person_guardian_profile_id"`
+	// PickupPersonName is a one-time person who is no contact of the child
+	// (#8162), instead of PickupPersonGuardianProfileID; the staff check the
+	// ID card at the pickup.
+	PickupPersonName *string                      `json:"pickup_person_name,omitempty"`
+	Signature        *declarationSignatureRequest `json:"signature,omitempty"`
 }
 
 // CareExceptionResponse is one day's merged pickup/arrival override, projected
@@ -120,7 +124,9 @@ type PickupChangeRequestResponse struct {
 	// carries a signature, whose proof the submitter can open.
 	PickupPerson                  *string   `json:"pickup_person,omitempty"`
 	PickupPersonGuardianProfileID *ident.ID `json:"pickup_person_guardian_profile_id,omitempty"`
-	Signed                        bool      `json:"signed"`
+	// PickupPersonOneTime marks a one-time person who is no contact (#8162).
+	PickupPersonOneTime bool `json:"pickup_person_one_time,omitempty"`
+	Signed              bool `json:"signed"`
 	// Version is what an edit of this request sends back as
 	// expected_version (ADR 0311).
 	Version string `json:"version"`
@@ -155,7 +161,8 @@ func toPickupChangeRequestResponse(req *careplan.CareScheduleChangeRequest, acco
 	}
 	if terms.PickupPersonName != "" {
 		response.PickupPerson = &terms.PickupPersonName
-		if req.Status == carerequests.StatusPending && req.SubmittedBy == accountID {
+		response.PickupPersonOneTime = terms.PickupPersonGuardianProfileID == 0
+		if !response.PickupPersonOneTime && req.Status == carerequests.StatusPending && req.SubmittedBy == accountID {
 			guardianProfileID := ident.ID(terms.PickupPersonGuardianProfileID)
 			response.PickupPersonGuardianProfileID = &guardianProfileID
 		}
@@ -211,7 +218,8 @@ func decodePickupChangeSubmission(w http.ResponseWriter, r *http.Request) (paren
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 		return none, false
 	}
-	if pickup == nil && departureMode == "" && personID == 0 {
+	personName := optionalTrimmed(req.PickupPersonName)
+	if pickup == nil && departureMode == "" && personID == 0 && personName == "" {
 		renderParentWriteError(w, r, parentService.ErrNoCareException)
 		return none, false
 	}
@@ -221,7 +229,8 @@ func decodePickupChangeSubmission(w http.ResponseWriter, r *http.Request) (paren
 	}
 	submission := parentService.PickupChangeSubmission{
 		Date: date, DepartureMode: departureMode, Reason: req.Reason,
-		RecipientGuardianProfileIDs: recipients, PickupPersonID: personID, Signature: req.Signature.pickupInput(),
+		RecipientGuardianProfileIDs: recipients, PickupPersonID: personID, PickupPersonName: personName,
+		Signature: req.Signature.pickupInput(),
 	}
 	if pickup != nil {
 		submission.PickupTime = *pickup
@@ -339,4 +348,12 @@ func (rs *Resource) deleteCareException(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	common.Respond(w, r, http.StatusOK, nil, "Care exception removed")
+}
+
+// optionalTrimmed is the trimmed text of an optional field, "" for none.
+func optionalTrimmed(raw *string) string {
+	if raw == nil {
+		return ""
+	}
+	return strings.TrimSpace(*raw)
 }

@@ -234,7 +234,7 @@ const modulePassthroughApplicationSegment = "/internal/application/"
 var modulePassthroughOwnerBudgets = map[string]int{
 	"modules/appointments": 21,
 	"modules/auditlog":     1,
-	"modules/careplan":     158,
+	"modules/careplan":     157,
 	"modules/classday":     14,
 	// Raised by ADR 0073: the composition forwards the parent announcement
 	// retention to its service.
@@ -260,7 +260,7 @@ var modulePassthroughOwnerBudgets = map[string]int{
 	// Raised by ADR 0112: the Träger logo read of the Träger-Portal.
 	// Raised by ADR 0172: the document contact read without an account (+1).
 	// ADR 0198: the transaction-bound account-retention read (+1).
-	"modules/organizationtenancy": 14,
+	"modules/organizationtenancy": 13,
 	// Added by ADR 0115: the rule checks and the link check of the new owner
 	// Elternabrechnung. Raised by ADR 0119: the billing run list (+1).
 	// Raised by ADR 0158: the monthly run list (+1).

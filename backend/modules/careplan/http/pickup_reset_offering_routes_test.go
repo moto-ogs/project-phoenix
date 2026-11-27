@@ -32,6 +32,7 @@ func TestPickupResetToOfferingRemovesTheStaffTimeThroughTheRoute(t *testing.T) {
 	require.NoError(t, err)
 	_, account := testpkg.CreateTestStaffWithAccount(t, tc.db, "Gehzeit", "Leitung")
 	claims, perms := testutil.AdminTestClaims(int(account.ID)), []string{"admin:*"}
+	testpkg.CreateTestPickupPerson(t, tc.db, child.ID, studentsTestToday, 0, "Oma Frieda", 0)
 
 	staffTime := map[string]any{
 		"schedules":        []map[string]any{{"weekday": 1, "pickup_time": "15:45"}},
@@ -51,12 +52,14 @@ func TestPickupResetToOfferingRemovesTheStaffTimeThroughTheRoute(t *testing.T) {
 				PickupTime string `json:"pickup_time"`
 				Source     string `json:"source"`
 			} `json:"schedules"`
+			PickupPersons []pickupPersonWire `json:"pickup_persons"`
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &answer))
 	for _, schedule := range answer.Data.Schedules {
 		assert.False(t, schedule.Weekday == 1 && schedule.Source == "staff", "the staff Gehzeit of Monday is gone: %+v", schedule)
 	}
+	assert.Equal(t, []pickupPersonWire{{ExceptionDate: studentsTestToday.String(), Name: "Oma Frieda", OneTime: true}}, answer.Data.PickupPersons)
 	assert.Zero(t, staffPickupRows(t, tc, child.ID, 1))
 }
 

@@ -53,7 +53,7 @@ vi.mock("next-auth/react", () => ({
   }),
 }));
 
-import TraegerResponsibilitiesPage from "./page";
+import TraegerResponsibilitiesPage from "./page-content";
 
 const OPTIONS = [
   { label: "Träger", value: "traeger" },

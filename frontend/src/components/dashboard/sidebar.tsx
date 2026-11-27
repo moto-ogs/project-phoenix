@@ -231,6 +231,8 @@ const OPERATOR_NAV_SECTIONS: readonly OperatorNavSection[] = [
 const TENANT_SCOPED_HREFS = new Set<string>([
   "/anfragen",
   STAFF_FLAT_PAGES.payroll.href,
+  // Stand bis #8134 im Planungskatalog und lief darüber durch tenantPath.
+  STAFF_FLAT_PAGES.carePlan.href,
   ...PARENT_SUB_PAGES.map((page) => page.href),
   ...COMMUNICATION_SUB_PAGES.map((page) => page.href),
   ...PLANNING_SUB_PAGES.map((page) => page.href),
@@ -402,7 +404,10 @@ function SidebarContent({
   // Get supervision state
   const {
     isLoadingGroups,
+    groupsLoadFailed,
     isLoadingSupervision,
+    sessionsLoadFailed,
+    releasedRoomsLoadFailed,
     groups,
     supervisedRooms,
     overviewEnabled,
@@ -951,47 +956,46 @@ function SidebarContent({
       toggle("groups");
       return;
     }
-    if (!onGroupsPage) toggle("groups");
     router.push(OGS_GROUPS_OVERVIEW_PATH);
   }, [groups.length, pathname, router, toggle]);
 
   const handleSupervisionsToggle = useCallback(() => {
-    // Aus einem offenen Raum ohne eigene Aufsicht heraus führt der Eintrag
-    // in die eigene Aufsicht und bleibt dabei aufgeklappt.
-    if (!isViewingSharedOpenRoom || expanded !== "supervisions") {
+    const onSupervisions = pathname.startsWith("/active-supervisions");
+    if (onSupervisions && !isViewingSharedOpenRoom) {
+      toggle("supervisions");
+      return;
+    }
+    // Die Zielroute öffnet das Akkordeon. Nur beim Wechsel der Aufsicht auf
+    // demselben Pfad gibt es keine Pfadänderung, die es öffnen würde.
+    if (onSupervisions && expanded !== "supervisions") {
       toggle("supervisions");
     }
-    if (
-      !pathname.startsWith("/active-supervisions") ||
-      isViewingSharedOpenRoom
-    ) {
-      // Own supervisions use their session key (#2265). A saved session that
-      // belongs to a released room instead identifies that room's shared view.
-      // Only entries listed under „Aktuelle Aufsicht“ qualify: a released room
-      // without an own supervision lives under „Räume“ (#4372).
-      const savedSessionId = memory.read("supervision-last-session");
-      const savedRoomId = memory.read("sidebar-last-room");
-      const targetRoom =
-        (savedSessionId
-          ? (supervisionNavRooms.find(
-              (r) => !r.isOpenRoom && r.groupId === savedSessionId,
-            ) ??
-            supervisionNavRooms.find((r) =>
-              r.sessionIds?.includes(savedSessionId),
-            ))
-          : undefined) ??
-        (savedRoomId
-          ? supervisionNavRooms.find((r) => r.id === savedRoomId)
-          : undefined) ??
-        // Ohne gespeicherte Wahl die eigene Aufsicht, nicht die erste fremde
-        // aus dem Überblick (#5035).
-        supervisionNavRooms.find((r) => r.isOwnSupervision) ??
-        supervisionNavRooms[0];
-      if (targetRoom) {
-        router.push(supervisionHref(targetRoom));
-      } else {
-        router.push("/active-supervisions");
-      }
+    // Own supervisions use their session key (#2265). A saved session that
+    // belongs to a released room instead identifies that room's shared view.
+    // Only entries listed under „Aktuelle Aufsicht“ qualify: a released room
+    // without an own supervision lives under „Räume“ (#4372).
+    const savedSessionId = memory.read("supervision-last-session");
+    const savedRoomId = memory.read("sidebar-last-room");
+    const targetRoom =
+      (savedSessionId
+        ? (supervisionNavRooms.find(
+            (r) => !r.isOpenRoom && r.groupId === savedSessionId,
+          ) ??
+          supervisionNavRooms.find((r) =>
+            r.sessionIds?.includes(savedSessionId),
+          ))
+        : undefined) ??
+      (savedRoomId
+        ? supervisionNavRooms.find((r) => r.id === savedRoomId)
+        : undefined) ??
+      // Ohne gespeicherte Wahl die eigene Aufsicht, nicht die erste fremde
+      // aus dem Überblick (#5035).
+      supervisionNavRooms.find((r) => r.isOwnSupervision) ??
+      supervisionNavRooms[0];
+    if (targetRoom) {
+      router.push(supervisionHref(targetRoom));
+    } else {
+      router.push("/active-supervisions");
     }
   }, [
     toggle,
@@ -1012,10 +1016,8 @@ function SidebarContent({
         ? "/database"
         : databaseSubPages[0]?.href;
     if (!pathname.startsWith("/database")) {
-      // Not on any database page, expand accordion and navigate to its
-      // reachable landing page.
-      toggle("database");
       if (databaseLandingPath) router.push(databaseLandingPath);
+      else toggle("database");
     } else if (pathname === "/database") {
       // On hub page, just toggle collapse or expand
       toggle("database");
@@ -1043,11 +1045,7 @@ function SidebarContent({
     // Hub = the request review queue. Mirrors handleDatabaseToggle's
     // navigate-on-expand behavior so clicking the section label always
     // ends up on a useful page rather than just toggling chevrons.
-    const onSection = getActiveEnrollmentSubPageHref(pathname) !== null;
-    if (!onSection) {
-      toggle("enrollments");
-      router.push("/admin/enrollments");
-    } else if (pathname === "/admin/enrollments") {
+    if (pathname === "/admin/enrollments") {
       toggle("enrollments");
     } else {
       router.push("/admin/enrollments");
@@ -1147,7 +1145,11 @@ function SidebarContent({
           pathname.startsWith("/ogs-groups") || Boolean(childGroupId)
         }
         isLoading={isLoadingGroups}
-        emptyText="Keine eigenen Gruppen"
+        emptyText={
+          groupsLoadFailed
+            ? "Gruppen gerade nicht verfügbar"
+            : "Keine eigenen Gruppen"
+        }
         hasChildren={personalGroups.length > 0 || Boolean(openForeignGroup)}
       >
         {personalGroups.map((group, index) => (
@@ -1209,7 +1211,11 @@ function SidebarContent({
               Boolean(childRoomId))
           }
           isLoading={isLoadingSupervision}
-          emptyText="Keine aktive Aufsicht"
+          emptyText={
+            sessionsLoadFailed
+              ? "Aufsichten gerade nicht verfügbar"
+              : "Keine aktive Aufsicht"
+          }
           hasChildren={supervisionNavRooms.length > 0}
         >
           {supervisionNavRooms.map((room, index) => (
@@ -1230,6 +1236,11 @@ function SidebarContent({
               )}
             />
           ))}
+          {releasedRoomsLoadFailed && (
+            <p className="py-2 pr-3 pl-11 text-sm text-gray-500">
+              Offene Räume sind hier gerade nicht markiert.
+            </p>
+          )}
         </SidebarAccordionSection>
       </>
     ) : null;

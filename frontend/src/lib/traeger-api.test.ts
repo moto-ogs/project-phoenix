@@ -98,8 +98,10 @@ describe("traeger-api", () => {
       decodeURIComponent(String(url)),
     );
     expect(urls).toHaveLength(2);
-    expect(urls[0]).toMatch(
-      /^\/api\/traeger\/finance-exports\/datev-runs\?care=1,2,/,
+    const firstPage = new URL(urls[0]!, "http://localhost");
+    expect(firstPage.pathname).toBe("/api/traeger/finance-exports/datev-runs");
+    expect(firstPage.searchParams.getAll("care")).toEqual(
+      Array.from({ length: 50 }, (_, index) => String(index + 1)),
     );
     expect(urls[1]).toBe("/api/traeger/finance-exports/datev-runs?holiday=7");
     expect(states.ready).toBe(true);

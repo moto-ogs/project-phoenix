@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import type { KeyedMutator } from "~/lib/swr";
+import type { ClockSession } from "~/lib/own-time-tracking-view";
 import {
   useOptimisticAction,
   type OptimisticOutcome,
@@ -14,11 +14,14 @@ import type { WorkSession } from "~/lib/time-tracking-helpers";
 
 /** Both normal stamps and the reason-dialog retry use the same locked write. */
 export function useOptimisticStamp(
-  confirmed: WorkSession | null | undefined,
-  mutate: KeyedMutator<WorkSession | null>,
+  confirmed: ClockSession | null | undefined,
+  commit: (session: WorkSession | null) => void,
   today: string,
 ) {
-  const action = useOptimisticAction(timeTrackingKeys.current(), confirmed);
+  const action = useOptimisticAction(
+    timeTrackingKeys.overview(today),
+    confirmed,
+  );
   const inFlight = useRef(false);
   const stamp = async (
     status: WorkSession["status"] | null,
@@ -36,7 +39,6 @@ export function useOptimisticStamp(
             ? current && { ...current, checkOutTime: now }
             : {
                 id,
-                staffId: current?.staffId ?? "",
                 date: today,
                 status,
                 source: "app",
@@ -45,10 +47,6 @@ export function useOptimisticStamp(
                 breakMinutes: 0,
                 notes: "",
                 autoCheckedOut: false,
-                createdBy: "",
-                updatedBy: null,
-                createdAt: now,
-                updatedAt: now,
               },
         request: () =>
           status === null
@@ -60,7 +58,7 @@ export function useOptimisticStamp(
               : timeTrackingService.checkIn(status, reason),
         commit: (saved) => {
           // The current-session reader contains only an active work block.
-          void mutate(status === null ? null : saved, { revalidate: false });
+          commit(status === null ? null : saved);
         },
         refusal: {
           codes: STAMP_REFUSALS,

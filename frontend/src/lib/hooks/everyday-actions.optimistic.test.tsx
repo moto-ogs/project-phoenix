@@ -143,10 +143,14 @@ function deferred() {
 }
 function useIn() {
   const reader = useSWRAuth<WorkSession | null>(
-    timeTrackingKeys.current(),
+    timeTrackingKeys.overview("2026-09-09"),
     mocks.current,
   );
-  const action = useOptimisticStamp(reader.data, reader.mutate, "2026-09-09");
+  const action = useOptimisticStamp(
+    reader.data,
+    (session) => void reader.mutate(session, { revalidate: false }),
+    "2026-09-09",
+  );
   return {
     data:
       action.data === undefined
@@ -158,10 +162,14 @@ function useIn() {
 }
 function useOut() {
   const reader = useSWRAuth<WorkSession | null>(
-    timeTrackingKeys.current(),
+    timeTrackingKeys.overview("2026-09-09"),
     mocks.current,
   );
-  const action = useOptimisticStamp(reader.data, reader.mutate, "2026-09-09");
+  const action = useOptimisticStamp(
+    reader.data,
+    (session) => void reader.mutate(session, { revalidate: false }),
+    "2026-09-09",
+  );
   return {
     data:
       action.data === undefined
@@ -406,12 +414,16 @@ it("clears the current session after checkout and permits another check-in", asy
   const { result, unmount } = renderHook(
     () => {
       const reader = useSWRAuth<WorkSession | null>(
-        timeTrackingKeys.current(),
+        timeTrackingKeys.overview("2026-09-09"),
         mocks.current,
       );
       return {
         reader,
-        action: useOptimisticStamp(reader.data, reader.mutate, "2026-09-09"),
+        action: useOptimisticStamp(
+          reader.data,
+          (session) => void reader.mutate(session, { revalidate: false }),
+          "2026-09-09",
+        ),
       };
     },
     { wrapper: Wrapper },

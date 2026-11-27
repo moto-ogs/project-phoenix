@@ -14,6 +14,8 @@ describe("working-time", () => {
       new ApiError("refused", 409, {
         code: "workforce.shift_working_time_warning",
         details: {
+          count: 2,
+          reason_required: false,
           warnings: [
             {
               kind: "rest_shortened",
@@ -22,7 +24,13 @@ describe("working-time", () => {
               limit: 660,
               needs_reason: false,
             },
-            { kind: "unknown", date: "2026-09-08" },
+            {
+              kind: "unknown",
+              date: "2026-09-08",
+              minutes: 600,
+              limit: 660,
+              needs_reason: false,
+            },
           ],
         },
       }),

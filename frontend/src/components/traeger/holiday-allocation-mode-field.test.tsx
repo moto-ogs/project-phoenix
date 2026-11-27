@@ -13,6 +13,7 @@ const CRITERION: HolidayCriterion = {
   scope: "family",
   active: true,
   position: 1,
+  points: 1,
   answered: false,
 };
 
@@ -49,6 +50,23 @@ describe("allocation mode of a holiday period (#4700)", () => {
     });
     expect(link).toHaveAttribute("href", "/traeger/ferien/kriterien");
     expect(link).toHaveAttribute("target", "_blank");
+  });
+
+  it("numbers the criteria only where the order is the priority (#8135)", () => {
+    render(
+      <HolidayAllocationModeField
+        value="criteria"
+        locked={false}
+        criteria={[CRITERION]}
+        ranking="equal"
+        onChange={vi.fn()}
+      />,
+    );
+    expect(
+      screen.getByText(
+        /1 Kriterium ist eingeschaltet: Beide Eltern berufstätig\. Alle zählen gleich viel\./,
+      ),
+    ).toBeInTheDocument();
   });
 
   it("warns without an active criterion", () => {

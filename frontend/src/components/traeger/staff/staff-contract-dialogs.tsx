@@ -58,7 +58,7 @@ const logger = createLogger({ component: "TraegerStaffContractDialogs" });
 const errorMessage = (err: unknown) =>
   err instanceof Error ? err.message : String(err);
 
-const HOURS_ERROR = "Bitte je Tag 0 bis 12 Stunden eingeben.";
+const HOURS_ERROR = "Bitte pro Tag 0 bis 12 Stunden eingeben.";
 
 /** Eine Schule mit ihren Stunden Montag bis Freitag im Formular. */
 export interface SiteDraft {
@@ -133,7 +133,7 @@ function SitesFieldset({
   return (
     <div className="space-y-4">
       <div className="space-y-1">
-        <SectionLabel as="h3">Soll je Schule</SectionLabel>
+        <SectionLabel as="h3">Soll pro Schule</SectionLabel>
         <p className="text-sm text-gray-500">
           Stunden pro Tag. Ein leeres Feld ist ein freier Tag.
         </p>

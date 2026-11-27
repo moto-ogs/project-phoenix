@@ -11,7 +11,7 @@ import {
   type ReactNode,
 } from "react";
 
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 
 import {
   AT_LEAST_MD,
@@ -58,6 +58,8 @@ export interface DataTableColumn<T> {
   // null is a missing value and sorts after all present values, independent
   // of direction.
   sortValue?: (row: T) => string | number | null;
+  /** This column is sorted by the server, without a local value comparator. */
+  serverSortable?: boolean;
   // Role this column plays in the stacked phone layout (below md, unless
   // the table sets `mobileScroll`).
   // A "field" whose render returns null for a row has no line in that row.
@@ -75,9 +77,14 @@ export interface DataTableColumn<T> {
   // clamp, for a title that must stay whole (an e-mail address in a log,
   // without a detail page that would show it). Defaults to true.
   stackedClamp?: boolean;
-  // What the "row" phone line shows for this column, when it needs a
-  // shorter form than the table cell ("15:30" instead of "🕒 15:30 Uhr").
+  // What the phone shows for this column, when it needs another form than
+  // the table cell ("15:30" instead of "🕒 15:30 Uhr"): the "row" line's
+  // title, meta and detail, and the head (title, meta) of a "lines" card.
   stackedRender?: (row: T) => ReactNode;
+  // "row" layout, as the `stackedDetailKey` column: true opens the full
+  // table cell in the card's details too, when the short `stackedRender`
+  // under the title drops part of it (a note, a marker; #7915).
+  stackedFullInDetails?: boolean;
   // False drops the visible header where the value names itself: in the
   // "row" phone line in front of the value (a class, a group), in the
   // "lines" layout a "field" then takes the full width (an invoice's
@@ -182,6 +189,10 @@ interface DataTableExtraCell {
   readonly columnKey: string;
   readonly colSpan?: number;
   readonly content: ReactNode;
+  // The label of this cell on a phone card, where the column header does
+  // not fit the sub row (a report time under "Ankunft"; #7915). The table
+  // keeps the column header.
+  readonly stackedLabel?: string;
 }
 
 /**
@@ -226,6 +237,11 @@ interface DataTableProps<T> {
   rowClassName?: (row: T) => string;
   defaultSortKey?: string;
   defaultSortDirection?: SortDirection;
+  serverSort?: {
+    key: string;
+    direction: SortDirection;
+    onChange: (sort: { key: string; direction: SortDirection }) => void;
+  };
   // When set, only the first N sorted rows render; a footer button reveals
   // another N per click. Use on tables whose row count is unbounded
   // (persons, accounts) — leave undefined on bounded views (orgs, devices).
@@ -712,9 +728,11 @@ function StackedDetailsToggle({
       tooltip={open ? closeTooltip : openTooltip}
       onClick={onToggle}
     >
-      <ChevronDown
+      {/* Same chevron as an expandable table row: to the side while
+          closed, down while open (#7915). */}
+      <ChevronRight
         aria-hidden="true"
-        className={`h-4 w-4 text-gray-500 transition-transform ${open ? "rotate-180" : ""}`}
+        className={`h-4 w-4 text-gray-500 transition-transform ${open ? "rotate-90" : ""}`}
       />
     </Button>
   );
@@ -770,7 +788,10 @@ function StackedExtraRow<T>({
         </div>
       ) : null}
       {cells.map((cell) => (
-        <StackedField key={cell.columnKey} label={headerOf(cell.columnKey)}>
+        <StackedField
+          key={cell.columnKey}
+          label={cell.stackedLabel ?? headerOf(cell.columnKey)}
+        >
           {cell.content}
         </StackedField>
       ))}
@@ -922,6 +943,7 @@ function StackedRows<T>({
   expandable,
   renderSubRows,
   summaryRow,
+  rowTone,
 }: Readonly<{
   columns: DataTableColumn<T>[];
   rows: T[];
@@ -948,6 +970,7 @@ function StackedRows<T>({
   expandable?: DataTableExpandable<T>;
   renderSubRows?: (row: T, expanded: boolean) => readonly DataTableExtraRow[];
   summaryRow?: (row: T) => DataTableExtraRow | null;
+  rowTone?: (row: T) => DataTableRowTone | null;
 }>) {
   const idBase = useId();
   // German defaults drop under a non-German KitLocaleProvider (#6744).
@@ -986,9 +1009,12 @@ function StackedRows<T>({
     (c) => c !== title && c !== meta && c !== rowMenu && c.stacked !== "hidden",
   );
   // "row" shows one chosen field on the card; every other one opens in the
-  // details, so no column is lost on a phone (#7911).
+  // details, so no column is lost on a phone (#7911). A chosen field whose
+  // short form drops part of the cell opens there in full too (#7915).
   const detailFields =
-    layout === "row" ? fields.filter((c) => c !== detail) : [];
+    layout === "row"
+      ? fields.filter((c) => c !== detail || c.stackedFullInDetails === true)
+      : [];
   const shownDetail =
     layout === "row" && detail && detail !== title && detail !== meta
       ? detail
@@ -1031,6 +1057,9 @@ function StackedRows<T>({
     // details have their own button (#7911).
     const rowClickable = clickable && (canClickRow?.(row) ?? true);
     const open = openKeys.has(rowKey);
+    // The card carries its row's tint like the table row (today, a total);
+    // the selected tint of the row beside the table wins.
+    const tone = active ? null : (rowTone?.(row) ?? null);
     const detailValues = detailFields
       .map((col) => ({ col, value: col.render(row) }))
       .filter((entry) => entry.value !== null);
@@ -1131,7 +1160,7 @@ function StackedRows<T>({
         }
       >
         <div
-          className={`${STACKED_ROW_PADDING[layout]} ${ROW_ACTION_FOCUS_CLASS} ${rowClickable ? "cursor-pointer" : ""} ${active ? ACTIVE_ROW_CLASS : ""} ${rowClassName ? rowClassName(row) : ""}`}
+          className={`${STACKED_ROW_PADDING[layout]} ${ROW_ACTION_FOCUS_CLASS} ${rowClickable ? "cursor-pointer" : ""} ${active ? ACTIVE_ROW_CLASS : ""} ${tone ? ROW_TONE_CLASS[tone] : ""} ${rowClassName ? rowClassName(row) : ""}`}
           tabIndex={rowKeyboardClickable ? 0 : undefined}
           role={rowKeyboardClickable ? "button" : undefined}
         >
@@ -1172,7 +1201,7 @@ function StackedRows<T>({
                 {/* Wide row actions (several text buttons) wrap below the
                     title instead of squeezing it under them. */}
                 <span id={titleId} className="min-w-32 flex-1">
-                  {title?.render(row)}
+                  {title ? (title.stackedRender ?? title.render)(row) : null}
                 </span>
                 {meta ? (
                   <span
@@ -1182,7 +1211,7 @@ function StackedRows<T>({
                         : "shrink-0 text-sm text-gray-500"
                     }
                   >
-                    {meta.render(row)}
+                    {(meta.stackedRender ?? meta.render)(row)}
                   </span>
                 ) : null}
                 {end}
@@ -1367,6 +1396,7 @@ export function DataTable<T>({
   rowClassName,
   defaultSortKey,
   defaultSortDirection = "asc",
+  serverSort,
   pageSize,
   loadMoreTooltip,
   pageNoun,
@@ -1422,7 +1452,7 @@ export function DataTable<T>({
   // it scrolls away (comparison tables carry no selection).
   const pinStartKey = stackedOnMobile ? undefined : shownColumns[0]?.key;
 
-  const [sort, setSort] = useState<{
+  const [localSort, setLocalSort] = useState<{
     key: string;
     direction: SortDirection;
   } | null>(
@@ -1431,16 +1461,21 @@ export function DataTable<T>({
       : null,
   );
 
-  const toggleSort = useCallback((key: string) => {
-    setSort((prev) =>
-      prev?.key === key
-        ? { key, direction: prev.direction === "asc" ? "desc" : "asc" }
-        : { key, direction: "asc" },
-    );
-  }, []);
+  const sort = serverSort ?? localSort;
+  const toggleSort = (key: string) => {
+    const nextSort = (current: typeof sort) => ({
+      key,
+      direction:
+        current?.key === key && current.direction === "asc"
+          ? ("desc" as const)
+          : ("asc" as const),
+    });
+    if (serverSort) serverSort.onChange(nextSort(serverSort));
+    else setLocalSort(nextSort);
+  };
 
   const sortedRows = useMemo(() => {
-    if (!sort) return rows;
+    if (serverSort || !sort) return rows;
     const col = columns.find((c) => c.key === sort.key);
     if (!col?.sortValue) return rows;
     const getValue = col.sortValue;
@@ -1458,7 +1493,7 @@ export function DataTable<T>({
       }
       return String(av).localeCompare(String(bv)) * dir;
     });
-  }, [rows, sort, columns]);
+  }, [rows, sort, columns, serverSort]);
 
   const [visibleCount, setVisibleCount] = useState(
     pageSize ?? Number.POSITIVE_INFINITY,
@@ -1481,26 +1516,36 @@ export function DataTable<T>({
   // Columns that run past the card edge get a cue: a fade at the edge, or
   // the pinned column's shadow. Without it a cut column reads as missing.
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [overflowEnd, setOverflowEnd] = useState(false);
-  const [overflowStart, setOverflowStart] = useState(false);
   useEffect(() => {
     const scroller = scrollRef.current;
     if (!scroller) return;
     const update = () => {
-      setOverflowEnd(
-        scroller.scrollWidth - scroller.clientWidth - scroller.scrollLeft > 1,
-      );
-      setOverflowStart(scroller.scrollLeft > 1);
+      const { scrollWidth, clientWidth, scrollLeft } = scroller;
+      // Only the scroll cues depend on these measurements. Re-rendering all
+      // rows would compete with the first paint and with each horizontal swipe.
+      if (scrollWidth - clientWidth - scrollLeft > 1) {
+        scroller.dataset.overflowEnd = "true";
+      } else {
+        delete scroller.dataset.overflowEnd;
+      }
+      if (scrollLeft > 1) {
+        scroller.dataset.overflowStart = "true";
+      } else {
+        delete scroller.dataset.overflowStart;
+      }
     };
-    update();
     scroller.addEventListener("scroll", update, { passive: true });
     let observer: ResizeObserver | undefined;
     if (typeof ResizeObserver !== "undefined") {
+      // The first observer notification runs after layout. Measuring here
+      // synchronously would force the whole table's layout on every reveal.
       observer = new ResizeObserver(update);
       observer.observe(scroller);
       if (scroller.firstElementChild) {
         observer.observe(scroller.firstElementChild);
       }
+    } else {
+      update();
     }
     return () => {
       scroller.removeEventListener("scroll", update);
@@ -1577,6 +1622,7 @@ export function DataTable<T>({
             expandable={expandable}
             renderSubRows={renderSubRows}
             summaryRow={summaryRow}
+            rowTone={rowTone}
           />
         </div>
       )}
@@ -1601,9 +1647,7 @@ export function DataTable<T>({
               containing block here they escape it and widen the page. */}
             <div
               ref={scrollRef}
-              data-overflow-end={overflowEnd ? "true" : undefined}
-              data-overflow-start={overflowStart ? "true" : undefined}
-              className="group/tablescroll relative overflow-x-auto"
+              className="group/tablescroll peer/table relative overflow-x-auto"
             >
               <table className={tableClass}>
                 <thead>
@@ -1633,7 +1677,9 @@ export function DataTable<T>({
                     ) : null}
                     {shownColumns.map((col) => {
                       const align = alignClass[col.align ?? "left"];
-                      const sortable = Boolean(col.sortValue);
+                      const sortable = serverSort
+                        ? col.serverSortable
+                        : Boolean(col.sortValue);
                       const active = sort?.key === col.key;
                       const pinned = pinnedHeadCellClass(
                         pinEdgeOf(col.key, pinStartKey),
@@ -1917,11 +1963,10 @@ export function DataTable<T>({
                 </tbody>
               </table>
             </div>
-            {overflowEnd &&
-            !shownColumns.some((col) => col.key === PINNED_COLUMN_KEY) ? (
+            {!shownColumns.some((col) => col.key === PINNED_COLUMN_KEY) ? (
               <div
                 aria-hidden
-                className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-white to-transparent"
+                className="pointer-events-none absolute inset-y-0 right-0 hidden w-10 bg-gradient-to-l from-white to-transparent peer-data-[overflow-end=true]/table:block"
               />
             ) : null}
           </div>

@@ -40,7 +40,10 @@ import { useMinuteClock } from "~/lib/pickup-helpers";
 import { schoolClassName } from "~/lib/school-class-label";
 import type { Student } from "~/lib/student-helpers";
 import { getStudentTimeStatus } from "~/lib/student-time-status";
-import { useStudentParentAttention } from "~/lib/hooks/use-parent-attention";
+import {
+  ParentAttentionList,
+  useListedParentAttention,
+} from "~/components/students/parent-attention-badge";
 import { useNFCEnabled } from "~/lib/tenant-context";
 import {
   canCompleteInstance,
@@ -412,7 +415,7 @@ function RosterChildRow({
     label: string;
   }
 >) {
-  const attention = useStudentParentAttention(studentId);
+  const attention = useListedParentAttention(studentId);
   const name = attention
     ? `${label} ${attention.total} neu von den Eltern`
     : label;
@@ -432,7 +435,21 @@ function SubtitlePart({ children }: Readonly<{ children: ReactNode }>) {
   );
 }
 
-export function TimetableRosterApp({
+/**
+ * Ein Abruf der Elternzahlen für die ganze Liste und ihr Kind-Blatt
+ * (`ParentAttentionList`), nicht einer je Zeile.
+ */
+export function TimetableRosterApp(
+  props: ComponentProps<typeof TimetableRosterAppContent>,
+) {
+  return (
+    <ParentAttentionList>
+      <TimetableRosterAppContent {...props} />
+    </ParentAttentionList>
+  );
+}
+
+function TimetableRosterAppContent({
   addStudentSearch,
   attendanceWebEnabled,
   isAddingStudent,

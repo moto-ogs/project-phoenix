@@ -1,8 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 
 import { berlinTodayISO } from "~/lib/date-helpers";
+
+// A seed boundary supplies the day of its HTML for hydration only.
+export const RenderedBerlinDay = createContext<string | undefined>(undefined);
 
 /**
  * The current Berlin calendar day as "YYYY-MM-DD", re-rendering the caller when
@@ -17,13 +26,21 @@ import { berlinTodayISO } from "~/lib/date-helpers";
  * per minute and re-renders only on the actual rollover.
  */
 export function useBerlinToday(): string {
+  return useBerlinTodayWithRefresh()[0];
+}
+
+/** Also checks the day on demand, before continuing a dated read. */
+export function useBerlinTodayWithRefresh() {
   const [today, setToday] = useState(berlinTodayISO);
-  useEffect(() => {
-    const id = setInterval(() => {
-      const now = berlinTodayISO();
-      setToday((prev) => (prev === now ? prev : now));
-    }, 60_000);
-    return () => clearInterval(id);
+  const refresh = useCallback(() => {
+    const now = berlinTodayISO();
+    setToday(now);
+    return now;
   }, []);
-  return today;
+  useEffect(() => {
+    const id = setInterval(refresh, 60_000);
+    return () => clearInterval(id);
+  }, [refresh]);
+  const renderedDay = useContext(RenderedBerlinDay);
+  return [renderedDay ?? today, refresh] as const;
 }

@@ -71,6 +71,10 @@ export async function getMealCaterer(): Promise<MealCaterer> {
   const data = await bffJson("tenant", "GET /api/meal-caterer/", {
     errorMessage: "meal caterer load failed",
   });
+  return mapMealCaterer(data);
+}
+
+export function mapMealCaterer(data: wire.SchoolCatererResponse): MealCaterer {
   return {
     supply: data.supply
       ? {

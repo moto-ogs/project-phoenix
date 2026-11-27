@@ -56,7 +56,7 @@ export function activitiesCatalogTopic(): HelpTopic {
     ],
     differences: [
       "Auf dem Handy steht statt `+ Aktivität` ein rundes Plus unten rechts.",
-      "`Schulhof Freispiel` und `WC` legt moto selbst an. Deine Namen sind fest, und `Löschen` fehlt.",
+      "`Schulhof Freispiel`, `WC` und `Offener Raum` legt moto selbst an. Name und Kategorie sind fest, und `Löschen` fehlt.",
     ],
     troubleshootingDetails: [
       "Fehlt `Datenverwaltung` in der Seitenleiste? Dann fehlen dir die Leitungsrechte. Frage deine Leitung.",

@@ -1,3 +1,4 @@
+import { deriveSupervision } from "~/lib/supervision-derive";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { activeService } from "~/lib/active-service";
@@ -12,11 +13,13 @@ import {
 } from "~/lib/tenant-context";
 import { useOptionalSupervision } from "~/lib/supervision-context";
 import { ApiError } from "~/lib/api-error";
+import { errorFromProblem } from "~/test/helpers/problem-response";
 import { catalogText } from "~/test/error-catalog-text";
 import type { Room } from "~/lib/room-helpers";
 
 /** Default supervision context: no school-wide overview. */
 const EMPTY_SUPERVISION = {
+  ...deriveSupervision(),
   hasGroups: false,
   isLoadingGroups: false,
   groups: [],
@@ -29,6 +32,10 @@ const EMPTY_SUPERVISION = {
 
 vi.mock("~/lib/supervision-context", () => ({
   useOptionalSupervision: vi.fn(),
+}));
+
+vi.mock("~/lib/hooks/use-berlin-today", () => ({
+  useBerlinToday: () => "2026-12-01",
 }));
 
 const { mockPush, mockSearchParamsToString } = vi.hoisted(() => ({
@@ -237,7 +244,7 @@ function mockTransitData({
       return { data: mockActivities, error: null, isLoading: false } as never;
     }
 
-    if (key === "rooms-list-{}") {
+    if (key === 'rooms-list-{"openOn":"2026-12-01"}') {
       return {
         data: rooms,
         error: null,
@@ -326,6 +333,7 @@ describe("TransitStudentsSection", () => {
 
     expect(fetchStudents).toHaveBeenCalledWith({
       locationState: "transit",
+      view: "slim",
       dayStatus: "comes_today",
       pageSize: 200,
     });
@@ -780,6 +788,7 @@ describe("TransitStudentsSection booking into a released room", () => {
       kind: "activity",
       code: "presence.activity_participant_limit_reached" as const,
       details: {
+        activity_id: "42",
         activity_name: "Betreuung",
         current_occupancy: 45,
         max_participants: 45,
@@ -790,6 +799,7 @@ describe("TransitStudentsSection booking into a released room", () => {
       kind: "room",
       code: "presence.room_capacity_exceeded" as const,
       details: {
+        room_id: "7",
         room_name: "Aula",
         current_occupancy: 30,
         max_capacity: 30,
@@ -799,10 +809,14 @@ describe("TransitStudentsSection booking into a released room", () => {
   ])(
     "says the $kind is full when the assignment is refused (#3633)",
     async ({ code, details }) => {
-      const full = new ApiError("Assign transit students failed: 409", 409, {
-        code,
-        details,
-      });
+      const full = await errorFromProblem(
+        "Assign transit students failed: 409",
+        409,
+        {
+          code,
+          details,
+        },
+      );
       // The catalog text names the full room or activity with its numbers.
       const maximum =
         ("max_participants" in details

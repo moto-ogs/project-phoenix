@@ -15,7 +15,7 @@ import { pathToFileURL } from "node:url";
  * Next also writes next-env.d.ts and tsconfig.json in the app root. A separate
  * distDir alone would still mutate the native dev loop's generated files.
  */
-export function createAppWorkspace(frontendDirectory) {
+export function createAppWorkspace(frontendDirectory, { production = false } = {}) {
   // Keep snapshots outside frontend: its test/type/source scanners must never
   // discover a second copy of the application while an E2E run is active.
   const repositoryDirectory = dirname(frontendDirectory);
@@ -29,10 +29,16 @@ export function createAppWorkspace(frontendDirectory) {
     }
     // Reuse the real config and its plugins. The explicit workspace boundary
     // permits dependency/public symlinks back into frontend, outside this app.
+    // A production build skips its type check: the snapshot has no stories,
+    // Storybook or E2E files the tsconfig includes, and `pnpm run check`
+    // type-checks the real tree.
+    const typescript = production
+      ? `, typescript: { ...config.typescript, ignoreBuildErrors: true }`
+      : "";
     writeFileSync(
       join(directory, "next.config.js"),
       `import config from ${JSON.stringify(pathToFileURL(join(frontendDirectory, "next.config.js")).href)};\n` +
-        `export default { ...config, turbopack: { ...config.turbopack, root: ${JSON.stringify(repositoryDirectory)} }, outputFileTracingRoot: ${JSON.stringify(repositoryDirectory)} };\n`,
+        `export default { ...config, turbopack: { ...config.turbopack, root: ${JSON.stringify(repositoryDirectory)} }, outputFileTracingRoot: ${JSON.stringify(repositoryDirectory)}${typescript} };\n`,
     );
     // Turbopack's app discovery needs source files inside the app root. Clone
     // where supported and otherwise copy; never reuse another run's output.

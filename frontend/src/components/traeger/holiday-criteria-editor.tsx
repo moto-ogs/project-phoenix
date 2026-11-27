@@ -1,15 +1,17 @@
 "use client";
 
-// Die Kriterien der Platzvergabe festlegen (#4700). Die Reihenfolge ist die
-// Priorität: das oberste Kriterium zählt am meisten. Jede Frage beantworten
+// Die Kriterien der Platzvergabe festlegen (#4700) und wie sie zählen
+// (#8135): nach Rangfolge (das oberste zählt am meisten), alle gleich oder
+// nach Punkten. Bei Gleichstand zählt immer der Eingang. Jede Frage beantworten
 // Eltern mit Ja oder Nein, einmal für die Familie oder für jedes Kind.
 // Entfernen nimmt ein Kriterium aus der Liste; schon gegebene Antworten und
 // Entscheidungen bleiben gespeichert. Vorlagen sind nur Vorschläge.
 
-import { ArrowDown, ArrowUp, Plus } from "lucide-react";
-import { useRef, useState } from "react";
+import { ArrowDown, ArrowUp, Equal, Plus } from "lucide-react";
+import { type ReactNode, useRef, useState } from "react";
 import { Alert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
+import { ChoiceTile } from "~/components/ui/choice-tile";
 import { EditActions } from "~/components/ui/edit-actions";
 import { EmptyState } from "~/components/ui/empty-state";
 import { FieldErrorHint } from "~/components/ui/field-error-hint";
@@ -21,7 +23,9 @@ import {
 import { IconTile } from "~/components/ui/icon-tile";
 import { Input } from "~/components/ui/input";
 import { InsetPanel } from "~/components/ui/inset-panel";
+import { NumberStepper } from "~/components/ui/number-stepper";
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
+import { Radio } from "~/components/ui/radio";
 import { SectionCard } from "~/components/ui/section-card";
 import { SectionLabel } from "~/components/ui/section-label";
 import { SegmentedControl } from "~/components/ui/segmented-control";
@@ -33,23 +37,30 @@ import { useReadDraftLoadError } from "~/lib/hooks/use-swr-load-error";
 import { createLogger } from "~/lib/logger";
 import { type DraftSource, useDraftOn } from "~/lib/swr/read-draft";
 import {
+  type HolidayCriteriaRanking,
   type HolidayCriteriaRead,
-  type HolidayCriterion,
   type HolidayCriterionScope,
   MAX_CRITERION_NAME,
+  MAX_CRITERION_POINTS,
   MAX_CRITERION_QUESTION,
   MAX_HOLIDAY_CRITERIA,
   saveHolidayCriteria,
 } from "~/lib/traeger-holiday-allocation-api";
 import {
+  CRITERIA_RANKINGS,
   CRITERION_TEMPLATES,
+  type CriteriaDraft,
   type CriterionDraft,
   criteriaChanged,
-  draftsFromCriteria,
+  draftFromRead,
   emptyCriterion,
   fromTemplate,
+  highestScore,
   inputsFromDrafts,
   moveCriterion,
+  parsePoints,
+  pointsLabel,
+  stepPoints,
   templateUsed,
   validateCriteria,
 } from "./holiday-criteria-model";
@@ -82,10 +93,114 @@ function ParentPreview({ draft }: Readonly<{ draft: CriterionDraft }>) {
   );
 }
 
+/** What the list says about its order, per way of counting. */
+const LIST_DESCRIPTION: Record<HolidayCriteriaRanking, string> = {
+  priority:
+    "Die Reihenfolge ist die Priorität. Das oberste Kriterium zählt am meisten.",
+  equal:
+    "Alle Kriterien zählen gleich viel. Eltern sehen die Fragen in dieser Reihenfolge.",
+  points:
+    "Jedes Kriterium bringt seine Punkte. Eltern sehen die Fragen in dieser Reihenfolge.",
+};
+
+/**
+ * How the criteria count (#8135). The choice belongs to the list: it is
+ * saved with it and sorts every open registration anew.
+ */
+function RankingChoice({
+  draft,
+  disabled,
+  onChange,
+}: Readonly<{
+  draft: CriteriaDraft;
+  disabled: boolean;
+  onChange: (ranking: HolidayCriteriaRanking) => void;
+}>) {
+  const highest = highestScore(draft);
+  return (
+    <fieldset className="min-w-0 space-y-3" disabled={disabled}>
+      <SectionLabel as="legend" className="mb-1">
+        Wie zählen die Kriterien?
+      </SectionLabel>
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+        {CRITERIA_RANKINGS.map((ranking) => (
+          <ChoiceTile
+            key={ranking.value}
+            selected={draft.ranking === ranking.value}
+            tone="green"
+            className="items-start p-4"
+          >
+            <Radio
+              name="ranking"
+              value={ranking.value}
+              checked={draft.ranking === ranking.value}
+              onChange={() => onChange(ranking.value)}
+              className="mt-0.5"
+            />
+            <span className="flex min-w-0 flex-col gap-1">
+              <span className="text-sm font-semibold text-gray-900">
+                {ranking.label}
+              </span>
+              <span className="text-sm font-normal text-gray-600">
+                {ranking.text}
+              </span>
+            </span>
+          </ChoiceTile>
+        ))}
+      </div>
+      <p className="text-sm text-gray-600">
+        Bei Gleichstand zählt, wer sich zuerst angemeldet hat.
+        {draft.ranking === "points" && highest > 0
+          ? ` Ein Kind kann höchstens ${pointsLabel(highest)} bekommen.`
+          : ""}
+      </p>
+    </fieldset>
+  );
+}
+
+/** What stands in the round tile and the badge of a criterion. */
+function criterionWeight(
+  draft: CriterionDraft,
+  ranking: HolidayCriteriaRanking,
+  position: number,
+): { tile: ReactNode; badge: string; spoken: string } {
+  if (ranking === "equal") {
+    return {
+      tile: <Equal aria-hidden="true" />,
+      badge: "Zählt gleich",
+      spoken: "",
+    };
+  }
+  if (ranking === "points") {
+    const points = parsePoints(draft.points);
+    return {
+      // With a plus, so the points never read as a rank in the list.
+      tile: (
+        <span
+          className={`font-semibold tabular-nums ${points !== null && points > 9 ? "text-xs" : "text-sm"}`}
+          aria-hidden="true"
+        >
+          {points === null ? "?" : `+${points}`}
+        </span>
+      ),
+      badge: points === null ? "Punkte fehlen" : pointsLabel(points),
+      spoken: "",
+    };
+  }
+  return {
+    tile: (
+      <span className="text-sm font-semibold tabular-nums">{position}</span>
+    ),
+    badge: `Priorität ${position}`,
+    spoken: `Priorität ${position}: `,
+  };
+}
+
 function CriterionRow({
   draft,
   index,
   count,
+  ranking,
   disabled,
   fieldError,
   onChange,
@@ -95,6 +210,7 @@ function CriterionRow({
   draft: CriterionDraft;
   index: number;
   count: number;
+  ranking: HolidayCriteriaRanking;
   disabled: boolean;
   fieldError: (name: string) => string | undefined;
   onChange: (next: CriterionDraft) => void;
@@ -105,22 +221,25 @@ function CriterionRow({
   const label = draft.name.trim() || `Kriterium ${position}`;
   const scopeId = `criterion-${draft.key}-scope`;
   const scopeError = fieldError(`criteria.${index}.scope`);
+  const pointsId = `criterion-${draft.key}-points`;
+  const byPriority = ranking === "priority";
+  const weight = criterionWeight(draft, ranking, position);
   return (
     <InsetPanel as="li" tone="white" framed padding="md" className="space-y-4">
       <div className="flex flex-wrap items-center gap-3">
         <IconTile
-          icon={
-            <span className="text-sm font-semibold tabular-nums">
-              {position}
-            </span>
-          }
+          icon={weight.tile}
           size="xs"
           shape="round"
           tone={draft.active ? "inverse" : "neutral"}
         />
-        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+        {/* min-w-48: on a phone the name keeps its width and the actions
+            move to their own line instead of squeezing it to a few letters. */}
+        <div className="flex min-w-48 flex-1 flex-wrap items-center gap-2">
           <SectionLabel as="h3" className="wrap-anywhere">
-            <span className="sr-only">Priorität {position}: </span>
+            {weight.spoken ? (
+              <span className="sr-only">{weight.spoken}</span>
+            ) : null}
             {label}
           </SectionLabel>
           {/* Neutral: the rank number in front ties the criterion to the
@@ -128,10 +247,10 @@ function CriterionRow({
           <StatusBadge
             tone="gray"
             size="xs"
-            label={draft.active ? `Priorität ${position}` : "Ausgeschaltet"}
+            label={draft.active ? weight.badge : "Ausgeschaltet"}
           />
         </div>
-        <div className="flex items-center gap-1">
+        <div className="ml-auto flex items-center gap-1">
           <Button
             type="button"
             variant="ghost"
@@ -139,11 +258,21 @@ function CriterionRow({
             disabled={disabled || index === 0}
             disabledReason={
               index === 0
-                ? "Dieses Kriterium hat schon die höchste Priorität."
+                ? byPriority
+                  ? "Dieses Kriterium hat schon die höchste Priorität."
+                  : "Dieses Kriterium steht schon ganz oben."
                 : undefined
             }
-            tooltip="Schiebt das Kriterium eine Stelle höher, es zählt dann mehr."
-            aria-label={`„${label}“ nach oben, höhere Priorität`}
+            tooltip={
+              byPriority
+                ? "Schiebt das Kriterium eine Stelle höher, es zählt dann mehr."
+                : "Schiebt die Frage eine Stelle höher. Wie viel sie zählt, bleibt gleich."
+            }
+            aria-label={
+              byPriority
+                ? `„${label}“ nach oben, höhere Priorität`
+                : `„${label}“ nach oben`
+            }
             onClick={() => onMove(-1)}
           >
             <ArrowUp className="h-4 w-4" aria-hidden="true" />
@@ -155,11 +284,21 @@ function CriterionRow({
             disabled={disabled || index === count - 1}
             disabledReason={
               index === count - 1
-                ? "Dieses Kriterium hat schon die niedrigste Priorität."
+                ? byPriority
+                  ? "Dieses Kriterium hat schon die niedrigste Priorität."
+                  : "Dieses Kriterium steht schon ganz unten."
                 : undefined
             }
-            tooltip="Schiebt das Kriterium eine Stelle tiefer, es zählt dann weniger."
-            aria-label={`„${label}“ nach unten, niedrigere Priorität`}
+            tooltip={
+              byPriority
+                ? "Schiebt das Kriterium eine Stelle tiefer, es zählt dann weniger."
+                : "Schiebt die Frage eine Stelle tiefer. Wie viel sie zählt, bleibt gleich."
+            }
+            aria-label={
+              byPriority
+                ? `„${label}“ nach unten, niedrigere Priorität`
+                : `„${label}“ nach unten`
+            }
             onClick={() => onMove(1)}
           >
             <ArrowDown className="h-4 w-4" aria-hidden="true" />
@@ -194,7 +333,13 @@ function CriterionRow({
         }
       />
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-[minmax(0,1fr)_auto]">
+      <div
+        className={
+          ranking === "points"
+            ? "grid grid-cols-1 gap-4 sm:grid-cols-[minmax(0,1fr)_auto] lg:grid-cols-[minmax(0,1fr)_auto_auto]"
+            : "grid grid-cols-1 gap-4 sm:grid-cols-[minmax(0,1fr)_auto]"
+        }
+      >
         <Input
           controlSize="compact"
           name={`criteria.${index}.name`}
@@ -232,6 +377,34 @@ function CriterionRow({
             </p>
           ) : null}
         </div>
+        {ranking === "points" ? (
+          <div className="space-y-1">
+            <FieldLabel htmlFor={pointsId} required>
+              Punkte
+            </FieldLabel>
+            <NumberStepper
+              id={pointsId}
+              name={`criteria.${index}.points`}
+              inputMode="numeric"
+              value={draft.points}
+              disabled={disabled}
+              error={fieldError(`criteria.${index}.points`)}
+              aria-required
+              onChange={(event) =>
+                onChange({ ...draft, points: event.target.value })
+              }
+              onStep={(delta) =>
+                onChange({ ...draft, points: stepPoints(draft.points, delta) })
+              }
+              canDecrement={(parsePoints(draft.points) ?? 0) !== 1}
+              canIncrement={parsePoints(draft.points) !== MAX_CRITERION_POINTS}
+              decrementLabel={`„${label}“: einen Punkt weniger`}
+              incrementLabel={`„${label}“: einen Punkt mehr`}
+              decrementTooltip="Gibt dem Kriterium einen Punkt weniger."
+              incrementTooltip="Gibt dem Kriterium einen Punkt mehr."
+            />
+          </div>
+        ) : null}
       </div>
       <Textarea
         name={`criteria.${index}.question`}
@@ -269,21 +442,37 @@ export function HolidayCriteriaEditor({
   // the stored criteria show, and nothing is sent until they were read.
   const editor = useDraftOn<
     HolidayCriteriaRead,
-    CriterionDraft[],
+    CriteriaDraft,
     string,
     HolidayCriteriaRead
   >(source, {
     token: (stored) => stored.version,
-    toDraft: (stored) => draftsFromCriteria(stored.criteria),
+    toDraft: draftFromRead,
     answer: (saved) => saved,
   });
-  const criteria: readonly HolidayCriterion[] =
-    (editor.base ?? source.data)?.criteria ?? [];
-  const drafts = editor.draft ?? draftsFromCriteria(criteria);
-  const setDrafts = editor.setDraft;
+  const stored = editor.base ?? source.data;
+  const criteria = stored?.criteria ?? [];
+  const storedRanking = stored?.ranking ?? "priority";
+  const draft =
+    editor.draft ??
+    draftFromRead({
+      criteria: [...criteria],
+      ranking: storedRanking,
+      version: "",
+    });
+  const drafts = draft.items;
+  const ranking = draft.ranking;
+  const setDrafts = (
+    change: (current: readonly CriterionDraft[]) => CriterionDraft[],
+  ) =>
+    editor.setDraft((current) => ({
+      ...current,
+      items: change(current.items),
+    }));
   const loadError = useReadDraftLoadError(editor, "die Kriterien");
   const [saving, setSaving] = useState(false);
-  const changed = criteriaChanged(drafts, criteria);
+  const changed =
+    ranking !== storedRanking || criteriaChanged(drafts, criteria);
   const full = drafts.length >= MAX_HOLIDAY_CRITERIA;
   const fieldError = (name: string) => formErrors.fieldError(name) ?? undefined;
   const unusedTemplates = CRITERION_TEMPLATES.filter(
@@ -296,7 +485,7 @@ export function HolidayCriteriaEditor({
     );
 
   const save = async () => {
-    const errors = validateCriteria(drafts);
+    const errors = validateCriteria(drafts, ranking);
     if (Object.keys(errors).length > 0) {
       formErrors.invalid("Bitte prüfe die markierten Felder.", errors);
       return;
@@ -305,7 +494,11 @@ export function HolidayCriteriaEditor({
     if (!editor.canSubmit) return;
     setSaving(true);
     const result = await editor.submit((version, edited) =>
-      saveHolidayCriteria(inputsFromDrafts(edited), version),
+      saveHolidayCriteria(
+        inputsFromDrafts(edited.items),
+        edited.ranking,
+        version,
+      ),
     );
     setSaving(false);
     if (result.ok) {
@@ -331,17 +524,29 @@ export function HolidayCriteriaEditor({
       ref={formRef}
       noValidate
       aria-label="Kriterien der Platzvergabe"
-      // A flex column only so the one card grows to the bottom edge; the
-      // page body sets the spacing (#7411).
-      className="flex flex-col"
+      // A flex column only so the last card grows to the bottom edge
+      // (#7411); the gap is the body's 24 px between cards.
+      className="flex flex-col gap-6"
       onSubmit={(event) => {
         event.preventDefault();
         void save();
       }}
     >
       <SectionCard
+        title="So sortiert moto vor"
+        description="moto schlägt nur vor. Über jeden Platz entscheidet dein Büro."
+      >
+        <RankingChoice
+          draft={draft}
+          disabled={saving}
+          onChange={(next) =>
+            editor.setDraft((current) => ({ ...current, ranking: next }))
+          }
+        />
+      </SectionCard>
+      <SectionCard
         title="Kriterien"
-        description="Die Reihenfolge ist die Priorität. Das oberste Kriterium zählt am meisten."
+        description={LIST_DESCRIPTION[ranking]}
         footer={
           <EditActions
             onCancel={() => {
@@ -362,6 +567,7 @@ export function HolidayCriteriaEditor({
               : {})}
             saveType="submit"
             saveLabel="Kriterien speichern"
+            saveTooltip="Speichert Kriterien und Zählweise. Offene Anmeldungen sortiert moto sofort neu."
             stretchOnPhone
           />
         }
@@ -380,13 +586,21 @@ export function HolidayCriteriaEditor({
               description="Wähle unten eine Vorlage oder lege ein eigenes Kriterium an."
             />
           ) : (
-            <ol className="space-y-3" aria-label="Kriterien nach Priorität">
+            <ol
+              className="space-y-3"
+              aria-label={
+                ranking === "priority"
+                  ? "Kriterien nach Priorität"
+                  : "Kriterien"
+              }
+            >
               {drafts.map((draft, index) => (
                 <CriterionRow
                   key={draft.key}
                   draft={draft}
                   index={index}
                   count={drafts.length}
+                  ranking={ranking}
                   disabled={saving}
                   fieldError={fieldError}
                   onChange={(next) => setDraft(index, next)}

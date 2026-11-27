@@ -37,7 +37,6 @@ import (
 	careContractHTTP "github.com/moto-ogs/project-phoenix/modules/carecontract/http"
 	careStudentsHTTP "github.com/moto-ogs/project-phoenix/modules/careplan/http"
 	requestFeedHTTP "github.com/moto-ogs/project-phoenix/modules/careplan/requestfeed/http"
-	classdayHTTP "github.com/moto-ogs/project-phoenix/modules/classday/http"
 	messageAttachmentsHTTP "github.com/moto-ogs/project-phoenix/modules/communication/http/messageattachments"
 	operatorAnnouncementsHTTP "github.com/moto-ogs/project-phoenix/modules/communication/http/operatorannouncements"
 	announcementAPI "github.com/moto-ogs/project-phoenix/modules/communication/http/parentannouncements"
@@ -212,6 +211,7 @@ func tenantContractMounts() []contractMount {
 		{"/api/shift-types", shiftTypeRouteContracts()},
 		{"/api/staff-shifts", staffShiftRouteContracts()},
 		{"/api/timetable", timetableHTTP.RouteContracts()},
+		{"/api/opening-changes", calendarAPI.OpeningChangeRouteContracts()},
 		{"/api/week-protocols", timetableHTTP.WeekProtocolRouteContracts()},
 		{"/api/surveys", announcementAPI.SurveyRouteContracts()},
 		{"/api/messages", parentMessagingAPI.RouteContracts()},
@@ -289,11 +289,7 @@ func ContractDocument() (contract.Document, error) {
 		StreamEnums: []contract.EnumSpec{{
 			Name: "StreamEventType", Type: realtime.EventType(""), Values: realtime.EventTypeValues(),
 		}},
-		ProblemDetails: map[string]any{
-			common.CodeStudentsCompanionPlanConflict:   careStudentsHTTP.CompanionConflictDetails{},
-			common.CodeClassdayClassTripStatusConflict: classdayHTTP.ClassTripConflictDetails{},
-			common.CodeStudentsStatusDayConflict:       presenceStudentsHTTP.StatusDayConflictDetails{},
-		},
+		ProblemDetails: problemDetailContracts,
 		Identifiers: map[reflect.Type]string{
 			reflect.TypeFor[ident.ID](): contract.KindID,
 			// The device management renders its instants in whole seconds.
@@ -441,7 +437,7 @@ func contractRegistration(prefix string, route common.RouteContract) contract.Re
 		registration.Portals = append(registration.Portals, string(portal))
 	}
 	for _, param := range route.Query {
-		registration.Query = append(registration.Query, contract.QueryParam{Name: param.Name, Kind: string(param.Kind), Repeated: param.Repeated, Values: param.Values})
+		registration.Query = append(registration.Query, contract.QueryParam{Name: param.Name, Kind: string(param.Kind), Repeated: param.Repeated, Values: param.Values, TextReason: param.TextReason})
 	}
 	if route.Variants != nil {
 		registration.Variants = &contract.VariantSpec{QueryParam: route.Variants.QueryParam, Default: route.Variants.Default, ByValue: route.Variants.ByValue}
@@ -488,6 +484,7 @@ func traegerContractMounts() []contractMount {
 		{"/traeger/holiday-closures", enrollmentHTTP.HolidayClosureRouteContracts()},
 		{"/traeger/holiday-closures/pending", holidayClosureHTTP.TraegerRouteContracts()},
 		{"/traeger/closing-days", calendarAPI.TraegerClosingDayRouteContracts()},
+		{"/traeger/opening-changes", calendarAPI.TraegerOpeningChangeRouteContracts()},
 		// Enrollment renders the registration a rebooking answers.
 		{"/traeger/holiday-contributions", parentBillingHTTP.HolidayRouteContracts(enrollmentOwner.HolidayRegistrationDetail{})},
 		{"/traeger/required-details", parentBillingHTTP.RequiredDetailsRouteContracts()},
@@ -503,6 +500,7 @@ func traegerContractMounts() []contractMount {
 func sharedPortalContractMounts() []contractMount {
 	return []contractMount{
 		{"/analytics-consent", meAPI.AnalyticsConsentRouteContracts()},
+		{"/display-preferences", meAPI.DisplayPreferencesRouteContracts()},
 		// The analytics package writes its envelope without api/common; the
 		// root names its answer.
 		{"/analytics-policy", []common.RouteContract{{
@@ -632,6 +630,10 @@ func mealPlanRouteContracts() []common.RouteContract {
 		{Method: "PUT", Pattern: "/meal-plan/participation/{studentId}/days/{date}", Portals: portals, Request: types.ChildDay, NoData: true},
 		{Method: "DELETE", Pattern: "/meal-plan/participation/{studentId}/days/{date}", Portals: portals, NoData: true},
 		{Method: "PUT", Pattern: "/meal-plan/participation/{studentId}/schedule", Portals: portals, Request: types.ChildSchedule, Response: types.ScheduleChanged},
+		// The days without lunch (#7656).
+		{Method: "GET", Pattern: "/meal-plan/cancellations", Portals: portals, Query: window, Response: types.Cancellations},
+		{Method: "PUT", Pattern: "/meal-plan/days/{date}/cancellation", Portals: portals, Request: types.CancelMeal, Response: types.Cancellation},
+		{Method: "DELETE", Pattern: "/meal-plan/days/{date}/cancellation", Portals: portals, NoData: true},
 		{Method: "GET", Pattern: "/meal-billing-months/", Portals: portals, Response: types.BillingMonths},
 		{Method: "GET", Pattern: "/meal-billing-months/{month}", Portals: portals, Response: types.BillingMonth},
 		{Method: "POST", Pattern: "/meal-billing-months/{month}/release", Portals: portals, Request: types.BillingMonthRelease, Response: types.BillingMonth},

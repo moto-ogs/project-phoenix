@@ -3,8 +3,6 @@ package parent
 import (
 	"errors"
 	"net/http"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
@@ -116,13 +114,9 @@ func toGroupThreadSummary(thread parentService.GroupThread, school string, child
 	return out
 }
 
-func parseOptionalGroupThreadID(raw string) (int64, error) {
-	raw = strings.TrimSpace(raw)
-	if raw == "" {
-		return 0, nil
-	}
-	id, err := strconv.ParseInt(raw, 10, 64)
-	if err != nil || id <= 0 {
+func parseOptionalGroupThreadID(raw ident.IDOrNone) (int64, error) {
+	id := raw.Int64()
+	if !raw.IsZero() && id <= 0 {
 		return 0, errors.New("invalid group thread ID")
 	}
 	return id, nil

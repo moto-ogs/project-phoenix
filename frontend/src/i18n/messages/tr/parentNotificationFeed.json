@@ -1,7 +1,7 @@
 {
   "bell": "Uyarılar",
-  "bellCount": "Uyarılar ({count})",
-  "badge": "{count} yeni uyarı",
+  "bellCount": "Uyarılar: {count}",
+  "bellCountCapped": "{max}+ uyarı, toplam {count}",
   "bellTooltip": "Okulun çocuklarınızla ilgili uyarılarını gösterir.",
   "description": "Okulun çocuklarınızla ilgili uyarıları, örneğin bakım iptal edildiğinde.",
   "close": "Kapat",

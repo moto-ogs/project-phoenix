@@ -8,6 +8,7 @@ import { bffFileHref, bffJson } from "./bff-fetch";
 import { knownEnum } from "./contract/known-enum";
 import type {
   FileResponse,
+  FolderListResponse,
   FolderRequest,
   FolderResponse,
 } from "./contract/files.generated";
@@ -138,22 +139,27 @@ function toBackendFolderInput(input: FolderInput): FolderRequest {
   };
 }
 
+export function toFolderOverview(list: FolderListResponse): FolderOverview {
+  return {
+    folders: (list.folders ?? []).flatMap((folder) => {
+      const mapped = mapFolder(folder);
+      return mapped ? [mapped] : [];
+    }),
+    canManage: list.can_manage,
+    canUpload: list.can_upload,
+    staffUploadEnabled: list.staff_upload_enabled,
+    usedBytes: list.used_bytes,
+    maxBytes: list.max_bytes,
+  };
+}
+
 class FilesService {
   async listFolders(): Promise<FolderOverview> {
-    const list = await bffJson("tenant", "GET /api/files/folders", {
-      errorMessage: "Ordner konnten nicht geladen werden.",
-    });
-    return {
-      folders: (list.folders ?? []).flatMap((folder) => {
-        const mapped = mapFolder(folder);
-        return mapped ? [mapped] : [];
+    return toFolderOverview(
+      await bffJson("tenant", "GET /api/files/folders", {
+        errorMessage: "Ordner konnten nicht geladen werden.",
       }),
-      canManage: list.can_manage,
-      canUpload: list.can_upload,
-      staffUploadEnabled: list.staff_upload_enabled,
-      usedBytes: list.used_bytes,
-      maxBytes: list.max_bytes,
-    };
+    );
   }
 
   async createFolder(input: FolderInput): Promise<FileFolder | null> {

@@ -7,7 +7,7 @@ export function traegerFinanceExportsTopic(): HelpTopic {
     title: "Sollstellung für die Kämmerei",
     question: "Wie gebe ich die Rechnungen an die Kämmerei?",
     summary:
-      "Für jeden ausgestellten Lauf lädst du eine Sollstellung herunter. Das ist eine CSV-Datei mit einer Zeile je Rechnung. Welche Spalten sie hat, legst du selbst fest. Jede Datei bekommt eine laufende Nummer.",
+      "Für jeden ausgestellten Lauf lädst du eine Sollstellung herunter. Das ist eine CSV-Datei mit einer Zeile pro Rechnung. Welche Spalten sie hat, legst du selbst fest. Jede Datei bekommt eine laufende Nummer.",
     group: "anmeldeverwaltung",
     audience: "traeger",
     icon: "Table",
@@ -26,7 +26,7 @@ export function traegerFinanceExportsTopic(): HelpTopic {
           "Wähle oben rechts das Menü mit den drei Punkten und dann `Feldzuordnung`.",
           "Wähle bei jeder Spalte den `Inhalt` und trage den `Spaltennamen` ein.",
           "Mit `Spalte` fügst du eine Spalte hinzu. Für einen Wert, der in jeder Zeile gleich ist, wähle `Fester Wert`, etwa ein Konto.",
-          "Für einen Text je Rechnung wähle `Buchungstext`. Schreibe feste Wörter selbst und füge Platzhalter wie `{Monat}` und `{Kind}` mit einem Klick ein. Aus `SKB {Monat} {Kind}` wird etwa `SKB 10/2026 Lia Müller`.",
+          "Für einen Text pro Rechnung wähle `Buchungstext`. Schreibe feste Wörter selbst und füge Platzhalter wie `{Monat}` und `{Kind}` mit einem Klick ein. Aus `SKB {Monat} {Kind}` wird etwa `SKB 10/2026 Lia Müller`.",
           "Will deine Buchhaltung Stornos und Gutschriften in einer eigenen Spalte? Dann wähle `Gutschrift`. Dort steht der Betrag ohne Minus. Die Spalte `Betrag` bleibt bei ihnen leer.",
           "Lege unter `Datei` Trennzeichen, Beträge, Datum, Zeichensatz und Dateinamen fest. `{NR}` im Dateinamen wird zur Dateinummer.",
           "Prüfe die `Vorschau` und wähle `Speichern`.",
@@ -53,7 +53,7 @@ export function traegerFinanceExportsTopic(): HelpTopic {
         title: "Läufe und Exportprotokoll herunterladen",
         steps: [
           "Wähle `Familien und Zahlung` und dann den Reiter `Exporte`.",
-          "Wähle bei `Dateien je Lauf` oder `Exportprotokoll` den Knopf `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
+          "Wähle bei `Dateien pro Lauf` oder `Exportprotokoll` den Knopf `Herunterladen` und dann `PDF`, `Excel` oder `CSV`.",
         ],
       },
     ],
@@ -65,7 +65,7 @@ export function traegerFinanceExportsTopic(): HelpTopic {
       "Für dein Steuerbüro gibt es im Menü des Laufs auch `DATEV-Datei`. Wie das geht, steht unter „DATEV-Werte eintragen“.",
       "Die Debitorennummer der Familie trägst du bei `Empfänger und Zahlung` der Familie ein. Neue Monats- und Ferienrechnungen übernehmen sie. Hat eine Ferienanmeldung eine eigene Nummer, gilt bei der Ferienrechnung diese. Beim Import der Mandate übernimmt moto die Spalte `Debitorennummer`.",
       "Eine neue Feldzuordnung gilt für jede neue Datei. Frühere Dateien bleiben, wie sie waren.",
-      "Wählst du als Inhalt `Erlöskonto`, `Kostenstelle (KOST1)` oder `Zweite Kostenstelle (KOST2)`, hat die Datei eine Zeile je Konto einer Rechnung. Der `Betrag` ist dann der Teil der Rechnung auf diesem Konto. Die Konten legst du unter `Konten und Kostenstellen` fest.",
+      "Wählst du als Inhalt `Erlöskonto`, `Kostenstelle (KOST1)` oder `Zweite Kostenstelle (KOST2)`, hat die Datei eine Zeile pro Konto einer Rechnung. Der `Betrag` ist dann der Teil der Rechnung auf diesem Konto. Die Konten legst du unter `Konten und Kostenstellen` fest.",
     ],
     differences: [
       "Der Reiter `Exporte` fehlt? Dir fehlt das Recht `Finanz-Export`.",
@@ -75,7 +75,7 @@ export function traegerFinanceExportsTopic(): HelpTopic {
     troubleshootingDetails: [
       "Die Kämmerei sieht falsche Umlaute? Wähle bei `Zeichensatz` den Wert `Windows-1252`.",
       "In der Datei stehen alle Werte in einer Spalte? Das Trennzeichen passt nicht zum Programm der Kämmerei. Wähle ein anderes.",
-      "Beim Import einer Datei zeigt eine Zeile `Geschwister haben verschiedene Nummern`? moto führt eine Nummer je Familie. Trage die richtige Nummer bei der Familie ein.",
+      "Beim Import einer Datei zeigt eine Zeile `Geschwister haben verschiedene Nummern`? moto führt eine Nummer pro Familie. Trage die richtige Nummer bei der Familie ein.",
     ],
     related: [
       HELP_TOPICS.traegerExportHandover,

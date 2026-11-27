@@ -415,7 +415,7 @@ export function StaffContractsCard({
     <SectionCard
       concept={timeTrackingConcept}
       title="Arbeitsverträge"
-      description="Vertrag und Soll je Schule. Die Schulen rechnen damit in ihrer Zeiterfassung, auch in den Ferien."
+      description="Vertrag und Soll pro Schule. Die Schulen rechnen damit in ihrer Zeiterfassung, auch in den Ferien."
       action={
         <Button
           size="md"
@@ -424,7 +424,7 @@ export function StaffContractsCard({
           className="gap-2"
           disabled={activeSchools === 0}
           disabledReason="Die Person arbeitet an keiner Schule mehr."
-          tooltip="Öffnet ein Fenster für einen neuen Vertrag mit Soll je Schule."
+          tooltip="Öffnet ein Fenster für einen neuen Vertrag mit Soll pro Schule."
           onClick={() => open({ kind: "create" })}
         >
           <PlusIcon className="h-4 w-4" aria-hidden="true" />

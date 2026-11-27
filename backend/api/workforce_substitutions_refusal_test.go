@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	substitutionsHTTP "github.com/moto-ogs/project-phoenix/modules/workforce/http/substitutions"
 	"github.com/stretchr/testify/require"
 )
@@ -21,7 +22,7 @@ func TestRenderSubstitutionsFailureCarriesDetailsAndField(t *testing.T) {
 	renderSubstitutionsFailure(recorder, request, substitutionsHTTP.Failure{
 		Status: http.StatusBadRequest, Code: "timetable.substitute_absent_on_date",
 		Message: "Die Angaben für die Vertretung sind ungültig.", Err: errors.New("cause"),
-		Details: map[string]any{"date": "2026-10-06"}, Field: "substitute_staff_id",
+		Details: workforce.SubstitutionRefusalValues{Date: "2026-10-06"}, Field: "substitute_staff_id",
 	})
 
 	require.Equal(t, http.StatusBadRequest, recorder.Code)

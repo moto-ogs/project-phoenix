@@ -72,6 +72,14 @@ Variante 3.
 
 ## Folgen
 
+- Beim ersten Anzeigen einer Seite darf ihr Server-Render den vorhandenen
+  Leseschlüssel mit einem Seed füllen (#8077, #8079). Der Seed gehört zur
+  frischen Portal-Sitzung mit ihrem Schul- bzw. Trägerkontext. Er ersetzt
+  keinen neueren Stand. Ohne brauchbaren Seed lädt derselbe Leser normal
+  nach. Beim warmen Seitenwechsel zeigt die neutrale Hülle gültige SWR-Daten
+  derselben Sitzung, ohne auf den neuen Seed zu warten (#8083). Protokollierte
+  Öffnungen, GETs mit Seiteneffekt und Schreibvorschauen bleiben auch beim
+  Wiederanzeigen durch React Activity an die jeweilige Aktion gebunden.
 - `useFreshSWR` gilt nur noch als Übergang. Jede Stelle wird nach Punkt 1, 2
   oder 5 eingeordnet und umgestellt; danach bleibt nur das Lesen bei jedem
   Öffnen für protokollierte Zugriffe.
@@ -82,6 +90,10 @@ Variante 3.
   `useDraftOn`, und `show(error, { reload })` zeigt eine Ablehnung erst mit
   dem neu gelesenen Stand oder mit dessen Ladefehler
   (`frontend/src/lib/swr/README.md`, „Reading and saving“).
+- Die eigene Zeiterfassung (#8081) nimmt `version` aus dem gewählten Block
+  des `period`-Reads. Bei einer Ablehnung lädt genau dieser Zeitraum mit
+  `revalidateOrThrow` neu. Die Stempeluhr kann den Tabellen-Lesestand nicht
+  ersetzen und liest unabhängig davon weiter.
 - Die Elternanfragen verlieren ihre vier Fehlerwerte und den leeren Token, der
   die Prüfung übersprang. Ihr Token ist `readstate.Of(updated_at)` ohne
   eigene Funktion; ein Stand ohne Zeile (Ankunftszeiten einer Klasse) hat den

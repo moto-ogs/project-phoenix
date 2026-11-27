@@ -25,6 +25,7 @@ export function ownProfileTopic(): HelpTopic {
     notes: [
       "Weiter unten stehen auch deine Nachweise, deine Passkeys und deine vertrauten Geräte.",
       "Deine E-Mail-Adresse änderst du hier nicht. Frage dafür deine Leitung.",
+      "Unter `Mehr Kontrast` schaltest du dunklere Ränder an Eingabefeldern, Kästchen und Schaltern ein. Das gilt für dein Konto, auf jedem Gerät.",
     ],
     related: [
       HELP_TOPICS.staffNotifications,

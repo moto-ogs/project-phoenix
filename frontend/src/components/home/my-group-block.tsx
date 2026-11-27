@@ -1,6 +1,6 @@
 "use client";
 
-import type * as studentsContract from "~/lib/contract/students.generated";
+import type { HomeGroupStudent } from "~/lib/ogs-group-live-api";
 import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { ListRow } from "~/components/ui/list-row";
 import { Skeleton, SkeletonRows } from "~/components/ui/skeleton";
@@ -45,7 +45,7 @@ const MAX_ROWS = 3;
 type GroupRow =
   | { readonly kind: "missing"; readonly arrival: HomeMissingArrival }
   | { readonly kind: "pickup"; readonly pickup: HomePickup }
-  | { readonly kind: "away"; readonly student: studentsContract.Student };
+  | { readonly kind: "away"; readonly student: HomeGroupStudent };
 
 /**
  * Baustein „Meine Gruppe heute" (#2180): der Stand der eigenen Gruppe auf
@@ -207,7 +207,7 @@ function StudentName({
   student,
   note,
 }: {
-  readonly student: studentsContract.Student;
+  readonly student: HomeGroupStudent;
   readonly note?: string;
 }) {
   return (
@@ -312,7 +312,7 @@ function AwayRow({
   onlyIfLessonCancelled,
   href,
 }: {
-  readonly student: studentsContract.Student;
+  readonly student: HomeGroupStudent;
   readonly onlyIfLessonCancelled: boolean;
   readonly href: string;
 }) {
@@ -343,7 +343,7 @@ export function AwayBadge({
   student,
   onlyIfLessonCancelled,
 }: {
-  readonly student: studentsContract.Student;
+  readonly student: HomeGroupStudent;
   readonly onlyIfLessonCancelled: boolean;
 }) {
   // Zum Unterricht abgemeldet: nur „Im Unterricht“, auch bei Krankmeldung

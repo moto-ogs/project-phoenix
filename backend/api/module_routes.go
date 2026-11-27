@@ -37,6 +37,7 @@ var moduleRouteRules = []moduleRouteRule{
 	{"/ready", moduleRouteBasis},
 	{"/analytics-consent", moduleRouteBasis},
 	{"/analytics-policy", moduleRouteBasis},
+	{"/display-preferences", moduleRouteBasis},
 	{"/internal", moduleRouteBasis},
 	{"/auth", moduleRouteBasis},
 	{"/operator", moduleRouteBasis},
@@ -82,6 +83,7 @@ var moduleRouteRules = []moduleRouteRule{
 	// Träger-Übersicht: the dashboard, occupancy, utilization, arrival and
 	// pickup, the comparison of schools, the daily report and the reports.
 	{"/traeger/schools/alerts", settings.ModuleTraegerUebersicht},
+	{"/traeger/schools/day-changes", settings.ModuleTraegerUebersicht},
 	{"/traeger/schools/occupancy", settings.ModuleTraegerUebersicht},
 	{"/traeger/schools/utilization", settings.ModuleTraegerUebersicht},
 	{"/traeger/schools/*/utilization", settings.ModuleTraegerUebersicht},
@@ -188,6 +190,8 @@ var moduleRouteRules = []moduleRouteRule{
 	// Staff and parent surveys (#4781); see docs/reference/modulschalter.md.
 	{"/api/surveys", moduleRouteBasis},
 	{"/api/timetable", moduleRouteBasis},
+	// Changed opening hours (#7654) belong to the closing days of the timetable page.
+	{"/api/opening-changes", moduleRouteBasis},
 	// The notices of changed school closing days (ADR 0196) belong to the
 	// closing days of the timetable page.
 	{"/api/holiday-closure-notices", moduleRouteBasis},

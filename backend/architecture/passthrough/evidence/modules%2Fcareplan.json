@@ -1241,13 +1241,6 @@
     },
     {
       "build": "production",
-      "evidence": "func (a pickupApprovalExceptions) CreateNote(ctx context.Context, value careplan.PickupNote) (careplan.PickupNote, error) {\n\tif value.StudentID \u003c= 0 || value.NoteDate == \"\" || strings.TrimSpace(value.Content) == \"\" {\n\t\treturn careplan.PickupNote{}, carerequests.ErrInvalidPayload\n\t}\n\treturn a.records.CreatePickupNote(ctx, value)\n}",
-      "form": "unclassified-evidence",
-      "id": "modules/careplan/internal/application/pickupApprovalExceptions.CreateNote",
-      "owner": "modules/careplan"
-    },
-    {
-      "build": "production",
       "evidence": "func (a pickupApprovalExceptions) FindDepartureForDate(ctx context.Context, id int64, date calendar.Date) (*careplan.DepartureException, error) {\n\trows, err := a.records.ListDepartureExceptions(ctx, careplan.StudentScheduleFilter{StudentIDs: []int64{id}, Date: careplan.Date(date)})\n\tif err != nil || len(rows) == 0 {\n\t\treturn nil, err\n\t}\n\treturn \u0026rows[0], nil\n}",
       "form": "unclassified-evidence",
       "id": "modules/careplan/internal/application/pickupApprovalExceptions.FindDepartureForDate",

@@ -2,6 +2,7 @@
 // genau einmal; die Bausteine importieren sie, nicht umgekehrt.
 
 import type { ReactNode } from "react";
+import { sameSetMembers } from "~/lib/utils";
 
 /**
  * Zähler-Plakette in der Such- und Filterzeile, z. B. die Zahl der gefundenen
@@ -27,6 +28,10 @@ export interface PageHeaderSearch {
   readonly inputProps?: React.InputHTMLAttributes<HTMLInputElement>;
   /** See `SearchBarProps.debounceMs` — keeps typing out of the page's state. */
   readonly debounceMs?: number;
+  /** Whether the field shows a draft not yet reported to the page. */
+  readonly onDraftPendingChange?: (pending: boolean) => void;
+  /** Returns a field error for a draft that must not be applied. */
+  readonly validateDraft?: (draft: string) => string | undefined;
   /** See `SearchBarProps.resetKey` — cancels a draft when a filter reset keeps the same value. */
   readonly resetKey?: string | number;
 }
@@ -107,6 +112,12 @@ export interface FilterOption {
   readonly label: string;
   readonly icon?: string; // SVG path data for grid-style buttons
   readonly count?: number;
+  /**
+   * Kept selectable only so a selected value outside the available options
+   * (e.g. a class restored from a link) can be lifted. Such an entry is not
+   * one of the options: selecting it still counts as a restriction.
+   */
+  readonly outsideOptions?: boolean;
 }
 
 export interface ActiveFilter {
@@ -195,6 +206,59 @@ export function normalizeFilterValues(
   if (Array.isArray(value)) return value;
   if (value) return [value];
   return [];
+}
+
+/**
+ * Whether a multi-select narrows the list. Neither the empty selection nor the
+ * full option set restricts anything: both mean "alle" (#6734).
+ *
+ * Compare by MEMBERSHIP, not length: a saved selection can hold a hidden value
+ * (e.g. a group/class the current user can't see) that pads the count to
+ * `options.length` while still excluding a visible option — selected
+ * [A, hiddenC] with options [A, B] is a real restriction, not "all selected".
+ * A selected value outside the options is itself a restriction to surface
+ * (#1565 review pass 2), including one kept selectable via `outsideOptions`.
+ */
+export function isMultiSelectRestricting(
+  selectedValues: readonly string[],
+  allOptions: readonly Pick<FilterOption, "value" | "outsideOptions">[],
+): boolean {
+  if (selectedValues.length === 0) return false;
+  const options = allOptions
+    .filter((option) => option.outsideOptions !== true)
+    .map((option) => option.value);
+  return !sameSetMembers(selectedValues, options);
+}
+
+/**
+ * Whether a filter is out of its default state, i.e. narrows the list: for a
+ * multi-select see {@link isMultiSelectRestricting}, for a single choice
+ * anything other than the first (default) option. Custom filters report
+ * `false`: their `value`/`options` are unused stubs, so a custom control
+ * reports its state through `activeFilters` instead.
+ */
+export function isFilterRestricting(filter: FilterConfig): boolean {
+  if (filter.type === "custom") return false;
+  if (filter.multiSelect === true || Array.isArray(filter.value)) {
+    return isMultiSelectRestricting(
+      normalizeFilterValues(filter.value),
+      filter.options,
+    );
+  }
+  return filter.value !== filter.options[0]?.value;
+}
+
+/**
+ * The ids of the filters that narrow the list ({@link isFilterRestricting}).
+ * A page that builds its own `activeFilters` asks this set, so its chips and
+ * count follow the same rule as the filter controls (#6734).
+ */
+export function restrictingFilterIds(
+  filters: readonly FilterConfig[],
+): ReadonlySet<string> {
+  return new Set(
+    filters.filter((filter) => isFilterRestricting(filter)).map((f) => f.id),
+  );
 }
 
 export interface OverflowMenuItem {

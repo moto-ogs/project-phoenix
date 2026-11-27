@@ -1,13 +1,19 @@
 import { describe, expect, it } from "vitest";
 import type { HolidayCriterion } from "~/lib/traeger-holiday-allocation-api";
 import {
+  CRITERIA_RANKINGS,
   CRITERION_TEMPLATES,
   criteriaChanged,
+  draftFromRead,
   draftsFromCriteria,
   emptyCriterion,
   fromTemplate,
+  highestScore,
   inputsFromDrafts,
   moveCriterion,
+  parsePoints,
+  pointsLabel,
+  stepPoints,
   templateUsed,
   validateCriteria,
 } from "./holiday-criteria-model";
@@ -20,6 +26,7 @@ const STORED: HolidayCriterion[] = [
     scope: "child",
     active: true,
     position: 2,
+    points: 2,
     answered: false,
   },
   {
@@ -29,6 +36,7 @@ const STORED: HolidayCriterion[] = [
     scope: "family",
     active: true,
     position: 1,
+    points: 5,
     answered: true,
   },
 ];
@@ -44,6 +52,7 @@ describe("holiday criteria model (#4700)", () => {
         question: "Ist ein Geschwisterkind schon angemeldet?",
         scope: "child",
         active: true,
+        points: 2,
       },
       {
         id: "1",
@@ -51,6 +60,7 @@ describe("holiday criteria model (#4700)", () => {
         question: "Sind beide Eltern berufstätig?",
         scope: "family",
         active: true,
+        points: 5,
       },
     ]);
   });
@@ -117,5 +127,76 @@ describe("holiday criteria model (#4700)", () => {
         STORED,
       ),
     ).toBe(true);
+  });
+
+  // #8135: the criteria count by their order, all the same, or by points.
+  it("offers the three ways of counting, the order as priority first", () => {
+    expect(CRITERIA_RANKINGS.map((ranking) => ranking.value)).toEqual([
+      "priority",
+      "equal",
+      "points",
+    ]);
+  });
+
+  it("takes whole points from 1 to 100 and nothing else", () => {
+    expect(parsePoints(" 7 ")).toBe(7);
+    expect(parsePoints("100")).toBe(100);
+    for (const text of ["", "0", "101", "1,5", "-2", "drei"]) {
+      expect(parsePoints(text)).toBeNull();
+    }
+    expect(stepPoints("1", -1)).toBe("1");
+    expect(stepPoints("100", 1)).toBe("100");
+    expect(stepPoints("4", 1)).toBe("5");
+    expect(stepPoints("", 1)).toBe("1");
+    expect(pointsLabel(1)).toBe("1 Punkt");
+    expect(pointsLabel(4)).toBe("4 Punkte");
+  });
+
+  it("checks the points only where they count", () => {
+    const drafts = draftsFromCriteria(STORED).map((draft, index) =>
+      index === 1 ? { ...draft, points: "" } : draft,
+    );
+    expect(validateCriteria(drafts, "priority")).toEqual({});
+    expect(validateCriteria(drafts, "equal")).toEqual({});
+    expect(validateCriteria(drafts, "points")).toEqual({
+      "criteria.1.points": "Bitte gib 1 bis 100 Punkte ein.",
+    });
+    // Hidden points that are no number go out as 0: the stored points stay,
+    // so a later switch back to points finds them unchanged.
+    expect(inputsFromDrafts(drafts)[1]?.points).toBe(0);
+  });
+
+  it("builds the same draft from the same read, so a change taken back leaves none", () => {
+    const read = { criteria: STORED, ranking: "equal" as const, version: "v" };
+    expect(draftFromRead(read)).toEqual(draftFromRead(read));
+  });
+
+  it("notices changed points and adds up what a child can reach", () => {
+    const drafts = draftsFromCriteria(STORED);
+    const edited = drafts.map((draft, index) =>
+      index === 0 ? { ...draft, points: "9" } : draft,
+    );
+    expect(criteriaChanged(edited, STORED)).toBe(true);
+    expect(
+      criteriaChanged(
+        drafts.map((draft, index) =>
+          index === 0 ? { ...draft, points: "" } : draft,
+        ),
+        STORED,
+      ),
+    ).toBe(true);
+
+    const read = { criteria: STORED, ranking: "points" as const, version: "v" };
+    expect(highestScore(draftFromRead(read))).toBe(7);
+    expect(highestScore({ ...draftFromRead(read), ranking: "equal" })).toBe(2);
+    // A criterion switched off adds nothing.
+    expect(
+      highestScore({
+        ranking: "points",
+        items: edited.map((draft, index) =>
+          index === 1 ? { ...draft, active: false } : draft,
+        ),
+      }),
+    ).toBe(9);
   });
 });

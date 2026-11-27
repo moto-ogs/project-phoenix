@@ -3,6 +3,7 @@ import { beforeEach, expect, it, vi } from "vitest";
 
 import { useCheckinTarget } from "~/lib/hooks/use-checkin-target";
 import { SWRConfig } from "~/lib/swr/testing";
+import { testClockDay } from "~/test/clock";
 import { SchoolCheckinTargetPicker } from "./school-checkin-target-picker";
 
 // A remembered target that is gone is a state in the content (#7704): the
@@ -44,15 +45,16 @@ vi.mock("~/lib/active-service", () => ({
 vi.mock("~/lib/activity-api", () => ({
   fetchActivities: vi.fn(async () => []),
 }));
+const roomFetcher = vi.hoisted(() =>
+  vi.fn(async () => [{ id: "3", name: "Mensa", isOccupied: true }]),
+);
 vi.mock("~/lib/swr/rooms", async (importOriginal) => {
   const actual = await importOriginal<typeof import("~/lib/swr/rooms")>();
   return {
     ...actual,
     rooms: {
       ...actual.rooms,
-      fetcher: vi.fn(async () => [
-        { id: "3", name: "Mensa", isOccupied: true },
-      ]),
+      fetcher: roomFetcher,
     },
   };
 });
@@ -64,6 +66,7 @@ function Picker() {
 }
 
 beforeEach(() => {
+  roomFetcher.mockClear();
   localStorage.clear();
   localStorage.setItem(
     STORAGE_KEY,
@@ -105,4 +108,5 @@ it("keeps the notice on a lost target without an X until a new target is chosen"
   expect(
     screen.getByRole("combobox", { name: "Anmelden in" }),
   ).toHaveTextContent("Mensa");
+  expect(roomFetcher).toHaveBeenCalledWith({ openOn: testClockDay(0) });
 });

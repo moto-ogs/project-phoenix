@@ -30,6 +30,7 @@ const CodeIotRfidTagNotStaff = "iot.rfid_tag_not_staff"
 const CodeIotRfidTagNotStudentOrStaff = "iot.rfid_tag_not_student_or_staff"
 const CodeIotRfidTagUnassigned = "iot.rfid_tag_unassigned"
 const CodeIotRoomCapacityExceeded = "iot.room_capacity_exceeded"
+const CodeIotRoomClosed = "iot.room_closed"
 const CodeIotRoomNotFound = "iot.room_not_found"
 const CodeIotSchulhofNotConfigured = "iot.schulhof_not_configured"
 const CodeIotStaffNotFound = "iot.staff_not_found"
@@ -69,6 +70,7 @@ var errorCodeClassesIot = []errorCodeClass{
 	{CodeIotRfidTagNotStudentOrStaff, "input"},
 	{CodeIotRfidTagUnassigned, "input"},
 	{CodeIotRoomCapacityExceeded, "business_rejection"},
+	{CodeIotRoomClosed, "business_rejection"},
 	{CodeIotRoomNotFound, "business_rejection"},
 	{CodeIotSchulhofNotConfigured, "server"},
 	{CodeIotStaffNotFound, "input"},

@@ -36,7 +36,11 @@ import { SpinnerIcon } from "~/components/ui/icons";
 import { SplitView } from "~/components/ui/split-view";
 import { formatSignedDuration } from "~/components/staff/staff-time-views";
 import type { LaborHint } from "~/lib/labor-time-hints";
-import type { StaffShift } from "~/lib/shift-helpers";
+import type {
+  OwnAbsence,
+  OwnBlock,
+  PlanShift,
+} from "~/lib/own-time-tracking-view";
 import { toIsoDayOfWeek } from "~/lib/staff-metrics-helpers";
 import { toISODate } from "~/lib/date-helpers";
 import {
@@ -44,8 +48,6 @@ import {
   formatDuration,
   formatTime,
   type DayProjection,
-  type StaffAbsence,
-  type WorkSessionHistory,
 } from "~/lib/time-tracking-helpers";
 import { useDeviceContext } from "~/lib/device-context";
 import { cn } from "~/lib/utils";
@@ -66,7 +68,7 @@ export interface AppClockPanelProps {
   readonly todayMinutes: number;
   /** Pause des laufenden oder letzten Blocks, live. */
   readonly breakMinutes: number;
-  readonly plannedShifts: readonly StaffShift[];
+  readonly plannedShifts: readonly PlanShift[];
   /**
    * Der heutige Dienst wie auf dem Desktop (Schichtart, Zeit, Pause,
    * entfallene Schichten); steht, solange noch nicht gestempelt ist.
@@ -101,6 +103,12 @@ export interface AppClockPanelProps {
   readonly compactSlot?: HTMLElement | null;
   /** Schulzeit jetzt („HH:MM“, Berlin): ob der Dienst schon begonnen hat. */
   readonly nowClock?: string;
+  /**
+   * Die Schule lässt diese Person nur am NFC-Terminal stempeln (#8024): wie
+   * am Desktop ein Hinweis statt der Stempelknöpfe; die Leiste trägt dann
+   * nur „Abwesenheit melden“.
+   */
+  readonly terminalOnly?: boolean;
 }
 
 function formatClock(totalSecs: number): string {
@@ -130,7 +138,7 @@ function shortShiftTypeName(name: string): string {
   return name.split(/\s+[/–-]\s+/)[0]?.trim() || name;
 }
 
-function plannedLine(shifts: readonly StaffShift[]): string | null {
+function plannedLine(shifts: readonly PlanShift[]): string | null {
   if (shifts.length === 0) return null;
   const parts = shifts.map((s) => `${s.startTime}–${s.endTime}`);
   const pause = shifts.reduce((sum, s) => sum + s.breakMinutes, 0);
@@ -157,6 +165,7 @@ export function AppClockPanel(props: AppClockPanelProps) {
     headSlot,
     compactSlot,
     nowClock,
+    terminalOnly = false,
   } = props;
   const [statusSheetOpen, setStatusSheetOpen] = useState(false);
   // Nach dem Ausstempeln meldet der Server keinen laufenden Block mehr; die
@@ -241,6 +250,14 @@ export function AppClockPanel(props: AppClockPanelProps) {
   const idleBeforeWork = state === "idle" && todayMinutes === 0 && !saving;
   const showToday = !idleBeforeWork;
 
+  // Wie am Desktop (#8024): vor dem Stempeln, wo stattdessen gestempelt
+  // wird; danach, dass Pause und Ausstempeln am Tablet geschehen.
+  const terminalHint = !terminalOnly
+    ? null
+    : state === "idle" || state === "done"
+      ? "Du stempelst am NFC-Tablet. Halte dein Armband an das Tablet."
+      : "Pause und Ausstempeln machst du am NFC-Tablet.";
+
   const todayText =
     state === "working" && todayMinutes < 1
       ? "<1min"
@@ -295,6 +312,7 @@ export function AppClockPanel(props: AppClockPanelProps) {
             ))}
           </ul>
         ) : null}
+        {terminalHint ? <p className="text-gray-500">{terminalHint}</p> : null}
       </div>
     );
 
@@ -380,71 +398,90 @@ export function AppClockPanel(props: AppClockPanelProps) {
               ))}
             </ul>
           ) : null}
+          {terminalHint ? (
+            <p className="mt-2 text-sm text-gray-500">{terminalHint}</p>
+          ) : null}
         </SectionCard>
       )}
 
       {portalBars(
-        <>
-          {state === "idle" ? (
+        terminalOnly ? (
+          state === "idle" ? (
             <ActionBar column="list">
               <Button
                 type="button"
-                variant="success"
+                variant="outline"
                 size="md"
-                disabled={disabled || pending}
-                onClick={() => setStatusSheetOpen(true)}
-                tooltip="Öffnet die Auswahl, wo du heute arbeitest."
+                onClick={props.onAddAbsence}
+                tooltip="Öffnet ein Fenster, um eine Abwesenheit einzutragen."
               >
-                {spinner}
-                Einstempeln
+                Abwesenheit melden
               </Button>
             </ActionBar>
-          ) : null}
-          {state === "working" ? (
-            <ActionBar
-              column="list"
-              secondary={
+          ) : null
+        ) : (
+          <>
+            {state === "idle" ? (
+              <ActionBar column="list">
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="success"
                   size="md"
                   disabled={disabled || pending}
-                  onClick={() => props.onBreakSheetOpenChange(true)}
-                  tooltip="Öffnet die Auswahl, wie lange die Pause dauert."
+                  onClick={() => setStatusSheetOpen(true)}
+                  tooltip="Öffnet die Auswahl, wo du heute arbeitest."
                 >
-                  Pause
+                  {spinner}
+                  Einstempeln
                 </Button>
-              }
-            >
-              <Button
-                type="button"
-                variant="primary"
-                size="md"
-                disabled={disabled || pending}
-                onClick={props.onCheckOut}
-                tooltip="Stempelt dich aus und beendet deine Arbeitszeit."
+              </ActionBar>
+            ) : null}
+            {state === "working" ? (
+              <ActionBar
+                column="list"
+                secondary={
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="md"
+                    disabled={disabled || pending}
+                    onClick={() => props.onBreakSheetOpenChange(true)}
+                    tooltip="Öffnet die Auswahl, wie lange die Pause dauert."
+                  >
+                    Pause
+                  </Button>
+                }
               >
-                {spinner}
-                Ausstempeln
-              </Button>
-            </ActionBar>
-          ) : null}
-          {state === "break" ? (
-            <ActionBar column="list">
-              <Button
-                type="button"
-                variant="primary"
-                size="md"
-                disabled={disabled || pending}
-                onClick={props.onEndBreak}
-                tooltip="Beendet die Pause sofort, deine Arbeitszeit läuft weiter."
-              >
-                {spinner}
-                Pause beenden
-              </Button>
-            </ActionBar>
-          ) : null}
-        </>,
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="md"
+                  disabled={disabled || pending}
+                  onClick={props.onCheckOut}
+                  tooltip="Stempelt dich aus und beendet deine Arbeitszeit."
+                >
+                  {spinner}
+                  Ausstempeln
+                </Button>
+              </ActionBar>
+            ) : null}
+            {state === "break" ? (
+              <ActionBar column="list">
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="md"
+                  disabled={disabled || pending}
+                  onClick={props.onEndBreak}
+                  tooltip="Beendet die Pause sofort, deine Arbeitszeit läuft weiter."
+                >
+                  {spinner}
+                  Pause beenden
+                </Button>
+              </ActionBar>
+            ) : null}
+          </>
+        ),
       )}
 
       <OverlaySheet
@@ -684,11 +721,11 @@ function isoWeek(d: Date): number {
 interface DayEntry {
   readonly key: string;
   readonly day: Date;
-  readonly sessions: readonly WorkSessionHistory[];
-  readonly absence: StaffAbsence | undefined;
-  readonly shifts: readonly StaffShift[];
+  readonly sessions: readonly OwnBlock[];
+  readonly absence: OwnAbsence | undefined;
+  readonly shifts: readonly PlanShift[];
   /** Entfallene Schichten (stehen am Telefon in der Zeile des Tages). */
-  readonly cancelled: readonly StaffShift[];
+  readonly cancelled: readonly PlanShift[];
   readonly special: string | undefined;
   readonly projection: DayProjection | undefined;
 }
@@ -711,16 +748,16 @@ export interface AppDayListProps {
   readonly from: Date;
   readonly to: Date;
   readonly today: Date;
-  readonly sessions: readonly WorkSessionHistory[];
-  readonly absences: readonly StaffAbsence[];
-  readonly shifts: readonly StaffShift[];
+  readonly sessions: readonly OwnBlock[];
+  readonly absences: readonly OwnAbsence[];
+  readonly shifts: readonly PlanShift[];
   readonly projection: ReadonlyMap<string, DayProjection> | undefined;
   readonly holidays: ReadonlyMap<string, string> | undefined;
   readonly closingDays: ReadonlyMap<string, string> | undefined;
   /** Tag oder Block bearbeiten (das Formular der Seite). */
   readonly onEdit: (
     date: Date,
-    session: WorkSessionHistory | null,
+    session: OwnBlock | null,
     facts: AppDayFacts,
   ) => void;
   /** Kopf der Karte: die Wahl von Woche oder Monat. */
@@ -755,7 +792,7 @@ export function AppDayList({
 }: AppDayListProps) {
   const todayKey = toISODate(today);
   const weeks = useMemo(() => {
-    const byDate = new Map<string, WorkSessionHistory[]>();
+    const byDate = new Map<string, OwnBlock[]>();
     for (const s of sessions) {
       const list = byDate.get(s.date) ?? [];
       list.push(s);
@@ -764,8 +801,8 @@ export function AppDayList({
     for (const list of byDate.values()) {
       list.sort((a, b) => a.checkInTime.localeCompare(b.checkInTime));
     }
-    const shiftsByDate = new Map<string, StaffShift[]>();
-    const cancelledByDate = new Map<string, StaffShift[]>();
+    const shiftsByDate = new Map<string, PlanShift[]>();
+    const cancelledByDate = new Map<string, PlanShift[]>();
     for (const s of shifts) {
       const target = s.cancelled ? cancelledByDate : shiftsByDate;
       const list = target.get(s.date) ?? [];
@@ -956,7 +993,7 @@ function DayBadge({ day, isToday }: { day: Date; isToday: boolean }) {
   );
 }
 
-function sourceLabel(session: WorkSessionHistory | null): string | null {
+function sourceLabel(session: OwnBlock | null): string | null {
   if (!session) return null;
   const source = session.source ?? "app";
   if (source === "nfc") return "NFC";
@@ -987,7 +1024,7 @@ function dayRows(
       ? d.shifts.map((s) => `${s.startTime}–${s.endTime}`).join(", ")
       : null;
   const plannedText = plan ? `Geplant ${plan}` : null;
-  const facts = (session: WorkSessionHistory | null): AppDayFacts => ({
+  const facts = (session: OwnBlock | null): AppDayFacts => ({
     plan,
     projection: d.projection,
     showBalance: hasBalance,
@@ -1131,16 +1168,18 @@ export function AppAccountCard({
   monthIst: number | null;
   monthSoll: number | null;
   accountBalanceMinutes: number | null;
-  accountStart: Date;
+  /** Beginn des Stundenkontos; `null`, solange keiner feststeht. */
+  accountStart: Date | null;
   /** Woher das Soll kommt, oder was fehlt (mit Link zum Eintragen). */
   origin: ReactNode;
 }>) {
-  const since = accountStart.toLocaleDateString("de-DE", {
-    timeZone: "Europe/Berlin",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
+  const since =
+    accountStart?.toLocaleDateString("de-DE", {
+      timeZone: "Europe/Berlin",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    }) ?? null;
   return (
     <SectionCard title="Stundenkonto" bodyClassName="mt-1">
       <div className="divide-y divide-gray-100 text-sm tabular-nums">
@@ -1165,7 +1204,9 @@ export function AppAccountCard({
           </span>
         </div>
         <div className="flex items-baseline justify-between gap-3 py-2.5">
-          <span className="text-gray-600">Saldo seit {since}</span>
+          <span className="text-gray-600">
+            {since ? `Saldo seit ${since}` : "Saldo"}
+          </span>
           <span
             className={cn(
               "font-semibold",

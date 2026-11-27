@@ -2,11 +2,11 @@
 {{template "header" .}}
 
 <div class="email-body">
-    <h1>Deine Ferienanmeldung ist bestätigt</h1>
+    <h1>Ihre Ferienanmeldung ist bestätigt</h1>
 
     <p>Guten Tag {{.GuardianName}},</p>
 
-    <p>der Träger{{if .SchoolName}} <strong>{{.SchoolName}}</strong>{{end}} hat deine Anmeldung für <strong>{{.PeriodName}}</strong> bestätigt.</p>
+    <p>der Träger{{if .SchoolName}} <strong>{{.SchoolName}}</strong>{{end}} hat Ihre Anmeldung für die Ferienbetreuung „<strong>{{.PeriodName}}</strong>“ bestätigt.</p>
 
     {{range .Children}}
     <div class="highlight-box">
@@ -48,7 +48,7 @@
     {{if .Waitlisted}}
     <div class="highlight-box" style="margin-top: 24px;">
         <p style="margin: 0; font-size: 14px;"><strong>Warteliste</strong></p>
-        <p style="margin: 8px 0 0 0; font-size: 14px;">Wird ein Platz frei, bekommt dein Kind ihn automatisch. Wir schreiben dir dann eine E-Mail.</p>
+        <p style="margin: 8px 0 0 0; font-size: 14px;">Wird ein Platz frei, bekommt Ihr Kind ihn automatisch. Wir schreiben Ihnen dann eine E-Mail.</p>
     </div>
     {{end}}
 
@@ -61,14 +61,14 @@
     {{end}}
 
     {{if .SetupURL}}
-    <p>Mit einem Elternkonto siehst du den Stand deiner Anmeldung in der Eltern-App. Dort findest du auch deine Dokumente.</p>
+    <p>Mit einem Elternkonto sehen Sie den Stand Ihrer Anmeldung in der Eltern-App. Dort finden Sie auch Ihre Dokumente.</p>
     <div class="button-wrapper" style="text-align: center;">
         <a class="button" href="{{.SetupURL}}">Elternkonto einrichten</a>
     </div>
     <p style="font-size: 14px; color: #6b7280;">Der Link gilt 30 Tage.</p>
     {{end}}
 
-    <p class="security-note">Bitte antworte nicht auf diese E-Mail. Bei Fragen wende dich an den Träger{{if .SchoolName}} ({{.SchoolName}}){{end}}.</p>
+    <p class="security-note">Bitte antworten Sie nicht auf diese E-Mail. Bei Fragen wenden Sie sich an den Träger{{if .SchoolName}} ({{.SchoolName}}){{end}}.</p>
 </div>
 
 {{template "footer" .}}

@@ -127,7 +127,7 @@ func TestAttendanceExportDocument_RendersEverySupportedFormat(t *testing.T) {
 
 	renderer := lists.NewRenderer()
 	doc := lists.Document{
-		Title: "Anwesenheit je Betreuungsangebot", GeneratedAt: time.Now(),
+		Title: "Anwesenheit pro Betreuungsangebot", GeneratedAt: time.Now(),
 		Columns: attendanceExportColumns(),
 		Rows: []lists.Row{{Values: map[lists.ColumnID]string{
 			attendanceColumnDate: "15.07.2026", attendanceColumnOffering: "Morgenbetreuung",

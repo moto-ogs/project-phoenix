@@ -27,6 +27,7 @@
   "rfid_tag_not_student_or_staff": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
   "rfid_tag_unassigned": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",
   "room_capacity_exceeded": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
+  "room_closed": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
   "room_not_found": "{object} değiştirilemedi. Güncel durumu kontrol edin.",
   "schulhof_not_configured": "{object} işlenemedi. Daha sonra yeniden deneyin.",
   "staff_not_found": "{object} kaydedilemedi. Girdiğiniz bilgileri kontrol edin.",

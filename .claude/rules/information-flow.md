@@ -33,6 +33,7 @@ the information by that module's users.
    synchronized with corrections, cancellations and expiry. Distinguish
    purpose-specific information from existing master data instead of silently
    overwriting it.
+   Show at the target whether it follows its source ([copy or link](copy-or-link.md)).
 
 ## Access boundaries and proof
 

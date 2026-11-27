@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect/pgdialect"
 
 	"github.com/moto-ogs/project-phoenix/modules/enrollment"
@@ -275,9 +276,9 @@ func (s *HolidayRegistrationStore) ReadHolidayWeekPlaces(ctx context.Context, or
 	if err != nil {
 		return nil, err
 	}
-	var weeks []holidayWeekPlacesRow
-	if err := db.NewRaw(holidayWeekPlacesQuery, organizationID, periodID).Scan(ctx, &weeks); err != nil {
-		return nil, fmt.Errorf("enrollment postgres: read holiday week places: %w", err)
+	weeks, err := readHolidayWeekPlaceRows(ctx, db, organizationID, periodID)
+	if err != nil {
+		return nil, err
 	}
 	var waiting []holidayWaitlistRow
 	if err := db.NewRaw(holidayWaitlistQuery, organizationID, periodID).Scan(ctx, &waiting); err != nil {
@@ -295,6 +296,32 @@ func (s *HolidayRegistrationStore) ReadHolidayWeekPlaces(ctx context.Context, or
 			TimeModelName: row.TimeModelName, Deferred: row.Deferred, Days: days,
 		})
 	}
+	return holidayWeekPlacesFromRows(weeks, byWeek), nil
+}
+
+// ReadHolidayWeekPlacementCounts reads only the capacities and counts used
+// by the allocation board, which does not expose the waiting list.
+func (s *HolidayRegistrationStore) ReadHolidayWeekPlacementCounts(ctx context.Context, organizationID, periodID int64) ([]enrollment.HolidayWeekPlaces, error) {
+	db, err := traegerDB(ctx, organizationID)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := readHolidayWeekPlaceRows(ctx, db, organizationID, periodID)
+	if err != nil {
+		return nil, err
+	}
+	return holidayWeekPlacesFromRows(rows, nil), nil
+}
+
+func readHolidayWeekPlaceRows(ctx context.Context, db bun.IDB, organizationID, periodID int64) ([]holidayWeekPlacesRow, error) {
+	var weeks []holidayWeekPlacesRow
+	if err := db.NewRaw(holidayWeekPlacesQuery, organizationID, periodID).Scan(ctx, &weeks); err != nil {
+		return nil, fmt.Errorf("enrollment postgres: read holiday week places: %w", err)
+	}
+	return weeks, nil
+}
+
+func holidayWeekPlacesFromRows(weeks []holidayWeekPlacesRow, byWeek map[int64][]enrollment.HolidayWaitlistEntry) []enrollment.HolidayWeekPlaces {
 	places := make([]enrollment.HolidayWeekPlaces, len(weeks))
 	for i, week := range weeks {
 		waitlist := byWeek[week.ID]
@@ -313,5 +340,5 @@ func (s *HolidayRegistrationStore) ReadHolidayWeekPlaces(ctx context.Context, or
 			BookingUnit: week.BookingUnit, Days: days,
 		}
 	}
-	return places, nil
+	return places
 }

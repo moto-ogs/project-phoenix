@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // The owner record capabilities the roots bind when they build the Care Plan
@@ -30,7 +31,10 @@ type PickupApprovalRecords interface {
 	UpdatePickupException(context.Context, careplan.PickupException) error
 	ListDepartureExceptions(context.Context, careplan.StudentScheduleFilter) ([]careplan.DepartureException, error)
 	SaveDepartureException(context.Context, careplan.DepartureException) (careplan.DepartureException, error)
-	CreatePickupNote(context.Context, careplan.PickupNote) (careplan.PickupNote, error)
+	// ListDayPickups and SaveApprovedPickupPerson read and write the day's
+	// pickup person a family named (#8162).
+	ListDayPickups(ctx context.Context, from, to calendar.Date, studentIDs []int64) ([]careplan.DayPickup, error)
+	SaveApprovedPickupPerson(context.Context, careplan.PickupPerson) (careplan.PickupPerson, error)
 }
 
 // PickupExcusalRecords is the existing owner persistence capability needed by

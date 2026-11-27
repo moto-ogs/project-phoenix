@@ -62,7 +62,7 @@ func careInvoiceLetter(content careLetterContent) Letter {
 	if notes := strings.TrimSpace(content.input.Notes); notes != "" {
 		blocks = append(blocks, LetterBlock{Heading: "Hinweise", Text: notes})
 	}
-	if question := questionText(head, recipientAddressee(invoice.Recipient)); question != "" {
+	if question := questionText(head); question != "" {
 		blocks = append(blocks, LetterBlock{Text: question})
 	}
 	letter.Blocks, letter.OnePage = blocks, carriesPaymentCode(blocks)
@@ -76,13 +76,12 @@ func careInvoiceIntro(content careLetterContent) (string, string) {
 	invoice, to := content.invoice, recipientAddressee(content.invoice.Recipient)
 	child, school := fullName(invoice.ChildFirstName, invoice.ChildLastName), strings.TrimSpace(invoice.SchoolName)
 	if invoice.Service == parentbilling.ServiceMeal {
-		return fmt.Sprintf(to.say("für das Mittagessen von %s an der %s berechnen wir euch die Mensa. Die Rechnung gehört zu %s.",
-			"für das Mittagessen von %s an der %s berechnen wir dir die Mensa. Die Rechnung gehört zu %s."),
-			child, school, careMonthName(content.run.BillingMonth)), to.say("Euer Mittagessen", "Das Mittagessen")
+		return fmt.Sprintf("für das Mittagessen von %s an der %s berechnen wir Ihnen die Mensa. Die Rechnung gehört zu %s.",
+			child, school, careMonthName(content.run.BillingMonth)), to.say("Ihr Mittagessen", "Das Mittagessen")
 	}
-	return fmt.Sprintf(to.say("für die Betreuung von %s an der %s berechnen wir euch den Monatsbeitrag für %s. Der Betrag richtet sich nach eurem Betreuungsvertrag.",
-		"für die Betreuung von %s an der %s berechnen wir dir den Monatsbeitrag für %s. Der Betrag richtet sich nach dem Betreuungsvertrag."),
-		child, school, careMonthName(content.run.BillingMonth)), to.say("Eure Betreuung", "Die Betreuung")
+	return fmt.Sprintf(to.say("für die Betreuung von %s an der %s berechnen wir Ihnen den Monatsbeitrag für %s. Der Betrag richtet sich nach Ihrem Betreuungsvertrag.",
+		"für die Betreuung von %s an der %s berechnen wir Ihnen den Monatsbeitrag für %s. Der Betrag richtet sich nach dem Betreuungsvertrag."),
+		child, school, careMonthName(content.run.BillingMonth)), to.say("Ihre Betreuung", "Die Betreuung")
 }
 
 // careCancellationLetter writes the letter of the Storno of a sent monthly
@@ -90,7 +89,6 @@ func careInvoiceIntro(content careLetterContent) (string, string) {
 // position with a minus.
 func careCancellationLetter(content careLetterContent) Letter {
 	invoice, cancellation, head := content.invoice, *content.cancellation, content.letterhead
-	to := recipientAddressee(invoice.Recipient)
 	letter := careLetterFrame(content, "Storno "+cancellation.Number+" zur Rechnung "+invoice.Number,
 		"Storno zur Rechnung "+invoice.Number+": "+carePeriodName(content.run.BillingMonth))
 	letter.Facts = careLetterFacts(content, []LetterFact{
@@ -106,9 +104,9 @@ func careCancellationLetter(content careLetterContent) Letter {
 		{Facts: append(slices.Concat(carePositionFacts(invoice.Positions, -1), careReductionFacts(invoice.Reductions, -1),
 			careMealFacts(invoice.MealPositions, -1), careCostShareFacts(invoice, -1), careCorrectionFacts(invoice, -1)),
 			LetterFact{Label: "Storno gesamt", Value: formatEuro(cancellation.TotalCents), Bold: true})},
-		{Text: voidText(to, "Diese Rechnung", "sie"), Bold: true},
+		{Text: voidText("Diese Rechnung", "sie"), Bold: true},
 	}
-	if question := questionText(head, to); question != "" {
+	if question := questionText(head); question != "" {
 		letter.Blocks = append(letter.Blocks, LetterBlock{Text: question})
 	}
 	return letter
@@ -194,9 +192,9 @@ func carePositionFacts(positions []parentbilling.CarePosition, sign int64) []Let
 // daysPerWeekLabel names a scale step: „1 Tag je Woche“, „3 Tage je Woche“.
 func daysPerWeekLabel(days int) string {
 	if days == 1 {
-		return "1 Tag je Woche"
+		return "1 Tag pro Woche"
 	}
-	return fmt.Sprintf("%d Tage je Woche", days)
+	return fmt.Sprintf("%d Tage pro Woche", days)
 }
 
 func isMonthEnd(date calendar.Date) bool {
@@ -206,17 +204,17 @@ func isMonthEnd(date calendar.Date) bool {
 // carePaymentText fills the payment text with the issued invoice values.
 // Without a debtor number, a text requiring it falls back to the invoice number.
 func carePaymentText(content careLetterContent) string {
-	invoice, to := content.invoice, recipientAddressee(content.invoice.Recipient)
-	nothing := to.say("Ihr müsst für diesen Monat nichts bezahlen.", "Du musst für diesen Monat nichts bezahlen.")
+	invoice := content.invoice
+	nothing := "Sie müssen für diesen Monat nichts bezahlen."
 	if invoice.TotalCents == 0 && len(invoice.CostShares) > 0 {
-		return "Beitragsfrei: " + costBearerNames(invoice.CostShares) + to.say(" übernimmt euren Beitrag. ", " übernimmt deinen Beitrag. ") + nothing
+		return "Beitragsfrei: " + costBearerNames(invoice.CostShares) + " übernimmt Ihren Beitrag. " + nothing
 	}
 	if invoice.TotalCents == 0 {
 		return nothing
 	}
 	due := dueOnOf(invoice.Payment, content.input.PaymentDueOn)
 	if isDirectDebit(invoice.Payment) {
-		return directDebitText(to, invoice.TotalCents, due, "Rechnungsnummer "+invoice.Number, paymentMandate(invoice.Payment),
+		return directDebitText(invoice.TotalCents, due, "Rechnungsnummer "+invoice.Number, paymentMandate(invoice.Payment),
 			content.accountHolder, fullName(invoice.Recipient.FirstName, invoice.Recipient.LastName),
 			secondLetterRecipient(invoice.Recipient.Kind, invoice.Recipient.SecondName))
 	}
@@ -228,8 +226,7 @@ func carePaymentText(content careLetterContent) string {
 			placeholderDebtorNumber, invoice.DebtorNumber,
 		).Replace(text)
 	}
-	return fmt.Sprintf(to.say("Bitte überweist %s bis zum %s auf das Konto unten. Gebt als Verwendungszweck die Rechnungsnummer %s an.",
-		"Bitte überweise %s bis zum %s auf das Konto unten. Gib als Verwendungszweck die Rechnungsnummer %s an."),
+	return fmt.Sprintf("Bitte überweisen Sie %s bis zum %s auf das Konto unten. Geben Sie als Verwendungszweck die Rechnungsnummer %s an.",
 		formatEuro(invoice.TotalCents), germanDate(due), invoice.Number)
 }
 
@@ -264,7 +261,7 @@ func careReductionReason(reduction parentbilling.CareReduction) string {
 			*reduction.ChildRank, *reduction.FamilyChildren, careRuleEffect(reduction))
 	case "cap":
 		if reduction.CapCents != nil {
-			return "Höchstbetrag " + formatEuro(*reduction.CapCents) + " je Familie und Monat erreicht"
+			return "Höchstbetrag " + formatEuro(*reduction.CapCents) + " pro Familie und Monat erreicht"
 		}
 	case "income_level":
 		return "Einkommensstufe, " + careRuleEffect(reduction)
@@ -333,7 +330,7 @@ func careNoticeValues(content careLetterContent) map[string]templates.Value {
 		"kinder":          text(fullName(invoice.ChildFirstName, invoice.ChildLastName)),
 		"traeger":         text(firstLine(textLines(head.SenderText))),
 		"ansprechperson":  text(head.ContactName),
-		"rueckfragen":     text(questionText(head, recipientAddressee(invoice.Recipient))),
+		"rueckfragen":     text(questionText(head)),
 		"zeitraum":        text(careMonthName(content.run.BillingMonth)),
 		"bescheidnummer":  text(invoice.Number),
 		"debitorennummer": text(invoice.DebtorNumber),
@@ -358,7 +355,6 @@ func careNoticeValues(content careLetterContent) map[string]templates.Value {
 // legal remedy when the template has one.
 func careNoticeCancellationLetter(content careLetterContent) Letter {
 	invoice, cancellation, head := content.invoice, *content.cancellation, content.letterhead
-	to := recipientAddressee(invoice.Recipient)
 	letter := careLetterFrame(content, "Aufhebungsbescheid "+cancellation.Number+" zum Bescheid "+invoice.Number,
 		"Aufhebungsbescheid zum Bescheid "+invoice.Number+": "+carePeriodName(content.run.BillingMonth))
 	letter.Facts = careLetterFacts(content, []LetterFact{
@@ -374,9 +370,9 @@ func careNoticeCancellationLetter(content careLetterContent) Letter {
 		{Facts: append(append(append(append(carePositionFacts(invoice.Positions, -1), careReductionFacts(invoice.Reductions, -1)...),
 			careMealFacts(invoice.MealPositions, -1)...), careCostShareFacts(invoice, -1)...),
 			LetterFact{Label: "Aufgehoben gesamt", Value: formatEuro(cancellation.TotalCents), Bold: true})},
-		{Text: voidText(to, "Der Bescheid", "den Betrag"), Bold: true},
+		{Text: voidText("Der Bescheid", "den Betrag"), Bold: true},
 	}
-	if question := questionText(head, to); question != "" {
+	if question := questionText(head); question != "" {
 		letter.Blocks = append(letter.Blocks, LetterBlock{Text: question})
 	}
 	if remedy := strings.TrimSpace(head.Template.LegalRemedy); remedy != "" {
@@ -416,7 +412,7 @@ func careCostShareFacts(invoice parentbilling.CareInvoice, sign int64) []LetterF
 // is only a rest when a cost bearer pays a part.
 func careTotalLabel(invoice parentbilling.CareInvoice) string {
 	if len(invoice.CostShares) > 0 {
-		return recipientAddressee(invoice.Recipient).say("Euer Anteil", "Dein Anteil")
+		return "Ihr Anteil"
 	}
 	return "Summe"
 }

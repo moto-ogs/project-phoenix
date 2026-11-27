@@ -174,8 +174,11 @@ type DailyList struct {
 	CutoffTime string
 	Deadline   time.Time
 	// Closed is a closing day or public holiday: nobody eats.
-	Closed       bool
-	Participants []DailyParticipant
+	Closed bool
+	// MealCancelled: the day is closed because the school cancelled lunch
+	// while it is open (#7656).
+	MealCancelled bool
+	Participants  []DailyParticipant
 	// Others are the enrolled children who do not eat that day.
 	Others []DailyParticipant
 }
@@ -280,6 +283,21 @@ type Registration interface {
 	WeeklyList(context.Context, Date) (WeeklyList, error)
 }
 
+// Services exposes the school's Meal Plan facade and the independent compact
+// order projection. Consumers receive only the capability they use.
+type Services struct {
+	Capability Capability
+	Summaries  CatererSummaries
+	// Cancellations is the school's entry of the days without lunch (#7656).
+	Cancellations MealCancellations
+}
+
+// CatererSummaries is the compact, read-only projection beside the Meal Plan facade.
+type CatererSummaries interface {
+	// CatererOrderSummary reads only daily totals, not class or child rows.
+	CatererOrderSummary(ctx context.Context, since time.Time, from, to Date) (OrderSummary, error)
+}
+
 // Ordering is the school's meal orders and what its caterer reads of them
 // (ADR 0077, #3873). Who supplies the school is no Meal Plan data: the
 // caterer portal hands in the start of the running supply.
@@ -359,16 +377,37 @@ type ClassCount struct {
 // An open day shows the registration as it stands in all three fields.
 // OrderID is 0 for a due order the worker has not stored yet.
 type OrderDay struct {
-	Date        Date
-	Closed      bool
-	Deadline    time.Time
-	Status      OrderStatus
-	OrderID     int64
-	ConfirmedAt *time.Time
-	Total       int
-	Classes     []ClassCount
-	Children    []OrderChild
-	Changes     []OrderChange
+	Date   Date
+	Closed bool
+	// MealCancelled: closed because the school cancelled lunch (#7656).
+	MealCancelled bool
+	Deadline      time.Time
+	Status        OrderStatus
+	OrderID       int64
+	ConfirmedAt   *time.Time
+	Total         int
+	Classes       []ClassCount
+	Children      []OrderChild
+	Changes       []OrderChange
+}
+
+// OrderSummary carries the current detail grants so a client cannot reopen
+// details cached under a wider grant.
+type OrderSummary struct {
+	Names   bool
+	ByClass bool
+	Days    []OrderDaySummary
+}
+
+type OrderDaySummary struct {
+	Date     calendar.Date
+	Closed   bool
+	Deadline time.Time
+	Status   OrderStatus
+	OrderID  int64
+	Total    int
+	Added    int
+	Removed  int
 }
 
 // OrderWeek is the orders of a window with the school's rhythm and detail.

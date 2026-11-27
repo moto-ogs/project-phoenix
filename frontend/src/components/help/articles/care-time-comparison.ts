@@ -24,7 +24,7 @@ export function careTimeComparisonTopic(): HelpTopic {
           "Öffne das Kind und wähle den Bereich `Betreuungszeiten`.",
           "Scrolle nach unten zu `Soll und Ist`.",
           "Wähle den Zeitraum. Am Anfang ist es der laufende Monat.",
-          "Lies je Tag `Gebucht`, `Tatsächlich` und `Abweichung`.",
+          "Lies pro Tag `Gebucht`, `Tatsächlich` und `Abweichung`.",
         ],
       },
       {

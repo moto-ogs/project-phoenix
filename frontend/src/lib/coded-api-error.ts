@@ -4,13 +4,13 @@
  */
 export interface CodedApiError {
   code: string;
+  /** @rawProblemDetails Read business fields through a generated decoder. */
   details: Record<string, unknown>;
 }
 
 interface CodedErrorShape {
   code?: unknown;
   details?: unknown;
-  body?: unknown;
 }
 
 function detailsObject(value: unknown): Record<string, unknown> {
@@ -21,24 +21,13 @@ function detailsObject(value: unknown): Record<string, unknown> {
 
 /**
  * Liest Code und Details aus einem geworfenen API-Fehler: direkt vom Fehler
- * (`code`, `details`, etwa bei ApiError) oder aus der rohen Antwort in
- * `body`, die der Service-Factory-Client mitträgt.
+ * (`code`, `details`, etwa bei ApiError).
  */
 export function readCodedApiError(err: unknown): CodedApiError | null {
   if (typeof err !== "object" || err === null) return null;
   const coded = err as CodedErrorShape;
   if (typeof coded.code === "string") {
     return { code: coded.code, details: detailsObject(coded.details) };
-  }
-  if (typeof coded.body === "string") {
-    try {
-      const parsed = JSON.parse(coded.body) as CodedErrorShape;
-      if (typeof parsed.code === "string") {
-        return { code: parsed.code, details: detailsObject(parsed.details) };
-      }
-    } catch {
-      return null;
-    }
   }
   return null;
 }

@@ -63,9 +63,10 @@ type Access interface {
 
 // GroupRecord is one education group as the projection needs it.
 type GroupRecord struct {
-	ID     int64
-	Name   string
-	RoomID *int64
+	ID       int64
+	Name     string
+	RoomID   *int64
+	RoomName string
 }
 
 // GroupDirectory lists groups. The projection sorts the rows of
@@ -73,6 +74,9 @@ type GroupRecord struct {
 type GroupDirectory interface {
 	// SupervisedGroups are the caller's own groups, including substitutions.
 	SupervisedGroups(ctx context.Context) ([]GroupRecord, error)
+	// SupervisedGroupsWithRooms reads the same assignments and their room names
+	// together for strict navigation context reads.
+	SupervisedGroupsWithRooms(ctx context.Context) ([]GroupRecord, error)
 	// SupervisedGroupIDs marks the same groups by ID, for a caller who sees
 	// every group anyway and needs only to mark its own.
 	SupervisedGroupIDs(ctx context.Context) (map[int64]bool, error)
@@ -98,8 +102,8 @@ type RosterStudent struct {
 	SickSince    *time.Time
 	Excused      bool
 	ExcusedSince *time.Time
-	// PhotoURL is the browser address; the projection checks photo access.
-	PhotoURL string
+	// PhotoVersion names the stored photo after the projection checks access.
+	PhotoVersion string
 }
 
 // Roster lists a group's members and their care participation.
@@ -184,6 +188,15 @@ type Pickup struct {
 
 	// DayDepartureMode is the Abholart set for this day only (#3946).
 	DayDepartureMode string
+	// DayPickupPerson is who collects the child on this day (#7655).
+	DayPickupPerson *PickupPerson
+}
+
+// PickupPerson is who collects a child on one day. OneTime marks a person
+// without a standing pickup permission: the staff check the ID card.
+type PickupPerson struct {
+	Name    string `json:"name"`
+	OneTime bool   `json:"one_time"`
 }
 
 // Day-planning reason codes are part of the students API wire contract

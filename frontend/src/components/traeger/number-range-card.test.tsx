@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ToastProvider } from "~/contexts/ToastContext";
-import { ApiError } from "~/lib/api-error";
+import { errorFromProblem } from "~/test/helpers/problem-response";
 import type { NumberRange } from "~/lib/traeger-billing-api";
 import { testClockDay } from "~/test/clock";
 
@@ -240,7 +240,7 @@ describe("NumberRangeCard: the next number (#7358)", () => {
 
   it("shows the refusal of the backend with the last issued number", async () => {
     api.saveHolidayNumberRangeStart.mockRejectedValue(
-      new ApiError("taken", 409, {
+      await errorFromProblem("taken", 409, {
         code: "parent_billing.number_range_start_taken",
         details: { last_number: "FE-2026-0250", last_sequence: 250 },
       }),

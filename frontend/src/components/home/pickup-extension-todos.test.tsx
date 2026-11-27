@@ -10,8 +10,24 @@ const state = vi.hoisted(() => ({
   enabledCalls: [] as boolean[],
   error: undefined as Error | undefined,
   refresh: vi.fn(),
+  loadChoices: vi.fn(async (): Promise<PickupExtension[]> => state.tasks),
 }));
 
+vi.mock("~/lib/pickup-extension-api", async (original) => ({
+  ...(await original<typeof import("~/lib/pickup-extension-api")>()),
+  fetchPickupExtensions: state.loadChoices,
+}));
+vi.mock("~/lib/swr", async (original) => ({
+  ...(await original<typeof import("~/lib/swr")>()),
+  useOpeningRead: (
+    key: string | null,
+    read: () => Promise<PickupExtension[]>,
+  ) => {
+    if (!key) return {};
+    void read();
+    return { data: state.tasks };
+  },
+}));
 vi.mock("~/lib/hooks/use-pickup-extensions", () => ({
   usePickupExtensions: (enabled: boolean) => {
     state.enabledCalls.push(enabled);
@@ -70,6 +86,7 @@ describe("PickupExtensionTodos (#3261)", () => {
     state.tasks = [];
     state.enabledCalls = [];
     state.error = undefined;
+    state.loadChoices.mockClear();
   });
 
   it("fragt ohne Recht am Betreuungsplan nichts ab und zeigt nichts", () => {
@@ -98,7 +115,7 @@ describe("PickupExtensionTodos (#3261)", () => {
     expect(state.refresh).toHaveBeenCalled();
   });
 
-  it("nennt Kind, Tag und neue Abholzeit und öffnet die Auswahl", () => {
+  it("nennt Kind, Tag und neue Abholzeit und öffnet die Auswahl", async () => {
     state.tasks = [task("1", "Lina Schröder")];
     render(<PickupExtensionTodos enabled />);
 
@@ -109,12 +126,15 @@ describe("PickupExtensionTodos (#3261)", () => {
       ),
     ).toBeInTheDocument();
 
+    expect(state.loadChoices).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "Termin wählen" }));
 
-    expect(screen.getByTestId("extension-dialog")).toHaveTextContent("1");
+    expect(await screen.findByTestId("extension-dialog")).toHaveTextContent(
+      "1",
+    );
   });
 
-  it("fasst mehrere Aufgaben zusammen und geht sie nacheinander durch", () => {
+  it("fasst mehrere Aufgaben zusammen und geht sie nacheinander durch", async () => {
     state.tasks = [
       task("1", "Lina Schröder"),
       task("2", "Sophie Schwarz"),
@@ -128,6 +148,8 @@ describe("PickupExtensionTodos (#3261)", () => {
       ),
     ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Termine wählen" }));
-    expect(screen.getByTestId("extension-dialog")).toHaveTextContent("1,2,3");
+    expect(await screen.findByTestId("extension-dialog")).toHaveTextContent(
+      "1,2,3",
+    );
   });
 });

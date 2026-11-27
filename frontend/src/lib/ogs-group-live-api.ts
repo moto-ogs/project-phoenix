@@ -43,6 +43,8 @@ export interface OgsPickupInfo {
   isException: boolean;
   /** The Abholart set for today only (#3946); absent for the weekly plan. */
   dayDepartureMode?: DepartureMode;
+  /** Who collects the child today (#7655); absent without a day value. */
+  dayPickupPerson?: { name: string; oneTime: boolean };
   notes?: string;
   dayNotes: Array<{ id: string; content: string }>;
 }
@@ -57,6 +59,55 @@ export interface OgsLiveViewData {
   pickupTimes: Map<string, OgsPickupInfo>;
   trackingIndicators: TrackingIndicatorsResponse;
   transfers: GroupTransfer[];
+}
+
+export type HomeGroupStudent = Pick<
+  studentsContract.Student,
+  | "id"
+  | "first_name"
+  | "last_name"
+  | "school_class"
+  | "current_location"
+  | "sick"
+  | "excused"
+  | "class_trip"
+  | "day_planning_status"
+  | "day_planning_label"
+  | "arrival_time"
+  | "arrival_notes"
+  | "actual_arrival_time"
+  | "actual_pickup_time"
+>;
+
+export interface HomeGroupRead extends Pick<
+  OgsLiveViewData,
+  "groups" | "groupId" | "pickupTimes"
+> {
+  students: HomeGroupStudent[];
+}
+
+export function mapHomeGroupRead(data: OgsLiveViewData): HomeGroupRead {
+  return {
+    groups: data.groups.filter((group) => group.id === data.groupId),
+    groupId: data.groupId,
+    pickupTimes: data.pickupTimes,
+    students: data.students.map((student) => ({
+      id: student.id,
+      first_name: student.first_name,
+      last_name: student.last_name,
+      school_class: student.school_class,
+      current_location: student.current_location,
+      sick: student.sick,
+      excused: student.excused,
+      class_trip: student.class_trip,
+      day_planning_status: student.day_planning_status,
+      day_planning_label: student.day_planning_label,
+      arrival_time: student.arrival_time,
+      arrival_notes: student.arrival_notes,
+      actual_arrival_time: student.actual_arrival_time,
+      actual_pickup_time: student.actual_pickup_time,
+    })),
+  };
 }
 
 /** Go writes an empty list as `null`; the cards read empty lists. */
@@ -88,6 +139,12 @@ export function mapOgsGroupLiveResponse(
       isException: pt.is_exception,
       // An Abholart this build does not know reads as the weekly plan's.
       dayDepartureMode: knownEnum(DEPARTURE_MODES, pt.day_departure_mode),
+      dayPickupPerson: pt.day_pickup_person
+        ? {
+            name: pt.day_pickup_person.name,
+            oneTime: pt.day_pickup_person.one_time,
+          }
+        : undefined,
       notes: pt.notes,
       dayNotes: (pt.day_notes ?? []).map((note) => ({
         id: note.id,

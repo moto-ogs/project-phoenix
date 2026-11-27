@@ -103,7 +103,10 @@ type DayChangesSources struct {
 	Names     dayChangesStaffNames
 	Groups    dayChangesGroups
 	CarePlan  dayChangesCarePlan
-	Students  dayChangesStudents
+	// DayPickups is Care Plan's read of the day's Abholart and pickup
+	// person (#7655).
+	DayPickups dayChangesDayPickups
+	Students   dayChangesStudents
 	// Notices is Timetable's read of the Hinweise der Leitung (#7667).
 	Notices dayChangesNoticeReads
 	// ClosingDays is School Calendar's read of the closing days (#7664).
@@ -123,6 +126,8 @@ type DayChangesSources struct {
 	MealPlan dayChangesMenuChanges
 	// Appointments is Appointments' read of the own calendar (#7663, #7903).
 	Appointments dayChangesAppointmentReads
+	// RoomClosures is Facilities' read of the room closures (#8161).
+	RoomClosures dayChangesRoomClosureReads
 	Today        func() calendar.Date
 	Logger       *slog.Logger
 }
@@ -132,7 +137,7 @@ func NewDayChanges(sources DayChangesSources) (daychangesview.Query, error) {
 	if sources.Caller == nil || sources.Workforce == nil || sources.Names == nil || sources.Groups == nil || sources.BlockStaff == nil {
 		return nil, fmt.Errorf("%w: personal sources", daychangesview.ErrDependencies)
 	}
-	if sources.CarePlan == nil || sources.Students == nil {
+	if sources.CarePlan == nil || sources.DayPickups == nil || sources.Students == nil {
 		return nil, fmt.Errorf("%w: children sources", daychangesview.ErrDependencies)
 	}
 	if sources.Notices == nil {
@@ -152,6 +157,9 @@ func NewDayChanges(sources DayChangesSources) (daychangesview.Query, error) {
 	}
 	if sources.Appointments == nil {
 		return nil, fmt.Errorf("%w: appointment source", daychangesview.ErrDependencies)
+	}
+	if sources.RoomClosures == nil {
+		return nil, fmt.Errorf("%w: room closure source", daychangesview.ErrDependencies)
 	}
 	classDay, err := timetable.ClassArrivalDayOf(sources.ClassArrivals)
 	if err != nil {
@@ -173,6 +181,7 @@ func NewDayChanges(sources DayChangesSources) (daychangesview.Query, error) {
 		Classes:      dayChangesClasses{sources: sources, classDay: classDay},
 		MealPlan:     dayChangesMealPlan{reads: sources.MealPlan},
 		Appointments: dayChangesAppointments{caller: sources.Caller, reads: sources.Appointments},
+		RoomClosures: dayChangesRoomClosures{reads: sources.RoomClosures, linkRoom: true, planned: plannedRoomsOf(sources.Blocks), caller: sources.Caller},
 		Logger:       sources.Logger,
 	})
 }

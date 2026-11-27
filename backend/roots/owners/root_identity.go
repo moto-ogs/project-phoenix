@@ -144,7 +144,7 @@ func BuildIdentityAccess(
 	if err != nil {
 		return nil, nil, err
 	}
-	rows, err := NewCallerRows(caller, groups, people.Staff, sessions, usercontextLogger)
+	rows, err := NewCallerRows(caller, groups, people.Staff, sessions)
 	if err != nil {
 		return nil, nil, err
 	}

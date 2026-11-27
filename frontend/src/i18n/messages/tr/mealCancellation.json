@@ -1,0 +1,20 @@
+{
+  "loadObject": "iptal edilen öğünler",
+  "notice": "Öğün iptal edildi: {reason}",
+  "cancelErrorObject": "öğün iptalini",
+  "cancelSuccess": "{day} gününde öğün iptal edildi.",
+  "title": "Öğün iptal edildi: {day}",
+  "reasonRequired": "Önce bir neden yazın.",
+  "saveTooltip": "İptali kaydeder. Bu günün rezervasyonları geçerli değildir.",
+  "description": "Çocuklar bu gün öğün almayacak. Rezervasyonlar geçerli değildir ve ücretlendirilmez. Ekip iptali „Bugün farklı“ bölümünde görür.",
+  "reasonLabel": "Neden",
+  "reasonPlaceholder": "Örneğin: Yemek şirketi teslimat yapmıyor.",
+  "restoreErrorObject": "öğünü",
+  "restoreSuccess": "{day} gününde öğün yeniden gerçekleşecek.",
+  "cancelAction": "Öğün iptal edildi",
+  "cancelDescription": "Bu gün öğün olmadığını kaydeder.",
+  "changeReasonAction": "Nedeni değiştir",
+  "changeReasonDescription": "Öğünün neden iptal edildiğini değiştirir.",
+  "restoreAction": "Öğün gerçekleşecek",
+  "restoreDescription": "İptali hemen geri alır. Rezervasyonlar yeniden geçerlidir."
+}

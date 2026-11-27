@@ -103,7 +103,7 @@ func (rs *Resource) ImportStaff(w http.ResponseWriter, r *http.Request) {
 		if result == nil {
 			rs.renderStaffImportError(w, r, err, "Import fehlgeschlagen")
 		} else {
-			renderBatchImportError(rs.runtime, w, r, result, err)
+			renderBatchImportError(rs.runtime, w, r, result, err, importModels.NewStaffImportResult)
 		}
 		return
 	}

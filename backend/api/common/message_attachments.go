@@ -115,7 +115,7 @@ func ParseMessageAttachmentIDs(raw []ident.ID, limit int) ([]int64, error) {
 // request. It answers a malformed request itself and reports false.
 func ParseMessageSend(w http.ResponseWriter, r *http.Request, clientMessageID string, attachmentIDs []ident.ID, limit int) ([]int64, bool) {
 	if len(clientMessageID) > 128 {
-		RenderError(w, r, ErrorInvalidRequestMessageWithCodeAndDetails("client_message_id exceeds 128 bytes", CodeGeneralInput, map[string]any{"max_bytes": 128}))
+		RenderError(w, r, ErrorInvalidRequestMessageWithCodeAndDetails("client_message_id exceeds 128 bytes", CodeGeneralInput, InputLimitDetails{MaxBytes: 128}))
 		return nil, false
 	}
 	ids, err := ParseMessageAttachmentIDs(attachmentIDs, limit)

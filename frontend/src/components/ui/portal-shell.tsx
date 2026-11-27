@@ -1,12 +1,15 @@
 "use client";
 
-import { Suspense, type ReactNode } from "react";
+import { Suspense, useState, type ReactNode } from "react";
 import { Z_LAYER } from "./overlay-styles";
 import {
   NavigationProgressBar,
   NavigationProgressProvider,
 } from "~/components/ui/navigation-progress";
-import { NavigationScrollPosition } from "~/components/ui/navigation-scroll-position";
+import {
+  NavigationScrollPosition,
+  NavigationScrollPositions,
+} from "~/components/ui/navigation-scroll-position";
 import { ButtonLink } from "~/components/ui/button";
 import { NavigationStackTracker } from "~/lib/mobile-navigation/use-navigation-stack";
 import { useKeyboardFlag } from "~/lib/mobile-navigation/use-keyboard-flag";
@@ -68,12 +71,13 @@ export function PortalShell({
 }: PortalShellProps) {
   useFixedLayersFollowViewport();
   useKeyboardFlag();
+  const [scrollPositions] = useState(() => new Map<string, number>());
   return (
-    <NavigationProgressProvider>
+    <NavigationProgressProvider manageScroll>
       <Suspense fallback={null}>
         {/* Vor der Scroll-Hülle: sie liest den Schlüssel des Eintrags. */}
         <NavigationStackTracker />
-        <NavigationScrollPosition />
+        <NavigationScrollPosition scrollPositions={scrollPositions} />
       </Suspense>
       {/*
        * Eine Flex-Spalte von der Wurzel bis zur Inhaltshülle: so reicht die
@@ -130,7 +134,9 @@ export function PortalShell({
             className="compact:p-5 compact:max-lg:pb-[calc(7rem+env(safe-area-inset-bottom))] app:pb-[calc(5.75rem+env(safe-area-inset-bottom)+var(--app-action-bar-space,0.625rem))] flex min-w-0 flex-1 flex-col p-8 focus:outline-none max-md:p-4 max-md:pb-[calc(7rem+env(safe-area-inset-bottom))]"
           >
             <div className={`relative ${Z_LAYER.raised} ${contentClassName}`}>
-              {children}
+              <NavigationScrollPositions value={scrollPositions}>
+                {children}
+              </NavigationScrollPositions>
             </div>
           </main>
         </div>

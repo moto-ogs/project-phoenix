@@ -64,6 +64,6 @@ func seedParallelHolidayDraft(client *Client, auth AuthRef, today calendar.Date,
 // registry default of holiday_registration.retention_days, which the seed
 // never changes.
 const (
-	seedHolidayConsentVersion = 5
+	seedHolidayConsentVersion = 7
 	seedHolidayRetentionDays  = 365
 )

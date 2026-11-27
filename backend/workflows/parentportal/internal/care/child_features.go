@@ -2,6 +2,8 @@ package care
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"log/slog"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan/carerequests"
@@ -16,11 +18,45 @@ func (s *Service) ChildFeatures(ctx context.Context, accountID, studentID int64)
 	if err != nil {
 		return ChildFeatureFlags{}, err
 	}
-	settings, err := s.resolveChildFeatureSettings(ctx, child.TenantID)
+	settings, err := s.resolveChildFeatureSettings(ctx, child.TenantID, s.now())
 	if err != nil {
 		return ChildFeatureFlags{}, err
 	}
+	features, err := s.featuresForSchool(ctx, accountID, child.TenantID, []schoolChild{{id: studentID, child: child}}, settings)
+	if err != nil {
+		return ChildFeatureFlags{}, err
+	}
+	return features[studentID], nil
+}
 
+// featuresForSchool applies the school's settings and day to each child's
+// own relationship. The meal switches, today's changed closing time and the
+// open change requests of all children of the school are read in one tenant
+// transaction; whatever the number of children, its statement count stays
+// the same.
+func (s *Service) featuresForSchool(ctx context.Context, accountID, tenantID int64, children []schoolChild, settings childFeatureSettings) (map[int64]ChildFeatureFlags, error) {
+	active := make([]int64, 0, len(children))
+	for _, c := range children {
+		if !c.child.CareEnded {
+			active = append(active, c.id)
+		}
+	}
+	facts, err := s.schoolFeatureFacts(ctx, tenantID, accountID, active, calendar.DateFromTime(settings.pickupCutoff.Now))
+	if err != nil {
+		return nil, err
+	}
+	settings.mealPlan, settings.mealRegistration = facts.mealPlan, facts.mealRegistration
+	if facts.closesAt != "" {
+		settings.careDayEnd = facts.closesAt
+	}
+	out := make(map[int64]ChildFeatureFlags, len(children))
+	for _, c := range children {
+		out[c.id] = featuresForChild(c.child, settings, facts.open[c.id])
+	}
+	return out, nil
+}
+
+func featuresForChild(child *Child, settings childFeatureSettings, hasOpenChangeRequest bool) ChildFeatureFlags {
 	// The child has left the OGS (#2487). Every WRITE capability goes off in
 	// this one place rather than in each screen: the portal builds its buttons
 	// from these flags, so a family sees a read-only profile instead of
@@ -37,14 +73,15 @@ func (s *Service) ChildFeatures(ctx context.Context, accountID, studentID int64)
 			MealRegistrationEnabled: false,
 			NewsEnabled:             settings.news,
 			CareFacilityTerm:        settings.careTerm,
-		}, nil
+			CareFacilityArticle:     settings.careArticle,
+		}
 	}
 
-	flags := settings.activeChildFlags(child, s.hasOpenChangeRequest(ctx, child.TenantID, accountID, studentID))
+	flags := settings.activeChildFlags(child, hasOpenChangeRequest)
 	if child.WithoutCarePlace {
-		return withoutCarePlaceFlags(flags), nil
+		return withoutCarePlaceFlags(flags)
 	}
-	return flags, nil
+	return flags
 }
 
 // withoutCarePlaceFlags switches off every OGS function of a child without an
@@ -106,75 +143,127 @@ func (f childFeatureSettings) activeChildFlags(child *Child, hasOpenChangeReques
 		NewsEnabled:                   f.news,
 		ReasonRequired:                parentrequests.ReasonRequired(f.reasonPolicy, parentrequests.ReasonSideGuardian),
 		CareFacilityTerm:              f.careTerm,
+		CareFacilityArticle:           f.careArticle,
 	}
 }
 
-// hasOpenChangeRequest reports whether the child has a pending change request
-// (care schedule OR master data) awaiting an OGS decision, so the parent
-// overview can badge the Stammdaten entry. The lookups hit tenant-scoped/RLS
-// tables, so they must run inside a tenant transaction — ChildFeatures is only
-// parent-authenticated and carries no tenant context otherwise. Best-effort: a
-// query error logs and yields false so a transient failure never shows a
-// phantom badge.
-func (s *Service) hasOpenChangeRequest(ctx context.Context, tenantID, accountID, studentID int64) bool {
-	open := false
+// schoolFeatureFacts are what the flags need of the school beside its
+// settings: the meal switches, the closing time of a changed opening day
+// today (#8173, empty on a regular day) and, per child, whether an open change
+// request awaits the OGS.
+type schoolFeatureFacts struct {
+	mealPlan         bool
+	mealRegistration bool
+	closesAt         string
+	open             map[int64]bool
+}
+
+// errOpenRequests marks a failed open-request lookup inside the facts
+// transaction: it costs the badge only, never the features.
+var errOpenRequests = errors.New("parent: open change-request check failed")
+
+// schoolFeatureFacts reads the facts in one tenant transaction. A failed
+// meal or closing-time read fails the features; a failed open-request lookup
+// logs and yields no badge, so a transient failure never shows a phantom one.
+func (s *Service) schoolFeatureFacts(ctx context.Context, tenantID, accountID int64, studentIDs []int64, today calendar.Date) (schoolFeatureFacts, error) {
+	facts := schoolFeatureFacts{open: make(map[int64]bool, len(studentIDs))}
 	err := s.Runtime.WithinTenant(ctx, tenantID, func(txCtx context.Context) error {
-		visibility, err := s.RequestSharing.LoadRequestShareVisibility(txCtx, studentID)
-		if err != nil {
+		var err error
+		if facts.mealPlan, facts.mealRegistration, err = s.mealAvailability(txCtx); err != nil {
 			return err
 		}
-		if s.hasOpenCareRequest(txCtx, visibility, accountID, studentID) {
-			open = true
-			return nil
+		if s.ClosingTimes != nil {
+			closesAt, ok, err := s.ClosingTimes(txCtx, today)
+			if err != nil {
+				return fmt.Errorf("parent: read the closing time of today: %w", err)
+			}
+			if ok {
+				facts.closesAt = closesAt
+			}
 		}
-		open = s.hasOpenMasterDataRequest(txCtx, visibility, accountID, studentID)
+		if err := s.markOpenChangeRequests(txCtx, accountID, studentIDs, facts.open); err != nil {
+			return fmt.Errorf("%w: %w", errOpenRequests, err)
+		}
 		return nil
 	})
-	if err != nil {
+	if errors.Is(err, errOpenRequests) {
 		s.Logger.Warn("parent: open change-request check failed",
-			slog.Int64("student_id", studentID),
+			slog.Int64("school_id", tenantID),
+			slog.Any("student_ids", studentIDs),
 			slog.String("error", err.Error()),
 		)
-		return false
+		facts.open = map[int64]bool{}
+		return facts, nil
 	}
-	return open
+	return facts, err
 }
 
-// hasOpenCareRequest reports a pending care-schedule request the account may
-// see. A lookup error logs and yields false.
-func (s *Service) hasOpenCareRequest(txCtx context.Context, visibility RequestShareVisibility, accountID, studentID int64) bool {
-	if s.CareRequests == nil {
-		return false
+// markOpenChangeRequests marks, per child, whether a pending change request
+// (care schedule OR master data) awaits an OGS decision and the account may
+// see it under the family's sharing, so the parent overview can badge the
+// Stammdaten entry. It reads shares and Familienschutz, the open weekly-plan
+// requests and the open Stammdaten requests, each one for all children, in
+// the caller's tenant transaction.
+func (s *Service) markOpenChangeRequests(txCtx context.Context, accountID int64, studentIDs []int64, open map[int64]bool) error {
+	if len(studentIDs) == 0 || s.ChangeRequestRepo == nil {
+		return nil
 	}
-	req, _, err := s.CareRequests.GetPendingForStudent(txCtx, studentID)
+	visibility, err := s.RequestSharing.LoadRequestShareVisibilities(txCtx, studentIDs)
 	if err != nil {
-		s.Logger.Warn("parent: pending care-request check failed",
-			slog.Int64("student_id", studentID),
-			slog.String("error", err.Error()),
-		)
-		return false
+		return err
 	}
-	return req != nil && visibility.Allows(RequestShareCareSchedule, req.ID, accountID, req.SubmittedBy)
-}
-
-// hasOpenMasterDataRequest reports a pending master-data request the account
-// may see. A lookup error logs and yields false.
-func (s *Service) hasOpenMasterDataRequest(txCtx context.Context, visibility RequestShareVisibility, accountID, studentID int64) bool {
-	if s.ChangeRequestRepo == nil {
-		return false
-	}
-	pending, err := s.ChangeRequestRepo.ListByStudent(txCtx, studentID, []string{DataChangeStatusPending}, 0)
-	if err != nil {
-		s.Logger.Warn("parent: pending master-data check failed",
-			slog.Int64("student_id", studentID),
-			slog.String("error", err.Error()),
-		)
-		return false
-	}
-	for _, req := range pending {
-		if req != nil && visibility.Allows(RequestShareMasterData, req.ID, accountID, req.SubmittedBy) {
-			return true
+	s.markOpenCareRequests(txCtx, visibility, accountID, studentIDs, open)
+	remaining := make([]int64, 0, len(studentIDs))
+	for _, id := range studentIDs {
+		if !open[id] {
+			remaining = append(remaining, id)
 		}
 	}
-	return false
+	s.markOpenMasterDataRequests(txCtx, visibility, accountID, remaining, open)
+	return nil
+}
+
+// markOpenCareRequests marks the children with a pending care-schedule
+// request the account may see. A lookup error logs and marks none.
+func (s *Service) markOpenCareRequests(txCtx context.Context, visibility map[int64]RequestShareVisibility, accountID int64, studentIDs []int64, open map[int64]bool) {
+	pending, err := s.ChangeRequestRepo.ListPendingWeeklyCareRequests(txCtx, studentIDs)
+	if err != nil {
+		s.Logger.Warn("parent: pending care-request check failed",
+			slog.Any("student_ids", studentIDs),
+			slog.String("error", err.Error()),
+		)
+		return
+	}
+	for _, req := range pending {
+		if allowsRequest(visibility[req.StudentID], RequestShareCareSchedule, req.ID, accountID, req.SubmittedBy) {
+			open[req.StudentID] = true
+		}
+	}
+}
+
+// markOpenMasterDataRequests marks the children with a pending master-data
+// request the account may see. A lookup error logs and marks none.
+func (s *Service) markOpenMasterDataRequests(txCtx context.Context, visibility map[int64]RequestShareVisibility, accountID int64, studentIDs []int64, open map[int64]bool) {
+	if len(studentIDs) == 0 {
+		return
+	}
+	pending, err := s.ChangeRequestRepo.ListByStudents(txCtx, studentIDs, []string{DataChangeStatusPending}, 0)
+	if err != nil {
+		s.Logger.Warn("parent: pending master-data check failed",
+			slog.Any("student_ids", studentIDs),
+			slog.String("error", err.Error()),
+		)
+		return
+	}
+	for _, req := range pending {
+		if req != nil && allowsRequest(visibility[req.StudentID], RequestShareMasterData, req.ID, accountID, req.SubmittedBy) {
+			open[req.StudentID] = true
+		}
+	}
+}
+
+// allowsRequest is the child's own share visibility; a child the ledger did
+// not answer for sees nothing.
+func allowsRequest(visibility RequestShareVisibility, requestType string, requestID, accountID, submittedBy int64) bool {
+	return visibility != nil && visibility.Allows(requestType, requestID, accountID, submittedBy)
 }

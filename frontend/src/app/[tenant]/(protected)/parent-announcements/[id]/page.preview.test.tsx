@@ -4,7 +4,7 @@ import { SWRConfig } from "~/lib/swr/testing";
 import { useSWRAuth } from "~/lib/swr";
 import { parentAnnouncementKeys } from "~/lib/swr/portal-keys";
 import { ToastProvider } from "~/contexts/ToastContext";
-import AnnouncementDetailPage from "./page";
+import AnnouncementDetailPage from "./page-content";
 
 vi.unmock("swr");
 vi.mock(

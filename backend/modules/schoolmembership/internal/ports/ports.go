@@ -36,6 +36,9 @@ type Store interface {
 	CountChildQuota(ctx context.Context, on string) (int, domain.OperationStats, error)
 	FindStaff(ctx context.Context, id int64, lock string, includeDeleted bool) (schoolmembership.Staff, bool, domain.OperationStats, error)
 	FindStaffByPerson(context.Context, int64) (schoolmembership.Staff, bool, domain.OperationStats, error)
+	// FindStaffClassesByPerson reads the live staff record of a person and
+	// the school classes assigned to it in one statement (#8155).
+	FindStaffClassesByPerson(context.Context, int64) (staffID int64, classes []string, found bool, stats domain.OperationStats, err error)
 	ListStaff(context.Context, schoolmembership.StaffFilter) ([]schoolmembership.Staff, domain.OperationStats, error)
 	// CreateStaff and UpdateStaff write the membership row only; the
 	// employment half belongs to Workforce (StaffEmployment).

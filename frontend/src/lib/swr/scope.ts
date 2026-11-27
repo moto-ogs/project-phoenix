@@ -37,6 +37,8 @@ import {
   stampSWRError,
 } from "./generation";
 import { hasSessionAccess } from "~/lib/session-access";
+import { sessionGeneration } from "./session-generation";
+import { sessionTreeState, subscribeSessionTree } from "~/lib/session-tree";
 
 type MaybeSession = Session | null | undefined;
 
@@ -50,17 +52,8 @@ export function authGeneration(session: MaybeSession): string | null {
   if (!hasSessionAccess(session)) return null;
   const known = generations.get(session);
   if (known !== undefined) return known;
-  const user = session.user;
-  const generation = JSON.stringify([
-    user.scope ?? "",
-    user.tenantId ?? null,
-    user.orgId ?? null,
-    user.id,
-    user.previewTargetAccountId ?? null,
-    user.roles ?? [],
-    user.permissions ?? [],
-  ]);
-  generations.set(session, generation);
+  const generation = sessionGeneration(session);
+  if (generation !== null) generations.set(session, generation);
   return generation;
 }
 
@@ -111,7 +104,8 @@ export function _setSWRCleanupForTests(enabled: boolean): void {
 
 // Cross-tab invalidation must take effect before React commits new keys or
 // SessionProvider answers. The revision also permanently withdraws shell seeds.
-const initialRefresh = { pending: false, revision: 0 };
+// `signedOut`: the other tab cleared the owner (its session ended).
+const initialRefresh = { pending: false, signedOut: false, revision: 0 };
 let sessionRefresh = initialRefresh;
 const refreshListeners = new Set<() => void>();
 
@@ -134,8 +128,12 @@ export function isSWRSessionPending(): boolean {
   return sessionRefresh.pending;
 }
 
-export function suspendSWRSession(): void {
-  sessionRefresh = { pending: true, revision: sessionRefresh.revision + 1 };
+export function suspendSWRSession(signedOut = false): void {
+  sessionRefresh = {
+    pending: true,
+    signedOut,
+    revision: sessionRefresh.revision + 1,
+  };
   for (const listener of refreshListeners) listener();
 }
 
@@ -143,6 +141,17 @@ export function resumeSWRSession(): void {
   if (!sessionRefresh.pending) return;
   sessionRefresh = { ...sessionRefresh, pending: false };
   for (const listener of refreshListeners) listener();
+}
+
+/**
+ * The paused session is confirmed: clear the cache while still paused (old
+ * subscribers may not have committed their disabled keys yet), then let the
+ * reads go on. The null → scoped key transition loads the confirmed
+ * session, immutable readers included.
+ */
+export function confirmSWRSession(): void {
+  resetSWRScope({ revalidate: false });
+  resumeSWRSession();
 }
 
 const scopeResetListeners = new Set<() => void>();
@@ -178,6 +187,22 @@ export function resetSWRScope({ revalidate }: { revalidate: boolean }): void {
 }
 
 /**
+ * Drops this tab's whole cache because the session cookie changed under it
+ * (#8082: another subdomain replaced the shared tenant cookie). Nothing
+ * loads again until a reader of the confirmed session mounts.
+ */
+export function dropSWRSession(): void {
+  resetSWRScope({ revalidate: false });
+}
+
+// A document that leaves its session (logout, school switch, another account,
+// pagehide) ends the tree's work with it: a read, prefetch or seed still
+// running writes nothing into the cache (#8082).
+subscribeSessionTree(() => {
+  if (sessionTreeState().leaving) dropSWRSession();
+});
+
+/**
  * Whether `error` is the server's refusal of an entity with one of `codes`.
  * Programs branch on the code (ADR 0006), never on a message.
  */
@@ -194,11 +219,13 @@ export function isEntityRefusal(
  * How invalidateSWRKeys treats the keys it collects.
  * - `revalidate`: mounted readers load again; no later reader reuses a
  *   request or preload from before (data stays until the answer).
+ * - `expire-inactive`: same for mounted readers, clear the unmounted entries.
  * - `clear`: data, error and loading state go; nothing is fetched.
  * - `discard`: like `clear`, but an error stays, so a view shows the
  *   refusal instead of the data.
  */
-export type SWRInvalidation = "revalidate" | "clear" | "discard";
+export type SWRInvalidation =
+  "revalidate" | "expire-inactive" | "clear" | "discard";
 
 /**
  * The one way to invalidate part of the cache (#5006; the whole cache goes
@@ -238,7 +265,8 @@ export function invalidateSWRKeys(
   }
   const matched = [...keys].filter((key) => matches(plainSWRKey(key)));
   // The lock first: it holds also for keys the cleanup cannot see.
-  if (mode === "revalidate") bumpRequestGeneration(matched);
+  if (mode === "revalidate" || mode === "expire-inactive")
+    bumpRequestGeneration(matched);
   else bumpDataGeneration(matches);
   // `discard` keeps the refusal on screen: that failure counts in the new
   // generation, everything else of the keys does not.
@@ -253,10 +281,14 @@ export function invalidateSWRKeys(
   const revalidations: Promise<unknown>[] = [];
   for (const key of matched) {
     if (state) {
-      const [, MUTATION, FETCH, PRELOAD, scopedMutate] = state;
+      const [EVENT_REVALIDATORS, MUTATION, FETCH, PRELOAD, scopedMutate] =
+        state;
       delete FETCH[key];
       delete PRELOAD[key];
-      if (mode === "revalidate") {
+      if (
+        mode === "revalidate" ||
+        (mode === "expire-inactive" && EVENT_REVALIDATORS[key]?.length)
+      ) {
         // SWR's own revalidation of one key: the first mounted hook loads.
         revalidations.push(scopedMutate(key));
         continue;
@@ -267,6 +299,10 @@ export function invalidateSWRKeys(
       MUTATION[key] = [ts, ts];
     }
     if (mode === "revalidate" || cache.get(key) === undefined) continue;
+    if (!state) {
+      cache.delete(key);
+      continue;
+    }
     const [, set] = createCacheHelper(cache, key);
     // `_c` holds the data an optimistic update replaced; SWR's State type
     // does not name it. A request discarded here never resets the loading
@@ -276,7 +312,9 @@ export function invalidateSWRKeys(
       _c: undefined,
       isValidating: false,
       isLoading: false,
-      ...(mode === "clear" ? { error: undefined } : {}),
+      ...(mode === "clear" || mode === "expire-inactive"
+        ? { error: undefined }
+        : {}),
       ...(mode === "discard" && key === refusedKey ? { error: refusal } : {}),
     } as Parameters<typeof set>[0]);
   }

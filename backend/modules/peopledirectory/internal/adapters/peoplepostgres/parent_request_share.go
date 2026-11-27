@@ -7,6 +7,7 @@ import (
 
 	userModels "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/rows"
 	ports "github.com/moto-ogs/project-phoenix/modules/peopledirectory/ports"
+	"github.com/uptrace/bun"
 )
 
 const parentRequestShareTable = "users.parent_request_share_events"
@@ -46,10 +47,14 @@ func (r *ParentRequestShareEventRepository) Create(ctx context.Context, event *u
 	return nil
 }
 
-// CurrentForStudent uses DISTINCT ON because the generic filter API cannot
-// select the newest immutable event for each request type and request ID.
-func (r *ParentRequestShareEventRepository) CurrentForStudent(ctx context.Context, studentID int64) ([]*userModels.ParentRequestShareEvent, error) {
+// CurrentForStudents uses DISTINCT ON because the generic filter API cannot
+// select the newest immutable event for each child, request type and request
+// ID. One statement serves any number of children.
+func (r *ParentRequestShareEventRepository) CurrentForStudents(ctx context.Context, studentIDs []int64) ([]*userModels.ParentRequestShareEvent, error) {
 	rows := make([]*userModels.ParentRequestShareEvent, 0)
+	if len(studentIDs) == 0 {
+		return rows, nil
+	}
 	ambientDB2, databaseErr2 := r.runtime.DB(ctx)
 	if databaseErr2 != nil {
 		return *new([]*userModels.ParentRequestShareEvent), databaseErr2
@@ -57,9 +62,9 @@ func (r *ParentRequestShareEventRepository) CurrentForStudent(ctx context.Contex
 	query := ambientDB2.NewSelect().
 		Model(&rows).
 		ModelTableExpr(`users.parent_request_share_events AS "parent_request_share_event"`).
-		Where(`"parent_request_share_event".student_id = ?`, studentID).
-		DistinctOn(`"parent_request_share_event".request_type, "parent_request_share_event".request_id`).
-		OrderExpr(`"parent_request_share_event".request_type, "parent_request_share_event".request_id, "parent_request_share_event".id DESC`)
+		Where(`"parent_request_share_event".student_id IN (?)`, bun.List(studentIDs)).
+		DistinctOn(`"parent_request_share_event".student_id, "parent_request_share_event".request_type, "parent_request_share_event".request_id`).
+		OrderExpr(`"parent_request_share_event".student_id, "parent_request_share_event".request_type, "parent_request_share_event".request_id, "parent_request_share_event".id DESC`)
 	query = withTenantFilter(ctx, r.runtime, query, "parent_request_share_event")
 	if err := query.Scan(ctx); err != nil {
 		return nil, &ports.DatabaseError{Op: "list current parent request shares", Err: translateNotFound(err)}

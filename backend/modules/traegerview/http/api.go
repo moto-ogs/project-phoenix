@@ -15,6 +15,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/api/common"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/modules/traegerview"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // Resource serves the Träger projection routes.
@@ -55,6 +56,8 @@ func (rs *Resource) TraegerRouter(protectedTraegerRoutes func(chi.Router, func(c
 		r.With(common.RequiresPermission(identityaccess.TraegerRightOverviewRead)).Get("/export", rs.listSchoolsExport)
 		r.With(common.RequiresPermission(identityaccess.TraegerRightOverviewRead)).Get("/alerts", rs.schoolsAlerts)
 		r.With(common.RequiresPermission(identityaccess.TraegerRightOverviewRead)).Get("/alerts/export", rs.schoolsAlertsExport)
+		// "Heute anders" (#7672): closing days and cancelled blocks per school.
+		r.With(common.RequiresPermission(identityaccess.TraegerRightOverviewRead)).Get("/day-changes", rs.schoolsDayChanges)
 		r.With(common.RequiresPermission(identityaccess.TraegerRightOverviewRead)).Get("/occupancy", rs.occupancy)
 		r.With(common.RequiresPermission(identityaccess.TraegerRightOverviewRead)).Get("/occupancy/export", rs.occupancyExport)
 		// The utilization over time is a report (#4713, ADR 0241): the
@@ -73,6 +76,11 @@ func (rs *Resource) TraegerRouter(protectedTraegerRoutes func(chi.Router, func(c
 		// The comparison of the schools is a report too (#4715, ADR 0245).
 		r.With(common.RequiresPermission(identityaccess.TraegerRightReportsRead)).Get("/comparison", rs.comparison)
 		r.With(common.RequiresPermission(identityaccess.TraegerRightReportsRead)).Get("/comparison/export", rs.comparisonExport)
+		// The children of every school by name (#8137, ADR 0327) need
+		// "Verträge verwalten", the right that already opens the names of
+		// the utilization and of Soll und Ist.
+		r.With(common.RequiresPermission(identityaccess.TraegerRightContractsManage)).Get("/children", rs.children)
+		r.With(common.RequiresPermission(identityaccess.TraegerRightContractsManage)).Get("/children/export", rs.childrenExport)
 		r.With(common.RequiresPermission(identityaccess.TraegerRightOverviewRead)).Get("/{id}", rs.getSchool)
 	})
 	return r
@@ -202,5 +210,41 @@ func (rs *Resource) schoolsAlerts(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, common.ErrorInternalServer(err))
 	default:
 		common.Respond(w, r, http.StatusOK, alerts, "School alerts retrieved successfully")
+	}
+}
+
+// errDayChangesDateFormat reports a date query parameter that is not
+// YYYY-MM-DD.
+var errDayChangesDateFormat = errors.New("date query parameter must be YYYY-MM-DD")
+
+// schoolsDayChanges answers GET /traeger/schools/day-changes: "Heute anders"
+// of every school of the Träger of the session that has a change today
+// (#7672), or tomorrow with ?date= (#8236). It names no person and no reason, so the read is not written to
+// the access log (ADR 0084 section 7).
+func (rs *Resource) schoolsDayChanges(w http.ResponseWriter, r *http.Request) {
+	principal, err := common.CurrentPrincipal(r.Context())
+	if err != nil || principal.OrganizationID() <= 0 {
+		common.RenderError(w, r, common.ErrorUnauthorized(common.ErrUnauthorized))
+		return
+	}
+	var on *calendar.Date
+	if raw := r.URL.Query().Get("date"); raw != "" {
+		parsed, parseErr := calendar.ParseDate(raw)
+		if parseErr != nil {
+			common.RenderError(w, r, common.ErrorInvalidRequest(errDayChangesDateFormat))
+			return
+		}
+		on = &parsed
+	}
+	changes, err := rs.reports.SchoolsDayChanges(r.Context(), principal.OrganizationID(), on)
+	switch {
+	case errors.Is(err, traegerview.ErrDayOutOfRange):
+		common.RenderError(w, r, common.ErrorInvalidRequest(err))
+	case errors.Is(err, traegerview.ErrTraegerUnavailable):
+		common.RenderError(w, r, common.ErrorUnauthorized(common.ErrUnauthorized))
+	case err != nil:
+		common.RenderError(w, r, common.ErrorInternalServer(err))
+	default:
+		common.Respond(w, r, http.StatusOK, changes, "School day changes retrieved successfully")
 	}
 }

@@ -21,14 +21,13 @@ vi.mock("~/lib/backend-client.server", async (original) => ({
 
 vi.mock("~/lib/user-context.server", () => ({
   loadUserContext: vi.fn(async () => ({
-    educationalGroups: [],
-    supervisedGroups: [],
     currentStaff: null,
-    educationalGroupIds: [],
-    educationalGroupRoomNames: [],
-    supervisedRoomNames: [],
-    incomplete: false,
-    unavailableSections: [],
+    schoolSwitches: {
+      parentNewsEnabled: true,
+      parentInviteMode: "direct",
+      timetableDayStartTime: "08:00",
+      timetableDayEndTime: "16:00",
+    },
   })),
 }));
 
@@ -76,52 +75,6 @@ function routeBackend(responses: Record<string, unknown | Error>): void {
 }
 
 const instant = "2026-01-01T00:00:00Z";
-const room = {
-  id: "8",
-  name: "Kreativraum",
-  is_occupied: false,
-  student_count: 0,
-  is_system: false,
-  is_open_room: true,
-  created_at: instant,
-  updated_at: instant,
-  version: instant,
-};
-const page = {
-  current_page: 1,
-  page_size: 20,
-  total_pages: 1,
-  total_records: 1,
-};
-const overviewGroup = {
-  id: "1",
-  group_id: "1",
-  room_id: "5",
-  room: { id: "5", name: "Aula" },
-  start_time: instant,
-  is_active: true,
-  created_at: instant,
-  updated_at: instant,
-};
-const ownGroup = {
-  id: overviewGroup.id,
-  group_id: overviewGroup.group_id,
-  room_id: overviewGroup.room_id,
-  start_time: instant,
-  created_at: instant,
-  updated_at: instant,
-  tenant_id: "1",
-  last_activity: instant,
-  timeout_minutes: 30,
-  room: {
-    ...overviewGroup.room,
-    tenant_id: "1",
-    created_at: instant,
-    updated_at: instant,
-    is_system: false,
-    is_open_room: true,
-  },
-};
 const absence = {
   id: "1",
   tenant_id: "1",
@@ -176,6 +129,34 @@ const navigationGroup = {
   is_personal: false,
 };
 
+const context = {
+  groups: {
+    status: "ok",
+    navigation: [navigationGroup],
+    own_group_ids: [],
+    own_room_names: [],
+  },
+  released_rooms: { status: "ok", items: [{ id: "8", name: "Kreativraum" }] },
+  sessions: {
+    status: "ok",
+    own_status: "ok",
+    overview_status: "ok",
+    items: [
+      {
+        id: "1",
+        room_id: "5",
+        room_name: "Aula",
+        activity_name: "Musik",
+        is_own: true,
+      },
+    ],
+  },
+};
+const onlyOwn = {
+  ...context,
+  sessions: { ...context.sessions, overview_status: "forbidden" },
+};
+
 beforeEach(() => {
   mockBackendAnswer.mockReset();
   vi.mocked(loadUserContext).mockClear();
@@ -210,19 +191,7 @@ describe("loadShellBootstrap", () => {
           },
         ],
       },
-      "/api/students/ogs-group-navigation": {
-        data: [navigationGroup],
-      },
-      "/api/active/supervisors/all": {
-        data: [overviewGroup],
-      },
-      "/api/me/groups/supervised": {
-        data: [ownGroup],
-      },
-      "/api/rooms/?is_open_room=true": {
-        data: [room],
-        pagination: page,
-      },
+      "/api/active/supervision-context": { data: context },
       "/api/staff/absences/pending": {
         data: [absence, { ...absence, id: "2" }],
       },
@@ -256,19 +225,18 @@ describe("loadShellBootstrap", () => {
       "access-token",
       expect.objectContaining({ signal: expect.any(AbortSignal) }),
     );
-    expect(shell.userContext?.incomplete).toBe(false);
+    expect(shell.userContext?.schoolSwitches.parentInviteMode).toBe("direct");
     // The settings schema stays out of the shell (#4996): the navigation
     // reads its switches from the tenant resolve.
     expect(calledEndpoints()).not.toContain("/api/settings/schema");
     expect(shell.profile?.firstName).toBe("Ada");
     expect(shell.accountTenants?.[0]?.organizationName).toBe("Org");
-    expect(shell.supervision).toEqual({
-      groups: [navigationGroup],
-      supervised: [overviewGroup],
-      ownSupervised: [ownGroup],
-      openRooms: [room],
-      overviewOk: true,
-    });
+    expect(shell.supervision).toEqual(context);
+    expect(
+      calledEndpoints().filter((path) =>
+        /groups\/supervised|is_open_room|supervision-context/.test(path),
+      ),
+    ).toEqual(["/api/active/supervision-context"]);
     // The list itself, not only its count (#4989): badge, home block and
     // /tagesinformationen read it from one SWR entry.
     expect(shell.staffNoticesToday).toEqual(
@@ -302,9 +270,7 @@ describe("loadShellBootstrap", () => {
         },
       },
       "/auth/account/tenants": { data: [] },
-      "/api/students/ogs-group-navigation": { data: [] },
-      "/api/me/groups/supervised": { data: [] },
-      "/api/rooms/?is_open_room=true": { data: [], pagination: page },
+      "/api/active/supervision-context": { data: onlyOwn },
       "/api/staff-notices/today": { data: [] },
       "/api/messages/unread-count": { data: { unread_count: 2 } },
       "/api/reminders/": { data: { enabled: false, reminders: [], count: 0 } },
@@ -320,7 +286,7 @@ describe("loadShellBootstrap", () => {
       ACCESS_TOKEN,
     );
 
-    expect(shell.supervision?.overviewOk).toBe(false);
+    expect(shell.supervision).toEqual(onlyOwn);
     // A caregiver holds users:read, so today's notices are loaded.
     expect(shell.staffNoticesToday).toEqual([]);
     expect(shell.counts).toEqual({
@@ -335,7 +301,6 @@ describe("loadShellBootstrap", () => {
     });
     const endpoints = calledEndpoints();
     expect(endpoints).not.toContain("/api/settings/schema");
-    expect(endpoints).not.toContain("/api/active/supervisors/all");
     expect(endpoints).not.toContain("/api/staff/absences/pending");
   });
 
@@ -346,9 +311,7 @@ describe("loadShellBootstrap", () => {
         data: { id: "9", first_name: "Jo", last_name: "B", email: "j@b" },
       },
       "/auth/account/tenants": { data: [] },
-      "/api/students/ogs-group-navigation": { data: [] },
-      "/api/me/groups/supervised": { data: [] },
-      "/api/rooms/?is_open_room=true": { data: [], pagination: page },
+      "/api/active/supervision-context": { data: onlyOwn },
       "/api/staff-notices/today": { data: [] },
       "/api/messages/unread-count": { data: { unread_count: 3 } },
       "/api/platform/announcements/unread": { data: [] },
@@ -364,21 +327,16 @@ describe("loadShellBootstrap", () => {
     // Today's notices need users:read as well; the browser asks no one.
     expect(shell.staffNoticesToday).toBeUndefined();
     const endpoints = calledEndpoints();
-    expect(endpoints).toContain("/api/me/groups/supervised");
+    expect(endpoints).toContain("/api/active/supervision-context");
     expect(endpoints).not.toContain("/api/messages/unread-count");
     expect(endpoints).not.toContain("/api/staff-notices/today");
   });
 
-  it("falls back to the own-supervision endpoint when the overview is refused", async () => {
+  it("leaves failed shell preloads to their browser readers", async () => {
     routeBackend({
       "/api/me/profile": new Error("500"),
       "/auth/account/tenants": new Error("500"),
-      "/api/students/ogs-group-navigation": new Error("500"),
-      "/api/active/supervisors/all": new Error("API error (403)"),
-      "/api/me/groups/supervised": {
-        data: [{ id: 3, group_id: 3, room_id: 2, room: { id: 2, name: "B" } }],
-      },
-      "/api/rooms/?is_open_room=true": new Error("500"),
+      "/api/active/supervision-context": new Error("500"),
       "/api/staff/absences/pending": new Error("500"),
       "/api/messages/unread-count": new Error("500"),
       "/api/staff-notices/today": new Error("500"),
@@ -404,61 +362,24 @@ describe("loadShellBootstrap", () => {
     );
   });
 
-  it("keeps a successful overview when the ownership request fails", async () => {
-    routeBackend({
-      "/api/students/ogs-group-navigation": { data: [] },
-      "/api/active/supervisors/all": {
-        data: [overviewGroup],
+  it.each([
+    [
+      "unavailable ownership",
+      {
+        ...context,
+        sessions: { ...context.sessions, own_status: "unavailable" },
       },
-      "/api/me/groups/supervised": new Error("500"),
-      "/api/rooms/?is_open_room=true": { data: [], pagination: page },
-    });
-
+    ],
+    [
+      "malformed answer",
+      { ...context, groups: { ...context.groups, own_group_ids: [7] } },
+    ],
+    ["missing section", { groups: context.groups, sessions: context.sessions }],
+  ])("does not seed a snapshot with %s", async (_description, data) => {
+    routeBackend({ "/api/active/supervision-context": { data } });
     const shell = await loadShellBootstrap(session(), tenant, ACCESS_TOKEN);
-
-    expect(shell.supervision).toEqual({
-      groups: [],
-      supervised: [overviewGroup],
-      ownSupervised: null,
-      openRooms: [],
-      overviewOk: true,
-    });
-  });
-
-  it("does not seed a complete supervision snapshot from a malformed answer", async () => {
-    routeBackend({
-      "/api/students/ogs-group-navigation": { data: [] },
-      "/api/me/groups/supervised": { data: [{ ...ownGroup, id: 1 }] },
-      "/api/rooms/?is_open_room=true": { data: [], pagination: page },
-    });
-
-    const shell = await loadShellBootstrap(
-      session({ roles: ["teacher"], permissions: ["groups:read"] }),
-      tenant,
-      ACCESS_TOKEN,
-    );
-
-    expect(calledEndpoints()).toContain("/api/me/groups/supervised");
+    expect(calledEndpoints()).toContain("/api/active/supervision-context");
     expect(shell.supervision).toBeUndefined();
-  });
-
-  it("leaves an incomplete navigation projection to the browser", async () => {
-    routeBackend({});
-    vi.mocked(loadUserContext).mockResolvedValueOnce({
-      educationalGroups: [],
-      supervisedGroups: [],
-      currentStaff: null,
-      educationalGroupIds: [],
-      educationalGroupRoomNames: [],
-      supervisedRoomNames: [],
-      incomplete: true,
-      unavailableSections: ["supervised_groups"],
-      schoolSwitches: null,
-    });
-
-    const shell = await loadShellBootstrap(session(), tenant, ACCESS_TOKEN);
-
-    expect(shell.userContext).toBeUndefined();
   });
 
   it("aborts timed-out backend preloads", async () => {

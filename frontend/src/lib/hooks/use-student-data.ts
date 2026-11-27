@@ -1,5 +1,6 @@
 "use client";
 
+import { useOptionalSupervision } from "~/lib/supervision-context";
 import type * as studentsContract from "~/lib/contract/students.generated";
 import {
   fetchStudentDetail,
@@ -61,6 +62,9 @@ interface UseStudentDataResult extends StudentDataState {
 export function useStudentData(studentId: string): UseStudentDataResult {
   const { data: session, status: sessionStatus } = useSession();
 
+  const { ownGroupIds, ownGroupRoomNames, ownSessionRoomNames } =
+    useOptionalSupervision();
+
   // SWR-based student data fetching with caching
   // Cache key "student-detail-{id}" will be invalidated by global SSE on student_checkin/checkout events
   const detail = useSWRAuth<StudentDetailResponse>(
@@ -116,9 +120,9 @@ export function useStudentData(studentId: string): UseStudentDataResult {
     attendanceLogEnabled: studentData?.attendanceLogEnabled ?? false,
     feedbackEnabled: studentData?.feedbackEnabled ?? false,
     supervisors: studentData?.supervisors ?? [],
-    myGroups: studentData?.myGroups ?? [],
-    myGroupRooms: studentData?.myGroupRooms ?? [],
-    mySupervisedRooms: studentData?.mySupervisedRooms ?? [],
+    myGroups: ownGroupIds,
+    myGroupRooms: ownGroupRoomNames,
+    mySupervisedRooms: ownSessionRoomNames,
     refreshData,
     reloadOrThrow,
   };

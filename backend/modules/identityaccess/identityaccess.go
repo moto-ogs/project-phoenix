@@ -130,7 +130,6 @@ type OperatorMFAAttempts struct {
 type Owner interface {
 	StaffCalendarFeeds
 	ParentCalendarFeeds
-	SchoolAccountListings
 	GuardianPortalQuery
 	GuardianPortalLoginQuery
 	RFIDCards

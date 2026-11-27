@@ -56,7 +56,7 @@ func ProvisioningErrorRenderer(err error) render.Renderer {
 	case errors.As(err, &organizationHasSchools):
 		return common.OperatorRejectionWithDetails(http.StatusConflict, common.CodeProvisioningOrganizationHasSchools,
 			fmt.Sprintf("Organization has %d existing school(s) and cannot be deleted. Delete all schools first.", organizationHasSchools.SchoolCount),
-			map[string]any{"school_count": organizationHasSchools.SchoolCount})
+			OrganizationHasSchoolsDetails{SchoolCount: organizationHasSchools.SchoolCount})
 	case errors.As(err, &organizationDeleted):
 		return common.OperatorRejection(http.StatusConflict, common.CodeProvisioningOrganizationDeleted, "Organization is deleted and cannot host schools")
 	case errors.As(err, &schoolNotFound):
@@ -157,10 +157,10 @@ func deviceErrorRenderer(err error) (render.Renderer, bool) {
 		return common.OperatorRejection(http.StatusConflict, common.CodeProvisioningDeviceSameSchool, "Device already belongs to the target school"), true
 	case errors.As(err, &deviceSlotsFull):
 		return common.OperatorRejectionWithDetails(http.StatusConflict, common.CodeProvisioningDeviceSlotsFull, "Every device slot of the school is occupied",
-			map[string]any{"device_slots": deviceSlotsFull.DeviceSlots}), true
+			DeviceSlotsDetails{Slots: deviceSlotsFull.DeviceSlots}), true
 	case errors.As(err, &deviceSlotsBelowOccupied):
 		return common.OperatorRejectionWithDetails(http.StatusConflict, common.CodeProvisioningDeviceSlotsBelowOccupied, "The school has more registered devices than the requested device slots",
-			map[string]any{"device_slots": deviceSlotsBelowOccupied.Requested, "occupied": deviceSlotsBelowOccupied.Occupied}), true
+			DeviceSlotsBelowOccupiedDetails{Slots: deviceSlotsBelowOccupied.Requested, Occupied: deviceSlotsBelowOccupied.Occupied}), true
 	default:
 		return nil, false
 	}
@@ -168,18 +168,33 @@ func deviceErrorRenderer(err error) (render.Renderer, bool) {
 
 // deviceRemovalBlockedDetails names the open session the operator has to
 // end before the removal.
-func deviceRemovalBlockedDetails(blocked *organizationtenancy.DeviceRemovalBlockedError) map[string]any {
-	details := map[string]any{
-		"session_id": ident.ID(blocked.SessionID),
-		"started_at": blocked.StartedAt.Format(time.RFC3339),
+func deviceRemovalBlockedDetails(blocked *organizationtenancy.DeviceRemovalBlockedError) DeviceRemovalDetails {
+	return DeviceRemovalDetails{
+		SessionID:    ident.ID(blocked.SessionID),
+		StartedAt:    blocked.StartedAt.Format(time.RFC3339),
+		ActivityName: blocked.ActivityName,
+		RoomName:     blocked.RoomName,
 	}
-	if blocked.ActivityName != nil {
-		details["activity_name"] = *blocked.ActivityName
-	}
-	if blocked.RoomName != nil {
-		details["room_name"] = *blocked.RoomName
-	}
-	return details
+}
+
+type OrganizationHasSchoolsDetails struct {
+	SchoolCount int `json:"school_count"`
+}
+
+type DeviceSlotsDetails struct {
+	Slots int `json:"device_slots"`
+}
+
+type DeviceSlotsBelowOccupiedDetails struct {
+	Slots    int `json:"device_slots"`
+	Occupied int `json:"occupied"`
+}
+
+type DeviceRemovalDetails struct {
+	SessionID    ident.ID `json:"session_id"`
+	StartedAt    string   `json:"started_at"`
+	ActivityName *string  `json:"activity_name,omitempty"`
+	RoomName     *string  `json:"room_name,omitempty"`
 }
 
 // provisioningConflictRenderer answers a collision with the code of the
@@ -205,13 +220,10 @@ func provisioningConflictRenderer(conflict *organizationtenancy.ProvisioningConf
 
 func caregiverCapabilityProvisioningErrorRenderer(err error) render.Renderer {
 	if blocked, ok := errors.AsType[caregiverCapabilityBlocked](err); ok {
-		resp := common.NewCaregiverCapabilityBlockedResponse(
-			http.StatusConflict,
+		return common.NewCaregiverCapabilityBlockedResponse(
 			blocked.Error(),
 			blocked.CaregiverCapabilityBlockers(),
 		)
-		resp.Code = common.CodeProvisioningCaregiverCapabilityBlocked
-		return resp
 	}
 	if _, missing := errors.AsType[caregiverAccountMissing](err); missing || errors.Is(err, organizationtenancy.ErrAccountNotFound) {
 		return common.OperatorRejection(http.StatusNotFound, common.CodeIdentityAccountNotFound, "Account not found")

@@ -151,3 +151,54 @@ type Schools interface {
 type HolidayNotices interface {
 	NotifyHolidayBookings(ctx context.Context, organizationID int64, day ClosingDayInput) (int, error)
 }
+
+// SchoolClosing is a closing day that closes a school of the Träger on the
+// day "Heute anders" reads (#7672): one the school entered or one the Träger
+// planned for it. Reason is the name the school or the Träger gave it, not a
+// reason of a person.
+type SchoolClosing struct {
+	StartDate calendar.Date
+	EndDate   calendar.Date
+	Reason    string
+	Traeger   bool
+}
+
+// SchoolOpening is an opening change that changes the opening hours of a
+// school of the Träger on the day "Heute anders" reads (#8146, #8202). It
+// carries the hours ("15:04") and no reason.
+type SchoolOpening struct {
+	StartDate calendar.Date
+	EndDate   calendar.Date
+	OpensAt   string
+	ClosesAt  string
+}
+
+// SchoolDay is what School Calendar changes on the day of one school: its
+// closing days and its opening changes.
+type SchoolDay struct {
+	Closings []SchoolClosing
+	Openings []SchoolOpening
+}
+
+// SchoolDays reads the closing days and the opening changes of the Träger's
+// schools on one day in one statement, keyed by school; a school without
+// either is missing. A Träger closing day counts only for the schools it
+// names that belong to organizationID now (ADR 0194). The caller runs it in
+// the administrative transaction of the Träger projection and passes the
+// Träger's schools; it reads no other.
+type SchoolDays interface {
+	SchoolDaysOn(ctx context.Context, organizationID int64, schools []int64, day calendar.Date) (map[int64]SchoolDay, error)
+}
+
+// ErrNoSchoolDays reports Träger closing days without the read.
+var ErrNoSchoolDays = errors.New("school calendar: the Träger closing days read no school days")
+
+// SchoolDaysOf is the read of the schools' days the Träger closing days
+// composed; they read their own rows.
+func SchoolDaysOf(days ClosingDays) (SchoolDays, error) {
+	read, ok := days.(SchoolDays)
+	if !ok {
+		return nil, ErrNoSchoolDays
+	}
+	return read, nil
+}

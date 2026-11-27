@@ -26,6 +26,27 @@ type TraegerClosingDay struct {
 	UpdatedAt time.Time
 }
 
+// SchoolClosing is one closing day range that closes a school on a day: one
+// of the school's own or one its current Träger planned for it (#7672).
+type SchoolClosing struct {
+	SchoolID  int64
+	StartDate calendar.Date
+	EndDate   calendar.Date
+	Reason    string
+	Traeger   bool
+}
+
+// SchoolOpening is one opening change that changes the opening hours of a
+// school on a day (#8146, #8202). It carries no reason: the Träger sees the
+// hours only.
+type SchoolOpening struct {
+	SchoolID  int64
+	StartDate calendar.Date
+	EndDate   calendar.Date
+	OpensAt   string
+	ClosesAt  string
+}
+
 // TraegerClosingDayFields are the written fields of a Träger closing day.
 type TraegerClosingDayFields struct {
 	StartDate calendar.Date

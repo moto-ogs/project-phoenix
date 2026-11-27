@@ -241,12 +241,16 @@ Auch Kennungen in RFC-9457-`details` sind auf der HTTP-Naht
 Dezimalstrings. Strukturierte Fehlerwerte verwenden `ident.ID` und
 denselben `wire`-Encoder wie Erfolgsantworten und SSE. Der Browser prüft
 erzeugte Dezimalstrings auf kanonische Schreibweise und den
-vorzeichenbehafteten 64-Bit-Wertebereich. Die gemeinsame
-Fehler-Middleware erkennt auch in Maps und verschachtelten Objekten
-Zahlen unter `id`, `*_id` und `*_ids`. Sie meldet den Vertragsverstoß
-und schreibt den ursprünglichen Zahlenwert als Text, ohne den Umweg über
-`float64`. Clients lesen die Kennung direkt als String. Die Kiosk-API
+vorzeichenbehafteten 64-Bit-Wertebereich. Der Go-Wächter vergleicht den
+gerenderten Typ mit der Registrierung des Fehlercodes. Die Middleware
+leitet Kennungen unverändert weiter. Die Kiosk-API
 `/api/iot/*` behält numerische Kennungen auch in ihren Fehlerdetails.
+
+`ident.IDOrNone` bildet bestehende Felder ab, die für eine fehlende
+Kennung `""` senden oder annehmen. Der Vertrag kennt beide Fälle als
+Dezimal-ID oder Leerwert. Neue optionale Felder verwenden `*ident.ID`.
+Für Nachrichten trägt SSE `sender_account_id` als Kennung; `source` ist
+kein Browser-Ersatz dafür.
 
 `id`, `*_id` und `*_ids` sind Hinweise, keine Typen. Eine Bigint-Kennung
 trägt `ident.ID`, keine von Hand formatierte Go-Zeichenkette. Ein Feld

@@ -1,7 +1,14 @@
 "use client";
 
 import { usePathname, useSearchParams } from "next/navigation";
-import { useEffect, useLayoutEffect, useRef } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useSyncExternalStore,
+} from "react";
 
 /** So lange darf eine Seite nach „Zurück“ nachladen, bis sie hoch genug ist. */
 const RESTORE_TIMEOUT_MS = 3000;
@@ -11,6 +18,25 @@ const USER_INPUT_EVENTS = [
   "pointerdown",
   "keydown",
 ] as const;
+
+export const NavigationScrollPositions = createContext<ReadonlyMap<
+  string,
+  number
+> | null>(null);
+
+const subscribe = () => () => undefined;
+const documentSnapshot = () => false;
+
+/** Do not shorten a long page that may restore a position below its first screen. */
+export function useHasDeepScrollPosition(): boolean {
+  const pathname = usePathname();
+  const positions = useContext(NavigationScrollPositions);
+  return useSyncExternalStore(
+    subscribe,
+    () => (positions?.get(pathname ?? "") ?? 0) >= window.innerHeight,
+    documentSnapshot,
+  );
+}
 
 /**
  * Hält das Dokument mindestens auf `top`, solange die Seite noch nachlädt. Beim
@@ -92,7 +118,11 @@ function currentAddressWithHash() {
  * vor denen der Seite, und eine Seite oder Next darf danach gezielt woanders
  * hinscrollen (etwa zu einer Sprungmarke in der Adresse).
  */
-export function NavigationScrollPosition() {
+export function NavigationScrollPosition({
+  scrollPositions,
+}: {
+  readonly scrollPositions: Map<string, number>;
+}) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const search = searchParams?.toString() ?? "";
@@ -109,7 +139,6 @@ export function NavigationScrollPosition() {
   // vor der Link-Navigation ergänzt den Wert, falls dessen Ereignis noch in
   // der Warteschlange steht.
   const lastScrollY = useRef(0);
-  const scrollPositions = useRef(new Map<string, number>());
   const resetFrame = useRef<number | undefined>(undefined);
   const stopRestore = useRef<(() => void) | undefined>(undefined);
   const isRestoring = useRef(false);
@@ -124,7 +153,7 @@ export function NavigationScrollPosition() {
       // eintreffendes Scroll-Ereignis gehört zur verlassenen Seite und darf
       // deren gemerkte Position nicht unter dem Zielpfad überschreiben.
       if (!isRestoring.current && !awaitingPathTraversal.current) {
-        scrollPositions.current.set(committedKey.current, lastScrollY.current);
+        scrollPositions.set(committedKey.current, lastScrollY.current);
       }
     };
     // Die Capture-Phase liegt vor dem Link-Handler. So merken wir auch einen
@@ -141,7 +170,7 @@ export function NavigationScrollPosition() {
         awaitingPathTraversal.current &&
         targetUrl === committedUrl.current;
       if (beforeCommit && !isRestoring.current) {
-        scrollPositions.current.set(committedKey.current, lastScrollY.current);
+        scrollPositions.set(committedKey.current, lastScrollY.current);
       }
       traversalBeforeCommit.current = beforeCommit;
       if (beforeCommit) {
@@ -167,7 +196,7 @@ export function NavigationScrollPosition() {
         cancelAnimationFrame(resetFrame.current);
         resetFrame.current = undefined;
       }
-      const position = scrollPositions.current.get(scrollKeyNow());
+      const position = scrollPositions.get(scrollKeyNow());
       stopRestore.current?.();
       isRestoring.current = false;
       // Sprungmarken sind eine ausdrückliche Zielposition und gewinnen gegen
@@ -219,7 +248,7 @@ export function NavigationScrollPosition() {
       stopRestore.current?.();
       isRestoring.current = false;
     };
-  }, []);
+  }, [scrollPositions]);
 
   useEffect(() => {
     const url = currentAddressWithHash();
@@ -250,7 +279,7 @@ export function NavigationScrollPosition() {
       (pathname !== window.location.pathname ||
         pathname === traversalTargetPathname.current);
     if (!isTraversal) {
-      scrollPositions.current.set(committedKey.current, lastScrollY.current);
+      scrollPositions.set(committedKey.current, lastScrollY.current);
     }
     committedPathname.current = pathname;
     committedKey.current = scrollKeyNow();
@@ -278,7 +307,7 @@ export function NavigationScrollPosition() {
       resetFrame.current = undefined;
       window.scrollTo({ top: 0, behavior: "instant" });
     });
-  }, [pathname]);
+  }, [pathname, scrollPositions]);
 
   return null;
 }

@@ -53,5 +53,10 @@
   "cancelContractTooltip": "Öffnet die Kündigung, abgeschickt wird erst auf der nächsten Seite.",
   "withdrawContractTooltip": "Öffnet den Widerruf, abgeschickt wird erst auf der nächsten Seite.",
   "showConfirmationTooltip": "Zeigt die Kündigung mit Vertragsende und Bestätigung.",
-  "showWithdrawalTooltip": "Zeigt den Widerruf mit seiner Bestätigung."
+  "showWithdrawalTooltip": "Zeigt den Widerruf mit seiner Bestätigung.",
+  "changeAwaitsSignature": "Änderung wartet auf deine Unterschrift",
+  "changeNote": "Die Betreuung ändert sich ab dem {date}. Bitte unterschreibe die neue Fassung. Bis dahin gilt dein Vertrag wie bisher.",
+  "signChange": "Änderung ansehen und unterschreiben",
+  "signChangeTooltip": "Öffnet die neue Fassung. Du siehst, was sich ändert, und kannst unterschreiben.",
+  "changeStartsOn": "Änderung ab"
 }

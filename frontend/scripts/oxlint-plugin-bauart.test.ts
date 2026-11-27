@@ -349,7 +349,7 @@ describe.concurrent("bauart rules", () => {
     it("tolerates only the form-internal exception at its recorded location", async () => {
       // Since #3119 the exception list holds no object action any more; the
       // remaining entries are chip removers inside forms, bound to their line.
-      const path = "src/app/[tenant]/(protected)/meal-plan/page.tsx";
+      const path = "src/app/[tenant]/(protected)/meal-plan/page-content.tsx";
       const source = readFileSync(resolve(path), "utf8");
 
       expect((await lintSource(source, path)).output).not.toContain(ROW_ACTION);

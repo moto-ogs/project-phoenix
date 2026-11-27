@@ -1253,6 +1253,48 @@ describe("DataTable phone cards without lost columns (#7911)", () => {
     expect(card.queryByText("Gruppe Rot")).not.toBeInTheDocument();
   });
 
+  it("opens the full cell of a detail the row line shows in short form", () => {
+    const { card } = renderCards("row", {
+      columns: cardColumns.map((c) =>
+        c.key === "pickup"
+          ? {
+              ...c,
+              render: (r: CardRow) => `${r.pickup} (mit Notiz)`,
+              stackedRender: (r: CardRow) => r.pickup,
+              stackedFullInDetails: true,
+            }
+          : c,
+      ),
+    });
+
+    // Anker: die Kurzform steht auf der Zeile.
+    expect(card.getByText("15:30")).toBeInTheDocument();
+    expect(card.queryByText("15:30 (mit Notiz)")).not.toBeInTheDocument();
+
+    fireEvent.click(card.getByRole("button", { name: "Details zu Alpha" }));
+
+    expect(card.getByText("15:30 (mit Notiz)")).toBeInTheDocument();
+  });
+
+  it("keeps a short detail out of the details unless the column asks for it", () => {
+    const { card } = renderCards("row", {
+      columns: cardColumns
+        .filter((c) => c.key === "name" || c.key === "pickup")
+        .map((c) =>
+          c.key === "pickup"
+            ? { ...c, stackedRender: (r: CardRow) => `um ${r.pickup}` }
+            : c,
+        ),
+    });
+
+    // Anker: die Kurzform steht auf der Zeile.
+    expect(card.getByText("um 15:30")).toBeInTheDocument();
+    // Nothing else to show: no details button that only repeats the line.
+    expect(
+      card.queryByRole("button", { name: "Details zu Alpha" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("opens the details without opening the entry, and the card still opens it", () => {
     const { card, onRowClick } = renderCards("row", {
       columns: cardColumns.filter((c) => c.key !== "actions"),
@@ -1325,6 +1367,32 @@ describe("DataTable phone cards without lost columns (#7911)", () => {
     expect(card.getByText("Block 8–12")).toBeInTheDocument();
   });
 
+  it("labels a sub row cell on the card with its own phone label", () => {
+    const { card } = renderCards("lines", {
+      renderSubRows: (row) => [
+        {
+          key: `${row.id}-report`,
+          cells: [
+            { columnKey: "name", content: "Krank" },
+            { columnKey: "room", content: "08:10", stackedLabel: "Gemeldet" },
+            { columnKey: "pickup", content: "–" },
+          ],
+        },
+      ],
+    });
+
+    const toggle = card.getByRole("button", { name: "Details zu Alpha" });
+    fireEvent.click(toggle);
+
+    const details = within(
+      document.getElementById(toggle.getAttribute("aria-controls")!)!,
+    );
+    expect(details.getByText("Gemeldet")).toBeInTheDocument();
+    // The column header stays the label where the cell names none.
+    expect(details.getByText("Abholung")).toBeInTheDocument();
+    expect(details.queryByText("Raum")).not.toBeInTheDocument();
+  });
+
   it("names the toggle of an expandable row with its own label", () => {
     const { card } = renderCards("lines", {
       expandable: {
@@ -1340,6 +1408,40 @@ describe("DataTable phone cards without lost columns (#7911)", () => {
 
     expect(toggle).toHaveAccessibleName("Alpha: Verlauf schließen");
     expect(card.getByText("Verlauf des Tages")).toBeInTheDocument();
+  });
+
+  it("shows the phone form of title and meta in the head of a lines card", () => {
+    const { card } = renderCards("lines", {
+      columns: [
+        {
+          ...cardColumns[0]!,
+          stackedRender: (r) => `${r.name} (kurz)`,
+        },
+        {
+          ...cardColumns[1]!,
+          stackedRender: (r) => `Status ${r.status}`,
+        },
+        ...cardColumns.slice(2),
+      ],
+    });
+
+    const head = card
+      .getByText("Alpha (kurz)")
+      .closest("[data-stacked-head]") as HTMLElement;
+    expect(within(head).getByText("Status Da")).toBeInTheDocument();
+    expect(card.queryByText("Alpha")).not.toBeInTheDocument();
+  });
+
+  it("tints a phone card like its table row", () => {
+    const { card } = renderCards("lines", {
+      rowTone: () => "today",
+    });
+
+    // Anker: die Karte ist gerendert.
+    expect(card.getByText("Alpha")).toBeInTheDocument();
+    expect(
+      card.getByText("Alpha").closest("[data-stacked-head]")!.parentElement,
+    ).toHaveClass("bg-moto-blue-soft/60");
   });
 
   it("still opens the entry from the card of a row that expands", () => {

@@ -4,26 +4,26 @@
 <div class="email-body">
     {{template "moto-brand" .}}
     {{if .ExistingAccount}}
-    <h1>Dein Zugang zum Eltern-Portal</h1>
+    <h1>Ihr Zugang zum Eltern-Portal</h1>
     {{if .FirstName}}
     <p>Guten Tag {{.FirstName}} {{.LastName}},</p>
     {{else}}
     <p>Guten Tag,</p>
     {{end}}
-    <p>Im <strong>Eltern-Portal</strong> von moto siehst du jetzt die Informationen zu deinen Kindern.</p>
-    <p>Du hast schon ein Konto bei moto. Du brauchst kein neues Konto.</p>
-    <p>Melde dich im Eltern-Portal mit deinen bisherigen Zugangsdaten an.</p>
+    <p>Im <strong>Eltern-Portal</strong> von moto sehen Sie jetzt die Informationen zu Ihren Kindern.</p>
+    <p>Sie haben schon ein Konto bei moto. Sie brauchen kein neues Konto.</p>
+    <p>Melden Sie sich im Eltern-Portal mit Ihren bisherigen Zugangsdaten an.</p>
 
     <div class="button-wrapper" style="text-align: center;">
         <a class="button" href="{{.InvitationURL}}">Zum Eltern-Portal</a>
     </div>
 
-    <p style="margin-top: 24px; font-size: 14px; color: #6b7280;">Falls der Button nicht funktioniert, kopiere bitte diesen Link:</p>
+    <p style="margin-top: 24px; font-size: 14px; color: #6b7280;">Falls der Button nicht funktioniert, kopieren Sie bitte diesen Link:</p>
     <div class="link-box">
         <a href="{{.InvitationURL}}">{{.InvitationURL}}</a>
     </div>
 
-    <p class="security-note">Passwort vergessen? Auf der Anmeldeseite kannst du ein neues Passwort anfordern.</p>
+    <p class="security-note">Passwort vergessen? Auf der Anmeldeseite können Sie ein neues Passwort anfordern.</p>
     {{else}}
     <h1>Einladung zum Eltern-Portal</h1>
     {{if .FirstName}}
@@ -31,11 +31,11 @@
     {{else}}
     <p>Guten Tag,</p>
     {{end}}
-    <p>Du wurdest zum <strong>Eltern-Portal</strong> von moto eingeladen. Mit diesem Zugang kannst du die Informationen {{if .StudentNames}}zu {{if eq (len .StudentNames) 1}}deinem Kind{{else}}deinen Kindern{{end}}{{else}}zu deinen Kindern{{end}} einsehen und erhältst wichtige Benachrichtigungen.</p>
+    <p>Sie wurden zum <strong>Eltern-Portal</strong> von moto eingeladen. Mit diesem Zugang können Sie die Informationen {{if .StudentNames}}zu {{if eq (len .StudentNames) 1}}Ihrem Kind{{else}}Ihren Kindern{{end}}{{else}}zu Ihren Kindern{{end}} einsehen und erhalten wichtige Benachrichtigungen.</p>
 
     {{if .StudentNames}}
     <div class="highlight-box">
-        <p style="margin: 0 0 8px 0; font-size: 14px;"><strong>{{if eq (len .StudentNames) 1}}Dein Kind:{{else}}Deine Kinder:{{end}}</strong></p>
+        <p style="margin: 0 0 8px 0; font-size: 14px;"><strong>{{if eq (len .StudentNames) 1}}Ihr Kind:{{else}}Ihre Kinder:{{end}}</strong></p>
         <ul style="margin: 0; padding-left: 20px; font-size: 14px;">
             {{range .StudentNames}}
             <li>{{.}}</li>
@@ -44,7 +44,7 @@
     </div>
     {{end}}
 
-    <p>Klicke auf den Button unten, um dein Eltern-Konto einzurichten und ein Passwort zu vergeben.</p>
+    <p>Klicken Sie auf den Button unten, um Ihr Eltern-Konto einzurichten und ein Passwort zu vergeben.</p>
 
     <div class="button-wrapper" style="text-align: center;">
         <a class="button" href="{{.InvitationURL}}">Einladung annehmen</a>
@@ -54,21 +54,21 @@
         <p><strong>Wichtig:</strong> Diese Einladung läuft in {{.ExpiryHours}} Stunden ab.</p>
     </div>
 
-    <p style="margin-top: 24px; font-size: 14px; color: #6b7280;">Falls der Button nicht funktioniert, kopiere bitte diesen Link:</p>
+    <p style="margin-top: 24px; font-size: 14px; color: #6b7280;">Falls der Button nicht funktioniert, kopieren Sie bitte diesen Link:</p>
     <div class="link-box">
         <a href="{{.InvitationURL}}">{{.InvitationURL}}</a>
     </div>
 
     <div class="highlight-box" style="margin-top: 24px;">
-        <p style="margin: 0; font-size: 14px;"><strong>Nach der Registrierung kannst du:</strong></p>
+        <p style="margin: 0; font-size: 14px;"><strong>Nach der Registrierung können Sie:</strong></p>
         <ul style="margin: 8px 0 0 0; padding-left: 20px; font-size: 14px;">
-            <li>Informationen zu deinen Kindern einsehen</li>
+            <li>Informationen zu Ihren Kindern einsehen</li>
             <li>Benachrichtigungen erhalten</li>
             <li>Mit der Einrichtung in Kontakt bleiben</li>
         </ul>
     </div>
 
-    <p class="security-note">Falls du diese Einladung nicht erwartet hast oder keinen Bezug zur moto-Einrichtung hast, kannst du diese E-Mail ignorieren.</p>
+    <p class="security-note">Falls Sie diese Einladung nicht erwartet haben oder keinen Bezug zur moto-Einrichtung haben, können Sie diese E-Mail ignorieren.</p>
     {{end}}
 </div>
 

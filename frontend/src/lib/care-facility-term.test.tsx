@@ -10,6 +10,7 @@ import {
   useCareTermTranslations,
   useProvideCareFacilityTerm,
 } from "./care-facility-term";
+import { useErrorCareFacilityTerm } from "./care-facility-term-context";
 
 function tenantWithTerm(careFacilityTerm: string | undefined) {
   vi.mocked(useTenantSafe).mockReturnValue({
@@ -34,6 +35,40 @@ describe("care facility term (#6042)", () => {
     );
     expect(result.current("reviewTitle")).toBe("Prüfung durch die GTS");
     expect(result.current("reviewText")).toMatch(/^Die GTS prüft/);
+  });
+
+  // #8136: a school with its own name chooses the article; every fixed
+  // German text declines the name with it.
+  it("declines the tenant's own name with its article", () => {
+    vi.mocked(useTenantSafe).mockReturnValue({
+      tenantSlug: "barnstorf",
+      tenant: {
+        careFacilityTerm: "Hort",
+        careFacilityArticle: "der",
+      } as TenantInfo,
+    } as ReturnType<typeof useTenantSafe>);
+    const { result } = renderHook(() =>
+      useCareTermTranslations("enrollmentPublic"),
+    );
+    expect(result.current("reviewTitle")).toBe("Prüfung durch den Hort");
+    expect(result.current("reviewText")).toMatch(/^Der Hort prüft/);
+    expect(result.current("disabled")).toContain("wende dich an den Hort,");
+  });
+
+  it("declines the name a status response reports to its scope", async () => {
+    function Status() {
+      useProvideCareFacilityTerm("Lernhaus", "das");
+      const t = useCareTermTranslations("enrollmentStatus");
+      return <p>{t("stepOneStatus")}</p>;
+    }
+    render(
+      <CareFacilityTermScope>
+        <Status />
+      </CareFacilityTermScope>,
+    );
+    expect(
+      await screen.findByText("Die Anmeldung liegt dem Lernhaus vor."),
+    ).toBeInTheDocument();
   });
 
   it("keeps the caller's own values next to the term", () => {
@@ -129,6 +164,47 @@ describe("care facility term (#6042)", () => {
     expect(seen[0]?.("stepOneStatus")).toBe("Die Anmeldung liegt der OGS vor.");
     expect(seen.at(-1)?.("stepOneStatus")).toBe(
       "Die Anmeldung liegt der GTS vor.",
+    );
+  });
+});
+
+describe("care term on the error path (#6258)", () => {
+  it("takes the scope's school first, then the tenant, else OGS", async () => {
+    const { TenantProvider } = await vi.importActual<
+      typeof import("~/lib/tenant-context")
+    >("~/lib/tenant-context");
+    const tenant = (careFacilityTerm: string | undefined) =>
+      ({ subdomain: "barnstorf", careFacilityTerm }) as TenantInfo;
+    const inTenant =
+      (term: string | undefined, scope?: string) =>
+      ({ children }: { children: React.ReactNode }) => (
+        <TenantProvider tenantSlug="barnstorf" tenant={tenant(term)}>
+          {scope === undefined ? (
+            children
+          ) : (
+            <CareFacilityTermScope term={scope}>
+              {children}
+            </CareFacilityTermScope>
+          )}
+        </TenantProvider>
+      );
+
+    expect(
+      renderHook(() => useErrorCareFacilityTerm(), { wrapper: inTenant("GTS") })
+        .result.current,
+    ).toBe("GTS");
+    expect(
+      renderHook(() => useErrorCareFacilityTerm(), {
+        wrapper: inTenant("GTS", "Ganztag Nord"),
+      }).result.current,
+    ).toBe("Ganztag Nord");
+    expect(
+      renderHook(() => useErrorCareFacilityTerm(), {
+        wrapper: inTenant(undefined),
+      }).result.current,
+    ).toBe("OGS");
+    expect(renderHook(() => useErrorCareFacilityTerm()).result.current).toBe(
+      "OGS",
     );
   });
 });

@@ -1,0 +1,7 @@
+{
+  "scenario": "api.traeger.schools_day_changes",
+  "max": 5,
+  "exact": true,
+  "description": "modules/traegerview — GET /traeger/schools/day-changes (#7672, #8146): in one\nadministrative transaction the Träger with its schools and their names\n(Organisation & Tenancy, one statement), the closing days of the schools\nand of the Träger with the opening changes (School Calendar, one\nstatement), the cancelled blocks, the cancelled lunches and the closed\nrooms for the whole school set. Flat in the number of schools.",
+  "route": "GET /traeger/schools/day-changes"
+}

@@ -1,90 +1,68 @@
-"use client";
+import { TenantRouteSeed } from "../../tenant-route-seed";
+import { seedRead } from "~/lib/server-seed.server";
+import * as contract from "~/lib/contract/students.generated";
+import { contractGet } from "~/lib/contract/client.server";
+import { canReadStudents } from "~/lib/student-access";
+import { mapStudentListRow } from "~/lib/student-wire";
+import { roomKeys } from "~/lib/swr/rooms-keys";
+import {
+  CHILD_OVERVIEW_PATH,
+  transitDayStatusFromReferrer,
+  transitReferrer,
+} from "./transit-selection";
+import PageContent from "./page-content";
 
-import { Suspense, useState } from "react";
-import { useSearchParams } from "next/navigation";
-import { BinaryModeGuard } from "~/components/tenant/binary-mode-guard";
-import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
-import { TenantPage } from "~/components/ui/tenant-page";
-import { TransitStudentsSection } from "~/components/rooms/transit-students-section";
-import { resolveDetailReferrer } from "~/lib/tenant-path";
-import { transitConcept } from "~/lib/concepts/transit";
-import TransitLoading from "./loading";
-
-const TRANSIT_INFO =
-  "Hier stehen Kinder, die da sind, aber in keinem Raum. Darfst du sie zuweisen, wählst du sie aus und setzt sie in einen Raum.";
-const TRANSIT_BINARY_MODE_INFO =
-  "Hier wären Kinder, die da sind, aber in keinem Raum. Deine Schule nutzt das zurzeit nicht.";
-
-/** Der Rückweg der Kindakte aus dieser Liste. */
-const TRANSIT_PATH = "/rooms/unterwegs";
-
-/**
- * Der Einstieg „Unterwegs“ auf „Alle Kinder“ (#5026) führt dorthin zurück;
- * jeder andere Rückweg geht zu den Räumen.
- */
-const CHILD_OVERVIEW_PATH = "/students/search";
-
-function transitDayStatusFromReferrer(
-  referrer: string,
-): "comes_today" | "not_coming_today" | undefined {
-  const dayStatus = new URL(referrer, "https://moto.invalid").searchParams.get(
-    "day_status",
-  );
-  return dayStatus === "comes_today" || dayStatus === "not_coming_today"
-    ? dayStatus
-    : undefined;
-}
-
-/**
- * Kinder ohne Raumzuweisung (#3115). Bis dahin ein Slide-over auf /rooms
- * („Unterwegs"); jetzt eine Seite wie jeder Raum, damit „Zurück", ein
- * geteilter Link und ein Neuladen dort landen, wo man war.
- */
-export default function TransitPage() {
+export default async function TransitPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ tenant: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const { tenant } = await params;
+  const query = await searchParams;
+  const from = Array.isArray(query.from) ? query.from[0] : query.from;
   return (
-    <BinaryModeGuard title="Unterwegs" info={TRANSIT_BINARY_MODE_INFO}>
-      <Suspense fallback={<TransitLoading />}>
-        <TransitPageContent />
-      </Suspense>
-    </BinaryModeGuard>
-  );
-}
-
-function TransitPageContent() {
-  const [totalCount, setTotalCount] = useState<number | null>(null);
-  const searchParams = useSearchParams();
-  const referrer = resolveDetailReferrer(searchParams.get("from"), "/rooms", [
-    "/rooms",
-    CHILD_OVERVIEW_PATH,
-  ]);
-  const backLabel = referrer.startsWith(CHILD_OVERVIEW_PATH)
-    ? "Zurück zur Kinderübersicht"
-    : "Zurück zu den Räumen";
-  const transitDayStatus = referrer.startsWith(CHILD_OVERVIEW_PATH)
-    ? transitDayStatusFromReferrer(referrer)
-    : undefined;
-  const transitReferrer = `${TRANSIT_PATH}?from=${encodeURIComponent(referrer)}`;
-
-  return (
-    <TenantPage
-      title="Unterwegs"
-      info={TRANSIT_INFO}
-      stats={
-        totalCount === null
-          ? undefined
-          : `${totalCount} ${totalCount === 1 ? "Kind" : "Kinder"}`
-      }
-      statsLoading={totalCount === null}
-      back
-      backHref={referrer}
-      backLabel={backLabel}
-      leading={<MotoConceptIcon concept={transitConcept} size={40} />}
+    <TenantRouteSeed
+      slug={tenant}
+      load={({ token, session, tenant: school }) => {
+        if (school.presenceMode === "binary" || !canReadStudents(session))
+          return [];
+        const referrer = transitReferrer(from ?? null);
+        const dayStatus = referrer.startsWith(CHILD_OVERVIEW_PATH)
+          ? transitDayStatusFromReferrer(referrer)
+          : undefined;
+        return [
+          {
+            key: roomKeys.transitStudents(dayStatus),
+            render: true,
+            value: seedRead("transit students", async (signal) => {
+              const read = await contractGet(
+                contract.routes["GET /api/students/"],
+                {
+                  token,
+                  signal,
+                  query: {
+                    location_state: "transit",
+                    day_status: dayStatus,
+                    page_size: 200,
+                    view: "slim",
+                  },
+                },
+              );
+              if (!read.ok) throw read.error.cause;
+              return {
+                students: read.value.data.map((row) =>
+                  mapStudentListRow(row, "slim"),
+                ),
+                pagination: read.value.pagination,
+              };
+            }),
+          },
+        ];
+      }}
     >
-      <TransitStudentsSection
-        dayStatus={transitDayStatus}
-        fromReferrer={transitReferrer}
-        onTotalCountChange={setTotalCount}
-      />
-    </TenantPage>
+      <PageContent />
+    </TenantRouteSeed>
   );
 }

@@ -14,3 +14,6 @@ export interface NavigationProgressStore {
 
 export const NavigationProgressContext =
   createContext<NavigationProgressStore | null>(null);
+
+/** PortalShell manages document scroll without Next's duplicate layout pass. */
+export const PortalScrollContext = createContext(false);

@@ -64,7 +64,7 @@ type careFixture struct {
 }
 
 func newCareScheduleRequestService(
-	requestRepo owners.RequestRecords,
+	requestRepo careplan.Capability,
 	people owners.RequestPeople,
 	arrival careplan.ArrivalScheduleService,
 	pickup careplan.PickupScheduleService,
@@ -76,7 +76,7 @@ func newCareScheduleRequestService(
 	logger *slog.Logger,
 ) carerequests.Service {
 	return owners.NewCareScheduleRequestServiceWithPickupChangesAndPolicy(nil,
-		requestRepo, people, arrival, pickup, nil, excusal, nil,
+		owners.CarePlanRequestRecords(requestRepo), people, arrival, pickup, nil, excusal, nil,
 		caller, emitter, broadcaster,
 		testpkg.RequestReviewPolicy[*peopleValues.StudentState]{UserContext: caller}, testpkg.PermissionsFromContext, nil, logger,
 		services.StudentAudit,
@@ -120,7 +120,7 @@ func newCareFixtureWithEmitter(t *testing.T, emitter eventContract.Emitter, opti
 
 	autoExcusal := newPickupExcusal(t, db, repos.CarePlan(), newPickupBaselineService(repos.CarePlan(), approvedOfferingProjection(t)), timetableOwner, false)
 	svc := owners.NewCareScheduleRequestServiceWithPickupChangesAndPolicy(nil,
-		repos.CarePlan(),
+		owners.CarePlanRequestRecords(repos.CarePlan()),
 		persons,
 		schedules.Arrivals,
 		schedules.Pickups,

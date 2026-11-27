@@ -47,24 +47,24 @@ func letterMailOf(mail parentbilling.BillingLetterMail) (string, string) {
 	correction := mail.DocumentKind == parentbilling.DocumentCancellation || mail.DocumentKind == parentbilling.MailDocumentCareCancellation
 	switch {
 	case mail.LetterKind == parentbilling.DocumentKindFeeNotice && correction:
-		return "Aufhebung deines Gebührenbescheids", noticeCorrectionMailTemplate
+		return "Aufhebung Ihres Gebührenbescheids", noticeCorrectionMailTemplate
 	case mail.LetterKind == parentbilling.DocumentKindFeeNotice && mail.DocumentKind == parentbilling.DocumentCredit:
-		return "Änderung deines Gebührenbescheids", noticeCorrectionMailTemplate
+		return "Änderung Ihres Gebührenbescheids", noticeCorrectionMailTemplate
 	case mail.LetterKind == parentbilling.DocumentKindFeeNotice:
-		return "Dein Gebührenbescheid", noticeLetterMailTemplate
+		return "Ihr Gebührenbescheid", noticeLetterMailTemplate
 	}
 	switch mail.DocumentKind {
 	case parentbilling.DocumentCancellation:
-		return "Storno deiner Rechnung", correctionMailTemplate
+		return "Storno Ihrer Rechnung", correctionMailTemplate
 	case parentbilling.DocumentCredit:
-		return "Gutschrift zu deiner Rechnung", correctionMailTemplate
+		return "Gutschrift zu Ihrer Rechnung", correctionMailTemplate
 	case parentbilling.MailDocumentCareInvoice:
-		return "Deine Rechnung", careLetterMailTemplate
+		return "Ihre Rechnung", careLetterMailTemplate
 	case parentbilling.MailDocumentCareCancellation:
-		return "Storno deiner Rechnung", correctionMailTemplate
+		return "Storno Ihrer Rechnung", correctionMailTemplate
 	}
 	if mail.LetterKind == parentbilling.DocumentKindInvoice {
-		return "Deine Rechnung", invoiceLetterMailTemplate
+		return "Ihre Rechnung", invoiceLetterMailTemplate
 	}
 	return "Bestätigung und Rechnung", letterMailTemplate
 }
@@ -74,9 +74,9 @@ func letterMailOf(mail parentbilling.BillingLetterMail) (string, string) {
 func careNoticeMailOf(documentKind string) (string, string, bool) {
 	switch documentKind {
 	case parentbilling.MailDocumentCareFeeNotice:
-		return "Dein Gebührenbescheid", noticeLetterMailTemplate, true
+		return "Ihr Gebührenbescheid", noticeLetterMailTemplate, true
 	case parentbilling.MailDocumentCareChangeNotice:
-		return "Änderungsbescheid zu deinem Gebührenbescheid", careChangeNoticeMailTemplate, true
+		return "Änderungsbescheid zu Ihrem Gebührenbescheid", careChangeNoticeMailTemplate, true
 	}
 	return "", "", false
 }

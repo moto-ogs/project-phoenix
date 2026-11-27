@@ -15,6 +15,9 @@ export const enrollmentKeys = {
   /** The care offerings of one phase (`listCareOfferings`). */
   careOfferings: (phaseId: string) =>
     `care-offerings-${encodeURIComponent(phaseId)}`,
+  /** Name/status/capacity for the phase detail, without editor metadata. */
+  phaseOccupancyOfferings: (phaseId: string) =>
+    `care-offerings-occupancy-${encodeURIComponent(phaseId)}`,
   /** Prefix of every phase's booking stats. */
   bookingStatsFamily: "care-offering-booking-stats-",
   /** Booking stats per offering of one phase (`fetchCareOfferingBookingStats`). */
@@ -93,12 +96,12 @@ export const enrollmentKeys = {
    * The Betreuungsplan reads the same key, so both share one cached answer.
    */
   timetableTemplates: () => "timetable-connect-templates",
+  /** Period-free names and slots for linking a care offering to a template. */
+  offeringTemplates: () => "timetable-connect-offering-templates",
   /**
-   * The care offerings of the listed phases in one list, for counts across
-   * phases. Inside the care offering family, so its invalidation reaches it.
+   * Offering counts by phase, in the same invalidation family as the catalog.
    */
-  allPhasesCareOfferings: (phaseIds: readonly string[]) =>
-    `care-offerings-of-phases-${phaseIds.map(encodeURIComponent).join(",")}`,
+  careOfferingCounts: () => "care-offerings-counts-by-phase",
   adminRequestsFamily: "enrollment-requests-",
   /** The enrollment requests of the school, or of one phase (`listAdminRequests`). */
   adminRequests: (phaseId?: string) =>

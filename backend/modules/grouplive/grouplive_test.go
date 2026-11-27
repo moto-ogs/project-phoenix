@@ -77,6 +77,10 @@ func (f *fakes) SupervisedGroups(ctx context.Context) ([]GroupRecord, error) {
 	return f.supervisedGroups(ctx)
 }
 
+func (f *fakes) SupervisedGroupsWithRooms(ctx context.Context) ([]GroupRecord, error) {
+	return f.SupervisedGroups(ctx)
+}
+
 // SupervisedGroupIDs serves the IDs of the supervised groups fixture, the
 // same groups the identity chain names.
 func (f *fakes) SupervisedGroupIDs(ctx context.Context) (map[int64]bool, error) {
@@ -453,8 +457,8 @@ func TestGetProjectsRosterUnderFullAccess(t *testing.T) {
 		members: func(_ context.Context, groupID int64) ([]RosterStudent, error) {
 			assert.Equal(t, appleGroupID, groupID)
 			return []RosterStudent{
-				{ID: 11, FirstName: "Ada", LastName: "Lovelace", SchoolClass: "2a", Sick: true, SickSince: &since, PhotoURL: "/api/students/11/photo/ada.jpg"},
-				{ID: 12, FirstName: "Bob", LastName: "Builder", SchoolClass: "2b", PhotoURL: "https://example.test/bob.jpg"},
+				{ID: 11, FirstName: "Ada", LastName: "Lovelace", SchoolClass: "2a", Sick: true, SickSince: &since, PhotoVersion: "ada.jpg"},
+				{ID: 12, FirstName: "Bob", LastName: "Builder", SchoolClass: "2b"},
 				{ID: 13, FirstName: "Cy", LastName: "Absent", SchoolClass: "2b"},
 			}, nil
 		},
@@ -532,7 +536,7 @@ func TestGetProjectsRosterUnderFullAccess(t *testing.T) {
 	assert.Equal(t, new("#A3D977"), ada.RoomColor)
 	assert.True(t, ada.Sick)
 	assert.Equal(t, &since, ada.SickSince)
-	assert.Equal(t, "/api/students/11/photo/ada.jpg", ada.PhotoURL)
+	assert.Equal(t, "ada.jpg", ada.PhotoVersion)
 	assert.Equal(t, "not_coming_today", ada.DayPlanningStatus)
 	assert.Equal(t, DayReasonSick, ada.DayPlanningReason)
 	assert.Equal(t, "krank gemeldet", ada.DayPlanningLabel)
@@ -541,7 +545,7 @@ func TestGetProjectsRosterUnderFullAccess(t *testing.T) {
 	assert.Nil(t, ada.PendingExcusedNote)
 
 	bob := got.Students[1]
-	assert.Equal(t, "https://example.test/bob.jpg", bob.PhotoURL, "non-upload URLs pass through untouched")
+	assert.Empty(t, bob.PhotoVersion, "a student without a stored photo has no version")
 	assert.True(t, bob.Excused, "the excused status day applies to a child who is not sick")
 	assert.Equal(t, &since, bob.ExcusedSince)
 	assert.Equal(t, "comes_today", bob.DayPlanningStatus)
@@ -630,7 +634,9 @@ func TestGetShowsSchoolBeforeTheFirstCheckIn(t *testing.T) {
 	assert.Equal(t, AtSchoolInputs{
 		Decision:   DayDecision{ComesToday: true, Reason: DayReasonArrivalSchedule},
 		PickupTime: &pickupAt,
-		CareDayEnd: "17:00",
+		// The pickup time ends this child's day, so the care day end is not
+		// read for it (#8157).
+		CareDayEnd: "",
 		Now:        fakeNow,
 	}, seen[0])
 	assert.True(t, seen[1].CheckedIn)
@@ -640,14 +646,60 @@ func TestGetShowsSchoolBeforeTheFirstCheckIn(t *testing.T) {
 func TestGetFailsWhenTheCareDayEndCannotBeResolved(t *testing.T) {
 	t.Parallel()
 
+	// The care day end is read once a child depends on it (#8157): here a
+	// child still "Im Unterricht".
 	f := &fakes{
 		caller:           fullCaller,
 		supervisedGroups: func(context.Context) ([]GroupRecord, error) { return twoGroups(), nil },
-		careDayEnd:       func(context.Context) (string, error) { return "", errors.New("settings down") },
+		members: func(context.Context, int64) ([]RosterStudent, error) {
+			return []RosterStudent{{ID: 7}}, nil
+		},
+		snapshot: func(context.Context, []int64, Date) (PresenceSnapshot, error) {
+			return presenceFake{
+				locations:   map[int64]Location{7: {Name: inClassLocation}},
+				attendances: map[int64]Attendance{7: {CheckInTime: &fakeNow, CheckOutTime: &fakeNow, InClass: true}},
+			}, nil
+		},
+		careDayEnd: func(context.Context) (string, error) { return "", errors.New("settings down") },
 	}
 
 	_, err := newService(f).LiveGroup(context.Background(), 1)
 	require.ErrorContains(t, err, "resolve care day end")
+	_, _, err = newService(f).CountAtSchoolToday(context.Background(), []int64{7})
+	require.ErrorContains(t, err, "resolve care day end")
+}
+
+// A roster whose children do not depend on the care day end never reads it:
+// on a day with changed opening hours the read costs a statement (#8157).
+func TestCareDayEndIsReadOnlyWhenAChildDependsOnIt(t *testing.T) {
+	t.Parallel()
+
+	reads := 0
+	f := &fakes{
+		caller:           fullCaller,
+		supervisedGroups: func(context.Context) ([]GroupRecord, error) { return twoGroups(), nil },
+		members: func(context.Context, int64) ([]RosterStudent, error) {
+			return []RosterStudent{{ID: 7}, {ID: 8}}, nil
+		},
+		snapshot: func(context.Context, []int64, Date) (PresenceSnapshot, error) {
+			return presenceFake{locations: map[int64]Location{7: {Name: absentLocation}, 8: {Name: absentLocation}}}, nil
+		},
+		decide:     func(DayInputs) DayDecision { return DayDecision{} },
+		careDayEnd: func(context.Context) (string, error) { reads++; return "12:00", nil },
+	}
+	_, err := newService(f).LiveGroup(context.Background(), 1)
+	require.NoError(t, err)
+	_, _, err = newService(f).CountAtSchoolToday(context.Background(), []int64{7, 8})
+	require.NoError(t, err)
+	assert.Zero(t, reads, "no child is expected today or in class")
+
+	f.decide = func(DayInputs) DayDecision { return DayDecision{ComesToday: true, Reason: DayReasonPickupSchedule} }
+	var ends []string
+	f.atSchool = func(inputs AtSchoolInputs) bool { ends = append(ends, inputs.CareDayEnd); return false }
+	_, err = newService(f).LiveGroup(context.Background(), 1)
+	require.NoError(t, err)
+	assert.Equal(t, 1, reads, "two expected children share one read")
+	assert.Equal(t, []string{"12:00", "12:00"}, ends, "the rule decides with the care day end of today")
 }
 
 func TestGetPassesPresenceAndPlansIntoTheDayDecision(t *testing.T) {
@@ -736,7 +788,7 @@ func TestGetRedactsRestrictedCallersButKeepsTheReviewersNote(t *testing.T) {
 		},
 		supervisedGroups: func(context.Context) ([]GroupRecord, error) { return twoGroups(), nil },
 		members: func(context.Context, int64) ([]RosterStudent, error) {
-			return []RosterStudent{{ID: 11, FirstName: "Ada", PhotoURL: "/api/students/11/photo/ada.jpg"}}, nil
+			return []RosterStudent{{ID: 11, FirstName: "Ada", PhotoVersion: "ada.jpg"}}, nil
 		},
 		snapshot: func(context.Context, []int64, Date) (PresenceSnapshot, error) {
 			return presenceFake{
@@ -765,7 +817,7 @@ func TestGetRedactsRestrictedCallersButKeepsTheReviewersNote(t *testing.T) {
 	student := got.Students[0]
 	assert.Equal(t, "Anwesend", student.Location)
 	assert.Nil(t, student.LocationSince)
-	assert.Empty(t, student.PhotoURL)
+	assert.Empty(t, student.PhotoVersion)
 	assert.Empty(t, student.DayPlanningStatus, "day plans stay gated on full access")
 	assert.Nil(t, student.ArrivalTime)
 	assert.Nil(t, student.ActualArrivalTime)
@@ -920,31 +972,10 @@ func TestGetSkipsStatusDaysAndTrackingForAnEmptyRoster(t *testing.T) {
 	assert.Equal(t, map[string]RoomStatus{}, got.RoomStatus)
 }
 
-func TestListGroupsToleratesMissingRoomNames(t *testing.T) {
-	t.Parallel()
-
-	f := &fakes{
-		caller:           fullCaller,
-		supervisedGroups: func(context.Context) ([]GroupRecord, error) { return twoGroups(), nil },
-		roomNames: func(context.Context, []int64) (map[int64]string, error) {
-			return nil, errors.New("rooms unavailable")
-		},
-	}
-
-	got, err := newService(f).ListGroups(context.Background())
-	require.NoError(t, err, "the group list degrades to nameless rooms instead of failing")
-	assert.Equal(t, 0, f.accessCalls, "the group list never resolves student access")
-	assert.Equal(t, []NavigationGroup{{ID: 1, Name: "Äpfel", RoomID: new(ident.ID(31)), IsPersonal: true}, {ID: 2, Name: "Zebra", IsPersonal: true}}, got)
-
-	empty, err := newService(&fakes{caller: fullCaller}).ListGroups(context.Background())
-	require.NoError(t, err)
-	assert.Nil(t, empty)
-}
-
-// TestListGroupsNamesTheGroupLeadership pins the selection page's leadership
+// TestNavigationContextNamesTheGroupLeadership pins the selection page's leadership
 // line (#4351): every listed group carries the names of its assigned
 // Gruppenleitung from one bulk lookup, and a group without one carries none.
-func TestListGroupsNamesTheGroupLeadership(t *testing.T) {
+func TestNavigationContextNamesTheGroupLeadership(t *testing.T) {
 	t.Parallel()
 
 	f := &fakes{
@@ -958,35 +989,17 @@ func TestListGroupsNamesTheGroupLeadership(t *testing.T) {
 	got, err := New(Dependencies{
 		Access: f, Groups: f, Roster: f, Presence: f, Planning: f, Transfers: f,
 		Settings: f, Calendar: f, Collate: strings.Compare,
-	}).ListGroups(context.Background())
+	}).NavigationContext(context.Background())
 	require.NoError(t, err)
-	require.Len(t, got, 2)
+	require.Len(t, got.Groups, 2)
 	assert.Equal(t, [][]int64{{2, 1}}, f.leaderCalls, "one bulk lookup for every listed group")
 	// strings.Compare puts "Zebra" (2) ahead of "Äpfel" (1).
-	assert.Nil(t, got[0].Leaders, "a group without Gruppenleitung names nobody")
-	assert.Equal(t, []string{"Anna Berg", "Carla Dorn"}, got[1].Leaders, "names follow the collation")
+	assert.Nil(t, got.Groups[0].Leaders, "a group without Gruppenleitung names nobody")
+	assert.Equal(t, []string{"Anna Berg", "Carla Dorn"}, got.Groups[1].Leaders, "names follow the collation")
 
-	raw, err := json.Marshal(got[0])
+	raw, err := json.Marshal(got.Groups[0])
 	require.NoError(t, err)
 	assert.NotContains(t, string(raw), "leaders", "an empty leadership stays off the wire")
-}
-
-func TestListGroupsToleratesMissingLeadership(t *testing.T) {
-	t.Parallel()
-
-	f := &fakes{
-		caller:           fullCaller,
-		supervisedGroups: func(context.Context) ([]GroupRecord, error) { return twoGroups(), nil },
-		leaderNames: func(context.Context, []int64) (map[int64][]string, error) {
-			return nil, errors.New("teachers unavailable")
-		},
-	}
-
-	got, err := newService(f).ListGroups(context.Background())
-	require.NoError(t, err, "the navigation degrades to groups without leadership instead of failing")
-	require.Len(t, got, 2)
-	assert.Nil(t, got[0].Leaders)
-	assert.Nil(t, got[1].Leaders)
 }
 
 func TestLiveGroupDoesNotLoadTheLeadership(t *testing.T) {
@@ -1002,10 +1015,10 @@ func TestLiveGroupDoesNotLoadTheLeadership(t *testing.T) {
 	assert.Empty(t, f.leaderCalls, "the live view keeps its query budget; only the navigation names the leadership")
 }
 
-// TestListGroupsSortsWithTheInjectedCollation pins that the projection, not
+// TestNavigationContextSortsWithTheInjectedCollation pins that the projection, not
 // the directory, orders the visible groups: bytewise comparison puts "Zebra"
 // ahead of "Äpfel", so the directory order cannot pass for the sorted one.
-func TestListGroupsSortsWithTheInjectedCollation(t *testing.T) {
+func TestNavigationContextSortsWithTheInjectedCollation(t *testing.T) {
 	t.Parallel()
 
 	names := func(groups []NavigationGroup) []string {
@@ -1023,9 +1036,9 @@ func TestListGroupsSortsWithTheInjectedCollation(t *testing.T) {
 	}
 
 	supervised := &fakes{caller: fullCaller, supervisedGroups: func(context.Context) ([]GroupRecord, error) { return twoGroups(), nil }}
-	got, err := withCollation(supervised).ListGroups(context.Background())
+	got, err := withCollation(supervised).NavigationContext(context.Background())
 	require.NoError(t, err)
-	assert.Equal(t, []string{"Zebra", "Äpfel"}, names(got), "the supervised groups follow the collation")
+	assert.Equal(t, []string{"Zebra", "Äpfel"}, names(got.Groups), "the supervised groups follow the collation")
 
 	overview := &fakes{
 		caller: func(context.Context) (Caller, error) {
@@ -1035,9 +1048,9 @@ func TestListGroupsSortsWithTheInjectedCollation(t *testing.T) {
 			return append(twoGroups(), GroupRecord{ID: 3, Name: "Mitte"}), nil
 		},
 	}
-	got, err = withCollation(overview).ListGroups(context.Background())
+	got, err = withCollation(overview).NavigationContext(context.Background())
 	require.NoError(t, err)
-	assert.Equal(t, []string{"Mitte", "Zebra", "Äpfel"}, names(got), "the tenant groups follow the collation")
+	assert.Equal(t, []string{"Mitte", "Zebra", "Äpfel"}, names(got.Groups), "the tenant groups follow the collation")
 }
 
 func TestNewRejectsIncompleteWiring(t *testing.T) {
@@ -1046,14 +1059,10 @@ func TestNewRejectsIncompleteWiring(t *testing.T) {
 	f := &fakes{}
 	_, err := New(Dependencies{}).LiveGroup(context.Background(), 0)
 	assert.EqualError(t, err, "OGS group live service is not fully configured")
-	_, err = New(Dependencies{}).ListGroups(context.Background())
+	_, err = New(Dependencies{}).NavigationContext(context.Background())
 	assert.EqualError(t, err, "OGS group live service is not fully configured")
 	_, err = New(Dependencies{Access: f, Groups: f}).LiveGroup(context.Background(), 0)
 	assert.EqualError(t, err, "OGS group live service is not fully configured", "group wiring alone cannot build the projection")
-
-	got, ok := New(Dependencies{}).(*service)
-	require.True(t, ok)
-	assert.NotNil(t, got.deps.Logger)
 }
 
 func TestProjectionSerializesAllIDsAsStrings(t *testing.T) {
@@ -1133,7 +1142,7 @@ func TestProjectionWireGolden(t *testing.T) {
 			LocationSince: &since, RoomColor: new("#A3D977"), Excused: true, ExcusedSince: &since,
 			DayPlanningStatus: "comes_today", DayPlanningReason: "arrival_exception", DayPlanningLabel: "geplante Ankunft heute",
 			PendingExcusedNote: new("Zahnarzt"), ArrivalTime: new("07:45"), ArrivalIsException: true, ArrivalNotes: "später",
-			ActualArrivalTime: new("08:10"), PhotoURL: "/api/students/11/photo/ada.jpg",
+			ActualArrivalTime: new("08:10"), PhotoVersion: "ada.jpg",
 		}, {ID: 12, FirstName: "Bob", LastName: "Builder", SchoolClass: "2b", Location: "Abwesend"}},
 		RoomStatus:         map[string]RoomStatus{"11": {InGroupRoom: true, CurrentRoomID: new(ident.ID(31))}, "12": {}},
 		PickupTimes:        []PickupTime{{StudentID: 11, Date: string(today), WeekdayName: "Freitag", PickupTime: new("15:30"), IsException: true, Notes: "Oma", DayNotes: []DayNote{{ID: 7, Content: "Klingeln"}}}},
@@ -1151,7 +1160,7 @@ func TestProjectionWireGolden(t *testing.T) {
 		`"excused_since":"2026-08-21T06:30:00Z","class_trip":false,"day_planning_status":"comes_today",` +
 		`"day_planning_reason":"arrival_exception","day_planning_label":"geplante Ankunft heute","pending_excused_note":"Zahnarzt",` +
 		`"arrival_time":"07:45","arrival_is_exception":true,"arrival_notes":"später","actual_arrival_time":"08:10",` +
-		`"photo_url":"/api/students/11/photo/ada.jpg"},` +
+		`"photo_version":"ada.jpg"},` +
 		`{"id":"12","first_name":"Bob","last_name":"Builder","school_class":"2b","current_location":"Abwesend","sick":false,"excused":false,"class_trip":false}],` +
 		`"room_status":{"11":{"in_group_room":true,"current_room_id":"31"},"12":{"in_group_room":false}},` +
 		`"pickup_times":[{"student_id":"11","date":"2026-08-21","weekday_name":"Freitag","pickup_time":"15:30","is_exception":true,"notes":"Oma","day_notes":[{"id":"7","content":"Klingeln"}]}],` +

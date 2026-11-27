@@ -106,6 +106,9 @@ func newEnrollmentFixture(t *testing.T, name string) enrollmentFixture {
 	c.link(t)
 	school := &enrolledSchool{school: carecontract.School{ID: c.school, Name: "OGS Am Lindenhof"}}
 	c.conclusions.intake.schools, c.conclusions.intake.applications, c.conclusions.intake.bookings = school, school, school
+	// The parents asked for every change of the bookings themselves (#4816).
+	c.conclusions.intake.requests = askedByParents{bookings: school,
+		account: contractPartyAt(t, context.Background(), c.org, c.imported, "")}
 	return enrollmentFixture{coverFixture: c, school: school,
 		enrollments: NewContractEnrollments(c.store, EnrollmentPorts{Applications: school, Bookings: school}, func() calendar.Date { return coverToday })}
 }

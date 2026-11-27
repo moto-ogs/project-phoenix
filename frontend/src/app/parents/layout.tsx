@@ -1,11 +1,20 @@
 import type { Metadata, Viewport } from "next";
-import { NextIntlClientProvider } from "next-intl";
+import { messageBoundary } from "~/i18n/scoped-messages";
 import { ParentProviders } from "./providers";
 import { ParentAuthGuard } from "./auth-guard";
 import { getLocale } from "next-intl/server";
 import { getParentAppMetadata } from "~/i18n/parent-app-metadata";
 import type { AppLocale } from "~/i18n/locales";
-import { readPortalSessionSnapshot } from "~/lib/portal-session-snapshot.server";
+import {
+  readPortalSessionSnapshot,
+  readRenderedSessionMark,
+} from "~/lib/portal-session-snapshot.server";
+import { ParentServerSeed } from "~/components/parent/parent-server-seed";
+import {
+  isProtectedParentPath,
+  parentSeedProps,
+  parentRequestPath,
+} from "~/lib/parent-seed.server";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -17,6 +26,21 @@ export const viewport: Viewport = {
   // Schreibfeld rutscht unter die Tastatur (#3664).
   interactiveWidget: "resizes-visual",
 };
+
+const ParentShellMessages = messageBoundary(
+  "language",
+  "analyticsConsent",
+  "parentNav",
+  "parentFirstSteps",
+  "parentNotificationFeed",
+  "parentNotificationSetup",
+  "pushNotifications",
+  "parentCrash",
+  // The session boundary's lock and reload texts (#8082).
+  "sessionTree",
+  "errorCatalog.actions.crash",
+  "errorCatalog.actions.retry",
+);
 
 /**
  * Erlaubt iOS, die Eltern-App ausserhalb des Browser-Rahmens zu starten.
@@ -55,27 +79,38 @@ export async function generateMetadata(): Promise<Metadata> {
  * (#4990), so the guard renders the page without first fetching the session.
  * Never call parentPortal.auth() here: its refresh callback could rotate the token
  * in a Server Component that cannot persist the new cookie (#1938).
- *
- * The whole parents subtree is localized, so it carries the full
- * NextIntlClientProvider. Rendered in a Server Component, it auto-inherits the
- * resolved locale + message catalog from request.ts (the proxy flags the
- * parents subdomain as localized). This is the only place — together with the
- * public enrollment layout — that ships the parent message catalog to the
- * client; the German-only staff/operator portals never mount it.
  */
 export default async function ParentLayout({
   children,
 }: {
   readonly children: React.ReactNode;
 }) {
-  const snapshot = await readPortalSessionSnapshot("parent");
+  const [snapshot, path] = await Promise.all([
+    readPortalSessionSnapshot("parent"),
+    parentRequestPath(),
+  ]);
+  const guarded = (
+    <ParentAuthGuard notBooked={snapshot?.notBooked ?? false}>
+      {children}
+    </ParentAuthGuard>
+  );
   return (
-    <NextIntlClientProvider>
-      <ParentProviders session={snapshot?.session ?? null}>
-        <ParentAuthGuard notBooked={snapshot?.notBooked ?? false}>
-          {children}
-        </ParentAuthGuard>
+    <ParentShellMessages>
+      <ParentProviders
+        session={snapshot?.session ?? null}
+        sessionMark={await readRenderedSessionMark("parent")}
+      >
+        {/* The shell's family cards (#8077), started now and
+            not awaited. A public page, also with a parent cookie, gets no
+            personal seed and no extra read. */}
+        {snapshot && !snapshot.notBooked && isProtectedParentPath(path) ? (
+          <ParentServerSeed {...parentSeedProps(false)}>
+            {guarded}
+          </ParentServerSeed>
+        ) : (
+          guarded
+        )}
       </ParentProviders>
-    </NextIntlClientProvider>
+    </ParentShellMessages>
   );
 }

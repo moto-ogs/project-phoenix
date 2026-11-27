@@ -41,6 +41,7 @@ import type {
   EndTemplateBody,
   EndTemplateResult,
   EnrichedInstance,
+  InstanceStudentSummary,
   GapsResponse,
   DeviationHistoryResponse,
   GuardianNoticeInput,
@@ -79,6 +80,7 @@ import {
   mapMoveStaff,
   mapStaffPool,
   mapInstance,
+  mapInstanceStudent,
   mapGuardianNoticeReach,
   mapInstanceStatusResult,
   mapMaterializeResult,
@@ -90,6 +92,7 @@ import {
   mapCombinedOfferingCounts,
   mapOfferingSourceOptions,
   mapTemplates,
+  mapOfferingTemplates,
   mapWeeklyInstances,
 } from "./timetable-helpers";
 import {
@@ -251,6 +254,12 @@ class TimetableService {
       },
     );
     return mapCombinedOfferingCounts(raw);
+  }
+
+  async getOfferingTemplates() {
+    return mapOfferingTemplates(
+      await bffJson("tenant", "GET /api/timetable/templates"),
+    );
   }
 
   async getTemplates(periodId?: string | null): Promise<TemplatesResponse> {
@@ -929,6 +938,19 @@ class TimetableService {
       { params: { id: instanceId } },
     );
     return mapStaffPool(raw);
+  }
+
+  async getInstanceAttendance(
+    instanceId: string,
+  ): Promise<InstanceStudentSummary[]> {
+    const data = await bffJson(
+      "tenant",
+      "GET /api/timetable/instances/{id}/attendance",
+      {
+        params: { id: instanceId },
+      },
+    );
+    return (data.students ?? []).map(mapInstanceStudent);
   }
 
   /**

@@ -8,6 +8,7 @@ import {
   mapAttendanceHistoryResponse,
   type AttendanceHistory,
 } from "./attendance-history-helpers";
+import { studentPhotoHref } from "~/lib/student-photo-href";
 import { bffJson } from "./bff-fetch";
 import type {
   EnrollmentAnswerFilterResponse,
@@ -46,7 +47,7 @@ import {
 import {
   CompanionPlanConflictError,
   isCompanionPlanConflictResponse,
-  PRIVACY_CONSENT_SAVED_DETAIL,
+  markPrivacyConsentSaved,
 } from "./student-update-errors";
 import {
   mapStudentDetailResponse,
@@ -134,7 +135,9 @@ const MULTI_VALUE_KEYS = {
   gradeLevel: "grade_level",
 } as const;
 
-function studentQuery(filters: StudentFilters = {}): Record<string, string> {
+export function studentQuery(
+  filters: StudentFilters = {},
+): Record<string, string> {
   const query: Record<string, string> = {};
   for (const [key, param] of Object.entries(QUERY_KEYS)) {
     const value = filters[key as keyof typeof QUERY_KEYS];
@@ -243,17 +246,6 @@ export async function createStudent(body: StudentCreateBody): Promise<Student> {
 }
 
 /**
- * Marks a refused student write whose consent write had landed already, so
- * the form says which half was saved (isPrivacyConsentSaved). Status, code,
- * field errors and the companion conflict list stay as the backend sent them.
- */
-function markPrivacyConsentSaved(error: unknown): unknown {
-  if (!(error instanceof ApiError)) return error;
-  error.details = { ...error.details, [PRIVACY_CONSENT_SAVED_DETAIL]: true };
-  return error;
-}
-
-/**
  * The registration questions the child list can filter by (#6954), read
  * through the portal's catalog proxy since #7563. `date` is the list's
  * planning day (YYYY-MM-DD); omit it for today. The answers name the children
@@ -282,7 +274,7 @@ export async function fetchCareOfferingOptions(): Promise<
 }
 
 /** A filter question of the contract, without the type the list needs not. */
-function mapEnrollmentAnswerFilter(
+export function mapEnrollmentAnswerFilter(
   filter: EnrollmentAnswerFilterResponse,
 ): EnrollmentAnswerFilter {
   return {
@@ -627,7 +619,7 @@ export async function deleteStudentWithData(
  *
  * The backend requires `operations.student_photos_enabled` and either a stored
  * photo consent or `consentAcknowledged`, which stamps the consent together
- * with the photo. The returned URL is opaque.
+ * with the photo. The browser builds the registered file address.
  */
 export async function uploadStudentPhoto(
   studentId: string,
@@ -650,7 +642,7 @@ export async function uploadStudentPhoto(
     params: { id: studentId },
     body: formData,
   });
-  return { photoUrl: data.photo_url };
+  return { photoUrl: studentPhotoHref(data.student_id, data.photo_version) };
 }
 
 /** Removes a child's photo (idempotent). */

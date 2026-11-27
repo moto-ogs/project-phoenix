@@ -84,12 +84,24 @@ export interface DepartureException {
   reason?: string;
 }
 
+/** Wer das Kind an einem einzelnen Tag abholt (#7655). */
+export interface DayPickupPersonEntry {
+  exceptionDate: string; // YYYY-MM-DD
+  name: string;
+  /** Gesetzt bei einer dauerhaft abholberechtigten Person. */
+  guardianProfileId?: string;
+  /** Ohne dauerhafte Berechtigung: nur der Name, Ausweis prüfen. */
+  oneTime: boolean;
+}
+
 export interface PickupData {
   schedules: PickupSchedule[];
   effectiveSchedules?: DatedPickupSchedule[];
   exceptions: PickupException[];
   notes: PickupNote[];
   departureExceptions?: DepartureException[];
+  /** Die Abholperson einzelner Tage (#7655). */
+  pickupPersons?: DayPickupPersonEntry[];
   /**
    * The token of the child's whole weekly plan (arrival, pickup, weekday
    * notes). A save of the weekly plan sends it back (ADR 0311).
@@ -219,6 +231,12 @@ export function mapPickupDataResponse(data: PickupDataResponse): PickupData {
         return mapped ? [mapped] : [];
       },
     ),
+    pickupPersons: (data.pickup_persons ?? []).map((person) => ({
+      exceptionDate: person.exception_date,
+      name: person.name,
+      guardianProfileId: person.guardian_profile_id,
+      oneTime: person.one_time,
+    })),
     weeklyPlanVersion: data.weekly_plan_version ?? "",
   };
 }
@@ -378,6 +396,20 @@ export interface DayData {
   weekdayNote?: PickupNote;
   /** Die Abholart, die die OGS nur für diesen Tag gesetzt hat (#3945). */
   departureException?: DepartureException;
+  /** Wer das Kind an diesem Tag abholt (#7655). */
+  pickupPerson?: DayPickupPersonEntry;
+}
+
+/** Fügt dem Tag seine Abholperson hinzu (#7655). */
+export function withPickupPerson(
+  day: DayData,
+  persons: readonly DayPickupPersonEntry[] | undefined,
+  dateISO: string,
+): DayData {
+  const pickupPerson = persons?.find(
+    (entry) => entry.exceptionDate === dateISO,
+  );
+  return pickupPerson ? { ...day, pickupPerson } : day;
 }
 
 /**

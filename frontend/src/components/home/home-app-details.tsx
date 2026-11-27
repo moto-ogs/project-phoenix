@@ -6,7 +6,6 @@ import { isDone, withKeys } from "~/components/home/day-changes-block";
 import {
   childChangeText,
   childSummaryTitle,
-  dayChangeHref,
   dayChangeLinkHref,
   dayChangeSpan,
   dayChangeText,
@@ -34,7 +33,8 @@ import type {
   DayChangesOverview,
 } from "~/lib/day-changes";
 import { useCurrentTimestamp } from "~/lib/hooks/use-current-timestamp";
-import { useDayPlanHref } from "~/lib/hooks/use-day-plan-href";
+import { useDayPlanLink } from "~/lib/hooks/use-day-plan-href";
+import { useDayChangeHref } from "~/components/home/day-change-link";
 import type { HomeGroupSnapshot } from "~/lib/hooks/use-home-group";
 import type { PlannedTimetableInstance } from "~/lib/timetable-operations-types";
 import { useDeviceContext } from "~/lib/device-context";
@@ -210,7 +210,7 @@ function DayChangeRows({
   readonly brief?: boolean;
 }) {
   const tenantPath = useTenantAwarePath();
-  const dayPlanHref = useDayPlanHref();
+  const changeHref = useDayChangeHref();
   // Vorschau: jede Zeile höchstens zwei Zeilen hoch. Der Satz hat Vorrang;
   // die Angabe (Zeitraum, Gruppe) folgt grau dahinter und wird zuerst
   // gekürzt. Der ganze Text steht unter „Alle anzeigen“ und am Ziel.
@@ -275,13 +275,7 @@ function DayChangeRows({
       }
       continue;
     }
-    const path = dayChangeHref(entry);
-    const href =
-      path === null
-        ? null
-        : entry.link?.target === "day_plan"
-          ? dayPlanHref
-          : tenantPath(path);
+    const href = changeHref(entry.link);
     rows.push(
       <CollectionRow
         key={key}
@@ -448,7 +442,7 @@ export function DayDetail({
 }: {
   readonly blocks: readonly PlannedTimetableInstance[];
 }) {
-  const dayPlanHref = useDayPlanHref();
+  const { href: dayPlanHref } = useDayPlanLink();
   if (blocks.length === 0) return null;
   return (
     <Collection label="Mein Tag">

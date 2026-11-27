@@ -73,3 +73,15 @@ export function routeSearch(
   const qs = search.toString();
   return qs ? `?${qs}` : "";
 }
+
+/** Forward only registered keys, leaving validation and repeated values to Go. */
+export function registeredRouteSearch(
+  keys: Readonly<Record<string, unknown>>,
+  incoming: URLSearchParams,
+): string {
+  const search = new URLSearchParams();
+  for (const key of Object.keys(keys)) {
+    for (const value of incoming.getAll(key)) search.append(key, value);
+  }
+  return search.size ? `?${search.toString()}` : "";
+}

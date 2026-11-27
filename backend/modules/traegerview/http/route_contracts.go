@@ -16,12 +16,14 @@ var window = []common.QueryParam{{Name: "from", Kind: common.QueryDate}, {Name: 
 func SchoolRouteContracts() []common.RouteContract {
 	format := []common.QueryParam{common.ListFormatQuery}
 	school := []common.QueryParam{common.ListFormatQuery, {Name: "school", Kind: common.QueryID}}
-	comparison := append([]common.QueryParam{{Name: "schools", Kind: common.QueryString}}, window...)
+	comparison := append([]common.QueryParam{{Name: "schools", Kind: common.QueryID, Repeated: true}}, window...)
+	children := []common.QueryParam{{Name: "school_id", Kind: common.QueryID}, {Name: "search", Kind: common.QueryString}}
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/", Portals: traegerPortal, Response: []traegerview.TraegerSchool{}},
 		{Method: "GET", Pattern: "/export", Portals: traegerPortal, Query: format, File: true},
 		{Method: "GET", Pattern: "/alerts", Portals: traegerPortal, Response: traegerview.SchoolsAlerts{}},
 		{Method: "GET", Pattern: "/alerts/export", Portals: traegerPortal, Query: school, File: true},
+		{Method: "GET", Pattern: "/day-changes", Portals: traegerPortal, Query: []common.QueryParam{{Name: "date", Kind: common.QueryDate}}, Response: traegerview.SchoolsDayChanges{}},
 		{Method: "GET", Pattern: "/occupancy", Portals: traegerPortal, Response: traegerview.Occupancy{}},
 		{Method: "GET", Pattern: "/occupancy/export", Portals: traegerPortal, Query: school, File: true},
 		{Method: "GET", Pattern: "/utilization", Portals: traegerPortal, Query: window, Response: traegerview.Utilization{}},
@@ -34,6 +36,9 @@ func SchoolRouteContracts() []common.RouteContract {
 		{Method: "GET", Pattern: "/comparison", Portals: traegerPortal, Query: comparison, Response: traegerview.SchoolComparison{}},
 		{Method: "GET", Pattern: "/comparison/export", Portals: traegerPortal,
 			Query: append([]common.QueryParam{common.ListFormatQuery, {Name: "metrics", Kind: common.QueryString}}, comparison...), File: true},
+		{Method: "GET", Pattern: "/children", Portals: traegerPortal,
+			Query: append([]common.QueryParam{{Name: "cursor", Kind: common.QueryString}}, children...), Response: traegerview.TraegerChildren{}},
+		{Method: "GET", Pattern: "/children/export", Portals: traegerPortal, Query: append([]common.QueryParam{common.ListFormatQuery, {Name: "roster_date", Kind: common.QueryDate}}, children...), File: true},
 		{Method: "GET", Pattern: "/{id}", Portals: traegerPortal, Response: traegerview.SchoolView{}},
 	}
 }

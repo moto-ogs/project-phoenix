@@ -24,19 +24,23 @@
     "procedure": "Du unterschreibst als einfache elektronische Signatur mit gezeichneter Unterschrift.",
     "missing": "Bitte unterschreibe und tippe auf „Unterschrift bestätigen“."
   },
-  "waitsForOgs": "Die {careTerm} bestätigt die Erlaubnis. Bis dahin gilt sie noch nicht.",
-  "pendingBadge": "Wartet auf die {careTerm}",
-  "pending": "Wartet auf die {careTerm}: {days}",
+  "waitsForOgs": "{careNomCap} bestätigt die Erlaubnis. Bis dahin gilt sie noch nicht.",
+  "pendingBadge": "Wartet auf {careAcc}",
+  "pending": "Wartet auf {careAcc}: {days}",
   "onlyDays": "Nur {days}",
-  "requestSent": "Deine Anfrage ist bei der {careTerm}. Du siehst hier, wenn sie bestätigt ist.",
+  "requestSent": "Deine Anfrage ist {careBei}. Du siehst hier, wenn sie bestätigt ist.",
   "proofPdf": "Nachweis (PDF)",
   "errorObjectProof": "Der Nachweis",
   "errorObjectRequest": "Die Abholerlaubnis",
   "pickupPerson": {
     "label": "Wer holt ab?",
     "none": "Wie immer",
-    "hint": "Nur Personen, die du bei den Kontakten eingetragen hast.",
-    "manageLink": "Neue Person bei den Kontakten eintragen"
+    "hint": "Wähle eine Person aus deinen Kontakten oder „Andere Person“.",
+    "manageLink": "Neue Person bei den Kontakten eintragen",
+    "other": "Andere Person",
+    "otherNameLabel": "Name der Person",
+    "otherNameHint": "Die Person zeigt bei der Abholung ihren Ausweis.",
+    "otherNameMissing": "Bitte schreib den Namen der Person auf."
   },
   "proofPdfTooltip": "Speichert den Nachweis als PDF auf diesem Gerät."
 }

@@ -21,11 +21,24 @@ const CRITERION_VALUES: readonly HolidayCriterionValue[] = [
   "no",
   "unknown",
 ];
+const RANKINGS: readonly HolidayCriteriaRanking[] = [
+  "priority",
+  "equal",
+  "points",
+];
 const VALUE_SOURCES = ["parent", "office"] as const;
 const BOOKING_UNITS = ["week", "day"] as const;
 
 /** Whether a criterion is asked once per family or for every child. */
 export type HolidayCriterionScope = "family" | "child";
+
+/**
+ * How the criteria of the Träger count (#8135): "priority" compares them
+ * from the top, the first difference decides; "equal" counts the criteria
+ * met; "points" adds the points of the criteria met. A tie falls to the
+ * arrival in every one.
+ */
+export type HolidayCriteriaRanking = "priority" | "equal" | "points";
 
 /** What the allocation decides for one booking. */
 export type HolidayAllocationPlacement = "placed" | "waitlisted";
@@ -38,8 +51,10 @@ export interface HolidayCriterion {
   readonly question: string;
   readonly scope: HolidayCriterionScope;
   readonly active: boolean;
-  /** 1 is the highest priority. */
+  /** Place in the list; with "priority", 1 counts most. */
   readonly position: number;
+  /** What meeting it adds with "points", 1 to MAX_CRITERION_POINTS. */
+  readonly points: number;
   /** Parents answered it already: removing it archives it. */
   readonly answered: boolean;
 }
@@ -51,12 +66,14 @@ export interface HolidayCriterionInput {
   readonly question: string;
   readonly scope: HolidayCriterionScope;
   readonly active: boolean;
+  readonly points: number;
 }
 
 /** The backend's limits of the criteria. */
 export const MAX_HOLIDAY_CRITERIA = 10;
 export const MAX_CRITERION_NAME = 60;
 export const MAX_CRITERION_QUESTION = 300;
+export const MAX_CRITERION_POINTS = 100;
 export const MAX_ALLOCATION_REASON = 500;
 export const MAX_ALLOCATION_DECISIONS = 500;
 
@@ -74,6 +91,7 @@ function criteriaFromBackend(
     scope: requiredEnum(SCOPES, criterion.scope, "holiday_criterion.scope"),
     active: criterion.active,
     position: criterion.position,
+    points: criterion.points,
     answered: criterion.answered,
   }));
 }
@@ -81,16 +99,23 @@ function criteriaFromBackend(
 /** The criteria as read, with the token a save sends back (ADR 0311). */
 export interface HolidayCriteriaRead {
   readonly criteria: HolidayCriterion[];
+  /** How the criteria count; the editor saves it with the list. */
+  readonly ranking: HolidayCriteriaRanking;
   readonly version: string;
 }
 
-function criteriaReadFromBackend(
+export function criteriaReadFromBackend(
   data: traegerHolidayPeriodsContract.HolidayCriteriaCatalog,
 ): HolidayCriteriaRead {
-  return { criteria: criteriaFromBackend(data), version: data.version };
+  return {
+    criteria: criteriaFromBackend(data),
+    // The editor saves it back, so an unknown one fails the read (#2353).
+    ranking: requiredEnum(RANKINGS, data.ranking, "holiday_criteria.ranking"),
+    version: data.version,
+  };
 }
 
-/** The criteria of the Träger, highest priority first. */
+/** The criteria of the Träger in the order of their list. */
 export async function fetchHolidayCriteria(): Promise<HolidayCriteriaRead> {
   return criteriaReadFromBackend(
     await bffJson("org", "GET /traeger/holiday-periods/criteria"),
@@ -98,24 +123,27 @@ export async function fetchHolidayCriteria(): Promise<HolidayCriteriaRead> {
 }
 
 /**
- * Saves the whole list over the version it was read in; its order is the
- * priority. A criterion left out is archived: given answers and decisions
- * keep it. The backend refuses a list saved since (ADR 0311).
+ * Saves the whole list and how it counts over the version it was read in.
+ * A criterion left out is archived: given answers and decisions keep it.
+ * The backend refuses a list saved since (ADR 0311).
  */
 export async function saveHolidayCriteria(
   criteria: readonly HolidayCriterionInput[],
+  ranking: HolidayCriteriaRanking,
   version: string,
 ): Promise<HolidayCriteriaRead> {
   return criteriaReadFromBackend(
     await bffJson("org", "PUT /traeger/holiday-periods/criteria", {
       body: {
         expected_version: version,
+        ranking,
         criteria: criteria.map((criterion) => ({
           id: criterion.id ? criterion.id : "0",
           name: criterion.name,
           question: criterion.question,
           scope: criterion.scope,
           active: criterion.active,
+          points: criterion.points,
         })),
       } satisfies traegerHolidayPeriodsContract.HolidayCriteriaRequest,
     }),
@@ -146,8 +174,13 @@ export interface HolidayAllocationEntry {
   readonly timeModelName: string;
   /** The wanted days of a week by days; empty for a whole week. */
   readonly days: readonly string[];
-  /** In the order of the priority. */
+  /** In the order of the list of criteria. */
   readonly criteria: readonly HolidayAllocationCriterionValue[];
+  /**
+   * What the criteria of the Träger it meets add up to: their points with
+   * "points", their number else. The holiday care wish is not in it.
+   */
+  readonly score: number;
   readonly proposal: HolidayAllocationPlacement;
 }
 
@@ -184,6 +217,11 @@ export interface HolidayAllocationDecision {
   /** Required when the decision differs from the proposal. */
   readonly reason: string;
   readonly decidedAt: string;
+  /** How the criteria counted at the time of the decision. */
+  readonly ranking: HolidayCriteriaRanking;
+  /** Score and its highest value then; null for a decision before #8135. */
+  readonly score: number | null;
+  readonly maxScore: number | null;
 }
 
 /** An active criterion as the allocation list names it. */
@@ -192,9 +230,18 @@ export interface HolidayAllocationCriterion {
   readonly name: string;
   readonly scope: HolidayCriterionScope;
   readonly position: number;
+  /** Its points with "points"; 0 for the holiday care wish. */
+  readonly points: number;
 }
 
+/** The holiday care wish (#4703) among the criteria of a list: no row of the Träger. */
+export const HOLIDAY_WISH_CRITERION_ID = "0";
+
 export interface HolidayAllocationBoard {
+  /** How the criteria of the Träger count in the order of the list. */
+  readonly ranking: HolidayCriteriaRanking;
+  /** The highest score an entry can reach. */
+  readonly maxScore: number;
   readonly criteria: readonly HolidayAllocationCriterion[];
   readonly weeks: readonly HolidayAllocationWeek[];
   /** Newest first. */
@@ -219,6 +266,14 @@ function boardFromBackend(
   board: traegerHolidayPeriodsContract.HolidayAllocationBoard,
 ): HolidayAllocationBoard {
   return {
+    // The screen explains the order with it; a guessed one would explain
+    // another order than the list has (#2353).
+    ranking: requiredEnum(
+      RANKINGS,
+      board.ranking,
+      "holiday_allocation.ranking",
+    ),
+    maxScore: board.max_score,
     criteria: (board.criteria ?? []).flatMap((criterion) => {
       const scope = knownEnum(SCOPES, criterion.scope);
       return scope
@@ -228,6 +283,7 @@ function boardFromBackend(
               name: criterion.name,
               scope,
               position: criterion.position,
+              points: criterion.points,
             },
           ]
         : [];
@@ -266,6 +322,7 @@ function boardFromBackend(
                 ? [{ criterionId: value.criterion_id, value: known, source }]
                 : [];
             }),
+            score: entry.score,
             proposal,
           },
         ];
@@ -297,6 +354,10 @@ function boardFromBackend(
           criteriaMet: decision.criteria_met ?? [],
           reason: decision.reason,
           decidedAt: decision.decided_at,
+          // An unknown way of counting shows the decision without a score.
+          ranking: knownEnum(RANKINGS, decision.ranking) ?? "priority",
+          score: knownEnum(RANKINGS, decision.ranking) ? decision.score : null,
+          maxScore: decision.max_score,
         },
       ];
     }),

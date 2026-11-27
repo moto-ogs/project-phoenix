@@ -52,7 +52,7 @@ func (r *GuardianPaymentRequest) Bind(_ *http.Request) error { return nil }
 // StudentPayerRequest binds the per-child payer assignment; a nil
 // guardian_id clears the assignment.
 type StudentPayerRequest struct {
-	GuardianID *string `json:"guardian_id" contract_text:"empty string clears the guardian selection"`
+	GuardianID *ident.IDOrNone `json:"guardian_id"`
 }
 
 func (r *StudentPayerRequest) Bind(_ *http.Request) error { return nil }
@@ -242,9 +242,9 @@ func (rs *GuardianResource) setStudentPayer(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	var guardianID *int64
-	if req.GuardianID != nil && strings.TrimSpace(*req.GuardianID) != "" {
-		parsed, err := strconv.ParseInt(strings.TrimSpace(*req.GuardianID), 10, 64)
-		if err != nil || parsed <= 0 {
+	if req.GuardianID != nil && !req.GuardianID.IsZero() {
+		parsed := req.GuardianID.Int64()
+		if parsed <= 0 {
 			rs.failMessage(w, r, FailureInvalidRequest, msgInvalidPaymentGuardian)
 			return
 		}

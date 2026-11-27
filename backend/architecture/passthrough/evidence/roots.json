@@ -415,13 +415,6 @@
     },
     {
       "build": "production",
-      "evidence": "func (p activeStaffAccess) HasCurrentStaff(ctx context.Context) (bool, error) {\n\treturn p.source.HasCurrentStaff(ctx)\n}",
-      "form": "forward-debt",
-      "id": "api/activeStaffAccess.HasCurrentStaff",
-      "owner": "roots"
-    },
-    {
-      "build": "production",
       "evidence": "func (a activityCatalogAdapter) CreateActivity(ctx context.Context, input facilities.SystemActivity) (facilities.SystemActivity, error) {\n\tcreated, err := a.service.CreateCatalogGroup(ctx, timetable.GroupInput{Name: input.Name, MaxParticipants: input.MaxParticipants, IsOpen: input.IsOpen, CategoryID: input.CategoryID, PlannedRoomID: input.PlannedRoomID, IsSystem: input.IsSystem, CreatedBy: input.CreatedBy})\n\treturn systemActivity(\u0026created), err\n}",
       "form": "unclassified-evidence",
       "id": "api/activityCatalogAdapter.CreateActivity",
@@ -772,13 +765,6 @@
     },
     {
       "build": "production",
-      "evidence": "func (s dayChangesMealPlan) MealPlanChanges(ctx context.Context, day calendar.Date) ([]daychangesview.SourceEntry, error) {\n\tchanged, err := s.reads.MenuChangedOn(ctx, mealplan.Date(day.String()))\n\tif err != nil {\n\t\treturn nil, fmt.Errorf(\"read meal plan change: %w\", err)\n\t}\n\tif !changed {\n\t\treturn nil, nil\n\t}\n\tentry := daychangesview.SourceEntry{Kind: daychangesview.KindMealPlanChanged}\n\tif mealPlanAllowed(ctx, mealplanAPI.AccessRead) {\n\t\tentry.Link = \u0026daychangesview.Link{Target: daychangesview.LinkMealPlan}\n\t}\n\treturn []daychangesview.SourceEntry{entry}, nil\n}",
-      "form": "unclassified-evidence",
-      "id": "api/dayChangesMealPlan.MealPlanChanges",
-      "owner": "roots"
-    },
-    {
-      "build": "production",
       "evidence": "func (p emergencySnapshotPersonNames) ByIDs(ctx context.Context, personIDs []int64) (map[int64]emergencysnapshot.Person, error) {\n\tif len(personIDs) == 0 {\n\t\treturn map[int64]emergencysnapshot.Person{}, nil\n\t}\n\trows, err := p.facade.ListPersonsByID(ctx, personIDs)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make(map[int64]emergencysnapshot.Person, len(rows))\n\tfor _, row := range rows {\n\t\tresult[row.ID] = emergencysnapshot.Person{ID: row.ID, FirstName: row.FirstName, LastName: row.LastName}\n\t}\n\treturn result, nil\n}",
       "form": "unclassified-evidence",
       "id": "api/emergencySnapshotPersonNames.ByIDs",
@@ -905,7 +891,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (d groupLiveDirectory) TenantGroups(ctx context.Context) ([]grouplive.GroupRecord, error) {\n\tgroups, err := d.education.ListGroups(ctx, nil)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\trecords := make([]grouplive.GroupRecord, 0, len(groups))\n\tfor _, group := range groups {\n\t\tif group != nil {\n\t\t\trecords = append(records, grouplive.GroupRecord{ID: group.ID, Name: group.Name, RoomID: group.RoomID})\n\t\t}\n\t}\n\treturn records, nil\n}",
+      "evidence": "func (d groupLiveDirectory) TenantGroups(ctx context.Context) ([]grouplive.GroupRecord, error) {\n\tgroups, err := d.education.ListGroups(ctx, nil)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\trecords := make([]grouplive.GroupRecord, 0, len(groups))\n\tfor _, group := range groups {\n\t\tif group != nil {\n\t\t\trecords = append(records, navigationGroupRecord(group))\n\t\t}\n\t}\n\treturn records, nil\n}",
       "form": "unclassified-evidence",
       "id": "api/groupLiveDirectory.TenantGroups",
       "owner": "roots"
@@ -915,6 +901,13 @@
       "evidence": "func (s groupLiveLocations) Location(studentID int64, fullAccess bool) grouplive.Location {\n\tinfo := s.snapshot.ResolveStudentLocationWithTime(studentID, fullAccess)\n\treturn grouplive.Location{Name: info.Location, Since: info.Since, RoomColor: info.RoomColor}\n}",
       "form": "unclassified-evidence",
       "id": "api/groupLiveLocations.Location",
+      "owner": "roots"
+    },
+    {
+      "build": "production",
+      "evidence": "func (p groupLivePlanning) PlannedActivities(ctx context.Context, studentIDs []int64, date grouplive.Date) (map[int64][]grouplive.PlannedActivity, error) {\n\trows, err := p.offerings.byStudent(ctx, studentIDs, string(date))\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make(map[int64][]grouplive.PlannedActivity, len(rows))\n\tfor studentID, offerings := range rows {\n\t\tfor _, offering := range offerings {\n\t\t\tresult[studentID] = append(result[studentID], grouplive.PlannedActivity(offering))\n\t\t}\n\t}\n\treturn result, nil\n}",
+      "form": "unclassified-evidence",
+      "id": "api/groupLivePlanning.PlannedActivities",
       "owner": "roots"
     },
     {
@@ -933,7 +926,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (s groupLiveSettings) CareDayEnd(ctx context.Context) (string, error) {\n\treturn s.settings.ResolveString(ctx, settingsplatform.KeySessionEndTime)\n}",
+      "evidence": "func (s groupLiveSettings) CareDayEnd(ctx context.Context) (string, error) {\n\tclosesAt, ok, err := s.closingTimes(ctx, calendar.DateFromTime(s.now()))\n\tif err != nil {\n\t\treturn \"\", fmt.Errorf(\"read the closing time of today: %w\", err)\n\t}\n\tif ok {\n\t\treturn closesAt, nil\n\t}\n\treturn s.settings.ResolveString(ctx, settingsplatform.KeySessionEndTime)\n}",
       "form": "unclassified-evidence",
       "id": "api/groupLiveSettings.CareDayEnd",
       "owner": "roots"
@@ -1171,9 +1164,9 @@
     },
     {
       "build": "production",
-      "evidence": "func (d operatorSettingsSchools) SchoolSlug(ctx context.Context, schoolID int64) (string, error) {\n\tschool, err := d.schools.FindSchool(ctx, schoolID)\n\tif err != nil {\n\t\treturn \"\", err\n\t}\n\treturn school.Slug, nil\n}",
+      "evidence": "func (d operatorSettingsSchools) SchoolSubdomain(ctx context.Context, schoolID int64) (string, error) {\n\tschool, err := d.schools.FindSchool(ctx, schoolID)\n\tif err != nil {\n\t\treturn \"\", err\n\t}\n\treturn school.Subdomain, nil\n}",
       "form": "unclassified-evidence",
-      "id": "api/operatorSettingsSchools.SchoolSlug",
+      "id": "api/operatorSettingsSchools.SchoolSubdomain",
       "owner": "roots"
     },
     {
@@ -1272,6 +1265,13 @@
       "evidence": "func (b parentBillingHolidayRegistrations) HolidayRegistration(ctx context.Context, reviewer parentbilling.HolidayReviewer, periodID, registrationID int64) (parentbilling.HolidayRegistration, error) {\n\tdetail, err := b.review.HolidayRegistration(ctx, enrollmentOwner.HolidayReviewer(reviewer), periodID, registrationID)\n\tif err != nil {\n\t\treturn parentbilling.HolidayRegistration{}, parentBillingHolidayError(err)\n\t}\n\treturn parentBillingRegistration(detail), nil\n}",
       "form": "unclassified-evidence",
       "id": "api/parentBillingHolidayRegistrations.HolidayRegistration",
+      "owner": "roots"
+    },
+    {
+      "build": "production",
+      "evidence": "func (b parentBillingHolidayRegistrations) RecordHolidayPayer(ctx context.Context, reviewer parentbilling.HolidayReviewer, periodID, registrationID int64, record parentbilling.HolidayPayerRecord) error {\n\tif b.payers == nil {\n\t\treturn errors.New(\"parent billing: this binding records no payer change\")\n\t}\n\tchange := enrollmentOwner.HolidayPayerChange{Before: enrollmentOwner.HolidayPaidBy{Kind: record.Before.Kind, CostBearerName: record.Before.CostBearerName}, After: enrollmentOwner.HolidayPaidBy{Kind: record.After.Kind, CostBearerName: record.After.CostBearerName}}\n\treturn parentBillingHolidayError(b.payers.RecordHolidayPayer(ctx, enrollmentOwner.HolidayReviewer(reviewer), periodID, registrationID, change, record.Reason))\n}",
+      "form": "unclassified-evidence",
+      "id": "api/parentBillingHolidayRegistrations.RecordHolidayPayer",
       "owner": "roots"
     },
     {
@@ -1563,6 +1563,13 @@
     },
     {
       "build": "production",
+      "evidence": "func (b studentListPlannedActivities) PlannedActivities(ctx context.Context, studentIDs []int64, day calendar.Date) (map[int64][]projectionStudentsHTTP.StudentListPlannedActivity, error) {\n\trows, err := b.offerings.byStudent(ctx, studentIDs, day.String())\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make(map[int64][]projectionStudentsHTTP.StudentListPlannedActivity, len(rows))\n\tfor studentID, offerings := range rows {\n\t\tfor _, offering := range offerings {\n\t\t\tresult[studentID] = append(result[studentID], projectionStudentsHTTP.StudentListPlannedActivity(offering))\n\t\t}\n\t}\n\treturn result, nil\n}",
+      "form": "unclassified-evidence",
+      "id": "api/studentListPlannedActivities.PlannedActivities",
+      "owner": "roots"
+    },
+    {
+      "build": "production",
       "evidence": "func (s studentSchoolGroups) GetGroup(ctx context.Context, id int64) (*presenceprojectionOwnerHTTP.SchoolGroup, error) {\n\tgroup, err := s.GroupManagement.GetGroup(ctx, id)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tview := presenceprojectionOwnerHTTP.SchoolGroup{ID: group.ID, Name: group.Name, RoomID: group.RoomID}\n\tif group.Room != nil {\n\t\tview.RoomName = group.Room.Name\n\t}\n\treturn \u0026view, nil\n}",
       "form": "unclassified-evidence",
       "id": "api/studentSchoolGroups.GetGroup",
@@ -1654,7 +1661,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (s supervisionSettings) Prepare(ctx context.Context) (context.Context, error) {\n\treturn s.settings.Prefetch(ctx, []string{settingsplatform.KeyOperationalOverviewScope, settingsplatform.KeyGroupMode, settingsplatform.KeyStudentPhotosEnabled, settingsplatform.KeyWebSpontaneousActivities, settingsplatform.KeyWeekendFollowsFriday, settingsplatform.KeyTrackingIndicatorsEnabled, settingsplatform.KeyTrackingIndicator1, settingsplatform.KeyTrackingIndicator2, settingsplatform.KeyTrackingIndicator3})\n}",
+      "evidence": "func (s supervisionSettings) Prepare(ctx context.Context) (context.Context, error) {\n\treturn s.settings.Prefetch(ctx, []string{settingsplatform.KeyOperationalOverviewScope, settingsplatform.KeyGroupMode, settingsplatform.KeyStudentPhotosEnabled, settingsplatform.KeyStudentCardActivitiesEnabled, settingsplatform.KeyWebSpontaneousActivities, settingsplatform.KeyWeekendFollowsFriday, settingsplatform.KeyTrackingIndicatorsEnabled, settingsplatform.KeyTrackingIndicator1, settingsplatform.KeyTrackingIndicator2, settingsplatform.KeyTrackingIndicator3})\n}",
       "form": "unclassified-evidence",
       "id": "api/supervisionSettings.Prepare",
       "owner": "roots"
@@ -1664,6 +1671,13 @@
       "evidence": "func (s supervisionSettings) SpontaneousActivitiesEnabled(ctx context.Context) (bool, error) {\n\tenabled, err := s.settings.ResolveBool(ctx, settingsplatform.KeyWebSpontaneousActivities)\n\tif err != nil {\n\t\treturn false, fmt.Errorf(\"resolve spontaneous activities setting: %w\", err)\n\t}\n\treturn enabled, nil\n}",
       "form": "unclassified-evidence",
       "id": "api/supervisionSettings.SpontaneousActivitiesEnabled",
+      "owner": "roots"
+    },
+    {
+      "build": "production",
+      "evidence": "func (s supervisionSettings) StudentCardActivitiesEnabled(ctx context.Context) (bool, error) {\n\treturn s.settings.ResolveBool(ctx, settingsplatform.KeyStudentCardActivitiesEnabled)\n}",
+      "form": "unclassified-evidence",
+      "id": "api/supervisionSettings.StudentCardActivitiesEnabled",
       "owner": "roots"
     },
     {
@@ -1762,6 +1776,13 @@
       "evidence": "func (c traegerChildDays) ChildDaysByTenant(ctx context.Context, schools []int64, from, to calendar.Date) ([]traegerview.ChildDay, error) {\n\trows, err := c.days.DailyAttendanceByTenant(ctx, schools, from, to)\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]traegerview.ChildDay, len(rows))\n\tfor i, row := range rows {\n\t\tresult[i] = traegerview.ChildDay{SchoolID: row.SchoolID, Date: row.Date, StudentID: row.StudentID, ArrivedAt: row.ArrivedAt, LeftAt: row.LeftAt}\n\t}\n\treturn result, nil\n}",
       "form": "unclassified-evidence",
       "id": "api/traegerChildDays.ChildDaysByTenant",
+      "owner": "roots"
+    },
+    {
+      "build": "production",
+      "evidence": "func (s traegerDayChangeSchools) TraegerSchoolsWithNames(ctx context.Context, organizationID int64) ([]traegerview.TraegerSchool, error) {\n\tschools, err := s.schools.ListTraegerSchools(ctx, organizationID)\n\tif errors.Is(err, organizationtenancy.ErrOrganizationInactive) || errors.Is(err, organizationtenancy.ErrOrganizationNotFound) {\n\t\treturn nil, traegerview.ErrTraegerUnavailable\n\t}\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]traegerview.TraegerSchool, 0, len(schools))\n\tfor _, school := range schools {\n\t\tresult = append(result, traegerview.TraegerSchool{ID: ident.ID(school.ID), Name: school.Name, Slug: school.Slug, Subdomain: school.Subdomain, City: school.City})\n\t}\n\treturn result, nil\n}",
+      "form": "unclassified-evidence",
+      "id": "api/traegerDayChangeSchools.TraegerSchoolsWithNames",
       "owner": "roots"
     },
     {
@@ -1916,6 +1937,13 @@
       "evidence": "func (e traegerSpringerEmployments) EndSpringerAccess(ctx context.Context, blockID int64) error {\n\treturn e.access.EndSpringerWindow(ctx, blockID)\n}",
       "form": "forward-debt",
       "id": "api/traegerSpringerEmployments.EndSpringerAccess",
+      "owner": "roots"
+    },
+    {
+      "build": "production",
+      "evidence": "func (n traegerStudentNames) StudentNamesByTenant(ctx context.Context, schools []int64, query traegerview.StudentNameQuery) ([]traegerview.StudentName, int, error) {\n\tnames, matched, err := n.names.StudentNamesByTenant(ctx, schools, peopledirectory.SchoolStudentNameQuery{StudentProfileIDs: query.Students, Search: query.Search, Limit: query.Limit, After: peopledirectory.SchoolStudentName(query.After)})\n\tif err != nil {\n\t\treturn nil, 0, err\n\t}\n\tresult := make([]traegerview.StudentName, 0, len(names))\n\tfor _, name := range names {\n\t\tresult = append(result, traegerview.StudentName(name))\n\t}\n\treturn result, matched, nil\n}",
+      "form": "unclassified-evidence",
+      "id": "api/traegerStudentNames.StudentNamesByTenant",
       "owner": "roots"
     },
     {
@@ -3267,27 +3295,6 @@
       "evidence": "func (p ProvisioningIdentity) InviteTraegerAccount(ctx context.Context, organizationID int64, email string, roles []string) (organizationtenancy.TraegerInvitation, error) {\n\tinvitation, err := p.Traeger.InviteTraegerAccountForOperator(ctx, organizationID, email, roles)\n\tif err != nil {\n\t\treturn organizationtenancy.TraegerInvitation{}, provisioningTraegerInvitationError(err)\n\t}\n\treturn provisioningTraegerInvitation(invitation), nil\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/ProvisioningIdentity.InviteTraegerAccount",
-      "owner": "roots"
-    },
-    {
-      "build": "production",
-      "evidence": "func (p ProvisioningIdentity) ListAllAccounts(ctx context.Context) ([]organizationCompose.OrganizationAccount, error) {\n\taccounts, err := p.Accounts.ListAllAccounts(ctx)\n\tif err != nil || accounts == nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]organizationCompose.OrganizationAccount, 0, len(accounts))\n\tfor _, account := range accounts {\n\t\tresult = append(result, organizationCompose.OrganizationAccount{SchoolAccount: organizationCompose.SchoolAccount(account.TenantAccountInfo), SchoolID: account.SchoolID, SchoolName: account.SchoolName})\n\t}\n\treturn result, nil\n}",
-      "form": "unclassified-evidence",
-      "id": "roots/owners/ProvisioningIdentity.ListAllAccounts",
-      "owner": "roots"
-    },
-    {
-      "build": "production",
-      "evidence": "func (p ProvisioningIdentity) ListOrganizationAccounts(ctx context.Context, organizationID int64) ([]organizationCompose.OrganizationAccount, error) {\n\taccounts, err := p.Accounts.ListAccountsByOrganizationID(ctx, organizationID)\n\tif err != nil || accounts == nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]organizationCompose.OrganizationAccount, 0, len(accounts))\n\tfor _, account := range accounts {\n\t\tresult = append(result, organizationCompose.OrganizationAccount{SchoolAccount: organizationCompose.SchoolAccount(account.TenantAccountInfo), SchoolID: account.SchoolID, SchoolName: account.SchoolName})\n\t}\n\treturn result, nil\n}",
-      "form": "unclassified-evidence",
-      "id": "roots/owners/ProvisioningIdentity.ListOrganizationAccounts",
-      "owner": "roots"
-    },
-    {
-      "build": "production",
-      "evidence": "func (p ProvisioningIdentity) ListSchoolAccounts(ctx context.Context, tenantID int64) ([]organizationCompose.SchoolAccount, error) {\n\taccounts, err := p.Accounts.ListAccountsByTenantID(ctx, tenantID)\n\tif err != nil || accounts == nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]organizationCompose.SchoolAccount, 0, len(accounts))\n\tfor _, account := range accounts {\n\t\tresult = append(result, organizationCompose.SchoolAccount(account))\n\t}\n\treturn result, nil\n}",
-      "form": "unclassified-evidence",
-      "id": "roots/owners/ProvisioningIdentity.ListSchoolAccounts",
       "owner": "roots"
     },
     {
@@ -5105,7 +5112,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (r classListEntryRosterReader) ListClassListEntries(ctx context.Context, schoolClass string) ([]enrollmentCompose.ClassListEntry, error) {\n\tvalues, err := r.entries.ListClassListEntriesInDisplayOrder(ctx, schoolmembership.ClassListEntryFilter{SchoolClass: schoolClass})\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]enrollmentCompose.ClassListEntry, 0, len(values))\n\tfor _, value := range values {\n\t\tresult = append(result, enrollmentCompose.ClassListEntry{ID: value.ID, FirstName: value.FirstName, LastName: value.LastName, SchoolClass: value.SchoolClass})\n\t}\n\treturn result, nil\n}",
+      "evidence": "func (r classListEntryRosterReader) ListClassListEntries(ctx context.Context, classes []string) ([]enrollmentCompose.ClassListEntry, error) {\n\tvalues, err := r.entries.ListClassListEntriesInDisplayOrder(ctx, schoolmembership.ClassListEntryFilter{SchoolClasses: classes})\n\tif err != nil {\n\t\treturn nil, err\n\t}\n\tresult := make([]enrollmentCompose.ClassListEntry, 0, len(values))\n\tfor _, value := range values {\n\t\tresult = append(result, enrollmentCompose.ClassListEntry{ID: value.ID, FirstName: value.FirstName, LastName: value.LastName, SchoolClass: value.SchoolClass})\n\t}\n\treturn result, nil\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/classListEntryRosterReader.ListClassListEntries",
       "owner": "roots"
@@ -6582,7 +6589,7 @@
     },
     {
       "build": "production",
-      "evidence": "func (r parentAttendanceReader) ListAttendance(ctx context.Context, filter parentportal.AttendanceFilter) ([]parentportal.Attendance, error) {\n\trows, err := r.reader.ListAttendance(ctx, parentAttendanceFilter(filter))\n\tif err != nil || rows == nil {\n\t\treturn nil, err\n\t}\n\tout := make([]parentportal.Attendance, len(rows))\n\tfor i, row := range rows {\n\t\tout[i] = parentportal.Attendance{LeftForClass: row.LeftForClass(), CheckInTime: row.CheckInTime, CheckOutTime: row.CheckOutTime}\n\t}\n\treturn out, nil\n}",
+      "evidence": "func (r parentAttendanceReader) ListAttendance(ctx context.Context, filter parentportal.AttendanceFilter) ([]parentportal.Attendance, error) {\n\trows, err := r.reader.ListAttendance(ctx, parentAttendanceFilter(filter))\n\tif err != nil || rows == nil {\n\t\treturn nil, err\n\t}\n\tout := make([]parentportal.Attendance, len(rows))\n\tfor i, row := range rows {\n\t\tout[i] = parentportal.Attendance{StudentID: row.StudentID, LeftForClass: row.LeftForClass(), CheckInTime: row.CheckInTime, CheckOutTime: row.CheckOutTime}\n\t}\n\treturn out, nil\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/parentAttendanceReader.ListAttendance",
       "owner": "roots"

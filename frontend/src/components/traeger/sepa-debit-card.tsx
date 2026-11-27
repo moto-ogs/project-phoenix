@@ -399,7 +399,7 @@ export function SepaDebitCard({
                   href={traegerPath("/traeger/einstellungen/zustaendigkeiten")}
                   variant="surface"
                   size="compact"
-                  tooltip="Öffnet die Zuständigkeiten mit den Angaben der Stellen je Schule."
+                  tooltip="Öffnet die Zuständigkeiten mit den Angaben der Stellen pro Schule."
                 >
                   Zuständigkeiten öffnen
                 </ButtonLink>

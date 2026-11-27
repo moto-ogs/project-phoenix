@@ -6,9 +6,6 @@ import { problemResponse } from "~/lib/api-response-error.server";
 
 const logger = createLogger({ component: "ParentSSEEventsRoute" });
 
-// REQUIRED for streaming - must use Node.js runtime
-export const runtime = "nodejs";
-
 /**
  * Parent-portal SSE proxy. Same streaming proxy as the tenant route
  * (proxySSEStream), but authenticates with the parent NextAuth session

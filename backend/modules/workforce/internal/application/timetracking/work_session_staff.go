@@ -17,6 +17,16 @@ type WorkSessionStaff interface {
 	BindSchedule(context.Context, StaffScheduleBinding) error
 }
 
+// TimeTrackingManagerStaff keeps, of the given staff members, those whose
+// active account holds the right to manage the working time of others in
+// this school (#8024). The terminal-only stamping rule exempts them. The root
+// binds it to the permission model: roles combine, so one managing role
+// suffices, a role name never decides, and a staff member without an active
+// account manages nothing.
+type TimeTrackingManagerStaff interface {
+	FindTimeTrackingManagerStaffIDs(ctx context.Context, staffIDs []int64) (map[int64]bool, error)
+}
+
 // ExternalCaregiverStaff tells whether a staff member is an external
 // caregiver (#3823), with or without an account (#4573). Externals record no
 // working time, so starting a supervision opens no work session for them.

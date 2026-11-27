@@ -78,7 +78,7 @@ function sessionWith(permissions: string[]) {
   };
 }
 
-import TraegerSchoolsPage from "./page";
+import TraegerSchoolsPage from "./page-content";
 
 describe("TraegerSchoolsPage", () => {
   beforeEach(() => {

@@ -346,7 +346,7 @@ No non-constructor functions.
 | `OccupancyProjection` | [projections.go:21](../../backend/modules/facilities/compose/projections.go#L21) | direct binding | `facilitiesService.NewOccupancyProjection` |
 | `HistoryProjection` | [projections.go:24](../../backend/modules/facilities/compose/projections.go#L24) | direct binding | `facilitiesService.NewHistoryProjection` |
 | `SettingHandlers` | [projections.go:27](../../backend/modules/facilities/compose/projections.go#L27) | direct binding | `facilitiesService.SettingHandlers` |
-| `FindRoomNames` | [room_rows.go:10](../../backend/modules/facilities/compose/room_rows.go#L10) | direct binding | `facilitiesService.FindRoomNames` |
+| `FindRoomNames` | [room_names.go:14](../../backend/modules/facilities/compose/room_names.go#L14) | direct binding | `facilitiesService.FindRoomNames` |
 
 
 ### `modules/facilities/compose/repositoryadapter`

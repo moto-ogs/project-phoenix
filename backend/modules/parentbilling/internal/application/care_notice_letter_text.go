@@ -80,12 +80,12 @@ func careNoticeBlocks(notice parentbilling.CareNotice, head parentbilling.Letter
 	totals = append(totals, LetterFact{Label: "Gesamtbetrag", Value: formatEuro(notice.TotalCents), Bold: true})
 	blocks := []LetterBlock{
 		{Text: intro},
-		{Heading: "I. Berechnung", Text: "Je Berechnungsgrundlage und Zeitraum mit gleichem Monatsbetrag eine Zeile.",
+		{Heading: "I. Berechnung", Text: "Pro Berechnungsgrundlage und Zeitraum mit gleichem Monatsbetrag eine Zeile.",
 			Facts: append(careNoticeLineFacts(notice.Lines, change), totals...)},
 		{Heading: "II. Abrechnung", Text: "Der Gesamtbetrag ist in Monatsraten zum Monatsersten fällig. Raten für Monate, die schon begonnen haben, sind sofort fällig. " +
 			careNoticePaymentText(notice), Facts: careNoticeInstallmentFacts(notice.Installments, change)},
 	}
-	if question := questionText(head, recipientAddressee(notice.Recipient)); question != "" {
+	if question := questionText(head); question != "" {
 		blocks = append(blocks, LetterBlock{Text: question})
 	}
 	if remedy := strings.TrimSpace(filledLegalRemedy(notice, head)); remedy != "" {
@@ -138,8 +138,7 @@ func careNoticePaymentText(notice parentbilling.CareNotice) string {
 	if notice.PaymentMethod == parentbilling.PaymentDirectDebit {
 		return "Die fälligen Raten werden per SEPA-Lastschrift eingezogen. Bitte nicht überweisen."
 	}
-	return recipientAddressee(notice.Recipient).say("Bitte überweist jede Rate bis zum Fälligkeitstag auf das Konto unten. Gebt dabei die Bescheid-Nr. ",
-		"Bitte überweise jede Rate bis zum Fälligkeitstag auf das Konto unten. Gib dabei die Bescheid-Nr. ") + notice.Number + " an."
+	return "Bitte überweisen Sie jede Rate bis zum Fälligkeitstag auf das Konto unten. Geben Sie dabei die Bescheid-Nr. " + notice.Number + " an."
 }
 
 func noticePeriodText(from, until calendar.Date) string {

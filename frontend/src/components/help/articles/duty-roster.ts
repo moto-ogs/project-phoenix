@@ -28,8 +28,8 @@ export function dutyRosterTopic(): HelpTopic {
       "Löschst du eine Dienstart, die geplante Dienste tragen, behalten diese Dienste sie. Sie verschwindet nur aus der Auswahl für neue Dienste.",
       // ADR 0116: die ausgerichtete Ferienwoche im Dienstplan.
       "Richtet deine OGS eine Ferienwoche für den Träger aus, steht im Kopf jedes Tages `Ferienbetreuung`. Darunter stehen die Zahl der Kinder und die Betreuungszeit. Plane dafür Schichten. In der Ansicht `Halbjahr` zeigt eine Sonne die Woche.",
-      "Unter dem Plan steht `Stunden der Woche`. Dort siehst du je Person die Stunden je Dienstart und das Soll.",
-      "Unter `Person` siehst du die Woche einer Person in Viertelstunden. Darunter stehen die Stunden je Tag und Dienstart.",
+      "Unter dem Plan steht `Stunden der Woche`. Dort siehst du pro Person die Stunden pro Dienstart und das Soll.",
+      "Unter `Person` siehst du die Woche einer Person in Viertelstunden. Darunter stehen die Stunden pro Tag und Dienstart.",
       "Ziehe dort über die Viertelstunden, um eine Schicht anzulegen.",
       "Wähle im Drei-Punkte-Menü `Drucken oder exportieren`. Wähle Vorlage, Fassung und Zeitraum. `Drucken` öffnet die Druckansicht. Für eine Datei wähle das Format und `Herunterladen`.",
       "Die Vorlage `Stundenübersicht` druckt diese Stunden als Liste.",
@@ -52,6 +52,8 @@ export function dutyRosterTopic(): HelpTopic {
       "Fehlt eine Person im Plan? Dann ist sie noch nicht als Personal angelegt.",
       // #7306: die eigenen Seiten brauchen ein Personalprofil der Schule.
       "Fehlen dir selbst `Mein Dienstplan`, `Mein Kalender` und `Zeiterfassung`? Diese Seiten zeigen deine eigenen Zeiten und Termine. Dafür brauchst du in dieser Schule ein eigenes Personalprofil. Über den Träger fehlen diese Seiten deshalb.",
+      // #7351: Planen braucht ein Personalprofil oder den Weg über den Träger.
+      "Steht über dem Plan `Du kannst den Dienstplan nur ansehen`? Zum Planen brauchst du in dieser Schule ein eigenes Personalprofil. Melde dich dafür beim moto-Team. Über den Träger planst du auch ohne Profil. `Krank melden` und das Übernehmen von Abwesenheiten fehlen dann aber.",
     ],
     related: [
       HELP_TOPICS.leadWorkTimeReview,

@@ -25,13 +25,15 @@ func (rs *Resource) mountMessageMailRoutes(r chi.Router, read, withTx func(http.
 // ThreadMailsResponse maps a message ID to its mail's outcome. A message
 // without a mail is absent.
 type ThreadMailsResponse struct {
-	Messages map[ident.ID]string `json:"messages"`
+	AwaitingFeedback bool                `json:"awaiting_feedback"`
+	Messages         map[ident.ID]string `json:"messages"`
 }
 
 // GroupThreadMailsResponse maps a message ID to its mails counted by outcome,
 // one mail per family. A message without a mail is absent.
 type GroupThreadMailsResponse struct {
-	Messages map[ident.ID]map[string]int `json:"messages"`
+	AwaitingFeedback bool                        `json:"awaiting_feedback"`
+	Messages         map[ident.ID]map[string]int `json:"messages"`
 }
 
 func (rs *Resource) getThreadMails(w http.ResponseWriter, r *http.Request) {
@@ -39,12 +41,12 @@ func (rs *Resource) getThreadMails(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	mails, err := rs.Mails.ParentMessageThreadMails(r.Context(), threadID)
+	mails, active, err := rs.Mails.ParentMessageThreadMails(r.Context(), threadID)
 	if err != nil {
 		renderMessagingError(w, r, err)
 		return
 	}
-	out := ThreadMailsResponse{Messages: make(map[ident.ID]string, len(mails))}
+	out := ThreadMailsResponse{AwaitingFeedback: active, Messages: make(map[ident.ID]string, len(mails))}
 	for id, outcome := range mails {
 		out.Messages[ident.ID(id)] = outcome
 	}
@@ -56,12 +58,12 @@ func (rs *Resource) getGroupThreadMails(w http.ResponseWriter, r *http.Request) 
 	if !ok {
 		return
 	}
-	mails, err := rs.Mails.ParentGroupThreadMails(r.Context(), threadID)
+	mails, active, err := rs.Mails.ParentGroupThreadMails(r.Context(), threadID)
 	if err != nil {
 		renderGroupThreadError(w, r, err)
 		return
 	}
-	out := GroupThreadMailsResponse{Messages: make(map[ident.ID]map[string]int, len(mails))}
+	out := GroupThreadMailsResponse{AwaitingFeedback: active, Messages: make(map[ident.ID]map[string]int, len(mails))}
 	for id, outcomes := range mails {
 		out.Messages[ident.ID(id)] = outcomes
 	}

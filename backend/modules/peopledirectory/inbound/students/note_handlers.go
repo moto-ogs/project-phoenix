@@ -4,7 +4,6 @@ import (
 	context "context"
 	errors "errors"
 	http "net/http"
-	strconv "strconv"
 	time "time"
 
 	securitycontract "github.com/moto-ogs/project-phoenix/modules/securityruntime/ports"
@@ -52,13 +51,13 @@ type studentNoteDeletedResponse struct {
 }
 
 type studentNoteRequestBody struct {
-	Kind             string  `json:"kind"`
-	Visibility       string  `json:"visibility"`
-	Category         string  `json:"category"`
-	Body             string  `json:"body"`
-	SubjectDate      *string `json:"subject_date"`
-	ActivityGroupID  *string `json:"activity_group_id" contract_text:"empty string means the note has no group subject"`
-	EducationGroupID *string `json:"education_group_id" contract_text:"empty string means the note has no group subject"`
+	Kind             string          `json:"kind"`
+	Visibility       string          `json:"visibility"`
+	Category         string          `json:"category"`
+	Body             string          `json:"body"`
+	SubjectDate      *string         `json:"subject_date"`
+	ActivityGroupID  *ident.IDOrNone `json:"activity_group_id"`
+	EducationGroupID *ident.IDOrNone `json:"education_group_id"`
 	// SharedWithSchool releases the note for the school (#4797). Omitted on
 	// create it stays off; omitted on update it keeps the stored value.
 	SharedWithSchool *bool `json:"shared_with_school"`
@@ -465,12 +464,12 @@ func validateNoteSubjectForChild(
 	return nil
 }
 
-func parseOptionalID(value *string, field string) (*int64, error) {
-	if value == nil || *value == "" {
+func parseOptionalID(value *ident.IDOrNone, field string) (*int64, error) {
+	if value == nil || value.IsZero() {
 		return nil, nil
 	}
-	parsed, err := strconv.ParseInt(*value, 10, 64)
-	if err != nil || parsed <= 0 {
+	parsed := value.Int64()
+	if parsed <= 0 {
 		return nil, errors.New(field + " must be a positive numeric id")
 	}
 	return &parsed, nil

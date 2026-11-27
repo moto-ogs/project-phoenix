@@ -1,0 +1,20 @@
+{
+  "loadObject": "lunch cancellations",
+  "notice": "Lunch is cancelled: {reason}",
+  "cancelErrorObject": "the lunch cancellation",
+  "cancelSuccess": "Lunch is cancelled on {day}.",
+  "title": "Lunch is cancelled: {day}",
+  "reasonRequired": "Enter a reason first.",
+  "saveTooltip": "Records the cancellation. Bookings for this day do not apply.",
+  "description": "Children will not receive lunch on this day. Bookings do not apply and are not billed. The team sees the cancellation under “Today is different”.",
+  "reasonLabel": "Reason",
+  "reasonPlaceholder": "For example: The caterer is not delivering.",
+  "restoreErrorObject": "lunch",
+  "restoreSuccess": "Lunch takes place again on {day}.",
+  "cancelAction": "Lunch is cancelled",
+  "cancelDescription": "Records that there is no lunch on this day.",
+  "changeReasonAction": "Change reason",
+  "changeReasonDescription": "Changes why lunch is cancelled.",
+  "restoreAction": "Lunch takes place",
+  "restoreDescription": "Cancels the cancellation immediately. Bookings apply again."
+}

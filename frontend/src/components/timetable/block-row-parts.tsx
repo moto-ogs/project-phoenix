@@ -1,5 +1,5 @@
 // Gemeinsame Teile der Blockzeilen im Tagesbetrieb (#4350): Tagesplan,
-// "Mein Tag", "Ablauf des Tages" und "Als Nächstes" in der Aufsicht zeigen
+// "Mein Tag", "Betreuungsplan heute" und "Als Nächstes" in der Aufsicht zeigen
 // denselben Block, also mit derselben Markierung für den eigenen Block und
 // denselben Symbolen für Raum und Personal. Die farbige Kante trägt nur
 // der Tagesplan; die Startseite und "Als Nächstes" tönen nur (#4413).

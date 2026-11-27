@@ -11,10 +11,10 @@ export function traegerArrivalPickupTimesTopic(): HelpTopic {
     title: "Ankunft und Abholung",
     question: "Wann kommen die Kinder an und wann gehen sie?",
     summary:
-      "Farbige Felder zeigen je Wochentag und halbe Stunde, wie viele Kinder ankommen und gehen. So planst du Personal für die vollen Zeiten.",
+      "Farbige Felder zeigen pro Wochentag und halbe Stunde, wie viele Kinder ankommen und gehen. So planst du Personal für die vollen Zeiten.",
     image: "/help/screens/ankunft-und-abholung.webp",
     imageAlt:
-      "Oben die Hauptzeiten Meiste Ankünfte und Meiste Abholungen. Darunter die grünen Felder der Ankunft mit einer Zeile je Wochentag und einem Feld je halbe Stunde.",
+      "Oben die Hauptzeiten Meiste Ankünfte und Meiste Abholungen. Darunter die grünen Felder der Ankunft mit einer Zeile pro Wochentag und einem Feld pro halbe Stunde.",
     group: "auswertung",
     audience: "traeger",
     icon: "ClockAfternoon",
@@ -27,7 +27,7 @@ export function traegerArrivalPickupTimesTopic(): HelpTopic {
       "Lies oben die Hauptzeiten: `Meiste Ankünfte` und `Meiste Abholungen`.",
       "Lies die Felder unter `Ankunft` und `Abholung`. Je dunkler ein Feld, desto mehr Kinder. Die Zahl im Feld ist der Durchschnitt eines Tages.",
       "Zeige auf ein Feld oder tippe darauf. Darunter steht dann die genaue Zahl.",
-      "Wähle unter `Je Schule` eine Schule oder oben neben dem Zeitraum eine Schule. Dann siehst du nur diese Schule.",
+      "Wähle unter `Pro Schule` eine Schule oder oben neben dem Zeitraum eine Schule. Dann siehst du nur diese Schule.",
       "Öffne oben rechts das Drei-Punkte-Menü. Wähle unter `Herunterladen` `PDF`, `Excel` oder `CSV`. Mit einer gewählten Schule enthält die Datei nur diese Schule.",
     ],
     result:

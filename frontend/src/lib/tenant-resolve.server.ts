@@ -17,7 +17,10 @@ export type TenantResolveResponse = Omit<
 
 /** A non-200 answer of the tenant lookup. Only 404 is cached. */
 export class TenantResolveStatusError extends Error {
-  constructor(readonly status: number) {
+  constructor(
+    readonly status: number,
+    readonly retryAfter: string | null = null,
+  ) {
     super(`Tenant resolution failed with HTTP ${status}`);
   }
 }
@@ -27,7 +30,8 @@ const TENANT_CACHE_LIMIT = 1_000;
 const CACHE = Symbol.for("moto.tenant-lookup-cache.v2");
 
 type TenantLookup =
-  { ok: true; data: TenantResolveResponse } | { ok: false; status: number };
+  | { ok: true; data: TenantResolveResponse }
+  | { ok: false; status: number; retryAfter: string | null };
 
 interface TenantCacheEntry {
   lookup: Promise<TenantLookup>;
@@ -62,7 +66,13 @@ async function loadTenant(
     query: { slug },
     headers: forwardHeaders,
   });
-  if (!result.ok) return { ok: false, status: result.error.status };
+  if (!result.ok) {
+    return {
+      ok: false,
+      status: result.error.status,
+      retryAfter: result.error.cause.retryAfter,
+    };
+  }
   const { settings, ...tenant } = result.value.data;
   return {
     ok: true,
@@ -94,7 +104,8 @@ export async function resolveTenantCached(
 ): Promise<TenantResolveResponse> {
   const result = await lookupTenant(slug, forwardHeaders);
   // Route bundles have separate error classes even though they share data.
-  if (!result.ok) throw new TenantResolveStatusError(result.status);
+  if (!result.ok)
+    throw new TenantResolveStatusError(result.status, result.retryAfter);
   return result.data;
 }
 

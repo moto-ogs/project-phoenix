@@ -383,6 +383,27 @@ func TestPreviousDepartureModesPreferTheDayValue(t *testing.T) {
 	assert.Equal(t, []string{careplan.DepartureModeAlone}, modes, "a weekday without a set reads as alone")
 }
 
+func TestPickupRequestPayloadRefusesPickupPersonIncompatibleWithWeeklyDeparture(t *testing.T) {
+	t.Parallel()
+	for _, mode := range []string{careplan.DepartureModeAlone, careplan.DepartureModeBus} {
+		t.Run(mode, func(t *testing.T) {
+			plan := &departurePlan{weekly: map[string][]string{"mon": {mode}}}
+			_, err := pickupRequestPayload(t.Context(), plan, calendar.NewDate(2026, 9, 21), carerequests.PickupChangeCreateInput{
+				StudentID:         fakeStudentID,
+				GuardianAccountID: fakeGuardian,
+				Date:              calendar.NewDate(2026, 9, 21),
+				Reason:            "Abholung",
+				PickupPerson: &carerequests.PickupPerson{
+					Name: "Tante Frieda",
+				},
+			})
+
+			require.ErrorIs(t, err, carerequests.ErrPickupChangeConflict)
+			require.Equal(t, []string{"day", "weekly"}, plan.calls)
+		})
+	}
+}
+
 type recordedPickupChanges struct {
 	notices []ports.PickupChangeNotice
 }

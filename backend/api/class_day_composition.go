@@ -150,6 +150,22 @@ func (b classDayRosters) SchoolRosterDay(ctx context.Context, date timezone.Date
 }
 
 // classDayRoster maps Enrollment's day roster onto the projection's port.
+func (b classDayRosters) AssignedClassRoster(ctx context.Context, classes []string, date timezone.Date, weekday string) (classday.AssignedRoster, error) {
+	roster, err := b.reports.AssignedClassRoster(ctx, classes, date, weekday)
+	if err != nil {
+		return classday.AssignedRoster{}, err
+	}
+	out := classday.AssignedRoster{
+		EnrollmentKnown: roster.EnrollmentKnown,
+		Students:        make([]classday.AssignedRosterStudent, 0, len(roster.Students)),
+		ListEntries:     roster.ListEntries,
+	}
+	for _, student := range roster.Students {
+		out.Students = append(out.Students, classday.AssignedRosterStudent(student))
+	}
+	return out, nil
+}
+
 func classDayRoster(roster *enrollmentOwner.ClassRosterDay) *classdayCompose.DayRoster {
 	if roster == nil {
 		return nil

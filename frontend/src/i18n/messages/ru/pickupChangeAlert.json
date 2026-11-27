@@ -1,0 +1,4 @@
+{
+  "pickupPerson": "{day}: {person} забирает ребёнка",
+  "pickupPersonWithdrawn": "{day}: информация о том, кто забирает ребёнка, отменена"
+}

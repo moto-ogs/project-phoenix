@@ -7,8 +7,8 @@
   "scripts": {
     "build": "NODE_OPTIONS=\"${NODE_OPTIONS:-} --max-old-space-size=6144\" next build",
     "build-storybook": "node scripts/build-storybook.mjs",
-    "check": "node ../scripts/check-du-form.mjs && node scripts/verify-locales.mjs && node scripts/generate-help-index.mjs --check && node scripts/generate-portal-pages.mjs --check && pnpm run test:source-contracts && node scripts/verify-error-catalog.mjs && node scripts/lint.mjs --max-warnings 0 && node ./node_modules/typescript-native/bin/tsc --noEmit",
-    "check:fresh": "rm -f *.tsbuildinfo && node ../scripts/check-du-form.mjs && node scripts/verify-locales.mjs && node scripts/generate-help-index.mjs --check && node scripts/generate-portal-pages.mjs --check && pnpm run test:source-contracts && node scripts/verify-error-catalog.mjs && node scripts/lint.mjs --max-warnings 0 && node ./node_modules/typescript-native/bin/tsc --noEmit",
+    "check": "node ../scripts/check-anrede.mjs && node scripts/verify-locales.mjs && node scripts/generate-help-index.mjs --check && node scripts/generate-portal-pages.mjs --check && pnpm run test:source-contracts && node scripts/verify-error-catalog.mjs && node scripts/lint.mjs --max-warnings 0 && node ./node_modules/typescript-native/bin/tsc --noEmit",
+    "check:fresh": "rm -f *.tsbuildinfo && node ../scripts/check-anrede.mjs && node scripts/verify-locales.mjs && node scripts/generate-help-index.mjs --check && node scripts/generate-portal-pages.mjs --check && pnpm run test:source-contracts && node scripts/verify-error-catalog.mjs && node scripts/lint.mjs --max-warnings 0 && node ./node_modules/typescript-native/bin/tsc --noEmit",
     "depcruise": "dependency-cruise --config .dependency-cruiser.cjs src",
     "dev": "node --max-http-header-size=65536 node_modules/next/dist/bin/next dev",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,mdx}\" --cache",
@@ -22,6 +22,7 @@
     "audit:a11y": "playwright test -c playwright.a11y-audit.config.ts",
     "test:network": "playwright test -c playwright.network.config.ts",
     "test:tenant-switch": "playwright test -c playwright.tenant-switch.config.ts",
+    "test:session-tree": "playwright test -c playwright.session-tree.config.ts",
     "generate:locales": "node scripts/generate-locales.mjs",
     "generate:error-catalog": "node scripts/verify-error-catalog.mjs --write",
     "lint": "node scripts/lint.mjs",

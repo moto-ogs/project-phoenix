@@ -1,6 +1,10 @@
 "use client";
 
-import { normalizeFilterValues, type FilterConfig } from "./types";
+import {
+  isFilterRestricting,
+  normalizeFilterValues,
+  type FilterConfig,
+} from "./types";
 import {
   ListboxChevron,
   ListboxDropdown,
@@ -136,26 +140,9 @@ function DropdownFilter({
     ? undefined
     : filter.options.find((opt) => opt.value === filter.value);
 
-  // "Filtered" = a real restriction is active. For multi-select that means the
-  // selection is neither empty (no restriction) nor the full visible option set.
-  // Compare by MEMBERSHIP, not length: a saved selection can hold a hidden value
-  // (e.g. a group/class the current user can't see) that pads the count to
-  // options.length while still excluding a visible option — selected [A, hiddenC]
-  // with options [A, B] is a real restriction, not "all selected". A selected
-  // value outside the visible options is itself a restriction to surface (#1565
-  // review pass 2). For single-select it means anything other than the
-  // first/default option.
-  const optionValueSet = new Set(filter.options.map((opt) => opt.value));
-  const selectedValueSet = new Set(selectedValues);
-  const allOptionsSelected = filter.options.every((opt) =>
-    selectedValueSet.has(opt.value),
-  );
-  const hasHiddenSelection = selectedValues.some(
-    (value) => !optionValueSet.has(value),
-  );
-  const isFiltered = isMulti
-    ? selectedValues.length > 0 && (!allOptionsSelected || hasHiddenSelection)
-    : filter.value !== filter.options[0]?.value;
+  // "Filtered" = a real restriction is active; the row's filter button and the
+  // pages' chips use the same rule (#6734).
+  const isFiltered = isFilterRestricting(filter);
 
   const options = filter.options.map((option) => ({
     value: option.value,
@@ -206,9 +193,7 @@ function DropdownFilter({
           <span
             className={cn(
               "whitespace-nowrap",
-              selectedOption && filter.value !== filter.options[0]?.value
-                ? "text-gray-900"
-                : "text-gray-600",
+              selectedOption && isFiltered ? "text-gray-900" : "text-gray-600",
             )}
           >
             {isMulti ? filter.label : (selectedOption?.label ?? filter.label)}

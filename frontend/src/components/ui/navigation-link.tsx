@@ -1,11 +1,11 @@
 "use client";
 
-import type { PrefetchResource } from "./data-prefetch-intent";
 // `.js`: Die Layouttests rendern ButtonLink in Node ohne Bundler (#6570).
 import NextLink from "next/link.js";
-import { forwardRef, type ComponentProps } from "react";
+import { forwardRef, useContext, type ComponentProps } from "react";
+import { PortalScrollContext } from "./navigation-progress-store";
 import { useNavigationLinkProgress } from "./use-navigation-link-progress";
-import { useLinkIntentPrefetch } from "./use-link-intent-prefetch";
+import { isInternalPath, portalManagesScroll } from "./navigation-url";
 import {
   startPageTransition,
   type PageTransitionDirection,
@@ -16,10 +16,10 @@ export type NavigationLinkProps = Omit<
   "href" | "prefetch"
 > & {
   readonly href: string;
-  /** Daten, die der Link bei Absicht zusätzlich zur Seite vorlädt. */
-  readonly resources?: readonly PrefetchResource[];
-  /** `false` schaltet auch das Vorladen bei Absicht ab. */
+  /** `false` schaltet das Vorladen der Hülle ab. */
   readonly prefetch?: false;
+  /** Verlässt das App-Dokument, etwa für die öffentliche Hilfe. */
+  readonly nativeAnchor?: boolean;
   /**
    * Seitlicher Übergang in der App (#8070): `forward` (Standard) schiebt die
    * neue Seite von rechts herein, `back` von links, `none` wechselt ohne
@@ -32,39 +32,22 @@ export type NavigationLinkProps = Omit<
  * Der eine Link des Kits für interne Ziele (#6570): Seitenleiste, untere
  * Leiste, Kopfzeile, Seiteninhalt und `ButtonLink` nutzen ihn.
  *
- * Fortschritt: Der Link meldet seinen Wechsel beim Klick, also vor dem
- * Router-Dispatch, und verwirft die Meldung sofort, wenn ein eigener Handler
- * oder `onNavigate` den Klick abbricht.
- *
- * Vorladen erst bei Absicht (#2976, #4987): Ein sichtbarer Link lädt nichts.
- * Bleibt die Maus kurz auf ihm, bekommt er den Fokus oder beginnt eine
- * Berührung, schaltet er `prefetch` auf `true`. Next lädt dann die volle
- * Zielseite samt ihrer JS-Module, nicht nur bis zur Ladehülle; der Klick
- * danach wartet nicht mehr auf den Code der Seite. Der Router hält diese
- * Daten nur im Speicher des Tabs; Logout und Schulwechsel laden die Seite
- * komplett neu und verwerfen ihn damit.
- *
- * In der Entwicklung lädt `next/link` selbst nichts vor, Links in einen neuen
- * Tab und fremde Ziele lässt diese Komponente aus.
+ * Next lädt die neutrale Hülle, nicht den URL-spezifischen Inhalt (#8083).
+ * Die Daten liefert der autorisierte Seitenseed oder der scoped SWR-Cache
+ * (#8079). Fremde Ziele, neue Tabs und `prefetch={false}` laden nichts vor.
  */
 const NavigationLink = forwardRef<HTMLAnchorElement, NavigationLinkProps>(
   function NavigationLink(
     {
       href,
       target,
-      prefetch: allowPrefetch,
+      prefetch,
+      nativeAnchor,
+      scroll,
       onClick,
       onNavigate,
-      onPointerEnter,
-      onPointerLeave,
-      onFocus,
-      onTouchStart,
-      onTouchMove,
-      onTouchEnd,
-      onTouchCancel,
-      onBlur,
-      resources,
       pageTransition = "forward",
+      children,
       ...anchorProps
     },
     ref,
@@ -83,42 +66,42 @@ const NavigationLink = forwardRef<HTMLAnchorElement, NavigationLinkProps>(
         startPageTransition(pageTransition, href);
       }
     });
-    const intent = useLinkIntentPrefetch({
-      href,
-      target,
-      prefetch: allowPrefetch,
-      onClick: progress.onClick,
-      onPointerEnter,
-      onPointerLeave,
-      onFocus,
-      onTouchStart,
-      onTouchMove,
-      onTouchEnd,
-      onTouchCancel,
-      onBlur,
-      resources,
-    });
+    const portalScroll = useContext(PortalScrollContext);
+    if (nativeAnchor) {
+      return (
+        <a
+          {...anchorProps}
+          ref={ref}
+          href={href}
+          target={target}
+          onClick={onClick}
+        >
+          {children}
+        </a>
+      );
+    }
 
-    // Jeder Handler steht hier genau einmal; `anchorProps` enthält keinen von
-    // ihnen. Die Reihenfolge der Props entscheidet deshalb nichts.
+    const canPrefetch =
+      prefetch !== false &&
+      (!target || target === "_self") &&
+      isInternalPath(href);
+
     return (
       <NextLink
         {...anchorProps}
         ref={ref}
         href={href}
         target={target}
-        prefetch={intent.prefetch}
-        onClick={intent.onClick}
+        scroll={
+          scroll ??
+          (portalScroll && portalManagesScroll(href) ? false : undefined)
+        }
+        prefetch={canPrefetch ? "auto" : false}
+        onClick={progress.onClick}
         onNavigate={progress.onNavigate}
-        onPointerEnter={intent.onPointerEnter}
-        onPointerLeave={intent.onPointerLeave}
-        onFocus={intent.onFocus}
-        onTouchStart={intent.onTouchStart}
-        onTouchMove={intent.onTouchMove}
-        onTouchEnd={intent.onTouchEnd}
-        onTouchCancel={intent.onTouchCancel}
-        onBlur={intent.onBlur}
-      />
+      >
+        {children}
+      </NextLink>
     );
   },
 );

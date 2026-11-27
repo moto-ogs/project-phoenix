@@ -3,14 +3,14 @@
   "overviewDescription": "Wähle ein Kind aus, um Betreuung, Daten und Kontakte zu sehen.",
   "careEnded": {
     "title": "Betreuung beendet",
-    "body": "Dein Kind wird in dieser {careTerm} nicht mehr betreut. Alles Bisherige kannst du weiter ansehen. Neue Meldungen sind nicht mehr möglich."
+    "body": "Dein Kind wird in {careThisDat} nicht mehr betreut. Alles Bisherige kannst du weiter ansehen. Neue Meldungen sind nicht mehr möglich."
   },
   "withoutCarePlace": {
-    "title": "Kein Platz in der {careTerm}",
-    "body": "Dein Kind hat keinen Platz in der {careTerm}. Abholung, Betreuungszeiten, Essen und Nachrichten an die {careTerm} gibt es deshalb hier nicht."
+    "title": "Kein Platz {careIn}",
+    "body": "Dein Kind hat keinen Platz {careIn}. Abholung, Betreuungszeiten, Essen und Nachrichten an {careAcc} gibt es deshalb hier nicht."
   },
   "notFound": "Zu dieser Adresse gibt es kein Kind in deinem Konto. Bitte wähle dein Kind in der Übersicht.",
-  "noChildren": "Mit deinem Konto ist noch kein Kind verknüpft. Die {careTerm} deiner Schule kann das einrichten.",
+  "noChildren": "Mit deinem Konto ist noch kein Kind verknüpft. {careNomCap} deiner Schule kann das einrichten.",
   "sections": {
     "today": "Heute"
   },
@@ -52,8 +52,8 @@
     "description": "Hier siehst du, was für dein Kind gespeichert ist.",
     "staffDescription": "Eltern ändern die Foto-Einwilligung im Elternportal. Eltern ohne Elternportal sagen es dir. Dann entfernst du unter „Bearbeiten“ beim Foto den Haken.",
     "photoDescription": "Die Foto-Einwilligung kannst du hier ändern.",
-    "photoViaCareDescription": "Die Foto-Einwilligung widerrufst du bei der {careTerm}.",
-    "photoMeaning": "Die {careTerm} darf dein Kind fotografieren und ein Foto von deinem Kind in moto speichern.",
+    "photoViaCareDescription": "Die Foto-Einwilligung widerrufst du {careBei}.",
+    "photoMeaning": "{careNomCap} darf dein Kind fotografieren und ein Foto von deinem Kind in moto speichern.",
     "items": {
       "agb": "Allgemeine Geschäftsbedingungen (AGB)",
       "data_processing": "Datenschutzinformation erhalten",
@@ -88,16 +88,16 @@
     "grantButton": "Foto-Einwilligung erneut geben",
     "grantButtonShort": "Erneut geben",
     "grantConfirmTitle": "Foto-Einwilligung erneut geben?",
-    "grantConfirmBody": "Die {careTerm} darf dein Kind fotografieren und ein Foto von deinem Kind in moto speichern.",
+    "grantConfirmBody": "{careNomCap} darf dein Kind fotografieren und ein Foto von deinem Kind in moto speichern.",
     "grantConfirmButton": "Einwilligung geben",
     "granting": "Wird gespeichert",
     "grantSuccess": "Die Foto-Einwilligung wurde erneut gegeben.",
     "errorObjectList": "die Liste der Einwilligungen",
     "errorObjectPhoto": "die Foto-Einwilligung",
     "withdrawTooltip": "Beendet die Foto-Einwilligung und löscht ein gespeichertes Foto. moto fragt vorher nach.",
-    "grantTooltip": "Erlaubt der {careTerm} wieder Fotos von deinem Kind. moto fragt vorher nach.",
+    "grantTooltip": "Erlaubt {careDat} wieder Fotos von deinem Kind. moto fragt vorher nach.",
     "roomHistoryDescription": "Raumverlauf und Stimmung kannst du hier stoppen.",
-    "roomHistoryViaCareDescription": "Den Stopp für Raumverlauf und Stimmung hebt die {careTerm} auf.",
+    "roomHistoryViaCareDescription": "Den Stopp für Raumverlauf und Stimmung hebt {careNom} auf.",
     "roomHistoryStopAria": "Raumverlauf und Stimmung stoppen",
     "roomHistoryStopShort": "Stoppen",
     "roomHistoryStopTooltip": "Löscht den bisherigen Raumverlauf und stoppt die Erfassung. moto fragt vorher nach.",

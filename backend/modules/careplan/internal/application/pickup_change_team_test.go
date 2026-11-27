@@ -172,6 +172,7 @@ func TestPickupChangeTeamListsTheRequestsCurrentState(t *testing.T) {
 	store := &pickupTeamStoreDouble{rows: []ports.PickupChangeNoticeRow{
 		{RequestID: 1, StudentID: 77, StudentFirstName: "Mia", Status: "approved", Payload: payload("2026-11-13"), InformedAt: informed},
 		{RequestID: 2, StudentID: 78, StudentFirstName: "Ben", Status: "rejected", Payload: payload("2026-11-20"), InformedAt: informed},
+		{RequestID: 4, StudentID: 80, StudentFirstName: "Lia", Status: "rejected", Payload: json.RawMessage(`{"date":"2026-11-21","pickup_person":{"name":"Tante Frieda"}}`), InformedAt: informed},
 		{RequestID: 3, StudentID: 79, StudentFirstName: "Ida", Status: "approved", Payload: json.RawMessage(`{}`), InformedAt: informed},
 	}}
 	team := newPickupTeam(store, &pickupTeamReachDouble{})
@@ -182,13 +183,53 @@ func TestPickupChangeTeamListsTheRequestsCurrentState(t *testing.T) {
 	assert.Equal(t, [2]int64{11, 80}, store.marked)
 	assert.Equal(t, seen, store.observed)
 	assert.Equal(t, pickupTeamToday, store.from, "only days from today on")
-	require.Len(t, got, 2, "a request without a pickup day has nothing to show")
+	require.Len(t, got, 3, "a request without a pickup day has nothing to show")
 	assert.Equal(t, careplan.PickupChangeTeamNotice{
 		RequestID: 1, StudentID: 77, StudentFirstName: "Mia", Date: calendar.NewDate(2026, 11, 13), PickupTime: "15:00", InformedAt: informed,
 	}, got[0])
 	assert.True(t, got[1].Withdrawn, "a corrected decision took the time back")
-	assert.Empty(t, got[1].PickupTime)
+	assert.Equal(t, "15:00", got[1].PickupTime)
+	assert.Equal(t, careplan.PickupChangeTeamNotice{
+		RequestID: 4, StudentID: 80, StudentFirstName: "Lia", Date: calendar.NewDate(2026, 11, 21),
+		PickupPerson: "Tante Frieda", Withdrawn: true, InformedAt: informed,
+	}, got[2])
 
 	_, err = team.ListUnreadPickupChangeNotices(t.Context(), 0)
 	require.ErrorIs(t, err, ErrPickupChangeNoticeInvalid)
+}
+
+// A family that names who collects the child tells the team too (#8162).
+// The device text names neither the child nor the person.
+func TestPickupChangeTeamTellsAboutThePickupPerson(t *testing.T) {
+	t.Parallel()
+	date := calendar.NewDate(2026, 11, 20)
+	notice := pickupNotice(date)
+	notice.PickupTime, notice.PickupPerson = "", "Tante Frieda"
+	withdrawn := notice
+	withdrawn.Withdrawn = true
+	for name, tc := range map[string]struct {
+		notice      careplan.PickupChangeNotice
+		title, body string
+	}{
+		"named":     {notice, "Abholperson geändert", "Ein Kind wird am Fr. 20.11.2026 von einer anderen Person abgeholt."},
+		"withdrawn": {withdrawn, "Abholperson zurückgenommen", "Für ein Kind gilt am Fr. 20.11.2026 wieder die normale Abholung."},
+		"both withdrawn": {func() careplan.PickupChangeNotice {
+			both := withdrawn
+			both.PickupTime = "15:00"
+			return both
+		}(), "Abholzeit und Abholperson zurückgenommen", "Für ein Kind gelten am Fr. 20.11.2026 wieder die normale Abholzeit und Abholung."},
+		"both": {func() careplan.PickupChangeNotice {
+			both := notice
+			both.PickupTime = "15:00"
+			return both
+		}(), "Abholzeit und Abholperson geändert", "Neue Abholzeit und Abholperson für ein Kind: am Fr. 20.11.2026 um 15:00 Uhr."},
+	} {
+		store, reach := &pickupTeamStoreDouble{}, &pickupTeamReachDouble{responsible: []int64{11}}
+		require.NoError(t, newPickupTeam(store, reach).NotifyPickupChangeApproved(t.Context(), tc.notice), name)
+		assert.Equal(t, []int64{11}, store.upserted, name)
+		require.Len(t, reach.pushes, 1, name)
+		assert.Equal(t, tc.title, reach.pushes[0].Title, name)
+		assert.Equal(t, tc.body, reach.pushes[0].Body, name)
+		assert.NotContains(t, reach.pushes[0].Body, "Frieda", name)
+	}
 }

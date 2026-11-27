@@ -29,6 +29,10 @@ const { headersMock } = vi.hoisted(() => ({
 vi.mock("next/headers", () => ({
   headers: headersMock,
 }));
+vi.mock("next/server", async (original) => ({
+  ...(await original<typeof import("next/server")>()),
+  connection: async () => undefined,
+}));
 
 vi.mock("next/cache", () => ({
   revalidatePath: vi.fn(),
@@ -50,6 +54,7 @@ vi.mock("~/lib/shell-bootstrap.server", () => ({
 }));
 
 vi.mock("~/lib/portal-session-snapshot.server", () => ({
+  readRenderedSessionMark: async () => "",
   readPortalSessionSnapshot: readPortalSessionSnapshotMock,
 }));
 
@@ -115,6 +120,7 @@ const tenantDefaults = {
   child_search_only_navigation: false,
   simple_staff_navigation: false,
   care_facility_term: "",
+  care_facility_article: "die",
 };
 
 function tenantResponse(name = "School A") {
@@ -437,15 +443,22 @@ describe("TenantLayout", () => {
       vi.resetModules();
       const other = await import("~/lib/tenant-resolve.server");
       expect(other.TenantResolveStatusError).not.toBe(TenantResolveStatusError);
-      const fetchSpy = vi
-        .spyOn(globalThis, "fetch")
-        .mockResolvedValue(new Response(null, { status }));
+      const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+        new Response(null, {
+          status,
+          headers: status === 429 ? { "Retry-After": "7" } : undefined,
+        }),
+      );
 
       const first = resolveTenantCached("school-a", {});
       const second = other.resolveTenantCached("school-a", {});
       await Promise.all([
         expect(first).rejects.toBeInstanceOf(TenantResolveStatusError),
         expect(second).rejects.toBeInstanceOf(other.TenantResolveStatusError),
+        expect(second).rejects.toMatchObject({
+          status,
+          retryAfter: status === 429 ? "7" : null,
+        }),
       ]);
       expect(fetchSpy).toHaveBeenCalledOnce();
     },

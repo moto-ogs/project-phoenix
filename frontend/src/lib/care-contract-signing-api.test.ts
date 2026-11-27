@@ -10,6 +10,7 @@ function signingView(status: string, weekdays: readonly string[]) {
     contract_id: "7",
     organization_id: "3",
     status,
+    amendment: false,
     traeger_name: "Träger",
     party_name: "Sabine Schneider",
     version: {
@@ -52,6 +53,15 @@ describe("fetchSigningView (#2353)", () => {
     expect(view.status).toBeUndefined();
     expect(view.services.map((service) => service.weekday)).toEqual(["mon"]);
   });
+
+  it.each([false, true])(
+    "keeps the stored amendment scope %s",
+    async (amendment) => {
+      stubAnswer({ ...signingView("aktiv", ["mon"]), amendment });
+      const view = await fetchSigningView({ kind: "link", link: "l" });
+      expect(view.amendment).toBe(amendment);
+    },
+  );
 
   it("fails on a contract version without its first day", async () => {
     stubAnswer({

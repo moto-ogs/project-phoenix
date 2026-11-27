@@ -69,7 +69,7 @@ import type {
 } from "~/lib/home-blocks";
 import { useCareWithdrawalsPending } from "~/lib/hooks/use-care-withdrawals-pending";
 import { useChangeRequestsPending } from "~/lib/hooks/use-change-requests-pending";
-import { useDayPlanHref } from "~/lib/hooks/use-day-plan-href";
+import { useDayPlanLink } from "~/lib/hooks/use-day-plan-href";
 import { useEnrollmentRequestsPending } from "~/lib/hooks/use-enrollment-requests-pending";
 import { useEnrollmentsUnread } from "~/lib/hooks/use-enrollments-unread";
 import { useHomeGroup } from "~/lib/hooks/use-home-group";
@@ -183,7 +183,7 @@ export function HomeApp({
   const { data: session } = useSession();
   const accountId = session?.user?.id ?? "";
   const tenantPath = useTenantAwarePath();
-  const dayPlanHref = useDayPlanHref();
+  const { href: dayPlanHref } = useDayPlanLink();
   const clock = useBerlinClock();
 
   const dayChanges = useSWRAuth<DayChangesOverview>(

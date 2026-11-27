@@ -1,9 +1,11 @@
 import { beforeEach, describe, it, expect, vi } from "vitest";
 import { render, waitFor } from "@testing-library/react";
-import RootLayout, { generateMetadata, viewport } from "./layout";
+import { generateMetadata, viewport } from "./layout";
+import { RootDocument } from "./root-document";
 
 const headerState = vi.hoisted(() => ({
   host: "moto-app.de",
+  contrastCookie: undefined as string | undefined,
 }));
 
 vi.mock("next/font/local", () => ({
@@ -19,6 +21,13 @@ vi.mock("next/headers", () => ({
       get: (name: string) =>
         name.toLowerCase() === "host" ? headerState.host : null,
     }),
+  cookies: () =>
+    Promise.resolve({
+      get: (name: string) =>
+        name === "moto_contrast" && headerState.contrastCookie
+          ? { value: headerState.contrastCookie }
+          : undefined,
+    }),
 }));
 
 const navigationState = vi.hoisted(() => ({ pathname: "/" }));
@@ -29,8 +38,16 @@ vi.mock("next/navigation", () => ({
 
 // Mock child components
 vi.mock("./providers", () => ({
-  Providers: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="providers">{children}</div>
+  Providers: ({
+    children,
+    moreContrast,
+  }: {
+    children: React.ReactNode;
+    moreContrast?: boolean;
+  }) => (
+    <div data-more-contrast={moreContrast} data-testid="providers">
+      {children}
+    </div>
   ),
 }));
 
@@ -43,6 +60,7 @@ vi.mock("~/components/background-wrapper", () => ({
 describe("RootLayout", () => {
   beforeEach(() => {
     headerState.host = "moto-app.de";
+    headerState.contrastCookie = undefined;
     navigationState.pathname = "/";
     vi.stubEnv("NEXT_PUBLIC_OPERATOR_HOSTNAME", "operator.moto-app.de");
     vi.stubEnv("NEXT_PUBLIC_PARENTS_HOSTNAME", "eltern.moto-app.de");
@@ -52,11 +70,11 @@ describe("RootLayout", () => {
     vi.stubEnv("TENANT_DOMAIN", "moto-app.de");
   });
 
-  // RootLayout is an async server component (it awaits getLocale() for the
+  // The request-time document awaits getLocale() for the
   // <html lang>), so it must be resolved before handing the element to render.
   it("renders children wrapped in providers", async () => {
     const { getByText, getByTestId } = render(
-      await RootLayout({ children: <div>Test Content</div> }),
+      await RootDocument({ children: <div>Test Content</div> }),
     );
 
     expect(getByText("Test Content")).toBeInTheDocument();
@@ -66,7 +84,7 @@ describe("RootLayout", () => {
 
   it("wraps content in providers and background wrapper", async () => {
     const { getByTestId } = render(
-      await RootLayout({ children: <div>Test</div> }),
+      await RootDocument({ children: <div>Test</div> }),
     );
 
     // Verify both wrapper components are present
@@ -74,12 +92,25 @@ describe("RootLayout", () => {
     expect(getByTestId("background-wrapper")).toBeInTheDocument();
   });
 
+  it("passes the contrast cookie to the document and client providers", async () => {
+    headerState.contrastCookie = "more";
+
+    const documentElement = await RootDocument({ children: <div>Test</div> });
+    const { getByTestId } = render(documentElement);
+
+    expect(documentElement.props["data-contrast"]).toBe("more");
+    expect(getByTestId("providers")).toHaveAttribute(
+      "data-more-contrast",
+      "true",
+    );
+  });
+
   // #7109: the title names the page and the portal of the host.
   it("renders the title of the current page", async () => {
     headerState.host = "schule.moto-app.de";
     navigationState.pathname = "/kalender";
 
-    render(await RootLayout({ children: <div>Test</div> }));
+    render(await RootDocument({ children: <div>Test</div> }));
 
     await waitFor(() => expect(document.title).toBe("Kalender – moto"));
   });
@@ -99,7 +130,7 @@ describe("RootLayout", () => {
     headerState.host = "school-a.moto-app.de";
     navigationState.pathname = pathname;
 
-    render(await RootLayout({ children: <div>Test</div> }));
+    render(await RootDocument({ children: <div>Test</div> }));
 
     await waitFor(() => expect(document.title).toBe(title));
   });
@@ -108,7 +139,7 @@ describe("RootLayout", () => {
     headerState.host = "bad host[";
     navigationState.pathname = "/start";
 
-    render(await RootLayout({ children: <div>Test</div> }));
+    render(await RootDocument({ children: <div>Test</div> }));
 
     await waitFor(() => expect(document.title).toBe("Erstgespräch – moto"));
   });

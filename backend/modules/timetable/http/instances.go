@@ -312,6 +312,9 @@ func staticConflict(message, code string) func(error) render.Renderer {
 // potentially wrong 4xx for a real database failure.
 var instanceLifecycleErrorRules = []common.ErrorRule{
 	{Target: timetable.ErrInvalidInstanceReference, Render: common.ErrorInvalidRequest},
+	{Target: timetable.ErrRoomClosed, Render: func(err error) render.Renderer {
+		return common.ErrorConflictOnField(err, common.CodeTimetableRoomClosed, "room_id")
+	}},
 	{Target: timetable.ErrGuardianNoticeInvalid, Render: codedOr(common.CodeTimetableGuardianNoticeInvalid)},
 	{
 		Target: timetable.ErrInstanceReinstateEnded,

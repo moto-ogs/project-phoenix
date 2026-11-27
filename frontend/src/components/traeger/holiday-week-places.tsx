@@ -177,8 +177,8 @@ export function HolidayDayPlacesGrid({
   if (!week && days.length === 0) return null;
   const heading = week
     ? capacity === null
-      ? "Angemeldete Kinder je Tag"
-      : `Plätze je Tag · ${capacity} ${capacity === 1 ? "Platz" : "Plätze"} an jedem Tag`
+      ? "Angemeldete Kinder pro Tag"
+      : `Plätze pro Tag · ${capacity} ${capacity === 1 ? "Platz" : "Plätze"} an jedem Tag`
     : `Buchbare Tage · ${days.filter((day) => !noCareDays.some((none) => none.date === day.date)).length} von ${days.length}`;
   return (
     <div className="space-y-2">

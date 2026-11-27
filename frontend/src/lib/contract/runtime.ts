@@ -5,6 +5,7 @@ import { isInt64Decimal } from "../compare-ids";
 
 /** An int64 identifier sent as a JSON string. Kept verbatim, never a number. */
 export const int64String = z.string().refine(isInt64Decimal);
+export const int64StringOrNone = z.union([int64String, z.literal("")]);
 
 export const safeInt = z.number().refine(Number.isSafeInteger);
 
@@ -42,6 +43,7 @@ const pagination = z.object({
   page_size: safeInt,
   total_pages: safeInt,
   total_records: safeInt,
+  next_cursor: z.string().optional(),
 });
 
 /** The page of a paginated list (`common.Pagination`). */

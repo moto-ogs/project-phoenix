@@ -7,7 +7,7 @@ export function traegerCareNoticesTopic(): HelpTopic {
     title: "Jahresbescheide ausstellen",
     question: "Wie stelle ich einen Gebührenbescheid für das Jahr aus?",
     summary:
-      "Ein Jahresbescheid setzt den Beitrag für mehrere Monate eines Jahres fest. Jede Familie bekommt je Vertrag einen Bescheid mit Monatsraten. Die Raten sind jeweils am 1. des Monats fällig. Für Monate mit Bescheid berechnet der Monatslauf keine Betreuung erneut. Essen rechnet er weiterhin ab.",
+      "Ein Jahresbescheid setzt den Beitrag für mehrere Monate eines Jahres fest. Jede Familie bekommt pro Vertrag einen Bescheid mit Monatsraten. Die Raten sind jeweils am 1. des Monats fällig. Für Monate mit Bescheid berechnet der Monatslauf keine Betreuung erneut. Essen rechnet er weiterhin ab.",
     group: "anmeldeverwaltung",
     audience: "traeger",
     icon: "CalendarDays",
@@ -35,9 +35,9 @@ export function traegerCareNoticesTopic(): HelpTopic {
         description:
           "Vor der Ausstellung ändert sich nichts. Die Vorschau zeigt immer den Stand von heute.",
         steps: [
-          "Je Kind steht eine Zeile mit Zeitraum, Monatsrate und Jahresbetrag.",
+          "Pro Kind steht eine Zeile mit Zeitraum, Monatsrate und Jahresbetrag.",
           "Wähle eine Zeile. Du siehst Seite 1 des Bescheids so, wie die Familie ihn bekommt.",
-          "Unter `I. Berechnung` steht je Modul der Betrag im Monat und für den Zeitraum.",
+          "Unter `I. Berechnung` steht pro Modul der Betrag im Monat und für den Zeitraum.",
           "Unter `II. Abrechnung` stehen die Raten. Ein Monat, der schon begonnen hat, ist sofort fällig.",
         ],
       },
@@ -70,7 +70,7 @@ export function traegerCareNoticesTopic(): HelpTopic {
         steps: [
           "Starte für dasselbe Jahr einen neuen Jahreslauf, zum Beispiel ab dem Monat der Änderung.",
           "Die Vorschau zeigt nur Kinder, bei denen sich etwas geändert hat. Sie stehen als `Änderungsbescheid`.",
-          "Der Änderungsbescheid nennt den alten Bescheid. Je Zeile steht `bisher`, `neu` und `Zu-/Abgang`.",
+          "Der Änderungsbescheid nennt den alten Bescheid. Pro Zeile steht `bisher`, `neu` und `Zu-/Abgang`.",
           "Stelle die Bescheide aus. Von da an gilt für diese Monate der Änderungsbescheid.",
         ],
       },

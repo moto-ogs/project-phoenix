@@ -28,7 +28,7 @@ import {
   UNKNOWN_ANALYTICS_PATH,
   type AnalyticsRouteSurface,
 } from "~/lib/analytics-routes";
-import type * as dayChangesContract from "~/lib/contract/day-changes.generated";
+import type * as dayChangesContract from "~/lib/contract/shared.generated";
 import { NOTIFICATION_FEED_ANALYTICS_TYPES } from "~/lib/notification-feed-helpers";
 
 /** Reiterarten auf „Alle Kinder“ (#5046); ein Aufsichtsreiter nennt keinen Raum. */
@@ -44,6 +44,7 @@ const DAY_CHANGE_KINDS = [
   "child_goes_alone",
   "child_pickup_changed",
   "child_pickup_note",
+  "child_pickup_person",
   "activity_cancelled",
   "activity_lead_changed",
   "activity_reinstated",
@@ -562,6 +563,9 @@ const CUSTOM_EVENTS: ReadonlySet<string> = new Set([
   "day_changes_entry_clicked",
   "day_changes_show_all",
   "day_changes_done_expanded",
+  // Umschalter auf „Morgen“ (#7657), ohne Eigenschaft: ob die Vorschau
+  // genutzt wird.
+  "day_changes_tomorrow_shown",
   // Selbstöffnende Flächen des Einstiegs (#7541): nur die Fläche
   // (onboarding_surface); das Portal steht in `surface`.
   "onboarding_surface_shown",

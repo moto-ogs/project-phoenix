@@ -143,6 +143,9 @@ var moduleSQLClockBudget = map[string]int{
 	// download only while expires_at > now() (1), and finishDownload stamps
 	// finished_at like the started_at default (1).
 	"modules/organizationtenancy": 14,
+	// ADR 0324: count and sort the same redeemable school invitations on the
+	// database clock that stamps and validates them (ADR 0285).
+	"modules/operatoraccountdirectory": 1,
 	// Named exceptions on the database clock (ADR 0281): the family children
 	// statement and confirmation (5), ordered against the statement time
 	// enrollment stamps with clock_timestamp(); the download of a PAIN.008
@@ -289,9 +292,13 @@ func countSQLClockReads(path string) (int, error) {
 		return 0, nil
 	}
 	reads := 0
+	var tags = map[*ast.BasicLit]bool{}
 	ast.Inspect(file, func(node ast.Node) bool {
+		if field, ok := node.(*ast.Field); ok && field.Tag != nil {
+			tags[field.Tag] = true
+		}
 		literal, ok := node.(*ast.BasicLit)
-		if !ok || literal.Kind != token.STRING {
+		if !ok || literal.Kind != token.STRING || tags[literal] {
 			return true
 		}
 		text, err := strconv.Unquote(literal.Value)
@@ -317,6 +324,7 @@ func TestModuleSQLClockRatchetCountsLiteralsOnly(t *testing.T) {
 		"const pinned = `UPDATE t SET ended_at = ? WHERE due < ?`\n"+
 		"var known = \"snow() is no clock, current_dates neither\"\n"+
 		"var detail = map[string]string{\"current_time\": \"12:00\"}\n"+
+		"type response struct { CurrentTime string `json:\"current_time\"` }\n"+
 		"var value = \"CURRENT_TIMESTAMP\"\n")
 	writeCalendarFixtureSourceAt(t, root, "modules/sample/internal/adapters/postgres/store_test.go", "package postgres\n"+
 		"const fixture = `SELECT NOW()`\n")

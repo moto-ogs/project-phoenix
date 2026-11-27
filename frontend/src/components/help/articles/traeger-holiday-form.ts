@@ -25,7 +25,7 @@ export function traegerHolidayFormTopic(): HelpTopic {
           "Wähle unter `Hinweise und Einwilligungen` die Aktion `Hinweis oder Einwilligung hinzufügen`.",
           "Trage `Titel` und `Text neben dem Häkchen oder Hinweis` ein.",
           "Ergänze den Text unter `Rechtstext / Erklärung`.",
-          "Für ein PDF wähle `PDFs hinzufügen`. Höchstens 10 MB je Datei.",
+          "Für ein PDF wähle `PDFs hinzufügen`. Höchstens 10 MB pro Datei.",
           "Trage unter `Bezeichnung für Eltern` einen passenden Namen ein.",
           "Müssen Eltern den Hinweis bestätigen? Wähle `Muss bestätigt werden`.",
           "Eine freiwillige Einwilligung lässt du ohne diese Pflicht.",

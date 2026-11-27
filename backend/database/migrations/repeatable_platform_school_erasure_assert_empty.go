@@ -320,6 +320,8 @@ AS $function$
     UNION ALL
     SELECT 1 FROM enrollment.submission_rate_limits AS r WHERE r.tenant_id = p_school_id
     UNION ALL
+    SELECT 1 FROM facilities.room_closures AS r WHERE r.tenant_id = p_school_id
+    UNION ALL
     SELECT 1 FROM facilities.rooms AS r WHERE r.tenant_id = p_school_id
     UNION ALL
     SELECT 1 FROM feedback.entries AS r WHERE r.tenant_id = p_school_id
@@ -368,6 +370,8 @@ AS $function$
     UNION ALL
     SELECT 1 FROM schedule.closing_days AS r WHERE r.tenant_id = p_school_id
     UNION ALL
+    SELECT 1 FROM schedule.opening_changes AS r WHERE r.tenant_id = p_school_id
+    UNION ALL
     SELECT 1 FROM schedule.dateframes AS r WHERE r.tenant_id = p_school_id
     UNION ALL
     SELECT 1 FROM schedule.grade_transition_roster_removals AS r WHERE r.tenant_id = p_school_id
@@ -404,6 +408,8 @@ AS $function$
     UNION ALL
     SELECT 1 FROM schedule.meal_plan_entries AS r WHERE r.tenant_id = p_school_id
     UNION ALL
+    SELECT 1 FROM schedule.meal_cancellations AS r WHERE r.tenant_id = p_school_id
+    UNION ALL
     SELECT 1 FROM schedule.meal_sickness_status_history AS r WHERE r.tenant_id = p_school_id
     UNION ALL
     SELECT 1 FROM schedule.pickup_extension_tasks AS r WHERE r.tenant_id = p_school_id
@@ -431,6 +437,8 @@ AS $function$
     SELECT 1 FROM schedule.student_pickup_exceptions AS r WHERE r.tenant_id = p_school_id
     UNION ALL
     SELECT 1 FROM schedule.student_pickup_notes AS r WHERE r.tenant_id = p_school_id
+    UNION ALL
+    SELECT 1 FROM schedule.student_pickup_persons AS r WHERE r.tenant_id = p_school_id
     UNION ALL
     SELECT 1 FROM schedule.student_pickup_schedules AS r WHERE r.tenant_id = p_school_id
     UNION ALL

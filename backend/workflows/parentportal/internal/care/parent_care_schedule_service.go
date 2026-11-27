@@ -314,22 +314,30 @@ func careDayStatus(hasCarePlan, hasArrivalDay bool, arrival, pickup string) Care
 // reaches the guardian. Must run inside the child's tenant transaction; a
 // missing repo (unwired) yields false rather than a panic.
 func (s *Service) hasActiveAbsenceToday(ctx context.Context, studentID int64, today calendar.Date) (bool, error) {
-	if s.StatusDayRepo == nil {
-		return false, nil
+	absent, err := s.absentToday(ctx, []int64{studentID}, today)
+	return absent[studentID], err
+}
+
+// absentToday is hasActiveAbsenceToday for the children of one school, in one
+// statement.
+func (s *Service) absentToday(ctx context.Context, studentIDs []int64, today calendar.Date) (map[int64]bool, error) {
+	absent := make(map[int64]bool, len(studentIDs))
+	if s.StatusDayRepo == nil || len(studentIDs) == 0 {
+		return absent, nil
 	}
-	rows, err := s.StatusDayRepo.FindActiveByStudentAndDateRange(ctx, studentID, today, today)
+	rows, err := s.StatusDayRepo.FindActiveByStudentIDsAndDate(ctx, studentIDs, today)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 	for _, r := range rows {
 		switch r.Status {
 		case absencerecords.StudentStatusDaySick,
 			absencerecords.StudentStatusDayExcused,
 			absencerecords.StudentStatusDayClassTrip:
-			return true, nil
+			absent[r.StudentID] = true
 		}
 	}
-	return false, nil
+	return absent, nil
 }
 
 // MapCareRequestError translates the schedule-domain sentinels into this
@@ -418,6 +426,8 @@ func MapCareRequestError(err error, op string) error {
 		return ErrCareRequestAlreadyPending
 	case errors.Is(err, carerequests.ErrInvalidPayload):
 		return ErrInvalidCareRequestPayload
+	case errors.Is(err, carerequests.ErrPickupChangeConflict):
+		return ErrCareExceptionConflict
 	case errors.Is(err, carerequests.ErrPickupChangeCutoffPassed):
 		return ErrPickupChangeCutoffPassed
 	default:

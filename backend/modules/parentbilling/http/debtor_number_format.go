@@ -24,10 +24,10 @@ func renderDebtorNumberFormat(w http.ResponseWriter, r *http.Request, err error)
 		return false
 	}
 	format := refusal.Format
-	code, details := common.CodeParentBillingDebtorNumberDigitRange,
-		map[string]any{"min_digits": format.MinDigits, "max_digits": format.MaxDigits, "example": format.Example()}
+	code := common.CodeParentBillingDebtorNumberDigitRange
+	var details any = DebtorNumberDigitRangeDetails{MinDigits: format.MinDigits, MaxDigits: format.MaxDigits, Example: format.Example()}
 	if format.MinDigits == format.MaxDigits {
-		code, details = common.CodeParentBillingDebtorNumberDigits, map[string]any{"digits": format.MinDigits, "example": format.Example()}
+		code, details = common.CodeParentBillingDebtorNumberDigits, DebtorNumberDigitsDetails{Digits: format.MinDigits, Example: format.Example()}
 	}
 	// The field errors stay with the code; the format travels in details.
 	refused := common.ErrorInvalidRequestWithCode(err, code)
@@ -49,17 +49,38 @@ func renderDebtorNumberRefusal(w http.ResponseWriter, r *http.Request, err error
 	if !ok {
 		return false
 	}
-	details := map[string]any{
-		"family_debtor_number": conflict.FamilyDebtorNumber, "debtor_number": conflict.DebtorNumber,
-		"family_email": conflict.FamilyEmail,
+	details := FamilyDebtorNumberDetails{
+		FamilyDebtorNumber: conflict.FamilyDebtorNumber, DebtorNumber: conflict.DebtorNumber,
+		FamilyEmail: conflict.FamilyEmail,
 	}
 	if len(conflict.Families) > 1 {
-		families := make([]map[string]string, len(conflict.Families))
+		details.Families = make([]FamilyDebtorNumberEntry, len(conflict.Families))
 		for i, family := range conflict.Families {
-			families[i] = map[string]string{"family_email": family.FamilyEmail, "family_debtor_number": family.DebtorNumber}
+			details.Families[i] = FamilyDebtorNumberEntry{FamilyEmail: family.FamilyEmail, FamilyDebtorNumber: family.DebtorNumber}
 		}
-		details["families"] = families
 	}
 	common.RenderError(w, r, common.ErrorConflictWithDetails(err, common.CodeParentBillingFamilyDebtorNumberConflict, details))
 	return true
+}
+
+type DebtorNumberDigitRangeDetails struct {
+	MinDigits int    `json:"min_digits"`
+	MaxDigits int    `json:"max_digits"`
+	Example   string `json:"example"`
+}
+
+type DebtorNumberDigitsDetails struct {
+	Digits  int    `json:"digits"`
+	Example string `json:"example"`
+}
+
+type FamilyDebtorNumberEntry struct {
+	FamilyEmail        string `json:"family_email"`
+	FamilyDebtorNumber string `json:"family_debtor_number"`
+}
+
+type FamilyDebtorNumberDetails struct {
+	FamilyDebtorNumberEntry
+	DebtorNumber string                    `json:"debtor_number"`
+	Families     []FamilyDebtorNumberEntry `json:"families,omitempty"`
 }

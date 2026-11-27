@@ -105,9 +105,9 @@ type AdminManualApprovedEnrollmentRequest struct {
 	// enrollment.child_possibly_enrolled (#6148): renew that enrolled child,
 	// or create a new one. At most one is set. ShownExistingStudentIDs are
 	// the candidates the office saw before it chose a new child (#6247).
-	ExistingStudentID       string     `json:"existing_student_id,omitempty" contract_text:"empty string means no existing student selected"`
-	CreateNewStudent        bool       `json:"create_new_student,omitempty"`
-	ShownExistingStudentIDs []ident.ID `json:"shown_existing_student_ids,omitempty"`
+	ExistingStudentID       ident.IDOrNone `json:"existing_student_id,omitzero"`
+	CreateNewStudent        bool           `json:"create_new_student,omitempty"`
+	ShownExistingStudentIDs []ident.ID     `json:"shown_existing_student_ids,omitempty"`
 }
 
 func (req *AdminManualApprovedEnrollmentRequest) Bind(r *http.Request) error {
@@ -356,7 +356,7 @@ func (rs *Resource) mapManualEnrollmentError(w http.ResponseWriter, r *http.Requ
 
 // possiblyEnrolledDetails lists the candidates of a refused approval in the
 // wire shape of the detail read.
-func possiblyEnrolledDetails(err error) map[string]any {
+func possiblyEnrolledDetails(err error) PossiblyEnrolledDetails {
 	candidates := []AdminExistingChildCandidate{}
 	var refusal *capability.ChildPossiblyEnrolledError
 	if errors.As(err, &refusal) {
@@ -364,5 +364,9 @@ func possiblyEnrolledDetails(err error) map[string]any {
 			candidates = append(candidates, newAdminExistingChildCandidate(candidate))
 		}
 	}
-	return map[string]any{"candidates": candidates}
+	return PossiblyEnrolledDetails{Candidates: candidates}
+}
+
+type PossiblyEnrolledDetails struct {
+	Candidates []AdminExistingChildCandidate `json:"candidates"`
 }

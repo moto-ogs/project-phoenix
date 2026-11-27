@@ -27,6 +27,7 @@ var errWorkerTraceStart = errors.New("start worker trace")
 type Scheduler struct {
 	retentionCleanupJobs
 	activeService               ports.SessionMaintenance
+	closingTimes                ports.ClosingTimes
 	cleanupService              ports.PresenceCleanup
 	authCleanup                 ports.AuthCleanup
 	invitationCleanup           ports.InvitationCleaner
@@ -219,6 +220,7 @@ func newScheduler(deps ports.WorkerDependencies) *Scheduler {
 		cleanupJobs:                schedulerCleanupJobs(deps),
 
 		activeService:      deps.Active,
+		closingTimes:       deps.ClosingTimes,
 		breakAutoEnder:     deps.BreakAutoEnder,
 		autoCheckouter:     deps.AutoCheckouter,
 		materializer:       deps.Materializer,

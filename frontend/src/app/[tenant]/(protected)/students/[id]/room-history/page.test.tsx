@@ -8,7 +8,9 @@ import {
   screen,
   waitFor,
   fireEvent,
+  within,
 } from "@testing-library/react";
+import { usePhoneViewport } from "~/test/helpers/viewport";
 import type { ReactElement, ReactNode } from "react";
 import { SWRConfig } from "~/lib/swr/testing";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
@@ -33,10 +35,7 @@ function render(ui: ReactElement) {
 
 // The child's detail also reads the account's own groups; none here.
 vi.mock("~/lib/usercontext-api", () => ({
-  userContextService: {
-    getMyEducationalGroups: () => Promise.resolve([]),
-    getMySupervisedGroups: () => Promise.resolve([]),
-  },
+  userContextService: {},
 }));
 
 const mockPush = vi.fn();
@@ -298,7 +297,6 @@ const sickStatusDay = {
 describe("StudentRoomHistoryPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    window.scrollTo = vi.fn();
   });
 
   // ─── Loading ────────────────────────────────────────────────────────────────
@@ -345,15 +343,6 @@ describe("StudentRoomHistoryPage", () => {
       expect(screen.getByText("Test Student")).toBeInTheDocument();
     });
     expect(screen.queryByText("·")).not.toBeInTheDocument();
-  });
-
-  it("scrolls to top on mount", async () => {
-    setupFetch(mockAttendanceHistoryResponse());
-    render(<StudentRoomHistoryPage />);
-
-    await waitFor(() => {
-      expect(window.scrollTo).toHaveBeenCalledWith(0, 0);
-    });
   });
 
   // ─── Error states ───────────────────────────────────────────────────────────
@@ -628,15 +617,12 @@ describe("StudentRoomHistoryPage", () => {
     setupFetch(mockAttendanceHistoryResponse([recordedDay]));
     render(<StudentRoomHistoryPage />);
 
-    // Tabelle (Desktop) nennt beide Buchungen in ihrer Spalte, die Karte
-    // (Mobil) beide in einer Zeile.
+    // Die Tabelle nennt beide Buchungen in ihrer Spalte; die Handy-Karte
+    // zeigt dieselben Spalten (siehe "on a phone").
     expect(
       await screen.findByText(/^Angemeldet:\s*Anna Muster$/),
     ).toBeInTheDocument();
     expect(screen.getByText(/^Abgemeldet:\s*am Gerät$/)).toBeInTheDocument();
-    expect(
-      screen.getByText("Angemeldet: Anna Muster · Abgemeldet: am Gerät"),
-    ).toBeInTheDocument();
   });
 
   it("shows 'Noch anwesend' when student has no check-out", async () => {
@@ -836,42 +822,137 @@ describe("StudentRoomHistoryPage", () => {
     });
   });
 
-  // ─── Mobile DayCard ─────────────────────────────────────────────────────────
+  // ─── Phone cards (#7915) ────────────────────────────────────────────────────
 
-  it("renders mobile day card with expand functionality", async () => {
-    setupFetch(mockAttendanceHistoryResponse([fullDay]));
-    render(<StudentRoomHistoryPage />);
+  // The phone stacks the table's own rows: every column on the card, the
+  // rooms and offerings of a day behind its details button.
+  describe("on a phone", () => {
+    usePhoneViewport();
 
-    await waitFor(() => {
-      expect(screen.getAllByText("7 h 30 min").length).toBeGreaterThan(0);
+    it("shows a day as a card and opens its rooms and offerings", async () => {
+      const slotDay = {
+        ...fullDay,
+        slots: [
+          {
+            instance_id: "501",
+            instance_status: "completed",
+            title: "Fußball-AG",
+            start_time: "14:00",
+            end_time: "15:00",
+            status: "present",
+            note: "Hat sich am Knie gestoßen.",
+            is_unplanned: true,
+          },
+        ],
+      };
+      setupFetch(mockAttendanceHistoryResponse([slotDay]));
+      render(<StudentRoomHistoryPage />);
+
+      const list = await screen.findByTestId("data-table-stacked");
+      expect(screen.queryByRole("table")).not.toBeInTheDocument();
+      const card = within(within(list).getByRole("listitem"));
+      // The phone names the day short, as the old day card did.
+      expect(card.getByText("Mo., 06.04.")).toBeInTheDocument();
+      expect(card.getByText("7 h 30 min")).toBeInTheDocument();
+      expect(card.getByText("Ankunft")).toBeInTheDocument();
+      expect(card.getByText("Abmeldung")).toBeInTheDocument();
+      expect(card.getByText(/1 Angebot · 2 Raumwechsel/)).toBeInTheDocument();
+      expect(card.queryByText("Gruppenraum A")).not.toBeInTheDocument();
+
+      fireEvent.click(card.getByRole("button", { name: /Details öffnen/ }));
+
+      expect(card.getByText("Gruppenraum A")).toBeInTheDocument();
+      expect(card.getByText("Schulhof")).toBeInTheDocument();
+      expect(card.getByText("2 h 20 min")).toBeInTheDocument();
+      expect(card.getByText("Fußball-AG")).toBeInTheDocument();
+      expect(card.getByText("ungeplant")).toBeInTheDocument();
+      expect(card.getByText(/Hat sich am Knie gestoßen\./)).toBeInTheDocument();
+      // An offering's attendance status is labelled as a status, not as
+      // the day's duration (#7915).
+      expect(card.getByText("Status")).toBeInTheDocument();
     });
 
-    // Find a mobile DayCard button (has role="button" with type="button")
-    const mobileButtons = screen
-      .getAllByRole("button")
-      .filter(
-        (b) => b.getAttribute("type") === "button" && b.closest(".md\\:hidden"),
+    it("names who recorded the arrival and the pickup on the card (#4761)", async () => {
+      setupFetch(
+        mockAttendanceHistoryResponse([
+          {
+            ...fullDay,
+            attendance: {
+              ...fullDay.attendance,
+              checked_in_actor: { kind: "staff", name: "Anna Muster" },
+              checked_out_actor: { kind: "device" },
+            },
+          },
+        ]),
       );
+      render(<StudentRoomHistoryPage />);
 
-    // If mobile buttons found, click to expand
-    if (mobileButtons.length > 0) {
-      fireEvent.click(mobileButtons[0]!);
-    }
-  });
+      const list = await screen.findByTestId("data-table-stacked");
+      expect(
+        within(list).getByText(/^Angemeldet:\s*Anna Muster$/),
+      ).toBeInTheDocument();
+      expect(
+        within(list).getByText(/^Abgemeldet:\s*am Gerät$/),
+      ).toBeInTheDocument();
+    });
 
-  it("shows 'Keine Daten' badge when mobile card has no attendance", async () => {
-    const dayWithoutAttendance = {
-      date: "2026-04-04",
-      attendance: null,
-      room_detail_available: true,
-      visits: [],
-    };
+    it("shows 'Keine Daten' on a card without attendance", async () => {
+      setupFetch(
+        mockAttendanceHistoryResponse([
+          {
+            date: "2026-04-04",
+            attendance: null,
+            room_detail_available: true,
+            visits: [],
+          },
+        ]),
+      );
+      render(<StudentRoomHistoryPage />);
 
-    setupFetch(mockAttendanceHistoryResponse([dayWithoutAttendance]));
-    render(<StudentRoomHistoryPage />);
+      const list = await screen.findByTestId("data-table-stacked");
+      expect(within(list).getByText("Keine Daten")).toBeInTheDocument();
+    });
 
-    await waitFor(() => {
-      expect(screen.getByText("Keine Daten")).toBeInTheDocument();
+    it("shows a status day with its report in the details", async () => {
+      setupFetch(mockAttendanceHistoryResponse([sickStatusDay]));
+      render(<StudentRoomHistoryPage />);
+
+      const list = await screen.findByTestId("data-table-stacked");
+      const card = within(within(list).getByRole("listitem"));
+      expect(card.getByText("Krank")).toBeInTheDocument();
+      // The status names the day already; no second "Keine Daten" badge.
+      expect(card.queryByText("Keine Daten")).not.toBeInTheDocument();
+
+      fireEvent.click(card.getByRole("button", { name: /Details öffnen/ }));
+
+      expect(card.getAllByText("Krank")).toHaveLength(2);
+      // The report reads as a report, not as an arrival (#7915).
+      expect(card.getByText("Gemeldet")).toBeInTheDocument();
+      expect(card.getByText("09:30")).toBeInTheDocument();
+      expect(card.getByText("Beendet")).toBeInTheDocument();
+      expect(card.getByText("18:00")).toBeInTheDocument();
+      expect(
+        card.getByText("Keine Raumwechsel an diesem Tag."),
+      ).toBeInTheDocument();
+    });
+
+    it("keeps the report of a day past the room-detail retention", async () => {
+      setupFetch(
+        mockAttendanceHistoryResponse([
+          { ...sickStatusDay, room_detail_available: false, visits: null },
+        ]),
+      );
+      render(<StudentRoomHistoryPage />);
+
+      const list = await screen.findByTestId("data-table-stacked");
+      const card = within(within(list).getByRole("listitem"));
+      fireEvent.click(card.getByRole("button", { name: /Details öffnen/ }));
+
+      expect(card.getByText("Gemeldet")).toBeInTheDocument();
+      expect(card.getByText("09:30")).toBeInTheDocument();
+      expect(
+        card.getByText(/Raumdetails nicht mehr verfügbar/),
+      ).toBeInTheDocument();
     });
   });
 

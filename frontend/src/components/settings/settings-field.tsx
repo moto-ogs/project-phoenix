@@ -9,6 +9,7 @@ import {
   useLayoutEffect,
   useRef,
   useId,
+  useMemo,
   type ReactNode,
 } from "react";
 import {
@@ -55,6 +56,12 @@ import { SettingsTimeField } from "./fields/time-field";
 import { DateField } from "./fields/date-field";
 import { TextField } from "./fields/text-field";
 import { SegmentedControl } from "~/components/ui/segmented-control";
+import {
+  CARE_ARTICLES,
+  careTermValuesOf,
+  normalizeCareArticle,
+  type CareArticle,
+} from "~/lib/care-facility-term-value";
 import { type ColorPreset, ColorField } from "./fields/color-field";
 import { TextareaField } from "./fields/textarea-field";
 import { PasswordField } from "./fields/password-field";
@@ -276,6 +283,8 @@ const ENROLLMENT_LEGAL_TEXT_TO_TOGGLE_KEY: Record<string, string> = {
 };
 
 const CARE_FACILITY_TERM_KEY = "enrollment.care_facility_term";
+/** The article of an own care name (#8136), edited next to that name. */
+const CARE_FACILITY_ARTICLE_KEY = "enrollment.care_facility_article";
 
 /**
  * The care-facility term (#6042) stands in sentences for parents, so the
@@ -612,7 +621,7 @@ export function SettingsField({
   const legalTermsEnabled = legalTermsEnabledFromItems(setting, categoryItems);
   const legalDocumentManagementDisabledReason =
     audience === "operator"
-      ? "PDF-Dateien können nur im Schulportal hochgeladen oder entfernt werden."
+      ? "PDF-Dateien können nur in der Schul-App hochgeladen oder entfernt werden."
       : undefined;
   const legalDocumentDeleteDisabledReason =
     audience !== "operator" &&
@@ -1129,6 +1138,45 @@ export function SettingsField({
     [handleImmediateSave],
   );
 
+  // The article of an own care name is a setting of its own, edited next to
+  // the name (#8136). It saves at once, like every choice.
+  const careArticleSetting =
+    setting.key === CARE_FACILITY_TERM_KEY
+      ? categoryItems.find((item) => item.key === CARE_FACILITY_ARTICLE_KEY)
+      : undefined;
+  const saveCareArticle = useCallback(
+    async (article: CareArticle): Promise<boolean> => {
+      if (!careArticleSetting) return false;
+      const run = writeQueueRef.current.then(() =>
+        persistSetting(onSave, careArticleSetting.key, article),
+      );
+      writeQueueRef.current = run.catch(() => undefined);
+      const outcome = await run;
+      if (!outcome.ok) {
+        void showFieldError(outcome.error, {
+          object: `die Einstellung „${careArticleSetting.label}“`,
+        });
+        return false;
+      }
+      toastSuccess(
+        `Die Einstellung „${careArticleSetting.label}“ ist gespeichert.`,
+      );
+      return true;
+    },
+    [careArticleSetting, onSave, showFieldError, toastSuccess],
+  );
+  const careArticle = useMemo<CareArticleChoice | undefined>(
+    () =>
+      careArticleSetting
+        ? {
+            value: normalizeCareArticle(careArticleSetting.value),
+            disabled: !careArticleSetting.writable,
+            onPick: saveCareArticle,
+          }
+        : undefined,
+    [careArticleSetting, saveCareArticle],
+  );
+
   const performReset = useCallback(async () => {
     if (debounceRef.current) {
       clearTimeout(debounceRef.current);
@@ -1281,7 +1329,10 @@ export function SettingsField({
 
   const hasColorPresets =
     setting.type === "color" && colorPresets(setting).length > 0;
-  const fieldLayout = hasColorPresets ? "" : "sm:flex-row sm:justify-between";
+  // A palette, and an own care name with its article and example (#8136),
+  // need the row's full width: they stand under the description.
+  const stackedField = hasColorPresets || careArticle !== undefined;
+  const fieldLayout = stackedField ? "" : "sm:flex-row sm:justify-between";
   const fieldAlignment =
     setting.type === "boolean" ? "sm:items-center" : "sm:items-start";
 
@@ -1345,7 +1396,7 @@ export function SettingsField({
 
       <div
         className={`flex min-w-0 flex-wrap items-center gap-3 ${
-          hasColorPresets ? "w-full" : "shrink-0 sm:flex-nowrap"
+          stackedField ? "w-full" : "shrink-0 sm:flex-nowrap"
         }`}
       >
         {isEnrollmentLegalTextSetting
@@ -1367,6 +1418,7 @@ export function SettingsField({
               hint ? hintId : undefined,
               handlePresetPick,
               plainTextareas,
+              careArticle,
             )}
 
         {offersReset(setting, audience, deletesRoomHistory) && (
@@ -2159,11 +2211,37 @@ function textPresets(setting: ResolvedSetting): ColorPreset[] {
 
 const OWN_TEXT_VALUE = "__own__";
 
+/** The article choice next to an own care name (#8136). */
+interface CareArticleChoice {
+  readonly value: CareArticle;
+  readonly disabled: boolean;
+  /** Saves the article; false when the save failed. */
+  readonly onPick: (article: CareArticle) => Promise<boolean>;
+}
+
+const CARE_ARTICLE_ITEMS = CARE_ARTICLES.map((article) => ({
+  value: article,
+  label: article,
+}));
+
+/**
+ * Two fixed sentences with the own name, so the school sees the article at
+ * work before it saves: subject („Der Hort prüft“) and object („an den
+ * Hort“).
+ */
+function careNameExample(name: string, article: CareArticle): string {
+  const care = careTermValuesOf(name, article);
+  return `„${care.careNomCap} prüft deine Angaben. Bitte wende dich an ${care.careAcc}.“`;
+}
+
 /**
  * Text setting with presets (#6042): the presets and „Eigener Name“ are one
  * value choice; the text field opens for the own name. A stored value
  * outside the presets shows as the own name. `ownFor` keeps the field open
  * for the value typed there, even when it equals a preset.
+ *
+ * With `article`, the own name gets its article in front (der, die, das,
+ * #8136); `example` shows the name in a sentence while the school types.
  */
 function PresetTextField({
   ariaLabel,
@@ -2174,6 +2252,8 @@ function PresetTextField({
   disabled,
   presets,
   errorId,
+  article,
+  example,
 }: {
   readonly ariaLabel: string;
   readonly value: string;
@@ -2183,10 +2263,35 @@ function PresetTextField({
   readonly disabled: boolean;
   readonly presets: readonly ColorPreset[];
   readonly errorId?: string;
+  readonly article?: CareArticleChoice;
+  readonly example?: (name: string, article: CareArticle) => string;
 }) {
   const [ownFor, setOwnFor] = useState<string | null>(null);
+  // The picked article shows at once, until the stored value changes: to the
+  // picked one after the save, or back when the save failed.
+  const storedArticle = article?.value ?? "die";
+  const [picked, setPicked] = useState<{
+    readonly article: CareArticle;
+    readonly over: CareArticle;
+  } | null>(null);
+  // The stored value caught up with the pick: forget it, so a later change
+  // from elsewhere (another tab) is not painted over by the old pick.
+  if (picked && picked.article === storedArticle) setPicked(null);
+  const shownArticle =
+    picked?.over === storedArticle ? picked.article : storedArticle;
+  const exampleId = useId();
   const own =
     !presets.some((preset) => preset.value === value) || ownFor === value;
+  const name = value.trim();
+  const exampleText =
+    own &&
+    example &&
+    name !== "" &&
+    !errorId &&
+    // A preset typed as an own name keeps „die“, so no article applies.
+    !presets.some((preset) => preset.value === name)
+      ? example(name, shownArticle)
+      : null;
   return (
     <div className="w-full min-w-0 space-y-3">
       <SegmentedControl
@@ -2211,17 +2316,54 @@ function PresetTextField({
         }}
       />
       {own && (
-        <TextField
-          ariaLabel={`${ariaLabel}: Eigener Name`}
-          value={value}
-          onChange={(next) => {
-            setOwnFor(next);
-            onChange(next);
-          }}
-          onBlur={() => void onBlur()}
-          disabled={disabled}
-          errorId={errorId}
-        />
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {article && (
+              <SegmentedControl
+                ariaLabel="Artikel zum eigenen Namen"
+                ariaDescribedBy={exampleText ? exampleId : undefined}
+                className="shrink-0 max-sm:w-full"
+                value={shownArticle}
+                items={CARE_ARTICLE_ITEMS.map((item) => ({
+                  ...item,
+                  disabled: article.disabled,
+                }))}
+                onChange={(next) => {
+                  if (next === shownArticle) return;
+                  const pick = { article: next, over: storedArticle };
+                  setPicked(pick);
+                  void article.onPick(next).then((saved) => {
+                    if (saved) return;
+                    setPicked((current) => (current === pick ? null : current));
+                  });
+                }}
+              />
+            )}
+            <div className="min-w-40 flex-1">
+              <TextField
+                ariaLabel={`${ariaLabel}: Eigener Name`}
+                value={value}
+                onChange={(next) => {
+                  setOwnFor(next);
+                  onChange(next);
+                }}
+                onBlur={() => void onBlur()}
+                disabled={disabled}
+                errorId={errorId}
+              />
+            </div>
+          </div>
+          {exampleText && (
+            <p
+              id={exampleId}
+              aria-live="polite"
+              className="text-sm text-gray-600"
+            >
+              Beispiel:{" "}
+              <span className="font-medium text-gray-900">{exampleText}</span>
+            </p>
+          )}
+        </div>
       )}
     </div>
   );
@@ -2254,6 +2396,7 @@ function renderField(
   errorId?: string,
   onPresetPick?: (value: unknown) => Promise<void>,
   plainTextareas = false,
+  careArticle?: CareArticleChoice,
 ) {
   const disabled = !setting.writable;
 
@@ -2316,6 +2459,12 @@ function renderField(
             disabled={disabled}
             presets={presets}
             errorId={errorId}
+            article={careArticle}
+            example={
+              setting.key === CARE_FACILITY_TERM_KEY
+                ? careNameExample
+                : undefined
+            }
           />
         );
       }

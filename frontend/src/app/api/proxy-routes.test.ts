@@ -295,12 +295,27 @@ function scanProject(sources: ReadonlyMap<string, string>): string[] {
   const pathPieces = /["'`]\/[^/\s]|\}\/|\.join\s*\(|\\[xu]/;
   const barrel = /\bexport\s+(?:\*|\{)/;
   const cache = ts.createModuleResolutionCache(src, (file) => file, options);
-  const imports = (file: string, source: string) =>
-    ts.preProcessFile(source).importedFiles.flatMap(({ fileName }) => {
-      const target = ts.resolveModuleName(fileName, file, options, host, cache)
-        .resolvedModule?.resolvedFileName;
-      return target ? [target] : [];
-    });
+  // Shared barrels recur in many import chains. Resolve each file's imports
+  // once per source snapshot, without changing the roots or the checker.
+  const resolvedImports = new Map<string, string[]>();
+  const imports = (file: string, source: string) => {
+    const previous = resolvedImports.get(file);
+    if (previous) return previous;
+    const resolved = ts
+      .preProcessFile(source)
+      .importedFiles.flatMap(({ fileName }) => {
+        const target = ts.resolveModuleName(
+          fileName,
+          file,
+          options,
+          host,
+          cache,
+        ).resolvedModule?.resolvedFileName;
+        return target ? [target] : [];
+      });
+    resolvedImports.set(file, resolved);
+    return resolved;
+  };
   const carriesPrefix = (file: string, seen: Set<string>): boolean => {
     if (seen.has(file)) return false;
     seen.add(file);

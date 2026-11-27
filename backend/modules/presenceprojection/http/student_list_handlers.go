@@ -20,6 +20,7 @@ func (rs *Resource) prefetchListSettings(ctx context.Context) (context.Context, 
 		settingPresenceMode,
 		settingSessionEndTime,
 		settingStudentPhotosEnabled,
+		settingStudentCardActivitiesEnabled,
 	)
 }
 
@@ -66,7 +67,12 @@ func (rs *Resource) listStudents(w http.ResponseWriter, r *http.Request) {
 	// run on the full responses — the two views differ on the wire only (#2097).
 	switch params.view {
 	case StudentListViewSlim:
-		common.RespondPaginated(w, r, http.StatusOK, slimStudentResponses(responses, plan.departureDate), pagination, "Students retrieved successfully")
+		slim := slimStudentResponses(responses, plan.departureDate)
+		if err := rs.attachPlannedActivities(r.Context(), slim, plan.planningDate); err != nil {
+			renderError(w, r, common.ErrorInternalServerWrap("failed to load students", err))
+			return
+		}
+		common.RespondPaginated(w, r, http.StatusOK, slim, pagination, "Students retrieved successfully")
 		return
 	case StudentListViewNames:
 		common.RespondPaginated(w, r, http.StatusOK, nameStudentResponses(responses), pagination, "Students retrieved successfully")

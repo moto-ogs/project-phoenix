@@ -5,7 +5,7 @@ import type { CareMealMode, CareMealTariff } from "~/lib/traeger-care-meal-api";
 import { formatMonth } from "./care-billing-format";
 
 export const MEAL_MODE_LABELS: Record<CareMealMode, string> = {
-  per_meal: "Je Essen",
+  per_meal: "Pro Essen",
   flat: "Pauschale",
 };
 

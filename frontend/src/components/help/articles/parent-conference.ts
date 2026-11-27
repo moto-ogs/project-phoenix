@@ -21,7 +21,7 @@ export function parentConferenceTopic(): HelpTopic {
     result:
       "Der Termin ist gebucht. Er steht in deinem Kalender, und du bekommst eine Nachricht.",
     notes: [
-      "Du buchst einen Termin je Kind. Hast du zwei Kinder in der Klasse, buche für jedes Kind einzeln.",
+      "Du buchst einen Termin pro Kind. Hast du zwei Kinder in der Klasse, buche für jedes Kind einzeln.",
       "Tippe auf eine andere Zeit, um deinen Termin zu verschieben. Mit `Termin absagen` sagst du ab.",
     ],
     differences: [

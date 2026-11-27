@@ -116,6 +116,7 @@ func instanceRouteContracts() []common.RouteContract {
 		{Method: "GET", Pattern: "/instances/{id}/guardian-notice", Portals: p, Response: GuardianNoticeReachResponse{}},
 		{Method: "POST", Pattern: "/instances/{id}/deviations", Portals: p, Request: applyDeviationsRequest{}, Response: ApplyDeviationsResponse{}},
 		{Method: "GET", Pattern: "/instances/{id}/staff-pool", Portals: p, Response: StaffPoolResponse{}},
+		{Method: "GET", Pattern: "/instances/{id}/attendance", Portals: p, Response: instanceAttendanceResponse{}},
 		{Method: "GET", Pattern: "/instances/{id}/participants", Portals: p, Response: InstanceParticipantsResponse{}},
 		{Method: "POST", Pattern: "/instances/{id}/move-staff", Portals: p, Request: moveStaffRequest{}, Response: MoveStaffResponse{}},
 		{Method: "PATCH", Pattern: "/instances/{instance_id}/students/{student_id}", Portals: p, Request: PatchAttendanceRequest{}, Response: AttendanceResponse{}},
@@ -175,11 +176,12 @@ func operationRouteContracts() []common.RouteContract {
 func templateRouteContracts() []common.RouteContract {
 	p := tenantPortal
 	period := query(idQuery, "period_id")
-	filter := append(query(common.QueryString, "grade_levels", "school_classes"),
+	grades := common.QueryParam{Name: "grade_levels", Kind: common.QueryString, TextReason: "comma-separated grade numbers, not row identifiers"}
+	filter := append(query(common.QueryString, "school_classes"), grades,
 		common.QueryParam{Name: "offering_ids", Kind: idQuery, Repeated: true})
-	draft := params(query(idQuery, "period_id"), []common.QueryParam{{Name: "roster", Kind: common.QueryString, Repeated: true}},
+	draft := params(query(idQuery, "period_id"), []common.QueryParam{{Name: "roster", Kind: common.QueryString, Repeated: true, TextReason: "each member pairs an ISO weekday with that day's list of child IDs"}},
 		query(common.QueryString, "list_kind", "type"))
-	suggestion := params(draft, query(common.QueryString, "school_classes", "grade_levels", "end_time"))
+	suggestion := params(draft, append(query(common.QueryString, "school_classes", "end_time"), grades))
 	preview := params(draft, filter, query(dateQuery, "from"))
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/templates", Portals: p, Query: period, Response: listTemplatesResponse{}},

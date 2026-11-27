@@ -58,7 +58,7 @@ const portals = [
     scope: "caterer",
     cookie: "caterer.session-token",
     logout: "/api/caterer/auth/logout",
-    read: "/api/caterer/schools",
+    read: "/api/caterer/schools?from=2026-09-07&to=2026-09-11",
   },
 ] as const;
 type Portal = (typeof portals)[number];
@@ -373,7 +373,7 @@ const catalogReads = {
     },
   },
   Caterer: {
-    registered: "/api/caterer/schools",
+    registered: "/api/caterer/schools?from=2026-09-07&to=2026-09-11",
     unregistered: "/api/caterer/billing/key-day",
     data: { caterer_name: "Fixture-Küche", schools: [] },
   },
@@ -441,14 +441,12 @@ test("Schule: the catalog proxy forwards a query and a write without data", asyn
       });
       return {
         status: response.status,
-        body: (await response.json().catch(() => null)) as {
-          data?: unknown;
-        } | null,
+        body: await response.json().catch(() => null),
       };
     }, path);
   const saved = await write("/api/school/notifications/preferences/absence");
-  expect(saved.status).toBe(200);
-  expect(saved.body?.data).toBeNull();
+  expect(saved.status).toBe(204);
+  expect(saved.body).toBeNull();
   // The same path under a method the contract does not register.
   expect((await write("/api/school/notifications/feed/read-all")).status).toBe(
     404,

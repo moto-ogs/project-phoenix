@@ -26,14 +26,14 @@ func NewMailRenderers(accounts enrollment.HolidayAcceptanceAccounts, parentsURL 
 		Rejected:                 decodingRenderer(decisionRenderer("Anmeldung abgelehnt", "enrollment-rejected.html")),
 		DecisionDigest:           decodingRenderer(renderDecisionDigest),
 		ChangeRequestSubmitted:   decodingRenderer(changeRequestRenderer("Neue Änderungsanfrage", "enrollment-change-request-submitted.html")),
-		ChangeRequestQuestion:    decodingRenderer(changeRequestRenderer("Rückfrage zu deiner Änderungsanfrage", "enrollment-change-request-question.html")),
+		ChangeRequestQuestion:    decodingRenderer(changeRequestRenderer("Rückfrage zu Ihrer Änderungsanfrage", "enrollment-change-request-question.html")),
 		ChangeRequestParentReply: decodingRenderer(changeRequestRenderer("Antwort auf Änderungsanfrage", "enrollment-change-request-parent-reply.html")),
 		ChangeRequestApproved:    decodingRenderer(changeRequestRenderer("Änderungsanfrage übernommen", "enrollment-change-request-approved.html")),
 		ChangeRequestRejected:    decodingRenderer(changeRequestRenderer("Änderungsanfrage abgelehnt", "enrollment-change-request-rejected.html")),
 		RolloverOptIn: decodingRenderer(rolloverRenderer(rolloverRendererSpec{
 			errLabel:         "opt_in",
 			template:         "enrollment-rollover-opt-in.html",
-			bareSubject:      "Bitte bestätige die Anmeldung",
+			bareSubject:      "Bitte bestätigen Sie die Anmeldung",
 			phaseSubject:     "Bitte bestätigen: Anmeldung %s",
 			phaseFullSubject: "Bitte bestätigen: Anmeldung %s - %s",
 		})),
@@ -313,7 +313,7 @@ func renderHolidayParentAccountOffer(ctx context.Context, kind string, raw json.
 	return &enrollment.RenderedMail{
 		SenderName: schoolSender(payload.TraegerName),
 		Recipient:  payload.Recipient,
-		Subject:    "Dein Elternkonto für die Ferienbetreuung",
+		Subject:    "Ihr Elternkonto für die Ferienbetreuung",
 		Template:   "holiday-parent-account-offer.html",
 		Content: map[string]any{
 			"GuardianName": payload.GuardianName,
@@ -394,6 +394,18 @@ func payloadStringSlice(payload map[string]any, key string) []string {
 // header (#6042); the parent message mail shares the rule (#6082).
 func careFacilityBadge(term string) string { return textnorm.Badge(term) }
 
+// careFacilityOwn is the header's stand-in for a missing school name with
+// the school's article: "Ihre OGS", "Ihr Hort" (#8136). Empty without a
+// term, so the header keeps its own default.
+func careFacilityOwn(payload map[string]any) string {
+	term := payloadString(payload, enrollment.EnrollmentPayloadCareFacilityTerm)
+	if strings.TrimSpace(term) == "" {
+		return ""
+	}
+	article := payloadString(payload, enrollment.EnrollmentPayloadCareFacilityArticle)
+	return textnorm.SentenceStart(textnorm.NewCareFacilityName(term, article).Your())
+}
+
 // schoolSender is the sender name of a mail: the school's name, or "" for
 // the platform's default sender.
 func schoolSender(schoolName string) string {
@@ -431,6 +443,7 @@ func renderSubmitted(_ string, payload map[string]any) (*enrollment.RenderedMail
 			"MotoLogoURL":       payloadString(payload, enrollment.EnrollmentPayloadMotoLogoURL),
 			"CareFacilityTerm":  payloadString(payload, enrollment.EnrollmentPayloadCareFacilityTerm),
 			"CareFacilityBadge": careFacilityBadge(payloadString(payload, enrollment.EnrollmentPayloadCareFacilityTerm)),
+			"CareFacilityOwn":   careFacilityOwn(payload),
 			"ChildNames":        payloadStringSlice(payload, enrollment.EnrollmentPayloadChildNames),
 		},
 	}, nil
@@ -471,6 +484,7 @@ func renderAdminNotification(_ string, payload map[string]any) (*enrollment.Rend
 			"MotoLogoURL":       payloadString(payload, enrollment.EnrollmentPayloadMotoLogoURL),
 			"CareFacilityTerm":  payloadString(payload, enrollment.EnrollmentPayloadCareFacilityTerm),
 			"CareFacilityBadge": careFacilityBadge(payloadString(payload, enrollment.EnrollmentPayloadCareFacilityTerm)),
+			"CareFacilityOwn":   careFacilityOwn(payload),
 			"ChildNames":        payloadStringSlice(payload, enrollment.EnrollmentPayloadChildNames),
 		},
 	}, nil
@@ -526,6 +540,7 @@ func rolloverRenderer(spec rolloverRendererSpec) payloadRenderer {
 				"MotoLogoURL":       payloadString(payload, enrollment.EnrollmentPayloadMotoLogoURL),
 				"CareFacilityTerm":  payloadString(payload, enrollment.EnrollmentPayloadCareFacilityTerm),
 				"CareFacilityBadge": careFacilityBadge(payloadString(payload, enrollment.EnrollmentPayloadCareFacilityTerm)),
+				"CareFacilityOwn":   careFacilityOwn(payload),
 				"ChildNames":        payloadStringSlice(payload, enrollment.EnrollmentPayloadChildNames),
 				"RolloverDeadline":  payloadString(payload, enrollment.EnrollmentPayloadRolloverDeadline),
 				// A payload enqueued before #6456 has no flag and keeps the
@@ -566,6 +581,7 @@ func renderDecisionMail(kind string, payload map[string]any, subject, templateNa
 			"MotoLogoURL":       payloadString(payload, enrollment.EnrollmentPayloadMotoLogoURL),
 			"CareFacilityTerm":  payloadString(payload, enrollment.EnrollmentPayloadCareFacilityTerm),
 			"CareFacilityBadge": careFacilityBadge(payloadString(payload, enrollment.EnrollmentPayloadCareFacilityTerm)),
+			"CareFacilityOwn":   careFacilityOwn(payload),
 			"ChildNames":        payloadStringSlice(payload, enrollment.EnrollmentPayloadChildNames),
 			"StatusReason":      payloadString(payload, enrollment.EnrollmentPayloadStatusReason),
 		},
@@ -591,7 +607,7 @@ func decisionRenderer(subject, templateName string) payloadRenderer {
 // renderDecisionDigest renders the single request-level summary emitted
 // after every child has a parent-visible final decision.
 func renderDecisionDigest(kind string, payload map[string]any) (*enrollment.RenderedMail, error) {
-	mail, err := renderDecisionMail(kind, payload, "Entscheidung zu deiner Anmeldung", "enrollment-decision-digest.html")
+	mail, err := renderDecisionMail(kind, payload, "Entscheidung zu Ihrer Anmeldung", "enrollment-decision-digest.html")
 	if err != nil {
 		return nil, err
 	}
@@ -629,6 +645,7 @@ func changeRequestRenderer(subject, templateName string) payloadRenderer {
 				"MotoLogoURL":       payloadString(payload, enrollment.EnrollmentPayloadMotoLogoURL),
 				"CareFacilityTerm":  payloadString(payload, enrollment.EnrollmentPayloadCareFacilityTerm),
 				"CareFacilityBadge": careFacilityBadge(payloadString(payload, enrollment.EnrollmentPayloadCareFacilityTerm)),
+				"CareFacilityOwn":   careFacilityOwn(payload),
 			},
 		}, nil
 	}

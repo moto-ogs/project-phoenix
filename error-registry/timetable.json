@@ -571,6 +571,12 @@
       "legacy": "timetable.reopen_supervision_changed"
     },
     {
+	  "code": "timetable.room_closed",
+	  "class": "business_rejection",
+	  "parameters": [],
+	  "legacy": "timetable.room_closed"
+	},
+	{
       "code": "timetable.room_occupied",
       "class": "business_rejection",
       "parameters": [],

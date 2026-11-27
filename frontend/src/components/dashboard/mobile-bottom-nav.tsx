@@ -110,7 +110,7 @@ import { accountsConcept } from "~/lib/concepts/accounts";
 import { mealPlanConcept } from "~/lib/concepts/mealPlan";
 import { activitiesConcept } from "~/lib/concepts/activities";
 import { announcementsConcept } from "~/lib/concepts/announcements";
-import { carePlanConcept } from "~/lib/concepts/carePlan";
+import { dayPlanConcept } from "~/lib/concepts/dayPlan";
 import { dashboardConcept } from "~/lib/concepts/dashboard";
 import { databaseConcept } from "~/lib/concepts/database";
 import { devicesConcept } from "~/lib/concepts/devices";
@@ -272,7 +272,7 @@ const STAFF_MAIN_ITEMS: NavItem[] = [
     href: STAFF_FLAT_PAGES.tagesplan.href,
     label: STAFF_FLAT_PAGES.tagesplan.label,
     iconKey: "betreuungsplan",
-    concept: carePlanConcept,
+    concept: dayPlanConcept,
     alwaysShow: true,
   },
   {
@@ -703,7 +703,7 @@ export function useStaffBottomNavModel() {
   // Callers covered by the school-wide overview (#2380): inject the
   // "Aufsicht" tab dynamically. This includes effective admins and verified
   // staff under all_staff. Gate on overviewEnabled (confirmed via
-  // /supervisors/all 200) rather than just isSupervising: a released room is
+  // the server) rather than just isSupervising: a released room is
   // reachable for everyone and grants no supervision (#3065), so its presence
   // must not surface the tab for a school that keeps everyone on their own
   // supervisions.

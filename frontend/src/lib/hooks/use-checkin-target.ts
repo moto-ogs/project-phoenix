@@ -27,6 +27,7 @@ import { useSWRAuth } from "~/lib/swr";
 import { me as meKeys } from "~/lib/swr/me";
 import { checkinTargetKeys } from "~/lib/swr/rooms-keys";
 import { rooms as roomsKeys } from "~/lib/swr/rooms";
+import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import {
   useAttendanceWebEnabled,
   usePresenceMode,
@@ -156,6 +157,7 @@ export interface CheckinTargetState {
 export function useCheckinTarget(enabled: boolean): CheckinTargetState {
   const presenceMode = usePresenceMode();
   const webAttendance = useAttendanceWebEnabled();
+  const today = useBerlinToday();
   const tenantSlug = useTenantSlugSafe();
   const { data: session } = useSession();
   const available = enabled && webAttendance && presenceMode === "detailed";
@@ -166,8 +168,8 @@ export function useCheckinTarget(enabled: boolean): CheckinTargetState {
     () => activeService.getActiveGroups({ active: true }),
   );
   const roomList = useSWRAuth<Room[]>(
-    available ? roomsKeys.key() : null,
-    roomsKeys.fetcher,
+    available ? roomsKeys.key({ openOn: today }) : null,
+    () => roomsKeys.fetcher({ openOn: today }),
   );
   const staff = useSWRAuth<Staff>(
     available && !showAllTargets ? meKeys.key() : null,

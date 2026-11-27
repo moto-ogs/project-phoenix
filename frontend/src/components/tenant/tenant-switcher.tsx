@@ -14,7 +14,14 @@ import {
   type TenantSummary,
 } from "~/lib/tenant-api";
 import { performEndStaffPreview } from "~/lib/staff-preview-api";
+import {
+  beginSessionExit,
+  discardSessionTree,
+  reloadDocument,
+  sessionTreeState,
+} from "~/lib/session-tree";
 import { schoolPortalLoginUrl } from "~/lib/school-url";
+import { readSessionMark, sessionMarkName } from "~/lib/session-mark";
 import { useShellSeed } from "~/lib/shell-seed";
 import { useTenantSlugSafe } from "~/lib/tenant-context";
 import { createLogger } from "~/lib/logger";
@@ -39,6 +46,13 @@ import { SCHOOL_SIGN_IN_LABEL } from "./school-sign-in";
 const logger = createLogger({ component: "BrandTenantSwitcher" });
 
 const NO_TENANTS: TenantSummary[] = [];
+
+/** The tenant session mark the cookie holds right now. */
+function cookieSessionMark(): string {
+  return readSessionMark(
+    sessionMarkName("tenant", clientEnv.NEXT_PUBLIC_TENANT_DOMAIN),
+  );
+}
 
 const SWITCH_REFUSALS = [
   "identity.tenant_access_denied",
@@ -143,12 +157,20 @@ export function BrandTenantSwitcher({
       setIsSwitching(true);
       setSchoolPortalHint(null);
 
+      // The switch is an exit of this document's session (#8082): its own
+      // answer is no step to confirm in place, and no guard switches back;
+      // the document navigates to the target school.
+      const endExit = beginSessionExit();
+      // The session the switch request carries: a refusal ends that one,
+      // not a sign-in another tab made meanwhile (#8082).
+      let markOfSwitch = cookieSessionMark();
       try {
         // Ein Schulwechsel beendet die Mitarbeiter-Vorschau (#2893): erst
         // die Admin-Sitzung wiederherstellen, dann mit deren Token wechseln
         // — das Vorschau-Token selbst darf den Wechsel nicht ausführen.
         if (session?.user?.isPreview) {
           await performEndStaffPreview(update, mutate);
+          markOfSwitch = cookieSessionMark();
         }
         // The backend resolves the switch target by SUBDOMAIN (same as
         // login), so pass targetTenant.subdomain — the slug column can
@@ -163,6 +185,9 @@ export function BrandTenantSwitcher({
         // Slugs identify organizations and must stay out of product analytics.
         trackTenantEvent("tenant_switched", targetTenant.tenantId.toString());
 
+        // The cookie names the target school now: the source school's tree
+        // goes before the navigation (#8082).
+        discardSessionTree();
         // 5. Hard-navigate to the new tenant subdomain.
         // Always use subdomain routing — the proxy rewrites subdomains
         // to path segments, so navigating to a path directly on the old
@@ -172,6 +197,38 @@ export function BrandTenantSwitcher({
         const protocol = window.location.protocol;
         window.location.href = `${protocol}//${targetTenant.subdomain}.${tenantDomain}${port}/home`;
       } catch (err) {
+        endExit();
+        // The cookie changed during the switch (the staff preview ended, or
+        // the answer broke after the new school's cookie came): the tree left
+        // with it, and no hint can show any more (#8082). A refusal with a
+        // way of its own takes it now; anything else loads this document
+        // with the session the cookie holds.
+        if (sessionTreeState().leaving) {
+          const code = err instanceof ApiError ? err.code : undefined;
+          if (code === "identity.mfa_session_required") {
+            // The session the refused request carried (the admin's again
+            // after the preview), not the tree's.
+            void import("./tenant-relogin")
+              .then(({ reloginAtTenant }) =>
+                reloginAtTenant(targetTenant.subdomain, markOfSwitch),
+              )
+              .catch(() => reloadDocument());
+          } else if (code === "traeger.school_requires_code") {
+            globalThis.location.assign(traegerSignInWithCodeUrl());
+          } else if (code === "identity.use_school_portal") {
+            let portalUrl: string | null = null;
+            try {
+              portalUrl = schoolPortalLoginUrl(
+                `?from=staff&tenant=${encodeURIComponent(targetTenant.subdomain)}`,
+              );
+            } catch {
+              // No portal host configured: this document loads anew instead.
+            }
+            if (portalUrl) globalThis.location.assign(portalUrl);
+            else reloadDocument();
+          } else reloadDocument();
+          return;
+        }
         logger.error("tenant_switch_failed", {
           error: err instanceof Error ? err.message : String(err),
           target_slug: targetTenant.subdomain,

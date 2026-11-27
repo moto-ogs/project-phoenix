@@ -146,7 +146,7 @@ func (a enrollmentDeliveryAdapter) RelatedEmailOutcomes(ctx context.Context, rel
 	outcomes := make([]enrollment.RequestMailOutcome, 0, len(reports))
 	for _, report := range reports {
 		if deliveryContract.IsParentMail(report.Kind) {
-			outcomes = append(outcomes, enrollment.RequestMailOutcome{Kind: report.Kind, Outcome: string(report.Outcome), AddressMark: string(report.Mark), Stopped: report.Stopped, OutcomeAt: report.OutcomeAt})
+			outcomes = append(outcomes, enrollment.RequestMailOutcome{AwaitingFeedback: report.AwaitingFeedback, Kind: report.Kind, Outcome: string(report.Outcome), AddressMark: string(report.Mark), Stopped: report.Stopped, OutcomeAt: report.OutcomeAt})
 		}
 	}
 	return outcomes, nil
@@ -165,32 +165,36 @@ func (a enrollmentDeliveryAdapter) CancelRelatedEmails(ctx context.Context, rela
 type ParentMessageMails struct{ Outcomes delivery.EmailOutcomes }
 
 // ParentMessageMailOutcomes reports the one mail of each conversation message.
-func (m ParentMessageMails) ParentMessageMailOutcomes(ctx context.Context, messageIDs []int64) (map[int64]string, error) {
+func (m ParentMessageMails) ParentMessageMailOutcomes(ctx context.Context, messageIDs []int64) (map[int64]string, bool, error) {
 	reports, err := m.read(ctx, announcement.MailRelatedTypeParentMessage, messageIDs)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	outcomes := make(map[int64]string, len(reports))
+	active := false
 	for _, report := range reports {
+		active = active || report.AwaitingFeedback
 		outcomes[report.RelatedID] = string(report.Outcome)
 	}
-	return outcomes, nil
+	return outcomes, active, nil
 }
 
 // ParentGroupMessageMailOutcomes counts the mails of each group message by outcome.
-func (m ParentMessageMails) ParentGroupMessageMailOutcomes(ctx context.Context, messageIDs []int64) (map[int64]map[string]int, error) {
+func (m ParentMessageMails) ParentGroupMessageMailOutcomes(ctx context.Context, messageIDs []int64) (map[int64]map[string]int, bool, error) {
 	reports, err := m.read(ctx, announcement.MailRelatedTypeParentGroupMessage, messageIDs)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	counts := make(map[int64]map[string]int)
+	active := false
 	for _, report := range reports {
+		active = active || report.AwaitingFeedback
 		if counts[report.RelatedID] == nil {
 			counts[report.RelatedID] = map[string]int{}
 		}
 		counts[report.RelatedID][string(report.Outcome)]++
 	}
-	return counts, nil
+	return counts, active, nil
 }
 
 func (m ParentMessageMails) read(ctx context.Context, relatedType string, ids []int64) ([]deliveryContract.EmailOutcomeReport, error) {
@@ -230,7 +234,7 @@ func (m CalendarAppointmentMails) AppointmentMails(ctx context.Context, appointm
 	}
 	mails := make([]calendarService.AppointmentMail, 0, len(reports))
 	for _, report := range reports {
-		mails = append(mails, calendarService.AppointmentMail{ID: report.MailID, Kind: report.Kind, Address: report.Address, Outcome: string(report.Outcome)})
+		mails = append(mails, calendarService.AppointmentMail{AwaitingFeedback: report.AwaitingFeedback, ID: report.MailID, Kind: report.Kind, Address: report.Address, Outcome: string(report.Outcome)})
 	}
 	return mails, nil
 }

@@ -19,6 +19,6 @@ func TestClassifyKeepsRefusalDetails(t *testing.T) {
 	})
 	require.Equal(t, 400, failure.Status)
 	require.Equal(t, "timetable.substitute_absent_on_date", failure.Code)
-	require.Equal(t, map[string]any{"date": "2026-10-06"}, failure.Details)
+	require.Equal(t, workforce.SubstitutionRefusalValues{Date: "2026-10-06"}, failure.Details)
 	require.Equal(t, "substitute_staff_id", failure.Field)
 }

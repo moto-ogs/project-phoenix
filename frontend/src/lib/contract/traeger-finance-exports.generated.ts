@@ -439,8 +439,8 @@ export const routes = {
     pattern: "/traeger/finance-exports/datev-runs",
     portals: ["org"],
     query: {
-      "care": { kind: "string" },
-      "holiday": { kind: "string" },
+      "care": { kind: "id", repeated: true },
+      "holiday": { kind: "id", repeated: true },
     },
     response: success(DatevRunOverviewsSchema),
   },

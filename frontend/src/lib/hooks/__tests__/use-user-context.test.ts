@@ -20,10 +20,7 @@ vi.mock("~/lib/swr", () => ({
 }));
 
 // Import after mocking
-import {
-  IncompleteUserContextError,
-  useUserContext,
-} from "../use-user-context";
+import { useUserContext } from "../use-user-context";
 import { useImmutableSWR } from "~/lib/swr";
 import type { NavigationResponse } from "~/lib/contract/me.generated";
 
@@ -38,16 +35,12 @@ function navigationRow(
 ): NavigationResponse {
   return {
     current_staff: null,
-    educational_groups: [],
-    incomplete: false,
     school_switches: {
       parent_news_enabled: false,
       parent_invite_mode: "direct",
       timetable_day_start_time: "08:00",
       timetable_day_end_time: "16:00",
     },
-    supervised_groups: [],
-    unavailable_sections: [],
     ...overrides,
   };
 }
@@ -81,12 +74,7 @@ describe("useUserContext", () => {
 
     it("returns user context data when loaded", () => {
       const mockContext = {
-        educationalGroups: [{ id: "1", name: "Group 1" }],
-        supervisedGroups: [{ id: "2", name: "Supervised 1" }],
         currentStaff: { id: "100", personId: "200" },
-        educationalGroupIds: ["1"],
-        educationalGroupRoomNames: ["Raum 1"],
-        supervisedRoomNames: ["Raum 2"],
       };
 
       vi.mocked(useImmutableSWR).mockReturnValue({
@@ -124,12 +112,7 @@ describe("useUserContext", () => {
 
     it("is ready when data is present even if empty", () => {
       const emptyContext = {
-        educationalGroups: [],
-        supervisedGroups: [],
         currentStaff: null,
-        educationalGroupIds: [],
-        educationalGroupRoomNames: [],
-        supervisedRoomNames: [],
       };
 
       vi.mocked(useImmutableSWR).mockReturnValue({
@@ -171,7 +154,6 @@ describe("useUserContext", () => {
       const fetcher = vi.mocked(useImmutableSWR).mock.calls[0]?.[1];
 
       expect(await fetcher?.()).toMatchObject({
-        educationalGroupIds: [],
         currentStaff: null,
         schoolSwitches: { parentInviteMode: "direct" },
       });
@@ -223,57 +205,6 @@ describe("useUserContext", () => {
         details: { section: "school_switches" },
         requestId: "request-navigation-123",
       });
-    });
-
-    it("does not cache incomplete user context data", async () => {
-      const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            data: navigationRow({
-              incomplete: true,
-              unavailable_sections: ["supervised_groups"],
-            }),
-          }),
-      } as Response);
-
-      renderHook(() => useUserContext());
-      const fetcher = vi.mocked(useImmutableSWR).mock.calls[0]?.[1];
-
-      if (fetcher) {
-        await expect(fetcher()).rejects.toBeInstanceOf(
-          IncompleteUserContextError,
-        );
-      }
-
-      fetchMock.mockRestore();
-    });
-
-    it("exposes partial user context data from an incomplete response", () => {
-      const partialContext = {
-        educationalGroups: [],
-        supervisedGroups: [],
-        currentStaff: { id: "100", personId: "200" },
-        educationalGroupIds: [],
-        educationalGroupRoomNames: [],
-        supervisedRoomNames: [],
-        incomplete: true,
-        unavailableSections: ["supervised_groups"],
-        schoolSwitches: null,
-      };
-      vi.mocked(useImmutableSWR).mockReturnValue({
-        data: undefined,
-        isLoading: false,
-        error: new IncompleteUserContextError(partialContext),
-        isValidating: false,
-        mutate: vi.fn(),
-      });
-
-      const { result } = renderHook(() => useUserContext());
-
-      expect(result.current.userContext).toEqual(partialContext);
-      expect(result.current.isIncomplete).toBe(true);
-      expect(result.current.unavailableSections).toEqual(["supervised_groups"]);
     });
   });
 });

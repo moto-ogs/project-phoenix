@@ -277,7 +277,7 @@ func ErrorUpload(err error, maxFileSize int64) render.Renderer {
 	}
 	shown := GermanUploadError(err, maxFileSize)
 	if refusal.code == CodeFilesFileTooLarge {
-		return ErrorInvalidRequestWithDetails(shown, refusal.code, map[string]any{"max_mb": uploadLimitMB(maxFileSize)})
+		return ErrorInvalidRequestWithDetails(shown, CodeFilesFileTooLarge, SizeLimitDetails{MaxMB: uploadLimitMB(maxFileSize)})
 	}
 	return ErrorInvalidRequestWithCode(shown, refusal.code)
 }

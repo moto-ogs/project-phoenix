@@ -31,7 +31,7 @@ import { homeConcept } from "~/lib/concepts/home";
 import { atSchoolConcept } from "~/lib/concepts/atSchool";
 import { inClassConcept } from "~/lib/concepts/inClass";
 import { classTripConcept } from "~/lib/concepts/classTrip";
-import { freeRoomsConcept } from "~/lib/concepts/freeRooms";
+import { openRoomsConcept } from "~/lib/concepts/openRooms";
 import { utilizationConcept } from "~/lib/concepts/utilization";
 import { emergencyConcept } from "~/lib/concepts/emergency";
 import { notArrivalConcept } from "~/lib/concepts/notArrival";
@@ -39,6 +39,7 @@ import { unknownConcept } from "~/lib/concepts/unknown";
 import { calendarConcept } from "~/lib/concepts/calendar";
 import { dayChangesConcept } from "~/lib/concepts/dayChanges";
 import { carePlanConcept } from "~/lib/concepts/carePlan";
+import { dayPlanConcept } from "~/lib/concepts/dayPlan";
 import { careTimesConcept } from "~/lib/concepts/careTimes";
 import { staffPlanConcept } from "~/lib/concepts/staffPlan";
 import { substitutionConcept } from "~/lib/concepts/substitution";
@@ -75,6 +76,7 @@ import { accountsConcept } from "~/lib/concepts/accounts";
 import { rolesConcept } from "~/lib/concepts/roles";
 import { permissionsConcept } from "~/lib/concepts/permissions";
 import { privacyConcept } from "~/lib/concepts/privacy";
+import { displayConcept } from "~/lib/concepts/display";
 import { signInConcept } from "~/lib/concepts/signIn";
 import { passkeysConcept } from "~/lib/concepts/passkeys";
 import { exportsConcept } from "~/lib/concepts/exports";
@@ -126,7 +128,7 @@ const registry = {
   atSchool: atSchoolConcept,
   inClass: inClassConcept,
   classTrip: classTripConcept,
-  freeRooms: freeRoomsConcept,
+  openRooms: openRoomsConcept,
   utilization: utilizationConcept,
   emergency: emergencyConcept,
   notArrival: notArrivalConcept,
@@ -134,6 +136,7 @@ const registry = {
   calendar: calendarConcept,
   dayChanges: dayChangesConcept,
   carePlan: carePlanConcept,
+  dayPlan: dayPlanConcept,
   careTimes: careTimesConcept,
   staffPlan: staffPlanConcept,
   substitution: substitutionConcept,
@@ -170,6 +173,7 @@ const registry = {
   roles: rolesConcept,
   permissions: permissionsConcept,
   privacy: privacyConcept,
+  display: displayConcept,
   signIn: signInConcept,
   passkeys: passkeysConcept,
   exports: exportsConcept,

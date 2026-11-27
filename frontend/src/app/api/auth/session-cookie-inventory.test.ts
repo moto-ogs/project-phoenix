@@ -282,10 +282,11 @@ describe("session cookie writers", () => {
       "src/server/auth/route-handler.ts",
       "src/server/auth/session-cookie-writes.ts",
     ]);
-    // Everyone else only reads the jar: any other use of cookies() of
-    // next/headers, through an alias, destructuring, a string key or a
-    // helper, counts as a write.
+    // The document reads only its presentation cookie. Every other use of
+    // next/headers' cookie jar, through an alias, destructuring, a string key
+    // or a helper, receives an explicit inventory entry.
     expect(writersOf("next-cookie-jar")).toEqual([
+      "src/app/root-document.tsx",
       "src/server/auth/session-cookie-writes.ts",
     ]);
   });
@@ -295,6 +296,12 @@ describe("session cookie writers", () => {
       string,
       { kinds: CookieWriteKind[]; proof: RegExp | null }
     > = {
+      // The root document reads the presentation preference for the first
+      // HTML response. It neither sees nor changes a session cookie.
+      "src/app/root-document.tsx": {
+        kinds: ["next-cookie-jar"],
+        proof: /cookieStore\.get\(CONTRAST_COOKIE_NAME\)\?\.value/,
+      },
       // The exit itself: takes the jar's session cookies (Next's internal
       // cookie adapter) and serializes them.
       "src/server/auth/session-cookie-writes.ts": {
@@ -343,11 +350,23 @@ describe("session cookie writers", () => {
         kinds: ["document-cookie"],
         proof: /clearCookies: \(\) => container\.clearCookies\(\),/,
       },
+      // The tenant session mark (#8082): reads the mark and listens to the
+      // browser's cookie change events; it writes no cookie (the exit does).
+      "src/lib/session-mark.ts": {
+        kinds: ["cookie-list"],
+        proof: /store\.addEventListener\("change", onChange\);/,
+      },
       // The parents portal's language, in the browser (#5444: the regex
       // inventory did not see document.cookie).
       "src/i18n/locales.ts": {
         kinds: ["document-cookie"],
         proof: /document\.cookie = `\$\{LOCALE_COOKIE_NAME\}=/,
+      },
+      // The presentation preference mirrors an account choice so that the
+      // first HTML response can render it. It is never a session cookie.
+      "src/lib/contrast-preference.ts": {
+        kinds: ["document-cookie"],
+        proof: /document\.cookie = `\$\{CONTRAST_COOKIE_NAME\}=/,
       },
     };
     expect([...cookieWritesByFile().keys()].sort()).toEqual(
@@ -388,6 +407,8 @@ describe("session cookie writers", () => {
       "src/lib/portal-session-snapshot.server.ts",
       "src/lib/session-cookie-exit.server.ts",
       "src/server/auth/portals.ts",
+      // The exit sets the tenant session mark beside that cookie (#8082).
+      "src/server/auth/session-cookie-writes.ts",
     ]);
     expect(isSessionCookieName(DEMO_TOKEN_COOKIE)).toBe(false);
     expect(
@@ -477,5 +498,18 @@ describe("session cookie writers", () => {
     expect(finalizer).toMatch(
       /return gateSessionCookieWrites\(current\.request, response\);\s*\}/,
     );
+  });
+});
+
+// #8082: every exit names the session it ends (END_SESSION_HEADER), and the
+// exit of session cookies keeps any other. Auth.js' SDK signOut names none:
+// it would delete whatever session the cookie holds by then, also another
+// tab's sign-in of the meantime. Its exits go through signOutSession.
+describe("session exits name their session", () => {
+  it("no client module ends a session through the SDK's signOut", () => {
+    const callers = matching(
+      /import\s*\{[^}]*\bsignOut\b[^}]*\}\s*from\s*["']next-auth\/react["']/,
+    ).filter((file) => !/\.(test|stories)\.tsx?$/.test(file));
+    expect(callers).toEqual([]);
   });
 });

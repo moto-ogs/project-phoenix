@@ -3,18 +3,22 @@ package api
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/moto-ogs/project-phoenix/auth/authorize/permissions"
+	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/daychangesview"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess/sessiontoken"
 	"github.com/moto-ogs/project-phoenix/modules/mealplan"
+	"github.com/moto-ogs/project-phoenix/modules/schoolcalendar"
 	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/ident"
 )
 
 type invisibleDayChangesCaller struct{}
@@ -60,8 +64,8 @@ func (directDayChangesIsolation) IsFatal(error) bool { return false }
 // unchangedDayChangesMenu is a meal plan without a changed menu today.
 type unchangedDayChangesMenu struct{}
 
-func (unchangedDayChangesMenu) MenuChangedOn(context.Context, mealplan.Date) (bool, error) {
-	return false, nil
+func (unchangedDayChangesMenu) MenuDayOn(context.Context, mealplan.Date) (mealplan.MenuDay, error) {
+	return mealplan.MenuDay{}, nil
 }
 
 func TestDayChangesInvisibleAccountSkipsUnavailableWorkforce(t *testing.T) {
@@ -86,6 +90,8 @@ func TestDayChangesInvisibleAccountSkipsUnavailableWorkforce(t *testing.T) {
 		Appointments: dayChangesAppointments{},
 		// No change mark today: the Essen source answers without an entry.
 		MealPlan: dayChangesMealPlan{reads: unchangedDayChangesMenu{}},
+		// Without rooms:read the Räume source answers before reading (#8161).
+		RoomClosures: dayChangesRoomClosures{},
 	})
 	require.NoError(t, err)
 
@@ -100,11 +106,53 @@ func TestDayChangesInvisibleAccountSkipsUnavailableWorkforce(t *testing.T) {
 		{Source: daychangesview.SourceClasses, Status: daychangesview.SourceLoaded},
 		{Source: daychangesview.SourceAppointments, Status: daychangesview.SourceLoaded},
 		{Source: daychangesview.SourceMealPlan, Status: daychangesview.SourceLoaded},
+		{Source: daychangesview.SourceRoomClosures, Status: daychangesview.SourceLoaded},
 	}, overview.Sources)
 	assert.Empty(t, overview.Entries)
 	assert.False(t, workforceSource.handoversRead)
 	assert.False(t, workforceSource.absencesRead)
 	assert.False(t, workforceSource.shiftsRead)
+}
+
+type dayChangesCalendarReads struct {
+	days     []schoolcalendar.ClosingDay
+	openings []schoolcalendar.OpeningChange
+}
+
+func (r dayChangesCalendarReads) ListClosingDays(context.Context, schoolcalendar.ClosingDayFilter) ([]schoolcalendar.ClosingDay, error) {
+	return r.days, nil
+}
+
+func (r dayChangesCalendarReads) ListOpeningChanges(context.Context, calendar.Date, calendar.Date) ([]schoolcalendar.OpeningChange, error) {
+	return r.openings, nil
+}
+
+type unavailableDayChangesWeeklyPickups struct{}
+
+func (unavailableDayChangesWeeklyPickups) ListPickupSchedules(context.Context, careplan.StudentScheduleFilter) ([]careplan.PickupSchedule, error) {
+	return nil, errors.New("weekly pickups unavailable")
+}
+
+func TestChildDayKeepsCalendarEntriesWhenWeeklyPickupLookupFails(t *testing.T) {
+	t.Parallel()
+	day := calendar.NewDate(2026, 9, 9)
+	calendarReads := dayChangesCalendarReads{
+		days: []schoolcalendar.ClosingDay{{StartDate: day.String(), EndDate: day.String(), Reason: "Pädagogischer Tag"}},
+		openings: []schoolcalendar.OpeningChange{{
+			StartDate: day, EndDate: day, OpensAt: "08:00", ClosesAt: "13:00", Reason: "Kurzer Tag",
+		}},
+	}
+	source := childDayClosingDays{
+		reads: calendarReads, openings: calendarReads, pickups: unavailableDayChangesWeeklyPickups{},
+		logger: slog.New(slog.DiscardHandler),
+	}
+
+	entries, err := source.ChildDayChanges(context.Background(), day, daychangesview.ChildFilter{StudentID: ident.ID(42)})
+	require.NoError(t, err)
+	require.Len(t, entries, 2)
+	assert.Equal(t, daychangesview.KindClosingDay, entries[0].Kind)
+	assert.Equal(t, daychangesview.KindOpeningChanged, entries[1].Kind)
+	assert.Nil(t, entries[1].Opening.RegularPickupAfterClosing)
 }
 
 func TestDayChangesLinksRequireDestinationAccess(t *testing.T) {

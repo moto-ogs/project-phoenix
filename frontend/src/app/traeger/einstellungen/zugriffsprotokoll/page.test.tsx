@@ -12,7 +12,7 @@ import {
 } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "~/contexts/ToastContext";
-import { ApiError } from "~/lib/api-error";
+import { errorFromProblem } from "~/test/helpers/problem-response";
 import { TEST_CLOCK_TODAY, testClockDay } from "~/test/clock";
 import type {
   TraegerAccessLogEntry,
@@ -64,7 +64,7 @@ vi.mock("~/components/ui/date-range-picker", async (importOriginal) => {
   };
 });
 
-import TraegerAccessLogPage from "./page";
+import TraegerAccessLogPage from "./page-content";
 
 const AS_OF = "2026-09-09T10:00:00Z";
 
@@ -250,7 +250,7 @@ describe("TraegerAccessLogPage", () => {
 
   it("says how to narrow an export with too many entries", async () => {
     mockDownload.mockRejectedValue(
-      new ApiError("too large", 400, {
+      await errorFromProblem("too large", 400, {
         code: "traeger.access_log_export_too_large",
         details: { limit: 10000 },
       }),

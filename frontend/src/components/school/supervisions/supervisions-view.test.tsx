@@ -9,6 +9,7 @@ import type {
 } from "~/lib/timetable-operations-types";
 import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
+import { errorFromProblem } from "~/test/helpers/problem-response";
 import type { ErrorCode } from "~/lib/error-codes.generated";
 import { catalogText } from "~/test/error-catalog-text";
 import { schoolSupervisionsApi } from "~/lib/school-supervisions-api";
@@ -147,10 +148,6 @@ const runningInstance = {
 
 const SCHOOL_CAPACITY_HINT = "Mehr Plätze kann die OGS freigeben.";
 
-function codedError(code: ErrorCode, details: Record<string, unknown>) {
-  return new ApiError("conflict", 409, { code, details });
-}
-
 /** The catalog text of `code` with its details filled in. */
 function capacityText(code: ErrorCode, details: Record<string, unknown>) {
   const maximum =
@@ -216,6 +213,7 @@ describe("SchoolSupervisionsView: Fehler beim Einchecken (#3633)", () => {
 
   it("nennt die volle Aktivität mit ihrer Belegung", async () => {
     const details = {
+      activity_id: "11",
       activity_name: "Betreuung",
       current_occupancy: 45,
       max_participants: 45,
@@ -226,7 +224,10 @@ describe("SchoolSupervisionsView: Fehler beim Einchecken (#3633)", () => {
       details,
     );
     const shown = await checkInAndFindError(
-      codedError("presence.activity_participant_limit_reached", details),
+      await errorFromProblem("refused", 409, {
+        code: "presence.activity_participant_limit_reached",
+        details,
+      }),
       expected,
     );
 
@@ -239,6 +240,7 @@ describe("SchoolSupervisionsView: Fehler beim Einchecken (#3633)", () => {
 
   it("nennt den vollen Raum mit seiner Belegung", async () => {
     const details = {
+      room_id: "7",
       room_name: "Turnhalle",
       current_occupancy: 30,
       max_capacity: 30,
@@ -246,7 +248,10 @@ describe("SchoolSupervisionsView: Fehler beim Einchecken (#3633)", () => {
     };
     const expected = capacityText("presence.room_capacity_exceeded", details);
     const shown = await checkInAndFindError(
-      codedError("presence.room_capacity_exceeded", details),
+      await errorFromProblem("refused", 409, {
+        code: "presence.room_capacity_exceeded",
+        details,
+      }),
       expected,
     );
 

@@ -84,6 +84,34 @@ describe("ContextHelpLink", () => {
     );
   });
 
+  // Der Betreuungsplan (#8134) ist eine Seite fuer Leitung und Team: die
+  // Leitung plant dort, das Team liest. Jede Rolle bekommt ihren Artikel.
+  it("opens the read article of a shared page for a caregiver", () => {
+    auth.roles = ["user"];
+    try {
+      render(<ContextHelpLink topic={HELP_TOPICS.leadCarePlan} />);
+      expect(
+        screen.getByRole("link", { name: "Hilfe zu dieser Seite" }),
+      ).toHaveAttribute(
+        "href",
+        expect.stringContaining("/help/betreuungsplan-ansehen?role=caregiver"),
+      );
+    } finally {
+      auth.roles = ["admin"];
+    }
+  });
+
+  it("keeps the lead article of a shared page for a lead", () => {
+    render(<ContextHelpLink topic={HELP_TOPICS.leadCarePlan} />);
+
+    expect(
+      screen.getByRole("link", { name: "Hilfe zu dieser Seite" }),
+    ).toHaveAttribute(
+      "href",
+      expect.stringContaining("/help/betreuungsplan-erstellen"),
+    );
+  });
+
   // Im Elternportal hat niemand die Rolle `admin`. Ohne den Portal-Modus
   // fiele der Knopf auf `caregiver` zurueck und schickte Eltern in die
   // Betreuungs-Hilfe.

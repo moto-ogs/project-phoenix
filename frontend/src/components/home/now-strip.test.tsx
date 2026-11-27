@@ -64,8 +64,11 @@ vi.mock("~/components/home/home-card-rows", () => ({
   useBerlinClock: () => "10:20",
 }));
 vi.mock("~/lib/hooks/use-day-plan-href", () => ({
-  useDayPlanHref: () => "/test-tenant/tagesplan",
-  useDayPlanLabel: () => "Heute öffnen",
+  useDayPlanLink: () => ({
+    href: "/test-tenant/tagesplan",
+    label: "Heute öffnen",
+    tooltip: "Öffnet deinen Tagesplan für heute.",
+  }),
 }));
 vi.mock("~/lib/tenant-path", () => ({
   useTenantAwarePath: () => (path: string) => `/test-tenant${path}`,
@@ -73,6 +76,7 @@ vi.mock("~/lib/tenant-path", () => ({
 const supervision = vi.hoisted(() => ({
   ownSupervision: false,
   hasGroups: true,
+  refresh: vi.fn(() => Promise.resolve()),
 }));
 vi.mock("~/lib/supervision-context", () => ({
   useOptionalSupervision: () => supervision,
@@ -96,6 +100,7 @@ const care: HomeBlockAccess = {
   canOpenRequestsPage: false,
   caresForGroups: true,
   hasOwnGroups: true,
+  seesAllBlocks: true,
 };
 const lead: HomeBlockAccess = {
   isAdminScope: true,
@@ -103,6 +108,7 @@ const lead: HomeBlockAccess = {
   canOpenRequestsPage: true,
   caresForGroups: false,
   hasOwnGroups: false,
+  seesAllBlocks: true,
 };
 
 function context(access: HomeBlockAccess): HomeBlockContext {
@@ -170,6 +176,7 @@ describe("NowStrip (#2180)", () => {
     router.push.mockReset();
     supervision.ownSupervision = false;
     supervision.hasGroups = true;
+    supervision.refresh.mockClear();
     ownStaff.present = true;
   });
 
@@ -246,6 +253,7 @@ describe("NowStrip (#2180)", () => {
       ),
     );
     expect(api.start).toHaveBeenCalledWith("4");
+    expect(supervision.refresh).toHaveBeenCalledWith(["sessions"]);
   });
 
   it("sagt es, wenn das Starten scheitert, und lädt den Tag neu", async () => {

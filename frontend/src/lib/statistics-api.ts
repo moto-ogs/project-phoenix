@@ -55,7 +55,7 @@ export const EXPORT_FILENAME_STEM: Record<StatisticsExportSection, string> = {
   attendance: "statistik",
   rooms: "raumauslastung",
   courses: "kurse",
-  "course-students": "kurse-je-kind",
+  "course-students": "kurse-pro-kind",
   occupancy: "belegung-nach-uhrzeit",
 };
 

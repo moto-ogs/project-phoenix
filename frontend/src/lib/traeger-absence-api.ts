@@ -1,3 +1,4 @@
+import type { z } from "zod";
 import { bffJson } from "~/lib/bff-fetch";
 /**
  * Abwesenheitsarten und Kontingente des Trägers (#4710, ADR 0089 §10 mit
@@ -162,7 +163,16 @@ function typeBody(
 }
 
 export async function fetchTraegerAbsenceTypes(): Promise<TraegerAbsenceTypeList> {
-  const data = await bffJson("org", "GET /traeger/absence-types/");
+  return mapTraegerAbsenceTypes(
+    await bffJson("org", "GET /traeger/absence-types/"),
+  );
+}
+
+export function mapTraegerAbsenceTypes(
+  data: z.output<
+    (typeof traegerAbsenceTypesContract.routes)["GET /traeger/absence-types/"]["response"]
+  >["data"],
+): TraegerAbsenceTypeList {
   return {
     released: data.release !== null,
     schoolCount: (data.schools ?? []).length,

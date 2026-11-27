@@ -1,24 +1,13 @@
 "use client";
 
-import { useEffect } from "react";
-
 import {
   AllowanceCard,
   AllowanceExpiryNote,
 } from "~/components/staff/allowance-card";
-import { LoadErrorAlert } from "~/components/ui/form-error-alert";
 import { SectionCard } from "~/components/ui/section-card";
-import { ABSENCES_REFRESH_EVENT, formatDayCount } from "~/lib/absence-helpers";
-import type { OwnAbsenceAllowance } from "~/lib/time-tracking-api";
-import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
-import { useSWRAuth } from "~/lib/swr";
-import { staffAbsenceKeys } from "~/lib/swr/staff-keys";
-import { timeTrackingService } from "~/lib/time-tracking-api";
+import { formatDayCount } from "~/lib/absence-helpers";
+import type { OwnLeaveAllowance } from "~/lib/contract/time-tracking.generated";
 
-// Die eigenen Kontingente der schuleigenen Abwesenheitsarten (#4971): dieselben
-// Karten wie im Reiter „Abwesenheiten“ der Leitung, nur ohne „Anspruch ändern“.
-// Ohne Art mit Kontingent bleibt der Block weg; ein Ladefehler steht im Block,
-// damit er nicht als „0 Tage“ gelesen wird.
 // Bekannte Tarifbegriffe kurz erklärt (App, #8070). Die Namen legt die
 // Schule oder der Träger selbst an; nur wo der Name ein feststehender Begriff
 // aus dem Tarif für Erziehungsberufe ist, steht eine Erklärung darunter.
@@ -34,48 +23,50 @@ function termHint(name: string): string | undefined {
   return TERM_HINTS[name.trim().toLowerCase()];
 }
 
+/** Was `AllowanceExpiryNote` zu einer Art braucht. */
+function expirySummary(entry: OwnLeaveAllowance, year: number) {
+  return {
+    carriedIn: entry.carried_in
+      ? {
+          year: entry.carried_in.year,
+          expiresOn:
+            entry.carried_in.expires_on ?? `${entry.carried_in.year}-12-31`,
+          expiredDays: entry.carried_in.expired_days,
+          remainingDays: entry.carried_in.remaining_days,
+        }
+      : null,
+    expiresOn: entry.expires_on ?? `${year}-12-31`,
+    expiredDays: entry.expired_days,
+    remainingDays: entry.remaining_days,
+  };
+}
+
+// Die eigenen Kontingente der schuleigenen Abwesenheitsarten (#4971): dieselben
+// Karten wie im Reiter „Abwesenheiten“ der Leitung, nur ohne „Anspruch ändern“.
+// Ohne Art mit Kontingent bleibt der Block weg.
 export function OwnAllowancesCard({
+  allowances,
+  year,
   app = false,
 }: {
+  readonly allowances: readonly OwnLeaveAllowance[];
+  readonly year: number;
   /** App (#8070): eine Liste in der Karte statt Karten in der Karte. */
   readonly app?: boolean;
-} = {}) {
-  const {
-    data: allowances,
-    error,
-    mutate,
-  } = useSWRAuth(staffAbsenceKeys.ownAllowances(), () =>
-    timeTrackingService.getOwnAbsenceAllowances(),
-  );
-  const load = useSwrResourceLoadError(
-    [{ data: allowances, error }],
-    "die Übersicht der Kontingente",
-    () => mutate(),
-  );
-
-  useEffect(() => {
-    const reload = () => void mutate();
-    window.addEventListener(ABSENCES_REFRESH_EVENT, reload);
-    return () => window.removeEventListener(ABSENCES_REFRESH_EVENT, reload);
-  }, [mutate]);
-
-  if (!load.failure && (allowances === undefined || allowances.length === 0)) {
-    return null;
-  }
+}) {
+  if (allowances.length === 0) return null;
 
   if (app) {
     // Alle Arten wie auf dem Desktop, auch ohne Anspruch (#8070, Runde 7):
     // je Art eine Zeile mit allen vier Zahlen. Steht überall 0, ist die
     // Karte zugeklappt und sagt das im Untertitel (Runde 9).
-    const empty =
-      !load.failure &&
-      (allowances ?? []).every(
-        ({ summary }) =>
-          summary.entitledDays === 0 &&
-          summary.takenDays === 0 &&
-          summary.reservedDays === 0 &&
-          summary.remainingDays === 0,
-      );
+    const empty = allowances.every(
+      (entry) =>
+        entry.entitled_days === 0 &&
+        entry.taken_days === 0 &&
+        entry.reserved_days === 0 &&
+        entry.remaining_days === 0,
+    );
     return (
       <SectionCard
         title="Kontingente"
@@ -88,18 +79,15 @@ export function OwnAllowancesCard({
         defaultCollapsed={empty}
         bodyClassName="mt-3"
       >
-        {load.failure ? (
-          <LoadErrorAlert error={load.error} />
-        ) : (
-          <ul className="-mb-1 divide-y divide-gray-100">
-            {(allowances ?? []).map((entry) => (
-              <AppAllowanceRow
-                key={entry.summary.absenceTypeId}
-                entry={entry}
-              />
-            ))}
-          </ul>
-        )}
+        <ul className="-mb-1 divide-y divide-gray-100">
+          {allowances.map((entry) => (
+            <AppAllowanceRow
+              key={entry.absence_type_id}
+              entry={entry}
+              year={year}
+            />
+          ))}
+        </ul>
       </SectionCard>
     );
   }
@@ -107,42 +95,45 @@ export function OwnAllowancesCard({
   return (
     <SectionCard
       title="Kontingente"
-      description="Deine Tage je Abwesenheitsart. Den Anspruch trägt deine Leitung ein."
+      description="Deine Tage pro Abwesenheitsart. Den Anspruch trägt deine Leitung ein."
       // Wie die Urlaubskarte darüber: ohne shrink-0 staucht die Flex-Spalte
       // der Seite die Karte auf die Kopfhöhe (#4363).
       className="shrink-0"
       bodyClassName="compact:mt-4 mt-5 max-sm:mt-4"
     >
-      {load.failure ? (
-        <LoadErrorAlert error={load.error} />
-      ) : (
-        <div className="grid gap-3 lg:grid-cols-2">
-          {(allowances ?? []).map((entry) => (
-            <AllowanceCard
-              key={entry.summary.absenceTypeId}
-              title={entry.name}
-              headingLevel={3}
-              year={entry.summary.year}
-              entitled={entry.summary.entitledDays}
-              taken={entry.summary.takenDays}
-              reserved={entry.summary.reservedDays}
-              remaining={entry.summary.remainingDays}
-              footer={<AllowanceExpiryNote summary={entry.summary} />}
-            />
-          ))}
-        </div>
-      )}
+      <div className="grid gap-3 lg:grid-cols-2">
+        {allowances.map((entry) => (
+          <AllowanceCard
+            key={entry.absence_type_id}
+            title={entry.name}
+            headingLevel={3}
+            year={year}
+            entitled={entry.entitled_days}
+            taken={entry.taken_days}
+            reserved={entry.reserved_days}
+            remaining={entry.remaining_days}
+            footer={
+              <AllowanceExpiryNote summary={expirySummary(entry, year)} />
+            }
+          />
+        ))}
+      </div>
     </SectionCard>
   );
 }
 
-function AppAllowanceRow({ entry }: { readonly entry: OwnAbsenceAllowance }) {
-  const { summary } = entry;
+function AppAllowanceRow({
+  entry,
+  year,
+}: {
+  readonly entry: OwnLeaveAllowance;
+  readonly year: number;
+}) {
   const hint = termHint(entry.name);
   const figures = [
-    `Anspruch ${formatDayCount(summary.entitledDays)}`,
-    `genommen ${formatDayCount(summary.takenDays)}`,
-    `vorgemerkt ${formatDayCount(summary.reservedDays)}`,
+    `Anspruch ${formatDayCount(entry.entitled_days)}`,
+    `genommen ${formatDayCount(entry.taken_days)}`,
+    `vorgemerkt ${formatDayCount(entry.reserved_days)}`,
   ];
   return (
     <li className="py-3">
@@ -152,7 +143,7 @@ function AppAllowanceRow({ entry }: { readonly entry: OwnAbsenceAllowance }) {
         </h3>
         <p className="shrink-0 text-right text-sm leading-6 text-gray-500 tabular-nums">
           <span className="font-semibold text-gray-900">
-            {formatDayCount(summary.remainingDays)}
+            {formatDayCount(entry.remaining_days)}
           </span>{" "}
           übrig
         </p>
@@ -167,7 +158,7 @@ function AppAllowanceRow({ entry }: { readonly entry: OwnAbsenceAllowance }) {
         ))}
       </p>
       <div className="mt-0.5 empty:hidden">
-        <AllowanceExpiryNote summary={summary} />
+        <AllowanceExpiryNote summary={expirySummary(entry, year)} />
       </div>
     </li>
   );

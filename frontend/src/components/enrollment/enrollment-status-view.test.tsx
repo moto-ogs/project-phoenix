@@ -6,6 +6,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
+import * as nextIntl from "next-intl";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -102,6 +103,7 @@ function status(overrides: Partial<StatusResponse> = {}): StatusResponse {
     ],
     signature_required: false,
     care_facility_term: "",
+    care_facility_article: "die",
     ...overrides,
   };
 }
@@ -152,6 +154,150 @@ describe("EnrollmentStatusView", () => {
 
     expect(screen.getByText("Status wird geladen…")).toBeInTheDocument();
     expect(await screen.findByText("Status-Link ungültig")).toBeInTheDocument();
+  });
+
+  it("shows the seeded status and changed fields without mount requests", () => {
+    const { request_id: _requestID, ...display } = status();
+    render(
+      <EnrollmentStatusView
+        token="tok"
+        initial={{
+          builtAt: Date.now(),
+          data: {
+            status: display,
+            changes: [
+              {
+                id: "42",
+                origin: "parent",
+                status: "pending_review",
+                created_at: "2026-06-28T11:09:00.000Z",
+                groups: [
+                  {
+                    key: "guardian_first_name",
+                    label: "Vorname",
+                    rows: [
+                      {
+                        id: "name",
+                        label: "Vorname",
+                        before: "Daniela",
+                        after: "Danielaaaa",
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        }}
+      />,
+    );
+
+    expect(screen.getByText("Lina Muster")).toBeInTheDocument();
+    expect(screen.getByText("Danielaaaa")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
+    expect(screen.getByLabelText("Vorname")).toHaveValue("Mara");
+    expect(screen.getByLabelText("Nachname")).toHaveValue("Muster");
+    expect(screen.getByLabelText("Telefon, optional")).toHaveValue(
+      "+49 221 1234567",
+    );
+    expect(mockFetchStatus).not.toHaveBeenCalled();
+    expect(mockListEnrollmentChangeRequests).not.toHaveBeenCalled();
+    expect(mockGetEnrollmentFormLabels).not.toHaveBeenCalled();
+  });
+
+  it("reloads only the seeded change list on a language switch", async () => {
+    mockListEnrollmentChangeRequests.mockResolvedValue([changeRequest()]);
+    const view = (
+      <EnrollmentStatusView
+        token="tok"
+        initial={{
+          builtAt: Date.now(),
+          data: {
+            status: status(),
+            changesLocale: "de",
+            changes: [
+              {
+                id: "42",
+                origin: "parent",
+                status: "pending_review",
+                created_at: "2026-06-28T11:09:00.000Z",
+                groups: [
+                  {
+                    key: "guardian_first_name",
+                    label: "Vorname",
+                    rows: [
+                      {
+                        id: "name",
+                        label: "Vorname",
+                        before: "Alter Text",
+                        after: "Alter Seed",
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        }}
+      />
+    );
+
+    const { rerender } = render(view);
+    expect(screen.getByText("Alter Seed")).toBeInTheDocument();
+    const locale = vi.spyOn(nextIntl, "useLocale").mockReturnValue("en");
+    rerender(<EnrollmentStatusView {...view.props} />);
+
+    expect(await screen.findByText("Danielaaaa")).toBeInTheDocument();
+    expect(screen.queryByText("Alter Seed")).not.toBeInTheDocument();
+    expect(screen.getByText("Lina Muster")).toBeInTheDocument();
+    expect(mockFetchStatus).not.toHaveBeenCalled();
+    expect(mockListEnrollmentChangeRequests).toHaveBeenCalledTimes(1);
+    locale.mockRestore();
+  });
+
+  it("keeps the post-write status refresh across a language switch", async () => {
+    const refresh = deferred<StatusResponse>();
+    mockFetchStatus.mockReturnValueOnce(refresh.promise);
+    mockPatchStatus.mockResolvedValueOnce();
+    const view = (
+      <EnrollmentStatusView
+        token="tok"
+        initial={{
+          builtAt: Date.now(),
+          data: {
+            status: status(),
+            changesLocale: "de",
+            changes: [
+              {
+                id: "42",
+                origin: "parent",
+                status: "approved",
+                created_at: "2026-06-28T11:09:00.000Z",
+                groups: [],
+              },
+            ],
+          },
+        }}
+      />
+    );
+    const { rerender } = render(view);
+    fireEvent.click(screen.getByRole("button", { name: "Bearbeiten" }));
+    fireEvent.change(screen.getByLabelText("Vorname"), {
+      target: { value: "Maria" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() => expect(mockFetchStatus).toHaveBeenCalledOnce());
+
+    const locale = vi.spyOn(nextIntl, "useLocale").mockReturnValue("en");
+    rerender(<EnrollmentStatusView {...view.props} />);
+    await act(async () =>
+      refresh.resolve(status({ guardian_first_name: "Maria" })),
+    );
+
+    expect(await screen.findByText("Maria Muster")).toBeInTheDocument();
+    expect(mockListEnrollmentChangeRequests).toHaveBeenCalledOnce();
+    locale.mockRestore();
   });
 
   it("renders editable submitted requests and saves contact changes", async () => {

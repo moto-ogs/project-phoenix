@@ -46,6 +46,6 @@ func (seamSettings) MealRegistrationEnabled(context.Context) (bool, error) { ret
 func (seamSettings) MealOrderingSettings(context.Context) (ports.OrderingSettings, error) {
 	return ports.OrderingSettings{}, nil
 }
-func newTestModule(e *recordingEngine) *Service {
-	return New(seamStore{e: e}, struct{ ports.Directory }{}, struct{ ports.Calendar }{}, seamSettings{e}, seamTransaction{}, func(ports.Observation) {}, func() time.Time { return time.Date(2026, 9, 7, 8, 0, 0, 0, calendar.Berlin) }, nil)
+func newTestModule(e *recordingEngine) mealplan.Capability {
+	return New(seamStore{e: e}, struct{ ports.Directory }{}, struct{ ports.Calendar }{}, seamSettings{e}, seamTransaction{}, func(ports.Observation) {}, func() time.Time { return time.Date(2026, 9, 7, 8, 0, 0, 0, calendar.Berlin) }, nil).Capability
 }

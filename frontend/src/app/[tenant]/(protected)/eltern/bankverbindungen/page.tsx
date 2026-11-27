@@ -43,7 +43,7 @@ const PAYMENT_EXPORT_FORMATS: readonly PaymentExportFormat[] = [
 const ROWS_PER_PAGE = 25;
 
 const BANK_DETAILS_INFO =
-  "Hier siehst du je Kind, ob eine IBAN gespeichert ist. Wähle „Ohne IBAN“, um zu sehen, wo noch etwas fehlt.";
+  "Hier siehst du pro Kind, ob eine IBAN gespeichert ist. Wähle „Ohne IBAN“, um zu sehen, wo noch etwas fehlt.";
 
 function BankverbindungenContent() {
   const { data: session, status } = useSession({ required: true });

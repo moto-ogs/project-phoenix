@@ -36,7 +36,9 @@ export function parentRequestsTopic(groupMode: HelpGroupMode): HelpTopic {
       // #3945: Tagesanfrage mit Abholart.
       "Eine Anfrage für einen einzelnen Tag kann die Abholzeit, die Abholart oder beides ändern. Die neue Abholart gilt nur an diesem Tag.",
       // #4780: Abholperson fuer einen Tag und Abholberechtigung je Wochentag.
-      "Eine Anfrage für einen Tag kann auch eine Abholperson nennen. Nach dem Freigeben steht beim Kind für diesen Tag `Abholung durch ... (Erlaubnis der Eltern)`.",
+      // #8162: die Freigabe setzt die Abholperson des Tages.
+      "Eine Anfrage für einen Tag kann auch eine Abholperson nennen: eine Kontaktperson oder eine andere Person mit Namen. Nach dem Freigeben steht in der Kinderkarte `Holt heute ab: ...`. Bei einer anderen Person steht `(Ausweis prüfen)` dabei.",
+      "Hat die OGS für den Tag schon selbst eine Abholperson eingetragen? Dann lässt sich die Anfrage nicht freigeben. Ändere die Abholperson direkt beim Kind.",
       "Eine `Abholberechtigung` trägt eine Kontaktperson als abholberechtigt ein, an allen Tagen oder nur an bestimmten Tagen. Sie gilt erst nach dem Freigeben.",
       "Haben die Eltern unterschrieben, öffnest du mit `Nachweis (PDF)` die Erklärung und die Unterschrift.",
       // #5698: Elternmeldung für einen Tag mit Teilentschuldigung.
@@ -45,7 +47,7 @@ export function parentRequestsTopic(groupMode: HelpGroupMode): HelpTopic {
       "Ist der Tag heute, zeigt die Kinderkarte nach dem Freigeben unten einen orangen Hinweis.",
       // #6855: freigegebene Abholzeit für einen Tag informiert das Team
       // (Typ student_pickup_changed) und markiert die Kinderakte.
-      "Gibst du eine neue Abholzeit für einen Tag frei, bekommt das Team des Kindes einen Hinweis. Er steht oben in der Kopfzeile unter `Neu für dich` mit rotem Zähler. Ist es eingeschaltet, kommt er auch aufs Handy. Ein Tippen darauf öffnet das Kind.",
+      "Gibst du eine neue Abholzeit oder eine Abholperson für einen Tag frei, bekommt das Team des Kindes einen Hinweis. Er steht oben in der Kopfzeile unter `Neu für dich` mit rotem Zähler. Ist es eingeschaltet, kommt er auch aufs Handy. Ein Tippen darauf öffnet das Kind.",
       "Nimmst du die Freigabe mit `Entscheidung korrigieren` zurück, bekommt das Team wieder einen Hinweis: `wieder normale Abholzeit`.",
       // #7707: Banner nur für ungesehene Änderungen, der Stand in den Betreuungszeiten.
       "Wer die Änderung noch nicht kennt, sieht oben in der Kinderakte `Abholzeit an einzelnen Tagen geändert`. Dort stehen Tag, Uhrzeit und `Neu`. Das X schließt den Hinweis. Er kommt erst bei einer neuen Änderung wieder.",
@@ -58,7 +60,7 @@ export function parentRequestsTopic(groupMode: HelpGroupMode): HelpTopic {
       "Plant ein Regeltermin alle Kinder einer Klasse, eines Jahrgangs oder einer Gruppe, steht dort `Mit Angebot verbinden`. Nur so fehlt das Kind dauerhaft.",
       // #4767: Warteliste je AG; Nachrücken ist die normale Freigabe.
       "Fragen Eltern einen Platz in einer vollen AG an? Dann zeigt die Anfrage zum Beispiel `Warteliste Platz 2`. Die älteste Anfrage ist zuerst dran.",
-      "Oben steht die Karte `Wartelisten`. Sie zeigt je AG die belegten Plätze und die wartenden Kinder in Reihenfolge. `Zur Anfrage` öffnet die Anfrage des Kindes.",
+      "Oben steht die Karte `Wartelisten`. Sie zeigt pro AG die belegten Plätze und die wartenden Kinder in Reihenfolge. `Zur Anfrage` öffnet die Anfrage des Kindes.",
       "Ist in einer AG ein Platz frei, steht dort `Platz frei` und beim ersten Kind `Als Nächstes dran`. Wähle bei seiner Anfrage `Freigeben`, dann rückt es nach.",
       "Anmeldungsänderungen öffnest du über `Prüfen`. Dafür brauchst du ein zusätzliches Recht.",
       // Ohne feste Gruppen gibt es keine Gruppenleitung, an der die

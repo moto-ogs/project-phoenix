@@ -19,13 +19,14 @@ type SSEEvent struct {
 // the relay's decimal strings, without changing the PostgreSQL signal format.
 type SSEEventData struct {
 	EventData
-	StudentID     *ident.ID   `json:"student_id,omitempty"`
-	StudentIDs    *[]ident.ID `json:"student_ids,omitempty"`
-	GroupIDs      *[]ident.ID `json:"group_ids,omitempty"`
-	RoomID        *ident.ID   `json:"room_id,omitempty"`
-	SupervisorIDs *[]ident.ID `json:"supervisor_ids,omitempty"`
-	InstanceID    *ident.ID   `json:"instance_id,omitempty"`
-	ThreadID      *ident.ID   `json:"thread_id,omitempty"`
+	StudentID       *ident.ID   `json:"student_id,omitempty"`
+	StudentIDs      *[]ident.ID `json:"student_ids,omitempty"`
+	GroupIDs        *[]ident.ID `json:"group_ids,omitempty"`
+	RoomID          *ident.ID   `json:"room_id,omitempty"`
+	SupervisorIDs   *[]ident.ID `json:"supervisor_ids,omitempty"`
+	InstanceID      *ident.ID   `json:"instance_id,omitempty"`
+	ThreadID        *ident.ID   `json:"thread_id,omitempty"`
+	SenderAccountID *ident.ID   `json:"sender_account_id,omitempty"`
 }
 
 // SSEPayload returns the browser projection independently of relay data.
@@ -36,8 +37,9 @@ func (event Event) SSEPayload() any {
 			EventData: event.Data, StudentID: parseEventID(event.Data.StudentID),
 			StudentIDs: parseEventIDs(event.Data.StudentIDs), GroupIDs: parseEventIDs(event.Data.GroupIDs),
 			RoomID: parseEventID(event.Data.RoomID), SupervisorIDs: parseEventIDs(event.Data.SupervisorIDs),
-			InstanceID: parseEventID(event.Data.InstanceID),
-			ThreadID:   parseEventID(event.Data.ThreadID),
+			InstanceID:      parseEventID(event.Data.InstanceID),
+			ThreadID:        parseEventID(event.Data.ThreadID),
+			SenderAccountID: event.Data.SenderAccountID,
 		},
 	}
 }
@@ -90,6 +92,7 @@ func EventTypeValues() []string {
 		string(EventDashboardCountsChanged),
 		string(EventGroupAccessChanged),
 		string(EventStaffTimeTrackingChanged),
+		string(EventStaffLeaveChanged),
 		string(EventActiveSupervisionChanged),
 		string(EventArrivalScheduleChanged),
 		string(EventPickupScheduleChanged),

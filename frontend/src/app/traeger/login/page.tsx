@@ -83,7 +83,7 @@ function LoginForm() {
   // The Träger choice after the password, with its own error path.
   const choice = useLoginAttempt("traeger");
   // Ending a session a sign-in with code is to replace (#6955).
-  const endErrors = useApiFormError();
+  const endErrors = useApiFormError(undefined, { preloadPresenter: false });
   const [endingSession, setEndingSession] = useState(false);
   const latestChoiceRef = useRef<() => void>(() => undefined);
   const isCleaningSessionRef = useRef(false);
@@ -117,6 +117,7 @@ function LoginForm() {
       void signOutStaleSession({
         status,
         session,
+        portal: "traeger",
         started: isCleaningSessionRef,
         logger,
       });

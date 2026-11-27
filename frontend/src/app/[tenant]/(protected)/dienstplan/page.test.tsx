@@ -18,7 +18,7 @@ vi.mock("~/components/staff/dienstplan-view", () => ({
   },
 }));
 
-import DienstplanPage from "./page";
+import DienstplanPage from "./page-content";
 
 const TENANT = { tenantId: "1", slug: "demo" } as TenantInfo;
 

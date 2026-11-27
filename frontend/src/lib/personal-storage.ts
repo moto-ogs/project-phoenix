@@ -26,6 +26,7 @@
 // Konto. Beim Kontowechsel vergibt `posthog.reset()` neue IDs.
 
 import { clearAnnouncementStudents } from "./announcement-prefill";
+import { discardSessionTree } from "./session-tree";
 
 const OWNER_KEY = "moto:personal-storage-owner";
 
@@ -127,6 +128,11 @@ export const KEPT_STORAGE_KEYS: readonly string[] = [
   // Zeitpunkt des letzten automatischen Neuladens, weil der Server eine neuere
   // Version ausliefert; verhindert eine Neulade-Schleife. Ohne Konto und Daten.
   "moto:deployment-skew-reload-at",
+  // Wie oft der automatische Schulwechsel dieses Tabs die Seite für dieselbe
+  // Schule neu geladen hat (#3375, #8082); verhindert eine Neulade-Schleife.
+  // Nur Schul-ID, Zähler und Zeitpunkt, ohne Konto. Muss den Schulwechsel
+  // überleben, der die persönlichen Einträge räumt.
+  "moto.tenant-switch-reloads",
   // Sperrzeiten für „Passwort vergessen“ je Adresse (#7213); entstehen vor
   // der Anmeldung. Je Eintrag ein Zeitpunkt unter einem 32-Bit-Hash der
   // Adresse, kein Konto und keine Adresse im Klartext. Wer eine Adresse
@@ -247,6 +253,8 @@ export function onOtherTabOwnerChange(
 export function leaveForAnotherAccount(href: string): void {
   if (leaving) return;
   leaving = true;
+  // Nothing of the old account's tree stays on screen meanwhile (#8082).
+  discardSessionTree();
   globalThis.location.replace(href);
 }
 

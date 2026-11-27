@@ -115,7 +115,7 @@ func (s seedRegularBookingsStep) Run(_ context.Context, rt *Runtime) error {
 		return err
 	}
 	fmt.Printf("  %d children of the master data booked with lunch: %d Ganztag, %d Kurzbetreuung; %d approved applications eat from %s\n",
-		len(studentIDs), len(studentIDs)-shortCare, shortCare, eating, bookedApplicationLunchFrom(todaySeedDate()))
+		len(studentIDs), len(studentIDs)-shortCare, shortCare, eating, bookedApplicationLunchFromSeed(rt, todaySeedDate()))
 	return nil
 }
 
@@ -127,13 +127,22 @@ func bookedApplicationLunchFrom(today seedDate) seedDate {
 	return day.AddDays(1)
 }
 
+// bookedApplicationLunchFromSeed follows the actual order day when the meal
+// seed had to skip a closed weekday.
+func bookedApplicationLunchFromSeed(rt *Runtime, today seedDate) seedDate {
+	if day, ok := rt.Values[mealOrderDayKey].(seedDate); ok {
+		return day.AddDays(1)
+	}
+	return bookedApplicationLunchFrom(today)
+}
+
 // registerBookedApplicationLunch registers in the meal plan every child of an
 // approved application whose booking includes lunch but who does not eat
 // yet, on its booked lunch days. Without it the families' applications booked
 // lunch for about fifteen children the meal plan never listed (#5023).
 func registerBookedApplicationLunch(rt *Runtime, auth AuthRef, lunchDays map[int64][]int) (int, error) {
 	lunchOffering := strconv.FormatInt(rt.Enrollment.Offerings["mittagessen"], 10)
-	from := bookedApplicationLunchFrom(todaySeedDate())
+	from := bookedApplicationLunchFromSeed(rt, todaySeedDate())
 	registered := 0
 	for _, request := range rt.Enrollment.Requests {
 		if request.Status != "approved" {

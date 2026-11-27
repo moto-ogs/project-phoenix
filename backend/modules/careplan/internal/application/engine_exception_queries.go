@@ -8,6 +8,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/domain"
 	"github.com/moto-ogs/project-phoenix/modules/careplan/internal/ports"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 // StatusQueries are the schedule, exception, note and status-day reads and
@@ -39,6 +40,17 @@ type StatusQueries interface {
 type ExceptionStore interface {
 	ports.Store
 	StatusQueries
+	PickupPersonQueries
+}
+
+// PickupPersonQueries are the store calls of the pickup person of one day
+// (#7655), with the Abholart of the day in one read.
+type PickupPersonQueries interface {
+	ListDayPickups(ctx context.Context, from, to calendar.Date, studentIDs []int64) ([]careplan.DayPickup, domain.OperationStats, error)
+	LockGuardianPickupPermission(ctx context.Context, relationshipID int64, weekday int) (bool, domain.OperationStats, error)
+	SavePickupPerson(ctx context.Context, v careplan.PickupPerson) (careplan.PickupPerson, domain.OperationStats, error)
+	DeletePickupPerson(ctx context.Context, studentID int64, date calendar.Date) (bool, domain.OperationStats, error)
+	DeletePickupPersonByID(ctx context.Context, studentID, id int64) (bool, domain.OperationStats, error)
 }
 
 // Owner reads keep transaction acquisition in the application layer. The raw

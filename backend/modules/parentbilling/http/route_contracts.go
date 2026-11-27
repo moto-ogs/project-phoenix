@@ -336,7 +336,7 @@ func FinanceExportRouteContracts() []common.RouteContract {
 	offset := common.QueryParam{Name: "offset", Kind: common.QueryInt}
 	run := []common.QueryParam{{Name: "run_kind", Kind: common.QueryString}, {Name: "run_id", Kind: common.QueryID}}
 	files := append([]common.QueryParam{offset}, run...)
-	runs := []common.QueryParam{{Name: "care", Kind: common.QueryString}, {Name: "holiday", Kind: common.QueryString}}
+	runs := []common.QueryParam{{Name: "care", Kind: common.QueryID, Repeated: true}, {Name: "holiday", Kind: common.QueryID, Repeated: true}}
 	datev := []common.QueryParam{{Name: "mode", Kind: common.QueryString, Values: []string{"new", "all"}}, {Name: "fiscal_year", Kind: common.QueryDate}}
 	return []common.RouteContract{
 		{Method: "GET", Pattern: "/settings", Portals: traegerPortal, Response: capability.ExportSettings{}},

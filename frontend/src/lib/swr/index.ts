@@ -32,6 +32,8 @@ export {
 } from "./hooks";
 export {
   authGeneration,
+  confirmSWRSession,
+  dropSWRSession,
   onSWRScopeReset,
   scopedSWRKey,
   tenantSWRScope,

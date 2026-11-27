@@ -1,0 +1,7 @@
+{
+  "scenario": "api.active.supervision_context.groups_sessions",
+  "max": 33,
+  "exact": false,
+  "description": "Groups and sessions (school-wide scope), with sessions requested twice. Shared identity reads and no room release query. Includes session validation.",
+  "route": "GET /api/active/supervision-context"
+}

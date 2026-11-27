@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"net/url"
-	"strconv"
 	"strings"
 	"time"
 
@@ -58,6 +56,9 @@ type StatusResponse struct {
 	// page's fixed texts (#6042). The token page runs on the parents host
 	// without a school context, so it travels with the status.
 	CareFacilityTerm string `json:"care_facility_term"`
+	// CareFacilityArticle is the article the German texts decline that
+	// term with (#8136).
+	CareFacilityArticle string `json:"care_facility_article"`
 	// RenewalTerms are the required blocks of the form in force for a
 	// renewal, which the parents accept for the new phase (#6456). Left out
 	// while no child waits for its renewal.
@@ -107,6 +108,7 @@ type EditBootstrapResponse struct {
 	CareOfferingsEnabled      bool                      `json:"care_offerings_enabled"`
 	GradeLevelMax             int                       `json:"grade_level_max"`
 	CareFacilityTerm          string                    `json:"care_facility_term"`
+	CareFacilityArticle       string                    `json:"care_facility_article"`
 	LegalTexts                PublicLegalTextsResponse  `json:"legal_texts"`
 	Draft                     EditDraftResponse         `json:"draft"`
 	EditMode                  string                    `json:"edit_mode"`
@@ -164,19 +166,20 @@ type EditDraftOfferingDayResponse struct {
 
 // getStatusSignatureProof answers GET /requests/{statusToken}/signature-proof:
 // the proof of the parent's signature on a path of its own, which the
-// frontend's catalog proxy serves as a public file (#2352). It is the status
-// read with ?format=pdf, so token resolution and its transaction stay one.
+// frontend's catalog proxy serves as a public file (#2352).
 func (rs *Resource) getStatusSignatureProof(w http.ResponseWriter, r *http.Request) {
-	proof := r.Clone(r.Context())
-	proof.URL.RawQuery = url.Values{"format": {"pdf"}}.Encode()
-	rs.getStatus(w, proof)
+	rs.getStatus(w, r, true)
 }
 
 // getStatus returns the per-child status for a token-bearing parent.
 // Public route — caller must wrap in admin-tx because there's no JWT.
 // With ?format=pdf it answers the proof of the parent's signature (#4786)
 // instead, for the request the same token names.
-func (rs *Resource) getStatus(w http.ResponseWriter, r *http.Request) {
+func (rs *Resource) getStatusResponse(w http.ResponseWriter, r *http.Request) {
+	rs.getStatus(w, r, wantsStatusProofPDF(r))
+}
+
+func (rs *Resource) getStatus(w http.ResponseWriter, r *http.Request, proof bool) {
 	if rs.RequestService == nil {
 		common.RenderError(w, r, common.ErrorInternalServer(errors.New("enrollment request service not configured")))
 		return
@@ -193,7 +196,7 @@ func (rs *Resource) getStatus(w http.ResponseWriter, r *http.Request) {
 		statusErr   error
 	)
 	err := withinAdmin(r.Context(), func(adminCtx context.Context) error {
-		view, invalidLink, statusErr = rs.loadPublicStatusView(adminCtx, token, wantsStatusProofPDF(r))
+		view, invalidLink, statusErr = rs.loadPublicStatusView(adminCtx, token, proof)
 		return statusErr
 	})
 	if err != nil {
@@ -204,7 +207,7 @@ func (rs *Resource) getStatus(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, common.ErrorInternalServerWrap("failed to load enrollment status", err))
 		return
 	}
-	if wantsStatusProofPDF(r) {
+	if proof {
 		rs.writeStatusSignatureProof(w, r, view)
 		return
 	}
@@ -233,14 +236,15 @@ func (rs *Resource) loadPublicStatusView(ctx context.Context, token string, proo
 
 // statusView is everything the status page and its proof show.
 type statusView struct {
-	req       *capability.Request
-	children  []*capability.RequestChild
-	guardians []*capability.RequestGuardian
-	editMode  string
-	careTerm  string
-	terms     *capability.RenewalTerms
-	proof     *SignatureProof
-	signature *StatusSignature
+	req         *capability.Request
+	children    []*capability.RequestChild
+	guardians   []*capability.RequestGuardian
+	editMode    string
+	careTerm    string
+	careArticle string
+	terms       *capability.RenewalTerms
+	proof       *SignatureProof
+	signature   *StatusSignature
 	// signatureUnavailable means the optional status read failed. The public
 	// response then fails closed and only offers the full edit form.
 	signatureUnavailable bool
@@ -259,6 +263,7 @@ func (rs *Resource) loadStatusView(ctx context.Context, token string) (view stat
 		return view, nil, fmt.Errorf("status: compute status page: %w", serverErr)
 	}
 	view.editMode, view.careTerm, view.terms = page.EditMode, page.CareFacilityTerm, page.RenewalTerms
+	view.careArticle = page.CareFacilityArticle
 	rs.loadStatusGuardians(ctx, token, &view)
 	return view, nil, nil
 }
@@ -314,6 +319,7 @@ func (rs *Resource) respondStatus(w http.ResponseWriter, r *http.Request, token 
 	req := view.req
 	resp, anyLocked := newStatusResponse(req, view.editMode, view.children, view.guardians)
 	resp.CareFacilityTerm = view.careTerm
+	resp.CareFacilityArticle = view.careArticle
 	resp.RenewalTerms = newStatusRenewalTerms(view.terms)
 	if view.signatureUnavailable {
 		resp.SignatureRequired = true
@@ -442,6 +448,7 @@ func (rs *Resource) getEditBootstrap(w http.ResponseWriter, r *http.Request) {
 		CareOfferingsEnabled:      draft.CareOfferingsEnabled,
 		GradeLevelMax:             draft.GradeLevelMax,
 		CareFacilityTerm:          draft.CareFacilityTerm,
+		CareFacilityArticle:       draft.CareFacilityArticle,
 		LegalTexts: PublicLegalTextsResponse{
 			AGB:                 draft.LegalTexts.AGB,
 			DSGVO:               draft.LegalTexts.DSGVO,
@@ -642,7 +649,7 @@ func mapEditError(w http.ResponseWriter, r *http.Request, err error) {
 // WithdrawRequest is the wire shape for POST /requests/{token}/withdraw.
 // Optional child_id; omit to withdraw every non-terminal child.
 type WithdrawRequest struct {
-	ChildID *string `json:"child_id,omitempty" contract_text:"empty string or omission withdraws the whole request"`
+	ChildID *ident.IDOrNone `json:"child_id,omitempty"`
 }
 
 func (req *WithdrawRequest) Bind(_ *http.Request) error { return nil }
@@ -668,13 +675,12 @@ func (rs *Resource) withdrawStatus(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	var childID int64
-	if body.ChildID != nil && *body.ChildID != "" {
-		v, err := strconv.ParseInt(*body.ChildID, 10, 64)
-		if err != nil || v <= 0 {
+	if body.ChildID != nil && !body.ChildID.IsZero() {
+		childID = body.ChildID.Int64()
+		if childID <= 0 {
 			common.RenderError(w, r, common.ErrorInvalidRequest(errors.New("invalid child_id")))
 			return
 		}
-		childID = v
 	}
 
 	err := rs.RequestService.Withdraw(r.Context(), token, childID)

@@ -49,7 +49,7 @@ function bookingUnitHint(unit: HolidayBookingUnit, booked: boolean): string {
       : "Eltern haben die Woche schon gebucht. Die Buchungsart bleibt deshalb so.";
   }
   return unit === "day"
-    ? "Eltern wählen einzelne Tage von Montag bis Freitag. Der Preis gilt je Tag. Die Plätze gelten für jeden Tag."
+    ? "Eltern wählen einzelne Tage von Montag bis Freitag. Der Preis gilt pro Tag. Die Plätze gelten für jeden Tag."
     : "Eltern buchen alle Tage der Woche. Der Preis gilt für die ganze Woche.";
 }
 
@@ -121,7 +121,7 @@ function ArchivedTimeModelRow({
       </div>
       <p className="text-sm text-gray-600">
         {model.startsAt} bis {model.endsAt} Uhr, {model.price} Euro
-        {unit === "day" ? " je Tag" : ""}. Neu buchen kann es niemand mehr.
+        {unit === "day" ? " pro Tag" : ""}. Neu buchen kann es niemand mehr.
         Gebuchte Tage behalten es.
       </p>
     </div>
@@ -191,7 +191,7 @@ function TimeModelRow({
       </div>
       <Input
         name={`${field}.price_cents`}
-        label={unit === "day" ? "Preis je Tag in Euro" : "Preis in Euro"}
+        label={unit === "day" ? "Preis pro Tag in Euro" : "Preis in Euro"}
         required
         controlSize="compact"
         inputMode="decimal"
@@ -293,7 +293,7 @@ function WeekLunchFields({
         description={
           booked
             ? "Für diese Woche ist schon Mittagessen gebucht. Das Angebot bleibt deshalb. Den Preis kannst du ändern."
-            : "Eltern wählen das Essen je Kind dazu. Es steht als eigener Betrag auf der Rechnung."
+            : "Eltern wählen das Essen pro Kind dazu. Es steht als eigener Betrag auf der Rechnung."
         }
         checked={offered}
         disabled={booked}

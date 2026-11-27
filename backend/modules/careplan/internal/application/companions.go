@@ -312,35 +312,35 @@ func (c *Companions) ReplaceCompanions(ctx context.Context, studentID int64, upd
 	if err != nil {
 		return nil, err
 	}
-	if len(conflicts) > 0 {
-		if !update.ExtendCompanionPlans {
-			return conflicts, nil
-		}
-		// Callers that write concurrently took every row touched here in one
-		// ascending pass before the first validation, which keeps the conflict
-		// set stable between the authorization pass and this one.
-		if err := c.extendConflictingPlans(ctx, conflicts, update); err != nil {
-			return nil, err
-		}
+	if len(conflicts) > 0 && !update.ExtendCompanionPlans {
+		return conflicts, nil
 	}
+	if err := checkAuthorizedCompanionExtensions(conflicts, update.AuthorizedExtensions); err != nil {
+		return nil, err
+	}
+	// The new edges are the "with whom" coverage People Directory validates
+	// when it widens the plans. Stage them first in the same tenant transaction
+	// so a child's first link does not require a redundant free-text note.
 	if err := c.records.ReplaceCompanionEdges(ctx, studentID, edges); err != nil {
 		return nil, fmt.Errorf("care plan companions: replace student companions: %w", err)
+	}
+	for _, conflict := range conflicts {
+		if err := c.students.ExtendAccompaniedDays(ctx, conflict.StudentID, conflict.Weekdays, update.ActorAccountID); err != nil {
+			return nil, err
+		}
 	}
 	return nil, nil
 }
 
-func (c *Companions) extendConflictingPlans(ctx context.Context, conflicts []careplan.CompanionConflict, update careplan.CompanionUpdate) error {
+func checkAuthorizedCompanionExtensions(conflicts []careplan.CompanionConflict, authorized map[int64]map[string]bool) error {
+	if authorized == nil {
+		return nil
+	}
 	for _, conflict := range conflicts {
-		if update.AuthorizedExtensions != nil {
-			authorized := update.AuthorizedExtensions[conflict.StudentID]
-			for _, day := range conflict.Weekdays {
-				if !authorized[day] {
-					return fmt.Errorf("%w: student %d, weekday %s", careplan.ErrCompanionExtensionNotAuthorized, conflict.StudentID, day)
-				}
+		for _, day := range conflict.Weekdays {
+			if !authorized[conflict.StudentID][day] {
+				return fmt.Errorf("%w: student %d, weekday %s", careplan.ErrCompanionExtensionNotAuthorized, conflict.StudentID, day)
 			}
-		}
-		if err := c.students.ExtendAccompaniedDays(ctx, conflict.StudentID, conflict.Weekdays, update.ActorAccountID); err != nil {
-			return err
 		}
 	}
 	return nil

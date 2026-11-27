@@ -1,0 +1,20 @@
+{
+  "loadObject": "отмены обедов",
+  "notice": "Обед отменён: {reason}",
+  "cancelErrorObject": "отмену обеда",
+  "cancelSuccess": "Обед {day} отменён.",
+  "title": "Обед отменён: {day}",
+  "reasonRequired": "Сначала укажите причину.",
+  "saveTooltip": "Сохраняет отмену. Заказы на этот день не действуют.",
+  "description": "В этот день дети не получат обед. Заказы не действуют и не оплачиваются. Команда увидит отмену в разделе «Сегодня иначе».",
+  "reasonLabel": "Причина",
+  "reasonPlaceholder": "Например: кейтеринг не доставляет обед.",
+  "restoreErrorObject": "обед",
+  "restoreSuccess": "Обед {day} снова состоится.",
+  "cancelAction": "Обед отменён",
+  "cancelDescription": "Сохраняет, что в этот день обеда не будет.",
+  "changeReasonAction": "Изменить причину",
+  "changeReasonDescription": "Изменяет причину отмены обеда.",
+  "restoreAction": "Обед состоится",
+  "restoreDescription": "Сразу отменяет отмену. Заказы снова действуют."
+}

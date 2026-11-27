@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/moto-ogs/project-phoenix/modules/careplan"
+	"github.com/moto-ogs/project-phoenix/sharedkernel/calendar"
 )
 
 type excusalStoreSpy struct {
@@ -26,7 +27,11 @@ func (s *excusalStoreSpy) SaveDepartureException(_ context.Context, row careplan
 	return row, nil
 }
 
-func (s *excusalStoreSpy) CreatePickupNote(_ context.Context, row careplan.PickupNote) (careplan.PickupNote, error) {
+func (s *excusalStoreSpy) ListDayPickups(context.Context, calendar.Date, calendar.Date, []int64) ([]careplan.DayPickup, error) {
+	return nil, nil
+}
+
+func (s *excusalStoreSpy) SaveApprovedPickupPerson(_ context.Context, row careplan.PickupPerson) (careplan.PickupPerson, error) {
 	s.writes++
 	return row, nil
 }

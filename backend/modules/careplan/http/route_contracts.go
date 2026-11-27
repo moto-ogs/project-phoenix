@@ -107,6 +107,8 @@ func pickupRouteContracts() []common.RouteContract {
 		{Method: "DELETE", Pattern: "/{id}/pickup-exceptions/{exceptionId}", Portals: portals, NoData: true},
 		{Method: "PUT", Pattern: "/{id}/departure-exceptions/{date}", Portals: portals, Request: DepartureExceptionRequest{}, Response: DepartureExceptionResponse{}},
 		{Method: "DELETE", Pattern: "/{id}/departure-exceptions/{date}", Portals: portals, NoData: true},
+		{Method: "PUT", Pattern: "/{id}/pickup-persons/{date}", Portals: portals, Request: PickupPersonRequest{}, Response: PickupPersonResponse{}},
+		{Method: "DELETE", Pattern: "/{id}/pickup-persons/{date}", Portals: portals, NoData: true},
 		{Method: "GET", Pattern: "/{id}/partial-absences", Portals: portals, Query: days, Response: []PartialAbsenceResponse{}},
 		{Method: "POST", Pattern: "/{id}/partial-absences", Portals: portals, Request: PartialAbsenceRequest{}, Response: PartialAbsenceResponse{}},
 		{Method: "PUT", Pattern: "/{id}/partial-absences/{partialAbsenceId}", Portals: portals, Request: PartialAbsenceRequest{}, Response: PartialAbsenceResponse{}},

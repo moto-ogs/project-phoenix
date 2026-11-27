@@ -15,11 +15,11 @@ func TestHistoryWirePreservesLargeIDsAndCalculatedFields(t *testing.T) {
 	t.Parallel()
 	const largeID int64 = 9007199254740993
 	response := workforce.HistoryResponse{Sessions: []*workforce.SessionResponse{{
-		WorkSession:  &workforce.WorkSession{ID: largeID, TenantID: largeID, StaffID: largeID, CreatedBy: largeID, UpdatedBy: new(largeID), BreakMinutes: 10},
+		WorkSession:  &workforce.WorkSession{ID: largeID, TenantID: largeID + 1, StaffID: largeID + 2, CreatedBy: largeID + 3, UpdatedBy: new(largeID + 4), BreakMinutes: 10},
 		BreakMinutes: 30, NetMinutes: 450, EditCount: 2, AuditCount: 3,
 		Breaks: []*workforce.WorkSessionBreak{{ID: ident.ID(largeID), TenantID: ident.ID(largeID), SessionID: ident.ID(largeID)}},
 	}}}
-	raw, err := wire.Marshal(response)
+	raw, err := wire.Marshal(historyResponse(&response))
 	require.NoError(t, err)
 	var decoded struct {
 		Sessions []map[string]json.RawMessage `json:"sessions"`
@@ -27,8 +27,11 @@ func TestHistoryWirePreservesLargeIDsAndCalculatedFields(t *testing.T) {
 	require.NoError(t, json.Unmarshal(raw, &decoded))
 	require.Len(t, decoded.Sessions, 1)
 	row := decoded.Sessions[0]
-	for _, field := range []string{"id", "tenant_id", "staff_id", "created_by", "updated_by"} {
-		require.JSONEq(t, `"9007199254740993"`, string(row[field]), field)
+	for field, want := range map[string]string{
+		"id": `"9007199254740993"`, "tenant_id": `"9007199254740994"`,
+		"staff_id": `"9007199254740995"`, "created_by": `"9007199254740996"`, "updated_by": `"9007199254740997"`,
+	} {
+		require.JSONEq(t, want, string(row[field]), field)
 	}
 	var pauses []map[string]json.RawMessage
 	require.NoError(t, json.Unmarshal(row["breaks"], &pauses))
@@ -41,7 +44,7 @@ func TestHistoryWirePreservesLargeIDsAndCalculatedFields(t *testing.T) {
 	require.JSONEq(t, "2", string(row["edit_count"]))
 	require.JSONEq(t, "3", string(row["audit_count"]))
 	response.Sessions[0].UpdatedBy = nil
-	raw, err = wire.Marshal(response.Sessions[0])
+	raw, err = wire.Marshal(historyResponse(&response).Sessions[0])
 	require.NoError(t, err)
 	require.NotContains(t, string(raw), "updated_by")
 	raw, err = wire.Marshal(workforce.SessionResponse{NetMinutes: 7})

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
+import { connection } from "next/server";
 import type { Session } from "next-auth";
 import { TenantGuard } from "~/components/tenant/tenant-guard";
 import { PathModeRedirect } from "~/components/tenant/path-mode-redirect";
@@ -10,6 +11,7 @@ import { loadShellBootstrap } from "~/lib/shell-bootstrap.server";
 import type { ShellBootstrap } from "~/lib/shell-seed";
 import {
   readPortalSessionSnapshot,
+  readRenderedSessionMark,
   type PortalSessionSnapshot,
 } from "~/lib/portal-session-snapshot.server";
 import { projectTenantResolve, type TenantInfo } from "~/lib/tenant-api";
@@ -209,6 +211,9 @@ export default async function TenantLayout({
     notFound();
   }
 
+  // A shell prefetch can supply a slug and headers, but must not resolve
+  // school-specific settings or use the tenant lookup's request budget.
+  await connection();
   const tenant = await fetchTenantInfo(tenantSlug);
 
   if (tenant === TENANT_RATE_LIMITED) {
@@ -253,6 +258,7 @@ export default async function TenantLayout({
       tenant={tenant}
       routingMode={routingMode}
       session={session}
+      sessionMark={await readRenderedSessionMark("tenant")}
       shell={shell}
     >
       <TenantGuard>{children}</TenantGuard>

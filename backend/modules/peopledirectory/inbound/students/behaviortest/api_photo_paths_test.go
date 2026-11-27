@@ -53,7 +53,7 @@ func seedPhotoFile(t *testing.T, tc *testContext, studentID int64) (storedURL, o
 
 // enablePhotoFeatureForTenant flips operations.student_photos_enabled
 // to true for tenant 1 and registers a reset cleanup. Without this,
-// the response payload from the update handler will lack photo_url and
+// the response payload from the update handler will lack photo_version and
 // the test cannot assert on enabled-only fields.
 func enablePhotoFeatureForTenant(t *testing.T, tc *testContext) {
 	t.Helper()
@@ -352,13 +352,13 @@ func TestDeleteStudent_NoPhotoSucceeds(t *testing.T) {
 	assert.Equal(t, 0, count)
 }
 
-// TestUpdateStudent_PhotoEnabled_ResponseIncludesPhotoURL verifies that
+// TestUpdateStudent_PhotoEnabled_ResponseIncludesPhotoVersion verifies that
 // when operations.student_photos_enabled is true and the student has a
-// photo, the response payload includes a photo_url field. This pins
+// photo, the response payload includes a photo_version field. This pins
 // the configService.ResolveBoolOrDefault branch in updateStudent
 // (line ~1252) — without the feature flag enabled the response strips
 // photo-related fields, even on a row that has a photo_path.
-func TestUpdateStudent_PhotoEnabled_ResponseIncludesPhotoURL(t *testing.T) {
+func TestUpdateStudent_PhotoEnabled_ResponseIncludesPhotoVersion(t *testing.T) {
 	t.Parallel()
 
 	tc := setupStudentsRoute(t)
@@ -372,8 +372,8 @@ func TestUpdateStudent_PhotoEnabled_ResponseIncludesPhotoURL(t *testing.T) {
 	rr := authExec(t, tc, req, testutil.AdminTestClaims(1), []string{"admin:*"})
 
 	require.Equal(t, http.StatusOK, rr.Code, "Body: %s", rr.Body.String())
-	assert.Contains(t, rr.Body.String(), "photo_url",
-		"response with feature enabled + photo on row must include photo_url")
+	assert.Contains(t, rr.Body.String(), "photo_version",
+		"response with feature enabled + photo on row must include photo_version")
 
 	// Cleanup — remove the on-disk file so a failed assertion above
 	// doesn't leave the JPEG behind.
@@ -382,11 +382,11 @@ func TestUpdateStudent_PhotoEnabled_ResponseIncludesPhotoURL(t *testing.T) {
 	// needed here.
 }
 
-// TestUpdateStudent_PhotoDisabled_ResponseOmitsPhotoURL asserts the
+// TestUpdateStudent_PhotoDisabled_ResponseOmitsPhotoVersion asserts the
 // other side of the same flag: when the tenant has not opted in, the
 // response payload must not leak photo URL details — even if the row
 // happens to carry an old photo_path.
-func TestUpdateStudent_PhotoDisabled_ResponseOmitsPhotoURL(t *testing.T) {
+func TestUpdateStudent_PhotoDisabled_ResponseOmitsPhotoVersion(t *testing.T) {
 	t.Parallel()
 
 	tc := setupStudentsRoute(t)
@@ -400,8 +400,8 @@ func TestUpdateStudent_PhotoDisabled_ResponseOmitsPhotoURL(t *testing.T) {
 	rr := authExec(t, tc, req, testutil.AdminTestClaims(1), []string{"admin:*"})
 
 	require.Equal(t, http.StatusOK, rr.Code, "Body: %s", rr.Body.String())
-	assert.NotContains(t, rr.Body.String(), `"photo_url"`,
-		"response with feature disabled must not surface photo_url")
+	assert.NotContains(t, rr.Body.String(), `"photo_version"`,
+		"response with feature disabled must not surface photo_version")
 
 	// Cleanup runs before CleanupActivityFixtures (LIFO). The on-disk
 	// file is registered for removal by seedPhotoFile; nothing else is

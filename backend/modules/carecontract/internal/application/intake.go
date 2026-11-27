@@ -36,6 +36,7 @@ type Intake struct {
 	letterheads  carecontract.Letterheads
 	issuers      carecontract.SchoolIssuers
 	families     carecontract.FamilyNumbers
+	requests     carecontract.SchoolParentRequests
 	today        func() calendar.Date
 }
 
@@ -59,6 +60,11 @@ type IntakePorts struct {
 	// Families takes the registration's number of children over with the
 	// contract (#6335).
 	Families carecontract.FamilyNumbers
+	// Requests reads the parents' own approved requests, which count as the
+	// signature of the version they made (#4816). The roots bind it; a
+	// composition without it knows no such request, so every changed version
+	// waits for a signature.
+	Requests carecontract.SchoolParentRequests
 }
 
 var _ carecontract.Intake = (*Intake)(nil)
@@ -70,7 +76,7 @@ func NewIntake(store Store, ports IntakePorts, today func() calendar.Date) *Inta
 	}
 	return &Intake{store: store, schools: ports.Schools, applications: ports.Applications, bookings: ports.Bookings,
 		access: ports.Access, runtime: ports.Runtime, modes: ports.Modes, mail: ports.Mail, letterheads: ports.Letterheads,
-		issuers: ports.Issuers, families: ports.Families, today: today}
+		issuers: ports.Issuers, families: ports.Families, requests: ports.Requests, today: today}
 }
 
 // schoolRead is what the intake read in one school's tenant transaction.

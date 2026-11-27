@@ -44,7 +44,10 @@ import {
 import { HolidayAcceptanceMailField } from "./holiday-acceptance-mail-field";
 import { HolidayAllocationModeField } from "./holiday-allocation-mode-field";
 import { HolidayWeekEditor } from "./holiday-week-editor";
-import type { HolidayCriterion } from "~/lib/traeger-holiday-allocation-api";
+import type {
+  HolidayCriteriaRanking,
+  HolidayCriterion,
+} from "~/lib/traeger-holiday-allocation-api";
 import { weekNoCareDays } from "./use-week-no-care-days";
 import type { TraegerCalendar } from "~/lib/traeger-closing-days";
 
@@ -92,6 +95,7 @@ export function HolidayPeriodForm({
   onDirtyChange,
   calendar,
   criteria,
+  criteriaRanking,
   reload,
 }: Readonly<{
   /** The stored period; without it the form creates a new one. */
@@ -105,6 +109,8 @@ export function HolidayPeriodForm({
   calendar?: TraegerCalendar;
   /** The Träger's criteria for the hint at the allocation (#4700). */
   criteria?: readonly HolidayCriterion[];
+  /** How those criteria count (#8135). */
+  criteriaRanking?: HolidayCriteriaRanking;
   /**
    * Reads the stored period again and rejects when that fails: after a
    * refused save the form shows it (ADR 0311).
@@ -365,8 +371,8 @@ export function HolidayPeriodForm({
             <Input
               controlSize="compact"
               name="max_days_per_child"
-              label="Höchstens Tage je Kind"
-              hint="Gilt für alle Wochen zusammen. Eltern dürfen die Tage verteilen. Leer lassen, wenn es keine Grenze gibt."
+              label="Höchstzahl an Tagen pro Kind"
+              hint="Gilt für alle Wochen zusammen. Eltern dürfen die Tage verteilen. Wenn es keine Grenze gibt, lass das Feld leer."
               inputMode="numeric"
               placeholder="zum Beispiel 5"
               className="sm:max-w-xs"
@@ -380,8 +386,10 @@ export function HolidayPeriodForm({
               label="Ferienwunsch aus der OGS-Anmeldung berücksichtigen"
               description={
                 <>
-                  Kinder deiner Schulen ohne Ferienwunsch warten hinter den
-                  anderen. Was ohne Ferienwunsch gilt, legst du in den{" "}
+                  Eltern geben in der OGS-Anmeldung an, ob ihr Kind
+                  Ferienbetreuung braucht. Ist der Schalter an, haben Kinder mit
+                  diesem Ferienwunsch Vorrang, wenn eine Woche voll ist. Oder
+                  nur sie können sich anmelden: Das legst du in den{" "}
                   {/* In a form a link opens a new tab, so the unsaved
                       draft stays (Bauart 1 R9). */}
                   <ButtonLink
@@ -396,7 +404,7 @@ export function HolidayPeriodForm({
                   >
                     Einstellungen
                   </ButtonLink>{" "}
-                  fest. Feriengäste sind nicht betroffen.
+                  fest. Für Feriengäste ändert sich nichts.
                 </>
               }
               checked={draft.holidayWishRule}
@@ -423,6 +431,7 @@ export function HolidayPeriodForm({
               value={draft.allocationMode}
               locked={period?.allocationModeLocked ?? false}
               criteria={criteria}
+              ranking={criteriaRanking}
               onChange={(allocationMode) =>
                 setDraft({ ...draft, allocationMode })
               }
@@ -434,7 +443,7 @@ export function HolidayPeriodForm({
               <SectionLabel as="h3">Wochen</SectionLabel>
               <p className="text-sm text-gray-600">
                 Jede Woche findet an einer Schule deines Trägers statt. Willst
-                du dieselben Tage an mehreren Schulen anbieten? Lege dafür je
+                du dieselben Tage an mehreren Schulen anbieten? Lege dafür pro
                 Schule eine Woche an. Eltern wählen dann eine Schule.
               </p>
               {/* What a booked time model allows is said only where one

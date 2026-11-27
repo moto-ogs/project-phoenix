@@ -14,7 +14,7 @@ import {
   BlockState,
   blockAheadLabel,
   blockStateLabel,
-} from "~/components/home/day-flow-block";
+} from "~/components/home/home-block-row";
 import {
   LinkRowMeta,
   upcomingFirst,
@@ -42,7 +42,7 @@ import { birthdaysConcept } from "~/lib/concepts/birthdays";
 import { carePlanConcept } from "~/lib/concepts/carePlan";
 import { groupsConcept } from "~/lib/concepts/groups";
 import { requestsConcept } from "~/lib/concepts/requests";
-import { useDayPlanHref, useDayPlanLabel } from "~/lib/hooks/use-day-plan-href";
+import { useDayPlanLink } from "~/lib/hooks/use-day-plan-href";
 import { useHomeGroup } from "~/lib/hooks/use-home-group";
 import { useMinuteClock } from "~/lib/pickup-helpers";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
@@ -96,8 +96,7 @@ function LoadingRow() {
  * der Weg in den Tagesplan.
  */
 export function MyDayCard() {
-  const dayPlanHref = useDayPlanHref();
-  const dayPlanLabel = useDayPlanLabel();
+  const { href: dayPlanHref, label: dayPlanLabel } = useDayPlanLink();
   const tenantPath = useTenantAwarePath();
   const now = useBerlinClock();
   const clockNow = useMinuteClock();

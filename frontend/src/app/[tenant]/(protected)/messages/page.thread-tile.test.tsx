@@ -51,7 +51,7 @@ vi.mock("~/components/messaging/new-message-modal", () => ({
   NewMessageModal: () => null,
 }));
 
-import MessagesPage from "./page";
+import MessagesPage from "./page-content";
 
 // #4361: Absender und Kind tragen die Symbole aus dem Konzeptregister, damit
 // sie beim Überfliegen auseinanderzuhalten sind (Kind wie in den Anfragen).

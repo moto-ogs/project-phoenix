@@ -247,6 +247,8 @@ vi.mock("swr", () => ({
   // invalidation (e.g. settings-page busts settings-schema cache so the
   // useStudentPhotosEnabled hook in other surfaces refetches).
   mutate: vi.fn(),
+  // A document that leaves its session drops the SWR scope (#8082).
+  unload: vi.fn(),
   useSWRConfig: vi.fn(() => ({
     mutate: vi.fn(),
     cache: new Map(),

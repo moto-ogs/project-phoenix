@@ -7,7 +7,7 @@ export function traegerBillingTermsTopic(): HelpTopic {
     title: "Zahlung und Empfänger der Rechnungen",
     question: "Wie lege ich fest, wie und bis wann Familien zahlen?",
     summary:
-      "Je Leistung legst du den Zahlungsweg und das Zahlungsziel fest. Das Mittagessen steht auf der Rechnung der Betreuung oder auf einer eigenen Rechnung. Für eine einzelne Familie legst du einen anderen Empfänger, einen eigenen Zahlungsweg oder einen eigenen Zahltag fest.",
+      "Pro Leistung legst du den Zahlungsweg und das Zahlungsziel fest. Das Mittagessen steht auf der Rechnung der Betreuung oder auf einer eigenen Rechnung. Für eine einzelne Familie legst du einen anderen Empfänger, einen eigenen Zahlungsweg oder einen eigenen Zahltag fest.",
     group: "anmeldeverwaltung",
     audience: "traeger",
     icon: "Users",
@@ -15,12 +15,12 @@ export function traegerBillingTermsTopic(): HelpTopic {
     steps: [],
     instructionGroups: [
       {
-        title: "Zahlung je Leistung festlegen",
+        title: "Zahlung pro Leistung festlegen",
         description:
           "Ohne deine Wahl zahlen alle Familien per Überweisung, innerhalb von 14 Tagen.",
         steps: [
           "Wähle unten in der Navigation `Einstellungen` und dann `Abrechnungsvorgaben`.",
-          "In der Karte `Zahlung und Rechnungen` steht je Leistung eine Zeile: `Monatsbeitrag Betreuung`, `Mittagessen` und `Ferienbetreuung`.",
+          "In der Karte `Zahlung und Rechnungen` steht pro Leistung eine Zeile: `Monatsbeitrag Betreuung`, `Mittagessen` und `Ferienbetreuung`.",
           "Wähle die Zeile der Leistung. Oder wähle das Menü mit den drei Punkten und dann `Bearbeiten`.",
           "Wähle den `Zahlungsweg`: `Überweisung` oder `Lastschrift`.",
           "Trage das `Zahlungsziel in Tagen` ein. Das sind die Tage nach dem Rechnungsdatum.",
@@ -35,7 +35,7 @@ export function traegerBillingTermsTopic(): HelpTopic {
         steps: [
           "Öffne den Lauf unter `Abrechnungsläufe`, im Reiter `Monatsbeiträge` oder `Ferien`.",
           "Wähle im Monatslauf in der Karte `Monatslauf`, im Ferienlauf in der Karte `Abrechnungslauf` den Knopf `Fälligkeiten bearbeiten`. Es öffnet sich eine eigene Seite.",
-          "Wähle je Zahlungsweg ein Datum. Ohne Datum gilt das Zahlungsziel der Leistung.",
+          "Wähle pro Zahlungsweg ein Datum. Ohne Datum gilt das Zahlungsziel der Leistung.",
           "Wähle `Speichern`. Du kommst zurück zum Lauf. Bei `Fällig` steht jetzt das Datum.",
         ],
       },
@@ -60,7 +60,7 @@ export function traegerBillingTermsTopic(): HelpTopic {
           "Wähle bei der Rechnung des Kindes das Menü mit den drei Punkten und dann `Empfänger und Zahlung`. Es öffnet sich eine eigene Seite.",
           "Wähle bei `Rechnung an`: `Person im Vertrag`, `Beide Eltern` oder `Andere Person`.",
           "Bei `Beide Eltern` trägst du den Namen des zweiten Elternteils ein. Beide Namen stehen dann auf der Rechnung.",
-          "Bei `Andere Person` trägst du Name, E-Mail-Adresse und Anschrift ein. Die Rechnung geht dann an diese Person. Mit dem Standardtext von moto beginnt das Schreiben mit „Guten Tag“ und ihrem Namen und spricht sie mit „du“ an. Eine eigene Vorlage behält ihren Wortlaut.",
+          "Bei `Andere Person` trägst du Name, E-Mail-Adresse und Anschrift ein. Die Rechnung geht dann an diese Person. Mit dem Standardtext von moto beginnt das Schreiben mit „Guten Tag“ und ihrem Namen. Wie jedes Schreiben spricht es sie mit „Sie“ an. Eine eigene Vorlage behält ihren Wortlaut.",
           "Wähle bei Bedarf einen eigenen `Zahlungsweg`. `Wie in den Abrechnungsvorgaben` nimmt den dort eingestellten Zahlungsweg.",
           "Wähle bei Bedarf einen `Zahltag`, zum Beispiel den 15. des Monats.",
           "Wähle `Speichern`.",

@@ -1380,10 +1380,10 @@ export function StudentHistorySection({
               : stop.stopped
                 ? appLayout
                   ? "Angebote, ohne Räume"
-                  : "Anwesenheit je Betreuungsangebot, ohne Räume"
+                  : "Anwesenheit pro Betreuungsangebot, ohne Räume"
                 : appLayout
                   ? "Angebote und besuchte Räume"
-                  : "Anwesenheit je Betreuungsangebot und besuchte Räume"
+                  : "Anwesenheit pro Betreuungsangebot und besuchte Räume"
         }
         disabled={attendanceDisabled}
         onClick={

@@ -39,6 +39,14 @@ type GroupTeacher struct {
 	Email     string
 }
 
+// PlannedActivityReader is the consumer-owned port to Timetable & Activities
+// behind the offerings on the child card (#8194): per child the offerings
+// (AG, Extern) it is planned for on a day, by start time. A child without
+// one is absent from the map. The read is set-based.
+type PlannedActivityReader interface {
+	PlannedActivities(ctx context.Context, studentIDs []int64, day calendar.Date) (map[int64][]StudentListPlannedActivity, error)
+}
+
 // ActiveEnrollments is the consumer-owned port to Timetable & Activities
 // (#3356) behind the export's "angemeldet" column: the names of the activity
 // groups each child is actively enrolled in on a date. A child without an

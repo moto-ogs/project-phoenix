@@ -6,6 +6,7 @@ import {
   settingsSectionHref,
   useSettingsSections,
 } from "~/components/settings/settings-nav-items";
+import { TRAEGER_SECTIONS_HEADING } from "~/components/settings/settings-sections";
 import { MotoNavIcon } from "~/components/ui/moto-nav-icon";
 import {
   PortalOverflowBottomNav,
@@ -91,6 +92,9 @@ function useStaffSettingsNav() {
   const activeId = sections
     ? activeSettingsSectionId(sections, searchParams.get("tab"))
     : "";
+  // Die Bereiche des Trägers stehen als Block am Ende (`settingsSectionsFor`).
+  const tabs = sections?.tabs ?? [];
+  const traegerStart = tabs.findIndex((section) => section.traeger);
   return {
     loading: sections === null,
     back: {
@@ -100,13 +104,16 @@ function useStaffSettingsNav() {
       concept: backConcept,
       active: false,
     },
-    items: (sections?.tabs ?? []).map((section) => ({
+    items: tabs.map((section, index) => ({
       key: section.id,
       href: tenantPath(settingsSectionHref(section.id)),
       label: section.label,
       concept: section.icon,
       active: section.id === activeId,
+      // Der erste Bereich des Trägers trägt im „Mehr“-Blatt die Überschrift.
+      ...(index === traegerStart ? { heading: TRAEGER_SECTIONS_HEADING } : {}),
     })),
+    traegerStart: traegerStart === -1 ? tabs.length : traegerStart,
   };
 }
 
@@ -124,7 +131,9 @@ export function StaffSettingsSidebarNav({
   readonly labelsMounted: boolean;
   readonly labelsVisible: boolean;
 }) {
-  const { loading, back, items } = useStaffSettingsNav();
+  const { loading, back, items, traegerStart } = useStaffSettingsNav();
+  const ownItems = items.slice(0, traegerStart);
+  const traegerItems = items.slice(traegerStart);
   const renderRow = (row: PortalOverflowNavItem) => (
     <SidebarRowLink
       key={row.key}
@@ -170,8 +179,21 @@ export function StaffSettingsSidebarNav({
                 )}
               </div>
             ))
-          : items.map(renderRow)}
+          : ownItems.map(renderRow)}
       </div>
+      {traegerItems.length > 0 ? (
+        <>
+          <div className="mt-5">
+            <SidebarSectionHeading
+              collapsed={collapsed}
+              labelsVisible={labelsVisible}
+            >
+              {TRAEGER_SECTIONS_HEADING}
+            </SidebarSectionHeading>
+          </div>
+          <div className={SIDEBAR_NAV_GAP}>{traegerItems.map(renderRow)}</div>
+        </>
+      ) : null}
     </nav>
   );
 }

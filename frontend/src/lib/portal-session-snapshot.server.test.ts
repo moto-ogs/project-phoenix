@@ -11,6 +11,7 @@ const { requestHeaders } = vi.hoisted(() => ({
 vi.mock("next/headers", () => ({
   headers: vi.fn(async () => requestHeaders.current),
 }));
+vi.mock("next/server", () => ({ connection: vi.fn(async () => undefined) }));
 const { familyState } = vi.hoisted(() => ({
   familyState: vi.fn<() => Promise<SessionFamilyState>>(),
 }));
@@ -210,6 +211,9 @@ describe.each(PORTALS)("$name session snapshot", (portal) => {
 
       expect(snapshot?.session.user.id).toBe("41");
       expect(snapshot?.notBooked).toBe(notBooked);
+      // The session itself says so, as the session route's answer does: the
+      // first poll shows no other identity (#8082).
+      expect(snapshot?.session.notBooked).toBe(notBooked ? true : undefined);
     },
   );
 

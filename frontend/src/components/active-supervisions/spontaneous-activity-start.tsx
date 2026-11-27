@@ -18,6 +18,9 @@ import { activityService } from "~/lib/activity-service";
 import type { Activity } from "~/lib/activity-helpers";
 import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
 import { fetchPlannerRooms } from "~/lib/planner-reference-api";
+import { useClosedRoomsOnState } from "~/lib/hooks/use-closed-rooms";
+import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
+import { roomClosureHint } from "~/lib/room-closures-api";
 import type { Staff } from "~/lib/staff-api";
 import { useSWRAuth } from "~/lib/swr";
 import { staff as staffResource } from "~/lib/swr/staff";
@@ -149,9 +152,19 @@ export function SpontaneousActivityStart({
   const formRef = useRef<HTMLFormElement>(null);
   const formErrors = useApiFormError(formRef);
   const { clear: clearFormErrors } = formErrors;
+  // Ein heute gesperrter Raum (#7653) ist nicht wählbar; die Auswahl nennt
+  // den Grund. Er bleibt von belegten Räumen getrennt, damit eine veraltete
+  // Auswahl die passende Sperrmeldung erhält.
+  const today = useBerlinToday();
+  const closures = useClosedRoomsOnState(isOpen ? today : null);
+  const { closedRooms, isLoading: isLoadingClosures } = closures;
   const occupiedRoomIdSet = useMemo(
     () => new Set(occupiedRoomIds),
     [occupiedRoomIds],
+  );
+  const unavailableRoomIdSet = useMemo(
+    () => new Set([...occupiedRoomIdSet, ...closedRooms.keys()]),
+    [occupiedRoomIdSet, closedRooms],
   );
 
   // Auswahllisten (Aktivitäten, Räume, Personal): jede Liste füllt, was sie
@@ -170,12 +183,13 @@ export function SpontaneousActivityStart({
   const staffList = useSWRAuth(isOpen ? staffResource.key() : null, () =>
     staffResource.fetcher(),
   );
-  const resources = [activityList, roomList, staffList];
+  const resources = [activityList, roomList, staffList, closures];
   const isLoadingRefs =
     isOpen &&
-    resources.some(
-      (resource) => resource.data === undefined && !resource.error,
-    );
+    (isLoadingClosures ||
+      resources.some(
+        (resource) => resource.data === undefined && !resource.error,
+      ));
   const { error: loadError } = useSwrResourceLoadError(
     resources,
     "die Auswahl für die spontane Aktivität",
@@ -217,7 +231,7 @@ export function SpontaneousActivityStart({
   if (isOpen && roomList.data && !isLoadingRefs && preselectedFor !== rooms) {
     setPreselectedFor(rooms);
     setRoomId((prev) =>
-      preselectRoom(rooms, prev, defaultRoomId, occupiedRoomIdSet),
+      preselectRoom(rooms, prev, defaultRoomId, unavailableRoomIdSet),
     );
   }
 
@@ -230,9 +244,12 @@ export function SpontaneousActivityStart({
   const isSelectedRoomOccupied =
     selectedRoom !== undefined &&
     isRoomOccupied(selectedRoom, occupiedRoomIdSet);
+  const isSelectedRoomClosed =
+    selectedRoom !== undefined && closedRooms.has(selectedRoom.id);
   const canSubmit =
     title.length > 0 &&
     roomId.length > 0 &&
+    !isSelectedRoomClosed &&
     !isSelectedRoomOccupied &&
     !isStarting;
   const suggestedActivities = activities.slice(0, 5);
@@ -242,14 +259,21 @@ export function SpontaneousActivityStart({
   );
   const roomOptions = useMemo(
     () =>
-      rooms.map((room) => ({
-        value: room.id,
-        label: `${room.building ? `${room.building} - ` : ""}${room.name}${
-          isRoomOccupied(room, occupiedRoomIdSet) ? " (belegt)" : ""
-        }`,
-        disabled: isRoomOccupied(room, occupiedRoomIdSet),
-      })),
-    [rooms, occupiedRoomIdSet],
+      rooms.map((room) => {
+        const closure = closedRooms.get(room.id);
+        const state = closure
+          ? ` (${roomClosureHint(closure)})`
+          : isRoomOccupied(room, occupiedRoomIdSet)
+            ? " (belegt)"
+            : "";
+        return {
+          value: room.id,
+          label: `${room.building ? `${room.building} - ` : ""}${room.name}${state}`,
+          disabled:
+            closure !== undefined || isRoomOccupied(room, occupiedRoomIdSet),
+        };
+      }),
+    [rooms, occupiedRoomIdSet, closedRooms],
   );
 
   function toggleStaff(staffId: string) {
@@ -283,6 +307,10 @@ export function SpontaneousActivityStart({
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (isSelectedRoomClosed) {
+      formErrors.invalid("Dieser Raum ist heute gesperrt.");
+      return;
+    }
     if (isSelectedRoomOccupied) {
       formErrors.invalid(
         "Der Raum ist schon belegt. Bitte wähle einen anderen Raum.",
@@ -316,12 +344,14 @@ export function SpontaneousActivityStart({
         })
       ) : (
         <SectionCard className="mb-4">
-          {/* oxlint-disable-next-line ui-kit/no-hand-rolled-button -- bestehende Desktop-Karte, im Prototyp #8070 unverändert */}
-          <button
+          <Button
             type="button"
             disabled={disabled || isStarting}
             onClick={() => setIsOpen(true)}
-            className="border-moto-green/40 bg-moto-green/10 hover:border-moto-green hover:bg-moto-green/15 flex min-h-14 w-full items-center gap-3 rounded-lg border px-3 py-2 text-left transition disabled:cursor-not-allowed disabled:opacity-50"
+            variant="surface_success"
+            size="card"
+            className="w-full justify-start gap-3 text-left"
+            tooltip="Öffnet die Auswahl für eine spontane Aktivität."
           >
             <IconTile
               shape="round"
@@ -337,7 +367,7 @@ export function SpontaneousActivityStart({
                   "Aktivität wählen, Raum belegen, Kinder danach hinzufügen"}
               </span>
             </span>
-          </button>
+          </Button>
         </SectionCard>
       )}
 
@@ -373,6 +403,7 @@ export function SpontaneousActivityStart({
                   : startBlockedReason({
                       title,
                       roomId,
+                      isSelectedRoomClosed,
                       isSelectedRoomOccupied,
                     })
               }
@@ -432,7 +463,11 @@ export function SpontaneousActivityStart({
             disabled={isLoadingRefs}
             required
             error={
-              isSelectedRoomOccupied ? "Dieser Raum ist bereits belegt." : null
+              selectedRoom && closedRooms.has(selectedRoom.id)
+                ? "Dieser Raum ist heute gesperrt."
+                : isSelectedRoomOccupied
+                  ? "Dieser Raum ist bereits belegt."
+                  : null
             }
             errorLive
             placeholder={isLoadingRefs ? "Lade Räume ..." : "Raum auswählen"}
@@ -503,11 +538,13 @@ export function SpontaneousActivityStart({
 function startBlockedReason(input: {
   title: string;
   roomId: string;
+  isSelectedRoomClosed: boolean;
   isSelectedRoomOccupied: boolean;
 }): string | undefined {
   if (input.title.length === 0)
     return "Wähle oder schreibe zuerst eine Aktivität.";
   if (input.roomId.length === 0) return "Wähle zuerst einen Raum aus.";
+  if (input.isSelectedRoomClosed) return "Dieser Raum ist heute gesperrt.";
   if (input.isSelectedRoomOccupied)
     return "Wähle einen freien Raum, dieser ist belegt.";
   return undefined;

@@ -15,7 +15,7 @@ var traegerPortal = []common.PortalScope{common.PortalTraeger}
 func HolidayPeriodRouteContracts() []common.RouteContract {
 	registration := "/{id}/registrations/{registrationId}"
 	filter := []common.QueryParam{
-		{Name: "status", Kind: common.QueryString}, {Name: "school", Kind: common.QueryString},
+		{Name: "status", Kind: common.QueryString}, {Name: "school", Kind: common.QueryString, TextReason: "a school ID or guest for children without a school in this Träger"},
 		{Name: "time_model", Kind: common.QueryString}, {Name: "wish", Kind: common.QueryString},
 		{Name: "week_id", Kind: common.QueryID},
 	}

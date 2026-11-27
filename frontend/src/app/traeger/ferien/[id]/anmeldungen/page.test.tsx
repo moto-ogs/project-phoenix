@@ -108,7 +108,7 @@ vi.mock("~/lib/file-download", () => ({
   downloadBlob: (blob: Blob, name: string) => mockDownloadBlob(blob, name),
 }));
 
-import TraegerHolidayRegistrationsPage from "./page";
+import TraegerHolidayRegistrationsPage from "./page-content";
 import {
   expectPageReloadedAfterRefusal,
   resetPageReloads,

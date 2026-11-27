@@ -8,7 +8,8 @@ import { TenantPageHeaderSkeleton } from "~/components/ui/page-skeletons";
 
 // Mirrors the loaded page: back button, student header (name + plain
 // two-span meta line), a two-column chart grid, then the history table
-// (desktop table + mobile day-card list), so there's no layout shift.
+// (desktop table + the table's stacked phone cards), so there's no layout
+// shift.
 export function RoomHistorySkeleton() {
   return (
     <div
@@ -53,21 +54,19 @@ export function RoomHistorySkeleton() {
           <DataTableSkeleton rows={4} columns={5} />
         </div>
 
-        {/* Mobile day-card list */}
+        {/* Phone: the table's stacked day cards (title, duration, fields) */}
         <div className="md:hidden">
           {Array.from({ length: 4 }, (_, i) => (
             <div
               key={i}
-              className="flex items-center justify-between border-b border-gray-100 px-4 py-3 last:border-b-0"
+              className="space-y-2 border-b border-gray-100 p-4 last:border-b-0"
             >
-              <div className="flex items-center gap-3">
-                <Skeleton shape="round" className="h-9 w-9 flex-shrink-0" />
-                <div className="space-y-1.5">
-                  <Skeleton className="h-4 w-16" />
-                  <Skeleton className="h-3 w-24" />
-                </div>
+              <div className="flex items-center justify-between gap-3">
+                <Skeleton className="h-4 w-40" />
+                <Skeleton shape="round" className="h-5 w-16" />
               </div>
-              <Skeleton shape="round" className="h-5 w-16" />
+              <Skeleton className="h-3 w-full" />
+              <Skeleton className="h-3 w-2/3" />
             </div>
           ))}
         </div>

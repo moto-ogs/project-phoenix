@@ -155,3 +155,68 @@ describe("SupervisionStudentGrid holiday guest (#5630)", () => {
     expect(screen.getByText("2a")).toBeInTheDocument();
   });
 });
+
+// #8194: Die Angebote des Tages stehen auch auf den Karten der Aufsicht,
+// zwischen Ankunft und Gehzeit, wie unter „Gruppen“.
+describe("SupervisionStudentGrid planned offerings (#8194)", () => {
+  it("lists a child's offerings between arrival and pickup", () => {
+    const booked = {
+      id: "1",
+      first_name: "Mia",
+      second_name: "Schulz",
+      planned_activities: [
+        { title: "Töpfer-AG", start_time: "14:00", end_time: "15:00" },
+        { title: "Handball", start_time: "15:15", end_time: "16:00" },
+      ],
+    } as unknown as ActiveSupervisionStudent;
+    const free = {
+      id: "2",
+      first_name: "Ben",
+      second_name: "Kurz",
+    } as unknown as ActiveSupervisionStudent;
+
+    render(
+      <SupervisionStudentGrid
+        students={[booked, free]}
+        filteredStudents={[booked, free]}
+        pickupTimesData={
+          new Map([
+            [
+              "1",
+              {
+                studentId: "1",
+                date: "2026-09-09",
+                weekdayName: "Mittwoch",
+                pickupTime: "16:30",
+                isException: false,
+                dayNotes: [],
+              } as BulkPickupTime,
+            ],
+          ])
+        }
+        arrivalTimesData={undefined}
+        trackingData={undefined}
+        myGroupIds={[]}
+        myGroupRooms={[]}
+        // 14:30 in Berlin, im Sommer.
+        now={new Date("2026-09-09T14:30:00+02:00")}
+        onOpenStudent={vi.fn()}
+      />,
+    );
+
+    const lists = screen.getAllByRole("list", { name: "Angebote heute" });
+    expect(lists).toHaveLength(1);
+    const offerings = lists[0]!;
+    expect(
+      Array.from(offerings.querySelectorAll("li")).map(
+        (item) => item.textContent,
+      ),
+    ).toEqual(["14:00–15:00 Töpfer-AG (läuft gerade)", "15:15–16:00 Handball"]);
+    const pickup = screen.getByText(/Gehzeit: 16:30 Uhr/);
+    expect(
+      offerings.compareDocumentPosition(pickup) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(pickup.closest("[data-prominent]")).toHaveClass("font-semibold");
+  });
+});

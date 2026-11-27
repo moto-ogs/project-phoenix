@@ -1,22 +1,6 @@
 // lib/usercontext-helpers.ts
 
-import type * as studentsContract from "~/lib/contract/students.generated";
 import type * as meContract from "./contract/me.generated";
-import type { EducationalGroup } from "./user-context-types";
-
-// Frontend types for UserContext (EducationalGroup is shared with the
-// user-context BFF route — single definition in user-context-types.ts)
-export type { EducationalGroup };
-
-export interface ActiveGroup {
-  id: string;
-  room_id?: string;
-  room?: {
-    id: string;
-    name: string;
-  };
-}
-
 /** The name of the staff member as the navigation shows it. */
 type Person = Pick<
   meContract.DirectoryPersonSnapshot,
@@ -31,48 +15,6 @@ export interface Staff {
   id: string;
   person_id: string;
   person?: Person;
-}
-
-// Helper functions to transform backend data to frontend types
-export function mapEducationalGroupResponse(
-  data: meContract.CallerGroupRow,
-): EducationalGroup {
-  return {
-    id: data.id,
-    name: data.name,
-    roomId: data.room_id,
-    room: data.room ? { id: data.room.id, name: data.room.name } : undefined,
-    viaSubstitution: data.via_substitution,
-  };
-}
-
-export function mapNavigationEducationalGroupResponse(
-  data: studentsContract.NavigationGroup,
-): EducationalGroup {
-  return {
-    id: data.id,
-    name: data.name,
-    roomId: data.room_id,
-    room:
-      data.room_id && data.room_name
-        ? { id: data.room_id, name: data.room_name }
-        : undefined,
-    viaSubstitution: data.via_substitution ?? false,
-  };
-}
-
-/**
- * A supervised session. Go sends no name of its own; the view names it by
- * its room.
- */
-export function mapActiveGroupResponse(
-  data: meContract.ActiveGroup,
-): ActiveGroup {
-  return {
-    id: data.id,
-    room_id: data.room_id,
-    room: data.room ? { id: data.room.id, name: data.room.name } : undefined,
-  };
 }
 
 export function mapStaffResponse(data: meContract.Staff): Staff {

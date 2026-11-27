@@ -279,8 +279,14 @@ func (m manualEnrollmentRouter) postManualEnrollmentForm(t *testing.T, formSchem
 		require.NoError(t, err)
 		shown = append(shown, ident.ID(id))
 	}
+	var existing ident.IDOrNone
+	if existingStudentID != "" {
+		id, parseErr := strconv.ParseInt(existingStudentID, 10, 64)
+		require.NoError(t, parseErr)
+		existing = ident.Optional(id)
+	}
 	payload, err := wire.Marshal(enrollmentAPI.AdminManualApprovedEnrollmentRequest{
-		ExistingStudentID:       existingStudentID,
+		ExistingStudentID:       existing,
 		CreateNewStudent:        createNewStudent,
 		ShownExistingStudentIDs: shown,
 		SubmitEnrollmentRequest: enrollmentAPI.SubmitEnrollmentRequest{

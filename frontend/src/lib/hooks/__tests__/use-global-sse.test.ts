@@ -1,3 +1,8 @@
+const refreshContext = vi.hoisted(() => vi.fn(async () => undefined));
+vi.mock("~/lib/supervision-context", () => ({
+  useOptionalSupervision: () => ({ refresh: refreshContext }),
+}));
+
 import { groupKeys } from "~/lib/swr/groups-keys";
 import { staffKeys } from "~/lib/swr/staff-keys";
 import { meKeys } from "~/lib/swr/me-keys";
@@ -87,6 +92,7 @@ import {
 
 describe("useGlobalSSE", () => {
   beforeEach(() => {
+    refreshContext.mockClear();
     vi.clearAllMocks();
     vi.useFakeTimers();
     mockMinuteClock.current = new Date("2026-01-01T22:59:00Z");
@@ -759,44 +765,26 @@ describe("useGlobalSSE", () => {
     it.each(["instance_started", "instance_completed", "instance_cancelled"])(
       "wakes the sidebar supervision list when a planned block changes (%s, #3888)",
       (reason) => {
-        const listener = vi.fn();
-        window.addEventListener("phoenix:supervision-stale", listener);
-        try {
-          renderHook(() => useGlobalSSE());
-          fire({
-            type: "active_supervision_changed",
-            active_group_id: "456",
-            data: { reason },
-          });
-          vi.advanceTimersByTime(DEBOUNCE_MS);
-
-          expect(listener).toHaveBeenCalledTimes(1);
-          const event = listener.mock.calls[0]?.[0] as CustomEvent<{
-            groupsOnly?: boolean;
-          }>;
-          expect(event.detail?.groupsOnly).toBe(false);
-        } finally {
-          window.removeEventListener("phoenix:supervision-stale", listener);
-        }
-      },
-    );
-
-    it("leaves the sidebar alone for an attendance-only supervision change", () => {
-      const listener = vi.fn();
-      window.addEventListener("phoenix:supervision-stale", listener);
-      try {
         renderHook(() => useGlobalSSE());
         fire({
           type: "active_supervision_changed",
           active_group_id: "456",
-          data: { reason: "timetable_attendance_updated" },
+          data: { reason },
         });
         vi.advanceTimersByTime(DEBOUNCE_MS);
+        expect(refreshContext.mock.calls).toEqual([[["sessions"]]]);
+      },
+    );
 
-        expect(listener).not.toHaveBeenCalled();
-      } finally {
-        window.removeEventListener("phoenix:supervision-stale", listener);
-      }
+    it("leaves the sidebar alone for an attendance-only supervision change", () => {
+      renderHook(() => useGlobalSSE());
+      fire({
+        type: "active_supervision_changed",
+        active_group_id: "456",
+        data: { reason: "timetable_attendance_updated" },
+      });
+      vi.advanceTimersByTime(DEBOUNCE_MS);
+      expect(refreshContext).toHaveBeenCalledTimes(0);
     });
 
     it("invalidates active supervision caches on active_supervision_changed event", () => {
@@ -1051,14 +1039,7 @@ describe("useGlobalSSE", () => {
         "staff-schedule-targets-42-2026-07-01-2026-07-31",
         "staff-schedule-targets-42-account-2026-01-01-2026-07-31",
         "staff-shifts-visible-42-2026-07-01-2026-07-31",
-        "time-tracking-current",
-        "time-tracking-history-2026-07-01-2026-07-31",
-        "time-tracking-absences-2026-07-01-2026-07-31",
-        "time-tracking-table-2026-07-01-2026-07-31",
-        "time-tracking-month-summary-2026-7",
         "time-tracking-schedule-targets-2026-07-01-2026-07-31",
-        "time-tracking-own-schedule-42",
-        "time-tracking-own-shifts-today-2026-07-25",
         "time-tracking-own-shifts-week-2026-07-21-2026-07-27",
       ]) {
         expect(matcher(`tenant:${key}`), key).toBe(true);
@@ -1281,6 +1262,8 @@ describe("useGlobalSSE", () => {
         "my-tenant:timetable-week-2026-08-17-2026-08-21",
         "my-tenant:timetable-day-2026-08-17-2026-08-17",
         "my-tenant:timetable-roster-42",
+        "my-tenant:timetable-month-2026-08-01-2026-08-31",
+        "my-tenant:timetable-detail-42-2026-08-17",
       ] as const;
       const unrelatedTimetableKeys = [
         "my-tenant:timetable-templates-7",
@@ -2240,8 +2223,6 @@ describe("useGlobalSSE", () => {
     });
 
     it("reconnects and refreshes access caches after a Berlin-day boundary", () => {
-      const supervisionListener = vi.fn();
-      window.addEventListener("phoenix:supervision-stale", supervisionListener);
       const { rerender } = renderHook(() => useGlobalSSE());
 
       const initialReconnectKey = vi
@@ -2276,13 +2257,8 @@ describe("useGlobalSSE", () => {
         "tenant:group-handovers",
         "tenant:substitution-groups",
         "tenant:substitution-teachers",
-        "tenant:user-context",
       ]);
-      expect(supervisionListener).toHaveBeenCalledTimes(1);
-      window.removeEventListener(
-        "phoenix:supervision-stale",
-        supervisionListener,
-      );
+      expect(refreshContext.mock.calls).toEqual([[["groups"]]]);
     });
 
     it("refreshes EVERY ogs-students key, not just the transferred group", () => {
@@ -2331,7 +2307,6 @@ describe("useGlobalSSE", () => {
         "tenant:active-substitutions",
         "tenant:substitution-groups",
         "tenant:substitution-teachers",
-        "tenant:user-context",
       ]);
     });
 
@@ -2370,30 +2345,19 @@ describe("useGlobalSSE", () => {
       ).toEqual([]);
     });
 
-    it("announces phoenix:supervision-stale so the sidebar group list refetches", () => {
-      // SupervisionContext owns the sidebar's "Meine Gruppen" list in local
-      // state behind its own fetch — no SWR key exists to invalidate, and its
-      // does not use SWR. Without this announcement a handover stays invisible
-      // until another explicit refresh.
-      const listener = vi.fn();
-      window.addEventListener("phoenix:supervision-stale", listener);
+    it("reloads only the groups section for a group transfer", () => {
       renderHook(() => useGlobalSSE());
-
       fire({
         type: "group_access_changed",
         data: { source: "group_transfer" },
       });
-      vi.advanceTimersByTime(500);
-
-      expect(listener).toHaveBeenCalledTimes(1);
-      window.removeEventListener("phoenix:supervision-stale", listener);
+      vi.advanceTimersByTime(DEBOUNCE_MS);
+      expect(refreshContext.mock.calls).toEqual([[["groups"]]]);
     });
 
     it("leaves every group-access cache and the sidebar alone on an unrelated event", () => {
       // A check-in must not drag the group list, the Vertretungen page or the
       // sidebar refetch along — that is the herd #2083 removed.
-      const listener = vi.fn();
-      window.addEventListener("phoenix:supervision-stale", listener);
       renderHook(() => useGlobalSSE());
 
       fire({ type: "dashboard_counts_changed", data: { group_ids: ["7"] } });
@@ -2407,8 +2371,7 @@ describe("useGlobalSSE", () => {
           "tenant:user-context",
         ]),
       ).toEqual([]);
-      expect(listener).not.toHaveBeenCalled();
-      window.removeEventListener("phoenix:supervision-stale", listener);
+      expect(refreshContext).toHaveBeenCalledTimes(0);
     });
   });
 });

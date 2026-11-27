@@ -6,7 +6,7 @@ import { ApiError } from "~/lib/api-error";
 import type { Survey, SurveyResults } from "~/lib/surveys-api";
 import { testClockDay } from "~/test/clock";
 
-import SurveyDetailPage from "./page";
+import SurveyDetailPage from "./page-content";
 
 const state = vi.hoisted(() => ({
   canManage: true,
@@ -139,7 +139,7 @@ describe("Umfrage, Objektseite (#4781)", () => {
     expect(screen.getByRole("tab", { name: "Auswertung" })).toBeInTheDocument();
     expect(screen.queryByText(/Frage 1:/)).not.toBeInTheDocument();
     expect(
-      screen.queryByRole("tab", { name: "Antworten je Person" }),
+      screen.queryByRole("tab", { name: "Antworten pro Person" }),
     ).not.toBeInTheDocument();
   });
 
@@ -150,7 +150,7 @@ describe("Umfrage, Objektseite (#4781)", () => {
     renderPage();
 
     expect(
-      await screen.findByRole("tab", { name: "Antworten je Person" }),
+      await screen.findByRole("tab", { name: "Antworten pro Person" }),
     ).toBeInTheDocument();
   });
 

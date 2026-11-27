@@ -101,6 +101,14 @@ export function calendarDayMarks(
   return marks;
 }
 
+/**
+ * Die wählbaren Jahre der Schließtage (#8128): das Vorjahr zum Nachsehen,
+ * dieses Jahr und drei Jahre voraus zum Planen.
+ */
+export function closingDayYears(thisYear: number): readonly number[] {
+  return Array.from({ length: 5 }, (_, index) => thisYear - 1 + index);
+}
+
 /** Die Schulen eines Bundeslands, für die Liste der Feiertage. */
 export function schoolsInState(
   schools: readonly TraegerCalendarSchool[],

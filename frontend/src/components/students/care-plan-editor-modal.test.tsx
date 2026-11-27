@@ -7,6 +7,7 @@ import {
 } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "~/lib/api-error";
+import { errorFromProblem } from "~/test/helpers/problem-response";
 import { CarePlanEditorModal } from "./care-plan-editor-modal";
 import type { ArrivalDayData } from "~/lib/arrival-schedule-helpers";
 import type { DayData as PickupDayData } from "~/lib/pickup-schedule-helpers";
@@ -14,6 +15,16 @@ import { catalogText } from "~/test/error-catalog-text";
 
 const toastSuccess = vi.fn();
 const toastError = vi.fn();
+const { pickupPersonGuardians } = vi.hoisted(() => ({
+  pickupPersonGuardians: {
+    data: [] as unknown[],
+    error: undefined as unknown,
+  },
+}));
+
+vi.mock("~/lib/swr", () => ({
+  useSWRAuth: () => pickupPersonGuardians,
+}));
 
 vi.mock("~/contexts/ToastContext", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/contexts/ToastContext")>()),
@@ -251,6 +262,8 @@ function rowButton(field: HTMLElement): HTMLButtonElement {
 describe("CarePlanEditorModal", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    pickupPersonGuardians.data = [];
+    pickupPersonGuardians.error = undefined;
   });
 
   it("names itself an exception when opened from a day", () => {
@@ -392,6 +405,81 @@ describe("CarePlanEditorModal", () => {
     expect(
       await screen.findByText(
         "Bitte ändere zuerst eine Zeit oder die Abholart.",
+      ),
+    ).toBeInTheDocument();
+    expect(onSubmitException).not.toHaveBeenCalled();
+  });
+
+  it("saves a one-time pickup person while the guardians cannot be loaded", async () => {
+    pickupPersonGuardians.error = new Error("request failed");
+    const { onSubmitException } = renderEditor({ studentId: "42" });
+
+    fireEvent.click(screen.getByRole("button", { name: "Andere Person" }));
+    fireEvent.change(screen.getByLabelText("Vor- und Nachname"), {
+      target: { value: "Tom Nachbar" },
+    });
+    save();
+
+    await waitFor(() => {
+      expect(onSubmitException).toHaveBeenCalledWith(
+        expect.objectContaining({
+          pickupPerson: { kind: "name", name: "Tom Nachbar" },
+        }),
+      );
+    });
+  });
+
+  it("removes a pickup person while the guardians cannot be loaded", async () => {
+    pickupPersonGuardians.error = new Error("request failed");
+    const { onSubmitException } = renderEditor({
+      studentId: "42",
+      pickupDay: {
+        ...basePickupDay,
+        pickupPerson: {
+          exceptionDate: "2026-05-25",
+          name: "Oma Frieda",
+          oneTime: true,
+        },
+      },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Wie immer" }));
+    save();
+
+    await waitFor(() => {
+      expect(onSubmitException).toHaveBeenCalledWith(
+        expect.objectContaining({ pickupPerson: { kind: "regular" } }),
+      );
+    });
+  });
+
+  it("does not save a contact pickup person while the guardians cannot be loaded", async () => {
+    pickupPersonGuardians.data = [
+      {
+        id: "7",
+        firstName: "Berta",
+        lastName: "Beispiel",
+        phoneNumbers: [],
+        preferredContactMethod: "",
+        languagePreference: "",
+        hasAccount: false,
+        relationshipId: "8",
+        relationshipType: "pickup_only",
+        isPrimary: false,
+        isEmergencyContact: false,
+        canPickup: true,
+        emergencyPriority: 1,
+      },
+    ];
+    pickupPersonGuardians.error = new Error("request failed");
+    const { onSubmitException } = renderEditor({ studentId: "42" });
+
+    fireEvent.click(screen.getByRole("button", { name: "Berta Beispiel" }));
+    save();
+
+    expect(
+      await screen.findByText(
+        "Die Liste der Abholpersonen konnte nicht geladen werden. Bitte versuche es noch einmal.",
       ),
     ).toBeInTheDocument();
     expect(onSubmitException).not.toHaveBeenCalled();
@@ -690,7 +778,7 @@ describe("CarePlanEditorModal", () => {
 
   it("names the day from which the booked pickup time can be taken over", async () => {
     const onResetPickupToOffering = vi.fn().mockRejectedValueOnce(
-      new ApiError("request failed", 409, {
+      await errorFromProblem("request failed", 409, {
         code: "students.pickup_reset_still_needed",
         details: { needed_until: "09.11.2026", possible_from: "10.11.2026" },
       }),

@@ -497,7 +497,7 @@ func exportIdentityFilterLabels(filters studentExportFilters, planningDate calen
 	if filters.Search != "" {
 		labels = append(labels, "Suche: "+filters.Search)
 	}
-	if filters.GroupID != "" {
+	if len(filters.GroupIDs) > 0 || (filters.GroupIDs == nil && filters.GroupID != "") {
 		labels = append(labels, "Gruppe gefiltert")
 	}
 	if strings.TrimSpace(filters.EnrollmentAnswer) != "" {

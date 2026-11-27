@@ -279,7 +279,11 @@ const (
 	// window requires a reason; the tolerance is configurable per school.
 	KeyTimeTrackingRequireDeviationReason    = "operations.time_tracking_require_deviation_reason"
 	KeyTimeTrackingDeviationToleranceMinutes = "operations.time_tracking_deviation_tolerance_minutes"
-	KeyMealPlanEnabled                       = "operations.meal_plan_enabled"
+	// #8024: staff without the right to manage working time stamp only with
+	// their own chip at the NFC terminal; the app neither stamps for them nor
+	// lets them change recorded times. Defaults OFF.
+	KeyTimeTrackingTerminalOnlyStamping = "operations.time_tracking_terminal_only_stamping"
+	KeyMealPlanEnabled                  = "operations.meal_plan_enabled"
 	// KeyFederalState is the school's Bundesland (ISO 3166-2, e.g. DE-NW).
 	// Drives the public-holiday calendar in time tracking (#1418 3a).
 	KeyFederalState = "operations.federal_state"
@@ -537,6 +541,8 @@ const (
 	KeyEnrollmentStatusTokenTTLDays                     = "enrollment.status_token_ttl_days"
 	KeyEnrollmentGradeLevelMax                          = "enrollment.grade_level_max"
 	KeyEnrollmentCareFacilityTerm                       = "enrollment.care_facility_term"
+	// The article of a school's own care name (der, die, das; #8136).
+	KeyEnrollmentCareFacilityArticle = "enrollment.care_facility_article"
 	// Per-tenant info texts (Markdown) shown behind each consent
 	// checkbox on the public enrollment form. A block is shown only when
 	// its matching enable setting is true and its text is non-empty.

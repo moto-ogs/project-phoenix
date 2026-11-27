@@ -51,7 +51,6 @@ const {
   mockPush,
   mockUseSession,
   mockUseOptionalSupervision,
-  mockUseUserContext,
   mockPageHeader,
   mockTrackEvent,
   flags,
@@ -62,7 +61,6 @@ const {
   mockPush: vi.fn(),
   mockUseSession: vi.fn(),
   mockUseOptionalSupervision: vi.fn(),
-  mockUseUserContext: vi.fn(),
   mockPageHeader: vi.fn(),
   mockTrackEvent: vi.fn(),
   mockFetchAnswerFilters: vi.fn(),
@@ -83,6 +81,7 @@ vi.mock("next-auth/react", () => ({
 }));
 
 vi.mock("next/navigation", () => ({
+  usePathname: () => "/students/search",
   useRouter: () => ({ push: mockPush, replace: vi.fn() }),
   useSearchParams: () => currentSearch,
 }));
@@ -213,11 +212,6 @@ vi.mock("~/lib/active-api", () => ({
   },
 }));
 
-vi.mock("~/lib/hooks/use-user-context", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("~/lib/hooks/use-user-context")>()),
-  useUserContext: () => mockUseUserContext(),
-}));
-
 vi.mock("~/lib/student-api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/lib/student-api")>()),
   fetchStudents: (...args: unknown[]) => mockGetStudents(...args),
@@ -304,6 +298,15 @@ vi.mock("~/components/students/student-card", () => ({
   StudentInfoRow: ({ children }: { children: React.ReactNode }) => (
     <div>{children}</div>
   ),
+  PlannedActivityRows: ({
+    activities,
+  }: {
+    activities?: readonly { title: string }[];
+  }) => (
+    <div data-testid="planned-activity-rows">
+      {(activities ?? []).map((activity) => activity.title).join(", ")}
+    </div>
+  ),
   PickupTimeRow: () => <div />,
   ArrivalTimeRow: () => <div />,
   StudentAbsenceRow: ({ label }: { label: string }) => <div>{label}</div>,
@@ -331,7 +334,7 @@ vi.mock("~/components/students/student-search-transit-card", () => ({
   ),
 }));
 
-import StudentSearchPage from "./page";
+import StudentSearchPage from "./page-content";
 
 vi.unmock("swr");
 
@@ -366,6 +369,10 @@ beforeEach(() => {
     status: "authenticated",
   }));
   mockUseOptionalSupervision.mockImplementation(() => ({
+    ownGroupIds: [],
+    ownGroupRoomNames: [],
+    ownSessionRoomNames: [],
+    ownSupervisedRooms: [],
     hasGroups: false,
     isSupervising: false,
     isLoadingGroups: false,
@@ -374,13 +381,6 @@ beforeEach(() => {
     supervisedRooms: [],
     groups: [],
     refresh: () => undefined,
-  }));
-  mockUseUserContext.mockImplementation(() => ({
-    userContext: {
-      educationalGroupIds: [],
-      educationalGroupRoomNames: [],
-      supervisedRoomNames: [],
-    },
   }));
   mockPageHeader.mockImplementation(() => <div data-testid="header" />);
 });
@@ -463,16 +463,9 @@ describe("StudentSearchPage — room_id deep-link (#1323)", () => {
       expect(mockGetStudents).toHaveBeenCalled();
     });
 
-    // Find the call with our roomId — there may be multiple if the page
-    // re-renders. The contract is: the first call after mount must carry
-    // the URL-derived room_id, otherwise the page would render the
-    // unfiltered list before correcting itself.
-    const calls = mockGetStudents.mock.calls.map(
-      (c) => c[0] as Record<string, unknown>,
-    );
-    const filteredCall = calls.find((c) => c.roomId === "42");
-    expect(filteredCall).toBeDefined();
-    expect(filteredCall?.roomId).toBe("42");
+    // The first call after mount must carry the URL's room, otherwise the
+    // page would render the unfiltered list before correcting itself.
+    expect(mockGetStudents.mock.calls[0]?.[0]).toMatchObject({ roomId: "42" });
   });
 
   it("applies an offered registration answer from the URL on the page (#6954, #7645)", async () => {
@@ -926,6 +919,16 @@ describe("StudentSearchPage — registration answer counts (#7645)", () => {
     expect(screen.queryByTestId("student-card-8")).not.toBeInTheDocument();
   });
 
+  it("counts an answer among the children a name search leaves", async () => {
+    currentSearch = new URLSearchParams({ search: "Mia" });
+
+    render(<StudentSearchPage />, { wrapper: FreshSwrCache });
+
+    expect(
+      await screen.findByRole("button", { name: /: Ja \(1\)$/ }),
+    ).toBeInTheDocument();
+  });
+
   it("shows as many children as the chosen answer counted, without a new list request", async () => {
     mockFetchAnswerFilters.mockResolvedValue([
       {
@@ -1001,6 +1004,9 @@ describe("StudentSearchPage — Kinder nur über Alle Kinder (#1321)", () => {
       status: "authenticated",
     }));
     mockUseOptionalSupervision.mockImplementation(() => ({
+      ownGroupIds: ["5"],
+      ownGroupRoomNames: [],
+      ownSessionRoomNames: ["Werkraum"],
       hasGroups: true,
       isSupervising: true,
       isLoadingGroups: false,
@@ -1010,21 +1016,6 @@ describe("StudentSearchPage — Kinder nur über Alle Kinder (#1321)", () => {
       ownSupervisedRooms: [{ id: "42", name: "Werkraum", groupId: "900" }],
       groups: [{ id: "5", name: "Bären", is_personal: true }],
       refresh: () => undefined,
-    }));
-    mockUseUserContext.mockImplementation(() => ({
-      userContext: {
-        educationalGroupIds: ["5"],
-        educationalGroupRoomNames: [],
-        supervisedRoomNames: ["Veralteter Raum"],
-        supervisedGroups: [
-          {
-            id: "900",
-            name: "Werken",
-            roomId: "91",
-            room: { id: "91", name: "Veralteter Raum" },
-          },
-        ],
-      },
     }));
   });
 
@@ -2068,7 +2059,7 @@ describe("StudentSearchPage — Unterwegs-Karte (#5026)", () => {
 
   it("keeps a name search on the way to and from the assignment page", async () => {
     currentSearch = new URLSearchParams({
-      search: "Mila",
+      search: "Max",
       view: "status",
     });
 
@@ -2081,11 +2072,11 @@ describe("StudentSearchPage — Unterwegs-Karte (#5026)", () => {
       "https://example.test",
     );
     expect(referrer.pathname).toBe("/students/search");
-    expect(referrer.searchParams.get("search")).toBe("Mila");
+    expect(referrer.searchParams.get("search")).toBe("Max");
     expect(referrer.searchParams.get("view")).toBe("status");
     expect(mockPageHeader).toHaveBeenLastCalledWith(
       expect.objectContaining({
-        search: expect.objectContaining({ value: "Mila" }),
+        search: expect.objectContaining({ value: "Max" }),
       }),
     );
   });

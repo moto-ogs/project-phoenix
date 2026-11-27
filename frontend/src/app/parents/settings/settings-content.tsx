@@ -1,0 +1,115 @@
+"use client";
+
+/**
+ * Parents-portal settings page (#1671).
+ *
+ * Personal settings belong to the account, not to a content area, so this page
+ * is reached from the account navigation, alongside sign-out. Before it
+ * existed, the two notification cards sat at the
+ * bottom of the dashboard with no entry point of their own: a parent who never
+ * scrolled that far never found them, and since "no row means off" that parent
+ * silently received nothing at all.
+ *
+ * The sections sit in the sidebar (#5750); the address names the open one. The
+ * app card stays with the notifications: without the app, nothing arrives.
+ */
+
+import { useEffect, useState } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
+import { usePageTitleSection } from "~/components/ui/page-title-section";
+import { useTranslations } from "next-intl";
+
+import { NotificationPreferencesSection } from "~/components/settings/notification-preferences-section";
+import { ParentAnalyticsConsentSection } from "~/components/settings/parent-analytics-consent-section";
+import { ParentContrastPreferenceSection } from "~/components/settings/parent-contrast-preference-section";
+import { PushNotificationSection } from "~/components/settings/push-notification-section";
+import { ParentPage, ParentPageHeader } from "~/components/parent/parent-page";
+import { LanguageSwitcher } from "~/components/parent/language-switcher";
+import { activeParentSettingsSection } from "~/components/parent/shell/parent-nav-items";
+import { ParentSection } from "~/components/parent/shell/parent-section";
+import { ParentSignInSection } from "~/components/parent/parent-sign-in-section";
+import { SamsungChromeInstructions } from "~/components/tenant/pwa-install-hint";
+import { ButtonLink } from "~/components/ui/button";
+import { buildHelpHref, HELP_TOPICS } from "~/lib/help-topics";
+import { isStandaloneApp } from "~/lib/push-api";
+import { isSamsungInternet } from "~/lib/pwa-install-prompt";
+import { devicesConcept } from "~/lib/concepts/devices";
+
+export default function ParentSettingsContent() {
+  const t = useTranslations("parentSettings");
+  const tNav = useTranslations("parentNav");
+  const section = activeParentSettingsSection(useSearchParams().get("tab"));
+  usePageTitleSection(tNav(section.tKey));
+  const pathname = usePathname();
+  const [pageUrl, setPageUrl] = useState<URL | null>(null);
+  const installHelpHref = buildHelpHref(
+    {
+      role: "parent",
+      nfcEnabled: false,
+      presenceMode: "detailed",
+      groupMode: "fixed_groups",
+      returnTo: pathname,
+    },
+    HELP_TOPICS.parentInstallApp,
+  );
+
+  useEffect(() => {
+    if (isSamsungInternet(window.navigator) && !isStandaloneApp()) {
+      setPageUrl(new URL(window.location.href));
+    }
+  }, []);
+
+  return (
+    <ParentPage>
+      <ParentPageHeader kicker={t("eyebrow")} title={tNav(section.tKey)} />
+
+      {section.key === "language" ? (
+        <ParentSection
+          title={t("languageTitle")}
+          description={t("languageDescription")}
+          actions={
+            <div className="ms-auto shrink-0">
+              <LanguageSwitcher />
+            </div>
+          }
+        />
+      ) : null}
+
+      {section.key === "notifications" ? (
+        <>
+          <div data-parent-tour-install-app>
+            <ParentSection
+              title={t("appInstallTitle")}
+              description={t("appInstallGenericDescription")}
+              concept={devicesConcept}
+            >
+              {pageUrl ? (
+                <SamsungChromeInstructions pageUrl={pageUrl} />
+              ) : (
+                <ButtonLink
+                  href={installHelpHref}
+                  nativeAnchor
+                  variant="surface"
+                  size="md"
+                  tooltip={t("appInstallGuideTooltip")}
+                >
+                  {t("appInstallGuide")}
+                </ButtonLink>
+              )}
+            </ParentSection>
+          </div>
+          <div data-parent-tour="notification-topics">
+            <NotificationPreferencesSection portal="parent" />
+          </div>
+          <PushNotificationSection portal="parent" />
+        </>
+      ) : null}
+
+      {section.key === "signIn" ? <ParentSignInSection /> : null}
+
+      {section.key === "display" ? <ParentContrastPreferenceSection /> : null}
+
+      {section.key === "privacy" ? <ParentAnalyticsConsentSection /> : null}
+    </ParentPage>
+  );
+}

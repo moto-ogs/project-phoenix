@@ -483,11 +483,14 @@ describe("holiday host api", () => {
     fetchMock.mockResolvedValue(
       jsonResponse(200, {
         status: "success",
-        data: [{ student_id: "12", school_name: "OGS Am Park" }],
+        data: [
+          { student_id: "12", school_name: "OGS Am Park" },
+          { student_id: "13", school_name: "Andere Schule" },
+        ],
       }),
     );
 
-    await expect(fetchHolidayGuestBadges()).resolves.toEqual([
+    await expect(fetchHolidayGuestBadges(["12"])).resolves.toEqual([
       { studentId: "12", schoolName: "OGS Am Park" },
     ]);
     expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/holiday-guests");

@@ -29,6 +29,7 @@ const sampleBackendActivity: ActivityResponse = {
   name: "Football Club",
   max_participants: 20,
   is_open: true,
+  is_system: false,
   category_id: "5",
   planned_room_id: "10",
   created_by: null,
@@ -128,7 +129,12 @@ describe("mapActivityResponse", () => {
     expect(result.planned_room_id).toBe("10");
     expect(result.participant_count).toBe(15);
     expect(result.category_name).toBe("Sport");
+    expect(result.is_system).toBe(false);
     expect(result.created_at).toBeInstanceOf(Date);
+    expect(
+      mapActivityResponse({ ...sampleBackendActivity, is_system: true })
+        .is_system,
+    ).toBe(true);
   });
 
   it("extracts supervisor info from detailed supervisors array", () => {
@@ -386,27 +392,30 @@ describe("mapSupervisorOption", () => {
 });
 
 describe("isSystemActivity", () => {
-  const makeActivity = (name: string): Activity => ({
+  const makeActivity = (name: string, isSystem?: boolean): Activity => ({
     id: "1",
     name,
     max_participant: 20,
     is_open_ags: false,
     supervisor_id: "1",
     ag_category_id: "1",
+    is_system: isSystem,
     created_at: new Date(),
     updated_at: new Date(),
   });
 
-  it("returns true for Schulhof Freispiel", () => {
-    expect(isSystemActivity(makeActivity("Schulhof Freispiel"))).toBe(true);
+  it("returns true for an activity the backend marks as system", () => {
+    expect(isSystemActivity(makeActivity("Offener Raum", true))).toBe(true);
   });
 
-  it("returns true for WC", () => {
-    expect(isSystemActivity(makeActivity("WC"))).toBe(true);
+  // A team may name its own activity „WC“; only the flag protects one.
+  it("returns false for a team activity that shares a system name", () => {
+    expect(isSystemActivity(makeActivity("WC", false))).toBe(false);
+    expect(isSystemActivity(makeActivity("Schulhof Freispiel"))).toBe(false);
   });
 
   it("returns false for regular activity", () => {
-    expect(isSystemActivity(makeActivity("Basteln"))).toBe(false);
+    expect(isSystemActivity(makeActivity("Basteln", false))).toBe(false);
   });
 
   it("returns false for null", () => {

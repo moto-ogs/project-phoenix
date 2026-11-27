@@ -411,3 +411,147 @@ Projektion nutzt „change“.
   `api.day_changes.today_activities` von 20 auf 19. Das Szenario
   `today_appointments` bleibt: Es misst die Sitzung ohne Gruppe mit
   engerer Obergrenze.
+
+## Nachtrag 2026-11-25: Heute anders im Schulportal (#7670)
+
+- Die Route ist `GET /school/day-changes/today` (Schulportal, nur
+  Schul-Sitzungen) hinter `class_day:read`. Dieselbe Projektion
+  (`daychangesview.NewSchool`) liest mit eigenen Quellen; Savepoint, Status
+  pro Quelle und Sortierung bleiben gleich. Die Root bindet die Ports in
+  `backend/api/day_changes_school.go`. Die Sichtregeln gelten für das
+  Schulportal eigenständig und kommen nicht aus denen des Staff-Portals.
+- **Abgrenzung zu `class-day-view`.** Die Kinder der eigenen Klassen
+  (Krankmeldung, Abholzeit, Ausflug eines Kindes) liest die Projektion
+  nicht. Sie stehen in den Zeilen des Klassentags, und die Startseite lädt
+  dessen Klassenbericht (`assigned-classes`) ohnehin. Der Block zählt die
+  geänderten Kinder pro Klasse aus diesem Bericht und springt zur ersten
+  geänderten Zeile. So werden Kinderdaten nicht doppelt gelesen, und ihre
+  Regel bleibt die des Klassentags (`education.class_teachers`).
+- Quellen in diesem Schritt:
+  - `classes`: geänderter Unterrichtsschluss der eigenen Klassen, unter
+    „Betrifft dich“. Ein Konto mit `class_day:all_classes`
+    (Schulverwaltung) sieht alle Klassen unter „Schule“. Kein Grund.
+  - `closing_days`: Schließtage der Schule und ihres Trägers, mit
+    `calendar:school`, dem Recht des Kalenders in moto schule, der sie
+    schon zeigt. Link auf diesen Kalender.
+- Neue Link-Ziele: `school_class` (Klassenseite, Klasse aus `class`) und
+  `school_calendar`.
+- Live: Der Block lädt bei `class_day_changed` und beim Fokus neu. Ein
+  geänderter Unterrichtsschluss und ein Schließtag senden heute kein
+  Ereignis an das Schulportal; der Abgleich beim Fokus holt sie.
+- Budget: `school.day_changes.today` mit 10 Anweisungen, gleich bei einer
+  und vier Klassen.
+- Noch offen (Folge-Ticket): Klassenausflug als Klassen-Eintrag,
+  Vertretungen bei den eigenen Aufsichten und Termine der Lehrkraft.
+  Verkürzte Öffnung, Essensausfall, Raumsperren und Abholperson folgen mit
+  #7654, #7656, #7653 und #7655.
+
+## Nachtrag 2026-11-25: Aufsichten und Live-Signal im Schulportal (#8148)
+
+- **Quelle `supervisions`:** Vertretungen bei den eigenen Aufsichten der
+  Lehrkraft. Ein Eintrag `block_substitution` entsteht, wenn sie einen
+  Termin übernimmt oder jemand ihren Termin übernimmt. Er steht unter
+  „Betrifft dich“ und verlinkt auf die Aufsichten (`school_supervisions`).
+  Die einzige Person eines Eintrags ist sie selbst; wer sie vertritt oder
+  wen sie vertritt, steht ohne Namen und ohne Personal-ID in der Antwort,
+  einen Grund gibt es nicht. Fehlt ein Kollege bei ihrem Termin ohne
+  Vertretung, oder fehlt sie ohne Vertretung, ist das kein Eintrag.
+- Rechte-Regel: `supervision:own`, das Recht der Seite Aufsichten, und eine
+  eigene Zeile der Lehrkraft am Termin. Ohne Recht oder ohne
+  Personaldatensatz bleibt die Quelle „geladen“ und leer.
+- **Budget:** Timetable liest die klassenweiten Ankunfts-Ausnahmen des Tages
+  und die geänderten Termine, an denen die Lehrkraft eingeteilt ist, in
+  einer Anweisung (`timetable.SchoolDayChangeQuery`, zwei JSON-Listen in
+  einem Select). Die Quellen `classes` und `supervisions` teilen sich das
+  Ergebnis im Savepoint. `school.day_changes.today` bleibt bei 10
+  Anweisungen, gemessen mit Klassen-Ausnahmen und einer Vertretung.
+- **Live:** Der Hub leitet `arrival_schedule_changed` und
+  `staffing_deviation_changed` wie `student_updated` inhaltslos als
+  `class_day_changed` an die Schul-Clients derselben Schule weiter. Ein
+  geänderter Unterrichtsschluss, ein Schließtag der Schule und eine
+  Vertretung an einem Termin erreichen den Block damit ohne neue
+  After-Commit-Stelle, ebenso ein Schließtag des Trägers (er meldet
+  `staffing_deviation_changed` an jede betroffene Schule). Jedes dieser
+  Events lädt die offenen Startseiten der Schule neu, auch wenn es eine
+  andere Lehrkraft betrifft; der bestehende Debounce bündelt Serien.
+- **Nicht in diesem Schritt (Folge-Ticket):** Der Klassenausflug als
+  Klassen-Eintrag und die Termine der Lehrkraft (`calendar:school`). Beide
+  brauchen eigene Lesungen anderer Owner (Ankunfts-Ausnahmen je Kind bei
+  Care Plan, Status-Tage, Klassen der Kinder; Termine bei Appointments),
+  für die es im Budget keine Einsparung gibt.
+
+## Nachtrag 2026-11-26: Klassenausflug und Termine im Schulportal (#8155)
+
+- **Klassenausflug:** kein Eintrag der Projektion, sondern ein Feld
+  `trips` pro Klasse im Bericht `GET /school/class-day/assigned-classes`
+  (Owner Klassentag), den die Startseite ohnehin lädt. Pro Klasse und
+  Rückkehrzeit die Zahl der Kinder: eine Klassenfahrt (Status-Tag
+  `class_trip`) ohne Zeit, ein Tagesausflug (Ankunfts-Ausnahme je Kind mit
+  Grund „Ausflug“) mit der Zeit, zu der die Kinder in die OGS kommen. Kein
+  Kind, kein Grund. Den Grund der Ausnahme liefert Care Plan in der Lesung
+  der Betreuungstage mit, die der Bericht schon für „kommt heute nicht“
+  macht (`PlannedCareDay.ArrivalReason`); das Budget
+  `modules.classday.assigned_classes` bleibt bei 30. Der Block baut daraus
+  Einträge der Art `class_trip` unter „Betrifft dich“, mit dem Satz des
+  Staff-Portals. Die Schulverwaltung (`class_day:all_classes`) lädt den
+  Bericht nicht und sieht keine Ausflüge im Block.
+- **Termine:** neue Quelle `appointments` von `NewSchool`. Regel des
+  Kalenders in moto schule: `calendar:school` und ein Personaldatensatz,
+  sichtbar ist, was Appointments der Lehrkraft als Organisatorin oder
+  eingeladenem Personal zeigt. `calendar:own` gilt hier nicht. Die
+  Ausnahmen des Tages sind die des Staff-Portals; das Link-Ziel ist der
+  Kalender von moto schule. Ohne Recht bleibt die Quelle „geladen“ und leer.
+- **Budget:** Die Aufrufer-Kette las Person, Personal und Klassen in drei
+  Anweisungen. Personaldatensatz und Klassen gehören beide School
+  Membership und kommen jetzt in einer Anweisung
+  (`schoolmembership.StaffClassReads`). Die frei gewordene Anweisung nutzt
+  die Termin-Lesung; `school.day_changes.today` bleibt bei 10.
+- **Live:** Ein Tagesausflug meldet `arrival_schedule_changed` und erreicht
+  den Block als `class_day_changed`. Eine abgesagte oder geänderte
+  Termin-Ausnahme sendet kein Signal an das Schulportal; der Block holt sie
+  beim Fokus und beim erneuten Verbinden.
+
+## Nachtrag 2026-11-26: Vorschau auf morgen (#7657)
+
+- **Punkt 6 wird erweitert.** Die Übersicht liest heute oder morgen. Die
+  Routen `GET /api/day-changes/today` und `GET /school/day-changes/today`
+  nehmen den optionalen Parameter `date` (`YYYY-MM-DD`). Ohne ihn liest das
+  Backend heute wie bisher. Die Projektion prüft den Tag
+  (`daychangesview.Query.On`): erlaubt sind heute und der nächste
+  Kalendertag in der Zeitzone der Schule. Jeder andere Tag und ein falsches
+  Format antworten mit 400 und `general.input`. Ein eigener Pfad
+  `/tomorrow` hätte die Route verdoppelt; der Filter ist ein Parameter
+  (Backend-Regel 6). Der Pfad behält seinen Namen, damit Frontend, Proxy und
+  Analytics-Routen unverändert bleiben.
+- Die Quellen-Ports nahmen den Tag schon als `calendar.Date`; keine Quelle
+  liest die Uhr. Sichtregel, Savepoint, Status pro Quelle und Query-Budget
+  sind für morgen dieselben wie für heute.
+- Morgen ist der nächste Kalendertag, auch am Wochenende oder an einem
+  Schließtag. Der Schließtag steht dann als Eintrag da; die Vorschau springt
+  nicht zum nächsten Betreuungstag. Es gibt keine Uhrzeit, ab der die
+  Vorschau erscheint, und keine Schuleinstellung.
+- Frontend: ein Umschalter „Heute / Morgen“ im Kopf von „Heute anders“
+  (`components/home/day-switch.tsx`), im Staff-Portal und in moto schule.
+  Die Sätze sind dieselben, nur „heute“ wird „morgen“. Der Klassenbericht
+  von moto schule wird für den gezeigten Tag geladen. Das Ereignis
+  `day_changes_tomorrow_shown` zählt, ob die Vorschau genutzt wird.
+- **Nicht in diesem Schritt:** Elternportal (#7671) und Träger-Portal
+  (#7672) haben eigene Lesewege (`ChildQuery.ChildDay`,
+  `traegerview.DayChangesReport`). Sie folgen in einem eigenen Ticket.
+
+## Nachtrag 2026-11-27: Vorschau auf morgen im Eltern- und Träger-Portal (#8236)
+
+- **Elternportal.** `GET /parent/me/children/{studentId}/day-changes` nimmt
+  das optionale `date`. `daychangesview.ChildQuery.ChildDayOn` prüft den Tag
+  wie `Query.On` (heute oder morgen der Schule). Der Port
+  `care.ChildDayChanges` bekommt den Tag; der leere Tag liest heute wie
+  bisher. Die Beziehungsprüfung (`parent_portal.access`, `WithPermittedChild`)
+  läuft zuerst und in derselben Transaktion: Ein Kind ohne Recht antwortet
+  auch mit einem unzulässigen Tag mit 403/404, nie mit 400.
+- **Träger-Portal.** `GET /traeger/schools/day-changes` nimmt `date`.
+  `traegerview.DayChangesReport.SchoolsDayChanges` bekommt den Tag; erlaubt
+  sind heute und morgen in Berlin, wie die Übersicht bisher heute las. Nur
+  die Schulen des Trägers, ohne Person und ohne Grund, mit denselben
+  Statements wie für heute.
+- Andere Tage und falsche Formate antworten in beiden Portalen mit 400 und
+  `general.input`. Kein Query-Budget wächst.

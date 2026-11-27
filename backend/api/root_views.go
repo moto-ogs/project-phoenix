@@ -233,13 +233,13 @@ func buildGroupLive(
 	live, err := newGroupLive(groupLiveSources{
 		Presence: presence.Presence, People: GroupRosterPeople(users), Education: structure.Education,
 		Substitutions: structure.Substitution, UserContext: GroupLiveCaller{caller}, Active: active,
-		Settings: settings, Pickups: schedules.Pickups, Arrivals: schedules.Arrivals,
+		Settings: settings, Pickups: schedules.Pickups, DayPickups: schedules.PickupPersons, Arrivals: schedules.Arrivals,
 		PlannedStudentIDs: lifecycle.Instances.GetPlannedStudentIDsByDate, Timetable: timetableOwner, BlockTypes: lifecycle.BlockMetadata,
 		CareDays:          schedules.CareDay,
 		CareParticipation: schedules.Lifecycle, ExcusedRequests: requests.Excused, StatusDays: presence.StatusDays,
 		Handovers:     groupLiveHandovers{reads: classHandoverReads{handovers: presence.Presence, staff: NewTimetablePeople(users)}},
 		HolidayGroups: enrollmentCompose.NewHolidayGuestBadgeList(calendar.CalendarDateClock(env.Now)),
-		Logger:        env.Logger.With("service", "ogs-group-live"), Now: env.Now,
+		Now:           env.Now,
 	}, hints)
 	if err != nil {
 		return nil, fmt.Errorf("compose OGS group live projection: %w", err)
@@ -264,8 +264,9 @@ func buildSupervisionDashboard(
 		Presence: newSupervisionPresence(active, active),
 		Planning: newSupervisionPlanning(schedules.Pickups, schedules.Arrivals),
 		Settings: newSupervisionSettings(settings), Staff: NewTimetablePeople(users), Calendar: supervisionCalendar{}, Now: env.Now,
-		TeacherHints: newSupervisionTeacherHints(hints),
-		Handovers:    supervisionHandovers{reads: classHandoverReads{handovers: presence.Presence, staff: NewTimetablePeople(users)}},
+		TeacherHints:      newSupervisionTeacherHints(hints),
+		PlannedActivities: supervisionPlannedActivities{offerings: plannedOfferings{timetable: timetableOwner, blockTypes: lifecycle.BlockMetadata}},
+		Handovers:         supervisionHandovers{reads: classHandoverReads{handovers: presence.Presence, staff: NewTimetablePeople(users)}},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("compose supervision dashboard projection: %w", err)

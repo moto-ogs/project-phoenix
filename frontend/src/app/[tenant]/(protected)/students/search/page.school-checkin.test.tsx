@@ -47,6 +47,10 @@ vi.mock("~/lib/hooks/use-school-checkin-mode", () => ({
 // (src/test/setup.ts defaults to "detailed") so the button renders.
 vi.mock("~/lib/supervision-context", () => ({
   useOptionalSupervision: () => ({
+    ownGroupIds: [],
+    ownGroupRoomNames: [],
+    ownSessionRoomNames: [],
+    ownSupervisedRooms: [],
     hasGroups: false,
     isSupervising: false,
     isLoadingGroups: false,
@@ -145,6 +149,15 @@ vi.mock("~/components/students/student-card", () => ({
   StudentInfoRow: ({ children }: { children: React.ReactNode }) => (
     <div>{children}</div>
   ),
+  PlannedActivityRows: ({
+    activities,
+  }: {
+    activities?: readonly { title: string }[];
+  }) => (
+    <div data-testid="planned-activity-rows">
+      {(activities ?? []).map((activity) => activity.title).join(", ")}
+    </div>
+  ),
   PickupTimeRow: () => <div />,
   ArrivalTimeRow: () => <div />,
   StudentAbsenceRow: () => <div />,
@@ -159,6 +172,7 @@ vi.mock("next-auth/react", () => ({
   })),
 }));
 vi.mock("next/navigation", () => ({
+  usePathname: () => "/students/search",
   useRouter: () => ({ push: mockPush, replace: vi.fn() }),
   useSearchParams: () => mockSearchParams,
 }));
@@ -259,17 +273,6 @@ vi.mock("~/lib/active-api", () => ({
   },
 }));
 
-vi.mock("~/lib/hooks/use-user-context", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("~/lib/hooks/use-user-context")>()),
-  useUserContext: () => ({
-    userContext: {
-      educationalGroupIds: [],
-      educationalGroupRoomNames: [],
-      supervisedRoomNames: [],
-    },
-  }),
-}));
-
 vi.mock("~/lib/student-api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/lib/student-api")>()),
   fetchStudents: vi.fn(() => Promise.resolve({ students: [] })),
@@ -291,7 +294,7 @@ vi.mock("~/lib/swr", () => ({
 
 import { useSession } from "next-auth/react";
 import { useImmutableSWR, useSWRAuth } from "~/lib/swr";
-import StudentSearchPage from "./page";
+import StudentSearchPage from "./page-content";
 
 const mockStudents = [
   {

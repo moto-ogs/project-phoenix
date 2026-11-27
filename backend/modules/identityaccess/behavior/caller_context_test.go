@@ -183,39 +183,6 @@ func TestCallerRows_GetMyGroups(t *testing.T) {
 	})
 }
 
-func TestCallerContext_Navigation(t *testing.T) {
-	t.Parallel()
-	db := testpkg.SetupTestDB(t)
-	caller := setupCallerRows(t, db).Caller()
-
-	t.Run("returns one complete navigation projection", func(t *testing.T) {
-		staff, account := testpkg.CreateTestStaffWithAccount(t, db, "Navigation", "Staff")
-		group := testpkg.CreateTestEducationGroup(t, db, "Navigation Group")
-		today := testpkg.TodayDate()
-		testpkg.CreateTestGroupSubstitution(t, db, group.ID, nil, staff.ID, today, today.AddDays(1))
-
-		result, err := testpkg.TenantQuery0(t, callerCtx(t, account.ID), db, caller.Navigation)
-
-		require.NoError(t, err)
-		assert.Equal(t, staff.ID, result.StaffID)
-		require.Len(t, result.Groups, 1)
-		assert.Equal(t, group.ID, result.Groups[0].ID)
-		assert.True(t, result.Groups[0].ViaSubstitution)
-		assert.Empty(t, result.SupervisedSessionIDs)
-	})
-
-	t.Run("keeps current staff null for a non-staff account", func(t *testing.T) {
-		_, account := testpkg.CreateTestPersonWithAccount(t, db, "Navigation", "NonStaff")
-
-		result, err := testpkg.TenantQuery0(t, callerCtx(t, account.ID), db, caller.Navigation)
-
-		require.NoError(t, err)
-		assert.Zero(t, result.StaffID)
-		assert.Empty(t, result.Groups)
-		assert.Empty(t, result.SupervisedSessionIDs)
-	})
-}
-
 func TestCallerContext_MyActivityGroupIDs(t *testing.T) {
 	t.Parallel()
 	db := testpkg.SetupTestDB(t)

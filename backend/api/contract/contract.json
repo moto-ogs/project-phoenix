@@ -1,16 +1,524 @@
 {
   "problem_details": {
+    "care_contract.family_refused": {
+      "kind": "ref",
+      "ref": "FamilyRefusalDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/carecontract"
+    },
+    "care_contract.import_file_too_large": {
+      "kind": "ref",
+      "ref": "BodyLimitDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/api/common"
+    },
+    "care_contract.paper_document_invalid": {
+      "kind": "ref",
+      "ref": "BodyLimitDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/api/common"
+    },
     "classday.class_trip_status_conflict": {
       "kind": "ref",
-      "ref": "ClassTripConflictDetails"
+      "ref": "ClassTripConflictDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/classday/http"
+    },
+    "communication.letter_placeholder_unknown": {
+      "kind": "ref",
+      "ref": "PlaceholderDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/api/common"
+    },
+    "communication.staff_group_name_invalid": {
+      "kind": "ref",
+      "ref": "StaffGroupNameLimitDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/communication/http/staffmessages"
+    },
+    "communication.staff_group_too_large": {
+      "kind": "ref",
+      "ref": "StaffGroupSizeLimitDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/communication/http/staffmessages"
+    },
+    "enrollment.care_offering_template_mixed_phases": {
+      "kind": "ref",
+      "ref": "CareOfferingSourceConflictValues",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/careplan"
+    },
+    "enrollment.care_offering_template_no_active_source": {
+      "kind": "ref",
+      "ref": "CareOfferingSourceConflictValues",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/careplan"
+    },
+    "enrollment.care_offering_template_outside_period": {
+      "kind": "ref",
+      "ref": "CareOfferingSourceConflictValues",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/careplan"
+    },
+    "enrollment.care_offering_template_source_invalid": {
+      "kind": "ref",
+      "ref": "CareOfferingSourceConflictValues",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/careplan"
+    },
+    "enrollment.child_possibly_enrolled": {
+      "kind": "ref",
+      "ref": "PossiblyEnrolledDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/enrollment/http"
+    },
+    "enrollment.complete_withdrawal_confirmation_required": {
+      "kind": "ref",
+      "ref": "WithdrawalConfirmationDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/workflows/parentportal/http"
+    },
+    "enrollment.holiday_allocation_full": {
+      "kind": "ref",
+      "ref": "HolidayAllocationDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/enrollment/http"
+    },
+    "enrollment.holiday_child_day_limit": {
+      "kind": "ref",
+      "ref": "HolidayChildDayLimitDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/api/common"
+    },
+    "enrollment.holiday_child_day_limit_public": {
+      "kind": "ref",
+      "ref": "PublicHolidayChildDayLimitDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/enrollment/http"
+    },
+    "enrollment.holiday_proof_limit": {
+      "kind": "ref",
+      "ref": "HolidayProofLimitDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/enrollment/http"
+    },
+    "enrollment.holiday_week_no_care_day": {
+      "kind": "ref",
+      "ref": "HolidayWeekNoCareDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/api/common"
+    },
+    "enrollment.legal_document_invalid": {
+      "kind": "ref",
+      "ref": "SizeLimitDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/api/common"
+    },
+    "enrollment.phase_booking_bounds_conflict": {
+      "kind": "ref",
+      "ref": "BookingBoundsDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/enrollment/http"
+    },
+    "enrollment.upload_content_mismatch": {
+      "kind": "ref",
+      "ref": "UploadContentDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/enrollment/http"
+    },
+    "enrollment.upload_invalid": {
+      "kind": "ref",
+      "ref": "UploadRefusalDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/enrollment/http"
+    },
+    "files.file_too_large": {
+      "kind": "ref",
+      "ref": "SizeLimitDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/api/common"
+    },
+    "general.input": {
+      "kind": "ref",
+      "ref": "InputLimitDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/api/common"
+    },
+    "general.request_too_large": {
+      "kind": "ref",
+      "ref": "BodyLimitDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/api/common"
+    },
+    "identity.role_platform_permission": {
+      "kind": "ref",
+      "ref": "PermissionDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/api/common"
+    },
+    "import.file_columns_missing": {
+      "kind": "ref",
+      "ref": "MissingColumnsDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/dataimport/http"
+    },
+    "import.file_row_invalid": {
+      "kind": "ref",
+      "ref": "InvalidRowDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/dataimport/http"
+    },
+    "import.file_too_large": {
+      "kind": "ref",
+      "ref": "BodyLimitDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/api/common"
+    },
+    "iot.deviation_reason_required": {
+      "kind": "ref",
+      "ref": "DeviationReasonDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/workforce/http/timetracking"
+    },
+    "iot.device_in_active_session": {
+      "kind": "ref",
+      "ref": "DeviceInActiveSessionDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/devicefleet/http/devices"
+    },
+    "iot.device_slots_full": {
+      "kind": "ref",
+      "ref": "SchoolDeviceSlotsDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/devicefleet/http/devices"
+    },
+    "iot.planned_start_not_reached": {
+      "kind": "ref",
+      "ref": "PlannedStartDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/workforce/http/timetracking"
+    },
+    "module.not_booked": {
+      "kind": "ref",
+      "ref": "ModuleNotBookedDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/api/common"
+    },
+    "parent_billing.datev_bookings_invalid": {
+      "kind": "ref",
+      "ref": "DatevBookingsDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/parentbilling/http"
+    },
+    "parent_billing.datev_not_ready": {
+      "kind": "ref",
+      "ref": "DatevReadinessDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/parentbilling/http"
+    },
+    "parent_billing.debtor_number_digit_range": {
+      "kind": "ref",
+      "ref": "DebtorNumberDigitRangeDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/parentbilling/http"
+    },
+    "parent_billing.debtor_number_digits": {
+      "kind": "ref",
+      "ref": "DebtorNumberDigitsDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/parentbilling/http"
+    },
+    "parent_billing.family_children_import_file_too_large": {
+      "kind": "ref",
+      "ref": "BodyLimitDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/api/common"
+    },
+    "parent_billing.family_debtor_number_conflict": {
+      "kind": "ref",
+      "ref": "FamilyDebtorNumberDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/parentbilling/http"
+    },
+    "parent_billing.issuer_creditor_is_traegers": {
+      "kind": "ref",
+      "ref": "BillingIssuerDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/parentbilling/http"
+    },
+    "parent_billing.number_range_missing": {
+      "kind": "ref",
+      "ref": "NumberRangeMissingDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/parentbilling/http"
+    },
+    "parent_billing.number_range_start_taken": {
+      "kind": "ref",
+      "ref": "NumberRangeTakenDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/parentbilling/http"
+    },
+    "parent_billing.payment_text_debtor_number_missing": {
+      "kind": "ref",
+      "ref": "PaymentTextDebtorDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/parentbilling/http"
+    },
+    "parent_billing.sepa_import_file_too_large": {
+      "kind": "ref",
+      "ref": "BodyLimitDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/api/common"
+    },
+    "parent_billing.sollstellung_revenue_account_missing": {
+      "kind": "ref",
+      "ref": "SollRevenueAccountDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/parentbilling/http"
+    },
+    "presence.activity_participant_limit_reached": {
+      "kind": "ref",
+      "ref": "ActivityParticipantLimitDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/studentpresence"
+    },
+    "presence.room_capacity_exceeded": {
+      "kind": "ref",
+      "ref": "RoomCapacityDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/studentpresence"
+    },
+    "provisioning.caregiver_capability_blocked": {
+      "kind": "ref",
+      "ref": "CaregiverCapabilityDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/api/common"
+    },
+    "provisioning.device_active_session": {
+      "kind": "ref",
+      "ref": "DeviceRemovalDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/inbound/operator"
+    },
+    "provisioning.device_slots_below_occupied": {
+      "kind": "ref",
+      "ref": "DeviceSlotsBelowOccupiedDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/inbound/operator"
+    },
+    "provisioning.device_slots_full": {
+      "kind": "ref",
+      "ref": "DeviceSlotsDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/inbound/operator"
+    },
+    "provisioning.organization_has_schools": {
+      "kind": "ref",
+      "ref": "OrganizationHasSchoolsDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/inbound/operator"
+    },
+    "rooms.still_planned": {
+      "kind": "ref",
+      "ref": "RoomStillPlannedDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/facilities/http"
+    },
+    "settings.attendance_retention_below_visible": {
+      "kind": "ref",
+      "ref": "VisibleDaysDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/settings/inbound/operator"
+    },
+    "settings.attendance_visible_exceeds_retention": {
+      "kind": "ref",
+      "ref": "RetentionDaysDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/settings/inbound/operator"
+    },
+    "settings.module_required_by": {
+      "kind": "ref",
+      "ref": "ModuleRequiredByDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/settings/inbound/operator"
+    },
+    "settings.module_requires": {
+      "kind": "ref",
+      "ref": "ModuleRequiresDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/settings/inbound/operator"
+    },
+    "students.child_quota_reached": {
+      "kind": "ref",
+      "ref": "ChildQuotaDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/schoolmembership"
     },
     "students.companion_plan_conflict": {
       "kind": "ref",
-      "ref": "CompanionConflictDetails"
+      "ref": "CompanionConflictDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/careplan/http"
+    },
+    "students.export_selection_too_large": {
+      "kind": "ref",
+      "ref": "ExportSelectionDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/presenceprojection/http"
+    },
+    "students.pickup_reset_still_needed": {
+      "kind": "ref",
+      "ref": "PickupResetDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/careplan/http"
     },
     "students.status_day_conflict": {
       "kind": "ref",
-      "ref": "StatusDayConflictDetails"
+      "ref": "StatusDayConflictDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/studentpresence/http"
+    },
+    "timetable.calendar_period_overlap_conflict": {
+      "kind": "ref",
+      "ref": "CalendarPeriodOverlapDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/timetable/http"
+    },
+    "timetable.calendar_period_shift_series_conflict": {
+      "kind": "ref",
+      "ref": "CalendarPeriodShiftSeriesDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/timetable/http"
+    },
+    "timetable.dates_in_past": {
+      "kind": "ref",
+      "ref": "RefusalValues",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/timetable"
+    },
+    "timetable.export_range_too_large": {
+      "kind": "ref",
+      "ref": "RefusalValues",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/timetable"
+    },
+    "timetable.pickup_extension_too_many_blocks": {
+      "kind": "ref",
+      "ref": "RefusalValues",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/timetable"
+    },
+    "timetable.series_end_before_start": {
+      "kind": "ref",
+      "ref": "RefusalValues",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/timetable"
+    },
+    "timetable.series_end_outside_period": {
+      "kind": "ref",
+      "ref": "RefusalValues",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/timetable"
+    },
+    "timetable.substitute_absent_on_date": {
+      "kind": "ref",
+      "ref": "RefusalValues",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/timetable"
+    },
+    "timetable.template_grade_above_max": {
+      "kind": "ref",
+      "ref": "RefusalValues",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/timetable"
+    },
+    "timetable.template_start_outside_period": {
+      "kind": "ref",
+      "ref": "RefusalValues",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/timetable"
+    },
+    "timetable.too_many_dates": {
+      "kind": "ref",
+      "ref": "RefusalValues",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/timetable"
+    },
+    "timetable.window_too_large": {
+      "kind": "ref",
+      "ref": "RefusalValues",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/timetable"
+    },
+    "traeger.access_log_export_too_large": {
+      "kind": "ref",
+      "ref": "AccessLogLimitDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/traegerview/http"
+    },
+    "traeger.document_template_unknown_placeholder": {
+      "kind": "ref",
+      "ref": "PlaceholderDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/api/common"
+    },
+    "traeger.logo_too_large": {
+      "kind": "ref",
+      "ref": "BodyLimitDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/api/common"
+    },
+    "traeger.school_party_creditor_account_conflict": {
+      "kind": "ref",
+      "ref": "SchoolPartyCreditorDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy/inbound/traeger"
+    },
+    "traeger.school_role_name_used_at_school": {
+      "kind": "ref",
+      "ref": "SchoolRoleNameDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/traegerportal"
+    },
+    "workforce.month_closed": {
+      "kind": "ref",
+      "ref": "RebookingValues",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/workforce"
+    },
+    "workforce.rebooking_before_vacation_opening": {
+      "kind": "ref",
+      "ref": "RebookingValues",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/workforce"
+    },
+    "workforce.rebooking_half_day_edge": {
+      "kind": "ref",
+      "ref": "RebookingValues",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/workforce"
+    },
+    "workforce.rebooking_no_working_day": {
+      "kind": "ref",
+      "ref": "RebookingValues",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/workforce"
+    },
+    "workforce.rebooking_outside_balance": {
+      "kind": "ref",
+      "ref": "RebookingValues",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/workforce"
+    },
+    "workforce.rebooking_request": {
+      "kind": "ref",
+      "ref": "RebookingValues",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/workforce"
+    },
+    "workforce.rebooking_same_type": {
+      "kind": "ref",
+      "ref": "RebookingValues",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/workforce"
+    },
+    "workforce.rebooking_sick_report": {
+      "kind": "ref",
+      "ref": "RebookingValues",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/workforce"
+    },
+    "workforce.rebooking_too_many": {
+      "kind": "ref",
+      "ref": "RebookingValues",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/workforce"
+    },
+    "workforce.shift_overlaps_other_site": {
+      "kind": "ref",
+      "ref": "ShiftOtherSiteDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/workforce"
+    },
+    "workforce.shift_working_time_warning": {
+      "kind": "ref",
+      "ref": "ShiftWorkingTimeDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/workforce"
+    },
+    "workforce.target_override_hours_invalid": {
+      "kind": "ref",
+      "ref": "TargetOverrideValues",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/workforce"
+    },
+    "workforce.target_override_overlap": {
+      "kind": "ref",
+      "ref": "TargetOverrideValues",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/workforce"
+    },
+    "workforce.target_override_range_invalid": {
+      "kind": "ref",
+      "ref": "TargetOverrideValues",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/workforce"
+    },
+    "workforce.target_override_too_long": {
+      "kind": "ref",
+      "ref": "TargetOverrideValues",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/workforce"
+    },
+    "workforce.traeger_contract_month_closed": {
+      "kind": "ref",
+      "ref": "StaffContractDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/workforce/http/traegerstaff"
+    },
+    "workforce.traeger_contract_overlap": {
+      "kind": "ref",
+      "ref": "StaffContractDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/workforce/http/traegerstaff"
+    },
+    "workforce.traeger_holiday_week_school_override": {
+      "kind": "ref",
+      "ref": "StaffContractDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/workforce/http/traegerstaff"
+    },
+    "workforce.traeger_month_closed_by_school": {
+      "kind": "ref",
+      "ref": "SchoolMonthDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/workforce/http/traegerstaff"
+    },
+    "workforce.traeger_month_later_closed": {
+      "kind": "ref",
+      "ref": "SchoolMonthDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/workforce/http/traegerstaff"
+    },
+    "workforce.traeger_payroll_not_ready": {
+      "kind": "ref",
+      "ref": "PayrollNotReadyDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/workforce/http/traegerstaff"
+    },
+    "workforce.traeger_staff_hire_duplicate": {
+      "kind": "ref",
+      "ref": "HireDuplicateDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/workforce/http/traegerstaff"
+    },
+    "workforce.traeger_staff_hire_incomplete": {
+      "kind": "ref",
+      "ref": "HireIncompleteDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/modules/workforce/http/traegerstaff"
+    },
+    "workforce.traeger_staff_import_file_too_large": {
+      "kind": "ref",
+      "ref": "BodyLimitDetails",
+      "go_package": "github.com/moto-ogs/project-phoenix/api/common"
     }
   },
   "stream_event": {
@@ -305,6 +813,14 @@
     },
     {
       "method": "DELETE",
+      "pattern": "/api/meal-plan/days/{date}/cancellation",
+      "portals": [
+        "tenant"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
       "pattern": "/api/meal-plan/participation/{studentId}/days/{date}",
       "portals": [
         "tenant"
@@ -350,6 +866,17 @@
     },
     {
       "method": "DELETE",
+      "pattern": "/api/opening-changes/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "CalendarStatusResponse"
+      }
+    },
+    {
+      "method": "DELETE",
       "pattern": "/api/parent-announcements/{announcementId}",
       "portals": [
         "tenant"
@@ -373,6 +900,14 @@
         "kind": "ref",
         "ref": "RoomRemovalResponse"
       }
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/api/rooms/{id}/closures/{closureId}",
+      "portals": [
+        "tenant"
+      ],
+      "no_data": true
     },
     {
       "method": "DELETE",
@@ -664,6 +1199,14 @@
     {
       "method": "DELETE",
       "pattern": "/api/students/{id}/pickup-notes/{noteId}",
+      "portals": [
+        "tenant"
+      ],
+      "no_data": true
+    },
+    {
+      "method": "DELETE",
+      "pattern": "/api/students/{id}/pickup-persons/{date}",
       "portals": [
         "tenant"
       ],
@@ -1544,6 +2087,17 @@
     },
     {
       "method": "DELETE",
+      "pattern": "/traeger/opening-changes/{id}",
+      "portals": [
+        "org"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "CalendarStatusResponse"
+      }
+    },
+    {
+      "method": "DELETE",
       "pattern": "/traeger/report-templates/{id}",
       "portals": [
         "org"
@@ -1764,6 +2318,29 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/active/supervision-context",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "section",
+          "kind": "string",
+          "repeated": true,
+          "values": [
+            "groups",
+            "released-rooms",
+            "sessions"
+          ]
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "NavigationContext"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/api/active/supervision-dashboard",
       "portals": [
         "tenant"
@@ -1777,20 +2354,6 @@
       "response": {
         "kind": "ref",
         "ref": "DashboardProjection"
-      }
-    },
-    {
-      "method": "GET",
-      "pattern": "/api/active/supervisors/all",
-      "portals": [
-        "tenant"
-      ],
-      "response": {
-        "kind": "array",
-        "elem": {
-          "kind": "ref",
-          "ref": "ActiveGroupResponse"
-        }
       }
     },
     {
@@ -2222,6 +2785,12 @@
       "pattern": "/api/day-changes/today",
       "portals": [
         "tenant"
+      ],
+      "query": [
+        {
+          "name": "date",
+          "kind": "date"
+        }
       ],
       "response": {
         "kind": "ref",
@@ -3557,6 +4126,30 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/meal-plan/cancellations",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "from",
+          "kind": "date"
+        },
+        {
+          "name": "to",
+          "kind": "date"
+        }
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "MealCancellationResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/api/meal-plan/days",
       "portals": [
         "tenant"
@@ -3793,7 +4386,8 @@
       "query": [
         {
           "name": "target_id",
-          "kind": "string"
+          "kind": "string",
+          "text_reason": "target_type selects a school class label, an OGS group ID or an activity group ID"
         },
         {
           "name": "target_type",
@@ -3971,6 +4565,30 @@
       "response": {
         "kind": "ref",
         "ref": "pushPublicKeyResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/opening-changes/",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "from",
+          "kind": "date"
+        },
+        {
+          "name": "to",
+          "kind": "date"
+        }
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "OpeningChangeResponse"
+        }
       }
     },
     {
@@ -4181,6 +4799,10 @@
           "kind": "bool"
         },
         {
+          "name": "open_on",
+          "kind": "date"
+        },
+        {
           "name": "page",
           "kind": "int"
         },
@@ -4194,6 +4816,34 @@
         "elem": {
           "kind": "ref",
           "ref": "RoomResponse"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/rooms/closures",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "from",
+          "kind": "date"
+        },
+        {
+          "name": "room_id",
+          "kind": "id"
+        },
+        {
+          "name": "to",
+          "kind": "date"
+        }
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "RoomClosureResponse"
         }
       }
     },
@@ -6148,20 +6798,6 @@
     },
     {
       "method": "GET",
-      "pattern": "/api/students/ogs-group-navigation",
-      "portals": [
-        "tenant"
-      ],
-      "response": {
-        "kind": "array",
-        "elem": {
-          "kind": "ref",
-          "ref": "NavigationGroup"
-        }
-      }
-    },
-    {
-      "method": "GET",
       "pattern": "/api/students/pickup-change-notices",
       "portals": [
         "tenant"
@@ -6908,6 +7544,17 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/time-tracking/leave-overview",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "OwnLeaveOverview"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/api/time-tracking/month-summary",
       "portals": [
         "tenant"
@@ -6925,6 +7572,42 @@
       "response": {
         "kind": "ref",
         "ref": "MonthSummary"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/time-tracking/overview",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "OwnClockOverview"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/api/time-tracking/period",
+      "portals": [
+        "tenant"
+      ],
+      "query": [
+        {
+          "name": "start",
+          "kind": "date"
+        },
+        {
+          "name": "view",
+          "kind": "string",
+          "values": [
+            "month",
+            "week"
+          ]
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "OwnTimePeriod"
       }
     },
     {
@@ -7217,6 +7900,17 @@
     },
     {
       "method": "GET",
+      "pattern": "/api/timetable/instances/{id}/attendance",
+      "portals": [
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "instanceAttendanceResponse"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/api/timetable/instances/{id}/guardian-notice",
       "portals": [
         "tenant"
@@ -7328,7 +8022,8 @@
         },
         {
           "name": "grade_levels",
-          "kind": "string"
+          "kind": "string",
+          "text_reason": "comma-separated grade numbers, not row identifiers"
         },
         {
           "name": "list_kind",
@@ -7346,7 +8041,8 @@
         {
           "name": "roster",
           "kind": "string",
-          "repeated": true
+          "repeated": true,
+          "text_reason": "each member pairs an ISO weekday with that day's list of child IDs"
         },
         {
           "name": "school_classes",
@@ -7375,7 +8071,8 @@
         },
         {
           "name": "grade_levels",
-          "kind": "string"
+          "kind": "string",
+          "text_reason": "comma-separated grade numbers, not row identifiers"
         },
         {
           "name": "list_kind",
@@ -7388,7 +8085,8 @@
         {
           "name": "roster",
           "kind": "string",
-          "repeated": true
+          "repeated": true,
+          "text_reason": "each member pairs an ISO weekday with that day's list of child IDs"
         },
         {
           "name": "school_classes",
@@ -7674,7 +8372,8 @@
         },
         {
           "name": "grade_levels",
-          "kind": "string"
+          "kind": "string",
+          "text_reason": "comma-separated grade numbers, not row identifiers"
         },
         {
           "name": "offering_ids",
@@ -8186,6 +8885,20 @@
       "portals": [
         "caterer"
       ],
+      "query": [
+        {
+          "name": "from",
+          "kind": "date"
+        },
+        {
+          "name": "school_id",
+          "kind": "id"
+        },
+        {
+          "name": "to",
+          "kind": "date"
+        }
+      ],
       "response": {
         "kind": "ref",
         "ref": "SchoolsResponse"
@@ -8232,9 +8945,44 @@
     },
     {
       "method": "GET",
+      "pattern": "/display-preferences/",
+      "portals": [
+        "caterer",
+        "org",
+        "parent",
+        "platform",
+        "school",
+        "tenant"
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "displayPreferencesResponse"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/operator/accounts",
       "portals": [
         "platform"
+      ],
+      "paginated": true,
+      "query": [
+        {
+          "name": "cursor",
+          "kind": "string"
+        },
+        {
+          "name": "direction",
+          "kind": "string"
+        },
+        {
+          "name": "search",
+          "kind": "string"
+        },
+        {
+          "name": "sort",
+          "kind": "string"
+        }
       ],
       "response": {
         "kind": "array",
@@ -8504,6 +9252,25 @@
       "portals": [
         "platform"
       ],
+      "paginated": true,
+      "query": [
+        {
+          "name": "cursor",
+          "kind": "string"
+        },
+        {
+          "name": "direction",
+          "kind": "string"
+        },
+        {
+          "name": "search",
+          "kind": "string"
+        },
+        {
+          "name": "sort",
+          "kind": "string"
+        }
+      ],
       "response": {
         "kind": "array",
         "elem": {
@@ -8699,6 +9466,25 @@
       "pattern": "/operator/schools/{id}/accounts",
       "portals": [
         "platform"
+      ],
+      "paginated": true,
+      "query": [
+        {
+          "name": "cursor",
+          "kind": "string"
+        },
+        {
+          "name": "direction",
+          "kind": "string"
+        },
+        {
+          "name": "search",
+          "kind": "string"
+        },
+        {
+          "name": "sort",
+          "kind": "string"
+        }
       ],
       "response": {
         "kind": "array",
@@ -9084,6 +9870,23 @@
     },
     {
       "method": "GET",
+      "pattern": "/parent/me/children/{studentId}/day-changes",
+      "portals": [
+        "parent"
+      ],
+      "query": [
+        {
+          "name": "date",
+          "kind": "date"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "ChildDayChangesResponse"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/parent/me/children/{studentId}/excused-requests",
       "portals": [
         "parent"
@@ -9455,6 +10258,23 @@
           "kind": "ref",
           "ref": "EnrollablePhaseResponse"
         }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/parent/me/family-start",
+      "portals": [
+        "parent"
+      ],
+      "query": [
+        {
+          "name": "student_id",
+          "kind": "id"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "FamilyStartResponse"
       }
     },
     {
@@ -10009,6 +10829,23 @@
     },
     {
       "method": "GET",
+      "pattern": "/school/class-day/assigned-classes",
+      "portals": [
+        "school"
+      ],
+      "query": [
+        {
+          "name": "date",
+          "kind": "date"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "AssignedClassesReport"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/school/class-day/classes",
       "portals": [
         "school"
@@ -10044,6 +10881,23 @@
       "response": {
         "kind": "ref",
         "ref": "StudentSharedNotes"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/school/day-changes/today",
+      "portals": [
+        "school"
+      ],
+      "query": [
+        {
+          "name": "date",
+          "kind": "date"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "Overview"
       }
     },
     {
@@ -11772,11 +12626,13 @@
       "query": [
         {
           "name": "care",
-          "kind": "string"
+          "kind": "id",
+          "repeated": true
         },
         {
           "name": "holiday",
-          "kind": "string"
+          "kind": "id",
+          "repeated": true
         }
       ],
       "response": {
@@ -11980,6 +12836,27 @@
     },
     {
       "method": "GET",
+      "pattern": "/traeger/holiday-contributions/{periodId}/registrations/{registrationId}/payer",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "benefits_exemption",
+          "kind": "bool"
+        },
+        {
+          "name": "cost_bearer_id",
+          "kind": "id"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "HolidayPayerPreviewResponse"
+      }
+    },
+    {
+      "method": "GET",
       "pattern": "/traeger/holiday-contributions/{periodId}/sibling-groups",
       "portals": [
         "org"
@@ -12138,7 +13015,8 @@
       "query": [
         {
           "name": "school",
-          "kind": "string"
+          "kind": "string",
+          "text_reason": "a school ID or guest for children without a school in this Träger"
         },
         {
           "name": "status",
@@ -12180,7 +13058,8 @@
         },
         {
           "name": "school",
-          "kind": "string"
+          "kind": "string",
+          "text_reason": "a school ID or guest for children without a school in this Träger"
         },
         {
           "name": "status",
@@ -12242,7 +13121,8 @@
         },
         {
           "name": "school",
-          "kind": "string"
+          "kind": "string",
+          "text_reason": "a school ID or guest for children without a school in this Träger"
         },
         {
           "name": "status",
@@ -12473,6 +13353,30 @@
         "elem": {
           "kind": "ref",
           "ref": "NumberRange"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/opening-changes/",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "from",
+          "kind": "date"
+        },
+        {
+          "name": "to",
+          "kind": "date"
+        }
+      ],
+      "response": {
+        "kind": "array",
+        "elem": {
+          "kind": "ref",
+          "ref": "OpeningChange"
         }
       }
     },
@@ -12717,6 +13621,62 @@
     },
     {
       "method": "GET",
+      "pattern": "/traeger/schools/children",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "cursor",
+          "kind": "string"
+        },
+        {
+          "name": "school_id",
+          "kind": "id"
+        },
+        {
+          "name": "search",
+          "kind": "string"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "TraegerChildren"
+      }
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/schools/children/export",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "format",
+          "kind": "string",
+          "values": [
+            "csv",
+            "pdf",
+            "xlsx"
+          ]
+        },
+        {
+          "name": "roster_date",
+          "kind": "date"
+        },
+        {
+          "name": "school_id",
+          "kind": "id"
+        },
+        {
+          "name": "search",
+          "kind": "string"
+        }
+      ],
+      "file": true
+    },
+    {
+      "method": "GET",
       "pattern": "/traeger/schools/comparison",
       "portals": [
         "org"
@@ -12728,7 +13688,8 @@
         },
         {
           "name": "schools",
-          "kind": "string"
+          "kind": "id",
+          "repeated": true
         },
         {
           "name": "to",
@@ -12766,7 +13727,8 @@
         },
         {
           "name": "schools",
-          "kind": "string"
+          "kind": "id",
+          "repeated": true
         },
         {
           "name": "to",
@@ -12822,6 +13784,23 @@
         }
       ],
       "file": true
+    },
+    {
+      "method": "GET",
+      "pattern": "/traeger/schools/day-changes",
+      "portals": [
+        "org"
+      ],
+      "query": [
+        {
+          "name": "date",
+          "kind": "date"
+        }
+      ],
+      "response": {
+        "kind": "ref",
+        "ref": "SchoolsDayChanges"
+      }
     },
     {
       "method": "GET",
@@ -14875,6 +15854,21 @@
     },
     {
       "method": "POST",
+      "pattern": "/api/opening-changes/",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "OpeningChangeRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "OpeningChangeResponse"
+      }
+    },
+    {
+      "method": "POST",
       "pattern": "/api/parent-announcements/",
       "portals": [
         "tenant"
@@ -15002,6 +15996,21 @@
         "ref": "roomSnapshotExportRequest"
       },
       "file": true
+    },
+    {
+      "method": "POST",
+      "pattern": "/api/rooms/{id}/closures",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "RoomClosureRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "RoomClosureResponse"
+      }
     },
     {
       "method": "POST",
@@ -20950,6 +21959,21 @@
     },
     {
       "method": "POST",
+      "pattern": "/traeger/opening-changes/",
+      "portals": [
+        "org"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "TraegerOpeningChangeRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "OpeningChange"
+      }
+    },
+    {
+      "method": "POST",
       "pattern": "/traeger/report-templates/",
       "portals": [
         "org"
@@ -21719,6 +22743,21 @@
     },
     {
       "method": "PUT",
+      "pattern": "/api/meal-plan/days/{date}/cancellation",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "MealCancellationRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "MealCancellationResponse"
+      }
+    },
+    {
+      "method": "PUT",
       "pattern": "/api/meal-plan/participation/{studentId}/days/{date}",
       "portals": [
         "tenant"
@@ -21795,6 +22834,21 @@
         "ref": "preferenceRequest"
       },
       "no_data": true
+    },
+    {
+      "method": "PUT",
+      "pattern": "/api/opening-changes/{id}",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "OpeningChangeRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "OpeningChangeResponse"
+      }
     },
     {
       "method": "PUT",
@@ -22484,6 +23538,21 @@
     },
     {
       "method": "PUT",
+      "pattern": "/api/students/{id}/pickup-persons/{date}",
+      "portals": [
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "PickupPersonRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "PickupPersonResponse"
+      }
+    },
+    {
+      "method": "PUT",
       "pattern": "/api/students/{id}/pickup-schedules",
       "portals": [
         "tenant"
@@ -22856,6 +23925,26 @@
         "ref": "ReplaceRolePermissionsRequest"
       },
       "no_data": true
+    },
+    {
+      "method": "PUT",
+      "pattern": "/display-preferences/",
+      "portals": [
+        "caterer",
+        "org",
+        "parent",
+        "platform",
+        "school",
+        "tenant"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "displayPreferencesRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "displayPreferencesResponse"
+      }
     },
     {
       "method": "PUT",
@@ -24000,6 +25089,21 @@
     },
     {
       "method": "PUT",
+      "pattern": "/traeger/holiday-contributions/{periodId}/registrations/{registrationId}/payer",
+      "portals": [
+        "org"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "HolidayPayerRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "HolidayContributionResponse"
+      }
+    },
+    {
+      "method": "PUT",
       "pattern": "/traeger/holiday-contributions/{periodId}/weeks/{weekId}/capacity",
       "portals": [
         "org"
@@ -24205,6 +25309,21 @@
       "response": {
         "kind": "ref",
         "ref": "NumberRange"
+      }
+    },
+    {
+      "method": "PUT",
+      "pattern": "/traeger/opening-changes/{id}",
+      "portals": [
+        "org"
+      ],
+      "request": {
+        "kind": "ref",
+        "ref": "TraegerOpeningChangeRequest"
+      },
+      "response": {
+        "kind": "ref",
+        "ref": "OpeningChange"
       }
     },
     {
@@ -24948,10 +26067,60 @@
       ]
     },
     {
+      "name": "ChildDayChangeKind",
+      "values": [
+        "activity_cancelled",
+        "activity_lead_changed",
+        "activity_reinstated",
+        "activity_room_changed",
+        "child_absent",
+        "child_goes_alone",
+        "child_pickup_changed",
+        "child_pickup_person",
+        "class_dismissal_changed",
+        "class_trip",
+        "closing_day",
+        "meal_cancelled",
+        "opening_changed"
+      ]
+    },
+    {
+      "name": "ChildDaySource",
+      "values": [
+        "activities",
+        "children",
+        "classes",
+        "closing_days",
+        "meal_plan"
+      ]
+    },
+    {
+      "name": "ChildDaySourceState",
+      "values": [
+        "failed",
+        "loaded"
+      ]
+    },
+    {
+      "name": "ChildDayStatus",
+      "values": [
+        "excused",
+        "sick"
+      ]
+    },
+    {
       "name": "ChildStatus",
       "values": [
         "excused",
         "sick"
+      ]
+    },
+    {
+      "name": "ContextStatus",
+      "values": [
+        "forbidden",
+        "ok",
+        "unavailable"
       ]
     },
     {
@@ -25070,13 +26239,16 @@
         "child_goes_alone",
         "child_pickup_changed",
         "child_pickup_note",
+        "child_pickup_person",
         "child_summary",
         "class_dismissal_changed",
         "class_trip",
         "closing_day",
         "group_substitution",
         "group_substitution_count",
+        "meal_cancelled",
         "meal_plan_changed",
+        "room_closed",
         "shift_cancelled",
         "shift_changed",
         "shift_replacement",
@@ -25095,6 +26267,10 @@
         "meal_plan",
         "own_absences",
         "own_shift_plan",
+        "room",
+        "school_calendar",
+        "school_class",
+        "school_supervisions",
         "shift_plan",
         "staff_absences",
         "staff_list",
@@ -25132,6 +26308,28 @@
       "values": [
         "important",
         "info"
+      ]
+    },
+    {
+      "name": "OwnTimePeriodView",
+      "values": [
+        "month",
+        "week"
+      ]
+    },
+    {
+      "name": "OwnTimeReadState",
+      "values": [
+        "ready",
+        "unavailable"
+      ]
+    },
+    {
+      "name": "OwnTimeShiftState",
+      "values": [
+        "not_booked",
+        "ready",
+        "unavailable"
       ]
     },
     {
@@ -25221,7 +26419,9 @@
         "closing_days",
         "meal_plan",
         "notices",
-        "staff"
+        "room_closures",
+        "staff",
+        "supervisions"
       ]
     },
     {
@@ -25258,6 +26458,7 @@
         "parent_message_read",
         "parent_message_unread_changed",
         "pickup_schedule_changed",
+        "staff_leave_changed",
         "staff_message",
         "staff_notices_changed",
         "staff_time_tracking_changed",
@@ -25341,6 +26542,12 @@
       "name": "AbsenceDecisionMailsResponse",
       "go_type": "timetracking.AbsenceDecisionMailsResponse",
       "fields": [
+        {
+          "name": "awaiting_feedback",
+          "schema": {
+            "kind": "bool"
+          }
+        },
         {
           "name": "absences",
           "schema": {
@@ -25649,6 +26856,12 @@
       "name": "AbsenceRequestMailsResponse",
       "go_type": "timetracking.AbsenceRequestMailsResponse",
       "fields": [
+        {
+          "name": "awaiting_feedback",
+          "schema": {
+            "kind": "bool"
+          }
+        },
         {
           "name": "absences",
           "schema": {
@@ -26000,6 +27213,18 @@
           "name": "data_label",
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AccessLogLimitDetails",
+      "go_type": "traegerviewhttp.AccessLogLimitDetails",
+      "fields": [
+        {
+          "name": "limit",
+          "schema": {
+            "kind": "int"
           }
         }
       ]
@@ -26996,6 +28221,42 @@
       ]
     },
     {
+      "name": "ActivityParticipantLimitDetails",
+      "go_type": "studentpresence.ActivityParticipantLimitDetails",
+      "fields": [
+        {
+          "name": "activity_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "activity_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "current_occupancy",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "max_participants",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "incoming_students",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
       "name": "ActivityRequest",
       "go_type": "httpadapter.ActivityRequest",
       "request": true,
@@ -27087,6 +28348,12 @@
         },
         {
           "name": "is_open",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "is_system",
           "schema": {
             "kind": "bool"
           }
@@ -27859,9 +29126,9 @@
         {
           "name": "existing_student_id",
           "optional": true,
-          "text_reason": "empty string means no existing student selected",
           "schema": {
-            "kind": "string"
+            "kind": "id",
+            "no_id": true
           }
         },
         {
@@ -28337,9 +29604,9 @@
         {
           "name": "existing_student_id",
           "optional": true,
-          "text_reason": "empty string means no existing student selected",
           "schema": {
-            "kind": "string"
+            "kind": "id",
+            "no_id": true
           }
         },
         {
@@ -30820,6 +32087,13 @@
       "go_type": "portal.AppointmentMails",
       "fields": [
         {
+          "name": "awaiting_feedback",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
           "name": "kinds",
           "schema": {
             "kind": "map",
@@ -31758,6 +33032,48 @@
           "name": "valid_from",
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AssignedClassesReport",
+      "go_type": "classday.AssignedClassesReport",
+      "fields": [
+        {
+          "name": "date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "weekday",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_day",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "enrollment_known",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "classes",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ClassSummary"
+            }
           }
         }
       ]
@@ -33315,6 +34631,12 @@
           }
         },
         {
+          "name": "change_awaits_signature",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
           "name": "ends_on",
           "optional": true,
           "schema": {
@@ -33821,6 +35143,24 @@
         },
         {
           "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "BillingIssuerDetails",
+      "go_type": "parentbillinghttp.BillingIssuerDetails",
+      "fields": [
+        {
+          "name": "issuer_key",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "issuer_name",
           "schema": {
             "kind": "string"
           }
@@ -35160,6 +36500,25 @@
       ]
     },
     {
+      "name": "BodyLimitDetails",
+      "go_type": "common.BodyLimitDetails",
+      "fields": [
+        {
+          "name": "max_bytes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "max_mb",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
       "name": "BookingAccounts",
       "go_type": "parentbilling.BookingAccounts",
       "fields": [
@@ -35289,6 +36648,18 @@
           "optional": true,
           "schema": {
             "kind": "date"
+          }
+        }
+      ]
+    },
+    {
+      "name": "BookingBoundsDetails",
+      "go_type": "enrollmenthttp.BookingBoundsDetails",
+      "fields": [
+        {
+          "name": "child",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -35864,6 +37235,32 @@
       ]
     },
     {
+      "name": "CalendarPeriodOverlapDetails",
+      "go_type": "timetablehttp.CalendarPeriodOverlapDetails",
+      "fields": [
+        {
+          "name": "overlapping_period_ids",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "id"
+            }
+          }
+        },
+        {
+          "name": "overlapping_period_names",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "CalendarPeriodRequest",
       "go_type": "timetablehttp.CalendarPeriodRequest",
       "request": true,
@@ -36045,6 +37442,18 @@
             "kind": "int"
           }
         },
+        {
+          "name": "staff_shift_series_count",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "CalendarPeriodShiftSeriesDetails",
+      "go_type": "timetablehttp.CalendarPeriodShiftSeriesDetails",
+      "fields": [
         {
           "name": "staff_shift_series_count",
           "schema": {
@@ -40296,6 +41705,24 @@
       ]
     },
     {
+      "name": "CareOfferingSourceConflictValues",
+      "go_type": "careplan.CareOfferingSourceConflictValues",
+      "fields": [
+        {
+          "name": "offering",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "template",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "CareOfferingsResponse",
       "go_type": "parent.CareOfferingsResponse",
       "fields": [
@@ -42476,6 +43903,22 @@
       ]
     },
     {
+      "name": "CaregiverCapabilityDetails",
+      "go_type": "common.CaregiverCapabilityDetails",
+      "fields": [
+        {
+          "name": "blockers",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "CaregiverCapabilityState",
       "go_type": "peopledirectory.CaregiverCapabilityState",
       "fields": [
@@ -43881,6 +45324,14 @@
             "kind": "string",
             "nullable": true
           }
+        },
+        {
+          "name": "pickup_person",
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "ChildPickupPerson"
+          }
         }
       ]
     },
@@ -44027,6 +45478,203 @@
           "schema": {
             "kind": "int"
           }
+        },
+        {
+          "name": "pickup_person",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ChildDayChangeEntry",
+      "go_type": "parent.ChildDayChangeEntry",
+      "fields": [
+        {
+          "name": "kind",
+          "schema": {
+            "kind": "enum",
+            "ref": "ChildDayChangeKind"
+          }
+        },
+        {
+          "name": "all_day",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "since",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "until",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "starts_at",
+          "schema": {
+            "kind": "instant",
+            "nullable": true
+          }
+        },
+        {
+          "name": "ends_at",
+          "schema": {
+            "kind": "instant",
+            "nullable": true
+          }
+        },
+        {
+          "name": "entered_by_you",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "child_status",
+          "schema": {
+            "kind": "enum",
+            "nullable": true,
+            "ref": "ChildDayStatus"
+          }
+        },
+        {
+          "name": "pickup_time",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "pickup_person_name",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "pickup_person_one_time",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "activity_title",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "room_name",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "previous_room_name",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "closing_name",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "closing_traeger",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "opening_name",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "opens_at",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "closes_at",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "pickup_after_closing",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "class_name",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "class_time",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "ChildDayChangesResponse",
+      "go_type": "parent.ChildDayChangesResponse",
+      "fields": [
+        {
+          "name": "date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "sources",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ChildDaySourceStatus"
+            }
+          }
+        },
+        {
+          "name": "entries",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ChildDayChangeEntry"
+            }
+          }
         }
       ]
     },
@@ -44077,6 +45725,26 @@
           "name": "cancel_until",
           "schema": {
             "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ChildDaySourceStatus",
+      "go_type": "parent.ChildDaySourceStatus",
+      "fields": [
+        {
+          "name": "source",
+          "schema": {
+            "kind": "enum",
+            "ref": "ChildDaySource"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "enum",
+            "ref": "ChildDaySourceState"
           }
         }
       ]
@@ -44299,6 +45967,12 @@
         },
         {
           "name": "care_facility_term",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "care_facility_article",
           "schema": {
             "kind": "string"
           }
@@ -44667,6 +46341,48 @@
           "name": "version",
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ChildPickupPerson",
+      "go_type": "daychangesview.ChildPickupPerson",
+      "fields": [
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "one_time",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ChildQuotaDetails",
+      "go_type": "schoolmembership.ChildQuotaDetails",
+      "fields": [
+        {
+          "name": "booked_places",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "occupied_places",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "requested_places",
+          "schema": {
+            "kind": "int"
           }
         }
       ]
@@ -45399,6 +47115,42 @@
       ]
     },
     {
+      "name": "ClassSummary",
+      "go_type": "classday.ClassSummary",
+      "fields": [
+        {
+          "name": "school_class",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "totals",
+          "schema": {
+            "kind": "ref",
+            "ref": "DayTotals"
+          }
+        },
+        {
+          "name": "changes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "trips",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ClassTripSummary"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "ClassTripConflictDetails",
       "go_type": "classdayhttp.ClassTripConflictDetails",
       "fields": [
@@ -45487,6 +47239,25 @@
         },
         {
           "name": "date_count",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ClassTripSummary",
+      "go_type": "classday.ClassTripSummary",
+      "fields": [
+        {
+          "name": "return_time",
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        },
+        {
+          "name": "children",
           "schema": {
             "kind": "int"
           }
@@ -46368,6 +48139,221 @@
       ]
     },
     {
+      "name": "ContextGroups",
+      "go_type": "supervisiondashboard.ContextGroups",
+      "fields": [
+        {
+          "name": "status",
+          "schema": {
+            "kind": "enum",
+            "ref": "ContextStatus"
+          }
+        },
+        {
+          "name": "navigation",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ContextNavigationGroup"
+            }
+          }
+        },
+        {
+          "name": "own_group_ids",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "id"
+            }
+          }
+        },
+        {
+          "name": "own_room_names",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ContextNavigationGroup",
+      "go_type": "supervisiondashboard.ContextNavigationGroup",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "room_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "room_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "via_substitution",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "is_personal",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "leaders",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "string"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ContextRoom",
+      "go_type": "supervisiondashboard.ContextRoom",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ContextRooms",
+      "go_type": "supervisiondashboard.ContextRooms",
+      "fields": [
+        {
+          "name": "status",
+          "schema": {
+            "kind": "enum",
+            "ref": "ContextStatus"
+          }
+        },
+        {
+          "name": "items",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ContextRoom"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ContextSession",
+      "go_type": "supervisiondashboard.ContextSession",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "room_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "room_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "activity_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "is_own",
+          "schema": {
+            "kind": "bool",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "ContextSessions",
+      "go_type": "supervisiondashboard.ContextSessions",
+      "fields": [
+        {
+          "name": "status",
+          "schema": {
+            "kind": "enum",
+            "ref": "ContextStatus"
+          }
+        },
+        {
+          "name": "overview_status",
+          "schema": {
+            "kind": "enum",
+            "ref": "ContextStatus"
+          }
+        },
+        {
+          "name": "own_status",
+          "schema": {
+            "kind": "enum",
+            "ref": "ContextStatus"
+          }
+        },
+        {
+          "name": "items",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ContextSession"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "ContractChanges",
       "go_type": "carecontract.ContractChanges",
       "fields": [
@@ -46876,6 +48862,12 @@
           }
         },
         {
+          "name": "change_awaits_signature",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
           "name": "version",
           "schema": {
             "kind": "ref",
@@ -46926,6 +48918,17 @@
             "elem": {
               "kind": "ref",
               "ref": "Reminder"
+            }
+          }
+        },
+        {
+          "name": "version_signatures",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "VersionSignature"
             }
           }
         },
@@ -47975,6 +49978,13 @@
           "schema": {
             "kind": "bool"
           }
+        },
+        {
+          "name": "document_sha256",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
         }
       ]
     },
@@ -48233,6 +50243,12 @@
           "schema": {
             "kind": "id",
             "nullable": true
+          }
+        },
+        {
+          "name": "change_awaits_signature",
+          "schema": {
+            "kind": "bool"
           }
         }
       ]
@@ -50433,6 +52449,13 @@
           }
         },
         {
+          "name": "meal_cancelled",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
           "name": "participants",
           "schema": {
             "kind": "array",
@@ -51017,6 +53040,17 @@
               "ref": "SupervisionTeacherHint"
             }
           }
+        },
+        {
+          "name": "planned_activities",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "SupervisionPlannedActivity"
+            }
+          }
         }
       ]
     },
@@ -51245,6 +53279,47 @@
       ]
     },
     {
+      "name": "DatevBookingProblem",
+      "go_type": "parentbilling.DatevBookingProblem",
+      "fields": [
+        {
+          "name": "document_number",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "field",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "reason",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "DatevBookingsDetails",
+      "go_type": "parentbillinghttp.DatevBookingsDetails",
+      "fields": [
+        {
+          "name": "documents",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "DatevBookingProblem"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "DatevExportReport",
       "go_type": "workforce.DatevExportReport",
       "fields": [
@@ -51317,6 +53392,32 @@
             "kind": "bool"
           }
         },
+        {
+          "name": "missing_settings",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "invalid_settings",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "DatevReadinessDetails",
+      "go_type": "parentbillinghttp.DatevReadinessDetails",
+      "fields": [
         {
           "name": "missing_settings",
           "schema": {
@@ -51654,6 +53755,18 @@
       ]
     },
     {
+      "name": "DayMealCancellation",
+      "go_type": "daychangesview.DayMealCancellation",
+      "fields": [
+        {
+          "name": "reason",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "DayMorningAttendance",
       "go_type": "classday.DayMorningAttendance",
       "fields": [
@@ -51958,6 +54071,18 @@
       ]
     },
     {
+      "name": "DayRoomClosure",
+      "go_type": "daychangesview.DayRoomClosure",
+      "fields": [
+        {
+          "name": "reason",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "DayRow",
       "go_type": "classday.DayRow",
       "fields": [
@@ -52160,6 +54285,48 @@
           "name": "list_entries",
           "schema": {
             "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "DebtorNumberDigitRangeDetails",
+      "go_type": "parentbillinghttp.DebtorNumberDigitRangeDetails",
+      "fields": [
+        {
+          "name": "min_digits",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "max_digits",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "example",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "DebtorNumberDigitsDetails",
+      "go_type": "parentbillinghttp.DebtorNumberDigitsDetails",
+      "fields": [
+        {
+          "name": "digits",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "example",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -52633,6 +54800,36 @@
       ]
     },
     {
+      "name": "DeviationReasonDetails",
+      "go_type": "timetracking.DeviationReasonDetails",
+      "fields": [
+        {
+          "name": "action",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "planned_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "actual_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "deviation_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
       "name": "DeviceCreationResponse",
       "go_type": "devices.DeviceCreationResponse",
       "fields": [
@@ -52722,6 +54919,30 @@
       ]
     },
     {
+      "name": "DeviceInActiveSessionDetails",
+      "go_type": "devices.DeviceInActiveSessionDetails",
+      "fields": [
+        {
+          "name": "session_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "room_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "started_at",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "DevicePINStatus",
       "go_type": "records.DevicePINStatus",
       "fields": [
@@ -52733,6 +54954,38 @@
         },
         {
           "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "DeviceRemovalDetails",
+      "go_type": "operator.DeviceRemovalDetails",
+      "fields": [
+        {
+          "name": "session_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "started_at",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "activity_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "room_name",
           "optional": true,
           "schema": {
             "kind": "string"
@@ -52864,6 +55117,36 @@
           "name": "version",
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "DeviceSlotsBelowOccupiedDetails",
+      "go_type": "operator.DeviceSlotsBelowOccupiedDetails",
+      "fields": [
+        {
+          "name": "device_slots",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "occupied",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "DeviceSlotsDetails",
+      "go_type": "operator.DeviceSlotsDetails",
+      "fields": [
+        {
+          "name": "device_slots",
+          "schema": {
+            "kind": "int"
           }
         }
       ]
@@ -53389,6 +55672,12 @@
         },
         {
           "name": "care_facility_term",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "care_facility_article",
           "schema": {
             "kind": "string"
           }
@@ -53951,7 +56240,15 @@
         {
           "name": "pickup_person_guardian_profile_id",
           "optional": true,
-          "text_reason": "empty string explicitly clears the collector; null leaves it unspecified",
+          "schema": {
+            "kind": "id",
+            "nullable": true,
+            "no_id": true
+          }
+        },
+        {
+          "name": "pickup_person_name",
+          "optional": true,
           "schema": {
             "kind": "string",
             "nullable": true
@@ -54454,19 +56751,19 @@
         {
           "name": "form_schema_id",
           "optional": true,
-          "text_reason": "empty string clears the form schema",
           "schema": {
-            "kind": "string",
-            "nullable": true
+            "kind": "id",
+            "nullable": true,
+            "no_id": true
           }
         },
         {
           "name": "calendar_period_id",
           "optional": true,
-          "text_reason": "empty string clears the calendar period",
           "schema": {
-            "kind": "string",
-            "nullable": true
+            "kind": "id",
+            "nullable": true,
+            "no_id": true
           }
         },
         {
@@ -54990,6 +57287,22 @@
             "kind": "ref",
             "nullable": true,
             "ref": "DayAppointment"
+          }
+        },
+        {
+          "name": "meal_cancellation",
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "DayMealCancellation"
+          }
+        },
+        {
+          "name": "room_closure",
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "DayRoomClosure"
           }
         }
       ]
@@ -55612,6 +57925,24 @@
           "schema": {
             "kind": "int",
             "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "ExportSelectionDetails",
+      "go_type": "presenceprojectionhttp.ExportSelectionDetails",
+      "fields": [
+        {
+          "name": "total",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "limit",
+          "schema": {
+            "kind": "int"
           }
         }
       ]
@@ -56809,6 +59140,59 @@
       ]
     },
     {
+      "name": "FamilyDebtorNumberDetails",
+      "go_type": "parentbillinghttp.FamilyDebtorNumberDetails",
+      "fields": [
+        {
+          "name": "family_email",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "family_debtor_number",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "debtor_number",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "families",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "FamilyDebtorNumberEntry"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "FamilyDebtorNumberEntry",
+      "go_type": "parentbillinghttp.FamilyDebtorNumberEntry",
+      "fields": [
+        {
+          "name": "family_email",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "family_debtor_number",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "FamilyDebtorNumberRequest",
       "go_type": "parentbillinghttp.FamilyDebtorNumberRequest",
       "request": true,
@@ -57007,6 +59391,89 @@
           "schema": {
             "kind": "date",
             "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "FamilyRefusalDetails",
+      "go_type": "carecontract.FamilyRefusalDetails",
+      "fields": [
+        {
+          "name": "reason",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "contract_id",
+          "schema": {
+            "kind": "id"
+          }
+        }
+      ]
+    },
+    {
+      "name": "FamilyStartCardResponse",
+      "go_type": "parent.FamilyStartCardResponse",
+      "fields": [
+        {
+          "name": "access_version",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "child",
+          "schema": {
+            "kind": "ref",
+            "ref": "ChildResponse"
+          }
+        },
+        {
+          "name": "features",
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "ChildFeaturesResponse"
+          }
+        },
+        {
+          "name": "today",
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "TodayStatusResponse"
+          }
+        }
+      ]
+    },
+    {
+      "name": "FamilyStartResponse",
+      "go_type": "parent.FamilyStartResponse",
+      "fields": [
+        {
+          "name": "day",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "day_remaining_seconds",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "cards",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "FamilyStartCardResponse"
+            }
           }
         }
       ]
@@ -59305,6 +61772,12 @@
       "go_type": "messaging.GroupThreadMailsResponse",
       "fields": [
         {
+          "name": "awaiting_feedback",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
           "name": "messages",
           "schema": {
             "kind": "map",
@@ -60408,9 +62881,9 @@
       "fields": [
         {
           "name": "account_id",
-          "text_reason": "required legacy field, empty when no guardian account is present",
           "schema": {
-            "kind": "string"
+            "kind": "id",
+            "no_id": true
           }
         },
         {
@@ -60791,6 +63264,46 @@
           "schema": {
             "kind": "date",
             "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "HireDuplicateDetails",
+      "go_type": "traegerstaff.HireDuplicateDetails",
+      "fields": [
+        {
+          "name": "matches",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "hireMatchResponse"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "HireIncompleteDetails",
+      "go_type": "traegerstaff.HireIncompleteDetails",
+      "fields": [
+        {
+          "name": "schools",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        },
+        {
+          "name": "staff_record_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
           }
         }
       ]
@@ -61284,6 +63797,18 @@
           }
         },
         {
+          "name": "ranking",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "max_score",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
           "name": "criteria",
           "schema": {
             "kind": "array",
@@ -61330,6 +63855,12 @@
         },
         {
           "name": "rank",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "score",
           "schema": {
             "kind": "int"
           }
@@ -61473,6 +64004,26 @@
           }
         },
         {
+          "name": "ranking",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "score",
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "max_score",
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
           "name": "criteria_met",
           "schema": {
             "kind": "array",
@@ -61499,6 +64050,18 @@
           "schema": {
             "kind": "id",
             "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "HolidayAllocationDetails",
+      "go_type": "enrollmenthttp.HolidayAllocationDetails",
+      "fields": [
+        {
+          "name": "week_id",
+          "schema": {
+            "kind": "id"
           }
         }
       ]
@@ -61844,6 +64407,36 @@
         },
         {
           "name": "total_cents",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "HolidayChildDayLimitDetails",
+      "go_type": "common.HolidayChildDayLimitDetails",
+      "fields": [
+        {
+          "name": "limit",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "days",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "elsewhere",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "child",
           "schema": {
             "kind": "int"
           }
@@ -62720,6 +65313,12 @@
       "go_type": "enrollment.HolidayCriteriaCatalog",
       "fields": [
         {
+          "name": "ranking",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
           "name": "criteria",
           "schema": {
             "kind": "array",
@@ -62773,6 +65372,13 @@
       "go_type": "enrollmenthttp.HolidayCriteriaRequest",
       "request": true,
       "fields": [
+        {
+          "name": "ranking",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
         {
           "name": "criteria",
           "optional": true,
@@ -62830,6 +65436,12 @@
         },
         {
           "name": "position",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "points",
           "schema": {
             "kind": "int"
           }
@@ -62964,6 +65576,12 @@
         },
         {
           "name": "position",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "points",
           "schema": {
             "kind": "int"
           }
@@ -64173,6 +66791,25 @@
       ]
     },
     {
+      "name": "HolidayPaidBy",
+      "go_type": "enrollment.HolidayPaidBy",
+      "fields": [
+        {
+          "name": "kind",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "cost_bearer_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "HolidayParentSetupResponse",
       "go_type": "account.HolidayParentSetupResponse",
       "fields": [
@@ -64249,6 +66886,183 @@
               "kind": "ref",
               "ref": "holidayParticipantResponse"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "HolidayPayer",
+      "go_type": "parentbilling.HolidayPayer",
+      "fields": [
+        {
+          "name": "kind",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "cost_bearer_id",
+          "schema": {
+            "kind": "id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "cost_bearer_name",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "HolidayPayerChange",
+      "go_type": "enrollment.HolidayPayerChange",
+      "fields": [
+        {
+          "name": "before",
+          "schema": {
+            "kind": "ref",
+            "ref": "HolidayPaidBy"
+          }
+        },
+        {
+          "name": "after",
+          "schema": {
+            "kind": "ref",
+            "ref": "HolidayPaidBy"
+          }
+        }
+      ]
+    },
+    {
+      "name": "HolidayPayerChildEffectResponse",
+      "go_type": "parentbillinghttp.HolidayPayerChildEffectResponse",
+      "fields": [
+        {
+          "name": "child_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "position",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "family_before_cents",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "family_after_cents",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "cost_bearer_before_cents",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "cost_bearer_after_cents",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "HolidayPayerPreviewResponse",
+      "go_type": "parentbillinghttp.HolidayPayerPreviewResponse",
+      "fields": [
+        {
+          "name": "current",
+          "schema": {
+            "kind": "ref",
+            "ref": "HolidayPayer"
+          }
+        },
+        {
+          "name": "chosen",
+          "schema": {
+            "kind": "ref",
+            "ref": "HolidayPayer"
+          }
+        },
+        {
+          "name": "changed",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "children",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "HolidayPayerChildEffectResponse"
+            }
+          }
+        },
+        {
+          "name": "exemption_available",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "invoiced",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "fingerprint",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "HolidayPayerRequest",
+      "go_type": "parentbillinghttp.HolidayPayerRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "benefits_exemption",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "cost_bearer_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "expected_fingerprint",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -64629,6 +67443,18 @@
           "name": "week_id",
           "schema": {
             "kind": "id"
+          }
+        }
+      ]
+    },
+    {
+      "name": "HolidayProofLimitDetails",
+      "go_type": "enrollmenthttp.HolidayProofLimitDetails",
+      "fields": [
+        {
+          "name": "max_files",
+          "schema": {
+            "kind": "int"
           }
         }
       ]
@@ -65941,6 +68767,14 @@
           "optional": true,
           "schema": {
             "kind": "bool"
+          }
+        },
+        {
+          "name": "payer",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "HolidayPayerChange"
           }
         }
       ]
@@ -67484,6 +70318,49 @@
       ]
     },
     {
+      "name": "HolidayWeekNoCareDetails",
+      "go_type": "common.HolidayWeekNoCareDetails",
+      "fields": [
+        {
+          "name": "week",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "week_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "date",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "iso_date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "kind",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "HolidayWeekPlaces",
       "go_type": "enrollment.HolidayWeekPlaces",
       "fields": [
@@ -68072,9 +70949,9 @@
         },
         {
           "name": "counterpart_account_id",
-          "text_reason": "required legacy field, empty for group threads without a counterpart",
           "schema": {
-            "kind": "string"
+            "kind": "id",
+            "no_id": true
           }
         },
         {
@@ -68256,6 +71133,33 @@
           "optional": true,
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "InputLimitDetails",
+      "go_type": "common.InputLimitDetails",
+      "fields": [
+        {
+          "name": "min",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "max",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "max_bytes",
+          "optional": true,
+          "schema": {
+            "kind": "int"
           }
         }
       ]
@@ -68487,6 +71391,18 @@
           "schema": {
             "kind": "ref",
             "ref": "GuardianNoticeResponse"
+          }
+        }
+      ]
+    },
+    {
+      "name": "InvalidRowDetails",
+      "go_type": "importapi.InvalidRowDetails",
+      "fields": [
+        {
+          "name": "row",
+          "schema": {
+            "kind": "int"
           }
         }
       ]
@@ -69824,6 +72740,13 @@
           "schema": {
             "kind": "id"
           }
+        },
+        {
+          "name": "room_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
         }
       ]
     },
@@ -70747,6 +73670,38 @@
       ]
     },
     {
+      "name": "MealCancellationRequest",
+      "go_type": "mealplan.MealCancellationRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "MealCancellationResponse",
+      "go_type": "mealplan.MealCancellationResponse",
+      "fields": [
+        {
+          "name": "date",
+          "schema": {
+            "kind": "date"
+          }
+        },
+        {
+          "name": "reason",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "MealParticipationDayResponse",
       "go_type": "parent.MealParticipationDayResponse",
       "fields": [
@@ -71248,6 +74203,18 @@
       ]
     },
     {
+      "name": "MissingColumnsDetails",
+      "go_type": "importapi.MissingColumnsDetails",
+      "fields": [
+        {
+          "name": "columns",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "ModelRequest",
       "go_type": "worktimemodels.ModelRequest",
       "request": true,
@@ -71361,6 +74328,61 @@
           "optional": true,
           "schema": {
             "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ModuleNotBookedDetails",
+      "go_type": "common.ModuleNotBookedDetails",
+      "fields": [
+        {
+          "name": "module",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "module_label",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ModuleRequiredByDetails",
+      "go_type": "operator.ModuleRequiredByDetails",
+      "fields": [
+        {
+          "name": "module",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "dependents",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ModuleRequiresDetails",
+      "go_type": "operator.ModuleRequiresDetails",
+      "fields": [
+        {
+          "name": "module",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "required",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -71819,6 +74841,36 @@
       ]
     },
     {
+      "name": "NavigationContext",
+      "go_type": "supervisiondashboard.NavigationContext",
+      "fields": [
+        {
+          "name": "groups",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "ContextGroups"
+          }
+        },
+        {
+          "name": "sessions",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "ContextSessions"
+          }
+        },
+        {
+          "name": "released_rooms",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "ContextRooms"
+          }
+        }
+      ]
+    },
+    {
       "name": "NavigationGroup",
       "go_type": "grouplive.NavigationGroup",
       "fields": [
@@ -71874,7 +74926,7 @@
     },
     {
       "name": "NavigationResponse",
-      "go_type": "identityaccess.NavigationResponse[github.com/moto-ogs/project-phoenix/modules/peopledirectory.Staff,*github.com/moto-ogs/project-phoenix/roots/owners.CallerGroupRow,*github.com/moto-ogs/project-phoenix/modules/studentpresence/internal/ports.ActiveGroup]",
+      "go_type": "identityaccess.NavigationResponse[*github.com/moto-ogs/project-phoenix/modules/peopledirectory.Staff]",
       "fields": [
         {
           "name": "current_staff",
@@ -71885,50 +74937,10 @@
           }
         },
         {
-          "name": "educational_groups",
-          "schema": {
-            "kind": "array",
-            "nullable": true,
-            "elem": {
-              "kind": "ref",
-              "nullable": true,
-              "ref": "CallerGroupRow"
-            }
-          }
-        },
-        {
-          "name": "incomplete",
-          "schema": {
-            "kind": "bool"
-          }
-        },
-        {
           "name": "school_switches",
           "schema": {
             "kind": "ref",
             "ref": "SchoolSwitches"
-          }
-        },
-        {
-          "name": "supervised_groups",
-          "schema": {
-            "kind": "array",
-            "nullable": true,
-            "elem": {
-              "kind": "ref",
-              "nullable": true,
-              "ref": "ActiveGroup"
-            }
-          }
-        },
-        {
-          "name": "unavailable_sections",
-          "schema": {
-            "kind": "array",
-            "nullable": true,
-            "elem": {
-              "kind": "string"
-            }
           }
         }
       ]
@@ -72596,6 +75608,30 @@
       ]
     },
     {
+      "name": "NumberRangeMissingDetails",
+      "go_type": "parentbillinghttp.NumberRangeMissingDetails",
+      "fields": [
+        {
+          "name": "issuer_key",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "issuer_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "service",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "NumberRangeRequest",
       "go_type": "parentbillinghttp.NumberRangeRequest",
       "request": true,
@@ -72681,6 +75717,24 @@
           "optional": true,
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "NumberRangeTakenDetails",
+      "go_type": "parentbillinghttp.NumberRangeTakenDetails",
+      "fields": [
+        {
+          "name": "last_number",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_sequence",
+          "schema": {
+            "kind": "int"
           }
         }
       ]
@@ -74615,6 +77669,13 @@
           }
         },
         {
+          "name": "photo_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
           "name": "photo_url",
           "optional": true,
           "schema": {
@@ -74869,6 +77930,173 @@
           "optional": true,
           "schema": {
             "kind": "number"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OpeningChange",
+      "go_type": "traegercalendar.OpeningChange",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "start_date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "end_date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "opens_at",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "closes_at",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "reason",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_ids",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "id"
+            }
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OpeningChangeRequest",
+      "go_type": "staffcalendarhttp.OpeningChangeRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "start_date",
+          "optional": true,
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "end_date",
+          "optional": true,
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "opens_at",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "closes_at",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OpeningChangeResponse",
+      "go_type": "staffcalendarhttp.OpeningChangeResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "start_date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "end_date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "opens_at",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "closes_at",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "reason",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "traeger",
+          "schema": {
+            "kind": "bool"
           }
         }
       ]
@@ -76343,6 +79571,13 @@
           }
         },
         {
+          "name": "meal_cancelled",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
           "name": "deadline",
           "schema": {
             "kind": "instant"
@@ -76512,6 +79747,13 @@
           }
         },
         {
+          "name": "invitation_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
           "name": "email",
           "schema": {
             "kind": "string"
@@ -76587,6 +79829,18 @@
           "name": "school_name",
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OrganizationHasSchoolsDetails",
+      "go_type": "operator.OrganizationHasSchoolsDetails",
+      "fields": [
+        {
+          "name": "school_count",
+          "schema": {
+            "kind": "int"
           }
         }
       ]
@@ -77145,6 +80399,1461 @@
           "name": "version",
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OwnClockOverview",
+      "go_type": "workforce.OwnClockOverview",
+      "fields": [
+        {
+          "name": "today",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "as_of",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "staff_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "session",
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "OwnTimeBlock"
+          }
+        },
+        {
+          "name": "today_absence",
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "OwnTimeAbsence"
+          }
+        },
+        {
+          "name": "shifts",
+          "schema": {
+            "kind": "ref",
+            "ref": "OwnTimeShifts"
+          }
+        },
+        {
+          "name": "assignments",
+          "schema": {
+            "kind": "ref",
+            "ref": "OwnTimeAssignments"
+          }
+        },
+        {
+          "name": "chart",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "OwnTimeChartPoint"
+            }
+          }
+        },
+        {
+          "name": "completed_today_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "completed_week_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "today_counts_in_totals",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "labor_days",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "WorkDayLaborHint"
+            }
+          }
+        },
+        {
+          "name": "is_over_weekly_max",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "week",
+          "schema": {
+            "kind": "ref",
+            "ref": "OwnTimeTotals"
+          }
+        },
+        {
+          "name": "month",
+          "schema": {
+            "kind": "ref",
+            "ref": "OwnTimeTotals"
+          }
+        },
+        {
+          "name": "account_start",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "account_balance_minutes",
+          "schema": {
+            "kind": "int",
+            "nullable": true
+          }
+        },
+        {
+          "name": "terminal_only_stamping",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OwnLeaveAllowance",
+      "go_type": "workforce.OwnLeaveAllowance",
+      "fields": [
+        {
+          "name": "absence_type_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "entitled_days",
+          "schema": {
+            "kind": "number"
+          }
+        },
+        {
+          "name": "taken_days",
+          "schema": {
+            "kind": "number"
+          }
+        },
+        {
+          "name": "reserved_days",
+          "schema": {
+            "kind": "number"
+          }
+        },
+        {
+          "name": "remaining_days",
+          "schema": {
+            "kind": "number"
+          }
+        },
+        {
+          "name": "expires_on",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "expired_days",
+          "schema": {
+            "kind": "number"
+          }
+        },
+        {
+          "name": "carried_in",
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "OwnLeaveAllowanceCarry"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OwnLeaveAllowanceCarry",
+      "go_type": "workforce.OwnLeaveAllowanceCarry",
+      "fields": [
+        {
+          "name": "year",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "remaining_days",
+          "schema": {
+            "kind": "number"
+          }
+        },
+        {
+          "name": "expired_days",
+          "schema": {
+            "kind": "number"
+          }
+        },
+        {
+          "name": "expires_on",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "OwnLeaveCounts",
+      "go_type": "workforce.OwnLeaveCounts",
+      "fields": [
+        {
+          "name": "reserved",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "question",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "approved",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "declined",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OwnLeaveMails",
+      "go_type": "workforce.OwnLeaveMails",
+      "fields": [
+        {
+          "name": "state",
+          "schema": {
+            "kind": "enum",
+            "ref": "OwnTimeReadState"
+          }
+        },
+        {
+          "name": "awaiting_feedback",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "absences",
+          "schema": {
+            "kind": "map",
+            "nullable": true,
+            "elem": {
+              "kind": "map",
+              "nullable": true,
+              "elem": {
+                "kind": "int"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "OwnLeaveOverview",
+      "go_type": "workforce.OwnLeaveOverview",
+      "fields": [
+        {
+          "name": "year",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "quota",
+          "schema": {
+            "kind": "ref",
+            "ref": "OwnLeaveQuota"
+          }
+        },
+        {
+          "name": "counts",
+          "schema": {
+            "kind": "ref",
+            "ref": "OwnLeaveCounts"
+          }
+        },
+        {
+          "name": "recent",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "OwnTimeAbsence"
+            }
+          }
+        },
+        {
+          "name": "questions",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "OwnTimeAbsence"
+            }
+          }
+        },
+        {
+          "name": "allowances",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "OwnLeaveAllowance"
+            }
+          }
+        },
+        {
+          "name": "mails",
+          "schema": {
+            "kind": "ref",
+            "ref": "OwnLeaveMails"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OwnLeaveQuota",
+      "go_type": "workforce.OwnLeaveQuota",
+      "fields": [
+        {
+          "name": "entitled_days",
+          "schema": {
+            "kind": "number"
+          }
+        },
+        {
+          "name": "carryover_days",
+          "schema": {
+            "kind": "number"
+          }
+        },
+        {
+          "name": "taken_before_days",
+          "schema": {
+            "kind": "number"
+          }
+        },
+        {
+          "name": "taken_days",
+          "schema": {
+            "kind": "number"
+          }
+        },
+        {
+          "name": "reserved_days",
+          "schema": {
+            "kind": "number"
+          }
+        },
+        {
+          "name": "remaining_days",
+          "schema": {
+            "kind": "number"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OwnTimeAbsence",
+      "go_type": "workforce.OwnTimeAbsence",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "date_start",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "date_end",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "absence_type",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "absence_type_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "absence_type_label",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "half_day",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "start_half_day",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "end_half_day",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "note",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "decision_note",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "requested_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "duration_days",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "working_days",
+          "optional": true,
+          "schema": {
+            "kind": "number"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OwnTimeAssignment",
+      "go_type": "workforce.OwnTimeAssignment",
+      "fields": [
+        {
+          "name": "instance_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "title",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "group_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "room_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "start_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "is_spontaneous",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "cancelled",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "is_primary",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "is_substitute",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "is_absent",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "absence_reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "cancel_reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "understaffed_ack",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OwnTimeAssignments",
+      "go_type": "workforce.OwnTimeAssignments",
+      "fields": [
+        {
+          "name": "state",
+          "schema": {
+            "kind": "enum",
+            "ref": "OwnTimeReadState"
+          }
+        },
+        {
+          "name": "rows",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "OwnTimeAssignment"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "OwnTimeBlock",
+      "go_type": "workforce.OwnTimeBlock",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "check_in_time",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "check_out_time",
+          "schema": {
+            "kind": "instant",
+            "nullable": true
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "source",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "notes",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "auto_checked_out",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "net_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "break_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "is_overtime",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "is_break_compliant",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "pack_up_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "rounding_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "edit_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "audit_count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "version",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "breaks",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "OwnTimeBreak"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "OwnTimeBreak",
+      "go_type": "workforce.OwnTimeBreak",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "started_at",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "ended_at",
+          "schema": {
+            "kind": "instant",
+            "nullable": true
+          }
+        },
+        {
+          "name": "duration_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "planned_end_time",
+          "schema": {
+            "kind": "instant",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "OwnTimeChartPoint",
+      "go_type": "workforce.OwnTimeChartPoint",
+      "fields": [
+        {
+          "name": "date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "actual_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "break_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OwnTimeClosingDay",
+      "go_type": "workforce.OwnTimeClosingDay",
+      "fields": [
+        {
+          "name": "start_date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "end_date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "reason",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OwnTimeDay",
+      "go_type": "workforce.OwnTimeDay",
+      "fields": [
+        {
+          "name": "date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "has_target",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "target_source",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "target_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "actual_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "credit_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "balance_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OwnTimeHoliday",
+      "go_type": "workforce.OwnTimeHoliday",
+      "fields": [
+        {
+          "name": "date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OwnTimeMonthSummary",
+      "go_type": "workforce.OwnTimeMonthSummary",
+      "fields": [
+        {
+          "name": "staff_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "year",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "month",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "carry_in_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "target_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "target_minutes_to_date",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "has_target",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "actual_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "credited_sick_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "credited_vacation_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "credited_training_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "credited_other_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "sick_days",
+          "schema": {
+            "kind": "number"
+          }
+        },
+        {
+          "name": "vacation_days",
+          "schema": {
+            "kind": "number"
+          }
+        },
+        {
+          "name": "training_days",
+          "schema": {
+            "kind": "number"
+          }
+        },
+        {
+          "name": "sick_days_without_target",
+          "schema": {
+            "kind": "number"
+          }
+        },
+        {
+          "name": "vacation_days_without_target",
+          "schema": {
+            "kind": "number"
+          }
+        },
+        {
+          "name": "training_days_without_target",
+          "schema": {
+            "kind": "number"
+          }
+        },
+        {
+          "name": "other_days_without_target",
+          "schema": {
+            "kind": "number"
+          }
+        },
+        {
+          "name": "planned_shift_minutes",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "adjustment_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "adjustments",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "AdjustmentView"
+            }
+          }
+        },
+        {
+          "name": "balance_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "closing_balance_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "is_closed",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "closed_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "closed_by",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "closed_by_traeger",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "close_reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "frozen_closing_balance_minutes",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "drift_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "carry_in_frozen",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "carry_in_frozen_from_month",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "planned_shift_state",
+          "schema": {
+            "kind": "enum",
+            "ref": "OwnTimeShiftState"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OwnTimePeriod",
+      "go_type": "workforce.OwnTimePeriod",
+      "fields": [
+        {
+          "name": "staff_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "view",
+          "schema": {
+            "kind": "enum",
+            "ref": "OwnTimePeriodView"
+          }
+        },
+        {
+          "name": "start",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "end",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "week_start",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "week_end",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "account_start",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "sessions",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "OwnTimeBlock"
+            }
+          }
+        },
+        {
+          "name": "labor_days",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "WorkDayLaborHint"
+            }
+          }
+        },
+        {
+          "name": "rest_hints",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "OwnTimeRestHint"
+            }
+          }
+        },
+        {
+          "name": "weekly_summaries",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "WorkWeekSummary"
+            }
+          }
+        },
+        {
+          "name": "absences",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "OwnTimeAbsence"
+            }
+          }
+        },
+        {
+          "name": "shifts",
+          "schema": {
+            "kind": "ref",
+            "ref": "OwnTimeShifts"
+          }
+        },
+        {
+          "name": "holidays",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "OwnTimeHoliday"
+            }
+          }
+        },
+        {
+          "name": "closing_days",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "OwnTimeClosingDay"
+            }
+          }
+        },
+        {
+          "name": "days",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "OwnTimeDay"
+            }
+          }
+        },
+        {
+          "name": "month_summary",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "OwnTimeMonthSummary"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OwnTimeRestHint",
+      "go_type": "workforce.OwnTimeRestHint",
+      "fields": [
+        {
+          "name": "date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "rest_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "limit_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OwnTimeShift",
+      "go_type": "workforce.OwnTimeShift",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "start_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "break_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "shift_type_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "shift_type_color",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "cancelled",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "change_reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "origin_shift_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OwnTimeShifts",
+      "go_type": "workforce.OwnTimeShifts",
+      "fields": [
+        {
+          "name": "state",
+          "schema": {
+            "kind": "enum",
+            "ref": "OwnTimeShiftState"
+          }
+        },
+        {
+          "name": "rows",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "OwnTimeShift"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "OwnTimeTotals",
+      "go_type": "workforce.OwnTimeTotals",
+      "fields": [
+        {
+          "name": "has_target",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "has_override",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "target_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "actual_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "credit_minutes",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "balance_minutes",
+          "schema": {
+            "kind": "int"
           }
         }
       ]
@@ -77715,9 +82424,9 @@
         {
           "name": "handled_up_to_message_id",
           "optional": true,
-          "text_reason": "empty string means send without confirming a message",
           "schema": {
-            "kind": "string"
+            "kind": "id",
+            "no_id": true
           }
         },
         {
@@ -79132,6 +83841,28 @@
       ]
     },
     {
+      "name": "PaymentTextDebtorDetails",
+      "go_type": "parentbillinghttp.PaymentTextDebtorDetails",
+      "fields": [
+        {
+          "name": "count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "invoice_numbers",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "PayrollAbsenceTypeRequest",
       "go_type": "timetracking.PayrollAbsenceTypeRequest",
       "request": true,
@@ -79423,6 +84154,19 @@
           "optional": true,
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "PayrollNotReadyDetails",
+      "go_type": "traegerstaff.PayrollNotReadyDetails",
+      "fields": [
+        {
+          "name": "report",
+          "schema": {
+            "kind": "ref",
+            "ref": "TraegerPayrollReport"
           }
         }
       ]
@@ -80032,6 +84776,18 @@
             "elem": {
               "kind": "string"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "PermissionDetails",
+      "go_type": "common.PermissionDetails",
+      "fields": [
+        {
+          "name": "permission",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -81497,6 +86253,13 @@
           }
         },
         {
+          "name": "pickup_person_one_time",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
           "name": "signed",
           "schema": {
             "kind": "bool"
@@ -81596,6 +86359,17 @@
             "elem": {
               "kind": "ref",
               "ref": "DepartureExceptionResponse"
+            }
+          }
+        },
+        {
+          "name": "pickup_persons",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "PickupPersonResponse"
             }
           }
         },
@@ -81846,6 +86620,114 @@
       ]
     },
     {
+      "name": "PickupPerson",
+      "go_type": "grouplive.PickupPerson",
+      "fields": [
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "one_time",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "PickupPersonRequest",
+      "go_type": "careplanhttp.PickupPersonRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "guardian_profile_id",
+          "optional": true,
+          "schema": {
+            "kind": "id",
+            "nullable": true
+          }
+        },
+        {
+          "name": "name",
+          "optional": true,
+          "schema": {
+            "kind": "string",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "PickupPersonResponse",
+      "go_type": "careplanhttp.PickupPersonResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "exception_date",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "guardian_profile_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "one_time",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "updated_at",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "PickupResetDetails",
+      "go_type": "careplanhttp.PickupResetDetails",
+      "fields": [
+        {
+          "name": "needed_until",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "possible_from",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "PickupScheduleImportData",
       "go_type": "dataimport.PickupScheduleImportData",
       "fields": [
@@ -82060,6 +86942,14 @@
           "schema": {
             "kind": "string"
           }
+        },
+        {
+          "name": "day_pickup_person",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "PickupPerson"
+          }
         }
       ]
     },
@@ -82083,6 +86973,18 @@
           "name": "table",
           "schema": {
             "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
+      "name": "PlaceholderDetails",
+      "go_type": "common.PlaceholderDetails",
+      "fields": [
+        {
+          "name": "placeholders",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -82575,6 +87477,24 @@
       ]
     },
     {
+      "name": "PlannedStartDetails",
+      "go_type": "timetracking.PlannedStartDetails",
+      "fields": [
+        {
+          "name": "planned_start_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "current_time",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "PlanningTrack",
       "go_type": "timetable.PlanningTrack",
       "fields": [
@@ -82875,6 +87795,23 @@
       ]
     },
     {
+      "name": "PossiblyEnrolledDetails",
+      "go_type": "enrollmenthttp.PossiblyEnrolledDetails",
+      "fields": [
+        {
+          "name": "candidates",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "AdminExistingChildCandidate"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "PostMessageRequest",
       "go_type": "parent.PostMessageRequest",
       "request": true,
@@ -82908,9 +87845,9 @@
         {
           "name": "group_thread_id",
           "optional": true,
-          "text_reason": "empty string means send without a group thread",
           "schema": {
-            "kind": "string"
+            "kind": "id",
+            "no_id": true
           }
         },
         {
@@ -83890,6 +88827,24 @@
           "name": "name",
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "PublicHolidayChildDayLimitDetails",
+      "go_type": "enrollmenthttp.PublicHolidayChildDayLimitDetails",
+      "fields": [
+        {
+          "name": "limit",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "child",
+          "schema": {
+            "kind": "int"
           }
         }
       ]
@@ -84878,6 +89833,33 @@
       ]
     },
     {
+      "name": "RebookingValues",
+      "go_type": "workforce.RebookingValues",
+      "fields": [
+        {
+          "name": "day",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "month",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "limit",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
       "name": "RecentActivityItem",
       "go_type": "presence.RecentActivityItem",
       "fields": [
@@ -85309,6 +90291,75 @@
       ]
     },
     {
+      "name": "RefusalValues",
+      "go_type": "timetable.RefusalValues",
+      "fields": [
+        {
+          "name": "date",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "start",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "max",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "given",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "max_days",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "max_weeks",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "grade",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "offering",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "RegisterRequest",
       "go_type": "account.RegisterRequest",
       "request": true,
@@ -85446,6 +90497,12 @@
       "name": "Reminder",
       "go_type": "carecontract.Reminder",
       "fields": [
+        {
+          "name": "version_number",
+          "schema": {
+            "kind": "int"
+          }
+        },
         {
           "name": "number",
           "schema": {
@@ -85787,6 +90844,13 @@
       "name": "RequestMailOutcome",
       "go_type": "enrollment.RequestMailOutcome",
       "fields": [
+        {
+          "name": "awaiting_feedback",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
         {
           "name": "kind",
           "schema": {
@@ -86155,6 +91219,18 @@
           "optional": true,
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "RetentionDaysDetails",
+      "go_type": "operator.RetentionDaysDetails",
+      "fields": [
+        {
+          "name": "retention_days",
+          "schema": {
+            "kind": "int"
           }
         }
       ]
@@ -86931,6 +92007,116 @@
       ]
     },
     {
+      "name": "RoomCapacityDetails",
+      "go_type": "studentpresence.RoomCapacityDetails",
+      "fields": [
+        {
+          "name": "room_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "room_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "current_occupancy",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "max_capacity",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "incoming_students",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "RoomClosureRequest",
+      "go_type": "httpadapter.RoomClosureRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "start_date",
+          "optional": true,
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "end_date",
+          "optional": true,
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "RoomClosureResponse",
+      "go_type": "httpadapter.RoomClosureResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "room_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "start_date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "end_date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "reason",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "created_at",
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
       "name": "RoomHistoryStopResponse",
       "go_type": "studentpresencehttp.RoomHistoryStopResponse",
       "fields": [
@@ -87398,6 +92584,36 @@
           "optional": true,
           "schema": {
             "kind": "id"
+          }
+        }
+      ]
+    },
+    {
+      "name": "RoomStillPlannedDetails",
+      "go_type": "httpadapter.RoomStillPlannedDetails",
+      "fields": [
+        {
+          "name": "activity_groups",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "upcoming_blocks",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "education_groups",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "devices",
+          "schema": {
+            "kind": "int"
           }
         }
       ]
@@ -89474,6 +94690,13 @@
           "schema": {
             "kind": "id"
           }
+        },
+        {
+          "name": "sender_account_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
         }
       ]
     },
@@ -90714,6 +95937,13 @@
           }
         },
         {
+          "name": "invitation_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
           "name": "email",
           "schema": {
             "kind": "string"
@@ -91174,6 +96404,48 @@
       ]
     },
     {
+      "name": "SchoolChildCount",
+      "go_type": "traegerview.SchoolChildCount",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "slug",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "subdomain",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "city",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "children",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
       "name": "SchoolClassesRequest",
       "go_type": "staff.SchoolClassesRequest",
       "request": true,
@@ -91375,6 +96647,82 @@
       ]
     },
     {
+      "name": "SchoolDayChanges",
+      "go_type": "traegerview.SchoolDayChanges",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "slug",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "subdomain",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "city",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "closing_days",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "SchoolDayClosing"
+            }
+          }
+        },
+        {
+          "name": "cancelled_blocks",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "opening_changes",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "SchoolDayOpening"
+            }
+          }
+        },
+        {
+          "name": "meal_cancelled",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "closed_rooms",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
       "name": "SchoolDayChild",
       "go_type": "classday.SchoolDayChild",
       "fields": [
@@ -91488,6 +96836,70 @@
               "kind": "ref",
               "ref": "SchoolDayChild"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "SchoolDayClosing",
+      "go_type": "traegerview.SchoolDayClosing",
+      "fields": [
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "traeger",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "since",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "until",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "SchoolDayOpening",
+      "go_type": "traegerview.SchoolDayOpening",
+      "fields": [
+        {
+          "name": "opens_at",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "closes_at",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "since",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "until",
+          "schema": {
+            "kind": "date",
+            "nullable": true
           }
         }
       ]
@@ -91644,6 +97056,18 @@
           "name": "end_date",
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SchoolDeviceSlotsDetails",
+      "go_type": "devices.SchoolDeviceSlotsDetails",
+      "fields": [
+        {
+          "name": "device_slots",
+          "schema": {
+            "kind": "int"
           }
         }
       ]
@@ -91892,6 +97316,31 @@
         },
         {
           "name": "tenant_slug",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SchoolMonthDetails",
+      "go_type": "traegerstaff.SchoolMonthDetails",
+      "fields": [
+        {
+          "name": "school",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "month",
           "optional": true,
           "schema": {
             "kind": "string"
@@ -92224,6 +97673,18 @@
         },
         {
           "name": "version",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SchoolPartyCreditorDetails",
+      "go_type": "traeger.SchoolPartyCreditorDetails",
+      "fields": [
+        {
+          "name": "school_name",
           "schema": {
             "kind": "string"
           }
@@ -92635,6 +98096,18 @@
               "kind": "ref",
               "ref": "SchoolRoleSchoolResponse"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "SchoolRoleNameDetails",
+      "go_type": "traegerportal.SchoolRoleNameDetails",
+      "fields": [
+        {
+          "name": "schools",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -93271,6 +98744,68 @@
       ]
     },
     {
+      "name": "SchoolSummaryResponse",
+      "go_type": "catererportalhttp.SchoolSummaryResponse",
+      "fields": [
+        {
+          "name": "id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "delivery_address",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "started_at",
+          "optional": true,
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "names",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "by_class",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "failure",
+          "optional": true,
+          "schema": {
+            "kind": "ref",
+            "ref": "SummaryFailureResponse"
+          }
+        },
+        {
+          "name": "days",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "SummaryDayResponse"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "SchoolSupervisionsResponse",
       "go_type": "timetablehttp.SchoolSupervisionsResponse",
       "fields": [
@@ -93655,6 +99190,36 @@
       ]
     },
     {
+      "name": "SchoolsDayChanges",
+      "go_type": "traegerview.SchoolsDayChanges",
+      "fields": [
+        {
+          "name": "day",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "schools",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "SchoolDayChanges"
+            }
+          }
+        },
+        {
+          "name": "as_of",
+          "schema": {
+            "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
       "name": "SchoolsResponse",
       "go_type": "catererportalhttp.SchoolsResponse",
       "fields": [
@@ -93671,7 +99236,7 @@
             "nullable": true,
             "elem": {
               "kind": "ref",
-              "ref": "SchoolResponse"
+              "ref": "SchoolSummaryResponse"
             }
           }
         }
@@ -96220,6 +101785,44 @@
       ]
     },
     {
+      "name": "ShiftOtherSiteDetails",
+      "go_type": "workforce.ShiftOtherSiteDetails",
+      "fields": [
+        {
+          "name": "date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "day",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "start",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "ShiftRequest",
       "go_type": "staffshifts.ShiftRequest",
       "request": true,
@@ -96625,6 +102228,35 @@
       ]
     },
     {
+      "name": "ShiftWorkingTimeDetails",
+      "go_type": "workforce.ShiftWorkingTimeDetails",
+      "fields": [
+        {
+          "name": "warnings",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "ShiftWorkingTimeWarning"
+            }
+          }
+        },
+        {
+          "name": "count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "reason_required",
+          "schema": {
+            "kind": "bool"
+          }
+        }
+      ]
+    },
+    {
       "name": "ShiftWorkingTimeWarning",
       "go_type": "workforce.ShiftWorkingTimeWarning",
       "fields": [
@@ -96744,6 +102376,13 @@
           "optional": true,
           "schema": {
             "kind": "bool"
+          }
+        },
+        {
+          "name": "document_sha256",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -97010,6 +102649,26 @@
             "nullable": true,
             "ref": "SigningSignature"
           }
+        },
+        {
+          "name": "previous",
+          "schema": {
+            "kind": "ref",
+            "nullable": true,
+            "ref": "SigningContract"
+          }
+        },
+        {
+          "name": "awaits_signature",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "amendment",
+          "schema": {
+            "kind": "bool"
+          }
         }
       ]
     },
@@ -97041,6 +102700,25 @@
             "elem": {
               "kind": "int"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "SizeLimitDetails",
+      "go_type": "common.SizeLimitDetails",
+      "fields": [
+        {
+          "name": "max_mb",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "max_bytes",
+          "optional": true,
+          "schema": {
+            "kind": "int"
           }
         }
       ]
@@ -97196,6 +102874,17 @@
           }
         },
         {
+          "name": "planned_activities",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "ref",
+              "ref": "StudentListPlannedActivity"
+            }
+          }
+        },
+        {
           "name": "departure_modes",
           "optional": true,
           "schema": {
@@ -97284,6 +102973,13 @@
             "elem": {
               "kind": "id"
             }
+          }
+        },
+        {
+          "name": "photo_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         },
         {
@@ -97475,6 +103171,28 @@
           "optional": true,
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SollRevenueAccountDetails",
+      "go_type": "parentbillinghttp.SollRevenueAccountDetails",
+      "fields": [
+        {
+          "name": "count",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "documents",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
           }
         }
       ]
@@ -98149,6 +103867,44 @@
       ]
     },
     {
+      "name": "StaffContractDetails",
+      "go_type": "traegerstaff.StaffContractDetails",
+      "fields": [
+        {
+          "name": "field",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "day",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "date",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "StaffDocumentListResponse",
       "go_type": "timetracking.StaffDocumentListResponse",
       "fields": [
@@ -98534,6 +104290,30 @@
               "kind": "ref",
               "ref": "ParentMessageAttachmentResponse"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "StaffGroupNameLimitDetails",
+      "go_type": "staffmessaging.StaffGroupNameLimitDetails",
+      "fields": [
+        {
+          "name": "max_characters",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "StaffGroupSizeLimitDetails",
+      "go_type": "staffmessaging.StaffGroupSizeLimitDetails",
+      "fields": [
+        {
+          "name": "max_members",
+          "schema": {
+            "kind": "int"
           }
         }
       ]
@@ -101513,6 +107293,12 @@
           }
         },
         {
+          "name": "care_facility_article",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
           "name": "renewal_terms",
           "optional": true,
           "schema": {
@@ -101723,6 +107509,13 @@
         },
         {
           "name": "actual_pickup_time",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "photo_version",
           "optional": true,
           "schema": {
             "kind": "string"
@@ -102316,6 +108109,13 @@
           "schema": {
             "kind": "ref",
             "ref": "ClassHandover"
+          }
+        },
+        {
+          "name": "photo_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         },
         {
@@ -103193,6 +108993,30 @@
       ]
     },
     {
+      "name": "StudentListPlannedActivity",
+      "go_type": "presenceprojectionhttp.StudentListPlannedActivity",
+      "fields": [
+        {
+          "name": "title",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "start_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end_time",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "StudentMoveResult",
       "go_type": "studentpresence.StudentMoveResult",
       "fields": [
@@ -103311,10 +109135,10 @@
         {
           "name": "guardian_id",
           "optional": true,
-          "text_reason": "empty string clears the guardian selection",
           "schema": {
-            "kind": "string",
-            "nullable": true
+            "kind": "id",
+            "nullable": true,
+            "no_id": true
           }
         }
       ]
@@ -103987,6 +109811,13 @@
           }
         },
         {
+          "name": "photo_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
           "name": "photo_url",
           "optional": true,
           "schema": {
@@ -104302,7 +110133,15 @@
         {
           "name": "pickup_person_guardian_profile_id",
           "optional": true,
-          "text_reason": "empty string explicitly clears the collector; null leaves it unspecified",
+          "schema": {
+            "kind": "id",
+            "nullable": true,
+            "no_id": true
+          }
+        },
+        {
+          "name": "pickup_person_name",
+          "optional": true,
           "schema": {
             "kind": "string",
             "nullable": true
@@ -104960,6 +110799,79 @@
       ]
     },
     {
+      "name": "SummaryDayResponse",
+      "go_type": "catererportalhttp.SummaryDayResponse",
+      "fields": [
+        {
+          "name": "date",
+          "schema": {
+            "kind": "date"
+          }
+        },
+        {
+          "name": "closed",
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
+          "name": "deadline",
+          "schema": {
+            "kind": "instant"
+          }
+        },
+        {
+          "name": "status",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "order_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "total",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "added",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "removed",
+          "schema": {
+            "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SummaryFailureResponse",
+      "go_type": "catererportalhttp.SummaryFailureResponse",
+      "fields": [
+        {
+          "name": "status",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "code",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "SupervisionClassHandover",
       "go_type": "supervisiondashboard.SupervisionClassHandover",
       "fields": [
@@ -105020,6 +110932,36 @@
         {
           "name": "note",
           "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "SupervisionPlannedActivity",
+      "go_type": "supervisiondashboard.SupervisionPlannedActivity",
+      "fields": [
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "title",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "start_time",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end_time",
           "schema": {
             "kind": "string"
           }
@@ -105463,6 +111405,47 @@
           "name": "staff_without_target",
           "schema": {
             "kind": "int"
+          }
+        }
+      ]
+    },
+    {
+      "name": "TargetOverrideValues",
+      "go_type": "workforce.TargetOverrideValues",
+      "fields": [
+        {
+          "name": "max_days",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "max_hours",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "start_date",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "end_date",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "month",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -105966,6 +111949,12 @@
           }
         },
         {
+          "name": "care_facility_article",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
           "name": "traeger_name",
           "optional": true,
           "schema": {
@@ -106010,9 +111999,9 @@
         },
         {
           "name": "counterpart_account_id",
-          "text_reason": "required legacy field, empty for group threads without a counterpart",
           "schema": {
-            "kind": "string"
+            "kind": "id",
+            "no_id": true
           }
         },
         {
@@ -106074,6 +112063,12 @@
       "name": "ThreadMailsResponse",
       "go_type": "messaging.ThreadMailsResponse",
       "fields": [
+        {
+          "name": "awaiting_feedback",
+          "schema": {
+            "kind": "bool"
+          }
+        },
         {
           "name": "messages",
           "schema": {
@@ -106214,9 +112209,9 @@
       "fields": [
         {
           "name": "thread_id",
-          "text_reason": "empty string before the first message",
           "schema": {
-            "kind": "string"
+            "kind": "id",
+            "no_id": true
           }
         },
         {
@@ -107080,6 +113075,107 @@
           "optional": true,
           "schema": {
             "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "TraegerChild",
+      "go_type": "traegerview.TraegerChild",
+      "fields": [
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "school_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "school_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_class",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "group_name",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "TraegerChildren",
+      "go_type": "traegerview.TraegerChildren",
+      "fields": [
+        {
+          "name": "roster_date",
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "schools",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "SchoolChildCount"
+            }
+          }
+        },
+        {
+          "name": "total",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "matched",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "children",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "TraegerChild"
+            }
+          }
+        },
+        {
+          "name": "next_cursor",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -108759,6 +114855,68 @@
           "optional": true,
           "schema": {
             "kind": "instant"
+          }
+        }
+      ]
+    },
+    {
+      "name": "TraegerOpeningChangeRequest",
+      "go_type": "staffcalendarhttp.TraegerOpeningChangeRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "start_date",
+          "optional": true,
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "end_date",
+          "optional": true,
+          "schema": {
+            "kind": "date",
+            "nullable": true
+          }
+        },
+        {
+          "name": "opens_at",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "closes_at",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "reason",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "school_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "id"
+            }
+          }
+        },
+        {
+          "name": "expected_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -112937,6 +119095,18 @@
       ]
     },
     {
+      "name": "UploadContentDetails",
+      "go_type": "enrollmenthttp.UploadContentDetails",
+      "fields": [
+        {
+          "name": "filename",
+          "schema": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
       "name": "UploadReceipt",
       "go_type": "enrollmenthttp.UploadReceipt",
       "fields": [
@@ -112962,6 +119132,35 @@
           "name": "content_type",
           "schema": {
             "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "name": "UploadRefusalDetails",
+      "go_type": "enrollmenthttp.UploadRefusalDetails",
+      "fields": [
+        {
+          "name": "max_mb",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "max_bytes",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "allowed_types",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "elem": {
+              "kind": "string"
+            }
           }
         }
       ]
@@ -113577,6 +119776,49 @@
             "kind": "date",
             "nullable": true
           }
+        },
+        {
+          "name": "agreed_from",
+          "optional": true,
+          "schema": {
+            "kind": "date"
+          }
+        }
+      ]
+    },
+    {
+      "name": "VersionSignature",
+      "go_type": "carecontract.VersionSignature",
+      "fields": [
+        {
+          "name": "version_number",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "method",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "channel",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "signer_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "signed_at",
+          "schema": {
+            "kind": "instant"
+          }
         }
       ]
     },
@@ -113647,6 +119889,18 @@
           "schema": {
             "kind": "json",
             "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "VisibleDaysDetails",
+      "go_type": "operator.VisibleDaysDetails",
+      "fields": [
+        {
+          "name": "visible_days",
+          "schema": {
+            "kind": "int"
           }
         }
       ]
@@ -113729,6 +119983,13 @@
           "optional": true,
           "schema": {
             "kind": "instant"
+          }
+        },
+        {
+          "name": "photo_version",
+          "optional": true,
+          "schema": {
+            "kind": "string"
           }
         },
         {
@@ -113984,6 +120245,13 @@
           }
         },
         {
+          "name": "meal_cancelled",
+          "optional": true,
+          "schema": {
+            "kind": "bool"
+          }
+        },
+        {
           "name": "participants",
           "schema": {
             "kind": "array",
@@ -114076,10 +120344,22 @@
         {
           "name": "child_id",
           "optional": true,
-          "text_reason": "empty string or omission withdraws the whole request",
           "schema": {
-            "kind": "string",
-            "nullable": true
+            "kind": "id",
+            "nullable": true,
+            "no_id": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "WithdrawalConfirmationDetails",
+      "go_type": "parent.WithdrawalConfirmationDetails",
+      "fields": [
+        {
+          "name": "confirmation",
+          "schema": {
+            "kind": "string"
           }
         }
       ]
@@ -121163,6 +127443,34 @@
       ]
     },
     {
+      "name": "displayPreferencesRequest",
+      "go_type": "me.displayPreferencesRequest",
+      "request": true,
+      "fields": [
+        {
+          "name": "moreContrast",
+          "optional": true,
+          "schema": {
+            "kind": "bool",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "displayPreferencesResponse",
+      "go_type": "me.displayPreferencesResponse",
+      "fields": [
+        {
+          "name": "moreContrast",
+          "schema": {
+            "kind": "bool",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
       "name": "editedInWindowResponse",
       "go_type": "timetablehttp.editedInWindowResponse",
       "fields": [
@@ -122413,6 +128721,68 @@
       ]
     },
     {
+      "name": "hireMatchResponse",
+      "go_type": "traegerstaff.hireMatchResponse",
+      "fields": [
+        {
+          "name": "kind",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "staff_record_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "school_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "school_name",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "staff_id",
+          "optional": true,
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "first_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "last_name",
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "reasons",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "string"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "holidayAddressRequest",
       "go_type": "enrollmenthttp.holidayAddressRequest",
       "request": true,
@@ -122752,6 +129122,13 @@
           "schema": {
             "kind": "bool"
           }
+        },
+        {
+          "name": "points",
+          "optional": true,
+          "schema": {
+            "kind": "int"
+          }
         }
       ]
     },
@@ -123077,6 +129454,29 @@
             "elem": {
               "kind": "ref",
               "ref": "homeLayoutBlockRequest"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "instanceAttendanceResponse",
+      "go_type": "timetablehttp.instanceAttendanceResponse",
+      "fields": [
+        {
+          "name": "instance_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "students",
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "ref",
+              "ref": "instanceStudentSummary"
             }
           }
         }
@@ -124064,6 +130464,12 @@
         },
         {
           "name": "skipped_closing_days",
+          "schema": {
+            "kind": "int"
+          }
+        },
+        {
+          "name": "skipped_closed_rooms",
           "schema": {
             "kind": "int"
           }
@@ -126937,6 +133343,13 @@
           }
         },
         {
+          "name": "pickup_person",
+          "optional": true,
+          "schema": {
+            "kind": "string"
+          }
+        },
+        {
           "name": "withdrawn",
           "schema": {
             "kind": "bool"
@@ -128513,9 +134926,9 @@
         {
           "name": "chosen_request_id",
           "optional": true,
-          "text_reason": "empty string means no selected request",
           "schema": {
-            "kind": "string"
+            "kind": "id",
+            "no_id": true
           }
         },
         {
@@ -130710,17 +137123,28 @@
         {
           "name": "group_id",
           "optional": true,
-          "text_reason": "comma-separated list of groups or empty selection",
+          "text_reason": "legacy comma-separated group filter",
           "schema": {
             "kind": "string"
           }
         },
         {
+          "name": "group_ids",
+          "optional": true,
+          "schema": {
+            "kind": "array",
+            "nullable": true,
+            "elem": {
+              "kind": "id"
+            }
+          }
+        },
+        {
           "name": "room_id",
           "optional": true,
-          "text_reason": "empty string means no room filter",
           "schema": {
-            "kind": "string"
+            "kind": "id",
+            "no_id": true
           }
         },
         {
@@ -130992,19 +137416,19 @@
         {
           "name": "activity_group_id",
           "optional": true,
-          "text_reason": "empty string means the note has no group subject",
           "schema": {
-            "kind": "string",
-            "nullable": true
+            "kind": "id",
+            "nullable": true,
+            "no_id": true
           }
         },
         {
           "name": "education_group_id",
           "optional": true,
-          "text_reason": "empty string means the note has no group subject",
           "schema": {
-            "kind": "string",
-            "nullable": true
+            "kind": "id",
+            "nullable": true,
+            "no_id": true
           }
         },
         {
@@ -131236,6 +137660,18 @@
       "name": "studentPhotoUploadedResponse",
       "go_type": "students.studentPhotoUploadedResponse",
       "fields": [
+        {
+          "name": "student_id",
+          "schema": {
+            "kind": "id"
+          }
+        },
+        {
+          "name": "photo_version",
+          "schema": {
+            "kind": "string"
+          }
+        },
         {
           "name": "photo_url",
           "schema": {
@@ -132121,10 +138557,10 @@
         {
           "name": "ref_id",
           "optional": true,
-          "text_reason": "empty string means no numeric target",
           "schema": {
-            "kind": "string",
-            "nullable": true
+            "kind": "id",
+            "nullable": true,
+            "no_id": true
           }
         },
         {
@@ -132310,10 +138746,10 @@
         {
           "name": "ref_id",
           "optional": true,
-          "text_reason": "empty string means no numeric target",
           "schema": {
-            "kind": "string",
-            "nullable": true
+            "kind": "id",
+            "nullable": true,
+            "no_id": true
           }
         },
         {

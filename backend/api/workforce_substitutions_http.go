@@ -6,6 +6,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/moto-ogs/project-phoenix/api/common"
+	"github.com/moto-ogs/project-phoenix/modules/timetable"
 	"github.com/moto-ogs/project-phoenix/modules/workforce"
 	substitutionsHTTP "github.com/moto-ogs/project-phoenix/modules/workforce/http/substitutions"
 )
@@ -35,7 +36,9 @@ func substitutionsRuntime() substitutionsHTTP.Runtime {
 func renderSubstitutionsFailure(w http.ResponseWriter, r *http.Request, failure substitutionsHTTP.Failure) {
 	resp := &common.ErrResponse{
 		Err: failure.Err, HTTPStatusCode: failure.Status, Detail: failure.Message, Code: failure.Code,
-		Details: failure.Details,
+	}
+	if failure.Details != (workforce.SubstitutionRefusalValues{}) {
+		resp.Details = timetable.RefusalValues{Date: failure.Details.Date, Max: failure.Details.Max}
 	}
 	if failure.Field != "" {
 		resp.Errors = []common.FieldError{{Field: failure.Field, Reason: failure.Message}}

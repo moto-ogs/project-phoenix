@@ -11,6 +11,7 @@ import { StatusBadge } from "~/components/ui/status-badge";
 import { formatChatDateTime } from "~/lib/date-helpers";
 import type { HolidayAllocationDecision } from "~/lib/traeger-holiday-allocation-api";
 import { traegerPath } from "~/lib/traeger-url";
+import { decisionCriteriaText } from "./holiday-allocation-model";
 import { formatHolidayWeek } from "./holiday-registration-format";
 
 function columns(
@@ -81,8 +82,7 @@ function columns(
     {
       key: "criteria",
       header: "Kriterien zu diesem Zeitpunkt",
-      render: (decision) =>
-        decision.criteriaMet.length > 0 ? decision.criteriaMet.join(", ") : "–",
+      render: decisionCriteriaText,
       stacked: "field",
     },
     {

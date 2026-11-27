@@ -112,11 +112,17 @@ func (s *Intake) StatusPage(ctx context.Context, status *enrollmentNative.Reques
 	if err != nil {
 		return none, fmt.Errorf("status: resolve care facility term: %w", err)
 	}
+	article, err := s.deps.Settings.CareFacilityArticle(tenantCtx)
+	if err != nil {
+		return none, fmt.Errorf("status: resolve care facility article: %w", err)
+	}
 	terms, err := s.renewalTerms(tenantCtx, req, children)
 	if err != nil {
 		return none, err
 	}
-	return enrollmentNative.StatusPage{EditMode: editMode, CareFacilityTerm: term, RenewalTerms: terms}, nil
+	return enrollmentNative.StatusPage{
+		EditMode: editMode, CareFacilityTerm: term, CareFacilityArticle: article, RenewalTerms: terms,
+	}, nil
 }
 
 // tenantContext scopes ctx to the tenant of a request the caller handed in.

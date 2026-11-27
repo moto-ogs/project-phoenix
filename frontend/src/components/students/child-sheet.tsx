@@ -41,7 +41,7 @@ import {
   type Student,
 } from "~/lib/student-helpers";
 import { useTenantRouter } from "~/lib/tenant-router";
-import { ParentAttentionButton } from "~/components/students/parent-attention-badge";
+import { ParentAttentionSheetButton } from "~/components/students/parent-attention-badge";
 import { TrackingIndicators } from "~/components/students/tracking-indicators";
 import { dayHomeChange } from "~/components/students/student-table";
 import { searchStudentDay } from "~/components/students/search-student-card";
@@ -319,7 +319,7 @@ export function ChildSummary({
         </div>
       ) : null}
       {cardFacts ? (
-        <ParentAttentionButton
+        <ParentAttentionSheetButton
           studentId={student.id.toString()}
           studentName={studentName(student)}
         />

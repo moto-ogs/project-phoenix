@@ -1,3 +1,4 @@
+import type { z } from "zod";
 import { bffJson } from "~/lib/bff-fetch";
 /**
  * Client of the Elternabrechnung in the Träger portal (#4664): the
@@ -14,6 +15,7 @@ import {
 } from "./holiday-contribution";
 import { ApiError, wireErrorCode } from "./api-error";
 import { knownEnum } from "./contract/known-enum";
+import { FamilyDebtorNumberDetailsSchema } from "./contract/problem-details.generated";
 import { requiredDay } from "./contract/required-day";
 import type * as sharedContract from "./contract/shared.generated";
 import type * as traegerContributionRulesContract from "./contract/traeger-contribution-rules.generated";
@@ -48,7 +50,7 @@ export interface ContributionRule {
 export type ContributionRuleInput = Omit<ContributionRule, "id" | "version">;
 
 /** A rule of a kind this build does not know is left out of the list. */
-function rulesFromBackend(
+export function rulesFromBackend(
   rules: readonly sharedContract.ContributionRule[],
 ): ContributionRule[] {
   return rules.flatMap((rule) => {
@@ -155,7 +157,14 @@ function costBearerFromBackend(bearer: sharedContract.CostBearer): CostBearer {
 
 /** The cost bearers of the Träger by name. */
 export async function fetchCostBearers(): Promise<CostBearer[]> {
-  const bearers = await bffJson("org", "GET /traeger/cost-bearers/");
+  return mapCostBearers(await bffJson("org", "GET /traeger/cost-bearers/"));
+}
+
+export function mapCostBearers(
+  bearers: z.output<
+    (typeof traegerCostBearersContract.routes)["GET /traeger/cost-bearers/"]["response"]
+  >["data"],
+): CostBearer[] {
   return bearers.map(costBearerFromBackend);
 }
 
@@ -316,6 +325,139 @@ export async function changeHolidayDebtorNumber(
   return changed.debtor_number;
 }
 
+/** Who pays the contribution of a registration (#5627, #8158). */
+export type HolidayPayerKind = "family" | "exemption" | "cost_bearer";
+
+const PAYER_KIND_VALUES = [
+  "family",
+  "exemption",
+  "cost_bearer",
+] as const satisfies readonly HolidayPayerKind[];
+
+/** A payer the Träger-Büro chooses; `costBearerId` only with a cost bearer. */
+export interface HolidayPayerChoice {
+  readonly kind: HolidayPayerKind;
+  readonly costBearerId: string | null;
+}
+
+/** Who pays, with the copied name of a cost bearer ("" otherwise). */
+interface HolidayPayer extends HolidayPayerChoice {
+  readonly costBearerName: string;
+}
+
+/** What a payer change does to one child, in whole cent. */
+interface HolidayPayerChildEffect {
+  readonly childId: string;
+  readonly position: number;
+  readonly familyBeforeCents: number;
+  readonly familyAfterCents: number;
+  readonly costBearerBeforeCents: number;
+  readonly costBearerAfterCents: number;
+}
+
+/**
+ * What a change of the payer of a confirmed registration would freeze
+ * (#8158), before the Träger-Büro saves it.
+ */
+export interface HolidayPayerPreview {
+  readonly current: HolidayPayer;
+  readonly chosen: HolidayPayer;
+  readonly changed: boolean;
+  readonly children: readonly HolidayPayerChildEffect[];
+  /** The Träger has a valid exemption rule. */
+  readonly exemptionAvailable: boolean;
+  /** An issued invoice bills the registration; it keeps its amounts. */
+  readonly invoiced: boolean;
+  /** The token the save sends back (ADR 0311). */
+  readonly fingerprint: string;
+}
+
+function payerFromBackend(
+  payer: traegerHolidayContributionsContract.HolidayPayer,
+): HolidayPayer {
+  return {
+    // A kind this build does not know reads as the family: the amounts of
+    // the preview still say what changes.
+    kind: knownEnum(PAYER_KIND_VALUES, payer.kind) ?? "family",
+    costBearerId: payer.cost_bearer_id,
+    costBearerName: payer.cost_bearer_name,
+  };
+}
+
+function payerQuery(choice: HolidayPayerChoice) {
+  return {
+    benefits_exemption: choice.kind === "exemption" ? true : undefined,
+    cost_bearer_id:
+      choice.kind === "cost_bearer"
+        ? (choice.costBearerId ?? undefined)
+        : undefined,
+  };
+}
+
+/**
+ * Previews the change of the payer of a confirmed registration to `choice`
+ * (#8158): the amounts per child before and after. Stores nothing.
+ */
+export async function fetchHolidayPayerChange(
+  periodId: string,
+  registrationId: string,
+  choice: HolidayPayerChoice,
+): Promise<HolidayPayerPreview> {
+  const preview = await bffJson(
+    "org",
+    "GET /traeger/holiday-contributions/{periodId}/registrations/{registrationId}/payer",
+    { params: { periodId, registrationId }, query: payerQuery(choice) },
+  );
+  return {
+    current: payerFromBackend(preview.current),
+    chosen: payerFromBackend(preview.chosen),
+    changed: preview.changed,
+    children: (preview.children ?? []).map((child) => ({
+      childId: child.child_id,
+      position: child.position,
+      familyBeforeCents: child.family_before_cents,
+      familyAfterCents: child.family_after_cents,
+      costBearerBeforeCents: child.cost_bearer_before_cents,
+      costBearerAfterCents: child.cost_bearer_after_cents,
+    })),
+    exemptionAvailable: preview.exemption_available,
+    invoiced: preview.invoiced,
+    fingerprint: preview.fingerprint,
+  };
+}
+
+/**
+ * Saves the payer of a confirmed registration from the preview `fingerprint`
+ * names (ADR 0311), with the reason for the history (#8158). Answers the
+ * contribution as it is frozen now.
+ */
+export async function changeHolidayPayer(
+  periodId: string,
+  registrationId: string,
+  choice: HolidayPayerChoice,
+  reason: string,
+  fingerprint: string,
+): Promise<HolidayContribution> {
+  const query = payerQuery(choice);
+  return contributionFromBackend(
+    await bffJson(
+      "org",
+      "PUT /traeger/holiday-contributions/{periodId}/registrations/{registrationId}/payer",
+      {
+        params: { periodId, registrationId },
+        body: {
+          benefits_exemption: query.benefits_exemption ?? false,
+          ...(query.cost_bearer_id
+            ? { cost_bearer_id: query.cost_bearer_id }
+            : {}),
+          reason,
+          expected_fingerprint: fingerprint,
+        } satisfies traegerHolidayContributionsContract.HolidayPayerRequest,
+      },
+    ),
+  );
+}
+
 /**
  * Which number applies when the number entered at a registration differs
  * from the one the family has (#6692): "replace" makes it the family's,
@@ -456,36 +598,21 @@ export function familyDebtorNumberConflictOf(
   ) {
     return null;
   }
-  const familyNumber = error.details?.family_debtor_number;
-  const enteredNumber = error.details?.debtor_number;
-  if (typeof familyNumber !== "string" || typeof enteredNumber !== "string") {
-    return null;
-  }
-  const familyEmail = error.details?.family_email;
-  const families = Array.isArray(error.details?.families)
-    ? error.details.families.flatMap((family: unknown) => {
-        if (!family || typeof family !== "object") return [];
-        const row = family as Record<string, unknown>;
-        return typeof row.family_email === "string" &&
-          typeof row.family_debtor_number === "string"
-          ? [
-              {
-                familyEmail: row.family_email,
-                familyNumber: row.family_debtor_number,
-              },
-            ]
-          : [];
-      })
-    : [
-        {
-          familyEmail: typeof familyEmail === "string" ? familyEmail : "",
-          familyNumber,
-        },
-      ];
+  const parsed = FamilyDebtorNumberDetailsSchema.safeParse(error.details);
+  if (!parsed.success) return null;
+  const {
+    family_debtor_number: familyNumber,
+    debtor_number: enteredNumber,
+    family_email: familyEmail,
+  } = parsed.data;
+  const families = parsed.data.families?.map((family) => ({
+    familyEmail: family.family_email,
+    familyNumber: family.family_debtor_number,
+  })) ?? [{ familyEmail, familyNumber }];
   return {
     families,
     familyNumber,
     enteredNumber,
-    familyEmail: typeof familyEmail === "string" ? familyEmail : "",
+    familyEmail,
   };
 }

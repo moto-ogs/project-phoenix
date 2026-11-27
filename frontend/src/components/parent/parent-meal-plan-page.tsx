@@ -36,7 +36,7 @@ import { StatusBadge } from "~/components/ui/status-badge";
 import { ParentPage, ParentPageHeader } from "~/components/parent/parent-page";
 import { ParentSubsection } from "~/components/parent/shell/parent-section";
 import { useDraftOn } from "~/lib/swr/read-draft";
-import { isValidISODate, parseISODate, toISODate } from "~/lib/date-helpers";
+import { parseISODate, toISODate } from "~/lib/date-helpers";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import {
   getChildMealPlan,
@@ -52,9 +52,10 @@ import { createLogger } from "~/lib/logger";
 import { usedMealAllergens } from "~/lib/meal-allergens";
 import {
   CareFacilityTermScope,
-  useCareFacilityTerm,
   useCareTermTranslations,
+  useCareTermValues,
 } from "~/lib/care-facility-term";
+import { careTermValuesOf } from "~/lib/care-facility-term-value";
 import {
   MealAllergenLegend,
   MealAllergenMarks,
@@ -67,6 +68,15 @@ import {
 } from "~/lib/hooks/use-parent-resources";
 import { useSWRAuth } from "~/lib/swr";
 import { parentInboxKeys } from "~/lib/swr/parent-inbox-keys";
+import {
+  LAST_MEAL_PLAN_WEEK,
+  linkedWeekOffset,
+  mondayISOFromOffset,
+  weekOffsetFromParam,
+  type WeekOffset,
+} from "~/lib/parent-meal-plan-window";
+
+export { weekOffsetFromParam } from "~/lib/parent-meal-plan-window";
 
 const logger = createLogger({ component: "ParentMealPlanPage" });
 
@@ -84,48 +94,12 @@ interface ChildOption {
   registrationEnabled: boolean;
   /** The school's term for its care (#6082). */
   careTerm?: string;
+  careArticle?: string;
 }
 
 // Parents reach the current week and the three following weeks. The meal plan
 // and the registration use this same range, so a notice always opens its plan.
-type WeekOffset = 0 | 1 | 2 | 3;
-const LAST_MEAL_PLAN_WEEK: WeekOffset = 3;
 const LAST_PARTICIPATION_WEEK: WeekOffset = LAST_MEAL_PLAN_WEEK;
-
-function mondayISOFromOffset(todayISO: string, weekOffset: number): string {
-  const base = parseISODate(todayISO);
-  base.setDate(base.getDate() + weekOffset * 7);
-  const offset = (base.getDay() + 6) % 7; // Mon=0 .. Sun=6
-  base.setDate(base.getDate() - offset);
-  return toISODate(base);
-}
-
-/**
- * Die Woche, die ein Link aus den Hinweisen öffnet (`?week=<Montag>`, #7145):
- * ihr Abstand zur aktuellen Woche, oder null für einen ungültigen Wert, eine
- * vergangene Woche oder eine Woche hinter der letzten erreichbaren.
- */
-function linkedWeekOffset(
-  todayISO: string,
-  week: string | undefined,
-): WeekOffset | null {
-  if (!week || !isValidISODate(week)) return null;
-  const monday = mondayISOFromOffset(week, 0);
-  for (let offset = 0; offset <= LAST_MEAL_PLAN_WEEK; offset++) {
-    if (mondayISOFromOffset(todayISO, offset) === monday) {
-      return offset as WeekOffset;
-    }
-  }
-  return null;
-}
-
-/** Wie `linkedWeekOffset`; ohne erreichbare Woche öffnet die aktuelle. */
-export function weekOffsetFromParam(
-  todayISO: string,
-  week: string | undefined,
-): WeekOffset {
-  return linkedWeekOffset(todayISO, week) ?? 0;
-}
 
 function workWeekDates(mondayISO: string): string[] {
   const monday = parseISODate(mondayISO);
@@ -1315,6 +1289,7 @@ export function ParentMealPlanPage({
           childName: `${child.first_name} ${child.last_name}`,
           registrationEnabled: childFeatures.meal_registration_enabled === true,
           careTerm: childFeatures.care_facility_term,
+          careArticle: childFeatures.care_facility_article,
         });
       }
     }
@@ -1342,10 +1317,19 @@ export function ParentMealPlanPage({
         null);
   // Der Plan gehört zur Schule des gewählten Kindes; seine Texte nennen die
   // Betreuung so, wie diese Schule sie nennt (#6082).
-  const accountTerm = useCareFacilityTerm();
-  const childTerm =
-    schools.find((school) => school.studentId === selectedStudent)?.careTerm ??
-    accountTerm;
+  const accountCare = useCareTermValues();
+  const careSchool = schools.find(
+    (school) => school.studentId === selectedStudent,
+  );
+  const selectedTerm = careSchool?.careTerm;
+  const selectedArticle = careSchool?.careArticle;
+  const childTerm = useMemo(
+    () =>
+      selectedTerm === undefined
+        ? accountCare
+        : careTermValuesOf(selectedTerm, selectedArticle),
+    [selectedTerm, selectedArticle, accountCare],
+  );
   const t = useCareTermTranslations("parentMealPlan", childTerm);
   // The school list loads once; its error text names no care term, so a
   // switch to a child with another term must not reload it and reset the
@@ -1369,10 +1353,7 @@ export function ParentMealPlanPage({
     useSwrResourceLoadError(
       [children, features],
       tSchools("errorObjectSchools"),
-      () => {
-        void children.mutate();
-        void features.mutate();
-      },
+      () => children.mutate(),
     );
   const loadingSchools = !schoolsFailure && !resolved && !knownSchools;
   const [participationEditing, setParticipationEditing] = useState(false);
@@ -1479,7 +1460,7 @@ export function ParentMealPlanPage({
       : t("subtitleMealsOnly");
 
   return (
-    <CareFacilityTermScope term={childTerm}>
+    <CareFacilityTermScope care={childTerm}>
       <ParentPage
         header={
           <ParentPageHeader
@@ -1588,8 +1569,13 @@ export function ParentMealPlanPage({
                       return (
                         <div className="overflow-hidden border-b border-gray-200">
                           <div className="flex items-center justify-between gap-2 border-b border-gray-200 px-4 py-3">
-                            <div className="text-sm font-semibold text-gray-900">
-                              {weekdayLabel(today)}
+                            <div>
+                              <div className="text-sm font-semibold text-gray-900">
+                                {weekdayLabel(today)}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {shortDate(today)}
+                              </div>
                             </div>
                             <StatusBadge
                               tone="green"

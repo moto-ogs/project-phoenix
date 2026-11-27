@@ -2,26 +2,30 @@
 {{template "header" .}}
 
 <div class="email-body">
-    <h1>Dein Betreuungsvertrag wartet auf deine Unterschrift</h1>
+    <h1>{{if .Amendment}}Bitte unterschreiben Sie die geänderte Vertragsfassung{{else}}Ihr Betreuungsvertrag wartet auf Ihre Unterschrift{{end}}</h1>
 
     <p>Guten Tag{{if .GuardianName}} {{.GuardianName}}{{end}},</p>
 
-    <p>wir haben dir den Betreuungsvertrag{{if .ChildName}} für <strong>{{.ChildName}}</strong>{{end}}{{if .Modules}} mit der Betreuung <strong>{{.Modules}}</strong>{{end}} geschickt. Er ist noch nicht unterschrieben.</p>
+    {{if .Amendment}}
+    <p>wir haben Ihnen eine geänderte Vertragsfassung{{if .ChildName}} für <strong>{{.ChildName}}</strong>{{end}} geschickt. Für diese Fassung fehlt noch Ihre Unterschrift. Bis dahin gilt der bisherige Vertrag.</p>
+    {{else}}
+    <p>wir haben Ihnen den Betreuungsvertrag{{if .ChildName}} für <strong>{{.ChildName}}</strong>{{end}}{{if .Modules}} mit der Betreuung <strong>{{.Modules}}</strong>{{end}} geschickt. Er ist noch nicht unterschrieben.</p>
+    {{end}}
 
     <div class="highlight-box">
-        <p style="margin: 0; font-size: 14px;"><strong>Was musst du tun?</strong></p>
-        <p style="margin: 8px 0 0 0; font-size: 14px;">Lies den Vertrag und unterschreibe ihn online. Stimmt etwas nicht? Dann melde dich beim Träger.</p>
+        <p style="margin: 0; font-size: 14px;"><strong>Was müssen Sie tun?</strong></p>
+        <p style="margin: 8px 0 0 0; font-size: 14px;">{{if .Amendment}}Lesen Sie die neue Fassung und unterschreiben Sie sie online.{{else}}Lesen Sie den Vertrag und unterschreiben Sie ihn online.{{end}} Stimmt etwas nicht? Dann melden Sie sich beim Träger.</p>
     </div>
 
     <div class="button-wrapper" style="text-align: center;">
-        <a class="button" href="{{.SigningURL}}">Vertrag lesen und unterschreiben</a>
+        <a class="button" href="{{.SigningURL}}">{{if .Amendment}}Änderung ansehen und unterschreiben{{else}}Vertrag lesen und unterschreiben{{end}}</a>
     </div>
 
-    <p class="security-note">Der Link gilt einmal{{if .LinkExpiresOn}} und bis zum {{.LinkExpiresOn}}{{end}}. Gib ihn nicht weiter. Hast du schon auf Papier unterschrieben? Dann musst du nichts tun.</p>
+    <p class="security-note">Der Link gilt einmal{{if .LinkExpiresOn}} und bis zum {{.LinkExpiresOn}}{{end}}. Geben Sie ihn nicht weiter. {{if .Amendment}}Haben Sie den bisherigen Vertrag auf Papier unterschrieben? Auch die neue Fassung braucht Ihre Unterschrift. Haben Sie diese Fassung schon auf Papier unterschrieben? Dann müssen Sie nichts tun.{{else}}Haben Sie schon auf Papier unterschrieben? Dann müssen Sie nichts tun.{{end}}</p>
 
-    <p>Hast du die moto Eltern-App? Dann findest du den Vertrag auch dort unter „Dokumente“.</p>
+    <p>Haben Sie die moto Eltern-App? Dann finden Sie den Vertrag auch dort unter „Dokumente“.</p>
 
-    <p class="security-note">Bitte antworte nicht auf diese E-Mail. Bei Fragen wende dich an den Träger{{if .SchoolName}} ({{.SchoolName}}){{end}}.</p>
+    <p class="security-note">Bitte antworten Sie nicht auf diese E-Mail. Bei Fragen wenden Sie sich an den Träger{{if .SchoolName}} ({{.SchoolName}}){{end}}.</p>
 </div>
 
 {{template "footer" .}}

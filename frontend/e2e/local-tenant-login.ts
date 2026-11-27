@@ -44,8 +44,12 @@ function saveSession(
   renameSync(temporary, path);
 }
 
-async function hasSession(page: Page, origin: string): Promise<boolean> {
-  const response = await page.request.get(`${origin}/api/auth/session`);
+async function hasSession(
+  page: Page,
+  origin: string,
+  basePath = "/api/auth",
+): Promise<boolean> {
+  const response = await page.request.get(`${origin}${basePath}/session`);
   if (!response.ok())
     throw new Error("Test-Sitzung konnte nicht geladen werden.");
   // Auth.js answers `null` without a session, for example when a cached
@@ -185,6 +189,42 @@ export async function loginToLocalTenant(
     `moto-playwright-sessions-${process.getuid?.() ?? "local"}`,
   ),
 ): Promise<void> {
+  await reuseLocalLogin(
+    page,
+    origin,
+    credentials,
+    cacheDirectory,
+    "/api/auth",
+    loginThroughUI,
+  );
+}
+
+/** Warm measurements reuse a real, still-confirmed local portal login. */
+export async function loginToCachedLocalPortal(
+  page: Page,
+  origin: string,
+  credentials: Credentials,
+  cacheDirectory: string,
+  basePath: string,
+): Promise<void> {
+  await reuseLocalLogin(
+    page,
+    origin,
+    credentials,
+    cacheDirectory,
+    basePath,
+    loginToLocalMfaPortal,
+  );
+}
+
+async function reuseLocalLogin(
+  page: Page,
+  origin: string,
+  credentials: Credentials,
+  cacheDirectory: string,
+  basePath: string,
+  signIn: typeof loginThroughUI,
+): Promise<void> {
   localURL(origin);
   // Playwright replaces the entire worker after a failing test. Keep only
   // completed local sessions outside reports/artifacts, just like devtools.
@@ -193,14 +233,16 @@ export async function loginToLocalTenant(
     .update(JSON.stringify([origin, credentials.email, credentials.password]))
     .digest("hex");
   const path = join(cacheDirectory, `${key}.json`);
-  if (await restoreSession(page, origin, cacheDirectory, path)) return;
+  if (await restoreSession(page, origin, cacheDirectory, path, basePath))
+    return;
   // Parallel workers share one account, and the backend sends at most three
   // MFA codes per account in fifteen minutes. On a cold cache one worker logs
   // in while the others wait and then reuse its session.
   mkdirSync(cacheDirectory, { recursive: true, mode: 0o700 });
   await withLoginLock(`${path}.lock`, async () => {
-    if (await restoreSession(page, origin, cacheDirectory, path)) return;
-    await loginThroughUI(page, origin, credentials);
+    if (await restoreSession(page, origin, cacheDirectory, path, basePath))
+      return;
+    await signIn(page, origin, credentials);
     saveSession(cacheDirectory, path, await page.context().cookies(origin));
   });
 }
@@ -210,11 +252,12 @@ async function restoreSession(
   origin: string,
   cacheDirectory: string,
   path: string,
+  basePath: string,
 ): Promise<boolean> {
   const cached = readSession(path);
   if (!cached) return false;
   await page.context().addCookies(cached);
-  if (!(await hasSession(page, origin))) return false;
+  if (!(await hasSession(page, origin, basePath))) return false;
   await page.goto(`${origin}/`, { waitUntil: "domcontentloaded" });
   saveSession(cacheDirectory, path, await page.context().cookies(origin));
   return true;

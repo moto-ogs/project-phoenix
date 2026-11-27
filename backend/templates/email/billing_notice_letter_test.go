@@ -21,17 +21,17 @@ func TestBillingNoticeAndInvoiceLetterTemplates_Render(t *testing.T) {
 	require.NoError(t, err, "parse all email templates")
 
 	for name, wants := range map[string][]string{
-		"billing-notice-letter.html": {"Dein Gebührenbescheid", "Am Ende steht, wie du widersprechen kannst.",
+		"billing-notice-letter.html": {"Ihr Gebührenbescheid", "Am Ende steht, wie Sie widersprechen können.",
 			"Die Kontaktdaten stehen im Bescheid."},
-		"billing-notice-correction-letter.html": {"Dein Gebührenbescheid hat sich geändert", "Du musst jetzt weniger bezahlen.",
-			"Dann melde dich bitte beim Träger."},
+		"billing-notice-correction-letter.html": {"Ihr Gebührenbescheid hat sich geändert", "Sie müssen jetzt weniger bezahlen.",
+			"Dann melden Sie sich bitte beim Träger."},
 		// The change notice of a Jahresbescheid (#6347) may raise or lower
 		// the amount, so it promises neither.
-		"billing-care-change-notice-letter.html": {"Dein Gebührenbescheid wurde geändert", "Er ersetzt deinen bisherigen Bescheid",
-			"Am Ende steht, wie du widersprechen kannst."},
+		"billing-care-change-notice-letter.html": {"Ihr Gebührenbescheid wurde geändert", "Er ersetzt Ihren bisherigen Bescheid",
+			"Am Ende steht, wie Sie widersprechen können."},
 		// The mail names no reference of its own: the letter says what to
 		// give, the debtor number or the invoice number (#4688, #6175).
-		"billing-invoice-letter.html": {"Deine Rechnung", "Dort steht, ob und bis wann du etwas bezahlen musst und welchen Verwendungszweck du angibst.",
+		"billing-invoice-letter.html": {"Ihre Rechnung", "Dort steht, ob und bis wann Sie etwas bezahlen müssen und welchen Verwendungszweck Sie angeben.",
 			"Die Kontaktdaten stehen in der Rechnung."},
 	} {
 		var out bytes.Buffer

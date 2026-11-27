@@ -133,7 +133,8 @@ func TestPickupChangeTeamMarksTheTeamAndClearsOnOpen(t *testing.T) {
 	assert.Len(t, unreadPickups(t, db, ctx, team, colleague.ID), 1, "the colleague's marker stays until they open the child")
 
 	// A correction that takes the time back marks it unread again, as taken
-	// back; a read of the revision the colleague loaded before leaves it.
+	// back while preserving its context; a read of the revision the colleague
+	// loaded before leaves it.
 	loaded := revisions(unreadPickups(t, db, ctx, team, colleague.ID))
 	_, err = db.NewRaw(`DELETE FROM schedule.student_pickup_exceptions WHERE student_id = ? AND exception_date = ?`, child.ID, string(date)).Exec(ctx)
 	require.NoError(t, err)
@@ -151,7 +152,7 @@ func TestPickupChangeTeamMarksTheTeamAndClearsOnOpen(t *testing.T) {
 		}
 	}
 	assert.True(t, withdrawn.Withdrawn)
-	assert.Empty(t, withdrawn.PickupTime)
+	assert.Equal(t, "15:00", withdrawn.PickupTime)
 	stale, err := inPickupSchool(t, db, ctx, func(txCtx context.Context) ([]careplan.PickupChangeTeamNotice, error) {
 		return team.MarkPickupChangeNoticesRead(txCtx, colleague.ID, child.ID, loaded)
 	})
@@ -310,4 +311,171 @@ func TestPickupChangeTeamHidesSupersededTimes(t *testing.T) {
 	require.Len(t, unreadPickups(t, db, ctx, team, reader.ID), 1)
 	testpkg.CreateTestPickupException(t, db, child.ID, date, staff.ID, "16:00", "")
 	assert.Empty(t, unreadPickups(t, db, ctx, team, reader.ID), "a newer exception means the regular time does not apply")
+}
+
+// A time exception does not make a taken-back pickup person irrelevant: the
+// two one-day values are independent, so the team still needs the withdrawal.
+func TestPickupChangeTeamShowsWithdrawnPickupPersonAlongsideTimeException(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	ctx := testpkg.Ctx(t)
+	child := testpkg.CreateTestStudent(t, db, "Mia", "Abholung", "2a")
+	parent := testpkg.CreateTestAccount(t, db, "pickup-person-withdrawal-parent")
+	reader := testpkg.CreateTestAccount(t, db, "pickup-person-withdrawal-reader")
+	staff := testpkg.CreateTestStaff(t, db, "OGS", "Abholung")
+	date := pickupTeamToday.AddDays(1)
+	var request int64
+	require.NoError(t, db.NewRaw(`INSERT INTO schedule.care_schedule_change_requests
+		(tenant_id, student_id, submitted_by, request_kind, payload, status)
+		VALUES (?, ?, ?, 'pickup_change', ?::jsonb, 'approved') RETURNING id`,
+		tenant.FromContext(ctx), child.ID, parent.ID, fmt.Sprintf(`{"date":%q,"pickup_person":{"name":"Tante Frieda"}}`, date.String()),
+	).Scan(ctx, &request))
+	_, err := db.NewRaw(`INSERT INTO schedule.student_pickup_persons
+		(tenant_id, student_id, exception_date, person_name, requested_by_guardian)
+		VALUES (?, ?, ?, 'Tante Frieda', ?)`, tenant.FromContext(ctx), child.ID, string(date), parent.ID,
+	).Exec(ctx)
+	require.NoError(t, err)
+
+	team := pickupTeam(&fixedPickupReach{responsible: []int64{reader.ID}})
+	approvePickup(t, db, ctx, team, careplan.PickupChangeNotice{
+		StudentID: child.ID, Date: date, PickupPerson: "Tante Frieda", RequestID: request,
+	})
+	require.Len(t, unreadPickups(t, db, ctx, team, reader.ID), 1)
+
+	_, err = db.NewRaw(`DELETE FROM schedule.student_pickup_persons WHERE tenant_id = ? AND student_id = ? AND exception_date = ?`, tenant.FromContext(ctx), child.ID, string(date)).Exec(ctx)
+	require.NoError(t, err)
+	_, err = db.NewRaw(`UPDATE schedule.care_schedule_change_requests SET status = 'rejected' WHERE tenant_id = ? AND id = ?`, tenant.FromContext(ctx), request).Exec(ctx)
+	require.NoError(t, err)
+	testpkg.CreateTestPickupException(t, db, child.ID, date, staff.ID, "16:00", "")
+	approvePickup(t, db, ctx, team, careplan.PickupChangeNotice{
+		StudentID: child.ID, Date: date, PickupPerson: "Tante Frieda", Withdrawn: true, RequestID: request,
+	})
+
+	unread := unreadPickups(t, db, ctx, team, reader.ID)
+	require.Len(t, unread, 1, "an unrelated time exception must not hide the withdrawn pickup person")
+	assert.True(t, unread[0].Withdrawn)
+	assert.Equal(t, "Tante Frieda", unread[0].PickupPerson)
+}
+
+func TestPickupChangeTeamShowsLegacyApprovedPickupPersonFromDatedNote(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	ctx := testpkg.Ctx(t)
+	child := testpkg.CreateTestStudent(t, db, "Mia", "Altbestand", "2a")
+	parent := testpkg.CreateTestAccount(t, db, "legacy-pickup-person-parent")
+	reader := testpkg.CreateTestAccount(t, db, "legacy-pickup-person-reader")
+	staff := testpkg.CreateTestStaff(t, db, "OGS", "Freigabe")
+	date := pickupTeamToday.AddDays(1)
+	var request int64
+	require.NoError(t, db.NewRaw(`INSERT INTO schedule.care_schedule_change_requests
+		(tenant_id, student_id, submitted_by, request_kind, payload, status)
+		VALUES (?, ?, ?, 'pickup_change', ?::jsonb, 'approved') RETURNING id`,
+		tenant.FromContext(ctx), child.ID, parent.ID, fmt.Sprintf(`{"date":%q,"pickup_person":{"name":"Tante Frieda","guardian_profile_id":17}}`, date.String()),
+	).Scan(ctx, &request))
+	_, err := db.NewRaw(`INSERT INTO schedule.student_pickup_notes
+		(tenant_id, student_id, note_date, content, created_by)
+		VALUES (?, ?, ?, 'Abholung durch Tante Frieda (Erlaubnis der Eltern)', ?)`,
+		tenant.FromContext(ctx), child.ID, string(date), staff.ID,
+	).Exec(ctx)
+	require.NoError(t, err)
+
+	team := pickupTeam(&fixedPickupReach{responsible: []int64{reader.ID}})
+	approvePickup(t, db, ctx, team, careplan.PickupChangeNotice{
+		StudentID: child.ID, Date: date, PickupPerson: "Tante Frieda", RequestID: request,
+	})
+
+	unread := unreadPickups(t, db, ctx, team, reader.ID)
+	require.Len(t, unread, 1, "the legacy dated note still makes the approved person current")
+	assert.Equal(t, "Tante Frieda", unread[0].PickupPerson)
+
+	_, err = db.NewRaw(`UPDATE schedule.student_pickup_notes SET content = 'Andere Notiz'
+		WHERE tenant_id = ? AND student_id = ? AND note_date = ?`, tenant.FromContext(ctx), child.ID, string(date)).Exec(ctx)
+	require.NoError(t, err)
+	assert.Empty(t, unreadPickups(t, db, ctx, team, reader.ID), "a changed legacy note no longer confirms the request")
+}
+
+func TestPickupChangeTeamDoesNotUseLegacyNoteForOneTimePickupPerson(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	ctx := testpkg.Ctx(t)
+	child := testpkg.CreateTestStudent(t, db, "Mia", "Einmal", "2a")
+	parent := testpkg.CreateTestAccount(t, db, "one-time-pickup-person-parent")
+	reader := testpkg.CreateTestAccount(t, db, "one-time-pickup-person-reader")
+	staff := testpkg.CreateTestStaff(t, db, "OGS", "Freigabe")
+	date := pickupTeamToday.AddDays(1)
+	var request int64
+	require.NoError(t, db.NewRaw(`INSERT INTO schedule.care_schedule_change_requests
+		(tenant_id, student_id, submitted_by, request_kind, payload, status)
+		VALUES (?, ?, ?, 'pickup_change', ?::jsonb, 'approved') RETURNING id`,
+		tenant.FromContext(ctx), child.ID, parent.ID, fmt.Sprintf(`{"date":%q,"pickup_person":{"name":"Tante Frieda"}}`, date.String()),
+	).Scan(ctx, &request))
+	_, err := db.NewRaw(`INSERT INTO schedule.student_pickup_persons
+		(tenant_id, student_id, exception_date, person_name, requested_by_guardian)
+		VALUES (?, ?, ?, 'Tante Frieda', ?)`,
+		tenant.FromContext(ctx), child.ID, string(date), parent.ID,
+	).Exec(ctx)
+	require.NoError(t, err)
+	_, err = db.NewRaw(`INSERT INTO schedule.student_pickup_notes
+		(tenant_id, student_id, note_date, content, created_by)
+		VALUES (?, ?, ?, 'Abholung durch Tante Frieda (Erlaubnis der Eltern)', ?)`,
+		tenant.FromContext(ctx), child.ID, string(date), staff.ID,
+	).Exec(ctx)
+	require.NoError(t, err)
+
+	team := pickupTeam(&fixedPickupReach{responsible: []int64{reader.ID}})
+	approvePickup(t, db, ctx, team, careplan.PickupChangeNotice{
+		StudentID: child.ID, Date: date, PickupPerson: "Tante Frieda", RequestID: request,
+	})
+	require.Len(t, unreadPickups(t, db, ctx, team, reader.ID), 1)
+
+	_, err = db.NewRaw(`DELETE FROM schedule.student_pickup_persons
+		WHERE tenant_id = ? AND student_id = ? AND exception_date = ?`,
+		tenant.FromContext(ctx), child.ID, string(date),
+	).Exec(ctx)
+	require.NoError(t, err)
+	assert.Empty(t, unreadPickups(t, db, ctx, team, reader.ID), "a legacy note cannot keep a one-time person current")
+}
+
+func TestPickupChangeTeamShowsWithdrawnPickupPersonWhenCorrectionRestoresEarlierPerson(t *testing.T) {
+	t.Parallel()
+	db := testpkg.SetupTestDB(t)
+	ctx := testpkg.Ctx(t)
+	child := testpkg.CreateTestStudent(t, db, "Mia", "Abholung", "2a")
+	parent := testpkg.CreateTestAccount(t, db, "pickup-person-restore-parent")
+	reader := testpkg.CreateTestAccount(t, db, "pickup-person-restore-reader")
+	date := pickupTeamToday.AddDays(1)
+	var request int64
+	require.NoError(t, db.NewRaw(`INSERT INTO schedule.care_schedule_change_requests
+		(tenant_id, student_id, submitted_by, request_kind, payload, status)
+		VALUES (?, ?, ?, 'pickup_change', ?::jsonb, 'approved') RETURNING id`,
+		tenant.FromContext(ctx), child.ID, parent.ID, fmt.Sprintf(`{"date":%q,"pickup_person":{"name":"Tante Leyla"}}`, date.String()),
+	).Scan(ctx, &request))
+	_, err := db.NewRaw(`INSERT INTO schedule.student_pickup_persons
+		(tenant_id, student_id, exception_date, person_name, requested_by_guardian)
+		VALUES (?, ?, ?, 'Tante Leyla', ?)`, tenant.FromContext(ctx), child.ID, string(date), parent.ID,
+	).Exec(ctx)
+	require.NoError(t, err)
+
+	team := pickupTeam(&fixedPickupReach{responsible: []int64{reader.ID}})
+	approvePickup(t, db, ctx, team, careplan.PickupChangeNotice{
+		StudentID: child.ID, Date: date, PickupPerson: "Tante Leyla", RequestID: request,
+	})
+	require.Len(t, unreadPickups(t, db, ctx, team, reader.ID), 1)
+
+	// A corrected later approval restores the former guardian-approved person
+	// instead of deleting the row. It still changes who collects the child.
+	_, err = db.NewRaw(`UPDATE schedule.student_pickup_persons SET person_name = 'Oma Berta'
+		WHERE tenant_id = ? AND student_id = ? AND exception_date = ?`, tenant.FromContext(ctx), child.ID, string(date)).Exec(ctx)
+	require.NoError(t, err)
+	_, err = db.NewRaw(`UPDATE schedule.care_schedule_change_requests SET status = 'rejected'
+		WHERE tenant_id = ? AND id = ?`, tenant.FromContext(ctx), request).Exec(ctx)
+	require.NoError(t, err)
+	approvePickup(t, db, ctx, team, careplan.PickupChangeNotice{
+		StudentID: child.ID, Date: date, PickupPerson: "Tante Leyla", Withdrawn: true, RequestID: request,
+	})
+
+	unread := unreadPickups(t, db, ctx, team, reader.ID)
+	require.Len(t, unread, 1, "the restored earlier person must not hide the correction")
+	assert.True(t, unread[0].Withdrawn)
+	assert.Equal(t, "Tante Leyla", unread[0].PickupPerson)
 }

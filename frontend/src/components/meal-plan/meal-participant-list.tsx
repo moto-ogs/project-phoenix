@@ -16,9 +16,14 @@ import { SectionCard } from "~/components/ui/section-card";
 import { MealRegistrationChangeModal } from "~/components/meal-plan/meal-registration-change-modal";
 import { useApiErrorDisplay } from "~/contexts/ToastContext";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
-import { useInvalidateFamily, useSWRAuth } from "~/lib/swr";
+import {
+  useInvalidateFamily,
+  useInvalidateMatching,
+  useOpeningRead,
+  useSWRAuth,
+} from "~/lib/swr";
 import { tenantContactKeys } from "~/lib/swr/tenant-contact-keys";
-import { formatDate, parseISODate, toISODate } from "~/lib/date-helpers";
+import { formatDate, parseISODate } from "~/lib/date-helpers";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
 import { useLocalizedDatePicker } from "~/lib/hooks/use-localized-date-picker";
 import {
@@ -26,6 +31,8 @@ import {
   downloadWeeklyMealParticipants,
   getDailyMealParticipants,
   getWeeklyMealParticipants,
+  isMealWeekendDay,
+  mealParticipantDate,
   mondayOf,
   workWeekDates,
   type DailyMealParticipant,
@@ -35,16 +42,6 @@ import { createLogger } from "~/lib/logger";
 import { useCareTermTranslations } from "~/lib/care-facility-term";
 
 const logger = createLogger({ component: "MealParticipantList" });
-
-const isWeekendDay = (date: Date) => date.getDay() === 0 || date.getDay() === 6;
-
-function nextWeekday(date: string): string {
-  const candidate = parseISODate(date);
-  while (isWeekendDay(candidate)) {
-    candidate.setDate(candidate.getDate() + 1);
-  }
-  return toISODate(candidate);
-}
 
 type ListView = "day" | "week";
 
@@ -84,8 +81,8 @@ function weeklyRows(week: WeeklyMealList | null): WeeklyMealRow[] {
 }
 
 /**
- * Die Tagesliste für die Küche. Mit `canRegister` (meals:register) lädt sie
- * auch die Kinder, die nicht essen: „Anmeldung ändern“ im Kopf öffnet das
+ * Die Tagesliste für die Küche. Mit `canRegister` (meals:register) lädt erst
+ * das Änderungsfenster auch die Kinder, die nicht essen. Der Knopf im Kopf öffnet das
  * Änderungsfenster ohne Kind, „Anmeldung ändern…“ im Menü einer Zeile mit
  * diesem Kind.
  */
@@ -102,6 +99,7 @@ export function MealParticipantList({
   const today = useBerlinToday();
   const { show: showActionError } = useApiErrorDisplay();
   const invalidateFamily = useInvalidateFamily();
+  const invalidateMatching = useInvalidateMatching();
   // „Wiederholen“ exportiert mit dem aktuell gewählten Tag.
   const retryDownloadRef = useRef<(format: "pdf" | "xlsx") => void>(
     () => undefined,
@@ -109,7 +107,7 @@ export function MealParticipantList({
   const [selectedView, setView] = useState<ListView>("day");
   const view = canExport ? selectedView : "day";
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const date = selectedDate ?? nextWeekday(today);
+  const date = selectedDate ?? mealParticipantDate(today);
   // Offenes Änderungsfenster; `studentId` ist das vorgewählte Kind.
   const [changing, setChanging] = useState<{ studentId?: string } | null>(null);
   const weekStart = mondayOf(parseISODate(date));
@@ -117,16 +115,24 @@ export function MealParticipantList({
   // Jede Liste gehört zu genau dem Tag bzw. der Woche, unter der sie
   // angezeigt wird (#6503). Ein Wechsel der Ansicht liest die Liste neu.
   const dayResource = useSWRAuth(
-    view === "day"
-      ? tenantContactKeys.mealParticipantsDay(date, canRegister)
-      : null,
-    () => getDailyMealParticipants(date, canRegister),
+    view === "day" ? tenantContactKeys.mealParticipantsDay(date, false) : null,
+    () => getDailyMealParticipants(date, false),
     { keepPreviousData: false, dedupingInterval: 0 },
   );
   const weekResource = useSWRAuth(
     view === "week" ? tenantContactKeys.mealParticipantsWeek(weekStart) : null,
     () => getWeeklyMealParticipants(weekStart),
     { keepPreviousData: false, dedupingInterval: 0 },
+  );
+  const rosterOpen = canRegister && changing !== null;
+  const rosterKey = tenantContactKeys.mealParticipantsDay(date, true);
+  const roster = useOpeningRead(
+    rosterOpen ? rosterKey : null,
+    () => getDailyMealParticipants(date, true),
+    { showCached: false },
+  );
+  const rosterError = useSwrLoadError(roster.error, t("errorObject"), () =>
+    roster.mutate(),
   );
   const current = view === "week" ? weekResource : dayResource;
   // Eine bereits geladene Liste derselben Auswahl bleibt stehen; der Fehler
@@ -137,8 +143,6 @@ export function MealParticipantList({
   const dayList = dayResource.data ?? null;
   const week = weekResource.data ?? null;
   const participants = dayList?.participants ?? NO_PARTICIPANTS;
-  // Die übrigen Kinder des Tages, für Änderungen durch die Schule (#3873).
-  const others = dayList?.others ?? NO_PARTICIPANTS;
   const deadline = dayList?.deadline ?? "";
   const closed = dayList?.closed ?? false;
   const hasList = view === "week" ? week !== null : dayList !== null;
@@ -218,7 +222,11 @@ export function MealParticipantList({
   const weekRows = useMemo(() => weeklyRows(week), [week]);
   const closedDates = useMemo(
     () =>
-      new Set(week?.days.filter((day) => day.closed).map((day) => day.date)),
+      new Map(
+        week?.days
+          .filter((day) => day.closed)
+          .map((day) => [day.date, day.mealCancelled === true]),
+      ),
     [week],
   );
   const weekColumns = useMemo<DataTableColumn<WeeklyMealRow>[]>(() => {
@@ -236,7 +244,9 @@ export function MealParticipantList({
         stacked: "field",
         render: (row) =>
           closedDates.has(day) ? (
-            <span className="text-xs text-gray-500">{t("weekClosed")}</span>
+            <span className="text-xs text-gray-500">
+              {closedDates.get(day) ? t("weekMealCancelled") : t("weekClosed")}
+            </span>
           ) : row.dates.has(day) ? (
             <>
               <Check
@@ -293,7 +303,9 @@ export function MealParticipantList({
     isWeek || (!closed && !deadline)
       ? null
       : closed
-        ? t("closedDay")
+        ? dayList?.mealCancelled
+          ? t("mealCancelledDay")
+          : t("closedDay")
         : t("cutoff", {
             date: new Date(deadline).toLocaleString(locale, {
               weekday: "short",
@@ -351,7 +363,7 @@ export function MealParticipantList({
             {...datePicker}
             calendarLayout="popover-below"
             controlSize="compact"
-            disabledDay={isWeekendDay}
+            disabledDay={isMealWeekendDay}
             hideClearButton
             required
             className="w-full sm:w-44"
@@ -418,7 +430,9 @@ export function MealParticipantList({
                 (day) =>
                   `${weekdayShort.format(parseISODate(day.date))} ${
                     day.closed
-                      ? t("weekClosed")
+                      ? day.mealCancelled
+                        ? t("weekMealCancelled")
+                        : t("weekClosed")
                       : t("weekCount", { count: day.participants.length })
                   }`,
               )
@@ -465,18 +479,24 @@ export function MealParticipantList({
         />
       )}
       <MealRegistrationChangeModal
-        isOpen={canRegister && changing !== null}
+        isOpen={rosterOpen}
         onClose={() => setChanging(null)}
         onSaved={(studentId) => {
-          void invalidateFamily(tenantContactKeys.mealParticipantsFamily);
+          void invalidateMatching(
+            (key) =>
+              key.startsWith(tenantContactKeys.mealParticipantsFamily) &&
+              key !== rosterKey,
+          );
           void invalidateFamily(tenantContactKeys.mealOrdersFamily);
           void invalidateFamily(
             tenantContactKeys.childMealScheduleFamily(studentId),
           );
         }}
         date={date}
-        participants={participants}
-        others={others}
+        participants={roster.data?.participants ?? participants}
+        others={roster.data?.others ?? NO_PARTICIPANTS}
+        rosterLoading={rosterOpen && !roster.data}
+        rosterError={rosterError}
         initialStudentId={changing?.studentId}
       />
     </SectionCard>

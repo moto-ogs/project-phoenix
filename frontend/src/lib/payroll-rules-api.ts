@@ -237,7 +237,7 @@ export const SURCHARGE_KIND_LABELS: Record<SurchargeKind, string> = {
 
 export const SURCHARGE_RATE_TYPE_LABELS: Record<SurchargeRateType, string> = {
   prozent: "Prozent vom Stundenlohn",
-  betrag: "Euro je Stunde",
+  betrag: "Euro pro Stunde",
 };
 
 /** A percent rule books hours, an amount rule an amount (backend rule). */

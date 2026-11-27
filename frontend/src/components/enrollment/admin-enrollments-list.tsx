@@ -29,7 +29,7 @@ import { StatusBadge } from "~/components/ui/status-badge";
 import { SectionCard } from "~/components/ui/section-card";
 import { InsetPanel } from "~/components/ui/inset-panel";
 import { listPhases, type Phase } from "~/lib/enrollment-phase-api";
-import { listCareOfferings } from "~/lib/care-offering-api";
+import { fetchCareOfferingCounts } from "~/lib/care-offering-api";
 import {
   latestSchemasByName,
   listSchemas,
@@ -127,17 +127,9 @@ export function AdminEnrollmentsList({
     listSchemas(),
   );
   const settingsRead = useSettingsSchema();
-  const phaseIds = useMemo(
-    () => (phasesRead.data ?? []).map((phase) => phase.id),
-    [phasesRead.data],
-  );
   const offeringsRead = useSWRAuth(
-    phasesRead.data ? enrollmentKeys.allPhasesCareOfferings(phaseIds) : null,
-    async () =>
-      (
-        await Promise.all(phaseIds.map((phaseId) => listCareOfferings(phaseId)))
-      ).flat(),
-    { keepPreviousData: false },
+    phasesRead.data?.length ? enrollmentKeys.careOfferingCounts() : null,
+    fetchCareOfferingCounts,
   );
   const phases = phasesRead.data ?? NO_PHASES;
   const allRequests = requestsRead.data ?? NO_REQUESTS;
@@ -151,24 +143,25 @@ export function AdminEnrollmentsList({
       ? null
       : enrollmentPrivacyNotice(settingsData?.tabs);
   const careOfferingStats = useMemo<CareOfferingStats>(() => {
-    const activePhaseIds = new Set(
-      phases.filter((phase) => phase.is_active).map((phase) => phase.id),
-    );
-    const careOfferings = offeringsRead.data ?? [];
-    return {
-      total: careOfferings.length,
-      activeInActivePhases: careOfferings.filter(
-        (offering) =>
-          offering.is_active && activePhaseIds.has(offering.phase_id),
-      ).length,
-    };
+    let total = 0;
+    let activeInActivePhases = 0;
+    for (const phase of phases) {
+      const count = offeringsRead.data?.[phase.id];
+      if (!count) continue;
+      total += count.total;
+      if (phase.is_active) activeInActivePhases += count.active;
+    }
+    return { total, activeInActivePhases };
   }, [phases, offeringsRead.data]);
   const mainResources = [
     { data: phasesRead.data, error: phasesRead.error },
     { data: requestsRead.data, error: requestsRead.error },
     { data: schemasRead.data, error: schemasRead.error },
     { data: settingsData, error: settingsRead.error },
-    { data: offeringsRead.data, error: offeringsRead.error },
+    {
+      data: phasesRead.data?.length === 0 ? null : offeringsRead.data,
+      error: offeringsRead.error,
+    },
   ];
   const loadError = useSwrResourceLoadError(
     mainResources,
@@ -644,7 +637,7 @@ function EnrollmentSetupGuide({
     },
     {
       title: "Betreuungsangebote ergänzen",
-      description: "Eltern wählen daraus die passende Betreuung je Kind.",
+      description: "Eltern wählen daraus die passende Betreuung pro Kind.",
       href: tenantPath("/care-offerings"),
       action:
         careOfferingCount > 0

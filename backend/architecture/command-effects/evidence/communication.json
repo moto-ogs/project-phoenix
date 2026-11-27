@@ -594,7 +594,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.ParentMessageMails.ParentGroupMessageMailOutcomes",
-      "binding_digest": "16bce66686cb2f925bb9645b098ba157",
+      "binding_digest": "340abb46f393afb8a97836292c21f46c",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentMessageMails.ParentGroupMessageMailOutcomes",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.EmailOutcomes.EmailOutcomes",
@@ -602,7 +602,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.ParentMessageMails.ParentGroupMessageMailOutcomes",
-      "binding_digest": "632bfa694490bfddf489a5af9adf9d9f",
+      "binding_digest": "f9b585a9d34585afe0d67b820a9aca62",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentMessageMails.ParentGroupMessageMailOutcomes",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
@@ -610,7 +610,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.ParentMessageMails.ParentGroupMessageMailOutcomes",
-      "binding_digest": "6df184c3142d7f5791519ca1a26a587d",
+      "binding_digest": "cf7318332dad29860211b5ff4ebd81c6",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentMessageMails.ParentGroupMessageMailOutcomes",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantID.Int64",
@@ -618,7 +618,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.ParentMessageMails.ParentMessageMailOutcomes",
-      "binding_digest": "d8242c001c0a55f33f381a640114d1aa",
+      "binding_digest": "44bbd4d84cdbb27d882caeaf7d0d66d2",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentMessageMails.ParentMessageMailOutcomes",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.EmailOutcomes.EmailOutcomes",
@@ -626,7 +626,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.ParentMessageMails.ParentMessageMailOutcomes",
-      "binding_digest": "ff0d24d89c029da1fa436f399f48abb6",
+      "binding_digest": "54d84d963d18bc45562f764476b3cfa8",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentMessageMails.ParentMessageMailOutcomes",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
@@ -634,7 +634,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.ParentMessageMails.ParentMessageMailOutcomes",
-      "binding_digest": "de0e1f8bcea80908c6cb2a9a4a4d63b2",
+      "binding_digest": "376720463562e3be2c7c89f6d9629cb4",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentMessageMails.ParentMessageMailOutcomes",
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantID.Int64",
@@ -690,7 +690,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/communication/ports.ParentMessageThreadRepository.ParentThreadListGuardiansForStudent",
-      "binding_digest": "5c2388b4f4cd73408fd2bed41793575a",
+      "binding_digest": "91a14cbb2fbd1601fe87c020806f7d01",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentThreadRecords.ParentThreadListGuardiansForStudent",
       "source_owner": "communication",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListGuardiansForStudent",
@@ -698,7 +698,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/communication/ports.ParentMessageThreadRepository.ParentThreadListStudentIDsWithMessageableGuardian",
-      "binding_digest": "94f1a2f3225c4a0bd25e8c7ceb137295",
+      "binding_digest": "2d71d8234770b3550778847cbad5e8d0",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication.ParentThreadRecords.ParentThreadListStudentIDsWithMessageableGuardian",
       "source_owner": "communication",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListStudentIDsWithMessageableGuardian",
@@ -1458,7 +1458,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/communication.ParentThreadRecords.ParentThreadListGuardiansForStudent",
-      "binding_digest": "5c2388b4f4cd73408fd2bed41793575a",
+      "binding_digest": "91a14cbb2fbd1601fe87c020806f7d01",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/internal/application.ParentMessageThreadRepositorySource.ParentThreadListGuardiansForStudent",
       "source_owner": "communication",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListGuardiansForStudent",
@@ -1466,7 +1466,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/communication/ports.ParentMessageThreadRepository.ParentThreadListGuardiansForStudent",
-      "binding_digest": "5c2388b4f4cd73408fd2bed41793575a",
+      "binding_digest": "91a14cbb2fbd1601fe87c020806f7d01",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/internal/application.ParentMessageThreadRepositorySource.ParentThreadListGuardiansForStudent",
       "source_owner": "communication",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListGuardiansForStudent",
@@ -1474,7 +1474,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/communication.ParentThreadRecords.ParentThreadListStudentIDsWithMessageableGuardian",
-      "binding_digest": "94f1a2f3225c4a0bd25e8c7ceb137295",
+      "binding_digest": "2d71d8234770b3550778847cbad5e8d0",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/internal/application.ParentMessageThreadRepositorySource.ParentThreadListStudentIDsWithMessageableGuardian",
       "source_owner": "communication",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListStudentIDsWithMessageableGuardian",
@@ -1482,7 +1482,7 @@
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/communication/ports.ParentMessageThreadRepository.ParentThreadListStudentIDsWithMessageableGuardian",
-      "binding_digest": "94f1a2f3225c4a0bd25e8c7ceb137295",
+      "binding_digest": "2d71d8234770b3550778847cbad5e8d0",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/internal/application.ParentMessageThreadRepositorySource.ParentThreadListStudentIDsWithMessageableGuardian",
       "source_owner": "communication",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListStudentIDsWithMessageableGuardian",
@@ -1863,6 +1863,14 @@
       "source_owner": "communication",
       "target": "github.com/moto-ogs/project-phoenix/modules/organizationtenancy.SchoolQuery.FindSchool",
       "target_owner": "organization-tenancy"
+    },
+    {
+      "binding": "github.com/moto-ogs/project-phoenix/modules/settings.ParentMessagingValues.CareFacilityArticle",
+      "binding_digest": "4d1d43c2a06c30749e54a308e7a5686f",
+      "port": "github.com/moto-ogs/project-phoenix/modules/communication/internal/parentmessages.Settings.CareFacilityArticle",
+      "source_owner": "communication",
+      "target": "github.com/moto-ogs/project-phoenix/modules/settings.ParentMessagingValues.CareFacilityArticle",
+      "target_owner": "settings-platform"
     },
     {
       "binding": "github.com/moto-ogs/project-phoenix/modules/settings.ParentMessagingValues.CareFacilityTerm",
@@ -3522,7 +3530,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/communication/internal/adapters/parentpostgres.threadRepository.ListGuardiansForStudent",
-      "binding_digest": "5c2388b4f4cd73408fd2bed41793575a",
+      "binding_digest": "91a14cbb2fbd1601fe87c020806f7d01",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/ports.ParentMessageThreadRepository.ListGuardiansForStudent",
       "source_owner": "communication",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListGuardiansForStudent",
@@ -3530,7 +3538,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/communication/internal/adapters/parentpostgres.threadRepository.ListStudentIDsWithMessageableGuardian",
-      "binding_digest": "94f1a2f3225c4a0bd25e8c7ceb137295",
+      "binding_digest": "2d71d8234770b3550778847cbad5e8d0",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/ports.ParentMessageThreadRepository.ListStudentIDsWithMessageableGuardian",
       "source_owner": "communication",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListStudentIDsWithMessageableGuardian",
@@ -3538,7 +3546,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/communication/internal/adapters/parentpostgres.threadRepository.ParentThreadListGuardiansForStudent",
-      "binding_digest": "5c2388b4f4cd73408fd2bed41793575a",
+      "binding_digest": "91a14cbb2fbd1601fe87c020806f7d01",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/ports.ParentMessageThreadRepository.ParentThreadListGuardiansForStudent",
       "source_owner": "communication",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListGuardiansForStudent",
@@ -3546,7 +3554,7 @@
     },
     {
       "binding": "*github.com/moto-ogs/project-phoenix/modules/communication/internal/adapters/parentpostgres.threadRepository.ParentThreadListStudentIDsWithMessageableGuardian",
-      "binding_digest": "94f1a2f3225c4a0bd25e8c7ceb137295",
+      "binding_digest": "2d71d8234770b3550778847cbad5e8d0",
       "port": "github.com/moto-ogs/project-phoenix/modules/communication/ports.ParentMessageThreadRepository.ParentThreadListStudentIDsWithMessageableGuardian",
       "source_owner": "communication",
       "target": "*github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/adapters/peoplepostgres.MessageableGuardianRepository.ListStudentIDsWithMessageableGuardian",

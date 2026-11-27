@@ -25,15 +25,17 @@ import {
   formatDayCount,
 } from "~/lib/absence-helpers";
 import { createLogger } from "~/lib/logger";
-import {
-  absenceDisplayLabel,
-  type StaffAbsence,
-} from "~/lib/time-tracking-helpers";
+import { absenceDisplayLabel } from "~/lib/time-tracking-helpers";
 import { timeTrackingService } from "~/lib/time-tracking-api";
 import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
-import { useSwrResourceLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { useSWRAuth } from "~/lib/swr";
 import { staffAbsenceKeys } from "~/lib/swr/staff-keys";
+import { timeTrackingKeys } from "~/lib/swr/portal-keys";
+import type { OwnAbsence } from "~/lib/own-time-tracking-view";
+import { mapOwnLeave } from "~/lib/own-leave-resource";
+import { useOwnTimeRefresh } from "~/lib/hooks/use-own-time-refresh";
+import { OwnAllowancesCard } from "./own-allowances-card";
 import { VacationRequestModal } from "./vacation-request-modal";
 import {
   AbsenceRequestMails,
@@ -60,7 +62,7 @@ function formatRangeShort(start: string, end: string): string {
   return `${sd}.${sm}.–${ed}.${em}.${ey}`;
 }
 
-function dayCountFor(a: StaffAbsence): number {
+function dayCountFor(a: OwnAbsence): number {
   return sharedDayCountFor({
     workingDays: a.workingDays,
     dateStart: a.dateStart,
@@ -86,12 +88,8 @@ function decisionNoteLabel(status: string): string {
   return "Anmerkung der Leitung:";
 }
 
-/** Urlaub und jeder Antrag einer beantragbaren eigenen Art (#4710). */
-function isRequestFlowAbsence(absence: StaffAbsence): boolean {
-  return (
-    absence.absenceType === "vacation" ||
-    (Boolean(absence.absenceTypeId) && absence.status !== "reported")
-  );
+async function readLeave(year: number) {
+  return mapOwnLeave(await timeTrackingService.getLeaveOverview(), year);
 }
 
 export function LeaveRequestsCard({
@@ -107,139 +105,74 @@ export function LeaveRequestsCard({
   const [modalOpen, setModalOpen] = useState(false);
   const toast = useToast();
   const cancelErrors = useApiFormError();
-
   const today = useBerlinToday();
   const year = Number(today.slice(0, 4));
   const yearStart = `${year}-01-01`;
   const yearEnd = `${year}-12-31`;
-
-  const quotaResource = useSWRAuth(
-    staffAbsenceKeys.ownVacationQuota(year),
-    () => timeTrackingService.getVacationQuota(year),
+  const refresh = useOwnTimeRefresh();
+  const read = useSWRAuth(
+    timeTrackingKeys.leaveOverview(year),
+    () => readLeave(year),
+    {
+      keepPreviousData: false,
+      revalidateOnFocus: false,
+    },
   );
-  const absencesResource = useSWRAuth(
-    staffAbsenceKeys.ownList(yearStart, yearEnd),
-    () => timeTrackingService.getAbsences(yearStart, yearEnd),
-  );
-  const questionsResource = useSWRAuth(staffAbsenceKeys.ownQuestioned(), () =>
-    timeTrackingService.getQuestionedAbsences(),
-  );
-  const { mutate: mutateQuota } = quotaResource;
-  const { mutate: mutateAbsences } = absencesResource;
-  const { mutate: mutateQuestions } = questionsResource;
-  const loadAll = useCallback(
-    () =>
-      Promise.all([mutateQuota(), mutateAbsences(), mutateQuestions()]).then(
-        () => undefined,
-      ),
-    [mutateQuota, mutateAbsences, mutateQuestions],
-  );
-  // A failed load stays in the card (#2514): without the quota the tiles
-  // would read as "0 Tage", which is wrong, not empty.
-  const load = useSwrResourceLoadError(
-    [quotaResource, absencesResource, questionsResource],
+  const { data, error, mutate } = read;
+  const afterWrite = useRefreshAfterWrite("die Urlaubsübersicht", async () => {
+    await refresh("leave");
+    const failure = read.readCurrent?.().error;
+    if (failure) throw failure;
+  });
+  const loadError = useSwrLoadError(
+    afterWrite.error ? undefined : error,
     "die Urlaubsübersicht",
-    loadAll,
-  );
-  const afterWrite = useRefreshAfterWrite("die Urlaubsübersicht", () =>
-    Promise.all([
-      mutateQuota(timeTrackingService.getVacationQuota(year), {
-        revalidate: false,
-      }),
-      mutateAbsences(timeTrackingService.getAbsences(yearStart, yearEnd), {
-        revalidate: false,
-      }),
-      mutateQuestions(timeTrackingService.getQuestionedAbsences(), {
-        revalidate: false,
-      }),
-    ]),
+    mutate,
   );
   const refreshAfterWrite = afterWrite.refresh;
-  const quota = quotaResource.data ?? null;
-  const loading =
-    !load.failure &&
-    (quotaResource.data === undefined ||
-      absencesResource.data === undefined ||
-      questionsResource.data === undefined);
-  // Neben Urlaub laufen Anträge beantragbarer Arten hier mit (#4710): alles,
-  // was nicht direkt eingetragen ist.
-  const vacations = useMemo(
-    () => (absencesResource.data ?? []).filter(isRequestFlowAbsence),
-    [absencesResource.data],
-  );
-  const questionedVacations = useMemo(
-    () =>
-      (questionsResource.data ?? []).filter(
-        (a) => isRequestFlowAbsence(a) && a.status === "question",
-      ),
-    [questionsResource.data],
-  );
 
-  const counts = useMemo(() => {
-    const reserved = vacations.filter((v) => v.status === "requested").length;
-    const question = questionedVacations.length;
-    const approved = vacations.filter(
-      (v) =>
-        (v.status === "approved" || v.status === "reported") &&
-        v.dateEnd >= today,
-    ).length;
-    const declined = vacations.filter((v) => v.status === "declined").length;
-    return { reserved, question, approved, declined };
-  }, [questionedVacations.length, vacations, today]);
+  const quota = data?.quota;
+  const loading = data === undefined && error === undefined;
+  const counts = data?.counts ?? {
+    reserved: 0,
+    question: 0,
+    approved: 0,
+    declined: 0,
+  };
+  const recentVacations = data?.recent ?? [];
+  const sortedQuestionedVacations = data?.questions ?? [];
+  const waiting = recentVacations
+    .filter((vacation) => vacation.status === "requested")
+    .map((vacation) => `${vacation.id}-${vacation.requestedAt}`)
+    .sort();
+  const requestMails = useOwnAbsenceRequestMails(waiting, data?.mails);
 
-  const recentVacations = useMemo(
-    () =>
-      vacations
-        .filter((vacation) => vacation.status !== "question")
-        .sort(
-          (a, b) =>
-            new Date(b.requestedAt ?? b.dateStart).getTime() -
-            new Date(a.requestedAt ?? a.dateStart).getTime(),
-        )
-        .slice(0, 8),
-    [vacations],
+  const absences = useSWRAuth(
+    modalOpen ? staffAbsenceKeys.ownList(yearStart, yearEnd) : null,
+    () => timeTrackingService.getAbsences(yearStart, yearEnd),
+    { keepPreviousData: false },
   );
-
-  // Ob die Leitung die wartenden Anträge per Mail bekam (#7058).
-  const waitingIds = useMemo(
-    () =>
-      vacations
-        .filter((vacation) => vacation.status === "requested")
-        .map((vacation) => vacation.id)
-        .sort(),
-    [vacations],
+  const overlapLoadError = useSwrLoadError(
+    absences.error,
+    "deine Abwesenheiten für den Kalender",
+    absences.mutate,
   );
-  const requestMails = useOwnAbsenceRequestMails(waitingIds);
+  const blockingVacations = useMemo(() => {
+    if (!absences.data) return undefined;
+    return Array.from(
+      new Map(
+        [...absences.data, ...(data?.questions ?? [])].map((vacation) => [
+          vacation.id,
+          vacation,
+        ]),
+      ).values(),
+    );
+  }, [absences.data, data]);
 
-  const sortedQuestionedVacations = useMemo(
-    () =>
-      questionedVacations
-        .slice()
-        .sort(
-          (a, b) =>
-            new Date(b.requestedAt ?? b.dateStart).getTime() -
-            new Date(a.requestedAt ?? a.dateStart).getTime(),
-        ),
-    [questionedVacations],
-  );
-
-  const blockingVacations = useMemo(
-    () =>
-      Array.from(
-        new Map(
-          [...vacations, ...questionedVacations].map((vacation) => [
-            vacation.id,
-            vacation,
-          ]),
-        ).values(),
-      ),
-    [questionedVacations, vacations],
-  );
-
-  const [cancelTarget, setCancelTarget] = useState<StaffAbsence | null>(null);
+  const [cancelTarget, setCancelTarget] = useState<OwnAbsence | null>(null);
   const [cancelSubmitting, setCancelSubmitting] = useState(false);
 
-  const handleCancel = (absence: StaffAbsence) => {
+  const handleCancel = (absence: OwnAbsence) => {
     cancelErrors.clear();
     setCancelTarget(absence);
   };
@@ -250,7 +183,7 @@ export function LeaveRequestsCard({
   }, [refreshAfterWrite]);
 
   const confirmCancel = async () => {
-    if (!cancelTarget) return;
+    if (!cancelTarget || error) return;
     setCancelSubmitting(true);
     cancelErrors.clear();
     try {
@@ -298,7 +231,7 @@ export function LeaveRequestsCard({
                 variant="primary"
                 size="md"
                 onClick={() => setModalOpen(true)}
-                disabled={loading || Boolean(load.failure)}
+                disabled={loading || error !== undefined}
                 tooltip="Öffnet ein Formular für einen neuen Urlaubsantrag."
               >
                 Urlaub beantragen
@@ -308,10 +241,10 @@ export function LeaveRequestsCard({
         }
         bodyClassName={app ? "mt-3" : "compact:mt-4 mt-5 max-sm:mt-4"}
       >
-        <LoadErrorAlert error={afterWrite.error} />
-        {load.failure ? (
-          <LoadErrorAlert error={load.error} />
-        ) : app ? (
+        <LoadErrorAlert
+          error={afterWrite.error ?? (error ? loadError : null)}
+        />
+        {app && (data || loading) ? (
           <ul className="-mb-1 divide-y divide-gray-100">
             <AppFigureRow
               label="Resturlaub"
@@ -366,6 +299,7 @@ export function LeaveRequestsCard({
                 key={vacation.id}
                 flat
                 absence={vacation}
+                disabled={error !== undefined}
                 currentTimestamp={currentTimestamp}
                 onCancel={handleCancel}
                 onResubmitted={handleResubmitted}
@@ -385,6 +319,7 @@ export function LeaveRequestsCard({
                 key={vacation.id}
                 flat
                 absence={vacation}
+                disabled={error !== undefined}
                 currentTimestamp={currentTimestamp}
                 onCancel={handleCancel}
                 mailCounts={
@@ -403,14 +338,14 @@ export function LeaveRequestsCard({
                 size="md"
                 className="w-full"
                 onClick={() => setModalOpen(true)}
-                disabled={loading}
+                disabled={loading || error !== undefined}
                 tooltip="Öffnet ein Formular für einen neuen Urlaubsantrag."
               >
                 Urlaub beantragen
               </Button>
             </li>
           </ul>
-        ) : (
+        ) : data || loading ? (
           <>
             <div
               className={`grid grid-cols-2 gap-4 ${counts.question > 0 ? "lg:grid-cols-5" : "lg:grid-cols-4"}`}
@@ -462,6 +397,7 @@ export function LeaveRequestsCard({
                       key={vacation.id}
                       absence={vacation}
                       currentTimestamp={currentTimestamp}
+                      disabled={error !== undefined}
                       onCancel={handleCancel}
                       onResubmitted={handleResubmitted}
                       showResubmit
@@ -485,6 +421,7 @@ export function LeaveRequestsCard({
                       key={vacation.id}
                       absence={vacation}
                       currentTimestamp={currentTimestamp}
+                      disabled={error !== undefined}
                       onCancel={handleCancel}
                       mailCounts={
                         vacation.status === "requested"
@@ -497,18 +434,31 @@ export function LeaveRequestsCard({
               </div>
             )}
           </>
-        )}
+        ) : null}
       </SectionCard>
 
-      <VacationRequestModal
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
-        onSubmitted={() => {
-          void refreshAfterWrite();
-        }}
-        remainingDays={remainingDays}
-        existingVacations={blockingVacations}
-      />
+      {data && (
+        <OwnAllowancesCard
+          allowances={data.allowances ?? []}
+          year={year}
+          app={app}
+        />
+      )}
+
+      {modalOpen && (
+        <VacationRequestModal
+          isOpen
+          onClose={() => setModalOpen(false)}
+          onSubmitted={() => {
+            void refreshAfterWrite();
+          }}
+          remainingDays={remainingDays}
+          existingVacations={
+            absences.error || error ? undefined : blockingVacations
+          }
+          overlapError={overlapLoadError ?? afterWrite.error ?? loadError}
+        />
+      )}
 
       <ConfirmationModal
         isOpen={cancelTarget !== null}
@@ -544,16 +494,18 @@ function AbsenceRequestItem({
   onCancel,
   onResubmitted,
   showResubmit = false,
+  disabled,
   mailCounts,
   flat = false,
 }: {
   /** App: eine Zeile der Liste statt einer Karte in der Karte. */
   readonly flat?: boolean;
-  readonly absence: StaffAbsence;
+  readonly absence: OwnAbsence;
   readonly currentTimestamp: number;
-  readonly onCancel: (absence: StaffAbsence) => void;
+  readonly onCancel: (absence: OwnAbsence) => void;
   readonly onResubmitted?: () => void;
   readonly showResubmit?: boolean;
+  readonly disabled: boolean;
   /** The notice of a waiting request to the Leitung (#7058). */
   readonly mailCounts?: MailOutcomeCounts;
 }) {
@@ -614,6 +566,7 @@ function AbsenceRequestItem({
               variant="ghost_danger"
               size="compact"
               className={flat ? TOUCH_HIT_AREA : undefined}
+              disabled={disabled}
               onClick={() => onCancel(absence)}
               tooltip="Zieht den Antrag zurück, auch genehmigten Urlaub. moto fragt vorher nach."
             >
@@ -622,7 +575,7 @@ function AbsenceRequestItem({
           )}
         </div>
       </div>
-      {showResubmit && onResubmitted && (
+      {!disabled && showResubmit && onResubmitted && (
         <ResubmitAbsenceForm absence={absence} onResubmitted={onResubmitted} />
       )}
     </li>
@@ -635,7 +588,7 @@ function ResubmitAbsenceForm({
   absence,
   onResubmitted,
 }: {
-  readonly absence: StaffAbsence;
+  readonly absence: OwnAbsence;
   readonly onResubmitted: () => void;
 }) {
   const [note, setNote] = useState(absence.note ?? "");

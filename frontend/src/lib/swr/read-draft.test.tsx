@@ -666,6 +666,47 @@ describe("useReadDraft", () => {
     expect(result.current.token).toBe("3");
   });
 
+  it("shows a failed write of a saved answer without leaving the draft saving", async () => {
+    const unavailable = new Error("unavailable");
+    const write = vi.fn(async () => {
+      throw unavailable;
+    });
+    const { result } = renderHook(() =>
+      useDraftOn<Stored, string, string, Stored>(
+        {
+          opening: "row-5",
+          data: { version: "1", name: "Anna" },
+          reload: async () => undefined,
+          write,
+        },
+        {
+          token: (read) => read.version,
+          toDraft: (read) => read.name,
+          answer: (saved) => saved,
+        },
+      ),
+    );
+    act(() => result.current.setDraft("Hanna"));
+
+    let outcome!: ReadDraftResult<Stored>;
+    await act(async () => {
+      outcome = await result.current.submit(async () => ({
+        version: "2",
+        name: "Hanna",
+      }));
+    });
+
+    expect(outcome).toMatchObject({
+      ok: false,
+      refused: false,
+      persisted: true,
+    });
+    expect(write).toHaveBeenCalledWith({ version: "2", name: "Hanna" });
+    expect(result.current.status).toBe("loadFailed");
+    expect(result.current.error).toBe(unavailable);
+    expect(result.current.canSubmit).toBe(false);
+  });
+
   // Input typed after a save whose read failed rests on the saved draft:
   // a read that brings exactly that draft keeps it; any other stored state
   // replaces it.

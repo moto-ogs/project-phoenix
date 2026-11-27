@@ -25,7 +25,7 @@ import { SAVED_BUT_STALE_SUFFIX } from "~/lib/hooks/use-refresh-after-write";
 import { ApiError, unavailableApiError } from "~/lib/api-error";
 import { TEST_CLOCK_INSTANT } from "~/test/clock";
 import { catalogText } from "~/test/error-catalog-text";
-import ParentAnnouncementsPage from "./page";
+import ParentAnnouncementsPage from "./page-content";
 
 vi.unmock("swr");
 

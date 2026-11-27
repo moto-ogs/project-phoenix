@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { TEST_CLOCK_TODAY } from "~/test/clock";
 import {
   buildStudentSearchFilters,
+  studentNameSearch,
   type StudentSearchFilterInput,
 } from "./student-search-resource";
 
@@ -71,5 +72,26 @@ describe("shared student search HTTP projection", () => {
       includeCompanions: true,
       view: "slim",
     });
+  });
+});
+
+// Same cases as the list endpoint's matchesSearchFilter (backend
+// presenceprojection): the server export applies that rule to the same term.
+describe("studentNameSearch", () => {
+  const child = { id: "4711", first_name: "Zoë", second_name: "Özdemir-Groß" };
+
+  it.each([
+    ["", true],
+    ["zoe", true],
+    ["OZDEM", true],
+    ["zoe ozdemir", true],
+    ["gross", true],
+    ["471", true],
+    ["ozdemir zoe", false],
+    ["mila", false],
+    ["zoe ", true],
+    ["gross ", false],
+  ])("matches %j: %s", (term, expected) => {
+    expect(studentNameSearch(term)(child)).toBe(expected);
   });
 });

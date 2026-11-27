@@ -19,6 +19,8 @@ type PortalService interface {
 	// attachments this account may download, or 0 when it may not (#2890).
 	GuardianAnnouncementTenant(ctx context.Context, accountID, announcementID int64) (int64, error)
 
+	FamilyStart(ctx context.Context, accountID int64, studentID *int64) (*parentService.FamilyStart, error)
+
 	// ListChildrenForAccount returns every child linked to any
 	// guardian profile owned by the account, across every active
 	// tenant mapping. Sorted by school then by name.
@@ -30,6 +32,11 @@ type PortalService interface {
 	// Antwort enthaelt niemals Raeume, Besuchshistorie, Rohereignisse oder
 	// Mitarbeitendennamen.
 	GetChildTodayStatus(ctx context.Context, accountID, studentID int64) (*parentService.TodayStatus, error)
+
+	// GetChildDayChanges liefert „Heute anders“ eines Kindes (#7671): was
+	// heute für das Kind anders ist, ohne Namen von Beschäftigten. Ohne Tag
+	// (nil) liest es heute, sonst nur heute oder morgen der Schule (#8236).
+	GetChildDayChanges(ctx context.Context, accountID, studentID int64, day *timezone.Date) (parentService.ChildDay, error)
 
 	// ListEnrollableForAccount returns every (school, open phase)
 	// pair the parent could enroll a new child at, with a flag for

@@ -16,7 +16,7 @@
   "not_supplied": "Du belieferst diese Schule nicht mehr. Bitte frage die Schule.",
   "order_not_found": "Diese Bestellung gibt es nicht. Bitte lade die Seite neu.",
   "supply_active": "{object} geht gerade nicht. Ein Caterer beliefert die Schule noch. Beende zuerst diese Belieferung.",
-  "participation_manage_denied": "Du darfst die Essensanmeldung ansehen, aber nicht ändern. Bitte wende dich an die OGS.",
+  "participation_manage_denied": "Du darfst die Essensanmeldung ansehen, aber nicht ändern. Bitte wende dich an {careAcc}.",
   "billing_month_running": "Der Monat ist noch nicht vorbei. Du kannst ihn ab dem 1. des nächsten Monats freigeben.",
   "billing_month_released": "Dieser Monat ist schon freigegeben. Eine Freigabe lässt sich nicht ändern.",
   "billing_month_changed": "Seit dem Laden hat sich der Monat geändert. Bitte prüfe ihn noch einmal und gib ihn dann frei.",

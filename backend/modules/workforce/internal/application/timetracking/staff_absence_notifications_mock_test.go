@@ -435,12 +435,12 @@ func TestNotifyAbsenceDecision_CoversStatusesAndRecipientFailures(t *testing.T) 
 		{
 			status:   AbsenceStatusApproved,
 			template: "absence-request-approved.html",
-			subject:  "Dein Abwesenheitsantrag wurde genehmigt",
+			subject:  "Ihr Abwesenheitsantrag wurde genehmigt",
 		},
 		{
 			status:   AbsenceStatusDeclined,
 			template: "absence-request-declined.html",
-			subject:  "Dein Abwesenheitsantrag wurde abgelehnt",
+			subject:  "Ihr Abwesenheitsantrag wurde abgelehnt",
 		},
 	} {
 		t.Run(tt.status, func(t *testing.T) {

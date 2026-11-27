@@ -1,11 +1,13 @@
 "use client";
 
 import React from "react";
+import { FieldErrorHint } from "~/components/ui/field-error-hint";
 import { useLatest } from "~/lib/hooks/use-latest";
 import type { SearchBarProps } from "./types";
 
 interface DebouncedSearchValue {
   readonly shownValue: string;
+  readonly draftError?: string;
   readonly handleChange: (next: string) => void;
   readonly commitNow: (next: string) => void;
 }
@@ -18,19 +20,41 @@ const DebouncedSearchValueContext =
  * silence (#2975). Without a debounce the owning page re-renders per keystroke;
  * with one, only this input does. `value` keeps winning when the owner reports
  * a new term; `resetKey` makes an external reset explicit when that term is
- * already the current controlled value.
+ * already the current controlled value. A `value` that only hands back what
+ * this field reported is no new term: the owner may render it late (slow
+ * device, transition), after more keys were typed, and must not undo them.
  */
 function useDebouncedSearchValue(
   value: string,
   onChange: (next: string) => void,
   debounceMs: number | undefined,
   resetKey: string | number | undefined,
+  validateDraft?: (draft: string) => string | undefined,
 ): DebouncedSearchValue {
   const [draft, setDraft] = React.useState(value);
   const timeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const onChangeRef = useLatest(onChange);
+  // Terms reported and not yet handed back as `value`, oldest first.
+  const reportedRef = React.useRef<string[]>([]);
+  const appliedResetKeyRef = React.useRef(resetKey);
+
+  const report = React.useCallback(
+    (next: string) => {
+      reportedRef.current.push(next);
+      onChangeRef.current(next);
+    },
+    [onChangeRef],
+  );
+  const validate = useLatest(validateDraft);
 
   React.useEffect(() => {
+    const handedBack = reportedRef.current.lastIndexOf(value);
+    if (handedBack >= 0 && appliedResetKeyRef.current === resetKey) {
+      reportedRef.current = reportedRef.current.slice(handedBack + 1);
+      return;
+    }
+    appliedResetKeyRef.current = resetKey;
+    reportedRef.current = [];
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     setDraft(value);
   }, [resetKey, value]);
@@ -44,17 +68,18 @@ function useDebouncedSearchValue(
 
   const handleChange = React.useCallback(
     (next: string) => {
+      if (debounceMs || validate.current) setDraft(next);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      if (validate.current?.(next)) return;
       if (!debounceMs) {
-        onChangeRef.current(next);
+        report(next);
         return;
       }
-      setDraft(next);
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
       timeoutRef.current = setTimeout(() => {
-        onChangeRef.current(next);
+        report(next);
       }, debounceMs);
     },
-    [debounceMs, onChangeRef],
+    [debounceMs, report, validate],
   );
 
   // The clear button is an explicit action, not typing: it reports at once so
@@ -63,12 +88,18 @@ function useDebouncedSearchValue(
     (next: string) => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
       setDraft(next);
-      onChangeRef.current(next);
+      report(next);
     },
-    [onChangeRef],
+    [report],
   );
 
-  return { shownValue: debounceMs ? draft : value, handleChange, commitNow };
+  const shownValue = debounceMs || validateDraft ? draft : value;
+  return {
+    shownValue,
+    draftError: validateDraft?.(shownValue),
+    handleChange,
+    commitNow,
+  };
 }
 
 interface SearchBarDraftProviderProps {
@@ -76,6 +107,8 @@ interface SearchBarDraftProviderProps {
   readonly onChange: (next: string) => void;
   readonly debounceMs: number | undefined;
   readonly resetKey: string | number | undefined;
+  readonly onDraftPendingChange?: (pending: boolean) => void;
+  readonly validateDraft?: (draft: string) => string | undefined;
   readonly children: React.ReactNode;
 }
 
@@ -85,6 +118,8 @@ export function SearchBarDraftProvider({
   onChange,
   debounceMs,
   resetKey,
+  onDraftPendingChange,
+  validateDraft,
   children,
 }: Readonly<SearchBarDraftProviderProps>) {
   const draftState = useDebouncedSearchValue(
@@ -92,7 +127,13 @@ export function SearchBarDraftProvider({
     onChange,
     debounceMs,
     resetKey,
+    validateDraft,
   );
+  const draftPending = draftState.shownValue !== value;
+  // Actions outside the field must see the same pending state before paint.
+  React.useLayoutEffect(() => {
+    onDraftPendingChange?.(draftPending);
+  }, [draftPending, onDraftPendingChange]);
 
   return (
     <DebouncedSearchValueContext.Provider value={draftState}>
@@ -109,7 +150,9 @@ function SearchBarContent({
   inputProps,
   draftState,
 }: Readonly<SearchBarProps & { readonly draftState: DebouncedSearchValue }>) {
-  const { shownValue, handleChange, commitNow } = draftState;
+  const { shownValue, draftError, handleChange, commitNow } = draftState;
+  const hintId = React.useId();
+  const describedBy = inputProps?.["aria-describedby"];
   const sizeClasses = {
     // By finger 16 px: smaller text makes iOS zoom into the field.
     // By finger 44 px high (9 + 24 + 9 + border), the hit area of a field.
@@ -125,58 +168,67 @@ function SearchBarContent({
   };
 
   return (
-    <div className={`relative ${className}`}>
-      <svg
-        className={`absolute top-1/2 left-3 -translate-y-1/2 transform ${iconSizeClasses[size]} text-gray-400`}
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-        />
-      </svg>
-
-      <input
-        {...inputProps}
-        // A search only filters the page and holds no draft: a tab of an
-        // earlier release may reload over it (lib/deployment-reload.ts).
-        data-search-field=""
-        type="text"
-        placeholder={placeholder}
-        value={shownValue}
-        onChange={(e) => handleChange(e.target.value)}
-        className={`w-full rounded-2xl border border-gray-500/80 bg-white text-gray-900 placeholder-gray-500 transition duration-200 focus:border-gray-900 focus:ring-0 focus:outline-none ${sizeClasses[size]} ${shownValue ? "pr-10" : ""} `}
-      />
-
-      {shownValue && (
-        <button
-          type="button"
-          aria-label="Suche löschen"
-          onClick={() => {
-            commitNow("");
-            onClear?.();
-          }}
-          className="absolute top-1/2 right-2 -translate-y-1/2 transform rounded-full p-1 transition-colors hover:bg-gray-100 md:right-3"
+    <div className={className}>
+      <div className="relative">
+        <svg
+          className={`absolute top-1/2 left-3 -translate-y-1/2 transform ${iconSizeClasses[size]} text-gray-400`}
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
         >
-          <svg
-            className={`${iconSizeClasses[size]} text-gray-400`}
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+          />
+        </svg>
+
+        <input
+          {...inputProps}
+          // A search only filters the page and holds no draft: a tab of an
+          // earlier release may reload over it (lib/deployment-reload.ts).
+          data-search-field=""
+          type="text"
+          placeholder={placeholder}
+          value={shownValue}
+          aria-invalid={draftError ? true : inputProps?.["aria-invalid"]}
+          aria-describedby={
+            draftError
+              ? [describedBy, hintId].filter(Boolean).join(" ")
+              : describedBy
+          }
+          onChange={(e) => handleChange(e.target.value)}
+          className={`border-field-edge focus:border-field-focus w-full rounded-2xl border bg-white text-gray-900 placeholder-gray-500 transition duration-200 focus:ring-0 focus:outline-none ${sizeClasses[size]} ${shownValue ? "pr-10" : ""} `}
+        />
+
+        {shownValue && (
+          <button
+            type="button"
+            aria-label="Suche löschen"
+            onClick={() => {
+              commitNow("");
+              onClear?.();
+            }}
+            className="absolute top-1/2 right-2 -translate-y-1/2 transform rounded-full p-1 transition-colors hover:bg-gray-100 md:right-3"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
-        </button>
-      )}
+            <svg
+              className={`${iconSizeClasses[size]} text-gray-400`}
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        )}
+      </div>
+      <FieldErrorHint id={hintId} message={draftError} live />
     </div>
   );
 }

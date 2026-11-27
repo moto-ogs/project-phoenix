@@ -127,8 +127,6 @@ func StaffAdminRouteContracts() []common.RouteContract {
 		route("GET", "/{id}/schedule", nil, ScheduleResponse{}),
 		route("PUT", "/{id}/schedule", ScheduleUpdateRequest{}, ScheduleResponse{}),
 		route("GET", "/{id}/time-tracking/month-summary", nil, workforce.MonthSummary{}, yearMonth...),
-		// The daily table never asks for ?target_only=true, so the proxy
-		// forwards the range only and the answer is always the projection.
 		route("GET", "/{id}/time-tracking/schedule-targets", nil, []workforce.DailyProjection{},
 			common.QueryParam{Name: "from", Kind: common.QueryDate}, common.QueryParam{Name: "to", Kind: common.QueryDate}),
 		route("GET", "/{id}/time-tracking/comp-time-preview", nil, workforce.CompTimeBalancePreview{},

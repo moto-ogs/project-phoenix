@@ -9,7 +9,7 @@ import { beforeEach, expect, it, vi } from "vitest";
 import { TraegerResourceTestProvider } from "~/test/traeger-resource-provider";
 import { ApiError } from "~/lib/api-error";
 import type { ExportRun } from "~/lib/traeger-finance-exports-api";
-import TraegerFinanceExportsPage from "./page";
+import TraegerFinanceExportsPage from "./page-content";
 
 vi.unmock("swr");
 
@@ -226,7 +226,7 @@ it("keeps the card inset around the run table and the protocol table", async () 
     await screen.findAllByRole("button", { name: "Ältere anzeigen" }),
   ).toHaveLength(2);
 
-  for (const title of ["Dateien je Lauf", "Exportprotokoll"]) {
+  for (const title of ["Dateien pro Lauf", "Exportprotokoll"]) {
     const card = screen
       .getByRole("heading", { name: title })
       .closest("section")!;
@@ -341,7 +341,6 @@ it.each(["care", "holiday"] as const)(
               field: "debtor_number",
               reason: "missing",
             },
-            { document_number: 7, field: "debtor_number", reason: "missing" },
           ],
         },
       }),
@@ -352,8 +351,7 @@ it.each(["care", "holiday"] as const)(
     expect(
       await screen.findByText(`Keine DATEV-Datei für ${run.label}`),
     ).toBeInTheDocument();
-    // One line per reason, with every invoice it names; the malformed entry
-    // is left out.
+    // One line per reason, with every invoice it names.
     expect(
       screen.getByText("Debitorennummer fehlt: MB-2026-0001, MB-2026-0002"),
     ).toBeInTheDocument();

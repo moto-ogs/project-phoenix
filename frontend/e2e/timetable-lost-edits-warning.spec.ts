@@ -67,8 +67,8 @@ async function stubProbe(page: Page) {
  * saveSeriesForm). Mutates nothing — the caller cancels the warning.
  */
 async function openSeriesScopeDialog(page: Page): Promise<boolean> {
-  // "Betreuungsplan" lives in the collapsible "Planung" sidebar group.
-  await openSidebarGroup(page, "Planung");
+  // "Betreuungsplan" lives in the "Tagesbetrieb" sidebar group (#8134).
+  await openSidebarGroup(page, "Tagesbetrieb");
   await page
     .locator("aside")
     .getByRole("link", { name: "Betreuungsplan", exact: true })

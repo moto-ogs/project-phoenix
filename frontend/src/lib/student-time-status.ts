@@ -231,29 +231,61 @@ export function earlyCheckoutMinutes({
   if (toleranceMinutes == null || !plannedPickup) {
     return null;
   }
-  const planned = buildTimeDate(plannedPickup, now);
-  if (!planned) {
+  const planned = wallTimeOnDate(plannedPickup, now);
+  if (planned === null) {
     return null;
   }
-  const millisecondsEarly = planned.getTime() - now.getTime();
+  const millisecondsEarly = planned - now.getTime();
   if (millisecondsEarly <= toleranceMinutes * 60000) {
     return null;
   }
   return Math.floor(millisecondsEarly / 60000);
 }
 
-function buildTimeDate(time: string, baseDate: Date): Date | null {
-  if (!parseTimeParts(time)) {
-    return null;
-  }
+// All rows in a card list share its minute-clock Date. Reuse the Berlin
+// conversion for each wall-clock minute, without changing DST handling.
+const wallTimesByClock = new WeakMap<
+  Date,
+  { instant: number; day: Date; times: Map<string, number> }
+>();
 
+function wallTimeOnDate(time: string | undefined, clock: Date): number | null {
+  if (!time || !parseTimeParts(time)) return null;
+  const instant = clock.getTime();
   try {
-    return new Date(
-      berlinDateTimeISO(parseISODate(berlinTodayISO(baseDate)), time),
-    );
+    let cached = wallTimesByClock.get(clock);
+    if (cached?.instant !== instant) {
+      cached = {
+        instant,
+        day: parseISODate(berlinTodayISO(clock)),
+        times: new Map(),
+      };
+      wallTimesByClock.set(clock, cached);
+    }
+    const reused = cached.times.get(time);
+    if (reused !== undefined) return reused;
+    const value = Date.parse(berlinDateTimeISO(cached.day, time));
+    cached.times.set(time, value);
+    return value;
   } catch {
     return null;
   }
+}
+
+/**
+ * Whether the Berlin wall-clock span start–end (HH:MM) contains the clock's
+ * instant. The end is exclusive: at 15:00 a block until 15:00 is over.
+ */
+export function isWallClockSpanRunning(
+  start: string,
+  end: string,
+  clock: Date,
+): boolean {
+  const from = wallTimeOnDate(start, clock);
+  const until = wallTimeOnDate(end, clock);
+  if (from === null || until === null) return false;
+  const instant = clock.getTime();
+  return from <= instant && instant < until;
 }
 
 function formatTimeDisplay(time?: string): string | undefined {
@@ -298,13 +330,12 @@ export function getStudentTimeStatus({
   const displayActualTime = formatTimeDisplay(actualTime);
   const displayPlannedTime = formatTimeDisplay(plannedTime);
 
-  const actualDate = actualTime ? buildTimeDate(actualTime, now) : null;
-  const plannedDate = plannedTime ? buildTimeDate(plannedTime, now) : null;
-
   if (displayActualTime) {
+    const actualAt = wallTimeOnDate(actualTime, now);
+    const plannedAt = wallTimeOnDate(plannedTime, now);
     const diffMinutes =
-      actualDate && plannedDate
-        ? Math.round((actualDate.getTime() - plannedDate.getTime()) / 60000)
+      actualAt !== null && plannedAt !== null
+        ? Math.round((actualAt - plannedAt) / 60000)
         : undefined;
 
     const doneLate = (diffMinutes ?? 0) > 0;
@@ -345,7 +376,8 @@ export function getStudentTimeStatus({
     };
   }
 
-  if (!displayPlannedTime || !plannedDate) {
+  const plannedAt = wallTimeOnDate(plannedTime, now);
+  if (!displayPlannedTime || plannedAt === null) {
     return {
       state: "none",
       displayTime: undefined,
@@ -356,9 +388,7 @@ export function getStudentTimeStatus({
     };
   }
 
-  const diffMinutes = Math.round(
-    (plannedDate.getTime() - now.getTime()) / 60000,
-  );
+  const diffMinutes = Math.round((plannedAt - now.getTime()) / 60000);
 
   if (kind === "arrival" && day && comesOnlyIfLessonCancelled(day)) {
     return {

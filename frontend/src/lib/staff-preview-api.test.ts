@@ -9,8 +9,10 @@ vi.mock("~/lib/session-cache", async () => ({
   clearSessionCache: () => mockClearSessionCache(),
 }));
 
-vi.mock("next-auth/react", () => ({
-  signOut: (...args: unknown[]) => mockSignOut(...args) as Promise<undefined>,
+// The tree's session ends through Auth.js' protocol (#8082).
+vi.mock("~/lib/tenant-session-cookie", () => ({
+  signOutSession: (...args: unknown[]) =>
+    mockSignOut(...args) as Promise<undefined>,
 }));
 
 const previewSession = (targetAccountId: string | null) => ({
@@ -151,7 +153,7 @@ describe("performEndStaffPreview", () => {
     );
 
     expect(global.fetch).toHaveBeenCalledTimes(1);
-    expect(mockSignOut).toHaveBeenCalledWith({ redirect: false });
+    expect(mockSignOut).toHaveBeenCalledWith("tenant");
     expect(swrMutate).not.toHaveBeenCalled();
   });
 
@@ -162,7 +164,7 @@ describe("performEndStaffPreview", () => {
       "restore failed",
     );
 
-    expect(mockSignOut).toHaveBeenCalledWith({ redirect: false });
+    expect(mockSignOut).toHaveBeenCalledWith("tenant");
   });
 
   it("never fails on a rejected audit call", async () => {

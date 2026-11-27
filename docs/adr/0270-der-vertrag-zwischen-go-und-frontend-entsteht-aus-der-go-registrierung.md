@@ -487,19 +487,26 @@ Für [#8003](https://github.com/moto-ogs/project-phoenix/issues/8003):
 Server-Module und Layouts lesen angemeldete JSON-Routen über `contractGet`
 und schreiben über `contractWrite`. Der erzeugte Eintrag bestimmt den Pfad
 und die Typen von `params` und `query`; es gibt keine freie Zieladresse.
+Registriert eine benannte Browserroute Query-Parameter, gibt sie den
+eingegangenen `Request` mit. Der Transport leitet alle registrierten Werte
+weiter. Dateirouten streamt der Katalog-Proxy; die JSON-Helfer nehmen keine
+Dateieinträge an.
 Die Staff-Shell lässt nicht lesbare
 optionale Startdaten aus; der Browser lädt sie auf dem normalen Weg.
 Der Schul-Lookup prüft den öffentlichen Routeneintrag und speichert
 dekodierte Treffer mit geprüften Branding-Feldern sowie 404, aber keine
-anderen Fehler. Die Invalidierung gilt für Treffer und 404 und läuft
+anderen Fehler. Bei 429 erhält der Browser Gos `Retry-After`. Die
+Invalidierung gilt für Treffer und 404 und läuft
 serverseitig im Schreibaufruf, nicht in einem zweiten Browser-Aufruf. Der Generator
-übernimmt die betroffenen Einstellungsschlüssel aus Go. Schulbezogene
-Zusatzschlüssel bleiben offen. Der Wächter in `route-backend-paths.test.ts` prüft
+übernimmt die betroffenen Einstellungsschlüssel aus Go. Der Operator-Write
+liefert die Subdomain direkt, ohne zweiten Lookup. Der Wächter in
+`route-backend-paths.test.ts` prüft
 auch Server-Module, nicht nur benannte BFF-Routen.
 
 Katalog-Proxy, benannte Routen und SSE verwenden für Ablehnungen vor dem
-Stream denselben Fehlerpfad. Die registrierten Formen in `details` und
-die SSE-Ereignisform erzeugt `gencontract` aus den Go-Typen.
+Stream denselben Fehlerpfad. `gencontract` erzeugt die Fehlerdecoder aus den
+je Code registrierten Go-Typen und der SSE-Ereignisform. Strukturierte
+Ablaufdaten stehen unter `details`, nicht neben der Problem-Hülle.
 Eine unlesbare Erfolgsantwort, auch abgeschnittenes JSON, ergibt 502.
 Kann die Änderung festgeschrieben sein, lautet der Fehlercode
 `general.write_answer_unreadable`; bei GET und `NoCommit` bleibt der
@@ -511,6 +518,8 @@ Fehler wiederholbar. Ein 204 ersetzt keine zugesagten Daten.
    aus einem registrierten GET-Dateischlüssel mit getypten Pfad- und
    Query-Parametern. `bffFile` bleibt der Aufruf, der einen `Response`
    liefert. `bffPath` baut andere registrierte Adressen mit einem Routenschlüssel.
+   Beim Schülerfoto liefert Go Schülerkennung und Fotoversion. Das BFF hält
+   `photo_url` nur für ältere Tabs aus derselben Dateiroute verfügbar.
    Der Wächter prüft den Produktcode auf handgebaute Adressen, auch wenn
    Templates oder Verkettungen Konstanten und Hilfsfunktionen nutzen.
    Die Lint-Ausnahmen für ungetypte Aufrufe gelten pro Datei, Methode und
@@ -525,3 +534,36 @@ Fehler wiederholbar. Ein 204 ersetzt keine zugesagten Daten.
    Demo-Route-Dateien lesen Status, Sitzung und Neustart über erzeugte
    Decoder. Die separate Website fordert den Link direkt an
    ([ADR 0316](0316-demo-link-anfrage-bleibt-ein-website-vertrag.md)).
+
+
+## Ergänzung: Aufsichtsfelder verlassen die Staff-Navigation (#8085)
+
+`GET /api/me/navigation` behält Personalprofil und Schulschalter. Seine vier
+Aufsichtsfelder (`educational_groups`, `supervised_groups`, `incomplete`,
+`unavailable_sections`) entfallen im selben Schnitt wie ihre Leser. Der
+Staff-Shell-Seed und der Browser lesen stattdessen
+[`GET /api/active/supervision-context`](../agents/contracts.md#staff-supervision-context-8084-8085).
+Die Auswertung des Lasttests liest keine dieser Eigenschaften; der Kiosk
+liest die Route nicht. Allgemeine Gruppen- und Aufsichtsabfragen für andere
+Leser bleiben unverändert.
+
+Die Vertragsprüfung erlaubt ausschließlich diese vier Feldentfernungen aus
+dem alten Go-Vertrag dieser Route. Der Schnitt setzt gemeinsam ausgelieferte
+Go- und Next-Versionen und danach neu geladene Staff-Tabs voraus. Ein alter
+Next-Decoder kann die kürzere Antwort nicht lesen. Die gewöhnliche
+Deprecation-Regel gilt für alle anderen Vertragsänderungen.
+
+## Ergänzung: Zwei ungenutzte Aufsichtsrouten entfallen
+
+Nach #8084 und #8085 liest die Staff-Oberfläche den Aufsichtskontext über
+`GET /api/active/supervision-context`. Die Suche in den Clients, Skripten,
+der Betriebs- und Monitoring-Konfiguration sowie in PyrePortal ergab keine
+Aufrufer mehr für `GET /api/students/ogs-group-navigation` oder
+`GET /api/active/supervisors/all`. Der k6-Kapazitätstest ruft weiterhin
+`GET /api/me/groups/supervised` auf; dieser Vertrag bleibt.
+
+Wie beim Schnitt für #8085 erlaubt die Vertragsprüfung nur die ausdrücklich
+benannten Entfernungen, hier die zwei bisherigen tenant-exklusiven
+GET-Routen mit ihren bisherigen Antworttypen. Die Deprecation-Regel gilt
+unverändert für andere Verträge. Ein älterer Client von vor der Umstellung
+muss neu geladen werden. Der Proxy leitet die beiden Pfade nicht mehr weiter.

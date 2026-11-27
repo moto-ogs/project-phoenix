@@ -17,7 +17,7 @@ import type {
   MealBillingSummary,
 } from "~/lib/meal-billing-api";
 
-import MealBillingReleasePage from "./page";
+import MealBillingReleasePage from "./page-content";
 
 vi.unmock("swr");
 
@@ -44,7 +44,8 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
-vi.mock("~/lib/meal-billing-api", () => ({
+vi.mock("~/lib/meal-billing-api", async (original) => ({
+  ...(await original<typeof import("~/lib/meal-billing-api")>()),
   fetchMealBillingMonths,
   fetchMealBillingMonth,
   releaseMealBillingMonth,

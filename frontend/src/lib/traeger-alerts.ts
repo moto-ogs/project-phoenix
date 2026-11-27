@@ -62,7 +62,7 @@ export function alertSentence(
 export function thresholdsSentence(thresholds: TraegerAlertThresholds): string {
   const staff =
     thresholds.childrenPerStaff > 0
-      ? `mehr als ${children(thresholds.childrenPerStaff)} je Betreuungskraft`
+      ? `mehr als ${children(thresholds.childrenPerStaff)} pro Betreuungskraft`
       : "Personal: aus";
   const sick =
     thresholds.sickPercent > 0

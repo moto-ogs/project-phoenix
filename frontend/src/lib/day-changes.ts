@@ -16,7 +16,7 @@ import type {
   PersonRole,
   Section,
   Source,
-} from "~/lib/contract/day-changes.generated";
+} from "~/lib/contract/shared.generated";
 
 export interface DayChangePerson {
   readonly staffId: string;
@@ -35,6 +35,14 @@ export interface DayChangeChild {
   readonly pickupTime: string | null;
   /** Bei `child_pickup_note`: der Hinweis zum Abholen. */
   readonly note: string | null;
+  /**
+   * Bei `child_pickup_person` (#7655): wer das Kind heute abholt.
+   * `oneTime` heißt: keine dauerhaft berechtigte Person, Ausweis prüfen.
+   */
+  readonly pickupPerson?: {
+    readonly name: string;
+    readonly oneTime: boolean;
+  } | null;
 }
 
 export interface DayChangeLink {
@@ -45,6 +53,8 @@ export interface DayChangeLink {
   readonly instanceId?: string | null;
   /** Der Tag der Übersicht, für den Vertretungsplan dieses Tages. */
   readonly day?: string | null;
+  /** Der gesperrte Raum (#8161). */
+  readonly roomId?: string | null;
 }
 
 /** Die Kinder einer Gruppe oder Klasse außerhalb der eigenen Gruppen. */
@@ -56,6 +66,7 @@ export interface DayChangeChildSummary {
     readonly pickupChanged: number;
     readonly goesAlone: number;
     readonly pickupNote: number;
+    readonly pickupPerson?: number;
   };
   readonly items: readonly {
     readonly kind: Kind | (string & {});
@@ -138,6 +149,10 @@ export interface DayChange {
   } | null;
   /** Nur bei den Arten `appointment_cancelled` und `appointment_changed`. */
   readonly appointment?: DayChangeAppointment | null;
+  /** Nur bei der Art `meal_cancelled` (#7656): der Grund der Schule. */
+  readonly mealCancellation?: { readonly reason: string } | null;
+  /** Nur bei der Art `room_closed` (#8161): der Grund der Schule. */
+  readonly roomClosure?: { readonly reason: string } | null;
 }
 
 export interface DayChangesOverview {
@@ -155,6 +170,7 @@ function mapLink(link: Entry["link"], day?: string): DayChangeLink | null {
         studentId: link.student_id ?? null,
         instanceId: link.instance_id ?? null,
         day: day ?? null,
+        roomId: link.room_id ?? null,
       }
     : null;
 }
@@ -166,6 +182,12 @@ function mapChild(child: Child): DayChangeChild {
     status: child.status,
     pickupTime: child.pickup_time,
     note: child.note,
+    pickupPerson: child.pickup_person
+      ? {
+          name: child.pickup_person.name,
+          oneTime: child.pickup_person.one_time,
+        }
+      : null,
   };
 }
 
@@ -180,6 +202,7 @@ function mapChildSummary(
       pickupChanged: summary.counts.pickup_changed,
       goesAlone: summary.counts.goes_alone,
       pickupNote: summary.counts.pickup_note,
+      pickupPerson: summary.counts.pickup_person,
     },
     items: (summary.items ?? []).map((item) => ({
       kind: item.kind,
@@ -254,10 +277,16 @@ function mapEntry(entry: Entry, day: string): DayChange {
         }
       : null,
     appointment: mapAppointment(entry.appointment ?? null),
+    mealCancellation: entry.meal_cancellation
+      ? { reason: entry.meal_cancellation.reason }
+      : null,
+    roomClosure: entry.room_closure
+      ? { reason: entry.room_closure.reason }
+      : null,
   };
 }
 
-function mapDayChanges(overview: Overview): DayChangesOverview {
+export function mapDayChanges(overview: Overview): DayChangesOverview {
   return {
     date: overview.date ?? "",
     failedSources: (overview.sources ?? [])
@@ -269,7 +298,36 @@ function mapDayChanges(overview: Overview): DayChangesOverview {
   };
 }
 
-/** Liest die Übersicht der Sitzung über den Proxy des Staff-Portals. */
-export async function fetchDayChanges(): Promise<DayChangesOverview> {
-  return mapDayChanges(await bffJson("tenant", "GET /api/day-changes/today"));
+/**
+ * Liest die Übersicht der Sitzung über den Proxy des Staff-Portals. Ohne
+ * `date` liest das Backend heute; `date` nennt morgen für die Vorschau
+ * (#7657), einen anderen Tag lehnt es ab.
+ */
+export async function fetchDayChanges(
+  date?: string,
+): Promise<DayChangesOverview> {
+  return mapDayChanges(
+    await bffJson(
+      "tenant",
+      "GET /api/day-changes/today",
+      date ? { query: { date } } : {},
+    ),
+  );
+}
+
+/**
+ * Liest die Übersicht von moto schule (#7670): Unterrichtsschluss der
+ * eigenen Klassen und Schließtage. Die Kinder stehen im Klassentag. `date`
+ * wie bei `fetchDayChanges` (#7657).
+ */
+export async function fetchSchoolDayChanges(
+  date?: string,
+): Promise<DayChangesOverview> {
+  return mapDayChanges(
+    await bffJson(
+      "school",
+      "GET /school/day-changes/today",
+      date ? { query: { date } } : {},
+    ),
+  );
 }

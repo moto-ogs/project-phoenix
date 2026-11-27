@@ -257,10 +257,11 @@ export function Modal({
     }
   }, [isDismissDisabled]);
 
-  useEffect(() => {
+  React.useLayoutEffect(() => {
     return () => {
       if (dismissTimerRef.current !== null) {
         clearTimeout(dismissTimerRef.current);
+        dismissTimerRef.current = null;
       }
     };
   }, []);

@@ -21,6 +21,9 @@ vi.mock("~/components/analytics/parent-portal-analytics-session", () => ({
 vi.mock("~/components/auth/sentry-session-context", () => ({
   SentrySessionContext: () => null,
 }));
+vi.mock("~/components/settings/contrast-account-sync", () => ({
+  ContrastAccountSync: () => null,
+}));
 vi.mock("~/components/notifications/push-subscription-sync", () => ({
   PushSubscriptionSync: () => null,
 }));
@@ -74,7 +77,7 @@ afterEach(() => {
 describe("ParentProviders", () => {
   it("starts authenticated from the server snapshot without a session request", async () => {
     render(
-      <ParentProviders session={snapshot}>
+      <ParentProviders sessionMark="" session={snapshot}>
         <SessionProbe />
       </ParentProviders>,
     );
@@ -87,7 +90,7 @@ describe("ParentProviders", () => {
 
   it("fetches the session in the browser when the server has no snapshot", async () => {
     render(
-      <ParentProviders session={null}>
+      <ParentProviders sessionMark="" session={null}>
         <SessionProbe />
       </ParentProviders>,
     );

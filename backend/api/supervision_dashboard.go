@@ -122,6 +122,7 @@ func (s supervisionSettings) Prepare(ctx context.Context) (context.Context, erro
 		settingsplatform.KeyOperationalOverviewScope,
 		settingsplatform.KeyGroupMode,
 		settingsplatform.KeyStudentPhotosEnabled,
+		settingsplatform.KeyStudentCardActivitiesEnabled,
 		settingsplatform.KeyWebSpontaneousActivities, settingsplatform.KeyWeekendFollowsFriday,
 		settingsplatform.KeyTrackingIndicatorsEnabled,
 		settingsplatform.KeyTrackingIndicator1,
@@ -618,7 +619,7 @@ func supervisionVisitRecords(rows []*studentpresence.VisitDisplay) []supervision
 			ExcusedSince:  row.ExcusedSince,
 		}
 		if row.PhotoPath != nil {
-			record.PhotoURL = common.BuildStudentPhotoServeURL(row.StudentID, *row.PhotoPath)
+			record.PhotoVersion = common.StudentPhotoVersion(*row.PhotoPath)
 		}
 		if row.Sick != nil {
 			record.Sick = *row.Sick

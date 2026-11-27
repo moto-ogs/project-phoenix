@@ -176,7 +176,7 @@ export function schoolColumns(
       key: "present",
       header: "Anwesend",
       align: "right",
-      headerTitle: "Kinder mit Check-in, im Durchschnitt je Tag",
+      headerTitle: "Kinder mit Check-in, im Durchschnitt pro Tag",
       render: (row) => {
         if (row.averagePresent === null) {
           return <NoFigure reason="keine Check-ins im Zeitraum" />;
@@ -296,14 +296,14 @@ export const ROOM_COLUMNS: DataTableColumn<UtilizationRoomRow>[] = [
     key: "children",
     header: "Kinder am Tag",
     align: "right",
-    headerTitle: "Kinder mit einem Besuch im Raum, im Durchschnitt je Tag",
+    headerTitle: "Kinder mit einem Besuch im Raum, im Durchschnitt pro Tag",
     render: (row) => <Figure>Ø {formatAverage(row.averageChildren)}</Figure>,
     sortValue: (row) => row.averageChildren,
   },
   {
     key: "peak",
     header: "Gleichzeitig",
-    headerTitle: "Die meisten Kinder zur selben Zeit, im Durchschnitt je Tag",
+    headerTitle: "Die meisten Kinder zur selben Zeit, im Durchschnitt pro Tag",
     render: (row) =>
       row.room.capacity !== null && row.averagePeak !== null ? (
         <ShareCell

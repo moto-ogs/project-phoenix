@@ -122,10 +122,7 @@ describe("useTimetableActions lifecycle reload (#3888)", () => {
     });
 
     await waitFor(() =>
-      expect(refreshSupervision).toHaveBeenCalledWith({
-        silent: true,
-        force: true,
-      }),
+      expect(refreshSupervision).toHaveBeenCalledWith(["sessions"]),
     );
     expect(options.rememberReopenable).toHaveBeenCalledWith(
       { instanceId: "99", title: "Mittagessen", roomId: "20" },
@@ -214,10 +211,7 @@ describe("useTimetableActions lifecycle reload (#3888)", () => {
     expect(options.router.push).toHaveBeenCalledWith(
       "/active-supervisions?session=5",
     );
-    expect(refreshSupervision).toHaveBeenCalledWith({
-      silent: true,
-      force: true,
-    });
+    expect(refreshSupervision).toHaveBeenCalledWith(["sessions"]);
   });
 
   it("keeps selected room, activity and staff IDs as decimal strings", async () => {
@@ -352,10 +346,7 @@ describe("useTimetableActions after a logout or account switch (#5000)", () => {
       });
 
       // Anker: the end went through and the page reloaded.
-      expect(refreshSupervision).toHaveBeenCalledWith({
-        silent: true,
-        force: true,
-      });
+      expect(refreshSupervision).toHaveBeenCalledWith(["sessions"]);
       expect(options.rememberReopenable).not.toHaveBeenCalled();
     },
   );

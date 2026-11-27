@@ -23,7 +23,7 @@ type Runtime struct {
 	ConstraintViolation func(error) bool
 	// ConflictWithDetails renders a 409 with a registered code and the
 	// structured values the screen shows.
-	ConflictWithDetails func(w http.ResponseWriter, r *http.Request, err error, code string, details map[string]any)
+	ConflictWithDetails func(w http.ResponseWriter, r *http.Request, err error, code string, details any)
 	// ActiveSession reads the open kiosk session of a device row in the
 	// request's tenant transaction; nil when the device runs none (#2319).
 	ActiveSession func(ctx context.Context, deviceRowID int64) (*RemovalSession, error)
@@ -128,7 +128,7 @@ func (rs *Resource) renderError(w http.ResponseWriter, r *http.Request, err erro
 	}
 	var slotsFull *devicefleet.DeviceSlotsFullError
 	if errors.As(err, &slotsFull) {
-		rs.runtime.ConflictWithDetails(w, r, err, codeDeviceSlotsFull, map[string]any{"device_slots": slotsFull.DeviceSlots})
+		rs.runtime.ConflictWithDetails(w, r, err, codeDeviceSlotsFull, SchoolDeviceSlotsDetails{Slots: slotsFull.DeviceSlots})
 		return
 	}
 	status := http.StatusInternalServerError

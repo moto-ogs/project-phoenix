@@ -217,6 +217,8 @@ func OwnTraegerHolidayPeriods(tb testing.TB, db *bun.DB, organizationID int64) {
 		// answers and decisions went with the registrations.
 		_, err = db.ExecContext(context.Background(), `DELETE FROM enrollment.holiday_allocation_criteria WHERE organization_id = ?`, organizationID)
 		require.NoError(tb, err, "Failed to clean up test holiday criteria")
+		_, err = db.ExecContext(context.Background(), `DELETE FROM enrollment.holiday_allocation_rules WHERE organization_id = ?`, organizationID)
+		require.NoError(tb, err, "Failed to clean up test holiday allocation rules")
 		_, err = db.ExecContext(context.Background(), `DELETE FROM enrollment.holiday_registration_deletions WHERE organization_id = ?`, organizationID)
 		require.NoError(tb, err, "Failed to clean up the test holiday registration deletion log")
 		_, err = db.ExecContext(context.Background(), `DELETE FROM enrollment.holiday_registration_rate_limits WHERE organization_id = ?`, organizationID)
@@ -241,6 +243,16 @@ func OwnTraegerClosingDays(tb testing.TB, db *bun.DB, organizationID int64) {
 	tb.Cleanup(func() {
 		_, err := db.ExecContext(context.Background(), `DELETE FROM schedule.traeger_closing_days WHERE organization_id = ?`, organizationID)
 		require.NoError(tb, err, "Failed to clean up test Träger closing days")
+	})
+}
+
+// OwnTraegerOpeningChanges removes the opening changes a test plans for the
+// Träger (#8202) when the test ends.
+func OwnTraegerOpeningChanges(tb testing.TB, db *bun.DB, organizationID int64) {
+	tb.Helper()
+	tb.Cleanup(func() {
+		_, err := db.ExecContext(context.Background(), `DELETE FROM schedule.traeger_opening_changes WHERE organization_id = ?`, organizationID)
+		require.NoError(tb, err, "Failed to clean up test Träger opening changes")
 	})
 }
 

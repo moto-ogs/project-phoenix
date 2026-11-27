@@ -9,6 +9,7 @@ GET /school/class-day/absence-list
 GET /school/class-day/absence-list/export
 GET /school/class-day/arrival-exceptions
 GET /school/class-day/arrival-exceptions/block-start
+GET /school/class-day/assigned-classes
 GET /school/class-day/classes
 GET /school/class-day/school-day
 GET /school/class-day/shared-notes/{schoolClass}/students/{studentId}

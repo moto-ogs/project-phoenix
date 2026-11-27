@@ -215,3 +215,12 @@ one of school accounts and operators; it adds no factor and no recovery path.
    events of the second factor name no school and are logged like the
    Träger's.
 
+## Addendum 2026-11-25: order overview (#8088)
+
+The caterer portal reads the current supply directory once per order window.
+Within each supplied school's own transaction it rechecks the relationship
+and asks Meal Plan for day totals, status, deadline and separate counts of
+additions and removals. A failed school leaves the aggregate incomplete;
+an ended supply leaves the result. Only opening a school requests the full
+order, under the same supply-start and disclosure rules. Closing the card
+may retain that detail for the same account, school, window and grant.

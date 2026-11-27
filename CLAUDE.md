@@ -76,15 +76,15 @@ All paths below are relative to the repository root.
 
 ## Read when the task matches
 
-Load matching references before design, implementation, or review; do not
-bulk-load the table. References are required even if the runtime did not attach
-path-scoped rules automatically.
+Read only matching references before design, implementation, or review,
+even if the runtime did not load them.
 
 | Task or affected surface | Required guidance |
 |---|---|
 | New/changed data collection, access rules, or cross-module/portal flows | [.claude/rules/information-flow.md](.claude/rules/information-flow.md) |
 | Any backend change | [backend/CLAUDE.md](backend/CLAUDE.md), including its target architecture; inspect affected policy entries before choosing a boundary |
 | Any frontend change | [frontend/AGENTS.md](frontend/AGENTS.md) and [frontend/CLAUDE.md](frontend/CLAUDE.md) |
+| New page or first read | [Server seeds, Cache Components, inventories](docs/agents/frontend-api.md#first-display-in-a-protected-page) |
 | New or changed API route, or a frontend call to one | [docs/agents/new-route.md](docs/agents/new-route.md) |
 | Login, MFA, refresh, sessions, routing, tenant scoping, enrollment, IoT, client IP / rate limits | [docs/agents/contracts.md](docs/agents/contracts.md); check affected session mint/renew paths and wrong-portal rejection |
 | Auth, permissions, crypto, certificates, uploads, sensitive data | [.claude/rules/security/project-security.md](.claude/rules/security/project-security.md); parent-child access also requires [.claude/rules/guardian-parent-permissions.md](.claude/rules/guardian-parent-permissions.md) |
@@ -92,10 +92,10 @@ path-scoped rules automatically.
 | Error responses, error codes, error display | [.claude/rules/error-path.md](.claude/rules/error-path.md) |
 | Tenant settings | [.claude/rules/settings-system.md](.claude/rules/settings-system.md) and the `settings` skill |
 | Env vars, Docker, SOPS, deployment | [.claude/rules/env-docker-sync.md](.claude/rules/env-docker-sync.md) and [docs/agents/operations.md](docs/agents/operations.md) |
-| User-visible UI, emails, kiosk, help | [.claude/rules/verstaendlichkeit.md](.claude/rules/verstaendlichkeit.md); German copy (Du-Form): `moto-einfache-sprache`, [.claude/rules/frontend-ui-kit.md](.claude/rules/frontend-ui-kit.md) before frontend UI |
+| User-visible UI, emails, kiosk, help | [.claude/rules/verstaendlichkeit.md](.claude/rules/verstaendlichkeit.md); German copy (du/Sie): `moto-einfache-sprache`, [.claude/rules/frontend-ui-kit.md](.claude/rules/frontend-ui-kit.md) before frontend UI |
 | New/changed tenant feature flow or help content | [.claude/rules/help-guide-sync.md](.claude/rules/help-guide-sync.md); update guide and affected screenshots in the same PR (exemptions in the rule) |
 | Guided tours: an element with `data-setup-tour`, a stop selector, or the tour files (`setup-tours.ts`, `staff-onboarding-steps.ts`, `use-setup-tour.ts`, `coach-mark.tsx`) | The affected stop in `frontend/src/components/school-setup/setup-tours.ts` or `frontend/src/components/staff-onboarding/staff-onboarding-steps.ts`; on the seeded native stack run `scripts/dev-native.sh frontend pnpm exec playwright test e2e/onboarding-tours.spec.ts` |
-| New page, new writing route, new portal surface, analytics events, or PostHog dashboards | [.claude/rules/usage-analytics.md](.claude/rules/usage-analytics.md); the page guard in `analytics-routes.test.ts` and the route guard in `TestFullProductionRouterGolden` enforce it |
+| New page, writing route, portal surface, analytics event or PostHog dashboard | [Analytics rules](.claude/rules/usage-analytics.md); `analytics-routes.test.ts` and `TestFullProductionRouterGolden` enforce them |
 | Failing or changing tests | [.claude/rules/no-test-modifications.md](.claude/rules/no-test-modifications.md); [backend fixture rules](docs/agents/backend-testing.md); [frontend tests](docs/agents/frontend-testing.md) for date-, timer- or absence-asserting tests, specs, stories |
 | New or slow tests, test helpers or config, CI workflows or runners | [.claude/rules/ci-test-performance.md](.claude/rules/ci-test-performance.md); `ci-cost` skill for CI changes |
 | Domain terminology or architecture decisions | [CONTEXT.md](CONTEXT.md), relevant `docs/adr/`, [docs/agents/domain.md](docs/agents/domain.md) |

@@ -36,7 +36,7 @@ func TestSessionStartRefusesADeviceRemovedAfterAuthentication(t *testing.T) {
 	resource.DeviceAuthenticator = alreadyAuthenticated
 	resource.DeviceOnlyAuthenticator = alreadyAuthenticated
 	resource.SessionLifecycle = scanBindings.NewSessionLifecycle(activePresence.Active, owners.NewLoggedStudentPresence(testpkg.NewDatabase(t, db), nil),
-		owners.UnavailableMirrorSupervisions{}, NewDeviceScanPeople(activePeople.Users), active.IoT, nil, nil, DeviceScanPrincipal, time.Now)
+		owners.UnavailableMirrorSupervisions{}, NewDeviceScanPeople(activePeople.Users), active.IoT, nil, NewRoomClosuresForTest(testpkg.NewDatabase(t, db)), nil, DeviceScanPrincipal, time.Now)
 	handler := testpkg.TenantRuntimeMiddleware(t, db)(resource.Router())
 
 	for _, force := range []bool{false, true} {

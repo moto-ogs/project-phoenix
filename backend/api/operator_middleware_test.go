@@ -209,6 +209,38 @@ func TestRequiresActiveOperator_MissingOperatorID(t *testing.T) {
 	assert.False(t, nextCalled, "requests without operator identity must not reach protected handlers")
 }
 
+func TestRequiresLivePlatformOperatorChecksOnlyPlatformSessions(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		name       string
+		claims     routetest.Claims
+		wantLookup bool
+	}{
+		{"platform", routetest.Claims{ID: 42, Scope: "platform", FamilyID: "operator-test-family"}, true},
+		{"tenant", routetest.Claims{ID: 42, Scope: "tenant", FamilyID: "account-test-family"}, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			lookups := 0
+			handler := identityoperator.RequiresLivePlatformOperator(operatorLiveness(func(context.Context, int64, string) error {
+				lookups++
+				return nil
+			}))(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(http.StatusNoContent)
+			}))
+			req := httptest.NewRequest(http.MethodGet, "/test", nil)
+			req = req.WithContext(routetest.WithAuthenticatedContext(req.Context(), tc.claims, nil))
+			rec := httptest.NewRecorder()
+
+			handler.ServeHTTP(rec, req)
+
+			assert.Equal(t, http.StatusNoContent, rec.Code)
+			assert.Equal(t, tc.wantLookup, lookups == 1)
+		})
+	}
+}
+
 func requestWithOperatorClaims(operatorID int) *http.Request {
 	req := httptest.NewRequest(http.MethodGet, "/test", nil)
 	claims := routetest.Claims{ID: operatorID, Scope: "platform", FamilyID: "operator-test-family"}

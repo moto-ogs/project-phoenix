@@ -172,6 +172,7 @@ AS $function$
     enrollment.request_uploads,
     enrollment.requests,
     enrollment.submission_rate_limits,
+    facilities.room_closures,
     facilities.rooms,
     feedback.entries,
     iot.devices,
@@ -196,6 +197,7 @@ AS $function$
     schedule.pickup_change_team_notices,
     schedule.care_schedule_change_requests,
     schedule.closing_days,
+    schedule.opening_changes,
     schedule.dateframes,
     schedule.grade_transition_roster_removals,
     schedule.instance_staff,
@@ -214,6 +216,7 @@ AS $function$
     schedule.meal_participation_overrides,
     schedule.meal_participation_schedules,
     schedule.meal_plan_entries,
+    schedule.meal_cancellations,
     schedule.meal_sickness_status_history,
     schedule.pickup_extension_tasks,
     schedule.planning_tracks,
@@ -228,6 +231,7 @@ AS $function$
     schedule.student_departure_exceptions,
     schedule.student_pickup_exceptions,
     schedule.student_pickup_notes,
+    schedule.student_pickup_persons,
     schedule.student_pickup_schedules,
     schedule.timeframes,
     schedule.timetable_conflict_acks,
@@ -332,7 +336,7 @@ AS $function$
      WHERE f.contype='f' AND pn.nspname || '.' || pc.relname IN
       (SELECT item->>'name' FROM jsonb_array_elements(v_plan) AS item)
      GROUP BY f.oid,cn.nspname,cc.relname,f.conname,pn.nspname,pc.relname,f.confdeltype
-    ) AS edge) <> '6b46241e82dac28d05c6360467a0729ddd58ed085096b6b9ed693654d4335605' THEN
+    ) AS edge) <> '0b4bc6b34629d50807365a08724b44bd2aa3d1f236007080c42d8f5df04d9886' THEN
     RAISE EXCEPTION 'school erasure foreign keys changed; review plan' USING ERRCODE = '55000';
    END IF;
    -- Generated incoming-FK scope checks. Never cascade into foreign rows.

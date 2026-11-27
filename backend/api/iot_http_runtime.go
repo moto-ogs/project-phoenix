@@ -58,7 +58,7 @@ func renderIoTErrorReportFailure(w http.ResponseWriter, r *http.Request, status 
 
 func iotDevicesRuntime(history devicefleet.LifecycleHistory, names DeviceActorDirectory, sessions DeviceRemovalSessions, logger *slog.Logger, now func() time.Time) devicesAPI.Runtime {
 	return devicesAPI.Runtime{ParseID: common.ParseIDParam, Now: now, Permission: common.RequiresPermission, Success: common.Respond, Failure: renderIoTDataFailure, ConflictOnField: renderIoTConflictOnField, ConstraintViolation: transactionFailures.IsConstraintViolation,
-		ConflictWithDetails: func(w http.ResponseWriter, r *http.Request, err error, code string, details map[string]any) {
+		ConflictWithDetails: func(w http.ResponseWriter, r *http.Request, err error, code string, details any) {
 			common.RenderError(w, r, common.ErrorConflictWithDetails(err, code, details))
 		},
 		ActiveSession:     deviceRemovalSession(sessions),

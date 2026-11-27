@@ -29,7 +29,7 @@ export function workTimeTemplatesTopic(): HelpTopic {
           "Wähle oben rechts `Vorlage`.",
           "Gib einen Namen ein, zum Beispiel `Teilzeit 30 Stunden`.",
           "Wähle bei `Rotation` zum Beispiel `Standard (1 Woche)` oder `A/B-Wochen (2 Wochen)`.",
-          "Trage je Wochentag die Stunden ein, zum Beispiel `6`.",
+          "Trage pro Wochentag die Stunden ein, zum Beispiel `6`.",
           "Wähle `Speichern`.",
         ],
       },

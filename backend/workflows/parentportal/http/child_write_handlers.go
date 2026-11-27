@@ -306,6 +306,9 @@ type ChildFeaturesResponse struct {
 	// CareFacilityTerm is the school's term for its care („OGS“, „GTS“,
 	// #6082): the portal names this child's care with it.
 	CareFacilityTerm string `json:"care_facility_term"`
+	// CareFacilityArticle is the article the German texts decline that
+	// term with: "der", "die" or "das" (#8136).
+	CareFacilityArticle string `json:"care_facility_article"`
 }
 
 // getChildFeatures returns the resolved parent-portal feature flags for the
@@ -325,7 +328,11 @@ func (rs *Resource) getChildFeatures(w http.ResponseWriter, r *http.Request) {
 		renderParentWriteError(w, r, err)
 		return
 	}
-	common.Respond(w, r, http.StatusOK, ChildFeaturesResponse{
+	common.Respond(w, r, http.StatusOK, toChildFeaturesResponse(flags), "Child features retrieved")
+}
+
+func toChildFeaturesResponse(flags parentService.ChildFeatureFlags) ChildFeaturesResponse {
+	return ChildFeaturesResponse{
 		ConferenceBookAllowed:         flags.ConferenceBookAllowed,
 		CareEnded:                     flags.CareEnded,
 		WithoutCarePlace:              flags.WithoutCarePlace,
@@ -355,7 +362,8 @@ func (rs *Resource) getChildFeatures(w http.ResponseWriter, r *http.Request) {
 		NewsEnabled:                   flags.NewsEnabled,
 		ReasonRequired:                flags.ReasonRequired,
 		CareFacilityTerm:              flags.CareFacilityTerm,
-	}, "Child features retrieved")
+		CareFacilityArticle:           flags.CareFacilityArticle,
+	}
 }
 
 // --- Meal plan (Essensplan) ---

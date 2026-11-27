@@ -8,6 +8,7 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "~/contexts/ToastContext";
 import { apiErrorFromBody } from "~/lib/api-error";
+import { errorFromProblem } from "~/test/helpers/problem-response";
 import type { HolidayRegistrationDetail } from "~/lib/traeger-holiday-registrations-api";
 import {
   HOLIDAY_PERIOD,
@@ -286,11 +287,17 @@ describe("HolidayRegistrationChildCard", () => {
     "shows the calendar reason %s and the next step after a refused rebooking",
     async (name) => {
       mockRebook.mockRejectedValue(
-        apiErrorFromBody("calendar refusal", 409, {
-          status: 409,
+        await errorFromProblem("calendar refusal", 409, {
           code: "enrollment.holiday_week_no_care_day",
           detail: "Internal calendar diagnostics",
-          details: { date: "04.01.2027", name },
+          details: {
+            week: 1,
+            week_id: "22",
+            date: "04.01.2027",
+            iso_date: "2027-01-04",
+            kind: "closure",
+            name,
+          },
         }),
       );
       const onChanged = renderCard(HOLIDAY_REGISTRATION, 1);

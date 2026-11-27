@@ -44,7 +44,10 @@ type ArrivalPlans interface {
 // with ErrCareExceptionStaffProfileRequired.
 type ArrivalExceptions interface {
 	GetStudentArrivalExceptionByID(ctx context.Context, exceptionID int64) (*ArrivalException, error)
-	GetStudentArrivalExceptionForDate(ctx context.Context, studentID int64, date calendar.Date) (*ArrivalException, error)
+	// GetStudentArrivalExceptionsForDate reads the day exceptions of the
+	// children on date in one statement, keyed by child; a child without one
+	// has no entry.
+	GetStudentArrivalExceptionsForDate(ctx context.Context, studentIDs []int64, date calendar.Date) (map[int64]*ArrivalException, error)
 	GetStudentArrivalExceptions(ctx context.Context, studentID int64) ([]*ArrivalException, error)
 	GetUpcomingStudentArrivalExceptions(ctx context.Context, studentID int64) ([]*ArrivalException, error)
 	CreateStudentArrivalException(ctx context.Context, exception *ArrivalException) error

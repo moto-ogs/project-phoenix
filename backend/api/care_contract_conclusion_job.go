@@ -24,11 +24,11 @@ import (
 func CareContractConclusionJob(logger *slog.Logger, now func() time.Time) owners.CareContractConclusionBuilder {
 	return func(organizations organizationtenancy.Capability, settings owners.SettingsOwner,
 		delivery deliveryRuntime.Capability, outcomes deliveryRuntime.EmailOutcomes, accessLog owners.DataAccessAppender,
-		holidays carecontract.SchoolHolidays, parentsURL string) schedulerPorts.CareContractConclusion {
-		if organizations == nil || settings.Traeger == nil || settings.Service == nil || delivery == nil || outcomes == nil || accessLog == nil || holidays == nil {
-			panic("care contract conclusion: organizations, settings, delivery, the mail outcomes, the access log and the school holidays are required")
+		holidays carecontract.SchoolHolidays, parentsURL string, accounts owners.CareContractAccountEmails) schedulerPorts.CareContractConclusion {
+		if organizations == nil || settings.Traeger == nil || settings.Service == nil || delivery == nil || outcomes == nil || accessLog == nil || holidays == nil || accounts == nil {
+			panic("care contract conclusion: organizations, settings, delivery, the mail outcomes, the access log, the school holidays and the account addresses are required")
 		}
-		conclusion := NewCareContractConclusion(organizations, settings.Traeger, settings.Service, delivery, outcomes, accessLog, holidays, parentsURL, now)
+		conclusion := NewCareContractConclusion(organizations, settings.Traeger, settings.Service, delivery, outcomes, accessLog, holidays, parentsURL, now, accounts)
 		return func(ctx context.Context) (int, error) {
 			concluded, concludeErr := concludeEveryTraeger(ctx, organizations, conclusion, logger)
 			amended, amendErr := amendEveryTraeger(ctx, organizations, conclusion, logger)
@@ -80,7 +80,8 @@ func amendEveryTraeger(ctx context.Context, organizations organizationtenancy.Ca
 			continue
 		}
 		run, err := amendments.AmendFromBookings(ctx, organization.ID.Int64())
-		amended += len(run.Amended)
+		// A version that waits for the parents' signature is work of the run too.
+		amended += len(run.Amended) + len(run.Awaiting)
 		if err != nil {
 			failures = append(failures, fmt.Errorf("care contract amendments of Träger %d: %w", organization.ID, err))
 			continue

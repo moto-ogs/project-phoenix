@@ -72,7 +72,7 @@ func mountPresenceRoutes(
 	timeTracking *workforceCompose.TimeTracking, rooms FacilitiesRooms, feedback feedbackModule.Capability,
 	organizations organizationtenancy.Query, invitations identityaccess.SchoolInvitations, now func() time.Time,
 ) error {
-	openRoomMove, err := newOpenRoomMove(facilities, timetableOwner, active, logger)
+	openRoomMove, err := newOpenRoomMove(facilities, rooms.Closures, timetableOwner, active, calendar.CalendarDateClock(now), logger)
 	if err != nil {
 		return err
 	}
@@ -80,7 +80,7 @@ func mountPresenceRoutes(
 	if err != nil {
 		return err
 	}
-	activeResource := presenceAPI.NewResource(operations, activePeople{source: NewAttendanceRoutePeople(users)}, activeStaffAccess{source: peopleCompose.NewAttendanceRouteStaff(caller)}, settings, ProtectedTenantRoutesWith(supervisionDashboardHTTP.NewResource(dashboard).Register), logger.With("handler", "active"), presence, activeRequestRuntime(now), activeAuthorization(), settingsFacts.NewDisplaySettings(settings))
+	activeResource := presenceAPI.NewResource(operations, activePeople{source: NewAttendanceRoutePeople(users)}, activeStaffAccess{source: peopleCompose.NewAttendanceRouteStaff(caller)}, settings, ProtectedTenantRoutesWith(supervisionDashboardHTTP.NewResource(dashboard).Register), logger.With("handler", "active"), presence, activeRequestRuntime(now), settingsFacts.NewDisplaySettings(settings))
 	sessionEnd, err := newSessionEnd(presence, timetableOwner, days.Bridge, persons, facilities, hub, emitter, logger)
 	if err != nil {
 		return err
@@ -102,7 +102,16 @@ func mountPresenceRoutes(
 		}
 		return staff.ID, true, err
 	})
-	tenant.Mount("/active", activeResource.Router(move.Register, yardResource.Register))
+	assignments, err := studentpresence.StaffSupervisionAssignmentsOf(presence)
+	if err != nil {
+		return err
+	}
+	contextQuery := supervisionContextReader(groupLive.NavigationContext, supervisionContextSessions{
+		staffID: caller.CurrentStaffID, settings: settings, presence: presence, rooms: facilities,
+		activities: timetableOwner,
+	}, assignments, logger.With("handler", "supervision-context"))
+	contextResource := supervisionDashboardHTTP.ContextResource{Read: contextQuery.SupervisionContext}
+	tenant.Mount("/active", activeResource.Router(move.Register, yardResource.Register, contextResource.Register))
 	tenant.Mount("/iot", iotResource.Router())
 	return nil
 }
@@ -167,7 +176,7 @@ func newIoTResource(
 		SchoolName:              devicescanCompose.NewSchoolName(schoolName(organizations), DeviceScanPrincipal),
 		ErrorReports:            NewIoTErrorReporter(errorReports, deviceErrorReportQuota(limits)),
 		SessionEnd:              bindIoTHostSessionEnd(BindIoTSessionEnd(sessionEnd)),
-		SessionLifecycle:        scanBindings.NewSessionLifecycle(active, presence, scanBindings.NewSupervisionQuery(presence), NewDeviceScanPeople(users), iot, NewKioskSessionMirror(timetableRepos, activities, KioskMirrorPublisher(hub, logger), logger), logger, DeviceScanPrincipal, now),
+		SessionLifecycle:        scanBindings.NewSessionLifecycle(active, presence, scanBindings.NewSupervisionQuery(presence), NewDeviceScanPeople(users), iot, NewKioskSessionMirror(timetableRepos, activities, KioskMirrorPublisher(hub, logger), logger), rooms.Closures, logger, DeviceScanPrincipal, now),
 		Logger:                  logger.With("handler", "iot"),
 		DeviceAuthenticator:     gateDeviceAuthentication(deviceAuth.Device()),
 		DeviceOnlyAuthenticator: gateDeviceAuthentication(deviceAuth.DeviceOnly()),

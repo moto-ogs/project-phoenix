@@ -17,6 +17,17 @@ func NewParentPickupSchedules(source careplan.PickupScheduleService) parentporta
 			value, err := source.GetEffectivePickupTimeForDate(ctx, id, date)
 			return parentCarePlanPointer(value, parentCarePlanFromOwnerEffectivePickupTime), err
 		},
+		GetBulkEffectivePickupTimesForDate: func(ctx context.Context, ids []int64, date calendar.Date) (map[int64]*parentportal.EffectivePickupTimeSnapshot, error) {
+			values, err := source.GetBulkEffectivePickupTimesForDate(ctx, ids, date)
+			if values == nil {
+				return nil, err
+			}
+			out := make(map[int64]*parentportal.EffectivePickupTimeSnapshot, len(values))
+			for id, value := range values {
+				out[id] = parentCarePlanPointer(value, parentCarePlanFromOwnerEffectivePickupTime)
+			}
+			return out, err
+		},
 		GetStudentPickupSchedules: func(ctx context.Context, id int64) ([]*parentportal.PickupScheduleSnapshot, error) {
 			value, err := source.GetStudentPickupSchedules(ctx, id)
 			return parentCarePlanSlice(value, func(value *careplan.PickupSchedule) *parentportal.PickupScheduleSnapshot {

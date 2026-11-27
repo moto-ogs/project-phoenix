@@ -10,6 +10,7 @@ import { ParentProviders } from "~/app/parents/providers";
 import { SchoolProviders } from "~/app/school/providers";
 import { CatererProviders } from "~/app/caterer/providers";
 import { TraegerProviders } from "~/app/traeger/providers";
+import { _resetSessionTreeForTests } from "~/lib/session-tree";
 
 const { mockSession, passthrough, empty } = vi.hoisted(() => ({
   mockSession: vi.fn(),
@@ -54,6 +55,9 @@ vi.mock("~/lib/tenant-context", () => ({ TenantProvider: passthrough }));
 vi.mock("~/components/auth/tenant-auth-wrapper", () => ({
   TenantAuthWrapper: passthrough,
 }));
+vi.mock("~/components/settings/contrast-account-sync", () => ({
+  ContrastAccountSync: empty,
+}));
 
 const messages: unknown[] = [];
 class RecordingChannel {
@@ -70,6 +74,8 @@ function signedIn(id: string) {
   };
 }
 beforeEach(() => {
+  // Every test is a new document: no tree of the one before leaves.
+  _resetSessionTreeForTests();
   messages.length = 0;
   primeSessionCache(null);
   vi.stubGlobal("BroadcastChannel", RecordingChannel);
@@ -83,6 +89,7 @@ const providers = [
     "tenant",
     (children: ReactNode) => (
       <TenantProviders
+        sessionMark=""
         tenantSlug="school-a"
         tenant={{
           messagingEnabled: false,
@@ -109,23 +116,33 @@ const providers = [
   ],
   [
     "operator",
-    (children: ReactNode) => <OperatorProviders>{children}</OperatorProviders>,
+    (children: ReactNode) => (
+      <OperatorProviders sessionMark="">{children}</OperatorProviders>
+    ),
   ],
   [
     "parent",
-    (children: ReactNode) => <ParentProviders>{children}</ParentProviders>,
+    (children: ReactNode) => (
+      <ParentProviders sessionMark="">{children}</ParentProviders>
+    ),
   ],
   [
     "school",
-    (children: ReactNode) => <SchoolProviders>{children}</SchoolProviders>,
+    (children: ReactNode) => (
+      <SchoolProviders sessionMark="">{children}</SchoolProviders>
+    ),
   ],
   [
     "caterer",
-    (children: ReactNode) => <CatererProviders>{children}</CatererProviders>,
+    (children: ReactNode) => (
+      <CatererProviders sessionMark="">{children}</CatererProviders>
+    ),
   ],
   [
     "traeger",
-    (children: ReactNode) => <TraegerProviders>{children}</TraegerProviders>,
+    (children: ReactNode) => (
+      <TraegerProviders sessionMark="">{children}</TraegerProviders>
+    ),
   ],
 ] as const;
 

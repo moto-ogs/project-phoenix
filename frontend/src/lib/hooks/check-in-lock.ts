@@ -3,6 +3,7 @@
 import { useSyncExternalStore } from "react";
 
 import { ApiError } from "~/lib/api-error";
+import { PlannedStartDetailsSchema } from "~/lib/contract/problem-details.generated";
 import { onSWRScopeReset } from "~/lib/swr";
 import { PLANNED_START_NOT_REACHED_CODE } from "~/lib/time-tracking-api";
 
@@ -44,8 +45,10 @@ export function noteCheckInRefusal(error: unknown, date: string): void {
     error.code !== PLANNED_START_NOT_REACHED_CODE
   )
     return;
-  const opensAt = error.details?.planned_start_time;
-  if (typeof opensAt !== "string" || !/^\d{2}:\d{2}$/.test(opensAt)) return;
+  const decoded = PlannedStartDetailsSchema.safeParse(error.details);
+  if (!decoded.success) return;
+  const opensAt = decoded.data.planned_start_time;
+  if (!/^\d{2}:\d{2}$/.test(opensAt)) return;
   emit({ date, opensAt });
 }
 

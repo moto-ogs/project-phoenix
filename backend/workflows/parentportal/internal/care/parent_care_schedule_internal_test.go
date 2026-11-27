@@ -24,6 +24,7 @@ func TestMapCareRequestError(t *testing.T) {
 		{"not pending", carerequests.ErrNotPending, ErrCareRequestNotPending},
 		{"already pending", carerequests.ErrAlreadyPending, ErrCareRequestAlreadyPending},
 		{"invalid payload", carerequests.ErrInvalidPayload, ErrInvalidCareRequestPayload},
+		{"pickup conflict", carerequests.ErrPickupChangeConflict, ErrCareExceptionConflict},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

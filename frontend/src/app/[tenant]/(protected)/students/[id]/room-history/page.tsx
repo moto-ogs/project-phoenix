@@ -3,12 +3,13 @@ import { LOCATION_COLORS } from "~/lib/location-helper";
 import { StatusColorBadge } from "~/components/ui/status-color-badge";
 import { StatusBadge } from "~/components/ui/status-badge";
 import { useBerlinToday } from "~/lib/hooks/use-berlin-today";
+import { parseISODate } from "~/lib/date-helpers";
 
 import React, { Suspense, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { useParams, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { ChevronRight, Download } from "lucide-react";
+import { Download } from "lucide-react";
 import { Skeleton } from "~/components/ui/skeleton";
 import { ConceptIconTile } from "~/components/ui/concept-icon-tile";
 import {
@@ -31,7 +32,6 @@ import { tenantStudentKeys } from "~/lib/swr/tenant-student-keys";
 import { useStudentData } from "~/lib/hooks/use-student-data";
 import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
 import { useStudentHistoryBreadcrumb } from "~/lib/breadcrumb-context";
-import { useScrollToTop } from "~/lib/hooks/use-scroll-to-top";
 
 import {
   type AttendanceHistoryDay,
@@ -40,10 +40,7 @@ import {
   formatDuration,
   formatTime,
 } from "~/lib/attendance-history-helpers";
-import {
-  attendanceActorLabel,
-  type AttendanceActor,
-} from "~/lib/attendance-actor";
+import { attendanceActorLabel } from "~/lib/attendance-actor";
 import {
   AttendanceCorrectionModal,
   type CorrectableSlot,
@@ -83,7 +80,7 @@ const LazyHistoryCharts = dynamic(() => import("./history-charts"), {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-/** Erklärung am „Korrigieren“-Knopf, in Karte und Tabelle gleich (#6643). */
+/** Erklärung am „Korrigieren“-Knopf eines Betreuungsangebots (#6643). */
 const CORRECTION_TOOLTIP =
   "Öffnet die Anwesenheit dieses Termins zum Ändern, mit Angabe eines Grundes.";
 
@@ -92,14 +89,6 @@ function formatDateShort(dateKey: string): string {
   const day = d.getDate().toString().padStart(2, "0");
   const month = (d.getMonth() + 1).toString().padStart(2, "0");
   return `${day}.${month}`;
-}
-
-function formatWeekday(dateKey: string): string {
-  const d = new Date(`${dateKey}T00:00:00`);
-  return d.toLocaleDateString("de-DE", {
-    timeZone: "Europe/Berlin",
-    weekday: "short",
-  });
 }
 
 function HistoryCharts({ days }: { readonly days: AttendanceHistoryDay[] }) {
@@ -125,268 +114,53 @@ function HistoryCharts({ days }: { readonly days: AttendanceHistoryDay[] }) {
   return <LazyHistoryCharts data={chartData} />;
 }
 
-// ─── Wer gebucht hat (#4761) ─────────────────────────────────────────────────
+// ─── HistoryTable ──────────────────────────────────────────────────────────
 
-function AttendanceActorSummary({
-  checkedIn,
-  checkedOut,
-}: {
-  readonly checkedIn: AttendanceActor | null;
-  readonly checkedOut: AttendanceActor | null;
-}) {
-  const parts = [
-    checkedIn ? `Angemeldet: ${attendanceActorLabel(checkedIn)}` : null,
-    checkedOut ? `Abgemeldet: ${attendanceActorLabel(checkedOut)}` : null,
-  ].filter((part): part is string => Boolean(part));
-  if (parts.length === 0) return null;
-  return (
-    <span className="mt-0.5 block text-xs text-gray-600">
-      {parts.join(" · ")}
-    </span>
-  );
+/** "Mo., 06.04." for a "YYYY-MM-DD" day. */
+function formatDayShort(dateKey: string): string {
+  return parseISODate(dateKey).toLocaleDateString("de-DE", {
+    weekday: "short",
+    day: "2-digit",
+    month: "2-digit",
+  });
 }
 
-// ─── DayCard (mobile) ────────────────────────────────────────────────────────
-
-function DayCard({
+/** The day with its status (sick, excused), in the table and on the card. */
+function DayTitle({
   day,
-  isToday,
-  canCorrect,
-  onCorrect,
-}: {
-  readonly day: AttendanceHistoryDay;
-  readonly isToday: boolean;
-  readonly canCorrect: boolean;
-  readonly onCorrect: (slot: CorrectableSlot) => void;
-}) {
-  const [expanded, setExpanded] = useState(false);
+  date,
+  wrap = false,
+}: Readonly<{ day: AttendanceHistoryDay; date: string; wrap?: boolean }>) {
   const statusLabel = day.statusEntries.map((entry) => entry.label).join(", ");
-
   return (
-    <div className="border-b border-gray-100 last:border-b-0">
-      <button
-        type="button"
-        onClick={() => setExpanded(!expanded)}
-        className={`flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-gray-50 ${isToday ? "bg-moto-blue-soft/60" : ""}`}
-      >
-        <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-xs font-medium text-gray-600">
-            {formatWeekday(day.date)}
-          </div>
-          <div>
-            <span className="text-sm font-medium text-gray-900">
-              {formatDateShort(day.date)}
-            </span>
-            {day.attendance && (
-              <span className="ml-2 text-xs text-gray-500">
-                {formatTime(day.attendance.checkInTime)} –{" "}
-                {day.attendance.checkOutTime
-                  ? formatTime(day.attendance.checkOutTime)
-                  : "anwesend"}
-              </span>
-            )}
-            {!day.attendance && statusLabel && (
-              <span className="text-moto-amber-strong ml-2 text-xs font-medium">
-                {statusLabel}
-              </span>
-            )}
-            {day.attendance && (
-              <AttendanceActorSummary
-                checkedIn={day.attendance.checkedInActor}
-                checkedOut={day.attendance.checkedOutActor}
-              />
-            )}
-            {day.attendance?.leftForClassAt.map((at) => (
-              <span
-                key={at.getTime()}
-                className="mt-0.5 block text-xs text-gray-600"
-              >
-                Zum Unterricht gegangen: {formatTime(at)} Uhr
-              </span>
-            ))}
-            {day.attendance?.checkOutNote && (
-              <span className="mt-0.5 block text-xs text-gray-600">
-                Grund für das frühe Gehen: {day.attendance.checkOutNote}
-              </span>
-            )}
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          {day.attendance && (
-            <StatusBadge
-              label={formatDuration(day.attendance.durationMinutes)}
-              tone="green"
-              compact
-            />
-          )}
-          {!day.attendance && (
-            <StatusColorBadge
-              label={statusLabel || "Keine Daten"}
-              color={LOCATION_COLORS.WARNING}
-              compact
-              wrap
-            />
-          )}
-          <ChevronRight
-            className={`h-4 w-4 text-gray-500 transition-transform ${expanded ? "rotate-90" : ""}`}
-          />
-        </div>
-      </button>
-
-      {expanded && (
-        <div className="border-t border-gray-50 bg-gray-50/50 px-4 py-3">
-          {day.slots.length > 0 && (
-            <div className="mb-3 space-y-2">
-              <p className="text-xs font-semibold text-gray-700">
-                Betreuungsangebote
-              </p>
-              {day.slots.map((slot) => (
-                <div key={slot.instanceId} className="text-xs">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="font-medium text-gray-800">
-                        {slot.title}
-                      </span>
-                      <span className="ml-2 text-gray-500">
-                        {slot.startTime}–{slot.endTime}
-                      </span>
-                      {slot.isUnplanned && (
-                        <span className="text-moto-orange-strong ml-2">
-                          ungeplant
-                        </span>
-                      )}
-                    </div>
-                    <span className="font-medium text-gray-600">
-                      {formatAttendanceSlotStatus(slot.status, slot.substatus)}
-                    </span>
-                  </div>
-                  {/* Die Bemerkung aus der Betreuung (#2898): ruhige
-                      Information unter ihrem Block, nicht klickbar. */}
-                  {slot.note && (
-                    <p className="mt-0.5 pl-1 text-gray-500 italic">
-                      Bemerkung: {slot.note}
-                    </p>
-                  )}
-                  {/* Korrigieren nur mit Recht und nach Abschluss. Der fehlende
-                      Instanzstatus synthetischer "Ohne Zuordnung"-Zeilen
-                      schließt sie ebenfalls aus. */}
-                  {canCorrect &&
-                    slot.instanceStatus === "completed" &&
-                    slot.status && (
-                      <Button
-                        type="button"
-                        variant="link"
-                        size="md"
-                        onClick={() =>
-                          onCorrect({
-                            instanceId: slot.instanceId,
-                            title: slot.title,
-                            date: formatDateShort(day.date),
-                            startTime: slot.startTime,
-                            endTime: slot.endTime,
-                            status: slot.status ?? "",
-                            substatus: slot.substatus,
-                            note: slot.note,
-                          })
-                        }
-                        tooltip={CORRECTION_TOOLTIP}
-                        className="mt-0.5 ml-1"
-                      >
-                        Korrigieren
-                      </Button>
-                    )}
-                </div>
-              ))}
-            </div>
-          )}
-          {day.statusEntries.length > 0 && (
-            <div className="mb-3 space-y-1">
-              {day.statusEntries.map((entry) => (
-                <div
-                  key={`${day.date}-${entry.status}`}
-                  className="flex items-center justify-between text-xs"
-                >
-                  <span className="text-moto-amber-strong font-medium">
-                    {entry.label}
-                  </span>
-                  <span className="text-gray-500">
-                    gemeldet {formatTime(entry.reportedAt)}
-                    {entry.clearedAt
-                      ? ` · beendet ${formatTime(entry.clearedAt)}`
-                      : ""}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-          {!day.roomDetailAvailable ? (
-            <p className="text-xs text-gray-500 italic">
-              Raumdetails nicht mehr verfügbar (Aufbewahrungsfrist
-              überschritten).
-            </p>
-          ) : day.visits.length === 0 ? (
-            <p className="text-xs text-gray-500">
-              Keine Raumwechsel an diesem Tag.
-            </p>
-          ) : (
-            <div className="space-y-2">
-              {day.visits.map((v, i) => (
-                <div
-                  key={`${day.date}-${i}-${v.entryTime.toISOString()}`}
-                  className="flex items-center justify-between text-xs"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium text-gray-700">
-                      {v.roomName || "Unbekannt"}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 text-gray-500">
-                    <span className="tabular-nums">
-                      {formatTime(v.entryTime)}
-                      {v.exitTime && <> – {formatTime(v.exitTime)}</>}
-                    </span>
-                    {v.durationMinutes != null && (
-                      <span className="rounded bg-gray-100 px-1.5 py-0.5 tabular-nums">
-                        {formatDuration(v.durationMinutes)}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+    <div className={`flex items-center gap-2 ${wrap ? "flex-wrap" : ""}`}>
+      <span className="font-medium text-gray-900">{date}</span>
+      {statusLabel && (
+        <StatusColorBadge
+          label={statusLabel}
+          color={LOCATION_COLORS.WARNING}
+          compact
+          wrap
+        />
       )}
     </div>
   );
 }
 
-// ─── HistoryTable (desktop) ──────────────────────────────────────────────────
-
+// On a phone the same rows stack as cards (#7915): the day with its status
+// as title, the duration beside it, arrival, departure and the counts below;
+// the rooms and offerings open with the card's details button.
 const HISTORY_COLUMNS: DataTableColumn<AttendanceHistoryDay>[] = [
   {
     key: "day",
     header: "Tag",
-    render: (day) => {
-      const statusLabel = day.statusEntries
-        .map((entry) => entry.label)
-        .join(", ");
-      return (
-        <div className="flex items-center gap-2">
-          <span className="font-medium text-gray-900">
-            {formatDate(day.date)}
-          </span>
-          {statusLabel && (
-            <StatusColorBadge
-              label={statusLabel}
-              color={LOCATION_COLORS.WARNING}
-              compact
-              wrap
-            />
-          )}
-        </div>
-      );
-    },
+    stacked: "title",
+    render: (day) => <DayTitle day={day} date={formatDate(day.date)} />,
+    // The phone card names the day short ("Mo., 06.04."), as the old day
+    // card did: the long form wraps on a phone line (#7915).
+    stackedRender: (day) => (
+      <DayTitle day={day} date={formatDayShort(day.date)} wrap />
+    ),
   },
   {
     key: "arrival",
@@ -438,6 +212,23 @@ const HISTORY_COLUMNS: DataTableColumn<AttendanceHistoryDay>[] = [
   {
     key: "duration",
     header: "Dauer",
+    stacked: "meta",
+    // A card without attendance and without a status (sick, excused) names
+    // the missing data; with a status the title already says what was.
+    stackedRender: (day) =>
+      day.attendance ? (
+        <StatusBadge
+          label={formatDuration(day.attendance.durationMinutes)}
+          tone="green"
+          compact
+        />
+      ) : day.statusEntries.length === 0 ? (
+        <StatusColorBadge
+          label="Keine Daten"
+          color={LOCATION_COLORS.WARNING}
+          compact
+        />
+      ) : null,
     render: (day) =>
       day.attendance ? (
         <StatusBadge
@@ -539,6 +330,9 @@ function daySlotRows(
       },
       {
         columnKey: "duration",
+        // The table shows an offering's status under "Dauer"; the card
+        // names it (#7915).
+        stackedLabel: "Status",
         content: (
           <span className="text-gray-600">
             {formatAttendanceSlotStatus(slot.status, slot.substatus)}
@@ -551,18 +345,9 @@ function daySlotRows(
 
 // Die Statusmeldungen und Raumwechsel eines aufgeklappten Tages.
 function dayRoomRows(day: AttendanceHistoryDay): DataTableExtraRow[] {
-  if (!day.roomDetailAvailable) {
-    return [
-      {
-        key: `${day.date}-rooms-expired`,
-        content: (
-          <span className="italic">
-            Raumdetails nicht mehr verfügbar (Aufbewahrungsfrist überschritten).
-          </span>
-        ),
-      },
-    ];
-  }
+  // A report stands under the arrival and departure columns; on a phone
+  // card it carries its own labels, or it would read as an arrival (#7915).
+  // Reports outlive the room-detail retention.
   const statusRows: DataTableExtraRow[] = day.statusEntries.map((entry) => ({
     key: `${day.date}-${entry.status}`,
     cells: [
@@ -576,12 +361,14 @@ function dayRoomRows(day: AttendanceHistoryDay): DataTableExtraRow[] {
       },
       {
         columnKey: "arrival",
+        stackedLabel: "Gemeldet",
         content: (
           <span className="tabular-nums">{formatTime(entry.reportedAt)}</span>
         ),
       },
       {
         columnKey: "departure",
+        stackedLabel: "Beendet",
         content: (
           <span className="tabular-nums">
             {entry.clearedAt ? formatTime(entry.clearedAt) : "–"}
@@ -594,6 +381,19 @@ function dayRoomRows(day: AttendanceHistoryDay): DataTableExtraRow[] {
       },
     ],
   }));
+  if (!day.roomDetailAvailable) {
+    return [
+      ...statusRows,
+      {
+        key: `${day.date}-rooms-expired`,
+        content: (
+          <span className="italic">
+            Raumdetails nicht mehr verfügbar (Aufbewahrungsfrist überschritten).
+          </span>
+        ),
+      },
+    ];
+  }
   if (day.visits.length === 0) {
     return [
       ...statusRows,
@@ -672,42 +472,24 @@ function HistoryTable({
         concept={changeHistoryConcept}
       >
         {days.length === 0 ? null : (
-          <>
-            {/* Desktop table */}
-            <div className="hidden md:block">
-              <DataTable
-                columns={HISTORY_COLUMNS}
-                rows={days}
-                getRowKey={(day) => day.date}
-                expandable={{
-                  rowLabel: (day, expanded) =>
-                    `${formatDate(day.date)}: Details ${expanded ? "schließen" : "öffnen"}`,
-                }}
-                renderSubRows={(day, expanded) =>
-                  expanded
-                    ? [
-                        ...daySlotRows(day, canCorrect, setCorrecting),
-                        ...dayRoomRows(day),
-                      ]
-                    : []
-                }
-                rowTone={(day) => (day.date === todayKey ? "today" : null)}
-              />
-            </div>
-
-            {/* Mobile card layout */}
-            <div className="moto-content-surface overflow-hidden rounded-xl border md:hidden">
-              {days.map((day) => (
-                <DayCard
-                  key={day.date}
-                  day={day}
-                  isToday={day.date === todayKey}
-                  canCorrect={canCorrect}
-                  onCorrect={setCorrecting}
-                />
-              ))}
-            </div>
-          </>
+          <DataTable
+            columns={HISTORY_COLUMNS}
+            rows={days}
+            getRowKey={(day) => day.date}
+            expandable={{
+              rowLabel: (day, expanded) =>
+                `${formatDate(day.date)}: Details ${expanded ? "schließen" : "öffnen"}`,
+            }}
+            renderSubRows={(day, expanded) =>
+              expanded
+                ? [
+                    ...daySlotRows(day, canCorrect, setCorrecting),
+                    ...dayRoomRows(day),
+                  ]
+                : []
+            }
+            rowTone={(day) => (day.date === todayKey ? "today" : null)}
+          />
         )}
       </SectionCard>
       {correcting && (
@@ -772,9 +554,6 @@ function StudentRoomHistoryPageContent() {
   const [exportOpen, setExportOpen] = useState(false);
 
   useStudentHistoryBreadcrumb({ studentName: student?.name, referrer });
-
-  // Start at the top instead of inheriting the previous page's scroll position
-  useScrollToTop(studentId);
 
   const displayName = student
     ? (student.name ?? `${student.first_name} ${student.second_name}`)

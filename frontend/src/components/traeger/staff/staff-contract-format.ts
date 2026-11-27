@@ -81,7 +81,7 @@ export function weekPattern(minutes: readonly number[]): string {
     parts.push(
       end === start
         ? `${from} ${hours}`
-        : `${from}–${to} ${value === 0 ? "frei" : `je ${hours}`}`,
+        : `${from}–${to} ${value === 0 ? "frei" : `${hours} pro Tag`}`,
     );
     start = end + 1;
   }

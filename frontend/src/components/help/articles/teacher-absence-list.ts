@@ -11,7 +11,7 @@ export function teacherAbsenceListTopic(): HelpTopic {
     title: "Fehlzeiten einer Klasse ansehen",
     question: "Wie viele Tage hat ein Kind gefehlt?",
     summary:
-      "Unter `Fehlzeiten` stehen die Fehltage je Kind, für Klassenbuch und Zeugnis.",
+      "Unter `Fehlzeiten` stehen die Fehltage pro Kind, für Klassenbuch und Zeugnis.",
     group: "klasse",
     audience: "teacher",
     icon: "ClipboardList",
@@ -19,7 +19,7 @@ export function teacherAbsenceListTopic(): HelpTopic {
       "Öffne `Fehlzeiten`.",
       "Wähle die Klasse.",
       "Prüfe `Von` und `Bis`. Vorgewählt ist das laufende Halbjahr.",
-      "Lies je Kind die Fehltage, davon entschuldigt und unentschuldigt.",
+      "Lies pro Kind die Fehltage, davon entschuldigt und unentschuldigt.",
       "Wähle bei Bedarf `Exportieren`. Wähle `PDF` oder `Excel`.",
     ],
     result: "Du siehst die Fehltage jedes Kindes im gewählten Zeitraum.",

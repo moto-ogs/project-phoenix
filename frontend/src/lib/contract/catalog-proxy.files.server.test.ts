@@ -619,7 +619,41 @@ describe("catalog multipart upload", () => {
   // An import whose later batch failed answers 500 with the saved part in
   // details.result; the page shows it (#2352, readImportBatchFailure).
   it("keeps a coded 500 with its details, such as a failed import batch", async () => {
-    const result = { total_rows: 3, created_count: 2, errors: [] };
+    const timestamp = "2026-11-24T10:00:00Z";
+    const result = {
+      started_at: timestamp,
+      completed_at: timestamp,
+      total_rows: 3,
+      created_count: 2,
+      updated_count: 0,
+      skipped_count: 0,
+      error_count: 1,
+      warning_count: 0,
+      bulk_actions: [],
+      dry_run: false,
+      errors: [
+        {
+          row_number: 3,
+          data: {
+            first_name: "Ada",
+            last_name: "Test",
+            school_class: "2a",
+            bus_permission: false,
+            privacy_accepted: false,
+            data_retention_days: 0,
+          },
+          errors: [
+            {
+              field: "write",
+              code: "creation_failed",
+              severity: "error",
+              message: "database db.internal: constraint failed",
+            },
+          ],
+          timestamp,
+        },
+      ],
+    };
     mockFetch.mockResolvedValue(
       new Response(
         JSON.stringify({
@@ -636,12 +670,38 @@ describe("catalog multipart upload", () => {
         },
       ),
     );
-    const response = await upload("abcd");
+    const entry = importRoutes["POST /api/import/students/import"];
+    const handler = makeCatalogProxy(portal, "/api", [entry], "POST");
+    const response = await handler(
+      new NextRequest(`http://localhost:3000${entry.pattern}`, {
+        method: "POST",
+        body: "abcd",
+        headers: uploadHeaders(4),
+      }),
+      { params: Promise.resolve({ path: ["import", "students", "import"] }) },
+    );
     expect(response.status).toBe(500);
-    expect(await response.json()).toMatchObject({
+    const body = await response.text();
+    expect(JSON.parse(body)).toMatchObject({
       code: "import.import_batch_failed",
-      details: { result },
+      details: {
+        result: {
+          ...result,
+          errors: [
+            {
+              ...result.errors[0],
+              errors: [
+                {
+                  code: "creation_failed",
+                  message: expect.stringMatching(/^Die Zeile konnte nicht/),
+                },
+              ],
+            },
+          ],
+        },
+      },
     });
+    expect(body).not.toContain("db.internal");
   });
 
   it("passes the backend's refusal of the file on as its problem", async () => {

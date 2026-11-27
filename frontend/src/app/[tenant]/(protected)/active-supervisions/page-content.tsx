@@ -1,0 +1,1811 @@
+"use client";
+
+import { MountOnFirstOpen } from "~/components/ui/mount-on-first-open";
+import { useHasDeepScrollPosition } from "~/components/ui/navigation-scroll-position";
+import { useInitialPaintViewport } from "~/lib/hooks/use-after-initial-paint";
+import { useState, Suspense, useMemo, useCallback, useRef } from "react";
+import { ChevronDown, Search, Sparkles, UserPlus } from "lucide-react";
+import { ActiveFilterChips } from "~/components/ui/page-header/ActiveFilterChips";
+import { OverlaySheet } from "~/components/ui/overlay-sheet";
+import { TenantPageSearchRow } from "~/components/ui/tenant-page-search-row";
+import { useSession } from "next-auth/react";
+import { blockTimeRange } from "~/lib/block-children";
+import { sessionIdentityKey } from "~/lib/session-access";
+import { useSearchParams } from "next/navigation";
+import { redirect } from "next/navigation";
+import { useTenantRouter } from "~/lib/tenant-router";
+import { useTenantAwarePath } from "~/lib/tenant-path";
+import {
+  useAttendanceWebEnabled,
+  useNFCEnabled,
+  useShowTimetableCounts,
+} from "~/lib/tenant-context";
+import { useOptionalSupervision } from "~/lib/supervision-context";
+import { ForbiddenPage } from "~/components/ui/forbidden-page";
+import { BinaryModeGuard } from "~/components/tenant/binary-mode-guard";
+import { useSetBreadcrumb } from "~/lib/breadcrumb-context";
+import { Alert } from "~/components/ui/alert";
+import { LoadErrorAlert } from "~/components/ui/form-error-alert";
+import {
+  TenantPage,
+  TenantPageListSearch,
+  TenantPageStats,
+} from "~/components/ui/tenant-page";
+import {
+  OverflowMenu,
+  type OverflowMenuEntry,
+} from "~/components/ui/page-header/OverflowMenu";
+import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
+import { Button } from "~/components/ui/button";
+import { cn } from "~/lib/utils";
+import { StatusBadge } from "~/components/ui/status-badge";
+import {
+  formatChildCount,
+  OVERBOOKED_LABEL,
+  overbookedHintFor,
+  type Occupancy,
+} from "~/lib/activity-occupancy";
+import { CompleteInstanceModal } from "~/components/active-supervisions/complete-instance-modal";
+import { useMinuteClock } from "~/lib/pickup-helpers";
+import { canReadSupervisionData, hasPermission } from "~/lib/auth-utils";
+import { canGrantExternalViewAccess } from "~/lib/external-caregiver-access";
+import { canReadStudents } from "~/lib/student-access";
+import { SSEErrorBoundary } from "~/components/sse/SSEErrorBoundary";
+import {
+  ActiveSupervisionLoadingView,
+  EmptyRoomsView,
+  ReleaseSupervisionModal,
+  SchulhofSuperviseButton,
+} from "~/components/active-supervisions/states";
+import { PastBlocksSection } from "~/components/active-supervisions/past-blocks-section";
+import {
+  PlannedNowSection,
+  PlannedOverdueChip,
+  usePlannedOverdueCount,
+} from "~/components/active-supervisions/planned-now-section";
+import { SpontaneousActivityStart } from "~/components/active-supervisions/spontaneous-activity-start";
+import { TransitStudentsSection } from "~/components/rooms/transit-students-section";
+import {
+  additionalSupervisionTarget,
+  canBulkCheckinFromSupervision,
+  handOverSupervisionTarget,
+  hasOwnBlock,
+  occupiedRoomIdsForSpontaneousStart,
+  openRoomSections,
+  rosterRunState,
+  schulhofHeadActionsApply,
+  sessionsOutsideOpenRooms,
+  supervisionHeadFacts,
+  supervisionTabLabel,
+} from "~/components/active-supervisions/view-model";
+import { SupervisionHeadFacts } from "~/components/active-supervisions/supervision-head-facts";
+import { useSupervisionDashboard } from "~/components/active-supervisions/use-supervision-dashboard";
+import { useTimetableRoster } from "~/components/active-supervisions/use-timetable-roster";
+import type {
+  PlannedTimetableInstance,
+  TimetableRosterRow,
+} from "~/lib/timetable-operations-types";
+import { useStudentFilters } from "~/components/active-supervisions/use-student-filters";
+import {
+  reopenBannerMessage,
+  useReopenBanner,
+} from "~/components/active-supervisions/use-reopen-banner";
+import { useTimetableActions } from "~/components/active-supervisions/use-timetable-actions";
+import { useSchulhofActions } from "~/components/active-supervisions/use-schulhof-actions";
+import { AddUnplannedStudentModal } from "~/components/active-supervisions/add-unplanned-student-modal";
+import { PresentChildrenPicker } from "~/components/active-supervisions/present-children-picker";
+import { TimetableRosterContent } from "~/components/active-supervisions/timetable-roster";
+import {
+  rosterAppCanAddUnplanned,
+  TimetableRosterApp,
+  rosterAppEndEntry,
+} from "~/components/active-supervisions/timetable-roster-app";
+import { ActionBar } from "~/components/ui/action-bar";
+import { useDeviceContext } from "~/lib/device-context";
+import {
+  canStartPlannedInstance,
+  isPlannedStartExpired,
+} from "~/lib/timetable-lifecycle";
+import {
+  SupervisionStudentGrid,
+  buildSupervisionTableColumns,
+} from "~/components/active-supervisions/student-grid";
+import { columnDefaults } from "~/components/students/student-table";
+import {
+  StudentSelectionScope,
+  type StudentTableSelection,
+} from "~/components/students/student-selection-scope";
+import {
+  CollectionViewSwitch,
+  columnMenuEntries,
+  phoneDetailMenuEntries,
+} from "~/components/ui/collection-view-switch";
+import { useRefreshAfterWrite } from "~/lib/hooks/use-refresh-after-write";
+import { useCollectionView } from "~/lib/hooks/use-collection-view";
+import {
+  AT_LEAST_LG,
+  BELOW_MD,
+  useMediaQuery,
+} from "~/lib/hooks/use-media-query";
+import { useStudentPhotosEnabled } from "~/lib/hooks/use-student-photos-enabled";
+import { useHolidayGuestLabels } from "~/lib/hooks/use-holiday-guest-labels";
+import { OpenRoomSections } from "~/components/active-supervisions/open-room-sections";
+import { AddSupervisorModal } from "~/components/active-supervisions/add-supervisor-modal";
+import {
+  ADD_SUPERVISOR_HINT,
+  REOPEN_TOOLTIP,
+} from "~/components/active-supervisions/supervision-action-hints";
+import {
+  HandOverSupervisionButton,
+  HandOverSupervisionModal,
+} from "~/components/active-supervisions/hand-over-supervision-modal";
+import { OwnSupervisionView } from "~/components/active-supervisions/own-supervision-view";
+import { useSidebarMemory } from "~/lib/sidebar-memory";
+import { roomsConcept } from "~/lib/concepts/rooms";
+import { staffConcept } from "~/lib/concepts/staff";
+import { childrenConcept } from "~/lib/concepts/children";
+import { SectionCard } from "~/components/ui/section-card";
+import { transitConcept } from "~/lib/concepts/transit";
+
+const ACTIVE_SUPERVISIONS_INFO =
+  "Hier führst du die Kinderliste deiner laufenden Aufsicht. Starte zuerst deinen Termin unter „Als Nächstes“ oder übernimm einen Raum. Halte die Liste aktuell, wenn Kinder kommen oder gehen.";
+const ACTIVE_SUPERVISIONS_BINARY_MODE_INFO =
+  "Hier wäre die Kinderliste deiner Aufsicht. Deine Schule nutzt sie zurzeit nicht.";
+
+/**
+ * Telefon, Titelzeile: Zustand und Zeit des Blocks als ein Abzeichen.
+ * „seit 00:03“ allein las sich wie eine Dauer; „Läuft seit 00:03“ nennt den
+ * Beginn wie Startseite und Tagesplan. „Beendet“ steht schon in der
+ * Chipzeile.
+ */
+function appRunStateLabel(
+  instance: Parameters<typeof blockTimeRange>[0] & {
+    readonly status: Parameters<typeof rosterRunState>[0];
+  },
+): string {
+  const range = blockTimeRange(instance);
+  if (instance.status === "completed") return `${range} Uhr`;
+  // Ein Wort für den laufenden Block wie auf Startseite und Tagesplan
+  // („Läuft seit 01:20“), nicht „Aktiv seit 01:20 Uhr“ (Runde 19).
+  return range.startsWith("seit") ? `Läuft ${range}` : `Läuft · ${range}`;
+}
+
+function hasSameGroupNames(
+  previous: readonly string[] | undefined,
+  next: readonly string[],
+): boolean {
+  if (!previous || previous.length !== next.length) return false;
+  return previous.every((group, index) => group === next[index]);
+}
+
+function MeinRaumPageContent() {
+  const attendanceWebEnabled = useAttendanceWebEnabled();
+  const nfcEnabled = useNFCEnabled();
+  const showTimetableCounts = useShowTimetableCounts();
+  const router = useTenantRouter();
+  const tenantPath = useTenantAwarePath();
+  const searchParams = useSearchParams();
+  const { data: session, status } = useSession({
+    required: true,
+    onUnauthenticated() {
+      router.push("/");
+    },
+  });
+  const memory = useSidebarMemory();
+  const [searchSheetOpen, setSearchSheetOpen] = useState(false);
+  const [appTransitExpanded, setAppTransitExpanded] = useState(false);
+  const [appTransitCount, setAppTransitCount] = useState<number | null>(null);
+  const appTransitRef = useRef<HTMLDivElement>(null);
+  // App: „Kind suchen und hinzufügen“ öffnet sich aus dem „…“-Menü.
+  const [appAddStudentOpen, setAppAddStudentOpen] = useState(false);
+  // App mit laufender Liste: „Spontane Aktivität starten“ steht im „…“-Menü.
+  const [appSpontaneousOpen, setAppSpontaneousOpen] = useState(false);
+  // App-Oberfläche (#8070): eigene Liste, Kopf und Aktionsleiste. Der
+  // Desktop-Zweig bleibt der heutige Code.
+  const device = useDeviceContext();
+  const appMode = device.resolved && device.isApp;
+
+  // Pre-select the session from the URL. `?session=<activeGroupId>` is the
+  // precise key (parallel sessions can share one room, #2265); the legacy
+  // `?room=<roomId>` entry point (sidebar, old links) still resolves but can
+  // never switch between sessions inside the same room.
+  const sessionParam = searchParams.get("session");
+  const roomParam = searchParams.get("room");
+
+  // Display clock for relative pickup information only. The dashboard's
+  // school day and spontaneous-start window come exclusively from the backend.
+  const now = useMinuteClock();
+  const openingViewport = useInitialPaintViewport(true);
+  const deepScroll = useHasDeepScrollPosition();
+  // Rows have 20px of vertical padding plus at least one 24px name line.
+  // The portal and both roster headings take at least 128px above them.
+  const openingRosterRows =
+    openingViewport && !deepScroll
+      ? Math.max(1, Math.ceil((openingViewport.height - 128) / 44))
+      : undefined;
+
+  // SSE is handled globally by TenantAuthWrapper - no page-level setup
+  // needed. When relevant events occur, global SSE invalidates the
+  // aggregated "active-supervision-dashboard-" cache, which triggers the
+  // SWR refetch inside useSupervisionDashboard. Do NOT call useGlobalSSE()
+  // here - it's already called in TenantAuthWrapper.
+  const dashboard = useSupervisionDashboard({
+    sessionKey: sessionIdentityKey(session),
+    sessionParam,
+    roomParam,
+  });
+  const {
+    allRooms,
+    plannedNow,
+    currentStaffId,
+    schulhofStatus,
+    openRooms,
+    currentRoom,
+    currentOpenRoom,
+    selectedTimetableInstanceId,
+    students,
+    loadError,
+    mutateDashboard,
+    refresh,
+  } = dashboard;
+
+  // A released room is one page with a section per running block (ADR 0019,
+  // point 3); null keeps its plain view of every child. The page's own
+  // roster belongs to an own session only: each block section loads its own.
+  const openRoomLayout = currentOpenRoom
+    ? openRoomSections(currentOpenRoom)
+    : null;
+  // Die Kinderliste eines Termins liest das Backend nur mit schedules:read.
+  // Der Gast (ADR 0091) hat es nicht und sieht die Kinder aus dem Raum.
+  // Eine Sitzung ohne Rechteliste (vor den Rechte-Claims) fragt weiter.
+  const sessionPermissions = session?.user?.permissions;
+  const canReadRosters =
+    !Array.isArray(sessionPermissions) ||
+    hasPermission(session, "schedules:read");
+  const roster = useTimetableRoster({
+    selectedTimetableInstanceId:
+      currentOpenRoom || !canReadRosters ? null : selectedTimetableInstanceId,
+    currentRoomId:
+      currentOpenRoom || !canReadRosters ? undefined : currentRoom?.id,
+  });
+  const { currentTimetableRoster } = roster;
+  const { overviewEnabled, refresh: refreshSupervision } =
+    useOptionalSupervision();
+  const [openRoomRosterGroups, setOpenRoomRosterGroups] = useState<
+    ReadonlyMap<string, readonly string[]>
+  >(() => new Map());
+  const rememberOpenRoomRosterGroups = useCallback(
+    (instanceId: string, groups: readonly string[]) => {
+      setOpenRoomRosterGroups((current) => {
+        if (hasSameGroupNames(current.get(instanceId), groups)) return current;
+        const next = new Map(current);
+        next.set(instanceId, groups);
+        return next;
+      });
+    },
+    [],
+  );
+  const filterOpenRoomRosterGroups = useMemo(() => {
+    if (!openRoomLayout) return [];
+    return openRoomLayout.flatMap((section) =>
+      section.kind === "block"
+        ? (openRoomRosterGroups.get(section.block.instanceId) ?? [])
+        : [],
+    );
+  }, [openRoomLayout, openRoomRosterGroups]);
+
+  // The header search covers the block list too (#3889): expected, absent
+  // and departed children, not only those checked in right now.
+  const filters = useStudentFilters(
+    students,
+    currentTimetableRoster?.rows,
+    filterOpenRoomRosterGroups,
+  );
+  const reopen = useReopenBanner();
+  // The session „Betreuer hinzufügen“ was opened for: the head action or one
+  // section of a released room.
+  const [addSupervisorTarget, setAddSupervisorTarget] = useState<string | null>(
+    null,
+  );
+  // The own running supervision „Aufsicht abgeben“ was opened for (#4763).
+  const [handOverTarget, setHandOverTarget] = useState<string | null>(null);
+
+  // Nachladen nach dem Eintragen oder Abgeben einer Aufsicht: ein Fehler
+  // dabei steht oben im Inhalt, auch wenn der Dialog zu ist (#6652).
+  const supervisorAfterWrite = useRefreshAfterWrite(
+    "die Anzeige der Aufsichten",
+    () => Promise.all([mutateDashboard(), refreshSupervision(["sessions"])]),
+  );
+
+  const actions = useTimetableActions({
+    allRooms,
+    currentStaffId,
+    activeTimetableInstanceId: roster.activeTimetableInstanceId,
+    currentTimetableRoster,
+    mutateRoster: roster.mutateRoster,
+    mutateDashboard,
+    adoptSession: dashboard.adoptSession,
+    setSelectedTimetableInstanceId: dashboard.setSelectedTimetableInstanceId,
+    router,
+    reopenable: reopen.reopenable,
+    rememberReopenable: reopen.rememberReopenable,
+    clearReopenable: reopen.clearReopenable,
+  });
+
+  const spontaneousStartBlockedReason =
+    dashboard.spontaneousStartAvailability?.blockedReason === "weekend"
+      ? "Spontane Aktivitäten sind nur montags bis freitags möglich."
+      : undefined;
+
+  const schulhof = useSchulhofActions({
+    schulhofStatus,
+    currentStaffId,
+    supervisedActiveGroupId:
+      schulhofStatus?.isUserSupervising && schulhofStatus.activeGroupId
+        ? schulhofStatus.activeGroupId
+        : null,
+    spontaneousStartBlockedReason: schulhofStatus?.activeGroupId
+      ? undefined
+      : spontaneousStartBlockedReason,
+    refresh,
+  });
+
+  // The Schulhof's own supervision offer (#2161) belongs to the Schulhof room,
+  // matched by room id — never by the name of the room on screen — and to
+  // the yard's own session, never to a block running there (#3281).
+  const isSchulhofOpenRoom =
+    !!currentOpenRoom &&
+    !!schulhofStatus?.roomId &&
+    schulhofStatus.roomId === currentOpenRoom.roomId &&
+    schulhofHeadActionsApply(openRoomLayout, schulhofStatus.activeGroupId);
+
+  // Desktop detection — sidebar handles room switching at lg+
+  const isDesktop = useMediaQuery(AT_LEAST_LG);
+
+  const openRoomIds = useMemo(
+    () => new Set(openRooms.map((room) => room.roomId)),
+    [openRooms],
+  );
+
+  const occupiedRoomIds = useMemo(
+    () =>
+      occupiedRoomIdsForSpontaneousStart({
+        ownSupervisionRoomIds: allRooms.map((room) => room.roomId),
+        openRooms,
+      }),
+    [allRooms, openRooms],
+  );
+
+  // Set breadcrumb so the header names what is open — a shared room by its
+  // room name, an own supervision by its session (parallel sessions can share
+  // one room, #2265).
+  // Ein offener Raum ohne eigene Aufsicht ist keine Aufsicht der Person: er
+  // gehört zu „Räume“ und führt dorthin zurück (#4372).
+  const isSharedRoomView =
+    currentOpenRoom !== null && !currentOpenRoom.isUserSupervising;
+  useSetBreadcrumb({
+    activeSupervisionName:
+      currentOpenRoom?.name ?? currentRoom?.name ?? currentRoom?.roomName,
+    activeSupervisionIsSharedRoom: isSharedRoomView || undefined,
+  });
+
+  // Opening a shared room is a pure selection: its occupancy already arrived
+  // with the dashboard, so there is nothing to load and nothing to claim.
+  const handleOpenRoom = useCallback(
+    (roomId: string) => {
+      const room = openRooms.find((candidate) => candidate.roomId === roomId);
+      if (!room) return;
+      dashboard.selectOpenRoom(roomId);
+      router.push(`/active-supervisions?room=${roomId}`);
+      if (room.isUserSupervising) {
+        memory.remove("supervision-last-session");
+      }
+      memory.write("sidebar-last-room", roomId);
+      memory.write("sidebar-last-room-name", room.name);
+    },
+    [dashboard, memory, openRooms, router],
+  );
+
+  const handleTabChange = (tabValue: string) => {
+    if (tabValue.startsWith("room:")) {
+      handleOpenRoom(tabValue.slice("room:".length));
+      return;
+    }
+    // Switch to the chosen session (keyed by active group, not by room —
+    // parallel sessions can share one room, #2265)
+    if (!tabValue.startsWith("session:")) return;
+    const sessionId = tabValue.slice("session:".length);
+    dashboard.clearOpenRoom();
+    const room = allRooms.find((r) => r.id === sessionId);
+    if (room) {
+      router.push(`/active-supervisions?session=${sessionId}`);
+      memory.write("supervision-last-session", sessionId);
+      if (room.roomId) {
+        memory.write("sidebar-last-room", room.roomId);
+      }
+      if (room.roomName) {
+        memory.write("sidebar-last-room-name", room.roomName);
+      }
+      void dashboard.switchToRoom(sessionId);
+    }
+  };
+
+  // Laden, fehlender Zugriff und Fehler laufen ueber das Geruest
+  // (`loading`/`empty`/`error`) und nicht mehr ueber vollstaendige
+  // Alternativ-Rueckgaben: sonst verliert die Seite genau in diesen
+  // Zustaenden Kopf, Titel und Orientierung.
+  const isPageLoading =
+    status === "loading" ||
+    dashboard.isInitialLoading ||
+    dashboard.isSwitchingSession ||
+    dashboard.isWaitingForUrlRoomSelection ||
+    dashboard.hasAccess === null;
+  const hasNoAccess = !isPageLoading && !dashboard.hasAccess;
+
+  // Statuszeile unter dem Seitentitel: welche Aufsicht gerade offen ist und
+  // wie viele Kinder in ihr geführt werden. Beides steht schon im geladenen
+  // Dashboard-Zustand.
+  const supervisionName =
+    currentOpenRoom?.name ?? currentRoom?.name ?? currentRoom?.roomName ?? null;
+  // Die Zahl kommt aus derselben Quelle wie früher der Zähler im Kopf: der
+  // gemeldeten Belegung, ersatzweise den geladenen Kindern.
+  const supervisionCount =
+    currentOpenRoom?.studentCount ??
+    currentRoom?.studentCount ??
+    students.length;
+  // Dazu Raum und wer die Aufsicht hat, für eigene Aufsichten wie für offene
+  // Räume (#4354). Die Blockkarte darunter nennt den Raum dann nicht mehr.
+  // Fehlt der Raum im Dashboard, nennt ihn der Roster des Blocks.
+  const headFacts = supervisionHeadFacts({
+    title: supervisionName,
+    currentRoom: currentRoom && {
+      roomName:
+        currentRoom.roomName ??
+        currentTimetableRoster?.instance.roomName ??
+        undefined,
+      supervisorNames: currentRoom.supervisorNames,
+    },
+    currentOpenRoom,
+  });
+  // Die Teilnehmergrenze gehört zur Sitzung, nicht zum offenen Raum: dort
+  // zeigt jeder Abschnitt seine eigene (#3634).
+  const supervisionOccupancy: Occupancy = {
+    count: supervisionCount,
+    limit: currentOpenRoom ? null : (currentRoom?.participantLimit ?? null),
+  };
+  const supervisionOverbookedHint = overbookedHintFor(
+    supervisionOccupancy,
+    nfcEnabled,
+  );
+  // In der App: Abzeichen (Aktiv, Eigene Aufsicht) und Chips „13 da · max. 20“,
+  // Raum, Betreuende in einer Zeile unter dem Titel, wie heute in der
+  // Kopfkarte, nur kompakt. Steht dort „Eigene Aufsicht“ und gibt es nur
+  // eine Betreuung, ist das die angemeldete Person: Ihr Name entfällt, damit
+  // die Zeile auch am kleinen Telefon nicht abgeschnitten wird.
+  // „13 da · max. 20“ statt „13 / 20 da“: Die zweite Zahl ist die
+  // Teilnehmergrenze, nicht die Zahl der Kinder in der Liste; als Bruch las
+  // sie sich wie „7 fehlen“.
+  // Steht der Chip „überfällig“ in der Zeile, entfällt „max. 20“: Sonst
+  // bricht die Chipzeile auch am iPhone 15 in eine dritte Zeile um. Die
+  // Grenze zählt nur bei Überbuchung, und dafür steht ein eigener Chip.
+  const appOverdueCount = usePlannedOverdueCount(plannedNow);
+  const appCountLabel =
+    supervisionOccupancy.limit != null &&
+    supervisionOccupancy.limit > 0 &&
+    appOverdueCount === 0
+      ? `${supervisionCount} da · max. ${supervisionOccupancy.limit}`
+      : `${supervisionCount} da`;
+  // Fällt „max. 20“ aus dem Kopf, nennt die Karte „Betreuung“ die Grenze.
+  const appLimitInCard =
+    supervisionOccupancy.limit != null &&
+    supervisionOccupancy.limit > 0 &&
+    appOverdueCount > 0;
+  const appSupervisionSummaryFor = (hideSoleOwnSupervisor: boolean) =>
+    supervisionName ? (
+      <TenantPageStats
+        items={[
+          {
+            label: appCountLabel,
+          },
+          ...(supervisionOverbookedHint ? [{ label: OVERBOOKED_LABEL }] : []),
+          ...(headFacts.roomName ? [{ label: headFacts.roomName }] : []),
+          ...(headFacts.supervisorNames.length > 0 &&
+          !(hideSoleOwnSupervisor && headFacts.supervisorNames.length === 1)
+            ? [{ label: headFacts.supervisorNames.join(", ") }]
+            : []),
+        ]}
+      />
+    ) : (
+      "Keine Aufsicht aktiv"
+    );
+  const appSupervisionSummary = appSupervisionSummaryFor(false);
+  const appCompactCount = supervisionName ? (
+    <TenantPageStats
+      items={[
+        {
+          label: appCountLabel,
+        },
+        // Der Raum bleibt auch im schmalen Kopf: Er sagt, welche Aufsicht
+        // gerade offen ist, wenn der Titel nur die Aktivität nennt.
+        ...(headFacts.roomName ? [{ label: headFacts.roomName }] : []),
+      ]}
+    />
+  ) : undefined;
+  const supervisionSummary = appMode ? (
+    appSupervisionSummary
+  ) : supervisionName ? (
+    <SupervisionHeadFacts
+      childCount={
+        supervisionOverbookedHint ? (
+          <TenantPageStats
+            items={[
+              {
+                label: formatChildCount(
+                  supervisionCount,
+                  supervisionOccupancy.limit,
+                ),
+              },
+              { label: OVERBOOKED_LABEL },
+            ]}
+          />
+        ) : (
+          formatChildCount(supervisionCount, supervisionOccupancy.limit)
+        )
+      }
+      roomName={headFacts.roomName}
+      supervisorNames={headFacts.supervisorNames}
+    />
+  ) : (
+    "Keine Aufsicht aktiv"
+  );
+
+  // Reiterleiste. Am Desktop wechselt die Seitenleiste, deshalb stehen die
+  // Reiter nur darunter. Wie in der Seitenleiste stehen hier nur Aufsichten:
+  // ein offener Raum nur mit eigener Aufsicht (#4349) oder solange er
+  // geöffnet ist. Die übrigen offenen Räume stehen unter „Räume“ (#4372).
+  const ownSessions = sessionsOutsideOpenRooms(allRooms, openRoomIds);
+  const tabOpenRooms = openRooms.filter(
+    (room) => room.isUserSupervising || room.roomId === currentOpenRoom?.roomId,
+  );
+  const totalSupervisions = ownSessions.length + tabOpenRooms.length;
+  const supervisionTabItems = [
+    ...ownSessions.map((room) => ({
+      value: `session:${room.id}`,
+      label: supervisionTabLabel(
+        room,
+        dashboard.sessionInfoByActiveGroup.get(room.id) ?? null,
+      ),
+    })),
+    // Wie bei den eigenen Reitern: läuft die eigene Aufsicht im offenen
+    // Raum, trägt sein Reiter den Hinweis (#4349).
+    ...tabOpenRooms.map((room) => ({
+      value: `room:${room.roomId}`,
+      label: room.isUserSupervising
+        ? `${room.name} · Eigene Aufsicht`
+        : room.name,
+    })),
+  ];
+  const supervisionTabs =
+    totalSupervisions >= 2 && !isDesktop
+      ? {
+          value: currentOpenRoom
+            ? `room:${currentOpenRoom.roomId}`
+            : currentRoom
+              ? `session:${currentRoom.id}`
+              : "",
+          onChange: handleTabChange,
+          items: supervisionTabItems,
+          label: "Aufsichten",
+        }
+      : undefined;
+
+  // Die Aufsicht abgeben kann nur, wer den Schulhof gerade beaufsichtigt;
+  // sonst steht an derselben Stelle „Beaufsichtigen". Beide Knöpfe tragen
+  // dasselbe neutrale Gewicht: neben den Abzeichen dominierte der rote Knopf
+  // den Kopf, und das Abgeben bestätigt ohnehin erst das Modal (#3312).
+  const releaseAction =
+    isSchulhofOpenRoom && schulhofStatus?.isUserSupervising ? (
+      <Button
+        type="button"
+        variant="outline"
+        size="md"
+        onClick={() => schulhof.setShowReleaseModal(true)}
+        tooltip="Beendet deine Aufsicht auf dem Schulhof. moto fragt vorher nach."
+      >
+        Aufsicht abgeben
+      </Button>
+    ) : undefined;
+
+  // In der App: läuft schon eine Aufsicht, steht der spontane Start am
+  // Listenende; sonst ist er die Hauptaktion in der Leiste über der Pill.
+  const appHasRunningRoster = appMode && currentTimetableRoster !== null;
+  // Schmaler Kopf: genau ein Kurzstatus wie auf jeder Seite (Runde 21). Läuft
+  // ein Block, sagt „Läuft seit 00:10“ am meisten; Raum und Zahl stehen im
+  // Kopf darüber.
+  const appCompactStatus =
+    appHasRunningRoster && currentTimetableRoster ? (
+      <span className="tabular-nums">
+        <StatusBadge
+          label={appRunStateLabel(currentTimetableRoster.instance)}
+          tone={rosterRunState(currentTimetableRoster.instance.status).tone}
+          compact
+        />
+      </span>
+    ) : (
+      appCompactCount
+    );
+  // Ohne laufende Aufsicht und ohne offenen Raum gibt es in der App keine
+  // Liste: keine Suche, kein „Keine Kinder in diesem Raum“.
+  const appHasList =
+    currentTimetableRoster !== null ||
+    currentOpenRoom !== null ||
+    currentRoom !== null;
+  const appStartablePlanned = appMode
+    ? [...plannedNow]
+        .filter(
+          (instance) =>
+            !isPlannedStartExpired(instance.startExpiresAt, now) &&
+            canStartPlannedInstance(instance, now),
+        )
+        .sort((a, b) => a.minutesUntilStart - b.minutesUntilStart)[0]
+    : undefined;
+  const renderAppSpontaneousTrigger = ({
+    open,
+    disabled,
+  }: {
+    open: () => void;
+    disabled: boolean;
+  }) => {
+    const button = (
+      <Button
+        type="button"
+        variant={
+          appHasRunningRoster || appStartablePlanned ? "outline" : "success"
+        }
+        size="md"
+        disabled={disabled}
+        disabledReason={spontaneousStartBlockedReason}
+        tooltip="Öffnet ein Fenster: Aktivität wählen, Raum belegen, Kinder danach hinzufügen."
+        onClick={open}
+      >
+        Spontane Aktivität starten
+      </Button>
+    );
+    // Während eine Liste läuft, steht der Start im „…“-Menü der Kopfkarte
+    // und, damit man ihn ohne Menü findet, als eigene Karte am Listenende:
+    // ein loser Knopf zwischen den Karten brach das Kartenmuster.
+    if (appHasRunningRoster) {
+      return (
+        <SectionCard
+          title="Spontane Aktivität"
+          icon={Sparkles}
+          titleSize="sm"
+          titleClassName="text-gray-700"
+          inlineActions
+          action={
+            <Button
+              type="button"
+              variant="outline"
+              size="compact"
+              disabled={disabled}
+              disabledReason={spontaneousStartBlockedReason}
+              aria-label="Spontane Aktivität starten"
+              tooltip="Öffnet ein Fenster: Aktivität wählen, Raum belegen, Kinder danach hinzufügen."
+              onClick={open}
+            >
+              Starten
+            </Button>
+          }
+        />
+      );
+    }
+    if (appStartablePlanned) return button;
+    return <ActionBar>{button}</ActionBar>;
+  };
+  const spontaneousStartBanner = dashboard.webSpontaneousActivitiesEnabled ? (
+    <SpontaneousActivityStart
+      canCreateExternalCaregiver={hasPermission(session, "users:create")}
+      canGrantExternalView={canGrantExternalViewAccess(session)}
+      currentStaffId={currentStaffId}
+      defaultRoomId={currentRoom?.roomId ?? currentOpenRoom?.roomId}
+      disabled={dashboard.spontaneousStartAvailability?.available === false}
+      disabledReason={spontaneousStartBlockedReason}
+      isStarting={actions.isStartingSpontaneous}
+      occupiedRoomIds={occupiedRoomIds}
+      onStart={(payload) =>
+        void actions.handleStartSpontaneousActivity(payload)
+      }
+      renderTrigger={appMode ? renderAppSpontaneousTrigger : undefined}
+      {...(appMode && appHasRunningRoster
+        ? { open: appSpontaneousOpen, onOpenChange: setAppSpontaneousOpen }
+        : {})}
+    />
+  ) : null;
+  // Das Banner steht über jeder Aufsicht, die nach dem Beenden offen ist. Es
+  // nennt deshalb die beendete Aktivität, sonst wirkt die gerade offene
+  // beendet (#3887).
+  const reopenBanner = reopen.reopenable ? (
+    <div>
+      <Alert
+        type="success"
+        message={reopenBannerMessage(
+          reopen.reopenable.title,
+          reopen.reopenable.expiresAt,
+        )}
+        action={
+          <Button
+            type="button"
+            variant="outline"
+            size="compact"
+            isLoading={actions.isReopeningInstance}
+            loadingText="Wird zurückgenommen…"
+            onClick={() => void actions.handleReopenTimetableInstance()}
+            tooltip={REOPEN_TOOLTIP}
+          >
+            Rückgängig
+          </Button>
+        }
+      />
+    </div>
+  ) : null;
+  // Ein aus Versehen beendeter Block öffnet sich auch nach dem Banner wieder,
+  // aus der Liste der beendeten Blöcke (#5676).
+  const reopenPastBlock = (block: PlannedTimetableInstance) =>
+    actions.handleReopenTimetableInstance({
+      instanceId: block.id,
+      title: block.title,
+      roomId: block.roomId,
+    });
+
+  // Zusätzliche Betreuer (#2806): auf der eigenen aktiven Aufsicht steht die
+  // Aktion im Kebab der Kopfkarte.
+  const additionalSupervisionActiveGroupId = additionalSupervisionTarget({
+    currentRoom,
+    currentOpenRoom,
+  });
+  const isCurrentSupervisionOwn = currentOpenRoom
+    ? currentOpenRoom.isUserSupervising
+    : (currentRoom?.isCurrentUserSupervising ?? false);
+
+  // Eine laufende Raum-Aufsicht übergeben oder abgeben kann nur, wer sie
+  // gerade führt (#4763). Der Schulhof hat dafür seinen eigenen Knopf.
+  const handOverActiveGroupId = !isSchulhofOpenRoom
+    ? handOverSupervisionTarget({ currentRoom, currentOpenRoom })
+    : null;
+  const handOverButton = handOverActiveGroupId ? (
+    <HandOverSupervisionButton
+      activeGroupId={handOverActiveGroupId}
+      onHandOver={setHandOverTarget}
+      className="gap-2"
+    />
+  ) : null;
+
+  // Im Kebab (Spec R4): sichtbar steht das Übergeben oder Abgeben.
+  // Suchblatt der App: Der Knopf sagt, was danach in der Liste steht.
+  const searchSheetHits =
+    currentTimetableRoster && filters.rosterRowFilter
+      ? currentTimetableRoster.rows
+          .filter(filters.rosterRowFilter)
+          .map((row) => row.studentName || `Kind ${row.studentId}`)
+      : null;
+  const searchSheetMatches = searchSheetHits?.length ?? null;
+  let searchSheetDoneLabel = "Zur Liste";
+  if (searchSheetMatches === 1) searchSheetDoneLabel = "1 Kind zeigen";
+  else if (searchSheetMatches === 0)
+    searchSheetDoneLabel = "Zur Liste: kein Treffer";
+  else if (searchSheetMatches !== null)
+    searchSheetDoneLabel = `${searchSheetMatches} Kinder zeigen`;
+
+  const addSupervisorEntries: OverflowMenuEntry[] = [
+    ...(additionalSupervisionActiveGroupId
+      ? [
+          {
+            label: "Betreuer hinzufügen",
+            description: ADD_SUPERVISOR_HINT,
+            icon: <UserPlus className="h-4 w-4" aria-hidden="true" />,
+            onClick: () =>
+              setAddSupervisorTarget(additionalSupervisionActiveGroupId),
+          },
+        ]
+      : []),
+    // In der App fügt die Leiste anwesende Kinder hinzu; ein Kind, das
+    // noch nicht da ist, findet die Suche hier im Menü.
+    ...(appHasRunningRoster &&
+    currentTimetableRoster &&
+    hasPermission(session, "users:read") &&
+    rosterAppCanAddUnplanned(currentTimetableRoster, attendanceWebEnabled)
+      ? [
+          {
+            label: "Kind suchen und hinzufügen",
+            description: "Auch Kinder, die noch nicht da sind.",
+            icon: <Search className="h-4 w-4" aria-hidden="true" />,
+            onClick: () => setAppAddStudentOpen(true),
+          },
+        ]
+      : []),
+    ...(appHasRunningRoster && dashboard.webSpontaneousActivitiesEnabled
+      ? [
+          {
+            label: "Spontane Aktivität starten",
+            description:
+              spontaneousStartBlockedReason ??
+              "Aktivität wählen, Raum belegen, Kinder danach hinzufügen.",
+            icon: <Sparkles className="h-4 w-4" aria-hidden="true" />,
+            disabled:
+              dashboard.spontaneousStartAvailability?.available === false ||
+              actions.isStartingSpontaneous,
+            onClick: () => setAppSpontaneousOpen(true),
+          },
+        ]
+      : []),
+  ];
+
+  // Abzeichen in der Kopfkarte: ein offener Raum heißt dort „Offener Raum",
+  // die eigene Aufsicht „Eigene Aufsicht" (#3065). Keine Erklärzeile.
+  // Ob der geöffnete Block läuft, steht zuerst (#4354); er kommt aus dem
+  // Roster, den nur eine eigene Aufsicht hier lädt. Im offenen Raum trägt
+  // jeder Block seinen Zustand in der eigenen Karte.
+  const runState = currentTimetableRoster
+    ? rosterRunState(currentTimetableRoster.instance.status)
+    : null;
+  const runStateBadge = runState ? (
+    <StatusBadge label={runState.label} tone={runState.tone} />
+  ) : null;
+  const openRoomBadge = currentOpenRoom ? (
+    <StatusBadge label="Offener Raum" tone="blue" />
+  ) : null;
+  const ownSupervisionBadge =
+    isCurrentSupervisionOwn &&
+    (currentOpenRoom !== null || additionalSupervisionActiveGroupId) ? (
+      <StatusBadge label="Eigene Aufsicht" tone="green" />
+    ) : null;
+  // Mit dem Überblick über alle Aufsichten öffnet die Seite auch fremde
+  // Sitzungen. Wer dort nicht Betreuer ist, sieht das am Abzeichen; die
+  // Betreuer stehen in der Zeile darunter (#5035).
+  const foreignSupervisionBadge =
+    currentRoom && !currentOpenRoom && !currentRoom.isCurrentUserSupervising ? (
+      <StatusBadge label="Nicht deine Aufsicht" tone="gray" />
+    ) : null;
+
+  // In der App stehen die Abzeichen vorn in der Chipzeile der Kopfkarte
+  // (heute: eigene Zeile unter den Angaben). Im „…“-Blatt stünden sie wie
+  // Knöpfe; dort bleibt nur, was man tippt.
+  // „Aktiv“ neben „Eigene Aufsicht“ sagte am Telefon zweimal dasselbe: Die
+  // eigene Aufsicht läuft. Der Zustand steht dort nur, wenn er abweicht
+  // („Beendet“).
+  const appRunStateBadge =
+    ownSupervisionBadge &&
+    currentTimetableRoster?.instance.status !== "completed"
+      ? null
+      : runStateBadge;
+  const appHeadBadges =
+    appRunStateBadge ||
+    openRoomBadge ||
+    ownSupervisionBadge ||
+    foreignSupervisionBadge ? (
+      <>
+        {appRunStateBadge}
+        {openRoomBadge}
+        {ownSupervisionBadge}
+        {foreignSupervisionBadge}
+      </>
+    ) : null;
+  // Überfällige Blöcke stehen heute direkt unter dem Kopf („Als Nächstes“).
+  // Am Telefon steht der Abschnitt hinter der Liste; der Hinweis steht als
+  // Chip am Ende der Chipzeile, nur wenn es ihn gibt.
+  const appOverdueChip = appHasRunningRoster ? (
+    <PlannedOverdueChip plannedNow={plannedNow} />
+  ) : null;
+  const appStats =
+    appHeadBadges && supervisionName ? (
+      // Umbrechen statt seitlich schieben: Der Chip „überfällig“ am Ende
+      // darf nicht hinter dem Kartenrand verschwinden.
+      <span className="flex flex-wrap items-center gap-1.5 whitespace-nowrap">
+        {appHeadBadges}
+        {appSupervisionSummaryFor(ownSupervisionBadge !== null)}
+        {appOverdueChip}
+      </span>
+    ) : (
+      supervisionSummary
+    );
+
+  // „Beaufsichtigen" steht als Kopf-Aktion dort, wo sonst „Aufsicht abgeben"
+  // steht (#2161).
+  const superviseDisabled =
+    !schulhofStatus?.activeGroupId &&
+    dashboard.spontaneousStartAvailability?.available === false;
+  const superviseAction =
+    isSchulhofOpenRoom && !currentOpenRoom?.isUserSupervising ? (
+      <SchulhofSuperviseButton
+        isToggling={schulhof.isTogglingSchulhof}
+        disabled={superviseDisabled}
+        disabledReason={
+          spontaneousStartBlockedReason
+            ? "Den Schulhof kannst du nur montags bis freitags beaufsichtigen."
+            : undefined
+        }
+        onToggle={() => schulhof.handleToggleSchulhof().catch(() => undefined)}
+      />
+    ) : null;
+  // Warum „Beaufsichtigen" gerade nicht geht. Mit spontanen Aktivitäten sagt
+  // das schon deren Karte; ohne sie steht der Grund als Hinweis im Inhalt.
+  const superviseBlockedReason =
+    superviseAction &&
+    superviseDisabled &&
+    !dashboard.webSpontaneousActivitiesEnabled
+      ? spontaneousStartBlockedReason
+      : undefined;
+  const hasHeadActions = Boolean(
+    runStateBadge ??
+    openRoomBadge ??
+    ownSupervisionBadge ??
+    foreignSupervisionBadge ??
+    additionalSupervisionActiveGroupId ??
+    handOverButton ??
+    superviseAction ??
+    releaseAction,
+  );
+
+  // Keine eigene Aufsicht, kein offener Raum, nichts geplant: dieselbe
+  // Kopfkarte, nur ein anderer Inhalt — keine zweite Seite.
+  const showUnclaimedOnly =
+    !isPageLoading &&
+    !hasNoAccess &&
+    allRooms.length === 0 &&
+    currentOpenRoom === null &&
+    plannedNow.length === 0;
+
+  // Kacheln oder Tabelle (#3834). Die Tabelle gilt für die Kinderliste der
+  // Aufsicht und der offenen Räume; die Stundenplan-Liste hat ihre eigene
+  // Form und bleibt, wie sie ist.
+  const { enabled: photosEnabled } = useStudentPhotosEnabled();
+  const holidayGuestLabel = useHolidayGuestLabels(students);
+  const tableColumns = useMemo(
+    () =>
+      buildSupervisionTableColumns({
+        pickupTimesData: dashboard.pickupTimesData,
+        arrivalTimesData: dashboard.arrivalTimesData,
+        trackingData: dashboard.trackingData,
+        myGroupIds: dashboard.myGroupIds,
+        myGroupRooms: dashboard.myGroupRooms,
+        now,
+        photosEnabled,
+        hrefFor: (student) =>
+          `/students/${student.id}?from=/active-supervisions`,
+        classLabel: holidayGuestLabel,
+      }),
+    [
+      dashboard.pickupTimesData,
+      dashboard.arrivalTimesData,
+      dashboard.trackingData,
+      dashboard.myGroupIds,
+      dashboard.myGroupRooms,
+      now,
+      photosEnabled,
+      holidayGuestLabel,
+    ],
+  );
+  const tableColumnDefaults = useMemo(
+    () => columnDefaults(tableColumns),
+    [tableColumns],
+  );
+  const collectionView = useCollectionView(
+    "active-supervisions",
+    tableColumnDefaults,
+    // Ohne eigene Wahl zeigt die Handy-Liste unter dem Namen die Gehzeit.
+    "pickup",
+  );
+  const tableApplies = openRoomLayout !== null || !currentTimetableRoster;
+  const showTable = collectionView.view === "table" && tableApplies;
+  // Die Spaltenwahl wirkt nur am Computer: auf dem Handy zeigt die Liste
+  // je Kind eine Zeile mit Name, Status und Gehzeit (#3834).
+  const isPhone = useMediaQuery(BELOW_MD);
+  // Eine Markierung gilt nur für die Liste, in der sie gesetzt wurde: ein
+  // anderer Raum, eine andere Suche oder ein anderer Filter leeren sie (wie
+  // in der Kindersuche, review #2372).
+  const selectionScope = [
+    currentRoom?.id,
+    currentOpenRoom?.roomId,
+    filters.searchTerm,
+    ...filters.activeFilters.map((filter) => `${filter.id}:${filter.label}`),
+  ].join("|");
+  const checkinAllowed = canBulkCheckinFromSupervision(
+    currentRoom,
+    currentOpenRoom,
+  );
+  const changeView = collectionView.setView;
+
+  const buildStudentGridProps = (
+    tableSelection: StudentTableSelection | null,
+  ) => ({
+    pickupTimesData: dashboard.pickupTimesData,
+    arrivalTimesData: dashboard.arrivalTimesData,
+    trackingData: dashboard.trackingData,
+    myGroupIds: dashboard.myGroupIds,
+    myGroupRooms: dashboard.myGroupRooms,
+    now,
+    onOpenStudent: (studentId: string) =>
+      router.push(`/students/${studentId}?from=/active-supervisions`),
+    table: tableSelection
+      ? {
+          columns: tableColumns,
+          hiddenColumns: collectionView.hiddenColumns,
+          phoneDetail: collectionView.phoneDetail,
+          selection: tableSelection,
+        }
+      : null,
+  });
+
+  // „Profil ansehen“ in den Block-Listen (#4356). Die Kinderseite lädt
+  // GET /api/students/{id}, das `users:read` oder `students:read` verlangt;
+  // ohne beides fehlt der Link, statt auf eine Fehlerseite zu führen.
+  const studentProfileHref = canReadStudents(session)
+    ? (row: TimetableRosterRow) =>
+        tenantPath(`/students/${row.studentId}?from=/active-supervisions`)
+    : undefined;
+
+  // Kinder in einen Raum setzen ist eine Verwaltungsaktion. Einen
+  // offenen Raum oder eine fremde Sitzung zu sehen verleiht sie
+  // nicht (#3065, #5035); wer dort die Aufsicht hat, behält sie,
+  // die Verwaltung auch auf fremden Sitzungen (canAssign).
+  const showTransit = Boolean(
+    currentOpenRoom
+      ? currentOpenRoom.isUserSupervising
+      : currentRoom?.canAssign,
+  );
+  const transitSection = showTransit ? (
+    <Suspense fallback={null}>
+      <TransitStudentsSection
+        fromReferrer="/active-supervisions"
+        collapsible
+        {...(appHasRunningRoster
+          ? {
+              expanded: appTransitExpanded,
+              onExpandedChange: setAppTransitExpanded,
+              onTotalCountChange: setAppTransitCount,
+            }
+          : {})}
+      />
+    </Suspense>
+  ) : null;
+  // „Kinder unterwegs“ war heute die erste Karte unter dem Kopf. In der App
+  // steht die Karte hinter der Liste; die Zahl steht trotzdem im ersten
+  // Bild, rechts im ersten Abschnittskopf, und führt aufgeklappt dorthin.
+  const appTransitLink =
+    appHasRunningRoster && showTransit && (appTransitCount ?? 0) > 0 ? (
+      <Button
+        type="button"
+        variant="ghost"
+        size="compact"
+        // Leiser Knopf mit Fingermaß; der Pfeil schließt bündig mit den
+        // Knöpfen der Zeilen darunter ab.
+        className="-mr-3 gap-1.5"
+        tooltip={
+          appTransitExpanded
+            ? "Blendet die Kinder ohne Raum am Ende der Liste aus."
+            : "Zeigt die Kinder ohne Raum am Ende der Liste."
+        }
+        aria-expanded={appTransitExpanded}
+        onClick={() => {
+          if (appTransitExpanded) {
+            setAppTransitExpanded(false);
+            return;
+          }
+          setAppTransitExpanded(true);
+          // Erst nach dem Aufklappen hat die Karte eine Lage.
+          requestAnimationFrame(() =>
+            appTransitRef.current?.scrollIntoView({
+              behavior: "smooth",
+              block: "start",
+            }),
+          );
+        }}
+      >
+        <MotoConceptIcon concept={transitConcept} size={16} />
+        {`${appTransitCount} unterwegs`}
+        {/* Der Pfeil zeigt, dass hier etwas aufgeht: ohne ihn läse sich
+            die Zahl wie die Anzeige daneben. */}
+        <ChevronDown
+          className={cn(
+            "size-4 text-gray-500",
+            appTransitExpanded && "rotate-180",
+          )}
+          aria-hidden="true"
+        />
+      </Button>
+    ) : null;
+
+  // Render helper for student grid content
+  const renderStudentContent = (
+    tableSelection: StudentTableSelection | null,
+  ) => {
+    const studentGridProps = buildStudentGridProps(tableSelection);
+    if (
+      dashboard.isWaitingForUrlRoomSelection ||
+      roster.isWaitingForTimetableRoster
+    ) {
+      return <ActiveSupervisionLoadingView withHeader={false} />;
+    }
+
+    if (openRoomLayout) {
+      return (
+        <OpenRoomSections
+          sections={openRoomLayout}
+          students={students}
+          filteredStudents={filters.filteredStudents}
+          grid={studentGridProps}
+          blocks={{
+            allRooms,
+            currentStaffId,
+            mutateDashboard,
+            adoptSession: dashboard.adoptSession,
+            setSelectedTimetableInstanceId:
+              dashboard.setSelectedTimetableInstanceId,
+            router,
+            reopenable: reopen.reopenable,
+            rememberReopenable: reopen.rememberReopenable,
+            clearReopenable: reopen.clearReopenable,
+            attendanceWebEnabled,
+            showTimetableCounts,
+            openingRosterRows,
+            canReadPresentChildren: hasPermission(session, "users:read"),
+            canExcuseRestOfDay: hasPermission(session, "users:update"),
+            studentProfileHref,
+            overviewEnabled,
+            onAddSupervisor: setAddSupervisorTarget,
+            onHandOver: setHandOverTarget,
+            onRosterGroups: rememberOpenRoomRosterGroups,
+            rosterRowFilter: filters.rosterRowFilter,
+            presentPickerAutoOpenInstanceId:
+              actions.presentPickerAutoOpenInstanceId,
+            onPresentPickerAutoOpened: actions.clearPresentPickerAutoOpen,
+          }}
+        />
+      );
+    }
+
+    if (currentTimetableRoster && appMode) {
+      return (
+        <>
+          {actions.moveNotice && (
+            <div className="mb-4">
+              <Alert type="info" message={actions.moveNotice} />
+            </div>
+          )}
+          <TimetableRosterApp
+            addStudentSearch={actions.addStudentSearch}
+            addStudentError={actions.addStudentError}
+            attendanceWebEnabled={attendanceWebEnabled}
+            isAddingStudent={actions.isAddingStudent}
+            isCompletingInstance={actions.isCompletingInstance}
+            isConfirmingExpected={actions.isConfirmingExpected}
+            roster={currentTimetableRoster}
+            showTimetableCounts={showTimetableCounts}
+            occupancy={supervisionOccupancy}
+            onAddStudent={actions.handleAddUnplannedStudent}
+            onAddPresentStudents={
+              hasPermission(session, "users:read")
+                ? actions.handleAddPresentStudents
+                : undefined
+            }
+            presentChildrenPicker={PresentChildrenPicker}
+            addUnplannedStudentModal={AddUnplannedStudentModal}
+            presentPickerAutoOpen={
+              actions.presentPickerAutoOpenInstanceId ===
+              currentTimetableRoster.instance.id
+            }
+            onPresentPickerAutoOpened={actions.clearPresentPickerAutoOpen}
+            onComplete={actions.handleCompleteTimetableInstance}
+            onHandOver={
+              handOverActiveGroupId
+                ? () => setHandOverTarget(handOverActiveGroupId)
+                : undefined
+            }
+            endEntry={rosterAppEndEntry({
+              roster: currentTimetableRoster,
+              attendanceWebEnabled,
+              now,
+              isCompleting: actions.isCompletingInstance,
+              onComplete: () => void actions.handleCompleteTimetableInstance(),
+            })}
+            onConfirmExpected={actions.handleConfirmExpectedStudents}
+            onRosterAction={actions.handleRosterAction}
+            onSaveHomeworkFeedback={actions.handleSaveHomeworkFeedback}
+            reloadAfterRefusal={actions.reloadRosterAfterRefusal}
+            onExcuseRestOfDay={
+              hasPermission(session, "users:update")
+                ? actions.handleExcuseRestOfDay
+                : undefined
+            }
+            studentProfileHref={studentProfileHref}
+            onSearchChange={actions.handleAddStudentSearchChange}
+            rowFilter={filters.rosterRowFilter}
+            addStudentOpen={appAddStudentOpen}
+            onAddStudentOpenChange={setAppAddStudentOpen}
+            leadGroupMeta={appTransitLink}
+            listFooter={
+              <>
+                {headFacts.supervisorNames.length > 0 ? (
+                  // Wer die Aufsicht hat, wie am Computer unter dem Titel.
+                  // In der Kopfkarte ist am Telefon kein Platz, ohne die
+                  // Kinder aus dem ersten Bild zu schieben.
+                  <SectionCard title="Betreuung" titleSize="md">
+                    <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+                      <p className="flex min-w-0 items-center gap-2 text-sm text-gray-700">
+                        <MotoConceptIcon concept={staffConcept} size={16} />
+                        {headFacts.supervisorNames.join(", ")}
+                      </p>
+                      {additionalSupervisionActiveGroupId ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="compact"
+                          tooltip={ADD_SUPERVISOR_HINT}
+                          onClick={() =>
+                            setAddSupervisorTarget(
+                              additionalSupervisionActiveGroupId,
+                            )
+                          }
+                        >
+                          Betreuer hinzufügen
+                        </Button>
+                      ) : null}
+                    </div>
+                    {appLimitInCard ? (
+                      // Die Teilnehmergrenze nennt der Kopf am Computer
+                      // immer („13 / 20 Kinder“). Steht am Telefon
+                      // „überfällig“ in der Chipzeile, fehlt dort der
+                      // Platz; dann steht sie hier (Erreichbarkeit).
+                      <p className="mt-2 flex min-w-0 items-center gap-2 text-sm text-gray-700">
+                        <MotoConceptIcon concept={childrenConcept} size={16} />
+                        {`${supervisionCount} da · max. ${supervisionOccupancy.limit} Kinder`}
+                      </p>
+                    ) : null}
+                  </SectionCard>
+                ) : null}
+                {spontaneousStartBanner}
+                {transitSection ? (
+                  // Zu ist die Karte nur eine Wiederholung der Zahl im
+                  // Listenkopf: Sie steht erst da, wenn der Kopf sie
+                  // aufklappt (ohne Kinder unterwegs wie am Computer).
+                  // Ausgeblendet bleibt sie geladen, sonst kennt der Kopf
+                  // die Zahl nicht.
+                  <div
+                    ref={appTransitRef}
+                    className={
+                      appTransitExpanded || appTransitCount === 0
+                        ? "scroll-mt-24"
+                        : "hidden"
+                    }
+                  >
+                    {transitSection}
+                  </div>
+                ) : null}
+                {/* „Als Nächstes“ wie heute, nur hinter der Liste: oben
+                    stünde es zwischen Kopf und Kindern. Überfälliges nennt
+                    die Kopfkarte. */}
+                <PlannedNowSection
+                  plannedNow={plannedNow}
+                  hasActiveTimetableSession
+                  isStartingInstance={actions.isStartingInstance}
+                  onStart={(instance) =>
+                    void actions.handleStartPlannedInstance(instance)
+                  }
+                  flush
+                  app
+                />
+                <PastBlocksSection onReopen={reopenPastBlock} app />
+              </>
+            }
+          />
+        </>
+      );
+    }
+
+    if (currentTimetableRoster) {
+      return (
+        <>
+          {actions.moveNotice && (
+            <div className="mb-4">
+              <Alert type="info" message={actions.moveNotice} />
+            </div>
+          )}
+          <TimetableRosterContent
+            openingRowLimit={openingRosterRows}
+            addStudentSearch={actions.addStudentSearch}
+            addStudentError={actions.addStudentError}
+            attendanceWebEnabled={attendanceWebEnabled}
+            isAddingStudent={actions.isAddingStudent}
+            isCompletingInstance={actions.isCompletingInstance}
+            isConfirmingExpected={actions.isConfirmingExpected}
+            roster={currentTimetableRoster}
+            showTimetableCounts={showTimetableCounts}
+            statusInPageHead
+            roomInPageHead
+            occupancy={supervisionOccupancy}
+            onAddStudent={actions.handleAddUnplannedStudent}
+            onAddPresentStudents={
+              hasPermission(session, "users:read")
+                ? actions.handleAddPresentStudents
+                : undefined
+            }
+            presentChildrenPicker={PresentChildrenPicker}
+            addUnplannedStudentModal={AddUnplannedStudentModal}
+            presentPickerAutoOpen={
+              actions.presentPickerAutoOpenInstanceId ===
+              currentTimetableRoster.instance.id
+            }
+            onPresentPickerAutoOpened={actions.clearPresentPickerAutoOpen}
+            onComplete={actions.handleCompleteTimetableInstance}
+            onConfirmExpected={actions.handleConfirmExpectedStudents}
+            onRosterAction={actions.handleRosterAction}
+            onSaveHomeworkFeedback={actions.handleSaveHomeworkFeedback}
+            reloadAfterRefusal={actions.reloadRosterAfterRefusal}
+            onExcuseRestOfDay={
+              hasPermission(session, "users:update")
+                ? actions.handleExcuseRestOfDay
+                : undefined
+            }
+            studentProfileHref={studentProfileHref}
+            onSearchChange={actions.handleAddStudentSearchChange}
+            rowFilter={filters.rosterRowFilter}
+          />
+        </>
+      );
+    }
+
+    return (
+      <>
+        {supervisionOverbookedHint ? (
+          <Alert type="warning" message={supervisionOverbookedHint} />
+        ) : null}
+        <SupervisionStudentGrid
+          students={students}
+          filteredStudents={filters.filteredStudents}
+          {...studentGridProps}
+        />
+      </>
+    );
+  };
+
+  // Beenden ist selten und endgültig: in der App im „…“-Blatt, mit
+  // Rückfrage, nicht neben der Hauptaktion über der Pill.
+  const appEndEntry =
+    appHasRunningRoster && currentTimetableRoster
+      ? rosterAppEndEntry({
+          roster: currentTimetableRoster,
+          attendanceWebEnabled,
+          now,
+          isCompleting: actions.isCompletingInstance,
+          onComplete: () => void actions.handleCompleteTimetableInstance(),
+        })
+      : null;
+  const headMenuEntries: OverflowMenuEntry[] = [
+    ...addSupervisorEntries,
+    ...(appEndEntry ? [appEndEntry] : []),
+    ...(showTable
+      ? isPhone
+        ? phoneDetailMenuEntries(
+            tableColumns,
+            collectionView.phoneDetail,
+            collectionView.setPhoneDetail,
+          )
+        : columnMenuEntries(
+            tableColumns,
+            collectionView.hiddenColumns,
+            collectionView.setColumnVisible,
+          )
+      : []),
+  ];
+
+  return (
+    <TenantPage
+      // Der offene Raum oder die eigene Aufsicht ist das Objekt der Seite.
+      // Die Breadcrumb bleibt „Aktuelle Aufsicht > Name“, der Seitentitel
+      // nennt deshalb nur den Namen statt die Aufsicht ein zweites Mal (#3312).
+      title={supervisionName ?? "Aktuelle Aufsicht"}
+      info={ACTIVE_SUPERVISIONS_INFO}
+      stats={appMode ? appStats : supervisionSummary}
+      // Beim Rollen bleibt im schmalen Kopf ein Kurzstatus (Runde 21): seit
+      // wann der Block läuft; ohne laufenden Block die Zahl der Kinder.
+      appCompactStats={appMode ? appCompactStatus : undefined}
+      // Die Lupe bleibt auch im schmalen Kopf: In der langen Liste ist die
+      // Suche sonst erst nach dem Zurückrollen erreichbar (Runde 19).
+      appCompactActions={
+        appMode && appHasRunningRoster ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            aria-label="Kinder suchen"
+            tooltip="Öffnet Suche und Filter für die Kinderliste."
+            onClick={() => setSearchSheetOpen(true)}
+          >
+            <Search className="size-5" aria-hidden="true" />
+          </Button>
+        ) : undefined
+      }
+      back={isSharedRoomView}
+      backHref={
+        currentOpenRoom ? `/rooms/${currentOpenRoom.roomId}` : undefined
+      }
+      backLabel="Zurück zum Raum"
+      actions={
+        hasHeadActions || tableApplies ? (
+          <>
+            {appHasRunningRoster && currentTimetableRoster ? (
+              // Wie am Computer in der Karte des Blocks: seit wann er läuft
+              // oder von wann bis wann er geht. Die Chipzeile darunter ist am
+              // Telefon schon voll; in der Titelzeile ist Platz. Die Kopfkarte
+              // zeigt in der Titelzeile nur `data-icon-only`-Elemente, im
+              // „…“-Blatt keine: die Zeit steht nur hier.
+              // Als Abzeichen „Läuft seit 01:20“: Der Zustand gehört
+              // zur Zeit, frei neben der Lupe las sie sich wie ein Fremdkörper.
+              <span data-icon-only="" className="shrink-0 tabular-nums">
+                <StatusBadge
+                  label={appRunStateLabel(currentTimetableRoster.instance)}
+                  tone={
+                    rosterRunState(currentTimetableRoster.instance.status).tone
+                  }
+                  compact
+                />
+              </span>
+            ) : null}
+            {appHasRunningRoster ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label="Kinder suchen"
+                // Abstand zum „…“: beide behalten ihre 44-px-Trefferfläche.
+                className="mr-3"
+                tooltip="Öffnet Suche und Filter für die Kinderliste."
+                onClick={() => setSearchSheetOpen(true)}
+              >
+                <Search className="size-5" aria-hidden="true" />
+              </Button>
+            ) : null}
+            {tableApplies && !(appMode && !appHasList) ? (
+              <CollectionViewSwitch
+                value={collectionView.view}
+                onChange={changeView}
+              />
+            ) : null}
+            {/* Die Abzeichen sind eine Zeile: das Gerüst gibt unter sm jedem
+                Kopf-Element eine eigene volle Zeile, zwei gestreckte Pillen
+                untereinander läsen sich wie zwei Knöpfe. */}
+            {!appMode &&
+            (runStateBadge ||
+              openRoomBadge ||
+              ownSupervisionBadge ||
+              foreignSupervisionBadge) ? (
+              <span className="flex items-center gap-2">
+                {runStateBadge}
+                {openRoomBadge}
+                {ownSupervisionBadge}
+                {foreignSupervisionBadge}
+              </span>
+            ) : null}
+            {handOverButton}
+            {superviseAction}
+            {releaseAction}
+            {/* Die Spaltenwahl der Liste (#3834) im ⋮-Menü, nicht als
+                eigener Knopf neben dem Umschalter. */}
+            {/* In der App stehen die Einträge direkt im „…“-Blatt des
+                Kopfs (`overflowMenu`), nicht hinter einem zweiten Menü. */}
+            {appMode ? null : (
+              <OverflowMenu
+                items={headMenuEntries}
+                ariaLabel="Weitere Aktionen"
+              />
+            )}
+          </>
+        ) : undefined
+      }
+      overflowMenu={appMode ? headMenuEntries : undefined}
+      tabs={supervisionTabs}
+      {...(appMode && appHasList && !appHasRunningRoster
+        ? {
+            search: {
+              value: filters.searchTerm,
+              onChange: filters.setSearchTerm,
+              placeholder: "Name suchen…",
+            },
+            filters: filters.filterConfigs,
+            activeFilters: filters.activeFilters,
+            onClearAllFilters: filters.clearAllFilters,
+          }
+        : {})}
+      statsLoading={isPageLoading}
+      loading={isPageLoading}
+      loadingLabel="Aktuelle Aufsicht wird geladen…"
+      empty={
+        hasNoAccess
+          ? {
+              icon: <MotoConceptIcon concept={roomsConcept} size={48} />,
+              title: "Keine aktive Raum-Aufsicht",
+              description: `Du bist aktuell in keinem Raum als Live-Aktivität registriert. Starte eine Aktivität ${
+                nfcEnabled ? "an einem Terminal" : "in der Web-App"
+              }, um Live-Raumdaten einzusehen.`,
+            }
+          : null
+      }
+      overlays={
+        <>
+          <MountOnFirstOpen open={actions.showCompleteConfirmation}>
+            <CompleteInstanceModal
+              isOpen={actions.showCompleteConfirmation}
+              roster={currentTimetableRoster}
+              isCompleting={actions.isCompletingInstance}
+              error={actions.completeError}
+              onClose={() => actions.setShowCompleteConfirmation(false)}
+              onConfirm={() => void actions.confirmCompleteTimetableInstance()}
+            />
+          </MountOnFirstOpen>
+          {/* Schulhof Release Supervision Modal */}
+          <MountOnFirstOpen open={schulhof.showReleaseModal}>
+            <ReleaseSupervisionModal
+              isOpen={schulhof.showReleaseModal}
+              onClose={() => schulhof.setShowReleaseModal(false)}
+              onConfirm={() =>
+                schulhof.handleReleaseSupervision().catch(() => undefined)
+              }
+              isConfirmLoading={schulhof.isReleasingSupervision}
+              error={schulhof.releaseError}
+            />
+          </MountOnFirstOpen>
+          {addSupervisorTarget ? (
+            <AddSupervisorModal
+              activeGroupId={addSupervisorTarget}
+              canCreateExternalCaregiver={hasPermission(
+                session,
+                "users:create",
+              )}
+              canGrantExternalView={canGrantExternalViewAccess(session)}
+              isOpen
+              onClose={() => setAddSupervisorTarget(null)}
+              onAdded={supervisorAfterWrite.refresh}
+            />
+          ) : null}
+          {handOverTarget ? (
+            <HandOverSupervisionModal
+              activeGroupId={handOverTarget}
+              currentStaffId={currentStaffId}
+              isOpen
+              onClose={() => setHandOverTarget(null)}
+              onDone={supervisorAfterWrite.refresh}
+            />
+          ) : null}
+        </>
+      }
+    >
+      {/* Ein Ladefehler steht oben im Inhalt und nicht im `error`-Zustand des
+          Geruests: der zuletzt geladene Stand bleibt darunter bedienbar.
+          Einzelaktionen melden sich als Toast oder in ihrem Dialog (#2517). */}
+      {!hasNoAccess ? <LoadErrorAlert error={loadError} /> : null}
+      <LoadErrorAlert error={supervisorAfterWrite.error} />
+      <LoadErrorAlert error={actions.reloadError} />
+      {showUnclaimedOnly ? (
+        <>
+          {reopenBanner}
+          {appMode ? null : spontaneousStartBanner}
+          <EmptyRoomsView />
+          {/* The day review must survive the empty state: after the last block
+              ends, supervisors land exactly here (#2335). */}
+          <PastBlocksSection onReopen={reopenPastBlock} />
+          {appMode ? spontaneousStartBanner : null}
+        </>
+      ) : (
+        <>
+          {reopenBanner}
+          {appHasRunningRoster && !openRoomLayout ? null : (
+            <PlannedNowSection
+              plannedNow={plannedNow}
+              hasActiveTimetableSession={
+                currentTimetableRoster !== null || hasOwnBlock(openRoomLayout)
+              }
+              isStartingInstance={actions.isStartingInstance}
+              onStart={(instance) =>
+                void actions.handleStartPlannedInstance(instance)
+              }
+            />
+          )}
+
+          {appMode ? null : spontaneousStartBanner}
+
+          {superviseBlockedReason ? (
+            <Alert type="info" message={superviseBlockedReason} />
+          ) : null}
+
+          {/* In der App steht „Kinder unterwegs“ am Listenende. */}
+          {appHasRunningRoster && !openRoomLayout ? null : transitSection}
+
+          {/* Die Suche steht direkt über den Kinderlisten, nicht in der
+              Kopfkarte: dazwischen liegen sonst Als Nächstes, Kinder
+              unterwegs und der Kopf des Blocks (#4353). Sie filtert jede
+              Liste darunter, in offenen Räumen jeden Block. */}
+          {appHasRunningRoster ? (
+            <>
+              <ActiveFilterChips
+                filters={filters.activeFilters}
+                className="mb-4"
+              />
+              <OverlaySheet
+                open={searchSheetOpen}
+                onOpenChange={setSearchSheetOpen}
+                title="Kinder suchen"
+                footer={
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="md"
+                    className="w-full"
+                    tooltip="Schließt die Suche und zeigt die passenden Kinder in der Liste."
+                    onClick={() => setSearchSheetOpen(false)}
+                  >
+                    {searchSheetDoneLabel}
+                  </Button>
+                }
+              >
+                <div role="search" aria-label="Kinder suchen">
+                  <TenantPageSearchRow
+                    search={{
+                      value: filters.searchTerm,
+                      onChange: filters.setSearchTerm,
+                      placeholder: "Name suchen…",
+                    }}
+                    filters={filters.filterConfigs}
+                    activeFilters={filters.activeFilters}
+                    onClearAllFilters={filters.clearAllFilters}
+                  />
+                </div>
+                <p className="mt-4 text-sm text-gray-600" aria-live="polite">
+                  {searchSheetHits === null
+                    ? "Die Liste zeigt danach nur die Kinder, die passen."
+                    : searchSheetHits.length === 0
+                      ? "Kein Kind in dieser Aufsicht passt."
+                      : `Passend: ${searchSheetHits.join(", ")}`}
+                </p>
+              </OverlaySheet>
+            </>
+          ) : null}
+          {appMode ? null : (
+            <TenantPageListSearch
+              label="Kinder suchen"
+              search={{
+                value: filters.searchTerm,
+                onChange: filters.setSearchTerm,
+                placeholder: "Name suchen…",
+              }}
+              filters={filters.filterConfigs}
+              activeFilters={filters.activeFilters}
+              onClearAllFilters={filters.clearAllFilters}
+            />
+          )}
+
+          {appMode && !appHasList ? null : showTable ? (
+            <StudentSelectionScope
+              visibleStudents={filters.filteredStudents}
+              scopeKey={selectionScope}
+              checkinAllowed={checkinAllowed}
+            >
+              {(selection) => renderStudentContent(selection)}
+            </StudentSelectionScope>
+          ) : (
+            renderStudentContent(null)
+          )}
+
+          {/* End-of-day review of finished and expired blocks (#2335) */}
+          {appHasRunningRoster && !openRoomLayout ? null : (
+            <PastBlocksSection onReopen={reopenPastBlock} />
+          )}
+          {/* In der App ohne laufende Aufsicht: Start am Ende, die Leiste
+              schwebt über der Pill. */}
+          {appMode && !appHasRunningRoster ? spontaneousStartBanner : null}
+          {appMode && !appHasRunningRoster && appStartablePlanned ? (
+            <ActionBar>
+              <Button
+                type="button"
+                variant="success"
+                size="md"
+                isLoading={
+                  actions.isStartingInstance === appStartablePlanned.id
+                }
+                loadingText="Startet…"
+                tooltip="Startet die Aufsicht sofort und öffnet die Kinderliste."
+                onClick={() =>
+                  void actions.handleStartPlannedInstance(appStartablePlanned)
+                }
+              >
+                {`${appStartablePlanned.title} starten`}
+              </Button>
+            </ActionBar>
+          ) : null}
+        </>
+      )}
+    </TenantPage>
+  );
+}
+
+// Gate component: allows callers who can read supervision data, or callers
+// covered by the server-confirmed school-wide overview (#2380). `schedules:read`
+// alone (#4573) opens only the own running supervision, without any
+// school-wide request.
+function ActiveSupervisionGate({
+  children,
+}: Readonly<{ children: React.ReactNode }>) {
+  const { data: session, status } = useSession({
+    required: true,
+    onUnauthenticated() {
+      redirect("/");
+    },
+  });
+  const { overviewEnabled, isLoadingSupervision } = useOptionalSupervision();
+
+  if (status === "loading" || isLoadingSupervision) {
+    return (
+      <TenantPage
+        title="Aktuelle Aufsicht"
+        info={ACTIVE_SUPERVISIONS_INFO}
+        statsLoading
+        loading
+        loadingLabel="Aktuelle Aufsicht wird geladen…"
+      />
+    );
+  }
+
+  if (canReadSupervisionData(session)) {
+    return <>{children}</>;
+  }
+
+  // The overview endpoint confirms the backend granted this caller access.
+  // That includes effective admins and verified staff under all_staff.
+  // Checking supervisedRooms.length would incorrectly let callers through
+  // when the scope is "own" but a released room is present: that room is
+  // reachable for everyone and grants no supervision (#3065).
+  if (overviewEnabled) {
+    return <>{children}</>;
+  }
+
+  // Ohne groups:read zeigte die volle Seite die Anwesenheit der ganzen
+  // Schule. Wer Blöcke führt (schedules:read), sieht seine eigene Aufsicht.
+  if (hasPermission(session, "schedules:read")) {
+    return <OwnSupervisionView />;
+  }
+
+  // Fehlendes Recht ist ein Zustand der Seite, kein Fehler: dieselbe
+  // Kopfkarte mit demselben Titel, darunter der ruhige Leerzustand.
+  return (
+    <ForbiddenPage title="Aktuelle Aufsicht" info={ACTIVE_SUPERVISIONS_INFO} />
+  );
+}
+
+// Main component with Suspense wrapper. BinaryModeGuard runs first so
+// binary-mode tenants get a 404 before the supervision gate tries to load
+// data that depends on detailed-mode room visits.
+export default function MeinRaumPage() {
+  return (
+    <BinaryModeGuard
+      title="Aktuelle Aufsicht"
+      info={ACTIVE_SUPERVISIONS_BINARY_MODE_INFO}
+    >
+      <Suspense
+        fallback={
+          <TenantPage
+            title="Aktuelle Aufsicht"
+            info={ACTIVE_SUPERVISIONS_INFO}
+            statsLoading
+            loading
+            loadingLabel="Aktuelle Aufsicht wird geladen…"
+          />
+        }
+      >
+        <ActiveSupervisionGate>
+          <SSEErrorBoundary>
+            <MeinRaumPageContent />
+          </SSEErrorBoundary>
+        </ActiveSupervisionGate>
+      </Suspense>
+    </BinaryModeGuard>
+  );
+}

@@ -864,7 +864,10 @@ describe("SettingsContent (via renderTab)", () => {
     );
 
     await stateChange.waitFor(() => {
-      expect(mockRefreshSupervision).toHaveBeenCalledWith({ force: true });
+      expect(mockRefreshSupervision).toHaveBeenCalledWith([
+        "groups",
+        "sessions",
+      ]);
     });
   });
 
@@ -958,7 +961,7 @@ describe("SettingsContent collapsed categories and search (#2830)", () => {
     renderWithProviders(<RenderedTab tabId="settings-operations" />);
     const heading = await screen.findByRole("button", { name: /Sitzungen/ });
     expect(heading.getAttribute("aria-expanded")).toBe("false");
-    expect(screen.getByText("Aktiviert, Uhrzeit")).toBeDefined();
+    expect(screen.getByText("Aktiviert · Uhrzeit")).toBeDefined();
     expect(screen.queryByText("Aktiviert")).toBeNull();
     expect(screen.queryByRole("switch")).toBeNull();
 

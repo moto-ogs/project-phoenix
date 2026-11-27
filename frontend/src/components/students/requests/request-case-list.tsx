@@ -22,8 +22,8 @@ import {
 import { childrenConcept } from "~/lib/concepts/children";
 import { SectionCard } from "~/components/ui/section-card";
 
-export function caseRowID(caseKey: string): string {
-  return `request-case-${caseKey}`;
+export function caseRowID(prefix: string, caseKey: string): string {
+  return `${prefix}-case-${caseKey}`;
 }
 
 function countLabel(childCase: OpenCase): string {
@@ -40,10 +40,12 @@ function countLabel(childCase: OpenCase): string {
 
 function CaseRow({
   childCase,
+  id,
   selected,
   onSelect,
 }: Readonly<{
   childCase: OpenCase;
+  id: string;
   selected: boolean;
   onSelect: (childCase: OpenCase) => void;
 }>) {
@@ -53,7 +55,7 @@ function CaseRow({
     <li>
       <button
         type="button"
-        id={caseRowID(childCase.key)}
+        id={id}
         aria-current={selected ? "true" : undefined}
         onClick={() => onSelect(childCase)}
         className={`flex min-h-[44px] w-full flex-col items-start gap-1 border-b border-gray-100 px-4 py-3 text-left last:border-b-0 hover:bg-gray-50 ${
@@ -96,6 +98,7 @@ function CaseRow({
 
 function CaseBucket({
   id,
+  prefix,
   title,
   description,
   cases,
@@ -103,6 +106,7 @@ function CaseBucket({
   onSelect,
 }: Readonly<{
   id: string;
+  prefix: string;
   title: string;
   description: string;
   cases: readonly OpenCase[];
@@ -122,6 +126,7 @@ function CaseBucket({
         {cases.map((childCase) => (
           <CaseRow
             key={childCase.key}
+            id={caseRowID(prefix, childCase.key)}
             childCase={childCase}
             selected={childCase.key === selectedKey}
             onSelect={onSelect}
@@ -134,17 +139,20 @@ function CaseBucket({
 
 export function RequestCaseList({
   buckets,
+  prefix,
   selectedKey,
   onSelect,
 }: Readonly<{
   buckets: CaseBuckets;
+  prefix: string;
   selectedKey: string | null;
   onSelect: (childCase: OpenCase) => void;
 }>) {
   return (
     <SectionCard padding="none">
       <CaseBucket
-        id="request-group-urgent"
+        id={`${prefix}-urgent`}
+        prefix={prefix}
         title="Heute wichtig"
         description="Diese Kinder sind heute betroffen."
         cases={buckets.urgent}
@@ -152,7 +160,8 @@ export function RequestCaseList({
         onSelect={onSelect}
       />
       <CaseBucket
-        id="request-group-later"
+        id={`${prefix}-later`}
+        prefix={prefix}
         title="Weitere Anfragen"
         description="Diese Anfragen sind nicht für heute dringend."
         cases={buckets.later}
@@ -160,7 +169,8 @@ export function RequestCaseList({
         onSelect={onSelect}
       />
       <CaseBucket
-        id="request-group-expired"
+        id={`${prefix}-expired`}
+        prefix={prefix}
         title="Abgelaufen"
         description="Diese Anfragen betreffen nur vergangene Tage. Sie ändern nichts mehr."
         cases={buckets.expired}

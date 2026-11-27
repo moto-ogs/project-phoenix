@@ -11,12 +11,7 @@ import { ShellIntlProvider } from "~/components/dashboard/shell-intl-provider";
 import { PwaInstallHint } from "~/components/tenant/pwa-install-hint";
 import { PortalNotificationSetup } from "~/components/notifications/portal-notification-setup";
 
-const SCHOOL_PUBLIC_PAGES = [
-  "/login",
-  // Accept flow for Lehrkraft invitations — gated by the invitation token.
-  "/invite",
-  "/reset-password",
-];
+import { SCHOOL_PUBLIC_PAGES } from "./public-pages";
 
 /**
  * Client-side auth guard for school routes ("moto schule", #2207). The

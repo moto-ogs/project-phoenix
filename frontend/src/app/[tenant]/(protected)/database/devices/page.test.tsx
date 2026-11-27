@@ -9,7 +9,7 @@ import {
 } from "@testing-library/react";
 import { useState, type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import DevicesPage from "./page";
+import DevicesPage from "./page-content";
 import { ApiError } from "~/lib/api-error";
 import { catalogText } from "~/test/error-catalog-text";
 

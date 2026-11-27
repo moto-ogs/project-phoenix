@@ -50,6 +50,8 @@
   "session_note_required": "Bitte gib einen Grund für die Änderung an.",
   "session_not_found": "Eintrag nicht gefunden.",
   "session_not_owned": "Du kannst nur eigene Einträge bearbeiten.",
+  "terminal_only_stamping": "Du stempelst nur am NFC-Tablet. Halte dort dein Armband an das Tablet.",
+  "terminal_only_time_edit": "Deine Zeiten ändert nur die Leitung. Bitte frage die Leitung.",
   "session_check_in_in_future": "Der Beginn darf nicht in der Zukunft liegen. Bitte prüfe den Beginn.",
   "session_times_invalid": "Das Ende muss nach dem Beginn liegen. Bitte prüfe Beginn, Ende und Pause.",
   "shift_changed": "{object} wurde inzwischen geändert. Bitte lade die Seite neu.",
@@ -130,5 +132,5 @@
   "traeger_payroll_employer_invalid": "Die Nummern des Arbeitgebers konnten nicht gespeichert werden. Prüfe die markierten Felder.",
   "traeger_payroll_not_ready": "Die Lohndatei kann noch nicht entstehen. Die Prüfung auf der Seite nennt, was noch fehlt.",
   "traeger_staff_employer_changed": "An dieser Schule stellt inzwischen eine andere Stelle das Personal an. Lade die Seite neu und prüfe die Angaben.",
-  "no_staff_profile": "Dafür brauchst du in dieser Schule ein eigenes Personalprofil. Bitte frage die Leitung."
+  "no_staff_profile": "Dafür brauchst du in dieser Schule ein eigenes Personalprofil. Arbeitest du hier mit, melde dich beim moto-Team."
 }

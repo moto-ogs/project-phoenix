@@ -131,7 +131,10 @@ describe("ParentFirstSteps", () => {
       </>
     );
     const beacon = () =>
-      screen.queryByRole("button", { name: /Erste Schritte öffnen/ });
+      screen.queryByRole("button", {
+        name: /^Erste Schritte \d+$/,
+        description: /Erste Schritte öffnen/,
+      });
     const list = () => screen.queryByRole("region", { name: "Erste Schritte" });
 
     it("steps aside with button and list while a chat is open", async () => {
@@ -143,7 +146,10 @@ describe("ParentFirstSteps", () => {
 
       rerender(steps(false));
       fireEvent.click(
-        await screen.findByRole("button", { name: /Erste Schritte öffnen/ }),
+        await screen.findByRole("button", {
+          name: /^Erste Schritte \d+$/,
+          description: /Erste Schritte öffnen/,
+        }),
       );
       expect(list()).toBeVisible();
 

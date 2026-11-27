@@ -1,7 +1,7 @@
 "use client";
 
 import { staff as staffKeys } from "~/lib/swr/staff";
-import { timetableKeys } from "~/lib/swr/portal-keys";
+import { timeTrackingKeys, timetableKeys } from "~/lib/swr/portal-keys";
 import { useCallback, useMemo } from "react";
 import { useSession } from "next-auth/react";
 import { revalidateOrThrow, type KeyedMutator } from "~/lib/swr";
@@ -42,10 +42,10 @@ export const PLAN_CACHE_KEY_PREFIXES = [
   VERTRETUNG_GAPS_KEY_PREFIX,
   "staff-pending-absences-",
   "time-tracking-absences-",
-  "time-tracking-table-absences-",
-  "time-tracking-own-absences-",
+  timeTrackingKeys.periodFamily,
+  timeTrackingKeys.overviewFamily,
+  timeTrackingKeys.leaveOverviewFamily,
   "staff-shifts-visible-",
-  "time-tracking-own-shifts-today-",
   // Eigener Dienstplan der Mitarbeitenden (#3821).
   "time-tracking-own-shifts-week-",
 ] as const;

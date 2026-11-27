@@ -227,6 +227,8 @@ type QueryParam struct {
 	Repeated bool
 	// Values closes a string parameter to these values.
 	Values []string
+	// TextReason documents a composite value that cannot be a single ID.
+	TextReason string
 }
 
 // ResponseVariants describes a response whose shape a query parameter

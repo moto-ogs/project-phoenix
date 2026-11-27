@@ -8,7 +8,7 @@ import {
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import ShiftTypesPage from "./page";
+import ShiftTypesPage from "./page-content";
 import { ApiError } from "~/lib/api-error";
 import { useModuleBooked } from "~/lib/tenant-context";
 

@@ -201,7 +201,7 @@ func newWTMFixture() *wtmFixture {
 	}
 	svc := NewWorkTimeMonthService(f.sessions, f.breaks, f.absences,
 		&wtmMockStaffReader{staff: &StaffScheduleAssignment{}},
-		f.schedules, f.models, f.shifts, f.settings, nil, WithMonthTestClock(wtmNow)).(*workTimeMonthService)
+		f.schedules, f.models, f.shifts, f.settings, nil, WithMonthTestClock(wtmNow))
 	f.svc = svc
 	return f
 }
@@ -619,7 +619,7 @@ func TestWTMMonthSummary_HistoricalRowAnchorWinsOverStaffAnchor(t *testing.T) {
 	versionAnchor := NewDate(2026, time.June, 1)
 	svc := NewWorkTimeMonthService(f.sessions, f.breaks, f.absences,
 		&wtmMockStaffReader{staff: &StaffScheduleAssignment{RotationAnchorDate: &staffAnchor}},
-		f.schedules, f.models, f.shifts, f.settings, nil, WithMonthTestClock(wtmNow)).(*workTimeMonthService)
+		f.schedules, f.models, f.shifts, f.settings, nil, WithMonthTestClock(wtmNow))
 
 	// 2-week rotation: week A Mondays = 480, week B Mondays = 0.
 	f.schedules.entries = []*WorkScheduleRow{

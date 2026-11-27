@@ -189,8 +189,10 @@ or write a `Backend*` interface for a registered route.
   ```
 
 - Pass `token` when the caller holds the bearer, or omit it for a public
-  or pre-session step. Pass typed `params` and `query`; the entry supplies
-  the backend path. There is no endpoint override. For a session-bound route that
+  or pre-session step. Pass typed `params`; the entry supplies the backend
+  path. For a named browser route with registered query keys, pass the incoming
+  `request` so the transport forwards them. Other server calls pass typed
+  `query`. There is no endpoint override. For a session-bound route that
   uses `backendFetch`, hand that transport to the contract helper as
   `send`; it keeps the portal's renewal policy.
 - Return `contractResponse(reply, request)` for decoded JSON that the BFF
@@ -418,6 +420,65 @@ confirmed.
 
 Context params are async in Next.js 16: `params: Promise<...>` — always `await`.
 
+### Own time-tracking reads (#8078, #8081)
+
+Use the three tenant entries in `time-tracking.generated.ts` with `bffJson`.
+They need `time_tracking:own` and Zeiterfassung and infer the staff member
+from the session. Do not send a staff ID. The standard catalog proxy forwards
+each read once on a live session; there is no page-specific proxy.
+
+- `period?view=week|month&start=YYYY-MM-DD`: pass a Monday or month start.
+  `start` to `end` is the displayed period. `week_start` to `week_end` is
+  the full ISO-week span used for session and labor warnings. A night block
+  can begin before either span. `days` covers every displayed day;
+  `has_target: false` means the target is unknown, not zero. Observe the
+  selected block's `version` when saving a correction (ADR 0311).
+  Only a month request carries `month_summary`. Its
+  `planned_shift_state` governs `planned_shift_minutes`: show a missing
+  plan only when the state is `ready` and minutes are absent. Hide the shift
+  comparison when `not_booked`; show a load failure when `unavailable`.
+- `overview`: current Berlin day, open block with pauses, today's absence
+  warning and assignments, ten weekday chart points, clock subtotals and
+  current week/month figures. `as_of` timestamps the figures; the client may
+  advance the live clock without fetching history. `account_balance_minutes:
+  null` means the account has not started. Do not enable stamping on a failed
+  read: a null session or absence is authoritative only in a success.
+- `leave-overview`: current Berlin year, quota, four counts, eight recent
+  non-question requests at most, all open questions, own allowances and the
+  initial mail outcomes. When `mails.state` is `ready`, use
+  `mails.awaiting_feedback` to decide if fast polling of the existing small
+  mail read is needed (#8094). Load the full year's absences and the
+  absence-type catalog only when their dialogs need them.
+
+For shifts, `not_booked` means Dienstplan is off; `unavailable` is a read
+failure. Assignments remain part of Basis and have a separate read status.
+For assignments and mail as well, only `ready` can mean an empty result.
+The page opens the three RAM-only `useSWRAuth` families in parallel. The
+period key uses the view and its canonical Berlin start, never previous data.
+The clock and leave keys use the Berlin day and year. The page uses the shell's
+known missing-profile state to avoid any own reads; a real authorization failure
+is not the missing-profile state.
+
+On a write, one short invalidation burst combines the local response and SSE
+echo. Its predicate refreshes mounted readers and expires affected cached
+periods without fetching them. `staff_leave_changed` invalidates the same
+time views as `staff_time_tracking_changed`, plus leave and the open vacation
+form's year list. Both are contentless tenant signals (ADR 0310). Timetable
+events update the clock's assignments; a closing-day change also affects the
+period. A reconnect reconciles all three. No historic period polls. The chart
+and clock advance today's actual time from the snapshot and its open block,
+not a second history reader. Only advance the week and month totals when
+`today_counts_in_totals` is true.
+
+The Admin table and the home assignment card still have their original reads.
+The session editor receives the selected block and the rejecting
+`revalidateOrThrow` of that period (ADR 0311). Action-bound reads keep their
+existing routes: audit history, export, annual absence overlap and the
+absence-type catalog. Run the seeded GET budget with
+`PERF_PORT=<native-frontend-port> pnpm run perf:render time-tracking.perf.ts`
+in `frontend/`; only the seeded measurement accepts `PERF_BASELINE=1` for
+the pre-#8081 page.
+
 ### Backend calls
 
 Every backend call goes through `sendBackend` (`lib/backend-client.server.ts`):
@@ -509,9 +570,73 @@ Inspect the domain's existing mapper, such as
 [room response mapping](../../frontend/src/lib/room-helpers.ts), rather than
 copying a generic mapper. Preserve nullability and date-vs-instant semantics.
 
+### First display in a protected page
+
+Load eligible first-display reads in the server page, not in a link handler
+or on the first browser mount. Use
+[`SWRServerSeed`](../../frontend/src/lib/swr/server-seed.tsx) with the existing
+reader's key and mapper. With [Cache Components and Partial Prefetching](../../frontend/next.config.js),
+the link prefetches the neutral shell only. Wait for `connection()` before
+resolving the session and starting protected seeds. Use
+[`readTenantPageContext`](../../frontend/src/lib/tenant-page-seed.server.ts) to
+bind Team reads to the host and school, or
+[`readPortalSessionSnapshot`](../../frontend/src/lib/portal-session-snapshot.server.ts)
+for the actual portal. Both wait for the connection. Go still checks the
+resource's permissions and relationships.
+
+Keep protected reads and values out of Next's `use cache` directives. React's
+`cache()` in the snapshot helpers deduplicates within a server request.
+For a measured revisit bottleneck, a page can export
+`unstable_dynamicStaleTime` (seconds) to reuse its authorized payload in the
+same document. This does not extend seed validity or change invalidation.
+See the [protected session boundary](contracts.md#protected-tree-per-session-8082).
+
+Use `seedRead` and `readContract` for each independently retriable GET.
+Mark only entries needed for initial HTML as `render` and keep the seed
+under the page's loading boundary. Use `claims` for known keys so a client
+navigation waits for the same answer instead of starting a second GET.
+Missing, refused and timed-out entries fall back to their existing browser
+reader and its error UI. Pass only the displayed projection across RSC.
+Keep bearer tokens and raw backend errors on the server.
+
+The shell seeds only its own readers. An audited opening, a read with side
+effects, a write preview, an edit, a download or a read for later local
+interaction is not a seed. See [ADR 0311](../adr/0311-ein-speichern-traegt-den-gelesenen-stand.md).
+
+Record each new page's first-display reads in exactly one inventory row,
+including why a read stays at opening time or why no seed is needed:
+
+- [Team](server-seed-team.md) and [Team daily routes and data administration](server-seed-team-catalog.md)
+- [Parents and standalone pages](server-seed-parents-public.md)
+- [School, Träger, Operator and Caterer](server-seed-portals.md)
+
+Use the internal route template without query parameters in the first
+column. `app-route-invariants.test.ts` checks these inventories against the
+page tree, excluding parallel slots that reuse a route.
+
 ### Auth Token Flow
 
 Go sends the access and refresh tokens to the BFF, not to the browser.
 Auth.js stores them in the encrypted httpOnly cookie. Server handlers forward
 the bearer to Go and renew it as needed. For password, MFA, and passkey
 steps, see [Login, refresh, and MFA](contracts.md#login-refresh-and-mfa). Invitation/password-reset token flows live at `app/invite/`, `app/[tenant]/(public)/invite/`, `app/reset-password/`, with API clients in `lib/invitation-api.ts` / `lib/invitation-helpers.ts` — use these instead of hitting backend routes directly.
+
+### Mail delivery polling
+
+Enrollment, appointment and absence readers reconcile quiet results every five
+minutes and when the tab regains focus. Delivery's `awaiting_feedback` keeps
+the 15-second cadence (30 seconds for absences) only while a send is active.
+Plain SMTP or fallback acceptance stays **accepted**, not delivered, and uses
+the slow cadence. A tracked provider acceptance waits up to 24 hours; a
+provider-reported delay follows Delivery's five-day limit. Settled chats stop
+polling; new messages refresh their mail status.
+
+### Operator account pages
+
+The three account GETs (platform, organization, school) answer a single
+50-row page through the generated paginated envelope (ADR 0324). Keep the
+first-page key scoped by filter and sort; pass `pagination.next_cursor`
+unchanged for “Mehr laden”. A new scope, order, search or successful write
+invalidates the continuation. Do not sort or truncate the loaded rows a
+second time in the table. Seed only the first page for the initial URL, with
+the same key and query the browser uses.

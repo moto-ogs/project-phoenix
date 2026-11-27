@@ -17,6 +17,7 @@ import {
   useRef,
   useState,
   type ReactNode,
+  type ComponentProps,
 } from "react";
 import {
   AlertTriangle,
@@ -48,7 +49,10 @@ import {
 import { dayHomeChange } from "~/components/students/student-table";
 import { NotificationBadge } from "~/components/ui/notification-badge";
 import { COUNTER_TONE } from "~/lib/counter-tones";
-import { useStudentParentAttention } from "~/lib/hooks/use-parent-attention";
+import {
+  ParentAttentionList,
+  useListedParentAttention,
+} from "~/components/students/parent-attention-badge";
 import { MOTO_COLOR_PALETTE } from "~/lib/kit-palette";
 import type { TrackingIndicatorsResponse } from "~/lib/active-helpers";
 import { useRowClock } from "~/components/students/student-card-clock";
@@ -231,7 +235,7 @@ function RowLine({
 export function RowParentAttention({
   studentId,
 }: Readonly<{ studentId: string }>) {
-  const attention = useStudentParentAttention(studentId);
+  const attention = useListedParentAttention(studentId);
   if (!attention) return null;
   return (
     <NotificationBadge
@@ -342,7 +346,21 @@ const SHORT_PHONE_DENSE = [
   "phone:[@media(max-height:700px)]:[&_[data-collection-group]_h3]:leading-[1.0625rem]",
 ].join(" ");
 
-export function StudentListApp({
+/**
+ * Ein Abruf der Elternzahlen für die ganze Liste und ihr Kind-Blatt
+ * (`ParentAttentionList`), nicht einer je Zeile.
+ */
+export function StudentListApp(
+  props: ComponentProps<typeof StudentListAppContent>,
+) {
+  return (
+    <ParentAttentionList>
+      <StudentListAppContent {...props} />
+    </ParentAttentionList>
+  );
+}
+
+function StudentListAppContent({
   students,
   groups,
   alphabetic,

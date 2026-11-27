@@ -11,7 +11,7 @@ import { ToastProvider } from "~/contexts/ToastContext";
 import { ApiError } from "~/lib/api-error";
 import type { Announcement } from "~/lib/parent-announcements-api";
 import { catalogText } from "~/test/error-catalog-text";
-import AnnouncementDetailPage from "./page";
+import AnnouncementDetailPage from "./page-content";
 
 vi.mock("next-auth/react", () => ({
   useSession: () => ({

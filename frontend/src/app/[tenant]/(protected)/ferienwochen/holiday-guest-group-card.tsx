@@ -95,7 +95,7 @@ export function HolidayGuestGroupCard({
   let status: string;
   if (!week.guestGroupId) {
     status = canAssign
-      ? "Noch keine Gruppe gewählt. Erst mit einer Gruppe sehen die Betreuungskräfte die Feriengäste in der Gruppe und im Check-in."
+      ? "Noch keine Gruppe gewählt. Wähle eine Gruppe, damit die Betreuungskräfte die Feriengäste in der Gruppe und im Check-in sehen."
       : "Noch keine Gruppe gewählt. Die Gruppe wählt die Leitung.";
   } else {
     const group = `der Gruppe ${groupName ?? "der Woche"}`;
@@ -115,7 +115,7 @@ export function HolidayGuestGroupCard({
   return (
     <SectionCard
       title="Feriengruppe"
-      description="Feriengäste sind Kinder anderer Schulen und Kinder ohne Schule beim Träger. In der Feriengruppe meldest du die Kinder an und ab. Du siehst Betreuung, Notfall, Abholung, Gesundheit und die Angaben, die der Träger freigibt. Kinder deiner OGS bleiben in ihrer Gruppe."
+      description="Feriengäste sind Kinder, die sonst nicht in deine OGS gehen. In der Feriengruppe meldest du die Kinder an und ab. Du siehst Betreuung, Notfall, Abholung, Gesundheit und die Angaben, die der Träger freigibt. Kinder deiner OGS bleiben in ihrer Gruppe."
     >
       <div className="flex flex-col gap-4">
         <p className="text-sm text-gray-700">{status}</p>

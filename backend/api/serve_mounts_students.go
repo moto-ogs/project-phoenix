@@ -33,6 +33,7 @@ import (
 	"github.com/moto-ogs/project-phoenix/modules/requestreview"
 	requestreviewcompose "github.com/moto-ogs/project-phoenix/modules/requestreview/compose"
 	reviewStudentsHTTP "github.com/moto-ogs/project-phoenix/modules/requestreview/http"
+	schoolCalendarCompose "github.com/moto-ogs/project-phoenix/modules/schoolcalendar/compose"
 	schoolMembershipModule "github.com/moto-ogs/project-phoenix/modules/schoolmembership"
 	"github.com/moto-ogs/project-phoenix/modules/schoolstructure"
 	schoolStructureCompose "github.com/moto-ogs/project-phoenix/modules/schoolstructure/compose"
@@ -189,7 +190,7 @@ func mountStudentRoutes(
 	statusDays studentpresence.StatusDays, absences deliveryCompose.AbsenceNotifier, deletion *studentdeletion.Workflow,
 	groupLive grouplive.Query, decisions enrollmentOwner.Decisions, active studentpresence.Presence, resumption careStudentsHTTP.CareResumption,
 	noteTeam peopledirectory.StudentNoteTeamNotices, noteTeamReach studentsAPI.StudentNoteTeamReach, cohorts timetableModule.CohortRosters,
-	answers enrollmentOwner.StudentAnswers, files nativeUploads.FileKeys, uploads nativeUploads.UploadFiles, now func() time.Time,
+	answers enrollmentOwner.StudentAnswers, files nativeUploads.FileKeys, uploads nativeUploads.UploadFiles, plannedActivities projectionStudentsHTTP.PlannedActivityReader, now func() time.Time,
 ) error {
 	// A direct school_class edit must resync Jahrgang-filtered offering-sourced
 	// Regeltermine like a grade transition does (#2147 review round 10); Care
@@ -239,7 +240,7 @@ func mountStudentRoutes(
 			PeopleDirectory:              persons,
 			Persons:                      peopleCompose.NewStudentRoutePersons(services.Users),
 			PickupAdjustmentService:      requests.CareOfferings, PickupChangeNotices: requests.PickupChangeTeam,
-			PickupScheduleService: schedules.Pickups, PickupSignatureProofs: staffPickupSignatures{ledger: owners.SignatureLedger()}, Reports: newDeclarationReports(),
+			PickupScheduleService: schedules.Pickups, PickupPersons: schedules.PickupPersons, PickupSignatureProofs: staffPickupSignatures{ledger: owners.SignatureLedger()}, Reports: newDeclarationReports(),
 			Schools: studentSchoolDirectory{schools: organizations}, SettingsService: settings,
 			StudentAccidentReports: requests.AccidentReports, StudentAuditService: persons,
 			StudentConsents:        services.StudentConsents,
@@ -256,14 +257,14 @@ func mountStudentRoutes(
 			ArrivalScheduleService: schedules.Arrivals,
 			CareDayService:         schedules.CareDay,
 			CareLifecycleService:   schedules.Lifecycle, ClassHandovers: studentListHandovers{reads: classHandoverReads{handovers: presence, staff: NewTimetablePeople(services.Users)}},
-			ClassListEntries:        classListEntryStudentsReader{entries: membership},
-			CompanionService:        companions,
-			ExcusedRequestService:   requests.Excused,
-			InstanceService:         lifecycle.Instances,
-			ListExportService:       lists.NewRenderer(),
-			Logger:                  logger.With("handler", "students"),
-			OfferingDayRoster:       schedules.OfferingDays,
-			PeopleDirectory:         persons,
+			ClassListEntries: classListEntryStudentsReader{entries: membership}, ClosingTimes: schoolCalendarCompose.NewOpeningChanges().ClosingTimeOn,
+			CompanionService:      companions,
+			ExcusedRequestService: requests.Excused,
+			InstanceService:       lifecycle.Instances,
+			ListExportService:     lists.NewRenderer(),
+			Logger:                logger.With("handler", "students"),
+			OfferingDayRoster:     schedules.OfferingDays,
+			PeopleDirectory:       persons, PlannedActivities: plannedActivities,
 			Persons:                 peopleCompose.NewStudentRoutePersons(services.Users),
 			PickupScheduleService:   schedules.Pickups,
 			SchoolGroups:            studentSchoolGroups{GroupManagement: structureViews.Education},

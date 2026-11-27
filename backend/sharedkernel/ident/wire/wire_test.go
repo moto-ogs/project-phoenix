@@ -83,3 +83,28 @@ func TestRequiredIDsDistinguishNullFromZero(t *testing.T) {
 	require.Error(t, err)
 	assert.True(t, wire.InvalidIDAt(err, "/ids"))
 }
+
+func TestLegacyEmptyIDDoesNotTurnAnExplicitZeroIntoAbsence(t *testing.T) {
+	t.Parallel()
+
+	type choice struct {
+		ID *ident.IDOrNone `json:"id"`
+	}
+	var omitted, cleared, zero, selected choice
+	require.NoError(t, wire.Unmarshal([]byte(`{}`), &omitted))
+	require.NoError(t, wire.Unmarshal([]byte(`{"id":""}`), &cleared))
+	require.NoError(t, wire.Unmarshal([]byte(`{"id":"0"}`), &zero))
+	require.NoError(t, wire.Unmarshal([]byte(`{"id":"9007199254740993"}`), &selected))
+	require.Error(t, wire.Unmarshal([]byte(`{"id":0}`), &choice{}))
+	require.Error(t, wire.Unmarshal([]byte(`{"id":" "}`), &choice{}))
+	require.Nil(t, omitted.ID)
+	require.NotNil(t, cleared.ID)
+	require.True(t, cleared.ID.IsZero())
+	require.NotNil(t, zero.ID)
+	require.False(t, zero.ID.IsZero())
+	require.Zero(t, zero.ID.Int64())
+	require.Equal(t, int64(9007199254740993), selected.ID.Int64())
+	raw, err := wire.Marshal(selected)
+	require.NoError(t, err)
+	require.JSONEq(t, `{"id":"9007199254740993"}`, string(raw))
+}

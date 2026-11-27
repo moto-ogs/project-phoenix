@@ -1,6 +1,26 @@
 import type { ErrorCode } from "~/lib/error-codes.generated";
 import { parseRetryAfter } from "~/lib/retry-after";
 
+const catalogValues = new WeakMap<ApiError, Record<string, unknown>>();
+
+export function apiErrorCatalogValues(
+  error: ApiError,
+): Record<string, unknown> {
+  return catalogValues.get(error) ?? {};
+}
+
+async function decodeCatalogValues(error: ApiError): Promise<void> {
+  if (!error.code || !error.details) return;
+  const { problemDetails } =
+    await import("~/lib/contract/problem-details.generated");
+  const code = error.code as keyof typeof problemDetails;
+  if (!Object.hasOwn(problemDetails, code)) return;
+  const decoded = problemDetails[code].safeParse(error.details);
+  if (decoded.success && isProblemRecord(decoded.data)) {
+    catalogValues.set(error, decoded.data);
+  }
+}
+
 /**
  * Types a wire code for comparison against registry codes, so a literal that
  * is not in error-registry/ fails the type check. The value itself is not
@@ -16,6 +36,7 @@ export class ApiError extends Error {
   code?: ErrorCode;
   /** Backend diagnostic detail. It is for logs, never for user-facing copy. */
   detail?: string;
+  /** @rawProblemDetails Read business fields through a generated decoder. */
   details?: Record<string, unknown>;
   errors?: { field: string; reason: string }[];
   instance?: string;
@@ -23,10 +44,7 @@ export class ApiError extends Error {
   retryAfterSeconds?: number;
   /** No HTTP response arrived; the status is a stand-in (unavailableApiError). */
   noResponse?: boolean;
-  /**
-   * The parsed RFC 9457 body, for the extension members of a domain refusal
-   * (a 409's `conflicts`). Undefined when the body was not JSON.
-   */
+  /** @rawProblemEnvelope Parsed envelope, for passing to a generated refusal decoder. */
   declare readonly problem?: Readonly<Record<string, unknown>>;
 
   constructor(
@@ -157,8 +175,6 @@ export interface ProblemBody {
   code: ErrorCode;
   errors?: { field: string; reason: string }[];
   details?: Record<string, unknown>;
-  /** Companion-plan 409 of the student PUT (CompanionPlanConflictError). */
-  conflicts?: unknown[];
 }
 
 /**
@@ -331,6 +347,11 @@ export async function apiErrorFromResponse(
     // Body already consumed or the stream broke: the status still classifies.
   }
   const error = apiErrorFromText(message, response.status, text);
+  try {
+    await decodeCatalogValues(error);
+  } catch {
+    // An unavailable lazy chunk must not hide the original refusal.
+  }
   // A refusal with a wait (429, 503) tells the screen when to try again.
   let retryAfter: number | null = null;
   try {

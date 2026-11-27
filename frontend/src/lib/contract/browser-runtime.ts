@@ -54,7 +54,9 @@ const text = (accept: (value: string) => boolean) =>
   );
 
 export const str = text(() => true);
-export const int64String = text(isInt64Decimal);
+export const int64String = /*#__PURE__*/ Object.assign(text(isInt64Decimal), {
+  orNone: text((value) => value === "" || isInt64Decimal(value)),
+});
 export const safeInt = decoder((value) =>
   typeof value === "number" && Number.isSafeInteger(value) ? value : invalid,
 );
@@ -99,3 +101,20 @@ export const nullable = <T>(item: Decoder<T>): Decoder<T | null> =>
   decoder((value) => (value === null ? null : item.read(value)));
 export const optional = <T>(item: Decoder<T>): Decoder<T | undefined> =>
   decoder((value) => (value === undefined ? undefined : item.read(value)));
+
+export interface PartialResult<T> {
+  result: T;
+  rejection?: { code: string; details: unknown };
+}
+
+/** A PartialError reuses the route's answer and may nest another refusal. */
+export function partialResult<T>(
+  result: Decoder<T>,
+): Decoder<PartialResult<T>> {
+  return object<PartialResult<T>>({
+    result,
+    rejection: optional(
+      object({ code: str, details: decoder((value) => value) }),
+    ),
+  });
+}

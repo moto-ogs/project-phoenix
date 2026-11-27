@@ -13477,6 +13477,17 @@
       "target_owner": "tenant-runtime"
     },
     {
+      "adr": "0067",
+      "binding": "github.com/moto-ogs/project-phoenix/modules/facilities.Closures.RoomClosedOn",
+      "classification": "leaf",
+      "effect": "lock",
+      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence.RoomClosures.RoomClosedOn",
+      "reason": "Guarded leaf command (lock): Student Presence asks Facilities to lock the selected room before starting a session. The lock stays in the ambient tenant transaction through the insert, serializing it with CloseRoom so a session cannot be committed in a newly closed room (#7653).",
+      "source_owner": "student-presence",
+      "target": "github.com/moto-ogs/project-phoenix/modules/facilities.Closures.RoomClosedOn",
+      "target_owner": "facilities"
+    },
+    {
       "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/modules/studentpresence.Owner.ListRoomSessionHistory",
       "classification": "platform",
@@ -17889,16 +17900,6 @@
       "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/internal/application.AttendanceRouteStaff.GetCurrentStaff; modules/peopledirectory/internal/application/attendance_route_identity.go:35. May-bind method surface, not a production-call/liveness claim.",
       "source_owner": "student-presence",
       "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.AttendanceRouteStaff.GetCurrentStaff",
-      "target_owner": "people-directory"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/api.activeStaffAccess.HasCurrentStaff",
-      "classification": "query",
-      "effect": "query",
-      "port": "github.com/moto-ogs/project-phoenix/modules/studentpresence/inbound/presence.StaffAccess.HasCurrentStaff",
-      "reason": "Reviewed read/value/construction method; no owned-row mutation or locking read at this terminal. Target modules/peopledirectory/internal/application.AttendanceRouteStaff.HasCurrentStaff; modules/peopledirectory/internal/application.AttendanceRouteStaff (supplied contract method). May-bind method surface, not a production-call/liveness claim.",
-      "source_owner": "student-presence",
-      "target": "github.com/moto-ogs/project-phoenix/modules/peopledirectory/internal/application.AttendanceRouteStaff.HasCurrentStaff",
       "target_owner": "people-directory"
     },
     {

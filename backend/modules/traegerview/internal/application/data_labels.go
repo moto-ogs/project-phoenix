@@ -34,8 +34,10 @@ var dataLabels = map[string]string{
 	"time_tracking_export":                "Arbeitszeiten des Personals (Export)",
 	"traeger_access_log":                  "Zugriffsprotokoll im Träger-Portal",
 	"traeger_access_log_export":           "Zugriffsprotokoll im Träger-Portal (Export)",
-	"traeger_daily_attendance":            "Tagesmeldung Mecklenburg-Vorpommern (Zahlen je Tag)",
+	"traeger_daily_attendance":            "Tagesmeldung Mecklenburg-Vorpommern (Zahlen pro Tag)",
 	"traeger_daily_attendance_export":     "Tagesmeldung Mecklenburg-Vorpommern (Export ohne Namen)",
+	"traeger_children":                    "Kinder der Schulen im Träger-Portal (Name, Klasse, Gruppe)",
+	"traeger_children_export":             "Kinder der Schulen im Träger-Portal (Export)",
 	"holiday_prefill":                     "Angaben eines Kindes für die Ferienanmeldung",
 	"holiday_participants":                "Teilnehmerliste einer Ferienwoche mit Einwilligungen",
 	"holiday_participants_export":         "Teilnehmerliste einer Ferienwoche (Export)",
@@ -47,7 +49,7 @@ var dataLabels = map[string]string{
 	"guardian_email_lift":                 "Sperre einer Mail-Adresse aufgehoben",
 	"parent_letter_preview":               "Vorschau eines Elternbriefs für ein Kind",
 	"parent_letter_print":                 "Alle Elternbriefe eines Versands (PDF)",
-	"parent_letter_publish":               "Angaben der Kinder für einen Elternbrief je Kind",
+	"parent_letter_publish":               "Angaben der Kinder für einen Elternbrief pro Kind",
 	"student_parent_records":              "Elternbriefe und Einverständnisse eines Kindes",
 	"parent_declaration_proof":            "Nachweis eines Einverständnisses (PDF oder CSV)",
 	"care_contract_applications":          "Angenommene Anmeldungen für Betreuungsverträge",
@@ -77,6 +79,7 @@ var dataLabels = map[string]string{
 	"holiday_registration_freeze":         "Ferienanmeldung eingefroren",
 	"holiday_registration_reopen":         "Ferienanmeldung wieder geöffnet",
 	"holiday_registration_consent":        "Einwilligung einer Ferienanmeldung geändert",
+	"holiday_registration_payer":          "Zahler einer Ferienanmeldung geändert",
 }
 
 // otherData labels a resource type a later feature adds before this list

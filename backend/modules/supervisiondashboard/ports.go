@@ -159,8 +159,8 @@ type VisitRecord struct {
 	SickSince     *time.Time
 	Excused       bool
 	ExcusedSince  *time.Time
-	// PhotoURL is the browser address; the projection checks photo access.
-	PhotoURL string
+	// PhotoVersion names the stored photo after the projection checks access.
+	PhotoVersion string
 }
 
 // Attendance is today's attendance row of one student.
@@ -248,6 +248,22 @@ type TeacherHintReader interface {
 	TeacherHints(ctx context.Context, studentIDs []int64, date Date) ([]SupervisionTeacherHint, error)
 }
 
+// SupervisionPlannedActivity is one offering a child is planned for today
+// (#8194), such as "Töpfer-AG", with its wall-clock times (HH:MM).
+type SupervisionPlannedActivity struct {
+	StudentID ident.ID `json:"student_id"`
+	Title     string   `json:"title"`
+	StartTime string   `json:"start_time"`
+	EndTime   string   `json:"end_time"`
+}
+
+// PlannedActivityReader reads the offerings (AG, Extern) many children are
+// planned for on a day, in the order of the children and by start time. The
+// read is set-based.
+type PlannedActivityReader interface {
+	PlannedActivities(ctx context.Context, studentIDs []int64, date Date) ([]SupervisionPlannedActivity, error)
+}
+
 // Planning reads the effective day plans of students.
 type Planning interface {
 	Pickups(ctx context.Context, studentIDs []int64, date Date) (map[int64]Pickup, error)
@@ -269,6 +285,9 @@ type Settings interface {
 	// context to continue with.
 	Prepare(ctx context.Context) (context.Context, error)
 	StudentPhotosEnabled(ctx context.Context) (bool, error)
+	// StudentCardActivitiesEnabled reports whether the child cards show the
+	// day's offerings (#6487, #8194).
+	StudentCardActivitiesEnabled(ctx context.Context) (bool, error)
 	// TrackingIndicatorLabels returns the configured labels, empty when the
 	// indicators are disabled.
 	TrackingIndicatorLabels(ctx context.Context) ([]string, error)

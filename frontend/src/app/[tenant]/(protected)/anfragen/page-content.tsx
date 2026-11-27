@@ -1,0 +1,700 @@
+"use client";
+
+import { useCallback, useDeferredValue, useMemo, useState } from "react";
+
+import { useSession } from "next-auth/react";
+import { redirect } from "next/navigation";
+import type { DateRange } from "react-day-picker";
+
+import { AggregatedRequestList } from "~/components/students/aggregated-request-list";
+import {
+  CourseWaitlistOverview,
+  CourseWaitlistProvider,
+} from "~/components/students/course-waitlist";
+import type { AggregatedRequestFilters } from "~/components/students/aggregated-request-list";
+import { StaffAbsenceRequestList } from "~/components/staff/staff-absence-request-list";
+import { RequestFeedDialog } from "~/components/students/request-feed-dialog";
+import type { StaffAbsenceRequestFilters } from "~/components/staff/staff-absence-request-list";
+import { PickupExtensionAccessProvider } from "~/components/timetable/pickup-extension-access";
+import { DateRangePicker } from "~/components/ui/date-range-picker";
+import { SegmentedControl } from "~/components/ui/segmented-control";
+import {
+  errorAlertActions,
+  LoadErrorAlert,
+} from "~/components/ui/form-error-alert";
+import { TenantPage } from "~/components/ui/tenant-page";
+import {
+  restrictingFilterIds,
+  type ActiveFilter,
+  type FilterConfig,
+} from "~/components/ui/page-header/types";
+import type {
+  AggregatedRequestStatus,
+  AggregatedRequestType,
+} from "~/lib/change-request-list-api";
+import { ABSENCE_TYPE_LABEL } from "~/lib/absence-helpers";
+import { hasPermission } from "~/lib/auth-utils";
+import { toISODate } from "~/lib/date-helpers";
+import { useChangeRequestAccess } from "~/lib/hooks/use-change-request-access";
+import { useSwrLoadError } from "~/lib/hooks/use-swr-load-error";
+import { useTenantAwarePath } from "~/lib/tenant-path";
+import { useTimetableEnabled } from "~/lib/tenant-context";
+import { fetchCourseWaitlists } from "~/lib/course-waitlist-api";
+import type { CourseWaitlist } from "~/lib/course-waitlist-helpers";
+import { courseWaitlistKeys } from "~/lib/swr/course-waitlist-keys";
+import { useSWRAuth } from "~/lib/swr";
+
+const NO_WAITLISTS: readonly CourseWaitlist[] = [];
+
+type AnfragenTabId = "eltern" | "mitarbeitende";
+
+const REQUEST_TYPE_OPTIONS: readonly {
+  value: AggregatedRequestType;
+  label: string;
+}[] = [
+  { value: "master_data", label: "Stammdaten" },
+  { value: "care_schedule", label: "Betreuungszeiten" },
+  { value: "offering", label: "Angebote und AGs" },
+  { value: "excused", label: "Abwesenheiten" },
+];
+
+// Anmeldungsänderungen sieht nur, wer sie auch entscheiden darf (#2435).
+const ENROLLMENT_TYPE_OPTION: {
+  value: AggregatedRequestType;
+  label: string;
+} = { value: "enrollment", label: "Anmeldung" };
+
+const CARE_WITHDRAWAL_TYPE_OPTION: {
+  value: AggregatedRequestType;
+  label: string;
+} = { value: "care_withdrawal", label: "Abmeldungen" };
+
+// Direkt-Korrekturen sind keine Anfragen: sie gibt es nur in der Historie,
+// also auch den Filter nur dort (#2436).
+const HISTORY_ONLY_TYPE_OPTIONS: readonly {
+  value: AggregatedRequestType;
+  label: string;
+}[] = [{ value: "direct_correction", label: "Direkt-Korrekturen" }];
+
+// Die Abwesenheitsarten, die Mitarbeitende beantragen können, mit den Namen
+// aus der geteilten Beschriftungstabelle. Freizeitausgleich fehlt bewusst: den
+// trägt die Zeiterfassung ein, er läuft nicht über eine Freigabe.
+const ABSENCE_TYPE_OPTIONS: readonly { value: string; label: string }[] = [
+  "vacation",
+  "sick",
+  "training",
+  "other",
+].map((value) => ({ value, label: ABSENCE_TYPE_LABEL[value] ?? value }));
+
+const STATUS_OPTIONS: readonly {
+  value: AggregatedRequestStatus;
+  label: string;
+}[] = [
+  { value: "approved", label: "Angenommen" },
+  { value: "rejected", label: "Abgelehnt" },
+  { value: "withdrawn", label: "Zurückgezogen" },
+];
+
+// Info-Knopf am Titel (#7566). Welche Reiter jemand sieht, hängt an den
+// Freigaberechten; der Text nennt nur, was auf der Seite auch steht.
+const ANFRAGEN_PARENTS_INFO =
+  "Hier landen Wünsche von Eltern, zum Beispiel eine neue Abholzeit. Suche nach einem Kind oder wähle oben eine Art. Prüfe die Anfrage und gib sie frei oder lehne sie ab.";
+const ANFRAGEN_STAFF_INFO =
+  "Hier landen Anträge aus deinem Team, etwa für Urlaub oder Fortbildung. Prüfe jeden offenen Antrag. Dann genehmigst du ihn oder lehnst ihn ab.";
+const ANFRAGEN_BOTH_INFO =
+  "Hier landen Wünsche von Eltern und Anträge aus deinem Team. Oben wählst du „Eltern“ oder „Mitarbeitende“. Prüfe jede offene Anfrage und triff deine Entscheidung.";
+
+/**
+ * Anfragen-Modul (#2429): ein Ort für alle eingereichten Wünsche, mit Reitern
+ * nach Herkunft. Der Eltern-Reiter zeigt seit #2432 EINE Liste über alle vier
+ * Anfragearten (statt vier Abschnitte), mit serverseitiger Namenssuche,
+ * Art-Filter und — in der Historie — Status- und Zeitraum-Filter. Der
+ * Mitarbeitende-Reiter zeigt seit #2433 die Abwesenheitsanträge (offen und
+ * Historie) und erscheint nur mit Freigaberecht dafür (vacation:approve).
+ */
+export default function AnfragenPage() {
+  const { status: sessionStatus } = useSession({ required: true });
+  const tenantPath = useTenantAwarePath();
+  const requestAccess = useChangeRequestAccess();
+  // Scheitert die Prüfung der Freigaben, fehlen sonst still der Eltern-Reiter
+  // oder die ganze Seite (#2517): der Fehler steht vor Ort, mit Wiederholen.
+  const accessError = useSwrLoadError(
+    requestAccess.error,
+    "die Prüfung deiner Freigaben",
+    () => requestAccess.refresh(),
+  );
+  const showElternTab = requestAccess.canOpenParentRequestsTab;
+  // Anmeldungsänderungen hängen an config:manage und kommen aus einem eigenen
+  // Endpunkt (#2435); ohne das Recht bleiben Quelle und Filteroption weg.
+  const showEnrollmentRequests =
+    requestAccess.canReviewEnrollmentChangeRequests;
+  const showCareWithdrawals = requestAccess.canReviewCareWithdrawals;
+  const showMitarbeitendeTab = requestAccess.canReviewStaffAbsenceRequests;
+  // Der Aggregator über die vier Kinderdaten-Arten verlangt users:update oder
+  // users:absence — ohne eines von beiden darf die Quelle gar nicht angefragt
+  // werden.
+  const showAggregatedRequests = requestAccess.canReviewParentRequests;
+  const showStudentDataRequests = requestAccess.canReviewStudentDataRequests;
+  // Wer nur die Entschuldigungs-Warteschlange hält, sieht ohnehin nur diese
+  // eine Art — der Art-Filter wäre eine Liste toter Optionen (#2232).
+  const showTypeFilter = showStudentDataRequests || showEnrollmentRequests;
+
+  // Reiter erscheinen nur mit passender Berechtigung; wer nur einen sehen
+  // darf, bekommt keine Reiterleiste mit einem einzelnen Eintrag.
+  const visibleTabs = useMemo(() => {
+    const tabs: { id: AnfragenTabId; label: string }[] = [];
+    if (showElternTab) tabs.push({ id: "eltern", label: "Eltern" });
+    if (showMitarbeitendeTab)
+      tabs.push({ id: "mitarbeitende", label: "Mitarbeitende" });
+    return tabs;
+  }, [showElternTab, showMitarbeitendeTab]);
+
+  // Zeilenzahl der sichtbaren Liste, von der Liste selbst gemeldet (kein
+  // zusätzlicher Request). `count: null` = noch am Laden; `hasMore` sagt, dass
+  // die Liste paginiert und noch weitere Seiten bereitliegen.
+  const [listCount, setListCount] = useState<{
+    count: number | null;
+    hasMore: boolean;
+  }>({ count: null, hasMore: false });
+
+  // Stabile Referenzen, damit der Melde-Effekt der Listen nicht bei jedem
+  // Render neu läuft.
+  const handleParentCount = useCallback(
+    (count: number | null, hasMore: boolean) =>
+      setListCount((current) =>
+        current.count === count && current.hasMore === hasMore
+          ? current
+          : { count, hasMore },
+      ),
+    [],
+  );
+  // Die Abwesenheitsanträge kommen ungeteilt, dort gibt es nie ein "+".
+  const handleStaffCount = useCallback(
+    (count: number | null) => handleParentCount(count, false),
+    [handleParentCount],
+  );
+
+  const [selectedTab, setSelectedTab] = useState<AnfragenTabId>("eltern");
+  // Fällt die Auswahl aus den sichtbaren Reitern (z. B. Session noch am
+  // Laden), gilt der erste sichtbare — so flackert nie ein leerer Inhalt.
+  const activeTab = visibleTabs.some((tab) => tab.id === selectedTab)
+    ? selectedTab
+    : (visibleTabs[0]?.id ?? "eltern");
+
+  // Such- und Filterzustand des Eltern-Reiters lebt hier, weil Suche und
+  // Filterleiste in der Kopfzeile (TenantPage) hängen.
+  const [view, setView] = useState<"open" | "history">("open");
+  const [searchTerm, setSearchTerm] = useState("");
+  const deferredSearch = useDeferredValue(searchTerm);
+  const [typeFilter, setTypeFilter] = useState<AggregatedRequestType[]>([]);
+  const [absenceTypeFilter, setAbsenceTypeFilter] = useState<string[]>([]);
+  const [statusFilter, setStatusFilter] = useState<AggregatedRequestStatus[]>(
+    [],
+  );
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  const [requestFeedOpen, setRequestFeedOpen] = useState(false);
+
+  // Ein Sprung aus einer Warteliste muss die Anfrage finden können. Die
+  // Arbeitsliste lädt dafür ohne Such- und Art-Filter; Rechte und Quellen
+  // bleiben unverändert.
+  const clearOpenParentRequestFilters = useCallback(() => {
+    setSearchTerm("");
+    setTypeFilter([]);
+  }, []);
+
+  // Die im aktuellen Umschalter-Zustand wählbaren Anfragearten. Eine Quelle
+  // für Filterknöpfe UND Filter-Chips: was hier fehlt, ist auch als Chip weg.
+  const typeOptions = useMemo(
+    () => [
+      ...(showStudentDataRequests ? REQUEST_TYPE_OPTIONS : []),
+      ...(showEnrollmentRequests ? [ENROLLMENT_TYPE_OPTION] : []),
+      ...(view === "open" && showCareWithdrawals
+        ? [CARE_WITHDRAWAL_TYPE_OPTION]
+        : []),
+      ...(view === "history" && showStudentDataRequests
+        ? HISTORY_ONLY_TYPE_OPTIONS
+        : []),
+    ],
+    [
+      showStudentDataRequests,
+      showEnrollmentRequests,
+      showCareWithdrawals,
+      view,
+    ],
+  );
+
+  // Die Arten, die in dieser Ansicht gelten. Ein übrig gebliebener Wert der
+  // anderen Ansicht filtert hier nichts und zählt nicht als Filter.
+  const viewTypeFilter = useMemo(
+    () =>
+      view === "history"
+        ? typeFilter.filter((type) => type !== "care_withdrawal")
+        : typeFilter.filter((type) => type !== "direct_correction"),
+    [typeFilter, view],
+  );
+
+  const filterConfigs = useMemo(() => {
+    const typeConfig: FilterConfig[] = showTypeFilter
+      ? [
+          {
+            id: "art",
+            label: "Anfrageart",
+            type: "buttons",
+            multiSelect: true,
+            value: viewTypeFilter,
+            onChange: (value) =>
+              setTypeFilter(
+                (Array.isArray(value)
+                  ? value
+                  : [value]) as AggregatedRequestType[],
+              ),
+            options: typeOptions.map((option) => ({ ...option })),
+          },
+        ]
+      : [];
+    const historyConfigs: FilterConfig[] =
+      view === "history"
+        ? [
+            {
+              id: "status",
+              label: "Status",
+              type: "buttons",
+              multiSelect: true,
+              value: statusFilter,
+              onChange: (value) =>
+                setStatusFilter(
+                  (Array.isArray(value)
+                    ? value
+                    : [value]) as AggregatedRequestStatus[],
+                ),
+              options: STATUS_OPTIONS.map((option) => ({ ...option })),
+            },
+            {
+              id: "zeitraum",
+              label: "Zeitraum",
+              type: "custom",
+              value: "",
+              onChange: () => undefined,
+              options: [],
+              render: (
+                <DateRangePicker
+                  value={dateRange}
+                  onChange={setDateRange}
+                  className="w-fit"
+                />
+              ),
+            },
+          ]
+        : [];
+    return [...typeConfig, ...historyConfigs];
+  }, [
+    showTypeFilter,
+    view,
+    typeOptions,
+    viewTypeFilter,
+    statusFilter,
+    dateRange,
+  ]);
+
+  // Alle Werte eines Filters gewählt heißt „alle“ (#6734): kein Chip, kein
+  // Ring, und die Liste lädt ungefiltert, wie die leere Auswahl.
+  const restricting = useMemo(
+    () => restrictingFilterIds(filterConfigs),
+    [filterConfigs],
+  );
+
+  // Stabil memoisiert: die Liste lädt bei jeder Identitätsänderung neu.
+  const filters: AggregatedRequestFilters = useMemo(
+    () => ({
+      search: deferredSearch,
+      includeAggregated: showAggregatedRequests,
+      includeEnrollment: showEnrollmentRequests,
+      includeCareWithdrawals: showCareWithdrawals,
+      canManageFamilyProtection: showEnrollmentRequests,
+      types: restricting.has("art") ? viewTypeFilter : [],
+      statuses:
+        view === "history" && restricting.has("status") ? statusFilter : [],
+      from:
+        view === "history" && dateRange?.from
+          ? toISODate(dateRange.from)
+          : undefined,
+      to:
+        view === "history" && dateRange?.to
+          ? toISODate(dateRange.to)
+          : undefined,
+    }),
+    [
+      deferredSearch,
+      showAggregatedRequests,
+      showEnrollmentRequests,
+      showCareWithdrawals,
+      restricting,
+      viewTypeFilter,
+      statusFilter,
+      dateRange,
+      view,
+    ],
+  );
+
+  const activeFilters = useMemo(() => {
+    const chips: ActiveFilter[] = [];
+    for (const type of restricting.has("art") ? viewTypeFilter : []) {
+      // Eine Art, die in dieser Ansicht nicht wählbar ist, trägt auch keinen
+      // Chip — in der Arbeitsliste betrifft das die Direkt-Korrekturen.
+      const label = typeOptions.find((option) => option.value === type)?.label;
+      if (!label) continue;
+      chips.push({
+        id: `art-${type}`,
+        label,
+        onRemove: () =>
+          setTypeFilter((prev) => prev.filter((value) => value !== type)),
+      });
+    }
+    if (view === "history") {
+      for (const status of restricting.has("status") ? statusFilter : []) {
+        const label = STATUS_OPTIONS.find(
+          (option) => option.value === status,
+        )?.label;
+        if (!label) continue;
+        chips.push({
+          id: `status-${status}`,
+          label,
+          onRemove: () =>
+            setStatusFilter((prev) => prev.filter((value) => value !== status)),
+        });
+      }
+      if (dateRange?.from ?? dateRange?.to) {
+        chips.push({
+          id: "zeitraum",
+          label: "Zeitraum",
+          onRemove: () => setDateRange(undefined),
+        });
+      }
+    }
+    return chips;
+  }, [restricting, typeOptions, viewTypeFilter, statusFilter, dateRange, view]);
+
+  const staffFilterConfigs = useMemo<FilterConfig[]>(
+    () => [
+      {
+        id: "abwesenheitsart",
+        label: "Art",
+        type: "buttons",
+        multiSelect: true,
+        value: absenceTypeFilter,
+        onChange: (value) =>
+          setAbsenceTypeFilter(
+            (Array.isArray(value) ? value : [value]) as string[],
+          ),
+        options: ABSENCE_TYPE_OPTIONS.map((option) => ({ ...option })),
+      },
+    ],
+    [absenceTypeFilter],
+  );
+
+  const staffAbsenceTypes = useMemo(
+    () =>
+      restrictingFilterIds(staffFilterConfigs).has("abwesenheitsart")
+        ? absenceTypeFilter
+        : [],
+    [staffFilterConfigs, absenceTypeFilter],
+  );
+
+  const staffFilters: StaffAbsenceRequestFilters = useMemo(
+    () => ({ search: deferredSearch, types: staffAbsenceTypes }),
+    [deferredSearch, staffAbsenceTypes],
+  );
+
+  const staffActiveFilters = useMemo<ActiveFilter[]>(
+    () =>
+      staffAbsenceTypes.map((type) => ({
+        id: `abwesenheitsart-${type}`,
+        label:
+          ABSENCE_TYPE_OPTIONS.find((option) => option.value === type)?.label ??
+          type,
+        onRemove: () =>
+          setAbsenceTypeFilter((prev) =>
+            prev.filter((value) => value !== type),
+          ),
+      })),
+    [staffAbsenceTypes],
+  );
+
+  const clearAllFilters = () => {
+    setTypeFilter([]);
+    setAbsenceTypeFilter([]);
+    setStatusFilter([]);
+    setDateRange(undefined);
+  };
+
+  const handleElternViewChange = (nextView: "open" | "history") => {
+    if (nextView === "open") {
+      setTypeFilter((previous) =>
+        previous.filter((type) => type !== "direct_correction"),
+      );
+    }
+    setView(nextView);
+  };
+
+  const isAccessLoading =
+    sessionStatus === "loading" || requestAccess.isLoading;
+
+  if (
+    !isAccessLoading &&
+    !requestAccess.canOpenRequestsPage &&
+    !requestAccess.error
+  ) {
+    redirect(tenantPath("/home"));
+  }
+  // Mit einem anderen Reiter bleibt die Seite stehen, der Fehler darüber.
+  const pageError =
+    accessError && requestAccess.canOpenRequestsPage
+      ? {
+          message: accessError.message,
+          action: errorAlertActions(accessError),
+          keepContent: true,
+        }
+      : accessError;
+
+  // Der Ladezustand kommt aus dem Gerüst (`loading` an TenantPage); bis der
+  // effektive Prüfbereich feststeht, bleibt die Seite ohne Reiter und Filter.
+  const isReady = !isAccessLoading;
+
+  const staffActive = activeTab === "mitarbeitende";
+  const canManageRequestFeed =
+    requestAccess.parentReviewAccess === "admin" ||
+    requestAccess.canReviewEnrollmentChangeRequests;
+
+  const viewSwitcher = (
+    <SegmentedControl
+      items={[
+        { value: "open", label: "Offen" },
+        { value: "history", label: "Historie" },
+      ]}
+      value={view}
+      onChange={staffActive ? setView : handleElternViewChange}
+      ariaLabel="Ansicht wählen"
+    />
+  );
+
+  // Ohne Reiter trägt die Reiterleiste nur einen einzigen Eintrag; dann
+  // bleibt sie weg.
+  const hasTabs = visibleTabs.length > 1;
+
+  return (
+    <TenantPage
+      title="Anfragen"
+      info={
+        showElternTab && showMitarbeitendeTab
+          ? ANFRAGEN_BOTH_INFO
+          : showMitarbeitendeTab
+            ? ANFRAGEN_STAFF_INFO
+            : ANFRAGEN_PARENTS_INFO
+      }
+      error={pageError}
+      stats={
+        listCount.count === null
+          ? null
+          : `${listCount.count}${listCount.hasMore ? "+" : ""} ${view === "open" ? "offen" : "entschieden"}`
+      }
+      statsLoading={!isReady || listCount.count === null}
+      // Offen gegen Historie ist eine Wertauswahl über derselben Liste, kein
+      // eigener Seitenbereich; sie sitzt deshalb als Aktion in der Titelzeile.
+      actions={isReady ? viewSwitcher : undefined}
+      search={
+        isReady
+          ? {
+              value: searchTerm,
+              onChange: setSearchTerm,
+              placeholder: staffActive
+                ? "Teammitglied suchen…"
+                : "Kind suchen…",
+            }
+          : undefined
+      }
+      filters={
+        !isReady
+          ? undefined
+          : staffActive
+            ? staffFilterConfigs
+            : filterConfigs.length > 0
+              ? filterConfigs
+              : undefined
+      }
+      activeFilters={
+        isReady ? (staffActive ? staffActiveFilters : activeFilters) : undefined
+      }
+      onClearAllFilters={clearAllFilters}
+      overflowMenu={
+        isReady && !staffActive && canManageRequestFeed
+          ? [
+              {
+                label: "Neue Anfragen abonnieren",
+                description:
+                  "Zeigt deinen persönlichen Link für neue Elternanfragen",
+                onClick: () => setRequestFeedOpen(true),
+              },
+            ]
+          : undefined
+      }
+      tabs={
+        isReady && hasTabs
+          ? {
+              value: activeTab,
+              // Der Suchbegriff des einen Reiters passt nie zum anderen (Kind
+              // gegen Teammitglied), also beim Wechsel leeren.
+              onChange: (tabId) => {
+                setSelectedTab(tabId as AnfragenTabId);
+                setSearchTerm("");
+              },
+              items: visibleTabs.map((tab) => ({
+                value: tab.id,
+                label: tab.label,
+              })),
+              label: "Herkunft der Anfragen",
+            }
+          : undefined
+      }
+      // Der Ladezustand kommt aus dem Gerüst, nicht aus einem eigenen Skelett
+      // im Inhalt.
+      loading={!isReady}
+      loadingLabel="Anfragen werden geladen…"
+      overlays={
+        <RequestFeedDialog
+          isOpen={requestFeedOpen}
+          onClose={() => setRequestFeedOpen(false)}
+        />
+      }
+    >
+      {staffActive ? (
+        <MitarbeitendeTab
+          view={view}
+          filters={staffFilters}
+          onCountChange={handleStaffCount}
+        />
+      ) : (
+        <ElternTab
+          view={view}
+          filters={filters}
+          onCountChange={handleParentCount}
+          onOpenWaitlistRequest={clearOpenParentRequestFilters}
+        />
+      )}
+    </TenantPage>
+  );
+}
+
+/**
+ * Der Eltern-Reiter: Umschalter Offen | Historie über EINER aggregierten
+ * Liste aller vier Anfragearten. Entscheiden funktioniert direkt aus der
+ * Liste; die Historie zeigt Datum, Person und Begründung jeder Entscheidung.
+ */
+function ElternTab({
+  view,
+  filters,
+  onCountChange,
+  onOpenWaitlistRequest,
+}: Readonly<{
+  view: "open" | "history";
+  filters: AggregatedRequestFilters;
+  onCountChange: (count: number | null, hasMore: boolean) => void;
+  onOpenWaitlistRequest: () => void;
+}>) {
+  const { data: session } = useSession();
+  const timetableEnabled = useTimetableEnabled();
+  // Wer Termine im Betreuungsplan zuordnen darf, wird nach dem Freigeben
+  // einer späteren Abholzeit direkt nach dem Termin gefragt (#3261).
+  const canPlanBlocks =
+    timetableEnabled && hasPermission(session, "schedules:manage");
+  // Warteliste je AG (#4767): wer Angebotsanfragen entscheidet, sieht den
+  // Platz des Kindes und den Hinweis, wenn ein Platz frei wird.
+  const showWaitlists =
+    view === "open" && hasPermission(session, "users:update");
+  const waitlistsSWR = useSWRAuth(
+    showWaitlists ? courseWaitlistKeys.all() : null,
+    () => fetchCourseWaitlists(),
+  );
+  const waitlistLoadError = useSwrLoadError(
+    waitlistsSWR.error,
+    "die Wartelisten der AGs",
+    () => waitlistsSWR.mutate(),
+  );
+  const refreshWaitlists = useCallback(() => {
+    void waitlistsSWR.mutate();
+  }, [waitlistsSWR]);
+  const waitlists = waitlistsSWR.data ?? NO_WAITLISTS;
+  // „Zur Anfrage“ in der Warteliste öffnet das Kind in der Liste darunter.
+  const [focusRequest, setFocusRequest] = useState<{
+    studentId: string;
+    requestId: string;
+    nonce: number;
+  } | null>(null);
+  const openRequest = useCallback(
+    (studentId: string, requestId: string) => {
+      onOpenWaitlistRequest();
+      setFocusRequest((current) => ({
+        studentId,
+        requestId,
+        nonce: (current?.nonce ?? 0) + 1,
+      }));
+    },
+    [onOpenWaitlistRequest],
+  );
+  return (
+    <div className="flex w-full flex-col gap-4">
+      {showWaitlists && waitlistLoadError && (
+        <LoadErrorAlert error={waitlistLoadError} actionLayout="responsive" />
+      )}
+      {showWaitlists && (
+        <CourseWaitlistOverview
+          waitlists={waitlists}
+          onOpenRequest={openRequest}
+        />
+      )}
+      {/* key={view}: die Liste mountet beim Umschalten frisch, wie zuvor die
+          Einzelsektionen — so braucht die Historie keine Refresh-Listener. */}
+      <CourseWaitlistProvider
+        waitlists={waitlists}
+        refresh={refreshWaitlists}
+        openRequestId={focusRequest?.requestId ?? null}
+      >
+        <PickupExtensionAccessProvider value={canPlanBlocks}>
+          <AggregatedRequestList
+            key={view}
+            view={view}
+            filters={filters}
+            onCountChange={onCountChange}
+            focusRequest={focusRequest}
+          />
+        </PickupExtensionAccessProvider>
+      </CourseWaitlistProvider>
+    </div>
+  );
+}
+
+/**
+ * Der Mitarbeitende-Reiter: Abwesenheitsanträge des Teams, offen entscheiden
+ * oder in der Historie nachschlagen. Genehmigen, Ablehnen und Rückfrage
+ * laufen über dieselben Modals wie zuvor auf der Mitarbeiter-Seite.
+ */
+function MitarbeitendeTab({
+  view,
+  filters,
+  onCountChange,
+}: Readonly<{
+  view: "open" | "history";
+  filters: StaffAbsenceRequestFilters;
+  onCountChange: (count: number | null) => void;
+}>) {
+  return (
+    <div className="w-full">
+      {/* key={view}: die Liste mountet beim Umschalten frisch. */}
+      <StaffAbsenceRequestList
+        key={view}
+        view={view}
+        filters={filters}
+        onCountChange={onCountChange}
+      />
+    </div>
+  );
+}

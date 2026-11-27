@@ -19,7 +19,7 @@ var enrollment_registerEnrollmentForm_formular_0Definitions = []config.Definitio
 	{
 		Key:             config.KeyEnrollmentCollectSchoolClass,
 		Label:           "Konkrete Klasse abfragen (ab Klasse 2)",
-		Description:     "Zusätzlich zur Klassenstufe wird ab der 2. Klasse die konkrete Klasse (z.B. 2a) abgefragt. Die auswählbaren Klassen und ob die Angabe verpflichtend ist, werden je Anmeldephase festgelegt. Für die 1. Klasse wird weiterhin nur die Klassenstufe erfasst.",
+		Description:     "Zusätzlich zur Klassenstufe wird ab der 2. Klasse die konkrete Klasse (z.B. 2a) abgefragt. Die auswählbaren Klassen und ob die Angabe verpflichtend ist, werden pro Anmeldephase festgelegt. Für die 1. Klasse wird weiterhin nur die Klassenstufe erfasst.",
 		Type:            config.FieldBoolean,
 		Default:         false,
 		ReadPermission:  "config:read",

@@ -74,6 +74,40 @@ func TestResolveTenant_CareFacilityTerm_SchoolOverride(t *testing.T) {
 	assert.Equal(t, "OGS", careFacilityTermOf(t, resolveCareFacilityTerm(t, resource, otherSlug)))
 }
 
+// A school with its own name chooses the article (#8136). A preset stays
+// feminine whatever article is stored, and a school without a choice reads
+// "die".
+func TestResolveTenant_CareFacilityArticle(t *testing.T) {
+	t.Parallel()
+
+	db, authRoute, tenantSettings := setupAuthDependenciesRouteWithSettings(t)
+	own, ownSlug := newTenantResolveScope(t, db)
+	preset, presetSlug := newTenantResolveScope(t, db)
+	_, defaultSlug := newTenantResolveScope(t, db)
+	require.NoError(t, tenantSettings.SetValue(own.Context(), settings.KeyEnrollmentCareFacilityTerm, "Hort", nil, nil))
+	require.NoError(t, tenantSettings.SetValue(own.Context(), settings.KeyEnrollmentCareFacilityArticle, "der", nil, nil))
+	require.NoError(t, tenantSettings.SetValue(preset.Context(), settings.KeyEnrollmentCareFacilityTerm, "GTS", nil, nil))
+	require.NoError(t, tenantSettings.SetValue(preset.Context(), settings.KeyEnrollmentCareFacilityArticle, "das", nil, nil))
+	require.Error(t, tenantSettings.SetValue(own.Context(), settings.KeyEnrollmentCareFacilityArticle, "den", nil, nil),
+		"only der, die and das are articles")
+
+	resource := careFacilityTermResource(authRoute)
+	articleOf := func(slug string) string {
+		rr := resolveCareFacilityTerm(t, resource, slug)
+		require.Equal(t, http.StatusOK, rr.Code, "Body: %s", rr.Body.String())
+		var resp struct {
+			Data struct {
+				CareFacilityArticle string `json:"care_facility_article"`
+			} `json:"data"`
+		}
+		require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &resp))
+		return resp.Data.CareFacilityArticle
+	}
+	assert.Equal(t, "der", articleOf(ownSlug))
+	assert.Equal(t, "die", articleOf(presetSlug))
+	assert.Equal(t, "die", articleOf(defaultSlug))
+}
+
 // An unreadable term fails the shell instead of guessing a wording, on the
 // single-key and on the batch read.
 func TestResolveTenant_CareFacilityTerm_ReadFailureFailsRequest(t *testing.T) {

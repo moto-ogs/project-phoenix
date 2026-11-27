@@ -28,7 +28,7 @@ export function teacherParentLettersTopic(): HelpTopic {
     notes: [
       "Wähle den Brief in der Liste. Dort siehst du, wer gelesen, bestätigt oder zugestimmt hat.",
       "Bei `Mit Lesebestätigung` setzt du unter `Für jedes Kind einsetzen` Angaben wie den Vornamen in den Text. Jede Familie liest dann den Brief mit den Angaben ihres Kindes. Unter `So liest die Familie den Brief` siehst du ihn vorher.",
-      "Für Familien ohne moto wählst du im gesendeten Brief `Briefe drucken`. Das PDF hat einen Brief je Kind.",
+      "Für Familien ohne moto wählst du im gesendeten Brief `Briefe drucken`. Das PDF hat einen Brief pro Kind.",
       "Ein gesendeter Brief lässt sich nicht mehr ändern. Du kannst ihn über `Zurückziehen` zurücknehmen.",
       "Die OGS sieht deine Briefe in ihrer Übersicht. Ändern kannst nur du sie.",
       "Unter `Empfänger` steht bei jeder Mail, was aus ihr geworden ist. Steht dort `Adresse prüfen`, sage der OGS Bescheid. Sie korrigiert die Adresse.",

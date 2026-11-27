@@ -5,6 +5,11 @@ a file under `frontend/`, so they cost no context during backend work. A skill
 whose name also exists globally is offered as `frontend:<name>` and wins for
 files under `frontend/`.
 
+Exception: `ui-skills`, `better-ui`, `ui-design-pass` and `ui-before-after`
+are also linked from the root `.agents/skills/` and `.claude/skills/`, so a session started at the
+repository root offers them too (Claude Code: `/ui-skills`; Codex: `$ui-skills`).
+The real files stay here.
+
 **`.claude/rules/frontend-ui-kit.md` outranks every skill in here.** Its "UI
 skills" section names the three places where the vendored `better-*` advice is
 wrong for this repo. Check it before acting on a skill's colour, surface, or

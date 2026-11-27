@@ -60,7 +60,7 @@ vi.mock("~/lib/traeger-billing-families-api", async (importOriginal) => ({
 }));
 
 import { useDebtorNumberSettings } from "~/components/traeger/use-debtor-number-format";
-import TraegerSettingsPage from "./page";
+import TraegerSettingsPage from "./page-content";
 
 /** A page elsewhere that shows the debtor number format (#6675). */
 function DebtorScope() {
@@ -531,7 +531,7 @@ describe("TraegerSettingsPage", () => {
       });
       expect(field).toHaveAttribute(
         "placeholder",
-        "Bitte überweist {Betrag} bis zum {Zahlungsfrist} auf das Konto unten. Gebt als Verwendungszweck die Rechnungsnummer {Rechnungsnummer} an.",
+        "Bitte überweisen Sie {Betrag} bis zum {Zahlungsfrist} auf das Konto unten. Geben Sie als Verwendungszweck die Rechnungsnummer {Rechnungsnummer} an.",
       );
       // The limit counts characters like the backend, not UTF-16 units.
       expect(field).not.toHaveAttribute("maxlength");
@@ -541,7 +541,7 @@ describe("TraegerSettingsPage", () => {
       expect(
         screen.getByRole("figure", { name: "Vorschau des Zahlungstexts" }),
       ).toHaveTextContent(
-        "Bitte überweist 124,00 € bis zum 15.12.2026 auf das Konto unten. Gebt als Verwendungszweck eure Debitorennummer 10 4711 an.",
+        "Bitte überweisen Sie 124,00 € bis zum 15.12.2026 auf das Konto unten. Geben Sie als Verwendungszweck Ihre Debitorennummer 10 4711 an.",
       );
     });
 

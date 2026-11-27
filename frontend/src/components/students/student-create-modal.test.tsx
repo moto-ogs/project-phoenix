@@ -17,6 +17,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { StudentCreateModal } from "./student-create-modal";
 import { validateStudentForm } from "~/lib/student-form-validation";
 import { ApiError } from "~/lib/api-error";
+import { errorFromProblem } from "~/test/helpers/problem-response";
 
 vi.unmock("swr");
 
@@ -571,9 +572,13 @@ describe("StudentCreateModal", () => {
 
   it("shows a failed save in the form with the catalog text and keeps the draft", async () => {
     mockOnCreate.mockRejectedValueOnce(
-      new ApiError("quota", 409, {
+      await errorFromProblem("quota", 409, {
         code: "students.child_quota_reached",
-        details: { booked_places: 50, occupied_places: 50 },
+        details: {
+          booked_places: 50,
+          occupied_places: 50,
+          requested_places: 1,
+        },
       }),
     );
 

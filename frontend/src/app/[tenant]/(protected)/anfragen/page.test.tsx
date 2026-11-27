@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import AnfragenPage from "./page";
+import AnfragenPage from "./page-content";
 import type { AggregatedRequestFilters } from "~/components/students/aggregated-request-list";
 import { ApiError } from "~/lib/api-error";
 import { resolveChangeRequestAccess } from "~/lib/change-request-access";
@@ -533,6 +533,37 @@ describe("AnfragenPage", () => {
     fireEvent.click(screen.getAllByRole("button", { name: /Filter/ })[0]!);
     fireEvent.click(screen.getAllByRole("button", { name: "Fortbildung" })[0]!);
     expect(absenceProbe().filters.types).toEqual(["training"]);
+  });
+
+  it("zählt alle gewählten Abwesenheitsarten nicht als Filter (#6734)", () => {
+    mockUseSession.mockReturnValue(sessionWith(["vacation:approve"]));
+
+    render(<AnfragenPage />);
+
+    const filterButton = screen.getAllByRole("button", { name: /Filter/ })[0]!;
+    fireEvent.click(filterButton);
+    fireEvent.click(screen.getAllByRole("button", { name: "Fortbildung" })[0]!);
+    // Eine Art eingeschränkt: Chip-Reihe und Filter-Ring stehen da. Den Ring
+    // trägt die Schaltfläche nur bei geschlossenem Panel.
+    fireEvent.click(filterButton);
+    expect(
+      screen.getAllByRole("button", { name: "Alle löschen" }).length,
+    ).toBeGreaterThan(0);
+    expect(filterButton).toHaveAttribute("data-filters-active");
+    expect(absenceProbe().filters.types).toEqual(["training"]);
+
+    fireEvent.click(filterButton);
+    for (const label of ["Urlaub", "Krank", "Sonstige"]) {
+      fireEvent.click(screen.getAllByRole("button", { name: label })[0]!);
+    }
+    fireEvent.click(filterButton);
+    // Alle Arten gewählt heißt „alle“: die Liste lädt ungefiltert, wie ohne
+    // Auswahl, und es gibt keinen Chip und keinen Ring.
+    expect(absenceProbe().filters.types).toEqual([]);
+    expect(
+      screen.queryByRole("button", { name: "Alle löschen" }),
+    ).not.toBeInTheDocument();
+    expect(filterButton).not.toHaveAttribute("data-filters-active");
   });
 
   it("schaltet den Mitarbeitende-Reiter auf die Historie um", () => {

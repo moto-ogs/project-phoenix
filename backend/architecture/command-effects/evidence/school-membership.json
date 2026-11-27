@@ -1577,22 +1577,6 @@
       "target_owner": "tenant-runtime"
     },
     {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.StaffLookup.ListStaff",
-      "binding_digest": "bb9382663c339cae2e4202a1c72d1160",
-      "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.StaffChainLookup.ListStaff",
-      "source_owner": "school-membership",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.StaffLookup.ListTeachers",
-      "binding_digest": "bb9382663c339cae2e4202a1c72d1160",
-      "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.StaffChainLookup.ListTeachers",
-      "source_owner": "school-membership",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
-      "target_owner": "tenant-runtime"
-    },
-    {
       "binding": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.Capability.BindSchedule",
       "binding_digest": "bb9382663c339cae2e4202a1c72d1160",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership.StaffEmploymentCommands.BindSchedule",
@@ -1940,6 +1924,14 @@
       "binding": "*github.com/moto-ogs/project-phoenix/modules/schoolmembership/internal/adapters/postgres.Store.FindStaffByPerson",
       "binding_digest": "bb9382663c339cae2e4202a1c72d1160",
       "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership/internal/ports.Store.FindStaffByPerson",
+      "source_owner": "school-membership",
+      "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
+      "target_owner": "tenant-runtime"
+    },
+    {
+      "binding": "*github.com/moto-ogs/project-phoenix/modules/schoolmembership/internal/adapters/postgres.Store.FindStaffClassesByPerson",
+      "binding_digest": "bb9382663c339cae2e4202a1c72d1160",
+      "port": "github.com/moto-ogs/project-phoenix/modules/schoolmembership/internal/ports.Store.FindStaffClassesByPerson",
       "source_owner": "school-membership",
       "target": "github.com/moto-ogs/project-phoenix/tenant.TenantFromContext",
       "target_owner": "tenant-runtime"

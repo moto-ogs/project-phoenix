@@ -16,15 +16,19 @@ proxy filters names only and forwards every occurrence of each registered
 key to Go, which validates the values. Server calls build the Go address
 from the same route entry. Catalog paths use the portal's BFF prefix;
 a named route file must register its exact `BrowserPath` to expose its
-address. Only legacy `GET /api/students/` selects its response shape by query;
+address and pass the incoming `Request` if it declares query keys.
+Only legacy `GET /api/students/` selects its response shape by query;
 both clients use the selected variant or the registered default. See the
 [students example](frontend-api.md#generated-contract-adr-0270).
 
 Bigint identifiers in portal JSON use Go `ident.ID` and travel as decimal
-strings. Identically named text fields carry a `contract_text` reason.
+strings. `ident.IDOrNone` registers a decimal ID or the legacy empty marker.
+Fields that hold real text carry a `contract_text` reason.
 Stored JSON and the numeric kiosk contract are separate from this boundary.
 Structured refusal data belongs in `details`. Register its Go type by error
-code and consume the generated decoder. When a batch refusal reports a
+code in `ContractDocument` and read it through the generated decoder. The
+handler test observer checks the rendered Go type against that registration.
+When a batch refusal reports a
 partially saved result, set `PartialError` on the route registration.
 `gencontract` emits a browser decoder for `details.result` from the same Go
 type as the success response. A cast of the error body is not a decoder.
@@ -347,6 +351,50 @@ school, omits the field; their `school_class` stays as before („Feriengast“
 for a guest). The kiosk shows „Gast aus <Schule>“ when the field is set and
 the class otherwise, so either side can deploy first.
 
+## Staff supervision context (#8084, #8085)
+
+`GET /api/active/supervision-context` is a staff-portal read. Omit `section`
+for the full projection, or repeat it for any union of `groups`, `sessions`
+and `released-rooms`. Unknown values return 400. Unrequested sections are
+absent and their section-specific reads do not run. Use the generated
+`active` contract for server and tenant BFF calls; no school, account or
+session ID comes from the caller.
+
+- `groups.navigation` is the Group Live navigation, including leadership and
+  substitution. `own_group_ids` and `own_room_names` are personal filters,
+  not all visible groups; a waiting holiday group can appear in the personal
+  filters without appearing in the navigation.
+- `sessions.items` contains one entry per open session, even when several
+  share a room. `overview_status: ok` means school-wide scope even if the
+  list is empty. `forbidden` or `unavailable` there leaves only known own
+  sessions. `own_status: unavailable` makes `is_own` null on overview rows;
+  do not treat these assignments as true or false. The section is `ok` when
+  the overview or the own list loaded; clients still check both statuses.
+  Released rooms never grant supervision. Overview requires `groups:read`
+  as well as the canonical operational overview rule; own sessions need neither.
+  Student Presence uses the same school-day assignment rule here and in the
+  existing own-session read. Only open sessions appear in this response.
+- `released_rooms.items` needs `rooms:read` and lists permanently released,
+  non-archived rooms. The Schulhof stays; WC and other system rooms are
+  excluded. The list is not paged and has no occupancy data.
+
+Each requested section reports `ok`, `forbidden` or `unavailable`. An empty
+list with `ok` is authoritative; independent successful sections survive
+recoverable SQL errors. A failed session family or transaction takes the
+ordinary HTTP error path. Calendar View composes owner reads using savepoints
+in one RLS school transaction, not a fixed snapshot across statements. The
+HTTP host checks the session family in its existing separate transaction.
+
+The tenant shell seeds the full projection under one in-memory SWR key for
+the staff school/account binding. If any section is missing or unavailable,
+the browser replaces the seed with a full read. Section refreshes replace only
+the requested sections, including `forbidden` or `unavailable` results. The
+shell, child navigation hints and own running supervision share this entry;
+it confers no read or write permissions. `GET /api/me/navigation` carries the
+current staff profile and school switches, not groups or running sessions.
+Other consumers of the general groups, rooms and sessions endpoints still use
+their own contracts. Do not retry a failed overview via an older endpoint.
+
 ## Tenant boundary
 
 Platform operator → organization (`platform.organizations`) → school
@@ -568,8 +616,12 @@ pass alone is not confirmation. Every portal shell revokes through its BFF logou
 Auth.js clears the cookie. When the route answers with an error (the
 backend's `identity.logout_not_revoked`, or a BFF 503), the browser still
 clears the cookie and the login page says the session ends at its expiry
-(#7209); only a logout without any answer (offline, timeout) keeps the
-session and shows the error with a retry. The tenant relogin action keeps
+(#7209). The password form receives that notice as ready-to-display copy:
+the generated German sentence for `identity.logout_not_revoked`, or the parents
+login's scoped translation. Opening a login must not load the full error
+presenter. Focusing the password form or starting an attempt warms it for a
+refusal without holding up the request. Only a logout without any answer
+(offline, timeout) keeps the session and shows the error with a retry. The tenant relogin action keeps
 the session on every failure and offers a retry: it moves to another
 school's host, where no notice could follow. All six routes
 come from one factory (`frontend/src/lib/logout-route.server.ts`); the
@@ -849,6 +901,225 @@ and the other portals' providers; the fetch observer applies it once
 installed. Other tabs, a tab started during a logout and the public tenant
 pages need no barrier: their answers pass the same server gates.
 
+### Protected tree per session (#8082)
+
+What a document still shows is the browser's part; the server gates above
+stay the guarantee. Every portal renders its pages, parallel slots,
+overlays and person-bound providers under one `SessionTreeBoundary`
+(`frontend/src/components/auth/session-tree-boundary.tsx`), mounted in
+`PortalProviders` and `TenantProviders`. A document renders one tree for
+one session; when it ends (invariant 4) nothing of it renders again, also
+not of routes React keeps hidden (`Activity`), and a new document shows
+the next session. Portal links into and out of the public help load a new
+document: the help never keeps a protected portal tree mounted. If a
+router Activity reconnects a boundary, the boundary checks its mark
+before paint, just as it does after hydration.
+
+One mechanism decides which session an answer, a deletion and a tree
+belong to: the **session mark** (`frontend/src/lib/session-mark.ts`), an
+HMAC under `NEXTAUTH_SECRET` of the session's refresh-token family and, for
+a staff preview, its preview, kept in a script-readable cookie beside every
+portal's session cookie. It names no person, school or token and opens
+nothing. Invariants:
+
+1. **The exit writes the mark with the session.** `gateSessionCookieWrites`
+   writes it with every session it lets go, with the session cookie's
+   lifetime, and deletes it with the session; a rotation keeps it.
+2. **Every answer names its session.** The exit answers
+   `X-Moto-Presented-Session-Mark` with the marks the request carried and
+   `X-Moto-Session-Mark` with those the request itself changed (sign-in,
+   school switch, second factor, preview; every deletion, also of a session
+   without a mark; not a rotation). The session route also names the
+   presented mark in its body (`Session.sessionMark`), bound to that answer.
+   The fetch observer hands both headers of every own-origin answer to the
+   boundary at their arrival, before any body (`noteSessionAnswer`): the
+   marks it wrote are recorded as the tab's own first, and the mark it
+   carried is read against the tree's mark from before the answer; another
+   one that the tree never had counts like a reported cookie value (a late
+   answer of the tree's own former session does not).
+3. **Nothing ends another session.** Every exit names the session it ends
+   (`X-Moto-End-Session`: portal and mark): the tree's mark
+   (`shownSessionMark`) for a logout or recovery, the errored answer's
+   `sessionMark` for a cleanup, the cookie's mark when the request left for
+   a refused school switch. All go through `signOutSession` /
+   `signOutPortal` / `signOutTenant`; a source test fails on the SDK's
+   `signOut`, which names none. The logout routes revoke nothing and answer
+   401, and the exit deletes nothing and answers `X-Moto-Session-Replaced`,
+   when the request carries another mark: another tab's sign-in of the
+   meantime stays, and the document loads it. This device's data of the
+   account (the shared owner of personal storage) goes only once the
+   session is revoked or its cookie gone, never for a replacing session.
+4. **A document shows one session; a change ends its tree for good.**
+   The page's HTML carries the mark it was rendered with; an inline check
+   hides it before its first paint when the cookie differs (the value it
+   saw counts at hydration, also if a late write restored the rendered
+   mark) and removes its body on a `pagehide` before hydration. The tree is **confirmed** while
+   the session keeps its identity: its mark, its auth generation (account,
+   school or Träger, preview, scope, roles, permissions) and whether the
+   school books the portal (`notBooked`, in the layout snapshot as in the
+   session route). A token rotation and a revalidation keep it and are no
+   event; so does the first mark of a session from before marks, once the
+   server confirms the same identity. Every event that shows another
+   identity or leaves it unconfirmed **ends** the tree at once: its DOM,
+   state, drafts, effects, SWR cache, toasts and overlays go, nothing of
+   the document brings it back (a lock holds for the whole document, also
+   for a boundary a soft navigation mounts later), and late answers change
+   nothing. A new document confirms the session on the server: an exit of
+   the document navigates (`beginSessionExit`: the school switcher,
+   `TenantGuard`'s switch back to the tab's own school, a signout), this
+   tab's own change without an exit reloads it, a session that ended
+   (another tab's signout, an answer the server ends) reloads it into the
+   login (an empty cookie proves a signout only for a marked tree), and another tab's session (or a session the server could not
+   confirm) waits for `Seite neu laden`, so no tab takes the shared cookie
+   back and forth by itself. A resumed document (`resume`, or
+   `visibilitychange` after its heartbeat stood still for at least two
+   minutes, for browsers without `resume`; a tab that was only hidden
+   returns at once), an unmarked session's first mark and another tab's cleared
+   owner hide the tree, with its drafts, until a direct read of the
+   session route (`getSession`; the provider unchanged) answers; it shows
+   again only for the same identity confirmed by Identity & Access
+   (`sessionConfirmed`); a confirmation after another tab cleared the owner
+   also lets the paused reads go on. A cookie change event hides it until, 250 ms
+   later, it is decided whose change it was. The table-driven test in
+   `session-tree-boundary.test.tsx` runs every row through the real
+   boundary and fails when this table and its own differ.
+
+   States: **shown** (confirmed; **unmarked** for a session from before
+   marks), **resuming** (hidden after `resume` or a suspension),
+   **checking a signout** (hidden after another tab cleared the owner),
+   **locked** (ended; `Seite neu laden`, saying either that another tab
+   changed the sign-in or, when it **fails**, that moto cannot check it
+   now), **leaving** (ended; an exit
+   navigates or the document reloads), **signed out** (no session shown).
+
+   Events: **own step** — an answer of this tab wrote another mark (school
+   switch, preview, second factor; **of an exit** while one runs; also
+   **one a late write undid** in the cookie since); **own
+   deletion** — an answer of this tab deleted the session (of an exit, or
+   **of a lookup** that cleaned up an unreadable cookie); **own first
+   mark** — an own answer gave an unmarked session its first mark, read by
+   the server as the same identity (or **of another identity**, such as a
+   staff preview); **other mark** — the cookie (hydration, the listeners'
+   first look, focus, `visibilitychange`, `resume`) or an answer (the mark
+   it carried) names a mark no own answer wrote; **other deletion** — the
+   cookie holds no session and no own answer deleted it; **reported other
+   value** — a cookie event reported one (decided 250 ms later);
+   **rotation**; **new claims** — the provider answers another auth
+   generation (with another mark in the cookie: locked); **module
+   withdrawn** — the provider answers that the school no longer books the
+   portal; **ended answer** — the provider answers the session ended (a
+   portal with an expiry notice leads to its login with it); **failed
+   provider lookup** — the provider answers no session while the cookie
+   still holds the tree's (Auth.js answers so for a failed request);
+   **owner change** — another tab of this origin bound a new owner
+   (`SWRScopeBoundary`; **of a signout** when it cleared the owner, also
+   before its cookie went or after its own lookup failed); **resume** and
+   **return after a suspension**, and the read: **same session**, **new
+   claims**, **ended** (the server ends the session), **no session** (no
+   answer, which may be a failed request, or not confirmed), **signed
+   out** (no answer, and the cookie holds none); **boundary
+   mounted again** (a soft navigation back into the tree); **pagehide**,
+   **pageshow restored**, **exit** (`discardSessionTree`).
+
+   | Tree state | Event | Outcome |
+   | --- | --- | --- |
+   | shown | own step | reloads |
+   | shown | own step of an exit | leaves |
+   | shown | own step a late write undid | reloads |
+   | shown | own deletion of an exit | leaves |
+   | shown | own deletion of a lookup | reloads |
+   | shown | other mark | locks |
+   | shown | other deletion | reloads |
+   | shown | reported other value | hides |
+   | shown | rotation | stays |
+   | shown | new claims | reloads |
+   | shown | module withdrawn | reloads |
+   | shown | ended answer | reloads |
+   | shown | failed provider lookup | fails |
+   | shown | owner change | locks |
+   | shown | owner change of a signout | stays |
+   | shown | resume | hides |
+   | shown | return after a suspension | hides |
+   | shown | pagehide | leaves |
+   | shown | pageshow restored | restarts |
+   | shown | exit | leaves |
+   | unmarked | own first mark | stays |
+   | unmarked | own first mark of another identity | reloads |
+   | resuming | same session read | stays |
+   | resuming | new claims read | reloads |
+   | resuming | no session read | fails |
+   | resuming | ended read | reloads |
+   | resuming | signed out read | reloads |
+   | resuming | other mark | locks |
+   | resuming | other deletion | reloads |
+   | resuming | own step | reloads |
+   | resuming | pagehide | leaves |
+   | checking a signout | same session read | stays |
+   | checking a signout | ended read | reloads |
+   | checking a signout | no session read | fails |
+   | checking a signout | signed out read | reloads |
+   | checking a signout | new claims | reloads |
+   | locked | own step | locks |
+   | locked | new claims | locks |
+   | locked | resume | locks |
+   | locked | pageshow restored | restarts |
+   | locked | boundary mounted again | locks |
+   | leaving | own step | leaves |
+   | leaving | other mark | leaves |
+   | leaving | pageshow restored | restarts |
+   | signed out | own step | adopts |
+   | signed out | other mark | ignores |
+
+   In every state `pagehide` leaves and a restored `pageshow` reloads; in
+   an ended state every other event keeps it; any other pair the table does
+   not list keeps the state. A sign-in on a page without a session takes
+   its own mark and the new generation. An exit that fails after its
+   cookie went loads the document; the switcher's school switch refused
+   after the staff preview ended takes its refusal's way (the target's
+   login, the sign-in with code, moto schule), `TenantGuard`'s loads the
+   document. An automatic switch of `TenantGuard` loads the document too,
+   at most three times in a row per tab and school within a minute; then
+   it offers its way out.
+5. **A document's payloads belong to its one tree.** The shell snapshot and
+   the page seeds (`SWRServerSeed`) of a document serve the tree of that
+   document; no tree of another session renders in it. Cache Components
+   and Partial Prefetching (#8083) let Next reuse route shells and keep
+   recently visited trees in memory. A normal link prefetches the reusable
+   shell, not a protected payload. The snapshot waits for `connection()`
+   before checking the presented cookie or starting a seed; a shell prefetch
+   does not run those reads. The authorized RSC response and SWR values stay
+   in that document, including any page-local router reuse. Follow the
+   [server-seed and Cache Components rules](frontend-api.md#first-display-in-a-protected-page).
+   No protected value belongs in a shared Next cache, public response or
+   browser storage. Opening the school's shared notes
+   always requires another audited read; a hidden tree may not reuse that
+   isolated SWR cache when it becomes visible again.
+6. **Leaving ends the tree.** Logouts drop the tree once the family is
+   revoked, before cleanup and the cookie deletion that may stall; without
+   a revocation (#7209) the deletion decides: its failure keeps the page
+   and its retry, a failure after the cookie went loads the document. The
+   hosted portals sign out through Auth.js' protocol without the SDK's
+   trailing session lookup; an Auth.js refusal (also with
+   200) counts as a failure. `pagehide` drops the tree synchronously and a
+   page restored from the back-forward cache loads again. Every portal's
+   sign-in, the school switcher and `leaveForAnotherAccount` open a new
+   document; a document that leaves its session also drops the SWR scope,
+   so no running read or seed writes into the cache. Toasts are cleared at
+   every discard, and a tree's late answers raise none from then on
+   (`ToastSessionScope`).
+
+Limits: a session from before the deploy has no mark until its first
+rotation, after which other tabs load again once; `PersonalStorageGuard`
+above the tree acts on the provider's answers, not on marks; a sign-in after a
+request left and before the browser applies its answer cannot be told
+apart; a focus check can come before the tab's own answer was noted and
+then asks it to load again; a browser without `cookieStore` compares only
+on the listed events; a refused school switch ends the session the cookie
+held right before its request, also if the transport's session gate held
+the request a moment longer. The parents' shell also discards its pages when the
+set of linked children or the access of one changes (`parent-shell.tsx`,
+the family read's `access_version` per child); a new order alone keeps them.
+
 ### Login, refresh, and MFA
 
 All six portals use generated `RouteFile` entries for session calls to Go.
@@ -907,6 +1178,10 @@ Backend paths in this section are relative to `backend/`:
   caterer portal (`workflows/catererportal`) opens each supplied school's
   tenant transaction itself (ADR 0077). The `caterer scope matrix` contract in
   `TestFullProductionRouterGolden` checks both directions.
+- `GET /caterer/schools?from=YYYY-MM-DD&to=YYYY-MM-DD` returns the compact
+  order overview (at most seven days). An optional `school_id` retries one
+  supplied school. A failed row is not a zero; a revoked supply is absent.
+  Only the school detail route returns classes, names or individual changes.
 - The caterer's second factor (ADR 0077 addendum, #4497) is voluntary and
   bound to the caterer's account, never to a school's `mfa_mode`. Once it is
   on, `/caterer/auth/login` answers `mfa_required` with a `caterer`-scope
@@ -1222,8 +1497,10 @@ outside it that a portal page calls belongs in that list.
 `GET /auth/tenant/resolve` via `contractGet`. The per-replica cache in
 `tenant-resolve.server.ts` keeps decoded successes and 404s for 60 seconds.
 Only missing, deleted or inactive schools return 404; lookup failures are
-not cached. Provisioning and writes to the generated lookup setting keys
-invalidate the same cache. The registry test checks that none of those keys
+not cached. A 429 keeps Go's `Retry-After` through the host check. Provisioning
+and writes to the generated lookup setting keys invalidate the same cache.
+Operator writes use the school subdomain returned as `school_slug`; they do
+not read the school list. The registry test checks that none of those keys
 can change through a Träger write. `POST /auth/switch-tenant` returns a tenant-session JWT
 for the target school, not a `scope=school` portal token.
 Verified MFA belongs to the live tenant-session family of the same account,
@@ -1241,6 +1518,15 @@ coordinate producer and consumer changes.
 Class-day is mounted only at `/school/class-day`; `/api/class-day` and the
 tenant `/klassen` page were removed. Its frontend uses `app/school/*`, shared
 `components/class-day`, and `server/auth/school*.ts` (under `frontend/src/`).
+The teacher's home uses one `GET /school/class-day/assigned-classes?date=…`
+with `class_day:read`. Go resolves the class assignments in the school
+transaction, reads those rosters together and returns totals only, including
+the number of children with a reported status or a changed pickup. The report
+follows Berlin's day and the school's Friday-plan setting. The administration's
+audited `/school-day` with child lists still requires `class_day:all_classes`.
+The class sheet still checks the class and logs disclosure when opened;
+`/classes` remains the class/options read on the screens that need it.
+
 The PWA identity is moto schule (`schule` / `schule-staging` favicon variants).
 Lehrkraft invitations link to `SCHOOL_URL/invite`, not `FRONTEND_URL/invite`.
 

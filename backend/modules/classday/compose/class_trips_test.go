@@ -23,6 +23,10 @@ func (r tripRosters) SchoolRosterDay(ctx context.Context, date calendar.Date) (*
 	return r.ClassRosterDay(ctx, "", date)
 }
 
+func (tripRosters) AssignedClassRoster(context.Context, []string, calendar.Date, string) (classday.AssignedRoster, error) {
+	panic("unexpected assigned class roster read")
+}
+
 func (tripRosters) ClassRosterDay(context.Context, string, calendar.Date) (*compose.DayRoster, error) {
 	return &compose.DayRoster{Rows: []compose.DayRosterRow{{StudentID: 11}, {StudentID: 12}}}, nil
 }

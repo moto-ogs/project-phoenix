@@ -68,7 +68,7 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => navigation.params,
 }));
 
-import TraegerPayrollExportPage from "./page";
+import TraegerPayrollExportPage from "./page-content";
 
 // The month `back` months before the month of the test day.
 function monthBefore(back: number): { year: number; month: number } {
@@ -644,7 +644,7 @@ describe("TraegerPayrollExportPage", () => {
     renderPage();
     expect(await screen.findByText("Kostenstelle fehlt")).toBeInTheDocument();
     fireEvent.click(
-      screen.getByRole("radio", { name: /Eine Datei je Arbeitgeber/ }),
+      screen.getByRole("radio", { name: /Eine Datei pro Arbeitgeber/ }),
     );
     expect(
       await screen.findByText("Berater- und Mandantennummer fehlen"),

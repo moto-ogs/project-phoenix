@@ -22,7 +22,8 @@ func classListEntryExportEligible(preset lists.Preset, f studentExportFilters) b
 	if preset != lists.PresetClassRoster {
 		return false
 	}
-	return f.GroupID == "" && f.RoomID == "" &&
+	groupFiltered := len(f.GroupIDs) > 0 || (f.GroupIDs == nil && f.GroupID != "")
+	return !groupFiltered && f.RoomID.IsZero() &&
 		!isActiveFilterValue(f.Status) && !isActiveFilterValue(f.Bus) &&
 		!isActiveFilterValue(f.PhotoConsent) && !isActiveFilterValue(f.PickupStatus) &&
 		!isActiveFilterValue(f.DayStatus) &&

@@ -118,6 +118,11 @@ export function setupSWR(opts: SetupSWROptions): void {
     requiredDetailsError,
   } = opts;
 
+  const pages = {
+    all: { rows: allAccounts ?? [], total: allAccounts?.length ?? 0 },
+    school: { rows: schoolAccounts ?? [], total: schoolAccounts?.length ?? 0 },
+    org: { rows: orgAccounts ?? [], total: orgAccounts?.length ?? 0 },
+  };
   useSWRMock.mockImplementation((key: unknown) => {
     if (typeof key !== "string") {
       return { data: undefined, isLoading: false, mutate: () => undefined };
@@ -164,12 +169,12 @@ export function setupSWR(opts: SetupSWROptions): void {
         mutate: mutateSchools,
       };
     }
-    if (key === "operator-all-accounts") {
+    if (key.startsWith("operator-all-accounts:")) {
       return {
         data:
           accountsLoading || (accountsError && !staleData)
             ? undefined
-            : (allAccounts ?? []),
+            : pages.all,
         error: accountsError,
         isLoading: accountsLoading,
         mutate: () => undefined,
@@ -180,7 +185,7 @@ export function setupSWR(opts: SetupSWROptions): void {
         data:
           accountsLoading || (accountsError && !staleData)
             ? undefined
-            : (schoolAccounts ?? []),
+            : pages.school,
         error: accountsError,
         isLoading: accountsLoading,
         mutate: () => undefined,
@@ -191,7 +196,7 @@ export function setupSWR(opts: SetupSWROptions): void {
         data:
           accountsLoading || (accountsError && !staleData)
             ? undefined
-            : (orgAccounts ?? []),
+            : pages.org,
         error: accountsError,
         isLoading: accountsLoading,
         mutate: () => undefined,

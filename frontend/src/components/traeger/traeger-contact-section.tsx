@@ -18,6 +18,7 @@ const SETTINGS_RIGHT = "traeger_settings:manage";
 export function TraegerContactSection({
   masterData,
   letterheadText,
+  refreshLetterhead,
   reload,
   write,
   onSaved,
@@ -28,6 +29,8 @@ export function TraegerContactSection({
   >;
   /** Der Absender aus dem Briefkopf; die Belehrung nennt ihn mit Anschrift. */
   letterheadText: string;
+  /** Liest den Briefkopf neu, wenn jemand aus seinem Tab zurückkommt. */
+  refreshLetterhead: () => Promise<unknown>;
   /** Liest die Stammdaten nach einer Ablehnung neu; scheitert laut. */
   reload: () => Promise<TraegerMasterData>;
   /** Übernimmt die Antwort eines Speicherns in die gelesenen Stammdaten. */
@@ -69,6 +72,7 @@ export function TraegerContactSection({
         }
         contact={masterData.contact}
         letterheadText={letterheadText}
+        refreshLetterhead={refreshLetterhead}
         canEdit={canEdit}
         onSaved={onSaved}
       />

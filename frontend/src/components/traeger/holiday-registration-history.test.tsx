@@ -106,3 +106,43 @@ it("names an allocation with its reason and a check of the criteria (#4700)", ()
     screen.getByText(/Beide Eltern berufstätig: trifft nicht zu/),
   ).toBeInTheDocument();
 });
+
+it("names the payer before and after a change with its reason (#8158)", () => {
+  render(
+    <HolidayRegistrationHistory
+      period={HOLIDAY_PERIOD}
+      names={new Map()}
+      registration={{
+        ...HOLIDAY_REGISTRATION,
+        history: [
+          {
+            action: "payer",
+            from: "",
+            debtorNumber: null,
+            occurredAt: "2026-09-08T10:00:00Z",
+            childId: "",
+            before: [],
+            after: [],
+            siblings: [],
+            fields: [],
+            wish: "",
+            reason: "Bescheid nachgereicht",
+            payer: {
+              before: { kind: "family", costBearerName: "" },
+              after: {
+                kind: "cost_bearer",
+                costBearerName: "Fachdienst Jugend",
+              },
+            },
+          },
+        ],
+      }}
+    />,
+  );
+  expect(screen.getByText("Zahler geändert")).toBeInTheDocument();
+  expect(
+    screen.getByText(
+      /Bisher: Die Familie\. Jetzt: Kostenträger: Fachdienst Jugend\. Begründung: Bescheid nachgereicht/,
+    ),
+  ).toBeInTheDocument();
+});

@@ -61,7 +61,7 @@ context=false
 env_sync=false
 hooks=false
 error_codes=false
-du_form_tests=false
+anrede_tests=false
 # Keep the diff and child-tool scratch files off a quota-limited system /tmp.
 # Git metadata also works in linked worktrees without dirtying the checkout.
 workspace_parent=$(git rev-parse --path-format=absolute --git-path pre-push-cache)
@@ -90,7 +90,7 @@ while IFS= read -r -d '' file; do
     .agents/*|.claude/*|.codex/*|scripts/check-agent-context*) context=true ;;
   esac
   case "$file" in
-    scripts/check-du-form*) du_form_tests=true ;;
+    scripts/check-anrede*) anrede_tests=true ;;
   esac
   # Same paths as the error-codes filter in main.yml; the check takes < 1 s.
   case "$file" in
@@ -141,10 +141,10 @@ if [[ "$error_codes" == true ]]; then
   quality_step error-code-tests node --test scripts/generate-error-codes.test.mjs
   quality_step error-codes node scripts/generate-error-codes.mjs --check
 fi
-# Sie-Anrede in German texts (ADR 0294); scans the whole tree in about a second.
-quality_step du-form node scripts/check-du-form.mjs
-if [[ "$du_form_tests" == true ]]; then
-  quality_step du-form-tests node --test scripts/check-du-form.test.mjs
+# Form of address in German texts (ADR 0328); scans the whole tree in about a second.
+quality_step anrede node scripts/check-anrede.mjs
+if [[ "$anrede_tests" == true ]]; then
+  quality_step anrede-tests node --test scripts/check-anrede.test.mjs
 fi
 if [[ "$env_sync" == true ]]; then
   quality_step env-sync bash scripts/env-check.sh

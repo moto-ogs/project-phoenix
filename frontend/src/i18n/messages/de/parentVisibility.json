@@ -1,4 +1,4 @@
 {
-  "ogs": "Für die {careTerm} sichtbar",
-  "ogsDescription": "Diese Angaben kann deine {careTerm} sehen."
+  "ogs": "Für {careAcc} sichtbar",
+  "ogsDescription": "Diese Angaben kann {careYourNom} sehen."
 }

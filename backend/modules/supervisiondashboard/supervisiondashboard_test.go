@@ -15,33 +15,34 @@ import (
 // fakes implements every consumer-owned port with func fields; a nil field
 // answers with an empty value so each test only wires what it asserts.
 type fakes struct {
-	currentStaffID    func(context.Context) (*int64, error)
-	caller            func(context.Context) (Caller, error)
-	fullStudentAccess func(context.Context) (bool, error)
-	running           func(context.Context) ([]Session, error)
-	supervised        func(context.Context) ([]Session, error)
-	supervisedByStaff func(context.Context, int64) (map[int64]struct{}, error)
-	unclaimed         func(context.Context) ([]UnclaimedGroup, error)
-	yard              func(context.Context, int64) (*SchulhofStatus, error)
-	myGroups          func(context.Context) ([]EducationalGroup, error)
-	plannedNow        func(context.Context, PlannedNowQuery) ([]PlannedInstance, error)
-	activeSessions    func(context.Context, Date) ([]ActiveSession, error)
-	groupVisits       func(context.Context, int64) ([]VisitRecord, error)
-	attendanceTimes   func(context.Context, []int64) (map[int64]Attendance, error)
-	tracking          func(context.Context, []int64, []string) (map[int64][]bool, error)
-	pickups           func(context.Context, []int64, Date) (map[int64]Pickup, error)
-	arrivals          func(context.Context, []int64, Date) (map[int64]Arrival, error)
-	prepare           func(context.Context) (context.Context, error)
-	photosEnabled     func(context.Context) (bool, error)
-	trackingLabels    func(context.Context) ([]string, error)
-	spontaneous       func(context.Context) (bool, error)
-	released          func(context.Context) ([]ReleasedRoom, error)
-	inRooms           func(context.Context, []int64) ([]RunningSession, error)
-	openVisits        func(context.Context, []int64) ([]VisitRecord, error)
-	sessionBlocks     func(context.Context, SessionBlocksQuery) ([]SessionBlock, error)
-	supervisorIDs     func(context.Context, []int64) (map[int64][]int64, error)
-	staffNames        func(context.Context, []int64) (map[int64]string, error)
-	now               func() time.Time
+	currentStaffID        func(context.Context) (*int64, error)
+	caller                func(context.Context) (Caller, error)
+	fullStudentAccess     func(context.Context) (bool, error)
+	running               func(context.Context) ([]Session, error)
+	supervised            func(context.Context) ([]Session, error)
+	supervisedByStaff     func(context.Context, int64) (map[int64]struct{}, error)
+	unclaimed             func(context.Context) ([]UnclaimedGroup, error)
+	yard                  func(context.Context, int64) (*SchulhofStatus, error)
+	myGroups              func(context.Context) ([]EducationalGroup, error)
+	plannedNow            func(context.Context, PlannedNowQuery) ([]PlannedInstance, error)
+	activeSessions        func(context.Context, Date) ([]ActiveSession, error)
+	groupVisits           func(context.Context, int64) ([]VisitRecord, error)
+	attendanceTimes       func(context.Context, []int64) (map[int64]Attendance, error)
+	tracking              func(context.Context, []int64, []string) (map[int64][]bool, error)
+	pickups               func(context.Context, []int64, Date) (map[int64]Pickup, error)
+	arrivals              func(context.Context, []int64, Date) (map[int64]Arrival, error)
+	prepare               func(context.Context) (context.Context, error)
+	photosEnabled         func(context.Context) (bool, error)
+	cardActivitiesEnabled func(context.Context) (bool, error)
+	trackingLabels        func(context.Context) ([]string, error)
+	spontaneous           func(context.Context) (bool, error)
+	released              func(context.Context) ([]ReleasedRoom, error)
+	inRooms               func(context.Context, []int64) ([]RunningSession, error)
+	openVisits            func(context.Context, []int64) ([]VisitRecord, error)
+	sessionBlocks         func(context.Context, SessionBlocksQuery) ([]SessionBlock, error)
+	supervisorIDs         func(context.Context, []int64) (map[int64][]int64, error)
+	staffNames            func(context.Context, []int64) (map[int64]string, error)
+	now                   func() time.Time
 }
 
 func (f *fakes) CurrentStaffID(ctx context.Context) (*int64, error) {
@@ -196,6 +197,13 @@ func (f *fakes) Arrivals(ctx context.Context, studentIDs []int64, date Date) (ma
 		return nil, nil
 	}
 	return f.arrivals(ctx, studentIDs, date)
+}
+
+func (f *fakes) StudentCardActivitiesEnabled(ctx context.Context) (bool, error) {
+	if f.cardActivitiesEnabled == nil {
+		return false, nil
+	}
+	return f.cardActivitiesEnabled(ctx)
 }
 
 func (f *fakes) Prepare(ctx context.Context) (context.Context, error) {
@@ -521,7 +529,7 @@ func TestBuildVisitsAndEffectiveTimes(t *testing.T) {
 	rows := []VisitRecord{{
 		StudentID: 1, ActiveGroupID: 2, EntryTime: checkedIn,
 		FirstName: "  Erika", LastName: "Mustermann ", SchoolClass: "4a", GroupName: "Bären",
-		Sick: true, SickSince: &checkedIn, Excused: true, ExcusedSince: &checkedOut, PhotoURL: "/api/students/1/photo/portrait.jpg",
+		Sick: true, SickSince: &checkedIn, Excused: true, ExcusedSince: &checkedOut, PhotoVersion: "portrait.jpg",
 	}}
 	svc := newService(&fakes{})
 
@@ -531,17 +539,17 @@ func TestBuildVisitsAndEffectiveTimes(t *testing.T) {
 	assert.True(t, visits[0].Sick)
 	assert.True(t, visits[0].Excused)
 	assert.Equal(t, &checkedIn, visits[0].SickSince)
-	assert.Equal(t, "/api/students/1/photo/portrait.jpg", visits[0].PhotoURL)
+	assert.Equal(t, "portrait.jpg", visits[0].PhotoVersion)
 	require.NotNil(t, visits[0].ActualArrivalTime)
 	assert.Equal(t, "12:00", *visits[0].ActualArrivalTime, "actual clocks render in Berlin summer time")
 	assert.Equal(t, "13:00", *visits[0].ActualPickupTime)
 
 	privateVisits := svc.buildVisits(rows, nil, false, true)
 	assert.Nil(t, privateVisits[0].ActualArrivalTime)
-	assert.Empty(t, privateVisits[0].PhotoURL)
+	assert.Empty(t, privateVisits[0].PhotoVersion)
 
 	noPhotos := svc.buildVisits(rows, nil, true, false)
-	assert.Empty(t, noPhotos[0].PhotoURL)
+	assert.Empty(t, noPhotos[0].PhotoVersion)
 
 	pickup := "15:30"
 	pickupItem := pickupTimeFromEffective(1, Pickup{
@@ -908,11 +916,12 @@ func TestProjectionWireShape(t *testing.T) {
 	projection.PlannedNow = []PlannedInstance{{ID: 5, Title: "Malen", Date: "2026-08-19", StartTime: "14:00", EndTime: "15:00", RoomID: 21, Status: "planned",
 		AssignedStaffIDs: []ident.ID{7}, RosterPreview: []RosterRow{{StudentID: 1, StudentName: "Erika Muster", Status: "expected", PickupTime: &clock, CareDayStatus: "scheduled"}},
 		PickupTimesLoaded: true, Warnings: []ConflictWarning{}, StartAvailableAt: "13:45", StartExpiresAt: "15:00"}}
-	projection.Visits = []Visit{{StudentID: 1, StudentName: "Erika Muster", SchoolClass: "4a", GroupName: "Bären", ActiveGroupID: 11, CheckInTime: entry, ActualArrivalTime: &clock, Sick: false, PhotoURL: "/api/students/1/photo/p.jpg"}}
+	projection.Visits = []Visit{{StudentID: 1, StudentName: "Erika Muster", SchoolClass: "4a", GroupName: "Bären", ActiveGroupID: 11, CheckInTime: entry, ActualArrivalTime: &clock, Sick: false, PhotoVersion: "p.jpg"}}
 	projection.TrackingIndicators = DashboardTrackingIndicators{Labels: []string{"Hausaufgaben"}, Results: map[int64][]bool{1: {true}}}
 	projection.PickupTimes = []DashboardPickupTime{{StudentID: 1, Date: "2026-08-19", WeekdayName: "Mittwoch", PickupTime: &clock, IsException: true, Notes: "Oma", DayNotes: []DashboardDayNote{{ID: 3, Content: "Klingeln"}}}}
 	projection.ArrivalTimes = []ArrivalTime{{StudentID: 1, Date: "2026-08-19", WeekdayName: "Mittwoch"}}
 	projection.TeacherHints = []SupervisionTeacherHint{{StudentID: 1, Body: "Heute Sportzeug vergessen", AuthorName: "Frau Kurz", SchoolClass: "4a"}}
+	projection.PlannedActivities = []SupervisionPlannedActivity{{StudentID: 1, Title: "Töpfer-AG", StartTime: "14:00", EndTime: "15:00"}}
 
 	got, err := wire.Marshal(projection)
 	require.NoError(t, err)
@@ -934,16 +943,17 @@ func TestProjectionWireShape(t *testing.T) {
 		`"expected_students_count":0,"present_students_count":0,"not_scheduled_students_count":0,"current_students_count":0,"planned_students_count":0,"is_spontaneous":false,"assigned_staff_ids":["7"],"is_assigned":false,"is_primary":false,"is_substitute":false,"is_absent":false,` +
 		`"roster_preview":[{"student_id":"1","student_name":"Erika Muster","school_class":"","group_name":"","planned":false,"is_unplanned":false,"currently_present":false,"status":"expected","pickup_time":"08:00","care_day_status":"scheduled"}],` +
 		`"pickup_times_loaded":true,"warnings":[],"can_start":false,"start_available_at":"13:45","start_expires_at":"15:00"}],` +
-		`"visits":[{"student_id":"1","student_name":"Erika Muster","school_class":"4a","group_name":"Bären","active_group_id":"11","check_in_time":"2026-08-19T06:00:00Z","actual_arrival_time":"08:00","sick":false,"excused":false,"photo_url":"/api/students/1/photo/p.jpg"}],` +
+		`"visits":[{"student_id":"1","student_name":"Erika Muster","school_class":"4a","group_name":"Bären","active_group_id":"11","check_in_time":"2026-08-19T06:00:00Z","actual_arrival_time":"08:00","sick":false,"excused":false,"photo_version":"p.jpg"}],` +
 		`"tracking_indicators":{"labels":["Hausaufgaben"],"results":{"1":[true]}},` +
 		`"pickup_times":[{"student_id":"1","date":"2026-08-19","weekday_name":"Mittwoch","pickup_time":"08:00","is_exception":true,"notes":"Oma","day_notes":[{"id":"3","content":"Klingeln"}]}],` +
 		`"arrival_times":[{"student_id":"1","date":"2026-08-19","weekday_name":"Mittwoch","is_exception":false}],` +
-		`"teacher_hints":[{"student_id":"1","body":"Heute Sportzeug vergessen","author_name":"Frau Kurz","school_class":"4a"}]}`
+		`"teacher_hints":[{"student_id":"1","body":"Heute Sportzeug vergessen","author_name":"Frau Kurz","school_class":"4a"}],` +
+		`"planned_activities":[{"student_id":"1","title":"Töpfer-AG","start_time":"14:00","end_time":"15:00"}]}`
 	assert.JSONEq(t, want, string(got))
 	assert.Equal(t, want, string(got), "key order is part of the golden contract")
 
 	empty, err := wire.Marshal(emptyProjection())
 	require.NoError(t, err)
 	assert.Equal(t, `{"business_day":"","spontaneous_start_availability":{"available":false},"groups":[],"unclaimed_groups":[],"educational_groups":[],"schulhof_status":null,`+
-		`"open_rooms":[],"capabilities":{"web_spontaneous_activities_enabled":false},"active_sessions":[],"planned_now":[],"visits":[],"tracking_indicators":{"labels":[],"results":{}},"pickup_times":[],"arrival_times":[],"teacher_hints":[]}`, string(empty))
+		`"open_rooms":[],"capabilities":{"web_spontaneous_activities_enabled":false},"active_sessions":[],"planned_now":[],"visits":[],"tracking_indicators":{"labels":[],"results":{}},"pickup_times":[],"arrival_times":[],"teacher_hints":[],"planned_activities":[]}`, string(empty))
 }

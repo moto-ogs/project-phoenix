@@ -484,7 +484,7 @@ func renderHolidayRegistrationError(w http.ResponseWriter, r *http.Request, err 
 		common.RenderError(w, r, common.ErrorInvalidRequest(err))
 	case errors.As(err, &rejection):
 		common.RenderError(w, r, common.ErrorInvalidRequestWithDetails(err, common.CodeEnrollmentUploadInvalid,
-			map[string]any{"max_mb": rejection.MaxMB, "allowed_types": rejection.AllowedTypes}))
+			UploadRefusalDetails{MaxMB: rejection.MaxMB, AllowedTypes: new(rejection.AllowedTypes)}))
 	case errors.Is(err, capability.ErrUploadRateLimited):
 		setRateLimitRetryAfter(w, rateLimitRetryAfterSeconds)
 		common.RenderError(w, r, common.ErrorTooManyRequestsWithCode(err, common.CodeEnrollmentUploadRateLimited))
@@ -494,7 +494,7 @@ func renderHolidayRegistrationError(w http.ResponseWriter, r *http.Request, err 
 		// Public input does not prove family access. The typed refusal's
 		// diagnostic and both totals can reveal existing bookings.
 		common.RenderError(w, r, common.ErrorInvalidRequestWithDetails(capability.ErrHolidayChildDayLimit,
-			common.CodeEnrollmentHolidayChildDayLimitPublic, map[string]any{"limit": dayLimit.Limit, "child": dayLimit.Child + 1}))
+			common.CodeEnrollmentHolidayChildDayLimitPublic, PublicHolidayChildDayLimitDetails{Limit: dayLimit.Limit, Child: dayLimit.Child + 1}))
 	case errors.As(err, &fields):
 		common.RenderError(w, r, common.ErrorInvalidRequestWithCode(err, common.CodeEnrollmentHolidayRegistrationInvalid))
 	case errors.Is(err, capability.ErrHolidayRegistrationStatusNotFound):
@@ -539,5 +539,10 @@ func publicHolidayLegalBlocks(blocks []capability.FormLegalBlock) []capability.F
 // position in the form, from 1.
 func holidayChildDayLimitError(err error, refusal *capability.HolidayChildDayLimitRefusal) render.Renderer {
 	return common.ErrorInvalidRequestWithDetails(err, common.CodeEnrollmentHolidayChildDayLimit,
-		map[string]any{"limit": refusal.Limit, "days": refusal.Days, "elsewhere": refusal.Elsewhere, "child": refusal.Child + 1})
+		common.HolidayChildDayLimitDetails{Limit: refusal.Limit, Days: refusal.Days, Elsewhere: refusal.Elsewhere, Child: refusal.Child + 1})
+}
+
+type PublicHolidayChildDayLimitDetails struct {
+	Limit int `json:"limit"`
+	Child int `json:"child"`
 }

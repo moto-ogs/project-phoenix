@@ -26,7 +26,7 @@ export interface ClassListEntryInput {
   schoolClass: string;
 }
 
-function mapEntry(
+export function mapClassListEntry(
   wire: classListEntriesContract.ClassListEntryResponse,
 ): ClassListEntry {
   return {
@@ -58,13 +58,13 @@ export async function fetchClassListEntries(): Promise<ClassListEntry[]> {
   const entries = await bffJson("tenant", "GET /api/class-list-entries/", {
     errorMessage,
   });
-  return entries.map(mapEntry);
+  return entries.map(mapClassListEntry);
 }
 
 export async function createClassListEntry(
   input: ClassListEntryInput,
 ): Promise<ClassListEntry> {
-  return mapEntry(
+  return mapClassListEntry(
     await bffJson("tenant", "POST /api/class-list-entries/", {
       body: toWireInput(input),
       errorMessage,
@@ -81,7 +81,7 @@ export async function updateClassListEntry(
   input: ClassListEntryInput,
   expectedVersion: string,
 ): Promise<ClassListEntry> {
-  return mapEntry(
+  return mapClassListEntry(
     await bffJson("tenant", "PUT /api/class-list-entries/{id}", {
       params: { id },
       body: { ...toWireInput(input), expected_version: expectedVersion },

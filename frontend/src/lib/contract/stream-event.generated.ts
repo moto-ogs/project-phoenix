@@ -11,7 +11,7 @@ import {
   type OpenEnum,
 } from "./browser-runtime";
 
-export const STREAM_EVENT_TYPE_VALUES = ["active_supervision_changed", "activity_end", "activity_start", "activity_update", "arrival_schedule_changed", "bulk_student_checkin", "bulk_student_checkout", "calendar_appointments_changed", "change_requests_changed", "class_day_changed", "dashboard_counts_changed", "group_access_changed", "instance_cancelled", "instance_completed", "instance_overdue", "instance_started", "meal_plan_changed", "notification", "notification_feed_changed", "parent_child_updated", "parent_message", "parent_message_read", "parent_message_unread_changed", "pickup_schedule_changed", "staff_message", "staff_notices_changed", "staff_time_tracking_changed", "staffing_deviation_changed", "student_checkin", "student_checkout", "student_companions_changed", "student_updated", "tenant_settings_changed"] as const;
+export const STREAM_EVENT_TYPE_VALUES = ["active_supervision_changed", "activity_end", "activity_start", "activity_update", "arrival_schedule_changed", "bulk_student_checkin", "bulk_student_checkout", "calendar_appointments_changed", "change_requests_changed", "class_day_changed", "dashboard_counts_changed", "group_access_changed", "instance_cancelled", "instance_completed", "instance_overdue", "instance_started", "meal_plan_changed", "notification", "notification_feed_changed", "parent_child_updated", "parent_message", "parent_message_read", "parent_message_unread_changed", "pickup_schedule_changed", "staff_leave_changed", "staff_message", "staff_notices_changed", "staff_time_tracking_changed", "staffing_deviation_changed", "student_checkin", "student_checkout", "student_companions_changed", "student_updated", "tenant_settings_changed"] as const;
 export type StreamEventType = (typeof STREAM_EVENT_TYPE_VALUES)[number];
 
 /** Go: realtime.SSEEventData */
@@ -39,32 +39,34 @@ export interface SSEEventData {
   supervisor_ids?: string[];
   instance_id?: string;
   thread_id?: string;
+  sender_account_id?: string;
 }
 
-export const SSEEventDataSchema: Decoder<SSEEventData> = object<SSEEventData>({
-  activity_name: optional(str),
-  room_name: optional(str),
-  instance_date: optional(str),
-  instance_start_time: optional(str),
-  attendance_status: optional(str),
-  attendance_substatus: optional(str),
-  attendance_note: optional(str),
-  source: optional(str),
-  reason: optional(str),
-  title: optional(str),
-  body: optional(str),
-  deep_link: optional(str),
-  school_deep_link: optional(str),
-  priority: optional(str),
-  notification_type: optional(str),
-  notification_data: optional(rec(str)),
-  student_id: optional(int64String),
-  student_ids: optional(arr(int64String)),
-  group_ids: optional(arr(int64String)),
-  room_id: optional(int64String),
-  supervisor_ids: optional(arr(int64String)),
-  instance_id: optional(int64String),
-  thread_id: optional(int64String),
+export const SSEEventDataSchema: Decoder<SSEEventData> = /*#__PURE__*/ object<SSEEventData>({
+  activity_name: /*#__PURE__*/ optional(str),
+  room_name: /*#__PURE__*/ optional(str),
+  instance_date: /*#__PURE__*/ optional(str),
+  instance_start_time: /*#__PURE__*/ optional(str),
+  attendance_status: /*#__PURE__*/ optional(str),
+  attendance_substatus: /*#__PURE__*/ optional(str),
+  attendance_note: /*#__PURE__*/ optional(str),
+  source: /*#__PURE__*/ optional(str),
+  reason: /*#__PURE__*/ optional(str),
+  title: /*#__PURE__*/ optional(str),
+  body: /*#__PURE__*/ optional(str),
+  deep_link: /*#__PURE__*/ optional(str),
+  school_deep_link: /*#__PURE__*/ optional(str),
+  priority: /*#__PURE__*/ optional(str),
+  notification_type: /*#__PURE__*/ optional(str),
+  notification_data: /*#__PURE__*/ optional(/*#__PURE__*/ rec(str)),
+  student_id: /*#__PURE__*/ optional(int64String),
+  student_ids: /*#__PURE__*/ optional(/*#__PURE__*/ arr(int64String)),
+  group_ids: /*#__PURE__*/ optional(/*#__PURE__*/ arr(int64String)),
+  room_id: /*#__PURE__*/ optional(int64String),
+  supervisor_ids: /*#__PURE__*/ optional(/*#__PURE__*/ arr(int64String)),
+  instance_id: /*#__PURE__*/ optional(int64String),
+  thread_id: /*#__PURE__*/ optional(int64String),
+  sender_account_id: /*#__PURE__*/ optional(int64String),
 });
 
 /** Go: realtime.SSEEvent */
@@ -75,7 +77,7 @@ export interface SSEEvent {
   timestamp: string;
 }
 
-export const SSEEventSchema: Decoder<SSEEvent> = object<SSEEvent>({
+export const SSEEventSchema: Decoder<SSEEvent> = /*#__PURE__*/ object<SSEEvent>({
   type: str,
   active_group_id: str,
   data: SSEEventDataSchema,

@@ -14,7 +14,7 @@ import type {
 import { requiredDay } from "./contract/required-day";
 import { calendarDate } from "./contract/browser-runtime";
 import { knownEnum } from "./contract/known-enum";
-import { problemDetails } from "./contract/problem-details.generated";
+import { ClassTripConflictDetailsSchema } from "./contract/problem-details.generated";
 import type * as schoolClassDayContract from "./contract/school-class-day.generated";
 
 /** Antwort von GET /school/class-day/classes; ohne Klassen eine leere Liste. */
@@ -26,6 +26,14 @@ export type ClassDayClasses = Omit<
 export async function fetchClassDayClassesSchool(): Promise<ClassDayClasses> {
   const data = await bffJson("school", "GET /school/class-day/classes");
   return { ...data, classes: data.classes ?? [] };
+}
+
+export function fetchAssignedClassesSchool(
+  date: string,
+): Promise<schoolClassDayContract.AssignedClassesReport> {
+  return bffJson("school", "GET /school/class-day/assigned-classes", {
+    query: { date },
+  });
 }
 
 export async function fetchSchoolDaySchool(
@@ -129,9 +137,7 @@ export function classTripConflictsFromError(
   ) {
     return null;
   }
-  const parsed = problemDetails[
-    "classday.class_trip_status_conflict"
-  ].safeParse(err.details);
+  const parsed = ClassTripConflictDetailsSchema.safeParse(err.details);
   if (!parsed.success) return null;
   const conflicts: ClassTripConflictDay[] = [];
   for (const conflict of parsed.data.conflicts ?? []) {

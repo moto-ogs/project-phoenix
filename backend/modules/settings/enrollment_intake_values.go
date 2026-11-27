@@ -79,6 +79,12 @@ func (v EnrollmentIntakeValues) CareFacilityTerm(ctx context.Context) (string, e
 	return v.source.ResolveString(ctx, configModel.KeyEnrollmentCareFacilityTerm)
 }
 
+// CareFacilityArticle is the article the German texts decline that term
+// with: "der", "die" or "das" (#8136).
+func (v EnrollmentIntakeValues) CareFacilityArticle(ctx context.Context) (string, error) {
+	return ResolveCareFacilityArticle(ctx, v.source)
+}
+
 // ChangeRequestMailsEnabled fails closed: a read failure sends no change
 // request mail.
 func (v EnrollmentIntakeValues) ChangeRequestMailsEnabled(ctx context.Context) bool {

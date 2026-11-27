@@ -61,6 +61,8 @@ export const roomService = {
     building?: string;
     category?: string;
     includeSystem?: boolean;
+    /** Calendar day for which rooms closed by a temporary closure are omitted. */
+    openOn?: string;
     page?: number;
     pageSize?: number;
   }): Promise<Room[]> => {
@@ -70,6 +72,7 @@ export const roomService = {
           building: filters?.building || undefined,
           category: filters?.category || undefined,
           include_system: filters?.includeSystem,
+          open_on: filters?.openOn,
           page: filters?.page,
           page_size: filters?.pageSize,
         },

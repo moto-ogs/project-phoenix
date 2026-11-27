@@ -287,6 +287,7 @@ export const HELP_TOPICS = {
   schoolTraegerDocuments: "dokumente-vom-traeger-in-der-ogs",
   traegerSchoolSwitch: "in-eine-schule-wechseln",
   traegerSchoolView: "zahlen-und-stammdaten-einer-schule-ansehen",
+  traegerChildren: "kinder-aller-schulen-finden",
   traegerDashboard: "alle-schulen-auf-einen-blick",
   traegerOccupancy: "belegung-der-schulen-ansehen",
   traegerUtilization: "auslastung-ueber-die-zeit-ansehen",

@@ -450,6 +450,17 @@ export const editedInWindowResponseSchema: z.ZodType<editedInWindowResponse, unk
   occurrences: nullable(arr(editedOccurrenceItemSchema)),
 });
 
+/** Go: timetablehttp.instanceAttendanceResponse */
+export interface instanceAttendanceResponse {
+  instance_id: string;
+  students: instanceStudentSummary[] | null;
+}
+
+export const instanceAttendanceResponseSchema: z.ZodType<instanceAttendanceResponse, unknown> = object<instanceAttendanceResponse>({
+  instance_id: int64String,
+  students: nullable(arr(instanceStudentSummarySchema)),
+});
+
 /** Go: timetablehttp.GuardianNoticeReachResponse */
 export interface GuardianNoticeReachResponse {
   child_count: number;
@@ -1988,6 +1999,7 @@ export interface materializeResponse {
   skipped_not_started: number;
   skipped_holidays: number;
   skipped_closing_days: number;
+  skipped_closed_rooms: number;
   candidates_raced: number;
   instance_students_created: number;
   instance_staff_created: number;
@@ -2008,6 +2020,7 @@ export const materializeResponseSchema: z.ZodType<materializeResponse, unknown> 
   skipped_not_started: safeInt,
   skipped_holidays: safeInt,
   skipped_closing_days: safeInt,
+  skipped_closed_rooms: safeInt,
   candidates_raced: safeInt,
   instance_students_created: safeInt,
   instance_staff_created: safeInt,
@@ -2558,6 +2571,12 @@ export const routes = {
       "to": { kind: "date" },
     },
     response: success(editedInWindowResponseSchema),
+  },
+  "GET /api/timetable/instances/{id}/attendance": {
+    method: "GET",
+    pattern: "/api/timetable/instances/{id}/attendance",
+    portals: ["tenant"],
+    response: success(instanceAttendanceResponseSchema),
   },
   "GET /api/timetable/instances/{id}/guardian-notice": {
     method: "GET",

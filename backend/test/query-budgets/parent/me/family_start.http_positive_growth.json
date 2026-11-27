@@ -1,0 +1,7 @@
+{
+  "scenario": "parent.me.family_start.http_positive_growth",
+  "max": 65,
+  "exact": true,
+  "description": "Registered parent HTTP resource mounted at /parent with production ParentSessionChain, real owner capabilities (Care Plan plans, exceptions, pickups, status days and requests, Student Presence attendance, the sharing ledger with Familienschutz, batch settings, meal plan) and tenant/admin transactions. Two schools; the first grows from one to three children with positive data, the second keeps one child. Per request: one administrative child read, then per school one settings snapshot, one tenant transaction for the meal switches, today's changed closing time (#8173), shares, Familienschutz and open requests, and one for the day (status days, attendance, attendance culture, exceptions, weekly plans, pickups). The count is the same for one and three children of a school. Captures every request-scoped SQL statement; excludes fixture setup/signing and outer production server/live-session middleware.",
+  "route": "GET /parent/me/family-start"
+}

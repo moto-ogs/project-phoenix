@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 
 import {
-  listMyChildren,
+  getFamilyStart,
   listMyDocuments,
   listEnrollableSchools,
   fetchParentEnrollmentProfile,
@@ -13,10 +13,7 @@ import {
   listExcusedRequests,
   updateExcusedRequest,
   updatePickupChangeRequest,
-  getChildFeatures,
   getChildMealPlan,
-  getChildToday,
-  UNKNOWN_CHILD_TODAY,
   getChildCareOfferings,
   getChildOfferingCatalog,
   submitCareScheduleRequest,
@@ -240,34 +237,51 @@ describe("parent care schedule requests", () => {
   });
 });
 
-// --- listMyChildren --------------------------------------------------
+// --- getFamilyStart --------------------------------------------------
 
-describe("listMyChildren", () => {
-  it("returns the unwrapped data array on 200", async () => {
-    mockFetch(async () => jsonResponse({ data: [mkChild("1234", "OGS A")] }));
-    const out = await listMyChildren();
-    expect(out).toHaveLength(1);
-    expect(out[0]!.student_id).toBe("1234");
-    expect(out[0]!.school_name).toBe("OGS A");
-  });
+describe("getFamilyStart", () => {
+  it.each([undefined, "1234"])(
+    "reads the family cards with the requested scope (%s)",
+    async (id) => {
+      const data = {
+        day: "2026-09-09",
+        day_remaining_seconds: 3600,
+        cards: [
+          {
+            child: mkChild("1234", "OGS A"),
+            access_version: "v1",
+            features: null,
+            today: null,
+          },
+        ],
+      };
+      mockFetch(async (input) => {
+        expect(String(input)).toBe(
+          "/api/parent/me/family-start" + (id ? "?student_id=1234" : ""),
+        );
+        return jsonResponse({ data });
+      });
+      expect(await getFamilyStart(id)).toEqual(data);
+    },
+  );
 
   it("rejects an answer without data as unreadable (502)", async () => {
     // The catalog proxy always answers { status, data }; a bare list is a
     // broken route, not a second answer shape.
     mockFetch(async () => jsonResponse([mkChild("1", "OGS")]));
-    await expect(listMyChildren()).rejects.toMatchObject({ status: 502 });
+    await expect(getFamilyStart()).rejects.toMatchObject({ status: 502 });
   });
 
   it("throws with backend error message on non-OK", async () => {
     mockFetch(async () =>
       jsonResponse({ detail: "forbidden" }, { status: 403 }),
     );
-    await expect(listMyChildren()).rejects.toThrow(/failed \(403\)/);
+    await expect(getFamilyStart()).rejects.toThrow(/failed \(403\)/);
   });
 
   it("throws with generic message on non-OK non-JSON body", async () => {
     mockFetch(async () => new Response("not json", { status: 500 }));
-    await expect(listMyChildren()).rejects.toThrow(/failed \(500\)/);
+    await expect(getFamilyStart()).rejects.toThrow(/failed \(500\)/);
   });
 
   it("redirects to /parents/login on 401", async () => {
@@ -279,7 +293,7 @@ describe("listMyChildren", () => {
       value: { assign, host: "parents.localhost:3000" },
     });
     mockFetch(async () => new Response("", { status: 401 }));
-    await expect(listMyChildren()).rejects.toThrow();
+    await expect(getFamilyStart()).rejects.toThrow();
     expect(assign).toHaveBeenCalledWith("/parents/login");
   });
 });
@@ -1062,40 +1076,6 @@ describe("updatePickupChangeRequest", () => {
   });
 });
 
-describe("getChildFeatures", () => {
-  it("GETs the features route and returns the resolved flags", async () => {
-    let seenURL = "";
-    mockFetch(async (input) => {
-      seenURL = typeof input === "string" ? input : input.toString();
-      return jsonResponse({
-        data: {
-          sick_note_enabled: true,
-          sick_requires_approval: true,
-          excused_requires_approval: true,
-          notes_enabled: false,
-          pickup_change_enabled: true,
-          related_accounts_invite_enabled: false,
-          related_accounts_remove_enabled: false,
-          master_data_edit_enabled: true,
-          master_data_contact_edit_enabled: false,
-          master_data_request_enabled: true,
-        },
-      });
-    });
-    const out = await getChildFeatures("84");
-    expect(out.sick_note_enabled).toBe(true);
-    expect(out.sick_requires_approval).toBe(true);
-    expect(out.notes_enabled).toBe(false);
-    expect(out.master_data_contact_edit_enabled).toBe(false);
-    expect(seenURL).toContain("/api/parent/me/children/84/features");
-  });
-
-  it("throws on non-OK so the caller can fall back to defaults", async () => {
-    mockFetch(async () => new Response("nope", { status: 500 }));
-    await expect(getChildFeatures("84")).rejects.toThrow(/failed \(500\)/);
-  });
-});
-
 describe("getChildMealPlan", () => {
   it("GETs the child meal-plan route with the week_start query and returns entries", async () => {
     let seenURL = "";
@@ -1469,28 +1449,6 @@ describe("acknowledgeAnnouncement", () => {
   });
 });
 
-describe("getChildToday", () => {
-  // 403 und 404 sind "wir wissen es nicht": der Zugriff ist entzogen oder der
-  // Endpunkt fehlt noch. Beides ist kein Fehler, den Eltern sehen muessen.
-  it.each([403, 404])(
-    "meldet bei %i einen unbekannten Tagesstatus statt zu werfen",
-    async (status) => {
-      mockFetch(async () => jsonResponse({ detail: "nope" }, { status }));
-
-      await expect(getChildToday("42")).resolves.toEqual(UNKNOWN_CHILD_TODAY);
-    },
-  );
-
-  // Ein Serverfehler ist ein echter Ausfall. Wuerde er als "unbekannt"
-  // durchgehen, saehe ein kaputtes Backend wie ein gueltiger Zustand aus und
-  // niemand erfuehre davon.
-  it.each([500, 502, 503])("wirft bei %i weiter", async (status) => {
-    mockFetch(async () => jsonResponse({ detail: "kaputt" }, { status }));
-
-    await expect(getChildToday("42")).rejects.toThrow();
-  });
-});
-
 describe("relationship refusal signals", () => {
   it("signals a child refusal for the account that started the request", async () => {
     const { bindSessionAccount } = await import("~/lib/session-account");
@@ -1501,7 +1459,7 @@ describe("relationship refusal signals", () => {
       mockFetch(async () =>
         jsonResponse({ code: "care.child_not_linked" }, { status: 403 }),
       );
-      await expect(getChildFeatures("42")).rejects.toMatchObject({
+      await expect(getFamilyStart("42")).rejects.toMatchObject({
         code: "care.child_not_linked",
       });
       expect(listener).toHaveBeenCalledOnce();
@@ -1529,7 +1487,7 @@ describe("relationship refusal signals", () => {
         }),
     );
     try {
-      const request = getChildFeatures("42");
+      const request = getFamilyStart("42");
       bindSessionAccount("parent-b");
       respond(jsonResponse({ code: "care.child_not_linked" }, { status: 403 }));
       await expect(request).rejects.toMatchObject({
@@ -1586,25 +1544,6 @@ describe("readable children after a refused write", () => {
       window.removeEventListener("parent-access-refused", listener);
     }
   });
-  it("reports lost portal access before the daily status falls back to unknown", async () => {
-    const { bindSessionAccount } = await import("~/lib/session-account");
-    const listener = vi.fn();
-    window.addEventListener("parent-access-refused", listener);
-    bindSessionAccount("parent-a");
-    try {
-      mockFetch(async () =>
-        jsonResponse(
-          { code: "care.guardian_permission_denied" },
-          { status: 403 },
-        ),
-      );
-      await expect(getChildToday("42")).resolves.toEqual(UNKNOWN_CHILD_TODAY);
-      expect(listener).toHaveBeenCalledOnce();
-    } finally {
-      bindSessionAccount(null);
-      window.removeEventListener("parent-access-refused", listener);
-    }
-  });
   it("evicts child access when reading the relationship is refused", async () => {
     const { bindSessionAccount } = await import("~/lib/session-account");
     const listener = vi.fn();
@@ -1617,7 +1556,7 @@ describe("readable children after a refused write", () => {
           { status: 403 },
         ),
       );
-      await expect(getChildFeatures("42")).rejects.toMatchObject({
+      await expect(getFamilyStart("42")).rejects.toMatchObject({
         code: "care.guardian_permission_denied",
       });
       expect(listener).toHaveBeenCalledOnce();

@@ -246,12 +246,14 @@ func TestDayChangesChildrenQueryBudget(t *testing.T) {
 				testpkg.CreateTestPickupException(t, db, student.ID, day, carer.StaffID, "14:00", "")
 				testpkg.CreateTestDepartureException(t, db, student.ID, day, carer.StaffID, "alone", "")
 				testpkg.CreateTestPickupNote(t, db, student.ID, day, carer.StaffID, "Notiz")
+				// The pickup person comes with the Abholart in one read (#7655).
+				testpkg.CreateTestPickupPerson(t, db, student.ID, day, carer.StaffID, "Abholperson", 0)
 			}
 		}
 		baseline = n
 		counter.Reset()
 		_, body := read(t, router, account.ID, testpkg.Tenant(t), "users:read")
-		require.Len(t, childLines(t, body), 4*n+n)
+		require.Len(t, childLines(t, body), 5*n+n)
 		require.Len(t, classLines(t, body), 3*n, "a trip, an outing and a changed Unterrichtsschluss per round")
 		measured := counter.Measurement(counter.Queries())
 		if round > 0 {

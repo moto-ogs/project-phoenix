@@ -7,6 +7,7 @@ import {
   fileAnswer,
   instant,
   int64String,
+  int64StringOrNone,
   json,
   multipart,
   noData,
@@ -33,6 +34,18 @@ import {
   type ParentConferenceWindow,
   type SwitchOffRequest,
 } from "./shared.generated";
+
+export const CHILD_DAY_CHANGE_KIND_VALUES = ["activity_cancelled", "activity_lead_changed", "activity_reinstated", "activity_room_changed", "child_absent", "child_goes_alone", "child_pickup_changed", "child_pickup_person", "class_dismissal_changed", "class_trip", "closing_day", "meal_cancelled", "opening_changed"] as const;
+export type ChildDayChangeKind = (typeof CHILD_DAY_CHANGE_KIND_VALUES)[number];
+
+export const CHILD_DAY_SOURCE_VALUES = ["activities", "children", "classes", "closing_days", "meal_plan"] as const;
+export type ChildDaySource = (typeof CHILD_DAY_SOURCE_VALUES)[number];
+
+export const CHILD_DAY_SOURCE_STATE_VALUES = ["failed", "loaded"] as const;
+export type ChildDaySourceState = (typeof CHILD_DAY_SOURCE_STATE_VALUES)[number];
+
+export const CHILD_DAY_STATUS_VALUES = ["excused", "sick"] as const;
+export type ChildDayStatus = (typeof CHILD_DAY_STATUS_VALUES)[number];
 
 export const ENROLLMENT_PHASE_AUDIENCE_VALUES = ["existing_students", "linked_parents", "new_students", "open"] as const;
 export type EnrollmentPhaseAudience = (typeof ENROLLMENT_PHASE_AUDIENCE_VALUES)[number];
@@ -504,6 +517,81 @@ export const CoursesResponseSchema: z.ZodType<CoursesResponse, unknown> = object
   items: nullable(arr(CourseItemResponseSchema)),
 });
 
+/** Go: parent.ChildDaySourceStatus */
+export interface ChildDaySourceStatus {
+  source: OpenEnum<ChildDaySource>;
+  status: OpenEnum<ChildDaySourceState>;
+}
+
+export const ChildDaySourceStatusSchema: z.ZodType<ChildDaySourceStatus, unknown> = object<ChildDaySourceStatus>({
+  source: str,
+  status: str,
+});
+
+/** Go: parent.ChildDayChangeEntry */
+export interface ChildDayChangeEntry {
+  kind: OpenEnum<ChildDayChangeKind>;
+  all_day: boolean;
+  since: string | null;
+  until: string | null;
+  starts_at: string | null;
+  ends_at: string | null;
+  entered_by_you: boolean;
+  child_status: OpenEnum<ChildDayStatus> | null;
+  pickup_time: string | null;
+  pickup_person_name: string | null;
+  pickup_person_one_time: boolean;
+  activity_title: string | null;
+  room_name: string | null;
+  previous_room_name: string | null;
+  closing_name: string | null;
+  closing_traeger: boolean;
+  opening_name: string | null;
+  opens_at: string | null;
+  closes_at: string | null;
+  pickup_after_closing: boolean;
+  class_name: string | null;
+  class_time: string | null;
+}
+
+export const ChildDayChangeEntrySchema: z.ZodType<ChildDayChangeEntry, unknown> = object<ChildDayChangeEntry>({
+  kind: str,
+  all_day: bool,
+  since: nullable(calendarDate),
+  until: nullable(calendarDate),
+  starts_at: nullable(instant),
+  ends_at: nullable(instant),
+  entered_by_you: bool,
+  child_status: nullable(str),
+  pickup_time: nullable(str),
+  pickup_person_name: nullable(str),
+  pickup_person_one_time: bool,
+  activity_title: nullable(str),
+  room_name: nullable(str),
+  previous_room_name: nullable(str),
+  closing_name: nullable(str),
+  closing_traeger: bool,
+  opening_name: nullable(str),
+  opens_at: nullable(str),
+  closes_at: nullable(str),
+  pickup_after_closing: bool,
+  class_name: nullable(str),
+  class_time: nullable(str),
+});
+
+/** Go: parent.ChildDayChangesResponse */
+export interface ChildDayChangesResponse {
+  date: string | null;
+  sources: ChildDaySourceStatus[] | null;
+  entries: ChildDayChangeEntry[] | null;
+}
+
+export const ChildDayChangesResponseSchema: z.ZodType<ChildDayChangesResponse, unknown> = object<ChildDayChangesResponse>({
+  date: nullable(calendarDate),
+  sources: nullable(arr(ChildDaySourceStatusSchema)),
+  entries: nullable(arr(ChildDayChangeEntrySchema)),
+});
+
 /** Go: parent.ParentExcusedRequestResponse */
 export interface ParentExcusedRequestResponse {
   id: string;
@@ -564,6 +652,7 @@ export interface ChildFeaturesResponse {
   parent_news_enabled: boolean;
   reason_required: boolean;
   care_facility_term: string;
+  care_facility_article: string;
 }
 
 export const ChildFeaturesResponseSchema: z.ZodType<ChildFeaturesResponse, unknown> = object<ChildFeaturesResponse>({
@@ -596,6 +685,7 @@ export const ChildFeaturesResponseSchema: z.ZodType<ChildFeaturesResponse, unkno
   parent_news_enabled: bool,
   reason_required: bool,
   care_facility_term: str,
+  care_facility_article: str,
 });
 
 /** Go: parent.guardianPhoneResponse */
@@ -846,6 +936,7 @@ export interface PickupChangeRequestResponse {
   is_self: boolean;
   pickup_person?: string;
   pickup_person_guardian_profile_id?: string;
+  pickup_person_one_time?: boolean;
   signed: boolean;
   version: string;
 }
@@ -865,6 +956,7 @@ export const PickupChangeRequestResponseSchema: z.ZodType<PickupChangeRequestRes
   is_self: bool,
   pickup_person: optional(str),
   pickup_person_guardian_profile_id: optional(int64String),
+  pickup_person_one_time: optional(bool),
   signed: bool,
   version: str,
 });
@@ -1042,6 +1134,7 @@ export interface BillingDocumentResponse {
   can_sign?: boolean;
   signed_at?: string;
   replaced: boolean;
+  change_awaits_signature: boolean;
   ends_on?: string;
   can_end_contract?: boolean;
   can_withdraw_contract?: boolean;
@@ -1065,6 +1158,7 @@ export const BillingDocumentResponseSchema: z.ZodType<BillingDocumentResponse, u
   can_sign: optional(bool),
   signed_at: optional(instant),
   replaced: bool,
+  change_awaits_signature: bool,
   ends_on: optional(calendarDate),
   can_end_contract: optional(bool),
   can_withdraw_contract: optional(bool),
@@ -1311,6 +1405,34 @@ export const EnrollablePhaseResponseSchema: z.ZodType<EnrollablePhaseResponse, u
   enrollment_close_at: optional(instant),
   already_linked: bool,
   audience: str,
+});
+
+/** Go: parent.FamilyStartCardResponse */
+export interface FamilyStartCardResponse {
+  access_version: string;
+  child: ChildResponse;
+  features: ChildFeaturesResponse | null;
+  today: TodayStatusResponse | null;
+}
+
+export const FamilyStartCardResponseSchema: z.ZodType<FamilyStartCardResponse, unknown> = object<FamilyStartCardResponse>({
+  access_version: str,
+  child: ChildResponseSchema,
+  features: nullable(ChildFeaturesResponseSchema),
+  today: nullable(TodayStatusResponseSchema),
+});
+
+/** Go: parent.FamilyStartResponse */
+export interface FamilyStartResponse {
+  day: string | null;
+  day_remaining_seconds: number;
+  cards: FamilyStartCardResponse[] | null;
+}
+
+export const FamilyStartResponseSchema: z.ZodType<FamilyStartResponse, unknown> = object<FamilyStartResponse>({
+  day: nullable(calendarDate),
+  day_remaining_seconds: safeInt,
+  cards: nullable(arr(FamilyStartCardResponseSchema)),
 });
 
 /** Go: parent.HolidayRegistrationEntryWeekResponse */
@@ -1595,7 +1717,7 @@ export interface ThreadViewResponse {
 }
 
 export const ThreadViewResponseSchema: z.ZodType<ThreadViewResponse, unknown> = object<ThreadViewResponse>({
-  thread_id: str,
+  thread_id: int64StringOrNone,
   student_id: int64String,
   student_name: str,
   school_name: str,
@@ -2236,6 +2358,7 @@ export interface SubmitCareExceptionRequest {
   reason?: string;
   recipient_guardian_profile_ids?: string[] | null;
   pickup_person_guardian_profile_id?: string | null;
+  pickup_person_name?: string | null;
   signature?: declarationSignatureRequest | null;
 }
 
@@ -2443,6 +2566,7 @@ export interface ContractSignRequest {
   typed_name?: string;
   withdrawal_notice_acknowledged?: boolean;
   early_start_requested?: boolean;
+  document_sha256?: string;
 }
 
 /** Go: parent.PostMessageRequest */
@@ -2668,6 +2792,7 @@ export interface EditPickupChangeRequestBody {
   reason?: string;
   expected_version?: string;
   pickup_person_guardian_profile_id?: string | null;
+  pickup_person_name?: string | null;
   signature?: declarationSignatureRequest | null;
 }
 
@@ -2837,6 +2962,15 @@ export const routes = {
     pattern: "/parent/me/children/{studentId}/courses",
     portals: ["parent"],
     response: success(CoursesResponseSchema),
+  },
+  "GET /parent/me/children/{studentId}/day-changes": {
+    method: "GET",
+    pattern: "/parent/me/children/{studentId}/day-changes",
+    portals: ["parent"],
+    query: {
+      "date": { kind: "date" },
+    },
+    response: success(ChildDayChangesResponseSchema),
   },
   "GET /parent/me/children/{studentId}/excused-requests": {
     method: "GET",
@@ -3022,6 +3156,15 @@ export const routes = {
     pattern: "/parent/me/enrollable-schools",
     portals: ["parent"],
     response: success(z.array(EnrollablePhaseResponseSchema)),
+  },
+  "GET /parent/me/family-start": {
+    method: "GET",
+    pattern: "/parent/me/family-start",
+    portals: ["parent"],
+    query: {
+      "student_id": { kind: "id" },
+    },
+    response: success(FamilyStartResponseSchema),
   },
   "GET /parent/me/holiday-registration-entries": {
     method: "GET",

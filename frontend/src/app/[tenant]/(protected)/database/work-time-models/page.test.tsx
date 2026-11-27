@@ -2,7 +2,7 @@ import "@testing-library/jest-dom/vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import WorkTimeModelsPage from "./page";
+import WorkTimeModelsPage from "./page-content";
 import { MODULE_KEYS } from "~/lib/modules";
 import type { TenantInfo } from "~/lib/tenant-api";
 import { useBookedModules, useTenantSafe } from "~/lib/tenant-context";

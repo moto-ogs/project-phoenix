@@ -353,12 +353,13 @@ func (s *staffAbsenceService) withLabel(ctx context.Context, response *StaffAbse
 	return response
 }
 
-func (s *staffAbsenceService) broadcastTimeTrackingChanged(ctx context.Context) {
-	queueStaffTimeTrackingChanged(ctx, s.broadcaster, nil)
+func (s *staffAbsenceService) broadcastLeaveChanged(ctx context.Context) {
+	if s.broadcaster != nil {
+		s.broadcaster.QueueStaffLeaveChanged(ctx, nil)
+	}
 }
 
-// NewStaffAbsenceService creates a new staff absence service
-func NewStaffAbsenceService(
+func newStaffAbsenceService(
 	absenceRepo AbsenceRequestRecords,
 	workSessionRepo WorkSessionRecords,
 	quotaRepo VacationQuotaRecords,
@@ -366,7 +367,7 @@ func NewStaffAbsenceService(
 	settings monthSettingsResolver,
 	monthService WorkTimeMonthService,
 	opts ...StaffAbsenceOption,
-) StaffAbsenceService {
+) *staffAbsenceService {
 	service := &staffAbsenceService{
 		absenceRepo:     absenceRepo,
 		workSessionRepo: workSessionRepo,
@@ -381,10 +382,14 @@ func NewStaffAbsenceService(
 	if service.shiftPlanSyncer == nil {
 		service.shiftPlanSyncer = unplannedSickCascade{}
 	}
-	if service.runInTx != nil {
-		return &absenceCommands{service, service}
-	}
 	return service
+}
+
+func (s *staffAbsenceService) transactional() StaffAbsenceService {
+	if s.runInTx != nil {
+		return &absenceCommands{s, s}
+	}
+	return s
 }
 
 // defaultEntitledDays is the fallback when no per-staff quota row exists.

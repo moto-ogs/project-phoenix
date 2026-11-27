@@ -117,7 +117,7 @@ func TestConfirmationNamesTheReceiptWithItsTime(t *testing.T) {
 	text, err := confirmationText("Ihre Kündigung für {Kind}.", confirmationValues{Child: "Lina", Received: receipt(parents),
 		Reason: "Wir ziehen um.", NeedsReason: true})
 	assert.NoError(t, err)
-	assert.Equal(t, "Ihre Kündigung für Lina.\n\nEingang deiner Erklärung: 07.11.2026 um 09:30 Uhr\n\nDein Grund: Wir ziehen um.", text)
+	assert.Equal(t, "Ihre Kündigung für Lina.\n\nEingang Ihrer Erklärung: 07.11.2026 um 09:30 Uhr\n\nIhr Grund: Wir ziehen um.", text)
 	text, err = confirmationText("Eingang {Eingang}. Grund: {Grund}", confirmationValues{Received: receipt(parents),
 		Reason: "Umzug", NeedsReason: true})
 	assert.NoError(t, err)
@@ -278,7 +278,7 @@ func TestRenderNoticeMailKeepsTheConfirmation(t *testing.T) {
 		`"confirmation_text":"wir bestätigen Ihren Widerruf.\n\nMit freundlichen Grüßen\nGanztag e.V."}`)
 	mail, err := RenderNoticeMail(t.Context(), payload)
 	assert.NoError(t, err)
-	assert.Equal(t, "Bestätigung deines Widerrufs", mail.Subject)
+	assert.Equal(t, "Bestätigung Ihres Widerrufs", mail.Subject)
 	assert.True(t, mail.Withdrawal)
 	assert.Equal(t, []string{"wir bestätigen Ihren Widerruf.", "Mit freundlichen Grüßen\nGanztag e.V."}, mail.Paragraphs)
 

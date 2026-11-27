@@ -175,13 +175,13 @@ func TestAppointmentRenderer_SubjectWithoutSchool(t *testing.T) {
 }
 
 // The greeting follows the form of address the guardian chose (#7362) on
-// first-name terms; without one, and in a mail queued before the choice
+// title and last name; without one, and in a mail queued before the choice
 // existed, it stays neutral with first and last name.
 func TestAppointmentRenderer_GreetsWithTheChosenSalutation(t *testing.T) {
 	t.Parallel()
 
 	render := NewAppointmentRenderer(EmailConfig{})
-	for salutation, want := range map[string]string{"ms": "Liebe Erika", "mr": "Lieber Erika", "": "Guten Tag Erika Mustermann"} {
+	for salutation, want := range map[string]string{"ms": "Liebe Frau Mustermann", "mr": "Lieber Herr Mustermann", "": "Guten Tag Erika Mustermann"} {
 		row := appointmentOutboxRow(emailKindAppointmentPublished)
 		if salutation != "" {
 			row.Payload[apptPayloadSalutation] = salutation
