@@ -111,7 +111,7 @@ import { getStudentTimeStatus } from "~/lib/student-time-status";
 import { useDeviceContext } from "~/lib/device-context";
 import {
   StudentAppActionBar,
-  studentAppBarCount,
+  StudentAppQuickActionRow,
   studentAppQuickActions,
 } from "~/components/students/student-app-action-bar";
 import { StudentSplitFrame } from "~/components/students/student-split-frame";
@@ -1588,18 +1588,11 @@ function StudentDetailPageContent() {
     attendanceWebEnabled,
   );
 
-  // App (#8070): Das „…“ im Kopf trägt die seltenen Wege der Akte, nicht
-  // nur Info und Hilfe. Die Tagesaktionen stehen in der Aktionsleiste.
+  // App (#8070): Das „…“ im Kopf trägt nur die seltenen Wege der Akte. Die
+  // Tagesaktionen stehen sichtbar in der Leiste (Hauptaktion) und in der
+  // Kachelzeile unter der Kopfkarte (Feedback 27.11.).
   const fullRecord = hasFullAccess && !isHolidayGuest;
   const appMenuEntries: OverflowMenuEntry[] = [
-    // Was nicht in die Aktionsleiste gehört (Kind da: alles außer Abmelden).
-    ...appQuickActions
-      .slice(studentAppBarCount(appQuickActions))
-      .map((action) => ({
-        label: action.label,
-        description: action.hint,
-        onClick: action.run,
-      })),
     ...(fullRecord && hasWriteAccess
       ? [
           {
@@ -2004,6 +1997,9 @@ function StudentDetailPageContent() {
     >
       <LoadErrorAlert error={recordAfterWrite.error} />
       <LoadErrorAlert error={statusDaysLoad.error} />
+      {/* App (#8070): die übrigen Tagesaktionen sichtbar unter der Kopfkarte,
+          wie die Kachelreihe am Desktop; die Hauptaktion steht in der Leiste. */}
+      {appHead ? <StudentAppQuickActionRow entries={appQuickActions} /> : null}
       {careWithdrawalLoad.error ? (
         <div>
           <LoadErrorAlert error={careWithdrawalLoad.error} />
