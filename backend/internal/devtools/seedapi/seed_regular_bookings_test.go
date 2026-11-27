@@ -271,6 +271,17 @@ func TestMealOrdersNoteTheLunchDaysTheBookingsFollow(t *testing.T) {
 	}
 }
 
+func TestBookedApplicationLunchFollowsSelectedMealOrderDay(t *testing.T) {
+	t.Parallel()
+	today, err := parseSeedDate("2026-09-07")
+	require.NoError(t, err)
+	selected, err := parseSeedDate("2026-09-09")
+	require.NoError(t, err)
+	rt := &Runtime{Values: map[string]any{mealOrderDayKey: selected}}
+
+	assert.Equal(t, "2026-09-10", bookedApplicationLunchFromSeed(rt, today).String())
+}
+
 // The approved applications that booked lunch eat on their booked days from
 // the day after the fixed order day; a child who eats already, a pending
 // application and a child without a lunch booking stay as they are (#5023).

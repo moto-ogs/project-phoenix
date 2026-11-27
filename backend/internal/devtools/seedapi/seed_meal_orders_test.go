@@ -229,6 +229,32 @@ func TestSeedMealOrdersFixesADayWithoutLateChanges(t *testing.T) {
 	}, server.events)
 }
 
+// Tomorrow's lunch can already be cancelled by the day-changes seed. The
+// order seed skips that closed day and fixes the first open weekday instead.
+func TestSeedMealOrdersSkipsAClosedFirstWeekday(t *testing.T) {
+	t.Parallel()
+	server := &mealOrderServer{t: t, date: "2026-09-09"}
+	srv := newSeedHTTPTestServer(func(w seedHTTPResponseWriter, r *seedHTTPRequest) {
+		if r.URL.Path == "/api/meal-plan/participants" && r.URL.Query().Get("date") == "2026-09-08" {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = fmt.Fprint(w, `{"status":"success","data":{"date":"2026-09-08","closed":true,"participants":[],"others":[]}}`)
+			return
+		}
+		server.handle(w, r)
+	})
+	defer srv.Close()
+	today, err := parseSeedDate("2026-09-07")
+	require.NoError(t, err)
+
+	rt := mealOrderRuntime(srv.URL)
+	require.NoError(t, seedMealOrders(context.Background(), rt, nil, today))
+	assert.Contains(t, server.events, "lead 3")
+	for _, event := range server.events {
+		assert.NotContains(t, event, "2026-09-08", event)
+	}
+	assert.Equal(t, "2026-09-09", rt.Values[mealOrderDayKey].(seedDate).String())
+}
+
 // The school invites its caterer once meal registration is on, and only
 // with a mailbox to accept the invitation from: in the demo sidecar the
 // mail would go to an address nobody reads (ADR 0077).
