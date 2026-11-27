@@ -4,7 +4,7 @@ import { berlinTodayISO } from "~/lib/date-helpers";
 import { mapOwnLeave } from "~/lib/own-leave-resource";
 import { readContract, seedOf, seedRead } from "~/lib/server-seed.server";
 import { readTenantPageContext } from "~/lib/tenant-page-seed.server";
-import { mapOwnClock } from "./own-clock-read";
+import { mapOwnClock } from "~/lib/own-clock-read";
 import { mapOwnPeriod } from "./own-period-read";
 import { ownTimeSeedKeys } from "./page-seed-keys";
 

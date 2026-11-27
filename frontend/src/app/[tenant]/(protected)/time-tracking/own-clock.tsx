@@ -86,7 +86,7 @@ import { MotoConceptIcon } from "~/components/ui/moto-concept-icon";
 import { rfidConcept } from "~/lib/concepts/rfid";
 import { SpinnerIcon } from "~/components/ui/icons";
 import { ModalActions } from "./absence-and-session-dialogs";
-import { clockMetrics, readOwnClock } from "./own-clock-read";
+import { clockMetrics, readOwnClock } from "~/lib/own-clock-read";
 
 const logger = createLogger({ component: "OwnClock" });
 const unavailable = new ApiError("Own clock part unavailable", undefined, {

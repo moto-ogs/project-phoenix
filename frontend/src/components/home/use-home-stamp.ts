@@ -19,7 +19,7 @@ import {
   readStampDeviation,
 } from "~/lib/time-tracking-api";
 import { useTenantRouter } from "~/lib/tenant-router";
-import { readOwnClock } from "~/app/[tenant]/(protected)/time-tracking/own-clock-read";
+import { readOwnClock } from "~/lib/own-clock-read";
 
 const logger = createLogger({ component: "HomeStamp" });
 
