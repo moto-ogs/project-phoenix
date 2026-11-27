@@ -6204,6 +6204,13 @@
     },
     {
       "build": "production",
+      "evidence": "func (t holidayHostTraeger) HolidayHostTraeger(ctx context.Context, schoolID int64) (int64, error) {\n\tschool, err := t.schools.FindSchool(ctx, schoolID)\n\tif err != nil {\n\t\treturn 0, err\n\t}\n\treturn school.OrganizationID.Int64(), nil\n}",
+      "form": "unclassified-evidence",
+      "id": "roots/owners/holidayHostTraeger.HolidayHostTraeger",
+      "owner": "roots"
+    },
+    {
+      "build": "production",
       "evidence": "func (p holidayOwnChildPlans) ApplyHolidayOwnChildPlans(ctx context.Context, changes enrollment.HolidayOwnChildPlanChanges) error {\n\tarrivals := make([]careplan.ArrivalException, 0, len(changes.Arrivals))\n\tfor _, plan := range changes.Arrivals {\n\t\tarrivals = append(arrivals, careplan.ArrivalException{StudentID: plan.StudentID, ExceptionDate: careplan.Date(plan.Day), ExpectedArrival: \u0026plan.Time, Reason: \u0026plan.Reason, Source: careplan.ExceptionSourceHolidayBooking})\n\t}\n\tpickups := make([]careplan.PickupException, 0, len(changes.Pickups))\n\tfor _, plan := range changes.Pickups {\n\t\tpickups = append(pickups, careplan.PickupException{StudentID: plan.StudentID, ExceptionDate: careplan.Date(plan.Day), PickupTime: \u0026plan.Time, Reason: \u0026plan.Reason, Source: careplan.ExceptionSourceHolidayBooking})\n\t}\n\treturn p.batch.ApplyExceptionBatch(ctx, careplan.ExceptionBatch{Arrivals: arrivals, Pickups: pickups, DeleteArrivals: changes.DeleteArrivals, DeletePickups: changes.DeletePickups})\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/holidayOwnChildPlans.ApplyHolidayOwnChildPlans",
@@ -8164,14 +8171,14 @@
     },
     {
       "build": "production",
-      "evidence": "func (d traegerInvitationDelivery) DispatchTraegerAccountChange(ctx context.Context, notice identityaccess.TraegerAccountChangeNotice) error {\n\tif d.outbox.Runtime == nil {\n\t\treturn nil\n\t}\n\tmessage := *identityMessage(d.from, email.NewEmail(\"\", notice.TargetEmail), identityaccess.TraegerAccountChangeMail(notice, d.frontendURL))\n\treturn d.outbox.EnqueueTransactionalMail(ctx, DurableMail{Message: message, Type: \"traeger_account_change\", ReferenceID: notice.TargetAccountID, Backoff: d.backoff})\n}",
+      "evidence": "func (d traegerInvitationDelivery) DispatchTraegerAccountChange(ctx context.Context, notice identityaccess.TraegerAccountChangeNotice) error {\n\tmessage := *identityMessage(d.from, email.NewEmail(\"\", notice.TargetEmail), identityaccess.TraegerAccountChangeMail(notice, d.frontendURL))\n\treturn d.outbox.EnqueueTransactionalMail(ctx, DurableMail{Message: message, Type: \"traeger_account_change\", ReferenceID: notice.TargetAccountID, Backoff: d.backoff})\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/traegerInvitationDelivery.DispatchTraegerAccountChange",
       "owner": "roots"
     },
     {
       "build": "production",
-      "evidence": "func (d traegerInvitationDelivery) DispatchTraegerInvitation(ctx context.Context, invitation identityaccess.TraegerInvitation, traegerName string, expiry time.Duration) error {\n\tif d.outbox.Runtime == nil {\n\t\treturn nil\n\t}\n\tmessage := *identityMessage(d.from, email.NewEmail(\"\", invitation.Email), identityaccess.TraegerInvitationMail(invitation, traegerName, d.frontendURL, d.traegerURL, expiry))\n\treturn d.outbox.EnqueueTransactionalMail(ctx, DurableMail{Message: message, Type: \"traeger_invitation\", ReferenceID: invitation.ID, Backoff: d.backoff, ExpiresAt: invitation.ExpiresAt})\n}",
+      "evidence": "func (d traegerInvitationDelivery) DispatchTraegerInvitation(ctx context.Context, invitation identityaccess.TraegerInvitation, traegerName string, expiry time.Duration) error {\n\tmessage := *identityMessage(d.from, email.NewEmail(\"\", invitation.Email), identityaccess.TraegerInvitationMail(invitation, traegerName, d.frontendURL, d.traegerURL, expiry))\n\treturn d.outbox.EnqueueTransactionalMail(ctx, DurableMail{Message: message, Type: \"traeger_invitation\", ReferenceID: invitation.ID, Backoff: d.backoff, ExpiresAt: invitation.ExpiresAt})\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/traegerInvitationDelivery.DispatchTraegerInvitation",
       "owner": "roots"

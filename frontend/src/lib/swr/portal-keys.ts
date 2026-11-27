@@ -543,6 +543,11 @@ export const holidayKeys = {
    * Markierung in Betreuungs- und Dienstplan teilen sich den Eintrag.
    */
   hostedWeeks: () => "holiday-weeks",
+  /** Die Zusatztage, die die Schule selbst angelegt hat (ADR 0329). */
+  extraDays: () => "holiday-extra-days",
+  extraDay: (id: string) => `holiday-extra-days:${encodeURIComponent(id)}`,
+  /** Liste und einzelne Tage zusammen, nach einem Speichern. */
+  extraDaysFamily: "holiday-extra-days",
   studentHealth: (studentId: string) =>
     `holiday-student-health:${encodeURIComponent(studentId)}`,
   /** Betreuung, Notfall und Abholung aus der Ferienanmeldung (#6678). */

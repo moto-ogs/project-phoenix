@@ -314,6 +314,10 @@ type HolidayRegistration struct {
 	GuardianLastName  string
 	GuardianEmail     string
 	Children          []HolidayChild
+	// IncludedInFee marks a registration of an extra care day the monthly
+	// contribution covers (#4817): nothing is billed, so its confirmation
+	// needs no debtor number.
+	IncludedInFee bool
 	// MovedUp names the other registrations whose bookings moved up from
 	// the waiting list because of the change that answers with this
 	// registration: a cancellation or a rebooking (#4699).

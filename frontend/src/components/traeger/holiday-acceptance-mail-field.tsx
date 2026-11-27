@@ -126,14 +126,15 @@ export function HolidayAcceptanceMailField({
               </div>
               <div className="space-y-2">
                 <p className="text-base font-semibold text-gray-900">
-                  Deine Ferienanmeldung ist bestätigt
+                  Ihre Ferienanmeldung ist bestätigt
                 </p>
                 <p>Guten Tag Eva Beispiel,</p>
+                {/* sie-anrede-erlaubt (ADR 0328): Vorschau der E-Mail an Eltern, wie moto sie schreibt. */}
                 <p>
                   der Träger{" "}
                   <strong className="text-gray-900">{traegerName}</strong> hat
-                  deine Anmeldung für{" "}
-                  <strong className="text-gray-900">{periodName}</strong>{" "}
+                  Ihre Anmeldung für die Ferienbetreuung „
+                  <strong className="text-gray-900">{periodName}</strong>“
                   bestätigt.
                 </p>
               </div>

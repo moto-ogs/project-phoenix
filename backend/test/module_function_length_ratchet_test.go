@@ -76,7 +76,7 @@ const moduleFuncLenThreshold = 60
 var moduleFuncLenAllowlist = map[string]int{
 	// Lowered by #7808: the cross-tenant visitor read left the presence wiring.
 	"api/active_test_helpers.go:buildActiveTestModule":            181,
-	"api/auth_test_helpers.go:NewAuthTestModule":                  163,
+	"api/auth_test_helpers.go:NewAuthTestModule":                  161,
 	"api/guardian_invitation_test_helpers.go:lifecycleTestModule": 61,
 	"api/guardians_composition.go:NewGuardiansResource":           91,
 	"api/import_test_helpers.go:NewImportTestModuleWithOwners":    76,
@@ -589,7 +589,7 @@ var moduleFuncLenAllowlist = map[string]int{
 	// ADR 0087.
 	"realtime/hub.go:(*Hub).Unregister": 61,
 	"roots/owners/parent_messaging_announcement_access_port.go:BindParentAnnouncementAccess": 125,
-	"roots/owners/root_identity.go:BuildIdentityAccess":                                      106,
+	"roots/owners/root_identity.go:BuildIdentityAccess":                                      105,
 	// ADR 0078: the worker composes the Meal Plan whose orders it settles.
 	// ADR 0263: the worker hands its clock to the Timetable owner (+3).
 	"roots/owners/root_worker.go:ComposeWorker": 344,

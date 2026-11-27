@@ -266,7 +266,7 @@ func (r *QualificationReminders) mail(ctx context.Context, tenantID int64, schoo
 			link = ""
 		}
 		message := content
-		message.FirstName, message.Own, message.LinkURL = to.FirstName, own, link
+		message.FirstName, message.LastName, message.Own, message.LinkURL = to.FirstName, to.LastName, own, link
 		return r.ports.Mail.Enqueue(ctx, workforce.QualificationMailMessage{
 			TenantID: tenantID, ToName: strings.TrimSpace(to.FirstName + " " + to.LastName), ToAddress: to.Email,
 			Subject: subject, Template: qualificationReminderTemplate, Content: message,

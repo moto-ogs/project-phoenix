@@ -29,7 +29,7 @@ func mealPositionLabel(position parentbilling.CareMealPosition) string {
 // careBasisText says what an invoice bills by: the contract, and the meals
 // the OGS released when it bills Mensa months.
 func careBasisText(invoice parentbilling.CareInvoice) string {
-	contract := recipientAddressee(invoice.Recipient).say("eurem Vertrag", "dem Vertrag")
+	contract := recipientAddressee(invoice.Recipient).say("Ihrem Vertrag", "dem Vertrag")
 	if len(invoice.MealPositions) == 0 {
 		return "Abgerechnet wird nach " + contract + ", nicht nach Anwesenheit."
 	}

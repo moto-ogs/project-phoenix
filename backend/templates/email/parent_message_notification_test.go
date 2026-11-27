@@ -30,7 +30,7 @@ func TestParentMessageNotificationTemplate_Renders(t *testing.T) {
 		"SchoolName":         "Musterschule",
 		"BrandKicker":        "Neue Nachricht",
 		"Greeting":           "Guten Tag Erika Mustermann,",
-		"IntroText":          "Die OGS Musterschule hat dir eine Nachricht geschrieben:",
+		"IntroText":          "Die OGS Musterschule hat Ihnen eine Nachricht geschrieben:",
 		"ReplyLabel":         "Antworten",
 		"FallbackHint":       "Falls der Button nicht funktioniert, kopieren Sie bitte diesen Link:",
 		"PreferenceHint":     "Sie erhalten diese E-Mail, weil Sie in moto als sorgeberechtigte Person hinterlegt sind.",
@@ -74,7 +74,7 @@ func TestParentMessageNotificationTemplate_OmitsMessageContent(t *testing.T) {
 		"Subject":        "Neue Nachricht von der OGS",
 		"SchoolName":     "Musterschule",
 		"Greeting":       "Guten Tag Erika Mustermann,",
-		"IntroText":      "Die OGS Musterschule hat dir eine Nachricht geschrieben:",
+		"IntroText":      "Die OGS Musterschule hat Ihnen eine Nachricht geschrieben:",
 		"ReplyLabel":     "Antworten",
 		"FallbackHint":   "Falls der Button nicht funktioniert, kopieren Sie bitte diesen Link:",
 		"PreferenceHint": "Sie erhalten diese E-Mail, weil Sie in moto als sorgeberechtigte Person hinterlegt sind.",
@@ -109,7 +109,7 @@ func TestParentMessageNotificationTemplate_RendersWithoutSchool(t *testing.T) {
 		"SchoolName":        "",
 		"MessagesURL":       "https://eltern.example.com/messages",
 		"Greeting":          "Guten Tag,",
-		"IntroText":         "Die OGS hat dir eine Nachricht geschrieben:",
+		"IntroText":         "Die OGS hat Ihnen eine Nachricht geschrieben:",
 		"ReplyLabel":        "Antworten",
 		"FallbackHint":      "Link kopieren",
 		"PreferenceHint":    "Benachrichtigungen verwalten",
@@ -117,7 +117,7 @@ func TestParentMessageNotificationTemplate_RendersWithoutSchool(t *testing.T) {
 	require.NoError(t, err)
 
 	out := buf.String()
-	assert.Contains(t, out, "Die OGS hat dir eine Nachricht geschrieben:")
+	assert.Contains(t, out, "Die OGS hat Ihnen eine Nachricht geschrieben:")
 	assert.Contains(t, out, "Guten Tag,")
 }
 

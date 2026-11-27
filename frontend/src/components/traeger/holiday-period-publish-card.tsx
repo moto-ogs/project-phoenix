@@ -18,8 +18,12 @@ import { parentsPortalUrl } from "~/lib/parent-url";
 import { type HolidayPeriod, publishHolidayPeriod } from "~/lib/traeger-api";
 import { holidayPeriodComplete } from "./holiday-period-model";
 import { QrCodeButton } from "~/components/qr-code/qr-code-button";
+import type { QrBrand } from "~/components/qr-code/qr-brand-logo";
 
 const logger = createLogger({ component: "HolidayPeriodPublish" });
+
+/** The Träger-Büro's route, read at the click and not at module load. */
+const publishAsTraeger = (id: string) => publishHolidayPeriod(id);
 
 /** What keeps a draft from being published, or `null`. */
 function holidayPublishBlocker(
@@ -28,6 +32,9 @@ function holidayPublishBlocker(
 ): string | null {
   if (unsavedChanges) {
     return "Bitte speichere zuerst deine Änderungen.";
+  }
+  if (period.kind === "extra_day" && !holidayPeriodComplete(period)) {
+    return "Zum Veröffentlichen braucht der Zusatztag mindestens eine Schule.";
   }
   if (!holidayPeriodComplete(period)) {
     return "Zum Veröffentlichen braucht der Ferienzeitraum mindestens eine Woche. Jede Woche braucht mindestens ein Zeitmodell.";
@@ -43,10 +50,13 @@ export function HolidayPeriodPublishButton({
   period,
   unsavedChanges,
   onPublished,
+  publish: publishPeriod = publishAsTraeger,
 }: Readonly<{
   period: HolidayPeriod;
   unsavedChanges: boolean;
   onPublished: (period: HolidayPeriod) => void;
+  /** The route that publishes; the Träger-Büro's without it (ADR 0329). */
+  publish?: (id: string) => Promise<HolidayPeriod>;
 }>) {
   const [confirming, setConfirming] = useState(false);
   const [publishing, setPublishing] = useState(false);
@@ -58,7 +68,7 @@ export function HolidayPeriodPublishButton({
   const publish = async () => {
     setPublishing(true);
     try {
-      onPublished(await publishHolidayPeriod(period.id));
+      onPublished(await publishPeriod(period.id));
       setConfirming(false);
     } catch (err) {
       logger.error("holiday_period_publish_failed", {
@@ -79,14 +89,22 @@ export function HolidayPeriodPublishButton({
         size="md"
         disabled={blocker !== null}
         disabledReason={blocker ?? undefined}
-        tooltip="Gibt die Anmeldung für alle Schulen des Zeitraums frei. moto fragt vorher nach."
+        tooltip={
+          period.kind === "extra_day"
+            ? "Gibt die Anmeldung für alle Schulen des Zusatztags frei. moto fragt vorher nach."
+            : "Gibt die Anmeldung für alle Schulen des Zeitraums frei. moto fragt vorher nach."
+        }
         onClick={() => setConfirming(true)}
       >
         Veröffentlichen
       </Button>
       <ConfirmationModal
         isOpen={confirming}
-        title="Ferienzeitraum veröffentlichen?"
+        title={
+          period.kind === "extra_day"
+            ? "Zusatztag veröffentlichen?"
+            : "Ferienzeitraum veröffentlichen?"
+        }
         confirmText="Veröffentlichen"
         isConfirmLoading={publishing}
         loadingText="Wird veröffentlicht…"
@@ -94,8 +112,10 @@ export function HolidayPeriodPublishButton({
         onConfirm={() => void publish()}
       >
         <p className="text-sm text-gray-700">
-          Danach ist der Ferienzeitraum für die Anmeldung freigegeben. Du kannst
-          ihn weiter ändern, aber nicht mehr zum Entwurf machen.
+          Danach ist der{" "}
+          {period.kind === "extra_day" ? "Zusatztag" : "Ferienzeitraum"} für die
+          Anmeldung freigegeben. Du kannst ihn weiter ändern, aber nicht mehr
+          zum Entwurf machen.
         </p>
       </ConfirmationModal>
     </>
@@ -109,9 +129,12 @@ export function HolidayPeriodPublishButton({
 export function HolidayPeriodPublishCard({
   period,
   unsavedChanges,
+  qrBrand = "traeger",
 }: Readonly<{
   period: HolidayPeriod;
   unsavedChanges: boolean;
+  /** The look of the QR code: the Träger's, or the school's own. */
+  qrBrand?: QrBrand;
 }>) {
   if (period.status === "published") {
     return (
@@ -123,7 +146,7 @@ export function HolidayPeriodPublishCard({
             : "Für die Anmeldung freigegeben."
         } Änderungen gelten sofort nach dem Speichern.`}
       >
-        <HolidayRegistrationLink period={period} />
+        <HolidayRegistrationLink period={period} qrBrand={qrBrand} />
       </SectionCard>
     );
   }
@@ -142,7 +165,8 @@ export function HolidayPeriodPublishCard({
 /** Der eine Link des Zeitraums für alle seine Schulen, im Elternportal. */
 function HolidayRegistrationLink({
   period,
-}: Readonly<{ period: HolidayPeriod }>) {
+  qrBrand,
+}: Readonly<{ period: HolidayPeriod; qrBrand: QrBrand }>) {
   const { showMessage } = useApiErrorDisplay();
   if (!period.publicToken) return null;
   const url = parentsPortalUrl(
@@ -151,8 +175,10 @@ function HolidayRegistrationLink({
   return (
     <div className="space-y-2 text-sm text-gray-700">
       <p>
-        Über diesen Link melden Eltern ihre Kinder für alle Wochen an. Ein
-        Elternkonto brauchen sie nicht.
+        {period.kind === "extra_day"
+          ? "Über diesen Link melden Eltern ihre Kinder für den Zusatztag an."
+          : "Über diesen Link melden Eltern ihre Kinder für alle Wochen an."}{" "}
+        Ein Elternkonto brauchen sie nicht.
       </p>
       <CopyField
         value={url}
@@ -166,9 +192,13 @@ function HolidayRegistrationLink({
         action={
           <QrCodeButton
             url={url}
-            title="QR-Code für die Ferienanmeldung"
+            title={
+              period.kind === "extra_day"
+                ? "QR-Code für die Anmeldung zum Zusatztag"
+                : "QR-Code für die Ferienanmeldung"
+            }
             fileName="qr-code-ferienanmeldung"
-            brand="traeger"
+            brand={qrBrand}
           />
         }
       />

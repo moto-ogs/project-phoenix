@@ -1,22 +1,20 @@
 {{define "enrollment-rollover-opt-in.html"}}
-{{template "header" .}}
-
-<div class="email-body">
+{{template "header"}}
     {{template "school-brand" .}}
-    <h1>Bitte bestätige die Anmeldung</h1>
+    <h1>Bitte bestätigen Sie die Anmeldung</h1>
 
     <p>Guten Tag {{.GuardianFirstName}} {{.GuardianLastName}},</p>
 
-    <p>{{if .SchoolName}}die <strong>{{.SchoolName}}</strong> bereitet{{else}}wir bereiten{{end}} die Anmeldungen für <strong>{{.PhaseName}}</strong> vor. Damit dein Kind im neuen Zeitraum dabei sein kann, musst du die Anmeldung aktiv bestätigen.</p>
+    <p>{{if .SchoolName}}die <strong>{{.SchoolName}}</strong> bereitet{{else}}wir bereiten{{end}} die Anmeldungen für <strong>{{.PhaseName}}</strong> vor. Damit Ihr Kind im neuen Zeitraum dabei sein kann, müssen Sie die Anmeldung aktiv bestätigen.</p>
 
     <div class="highlight-box">
-        <p style="margin: 0 0 8px 0; font-size: 14px;"><strong>Du hast drei Möglichkeiten:</strong></p>
+        <p style="margin: 0 0 8px 0; font-size: 14px;"><strong>Sie haben drei Möglichkeiten:</strong></p>
         <ul style="margin: 0; padding-left: 20px; font-size: 14px;">
             <li>Betreuung unverändert bestätigen</li>
             <li>Betreuungsangebote oder Wochentage anpassen</li>
             <li>Betreuung zum Ende des aktuellen Zeitraums beenden</li>
         </ul>
-        <p style="margin: 8px 0 0 0; font-size: 14px;">Alles erledigst du über den Link unten. Deine übrigen Daten bleiben unverändert und müssen nicht neu eingegeben werden.</p>
+        <p style="margin: 8px 0 0 0; font-size: 14px;">Alles erledigen Sie über den Link unten. Ihre übrigen Daten bleiben unverändert und müssen nicht neu eingegeben werden.</p>
     </div>
 
     {{if .ChildNames}}
@@ -32,27 +30,23 @@
 
     {{if .RolloverDeadline}}
     <div class="highlight-box" style="margin-top: 16px;">
-        <p style="margin: 0; font-size: 14px;"><strong>Frist:</strong> Bitte bestätige bis spätestens <strong>{{.RolloverDeadline}}</strong>.</p>
+        <p style="margin: 0; font-size: 14px;"><strong>Frist:</strong> Bitte bestätigen Sie bis spätestens <strong>{{.RolloverDeadline}}</strong>.</p>
         <p style="margin: 8px 0 0 0; font-size: 14px;">Erfolgt keine Bestätigung bis zu diesem Datum, wird die Anmeldung automatisch zurückgezogen.</p>
     </div>
     {{end}}
 
-    <div class="button-wrapper" style="text-align: center;">
+    <div class="button-wrapper">
         <a class="button" href="{{.StatusURL}}">Anmeldung bestätigen</a>
     </div>
 
-    <p style="margin-top: 24px; font-size: 14px; color: #6b7280;">Falls der Button nicht funktioniert, kopiere bitte diesen Link:</p>
-    <div class="link-box">
-        <a href="{{.StatusURL}}">{{.StatusURL}}</a>
-    </div>
+    {{template "copy-link-hint" .StatusURL}}
 
     <div class="highlight-box" style="margin-top: 24px;">
         <p style="margin: 0; font-size: 14px;"><strong>Was passiert nach der Bestätigung?</strong></p>
-        <p style="margin: 8px 0 0 0; font-size: 14px;">Die Schulleitung prüft die Anmeldung wie gewohnt und informiert dich per E-Mail über das Ergebnis. Du kannst die Anmeldung auch jederzeit über den Link oben einsehen oder zurückziehen.</p>
+        <p style="margin: 8px 0 0 0; font-size: 14px;">Die Schulleitung prüft die Anmeldung wie gewohnt und informiert Sie per E-Mail über das Ergebnis. Sie können die Anmeldung auch jederzeit über den Link oben einsehen oder zurückziehen.</p>
     </div>
 
-    <p class="security-note">Bewahre diese E-Mail auf. Der Link bleibt bis zur Frist gültig.</p>
-</div>
+    <p class="security-note">Bewahren Sie diese E-Mail auf. Der Link bleibt bis zur Frist gültig.</p>
 
 {{template "footer" .}}
 {{end}}

@@ -19,9 +19,8 @@ import (
 // root binds the Träger membership of Organisation & Tenancy, the Audit
 // Platform's Träger account ledger and the invitation mail into the outbox.
 
-// TraegerAccountWiring is the configuration the Träger invitation is composed
-// with. Outbox persists the link mail in the caller's transaction. Without a
-// delivery runtime, the link is not mailed.
+// TraegerAccountWiring binds Träger account mails to Delivery's outbox.
+// They commit with the account change and the worker sends them afterwards.
 type TraegerAccountWiring struct {
 	DefaultFrom email.Email
 	Outbox      OutboxEnqueuer
@@ -73,9 +72,6 @@ type traegerInvitationDelivery struct {
 
 // DispatchTraegerInvitation queues the invitation mail with the invitation.
 func (d traegerInvitationDelivery) DispatchTraegerInvitation(ctx context.Context, invitation identityaccess.TraegerInvitation, traegerName string, expiry time.Duration) error {
-	if d.outbox.Runtime == nil {
-		return nil
-	}
 	message := *identityMessage(d.from, email.NewEmail("", invitation.Email),
 		identityaccess.TraegerInvitationMail(invitation, traegerName, d.frontendURL, d.traegerURL, expiry))
 	return d.outbox.EnqueueTransactionalMail(ctx, DurableMail{
@@ -87,9 +83,6 @@ func (d traegerInvitationDelivery) DispatchTraegerInvitation(ctx context.Context
 // DispatchTraegerAccountChange queues the notice to the person whose roles
 // changed or who was removed, with the change (#5474).
 func (d traegerInvitationDelivery) DispatchTraegerAccountChange(ctx context.Context, notice identityaccess.TraegerAccountChangeNotice) error {
-	if d.outbox.Runtime == nil {
-		return nil
-	}
 	message := *identityMessage(d.from, email.NewEmail("", notice.TargetEmail),
 		identityaccess.TraegerAccountChangeMail(notice, d.frontendURL))
 	return d.outbox.EnqueueTransactionalMail(ctx, DurableMail{

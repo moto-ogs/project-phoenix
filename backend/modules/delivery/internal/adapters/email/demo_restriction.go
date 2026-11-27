@@ -37,6 +37,7 @@ func (m demoRestrictedMailer) Send(message mailcontract.Message) error {
 }
 
 func (m demoRestrictedMailer) SendContext(ctx context.Context, message mailcontract.Message) error {
+	// The dispatcher leaves the cancellation check to a ContextMailer.
 	if err := ctx.Err(); err != nil {
 		return err
 	}

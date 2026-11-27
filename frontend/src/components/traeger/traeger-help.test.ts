@@ -119,6 +119,15 @@ describe("getTraegerHelpTopicForPath", () => {
     ).toBe(HELP_TOPICS.traegerAccessLog);
   });
 
+  it.each(["/traeger/ferien/zusatztage", "/ferien/zusatztage/neu"])(
+    "opens the extra day article on %s (#4817)",
+    (path) => {
+      expect(getTraegerHelpTopicForPath(path)).toBe(
+        HELP_TOPICS.traegerExtraCareDay,
+      );
+    },
+  );
+
   it("keeps the settings article and the sign-in article for the other pages", () => {
     expect(getTraegerHelpTopicForPath("/einstellungen")).toBe(
       HELP_TOPICS.traegerSettings,

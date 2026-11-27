@@ -104,7 +104,7 @@ func (s *PayrollDispatch) notifyManagers(ctx context.Context, problem payrollPro
 			TenantID: problem.TenantID, ToName: strings.TrimSpace(manager.FirstName + " " + manager.LastName), ToAddress: manager.Email,
 			Subject: "Monatsdatei " + month + " nicht verschickt", Template: payrollProblemTemplate,
 			Content: workforce.PayrollMailContent{
-				LogoURL: s.logoURL(), FirstName: manager.FirstName, MonthLabel: month,
+				LogoURL: s.logoURL(), FirstName: manager.FirstName, LastName: manager.LastName, MonthLabel: month,
 				Correction: problem.Correction, ReasonText: payrollReasonText(problem.Reason), LinkURL: linkURL,
 			},
 			Type: PayrollProblemMailType, ReferenceID: problem.DispatchID,

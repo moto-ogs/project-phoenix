@@ -9,13 +9,48 @@
 
 import { StatusBadge } from "~/components/ui/status-badge";
 import type { TenantPageProps } from "~/components/ui/tenant-page";
-import type { HolidayAllocationMode, HolidayPeriod } from "~/lib/traeger-api";
+import type {
+  HolidayAllocationMode,
+  HolidayPeriod,
+  HolidayPeriodKind,
+} from "~/lib/traeger-api";
 import { traegerPath } from "~/lib/traeger-url";
-import { formatDateRange, holidayStatusLabel } from "./holiday-period-format";
+import { extraDayDate, extraDayFee } from "./extra-day-model";
+import {
+  formatDateRange,
+  formatDay,
+  holidayStatusLabel,
+} from "./holiday-period-format";
 
 /** Was ein Klick auf die Kriterien der Platzvergabe tut (#6747). */
 export const HOLIDAY_CRITERIA_HINT =
   "Öffnet die Kriterien für alle Ferien mit Vergabe nach Kriterien.";
+
+/**
+ * Die zwei Listen der Ferienbetreuung (#4817): Ferienzeiträume mit Wochen
+ * und einzelne Zusatztage außerhalb der Ferien. Jede hat ihre eigene Adresse.
+ */
+export function holidayOverviewTabs(
+  active: "ferien" | "zusatztage",
+): NonNullable<TenantPageProps["tabs"]> {
+  return {
+    value: active,
+    onChange: () => undefined,
+    label: "Bereiche der Ferienbetreuung",
+    items: [
+      {
+        value: "ferien",
+        label: "Ferienzeiträume",
+        href: traegerPath("/traeger/ferien"),
+      },
+      {
+        value: "zusatztage",
+        label: "Zusatztage",
+        href: traegerPath("/traeger/ferien/zusatztage"),
+      },
+    ],
+  };
+}
 
 export type HolidayPeriodTab =
   "planung" | "formular" | "anmeldungen" | "plaetze" | "vergabe";
@@ -26,12 +61,16 @@ export function holidayPeriodTabs(
   active: HolidayPeriodTab,
   registrationCount?: number,
   allocationMode?: HolidayAllocationMode,
+  kind?: HolidayPeriodKind,
 ): NonNullable<TenantPageProps["tabs"]> {
   return {
     value: active,
     // Die Reiter sind Links; die Navigation übernimmt der Link selbst.
     onChange: () => undefined,
-    label: "Bereiche des Ferienzeitraums",
+    label:
+      kind === "extra_day"
+        ? "Bereiche des Zusatztags"
+        : "Bereiche des Ferienzeitraums",
     items: [
       {
         value: "planung",
@@ -84,6 +123,14 @@ export function HolidayPeriodStatusBadge({
  * Anmeldefrist und, wenn gesetzt, die Grenze je Kind.
  */
 export function holidayPeriodStats(period: HolidayPeriod): { label: string }[] {
+  if (period.kind === "extra_day") {
+    // Ein Zusatztag nennt seinen Tag und was er kostet (#4817).
+    return [
+      { label: extraDayDate(period) },
+      { label: `Anmeldung bis ${formatDay(period.registrationClosesOn)}` },
+      { label: extraDayFee(period) },
+    ];
+  }
   return [
     {
       label: `Anmeldung ${formatDateRange(

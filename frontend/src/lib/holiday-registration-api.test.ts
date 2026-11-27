@@ -219,6 +219,8 @@ describe("fetchHolidayRegistrationOffer form (#2353)", () => {
     return {
       traeger_name: "Träger",
       name: "Herbstferien",
+      kind: "holiday",
+      included_in_fee: false,
       registration_opens_on: "2026-09-01",
       registration_closes_on: "2026-10-01",
       binding: true,

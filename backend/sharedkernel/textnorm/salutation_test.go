@@ -5,11 +5,12 @@ import "testing"
 func TestGermanGreeting(t *testing.T) {
 	t.Parallel()
 	cases := []struct{ salutation, first, last, want string }{
-		{SalutationMs, "Karin", "Klein", "Liebe Karin"},
-		{SalutationMr, " Jonas ", " Klein ", "Lieber Jonas"},
+		{SalutationMs, "Karin", "Klein", "Liebe Frau Klein"},
+		{SalutationMr, " Jonas ", " Klein ", "Lieber Herr Klein"},
 		{"", "Karin", "Klein", "Guten Tag Karin Klein"},
 		{"unknown", "Karin", "Klein", "Guten Tag Karin Klein"},
-		{SalutationMs, "", "Klein", "Guten Tag Klein"},
+		{SalutationMs, "", "Klein", "Liebe Frau Klein"},
+		{SalutationMs, "Karin", "", "Guten Tag Karin"},
 		{SalutationMr, "", "", "Guten Tag"},
 	}
 	for _, c := range cases {

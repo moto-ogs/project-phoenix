@@ -1,0 +1,7 @@
+{
+  "scenario": "api.traeger.invoice_journal",
+  "max": 4,
+  "exact": true,
+  "description": "modules/parentbilling — GET /traeger/invoice-journal (#4819), every\nstatement: the Träger transaction, its binding and its commit, and one statement\nthat reads the page of issued documents, the sums, the gaps of the\nnumber ranges and the filter choices, and records the read in the\ntrails of the runs the page shows. Flat in the number of documents,\nruns and number ranges.",
+  "route": "GET /traeger/invoice-journal/"
+}

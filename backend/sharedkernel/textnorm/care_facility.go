@@ -69,13 +69,13 @@ func (n CareFacilityName) From() string {
 	return "vom " + n.term
 }
 
-// Your is the reader's own care as a subject or a heading: "deine OGS",
-// "dein Hort", "dein Lernhaus".
+// Your is the reader's own care as a subject or a heading, in the Sie-form
+// of the mails that use it: "Ihre OGS", "Ihr Hort", "Ihr Lernhaus".
 func (n CareFacilityName) Your() string {
 	if n.article == CareArticleDie {
-		return "deine " + n.term
+		return "Ihre " + n.term
 	}
-	return "dein " + n.term
+	return "Ihr " + n.term
 }
 
 // SentenceStart capitalises the first letter of a phrase: "Die OGS".

@@ -46,7 +46,8 @@ import (
 // and the list for the reimbursement by a cost bearer (#5627), and the mail
 // of the letters as mails of the Träger on Delivery's outbox and their
 // print in one file (#4670, ADR 0123), and the invoices and amounts per
-// family at /traeger/billing-families behind the right "Abrechnung" (#4691),
+// family at /traeger/billing-families behind the right "Abrechnung" (#4691)
+// with every issued document in one list at /traeger/invoice-journal (#4819),
 // and the children of the families at /traeger/family-children (#5918),
 // and the payment terms, the family deviations and the due dates of the runs
 // at /traeger/billing-terms, /traeger/family-billing and
@@ -79,6 +80,7 @@ func mountParentBillingRoutes(root, publicLink chi.Router, organizations Holiday
 	families := parentBillingHTTP.NewBillingFamilyResource(billingFamilies, common.RequiresPermission(identityaccess.TraegerRightBillingManage),
 		traegerListRenderer(NewSimpleListRenderer()))
 	root.Mount("/traeger/billing-families", families.Router(ProtectedTraegerRoutes))
+	root.Mount("/traeger/invoice-journal", parentBillingHTTP.NewInvoiceJournalResource(billingFamilies, common.RequiresPermission(identityaccess.TraegerRightBillingManage), traegerListRenderer(NewSimpleListRenderer())).Router(ProtectedTraegerRoutes))
 	care, reductions, meals, familyChildren := NewCareBillingHTTP(organizations, settings, schoolSettings, marks, delivery, outcomes, bankData, today, now)
 	root.Mount("/traeger/care-tariffs", care.TariffRouter(ProtectedTraegerRoutes))
 	root.Mount("/traeger/care-billing-runs", care.RunRouter(ProtectedTraegerRoutes))
@@ -687,7 +689,7 @@ func (b parentBillingBillingRegistrations) HolidayBillingPeriod(ctx context.Cont
 // and last week.
 func parentBillingPeriod(period enrollmentOwner.HolidayPeriod) parentbilling.HolidayBillingPeriod {
 	billing := parentbilling.HolidayBillingPeriod{
-		ID: period.ID, Name: period.Name, Published: period.Status == enrollmentOwner.HolidayPeriodPublished,
+		ID: period.ID, Name: period.Name, Published: period.Status == enrollmentOwner.HolidayPeriodPublished, IncludedInFee: period.IncludedInFee, ExtraDay: period.Kind == enrollmentOwner.HolidayPeriodKindExtraDay,
 	}
 	for _, week := range period.Weeks {
 		if billing.StartsOn.IsZero() || week.StartsOn.Before(billing.StartsOn) {
@@ -746,7 +748,7 @@ func parentBillingRegistration(detail enrollmentOwner.HolidayRegistrationDetail)
 		ID: detail.ID.Int64(), Status: detail.Status, SubmittedAt: detail.SubmittedAt, BenefitsDeclared: detail.BenefitsDeclared,
 		DebtorNumber: detail.DebtorNumber, Children: make([]parentbilling.HolidayChild, len(detail.Children)),
 		MovedUp:           promotedRegistrations(detail.Promotions),
-		GuardianFirstName: detail.GuardianFirstName, GuardianLastName: detail.GuardianLastName, GuardianEmail: detail.GuardianEmail,
+		GuardianFirstName: detail.GuardianFirstName, GuardianLastName: detail.GuardianLastName, GuardianEmail: detail.GuardianEmail, IncludedInFee: detail.IncludedInFee,
 	}
 	for i, child := range detail.Children {
 		bookings := make([]parentbilling.HolidayBooking, len(child.Bookings))

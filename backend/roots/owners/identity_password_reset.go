@@ -3,7 +3,6 @@ package owners
 import (
 	"context"
 	"log/slog"
-	"strings"
 	"time"
 
 	email "github.com/moto-ogs/project-phoenix/modules/delivery/mail"
@@ -12,8 +11,8 @@ import (
 	identityPorts "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports"
 )
 
-// PasswordResetWiring is the configuration the reset flows are composed
-// with. the durable outbox may be nil: the link is then not mailed, as before.
+// PasswordResetWiring configures the reset flows. A nil outbox leaves
+// delivery disabled for fixtures that only exercise the reset token.
 type PasswordResetWiring struct {
 	Durable          DurableMailOutbox
 	DefaultFrom      email.Email
@@ -87,27 +86,20 @@ func (d passwordResetDelivery) DispatchPasswordReset(ctx context.Context, link i
 	})
 }
 
-func (d passwordResetDelivery) recordDelivery(ctx context.Context, meta email.DeliveryMetadata, baseRetry int, result email.DeliveryResult) {
-	delivery := identityaccess.TokenDelivery{RetryCount: baseRetry + result.Attempt}
-	if result.Status == email.DeliveryStatusSent {
-		sentAt := result.SentAt
-		delivery.SentAt = &sentAt
-	} else if result.Err != nil {
-		message := strings.TrimSpace(result.Err.Error())
-		delivery.Error = &message
-	}
-	if err := d.records.RecordPasswordResetDelivery(ctx, meta.ReferenceID, delivery); err != nil {
+func (d passwordResetDelivery) recordDelivery(ctx context.Context, attempt transactionalMailAttempt) {
+	delivery := attempt.tokenDelivery()
+	if err := d.records.RecordPasswordResetDelivery(ctx, attempt.referenceID, delivery); err != nil {
 		d.logger.Error("failed to update password reset delivery status",
-			slog.Int64("token_id", meta.ReferenceID),
+			slog.Int64("token_id", attempt.referenceID),
 			slog.Any("error", err),
 		)
 		return
 	}
-	if result.Final && result.Status == email.DeliveryStatusFailed {
+	if attempt.final && attempt.err != nil {
 		d.logger.Error("password reset email permanently failed",
-			slog.Int64("token_id", meta.ReferenceID),
-			slog.String("recipient", identityaccessCompose.MaskEmail(meta.Recipient)),
-			slog.Any("error", result.Err),
+			slog.Int64("token_id", attempt.referenceID),
+			slog.String("recipient", identityaccessCompose.MaskEmail(attempt.recipient)),
+			slog.Any("error", attempt.err),
 		)
 	}
 }

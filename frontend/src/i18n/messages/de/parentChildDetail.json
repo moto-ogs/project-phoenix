@@ -51,7 +51,7 @@
     "lastName": "Nachname",
     "salutationLabel": "Anrede",
     "salutationNone": "Keine Angabe",
-    "salutationHint": "Freiwillig. Mit Anrede beginnen E-Mails zum Beispiel mit „Liebe Karin“ oder „Lieber Jonas“.",
+    "salutationHint": "Freiwillig. Mit Anrede beginnen E-Mails zum Beispiel mit „Liebe Frau Klein“ oder „Lieber Herr Klein“.",
     "email": "E-Mail",
     "street": "Straße und Hausnummer",
     "postalCode": "PLZ",

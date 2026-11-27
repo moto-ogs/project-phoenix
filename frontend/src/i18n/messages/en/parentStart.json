@@ -49,6 +49,7 @@
     "forChildren": "For {names}",
     "offeredByTraeger": "Offered by {traeger}",
     "careLine": "Care {from} to {to}",
+    "careDayLine": "Care on {date}",
     "registrationLine": "Registration until {date}",
     "registrationRangeLine": "Registration {from} to {to}",
     "registerTooltip": "Opens the registration for this holiday offer."

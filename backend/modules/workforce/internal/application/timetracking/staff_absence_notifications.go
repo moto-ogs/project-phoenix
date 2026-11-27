@@ -164,7 +164,7 @@ func (s *staffAbsenceService) enqueueAbsenceRequested(ctx context.Context, absen
 		if approver.Email == "" || approver.StaffID == absence.StaffID {
 			continue
 		}
-		if err := s.dispatchAbsenceEmail(ctx, workforce.AbsenceMailRequestReceived, absence, AbsenceEmailMessage{
+		if err := s.enqueueAbsenceEmail(ctx, workforce.AbsenceMailRequestReceived, absence, AbsenceEmailMessage{
 			To:       AbsenceEmailAddress{Name: approver.FirstName + " " + approver.LastName, Address: approver.Email},
 			Subject:  subject,
 			Template: absenceRequestReceivedTemplate,
@@ -196,11 +196,11 @@ func (s *staffAbsenceService) notifyAbsenceDecision(ctx context.Context, absence
 	var subject, template, metaType string
 	switch absence.Status {
 	case AbsenceStatusApproved:
-		subject, template, metaType = "Dein Abwesenheitsantrag wurde genehmigt", "absence-request-approved.html", workforce.AbsenceMailRequestApproved
+		subject, template, metaType = "Ihr Abwesenheitsantrag wurde genehmigt", "absence-request-approved.html", workforce.AbsenceMailRequestApproved
 	case AbsenceStatusDeclined:
-		subject, template, metaType = "Dein Abwesenheitsantrag wurde abgelehnt", "absence-request-declined.html", workforce.AbsenceMailRequestDeclined
+		subject, template, metaType = "Ihr Abwesenheitsantrag wurde abgelehnt", "absence-request-declined.html", workforce.AbsenceMailRequestDeclined
 	case AbsenceStatusQuestion:
-		subject, template, metaType = "Rückfrage zu deinem Abwesenheitsantrag", "absence-request-question.html", workforce.AbsenceMailRequestQuestion
+		subject, template, metaType = "Rückfrage zu Ihrem Abwesenheitsantrag", "absence-request-question.html", workforce.AbsenceMailRequestQuestion // sie-anrede-erlaubt (ADR 0328): Betreff einer E-Mail.
 	default:
 		return nil
 	}
@@ -220,7 +220,7 @@ func (s *staffAbsenceService) notifyAbsenceDecision(ctx context.Context, absence
 	if requester.Email == "" {
 		return nil
 	}
-	return s.dispatchAbsenceEmail(ctx, metaType, absence, AbsenceEmailMessage{
+	return s.enqueueAbsenceEmail(ctx, metaType, absence, AbsenceEmailMessage{
 		To:       AbsenceEmailAddress{Name: requester.FirstName + " " + requester.LastName, Address: requester.Email},
 		Subject:  subject,
 		Template: template,
@@ -308,8 +308,8 @@ func (s *staffAbsenceService) logoURL() string {
 	return fmt.Sprintf("%s/images/moto-logo-mit-schriftzug.png", s.emailDeps.FrontendURL)
 }
 
-func (s *staffAbsenceService) dispatchAbsenceEmail(ctx context.Context, metaType string, absence *StaffAbsence, message AbsenceEmailMessage) error {
-	message.Type, message.ReferenceID = metaType, absence.ID
+func (s *staffAbsenceService) enqueueAbsenceEmail(ctx context.Context, mailType string, absence *StaffAbsence, message AbsenceEmailMessage) error {
+	message.Type, message.ReferenceID = mailType, absence.ID
 	message.TenantID = tenant.FromContext(ctx)
 	return s.emailDeps.Dispatcher.Enqueue(ctx, message)
 }

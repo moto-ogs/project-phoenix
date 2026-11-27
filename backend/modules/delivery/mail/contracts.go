@@ -108,46 +108,14 @@ func NewEmail(name, address string) Email {
 	}
 }
 
-// DeliveryStatus represents the current state of an outbound email.
-type DeliveryStatus string
-
-const (
-	// DeliveryStatusSent indicates the message was delivered successfully.
-	DeliveryStatusSent DeliveryStatus = "sent"
-	// DeliveryStatusFailed indicates the message failed to send.
-	DeliveryStatusFailed DeliveryStatus = "failed"
-)
-
-// DeliveryMetadata captures contextual identifiers for the email.
-type DeliveryMetadata struct {
-	// Type is a short identifier for the feature (e.g., "invitation", "password_reset").
-	Type string
-	// ReferenceID is a database identifier associated with the email (e.g., invitation token ID).
-	ReferenceID int64
-	// Recipient holds the destination email address for logging.
-	Recipient string
-}
-
-// DeliveryResult captures the outcome of an email attempt.
-type DeliveryResult struct {
-	Attempt int
-	Status  DeliveryStatus
-	Err     error
-	SentAt  time.Time
-	Final   bool
-}
-
 // ErrDeliveryUnavailable reports a missing synchronous transport.
 var ErrDeliveryUnavailable = errors.New("email delivery is unavailable")
 
-// InteractiveRetry sets the retry policy for mail a person is waiting for,
-// such as an invitation, a sign-in code or a password reset. Passing backoff
-// overrides the default spacing of one, five and fifteen seconds.
-func InteractiveRetry(backoff []time.Duration) (attempts int, spacing []time.Duration) {
-	if backoff == nil {
-		backoff = []time.Duration{time.Second, 5 * time.Second, 15 * time.Second}
-	}
-	return 3, backoff
+const InteractiveMaxAttempts = 3
+
+// InteractiveRetryBackoff gives each waiting mail its own retry spacing.
+func InteractiveRetryBackoff() []time.Duration {
+	return []time.Duration{time.Second, 5 * time.Second, 15 * time.Second}
 }
 
 type MailerConfig struct {

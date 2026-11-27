@@ -11,13 +11,12 @@ import (
 // MockMailer is a mock Mailer
 type MockMailer struct {
 	SendFn func(m mailcontract.Message) error
-	// SendInvoked is atomic because deliveries can run concurrently.
+	// Parallel delivery attempts may update SendInvoked concurrently.
 	SendInvoked atomic.Bool
 }
 
 func logMessage(m mailcontract.Message) {
 	slog.Default().Info("mock email queued",
-		slog.String("subject", m.Subject),
 		slog.String("template", m.Template))
 }
 

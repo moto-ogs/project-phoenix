@@ -43,10 +43,10 @@ func confirmationText(template string, values confirmationValues) (string, error
 	}
 	template = strings.TrimSpace(template)
 	if !strings.Contains(template, "{Eingang}") {
-		template += "\n\nEingang deiner Erklärung: {Eingang}"
+		template += "\n\nEingang Ihrer Erklärung: {Eingang}"
 	}
 	if values.NeedsReason && !strings.Contains(template, "{Grund}") {
-		template += "\n\nDein Grund: {Grund}"
+		template += "\n\nIhr Grund: {Grund}"
 	}
 	endsOn := ""
 	if values.EndsOn != nil {
@@ -105,14 +105,14 @@ func RenderNoticeMail(_ context.Context, payload []byte) (carecontract.RenderedN
 		return carecontract.RenderedNoticeMail{}, errors.New(carecontract.MailKindNotice + " payload has no text")
 	}
 	// The subject names no child: the mailers log it at Info level.
-	subject, heading := "Bestätigung deiner Kündigung", ""
+	subject, heading := "Bestätigung Ihrer Kündigung", ""
 	switch {
 	case mail.Decision == carecontract.EndDecisionSet:
-		subject, heading = "Ende deines Betreuungsvertrags", "Ende deines Betreuungsvertrags"
+		subject, heading = "Ende Ihres Betreuungsvertrags", "Ende Ihres Betreuungsvertrags"
 	case mail.Decision == carecontract.EndDecisionReinterpreted:
-		subject, heading = "Deine Kündigung gilt als ordentliche Kündigung", "Deine Kündigung gilt als ordentliche Kündigung"
+		subject, heading = "Ihre Kündigung gilt als ordentliche Kündigung", "Ihre Kündigung gilt als ordentliche Kündigung"
 	case mail.Kind == carecontract.NoticeWithdrawal:
-		subject = "Bestätigung deines Widerrufs"
+		subject = "Bestätigung Ihres Widerrufs"
 	}
 	paragraphs := []string{}
 	for _, paragraph := range strings.Split(mail.ConfirmationText, "\n\n") {

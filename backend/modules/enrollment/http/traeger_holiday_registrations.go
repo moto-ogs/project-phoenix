@@ -461,7 +461,7 @@ func holidayRegistrationFilterLabels(period capability.HolidayPeriod, filter cap
 	}
 	for _, week := range period.Weeks {
 		if week.ID == ident.ID(filter.WeekID) {
-			labels = append(labels, "Woche: "+week.StartsOn.Format("02.01.")+" bis "+week.EndsOn.Format("02.01.2006")+", "+schoolName(week.HostSchoolID.Int64()))
+			labels = append(labels, capability.HolidayWeekHeading(week.StartsOn, week.EndsOn)+", "+schoolName(week.HostSchoolID.Int64()))
 		}
 	}
 	if filter.TimeModel != "" {
@@ -552,7 +552,7 @@ func holidayTextAnswer(question capability.HolidayFormField, answer string) stri
 // holidayExportWeek names the week of a booking in the export, with its days
 // for a booking of days (#4701).
 func holidayExportWeek(booking capability.HolidayRegistrationBooking) string {
-	week := booking.WeekStartsOn.Format("02.01.") + " bis " + booking.WeekEndsOn.Format("02.01.2006")
+	week := capability.HolidayWeekShortSpan(booking.WeekStartsOn, booking.WeekEndsOn)
 	if len(booking.Days) > 0 {
 		week += " (" + capability.HolidayDayNames(booking.Days) + ")"
 	}

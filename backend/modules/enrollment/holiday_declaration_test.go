@@ -33,8 +33,8 @@ func TestConsentTextsNameTheKeptDebtorNumberFromVersionFive(t *testing.T) {
 		"version 5 adds to the text of version 4")
 }
 
-// The name sentence addresses the parent with Du from version 6 on (#7687,
-// ADR 0294): a new wording, so a new version that every new registration
+// The name sentence addresses the parent with Du from version 6 on (#7687;
+// the form is portal text, ADR 0328): a new wording, so a new version that every new registration
 // agrees to. Versions 3 to 5 keep the sentence the parents agreed to.
 func TestConsentTextsGiveTheNameSentenceInDuFromVersionSix(t *testing.T) {
 	t.Parallel()

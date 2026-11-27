@@ -49,7 +49,7 @@ func TestTrustedDeviceAddedTemplate_Renders(t *testing.T) {
 				"14.05.2026 09:42",
 				"90",
 				// "Was that you?" guidance
-				"Warst du das nicht",
+				"Waren Sie das nicht",
 				// Primary self-service path — every user has access via /profile
 				"Mein Profil",
 				"Meine vertrauten Geräte",
@@ -96,7 +96,7 @@ func TestTrustedDeviceAddedTemplate_Renders(t *testing.T) {
 				"Konto → Meine vertrauten Geräte",
 				"moto-Team",
 			},
-			mustNotContain: []string{"Administration deiner Schule", "Caterer-Portal"},
+			mustNotContain: []string{"Administration Ihrer Schule", "Caterer-Portal"},
 		},
 	}
 

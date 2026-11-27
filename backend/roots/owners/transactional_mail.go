@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	deliveryContract "github.com/moto-ogs/project-phoenix/modules/delivery/contract"
@@ -68,11 +69,12 @@ func (o OutboxEnqueuer) EnqueueMailIntent(ctx context.Context, mail DurableMail)
 	if o.Runtime == nil || o.Runtime.Module == nil {
 		return deliveryContract.Enqueued{}, errors.New("transactional mail: delivery is not configured")
 	}
-	attempts, backoff := email.InteractiveRetry(mail.Backoff)
 	if mail.MaxAttempts == 0 {
-		mail.MaxAttempts = attempts
+		mail.MaxAttempts = email.InteractiveMaxAttempts
 	}
-	mail.Backoff = backoff
+	if mail.Backoff == nil {
+		mail.Backoff = email.InteractiveRetryBackoff()
+	}
 	payload, err := json.Marshal(transactionalMailPayload{
 		MaxAttempts: mail.MaxAttempts, Backoff: mail.Backoff,
 		Message: mail.Message, Type: mail.Type, ReferenceID: mail.ReferenceID,
@@ -177,26 +179,50 @@ func transactionalSendFinal(attempt, maxAttempts int, sendErr error) bool {
 	return attempt >= maxAttempts && !errors.Is(sendErr, email.ErrSendPostponed)
 }
 
+type transactionalMailAttempt struct {
+	referenceID int64
+	recipient   string
+	retryCount  int
+	sentAt      time.Time
+	err         error
+	final       bool
+}
+
+func (a transactionalMailAttempt) tokenDelivery() identityaccess.TokenDelivery {
+	delivery := identityaccess.TokenDelivery{RetryCount: a.retryCount}
+	if a.err == nil {
+		sentAt := a.sentAt
+		delivery.SentAt = &sentAt
+	} else {
+		message := strings.TrimSpace(a.err.Error())
+		delivery.Error = &message
+	}
+	return delivery
+}
+
 func (r TransactionalMailRenderer) RecordDelivery(ctx context.Context, intent *deliveryCompose.MailIntent, sendErr error) error {
 	payload, err := decodeTransactionalMail(intent)
 	if err != nil {
 		return err
 	}
-	result := email.DeliveryResult{Attempt: intent.Attempts + 1, SentAt: time.Now(), Err: sendErr, Final: transactionalSendFinal(intent.Attempts+1, payload.MaxAttempts, sendErr)}
-	result.Status = email.DeliveryStatusSent
-	if sendErr != nil {
-		result.Status = email.DeliveryStatusFailed
+	attemptNumber := intent.Attempts + 1
+	attempt := transactionalMailAttempt{
+		referenceID: payload.ReferenceID,
+		recipient:   payload.Message.To.Address,
+		retryCount:  payload.BaseRetry + attemptNumber,
+		sentAt:      time.Now(),
+		err:         sendErr,
+		final:       transactionalSendFinal(attemptNumber, payload.MaxAttempts, sendErr),
 	}
-	meta := email.DeliveryMetadata{Type: payload.Type, ReferenceID: payload.ReferenceID, Recipient: payload.Message.To.Address}
 	switch payload.Type {
 	case "password_reset":
-		passwordResetDelivery{records: r.Identity, logger: r.Logger}.recordDelivery(ctx, meta, payload.BaseRetry, result)
+		passwordResetDelivery{records: r.Identity, logger: r.Logger}.recordDelivery(ctx, attempt)
 	case "invitation":
-		invitationDelivery{invitations: r.Identity, logger: r.Logger}.recordDelivery(ctx, meta, payload.BaseRetry, result)
+		invitationDelivery{invitations: r.Identity, logger: r.Logger}.recordDelivery(ctx, attempt)
 	case "operator_invitation":
-		operatorLinkDelivery{tokens: r.Identity, logger: r.Logger}.recordInvitationDelivery(ctx, meta, payload.BaseRetry, result)
+		operatorLinkDelivery{tokens: r.Identity, logger: r.Logger}.recordInvitationDelivery(ctx, attempt)
 	case "operator_email_change_verify":
-		operatorLinkDelivery{tokens: r.Identity, logger: r.Logger}.recordEmailChangeDelivery(ctx, meta, payload.BaseRetry, result)
+		operatorLinkDelivery{tokens: r.Identity, logger: r.Logger}.recordEmailChangeDelivery(ctx, attempt)
 	}
 	return nil
 }

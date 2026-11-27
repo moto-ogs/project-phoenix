@@ -49,8 +49,8 @@ func TestMFAEmailCodeTemplate_Renders(t *testing.T) {
 				"vertrauenswürdiges Gerät",
 				"30 Tage",
 				// Anti-phishing disclaimer
-				"ignoriere diese E-Mail",
-				"fragt dich niemals",
+				"ignorieren Sie diese E-Mail",
+				"fragt Sie niemals",
 				// Branding
 				`alt="moto"`,
 				// Footer chrome

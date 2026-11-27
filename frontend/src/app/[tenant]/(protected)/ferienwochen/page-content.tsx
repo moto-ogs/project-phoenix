@@ -9,6 +9,7 @@ import {
 } from "~/components/holiday/holiday-host-consents";
 import { DataTable, type DataTableColumn } from "~/components/ui/data-table";
 import { EmptyState } from "~/components/ui/empty-state";
+import { ButtonLink } from "~/components/ui/button";
 import { OverflowMenu } from "~/components/ui/page-header/OverflowMenu";
 import NavigationLink from "~/components/ui/navigation-link";
 import { SectionCard } from "~/components/ui/section-card";
@@ -87,8 +88,12 @@ const HOME_SCHOOL_TAB = "andere-ogs";
 // Bauart 3 (Werkzeug): eine Liste zum Vorbereiten und Ausdrucken, kein
 // Objekt, das hier bearbeitet wird.
 
-/** „06.07. bis 10.07.2099“ */
+/**
+ * „06.07. bis 10.07.2099“; a week of a single day, such as an extra care
+ * day of the Träger (#4817), is that day alone.
+ */
 function weekLabel(week: HostedHolidayWeek): string {
+  if (week.startsOn === week.endsOn) return formatDate(week.endsOn);
   return `${formatDate(week.startsOn).slice(0, 6)} bis ${formatDate(week.endsOn)}`;
 }
 
@@ -335,6 +340,9 @@ export default function FerienwochenPage() {
   ]);
   const { data: session } = useSession();
   const canAssignGuests = hasPermission(session, "users:create");
+  // The right that plans the school's closing days plans its extra days.
+  const canPlanExtraDays = hasPermission(session, "schedules:update");
+  const tenantPath = useTenantAwarePath();
   // Tenant-scoped keys: the list holds children's names and birth dates, so
   // another school's cache entry must never show here.
   const weeks = useSWRAuth(
@@ -471,25 +479,37 @@ export default function FerienwochenPage() {
       loading={loading}
       error={weeksError ?? participantsError ?? homeSchoolError}
       actions={
-        selectedWeek ? (
-          <OverflowMenu
-            ariaLabel="Weitere Aktionen"
-            items={[
-              {
-                label: "Als Excel herunterladen",
-                description:
-                  "Speichert die Teilnehmerliste der Woche als Excel-Datei auf diesem Gerät.",
-                onClick: () => void exportRef.current("xlsx"),
-              },
-              {
-                label: "Als CSV herunterladen",
-                description:
-                  "Speichert die Teilnehmerliste der Woche als CSV-Datei auf diesem Gerät.",
-                onClick: () => void exportRef.current("csv"),
-              },
-            ]}
-          />
-        ) : undefined
+        <>
+          {canPlanExtraDays ? (
+            <ButtonLink
+              href={tenantPath("/ferienwochen/zusatztage")}
+              variant="outline"
+              size="md"
+              tooltip="Öffnet die Zusatztage deiner OGS, zum Beispiel Brückentage, zum Anlegen und Ändern."
+            >
+              Zusatztage
+            </ButtonLink>
+          ) : null}
+          {selectedWeek ? (
+            <OverflowMenu
+              ariaLabel="Weitere Aktionen"
+              items={[
+                {
+                  label: "Als Excel herunterladen",
+                  description:
+                    "Speichert die Teilnehmerliste der Woche als Excel-Datei auf diesem Gerät.",
+                  onClick: () => void exportRef.current("xlsx"),
+                },
+                {
+                  label: "Als CSV herunterladen",
+                  description:
+                    "Speichert die Teilnehmerliste der Woche als CSV-Datei auf diesem Gerät.",
+                  onClick: () => void exportRef.current("csv"),
+                },
+              ]}
+            />
+          ) : null}
+        </>
       }
       tabs={
         weeks.data && hostsWeeks

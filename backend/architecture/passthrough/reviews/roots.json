@@ -4431,6 +4431,11 @@
       "reason": "ADR 0120 addendum (#4722): Consumer-port adapter of Enrollment's holiday guest people; it translates the health information of a guest into the People Directory's enrollment profile patch for the health field of its child, in the hosting school's tenant transaction."
     },
     {
+      "decision": "0329",
+      "id": "roots/owners/holidayHostTraeger.HolidayHostTraeger",
+      "reason": "ADR 0329 (#4817): Consumer-port adapter of Enrollment's HolidayHostTraeger; it translates the school row of Organisation \u0026 Tenancy to the ID of its Träger for the extra days a school plans for itself, in the school's tenant transaction."
+    },
+    {
       "decision": "0075",
       "id": "roots/owners/holidayOwnChildPlans.ApplyHolidayOwnChildPlans",
       "reason": "Consumer-owned port translation (ADR 0068, ADR 0075): maps Care Plan exceptions onto Enrollment's own-child plan values. Reconciliation decisions live in Enrollment; no persistence or business policy in the binding."
@@ -5833,12 +5838,12 @@
     {
       "decision": "0090",
       "id": "roots/owners/traegerInvitationDelivery.DispatchTraegerAccountChange",
-      "reason": "#5474: renders the notice of a Träger role change or removal and queues it in Delivery's outbox on the caller's transaction; skips when no mail is configured."
+      "reason": "#5474: renders the notice of a Träger role change or removal and queues it in Delivery's outbox on the caller's transaction. The required durable outbox owns enqueue failure; the retired direct dispatcher no longer gates it."
     },
     {
       "decision": "0090",
       "id": "roots/owners/traegerInvitationDelivery.DispatchTraegerInvitation",
-      "reason": "#4650: renders the Träger invitation mail and queues it in Delivery's outbox on the caller's transaction; skips when no mail is configured."
+      "reason": "#4650: renders the Träger invitation mail and queues it in Delivery's outbox on the caller's transaction. The required durable outbox owns enqueue failure; the retired direct dispatcher no longer gates it."
     },
     {
       "decision": "0090",

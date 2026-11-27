@@ -145,6 +145,11 @@ func (h *HolidayContributions) confirmsChildNumbers(ctx context.Context, organiz
 	if perChild && (len(registration.Children) > 1 || childNumbers != nil) {
 		return true, nil
 	}
+	// An extra care day the monthly contribution covers is never billed
+	// (#4817): the office confirms it without a number of the family.
+	if registration.IncludedInFee {
+		return false, nil
+	}
 	return false, h.requireDebtorNumber(ctx, organizationID, registration.DebtorNumber)
 }
 
@@ -176,7 +181,7 @@ func (h *HolidayContributions) SetHolidayChildDebtorNumbers(ctx context.Context,
 	if err := readstate.Check(expectedVersion, holidayChildNumbersVersion(registration, stored)); err != nil {
 		return parentbilling.HolidayFamilyDebtorNumber{}, err
 	}
-	entered, err := h.enteredChildNumbers(ctx, reviewer.OrganizationID, registration, stored, numbers)
+	entered, err := h.enteredChildNumbers(ctx, reviewer.OrganizationID, registration, stored, numbers, false)
 	if err != nil {
 		return parentbilling.HolidayFamilyDebtorNumber{}, err
 	}
@@ -226,7 +231,9 @@ func (h *HolidayContributions) confirmChildNumbers(ctx context.Context, reviewer
 			return err
 		}
 	}
-	entered, err := h.enteredChildNumbers(ctx, reviewer.OrganizationID, registration, stored, numbers)
+	// An extra care day the monthly contribution covers is never billed
+	// (#4817): its confirmation may leave a child without a number.
+	entered, err := h.enteredChildNumbers(ctx, reviewer.OrganizationID, registration, stored, numbers, registration.IncludedInFee)
 	if err != nil {
 		return err
 	}
@@ -281,9 +288,10 @@ func (h *HolidayContributions) keepChildNumbers(ctx context.Context, reviewer pa
 // enteredChildNumbers checks the entered numbers: only children of the
 // registration, each in the Träger's format, and, when the Träger asks for
 // a number, one for every child, entered or stored. The errors name the
-// field of each child.
+// field of each child. missingAllowed leaves a child without a number
+// as it is (requireChildNumbers).
 func (h *HolidayContributions) enteredChildNumbers(ctx context.Context, organizationID int64, registration parentbilling.HolidayRegistration,
-	numbers []parentbilling.ChildDebtorNumber, inputs []parentbilling.HolidayChildDebtorNumberInput,
+	numbers []parentbilling.ChildDebtorNumber, inputs []parentbilling.HolidayChildDebtorNumberInput, missingAllowed bool,
 ) (map[int64]string, error) {
 	if parentbilling.FamilyKey(registration.GuardianEmail) == "" {
 		return nil, parentbilling.ErrChildNotFound
@@ -319,7 +327,7 @@ func (h *HolidayContributions) enteredChildNumbers(ctx context.Context, organiza
 		entered[input.ChildID.Int64()] = number
 	}
 	if required {
-		requireChildNumbers(stored, entered, errs)
+		requireChildNumbers(stored, entered, errs, missingAllowed)
 	}
 	if len(errs) > 0 {
 		return nil, errs
@@ -346,13 +354,18 @@ func storedHolidayChildNumbers(registration parentbilling.HolidayRegistration, n
 }
 
 // requireChildNumbers refuses a missing number, whether omitted or cleared.
-func requireChildNumbers(stored, entered map[int64]string, errs validation.Errors) {
+// missingAllowed lets a child stay without a number; a number another
+// invoice may rely on is still not cleared.
+func requireChildNumbers(stored, entered map[int64]string, errs validation.Errors, missingAllowed bool) {
 	for id, previous := range stored {
 		field := childDebtorNumberField(id)
 		if _, refused := errs[field]; refused {
 			continue
 		}
 		number, named := entered[id]
+		if missingAllowed && previous == "" {
+			continue
+		}
 		if (named && number == "") || (!named && previous == "") {
 			errs[field] = errors.New("is required")
 		}

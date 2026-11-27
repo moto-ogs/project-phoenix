@@ -23,13 +23,6 @@ type AbsenceEmailDispatcher struct {
 }
 
 func (d AbsenceEmailDispatcher) Enqueue(ctx context.Context, value workforceCompose.AbsenceEmailMessage) error {
-	return enqueueDurableMail(ctx, d.Durable, DurableMail{
-		TenantID: value.TenantID, Message: d.message(ctx, value), Type: value.Type, ReferenceID: value.ReferenceID,
-		Backoff: []time.Duration{time.Minute, 5 * time.Minute, 15 * time.Minute},
-	})
-}
-
-func (d AbsenceEmailDispatcher) message(ctx context.Context, value workforceCompose.AbsenceEmailMessage) email.Message {
 	message := email.Message{
 		From: d.From, To: email.NewEmail(value.To.Name, value.To.Address),
 		Subject: value.Subject, Template: value.Template, Content: value.TemplateData(),
@@ -38,7 +31,10 @@ func (d AbsenceEmailDispatcher) message(ctx context.Context, value workforceComp
 		identity := email.ResolveReplyToIdentity(ctx, d.Identity, value.TenantID, d.Logger)
 		message.ReplyTo = email.NewEmail(identity.Name, identity.Address)
 	}
-	return message
+	return enqueueDurableMail(ctx, d.Durable, DurableMail{
+		TenantID: value.TenantID, Message: message, Type: value.Type, ReferenceID: value.ReferenceID,
+		Backoff: []time.Duration{time.Minute, 5 * time.Minute, 15 * time.Minute},
+	})
 }
 
 type absenceEmailSchoolDirectory struct {

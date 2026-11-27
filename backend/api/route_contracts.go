@@ -462,6 +462,7 @@ func traegerContractMounts() []contractMount {
 		{"/traeger/documents", organizationTenancyTraeger.DocumentRouteContracts()},
 		{"/traeger/report-templates", organizationTenancyTraeger.ReportTemplateRouteContracts()},
 		{"/traeger/billing-families", parentBillingHTTP.BillingFamilyRouteContracts()},
+		{"/traeger/invoice-journal", parentBillingHTTP.InvoiceJournalRouteContracts()},
 		{"/traeger/notifications", schoolFeedRouteContracts(common.PortalTraeger)},
 		{"/traeger/staff-records", workforceTraegerStaff.RecordRouteContracts()},
 		{"/traeger/staff-record-imports", workforceTraegerStaff.ImportRouteContracts()},
@@ -724,6 +725,7 @@ func tenantEnrollmentContractMounts() []contractMount {
 		{"/api/enrollment", enrollmentHTTP.AdminRequestRouteContracts()},
 		{"/api/enrollment", enrollmentHTTP.AdminReviewRouteContracts()},
 		{"/api/holiday-weeks", enrollmentHTTP.HolidayHostRouteContracts()},
+		{"/api/holiday-extra-days", enrollmentHTTP.SchoolExtraDayRouteContracts()},
 		{"/api/holiday-guests", enrollmentHTTP.HolidayGuestRouteContracts()},
 		// People Directory's http role may not import the contract types;
 		// both decisions answer no data.

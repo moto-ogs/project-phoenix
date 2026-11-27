@@ -1,7 +1,5 @@
 {{define "parent-mfa-email-code.html"}}
-{{template "header" .}}
-
-<div class="email-body" lang="{{.Lang}}">
+{{template "header" (or .Lang "")}}
     {{template "moto-brand" .}}
     <h1>{{.Title}}</h1>
     <p>{{.Greeting}}</p>
@@ -10,8 +8,8 @@
     <!-- The code itself: large, monospace, copy-friendly. No surrounding link
          on purpose, as in every code mail (phishing defense). -->
     <div style="background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px 16px; margin: 32px 0; text-align: center;">
-        <p style="margin: 0 0 8px 0; color: #6b7280; font-size: 13px;">{{.CodeLabel}}</p>
-        <p style="margin: 0; color: #111827; font-family: 'Monaco', 'Courier New', monospace; font-size: 32px; font-weight: 700; letter-spacing: 0.4em;">{{.Code}}</p>
+        <p class="code-label" style="margin: 0 0 8px 0; color: #6b7280; font-size: 13px;">{{.CodeLabel}}</p>
+        <p class="code-value" style="margin: 0; color: #111827; font-family: 'Monaco', 'Courier New', monospace; font-size: 32px; font-weight: 700; letter-spacing: 0.4em;">{{.Code}}</p>
     </div>
 
     <div class="highlight-box">
@@ -27,7 +25,6 @@
     {{end}}
 
     <p class="security-note">{{.Security}}</p>
-</div>
 
 {{template "footer" .}}
 {{end}}

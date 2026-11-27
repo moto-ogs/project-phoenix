@@ -10,7 +10,6 @@ import (
 	owners "github.com/moto-ogs/project-phoenix/roots/owners"
 
 	deliveryCompose "github.com/moto-ogs/project-phoenix/modules/delivery/compose"
-	email "github.com/moto-ogs/project-phoenix/modules/delivery/mail"
 	"github.com/moto-ogs/project-phoenix/modules/identityaccess"
 	"github.com/moto-ogs/project-phoenix/tenant"
 )
@@ -20,20 +19,8 @@ import (
 type fixtureMailOutbox struct {
 	outbox   owners.OutboxEnqueuer
 	runtime  *deliveryCompose.Runtime
-	mailer   email.Mailer
+	provider *deliveryCompose.MailPushProvider
 	logger   *slog.Logger
-	renderer func() deliveryCompose.MailRenderer
-}
-
-func newFixtureMailOutbox(delivery DeliveryTestModule, mailer email.Mailer, logger *slog.Logger, identity *identityaccess.Owner) fixtureMailOutbox {
-	return fixtureMailOutbox{
-		outbox:  owners.OutboxEnqueuer{Outbox: delivery.EmailOutbox, Runtime: delivery.Runtime},
-		runtime: delivery.Runtime, mailer: mailer, logger: logger,
-		// Identity is composed after the outbox. Resolve it when the mail is sent.
-		renderer: func() deliveryCompose.MailRenderer {
-			return owners.TransactionalMailRenderer{Identity: *identity, Logger: logger}
-		},
-	}
 }
 
 func (f fixtureMailOutbox) EnqueueTransactionalMail(ctx context.Context, mail owners.DurableMail) error {
@@ -44,12 +31,7 @@ func (f fixtureMailOutbox) EnqueueTransactionalMail(ctx context.Context, mail ow
 	tenant.RegisterAfterCommit(ctx, func() {
 		sendCtx, cancel := context.WithTimeout(identityaccessFixtureContext(ctx), 15*time.Second)
 		defer cancel()
-		provider := &deliveryCompose.MailPushProvider{
-			Registry: deliveryCompose.NewEmailTemplateRegistry(map[string]deliveryCompose.MailRenderer{
-				owners.TransactionalMailKind: f.renderer(),
-			}), Mailer: f.mailer, Logger: f.logger, Tenants: deliveryCompose.NewTenantTransactions(nil), Now: f.runtime.Now,
-		}
-		if err := deliveryCompose.DrainEmailForTest(sendCtx, f.runtime, provider, mail.TenantID, queued.ID); err != nil {
+		if err := deliveryCompose.DrainEmailForTest(sendCtx, f.runtime, f.provider, mail.TenantID, queued.ID); err != nil {
 			f.logger.Error("fixture outbox worker failed", "error", err.Error())
 		}
 		if mail.TenantID == 0 {

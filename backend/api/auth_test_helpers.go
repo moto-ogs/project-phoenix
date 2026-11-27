@@ -248,11 +248,8 @@ func NewAuthTestModule(db transactionruntime.Database, unit tenant.UnitOfWork, o
 	if err != nil {
 		return AuthTestModule{}, err
 	}
-	var identityAccess identityaccess.Owner
-	durable := mail.outbox
-	if durable == nil {
-		durable = newFixtureMailOutbox(deliveryModule, mailer, logger, &identityAccess)
-	}
+	mailRenderer := &owners.TransactionalMailRenderer{Logger: logger}
+	durable := authTestTransactionalMail(deliveryModule.Runtime, mailRenderer, mail, logger)
 	identity := owners.TenantMailIdentity(organizations, settings.Settings, owners.RootEnvironment{Logger: logger})
 	sessionRepos := owners.SessionRepositoriesOf(r, organizations, audits.AuthEvent, deliveryCompose.NewPushSubscriptionRepository(db.Pool()))
 	if settingsOverrides.staffCreateErr != nil {
@@ -309,7 +306,7 @@ func NewAuthTestModule(db transactionruntime.Database, unit tenant.UnitOfWork, o
 	}
 	demo, err := owners.DemoDependencies(&owners.DemoAccessWiring{
 		DefaultFrom: defaultFrom, Durable: durable, FrontendURL: frontendURL,
-		Logger: logger, Backoff: settingsOverrides.resetBackoff, MaxActiveSchools: settingsOverrides.demoMaxActiveSchools,
+		Backoff: settingsOverrides.resetBackoff, MaxActiveSchools: settingsOverrides.demoMaxActiveSchools,
 		OperatorWithoutSecondFactor: settingsOverrides.demoOperatorWithoutSecondFactor,
 		NewToken:                    requestTokenReads.NewCapabilityToken, Fingerprint: requestTokenReads.CapabilityFingerprint,
 	}, settingsOverrides.standingDemo, organizations)
@@ -327,7 +324,7 @@ func NewAuthTestModule(db transactionruntime.Database, unit tenant.UnitOfWork, o
 	if err != nil {
 		return AuthTestModule{}, err
 	}
-	identityAccess, err = owners.NewIdentityAccessWithSessions(identityaccessCompose.Dependencies{
+	identityAccess, err := owners.NewIdentityAccessWithSessions(identityaccessCompose.Dependencies{
 		DB: db.Pool(), Observe: func(identityaccessCompose.Observation) {}, Now: settingsOverrides.identityClock,
 		MFA: mfa, Lifecycle: lifecycle, Operators: operators, Demo: demo, TenantRuntime: unit,
 		Resets: owners.PasswordResetDependencies(&owners.PasswordResetWiring{
@@ -341,6 +338,7 @@ func NewAuthTestModule(db transactionruntime.Database, unit tenant.UnitOfWork, o
 	if err != nil {
 		return AuthTestModule{}, err
 	}
+	mailRenderer.Identity = identityAccess
 	invitation := InvitationCapability(identityAccess)
 	guardian := GuardianInvitationCapability(identityAccess)
 	return AuthTestModule{
@@ -351,6 +349,24 @@ func NewAuthTestModule(db transactionruntime.Database, unit tenant.UnitOfWork, o
 		SessionSigning: AuthTestSessionSigning{Secret: cfg.JWTSecret, AccessExpiry: cfg.JWTExpiry, RefreshExpiry: cfg.JWTRefreshExpiry},
 		Invitation:     invitation, GuardianInvitation: guardian,
 	}, nil
+}
+
+func authTestTransactionalMail(runtime *deliveryCompose.Runtime, renderer *owners.TransactionalMailRenderer, mail authTestMail, logger *slog.Logger) owners.DurableMailOutbox {
+	if mail.outbox != nil {
+		return mail.outbox
+	}
+	provider := &deliveryCompose.MailPushProvider{
+		Registry: deliveryCompose.NewEmailTemplateRegistry(map[string]deliveryCompose.MailRenderer{
+			owners.TransactionalMailKind: renderer,
+		}),
+		Mailer: mail.mailer, Logger: logger, Tenants: deliveryCompose.NewTenantTransactions(nil), Now: runtime.Now,
+	}
+	return fixtureMailOutbox{
+		outbox:   owners.OutboxEnqueuer{Runtime: runtime},
+		runtime:  runtime,
+		provider: provider,
+		logger:   logger,
+	}
 }
 
 // IdentityAccessForTests composes the Identity & Access module over the

@@ -3646,7 +3646,7 @@
       "classification": "platform",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.DemoAccessMail.SendDemoAccessLink",
-      "reason": "In the testhooks build, the fixture removes its own system-scope intent after the worker runs. This does not run in the transaction that persists the intent or in production.",
+      "reason": "After the fixture drain, the test hook cleans up only its own system intent. Tenant deliveries and the production roots are unaffected.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.DeleteSystemEmailForTest",
       "target_owner": "delivery-platform"
@@ -3655,9 +3655,9 @@
       "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.demoAccessMail.SendDemoAccessLink",
       "classification": "platform",
-      "effect": "durable",
+      "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.DemoAccessMail.SendDemoAccessLink",
-      "reason": "In the testhooks build, the explicit fixture outbox drives the leased Delivery worker for this persisted intent after the caller commits. The production binding leaves delivery to the worker.",
+      "reason": "The auth test fixture runs the existing leased worker for exactly its committed intent with the fixture mail transport. The helper is testhooks-only.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.DrainEmailForTest",
       "target_owner": "delivery-platform"
@@ -3668,7 +3668,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.DemoAccessMail.SendDemoAccessLink",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through roots/owners.demoAccessMail.SendDemoAccessLink. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The durable outbox replaces the legacy dispatcher enablement check. The same intent is persisted in the caller’s transaction; the testhooks fixture binds its after-commit worker explicitly.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through roots/owners.demoAccessMail.SendDemoAccessLink. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. Dispatcher removal: The retired direct dispatcher no longer gates transactional mail. The existing outbox recipient, scope, retry defaults and persisted payload are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueEmail",
       "target_owner": "delivery-platform"
@@ -3679,7 +3679,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.DemoAccessMail.SendDemoAccessLink",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through roots/owners.demoAccessMail.SendDemoAccessLink. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The durable outbox replaces the legacy dispatcher enablement check. The same intent is persisted in the caller’s transaction; the testhooks fixture binds its after-commit worker explicitly.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through roots/owners.demoAccessMail.SendDemoAccessLink. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. Dispatcher removal: The retired direct dispatcher no longer gates transactional mail. The existing outbox recipient, scope, retry defaults and persisted payload are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueSystemEmail",
       "target_owner": "delivery-platform"
@@ -3690,7 +3690,7 @@
       "classification": "platform",
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.DemoAccessMail.SendDemoAccessLink",
-      "reason": "In the testhooks build, the explicit fixture outbox registers a callback after persisting the intent. The callback runs only after the caller commits; the production outbox does not register this fixture callback.",
+      "reason": "The auth test fixture registers its drain only after the outbox insert commits. The serving and worker roots do not use this hook.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
       "target_owner": "tenant-runtime"
@@ -3701,7 +3701,7 @@
       "classification": "platform",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.DemoAccessMail.SendDemoLead",
-      "reason": "In the testhooks build, the fixture removes its own system-scope intent after the worker runs. This does not run in the transaction that persists the intent or in production.",
+      "reason": "After the fixture drain, the test hook cleans up only its own system intent. Tenant deliveries and the production roots are unaffected.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.DeleteSystemEmailForTest",
       "target_owner": "delivery-platform"
@@ -3710,9 +3710,9 @@
       "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.demoAccessMail.SendDemoLead",
       "classification": "platform",
-      "effect": "durable",
+      "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.DemoAccessMail.SendDemoLead",
-      "reason": "In the testhooks build, the explicit fixture outbox drives the leased Delivery worker for this persisted intent after the caller commits. The production binding leaves delivery to the worker.",
+      "reason": "The auth test fixture runs the existing leased worker for exactly its committed intent with the fixture mail transport. The helper is testhooks-only.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.DrainEmailForTest",
       "target_owner": "delivery-platform"
@@ -3723,7 +3723,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.DemoAccessMail.SendDemoLead",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through roots/owners.demoAccessMail.SendDemoLead. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The durable outbox replaces the legacy dispatcher enablement check. The same intent is persisted in the caller’s transaction; the testhooks fixture binds its after-commit worker explicitly.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through roots/owners.demoAccessMail.SendDemoLead. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. Dispatcher removal: The retired direct dispatcher no longer gates transactional mail. The existing outbox recipient, scope, retry defaults and persisted payload are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueEmail",
       "target_owner": "delivery-platform"
@@ -3734,7 +3734,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.DemoAccessMail.SendDemoLead",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through roots/owners.demoAccessMail.SendDemoLead. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The durable outbox replaces the legacy dispatcher enablement check. The same intent is persisted in the caller’s transaction; the testhooks fixture binds its after-commit worker explicitly.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through roots/owners.demoAccessMail.SendDemoLead. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. Dispatcher removal: The retired direct dispatcher no longer gates transactional mail. The existing outbox recipient, scope, retry defaults and persisted payload are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueSystemEmail",
       "target_owner": "delivery-platform"
@@ -3745,7 +3745,7 @@
       "classification": "platform",
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.DemoAccessMail.SendDemoLead",
-      "reason": "In the testhooks build, the explicit fixture outbox registers a callback after persisting the intent. The callback runs only after the caller commits; the production outbox does not register this fixture callback.",
+      "reason": "The auth test fixture registers its drain only after the outbox insert commits. The serving and worker roots do not use this hook.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
       "target_owner": "tenant-runtime"
@@ -6847,7 +6847,7 @@
       "classification": "platform",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.ConfirmOperatorEmailChange",
-      "reason": "In the testhooks build, the fixture removes its own system-scope intent after the worker runs. This does not run in the transaction that persists the intent or in production.",
+      "reason": "After the fixture drain, the test hook cleans up only its own system intent. Tenant deliveries and the production roots are unaffected.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.DeleteSystemEmailForTest",
       "target_owner": "delivery-platform"
@@ -6856,9 +6856,9 @@
       "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.engine.ConfirmOperatorEmailChange",
       "classification": "platform",
-      "effect": "durable",
+      "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.ConfirmOperatorEmailChange",
-      "reason": "In the testhooks build, the explicit fixture outbox drives the leased Delivery worker for this persisted intent after the caller commits. The production binding leaves delivery to the worker.",
+      "reason": "The auth test fixture runs the existing leased worker for exactly its committed intent with the fixture mail transport. The helper is testhooks-only.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.DrainEmailForTest",
       "target_owner": "delivery-platform"
@@ -6869,7 +6869,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.ConfirmOperatorEmailChange",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through modules/identityaccess/internal/application.engine.ConfirmOperatorEmailChange. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). The durable outbox replaces the legacy dispatcher enablement check. The same intent is persisted in the caller’s transaction; the testhooks fixture binds its after-commit worker explicitly.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through modules/identityaccess/internal/application.engine.ConfirmOperatorEmailChange. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Dispatcher removal: The retired direct dispatcher no longer gates transactional mail. The existing outbox recipient, scope, retry defaults and persisted payload are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueEmail",
       "target_owner": "delivery-platform"
@@ -6880,7 +6880,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.ConfirmOperatorEmailChange",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through modules/identityaccess/internal/application.engine.ConfirmOperatorEmailChange. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). The durable outbox replaces the legacy dispatcher enablement check. The same intent is persisted in the caller’s transaction; the testhooks fixture binds its after-commit worker explicitly.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through modules/identityaccess/internal/application.engine.ConfirmOperatorEmailChange. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Dispatcher removal: The retired direct dispatcher no longer gates transactional mail. The existing outbox recipient, scope, retry defaults and persisted payload are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueSystemEmail",
       "target_owner": "delivery-platform"
@@ -6891,7 +6891,7 @@
       "classification": "platform",
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess.Owner.ConfirmOperatorEmailChange",
-      "reason": "In the testhooks build, the explicit fixture outbox registers a callback after persisting the intent. The callback runs only after the caller commits; the production outbox does not register this fixture callback.",
+      "reason": "The auth test fixture registers its drain only after the outbox insert commits. The serving and worker roots do not use this hook.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
       "target_owner": "tenant-runtime"
@@ -15826,7 +15826,7 @@
       "classification": "platform",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorEmailChangeConfirmed",
-      "reason": "In the testhooks build, the fixture removes its own system-scope intent after the worker runs. This does not run in the transaction that persists the intent or in production.",
+      "reason": "After the fixture drain, the test hook cleans up only its own system intent. Tenant deliveries and the production roots are unaffected.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.DeleteSystemEmailForTest",
       "target_owner": "delivery-platform"
@@ -15835,9 +15835,9 @@
       "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.operatorLinkDelivery.DispatchOperatorEmailChangeConfirmed",
       "classification": "platform",
-      "effect": "durable",
+      "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorEmailChangeConfirmed",
-      "reason": "In the testhooks build, the explicit fixture outbox drives the leased Delivery worker for this persisted intent after the caller commits. The production binding leaves delivery to the worker.",
+      "reason": "The auth test fixture runs the existing leased worker for exactly its committed intent with the fixture mail transport. The helper is testhooks-only.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.DrainEmailForTest",
       "target_owner": "delivery-platform"
@@ -15848,7 +15848,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorEmailChangeConfirmed",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through roots/owners.operatorLinkDelivery.DispatchOperatorEmailChangeConfirmed. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The durable outbox replaces the legacy dispatcher enablement check. The same intent is persisted in the caller’s transaction; the testhooks fixture binds its after-commit worker explicitly.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through roots/owners.operatorLinkDelivery.DispatchOperatorEmailChangeConfirmed. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. Dispatcher removal: The retired direct dispatcher no longer gates transactional mail. The existing outbox recipient, scope, retry defaults and persisted payload are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueEmail",
       "target_owner": "delivery-platform"
@@ -15859,7 +15859,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorEmailChangeConfirmed",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through roots/owners.operatorLinkDelivery.DispatchOperatorEmailChangeConfirmed. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The durable outbox replaces the legacy dispatcher enablement check. The same intent is persisted in the caller’s transaction; the testhooks fixture binds its after-commit worker explicitly.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through roots/owners.operatorLinkDelivery.DispatchOperatorEmailChangeConfirmed. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. Dispatcher removal: The retired direct dispatcher no longer gates transactional mail. The existing outbox recipient, scope, retry defaults and persisted payload are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueSystemEmail",
       "target_owner": "delivery-platform"
@@ -15870,7 +15870,7 @@
       "classification": "platform",
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorEmailChangeConfirmed",
-      "reason": "In the testhooks build, the explicit fixture outbox registers a callback after persisting the intent. The callback runs only after the caller commits; the production outbox does not register this fixture callback.",
+      "reason": "The auth test fixture registers its drain only after the outbox insert commits. The serving and worker roots do not use this hook.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
       "target_owner": "tenant-runtime"
@@ -15881,7 +15881,7 @@
       "classification": "platform",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorEmailChangeRequested",
-      "reason": "In the testhooks build, the fixture removes its own system-scope intent after the worker runs. This does not run in the transaction that persists the intent or in production.",
+      "reason": "After the fixture drain, the test hook cleans up only its own system intent. Tenant deliveries and the production roots are unaffected.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.DeleteSystemEmailForTest",
       "target_owner": "delivery-platform"
@@ -15890,9 +15890,9 @@
       "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.operatorLinkDelivery.DispatchOperatorEmailChangeRequested",
       "classification": "platform",
-      "effect": "durable",
+      "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorEmailChangeRequested",
-      "reason": "In the testhooks build, the explicit fixture outbox drives the leased Delivery worker for this persisted intent after the caller commits. The production binding leaves delivery to the worker.",
+      "reason": "The auth test fixture runs the existing leased worker for exactly its committed intent with the fixture mail transport. The helper is testhooks-only.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.DrainEmailForTest",
       "target_owner": "delivery-platform"
@@ -15903,7 +15903,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorEmailChangeRequested",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through roots/owners.operatorLinkDelivery.DispatchOperatorEmailChangeRequested. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The durable outbox replaces the legacy dispatcher enablement check. The same intent is persisted in the caller’s transaction; the testhooks fixture binds its after-commit worker explicitly.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through roots/owners.operatorLinkDelivery.DispatchOperatorEmailChangeRequested. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. Dispatcher removal: The retired direct dispatcher no longer gates transactional mail. The existing outbox recipient, scope, retry defaults and persisted payload are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueEmail",
       "target_owner": "delivery-platform"
@@ -15914,7 +15914,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorEmailChangeRequested",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through roots/owners.operatorLinkDelivery.DispatchOperatorEmailChangeRequested. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The durable outbox replaces the legacy dispatcher enablement check. The same intent is persisted in the caller’s transaction; the testhooks fixture binds its after-commit worker explicitly.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through roots/owners.operatorLinkDelivery.DispatchOperatorEmailChangeRequested. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. Dispatcher removal: The retired direct dispatcher no longer gates transactional mail. The existing outbox recipient, scope, retry defaults and persisted payload are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueSystemEmail",
       "target_owner": "delivery-platform"
@@ -15925,7 +15925,7 @@
       "classification": "platform",
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorEmailChangeRequested",
-      "reason": "In the testhooks build, the explicit fixture outbox registers a callback after persisting the intent. The callback runs only after the caller commits; the production outbox does not register this fixture callback.",
+      "reason": "The auth test fixture registers its drain only after the outbox insert commits. The serving and worker roots do not use this hook.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
       "target_owner": "tenant-runtime"
@@ -15936,7 +15936,7 @@
       "classification": "platform",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorEmailChangeVerification",
-      "reason": "In the testhooks build, the fixture removes its own system-scope intent after the worker runs. This does not run in the transaction that persists the intent or in production.",
+      "reason": "After the fixture drain, the test hook cleans up only its own system intent. Tenant deliveries and the production roots are unaffected.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.DeleteSystemEmailForTest",
       "target_owner": "delivery-platform"
@@ -15945,9 +15945,9 @@
       "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.operatorLinkDelivery.DispatchOperatorEmailChangeVerification",
       "classification": "platform",
-      "effect": "durable",
+      "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorEmailChangeVerification",
-      "reason": "In the testhooks build, the explicit fixture outbox drives the leased Delivery worker for this persisted intent after the caller commits. The production binding leaves delivery to the worker.",
+      "reason": "The auth test fixture runs the existing leased worker for exactly its committed intent with the fixture mail transport. The helper is testhooks-only.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.DrainEmailForTest",
       "target_owner": "delivery-platform"
@@ -15958,7 +15958,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorEmailChangeVerification",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through roots/owners.operatorLinkDelivery.DispatchOperatorEmailChangeVerification. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The durable outbox replaces the legacy dispatcher enablement check. The same intent is persisted in the caller’s transaction; the testhooks fixture binds its after-commit worker explicitly.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through roots/owners.operatorLinkDelivery.DispatchOperatorEmailChangeVerification. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. Dispatcher removal: The retired direct dispatcher no longer gates transactional mail. The existing outbox recipient, scope, retry defaults and persisted payload are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueEmail",
       "target_owner": "delivery-platform"
@@ -15969,7 +15969,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorEmailChangeVerification",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through roots/owners.operatorLinkDelivery.DispatchOperatorEmailChangeVerification. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The durable outbox replaces the legacy dispatcher enablement check. The same intent is persisted in the caller’s transaction; the testhooks fixture binds its after-commit worker explicitly.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through roots/owners.operatorLinkDelivery.DispatchOperatorEmailChangeVerification. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. Dispatcher removal: The retired direct dispatcher no longer gates transactional mail. The existing outbox recipient, scope, retry defaults and persisted payload are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueSystemEmail",
       "target_owner": "delivery-platform"
@@ -15980,7 +15980,7 @@
       "classification": "platform",
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorEmailChangeVerification",
-      "reason": "In the testhooks build, the explicit fixture outbox registers a callback after persisting the intent. The callback runs only after the caller commits; the production outbox does not register this fixture callback.",
+      "reason": "The auth test fixture registers its drain only after the outbox insert commits. The serving and worker roots do not use this hook.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
       "target_owner": "tenant-runtime"
@@ -15991,7 +15991,7 @@
       "classification": "platform",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorInvitation",
-      "reason": "In the testhooks build, the fixture removes its own system-scope intent after the worker runs. This does not run in the transaction that persists the intent or in production.",
+      "reason": "After the fixture drain, the test hook cleans up only its own system intent. Tenant deliveries and the production roots are unaffected.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.DeleteSystemEmailForTest",
       "target_owner": "delivery-platform"
@@ -16000,9 +16000,9 @@
       "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.operatorLinkDelivery.DispatchOperatorInvitation",
       "classification": "platform",
-      "effect": "durable",
+      "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorInvitation",
-      "reason": "In the testhooks build, the explicit fixture outbox drives the leased Delivery worker for this persisted intent after the caller commits. The production binding leaves delivery to the worker.",
+      "reason": "The auth test fixture runs the existing leased worker for exactly its committed intent with the fixture mail transport. The helper is testhooks-only.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.DrainEmailForTest",
       "target_owner": "delivery-platform"
@@ -16013,7 +16013,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorInvitation",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through roots/owners.operatorLinkDelivery.DispatchOperatorInvitation. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The durable outbox replaces the legacy dispatcher enablement check. The same intent is persisted in the caller’s transaction; the testhooks fixture binds its after-commit worker explicitly.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through roots/owners.operatorLinkDelivery.DispatchOperatorInvitation. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. Dispatcher removal: The retired direct dispatcher no longer gates transactional mail. The existing outbox recipient, scope, retry defaults and persisted payload are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueEmail",
       "target_owner": "delivery-platform"
@@ -16024,7 +16024,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorInvitation",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through roots/owners.operatorLinkDelivery.DispatchOperatorInvitation. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The durable outbox replaces the legacy dispatcher enablement check. The same intent is persisted in the caller’s transaction; the testhooks fixture binds its after-commit worker explicitly.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through roots/owners.operatorLinkDelivery.DispatchOperatorInvitation. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. Dispatcher removal: The retired direct dispatcher no longer gates transactional mail. The existing outbox recipient, scope, retry defaults and persisted payload are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueSystemEmail",
       "target_owner": "delivery-platform"
@@ -16035,7 +16035,7 @@
       "classification": "platform",
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorInvitation",
-      "reason": "In the testhooks build, the explicit fixture outbox registers a callback after persisting the intent. The callback runs only after the caller commits; the production outbox does not register this fixture callback.",
+      "reason": "The auth test fixture registers its drain only after the outbox insert commits. The serving and worker roots do not use this hook.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
       "target_owner": "tenant-runtime"
@@ -20769,7 +20769,7 @@
       "classification": "platform",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/operator.OperatorAccess.ConfirmOperatorEmailChange",
-      "reason": "In the testhooks build, the fixture removes its own system-scope intent after the worker runs. This does not run in the transaction that persists the intent or in production.",
+      "reason": "After the fixture drain, the test hook cleans up only its own system intent. Tenant deliveries and the production roots are unaffected.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.DeleteSystemEmailForTest",
       "target_owner": "delivery-platform"
@@ -20778,9 +20778,9 @@
       "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/api.operatorIdentityCapabilities.ConfirmOperatorEmailChange",
       "classification": "platform",
-      "effect": "durable",
+      "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/operator.OperatorAccess.ConfirmOperatorEmailChange",
-      "reason": "In the testhooks build, the explicit fixture outbox drives the leased Delivery worker for this persisted intent after the caller commits. The production binding leaves delivery to the worker.",
+      "reason": "The auth test fixture runs the existing leased worker for exactly its committed intent with the fixture mail transport. The helper is testhooks-only.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.DrainEmailForTest",
       "target_owner": "delivery-platform"
@@ -20791,7 +20791,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/operator.OperatorAccess.ConfirmOperatorEmailChange",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through api.operatorIdentityCapabilities.ConfirmOperatorEmailChange. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). The durable outbox replaces the legacy dispatcher enablement check. The same intent is persisted in the caller’s transaction; the testhooks fixture binds its after-commit worker explicitly.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through api.operatorIdentityCapabilities.ConfirmOperatorEmailChange. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Dispatcher removal: The retired direct dispatcher no longer gates transactional mail. The existing outbox recipient, scope, retry defaults and persisted payload are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueEmail",
       "target_owner": "delivery-platform"
@@ -20802,7 +20802,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/operator.OperatorAccess.ConfirmOperatorEmailChange",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through api.operatorIdentityCapabilities.ConfirmOperatorEmailChange. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). The durable outbox replaces the legacy dispatcher enablement check. The same intent is persisted in the caller’s transaction; the testhooks fixture binds its after-commit worker explicitly.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through api.operatorIdentityCapabilities.ConfirmOperatorEmailChange. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176). Dispatcher removal: The retired direct dispatcher no longer gates transactional mail. The existing outbox recipient, scope, retry defaults and persisted payload are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueSystemEmail",
       "target_owner": "delivery-platform"
@@ -20813,7 +20813,7 @@
       "classification": "platform",
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/inbound/operator.OperatorAccess.ConfirmOperatorEmailChange",
-      "reason": "In the testhooks build, the explicit fixture outbox registers a callback after persisting the intent. The callback runs only after the caller commits; the production outbox does not register this fixture callback.",
+      "reason": "The auth test fixture registers its drain only after the outbox insert commits. The serving and worker roots do not use this hook.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
       "target_owner": "tenant-runtime"
@@ -22863,7 +22863,7 @@
       "classification": "platform",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/ports.OperatorEmailChangeDelivery.DispatchOperatorEmailChangeConfirmed",
-      "reason": "In the testhooks build, the fixture removes its own system-scope intent after the worker runs. This does not run in the transaction that persists the intent or in production.",
+      "reason": "After the fixture drain, the test hook cleans up only its own system intent. Tenant deliveries and the production roots are unaffected.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.DeleteSystemEmailForTest",
       "target_owner": "delivery-platform"
@@ -22872,9 +22872,9 @@
       "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/application.OperatorEmailChangeDelivery.DispatchOperatorEmailChangeConfirmed",
       "classification": "platform",
-      "effect": "durable",
+      "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/ports.OperatorEmailChangeDelivery.DispatchOperatorEmailChangeConfirmed",
-      "reason": "In the testhooks build, the explicit fixture outbox drives the leased Delivery worker for this persisted intent after the caller commits. The production binding leaves delivery to the worker.",
+      "reason": "The auth test fixture runs the existing leased worker for exactly its committed intent with the fixture mail transport. The helper is testhooks-only.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.DrainEmailForTest",
       "target_owner": "delivery-platform"
@@ -22885,7 +22885,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/ports.OperatorEmailChangeDelivery.DispatchOperatorEmailChangeConfirmed",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through modules/identityaccess/internal/application.OperatorEmailChangeDelivery.DispatchOperatorEmailChangeConfirmed. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The durable outbox replaces the legacy dispatcher enablement check. The same intent is persisted in the caller’s transaction; the testhooks fixture binds its after-commit worker explicitly.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through modules/identityaccess/internal/application.OperatorEmailChangeDelivery.DispatchOperatorEmailChangeConfirmed. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. Dispatcher removal: The retired direct dispatcher no longer gates transactional mail. The existing outbox recipient, scope, retry defaults and persisted payload are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueEmail",
       "target_owner": "delivery-platform"
@@ -22896,7 +22896,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/ports.OperatorEmailChangeDelivery.DispatchOperatorEmailChangeConfirmed",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through modules/identityaccess/internal/application.OperatorEmailChangeDelivery.DispatchOperatorEmailChangeConfirmed. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The durable outbox replaces the legacy dispatcher enablement check. The same intent is persisted in the caller’s transaction; the testhooks fixture binds its after-commit worker explicitly.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through modules/identityaccess/internal/application.OperatorEmailChangeDelivery.DispatchOperatorEmailChangeConfirmed. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. Dispatcher removal: The retired direct dispatcher no longer gates transactional mail. The existing outbox recipient, scope, retry defaults and persisted payload are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueSystemEmail",
       "target_owner": "delivery-platform"
@@ -22907,7 +22907,7 @@
       "classification": "platform",
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/internal/ports.OperatorEmailChangeDelivery.DispatchOperatorEmailChangeConfirmed",
-      "reason": "In the testhooks build, the explicit fixture outbox registers a callback after persisting the intent. The callback runs only after the caller commits; the production outbox does not register this fixture callback.",
+      "reason": "The auth test fixture registers its drain only after the outbox insert commits. The serving and worker roots do not use this hook.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
       "target_owner": "tenant-runtime"
@@ -25624,7 +25624,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.AccountSecurityNotice.NotifyMFAResetByAdmin",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through roots/owners.MFAMailer.NotifyMFAResetByAdmin. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #6862: an administrator's reset of an account's second factor enqueues the holder's notice as a global identity mail in the reset's administrative transaction, after the operator audit where an operator resets; without the notice nothing is reset. The shared outbox reads the same three-attempt retry policy and backoff directly, without constructing a legacy dispatcher request. The intent and transaction boundary are unchanged.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through roots/owners.MFAMailer.NotifyMFAResetByAdmin. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #6862: an administrator's reset of an account's second factor enqueues the holder's notice as a global identity mail in the reset's administrative transaction, after the operator audit where an operator resets; without the notice nothing is reset. Dispatcher removal: The retired direct dispatcher no longer gates transactional mail. The existing outbox recipient, scope, retry defaults and persisted payload are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueEmail",
       "target_owner": "delivery-platform"
@@ -25635,7 +25635,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.AccountSecurityNotice.NotifyMFAResetByAdmin",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through roots/owners.MFAMailer.NotifyMFAResetByAdmin. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #6862: an administrator's reset of an account's second factor enqueues the holder's notice as a global identity mail in the reset's administrative transaction, after the operator audit where an operator resets; without the notice nothing is reset. The shared outbox reads the same three-attempt retry policy and backoff directly, without constructing a legacy dispatcher request. The intent and transaction boundary are unchanged.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through roots/owners.MFAMailer.NotifyMFAResetByAdmin. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #6862: an administrator's reset of an account's second factor enqueues the holder's notice as a global identity mail in the reset's administrative transaction, after the operator audit where an operator resets; without the notice nothing is reset. Dispatcher removal: The retired direct dispatcher no longer gates transactional mail. The existing outbox recipient, scope, retry defaults and persisted payload are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueSystemEmail",
       "target_owner": "delivery-platform"
@@ -25949,7 +25949,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.CatererMFAResetNotice.NotifyCatererMFAReset",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through roots/owners.MFAMailer.NotifyCatererMFAReset. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #4497: the operator's reset of a caterer's second factor enqueues its notice as a global identity mail in the reset's administrative transaction, with its operator audit. Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The shared outbox reads the same three-attempt retry policy and backoff directly, without constructing a legacy dispatcher request. The intent and transaction boundary are unchanged.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through roots/owners.MFAMailer.NotifyCatererMFAReset. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #4497: the operator's reset of a caterer's second factor enqueues its notice as a global identity mail in the reset's administrative transaction, with its operator audit. Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. Dispatcher removal: The retired direct dispatcher no longer gates transactional mail. The existing outbox recipient, scope, retry defaults and persisted payload are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueEmail",
       "target_owner": "delivery-platform"
@@ -25960,7 +25960,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.CatererMFAResetNotice.NotifyCatererMFAReset",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through roots/owners.MFAMailer.NotifyCatererMFAReset. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #4497: the operator's reset of a caterer's second factor enqueues its notice as a global identity mail in the reset's administrative transaction, with its operator audit. Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The shared outbox reads the same three-attempt retry policy and backoff directly, without constructing a legacy dispatcher request. The intent and transaction boundary are unchanged.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through roots/owners.MFAMailer.NotifyCatererMFAReset. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #4497: the operator's reset of a caterer's second factor enqueues its notice as a global identity mail in the reset's administrative transaction, with its operator audit. Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. Dispatcher removal: The retired direct dispatcher no longer gates transactional mail. The existing outbox recipient, scope, retry defaults and persisted payload are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueSystemEmail",
       "target_owner": "delivery-platform"
@@ -26529,7 +26529,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.MFAMail.EnqueueCode",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Worker.DeliverEmail (delivery-platform) through api.fixtureMFAMail.EnqueueCode. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The shared outbox reads the same three-attempt retry policy and backoff directly, without constructing a legacy dispatcher request. The intent and transaction boundary are unchanged.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Worker.DeliverEmail (delivery-platform) through api.fixtureMFAMail.EnqueueCode. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. Dispatcher removal: The retired direct dispatcher no longer gates transactional mail. The existing outbox recipient, scope, retry defaults and persisted payload are unchanged.",
       "source_owner": "identity-access",
       "target": "*github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Worker.DeliverEmail",
       "target_owner": "delivery-platform"
@@ -26551,7 +26551,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.MFAMail.EnqueueCode",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through api.fixtureMFAMail.EnqueueCode. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The shared outbox reads the same three-attempt retry policy and backoff directly, without constructing a legacy dispatcher request. The intent and transaction boundary are unchanged.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through api.fixtureMFAMail.EnqueueCode. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. Dispatcher removal: The retired direct dispatcher no longer gates transactional mail. The existing outbox recipient, scope, retry defaults and persisted payload are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueEmail",
       "target_owner": "delivery-platform"
@@ -26562,7 +26562,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.MFAMail.EnqueueCode",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through api.fixtureMFAMail.EnqueueCode. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The shared outbox reads the same three-attempt retry policy and backoff directly, without constructing a legacy dispatcher request. The intent and transaction boundary are unchanged.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through api.fixtureMFAMail.EnqueueCode. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. Dispatcher removal: The retired direct dispatcher no longer gates transactional mail. The existing outbox recipient, scope, retry defaults and persisted payload are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueSystemEmail",
       "target_owner": "delivery-platform"
@@ -26573,7 +26573,7 @@
       "classification": "platform",
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.MFAMail.EnqueueCode",
-      "reason": "Platform protocol participation (scope): identity-access reaches modules/transactionruntime/compose.Database.UnitOfWork (transaction-runtime) through api.fixtureMFAMail.EnqueueCode. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The shared outbox reads the same three-attempt retry policy and backoff directly, without constructing a legacy dispatcher request. The intent and transaction boundary are unchanged.",
+      "reason": "Platform protocol participation (scope): identity-access reaches modules/transactionruntime/compose.Database.UnitOfWork (transaction-runtime) through api.fixtureMFAMail.EnqueueCode. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. Dispatcher removal: The retired direct dispatcher no longer gates transactional mail. The existing outbox recipient, scope, retry defaults and persisted payload are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/transactionruntime/compose.Database.UnitOfWork",
       "target_owner": "transaction-runtime"
@@ -26607,7 +26607,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.MFAMail.EnqueueCode",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through roots/owners.MFAMailer.EnqueueCode. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The shared outbox reads the same three-attempt retry policy and backoff directly, without constructing a legacy dispatcher request. The intent and transaction boundary are unchanged.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through roots/owners.MFAMailer.EnqueueCode. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. Dispatcher removal: The retired direct dispatcher no longer gates transactional mail. The existing outbox recipient, scope, retry defaults and persisted payload are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueEmail",
       "target_owner": "delivery-platform"
@@ -26618,7 +26618,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.MFAMail.EnqueueCode",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through roots/owners.MFAMailer.EnqueueCode. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The shared outbox reads the same three-attempt retry policy and backoff directly, without constructing a legacy dispatcher request. The intent and transaction boundary are unchanged.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through roots/owners.MFAMailer.EnqueueCode. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. Dispatcher removal: The retired direct dispatcher no longer gates transactional mail. The existing outbox recipient, scope, retry defaults and persisted payload are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueSystemEmail",
       "target_owner": "delivery-platform"
@@ -26662,7 +26662,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.MFAMail.NotifyTrustedDeviceAdded",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through api.fixtureMFAMail.NotifyTrustedDeviceAdded. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The shared outbox reads the same three-attempt retry policy and backoff directly, without constructing a legacy dispatcher request. The intent and transaction boundary are unchanged.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through api.fixtureMFAMail.NotifyTrustedDeviceAdded. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. Dispatcher removal: The retired direct dispatcher no longer gates transactional mail. The existing outbox recipient, scope, retry defaults and persisted payload are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueEmail",
       "target_owner": "delivery-platform"
@@ -26673,7 +26673,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.MFAMail.NotifyTrustedDeviceAdded",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through api.fixtureMFAMail.NotifyTrustedDeviceAdded. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The shared outbox reads the same three-attempt retry policy and backoff directly, without constructing a legacy dispatcher request. The intent and transaction boundary are unchanged.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through api.fixtureMFAMail.NotifyTrustedDeviceAdded. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. Dispatcher removal: The retired direct dispatcher no longer gates transactional mail. The existing outbox recipient, scope, retry defaults and persisted payload are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueSystemEmail",
       "target_owner": "delivery-platform"
@@ -26718,7 +26718,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.MFAMail.NotifyTrustedDeviceAdded",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through roots/owners.MFAMailer.NotifyTrustedDeviceAdded. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The shared outbox reads the same three-attempt retry policy and backoff directly, without constructing a legacy dispatcher request. The intent and transaction boundary are unchanged.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through roots/owners.MFAMailer.NotifyTrustedDeviceAdded. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. Dispatcher removal: The retired direct dispatcher no longer gates transactional mail. The existing outbox recipient, scope, retry defaults and persisted payload are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueEmail",
       "target_owner": "delivery-platform"
@@ -26729,7 +26729,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.MFAMail.NotifyTrustedDeviceAdded",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through roots/owners.MFAMailer.NotifyTrustedDeviceAdded. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The shared outbox reads the same three-attempt retry policy and backoff directly, without constructing a legacy dispatcher request. The intent and transaction boundary are unchanged.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through roots/owners.MFAMailer.NotifyTrustedDeviceAdded. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. Dispatcher removal: The retired direct dispatcher no longer gates transactional mail. The existing outbox recipient, scope, retry defaults and persisted payload are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueSystemEmail",
       "target_owner": "delivery-platform"
@@ -27066,7 +27066,7 @@
       "classification": "platform",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.OperatorEmailChangeDelivery.DispatchOperatorEmailChangeConfirmed",
-      "reason": "In the testhooks build, the fixture removes its own system-scope intent after the worker runs. This does not run in the transaction that persists the intent or in production.",
+      "reason": "After the fixture drain, the test hook cleans up only its own system intent. Tenant deliveries and the production roots are unaffected.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.DeleteSystemEmailForTest",
       "target_owner": "delivery-platform"
@@ -27075,9 +27075,9 @@
       "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorEmailChangeConfirmed",
       "classification": "platform",
-      "effect": "durable",
+      "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.OperatorEmailChangeDelivery.DispatchOperatorEmailChangeConfirmed",
-      "reason": "In the testhooks build, the explicit fixture outbox drives the leased Delivery worker for this persisted intent after the caller commits. The production binding leaves delivery to the worker.",
+      "reason": "The auth test fixture runs the existing leased worker for exactly its committed intent with the fixture mail transport. The helper is testhooks-only.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.DrainEmailForTest",
       "target_owner": "delivery-platform"
@@ -27088,7 +27088,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.OperatorEmailChangeDelivery.DispatchOperatorEmailChangeConfirmed",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorEmailChangeConfirmed. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The durable outbox replaces the legacy dispatcher enablement check. The same intent is persisted in the caller’s transaction; the testhooks fixture binds its after-commit worker explicitly.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorEmailChangeConfirmed. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. Dispatcher removal: The retired direct dispatcher no longer gates transactional mail. The existing outbox recipient, scope, retry defaults and persisted payload are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueEmail",
       "target_owner": "delivery-platform"
@@ -27099,7 +27099,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.OperatorEmailChangeDelivery.DispatchOperatorEmailChangeConfirmed",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorEmailChangeConfirmed. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The durable outbox replaces the legacy dispatcher enablement check. The same intent is persisted in the caller’s transaction; the testhooks fixture binds its after-commit worker explicitly.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorEmailChangeConfirmed. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. Dispatcher removal: The retired direct dispatcher no longer gates transactional mail. The existing outbox recipient, scope, retry defaults and persisted payload are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueSystemEmail",
       "target_owner": "delivery-platform"
@@ -27110,7 +27110,7 @@
       "classification": "platform",
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.OperatorEmailChangeDelivery.DispatchOperatorEmailChangeConfirmed",
-      "reason": "In the testhooks build, the explicit fixture outbox registers a callback after persisting the intent. The callback runs only after the caller commits; the production outbox does not register this fixture callback.",
+      "reason": "The auth test fixture registers its drain only after the outbox insert commits. The serving and worker roots do not use this hook.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
       "target_owner": "tenant-runtime"
@@ -27121,7 +27121,7 @@
       "classification": "platform",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.OperatorEmailChangeDelivery.DispatchOperatorEmailChangeRequested",
-      "reason": "In the testhooks build, the fixture removes its own system-scope intent after the worker runs. This does not run in the transaction that persists the intent or in production.",
+      "reason": "After the fixture drain, the test hook cleans up only its own system intent. Tenant deliveries and the production roots are unaffected.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.DeleteSystemEmailForTest",
       "target_owner": "delivery-platform"
@@ -27130,9 +27130,9 @@
       "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorEmailChangeRequested",
       "classification": "platform",
-      "effect": "durable",
+      "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.OperatorEmailChangeDelivery.DispatchOperatorEmailChangeRequested",
-      "reason": "In the testhooks build, the explicit fixture outbox drives the leased Delivery worker for this persisted intent after the caller commits. The production binding leaves delivery to the worker.",
+      "reason": "The auth test fixture runs the existing leased worker for exactly its committed intent with the fixture mail transport. The helper is testhooks-only.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.DrainEmailForTest",
       "target_owner": "delivery-platform"
@@ -27143,7 +27143,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.OperatorEmailChangeDelivery.DispatchOperatorEmailChangeRequested",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorEmailChangeRequested. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The durable outbox replaces the legacy dispatcher enablement check. The same intent is persisted in the caller’s transaction; the testhooks fixture binds its after-commit worker explicitly.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorEmailChangeRequested. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. Dispatcher removal: The retired direct dispatcher no longer gates transactional mail. The existing outbox recipient, scope, retry defaults and persisted payload are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueEmail",
       "target_owner": "delivery-platform"
@@ -27154,7 +27154,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.OperatorEmailChangeDelivery.DispatchOperatorEmailChangeRequested",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorEmailChangeRequested. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The durable outbox replaces the legacy dispatcher enablement check. The same intent is persisted in the caller’s transaction; the testhooks fixture binds its after-commit worker explicitly.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorEmailChangeRequested. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. Dispatcher removal: The retired direct dispatcher no longer gates transactional mail. The existing outbox recipient, scope, retry defaults and persisted payload are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueSystemEmail",
       "target_owner": "delivery-platform"
@@ -27165,7 +27165,7 @@
       "classification": "platform",
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.OperatorEmailChangeDelivery.DispatchOperatorEmailChangeRequested",
-      "reason": "In the testhooks build, the explicit fixture outbox registers a callback after persisting the intent. The callback runs only after the caller commits; the production outbox does not register this fixture callback.",
+      "reason": "The auth test fixture registers its drain only after the outbox insert commits. The serving and worker roots do not use this hook.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
       "target_owner": "tenant-runtime"
@@ -27176,7 +27176,7 @@
       "classification": "platform",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.OperatorEmailChangeDelivery.DispatchOperatorEmailChangeVerification",
-      "reason": "In the testhooks build, the fixture removes its own system-scope intent after the worker runs. This does not run in the transaction that persists the intent or in production.",
+      "reason": "After the fixture drain, the test hook cleans up only its own system intent. Tenant deliveries and the production roots are unaffected.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.DeleteSystemEmailForTest",
       "target_owner": "delivery-platform"
@@ -27185,9 +27185,9 @@
       "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorEmailChangeVerification",
       "classification": "platform",
-      "effect": "durable",
+      "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.OperatorEmailChangeDelivery.DispatchOperatorEmailChangeVerification",
-      "reason": "In the testhooks build, the explicit fixture outbox drives the leased Delivery worker for this persisted intent after the caller commits. The production binding leaves delivery to the worker.",
+      "reason": "The auth test fixture runs the existing leased worker for exactly its committed intent with the fixture mail transport. The helper is testhooks-only.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.DrainEmailForTest",
       "target_owner": "delivery-platform"
@@ -27198,7 +27198,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.OperatorEmailChangeDelivery.DispatchOperatorEmailChangeVerification",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorEmailChangeVerification. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The durable outbox replaces the legacy dispatcher enablement check. The same intent is persisted in the caller’s transaction; the testhooks fixture binds its after-commit worker explicitly.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorEmailChangeVerification. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. Dispatcher removal: The retired direct dispatcher no longer gates transactional mail. The existing outbox recipient, scope, retry defaults and persisted payload are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueEmail",
       "target_owner": "delivery-platform"
@@ -27209,7 +27209,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.OperatorEmailChangeDelivery.DispatchOperatorEmailChangeVerification",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorEmailChangeVerification. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The durable outbox replaces the legacy dispatcher enablement check. The same intent is persisted in the caller’s transaction; the testhooks fixture binds its after-commit worker explicitly.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorEmailChangeVerification. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. Dispatcher removal: The retired direct dispatcher no longer gates transactional mail. The existing outbox recipient, scope, retry defaults and persisted payload are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueSystemEmail",
       "target_owner": "delivery-platform"
@@ -27220,7 +27220,7 @@
       "classification": "platform",
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.OperatorEmailChangeDelivery.DispatchOperatorEmailChangeVerification",
-      "reason": "In the testhooks build, the explicit fixture outbox registers a callback after persisting the intent. The callback runs only after the caller commits; the production outbox does not register this fixture callback.",
+      "reason": "The auth test fixture registers its drain only after the outbox insert commits. The serving and worker roots do not use this hook.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
       "target_owner": "tenant-runtime"
@@ -27231,7 +27231,7 @@
       "classification": "platform",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.OperatorInvitationDelivery.DispatchOperatorInvitation",
-      "reason": "In the testhooks build, the fixture removes its own system-scope intent after the worker runs. This does not run in the transaction that persists the intent or in production.",
+      "reason": "After the fixture drain, the test hook cleans up only its own system intent. Tenant deliveries and the production roots are unaffected.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.DeleteSystemEmailForTest",
       "target_owner": "delivery-platform"
@@ -27240,9 +27240,9 @@
       "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorInvitation",
       "classification": "platform",
-      "effect": "durable",
+      "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.OperatorInvitationDelivery.DispatchOperatorInvitation",
-      "reason": "In the testhooks build, the explicit fixture outbox drives the leased Delivery worker for this persisted intent after the caller commits. The production binding leaves delivery to the worker.",
+      "reason": "The auth test fixture runs the existing leased worker for exactly its committed intent with the fixture mail transport. The helper is testhooks-only.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.DrainEmailForTest",
       "target_owner": "delivery-platform"
@@ -27253,7 +27253,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.OperatorInvitationDelivery.DispatchOperatorInvitation",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorInvitation. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The durable outbox replaces the legacy dispatcher enablement check. The same intent is persisted in the caller’s transaction; the testhooks fixture binds its after-commit worker explicitly.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorInvitation. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. Dispatcher removal: The retired direct dispatcher no longer gates transactional mail. The existing outbox recipient, scope, retry defaults and persisted payload are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueEmail",
       "target_owner": "delivery-platform"
@@ -27264,7 +27264,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.OperatorInvitationDelivery.DispatchOperatorInvitation",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorInvitation. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The durable outbox replaces the legacy dispatcher enablement check. The same intent is persisted in the caller’s transaction; the testhooks fixture binds its after-commit worker explicitly.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through modules/identityaccess/compose.OperatorLinkDelivery.DispatchOperatorInvitation. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. Dispatcher removal: The retired direct dispatcher no longer gates transactional mail. The existing outbox recipient, scope, retry defaults and persisted payload are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueSystemEmail",
       "target_owner": "delivery-platform"
@@ -27275,7 +27275,7 @@
       "classification": "platform",
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.OperatorInvitationDelivery.DispatchOperatorInvitation",
-      "reason": "In the testhooks build, the explicit fixture outbox registers a callback after persisting the intent. The callback runs only after the caller commits; the production outbox does not register this fixture callback.",
+      "reason": "The auth test fixture registers its drain only after the outbox insert commits. The serving and worker roots do not use this hook.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
       "target_owner": "tenant-runtime"
@@ -27356,7 +27356,7 @@
       "classification": "platform",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.PasswordResetDelivery.DispatchPasswordReset",
-      "reason": "In the testhooks build, the fixture removes its own system-scope intent after the worker runs. This does not run in the transaction that persists the intent or in production.",
+      "reason": "After the fixture drain, the test hook cleans up only its own system intent. Tenant deliveries and the production roots are unaffected.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.DeleteSystemEmailForTest",
       "target_owner": "delivery-platform"
@@ -27365,9 +27365,9 @@
       "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.passwordResetDelivery.DispatchPasswordReset",
       "classification": "platform",
-      "effect": "durable",
+      "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.PasswordResetDelivery.DispatchPasswordReset",
-      "reason": "In the testhooks build, the explicit fixture outbox drives the leased Delivery worker for this persisted intent after the caller commits. The production binding leaves delivery to the worker.",
+      "reason": "The auth test fixture runs the existing leased worker for exactly its committed intent with the fixture mail transport. The helper is testhooks-only.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.DrainEmailForTest",
       "target_owner": "delivery-platform"
@@ -27378,7 +27378,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.PasswordResetDelivery.DispatchPasswordReset",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through roots/owners.passwordResetDelivery.DispatchPasswordReset. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The durable outbox replaces the legacy dispatcher enablement check. The same intent is persisted in the caller’s transaction; the testhooks fixture binds its after-commit worker explicitly.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through roots/owners.passwordResetDelivery.DispatchPasswordReset. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. Dispatcher removal: The retired direct dispatcher no longer gates transactional mail. The existing outbox recipient, scope, retry defaults and persisted payload are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueEmail",
       "target_owner": "delivery-platform"
@@ -27389,7 +27389,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.PasswordResetDelivery.DispatchPasswordReset",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through roots/owners.passwordResetDelivery.DispatchPasswordReset. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The durable outbox replaces the legacy dispatcher enablement check. The same intent is persisted in the caller’s transaction; the testhooks fixture binds its after-commit worker explicitly.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through roots/owners.passwordResetDelivery.DispatchPasswordReset. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. Dispatcher removal: The retired direct dispatcher no longer gates transactional mail. The existing outbox recipient, scope, retry defaults and persisted payload are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueSystemEmail",
       "target_owner": "delivery-platform"
@@ -27400,7 +27400,7 @@
       "classification": "platform",
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.PasswordResetDelivery.DispatchPasswordReset",
-      "reason": "In the testhooks build, the explicit fixture outbox registers a callback after persisting the intent. The callback runs only after the caller commits; the production outbox does not register this fixture callback.",
+      "reason": "The auth test fixture registers its drain only after the outbox insert commits. The serving and worker roots do not use this hook.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
       "target_owner": "tenant-runtime"
@@ -27972,7 +27972,7 @@
       "classification": "platform",
       "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.SchoolInvitationDelivery.DispatchSchoolInvitation",
-      "reason": "In the testhooks build, the fixture removes its own system-scope intent after the worker runs. This does not run in the transaction that persists the intent or in production.",
+      "reason": "After the fixture drain, the test hook cleans up only its own system intent. Tenant deliveries and the production roots are unaffected.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.DeleteSystemEmailForTest",
       "target_owner": "delivery-platform"
@@ -27981,9 +27981,9 @@
       "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.invitationDelivery.DispatchSchoolInvitation",
       "classification": "platform",
-      "effect": "durable",
+      "effect": "mutation",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.SchoolInvitationDelivery.DispatchSchoolInvitation",
-      "reason": "In the testhooks build, the explicit fixture outbox drives the leased Delivery worker for this persisted intent after the caller commits. The production binding leaves delivery to the worker.",
+      "reason": "The auth test fixture runs the existing leased worker for exactly its committed intent with the fixture mail transport. The helper is testhooks-only.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/compose.DrainEmailForTest",
       "target_owner": "delivery-platform"
@@ -27994,7 +27994,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.SchoolInvitationDelivery.DispatchSchoolInvitation",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through roots/owners.invitationDelivery.DispatchSchoolInvitation. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The durable outbox replaces the legacy dispatcher enablement check. The same intent is persisted in the caller’s transaction; the testhooks fixture binds its after-commit worker explicitly.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through roots/owners.invitationDelivery.DispatchSchoolInvitation. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. Dispatcher removal: The retired direct dispatcher no longer gates transactional mail. The existing outbox recipient, scope, retry defaults and persisted payload are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueEmail",
       "target_owner": "delivery-platform"
@@ -28005,7 +28005,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.SchoolInvitationDelivery.DispatchSchoolInvitation",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through roots/owners.invitationDelivery.DispatchSchoolInvitation. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The durable outbox replaces the legacy dispatcher enablement check. The same intent is persisted in the caller’s transaction; the testhooks fixture binds its after-commit worker explicitly.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through roots/owners.invitationDelivery.DispatchSchoolInvitation. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. Dispatcher removal: The retired direct dispatcher no longer gates transactional mail. The existing outbox recipient, scope, retry defaults and persisted payload are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueSystemEmail",
       "target_owner": "delivery-platform"
@@ -28016,7 +28016,7 @@
       "classification": "platform",
       "effect": "scope",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.SchoolInvitationDelivery.DispatchSchoolInvitation",
-      "reason": "In the testhooks build, the explicit fixture outbox registers a callback after persisting the intent. The callback runs only after the caller commits; the production outbox does not register this fixture callback.",
+      "reason": "The auth test fixture registers its drain only after the outbox insert commits. The serving and worker roots do not use this hook.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/tenant.RegisterAfterCommit",
       "target_owner": "tenant-runtime"
@@ -28067,7 +28067,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.SchoolInvitationDelivery.QueueSchoolWelcome",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/compose.EmailOutbox.Enqueue (delivery-platform) through roots/owners.invitationDelivery.QueueSchoolWelcome. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). The welcome checks for the durable invitation outbox instead of the old dispatcher. Its savepoint-backed settings reads and transactional enqueue remain unchanged.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/compose.EmailOutbox.Enqueue (delivery-platform) through roots/owners.invitationDelivery.QueueSchoolWelcome. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Dispatcher removal: The direct dispatcher nil check is gone. Welcome still reads school settings inside the same savepoint and enqueues after the same help-link step.",
       "source_owner": "identity-access",
       "target": "*github.com/moto-ogs/project-phoenix/modules/delivery/compose.EmailOutbox.Enqueue",
       "target_owner": "delivery-platform"
@@ -28077,7 +28077,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.SchoolInvitationDelivery.QueueSchoolWelcome",
-      "reason": "Read-only newly exposed target: identity-access reaches modules/settings/records.BatchSettingsService.ResolveBool (settings-platform) through roots/owners.invitationDelivery.QueueSchoolWelcome. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Rebound by #4892: the welcome mail's help link reads the module switch module.nfc_anwesenheit instead of attendance.nfc_enabled; the effect stays as reviewed. The welcome checks for the durable invitation outbox instead of the old dispatcher. Its savepoint-backed settings reads and transactional enqueue remain unchanged.",
+      "reason": "Read-only newly exposed target: identity-access reaches modules/settings/records.BatchSettingsService.ResolveBool (settings-platform) through roots/owners.invitationDelivery.QueueSchoolWelcome. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Rebound by #4892: the welcome mail's help link reads the module switch module.nfc_anwesenheit instead of attendance.nfc_enabled; the effect stays as reviewed. Dispatcher removal: The direct dispatcher nil check is gone. Welcome still reads school settings inside the same savepoint and enqueues after the same help-link step.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveBool",
       "target_owner": "settings-platform"
@@ -28087,7 +28087,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.SchoolInvitationDelivery.QueueSchoolWelcome",
-      "reason": "Read-only newly exposed target: identity-access reaches modules/settings/records.BatchSettingsService.ResolveBoolForTenantInTx (settings-platform) through roots/owners.invitationDelivery.QueueSchoolWelcome. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Rebound by #4892: the welcome mail's help link reads the module switch module.nfc_anwesenheit instead of attendance.nfc_enabled; the effect stays as reviewed. The welcome checks for the durable invitation outbox instead of the old dispatcher. Its savepoint-backed settings reads and transactional enqueue remain unchanged.",
+      "reason": "Read-only newly exposed target: identity-access reaches modules/settings/records.BatchSettingsService.ResolveBoolForTenantInTx (settings-platform) through roots/owners.invitationDelivery.QueueSchoolWelcome. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Rebound by #4892: the welcome mail's help link reads the module switch module.nfc_anwesenheit instead of attendance.nfc_enabled; the effect stays as reviewed. Dispatcher removal: The direct dispatcher nil check is gone. Welcome still reads school settings inside the same savepoint and enqueues after the same help-link step.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveBoolForTenantInTx",
       "target_owner": "settings-platform"
@@ -28097,7 +28097,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.SchoolInvitationDelivery.QueueSchoolWelcome",
-      "reason": "Read-only newly exposed target: identity-access reaches modules/settings/records.BatchSettingsService.ResolveString (settings-platform) through roots/owners.invitationDelivery.QueueSchoolWelcome. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Rebound by #4892: the welcome mail's help link reads the module switch module.nfc_anwesenheit instead of attendance.nfc_enabled; the effect stays as reviewed. The welcome checks for the durable invitation outbox instead of the old dispatcher. Its savepoint-backed settings reads and transactional enqueue remain unchanged.",
+      "reason": "Read-only newly exposed target: identity-access reaches modules/settings/records.BatchSettingsService.ResolveString (settings-platform) through roots/owners.invitationDelivery.QueueSchoolWelcome. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Rebound by #4892: the welcome mail's help link reads the module switch module.nfc_anwesenheit instead of attendance.nfc_enabled; the effect stays as reviewed. Dispatcher removal: The direct dispatcher nil check is gone. Welcome still reads school settings inside the same savepoint and enqueues after the same help-link step.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveString",
       "target_owner": "settings-platform"
@@ -28107,7 +28107,7 @@
       "classification": "query",
       "effect": "query",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.SchoolInvitationDelivery.QueueSchoolWelcome",
-      "reason": "Read-only newly exposed target: identity-access reaches modules/settings/records.BatchSettingsService.ResolveStringForTenantInTx (settings-platform) through roots/owners.invitationDelivery.QueueSchoolWelcome. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Rebound by #4892: the welcome mail's help link reads the module switch module.nfc_anwesenheit instead of attendance.nfc_enabled; the effect stays as reviewed. The welcome checks for the durable invitation outbox instead of the old dispatcher. Its savepoint-backed settings reads and transactional enqueue remain unchanged.",
+      "reason": "Read-only newly exposed target: identity-access reaches modules/settings/records.BatchSettingsService.ResolveStringForTenantInTx (settings-platform) through roots/owners.invitationDelivery.QueueSchoolWelcome. No persistent, lock or scope effect; exposed by #4836 binding-flow resolution (ADR 0098). Rebound by #4892: the welcome mail's help link reads the module switch module.nfc_anwesenheit instead of attendance.nfc_enabled; the effect stays as reviewed. Dispatcher removal: The direct dispatcher nil check is gone. Welcome still reads school settings inside the same savepoint and enqueues after the same help-link step.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/settings/records.BatchSettingsService.ResolveStringForTenantInTx",
       "target_owner": "settings-platform"
@@ -28753,7 +28753,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.TraegerInvitationDelivery.DispatchTraegerAccountChange",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through roots/owners.traegerInvitationDelivery.DispatchTraegerAccountChange. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The Delivery runtime now supplies the enablement check; the same Träger account intent is persisted in the same transaction.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through roots/owners.traegerInvitationDelivery.DispatchTraegerAccountChange. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. Dispatcher removal: The retired direct dispatcher no longer gates transactional mail. The existing outbox recipient, scope, retry defaults and persisted payload are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueEmail",
       "target_owner": "delivery-platform"
@@ -28764,7 +28764,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.TraegerInvitationDelivery.DispatchTraegerAccountChange",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through roots/owners.traegerInvitationDelivery.DispatchTraegerAccountChange. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The Delivery runtime now supplies the enablement check; the same Träger account intent is persisted in the same transaction.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through roots/owners.traegerInvitationDelivery.DispatchTraegerAccountChange. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. Dispatcher removal: The retired direct dispatcher no longer gates transactional mail. The existing outbox recipient, scope, retry defaults and persisted payload are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueSystemEmail",
       "target_owner": "delivery-platform"
@@ -28775,7 +28775,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.TraegerInvitationDelivery.DispatchTraegerInvitation",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through roots/owners.traegerInvitationDelivery.DispatchTraegerInvitation. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The Delivery runtime now supplies the enablement check; the same Träger account intent is persisted in the same transaction.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueEmail (delivery-platform) through roots/owners.traegerInvitationDelivery.DispatchTraegerInvitation. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. Dispatcher removal: The retired direct dispatcher no longer gates transactional mail. The existing outbox recipient, scope, retry defaults and persisted payload are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueEmail",
       "target_owner": "delivery-platform"
@@ -28786,7 +28786,7 @@
       "classification": "platform",
       "effect": "durable",
       "port": "github.com/moto-ogs/project-phoenix/modules/identityaccess/ports.TraegerInvitationDelivery.DispatchTraegerInvitation",
-      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through roots/owners.traegerInvitationDelivery.DispatchTraegerInvitation. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. The Delivery runtime now supplies the enablement check; the same Träger account intent is persisted in the same transaction.",
+      "reason": "Platform protocol participation (durable): identity-access reaches modules/delivery/runtime.Capability.EnqueueSystemEmail (delivery-platform) through roots/owners.traegerInvitationDelivery.DispatchTraegerInvitation. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098). Reviewed for #5932: EmailIntent gained the optional Security flag, and the binding's effect is unchanged. Dispatcher removal: The retired direct dispatcher no longer gates transactional mail. The existing outbox recipient, scope, retry defaults and persisted payload are unchanged.",
       "source_owner": "identity-access",
       "target": "github.com/moto-ogs/project-phoenix/modules/delivery/runtime.Capability.EnqueueSystemEmail",
       "target_owner": "delivery-platform"

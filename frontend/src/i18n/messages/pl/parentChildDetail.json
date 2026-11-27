@@ -51,7 +51,7 @@
     "lastName": "Nazwisko",
     "salutationLabel": "Forma grzecznościowa",
     "salutationNone": "Nie podano",
-    "salutationHint": "Dobrowolne. Z formą grzecznościową niemieckie e-maile zaczynają się np. od „Liebe Karin” lub „Lieber Jonas”.",
+    "salutationHint": "Dobrowolne. Z formą grzecznościową niemieckie e-maile zaczynają się np. od „Liebe Frau Klein” lub „Lieber Herr Klein”.",
     "email": "E-mail",
     "street": "Ulica i numer domu",
     "postalCode": "Kod pocztowy",

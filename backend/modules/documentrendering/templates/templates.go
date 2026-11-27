@@ -164,9 +164,10 @@ func Default(kind Kind) Template {
 }
 
 // DefaultForOne is the standard template of kind for a letter to one
-// person (ADR 0294, #7463): the text of Default in the du-form, with its
-// closing. It carries no salutation; the letter greets the person by name.
-// A kind no letter to one person uses has none and keeps Default.
+// person, another payer (#7463): the confirmation letter without the
+// booking and the child as the reader's own, with the closing of Default.
+// It carries no salutation; the letter greets the person by name. Every
+// other kind keeps Default.
 func DefaultForOne(kind Kind) Template {
 	entry := catalog[kind]
 	if entry.forOne.Body == "" {

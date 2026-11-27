@@ -151,7 +151,13 @@ type HolidayWeekRequest struct {
 // /traeger/holiday-periods/{id}: the whole period with its weeks. Prices are
 // whole cent.
 type HolidayPeriodRequest struct {
-	Name                 string        `json:"name"`
+	Name string `json:"name"`
+	// Kind is "holiday" or "extra_day"; empty is a holiday period on a
+	// create and keeps the stored kind on an update (#4817).
+	Kind string `json:"kind,omitempty"`
+	// IncludedInFee marks an extra day the monthly contribution covers; its
+	// time models have no price (#4817).
+	IncludedInFee        bool          `json:"included_in_fee,omitempty"`
 	RegistrationOpensOn  calendar.Date `json:"registration_opens_on"`
 	RegistrationClosesOn calendar.Date `json:"registration_closes_on"`
 	Binding              bool          `json:"binding"`
@@ -186,7 +192,7 @@ func (req *HolidayPeriodRequest) input() capability.HolidayPeriodInput {
 		}
 	}
 	return capability.HolidayPeriodInput{
-		Name: req.Name, RegistrationOpensOn: req.RegistrationOpensOn, RegistrationClosesOn: req.RegistrationClosesOn,
+		Name: req.Name, Kind: req.Kind, IncludedInFee: req.IncludedInFee, RegistrationOpensOn: req.RegistrationOpensOn, RegistrationClosesOn: req.RegistrationClosesOn,
 		Binding: req.Binding, Notes: req.Notes, AcceptanceMailText: req.AcceptanceMailText, HolidayWishRule: req.HolidayWishRule, Weeks: weeks, MaxDaysPerChild: req.MaxDaysPerChild,
 		AllocationMode: req.AllocationMode, ExpectedVersion: req.ExpectedVersion,
 	}

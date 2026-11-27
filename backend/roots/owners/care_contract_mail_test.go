@@ -27,9 +27,9 @@ func TestContractReminderKeepsItsSignatureScopeThroughDelivery(t *testing.T) {
 			assert.Equal(t, amendment, content["Amendment"])
 			assert.Equal(t, "https://example.org/sign", content["SigningURL"])
 			if amendment {
-				assert.Equal(t, "Erinnerung: Bitte unterschreibe die geänderte Vertragsfassung", mail.Subject)
+				assert.Equal(t, "Erinnerung: Bitte unterschreiben Sie die geänderte Vertragsfassung", mail.Subject)
 			} else {
-				assert.Equal(t, "Erinnerung: Dein Betreuungsvertrag wartet auf deine Unterschrift", mail.Subject)
+				assert.Equal(t, "Erinnerung: Ihr Betreuungsvertrag wartet auf Ihre Unterschrift", mail.Subject)
 			}
 		})
 	}

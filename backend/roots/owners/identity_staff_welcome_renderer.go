@@ -16,6 +16,7 @@ const (
 	staffWelcomePayloadRecipientEmail = "recipient_email"
 	staffWelcomePayloadHelpURL        = "help_url"
 	staffWelcomePayloadFirstName      = "first_name"
+	staffWelcomePayloadLastName       = "last_name"
 	staffWelcomePayloadLogoURL        = "logo_url"
 	staffWelcomePayloadSchoolName     = "school_name"
 )
@@ -26,6 +27,7 @@ func staffWelcomePayload(welcome identityaccess.StaffWelcome) map[string]any {
 		staffWelcomePayloadRecipientEmail: welcome.Recipient,
 		staffWelcomePayloadHelpURL:        welcome.HelpURL,
 		staffWelcomePayloadFirstName:      welcome.FirstName,
+		staffWelcomePayloadLastName:       welcome.LastName,
 		staffWelcomePayloadLogoURL:        welcome.LogoURL,
 		staffWelcomePayloadSchoolName:     welcome.SchoolName,
 	}
@@ -40,7 +42,7 @@ func storedStaffWelcome(payload map[string]any) identityaccess.StaffWelcome {
 	}
 	return identityaccess.StaffWelcome{
 		Recipient: text(staffWelcomePayloadRecipientEmail), HelpURL: text(staffWelcomePayloadHelpURL),
-		FirstName: text(staffWelcomePayloadFirstName), LogoURL: text(staffWelcomePayloadLogoURL),
+		FirstName: text(staffWelcomePayloadFirstName), LastName: text(staffWelcomePayloadLastName), LogoURL: text(staffWelcomePayloadLogoURL),
 		SchoolName: text(staffWelcomePayloadSchoolName),
 	}
 }

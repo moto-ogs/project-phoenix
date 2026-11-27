@@ -108,7 +108,7 @@ func BuildIdentityAccess(
 		return nil, nil, err
 	}
 	demo, err := DemoDependencies(
-		demoAccessWiringFor(strings.ToLower(cfg.AppEnv), mailFrom, links.FrontendURL, viper.GetInt("demo_max_active_schools"), tokens, authLogger, durable),
+		demoAccessWiringFor(cfg.AppEnv, mailFrom, links.FrontendURL, viper.GetInt("demo_max_active_schools"), tokens, durable),
 		organizationtenancy.StandingDemoSchool(viper.GetBool("demo_standing_school")), organizations)
 	if err != nil {
 		return nil, nil, err
@@ -129,7 +129,6 @@ func BuildIdentityAccess(
 			defaultFrom: mailFrom, durable: durable,
 			frontendURL: links.FrontendURL, operatorFrontendURL: operatorFrontendURL,
 			invitationExpiry: links.InvitationTokenExpiry, emailChangeExpiry: emailChangeExpiry(links.PasswordResetTokenExpiry, env.Logger),
-			logger: platformLogger,
 		}, authLogger),
 	}, sessionRepos, tokens.SessionTokens, settings, audit.Command, authLogger)
 	if err != nil {

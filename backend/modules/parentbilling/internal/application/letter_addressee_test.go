@@ -31,18 +31,20 @@ var addresseeRecipients = []addresseeRecipient{
 		address: &parentbilling.PostalAddress{Street: "Lindenweg 8", PostalCode: "12345", City: "Beispielstadt"}},
 }
 
-// ihrForm finds the plural address; duForm the singular one. The
-// fixtures keep every Träger text free of both, so a hit is moto's text.
+// informalForm finds the ihr- and the du-form, ownedByPayer a payer called
+// the parent of the child or a party to the contract. The fixtures keep
+// every Träger text free of them, so a hit is moto's text.
 var (
-	ihrForm = regexp.MustCompile(`(?i)\b(ihr|euch|euer|eure[mnrs]?|habt|müsst|seid|gebt|meldet|überweist|scannt|beachtet)\b`)
-	duForm  = regexp.MustCompile(`(?i)\b(du|dich|dir|dein|deine[mnrs]?|hast|musst|bist|gib|melde|überweise|scanne|beachte|erreichst)\b`)
+	informalForm = regexp.MustCompile(`\b(ihr|[Ee]uch|[Ee]uer|[Ee]ure[mnrs]?|habt|müsst|seid|gebt|meldet|überweist|scannt|beachtet|` +
+		`[Dd]u|[Dd]ich|[Dd]ir|[Dd]ein|[Dd]eine[mnrs]?|hast|musst|bist|[Gg]ib|melde|überweise|[Ss]canne|beachte|erreichst)\b`)
+	ownedByPayer = regexp.MustCompile(`\bIhr(e[mnrs]?)? (Kind|Vertrag|Betreuungsvertrag|Mittagessen|Betreuung)\b`)
 )
 
 // TestLettersSpeakToTheirAddressee pins every letter moto writes in
-// parent billing for the family, both parents and another payer (ADR 0294,
-// #7463): a letter to the family or to both parents greets the family and
-// says "ihr"; a letter to another payer greets the person by name and says
-// "du" in every sentence after it.
+// parent billing for the family, both parents and another payer (ADR 0328,
+// #7463): every letter says "Sie". A letter to the family or to both
+// parents greets the family; a letter to another payer greets the person by
+// name and does not call the child or the contract theirs.
 func TestLettersSpeakToTheirAddressee(t *testing.T) {
 	t.Parallel()
 	for _, recipient := range addresseeRecipients {
@@ -57,12 +59,12 @@ func TestLettersSpeakToTheirAddressee(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, string(want), text)
 
+			assert.Empty(t, informalForm.FindAllString(text, -1), "every letter says Sie")
 			if recipient.kind == parentbilling.RecipientPayer {
-				assert.Empty(t, ihrForm.FindAllString(text, -1), "a letter to one person says du")
+				assert.Empty(t, ownedByPayer.FindAllString(text, -1), "the child and the contract are not the payer's")
 				assert.Contains(t, text, "Guten Tag Karin Muster,")
 				assert.NotContains(t, text, "Familie")
 			} else {
-				assert.Empty(t, duForm.FindAllString(text, -1), "a letter to the family says ihr")
 				assert.Contains(t, text, "Liebe Familie Beispiel,")
 				assert.NotContains(t, text, "Guten Tag")
 			}
@@ -82,13 +84,13 @@ func TestATraegerTemplateKeepsItsWordingForOnePerson(t *testing.T) {
 	assert.Equal(t, []string{"Ihr Träger"}, letter.Closing)
 	text := addresseeLetterText(letter)
 	assert.Contains(t, text, "anbei Ihre Rechnung.")
-	assert.Contains(t, text, "Bitte überweise 92,50 € bis zum 15.12.2026 auf das Konto unten. Gib als Verwendungszweck deine Debitorennummer 10234 an.")
+	assert.Contains(t, text, "Bitte überweisen Sie 92,50 € bis zum 15.12.2026 auf das Konto unten. Geben Sie als Verwendungszweck Ihre Debitorennummer 10234 an.")
 }
 
 // The standard text reaches a letter as the template Document Templates
 // delivers while the Träger has saved none, or as a saved copy of it: both
-// speak to one person in the du-form like a letterhead without a template,
-// and a saved copy keeps its table layout.
+// greet one person by name like a letterhead without a template, and a
+// saved copy keeps its table layout.
 func TestTheStandardTextSpeaksToOnePersonHoweverItArrives(t *testing.T) {
 	t.Parallel()
 	payer := addresseeRecipients[2]
@@ -108,7 +110,7 @@ func TestTheStandardTextSpeaksToOnePersonHoweverItArrives(t *testing.T) {
 	grouped.letterhead.Template.GroupByChild = true
 	filled := letterTemplate(grouped.letterhead.Template, templateKindOf(parentbilling.DocumentKindInvoice), documentAddressee(grouped.document))
 	assert.True(t, filled.Invoice.GroupByChild, "a saved copy keeps its table layout")
-	assert.Contains(t, filled.Body, "berechnen wir dir")
+	assert.Contains(t, filled.Body, "berechnen wir Ihnen")
 }
 
 // addresseeLetters renders every letter for the recipient, one after the
@@ -200,9 +202,8 @@ func addresseeLetterSet(t *testing.T, recipient addresseeRecipient) []namedLette
 	noDebtor := addresseeHolidayContent(t, recipient, parentbilling.DocumentKindFeeNotice)
 	noDebtor.document.DebtorNumber = ""
 	add("Gebührenbescheid ohne Buchungszeichen (Ferien)", Letter{Blocks: []LetterBlock{{Text: paymentText(noDebtor)}}})
-	to := documentAddressee(confirmation.document)
-	add("Rückfragen nur mit Name", Letter{Blocks: []LetterBlock{{Text: questionText(parentbilling.Letterhead{ContactName: "Paula Kern"}, to)}}})
-	add("Rückfragen nur mit Telefon", Letter{Blocks: []LetterBlock{{Text: questionText(parentbilling.Letterhead{ContactPhone: "05402 1234-0"}, to)}}})
+	add("Rückfragen nur mit Name", Letter{Blocks: []LetterBlock{{Text: questionText(parentbilling.Letterhead{ContactName: "Paula Kern"})}}})
+	add("Rückfragen nur mit Telefon", Letter{Blocks: []LetterBlock{{Text: questionText(parentbilling.Letterhead{ContactPhone: "05402 1234-0"})}}})
 	return letters
 }
 

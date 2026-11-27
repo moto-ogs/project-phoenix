@@ -277,9 +277,9 @@ func reminderPublicationCycle(a *StaffParentAnnouncement) int64 {
 
 func reminderIntro(schoolName, what string) string {
 	if schoolName == "" {
-		return fmt.Sprintf("wir erinnern dich an %s.", what)
+		return fmt.Sprintf("wir erinnern Sie an %s.", what) // sie-anrede-erlaubt (ADR 0328): Text einer E-Mail an Eltern.
 	}
-	return fmt.Sprintf("die %s erinnert dich an %s.", schoolName, what)
+	return fmt.Sprintf("die %s erinnert Sie an %s.", schoolName, what) // sie-anrede-erlaubt (ADR 0328): Text einer E-Mail an Eltern.
 }
 
 // reminderMailSpec is the untracked reminder mail of a plain Mitteilung: like
@@ -290,7 +290,7 @@ func reminderMailSpec(a *StaffParentAnnouncement) mailSpec {
 		title:  reminderTitlePrefix + a.Title,
 		kicker: reminderEmailKicker,
 		intro: func(schoolName string) string {
-			return reminderIntro(schoolName, "diese Mitteilung") + " Den vollständigen Inhalt findest du im Eltern-Portal."
+			return reminderIntro(schoolName, "diese Mitteilung") + " Den vollständigen Inhalt finden Sie im Eltern-Portal." // sie-anrede-erlaubt (ADR 0328): Text einer E-Mail an Eltern.
 		},
 		relatedType:    relatedEntityTypeReminder,
 		idempotencyKey: func(address string) string { return reminderIdempotencyKey(a, address) },
@@ -313,13 +313,13 @@ func reminderLetterMailSpec(a *StaffParentAnnouncement) mailSpec {
 	if a.IsLetter() {
 		spec.kicker = letterReminderEmailKicker
 		spec.intro = func(schoolName string) string {
-			return reminderIntro(schoolName, "diesen Elternbrief") + " Den Text findest du unten."
+			return reminderIntro(schoolName, "diesen Elternbrief") + " Den Text finden Sie unten." // sie-anrede-erlaubt (ADR 0328): Text einer E-Mail an Eltern.
 		}
 		spec.body = a.ReminderBody()
 		return spec
 	}
 	spec.intro = func(schoolName string) string {
-		return reminderIntro(schoolName, "diese Mitteilung") + " Den vollständigen Inhalt findest du im Eltern-Portal."
+		return reminderIntro(schoolName, "diese Mitteilung") + " Den vollständigen Inhalt finden Sie im Eltern-Portal." // sie-anrede-erlaubt (ADR 0328): Text einer E-Mail an Eltern.
 	}
 	return spec
 }

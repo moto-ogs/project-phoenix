@@ -85,10 +85,14 @@ export function useWeekLabels() {
     return {
       locale,
       range: (week: HolidayRegistrationWeek) =>
-        t("weekRange", {
-          starts: formatDate(week.startsOn, false, locale),
-          ends: formatDate(week.endsOn, false, locale),
-        }),
+        // A week of a single day, such as an extra care day (#4817), is that
+        // day with its weekday.
+        week.startsOn === week.endsOn
+          ? formatDate(week.startsOn, true, locale)
+          : t("weekRange", {
+              starts: formatDate(week.startsOn, false, locale),
+              ends: formatDate(week.endsOn, false, locale),
+            }),
       timeModel: (model: HolidayRegistrationTimeModel) =>
         t("timeModel", {
           name: model.name,
@@ -139,7 +143,13 @@ function WeekChoice({
   onChange,
   onDaysChange,
   onLunchChange,
+  extraDay = false,
+  includedInFee = false,
 }: Readonly<{
+  /** The offer is one extra care day, not weeks of holiday care (#4817). */
+  extraDay?: boolean;
+  /** The extra day is covered by the monthly fee: no price is shown. */
+  includedInFee?: boolean;
   group: readonly HolidayRegistrationWeek[];
   prefix: string;
   value: string;
@@ -163,7 +173,11 @@ function WeekChoice({
     week: HolidayRegistrationWeek,
     model: HolidayRegistrationTimeModel,
   ) => {
-    const priced = labels.pricedTimeModel(model, week.bookingUnit === "day");
+    // An included day names its care time only; the price of an extra day
+    // is a price per day.
+    const priced = includedInFee
+      ? labels.timeModel(model)
+      : labels.pricedTimeModel(model, extraDay || week.bookingUnit === "day");
     return parallel ? `${week.hostSchoolName}: ${priced}` : priced;
   };
   const labelId = `${prefix}-week-${first.id}`;
@@ -193,7 +207,9 @@ function WeekChoice({
         <span id={labelId} className="text-sm text-gray-900">
           {labels.range(first)}
           <span className="block text-xs text-gray-500">
-            {parallel ? t("parallelWeeksHint") : first.hostSchoolName}
+            {parallel
+              ? t(extraDay ? "parallelDayHint" : "parallelWeeksHint")
+              : first.hostSchoolName}
           </span>
           {blockedHints.map((hint) => (
             <span key={hint} className="mt-1 block text-xs text-gray-600">
@@ -241,7 +257,11 @@ function WeekChoice({
             checked={lunch}
             onChange={(next) => onLunchChange(booked.id, next)}
             label={t("lunchLabel")}
-            hint={labels.lunch(booked, days)}
+            hint={
+              includedInFee
+                ? t("lunchHintIncluded")
+                : labels.lunch(booked, days)
+            }
           />
         </div>
       ) : null}
@@ -469,20 +489,38 @@ export function ChildCard({
 
         <fieldset className="space-y-3">
           <legend className="text-sm font-semibold text-gray-900">
-            {t("weeksTitle")}
+            {t(offer.extraDay ? "extraDayTitle" : "weeksTitle")}
             <RequiredMark />
           </legend>
           <p className="text-sm text-gray-600">
-            {[
-              t("weeksText"),
-              t("weeksPriceText"),
-              offer.weeks.some((week) => week.bookingUnit === "day")
-                ? t("weeksDayPriceText")
-                : "",
-              offer.weeks.some((week) => week.lunchPriceCents != null)
-                ? t("weeksLunchText")
-                : "",
-            ]
+            {(offer.extraDay
+              ? [
+                  t("extraDayText"),
+                  t(
+                    offer.includedInFee
+                      ? "extraDayIncludedText"
+                      : "extraDayPriceText",
+                  ),
+                ]
+              : [
+                  t("weeksText"),
+                  t("weeksPriceText"),
+                  offer.weeks.some((week) => week.bookingUnit === "day")
+                    ? t("weeksDayPriceText")
+                    : "",
+                ]
+            )
+              .concat(
+                offer.weeks.some((week) => week.lunchPriceCents != null)
+                  ? t(
+                      offer.includedInFee
+                        ? "extraDayLunchIncludedText"
+                        : offer.extraDay
+                          ? "extraDayLunchText"
+                          : "weeksLunchText",
+                    )
+                  : "",
+              )
               .filter(Boolean)
               .join(" ")}
           </p>
@@ -508,6 +546,8 @@ export function ChildCard({
             return (
               <WeekChoice
                 key={group[0]?.id}
+                extraDay={offer.extraDay}
+                includedInFee={offer.includedInFee}
                 group={group}
                 prefix={prefix}
                 value={value}

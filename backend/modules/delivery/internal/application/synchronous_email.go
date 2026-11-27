@@ -26,7 +26,7 @@ func (w *Worker) DispatchEmail(ctx context.Context, tenantID, id int64) error {
 	}
 	for {
 		now := w.now()
-		intent, acquired, err := store.ClaimEmail(ctx, tenantID, id, now, synchronousPushLease(ctx, w.now(), w.leaseDuration))
+		intent, acquired, err := store.ClaimEmail(ctx, tenantID, id, now, synchronousDispatchLease(ctx, w.now(), w.leaseDuration))
 		if err != nil {
 			return err
 		}
@@ -69,7 +69,7 @@ func (w *Worker) deliverEmail(ctx context.Context, store targetedEmailStore, int
 		w.recordHeldSend(ctx, intent, hold)
 		return errors.Join(fmt.Errorf("%w: %w", domain.ErrCancelled, hold), err)
 	}
-	token, active, err := w.store.StartDelivery(ctx, intent.Transport, intent.ID, leaseToken(intent), synchronousPushLease(ctx, w.now(), w.leaseDuration))
+	token, active, err := w.store.StartDelivery(ctx, intent.Transport, intent.ID, leaseToken(intent), synchronousDispatchLease(ctx, w.now(), w.leaseDuration))
 	if err != nil {
 		return err
 	}
@@ -93,14 +93,14 @@ func (w *Worker) deliverEmail(ctx context.Context, store targetedEmailStore, int
 		}
 		return errors.Join(sendErr, err)
 	}
-	return w.finalizeSynchronousPush(finalizeCtx, intent, token, result)
+	return w.finalizeSynchronousSend(finalizeCtx, intent, token, result)
 }
 
 func (w *Worker) sendEmailAttempts(ctx context.Context, store targetedEmailStore, intent domain.Intent, token string) (deliveryContract.ProviderResult, int, error) {
 	policy := struct {
 		MaxAttempts int             `json:"delivery_max_attempts"`
 		Backoff     []time.Duration `json:"delivery_backoff"`
-	}{MaxAttempts: 3, Backoff: []time.Duration{time.Second, 5 * time.Second, 15 * time.Second}}
+	}{MaxAttempts: mail.InteractiveMaxAttempts, Backoff: mail.InteractiveRetryBackoff()}
 	if err := json.Unmarshal(intent.Payload, &policy); err != nil {
 		return deliveryContract.ProviderResult{}, intent.Attempts, err
 	}

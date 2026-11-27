@@ -49,6 +49,7 @@ import { routes as files } from "./files.generated";
 import { routes as groups } from "./groups.generated";
 import { routes as guardians } from "./guardians.generated";
 import { routes as holidayClosureNotices } from "./holiday-closure-notices.generated";
+import { routes as holidayExtraDays } from "./holiday-extra-days.generated";
 import { routes as holidayGuests } from "./holiday-guests.generated";
 import { routes as holidayWeeks } from "./holiday-weeks.generated";
 import { routes as importRoutes } from "./import.generated";
@@ -161,6 +162,7 @@ import { routes as traegerHolidayPeriods } from "./traeger-holiday-periods.gener
 import { routes as traegerHolidayQuotes } from "./traeger-holiday-quotes.generated";
 import { routes as traegerHolidayRegistrations } from "./traeger-holiday-registrations.generated";
 import { routes as traegerInvitations } from "./traeger-invitations.generated";
+import { routes as traegerInvoiceJournal } from "./traeger-invoice-journal.generated";
 import { routes as traegerMasterData } from "./traeger-master-data.generated";
 import { routes as traegerNotifications } from "./traeger-notifications.generated";
 import { routes as traegerNumberRanges } from "./traeger-number-ranges.generated";
@@ -488,6 +490,8 @@ export const portalRoutes = {
     traegerHolidayPeriods["PUT /traeger/holiday-periods/{id}/registrations/{registrationId}/children/{childId}/holiday-wish"],
     traegerHolidayPeriods["PUT /traeger/holiday-periods/{id}/registrations/{registrationId}/criteria"],
     traegerHolidayPeriods["PUT /traeger/holiday-periods/{id}/registrations/{registrationId}/details"],
+    traegerInvoiceJournal["GET /traeger/invoice-journal/"],
+    traegerInvoiceJournal["GET /traeger/invoice-journal/export"],
     traegerMasterData["DELETE /traeger/master-data/bank-accounts/{id}"],
     traegerMasterData["DELETE /traeger/master-data/logo"],
     traegerMasterData["DELETE /traeger/master-data/responsibilities/schools/{schoolId}/parties/{kind}"],
@@ -1262,6 +1266,11 @@ export const portalRoutes = {
     guardians["PUT /api/guardians/{id}/payment"],
     holidayClosureNotices["GET /api/holiday-closure-notices/"],
     holidayClosureNotices["POST /api/holiday-closure-notices/{id}/notify"],
+    holidayExtraDays["GET /api/holiday-extra-days/"],
+    holidayExtraDays["GET /api/holiday-extra-days/{id}"],
+    holidayExtraDays["POST /api/holiday-extra-days/"],
+    holidayExtraDays["POST /api/holiday-extra-days/{id}/publish"],
+    holidayExtraDays["PUT /api/holiday-extra-days/{id}"],
     holidayGuests["GET /api/holiday-guests/"],
     holidayGuests["GET /api/holiday-guests/groups"],
     holidayGuests["GET /api/holiday-guests/{studentId}"],

@@ -62,7 +62,7 @@ func BuildAuditOwner(db transactionruntime.Database, env RootEnvironment) (Audit
 	return AuditOwner{Persistence: audits.WithRoutedWrites(command), Command: command}, nil
 }
 
-// BuildMailTransport binds the mail transport and web push configuration. An invalid VAPID configuration fails startup.
+// BuildMailTransport builds SMTP and web push configuration.
 func BuildMailTransport(env RootEnvironment) (email.Mailer, email.Email, deliveryCompose.VAPIDConfig, error) {
 	cfg, logger := env.Config, env.Logger
 	provider := email.ProviderConfig(cfg.EmailProvider)

@@ -21,8 +21,8 @@ import (
 // so the hosting OGS sees the health information of a registration under it.
 // Version 5 adds that the Träger keeps the customer number of the Gemeinde
 // for later registrations and when it goes (#6692). Version 6 keeps the
-// texts of version 5 and gives the name sentence in the Du-Form (#7687, ADR
-// 0294). Version 7 names the team that cares for the child instead of "die
+// texts of version 5 and gives the name sentence in the Du-Form (#7687): the form
+// is portal text (ADR 0328). Version 7 names the team that cares for the child instead of "die
 // OGS": a school may call its care "der Hort" or "das Lernhaus" (#8136).
 const HolidayConsentVersionCurrent = HolidayConsentVersionCareTeam
 
@@ -137,7 +137,7 @@ const (
 	holidayBindingConfirmedText = "Ich weiß, dass die Anmeldung verbindlich ist."
 	holidayCustodyConfirmedText = "Ich darf die Anmeldung allein abgeben: " +
 		"Ich bin allein sorgeberechtigt oder die andere sorgeberechtigte Person ist einverstanden."
-	// sie-anrede-erlaubt (ADR 0294): versionierter Erklärungssatz der Versionen 3 bis 5, Eltern haben ihm zugestimmt.
+	// sie-anrede-erlaubt (ADR 0328): versionierter Erklärungssatz der Versionen 3 bis 5, Eltern haben ihm zugestimmt.
 	holidayFormalDeclarationNameText = "Mit Ihrem Namen geben Sie die Erklärungen oben ab."
 	holidayDeclarationNameText       = "Mit deinem Namen gibst du die Erklärungen oben ab."
 )
