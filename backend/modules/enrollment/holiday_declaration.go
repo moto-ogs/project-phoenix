@@ -21,8 +21,8 @@ import (
 // so the hosting OGS sees the health information of a registration under it.
 // Version 5 adds that the Träger keeps the customer number of the Gemeinde
 // for later registrations and when it goes (#6692). Version 6 keeps the
-// texts of version 5 and gives the name sentence in the Du-Form (#7687, ADR
-// 0294). Version 7 names the team that cares for the child instead of "die
+// texts of version 5 and gives the name sentence in the Du-Form (#7687): the form
+// is portal text (ADR 0328). Version 7 names the team that cares for the child instead of "die
 // OGS": a school may call its care "der Hort" or "das Lernhaus" (#8136).
 const HolidayConsentVersionCurrent = HolidayConsentVersionCareTeam
 

@@ -24,7 +24,7 @@ export NEXT_PUBLIC_SCHOOL_HOSTNAME=schule.localhost:3000
 export NEXT_PUBLIC_CATERER_HOSTNAME=caterer.localhost:3000
 export NEXT_PUBLIC_TRAEGER_HOSTNAME=traeger.localhost:3000
 # Form of address in German texts (ADR 0328); about a second over the whole tree.
-[[ "${1:-quality}" == fast ]] || quality_step du-form node ../scripts/check-du-form.mjs
+[[ "${1:-quality}" == fast ]] || quality_step anrede node ../scripts/check-anrede.mjs
 [[ "${1:-quality}" == fast ]] || quality_step locales pnpm exec node scripts/verify-locales.mjs
 [[ "${1:-quality}" == fast ]] || quality_step help-index pnpm exec node scripts/generate-help-index.mjs --check
 [[ "${1:-quality}" == fast ]] || quality_step portal-pages pnpm exec node scripts/generate-portal-pages.mjs --check

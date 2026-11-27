@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { after, describe, test } from 'node:test';
-import { OUTGOING, OUTGOING_TEXT, checkRepository, checkSource, checkTokens, findFormalAddress, findInformalAddress, goTokens, scriptTokens, templateTokens } from './check-du-form.mjs';
+import { OUTGOING, OUTGOING_TEXT, checkRepository, checkSource, checkTokens, findFormalAddress, findInformalAddress, goTokens, scriptTokens, templateTokens } from './check-anrede.mjs';
 
 const words = text => findFormalAddress(text).map(hit => hit.word);
 
@@ -301,7 +301,7 @@ describe('placeholders, slashes, links and quotes', () => {
 });
 
 describe('checkRepository', () => {
-  const root = mkdtempSync(join(tmpdir(), 'check-du-form-'));
+  const root = mkdtempSync(join(tmpdir(), 'check-anrede-'));
   after(() => rmSync(root, { recursive: true, force: true }));
   const write = (file, content) => {
     mkdirSync(dirname(join(root, file)), { recursive: true });

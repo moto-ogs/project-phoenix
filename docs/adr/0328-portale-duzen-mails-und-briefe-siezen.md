@@ -9,17 +9,16 @@ Entscheidung vom 27.11.2026. Sie löst
 
 ## Kontext
 
-ADR 0294 stellte am 18.11.2026 jeden Text, den moto schreibt, auf „du“ um,
-auch E-Mails und Briefvorlagen. Innerhalb weniger Tage fragten mehrere
-Kunden, wie sie Mails und Schreiben wieder auf „Sie“ stellen. Eine
-Rechnung, ein Gebührenbescheid oder ein Vertragsschreiben geht an Familien,
-die den Träger nicht kennen, und wird oft ausgedruckt und abgeheftet. Dort
-wirkt „du“ unpassend. Im Portal dagegen arbeiten Eltern und Personal täglich
-mit moto; dort passt das „du“.
+Bis zum 18.11.2026 standen die Texte in der Sie-Form. ADR 0294 stellte dann
+jeden Text, den moto schreibt, auf „du“ um, auch E-Mails und Briefvorlagen.
+Innerhalb weniger Tage fragten mehrere Kunden, wie sie Mails und Schreiben
+wieder auf „Sie“ stellen. Eine Rechnung, ein Gebührenbescheid oder ein
+Vertragsschreiben geht an Familien, die den Träger nicht kennen, und wird oft
+ausgedruckt und abgeheftet. Dort wirkt „du“ unpassend. Im Portal dagegen
+arbeiten Eltern und Personal täglich mit moto; dort passt das „du“.
 
-Der Nachtrag vom 27.11.2026 zu ADR 0294 stellte als ersten Schritt die
-Bestätigungsmail der Ferienanmeldung auf „Sie“ um. Diese ADR macht daraus die
-Regel für alles, was moto verschickt.
+Diese ADR ist die einzige Regel für die Anrede. ADR 0294 gilt nicht mehr und
+verweist nur noch hierher.
 
 ## Entscheidung
 
@@ -48,8 +47,8 @@ Regel für alles, was moto verschickt.
    Frau Klein,“ oder „Lieber Herr Klein,“. Ohne
    Anrede oder ohne Nachnamen bleibt sie neutral: „Guten Tag Karin Klein,“.
    Eine Begrüßung nur mit Vornamen („Hallo Karin,“) wird zu „Guten Tag Karin
-   Klein,“. Das löst die Mischung „Liebe Karin, … Sie“, die ADR 0294 als
-   früheres Problem nannte. Briefe an die Familie beginnen weiter mit „Liebe
+   Klein,“. So folgt auf einen Vornamen nie ein „Sie“
+   („Liebe Karin, … Sie“). Briefe an die Familie beginnen weiter mit „Liebe
    Familie Klein,“, Mails ohne Namen weiter mit „Hallo,“ oder „Guten Tag,“.
 5. **Brief an eine andere zahlende Person.** Auch er sagt „Sie“ und grüßt die
    Person mit Namen. Er nennt das Kind und den Vertrag weiter nicht ihr
@@ -91,7 +90,7 @@ die Vorschau eines Bescheids), steht wie das Schreiben in der Sie-Form.
 Eine Mail, die schon in der Warteschlange steht, behält ihren Betreff; ihr
 Text entsteht beim Versand aus der aktuellen Vorlage.
 
-`scripts/check-du-form.mjs` prüft beide Richtungen: „Sie“ in Portal-Texten,
+`scripts/check-anrede.mjs` prüft beide Richtungen: „Sie“ in Portal-Texten,
 „du“ und „ihr“ in den Mail-Vorlagen und in den Go-Dateien seiner Liste
 `OUTGOING`, die Mails und Briefe schreiben. Ein gebundener Wortlaut trägt den
 Kommentar `sie-anrede-erlaubt (ADR 0328): <Grund>` im Portal-Text oder

@@ -2,7 +2,7 @@
 // Checks the form of address in German texts that moto writes itself (ADR
 // 0328: the portals say „du“, what moto sends out says „Sie“).
 //
-//   node scripts/check-du-form.mjs
+//   node scripts/check-anrede.mjs
 //
 // Scans the whole tree in about a second: the German message files, help
 // articles, components and stories under frontend/src and frontend/.storybook,
@@ -596,11 +596,11 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   const problems = checkRepository(root);
   if (problems.length) {
     console.error(`Falsche Anrede in deutschen Texten (ADR 0328: die Portale sagen „du“, Mails und Briefe „Sie“):\n${problems.map(problem => `  ${problem}`).join('\n')}`);
-    console.error('\nPortaltexte stehen in der Du-Form, Mail-Vorlagen und die Dateien in OUTGOING (scripts/check-du-form.mjs) in der Sie-Form.\n' +
+    console.error('\nPortaltexte stehen in der Du-Form, Mail-Vorlagen und die Dateien in OUTGOING (scripts/check-anrede.mjs) in der Sie-Form.\n' +
       'Ist der Wortlaut gebunden (ADR 0328, Ausnahmen), markiere ihn mit dem Kommentar „sie-anrede-erlaubt (ADR 0328): <Grund>“\n' +
       'im Portaltext oder „du-anrede-erlaubt (ADR 0328): <Grund>“ im ausgehenden Text (JSON: JSON_EXCEPTIONS).');
     process.exitCode = 1;
   } else {
-    console.log('check-du-form: Anrede in deutschen Texten stimmt.');
+    console.log('check-anrede: Anrede in deutschen Texten stimmt.');
   }
 }

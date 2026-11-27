@@ -48,7 +48,7 @@ case "${1:-quality}" in
     quality_step deadcode-regressions bash "$root/scripts/check-deadcode_test.sh"
     quality_step deadcode bash "$root/scripts/check-deadcode.sh"
     # Form of address in German texts (ADR 0328); about a second over the whole tree.
-    quality_step du-form node "$root/scripts/check-du-form.mjs"
+    quality_step anrede node "$root/scripts/check-anrede.mjs"
     ;;
   # Dependency scans run nightly, not per pull request (nightly.yml).
   dependencies)
