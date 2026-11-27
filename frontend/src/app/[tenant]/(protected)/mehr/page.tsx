@@ -32,10 +32,12 @@ import { ENROLLMENT_SECTION } from "~/lib/section-navigation";
 import { useTenantRouter } from "~/lib/tenant-router";
 import { isDemoBuild } from "~/lib/demo-access";
 import { useShellAuth } from "~/lib/shell-auth-context";
+import { useTenantSlugSafe } from "~/lib/tenant-context";
 import { useCareWithdrawalsPending } from "~/lib/hooks/use-care-withdrawals-pending";
 import { useChangeRequestsPending } from "~/lib/hooks/use-change-requests-pending";
 import { useEnrollmentRequestsPending } from "~/lib/hooks/use-enrollment-requests-pending";
 import { useMessagesUnread } from "~/lib/hooks/use-messages-unread";
+import { useMoreClosedGroups } from "~/lib/hooks/use-more-closed-groups";
 import { useStaffAbsencesPending } from "~/lib/hooks/use-staff-absences-pending";
 import { useStaffMessagesUnread } from "~/lib/hooks/use-staff-messages-unread";
 import { useStaffNoticesPending } from "~/lib/hooks/use-staff-notices-pending";
@@ -198,6 +200,11 @@ interface MoreSection {
   readonly title: string;
   /** Zahl der Zeilen, für die Verteilung auf Spalten. */
   readonly size: number;
+  /**
+   * Was in den Zeilen neu oder offen ist. Zugeklappt nennt der Kopf die
+   * Summe, wie eine zugeklappte Gruppe der Seitenleiste.
+   */
+  readonly pending?: number;
   readonly rows: ReactNode;
 }
 
@@ -239,8 +246,32 @@ function splitColumns(
   return result;
 }
 
-function MorePageContent() {
+/** Summe der Zähler in den Zeilen eines Abschnitts. */
+function pendingIn(
+  items: readonly MenuItem[],
+  model: StaffBottomNavModel,
+  counters: Readonly<Record<string, RowCounter>>,
+): number {
+  return items.reduce((sum, item) => {
+    if (item.locked) return sum;
+    if (item.href === ENROLLMENT_SECTION.href)
+      return sum + model.enrollmentsUnreadCount;
+    return sum + (counters[item.href]?.count ?? 0);
+  }, 0);
+}
+
+function MorePageContent({
+  tenantSlug,
+  accountId,
+}: Readonly<{ tenantSlug: string; accountId: string }>) {
   const model = useStaffBottomNavModel();
+  // Auf- und Zuklappen wie in der Seitenleiste, gemerkt je Schule und Konto
+  // (Feedback 27.11.). Ohne bekanntes Konto bleiben alle Abschnitte offen.
+  const { isSectionOpen, toggleSection } = useMoreClosedGroups(
+    tenantSlug,
+    accountId,
+  );
+  const canCollapse = tenantSlug !== "" && accountId !== "";
   const openNotificationsSheet = useOpenNotificationsSheet();
   const [logoutOpen, setLogoutOpen] = useState(false);
   const { resolved, isApp, layout, isSplit } = useDeviceContext();
@@ -316,6 +347,7 @@ function MorePageContent() {
       key: "neu",
       title: STAFF_NEWS_TITLE,
       size: news.length * 1.3,
+      pending: news.length,
       rows: <StaffNewsList items={news} rows />,
     });
   }
@@ -345,6 +377,9 @@ function MorePageContent() {
       key: "tag",
       title: "Mein Tag",
       size: flows.length + (notificationsRow ? 1 : 0),
+      pending:
+        pendingIn(flows, model, counters) +
+        (isTeacher ? model.feedUnreadCount : 0),
       rows: (
         <>
           {/* Der Notfall vor allem anderen (Runde 17), dann die Glocke. */}
@@ -368,6 +403,7 @@ function MorePageContent() {
       key: group.key,
       title: group.group?.label ?? "Weiteres",
       size: group.items.length,
+      pending: pendingIn(group.items, model, counters),
       rows: <MenuRows items={group.items} model={model} counters={counters} />,
     });
   }
@@ -396,6 +432,7 @@ function MorePageContent() {
       key: "konto",
       title: "Konto",
       size: 3 + looseItems.length,
+      pending: pendingIn(looseItems, model, counters),
       rows: (
         <>
           <li>
@@ -455,11 +492,43 @@ function MorePageContent() {
     </Collection>
   );
 
-  const group = (section: MoreSection, sticky = false) => (
-    <CollectionGroup key={section.key} title={section.title} sticky={sticky}>
-      {section.rows}
-    </CollectionGroup>
-  );
+  const group = (section: MoreSection, sticky = false) => {
+    const open = !canCollapse || isSectionOpen(section.key);
+    const pending = section.pending ?? 0;
+    return (
+      <CollectionGroup
+        key={section.key}
+        title={section.title}
+        sticky={sticky}
+        collapsible={
+          canCollapse
+            ? {
+                expanded: open,
+                onToggle: () => toggleSection(section.key),
+                // Zugeklappt verschwindet kein Zähler: der Kopf nennt die
+                // Summe, gedeckelt wie die Glocke („9+“).
+                collapsedBadge:
+                  pending > 0 ? (
+                    <NotificationBadge
+                      count={pending}
+                      tone={COUNT_TONE}
+                      size="md"
+                      max={NOTIFICATIONS_BADGE_MAX}
+                      ariaLabel={
+                        pending === 1
+                          ? "1 neuer oder offener Eintrag"
+                          : `${pending} neue oder offene Einträge`
+                      }
+                    />
+                  ) : undefined,
+              }
+            : undefined
+        }
+      >
+        {section.rows}
+      </CollectionGroup>
+    );
+  };
 
   // Telefon: EINE Liste, die Abschnitte als Gruppenköpfe darin. iPad: die
   // Abschnitte als Karten in zwei (hoch) oder drei (quer) Spalten, damit
@@ -532,11 +601,28 @@ function MorePageContent() {
   );
 }
 
+/**
+ * Der gemerkte Auf/Zu-Stand gehört zu Schule und Konto; der Speicher wird
+ * einmal beim Einhängen gelesen. Ändert sich eins davon, hängt die Seite
+ * darum neu ein.
+ */
+function MorePageForAccount() {
+  const tenantSlug = useTenantSlugSafe() ?? "";
+  const accountId = useShellAuth().user?.id ?? "";
+  return (
+    <MorePageContent
+      key={`${tenantSlug}:${accountId}`}
+      tenantSlug={tenantSlug}
+      accountId={accountId}
+    />
+  );
+}
+
 export default function MorePage() {
   // `useSearchParams` im Navigationsmodell braucht eine Suspense-Grenze.
   return (
     <Suspense fallback={null}>
-      <MorePageContent />
+      <MorePageForAccount />
     </Suspense>
   );
 }
