@@ -46,6 +46,8 @@ type SchoolDependencies struct {
 	// Appointments is today's exceptions of the caller's appointments, as
 	// the calendar of moto schule shows them (#8155).
 	Appointments AppointmentChanges
+	// RoomClosures is the rooms the school closed today (#8161).
+	RoomClosures RoomClosures
 	Logger       *slog.Logger
 }
 
@@ -53,7 +55,7 @@ type SchoolDependencies struct {
 // as New with the sources of the school portal: the same savepoints, status
 // per source and sort order.
 func NewSchool(deps SchoolDependencies) (Query, error) {
-	if deps.Today == nil || deps.Isolation == nil || deps.Closing == nil || deps.Classes == nil || deps.Supervisions == nil || deps.Appointments == nil {
+	if deps.Today == nil || deps.Isolation == nil || deps.Closing == nil || deps.Classes == nil || deps.Supervisions == nil || deps.Appointments == nil || deps.RoomClosures == nil {
 		return nil, ErrDependencies
 	}
 	logger := deps.Logger
@@ -69,6 +71,7 @@ func NewSchool(deps SchoolDependencies) (Query, error) {
 			{source: SourceClasses, read: deps.Classes.ClassChanges},
 			{source: SourceSupervisions, read: deps.Supervisions.SupervisionChanges},
 			{source: SourceAppointments, read: deps.Appointments.AppointmentChanges},
+			{source: SourceRoomClosures, read: deps.RoomClosures.RoomClosures},
 		},
 	}, nil
 }

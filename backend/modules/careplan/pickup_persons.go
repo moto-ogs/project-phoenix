@@ -28,6 +28,9 @@ var (
 	// ErrPickupPersonGuardianNotAuthorized refuses a contact whose pickup
 	// permission no longer applies while the day's person is being saved.
 	ErrPickupPersonGuardianNotAuthorized = errors.New("the contact has no pickup permission for the child on this day")
+	// ErrPickupPersonChanged refuses reverting an approval after another
+	// write replaced or changed its pickup person.
+	ErrPickupPersonChanged = errors.New("die Abholperson wurde inzwischen geändert")
 )
 
 // PickupPerson is who collects the child on ExceptionDate. GuardianProfileID
@@ -48,6 +51,10 @@ type PickupPerson struct {
 	// CreatedBy is the staff membership that set the value; nil after that
 	// membership was deleted.
 	CreatedBy *int64
+	// RequestedByGuardian is the guardian account whose one-day request
+	// named the person (#8162); the OGS approval wrote the value. Nil for a
+	// value the staff set.
+	RequestedByGuardian *int64
 }
 
 // PickupPersonGuardianAuthorization names the relationship and plan weekday
@@ -69,6 +76,17 @@ type DayPickup struct {
 	Date      Date
 	Departure *DepartureException
 	Person    *PickupPerson
+}
+
+// ApprovedPickupPersons writes the pickup person a family named in its
+// one-day request, once the OGS approved it (#8162). Every command takes the
+// care-day lock; only the care request decisions and corrections call it.
+type ApprovedPickupPersons interface {
+	SaveApprovedPickupPerson(ctx context.Context, person PickupPerson) (PickupPerson, error)
+	// DeleteApprovedPickupPerson takes back the row id of the child's day an
+	// approval wrote, under the care-day lock, when its decision is
+	// corrected; false when the row is gone.
+	DeleteApprovedPickupPerson(ctx context.Context, studentID int64, date calendar.Date, id int64, expectedVersion string) (bool, error)
 }
 
 // PickupPersons is the owner's capability for the pickup person of a day.

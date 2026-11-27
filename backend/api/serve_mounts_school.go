@@ -134,7 +134,8 @@ func mountSchoolPortalRoutes(
 	planExport planexport.Service, chat owners.CommunicationMessaging, persons peopledirectory.Capability, notifications owners.DeliveryNotifications,
 	devices owners.DeliveryDevices, classDay ClassDayViews, identity identityaccess.Owner, calendarApp calendarCompose.Application,
 	announcements communicationModule.ParentAnnouncementCapability, shiftSeries workforceModule.ShiftPlanReferenceQuery, staff owners.StaffPermissionHolders,
-	hub realtime.Broadcaster, membership schoolMembershipModule.Capability, calendarAppointments appointmentsModule.Query, now func() time.Time,
+	hub realtime.Broadcaster, membership schoolMembershipModule.Capability, calendarAppointments appointmentsModule.Query,
+	roomClosures facilitiesModule.Closures, now func() time.Time,
 ) error {
 	pickupExtensions, err := careexit.NewPickupExtensions(timetableOwner, presence)
 	if err != nil {
@@ -181,7 +182,7 @@ func mountSchoolPortalRoutes(
 	// /api/calendar, behind calendar:school and the school-portal mantle.
 	schoolCalendar := calendarAPI.NewResource(calendarApp, nil, logger.With("handler", "school-calendar"))
 	school := NewSchoolPortalHTTP(SchoolPortalAuth(identity), SchoolPortalMFA(identity), portalauth.PasswordResetRoutes(identity, identityaccess.PasswordResetScopeSchool), classDayResource, timetableResource, staffMessaging, staffNotices, notificationRoutes, schoolCalendar)
-	parentLetters, dayChanges, err := schoolClassSurfaces(announcements, caller, membership, calendarAppointments, classArrivals, calendar, classDay.Today, logger)
+	parentLetters, dayChanges, err := schoolClassSurfaces(announcements, caller, membership, calendarAppointments, classArrivals, calendar, roomClosures, classDay.Today, logger)
 	if err != nil {
 		return err
 	}
@@ -224,7 +225,8 @@ func NewOpeningChangesWithNotices(notifications owners.DeliveryNotifications, to
 func schoolClassSurfaces(
 	announcements communicationModule.ParentAnnouncementCapability, caller *owners.CallerRows,
 	membership schoolMembershipModule.Capability, calendarAppointments appointmentsModule.Query,
-	classArrivals timetableModule.ClassArrivalQuery, calendar schoolcalendar.Calendar, today func() timezone.Date, logger *slog.Logger,
+	classArrivals timetableModule.ClassArrivalQuery, calendar schoolcalendar.Calendar, roomClosures facilitiesModule.Closures,
+	today func() timezone.Date, logger *slog.Logger,
 ) (*announcementAPI.Resource, *dayChangesHTTP.SchoolResource, error) {
 	// Parent letters of a Lehrkraft to her classes (#4800): the OGS's
 	// announcement resource, narrowed by the caller's class reach.
@@ -237,11 +239,12 @@ func schoolClassSurfaces(
 	}
 	// "Heute anders" of moto schule (#7670) reads the class arrivals and
 	// the closing days already built for the timetable, the caller's staff
-	// record with its classes and her appointments (#8155).
+	// record with its classes, her appointments (#8155) and the room
+	// closures (#8161).
 	dayChanges, err := NewSchoolDayChanges(SchoolDayChangesSources{
 		Caller: caller.Caller(), Staff: staff, ClassArrivals: classArrivals, ClosingDays: calendar,
-		Appointments: dayChangesAppointmentsOf(calendarAppointments),
-		Today:        today, Logger: logger.With("service", "school-day-changes"),
+		Appointments: dayChangesAppointmentsOf(calendarAppointments), RoomClosures: roomClosures,
+		Today: today, Logger: logger.With("service", "school-day-changes"),
 	})
 	return parentLetters, dayChanges, err
 }

@@ -35,8 +35,12 @@
   "pickupPerson": {
     "label": "Who picks up?",
     "none": "As usual",
-    "hint": "Only people you have added to your contacts.",
-    "manageLink": "Add a new person to your contacts"
+    "hint": "Choose a person from your contacts or “Someone else”.",
+    "manageLink": "Add a new person to your contacts",
+    "other": "Someone else",
+    "otherNameLabel": "Name of the person",
+    "otherNameHint": "The person shows an ID card at pick-up.",
+    "otherNameMissing": "Please enter the name of the person."
   },
   "proofPdfTooltip": "Saves the proof as a PDF on this device."
 }

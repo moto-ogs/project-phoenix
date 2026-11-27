@@ -90,7 +90,7 @@ func buildPickupChangeServiceWithRequestOptions(t *testing.T, requestOptions []o
 	presence, err := presenceCompose.New(presenceCompose.Dependencies{DB: db, Observe: func(presenceCompose.Observation) {}})
 	require.NoError(t, err)
 	careRequests := owners.NewCareScheduleRequestServiceWithPickupChangesAndPolicy(nil,
-		repos.CarePlan(),
+		owners.CarePlanRequestRecords(repos.CarePlan()),
 		persons,
 		schedules.Arrivals,
 		schedules.Pickups,

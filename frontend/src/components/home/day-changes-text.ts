@@ -322,6 +322,20 @@ function mealCancelledText(change: DayChange): string {
     : "Das Mittagessen fällt heute aus.";
 }
 
+/**
+ * Ein Raum ist heute gesperrt, mit dem Grund der Schule (#8161). Termine dort
+ * bleiben, bis die Leitung sie verlegt; ein verlegter Termin hat seine eigene
+ * Zeile.
+ */
+function roomClosedText(change: DayChange): string {
+  const room = change.roomName?.trim();
+  if (!room) return "";
+  const reason = change.roomClosure?.reason.trim().replace(/\.$/, "");
+  return reason
+    ? `Der Raum „${room}“ ist heute gesperrt: ${reason}.`
+    : `Der Raum „${room}“ ist heute gesperrt.`;
+}
+
 /** Der Satz je Art. Eine unbekannte Art zeigt die Übersicht nicht. */
 const DAY_CHANGE_TEXTS: Readonly<
   Record<string, (change: DayChange) => string>
@@ -364,6 +378,8 @@ const DAY_CHANGE_TEXTS: Readonly<
   meal_plan_changed: () => "Der Speiseplan für heute wurde geändert.",
   // Das Mittagessen fällt aus, obwohl die OGS offen ist (#7656).
   meal_cancelled: mealCancelledText,
+  // Ein gesperrter Raum (#8161).
+  room_closed: roomClosedText,
 };
 
 export function dayChangeText(change: DayChange): string | null {
@@ -392,7 +408,8 @@ function timeOfDay(change: DayChange): string | null {
 
 /** Der Raum eines Termins, bei einem Wechsel „Turnhalle statt Werkraum“. */
 function roomOf(change: DayChange): string | null {
-  if (!change.roomName) return null;
+  // Ein gesperrter Raum steht schon im Satz (#8161).
+  if (!change.roomName || change.kind === "room_closed") return null;
   return change.previousRoomName
     ? `${change.roomName} statt ${change.previousRoomName}`
     : change.roomName;
@@ -431,6 +448,8 @@ const SOURCE_FAILURE_TEXTS: Readonly<Record<string, string>> = {
   // Aufsichten in moto schule (#8148).
   supervisions:
     "Vertretungen bei deinen Aufsichten konnten gerade nicht geladen werden.",
+  // Gesperrte Räume (#8161).
+  room_closures: "Gesperrte Räume konnten gerade nicht geladen werden.",
 };
 
 export function sourceFailureText(source: string): string {
@@ -482,6 +501,9 @@ export function dayChangeLinkHref(link: DayChangeLink | null): string | null {
       return "/calendar";
     case "meal_plan":
       return "/meal-plan";
+    case "room":
+      // Die Raumseite mit ihren Sperren (#8161).
+      return link.roomId ? `/rooms/${link.roomId}?tab=stammdaten` : null;
     default:
       return null;
   }

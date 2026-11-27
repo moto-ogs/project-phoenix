@@ -23164,17 +23164,6 @@
     },
     {
       "adr": "0098",
-      "binding": "github.com/moto-ogs/project-phoenix/roots/owners.RequestRecords.CreatePickupNote",
-      "classification": "platform",
-      "effect": "scope",
-      "port": "github.com/moto-ogs/project-phoenix/modules/careplan/ports.PickupApprovalRecords.CreatePickupNote",
-      "reason": "Platform protocol participation (scope): care-plan reaches tenant.WithinTenant (tenant-runtime) through roots/owners.RequestRecords.CreatePickupNote. The caller enters the platform contract inside its own unit; transaction, savepoint, after-commit and lock-order correctness stay with the platform behavior tests (ADR 0098); newly attributed to this port by #6125 owner-internal interface resolution (ADR 0176).",
-      "source_owner": "care-plan",
-      "target": "github.com/moto-ogs/project-phoenix/tenant.WithinTenant",
-      "target_owner": "tenant-runtime"
-    },
-    {
-      "adr": "0098",
       "binding": "github.com/moto-ogs/project-phoenix/roots/owners.RequestRecords.SaveDepartureException",
       "classification": "platform",
       "effect": "scope",

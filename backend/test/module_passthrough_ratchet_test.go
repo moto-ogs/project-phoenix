@@ -234,7 +234,7 @@ const modulePassthroughApplicationSegment = "/internal/application/"
 var modulePassthroughOwnerBudgets = map[string]int{
 	"modules/appointments": 21,
 	"modules/auditlog":     1,
-	"modules/careplan":     158,
+	"modules/careplan":     157,
 	"modules/classday":     14,
 	// Raised by ADR 0073: the composition forwards the parent announcement
 	// retention to its service.

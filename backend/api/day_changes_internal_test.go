@@ -90,6 +90,8 @@ func TestDayChangesInvisibleAccountSkipsUnavailableWorkforce(t *testing.T) {
 		Appointments: dayChangesAppointments{},
 		// No change mark today: the Essen source answers without an entry.
 		MealPlan: dayChangesMealPlan{reads: unchangedDayChangesMenu{}},
+		// Without rooms:read the Räume source answers before reading (#8161).
+		RoomClosures: dayChangesRoomClosures{},
 	})
 	require.NoError(t, err)
 
@@ -104,6 +106,7 @@ func TestDayChangesInvisibleAccountSkipsUnavailableWorkforce(t *testing.T) {
 		{Source: daychangesview.SourceClasses, Status: daychangesview.SourceLoaded},
 		{Source: daychangesview.SourceAppointments, Status: daychangesview.SourceLoaded},
 		{Source: daychangesview.SourceMealPlan, Status: daychangesview.SourceLoaded},
+		{Source: daychangesview.SourceRoomClosures, Status: daychangesview.SourceLoaded},
 	}, overview.Sources)
 	assert.Empty(t, overview.Entries)
 	assert.False(t, workforceSource.handoversRead)

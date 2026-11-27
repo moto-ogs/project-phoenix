@@ -426,6 +426,8 @@ func MapCareRequestError(err error, op string) error {
 		return ErrCareRequestAlreadyPending
 	case errors.Is(err, carerequests.ErrInvalidPayload):
 		return ErrInvalidCareRequestPayload
+	case errors.Is(err, carerequests.ErrPickupChangeConflict):
+		return ErrCareExceptionConflict
 	case errors.Is(err, carerequests.ErrPickupChangeCutoffPassed):
 		return ErrPickupChangeCutoffPassed
 	default:

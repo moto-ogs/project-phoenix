@@ -53,6 +53,8 @@ export interface DayChangeLink {
   readonly instanceId?: string | null;
   /** Der Tag der Übersicht, für den Vertretungsplan dieses Tages. */
   readonly day?: string | null;
+  /** Der gesperrte Raum (#8161). */
+  readonly roomId?: string | null;
 }
 
 /** Die Kinder einer Gruppe oder Klasse außerhalb der eigenen Gruppen. */
@@ -149,6 +151,8 @@ export interface DayChange {
   readonly appointment?: DayChangeAppointment | null;
   /** Nur bei der Art `meal_cancelled` (#7656): der Grund der Schule. */
   readonly mealCancellation?: { readonly reason: string } | null;
+  /** Nur bei der Art `room_closed` (#8161): der Grund der Schule. */
+  readonly roomClosure?: { readonly reason: string } | null;
 }
 
 export interface DayChangesOverview {
@@ -166,6 +170,7 @@ function mapLink(link: Entry["link"], day?: string): DayChangeLink | null {
         studentId: link.student_id ?? null,
         instanceId: link.instance_id ?? null,
         day: day ?? null,
+        roomId: link.room_id ?? null,
       }
     : null;
 }
@@ -274,6 +279,9 @@ function mapEntry(entry: Entry, day: string): DayChange {
     appointment: mapAppointment(entry.appointment ?? null),
     mealCancellation: entry.meal_cancellation
       ? { reason: entry.meal_cancellation.reason }
+      : null,
+    roomClosure: entry.room_closure
+      ? { reason: entry.room_closure.reason }
       : null,
   };
 }
