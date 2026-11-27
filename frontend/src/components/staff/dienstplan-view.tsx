@@ -166,7 +166,10 @@ function DienstplanContent() {
   // Ein Kontext ohne Profil kann erst eintreffen, während ein zuvor erlaubter
   // Dialog offen ist. Dann bleibt keine Schreibaktion auf einer Anzeige übrig.
   useEffect(() => {
-    if (!canPlanShifts) setModal(null);
+    if (!canPlanShifts) {
+      setModal(null);
+      setPeriodModalOpen(false);
+    }
   }, [canPlanShifts]);
   useEffect(() => {
     if (!canWriteAbsences) setSickModal(null);
@@ -740,6 +743,7 @@ function DienstplanContent() {
             periods={periods ?? []}
             weekDays={weekDayDates}
             isLoading={showSkeleton || periodsLoading}
+            canManage={canPlanShifts}
             onCreate={() => setPeriodModalOpen(true)}
             onSelect={(period) =>
               updateUrlParams({
@@ -792,7 +796,7 @@ function DienstplanContent() {
           reloadShift={reloadModalShift}
         />
       )}
-      {periodModalOpen && (
+      {periodModalOpen && canPlanShifts && (
         <CalendarPeriodModal
           linkClosingDays
           isOpen
