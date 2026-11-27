@@ -101,6 +101,10 @@ func TestSchoolPlansAnExtraCareDayForItself(t *testing.T) {
 	require.Len(t, created.Weeks, 1)
 	assert.Equal(t, office.schools[0], int64(created.Weeks[0].HostSchoolID))
 
+	rec = schoolExtraDayJSON(t, school, planner, http.MethodGet, fmt.Sprintf("/%d", created.ID), nil)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	assert.Equal(t, created.Version, decodeSchoolPortalData[schoolExtraDayBody](t, rec.Body.Bytes()).Version, "the school reads its day with the version a change sends back")
+
 	// The school moves the day to a price per day while it is a draft.
 	paid := extraDay(extraDayBridge, false, 1800, office.schools[0])
 	paid["expected_version"] = created.Version
