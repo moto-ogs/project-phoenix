@@ -8206,6 +8206,13 @@
     },
     {
       "build": "production",
+      "evidence": "func (n traegerOpeningChangeNotices) NotifySchool(ctx context.Context, schoolID int64, notice schoolcalendar.OpeningChangeNotice) error {\n\tid, err := tenant.NewTenantID(schoolID)\n\tif err == nil {\n\t\terr = tenant.WithinTenant(tenant.ContextWithoutTransaction(ctx), id, func(ctx context.Context) error {\n\t\t\treturn n.school.NotifyOpeningChangeChanged(ctx, notice)\n\t\t})\n\t}\n\tif err != nil {\n\t\ttenant.MarkRollback(ctx)\n\t}\n\treturn err\n}",
+      "form": "unclassified-evidence",
+      "id": "roots/owners/traegerOpeningChangeNotices.NotifySchool",
+      "owner": "roots"
+    },
+    {
+      "build": "production",
       "evidence": "func (a *weeklyApprovalAdapter) AuditDepartureModes(ctx context.Context, _, actorID int64) error {\n\tif a.audit == nil {\n\t\treturn nil\n\t}\n\treturn a.audit.RecordChangesForActor(ctx, requestStudentAuditSnapshot(a.before), requestStudentAuditSnapshot(a.student), actorID)\n}",
       "form": "unclassified-evidence",
       "id": "roots/owners/weeklyApprovalAdapter.AuditDepartureModes",
