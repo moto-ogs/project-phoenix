@@ -11,7 +11,6 @@ import (
 	_ "embed"
 	"fmt"
 	"io"
-	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -153,77 +152,8 @@ func newDesignRenderer(doc listrecords.Document) (*designRenderer, error) {
 	if documentHasAccents(doc.Rows) {
 		r.gutter = accentInset
 	}
-	const horizontalChrome = 2*pageMargin + 2*cardPadX
-	r.widths = pdfColumnWidths(cols, r.w-horizontalChrome)
-	if slices.ContainsFunc(cols, func(col listrecords.Column) bool { return col.ID == "number" }) {
-		if err := r.fitNumberedColumns(horizontalChrome); err != nil {
-			return nil, err
-		}
-	}
+	r.widths = pdfColumnWidths(cols, r.w-2*pageMargin-2*cardPadX)
 	return r, nil
-}
-
-// Preserve complete identifiers, dates and amounts, including the totals row,
-// before wrapping cells for pagination.
-func (r *designRenderer) fitNumberedColumns(horizontalChrome float64) error {
-	minimums, required, err := r.numberedColumnMinimums()
-	if err != nil {
-		return err
-	}
-	if required > r.w-horizontalChrome {
-		size := *gopdf.PageSizeA3Landscape
-		size.W = max(size.W, required+horizontalChrome)
-		doc := r.doc
-		r.pageChrome, err = newPageChromeForSize(size, doc.Title, doc.Subtitle, doc.GeneratedAt, doc.Filters, doc.Footer)
-		if err != nil {
-			return err
-		}
-		r.widths = pdfColumnWidths(r.cols, r.w-horizontalChrome)
-	}
-	distributePDFWidths(r.widths, minimums, max(0, r.w-horizontalChrome-required))
-	return nil
-}
-
-func (r *designRenderer) numberedColumnMinimums() ([]float64, float64, error) {
-	if err := r.setFont(styleNormal, fontBody); err != nil {
-		return nil, 0, err
-	}
-	minimums := make([]float64, len(r.cols))
-	total := 0.0
-	for i, col := range r.cols {
-		// Leave room for text columns to wrap without squeezing them to
-		// a few characters when a number is unusually long.
-		width := min(32, r.widths[i])
-		if col.Numeric || col.ID == "number" || col.ID == "issued" || col.ID == "reference" {
-			for _, row := range r.doc.Rows {
-				measured, err := r.measure(row.Values[col.ID])
-				if err != nil {
-					return nil, 0, err
-				}
-				width = max(width, measured+cellPadX+r.gutter+1)
-			}
-		}
-		minimums[i] = width
-		total += width
-	}
-	return minimums, total, nil
-}
-
-// Keep the original column proportions where there is spare space. Columns
-// whose contents already need more than their original share take no surplus.
-func distributePDFWidths(widths, minimums []float64, available float64) {
-	spare := 0.0
-	for i, width := range widths {
-		widths[i] = max(0, width-minimums[i])
-		spare += widths[i]
-	}
-	for i, minimum := range minimums {
-		share := available / float64(len(widths))
-		if spare > 0 {
-			share = available * widths[i] / spare
-		}
-		widths[i] = minimum + share
-	}
 }
 
 func renderPDFDesigned(doc listrecords.Document) ([]byte, error) {
